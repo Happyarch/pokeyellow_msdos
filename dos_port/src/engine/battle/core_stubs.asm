@@ -183,6 +183,11 @@ AnimationFlashEnemyMonPic:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
 
 ; --- Stage 4: mon-pic slides + motion + OAM particles + HUD shake ---
+; AnimationLeavesFalling, AnimationPetalsFalling,
+; AnimationWaterDropletsEverywhere: RETIRED 2026-08-08 — real bodies in
+; animations.asm (Stage 4f), with AnimationFallingObjects, the four
+; FallingObjects_* helpers, their three data tables and _AnimationWaterDroplets.
+
 ; AnimationSpiralBallsInward, AnimationShootBallsUpward,
 ; AnimationShootManyBallsUpward: RETIRED 2026-08-08 — real bodies in
 ; animations.asm (Stage 4e ball particles), with _AnimationShootBallsUpward,
@@ -210,21 +215,6 @@ AnimationFlashEnemyMonPic:
 ; ClearMonPicFromTileMap, GetMonSpriteTileMapPointerFromRowCount, GetTileIDList,
 ; AnimCopyRowLeft/Right, CopyPicTiles, CopyDownscaledMonTiles,
 ; CopyTileIDs{,_NoBGTransfer} and CopyTileIDsFromList.
-
-; STUB{class=temporary; label=AnimationLeavesFalling; pret=engine/battle/animations.asm:AnimationLeavesFalling; behavior=return instead of the falling leaves particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
-global AnimationLeavesFalling
-AnimationLeavesFalling:
-    ret
-
-; STUB{class=temporary; label=AnimationPetalsFalling; pret=engine/battle/animations.asm:AnimationPetalsFalling; behavior=return instead of the falling petals particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
-global AnimationPetalsFalling
-AnimationPetalsFalling:
-    ret
-
-; STUB{class=temporary; label=AnimationWaterDropletsEverywhere; pret=engine/battle/animations.asm:AnimationWaterDropletsEverywhere; behavior=return instead of the water droplets particles; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 particle family lands}
-global AnimationWaterDropletsEverywhere
-AnimationWaterDropletsEverywhere:
-    ret
 
 ; STUB{class=temporary; label=AnimationShakeEnemyHUD; pret=engine/battle/animations.asm:AnimationShakeEnemyHUD; behavior=return instead of shaking the enemy HUD; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 4 HUD shake lands}
 global AnimationShakeEnemyHUD

@@ -1652,6 +1652,264 @@ UpwardBallsAnimXCoordinatesEnemyTurn:
     db 0x60, 0x90, 0x78, 0x68, 0x88, 0x80
     db -1                                    ; end
 
+global AnimationWaterDropletsEverywhere
+AnimationWaterDropletsEverywhere:
+; Draws water droplets all over the screen and makes them scroll. The main
+; animation in Surf/Mist/Toxic.
+    xor al, al
+    mov [ebp + wWhichBattleAnimTileset], al
+    call LoadMoveAnimationTiles
+    mov dh, 32                               ; ld d, 32 — outer repeat count
+    mov al, -16
+    mov [ebp + wBaseCoordX], al
+    mov al, 0x71
+    mov [ebp + wDropletTile], al
+.loop:
+    mov al, 16
+    mov [ebp + wBaseCoordY], al
+    mov al, 0
+    mov [ebp + wUnusedWaterDropletsByte], al
+    call _AnimationWaterDroplets
+    mov al, 24
+    mov [ebp + wBaseCoordY], al
+    mov al, 32
+    mov [ebp + wUnusedWaterDropletsByte], al
+    call _AnimationWaterDroplets
+    dec dh                                   ; 8-bit, as pret
+    jnz .loop
+    ret
+
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:_AnimationWaterDroplets; behavior=the port publishes wShadowOAM to the renderer at the battle-frame origin (80,24) via PublishProjectedOAM before the closing DelayFrame; evidence=the port has no hardware OAM DMA so the droplet OAM this routine writes would never reach render_sprites otherwise, exactly as DrawFrameBlock already documents, and offscreen entries stay hidden by the g_obj_clip rectangle MoveAnimation set on entry; lifetime=permanent, part of the battle-animation projection boundary}
+global _AnimationWaterDroplets
+_AnimationWaterDroplets:
+    mov esi, W_SHADOW_OAM
+.loop:
+    mov al, 1
+    mov [ebp + wdef4], al
+    mov al, [ebp + wBaseCoordY]
+    mov [ebp + esi], al                      ; Y
+    inc esi
+    cmp al, 40
+    jb .yInRange
+    mov al, [ebp + wdef4]
+    inc al
+    mov [ebp + wdef4], al
+.yInRange:
+    mov al, [ebp + wBaseCoordX]
+    add al, 27
+    mov [ebp + wBaseCoordX], al
+    mov [ebp + esi], al                      ; X
+    inc esi
+    cmp al, 88
+    jb .xInRange
+    mov al, [ebp + wdef4]
+    add al, 2
+    and al, 3
+    mov [ebp + wdef4], al
+.xInRange:
+    mov al, [ebp + wDropletTile]
+    mov [ebp + esi], al                      ; tile
+    inc esi
+    mov al, [ebp + wdef4]
+    mov [ebp + esi], al                      ; attribute
+    inc esi
+    mov al, [ebp + wBaseCoordX]
+    cmp al, 144
+    jb .loop
+    sub al, 168
+    mov [ebp + wBaseCoordX], al
+    mov al, [ebp + wBaseCoordY]
+    add al, 16
+    mov [ebp + wBaseCoordY], al
+    cmp al, 112
+    jb .loop
+    call AnimationCleanOAM
+    call PublishBattleAnimOAM
+    jmp DelayFrame
+
+global AnimationLeavesFalling
+AnimationLeavesFalling:
+; Makes leaves float down from the top of the screen. Used in Razor Leaf.
+    mov al, [ebp + wAnimPalette]
+    mov [ebp + IO_OBP0], al                  ; ldh [rOBP0], a — the whole effect here
+    call UpdateCGBPal_OBP0
+    mov dh, 0x37                             ; leaf tile
+    mov al, 3                                ; number of leaves
+    mov [ebp + wNumFallingObjects], al
+    jmp AnimationFallingObjects
+
+global AnimationPetalsFalling
+AnimationPetalsFalling:
+; Makes lots of petals fall down from the top of the screen. Used in Petal Dance.
+    mov dh, 0x71                             ; petal tile
+    mov al, 20                               ; number of petals
+    mov [ebp + wNumFallingObjects], al
+    call AnimationFallingObjects
+    jmp ClearSprites
+
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:AnimationFallingObjects; behavior=the port publishes wShadowOAM to the renderer at the battle-frame origin (80,24) via PublishProjectedOAM before each inter-frame delay; evidence=the port has no hardware OAM DMA so the falling-object OAM this routine writes would never reach render_sprites otherwise, exactly as DrawFrameBlock already documents, and offscreen entries stay hidden by the g_obj_clip rectangle MoveAnimation set on entry; lifetime=permanent, part of the battle-animation projection boundary}
+global AnimationFallingObjects
+AnimationFallingObjects:
+    mov bl, al                               ; ld c, a
+    mov al, 1
+    call InitMultipleObjectsOAM
+    call FallingObjects_InitXCoords
+    call FallingObjects_InitMovementData
+    mov esi, W_SHADOW_OAM
+    mov byte [ebp + esi], 0
+.loop:
+    mov esi, wFallingObjectsMovementData
+    xor edx, edx                             ; ld de, 0 — OAM entry byte offset
+    mov al, [ebp + wNumFallingObjects]
+    mov bl, al
+.innerLoop:
+    push ebx
+    push esi
+    push edx
+    mov al, [ebp + esi]
+    mov [ebp + wFallingObjectMovementByte], al
+    call FallingObjects_UpdateMovementByte
+    call FallingObjects_UpdateOAMEntry
+    pop edx
+    add edx, 4                               ; ld hl, 4 / add hl, de / ld de, hl
+    pop esi
+    mov al, [ebp + wFallingObjectMovementByte]
+    mov [ebp + esi], al                      ; ld [hli], a
+    inc esi
+    pop ebx
+    dec bl                                   ; 8-bit, as pret
+    jnz .innerLoop
+    call PublishBattleAnimOAM
+    call Delay3
+    mov esi, W_SHADOW_OAM
+    mov al, [ebp + esi]                      ; Y of the top falling object
+    cmp al, 104                              ; has it reached 104 yet?
+    jnz .loop                                ; keep falling until it does
+    ret
+
+; Increases Y by 2 pixels and adjusts X and X-flip from the movement byte.
+; In: EDX = byte offset of this object's OAM entry.
+FallingObjects_UpdateOAMEntry:
+    mov esi, W_SHADOW_OAM
+    add esi, edx
+    mov al, 1
+    mov [ebp + wdef4], al
+    mov al, [ebp + esi]
+    inc al
+    inc al
+    cmp al, 112
+    jb .yNext
+    mov al, SCREEN_HEIGHT_PX + OAM_Y_OFS     ; Y >= 112 -> put it off-screen
+.yNext:
+    mov [ebp + esi], al                      ; Y
+    inc esi
+    cmp al, 40
+    jb .yInRange
+    mov al, [ebp + wdef4]
+    inc al
+    mov [ebp + wdef4], al
+.yInRange:
+    mov al, [ebp + wFallingObjectMovementByte]
+    mov bh, al                               ; ld b, a
+    mov edx, FallingObjects_DeltaXs          ; flat table (pret ld de, …)
+    and al, 0x7F
+    movzx ecx, al
+    add edx, ecx                             ; pret's add e / jr nc / inc d
+    mov al, bh
+    and al, 0x80
+    jnz .movingLeft
+; moving right
+    mov al, [edx]
+    add al, [ebp + esi]
+    mov [ebp + esi], al                      ; X
+    inc esi
+    cmp al, 88
+    jb .rightInRange
+    mov al, [ebp + wdef4]
+    add al, 2
+    and al, 3
+    mov [ebp + wdef4], al
+.rightInRange:
+    inc esi
+    xor al, al                               ; no horizontal flip
+    jmp short .next2
+.movingLeft:
+    mov al, [edx]
+    mov bh, al                               ; ld b, a
+    mov al, [ebp + esi]
+    sub al, bh
+    mov [ebp + esi], al                      ; X
+    inc esi
+    cmp al, 88
+    jb .leftInRange
+    mov al, [ebp + wdef4]
+    add al, 2
+    and al, 3
+    mov [ebp + wdef4], al
+.leftInRange:
+    inc esi
+    mov al, OAM_XFLIP
+.next2:
+    mov bh, al                               ; ld b, a
+    mov al, [ebp + wdef4]
+    or al, bh
+    mov [ebp + esi], al                      ; attribute
+    ret
+
+FallingObjects_DeltaXs:
+    db 0, 1, 3, 5, 7, 9, 11, 13, 15
+
+FallingObjects_UpdateMovementByte:
+    mov al, [ebp + wFallingObjectMovementByte]
+    inc al
+    mov bh, al                               ; ld b, a
+    and al, 0x7F
+    cmp al, 9                                ; end of the delta-Xs?
+    mov al, bh                               ; (does not disturb the flags)
+    jnz .next
+; wrap to the start and flip direction, right <-> left
+    and al, 0x80
+    xor al, 0x80
+.next:
+    mov [ebp + wFallingObjectMovementByte], al
+    ret
+
+FallingObjects_InitXCoords:
+    mov esi, W_SHADOW_OAM + 1                ; wShadowOAMSprite00XCoord
+    mov edx, FallingObjects_InitialXCoords   ; flat table
+    mov al, [ebp + wNumFallingObjects]
+    mov bl, al
+.loop:
+    mov al, [edx]
+    mov [ebp + esi], al                      ; ld [hli], a
+    add esi, 4                               ; inc hl x3 after the store = next OAM entry
+    inc edx
+    dec bl
+    jnz .loop
+    ret
+
+FallingObjects_InitialXCoords:
+    db 0x38, 0x40, 0x50, 0x60, 0x70, 0x88, 0x90, 0x56, 0x67, 0x4A
+    db 0x77, 0x84, 0x98, 0x32, 0x22, 0x5C, 0x6C, 0x7D, 0x8E, 0x99
+
+FallingObjects_InitMovementData:
+    mov esi, wFallingObjectsMovementData
+    mov edx, FallingObjects_InitialMovementData
+    mov al, [ebp + wNumFallingObjects]
+    mov bl, al
+.loop:
+    mov al, [edx]
+    mov [ebp + esi], al
+    inc esi
+    inc edx
+    dec bl
+    jnz .loop
+    ret
+
+FallingObjects_InitialMovementData:
+    db 0x00, 0x84, 0x06, 0x81, 0x02, 0x88, 0x01, 0x83, 0x05, 0x89
+    db 0x09, 0x80, 0x07, 0x87, 0x03, 0x82, 0x04, 0x85, 0x08, 0x86
+
 ; PublishBattleAnimOAM — port-only. The five-instruction PublishProjectedOAM
 ; call the particle routines need before every inter-frame delay, factored out
 ; so the DEVIATIONs above describe one mechanism rather than six copies. Not a

@@ -6555,3 +6555,53 @@ visual check. `AnimationSlideMon*`, `AnimationShakeBackAndForth` and
 target: the port's `gb_constants.inc` has no `DOUBLE_TEAM` equ — a pre-existing
 gap in the move-constant coverage, unrelated to this work). Maintainer visual
 sign-off on the Stage 4 representatives is still owed.
+
+---
+
+## 2026-08-08 — battle animations Stage 4f: falling objects + water droplets
+
+pret `engine/battle/animations.asm`. Nine labels plus three data tables:
+`AnimationLeavesFalling`, `AnimationPetalsFalling`, `AnimationFallingObjects`,
+`FallingObjects_UpdateOAMEntry`, `FallingObjects_UpdateMovementByte`,
+`FallingObjects_InitXCoords`, `FallingObjects_InitMovementData` (+
+`FallingObjects_DeltaXs` / `_InitialXCoords` / `_InitialMovementData`),
+`AnimationWaterDropletsEverywhere` and `_AnimationWaterDroplets`. Three more
+stubs retired; the Stage 4 particle box is closed.
+
+Same two-address-space split as 4e: the delta/init tables are flat program-image
+data walked with `EDX`, shadow OAM is GB space at `[ebp + esi]`. pret's 16-bit
+`add e / jr nc / inc d` pointer arithmetic on `FallingObjects_DeltaXs` becomes a
+flat `add edx, ecx` — equivalent for the 0..127 index range the mask allows.
+
+New WRAM, all sym-measured and all landing on pret's own union bytes:
+`wFallingObjectsMovementData` $CD3D (ds 20, the head of the $CD3D scratch lane
+shared with `wSavedY` / `wNumShakes`), `wDropletTile` $D09E,
+`wUnusedWaterDropletsByte` $D089.
+
+**A near-miss worth recording.** `wUnusedWaterDropletsByte` was first inserted
+one line too high and landed **inside** the `%ifndef wCoordAdjustmentAmount`
+guard, which would have made it conditionally defined — silently absent in any
+translation unit that had already defined `wCoordAdjustmentAmount`, with the
+`%include` still succeeding. Moved above the `%ifndef`. Read the surrounding
+preprocessor guard before inserting into `gb_memmap.inc`.
+
+**faithdiff findings, all three justified:**
+* `AnimationLeavesFalling`: `+ ADDED [IO_OBP0]`. This is the documented
+  faithdiff **store** blind spot — its pret-side store regex only matches
+  `w`/`h`-prefixed names, so pret's `ldh [rOBP0], a` is invisible on that side
+  while the port's `[IO_OBP0]` is not. Same finding already stands on Stage 3's
+  `SetAnimationPalette` (`+ ADDED [IO_OBP0]` / `[IO_OBP1]`), verified this
+  session rather than assumed.
+* `AnimationFallingObjects` and `_AnimationWaterDroplets`:
+  `+ ADDED PublishBattleAnimOAM (call)`, each carrying its own
+  `DEVIATION{class=projection}` — the annotation on the droplet path was moved
+  from the parent onto `_AnimationWaterDroplets` itself, since that is where the
+  call actually is and `pret=` should name the routine it describes.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; `audit_memmap`
+79 regions clean; `pgate.sh` 17/17 with mask-hit counts byte-identical to 4e.
+Runtime: `ANIM=SURF` (water droplets) and `ANIM=RAZOR_LEAF` (falling leaves)
+both run clean headless and produce OAM states distinct from the `POUND`
+baseline — 9 differing entries for SURF, **16** for RAZOR_LEAF, consistent with
+a leaf animation occupying more sprites. That is execution evidence; it is
+**not** placement evidence, and no visual check has been made.

@@ -556,6 +556,7 @@ wUnusedMoveAnimByte    equ 0xD09A   ; golden 00:d09a — MoveAnimation write-onl
 wFBDestAddr            equ 0xD09B   ; word: running wShadowOAM write cursor (big-endian)
 wFBMode                equ 0xD09D   ; FRAMEBLOCKMODE_* post-frame-block behavior
 wWhichBattleAnimTileset equ 0xD09E  ; 0/1/2 -> MoveAnimationTilesPointers row
+wFallingObjectsMovementData equ 0xCD3D ; golden 00:cd3d — ds 20, one movement byte per falling object (AnimationFallingObjects). Head of the same $CD3D scratch lane as wSavedY / wNumShakes / wWhichTownMapLocation; pret unions them the same way and only one battle animation runs at a time.
 wSavedY                equ 0xCD3D   ; golden 00:cd3d — AnimationShootManyBallsUpward's per-pillar Y. Same $CD3D scratch lane as wNumShakes / wWhichTownMapLocation below; lifetimes disjoint (one battle anim at a time).
 wNumShakes             equ 0xCD3D   ; ball-shake count (low nybble of wPokeBallAnimData; transitions scratch lane union)
 wDownscaledMonSize     equ 0xCD6C   ; 0 = 5x5, 1 = 3x3 (send-out/recall downscale)
@@ -567,8 +568,10 @@ wNumShootingBalls          equ 0xD089
 wSpiralBallsBaseX          equ 0xD08A   ; (= wSubAnimTransform; effects that use it do not run inside a transformed subanim)
 wNumFallingObjects         equ 0xD08A
 wSlideMonDelay             equ 0xD08A   ; golden 00:d08a — V-blanks per tile of _AnimationSlideMonOff. Same pret $D08A union as above (wSubAnimTransform / wSpiralBallsBaseX / wNumFallingObjects); pret aliases them on hardware too, so the collision is reproduced, not introduced.
+wDropletTile           equ 0xD09E   ; golden 00:d09e — tile id of the Surf/Mist/Toxic droplet. Same pret $D09E union as the two below.
 wSquishMonCurrentDirection equ 0xD09E   ; golden 00:d09e — 0 = left, 1 = right, read by _AnimationSquishMonPic. Same pret $D09E union as the two below.
 wSlideMonUpBottomRowLeftTile equ 0xD09E ; golden 00:d09e — tile id seeding _AnimationSlideMonUp's refilled bottom row. UNION with wWhichBattleAnimTileset / wOutwardSpiralCurrentDirection at 0xD09E, as in pret; the slide never calls LoadMoveAnimationTiles, so the lifetimes are disjoint.
+wUnusedWaterDropletsByte   equ 0xD089   ; golden 00:d089 — written by AnimationWaterDropletsEverywhere, never read (pret name says so). Same $D089 union lane as the aliases above.
 %ifndef wCoordAdjustmentAmount
 wCoordAdjustmentAmount     equ 0xD089   ; AdjustOAMBlock* signed delta (was locally %ifndef-defined in animations.asm/dust_smoke.asm)
 %endif
