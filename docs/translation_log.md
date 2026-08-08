@@ -6822,3 +6822,47 @@ the session. Removed all 33; the 7 that really are still stubbed
 
 **Verification:** build clean; `lint_pret_labels` 0 both modes; `pgate.sh` 17/17
 with mask-hit counts byte-identical to the 5b run.
+
+---
+
+## 2026-08-08 — battle animations Stage 5c: the ChangeMonPic family
+
+pret `engine/battle/animations.asm`. Five labels: `AnimationFlashMonPic`,
+`AnimationFlashEnemyMonPic`, `AnimationTransformMon`, `ChangeMonPic`,
+`Func_79929`. Five stubs retired. This also **closes the last Stage 4 label** —
+`Func_79929` was left stubbed in Stage 4g precisely because its body needs
+`AnimationFlashMonPic` -> `ChangeMonPic`.
+
+`ChangeMonPic` redraws a battler's pic as a different species; `AnimationTransformMon`
+falls through into it (as pret does) after staging the opposing species, and
+`AnimationFlashMonPic` re-draws the **same** species, which is what makes the pic
+appear to flash.
+
+Port mapping notes:
+* pret's `predef LoadMonBackPic` is a direct `call` — the port has no predef
+  dispatcher, and unlike `CopyDownscaledMonTiles` this one takes its input from
+  WRAM (`wBattleMonSpecies2`), so no `GetPredefRegisters` drop arises and
+  faithdiff is clean.
+* `hlcoord 12, 0` -> `BCOORD(12, 0)`, `; PROJ` tagged.
+  `LoadFrontSpriteByMonIndex` in this port already takes the tilemap destination
+  in ESI and both decodes and places the pic, which is exactly pret's
+  "set the coord, then call" contract.
+* `ld b, SET_PAL_BATTLE` -> `mov bh, SET_PAL_BATTLE` for `RunPaletteCommand`.
+
+New WRAM, sym-measured: `wChangeMonPicEnemyTurnSpecies` $CEE9 and
+`wChangeMonPicPlayerTurnSpecies` $CEEA — the same $CEE9/$CEEA shared scratch lane
+the port already gives `wHPBarMaxHP` / `wEvoOldSpecies` / `wBuffer` /
+`wTownMapCoords`, unioned in pret exactly as here (a mon-pic change and an HP-bar
+update are never live at once).
+
+**VRAM invariant checked, not assumed.** `ChangeMonPic` is the second Stage 4/5
+routine to write tile PATTERN data (after `CopyTempPicToMonPic`). Both of its
+writers — `LoadFrontSpriteByMonIndex` and `LoadMonBackPic` — go through
+`src/home/pics.asm`, which arms `g_tilecache_dirty` on both the front and back
+merge paths (lines 200 and 391). So the invariant holds by construction and no
+explicit arming is owed here.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; faithdiff **clean
+on all five with no findings** — notably `ChangeMonPic` at 7 pret / 7 port calls,
+all matched; `pgate.sh` 17/17 with per-scenario mask-hit counts byte-identical to
+the previous run. Dispatch-only, so absence-of-regression rather than execution.

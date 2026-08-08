@@ -582,6 +582,12 @@ wEnemyMon1Moves        equ 0xD8AB
 wEnemyMon1PP           equ 0xD8C0   ; enemy party struct base 0xD8A3 + MON_PP (0x1D); used by IncrementMovePP (mirror_move.asm)
 
 ; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
+; ChangeMonPic staging (pret animations.asm). Golden 00:cee9/00:ceea — the same
+; $CEE9/$CEEA shared scratch lane as wHPBarMaxHP / wEvoOldSpecies / wBuffer /
+; wTownMapCoords above, unioned in pret exactly as here; a mon-pic change and an
+; HP-bar update are never live at once.
+wChangeMonPicEnemyTurnSpecies  equ 0xCEE9
+wChangeMonPicPlayerTurnSpecies equ 0xCEEA
 wHPBarMaxHP            equ 0xCEE9   ; word
 wHPBarOldHP            equ 0xCEEB   ; word
 wHPBarNewHP            equ 0xCEED   ; word

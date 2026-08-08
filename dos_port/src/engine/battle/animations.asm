@@ -91,15 +91,16 @@ extern LoadScreenTilesFromBuffer1     ; src/home/tilemap.asm
 extern SaveScreenTilesToBuffer2       ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2     ; src/home/tilemap.asm
 extern Delay3                         ; src/home/palettes.asm
+extern GetMonHeader                   ; src/home/pokemon.asm
+extern LoadFrontSpriteByMonIndex      ; src/home/pokemon.asm — ESI = tilemap dest
+extern LoadMonBackPic                 ; src/engine/battle/init_battle.asm
+extern RunPaletteCommand              ; src/home/palettes.asm — BH = command id
 extern PublishProjectedOAM            ; src/engine/gfx/sprite_oam.asm — wShadowOAM -> canvas at (EAX,EBX)
 extern g_obj_clip                     ; src/ppu/ppu.asm — OBJ clip rectangle (x0,y0,x1,y1 dwords)
 extern g_row_xoff_on                  ; src/ppu/ppu.asm — wavy-screen per-row HAL enable
 extern g_row_xoff                     ; src/ppu/ppu.asm — signed per-screen-row BG X offset
 
 ; --- Dispatch targets still stubbed in src/engine/battle/core_stubs.asm ---
-extern AnimationFlashMonPic
-extern AnimationTransformMon
-extern AnimationFlashEnemyMonPic
 extern AnimationSubstitute
 extern TradeHidePokemon
 extern TradeShakePokeball
@@ -1878,6 +1879,87 @@ FallingObjects_InitMovementData:
 FallingObjects_InitialMovementData:
     db 0x00, 0x84, 0x06, 0x81, 0x02, 0x88, 0x01, 0x83, 0x05, 0x89
     db 0x09, 0x80, 0x07, 0x87, 0x03, 0x82, 0x04, 0x85, 0x08, 0x86
+
+; ===========================================================================
+; CHANGEMONPIC FAMILY — pret animations.asm (battle_animations Stage 5c).
+; Redraws a battler's pic as a different species. Transform uses it directly;
+; AnimationFlashMonPic re-draws the SAME species, which is what makes the pic
+; flash. Landing it also unblocks Func_79929.
+; ===========================================================================
+
+global AnimationFlashMonPic
+AnimationFlashMonPic:
+; Flashes the mon's sprite on and off
+    mov al, [ebp + wBattleMonSpecies]
+    mov [ebp + wChangeMonPicPlayerTurnSpecies], al
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [ebp + wChangeMonPicEnemyTurnSpecies], al
+    jmp ChangeMonPic
+
+global AnimationFlashEnemyMonPic
+AnimationFlashEnemyMonPic:
+; Flashes the enemy mon's sprite on and off
+    mov esi, AnimationFlashMonPic
+    jmp CallWithTurnFlipped
+
+global AnimationTransformMon
+AnimationTransformMon:
+; Redraws this mon's sprite as the back/front sprite of the opposing mon.
+; Used in Transform.
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [ebp + wChangeMonPicPlayerTurnSpecies], al
+    mov al, [ebp + wBattleMonSpecies]
+    mov [ebp + wChangeMonPicEnemyTurnSpecies], al
+    ; falls through to ChangeMonPic, as pret does
+
+global ChangeMonPic
+ChangeMonPic:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+    mov al, [ebp + wChangeMonPicEnemyTurnSpecies]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wCurSpecies], al
+    mov byte [ebp + wSpriteFlipped], 0
+    call GetMonHeader
+    mov esi, BCOORD(12, 0)                   ; PROJ — pret hlcoord 12, 0
+    call LoadFrontSpriteByMonIndex
+    jmp short .done
+.playerTurn:
+    mov al, [ebp + wBattleMonSpecies2]
+    push eax                                 ; push af
+    mov al, [ebp + wChangeMonPicPlayerTurnSpecies]
+    mov [ebp + wBattleMonSpecies2], al
+    mov [ebp + wCurSpecies], al
+    call GetMonHeader
+    call LoadMonBackPic                      ; pret: predef LoadMonBackPic
+    xor al, al                               ; TILEMAP_MON_PIC
+    call GetTileIDList
+    call GetMonSpriteTileMapPointerFromRowCount
+    call CopyPicTiles
+    pop eax                                  ; pop af
+    mov [ebp + wBattleMonSpecies2], al
+.done:
+    mov bh, SET_PAL_BATTLE                   ; ld b, SET_PAL_BATTLE
+    jmp RunPaletteCommand
+
+global Func_79929
+Func_79929:
+    mov esi, wPlayerMonMinimized
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+    mov esi, wEnemyMonMinimized
+.playerTurn:
+    mov al, [ebp + esi]
+    test al, al
+    jz .notMinimized
+    call AnimationMinimizeMon
+    ret
+.notMinimized:
+    call AnimationFlashMonPic
+    call AnimationShowMonPic
+    ret
 
 ; ===========================================================================
 ; BALL-TOSS PATH — pret animations.asm (battle_animations Stage 5b).

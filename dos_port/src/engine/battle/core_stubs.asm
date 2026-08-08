@@ -119,11 +119,6 @@ global AnimationSubstitute
 AnimationSubstitute:
     ret
 
-; STUB{class=temporary; label=AnimationTransformMon; pret=engine/battle/animations.asm:AnimationTransformMon; behavior=leave the mon pic unchanged instead of redrawing as the transformed species; evidence=no battle pic reload path for Transform yet, transform.asm runs the faithful stat/move copies around it; lifetime=until the Transform pic reload lands}
-global AnimationTransformMon
-AnimationTransformMon:
-    ret
-
 ; STUB{class=temporary; label=HideSubstituteShowMonAnim; pret=engine/battle/animations.asm:HideSubstituteShowMonAnim; behavior=leave the pics unchanged instead of swapping the Substitute doll pic for the mon pic; evidence=no Substitute pic support in the port yet; lifetime=until Substitute pic VRAM support lands}
 global HideSubstituteShowMonAnim
 HideSubstituteShowMonAnim:
@@ -157,16 +152,6 @@ ReshowSubstituteAnim:
 ; SetAnimationBGPalette, FlashScreenLongDelay, the FlashScreenLong* tables and
 ; the unreferenced AnimationUnusedPalette1-4 / FlashScreenUnused.
 
-; STUB{class=temporary; label=AnimationFlashMonPic; pret=engine/battle/animations.asm:AnimationFlashMonPic; behavior=return instead of flashing the mon pic palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
-global AnimationFlashMonPic
-AnimationFlashMonPic:
-    ret
-
-; STUB{class=temporary; label=AnimationFlashEnemyMonPic; pret=engine/battle/animations.asm:AnimationFlashEnemyMonPic; behavior=return instead of flashing the enemy mon pic palette; evidence=real body arrives in a later battle-animations stage, the interpreter is faithful without it and offscreen anim OAM stays hidden by g_obj_clip; lifetime=until Stage 3 flash family lands}
-global AnimationFlashEnemyMonPic
-AnimationFlashEnemyMonPic:
-    ret
-
 ; AnimationShakeScreen, AnimationBlinkEnemyMon: RETIRED 2026-08-08 — real bodies
 ; in animations.asm (Stage 3b shake family / blink wrapper chain), along with
 ; AnimationShakeScreen{Vertically,HorizontallyFast,HorizontallySlow},
@@ -179,6 +164,10 @@ AnimationFlashEnemyMonPic:
 
 ; FlashScreenEveryFourFrameBlocks, FlashScreenEveryEightFrameBlocks:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
+
+; AnimationFlashMonPic, AnimationFlashEnemyMonPic, AnimationTransformMon,
+; ChangeMonPic, Func_79929: RETIRED 2026-08-08 — real bodies in animations.asm
+; (Stage 5c ChangeMonPic family).
 
 ; TossBallAnimation, DoBallTossSpecialEffects, DoBallShakeSpecialEffects,
 ; DoPoofSpecialEffects: RETIRED 2026-08-08 — real bodies in animations.asm

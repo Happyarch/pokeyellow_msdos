@@ -466,13 +466,14 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `AnimationLeavesFalling`, `AnimationPetalsFalling`,
       `AnimationFallingObjects` + `FallingObjects_*` (6 labels + 2 data),
       `AnimationWaterDropletsEverywhere` + `_AnimationWaterDroplets`.
-- [~] HUD shake + OAM helpers: `AnimationShakeEnemyHUD`,
+- [x] HUD shake + OAM helpers: `AnimationShakeEnemyHUD`,
       `ShakeEnemyHUD_ShakeBG`, `ShakeEnemyHUD_WritePlayerMonPicOAM`,
       `BattleAnimWriteOAMEntry`, `InitMultipleObjectsOAM`, `Func_79929`.
       **DONE 2026-08-08 for five of the six** (`BattleAnimWriteOAMEntry` /
       `InitMultipleObjectsOAM` in Stage 4e; the three HUD-shake labels in 4g).
-      `Func_79929` is genuinely BLOCKED: its body calls `AnimationFlashMonPic`
-      -> `ChangeMonPic`, which Stage 5 owns. Left stubbed on purpose.
+      `Func_79929` was genuinely BLOCKED on `AnimationFlashMonPic` ->
+      `ChangeMonPic`; **both landed in Stage 5c (2026-08-08), so `Func_79929` is
+      now real and this box is fully closed.**
       **`AnimationShakeEnemyHUD`'s mechanism does not transfer, and this is the
       one Stage 4 decision a reviewer should look at first.** On the GB the
       battle screen IS the window layer, so pret slides the window down to cover
