@@ -49,6 +49,11 @@ FILES = {
         ("str_greatly_rose", [[0x4C], "greatly rose!", [0x58]]),
         ("str_fell", [" fell!", [0x58]]),
         ("str_greatly_fell", [[0x4C], "greatly fell!", [0x58]]),
+        # pret engine/battle/core.asm:SevenSpacesText — `ds PIC_WIDTH, " "` + "@".
+        # SlideDownFaintedMonPic PlaceStrings it to blank the row the pic just
+        # vacated. A rendered glyph run is Tier-1 data, so it is generated here
+        # rather than hand-encoded (PIC_WIDTH = 7).
+        ("SevenSpacesText", [" " * 7, [0x50]]),
     ],
     "effectiveness_runtime_strings.inc": [
         ("SuperEffectiveText", [[0x00], "It's super", [0x4F], "effective!", [0x58]]),

@@ -6605,3 +6605,43 @@ both run clean headless and produce OAM states distinct from the `POUND`
 baseline — 9 differing entries for SURF, **16** for RAZOR_LEAF, consistent with
 a leaf animation occupying more sprites. That is execution evidence; it is
 **not** placement evidence, and no visual check has been made.
+
+---
+
+## 2026-08-08 — battle animations Stage 4g: SlideDownFaintedMonPic
+
+pret `engine/battle/core.asm:SlideDownFaintedMonPic`. Body lands in the port's
+`core.asm` mirror (pret's own file), and the `core_stubs.asm` ret-stub retires.
+This is the first Stage 4 change on a **live production path** — both faint
+branches call it unconditionally.
+
+**`SevenSpacesText` is GENERATED, not hand-encoded.** pret writes it as
+`ds PIC_WIDTH, ' '` + `db "@"`. Seven space glyphs are a rendered glyph run and
+therefore Tier-1 data, so it goes through `gen_runtime_strings.py` into
+`assets/battle_core_runtime_strings.inc` (which `core.asm` already `%include`s)
+rather than a `db 0x7F, …` in the assembly. Emitted:
+`db 0x7F x7, 0x50`.
+
+**The two call sites now set up coordinates, which they previously did not.**
+The stub era left them bare with a comment saying "the stub owns its own no-op
+geometry"; both now do the projection: `BCOORD(1,10)`/`BCOORD(1,11)` on the
+player-faint branch (pret `hlcoord 1, 10` / `decoord 1, 11`) and
+`BCOORD(12,5)`/`BCOORD(12,6)` on the enemy-faint branch (pret `hlcoord 12, 5` /
+`decoord 12, 6`), `; PROJ` tagged. The stale "no coordinate setup" comment is
+deleted rather than left to mislead.
+
+Note the row walk here goes **upward** (`ld bc, -SCREEN_WIDTH`), unlike
+`_AnimationSlideMonUp`, and pret pops `de`/`hl` in the normal order — there is
+**no** swap in this one. Easy to get wrong by pattern-matching the other slide.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes; faithdiff
+**clean, no findings** (3 pret / 3 port calls all matched, 1 store matched);
+`pgate.sh` 17/17 with per-scenario mask-hit counts byte-identical to the 4f run
+— including `battle_faint`, `trainer_battle_win` and `trainer_battle_loss`,
+which all traverse this routine now that it does real work.
+
+Caveat on what that last point proves: `battle_faint` is a **datastruct**-class
+scenario, so its tilemap/VRAM/OAM are deliberately not compared. What is
+witnessed is that the slide runs without disturbing the WRAM the flow is pinned
+on, and that `wStatusFlags5` is saved and restored correctly around it. The
+slide's *appearance* is unverified.

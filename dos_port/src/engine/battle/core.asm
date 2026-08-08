@@ -254,7 +254,7 @@ extern IsItemInBag                     ; src/home/map_objects.asm
 extern PrintEmptyString                ; battle_exp_stubs.asm (STUB)
 extern RunPaletteCommand               ; home/palettes.asm
 extern SkipFixedLengthTextEntries      ; home/array.asm
-extern SlideDownFaintedMonPic          ; core_stubs.asm (STUB)
+
 
 ; ---------------------------------------------------------------------------
 ; MainInBattleLoop — pret engine/battle/core.asm:MainInBattleLoop (line 289).
@@ -4298,7 +4298,10 @@ RemoveFaintedPlayerMon:
     mov [ebp + wEnemyBideAccumulatedDamage + 1], al
     mov [ebp + wBattleMonStatus], al
     call ReadPlayerMonCurHPAndStatus
-    call SlideDownFaintedMonPic          ; ANIMATION=OFF
+    ; pret `hlcoord 1, 10 / decoord 1, 11 / call SlideDownFaintedMonPic`
+    mov esi, BCOORD(1, 10)               ; PROJ — pret hlcoord 1, 10
+    mov edx, BCOORD(1, 11)               ; PROJ — pret decoord 1, 11
+    call SlideDownFaintedMonPic
     mov byte [ebp + wBattleResult], 1    ; player lost (overwritten on later continue)
     ; When both mons faint and the enemy faint was detected first, don't print /
     ; cry (pret: called by HandleEnemyMonFainted with wInHandlePlayerMonFainted==0).
@@ -5753,10 +5756,10 @@ FaintEnemyPokemon:
     mov byte [ebp + wPlayerUsedMove], 0       ; ld hl,wPlayerUsedMove / ld[hli],a
     mov byte [ebp + wEnemyUsedMove], 0        ; ld[hl],a
 
-    ; ANIMATION=OFF: pret `hlcoord 12,5 / decoord 12,6 / call SlideDownFaintedMonPic`
-    ; is a pure pixel-slide graphics effect. Call site kept faithful (extern, called
-    ; unconditionally as pret does) but no coordinate setup — the stub owns its own
-    ; no-op geometry until the animation layer exists.
+    ; pret `hlcoord 12,5 / decoord 12,6 / call SlideDownFaintedMonPic`. The real
+    ; body landed in battle_animations Stage 4g, so the coordinate setup is live.
+    mov esi, BCOORD(12, 5)               ; PROJ — pret hlcoord 12, 5
+    mov edx, BCOORD(12, 6)               ; PROJ — pret decoord 12, 6
     call SlideDownFaintedMonPic
 
     ; ClearScreenArea IS real: pret `hlcoord 0,0 / lb bc,4,11`.
@@ -6461,4 +6464,51 @@ HandleExplodingAnimation:
     mov al, MEGA_PUNCH_ANIM
     jmp PlayMoveAnimation
 .ret:
+    ret
+
+; ---------------------------------------------------------------------------
+; SlideDownFaintedMonPic — pret engine/battle/core.asm. Slides the fainted mon's
+; pic off the screen one row at a time, blanking the row it vacates.
+; battle_animations Stage 4g; the core_stubs.asm ret-stub is retired.
+;
+; In: ESI = pic bottom-row source (pret hl), EDX = one row below it (pret de).
+;     Both are BCOORD-projected by the caller — see the ; PROJ tags there.
+; ---------------------------------------------------------------------------
+global SlideDownFaintedMonPic
+SlideDownFaintedMonPic:
+    mov al, [ebp + wStatusFlags5]
+    push eax                                 ; push af
+    or al, 1 << BIT_NO_TEXT_DELAY            ; set BIT_NO_TEXT_DELAY, a
+    mov [ebp + wStatusFlags5], al
+    mov bh, PIC_HEIGHT                       ; number of times to slide
+.slideStepLoop:                              ; each pass slides the mon down one row
+    push ebx
+    push edx
+    push esi
+    mov bh, PIC_HEIGHT - 1                   ; number of rows
+.rowLoop:
+    push ebx
+    push esi
+    push edx
+    mov ebx, PIC_WIDTH                       ; ld bc, PIC_WIDTH
+    call CopyData
+    pop edx
+    pop esi
+    sub esi, SCREEN_WIDTH                    ; ld bc, -SCREEN_WIDTH / add hl, bc
+    sub edx, SCREEN_WIDTH                    ; pret does the same via hl, then de = hl
+    pop ebx
+    dec bh
+    jnz .rowLoop
+    add esi, SCREEN_WIDTH                    ; stride, not a coordinate
+    mov eax, SevenSpacesText                 ; ld de, SevenSpacesText (flat string ptr)
+    call PlaceString
+    mov bl, 2
+    call DelayFrames
+    pop esi
+    pop edx
+    pop ebx
+    dec bh                                   ; 8-bit, as pret
+    jnz .slideStepLoop
+    pop eax                                  ; pop af
+    mov [ebp + wStatusFlags5], al
     ret

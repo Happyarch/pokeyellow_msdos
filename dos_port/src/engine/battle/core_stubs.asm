@@ -134,10 +134,8 @@ global ReshowSubstituteAnim
 ReshowSubstituteAnim:
     ret
 
-; STUB{class=temporary; label=SlideDownFaintedMonPic; pret=engine/battle/core.asm:SlideDownFaintedMonPic; behavior=return immediately instead of sliding the fainted mon pic off the screen row by row; evidence=ANIMATION=OFF layer, the HP bar has already drained to 0 in the faithful damage path (faint_switch.asm/faint_enemy.asm callers); lifetime=until the ANIMATION=OFF faint slide lands}
-global SlideDownFaintedMonPic
-SlideDownFaintedMonPic:
-    ret
+; SlideDownFaintedMonPic: RETIRED 2026-08-08 — real body in
+; src/engine/battle/core.asm (pret's own file), battle_animations Stage 4g.
 
 ; ===========================================================================
 ; Battle-animation dispatch-target link stubs (battle_animations Stage 2).

@@ -380,7 +380,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
 
 ### Stage 4 — mon-pic + OAM particle families
 
-- [~] Slides: `AnimationSlideMonUp/Down/Off`, `_AnimationSlideMonUp/Off`,
+- [x] Slides: `AnimationSlideMonUp/Down/Off`, `_AnimationSlideMonUp/Off`,
       `AnimationSlideEnemyMonOff`, `AnimationSlideMonDownAndHide`,
       `AnimationSlideMonHalfOff`; retire `SlideDownFaintedMonPic` stub (pret
       core.asm label — body lands per pret placement).
@@ -394,10 +394,12 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       (sym-measured; both land on pret's own union bytes, reproduced not
       introduced — see the notes in `gb_memmap.inc`).
       `AnimationSlideMonDownAndHide` CLOSED in Stage 4d (with `wTempPic` and
-      `CopyTempPicToMonPic`). STILL OPEN in this box: only the
-      `SlideDownFaintedMonPic` stub (pret `core.asm`; needs `PlaceString` + a
-      **generated** `SevenSpacesText`, since a rendered space run is Tier-1 data
-      and must not be hand-encoded).
+      `CopyTempPicToMonPic`). `SlideDownFaintedMonPic` CLOSED in Stage 4g: body
+      in the port's `core.asm` mirror, `SevenSpacesText` **generated** into
+      `assets/battle_core_runtime_strings.inc` via `gen_runtime_strings.py`, and
+      both faint call sites now do the `BCOORD` setup they had been skipping
+      while the stub "owned its own no-op geometry". faithdiff clean, no
+      findings. **This box is now closed.**
 - [x] Hide/show + tilemap helpers: `AnimationHideMonPic`,
       `AnimationHideEnemyMonPic`, `AnimationShowMonPic`,
       `AnimationShowEnemyMonPic`, `ClearMonPicFromTileMap`,
