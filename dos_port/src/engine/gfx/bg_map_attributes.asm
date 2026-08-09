@@ -25,9 +25,12 @@ bits 32
 
 global LoadBGMapAttributes
 global BGMapAttributesPointers
+global ApplyBGMapAttributes
+global g_bg_attr_table
 
 extern tile_pal, g_tilecache_dirty
 extern HandleBadgeFaceAttributes, HandlePartyHPBarAttributes  ; gfx_stubs.asm
+extern text_row_stride              ; home/text.asm — the live tilemap row stride
 
 ; Mirrors ppu.asm's file-local constant of the same name (rLCDC bit 4: tile data
 ; addressing mode). Kept in step with it deliberately — this routine must resolve
@@ -57,6 +60,19 @@ BGMapAttributesPointers:
     dd BGMapAttributes_WholeScreen
     dd BGMapAttributes_Unknown13
 
+section .bss
+; The ACTIVE attribute plane, and why it has to persist.
+;
+; pret's screens run RunPaletteCommand BEFORE drawing (the pokédex calls
+; SetPal_Pokedex, then DrawDexEntryOnScreen), which is correct on hardware
+; because the plane lives in VRAM bank 1 and colours whatever the screen draws
+; afterwards. A one-shot resolve at load time reads an empty tilemap and
+; publishes nothing. So the port keeps the active plane and re-resolves it every
+; frame, which reproduces the hardware's persistence.
+g_bg_attr_table:   resd 1      ; active BGMapAttributes_* table, 0 = none
+g_bg_attr_packet:  resd 1      ; its packet index, for the c==4 / c==5 handlers
+g_bg_attr_canvas:  resd 1      ; nonzero = also walk the projected canvas window
+
 section .text
 
 ; ---------------------------------------------------------------------------
@@ -85,6 +101,14 @@ LoadBGMapAttributes:
     cmp eax, BG_ATTR_TABLE_COUNT
     jae .done
     mov esi, [BGMapAttributesPointers + eax*4]
+
+    ; Record the plane so ApplyBGMapAttributes can re-resolve it every frame; see
+    ; the .bss block above for why one-shot resolution is not enough.
+    mov [g_bg_attr_table], esi
+    movzx eax, bl
+    mov [g_bg_attr_packet], eax
+    movzx eax, bh
+    mov [g_bg_attr_canvas], eax
 
     ; .apply_plane / .apply_canvas_plane both clobber EBX, and the canvas flag
     ; (BH) and packet index (BL) are still needed after them — keep a copy on the
@@ -191,12 +215,28 @@ BG_ATTR_STRIDE   equ 32                 ; the attribute plane's own row stride
     jbe .rows_ok
     mov ecx, GB_SCREEN_ROWS
 .rows_ok:
-    xor ebx, ebx                        ; EBX = current row
+    ; The canvas has TWO layouts and the port already tracks which one is live.
+    ; A full-screen takeover screen (trainer card, pokédex, options) draws
+    ; W_TILEMAP as a GB-SHAPED stride-20 scratch at origin (0,0); everything else
+    ; keeps the 40-wide canvas with the GB screen centered at (10,3). Reading
+    ; text_row_stride picks the right one instead of guessing per screen.
+    mov eax, [text_row_stride]
+    cmp eax, GB_SCREEN_COLS
+    je .stride20
+    mov esi, W_TILEMAP + 3 * SCREEN_WIDTH + 10   ; centered on the 40-wide canvas
+    mov eax, SCREEN_WIDTH
+    jmp .have_layout
+.stride20:
+    mov esi, W_TILEMAP                           ; GB-shaped scratch, 1:1
+    mov eax, GB_SCREEN_COLS
+.have_layout:
+    ; EAX (stride) and ESI (origin) cannot stay live: the column loop below uses
+    ; EAX for the tile id. Turn them into a running cursor plus a stack-held row
+    ; advance, so nothing the inner loop touches is load-bearing.
+    mov edi, esi                        ; EDI = first row's start cell
+    sub eax, GB_SCREEN_COLS
+    push eax                            ; [esp] = stride - 20, the row advance
 .row_loop:
-    ; W_TILEMAP cell for GB (0, row) = (row + 3) * SCREEN_WIDTH + 10
-    lea edi, [ebx + 3]
-    imul edi, edi, SCREEN_WIDTH
-    add edi, W_TILEMAP + 10
     push ecx
     mov ecx, GB_SCREEN_COLS
 .col_loop:
@@ -207,19 +247,91 @@ BG_ATTR_STRIDE   equ 32                 ; the attribute plane's own row stride
     jae .canvas_slot
     add eax, 256
 .canvas_slot:
-    push ebx
     movzx ebx, byte [edx]
     and bl, 7
     mov [tile_pal + eax], bl
-    pop ebx
     inc edi
     inc edx
     dec ecx
     jnz .col_loop
     pop ecx
     add edx, BG_ATTR_STRIDE - GB_SCREEN_COLS   ; skip the 12 off-screen columns
-    inc ebx
+    add edi, [esp]                             ; advance to the next row's start
     dec ecx
     jnz .row_loop
+    add esp, 4
     pop esi
     ret
+
+; ---------------------------------------------------------------------------
+; ApplyBGMapAttributes — re-resolve the active plane. Port-only; no pret
+; counterpart, because on hardware the plane simply sits in VRAM bank 1 and the
+; PPU re-reads it every frame. This is that re-read.
+;
+; Called once per frame from the DelayFrame pipeline, before render_bg consumes
+; tile_cache. Arms g_tilecache_dirty only when a tile_pal byte actually changed,
+; so a steady screen costs one walk and no re-decode.
+;
+; With no active plane (the overworld and battle, i.e. every perf-critical
+; screen) this is a load, a test and a ret.
+;
+; In:  EBP = GB memory base. Out: all registers preserved.
+; ---------------------------------------------------------------------------
+ApplyBGMapAttributes:
+    mov esi, [g_bg_attr_table]
+    test esi, esi
+    jz .nothing
+    pushad
+    ; Snapshot tile_pal so we can tell whether this frame's resolution changed
+    ; anything; re-decoding 384 tiles every frame would undo the compositor's
+    ; dirty-skip on any screen with a plane.
+    mov esi, tile_pal
+    mov edi, tile_pal_shadow
+    mov ecx, TILE_PAL_BYTES / 4
+    rep movsd
+
+    mov esi, [g_bg_attr_table]
+    mov ecx, [esi]
+    mov edx, [esi + 4]
+    mov edi, GB_TILEMAP0
+    call LoadBGMapAttributes.apply_plane
+
+    mov esi, [g_bg_attr_table]
+    mov ecx, [esi]
+    mov edx, [esi + 8]
+    mov edi, GB_TILEMAP1
+    call LoadBGMapAttributes.apply_plane
+
+    cmp dword [g_bg_attr_canvas], 0
+    je .no_canvas
+    mov esi, [g_bg_attr_table]
+    mov ecx, [esi]
+    mov edx, [esi + 4]
+    call LoadBGMapAttributes.apply_canvas_plane
+.no_canvas:
+
+    mov eax, [g_bg_attr_packet]
+    cmp al, 4
+    jne .not_trainer_card
+    call HandleBadgeFaceAttributes
+    jmp .compare
+.not_trainer_card:
+    cmp al, 5
+    jne .compare
+    call HandlePartyHPBarAttributes
+
+.compare:
+    mov esi, tile_pal
+    mov edi, tile_pal_shadow
+    mov ecx, TILE_PAL_BYTES / 4
+    repe cmpsd
+    je .unchanged
+    mov byte [g_tilecache_dirty], 1     ; the palette band moved → re-decode
+.unchanged:
+    popad
+.nothing:
+    ret
+
+section .bss
+TILE_PAL_BYTES equ 384
+tile_pal_shadow: resb TILE_PAL_BYTES

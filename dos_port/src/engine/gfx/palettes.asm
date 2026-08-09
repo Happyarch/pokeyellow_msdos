@@ -49,7 +49,7 @@ extern tile_pal, g_tilecache_dirty
 extern g_pal_dirty, bg_slot_pal, obj_slot_pal
 extern mon_pal_table, battle_slot_pal, battle_tile_pal, command_pal_table
 extern RefreshMonFrontRepaintPalette
-extern LoadBGMapAttributes          ; engine/gfx/bg_map_attributes.asm
+extern LoadBGMapAttributes, g_bg_attr_table  ; engine/gfx/bg_map_attributes.asm
 
 section .text
 
@@ -124,6 +124,7 @@ SetPal_Battle:
     mov edi, obj_slot_pal
     mov ecx, 4
     rep movsb
+    mov dword [g_bg_attr_table], 0   ; battle publishes battle_tile_pal itself
     mov esi, battle_tile_pal
     mov edi, tile_pal
     mov ecx, 384
@@ -164,15 +165,21 @@ SetPal_Screen:
     ; commands) is complete here and maps to 0 in the table below. The rest carry
     ; a real per-cell plane and overlay it on top of the flood.
     cmp edx, SET_PAL_ATTR_TABLE_LEN
-    jae .no_attributes
+    jae .clear_attributes
     movzx ebx, byte [set_pal_attr_table + edx]
     test bl, bl
-    jz .no_attributes
+    jz .clear_attributes
     mov bh, bl
     and bh, SET_PAL_ATTR_CANVAS             ; bit 7: screen lives on the projected canvas
     and bl, ~SET_PAL_ATTR_CANVAS & 0xff     ; low bits: packet index
     call LoadBGMapAttributes
-.no_attributes:
+    jmp .attributes_done
+.clear_attributes:
+    ; No plane for this command (or an out-of-range id): drop the previous
+    ; screen's, so ApplyBGMapAttributes stops re-resolving it. The zero-flood
+    ; above already left tile_pal in the all-palette-0 state this implies.
+    mov dword [g_bg_attr_table], 0
+.attributes_done:
     mov byte [g_tilecache_dirty], 1
     mov byte [g_pal_dirty], 1
     popad
@@ -199,8 +206,8 @@ set_pal_attr_table:
     db 0                                    ; 0  SET_PAL_BATTLE_BLACK  — SetPal_BattleBlack owns it
     db 0                                    ; 1  SET_PAL_BATTLE        — SetPal_Battle owns it
     db 0                                    ; 2  SET_PAL_TOWN_MAP      → WholeScreen (= the flood)
-    db 10                                   ; 3  SET_PAL_STATUS_SCREEN → StatusScreen
-    db 9                                    ; 4  SET_PAL_POKEDEX       → Pokedex
+    db 10 | SET_PAL_ATTR_CANVAS             ; 3  SET_PAL_STATUS_SCREEN → StatusScreen (canvas +10/+3)
+    db 9 | SET_PAL_ATTR_CANVAS              ; 4  SET_PAL_POKEDEX       → Pokedex (stride-20 scratch)
     db 8                                    ; 5  SET_PAL_SLOTS         → Slots
     db 7                                    ; 6  SET_PAL_TITLE_SCREEN  → TitleScreen
     db 6 | SET_PAL_ATTR_CANVAS              ; 7  SET_PAL_NIDORINO_INTRO→ NidorinoIntro (canvas)
@@ -209,7 +216,7 @@ set_pal_attr_table:
     db 5                                    ; 10 SET_PAL_PARTY_MENU    → PartyMenu
     db 0                                    ; 11 SET_PAL_POKEMON_WHOLE_SCREEN → WholeScreen (= the flood)
     db 3 | SET_PAL_ATTR_CANVAS              ; 12 SET_PAL_GAME_FREAK_INTRO → GameFreakIntro (canvas)
-    db 4                                    ; 13 SET_PAL_TRAINER_CARD  → TrainerCard
+    db 4 | SET_PAL_ATTR_CANVAS              ; 13 SET_PAL_TRAINER_CARD  → TrainerCard (stride-20 scratch)
     db 0                                    ; 14 SET_PAL_SURFING_PIKACHU_TITLE → WholeScreen (= the flood)
     db 0                                    ; 15 SET_PAL_SURFING_PIKACHU_MINIGAME → WholeScreen (= the flood)
 SET_PAL_ATTR_TABLE_LEN equ $ - set_pal_attr_table
@@ -256,6 +263,7 @@ SetPal_Overworld:
 .route:
     mov al, PAL_ROUTE
 .apply:
+    mov dword [g_bg_attr_table], 0   ; the overworld has no attribute plane
     mov ecx, 8
     mov edi, bg_slot_pal
     rep stosb

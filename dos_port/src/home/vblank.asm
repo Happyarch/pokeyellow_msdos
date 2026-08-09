@@ -41,6 +41,7 @@ extern wait_vblank
 extern wait_pit_tick
 extern audio_tick            ; src/audio/audio_hal.asm — pret VBlank audio block
 extern commit_palette
+extern ApplyBGMapAttributes  ; engine/gfx/bg_map_attributes.asm
 extern render_bg
 extern render_window
 extern g_windows
@@ -207,6 +208,11 @@ DelayFrame:
     ; battle). InitBattle zeroes that pointer (+ SCX/SCY), so the battle screen is
     ; just the full-canvas W_TILEMAP rendered here. (Wave-2 Stage 1a: replaced the
     ; Stage-0.5 clear_backbuffer_battle + centered-window approach.)
+    ; Re-resolve the active CGB attribute plane before the compositor consumes
+    ; tile_cache. pret's screens set their palette BEFORE drawing, relying on the
+    ; VRAM plane to colour whatever is drawn after; this is that persistence.
+    ; No-op (a load and a test) whenever no plane is active.
+    call ApplyBGMapAttributes
     call render_bg
     PERF_MARK PERF_BG
     ; DIVERGENCE FROM GB HARDWARE (intentional, and now opt-out): on real DMG/CGB,
