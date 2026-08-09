@@ -233,6 +233,17 @@ Acceptance criteria:
       `dos_port/tools/colorize.py`, `assets/colors/palettes.{json,inc}`, runtime
       stages R1–R3 all ticked). Remaining Phase 5 work is per-asset palette
       authoring, not tooling.
+- [~] CGB BG attribute planes: `data/cgb/bg_map_attributes.asm` is consumed and
+      `LoadBGMapAttributes` is ported (2026-08-09). The port resolves the
+      per-cell plane to its per-tile-id `tile_pal` and re-applies it every frame,
+      which is what the hardware's VRAM-bank-1 plane does. Live on the title,
+      status, pokédex-entry and trainer-card screens; the Yellow intro's
+      `YellowIntroPaletteAction` is ported too. **Battle needs no per-cell
+      compositor layer** — measured: its only colliding tile is the HP-bar
+      segment, already solved by the existing `$C0-$C8` gauge clones. Left: the
+      two per-cell runtime handlers (`HandleBadgeFaceAttributes`,
+      `HandlePartyHPBarAttributes`, both stubs) and the two inline intro
+      attribute boxes, all of which need a real per-cell layer.
 - [ ] Fullscreen scaling options: 2× nearest-neighbor (default), integer scale options
 - [ ] Packaging: documentation, DOSBox config example (a working one already
       exists at `dos_port/dosbox-x.conf`, used by `dos_port/run`), 86Box config

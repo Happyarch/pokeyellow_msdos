@@ -92,7 +92,7 @@ extern PrintMonType                                  ; engine/battle/print_type.
 extern GetHealthBarColor
 extern DrawHPBar                                     ; home/pokemon.asm — ESI=dest, DH=tiles, DL=px, BL=sliver
 extern GetHPBarLength                                ; engine/gfx/hp_bar.asm — BX=hp, DX=maxhp → DL=px
-extern RunPaletteCommand                             ; palette Phase 5 (no-op)
+extern RunPaletteCommand                             ; home/palettes.asm — LIVE
 ; screen / frame helpers
 extern GBPalWhiteOutWithDelay3
 extern GBPalNormal
@@ -226,9 +226,11 @@ StatusScreen:
     mov esi, scoord(11, 3)
     call DrawHP                                      ; leaves DL = HP-bar pixel length
     mov esi, wStatusScreenHPBarColor
-    call GetHealthBarColor                           ; cosmetic (palette Phase 5)
+    call GetHealthBarColor                           ; feeds wStatusScreenHPBarColor
     mov bh, SET_PAL_STATUS_SCREEN
-    call RunPaletteCommand                           ; no-op (Phase 5)
+    call RunPaletteCommand                           ; LIVE: publishes the status
+                                                     ; screen's slots AND its
+                                                     ; BGMapAttributes plane
 
     ; --- status condition at (16,6), else "OK" ---
     mov esi, scoord(16, 6)

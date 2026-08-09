@@ -224,7 +224,7 @@ YellowIntroScene1:
 
 ; Scene 4 — "running Pikachu 2": pump the music, lay out the framed BG (Func_f9e5f),
 ; spawn animated object $2, reset the DMG palettes, arm a 128-frame timer, advance.
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene4; behavior=the hOnCGB branch that writes the CGB VRAM bank-1 attribute map (rVBK, the 6x6 tile-attribute box at $98d4) is omitted, the port always takes the DMG path; evidence=the port renders DMG shades through the VGA compositor and has no CGB tile-attribute plane, hOnCGB is 0-equivalent, this is the Phase-5 CGB palette boundary; lifetime=Phase-5 CGB palette translation}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene4; behavior=the hOnCGB branch that writes the CGB VRAM bank-1 attribute map (rVBK, the 6x6 tile-attribute box at $98d4) is omitted, so those 36 cells take the scene's palette instead of their own; evidence=this is a PER-CELL attribute write with no table behind it, and the port resolves attributes per TILE ID (tile_pal, engine/gfx/bg_map_attributes.asm) so a box covering tiles that also appear outside it cannot be expressed, unlike the table-driven planes which are collision-free and ARE ported; lifetime=retire with a per-cell attribute layer in the compositor}
 YellowIntroScene4:
     call YellowIntro_BlankPalsDelay2AndDisableLCD
     mov bl, 0x5                                     ; ld c, $5
@@ -652,7 +652,7 @@ YellowIntroScene2:
 ; at GB (col 20, row 6), authored at the cinematic origin. Col 20 is off the right
 ; of the visible 20-col area at SCX=0; scene 3 scrolls the BG right to bring it in.
 ;
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene2_PlaceGraphic; behavior=the hOnCGB branch that writes the CGB VRAM bank-1 attribute map is omitted, the port always takes the DMG path; evidence=the port renders DMG shades through the VGA compositor and has no CGB tile-attribute plane, the Phase-5 CGB palette boundary, same as YellowIntroScene4; lifetime=Phase-5 CGB palette translation}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene2_PlaceGraphic; behavior=the hOnCGB branch that writes the CGB VRAM bank-1 attribute map is omitted, so those cells take the scene's palette instead of their own; evidence=a PER-CELL attribute write with no table behind it, which the port's per-TILE-ID tile_pal cannot express, same boundary as YellowIntroScene4; lifetime=retire with a per-cell attribute layer in the compositor}
 YellowIntroScene2_PlaceGraphic:
     mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 20  ; ld hl, $98d4  (GB col 20, row 6 — off-screen right, revealed by scene 3's scroll)
     mov bh, 0x6                                    ; ld b, $6  (rows)
@@ -673,7 +673,7 @@ YellowIntroScene2_PlaceGraphic:
     add al, 0x10                                   ; add $10
     dec bh                                         ; dec b
     jnz .row
-    ; hOnCGB CGB attribute-map block omitted (Phase-5; port renders DMG shades)
+    ; hOnCGB CGB attribute-map block omitted — per-cell, see the DEVIATION above
     ret
 
 ; Scene 3 — hold the "running Pikachu 1" pose while scrolling the BG right to

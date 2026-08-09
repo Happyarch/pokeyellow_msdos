@@ -113,7 +113,8 @@ RestoreScreenTilesAndReloadTilePatterns:
     ;   next audited; the call is still dropped here)
     call LoadTextBoxTilePatterns
     ; TODO(unimplemented): call RunDefaultPaletteCommand
-    ;   (SGB/CGB palette command dispatch — Phase 5; town_map.asm stubs it too.
+    ;   (SGB/CGB palette command dispatch — the dispatcher itself is LIVE now
+    ;   (_RunPaletteCommand, engine/gfx/palettes.asm); town_map.asm stubs it too.
     ;   NOTE: since the mirror move this call's target is defined LOWER IN THIS
     ;   FILE, so the only thing still missing is the audit, not a symbol.)
     jmp Delay3                            ; jr Delay3 (tail-call)
@@ -136,7 +137,8 @@ Delay3:
 ; ---------------------------------------------------------------------------
 ; GBPalNormal — reset the BGP/OBP0 shadows to DMG normal palettes (pret writes
 ; only rBGP and rOBP0 here — OBP1 is untouched, as in pret).
-; CGB palette updates deferred to Phase 5.
+; The CGB side needs nothing here: commit_palette (boot/video.asm) re-derives the
+; DAC from these shadows every frame, so writing them IS the whole effect.
 ; ---------------------------------------------------------------------------
 GBPalNormal:
     mov byte [ebp + IO_BGP],  BGP_NORMAL
