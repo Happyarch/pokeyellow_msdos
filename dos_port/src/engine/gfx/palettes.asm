@@ -49,6 +49,7 @@ extern tile_pal, g_tilecache_dirty
 extern g_pal_dirty, bg_slot_pal, obj_slot_pal
 extern mon_pal_table, battle_slot_pal, battle_tile_pal, command_pal_table
 extern RefreshMonFrontRepaintPalette
+extern LoadBGMapAttributes          ; engine/gfx/bg_map_attributes.asm
 
 section .text
 
@@ -140,6 +141,8 @@ SetPal_Battle:
 SetPal_Screen:
     pushad
     movzx eax, al
+    mov edx, eax                            ; keep the command id; EDX survives the
+                                            ; rep movsb/stosb below (they use ESI/EDI/ECX/AL)
     shl eax, 2
     mov esi, command_pal_table
     add esi, eax
@@ -155,10 +158,62 @@ SetPal_Screen:
     mov edi, tile_pal
     mov ecx, 384
     rep stosb
+    ; The zero-flood above already IS BlkPacket_WholeScreen's attribute plane,
+    ; which is all zeroes — so every command pret pairs with BlkPacket_WholeScreen
+    ; (GENERIC, TOWN_MAP, OVERWORLD, POKEMON_WHOLE_SCREEN, both Pikachu's Beach
+    ; commands) is complete here and maps to 0 in the table below. The rest carry
+    ; a real per-cell plane and overlay it on top of the flood.
+    cmp edx, SET_PAL_ATTR_TABLE_LEN
+    jae .no_attributes
+    movzx ebx, byte [set_pal_attr_table + edx]
+    test bl, bl
+    jz .no_attributes
+    mov bh, bl
+    and bh, SET_PAL_ATTR_CANVAS             ; bit 7: screen lives on the projected canvas
+    and bl, ~SET_PAL_ATTR_CANVAS & 0xff     ; low bits: packet index
+    call LoadBGMapAttributes
+.no_attributes:
     mov byte [g_tilecache_dirty], 1
     mov byte [g_pal_dirty], 1
     popad
     ret
+
+; SET_PAL_* command id → BGMapAttributesPointers index (pret's `c`, 1-based;
+; 0 = no attribute plane). pret reaches these through
+; TranslatePalPacketToBGMapAttributes, which matches the BLK packet pointer each
+; SetPal_* hands to RunPaletteCommand; this table is that match resolved ahead of
+; time, since the port's SetPal_Screen dispatches on the command id directly.
+; Derived from pret engine/gfx/palettes.asm's SetPal_* bodies:
+;   SET_PAL_BATTLE(1)->BlkPacket_Battle is handled by SetPal_Battle's own
+;   battle_tile_pal path and is deliberately absent here.
+; Bit 7 marks a screen the port draws on its 40x25 canvas under the uniform
+; +10 col / +3 row GB-centered projection (docs/ui_projection.md), rather than
+; through a window over GB_TILEMAP0/1. The title screen renders through the
+; window path and so does NOT set it; the copyright/Oak cinematics draw onto the
+; canvas and do. Screens with per-element anchoring must never set it — there is
+; no cell-for-cell mapping to read them at.
+SET_PAL_ATTR_CANVAS equ 0x80
+
+section .data
+set_pal_attr_table:
+    db 0                                    ; 0  SET_PAL_BATTLE_BLACK  — SetPal_BattleBlack owns it
+    db 0                                    ; 1  SET_PAL_BATTLE        — SetPal_Battle owns it
+    db 0                                    ; 2  SET_PAL_TOWN_MAP      → WholeScreen (= the flood)
+    db 10                                   ; 3  SET_PAL_STATUS_SCREEN → StatusScreen
+    db 9                                    ; 4  SET_PAL_POKEDEX       → Pokedex
+    db 8                                    ; 5  SET_PAL_SLOTS         → Slots
+    db 7                                    ; 6  SET_PAL_TITLE_SCREEN  → TitleScreen
+    db 6 | SET_PAL_ATTR_CANVAS              ; 7  SET_PAL_NIDORINO_INTRO→ NidorinoIntro (canvas)
+    db 0                                    ; 8  SET_PAL_GENERIC       → WholeScreen (= the flood)
+    db 0                                    ; 9  SET_PAL_OVERWORLD     → WholeScreen (= the flood)
+    db 5                                    ; 10 SET_PAL_PARTY_MENU    → PartyMenu
+    db 0                                    ; 11 SET_PAL_POKEMON_WHOLE_SCREEN → WholeScreen (= the flood)
+    db 3 | SET_PAL_ATTR_CANVAS              ; 12 SET_PAL_GAME_FREAK_INTRO → GameFreakIntro (canvas)
+    db 4                                    ; 13 SET_PAL_TRAINER_CARD  → TrainerCard
+    db 0                                    ; 14 SET_PAL_SURFING_PIKACHU_TITLE → WholeScreen (= the flood)
+    db 0                                    ; 15 SET_PAL_SURFING_PIKACHU_MINIGAME → WholeScreen (= the flood)
+SET_PAL_ATTR_TABLE_LEN equ $ - set_pal_attr_table
+section .text
 
 ; Faithful SetPal_Overworld palette choice from pret engine/gfx/palettes.asm.
 ; The port has no SGB attribute packets, so slot 0 becomes the whole-map band;

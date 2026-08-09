@@ -375,6 +375,8 @@ GAME_SRCS := \
     src/data/sprite_anims/intro_oam.asm \
     src/engine/gfx/mon_icons.asm \
     src/engine/gfx/palettes.asm \
+    src/engine/gfx/bg_map_attributes.asm \
+    src/engine/gfx/gfx_stubs.asm \
     src/engine/gfx/load_pokedex_tiles.asm \
     src/home/load_font.asm \
     src/home/text.asm \
@@ -2656,6 +2658,12 @@ assets/colors/palettes.inc: tools/generators/gen_palettes.py tools/gfx_core/pale
 
 src/home/palettes.o: assets/colors/palettes.inc $(REPAINT_2BPP)
 
+assets/bg_map_attributes.inc: tools/generators/gen_bg_attributes.py \
+		../data/cgb/bg_map_attributes.asm
+	python3 tools/generators/gen_bg_attributes.py
+
+src/engine/gfx/bg_map_attributes.o: assets/bg_map_attributes.inc
+
 # Audio engine data: four GB audio-bank images (headers + music/sfx bytecode
 # at true GB addresses), positional sound-ID constants, cry-modifier table.
 # Generated from the pret audio sources; byte-exact vs the reference ROM
@@ -2994,6 +3002,7 @@ assets: assets/scenario_registry.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \
 		assets/colors/palettes.inc \
+        assets/bg_map_attributes.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
         assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \
