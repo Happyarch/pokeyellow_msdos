@@ -6,8 +6,24 @@
 > pytest resolves — allowlist is not ours to grow, behavior changes need
 > scenarios). Not duplicated here; read it there.
 
-Status: **Stages 0-3 COMPLETE and maintainer-signed-off. Stage 4 CONTENT
-COMPLETE 2026-08-08 (autonomous session), visual sign-off OWED.**
+Status: **Stages 0-3 COMPLETE and maintainer-signed-off. Stages 4 AND 5 CONTENT
+COMPLETE 2026-08-08 (autonomous session); visual sign-off OWED, plus one optional
+tail (`MarowakAnim`) left deliberately for its owning plan.**
+
+> **Picking this up cold? Read this box, then the memory
+> `battle-animations-plan-created`, then jump to Stage 6.**
+> Content work in this plan is done except `MarowakAnim`. What remains is
+> VERIFICATION, and two items of it cannot be produced by an agent:
+> 1. **A human has to watch it.** Run
+>    `dos_port/run DEBUG_ANIM_SHOW=1 /LOOP` — the showcase harness added for
+>    exactly this. It plays 20 real moves, one per family landed after Stage 3,
+>    labelled on screen. Nothing in Stages 4-5 has been seen by anyone.
+> 2. **The `AnimationShakeEnemyHUD` mechanism decision** (`3394160d`) needs
+>    maintainer review — the only place the MECHANISM, not just the coordinates,
+>    diverges from pret. One revertable commit.
+> Everything else is Stage 6: new must-hit scenarios (notably one that really
+> enters `TossBallAnimation` — `ball_catch` is a false witness for it), the
+> F-19 mask evaluation, and the closing sweep.
 
 Stage 4 landed in seven revertable commits — 4a `b1eff474` tilemap helpers,
 4b `3a4c921b` slides, 4c `2af716c1` motion, 4d `3c1e267c` wTempPic effects,
@@ -460,12 +476,21 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `jp Delay3` — a tail call, not a return. The `- DROPPED Delay3 (jp)`
       finding was the tool doing exactly its job; the fix was the code, not a
       suppression.
-- [ ] Particles: `AnimationSpiralBallsInward` + `SpiralBallAnimationCoordinates`,
+- [x] Particles: `AnimationSpiralBallsInward` + `SpiralBallAnimationCoordinates`,
       `AnimationShootBallsUpward` + `_AnimationShootBallsUpward` +
       `AnimationShootManyBallsUpward` + `UpwardBallsAnimXCoordinates*Turn`,
       `AnimationLeavesFalling`, `AnimationPetalsFalling`,
       `AnimationFallingObjects` + `FallingObjects_*` (6 labels + 2 data),
       `AnimationWaterDropletsEverywhere` + `_AnimationWaterDroplets`.
+      **DONE 2026-08-08 across Stage 4e (`6409f636`, ball particles +
+      `BattleAnimWriteOAMEntry` / `InitMultipleObjectsOAM`) and Stage 4f
+      (`37634638`, falling objects + water droplets).** All three coordinate
+      tables stay in the engine mirror — pret inlines them in `animations.asm`,
+      so they are not `data/` labels. New WRAM: `wSavedY` $CD3D,
+      `wFallingObjectsMovementData` $CD3D, `wDropletTile` $D09E,
+      `wUnusedWaterDropletsByte` $D089 (all sym-measured, all on pret's own union
+      bytes). Runtime-witnessed: `ANIM=SURF` and `ANIM=RAZOR_LEAF` produce OAM
+      states distinct from a `POUND` baseline (9 and 16 differing entries).
 - [x] HUD shake + OAM helpers: `AnimationShakeEnemyHUD`,
       `ShakeEnemyHUD_ShakeBG`, `ShakeEnemyHUD_WritePlayerMonPicOAM`,
       `BattleAnimWriteOAMEntry`, `InitMultipleObjectsOAM`, `Func_79929`.
@@ -583,9 +608,25 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `PokedexOrder`, as `LoadMonBackPic` already does).
 - [ ] Optional tail (coordinate with umbrella 4c): `MarowakAnim` +
       `CopyMonPicFromBGToSpriteVRAM` (engine/battle/ghost_marowak_anim.asm).
-- [ ] Gate: faithdiff; `ball_catch` stays green; demo sign-off on ball toss/
+      **NOT DONE, deliberately.** It is marked optional here and its reachability
+      is owned by `battle_completion` Stage 4c, so landing it unilaterally would
+      cross a plan boundary. Everything else in Stage 5 is closed; this is the
+      only content item left in the plan before Stage 6.
+- [~] Gate: faithdiff; `ball_catch` stays green; demo sign-off on ball toss/
       shake/capture + Substitute; Oak-intro capture visually shows the throw
       (`DEBUG_SEAM_KEEP_BATTLES=1` pilot).
+      **Static half MET 2026-08-08**: faithdiff justified on every Stage 5 label;
+      lint 0 both modes; static_gate PASS at each commit; `ball_catch` green in
+      every `pgate` run with mask-hit counts byte-identical across 5a-5d.
+      **Visual half OWED** — see the showcase harness in "Verification summary"
+      below; it covers Substitute, and the ball toss needs a real capture (no
+      demo entry, because `wNamedObjectIndex` shares a byte with
+      `wPokeBallAnimData`).
+      **Also owed and NOT satisfiable by the current suite:** a must-hit runtime
+      scenario that actually ENTERS `TossBallAnimation`. `ball_catch` is
+      datastruct-class and compares no WRAM the toss path writes, so it passed
+      identically before and after the real body landed — it is a false witness
+      for this specific routine. Belongs on the Stage 6 list, which names it.
 
 ### Stage 6 — verification closure + bookkeeping
 
@@ -615,6 +656,16 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
   stage; new animation scenarios at Stage 6.
 - Visual: `dos_port/run DEBUG_ANIM_DEMO=1 [ANIM=…]` maintainer sign-off per
   stage (transitions precedent).
+- **Visual, Stage 4/5 (added 2026-08-08): `dos_port/run DEBUG_ANIM_SHOW=1 /LOOP`**
+  — the showcase harness. Walks 20 real moves, one per animation family landed
+  after Stage 3, printing each move's name in the battle frame (from the real
+  `GetMoveName` -> `MoveNames` table, so the label cannot disagree with the id)
+  before playing it through the production `PlayMoveAnimation`. `/LOOP` repeats
+  forever; without it the list plays once, then dumps and exits.
+  `ANIM_SHOW_HOLD` / `ANIM_SHOW_GAP` tune pacing. Proven to run end to end
+  headless: exit 0 with both dumps (the only path to `DebugDumpMemory` is the
+  list terminator), and the dumped `wTileMap` at the label position decodes to
+  "SUBSTITUTE", the last entry. **No human has watched it yet.**
 - Traps carried forward: AUTOKEY_DUMP_ON_BATTLE gates on `wIsInBattle` (cannot
   photograph pre-battle trainer phases — wild path sets it earlier); harness
   loop counters in memory; `W_SHADOW_OAM` ends at `W_TILEMAP` (bounds-guard);
