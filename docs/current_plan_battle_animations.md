@@ -638,6 +638,54 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       why-string. Scenario registration per the manifest/validate_scenarios
       chain; each scenario's entry states what path it actually ENTERS (false-
       witness rule).
+      **NOT STARTED — deliberately, 2026-08-08. Prerequisites verified present
+      (`../pokeyellow_msdos-pret-golden/pokeyellow.gbc` and the built
+      `tools/mgba_build/mgba-lua-runner`), so this is a judgement call, not a
+      blocker.** Reason: these commit NEW GOLDEN ARTIFACTS, and the existing
+      battle scenarios (`battle_faint.lua` 151 lines, `trainer_battle_route.lua`
+      238) show how delicate the dump-instant convergence already is for
+      POST-FLOW WRAM — their own comments describe landing "a few frames too
+      early, before GainExperience wrote anything" and having to converge on a
+      port dump instant "one step later" than the obvious one. An
+      MID-ANIMATION landmark is strictly more timing-coupled than that. A subtly
+      wrong landmark yields a golden that passes today and becomes a flaky or
+      false witness later — the exact failure this plan's own false-witness rule
+      exists to prevent, and hard to review after the fact. Specced below for a
+      supervised pass instead.
+
+      **SPEC for the five scenarios** (entry point -> what it actually ENTERS ->
+      what it should compare). The third column is the part that matters: state
+      it per the false-witness rule, and verify it by diffing two dumps rather
+      than trusting `must_hit`.
+      1. **physical** — `ANIM=POUND`-class through a real turn.
+         ENTERS `PlayMoveAnimation` -> `MoveAnimation` -> `PlaySubanimation` ->
+         `DrawFrameBlock`. Compare **oam** at a frame-block landmark (not the
+         terminal screen); this is the only family whose whole effect IS OAM.
+      2. **elemental flash** — Thundershock/Growl-class.
+         ENTERS the `SE_*` palette handlers. Compare `IO_BGP` at a landmark; the
+         Stage 3a trace (`6F,1B,00` x3 then `E4`) is the known-good sequence, so
+         the landmark can be pinned to a specific step of it.
+      3. **ball (TOSS_ANIM through the item path)** — **the one this plan
+         explicitly still owes.** ENTERS `UseItem` -> `ItemUseBall` ->
+         `PlayMoveAnimation` -> `MoveAnimation`'s `cmp TOSS_ANIM` branch ->
+         `TossBallAnimation`. NOTE `ball_catch` CANNOT be extended in place to
+         cover this: it is datastruct-class and compares no WRAM the toss path
+         writes, which is why it passed identically before and after the real
+         body landed. Needs its own non-datastruct comparison, or `wNumShakes` /
+         `wAnimationID` added to the compared set.
+      4. **shake/blink (`wAnimationType`)** — ENTERS
+         `PlayApplyingAttackAnimation`'s type dispatch. **This closes a real
+         evidence gap named in the Stage 3 sign-off:** that a live battle sets
+         `wAnimationType` is established statically (three writes in
+         `effects.asm`) but has never been observed at runtime — the demo
+         harness SEEDS it. Compare `H_SCX`/`H_SCY` at a displacement landmark.
+      5. **option-off (`BIT_BATTLE_ANIMATION` set)** — ENTERS `MoveAnimation`'s
+         `.animationsDisabled` 30-frame path. Compare that the animation state
+         is UNtouched; this is the cheapest of the five and the best first one.
+
+      **Trap to carry in:** `AUTOKEY_DUMP_ON_BATTLE` gates on `wIsInBattle`, so
+      pre-battle trainer phases cannot be photographed (already in the
+      Verification summary's carried-forward list).
 - [x] Full battle tier + core fidelity + `fidelity-full`; `goldens-verify` if
       golden artifacts changed.
       **DONE 2026-08-08: the WHOLE registry, 56/56 PASS in 266 s** via
