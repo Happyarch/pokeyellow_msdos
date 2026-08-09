@@ -407,8 +407,14 @@ def check_host_tools() -> list[str]:
         if shutil.which(tool) is None:
             missing.append(f"{tool:<7} -- {hint}")
 
+    # The complete third-party set the asset build imports, measured by walking
+    # every generator dos_port/Makefile invokes -- PIL decodes the font/HUD
+    # PNGs, numpy builds the Pikachu PCM, yaml reads the audio sidecars. numpy
+    # was missing from this list until 2026-08-09 and imports unguarded in
+    # tools/audio/gen_pika_pcm.py, so its absence was a raw traceback.
     for mod, hint in (
         ("PIL", "pip install pillow       (fresh-clone asset build only)"),
+        ("numpy", "pip install numpy        (fresh-clone asset build only)"),
         ("yaml", "pip install pyyaml       (fresh-clone asset build only)"),
     ):
         try:

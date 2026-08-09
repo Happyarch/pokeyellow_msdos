@@ -42,16 +42,23 @@ To rebuild `PKMN.EXE` you need **NASM**, a **DJGPP linker** (`ld` targeting
 
 A **fresh clone needs more**, because the graphics and most data tables are
 generated rather than committed — see [Fresh clone](#fresh-clone-generate-the-assets-first)
-below for the full list (rgbds, a C compiler, Pillow, PyYAML).
+below for the full list (rgbds, a C compiler, Pillow, numpy, PyYAML).
 
 ### Linux
 
 ```sh
 # Debian / Ubuntu (incl. WSL)
 sudo apt install nasm binutils-djgpp python3 make
-# a fresh clone additionally needs:
-sudo apt install gcc python3-pil python3-yaml
+# a fresh clone additionally needs (asset generation):
+sudo apt install gcc python3-pil python3-numpy python3-yaml
 ```
+
+Those three Python packages are the complete set the build imports — measured by
+walking every generator the Makefile invokes, not by guesswork. `Pillow`
+(`python3-pil`) decodes the font/HUD PNGs, `numpy` builds the Pikachu PCM, and
+`PyYAML` reads the audio arrangement sidecars. Nothing else is needed to build;
+`pygame` is only for the optional interactive editors (`colorize.py --edit`,
+`map_editor`).
 
 **rgbds is not in Ubuntu's repos**, and where a distro does package it the
 version is wrong — `.rgbds-version` pins **1.0.2** exactly. Let the setup script
@@ -116,7 +123,7 @@ script reports which are missing:
 | `make` | always | MSYS2 `pacman -S make` |
 | `git` | always | [git-scm.com](https://git-scm.com/download/win) |
 | `gcc` | fresh clone only | MSYS2 `pacman -S gcc` |
-| Pillow, PyYAML | fresh clone only | `pip install pillow pyyaml` |
+| Pillow, numpy, PyYAML | fresh clone only | `pip install pillow numpy pyyaml` |
 
 Then, per shell:
 
@@ -181,7 +188,7 @@ file 'assets/..._gfx.inc'`. Most of the assets are generated, not committed: 585
 cd <repo root>              # these three run from the ROOT, not dos_port/
 git submodule update --init --recursive
 make                        # renders the .2bpp — needs rgbds + gcc
-make -C dos_port assets     # needs Pillow + PyYAML
+make -C dos_port assets     # needs Pillow + numpy + PyYAML
 ```
 
 Only the first `make` is root-only — it drives pret's build. Anything with
