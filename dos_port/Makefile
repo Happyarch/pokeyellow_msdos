@@ -2560,6 +2560,33 @@ assets/battle_hud_2bpp.inc: ../gfx/battle/battle_hud_1.png ../gfx/battle/battle_
                             ../gfx/battle/battle_hud_3.png tools/generators/gen_battle_hud_inc.py
 	python3 tools/generators/gen_battle_hud_inc.py
 
+# ---------------------------------------------------------------------------
+# pret graphics as prerequisites (../gfx/**.1bpp / .2bpp).
+#
+# These are BUILD OUTPUTS of the root Makefile, not committed files: 585 of them
+# exist after a root build and *zero* are tracked. 30 are prerequisites of
+# targets in this file. Without a rule, a fresh clone dies with
+#
+#     make: *** No rule to make target '../gfx/font/P.1bpp',
+#           needed by 'assets/ptile_2bpp.inc'.  Stop.
+#
+# which names the missing file but not the cause — the root `make` was never run,
+# or (the common one) it stopped early because rgbds was not on PATH, so only the
+# graphics it had reached before dying exist. Reported by a first-time builder
+# 2026-08-09; the message sent them looking for a file to create by hand.
+#
+# Delegating to the root Makefile fixes both halves: if the tree is merely
+# un-bootstrapped the file just gets built, and if the real problem is a missing
+# rgbds then rgbgfx's own error surfaces instead of a misleading make error.
+# `+` marks these as recursive make so -n/-j propagate correctly.
+../gfx/%.1bpp:
+	@echo "$@ is a pret build output and is missing — building it via the root Makefile"
+	+$(MAKE) -C .. gfx/$*.1bpp
+
+../gfx/%.2bpp:
+	@echo "$@ is a pret build output and is missing — building it via the root Makefile"
+	+$(MAKE) -C .. gfx/$*.2bpp
+
 # PTile (bold "P" of the status screen's "PP") is a separate blob from the battle
 # HUD tiles above: pret loads it in StatusScreen, not in LoadHudTilePatterns. The
 # split is what lets src/engine/battle/core.asm %include the HUD blob — which it
