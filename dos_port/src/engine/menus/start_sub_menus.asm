@@ -1748,6 +1748,13 @@ RunTrainerCardTest:
     call FillMemory
     call DrawTrainerInfo
     call DrawBadges
+    ; The live StartMenu_TrainerInfo issues SET_PAL_TRAINER_CARD here, between
+    ; DrawBadges and the composite. This gate omitted it, so it could not witness
+    ; the card's CGB attribute plane at all — the palette command is what records
+    ; the plane, and without it the screen renders in one palette no matter what
+    ; the attribute path does. Keep this in step with the live order above.
+    mov bh, SET_PAL_TRAINER_CARD
+    call RunPaletteCommand
     call trainer_card_present
     call DelayFrame
     call DelayFrame
