@@ -58,13 +58,24 @@ version is wrong — `.rgbds-version` pins **1.0.2** exactly. Let the setup scri
 fetch it (statically linked, so it runs on any x86-64 distro):
 
 ```sh
-python3 dos_port/tools/setup_toolchain.py
-export PATH="$PWD/.toolchain/rgbds:$PATH"
+python3 dos_port/tools/setup_toolchain.py            # from the repo root
+export PATH="$(git rev-parse --show-toplevel)/.toolchain/rgbds:$PATH"
+rgbasm --version                                     # expect v1.0.2
 ```
+
+`.toolchain/` always lives at the **repository root**, so `git rev-parse` above
+keeps the export correct whether you run it from the root or from `dos_port/`.
+(The script prints the same line with an absolute path when it finishes — copying
+that is equally safe.)
 
 On Linux it installs *only* rgbds and tells you what to apt-get; run it with
 `--print-only` first to see exactly what it fetches. Arch does package a current
 `rgbds`, but check it reports 1.0.2 before relying on it.
+
+**Set that `PATH` before running `make`.** The root build calls `rgbgfx` to render
+the graphics; without it, `make` dies partway and leaves only the graphics it had
+already reached, which later shows up as a confusing
+`No rule to make target '../gfx/font/P.1bpp'` from the port build.
 
 On distros without a packaged DJGPP binutils (Arch, Fedora, …), build the
 cross-toolchain with [andrewwutw/build-djgpp](https://github.com/andrewwutw/build-djgpp).
@@ -167,10 +178,16 @@ file 'assets/..._gfx.inc'`. Most of the assets are generated, not committed: 585
 `dos_port/assets/*.inc`. Bootstrap them once:
 
 ```sh
+cd <repo root>              # these three run from the ROOT, not dos_port/
 git submodule update --init --recursive
 make                        # renders the .2bpp — needs rgbds + gcc
 make -C dos_port assets     # needs Pillow + PyYAML
 ```
+
+Only the first `make` is root-only — it drives pret's build. Anything with
+`-C dos_port` has a direct equivalent from inside `dos_port/` (`make assets`,
+`make PKMN.EXE`, …), so work wherever you prefer; just keep `PATH` pointing at
+the repo-root `.toolchain/` as above.
 
 The root `make` builds pret's own C tools (`tools/gfx`, `tools/scan_includes`,
 `tools/make_patch`), which is why a C compiler is on the list. Its final ROM link
