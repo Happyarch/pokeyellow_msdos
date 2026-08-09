@@ -211,6 +211,29 @@ def probe_path(root: Path, name: str, pkg: dict) -> Path:
     return bin_path(root, name, pkg) / pkg["probe"]
 
 
+def write_self_ignore(root: Path) -> Path:
+    """Make the toolchain directory ignore its own contents.
+
+    The repo's root .gitignore already lists `.toolchain/`, but this does not
+    depend on it: a self-ignoring directory stays isolated even when installed
+    somewhere else via --dest, when the root rule is edited, or when someone
+    copies this script into another tree. `*` matches everything here
+    including this file, so nothing under the toolchain root is ever
+    committable -- which is the whole point, since these are third-party GPL
+    and BSD binaries we download rather than redistribute.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    ignore = root / ".gitignore"
+    ignore.write_text(
+        "# Written by dos_port/tools/setup_toolchain.py.\n"
+        "# Downloaded third-party toolchain -- never commit any of it.\n"
+        "# See the \"Legal note\" in README.md.\n"
+        "*\n",
+        encoding="ascii",
+    )
+    return ignore
+
+
 def write_activators(root: Path, order: list[str]) -> tuple[Path, Path]:
     """Write activate.bat / activate.ps1 that prepend the tool dirs to PATH."""
     dirs = [bin_path(root, n, PACKAGES[n]) for n in order]
@@ -350,6 +373,10 @@ def main() -> int:
     cache = root / "downloads"
     print(f"Installing the DOS-port toolchain into {root}\n")
 
+    # Before the first byte is downloaded, so a partial or interrupted run can
+    # never leave un-ignored archives lying around inside the repo.
+    write_self_ignore(root)
+
     order = list(PACKAGES)
     for name in order:
         pkg = PACKAGES[name]
@@ -390,7 +417,8 @@ def main() -> int:
         for m in missing:
             print(f"  - {m}")
 
-    print(f"\nTo uninstall, delete {root}")
+    print(f"\nAll of it is git-ignored ({root / '.gitignore'} ignores `*`).")
+    print(f"To uninstall, delete {root}")
     return 0
 
 
