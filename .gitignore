@@ -136,3 +136,8 @@ handoff_s*.md
 # see the "Legal note" in README.md -- these are third-party GPL/BSD binaries we
 # link to, not redistribute)
 .toolchain/
+
+# DOSBox-X staging dir created by the ps1 run scripts (mounted as C: on
+# Windows, where PKMN.IMG cannot be built). Holds PKMN.EXE + CWSDPMI.EXE +
+# the save; the scripts also write a self-ignoring .gitignore inside it.
+dos_port/rundir/

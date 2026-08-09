@@ -108,7 +108,44 @@ make -C dos_port PKMN.EXE LD=i586-pc-msdosdjgpp-ld
 ```
 
 Copy the resulting `PKMN.EXE` and `CWSDPMI.EXE` into your DOSBox-X mount and run
-`PKMN`.
+`PKMN` — or use the run scripts below, which do it for you.
+
+#### Run scripts
+
+The bash launchers have PowerShell counterparts, with the same argument
+convention (`/...` tokens are `PKMN.EXE` flags, everything else goes to make):
+
+| PowerShell | bash | What |
+|---|---|---|
+| `.\build.ps1` | `build` | build `PKMN.EXE` |
+| `.\run.ps1` | `run` | build + launch in DOSBox-X |
+| `.\run-mt32.ps1` | `run-mt32` | MT-32 music via DOSBox-X's built-in MUNT |
+| `.\run-spk.ps1` | `run-spk` | Sound Blaster off — PC-speaker PWM cry |
+| `.\run-tandy.ps1` | `run-tandy` | Tandy 1000 SN76489 PSG |
+
+```powershell
+cd dos_port
+.\run.ps1 SKIP_TITLE=1
+.\run.ps1 DEBUG_AUDIO=1 /LOOP /NOENH
+$env:MT32_ROMDIR = 'C:\roms\mt32'; .\run-mt32.ps1 DEBUG_AUDIO=1 /LOOP
+```
+
+They find DOSBox-X on `PATH` or in the usual install directories, put
+`.toolchain\` on `PATH` automatically, and supply the `LD=` override for you.
+
+⚠ **They differ from the bash scripts in one way that matters.** The bash
+launchers build `PKMN.IMG` and `imgmount` it, so C: is an isolated FAT image and
+the game cannot reach the host filesystem at any `BUG_FIX_LEVEL`. Building that
+image needs `sfdisk`/`mkfs.fat`/`mcopy`, so on Windows C: is instead a **mounted
+directory** (`dos_port\rundir\`) holding only `PKMN.EXE`, `CWSDPMI.EXE` and your
+save. That keeps the blast radius small, but it is not the same guarantee — read
+[docs/glitch_safety.md](docs/glitch_safety.md) before exploring glitches, and
+prefer WSL for that. One upside: dumps (`FRAME.BIN`, `GBSTATE.BIN`, …) land
+directly on the host with no `mcopy` step.
+
+MT-32 additionally needs the Roland ROM pair (`MT32_CONTROL.ROM`,
+`MT32_PCM.ROM`) in `$env:MT32_ROMDIR` or `dos_port\mt32-roms\`. Those are
+copyright Roland — supply your own; nothing here fetches them.
 
 #### Fresh clone? Generate the assets first
 

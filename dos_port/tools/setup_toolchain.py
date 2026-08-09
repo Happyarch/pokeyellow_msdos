@@ -78,6 +78,24 @@ PACKAGES = {
         "bindir": "bin",
         "probe": "rgbasm.exe",
     },
+    "cwsdpmi": {
+        # The DPMI host the DJGPP stub auto-loads. Needed to RUN, not to build,
+        # and it is gitignored rather than committed -- so a Windows user has no
+        # copy at all until this fetches one. The binary here is byte-identical
+        # to the CWSDPMI.EXE this repo has been running against (verified by
+        # sha256 2026-08-09).
+        "desc": "CWSDPMI r7 (DPMI host -- required to run PKMN.EXE)",
+        "url": "http://www.delorie.com/pub/djgpp/current/v2misc/csdpmi7b.zip",
+        "sha256": "deacda0488e1cdd7c4a9f32fab45662b34c0ed6b2d7d4d13bc07041b62004a8c",
+        "size": 71339,
+        "license": "GPL, or binary redistribution under the terms in cwsdpmi.doc",
+        "strip_prefix": "",
+        "bindir": "bin",
+        "probe": "CWSDPMI.EXE",
+        # A DOS executable: it belongs next to PKMN.EXE inside the emulator,
+        # not on the Windows PATH.
+        "on_path": False,
+    },
     "djgpp": {
         # binutils version is what `ld --version` reports, not what the
         # archive name suggests (the gcc1220 in the filename is the *gcc*
@@ -253,7 +271,11 @@ def write_self_ignore(root: Path) -> Path:
 
 def write_activators(root: Path, order: list[str]) -> tuple[Path, Path]:
     """Write activate.bat / activate.ps1 that prepend the tool dirs to PATH."""
-    dirs = [bin_path(root, n, PACKAGES[n]) for n in order]
+    dirs = [
+        bin_path(root, n, PACKAGES[n])
+        for n in order
+        if PACKAGES[n].get("on_path", True)
+    ]
 
     bat = root / "activate.bat"
     bat.write_text(
