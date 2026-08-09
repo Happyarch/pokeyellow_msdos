@@ -37,17 +37,69 @@ See [INSTALL.md](INSTALL.md) for full setup instructions.
 
 ## Building the DOS Port
 
-**Toolchain (Linux cross-build):**
+You need three things: **NASM** (assembler), a **DJGPP linker** (`ld` targeting
+`coff-go32-exe`), and **Python 3** (the asset generators are Python).
+
+### Linux
+
 ```sh
-# Install assembler and DJGPP cross-linker (Debian/Ubuntu)
-sudo apt install nasm binutils-djgpp
+# Debian / Ubuntu
+sudo apt install nasm binutils-djgpp python3
 ```
 
-**Build:**
+On distros without a packaged DJGPP binutils (Arch, Fedora, …), build the
+cross-toolchain with [andrewwutw/build-djgpp](https://github.com/andrewwutw/build-djgpp).
+
 ```sh
 make -C dos_port
-# produces: pokeyellow_dos.exe
+# produces: dos_port/PKMN.EXE, plus PKMN.IMG (a bootable disk image)
 ```
+
+The Makefile calls the linker `i386-pc-msdosdjgpp-ld` and the objdump
+`i586-pc-msdosdjgpp-objdump`. Toolchain builds commonly produce only the `i586-`
+names, so either symlink `i386-pc-msdosdjgpp-ld → i586-pc-msdosdjgpp-ld` or
+override on the command line: `make -C dos_port LD=i586-pc-msdosdjgpp-ld`.
+
+### Windows
+
+**Option A — WSL (recommended).** Install
+[WSL](https://learn.microsoft.com/windows/wsl/install), open the Ubuntu shell,
+and follow the Linux instructions above verbatim. This is the same toolchain the
+project is developed against, so everything — including the disk-image and
+fidelity targets — works.
+
+**Option B — native Windows (MSYS2).** Use this if you'd rather not run WSL.
+Note that only the `PKMN.EXE` target works natively; the `image` target needs
+Linux-only tools (`sfdisk`, `mkfs.fat`, `mcopy`).
+
+1. **NASM** — install from [nasm.us](https://www.nasm.us/) (grab the
+   `win64/nasm-*-installer-x64.exe` under the latest stable release), or with
+   MSYS2: `pacman -S nasm`. Make sure `nasm --version` works in your shell.
+2. **DJGPP linker** — download the binutils package from the
+   [DJGPP distribution](http://www.delorie.com/djgpp/): under
+   [`current/v2gnu/`](http://www.delorie.com/pub/djgpp/current/v2gnu/), take the
+   binutils package — the file named `bnu<version>b.zip`. Unzip it somewhere
+   like `C:\djgpp` and add `C:\djgpp\bin` to your `PATH`. This gives
+   you `ld.exe` and `objdump.exe` already targeting DJGPP COFF.
+3. **Python 3** — from [python.org](https://www.python.org/downloads/), or
+   MSYS2: `pacman -S python`.
+4. **make** — MSYS2: `pacman -S make`.
+
+The DJGPP tools ship under plain names (`ld`, `objdump`) rather than the
+cross-prefixed names the Makefile defaults to, so override them:
+
+```sh
+make -C dos_port PKMN.EXE LD=ld OBJDUMP=objdump
+```
+
+Copy the resulting `PKMN.EXE` and `CWSDPMI.EXE` into your DOSBox-X mount and run
+`PKMN`.
+
+> Option B is documented from the toolchain requirements, not routinely
+> exercised by the maintainers — if a native build breaks, WSL is the supported
+> fallback.
+
+### Running the port
 
 **Run in DOSBox / DOSBox-X:**
 ```dosbox
