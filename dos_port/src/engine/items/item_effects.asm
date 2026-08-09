@@ -777,15 +777,16 @@ RestoreBonusPP:
 ; ---------------------------------------------------------------------------
 ; PORT DEVIATIONS (justified; each names what retires it)
 ;
-; 1. DEVIATION(video) — `predef UpdateHPBar2` (the animated party-menu HP bar,
-;    twice: the Softboiled drain and the heal fill) is NOT called: the port has
-;    no party-menu HP-bar animator (engine/gfx/hp_bar.asm ports the length
-;    predef; battle_hud.asm's AnimateHPBar is battle-HUD-coordinate-bound).
-;    RedrawPartyMenu below redraws the bar at its final length, so the healed
-;    value is shown — it just doesn't sweep. The one *observable* side effect of
-;    pret's UpdateHPBar that outlives the animation is wHPBarHPDifference, which
-;    PotionText prints ("recovered by N!"), so we compute it here.
-;    Retired by: a party-menu HP-bar animator (items-plan Stage 5 tail).
+; 1. RETIRED 2026-08-08 — the party-menu HP-bar animator now EXISTS. pret's
+;    UpdateHPBar/UpdateHPBar2 and its five UpdateHPBar_* helpers are translated
+;    in their mirror (engine/gfx/hp_bar.asm), and the heal path calls
+;    UpdateHPBar2 for real, so the bar SWEEPS instead of snapping. What is left
+;    of the old note: the port still computes wHPBarHPDifference itself at
+;    .doneHealingPartyHP. That is now redundant with UpdateHPBar2, which computes
+;    the same value from the same inputs before it mutates anything — it is kept
+;    because the status-ailment branches reach the message without going through
+;    UpdateHPBar2, and pret's guarantee only covers the path where the predef
+;    runs. The Softboiled drain is still not animated (a separate call site).
 ;
 ; 2. DEVIATION(text/window) — pret prints through PrintText, which composites the
 ;    message box over the live screen buffer. The port's dialog projection
@@ -984,6 +985,13 @@ ItemUsePtrTable_end:
 
 section .bss
 align 4
+iu_hpbar_coord: resd 1      ; party-menu HP-bar tilemap coord for UpdateHPBar2.
+                            ; pret carries it in hl THROUGH the predef mechanism
+                            ; (predef stashes hl, GetPredefRegisters restores it
+                            ; inside UpdateHPBar2), which survives the intervening
+                            ; RemoveUsedItem / PlaySoundWaitForCurrent calls. A
+                            ; direct call has no such carrier, so the port stashes
+                            ; it here — see the DEVIATION at the call site.
 iu_mon_base:  resd 1        ; the selected party mon's struct base (pret keeps this
                             ; on the stack across the heal math; the port re-derives
                             ; its HP/status/maxHP pointers from it instead)
@@ -1273,9 +1281,30 @@ ItemUseMedicine:
     cmp al, FULL_RESTORE
     jne .doneHealing
     mov byte [ebp + wBattleMonStatus], 0
-    ; pret's .calculateHPBarCoords (hlcoord 4,-1 + d rows) feeds UpdateHPBar2,
-    ; which the port does not run — see DEVIATION 1. RedrawPartyMenu redraws the
-    ; bar from the party data instead, so no coordinate is needed.
+    ; fall through to .calculateHPBarCoords
+
+; PARTY_SCR_W — the party menu is pret's 20x18 stride-20 W_TILEMAP scratch (the
+; same value party_menu.asm calls GBSCR_W, which is file-local there). pret's
+; SCREEN_WIDTH in .calculateHPBarCoords is that stride, NOT the port's 40-wide
+; canvas, so the coordinate arithmetic below is pret's verbatim.
+%ifndef PARTY_SCR_W
+%define PARTY_SCR_W 20
+%endif
+
+; pret .calculateHPBarCoords: hlcoord 4,-1 then (d+1) steps of 2*SCREEN_WIDTH,
+; i.e. column 4, row 2d+1 — the party-menu HP-bar row for party slot d. The party
+; menu IS pret's 20x18 stride-20 W_TILEMAP scratch here (GBSCR_W), NOT the battle
+; frame, so these are pret's coordinates verbatim with GBSCR_W for SCREEN_WIDTH —
+; no BCOORD projection applies.
+.calculateHPBarCoords:
+    mov esi, W_TILEMAP + 4 - PARTY_SCR_W        ; hlcoord 4, -1
+    mov dh, [ebp + wUsedItemOnWhichPokemon] ; d = party index
+    inc dh                                  ; inc d
+.calculateHPBarCoordsLoop:
+    add esi, 2 * PARTY_SCR_W                    ; ld bc, 2 * SCREEN_WIDTH / add hl, bc
+    dec dh
+    jnz .calculateHPBarCoordsLoop
+    mov [iu_hpbar_coord], esi
     jmp .doneHealing
 
 .healingItemNoEffect:
@@ -1295,8 +1324,12 @@ ItemUseMedicine:
     jz .playStatusAilmentCuringSound
     mov al, SFX_HEAL_HP
     call PlaySoundWaitForCurrent
-    ; predef UpdateHPBar2 (animate the bar filling) — DEVIATION 1.
+; DEVIATION{class=HAL; pret=engine/items/item_effects.asm:ItemUseMedicine; behavior=pret reaches UpdateHPBar2 through predef which carries the bar coordinate in hl, the port calls it directly and reloads that coordinate from the port-local slot iu_hpbar_coord stashed at .calculateHPBarCoords; evidence=the port has no predef dispatcher so nothing stages or restores hl, and the intervening RemoveUsedItem and PlaySoundWaitForCurrent calls clobber ESI, so the coordinate must be carried in memory instead of the register; lifetime=permanent, the port calls predef targets directly}
+    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PARTY_MENU_HP_BAR
     mov byte [ebp + wHPBarType], 0x02
+    mov esi, [iu_hpbar_coord]
+    call UpdateHPBar2                   ; animate the HP bar lengthening
+    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_PARTY_MENU_HP_BAR)) & 0xFF
     mov byte [ebp + wPartyMenuTypeOrMessageID], REVIVE_MSG
     mov al, [ebp + wCurItem]
     cmp al, REVIVE
@@ -1656,6 +1689,7 @@ extern StopAllMusic               ; home/audio.asm
 extern PlayMusic                  ; home/audio.asm
 extern Random                 ; home/random.asm — AL = next random byte
 extern PlayBattleAnimation    ; engine/battle/effects.asm — real interpreter entry (Stage 2b)
+extern UpdateHPBar2           ; engine/gfx/hp_bar.asm — ESI = bar coord (HP-bar sweep)
 extern Multiply               ; home/math.asm — hMultiplicand(3) * hMultiplier → hProduct(4)
 extern IndexToPokedex         ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern ShowPokedexData        ; engine/menus/pokedex.asm (predef)

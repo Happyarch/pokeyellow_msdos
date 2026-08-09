@@ -4060,8 +4060,17 @@ autokey_script:
     ;   A                              : dismiss "SNORLAX recovered by N!"
     ; then the bag is back with POTION consumed, so slot 1 is now ANTIDOTE:
     ;   A → A → A                      : ANTIDOTE → USE → mon 1 (no status) → refusal
-    ; Pick the moment to look at with AUTOKEY_DUMP_FRAME (380 = the heal message,
-    ; 620 = the refusal, 700 = the bag list with POTION gone).
+    ; RETIMED 2026-08-08: every press from the heal onward moved +80 frames.
+    ; UpdateHPBar2 (the party-menu HP-bar sweep) is now ported and WIRED into the
+    ; potion path, so the heal takes ~35-40 real frames it never used to. At the
+    ; old timings the frame-420 "dismiss" press landed while the bar was still
+    ; sweeping, so the message was never dismissed and every later dump caught the
+    ; port mid-text-session (wLetterPrintingDelayFlags $03 = BIT_TEXT_DELAY set by
+    ; TextCommandProcessor, against the golden's settled $01). The fix is the
+    ; harness clock, not a mask: the flow itself is now MORE faithful, because the
+    ; real game animates that bar too.
+    ; Pick the moment to look at with AUTOKEY_DUMP_FRAME (460 = the heal message,
+    ; 700 = the refusal, 900 = the bag list with POTION gone).
     dd  60,  66, PAD_START
     dd 100, 106, PAD_DOWN
     dd 140, 146, PAD_DOWN
@@ -4069,11 +4078,11 @@ autokey_script:
     dd 220, 226, PAD_A          ; POTION → USE/TOSS submenu
     dd 260, 266, PAD_A          ; USE
     dd 340, 346, PAD_A          ; party menu: mon 1
-    dd 420, 426, PAD_A          ; dismiss the heal message
-    dd 500, 506, PAD_A          ; ANTIDOTE → USE/TOSS submenu
-    dd 540, 546, PAD_A          ; USE
-    dd 600, 606, PAD_A          ; party menu: mon 1 (healthy → refusal)
-    dd 660, 666, PAD_A          ; dismiss the refusal
+    dd 500, 506, PAD_A          ; dismiss the heal message (was 420, +80 for the sweep)
+    dd 580, 586, PAD_A          ; ANTIDOTE → USE/TOSS submenu
+    dd 620, 626, PAD_A          ; USE
+    dd 680, 686, PAD_A          ; party menu: mon 1 (healthy → refusal)
+    dd 740, 746, PAD_A          ; dismiss the refusal
     dd  -1,  -1, 0
 %elifdef AUTOKEY_SURF
     ; items-plan Stage 11 (DEBUG_SURF): drive the real overworld loop through a

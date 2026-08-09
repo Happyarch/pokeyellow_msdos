@@ -271,7 +271,7 @@
       "id": 19,
       "tier": "full",
       "scenario_class": "datastruct",
-      "build_flags": "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=700",
+      "build_flags": "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=900",
       "port_entry_gate": "DEBUG_ITEMUSE",
       "navigation_script": "tools/mgba_harness/scenarios/item_potion_use.lua",
       "dump": {

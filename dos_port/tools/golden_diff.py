@@ -624,7 +624,7 @@ SCENARIOS = {
         # frame 700 = the gate's AUTOKEY_ITEMUSE script done (POTION heal +
         # ANTIDOTE refusal), bag list reopened — the WRAM state is settled there
         "class": "datastruct",
-        "flags": "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=700",
+        "flags": "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=900",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
     },
     # --- Stage 2: battle scenarios. Window (10,3) = the uniform GB-centering of
