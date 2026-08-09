@@ -59,6 +59,18 @@ FILES = {
         ("SuperEffectiveText", [[0x00], "It's super", [0x4F], "effective!", [0x58]]),
         ("NotVeryEffectiveText", [[0x00], "It's not very", [0x4F], "effective...", [0x58]]),
     ],
+    # DEBUG_ANIM_SHOW labels. Rendered on screen, so Tier-1 data like every other
+    # string — never hand-encoded charmap bytes in the harness. Moves are labelled
+    # at runtime from the real MoveNames table; these five are the item-path
+    # animations, whose ids are NOT move ids (TOSS_ANIM $C1 etc. sit past
+    # NUM_ATTACKS, so GetMoveName would read off the end of the table).
+    "anim_show_strings.inc": [
+        ("as_lbl_ball_catch", ["BALL CATCH", [0x50]]),
+        ("as_lbl_ball_break", ["BALL BREAK", [0x50]]),
+        ("as_lbl_bait", ["SAFARI BAIT", [0x50]]),
+        ("as_lbl_rock", ["SAFARI ROCK", [0x50]]),
+        ("as_lbl_xitem", ["X ITEM", [0x50]]),
+    ],
     "battle_intro_runtime_strings.inc": [
         ("intro_line1", ["Wild "]), ("intro_line2", ["appeared!"]),
     ],

@@ -2514,6 +2514,7 @@ assets/battle_text.inc: $(wildcard ../data/text/text_*.asm) \
 
 RUNTIME_STRING_ASSETS := assets/battle_menu_runtime_strings.inc \
 	assets/battle_core_runtime_strings.inc assets/effectiveness_runtime_strings.inc \
+	assets/anim_show_strings.inc \
 	assets/battle_intro_runtime_strings.inc assets/stat_mod_runtime_strings.inc \
 	assets/item_runtime_strings.inc assets/status_ailment_runtime_strings.inc \
 	assets/home_names_runtime_strings.inc assets/home_text_runtime_strings.inc \
@@ -2522,6 +2523,7 @@ $(RUNTIME_STRING_ASSETS) &: assets/gb_charmap.txt tools/generators/gen_runtime_s
 		tools/generators/gen_battle_text.py ../constants/charmap.asm
 	python3 tools/generators/gen_runtime_strings.py
 src/engine/battle/battle_menu.o: assets/battle_menu_runtime_strings.inc
+src/debug/debug_dump.o: assets/anim_show_strings.inc
 src/engine/battle/core.o: assets/battle_core_runtime_strings.inc
 src/engine/battle/display_effectiveness.o: assets/effectiveness_runtime_strings.inc
 src/engine/battle/init_battle.o: assets/battle_intro_runtime_strings.inc

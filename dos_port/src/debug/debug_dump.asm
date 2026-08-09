@@ -222,6 +222,8 @@ extern DelayFrames               ; src/home/delay.asm — BL = frame count
 extern DelayFrame                ; src/home/vblank.asm
 extern g_cfg_musicloop           ; src/audio/audio_hal.asm — the shared /LOOP exe flag
 extern GetMoveName               ; src/home/names.asm — [wNamedObjectIndex] -> wNameBuffer
+extern TossBallAnimation         ; src/engine/battle/animations.asm — the ball path
+extern PlayBattleAnimation       ; src/engine/battle/effects.asm — AL = animation id
 extern PlaceString               ; src/home/text.asm — EAX = src ptr, ESI = tilemap dest
 extern ClearScreenArea           ; src/home/copy2.asm — ESI dest, BH rows, BL cols
 %endif
@@ -659,8 +661,13 @@ anim_show_idx: db 0
 ; with hand equs scattered across the tree. The on-screen label does not depend
 ; on these comments — it comes from the real GetMoveName -> MoveNames Tier-1
 ; table at runtime, so it cannot drift from the id.
-; NOTE: no ball/TOSS entry. wNamedObjectIndex ($D11D) is the same byte as
-; wPokeBallAnimData, so priming a name would corrupt what the ball handlers read.
+; This is the MOVE list only. The item-path animations (ball toss, Safari
+; bait/rock, X item) are not move ids and are played by a separate section after
+; the list ends — see .animShowPassDone. wNamedObjectIndex ($D11D) is the same
+; byte as wPokeBallAnimData, which is why that section renders each label BEFORE
+; it writes the ball outcome code.
+; DEBUG_ANIM_SHOW's item-path labels (Tier-1, generated — never hand-encoded).
+%include "assets/anim_show_strings.inc"
 anim_show_list:
     db 0x2D    ; GROWL        — Stage 3 flash family (signed-off anchor)
     db 0x95    ; PSYWAVE      — Stage 3 wavy-screen HAL (signed-off anchor)
@@ -2489,10 +2496,77 @@ RunBattleTest:
     inc byte [anim_show_idx]
     jmp .animShowNext
 .animShowPassDone:
+    ; ------------------------------------------------------------------
+    ; ITEM-PATH animations. These are NOT move ids, so they cannot ride the
+    ; loop above: TossBallAnimation is entered directly (MoveAnimation's
+    ; cmp TOSS_ANIM branch does the same in production), and BAIT/ROCK/X-item
+    ; ride PlayBattleAnimation exactly as ItemUseBait / ItemUseRock /
+    ; the X-stat handler do. Their labels come from generated strings because
+    ; their ids sit past NUM_ATTACKS, where GetMoveName would read off the end
+    ; of MoveNames.
+    ;
+    ; ORDER MATTERS: the label is rendered BEFORE wPokeBallAnimData is written.
+    ; wNamedObjectIndex and wPokeBallAnimData are the same byte ($D11D), so
+    ; priming a name afterwards would corrupt what the ball handlers read.
+    ; ------------------------------------------------------------------
+    ; Poke Ball, successful capture: high nybble 4 = play 4 of the
+    ; .PokeBallAnimations sequence, low nybble 3 = three shakes.
+    mov eax, as_lbl_ball_catch
+    call anim_show_label
+    mov byte [ebp + wCurItem], POKE_BALL
+    mov byte [ebp + wPokeBallAnimData], 0x43
+    call TossBallAnimation
+    mov bl, ANIM_SHOW_GAP
+    call DelayFrames
+    ; Ultra Ball, breakout: high nybble 6 = the longer sequence. Ultra/Master
+    ; also take DoBallTossSpecialEffects' rOBP0 flashing branch.
+    mov eax, as_lbl_ball_break
+    call anim_show_label
+    mov byte [ebp + wCurItem], ULTRA_BALL
+    mov byte [ebp + wPokeBallAnimData], 0x63
+    call TossBallAnimation
+    mov bl, ANIM_SHOW_GAP
+    call DelayFrames
+    ; Safari bait / rock and the X-stat item: plain PlayBattleAnimation ids.
+    mov eax, as_lbl_bait
+    call anim_show_label
+    mov al, BAIT_ANIM
+    call PlayBattleAnimation
+    mov bl, ANIM_SHOW_GAP
+    call DelayFrames
+    mov eax, as_lbl_rock
+    call anim_show_label
+    mov al, ROCK_ANIM
+    call PlayBattleAnimation
+    mov bl, ANIM_SHOW_GAP
+    call DelayFrames
+    mov eax, as_lbl_xitem
+    call anim_show_label
+    mov al, XSTATITEM_ANIM
+    call PlayBattleAnimation
+    mov bl, ANIM_SHOW_GAP
+    call DelayFrames
     cmp byte [g_cfg_musicloop], 0       ; /LOOP: run the whole list forever
     jnz .animShowPass
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+
+; anim_show_label — clear the label row and print the flat string in EAX at the
+; projected label cell. Port-only debug glue. Clobbers what PlaceString clobbers.
+anim_show_label:
+    push eax
+    mov esi, BCOORD(1, 14)              ; PROJ — inside the 20x18 battle frame
+    mov bh, 1
+    mov bl, 12
+    call ClearScreenArea
+    pop eax
+    mov esi, BCOORD(1, 14)              ; PROJ
+    call PlaceString
+    push ebx
+    mov bl, ANIM_SHOW_HOLD
+    call DelayFrames
+    pop ebx
+    ret
 %elifdef DEBUG_ANIM_DEMO
     ; ------------------------------------------------------------------
     ; DEBUG_ANIM_DEMO — the move-animation sign-off harness
