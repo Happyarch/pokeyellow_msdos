@@ -41,6 +41,7 @@ bits 32
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 
+global MonsterSprite               ; assets/mon_icons.inc blob — AnimationSubstitute reads its tiles
 global AnimatePartyMon
 global AnimatePartyMon_ForceSpeed1
 global GetAnimationSpeed

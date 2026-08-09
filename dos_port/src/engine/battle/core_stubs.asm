@@ -114,21 +114,6 @@ FormatMovesString:
 ; regression-battle-anim-interp-runtime-crash).
 ; ===========================================================================
 
-; STUB{class=temporary; label=AnimationSubstitute; pret=engine/battle/animations.asm:AnimationSubstitute; behavior=leave the mon pic unchanged instead of slide-out plus Substitute doll draw; evidence=no Substitute pic support in the port yet, callers in substitute.asm run the faithful state changes around it; lifetime=until Substitute pic VRAM support lands}
-global AnimationSubstitute
-AnimationSubstitute:
-    ret
-
-; STUB{class=temporary; label=HideSubstituteShowMonAnim; pret=engine/battle/animations.asm:HideSubstituteShowMonAnim; behavior=leave the pics unchanged instead of swapping the Substitute doll pic for the mon pic; evidence=no Substitute pic support in the port yet; lifetime=until Substitute pic VRAM support lands}
-global HideSubstituteShowMonAnim
-HideSubstituteShowMonAnim:
-    ret
-
-; STUB{class=temporary; label=ReshowSubstituteAnim; pret=engine/battle/animations.asm:ReshowSubstituteAnim; behavior=leave the pics unchanged instead of restoring the Substitute doll pic; evidence=no Substitute pic support in the port yet; lifetime=until Substitute pic VRAM support lands}
-global ReshowSubstituteAnim
-ReshowSubstituteAnim:
-    ret
-
 ; SlideDownFaintedMonPic: RETIRED 2026-08-08 — real body in
 ; src/engine/battle/core.asm (pret's own file), battle_animations Stage 4g.
 
@@ -164,6 +149,10 @@ ReshowSubstituteAnim:
 
 ; FlashScreenEveryFourFrameBlocks, FlashScreenEveryEightFrameBlocks:
 ; RETIRED 2026-08-08 — real bodies in animations.asm (Stage 3 flash family).
+
+; AnimationSubstitute, HideSubstituteShowMonAnim, ReshowSubstituteAnim,
+; CopyMonsterSpriteData: RETIRED 2026-08-08 — real bodies in animations.asm
+; (Stage 5d substitute family).
 
 ; AnimationFlashMonPic, AnimationFlashEnemyMonPic, AnimationTransformMon,
 ; ChangeMonPic, Func_79929: RETIRED 2026-08-08 — real bodies in animations.asm

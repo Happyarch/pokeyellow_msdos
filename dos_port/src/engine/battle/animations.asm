@@ -95,13 +95,15 @@ extern GetMonHeader                   ; src/home/pokemon.asm
 extern LoadFrontSpriteByMonIndex      ; src/home/pokemon.asm — ESI = tilemap dest
 extern LoadMonBackPic                 ; src/engine/battle/init_battle.asm
 extern RunPaletteCommand              ; src/home/palettes.asm — BH = command id
+extern LoadMonFrontSprite             ; src/home/pics.asm — EAX = dex-1, EDX = dest VRAM
+extern PokedexOrder                   ; src/data/pokemon/dex_order.asm — species index -> dex
+extern MonsterSprite                  ; src/engine/gfx/mon_icons.asm (assets/mon_icons.inc blob)
 extern PublishProjectedOAM            ; src/engine/gfx/sprite_oam.asm — wShadowOAM -> canvas at (EAX,EBX)
 extern g_obj_clip                     ; src/ppu/ppu.asm — OBJ clip rectangle (x0,y0,x1,y1 dwords)
 extern g_row_xoff_on                  ; src/ppu/ppu.asm — wavy-screen per-row HAL enable
 extern g_row_xoff                     ; src/ppu/ppu.asm — signed per-screen-row BG X offset
 
 ; --- Dispatch targets still stubbed in src/engine/battle/core_stubs.asm ---
-extern AnimationSubstitute
 extern TradeHidePokemon
 extern TradeShakePokeball
 extern TradeJumpPokeball
@@ -1879,6 +1881,163 @@ FallingObjects_InitMovementData:
 FallingObjects_InitialMovementData:
     db 0x00, 0x84, 0x06, 0x81, 0x02, 0x88, 0x01, 0x83, 0x05, 0x89
     db 0x09, 0x80, 0x07, 0x87, 0x03, 0x82, 0x04, 0x85, 0x08, 0x86
+
+; ===========================================================================
+; SUBSTITUTE FAMILY — pret animations.asm (battle_animations Stage 5d).
+; ===========================================================================
+
+global AnimationSubstitute
+AnimationSubstitute:
+; Changes the pokemon's sprite to the mini substitute sprite.
+    mov esi, wTempPic
+    xor al, al
+    mov ebx, wTempPic_SIZE                   ; ld bc, PIC_SIZE tiles
+    call FillMemory
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jz .playerTurn
+; enemy turn — facing-down sprite
+    mov esi, MonsterSprite + 0 * TILE_SIZE
+    mov edx, wTempPic + 0x120
+    call CopyMonsterSpriteData
+    mov esi, MonsterSprite + 1 * TILE_SIZE
+    mov edx, wTempPic + 0x120 + 0x70
+    call CopyMonsterSpriteData
+    mov esi, MonsterSprite + 2 * TILE_SIZE
+    mov edx, wTempPic + 0x120 + 0x10
+    call CopyMonsterSpriteData
+    mov esi, MonsterSprite + 3 * TILE_SIZE
+    mov edx, wTempPic + 0x120 + 0x10 + 0x70
+    call CopyMonsterSpriteData
+    jmp short .next
+.playerTurn:                                 ; facing-up sprite
+    mov esi, MonsterSprite + 4 * TILE_SIZE
+    mov edx, wTempPic + 0x120 + 0x70
+    call CopyMonsterSpriteData
+    mov esi, MonsterSprite + 5 * TILE_SIZE
+    mov edx, wTempPic + 0x120 + 0xE0
+    call CopyMonsterSpriteData
+    mov esi, MonsterSprite + 6 * TILE_SIZE
+    mov edx, wTempPic + 0x120 + 0x80
+    call CopyMonsterSpriteData
+    mov esi, MonsterSprite + 7 * TILE_SIZE
+    mov edx, wTempPic + 0x120 + 0xF0
+    call CopyMonsterSpriteData
+.next:
+    call CopyTempPicToMonPic
+    jmp AnimationShowMonPic
+
+; DEVIATION{class=data-model; pret=engine/battle/animations.asm:CopyMonsterSpriteData; behavior=the tile is copied by an inline 16-byte move from a FLAT program-image source to the EBP-relative destination instead of tail-calling FarCopyData with a bank in A; evidence=MonsterSprite is an incbin blob in the generated assets-mon_icons.inc so its address is a flat program-image pointer while wTempPic is EBP-relative, and the port's FarCopyData forwards to CopyData whose source is a GB offset, so the two address spaces cannot meet through it, and the flat model makes pret's BANK argument meaningless anyway; lifetime=permanent, part of the flat-pointer port model}
+; In: ESI = flat source tile, EDX = GB-space destination
+global CopyMonsterSpriteData
+CopyMonsterSpriteData:
+    push esi
+    push edi
+    push ecx
+    lea edi, [ebp + edx]
+    mov ecx, TILE_SIZE                       ; ld bc, TILE_SIZE
+    rep movsb
+    pop ecx
+    pop edi
+    pop esi
+    ret
+
+global ReshowSubstituteAnim
+ReshowSubstituteAnim:
+    call AnimationSlideMonOff
+    call AnimationSubstitute
+    jmp AnimationShowMonPic
+
+global HideSubstituteShowMonAnim
+HideSubstituteShowMonAnim:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov esi, wPlayerMonMinimized
+    mov edx, wPlayerBattleStatus1
+    mov ebx, wPlayerMoveNum
+    mov al, [ebp + wPlayerBattleStatus2]
+    jz .next1
+    mov esi, wEnemyMonMinimized
+    mov edx, wEnemyBattleStatus1
+    mov ebx, wEnemyMoveNum
+    mov al, [ebp + wEnemyBattleStatus2]
+.next1:
+    push esi
+    push edx
+    push ebx
+; if the substitute broke, slide it down; else slide it offscreen horizontally
+    test al, 1 << HAS_SUBSTITUTE_UP
+    jnz .substituteStillUp
+    call AnimationSlideMonDown
+    jmp short .next2
+.substituteStillUp:
+    call AnimationSlideMonOff
+.next2:
+    pop ebx
+    pop edx
+    mov al, [ebp + edx]                      ; ld a, [de]
+    test al, 1 << INVULNERABLE
+    pop esi                                  ; pret pops hl between the bit test and its branch
+    jnz .invulnerable
+    mov al, [ebp + ebx]                      ; ld a, [bc] — the move being used
+    cmp al, FLY
+    jz .flyOrDig
+    cmp al, DIG
+    jz .flyOrDig
+.invulnerable:
+    mov al, [ebp + esi]
+    test al, al
+    jnz AnimationMinimizeMon                 ; jp nz
+    call AnimationFlashMonPic
+    jmp AnimationShowMonPic
+.flyOrDig:
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    jnz .enemy
+    mov al, [ebp + wPlayerMonMinimized]
+    test al, al
+    jnz .monIsMinimized
+    mov al, [ebp + wBattleMonSpecies]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wCurSpecies], al
+    call GetMonHeader
+    call LoadMonBackPic                      ; pret: predef LoadMonBackPic
+    ret
+.enemy:
+    mov al, [ebp + wEnemyMonMinimized]
+    test al, al
+    jnz .monIsMinimized
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wCurSpecies], al
+    call GetMonHeader
+; DEVIATION{class=data-model; pret=engine/battle/animations.asm:HideSubstituteShowMonAnim; behavior=the enemy front-pic reload converts the species index to dex-1 through PokedexOrder and passes it in EAX, instead of letting LoadMonFrontSprite read the sprite pointer out of the loaded mon header; evidence=the port has no ROM banking so the mon header's front-pic pointer is a GB-ROM address with no meaning here, and LoadMonFrontSprite resolves the pic through the dex-keyed MonFrontPics table exactly as LoadMonBackPic already does for the back pic; lifetime=permanent, the flat memory model is by design}
+    movzx eax, byte [ebp + wEnemyMonSpecies]
+    dec eax
+    movzx eax, byte [PokedexOrder + eax]     ; national dex number (1-based)
+    dec eax                                  ; dex-1 = MonFrontPics record index
+    mov edx, vFrontPic                       ; ld de, vFrontPic
+    jmp LoadMonFrontSprite
+.monIsMinimized:
+    mov esi, wTempPic
+    push esi
+    xor al, al
+    mov ebx, PIC_WIDTH * PIC_HEIGHT * TILE_SIZE   ; ld bc, 7 * 7 * $10
+    call FillMemory
+    pop esi
+    add esi, 0x194                           ; ld de, $194 / add hl, de
+    mov edx, MinimizedMonSprite              ; flat program-image data
+    mov bl, MinimizedMonSpriteEnd - MinimizedMonSprite
+.loop:
+    mov al, [edx]
+    mov [ebp + esi], al                      ; ld [hli], a — both 2bpp bitplanes
+    inc esi
+    mov [ebp + esi], al
+    inc esi
+    inc edx
+    dec bl
+    jnz .loop
+    jmp CopyTempPicToMonPic
 
 ; ===========================================================================
 ; CHANGEMONPIC FAMILY — pret animations.asm (battle_animations Stage 5c).

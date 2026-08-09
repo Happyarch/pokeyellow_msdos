@@ -32,17 +32,14 @@ extern DelayFrames                  ; src/home/delay.asm — BL = frame count
 extern DrawHUDsAndHPBars            ; engine/battle/core.asm — jpfar target in pret; flat tail-call here
 ; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
 extern PlayCurrentMoveAnimation
-; AnimationSubstitute (engine/battle/animations.asm:2020) is the literal hard-coded
-; substitute pop-up subanim pret reaches when wOptions/BIT_BATTLE_ANIMATION is SET
-; (animations off — see comment at .selectAnim below). It is NOT yet defined anywhere
-; in the dos_port scaffold (core_stubs.asm only stubs PlayCurrentMoveAnimation/
-; PlayBattleAnimation, not this one). Externed here per allowlist §2 item 1 (literal
-; subanimation engine, not ported) so this file assembles standalone; resolving the
-; undefined symbol at link time is the master's job — add a `ret`-stub global
-; AnimationSubstitute alongside the others in core_stubs.asm.
-; FLAG FOR MASTER: AnimationSubstitute has no stub yet — add one (ret) to
-; core_stubs.asm's stub block before this handler can link.
-extern AnimationSubstitute
+; AnimationSubstitute is the literal hard-coded substitute pop-up subanim pret
+; reaches when wOptions/BIT_BATTLE_ANIMATION is SET (animations off — see the
+; comment at .selectAnim below). It is REAL as of battle_animations Stage 5d
+; (2026-08-08): the body lives in engine/battle/animations.asm alongside the rest
+; of the substitute family. The stale "FLAG FOR MASTER: no stub yet" note that
+; stood here through the scaffold era is removed — it was asking for a ret-stub
+; that has since been written and then retired.
+extern AnimationSubstitute          ; src/engine/battle/animations.asm
 ; --- battle_text.inc streams (global in core.o) ---
 extern SubstituteText
 extern HasSubstituteText

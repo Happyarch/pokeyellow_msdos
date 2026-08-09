@@ -28,18 +28,10 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 
-; ---------------------------------------------------------------------------
-; FLAG FOR MASTER — wTransformedEnemyMonOriginalDVs is not yet in gb_memmap.inc.
-; Sym-verified against the built ROM symbol table (pokeyellow.sym: "00:cceb
-; wTransformedEnemyMonOriginalDVs"), cross-checked the same way the existing
-; gb_memmap.inc entries were verified (e.g. wPlayerMoveListIndex sym = 00:cc2e,
-; matching gb_memmap.inc's existing equ exactly) — same bank-0 WRAM numbering
-; convention, so 0xCCEB is correct. Please fold this into gb_memmap.inc proper
-; (it sits between wSafariBaitFactor $CCE9/$CCEA and wMonIsDisobedient $CCED in
-; ram/wram.asm, a 2-byte word) and drop the local equ here.
-; ---------------------------------------------------------------------------
-%ifndef wTransformedEnemyMonOriginalDVs
-%endif
+; wTransformedEnemyMonOriginalDVs ($CCEB, word) now lives in gb_memmap.inc, so the
+; scaffold-era "FLAG FOR MASTER — not yet in gb_memmap.inc" note and its local
+; fallback equ are gone (swept battle_animations Stage 5d, 2026-08-08). The
+; %ifndef block they left behind was empty and defined nothing.
 
 section .text
 

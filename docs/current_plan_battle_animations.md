@@ -558,11 +558,29 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       convention — and `DoExplodeSpecialEffects` keeps pret's dead
       `hlcoord 1, 5` (as `BCOORD(1,5)`), which is dead on both sides because
       `AnimationHideMonPic` derives its own origin from `hWhoseTurn`.
-- [ ] Substitute/Transform: `AnimationSubstitute`, `AnimationTransformMon`,
+- [x] Substitute/Transform: `AnimationSubstitute`, `AnimationTransformMon`,
       `HideSubstituteShowMonAnim`, `ReshowSubstituteAnim` (retire 4 stubs),
       `ChangeMonPic`, `CopyMonsterSpriteData`, `CopyTempPicToMonPic`; sweep the
       stale `FLAG FOR MASTER` comments in `move_effects/substitute.asm:43` and
       `move_effects/transform.asm:66`.
+      **DONE 2026-08-08 (Stage 5c + 5d).** `CopyTempPicToMonPic` was pulled
+      forward in Stage 4d; `ChangeMonPic` / `AnimationTransformMon` landed in 5c
+      (which also closed Stage 4's last label, `Func_79929`); the substitute
+      family in 5d. Both `FLAG FOR MASTER` comments swept — and both were
+      **stale, not actionable**: `AnimationSubstitute` has a real body now (the
+      note asked for a ret-stub that has since been written *and* retired), and
+      `wTransformedEnemyMonOriginalDVs` is already in `gb_memmap.inc:299`, its
+      note leaving behind an **empty `%ifndef` block** that defined nothing.
+      **Transform's MOVE LOGIC was already done** (checked 2026-08-08, maintainer
+      question): `TransformEffect_` is translated, linked (`Makefile:1944`) and
+      dispatched from `MoveEffectPointerTable` row `$39 TRANSFORM_EFFECT`. Its
+      "0 port callers" in `label_status` is the documented `dd`-dispatch blind
+      spot, not a wiring gap — no work owed.
+      One `DEVIATION{class=data-model}` on `CopyMonsterSpriteData` (flat
+      `MonsterSprite` source vs EBP-relative `wTempPic` destination, which
+      `FarCopyData`/`CopyData` cannot bridge) and one on
+      `HideSubstituteShowMonAnim`'s enemy front-pic reload (species -> dex-1 via
+      `PokedexOrder`, as `LoadMonBackPic` already does).
 - [ ] Optional tail (coordinate with umbrella 4c): `MarowakAnim` +
       `CopyMonPicFromBGToSpriteVRAM` (engine/battle/ghost_marowak_anim.asm).
 - [ ] Gate: faithdiff; `ball_catch` stays green; demo sign-off on ball toss/

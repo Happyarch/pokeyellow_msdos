@@ -6866,3 +6866,56 @@ explicit arming is owed here.
 on all five with no findings** — notably `ChangeMonPic` at 7 pret / 7 port calls,
 all matched; `pgate.sh` 17/17 with per-scenario mask-hit counts byte-identical to
 the previous run. Dispatch-only, so absence-of-regression rather than execution.
+
+---
+
+## 2026-08-08 — battle animations Stage 5d: the substitute family + stale-flag sweep
+
+pret `engine/battle/animations.asm`. Four labels: `AnimationSubstitute`,
+`CopyMonsterSpriteData`, `ReshowSubstituteAnim`, `HideSubstituteShowMonAnim`.
+Three stubs retired. **This closes the Stage 5 substitute/transform box.**
+
+Two `DEVIATION{class=data-model}`:
+* `CopyMonsterSpriteData` — pret tail-calls `FarCopyData` with a bank in `A`.
+  Here `MonsterSprite` is an `incbin` blob in the generated
+  `assets/mon_icons.inc`, so its address is a **flat** program-image pointer,
+  while `wTempPic` is **EBP-relative**; the port's `FarCopyData` forwards to
+  `CopyData`, whose source is a GB offset, so the two address spaces cannot meet
+  through it. Replaced by an inline 16-byte `rep movsb`. faithdiff reports the
+  matching `- DROPPED FarCopyData (jp)`.
+* `HideSubstituteShowMonAnim`'s enemy front-pic reload converts species -> dex-1
+  through `PokedexOrder` and passes it in `EAX`, because the port's
+  `LoadMonFrontSprite` resolves the pic through the dex-keyed `MonFrontPics`
+  table — the mon header's front-pic pointer is a GB-ROM address with no meaning
+  in the flat model. `LoadMonBackPic` already carries the same projection.
+
+`MonsterSprite` is now `global` in `src/engine/gfx/mon_icons.asm` (the
+hand-written carrier), not in the generated `.inc`.
+
+**Both `FLAG FOR MASTER` comments swept — and both were stale, not actionable.**
+`substitute.asm` asked the master to add a `ret`-stub for `AnimationSubstitute`;
+that stub was written long ago and has now been retired, so the note was two
+generations out of date. `transform.asm` asked for
+`wTransformedEnemyMonOriginalDVs` to be folded into `gb_memmap.inc`; it is
+already there (line 299), and the note had left behind an **empty `%ifndef`
+block that defined nothing**.
+
+**Transform's move logic was already complete** (checked because the maintainer
+asked whether an animation without it would be useful). `TransformEffect_` is
+translated, linked (`Makefile:1944`) and dispatched from
+`MoveEffectPointerTable` row `$39 TRANSFORM_EFFECT`. `label_status` reporting
+"0 port callers" is the documented `dd`-dispatch-table blind spot, not evidence
+of being unwired — the same caveat the dependency-graph docs give. No work owed.
+
+**The linter earned its keep again.** Retiring these stubs left four
+`extern … ; core_stubs.asm (STUB)` comments in `core.asm` and `effects.asm`
+pointing at a file that no longer defines the symbol; `lint_pret_labels` failed
+with 4 `stale_extern` violations until they were repointed at
+`src/engine/battle/animations.asm`. That is stub rule 5 working exactly as
+designed.
+
+**Verification:** build clean; `lint_pret_labels` 0 both modes (after the
+repoint); faithdiff clean on three labels — `HideSubstituteShowMonAnim` at
+**10 pret / 10 port calls all matched** — plus the one justified
+`FarCopyData` drop; `pgate.sh` 17/17 with per-scenario mask-hit counts
+byte-identical to the 5c run.

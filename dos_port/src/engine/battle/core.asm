@@ -1148,8 +1148,8 @@ section .text
 ; ---------------------------------------------------------------------------
 ; --- externs for the faithful ExecutePlayerMove flow (Stage 2.5) ---
 extern DisplayEffectiveness            ; display_effectiveness.asm (real)
-extern HideSubstituteShowMonAnim       ; core_stubs.asm (STUB)
-extern ReshowSubstituteAnim            ; core_stubs.asm (STUB)
+extern HideSubstituteShowMonAnim       ; src/engine/battle/animations.asm
+extern ReshowSubstituteAnim            ; src/engine/battle/animations.asm
 extern DelayFrames                     ; src/home/delay.asm
 extern str_oldman_name                 ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern str_profoak_name                ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)

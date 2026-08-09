@@ -103,8 +103,8 @@ extern ParalyzedMayNotAttackText
 extern StatModTextStrings               ; src/data/battle_data.asm
 
 ; --- substitute show/hide: ret-stubs in core_stubs.asm ---
-extern HideSubstituteShowMonAnim     ; core_stubs.asm (STUB)
-extern ReshowSubstituteAnim          ; core_stubs.asm (STUB)
+extern HideSubstituteShowMonAnim     ; src/engine/battle/animations.asm
+extern ReshowSubstituteAnim          ; src/engine/battle/animations.asm
 
 ; --- battle-animation interpreter (Stage 2b wiring) ---
 extern MoveAnimation                 ; animations.asm — pret predef, direct call in flat model
