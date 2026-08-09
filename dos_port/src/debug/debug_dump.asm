@@ -23,6 +23,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 %include "gb_constants.inc"
+%include "coords.inc"                   ; BCOORD — battle-frame projection (DEBUG_ANIM_SHOW label)
 %ifdef DEBUG_MAPSCRIPT_SIGHT
 ; Trainer-flow WRAM addresses the shared memmap has not absorbed yet (M8.2 scaffold).
 %endif
@@ -214,6 +215,15 @@ extern PlayMoveAnimation         ; core.asm — wAnimationID + Delay3 + MoveAnim
 extern DelayFrames               ; src/home/delay.asm — BL = frame count
 extern DelayFrame                ; src/home/vblank.asm
 extern g_cfg_musicloop           ; src/audio/audio_hal.asm — the shared /LOOP exe flag
+%endif
+%ifdef DEBUG_ANIM_SHOW
+extern PlayMoveAnimation         ; core.asm — the real production entry point
+extern DelayFrames               ; src/home/delay.asm — BL = frame count
+extern DelayFrame                ; src/home/vblank.asm
+extern g_cfg_musicloop           ; src/audio/audio_hal.asm — the shared /LOOP exe flag
+extern GetMoveName               ; src/home/names.asm — [wNamedObjectIndex] -> wNameBuffer
+extern PlaceString               ; src/home/text.asm — EAX = src ptr, ESI = tilemap dest
+extern ClearScreenArea           ; src/home/copy2.asm — ESI dest, BH rows, BL cols
 %endif
 %endif
 global RunBattleTest
@@ -637,6 +647,42 @@ fpname: db "PAL.BIN", 0
 ; DEBUG_ANIM_DEMO's iteration counter. In MEMORY, not a register: every callee
 ; under PlayMoveAnimation clobbers the general registers.
 anim_demo_count: db 0
+%endif
+%ifdef DEBUG_ANIM_SHOW
+; DEBUG_ANIM_SHOW's cursor into anim_show_list. In MEMORY for the same reason as
+; anim_demo_count above: PlayMoveAnimation clobbers everything.
+anim_show_idx: db 0
+; The showcase list — real move ids, one per animation family landed AFTER Stage
+; 3, in roughly the order the stages landed. Raw ids with the name in the comment
+; ON PURPOSE: most of these moves have no equ in the port (it only ever defined
+; the handful its handlers named), and adding ~200 generated move equs collides
+; with hand equs scattered across the tree. The on-screen label does not depend
+; on these comments — it comes from the real GetMoveName -> MoveNames Tier-1
+; table at runtime, so it cannot drift from the id.
+; NOTE: no ball/TOSS entry. wNamedObjectIndex ($D11D) is the same byte as
+; wPokeBallAnimData, so priming a name would corrupt what the ball handlers read.
+anim_show_list:
+    db 0x2D    ; GROWL        — Stage 3 flash family (signed-off anchor)
+    db 0x95    ; PSYWAVE      — Stage 3 wavy-screen HAL (signed-off anchor)
+    db 0x3F    ; HYPER_BEAM   — Stage 3 flash + screen shake (signed-off anchor)
+    db 0x21    ; TACKLE       — 4c AnimationMoveMonHorizontally
+    db 0x64    ; TELEPORT     — 4c squish + 4e shoot balls upward
+    db 0x8F    ; SKY_ATTACK   — 4c/4e, the other squish + balls user
+    db 0x68    ; DOUBLE_TEAM  — 4c AnimationShakeBackAndForth
+    db 0x96    ; SPLASH       — 4c AnimationBoundUpAndDown
+    db 0x69    ; RECOVER      — 4a AnimationBlinkMon
+    db 0x6B    ; MINIMIZE     — 4e spiral balls + 4d AnimationMinimizeMon
+    db 0x97    ; ACID_ARMOR   — 4d AnimationSlideMonDownAndHide
+    db 0x45    ; SEISMIC_TOSS — 4a hide/show enemy pic
+    db 0x4B    ; RAZOR_LEAF   — 4f AnimationLeavesFalling
+    db 0x50    ; PETAL_DANCE  — 4f AnimationPetalsFalling
+    db 0x39    ; SURF         — 4f AnimationWaterDropletsEverywhere
+    db 0x9D    ; ROCK_SLIDE   — 5a DoRockSlideSpecialEffects
+    db 0x99    ; EXPLOSION    — 5a DoExplodeSpecialEffects
+    db 0x3B    ; BLIZZARD     — 5a DoBlizzardSpecialEffects
+    db 0x90    ; TRANSFORM    — 5c ChangeMonPic / AnimationTransformMon
+    db 0xA4    ; SUBSTITUTE   — 5d AnimationSubstitute
+    db 0        ; terminator
 %endif
 %ifdef DEBUG_TEXT
 ; The text-engine oracle's probe streams (RunTextTest). Tier-1 data: generated,
@@ -2394,6 +2440,59 @@ RunBattleTest:
 .blackoutKO:
     call HandlePlayerMonFainted         ; RemoveFaintedPlayerMon -> HandlePlayerBlackOut
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+%elifdef DEBUG_ANIM_SHOW
+    ; ------------------------------------------------------------------
+    ; DEBUG_ANIM_SHOW — the Stage 4/5 animation SHOWCASE.
+    ;
+    ; Same rationale and same battle scene as DEBUG_ANIM_DEMO below (read its
+    ; comment first — it explains why the DEBUG_BATTLE_GOLDEN preamble is
+    ; load-bearing rather than decorative). The only difference: instead of one
+    ; move id repeated, this walks anim_show_list, printing each move's NAME in
+    ; the battle frame before playing it, so a viewer can tell which animation
+    ; family they are looking at.
+    ;
+    ; The label comes from the REAL GetMoveName -> MoveNames Tier-1 table, not
+    ; from a hand-written string, so it cannot disagree with the id being played.
+    ;
+    ; Port-only debug glue: it invents no pret label and changes no pret body.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    and byte [ebp + wOptions], ~(1 << BIT_BATTLE_ANIMATION) & 0xff
+    mov byte [ebp + hWhoseTurn], 0
+    mov byte [ebp + wAnimationType], 3
+.animShowPass:
+    mov byte [anim_show_idx], 0
+.animShowNext:
+    movzx eax, byte [anim_show_idx]
+    movzx eax, byte [anim_show_list + eax]
+    test al, al
+    jz .animShowPassDone                ; 0 terminates the list
+    push eax                            ; the move id, across GetMoveName
+    ; Name the move in the battle frame. wNamedObjectIndex is $D11D — the same
+    ; byte as wPokeBallAnimData, which is why the list carries no ball entry.
+    mov [ebp + wNamedObjectIndex], al
+    call GetMoveName                    ; -> wNameBuffer
+    mov esi, BCOORD(1, 14)              ; PROJ — inside the 20x18 battle frame
+    mov bh, 1                           ; clear one row, 12 cols, before printing
+    mov bl, 12
+    call ClearScreenArea
+    mov esi, BCOORD(1, 14)              ; PROJ
+    lea eax, [ebp + wNameBuffer]        ; GB-memory string -> linear pointer
+    call PlaceString
+    mov bl, ANIM_SHOW_HOLD              ; hold the name so it can be read
+    call DelayFrames
+    pop eax
+    call PlayMoveAnimation              ; the real production entry point
+    mov bl, ANIM_SHOW_GAP               ; settle before the next one
+    call DelayFrames
+    inc byte [anim_show_idx]
+    jmp .animShowNext
+.animShowPassDone:
+    cmp byte [g_cfg_musicloop], 0       ; /LOOP: run the whole list forever
+    jnz .animShowPass
+    call DelayFrame
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %elifdef DEBUG_ANIM_DEMO
     ; ------------------------------------------------------------------
     ; DEBUG_ANIM_DEMO — the move-animation sign-off harness
@@ -2464,7 +2563,7 @@ RunBattleTest:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT or DEBUG_ANIM_DEMO
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 

@@ -1028,6 +1028,25 @@ endif
 # exits, so run_headless.sh can prove the harness executed.
 # NOTE (Stages 3-5): every SE/mon-pic/palette/shake handler is still a ret-stub,
 # so what you see is OAM particle frame blocks only — that is expected today.
+# DEBUG_ANIM_SHOW=1: the Stage 4/5 animation SHOWCASE ("onslaught"). Same battle
+# scene as DEBUG_ANIM_DEMO, but instead of one move it walks a curated list of
+# real moves covering every animation family landed after Stage 3, printing each
+# move's name (via the real GetMoveName -> MoveNames table) in the battle frame
+# before playing it, so a viewer can tell what they are looking at.
+#   dos_port/run DEBUG_ANIM_SHOW=1 /LOOP      <- the maintainer sign-off command
+# /LOOP repeats the whole list forever. WITHOUT /LOOP it plays the list ONCE,
+# then dumps GBSTATE.BIN + DUMP.BIN and exits, so run_headless.sh can prove it
+# ran. ANIM_SHOW_HOLD sets the frames each name is held before its animation
+# (default 40, ~0.65 s) and ANIM_SHOW_GAP the pause after (default 50).
+ifdef DEBUG_ANIM_SHOW
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_ANIM_SHOW -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SEED_PARTY
+ANIM_SHOW_HOLD ?= 40
+ANIM_SHOW_GAP ?= 50
+NASMFLAGS += -D ANIM_SHOW_HOLD=$(ANIM_SHOW_HOLD) -D ANIM_SHOW_GAP=$(ANIM_SHOW_GAP)
+endif
+
 ifdef DEBUG_ANIM_DEMO
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_ANIM_DEMO -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

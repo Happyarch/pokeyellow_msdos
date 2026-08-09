@@ -6919,3 +6919,58 @@ repoint); faithdiff clean on three labels — `HideSubstituteShowMonAnim` at
 **10 pret / 10 port calls all matched** — plus the one justified
 `FarCopyData` drop; `pgate.sh` 17/17 with per-scenario mask-hit counts
 byte-identical to the 5c run.
+
+---
+
+## 2026-08-08 — DEBUG_ANIM_SHOW: the Stage 4/5 animation showcase harness
+
+Maintainer request: "a live animation showcase that plays all the animations
+after stage 3 sequentially so I can visually check". Port-only debug glue — it
+invents no pret label and changes no pret body.
+
+```
+dos_port/run DEBUG_ANIM_SHOW=1 /LOOP        # the sign-off command
+```
+
+It rides the same `DEBUG_BATTLE_GOLDEN` battle scene as `DEBUG_ANIM_DEMO` (that
+preamble is load-bearing, not decorative — see its comment), but instead of one
+move repeated it walks `anim_show_list`: **20 real moves, one per animation
+family landed after Stage 3**, printing each move's NAME in the battle frame
+before playing it so a viewer can tell what they are looking at. `/LOOP` repeats
+forever; without it the list plays once, then dumps and exits so
+`run_headless.sh` can prove it ran. `ANIM_SHOW_HOLD` / `ANIM_SHOW_GAP` tune the
+pacing.
+
+**The labels come from the real `GetMoveName` -> `MoveNames` Tier-1 table**, not
+hand-written strings, so a label cannot disagree with the id being played. The
+list itself is raw ids with the name in a comment, deliberately: most of these
+moves have **no equ in the port** (it only ever defined the handful its handlers
+named).
+
+**A rejected approach worth recording, because it looked obviously right.** The
+first attempt taught `gen_battle_anim_data.py` to emit all ~200 move ids as
+generated constants — the proper Tier-1 fix for that gap. It fails on this tree:
+`%ifndef` guards do **not** protect against `equ` collisions (`%ifndef` only sees
+preprocessor `%define`s and is blind to `equ` labels), `REST` is a NASM-reserved
+token that `gb_constants.inc` already carries as a `%define` for that reason, and
+skipping names defined in `gb_constants.inc` still collided with `MIRROR_MOVE`,
+which is defined **locally in `core.asm`**. Filling the move-constant gap
+properly means first consolidating hand equs scattered across the tree — a real
+task, but not this one. Backed out; the harness needs no constants at all.
+
+No ball/TOSS entry in the list, on purpose: `wNamedObjectIndex` ($D11D) is the
+same byte as `wPokeBallAnimData`, so priming a name would corrupt what the ball
+handlers read.
+
+**Verification — it ran, and the label rendered.** `run_headless.sh
+"DEBUG_ANIM_SHOW=1"` exits 0 with both dumps, which alone proves it reached the
+list terminator (that is the only path to `DebugDumpMemory` in this build), i.e.
+all 20 animations played without crashing. Decisive check on top: decoding the
+`wTileMap` region of the resulting `GBSTATE.BIN` at `BCOORD(1,14)` — the label
+position — yields `92 94 81 92 93 88 93 94 93 84`, which charmap-decodes to
+**"SUBSTITUTE"**, the last entry in the list, resolved from raw id `0xA4`. So the
+walk completed, `GetMoveName` resolved correctly, and `PlaceString` rendered at
+the projected coordinate.
+Default build clean; `lint_pret_labels` 0; `pgate.sh` 17/17 with mask-hit counts
+byte-identical (the harness is `%ifdef`-gated and cannot affect them).
+**Still owed: an actual human looking at it.**
