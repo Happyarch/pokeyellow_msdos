@@ -289,10 +289,17 @@ PrepareTitleScreen:
     mov byte [ebp + W_STATUS_FLAGS_7],        al
     mov byte [ebp + W_ELITE4_FLAGS],          al
 
-    ; Audio ROM bank — TODO: audio HAL (Phase 3); write placeholder
-    ; BANK(Music_TitleScreen) = 0 for now (stub)
+    ; pret: ld a, BANK(Music_TitleScreen) / ld [wAudioROMBank], a /
+    ; ld [wAudioSavedROMBank], a — note pret RELOADS a here; it is not the
+    ; xor-a above. This carried a Phase-1 placeholder that wrote 0 instead,
+    ; which GetNextMusicByte matches against no audio bank and so falls through
+    ; to blob slot 3 (bank $20): the title screen streamed Music_TitleScreen's
+    ; channel data out of the wrong 16 KB image and played as noise.
+    mov al, MUSIC_TITLE_SCREEN_BANK
     mov byte [ebp + W_AUDIO_ROM_BANK],        al
     mov byte [ebp + W_AUDIO_SAVED_ROM_BANK],  al
+    ; AL is left holding the bank, as pret leaves A — it is dead into
+    ; DisplayTitleScreen, whose first write to A is its own.
 
     ; Fall through to DisplayTitleScreen
 

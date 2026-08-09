@@ -27,6 +27,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/audio_constants.inc"   ; MUSIC_YELLOW_INTRO + its _BANK
 
 ; pret HRAM names for the auto-BG-transfer registers — used so the faithful (inert)
 ; writes below cross-reference against pret by name (faithdiff matches stores by name).
@@ -798,7 +799,14 @@ InitYellowIntroGFXAndMusic:
     call RunPaletteCommand
     xor eax, eax                                   ; zero the 4 scene-state bytes
     mov [ebp + wYellowIntroCurrentScene], eax       ; CurrentScene / Timer / StructPointer
-    mov al, 0xdc                                   ; ld a, MUSIC_YELLOW_INTRO ($dc)
+    ; PlayMusic takes the song in A and its audio ROM bank in C (it writes C to
+    ; wAudioROMBank/wAudioSavedROMBank). The bank load was dropped here, so the
+    ; intro inherited whatever bank the previous track left and GetNextMusicByte
+    ; streamed Music_YellowIntro's channel data out of the wrong 16 KB blob —
+    ; the intro played as noise while every other track, whose call site does
+    ; set the bank, was fine.
+    mov bl, MUSIC_YELLOW_INTRO_BANK                ; ld c, BANK(Music_YellowIntro)
+    mov al, MUSIC_YELLOW_INTRO                     ; ld a, MUSIC_YELLOW_INTRO
     call PlayMusic
     ret
 

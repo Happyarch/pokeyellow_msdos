@@ -158,7 +158,18 @@ Init:
     ; DEVIATION{class=HAL; pret=home/init.asm:Init; behavior=predef LoadSGB is not called, its observable result wOnSGB=1 is published directly and the SGB packet transfer is omitted; evidence=measured in mGBA on the golden ROM in CGB mode, LoadSGB leaves hOnCGB=1 and wOnSGB=1, and the port's VGA DAC slot palettes are the colour-hardware path; lifetime=retired if an SGB packet HAL is ever implemented}
     mov byte [ebp + wOnSGB], 1
 
-    ; DEVIATION{class=HAL; pret=home/init.asm:Init; behavior=pret's wAudioROMBank/wAudioSavedROMBank = BANK(SFX_Shooting_Star) seed is dropped; evidence=the audio engine is Phase 3 (docs/current_plan_audio.md) and the bank cells are inert until it lands; lifetime=retired by the Phase 3 audio engine wiring the boot banks}
+    ; pret: ld a, BANK(SFX_Shooting_Star) / ld [wAudioROMBank], a /
+    ; ld [wAudioSavedROMBank], a. This seed is load-bearing, not bookkeeping:
+    ; StopAllSounds above leaves the bank at engine 1 ($02), and PlayIntro below
+    ; plays SFX_SHOOTING_STAR, whose header lives only in SFX_Headers_3 (bank
+    ; $1f, and its id $c2 IS MAX_SFX_ID_3). Under engine 1 that id is above
+    ; MAX_SFX_ID_1 ($b9) but below engine 1's music boundary, so PlaySound falls
+    ; through to the MUSIC path and the Game Freak shooting-star SFX never plays.
+    ; The Phase-3 DEVIATION that used to stand here called these cells "inert
+    ; until the audio engine lands"; the engine has landed, so it is retired.
+    mov al, AUDIO_BANK_3                        ; BANK(SFX_Shooting_Star) = $1f
+    mov [ebp + wAudioROMBank], al
+    mov [ebp + wAudioSavedROMBank], al
 
     ; hAutoBGTransferDest = vBGMap1 ($9C00)
     mov byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1], (GB_TILEMAP1 >> 8) & 0xFF
