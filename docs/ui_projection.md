@@ -34,6 +34,36 @@ box hand-drawn at the same offset. The player HUD uses +3 (not +4) so its frame
 in `battle_hud.asm` / `init_battle.asm` / `pics.asm`. See `current_plan_battle_pret_alignment.md`
 (battle-frontend draw layer; the old `current_plan_battle_frontend.md` is archived at `docs/plans/`).
 
+### Battle animations — the same GB-centered projection, applied in code
+
+In-battle move animations (`docs/current_plan_battle_animations.md`) use the
+**identical +10 col / +3 row** offset as the battle screen above, via the
+`BCOORD(x, y)` macro hoisted into `include/coords.inc`. Two things make this
+subsystem different from the ones above, and both are load-bearing:
+
+1. **Nothing here is a window.** These are tilemap writes into `W_TILEMAP` at a
+   projected address, so the `wx`/`wy`/`clip`/`max_y` columns are `—` for every
+   row — like the `overworld-field` row, not like the menu rows.
+2. **`SCREEN_WIDTH` has TWO roles and only one of them projects.** As a row
+   STRIDE (`ld bc, SCREEN_WIDTH`, `SCREEN_WIDTH - 8`, `-SCREEN_WIDTH`) the
+   literal is correct verbatim on both sides — each means "my tilemap's stride",
+   20 in pret and 40 here. As a COORDINATE it is not: pret writes the player-pic
+   origin as `5 * SCREEN_WIDTH + 1`, which is the tile **(1,5)**, and the enemy
+   origin as a bare `ld a, 12`, which is **(12,0)**. Re-derive those through
+   `BCOORD`; never reuse the literal. Getting this backwards is the single
+   easiest way to corrupt the battle frame.
+
+The OAM half of the same subsystem does NOT project in the data: `wShadowOAM`
+holds pret's exact GB bytes and the offset is applied at publication only, by
+`PublishProjectedOAM(80, 24)` with `g_obj_clip = (80,24,240,168)` reproducing the
+GB's off-screen hiding. See "OBJ viewport clipping — `g_obj_clip`" below.
+
+Cross-check worth keeping: the animation origins `BCOORD(1,5)` / `BCOORD(12,0)`
+are the same cells the `battle-ui (player back pic)` and `battle-ui (enemy front
+pic)` rows already record, and a runtime dump confirmed it — a `TELEPORT`
+animation changed exactly 49 `wTileMap` cells forming a 7×7 block at canvas
+cols 11-17 / rows 8-14, i.e. GB (1,5)-(7,11).
+
 ### Cinematics — boot movie (splash, Yellow intro, title, Oak speech) — GB-centered
 
 The whole 160×144 GB screen is centered as a **presentation matte vignette**:
@@ -214,6 +244,16 @@ grep -rn '; PROJ' dos_port/src
 | battle-ui (player back pic) | (1,5)   | 7×7   | +10col/+3row → canvas (11,8), VRAM tile $31 | — | — | — | — | pics.asm (player Red back → mon back at send-out) |
 | battle-ui (pokéballs)       | OAM     | 6×1   | player base OAM ($60,$60)+center; enemy ($48,$20)+center (trainer) | — | — | — | — | pokeballs.asm (OAM via PrepareStaticOAM) |
 | battle-ui (slide-in)        | —       | —     | pics slide from edges: enemy col 22+step (right), player col 11-step (left), step 18→0 | — | — | — | — | pics.asm (SlideBattlePicsIn, darkened) |
+| battle-anim (mon-pic origin)| (1,5) player / (12,0) enemy | 7×7 | BCOORD +10col/+3row → canvas (11,8) / (22,3). pret writes these as `5 * SCREEN_WIDTH + 1` and a bare `ld a, 12` — COORDINATES, not strides | — | — | — | — | animations.asm (AnimationHideMonPic, GetMonSpriteTileMapPointerFromRowCount, ChangeMonPic) |
+| battle-anim (move/reset pos)| (2,5) player / (11,0) enemy | 7×7 | BCOORD; the shifted "stepped forward" pic position | — | — | — | — | animations.asm (AnimationMoveMonHorizontally, AnimationResetMonPosition) |
+| battle-anim (shake b&forth) | (0,5)+(2,5) / (11,0)+(13,0) | 7×9 clear | BCOORD; drawn at hl then de, erased by ONE 7×9 clear anchored at hl (9 wide because de = hl+2) | — | — | — | — | animations.asm (AnimationShakeBackAndForth) |
+| battle-anim (squish)        | (5,5)+(3,5) / (16,0)+(14,0) | 7×7 | BCOORD; row-shift pair walked by AnimCopyRowLeft/Right | — | — | — | — | animations.asm (AnimationSquishMonPic) |
+| battle-anim (slide up)      | (1,6)→(1,5) / (12,1)→(12,0); bottom row (1,11) / (12,6) | 7×7 | BCOORD; src/dst pair, stride SCREEN_WIDTH×2 verbatim | — | — | — | — | animations.asm (AnimationSlideMonUp, _AnimationSlideMonUp) |
+| battle-anim (slide off)     | (0,5) player / (12,0) enemy | 7×8 | BCOORD; row advance `SCREEN_WIDTH - 8` is a STRIDE (32 here, 12 in pret) | — | — | — | — | animations.asm (_AnimationSlideMonOff) |
+| battle-anim (fainted slide) | (1,10)→(1,11) player / (12,5)→(12,6) enemy | 7×7 | BCOORD; walks UPWARD (`-SCREEN_WIDTH`), no push/pop swap — unlike _AnimationSlideMonUp | — | — | — | — | core.asm (SlideDownFaintedMonPic call sites) |
+| battle-anim (Marowak dodge) | (17,0) | 7×7 | BCOORD; pret's adjacent `ld de, 20` is a row STRIDE and carries the port's 40 | — | — | — | — | animations.asm (DoBallTossSpecialEffects) |
+| battle-anim (enemy HUD shake)| rows 0-6 | 20×7 | canvas pixel rows 24..79 (GB tile rows 0-6 at +3), displaced by the per-row HAL `g_row_xoff` instead of pret's window+rSCX trick | — | — | — | — | animations.asm (ShakeEnemyHUD_SetHUDRows) |
+| battle-anim (showcase label)| (1,14) | 12×1 | BCOORD; DEBUG_ANIM_SHOW only — move name printed in the battle frame | — | — | — | — | debug_dump.asm (DEBUG_ANIM_SHOW) |
 
 ---
 

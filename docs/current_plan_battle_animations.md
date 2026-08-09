@@ -642,11 +642,25 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       golden artifacts changed.
 - [ ] Evaluate F-19 masks against the now-real animation route; report to
       umbrella 6e (do not delete unilaterally).
-- [ ] Sweep: retired stubs' extern comments (`label_status --callers` each),
+- [~] Sweep: retired stubs' extern comments (`label_status --callers` each),
       `update_label_db`, `docs/ui_projection.md` index rows + a battle-anim
       subsystem note, `docs/translation_log.md` entries, stigmergy memories
       (close/update + `episode_record`), refresh umbrella Stage 6 boxes,
       archive this plan.
+      **DONE 2026-08-08:** extern comments swept twice (33 stale ones in
+      `animations.asm` in `14f57251`; 4 `stale_extern` lint violations in
+      `core.asm`/`effects.asm` in `8a6e1f20`); `update_label_db` run at every
+      increment; **`docs/ui_projection.md` now carries the battle-animations
+      subsystem note + 10 index rows** (the geometry directive's third
+      requirement, which Stages 4-5 had been meeting only via `; PROJ` tags in
+      code); `translation_log.md` has a per-stage entry for 4a-4g and 5a-5d plus
+      the runtime-evidence and correction entries; memory
+      `battle-animations-plan-created` rewritten for the handoff; episodes 25-26
+      recorded; `build-and-debug` skill now names both animation viewers.
+      **STILL OPEN:** refresh the umbrella `battle_completion` Stage 6 boxes
+      (cross-plan edit — should follow the maintainer's visual sign-off, since
+      the umbrella's 6d/6e wording depends on it) and archive this plan (only
+      after Stage 6 closes).
 
 ## Verification summary
 
