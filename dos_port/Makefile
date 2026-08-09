@@ -2587,6 +2587,19 @@ assets/battle_hud_2bpp.inc: ../gfx/battle/battle_hud_1.png ../gfx/battle/battle_
 	@echo "$@ is a pret build output and is missing — building it via the root Makefile"
 	+$(MAKE) -C .. gfx/$*.2bpp
 
+# .pic (pkmncompress-compressed sprites) are the same story -- 380 on disk after
+# a root build, 0 tracked -- with one extra wrinkle: gen_trainer_pics.py and
+# gen_mon_pics.py open them directly to measure st_size, so make never saw them
+# as prerequisites and could not know to build them. A missing one surfaced as a
+# raw Python traceback (FileNotFoundError on gfx/trainers/youngster.pic) rather
+# than a build error. Declaring them turns that into something make can fix.
+PRET_PICS := $(addprefix ../,$(shell sed -n 's/.*INCBIN "\(gfx\/[^"]*\.pic\)".*/\1/p' \
+                                    ../gfx/pics.asm 2>/dev/null | sort -u))
+
+../gfx/%.pic:
+	@echo "$@ is a pret build output and is missing — building it via the root Makefile"
+	+$(MAKE) -C .. gfx/$*.pic
+
 # PTile (bold "P" of the status screen's "PP") is a separate blob from the battle
 # HUD tiles above: pret loads it in StatusScreen, not in LoadHudTilePatterns. The
 # split is what lets src/engine/battle/core.asm %include the HUD blob — which it
@@ -2596,12 +2609,12 @@ assets/ptile_2bpp.inc: ../gfx/font/P.1bpp tools/generators/gen_ptile_inc.py
 	python3 tools/generators/gen_ptile_inc.py
 
 assets/trainer_pics.inc: ../gfx/pics.asm ../data/trainers/pic_pointers_money.asm \
-                         tools/generators/gen_trainer_pics.py
+                         tools/generators/gen_trainer_pics.py $(PRET_PICS)
 	python3 tools/generators/gen_trainer_pics.py
 
 # Pokémon front battle sprites (compressed .pic) + dex-ordered MonFrontPics
 # pointer/length table for LoadFrontSpriteByMonIndex.
-assets/mon_pics.inc: ../data/pokemon/base_stats.asm tools/generators/gen_mon_pics.py
+assets/mon_pics.inc: ../data/pokemon/base_stats.asm tools/generators/gen_mon_pics.py $(PRET_PICS)
 	python3 tools/generators/gen_mon_pics.py
 
 src/data/mon_pics.o: assets/mon_pics.inc
