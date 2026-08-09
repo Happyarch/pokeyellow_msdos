@@ -603,6 +603,21 @@ enemy-gauge clone tile ids and VRAM slots.
 - [ ] **6e. Retire F-19.** Remove the enemy-gauge clone-id divergence, restore
       canonical gauge tile identities, and delete every F-19-owned tilemap/VRAM
       mask. Do not close the finding while its masks remain.
+      > **Report in from `current_plan_battle_animations.md` Stage 6 (2026-08-08),
+      > as that plan's evaluate-and-report box requires — no mask was changed.**
+      > The now-real Stage 4/5 animation route does **not** affect F-19. F-19
+      > masks vFont `$C0-$C8` = `$8C00-$8C8F`; the animation route's complete VRAM
+      > destination set is `$8310` (`LoadMoveAnimationTiles`), `$8000-$830F`
+      > (`AnimationShakeEnemyHUD`), and `$9000` / `$9310` (the pic reloads).
+      > No intersection, so retiring F-19 stays purely the per-cell-palette work
+      > described above.
+      > **One thing to carry into 6e's mask sweep, though:** the neighbouring
+      > battle-intro mask over slots `$00-$30` is justified as "port `$80xx` is
+      > undisplayed OBJ leftovers", and `AnimationShakeEnemyHUD` writes the back
+      > pic into exactly slots 0-48. No scenario reaches the HUD shake today, so
+      > the string is currently true — but it becomes false the moment a Stage 6
+      > animation scenario exercises the shake. Re-measure it then rather than
+      > carrying it forward.
 - [ ] Add must-hit animation scenarios for representative physical, elemental,
       ball, shake/blink, and option-off paths. Compare ordered checkpoints rather
       than only the terminal screen; keep every remaining mask measured and

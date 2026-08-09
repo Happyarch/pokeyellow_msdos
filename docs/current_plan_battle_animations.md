@@ -640,8 +640,26 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       witness rule).
 - [ ] Full battle tier + core fidelity + `fidelity-full`; `goldens-verify` if
       golden artifacts changed.
-- [ ] Evaluate F-19 masks against the now-real animation route; report to
+- [x] Evaluate F-19 masks against the now-real animation route; report to
       umbrella 6e (do not delete unilaterally).
+      **EVALUATED 2026-08-08. Result: F-19 is UNAFFECTED — no mask change owed,
+      nothing deleted.** F-19 masks vFont ids `$C0-$C8` = `$8C00-$8C8F` (differ
+      slots 192-200). The complete VRAM destination set of the Stage 4/5
+      animation route is: `LoadMoveAnimationTiles` -> `$8310` (slot 49);
+      `AnimationShakeEnemyHUD` -> `$8000-$830F` (slots 0-48);
+      `CopyTempPicToMonPic` / `ChangeMonPic` -> `vFrontPic $9000` and
+      `vBackPic $9310`. **None of it intersects `$8C00-$8C8F`**, so the
+      clone mechanism and its masks are exactly as they were. Retiring F-19
+      remains purely umbrella 6e's per-cell-palette work.
+      **But a SEPARATE mask's justification is now conditional, and 6e should
+      know.** The battle-intro VRAM mask over slots `$00-$30` says "port `$80xx`
+      is undisplayed OBJ leftovers". `AnimationShakeEnemyHUD` copies the back pic
+      into `vSprites` for exactly `PIC_SIZE` = 49 tiles = slots **0-48**, i.e.
+      precisely that masked range — so after a HUD shake those slots hold a live
+      back-pic copy, not leftovers. No current scenario dispatches to the HUD
+      shake, so the why-string is accurate for the suite as it stands **today**;
+      a Stage 6 scenario that exercises the shake would falsify it and the string
+      must be re-measured then, not assumed.
 - [~] Sweep: retired stubs' extern comments (`label_status --callers` each),
       `update_label_db`, `docs/ui_projection.md` index rows + a battle-anim
       subsystem note, `docs/translation_log.md` entries, stigmergy memories
