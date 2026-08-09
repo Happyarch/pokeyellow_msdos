@@ -47,11 +47,12 @@ below for the full list (rgbds, a C compiler, Pillow, numpy, PyYAML).
 ### Linux
 
 ```sh
-# Debian / Ubuntu (incl. WSL)
-sudo apt install nasm binutils-djgpp python3 make
-# a fresh clone additionally needs (asset generation):
-sudo apt install gcc python3-pil python3-numpy python3-yaml
+# Debian / Ubuntu (incl. WSL) — everything, in one line
+sudo apt install build-essential git nasm binutils-djgpp \
+                 python3 python3-pil python3-numpy python3-yaml
 ```
+
+`build-essential` covers gcc, make and the C headers pret's `tools/` needs — plain `gcc` pulls in neither make nor libc-dev.
 
 Those three Python packages are the complete set the build imports — measured by
 walking every generator the Makefile invokes, not by guesswork. `Pillow`

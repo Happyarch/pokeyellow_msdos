@@ -2561,6 +2561,31 @@ assets/battle_hud_2bpp.inc: ../gfx/battle/battle_hud_1.png ../gfx/battle/battle_
 	python3 tools/generators/gen_battle_hud_inc.py
 
 # ---------------------------------------------------------------------------
+# The DPMI host. `image` needs it to build PKMN.IMG, but it is a third-party
+# binary we deliberately do NOT commit (see the licensing note in
+# tools/setup_toolchain.py), so a fresh clone has no copy and make used to stop
+# with a bare
+#     make: *** No rule to make target 'CWSDPMI.EXE', needed by 'image'.
+# right after a successful "Built: PKMN.EXE" -- reported 2026-08-09.
+#
+# setup_toolchain.py fetches it into .toolchain/ on both Windows and Linux (it
+# is a DOS binary; the host OS is irrelevant). Copy it from there if present,
+# and otherwise say what to run rather than naming a file with no rule.
+$(DPMI_HOST):
+	@if [ -f ../.toolchain/cwsdpmi/bin/$(DPMI_HOST) ]; then \
+	    echo "copying $(DPMI_HOST) from .toolchain/"; \
+	    cp ../.toolchain/cwsdpmi/bin/$(DPMI_HOST) $@; \
+	else \
+	    echo "$(DPMI_HOST) is missing -- it is the DPMI host PKMN.EXE needs to run."; \
+	    echo "Fetch it with:"; \
+	    echo "    python3 tools/setup_toolchain.py"; \
+	    echo "or download csdpmi7b.zip from"; \
+	    echo "    http://www.delorie.com/pub/djgpp/current/v2misc/"; \
+	    echo "and put $(DPMI_HOST) in dos_port/."; \
+	    exit 1; \
+	fi
+
+# ---------------------------------------------------------------------------
 # pret graphics as prerequisites (../gfx/**.1bpp / .2bpp).
 #
 # These are BUILD OUTPUTS of the root Makefile, not committed files: 585 of them

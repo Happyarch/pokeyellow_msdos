@@ -120,6 +120,22 @@ PACKAGES = {
 # does package it the version is wrong -- .rgbds-version pins 1.0.2 exactly.
 # These are statically-linked binaries, so they run on any x86-64 distro.
 LINUX_PACKAGES = {
+    # CWSDPMI is a DOS binary -- the host OS is irrelevant, DOSBox-X runs it
+    # either way -- and `make image` needs it to build PKMN.IMG. Leaving it out
+    # of this set (until 2026-08-09) meant a Linux user got all the way to
+    # "Built: PKMN.EXE" and then hit
+    #     make: *** No rule to make target 'CWSDPMI.EXE', needed by 'image'.
+    "cwsdpmi": {
+        "desc": "CWSDPMI r7 (DPMI host -- required to run PKMN.EXE)",
+        "url": "http://www.delorie.com/pub/djgpp/current/v2misc/csdpmi7b.zip",
+        "sha256": "deacda0488e1cdd7c4a9f32fab45662b34c0ed6b2d7d4d13bc07041b62004a8c",
+        "size": 71339,
+        "license": "GPL, or binary redistribution under the terms in cwsdpmi.doc",
+        "strip_prefix": "",
+        "bindir": "bin",
+        "probe": "CWSDPMI.EXE",
+        "on_path": False,
+    },
     "rgbds": {
         "desc": "rgbds 1.0.2 (linux x86_64, static)",
         "url": (
