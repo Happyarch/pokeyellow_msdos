@@ -61,6 +61,23 @@ PACKAGES = {
         "bindir": "",
         "probe": "nasm.exe",
     },
+    "rgbds": {
+        # Needed to BOOTSTRAP a fresh clone, not to rebuild the EXE: the 585
+        # .2bpp tileset graphics and ~693 of the 714 dos_port/assets/*.inc are
+        # generated, not committed. Version is pinned by .rgbds-version (1.0.2);
+        # upstream tags it v1.0.2+hotfix.
+        "desc": "rgbds 1.0.2 (win64) -- assembles the reference ROM + renders .2bpp",
+        "url": (
+            "https://github.com/gbdev/rgbds/releases/download/"
+            "v1.0.2%2Bhotfix/rgbds-win64.zip"
+        ),
+        "sha256": "51d5371ebf86c18c136a5c7616dd2fb350f537abd13f5603c7fb56b3e73fa4da",
+        "size": 1104438,
+        "license": "MIT",
+        "strip_prefix": "",
+        "bindir": "bin",
+        "probe": "rgbasm.exe",
+    },
     "djgpp": {
         # binutils version is what `ld --version` reports, not what the
         # archive name suggests (the gcc1220 in the filename is the *gcc*
@@ -293,15 +310,46 @@ def check(root: Path, verbose: bool = True) -> bool:
 
 
 def check_host_tools() -> list[str]:
-    """Things this script deliberately does NOT install. Returns missing names."""
+    """Things this script deliberately does NOT install. Returns missing names.
+
+    These are all system-wide installs (a package manager, a compiler toolchain,
+    pip into the user's environment). Fetching a pinned archive into a local
+    directory is one thing; mutating the user's system is another, and this
+    script does not do the second. It reports instead.
+    """
     missing = []
     for tool, hint in (
         ("make", "MSYS2: pacman -S make   (or GnuWin32 make)"),
         ("git", "https://git-scm.com/download/win"),
+        # Only needed to bootstrap assets on a fresh clone: pret's Makefile
+        # builds tools/gfx, tools/scan_includes and tools/make_patch from C.
+        ("gcc", "MSYS2: pacman -S gcc     (fresh-clone asset build only)"),
     ):
         if shutil.which(tool) is None:
-            missing.append(f"{tool:<6} -- {hint}")
+            missing.append(f"{tool:<7} -- {hint}")
+
+    for mod, hint in (
+        ("PIL", "pip install pillow       (fresh-clone asset build only)"),
+        ("yaml", "pip install pyyaml       (fresh-clone asset build only)"),
+    ):
+        try:
+            __import__(mod)
+        except ImportError:
+            missing.append(f"{mod:<7} -- {hint}")
     return missing
+
+
+def assets_present() -> bool | None:
+    """Best-effort: does this clone already have generated assets?
+
+    Returns None if the layout can't be inspected. Used only to decide which
+    advice to print -- never to skip work.
+    """
+    gen = repo_root() / "dos_port" / "assets"
+    if not gen.is_dir():
+        return None
+    # 21 .inc files are tracked; a bootstrapped tree has hundreds.
+    return len(list(gen.rglob("*.inc"))) > 50
 
 
 def print_plan(root: Path) -> None:
@@ -416,6 +464,21 @@ def main() -> int:
         print("\nStill needed (this script does not install these):")
         for m in missing:
             print(f"  - {m}")
+
+    if assets_present() is False:
+        print(
+            "\nNOTE: this clone has no generated assets yet, so `make PKMN.EXE`\n"
+            "      will fail with \"unable to open include file 'assets/...'\".\n"
+            "      The .2bpp graphics and most assets/*.inc are generated, not\n"
+            "      committed. Bootstrap them first (needs make + gcc + Pillow +\n"
+            "      PyYAML, all above):\n"
+            "          git submodule update --init --recursive\n"
+            "          make                       # renders the .2bpp via rgbds\n"
+            "          make -C dos_port assets\n"
+            "      That chain is the least-tested part of the native Windows\n"
+            "      route -- WSL is the reliable way to do a first bootstrap.\n"
+            "      Once assets exist, rebuilding PKMN.EXE natively is fine."
+        )
 
     print(f"\nAll of it is git-ignored ({root / '.gitignore'} ignores `*`).")
     print(f"To uninstall, delete {root}")

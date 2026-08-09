@@ -37,18 +37,25 @@ See [INSTALL.md](INSTALL.md) for full setup instructions.
 
 ## Building the DOS Port
 
-You need three things: **NASM** (assembler), a **DJGPP linker** (`ld` targeting
-`coff-go32-exe`), and **Python 3** (the asset generators are Python).
+To rebuild `PKMN.EXE` you need **NASM**, a **DJGPP linker** (`ld` targeting
+`coff-go32-exe`) and **Python 3**.
+
+A **fresh clone needs more**, because the graphics and most data tables are
+generated rather than committed — see [Fresh clone](#fresh-clone-generate-the-assets-first)
+below for the full list (rgbds, a C compiler, Pillow, PyYAML).
 
 ### Linux
 
 ```sh
 # Debian / Ubuntu
 sudo apt install nasm binutils-djgpp python3
+# fresh clone also needs: gcc, rgbds 1.0.2, python3-pil, python3-yaml
 ```
 
 On distros without a packaged DJGPP binutils (Arch, Fedora, …), build the
 cross-toolchain with [andrewwutw/build-djgpp](https://github.com/andrewwutw/build-djgpp).
+rgbds must be **1.0.2** (the version in `.rgbds-version`); Arch packages it as
+`rgbds`, elsewhere take the release binaries or build from the `v1.0.2+hotfix` tag.
 
 ```sh
 make -C dos_port
@@ -70,12 +77,23 @@ then let the setup script fetch the rest:
 python dos_port\tools\setup_toolchain.py
 ```
 
-It downloads NASM and a Windows-hosted DJGPP cross-linker into a project-local
-`.toolchain\` directory, checks each download against a pinned SHA-256, and
-writes an activator. Nothing is installed system-wide and no global environment
-variable is touched — delete `.toolchain\` to uninstall. Run it with
+It downloads NASM, rgbds 1.0.2 and a Windows-hosted DJGPP cross-linker into a
+project-local `.toolchain\` directory, checks each download against a pinned
+SHA-256, and writes an activator. Nothing is installed system-wide and no global
+environment variable is touched — delete `.toolchain\` to uninstall. Run it with
 `--print-only` first if you'd rather see exactly what it fetches and from where,
 or `--check` to see what you already have.
+
+**It does not install everything, by design.** It fetches pinned archives into a
+local folder; it will not mutate your system. These stay your job, and the
+script reports which are missing:
+
+| Needed | For | Get it |
+|---|---|---|
+| `make` | always | MSYS2 `pacman -S make` |
+| `git` | always | [git-scm.com](https://git-scm.com/download/win) |
+| `gcc` | fresh clone only | MSYS2 `pacman -S gcc` |
+| Pillow, PyYAML | fresh clone only | `pip install pillow pyyaml` |
 
 Then, per shell:
 
@@ -91,6 +109,30 @@ make -C dos_port PKMN.EXE LD=i586-pc-msdosdjgpp-ld
 
 Copy the resulting `PKMN.EXE` and `CWSDPMI.EXE` into your DOSBox-X mount and run
 `PKMN`.
+
+#### Fresh clone? Generate the assets first
+
+A clone straight from git **cannot build** — you'll get `unable to open include
+file 'assets/..._gfx.inc'`. Most of the assets are generated, not committed: 585
+`.2bpp` tileset graphics (none tracked) and ~693 of the 714
+`dos_port/assets/*.inc`. Bootstrap them once:
+
+```sh
+git submodule update --init --recursive
+make                        # renders the .2bpp — needs rgbds + gcc
+make -C dos_port assets     # needs Pillow + PyYAML
+```
+
+The root `make` builds pret's own C tools (`tools/gfx`, `tools/scan_includes`,
+`tools/make_patch`), which is why a C compiler is on the list. Its final ROM link
+may fail — that's fine, the graphics are produced before it.
+
+> **This chain is the least-tested part of the native Windows route.** Do the
+> first bootstrap under **WSL** if you hit trouble; once the assets exist,
+> rebuilding `PKMN.EXE` natively works fine and is verified. If `git submodule`
+> fails, note that `.gitmodules` uses SSH URLs — either add
+> `git config --global url."https://github.com/".insteadOf git@github.com:` or
+> use SSH keys.
 
 Two Windows-specific limits:
 
