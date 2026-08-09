@@ -638,8 +638,22 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       why-string. Scenario registration per the manifest/validate_scenarios
       chain; each scenario's entry states what path it actually ENTERS (false-
       witness rule).
-- [ ] Full battle tier + core fidelity + `fidelity-full`; `goldens-verify` if
+- [x] Full battle tier + core fidelity + `fidelity-full`; `goldens-verify` if
       golden artifacts changed.
+      **DONE 2026-08-08: the WHOLE registry, 56/56 PASS in 266 s** via
+      `tools/pgate.sh <out> $(gen_scenario_registry.py --names full)`. Stages 4
+      and 5 had been gated on the 17-scenario `pgate` battery at every increment;
+      this is the first run over all 56, i.e. the other 39 (menus, cinematics,
+      title/soft-reset, save + PC + box round-trip, all twelve `route*_sight`,
+      surf, fishing, item flows) had never been run against this session's work.
+      Decomposed rather than quoted: **23 scenarios compare rendered surfaces**
+      (360 tilemap cells each, across four distinct projections — stride-40
+      windows at (0,0), the battle window at (10,3), a (16,10) window, and five
+      stride-20 scratch screens) and **33 are datastruct-class** comparing WRAM
+      only; WRAM coverage runs 7-13 regions per scenario. No failures, no new
+      masks.
+      `goldens-verify` NOT run and not owed: no golden artifact changed this
+      session (`git status` clean under `tests/goldens/` throughout).
 - [x] Evaluate F-19 masks against the now-real animation route; report to
       umbrella 6e (do not delete unilaterally).
       **EVALUATED 2026-08-08. Result: F-19 is UNAFFECTED — no mask change owed,
