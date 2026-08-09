@@ -55,6 +55,7 @@ extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObje
 extern DelayFrames, DelayFrame, DisableLCD, FillMemory
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
 extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
+extern YellowIntroPaletteAction      ; engine/gfx/palettes.asm
 ; The frame/OAM data mirrors (pret INCLUDEs both files into this one); staged
 ; into GB space by CopyYellowIntroAnimatedObjectData below.
 extern YellowIntro_AnimatedObjectFramesData       ; data/sprite_anims/intro_frames.asm
@@ -1026,10 +1027,10 @@ Func_f9e5f:
 ; Func_f9e9a — per-scene reset: scroll/window to 0/0/$90, LCDC on, DMG palettes
 ; ($e4/$e4/$e0), CGB palettes applied. In: AL = palette variant (CGB-only).
 ;
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:Func_f9e9a; behavior=the callfar YellowIntroPaletteAction (CGB palette-RAM + SGB packet setup) is dropped, and the DMG rBGP/rOBP shadows this routine also writes drive the port's rendering instead; evidence=CGB->VGA palette translation is the Phase-5 boundary (YellowIntroPaletteAction's InitCGBPalettes/SendSGBPacket are unported) and the port renders DMG shades from the IO palette shadows; lifetime=Phase-5 CGB palette port}
 ; ---------------------------------------------------------------------------
 Func_f9e9a:
-    ; ld e, a — variant selector, only read by the omitted YellowIntroPaletteAction.
+    mov dl, al                                      ; ld e, a — palette variant
+    call YellowIntroPaletteAction                   ; callfar YellowIntroPaletteAction
     xor al, al
     mov [ebp + H_SCX], al                          ; ldh [hSCX], a
     mov [ebp + H_SCY], al                           ; ldh [hSCY], a

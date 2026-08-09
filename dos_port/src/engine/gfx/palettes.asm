@@ -36,6 +36,8 @@ bits 32
 %define PAL_BLACK           30
 %define PAL_GREENBAR        31
 %define PAL_CAVE            35
+%define PAL_MEWMON          16
+%define PAL_PIKACHUS_BEACH  37
 
 global _RunPaletteCommand
 global SetPalFunctions, SetPal_BattleBlack, SetPal_Battle, DeterminePaletteID
@@ -43,6 +45,7 @@ global SetPal_TownMap, SetPal_StatusScreen, SetPal_Pokedex, SetPal_Slots
 global SetPal_TitleScreen, SetPal_NidorinoIntro, SetPal_Generic, SetPal_Overworld
 global SetPal_PartyMenu, SetPal_PokemonWholeScreen, SetPal_GameFreakIntro
 global SetPal_TrainerCard, SetPal_PikachusBeach, SetPal_PikachusBeachTitle
+global YellowIntroPaletteAction
 
 extern IndexToPokedex               ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern tile_pal, g_tilecache_dirty
@@ -221,6 +224,51 @@ set_pal_attr_table:
     db 0                                    ; 15 SET_PAL_SURFING_PIKACHU_MINIGAME → WholeScreen (= the flood)
 SET_PAL_ATTR_TABLE_LEN equ $ - set_pal_attr_table
 section .text
+
+; ---------------------------------------------------------------------------
+; YellowIntroPaletteAction — pret engine/gfx/palettes.asm:YellowIntroPaletteAction
+;
+; In: DL = pret's E, the scene's palette variant.
+;
+; E == 0 is the plain Generic packet. E != 0 is the one the Yellow intro spends
+; almost all its time in: PalPacket_PikachusBeach in all four slots, then BG slot
+; 1 alone overridden with PalPacket_Generic's first palette (PAL_MEWMON). pret
+; does that override through wCGBBasePalPointers + 2 (entry 1, two bytes each)
+; and TransferCurBGPData with a = 1, so it touches the BG palette ONLY — the OBJ
+; slots keep PAL_PIKACHUS_BEACH. Getting that asymmetry wrong is the whole
+; difference between the intro's real look and a flat wash.
+;
+; This is why the intro used to render entirely in Mew's red/blue: the port
+; dropped this routine, so every scene fell back to SET_PAL_GENERIC = PAL_MEWMON
+; in all four slots.
+;
+; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:YellowIntroPaletteAction; behavior=publishes palette IDs into bg_slot_pal and obj_slot_pal instead of calling InitCGBPalettes, GetCGBBasePalAddress, DMGPalToCGBPal, TransferCurBGPData and SendSGBPacket to build palette RAM and SGB packets; evidence=commit_palette in boot/video.asm already reproduces that whole chain once per frame from the slot tables, so those five routines have no port counterpart by design and the port has never needed them; lifetime=permanent, this is the port's palette-HAL boundary}
+; ---------------------------------------------------------------------------
+YellowIntroPaletteAction:
+    pushad
+    test dl, dl                          ; ld a, e / and a
+    jnz .pikachusBeach
+    mov al, SET_PAL_GENERIC              ; ld hl, PalPacket_Generic
+    popad
+    jmp SetPal_Screen
+.pikachusBeach:
+    ; PalPacket_PikachusBeach is PAL_PIKACHUS_BEACH in all four entries, and
+    ; InitCGBPalettes converts each into the BG pal AND both OBJ pals.
+    mov al, PAL_PIKACHUS_BEACH
+    mov ecx, 4
+    mov edi, bg_slot_pal
+    rep stosb
+    mov ecx, 4
+    mov edi, obj_slot_pal
+    rep stosb
+    ; …then BG slot 1 only takes PalPacket_Generic's palette.
+    mov byte [bg_slot_pal + 1], PAL_MEWMON
+    ; No BLK packet is involved, so there is no attribute plane for this scene —
+    ; drop any the previous screen left, or it would keep re-resolving.
+    mov dword [g_bg_attr_table], 0
+    mov byte [g_pal_dirty], 1
+    popad
+    ret
 
 ; Faithful SetPal_Overworld palette choice from pret engine/gfx/palettes.asm.
 ; The port has no SGB attribute packets, so slot 0 becomes the whole-map band;
