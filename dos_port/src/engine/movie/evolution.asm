@@ -50,6 +50,16 @@ extern DelayFrames              ; (BL = frame count)
 extern DelayFrame               ; wait one frame
 extern JoypadLowSensitivity     ; refresh hJoy5 (H_JOY5) low-sensitivity input
 
+; Audio (live since the Phase-3 engine landed — see the EvolveMon header):
+extern StopAllMusic             ; src/home/audio.asm
+extern PlaySound                ; src/home/audio.asm — AL = sound id
+extern PlayMusic                ; src/home/audio.asm — AL = song, BL = audio ROM bank
+extern PlayCry                  ; home_stubs.asm — pret: home/pokemon.asm (still a stub)
+extern WaitForSoundToFinish     ; src/home/delay.asm
+extern Delay3                   ; src/home/palettes.asm
+
+%include "assets/audio_constants.inc"   ; SFX_TINK, MUSIC_SAFARI_ZONE + its _BANK
+
 section .text
 
 ; ===========================================================================
@@ -57,12 +67,18 @@ section .text
 ; Runs the evolution animation and returns CF = "player cancelled".
 ;
 ; FUNCTIONAL now: the B-cancel loop is LIVE (real JoypadLowSensitivity input,
-; honoring wForceEvolution), and wEvoCancelled → CF is faithful. Deferred:
-;   TODO-HW (audio HAL, Phase 3): StopAllMusic / SFX_TINK / PlayCry(old,new) /
-;     PlayMusic(MUSIC_SAFARI_ZONE).
+; honoring wForceEvolution), wEvoCancelled → CF is faithful, and the AUDIO is
+; live. The audio used to be deferred behind "TODO-HW (audio HAL, Phase 3)";
+; that claim went stale when the Phase-3 engine landed and linked, so the calls
+; are restored here against pret's actual sequence. PlayCry is the one piece
+; still genuinely missing, and it is missing because the ROUTINE is a stub, not
+; because the subsystem is absent — so it is called faithfully and returns.
+;
+; Still deferred:
 ;   [2b] (software PPU / palette): EvolutionSetWholeScreenPalette flash,
 ;     Evolution_LoadPic old/new (LoadFlippedFrontSpriteByMonIndex + pic swap),
 ;     Evolution_ChangeMonPic / Evolution_BackAndForthAnim tile morph.
+; STUB{class=stub; label=PlayCry; pret=home/pokemon.asm:PlayCry; behavior=the old and new species cries do not play, the call is made faithfully at both pret sites and the ret-stub in home_stubs.asm returns immediately; evidence=tools/label_status PlayCry reports stub with provider dos_port/src/home/home_stubs.asm, while every other audio routine this routine calls has a real linked body; lifetime=retire when PlayCry is translated, no change is needed here}
 ; Because the pic-load path is deferred, this does NOT clobber wCurPartySpecies/
 ; wCurSpecies, so (unlike pret) it need not save/restore them.
 ; Out: CF set iff cancelled. Clobbers AL; preserves ESI/EDX/EBX.
@@ -72,10 +88,28 @@ EvolveMon:
     push edx
     push ebx
 
-    ; TODO-HW: audio HAL (Phase 3) — StopAllMusic; PlaySound SFX_TINK; Delay3;
-    ;          PlayCry [wEvoOldSpecies]; PlayMusic MUSIC_SAFARI_ZONE.
+    xor al, al                      ; xor a
+    mov [ebp + wLowHealthAlarm], al ; ld [wLowHealthAlarm], a
+    mov [ebp + wChannelSoundIDs + CHAN5], al  ; ld [wChannelSoundIDs + CHAN5], a
+    call StopAllMusic
+    mov byte [ebp + hAutoBGTransferEnabled], 1 ; ld a,$1 / ldh [hAutoBGTransferEnabled],a
+    mov al, SFX_TINK                ; ld a, SFX_TINK
+    call PlaySound
+    call Delay3
+    xor al, al                      ; xor a
+    mov [ebp + hAutoBGTransferEnabled], al     ; ldh [hAutoBGTransferEnabled], a
+    mov [ebp + hTileAnimations], al            ; ldh [hTileAnimations], a
+
     ; [2b]: EvolutionSetWholeScreenPalette (old species) + Evolution_LoadPic
     ;       old/new + vFrontPic/vBackPic swap (battle-pic + palette path).
+
+    mov byte [ebp + hAutoBGTransferEnabled], 1 ; ld a,$1 / ldh [hAutoBGTransferEnabled],a
+    mov al, [ebp + wEvoOldSpecies]  ; ld a, [wEvoOldSpecies]
+    call PlayCry                    ; ret-stub — see the STUB annotation above
+    call WaitForSoundToFinish
+    mov bl, MUSIC_SAFARI_ZONE_BANK  ; ld c, BANK(Music_SafariZone)
+    mov al, MUSIC_SAFARI_ZONE       ; ld a, MUSIC_SAFARI_ZONE
+    call PlayMusic
 
     mov bl, 80                      ; pret: ld c, 80 / call DelayFrames
     call DelayFrames
@@ -102,7 +136,15 @@ EvolveMon:
     ; [2b]: Evolution_ChangeMonPic (show the new species pic).
     mov al, [ebp + wEvoNewSpecies]
 .done:
-    ; TODO-HW: audio HAL (Phase 3) — StopAllMusic; PlayCry AL; palette AL.
+    ; pret: ld [wWholeScreenPaletteMonSpecies], a / call StopAllMusic /
+    ; ld a, [wWholeScreenPaletteMonSpecies] / call PlayCry. AL arrives holding the
+    ; species, and pret parks it in WRAM precisely because StopAllMusic does not
+    ; preserve A — so the reload is load-bearing, not redundant.
+    mov [ebp + wWholeScreenPaletteMonSpecies], al
+    call StopAllMusic
+    mov al, [ebp + wWholeScreenPaletteMonSpecies]
+    call PlayCry                    ; ret-stub — see the STUB annotation above
+    ; [2b]: ld c, 0 / call EvolutionSetWholeScreenPalette.
     pop ebx
     pop edx
     pop esi

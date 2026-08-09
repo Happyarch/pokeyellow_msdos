@@ -111,8 +111,21 @@ LoadYellowIntroObjectAnimationDataPointers:
     ret
 
 ; ---------------------------------------------------------------------------
-; Func_f98a2 — scene-7 hook: set the BG-priority bit (OAM attr bit 0) on the
-; surfing-Pikachu OBJ so the wave BG draws over them.
+; Func_f98a2 — scene-7 hook: OR $1 into the OAM attribute byte of the surfing
+; Pikachu's OBJ.
+;
+; BIT 0 IS NOT THE BG-PRIORITY BIT — this comment used to say it was, and the
+; wrong model is worth naming because it is easy to reach for. In a GB OAM
+; attribute byte, bit 7 is OBJ-behind-BG priority (OAM_BEHIND_BG) and bit 4 is
+; the DMG OBP0/OBP1 select; bits 0-2 are the CGB palette NUMBER. So `or $1`
+; moves these sprites from CGB OBJ palette 0 to palette 1. The port reproduces
+; that faithfully: render_sprites (ppu.asm) selects its palette with attr & 7,
+; ignoring bit 4, exactly as CGB hardware does.
+;
+; It is invisible during the Yellow intro only because PalPacket_PikachusBeach
+; is PAL_PIKACHUS_BEACH in all four entries, so OBJ slots 0 and 1 hold the same
+; palette (YellowIntroPaletteAction overrides entry 1 of the BG table ONLY).
+; Do not "simplify" this to a priority write on that basis.
 ; ---------------------------------------------------------------------------
 Func_f98a2:
     mov al, [ebp + wShadowOAMSprite08Attributes]
@@ -133,7 +146,9 @@ Func_f98a2:
     ret
 
 ; ---------------------------------------------------------------------------
-; Func_f98cb — scene-0xb hook: same BG-priority bit on the flying-Pikachu OBJ.
+; Func_f98cb — scene-0xb hook: the same OR $1 on the flying-Pikachu OBJ, i.e.
+; CGB OBJ palette 0 -> 1, not a priority write. See Func_f98a2 above for why
+; bit 0 is the palette-number LSB and not OAM_BEHIND_BG.
 ; ---------------------------------------------------------------------------
 Func_f98cb:
     mov al, [ebp + wShadowOAMSprite18Attributes]
@@ -252,13 +267,18 @@ YellowIntroScene5:
     call YellowIntro_NextScene
     ret
 
-; Scene 6 — "surfing scene": arm the per-scanline SCY wobble (inert in the port),
-; lay out a custom BG (rows 0-2 tile 0, row 3 a $20/$21 stripe, rows 4+ tile $10 =
-; the water), and spawn object $5. The rSCY LY-effect + sine buffer produce the
-; wave wobble on hardware; the port stores them faithfully but does not emulate the
-; per-scanline override (see Copy8BitSineWave), so the wobble is inert. (BG fills
-; use the cinematic origin, as documented once at the top; pret's rows-4+ $300 fill
-; is capped at the surface bottom so it does not overrun the 40-wide canvas.)
+; Scene 6 — "surfing scene": arm the per-scanline SCY wobble, lay out a custom BG
+; (rows 0-2 tile 0, row 3 a $20/$21 stripe, rows 4+ tile $10 = the water), and
+; spawn object $5. The rSCY LY-effect + sine buffer produce the wave wobble on
+; hardware. (BG fills use the cinematic origin, as documented once at the top;
+; pret's rows-4+ $300 fill is capped at the surface bottom so it does not overrun
+; the 40-wide canvas.)
+;
+; This is the AUTHORITATIVE annotation for the port's missing per-scanline scroll
+; channel. The two Request7TileTransfer* DEVIATIONs below describe the transfers
+; that FEED this mechanism, but the mechanism itself had only a prose "inert" note,
+; so nothing machine-parsed recorded that the wave does not render at all.
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene6; behavior=the per-scanline LY scroll override is not emulated, so the rSCY value written through hLCDCPointer never displaces any scanline and the surfing scene's water renders flat instead of waving, the port stores hLCDCPointer and wLYOverridesBuffer faithfully but nothing consumes them; evidence=H_LCDC_POINTER is written at 9 sites in this file and W_LY_OVERRIDES_BUFFER only here, and neither is read anywhere under src/ or boot/ -- the compositor exposes no per-scanline scroll channel, only the whole-plane H_SCX/H_SCY and the per-row g_row_xoff HAL that battle animations use; lifetime=retire when the compositor gains a per-scanline scroll layer, at which point these bytes drive it directly}
 YellowIntroScene6:
     call YellowIntro_BlankPalsDelay2AndDisableLCD
     mov bl, 0x5                                    ; ld c, $5
@@ -722,10 +742,14 @@ Func_f98fc:
 ; ---------------------------------------------------------------------------
 ; InitYellowIntroGFXAndMusic — blank the tilemap, load the intro tile sheets to
 ; VRAM, point the object engine at the intro tables, set the generic palette and
-; music, and zero the scene state. hAutoBGTransferEnabled/Dest are written faithfully
-; though inert (no port consumer reads the enable byte, do_bg_transfer is retired, and
-; the compositor renders directly from W_TILEMAP); the port keeps these writes exactly
-; as pret does throughout the tree. Graphics2 loads 255 tiles (pret's (size-$10)/$10).
+; music, and zero the scene state. Graphics2 loads 255 tiles (pret's (size-$10)/$10).
+;
+; The hAutoBGTransferEnabled/Dest writes are kept exactly as pret makes them, here
+; and at the other 6 sites in this file. Unlike the LY overrides above this is a
+; BENIGN inertness -- the port reaches the same visible result by another route --
+; but it was carried in prose only, so nothing machine-parsed distinguished it from
+; a real missing feature. That is the distinction this annotation records.
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:InitYellowIntroGFXAndMusic; behavior=the hAutoBGTransferEnabled/hAutoBGTransferDest request bytes are written faithfully but no port code reads them, because the GB's VBlank BG-map auto-transfer has no counterpart, the compositor composes every frame directly from W_TILEMAP so the tilemap the transfer would have published is already on screen; evidence=H_AUTO_BG_TRANSFER_EN and H_AUTO_BG_TRANSFER_DEST are written in this file and in intro.asm and read nowhere under src/ or boot/, and the do_bg_transfer consumer was retired with the surface-mirror compositor -- so unlike the LY-override case no visible behaviour is lost; lifetime=permanent, the surface-mirror compositor replaces the transfer rather than deferring it}
 ; ---------------------------------------------------------------------------
 ; ---------------------------------------------------------------------------
 ; CopyYellowIntroAnimatedObjectData — port-only: stage the three immutable
