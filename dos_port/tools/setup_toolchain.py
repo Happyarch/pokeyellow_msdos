@@ -426,7 +426,31 @@ def main() -> int:
                 print(f"  - {m}")
         return 0 if allgood else 1
 
-    if platform.system() != "Windows" and not args.skip_platform_check:
+    system = platform.system()
+
+    # MSYS2 / Cygwin Python reports MSYS_NT-* / CYGWIN_NT-* / MINGW*, not
+    # "Windows", and its pathlib emits POSIX paths (/c/Users/...). Forcing it
+    # through would write an activate.bat full of paths cmd.exe cannot use, so
+    # this is a hard stop with the right instruction rather than the Linux
+    # advice below -- which is what a bare `!= "Windows"` check used to print.
+    if system.startswith(("MSYS", "MINGW", "CYGWIN")):
+        print(
+            f"Detected {system} Python (MSYS2/Cygwin).\n"
+            "\n"
+            "Run this with WINDOWS Python from PowerShell or cmd instead:\n"
+            "    python dos_port\\tools\\setup_toolchain.py\n"
+            "\n"
+            "It installs Windows binaries and writes Windows paths into\n"
+            "activate.bat / activate.ps1; MSYS2 Python would write POSIX paths\n"
+            "(/c/Users/...) that cmd.exe cannot use.\n"
+            "\n"
+            "Use your MSYS2 shell for the `make` steps -- that is where the\n"
+            "build needs python3 and gcc, which Windows Python does not provide.",
+            file=sys.stderr,
+        )
+        return 2
+
+    if system != "Windows" and not args.skip_platform_check:
         print(
             "This script installs the *Windows* toolchain.\n"
             "\n"
