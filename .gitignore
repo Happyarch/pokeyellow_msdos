@@ -131,3 +131,8 @@ dos_port/tools/audio/analysis/
 # Session handoff notes — local scratch, never committed (see stigmergy for anything durable)
 handoff.md
 handoff_s*.md
+
+# Windows toolchain installed by dos_port/tools/setup_toolchain.py (never committed;
+# see the "Legal note" in README.md -- these are third-party GPL/BSD binaries we
+# link to, not redistribute)
+.toolchain/
