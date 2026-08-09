@@ -47,15 +47,27 @@ below for the full list (rgbds, a C compiler, Pillow, PyYAML).
 ### Linux
 
 ```sh
-# Debian / Ubuntu
-sudo apt install nasm binutils-djgpp python3
-# fresh clone also needs: gcc, rgbds 1.0.2, python3-pil, python3-yaml
+# Debian / Ubuntu (incl. WSL)
+sudo apt install nasm binutils-djgpp python3 make
+# a fresh clone additionally needs:
+sudo apt install gcc python3-pil python3-yaml
 ```
+
+**rgbds is not in Ubuntu's repos**, and where a distro does package it the
+version is wrong — `.rgbds-version` pins **1.0.2** exactly. Let the setup script
+fetch it (statically linked, so it runs on any x86-64 distro):
+
+```sh
+python3 dos_port/tools/setup_toolchain.py
+export PATH="$PWD/.toolchain/rgbds:$PATH"
+```
+
+On Linux it installs *only* rgbds and tells you what to apt-get; run it with
+`--print-only` first to see exactly what it fetches. Arch does package a current
+`rgbds`, but check it reports 1.0.2 before relying on it.
 
 On distros without a packaged DJGPP binutils (Arch, Fedora, …), build the
 cross-toolchain with [andrewwutw/build-djgpp](https://github.com/andrewwutw/build-djgpp).
-rgbds must be **1.0.2** (the version in `.rgbds-version`); Arch packages it as
-`rgbds`, elsewhere take the release binaries or build from the `v1.0.2+hotfix` tag.
 
 ```sh
 make -C dos_port

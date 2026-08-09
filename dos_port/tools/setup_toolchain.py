@@ -33,6 +33,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import urllib.error
 import urllib.request
@@ -111,6 +112,26 @@ PACKAGES = {
         "strip_prefix": "djgpp/",
         "bindir": "bin",
         "probe": "i586-pc-msdosdjgpp-ld.exe",
+    },
+}
+
+# Linux/WSL needs only rgbds from here: nasm and binutils-djgpp are packaged by
+# every mainstream distro, but rgbds is NOT in Ubuntu's repos, and where a distro
+# does package it the version is wrong -- .rgbds-version pins 1.0.2 exactly.
+# These are statically-linked binaries, so they run on any x86-64 distro.
+LINUX_PACKAGES = {
+    "rgbds": {
+        "desc": "rgbds 1.0.2 (linux x86_64, static)",
+        "url": (
+            "https://github.com/gbdev/rgbds/releases/download/"
+            "v1.0.2%2Bhotfix/rgbds-linux-x86_64.tar.xz"
+        ),
+        "sha256": "b13d97db79095fb99372fab8e75d024b7bffbd9485b3cd1d0a6cbf2d2badfbf9",
+        "size": 1401412,
+        "license": "MIT",
+        "strip_prefix": "",
+        "bindir": "",          # the tarball is flat -- binaries at the root
+        "probe": "rgbasm",
     },
 }
 
@@ -209,6 +230,10 @@ def extract(archive: Path, target: Path, strip_prefix: str) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(dir=target.parent, prefix=".stage-"))
     try:
+        if archive.name.endswith((".tar.xz", ".tar.gz", ".tar.bz2")):
+            _extract_tar(archive, staging, strip_prefix)
+            staging.replace(target)
+            return
         with zipfile.ZipFile(archive) as zf:
             for info in zf.infolist():
                 name = info.filename
@@ -236,6 +261,38 @@ def extract(archive: Path, target: Path, strip_prefix: str) -> None:
     finally:
         if staging.exists():
             shutil.rmtree(staging, ignore_errors=True)
+
+
+def _extract_tar(archive: Path, staging: Path, strip_prefix: str) -> None:
+    """Tar counterpart of extract(), same zip-slip refusal, modes preserved.
+
+    Unix modes matter here in a way they don't for the zips: the rgbds tarball
+    carries the executable bit, and without it the binaries are unrunnable.
+    """
+    with tarfile.open(archive) as tf:
+        for member in tf.getmembers():
+            name = member.name
+            if strip_prefix:
+                if not name.startswith(strip_prefix):
+                    continue
+                name = name[len(strip_prefix):]
+            if not name:
+                continue
+            out = (staging / name).resolve()
+            if not str(out).startswith(str(staging.resolve())):
+                raise SystemExit(f"error: unsafe path in {archive.name}: {member.name}")
+            if member.isdir():
+                out.mkdir(parents=True, exist_ok=True)
+                continue
+            if not member.isfile():
+                continue          # skip links/devices rather than trust them
+            out.parent.mkdir(parents=True, exist_ok=True)
+            src = tf.extractfile(member)
+            if src is None:
+                continue
+            with src, out.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
+            out.chmod(member.mode & 0o777)
 
 
 def bin_path(root: Path, name: str, pkg: dict) -> Path:
@@ -412,6 +469,12 @@ def main() -> int:
 
     root = (args.dest or (repo_root() / ".toolchain")).resolve()
 
+    # Pick the package set BEFORE --print-only / --check, so those report what
+    # this host would actually install rather than always the Windows set.
+    global PACKAGES
+    if platform.system() == "Linux" and not args.skip_platform_check:
+        PACKAGES = LINUX_PACKAGES
+
     if args.print_only:
         print_plan(root)
         return 0
@@ -450,14 +513,29 @@ def main() -> int:
         )
         return 2
 
-    if system != "Windows" and not args.skip_platform_check:
+    if system == "Linux" and not args.skip_platform_check:
+        # Linux/WSL: nasm and binutils-djgpp come from the distro, but rgbds
+        # does NOT -- it is absent from Ubuntu's repos entirely, and any distro
+        # that does package it ships a version other than the pinned 1.0.2.
+        # So install just that, rather than refusing and leaving the user to
+        # hand-assemble a tarball.
+        print(
+            "Linux/WSL detected. Install these from your package manager:\n"
+            "    Debian/Ubuntu:  sudo apt install nasm binutils-djgpp python3 "
+            "gcc make python3-pil python3-yaml\n"
+            "    Other distros:  https://github.com/andrewwutw/build-djgpp "
+            "for the DJGPP cross-toolchain\n"
+            "\n"
+            "rgbds is NOT packaged by Ubuntu and must match .rgbds-version"
+            " (1.0.2),\nso this script fetches it below.\n"
+        )
+
+    elif system != "Windows" and not args.skip_platform_check:
         print(
             "This script installs the *Windows* toolchain.\n"
             "\n"
-            "On Linux, use your package manager instead:\n"
-            "    Debian/Ubuntu:  sudo apt install nasm binutils-djgpp python3\n"
-            "    Other distros:  https://github.com/andrewwutw/build-djgpp\n"
-            "On macOS: https://github.com/andrewwutw/build-djgpp (osx release)\n"
+            "On macOS: https://github.com/andrewwutw/build-djgpp (osx release),\n"
+            "and rgbds 1.0.2 from https://github.com/gbdev/rgbds/releases\n"
             "\n"
             "Pass --skip-platform-check to run it here anyway.",
             file=sys.stderr,
@@ -493,17 +571,27 @@ def main() -> int:
             archive.unlink(missing_ok=True)
         print()
 
-    bat, ps1 = write_activators(root, order)
-
     print("Installed:")
     check(root)
 
-    print("\nActivate the toolchain for a shell:")
-    print(f"    cmd.exe:      {bat}")
-    print(f"    PowerShell:   . {ps1}")
-    print("\nThen build:")
-    print(f"    make -C dos_port PKMN.EXE {fmt_overrides()}")
-    print("\nCopy PKMN.EXE and CWSDPMI.EXE into your DOSBox-X mount and run PKMN.")
+    if system == "Linux":
+        # No .bat/.ps1 here -- give the shell line that actually works.
+        dirs = [bin_path(root, n, PACKAGES[n]) for n in order
+                if PACKAGES[n].get("on_path", True)]
+        print("\nPut it on PATH for this shell:")
+        print(f"    export PATH=\"{':'.join(str(d) for d in dirs)}:$PATH\"")
+        print("\nThen bootstrap the assets and build:")
+        print("    make                     # renders the .2bpp via rgbds")
+        print("    make -C dos_port assets")
+        print("    make -C dos_port")
+    else:
+        bat, ps1 = write_activators(root, order)
+        print("\nActivate the toolchain for a shell:")
+        print(f"    cmd.exe:      {bat}")
+        print(f"    PowerShell:   . {ps1}")
+        print("\nThen build:")
+        print(f"    make -C dos_port PKMN.EXE {fmt_overrides()}")
+        print("\nCopy PKMN.EXE and CWSDPMI.EXE into your DOSBox-X mount and run PKMN.")
 
     missing = check_host_tools()
     if missing:
