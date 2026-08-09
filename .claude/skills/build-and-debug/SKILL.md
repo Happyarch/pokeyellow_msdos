@@ -574,6 +574,14 @@ plus the menu gates: `DEBUG_STARTMENU` (seeds the leaked
 `DEBUG_BAGMENU` (seeds `text_row_stride=40` to mirror the live START→ITEM
 entry; add `DEBUG_BAGMENU_EMPTY=1` for the empty-inventory worst case),
 `DEBUG_PARTYMENU`, `DEBUG_G1` (pokédex CONTENTS), `DEBUG_TEXTBOXID=<id>`;
+the two battle-animation viewers `DEBUG_ANIM_DEMO=1 [ANIM=<MOVE>]` (one move,
+repeated — the per-stage sign-off harness) and **`DEBUG_ANIM_SHOW=1` (the Stage
+4/5 showcase: walks 20 real moves, one per animation family landed after Stage 3,
+printing each move's name in the battle frame from the real `GetMoveName` table
+before playing it through the production `PlayMoveAnimation`)** — both ride the
+`DEBUG_BATTLE_GOLDEN` battle scene, both take the shared `/LOOP` exe flag to run
+forever and otherwise dump-and-exit so `run_headless.sh` can prove they ran
+(`ANIM_SHOW_HOLD` / `ANIM_SHOW_GAP` tune the showcase's pacing);
 and the audio-engine gate `DEBUG_AUDIO` (starts Pallet Town BGM via the real
 gateway at boot, ticks the engine 120 frames, dumps audio RAM + virtual APU
 windows to DUMP.BIN — expected values are commented on its `windows:` table
