@@ -153,7 +153,7 @@ MovieEndSurface:
     ret
 
 ; ---------------------------------------------------------------------------
-; MovieMirrorSurface — copy the drawn 20x18 rectangle into the GB tilemap.
+; MovieMirrorSurface — copy the drawn rectangle into the GB tilemap.
 ;
 ; Cinematic code draws into W_TILEMAP at the projected position (stride 40) like
 ; every other screen; the window compositor samples a 32-stride GB tilemap. This
@@ -161,17 +161,59 @@ MovieEndSurface:
 ; next frame — menu_redraw_cb is driven by generic menu-input loops, not by
 ; DelayFrame, so it cannot be relied on here.
 ;
+; IT MUST MIRROR MORE THAN THE 20 VISIBLE COLUMNS. A GB BG map is 32 tiles wide
+; and only its leftmost 20 are on screen at SCX=0; the other 12 are the staging
+; area that horizontal scrolling reveals, and the Yellow intro uses them heavily.
+; This copied UI_TITLE_GBW (20) columns, so GB columns 20-31 were never written
+; and every scene that authored into them rendered as blank:
+;   * YellowIntroScene2 places the "pikachu kick" graphic at GB (col 20, row 6)
+;     for YellowIntroScene3 to scroll in — it landed entirely in the dead region,
+;     so Pikachu never appeared in that scene at all.
+;   * YellowIntroScene6/7 lay out the surf water across the full map and ramp
+;     hSCX forever — the water scrolled once and then ran into unwritten columns,
+;     leaving Pikachu surfing on nothing.
+; Both were one defect: content authored past GB column 19 never reached the
+; tilemap the renderer samples.
+;
+; ALL 32 columns must come from real canvas cells. The canvas is SCREEN_WIDTH
+; (40) wide and the GB window starts at UI_TITLE_COL (10), so a straight run
+; supplies only 30. Zeroing the last 2 was the first cut of this fix and it is
+; visible: the surf scene ramps hSCX forever, so those 2 matte columns sweep
+; across the screen as a black stripe once per 256 px of scroll.
+;
+; So the source wraps at the canvas width instead — GB column c reads canvas
+; column (UI_TITLE_COL + c) mod SCREEN_WIDTH, i.e. GB 0-29 from canvas 10-39 and
+; GB 30-31 from canvas 0-1. That is a bijection over the 32 GB columns, so no two
+; GB columns alias, and any scene that paints the full canvas width (the surf
+; scene fills every column of rows 4+) supplies real tiles for all of them.
+;
+; DEVIATION{class=projection; pret=engine/movie/intro_yellow.asm:YellowIntroScene6; behavior=GB BG columns 30-31 are sourced from canvas columns 0-1 by wrapping at the canvas width rather than from canvas columns 40-41 which do not exist, so the port's cinematic canvas behaves as a 40-column torus feeding a 32-column GB map instead of the GB's own 32-column torus; evidence=SCREEN_WIDTH is 40 and UI_TITLE_COL is 10 leaving a 30-column straight run while TILEMAP_WIDTH is 32, and the mapping stays one-to-one over all 32 GB columns so scroll wrap is continuous, a scene that leaves canvas columns 0-1 unpainted shows matte in those 2 GB columns exactly as it would have shown matte off the end; lifetime=retire when the cinematic authoring origin or the canvas width is re-derived so all 32 GB columns have a straight-run source}
+;
 ; In:  EBP = GB memory base. All registers preserved.
 ; ---------------------------------------------------------------------------
+; The straight run from the origin, and the wrapped remainder.
+MOVIE_MIRROR_RUN  equ (SCREEN_WIDTH - UI_TITLE_COL)          ; 30
+MOVIE_MIRROR_WRAP equ (TILEMAP_WIDTH - MOVIE_MIRROR_RUN)     ; 2
+
 MovieMirrorSurface:
     pushad
     lea esi, [ebp + W_TILEMAP + UI_TITLE_ROW * SCREEN_WIDTH + UI_TITLE_COL]
     lea edi, [ebp + GB_TILEMAP0]
     mov edx, UI_TITLE_GBH               ; 18 rows
 .row:
-    mov ecx, UI_TITLE_GBW               ; 20 columns
     push esi
     push edi
+    mov ecx, MOVIE_MIRROR_RUN           ; GB cols 0-29 <- canvas cols 10-39
+    rep movsb
+    ; GB cols 30-31 <- canvas cols 0-1 of the SAME row. ESI is now one past the
+    ; row's last canvas cell, so back up the full row to reach column 0.
+    ; Deliberately NOT wrapped in a %if MOVIE_MIRROR_WRAP > 0: the build-graph
+    ; scanner in tools/update_label_db cannot evaluate a condition over `equ`
+    ; symbols and refuses to guess which arm ships, and it is right to. It needs
+    ; no guard anyway — `rep movsb` with ECX = 0 copies nothing, so a geometry
+    ; where the straight run already covers all 32 columns degenerates safely.
+    sub esi, SCREEN_WIDTH
+    mov ecx, MOVIE_MIRROR_WRAP
     rep movsb
     pop edi
     pop esi

@@ -291,7 +291,17 @@ YellowIntroScene6:
     xor al, al
     call FillMemory                                ; call Bank3E_FillMemory
     mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 3 * SCREEN_TILES_W  ; GB row 3 (col 0 start: the 32-col stripe covers the visible cols 10-29 with matching parity)
-    mov cl, 0x10                                   ; ld c, $10
+    ; pret writes 16 pairs = the GB map's full 32 columns. The port's canvas is
+    ; SCREEN_WIDTH (40) wide and MovieMirrorSurface reads all of it (cols 10-39
+    ; plus the wrapped 0-1), so painting only 32 left canvas cols 32-39 unpainted
+    ; and the scroll dragged that gap through the wave as a black bar. Paint the
+    ; whole canvas row instead.
+    ;
+    ; Parity survives the wrap for free: the mirror maps GB col c to canvas col
+    ; (UI_TITLE_COL + c) mod SCREEN_WIDTH, and both 10 and 40 are even, so canvas
+    ; parity equals GB parity everywhere -- $20 on even canvas columns lands $20
+    ; on even GB columns, including at the wrap.
+    mov cl, SCREEN_TILES_W / 2                     ; ld c, $10 -> one pair per canvas column pair
     mov al, 0x20                                   ; ld a, $20
 .stripe:
     mov [ebp + esi], al                            ; ld [hli], a  ($20)
