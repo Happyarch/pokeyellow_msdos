@@ -564,7 +564,24 @@ RunOakPicTest:
 ; In: EBP = GB base. Never returns (AutoKeyDrive dumps FRAME.BIN + exits).
 ; ---------------------------------------------------------------------------
 extern LoadFontTilePatterns          ; home/load_font.asm — ensure $7F/glyph tiles are decoded
+extern RunPaletteCommand             ; home/palettes.asm — BH = SET_PAL_* command
+extern RunDefaultPaletteCommand      ; home/palettes.asm — RunPaletteCommand(SET_PAL_DEFAULT)
 global RunOakSpeechCheckpoint
+
+; The hook that calls this lives in EnterMap, i.e. AFTER LoadMapData, which runs
+; RunPaletteCommand(SET_PAL_OVERWORLD) — the one handler that floods ALL EIGHT
+; palette slots. So without the prologue below the harness photographs the MAP's
+; palette (PAL_PALLET x8 in Pallet Town) and reports it as the cutscene's, which
+; is a FALSE WITNESS for any palette question: measured 2026-08-10 against the
+; oak_palette_trace mGBA capture, hardware has PAL_MEWMON in BG slot 0 and
+; PAL_ROUTE in 1-3 at this same checkpoint, and the unprefixed harness showed
+; PAL_PALLET in all 8.
+;
+; The production route is intro.asm SET_PAL_GAME_FREAK_INTRO (whose handler
+; publishes wDefaultPaletteCommand = SET_PAL_GENERIC) -> MainMenu's
+; RunDefaultPaletteCommand. Replaying exactly those two calls puts the harness in
+; the palette state OakSpeech really starts from.
+SET_PAL_GAME_FREAK_INTRO equ 0x0C
 
 ; RunOakSpeechCheckpoint — A4.5f oak_intro checkpoint. Drives the REAL OakSpeech
 ; (not a bespoke replica): clears BIT_DEBUG_MODE so the speech runs, then calls
@@ -575,6 +592,10 @@ global RunOakSpeechCheckpoint
 ; DisplayPicCenteredOrUpperRight) for real. In: EBP = GB base. Never returns.
 RunOakSpeechCheckpoint:
     call LoadFontTilePatterns
+    ; Undo EnterMap's SET_PAL_OVERWORLD by replaying the production prologue.
+    mov bh, SET_PAL_GAME_FREAK_INTRO   ; intro.asm:115 — publishes SET_PAL_GENERIC
+    call RunPaletteCommand
+    call RunDefaultPaletteCommand      ; main_menu.asm:206
     and byte [ebp + wStatusFlags6], ~(1 << BIT_DEBUG_MODE) & 0xFF  ; speech must show
     call OakSpeech                    ; real cutscene; parks at page-1 <PARA> (IntroTextWait)
     jmp $                             ; AutoKeyDrive photographs the parked frame + exits

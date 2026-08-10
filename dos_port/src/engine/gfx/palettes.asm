@@ -70,13 +70,31 @@ _RunPaletteCommand:
     jne .not_default
     mov al, [ebp + wDefaultPaletteCommand]  ; ld a, [wDefaultPaletteCommand]
 .not_default:
-    cmp al, SET_PAL_BATTLE                  ; pret dispatches through SetPalFunctions;
-    je SetPal_Battle                        ; SetPal_Battle builds live slots, not a row
-    cmp al, SET_PAL_OVERWORLD
-    je SetPal_Overworld
+    ; pret: ld l,a / ld h,0 / add hl,hl / ld de,SetPalFunctions / add hl,de /
+    ; ld a,[hli] / ld h,[hl] / ld l,a / jp hl — an INDIRECT dispatch through the
+    ; table, which is what this now does (dd entries, so *4 rather than *2).
+    ;
+    ; It used to be a cmp chain that special-cased SET_PAL_BATTLE and
+    ; SET_PAL_OVERWORLD and sent EVERY other command straight to SetPal_Screen.
+    ; That skipped the per-command SetPal_* labels entirely, and one of them does
+    ; more than name a table row: SetPal_GameFreakIntro publishes
+    ; wDefaultPaletteCommand = SET_PAL_GENERIC. Bypassing it made that publish
+    ; dead code, and it is the ONLY thing on the boot path that ever seeds the
+    ; default — so wDefaultPaletteCommand stayed at its cold-boot 0 and MainMenu's
+    ; RunDefaultPaletteCommand resolved SET_PAL_DEFAULT to SET_PAL_BATTLE_BLACK,
+    ; painting the new-game Oak / rival / player screens in PAL_BLACK. Measured
+    ; 2026-08-10 against the oak_palette_trace mGBA capture, which has PAL_MEWMON
+    ; in BG slot 0 and PAL_ROUTE in 1-3 at that checkpoint.
+    ;
+    ; Latent since the port was written, but only OBSERVABLE from 62286cb7
+    ; (2026-08-05), which stopped hardcoding SET_PAL_DEFAULT -> SetPal_Generic and
+    ; started honouring wDefaultPaletteCommand. Before that the missing publish was
+    ; masked because the hardcoded answer happened to be the right one here.
     cmp al, SET_PAL_SURFING_PIKACHU_MINIGAME
-    ja .done
-    jmp SetPal_Screen
+    ja .done                                ; SET_PAL_PARTY_MENU_HP_BARS ($fc) and any
+                                            ; out-of-range id: no port handler, as before
+    movzx eax, al
+    jmp [SetPalFunctions + eax*4]
 .done:
     ret
 
