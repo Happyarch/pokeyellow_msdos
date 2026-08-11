@@ -115,8 +115,20 @@ PlayShootingStar:
     mov bh, 0x0C                          ; ld b, SET_PAL_GAME_FREAK_INTRO
     call RunPaletteCommand
     call LoadCopyrightAndTextBoxTiles     ; the ©1995-1999 Nintendo/Creatures/GAME FREAK screen
-    mov al, 0x1B                          ; ldpal a, SHADE_BLACK,SHADE_DARK,SHADE_LIGHT,SHADE_WHITE
-    mov [ebp + IO_BGP], al                ; ldh [rBGP], a  (inverted splash palette)
+    ; pret: ldpal a, SHADE_BLACK, SHADE_DARK, SHADE_LIGHT, SHADE_WHITE
+    ; macros/code.asm: MACRO ldpal -> ld \1, \2<<6 | \3<<4 | \4<<2 | \5, so the
+    ; arguments run colour 3 FIRST and colour 0 LAST:
+    ;   SHADE_BLACK<<6 | SHADE_DARK<<4 | SHADE_LIGHT<<2 | SHADE_WHITE
+    ;   = 3<<6 | 2<<4 | 1<<2 | 0 = 0xE4 — the NORMAL palette.
+    ; This was 0x1B, the exact bit-reversal, read off the argument list as though
+    ; it ran colour 0 first; the old comment then rationalised it as an "inverted
+    ; splash palette". It is not inverted. Colour 0 is the copyright screen's
+    ; WHITE background and colour 3 its BLACK text, so 0x1B rendered both that
+    ; screen and the GAME FREAK logo screen white-on-black. The one genuinely
+    ; inverted palette in this tree is engine/battle/animations.asm's 0x1B, which
+    ; mirrors pret's literal `ld a, %00011011` — not an ldpal.
+    mov al, 0xE4                          ; ldpal a, SHADE_BLACK,SHADE_DARK,SHADE_LIGHT,SHADE_WHITE
+    mov [ebp + IO_BGP], al                ; ldh [rBGP], a
     call UpdateCGBPal_BGP
 %ifdef DEBUG_TITLE_TIMEOUT
 %define DUMP_RESET_REPLAY 1
