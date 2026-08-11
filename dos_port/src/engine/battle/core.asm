@@ -252,6 +252,14 @@ extern ClearScreen                     ; home/copy2.asm
 extern ClearSprites                    ; home/clear_sprites.asm
 extern IsItemInBag                     ; src/home/map_objects.asm
 extern PrintEmptyString                ; battle_exp_stubs.asm (STUB)
+extern PrintSendOutMonMessage          ; battle_stubs.asm (STUB) — pret engine/battle/common_text.asm
+extern AnimateSendingOutMon            ; engine/battle/init_battle.asm — send-out pic animation
+extern LoadMonBackPic                  ; engine/battle/init_battle.asm — sent-out mon back pic
+extern IsThisPartyMonStarterPikachu    ; engine/pikachu/pikachu_status.asm — CF=1 when starter
+extern StarterPikachuBattleEntranceAnimation ; battle_stubs.asm (STUB) — pret engine/battle/pikachu_entrance_anim.asm
+extern IsPlayerPikachuAsleepInParty    ; pikachu_stubs.asm (STUB) — pret engine/pikachu/pikachu_emotions.asm
+extern PlayPikachuSoundClip            ; src/audio/pikachu_pcm.asm
+extern PlayCry                         ; home_stubs.asm (STUB) — pret home/audio.asm
 extern RunPaletteCommand               ; home/palettes.asm
 extern SkipFixedLengthTextEntries      ; home/array.asm
 
@@ -4383,14 +4391,36 @@ ChooseNextMon:
     ret
 
 ; ===========================================================================
-; SendOutMon — pret core.asm:1764+. Redraws the HUDs and resets the player-side
-; per-mon battle state for the incoming mon. ANIMATION=OFF: the send-out pic
-; animation / cry / palette command are deferred; the STATE resets are faithful.
+; SendOutMon — pret core.asm:1764+. Prints the send-out message, redraws the
+; HUDs, resets the player-side per-mon battle state, and plays the send-out
+; animation + cry for the incoming mon.
+;
+; RESTORED 2026-08-11 (battle_completion plan item 1f). The previous body ended
+; at RunPaletteCommand under the comment "ANIMATION=OFF: PlayMoveAnimation
+; (POOF_ANIM) / AnimateSendingOutMon / Pikachu.", which was STALE — faithdiff
+; reported calls 14 pret / 2 port. That dropped chain is why IO_OBP1 stayed 0:
+; pret reaches SetAnimationPalette (the only writer of rOBP1=$6c) through
+; PlayMoveAnimation, so the composed CGB OBJ palettes 4-7 collapsed to white in
+; every battle golden. Measurement: docs/current_plan_palette_fidelity.md and
+; memory regression-battle-sendoutmon-animation-tail-dropped.
+;
+; Three callees are ret-stubs, each with its own STUB annotation at its stub
+; site: PrintSendOutMonMessage and StarterPikachuBattleEntranceAnimation
+; (battle_stubs.asm), IsPlayerPikachuAsleepInParty (pikachu_stubs.asm). PlayCry
+; and PrintEmptyString were already linked stubs. The call SHAPE is pret's; the
+; stubs are what remains to retire.
 ; ===========================================================================
 SendOutMon:
-    ; TODO-HW: PrintSendOutMonMessage ("Go! <mon>!" / audio).
-    call DrawHUDsAndHPBars               ; enemy + player HUD/HP (pret draws each)
+    call PrintSendOutMonMessage          ; callfar PrintSendOutMonMessage (STUB)
+    mov al, [ebp + wEnemyMonHP]          ; ld hl,wEnemyMonHP / ld a,[hli]
+    or  al, [ebp + wEnemyMonHP + 1]      ; or [hl] — is enemy mon HP zero?
+    jz .skipDrawingEnemyHUDAndHPBar      ; jp z
+    call DrawEnemyHUDAndHPBar
+.skipDrawingEnemyHUDAndHPBar:
+    call DrawPlayerHUDAndHPBar
+    call LoadMonBackPic                  ; predef LoadMonBackPic (direct in flat model)
     xor al, al
+    mov [ebp + hStartTileID], al         ; xor a / ldh [hStartTileID],a
     mov [ebp + wBattleAndStartSavedMenuItem + 0], al
     mov [ebp + wBattleAndStartSavedMenuItem + 1], al
     mov [ebp + wBoostExpByExpAll], al
@@ -4413,8 +4443,36 @@ SendOutMon:
     mov bh, SET_PAL_BATTLE               ; ld b, SET_PAL_BATTLE
     call RunPaletteCommand
     and byte [ebp + wEnemyBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
-    ; ANIMATION=OFF: PlayMoveAnimation(POOF_ANIM) / AnimateSendingOutMon / Pikachu.
-    ret
+    call IsThisPartyMonStarterPikachu    ; callfar — CF=1 when it is the starter
+    jc .starterPikachu                   ; jr c
+    mov byte [ebp + hWhoseTurn], 1       ; ld a,$1 / ldh [hWhoseTurn],a
+    mov al, POOF_ANIM                    ; ld a, POOF_ANIM
+    call PlayMoveAnimation               ; -> MoveAnimation -> SetAnimationPalette
+    ; hlcoord 4, 11 -> the predef HL mailbox. pret's `predef` macro stashes HL in
+    ; wPredefHL and AnimateSendingOutMon reads it back itself; the port stages the
+    ; same big-endian word inline, as add_mon.asm / evos_moves.asm do.
+    mov eax, BCOORD(4, 11)
+    mov [ebp + wPredefHL + 1], al        ; L (low byte)
+    mov [ebp + wPredefHL], ah            ; H (high byte) — GB predef word is big-endian
+    call AnimateSendingOutMon            ; predef AnimateSendingOutMon
+    jmp short .playRegularCry            ; jr .playRegularCry
+.starterPikachu:
+    mov byte [ebp + hWhoseTurn], 0       ; xor a / ldh [hWhoseTurn],a
+    mov byte [ebp + hAutoBGTransferEnabled], 1
+    call StarterPikachuBattleEntranceAnimation ; callfar (STUB)
+    call IsPlayerPikachuAsleepInParty    ; callfar (STUB, returns CF=0)
+    mov dl, 36                           ; ldpikacry e, PikachuCry37 (0-based)
+    jc .asm_3cd81                        ; jr c
+    mov dl, 10                           ; ldpikacry e, PikachuCry11 (0-based)
+.asm_3cd81:
+    call PlayPikachuSoundClip            ; callfar PlayPikachuSoundClip
+    jmp short .done                      ; jr .done
+.playRegularCry:
+    mov al, [ebp + wCurPartySpecies]     ; ld a,[wCurPartySpecies]
+    call PlayCry                         ; (STUB — home_stubs.asm)
+.done:
+    call PrintEmptyString                ; (STUB — battle_exp_stubs.asm)
+    jmp SaveScreenTilesToBuffer1         ; jp SaveScreenTilesToBuffer1
 
 ; ===========================================================================
 ; HandlePlayerBlackOut — pret core.asm:1171-1204. Called when the player has no
