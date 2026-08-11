@@ -104,7 +104,7 @@ extern PrintStatsBox            ; deferred: level-up stats overlay
 extern WaitForTextScrollButtonPress  ; src/home/joypad2.asm — A-press wait
 extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1    ; src/home/tilemap.asm
-extern PrintEmptyString              ; deferred: clear text line
+extern PrintEmptyString              ; engine/battle/core.asm — redraws the battle message box
 extern LearnMoveFromLevelUp          ; deferred: move-learn flow
 
 ; Battle core dispatch targets (passed via ESI to CallBattleCore; Wave 2)

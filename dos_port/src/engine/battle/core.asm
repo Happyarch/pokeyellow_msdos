@@ -104,6 +104,7 @@ global SwapMovesInMenu
 global PrintMenuItem
 global AnyMoveToSelect
 global PrintBattleText
+global PrintEmptyString                 ; pret core.asm:6720 — retired its battle_exp_stubs.asm stub
 extern DisplayUsedMoveText          ; src/engine/battle/used_move_text.asm
 extern PrintTextStaged                 ; src/home/window.asm — PrintText, stream already staged
 global ExecutePlayerMove
@@ -251,7 +252,6 @@ extern AddBCD                          ; engine/math/bcd.asm
 extern ClearScreen                     ; home/copy2.asm
 extern ClearSprites                    ; home/clear_sprites.asm
 extern IsItemInBag                     ; src/home/map_objects.asm
-extern PrintEmptyString                ; battle_exp_stubs.asm (STUB)
 extern PrintSendOutMonMessage          ; battle_stubs.asm (STUB) — pret engine/battle/common_text.asm
 extern AnimateSendingOutMon            ; engine/battle/init_battle.asm — send-out pic animation
 extern LoadMonBackPic                  ; engine/battle/init_battle.asm — sent-out mon back pic
@@ -1062,6 +1062,36 @@ PrintBattleText:
     mov dword [text_msgbox], msgbox_centered
     jmp PrintText                       ; the one printer, drawing per the record.
                                         ; Tail — its ret returns to us.
+
+; ---------------------------------------------------------------------------
+; PrintEmptyString — pret core.asm:6720:
+;       PrintEmptyString: ld hl, .emptyString / jp PrintText
+;       .emptyString      db "@"
+; A zero-length stream printed for its SIDE EFFECT: PrintText draws the message
+; box, so this blanks/redraws the battle dialog area. It is not cosmetic filler —
+; five live callers depend on the box being (re)drawn: SendOutMon,
+; EnemySendOutFirstMon, FaintEnemyPokemon, DoUseNextMonDialogue and the
+; ModifyPikachuHappiness path.
+;
+; RETIRED the ret-only stub in battle_exp_stubs.asm (battle_completion 3d).
+;
+; pret writes `jp PrintText`; the port goes through PrintBattleText, which is
+; PrintText plus the one thing pret does not need — selecting the battle msgbox
+; projection. pret's box id is fixed at MESSAGE_BOX inside DisplayTextBoxID,
+; whereas the port's PrintText republishes geometry from [text_msgbox] on every
+; call, so a bare PrintText here would draw wherever the LAST printer left the
+; record. SendOutMon's call can be the first text of a battle, so that record is
+; not reliably the battle box yet. Same wrapper the rest of this file uses.
+; ---------------------------------------------------------------------------
+PrintEmptyString:
+    mov eax, EmptyBattleString           ; ld hl, .emptyString
+    jmp PrintBattleText                  ; jp PrintText (see the note above)
+
+section .data
+; pret's `.emptyString db "@"` — a lone $50 text terminator, i.e. a control byte,
+; not a rendered glyph run, so it is code-side rather than generated Tier-1 data.
+EmptyBattleString: db 0x50
+section .text
 
 ; RunBattleTextStream — print a stream COMPOSED IN WRAM (NPC_DIALOG_BUF) in the
 ; battle dialog box. DisplayUsedMoveText and ComposeStatIntro build their streams

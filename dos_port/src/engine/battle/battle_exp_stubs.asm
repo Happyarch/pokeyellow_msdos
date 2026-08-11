@@ -22,7 +22,8 @@ section .text
 global ModifyPikachuHappiness
 ; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 are now REAL (battle_menu.asm) —
 ; no longer stubbed (they snapshot/restore the battle screen for the EXP display too).
-global PrintEmptyString
+; PrintEmptyString is now REAL (engine/battle/core.asm, the pret mirror — it prints a
+; zero-length stream so PrintText redraws the battle message box) — no longer stubbed.
 global CalculateModifiedStats
 ; RespawnOverworldPikachu (pret engine/pikachu/pikachu_movement.asm) and
 ; DoubleOrHalveSelectedStats (pret engine/battle/core.asm, a predef) are reached by
@@ -47,7 +48,6 @@ global DoubleOrHalveSelectedStats
 ; LearnMoveFromLevelUp is now REAL (evos_moves.asm) — no longer stubbed.
 
 ModifyPikachuHappiness:
-PrintEmptyString:
 CalculateModifiedStats:
 RespawnOverworldPikachu:
 DoubleOrHalveSelectedStats:
