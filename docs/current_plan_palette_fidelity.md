@@ -166,7 +166,47 @@ Measured on a 56/56 full-tier run:
   its source value: the only `$E4` is `ghost_marowak_anim.asm:4`, and the fade
   tables end at `$E0` / `$00` / `$FF`). Which leads to the finding below.
 
-### THE MODELS DIFFER: hardware's OBJ 4-7 are STICKY, the port's are LIVE
+### MEASURED 2026-08-11: the sticky hypothesis is REFUTED as the cause here
+
+`tools/mgba_harness/scenarios/battle_palette_trace.lua` (a `*_trace` recorder —
+no committed golden, skipped by `goldens-verify`) reads the raw registers AND
+palette RAM at both checkpoints, and prints the solved mapping next to the real
+register so the two cannot be conflated. Run it with
+`tools/mgba_harness/make_goldens.sh battle_palette_trace`.
+
+| checkpoint | real `rOBP1` | solved from palette RAM |
+|---|---|---|
+| `battle_intro` (intro box parked) | **`$E4`** | `$E4` |
+| `battle_menu` (action menu open)  | **`$6C`** | `$6C` |
+
+They AGREE at both. Palette RAM tracks the register here, so staleness is not
+what produces `battle_intro`'s divergence: **hardware genuinely holds `$E4`** and
+the port holds 0. Hypothesis (a) — a missing writer — is the live one, and the
+"no `$E4` writer exists on the battle-entry path" conclusion below is therefore
+PROVEN INCOMPLETE. It was drawn from grepping literal `ld a, $e4` before
+`ldh [rOBP1], a`; the write evidently is not that shape.
+
+**Strong lead, not yet confirmed.** At `battle_intro` all three registers read
+`rBGP=$E4 rOBP0=$E4 rOBP1=$E4`. Decoding pret's `FadePal` table (3 bytes per
+entry: BGP, OBP0, OBP1) shows exactly one offset producing that triple through
+`LoadGBPal`'s `hl = FadePal4 - wMapPalOffset`:
+
+    wMapPalOffset=0: BGP=E4 OBP0=D0 OBP1=E0   <- the overworld value we already see
+    wMapPalOffset=2: BGP=E4 OBP0=E4 OBP1=E4   <- the battle_intro triple
+
+And there is a matching faithfulness gap: pret's `_InitBattleCommon` ends with
+`pop af / ld [wMapPalOffset], a` (`init_battle.asm:135`), paired with a
+`push af` in `InitWildBattle` — a save/restore of `wMapPalOffset` across the
+battle. `grep -c wMapPalOffset dos_port/src/engine/battle/init_battle.asm`
+returns **0**: the port has neither half. Whether that is what puts a 2 there is
+NOT established — do not implement on this paragraph alone. The next measurement
+is to add `wMapPalOffset` (and the other `FadePal`-adjacent state) to the trace
+probe and read it at the same checkpoint.
+
+### The models DO still differ: hardware's OBJ 4-7 are STICKY, the port's are LIVE
+
+*(Structurally true and worth knowing — it just is not the cause of the
+`battle_intro` divergence, per the measurement above.)*
 
 Measured 2026-08-11, and it reframes this whole region.
 
