@@ -118,6 +118,48 @@ local function solve_obp1(obj)
 	return hits
 end
 
+-- CHANGE TIMELINE. Two snapshots tell you the values differ but not WHEN or WHY.
+-- This samples the three palette registers plus wMapPalOffset and wIsInBattle
+-- every frame and records only the transitions, which pins the write to a frame
+-- and shows what else moved with it. Registered before scenario.run so it sees
+-- every frame; the runner allows multiple "frame" callbacks and this one only
+-- reads, so it cannot perturb the run.
+local timeline = {}
+local wframe = 0
+local last_key = nil
+local WATCH = {
+	MapPalOffset = "wMapPalOffset",
+	IsInBattle   = "wIsInBattle",
+	CurOpponent  = "wCurOpponent",
+}
+local waddr = {}
+
+callbacks:add("frame", function()
+	wframe = wframe + 1
+	if next(waddr) == nil then
+		for name, label in pairs(WATCH) do waddr[name] = sym:addr(label) end
+	end
+	local bgp, obp0, obp1 = emu:read8(0xFF47), emu:read8(0xFF48), emu:read8(0xFF49)
+	local off  = emu:read8(waddr.MapPalOffset)
+	local inb  = emu:read8(waddr.IsInBattle)
+	local opp  = emu:read8(waddr.CurOpponent)
+	local key = ("%02X%02X%02X%02X%02X%02X"):format(bgp, obp0, obp1, off, inb, opp)
+	if key ~= last_key then
+		last_key = key
+		if #timeline < 400 then
+			timeline[#timeline + 1] = ("f%-6d rBGP=%02X rOBP0=%02X rOBP1=%02X | wMapPalOffset=%d wIsInBattle=%d wCurOpponent=%02X")
+				:format(wframe, bgp, obp0, obp1, off, inb, opp)
+		end
+	end
+end)
+
+local function dump_timeline()
+	console:log("========== palette-register change timeline ==========")
+	console:log("(only transitions are listed; wMapPalOffset is LoadGBPal's index into FadePal)")
+	for _, line in ipairs(timeline) do console:log("  " .. line) end
+	console:log(("========== %d transitions =========="):format(#timeline))
+end
+
 local function probe(what)
 	console:log(("---------- %s (frame %d) ----------"):format(what, scenario.frame()))
 	console:log(("rBGP=%02X rOBP0=%02X rOBP1=%02X hOnCGB=%d wOnSGB=%d"):format(
@@ -152,4 +194,5 @@ scenario.run(function()
 	assert(navigate.tilemap():find(fight, 1, true),
 		"battle_palette_trace: menu vanished before the probe")
 	scenario.exec(function() probe("battle_menu checkpoint: action menu open") end)
+	scenario.exec(dump_timeline)
 end)

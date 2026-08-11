@@ -166,6 +166,42 @@ Measured on a 56/56 full-tier run:
   its source value: the only `$E4` is `ghost_marowak_anim.asm:4`, and the fade
   tables end at `$E0` / `$00` / `$FF`). Which leads to the finding below.
 
+### CLOSED 2026-08-11: the missing writer is the SILHOUETTE SLIDE
+
+`SlideBattlePicsIn` (`src/home/pics.asm`) wrote only `IO_BGP`. pret's
+`SlidePlayerAndEnemySilhouettesOnScreen` (`engine/battle/core.asm:66`) writes
+**all three**:
+
+    ld a, %11100100        ; == $E4
+    ldh [rBGP], a / ldh [rOBP0], a / ldh [rOBP1], a
+    call UpdateCGBPal_BGP / _OBP0 / _OBP1
+
+so `IO_OBP0`/`IO_OBP1` sat at `Init`'s 0 and the composed OBJ palettes 4-7
+collapsed to white. Fixed by writing them where pret does.
+
+**Why every earlier search missed it: pret spells the value in BINARY.** The
+enumeration that concluded "no pret routine writes `$E4` to `rOBP1` on the
+battle-entry path" grepped for `ld a, $e4`, which cannot match `%11100100`. The
+routine was in the file the whole time. Treat a grep over one literal spelling
+as a search, never as evidence of absence.
+
+Measured result (10 battle scenarios, all PASS):
+
+| scenario | before | after |
+|---|---:|---:|
+| `battle_intro` | 12 | **0** |
+| `battle_damage` | 12 | **8** |
+| `ball_catch` | 12 | 12 |
+| `trainer_battle_init` / `_win` / `_loss` | 36 / 28 / 48 | unchanged |
+
+`battle_damage`'s remaining 8 decompose exactly: colours 1 and 3 are SWAPPED
+(port `$E4`, hardware `$6C`), colour 2 matching because both map it to base 2.
+That is the animation-path difference recorded below — hardware plays move
+animations and reaches `SetAnimationPalette`, the port's arithmetic oracle
+deliberately does not. So 4 of that scenario's 12 were this defect and 8 remain
+by design. `ball_catch` unchanged confirms it is a different family (BG
+colour-3), as measured earlier.
+
 ### MEASURED 2026-08-11: the sticky hypothesis is REFUTED as the cause here
 
 `tools/mgba_harness/scenarios/battle_palette_trace.lua` (a `*_trace` recorder —

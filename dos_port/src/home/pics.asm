@@ -553,6 +553,31 @@ DebugLoadEmbeddedTrainerPic:
 SlideBattlePicsIn:
     ; pret's SET_PAL_BATTLE_BLACK swaps all active CGB slots to PAL_BLACK.
     call SetPal_BattleBlack
+    ; pret SlidePlayerAndEnemySilhouettesOnScreen (engine/battle/core.asm:66)
+    ; writes ALL THREE palette registers here:
+    ;     ld a, %11100100   ; == $E4
+    ;     ldh [rBGP], a / ldh [rOBP0], a / ldh [rOBP1], a
+    ;     call UpdateCGBPal_BGP / _OBP0 / _OBP1
+    ; and they persist through the slide and the whole battle intro, until
+    ; SetAnimationPalette moves OBP0/OBP1 at the first move animation. This
+    ; routine only ever wrote IO_BGP, so IO_OBP0/IO_OBP1 sat at Init's 0 and the
+    ; composed CGB OBJ palettes 4-7 (the four base palettes mapped through
+    ; rOBP1) collapsed to white — the 12 OBJ pal4-7 divergences battle_intro
+    ; reported.
+    ;
+    ; MEASURED, not inferred: tools/mgba_harness/scenarios/battle_palette_trace.lua
+    ; shows hardware going FF FF FF (BattleTransition_BlackScreen) -> E4 E4 E4 at
+    ; the frame this routine runs, and holding E4 until SetAnimationPalette.
+    ; The earlier search that concluded "no pret routine writes $E4 to rOBP1 on
+    ; the battle-entry path" was wrong because pret spells the value in BINARY
+    ; (%11100100), so a grep for `ld a, $e4` could not see it.
+    ;
+    ; IO_BGP keeps the port's own BGP_SILHOUETTE mechanism during the slide (a
+    ; documented projection — the port darkens via BGP where pret relies on the
+    ; pic data), and both sides agree on $E4 by the end, which is why no BG
+    ; divergence is reported at the battle_intro checkpoint.
+    mov byte [ebp + IO_OBP0], 0xE4
+    mov byte [ebp + IO_OBP1], 0xE4
     mov byte [ebp + IO_BGP], BGP_SILHOUETTE
     mov dword [slide_step], SLIDE_STEPS
 .loop:
