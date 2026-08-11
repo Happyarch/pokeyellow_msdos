@@ -14,9 +14,11 @@
 ; Deferred boundaries (marked inline):
 ;   - Link-battle presentation (versus box + YOU WIN/LOSE/DRAW): no networking in
 ;     the port (Phase 4). wLinkState is never LINK_STATE_BATTLING here.
-;   - Pay Day award (predef AddBCDPredef → wPlayerMoney; PickUpPayDayMoneyText):
-;     AddBCDPredef unlinked + text not generated. The Pay Day move can't set
-;     wTotalPayDayMoney yet, so this branch is never taken; kept structurally.
+;   (The Pay Day award used to be listed here as deferred, on three claims that
+;   were EACH measurably false by 2026-08-11: AddBCDPredef is translated
+;   (src/engine/math/bcd.asm), PickUpPayDayMoneyText IS generated
+;   (assets/battle_text.inc), and PayDayEffect_ does accumulate into
+;   wTotalPayDayMoney (move_effects/pay_day.asm). It is implemented below.)
 ;   - WaitForSoundToFinish: audio HAL (Phase 3).
 ;
 ; Register map (CLAUDE.md): A=AL; BC=BX; DE=EDX; HL=ESI; EBP=GB base, [ebp+addr].
@@ -32,6 +34,9 @@ section .text
 
 global EndOfBattle
 
+extern AddBCD                            ; engine/math/bcd.asm — predef AddBCDPredef's body
+extern PickUpPayDayMoneyText             ; assets/battle_text.inc (generated Tier-1)
+extern PrintText                         ; src/home/window.asm
 extern EvolutionAfterBattle              ; evos_moves.asm — walks party, evolves eligible mons
 extern UpdatePikachuMoodAfterBattle      ; pikachu_status.asm — raises starter Pikachu mood (DH=$82)
 extern GBPalWhiteOut                     ; src/home/palettes.asm — fade to white on the way out
@@ -61,9 +66,16 @@ EndOfBattle:
     inc esi
     or al, [ebp + esi]
     jz .evolution                        ; pay day money 0 → skip the award
-    ; TODO-HW: award Pay Day — predef AddBCDPredef (DE=wPlayerMoney+2, C=3) then
-    ; PrintText PickUpPayDayMoneyText. Deferred: AddBCDPredef unlinked +
-    ; PickUpPayDayMoneyText not generated. Falls through to evolution.
+    ; Award it. ESI is already wTotalPayDayMoney + 2 from the or-chain above,
+    ; exactly as pret's HL is — AddBCD walks both pointers DOWNWARD by C bytes,
+    ; so source and destination both start at their array's least-significant
+    ; byte. Big-endian GB money, 3-byte BCD.
+    ; DEVIATION{class=HAL; pret=engine/battle/end_of_battle.asm:EndOfBattle; behavior=calls AddBCD directly where pret runs predef AddBCDPredef; evidence=AddBCDPredef in the port is GetPredefRegisters falling through to AddBCD and the port has no predef dispatcher staging wPredefHL-DE-BC for this site so GetPredefRegisters would load stale registers over the live ones, the same convention pay_day.asm and ReadTrainer already use; lifetime=permanent, the port calls predef targets directly}
+    mov edx, wPlayerMoney + 2            ; ld de, wPlayerMoney + 2
+    mov cl, 3                            ; ld c, $3
+    call AddBCD                          ; predef AddBCDPredef
+    mov esi, PickUpPayDayMoneyText       ; ld hl, PickUpPayDayMoneyText
+    call PrintText
 
 .evolution:
     xor al, al

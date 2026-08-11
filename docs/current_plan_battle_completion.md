@@ -594,7 +594,37 @@ provider shapes below, not their runtime behavior.
       counter, accumulation, release, and cleanup flow on both turns. Preserve
       original-game quirks only when pret or the current bug reference supports
       them, with the required `BUG`/`GLITCH` tags.
-- [ ] **3b. Pay Day and end-of-battle money.** The move's accumulator is done and
+- [~] **3b. Pay Day and end-of-battle money.** IMPLEMENTED 2026-08-11, NOT
+      TICKED — the code is in, the acceptance evidence is not.
+
+      The payout is now real in `EndOfBattle`: `AddBCD` (3-byte BCD, both
+      pointers starting at their array's least-significant byte, exactly as
+      pret's `HL`/`DE` do) into `wPlayerMoney`, then `PrintText
+      PickUpPayDayMoneyText`. `faithdiff EndOfBattle` swaps `- DROPPED
+      AddBCDPredef` for `+ ADDED AddBCD` under a `DEVIATION{class=HAL}` — the
+      port's `AddBCDPredef` is `GetPredefRegisters` falling through to `AddBCD`,
+      and there is no predef dispatcher staging the mailbox at this site, which
+      is the convention `pay_day.asm` and `ReadTrainer` already follow.
+
+      **All three of the old TODO-HW's deferral claims were false, each
+      independently checkable in one command:** `AddBCDPredef` is `translated`
+      (`src/engine/math/bcd.asm`), `PickUpPayDayMoneyText` IS generated
+      (`assets/battle_text.inc:357`), and `PayDayEffect_` does accumulate into
+      `wTotalPayDayMoney` (`move_effects/pay_day.asm:134`). The comment is
+      deleted and replaced with the measurement.
+
+      **WHAT IS OWED — a must-hit scenario.** No existing scenario can witness
+      this: the branch is gated on `wTotalPayDayMoney != 0`, which is 0 in every
+      scenario in the manifest, so the suite proves non-regression and nothing
+      more. It needs a deterministic battle in which Pay Day is used and won,
+      comparing `wPlayerMoney` (BCD) against the golden. Until that exists this
+      box stays `[~]`. Do not read a green suite as evidence for it.
+
+      One thing to check when that scenario is built: this branch now calls
+      `PrintText` at battle exit. pret does the same, so it is faithful, but if
+      the port's `PrintText` waits for a keypress there, an automated scenario
+      reaching this path will stall — that is where to look first.
+- [ ] **3b (original entry).** The move's accumulator is done and
       linked (`PayDayEffect_`, `move_effects/pay_day.asm`, `AddBCD` into
       `wTotalPayDayMoney`); complete the payout/text path in
       `end_of_battle.asm` (its `TODO-HW` still claims `AddBCDPredef` is unlinked
