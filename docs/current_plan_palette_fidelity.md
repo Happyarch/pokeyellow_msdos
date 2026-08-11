@@ -157,16 +157,68 @@ Measured on a 56/56 full-tier run:
 
 - `battle_menu` **12 → 0**, `move_selection` **12 → 0**. `battle_menu`'s
   `$80xx` VRAM mask also fell from **128 hits to 49**, as predicted.
-- `battle_intro` still 12, all `OBJ pal4-7`. Expected: its harness hangs at
+- `battle_intro` still 12, all `OBJ pal4-7`. Its harness hangs at
   `.goldenintrohang` BEFORE the send-out block, so the port's `IO_OBP1` is
-  legitimately still 0 there — but the golden solves to `rOBP1 = $E4` at that
-  checkpoint, so **hardware has some other writer before the intro**. Finding
-  it is the remaining `OBJ pal4-7` work. Do not assume it is `SetAnimationPalette`
-  ($6C) — the value is different.
-- `battle_damage` still 12, all `OBJ pal4-7`, golden `$6C`. Its gate shares the
-  send-out preamble, so it *should* now reach `SendOutMon`; it does not show the
-  effect. Check which branch `DEBUG_BATTLE_DAMAGE` actually takes before
-  concluding anything.
+  legitimately still 0 there. The golden's OBJ 4-7 are byte-identical to its
+  OBJ 0-3, i.e. the identity mapping `$E4` — not `$6C`, so `SetAnimationPalette`
+  is not the writer. **No routine in pret `home/` + `engine/` writes `$E4` to
+  `rOBP1` on the battle-entry path** (enumerated every `ldh [rOBP1], a` site and
+  its source value: the only `$E4` is `ghost_marowak_anim.asm:4`, and the fade
+  tables end at `$E0` / `$00` / `$FF`). Which leads to the finding below.
+
+### THE MODELS DIFFER: hardware's OBJ 4-7 are STICKY, the port's are LIVE
+
+Measured 2026-08-11, and it reframes this whole region.
+
+pret's `UpdateCGBPal_OBP1` (`home/cgb_palettes.asm`) compares `rOBP1` against
+`wLastOBP1` and **only transfers when it changed**. So the CGB palette RAM the
+golden reads holds the four base palettes mapped through whatever `rOBP1` held
+at the LAST TRANSFER — it is not a function of the current register.
+
+The port has **no `wLast*` model whatsoever**: `UpdateCGBPal_BGP`, `_OBP0` and
+`_OBP1` all collapse to `mov byte [g_pal_dirty], 1` (`src/home/cgb_palettes.asm`,
+the whole file is 11 lines), and `commit_palette` recomputes OBJ 4-7 from the
+CURRENT `IO_OBP1` every frame. `grep -rn wLastOBP1 dos_port/src` returns nothing.
+
+So the two structures coincide only when the current register equals the
+last-transferred one, and a divergence of exactly this shape is expected wherever
+they do not. That is sufficient on its own to explain `battle_intro`.
+
+**It also corrects the method used earlier in this file.** Solving a golden's
+`cgb_palettes` for "the rOBP1 value" actually recovers *rOBP1 at the last OBP1
+transfer*. Every solved value quoted above should be read that way. It happened
+not to matter for the `$6C` cases — the transfer and the checkpoint agreed — but
+the inference was weaker than it was written.
+
+NEXT MEASUREMENT (do this before writing any code): probe `rOBP1` live on the
+mGBA side at the `battle_intro` checkpoint (`tools/run_mgba_mcp.sh`) and compare
+it with the `$E4` recovered from palette RAM. Equal ⇒ hardware genuinely holds
+`$E4` and there is a writer still to find. Different ⇒ the sticky model is the
+whole story, and the fix is to give the port a real `wLast*`-gated transfer
+rather than a live recompute.
+- `battle_damage` still 12, all `OBJ pal4-7`, golden `$6C`. **RESOLVED
+  2026-08-11 as BY DESIGN, not a port defect — no code change.** Two measured
+  reasons, both structural:
+  1. Its send-out takes the starter-Pikachu branch. `DEBUG_BATTLE_DAMAGE` sends
+     out party slot 3, and the seeded slot 3 is species `$54` = PIKACHU with the
+     player's OT id and name, so `IsThisPartyMonStarterPikachu` returns CF=1 and
+     `SendOutMon` runs `StarterPikachuBattleEntranceAnimation` instead of
+     `PlayMoveAnimation POOF_ANIM`. **pret's entrance animation writes no
+     palette register at all** (measured: `engine/battle/pikachu_entrance_anim.asm`
+     is 47 lines and contains no `rOBP` write and no `MoveAnimation` call), so
+     hardware would not get `$6C` from that branch either. The port's ret-stub is
+     therefore not the cause.
+  2. The golden's `$6C` comes from the MOVE animations its Lua plays while
+     driving real non-lethal turns. The port's gate deliberately "calls the
+     numerical spine directly so text and animation waits cannot dominate a
+     headless arithmetic check" — its own header comment. Making this scenario
+     match would mean playing animations inside an arithmetic oracle, against
+     its documented design.
+
+  When `PALETTE_GATING` flips to `True` this needs a mask carrying exactly that
+  justification. It is deliberately NOT added now: nothing is failing while the
+  region is reporting-only, and a mask written ahead of the gate is a mask
+  nobody re-derives.
 - `ball_catch` still 12 — **but NOT this family, and the line below saying it is
   was wrong.** Measured signature: `BG pal0..3 colour3: rom=(16,31,4)
   port=(31,31,31)`. That is a BG colour-3 divergence, not an OBJ one. It was
