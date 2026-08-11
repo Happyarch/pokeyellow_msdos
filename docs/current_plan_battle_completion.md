@@ -693,7 +693,19 @@ provider shapes below, not their runtime behavior.
 - [ ] **3c (original entry).** Reconstruct the
       Self-Destruct/Explosion result and music selection from pret, then add a
       must-hit scenario for the mutual-faint terminal state.
-- [ ] **3d. Empty `battle_exp_stubs.asm`.** Implement and retire the battle-owned
+- [~] **3d. Empty `battle_exp_stubs.asm`.** PARTIAL 2026-08-11: `PrintEmptyString`
+      is RETIRED — real pret body (core.asm:6720) in the core.asm mirror, stub
+      label removed, both extern comments repointed, `faithdiff` 1/1 with the
+      documented `PrintText` -> `PrintBattleText` wrapper swap. 23/23 scenarios
+      PASS, but that is NON-REGRESSION ONLY: the goldencheck output is
+      byte-identical to the pre-change run. It IS executed (`battle_faint`
+      must-hits `FaintEnemyPokemon`, whose call at core.asm:5924 is
+      unconditional once `AnyPartyAlive` passes), but `battle_faint` is
+      datastruct class so TILEMAP/VRAM/OAM are SKIPPED, and `battle_menu` dumps
+      after `DisplayBattleMenu` has redrawn the box. Reachable is not witnessed.
+      STILL OPEN: `CalculateModifiedStats`, `ModifyPikachuHappiness`, and
+      `DoubleOrHalveSelectedStats` (blocked on 2c per this plan's ordering rule).
+- [ ] **3d (original entry).** Implement and retire the battle-owned
       providers `PrintEmptyString`, `CalculateModifiedStats`, and
       `DoubleOrHalveSelectedStats`; implement `ModifyPikachuHappiness` at its
       pret-owned interface so the existing battle/item callers stop being inert.
