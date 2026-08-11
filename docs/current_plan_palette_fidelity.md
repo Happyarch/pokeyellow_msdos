@@ -82,6 +82,54 @@ across 42 scenarios**.
   green, so this is pre-existing, not caused by it.) `trainer_battle_init` (36)
   and `trainer_battle_win` (28) share the shape.
 
+  **ROOT-CAUSED for the five battle scenarios — 2026-08-11, measured, not
+  inferred.** The missing writer is `SetAnimationPalette`
+  (pret `engine/battle/animations.asm:565`, `ld a, $6c / ldh [rOBP1], a`), and
+  the port's body of it is already faithful. What is missing is the CALL CHAIN:
+  pret's `SendOutMon` (`engine/battle/core.asm:1803`) does
+  `ld a, POOF_ANIM / call PlayMoveAnimation` → `MoveAnimation` →
+  `SetAnimationPalette`, and the port's `SendOutMon` ends at
+  `RunPaletteCommand` with the comment
+  `; ANIMATION=OFF: PlayMoveAnimation(POOF_ANIM) / AnimateSendingOutMon / Pikachu.`
+  `PlayMoveAnimation` has been translated and live since the battle-animations
+  plan landed, so that comment is stale — this is a genuine dropped call, not a
+  deferral.
+
+  How it was measured, with the decomposition (aggregates alone would not have
+  settled it):
+  * Solved each committed golden's `cgb_palettes` region for the DMG register
+    that maps OBJ base palettes 0-3 onto slots 4-7 (`_UpdateCGBPal_OBP` with
+    `CONVERT_OBP1`). `battle_menu`, `battle_faint`, `battle_damage`,
+    `move_selection` and `battle_blackout` all solve to a UNIQUE `rOBP1 = $6C`;
+    `battle_intro` solves to `$E4` (its checkpoint precedes the send-out);
+    overworld/menu goldens solve to `$E0`, i.e. `LoadGBPal`, as this file
+    already recorded.
+  * `$6C` appears exactly twice in all of pret `home/` + `engine/`, both inside
+    `SetAnimationPalette` (its SGB and non-SGB arms).
+  * `goldencheck SCENARIO=battle_menu` (PASS, reporting-only) prints 12
+    divergences and they are exactly `OBJ pal4..7 colour1..3`, port
+    `(31,31,31)` throughout — the signature of `IO_OBP1 == 0` composed against
+    a base palette whose colour 0 is white. `OBJ pal0-3` do NOT diverge, which
+    proves `obj_slot_pal[0..3]` is already correct and isolates the fault to
+    the register.
+
+  **The fix is to restore `SendOutMon`, and that is bigger than one register.**
+  `faithdiff SendOutMon` reports `calls: 14 pret / 2 port (1 matched)` — 13
+  DROPPED (`PrintSendOutMonMessage`, `DrawEnemyHUDAndHPBar`,
+  `DrawPlayerHUDAndHPBar`, `LoadMonBackPic`, `PlayMoveAnimation`,
+  `AnimateSendingOutMon`, `IsThisPartyMonStarterPikachu`,
+  `StarterPikachuBattleEntranceAnimation`, `IsPlayerPikachuAsleepInParty`,
+  `PlayPikachuSoundClip`, `PlayCry`, `PrintEmptyString`,
+  `SaveScreenTilesToBuffer1`) and 1 ADDED (the port-only `DrawHUDsAndHPBars`),
+  plus dropped `[hStartTileID]` / `[hWhoseTurn]` / `[hAutoBGTransferEnabled]`
+  stores. `AnimateSendingOutMon` and `StarterPikachuBattleEntranceAnimation`
+  are both `missing` per `label_status`. So this belongs in
+  `docs/current_plan_battle_completion.md` as send-out restoration work, not
+  in a one-line palette patch — and it should RETIRE, not grow, the battle
+  goldens' 128-slot `$80xx` VRAM mask, whose justification string ("the port
+  draws from the matching $93xx copies and its $80xx is undisplayed after the
+  intro") is a consequence of exactly this dropped chain.
+
 **"Battle" is NOT a family of its own.** Measured: `battle_intro`,
 `battle_menu`, `move_selection`, `ball_catch` and `battle_damage` are 12
 divergences each and **every one is the `OBJ pal4-7 -> white` family above** —

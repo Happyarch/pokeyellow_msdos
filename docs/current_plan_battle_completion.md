@@ -440,6 +440,34 @@ result gates deliberately stop after initialization and drive one terminal turn.
       trainer victory music, faint/send-out cries, waits, and screen restoration
       from pret. Resolve `PlayCry` by its real blocking contract rather than an
       audio-no-op assumption.
+- [ ] **1f. Restore `SendOutMon`'s send-out sequence.** ADDED 2026-08-11 from a
+      measured palette-fidelity root cause, not from a survey. `faithdiff
+      SendOutMon` reports `calls: 14 pret / 2 port (1 matched)`: 13 DROPPED
+      (`PrintSendOutMonMessage`, `DrawEnemyHUDAndHPBar`, `DrawPlayerHUDAndHPBar`,
+      `LoadMonBackPic`, `PlayMoveAnimation`, `AnimateSendingOutMon`,
+      `IsThisPartyMonStarterPikachu`, `StarterPikachuBattleEntranceAnimation`,
+      `IsPlayerPikachuAsleepInParty`, `PlayPikachuSoundClip`, `PlayCry`,
+      `PrintEmptyString`, `SaveScreenTilesToBuffer1`), 1 ADDED (port-only
+      `DrawHUDsAndHPBars`), plus dropped `[hStartTileID]` / `[hWhoseTurn]` /
+      `[hAutoBGTransferEnabled]` stores and pret's enemy-HP-zero skip of the
+      enemy HUD. `AnimateSendingOutMon` (pret `init_battle.asm:181`) and
+      `StarterPikachuBattleEntranceAnimation` are both `missing`; everything
+      else it needs is translated and linked.
+
+      The in-source comment `; ANIMATION=OFF: PlayMoveAnimation(POOF_ANIM) /
+      AnimateSendingOutMon / Pikachu.` is STALE — `PlayMoveAnimation` has been
+      live since the battle-animations plan landed. Do not read it as a
+      sanctioned deferral.
+
+      Measured consequence: pret's `PlayMoveAnimation POOF_ANIM` reaches
+      `SetAnimationPalette`, the ONLY writer of `rOBP1 = $6C`, so hardware holds
+      `$6C` at the `battle_menu` / `battle_faint` / `battle_damage` /
+      `move_selection` / `battle_blackout` checkpoints (each solves to that value
+      UNIQUELY from its committed `cgb_palettes` golden) while the port holds 0.
+      That is 12 palette divergences per scenario, all `OBJ pal4..7 colour1..3`.
+      Decomposition and method: `docs/current_plan_palette_fidelity.md`.
+      Restoring this should also RETIRE the battle goldens' 128-slot `$80xx`
+      VRAM mask rather than needing a new one — check that when it lands.
 - [ ] **1e. AI execution leaves.** Complete `SwitchEnemyMon` through withdrawal,
       `EnemySendOut`, and its return flags; complete AI item text/effect/HP-bar
       paths without duplicating item-owned player handlers.
