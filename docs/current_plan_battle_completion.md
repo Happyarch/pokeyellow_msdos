@@ -660,7 +660,37 @@ provider shapes below, not their runtime behavior.
       `end_of_battle.asm` (its `TODO-HW` still claims `AddBCDPredef` is unlinked
       and that the move cannot set `wTotalPayDayMoney` — both are now false; fix
       the comment in the same change) using big-endian/BCD conventions.
-- [ ] **3c. Battle draw and simultaneous-faint behavior.** Reconstruct the
+- [~] **3c. Battle draw and simultaneous-faint behavior.** RE-MEASURED
+      2026-08-11, and the box's premise was mostly already satisfied.
+
+      "Reconstruct the Self-Destruct/Explosion result and music selection from
+      pret" — the reconstruction is ALREADY THERE and faithful. `FaintEnemyPokemon`
+      carries pret's whole `.sfxplayed` block (`core.asm:808-815`): the
+      player-HP test, the `wInHandlePlayerMonFainted` guard against calling
+      `RemoveFaintedPlayerMon` twice, and the call itself. `RemoveFaintedPlayerMon`
+      likewise has pret's early `ret` that suppresses the cry and the
+      "<mon> fainted!" message when the enemy faint was detected first
+      (`core.asm:1050-1052`). The wild victory jingle and `EndLowHealthAlarm` are
+      wired. Do not re-derive these; read them.
+
+      WHAT WAS ACTUALLY MISSING: pret documents a BUG at exactly this spot — the
+      wild victory jingle starts BEFORE the player-HP check, so a simultaneous
+      faint plays the win music for a battle the player did not win. It was
+      untagged. Now `BUG{class=timing}` with a `BUG_FIX_LEVEL >= 2` correction
+      that tests `wBattleMonHP` first (valid because
+      `ReadPlayerMonCurHPAndStatus` runs at the top of `FaintEnemyPokemon`).
+
+      Evidence the default path did not move: the default-build `PKMN.EXE` is
+      BYTE-IDENTICAL with and without the change (sha256 `7559a45b…` both ways),
+      while the `BUG_FIX_LEVEL=2` build differs (`f615ac29…`) — so the check is
+      sensitive and the fix really is emitted at level 2. All three levels build.
+      `faithdiff FaintEnemyPokemon` is unchanged by the edit.
+
+      STILL OWED, which is why this is `[~]`: the must-hit scenario for the
+      mutual-faint terminal state. Same bottleneck as 3a/3b — see stigmergy
+      `battle-stage3-blocked-on-mechanics-scenarios`. The remaining trainer-faint
+      SFX at `.sfxplayed` is a `TODO-HW` audio item (Phase 3), not this box.
+- [ ] **3c (original entry).** Reconstruct the
       Self-Destruct/Explosion result and music selection from pret, then add a
       must-hit scenario for the mutual-faint terminal state.
 - [ ] **3d. Empty `battle_exp_stubs.asm`.** Implement and retire the battle-owned

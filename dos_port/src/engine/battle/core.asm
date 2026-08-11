@@ -5862,6 +5862,15 @@ FaintEnemyPokemon:
     jmp .sfxplayed
 .wild_win:
     call EndLowHealthAlarm                     ; pret: call EndLowHealthAlarm
+    ; BUG{class=timing; pret=engine/battle/core.asm:FaintEnemyPokemon; behavior=the wild victory jingle is started before the player mon's HP is checked at compatibility level 0, so a simultaneous faint plays the win music for a battle the player did not win; evidence=pret comments this at the .sfxplayed label - "win sfx is played for wild battles before checking for player mon HP, this can lead to odd scenarios where both player and enemy faint, as the win sfx plays yet the player never won the battle" - and the double-faint guard immediately below is what detects the case too late; lifetime=permanent Gen-1 behavior at compatibility level 0, corrected at BUG_FIX_LEVEL 2}
+%if BUG_FIX_LEVEL >= 2
+    ; Fixed: decide first. wBattleMonHP is current here — ReadPlayerMonCurHPAndStatus
+    ; runs at the top of FaintEnemyPokemon — so a player mon that fainted on the same
+    ; turn skips the jingle and falls into the double-faint guard below unchanged.
+    mov al, [ebp + wBattleMonHP]
+    or  al, [ebp + wBattleMonHP + 1]
+    jz .sfxplayed                              ; both fainted -> no victory music
+%endif
     mov al, MUSIC_DEFEATED_WILD_MON            ; pret: ld a, MUSIC_DEFEATED_WILD_MON
     call PlayBattleVictoryMusic                ; pret: call PlayBattleVictoryMusic
 
