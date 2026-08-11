@@ -440,9 +440,42 @@ result gates deliberately stop after initialization and drive one terminal turn.
       trainer victory music, faint/send-out cries, waits, and screen restoration
       from pret. Resolve `PlayCry` by its real blocking contract rather than an
       audio-no-op assumption.
-- [ ] **1f. Restore `SendOutMon`'s send-out sequence.** ADDED 2026-08-11 from a
-      measured palette-fidelity root cause, not from a survey. `faithdiff
-      SendOutMon` reports `calls: 14 pret / 2 port (1 matched)`: 13 DROPPED
+- [x] **1f. Restore `SendOutMon`'s send-out sequence.** DONE 2026-08-11 (two
+      commits: `AnimateSendingOutMon` ported, then the call graph restored).
+      `faithdiff SendOutMon` is now `calls: 14 pret / 14 port (14 matched)`.
+      Three callees land as annotated ret-stubs — `PrintSendOutMonMessage` and
+      `StarterPikachuBattleEntranceAnimation` (`battle_stubs.asm`),
+      `IsPlayerPikachuAsleepInParty` (new `src/engine/pikachu/pikachu_stubs.asm`)
+      — so the SHAPE is pret's and the stubs are what remains to retire.
+
+      **It did NOT close the palette family, and the reason is a separate
+      defect — see 1g.** Measured: 11 battle-tier scenarios PASS, and their
+      goldencheck output is BYTE-IDENTICAL to a stashed-baseline re-run
+      (`battle_menu` / `battle_faint` / `trainer_battle_loss` diffed in full).
+      Identical output means the restored code did not execute:
+      `label_status --callers SendOutMon` reports ONE port caller,
+      `ChooseNextMon`. So those 11 passes are no-regression evidence only.
+- [ ] **1g. Route the battle-entry send-out through `SendOutMon`.** ADDED
+      2026-08-11, measured. pret calls `SendOutMon` from THREE sites —
+      `StartBattle` (core.asm:259, the initial send-out, immediately before
+      `jr MainInBattleLoop`), `ChooseNextMon` (:1163) and `SwitchPlayerMon`
+      (:2541). The port has only `ChooseNextMon`. `StartBattle` is `missing`:
+      the port's `_InitBattleCommon` absorbed the wild/trainer orchestration and
+      performs the initial send-out inline, so nothing reaches `SendOutMon` at
+      battle start.
+
+      That is what actually keeps `IO_OBP1` at 0 for the five battle
+      checkpoints: hardware gets `$6C` from `SetAnimationPalette` via
+      `StartBattle` → `SendOutMon` → `PlayMoveAnimation POOF_ANIM`. Closing this
+      is what should retire the 12-divergence `OBJ pal4-7` signature in
+      `battle_intro` / `battle_menu` / `move_selection` / `ball_catch` /
+      `battle_damage`, and it is the acceptance test for this box — a passing
+      suite alone is not, since the suite passed while the code was unreached.
+      `SwitchPlayerMon` is Stage 2a's, not this box's.
+      *What 1f looked like when it was opened, kept as the record of the defect
+      and of one claim that turned out to be wrong.* It came from a measured
+      palette-fidelity root cause, not from a survey. `faithdiff SendOutMon`
+      reported `calls: 14 pret / 2 port (1 matched)`: 13 DROPPED
       (`PrintSendOutMonMessage`, `DrawEnemyHUDAndHPBar`, `DrawPlayerHUDAndHPBar`,
       `LoadMonBackPic`, `PlayMoveAnimation`, `AnimateSendingOutMon`,
       `IsThisPartyMonStarterPikachu`, `StarterPikachuBattleEntranceAnimation`,
@@ -468,6 +501,15 @@ result gates deliberately stop after initialization and drive one terminal turn.
       Decomposition and method: `docs/current_plan_palette_fidelity.md`.
       Restoring this should also RETIRE the battle goldens' 128-slot `$80xx`
       VRAM mask rather than needing a new one — check that when it lands.
+
+      **CORRECTED 2026-08-11, same day, by the restoration itself.** The last two
+      sentences above were wrong in their conclusion, though right about the
+      mechanism: restoring `SendOutMon` changed NOTHING — `battle_menu` still
+      reports the identical 12 divergences, the `$80xx` mask still hits 128
+      times, and a stashed-baseline re-run diffed byte-identical. The missing
+      link is 1g: the port's battle ENTRY never calls `SendOutMon`. Read the
+      block above as the description of a real defect that was fixed, not as a
+      prediction that came true.
 - [ ] **1e. AI execution leaves.** Complete `SwitchEnemyMon` through withdrawal,
       `EnemySendOut`, and its return flags; complete AI item text/effect/HP-bar
       paths without duplicating item-owned player handlers.

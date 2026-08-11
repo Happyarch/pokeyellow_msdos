@@ -113,7 +113,25 @@ across 42 scenarios**.
     proves `obj_slot_pal[0..3]` is already correct and isolates the fault to
     the register.
 
-  **The fix is to restore `SendOutMon`, and that is bigger than one register.**
+  **CORRECTION, same day: restoring `SendOutMon` was NOT the fix.** It landed
+  (`faithdiff SendOutMon` 14/14 matched) and moved nothing: `battle_menu` reports
+  the same 12 divergences, and a stashed-baseline re-run of `battle_menu` /
+  `battle_faint` / `trainer_battle_loss` diffed BYTE-IDENTICAL. Measured cause —
+  `label_status --callers SendOutMon` gives ONE port caller, `ChooseNextMon`,
+  where pret has three: `StartBattle` (core.asm:259, the initial send-out),
+  `ChooseNextMon` (:1163) and `SwitchPlayerMon` (:2541). `StartBattle` is
+  `missing`; the port's `_InitBattleCommon` does the battle-entry send-out
+  inline. **So the open work is routing battle entry through `SendOutMon`** —
+  `docs/current_plan_battle_completion.md` item 1g. Everything below about the
+  mechanism stands; only the "which routine to fix" conclusion was wrong.
+
+  **Also corrected:** the blackout/loss bullet below records `trainer_battle_loss`
+  as 40 divergences. Measured 2026-08-11 it is **48**, on BOTH sides of the
+  `SendOutMon` change — and 48 is exactly the number of non-white entries in its
+  committed golden (48 of 64), i.e. the port's palette RAM is entirely white at
+  that checkpoint. The 40 was stale before this work started.
+
+  **What restoring `SendOutMon` involved, for the record.**
   `faithdiff SendOutMon` reports `calls: 14 pret / 2 port (1 matched)` — 13
   DROPPED (`PrintSendOutMonMessage`, `DrawEnemyHUDAndHPBar`,
   `DrawPlayerHUDAndHPBar`, `LoadMonBackPic`, `PlayMoveAnimation`,
