@@ -57,7 +57,16 @@ DAMAGE_ORACLE_RECORD_SIZE = 15
 
 # Regions handled by the dedicated video comparators; everything else in the
 # dump is WRAM game data, compared byte-for-byte by compare_wram().
-VIDEO_REGIONS = ("wTileMap", "vram_tiles", "oam")
+VIDEO_REGIONS = ("wTileMap", "vram_tiles", "oam", "cgb_palettes")
+
+# cgb_palettes is COMPOSED, not read from memory, on both sides: the Game Boy
+# keeps it behind BCPS/BCPD and OCPS/OCPD, and the port builds it from its slot
+# tables plus BGP/OBP0/OBP1. Both publish this sentinel as gb_addr to say "no
+# comparable address" (GBSTATE_FLAT_ADDR in src/debug/debug_dump.asm), so the
+# address cross-check must not fire on it. compare_palettes() does the real work.
+FLAT_ADDR_SENTINEL = 0xFFFFFFFF
+# 8 BG + 8 OBJ palettes, four BGR555 u16 each.
+CGB_PAL_SIZE = (8 + 8) * 4 * 2
 
 # --- struct field maps: (offset, size, name) — used to name a diverging byte ---
 # party_struct (pret macros/ram.asm:20), 44 B. Offset 7 is the catch rate, which
@@ -1337,7 +1346,8 @@ def load_golden(goldens_dir, scenario):
             "size": r["size"],
             "data": blob[r["file_offset"]:r["file_offset"] + r["size"]],
         }
-    for name, size in (("wTileMap", GB_W * GB_H), ("vram_tiles", VRAM_SIZE), ("oam", OAM_SIZE)):
+    for name, size in (("wTileMap", GB_W * GB_H), ("vram_tiles", VRAM_SIZE), ("oam", OAM_SIZE),
+                       ("cgb_palettes", CGB_PAL_SIZE)):
         if regions.get(name, {}).get("size") != size:
             sys.exit(f"golden {scenario}: region {name} missing or wrong size")
     return sidecar, regions
@@ -1384,7 +1394,11 @@ def check_addresses(golden, port, scenario):
     bad = []
     for name in sorted(set(golden) & set(port)):
         if name in VIDEO_REGIONS:
-            continue  # wTileMap is deliberately a different size (canvas vs screen)
+            # wTileMap is deliberately a different size (canvas vs screen), and
+            # cgb_palettes has no comparable address on either side.
+            continue
+        if golden[name]["addr"] == FLAT_ADDR_SENTINEL or port[name]["addr"] == FLAT_ADDR_SENTINEL:
+            continue  # composed region: gb_addr is the "not memory-mapped" sentinel
         g, p = golden[name], port[name]
         if g["addr"] != p["addr"] or g["size"] != p["size"]:
             bad.append(f"  {name}: golden ${g['addr']:04X}/{g['size']}B (pret .sym) != "
@@ -1536,6 +1550,39 @@ def value_str(data, start, size):
     if size <= 3:
         return f"${v:0{size * 2}X} ({v})"
     return chunk.hex()
+
+
+def compare_palettes(golden, port, max_report):
+    """Compare the CGB palette RAM: 8 BG then 8 OBJ palettes, four BGR555 u16 each.
+
+    This is the only region that gates COLOUR. Every other region compares tile
+    ids, patterns, sprite entries or WRAM bytes, all of which stay correct while
+    a screen renders in entirely the wrong palette -- which is exactly how a run
+    of palette defects shipped through a green suite (912d43777, 2147f00fb,
+    6d965c824, 1b9c6d6ed).
+    """
+    g, p = golden.get("cgb_palettes"), port.get("cgb_palettes")
+    if g is None or p is None:
+        side = "golden" if g is None else "port"
+        return [f"  cgb_palettes: region missing on the {side} side"], []
+    if len(g["data"]) != len(p["data"]):
+        return [f"  cgb_palettes: size {len(g['data'])} (golden) != {len(p['data'])} (port)"], []
+
+    def colours(buf, base, pal):
+        out = []
+        for c in range(4):
+            w = buf[base + pal * 8 + c * 2] | (buf[base + pal * 8 + c * 2 + 1] << 8)
+            out.append((w & 31, (w >> 5) & 31, (w >> 10) & 31))
+        return out
+
+    lines = []
+    for half, base in (("BG", 0), ("OBJ", 64)):
+        for pal in range(8):
+            gc, pc = colours(g["data"], base, pal), colours(p["data"], base, pal)
+            for c, (gv, pv) in enumerate(zip(gc, pc)):
+                if gv != pv:
+                    lines.append(f"  {half} pal{pal} colour{c}: rom={gv} port={pv}")
+    return lines[:max_report], lines
 
 
 def compare_wram(golden, port, cfg, max_report):
@@ -1881,6 +1928,30 @@ def main():
             golden_regions, port_regions, cfg, args.max_report)
         failures += wram_failures
         masked_hits.extend(wram_masked)
+
+    # PALETTE IS REPORTING-ONLY FOR NOW -- it prints, it does not fail.
+    #
+    # The region went in on 2026-08-11 and immediately found a real backlog of
+    # port-vs-hardware palette divergences (three families: the overworld/menu
+    # LoadGBPal path, SetPal_StatusScreen's live mon palette, and battle). Two
+    # were fixed with it; the rest are open work, tracked in
+    # docs/current_plan_palette_fidelity.md.
+    #
+    # The alternative -- masking the survivors to force green -- is exactly how
+    # this class hid for a week, so it is deliberately not done. Flip
+    # PALETTE_GATING to True once that plan closes; the comparator itself is
+    # already exact and needs no change.
+    PALETTE_GATING = False
+    pal_lines, pal_all = compare_palettes(golden_regions, port_regions, args.max_report)
+    if pal_all:
+        if PALETTE_GATING:
+            failures += len(pal_all)
+        print(f"PALETTE: {len(pal_all)} divergence(s)"
+              f"{'' if PALETTE_GATING else ' [reporting-only, see docs/current_plan_palette_fidelity.md]'}:")
+        for line in pal_lines:
+            print(line)
+        if len(pal_all) > len(pal_lines):
+            print(f"  ... {len(pal_all) - len(pal_lines)} more")
 
     if masked_hits:
         print(f"masked (justified) divergences hit: {len(masked_hits)}")

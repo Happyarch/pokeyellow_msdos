@@ -30,6 +30,7 @@ bits 32
 
 extern ds_base
 extern pal_rgb_table, bg_slot_pal, obj_slot_pal
+extern pal_cgb_table    ; assets/colors/palettes.inc — BGR555 twin of pal_rgb_table
 extern tile_pal
 %ifdef DEBUG_CALCSTATS
 extern GetMonHeader
@@ -339,6 +340,17 @@ GBSTATE_VERSION     equ 2
 GBSTATE_HDR_SIZE    equ 16
 GBSTATE_NAME_LEN    equ 20
 GBSTATE_DIRENT_SIZE equ GBSTATE_NAME_LEN + 12    ; name + gb_addr + size + file_offset
+; A region composed in port memory rather than read from GB memory publishes
+; this in its gb_addr field, telling the differ "no comparable address".
+GBSTATE_FLAT_ADDR   equ 0xFFFFFFFF
+; Anything at or above this is a port .data/.bss address, not a GB address.
+; GB space ends at 0x10000 and the port image starts around 0x100000, so the
+; gap is four orders of magnitude wide.
+GBSTATE_FLAT_MIN    equ 0x10000
+; cgb_palettes payload: the Game Boy's CGB palette RAM as the golden side reads
+; it through BCPS/BCPD and OCPS/OCPD — 8 BG then 8 OBJ palettes, four BGR555 u16
+; each, composed by ComposeCGBPalettes into port memory (see gbregion_flat).
+CGB_PAL_DUMP_SIZE   equ (8 + 8) * 4 * 2
 GBSTATE_VRAM_SIZE   equ 0x1800
 
 ; battle_struct (pret macros/ram.asm:39) — species, HP, box level, status, 2
@@ -727,12 +739,44 @@ anim_show_list:
 %assign GBSTATE_PAYLOAD GBSTATE_PAYLOAD + (%3)
 %endmacro
 
+; gbregion_flat — a region whose bytes live in PORT memory, not GB memory.
+;
+; DumpGBState copies a normal region from [ebp + gb_addr]; a flat region is
+; copied from its address directly. The two are told apart by MAGNITUDE, which
+; is unambiguous by a wide margin: GB addresses are below 0x10000 and the port's
+; own .data/.bss symbols land above 0x100000 (measured: bg_slot_pal = 0x124634).
+; The macro asserts nothing at assembly time because the address is a
+; relocation, so DumpGBState re-checks it at run time instead.
+;
+; The DIRECTORY entry written to the file gets GBSTATE_FLAT_ADDR in its gb_addr
+; field, not the port address: the differ cross-checks every region's gb_addr
+; against the address the golden side resolved from pret's .sym, and a region
+; that is COMPOSED rather than memory-mapped has no such address on either
+; side. The sentinel says so explicitly instead of publishing a port pointer
+; that means nothing to the golden, or faking a GB address the loop would not
+; honour anyway.
+%macro gbregion_flat 3      ; %1 = name string, %2 = flat address, %3 = size
+%%name: db %1
+%if ($ - %%name) > GBSTATE_NAME_LEN
+    %error "gbregion_flat name too long for GBSTATE_NAME_LEN"
+%endif
+    times GBSTATE_NAME_LEN - ($ - %%name) db 0
+    dd %2                   ; flat source address (replaced by the sentinel on write)
+    dd %3                   ; size
+    dd 0                    ; file_offset — filled in by DumpGBState
+%assign GBSTATE_PAYLOAD GBSTATE_PAYLOAD + (%3)
+%endmacro
+
 align 4
 gbstate_regions:
     ; --- video state (the v1 regions; wTileMap is the port's 40x25 canvas) ---
     gbregion "wTileMap",      W_TILEMAP,     W_TILEMAP_SIZE
     gbregion "vram_tiles",    GB_VRAM0,      GBSTATE_VRAM_SIZE
     gbregion "oam",           GB_OAM,        GB_OAM_SIZE
+    ; The Game Boy's CGB palette RAM, composed from the port's slot tables and
+    ; DMG palette registers by ComposeCGBPalettes. Port-only debug data, so it
+    ; is NOT staged into GB RAM just to be dumpable — see gbregion_flat.
+    gbregion_flat "cgb_palettes", cgb_pal_dump, CGB_PAL_DUMP_SIZE
     ; --- player / save-block game data (compared in EVERY scenario) ---
     gbregion "wPlayerName",   wPlayerName,   NAME_LENGTH
     ; count + species list + $FF sentinel + 6 structs + 6 OT names + 6 nicks
@@ -1159,6 +1203,10 @@ PAL_TILEPAL_SIZE equ 384
 PAL_TOTAL       equ PAL_HDR_SIZE + PAL_DAC_SIZE + PAL_TILEPAL_SIZE + 8 + 8
 pal_stage:      resb PAL_TOTAL
 pal_reg_tmp:    resd 1
+; The GBSTATE cgb_palettes payload (CGB_PAL_DUMP_SIZE is defined with the other
+; GBSTATE constants, because the region table above uses it and NASM requires an
+; equ to be defined before use).
+cgb_pal_dump:   resb CGB_PAL_DUMP_SIZE
 %ifdef DEBUG_NPC_WALK
 NPC_LOG_CAP  equ 4096            ; 12-byte records → 341 NPC walk-decisions
 npc_log:     resb NPC_LOG_CAP    ; appended by movement.asm:npc_dbg_record
@@ -3085,7 +3133,80 @@ DebugDumpMemory:
 ; and exits, so every existing hook gains GBSTATE.BIN with no call-site edits.
 ; In: EBP = GB memory base. Clobbers caller-saved regs; preserves EBP.
 ; ---------------------------------------------------------------------------
+; ---------------------------------------------------------------------------
+; ComposeCGBPalettes — build the cgb_palettes GBSTATE region.
+;
+; Reproduces, in the Game Boy's own five-bit BGR555 form, the palette RAM the
+; golden side reads through BCPS/BCPD ($FF68/$FF69) and OCPS/OCPD ($FF6A/$FF6B):
+; eight BG palettes then eight OBJ palettes, four u16 colours each, colour 0
+; first. Little-endian, as the CGB stores them.
+;
+; The mapping is EXACTLY the one commit_palette (boot/video.asm) performs into
+; the VGA DAC, and deliberately so -- if the two ever disagree the region would
+; be testing something the screen does not show:
+;   BG  slot 0..7 -> bg_slot_pal[slot],      colour index via IO_BGP
+;   OBJ slot 0..7 -> obj_slot_pal[slot & 3], colour index via IO_OBP0 (slots
+;                    0-3) or IO_OBP1 (slots 4-7)
+; The OBJ fold is the CGB's own DMG-compat layout: four base palettes converted
+; twice, once through each OBP register (pret _UpdateCGBPal_OBP, index and
+; index+4).
+;
+; The colour index for colour c is (reg >> 2c) & 3, and pal_cgb_table is four
+; u16 per palette, so the source word is pal_cgb_table[pal*4 + idx].
+;
+; In: EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+ComposeCGBPalettes:
+    pushad
+    mov edi, cgb_pal_dump
+    xor ebx, ebx                        ; slot 0..7
+.bg_slot:
+    movzx esi, byte [bg_slot_pal + ebx]
+    shl esi, 3                          ; palette -> byte offset (4 colours x 2 B)
+    add esi, pal_cgb_table
+    movzx edx, byte [ebp + IO_BGP]
+    mov ecx, 4
+.bg_color:
+    mov eax, edx
+    and eax, 3                          ; colour index for this entry
+    mov ax, [esi + eax*2]
+    stosw
+    shr edx, 2
+    dec ecx
+    jnz .bg_color
+    inc ebx
+    cmp ebx, 8
+    jb .bg_slot
+
+    xor ebx, ebx                        ; OBJ slot 0..7
+.obj_slot:
+    mov eax, ebx
+    and eax, 3                          ; four base palettes, folded twice
+    movzx esi, byte [obj_slot_pal + eax]
+    shl esi, 3
+    add esi, pal_cgb_table
+    movzx edx, byte [ebp + IO_OBP0]
+    cmp ebx, 4
+    jb .obj_reg
+    movzx edx, byte [ebp + IO_OBP1]
+.obj_reg:
+    mov ecx, 4
+.obj_color:
+    mov eax, edx
+    and eax, 3
+    mov ax, [esi + eax*2]
+    stosw
+    shr edx, 2
+    dec ecx
+    jnz .obj_color
+    inc ebx
+    cmp ebx, 8
+    jb .obj_slot
+    popad
+    ret
+
 DumpGBState:
+    call ComposeCGBPalettes             ; refresh the composed cgb_palettes region
     ; --- Allocate a conventional DOS buffer: 0x10 + GBSTATE_TOTAL bytes ---
     ; 16 + 8464 = 8480 -> 530 paragraphs; round up to 0x280 (10 KB).
     mov ax, 0x0100
@@ -3132,10 +3253,21 @@ DumpGBState:
     cmp ebx, gbstate_regions_end
     jae .regions_done
     mov [edx + GBSTATE_NAME_LEN + 8], eax     ; dirent.file_offset
-    mov esi, [ebx + GBSTATE_NAME_LEN]         ; dirent.gb_addr
+    mov esi, [ebx + GBSTATE_NAME_LEN]         ; dirent.gb_addr (or a flat address)
     mov ecx, [ebx + GBSTATE_NAME_LEN + 4]     ; dirent.size
     add eax, ecx
+    ; A port-memory region (gbregion_flat) is copied from its address as-is; a
+    ; GB region is copied from [ebp + addr]. Told apart by magnitude — see
+    ; GBSTATE_FLAT_MIN. A flat region also publishes GBSTATE_FLAT_ADDR in the
+    ; directory it writes out, so the differ skips the gb_addr cross-check for
+    ; a region that has no comparable address on the golden side.
+    cmp esi, GBSTATE_FLAT_MIN
+    jae .flat_source
     lea esi, [ebp + esi]                      ; flat source = GB base + addr
+    jmp .have_source
+.flat_source:
+    mov dword [edx + GBSTATE_NAME_LEN], GBSTATE_FLAT_ADDR
+.have_source:
     rep movsb                                 ; -> EDI, which accumulates
     add ebx, GBSTATE_DIRENT_SIZE
     add edx, GBSTATE_DIRENT_SIZE

@@ -43,7 +43,7 @@ PAL_GAMEFREAK equ 36
 PAL_PIKACHUS_BEACH equ 37
 PAL_PIKACHU_PORTRAIT equ 38
 PAL_PIKACHUS_BEACH_TITLE equ 39
-PAL_DMG_GREEN equ 40
+PAL_BOOT_WHITE equ 40
 pal_rgb_table:
     db 63, 63, 63, 33, 63, 8, 22, 47, 63, 6, 6, 6  ; PAL_ROUTE
     db 63, 63, 63, 47, 35, 63, 22, 47, 63, 6, 6, 6  ; PAL_PALLET
@@ -85,7 +85,54 @@ pal_rgb_table:
     db 63, 63, 63, 63, 63, 0, 22, 47, 63, 6, 6, 6  ; PAL_PIKACHUS_BEACH
     db 63, 63, 63, 63, 37, 0, 39, 14, 2, 6, 6, 6  ; PAL_PIKACHU_PORTRAIT
     db 63, 63, 63, 18, 18, 18, 63, 43, 0, 6, 6, 6  ; PAL_PIKACHUS_BEACH_TITLE
-    db 38, 47, 3, 34, 43, 3, 12, 24, 12, 3, 14, 3  ; PAL_DMG_GREEN
+    db 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63  ; PAL_BOOT_WHITE
+
+; CGB BGR555 twin of pal_rgb_table (four u16 per palette, colour 0
+; first), consumed by the GBSTATE cgb_palettes region. Port-only ids
+; past pret's PAL_* range are converted from their six-bit values; every
+; pret palette is asserted to round-trip exactly at generation time.
+pal_cgb_table:
+    dw 0x7fff, 0x13f0, 0x7eeb, 0x0c63  ; PAL_ROUTE
+    dw 0x7fff, 0x7e37, 0x7eeb, 0x0c63  ; PAL_PALLET
+    dw 0x7fff, 0x03f3, 0x7eeb, 0x0c63  ; PAL_VIRIDIAN
+    dw 0x7fff, 0x3e52, 0x7eeb, 0x0c63  ; PAL_PEWTER
+    dw 0x7fff, 0x7d05, 0x7eeb, 0x0c63  ; PAL_CERULEAN
+    dw 0x7fff, 0x7c99, 0x7eeb, 0x0c63  ; PAL_LAVENDER
+    dw 0x7fff, 0x027f, 0x7eeb, 0x0c63  ; PAL_VERMILION
+    dw 0x7fff, 0x17e5, 0x7eeb, 0x0c63  ; PAL_CELADON
+    dw 0x7fff, 0x3dff, 0x7eeb, 0x0c63  ; PAL_FUCHSIA
+    dw 0x7fff, 0x211f, 0x7eeb, 0x0c63  ; PAL_CINNABAR
+    dw 0x7fff, 0x7d0b, 0x7eeb, 0x0c63  ; PAL_INDIGO
+    dw 0x7fff, 0x03ff, 0x7eeb, 0x0c63  ; PAL_SAFFRON
+    dw 0x7fff, 0x7ea0, 0x038a, 0x0421  ; PAL_TOWNMAP
+    dw 0x7fff, 0x03ff, 0x001f, 0x001f  ; PAL_LOGO1
+    dw 0x7fff, 0x03ff, 0x64e7, 0x4400  ; PAL_LOGO2
+    dw 0x7fff, 0x7c2d, 0x7d20, 0x0421  ; PAL_0F
+    dw 0x7fff, 0x03ff, 0x043f, 0x0c63  ; PAL_MEWMON
+    dw 0x7fff, 0x7e50, 0x6420, 0x0c63  ; PAL_BLUEMON
+    dw 0x7fff, 0x023f, 0x001f, 0x0c63  ; PAL_REDMON
+    dw 0x7fff, 0x7f50, 0x7e20, 0x0c63  ; PAL_CYANMON
+    dw 0x7fff, 0x7df9, 0x5813, 0x0c63  ; PAL_PURPLEMON
+    dw 0x7fff, 0x2a5d, 0x1531, 0x0c63  ; PAL_BROWNMON
+    dw 0x7fff, 0x2ff1, 0x1ac1, 0x0c63  ; PAL_GREENMON
+    dw 0x7fff, 0x49ff, 0x181f, 0x0c63  ; PAL_PINKMON
+    dw 0x7fff, 0x03ff, 0x01dc, 0x0c63  ; PAL_YELLOWMON
+    dw 0x7fff, 0x2af4, 0x156b, 0x0c63  ; PAL_GRAYMON
+    dw 0x7fff, 0x7c39, 0x001f, 0x0c63  ; PAL_SLOTS1
+    dw 0x7fff, 0x4c9f, 0x03ff, 0x0c63  ; PAL_SLOTS2
+    dw 0x7fff, 0x03e8, 0x03ff, 0x0c63  ; PAL_SLOTS3
+    dw 0x7fff, 0x7fe0, 0x03ff, 0x0c63  ; PAL_SLOTS4
+    dw 0x7fff, 0x0c63, 0x0c63, 0x0c63  ; PAL_BLACK
+    dw 0x7fff, 0x03ff, 0x03e0, 0x0c63  ; PAL_GREENBAR
+    dw 0x7fff, 0x03ff, 0x025f, 0x0c63  ; PAL_YELLOWBAR
+    dw 0x7fff, 0x03ff, 0x001f, 0x0c63  ; PAL_REDBAR
+    dw 0x7fff, 0x0117, 0x2dd1, 0x0c63  ; PAL_BADGE
+    dw 0x7fff, 0x0117, 0x2dd1, 0x0c63  ; PAL_CAVE
+    dw 0x7fff, 0x027f, 0x0273, 0x0c63  ; PAL_GAMEFREAK
+    dw 0x7fff, 0x03ff, 0x7eeb, 0x0c63  ; PAL_PIKACHUS_BEACH
+    dw 0x7fff, 0x025f, 0x04f3, 0x0c63  ; PAL_PIKACHU_PORTRAIT
+    dw 0x7fff, 0x2529, 0x02bf, 0x0c63  ; PAL_PIKACHUS_BEACH_TITLE
+    dw 0x7fff, 0x7fff, 0x7fff, 0x7fff  ; PAL_BOOT_WHITE
 
 ; Pokédex order: MISSINGNO then #001..#151.
 mon_pal_table:

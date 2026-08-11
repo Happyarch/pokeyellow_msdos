@@ -41,6 +41,37 @@ function dump.video_regions(sym)
 		{ name = "wTileMap",   addr = sym:addr("wTileMap"), size = 20 * 18 },
 		{ name = "vram_tiles", addr = 0x8000,               size = 0x1800 },
 		{ name = "oam",        addr = 0xFE00,               size = 160 },
+		dump.palette_region(),
+	}
+end
+
+-- The CGB palette RAM, which is NOT memory-mapped: it is reached only through
+-- the index/data port pairs BCPS/BCPD ($FF68/$FF69) and OCPS/OCPD ($FF6A/$FF6B),
+-- so emu:readRange cannot see it and the bytes are supplied directly via `data`.
+--
+-- 8 BG palettes then 8 OBJ palettes, four BGR555 u16 each, colour 0 first --
+-- exactly the order dos_port/src/debug/debug_dump.asm:ComposeCGBPalettes builds
+-- on the port side. The index is written WITHOUT the auto-increment bit and
+-- re-written for every byte, so the read does not depend on the emulator's
+-- auto-increment behaviour.
+--
+-- gb_addr is GBSTATE_FLAT_ADDR (0xFFFFFFFF), the port's "composed, not
+-- memory-mapped" sentinel: this region has no address that means the same thing
+-- on both sides, so the differ must not cross-check one. Publishing $FF68 here
+-- would be a fiction -- that is the port register, not where the bytes live.
+function dump.palette_region()
+	local bytes = {}
+	for _, ports in ipairs({ { 0xFF68, 0xFF69 }, { 0xFF6A, 0xFF6B } }) do
+		for i = 0, 63 do
+			emu:write8(ports[1], i)
+			bytes[#bytes + 1] = string.char(emu:read8(ports[2]))
+		end
+	end
+	return {
+		name = "cgb_palettes",
+		addr = 0xFFFFFFFF,
+		size = 128,
+		data = table.concat(bytes),
 	}
 end
 
@@ -132,6 +163,12 @@ local function json_encode(v, indent)
 end
 
 local function hex(n)
+	-- Eight digits for anything above the 16-bit GB space, so the
+	-- GBSTATE_FLAT_ADDR sentinel (0xFFFFFFFF) is not truncated to 0xFFFF --
+	-- which would collide with a real GB address in the sidecar.
+	if n > 0xFFFF then
+		return ("0x%08X"):format(n)
+	end
 	return ("0x%04X"):format(n)
 end
 
@@ -146,9 +183,11 @@ function dump.write(scenario_name, regions, extra)
 	local sidecar_regions = {}
 	local offset = 0
 	for _, r in ipairs(regions) do
-		local data = emu:readRange(r.addr, r.size)
+		-- A region may supply its own bytes (r.data) when the state it captures
+		-- is not in the address space at all -- see dump.palette_region.
+		local data = r.data or emu:readRange(r.addr, r.size)
 		assert(#data == r.size,
-			("dump: readRange(%s) returned %d bytes, wanted %d"):format(hex(r.addr), #data, r.size))
+			("dump: region %s produced %d bytes, wanted %d"):format(r.name, #data, r.size))
 		blobs[#blobs + 1] = data
 		sidecar_regions[#sidecar_regions + 1] = {
 			name = r.name,

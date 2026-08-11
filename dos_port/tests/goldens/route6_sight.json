@@ -22,138 +22,144 @@
     },
     {
       "file_offset": 6664,
+      "gb_addr": "0xFFFFFFFF",
+      "name": "cgb_palettes",
+      "size": 128
+    },
+    {
+      "file_offset": 6792,
       "gb_addr": "0xD157",
       "name": "wPlayerName",
       "size": 11
     },
     {
-      "file_offset": 6675,
+      "file_offset": 6803,
       "gb_addr": "0xD162",
       "name": "wPartyData",
       "size": 404
     },
     {
-      "file_offset": 7079,
+      "file_offset": 7207,
       "gb_addr": "0xD2F6",
       "name": "wPokedex",
       "size": 38
     },
     {
-      "file_offset": 7117,
+      "file_offset": 7245,
       "gb_addr": "0xD31C",
       "name": "wBagItems",
       "size": 42
     },
     {
-      "file_offset": 7159,
+      "file_offset": 7287,
       "gb_addr": "0xD346",
       "name": "wPlayerMoney",
       "size": 3
     },
     {
-      "file_offset": 7162,
+      "file_offset": 7290,
       "gb_addr": "0xD354",
       "name": "wOptionsBlock",
       "size": 4
     },
     {
-      "file_offset": 7166,
+      "file_offset": 7294,
       "gb_addr": "0xD358",
       "name": "wPlayerID",
       "size": 2
     },
     {
-      "file_offset": 7168,
+      "file_offset": 7296,
       "gb_addr": "0xCF97",
       "name": "wLoadedMon",
       "size": 44
     },
     {
-      "file_offset": 7212,
+      "file_offset": 7340,
       "gb_addr": "0xD056",
       "name": "wBattleFlags",
       "size": 4
     },
     {
-      "file_offset": 7216,
+      "file_offset": 7344,
       "gb_addr": "0xCFD9",
       "name": "wEnemyMonNick",
       "size": 11
     },
     {
-      "file_offset": 7227,
+      "file_offset": 7355,
       "gb_addr": "0xCFE4",
       "name": "wEnemyMon",
       "size": 29
     },
     {
-      "file_offset": 7256,
+      "file_offset": 7384,
       "gb_addr": "0xD008",
       "name": "wBattleMonNick",
       "size": 11
     },
     {
-      "file_offset": 7267,
+      "file_offset": 7395,
       "gb_addr": "0xD013",
       "name": "wBattleMon",
       "size": 29
     },
     {
-      "file_offset": 7296,
+      "file_offset": 7424,
       "gb_addr": "0xCC55",
       "name": "wTrainerFlagBit",
       "size": 1
     },
     {
-      "file_offset": 7297,
+      "file_offset": 7425,
       "gb_addr": "0xCD2D",
       "name": "wEngagedTrainer",
       "size": 2
     },
     {
-      "file_offset": 7299,
+      "file_offset": 7427,
       "gb_addr": "0xCD3E",
       "name": "wTrainerEngage",
       "size": 4
     },
     {
-      "file_offset": 7303,
+      "file_offset": 7431,
       "gb_addr": "0xCD4F",
       "name": "wEmotionBubble",
       "size": 2
     },
     {
-      "file_offset": 7305,
+      "file_offset": 7433,
       "gb_addr": "0xCD6B",
       "name": "wJoyIgnore",
       "size": 1
     },
     {
-      "file_offset": 7306,
+      "file_offset": 7434,
       "gb_addr": "0xCF13",
       "name": "wSpriteIndex",
       "size": 1
     },
     {
-      "file_offset": 7307,
+      "file_offset": 7435,
       "gb_addr": "0xD35D",
       "name": "wPlayerMapPos",
       "size": 5
     },
     {
-      "file_offset": 7312,
+      "file_offset": 7440,
       "gb_addr": "0xD72F",
       "name": "wStatusFlags5to7",
       "size": 4
     },
     {
-      "file_offset": 7316,
+      "file_offset": 7444,
       "gb_addr": "0xDA38",
       "name": "wCurMapScript",
       "size": 1
     },
     {
-      "file_offset": 7317,
+      "file_offset": 7445,
       "gb_addr": "0xD5EF",
       "name": "wGameProgressFlags",
       "size": 48
@@ -161,5 +167,5 @@
   ],
   "rom_title": "POKEMON YEL",
   "scenario": "route6_sight",
-  "total_size": 7365
+  "total_size": 7493
 }

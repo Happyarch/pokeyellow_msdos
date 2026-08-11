@@ -60,6 +60,8 @@ PAD_BUTTONS  equ 0x0F   ; A|B|SELECT|START (button byte low nibble)
 PAD_CTRL_PAD equ 0xF0   ; RIGHT|LEFT|UP|DOWN (D-pad high nibble)
 
 extern DelayFrame                    ; src/home/vblank.asm
+extern LoadGBPal                     ; src/home/fade.asm — reload rBGP/rOBP0/rOBP1
+                                     ; from FadePal4 - wMapPalOffset
 extern JoypadLowSensitivity          ; src/home/joypad2.asm — writes hJoy5
 extern BankswitchCommon              ; home/bankswitch2.asm — AL = bank (flat no-op)
 extern GetTileAndCoordsInFrontOfPlayer ; engine/overworld/player_state.asm (predef
@@ -1092,13 +1094,24 @@ OverworldLoop:
     ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
 OverworldLoopLessDelay:                      ; pret: home/overworld.asm:OverworldLoopLessDelay
     call DelayFrame
-    ; pret: call HandleMidJump (home/overworld.asm:49) — advances the ledge-hop
-    ; arc and, when it finishes, tears down BIT_LEDGE_OR_FISHING /
-    ; BIT_SCRIPTED_MOVEMENT_STATE / wJoyIgnore. pret's IsSurfingPikachuInParty and
-    ; LoadGBPal sit between DelayFrame and this call; both are dropped separately
-    ; (Pikachu-follower and palette-fade paths), so this call follows DelayFrame
-    ; directly. No live ZF/CF crosses it: the wWalkCounter cmp below produces its
-    ; own flags.
+    ; pret: call IsSurfingPikachuInParty / call LoadGBPal / call HandleMidJump.
+    ;
+    ; LoadGBPal is RESTORED (2026-08-11). It reloads rBGP/rOBP0/rOBP1 from
+    ; FadePal4 - wMapPalOffset every overworld frame, which is the ONLY thing that
+    ; ever gives rOBP1 a non-zero value on this path (FadePal4 + 2 = dc 3,2,0,0 =
+    ; $E0). Dropped as a "palette-fade path", it left IO_OBP1 at Init's zero for
+    ; the whole run, so CGB OBJ palettes 4-7 -- the four base palettes mapped
+    ; through OBP1 -- collapsed to white. Measured by the cgb_palettes golden
+    ; region: ~229 divergences of the form `OBJ pal4-7 colour2/3: rom=(11,23,31)
+    ; port=(31,31,31)` across 44 scenarios, all one missing call.
+    ;
+    ; IsSurfingPikachuInParty is still dropped (Pikachu-follower path), along with
+    ; the other calls faithdiff reports on this routine -- untouched here.
+    ;
+    ; HandleMidJump advances the ledge-hop arc and, when it finishes, tears down
+    ; BIT_LEDGE_OR_FISHING / BIT_SCRIPTED_MOVEMENT_STATE / wJoyIgnore. No live
+    ; ZF/CF crosses these calls: the wWalkCounter cmp below produces its own flags.
+    call LoadGBPal
     call HandleMidJump
 
     cmp byte [ebp + W_WALK_COUNTER], 0

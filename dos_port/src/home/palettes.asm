@@ -36,6 +36,7 @@ SET_PAL_DEFAULT        equ 0xFF
 global RunPaletteCommand
 global g_pal_dirty, bg_slot_pal, obj_slot_pal
 global pal_rgb_table, mon_pal_table, battle_slot_pal, battle_tile_pal, command_pal_table, repaint_front_table
+global pal_cgb_table   ; BGR555 twin of pal_rgb_table — GBSTATE cgb_palettes region
 global InitMapSprites
 global RestoreScreenTilesAndReloadTilePatterns
 global GBPalWhiteOutWithDelay3
@@ -57,9 +58,14 @@ extern UpdateCGBPal_OBP1            ; src/home/cgb_palettes.asm
 section .data
 align 4
 %include "assets/colors/palettes.inc"
-; Preserve today's look until a palette command chooses otherwise.
+; Boot state for the slot tables: the CGB powers up with WHITE palette RAM, and
+; nothing writes BG/OBJ slots 4-7 (every screen command fills 0-3 only), so they
+; keep this for the whole run. Measured on hardware with
+; tools/mgba_harness/scenarios/oak_palette_trace.lua: BG palettes 4-7 read
+; (31,31,31) throughout. This used to be the pre-colour stopgap green ramp,
+; which therefore leaked green into any tile whose tile_pal pointed at 4-7.
 ; DEVIATION{class=HAL; pret=home/palettes.asm:RunPaletteCommand; behavior=the palette a tile renders with is held per BG and OBJ slot as a port palette id plus a dirty flag the software renderer polls, instead of living in the Game Boy's BGP OBP0 OBP1 registers and the CGB palette RAM the hardware reads while scanning; evidence=the DOS target renders through a VGA DAC with no per-scanline palette hardware, so a palette command has to be resolved into renderer-side state and the renderer told it changed, and these three symbols have no pret counterpart because on the GB the registers themselves are the state, the pret-labelled command routines above still run unchanged; lifetime=permanent, the palette side of the software video HAL}
-bg_slot_pal: times 8 db PAL_DMG_GREEN
+bg_slot_pal: times 8 db PAL_BOOT_WHITE
 ; obj_slot_pal holds the FOUR BASE OBJ palettes the game maintains (entries 0-3),
 ; the same four the packet/battle handlers publish into bg_slot_pal.
 ; commit_palette (boot/video.asm) expands them into the eight CGB OBJ palettes the
@@ -69,7 +75,7 @@ bg_slot_pal: times 8 db PAL_DMG_GREEN
 ; Entries 4-7 are therefore UNUSED/RESERVED — never read. The array keeps its 8
 ; bytes because several handlers still flood all eight (harmless), and other files
 ; index it as an 8-byte table (src/debug/debug_dump.asm:DumpPalette).
-obj_slot_pal: times 8 db PAL_DMG_GREEN
+obj_slot_pal: times 8 db PAL_BOOT_WHITE
 g_pal_dirty: db 1
 section .text
 

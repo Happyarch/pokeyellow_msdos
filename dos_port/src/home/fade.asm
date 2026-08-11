@@ -18,7 +18,7 @@
 ;   commit_palette (src/home/vblank.asm -> video.asm) maps the shade index a
 ;   pixel resolves to through whichever of BGP/OBP0/OBP1 applies, every frame in
 ;   DelayFrame. So writing IO_BGP/IO_OBP0/IO_OBP1 + DelayFrame reproduces the GB
-;   fade exactly, on the current DMG-green debug ramp. This is INDEPENDENT of the
+;   fade exactly, on whatever palettes the slot tables hold. This is INDEPENDENT of the
 ;   Phase-5 work of translating the true CGB color values into the VGA DAC:
 ;   these routines only choose shade indices, never RGB. Hence "implementable now".
 ;   The GB's UpdateCGBPal_{BGP,OBP0,OBP1} calls (which push CGB RGB) are the only

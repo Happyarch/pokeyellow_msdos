@@ -226,7 +226,7 @@ supporting home routines (`src/home/copy.asm`, `src/home/lcd.asm`,
 (pret mirror `src/home/overworld.asm`; `src/engine/overworld/overworld.asm` keeps
 the port-only glue and the embedded asset blobs) renders correctly in DOSBox-X: `SKIP_TITLE=1`
 boots straight into a fully drawn Pallet Town (Oak's Lab, tree border, sign) in the
-DMG-green palette. The title screen (`src/engine/movie/title.asm`) is a **bespoke early
+map's real CGB palette. The title screen (`src/engine/movie/title.asm`) is a **bespoke early
 implementation that does NOT render fully correctly** — it boots and reaches the
 menu ("works enough") but the graphics are wrong; a known low-priority defect, its
 faithful reimpl deferred (likely rides with the overworld tile-management rewrite).

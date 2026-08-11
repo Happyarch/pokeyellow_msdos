@@ -21,6 +21,9 @@ bits 32
 %define SET_PAL_DEFAULT                  0xff
 
 ; pret constants not otherwise needed by the DOS map loader.
+; NUM_ACTIVE_PALS (constants/palette_constants.asm) is how many palettes an SGB
+; PAL_SET packet carries, and therefore how many slots InitCGBPalettes writes.
+%define NUM_ACTIVE_PALS     4
 %define NUM_CITY_MAPS       11
 %define FIRST_INDOOR_MAP    0x25
 %define CERULEAN_CAVE_2F    0xe2
@@ -100,11 +103,15 @@ _RunPaletteCommand:
 
 SetPal_BattleBlack:
     pushad
+    ; FOUR slots, not eight. pret hands PalPacket_Black (PAL_SET PAL_BLACK x4) to
+    ; InitCGBPalettes, which writes BG palettes 0-3 and OBJ palettes 0-3/4-7 from
+    ; those four entries -- BG 4-7 are never written by any packet. Flooding all
+    ; eight left PAL_BLACK in BG 4-7 permanently, since nothing else writes them.
     mov al, PAL_BLACK
-    mov ecx, 8
+    mov ecx, NUM_ACTIVE_PALS
     mov edi, bg_slot_pal
     rep stosb
-    mov ecx, 8
+    mov ecx, NUM_ACTIVE_PALS
     mov edi, obj_slot_pal
     rep stosb
     mov byte [g_pal_dirty], 1
@@ -361,11 +368,24 @@ SetPal_Overworld:
     mov al, PAL_ROUTE
 .apply:
     mov dword [g_bg_attr_table], 0   ; the overworld has no attribute plane
-    mov ecx, 8
-    mov edi, bg_slot_pal
+    ; pret: CopyData(PalPacket_Empty -> wPalPacket), then `ld hl, wPalPacket + 1 /
+    ; ld [hld], a` -- the map's palette goes into ENTRY 0 ONLY. PalPacket_Empty is
+    ; PAL_SET 0, 0, 0, 0, so entries 1-3 keep palette id 0 (PAL_ROUTE), and BG
+    ; palettes 4-7 are not written by any packet at all.
+    ;
+    ; This used to flood the map's palette into all eight slots of both tables.
+    ; Invisible on screen (tile_pal is all-zero here, so every tile renders
+    ; through slot 0) but measurably wrong, and it is what the cgb_palettes
+    ; golden region caught first: slots 1-3 read the town palette where hardware
+    ; has PAL_ROUTE, and 4-7 kept it forever.
+    mov [bg_slot_pal], al
+    mov [obj_slot_pal], al
+    mov al, PAL_ROUTE                ; PalPacket_Empty's remaining three entries
+    mov ecx, NUM_ACTIVE_PALS - 1
+    lea edi, [bg_slot_pal + 1]
     rep stosb
-    mov ecx, 8
-    mov edi, obj_slot_pal
+    mov ecx, NUM_ACTIVE_PALS - 1
+    lea edi, [obj_slot_pal + 1]
     rep stosb
     xor al, al
     mov edi, tile_pal

@@ -22,90 +22,96 @@
     },
     {
       "file_offset": 6664,
+      "gb_addr": "0xFFFFFFFF",
+      "name": "cgb_palettes",
+      "size": 128
+    },
+    {
+      "file_offset": 6792,
       "gb_addr": "0xD157",
       "name": "wPlayerName",
       "size": 11
     },
     {
-      "file_offset": 6675,
+      "file_offset": 6803,
       "gb_addr": "0xD162",
       "name": "wPartyData",
       "size": 404
     },
     {
-      "file_offset": 7079,
+      "file_offset": 7207,
       "gb_addr": "0xD2F6",
       "name": "wPokedex",
       "size": 38
     },
     {
-      "file_offset": 7117,
+      "file_offset": 7245,
       "gb_addr": "0xD31C",
       "name": "wBagItems",
       "size": 42
     },
     {
-      "file_offset": 7159,
+      "file_offset": 7287,
       "gb_addr": "0xD346",
       "name": "wPlayerMoney",
       "size": 3
     },
     {
-      "file_offset": 7162,
+      "file_offset": 7290,
       "gb_addr": "0xD354",
       "name": "wOptionsBlock",
       "size": 4
     },
     {
-      "file_offset": 7166,
+      "file_offset": 7294,
       "gb_addr": "0xD358",
       "name": "wPlayerID",
       "size": 2
     },
     {
-      "file_offset": 7168,
+      "file_offset": 7296,
       "gb_addr": "0xCF97",
       "name": "wLoadedMon",
       "size": 44
     },
     {
-      "file_offset": 7212,
+      "file_offset": 7340,
       "gb_addr": "0xD056",
       "name": "wBattleFlags",
       "size": 4
     },
     {
-      "file_offset": 7216,
+      "file_offset": 7344,
       "gb_addr": "0xCFD9",
       "name": "wEnemyMonNick",
       "size": 11
     },
     {
-      "file_offset": 7227,
+      "file_offset": 7355,
       "gb_addr": "0xCFE4",
       "name": "wEnemyMon",
       "size": 29
     },
     {
-      "file_offset": 7256,
+      "file_offset": 7384,
       "gb_addr": "0xD008",
       "name": "wBattleMonNick",
       "size": 11
     },
     {
-      "file_offset": 7267,
+      "file_offset": 7395,
       "gb_addr": "0xD013",
       "name": "wBattleMon",
       "size": 29
     },
     {
-      "file_offset": 7296,
+      "file_offset": 7424,
       "gb_addr": "0xDA7F",
       "name": "wBoxData",
       "size": 1122
     },
     {
-      "file_offset": 8418,
+      "file_offset": 8546,
       "gb_addr": "0xD59F",
       "name": "wCurrentBoxNum",
       "size": 1
@@ -113,5 +119,5 @@
   ],
   "rom_title": "POKEMON YEL",
   "scenario": "box_change_roundtrip",
-  "total_size": 8419
+  "total_size": 8547
 }

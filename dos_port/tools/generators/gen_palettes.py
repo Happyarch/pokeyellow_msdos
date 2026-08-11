@@ -73,11 +73,18 @@ def emit() -> str:
             rgb_rows.append((name, colors))
             ids.append(len(rgb_rows) - 1)
         repaint_rows[asset] = ids, width, height
-    # Port bootstrap palette.  Keeping it in the generated table makes the
-    # runtime's non-battle defaults byte-for-byte equivalent to the old DMG
-    # green ramp while every live slot still follows one code path.
-    rgb_rows.append(("PAL_DMG_GREEN", [(38, 47, 3), (34, 43, 3),
-                                        (12, 24, 12), (3, 14, 3)]))
+    # Boot palette for the slot tables, matching the Game Boy Color's own power-on
+    # palette RAM: all white. Measured on hardware via
+    # tools/mgba_harness/scenarios/oak_palette_trace.lua, which reads BG palettes
+    # 4-7 as (31,31,31) throughout -- InitCGBPalettes writes BG 0-3 only, so 4-7
+    # keep their boot contents for the whole run.
+    #
+    # This row used to be PAL_DMG_GREEN, the pre-colour stopgap ramp, "kept in the
+    # generated table" so the defaults stayed byte-for-byte equivalent to it. That
+    # outlived its purpose: because no screen command writes slots 4-7, the green
+    # persisted there for the entire run and any tile whose tile_pal pointed at
+    # 4-7 rendered in it. Booting white is both faithful and invisible.
+    rgb_rows.append(("PAL_BOOT_WHITE", [(63, 63, 63)] * 4))
     palette_ids = {name: i for i, (name, _) in enumerate(rgb_rows)}
 
     mon_source = palettes.parse_monster_palettes()
@@ -145,6 +152,31 @@ def emit() -> str:
     for name, colors in rgb_rows:
         flat = ", ".join(str(v) for color in colors for v in color)
         lines.append(f"    db {flat}  ; {name}")
+    # CGB twin of the table above, for the fidelity harness's cgb_palettes
+    # region. The port renders through a six-bit VGA DAC, but the golden side
+    # reads the Game Boy's five-bit palette RAM, so the comparison needs the
+    # five-bit form. Six -> five is exact for every pret palette; assert it here
+    # rather than assume it, so a future sidecar override that breaks the
+    # round trip fails the build instead of silently skewing a golden.
+    pret_names = {name for name, _ in rows}
+    cgb_rows = []
+    for name, colors in rgb_rows:
+        words = []
+        for color in colors:
+            five = tuple(round(v * 31 / 63) for v in color)
+            if name in pret_names and tuple(round(v * 63 / 31) for v in five) != tuple(color):
+                raise ValueError(
+                    f"{name}: six-bit {color} does not round-trip through five-bit "
+                    f"{five}; pal_cgb_table would not match the Game Boy")
+            words.append(five[0] | (five[1] << 5) | (five[2] << 10))
+        cgb_rows.append((name, words))
+    lines += ["", "; CGB BGR555 twin of pal_rgb_table (four u16 per palette, colour 0",
+              "; first), consumed by the GBSTATE cgb_palettes region. Port-only ids",
+              "; past pret's PAL_* range are converted from their six-bit values; every",
+              "; pret palette is asserted to round-trip exactly at generation time.",
+              "pal_cgb_table:"]
+    for name, words in cgb_rows:
+        lines.append("    dw " + ", ".join(f"0x{w:04x}" for w in words) + f"  ; {name}")
     lines += ["", "; Pokédex order: MISSINGNO then #001..#151.",
               "mon_pal_table:"]
     for start in range(0, len(mon_rows), 16):
