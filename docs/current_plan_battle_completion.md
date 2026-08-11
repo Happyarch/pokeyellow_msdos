@@ -12,14 +12,21 @@
 >
 > **What that does NOT mean.** A class sitting at baseline is not sanctioned —
 > it is unfixed debt that merely has not gotten worse. `dos_port/tools/lint_pret_labels`
-> **must exit 0**; it does not today — a small number of known, unsanctioned
-> findings remain (`aux_misplaced` under plain `lint_pret_labels`;
-> `--strict-claims` can add `hand_encoded_text` / `local_shadow` on top). None
-> of those was ever approved by the maintainer, and the counts move as agents
-> clear debt — **run `dos_port/tools/lint_pret_labels --no-scan` and
-> `--no-scan --strict-claims` yourself** rather than trusting a number written
-> here. Do not cite "at baseline" as permission to leave a class non-zero, and
-> do not rewrite the rule to match the breakage.
+> **must exit 0**.
+>
+> **It DOES exit 0 today — that changed since this plan was written.** Measured
+> 2026-08-11: both `lint_pret_labels --no-scan` and `--no-scan --strict-claims`
+> report **0 violations**, and the `static_gate` baseline is empty (`{}`). The
+> paragraph this replaces said the opposite ("it does not today", naming
+> `aux_misplaced` / `hand_encoded_text` / `local_shadow` as outstanding); that
+> was true on 2026-08-02 and is now stale. The debt was cleared by `a3804828`,
+> `3fad3249` and the map-header relocation.
+>
+> The consequence for you is the important part: **any finding you see is
+> YOURS**, not inherited. Do not treat a non-zero count as pre-existing.
+> Still **run both modes yourself** rather than trusting any number written here
+> — including this one. Do not cite "at baseline" as permission to leave a class
+> non-zero, and do not rewrite the rule to match the breakage.
 >
 > **For every commit made under this plan:**
 > 1. Record the per-class counts from BOTH `lint_pret_labels` and
@@ -579,6 +586,26 @@ provider shapes below, not their runtime behavior.
       proof that the transition executed.
 
 ## Stage 6 — battle animations and battle-mask closure
+
+> **SUPERSEDED 2026-08-11 — do not execute 6a-6d from here.** This stage was
+> written before `docs/current_plan_battle_animations.md` existed; that plan took
+> the work over and is 31 done / 2 open, with the MOVE animations
+> maintainer-signed-off (stigmergy `battle-animations-plan-created`). Measured
+> today, the routines 6c and 6d ask for are already `translated` and live:
+> `PlayAnimation` (four callers, via `MoveAnimation` and `TossBallAnimation`),
+> `MoveAnimation`, `AnimationShakeScreenVertically`. The boxes below are left
+> unticked ONLY because they are not this plan's to tick — read them as pointers
+> into the animations plan, and take the remaining work from there:
+>
+>   - 6a HAL design, 6b Tier-1 data, 6c interpreter, 6d shake/blink/flash —
+>     delivered by `current_plan_battle_animations.md` Stages 1-5.
+>   - 6e (retire the F-19 enemy-gauge masks) and the final animation-scenario box
+>     are genuinely OPEN, and are the animations plan's Stage 6 / optional tail.
+>
+> This is why `project_state --plans` overstates this plan: its open count
+> includes boxes another plan already closed. Reconcile properly (tick or delete)
+> when the animations plan archives; a bare count from here is not a work list.
+
 
 Current evidence: `PlayApplyingAttackAnimation` is linked, but the existing
 ANIMATION=OFF path is the implemented behavior; `PredefShakeScreenHorizontally`

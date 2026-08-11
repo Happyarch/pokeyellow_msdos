@@ -63,16 +63,32 @@ across 42 scenarios**.
   `home/palettes.asm:GBPalWhiteOut` (zero), `home/fade.asm` x3 (`LoadGBPal`,
   `GBFadeIncCommon`, `GBFadeDecCommon`), plus battle/minigame sites. Start by
   finding which of those runs before each failing checkpoint on hardware.
-- [ ] **Status / item screens.** `BG pal0 colour1: rom=(31,31,0)
-  port=(16,31,4)` — the port has `PAL_ROUTE` where hardware has a mon-derived
-  palette. `SetPal_StatusScreen` builds its packet live from `wCurPartySpecies`
+- [ ] **Live mon / HP-bar palettes — status and item screens.** Measured:
+  `status_p1` is exactly 6 divergences, `BG pal0/1` and `OBJ pal0/1`, e.g.
+  `BG pal0 colour1: rom=(31,31,0) port=(16,31,4)` and `colour2: rom=(0,31,0)
+  port=(11,23,31)`. The rom values are HP-bar / mon palettes (green, yellow,
+  brown); the port has `PAL_ROUTE` throughout, i.e. it never installs the live
+  per-species and per-HP-colour slots. `SetPal_StatusScreen` builds its packet live from `wCurPartySpecies`
   via `DeterminePaletteID` (pret `engine/gfx/palettes.asm`); check the port's
   equivalent actually runs and picks the same id. Scenarios: `status_p1`,
   `status_p2`, `item_potion_use`, `item_tm_teach`, `item_stone_evolve`.
-- [ ] **Battle.** ~12 divergences per battle scenario, not yet characterised.
-  Start with `SetPal_Battle`'s four live slots (player/enemy HP colour, player/
-  enemy pic palette) and `battle_tile_pal`. Scenarios: `battle_intro`,
-  `battle_menu`, `move_selection`, `ball_catch`, `battle_faint`.
+- [ ] **Blackout / loss path — whole palettes white where hardware is
+  `PAL_BLACK`.** Characterised 2026-08-11: `trainer_battle_loss` is 40
+  divergences, and **32 of them are all four colours of BG 0-3 and OBJ 0-3**,
+  `rom=(3,3,3)` against `port=(31,31,31)`. Hardware is blacked out at that
+  checkpoint and the port is not, i.e. `SetPal_BattleBlack`'s effect is absent or
+  overwritten. (The port reads white because the slots still hold
+  `PAL_BOOT_WHITE`; before that stopgap retirement the same divergence showed as
+  green, so this is pre-existing, not caused by it.) `trainer_battle_init` (36)
+  and `trainer_battle_win` (28) share the shape.
+
+**"Battle" is NOT a family of its own.** Measured: `battle_intro`,
+`battle_menu`, `move_selection`, `ball_catch` and `battle_damage` are 12
+divergences each and **every one is the `OBJ pal4-7 -> white` family above** —
+colours 1-3 of the four OBP1-derived palettes, with colour 0 matching because it
+is white on both sides. Do not open a separate battle investigation for those
+five; they close when `IO_OBP1` closes. Only the blackout/loss shape is
+battle-specific.
 - [ ] **Re-measure the remainder** after each family closes; the counts in this
   file are from the 2026-08-11 runs and will drift.
 - [ ] **Flip `PALETTE_GATING = True`** in `tools/golden_diff.py` once the count
