@@ -455,8 +455,38 @@ result gates deliberately stop after initialization and drive one terminal turn.
       Identical output means the restored code did not execute:
       `label_status --callers SendOutMon` reports ONE port caller,
       `ChooseNextMon`. So those 11 passes are no-regression evidence only.
-- [ ] **1g. Route the battle-entry send-out through `SendOutMon`.** ADDED
-      2026-08-11, measured. pret calls `SendOutMon` from THREE sites —
+- [x] **1g. Route the battle-entry send-out through `SendOutMon`.** DONE
+      2026-08-11. **The truncation was in TWO places, and the second is why 1f
+      looked like it did nothing.** Besides the production `_InitBattleCommon`,
+      the `DEBUG_BATTLE_GOLDEN` gate in `src/debug/debug_dump.asm` does not call
+      `_InitBattleCommon` at all — it hand-rebuilds the intro scene and ended its
+      send-out at `LoadMonBackPic`, carrying its own copy of the same omission.
+      So the scenario that was supposed to witness the fix contained the bug
+      (`bug-class-false-witness-scenario`). Both sites now call `SendOutMon`.
+
+      Measured result — the first execution evidence in this workstream:
+      `battle_menu` and `move_selection` palette divergences **12 → 0**, and
+      `battle_menu`'s `$80xx` VRAM mask hits **128 → 49**. TILEMAP, VRAM and WRAM
+      stayed OK, so drawing both HUDs at send-out does not disturb the screen.
+
+      It also exposed a real second defect, now fixed: `AnimationCleanOAM` left
+      12 stale OAM entries (the POOF particles) in canonical `$FE00`. On the GB,
+      `ClearSprites` zeroes `wShadowOAM` and the next VBlank DMA carries the
+      zeros into `$FE00`; the port has no hardware DMA and `update_oam` skips the
+      copy while `wUpdateSpritesEnabled` is `$FF`, as it is in battle. Rendering
+      was unaffected (`spr_oam_valid` is zeroed), so only the compared bytes
+      diverged. `AnimationCleanOAM` now republishes the cleared shadow, under a
+      `DEVIATION{class=projection}` matching `DrawFrameBlock`'s.
+
+      **One judgement call for maintainer review:** `trainer_battle_route` now
+      needs a mask on the lead mon's PP. The send-out animation moves the port's
+      RNG stream, so it took 4 turns where the golden took 3. This is the same
+      class the scenario already declares (its `wLoadedMon` skip says the sides
+      "fight the roster over a different number of RNG-dependent turns"), and the
+      zero-RNG reward bytes still match, but it does retire the incidental
+      move-selection witness the cadence used to give. Full reasoning is in the
+      mask's own why-string.
+- [~] **1g's original entry, kept as the record.** pret calls `SendOutMon` from THREE sites —
       `StartBattle` (core.asm:259, the initial send-out, immediately before
       `jr MainInBattleLoop`), `ChooseNextMon` (:1163) and `SwitchPlayerMon`
       (:2541). The port has only `ChooseNextMon`. `StartBattle` is `missing`:

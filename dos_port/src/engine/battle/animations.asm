@@ -893,6 +893,17 @@ PlaySubanimation:
 
 ; ===========================================================================
 ; AnimationCleanOAM — pret animations.asm. Delay a frame, then clear all sprites.
+;
+; The trailing publish is the counterpart of the one DrawFrameBlock already
+; documents. On the GB, ClearSprites zeroes wShadowOAM and the NEXT VBlank's
+; OAM DMA carries those zeros into $FE00; the port has no hardware DMA, so
+; without an explicit publish the canonical $FE00 keeps the last particle frame
+; forever. Rendering was unaffected (ClearSprites zeroes spr_oam_valid, so
+; nothing is drawn) — but the bytes a golden compares diverged. Measured: after
+; the send-out was routed through SendOutMon, battle_menu and move_selection
+; reported 12 stale OAM entries each (tiles $55/$56/$65, the POOF particles)
+; where the golden holds zeros.
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:AnimationCleanOAM; behavior=after ClearSprites the port explicitly publishes the cleared wShadowOAM to the canonical OAM at the battle-frame origin, standing in for the GB VBlank OAM DMA that would carry the zeroed shadow into $FE00 on the next frame; evidence=the port has no hardware OAM DMA and update_oam skips the shadow copy while wUpdateSpritesEnabled is $FF as it is in battle, so the canonical OAM retained the last published particle frame and diverged from the golden by 12 entries in battle_menu and move_selection; lifetime=permanent, part of the battle-animation projection boundary DrawFrameBlock already documents}
 ; ===========================================================================
 AnimationCleanOAM:
     push esi
@@ -901,6 +912,13 @@ AnimationCleanOAM:
     push eax
     call DelayFrame
     call ClearSprites
+    ; publish the now-zeroed shadow as the canonical OAM (the GB's next DMA).
+    ; ECX = 0: no drawn entries, matching the spr_oam_valid ClearSprites just set.
+    mov esi, W_SHADOW_OAM
+    xor ecx, ecx
+    mov eax, 80                              ; battle-frame projection origin
+    mov ebx, 24
+    call PublishProjectedOAM
     pop eax
     pop ebx
     pop edx

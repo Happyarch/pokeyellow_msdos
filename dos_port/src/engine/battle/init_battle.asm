@@ -110,6 +110,7 @@ extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball r
 extern WaitForAPress                     ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
 extern HideBattlePokeballs               ; pokeballs.asm
 extern MainInBattleLoop                  ; core.asm — the whole battle loop
+extern SendOutMon                        ; core.asm — pret StartBattle.playerSendOutFirstMon send-out
 extern DisplayBattleMenu                 ; core.asm — special-battle menu loop (pret StartBattle .displaySafariZoneBattleMenu)
 extern EndOfBattle                       ; end_of_battle.asm — post-battle (EXP/evo/reset)
 extern EndBattleScreen                   ; battle_menu.asm — clean terminal
@@ -433,9 +434,16 @@ _InitBattleCommon:
     mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     call LoadFrontSpriteByMonIndex
 .enemyFrontReady:
-    ; send-out: decode the actual sent-out mon's back sprite (generic, MonBackPics-indexed
-    ; from wBattleMonSpecies2) → vBackPic. pret LoadMonBackPic, now below in this file.
-    call LoadMonBackPic
+    ; send-out. pret StartBattle.playerSendOutFirstMon ends
+    ;   call LoadBattleMonFromParty / call LoadScreenTilesFromBuffer1 /
+    ;   call SendOutMon / jr MainInBattleLoop
+    ; and SendOutMon is what draws the HUDs, decodes the sent-out mon's back pic
+    ; (predef LoadMonBackPic), plays POOF_ANIM + AnimateSendingOutMon and the cry.
+    ; This site used to call LoadMonBackPic alone — the back-pic decode only —
+    ; which is why nothing in the port ever reached SetAnimationPalette at battle
+    ; entry and IO_OBP1 stayed 0 (battle_completion 1g).
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:StartBattle; behavior=the port's _InitBattleCommon carries StartBattle's call SendOutMon inline because it already collapses pret's InitWildBattle plus _InitBattleCommon plus StartBattle into one routine, so faithdiff reports SendOutMon as ADDED here and StartBattle as DROPPED; evidence=pret StartBattle.playerSendOutFirstMon ends call LoadBattleMonFromParty then call SendOutMon then jr MainInBattleLoop and this site sits in exactly that position with MainInBattleLoop next, and routing it here moved battle_menu and move_selection from 12 palette divergences to 0 by finally reaching SetAnimationPalette; lifetime=until the collapsed StartBattle is restored as its own pret-labeled routine}
+    call SendOutMon
 
     ; --- the battle itself ---
     call MainInBattleLoop                       ; menu/turns/damage/faint/EXP/run

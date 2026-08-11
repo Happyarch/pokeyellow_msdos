@@ -841,6 +841,37 @@ SCENARIOS = {
                           "state that matters is compared directly instead",
         }),
         "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            # Lead-mon PP: turn-count-derived, therefore RNG-coupled, exactly like
+            # the wLoadedMon skip above ("the two sides fight the roster over a
+            # different number of RNG-dependent turns"). Region offsets 37..40 =
+            # struct base 8 + party_struct PP 1..4 at rel 29..32, mon 0 only.
+            #
+            # ADDED 2026-08-11 (battle_completion 1g), and it is a WEAKENING of the
+            # surface, so read the evidence before trusting it. Routing battle entry
+            # through SendOutMon gave the port the send-out animation the GB always
+            # had; those frames move the port's RNG stream, and the port then needed
+            # a 4th turn where the golden needed 3 (measured: PP 1 want $0F got $0E,
+            # i.e. one extra use of move 1, while PP 4 — STRENGTH, used 3 times —
+            # still matches). Corroboration that the same battle was fought and won:
+            # the lead mon's EXP and the player money BCD, both zero-RNG reward
+            # bytes, are compared and MATCH, and the damage math itself is gated
+            # independently by battle_damage (scenario 43, green), which validates
+            # each hit against every legal Gen-1 random factor.
+            #
+            # COST, stated rather than hidden: this retires the incidental
+            # move-selection witness that the autokey cadence used to provide (see
+            # stigmergy battle-stage1b-continuous-scenario, "port PP now matches the
+            # golden"). That match was RNG alignment, not a pinned property — it
+            # could not have survived any change to port-side battle timing. A
+            # cadence regression now needs its own check.
+            "wPartyData": [
+                ((37, 40), "lead mon PP 1-4: turn-count-derived and therefore "
+                           "RNG-coupled, the same reason wLoadedMon is skipped for "
+                           "this scenario — the two sides fight the roster over a "
+                           "different number of RNG-dependent turns. Species, HP, "
+                           "EXP, stat exp, DVs, level, stats and every other mon "
+                           "ARE still compared, as are the zero-RNG reward bytes."),
+            ],
             "wPlayerMapPos": [
                 ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
                          "not pret's 3 (include/gb_memmap.inc), so the post-battle "

@@ -197,7 +197,7 @@ extern LoadFrontSpriteByMonIndex ; src/home/pokemon.asm — real enemy front pic
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — real send-out loader
 extern FlagAction                ; flag_action.asm
 extern DisplayBattleMenu         ; core.asm — real menu (parks in HandleMenuInput)
-extern LoadMonBackPic            ; src/engine/battle/init_battle.asm — sent-out mon's back pic
+extern SendOutMon                ; engine/battle/core.asm — pret StartBattle's send-out (HUDs, back pic, POOF_ANIM, cry)
 extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern DrawHUDsAndHPBars         ; engine/battle/core.asm
 extern DrawEmptyDialogBox        ; battle_menu.asm
@@ -2152,7 +2152,12 @@ RunBattleTest:
     mov esi, wPartyFoughtCurrentEnemyFlags
     call FlagAction
     call LoadBattleMonFromParty
-    call LoadMonBackPic
+    ; pret StartBattle.playerSendOutFirstMon calls SendOutMon here, not the
+    ; back-pic decode alone. This gate called LoadMonBackPic — the same
+    ; truncation the production _InitBattleCommon had — so no golden could
+    ; witness the send-out, and the OBJ pal4-7 divergence survived a SendOutMon
+    ; restoration that changed nothing (battle_completion 1f/1g).
+    call SendOutMon
 %ifdef DEBUG_BATTLE_MENU
     ; The REAL battle menu: DisplayBattleMenu draws HUDs + boxes and parks in
     ; HandleMenuInput with the ▶ on FIGHT; AUTOKEY_QUIET photographs it at
@@ -2630,7 +2635,7 @@ anim_show_label:
     ; PrepareNewGameDebug party, wild PIDGEY L13 through InitBattle ->
     ; LoadEnemyMonData, the enemy front pic, Red's back pic, the intro box,
     ; then the send-out (HideBattlePokeballs / LoadBattleMonFromParty /
-    ; LoadMonBackPic) in the shared %else above. Skipping that preamble is
+    ; SendOutMon) in the shared %else above. Skipping that preamble is
     ; what makes a hand-rolled animation demo render garbage.
     ;
     ; Then it calls the REAL production entry point, core.asm's
