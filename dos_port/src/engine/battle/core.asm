@@ -2868,11 +2868,34 @@ ReadPlayerMonCurHPAndStatus:
     jmp CopyData                        ; tail (pret: jp CopyData)
 
 ; ---------------------------------------------------------------------------
-; CheckNumAttacksLeft — pret core.asm: manage multi-turn move counters (Bide/Thrash/
-; Wrap → clear the multi-turn flags when the counter runs out).
-; TODO(faithful): translate. No-op until the multi-turn move effects are wired.
+; CheckNumAttacksLeft — pret core.asm:692. Called at the end of every turn from
+; both MainInBattleLoop tails: when a side's multi-turn counter has run out,
+; clear USING_TRAPPING_MOVE so Wrap/Bind/Fire Spin/Clamp stop trapping.
+;
+; TRANSLATED 2026-08-11 (battle_completion 3a). It was a bare `ret` under the
+; comment "No-op until the multi-turn move effects are wired" — stale: the
+; effects that seed the counters ARE wired and linked. TrappingEffect_ sets
+; USING_TRAPPING_MOVE and seeds wXxxNumAttacksLeft (effects.asm:1451-1480), and
+; the Bide, Thrash and multi-strike effects all write the same overloaded byte
+; (effects.asm:1000-1096, 1238-1290). With this routine a no-op, nothing on the
+; ordinary turn path ever cleared the flag once set.
+;
+; pret's `ret nz` is spelled `jnz .done` here so the enemy half stays a
+; fallthrough; no call graph or flag contract changes.
 ; ---------------------------------------------------------------------------
 CheckNumAttacksLeft:
+    mov al, [ebp + wPlayerNumAttacksLeft]
+    test al, al
+    jnz .checkEnemy                      ; jr nz, .checkEnemy
+    ; player has 0 attacks left — no longer using a multi-turn attack like Wrap
+    and byte [ebp + wPlayerBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
+.checkEnemy:
+    mov al, [ebp + wEnemyNumAttacksLeft]
+    test al, al
+    jnz .done                            ; ret nz
+    ; enemy has 0 attacks left
+    and byte [ebp + wEnemyBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
+.done:
     ret
 
 ; ---------------------------------------------------------------------------

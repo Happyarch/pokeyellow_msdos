@@ -589,7 +589,37 @@ Re-derive each routine from pret at implementation time; do not carry the old
 audit's finding status forward. Current generated/source evidence establishes the
 provider shapes below, not their runtime behavior.
 
-- [ ] **3a. Multi-turn state.** Replace the linked ret-only
+- [~] **3a. Multi-turn state.** `CheckNumAttacksLeft` TRANSLATED 2026-08-11; the
+      rest of the box (verifying the full Bide/Thrash/trapping counter,
+      accumulation, release and cleanup flow on both turns) is NOT done, so this
+      stays `[~]`.
+
+      The ret-only body carried the comment "No-op until the multi-turn move
+      effects are wired." Measured: they ARE wired and linked — `TrappingEffect_`
+      sets `USING_TRAPPING_MOVE` and seeds `wXxxNumAttacksLeft`
+      (`effects.asm:1451-1480`), and the Bide, Thrash and multi-strike effects
+      all write the same overloaded byte (`effects.asm:1000-1096`, `1238-1290`).
+      So nothing on the ordinary turn path ever cleared the flag once set:
+      Wrap/Bind/Fire Spin/Clamp would keep trapping past their 2-5 turns.
+
+      Addresses checked against the checked-out ROM symbol file rather than the
+      port header: `wPlayerNumAttacksLeft` `$D069`, `wEnemyNumAttacksLeft`
+      `$D06E`, `wPlayerBattleStatus1` `$D061`, `wEnemyBattleStatus1` `$D066` —
+      all four match `pokeyellow.sym`, and `USING_TRAPPING_MOVE` is bit 5 on
+      both sides.
+
+      `faithdiff CheckNumAttacksLeft`: 0 calls each side; the two ADDED stores
+      are pret's `res USING_TRAPPING_MOVE, [hl]` writes through
+      `ld hl, wXxxBattleStatus1`, which the faithfulness-review skill documents
+      as surfacing this way (stores match by NAME, and pret's are
+      pointer-indirect).
+
+      **Unwitnessed, like 3b.** No scenario uses a multi-turn move, so the suite
+      proves only that clearing an already-clear bit changes nothing. The
+      remaining work — the counter/accumulation/release flow and its quirks —
+      needs a deterministic Wrap or Bide scenario, and that is what would let
+      this box be ticked.
+- [ ] **3a (original entry).** Replace the linked ret-only
       `CheckNumAttacksLeft` body and verify the complete Bide/Thrash/trapping
       counter, accumulation, release, and cleanup flow on both turns. Preserve
       original-game quirks only when pret or the current bug reference supports
