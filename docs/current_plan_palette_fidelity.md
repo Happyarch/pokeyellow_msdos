@@ -148,7 +148,34 @@ across 42 scenarios**.
   draws from the matching $93xx copies and its $80xx is undisplayed after the
   intro") is a consequence of exactly this dropped chain.
 
-**"Battle" is NOT a family of its own.** Measured: `battle_intro`,
+### `OBJ pal4-7` — PARTIALLY CLOSED 2026-08-11, with the remainder decomposed
+
+Routing the battle-entry send-out through `SendOutMon` (battle_completion 1g,
+both the production `_InitBattleCommon` site and the `DEBUG_BATTLE_GOLDEN`
+harness's duplicate of it) closed the family for two scenarios and left three.
+Measured on a 56/56 full-tier run:
+
+- `battle_menu` **12 → 0**, `move_selection` **12 → 0**. `battle_menu`'s
+  `$80xx` VRAM mask also fell from **128 hits to 49**, as predicted.
+- `battle_intro` still 12, all `OBJ pal4-7`. Expected: its harness hangs at
+  `.goldenintrohang` BEFORE the send-out block, so the port's `IO_OBP1` is
+  legitimately still 0 there — but the golden solves to `rOBP1 = $E4` at that
+  checkpoint, so **hardware has some other writer before the intro**. Finding
+  it is the remaining `OBJ pal4-7` work. Do not assume it is `SetAnimationPalette`
+  ($6C) — the value is different.
+- `battle_damage` still 12, all `OBJ pal4-7`, golden `$6C`. Its gate shares the
+  send-out preamble, so it *should* now reach `SendOutMon`; it does not show the
+  effect. Check which branch `DEBUG_BATTLE_DAMAGE` actually takes before
+  concluding anything.
+- `ball_catch` still 12 — **but NOT this family, and the line below saying it is
+  was wrong.** Measured signature: `BG pal0..3 colour3: rom=(16,31,4)
+  port=(31,31,31)`. That is a BG colour-3 divergence, not an OBJ one. It was
+  grouped here on 2026-08-11 without per-scenario decomposition; the grouping
+  claim is corrected rather than deleted so the mistake stays visible.
+
+**"Battle" is NOT a family of its own.** *(Superseded in part — read the
+decomposition above first. `ball_catch` is measurably a different family, and
+`battle_intro`'s cause is a different register value.)* Measured: `battle_intro`,
 `battle_menu`, `move_selection`, `ball_catch` and `battle_damage` are 12
 divergences each and **every one is the `OBJ pal4-7 -> white` family above** —
 colours 1-3 of the four OBP1-derived palettes, with colour 0 matching because it
