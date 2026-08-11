@@ -121,6 +121,10 @@ extern LoadMonPicToVRAM                  ; src/home/pics.asm — staged compress
 extern DrawEmptyDialogBox                ; battle_menu.asm — trainer intro placeholder surface
 extern TryDoWildEncounter                ; wild_encounters.asm — ZF=1 when a roster was selected
 extern DoBattleTransitionAndInitBattleVariables ; core.asm — transition + teardown (pret call sites below)
+extern Delay3                            ; src/home/palettes.asm — 3-frame wait
+extern DelayFrames                       ; src/home/delay.asm  (In: BL = frame count)
+extern CopyDownscaledMonTiles            ; animations.asm — predef target (In: ESI=dest, BH=rows, BL=cols)
+global AnimateSendingOutMon       ; predef target; the "growing out of the ball" send-out
 global LoadMonBackPic             ; generic player send-out back pic (retires LoadEmbeddedBackPicFallback)
 global CopyUncompressedPicToHL          ; shared flip-aware 7×7 tilemap placement
 
@@ -581,6 +585,65 @@ DrawBattleIntroBox:
     ; the enemy name/HP bar. The call is gone; the enemy HUD now first draws
     ; exactly where pret draws it.
     ret
+
+; ---------------------------------------------------------------------------
+; AnimateSendingOutMon — pret engine/battle/init_battle.asm:AnimateSendingOutMon.
+; "animates the mon growing out of the pokeball": draw the open-ball tile at the
+; predef HL, then two downscaled tile blocks (3x3 then 5x5), each one row-pair
+; higher and one column left, then place the full 7x7 pic.
+;
+; predef target: pret's `predef` macro stashes the caller's HL into wPredefHL
+; (big-endian) and the routine reads it back itself — it does NOT call
+; GetPredefRegisters — so this is a literal translation and needs no HAL
+; deviation of its own. The port's callers store wPredefHL the same way
+; (src/engine/predefs.asm:GetPredefPointer is the shared writer).
+;
+; The three `ld bc, -(SCREEN_WIDTH * 2 + 1)` steps are STRIDE arithmetic, not
+; coordinates: "up two rows, left one column". SCREEN_WIDTH is therefore the
+; port's 40-wide canvas stride here, exactly as CopyTileIDs uses it — the
+; coordinate projection lives in the caller's BCOORD, not in this routine.
+;
+; In:  [wPredefHL] = GB tilemap dest (big-endian), [hStartTileID] = base tile id.
+; Out: tail-jumps into CopyUncompressedPicToHL (which reads [wSpriteFlipped]).
+; ---------------------------------------------------------------------------
+AnimateSendingOutMon:
+    movzx eax, byte [ebp + wPredefHL]        ; ld a,[wPredefHL] / ld h,a
+    shl eax, 8
+    mov al, [ebp + wPredefHL + 1]            ; ld a,[wPredefHL + 1] / ld l,a
+    movzx esi, ax                            ; ESI = HL (16-bit GB offset)
+    mov al, [ebp + hStartTileID]             ; ldh a,[hStartTileID]
+    mov [ebp + hBaseTileID], al              ; ldh [hBaseTileID],a
+    mov bh, 0x4c                             ; ld b, $4c
+    mov al, [ebp + wIsInBattle]
+    test al, al                              ; and a
+    jz .notInBattle                          ; jr z
+    add al, bh                               ; add b  ($4c + wIsInBattle)
+    mov [ebp + esi], al                      ; ld [hl],a — the open-ball tile
+    call Delay3
+    sub esi, SCREEN_WIDTH * 2 + 1            ; ld bc,-(...) / add hl,bc
+    mov byte [ebp + wDownscaledMonSize], 1
+    mov bh, 3                                ; lb bc, 3, 3
+    mov bl, 3
+    call CopyDownscaledMonTiles              ; predef (preserves ESI)
+    mov bl, 4                                ; ld c, 4
+    call DelayFrames
+    sub esi, SCREEN_WIDTH * 2 + 1
+    mov byte [ebp + wDownscaledMonSize], 0   ; xor a / ld [wDownscaledMonSize],a
+    mov bh, 5                                ; lb bc, 5, 5
+    mov bl, 5
+    call CopyDownscaledMonTiles
+    mov bl, 5                                ; ld c, 5
+    call DelayFrames
+    sub esi, SCREEN_WIDTH * 2 + 1            ; ld bc,-(...) / jr .next
+    jmp short .next
+.notInBattle:
+    sub esi, SCREEN_WIDTH * 6 + 3            ; ld bc,-(SCREEN_WIDTH * 6 + 3)
+.next:
+    movzx eax, byte [ebp + hBaseTileID]      ; ldh a,[hBaseTileID]
+    add al, 0x31                             ; add $31
+    lea edi, [ebp + esi]                     ; port signature: EDI = flat dest
+    mov edx, SCREEN_WIDTH                    ; EDX = row stride
+    jmp CopyUncompressedPicToHL              ; jr CopyUncompressedPicToHL
 
 ; ---------------------------------------------------------------------------
 ; CopyUncompressedPicToTilemap — predef target. Place a 7×7 block of ascending
