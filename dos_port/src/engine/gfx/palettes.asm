@@ -249,12 +249,29 @@ section .text
 ; In: DL = pret's E, the scene's palette variant.
 ;
 ; E == 0 is the plain Generic packet. E != 0 is the one the Yellow intro spends
-; almost all its time in: PalPacket_PikachusBeach in all four slots, then BG slot
-; 1 alone overridden with PalPacket_Generic's first palette (PAL_MEWMON). pret
-; does that override through wCGBBasePalPointers + 2 (entry 1, two bytes each)
-; and TransferCurBGPData with a = 1, so it touches the BG palette ONLY — the OBJ
-; slots keep PAL_PIKACHUS_BEACH. Getting that asymmetry wrong is the whole
-; difference between the intro's real look and a flat wash.
+; almost all its time in: PalPacket_PikachusBeach in all four slots, then base
+; palette 1 overridden with PalPacket_Generic's first palette (PAL_MEWMON).
+;
+; *** SLOT 1 IS OVERRIDDEN ON **BOTH** PLANES, NOT BG-ONLY. *** This comment used
+; to claim "it touches the BG palette ONLY — the OBJ slots keep
+; PAL_PIKACHUS_BEACH ... getting that asymmetry wrong is the whole difference
+; between the intro's real look and a flat wash", and the code matched that
+; claim. It is wrong, and it is what left Pikachu with BLUE CHEEKS on the surfing
+; and balloon scenes.
+;
+; pret writes the override into wCGBBasePalPointers + 2 — the BASE palette table
+; that feeds BOTH planes — and only then calls TransferCurBGPData with a = 1. The
+; BG-only step is momentary: YellowIntroPaletteAction's SOLE caller is
+; intro_yellow.asm:Func_f9e9a, which unconditionally calls UpdateCGBPal_OBP0 and
+; UpdateCGBPal_OBP1 a few instructions later, and _UpdateCGBPal_OBP
+; (engine/gfx/palettes.asm:991) rebuilds ALL FOUR OBJ palettes by re-reading
+; wCGBBasePalPointers. So PAL_MEWMON lands in OBJ palette 1 too.
+;
+; That is exactly what the cheeks need: PAL_PIKACHUS_BEACH has NO red at all
+; (white, yellow, blue, black), while PAL_MEWMON's colour 2 IS red. The surfing
+; hook Func_f98a2 and the flying/balloon hook Func_f98cb OR $1 into the cheek
+; sprites' OAM attribute bytes, i.e. CGB OBJ palette 0 -> 1, and palette 1 is the
+; one slot carrying red.
 ;
 ; This is why the intro used to render entirely in Mew's red/blue: the port
 ; dropped this routine, so every scene fell back to SET_PAL_GENERIC = PAL_MEWMON
@@ -288,8 +305,13 @@ YellowIntroPaletteAction:
     mov ecx, 4
     mov edi, obj_slot_pal
     rep stosb
-    ; …then BG slot 1 only takes PalPacket_Generic's palette.
+    ; …then slot 1 takes PalPacket_Generic's palette on BOTH planes, because pret
+    ; overrides the shared BASE table (wCGBBasePalPointers + 2) and Func_f9e9a's
+    ; UpdateCGBPal_OBP0/OBP1 immediately rebuild the OBJ palettes from it. The OBJ
+    ; half is what gives the surfing and balloon Pikachu red cheeks — see the
+    ; header for the full chain.
     mov byte [bg_slot_pal + 1], PAL_MEWMON
+    mov byte [obj_slot_pal + 1], PAL_MEWMON
     ; No BLK packet is involved, so there is no attribute plane for this scene —
     ; drop any the previous screen left, or it would keep re-resolving.
     mov dword [g_bg_attr_table], 0

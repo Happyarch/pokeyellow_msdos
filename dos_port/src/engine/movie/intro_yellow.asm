@@ -55,6 +55,15 @@ global Func_f9e9a, Func_f9e5f
 extern SpawnAnimatedObject, MaskCurrentAnimatedObjectStruct, MaskAllAnimatedObjectStructs
 extern DelayFrames, DelayFrame, DisableLCD, FillMemory
 extern UpdateCGBPal_BGP, UpdateCGBPal_OBP0, UpdateCGBPal_OBP1
+extern tile_pal, g_tilecache_dirty   ; src/ppu/ppu.asm — per-tile-slot palette band
+                                     ; and its cache-invalidate flag. DECLARED HERE, AT THE
+                                     ; TOP, DELIBERATELY: NASM sizes an instruction the first
+                                     ; time it sees the symbol, so using an external before its
+                                     ; `extern` appears makes the encoding grow once the
+                                     ; declaration is reached, shifting every later label and
+                                     ; failing the build with `label ... changed during code
+                                     ; generation`. g_tilecache_dirty used to be declared near
+                                     ; the bottom of this file, which is exactly that trap.
 extern CopyVideoData, RunPaletteCommand, PlayMusic, ClearObjectAnimationBuffers
 extern YellowIntroPaletteAction      ; engine/gfx/palettes.asm
 ; The frame/OAM data mirrors (pret INCLUDEs both files into this one); staged
@@ -240,11 +249,57 @@ YellowIntroScene1:
 
 ; Scene 4 — "running Pikachu 2": pump the music, lay out the framed BG (Func_f9e5f),
 ; spawn animated object $2, reset the DMG palettes, arm a 128-frame timer, advance.
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene4; behavior=the hOnCGB branch that writes the CGB VRAM bank-1 attribute map (rVBK, the 6x6 tile-attribute box at $98d4) is omitted, so those 36 cells take the scene's palette instead of their own; evidence=this is a PER-CELL attribute write with no table behind it, and the port resolves attributes per TILE ID (tile_pal, engine/gfx/bg_map_attributes.asm) so a box covering tiles that also appear outside it cannot be expressed, unlike the table-driven planes which are collision-free and ARE ported; lifetime=retire with a per-cell attribute layer in the compositor}
+; ---------------------------------------------------------------------------
+; YellowIntro_PublishGraphicAttr — port realization of pret's TWO rVBK bank-1
+; attribute writes over the 6x6 box at $98d4: YellowIntroScene2_PlaceGraphic
+; sets palette 1, YellowIntroScene4 clears it back to 0. Port-only (no pret
+; label): on hardware those are per-cell attribute bytes in VRAM bank 1, which
+; this port does not model. It lives beside its two call sites, mirroring
+; pret's own inline placement in this same file.
+;
+; EXACT, not approximate. YellowIntroScene2_PlaceGraphic lays the block out as
+; id 0x90 + row*0x10 + col over a BG map its caller has just filled entirely
+; with tile 0, so ids 0x90-0xE5 belong to that graphic and to nothing else on
+; screen -- the tile-id collision warned about by the annotation on
+; bg_map_attributes.asm:LoadBGMapAttributes cannot occur here. Scene 4's clear
+; bounds the band's lifetime, which is exactly why pret clears it too.
+;
+; tile_pal is indexed by physical tile slot, and for an id >= 128 the slot IS
+; the id under BOTH LCDC addressing modes; every id here is >= 0x90, so no
+; LCDC-dependent fixup is needed (unlike .apply_plane, which handles ids < 128).
+;
+; In: AL = palette to publish (1 to set, 0 to clear). All registers preserved.
+; ---------------------------------------------------------------------------
+YellowIntro_PublishGraphicAttr:
+YellowIntro_PublishGraphicAttr:
+    pushad
+    mov bl, al                          ; palette value
+    mov edx, 0x90                       ; first row's base tile id
+    mov esi, 6                          ; 6 rows
+.row:
+    mov edi, tile_pal
+    add edi, edx                        ; slot == tile id (every id >= 0x90)
+    mov al, bl
+    mov ecx, 6                          ; 6 columns
+    rep stosb
+    add edx, 0x10                       ; next row's base id
+    dec esi
+    jnz .row
+    ; tile_pal feeds the palette band baked into tile_cache at decode time, so
+    ; the cache must be rebuilt before the band becomes visible.
+    mov byte [g_tilecache_dirty], 1
+    popad
+    ret
+
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene4; behavior=the hOnCGB rVBK bank-1 attribute clear over the 6x6 box at $98d4 is published as a per-TILE-ID band in tile_pal instead of per-cell attribute bytes in VRAM bank 1; evidence=the box covers tile ids 0x90-0xE5 which YellowIntroScene2_PlaceGraphic owns exclusively, so the per-tile-id resolution is exact, and the port's compositor bakes palette into tile_cache per tile id; lifetime=permanent, the same HAL boundary LoadBGMapAttributes already resolves this way}
 YellowIntroScene4:
     call YellowIntro_BlankPalsDelay2AndDisableLCD
     mov bl, 0x5                                     ; ld c, $5
     call UpdateMusicCTimes
+    ; pret's hOnCGB block: rVBK=1, then `xor a` into the same 6x6 cells, putting
+    ; the graphic back on palette 0 now that the running-Pikachu beat is over.
+    xor al, al
+    call YellowIntro_PublishGraphicAttr
     xor al, al
     mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
     call Func_f9e5f
@@ -683,7 +738,7 @@ YellowIntroScene2:
 ; at GB (col 20, row 6), authored at the cinematic origin. Col 20 is off the right
 ; of the visible 20-col area at SCX=0; scene 3 scrolls the BG right to bring it in.
 ;
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene2_PlaceGraphic; behavior=the hOnCGB branch that writes the CGB VRAM bank-1 attribute map is omitted, so those cells take the scene's palette instead of their own; evidence=a PER-CELL attribute write with no table behind it, which the port's per-TILE-ID tile_pal cannot express, same boundary as YellowIntroScene4; lifetime=retire with a per-cell attribute layer in the compositor}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene2_PlaceGraphic; behavior=the hOnCGB rVBK bank-1 attribute box is published as a per-TILE-ID band in tile_pal instead of per-cell attribute bytes in VRAM bank 1; evidence=the graphic owns tile ids 0x90-0xE5 exclusively because the routine's caller has just filled the whole of vBGMap0 with tile 0, so the per-tile-id resolution is exact here rather than approximate, and the port's compositor bakes palette into tile_cache per tile id; lifetime=permanent, this is the same HAL boundary LoadBGMapAttributes already resolves this way}
 YellowIntroScene2_PlaceGraphic:
     mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 20  ; ld hl, $98d4  (GB col 20, row 6 — off-screen right, revealed by scene 3's scroll)
     mov bh, 0x6                                    ; ld b, $6  (rows)
@@ -704,8 +759,15 @@ YellowIntroScene2_PlaceGraphic:
     add al, 0x10                                   ; add $10
     dec bh                                         ; dec b
     jnz .row
-    ; hOnCGB CGB attribute-map block omitted — per-cell, see the DEVIATION above
+    ; pret's hOnCGB block: rVBK=1, then write $1 into the SAME 6x6 cells, giving
+    ; the graphic BG palette 1 (PalPacket_Generic's PAL_MEWMON, whose colour 2 is
+    ; red) while the scene's palette 0 is PAL_PIKACHUS_BEACH (colour 2 blue).
+    ; That one attribute byte is the whole difference between Pikachu's cheeks
+    ; being red and being blue.
+    mov al, 1
+    call YellowIntro_PublishGraphicAttr
     ret
+
 
 ; Scene 3 — hold the "running Pikachu 1" pose while scrolling the BG right to
 ; hSCX = 0x68, then mask the objects and advance. hSCX is the port's own scroll
@@ -1349,15 +1411,29 @@ YellowIntro_AnimatedObjectJumptable:
     dd Func_fa02b
     dd Func_fa062
 
-; Unkn_fa0aa — pret `sine_table 32`: dw sin(x*0.5/32) as RGBDS Q16 fractions,
-; i.e. round(sin(pi*x/32) * 65536) & 0xffff for x=0..31. Verified byte-exact
-; against rgbasm. (x=16 is 0x0000 — RGBDS truncates sin(0.25turn)=1.0 to the low
-; word; faithful to pret.) Read flat by Func_fa08e.
+; Unkn_fa0aa — pret `sine_table 32` (macros/data.asm: dw sin(x * 0.5 / 32)).
+;
+; These are Q8.8: round(sin(pi*x/32) * 256) for x=0..31, so the peak at x=16 is
+; 0x0100, not 0. TRANSCRIBED FROM THE ROM, bank $3e offset $60aa (pokeyellow.gbc
+; +0xfa0aa), not re-derived -- the ROM is the authority for this table.
+;
+; It previously held the Q16.16 form (round(sin(pi*x/32) * 65536) & 0xffff), with
+; a comment claiming it was "verified byte-exact against rgbasm" and that x=16 was
+; legitimately 0x0000 because RGBDS truncates sin(0.25turn)=1.0 to the low word.
+; Both claims were false: all 31 non-zero entries disagreed with the ROM, and the
+; ROM has 0x0100 at x=16. Func_fa08e computes table[phase] * amplitude in a 16-bit
+; accumulator and returns the HIGH byte, so a table scaled 256x too large made
+; every product overflow and the high byte read out as noise -- the balloon
+; Pikachu teleported vertically instead of bobbing (measured: up to 195 px of
+; movement per frame, against 1 px with these values, amplitude 8 giving a clean
+; -8..+8 sine).
+;
+; Read flat by Func_fa08e.
 Unkn_fa0aa:
-    dw 0x0000, 0x1918, 0x31f1, 0x4a50, 0x61f8, 0x78ad, 0x8e3a, 0xa268
-    dw 0xb505, 0xc5e4, 0xd4db, 0xe1c6, 0xec83, 0xf4fa, 0xfb15, 0xfec4
-    dw 0x0000, 0xfec4, 0xfb15, 0xf4fa, 0xec83, 0xe1c6, 0xd4db, 0xc5e4
-    dw 0xb505, 0xa268, 0x8e3a, 0x78ad, 0x61f8, 0x4a50, 0x31f1, 0x1918
+    dw 0x0000, 0x0019, 0x0032, 0x004a, 0x0062, 0x0079, 0x008e, 0x00a2
+    dw 0x00b5, 0x00c6, 0x00d5, 0x00e2, 0x00ed, 0x00f5, 0x00fb, 0x00ff
+    dw 0x0100, 0x00ff, 0x00fb, 0x00f5, 0x00ed, 0x00e2, 0x00d5, 0x00c6
+    dw 0x00b5, 0x00a2, 0x008e, 0x0079, 0x0062, 0x004a, 0x0032, 0x0019
 
 ; Scene dispatch table (flat 32-bit code addresses, indexed by
 ; wYellowIntroCurrentScene). Unported scenes point at YellowIntro_NextScene
@@ -1445,7 +1521,7 @@ global YellowIntroGraphics1, YellowIntroGraphics2
 ; Verifies: spawn→run→OAM-stamp, projected native positions (= canonical +
 ; (80,24)), and surface clipping (unused/edge OBJ never paint the matte).
 ; ---------------------------------------------------------------------------
-extern g_tilecache_dirty
+; g_tilecache_dirty is externed at the top of this file (see the note there).
 global RunAnimObjectTest
 
 section .text
