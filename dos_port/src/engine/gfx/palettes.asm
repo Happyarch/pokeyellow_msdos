@@ -266,8 +266,17 @@ YellowIntroPaletteAction:
     pushad
     test dl, dl                          ; ld a, e / and a
     jnz .pikachusBeach
-    mov al, SET_PAL_GENERIC              ; ld hl, PalPacket_Generic
+    ; popad FIRST. This was `mov al, SET_PAL_GENERIC / popad / jmp SetPal_Screen`,
+    ; and popad restores EAX — so the command byte was destroyed before it was ever
+    ; used and SetPal_Screen ran with the caller's AL, which at this call site is
+    ; the palette variant itself, i.e. 0 = SET_PAL_BATTLE_BLACK. Every E == 0 scene
+    ; of the Yellow intro therefore loaded command_pal_table[0] = PAL_BLACK in all
+    ; four BG and OBJ slots instead of PalPacket_Generic's PAL_MEWMON + PAL_ROUTE x3:
+    ; the running Pikachu rendered as a solid black silhouette, and Scene 15's
+    ; thunderbolt strobe was invisible because XOR-ing rOBP0/rBGP only reshuffles
+    ; colour indices within a palette whose four entries are all black.
     popad
+    mov al, SET_PAL_GENERIC              ; ld hl, PalPacket_Generic
     jmp SetPal_Screen
 .pikachusBeach:
     ; PalPacket_PikachusBeach is PAL_PIKACHUS_BEACH in all four entries, and
