@@ -1600,14 +1600,36 @@ provider shapes below, not their runtime behavior.
       was never entered.** Always read back the byte a pin is supposed to have
       changed.
 
-      **Step 2: with the pin corrected, the run produces NO DUMP AT ALL.** So
-      actually entering the EXP ALL branch changes the flow enough that the gate
-      never reaches its dump — a crash, a stall, or a path that does not return.
-      That is precisely what this box exists to investigate, and it is the first
-      time the branch has ever executed in this project. NEXT STEP: capture
-      `AUTOKEY_DUMP_FRAME=<n>` FRAME.BIN images across the run to see where it
-      goes, exactly as the 3a gate was diagnosed; do NOT assume a defect or a
-      harness fault before that picture exists.
+      **Step 2: with the pin corrected, the run produces NO DUMP AT ALL.**
+
+      **Step 3, the frame captures (2026-08-12).** It is a CRASH, not a stall:
+      `AUTOKEY_DUMP_FRAME` dumps at 500 and 600 and produces nothing at 700,
+      800, 1000, 1500 or 3000. A stall would keep dumping.
+
+      **The branch really does run, and the whole-party payment starts.** The
+      frame-600 capture reads **"PIKACHU gained 10 E…"** — PIKACHU is party slot
+      3, a NON-PARTICIPANT, so `FaintEnemyPokemon` took the EXP ALL arm and was
+      part-way through crediting the party when it died. That is the first
+      execution of this branch in the project.
+
+      **WHAT IS NOT ESTABLISHED, and must not be written down as if it were: is
+      this a PORT DEFECT or an artefact of the synthetic entry?** This gate
+      reaches `HandleEnemyMonFainted` from the `DEBUG_BATTLE_GOLDEN` scene, not
+      through `MainInBattleLoop`, and a whole-party loop reads state the normal
+      entry sets. One hypothesis is already RULED OUT by measurement — forcing
+      `wPartyGainExpFlags = $3F` (all six mons) does not change the crash.
+      Remaining candidates, in order: `wPartyFoughtCurrentEnemyFlags` (the scene
+      sets slot 0 only), `wPlayerMonNumber` / `wWhichPokemon`, and anything
+      `MainInBattleLoop` initialises that a direct `call` skips.
+
+      **NEXT STEP: get the faulting EIP.** The DPMI fault prints a register dump
+      to the DOS console, which only a screenshot of the emulated screen can
+      read — `FRAME.BIN` and `GBSTATE.BIN` structurally cannot. The dosbox-mcp
+      route failed repeatedly in this session (stale socket, multiple instances,
+      a binary predating the SCREENSHOT command — rebuild with
+      `dos_port/tools/build_dosbox_mcp.sh` and relaunch from the REPO ROOT).
+      Either fix that workflow or add a breadcrumb region written at each step
+      of the distribution loop.
 
       Also landed in the same change: `EXP_ALL` moved from a file-local `equ` in
       `core.asm` to `include/gb_constants.inc`, since the debug gate needs it
