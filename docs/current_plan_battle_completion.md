@@ -1578,10 +1578,40 @@ provider shapes below, not their runtime behavior.
       as its eventual home, and that transfer should happen after the 2a/2c
       pret-label rename lands, not before. Run `label_status --callers` and
       repair every stub-era extern/provider comment and assumption.
-- [ ] **3e. EXP ALL.** Establish a deterministic whole-party EXP scenario before
+- [~] **3e. EXP ALL.** Establish a deterministic whole-party EXP scenario before
       deciding whether any defect remains. Compare participants, EXP, levels,
       stats, moves, and `wIsInBattle`; do not preserve the old audit/repro claim
       without a current failing execution.
+
+      **GATE BUILT 2026-08-12, NOT REGISTERED — and entering the branch is
+      itself the finding.** `DEBUG_BATTLE_EXPALL=1` is `battle_faint`'s shape
+      (STRENGTH KO, then `HandleEnemyMonFainted`) with the seeded bag's last
+      slot swapped to `EXP_ALL`, so `FaintEnemyPokemon` takes its whole-party
+      branch. Reachability was checked first, per the 3a lesson: the branch is
+      inside `FaintEnemyPokemon`, reached from `HandleEnemyMonFainted` at
+      core.asm:2861, the call this template already makes — no
+      `MainInBattleLoop` harness needed.
+
+      **Step 1, and it is a warning about pins generally.** The first pin wrote
+      `wBagItems + 1 + 15*2` and SILENTLY DID NOTHING: `wNumBagItems` (`$D31C`)
+      is the count and `wBagItems` (`$D31D`) is the LIST, so item *i*'s id is at
+      `wBagItems + i*2` with no `+1`. The `+1` landed on item 15's QUANTITY, and
+      the dump still read id `$4F` (PP_UP). **The run looked fine and the branch
+      was never entered.** Always read back the byte a pin is supposed to have
+      changed.
+
+      **Step 2: with the pin corrected, the run produces NO DUMP AT ALL.** So
+      actually entering the EXP ALL branch changes the flow enough that the gate
+      never reaches its dump — a crash, a stall, or a path that does not return.
+      That is precisely what this box exists to investigate, and it is the first
+      time the branch has ever executed in this project. NEXT STEP: capture
+      `AUTOKEY_DUMP_FRAME=<n>` FRAME.BIN images across the run to see where it
+      goes, exactly as the 3a gate was diagnosed; do NOT assume a defect or a
+      harness fault before that picture exists.
+
+      Also landed in the same change: `EXP_ALL` moved from a file-local `equ` in
+      `core.asm` to `include/gb_constants.inc`, since the debug gate needs it
+      too.
 
 ## Stage 4 — special battle types
 

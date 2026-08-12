@@ -590,6 +590,7 @@ GUST                    equ 0x10    ; the battle_blackout gate pins the wild
 CUT                     equ 0x0F
 FLY                     equ 0x13
 SURF                    equ 0x39
+EXP_ALL                 equ 0x4B    ; constants/item_constants.asm (was a file-local equ in core.asm)
 PAY_DAY                 equ 0x06    ; constants/move_constants.asm
 WRAP                    equ 0x23    ; constants/move_constants.asm (trapping move)
 STRENGTH                equ 0x46

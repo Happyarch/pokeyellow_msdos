@@ -215,6 +215,11 @@ extern g_windows                     ; src/ppu/ppu.asm — descriptor array
 extern ExecuteEnemyMove          ; core.asm — the real enemy-turn/damage pipeline
 extern HandlePlayerMonFainted    ; core.asm — RemoveFaintedPlayerMon + the black-out branch
 %endif
+%ifdef DEBUG_BATTLE_EXPALL
+; Declared with the other battle externs — NASM sizes on first sight.
+extern ExecutePlayerMove         ; core.asm — the real player-turn/damage pipeline
+extern HandleEnemyMonFainted     ; core.asm — FaintEnemyPokemon + the EXP ALL branch
+%endif
 %ifdef DEBUG_BATTLE_SELFDESTRUCT
 ; Declared with the other battle externs, not at the gate — NASM sizes on first
 ; sight and a late extern shifts every later label.
@@ -2601,6 +2606,49 @@ RunBattleTest:
 .faintKO:
     call HandleEnemyMonFainted          ; FaintEnemyPokemon -> GainExperience
     call DebugDumpMemory                ; GBSTATE.BIN (id 21) + DUMP.BIN + exit
+%elifdef DEBUG_BATTLE_EXPALL
+    ; ------------------------------------------------------------------
+    ; battle_exp_all golden gate (battle plan 3e). FaintEnemyPokemon's EXP ALL
+    ; branch: `ld b, EXP_ALL / call IsItemInBag`, which halves
+    ; wEnemyMonBaseStats and then pays the halved EXP to the WHOLE party rather
+    ; than only the mons that fought. The seeded bag has no EXP_ALL, so nothing
+    ; in the registry has ever taken it.
+    ;
+    ; REACHABILITY CHECKED FIRST (the 3a lesson): the branch is inside
+    ; FaintEnemyPokemon, reached from HandleEnemyMonFainted at core.asm:2861 —
+    ; the same call this gate template already makes. No MainInBattleLoop
+    ; harness needed, exactly as for battle_self_destruct.
+    ;
+    ; THE BAG PIN: the LAST seeded slot's item id (PP_UP, index 15) is
+    ; overwritten with EXP_ALL. That keeps the count and the list structure
+    ; intact — no append, no $FF juggling — and the golden makes the identical
+    ; write, so wBagItems compares clean.
+    ;
+    ; DETERMINISTIC: the EXP award is computed from the enemy's base EXP and
+    ; level, not from a roll. STRENGTH from L80 SNORLAX overkills PIDGEY's 36 HP
+    ; on every roll, so the KO happens for every roll and the damage value is
+    ; never compared — battle_faint's argument, same matchup.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    ; wNumBagItems ($D31C) is the COUNT and wBagItems ($D31D) is the LIST, so
+    ; item i's id is at wBagItems + i*2 — no +1. MEASURED the hard way: the first
+    ; version added that +1, wrote item 15's QUANTITY instead, and the dump still
+    ; read id $4F (PP_UP), i.e. the pin silently did nothing.
+    mov byte [ebp + wBagItems + 15 * 2], EXP_ALL      ; PP_UP slot -> EXP_ALL
+    mov byte [ebp + wPlayerMoveListIndex], 3
+    mov byte [ebp + wPlayerSelectedMove], STRENGTH
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    call ExecutePlayerMove
+    mov al, [ebp + wEnemyMonHP]
+    or al, [ebp + wEnemyMonHP + 1]
+    jnz .expAllAlive
+    call HandleEnemyMonFainted          ; FaintEnemyPokemon -> the EXP ALL branch
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+.expAllAlive:
+    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    call DelayFrame
+    call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_SELFDESTRUCT
     ; ------------------------------------------------------------------
     ; battle_self_destruct golden gate (battle plan 3c). The MUTUAL FAINT:
@@ -3101,7 +3149,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 

@@ -6560,7 +6560,7 @@ wEnemyStatsToHalve  equ wEnemyBattleStatus1 - 1   ; = 0xD065
 ;    0-based `const_value` chain starting at NO_ITEM=$00, i.e. $4B). Move into
 ;    gb_constants.inc when integrating.
 %ifndef EXP_ALL
-EXP_ALL equ 0x4B
+; EXP_ALL moved to include/gb_constants.inc (the debug gate needs it too)
 %endif
 
 ; 4. MUSIC_DEFEATED_WILD_MON — victory jingle id ($F9), from assets/audio_constants.inc
