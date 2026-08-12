@@ -430,7 +430,7 @@ _InitBattleCommon:
     call SlideBattlePicsIn                      ; silhouette slide-in
     cmp byte [ebp + wIsInBattle], 2
     jne .drawWildIntro
-    ; DEVIATION{class=temporary; pret=engine/battle/common_text.asm:PrintBeginningBattleText; behavior=trainer initialization draws a blank dialog surface before the party-ball rows instead of the class-specific wants-to-fight stream; evidence=Stage 1a proves trainer data and first-mon initialization while common_text.asm TrainerWantsToFightText remains missing; lifetime=Stage 1d trainer presentation}
+    ; DEVIATION{class=temporary; pret=engine/battle/common_text.asm:PrintBeginningBattleText; behavior=trainer initialization draws a blank dialog surface before the party-ball rows instead of the class-specific wants-to-fight stream; evidence=PrintBeginningBattleText is label_status missing - the port has no translation of it at all - and its DrawAllPokeballs callee is missing too because the routine half of pret draw_hud_pokeball_gfx.asm lives in engine/battle/pokeballs.asm under port-only names as pre-existing mirror debt this plan owns; lifetime=retire together with PrintBeginningBattleText and the pokeballs forked-name debt, tracked in battle plan 4c}
     call DrawEmptyDialogBox
     jmp .introDrawn
 .drawWildIntro:

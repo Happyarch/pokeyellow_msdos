@@ -1702,11 +1702,43 @@ provider shapes below, not their runtime behavior.
          `("ghost_nick", ["GHOST", [0x50]])` — the same shape as `intro_line1`.
          Hand-encoding charmap bytes in a `.asm` is this project's
          most-repeated violation, so it must go through the generator.
-      2. **The unveil sequence — what makes `MarowakAnim` REACHABLE.** pret
-         `engine/battle/common_text.asm` (~:70-76) runs `UnveiledGhostText` ->
-         `LoadEnemyMonData` -> `callfar MarowakAnim` -> `WildMonAppearedText`.
-         The port's `common_text.asm` has **no `MarowakAnim` call site** — grep
-         is empty. Until this lands, the animation stays unwitnessed.
+      2. **The unveil sequence — what makes `MarowakAnim` REACHABLE. TRACED
+         2026-08-12 to a bigger, already-owned blocker.** The unveil arm is not
+         a standalone call site: it lives inside pret's
+         `PrintBeginningBattleText` (`engine/battle/common_text.asm`, the
+         `.isMarowak` arm at ~:65-76 —  `EnemyAppearedText` ->
+         `UnveiledGhostText` -> `LoadEnemyMonData` -> `callfar MarowakAnim` ->
+         `WildMonAppearedText`). The dependency chain, measured:
+         * **`PrintBeginningBattleText` is `label_status` MISSING** — the port
+           has no translation of it at all. What stands in its place is the
+           ad-hoc intro in `init_battle.asm` (`DrawBattleIntroBox` /
+           `DrawEmptyDialogBox`) under a `DEVIATION{class=temporary}`.
+         * **That deviation's evidence clause was STALE and is corrected in the
+           same change.** It read "…while common_text.asm TrainerWantsToFightText
+           remains missing" — measured FALSE: the stream is generated Tier-1 at
+           `assets/battle_text.inc:498-501`. So are the other five the routine
+           needs (`WildMonAppearedText`, `EnemyAppearedText`,
+           `GhostCantBeIDdText`, `UnveiledGhostText`, `HookedMonAttackedText`).
+           Its `lifetime=` also named Stage 1d, which is TICKED — a retirement
+           condition that has already passed without the routine landing.
+         * **The real blocker is `DrawAllPokeballs`, and it is debt this plan
+           already owns.** It is `missing`; the ROUTINE half of pret
+           `engine/battle/draw_hud_pokeball_gfx.asm` (`DrawAllPokeballs`,
+           `LoadPartyPokeballGfx`, `SetupPokeballs`, `PickPokeball`,
+           `WritePokeballOAMData`, `PlaceHUDTiles`) lives in
+           `src/engine/battle/pokeballs.asm` under PORT-ONLY NAMES with its own
+           private copy of the tile blob. The mirror file says so itself:
+           *"a faithful-in-spirit bespoke … that predates the mirror rule —
+           pre-existing debt owned by the battle-completion plan, not grown
+           here."*
+
+         **SO THE NEXT ACTIONABLE BOX IS THE POKEBALLS FORKED-NAME DEBT**, not
+         the unveil. Retiring it (restoring pret's names into the mirror) unlocks
+         `PrintBeginningBattleText`, which in turn unlocks both this item and the
+         faithful trainer intro. BLAST RADIUS, stated up front: replacing the
+         ad-hoc intro changes what `battle_intro`, `battle_menu`,
+         `move_selection` and `trainer_battle_route` photograph, so it will need
+         golden regeneration and a `fidelity-full`, not just a core tier.
 
 - [ ] **4c. Ghost Marowak (original folding note).** FOLDED IN 2026-08-11 from the archived animations
       plan (maintainer instruction), which had it as an optional tail explicitly
