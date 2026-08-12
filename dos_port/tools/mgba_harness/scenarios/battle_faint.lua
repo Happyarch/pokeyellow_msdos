@@ -16,8 +16,15 @@
 --   * SNORLAX L80 (debug party slot 0) vs PIDGEY L13, 36 HP. STRENGTH's
 --     MINIMUM damage roll still overkills 36 by a wide margin, so the KO takes
 --     exactly one turn for every roll and every crit outcome.
---   * SNORLAX far outspeeds PIDGEY, so the enemy never gets a turn: the party
---     mon's HP, status and PP are untouched by any roll.
+--   * The enemy never gets a turn -- BUT NOT BECAUSE OF SPEED, which is what
+--     this comment used to claim. A YELLOW L13 PIDGEY knows QUICK ATTACK, and
+--     +1 priority beats any speed; whether the AI picks it is a roll the two
+--     emulators do not share. MEASURED in battle_exp_all (same matchup): with
+--     no pin the golden's SNORLAX finished on 359 HP one generation and 360 the
+--     next, against the port's full 362. The enemy is pinned ASLEEP on both
+--     sides instead, so the party mon's HP, status and PP really are untouched
+--     by any roll. battle_wrap / battle_bide / battle_thrash / battle_exp_all
+--     carry the same pin.
 --   * So EXP gained, stat EXP gained, party HP, wBattleResult and the zeroed
 --     enemy HP are functions of species and level only. The damage VALUE does
 --     differ between the two sides and is deliberately NOT compared: it
@@ -57,6 +64,7 @@ navigate.init(sym, text)
 
 -- SNORLAX's level in the debug party (lib/seed.lua DEBUG_PARTY[1].level). Used
 -- as the marker that the post-faint HUD redraw has staged it into wLoadedMon.
+local SLEEP_TURNS = 7           -- enemy SLP counter; outlasts this one turn
 local PARTY_MON_LEVEL = 80
 
 -- Big-endian multi-byte reads (Gen-1 data layout). These go through
@@ -80,6 +88,13 @@ scenario.run(function()
 	input.tap("A", 2, 8)
 	navigate.dialog_until_text(text:encode("FIGHT"), 3600)
 	scenario.wait(30) -- settle: menu parked in its input loop
+
+	-- THE ENEMY MUST NOT ACT. See the header: speed does not remove its turn,
+	-- QUICK ATTACK's +1 priority beats any speed. Sleep does, deterministically.
+	-- The port gate makes the identical write.
+	scenario.exec(function()
+		emu:write8(sym:addr("wEnemyMonStatus"), SLEEP_TURNS)
+	end)
 
 	-- FIGHT -> the move list, then STRENGTH (SNORLAX's slot 4).
 	navigate.choose(text:encode("FIGHT"))
@@ -125,9 +140,23 @@ scenario.run(function()
 	-- diverge on all 12 wLoadedMon fields (measured: golden held the L13 enemy,
 	-- port held SNORLAX L80). Watch for the copy itself rather than guessing a
 	-- frame count: wLoadedMonLevel reads the party mon's level once it lands.
+	--
+	-- THE LEVEL ALONE IS NOT ENOUGH, and adding the enemy-asleep pin is what
+	-- exposed that. DrawPlayerHUDAndHPBar copies only two DISJOINT runs into
+	-- wLoadedMon -- species..moves and level..stats -- so bytes 12-32 keep
+	-- whatever the last LoadMonData left. There is a staging where the level
+	-- already reads 80 while those bytes are still ZERO, and the pin shifted the
+	-- frame counts just enough to land on it: the golden came out with
+	-- `wLoadedMon EXP: want $000000 | got $09C466` and the same for all four
+	-- stat-EXP words. So the poll also requires the staged buffer to CARRY the
+	-- EXP, which only LoadMonData writes. One read covers level (offset $21) and
+	-- EXP (offsets $0E-$10) -- two reads would be two frames.
+	local LOADED_SPAN = 0x22
 	local staged = false
 	for _ = 1, 3600 do
-		if read_be("wLoadedMonLevel", 1) == PARTY_MON_LEVEL then
+		local blk = scenario.read_range(sym:addr("wLoadedMon"), LOADED_SPAN)
+		local exp = blk:byte(0x0F) * 65536 + blk:byte(0x10) * 256 + blk:byte(0x11)
+		if blk:byte(0x22) == PARTY_MON_LEVEL and exp ~= 0 then
 			staged = true
 			break
 		end

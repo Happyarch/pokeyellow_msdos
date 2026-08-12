@@ -716,6 +716,17 @@ result gates deliberately stop after initialization and drive one terminal turn.
       makes the AI choose to switch. Same gap 3a/3b/3d had, and all three of
       those are now closed by scenarios, so this is the last of that family.
 
+      **NOT STARTED 2026-08-12, and the reason is the GOLDEN side, not the
+      gate.** `tools/mgba_harness/lib/battle.lua` exposes `enter_wild` and
+      nothing else — there is no trainer-battle entry helper. The only existing
+      trainer entry is `trainer_battle_route`'s hard-won overworld cadence
+      (`A, DOWN x3, A`, state-gated D-pad, no B; two unguarded EnterMap seed
+      hooks had to be fixed to get it green — `fefdf0ab`,
+      `battle-stage1b-continuous-scenario`). So this scenario needs a
+      trainer-entry harness written from scratch or lifted from that cadence,
+      which is a whole iteration on its own rather than a variation on
+      `battle_wrap`'s template. Deliberately not begun half-way.
+
       **THE ROUTE TO A WITNESS IS MEASURED AND IT IS DETERMINISTIC — the next
       iteration does not need to re-derive it.**
       * `SwitchEnemyMon` has exactly ONE port caller: `AISwitchIfEnoughMons`

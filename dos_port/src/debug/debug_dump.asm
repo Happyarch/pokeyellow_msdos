@@ -2578,8 +2578,18 @@ RunBattleTest:
     ;   * SNORLAX L80 (debug party slot 0) vs the spec PIDGEY L13, 36 HP.
     ;     STRENGTH's minimum roll still exceeds 36 by a wide margin, so
     ;     the KO takes exactly one turn for ANY damage roll and any crit.
-    ;   * SNORLAX outspeeds PIDGEY (L80 vs L13), so the enemy never acts:
-    ;     the player mon's HP, status and PP are untouched by a roll.
+    ;   * The enemy never acts -- BUT NOT FOR THE REASON THIS COMMENT USED
+    ;     TO GIVE. It read "SNORLAX outspeeds PIDGEY (L80 vs L13), so the
+    ;     enemy never acts", and that is FALSE: a YELLOW L13 PIDGEY knows
+    ;     QUICK ATTACK, whose +1 priority beats any speed, and whether the
+    ;     AI picks it is a roll the two emulators do not share. MEASURED in
+    ;     battle_exp_all, which has this exact matchup: with no pin the
+    ;     golden's SNORLAX finished on 359 HP in one generation and 360 in
+    ;     the next, while the port -- whose gate grants the enemy no turn at
+    ;     all -- held a full 362. Three compared copies of its HP diverged on
+    ;     a value that MOVED BETWEEN RUNS. The enemy is now pinned ASLEEP on
+    ;     both sides, which removes its turn deterministically and masks
+    ;     nothing (it is knocked out this turn either way).
     ;   * Therefore every compared datum -- EXP and stat EXP gained, party
     ;     HP, wBattleResult, the zeroed enemy HP -- is a deterministic
     ;     function of species and level, not of the stream. The damage
@@ -2605,6 +2615,13 @@ RunBattleTest:
     ; ------------------------------------------------------------------
     call LoadScreenTilesFromBuffer1
     call DrawHUDsAndHPBars
+    ; THE ENEMY MUST NOT ACT, and the reason this gate gave for years was
+    ; WRONG — see the RNG-independence note above. A Yellow L13 PIDGEY knows
+    ; QUICK ATTACK (+1 priority beats any speed), so "SNORLAX outspeeds it"
+    ; does not remove the enemy's turn; only a status does. Same pin as
+    ; battle_wrap / battle_bide / battle_thrash / battle_exp_all, and the
+    ; golden makes the identical write.
+    mov byte [ebp + wEnemyMonStatus], 7  ; SLP counter (7 turns)
     ; The debug party pokes STRENGTH into SNORLAX's move slot 4
     ; (tools/mgba_harness/lib/seed.lua DEBUG_PARTY[1].pokes[4]), so the
     ; 0-based list index is 3. Both are set: GetCurrentMove reads
