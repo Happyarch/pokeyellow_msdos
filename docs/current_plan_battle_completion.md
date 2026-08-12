@@ -1700,7 +1700,8 @@ provider shapes below, not their runtime behavior.
           break `fidelity-full` for everyone. So the manifest and
           `golden_diff.SCENARIOS` are left untouched and the suite stays at 66
           consistent scenarios.
-        * **ROOT-CAUSED 2026-08-12, AND IT IS A SHARED STAGE-4 BLOCKER, NOT A
+        * **RESOLVED 2026-08-12 — the scenario is REGISTERED and PASSES (id 69).**
+          The diagnosis below is kept because it is a SHARED STAGE-4 BLOCKER, NOT A
           BUG IN THIS SCENARIO.** Adding `wBattleMonSpecies != 0` to the
           landmark made the golden generation FAIL, and the assert's tilemap
           dump is the evidence: it read "All right!" / "PIDGEY was ..." — the
@@ -1719,12 +1720,34 @@ provider shapes below, not their runtime behavior.
           `InitBattleVariables` / `InitBattleCanvas` / HUDs — instead of going
           through `_InitBattleCommon`, so it loads `wBattleMon` before any gate
           body runs, whatever `wBattleType` says.
-        * **CONSEQUENCE FOR THE WHOLE OF STAGE 4:** every `wBattleType != 0`
-          scenario — **4a Pikachu, 4b old man, 4d Safari** — needs a harness
-          entry that reaches the battle through the real special-battle path
-          rather than the normal staging. That is one shared piece of work
-          under three boxes, and it is the actual prerequisite for 4a's and
-          4d's must-hit scenarios too, not just this one.
+        * **CONSEQUENCE FOR THE WHOLE OF STAGE 4 — AND IT IS NOW BUILT.** Every
+          `wBattleType != 0` scenario (**4a Pikachu, 4b old man, 4d Safari**)
+          needs a harness entry that reaches the battle through the real
+          special-battle path. That entry now exists, in the shared battle
+          staging, and 4a/4d can use it directly:
+          1. The send-out is guarded by `cmp wBattleType, 0 / jne
+             .skipPlayerSendOut`, pret `StartBattle:171` exactly. Special types
+             never send out, so `wBattleMon` stays zero on both sides.
+          2. `wBattleType` is set in the STAGING, before that decision — a gate
+             that sets it in its own body is already too late.
+          3. A special battle **never enters `MainInBattleLoop`**: pret falls
+             into `.displaySafariZoneBattleMenu` and loops on
+             `DisplayBattleMenu` (`core.asm:176-181`). Jumping to
+             `MainInBattleLoop` with no player mon simply hangs — that is how
+             this was found, via a `run_headless` timeout.
+        * **RESULT: 32 divergences → 1 → PASS.** The last one was
+          `wLoadedMon level` ($0D vs $00), skipped with a written justification
+          rather than a bare mask: `faithdiff LoadEnemyMonData` reports all 8
+          pret stores matched (so the port drops nothing), and pret's only
+          battle-path writer of `wLoadedMon` is `core.asm:1904` inside
+          `DrawPlayerHUDAndHPBar` — a normal-battle routine a special battle
+          never reaches. Same reason `battle_faint` skips that buffer.
+        * **NON-VACUITY, decisive.** Reverting the generator to `0x50` padding
+          makes the scenario FAIL on exactly the predicted bytes:
+          `wPlayerName: want 'OLD MAN' | got 'OLD MAN'`
+          `(8e8b837f8c808d50 8f918e | 8e8b837f8c808d50 505050)` — the decoded
+          strings are IDENTICAL while the bytes differ, which is precisely why
+          this defect stayed invisible.
         * Registering it is: re-add the manifest entry (id 69, tier `full`,
           class `datastruct`, gate `DEBUG_BATTLE_OLDMAN`) and the
           `golden_diff.SCENARIOS` row, then `make assets` (the

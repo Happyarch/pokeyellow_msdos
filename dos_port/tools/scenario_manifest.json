@@ -2000,6 +2000,34 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "the END of a thrash \u2014 ExecutePlayerMove's .thrashingAboutCheck clearing THRASHING_ABOUT and setting CONFUSED once the rolled counter runs out. battle_wrap witnessed USING_TRAPPING_MOVE and battle_bide witnessed STORING_ENERGY; nothing had ever set THRASHING_ABOUT. Needs the REAL MainInBattleLoop, like both of those, because the block only means anything across two turns. THE ENEMY HP PIN IS 65535, NOT battle_wrap's 999, and that was measured: THRASH is power 90 against WRAP's 15, so two hits go through 999 and the thrash ends by KO instead of by the routine \u2014 a failure that reads exactly like the feature being broken. What is compared is the state transition (THRASHING_ABOUT clear + CONFUSED set + counter 0) behind a latch proving the bit was seen SET, since not-thrashing-and-not-confused is how the battle starts. wPlayerConfusedCounter is carried as a row but SKIPPED: it is a second BattleRandom roll, and pinning it would make the comparison a tautology"
+    },
+    {
+      "name": "battle_oldman",
+      "id": 69,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_OLDMAN=1",
+      "port_entry_gate": "DEBUG_BATTLE_OLDMAN",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_oldman.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "DisplayBattleMenu"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "DisplayBattleMenu.doSimulatedMenuInput -- the old-man / Prof. Oak tutorial menu, the first scenario to execute it. Compares wPlayerName, already a STANDARD region: pret copies NAME_LENGTH=11 from the 8-byte .oldManName literal, so the correct bytes are 8E 8B 83 7F 8C 80 8D 50 8F 91 8E -- \"OLD MAN\" @ plus the adjacent \"PRO\" of .profOakName -- and a port padding with 0x50 differs in exactly the last three (the defect fixed in dbe6e797b). THE STAGING IS THE POINT: a special battle NEVER sends out the player's mon (pret StartBattle core.asm:171) and never enters MainInBattleLoop (it loops on DisplayBattleMenu, core.asm:176), so wBattleMon stays ZERO throughout on both sides. The harness sets wBattleType before the send-out decision rather than in the gate body, which is what makes the two sides agree"
     }
   ],
   "disabled_scenarios": []

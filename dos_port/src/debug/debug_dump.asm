@@ -2222,6 +2222,27 @@ RunBattleTest:
     ; LoadBattleMonFromParty; its back pic
     ; replaces Red's. Mirrors _InitBattleCommon's scan outcome + the
     ; pret StartBattle EXP/fought flag sets. ---
+%ifdef DEBUG_BATTLE_OLDMAN
+    ; SET BEFORE THE SEND-OUT DECISION, not in the gate body further down —
+    ; that is the whole point. A gate that sets wBattleType in its own block
+    ; runs AFTER this staging has already sent the player's mon out, which is
+    ; what left battle_oldman 32 fields adrift from hardware (199192742).
+    mov byte [ebp + wBattleType], BATTLE_TYPE_OLD_MAN
+%endif
+    ; pret StartBattle .specialBattle (engine/battle/core.asm:171-174):
+    ;     ld a, [wBattleType] / and a / jp z, .playerSendOutFirstMon
+    ; ONLY a normal battle sends out the player's mon. Safari, old man, Pikachu
+    ; and run all skip straight to DisplayBattleMenu, so wBattleMon stays ZERO
+    ; for the whole battle — measured on hardware, where the old-man tutorial
+    ; runs to its catch text with wBattleMon never set.
+    ;
+    ; This harness previously sent out unconditionally, so it could stage a
+    ; NORMAL battle only. That is why no wBattleType != 0 scenario could align:
+    ; the port arrived at the menu with a loaded mon that the ROM never loads.
+    ; The production path is faithful (init_battle.asm:391 branches to
+    ; .specialBattleIntro); it was only this staging that was not.
+    cmp byte [ebp + wBattleType], 0
+    jne .skipPlayerSendOut
     call HideBattlePokeballs
 %ifdef DEBUG_BATTLE_DAMAGE
     mov byte [ebp + wWhichPokemon], 3
@@ -2254,6 +2275,7 @@ RunBattleTest:
     ; witness the send-out, and the OBJ pal4-7 divergence survived a SendOutMon
     ; restoration that changed nothing (battle_completion 1f/1g).
     call SendOutMon
+.skipPlayerSendOut:
 %ifdef DEBUG_BATTLE_SWITCH
     ; --- voluntary in-battle SWITCH (battle plan 2a) ---
     ; The first gate that drives PKMN -> party menu -> SWITCH, so
@@ -2794,16 +2816,47 @@ RunBattleTest:
     ; why the enemy is pinned inert below exactly as battle_wrap/bide/thrash pin
     ; theirs.
     ; ------------------------------------------------------------------
+    ; pret StartBattle .specialBattle opens with `call LoadScreenTilesFromBuffer1`
+    ; (core.asm:172) and then goes STRAIGHT to the menu — it draws NO HUDs,
+    ; because for wBattleType != 0 there is no player mon on screen to draw one
+    ; for. DrawHUDsAndHPBars was called here in the first revision of this gate,
+    ; copied from the normal-battle gates, and it is wrong for this battle type.
     call LoadScreenTilesFromBuffer1
-    call DrawHUDsAndHPBars
     ; The enemy must not act: an enemy turn puts a damage ROLL into wBattleMon,
     ; which is compared, and the two emulators do not share an RNG stream.
     ; 65535 HP + a seeded sleep counter is battle_thrash's pin, same reason.
     mov word [ebp + wEnemyMonHP], 0xFFFF
     mov word [ebp + wEnemyMonMaxHP], 0xFFFF
     mov byte [ebp + wEnemyMonStatus], 7         ; SLP counter (7 turns)
-    mov byte [ebp + wBattleType], BATTLE_TYPE_OLD_MAN
-    jmp MainInBattleLoop                        ; the real loop; it does not return
+    ; wBattleType is NOT set here — it is set in the staging above, BEFORE the
+    ; send-out decision. Setting it here would be too late, which is exactly
+    ; the defect this gate's first revision had.
+    ;
+    ; AND IT IS NOT MainInBattleLoop, which the first revision also got wrong.
+    ; pret StartBattle falls out of the send-out check straight into
+    ; .displaySafariZoneBattleMenu (core.asm:176-181):
+    ;     .displaySafariZoneBattleMenu
+    ;         call DisplayBattleMenu
+    ;         ret c                       ; the player ran
+    ;         ld a, [wActionResultOrTookBattleTurn]
+    ;         and a
+    ;         jr z, .displaySafariZoneBattleMenu
+    ; A special battle NEVER enters MainInBattleLoop — the menu IS the loop.
+    ; Jumping to MainInBattleLoop with no player mon staged simply hung, which
+    ; is how this was found (run_headless timed out with no dump).
+.oldManMenuLoop:
+    call DisplayBattleMenu
+    jc .oldManRan
+    cmp byte [ebp + wActionResultOrTookBattleTurn], 0
+    je .oldManMenuLoop
+.oldManRan:
+    ; The dump fires from AutoKeyDrive the instant the rename is visible, which
+    ; is INSIDE DisplayBattleMenu's cursor walk, so control normally never gets
+    ; here. Reaching it means the menu completed without the rename ever
+    ; landing — a diagnosable marker rather than a silent hang.
+    mov byte [ebp + W_TILEMAP], 0xEE
+    call DelayFrame
+    call DumpBackbuffer                         ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_THRASH
     ; ------------------------------------------------------------------
     ; battle_thrash golden gate (battle plan 3a residue — the Thrash third, and
