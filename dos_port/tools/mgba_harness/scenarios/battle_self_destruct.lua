@@ -102,20 +102,30 @@ scenario.run(function()
 		"SELFDESTRUCT did not execute, or the move slot poke did not take")
 	scenario.log("self_destruct: both mons down")
 
-	-- The scenario's actual subject: RemoveFaintedPlayerMon writing the fainted
-	-- mon's 0 HP back into its PARTY slot, which only the `.sfxplayed`
-	-- player-also-fainted arm does. Nothing else in this flow touches it.
-	local written_back = false
+	-- THE ONLY OBSERVABLE WINDOW, and finding it took three attempts.
+	-- wBattleResult == 1 is written ONLY by RemoveFaintedPlayerMon, and in this
+	-- flow that call happens ONLY on FaintEnemyPokemon's player-also-fainted
+	-- arm — the line box 3c is about. FaintEnemyPokemon RE-ZEROES the byte a few
+	-- instructions later (pret core.asm:825-826), so it has to be caught while
+	-- the 1 still stands, during the text and pic-slide RemoveFaintedPlayerMon
+	-- runs. One read_range per poll keeps that to a single frame.
+	--
+	-- WHAT DOES NOT WORK, measured, so it is not retried: dumping after
+	-- FaintEnemyPokemon returns. Party slot 0's HP reaches 0 either way (written
+	-- by something other than this arm), wBattleResult is re-zeroed, and
+	-- wPartyGainExpFlags is consumed by the EXP distribution. Two earlier
+	-- versions passed their diff AND their sabotage, i.e. proved nothing.
+	local result_seen = false
 	for _ = 1, 3600 do
-		if read_be("wPartyMon1HP", 2) == 0 then
-			written_back = true
+		if read_be("wBattleResult", 1) == 1 then
+			result_seen = true
 			break
 		end
 		input.tap("A", 2, 10)
 	end
-	assert(written_back, "battle_self_destruct: party slot 0 HP never went 0 — " ..
-		"FaintEnemyPokemon did not take its player-also-fainted arm")
-	scenario.log("self_destruct: party slot 0 HP written back")
+	assert(result_seen, "battle_self_destruct: wBattleResult never read 1 — " ..
+		"RemoveFaintedPlayerMon did not run on the player-also-fainted arm")
+	scenario.log("self_destruct: wBattleResult == 1 (the arm ran)")
 
 	-- battle_faint's wLoadedMon ALIGNMENT DOES NOT TRANSFER HERE, and this is
 	-- recorded so it is not retried. battle_faint waits for

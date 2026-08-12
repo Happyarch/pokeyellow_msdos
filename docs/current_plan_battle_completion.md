@@ -1401,7 +1401,8 @@ provider shapes below, not their runtime behavior.
       `end_of_battle.asm` (its `TODO-HW` still claims `AddBCDPredef` is unlinked
       and that the move cannot set `wTotalPayDayMoney` — both are now false; fix
       the comment in the same change) using big-endian/BCD conventions.
-- [~] **3c. Battle draw and simultaneous-faint behavior.** RE-MEASURED
+- [x] **3c. Battle draw and simultaneous-faint behavior.** WITNESSED 2026-08-12
+      by `battle_self_destruct` (id 65). RE-MEASURED
       2026-08-11, and the box's premise was mostly already satisfied.
 
       "Reconstruct the Self-Destruct/Explosion result and music selection from
@@ -1427,61 +1428,42 @@ provider shapes below, not their runtime behavior.
       sensitive and the fix really is emitted at level 2. All three levels build.
       `faithdiff FaintEnemyPokemon` is unchanged by the edit.
 
-      **THE SCENARIO WAS BUILT 2026-08-12 AND IS NOT REGISTERED, because its
-      own sabotage check disproved it.** `DEBUG_BATTLE_SELFDESTRUCT=1` +
-      `tools/mgba_harness/scenarios/battle_self_destruct.lua` exist and the diff
-      PASSES (`WRAM: OK (13 regions, 0 skipped)`, no masks) — but that pass is
-      not evidence, and here is the measurement that says so.
+      **DONE 2026-08-12: `battle_self_destruct` is scenario id 65 and PASSES,
+      and its sabotage FAILS.** Registry is 63, all 63 PASS.
 
       SNORLAX L80 uses SELFDESTRUCT on the spec wild PIDGEY L13; both mons reach
-      0 HP, and hardware and the port agree on every compared byte including
-      party slot 0's HP going to 0. Deterministic by construction: `ExplodeEffect`
-      zeroes the USER's HP with no accuracy test, and a power-130 hit from L80
-      overkills 36 HP on every roll.
+      0 HP, so `FaintEnemyPokemon`'s `.sfxplayed` player-also-fainted arm runs —
+      the arm `battle_faint` (enemy only) and `battle_blackout` (player only)
+      cannot reach. Deterministic by CONSTRUCTION: `ExplodeEffect` zeroes the
+      USER's HP with no accuracy test, and a power-130 hit from L80 overkills 36
+      HP on every roll. `WRAM: OK (14 regions, 0 skipped)`, no masks, golden
+      byte-identical across two generations (md5 `5954d5aa…`).
 
-      **THEN THE SABOTAGE PASSED.** Deleting the `call RemoveFaintedPlayerMon`
-      from `FaintEnemyPokemon`'s `.sfxplayed` player-also-fainted arm — the exact
-      line this box is about — left the comparison GREEN. So whatever writes
-      party slot 0's HP to 0 in this flow, it is NOT that call, and the scenario
-      does not witness the arm. Registering it would have added a scenario that
-      looks like coverage and is not.
+      **THE DUMP INSTANT IS THE WHOLE DESIGN, AND IT TOOK THREE ATTEMPTS. The
+      first two PASSED THEIR DIFF AND THEIR SABOTAGE — i.e. proved nothing — and
+      were rejected rather than shipped.** Recorded so the pattern is
+      recognisable next time:
+      * attempt 1 dumped after `FaintEnemyPokemon` returned and compared party
+        slot 0's HP. Deleting the arm's `call RemoveFaintedPlayerMon` left the
+        diff GREEN: that HP reaches 0 either way, written by something else.
+      * attempt 2 added `wBattleResult` (`$CF0B`) as a scenario-local row, on the
+        theory that only the arm writes 1 there. Sabotage passed AGAIN. Direct
+        measurement said why: the byte reads `$00` at that instant with AND
+        without the call, on both sides.
+      * the cause, found by reading rather than guessing a third byte:
+        **`FaintEnemyPokemon` RE-ZEROES `wBattleResult` itself**, a few
+        instructions after the arm (pret core.asm:825-826, port
+        core.asm:6688). And `wPartyGainExpFlags` is no use either — it is
+        `$D057`, already inside the shared `wBattleFlags` region, and the EXP
+        distribution consumes it. **No extra compared byte could have rescued a
+        return-based dump.**
 
-      **THAT NEXT MOVE WAS TRIED AND ALSO FAILS — measured, so it is not
-      retried.** `wBattleResult` (`$CF0B`) is in no shared region, and
-      `RemoveFaintedPlayerMon` sets it to 1 (loss) over `FaintEnemyPokemon`'s 0
-      (win), so it looked like the discriminator. A scenario-local `gbregion`
-      for it was added on both sides (14 regions, still 0 skipped, still PASS)
-      and **the same sabotage passed again**. Direct measurement of the byte
-      says why: `wBattleResult` reads `$00` at this dump instant **with and
-      without** the call — clean port `00`, sabotaged port `00`, and the golden
-      agrees with both.
+      *The window that does exist* is inside `RemoveFaintedPlayerMon`: it sets
+      `wBattleResult = 1` and then PRINTS TEXT and slides the fainted pic, which
+      spans frames. Both sides now dump state-gated on `wBattleResult == 1` with
+      both HP words 0. With the arm deleted that value never appears, so the run
+      produces no dump at all — which is exactly what the sabotage now reports.
 
-      So at this dump point the arm leaves NO distinguishable trace in anything
-      compared: party slot 0's HP goes to 0 either way, and `wBattleResult` is 0
-      either way. **The scenario as constructed cannot witness 3c by adding more
-      bytes** — the dump instant itself is wrong.
-
-      **WHAT IS ACTUALLY NEEDED:** a dump point at which the arm's effect is
-      still observable, i.e. before whatever re-zeroes `wBattleResult` after
-      `RemoveFaintedPlayerMon` sets it. Find that writer first (read
-      `RemoveFaintedPlayerMon`'s tail and everything `HandleEnemyMonFainted`
-      calls after `FaintEnemyPokemon`), THEN choose the landmark, THEN re-run
-      the sabotage and require it to FAIL. The gate, the golden script and the
-      `wBattleResult` region all remain in the tree for that work; only the
-      manifest and differ rows are withheld.
-
-      Also learned and worth keeping: `battle_faint`'s wLoadedMon alignment
-      (wait for `wLoadedMonLevel == 80`) does NOT transfer to a mutual faint. The
-      player's mon is also down, so the GB continues into
-      `HandlePlayerMonFainted` and the next-mon dialogue instead of redrawing the
-      player's HUD; that poll spins to the 36000-frame cap. The dump lands on the
-      write-back instead.
-
-      STILL OWED, which is why this is `[~]`: the must-hit scenario for the
-      mutual-faint terminal state — with a landmark that its own sabotage can
-      break. Same bottleneck as 3a/3b — see stigmergy
-      `battle-stage3-blocked-on-mechanics-scenarios`. The remaining trainer-faint
-      SFX at `.sfxplayed` is a `TODO-HW` audio item (Phase 3), not this box.
 - [ ] **3c (original entry).** Reconstruct the
       Self-Destruct/Explosion result and music selection from pret, then add a
       must-hit scenario for the mutual-faint terminal state.

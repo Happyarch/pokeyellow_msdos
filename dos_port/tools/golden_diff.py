@@ -898,6 +898,27 @@ SCENARIOS = {
         },
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_self_destruct": {
+        # datastruct: the MUTUAL FAINT — FaintEnemyPokemon's .sfxplayed
+        # player-also-fainted arm, which battle_faint (enemy only) and
+        # battle_blackout (player only) cannot reach.
+        #
+        # THE DUMP INSTANT IS THE WHOLE DESIGN. Both sides dump in the only
+        # observable window: wBattleResult == 1 with both HP words 0. Only
+        # RemoveFaintedPlayerMon writes that 1, and in this flow it runs only on
+        # that arm — and FaintEnemyPokemon RE-ZEROES it a few instructions later
+        # (pret core.asm:825-826), so it is caught per frame during the text and
+        # pic-slide. Two earlier versions dumped after FaintEnemyPokemon
+        # returned; both passed their diff AND their sabotage, i.e. proved
+        # nothing. Do not move this dump point.
+        #
+        # Deterministic by construction: ExplodeEffect zeroes the USER's HP with
+        # no accuracy test, and SELFDESTRUCT's power-130 hit from L80 overkills
+        # PIDGEY's 36 HP on every roll, so both HP words end at 0 for every roll.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_SELFDESTRUCT=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "trainer_battle_init": {
         # The two sides reach the same InitBattleCommon checkpoint through
         # different outer presentation paths. The scenario-local trainerInit

@@ -677,6 +677,38 @@
       "verification": "the ONLY scenario in which CheckNumAttacksLeft clears a SET bit. Its two call sites are both in MainInBattleLoop's turn tail and neither is reachable from ExecutePlayerMove, so this is the first harness on either side that lets the real MainInBattleLoop run turns. SNORLAX L80 wraps the spec wild PIDGEY L13; the scenario-local rows wPlyStatus1 and wPlyAtksLeft pin the release. Three pins, each measured: enemy HP 999 because a KO takes `jp z, HandleEnemyMonFainted` and skips the turn tail entirely; enemy asleep because its damage to SNORLAX is a roll and wBattleMon is compared; and the trapping counter forced to 1 because TrappingEffect rolls it 2-5 and the emulators do not share an RNG stream"
     },
     {
+      "name": "battle_self_destruct",
+      "id": 65,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_SELFDESTRUCT=1",
+      "port_entry_gate": "DEBUG_BATTLE_SELFDESTRUCT",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_self_destruct.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "ExecutePlayerMove",
+        "ExplodeEffect",
+        "HandleEnemyMonFainted",
+        "FaintEnemyPokemon",
+        "RemoveFaintedPlayerMon"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the MUTUAL FAINT: FaintEnemyPokemon's .sfxplayed player-also-fainted arm, which battle_faint (enemy only) and battle_blackout (player only) cannot reach. THE DUMP INSTANT IS THE WHOLE DESIGN and took three attempts. Both sides dump in the ONLY observable window: wBattleResult == 1 with both HP words 0. That byte is written ONLY by RemoveFaintedPlayerMon, which in this flow runs ONLY on that arm, and FaintEnemyPokemon RE-ZEROES it a few instructions later (pret core.asm:825-826), so it is caught per frame during the text and pic-slide. Two earlier versions dumped after FaintEnemyPokemon returned; both passed their diff AND their sabotage, i.e. proved nothing -- party slot 0's HP reaches 0 either way, wBattleResult is re-zeroed, and wPartyGainExpFlags is consumed by the EXP distribution. Deterministic by construction: ExplodeEffect zeroes the USER's HP with no accuracy test and a power-130 hit from L80 overkills 36 HP on every roll"
+    },
+    {
       "name": "battle_damage",
       "id": 43,
       "tier": "full",

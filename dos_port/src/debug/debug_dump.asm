@@ -2635,8 +2635,21 @@ RunBattleTest:
     mov al, [ebp + wBattleMonHP]
     or al, [ebp + wBattleMonHP + 1]
     jnz .selfDestructAlive
+    ; The dump is STATE-GATED (see the DEBUG_BATTLE_SELFDESTRUCT block in
+    ; AutoKeyDrive), not taken after this call returns. MEASURED, twice: by the
+    ; time FaintEnemyPokemon returns, EVERY trace of the mutual-faint arm has
+    ; been overwritten or consumed — FaintEnemyPokemon itself re-zeroes
+    ; wBattleResult a few instructions later (pret core.asm:825-826, port
+    ; core.asm:6688), the party HP is written by something else anyway, and
+    ; wPartyGainExpFlags is consumed by the EXP distribution. Two scenarios
+    ; built on a return-based dump passed their diff AND their sabotage, i.e.
+    ; proved nothing. The window that does exist is inside
+    ; RemoveFaintedPlayerMon: it sets wBattleResult = 1 and then PRINTS TEXT and
+    ; slides the fainted pic, which spans frames.
     call HandleEnemyMonFainted          ; FaintEnemyPokemon -> the .sfxplayed arm
-    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+.selfDestructHang:
+    call DelayFrame
+    jmp .selfDestructHang
 .selfDestructAlive:
     mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
@@ -4360,6 +4373,25 @@ AutoKeyDrive:
     jne .noBattleDump
     call DumpBackbuffer                 ; FRAME.BIN, then exits
 .noBattleDump:
+%endif
+%ifdef DEBUG_BATTLE_SELFDESTRUCT
+    ; --- battle_self_destruct's dump: the ONLY observable window (plan 3c) ---
+    ; wBattleResult == 1 is written ONLY by RemoveFaintedPlayerMon, and in this
+    ; flow that call happens ONLY on FaintEnemyPokemon's player-also-fainted
+    ; arm — the line box 3c is about. FaintEnemyPokemon re-zeroes the byte a few
+    ; instructions later, so this must be caught per frame, during the text and
+    ; pic-slide that RemoveFaintedPlayerMon runs while the 1 is still standing.
+    ; Both HP words are required too, so this cannot fire on an ordinary loss.
+    cmp byte [ebp + wBattleResult], 1
+    jne .noBoomDump
+    mov al, [ebp + wBattleMonHP]
+    or al, [ebp + wBattleMonHP + 1]
+    jnz .noBoomDump
+    mov al, [ebp + wEnemyMonHP]
+    or al, [ebp + wEnemyMonHP + 1]
+    jnz .noBoomDump
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN, then exits
+.noBoomDump:
 %endif
 %ifdef DEBUG_BATTLE_WRAP
     ; --- battle_wrap: the RNG pin, a latch, and the dump (battle plan 3a) ---
