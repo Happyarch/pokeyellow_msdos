@@ -1786,16 +1786,22 @@ provider shapes below, not their runtime behavior.
          `move_selection` and `trainer_battle_route` photograph, so it will need
          golden regeneration and a `fidelity-full`, not just a core tier.
 
-- [ ] **4c. Ghost Marowak (original folding note).** FOLDED IN 2026-08-11 from the archived animations
-      plan (maintainer instruction), which had it as an optional tail explicitly
-      deferred to this box: port `MarowakAnim` + `CopyMonPicFromBGToSpriteVRAM`
-      (`engine/battle/ghost_marowak_anim.asm`). Measured today: `MarowakAnim` is
-      `missing`, `IsGhostBattle` is `translated`. That plan declined to land it
-      unilaterally because reachability is owned here, so it lands with 4c.
-- [ ] **4c (original entry).** Starting from the linked `IsGhostBattle`, implement
-      ghost initialization/identity, unidentified-ghost move refusal, escape
-      rules, and the item-owned Poké Doll result consumer. Pokémon Tower/Silph
-      Scope event reachability remains overworld-owned.
+- [x] **4c (original folding note) — SUPERSEDED 2026-08-12, not open work.**
+      It asked for `MarowakAnim` + `CopyMonPicFromBGToSpriteVRAM` to be folded
+      in from the archived animations plan. Both were translated into the mirror
+      `dos_port/src/engine/battle/ghost_marowak_anim.asm` on 2026-08-12
+      (`83d8cf1c1`), which is the "ANIMATION HALF DONE" half of the consolidated
+      4c box above. Nothing here is outstanding; ticked so it stops reading as a
+      third open 4c.
+- [x] **4c (original entry) — SUPERSEDED 2026-08-12, not open work.** Its scope
+      (ghost initialization/identity, unidentified-ghost move refusal, escape
+      rules, the item-owned Poké Doll consumer, and the note that Pokémon
+      Tower/Silph Scope reachability stays overworld-owned) is enumerated in
+      full, with per-item measurement, inside the consolidated 4c box above —
+      including the two findings that entry predates: the refusal's CATCH half
+      is already wired, and `ItemUsePokeDoll` already MATCHES pret. **The
+      remaining 4c work, and its recorded blocker chain, live in that box; track
+      it there and nowhere else.** Ticked as a duplicate, NOT as completed work.
 - [ ] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
       divergence using the already-translated item-owned `ItemUseBait`,
       `ItemUseRock`, and `ItemUseBall` effects. Safari maps, steps, and story
