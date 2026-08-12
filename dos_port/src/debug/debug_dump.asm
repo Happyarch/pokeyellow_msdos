@@ -893,6 +893,16 @@ gbstate_regions:
     ; the enclosing block IS the tight span.
     gbregion "wBoxData",      wBoxDataStart, wBoxDataEnd - wBoxDataStart
 %endif
+%ifdef DEBUG_BATTLE_SELFDESTRUCT
+    ; --- scenario-local row for the mutual faint (battle plan 3c) ---
+    ; wBattleResult ($CF0B) is in NO shared region, and THAT is why the first
+    ; version of this scenario was not a witness: deleting the
+    ; RemoveFaintedPlayerMon call from FaintEnemyPokemon's player-also-fainted
+    ; arm left every compared byte unchanged and the diff stayed green.
+    ; That call is what writes result = 1 (loss) over FaintEnemyPokemon's 0
+    ; (win), so this row is the byte the sabotage has to be able to move.
+    gbregion "wBattleResult", wBattleResult, 1
+%endif
 %ifdef DEBUG_BATTLE_WRAP
     ; --- scenario-local rows for the trapping counter (battle plan 3a) ---
     ; Neither byte is in any shared region: wBattleFlags covers only

@@ -1446,13 +1446,29 @@ provider shapes below, not their runtime behavior.
       does not witness the arm. Registering it would have added a scenario that
       looks like coverage and is not.
 
-      **WHAT THE NEXT PASS NEEDS:** a compared byte that ONLY the mutual-faint
-      arm writes. `RemoveFaintedPlayerMon` also clears the fainted mon's
-      `wPartyGainExpFlags` bit and sets `wBattleResult`; neither is in a compared
-      region today (`wBattleFlags` covers only `wIsInBattle..wBattleType`,
-      `$D057-$D05A`), so a scenario-local `gbregion` for one of them is the
-      obvious next move — then re-run the same sabotage and require it to FAIL
-      before registering anything.
+      **THAT NEXT MOVE WAS TRIED AND ALSO FAILS — measured, so it is not
+      retried.** `wBattleResult` (`$CF0B`) is in no shared region, and
+      `RemoveFaintedPlayerMon` sets it to 1 (loss) over `FaintEnemyPokemon`'s 0
+      (win), so it looked like the discriminator. A scenario-local `gbregion`
+      for it was added on both sides (14 regions, still 0 skipped, still PASS)
+      and **the same sabotage passed again**. Direct measurement of the byte
+      says why: `wBattleResult` reads `$00` at this dump instant **with and
+      without** the call — clean port `00`, sabotaged port `00`, and the golden
+      agrees with both.
+
+      So at this dump point the arm leaves NO distinguishable trace in anything
+      compared: party slot 0's HP goes to 0 either way, and `wBattleResult` is 0
+      either way. **The scenario as constructed cannot witness 3c by adding more
+      bytes** — the dump instant itself is wrong.
+
+      **WHAT IS ACTUALLY NEEDED:** a dump point at which the arm's effect is
+      still observable, i.e. before whatever re-zeroes `wBattleResult` after
+      `RemoveFaintedPlayerMon` sets it. Find that writer first (read
+      `RemoveFaintedPlayerMon`'s tail and everything `HandleEnemyMonFainted`
+      calls after `FaintEnemyPokemon`), THEN choose the landmark, THEN re-run
+      the sabotage and require it to FAIL. The gate, the golden script and the
+      `wBattleResult` region all remain in the tree for that work; only the
+      manifest and differ rows are withheld.
 
       Also learned and worth keeping: `battle_faint`'s wLoadedMon alignment
       (wait for `wLoadedMonLevel == 80`) does NOT transfer to a mutual faint. The

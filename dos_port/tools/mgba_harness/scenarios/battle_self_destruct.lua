@@ -51,6 +51,16 @@ navigate.init(sym, text)
 
 local SELFDESTRUCT = 0x78     -- constants/move_constants.asm
 
+-- The SCENARIO-LOCAL row, mirrored BY NAME from the %ifdef
+-- DEBUG_BATTLE_SELFDESTRUCT gbregion in dos_port/src/debug/debug_dump.asm.
+-- wBattleResult ($CF0B) is in no shared region, and its absence is exactly why
+-- the first version of this scenario was not a witness — see the header.
+local function regions(s)
+	local r = dump.standard_regions(s)
+	r[#r + 1] = { name = "wBattleResult", addr = s:addr("wBattleResult"), size = 1 }
+	return r
+end
+
 local function read_be(label, size)
 	local raw = scenario.read_range(sym:addr(label), size)
 	local v = 0
@@ -118,7 +128,7 @@ scenario.run(function()
 	-- itself, which is what this scenario is about.
 
 	scenario.exec(function()
-		dump.write("battle_self_destruct", dump.standard_regions(sym), {
+		dump.write("battle_self_destruct", regions(sym), {
 			frame = scenario.frame(),
 			description = "SNORLAX L80 used SELFDESTRUCT on the spec wild PIDGEY " ..
 				"L13 and BOTH mons fainted in the same turn, so FaintEnemyPokemon " ..
