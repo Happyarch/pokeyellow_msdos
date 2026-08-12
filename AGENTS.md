@@ -363,6 +363,44 @@ gate and the status you read.** Both `make fidelity | tail -40` and
 failing gate reads as a pass. Redirect to a file, record `$?` to a file, read that
 file. Full detail → skill **`build-and-debug`**.
 
+### The fidelity gates are PARALLEL — do not budget serial time for them
+
+**`make -C dos_port fidelity` (core) and `fidelity-full` both run in parallel via
+`tools/pgate.sh`, as of 2026-08-12 (`8742e04c8`).** Measured on the 96-thread
+host: **core 16 scenarios ≈ 30 s; full 66 scenarios 378 s** (the full tier was
+~1750 s serial — a ~4.6× cut). Do not quote the old "core ~2m50s / full ~4m45s"
+or "fidelity-full is ~15 min" figures: they date from a 17-scenario battery, the
+registry is 66, and repeating them causes agents to skip the full tier or idle
+waiting for it. Re-measure rather than trusting this line.
+
+- `fidelity-serial` / `fidelity-full-serial` keep the old one-at-a-time loops.
+  **DO NOT USE THEM UNLESS THE MAINTAINER EXPLICITLY ASKS** (maintainer
+  directive, 2026-08-12). They exist as a fallback for slower machines — the
+  maintainer's laptop, where the parallel fan-out is not worth it — and as the
+  reference semantics/arbiter if the two tiers ever disagree. Reaching for them
+  by default is how the loop got slow in the first place.
+- `pgate.sh` gives each scenario its own tmpfs shadow copy, so the shared
+  `PKMN.EXE`/`PKMN.IMG` contention that forced a serial loop does not apply.
+  Concurrency is bounded (`nproc/6`, clamped to [4,24], `PGATE_JOBS` overrides)
+  because oversubscription is the one way parallelism can change a result — by
+  pushing a run into `goldencheck`'s `timeout -s KILL`.
+- **`pgate.sh` exits non-zero on any gap** and names every scenario that never
+  reported. Do not judge a run by PASS/FAIL counts: a scenario that never ran
+  emits neither, which is exactly how a `fidelity-full` once read "61 PASS /
+  0 FAIL" while failing.
+
+**A suite run holds a WRITE LOCK on the source tree in spirit — do not edit
+sources while one is running.** The serial tier rebuilds from the live worktree
+per scenario, so an edit mid-run assembles a torn state and voids the whole run
+(measured 2026-08-12). `pgate` is safer — it rsyncs a base copy up front — but
+wait for staging to finish regardless.
+
+**Never poll for completion with `pgrep -f "make fidelity…"`.** The pattern
+matches the polling shell's OWN command line, so it never terminates *and*,
+used as a status check, always reports "still running". Wait on the status FILE
+the command writes, or use the harness's background completion notification.
+Two such shells span 37 min and ~2 h before being caught.
+
 ### Preserve pret Labels
 
 **Keep the pret label names — do not rename or invent.** Every translated

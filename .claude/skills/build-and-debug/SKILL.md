@@ -436,22 +436,66 @@ tools/golden_diff.py status_p1 --gbstate PATH     # diff a dump you extracted yo
 tools/mgba_harness/inspect_golden.py tests/goldens/status_p1.json  # eyeball a golden
 ```
 
-### Parallel golden gate — `tools/pgate.sh` (4.6x faster, same results)
+### Parallel golden gate — `tools/pgate.sh`, and BOTH tiers now use it
 
-`make goldencheck` is serial: 17 scenarios take ~20 min because each one boots
-DOSBox for ~60-250 s. `dos_port/tools/pgate.sh` runs them SIMULTANEOUSLY against
-per-scenario tmpfs shadow copies, so wall clock becomes **the slowest single
-scenario** instead of the sum. Measured 2026-08-08 on a 96-thread host: the
-17-scenario battery went **~20 min -> 261 s, 17/17, byte-identical verdicts**.
+**`make fidelity` and `make fidelity-full` ARE the parallel gate as of
+2026-08-12 (`8742e04c8`). You do not need to invoke `pgate.sh` by hand.**
+
+That wiring is the whole point of this section: `pgate.sh` was added 2026-08-08
+(`c27b3720e`) but was never referenced by the Makefile — `git log -S pgate --
+Makefile` was empty for four days — so the documented gate commands stayed
+serial while the parallel runner sat unused beside them. Agents budgeted ~30 min
+for a full run, or skipped it.
+
+Measured on the 96-thread host, same tree, same scenarios:
+
+| tier | scenarios | serial | parallel |
+|------|-----------|--------|----------|
+| core | 16 | (not re-timed) | **30 s** |
+| full | 66 | **~1750 s** | **378 s** (~4.6x) |
+
+**Do not quote the old figures** — "core ~2m50s / full ~4m45s" and
+"fidelity-full is ~15 min" both date from the 17-scenario battery era; the
+registry is 66. Re-measure.
+
+**`fidelity-serial` / `fidelity-full-serial` keep the one-at-a-time loops, and
+you must NOT use them unless the maintainer explicitly asks** (directive,
+2026-08-12). They are a fallback for slower machines (the maintainer's laptop)
+and the reference semantics/arbiter if the two tiers ever disagree.
+
+Two properties worth knowing:
+* **It exits non-zero on any gap** and names each scenario that never reported.
+  Judge a run by that, never by PASS/FAIL counts — a scenario that never ran
+  emits neither, which is how a `fidelity-full` once read "61 PASS / 0 FAIL"
+  while failing.
+* **Concurrency is bounded** (`nproc/6`, clamped [4,24], `PGATE_JOBS` overrides).
+  Oversubscription is the one way parallelism can change a verdict: it pushes a
+  run into `goldencheck`'s `timeout -s KILL`. Do not remove the cap.
+
+⚠ **Do not edit sources while any suite is running.** The serial tier rebuilds
+from the live worktree per scenario, so a mid-run edit assembles a torn state
+and voids the whole run (measured 2026-08-12: five scenarios silently never
+ran). `pgate` rsyncs a base copy up front and is safer, but still wait for
+staging.
+
+⚠ **Never poll with `pgrep -f "make fidelity…"`** — it matches the polling
+shell's own command line, so it never terminates and, as a status check, always
+says "still running". Wait on the status FILE the command writes.
+
+Direct use is still available for a subset:
 
 ```sh
-tools/pgate.sh /tmp/out                      # the 17-scenario battery (default)
+make -C dos_port fidelity                    # core tier, parallel (preferred)
+make -C dos_port fidelity-full               # full registry, parallel (preferred)
+tools/pgate.sh /tmp/out                      # no scenario args -> the FULL registry
 tools/pgate.sh /tmp/out battle_menu party_menu   # explicit subset
 cat /tmp/out/results.txt                     # "<scenario> EXIT=0" per line + timings
 ```
 
 Why it is safe: `goldencheck.sh` has no external path dependencies (no `../`, no
-absolute paths, no pret-golden reference), all 57 goldens are committed in-repo,
+absolute paths, no pret-golden reference), every golden is committed in-repo
+(this line said "all 57"; the registry is 66 at 2026-08-12 — count it, do not
+quote it: `python3 tools/generators/gen_scenario_registry.py --names full | wc -w`),
 and it invokes plain `dosbox-x` from PATH rather than the `tools/dosbox-x-mcp`
 fork — so a copy is self-contained. DOSBox at `cycles=fixed` emulates time rather
 than racing wall clock, so parallelism cannot change results; the only hazard is
