@@ -159,7 +159,37 @@ state-driven dump lands inside a whiteout phase that the port's fixed-frame dump
 misses. Note the port gate is FIXED-FRAME while the golden is STATE-DRIVEN,
 which makes (b) entirely plausible.
 
-**DISCRIMINATING EXPERIMENT (do this, do not guess):** run the port gate at
+**EXPERIMENT RUN 2026-08-11 — result is UNDER-POWERED, read the limitation.**
+Ran the port gate at six dump frames (760/820/860/900/940/1000) via
+`run_headless.sh` and decoded `cgb_palettes` from each `GBSTATE.BIN`:
+
+    frame  760..1000: white 36/64 at EVERY sample, BG0 = 7FFF 03FF 043F 0C63
+                      — byte-identical across all six, never all-white
+
+So the port is completely static across those 240 frames and never reaches
+hardware's 64/64 white. **That does NOT establish hypothesis (a).**
+`GBPalWhiteOutWithDelay3` is a whiteout followed by `Delay3` — the white window
+is roughly THREE FRAMES — and sampling every 60 frames cannot detect a 3-frame
+transient. The null result is what an under-powered probe returns either way.
+
+What the same session DID settle:
+- `faithdiff StartMenu_Item` is `22 pret / 24 port (21 matched)` with NO
+  `GBPalWhiteOut` or `LoadGBPal` line in the diff, i.e. those calls are present
+  and MATCHED against pret. The port is not missing the whiteout.
+- Both trees have `GBPalWhiteOutWithDelay3` callers throughout
+  `start_sub_menus.asm`.
+
+That makes **(b) the leading hypothesis**: the golden's state-driven dump lands
+inside a ~3-frame whiteout that the port passes through at a different moment.
+It is not proven, and this probe cannot prove it.
+
+**PROPERLY-POWERED EXPERIMENT, still to do:** a PER-FRAME port-side sampler (the
+port equivalent of `battle_palette_trace.lua`'s `callbacks:add("frame")`
+timeline), or a golden-side trace over the item flow to measure how many frames
+hardware actually stays white. Sampling must be per-frame; anything coarser
+cannot see the event.
+
+(Superseded plan for the original experiment, kept for the reasoning:) run the port gate at
 several dump frames —
 `tools/run_headless.sh "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=N"` for N around
 860/900/940/1000 — and decode `cgb_palettes` out of each `GBSTATE.BIN`. If the
