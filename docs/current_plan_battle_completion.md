@@ -1667,16 +1667,41 @@ provider shapes below, not their runtime behavior.
 
       **WHAT IS ACTUALLY LEFT IS TWO WIRE-UPS**, named with their pret line
       ranges so the next attempt does not re-survey:
-      1. **Ghost IDENTITY at battle init.** pret `engine/battle/init_battle.asm`
-         (~:76-90) sets `wEnemyMonNick` to "GHOST", pushes `wCurPartySpecies`,
-         substitutes `MON_GHOST`, loads the ghost front sprite, then restores
-         the species. The port has **no `MON_GHOST` reference in
-         init_battle.asm at all** — grep is empty. **TRAP:** pret writes the
-         name with `ld_hli_a_string "GHOST@"`, and this project's hard rule is
-         that any human-rendered string is Tier-1 DATA emitted by a generator
-         into `assets/*.inc`. Hand-encoding charmap bytes in a `.asm` is the
-         most-repeated violation here, so this needs a generator entry, not an
-         inline string.
+      1. **Ghost IDENTITY at battle init — BLOCKED 2026-08-12 on a MISSING
+         ASSET, not on battle code.** pret `engine/battle/init_battle.asm`
+         (~:76-90) hand-writes the mon header (`wMonHSpriteDim` = `$66`, front-pic
+         pointer = `GhostPic`), sets `wEnemyMonNick` to "GHOST", substitutes
+         `MON_GHOST` into `wCurPartySpecies`, calls `LoadMonFrontSprite`, then
+         restores the species. Two things make that untranslatable as written:
+         * **`GhostPic` DOES NOT EXIST IN THE PORT.** `GetMonHeader`'s `.ghost`
+           path is already there and sets the dimensions correctly
+           (`src/home/pokemon.asm:148-160`), but writes `wMonHFrontSprite = 0`
+           under a `TODO-HW` verified 2026-07-13: *"none of the three exists in
+           the port — no symbol in pkmn.sym, no data blob, no generator emits
+           them — so there is nothing to point at."* The same gap covers
+           `FossilKabutopsPic` and `FossilAerodactylPic`, so this is a shared
+           asset-generation item, not a battle one.
+           (Beware a grep for `GhostPic` reporting "present" — it matches that
+           TODO comment. There is no data.)
+         * **The port's front-pic loader is INDEX-driven, pret's ghost path is
+           HEADER-driven.** `LoadMonFrontSprite`'s contract is `EAX = dex-1
+           (0..150)` and its own header records that pret "reads the front-pic
+           ROM pointer out of the loaded mon header" while the port does not;
+           `LoadFrontSpriteByMonIndex` goes `wCurPartySpecies` ->
+           `IndexToPokedex` -> `MonFrontPics[dex-1]`. `MON_GHOST` (`$B8`) has no
+           dex number, so it would hit the Rhydon invalid-dex trap. Loading a
+           non-dex pic needs a pointer-taking path that does not exist yet.
+         So this item is owed an ASSET (a generator emitting the three special
+         pics) plus a loader entry point that accepts an explicit pic pointer.
+         Both are outside the battle plan's scope and neither should be
+         improvised here.
+         **The string half IS ready and is not the blocker:** "GHOST" belongs in
+         `tools/generators/gen_runtime_strings.py` under
+         `battle_intro_runtime_strings.inc` (which `init_battle.asm` already
+         `%include`s and the Makefile already depends on), as
+         `("ghost_nick", ["GHOST", [0x50]])` — the same shape as `intro_line1`.
+         Hand-encoding charmap bytes in a `.asm` is this project's
+         most-repeated violation, so it must go through the generator.
       2. **The unveil sequence — what makes `MarowakAnim` REACHABLE.** pret
          `engine/battle/common_text.asm` (~:70-76) runs `UnveiledGhostText` ->
          `LoadEnemyMonData` -> `callfar MarowakAnim` -> `WildMonAppearedText`.
