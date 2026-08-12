@@ -768,6 +768,24 @@ SCENARIOS = {
             ],
         }),
     },
+    "battle_switch": {
+        # datastruct: the WRAM outcome of a VOLUNTARY SWITCH driven through the
+        # real battle menu — PKMN (RIGHT then A), party slot 1, SWITCH. The
+        # first scenario in the suite that presses PKMN at all, so
+        # PartyMenuOrRockOrRun / SwitchPlayerMon / RetreatMon /
+        # AnimateRetreatingPlayerMon execute here and nowhere else.
+        #
+        # RNG-independent BY CONSTRUCTION, not by matchup: nothing in the
+        # compared flow rolls. No move is selected, no damage is dealt, no
+        # accuracy is checked — a switch is a turn spent, and both sides dump at
+        # SwitchPlayerMon's closing wCurrentMenuItem = 2 store, before
+        # SelectEnemyMove runs. What is compared is the switch's result:
+        # wBattleMon now holds PERSIAN L80 (party slot 1) fully sent out, the
+        # party is otherwise untouched, and the withdrawn SNORLAX is unchanged.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_SWITCH=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "trainer_battle_init": {
         # The two sides reach the same InitBattleCommon checkpoint through
         # different outer presentation paths. The scenario-local trainerInit

@@ -207,7 +207,7 @@ extern DrawBattleMenuBox         ; battle_menu.asm
 extern ExecutePlayerMove         ; core.asm — the real player-turn/damage pipeline
 extern HandleEnemyMonFainted     ; core.asm — faint + EXP chain (FaintEnemyPokemon, GainExperience)
 %endif
-%ifdef DEBUG_BATTLE_SWITCH
+%ifdef BATTLE_SWITCH_WINDOW_PROBE
 extern g_window_count                ; src/ppu/ppu.asm — window descriptor count
 extern g_windows                     ; src/ppu/ppu.asm — descriptor array
 %endif
@@ -875,10 +875,13 @@ gbstate_regions:
     ; the enclosing block IS the tight span.
     gbregion "wBoxData",      wBoxDataStart, wBoxDataEnd - wBoxDataStart
 %endif
-%ifdef DEBUG_BATTLE_SWITCH
+%ifdef BATTLE_SWITCH_WINDOW_PROBE
     ; --- window-layer diagnosis for the post-switch render defect ---
-    ; DIAGNOSIS ONLY; this gate is a viewer, not a golden, so these rows cost
-    ; nothing. regression-battle-switch-screen-stuck-on-party-menu narrowed the
+    ; HARNESS-DIAGNOSIS PROBE, NOT part of the golden — the BILLSPC_MENU_PROBE
+    ; precedent below. Build with BATTLE_SWITCH_WINDOW_PROBE=1; a scenario run
+    ; must never enable it, because the differ joins regions by NAME and the
+    ; golden side has no counterpart for port-only memory.
+    ; regression-battle-switch-screen-stuck-on-party-menu narrowed the
     ; symptom to the composite alone — WRAM and W_TILEMAP are both correct after
     ; the switch, yet the frame shows a stale PARTIAL party panel — and the next
     ; question is what the window layer actually holds. hide_window (count=0,
@@ -2194,10 +2197,28 @@ RunBattleTest:
     ; cursor ON THE ACTIVE MON. Selecting it would print AlreadyOutText and
     ; bounce back, which is why the script presses DOWN first — see the
     ; AUTOKEY_BATTLE_SWITCH cadence note.
+    ;
+    ; DUMP POINT (battle plan Stage 2 scenario box, 2026-08-12): the instant
+    ; DisplayBattleMenu RETURNS. On the switch path its last callee is
+    ; SwitchPlayerMon, whose tail is LoadBattleMonFromParty -> SendOutMon ->
+    ; SaveScreenTilesToBuffer1 -> wCurrentMenuItem = 2 (core.asm:2525-2551).
+    ; So this instant is exactly "the new mon is fully out and the menu has
+    ; reported a taken turn", and the golden polls that same wCurrentMenuItem
+    ; store — see tools/mgba_harness/scenarios/battle_switch.lua.
     call DisplayBattleMenu
-.goldenswitchhang:
+    ; The switch must have HAPPENED. must_hit proves the harness reached these
+    ; symbols, not that the flow took the branch, so assert the outcome: the
+    ; scene sent out slot 0 and the script picks slot 1.
+    mov al, [ebp + wPlayerMonNumber]
+    cmp al, 1
+    jne .switchNotTaken
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+.switchNotTaken:
+    ; Distinctive marker so a mis-timed autokey script is diagnosable from
+    ; FRAME.BIN instead of looking like a hang (same shape as .faintAlive).
+    mov byte [ebp + W_TILEMAP], 0xEE
     call DelayFrame
-    jmp .goldenswitchhang
+    call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_MENU
     ; The REAL battle menu: DisplayBattleMenu draws HUDs + boxes and parks in
     ; HandleMenuInput with the ▶ on FIGHT; AUTOKEY_QUIET photographs it at

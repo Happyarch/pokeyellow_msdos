@@ -998,16 +998,61 @@ their current bodies auto-answer and auto-select.
       `class=data-model` deviation and 4b owning the real list. And
       `SAFARI_BAIT` = `BOULDERBADGE` = `$15`, the same deliberate overload as
       `SAFARI_ROCK`.
-- [ ] Add separate must-hit scenarios for voluntary switch, forced switch, a
+- [~] Add separate must-hit scenarios for voluntary switch, forced switch, a
       successful medicine/battle-item use, a failed item, and ball capture entered
       through `BattleItemMenu`. The existing `party_menu`, `battle_menu`, and
       `ball_catch` scenarios do not prove these routes.
 
-      **THIS IS NOW THE BLOCKING BOX FOR THE WHOLE STAGE, and for Stage 3 as
-      well.** 2a and 2b are both closed and both landed with ZERO execution
-      evidence; memory `battle-stage3-blocked-on-mechanics-scenarios` records
-      3a/3b in the same state. The bottleneck is scenario capability, not
-      translation. Do this before 2c.
+      **1 of 5 DONE 2026-08-12: `battle_switch` (scenario id 59) is in the
+      registry and PASSES.** The voluntary switch is no longer unwitnessed. The
+      registry is 57 scenarios, all 57 pass, and `WRAM: OK (13 regions, 0
+      skipped)` for this one — the port's switch produces byte-identical game
+      data to the real Game Boy.
+
+      *What it drives, on both sides:* `RIGHT` then `A` into the real 2x2 battle
+      menu (PKMN), `DOWN` then `A` in the real party menu (slot 1, PERSIAN L80),
+      `A` on SWITCH. Neither side calls `SwitchPlayerMon`. `PartyMenuOrRockOrRun`,
+      `SwitchPlayerMon`, `RetreatMon` and `AnimateRetreatingPlayerMon` execute
+      here and nowhere else in the registry.
+
+      *Dump point, and it is exact on both sides:* `wCurrentMenuItem == 2` while
+      `wPlayerMonNumber == 1` — `SwitchPlayerMon`'s closing store (pret
+      core.asm:2549-2551), which is reached only after `RetreatMon`, the 50-frame
+      wait, `AnimateRetreatingPlayerMon`, `LoadBattleMonFromParty` and
+      `SendOutMon` have all run. The port gate dumps at the instruction after
+      `DisplayBattleMenu` returns, which is that same instant. The port gate also
+      ASSERTS `wPlayerMonNumber == 1` and dumps `FRAME.BIN` with the `$EE` marker
+      instead if the script mistimed, so a no-op switch cannot dump a passing
+      state.
+
+      **PROVEN TO BE A REAL WITNESS, not just a passing check.** Deleting the one
+      `call LoadBattleMonFromParty` from `SwitchPlayerMon` and re-running it
+      produced **26 unmasked divergences**, naming the failure exactly:
+      `wBattleMon species: want $90 | got $84`, `wBattleMonNick: want 'PERSIAN' |
+      got 'SNORLAX'`, and every stat/move/PP word with it. Restored and re-run:
+      PASS. The golden is also deterministic — two consecutive generations are
+      byte-identical (md5 `f96b93d9…`).
+
+      *Two harness facts worth reusing.* The RIGHT press into the menu's right
+      column is POLLED, not assumed: `wTopMenuItemX` is `$9` in the left
+      HandleMenuInput loop and `$f` in the right one (pret core.asm:2157/2190),
+      so a swallowed RIGHT is caught instead of turning the following `A` into
+      FIGHT. And the port-only window-layer diagnosis rows this gate carried
+      (`g_window_count` / `g_windows` / `io_lcdc`) moved behind a new
+      `BATTLE_SWITCH_WINDOW_PROBE=1` knob — the differ joins regions by NAME and
+      the golden side has no counterpart for port memory.
+
+      **STILL OPEN — 4 of 5.** Forced switch (2b, still unwitnessed), a
+      successful medicine/battle-item use, a failed item, and a ball capture
+      entered through the real bag rather than the preset `DEBUG_ITEMBALL` gate.
+      2c landed the real `BagWasSelected` / `DisplayBagMenu` / `UseBagItem`, so
+      the last three are now reachable the same way this one was: drive
+      `DisplayBattleMenu` with autokey presses through ITEM.
+
+      **THIS WAS THE BLOCKING BOX FOR THE WHOLE STAGE, and for Stage 3 as
+      well.** 2a and 2b both landed with ZERO execution evidence; memory
+      `battle-stage3-blocked-on-mechanics-scenarios` records 3a/3b in the same
+      state. The bottleneck is scenario capability, not translation.
 
       **`battle_switch` design — the measured parts, so the next pass does not
       re-derive them.**

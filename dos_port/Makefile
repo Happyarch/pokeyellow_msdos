@@ -1001,20 +1001,28 @@ endif
 # enemy's moves so nothing compared depends on an RNG roll -- see the gate's
 # header in src/debug/debug_dump.asm.
 # make DEBUG_BATTLE_BLACKOUT=1
-# Voluntary in-battle SWITCH viewer (battle plan 2a): the DEBUG_BATTLE_GOLDEN
-# scene, then the REAL DisplayBattleMenu driven PKMN -> slot 1 -> SWITCH by the
-# AUTOKEY_BATTLE_SWITCH script, then FRAME.BIN at AUTOKEY_DUMP_FRAME. This is the
-# first gate that executes PartyMenuOrRockOrRun / SwitchPlayerMon / RetreatMon /
-# AnimateRetreatingPlayerMon at all -- nothing in the scenario registry presses
-# PKMN. It is a VIEWER, not a registered golden scenario yet; the golden pair is
-# the Stage 2 scenario box's job.
+# Voluntary in-battle SWITCH gate (battle_switch golden, battle plan Stage 2):
+# the DEBUG_BATTLE_GOLDEN scene, then the REAL DisplayBattleMenu driven
+# PKMN -> party slot 1 -> SWITCH by the AUTOKEY_BATTLE_SWITCH script, then
+# GBSTATE.BIN the instant DisplayBattleMenu returns. This is the only gate that
+# executes PartyMenuOrRockOrRun / SwitchPlayerMon / RetreatMon /
+# AnimateRetreatingPlayerMon at all -- nothing else in the scenario registry
+# presses PKMN.
+# AUTOKEY_DUMP_FRAME defaults past the end of the run so the gate's own dump
+# wins; pass AUTOKEY_DUMP_FRAME=1500 to use it as a FRAME.BIN viewer instead.
 #   dos_port/tools/run_headless.sh "DEBUG_BATTLE_SWITCH=1" /tmp/switch
 ifdef DEBUG_BATTLE_SWITCH
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_SWITCH -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLE_SWITCH -D DEBUG_SEED_PARTY
-AUTOKEY_DUMP_FRAME ?= 1500
+AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+# BATTLE_SWITCH_WINDOW_PROBE=1 adds the port-only window-layer diagnosis rows
+# (g_window_count / g_windows / io_lcdc) to GBSTATE.BIN. NEVER for a scenario
+# run: the differ joins regions by name and the golden has no counterpart.
+ifdef BATTLE_SWITCH_WINDOW_PROBE
+NASMFLAGS += -D BATTLE_SWITCH_WINDOW_PROBE
+endif
 endif
 ifdef DEBUG_BATTLE_BLACKOUT
 NEED_DEBUG_DUMP := 1
