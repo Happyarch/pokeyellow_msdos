@@ -1,5 +1,23 @@
 # Audio Subsystem — Phase 3 Plan
 
+> **ARCHIVED 2026-08-11.** Phases A-D (engine translation, virtual APU, all
+> four device shims — OPL3/MT-32+GM/Tandy/PC-speaker) are done and linked;
+> Phase E's tooling (schema, `music_analysis.py`, `yaml_lint.py`, the
+> enhancement merge, the OPL enhancement stream player, the
+> `music-theory`/`audio-enhance-*` skills) is also done. What's left —
+> per-song arrangement content — was never checkbox-shaped: a track doesn't
+> need every tier filled in, or any enhancement at all, to be finished; it
+> needs the maintainer's own sign-off by ear, which no lint pass can certify.
+> That per-song status (which songs have `enhancements/*.yaml`, which tiers,
+> which `overrides/*.yaml`, and which are the maintainer's approved sign-offs)
+> is now tracked by a generated report instead of a checklist in this file:
+> run `dos_port/tools/gen_audio_enhancement_report` for
+> `docs/audio_enhancement_status.md`, or `... MUSIC_<CONST>=1` to record a
+> new sign-off (never hand-edit the approval store). The rest of this file is
+> kept as the historical design record — architecture decisions, the asset
+> pipeline, and the phase-by-phase build log below are still accurate as of
+> archival.
+>
 > **Gate — the linter is MANDATORY. Rewritten 2026-08-02 against the tooling
 > that actually exists; the version this replaces predated `static_gate` and
 > told you "nothing runs it for you", which stopped being true on 2026-07-26.**
@@ -60,7 +78,7 @@ the source of truth): the engine, the virtual APU, and all four device shims
   user-confirmed audible.
 - **Phase D — `[x]`** (Tandy + speaker SFX + polish): done 2026-07-07, both new
   device paths user-confirmed audible; only an optional DMA upgrade is deferred.
-- **Phase E — `[ ]`** (LLM music arranger): all tooling/infrastructure is done
+- **Phase E — `[x]`** (LLM music arranger): all tooling/infrastructure is done
   (schema, `music_analysis.py`, `yaml_lint.py`, the enhancement merge, the OPL
   enhancement player, the skills) and one song (`Music_PalletTown`) has a
   hand-crafted, user-auditioned tier-1 layer — but the actual per-song

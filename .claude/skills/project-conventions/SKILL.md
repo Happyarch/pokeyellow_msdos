@@ -362,23 +362,30 @@ dos_port/tools/project_state --plans
   *slower* (rejected), and `wait_vblank` overrun pacing was dropped (no overruns
   left to pace). Also: **`FRAME.BIN` cannot validate `present`** — it dumps the
   back buffer, which is `present`'s input.
-- `docs/current_plan_audio.md` — **audio subsystem (Phase 3)**, architecture settled
-  2026-07-05: faithful pret engine translation driving a virtual APU + per-device
-  shims (OPL3/SB Pro floor, Tandy, PC speaker), MT-32-flagship MIDI path via
-  precompiled streams, Pikachu PCM via DSP direct mode / speaker PWM. Phases A–E.
-  **The engine is LIVE and linked** — do not repeat the old "Phase A not started"
-  line from this entry, which was false: `AUDIO_SRCS` in `dos_port/Makefile`
+- **Audio subsystem (Phase 3) — COMPLETE & archived** at `docs/plans/audio.md`
+  (2026-08-11; there is no `docs/current_plan_audio.md` anymore). Architecture
+  settled 2026-07-05: faithful pret engine translation driving a virtual APU +
+  per-device shims (OPL3/SB Pro floor, Tandy, PC speaker), MT-32-flagship MIDI
+  path via precompiled streams, Pikachu PCM via DSP direct mode / speaker PWM.
+  Phases A-D shipped and are linked/playing (`AUDIO_SRCS` in `dos_port/Makefile`
   links `audio_hal`, `opl_shim`, `opl_enh`, `tandy_shim`, `spk_shim`, `mpu401`,
-  `sb_pcm`, `spk_pcm`, `pikachu_pcm`, `engine_1..4` and friends. Status as of
-  2026-08-02, from the plan's own boxes: **C (Pikachu PCM) and D (Tandy +
-  speaker SFX + polish) are `[x]`, DONE 2026-07-07**; **B (MIDI/MT-32) is `[~]`,
-  infrastructure complete**; **A is `[ ]` at the top level but every substantive
-  sub-item under it is `[x]`** (OPL3 reference, `pret_audio.py`, `gen_audio_data.py`
-  + ROM byte-compare, the `home/audio.asm` gateway and engine translation, the
-  `DelayFrame` tick hook, `opl_shim` + `gen_opl_patches.py`, `BLASTER` detection)
-  — only the stub-retirement tail is `[~]`. Read the boxes, not the parent.
-  Phase E is the LLM music arranger (the `score-analysis` / `music-theory` /
-  `audio-enhance-*` skill set).
+  `sb_pcm`, `spk_pcm`, `pikachu_pcm`, `engine_1..4` and friends); Phase E's
+  tooling (`music_analysis.py`, `yaml_lint.py`, the enhancement merge, the OPL
+  enhancement stream player, the `score-analysis`/`music-theory`/
+  `audio-enhance-*` skills) is also done. **What archived it: per-song
+  arrangement content was the one open item and it was never checkbox-shaped**
+  — a track doesn't need every tier filled in, or any enhancement at all, to
+  be finished, only the maintainer's own sign-off by ear. That status now
+  lives in a generated report instead of a plan checklist:
+  `dos_port/tools/gen_audio_enhancement_report` reads `enhancements/*.yaml` /
+  `overrides/*.yaml` live and writes `docs/audio_enhancement_status.md`
+  (which songs have enhancements, what tiers, which have MT-32/MIDI or
+  OPL3-specific patch overrides); sign-off is recorded by running the tool
+  with `MUSIC_<CONST>=1`/`=0`, which writes
+  `dos_port/tools/audio/enhancement_approvals.json` itself — that file is
+  program-owned and is never hand-edited. Seeded 2026-08-11 with
+  `Music_Lavender`/`Music_GymLeaderBattle`/`Music_PalletTown` per the
+  maintainer's sign-off.
 - **script engine — not active, but the plan file EXISTS. Read it.** There is no
   `docs/current_plan_script_engine.md` — `eb17e64d` (2026-07-12) recorded it as a
   RENAME (`R098`) into `docs/plans/`, which is why a delete-log search comes up

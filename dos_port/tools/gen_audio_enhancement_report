@@ -1,0 +1,296 @@
+#!/usr/bin/env python3
+"""
+gen_audio_enhancement_report — Render docs/audio_enhancement_status.md from
+the audio enhancement/override YAML sources, plus record maintainer sign-off.
+
+WHAT THIS REPLACES
+-------------------
+docs/current_plan_audio.md (now archived at docs/plans/audio.md) used to track
+per-song arrangement progress as a hand-kept checklist. That was the wrong
+shape: a track doesn't need every tier filled in, or any enhancement at all,
+to be finished — it needs the maintainer's own sign-off by ear, which no lint
+pass or tier count can certify. So this tool splits the two kinds of fact:
+
+  * STRUCTURAL facts (does tools/audio/enhancements/<Song>.yaml exist, what
+    tiers does it declare, does tools/audio/overrides/<Song>.yaml exist, what
+    do its channels/patches say) are read LIVE from the tree every run, the
+    same way project_state/gen_progress_report derive their tables.
+  * APPROVAL is not inferred from any of that. It lives in
+    tools/audio/enhancement_approvals.json, a small file this tool owns and
+    writes itself — never hand-edited. Record a sign-off by invoking this
+    tool with MUSIC_<CONST>=1 (clear one with =0); see Usage below.
+
+WHAT THIS REPORT DOES NOT PROVE
+--------------------------------
+Presence of an enhancements/*.yaml or overrides/*.yaml file means schema-valid
+content exists at that path. It is NOT lint-clean (run yaml_lint.py for that),
+NOT audition-tested, and NOT a quality judgment. A song with zero enhancement
+channels can still be a finished, signed-off track — not every track needs,
+or can even take without damaging its voice-leading, a full arrangement. A
+song with all three tiers filled in is not thereby approved. Only the
+"Approved" column reflects a human decision, and it reflects nothing else.
+
+Usage:
+    dos_port/tools/gen_audio_enhancement_report                  # write docs/audio_enhancement_status.md
+    dos_port/tools/gen_audio_enhancement_report --stdout          # print instead of writing
+    dos_port/tools/gen_audio_enhancement_report MUSIC_LAVENDER=1  # record sign-off, then report
+    dos_port/tools/gen_audio_enhancement_report MUSIC_LAVENDER=0  # clear sign-off, then report
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+import yaml
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parents[1]
+AUDIO_DIR = SCRIPT_DIR / "audio"
+ENH_DIR = AUDIO_DIR / "enhancements"
+OVR_DIR = AUDIO_DIR / "overrides"
+APPROVALS_PATH = AUDIO_DIR / "enhancement_approvals.json"
+OUT_PATH = REPO_ROOT / "docs" / "audio_enhancement_status.md"
+
+sys.path.insert(0, str(AUDIO_DIR))
+import gen_audio_data  # noqa: E402
+
+_ASSIGNMENT_RE = re.compile(r"^(MUSIC_[A-Z0-9_]+)=([01])$")
+
+
+def cell(value):
+    """Table cell values may legally contain '|', which would split the row."""
+    return str(value).replace('|', '\\|').replace('\n', ' ')
+
+
+def md_table(headers, rows):
+    out = ['| ' + ' | '.join(headers) + ' |',
+           '| ' + ' | '.join('---' for _ in headers) + ' |']
+    for r in rows:
+        out.append('| ' + ' | '.join(cell(c) for c in r) + ' |')
+    return '\n'.join(out)
+
+
+def canonical_songs():
+    """(const_name, header_label) for every MUSIC_* entry in music_constants.asm.
+
+    parse_music_constants() just parses that one file's text — no ROM
+    assembly needed, so this is cheap to call on every invocation.
+    """
+    consts, _bounds = gen_audio_data.parse_music_constants()
+    return sorted((n, l) for n, l in consts.items() if n.startswith("MUSIC_"))
+
+
+def load_yaml_dir(dir_path):
+    """{filename_stem: parsed_dict} for every *.yaml directly in dir_path."""
+    out = {}
+    for path in sorted(dir_path.glob("*.yaml")):
+        with path.open(encoding="utf-8") as fh:
+            out[path.stem] = yaml.safe_load(fh) or {}
+    return out
+
+
+def tiers_of(enh_data):
+    tiers = {ch.get("tier") for ch in (enh_data or {}).get("channels", [])
+             if ch.get("tier") is not None}
+    return sorted(tiers)
+
+
+def load_approvals():
+    if APPROVALS_PATH.exists():
+        return json.loads(APPROVALS_PATH.read_text(encoding="utf-8"))
+    return {}
+
+
+def save_approvals(approvals):
+    APPROVALS_PATH.write_text(
+        json.dumps(approvals, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def apply_mutations(assignments, const_to_label, approvals):
+    """Validate-then-write MUSIC_<CONST>=<0|1> args into the approval store."""
+    changed = False
+    for arg in assignments:
+        m = _ASSIGNMENT_RE.match(arg)
+        if not m:
+            sys.exit(f"unrecognized argument: {arg!r} "
+                     "(expected MUSIC_<CONST>=1 or MUSIC_<CONST>=0)")
+        const, flag = m.group(1), m.group(2)
+        if const not in const_to_label:
+            sys.exit(f"unknown song constant: {const!r} "
+                      "(not a MUSIC_* entry in constants/music_constants.asm)")
+        if flag == "1":
+            approvals[const] = {
+                "approved": True,
+                "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            }
+        else:
+            approvals.pop(const, None)
+        changed = True
+    if changed:
+        save_approvals(approvals)
+    return changed
+
+
+def orphan_note(data):
+    if isinstance(data, dict) and "schema" in data and any(
+            isinstance(ch, dict) and "tier" in ch for ch in data.get("channels", [])):
+        return ("enhancement-shaped content (has `channels[].tier`) sitting in "
+                "`overrides/` — not read by `load_overrides()`, which only "
+                "matches the exact canonical filename")
+    return "filename does not match any canonical song label"
+
+
+def build_report(canonical, const_to_label, label_to_const, approvals):
+    enh_files = load_yaml_dir(ENH_DIR)
+    ovr_files = load_yaml_dir(OVR_DIR)
+
+    label_set = set(label_to_const)
+    enh_by_label = {s: d for s, d in enh_files.items() if s in label_set}
+    enh_orphans = {s: d for s, d in enh_files.items() if s not in label_set}
+    ovr_by_label = {s: d for s, d in ovr_files.items() if s in label_set}
+    ovr_orphans = {s: d for s, d in ovr_files.items() if s not in label_set}
+
+    total = len(canonical)
+    n_enh = len(enh_by_label)
+    n_ovr = len(ovr_by_label)
+    approved_consts = [c for c in approvals if c in const_to_label]
+    n_approved = len(approved_consts)
+
+    lines = [
+        '# Audio Enhancement Status', '',
+        '_Generated by `dos_port/tools/gen_audio_enhancement_report`. Do not'
+        ' hand-edit — edit the generator, or run the tool with'
+        ' `MUSIC_<CONST>=1`/`=0` to change sign-off._', '',
+        f'_Last generated: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}_',
+        '',
+        '> **Presence is a structural fact, not a quality signal.** "Enhancement"'
+        ' and "Override" mean a schema-shaped YAML file exists at that path —'
+        ' not that it is lint-clean (`yaml_lint.py`) or audition-tested.'
+        ' **"Approved" is the one column that reflects a human decision**,'
+        ' entered only via `gen_audio_enhancement_report MUSIC_<CONST>=1`,'
+        ' never by hand-editing `tools/audio/enhancement_approvals.json`. A'
+        ' song with no enhancement channels at all can be legitimately'
+        ' finished — not every track needs, or can take without damaging its'
+        ' voice-leading, a full arrangement — and a song with all three tiers'
+        ' filled in is not thereby approved.', '',
+        '## Summary', '',
+        md_table(['metric', 'count', 'of 49'], [
+            ['has enhancements/*.yaml', n_enh, f'{n_enh}/{total}'],
+            ['has overrides/*.yaml', n_ovr, f'{n_ovr}/{total}'],
+            ['approved (signed off)', n_approved, f'{n_approved}/{total}'],
+        ]), '',
+    ]
+
+    # ── Main table ───────────────────────────────────────────────────────
+    lines += ['## Per-song status', '']
+    rows = []
+    for const, label in canonical:
+        enh = enh_by_label.get(label)
+        ovr = ovr_by_label.get(label)
+        tiers = tiers_of(enh)
+        approval = approvals.get(const)
+        rows.append([
+            label,
+            'yes' if enh else '—',
+            ','.join(str(t) for t in tiers) if tiers else '—',
+            'yes' if ovr else '—',
+            f'\u2713 {approval["date"]}' if approval else '—',
+        ])
+    lines += [md_table(['Song', 'Enhancement', 'Tiers', 'Override', 'Approved'], rows), '']
+
+    # ── Per-song detail ──────────────────────────────────────────────────
+    detail_labels = sorted(set(enh_by_label) | set(ovr_by_label))
+    if detail_labels:
+        lines += ['## Per-song detail', '',
+                  '_Only songs with an enhancement and/or override file get a'
+                  ' section here._', '']
+        for label in detail_labels:
+            const = label_to_const[label]
+            lines += [f'### {label} (`{const}`)', '']
+            enh = enh_by_label.get(label)
+            if enh:
+                lines += ['**Enhancement channels** — OPL3-specific patch is'
+                          ' `opl_patch` (tier 1 only); MT-32/GM patches are'
+                          ' `mt32_patch`/`gm_program` on every tier:', '']
+                ch_rows = [[
+                    c.get('name', '?'), c.get('tier', '?'),
+                    c.get('opl_patch', '—'), c.get('mt32_patch', '—'),
+                    c.get('gm_program', '—'), c.get('pan', 'center'),
+                    c.get('volume', 96),
+                ] for c in enh.get('channels', [])]
+                lines += [md_table(
+                    ['Channel', 'Tier', 'OPL Patch', 'MT-32 Patch',
+                     'GM Program', 'Pan', 'Volume'], ch_rows), '']
+            ovr = ovr_by_label.get(label)
+            if ovr:
+                lines += ['**MT-32/MIDI overrides** (base 4 GB channels'
+                          ' 1-3; drums = channel 4/noise):', '']
+                ch_rows = []
+                for gb_ch in sorted(ovr.get('channels', {}), key=str):
+                    c = ovr['channels'][gb_ch]
+                    ch_rows.append([
+                        gb_ch, c.get('mt32_program', '—'), c.get('gm_program', '—'),
+                        c.get('program', '—'), c.get('volume', '—'), c.get('pan', '—'),
+                    ])
+                if ch_rows:
+                    lines += [md_table(
+                        ['GB Channel', 'MT-32 Program', 'GM Program',
+                         'Program (fallback)', 'Volume', 'Pan'], ch_rows), '']
+                drums = ovr.get('drums')
+                if drums:
+                    dmap = drums.get('map', {})
+                    lines += [f'Drums: velocity {drums.get("velocity", "—")}, '
+                              f'{len(dmap)} noise-id \u2192 GM-drum mapping(s).', '']
+
+    # ── Orphan files ─────────────────────────────────────────────────────
+    orphans = ([(f'enhancements/{s}.yaml', d) for s, d in sorted(enh_orphans.items())]
+               + [(f'overrides/{s}.yaml', d) for s, d in sorted(ovr_orphans.items())])
+    lines += ['## Orphan / unmatched files', '']
+    if not orphans:
+        lines += ['_None found._', '']
+    else:
+        lines += ['_Files present under `enhancements/` or `overrides/` whose'
+                  ' name does not match any canonical `MUSIC_*` song label —'
+                  ' dead weight the pipeline never reads:_', '']
+        lines += [md_table(['file', 'note'],
+                            [[p, orphan_note(d)] for p, d in orphans]), '']
+
+    lines += ['', '---', '',
+              '_To reproduce: `dos_port/tools/gen_audio_enhancement_report`.'
+              ' To record sign-off: `dos_port/tools/gen_audio_enhancement_report'
+              ' MUSIC_<CONST>=1` (find the constant name in'
+              ' `constants/music_constants.asm`)._', '']
+    return '\n'.join(lines) + '\n'
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('assignments', nargs='*',
+                     help='MUSIC_<CONST>=1 or =0 to record/clear sign-off '
+                          'before generating the report')
+    ap.add_argument('--stdout', action='store_true',
+                     help='print instead of writing docs/audio_enhancement_status.md')
+    args = ap.parse_args()
+
+    canonical = canonical_songs()
+    const_to_label = dict(canonical)
+    label_to_const = {label: const for const, label in canonical}
+
+    approvals = load_approvals()
+    apply_mutations(args.assignments, const_to_label, approvals)
+
+    report = build_report(canonical, const_to_label, label_to_const, approvals)
+    if args.stdout:
+        sys.stdout.write(report)
+    else:
+        OUT_PATH.write_text(report, encoding='utf-8')
+        print(f'Wrote {OUT_PATH.relative_to(REPO_ROOT)}')
+
+
+if __name__ == "__main__":
+    main()
