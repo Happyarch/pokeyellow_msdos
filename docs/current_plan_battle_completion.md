@@ -734,6 +734,45 @@ their current bodies auto-answer and auto-select.
       inline in `DisplayBattleMenu.partyMenuOrRun`) — then implement it with pret's
       `BATTLE_PARTY_MENU` mode, selection/cancel rules, withdrawal/send-out HUD
       work, party↔battle-mon synchronization, and the enemy's free turn.
+
+      **DEPENDENCY SURVEY, measured 2026-08-12 — the box is NOT blocked, it is
+      just large. 24 of its 28 callees already exist.** Do not re-derive this;
+      re-measure it if it looks stale.
+
+      Present and `translated`: `SaveScreenTilesToBuffer2`,
+      `LoadScreenTilesFromBuffer1/2`, `DisplayPartyMenu`, `GoBackToPartyMenu`,
+      `GBPalWhiteOut`, `GBPalNormal`, `LoadHudTilePatterns`,
+      `RunDefaultPaletteCommand`, `DisplayTextBoxID`, `HandleMenuInput`,
+      `PlaceUnfilledArrowMenuCursor`, `StatusScreen`, `StatusScreen2`,
+      `AnimationSubstitute`, `AnimationMinimizeMon`, `GetMonHeader`,
+      `LoadMonFrontSprite`, `HasMonFainted`, `AlreadyOutText`, `FlagAction`,
+      `LoadBattleMonFromParty`, `SendOutMon`, `BattleMenu_RunWasSelected`,
+      `FillMemory`, `ClearSprites`.
+
+      **Missing, and this is the whole of the new-code cost:**
+      1. `SwitchPlayerMon` (pret `core.asm:2521`, ~45 lines) — the fall-through
+         target of `.switchMon`. Shared with 2b, so porting it serves both.
+      2. `AnimateRetreatingPlayerMon` (pret `core.asm:1828`, ~30 lines) —
+         starter-Pikachu branch, `ClearScreenArea`, `CopyDownscaledMonTiles`
+         predef, `DelayFrames`.
+      3. `RetreatMon` (pret `engine/battle/common_text.asm:183`) — two
+         instructions, but its `PlayerMon2Text` carries a real `text_asm` tail
+         that computes HP lost from `wLastSwitchInEnemyMonHP`. Tier-1 text +
+         Tier-2 tail.
+      4. `UseBagItem` — needed ONLY by the safari `SAFARI_ROCK` arm of
+         `PartyMenuOrRockOrRun`. That arm belongs to **2c/4d**, not here; port
+         the branch shape and let 2c supply the callee rather than inventing a
+         stub for it.
+
+      Naming: the port-only `BattlePartyMenu` in `battle_menu.asm` is a ret-only
+      helper; it must be REPLACED by the pret label, not renamed in place, since
+      the pret counterpart is the tail of `PartyMenuOrRockOrRun` in `core.asm`
+      (the mirror rule puts the body in `src/engine/battle/core.asm`).
+
+      Witness: nothing in the 56-scenario registry drives an in-battle party
+      switch, so this box lands with zero execution evidence until the Stage 2
+      scenario box below supplies one. Budget that scenario as part of 2a, not
+      after it.
 - [ ] **2b. Forced switch.** Replace the automatic Yes and first-live-mon paths
       in `DoUseNextMonDialogue`/`ChooseNextMon` with the faithful Yes/No and party
       menus, including wild-run behavior and the no-cancel forced selection.
