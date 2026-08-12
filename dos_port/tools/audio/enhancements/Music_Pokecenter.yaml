@@ -1,0 +1,106 @@
+# Music_Pokecenter — Pokémon Center theme. Tier 1 + tier 3 enhancement (Phase E).
+#
+# Authored against analysis/Music_Pokecenter.yaml (frame-exact) and a
+# user-supplied score-analysis note (not in the transcriptions tree), per
+# the audio-enhance-opl3 / audio-enhance-mt32 / music-theory skills.
+#
+# The track: D major (analysis K-S is ambiguous A/D 0.777 vs 0.757; the
+# wave ostinato is D–F# and the piece is the textbook I–V–I / I–ii–V–I
+# hospital cue — trust D). 4/4, tempo 144, 16 measures, loop at m1 b1
+# (frame 0). No noise channel (trio). Melody is ch2 (D4–B5); ch1 is the
+# inner walking line (C#4–E5); ch3 is a high wave ostinato (D4–B4) —
+# another Masuda high-register town cue, the GB speaker omitting the
+# low end. Binary A A' B B' (two 8-bar periods). Each period is a
+# 4+4 antecedent/consequent: A uses I–V–I (IAC V→I6 at m4, PAC at m8);
+# B uses I–ii–V–I (IAC V→I6 at m12, PAC at m16). mm5–7 fingerprint as
+# mm1–3; m8 is the A' consequent close (half-note D, then a D–E pickup
+# into B). Authority for notes/loop is the analysis; chord *function*
+# below follows the description + sounding pitches, not the A-major
+# Roman numerals the template printed.
+#
+# Skill table: Pokémon Center gets ONE light warm pad (town-quiet;
+# over-orchestrating this loop is the listed mistake). The three GB
+# voices pack C#4–B5 continuously, so a mid pad unison-collides with
+# the wave eighths. The empty band is everything below C#4.
+#
+#   Tier 1 (OPL3 + MT-32/GM) — the one allowed voice:
+#     warm_pad — A3 common-tone pedal (5th of I, root of V) through
+#                both A periods; E3 (root of ii) on the B-section ii
+#                bars (m10/m14). B3 there would parallel-8ve the
+#                melody's B5→A5 into m15; G3 would parallel-8ve the
+#                A5→G5 into m14. Re-attacks at each 4-bar phrase so
+#                the period form still reads. Stays in E3–A3 (52–57),
+#                below every GB pitch (floor C#4 = 61), so unison is
+#                impossible. Sustains through I↔V prolongations.
+#
+#   Tier 2: deliberately absent. The cascaded tier-1 pad is already
+#           the MT-32 string tenor (patch 49), and there is no clean
+#           alto register for a second sustained layer (same proven
+#           Pallet Town / Oak's Lab situation).
+#
+#   Tier 3 (MT-32/GM only):
+#     heal_choir — PAC-only aahs (m8 b1, m16 b3) on F#5+A5, the 3rd
+#                  and 5th above the melody's tonic D5. FM cannot do
+#                  choir. IACs stay thin (no choir at m4/m12) so the
+#                  authentic closes still feel like the strong ones.
+#
+# Loop seam: no note may cross frame 1728. The last events release a
+# few frames early (d 3.9 / d 1.9) because the final frame is not
+# beat-addressable. The 16-bar body *is* the loop, so one instance.
+#
+# Voice leading (pad vs GB, half-measure structural tones):
+#   A3 holds through mm1–8 (I/V share A) — oblique against the wave
+#   D4–E4–F#4. m9 A3 → m10 E3 vs melody A5 → G5 is similar into a
+#   tenth (not a perfect). PAC at m16 keeps A3 (common tone V→I)
+#   rather than dropping to D3, which would parallel-8ve the
+#   melody's A5→D5. Leading-tone C# in the melody (m3/m7/m11)
+#   resolves up to D; the pad never takes it.
+
+schema: 1
+song: Music_Pokecenter
+
+channels:
+  - name: warm_pad
+    tier: 1
+    opl_patch: soft_pad       # organ-like FM warmth; not a pulse
+    mt32_patch: 49            # MT-32 Str Sect 1 (cascades as real strings)
+    gm_program: 90            # GM Pad 2 (warm)
+    pan: center
+    volume: 62                # lighter than Pallet Town's 72 — "light pad"
+    velocity: 78
+    events:
+      - {at: 1, pattern: pad_body}
+
+  # --- Tier 3 (MT-32 / GM only; never OPL) --------------------------------
+  - name: heal_choir
+    tier: 3                   # color — dropped first under polyphony
+    mt32_patch: 35            # MT-32 Chorale
+    gm_program: 53            # GM Choir Aahs
+    pan: center
+    volume: 50                # a halo at the PAC, not a section
+    velocity: 70
+    events:
+      - {at: 1, pattern: choir_body}
+
+patterns:
+  # A3 pedal through I and V; E3 (ii root) on the B-section ii bars.
+  # Phrase re-attacks at m1 / m5 / m9 / m13 mark A A' B B'.
+  pad_body:
+    measures: 16
+    events:
+      - {m: 1,  b: 1, d: 16, n: A3}    # A ant.: I (5th) / V (root) — A held
+      - {m: 5,  b: 1, d: 16, n: A3}    # A' cons.: same, PAC at m8 keeps the 5th
+      - {m: 9,  b: 1, d: 4,  n: A3}    # B I (5th)
+      - {m: 10, b: 1, d: 4,  n: E3}    # B ii (root of Em)
+      - {m: 11, b: 1, d: 8,  n: A3}    # B V (root) → I6 (5th) — IAC, stay on A
+      - {m: 13, b: 1, d: 4,  n: A3}    # B' I (5th)
+      - {m: 14, b: 1, d: 4,  n: E3}    # B' ii (root of Em)
+      - {m: 15, b: 1, d: 4,  n: A3}    # B' V (root)
+      - {m: 16, b: 1, d: 3.9, n: A3}   # B' I (5th) — PAC; shaved for loop seam
+
+  # Full-ish PAC voicing only: 3rd + 5th above the melody's *do*.
+  choir_body:
+    measures: 16
+    events:
+      - {m: 8,  b: 1, d: 2,   n: [F#5, A5]}   # A' PAC (melody is D5)
+      - {m: 16, b: 3, d: 1.9, n: [F#5, A5]}   # B' PAC (melody is D5)
