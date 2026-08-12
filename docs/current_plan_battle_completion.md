@@ -1585,7 +1585,68 @@ provider shapes below, not their runtime behavior.
 - [ ] **4b. `BATTLE_TYPE_OLD_MAN`.** Implement the tutorial identity/menu and
       scripted throw behavior behind a deterministic battle scenario. The
       Viridian script and story reachability belong to overworld-events Stage 5.
-- [ ] **4c. Ghost Marowak.** FOLDED IN 2026-08-11 from the archived animations
+- [~] **4c. Ghost Marowak — GROUNDWORK MEASURED 2026-08-12, and the animation
+      half is BLOCKED on a real design decision. Do not guess past it.**
+
+      `engine/battle/ghost_marowak_anim.asm` is 92 lines / two routines, and
+      every callee of `MarowakAnim` is already `translated` EXCEPT the file's own
+      second routine — `ChangeMonPic`, `ClearScreenArea`, `ClearSprites`,
+      `Delay3`, `DelayFrames`, `FlashSprite8Times`, `UpdateCGBPal_OBP1`. So no
+      new stubs are needed and the file can land in one piece. Everything below
+      was measured this pass so the next attempt does not re-derive it.
+
+      **THE BLOCKER: `CopyMonPicFromBGToSpriteVRAM` cannot be expressed with the
+      port's `CopyVideoData`.** pret's first four instructions are
+      `ld de, vFrontPic / ld hl, vSprites / ld bc, PIC_SIZE / call CopyVideoData`
+      — a **VRAM -> VRAM** copy measured in **BYTES**. The port's
+      `CopyVideoData` (src/home/copy2.asm) documents a different contract:
+      `ESI` = destination GB VRAM offset, **`EDX` = source FLAT pointer (2bpp
+      tile data in .data / ROM)**, `BH` = source bank (no-op), **`BL` = TILE
+      count**. A source that is emulated VRAM, and a byte count, are both
+      outside it. This needs a deliberate decision — a VRAM->VRAM path, a
+      port-only variant, or a different realisation — plus the `DEVIATION` that
+      goes with whichever is chosen. **It is NOT a mechanical translation, which
+      is why this box stops here rather than guessing.**
+
+      **SETTLED, so the next attempt can start from these:**
+      * *`hlcoord 12, 0`* -> `W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W +
+        UI_ENEMY_PIC_COL` (`UI_ENEMY_PIC_ROW equ 3`,
+        `assets/ui_layout_battle.inc`). Two sites already do exactly this —
+        `init_battle.asm:434` and `core.asm:5217` — and a memory records that
+        placing this 7x7 block at pret's RAW coords on the 40-wide canvas is a
+        shipped bug (`regression-battle-second-battle-hud-tile-band`).
+      * *`jr nz` after `call UpdateCGBPal_OBP1`* (both fade loops) reads the ZF
+        that `sla a / sla a` set, ACROSS the call. That is safe on both sides and
+        it is load-bearing: pret's `UpdateCGBPal_OBP1` is `push af ... pop af /
+        ret`, and the port's is `mov byte [g_pal_dirty], 1 / ret` — a `mov`
+        immediate-to-memory sets no flags. **Say so in a comment when writing
+        it**, because adding any `cmp` to that two-line routine would silently
+        break this loop.
+      * *`rra`* is x86 `rcr al, 1` (rotate through carry), NOT `shr`. The
+        fade-in loop pairs it with `srl b` -> `shr bh, 1`.
+      * *The fade-in loop holds the mask in `b` and the delay count in `c`* —
+        BH and BL. The port's `DelayFrames` decrements BL only and its inner
+        `DelayFrame` is `pushad`-wrapped, so BH survives; that is what the loop
+        needs.
+      * *`hAutoBGTransferEnabled` writes are FAITHFUL BUT INERT.* The port
+        retired pret's VBlank auto-transfer (`src/home/vblank.asm:136`), and
+        vblank.asm records that the faithful writes stay throughout the tree. So
+        write them and add no new annotation — but note the EFFECT pret is
+        buying here (hiding the BG swap until the sprite pic covers it) does not
+        happen, which is a behavioural question for whoever gets it on screen.
+      * *OAM.* `CopyMonPicFromBGToSpriteVRAM` builds records in `wShadowOAM`.
+        Writing that alone DRAWS NOTHING in this port: the renderer positions
+        from `spr_dos_sx/sy` and honours `spr_oam_valid`, so the records must be
+        published (`PublishProjectedOAM`: ESI = GB-relative records, ECX = count,
+        EAX/EBX = projection offsets 80/24, all registers preserved). That is a
+        port-only call and needs a `DEVIATION{class=projection}`; the payday gate
+        and `battle_transitions.asm` are the precedents.
+
+      The rest of 4c — ghost initialization/identity, unidentified-ghost move
+      refusal, escape rules, the Poké Doll consumer — is untouched and is
+      separate from the animation half above.
+
+- [ ] **4c. Ghost Marowak (original folding note).** FOLDED IN 2026-08-11 from the archived animations
       plan (maintainer instruction), which had it as an optional tail explicitly
       deferred to this box: port `MarowakAnim` + `CopyMonPicFromBGToSpriteVRAM`
       (`engine/battle/ghost_marowak_anim.asm`). Measured today: `MarowakAnim` is
