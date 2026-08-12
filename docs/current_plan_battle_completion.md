@@ -1238,7 +1238,7 @@ provider shapes below, not their runtime behavior.
          turns — the same class of pin `battle_blackout` uses for GUST. Compare
          the FLAG (`wPlayerBattleStatus1`'s `USING_TRAPPING_MOVE`) and the
          zeroed counter, not the rolled value;
-      4. a scenario-local `gbregion`: `wPlayerBattleStatus1` (`$D062`) is in NO
+      4. a scenario-local `gbregion`: `wPlayerBattleStatus1` (`$D061`) is in NO
          compared region today — `wBattleFlags` covers only
          `wIsInBattle..wBattleType` (`$D057-$D05A`). Precedents for a
          scenario-local row: `trainerResult`, `wBoxData`, `wMenuState`.
@@ -1263,11 +1263,39 @@ provider shapes below, not their runtime behavior.
       wrong one: a scenario built around a multi-hit move would exercise
       core.asm:3419 and never touch `CheckNumAttacksLeft` at all.
 
-      What remains for the next pass is the mechanical part: the gate
-      (`jmp MainInBattleLoop` with WRAP preset), a state-gated PIN of
-      `wPlayerNumAttacksLeft` in `AutoKeyDrive` (new machinery, but the same
-      class of pin `battle_blackout` uses for GUST), the state-gated dump, the
-      scenario-local region, and the golden.
+      **THE GATE IS BUILT (2026-08-12) AND IT DOES NOT TERMINATE YET.**
+      `DEBUG_BATTLE_WRAP=1` is a VIEWER, deliberately NOT in the manifest.
+      `run_headless.sh "DEBUG_BATTLE_WRAP=1"` produces no dump.
+
+      What DOES work, measured from GBSTATE at frame 1500:
+      * the real `MainInBattleLoop` runs turns from the gate — this is the first
+        harness that drives it, and it is the direction this box needs;
+      * WRAP is selected and the trapping state is live:
+        `wPlayerBattleStatus1 = $20` (`USING_TRAPPING_MOVE`, bit 5) and
+        `wPlayerNumAttacksLeft = 1`, i.e. the `AutoKeyDrive` PIN is holding;
+      * the enemy seed landed and does its job: `wEnemyMon` reads HP 261 of max
+        999 with status `$03` (the seeded sleep counting down from 7), so it
+        survives WRAP and never acts. **That fixed the first failure** — at the
+        spec PIDGEY's 36 HP, WRAP KO'd it on turn 1 and `MainInBattleLoop` took
+        `jp z, HandleEnemyMonFainted`, skipping the turn tail entirely.
+
+      What does NOT work: the wrap sequence never releases. By frame 4000 the
+      enemy has fainted from accumulated chip damage anyway and the screen reads
+      "SNORLAX gained 102 EXP. Points!", so the flow left through
+      `HandleEnemyMonFainted` and `CheckNumAttacksLeft` was skipped again.
+
+      **THE OPEN QUESTION, precisely:** where is the TRAPPING counter
+      decremented per turn, and does the per-frame pin interfere with it? Note
+      `effects.asm:1249` is `TwoToFiveAttacksEffect`, which is
+      `ATTACKING_MULTIPLE_TIMES` — the multi-hit mechanic, NOT this one (the
+      same near-miss the box already warns about). The trapping effect is a
+      different routine in the same file. Until that decrement is read, do not
+      guess at the pin: it may be clamping the counter at 1 on exactly the frame
+      it would otherwise reach 0.
+
+      Also still owed once it terminates: the golden, the manifest row, and the
+      `wPlyStatus1`/`wPlyAtksLeft` scenario-local rows (already written into the
+      gate) mirrored by name on the mGBA side.
 - [ ] **3a (original entry).** Replace the linked ret-only
       `CheckNumAttacksLeft` body and verify the complete Bide/Thrash/trapping
       counter, accumulation, release, and cleanup flow on both turns. Preserve

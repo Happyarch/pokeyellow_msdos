@@ -887,6 +887,14 @@ gbstate_regions:
     ; the enclosing block IS the tight span.
     gbregion "wBoxData",      wBoxDataStart, wBoxDataEnd - wBoxDataStart
 %endif
+%ifdef DEBUG_BATTLE_WRAP
+    ; --- scenario-local rows for the trapping counter (battle plan 3a) ---
+    ; Neither byte is in any shared region: wBattleFlags covers only
+    ; wIsInBattle..wBattleType ($D057-$D05A). Same scenario-local precedent as
+    ; trainerResult and wBoxData. The golden mirrors both rows BY NAME.
+    gbregion "wPlyStatus1",  wPlayerBattleStatus1,  1   ; $D061 — USING_TRAPPING_MOVE
+    gbregion "wPlyAtksLeft", wPlayerNumAttacksLeft, 1   ; $D069 — the trapping counter
+%endif
 %ifdef BATTLE_NEXTMON_MENU_PROBE
     ; --- ChooseNextMon party-menu stall probe (battle plan 2b) ---
     ; HARNESS-DIAGNOSIS PROBE, NOT part of any golden (the BILLSPC_MENU_PROBE
@@ -2577,6 +2585,46 @@ RunBattleTest:
 .faintKO:
     call HandleEnemyMonFainted          ; FaintEnemyPokemon -> GainExperience
     call DebugDumpMemory                ; GBSTATE.BIN (id 21) + DUMP.BIN + exit
+%elifdef DEBUG_BATTLE_WRAP
+    ; ------------------------------------------------------------------
+    ; battle_wrap golden gate (battle plan 3a). The FIRST gate that lets the
+    ; REAL MainInBattleLoop run turns, which is the only way to reach
+    ; CheckNumAttacksLeft: its two call sites (pret core.asm:448/:476, port
+    ; core.asm:432/:458) are BOTH in that loop's turn tail and neither is
+    ; reachable from ExecutePlayerMove. A gate that called it directly after
+    ; ExecutePlayerMove would duplicate production's sequencing and prove only
+    ; that the routine runs when you run it.
+    ;
+    ; SNORLAX L80 uses WRAP on the spec wild PIDGEY L13. Turn 1 sets
+    ; USING_TRAPPING_MOVE; the menu is then SKIPPED (MainInBattleLoop masks
+    ; STORING_ENERGY|USING_TRAPPING_MOVE at core.asm:322-324 and jumps straight
+    ; to .selectEnemyMove), so the move auto-repeats with no further input until
+    ; the counter runs out and the turn tail's CheckNumAttacksLeft clears the bit.
+    ;
+    ; The rolled attack count is PINNED to 1 by AutoKeyDrive, not here: Wrap
+    ; rolls 2-5 and the two emulators do not share an RNG stream, so the release
+    ; turn has to be forced to the same turn on both sides. Same class of pin as
+    ; battle_blackout's GUST pin. See the DEBUG_BATTLE_WRAP block in AutoKeyDrive
+    ; for the pin, the latch and the dump condition.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    ; THE ENEMY MUST SURVIVE, OR THE ROUTINE IS SKIPPED ENTIRELY. MEASURED: at
+    ; the spec PIDGEY's 36 HP, WRAP from L80 SNORLAX knocks it out on turn 1,
+    ; MainInBattleLoop takes `jp z, HandleEnemyMonFainted` and NEVER REACHES the
+    ; turn tail where CheckNumAttacksLeft lives. 999 HP (big-endian $03E7) puts
+    ; the KO out of reach of WRAP's power-15 chip damage for the two turns this
+    ; scenario needs.
+    mov word [ebp + wEnemyMonHP], 0xE703        ; big-endian 999
+    mov word [ebp + wEnemyMonMaxHP], 0xE703
+    ; AND IT MUST NOT ACT. Its damage to SNORLAX would be a ROLL, and wBattleMon
+    ; is compared — the two sides would diverge on HP for no reason connected to
+    ; this box. A seeded sleep counter removes the enemy turn deterministically,
+    ; without masking anything: 7 turns outlasts the two this scenario runs.
+    mov byte [ebp + wEnemyMonStatus], 7         ; SLP counter
+    mov byte [ebp + wBattleMonMoves], WRAP      ; move slot 1 = WRAP
+    mov byte [ebp + wPlayerMoveListIndex], 0
+    jmp MainInBattleLoop                        ; the real loop; it does not return
 %elifdef DEBUG_BATTLE_PAYDAY
     ; ------------------------------------------------------------------
     ; battle_pay_day golden gate (battle plan 3b). The payout branch in
@@ -2984,7 +3032,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 
@@ -4257,6 +4305,35 @@ AutoKeyDrive:
     call DumpBackbuffer                 ; FRAME.BIN, then exits
 .noBattleDump:
 %endif
+%ifdef DEBUG_BATTLE_WRAP
+    ; --- battle_wrap: the RNG pin, a latch, and the dump (battle plan 3a) ---
+    ; THE PIN. Wrap rolls wPlayerNumAttacksLeft 2-5 and the emulators do not
+    ; share an RNG stream, so force it to 1 the moment the trapping bit is set.
+    ; The release then always lands on the next turn, on both sides.
+    test byte [ebp + wPlayerBattleStatus1], 1 << USING_TRAPPING_MOVE
+    jz .noWrapPin
+    mov dword [wrap_pin_seen], 1                ; latch: the bit WAS set at least once
+    cmp byte [ebp + wPlayerNumAttacksLeft], 1
+    jbe .noWrapPin
+    mov byte [ebp + wPlayerNumAttacksLeft], 1
+.noWrapPin:
+    ; THE DUMP. "trapping bit clear AND counter 0" is ALSO the initial state, so
+    ; it cannot be the whole condition — the latch above is what proves a Wrap
+    ; actually happened, and wPlayerUsedMove pins WHICH move (SendOutMon zeroes
+    ; it, so it only reads WRAP after a Wrap turn). Without the latch this would
+    ; fire on the frame between ExecutePlayerMove storing wPlayerUsedMove and
+    ; the effect setting the bit.
+    cmp dword [wrap_pin_seen], 0
+    je .noWrapDump
+    cmp byte [ebp + wPlayerUsedMove], WRAP
+    jne .noWrapDump
+    test byte [ebp + wPlayerBattleStatus1], 1 << USING_TRAPPING_MOVE
+    jnz .noWrapDump
+    cmp byte [ebp + wPlayerNumAttacksLeft], 0
+    jne .noWrapDump
+    call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN, then exits
+.noWrapDump:
+%endif
 %ifdef DEBUG_BATTLE_ITEM_FAIL
     ; battle_item_no_effect's dump, state-gated for the same structural reason
     ; as battle_choose_next_mon's: the flow it photographs never returns.
@@ -4400,6 +4477,10 @@ AutoKeyDrive:
 
 section .data
 autokey_frame: dd 0
+%ifdef DEBUG_BATTLE_WRAP
+align 4
+wrap_pin_seen: dd 0            ; set once USING_TRAPPING_MOVE has been observed
+%endif
 %ifdef AUTOKEY_DUMP_ON_BATTLE
 align 4
 autokey_battle_frame: dd 0             ; frames counted while wBattleType != 0

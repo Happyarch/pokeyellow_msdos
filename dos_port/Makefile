@@ -1087,6 +1087,18 @@ endif
 # accumulated wTotalPayDayMoney into wPlayerMoney with AddBCD. The payout is
 # level*2 in BCD, so the compared value has no RNG in it.
 #   dos_port/tools/run_headless.sh "DEBUG_BATTLE_PAYDAY=1" /tmp/payday
+# Trapping-counter gate (battle_wrap, battle plan 3a): SNORLAX L80 uses WRAP on
+# the spec wild PIDGEY L13 and the REAL MainInBattleLoop runs the turns, which is
+# the only way to reach CheckNumAttacksLeft. AutoKeyDrive pins the rolled attack
+# count to 1 and dumps when the turn tail clears USING_TRAPPING_MOVE.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_WRAP=1" /tmp/wrap
+ifdef DEBUG_BATTLE_WRAP
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_WRAP -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_BATTLE_PAYDAY
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_PAYDAY -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

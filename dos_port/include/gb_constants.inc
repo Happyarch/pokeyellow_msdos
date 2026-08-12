@@ -591,6 +591,7 @@ CUT                     equ 0x0F
 FLY                     equ 0x13
 SURF                    equ 0x39
 PAY_DAY                 equ 0x06    ; constants/move_constants.asm
+WRAP                    equ 0x23    ; constants/move_constants.asm (trapping move)
 STRENGTH                equ 0x46
 DIG                     equ 0x5B
 TELEPORT                equ 0x64
