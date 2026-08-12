@@ -4579,10 +4579,22 @@ autokey_script:
     ; starter-Pikachu branch fires on either side of the golden.
     ;   deposit PERSIAN → deposit JIGGLYPUFF → withdraw PERSIAN (the
     ;   44B→33B→44B round trip + stat recompute) → release JIGGLYPUFF → SEE YA
-    ; Cadence: one input per 60 frames, 10-frame holds (edge-triggered, and well
+    ; Cadence: one input per 120 frames, holds unchanged (edge-triggered, and well
     ; under JoypadLowSensitivity's repeat delay). The first cut used 30-40-frame
     ; gaps and the mon list ate one A mid-settle, shifting every later press one
-    ; state over (PERSIAN got released instead of JIGGLYPUFF). The tail uses B —
+    ; state over (PERSIAN got released instead of JIGGLYPUFF).
+    ;
+    ; DOUBLED FROM 60 ON 2026-08-12, and the same failure is why. PlayCry stopped
+    ; being a ret-stub that day (its real body is now in src/home/pokemon.asm), so
+    ; this flow really plays three cries and really WAITS on them -- both inside
+    ; PlayCry and at bills_pc.asm's own WaitForSoundToFinish before the release
+    ; cry. At 60-frame gaps that pushed every later press one state over and the
+    ; golden failed with the party shifted by exactly one mon (99 unmasked
+    ; divergences; box_change_roundtrip 186). Measured, not inferred: disabling
+    ; only PlayCry's internal wait changed NOTHING, disabling the whole body took
+    ; both scenarios back to PASS. Press FRAMES are doubled; hold WIDTHS are not,
+    ; because those are tuned (see trap 1 in the change-box script below).
+    ; The tail uses B --
     ; B answers prompts AND exits the menu, so the flow converges whether or not
     ; OnceReleasedText carries its own prompt before the YES/NO box.
 %ifdef BILLSPC_ATTACH_DELAY
@@ -4594,33 +4606,33 @@ autokey_script:
     ; bills_pc_text.inc): _MonWasStoredText = 1 (prompt); _MonIsTakenOutText and
     ; _MonWasReleasedText = 2 (cont + prompt); _OnceReleasedText = 1 (cont; its
     ; `done` leaves the box up for the YES/NO choice).
-    dd   40 + BPC_AKS,   50 + BPC_AKS, PAD_DOWN ; menu 0→1 (DEPOSIT)
-    dd  100 + BPC_AKS,  110 + BPC_AKS, PAD_A    ; open the party mon list
-    dd  160 + BPC_AKS,  170 + BPC_AKS, PAD_DOWN ; list 0→1 (PERSIAN)
-    dd  220 + BPC_AKS,  230 + BPC_AKS, PAD_A    ; select PERSIAN → DEPOSIT/STATS/CANCEL
-    dd  280 + BPC_AKS,  290 + BPC_AKS, PAD_A    ; DEPOSIT → "PERSIAN was stored in BOX 1."
-    dd  360 + BPC_AKS,  370 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu
-    dd  440 + BPC_AKS,  450 + BPC_AKS, PAD_A    ; open the party mon list again
-    dd  500 + BPC_AKS,  510 + BPC_AKS, PAD_DOWN ; list 0→1 (JIGGLYPUFF)
-    dd  560 + BPC_AKS,  570 + BPC_AKS, PAD_A    ; select JIGGLYPUFF → submenu
-    dd  620 + BPC_AKS,  630 + BPC_AKS, PAD_A    ; DEPOSIT → stored message
-    dd  700 + BPC_AKS,  710 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu
-    dd  780 + BPC_AKS,  790 + BPC_AKS, PAD_UP   ; menu 1→0 (WITHDRAW)
-    dd  840 + BPC_AKS,  850 + BPC_AKS, PAD_A    ; open the box mon list (PERSIAN 0, JIGGLYPUFF 1)
-    dd  900 + BPC_AKS,  910 + BPC_AKS, PAD_A    ; select PERSIAN → WITHDRAW/STATS/CANCEL
-    dd  960 + BPC_AKS,  970 + BPC_AKS, PAD_A    ; WITHDRAW → "PERSIAN is / taken out." (cont)
-    dd 1040 + BPC_AKS, 1050 + BPC_AKS, PAD_A    ; scroll "Got PERSIAN." (cont)
-    dd 1100 + BPC_AKS, 1110 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu (cursor 0)
-    dd 1180 + BPC_AKS, 1190 + BPC_AKS, PAD_DOWN ; menu 0→1
-    dd 1240 + BPC_AKS, 1250 + BPC_AKS, PAD_DOWN ; menu 1→2 (RELEASE)
-    dd 1300 + BPC_AKS, 1310 + BPC_AKS, PAD_A    ; open the box mon list (JIGGLYPUFF at 0)
-    dd 1360 + BPC_AKS, 1370 + BPC_AKS, PAD_A    ; select JIGGLYPUFF → "Once released..." (cont)
-    dd 1420 + BPC_AKS, 1430 + BPC_AKS, PAD_A    ; scroll to "OK?" → YES/NO box
-    dd 1480 + BPC_AKS, 1490 + BPC_AKS, PAD_A    ; YES → "JIGGLYPUFF was / released." (cont)
-    dd 1560 + BPC_AKS, 1570 + BPC_AKS, PAD_A    ; scroll "Bye JIGGLYPUFF!" (cont)
-    dd 1620 + BPC_AKS, 1630 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu
-    dd 1700 + BPC_AKS, 1710 + BPC_AKS, PAD_B    ; SEE YA (ExitBillsPC) → harness hang loop
-    dd 1780 + BPC_AKS, 1790 + BPC_AKS, PAD_B    ; spare — harmless in the hang loop
+    dd   80 + BPC_AKS,   90 + BPC_AKS, PAD_DOWN ; menu 0→1 (DEPOSIT)
+    dd  200 + BPC_AKS,  210 + BPC_AKS, PAD_A    ; open the party mon list
+    dd  320 + BPC_AKS,  330 + BPC_AKS, PAD_DOWN ; list 0→1 (PERSIAN)
+    dd  440 + BPC_AKS,  450 + BPC_AKS, PAD_A    ; select PERSIAN → DEPOSIT/STATS/CANCEL
+    dd  560 + BPC_AKS,  570 + BPC_AKS, PAD_A    ; DEPOSIT → "PERSIAN was stored in BOX 1."
+    dd  720 + BPC_AKS,  730 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu
+    dd  880 + BPC_AKS,  890 + BPC_AKS, PAD_A    ; open the party mon list again
+    dd 1000 + BPC_AKS, 1010 + BPC_AKS, PAD_DOWN ; list 0→1 (JIGGLYPUFF)
+    dd 1120 + BPC_AKS, 1130 + BPC_AKS, PAD_A    ; select JIGGLYPUFF → submenu
+    dd 1240 + BPC_AKS, 1250 + BPC_AKS, PAD_A    ; DEPOSIT → stored message
+    dd 1400 + BPC_AKS, 1410 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu
+    dd 1560 + BPC_AKS, 1570 + BPC_AKS, PAD_UP   ; menu 1→0 (WITHDRAW)
+    dd 1680 + BPC_AKS, 1690 + BPC_AKS, PAD_A    ; open the box mon list (PERSIAN 0, JIGGLYPUFF 1)
+    dd 1800 + BPC_AKS, 1810 + BPC_AKS, PAD_A    ; select PERSIAN → WITHDRAW/STATS/CANCEL
+    dd 1920 + BPC_AKS, 1930 + BPC_AKS, PAD_A    ; WITHDRAW → "PERSIAN is / taken out." (cont)
+    dd 2080 + BPC_AKS, 2090 + BPC_AKS, PAD_A    ; scroll "Got PERSIAN." (cont)
+    dd 2200 + BPC_AKS, 2210 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu (cursor 0)
+    dd 2360 + BPC_AKS, 2370 + BPC_AKS, PAD_DOWN ; menu 0→1
+    dd 2480 + BPC_AKS, 2490 + BPC_AKS, PAD_DOWN ; menu 1→2 (RELEASE)
+    dd 2600 + BPC_AKS, 2610 + BPC_AKS, PAD_A    ; open the box mon list (JIGGLYPUFF at 0)
+    dd 2720 + BPC_AKS, 2730 + BPC_AKS, PAD_A    ; select JIGGLYPUFF → "Once released..." (cont)
+    dd 2840 + BPC_AKS, 2850 + BPC_AKS, PAD_A    ; scroll to "OK?" → YES/NO box
+    dd 2960 + BPC_AKS, 2970 + BPC_AKS, PAD_A    ; YES → "JIGGLYPUFF was / released." (cont)
+    dd 3120 + BPC_AKS, 3130 + BPC_AKS, PAD_A    ; scroll "Bye JIGGLYPUFF!" (cont)
+    dd 3240 + BPC_AKS, 3250 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu
+    dd 3400 + BPC_AKS, 3410 + BPC_AKS, PAD_B    ; SEE YA (ExitBillsPC) → harness hang loop
+    dd 3560 + BPC_AKS, 3570 + BPC_AKS, PAD_B    ; spare — harmless in the hang loop
     dd  -1,  -1, 0
 %elifdef AUTOKEY_BILLSPC_CHANGE
     ; sram-plan stage 6 (DEBUG_BILLSPC_CHANGEBOX): the change-box round trip —
@@ -4642,24 +4654,24 @@ autokey_script:
 %else
 %assign BPC_AKS 0
 %endif
-    dd   40 + BPC_AKS,   50 + BPC_AKS, PAD_DOWN ; menu 0→1 (DEPOSIT)
-    dd  100 + BPC_AKS,  110 + BPC_AKS, PAD_A    ; open the party mon list
-    dd  160 + BPC_AKS,  170 + BPC_AKS, PAD_DOWN ; list 0→1 (PERSIAN)
-    dd  220 + BPC_AKS,  230 + BPC_AKS, PAD_A    ; select PERSIAN → DEPOSIT/STATS/CANCEL
-    dd  280 + BPC_AKS,  290 + BPC_AKS, PAD_A    ; DEPOSIT → "PERSIAN was stored in BOX 1."
-    dd  360 + BPC_AKS,  370 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu (cursor 1)
-    dd  440 + BPC_AKS,  450 + BPC_AKS, PAD_DOWN ; menu 1→2 (RELEASE)
-    dd  500 + BPC_AKS,  510 + BPC_AKS, PAD_DOWN ; menu 2→3 (CHANGE BOX)
-    dd  560 + BPC_AKS,  570 + BPC_AKS, PAD_A    ; CHANGE BOX → "When you change a..."
-    dd  640 + BPC_AKS,  650 + BPC_AKS, PAD_A    ; cont: "will be saved."
-    dd  700 + BPC_AKS,  710 + BPC_AKS, PAD_A    ; para: "Is that okay?" → YES/NO box
-    dd  760 + BPC_AKS,  770 + BPC_AKS, PAD_A    ; YES → EmptyAllSRAMBoxes → box menu (BOX 1)
+    dd   80 + BPC_AKS,   90 + BPC_AKS, PAD_DOWN ; menu 0→1 (DEPOSIT)
+    dd  200 + BPC_AKS,  210 + BPC_AKS, PAD_A    ; open the party mon list
+    dd  320 + BPC_AKS,  330 + BPC_AKS, PAD_DOWN ; list 0→1 (PERSIAN)
+    dd  440 + BPC_AKS,  450 + BPC_AKS, PAD_A    ; select PERSIAN → DEPOSIT/STATS/CANCEL
+    dd  560 + BPC_AKS,  570 + BPC_AKS, PAD_A    ; DEPOSIT → "PERSIAN was stored in BOX 1."
+    dd  720 + BPC_AKS,  730 + BPC_AKS, PAD_A    ; dismiss (prompt) → BillsPCMenu (cursor 1)
+    dd  880 + BPC_AKS,  890 + BPC_AKS, PAD_DOWN ; menu 1→2 (RELEASE)
+    dd 1000 + BPC_AKS, 1010 + BPC_AKS, PAD_DOWN ; menu 2→3 (CHANGE BOX)
+    dd 1120 + BPC_AKS, 1130 + BPC_AKS, PAD_A    ; CHANGE BOX → "When you change a..."
+    dd 1280 + BPC_AKS, 1290 + BPC_AKS, PAD_A    ; cont: "will be saved."
+    dd 1400 + BPC_AKS, 1410 + BPC_AKS, PAD_A    ; para: "Is that okay?" → YES/NO box
+    dd 1520 + BPC_AKS, 1530 + BPC_AKS, PAD_A    ; YES → EmptyAllSRAMBoxes → box menu (BOX 1)
 %assign BPC_I 0
 %rep 11
-    dd  820 + BPC_I * 60 + BPC_AKS, 830 + BPC_I * 60 + BPC_AKS, PAD_DOWN ; → BOX12
+    dd 1640 + BPC_I * 120 + BPC_AKS, 1650 + BPC_I * 120 + BPC_AKS, PAD_DOWN ; → BOX12
 %assign BPC_I BPC_I + 1
 %endrep
-    dd 1540 + BPC_AKS, 1550 + BPC_AKS, PAD_A    ; pick BOX12 → save + swap (banks 2→3)
+    dd 3080 + BPC_AKS, 3090 + BPC_AKS, PAD_A    ; pick BOX12 → save + swap (banks 2→3)
     ; Second CHANGE BOX — measured, NOT symmetric with the first. Two traps
     ; (FRAME.BIN bisects at 1860/2060/2160):
     ;  1. A 10-frame opener hold can DOUBLE-CONSUME (select + the text's cont
@@ -4670,18 +4682,18 @@ autokey_script:
     ;     wait boundary lands in DIFFERENT states across otherwise-identical
     ;     runs. Every gap here is >= 120 frames so the jitter cannot reorder
     ;     press vs wait.
-    dd 1840 + BPC_AKS, 1844 + BPC_AKS, PAD_A    ; CHANGE BOX (short hold — trap 1)
-    dd 1960 + BPC_AKS, 1964 + BPC_AKS, PAD_A    ; cont: "will be saved."
-    dd 2080 + BPC_AKS, 2084 + BPC_AKS, PAD_A    ; para: "Is that okay?" → YES/NO box
-    dd 2200 + BPC_AKS, 2210 + BPC_AKS, PAD_A    ; YES → box menu (cursor BOX12)
+    dd 3680 + BPC_AKS, 3684 + BPC_AKS, PAD_A    ; CHANGE BOX (short hold — trap 1)
+    dd 3920 + BPC_AKS, 3924 + BPC_AKS, PAD_A    ; cont: "will be saved."
+    dd 4160 + BPC_AKS, 4164 + BPC_AKS, PAD_A    ; para: "Is that okay?" → YES/NO box
+    dd 4400 + BPC_AKS, 4410 + BPC_AKS, PAD_A    ; YES → box menu (cursor BOX12)
 %assign BPC_I 0
 %rep 11
-    dd 2320 + BPC_I * 60 + BPC_AKS, 2330 + BPC_I * 60 + BPC_AKS, PAD_UP ; → BOX 1
+    dd 4640 + BPC_I * 120 + BPC_AKS, 4650 + BPC_I * 120 + BPC_AKS, PAD_UP ; → BOX 1
 %assign BPC_I BPC_I + 1
 %endrep
-    dd 3040 + BPC_AKS, 3050 + BPC_AKS, PAD_A    ; pick BOX 1 → save + swap back (bank 2)
-    dd 3340 + BPC_AKS, 3350 + BPC_AKS, PAD_B    ; SEE YA (ExitBillsPC) → harness hang loop
-    dd 3420 + BPC_AKS, 3430 + BPC_AKS, PAD_B    ; spare — harmless in the hang loop
+    dd 6080 + BPC_AKS, 6090 + BPC_AKS, PAD_A    ; pick BOX 1 → save + swap back (bank 2)
+    dd 6680 + BPC_AKS, 6690 + BPC_AKS, PAD_B    ; SEE YA (ExitBillsPC) → harness hang loop
+    dd 6840 + BPC_AKS, 6850 + BPC_AKS, PAD_B    ; spare — harmless in the hang loop
     dd  -1,  -1, 0
 %elifdef AUTOKEY_FLY
     ; overworld-events Stage 4 (DEBUG_AUTOKEY AUTOKEY_FLY): drive the real FLY path

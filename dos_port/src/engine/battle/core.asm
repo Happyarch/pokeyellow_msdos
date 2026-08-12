@@ -263,7 +263,7 @@ extern IsThisPartyMonStarterPikachu    ; engine/pikachu/pikachu_status.asm — C
 extern StarterPikachuBattleEntranceAnimation ; battle_stubs.asm (STUB) — pret engine/battle/pikachu_entrance_anim.asm
 extern IsPlayerPikachuAsleepInParty    ; pikachu_stubs.asm (STUB) — pret engine/pikachu/pikachu_emotions.asm
 extern PlayPikachuSoundClip            ; src/audio/pikachu_pcm.asm
-extern PlayCry                         ; home_stubs.asm (STUB) — pret home/audio.asm
+extern PlayCry                         ; src/home/pokemon.asm — pret home/pokemon.asm:140
 extern RunPaletteCommand               ; home/palettes.asm
 extern SkipFixedLengthTextEntries      ; home/array.asm
 

@@ -1219,7 +1219,10 @@ ifdef DEBUG_BILLSPC
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BILLSPC -D DEBUG_SEED_PARTY -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BILLSPC
-AUTOKEY_DUMP_FRAME ?= 1900
+# 1900 -> 3800 on 2026-08-12 with the AUTOKEY_BILLSPC cadence doubling: PlayCry
+# stopped being a ret-stub, so the flow now really plays (and waits on) three
+# cries. See the cadence note on the script in debug_dump.asm.
+AUTOKEY_DUMP_FRAME ?= 3800
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 # BILLSPC_ATTACH_DELAY=<frames>: RunBillsPCTest idles that long before the flow
 # so a debugger can attach; the autokey script shifts itself by the same amount
@@ -1240,7 +1243,8 @@ ifdef DEBUG_BILLSPC_CHANGEBOX
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BILLSPC_CHANGEBOX -D DEBUG_SEED_PARTY -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BILLSPC_CHANGE
-AUTOKEY_DUMP_FRAME ?= 3800
+# 3800 -> 7600 on 2026-08-12, same reason as DEBUG_BILLSPC above.
+AUTOKEY_DUMP_FRAME ?= 7600
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 ifdef BILLSPC_ATTACH_DELAY
 NASMFLAGS += -D BILLSPC_ATTACH_DELAY=$(BILLSPC_ATTACH_DELAY)

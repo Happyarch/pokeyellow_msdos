@@ -71,7 +71,7 @@ extern AnimationIdSpecialEffects      ; src/data/battle_anim_dispatch.asm (hand-
 ; --- home/engine backend ---
 extern WaitForSoundToFinish          ; src/home/delay.asm
 extern PlaySound                      ; src/home/audio.asm
-extern GetCryData                     ; src/home/home_stubs.asm (STUB)
+extern GetCryData                     ; src/home/pokemon.asm — pret home/pokemon.asm:157
 extern PredefShakeScreenVertically     ; src/engine/gfx/screen_effects.asm
 extern PredefShakeScreenHorizontally   ; src/engine/gfx/screen_effects.asm
 extern UpdateCGBPal_BGP               ; src/home/cgb_palettes.asm

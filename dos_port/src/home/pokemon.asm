@@ -9,7 +9,9 @@
 ;         (see the banner at the end of this file).
 ; The pic pair came from src/home/pics.asm and LoadMonData from
 ; src/engine/pokemon/load_mon_data.asm, which keeps the real body LoadMonData_.
-; NOT here: OverwritewMoves, PlayCry, GetCryData and GetwMoves are unported.
+; PlayCry and GetCryData joined the mirror 2026-08-12 (battle plan 1d) — see the
+; two banners at the end of this file; they were ret-stubs in home_stubs.asm.
+; NOT here: OverwritewMoves and GetwMoves are unported.
 ;
 ; GetMonHeader copies the 28-byte base-stats record for the internal species
 ; index in [wCurSpecies] into wMonHeader, then overwrites byte 0 (the dex id)
@@ -41,6 +43,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "assets/audio_constants.inc"   ; CRY_SFX_START (GetCryData)
 
 %define RHYDON        0x01
 %define NUM_POKEMON   151
@@ -73,12 +76,17 @@ extern PrintStatusAilment               ; src/engine/pokemon/status_ailments.asm
 extern IsThisPartyMonStarterPikachu     ; src/engine/pikachu/pikachu_status.asm
 extern CheckPikachuFollowingPlayer      ; src/home/pikachu.asm
 extern PartyMenuText_12cc               ; assets/item_text.inc (_SleepingPikachuText1)
+extern CryData                          ; assets/cry_data.inc via src/data/audio_data.asm
+extern PlaySound                        ; src/home/audio.asm — AL = sound id
+extern WaitForSoundToFinish             ; src/home/delay.asm — block until channels drain
 %ifdef DEBUG_PARTYMENU
 extern DelayFrame
 extern DumpBackbuffer
 extern PlaceMenuCursor                  ; src/home/window.asm — ▶ at the current item
 %endif
 
+global PlayCry
+global GetCryData
 global GetMonHeader
 global GetPartyMonName
 global GetPartyMonName2
@@ -535,4 +543,83 @@ LoadFrontSpriteByMonIndex:
     ; Rhydon trap — fail-safe invalid dex numbers to RHYDON (pret .invalidDexNumber)
     add esp, 4                               ; discard the saved dest (nothing drawn)
     mov byte [ebp + wCurPartySpecies], RHYDON
+    ret
+
+; ---------------------------------------------------------------------------
+; PlayCry — pret home/pokemon.asm:140. Play monster AL's cry.
+;
+; IMPLEMENTED 2026-08-12 (battle plan 1d, "resolve PlayCry by its real blocking
+; contract rather than an audio-no-op assumption"). Both this and GetCryData
+; were ret-only stubs in src/home/home_stubs.asm. The stub's own note had
+; already retired the "no audio HAL (Phase 3)" excuse and stated the truth:
+; PlaySound and WaitForSoundToFinish are real translated bodies,
+; src/audio/engine_1.asm already understands cries (Audio1_IsCry,
+; CRY_SFX_START/END, and it reads the two modifier vars GetCryData sets), and
+; CryData is generated and exported (assets/cry_data.inc, %included by
+; src/data/audio_data.asm). Nothing blocked it but the instructions.
+;
+; THE CONTRACT IS THE DURATION, NOT A REGISTER. pret ends in
+; WaitForSoundToFinish, so PlayCry BLOCKS for the length of the cry, and callers
+; depend on that. With a bare `ret` the port's UsedStrengthText hook
+; (`call PlayCry / call Delay3 / jmp TextScriptEnd`) gave "<MON> used STRENGTH."
+; only Delay3's three frames before the next message painted over it — observed
+; live 2026-07-13 and recorded on the stub as ledger M-32. Restoring the body
+; restores the wait.
+;
+; The wLowHealthAlarm save/zero/restore is pret's: the alarm must not fight the
+; cry for the SFX channels while it plays.
+;
+; In:  AL = species index. Out: AL/EBX preserved as pret preserves A/BC.
+; ---------------------------------------------------------------------------
+PlayCry:
+    push ebx                                ; push bc
+    mov bh, al                              ; ld b, a
+    mov al, [ebp + wLowHealthAlarm]
+    push eax                                ; push af
+    mov byte [ebp + wLowHealthAlarm], 0     ; xor a / ld [wLowHealthAlarm], a
+    mov al, bh                              ; ld a, b
+    call GetCryData
+    call PlaySound
+    call WaitForSoundToFinish               ; THE blocking step — see above
+    pop eax                                 ; pop af
+    mov [ebp + wLowHealthAlarm], al
+    pop ebx                                 ; pop bc
+    ret
+
+; ---------------------------------------------------------------------------
+; GetCryData — pret home/pokemon.asm:157. Load cry data for monster AL.
+;
+; Indexes CryData by species-1, three bytes per entry: base cry id, pitch
+; modifier, tempo modifier. Returns AL = cry_id*3 + CRY_SFX_START, because cry
+; headers occupy three channels each.
+;
+; pret's `dec a` is kept verbatim, underflow included: species 0 wraps to $FF
+; and reads past the table exactly as the Game Boy does. The callers
+; (PlayCry, and the POKéDEX side menu's CRY option) maintain species >= 1.
+;
+; DEVIATION{class=banking; pret=home/pokemon.asm:GetCryData; behavior=the BankswitchHome BANK(CryData) and BankswitchBack pair around the table read is omitted; evidence=the port has one flat address space and CryData is a linked program-image label rather than a banked ROM table, so both calls are provably no-ops here - the same treatment every other flat table read in this port gets; lifetime=permanent while the port is flat-addressed}
+;
+; In:  AL = species index.
+; Out: AL = sound id to hand PlaySound, BH = base cry id,
+;      [wFrequencyModifier] / [wTempoModifier] set. ESI, ECX clobbered.
+; ---------------------------------------------------------------------------
+GetCryData:
+    dec al                                  ; dec a (species -> 0-based entry)
+    movzx ecx, al                           ; ld c, a / ld b, 0  (bc = index)
+    lea esi, [CryData + ecx*2]              ; ld hl, CryData / add hl,bc / add hl,bc
+    add esi, ecx                            ; add hl, bc  (third time -> index*3)
+    ; Flat program-image table: read through ESI directly, NOT [ebp + esi].
+    mov bh, [esi]                           ; ld a,[hli] / ld b,a  (base cry id)
+    mov al, [esi + 1]                       ; ld a,[hli]
+    mov [ebp + wFrequencyModifier], al
+    mov al, [esi + 2]                       ; ld a,[hl]
+    mov [ebp + wTempoModifier], al
+    ; A = b*3 + CRY_SFX_START. pret: ld a,b / ld c,CRY_SFX_START / rlca / add b /
+    ; add c. `rlca` is a ROTATE, so translate it as rol (not shl) — identical for
+    ; the ids in this table, and faithful for any value.
+    mov al, bh                              ; ld a, b
+    mov bl, CRY_SFX_START                   ; ld c, CRY_SFX_START
+    rol al, 1                               ; rlca  (* 2)
+    add al, bh                              ; add b  (* 3)
+    add al, bl                              ; add c
     ret

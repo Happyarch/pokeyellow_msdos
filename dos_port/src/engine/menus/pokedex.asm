@@ -122,7 +122,7 @@ extern g_bg_whiteout                 ; ppu/ppu.asm
 ; to claim — the audio engine is live and music plays. The POKéDEX CRY option is
 ; silent only because GetCryData/PlayCry are still ret-stubs (home_stubs.asm; M-32).
 extern PlaySound                     ; home/audio.asm — a REAL body
-extern GetCryData                    ; home_stubs.asm — STUB (M-32); pret home/pokemon.asm
+extern GetCryData                    ; src/home/pokemon.asm — pret home/pokemon.asm:157
 extern LoadTownMap_Nest              ; engine/items/town_map.asm — REAL body, linked (M-64)
 extern PrintPokedexEntry             ; engine/printer/printer_stubs.asm — STUB (GB printer)
 ; ---- externs used only by the DATA (entry) page ---------------------------
@@ -135,7 +135,7 @@ extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 ; blocker — the engine is live and CryData is generated; nobody has written its ~15
 ; instructions (M-32). pret's DrawDexEntryOnScreen calls it, so the port calls it: the
 ; call is what goes loud the day the stub is filled in. Dropping it was M-75.
-extern PlayCry                       ; home_stubs.asm — STUB (M-32); pret home/pokemon.asm
+extern PlayCry                       ; src/home/pokemon.asm — pret home/pokemon.asm:140
 extern g_dex_flavor_active           ; text/text.asm — full-page window mode for the flavor
 
 ; ---- local equates (Tier-2 UI/index enums; not gb_memmap data) -----------
@@ -387,9 +387,12 @@ HandlePokedexSideMenu:
 
 .choseCry:
     mov al, [ebp + wPokedexNum]
-    ; STUB{class=stub; label=GetCryData; pret=home/audio.asm:GetCryData; behavior=returns without preparing cry parameters; evidence=project_state:GetCryData reports linked stub; lifetime=until audio Phase A cry gateway}
+    ; The CRY option is live as of 2026-08-12: GetCryData is a real body in
+    ; src/home/pokemon.asm and PlaySound has been real for longer. The STUB
+    ; annotation and the "audio HAL stub (no-op)" note that stood here were both
+    ; retired with it.
     call GetCryData
-    call PlaySound                                  ; audio HAL stub (no-op)
+    call PlaySound
     jmp .handleMenuInput
 
 .choseArea:

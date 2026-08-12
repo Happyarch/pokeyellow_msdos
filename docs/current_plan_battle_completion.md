@@ -441,9 +441,34 @@ result gates deliberately stop after initialization and drive one terminal turn.
       audio-no-op assumption.
 
       **PARTIAL 2026-08-11 — three sub-items closed, and every one of them was
-      blocked by a comment that measurement disproved.** Not ticked: the
-      per-header win/lose text data, the cries, and `PlayCry`'s blocking
-      contract are still open.
+      blocked by a comment that measurement disproved.** Not ticked at that
+      point: the per-header win/lose text data, the cries, and `PlayCry`'s
+      blocking contract.
+
+      **`PlayCry` AND THE CRIES CLOSED 2026-08-12.** `PlayCry` and `GetCryData`
+      were both ret-only stubs in `home_stubs.asm`; their real bodies now live
+      in the mirrored `src/home/pokemon.asm`. `faithdiff PlayCry` is
+      `3/3 calls, 1/1 stores, clean`; `GetCryData` is `2/2 stores` with pret's
+      `BankswitchHome`/`BankswitchBack` pair dropped under a
+      `DEVIATION{class=banking}` (one flat address space, `CryData` is a linked
+      program-image label). **The point was the blocking contract, and it is
+      now real:** pret's `PlayCry` ends in `WaitForSoundToFinish`, so it blocks
+      for the length of the cry, and a bare `ret` had been silently deleting
+      that wait — the recorded live symptom (ledger M-32, observed 2026-07-13)
+      was `UsedStrengthText` getting only `Delay3`'s three frames before the
+      next message painted over it. Every faint and
+      send-out cry site was already calling `PlayCry` faithfully, so those
+      cries start sounding — and start waiting — with no further change.
+
+      Retiring the stubs forced the convention sweep: 7 `stale_extern` comments
+      still pointed at `home_stubs.asm` and 2 `STUB{}` annotations went
+      malformed the moment the labels became `translated`
+      (`pokedex.asm:390` for `GetCryData`, `evolution.asm:81` for `PlayCry` —
+      the latter's own `lifetime` clause said "retire when `PlayCry` is
+      translated"). All 9 fixed in the same change; both `lint_pret_labels`
+      modes back to 0.
+
+      **Still open in 1d, and only this: the per-header win/lose text DATA.**
 
       1. **`SaveTrainerName` stub RETIRED.** Its stated blocker — "needs the
          Tier-1 `TrainerNamePointers` name table, not yet generated" — was
@@ -617,9 +642,40 @@ result gates deliberately stop after initialization and drive one terminal turn.
       is UNWITNESSED — 56/56 full tier passed byte-identical, because no scenario
       makes the AI choose to switch. Same gap as 3a/3b/3d
       (`battle-stage3-blocked-on-mechanics-scenarios`).
-- [ ] **1e (original entry).** Complete `SwitchEnemyMon` through withdrawal,
+- [x] **1e (original entry).** Complete `SwitchEnemyMon` through withdrawal,
       `EnemySendOut`, and its return flags; complete AI item text/effect/HP-bar
       paths without duplicating item-owned player handlers.
+
+      DONE 2026-08-12, structurally, with the evidence class stated below.
+      * `SwitchEnemyMon` — `4/4 calls (3 matched), 1/1 stores`. Withdrawal via
+        pret's own `CopyData` (a hand-rolled byte loop had been standing in),
+        `AIBattleWithdrawText`, the `wFirstMonsNotOutYet` 1/0 abuse pret
+        comments on, `EnemySendOut`, and the `LINK_STATE_BATTLING` CF=0 /
+        CF=1 return contract. The one diff is the standing
+        `PrintText`→`PrintBattleText` battle-box projection.
+      * AI item paths — `AIPrintItemUseAndUpdateHPBar` 3/3 clean;
+        `AIUseFullHeal` 3/3 clean; `AIUseSuperPotion` / `AIUsePotion` /
+        `AIUseHyperPotion` / `AISwitchIfEnoughMons` clean; `AIPrintItemUse_`,
+        `AIRecoverHP`, `AIUseFullRestore` and `AIIncreaseStat` match on calls
+        with ADDED stores that are x86 lowering of pret's `ld hl`-indirect
+        writes. No player item handler is duplicated: the AI path calls the
+        shared `StatModifierUpEffect` and `UpdateHPBar2` rather than forking.
+      * `AIPlayRestoringSFX` — was `ret` under "TODO-HW: audio HAL Phase 3.
+        Stub no-op." **False blocker, and the fourth of its kind this week:**
+        `PlaySoundWaitForCurrent` is a translated routine with ten other
+        callers and `SFX_HEAL_AILMENT` is generated as `$8E`. Now
+        `1/1 clean` — and, like `PlayCry`, the point is that
+        `PlaySoundWaitForCurrent` BLOCKS, so the `ret` had been deleting a
+        wait the item-use pacing depends on.
+      * The file header's "per-trainer AI stubs — deferred UI paths" and
+        "item/switch actions (UI stubbed)" claims are retired: measured, all
+        eleven per-class bodies match pret's call graph exactly.
+
+      **EVIDENCE CLASS: structural only.** No scenario in the 56-scenario
+      registry fights a trainer that carries items (the only trainer scenarios
+      are the Route 3 youngster), so the AI item and switch paths have zero
+      execution evidence. That is a scenario debt, and Stage 2's scenario box
+      is where it belongs.
 - [x] Add deterministic trainer win and loss scenarios. Must-hit lists must name
       trainer initialization, party loading, battle entry, result handling, and
       the flag/script consumer. Compare party/enemy state, money, event/script

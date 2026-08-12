@@ -54,7 +54,7 @@ extern JoypadLowSensitivity     ; refresh hJoy5 (H_JOY5) low-sensitivity input
 extern StopAllMusic             ; src/home/audio.asm
 extern PlaySound                ; src/home/audio.asm — AL = sound id
 extern PlayMusic                ; src/home/audio.asm — AL = song, BL = audio ROM bank
-extern PlayCry                  ; home_stubs.asm — pret: home/pokemon.asm (still a stub)
+extern PlayCry                  ; src/home/pokemon.asm — pret home/pokemon.asm:140
 extern WaitForSoundToFinish     ; src/home/delay.asm
 extern Delay3                   ; src/home/palettes.asm
 
@@ -78,7 +78,10 @@ section .text
 ;   [2b] (software PPU / palette): EvolutionSetWholeScreenPalette flash,
 ;     Evolution_LoadPic old/new (LoadFlippedFrontSpriteByMonIndex + pic swap),
 ;     Evolution_ChangeMonPic / Evolution_BackAndForthAnim tile morph.
-; STUB{class=stub; label=PlayCry; pret=home/pokemon.asm:PlayCry; behavior=the old and new species cries do not play, the call is made faithfully at both pret sites and the ret-stub in home_stubs.asm returns immediately; evidence=tools/label_status PlayCry reports stub with provider dos_port/src/home/home_stubs.asm, while every other audio routine this routine calls has a real linked body; lifetime=retire when PlayCry is translated, no change is needed here}
+; The PlayCry STUB annotation that stood here is RETIRED 2026-08-12: its own
+; lifetime clause said "retire when PlayCry is translated, no change is needed
+; here", and PlayCry is now a real body in src/home/pokemon.asm. Both pret call
+; sites were already faithful, so the cries simply play now.
 ; Because the pic-load path is deferred, this does NOT clobber wCurPartySpecies/
 ; wCurSpecies, so (unlike pret) it need not save/restore them.
 ; Out: CF set iff cancelled. Clobbers AL; preserves ESI/EDX/EBX.

@@ -148,7 +148,7 @@ extern PrintNumber         ; src/home/print_num.asm — TX_NUM (text_decimal)
 extern PrintBCDNumber      ; src/home/print_bcd.asm — TX_BCD (text_bcd / money)
 extern PlaySound           ; src/home/audio.asm — AL = sound id (TextCommand_SOUND)
 extern WaitForSoundToFinish ; src/home/delay.asm
-extern PlayCry             ; home_stubs.asm — pret: home/pokemon.asm (AL = species; ret-stub)
+extern PlayCry             ; src/home/pokemon.asm — pret home/pokemon.asm:140 (AL = species)
 
 %include "assets/audio_constants.inc"   ; SFX_* ids for the TextCommandSounds table
 

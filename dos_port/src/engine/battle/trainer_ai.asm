@@ -8,11 +8,19 @@
 ;   TrainerClassMoveChoiceModifications — per-trainer-class modifier list
 ;   StatusAilmentMoveEffects — data table for Mod1
 ;   ReadMove — loads a move record from the flat Moves table into enemy move WRAM
-;   TrainerAI — top-level AI dispatcher (per-trainer-class random AI; mostly UI-coupled)
+;   TrainerAI — top-level AI dispatcher (per-trainer-class random AI)
 ;   TrainerAIPointers — per-class AI function + count table
-;   Per-trainer AI stubs (BrockAI, GenericAI, …) — deferred UI paths
+;   BrockAI, MistyAI, …, GenericAI — the per-class AI bodies
 ;   AICheckIfHPBelowFraction, AICureStatus, DecrementAICount — pure math/WRAM helpers
-;   AIUseX*, AIRecoverHP, AISwitchIfEnoughMons … — item/switch actions (UI stubbed)
+;   AIUseX*, AIRecoverHP, AISwitchIfEnoughMons … — item/switch actions
+;
+; THE "STUBBED" LANGUAGE THAT USED TO BE IN THIS HEADER IS RETIRED (2026-08-12).
+; It called the per-class AI bodies "stubs — deferred UI paths" and the item and
+; switch actions "UI stubbed". Measured with faithdiff instead of believed: all
+; eleven per-class bodies match pret's call graph exactly (BrockAI 1/1, ErikaAI
+; 2/2, BlaineAI 2/2, Rival2AI 2/2, Rival3AI 2/2, GenericAI 0/0, …), and so do
+; AISwitchIfEnoughMons (1/1, clean) and the AIUse* family. Do not reintroduce
+; the claim without re-measuring it.
 ;
 ; Register map: A=AL, B=BH, C=BL, D=DH, E=DL, HL=ESI, DE=EDX, BC=EBX.
 ; GB memory at [EBP+addr]; flat program-image tables accessed as [label] directly.
@@ -22,9 +30,13 @@
 ;   `ret nz` → `jz  .continue; ret; .continue:` (return if ZF clear)
 ; `sbc` → `sbb`; AddNTimes stride in BX (not CX).
 ;
-; Deferred externs (UI / audio — Wave 2 front-end):
-;   AIPrintItemUse_, UpdateHPBar2, EnemySendOut, PlaySoundWaitForCurrent
-;   (all stubbed as local no-ops so this file assembles clean)
+; Formerly "deferred externs (UI / audio — Wave 2 front-end): AIPrintItemUse_,
+; UpdateHPBar2, EnemySendOut, PlaySoundWaitForCurrent — all stubbed as local
+; no-ops so this file assembles clean". NONE of those four is a no-op now:
+; UpdateHPBar2 and EnemySendOut are real externs (see the extern block below),
+; AIPrintItemUse_ was implemented 2026-08-11, and AIPlayRestoringSFX's
+; PlaySoundWaitForCurrent tail was restored 2026-08-12. The file has no local
+; no-op stand-ins left.
 ;
 ; Trainer-data global dependency:
 ;   TrainerAIPointers is hand-written here (data-vs-code: pointers in .asm).
@@ -47,6 +59,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "coords.inc"                 ; BCOORD — pret battle hlcoords onto the 40x25 canvas
+%include "assets/audio_constants.inc" ; SFX_HEAL_AILMENT (AIPlayRestoringSFX)
 
 ; ---------------------------------------------------------------------------
 ; File-local derived constants. All shared WRAM aliases (wAICount, wAIItem,
@@ -81,6 +94,7 @@ extern Moves
 extern AIGetTypeEffectiveness         ; engine/battle/core.asm — → wTypeEffectiveness
 extern StatModifierUpEffect
 extern IsInArray                ; src/home/array2.asm (shared home global)
+extern PlaySoundWaitForCurrent  ; src/home/delay.asm — AL = sfx id (AIPlayRestoringSFX)
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -813,13 +827,30 @@ AICureStatus:
     ret
 
 ; ===========================================================================
-; AI item-use helpers (UI parts stubbed)
+; AI item-use helpers
 ; ===========================================================================
 
 ; --- AIPlayRestoringSFX ---
-; TODO-HW: audio HAL Phase 3. Stub no-op.
+; pret trainer_ai.asm:468 — `ld a, SFX_HEAL_AILMENT / jp PlaySoundWaitForCurrent`.
+; The healing/stat-item jingle the enemy trainer's item use plays; four callers
+; (AIUseFullHeal, AIUseGuardSpec, AIUseXAccuracy, AIUseDireHit), matching pret's
+; four call sites exactly.
+;
+; IMPLEMENTED 2026-08-12 (battle plan 1e). The old body was `ret` under
+; "TODO-HW: audio HAL Phase 3. Stub no-op." That blocker did not exist when it
+; was read: PlaySoundWaitForCurrent has been a linked, translated routine in
+; src/home/delay.asm with ten other callers (TryRunningFromBattle,
+; ItemUseMedicine x2, ItemUseItemfinder x2, Music_PokeFluteInBattle, ...), and
+; SFX_HEAL_AILMENT is generated into assets/audio_constants.inc as $8E. Nothing
+; about this routine needed a "Phase 3".
+;
+; This also mattered for the BLOCKING contract, not just for the sound: pret's
+; PlaySoundWaitForCurrent drains the current SFX before starting the next, so a
+; `ret` here did not merely stay silent, it removed a wait the item-use
+; sequence's pacing depends on.
 AIPlayRestoringSFX:
-    ret
+    mov al, SFX_HEAL_AILMENT
+    jmp PlaySoundWaitForCurrent     ; pret: jp (tail)
 
 ; --- AIPrintItemUse_ ---
 ; pret trainer_ai.asm:741 — print "<trainer> used <item> on <mon>!".
@@ -870,7 +901,7 @@ AIUseHyperPotion:
     ; fallthrough
 
 ; --- AIRecoverHP ---
-; Heal BH HP from enemy mon (cap at maxHP), write HPBar scratch. UI stubbed.
+; Heal BH HP from enemy mon (cap at maxHP), write HPBar scratch.
 ; Pret ref: engine/battle/trainer_ai.asm:AIRecoverHP
 AIRecoverHP:
     mov [ebp + wAIItem], al
@@ -908,7 +939,7 @@ AIRecoverHP:
     jmp AIPrintItemUseAndUpdateHPBar
 
 ; --- AIUseFullRestore ---
-; Cure status + set HP = maxHP. UI stubbed.
+; Cure status + set HP = maxHP.
 ; Pret ref: engine/battle/trainer_ai.asm:AIUseFullRestore
 AIUseFullRestore:
     call AICureStatus
@@ -1021,12 +1052,12 @@ AIUseXSpecial:
 
 ; --- AIIncreaseStat ---
 ; Save wEnemyMoveNum/Effect, inject XSTATITEM_DUPLICATE_ANIM + stat effect,
-; call StatModifierUpEffect, restore. UI call stubbed.
+; call StatModifierUpEffect, restore.
 ; Pret ref: engine/battle/trainer_ai.asm:AIIncreaseStat
 AIIncreaseStat:
     mov [ebp + wAIItem], al
     push ebx                        ; save bh (stat effect id)
-    call AIPrintItemUse_            ; deferred UI stub
+    call AIPrintItemUse_            ; real body since 2026-08-11
     pop ebx
     ; save current wEnemyMoveNum and wEnemyMoveEffect
     movzx eax, byte [ebp + wEnemyMoveEffect]
@@ -1053,7 +1084,7 @@ AIUseGuardSpec:
     jmp AIPrintItemUse
 
 ; --- AIPrintItemUse ---
-; Store item, call UI stub, decrement count.
+; Store item, print the item-use text, decrement count.
 ; Pret ref: engine/battle/trainer_ai.asm:AIPrintItemUse
 AIPrintItemUse:
     mov [ebp + wAIItem], al
