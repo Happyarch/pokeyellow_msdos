@@ -1780,6 +1780,7 @@ CONNECTION_EAST          equ 1 << 0     ; bit 0 = $01
 
 ; Map IDs (constants/map_constants.asm — subset for implemented maps)
 MAP_ID_PALLET_TOWN       equ 0x00
+MAP_ID_OAKS_LAB          equ 0x28   ; pret OAKS_LAB (constants/map_constants.asm:72)
 MAP_ID_ROUTE_1            equ 0x0C
 MAP_ID_ROUTE_21           equ 0x20
 MAP_NO_CONNECTION         equ 0xFF       ; sentinel: no connected map in this direction

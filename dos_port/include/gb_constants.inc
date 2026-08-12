@@ -231,6 +231,7 @@ PIKAHAPPY_USEDTMHM     equ 5       ; (ItemUseTMHM: a TM/HM was taught to a party
 PIKAHAPPY_DEPOSITED    equ 7       ; (BillsPCDeposit: starter Pikachu was boxed)
 STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
 LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
+SET_PAL_BATTLE_BLACK   equ 0x00    ; constants/palette_constants.asm (RunPaletteCommand id)
 SET_PAL_BATTLE         equ 0x01    ; constants/palette_constants.asm (RunPaletteCommand id)
 SET_PAL_STATUS_SCREEN  equ 0x03    ; constants/palette_constants.asm (RunPaletteCommand id)
 SET_PAL_OVERWORLD      equ 0x09    ; constants/palette_constants.asm (RunPaletteCommand id)
@@ -708,6 +709,7 @@ MON_GHOST               equ 0xB8
 ; ---------------------------------------------------------------------------
 OPP_ID_OFFSET           equ 200
 ROCKET                  equ 0x1E   ; trainer class $1E (IsFightingJessieJames)
+RIVAL3                  equ 0x2B   ; trainer class $2B (TrainerBattleVictory final rival)
 OPP_LASS                equ OPP_ID_OFFSET + 0x03
 OPP_JR_TRAINER_F        equ OPP_ID_OFFSET + 0x06
 OPP_UNUSED_JUGGLER      equ OPP_ID_OFFSET + 0x0D

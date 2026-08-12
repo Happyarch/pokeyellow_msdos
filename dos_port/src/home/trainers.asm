@@ -120,7 +120,7 @@ extern _GetSpritePosition1      ; src/engine/overworld/trainer_sight.asm
 extern _GetSpritePosition2      ; src/engine/overworld/trainer_sight.asm
 extern _SetSpritePosition1      ; src/engine/overworld/trainer_sight.asm
 extern _SetSpritePosition2      ; src/engine/overworld/trainer_sight.asm
-extern SaveTrainerName          ; src/engine/battle/battle_stubs.asm — STUB (pret engine/battle/save_trainer_name.asm)
+extern SaveTrainerName          ; src/engine/battle/save_trainer_name.asm
 extern SetEnemyTrainerToStayAndFaceAnyDirection ; src/engine/overworld/npc_movement_2.asm
 extern TextCommandProcessor     ; src/home/text.asm
 extern TextScriptEnd            ; src/home/overworld_text.asm
@@ -668,7 +668,11 @@ PrintEndBattleText:
     jz .noText
     and byte [ebp + wStatusFlags3], ~(1 << BIT_PRINT_END_BATTLE_TEXT)
     ; TODO-HW: bank save/restore is a no-op under the flat model (kept structurally).
-; STUB{label=SaveTrainerName; class=stub; pret=home/trainers.asm:PrintEndBattleText; behavior=the call returns without copying the trainer class name into wNameBuffer, so the TX_RAM wNameBuffer prefix of TrainerEndBattleText prints whatever the buffer last held; evidence=label DB reports SaveTrainerName status=stub with stub_file dos_port/src/engine/battle/battle_stubs.asm, whose body is ret-only; lifetime=retired with that stub, once TrainerNamePointers exists as generated Tier-1 data and the real save_trainer_name.asm body is ported}
+    ; SaveTrainerName is REAL as of 2026-08-11 (src/engine/battle/save_trainer_name.asm).
+    ; The STUB annotation that stood here retired itself: its own lifetime field said
+    ; "once TrainerNamePointers exists as generated Tier-1 data and the real
+    ; save_trainer_name.asm body is ported", and the names were already generated
+    ; (assets/trainer_names.inc). It now fills wNameBuffer for the TX_RAM prefix below.
     call SaveTrainerName
     mov esi, TrainerEndBattleText   ; flat text-script
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection

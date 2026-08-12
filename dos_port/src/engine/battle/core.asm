@@ -169,6 +169,7 @@ global RemoveFaintedPlayerMon
 global ReplaceFaintedEnemyMon
 global SendOutMon
 global TrainerBattleVictory
+global ScrollTrainerPicAfterBattle      ; pret core.asm:6453 jpfar thunk
 
 ; --- backend (already-faithful translations in other files) ---
 extern TrainerAI                       ; trainer_ai.asm (CF if AI used item/switch)
@@ -250,6 +251,9 @@ extern CheckTargetSubstitute           ; substitute.asm
 ; --- pulled in with the unit-C faint/send-out cluster ---
 extern AddBCD                          ; engine/math/bcd.asm
 extern ClearScreen                     ; home/copy2.asm
+extern ClearScreenArea                 ; src/home/copy2.asm — ESI=W_TILEMAP dest, BH=rows, BL=width
+                                       ; (hoisted here 2026-08-11: HandlePlayerBlackOut
+                                       ; uses it ~1000 lines before the old declaration)
 extern ClearSprites                    ; home/clear_sprites.asm
 extern IsItemInBag                     ; src/home/map_objects.asm
 extern PrintSendOutMonMessage          ; battle_stubs.asm (STUB) — pret engine/battle/common_text.asm
@@ -1192,6 +1196,8 @@ extern DelayFrames                     ; src/home/delay.asm
 extern str_oldman_name                 ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern str_profoak_name                ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern MultiHitText                    ; battle_text.inc
+extern _ScrollTrainerPicAfterBattle    ; scroll_draw_trainer_pic.asm — pret jpfar target
+extern PrintEndBattleText              ; src/home/trainers.asm — class-specific end text
 
 ; Faithful port of pret engine/battle/core.asm:ExecutePlayerMove (3244). Re-entry
 ; labels (PlayerCanExecuteMove/PlayerCalcMoveDamage/HandleIfPlayerMoveMissed/
@@ -4529,15 +4535,59 @@ SendOutMon:
 
 ; ===========================================================================
 ; HandlePlayerBlackOut — pret core.asm:1171-1204. Called when the player has no
-; usable mons. Prints the lose message, clears the screen, returns CF=1.
-; TODO(faithful): the OPP_RIVAL1 / OAKS_LAB starter-battle no-blackout special
-; case + link-lost text + SET_PAL_BATTLE_BLACK palette command.
+; usable mons. Prints the appropriate lose message and returns CF=1, EXCEPT for
+; the Oak's Lab rival-1 starter battle, which returns early without blacking out.
+;
+; RESTORED 2026-08-11 (battle plan 1d). The body was a three-line stand-in
+; (`call ClearScreen / stc / ret`) whose `TODO-HW` claimed the palette command
+; and PlayerBlackedOutText2 were unavailable; both are present —
+; SET_PAL_BATTLE_BLACK in engine/gfx/palettes.asm and the three lose-text
+; streams generated into assets/battle_text.inc (lines 285, 369, 402).
+; `faithdiff HandlePlayerBlackOut` read 6 pret / 1 port before this change.
+;
+; Out: CF=1 = player blacked out; CF=0 = Oak's Lab starter loss (no blackout).
 ; ===========================================================================
 HandlePlayerBlackOut:
-    ; TODO-HW: RunPaletteCommand(SET_PAL_BATTLE_BLACK); PlayerBlackedOutText2.
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    jz .notRival1Battle                  ; jr z
+    mov al, [ebp + wCurOpponent]
+    cmp al, OPP_RIVAL1
+    jnz .notRival1Battle                 ; jr nz
+    ; rival 1 battle: wipe the battle frame and scroll the rival's pic back in
+    mov esi, BCOORD(0, 0)                ; PROJ — pret hlcoord 0, 0
+    mov bh, 8                            ; lb bc, 8, 21 — b = height
+    mov bl, 21                           ;               c = width (pret clears
+                                         ;               21 columns on a 20-wide
+                                         ;               GB screen; kept verbatim)
+    call ClearScreenArea
+%ifndef DEBUG_TRAINER_RESULT
+    call ScrollTrainerPicAfterBattle
+    mov bl, 40                           ; ld c, 40
+    call DelayFrames
+    mov eax, Rival1WinText
+    call PrintBattleText
+%endif
+    mov al, [ebp + wCurMap]
+    cmp al, MAP_ID_OAKS_LAB
+    jz .noBlackOut                       ; ret z — starter battle: don't black out
+.notRival1Battle:
+    mov bh, SET_PAL_BATTLE_BLACK         ; ld b (port RunPaletteCommand reads BH)
+    call RunPaletteCommand
+%ifndef DEBUG_TRAINER_RESULT
+    mov eax, PlayerBlackedOutText2       ; ld hl, PlayerBlackedOutText2
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    jnz .noLinkBattle                    ; jr nz
+    mov eax, LinkBattleLostText
+.noLinkBattle:
+    call PrintBattleText
+%endif
+    ; ld a,[wStatusFlags6] / res BIT_ALWAYS_ON_BIKE, a / ld [wStatusFlags6], a
+    and byte [ebp + W_STATUS_FLAGS_6], (~(1 << BIT_ALWAYS_ON_BIKE)) & 0xFF
     call ClearScreen
     stc                                  ; CF=1 → player blacked out
     ret
+.noBlackOut:
+    ret                                  ; pret `ret z`: CF is clear here
 
 ; ===========================================================================
 ; EnemyRan — pret core.asm:263. Reached (single-player) only as the ReplaceFainted-
@@ -4689,21 +4739,71 @@ ReplaceFaintedEnemyMon:
     ret
 
 ; ===========================================================================
-; TrainerBattleVictory — pret core.asm:929. Prize money + "defeated / money" text.
-; Music, ScrollTrainerPicAfterBattle, PrintEndBattleText, and the gym-leader/rival
-; music branches are deferred (audio/animation). wAmountMoneyWon was computed by
-; ReadTrainer at battle start.
+; ScrollTrainerPicAfterBattle — pret core.asm:6453 (`jpfar
+; _ScrollTrainerPicAfterBattle`). The port has one flat address space, so the
+; far-call thunk is a plain tail jump; the body lives in its own pret-mirrored
+; file, src/engine/battle/scroll_draw_trainer_pic.asm.
+; ===========================================================================
+ScrollTrainerPicAfterBattle:
+    jmp _ScrollTrainerPicAfterBattle
+
+; ===========================================================================
+; TrainerBattleVictory — pret core.asm:929. Victory music, "<TRAINER> was
+; defeated!", the trainer pic scrolling back in, the class-specific end-battle
+; text, then the prize money. wAmountMoneyWon was computed by ReadTrainer at
+; battle start.
+;
+; RESTORED 2026-08-11 (battle plan 1d). The body previously printed only
+; MoneyForWinningText and carried a `TODO-HW` claiming PlayBattleVictoryMusic,
+; ScrollTrainerPicAfterBattle and TrainerDefeatedText were unavailable. Two of
+; those three claims were FALSE when measured: PlayBattleVictoryMusic is a
+; translated routine in this very file, and TrainerDefeatedText IS generated
+; into assets/battle_text.inc (line 473), which core.asm %includes. Only
+; ScrollTrainerPicAfterBattle was genuinely absent — `label_status` read
+; `missing` for both _ScrollTrainerPicAfterBattle and DrawTrainerPicColumn — and
+; it is ported now. `faithdiff TrainerBattleVictory` read 7 pret / 2 port before
+; this change.
 ; ===========================================================================
 TrainerBattleVictory:
-    ; TODO-HW: PlayBattleVictoryMusic; ScrollTrainerPicAfterBattle; TrainerDefeatedText
-    ; (TrainerDefeatedText is not yet in the generated battle_text.inc).
+    call EndLowHealthAlarm
+    mov bh, MUSIC_DEFEATED_GYM_LEADER              ; ld b, MUSIC_DEFEATED_GYM_LEADER
+    cmp byte [ebp + wGymLeaderNo], 0               ; ld a,[wGymLeaderNo] / and a
+    jnz .gymleader
+    mov bh, MUSIC_DEFEATED_TRAINER
+.gymleader:
+    mov al, [ebp + wTrainerClass]
+    cmp al, RIVAL3                                 ; final battle against rival
+    jnz .notrival
+    mov bh, MUSIC_DEFEATED_GYM_LEADER
+    ; ld hl, wStatusFlags7 / set BIT_NO_MAP_MUSIC, [hl]
+    or byte [ebp + W_STATUS_FLAGS_7], 1 << BIT_NO_MAP_MUSIC
+.notrival:
+    ; ld a,[wLinkState] / cp LINK_STATE_BATTLING / ld a,b / call nz, ...
+    ; `mov al, bh` sets no flags, exactly as pret's `ld a, b` — the ZF the
+    ; conditional call reads is still the one `cmp` produced.
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    mov al, bh
+    jz .noVictoryMusic
+    call PlayBattleVictoryMusic
+.noVictoryMusic:
+    ; Only the TEXT/ANIMATION waits are gated below — the link-state early
+    ; return stays on both builds so the guard cannot change which battles award
+    ; prize money. Harness-only: the Stage-1b state oracle has no input driver,
+    ; so it must not park in an acknowledgement wait; it stops at the same
+    ; post-victory arithmetic boundary the production path reaches.
 %ifndef DEBUG_TRAINER_RESULT
+    mov eax, TrainerDefeatedText
+    call PrintBattleText
+%endif
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    jz .ret                                        ; pret: ret z (link battle ends here)
+%ifndef DEBUG_TRAINER_RESULT
+    call ScrollTrainerPicAfterBattle
+    mov bl, 40                                     ; ld c, 40
+    call DelayFrames
+    call PrintEndBattleText                        ; class-specific "<TRAINER>: …"
     mov eax, MoneyForWinningText
     call PrintBattleText
-%else
-    ; Harness-only: the Stage-1b state oracle has no input driver, so stop at
-    ; the same post-victory arithmetic boundary without parking in the final
-    ; acknowledgement wait. The production path remains byte-for-byte above.
 %endif
     ; win money: wPlayerMoney += wAmountMoneyWon (3-byte BCD). pret:
     ;   ld de, wPlayerMoney+2 / ld hl, wAmountMoneyWon+2 / ld c,3 / predef AddBCDPredef.
@@ -4713,6 +4813,12 @@ TrainerBattleVictory:
     mov cl, 3
     call AddBCD
     mov byte [ebp + wBattleResult], 0              ; player won
+    ret
+.ret:
+    ; pret's `ret z` on LINK_STATE_BATTLING: a link battle ends here with no
+    ; prize money. Port-only addition on this path: the wBattleResult store
+    ; above is not pret's (pret sets it elsewhere), so it is deliberately NOT
+    ; duplicated here — this arm mirrors pret's bare `ret`.
     ret
 
 ; --- was src/engine/battle/faint_leaves.asm ---
@@ -5493,7 +5599,6 @@ extern StopAllMusic                    ; src/home/audio.asm
 extern PlayMusic                       ; src/home/audio.asm
 extern StatModifierUpEffect            ; src/engine/battle/effects.asm
 extern BuildingRageText                ; dos_port/assets/battle_text.inc
-extern ClearScreenArea                 ; src/home/copy2.asm — ESI=W_TILEMAP dest, BH=rows, BL=width
 extern EnemyMonFaintedText             ; dos_port/assets/battle_text.inc (global label, battle_text stream)
 extern DoesntAffectMonText             ; dos_port/assets/battle_text.inc
 extern AttackMissedText                ; dos_port/assets/battle_text.inc

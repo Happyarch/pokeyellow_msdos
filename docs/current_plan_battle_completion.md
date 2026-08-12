@@ -435,11 +435,60 @@ result gates deliberately stop after initialization and drive one terminal turn.
       streams (the `text_far`/`text_asm` continuation truncation is already
       retired — TX_ASM has real dispatch, TX_FAR its flat splice, and
       `_TrainerNameText` is generated Tier-1 in `assets/trainer_text.inc`; what
-      remains is the per-header win/lose text data and retiring the
-      `SaveTrainerName` stub); restore
+      remains is the per-header win/lose text data); restore
       trainer victory music, faint/send-out cries, waits, and screen restoration
       from pret. Resolve `PlayCry` by its real blocking contract rather than an
       audio-no-op assumption.
+
+      **PARTIAL 2026-08-11 — three sub-items closed, and every one of them was
+      blocked by a comment that measurement disproved.** Not ticked: the
+      per-header win/lose text data, the cries, and `PlayCry`'s blocking
+      contract are still open.
+
+      1. **`SaveTrainerName` stub RETIRED.** Its stated blocker — "needs the
+         Tier-1 `TrainerNamePointers` name table, not yet generated" — was
+         false: `assets/trainer_names.inc` already held all 47 names
+         (`gen_trainer_names.py`) and `src/home/names2.asm` already bound that
+         blob as name list 7 (`TRAINER_NAME`). Real body now in the mirrored
+         `src/engine/battle/save_trainer_name.asm`; `faithdiff` 0 pret / 1 port
+         (the `GetName` tail) under a `DEVIATION{class=data-model}` for the flat
+         blob vs pret's pointer table.
+      2. **`TrainerBattleVictory` RESTORED** — was `calls: 7 pret / 2 port`,
+         now `7 / 7 (5 matched)`. Victory music (gym-leader / `RIVAL3` /
+         `BIT_NO_MAP_MUSIC` branches), `TrainerDefeatedText`,
+         `ScrollTrainerPicAfterBattle`, `DelayFrames 40` and
+         `PrintEndBattleText` are all live. Its `TODO-HW` named three blockers
+         and **two were false**: `PlayBattleVictoryMusic` is a translated
+         routine in the same file, and `TrainerDefeatedText` IS generated
+         (`assets/battle_text.inc:473`, which `core.asm` `%include`s). The two
+         residual diffs are the port's standing conventions —
+         `AddBCDPredef`→`AddBCD` (predef bank drop) and
+         `PrintText`→`PrintBattleText` (battle-box projection).
+         `PrintEndBattleText` had **zero port callers** before this; that is why
+         retiring the `SaveTrainerName` stub alone changed no observable byte.
+      3. **`HandlePlayerBlackOut` RESTORED** — was `calls: 6 pret / 1 port`
+         (a three-line `ClearScreen`/`stc`/`ret` stand-in), now `6 / 6
+         (5 matched)` with `stores: 1 / 1 matched`. The OPP_RIVAL1 screen wipe,
+         pic scroll-in, `Rival1WinText`, the OAKS_LAB no-blackout early return,
+         `SET_PAL_BATTLE_BLACK`, the link-vs-normal lose text and the
+         `BIT_ALWAYS_ON_BIKE` clear are all live. Its `TODO-HW` claimed
+         `SET_PAL_BATTLE_BLACK` and `PlayerBlackedOutText2` were unavailable;
+         both existed (`engine/gfx/palettes.asm`, and battle_text.inc lines
+         285/369/402).
+
+      **New file:** `src/engine/battle/scroll_draw_trainer_pic.asm` —
+      `_ScrollTrainerPicAfterBattle` + `DrawTrainerPicColumn`, the only pieces
+      that were genuinely `missing`. Plus the `ScrollTrainerPicAfterBattle`
+      `jpfar` thunk in `core.asm`. Both faithdiff clean.
+
+      **Evidence class:** the two restored bodies' *presentation* calls sit
+      inside the existing `%ifndef DEBUG_TRAINER_RESULT` guard (the state
+      oracles have no input driver), so the trainer goldens are no-regression
+      evidence, not execution evidence, for the text/scroll/wait steps. The
+      control flow, the `wStatusFlags6` store and the palette command are
+      ungated and DO run in `battle_blackout`. Witnessing the trainer
+      presentation needs a scenario that samples the end-battle text moment —
+      Stage 6's final box owns that.
 - [x] **1f. Restore `SendOutMon`'s send-out sequence.** DONE 2026-08-11 (two
       commits: `AnimateSendingOutMon` ported, then the call graph restored).
       `faithdiff SendOutMon` is now `calls: 14 pret / 14 port (14 matched)`.

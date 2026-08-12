@@ -1944,6 +1944,8 @@ FRONTEND_SRCS := \
     src/engine/battle/battle_transitions.asm \
     src/data/maps/dungeon_maps.asm \
     src/engine/battle/get_trainer_name.asm \
+    src/engine/battle/save_trainer_name.asm \
+    src/engine/battle/scroll_draw_trainer_pic.asm \
     src/engine/battle/battle_hud.asm \
     src/engine/battle/scale_sprites.asm \
     src/engine/battle/battle_menu.asm \
