@@ -1625,13 +1625,28 @@ ItemUseItemfinder:
     call HiddenItemNear                     ; farcall — CF set if item nearby
     mov esi, [ItemfinderFoundNothingText_ref]
     jnc .printText                          ; if no hidden items
-    mov cl, 4                               ; ld c, 4
+    ; THE COUNTER MUST LIVE IN BL, NOT CL, AND THAT IS NOT A STYLE POINT.
+    ; pret keeps it in `c` (`ld c, 4`) and does NOT push it, because its audio
+    ; path preserves BC: home/audio.asm `PlaySound::` opens `push hl / push de /
+    ; push bc`. The port's PlaySound mirrors that exactly — `push esi / push edx
+    ; / push ebx` — so EBX (pret's BC) survives, and ECX does not and was never
+    ; meant to: DetermineAudioFunction pushes ebx only, and Audio1_PlaySound
+    ; (src/audio/engine_1.asm) uses ECX freely (`movzx ecx, bl`,
+    ; `lea ecx, [ecx+ecx*2]`, `movzx ecx, al`). With the count in CL the first
+    ; call overwrote it and `dec cl / jnz` counted from an audio-derived value,
+    ; so the found-item jingle played an unpredictable number of times. Same
+    ; defect class as DivideExpDataByNumMonsGainingExp (17d670c2f); found by the
+    ; tree-wide audit recorded in the stigmergy memory
+    ; bug-class-loop-counter-in-cl-across-a-clobbering-call.
+    ; (WaitForSoundToFinish -> DelayFrame is pushad-wrapped, so that half was
+    ; never the leak.)
+    mov bl, 4                               ; ld c, 4 — pret's c IS BL
 .loop:
     mov al, SFX_HEALING_MACHINE
     call PlaySoundWaitForCurrent
     mov al, SFX_PURCHASE
     call PlaySoundWaitForCurrent
-    dec cl
+    dec bl                                  ; dec c — BL survives PlaySound, CL does not
     jnz .loop
     mov esi, [ItemfinderFoundItemText_ref]
 .printText:
