@@ -129,14 +129,50 @@ family dumps from *inside* `EnterMap` or a sub-flow rather than running
 registers being the clear case — is therefore absent at those checkpoints by
 construction. That is a property of the gates, not of the port.
 
-### 48 more, unexplained: hardware is WHITED OUT and the port is not
+### 48 more: hardware WHITED OUT, port not — NOT a gate artifact, still open
 
-`item_potion_use` (28) and `continue_seed` (20) are the only scenarios where
-**every** divergence has `rom=(31,31,31)` — hardware white across BG pal0-3
-colours 1-3, consistent with `rBGP = 0` (every index mapping to base colour 0),
-while the port holds real colours. Both are `datastruct` class. Cause not
-established: either the port is missing a `GBPalWhiteOut`/fade on those exits,
-or the two sides stop at different points of one. Worth a trace probe.
+`item_potion_use` (28) and `continue_seed` (20). **This group is materially
+different from the 240 above and should not be filed with them.** Narrowed
+2026-08-11 but NOT closed:
+
+- Hardware is **fully** white: decoding both goldens' `cgb_palettes` gives
+  **32/32 BG and 32/32 OBJ entries white**. That is a complete whiteout
+  (`rBGP = rOBP0 = rOBP1 = 0`), not a partial or a stale slot.
+- The port is definitely not whited out at its dump: its composed entries hold
+  real colours, so `IO_BGP != 0` there.
+- **A whiteout changes the palette registers only, not the tilemap.** So unlike
+  the loop-bypass and trainer-gate cases, both sides can legitimately be at the
+  SAME flow point and still differ — the divergence is not explained by a gate
+  skipping code.
+- Both sides are nominally at the same point. The golden's Lua dumps after
+  `dismiss_text("effect")` + `scenario.wait(30)`, described as "settle over the
+  reopened bag list"; the port's gate is `AUTOKEY_DUMP_FRAME=900`, documented as
+  "the bag list with POTION gone".
+- The port DOES have whiteout callers on menu paths (`GBPalWhiteOut` /
+  `WithDelay3` in `main_menu.asm:346`, `status_screen.asm`, `naming_screen.asm`,
+  `league_pc.asm`, `home/pokemon.asm`), so it is not simply that the routine is
+  missing.
+
+Two live hypotheses, and the evidence does not yet separate them: (a) the port
+omits a `GBPalWhiteOutWithDelay3` on this particular exit, or (b) the golden's
+state-driven dump lands inside a whiteout phase that the port's fixed-frame dump
+misses. Note the port gate is FIXED-FRAME while the golden is STATE-DRIVEN,
+which makes (b) entirely plausible.
+
+**DISCRIMINATING EXPERIMENT (do this, do not guess):** run the port gate at
+several dump frames —
+`tools/run_headless.sh "DEBUG_ITEMUSE=1 AUTOKEY_DUMP_FRAME=N"` for N around
+860/900/940/1000 — and decode `cgb_palettes` out of each `GBSTATE.BIN`. If the
+port passes through an all-white palette at ANY frame in that flow, it is (b), a
+phase mismatch, and the fix is the harness clock. If it never does, it is (a), a
+real missing whiteout, and the fix is in the exit path. The harness's own
+comment at `debug_dump.asm:4200` already sets that precedent: "The fix is the
+harness clock, not a mask."
+
+Caution when acting on (b): retiming `AUTOKEY_DUMP_FRAME` moves the WRAM
+comparison too, and that comparison currently PASSES — it is the scenario's
+actual contract, while the palette region is reporting-only. Do not trade a
+passing datastruct check for a reporting-only count.
 
 ### What that leaves as genuine port-defect candidates
 
