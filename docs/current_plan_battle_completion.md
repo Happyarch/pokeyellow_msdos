@@ -728,7 +728,7 @@ effects they need are already translated. `DoUseNextMonDialogue` and
 `ChooseNextMon` are linked partial implementations called from faint handling;
 their current bodies auto-answer and auto-select.
 
-- [x] **2a. Voluntary switch.** Rename the port-only `BattlePartyMenu` to its
+- [~] **2a. Voluntary switch.** Rename the port-only `BattlePartyMenu` to its
       pret counterpart — the TAIL of `PartyMenuOrRockOrRun` (pret
       engine/battle/core.asm:2409; the head, the dec-a run check, is already
       inline in `DisplayBattleMenu.partyMenuOrRun`) — then implement it with pret's
@@ -825,6 +825,33 @@ their current bodies auto-answer and auto-select.
         `PlayerMon2Text`'s outcome selector picking GoodText → ComeBackText.
         That is execution evidence for the 2a switch-out TEXT chain too, not
         just the switch.
+
+      **REOPENED 2026-08-12 (`[~]`, visual half only) — MAINTAINER-OBSERVED IN
+      REAL GAMEPLAY.** The switch is structurally faithful (24/24) and the game
+      state is correct, but the SCREEN is not. Playing
+      `dos_port/run TRAINER_ROUTE_PILOT=1` and switching shows: HP bars red at
+      full health, the SWITCH/STATS/CANCEL box not drawn at all (though it still
+      responds to A), a corrupt party menu, the player sprite wearing the
+      incoming mon's palette, and the battle screen never returning.
+
+      **The lesson for this plan: `faithdiff` clean is not "works" for any
+      screen the port draws differently from pret.** The party menu is one —
+      pret's is a plain tilemap; the port's uses a window overlay, a
+      `GB_TILEMAP1` mirror and OBJ icon tiles. 2a added the second-ever caller
+      of it and reproduced only pret's calls.
+
+      One symptom is root-caused and it is NOT a quick fix: the per-mon HP-bar
+      colour is computed correctly and `RunPaletteCommand
+      SET_PAL_PARTY_MENU_HP_BARS` IS issued, but `_RunPaletteCommand` drops that
+      id (`ja .done`, "no port handler"). Writing the handler is necessary but
+      insufficient — pret colours each row through a BLK packet that CGB really
+      does consume (`SendSGBPackets` runs BOTH packets through
+      `InitCGBPalettes`), while the port's palette HAL is per-TILE-ID
+      (`tile_pal`) and all six bars share the same tile ids. The existing
+      precedent for solving exactly this is `DuplicateEnemyHPBarTiles`, which
+      already gives the battle's enemy gauge its own palette-able ids. Budget it
+      as a HAL task. Full detail, plus the eliminations, in
+      `regression-battle-party-menu-graphics-not-set-up`.
 
       It is still not a registered golden (no manifest entry, no mGBA side) —
       that remains the Stage 2 scenario box's job. And the gate immediately
