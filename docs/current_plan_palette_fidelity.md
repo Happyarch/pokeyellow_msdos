@@ -48,6 +48,58 @@ So the divergences are printed, counted, and listed here instead.
   battle and never reach that loop. The call was genuinely dropped and restoring
   it is correct on faithfulness grounds, but it is not the fix for this family.
 
+## Where the remaining divergences actually are — full-tier decomposition, 2026-08-11
+
+**479 across the 56-scenario tier** (56/56 PASS; the region is reporting-only).
+Re-derived from the run itself, not carried forward. Do not compare this against
+the "523 across 42 scenarios" figure below — different scenario set, not a delta.
+
+Top scenarios: `trainer_battle_loss` 48, `trainer_battle_init` 36,
+`trainer_battle_win` 28, `item_pp_restore` 28, `item_potion_use` 28,
+`fish_old_rod` 24, `item_tm_teach` 20, `item_stone_evolve` 20, `continue_seed`
+20, `main_menu` 16, `ball_catch` 12, `save_real_load` 11, `save_boxes_load` 11,
+then a tail of 8s (the `route*_sight` family, `start_menu`, `sign_pallet`).
+
+### 112 of the 479 are NOT port defects — they are oracle-gate stop points
+
+The three `trainer_battle_*` scenarios contribute 112, and **none of it is the
+palette code being wrong**. Their port gates deliberately stop before the battle
+presentation:
+
+    src/engine/battle/init_battle.asm:397  %ifdef DEBUG_TRAINER_RESULT ... ret
+    src/engine/battle/init_battle.asm:340  %ifdef DEBUG_TRAINER_INIT   ... ret
+    src/engine/battle/init_battle.asm:407  call SetPal_Battle      <-- never reached
+
+So the port structurally cannot hold a battle palette at those checkpoints,
+while hardware does. It shows up in both directions, which is the tell:
+
+- `trainer_battle_win` 28/28 and `trainer_battle_loss` 40/48 are `port=WHITE`
+  against real colours — the port never left its initial palette.
+- `trainer_battle_init` is the INVERSE: **0** of its 36 are `port=WHITE`; it is
+  `port=(3,3,3)` black against hardware's real battle palette, i.e. the port is
+  still in the transition's black-out while hardware has already run
+  `SetPal_Battle`.
+
+Same class as `battle_damage`'s residual 8. These want a per-scenario mask with
+that justification when `PALETTE_GATING` flips, NOT a code change — and chasing
+them as defects would be 112 divergences of wasted effort.
+
+### What that leaves as genuine port-defect candidates
+
+Roughly **367**, and the two dominant signatures across the whole tier are:
+
+| signature | count |
+|---|---:|
+| `OBJ palN colourN: rom=BLACKISH port=WHITE` | 128 |
+| `OBJ palN colourN: rom=(11,23,31) port=WHITE` | 93 |
+| `OBJ palN: rom=WHITE port=BLACKISH` | 24 |
+| `BG palN: rom=BLACKISH port=WHITE` | 24 |
+
+The `(11,23,31)` (light blue) and `(16,31,4)` (green) values are HP-bar / mon
+palette colours, which points at the "Live mon / HP-bar palettes" family below —
+now the largest REAL target, concentrated in the `item_*` and status scenarios
+(96+ divergences). That is the next thing to work, not the trainer set.
+
 ## Open families
 
 Counts from the 2026-08-11 run after the three fixes above: **523 divergences
