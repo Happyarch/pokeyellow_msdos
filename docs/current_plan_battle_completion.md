@@ -1334,11 +1334,60 @@ provider shapes below, not their runtime behavior.
       Also still owed once it terminates: the golden, the manifest row, and the
       `wPlyStatus1`/`wPlyAtksLeft` scenario-local rows (already written into the
       gate) mirrored by name on the mGBA side.
-- [ ] **3a (original entry).** Replace the linked ret-only
-      `CheckNumAttacksLeft` body and verify the complete Bide/Thrash/trapping
-      counter, accumulation, release, and cleanup flow on both turns. Preserve
-      original-game quirks only when pret or the current bug reference supports
-      them, with the required `BUG`/`GLITCH` tags.
+- [~] **3a (original entry) — TRAPPING and BIDE now witnessed; THRASH is the
+      residue.** Kept as a live box rather than folded into 3a because the
+      ticked 3a covers only the trapping third of what this asked for.
+
+      * **Trapping — DONE** by `battle_wrap` (id 64, 782638274). See 3a above.
+      * **Bide — DONE 2026-08-12** by `battle_bide` (id 67). `DEBUG_BATTLE_BIDE`
+        has `battle_wrap`'s shape for the same structural reason: the store and
+        release arms live in `ExecutePlayerMove` (`.bideCheck` /
+        `.unleashEnergy`, port core.asm:1799-1843) and only mean anything across
+        TWO turns, which only the real `MainInBattleLoop` drives. Nothing in the
+        registry had ever set `STORING_ENERGY`, let alone released it.
+
+        **FOUR PINS, and two of them are not obvious.** Enemy HP 999 (the
+        release deals 200; the spec PIDGEY's 36 would be an overkill) and enemy
+        asleep are `battle_wrap`'s. The other two are specific to Bide: the
+        rolled counter is forced to 1, and **the accumulator is forced to 100
+        with `wDamage` zeroed alongside it**. Bide accumulates the damage the
+        USER TAKES, so with the enemy asleep the accumulated total is 0 and
+        `.unleashEnergy` would take its `wMoveMissed = 1` arm — an unpinned run
+        photographs the DEGENERATE release and proves nothing. `wDamage` is
+        zeroed because `.bideCheck` ADDS it into the accumulator every storing
+        turn, so without it the compared total depends on scratch residue.
+        **Every mid-battle write is gated on `STORING_ENERGY` being SET**, on
+        both sides: `.unleashEnergy` clears the bit before it writes `wDamage`,
+        so that condition is what guarantees a pin can never land between the
+        release computing its damage and `HandleIfPlayerMoveMissed` applying it.
+
+        **`wEnemyMon` IS COMPARED here, unlike in `battle_wrap`.** A trapping
+        move's chip damage is a roll; the Bide release is exactly twice the
+        pinned accumulator and jumps straight to `HandleIfPlayerMoveMissed`,
+        skipping the damage calculation and the accuracy test — so 999-200=799
+        is arithmetic. It is the scenario's landmark, together with a latch
+        proving `STORING_ENERGY` was seen set (bit-clear-and-accumulator-zero is
+        also the pre-battle state).
+
+        **EVIDENCE.** `goldencheck battle_bide` PASS, `WRAM: OK (16 regions, 0
+        skipped)`, one pre-existing datastruct mask, NO scenario-specific skips
+        — a cleaner comparison than `battle_wrap`, which has to skip
+        `wLoadedMon` and `wEnemyMon`. Golden reproducible: two fresh generations
+        and the committed file all sha1 `c1656988`. **SABOTAGE: deleting
+        `.unleashEnergy`'s two accumulator-clearing stores fails with exactly
+        `wPlyBideDmg +1: want $00 | got $64`** — the precise byte the cleanup
+        writes, which is the "cleanup flow" clause of this box. `make fidelity`
+        16 PASS; `lint_pret_labels` 0 both modes; `validate_scenarios` 65.
+      * **Thrash / Petal Dance — STILL OPEN, and it is the only residue.**
+        `ThrashPetalDanceEffect` is `translated` and `faithdiff`-clean (2/2
+        calls), and `.thrashingAboutCheck` (port core.asm:1845) is written, but
+        NOTHING HAS EVER EXECUTED IT. The confusion tail is what makes it more
+        than a copy of `battle_bide`: pret's thrash exit runs
+        `HandleSelfConfusionDamage`, whose port faithdiff already shows four
+        ADDED stores (`wEnemyMonDefense`, `wPlayerMove{Effect,Power,Type}`) that
+        are UNTRIAGED. A `battle_thrash` scenario should pin the rolled
+        thrash counter the same way `battle_bide` pins Bide's, and compare
+        `wPlayerBattleStatus1`'s `CONFUSED` bit at the exit.
 - [x] **3b. Pay Day and end-of-battle money.** IMPLEMENTED 2026-08-11,
       WITNESSED 2026-08-12 — the acceptance evidence the box was waiting for is
       `battle_pay_day`, scenario id 63.
@@ -1395,12 +1444,9 @@ provider shapes below, not their runtime behavior.
       `PrintText` at battle exit. pret does the same, so it is faithful, but if
       the port's `PrintText` waits for a keypress there, an automated scenario
       reaching this path will stall — that is where to look first.
-- [ ] **3b (original entry).** The move's accumulator is done and
-      linked (`PayDayEffect_`, `move_effects/pay_day.asm`, `AddBCD` into
-      `wTotalPayDayMoney`); complete the payout/text path in
-      `end_of_battle.asm` (its `TODO-HW` still claims `AddBCDPredef` is unlinked
-      and that the move cannot set `wTotalPayDayMoney` — both are now false; fix
-      the comment in the same change) using big-endian/BCD conventions.
+- [x] **3b (original entry) — SUPERSEDED.** Every clause of this text is covered and
+      witnessed by 3b above (`battle_pay_day`, id 63); kept only as the record of what the box originally
+      asked for. The narrative lives in git history, per this plan's own rule.
 - [x] **3c. Battle draw and simultaneous-faint behavior.** WITNESSED 2026-08-12
       by `battle_self_destruct` (id 65). RE-MEASURED
       2026-08-11, and the box's premise was mostly already satisfied.
@@ -1464,9 +1510,9 @@ provider shapes below, not their runtime behavior.
       both HP words 0. With the arm deleted that value never appears, so the run
       produces no dump at all — which is exactly what the sabotage now reports.
 
-- [ ] **3c (original entry).** Reconstruct the
-      Self-Destruct/Explosion result and music selection from pret, then add a
-      must-hit scenario for the mutual-faint terminal state.
+- [x] **3c (original entry) — SUPERSEDED.** Every clause of this text is covered and
+      witnessed by 3c above (`battle_self_destruct`, id 65); kept only as the record of what the box originally
+      asked for. The narrative lives in git history, per this plan's own rule.
 - [~] **3d. Empty `battle_exp_stubs.asm`.** PARTIAL 2026-08-11: `PrintEmptyString`
       is RETIRED — real pret body (core.asm:6720) in the core.asm mirror, stub
       label removed, both extern comments repointed, `faithdiff` 1/1 with the

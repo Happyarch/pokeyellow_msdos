@@ -1940,6 +1940,36 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "the Exp. All whole-party branch of FaintEnemyPokemon, which no scenario had ever entered because the seeded bag holds no EXP_ALL. Both sides pin item 15's id to EXP_ALL (wBagItems + i*2 -- the LIST, no +1; wNumBagItems is the separate count byte) so the bag compares clean. The branch halves wEnemyMonBaseStats and runs GainExperience a SECOND time over the whole party; the golden's dump landmark is the LAST party slot gaining EXP, which only the whole-party pass credits, so a run that silently fell back to the fought-mon-only path fails instead of passing. Reaching it is what exposed the DivideExpDataByNumMonsGainingExp runaway loop fixed in 17d670c2f -- that routine is unreachable without Exp. All. Deterministic by matchup, exactly as battle_faint: STRENGTH's minimum roll overkills PIDGEY's 36 HP and SNORLAX outspeeds it, and each mon's share is a function of base EXP, level and the number of mons gaining EXP, never a roll"
+    },
+    {
+      "name": "battle_bide",
+      "id": 67,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_BIDE=1",
+      "port_entry_gate": "DEBUG_BATTLE_BIDE",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_bide.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "MainInBattleLoop",
+        "ExecutePlayerMove",
+        "BideEffect"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the Bide STORE and RELEASE \u2014 ExecutePlayerMove's .bideCheck accumulating and .unleashEnergy clearing STORING_ENERGY, zeroing the accumulator and dealing twice what was stored. battle_wrap witnessed the TRAPPING counter; nothing had ever set STORING_ENERGY. Like battle_wrap this needs the REAL MainInBattleLoop, because Bide only means anything across two turns. Four pins, each measured: enemy HP 999 so the release does not KO, enemy asleep because Bide accumulates the damage the USER TAKES and an enemy turn would put a roll straight into the compared accumulator, the rolled counter forced to 1 so the release lands on the same turn on both sides, and the accumulator forced to 100 (with wDamage zeroed alongside it) so the release is a real one rather than .unleashEnergy's degenerate wMoveMissed arm. All the mid-battle writes are gated on STORING_ENERGY being SET, which is what guarantees they cannot land between the release computing wDamage and HandleIfPlayerMoveMissed applying it. Landmark: the enemy at 999-2*100 = 799 HP, having SEEN STORING_ENERGY set \u2014 the latch matters because bit-clear-and-accumulator-zero is also the pre-battle state"
     }
   ],
   "disabled_scenarios": []

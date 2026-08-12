@@ -1123,6 +1123,19 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Bide store/release gate (battle_bide, battle plan 3a residue): SNORLAX L80 uses
+# BIDE on the spec wild PIDGEY L13 and the REAL MainInBattleLoop runs the two
+# turns, which is the only way to reach ExecutePlayerMove's .bideCheck and
+# .unleashEnergy. AutoKeyDrive pins the rolled counter, the accumulator and
+# wDamage, and dumps once the release has taken the enemy to 799 HP.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_BIDE=1" /tmp/bide
+ifdef DEBUG_BATTLE_BIDE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_BIDE -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_BATTLE_PAYDAY
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_PAYDAY -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

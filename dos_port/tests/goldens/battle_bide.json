@@ -1,0 +1,129 @@
+{
+  "description": "SNORLAX L80 used BIDE on the spec wild PIDGEY L13 (seeded to 999 HP and asleep so the two turns run without a KO or an enemy turn); the rolled counter was pinned to 1 and the accumulator to 100, and ExecutePlayerMove's .unleashEnergy released twice that into the enemy — the first golden in which STORING_ENERGY is ever set, let alone released",
+  "frame": 6654,
+  "regions": [
+    {
+      "file_offset": 0,
+      "gb_addr": "0xC3A0",
+      "name": "wTileMap",
+      "size": 360
+    },
+    {
+      "file_offset": 360,
+      "gb_addr": "0x8000",
+      "name": "vram_tiles",
+      "size": 6144
+    },
+    {
+      "file_offset": 6504,
+      "gb_addr": "0xFE00",
+      "name": "oam",
+      "size": 160
+    },
+    {
+      "file_offset": 6664,
+      "gb_addr": "0xFFFFFFFF",
+      "name": "cgb_palettes",
+      "size": 128
+    },
+    {
+      "file_offset": 6792,
+      "gb_addr": "0xD157",
+      "name": "wPlayerName",
+      "size": 11
+    },
+    {
+      "file_offset": 6803,
+      "gb_addr": "0xD162",
+      "name": "wPartyData",
+      "size": 404
+    },
+    {
+      "file_offset": 7207,
+      "gb_addr": "0xD2F6",
+      "name": "wPokedex",
+      "size": 38
+    },
+    {
+      "file_offset": 7245,
+      "gb_addr": "0xD31C",
+      "name": "wBagItems",
+      "size": 42
+    },
+    {
+      "file_offset": 7287,
+      "gb_addr": "0xD346",
+      "name": "wPlayerMoney",
+      "size": 3
+    },
+    {
+      "file_offset": 7290,
+      "gb_addr": "0xD354",
+      "name": "wOptionsBlock",
+      "size": 4
+    },
+    {
+      "file_offset": 7294,
+      "gb_addr": "0xD358",
+      "name": "wPlayerID",
+      "size": 2
+    },
+    {
+      "file_offset": 7296,
+      "gb_addr": "0xCF97",
+      "name": "wLoadedMon",
+      "size": 44
+    },
+    {
+      "file_offset": 7340,
+      "gb_addr": "0xD056",
+      "name": "wBattleFlags",
+      "size": 4
+    },
+    {
+      "file_offset": 7344,
+      "gb_addr": "0xCFD9",
+      "name": "wEnemyMonNick",
+      "size": 11
+    },
+    {
+      "file_offset": 7355,
+      "gb_addr": "0xCFE4",
+      "name": "wEnemyMon",
+      "size": 29
+    },
+    {
+      "file_offset": 7384,
+      "gb_addr": "0xD008",
+      "name": "wBattleMonNick",
+      "size": 11
+    },
+    {
+      "file_offset": 7395,
+      "gb_addr": "0xD013",
+      "name": "wBattleMon",
+      "size": 29
+    },
+    {
+      "file_offset": 7424,
+      "gb_addr": "0xD061",
+      "name": "wPlyStatus1",
+      "size": 1
+    },
+    {
+      "file_offset": 7425,
+      "gb_addr": "0xD069",
+      "name": "wPlyAtksLeft",
+      "size": 1
+    },
+    {
+      "file_offset": 7426,
+      "gb_addr": "0xD073",
+      "name": "wPlyBideDmg",
+      "size": 2
+    }
+  ],
+  "rom_title": "POKEMON YEL",
+  "scenario": "battle_bide",
+  "total_size": 7428
+}

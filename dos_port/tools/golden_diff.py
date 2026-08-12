@@ -889,6 +889,23 @@ SCENARIOS = {
         "flags": "DEBUG_BATTLE_PAYDAY=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_bide": {
+        # datastruct: the Bide STORE and RELEASE — ExecutePlayerMove's
+        # .bideCheck accumulating and .unleashEnergy clearing STORING_ENERGY,
+        # zeroing the accumulator and dealing twice what was stored. What it
+        # pins is the scenario-local triple wPlyStatus1 / wPlyAtksLeft /
+        # wPlyBideDmg plus the enemy's HP.
+        #
+        # UNLIKE battle_wrap, wEnemyMon IS COMPARED. battle_wrap has to skip it
+        # because a trapping move's chip damage is a roll; here the released
+        # damage is exactly twice the PINNED accumulator (200) and the release
+        # path jumps straight to HandleIfPlayerMoveMissed, skipping the damage
+        # calculation and the accuracy test — so 999 - 200 = 799 is arithmetic,
+        # not a roll, and it is the scenario's landmark.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_BIDE=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_wrap": {
         # datastruct: the RELEASE of a trapping move — the turn tail's
         # CheckNumAttacksLeft clearing USING_TRAPPING_MOVE once the counter

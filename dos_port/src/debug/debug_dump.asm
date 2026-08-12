@@ -908,6 +908,16 @@ gbstate_regions:
     ; (win), so this row is the byte the sabotage has to be able to move.
     gbregion "wBattleResult", wBattleResult, 1
 %endif
+%ifdef DEBUG_BATTLE_BIDE
+    ; --- scenario-local rows for Bide (battle plan 3a residue) ---
+    ; None of these is in a shared region (wBattleFlags covers only
+    ; wIsInBattle..wBattleType), same precedent as battle_wrap's two rows. The
+    ; golden mirrors all three BY NAME. wPlyBideDmg is the point of the
+    ; scenario: it must read 0000 after the release, having been non-zero.
+    gbregion "wPlyStatus1",  wPlayerBattleStatus1,        1   ; $D061 — STORING_ENERGY
+    gbregion "wPlyAtksLeft", wPlayerNumAttacksLeft,       1   ; $D069 — the Bide counter
+    gbregion "wPlyBideDmg",  wPlayerBideAccumulatedDamage, 2  ; $D073 — big-endian
+%endif
 %ifdef DEBUG_BATTLE_WRAP
     ; --- scenario-local rows for the trapping counter (battle plan 3a) ---
     ; Neither byte is in any shared region: wBattleFlags covers only
@@ -2732,6 +2742,42 @@ RunBattleTest:
     mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
+%elifdef DEBUG_BATTLE_BIDE
+    ; ------------------------------------------------------------------
+    ; battle_bide golden gate (battle plan 3a residue — the Bide half). Same
+    ; shape as DEBUG_BATTLE_WRAP below and for the same structural reason: the
+    ; Bide store/release arms live in ExecutePlayerMove's .bideCheck /
+    ; .unleashEnergy (port core.asm:1799-1843), which only the REAL
+    ; MainInBattleLoop drives across two turns. battle_wrap witnessed the
+    ; TRAPPING counter; nothing has ever witnessed STORING_ENERGY.
+    ;
+    ; SNORLAX L80 uses BIDE on the spec wild PIDGEY L13. Turn 1 BideEffect sets
+    ; STORING_ENERGY and rolls wPlayerNumAttacksLeft; the menu is then SKIPPED
+    ; (MainInBattleLoop masks STORING_ENERGY|USING_TRAPPING_MOVE at
+    ; core.asm:322-324), so turn 2 re-enters .bideCheck with no further input,
+    ; the counter reaches 0, and .unleashEnergy fires.
+    ;
+    ; THE THREE PINS ARE IN AutoKeyDrive, not here, because two of them must be
+    ; applied WHILE STORING_ENERGY is set rather than before the battle. See the
+    ; DEBUG_BATTLE_BIDE block there for the rolled-counter pin, the accumulator
+    ; pin, and the latch that makes the released state a landmark.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    ; THE ENEMY MUST SURVIVE TWO TURNS, exactly as in battle_wrap: at the spec
+    ; PIDGEY's 36 HP the released Bide would be an overkill and the interesting
+    ; state would be gone before it could be photographed. 999 (big-endian
+    ; $03E7) leaves room for the 200 the release deals.
+    mov word [ebp + wEnemyMonHP], 0xE703        ; big-endian 999
+    mov word [ebp + wEnemyMonMaxHP], 0xE703
+    ; AND IT MUST NOT ACT. Bide accumulates the damage the user TAKES, so an
+    ; enemy turn would put a ROLL straight into the compared accumulator — the
+    ; one value this scenario exists to pin. A seeded sleep counter removes the
+    ; enemy turn deterministically (battle_wrap's pin, and battle_exp_all's).
+    mov byte [ebp + wEnemyMonStatus], 7         ; SLP counter (7 turns)
+    mov byte [ebp + wBattleMonMoves], BIDE      ; move slot 1 = BIDE
+    mov byte [ebp + wPlayerMoveListIndex], 0
+    jmp MainInBattleLoop                        ; the real loop; it does not return
 %elifdef DEBUG_BATTLE_WRAP
     ; ------------------------------------------------------------------
     ; battle_wrap golden gate (battle plan 3a). The FIRST gate that lets the
@@ -3179,7 +3225,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_BIDE, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 
@@ -4471,6 +4517,48 @@ AutoKeyDrive:
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN, then exits
 .noBoomDump:
 %endif
+%ifdef DEBUG_BATTLE_BIDE
+    ; --- battle_bide: three pins, a latch, and the dump (3a residue) ---
+    ; ALL THREE PINS ARE CONDITIONED ON STORING_ENERGY, and that condition is
+    ; load-bearing rather than tidy: .unleashEnergy CLEARS the bit before it
+    ; writes wDamage, so gating on the bit guarantees these writes can never
+    ; land between the release computing its damage and HandleIfPlayerMoveMissed
+    ; applying it.
+    test byte [ebp + wPlayerBattleStatus1], 1 << STORING_ENERGY
+    jz .noBidePin
+    mov dword [bide_pin_seen], 1                ; latch: STORING_ENERGY was set
+    ; PIN 1 — the rolled counter. BideEffect rolls wPlayerNumAttacksLeft and the
+    ; two emulators do not share an RNG stream, so the release has to be forced
+    ; onto the same turn on both sides. battle_wrap's pin, same reason.
+    cmp byte [ebp + wPlayerNumAttacksLeft], 1
+    jbe .bidePin2
+    mov byte [ebp + wPlayerNumAttacksLeft], 1
+.bidePin2:
+    ; PIN 2 — the accumulator itself, to a fixed 100 ($0064, big-endian). Bide
+    ; accumulates the damage the USER TAKES; with the enemy asleep that is 0 on
+    ; both sides, so without this the released damage would be 0, .unleashEnergy
+    ; would take its `wMoveMissed = 1` arm, and the scenario would photograph
+    ; the degenerate case instead of a real release. 100 doubles to 200, which
+    ; the enemy's seeded 999 HP can absorb.
+    mov word [ebp + wPlayerBideAccumulatedDamage], 0x6400   ; big-endian $0064
+    ; PIN 3 — wDamage to 0. .bideCheck ADDS wDamage into the accumulator on
+    ; every storing turn, so leaving whatever scratch value was there would make
+    ; the accumulated total depend on residue rather than on pin 2. Zeroing it
+    ; makes pin 2 idempotent no matter which frame boundary this lands on.
+    mov word [ebp + wDamage], 0
+.noBidePin:
+    ; THE DUMP: the RELEASE LANDED. The enemy's HP is the landmark because it is
+    ; the only value here that cannot also be an initial state — 999 - 2*100 =
+    ; 799 ($031F big-endian). "STORING_ENERGY clear and the accumulator 0" is
+    ; ALSO the pre-battle state, which is what the latch and this HP check
+    ; together rule out.
+    cmp dword [bide_pin_seen], 0
+    je .noBideDump
+    cmp word [ebp + wEnemyMonHP], 0x1F03        ; big-endian 799
+    jne .noBideDump
+    call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN, then exits
+.noBideDump:
+%endif
 %ifdef DEBUG_BATTLE_WRAP
     ; --- battle_wrap: the RNG pin, a latch, and the dump (battle plan 3a) ---
     ; THE PIN. Wrap rolls wPlayerNumAttacksLeft 2-5 and the emulators do not
@@ -4651,6 +4739,10 @@ autokey_frame: dd 0
 %ifdef DEBUG_BATTLE_WRAP
 align 4
 wrap_pin_seen: dd 0            ; set once USING_TRAPPING_MOVE has been observed
+%endif
+%ifdef DEBUG_BATTLE_BIDE
+align 4
+bide_pin_seen: dd 0            ; set once STORING_ENERGY has been observed
 %endif
 %ifdef AUTOKEY_DUMP_ON_BATTLE
 align 4
