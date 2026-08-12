@@ -1631,6 +1631,49 @@ provider shapes below, not their runtime behavior.
 - [ ] **4b. `BATTLE_TYPE_OLD_MAN`.** Implement the tutorial identity/menu and
       scripted throw behavior behind a deterministic battle scenario. The
       Viridian script and story reachability belong to overworld-events Stage 5.
+      - **BRANCH-CORRECTNESS AUDIT DONE 2026-08-12** — this answers the gate
+        preamble's open question ("whether any of 4b's branches are CORRECT
+        rather than merely present"). **All 7 pret `BATTLE_TYPE_OLD_MAN` sites
+        are present in the port and 6 are faithful in structure and ordering**:
+        `DisplayBattleMenu` (core.asm:2095), `BattleItemMenu` (:2303),
+        `LoadPlayerBackPic` (:6387), and all four `item_effects.asm` sites
+        (:117 party/box-full skip, :158 + :170 `.oldManBattle`, :529
+        `.oldManCaughtMon`). The item sites carry their `GLITCH`/`BUG`
+        annotations already. The port has an 8th site, which is the
+        `.doSimulatedMenuInput` name compare split across two lines.
+      - **ONE REAL DIVERGENCE FOUND, measured against the ROM, and it is DATA
+        not code.** pret copies `NAME_LENGTH` = **11** bytes from
+        `.oldManName` / `.profOakName`, which are only **8** and **9** bytes
+        long, so hardware copies whatever follows them into `wPlayerName`.
+        From `pokeyellow.gbc` at `0f:4fe7` (offset `0x3CFE7`):
+          `.oldManName`  11 bytes = `8e 8b 83 7f 8c 80 8d 50` + **`8f 91 8e`**
+            — the tail is "PRO", bleeding out of `.profOakName`.
+          `.profOakName` 11 bytes = `8f 91 8e 85 e8 8e 80 8a 50` + **`fa 2d`**
+            — the tail is the first two bytes of the FOLLOWING CODE
+            (`ld a, [wBattleAndStartSavedMenuItem]` = `fa 2d cc`).
+        `tools/generators/gen_runtime_strings.py` instead pads both to 11 with
+        `0x50`, so the port writes `50 50 50` / `50 50` where hardware writes
+        `8f 91 8e` / `fa 2d`.
+      - **SCOPE OF THAT DIVERGENCE, deliberately not overstated.** It is
+        display-invisible (the `0x50` terminator lands in the same position on
+        both sides) and TRANSIENT (`ItemUseBall.oldManBattle` copies
+        `wGrassRate` -> `wPlayerName`, restoring the real name). **It does NOT
+        reach the Missingno encounter data** — an earlier reading of this that
+        said it did was wrong: pret's `CopyData` copies `hl` -> `de`, so the
+        glitch WRITE is the earlier `wPlayerName` -> `wLinkEnemyTrainerName`
+        (== `wGrassRate`) in `.doSimulatedMenuInput`, carrying the player's REAL
+        name, and `.oldManBattle` is the restore. What remains is a genuine
+        compared-WRAM gap: `wPlayerName` is a standard golden region
+        (`lib/dump.lua:92`, all `NAME_LENGTH` bytes), so any golden photographed
+        between the rename and the ball throw would diverge on 3 bytes (old man)
+        or 2 (Pikachu).
+      - **WHY NOTHING CAUGHT IT:** no scenario exercises the simulated-menu
+        path. 4a's Pikachu golden is still unauthored and there is no old-man
+        scenario at all — so this is precisely the class of defect the "add a
+        must-hit scenario" rule exists for, and the fix should land with one.
+      - **FIX IS GENERATOR-SIDE** (Tier-1 rule: never hand-edit
+        `assets/*.inc`): emit the ROM's real 11 bytes in
+        `gen_runtime_strings.py` and re-run `make assets`.
 - [~] **4c. Ghost Marowak — ANIMATION HALF DONE 2026-08-12. The rest of the box
       is untouched.** `MarowakAnim` and `CopyMonPicFromBGToSpriteVRAM` are
       translated into the mirror `dos_port/src/engine/battle/ghost_marowak_anim.asm`
