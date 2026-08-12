@@ -1700,6 +1700,31 @@ provider shapes below, not their runtime behavior.
           break `fidelity-full` for everyone. So the manifest and
           `golden_diff.SCENARIOS` are left untouched and the suite stays at 66
           consistent scenarios.
+        * **ROOT-CAUSED 2026-08-12, AND IT IS A SHARED STAGE-4 BLOCKER, NOT A
+          BUG IN THIS SCENARIO.** Adding `wBattleMonSpecies != 0` to the
+          landmark made the golden generation FAIL, and the assert's tilemap
+          dump is the evidence: it read "All right!" / "PIDGEY was ..." — the
+          tutorial's CATCH text. **In the old-man battle the player's mon is
+          never sent out**, so `wBattleMon` stays zero for the whole battle on
+          hardware. pret is explicit (`core.asm:171-174`,
+          `StartBattle.specialBattle`): `ld a,[wBattleType] / and a /
+          jp z, .playerSendOutFirstMon` — only a NORMAL battle sends out.
+          The golden is therefore CORRECT and the port's dump is the odd one.
+        * **THE PORT'S GAME CODE IS FAITHFUL HERE — the harness is not.**
+          `init_battle.asm:391` does `cmp wBattleType, 0 / jne
+          .specialBattleIntro`, carrying a DEVIATION that records why
+          `StartBattle` reads `missing` (it is collapsed into
+          `_InitBattleCommon`). But the battle-GOLDEN harness prologue
+          (`debug_dump.asm` ~:2171) stages a battle BY HAND —
+          `InitBattleVariables` / `InitBattleCanvas` / HUDs — instead of going
+          through `_InitBattleCommon`, so it loads `wBattleMon` before any gate
+          body runs, whatever `wBattleType` says.
+        * **CONSEQUENCE FOR THE WHOLE OF STAGE 4:** every `wBattleType != 0`
+          scenario — **4a Pikachu, 4b old man, 4d Safari** — needs a harness
+          entry that reaches the battle through the real special-battle path
+          rather than the normal staging. That is one shared piece of work
+          under three boxes, and it is the actual prerequisite for 4a's and
+          4d's must-hit scenarios too, not just this one.
         * Registering it is: re-add the manifest entry (id 69, tier `full`,
           class `datastruct`, gate `DEBUG_BATTLE_OLDMAN`) and the
           `golden_diff.SCENARIOS` row, then `make assets` (the

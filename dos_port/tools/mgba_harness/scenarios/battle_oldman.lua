@@ -114,6 +114,13 @@ scenario.run(function()
 			-- DUMP-POINT misalignment rather than a defect. Requiring the battle
 			-- to be live makes the landmark mean what the header claims it does.
 			if emu:read8(sym:addr("wIsInBattle")) == 0 then return end
+			-- DO NOT ADD `wBattleMonSpecies ~= 0` HERE. It was tried, and it
+			-- MEASURED THE REAL ANSWER by failing: the assert fired with the
+			-- screen showing "All right!" / "PIDGEY was ..." — the tutorial's
+			-- CATCH text. In the old-man battle the player's mon is NEVER SENT
+			-- OUT (the old man throws the ball immediately), so wBattleMon stays
+			-- zero for the whole battle on hardware. The golden is CORRECT to
+			-- have it zero; anything that waits for it waits forever.
 			if emu:read8(name) ~= OLDMAN_FIRST_BYTE then return end
 			-- And require the WHOLE name, not just its first byte: the tail is
 			-- the entire point of this scenario, so a partial match is not a
