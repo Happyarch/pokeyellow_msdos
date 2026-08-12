@@ -206,7 +206,26 @@ InitWildBattle:
     call InitBattleCanvas
     mov al, [ebp + wEnemyMonSpecies2]
     mov [ebp + wCurPartySpecies], al
-    mov esi, W_TILEMAP + 12
+    ; PROJ battle: the projected enemy-pic cell, not pret's raw `hlcoord 12, 0`
+    ; (init_battle.asm:90). This is the THIRD site of that pattern; the other
+    ; two — core.asm's send-out tail and the trainer-intro replacement below —
+    ; were fixed in dc7df2f8 after they shipped a visible defect (the enemy HUD
+    ; showing fragments of the enemy's own front pic, because the raw anchor
+    ; leaves a 7x7 ghost block at rows 0-6 / cols 12-18 that the projected HUD
+    ; is then drawn over). See regression-battle-second-battle-hud-tile-band.
+    ;
+    ; THIS ONE WAS INERT, WHICH IS WHY IT SURVIVED THAT SWEEP, and the reason is
+    ; worth writing down rather than rediscovering: unlike the other two, this
+    ; call runs BEFORE the slide. `InitWildBattle` falls into _InitBattleCommon,
+    ; which calls SlideBattlePicsIn, and that clears the FULL canvas every frame
+    ; of its loop (`rep stosb` over SCREEN_TILES_W * SCREEN_TILES_H,
+    ; src/home/pics.asm:583-587) — so the tilemap cells written here were erased
+    ; before anything displayed them. The VRAM decode that
+    ; LoadFrontSpriteByMonIndex also performs is the part that mattered and is
+    ; unaffected. Corrected regardless: an anchor that is only harmless because
+    ; a later routine happens to wipe it is a landmine for whoever changes that
+    ; routine.
+    mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     call LoadFrontSpriteByMonIndex
     mov byte [ebp + wTrainerClass], 0
     jmp _InitBattleCommon
