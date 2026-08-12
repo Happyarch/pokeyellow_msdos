@@ -1381,13 +1381,24 @@ provider shapes below, not their runtime behavior.
       * **Thrash / Petal Dance — STILL OPEN, and it is the only residue.**
         `ThrashPetalDanceEffect` is `translated` and `faithdiff`-clean (2/2
         calls), and `.thrashingAboutCheck` (port core.asm:1845) is written, but
-        NOTHING HAS EVER EXECUTED IT. The confusion tail is what makes it more
-        than a copy of `battle_bide`: pret's thrash exit runs
-        `HandleSelfConfusionDamage`, whose port faithdiff already shows four
-        ADDED stores (`wEnemyMonDefense`, `wPlayerMove{Effect,Power,Type}`) that
-        are UNTRIAGED. A `battle_thrash` scenario should pin the rolled
-        thrash counter the same way `battle_bide` pins Bide's, and compare
+        NOTHING HAS EVER EXECUTED IT. A `battle_thrash` scenario should pin the
+        rolled thrash counter the way `battle_bide` pins Bide's, and compare
         `wPlayerBattleStatus1`'s `CONFUSED` bit at the exit.
+
+        **`HandleSelfConfusionDamage`'s four ADDED stores are TRIAGED as of
+        2026-08-12 and are NOT divergences** — this entry called them untriaged,
+        and that is now answered by decomposition rather than by verdict. pret's
+        routine makes exactly THREE named stores: `wCriticalHitOrOHKO`
+        (core.asm:3861), `wAnimationType` (:3880) and `hWhoseTurn` (:3881/:3884)
+        — precisely the "3 pret stores" faithdiff reports. It writes the other
+        four through `HL`: `ld hl, wEnemyMonDefense` … `ld [hli], a`
+        (:3846-3854), and `ld hl, wPlayerMoveEffect` … `ld [hli], a`
+        (:3855-3865), that run covering the effect, the base power at +1 and the
+        type at +2. The port writes the same four by name. So all four ADDED
+        lines are faithdiff's documented store-matching-by-name blind spot with
+        ZERO unexplained residue, and NO suppression is appropriate:
+        `faithdiff_suppress.json` is for symbols expected on one side of *every*
+        routine, not for a routine-specific tool artefact.
 - [x] **3b. Pay Day and end-of-battle money.** IMPLEMENTED 2026-08-11,
       WITNESSED 2026-08-12 — the acceptance evidence the box was waiting for is
       `battle_pay_day`, scenario id 63.
@@ -1634,6 +1645,44 @@ provider shapes below, not their runtime behavior.
 
 ## Stage 4 — special battle types
 
+> **MEASURED SCOPE, 2026-08-12** — recorded so the next iteration picks a box on
+> evidence instead of on the prose below, which was written before any of it was
+> measured. Commands are named so each line can be re-run rather than trusted.
+>
+> `dos_port/tools/label_status <Label>`:
+> * **4c Ghost Marowak is REAL TRANSLATION WORK.** `MarowakAnim` and
+>   `CopyMonPicFromBGToSpriteVRAM` are both `missing` (pret
+>   `engine/battle/ghost_marowak_anim.asm`); `IsGhostBattle` is `translated`.
+> * **4d Safari's text layer is missing.** `PrintSafariZoneBattleText` is
+>   `missing` (pret `engine/battle/safari_zone.asm`, whose only other labels are
+>   its two texts).
+>
+> `grep -c` of the battle-type constants, which measures BRANCH COVERAGE and
+> nothing else — a present branch is not a working feature, and none of these
+> is executed by any scenario:
+> * **4b OLD MAN is largely branched-in already**: pret has **7**
+>   `BATTLE_TYPE_OLD_MAN` sites (4 in `engine/items/item_effects.asm`, 3 in
+>   `engine/battle/core.asm`); the port has **8**, in the same two files. The
+>   extra one is EXPLAINED, not dangling, and the mapping was checked rather
+>   than assumed: port `core.asm:592` is pret `core.asm:2113-2117`
+>   (`ld hl, .oldManName / ld a,[wBattleType] / dec a / jr z, .useOldManName /
+>   ld hl, .profOakName`). `BATTLE_TYPE_OLD_MAN` is 1, so pret's `dec a / jr z`
+>   IS the equality test; the port spells it `cmp byte [wBattleType],
+>   BATTLE_TYPE_OLD_MAN`, which the grep counts and pret's does not. So 4b is plausibly a WITNESS problem more than an
+>   implementation one — start by trying to build its scenario, not by writing
+>   code.
+> * **4d Safari is roughly half-branched**: `Safari|SAFARI` appears **32** times
+>   in pret `engine/battle/core.asm` and **13** in the port's. The BAIT/ROCK menu
+>   wiring is there (port core.asm:568, :3199, :6377); the turn/flee mechanics
+>   and the text layer are what is thin.
+>
+> Not measured this pass, and therefore NOT covered by the above: 4a's two
+> remaining open sub-items (its golden and the happiness-init audit), and
+> whether any of 4b's branches are CORRECT rather than merely present. 4a's
+> THIRD sub-item — the Oak follow stall — was re-measured and is DEAD; see the
+> box itself.
+
+
 - [ ] **4a. `BATTLE_TYPE_PIKACHU`.** Audit every pret branch and implement the
       starter-battle menu, ball refusal, initialization, loss/result, and
       happiness behavior. Overworld-events Stage 1 seeds `wCurOpponent`,
@@ -1651,13 +1700,27 @@ provider shapes below, not their runtime behavior.
         `DEBUG_SEAM_KEEP_BATTLES=1 AUTOKEY_DUMP_ON_BATTLE=1` (gate dumps on
         `wCurOpponent`/`wBattleType`; boot-drift-robust).
       - STILL OPEN: (1) the must-hit Pikachu-battle golden scenario is not yet
-        authored; (2) happiness init (`ModifyPikachuHappiness`) not audited;
-        (3) DOWNSTREAM the post-battle `PLAYER_FOLLOWS_OAK` step STALLS — Oak's
-        lead-to-lab movement never completes because the battle leaves the player
-        at x=8 and `PalletMovementScript_OakMoveLeft` underflows
-        `wXCoord - 10` to a 254-step walk. Root-caused in memory
-        `regression-oak-intro-follow-stall-after-battle`. This is what still
-        blocks the Oak intro from reaching the lab end-to-end.
+        authored; (2) happiness init (`ModifyPikachuHappiness`) not audited —
+        and note that the routine itself has been REAL since `9ce747c2e`, with
+        its reason-code register fixed at 8 of 9 call sites in `2df28308a`, so
+        this audit is now about the Pikachu-battle INIT path rather than about a
+        stub.
+      - **ITEM (3) IS DEAD AND HAS BEEN SINCE 2026-08-07 — do not treat it as a
+        blocker.** It read: "DOWNSTREAM the post-battle `PLAYER_FOLLOWS_OAK`
+        step STALLS … this is what still blocks the Oak intro from reaching the
+        lab end-to-end." That was FIXED by `7deceb6f1` ("battle: AnyPartyAlive
+        faithful 8-bit wrap — fixes Oak-intro empty-party blackout"), five days
+        before this line was last re-read. The stigmergy memory
+        `regression-oak-intro-follow-stall-after-battle` has said `FIXED` since
+        the same day, and the repository corroborates it independently:
+        `AnyPartyAlive` (port core.asm:6797-6818) now carries pret's 8-bit
+        `dec cl` with NO zero-guard, and a comment naming this exact stall as
+        what the guard used to cause. The v3 hypothesis quoted above — a
+        battle-exit displacement to x=8 — was itself measured WRONG; the real
+        cause was the empty intro party making `AnyPartyAlive` report
+        all-fainted, blacking the player out to `SetupPlayerSprite`'s (8,8).
+        **A stale blocker in a plan is worse than no note, because the next
+        agent treats it as live work.** Re-measure before re-adding one.
 - [ ] **4b. `BATTLE_TYPE_OLD_MAN`.** Implement the tutorial identity/menu and
       scripted throw behavior behind a deterministic battle scenario. The
       Viridian script and story reachability belong to overworld-events Stage 5.
