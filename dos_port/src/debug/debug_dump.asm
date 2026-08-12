@@ -2773,6 +2773,37 @@ RunBattleTest:
     mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
+%elifdef DEBUG_BATTLE_OLDMAN
+    ; ------------------------------------------------------------------
+    ; battle_oldman golden gate (battle plan 4b). Witnesses
+    ; DisplayBattleMenu.doSimulatedMenuInput — the old-man / Prof. Oak tutorial
+    ; path, which NO scenario has ever executed. That gap is not incidental: it
+    ; is why the tutorial-name tail bytes were wrong from the first day and were
+    ; found by reading the ROM rather than by the suite (dbe6e797b,
+    ; regression-battle-oldman-name-tail-bytes).
+    ;
+    ; WHAT IS WITNESSED: the rename. The path copies the real player name to
+    ; wLinkEnemyTrainerName, then copies NAME_LENGTH = 11 bytes of
+    ; str_oldman_name over wPlayerName — a region the differ ALREADY compares in
+    ; full, so this scenario needs no scenario-local dump rows at all.
+    ;
+    ; ONLY wBattleType IS SET HERE. The simulated menu is not driven by input:
+    ; DisplayBattleMenu reads wBattleType, takes .doSimulatedMenuInput, and walks
+    ; its own cursor. So there is nothing to press and no RNG in the path — the
+    ; rolls in this scenario all belong to the WILD BATTLE around it, which is
+    ; why the enemy is pinned inert below exactly as battle_wrap/bide/thrash pin
+    ; theirs.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    ; The enemy must not act: an enemy turn puts a damage ROLL into wBattleMon,
+    ; which is compared, and the two emulators do not share an RNG stream.
+    ; 65535 HP + a seeded sleep counter is battle_thrash's pin, same reason.
+    mov word [ebp + wEnemyMonHP], 0xFFFF
+    mov word [ebp + wEnemyMonMaxHP], 0xFFFF
+    mov byte [ebp + wEnemyMonStatus], 7         ; SLP counter (7 turns)
+    mov byte [ebp + wBattleType], BATTLE_TYPE_OLD_MAN
+    jmp MainInBattleLoop                        ; the real loop; it does not return
 %elifdef DEBUG_BATTLE_THRASH
     ; ------------------------------------------------------------------
     ; battle_thrash golden gate (battle plan 3a residue — the Thrash third, and
@@ -4616,6 +4647,25 @@ AutoKeyDrive:
     jne .noThrashDump
     call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN, then exits
 .noThrashDump:
+%endif
+%ifdef DEBUG_BATTLE_OLDMAN
+    ; --- battle_oldman: the dump, on the rename itself (battle plan 4b) ---
+    ; NO PIN AND NO LATCH ARE NEEDED HERE, and that is worth stating because
+    ; every neighbouring battle gate has both. Those exist to force an RNG roll
+    ; onto the same turn on both sides, and to distinguish a released state from
+    ; the identical-looking initial state. Neither applies:
+    ;   * .doSimulatedMenuInput contains no roll — it walks its own cursor;
+    ;   * the landmark CANNOT be an initial state. wPlayerName[0] is 'R' ($91)
+    ;     of the seeded "RED" identity until the rename lands, and $8E is 'O',
+    ;     reachable here only by the str_oldman_name copy.
+    ; The dump therefore fires on the first frame at which the rename is visible,
+    ; which is inside the two DelayFrames(20) the cursor walk spends before the
+    ; ITEM branch — comfortably before ItemUseBall.oldManBattle copies
+    ; wGrassRate back over wPlayerName and destroys the evidence.
+    cmp byte [ebp + wPlayerName], 0x8E          ; 'O' of "OLD MAN"
+    jne .noOldManDump
+    call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN, then exits
+.noOldManDump:
 %endif
 %ifdef DEBUG_BATTLE_BIDE
     ; --- battle_bide: three pins, a latch, and the dump (3a residue) ---

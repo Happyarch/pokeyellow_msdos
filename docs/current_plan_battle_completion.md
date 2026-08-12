@@ -1671,9 +1671,39 @@ provider shapes below, not their runtime behavior.
         path. 4a's Pikachu golden is still unauthored and there is no old-man
         scenario at all — so this is precisely the class of defect the "add a
         must-hit scenario" rule exists for, and the fix should land with one.
-      - **FIX IS GENERATOR-SIDE** (Tier-1 rule: never hand-edit
-        `assets/*.inc`): emit the ROM's real 11 bytes in
-        `gen_runtime_strings.py` and re-run `make assets`.
+      - **FIX LANDED 2026-08-12 (`dbe6e797b`)**, generator-side per the Tier-1
+        rule. `assets/battle_menu_runtime_strings.inc` now matches the ROM byte
+        for byte.
+      - **THE WITNESS IS BUILT BUT NOT YET REGISTERED — this is the one open
+        piece of 4b, and it is a DUMP-POINT ALIGNMENT problem, not a defect.**
+        Landed unregistered: the `DEBUG_BATTLE_OLDMAN` gate
+        (`debug_dump.asm` + its Makefile flag block) and
+        `tools/mgba_harness/scenarios/battle_oldman.lua` with a committed,
+        twice-verified deterministic golden (`b1a53777…`).
+        * **THE FIX IS CONFIRMED BY IT.** The golden captured
+          `8e 8b 83 7f 8c 80 8d 50 8f 91 8e` — live emulation of the real game
+          independently reproducing the static ROM read — and in the port-vs-
+          golden diff **`wPlayerName` does NOT appear among the mismatches**. So
+          the port and hardware agree on the bytes under test.
+        * **WHY IT IS NOT IN THE SUITE:** the two sides photograph different
+          phases. All 32 divergences are `wBattleMon` / `wLoadedMon` /
+          `wBattleFlags` reading ZERO on the GOLDEN side (`want` is the golden,
+          confirmed at `golden_diff.py:1919`) and populated on the port's — the
+          golden dumps before the battle mon is loaded, the port after.
+          Tightening the landmark to require `wIsInBattle != 0` AND the full
+          11-byte name did NOT move the golden's dump frame (5718 both times),
+          so the next step is to find what the golden is actually sitting in at
+          that frame rather than to add clauses blind.
+        * **DELIBERATELY NOT MASKED.** Masking 32 fields would turn a real
+          alignment question into a green tick, which is precisely what the
+          preamble forbids; and registering a knowingly-failing scenario would
+          break `fidelity-full` for everyone. So the manifest and
+          `golden_diff.SCENARIOS` are left untouched and the suite stays at 66
+          consistent scenarios.
+        * Registering it is: re-add the manifest entry (id 69, tier `full`,
+          class `datastruct`, gate `DEBUG_BATTLE_OLDMAN`) and the
+          `golden_diff.SCENARIOS` row, then `make assets` (the
+          `GBSTATE_SCENARIO equ 69` row is generated from the manifest).
 - [~] **4c. Ghost Marowak — ANIMATION HALF DONE 2026-08-12. The rest of the box
       is untouched.** `MarowakAnim` and `CopyMonPicFromBGToSpriteVRAM` are
       translated into the mirror `dos_port/src/engine/battle/ghost_marowak_anim.asm`

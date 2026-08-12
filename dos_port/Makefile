@@ -1149,6 +1149,18 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# battle_oldman (battle plan 4b): the old-man / Prof. Oak SIMULATED battle menu,
+# DisplayBattleMenu.doSimulatedMenuInput. Same flag set as the gates above —
+# DEBUG_AUTOKEY is required and not optional, because this gate's dump lives in
+# AutoKeyDrive, which vblank.asm only calls under %ifdef DEBUG_AUTOKEY.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_OLDMAN=1" /tmp/oldman
+ifdef DEBUG_BATTLE_OLDMAN
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_OLDMAN -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_BATTLE_PAYDAY
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_PAYDAY -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
