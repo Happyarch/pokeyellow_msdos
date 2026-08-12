@@ -6,7 +6,7 @@
 ; exits, slide distances, object masks and screen-edge timing are authored
 ; against the GB viewport. Expanding them would either expose artwork and sprite
 ; states pret deliberately hides, or require inventing staging. Either violates
-; fidelity. See docs/current_plan_menu_intro.md, "Presentation boundary".
+; fidelity. See docs/plans/menu_intro.md, "Presentation boundary".
 ;
 ; So every cinematic screen is an exact 160x144 GB surface centred on the canvas:
 ; canvas tile (10,3), pixel (80,24), ending exclusively at (240,168). The

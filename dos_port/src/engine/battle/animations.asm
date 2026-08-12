@@ -1,6 +1,6 @@
 ; animations.asm — battle move-animation engine (pret engine/battle/animations.asm).
 ;
-; battle_animations Stage 2 (docs/current_plan_battle_animations.md): the
+; battle_animations Stage 2 (docs/plans/battle_animations.md): the
 ; interpreter core. This mirror now carries the command-stream interpreter that
 ; walks the Tier-1 data in src/data/battle_anims.asm and paints frame blocks into
 ; wShadowOAM:
@@ -1347,7 +1347,7 @@ SetAnimationBGPalette:
 ; ===========================================================================
 ; MON-PIC TILEMAP HELPERS — pret animations.asm (battle_animations Stage 4).
 ;
-; PROJECTION (docs/current_plan_battle_animations.md, geometry directive). These
+; PROJECTION (docs/plans/battle_animations.md, geometry directive). These
 ; routines address wTileMap, so every pret COORDINATE is re-derived through
 ; BCOORD(x,y) (+10 col / +3 row) and every pret row STRIDE stays the literal
 ; SCREEN_WIDTH — which is 40 here and 20 in pret, each meaning "my tilemap's

@@ -36,7 +36,7 @@ in `battle_hud.asm` / `init_battle.asm` / `pics.asm`. See `current_plan_battle_p
 
 ### Battle animations — the same GB-centered projection, applied in code
 
-In-battle move animations (`docs/current_plan_battle_animations.md`) use the
+In-battle move animations (`docs/plans/battle_animations.md`) use the
 **identical +10 col / +3 row** offset as the battle screen above, via the
 `BCOORD(x, y)` macro hoisted into `include/coords.inc`. Two things make this
 subsystem different from the ones above, and both are load-bearing:

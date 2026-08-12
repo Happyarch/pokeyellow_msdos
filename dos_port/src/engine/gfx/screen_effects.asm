@@ -1,6 +1,6 @@
 ; screen_effects.asm — mirror of pret engine/gfx/screen_effects.asm.
 ;
-; battle_animations Stage 3b (docs/current_plan_battle_animations.md): the two
+; battle_animations Stage 3b (docs/plans/battle_animations.md): the two
 ; screen-shake predefs that the battle animation engine's shake family jumps to.
 ; ChangeBGPalColor0_4Frames (the third routine in pret's file, used by
 ; engine/events/poison.asm) is NOT ported here — nothing in the port references

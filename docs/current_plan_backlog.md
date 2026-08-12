@@ -460,7 +460,7 @@ Filed 2026-08-02. **Two different build gates one underscore apart, in the same
 Makefile**, driving two different scenarios:
 - `DEBUG_OAKINTRO` (`Makefile:1168`) → `RunOakSpeechCheckpoint` — Prof. Oak's
   *opening speech*. This is golden scenario id 29, named `oak_intro`, owned by
-  `docs/current_plan_menu_intro.md`.
+  `docs/plans/menu_intro.md`.
 - `DEBUG_OAK_INTRO` (`Makefile:649`) → `RunOakIntroTest`
   (`src/home/overworld.asm:385`, `src/debug/debug_dump.asm:207`) — the **Pallet
   overworld** Oak cutscene, owned by `docs/current_plan_overworld_events.md`.

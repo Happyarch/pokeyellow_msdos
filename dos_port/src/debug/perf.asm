@@ -56,7 +56,7 @@ PERF_STAGES    equ 9           ; keep in sync with tools/read_perf.py STAGE_NAME
 ; Per-frame WORK series (PERF.BIN v2). The accumulators above give mean and
 ; worst only; a mean cannot show a deadline-miss COUNT and two opposing stage
 ; regressions cancel in a total. The A1 performance contract of
-; docs/current_plan_menu_intro.md gates on median, 95th percentile, and
+; docs/plans/menu_intro.md gates on median, 95th percentile, and
 ; deadline misses, none of which are recoverable from sums — so each frame's
 ; busy total (stages 1..N-1, excluding the stage-0 pacing spin) is also
 ; recorded, and the host derives the distribution.

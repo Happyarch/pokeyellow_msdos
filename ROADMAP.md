@@ -143,7 +143,7 @@ dos_port/tools/label_status --callers <Label> # is a given routine linked/reache
 ```
 then read the owning `docs/current_plan_*.md`. The live Phase-2 plans are
 `current_plan_overworld_events.md`, `current_plan_items.md`,
-`current_plan_battle_completion.md` and `current_plan_menu_intro.md`; deferred
+`current_plan_battle_completion.md` and `plans/menu_intro.md`; deferred
 tails with no other owner are in `docs/current_plan_backlog.md`.
 
 ⚠ **Those first three carry a maintainer directive (2026-08-02): re-measure

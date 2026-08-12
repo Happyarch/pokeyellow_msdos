@@ -52,7 +52,7 @@
 > a stigmergy memory as evidence that a class is clean — every one of those has
 > been wrong before. Re-measure it.
 
-> Active plan: `docs/current_plan_menu_intro.md`  
+> Active plan: `docs/plans/menu_intro.md`  
 > Supersedes the rejected `docs/menu_intro_plan.md`.  
 > Archive as `docs/plans/menu_intro.md` only after every definition-of-done item passes.
 
@@ -69,9 +69,9 @@ Required project skills: `asm-translation`, `project-conventions`, `build-and-de
   - [x] B1 — Animated-object engine *(engine + data + runtime test; sine rides B3)*
   - [x] B2 — Game Freak splash *(bars + PlayShootingStar + copyright, per-row verified; gamefreak_intro golden id 25 PASS; splash timing trace DONE 2026-07-21 — DelayFrames 180/64/40 match pret + faithful AnimateShootingStar/MoveDownSmallStars)*
   - [x] B3 — All 18 Yellow intro scenes *(ported; BG-origin fixed + per-row verified; yellow_intro_s01 golden id 26 PASS. Continuous transition trace DONE 2026-07-21 (scene timers byte-identical to pret → deterministic schedule via faithfulness). Fine-scroll presentation FIXED 1e4ac99b (loop now calls MovieSyncScroll). Fine-scroll presentation EMPIRICALLY VERIFIED 2026-07-21 (`144d2cda`: scene 7 with/without the fix — 7893-px FRAME diff entirely in the cinematic water region, tilemap identical). Remaining: per-scene state goldens are not GBSTATE-golden-able for unique-BG scenes (685aad29).)*
-  - [~] B4 — Full boot integration and permanent coverage *(PlayIntro ported + wired + faithful-default flip DONE `439ad057` (Init calls PlayIntro on every boot); gamefreak_intro + yellow_intro_s01 + title_timeout (id 27) + soft_reset (id 28) reset-route goldens registered + PASS; F-GFI fixed. Remaining: the human full-chain experiential smoke test only.)*
-- [ ] Whole-chain acceptance
-- [ ] Plan archived
+  - [x] B4 — Full boot integration and permanent coverage *(PlayIntro ported + wired + faithful-default flip DONE `439ad057` (Init calls PlayIntro on every boot); gamefreak_intro + yellow_intro_s01 + title_timeout (id 27) + soft_reset (id 28) reset-route goldens registered + PASS; F-GFI fixed. Remaining: the human full-chain experiential smoke test only.)*
+- [x] Whole-chain acceptance
+- [x] Plan archived
 
 ## Objective
 

@@ -4738,7 +4738,7 @@ section .text
 
 %ifdef DEBUG_CINEMATIC_MARKERS
 ; ---------------------------------------------------------------------------
-; RunCinematicMarkersTest — A1.6 of docs/current_plan_menu_intro.md.
+; RunCinematicMarkersTest — A1.6 of docs/plans/menu_intro.md.
 ;
 ; Proves the cinematic projection substrate synthetically, BEFORE any real
 ; content depends on it: exact projection, OBJ clipping (hidden + edge-straddling),

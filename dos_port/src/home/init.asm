@@ -184,7 +184,7 @@ Init:
     ;   SKIP_INTRO — piece-test harnesses (title / mainmenu / oak / naming) that boot
     ;                the real title but must land on their screen immediately, without
     ;                the ~20 s cinematic shifting their dump frames.
-    ; DEVIATION{class=banking; pret=home/init.asm:Init; behavior=pret's `predef PlayIntro` (a banked predef-table dispatch) is lowered to a direct `call PlayIntro`; evidence=the flat 32-bit port has no predef table or ROM banking, so every predef becomes a direct call to the exact pret label (see the Predef boundary in docs/current_plan_menu_intro.md); lifetime=permanent flat-banking model}
+    ; DEVIATION{class=banking; pret=home/init.asm:Init; behavior=pret's `predef PlayIntro` (a banked predef-table dispatch) is lowered to a direct `call PlayIntro`; evidence=the flat 32-bit port has no predef table or ROM banking, so every predef becomes a direct call to the exact pret label (see the Predef boundary in docs/plans/menu_intro.md); lifetime=permanent flat-banking model}
 %ifndef SKIP_TITLE
 %ifndef SKIP_INTRO
     extern PlayIntro                        ; engine/movie/intro.asm

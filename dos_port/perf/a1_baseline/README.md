@@ -1,7 +1,7 @@
 # A1 pre-change performance baseline
 
 Baseline for the A1 decomposed performance contract of
-`docs/current_plan_menu_intro.md`. Captured **before** any compositor or sprite
+`docs/plans/menu_intro.md`. Captured **before** any compositor or sprite
 renderer change, on the tree at the A1.0 commit.
 
 ## Fixed capture parameters (must be identical on the after side)

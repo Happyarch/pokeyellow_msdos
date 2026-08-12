@@ -22,7 +22,7 @@ Emits:
 
 All coordinate/delta bytes are pret's GB-space values, byte-for-byte: the port's
 battle-frame projection (+80,+24 px / BCOORD +10,+3) is applied by CODE at
-publication, never baked into this data (docs/current_plan_battle_animations.md).
+publication, never baked into this data (docs/plans/battle_animations.md).
 
 Command stream encoding (consumed by PlayAnimation):
   subanimation:   db (tileset << 6) | delay, sound_move_id - 1, subanim_id   (first byte < FIRST_SE_ID)

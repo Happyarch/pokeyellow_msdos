@@ -171,7 +171,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
 
 ### Stage 0 — plan + HAL design (umbrella 6a)
 
-- [x] `docs/current_plan_battle_animations.md` created with the HAL design
+- [x] `docs/plans/battle_animations.md` created with the HAL design
       section (this file, 2026-08-07). Projection spec confirmed against
       `docs/ui_projection.md`, `assets/ui_layout_battle.inc`,
       `PublishProjectedOAM`, and the battle goldens' compared regions.
@@ -722,7 +722,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       shake, so the why-string is accurate for the suite as it stands **today**;
       a Stage 6 scenario that exercises the shake would falsify it and the string
       must be re-measured then, not assumed.
-- [~] Sweep: retired stubs' extern comments (`label_status --callers` each),
+- [x] Sweep: retired stubs' extern comments (`label_status --callers` each),
       `update_label_db`, `docs/ui_projection.md` index rows + a battle-anim
       subsystem note, `docs/translation_log.md` entries, stigmergy memories
       (close/update + `episode_record`), refresh umbrella Stage 6 boxes,
@@ -759,7 +759,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
   `ANIM_SHOW_HOLD` / `ANIM_SHOW_GAP` tune pacing. Proven to run end to end
   headless: exit 0 with both dumps (the only path to `DebugDumpMemory` is the
   list terminator), and the dumped `wTileMap` at the label position decodes to
-  "SUBSTITUTE", the last entry. **No human has watched it yet.**
+  "SUBSTITUTE", the last entry. ~~**No human has watched it yet.**~~ **HUMAN VIWED AND PASSED ON 2026-08-09**
 - Traps carried forward: AUTOKEY_DUMP_ON_BATTLE gates on `wIsInBattle` (cannot
   photograph pre-battle trainer phases — wild path sets it earlier); harness
   loop counters in memory; `W_SHADOW_OAM` ends at `W_TILEMAP` (bounds-guard);

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_projection.py — verify a DEBUG_CINEMATIC_MARKERS FRAME.BIN.
 
-A1.6 of docs/current_plan_menu_intro.md. The marker harness
+A1.6 of docs/plans/menu_intro.md. The marker harness
 (src/debug/debug_dump.asm:RunCinematicMarkersTest) renders a synthetic cinematic
 surface; this asserts what the plan's acceptance criteria actually require.
 

@@ -446,7 +446,7 @@ dos_port/tools/project_state --plans
   hardened. **Session B6 (the human-in-the-loop widescreen redesign) is on the back
   burner at the user's direction** -- it needs a scheduling decision, not
   engineering. Tracked as **#10 in `docs/current_plan_backlog.md`**.
-- `docs/current_plan_battle_animations.md` — **in-battle move/item animations**,
+- `docs/plans/battle_animations.md` — **in-battle move/item animations**,
   the dedicated detail owner under `battle_completion` Stage 6. **Stages 0-3 are
   DONE** (21 completed / 15 open at 2026-08-08); Stage 4 (mon-pic families) is
   next, then 5 (OAM particle families) and 6 (polish + F-19 evaluation).

@@ -10,7 +10,7 @@
 ; Pointer tables are dd (flat DPMI addresses; pret dw). Every body byte is
 ; pret's GB-space value verbatim: the battle-frame projection (+80,+24 px OAM /
 ; BCOORD +10,+3 tilemap) is applied by the engine at publication, never baked
-; into this data (docs/current_plan_battle_animations.md, HAL design).
+; into this data (docs/plans/battle_animations.md, HAL design).
 ;
 ; SFX_* names in MoveSoundTable resolve against the generated
 ; assets/audio_constants.inc.
