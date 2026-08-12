@@ -1111,35 +1111,58 @@ their current bodies auto-answer and auto-select.
       gap between 3 and 5 is deliberate — a wrong cursor lands on a FAINTED mon
       rather than silently selecting the right one.
 
-      It is **NOT registered as a scenario**: the port never completes the
-      selection. `run_headless.sh "DEBUG_BATTLE_NEXTMON=1"` produces no dump, and
-      a frame capture shows the party menu still up with the cursor parked on
-      LAPRAS. What has been measured, so the next pass does not redo it:
+      It is **NOT registered as a scenario**: the flow never returns from
+      `HandlePlayerMonFainted`, so `run_headless.sh "DEBUG_BATTLE_NEXTMON=1"`
+      produces no dump at all.
 
-      1. **`ChooseNextMon.goBackToPartyMenu` is NEVER reached** — execution
-         breakpoint, 300 s, fresh run with the key script live. So
-         `DisplayPartyMenu` never RETURNS; the stall is inside
-         `HandlePartyMenuInput`, not in the rejected-choice loop.
-      2. **Not press timing.** 90 A presses of 15 frames at a 40-frame period
-         change nothing (the earlier 5-frame/20-frame train likewise).
-      3. **Not the fainted-mon rejection.** The cursor is on slot 5 and that
-         mon's party HP word at `$D247` reads `$008B` (139), so `HasMonFainted`
-         returns not-fainted.
-      4. **Not the SELECT-swap re-entry.** `wMenuItemToSwap` (`$CC35`) = 0, so
-         `HandlePartyMenuInput` is not looping through `.swappingPokemon`.
-         `wForcePlayerToChooseMon` (`$D11E`) = 0.
-      5. **THE LEAD.** At the stall, `wCurrentMenuItem` (`$CC26`) = **0** while
-         the drawn cursor is on row 5, and `wTopMenuItemY`/`X` = `$0F`/`$0F` with
-         `wMenuWatchedKeys` = `$C7`. `PartyMenuInit` writes Y=1, X=0,
-         watched = `PAD_A|PAD_B`, and current = `wPartyAndBillsPCSavedMenuItem`
-         — which reads **5**. So the live `HandleMenuInput` state does not
-         belong to the party menu that is on screen. Start there.
-         (`wPartyMenuTypeOrMessageID` at `$D07C` reads `$4F`; note that address
-         is `wAnimationID + 1`, and the faint path runs an animation.)
+      **RETRACTED, and this matters more than the finding.** The first pass wrote
+      here that "the selection never completes; `DisplayPartyMenu` never
+      RETURNS; the stall is inside `HandlePartyMenuInput`", citing an execution
+      breakpoint on `ChooseNextMon.goBackToPartyMenu` that never fired in 300 s.
+      **That evidence was void.** The breakpoint ran on an emulator that had
+      already passed the end of the fixed-frame autokey script, and this flow
+      only advances on a press — so nothing could have fired, whatever the state.
+      A fixed-frame harness has an EXPIRY (this one's last press is frame 4680,
+      ~78 s after PKMN.EXE starts), and any live-debugger conclusion drawn after
+      it is worthless. Do not re-cite the retracted claim.
 
-      Read the state with `BATTLE_NEXTMON_MENU_PROBE=1`, which adds the
-      `HandleMenuInput` block to `GBSTATE.BIN` (diagnosis only — never for a
-      scenario run, since the differ joins regions by name).
+      **WHAT IS ACTUALLY TRUE (2026-08-12, all from headless GBSTATE dumps at
+      chosen frames — build with `BATTLE_NEXTMON_MENU_PROBE=1`).**
+
+      1. **The selection DOES complete, early.** By frame 1100 `wBattleMon` holds
+         species 19 / 139 HP / nick `LAPRAS` — so `HandlePartyMenuInput` returned
+         CF=0 and `ChooseNextMon` already ran `wPlayerMonNumber = 5` and
+         `LoadBattleMonFromParty`. At frame 700 it was still PIKACHU (species
+         84, 0 HP).
+      2. **The tail ran into `SendOutMon`.** At frame 1500 `wLoadedMon` holds
+         PIDGEY **L13** — the ENEMY — which only `DrawEnemyHUDAndHPBar`, inside
+         `SendOutMon`, stages. `RunPaletteCommand SET_PAL_BATTLE` had already
+         run too: `cgb_palettes` differs by 39 bytes between frames 700 and
+         1100 and is then byte-stable.
+      3. **An animation is running, not a dead hang.** `oam` differs by 88 bytes
+         (700→1100) and 48 (1100→1500), with the non-zero count falling
+         80 → 48 → 16; `vram_tiles` churns by >1100 bytes across both windows.
+      4. **By frame 3000 the flow has LOOPED BACK to a party menu**, and it is
+         live: `wCurrentMenuItem` reads 0 at frame 3000 and 1 at frame 7000,
+         with `wTopMenuItemY`/`X` = `$0F`/`$0F` and `wMenuWatchedKeys` = `$C7` —
+         none of which `PartyMenuInit` writes (Y=1, X=0, `PAD_A|PAD_B`). The
+         screen at 7000 is the party menu again.
+      5. **Not press timing** (90 A presses of 15 frames at a 40-frame period
+         change nothing), **not the fainted-mon rejection** (the chosen slot's
+         party HP word at `$D247` reads `$008B` = 139), **not the SELECT-swap
+         re-entry** (`wMenuItemToSwap` `$CC35` = 0, `wForcePlayerToChooseMon`
+         `$D11E` = 0).
+      6. **A red herring, resolved.** `wPartyMenuTypeOrMessageID` (`$D07C`) goes
+         `$02` (BATTLE_PARTY_MENU) at frame 700 → `$4F` by 1100. That is pret's
+         own union, not a port bug: `pokeyellow.sym` puts `wNamingScreenType`,
+         `wPartyMenuTypeOrMessageID` and `wTempTilesetNumTiles` all at `$D07C`,
+         and `ChooseNextMon`'s tail calls `LoadHudTilePatterns`. It corroborates
+         (1) and (2) rather than explaining the stall.
+
+      **So the question is no longer "why won't it select" but "why does the
+      flow come back".** Start at `ChooseNextMon`'s tail and `HandlePlayerMonFainted`
+      — something after `SendOutMon` re-enters the party menu instead of
+      returning.
 
       **CORRECTION: the failed item is NOT "nearly free", as this box claimed
       earlier today.** Measured: `UseBagItem` is
