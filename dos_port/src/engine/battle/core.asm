@@ -6372,8 +6372,27 @@ section .text
 ; ===========================================================================
 TryRunningFromBattle:
     ; pret core.asm:1536-1545 — guaranteed-escape special cases before the odds math.
-    ; TODO(faithful): IsGhostBattle → .canEscape (Master A's IsGhostBattle; ghost
-    ; battles are not reachable yet).
+    ;
+    ; BUG{class=data-model; pret=engine/battle/core.asm:TryRunningFromBattle; behavior=a wild battle on Pokemon Tower 1F-7F while the player HOLDS the Silph Scope computes its run odds from a destroyed player-speed pointer and reads bag bytes as the speed; evidence=pret calls IsGhostBattle first and then reads the player speed with ld a [hli] at core.asm:1553 without reloading hl, the only path inside IsGhostBattle reaching call IsItemInBag is the Pokemon Tower map range, and the whole predef chain there destroys hl - engine/predefs.asm GetPredefPointer backs hl up into wPredefHL, GetQuantityOfItemInBag restores it via GetPredefRegisters and then immediately overwrites it with ld hl wNumBagItems and walks the list, and home/predef.asm Predef returns through pop af then BankswitchCommon then ret with no register restore, so hl survives every other route into this routine and is garbage on exactly that one; lifetime=permanent Gen-1 behavior at compatibility level below 2}
+    ; "Silph Scope run-odds pointer clobber". UNDOCUMENTED as far as the
+    ; references in this tree go, and the search is named so the claim can be
+    ; re-tested rather than trusted: docs/bugs_and_glitches.md,
+    ; docs/references/yellow_glitches.md, and the local mirrors under
+    ; docs/references/glitchcity and docs/references/moddingwiki (which cover
+    ; the MissingNo./underflow/ACE families, not this).
+    ; It is reproduced rather than fixed: the escape rule below is faithful only
+    ; if the clobber comes with it, so ESI is deliberately NOT saved around the
+    ; call. When the scope is ABSENT the routine returns ZF=1 and jumps to
+    ; .canEscape, which never reads ESI, so the damage is confined to the
+    ; scope-in-bag case.
+%if BUG_FIX_LEVEL >= 2
+    push esi                             ; fixed: keep the caller's speed pointer
+    call IsGhostBattle
+    pop esi
+%else
+    call IsGhostBattle
+%endif
+    je .canEscape                        ; jp z — a ghost battle always escapes
     cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
     je .canEscape                        ; Safari battle always escapes (reachable)
     cmp byte [ebp + wBattleType], BATTLE_TYPE_RUN
