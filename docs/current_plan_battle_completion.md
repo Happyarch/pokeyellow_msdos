@@ -728,7 +728,7 @@ effects they need are already translated. `DoUseNextMonDialogue` and
 `ChooseNextMon` are linked partial implementations called from faint handling;
 their current bodies auto-answer and auto-select.
 
-- [~] **2a. Voluntary switch.** Rename the port-only `BattlePartyMenu` to its
+- [x] **2a. Voluntary switch.** Rename the port-only `BattlePartyMenu` to its
       pret counterpart — the TAIL of `PartyMenuOrRockOrRun` (pret
       engine/battle/core.asm:2409; the head, the dec-a run check, is already
       inline in `DisplayBattleMenu.partyMenuOrRun`) — then implement it with pret's
@@ -826,7 +826,17 @@ their current bodies auto-answer and auto-select.
         That is execution evidence for the 2a switch-out TEXT chain too, not
         just the switch.
 
-      **REOPENED 2026-08-12 (`[~]`, visual half only) — MAINTAINER-OBSERVED IN
+      **RE-CLOSED 2026-08-12 after the visual half was fixed or filed.** Of the
+      five defects the maintainer found by playing it: the battle screen not
+      returning is FIXED (`55d9d45b8`), the stray switch-out message is FIXED
+      (`65aa5a233`), the HP-bar colours and the invisible SWITCH/STATS/CANCEL
+      box are FILED as backlog items 10b and 10c with `DEVIATION` markers at
+      their call sites, and the player-palette report does not reproduce in any
+      headless gate (`battle_intro` has ZERO palette divergences against the
+      golden and renders Red correctly), so it needs a precise repro before it
+      can be chased. The original reopening note follows.
+
+      **WAS REOPENED (`[~]`, visual half only) — MAINTAINER-OBSERVED IN
       REAL GAMEPLAY.** The switch is structurally faithful (24/24) and the game
       state is correct, but the SCREEN is not. Playing
       `dos_port/run TRAINER_ROUTE_PILOT=1` and switching shows: HP bars red at
@@ -915,6 +925,46 @@ their current bodies auto-answer and auto-select.
       `UseItem_` dispatcher. Preserve success/failure result codes, consumption,
       cancel behavior, and whether the enemy receives a turn. Do not fork item
       effects into battle code.
+
+      **DEPENDENCY SURVEY, measured 2026-08-12 — this is mostly WIRING, not
+      building.** 13 of 17 callees already exist; the whole backend is there.
+
+      Present and `translated`: `DisplayListMenuID` (the bag list UI itself),
+      `UseItem`, `UseItem_`, `GetItemName`, `CopyToStringBuffer`,
+      `DrawHUDsAndHPBars`, `SaveScreenTilesToBuffer2`,
+      `LoadScreenTilesFromBuffer1`, `LoadHudTilePatterns`, `ClearSprites`,
+      `Delay3`, `GBPalNormal`, `ItemsCantBeUsedHereText`. Every WRAM symbol the
+      flow needs is declared (`wListPointer`, `wPrintItemPrices`, `wListMenuID`,
+      `wBagSavedMenuItem`, `wMenuWatchMovingOutOfBounds`, `wPseudoItemID`,
+      `wCapturedMonSpecies`, `wNumBagItems`), as are `ITEMLISTMENU`,
+      `BATTLE_TYPE_OLD_MAN` and `BATTLE_TYPE_PIKACHU`.
+
+      **Missing — the whole new-code cost:**
+      1. `BagWasSelected` (pret `core.asm:2292`), `DisplayPlayerBag` and
+         `DisplayBagMenu` — three short routines, plus the link-battle and
+         safari-bait preamble above them.
+      2. `UseBagItem` — currently the `STUB{class=stub}` added by 2a so the
+         safari arm could keep pret's shape. **2c retires it**; pret's body is
+         at `core.asm:2344`.
+      3. `SAFARI_BAIT` — one constant, `= BOULDERBADGE = $15`
+         (`constants/item_constants.asm:32`), the same deliberate overload as
+         `SAFARI_ROCK = CASCADEBADGE = $16` already added.
+      4. `SimulatedInputBattleItemList` — a 4-byte data table.
+      Plus: DELETE the port-only `BattleItemMenu`, exactly as 2a deleted
+      `BattlePartyMenu` — do not rename it, since pret's body belongs in
+      `core.asm` under the mirror rule.
+
+      **⚠ 2c WALKS INTO THE SAME TRAP 2a DID — budget for it up front.** The
+      bag/list menu is another screen-takeover: `list_draw_box_border`
+      (`src/home/list_menu.asm`) calls `hide_window` and then `add_window`, and
+      `town_map.asm:477` clears `g_bg_whiteout` with the comment "the bag menu
+      may have set it". So the battle caller owes the SAME THREE port-only
+      obligations on every exit that 2a had to learn the hard way:
+      `g_window_count = 0`, `g_bg_whiteout = 0` (these two are a pair — clearing
+      windows alone is inert), and re-assert `text_msgbox = msgbox_centered`.
+      None of that is visible to `faithdiff`, which stayed at 24/24 across both
+      of 2a's fixes because all three are port memory. Verify 2c with a rendered
+      frame, not just the gates.
 - [ ] Add separate must-hit scenarios for voluntary switch, forced switch, a
       successful medicine/battle-item use, a failed item, and ball capture entered
       through `BattleItemMenu`. The existing `party_menu`, `battle_menu`, and
