@@ -1,0 +1,178 @@
+# Music_SSAnne — hand-crafted tier-1 + tier-3 enhancement (Phase E).
+#
+# Authored against analysis/Music_SSAnne.yaml (frame-exact) and the
+# score-analysis description for S.S. Anne (user-supplied; not in the
+# transcriptions tree). Per the audio-enhance-opl3 / audio-enhance-mt32
+# skills.
+#
+# The track: E major, 4/4, tempo 128. The grid is 20 measures and the loop
+# is the whole piece (loop_start 0, period 1920 f = 80 beats). Ch2 is the
+# high ornamental descant (A3..E5) the analysis flags as melody; ch1 is the
+# *thematic* square-1 line (C#3..G#4) that Masuda states three times
+# (m1-4 / m5-8 / m9-12) — the "three statements" the score analysis
+# highlights — before the descending sequence in thirds at m13 (trills on
+# C#/D, A/B, F#/G# alternating with descending arpeggios). Ch3 is the wave
+# ostinato (E4..D5): silent for half of statement 1, half notes in
+# statement 2, quarter notes in statement 3 (m9-12) — exactly the channel
+# variation the score analysis describes.
+#
+# Register audit: the three GB voices pack C#3(49)..E5(76) — ch1 is entirely
+# octave 4 in the A section (m1-15) and only descends into octave 3 (B3,
+# A3, G#3, C#3, E3) for the sequence's low point (m16-20); ch2 rides
+# A4..E5; ch3 sits E4..D5. The whole low end BELOW C#3 is empty — exactly
+# what the GB speaker forced Masuda to omit. That is where the tier-1
+# foundation goes, same reasoning as the approved Music_PalletTown /
+# Music_OaksLab files (same Masuda town/route-theme family):
+#
+#   * sub_bass — chord roots in octave 2 (C#2..B2), one note per
+#                half-measure chord change (whole-measure on the held
+#                E7/A/E/C#m). Grounds the bouncy ride; nothing to double.
+#   * low_pad  — octave-3 chord tones (C#3..G#3), voice-led by step or
+#                common tone, active m1-15 while ch1 stays in octave 4.
+#                It rests m16-20 where ch1 descends into octave 3 — the
+#                pad's register would unison-collide, and the close thins
+#                to bass + ch1's low counter-line + ch3's sustained harmony
+#                before the loop restarts, giving the whole 20-measure
+#                cycle a natural dynamic arc.
+#
+# Harmony was read from the sounding pitches of the frame-exact sim, not
+# the template labels, where they disagreed. The template's m15 "C#aug"
+# (and m12 "G#dim" is right, but m15 is not) sounds A-major — ch2 trills
+# A/B, ch1 sits on C#4, ch3 holds A4 — so m15 takes bass A. m12 b3 and
+# m13 do take G# (G#dim / C#m) as labeled. Chord roots follow the
+# half-measure harmonic rhythm throughout.
+#
+# Voice leading: bass+pad was checked half-measure by half-measure — no
+# parallel 5ths/8ves between the two added voices (the Bm chords take the
+# 3rd D3 rather than the 5th F#3 to dodge the A2->B2 / E3->F#3 parallel
+# 5th, and m12 b1 takes C#3 to dodge the G2->A2 / D3->E3 parallel 5th).
+# The pad moves only by step, 3rd, or common tone; intervals vs the bass
+# are wide (P5 or larger) except the intentional low B2-D3 major 3rd under
+# Bm and the G#dim tritone, which the GB voices already imply at the octave.
+#
+# Tier 2 (MT-32-only) is deliberately absent: the tier-1 low_pad already
+# cascades to MT-32 as a warm string tenor (patch 49), and the GB voices
+# leave no clean mid register for a second sustained layer (ch1 packs
+# octave 4 in the A section, then drops into the pad's own octave-3 slot at
+# m16-20) — the proven Pallet Town / OaksLab situation. Tier 3 adds the one
+# thing that fits the water/sailing mood: a celesta "sparkle" ABOVE the
+# melody (G#5..E6, clear of the E5 ceiling) marking each of the three
+# statements' opens and cadences, the descending sequence's downbeat and
+# low point, and the final E7 close.
+#
+# Patches mirror the approved Pallet Town / OaksLab set (same family,
+# proven in audition): sub_bass -> MT-32 SynBass1 / GM Synth Bass 1;
+# soft_pad -> MT-32 Str Sect 1 / GM Pad 2 (warm); celesta -> MT-32 Celesta 1
+# / GM Celesta.
+
+schema: 1
+song: Music_SSAnne
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 58
+    velocity: 78
+    events:
+      - {m: 1,  b: 1, d: 2, n: A2}    # A       — statement 1 open
+      - {m: 1,  b: 3, d: 2, n: E2}    # E7
+      - {m: 2,  b: 1, d: 2, n: D2}    # Dmaj7
+      - {m: 2,  b: 3, d: 2, n: C#2}   # C#m7
+      - {m: 3,  b: 1, d: 2, n: D2}    # Dmaj7
+      - {m: 3,  b: 3, d: 2, n: B2}    # Bm
+      - {m: 4,  b: 1, d: 2, n: C#2}   # C#m
+      - {m: 4,  b: 3, d: 2, n: E2}    # E       — statement 1 cadence
+      - {m: 5,  b: 1, d: 2, n: A2}    # A       — statement 2 open
+      - {m: 5,  b: 3, d: 2, n: B2}    # Bm
+      - {m: 6,  b: 1, d: 2, n: D2}    # Dmaj7
+      - {m: 6,  b: 3, d: 2, n: C#2}   # C#m7
+      - {m: 7,  b: 1, d: 2, n: D2}    # Dmaj7
+      - {m: 7,  b: 3, d: 2, n: B2}    # Bm
+      - {m: 8,  b: 1, d: 2, n: C#2}   # C#m
+      - {m: 8,  b: 3, d: 2, n: E2}    # E       — statement 2 cadence
+      - {m: 9,  b: 1, d: 2, n: A2}    # A       — statement 3 open
+      - {m: 9,  b: 3, d: 2, n: B2}    # Bm
+      - {m: 10, b: 1, d: 2, n: D2}    # Dmaj7
+      - {m: 10, b: 3, d: 2, n: C#2}   # C#m7
+      - {m: 11, b: 1, d: 2, n: F#2}   # F#m7
+      - {m: 11, b: 3, d: 2, n: G2}    # Gmaj7
+      - {m: 12, b: 1, d: 2, n: A2}    # Amaj7   — statement 3 cadence
+      - {m: 12, b: 3, d: 2, n: G#2}   # G#dim   — leads into the sequence
+      - {m: 13, b: 1, d: 2, n: C#2}   # C#m7    — descending seq. downbeat
+      - {m: 13, b: 3, d: 2, n: F#2}   # F#7
+      - {m: 14, b: 1, d: 4, n: E2}    # E7, held
+      - {m: 15, b: 1, d: 4, n: A2}    # A, held (template's "C#aug" sounds A)
+      - {m: 16, b: 1, d: 4, n: E2}    # E, held
+      - {m: 17, b: 1, d: 2, n: F#2}   # F#m7
+      - {m: 17, b: 3, d: 2, n: B2}    # B7
+      - {m: 18, b: 1, d: 4, n: C#2}   # C#m7, held
+      - {m: 19, b: 1, d: 2, n: F#2}   # F#m7
+      - {m: 19, b: 3, d: 2, n: B2}    # B7
+      - {m: 20, b: 1, d: 2, n: C#2}   # C#7
+      - {m: 20, b: 3, d: 1.99, n: E2} # E7      — final cadence, rings to the loop point
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not strings
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 66
+    velocity: 80
+    events:
+      - {m: 1,  b: 1, d: 2, n: E3}    # A      5th
+      - {m: 1,  b: 3, d: 2, n: G#3}   # E7     3rd
+      - {m: 2,  b: 1, d: 2, n: F#3}   # Dmaj7  3rd
+      - {m: 2,  b: 3, d: 2, n: E3}    # C#m7   3rd
+      - {m: 3,  b: 1, d: 2, n: F#3}   # Dmaj7  3rd
+      - {m: 3,  b: 3, d: 2, n: D3}    # Bm     3rd (not F#3 — dodge P5)
+      - {m: 4,  b: 1, d: 2, n: E3}    # C#m    3rd
+      - {m: 4,  b: 3, d: 2, n: G#3}   # E      3rd — cadence
+      - {m: 5,  b: 1, d: 2, n: E3}    # A      5th
+      - {m: 5,  b: 3, d: 2, n: D3}    # Bm     3rd (dodge P5)
+      - {m: 6,  b: 1, d: 2, n: F#3}   # Dmaj7  3rd
+      - {m: 6,  b: 3, d: 2, n: E3}    # C#m7   3rd
+      - {m: 7,  b: 1, d: 2, n: F#3}   # Dmaj7  3rd
+      - {m: 7,  b: 3, d: 2, n: D3}    # Bm     3rd (dodge P5)
+      - {m: 8,  b: 1, d: 2, n: E3}    # C#m    3rd
+      - {m: 8,  b: 3, d: 2, n: G#3}   # E      3rd — cadence
+      - {m: 9,  b: 1, d: 2, n: E3}    # A      5th
+      - {m: 9,  b: 3, d: 2, n: D3}    # Bm     3rd (dodge P5)
+      - {m: 10, b: 1, d: 2, n: F#3}   # Dmaj7  3rd
+      - {m: 10, b: 3, d: 2, n: E3}    # C#m7   3rd
+      - {m: 11, b: 1, d: 2, n: E3}    # F#m7   7th — common tone
+      - {m: 11, b: 3, d: 2, n: D3}    # Gmaj7  5th
+      - {m: 12, b: 1, d: 2, n: C#3}   # Amaj7  3rd (not E3 — dodge P5)
+      - {m: 12, b: 3, d: 2, n: D3}    # G#dim  5th
+      - {m: 13, b: 1, d: 2, n: E3}    # C#m7   3rd
+      - {m: 13, b: 3, d: 2, n: E3}    # F#7    7th — common tone
+      - {m: 14, b: 1, d: 4, n: G#3}   # E7     3rd, held
+      - {m: 15, b: 1, d: 4, n: E3}    # A      5th, held
+      # m16-20 rest: ch1 descends into octave 3 (B3/A3/G#3/C#3/E3), so the
+      # pad's register would unison-collide; the close is carried by the
+      # bass, ch1's low counter-line, and ch3's sustained harmony before
+      # the loop returns to the full texture at m1.
+
+  # --- Tier 3 (MT-32 / GM only; never OPL) ---------------------------------
+  # One tier-3 color layer; no tier-2 (see header — no clean register).
+  - name: sparkle
+    tier: 3                 # color/flourish — dropped first under polyphony
+    mt32_patch: 23          # MT-32 Celesta 1
+    gm_program: 9           # GM Celesta
+    pan: right
+    volume: 60
+    velocity: 76
+    events:
+      - {m: 1,  b: 1, d: 1, n: E6}    # A      5th  — statement 1 open
+      - {m: 4,  b: 1, d: 1, n: B5}    # E      5th  — statement 1 cadence
+      - {m: 5,  b: 1, d: 1, n: C#6}   # A      3rd  — statement 2 open
+      - {m: 8,  b: 1, d: 1, n: B5}    # E      5th  — statement 2 cadence
+      - {m: 9,  b: 1, d: 1, n: E6}    # A      5th  — statement 3 open
+      - {m: 12, b: 1, d: 1, n: C#6}   # Amaj7  3rd  — statement 3 cadence
+      - {m: 13, b: 1, d: 1, n: G#5}   # C#m7   3rd  — descending seq. downbeat
+      - {m: 16, b: 1, d: 1, n: B5}    # E      5th  — sequence low point
+      - {m: 20, b: 3, d: 1, n: G#5}   # E7     3rd  — final cadence, turns the loop
