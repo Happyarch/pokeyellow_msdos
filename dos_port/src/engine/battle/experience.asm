@@ -587,14 +587,14 @@ GainExperience:
 DivideExpDataByNumMonsGainingExp:
     ; Count set bits in wPartyGainExpFlags (which mons are gaining EXP).
     mov al, [ebp + wPartyGainExpFlags]
-    mov bh, al
+    mov bh, al                      ; ld b, a
     xor al, al
-    mov cl, 8
+    mov bl, 8                       ; ld c, $8 — pret's c IS BL (register map)
     mov dh, 0
 .countSetBitsLoop:
     shr bh, 1                       ; CF ← bit 0 of BH, shift right
     adc dh, 0                       ; DH += CF (counts set bits)
-    dec cl
+    dec bl                          ; dec c
     jnz .countSetBitsLoop
 
     ; DH = number of mons gaining EXP. If < 2, no division needed.
@@ -605,7 +605,21 @@ DivideExpDataByNumMonsGainingExp:
     ; Divide each byte from wEnemyMonBaseStats through wEnemyMonBaseExp (7 bytes).
     ; Layout: [HP,Atk,Def,Spd,Spc,CatchRate,BaseExp] at 0xD001–0xD007.
     mov esi, wEnemyMonBaseStats
-    mov cl, wEnemyMonBaseExp + 1 - wEnemyMonBaseStats  ; 7 bytes
+    ; THE COUNTER MUST LIVE IN BL, NOT CL, AND THAT IS NOT A STYLE POINT.
+    ; pret keeps it in c (`ld c, wEnemyMonBaseExp + 1 - wEnemyMonBaseStats`) and
+    ; relies on Divide preserving BC — pret's home/math.asm Divide does
+    ; `push bc ... pop bc`, and the port's wrapper mirrors that with
+    ; `push bx / pop bx`. It does NOT preserve ECX, and it cannot: _Divide
+    ; loads the divisor into ECX (`movzx ecx, byte [ebp + H_DIVISOR]`) and
+    ; `div ecx` leaves it there. So a counter parked in CL is reloaded with the
+    ; DIVISOR on every call. MEASURED 2026-08-12 with a BPLM watchpoint on
+    ; wIsInBattle: with CL the loop never terminated — ECX came back 2 (the
+    ; divisor) after each Divide, `dec cl / jnz` ran forever, and ESI walked
+    ; past the 7-byte base-stat block writing quotient bytes across WRAM
+    ; (observed storing at $D056 wIsInBattle, then $D057 wPartyGainExpFlags)
+    ; until it left the DPMI allocation and page-faulted. Only reachable with
+    ; EXP ALL, since a single mon gaining EXP returns above.
+    mov bl, wEnemyMonBaseExp + 1 - wEnemyMonBaseStats  ; ld c, 7 (c = BL)
 .divideLoop:
     xor al, al
     mov [ebp + hDividend], al           ; clear high byte of dividend
@@ -617,8 +631,8 @@ DivideExpDataByNumMonsGainingExp:
     call Divide
     mov al, [ebp + hQuotient + 3]       ; quotient byte
     mov [ebp + esi], al
-    inc esi
-    dec cl
+    inc esi                             ; ld [hli], a
+    dec bl                              ; dec c — BL survives Divide, CL does not
     jnz .divideLoop
 .return:
     ret
