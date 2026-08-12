@@ -1149,6 +1149,17 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# battle_pikachu (battle plan 4a): the Prof. Oak / Pikachu SIMULATED battle
+# menu — the same .doSimulatedMenuInput as the old-man gate, differing only in
+# which name is copied over wPlayerName.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_PIKACHU=1" /tmp/pika
+ifdef DEBUG_BATTLE_PIKACHU
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_PIKACHU -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # battle_oldman (battle plan 4b): the old-man / Prof. Oak SIMULATED battle menu,
 # DisplayBattleMenu.doSimulatedMenuInput. Same flag set as the gates above —
 # DEBUG_AUTOKEY is required and not optional, because this gate's dump lives in

@@ -2222,6 +2222,13 @@ RunBattleTest:
     ; LoadBattleMonFromParty; its back pic
     ; replaces Red's. Mirrors _InitBattleCommon's scan outcome + the
     ; pret StartBattle EXP/fought flag sets. ---
+%ifdef DEBUG_BATTLE_PIKACHU
+    ; battle plan 4a. Same staging as the old-man gate below and for the same
+    ; reason — BATTLE_TYPE_PIKACHU is a special type, so pret skips the player
+    ; send-out for it too (StartBattle:171 tests wBattleType against 0, not
+    ; against a specific type).
+    mov byte [ebp + wBattleType], BATTLE_TYPE_PIKACHU
+%endif
 %ifdef DEBUG_BATTLE_OLDMAN
     ; SET BEFORE THE SEND-OUT DECISION, not in the gate body further down —
     ; that is the whole point. A gate that sets wBattleType in its own block
@@ -2795,6 +2802,38 @@ RunBattleTest:
     mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
+%elifdef DEBUG_BATTLE_PIKACHU
+    ; ------------------------------------------------------------------
+    ; battle_pikachu golden gate (battle plan 4a — the must-hit Pikachu-battle
+    ; scenario the box has wanted since 5a768070 landed the slice).
+    ;
+    ; IT IS THE SAME PATH AS battle_oldman, deliberately: DisplayBattleMenu
+    ; dispatches BATTLE_TYPE_OLD_MAN and BATTLE_TYPE_PIKACHU to the SAME
+    ; .doSimulatedMenuInput (port core.asm:492-496, pret core.asm:2094-2098),
+    ; and the only thing that differs is which name is copied over wPlayerName.
+    ;
+    ; SO THIS WITNESSES THE HALF battle_oldman CANNOT. The tutorial-name fix
+    ; (dbe6e797b) corrected TWO strings; battle_oldman covers str_oldman_name,
+    ; and its tail is data-adjacency ("PRO" from .profOakName). str_profoak_name
+    ; is the fragile one — its 11-byte tail is pret CODE (FA 2D, the first two
+    ; bytes of ld a,[wBattleAndStartSavedMenuItem]), which is exactly the byte
+    ; pair the generator comment warns will silently drift if upstream edits
+    ; DisplayBattleMenu.handleBattleMenuInput. Without this scenario that
+    ; warning has no enforcement.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1             ; pret StartBattle .specialBattle
+    mov word [ebp + wEnemyMonHP], 0xFFFF
+    mov word [ebp + wEnemyMonMaxHP], 0xFFFF
+    mov byte [ebp + wEnemyMonStatus], 7         ; SLP counter — keep the enemy inert
+.pikaMenuLoop:
+    call DisplayBattleMenu                      ; the menu IS the loop for a special battle
+    jc .pikaRan
+    cmp byte [ebp + wActionResultOrTookBattleTurn], 0
+    je .pikaMenuLoop
+.pikaRan:
+    mov byte [ebp + W_TILEMAP], 0xEE            ; diagnosable marker, not a silent hang
+    call DelayFrame
+    call DumpBackbuffer
 %elifdef DEBUG_BATTLE_OLDMAN
     ; ------------------------------------------------------------------
     ; battle_oldman golden gate (battle plan 4b). Witnesses
@@ -4700,6 +4739,16 @@ AutoKeyDrive:
     jne .noThrashDump
     call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN, then exits
 .noThrashDump:
+%endif
+%ifdef DEBUG_BATTLE_PIKACHU
+    ; --- battle_pikachu: the dump, on the rename (battle plan 4a) ---
+    ; $8F is 'P' of "PROF.OAK". Like the old-man gate this needs no latch: the
+    ; seeded identity is "RED" ($91 'R'), so $8F at wPlayerName[0] is reachable
+    ; here only through the str_profoak_name copy.
+    cmp byte [ebp + wPlayerName], 0x8F
+    jne .noPikaDump
+    call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN, then exits
+.noPikaDump:
 %endif
 %ifdef DEBUG_BATTLE_OLDMAN
     ; --- battle_oldman: the dump, on the rename itself (battle plan 4b) ---

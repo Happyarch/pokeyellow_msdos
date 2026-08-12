@@ -1562,8 +1562,30 @@ provider shapes below, not their runtime behavior.
         (wBattleType-gated, no normal-battle regression). Verify harness:
         `DEBUG_SEAM_KEEP_BATTLES=1 AUTOKEY_DUMP_ON_BATTLE=1` (gate dumps on
         `wCurOpponent`/`wBattleType`; boot-drift-robust).
-      - STILL OPEN: (1) the must-hit Pikachu-battle golden scenario is not yet
-        authored.
+      - **(1) THE MUST-HIT PIKACHU GOLDEN IS DONE 2026-08-12** — `battle_pikachu`,
+        id 70, registered and PASSING. It became cheap the moment the shared
+        special-battle staging landed (`63a37b2e4`); before that it was blocked
+        for the same reason 4b was.
+        * It is the SAME `.doSimulatedMenuInput` as `battle_oldman` —
+          `DisplayBattleMenu` dispatches `BATTLE_TYPE_OLD_MAN` and
+          `BATTLE_TYPE_PIKACHU` to it identically (pret `core.asm:2094-2098`) —
+          so what it adds is the OTHER name, and specifically the FRAGILE one.
+          `str_profoak_name`'s 11-byte tail is pret **CODE** (`FA 2D`, the first
+          two bytes of `ld a,[wBattleAndStartSavedMenuItem]`), not the
+          data-adjacency the old-man tail is. The generator's warning that those
+          bytes drift if upstream edits `handleBattleMenuInput` had **no
+          enforcement** before this scenario; now a drift fails the suite.
+        * The golden captured `8f 91 8e 85 e8 8e 80 8a 50 fa 2d` — live
+          emulation reproducing even the code-byte tail.
+        * **Non-vacuity:** reverting `str_profoak_name` to `0x50` padding fails
+          it on exactly those bytes —
+          `want 'PROF.OAK' | got 'PROF.OAK'`
+          `(8f918e85e88e808a50 fa2d | 8f918e85e88e808a50 5050)`. Decoded
+          strings identical, bytes different; generator restored byte-identical
+          afterwards and the scenario re-run PASS.
+        * `wLoadedMon` is skipped for the same measured reason as
+          `battle_oldman` (faithdiff `LoadEnemyMonData` 8/8 stores matched; the
+          only pret writer is in a normal-battle routine).
       - **(2) THE HAPPINESS-INIT AUDIT IS DONE (2026-08-12). It found three
         MISSING calls, and — more importantly — the reason no gate had ever
         reported them.**

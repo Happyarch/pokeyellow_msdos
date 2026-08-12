@@ -2028,6 +2028,34 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "DisplayBattleMenu.doSimulatedMenuInput -- the old-man / Prof. Oak tutorial menu, the first scenario to execute it. Compares wPlayerName, already a STANDARD region: pret copies NAME_LENGTH=11 from the 8-byte .oldManName literal, so the correct bytes are 8E 8B 83 7F 8C 80 8D 50 8F 91 8E -- \"OLD MAN\" @ plus the adjacent \"PRO\" of .profOakName -- and a port padding with 0x50 differs in exactly the last three (the defect fixed in dbe6e797b). THE STAGING IS THE POINT: a special battle NEVER sends out the player's mon (pret StartBattle core.asm:171) and never enters MainInBattleLoop (it loops on DisplayBattleMenu, core.asm:176), so wBattleMon stays ZERO throughout on both sides. The harness sets wBattleType before the send-out decision rather than in the gate body, which is what makes the two sides agree"
+    },
+    {
+      "name": "battle_pikachu",
+      "id": 70,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_PIKACHU=1",
+      "port_entry_gate": "DEBUG_BATTLE_PIKACHU",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_pikachu.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "DisplayBattleMenu"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "battle plan 4a's must-hit Pikachu-battle scenario. Same .doSimulatedMenuInput as battle_oldman -- DisplayBattleMenu dispatches BATTLE_TYPE_OLD_MAN and BATTLE_TYPE_PIKACHU to it identically (pret core.asm:2094-2098) -- so what this adds is the OTHER name. It witnesses the half battle_oldman structurally cannot: str_profoak_name's 11-byte tail is pret CODE (FA 2D, the first two bytes of ld a,[wBattleAndStartSavedMenuItem]) rather than the data-adjacency the old-man tail is, and the generator's warning that those bytes drift if upstream edits handleBattleMenuInput had no enforcement before this. wBattleMon stays ZERO on both sides throughout: a special battle never sends out the player's mon (pret StartBattle core.asm:171) and never enters MainInBattleLoop (it loops on DisplayBattleMenu, core.asm:176)"
     }
   ],
   "disabled_scenarios": []

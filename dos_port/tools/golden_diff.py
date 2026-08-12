@@ -922,6 +922,28 @@ SCENARIOS = {
                           "Nothing in the path under test reads it.",
         },
     },
+    "battle_pikachu": {
+        # datastruct: battle plan 4a's must-hit scenario. The SAME
+        # .doSimulatedMenuInput as battle_oldman -- what it adds is the other
+        # name, and specifically the FRAGILE one: str_profoak_name's 11-byte
+        # tail is pret CODE (FA 2D), not data-adjacency, so this is what
+        # enforces the generator's drift warning.
+        #
+        # Same wLoadedMon skip as battle_oldman, for the identical measured
+        # reason: faithdiff LoadEnemyMonData shows all 8 pret stores matched, so
+        # the port drops nothing, and pret's only battle-path writer of
+        # wLoadedMon is core.asm:1904 inside DrawPlayerHUDAndHPBar -- a
+        # NORMAL-battle routine a special battle never reaches.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_PIKACHU=1",
+        "wram_skip": {
+            "wLoadedMon": "scratch staging buffer with a different last writer "
+                          "on each side at this instant; the port drops no "
+                          "store (faithdiff LoadEnemyMonData is 8/8) and "
+                          "nothing in the path under test reads it. Same skip "
+                          "and same reason as battle_oldman and battle_faint.",
+        },
+    },
     "battle_thrash": {
         # datastruct: the END of a thrash — .thrashingAboutCheck clearing
         # THRASHING_ABOUT and setting CONFUSED once the rolled counter runs out.
