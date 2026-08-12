@@ -39,6 +39,7 @@ bits 32
 EFFECT_1E equ 0x1E                     ; unused move effect, special-cased in CalculateDamage
 ; carried in with the unit-C faint/send-out cluster
 wPartyMon1HP      equ (wPartyMon1 + MON_HP)
+wPartyMon1Speed   equ (wPartyMon1 + MON_SPD)   ; pret ram/wram.asm — DoUseNextMonDialogue's run odds
 wPartyMon1Species equ wPartyMon1
 wEnemyMon1        equ wEnemyMons
 wEnemyMon1Level   equ (wEnemyMons + MON_LEVEL)
@@ -198,6 +199,8 @@ extern AnimationMinimizeMon            ; engine/battle/animations.asm
 extern LoadMonFrontSprite              ; src/home/pics.asm — EDX = VRAM dest
 extern FillMemory                      ; src/home/copy2.asm — ESI dest, BX count, AL value
 extern UseBagItem                      ; battle_stubs.asm (STUB) — 2c owns the body
+extern LinkBattleExchangeData          ; battle_stubs.asm (STUB) — link play is unported
+extern UseNextMonText                  ; assets/battle_text.inc (generated Tier-1)
 extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm — restore clean screen
 extern DrawEmptyDialogBox              ; pret PrintEmptyString equiv (blank dialog box)
 extern DrawBattleMenuBox               ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE) equiv
@@ -3203,6 +3206,8 @@ SwitchPlayerMon:
 BattleMenu_RunWasSelected:
     call LoadScreenTilesFromBuffer1
     mov byte [ebp + wCurrentMenuItem], 3
+    mov esi, wBattleMonSpeed            ; ld hl, wBattleMonSpeed
+    mov edx, wEnemyMonSpeed             ; ld de, wEnemyMonSpeed
     call TryRunningFromBattle           ; CF = escaped; sets wActionResultOrTookBattleTurn
     jc  .escaped
     mov al, [ebp + wActionResultOrTookBattleTurn]
@@ -4644,10 +4649,16 @@ RemoveFaintedPlayerMon:
 
 ; ===========================================================================
 ; DoUseNextMonDialogue — pret core.asm:1091-1117. Trainer battles: no prompt,
-; return CF=0. Wild battles: pret asks "Use next Pokémon?" (Yes → switch, No →
-; try to run). Returns CF=1 if the player ran.
-; TODO(faithful): the wild Yes/No box (TWO_OPTION_MENU) + No→TryRunningFromBattle;
-; stubbed to "Yes" (CF=0 → proceed to the forced switch).
+; return CF=0. Wild battles: ask "Use next Pokémon?" — YES falls through to the
+; forced switch, NO tries to run. Returns CF=1 if the player ran.
+;
+; RESTORED 2026-08-12 (battle plan 2b). The body auto-answered YES under a
+; `TODO(faithful)` and faithdiff read 5 pret / 2 port, with the whole Yes/No box
+; and the run arm missing.
+;
+; DEVIATION{class=projection; pret=engine/battle/core.asm:DoUseNextMonDialogue; behavior=the two-option box is placed at BCOORD(13, 9) rather than pret's raw hlcoord 13 9; evidence=every in-battle screen in this port is drawn through the BCOORD battle-frame projection in include/coords.inc, the same offset PartyMenuOrRockOrRun's deselect wipe uses; lifetime=permanent while the port renders a 40x25 canvas}
+;
+; Out: CF=1 iff the player ran (TryRunningFromBattle's contract), CF=0 otherwise.
 ; ===========================================================================
 DoUseNextMonDialogue:
     call PrintEmptyString
@@ -4655,59 +4666,93 @@ DoUseNextMonDialogue:
     mov al, [ebp + wIsInBattle]
     and al, al
     dec al                               ; wIsInBattle==2 (trainer) → nz
-    jnz .noRun                           ; trainer: no prompt
-    ; wild: "Use next mon?" — defaulting to YES (switch). TODO: real Yes/No + run.
-.noRun:
-    clc                                  ; CF=0 → did not run
+    jnz .ret                             ; ret nz — trainer battle: no prompt
+    mov esi, UseNextMonText
+    call PrintText
+.displayYesNoBox:
+    mov esi, BCOORD(13, 9)               ; PROJ — pret hlcoord 13, 9
+    mov bh, 10                           ; lb bc, 10, 14
+    mov bl, 14
+    mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
+    call DisplayTextBoxID
+    mov al, [ebp + wMenuExitMethod]
+    cmp al, CHOSE_SECOND_ITEM            ; did the player choose NO?
+    je .tryRunning                       ; jr z
+    and al, al                           ; reset carry
+    ret
+.tryRunning:
+    mov al, [ebp + wCurrentMenuItem]
+    and al, al
+    jz .displayYesNoBox                  ; jr z — pret: "xxx when does this happen?"
+    ; pret passes PARTY MON 1's speed here, not the battle mon's: the active mon
+    ; has just fainted. TryRunningFromBattle honours those pointers as of 2b.
+    mov esi, wPartyMon1Speed             ; ld hl, wPartyMon1Speed
+    mov edx, wEnemyMonSpeed              ; ld de, wEnemyMonSpeed
+    jmp TryRunningFromBattle             ; jp (tail — its CF is ours)
+.ret:
+    clc                                  ; pret returns here with CF clear
     ret
 
 ; ===========================================================================
-; ChooseNextMon — pret core.asm:1125-1167. Faithful state: clear the turn flag,
-; set wPlayerMonNumber, set the gain-exp + fought flags for the new mon, load it
-; into the battle-mon struct, send it out. Returns ZF from the enemy's HP word
-; (pret's contract, read by HandlePlayerMonFainted).
-; DEFERRAL: pret runs BATTLE_PARTY_MENU here; that interactive picker is the
-; deferred BattlePartyMenu sub-UI, so this auto-selects the first live party mon.
+; ChooseNextMon — pret core.asm:1125-1167. The FORCED switch after a faint: the
+; party menu with no cancel, refusing fainted mons, then the send-out.
+;
+; RESTORED 2026-08-12 (battle plan 2b). The body auto-selected the first live
+; party slot with its own scan loop under a "DEFERRAL" note, and faithdiff read
+; 13 pret / 3 port. The picker it was standing in for is DisplayPartyMenu in
+; BATTLE_PARTY_MENU mode, which has been linked all along; the deferral was the
+; interactive UI, and 2a's PartyMenuOrRockOrRun proved that flow works.
+;
+; NO-CANCEL IS STRUCTURAL, not a flag: pret loops back to GoBackToPartyMenu
+; whenever DisplayPartyMenu returns CF=1 (cancelled) or the chosen mon has
+; fainted, so there is no way out of this menu except a live mon.
+;
+; DEVIATION{class=banking; pret=engine/battle/core.asm:ChooseNextMon; behavior=the two FlagActionPredef predefs are plain FlagAction calls; evidence=the port has no predef dispatcher so every predef target is called directly with its arguments in registers, the same standing convention SwitchPlayerMon and CopyDownscaledMonTiles already carry; lifetime=permanent while the port is dispatcher-free}
+;
+; Out: ZF from the enemy's HP word (pret's contract, read by
+;      HandlePlayerMonFainted).
 ; ===========================================================================
 ChooseNextMon:
-    ; find the first party slot with non-zero HP (AnyPartyAlive already guaranteed one)
-    movzx ebx, byte [ebp + wPartyCount]
-    xor eax, eax                         ; idx = 0
-.scanLoop:
-    mov esi, wPartyMon1HP
-    movzx edx, al
-    imul edx, edx, PARTYMON_STRUCT_LENGTH
-    add esi, edx
-    mov dl, [ebp + esi]
-    or  dl, [ebp + esi + 1]
-    jnz .found
-    inc al
-    dec bl
-    jnz .scanLoop
-    ; fallback (should be unreachable): keep idx 0
-    xor al, al
-.found:
-    mov [ebp + wWhichPokemon], al
+    mov byte [ebp + wPartyMenuTypeOrMessageID], BATTLE_PARTY_MENU
+    call DisplayPartyMenu
+.checkIfMonChosen:
+    jnc .monChosen                      ; jr nc
+.goBackToPartyMenu:
+    call GoBackToPartyMenu
+    jmp .checkIfMonChosen               ; jr
+.monChosen:
+    call HasMonFainted
+    jz .goBackToPartyMenu               ; jr z — a fainted mon is not a choice
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    jne .notLinkBattle                  ; jr nz
+    mov byte [ebp + wActionResultOrTookBattleTurn], 1
+    call LinkBattleExchangeData         ; ret-stand-in; link play is unported
+.notLinkBattle:
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0   ; xor a
+    call ClearSprites
+    mov al, [ebp + wWhichPokemon]
     mov [ebp + wPlayerMonNumber], al
-    mov byte [ebp + wActionResultOrTookBattleTurn], 0
-    ; set the gain-exp flag for the new mon (predef FlagActionPredef, FLAG_SET)
-    push eax
+    ; pret: ld c,a / ld hl,wPartyGainExpFlags / ld b,FLAG_SET / push bc /
+    ;       predef / pop bc / ld hl,wPartyFoughtCurrentEnemyFlags / predef
     mov cl, al
+    mov bh, FLAG_SET
+    push ebx
+    push ecx
     mov esi, wPartyGainExpFlags
-    mov bh, FLAG_SET
     call FlagAction
-    pop eax
-    ; set the fought-current-enemy flag for the new mon
-    push eax
-    mov cl, al
+    pop ecx
+    pop ebx
     mov esi, wPartyFoughtCurrentEnemyFlags
-    mov bh, FLAG_SET
     call FlagAction
-    pop eax
     call LoadBattleMonFromParty
+    call GBPalWhiteOut
+    call LoadHudTilePatterns
+    call LoadScreenTilesFromBuffer1
+    call RunDefaultPaletteCommand
+    call GBPalNormal
     call SendOutMon
     mov al, [ebp + wEnemyMonHP]
-    or  al, [ebp + wEnemyMonHP + 1]      ; ZF = enemy has 0 HP (pret return contract)
+    or  al, [ebp + wEnemyMonHP + 1]     ; ZF = enemy has 0 HP (pret return contract)
     ret
 
 ; ===========================================================================
@@ -6004,21 +6049,28 @@ TryRunningFromBattle:
     cmp byte [ebp + wIsInBattle], 2
     je .trainerBattle
     inc byte [ebp + wNumRunAttempts]
-    mov al, [ebp + wBattleMonSpeed]
+    ; pret reads the PLAYER speed through hl and the ENEMY speed through de,
+    ; both supplied by the caller. The port used to hardcode wBattleMonSpeed /
+    ; wEnemyMonSpeed here, which is right for BattleMenu_RunWasSelected and
+    ; WRONG for the other pret caller: DoUseNextMonDialogue's "NO, run" arm
+    ; passes wPartyMon1Speed, because the battle mon has just fainted. The
+    ; parameters are honoured now (battle plan 2b) — ESI = player speed word,
+    ; EDX = enemy speed word, both big-endian GB offsets.
+    mov al, [ebp + esi]                 ; ld a,[hli]
     mov [ebp + hMultiplicand + 1], al
-    mov al, [ebp + wBattleMonSpeed + 1]
+    mov al, [ebp + esi + 1]             ; ld a,[hl]
     mov [ebp + hMultiplicand + 2], al
-    mov al, [ebp + wEnemyMonSpeed]
+    mov al, [ebp + edx]                 ; ld a,[de]
     mov [ebp + hEnemySpeed], al
-    mov al, [ebp + wEnemyMonSpeed + 1]
+    mov al, [ebp + edx + 1]             ; inc de / ld a,[de]
     mov [ebp + hEnemySpeed + 1], al
     ; player speed >= enemy speed → guaranteed escape (pret StringCmp + jr nc)
-    movzx eax, byte [ebp + wBattleMonSpeed]
+    movzx eax, byte [ebp + esi]
     shl eax, 8
-    mov al, [ebp + wBattleMonSpeed + 1]
-    movzx ecx, byte [ebp + wEnemyMonSpeed]
+    mov al, [ebp + esi + 1]
+    movzx ecx, byte [ebp + edx]
     shl ecx, 8
-    mov cl, [ebp + wEnemyMonSpeed + 1]
+    mov cl, [ebp + edx + 1]
     cmp eax, ecx
     jae .canEscape
     ; quotient = (player speed * 32) / ((enemy speed / 4) % 256)

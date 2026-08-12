@@ -53,3 +53,17 @@ StarterPikachuBattleEntranceAnimation:
 global UseBagItem
 UseBagItem:
     ret
+
+; LinkBattleExchangeData — pret engine/battle/core.asm:LinkBattleExchangeData.
+; The per-turn link-cable exchange: both sides swap their chosen action and the
+; battle proceeds in lockstep.
+;
+; ADDED AS A STUB 2026-08-12 (battle plan 2b). ChooseNextMon calls it inside a
+; `wLinkState == LINK_STATE_BATTLING` branch, and keeping pret's branch shape
+; needs the label to resolve. Link play is entirely unported — there is no
+; serial HAL — so the branch is unreachable in this port: wLinkState is 0 in
+; single-player and nothing ever writes LINK_STATE_BATTLING.
+; STUB{label=LinkBattleExchangeData; class=stub; pret=engine/battle/core.asm:LinkBattleExchangeData; behavior=return without exchanging any data with a peer so the link branch of ChooseNextMon does nothing; evidence=label DB reports LinkBattleExchangeData missing and the port has no serial link HAL at all so no code path sets wLinkState to LINK_STATE_BATTLING; lifetime=until link battles are ported, which no current plan schedules}
+global LinkBattleExchangeData
+LinkBattleExchangeData:
+    ret

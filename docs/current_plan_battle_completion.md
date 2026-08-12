@@ -813,9 +813,55 @@ their current bodies auto-answer and auto-select.
       do not exercise the party menu, because no scenario presses PKMN. The
       switch itself therefore still has zero execution evidence, and the Stage 2
       scenario box below is where that debt sits.
-- [ ] **2b. Forced switch.** Replace the automatic Yes and first-live-mon paths
+- [x] **2b. Forced switch.** Replace the automatic Yes and first-live-mon paths
       in `DoUseNextMonDialogue`/`ChooseNextMon` with the faithful Yes/No and party
       menus, including wild-run behavior and the no-cancel forced selection.
+
+      **DONE 2026-08-12.** `DoUseNextMonDialogue` was `5 pret / 2 port` and is
+      now **clean 5/5 calls, 1/1 stores**; `ChooseNextMon` was `13 / 3` and is
+      now **13/13 (12 matched), 3/3 stores**, its one diff the annotated
+      `FlagActionPredef` → `FlagAction` convention.
+
+      * The wild "Use next Pokémon?" `TWO_OPTION_MENU` box is real, and NO now
+        runs. Its position carries a `DEVIATION{class=projection}` for
+        `BCOORD(13, 9)`.
+      * The auto-select scan loop is gone. `ChooseNextMon` runs pret's
+        `DisplayPartyMenu` in `BATTLE_PARTY_MENU` mode. **No-cancel is
+        structural, not a flag:** pret loops back to `GoBackToPartyMenu` on
+        both a cancelled menu (CF=1) and a fainted pick, so the only exit is a
+        live mon. The picker it had been standing in for was linked all along —
+        the deferral was the interactive UI, which 2a proved works.
+
+      **A LATENT DIVERGENCE HAD TO BE FIXED FIRST, and it is the interesting
+      part of this box.** pret's `TryRunningFromBattle` reads the player speed
+      through `hl` and the enemy speed through `de`, both supplied by the
+      caller — and its two callers pass DIFFERENT things:
+      `BattleMenu_RunWasSelected` passes `wBattleMonSpeed`, while
+      `DoUseNextMonDialogue`'s NO arm passes **`wPartyMon1Speed`**, because the
+      battle mon has just fainted. The port had hardcoded `wBattleMonSpeed`,
+      which is correct for the caller that existed and wrong for the one this
+      box adds. The routine now honours the pointers (ESI/EDX) and both call
+      sites set them; `label_status --callers` confirms there are exactly two
+      and no third entry path. Had this not been caught, 2b would have shipped
+      a run-odds bug that no scenario could see.
+
+      Also added: `wPartyMon1Speed` (`wPartyMon1 + MON_SPD`), and a declared
+      `STUB{class=stub}` for `LinkBattleExchangeData` so `ChooseNextMon` keeps
+      pret's link branch. That branch is unreachable in this port for a
+      structural reason, not a lucky one: there is no serial HAL, and nothing
+      ever writes `LINK_STATE_BATTLING`.
+
+      **EVIDENCE CLASS.** Both routines sit on the live faint path, but no
+      scenario reaches them: `battle_faint` kills the ENEMY, and
+      `battle_blackout` deliberately leaves exactly one mon alive so the
+      black-out branch is taken instead — its header says so outright. So this
+      box lands with **zero execution evidence**, same as 2a, and the Stage 2
+      scenario box owns the debt for both.
+
+      Left open deliberately: `TryRunningFromBattle` still drops
+      `IsGhostBattle`, `LinkBattleExchangeData`, `LoadScreenTilesFromBuffer1`
+      and `PrintText` (11 pret / 7 port). Those predate this box and belong to
+      4c (ghost) and the run-message work, not here.
 - [ ] **2c. In-battle bag.** Rename the port-only `BattleItemMenu` to its pret
       counterpart `BagWasSelected` (pret engine/battle/core.asm:2270-2300,
       including the link-battle and safari-bait preamble), then implement it
