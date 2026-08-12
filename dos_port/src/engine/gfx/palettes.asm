@@ -403,8 +403,69 @@ SetPal_Overworld:
 ; when reached through _RunPaletteCommand; direct callers receive the proper id.
 SetPal_TownMap:                 mov al, SET_PAL_TOWN_MAP                 ; fall through
                                 jmp SetPal_Screen
-SetPal_StatusScreen:            mov al, SET_PAL_STATUS_SCREEN
-                                jmp SetPal_Screen
+; ---------------------------------------------------------------------------
+; SetPal_StatusScreen — pret engine/gfx/palettes.asm:73. NOT a plain screen
+; command: pret copies PalPacket_Empty and then overwrites TWO of its four
+; palette ids at run time —
+;     entry 0 (wPalPacket + 1) = wStatusScreenHPBarColor + PAL_GREENBAR
+;     entry 1 (wPalPacket + 3) = DeterminePaletteIDOutOfBattle(wCurPartySpecies)
+; so the status screen shows the mon's OWN colours and an HP bar tinted
+; green/yellow/red by its remaining HP.
+;
+; The port used to be `mov al, SET_PAL_STATUS_SCREEN / jmp SetPal_Screen`, i.e.
+; the static row only — measured as `faithdiff SetPal_StatusScreen`
+; 2 pret / 1 port with ZERO matched, and visible as status_p1 / status_p2's 6
+; divergences each (BG pal0/1 and OBJ pal0/1 colour1-2 holding PAL_ROUTE where
+; hardware has the HP-bar and species colours). The port already COMPUTED the
+; input — status_screen.asm:229 fills wStatusScreenHPBarColor via
+; GetHealthBarColor — and then never used it.
+;
+; SetPal_Screen still runs first: it loads the static row into both slot tables
+; AND installs the command's per-cell attribute plane, which pret gets from
+; BlkPacket_StatusScreen. Only the two ids are then overridden, matching pret's
+; packet exactly. It ends in popad/ret and already arms g_pal_dirty.
+;
+; NUM_POKEMON_INDEXES is $BE: VICTREEBEL is the last `const` in pret
+; constants/pokemon_constants.asm ($BE) and the DEF is `const_value - 1`.
+;
+; DEVIATION{class=projection; pret=engine/gfx/palettes.asm:SetPal_StatusScreen; behavior=builds the two live palette ids directly into bg_slot_pal and obj_slot_pal after SetPal_Screen instead of copying PalPacket_Empty into wPalPacket and returning HL-DE for the SGB-packet path, so faithdiff shows DROPPED CopyData and ADDED SetPal_Screen; evidence=the port has no wPalPacket-plus-SendSGBPackets stage at all - SetPal_Screen IS the port's realization of a PAL_SET packet plus its BlkPacket attribute plane, and every other SetPal_ command in this file already goes through it, so a wPalPacket copy would write a buffer nothing reads; lifetime=permanent, the port's palette-command boundary}
+;
+; ONE MORE faithdiff line, and it is a PRE-EXISTING LABEL BUG, not this change:
+; pret has TWO entry points two lines apart —
+;     DeterminePaletteID:            ld a, [hl]
+;     DeterminePaletteIDOutOfBattle: ld [wPokedexNum], a  ...
+; The port's routine named `DeterminePaletteID` starts at the `ld [wPokedexNum]`
+; line, i.e. its body IS pret's DeterminePaletteIDOutOfBattle under the wrong
+; name, and `label_status DeterminePaletteIDOutOfBattle` reads `missing`. pret's
+; SetPal_StatusScreen calls the OutOfBattle entry, so this call reaches the RIGHT
+; CODE under the WRONG NAME, which is why faithdiff prints DROPPED
+; DeterminePaletteIDOutOfBattle / ADDED DeterminePaletteID.
+; NOT repaired here, deliberately: adding pret's `ld a, [hl]` entry above the
+; body would clobber AL for SetPal_Battle's two existing call sites, which load
+; AL themselves rather than pointing HL. Fixing it properly means repointing
+; those two calls as well, which is battle-palette code this change has no
+; business touching. Filed as its own job.
+; ---------------------------------------------------------------------------
+%define NUM_POKEMON_INDEXES 0xBE
+SetPal_StatusScreen:
+    mov al, SET_PAL_STATUS_SCREEN
+    call SetPal_Screen                  ; static row + attribute plane
+    mov al, [ebp + wCurPartySpecies]    ; ld a, [wCurPartySpecies]
+    cmp al, NUM_POKEMON_INDEXES + 1     ; cp NUM_POKEMON_INDEXES + 1
+    jb .pokemon                         ; jr c, .pokemon
+    mov al, 1                           ; ld a, $1 ; not pokemon
+.pokemon:
+    call DeterminePaletteID             ; AL = the mon's palette id
+    push eax                            ; pret: push af
+    movzx eax, byte [ebp + wStatusScreenHPBarColor]
+    add al, PAL_GREENBAR                ; entry 0 = HP-bar tint
+    mov [bg_slot_pal + 0], al
+    mov [obj_slot_pal + 0], al
+    pop eax                             ; pret: pop af
+    mov [bg_slot_pal + 1], al           ; entry 1 = the mon's palette
+    mov [obj_slot_pal + 1], al
+    mov byte [g_pal_dirty], 1
+    ret
 SetPal_Pokedex:                 mov al, SET_PAL_POKEDEX
                                 jmp SetPal_Screen
 SetPal_Slots:                   mov al, SET_PAL_SLOTS
