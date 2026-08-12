@@ -1279,19 +1279,36 @@ provider shapes below, not their runtime behavior.
         spec PIDGEY's 36 HP, WRAP KO'd it on turn 1 and `MainInBattleLoop` took
         `jp z, HandleEnemyMonFainted`, skipping the turn tail entirely.
 
-      What does NOT work: the wrap sequence never releases. By frame 4000 the
-      enemy has fainted from accumulated chip damage anyway and the screen reads
-      "SNORLAX gained 102 EXP. Points!", so the flow left through
-      `HandleEnemyMonFainted` and `CheckNumAttacksLeft` was skipped again.
+      **THE PORT SIDE NOW WORKS (2026-08-12).**
+      `run_headless.sh "DEBUG_BATTLE_WRAP=1"` dumps, and the dump is the
+      RELEASE: `wPlyStatus1 = $00` — `USING_TRAPPING_MOVE` CLEARED — with
+      `wPlyAtksLeft = $00` and the enemy alive at 601 HP. **That is the first
+      execution evidence in the project that `CheckNumAttacksLeft` clears a SET
+      bit**, which is exactly what this box exists to prove; every prior run of
+      that routine cleared an already-clear bit.
 
-      **THE OPEN QUESTION, precisely:** where is the TRAPPING counter
-      decremented per turn, and does the per-frame pin interfere with it? Note
-      `effects.asm:1249` is `TwoToFiveAttacksEffect`, which is
-      `ATTACKING_MULTIPLE_TIMES` — the multi-hit mechanic, NOT this one (the
-      same near-miss the box already warns about). The trapping effect is a
-      different routine in the same file. Until that decrement is read, do not
-      guess at the pin: it may be clamping the counter at 1 on exactly the frame
-      it would otherwise reach 0.
+      *What the earlier failure actually was, since the box previously blamed
+      the pin.* Both port routines are FAITHFUL — `CheckNumAttacksLeft` clears
+      on 0, and `TrappingEffect` is guarded by `bit USING_TRAPPING_MOVE / ret nz`
+      so it cannot re-roll mid-sequence. The per-turn decrement is
+      `.multiturnMoveCheck` (pret core.asm:3726-3736, port
+      `core.asm:1865-1874`), also faithful. The fault was the HARNESS: with
+      `AUTOKEY_APRESS` mashing A, every release was immediately followed by a
+      FRESH Wrap, so the sequence looked endless and the enemy died of chip
+      damage. Measured signature of that cycle: `wPlyAtksLeft` read `00` at
+      frame 700 and `01` again at 900 with `wPlyStatus1 = $20` throughout —
+      release, then re-cast. The dump condition also carried an unverified
+      `wPlayerUsedMove == WRAP` clause; the latch already makes the same claim,
+      so it was dropped.
+
+      **STILL OWED: the golden side.** And one thing to decide before writing
+      it, because it is visible in the port dump already: the enemy ends at 601
+      of 999 HP, and that value is a DAMAGE ROLL over the two trapping hits.
+      `wEnemyMon` is a compared region and the emulators do not share an RNG
+      stream, so this scenario will need a documented `wram_skip` for
+      `wEnemyMon` — the `trainer_battle_init` precedent — stating that what it
+      pins is the counter and the flag, not the damage. Decide that BEFORE
+      generating the golden rather than after it fails.
 
       Also still owed once it terminates: the golden, the manifest row, and the
       `wPlyStatus1`/`wPlyAtksLeft` scenario-local rows (already written into the

@@ -4317,16 +4317,21 @@ AutoKeyDrive:
     jbe .noWrapPin
     mov byte [ebp + wPlayerNumAttacksLeft], 1
 .noWrapPin:
-    ; THE DUMP. "trapping bit clear AND counter 0" is ALSO the initial state, so
-    ; it cannot be the whole condition — the latch above is what proves a Wrap
-    ; actually happened, and wPlayerUsedMove pins WHICH move (SendOutMon zeroes
-    ; it, so it only reads WRAP after a Wrap turn). Without the latch this would
-    ; fire on the frame between ExecutePlayerMove storing wPlayerUsedMove and
-    ; the effect setting the bit.
+    ; THE DUMP: the RELEASE. "trapping bit clear AND counter 0" is ALSO the
+    ; initial state, so the latch above is what makes it a landmark — it proves
+    ; USING_TRAPPING_MOVE was observed set at least once, i.e. a Wrap really ran.
+    ;
+    ; The window is NARROW and that is why this is checked every frame: measured,
+    ; the player immediately starts ANOTHER Wrap (the A train re-selects it), so
+    ; the released state exists for only the handful of frames between the turn
+    ; tail's CheckNumAttacksLeft and the next TrappingEffect. Measured evidence
+    ; of that cycle: wPlyAtksLeft read 00 at frame 700 and 01 again at 900, with
+    ; wPlyStatus1 = $20 throughout — release, then re-cast.
+    ;
+    ; An earlier version also required wPlayerUsedMove == WRAP. Dropped: it was
+    ; never verified to hold, and the latch already carries the same claim.
     cmp dword [wrap_pin_seen], 0
     je .noWrapDump
-    cmp byte [ebp + wPlayerUsedMove], WRAP
-    jne .noWrapDump
     test byte [ebp + wPlayerBattleStatus1], 1 << USING_TRAPPING_MOVE
     jnz .noWrapDump
     cmp byte [ebp + wPlayerNumAttacksLeft], 0
