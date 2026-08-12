@@ -886,6 +886,7 @@ gbstate_regions:
     ; story; dump it and see. Both live in port memory, hence gbregion_flat.
     gbregion_flat "g_window_count", g_window_count, 4
     gbregion_flat "g_windows",      g_windows, MAX_WINDOWS * WIN_DESC_SIZE
+    gbregion      "io_lcdc",       IO_LCDC, 1   ; is the BG layer even enabled?
 %endif
 %ifdef DEBUG_BILLSPC
     ; --- Bill's PC box-behaviour flow (sram plan stage 6) ---
