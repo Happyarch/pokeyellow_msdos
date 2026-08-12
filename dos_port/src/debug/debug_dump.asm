@@ -908,6 +908,20 @@ gbstate_regions:
     ; (win), so this row is the byte the sabotage has to be able to move.
     gbregion "wBattleResult", wBattleResult, 1
 %endif
+%ifdef DEBUG_BATTLE_THRASH
+    ; --- scenario-local rows for Thrash (battle plan 3a residue) ---
+    ; The golden mirrors all four BY NAME. wPlyStatus1 is the point: THRASHING_ABOUT
+    ; clear with CONFUSED set is the transition .thrashingAboutCheck performs.
+    ; wPlyConfused is carried but SKIPPED by golden_diff — it is a second
+    ; BattleRandom roll (2-5 turns) that the two emulators cannot agree on, and
+    ; PINNING it would make the comparison a tautology. wPlyMoveNum is carried
+    ; but is NOT discriminating: GetCurrentMove already wrote the selected move
+    ; there, and the selected move IS THRASH.
+    gbregion "wPlyStatus1",  wPlayerBattleStatus1,   1   ; $D061 — THRASHING_ABOUT / CONFUSED
+    gbregion "wPlyAtksLeft", wPlayerNumAttacksLeft,  1   ; $D069 — the thrash counter
+    gbregion "wPlyConfused", wPlayerConfusedCounter, 1   ; $D06A — rolled; skipped by the differ
+    gbregion "wPlyMoveNum",  wPlayerMoveNum,         1   ; $CFD1
+%endif
 %ifdef DEBUG_BATTLE_BIDE
     ; --- scenario-local rows for Bide (battle plan 3a residue) ---
     ; None of these is in a shared region (wBattleFlags covers only
@@ -2742,6 +2756,38 @@ RunBattleTest:
     mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
+%elifdef DEBUG_BATTLE_THRASH
+    ; ------------------------------------------------------------------
+    ; battle_thrash golden gate (battle plan 3a residue — the Thrash third, and
+    ; the last of them). Same shape as DEBUG_BATTLE_WRAP / DEBUG_BATTLE_BIDE:
+    ; ExecutePlayerMove's .thrashingAboutCheck (port core.asm:1845) only means
+    ; anything across two turns, and only the REAL MainInBattleLoop drives two
+    ; turns. battle_wrap witnessed USING_TRAPPING_MOVE and battle_bide witnessed
+    ; STORING_ENERGY; nothing had ever set THRASHING_ABOUT.
+    ;
+    ; THE ENEMY HP PIN IS 65535, NOT battle_wrap's 999, AND THAT WAS MEASURED.
+    ; WRAP is power 15; THRASH is power 90. Two thrash hits from L80 SNORLAX go
+    ; straight through 999, the enemy faints, and the thrash ends because the
+    ; BATTLE ended rather than because .thrashingAboutCheck ran — a failure that
+    ; looks exactly like the feature being broken (the golden-side probe read
+    ; THRASHING_ABOUT set and then cleared with CONFUSED never set, forever).
+    ; When copying a survive-the-sequence pin between scenarios, re-derive the
+    ; number from the MOVE'S POWER.
+    ;
+    ; The rolled thrash counter is pinned in AutoKeyDrive, not here, because it
+    ; only exists once ThrashPetalDanceEffect has run. See that block for the
+    ; pin, the latch and the dump condition.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    mov word [ebp + wEnemyMonHP], 0xFFFF        ; 65535 (byte order is moot here)
+    mov word [ebp + wEnemyMonMaxHP], 0xFFFF
+    ; AND IT MUST NOT ACT: an enemy turn puts a damage ROLL into wBattleMon,
+    ; which is compared. battle_wrap's and battle_bide's pin.
+    mov byte [ebp + wEnemyMonStatus], 7         ; SLP counter (7 turns)
+    mov byte [ebp + wBattleMonMoves], THRASH    ; move slot 1 = THRASH
+    mov byte [ebp + wPlayerMoveListIndex], 0
+    jmp MainInBattleLoop                        ; the real loop; it does not return
 %elifdef DEBUG_BATTLE_BIDE
     ; ------------------------------------------------------------------
     ; battle_bide golden gate (battle plan 3a residue — the Bide half). Same
@@ -3225,7 +3271,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_BIDE, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_BIDE, DEBUG_BATTLE_THRASH, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 
@@ -4517,6 +4563,43 @@ AutoKeyDrive:
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN, then exits
 .noBoomDump:
 %endif
+%ifdef DEBUG_BATTLE_THRASH
+    ; --- battle_thrash: the RNG pin, a latch, and the dump (3a residue) ---
+    ; THE PIN. ThrashPetalDanceEffect rolls wPlayerNumAttacksLeft 2-3
+    ; (effects.asm:837-841) and the emulators share no RNG stream, so clamp it
+    ; to 1 the moment THRASHING_ABOUT is seen set; the thrash then ends on the
+    ; next turn on both sides. battle_wrap's pin exactly.
+    test byte [ebp + wPlayerBattleStatus1], 1 << THRASHING_ABOUT
+    jz .thrashMaybeDump
+    mov dword [thrash_pin_seen], 1              ; latch: the bit WAS set at least once
+    cmp byte [ebp + wPlayerNumAttacksLeft], 1
+    jbe .noThrashDump
+    mov byte [ebp + wPlayerNumAttacksLeft], 1
+    jmp .noThrashDump
+.thrashMaybeDump:
+    ; THE DUMP: the END of the thrash. THRASHING_ABOUT clear AND CONFUSED set.
+    ; The latch is what makes it a landmark — "not thrashing and not confused"
+    ; is exactly how the battle starts, so without it this fires immediately.
+    ; wPlayerConfusedCounter is deliberately NOT pinned here: it is a second
+    ; BattleRandom roll and pinning it would only prove the harness can write a
+    ; byte. golden_diff skips that row instead, with the reason recorded there.
+    cmp dword [thrash_pin_seen], 0
+    je .noThrashDump
+    test byte [ebp + wPlayerBattleStatus1], 1 << CONFUSED
+    jz .noThrashDump
+    ; ALIGNMENT CLAUSE, tried BEFORE reaching for a mask. Without it the only
+    ; divergence in this scenario was `wLoadedMon level: want $50 | got $0D` —
+    ; the HUD staging buffer, with the golden holding the PLAYER mon (L80) and
+    ; the port holding the ENEMY (L13), i.e. the two sides straddling the turn
+    ; tail's DrawHUDsAndHPBars. battle_wrap records the identical symptom and
+    ; skips the whole region; here the window is wide enough to converge on
+    ; instead, because CONFUSED stays set for turns rather than for a handful of
+    ; frames. Both sides now wait for the player mon to be the staged one.
+    cmp byte [ebp + wLoadedMonLevel], 80        ; SNORLAX L80 staged, not the L13 enemy
+    jne .noThrashDump
+    call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN, then exits
+.noThrashDump:
+%endif
 %ifdef DEBUG_BATTLE_BIDE
     ; --- battle_bide: three pins, a latch, and the dump (3a residue) ---
     ; ALL THREE PINS ARE CONDITIONED ON STORING_ENERGY, and that condition is
@@ -4743,6 +4826,10 @@ wrap_pin_seen: dd 0            ; set once USING_TRAPPING_MOVE has been observed
 %ifdef DEBUG_BATTLE_BIDE
 align 4
 bide_pin_seen: dd 0            ; set once STORING_ENERGY has been observed
+%endif
+%ifdef DEBUG_BATTLE_THRASH
+align 4
+thrash_pin_seen: dd 0          ; set once THRASHING_ABOUT has been observed
 %endif
 %ifdef AUTOKEY_DUMP_ON_BATTLE
 align 4

@@ -889,6 +889,36 @@ SCENARIOS = {
         "flags": "DEBUG_BATTLE_PAYDAY=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_thrash": {
+        # datastruct: the END of a thrash — .thrashingAboutCheck clearing
+        # THRASHING_ABOUT and setting CONFUSED once the rolled counter runs out.
+        # What it pins is wPlyStatus1 (the transition itself) and wPlyAtksLeft.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_THRASH=1",
+        "wram_skip": {
+            "wEnemyMon": "the enemy's remaining HP is the accumulated damage of "
+                         "the thrash hits, i.e. a roll, and the two sides do not "
+                         "share an RNG stream. It is seeded to 65535 only so it "
+                         "SURVIVES both turns -- THRASH is power 90 and two hits "
+                         "from L80 go through battle_wrap's 999, which ends the "
+                         "thrash by KO instead of by the routine under test. Its "
+                         "value therefore carries no information about this box.",
+            "wPlyConfused": "wPlayerConfusedCounter is a SECOND BattleRandom roll "
+                            "(pret core.asm:3716-3720, `and 3 / inc a / inc a`, "
+                            "2-5 turns), so the two emulators cannot be made to "
+                            "agree on it. PINNING IT WOULD BE A TAUTOLOGY -- the "
+                            "harness would write the same byte on both sides and "
+                            "then check both read it back, which tests the harness "
+                            "rather than the port. NOTE, and do not let it tempt "
+                            "anyone into deleting this skip: both sides happen to "
+                            "read $05 today. That is a coincidence of two "
+                            "independent RNG streams, not agreement, and any "
+                            "timing change can break it -- at which point it would "
+                            "read as a port defect. The row is carried so the gap "
+                            "is greppable instead of silent.",
+        },
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_bide": {
         # datastruct: the Bide STORE and RELEASE — ExecutePlayerMove's
         # .bideCheck accumulating and .unleashEnergy clearing STORING_ENERGY,

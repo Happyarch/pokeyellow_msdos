@@ -1970,6 +1970,36 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "the Bide STORE and RELEASE \u2014 ExecutePlayerMove's .bideCheck accumulating and .unleashEnergy clearing STORING_ENERGY, zeroing the accumulator and dealing twice what was stored. battle_wrap witnessed the TRAPPING counter; nothing had ever set STORING_ENERGY. Like battle_wrap this needs the REAL MainInBattleLoop, because Bide only means anything across two turns. Four pins, each measured: enemy HP 999 so the release does not KO, enemy asleep because Bide accumulates the damage the USER TAKES and an enemy turn would put a roll straight into the compared accumulator, the rolled counter forced to 1 so the release lands on the same turn on both sides, and the accumulator forced to 100 (with wDamage zeroed alongside it) so the release is a real one rather than .unleashEnergy's degenerate wMoveMissed arm. All the mid-battle writes are gated on STORING_ENERGY being SET, which is what guarantees they cannot land between the release computing wDamage and HandleIfPlayerMoveMissed applying it. Landmark: the enemy at 999-2*100 = 799 HP, having SEEN STORING_ENERGY set \u2014 the latch matters because bit-clear-and-accumulator-zero is also the pre-battle state"
+    },
+    {
+      "name": "battle_thrash",
+      "id": 68,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_THRASH=1",
+      "port_entry_gate": "DEBUG_BATTLE_THRASH",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_thrash.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "MainInBattleLoop",
+        "ExecutePlayerMove",
+        "ThrashPetalDanceEffect"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the END of a thrash \u2014 ExecutePlayerMove's .thrashingAboutCheck clearing THRASHING_ABOUT and setting CONFUSED once the rolled counter runs out. battle_wrap witnessed USING_TRAPPING_MOVE and battle_bide witnessed STORING_ENERGY; nothing had ever set THRASHING_ABOUT. Needs the REAL MainInBattleLoop, like both of those, because the block only means anything across two turns. THE ENEMY HP PIN IS 65535, NOT battle_wrap's 999, and that was measured: THRASH is power 90 against WRAP's 15, so two hits go through 999 and the thrash ends by KO instead of by the routine \u2014 a failure that reads exactly like the feature being broken. What is compared is the state transition (THRASHING_ABOUT clear + CONFUSED set + counter 0) behind a latch proving the bit was seen SET, since not-thrashing-and-not-confused is how the battle starts. wPlayerConfusedCounter is carried as a row but SKIPPED: it is a second BattleRandom roll, and pinning it would make the comparison a tautology"
     }
   ],
   "disabled_scenarios": []

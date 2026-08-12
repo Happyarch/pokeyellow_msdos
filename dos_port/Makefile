@@ -1136,6 +1136,19 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Thrash end gate (battle_thrash, battle plan 3a residue): SNORLAX L80 uses
+# THRASH on the spec wild PIDGEY L13 and the REAL MainInBattleLoop runs the two
+# turns, which is the only way to reach ExecutePlayerMove's .thrashingAboutCheck.
+# The enemy is seeded to 65535 HP, not battle_wrap's 999 — THRASH is power 90 and
+# two hits blow through 999, ending the thrash by KO instead of by the routine.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_THRASH=1" /tmp/thrash
+ifdef DEBUG_BATTLE_THRASH
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_THRASH -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_BATTLE_PAYDAY
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_PAYDAY -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

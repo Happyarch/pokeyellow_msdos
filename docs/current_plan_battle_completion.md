@@ -1334,9 +1334,10 @@ provider shapes below, not their runtime behavior.
       Also still owed once it terminates: the golden, the manifest row, and the
       `wPlyStatus1`/`wPlyAtksLeft` scenario-local rows (already written into the
       gate) mirrored by name on the mGBA side.
-- [~] **3a (original entry) — TRAPPING and BIDE now witnessed; THRASH is the
-      residue.** Kept as a live box rather than folded into 3a because the
-      ticked 3a covers only the trapping third of what this asked for.
+- [x] **3a (original entry) — DONE 2026-08-12. All three thirds witnessed.**
+      This box asked for "the complete Bide/Thrash/trapping counter,
+      accumulation, release and cleanup flow"; the ticked 3a above covers only
+      the trapping third, which is why this entry stayed live.
 
       * **Trapping — DONE** by `battle_wrap` (id 64, 782638274). See 3a above.
       * **Bide — DONE 2026-08-12** by `battle_bide` (id 67). `DEBUG_BATTLE_BIDE`
@@ -1378,270 +1379,53 @@ provider shapes below, not their runtime behavior.
         `wPlyBideDmg +1: want $00 | got $64`** — the precise byte the cleanup
         writes, which is the "cleanup flow" clause of this box. `make fidelity`
         16 PASS; `lint_pret_labels` 0 both modes; `validate_scenarios` 65.
-      * **Thrash / Petal Dance — STILL OPEN, and it is the only residue.**
-        `ThrashPetalDanceEffect` is `translated` and `faithdiff`-clean (2/2
-        calls), and `.thrashingAboutCheck` (port core.asm:1845) is written, but
-        NOTHING HAS EVER EXECUTED IT. A `battle_thrash` scenario should pin the
-        rolled thrash counter the way `battle_bide` pins Bide's, and compare
-        `wPlayerBattleStatus1`'s `CONFUSED` bit at the exit.
+      * **Thrash / Petal Dance — DONE 2026-08-12** by `battle_thrash` (id 68).
+        `.thrashingAboutCheck` (port core.asm:1845) had never executed;
+        THRASHING_ABOUT had never been set by anything in the registry. Same
+        `MainInBattleLoop` gate shape as the other two.
 
-        **`HandleSelfConfusionDamage`'s four ADDED stores are TRIAGED as of
-        2026-08-12 and are NOT divergences** — this entry called them untriaged,
-        and that is now answered by decomposition rather than by verdict. pret's
-        routine makes exactly THREE named stores: `wCriticalHitOrOHKO`
-        (core.asm:3861), `wAnimationType` (:3880) and `hWhoseTurn` (:3881/:3884)
-        — precisely the "3 pret stores" faithdiff reports. It writes the other
-        four through `HL`: `ld hl, wEnemyMonDefense` … `ld [hli], a`
-        (:3846-3854), and `ld hl, wPlayerMoveEffect` … `ld [hli], a`
-        (:3855-3865), that run covering the effect, the base power at +1 and the
-        type at +2. The port writes the same four by name. So all four ADDED
-        lines are faithdiff's documented store-matching-by-name blind spot with
-        ZERO unexplained residue, and NO suppression is appropriate:
-        `faithdiff_suppress.json` is for symbols expected on one side of *every*
-        routine, not for a routine-specific tool artefact.
-- [x] **3b. Pay Day and end-of-battle money.** IMPLEMENTED 2026-08-11,
-      WITNESSED 2026-08-12 — the acceptance evidence the box was waiting for is
-      `battle_pay_day`, scenario id 63.
+        **THE ENEMY-HP PIN DOES NOT COPY, AND THAT COST A RUN TO FIND.**
+        `battle_wrap`'s 999 is sized for WRAP's power 15; THRASH is power 90, so
+        two hits from L80 go straight through it, the enemy faints, and the
+        thrash ends because the BATTLE ended rather than because the routine
+        ran. **The failure is silent and reads exactly like a broken feature** —
+        the probe showed THRASHING_ABOUT set and then cleared with CONFUSED
+        never set, forever. Seeded to 65535 now. When copying a
+        survive-the-sequence pin between scenarios, re-derive it from the MOVE'S
+        POWER.
 
-      The payout is now real in `EndOfBattle`: `AddBCD` (3-byte BCD, both
-      pointers starting at their array's least-significant byte, exactly as
-      pret's `HL`/`DE` do) into `wPlayerMoney`, then `PrintText
-      PickUpPayDayMoneyText`. `faithdiff EndOfBattle` swaps `- DROPPED
-      AddBCDPredef` for `+ ADDED AddBCD` under a `DEVIATION{class=HAL}` — the
-      port's `AddBCDPredef` is `GetPredefRegisters` falling through to `AddBCD`,
-      and there is no predef dispatcher staging the mailbox at this site, which
-      is the convention `pay_day.asm` and `ReadTrainer` already follow.
+        **ALIGNMENT WORKED HERE, WHERE `battle_wrap` RECORDS THAT IT DOES NOT.**
+        The first run's ONLY divergence was `wLoadedMon level: want $50 | got
+        $0D` — the HUD staging buffer, golden holding the player mon and port
+        the enemy, i.e. the two sides straddling the turn tail's
+        `DrawHUDsAndHPBars`. That is `battle_wrap`'s exact symptom, and
+        `battle_wrap` skips the whole region for it. Rather than copy the mask,
+        both dump conditions got `wLoadedMonLevel == 80` — and it converged.
+        **So `battle_wrap`'s "alignment does not work" note is scenario-specific,
+        not a general truth: the difference is WINDOW WIDTH.** A released trap
+        exists for a handful of frames before the next cast; CONFUSED persists
+        for turns. `battle_thrash` therefore COMPARES `wLoadedMon`, and skips
+        only two regions where `battle_wrap` skips three.
 
-      **All three of the old TODO-HW's deferral claims were false, each
-      independently checkable in one command:** `AddBCDPredef` is `translated`
-      (`src/engine/math/bcd.asm`), `PickUpPayDayMoneyText` IS generated
-      (`assets/battle_text.inc:357`), and `PayDayEffect_` does accumulate into
-      `wTotalPayDayMoney` (`move_effects/pay_day.asm:134`). The comment is
-      deleted and replaced with the measurement.
+        **`wPlayerConfusedCounter` IS CARRIED BUT SKIPPED, deliberately.** It is
+        a second `BattleRandom` roll (2-5 turns, pret core.asm:3716-3720), so
+        the two emulators cannot be made to agree on it, and PINNING it would be
+        a tautology — the harness writing a byte on both sides and then checking
+        both read it back. Both sides happen to read `$05` today; that is a
+        coincidence of two independent streams, not agreement, and the skip's
+        why-string says so explicitly so nobody deletes it on the strength of a
+        passing run. `wPlyMoveNum` is carried too and is likewise NOT
+        discriminating — `GetCurrentMove` already wrote the selected move there
+        (pret core.asm:1781) and the selected move IS THRASH, so it reads `$25`
+        whether or not the block under test ran.
 
-      **THE SCENARIO EXISTS: `battle_pay_day` (id 63), and it PASSES.** SNORLAX
-      L80 uses PAY_DAY on the spec wild PIDGEY L13 through the real FIGHT menu;
-      the KO ends the battle and `EndOfBattle` pays out with `AddBCD`.
-      `WRAM: OK (13 regions, 0 skipped)`, no masks. Registry is 61, all 61 PASS.
-
-      **THE SEEDED WALLET IS LOAD-BEARING, AND FINDING OUT WHY IS THE MAIN
-      LESSON HERE.** MEASURED: the debug seed leaves `wPlayerMoney` at the BCD
-      maximum **999999**, where `AddBCD` saturates — so the payout would have
-      left every compared byte unchanged and the scenario would have PASSED
-      while proving nothing whatsoever. Both sides now seed `001000` first and
-      the end state is `001160`. Any "nothing changed, therefore fine" reading
-      of a money comparison in this project should check the ceiling first.
-
-      *Zero RNG in the compared value:* the payout is `level * 2` in BCD
-      (`PayDayEffect_`), so it depends only on SNORLAX's level. The damage roll
-      decides only whether the KO happens, and PAY_DAY at power 40 from L80
-      overkills 36 HP on every roll — `battle_faint`'s argument, same matchup.
-
-      *Non-vacuity:* seeding `001001` instead fails with
-      `wPlayerMoney +2: want $60 | got $61`. *Determinism:* two consecutive
-      golden generations byte-identical (md5 `fdcd15bf…`).
-
-      **TWO HARNESS TRAPS, both hit and both written into the scenario so the
-      next author does not repeat them.** (1) An `assert wTotalPayDayMoney != 0`
-      right after the KO looks like the obvious mid-flow check and is WRONG:
-      `EndOfBattle` zeroes that counter after paying, and the KO poll only exits
-      at a frame boundary which can already be past it. It fired, and briefly
-      looked like a port divergence. (2) Polling on the money alone dumps DURING
-      `EndOfBattle`, before `.resetVariables`, and diverges on exactly one byte
-      — `wBattleFlags wIsInBattle: want $01 | got $00`. The landmark is now the
-      pair `wPlayerMoney == 001160 AND wIsInBattle == 0`.
-
-      One thing to check when that scenario is built: this branch now calls
-      `PrintText` at battle exit. pret does the same, so it is faithful, but if
-      the port's `PrintText` waits for a keypress there, an automated scenario
-      reaching this path will stall — that is where to look first.
-- [x] **3b (original entry) — SUPERSEDED.** Every clause of this text is covered and
-      witnessed by 3b above (`battle_pay_day`, id 63); kept only as the record of what the box originally
-      asked for. The narrative lives in git history, per this plan's own rule.
-- [x] **3c. Battle draw and simultaneous-faint behavior.** WITNESSED 2026-08-12
-      by `battle_self_destruct` (id 65). RE-MEASURED
-      2026-08-11, and the box's premise was mostly already satisfied.
-
-      "Reconstruct the Self-Destruct/Explosion result and music selection from
-      pret" — the reconstruction is ALREADY THERE and faithful. `FaintEnemyPokemon`
-      carries pret's whole `.sfxplayed` block (`core.asm:808-815`): the
-      player-HP test, the `wInHandlePlayerMonFainted` guard against calling
-      `RemoveFaintedPlayerMon` twice, and the call itself. `RemoveFaintedPlayerMon`
-      likewise has pret's early `ret` that suppresses the cry and the
-      "<mon> fainted!" message when the enemy faint was detected first
-      (`core.asm:1050-1052`). The wild victory jingle and `EndLowHealthAlarm` are
-      wired. Do not re-derive these; read them.
-
-      WHAT WAS ACTUALLY MISSING: pret documents a BUG at exactly this spot — the
-      wild victory jingle starts BEFORE the player-HP check, so a simultaneous
-      faint plays the win music for a battle the player did not win. It was
-      untagged. Now `BUG{class=timing}` with a `BUG_FIX_LEVEL >= 2` correction
-      that tests `wBattleMonHP` first (valid because
-      `ReadPlayerMonCurHPAndStatus` runs at the top of `FaintEnemyPokemon`).
-
-      Evidence the default path did not move: the default-build `PKMN.EXE` is
-      BYTE-IDENTICAL with and without the change (sha256 `7559a45b…` both ways),
-      while the `BUG_FIX_LEVEL=2` build differs (`f615ac29…`) — so the check is
-      sensitive and the fix really is emitted at level 2. All three levels build.
-      `faithdiff FaintEnemyPokemon` is unchanged by the edit.
-
-      **DONE 2026-08-12: `battle_self_destruct` is scenario id 65 and PASSES,
-      and its sabotage FAILS.** Registry is 63, all 63 PASS.
-
-      SNORLAX L80 uses SELFDESTRUCT on the spec wild PIDGEY L13; both mons reach
-      0 HP, so `FaintEnemyPokemon`'s `.sfxplayed` player-also-fainted arm runs —
-      the arm `battle_faint` (enemy only) and `battle_blackout` (player only)
-      cannot reach. Deterministic by CONSTRUCTION: `ExplodeEffect` zeroes the
-      USER's HP with no accuracy test, and a power-130 hit from L80 overkills 36
-      HP on every roll. `WRAM: OK (14 regions, 0 skipped)`, no masks, golden
-      byte-identical across two generations (md5 `5954d5aa…`).
-
-      **THE DUMP INSTANT IS THE WHOLE DESIGN, AND IT TOOK THREE ATTEMPTS. The
-      first two PASSED THEIR DIFF AND THEIR SABOTAGE — i.e. proved nothing — and
-      were rejected rather than shipped.** Recorded so the pattern is
-      recognisable next time:
-      * attempt 1 dumped after `FaintEnemyPokemon` returned and compared party
-        slot 0's HP. Deleting the arm's `call RemoveFaintedPlayerMon` left the
-        diff GREEN: that HP reaches 0 either way, written by something else.
-      * attempt 2 added `wBattleResult` (`$CF0B`) as a scenario-local row, on the
-        theory that only the arm writes 1 there. Sabotage passed AGAIN. Direct
-        measurement said why: the byte reads `$00` at that instant with AND
-        without the call, on both sides.
-      * the cause, found by reading rather than guessing a third byte:
-        **`FaintEnemyPokemon` RE-ZEROES `wBattleResult` itself**, a few
-        instructions after the arm (pret core.asm:825-826, port
-        core.asm:6688). And `wPartyGainExpFlags` is no use either — it is
-        `$D057`, already inside the shared `wBattleFlags` region, and the EXP
-        distribution consumes it. **No extra compared byte could have rescued a
-        return-based dump.**
-
-      *The window that does exist* is inside `RemoveFaintedPlayerMon`: it sets
-      `wBattleResult = 1` and then PRINTS TEXT and slides the fainted pic, which
-      spans frames. Both sides now dump state-gated on `wBattleResult == 1` with
-      both HP words 0. With the arm deleted that value never appears, so the run
-      produces no dump at all — which is exactly what the sabotage now reports.
-
-- [x] **3c (original entry) — SUPERSEDED.** Every clause of this text is covered and
-      witnessed by 3c above (`battle_self_destruct`, id 65); kept only as the record of what the box originally
-      asked for. The narrative lives in git history, per this plan's own rule.
-- [~] **3d. Empty `battle_exp_stubs.asm`.** ALL FOUR NAMED PROVIDERS ARE DONE
-      2026-08-12; the box stays open on ONE deferred stub, not on unfinished
-      work. Measured with `label_status`, not read off a comment:
-
-      | label | status | provider |
-      |---|---|---|
-      | `PrintEmptyString` | translated | `core.asm` (retired 2026-08-11) |
-      | `CalculateModifiedStats` | translated | `core.asm` (`57ea6299d`) |
-      | `DoubleOrHalveSelectedStats` | translated | `core.asm` (`a50872654`) |
-      | `ModifyPikachuHappiness` | translated | `engine/events/pikachu_happiness.asm` (`9ce747c2e`) |
-
-      `battle_exp_stubs.asm` is down to a single body, `RespawnOverworldPikachu`,
-      which THIS BOX'S OWN TEXT defers to the Yellow Pikachu-follow engine. So
-      "empty the file" is blocked on a transfer, not on a translation.
-
-      **THE COMMENT SWEEP THIS BOX ASKS FOR IS DONE, and it was not cosmetic.**
-      Four stub-era comments still asserted things that had become false, and
-      `lint_pret_labels --strict-claims` cannot see any of them because they are
-      prose rather than `extern` lines:
-      * `bills_pc.asm:45` and `:481` — "ModifyPikachuHappiness → …
-        battle_exp_stubs.asm (STUB)" / "ret-stub today";
-      * `core.asm:5024` — "`call PrintEmptyString ; (STUB — battle_exp_stubs.asm)`";
-      * `item_effects.asm:2984` — **the worst of the four.** It documented the
-        WRONG register as deliberate: "`farcall_ModifyPikachuHappiness <id>`
-        passes the id in D on the GB; the port's convention … is AL." That is
-        exactly how the defect fixed in `2df28308a` survived — eight of nine
-        call sites wrote AL, the routine read garbage out of DH, and the comment
-        said it was on purpose. Harmless only while the routine was a ret-stub.
-      All four now state what is true and cite the commit that made it true.
-
-- [~] **3d (original entry) — one clause left, and it is a TRANSFER.** Its four
-      named providers and its comment-sweep clause are satisfied (see 3d above,
-      with the measured `label_status` table). What remains is
-      `RespawnOverworldPikachu`, still a ret-stub in `battle_exp_stubs.asm` and
-      still called from `item_effects.asm`'s Rare Candy path. This entry's own
-      text made the transfer conditional on "the 2a/2c pret-label rename",
-      which has since landed with Stage 2; a future iteration should move the
-      stub to the Pikachu-follow owner rather than translating it here, and that
-      decision is the maintainer's, not an agent's.
-
-- [x] **3e. EXP ALL.** DONE 2026-08-12. Registered golden `battle_exp_all`
-      (id 66, tier full), and reaching the branch found and fixed a page fault
-      that had made it unreachable in the port for its whole existence.
-
-      **THE DEFECT (fixed 17d670c2f).** `DivideExpDataByNumMonsGainingExp` —
-      reachable ONLY through Exp. All, because a single mon gaining EXP returns
-      at its `cp 2` — kept pret's `c` (the 7-byte count over
-      `wEnemyMonBaseStats..wEnemyMonBaseExp`) in **CL**. pret can, because
-      `home/math.asm Divide` is `push bc ... pop bc`; the port's wrapper mirrors
-      that as `push bx / pop bx` and cannot preserve ECX, since `_Divide` does
-      `movzx ecx, byte [ebp + H_DIVISOR]` and `div ecx`. So every `call Divide`
-      reloaded the counter with the DIVISOR, the loop never terminated, and ESI
-      walked past the block writing quotient bytes across WRAM until it left the
-      DPMI allocation and page-faulted. The first two stray writes land on
-      `wIsInBattle` and `wPartyGainExpFlags`, which is why an earlier trace
-      showed `HandleEnemyMonFainted` taking the TRAINER branch out of a WILD
-      battle. Fix: put the counter in **BL**, where the register map already
-      says pret's `c` lives. No guard, no masking.
-
-      **HOW IT WAS FOUND, because the method is the reusable part.** Three
-      rounds of bisection (party size, then stub-bisecting
-      `CalculateModifiedStats` and `ModifyPikachuHappiness`) all pointed at the
-      wrong half of the program. What settled it in one shot was a **BPLM
-      memory-change watchpoint on the byte that was corrupted** —
-      `set_watchpoint("D056")` — instead of a breakpoint on the code under
-      suspicion. It broke inside `.divideLoop` with `ESI=0000D056 ECX=00000002`
-      and again at `ESI=0000D057`; ESI is supposed to run `D001..D007`, and ECX
-      sitting at the divisor instead of counting down named the cause. **When a
-      fault's neighbourhood makes no sense, watch the corrupted byte — it knows
-      who wrote it.** Logged as stigmergy
-      `bug-class-loop-counter-in-cl-across-a-clobbering-call`, with 37
-      candidate sites tree-wide (exposure, NOT a defect tally — most callees are
-      `pushad`-wrapped or preserve ECX; none audited).
-
-      **TWO PINS THE SCENARIO NEEDED, each measured.**
-      * *The bag pin.* `wNumBagItems` (`$D31C`) is the COUNT and `wBagItems`
-        (`$D31D`) is the LIST, so item *i*'s id is at `wBagItems + i*2` — NO
-        `+1`. The first port-side version added the `+1`, wrote item 15's
-        QUANTITY, and the branch was simply never entered while the run looked
-        healthy. **Always read back the byte a pin should have changed.**
-      * *The enemy asleep.* battle_faint's determinism argument — "SNORLAX
-        outspeeds the L13 PIDGEY so the enemy never acts" — IS WRONG, and this
-        scenario measured it: a YELLOW L13 PIDGEY knows QUICK ATTACK, whose +1
-        priority beats speed, and whether the AI picks it is a roll. Before the
-        pin the golden's SNORLAX finished on 359 HP one run and 360 the next
-        while the port held 362. Both sides now seed `wEnemyMonStatus = 7`, the
-        same pin battle_wrap uses. *(battle_faint carries the same latent
-        hazard; it has not been re-pinned and that is a loose end.)*
-
-      **THE DUMP INSTANT MOVED, and not by preference.** battle_faint's instant
-      (`wLoadedMonLevel == 80` with `wIsInBattle` still 1, right after
-      `HandleEnemyMonFainted`) **does not exist on the ROM** once the
-      whole-party pass has run: `DrawPlayerHUDAndHPBar`'s staging and the battle
-      teardown fall inside one frame. A poll for both bytes in a SINGLE
-      `read_range` ran to its 3600-frame cap and failed. (An earlier version
-      *seemed* to work only because it read the two bytes in two `read_range`
-      calls — two frames — so the condition was never true simultaneously and
-      the golden came out `$00` while the assert claimed `$01`. **Two reads in a
-      poll are two frames.**) The port gate therefore continues into
-      `EndOfBattle`, as `DEBUG_BATTLE_PAYDAY` does, and both sides dump the
-      settled post-battle state. Also: the test and the dump share ONE yielded
-      thunk, because every `scenario.*` helper is a frame.
-
-      **EVIDENCE.** `goldencheck battle_exp_all` PASS (WRAM OK, 13 regions, 0
-      skipped; 2 pre-existing justified masks). Golden reproducible — two fresh
-      generations and the committed file all sha1 `b24c5456`. **SABOTAGE
-      (removing the port's bag pin so the branch is not taken): 44 divergences**,
-      decomposing exactly as the mechanic predicts — every non-participant slot
-      loses its EXP and stat-EXP, and slot 0 gains the FULL unhalved amount
-      (`$09C466` vs `$09C439`). `make fidelity` EXIT=0, 16 PASS;
-      `lint_pret_labels` 0 in both modes; `validate_scenarios` 64 consistent.
-
-      Also landed along the way: `EXP_ALL` moved from a file-local `equ` in
-      `core.asm` to `include/gb_constants.inc`, and `ModifyPikachuHappiness`'s
-      reason code was taking the wrong register at 8 of 9 call sites (pret
-      passes it in `d`, the port wrote AL — `2df28308a`; witness still owed,
-      since the routine returns early unless the acted-on mon is the starter
-      Pikachu).
+        **EVIDENCE.** `goldencheck battle_thrash` PASS, `WRAM: OK (15 regions, 2
+        skipped)`. Golden reproducible: two fresh generations and the committed
+        file all sha1 `c784b331`. **SABOTAGE (delete the `or … 1 << CONFUSED` at
+        the thrash end): the run produces NO DUMP AT ALL** — the transition IS
+        the dump condition, the same shape of proof `battle_wrap` gives.
+        `make fidelity` 16 PASS; `lint_pret_labels` 0 both modes;
+        `validate_scenarios` 66.
 
 ## Stage 4 — special battle types
 
