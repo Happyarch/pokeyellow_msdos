@@ -3087,6 +3087,16 @@ PartyMenuOrRockOrRun:
     ; the background.
     mov dword [g_window_count], 0
     mov dword [g_bg_whiteout], 0
+    ; ...and re-assert the BATTLE text projection. The party menu scopes
+    ; text_msgbox around its own PrintText and restores it to msgbox_dialog, the
+    ; OVERWORLD record (party_menu.asm:436) — right for its START-menu caller,
+    ; wrong for this one. Left alone, the next battle message (RetreatMon's
+    ; switch-out line, printed through the plain PrintText pret uses) comes out
+    ; with overworld geometry: measured 2026-08-12 at canvas rows 6-8 cols 0-20,
+    ; a stride-20 box at GB(0,12), while the battle's own dialog box sat empty at
+    ; rows 15-20. The record is the caller's to own — party_menu.asm's own
+    ; annotation says as much, putting the choice in the screen that makes it.
+    mov dword [text_msgbox], msgbox_centered
     call LoadScreenTilesFromBuffer2
     call RunDefaultPaletteCommand
     call GBPalNormal
@@ -3180,6 +3190,7 @@ PartyMenuOrRockOrRun:
     call LoadHudTilePatterns
     mov dword [g_window_count], 0       ; port-only teardown — see .quitPartyMenu
     mov dword [g_bg_whiteout], 0
+    mov dword [text_msgbox], msgbox_centered  ; battle geometry again — ditto
     call LoadScreenTilesFromBuffer1
     call RunDefaultPaletteCommand
     call GBPalNormal
