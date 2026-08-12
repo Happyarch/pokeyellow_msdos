@@ -103,7 +103,7 @@ extern IsThisBoxMonStarterPikachu   ; engine/pikachu/pikachu_status.asm — CF o
 extern CheckPikachuFollowingPlayer  ; src/home/pikachu.asm — ZF set = not following
 extern PlayPikachuSoundClip     ; src/audio/pikachu_pcm.asm — DL = 0-based clip index
 extern PlayCry                  ; src/home/pokemon.asm — AL = species
-extern ModifyPikachuHappiness   ; battle_exp_stubs.asm STUB — DH = PIKAHAPPY_* kind (pret ld d)
+extern ModifyPikachuHappiness   ; engine/events/pikachu_happiness.asm — DH = PIKAHAPPY_* kind (pret ld d)
 extern ChangeBox                ; engine/menus/save.asm — first live caller
 extern PrintPCBox               ; engine/printer/printer_stubs.asm STUB
 extern StatusScreen             ; engine/pokemon/status_screen.asm (pret predef)

@@ -1352,7 +1352,37 @@ provider shapes below, not their runtime behavior.
       `experience.asm` claiming it "is still a stub" were corrected in the same
       change.
 
-      STILL OPEN: `ModifyPikachuHappiness` only.
+      **`ModifyPikachuHappiness` RETIRED 2026-08-12 — 3d's last provider.**
+      Real body at its pret-owned path, `src/engine/events/pikachu_happiness.asm`
+      (118 pret lines: the routine plus `HappinessChangeTable` and
+      `PikachuMoods`, which stay in the engine file because that is where pret
+      defines them). faithdiff clean, 2/2 calls and 2/2 stores.
+      `battle_exp_stubs.asm` is now down to `RespawnOverworldPikachu` alone.
+
+      **NINE call sites stop being inert:** `GainExperience`,
+      `ItemUseMedicine` (x2), `ItemUseTMHM`, `ItemUseXAccuracy`,
+      `ItemUseGuardSpec`, `ItemUseDireHit`, `ItemUseXStat` and
+      `BillsPCDeposit`. Added the six missing `PIKAHAPPY_*` constants (4, 6,
+      8-11); `lint_pret_labels` caught all three stale extern comments.
+
+      *Two original-game quirks reproduced, not fixed:* the table index is
+      `dec c` + three `add hl, bc` with no bounds check, and the delta's sign
+      test is `cp 100` rather than `cp 128` — pret's own comment calls the
+      latter "inexplicable". It is unreachable (the largest positive delta is 5)
+      rather than wrong, so it is left exactly as the ROM has it.
+
+      **NOT WITNESSED, and it cannot be with today's dumps — measured, not
+      assumed.** `wPikachuHappiness` (`$D46F`) and `wPikachuMood` (`$D470`) are
+      in NO `gbregion` in `debug_dump.asm`, so no scenario compares them. And
+      the one live path a scenario does drive — `bills_pc_ops` -> `BillsPCDeposit`
+      — deposits PERSIAN and JIGGLYPUFF, never the starter Pikachu, so
+      `IsThisPartyMonStarterPikachu` fails and the routine takes its `ret nc`
+      early-out. 60/60 full tier is therefore non-regression only. A witness is
+      cheap: add those two bytes as a scenario-local region and deposit party
+      slot 3 (STARTER_PIKACHU) in a `bills_pc` variant.
+
+      STILL OPEN: `RespawnOverworldPikachu` only — and that one is deferred by
+      this box's own text, pending the Yellow Pikachu-follow engine.
 - [ ] **3d (original entry).** Implement and retire the battle-owned
       providers `PrintEmptyString`, `CalculateModifiedStats`, and
       `DoubleOrHalveSelectedStats`; implement `ModifyPikachuHappiness` at its

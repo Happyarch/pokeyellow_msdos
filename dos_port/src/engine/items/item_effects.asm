@@ -845,7 +845,7 @@ extern FlagAction           ; engine/flag_action.asm — ESI=array, CL=index, BH
 extern PrintStatsBox        ; engine/pokemon/status_screen.asm — DH = box type
 extern LearnMoveFromLevelUp ; engine/pokemon/evos_moves.asm (predef)
 extern TryEvolvingMon       ; engine/pokemon/evos_moves.asm
-extern ModifyPikachuHappiness    ; battle_exp_stubs.asm (deferred)
+extern ModifyPikachuHappiness    ; engine/events/pikachu_happiness.asm (pret mirror; DH = PIKAHAPPY_*)
 extern RespawnOverworldPikachu   ; battle_exp_stubs.asm (deferred)
 extern DoubleOrHalveSelectedStats   ; engine/battle/core.asm (pret mirror; bodies in unused_stats_functions.asm)
 

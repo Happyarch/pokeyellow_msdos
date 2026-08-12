@@ -473,6 +473,7 @@ GAME_SRCS := \
     src/engine/events/black_out.asm \
     src/engine/events/heal_party.asm \
     src/engine/events/pick_up_item.asm \
+    src/engine/events/pikachu_happiness.asm \
     src/engine/events/give_pokemon_stubs.asm \
     src/data/pickup_text.asm \
     src/data/predef_text_data.asm \

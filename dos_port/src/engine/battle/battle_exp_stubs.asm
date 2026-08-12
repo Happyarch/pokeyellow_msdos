@@ -19,7 +19,6 @@ bits 32
 section .text
 
 ; GetPartyMonName is now REAL (home/pokemon.asm, Wave 5/M5.2) — no longer stubbed.
-global ModifyPikachuHappiness
 ; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 are now REAL (battle_menu.asm) —
 ; no longer stubbed (they snapshot/restore the battle screen for the EXP display too).
 ; PrintEmptyString is now REAL (engine/battle/core.asm, the pret mirror — it prints a
@@ -42,6 +41,5 @@ global RespawnOverworldPikachu
 ; stubbed here (the documented latent collision is resolved by deleting these stubs).
 ; LearnMoveFromLevelUp is now REAL (evos_moves.asm) — no longer stubbed.
 
-ModifyPikachuHappiness:
 RespawnOverworldPikachu:
     ret
