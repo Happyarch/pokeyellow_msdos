@@ -1622,14 +1622,38 @@ provider shapes below, not their runtime behavior.
       sets slot 0 only), `wPlayerMonNumber` / `wWhichPokemon`, and anything
       `MainInBattleLoop` initialises that a direct `call` skips.
 
-      **NEXT STEP: get the faulting EIP.** The DPMI fault prints a register dump
-      to the DOS console, which only a screenshot of the emulated screen can
-      read — `FRAME.BIN` and `GBSTATE.BIN` structurally cannot. The dosbox-mcp
-      route failed repeatedly in this session (stale socket, multiple instances,
-      a binary predating the SCREENSHOT command — rebuild with
-      `dos_port/tools/build_dosbox_mcp.sh` and relaunch from the REPO ROOT).
-      Either fix that workflow or add a breadcrumb region written at each step
-      of the distribution loop.
+      **Step 4: HOW FAR THE DISTRIBUTION GETS, from the dumps (2026-08-12).**
+      Comparing party EXP against the run where the pin missed (so EXP ALL was
+      never entered), at frame 600:
+
+      | slot | species | EXP delta |
+      |---:|---|---:|
+      | 0 | SNORLAX (the participant) | **-52** |
+      | 1 | PERSIAN | +10 |
+      | 2 | JIGGLYPUFF | 0 |
+      | 3 | PIKACHU | +10 |
+      | 4 | CHARIZARD | 0 |
+      | 5 | LAPRAS | 0 |
+
+      The participant's **-52** is expected and is itself confirmation the arm
+      ran: EXP ALL halves `wEnemyMonBaseStats`, so the mon that fought earns
+      LESS than it would have. Two of the five non-participants are credited.
+
+      **The crash is between frames 600 and 660** (660 produces no dump), so it
+      dies part-way through the party walk, with three mons still uncredited.
+
+      **NEXT STEP: still the faulting EIP.** The DPMI fault prints a register
+      dump to the DOS console, which only a screenshot of the emulated screen
+      can read — `FRAME.BIN` and `GBSTATE.BIN` structurally cannot.
+      **dosbox-mcp ordering rule, learned the hard way three times in one
+      session: call `pause_exec` FIRST and only call `screenshot` once it has
+      returned a BREAK.** Calling `screenshot` while the emulator is running
+      leaves a pending response that wedges the whole session, and every
+      subsequent call fails until the emulator is killed. Also: check
+      `pgrep -f dosbox-x-mcp` before launching (repeated launches leave several
+      instances), remove a stale `/tmp/dosbox-mcp.sock`, and launch from the
+      REPO ROOT. The debugger-free alternative remains a breadcrumb region
+      written at each step of the distribution loop.
 
       Also landed in the same change: `EXP_ALL` moved from a file-local `equ` in
       `core.asm` to `include/gb_constants.inc`, since the debug gate needs it
