@@ -41,6 +41,9 @@ bits 32
 %define PAL_CAVE            35
 %define PAL_MEWMON          16
 %define PAL_PIKACHUS_BEACH  37
+; pret writes `ld bc, wPartyMon2 - wPartyMon1`; this file defines its constants
+; locally rather than including gb_constants.inc (same style as the PAL_* above).
+%define PARTYMON_STRUCT_LENGTH 0x2C
 
 global _RunPaletteCommand
 global SetPalFunctions, SetPal_BattleBlack, SetPal_Battle, DeterminePaletteID
@@ -51,6 +54,7 @@ global SetPal_TrainerCard, SetPal_PikachusBeach, SetPal_PikachusBeachTitle
 global YellowIntroPaletteAction
 
 extern IndexToPokedex               ; engine/menus/pokedex.asm — predef, wPokedexNum in place
+extern AddNTimes                    ; src/home/array.asm — ESI += BX * AL
 extern tile_pal, g_tilecache_dirty
 extern g_pal_dirty, bg_slot_pal, obj_slot_pal
 extern mon_pal_table, battle_slot_pal, battle_tile_pal, command_pal_table
@@ -125,10 +129,26 @@ SetPal_Battle:
     mov edi, bg_slot_pal
     mov ecx, 4
     rep movsb
-    mov al, [ebp + wBattleMonSpecies2]
-    call DeterminePaletteID
+    ; pret (engine/gfx/palettes.asm:33-46) picks the PLAYER's species through a
+    ; pointer, not from a flat copy: HL = wBattleMonSpecies, and when that byte is
+    ; non-zero HL is retargeted at &wPartyMon1[wPlayerMonNumber] so the id comes
+    ; from the PARTY struct. The port read wBattleMonSpecies2 ($CFD8) — a
+    ; different address from pret's wBattleMonSpecies ($D013), both of which exist
+    ; here and match pokeyellow.sym — and never consulted the party mon. It
+    ; happened to agree in an ordinary battle, which is why the battle scenarios
+    ; report 0 palette divergences either way; this is the faithful shape.
+    mov esi, wBattleMonSpecies          ; ld hl, wBattleMonSpecies
+    mov al, [ebp + esi]                 ; ld a, [hl]
+    test al, al                         ; and a
+    jz .playerPalFromBattleMon          ; jr z, .asm_71ef9
+    mov esi, wPartyMon1                 ; ld hl, wPartyMon1
+    mov al, [ebp + wPlayerMonNumber]    ; ld a, [wPlayerMonNumber]
+    mov bx, PARTYMON_STRUCT_LENGTH      ; ld bc, wPartyMon2 - wPartyMon1
+    call AddNTimes                      ; hl = &partyMon[n] (species at +0)
+.playerPalFromBattleMon:
+    call DeterminePaletteID             ; pret's HL-reading entry
     mov [bg_slot_pal + 2], al
-    mov al, [ebp + wEnemyMonSpecies2]
+    mov esi, wEnemyMonSpecies2          ; ld hl, wEnemyMonSpecies2
     call DeterminePaletteID
     mov [bg_slot_pal + 3], al
     movzx eax, byte [ebp + wPlayerHPBarColor]
@@ -430,21 +450,11 @@ SetPal_TownMap:                 mov al, SET_PAL_TOWN_MAP                 ; fall 
 ;
 ; DEVIATION{class=projection; pret=engine/gfx/palettes.asm:SetPal_StatusScreen; behavior=builds the two live palette ids directly into bg_slot_pal and obj_slot_pal after SetPal_Screen instead of copying PalPacket_Empty into wPalPacket and returning HL-DE for the SGB-packet path, so faithdiff shows DROPPED CopyData and ADDED SetPal_Screen; evidence=the port has no wPalPacket-plus-SendSGBPackets stage at all - SetPal_Screen IS the port's realization of a PAL_SET packet plus its BlkPacket attribute plane, and every other SetPal_ command in this file already goes through it, so a wPalPacket copy would write a buffer nothing reads; lifetime=permanent, the port's palette-command boundary}
 ;
-; ONE MORE faithdiff line, and it is a PRE-EXISTING LABEL BUG, not this change:
-; pret has TWO entry points two lines apart —
-;     DeterminePaletteID:            ld a, [hl]
-;     DeterminePaletteIDOutOfBattle: ld [wPokedexNum], a  ...
-; The port's routine named `DeterminePaletteID` starts at the `ld [wPokedexNum]`
-; line, i.e. its body IS pret's DeterminePaletteIDOutOfBattle under the wrong
-; name, and `label_status DeterminePaletteIDOutOfBattle` reads `missing`. pret's
-; SetPal_StatusScreen calls the OutOfBattle entry, so this call reaches the RIGHT
-; CODE under the WRONG NAME, which is why faithdiff prints DROPPED
-; DeterminePaletteIDOutOfBattle / ADDED DeterminePaletteID.
-; NOT repaired here, deliberately: adding pret's `ld a, [hl]` entry above the
-; body would clobber AL for SetPal_Battle's two existing call sites, which load
-; AL themselves rather than pointing HL. Fixing it properly means repointing
-; those two calls as well, which is battle-palette code this change has no
-; business touching. Filed as its own job.
+; The DeterminePaletteIDOutOfBattle call is pret's exactly: pret's
+; SetPal_StatusScreen calls that entry with the species already in A. Both pret
+; entry points now exist in this file (they did not before — see the note at
+; DeterminePaletteID), so this no longer reaches the right code under the wrong
+; name.
 ; ---------------------------------------------------------------------------
 %define NUM_POKEMON_INDEXES 0xBE
 SetPal_StatusScreen:
@@ -455,7 +465,7 @@ SetPal_StatusScreen:
     jb .pokemon                         ; jr c, .pokemon
     mov al, 1                           ; ld a, $1 ; not pokemon
 .pokemon:
-    call DeterminePaletteID             ; AL = the mon's palette id
+    call DeterminePaletteIDOutOfBattle  ; pret's A-holds-the-species entry
     push eax                            ; pret: push af
     movzx eax, byte [ebp + wStatusScreenHPBarColor]
     add al, PAL_GREENBAR                ; entry 0 = HP-bar tint
@@ -494,7 +504,17 @@ SetPal_PikachusBeachTitle:      mov al, SET_PAL_SURFING_PIKACHU_MINIGAME
 
 ; DeterminePaletteIDOutOfBattle flow (pret palettes.asm): store the index,
 ; convert via predef IndexToPokedex, then the MonsterPalettes lookup.
+; pret has TWO entry points here, two lines apart (engine/gfx/palettes.asm:297):
+;     DeterminePaletteID:            ld a, [hl]      <- species FROM MEMORY at HL
+;     DeterminePaletteIDOutOfBattle: ld [wPokedexNum], a   <- species already in A
+; The port previously had only the second body, carrying the FIRST name — so
+; `label_status DeterminePaletteIDOutOfBattle` read `missing` and every caller
+; reached the right code under the wrong name. Both pret names now exist with
+; pret's structure; callers pick the entry that matches what they hold.
+global DeterminePaletteIDOutOfBattle
 DeterminePaletteID:
+    mov al, [ebp + esi]                 ; ld a, [hl]
+DeterminePaletteIDOutOfBattle:
     mov [ebp + wPokedexNum], al         ; ld [wPokedexNum], a
     test al, al                         ; and a — is the mon index 0?
     jz .skipDexNumConversion
