@@ -3101,6 +3101,19 @@ PartyMenuOrRockOrRun:
     call GoBackToPartyMenu
     jmp .checkIfPartyMonWasSelected     ; jr
 .partyMonWasSelected:
+    ; ⚠ THIS BOX IS DRAWN BUT NEVER SEEN — COME BACK HERE. DisplayTextBoxID puts
+    ; it on the 40-wide CANVAS (measured: canvas rows 18-24, cols 31-39), and the
+    ; party menu is a full-screen takeover with g_bg_whiteout=1, so render_bg
+    ; skips the tilemap and nothing composites it. The screen itself is a
+    ; stride-20 scratch mirrored into GB_TILEMAP1 by PartyMenuMirror, and windows
+    ; read GB_TILEMAP0/1 rather than the canvas, so a canvas draw cannot reach
+    ; this screen at all. The menu still WORKS — A selects SWITCH — only the draw
+    ; is missing. Fix shape (follow msgbox_party, which solved exactly this for
+    ; this screen's message box): draw into the stride-20 scratch at the GB
+    ; coords the layout already carries, UI_SWITCH_STATS_CANCEL_MENU_TEMPLATE_GBX
+    ; /_GBY = 11,11 = pret's hlcoord 11,11, and let PartyMenuMirror carry it.
+    ; Owner: docs/current_plan_backlog.md item 10c.
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=the SWITCH STATS CANCEL box is drawn onto the 40-wide canvas where this screen never composites it so it is invisible although it still responds to input; evidence=the party menu is a full-screen takeover that sets g_bg_whiteout and render_bg then skips the tilemap while the screen itself is a stride-20 scratch mirrored into GB_TILEMAP1 and window descriptors read the GB tilemaps rather than the canvas so a canvas draw cannot reach this screen; lifetime=until backlog item 10c draws this box into the party scratch as msgbox_party already does}
     mov byte [ebp + wTextBoxID], SWITCH_STATS_CANCEL_MENU_TEMPLATE
     call DisplayTextBoxID
     ; pret walks hl from wTopMenuItemY; the port writes each field directly.

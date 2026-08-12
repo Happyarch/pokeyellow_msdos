@@ -593,6 +593,56 @@ Full detail, symptom list and the eliminated hypotheses:
 stigmergy `regression-battle-party-menu-graphics-not-set-up`.
 
 
+### 10c. SWITCH/STATS/CANCEL box is drawn where nothing composites it
+
+**FILED 2026-08-12 at the maintainer's direction.** Sibling of 10b above, same
+class: a port UI-architecture gap exposed by battle plan 2a, not a translation
+bug. Maintainer-observed in real gameplay — the SWITCH/STATS/CANCEL box does not
+render at all, yet it still WORKS (A selects SWITCH), so the logic is fine and
+only the drawing is missing.
+
+**Measured, at frame 800 of the DEBUG_BATTLE_SWITCH gate.** The box IS drawn —
+decoding `wTileMap` shows SWITCH / STATS / CANCEL sitting at canvas rows 18-24,
+columns 31-39, i.e. the bottom-right corner of the 40x25 canvas. Two things are
+wrong with that:
+
+1. **It is on the canvas, and the canvas is not composited here.** The party
+   menu is a full-screen takeover with `g_bg_whiteout = 1`, and `render_bg`
+   skips the tilemap entirely. `party_menu.asm`'s own comment states the rule:
+   a stride-40 draw "into the CANVAS — which g_bg_whiteout means we never
+   composite. Invisible."
+2. **The party screen is a stride-20 scratch shown through windows**, mirrored
+   into `GB_TILEMAP1` by `PartyMenuMirror`. Windows read `GB_TILEMAP0` /
+   `GB_TILEMAP1` (see `WIN_TILEMAP` in `include/gb_memmap.inc`), never the
+   canvas — so nothing can carry a canvas draw onto this screen.
+
+**Why no other template hits this.** `SWITCH_STATS_CANCEL_MENU_TEMPLATE` is the
+only `DisplayTextBoxID` template used over a whited-out full-takeover screen.
+It also had NO caller at all until 2a added one, so its generated coordinates
+were never exercised.
+
+**Note the generated layout already anticipates a window and nothing uses it.**
+`assets/ui_layout_menus.inc` emits `UI_SWITCH_STATS_CANCEL_MENU_TEMPLATE_WX/_WY/
+_CLIP/_MAX_Y` (`wx=255 wy=144 clip=72 max_y=200`) beside the canvas coords — but
+`text_box.asm`'s `text_box_text` macro takes only `id, x1, y1, x2, y2, text, tx,
+ty`. The window fields are dead data on this path.
+
+**Fix shape** — follow `msgbox_party`, which solved the identical problem for
+this screen's message box: draw into the party screen's own stride-20 scratch at
+the GB coordinates the layout already carries (`_GBX = 11`, `_GBY = 11`, exactly
+pret's `hlcoord 11, 11`) and let `PartyMenuMirror` carry it to the window layer.
+That needs `TextBoxTextAndCoordTable` to carry GB coords for this row, or a
+stride-aware entry, so it is a generator + table change rather than a one-liner.
+`PartyMenuMirror` runs as `menu_redraw_cb` during `HandleMenuInput`, which is
+exactly where this box waits, so the timing already works.
+
+**Where it is marked in the source:** a `DEVIATION{class=projection}` sits on the
+`DisplayTextBoxID` call in `PartyMenuOrRockOrRun.partyMonWasSelected`
+(`src/engine/battle/core.asm`). Grep `SWITCH_STATS_CANCEL_MENU_TEMPLATE`.
+
+Full symptom list and the eliminated hypotheses: stigmergy
+`regression-battle-party-menu-graphics-not-set-up`.
+
 ### 11. Bill's PC full UI — DONE 2026-07-31 (sram plan C1-C5, a2ea6550..c0b34720)
 From `docs/plans/pokemon_behavior.md`. Closed: the whole Bill's PC UI is the
 faithful pret mirror in `src/engine/pokemon/bills_pc.asm`, LINKED, and driven
