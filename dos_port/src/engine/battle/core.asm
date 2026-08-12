@@ -199,6 +199,8 @@ extern AnimationMinimizeMon            ; engine/battle/animations.asm
 extern LoadMonFrontSprite              ; src/home/pics.asm — EDX = VRAM dest
 extern FillMemory                      ; src/home/copy2.asm — ESI dest, BX count, AL value
 extern UseBagItem                      ; battle_stubs.asm (STUB) — 2c owns the body
+extern g_window_count                  ; src/ppu/ppu.asm — window descriptor count
+extern g_bg_whiteout                   ; src/ppu/ppu.asm — 1 = blank BG, skip the tilemap
 extern LinkBattleExchangeData          ; battle_stubs.asm (STUB) — link play is unported
 extern UseNextMonText                  ; assets/battle_text.inc (generated Tier-1)
 extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm — restore clean screen
@@ -3042,6 +3044,8 @@ CheckNumAttacksLeft:
 ;
 ; DEVIATION{class=projection; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=the deselect wipe starts at BCOORD(11, 11) and its length uses the port SCREEN_WIDTH of 40 rather than the Game Boy 20; evidence=every in-battle screen here is drawn through the BCOORD battle-frame projection in include/coords.inc and the port redefines SCREEN_WIDTH to SCREEN_TILES_W as ClearScreenArea already documents, so pret's 6 * SCREEN_WIDTH + 9 expression carries the canvas width unchanged; lifetime=permanent while the port renders a 40x25 canvas}
 ;
+; DEVIATION{class=projection; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=both exits from the party menu clear the port-only g_window_count and g_bg_whiteout before restoring the battle screen; evidence=this port draws the party menu as a full-screen takeover from two window descriptors over a blanked background which party_menu.asm turns on with g_bg_whiteout and render_bg then skips the tilemap entirely, so without the teardown the restored battle screen is composited as a blank frame - the START-menu caller in start_sub_menus.asm performs the identical pair; lifetime=permanent while the port composites windows over a blankable background}
+;
 ; DEVIATION{class=banking; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=the two StatusScreen predefs are direct calls and the enemy-animation Bankswitch is an indirect call through ESI; evidence=the port has one flat address space and no predef dispatcher so every predef target is called directly, and pret's Bankswitch is a bank load plus jp hl which in a flat image is just the indirect call; lifetime=permanent while the port is flat-addressed and dispatcher-free}
 ;
 ; In: AL = the battle-menu item id (2 = PKMN/ROCK, 3 = RUN).
@@ -3068,6 +3072,21 @@ PartyMenuOrRockOrRun:
     call ClearSprites
     call GBPalWhiteOut
     call LoadHudTilePatterns
+    ; PORT-ONLY TEARDOWN — pret has no counterpart, and without it the battle
+    ; screen never comes back. The port's party menu is a FULL-SCREEN TAKEOVER
+    ; drawn from two window descriptors over a blanked background
+    ; (party_menu.asm sets g_bg_whiteout=1), so leaving it must drop both. Only
+    ; the START-menu caller did this — src/engine/menus/start_sub_menus.asm
+    ; does exactly `g_window_count = 0` + `g_bg_whiteout = 0` on its way out —
+    ; and battle plan 2a added the second-ever caller without it.
+    ; Measured 2026-08-12 (DEBUG_BATTLE_SWITCH): windows go 0 -> 2 when the menu
+    ; opens and the back buffer drops from 14 distinct colours to 8, then stays
+    ; blank afterwards, because render_bg's g_bg_whiteout early-out fills with BG
+    ; colour 0 and skips the map entirely. Clearing the window list ALONE is
+    ; inert — that was tried and measured — because the whiteout is what blanks
+    ; the background.
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
     call LoadScreenTilesFromBuffer2
     call RunDefaultPaletteCommand
     call GBPalNormal
@@ -3146,6 +3165,8 @@ PartyMenuOrRockOrRun:
     call GBPalWhiteOut
     call ClearSprites
     call LoadHudTilePatterns
+    mov dword [g_window_count], 0       ; port-only teardown — see .quitPartyMenu
+    mov dword [g_bg_whiteout], 0
     call LoadScreenTilesFromBuffer1
     call RunDefaultPaletteCommand
     call GBPalNormal
