@@ -1041,6 +1041,34 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLE_ITEM -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Forced-switch gate (battle_choose_next_mon, battle plan 2b): the third door out
+# of HandlePlayerMonFainted. battle_faint kills the ENEMY, battle_blackout kills
+# the player's LAST mon; this one kills the player's mon with ANOTHER ALIVE, so
+# AnyPartyAlive succeeds and DoUseNextMonDialogue + ChooseNextMon finally run.
+# Two mons alive: slot 3 (PIKACHU L5) at 1 HP as the active one, slot 5 (LAPRAS
+# L34) at full as the replacement -- see the gate header for why the gap matters.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_NEXTMON=1" /tmp/nextmon
+ifdef DEBUG_BATTLE_NEXTMON
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_NEXTMON -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLE_NEXTMON -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+# BATTLE_NEXTMON_MENU_PROBE=1 adds the HandleMenuInput state block to
+# GBSTATE.BIN. Diagnosis only; never for a scenario run.
+ifdef BATTLE_NEXTMON_MENU_PROBE
+NASMFLAGS += -D BATTLE_NEXTMON_MENU_PROBE
+endif
+ifdef AUTOKEY_NEXTMON_MENU_FRAME
+NASMFLAGS += -D AUTOKEY_NEXTMON_MENU_FRAME=$(AUTOKEY_NEXTMON_MENU_FRAME)
+endif
+ifdef AUTOKEY_NEXTMON_DOWNS
+NASMFLAGS += -D AUTOKEY_NEXTMON_DOWNS=$(AUTOKEY_NEXTMON_DOWNS)
+endif
+ifdef AUTOKEY_NEXTMON_APRESS_END
+NASMFLAGS += -D AUTOKEY_NEXTMON_APRESS_END=$(AUTOKEY_NEXTMON_APRESS_END)
+endif
+endif
 ifdef DEBUG_BATTLE_BLACKOUT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_BLACKOUT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

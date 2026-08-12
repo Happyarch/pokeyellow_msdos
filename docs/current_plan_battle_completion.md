@@ -1098,8 +1098,48 @@ their current bodies auto-answer and auto-select.
       could not be reused; the new script does the navigation first and starts
       the B train only after the ball is thrown.
 
-      **STILL OPEN — 2 of 5.** Forced switch (2b, still unwitnessed) and the
-      failed item.
+      **STILL OPEN — 2 of 5, and the forced switch is now BLOCKED on a defect,
+      not on scenario capability.** See the block below.
+
+      **FORCED SWITCH (2b): the gate is built, and it found a hard stall.**
+      `DEBUG_BATTLE_NEXTMON=1` (2026-08-12) is the third door out of
+      `HandlePlayerMonFainted` — `battle_faint` kills the ENEMY, `battle_blackout`
+      kills the player's LAST mon, and this one kills the player's mon with
+      another alive, so `AnyPartyAlive` succeeds and `DoUseNextMonDialogue` +
+      `ChooseNextMon` run. Party: slot 3 (PIKACHU L5) at 1 HP as the active mon,
+      slot 5 (LAPRAS L34) at full as the replacement, slots 0/1/2/4 zeroed. The
+      gap between 3 and 5 is deliberate — a wrong cursor lands on a FAINTED mon
+      rather than silently selecting the right one.
+
+      It is **NOT registered as a scenario**: the port never completes the
+      selection. `run_headless.sh "DEBUG_BATTLE_NEXTMON=1"` produces no dump, and
+      a frame capture shows the party menu still up with the cursor parked on
+      LAPRAS. What has been measured, so the next pass does not redo it:
+
+      1. **`ChooseNextMon.goBackToPartyMenu` is NEVER reached** — execution
+         breakpoint, 300 s, fresh run with the key script live. So
+         `DisplayPartyMenu` never RETURNS; the stall is inside
+         `HandlePartyMenuInput`, not in the rejected-choice loop.
+      2. **Not press timing.** 90 A presses of 15 frames at a 40-frame period
+         change nothing (the earlier 5-frame/20-frame train likewise).
+      3. **Not the fainted-mon rejection.** The cursor is on slot 5 and that
+         mon's party HP word at `$D247` reads `$008B` (139), so `HasMonFainted`
+         returns not-fainted.
+      4. **Not the SELECT-swap re-entry.** `wMenuItemToSwap` (`$CC35`) = 0, so
+         `HandlePartyMenuInput` is not looping through `.swappingPokemon`.
+         `wForcePlayerToChooseMon` (`$D11E`) = 0.
+      5. **THE LEAD.** At the stall, `wCurrentMenuItem` (`$CC26`) = **0** while
+         the drawn cursor is on row 5, and `wTopMenuItemY`/`X` = `$0F`/`$0F` with
+         `wMenuWatchedKeys` = `$C7`. `PartyMenuInit` writes Y=1, X=0,
+         watched = `PAD_A|PAD_B`, and current = `wPartyAndBillsPCSavedMenuItem`
+         — which reads **5**. So the live `HandleMenuInput` state does not
+         belong to the party menu that is on screen. Start there.
+         (`wPartyMenuTypeOrMessageID` at `$D07C` reads `$4F`; note that address
+         is `wAnimationID + 1`, and the faint path runs an animation.)
+
+      Read the state with `BATTLE_NEXTMON_MENU_PROBE=1`, which adds the
+      `HandleMenuInput` block to `GBSTATE.BIN` (diagnosis only — never for a
+      scenario run, since the differ joins regions by name).
 
       **CORRECTION: the failed item is NOT "nearly free", as this box claimed
       earlier today.** Measured: `UseBagItem` is

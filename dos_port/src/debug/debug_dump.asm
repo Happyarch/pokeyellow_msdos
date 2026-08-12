@@ -215,6 +215,10 @@ extern g_windows                     ; src/ppu/ppu.asm — descriptor array
 extern ExecuteEnemyMove          ; core.asm — the real enemy-turn/damage pipeline
 extern HandlePlayerMonFainted    ; core.asm — RemoveFaintedPlayerMon + the black-out branch
 %endif
+%ifdef DEBUG_BATTLE_NEXTMON
+extern ExecuteEnemyMove          ; core.asm — the real enemy-turn/damage pipeline
+extern HandlePlayerMonFainted    ; core.asm — RemoveFaintedPlayerMon + DoUseNextMonDialogue/ChooseNextMon
+%endif
 %ifdef DEBUG_ANIM_DEMO
 extern PlayMoveAnimation         ; core.asm — wAnimationID + Delay3 + MoveAnimation + Func_78e98
 extern DelayFrames               ; src/home/delay.asm — BL = frame count
@@ -874,6 +878,17 @@ gbstate_regions:
     ; rows there is no volatile scratch inside it -- every byte is saved data, so
     ; the enclosing block IS the tight span.
     gbregion "wBoxData",      wBoxDataStart, wBoxDataEnd - wBoxDataStart
+%endif
+%ifdef BATTLE_NEXTMON_MENU_PROBE
+    ; --- ChooseNextMon party-menu stall probe (battle plan 2b) ---
+    ; HARNESS-DIAGNOSIS PROBE, NOT part of any golden (the BILLSPC_MENU_PROBE
+    ; precedent). The whole HandleMenuInput state block plus the two bytes that
+    ; can divert HandlePartyMenuInput away from its mon-chosen exit:
+    ; wMenuItemToSwap - non-zero sends every A into .swappingPokemon, which
+    ; re-enters the menu and never returns - and wForcePlayerToChooseMon.
+    gbregion "wMenuState",   wTopMenuItemY, 0x14
+    gbregion "wPartyMenuTy", wPartyMenuTypeOrMessageID, 1
+    gbregion "wForceChoose", wForcePlayerToChooseMon, 1
 %endif
 %ifdef BATTLE_SWITCH_WINDOW_PROBE
     ; --- window-layer diagnosis for the post-switch render defect ---
@@ -2622,6 +2637,81 @@ RunBattleTest:
 .blackoutKO:
     call HandlePlayerMonFainted         ; RemoveFaintedPlayerMon -> HandlePlayerBlackOut
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+%elifdef DEBUG_BATTLE_NEXTMON
+    ; ------------------------------------------------------------------
+    ; battle_choose_next_mon golden gate (battle plan 2b). The THIRD door out
+    ; of HandlePlayerMonFainted, and the only one nothing has ever opened:
+    ;   battle_faint      kills the ENEMY;
+    ;   battle_blackout   kills the player's LAST mon (AnyPartyAlive fails);
+    ;   this one          kills the player's mon with ANOTHER ALIVE, so
+    ;                     AnyPartyAlive succeeds and the flow reaches
+    ;                     DoUseNextMonDialogue + ChooseNextMon.
+    ; 2b ported both of those on 2026-08-12 (68210555a) with zero execution
+    ; evidence, and battle_blackout's header records exactly why: it leaves one
+    ; mon alive on purpose because the party menu was believed "untimeable
+    ; against a golden". battle_switch disproved that, so this is now buildable.
+    ;
+    ; PARTY SHAPE. Two mons alive:
+    ;   slot 3 STARTER_PIKACHU L5 at 1 HP — the FIRST alive slot, so the
+    ;          send-out scan picks it on both sides without either naming it,
+    ;          and any damage roll faints it (Gen-1 minimum damage is 1);
+    ;   slot 5 LAPRAS L34, left at the seed's full HP — the replacement.
+    ; Slots 0/1/2/4 are zeroed. The gap between 3 and 5 is deliberate: it makes
+    ; a wrong cursor land on a FAINTED mon ("no will to fight" and a re-ask)
+    ; rather than silently selecting the right one, so a mistimed script fails.
+    ;
+    ; RNG-INDEPENDENCE: identical to battle_blackout. PIKACHU L5's speed ~14
+    ; loses to the spec PIDGEY L13's 21, so the ENEMY always moves first and the
+    ; 1-HP mon faints before ever acting; the enemy's moves are pinned to GUST
+    ; so move SELECTION cannot diverge either.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    ; --- two mons alive: slot 3 at 1 HP, slot 5 untouched, the rest at 0 ---
+%assign NM_SLOT 0
+%rep 5
+%if NM_SLOT == 3
+    mov word [ebp + wPartyMon1HP + NM_SLOT * PARTYMON_STRUCT_LENGTH], 0x0100
+%else
+    mov word [ebp + wPartyMon1HP + NM_SLOT * PARTYMON_STRUCT_LENGTH], 0x0000
+%endif
+%assign NM_SLOT NM_SLOT + 1
+%endrep
+    ; --- re-run the send-out for the first alive mon (slot 3) ---
+    mov byte [ebp + wWhichPokemon], 3
+    mov byte [ebp + wPlayerMonNumber], 3
+    mov al, [ebp + wPartySpecies + 3]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wBattleMonSpecies2], al
+    ; Same flag restatement battle_blackout needs and for the same reason: the
+    ; golden's reshape lands BEFORE the send-out, so its real send-out FLAG_SETs
+    ; slot 3 and nothing else, while this gate's scene already set slot 0.
+    mov byte [ebp + wPartyGainExpFlags], 1 << 3
+    call LoadBattleMonFromParty         ; REAL loader; copies the 1 HP across
+    call DrawHUDsAndHPBars
+    ; --- pin the enemy's moves and its selection to GUST ---
+    mov byte [ebp + wEnemyMonMoves + 0], GUST
+    mov byte [ebp + wEnemyMonMoves + 1], GUST
+    mov byte [ebp + wEnemyMonMoves + 2], GUST
+    mov byte [ebp + wEnemyMonMoves + 3], GUST
+    mov byte [ebp + wEnemySelectedMove], GUST
+    mov byte [ebp + wEnemyMoveListIndex], 0
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    call ExecuteEnemyMove               ; the real enemy turn
+    mov al, [ebp + wBattleMonHP]
+    or al, [ebp + wBattleMonHP + 1]     ; big-endian word, either byte set = alive
+    jnz .nextMonAlive
+    ; The real faint handler: RemoveFaintedPlayerMon, then — because a mon is
+    ; still alive — DoUseNextMonDialogue and ChooseNextMon, driven by
+    ; AUTOKEY_BATTLE_NEXTMON.
+    call HandlePlayerMonFainted
+    ; The replacement must be OUT. Only ChooseNextMon's send-out sets this.
+    cmp byte [ebp + wPlayerMonNumber], 5
+    jne .nextMonAlive
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+.nextMonAlive:
+    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    call DelayFrame
+    call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_ANIM_SHOW
     ; ------------------------------------------------------------------
     ; DEBUG_ANIM_SHOW — the Stage 4/5 animation SHOWCASE.
@@ -2812,7 +2902,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 
@@ -4896,6 +4986,53 @@ autokey_script:
     dd  720,  730, PAD_A        ; party menu: the active mon (slot 0) -> heal
     dd  900,  910, PAD_A        ; walk the "recovered HP" message
     dd 1080, 1090, PAD_A        ; spare
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_BATTLE_NEXTMON
+    ; battle plan 2b: walk the faint messages, answer "Use next POKéMON?" YES,
+    ; then pick the REPLACEMENT out of ChooseNextMon's party menu.
+    ;
+    ; WHY THIS IS NOT JUST AN A TRAIN. The party menu opens on a FAINTED slot,
+    ; and choosing a fainted mon prints "no will to fight" and re-asks, so an
+    ; A-only script loops forever. But a DOWN cannot simply be sprinkled in
+    ; either: DoUseNextMonDialogue's box is YES/NO, and a DOWN landing there
+    ; moves the cursor to NO, whose A runs from the battle. So the DOWN presses
+    ; must fall INSIDE the party menu's own window and nowhere else, which is
+    ; why the A train is split into a before-half and an after-half around them.
+    ;
+    ; The frame numbers below are MEASURED, not guessed — see the box in
+    ; docs/current_plan_battle_completion.md for the capture that placed them.
+%ifndef AUTOKEY_NEXTMON_APRESS_END
+%define AUTOKEY_NEXTMON_APRESS_END 450  ; last A BEFORE the menu can be up
+%endif
+%ifndef AUTOKEY_NEXTMON_MENU_FRAME
+%define AUTOKEY_NEXTMON_MENU_FRAME 900
+%endif
+%ifndef AUTOKEY_NEXTMON_DOWNS
+%define AUTOKEY_NEXTMON_DOWNS 5
+%endif
+    ; before-half: A every 20 frames, walking the enemy move text, the faint
+    ; animation and message, and answering "Use next POKéMON?" YES. It STOPS at
+    ; AUTOKEY_NEXTMON_APRESS_END, before the party menu can be on screen —
+    ; measured: the menu is not up at frame 450 and is up at 600. An A landing
+    ; in the menu would select the FAINTED slot 0 and, worse, leave a
+    ; "no will to fight" message that only another A can clear.
+%assign AK_N 30
+%rep (AUTOKEY_NEXTMON_APRESS_END - 30) / 20
+    dd AK_N, AK_N + 5, PAD_A
+%assign AK_N AK_N + 20
+%endrep
+    ; the party menu is up: walk the cursor down to the replacement slot.
+%assign AK_N AUTOKEY_NEXTMON_MENU_FRAME
+%rep AUTOKEY_NEXTMON_DOWNS
+    dd AK_N, AK_N + 8, PAD_DOWN
+%assign AK_N AK_N + 30
+%endrep
+    ; after-half: A to choose it, then walk whatever the send-out prints.
+%assign AK_N AK_N + 30
+%rep 90
+    dd AK_N, AK_N + 15, PAD_A
+%assign AK_N AK_N + 40
+%endrep
     dd   -1,   -1, 0
 %elifdef AUTOKEY_ITEMBALL
     ; ball_catch, since 2026-08-12: FIGHT-menu -> ITEM -> MASTER BALL, through
