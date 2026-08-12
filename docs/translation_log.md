@@ -6974,3 +6974,30 @@ the projected coordinate.
 Default build clean; `lint_pret_labels` 0; `pgate.sh` 17/17 with mask-hit counts
 byte-identical (the harness is `%ifdef`-gated and cannot affect them).
 **Still owed: an actual human looking at it.**
+
+## 2026-08-12 — engine/battle/ghost_marowak_anim.asm (MarowakAnim, CopyMonPicFromBGToSpriteVRAM)
+
+Battle plan 4c, animation half. Both labels were `missing`; every other callee
+of `MarowakAnim` was already `translated`, so this needed no stubs.
+
+Three points that are not obvious from the SM83, all carried into the source:
+the `jr nz` in both fade loops reads the ZF that `sla a / sla a` set ACROSS
+`call UpdateCGBPal_OBP1` (safe on both sides — pret's is `push af ... pop af`,
+the port's is `mov byte [g_pal_dirty], 1 / ret`, and a mov imm->mem sets no
+flags); `rra` is `rcr al, 1` rather than `shr`, pairing with `srl b`; and the
+fade-in loop keeps the fade mask in BH while `DelayFrames` uses BL, which is
+safe because that routine touches BL only.
+
+`hlcoord 12, 0` becomes `UI_ENEMY_PIC_ROW/_COL` — raw coords for this 7x7 block
+are a shipped bug (regression-battle-second-battle-hud-tile-band).
+
+Two things deliberately left: `hAutoBGTransferEnabled` writes are faithful but
+inert here (the port retired the VBlank auto-transfer), and the 36 OAM records
+are written to wShadowOAM faithfully but not published — `PublishProjectedOAM`
+needs a projection offset owned by the screen, and the ghost battle that owns it
+is the rest of 4c.
+
+faithdiff: MarowakAnim 8/8 calls, 3/3 pret stores, one `+ ADDED [IO_OBP1]` that
+is the hardware-register blind spot (pret writes rOBP1 3x, the port writes
+IO_OBP1 3x — counted, not assumed). CopyMonPicFromBGToSpriteVRAM clean.
+UNWITNESSED: nothing calls MarowakAnim until the rest of 4c lands.

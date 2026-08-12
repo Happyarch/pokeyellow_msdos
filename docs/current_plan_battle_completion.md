@@ -1585,66 +1585,73 @@ provider shapes below, not their runtime behavior.
 - [ ] **4b. `BATTLE_TYPE_OLD_MAN`.** Implement the tutorial identity/menu and
       scripted throw behavior behind a deterministic battle scenario. The
       Viridian script and story reachability belong to overworld-events Stage 5.
-- [~] **4c. Ghost Marowak — GROUNDWORK MEASURED 2026-08-12, and the animation
-      half is BLOCKED on a real design decision. Do not guess past it.**
+- [~] **4c. Ghost Marowak — ANIMATION HALF DONE 2026-08-12. The rest of the box
+      is untouched.** `MarowakAnim` and `CopyMonPicFromBGToSpriteVRAM` are
+      translated into the mirror `dos_port/src/engine/battle/ghost_marowak_anim.asm`
+      and linked; both were `missing`, and every other callee was already
+      `translated`, so it needed no stubs.
 
-      `engine/battle/ghost_marowak_anim.asm` is 92 lines / two routines, and
-      every callee of `MarowakAnim` is already `translated` EXCEPT the file's own
-      second routine — `ChangeMonPic`, `ClearScreenArea`, `ClearSprites`,
-      `Delay3`, `DelayFrames`, `FlashSprite8Times`, `UpdateCGBPal_OBP1`. So no
-      new stubs are needed and the file can land in one piece. Everything below
-      was measured this pass so the next attempt does not re-derive it.
+      **CORRECTION — THE "BLOCKER" I RECORDED HERE ONE ITERATION EARLIER WAS
+      WRONG, ON BOTH COUNTS.** It claimed `CopyMonPicFromBGToSpriteVRAM` could
+      not be expressed with the port's `CopyVideoData` because the copy is
+      "VRAM -> VRAM counted in BYTES" while the port wants a flat source and a
+      tile count. Measured:
+      * **`PIC_SIZE` is 49 TILES, not bytes** — `PIC_WIDTH * PIC_HEIGHT`,
+        `constants/gfx_constants.asm` says `; tiles`. pret's own header for
+        `CopyVideoData` reads "copy c 2bpp tiles from b:de to hl", so DE is the
+        SOURCE, HL the DEST and C a TILE count — the same shape the port
+        documents (ESI dest, EDX source, BH bank, BL tiles).
+      * **The port dereferences EDX FLAT** (`mov esi, edx` then `rep movsb`), so
+        an emulated-VRAM source is simply `lea edx, [ebp + vFrontPic]`. Its doc
+        comment says ".data / ROM" because every earlier caller happened to copy
+        from there; nothing in the routine requires it.
+      So there was no design decision to make. I recorded a confident wrong
+      claim that would have stopped the next agent — exactly the failure mode
+      this plan's preamble warns about — and it is corrected here rather than
+      quietly dropped.
 
-      **THE BLOCKER: `CopyMonPicFromBGToSpriteVRAM` cannot be expressed with the
-      port's `CopyVideoData`.** pret's first four instructions are
-      `ld de, vFrontPic / ld hl, vSprites / ld bc, PIC_SIZE / call CopyVideoData`
-      — a **VRAM -> VRAM** copy measured in **BYTES**. The port's
-      `CopyVideoData` (src/home/copy2.asm) documents a different contract:
-      `ESI` = destination GB VRAM offset, **`EDX` = source FLAT pointer (2bpp
-      tile data in .data / ROM)**, `BH` = source bank (no-op), **`BL` = TILE
-      count**. A source that is emulated VRAM, and a byte count, are both
-      outside it. This needs a deliberate decision — a VRAM->VRAM path, a
-      port-only variant, or a different realisation — plus the `DEVIATION` that
-      goes with whichever is chosen. **It is NOT a mechanical translation, which
-      is why this box stops here rather than guessing.**
+      **THREE NON-OBVIOUS TRANSLATION POINTS, all carried into the source:**
+      * *`jr nz` reads ZF ACROSS a call*, in both fade loops
+        (`sla a / sla a / ldh [rOBP1], a / call UpdateCGBPal_OBP1 / jr nz`). Safe
+        on both sides and load-bearing: pret's routine is `push af ... pop af /
+        ret`, the port's is `mov byte [g_pal_dirty], 1 / ret`, and a mov
+        immediate-to-memory sets no flags. **Adding any compare to that two-line
+        routine would silently break both loops.**
+      * *`rra` is `rcr al, 1`, not `shr`* — it pairs with `srl b` -> `shr bh, 1`
+        to carry the ejected bit.
+      * *The fade-in loop keeps two live values in BX* (mask in BH, DelayFrames
+        count in BL). Safe because the port's `DelayFrames` touches BL only and
+        its inner `DelayFrame` is `pushad`-wrapped.
+      Plus the projection: pret's `hlcoord 12, 0` becomes
+      `UI_ENEMY_PIC_ROW/_COL`, the expression `init_battle.asm:434` and
+      `core.asm:5217` already use — raw coords for this exact 7x7 block are a
+      shipped bug (`regression-battle-second-battle-hud-tile-band`).
 
-      **SETTLED, so the next attempt can start from these:**
-      * *`hlcoord 12, 0`* -> `W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W +
-        UI_ENEMY_PIC_COL` (`UI_ENEMY_PIC_ROW equ 3`,
-        `assets/ui_layout_battle.inc`). Two sites already do exactly this —
-        `init_battle.asm:434` and `core.asm:5217` — and a memory records that
-        placing this 7x7 block at pret's RAW coords on the 40-wide canvas is a
-        shipped bug (`regression-battle-second-battle-hud-tile-band`).
-      * *`jr nz` after `call UpdateCGBPal_OBP1`* (both fade loops) reads the ZF
-        that `sla a / sla a` set, ACROSS the call. That is safe on both sides and
-        it is load-bearing: pret's `UpdateCGBPal_OBP1` is `push af ... pop af /
-        ret`, and the port's is `mov byte [g_pal_dirty], 1 / ret` — a `mov`
-        immediate-to-memory sets no flags. **Say so in a comment when writing
-        it**, because adding any `cmp` to that two-line routine would silently
-        break this loop.
-      * *`rra`* is x86 `rcr al, 1` (rotate through carry), NOT `shr`. The
-        fade-in loop pairs it with `srl b` -> `shr bh, 1`.
-      * *The fade-in loop holds the mask in `b` and the delay count in `c`* —
-        BH and BL. The port's `DelayFrames` decrements BL only and its inner
-        `DelayFrame` is `pushad`-wrapped, so BH survives; that is what the loop
-        needs.
-      * *`hAutoBGTransferEnabled` writes are FAITHFUL BUT INERT.* The port
-        retired pret's VBlank auto-transfer (`src/home/vblank.asm:136`), and
-        vblank.asm records that the faithful writes stay throughout the tree. So
-        write them and add no new annotation — but note the EFFECT pret is
-        buying here (hiding the BG swap until the sprite pic covers it) does not
-        happen, which is a behavioural question for whoever gets it on screen.
-      * *OAM.* `CopyMonPicFromBGToSpriteVRAM` builds records in `wShadowOAM`.
-        Writing that alone DRAWS NOTHING in this port: the renderer positions
-        from `spr_dos_sx/sy` and honours `spr_oam_valid`, so the records must be
-        published (`PublishProjectedOAM`: ESI = GB-relative records, ECX = count,
-        EAX/EBX = projection offsets 80/24, all registers preserved). That is a
-        port-only call and needs a `DEVIATION{class=projection}`; the payday gate
-        and `battle_transitions.asm` are the precedents.
+      **TWO THINGS DELIBERATELY NOT DONE, both stated in the source:**
+      * `hAutoBGTransferEnabled` writes are faithful but INERT (the port retired
+        pret's VBlank auto-transfer), so the BG ghost->Marowak swap is not
+        hidden the way the Game Boy hides it. That is a behavioural question for
+        whoever first puts this on screen.
+      * The 36 OAM records go to `wShadowOAM` exactly as pret writes them, and
+        on this port that DRAWS NOTHING without a `PublishProjectedOAM` — whose
+        projection OFFSET is a property of the screen that owns the canvas, and
+        that screen (the ghost battle) does not exist yet. Inventing an offset
+        would be a guess that stays invisible until someone finally sees the
+        animation.
 
-      The rest of 4c — ghost initialization/identity, unidentified-ghost move
-      refusal, escape rules, the Poké Doll consumer — is untouched and is
-      separate from the animation half above.
+      **EVIDENCE.** Assembles standalone; build EXIT=0; `faithdiff MarowakAnim`
+      8/8 calls, 3/3 pret stores matched with ONE `+ ADDED [IO_OBP1]`, which is
+      faithdiff's documented hardware-register blind spot (its pret-side store
+      regex matches only `w`/`h` names) — verified rather than assumed by
+      counting both sides: pret writes `rOBP1` 3 times in this routine and the
+      port writes `IO_OBP1` 3 times. `faithdiff CopyMonPicFromBGToSpriteVRAM`
+      CLEAN. `lint_pret_labels` 0 in both modes; `make fidelity` 16 PASS / 0
+      FAIL.
+
+      **UNWITNESSED, and that is not glossed:** nothing calls `MarowakAnim` yet.
+      The rest of 4c below — ghost initialization/identity, unidentified-ghost
+      move refusal, escape rules, the Poké Doll consumer — is what makes it
+      reachable and is NOT in this change.
 
 - [ ] **4c. Ghost Marowak (original folding note).** FOLDED IN 2026-08-11 from the archived animations
       plan (maintainer instruction), which had it as an optional tail explicitly
