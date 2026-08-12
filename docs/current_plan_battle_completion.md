@@ -1642,12 +1642,33 @@ provider shapes below, not their runtime behavior.
       **The crash is between frames 600 and 660** (660 produces no dump), so it
       dies part-way through the party walk, with three mons still uncredited.
 
+      **Step 5: BISECTED BY PARTY SIZE (2026-08-12).** A diagnosis knob,
+      `EXPALL_PARTY_COUNT=<n>`, shrinks the party so the whole-party walk has
+      fewer slots:
+      * `EXPALL_PARTY_COUNT=1` (the participant alone) — **SURVIVES and dumps**;
+      * `EXPALL_PARTY_COUNT=2` (participant + PERSIAN) — **crashes**.
+      So it dies on the FIRST NON-PARTICIPANT, which is a far tighter target
+      than "somewhere in the party walk".
+
+      **Step 6: TWO CANDIDATES ELIMINATED, and they were mine.** Both routines
+      this session added with NO execution evidence sit on the EXP path, so both
+      were suspects. Stubbing each back to a bare `ret` and re-running
+      `EXPALL_PARTY_COUNT=2`:
+      * `CalculateModifiedStats` (57ea6299d) — still crashes. NOT it.
+      * `ModifyPikachuHappiness` (9ce747c2e) — still crashes. NOT it.
+      Both commits are cleared by measurement rather than by argument. Remaining
+      suspects are the per-mon award path itself (`LoadMonData`, the experience
+      routines) and the display stubs `PrintStatsBox` / `LearnMoveFromLevelUp`.
+
       **NEXT STEP: still the faulting EIP.** The DPMI fault prints a register
       dump to the DOS console, which only a screenshot of the emulated screen
       can read — `FRAME.BIN` and `GBSTATE.BIN` structurally cannot.
-      **dosbox-mcp ordering rule, learned the hard way three times in one
+      **dosbox-mcp ordering rule, learned the hard way four times in one
       session: call `pause_exec` FIRST and only call `screenshot` once it has
-      returned a BREAK.** Calling `screenshot` while the emulator is running
+      returned a literal `BREAK` line. "Already paused." IS NOT A BREAK** — it
+      means the debugger is idle while the emulator runs, and a `screenshot`
+      after it wedges the session exactly as one issued with no pause at all.
+      Call `pause_exec` again until it answers `BREAK`. Calling `screenshot` while the emulator is running
       leaves a pending response that wedges the whole session, and every
       subsequent call fails until the emulator is killed. Also: check
       `pgrep -f dosbox-x-mcp` before launching (repeated launches leave several

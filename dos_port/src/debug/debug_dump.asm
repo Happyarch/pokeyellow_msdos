@@ -2636,6 +2636,12 @@ RunBattleTest:
     ; version added that +1, wrote item 15's QUANTITY instead, and the dump still
     ; read id $4F (PP_UP), i.e. the pin silently did nothing.
     mov byte [ebp + wBagItems + 15 * 2], EXP_ALL      ; PP_UP slot -> EXP_ALL
+%ifdef EXPALL_PARTY_COUNT
+    ; Diagnosis knob: shrink the party so the whole-party EXP walk has fewer
+    ; slots to visit. Used to localise the crash by bisection rather than by
+    ; guessing which slot's data is bad.
+    mov byte [ebp + wPartyCount], EXPALL_PARTY_COUNT
+%endif
     mov byte [ebp + wPlayerMoveListIndex], 3
     mov byte [ebp + wPlayerSelectedMove], STRENGTH
     mov byte [ebp + wActionResultOrTookBattleTurn], 0
