@@ -1907,6 +1907,39 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "the CONTINUOUS overworld->battle->return scenario, and the only one in which the port's real OverworldLoop drives a trainer battle end to end: sight engagement by the map script, entry through the loop's own wCurOpponent poll, the live battle menus, and the .battleOccurred return that dispatches EndTrainerBattle. 44/45/46 call StartTrainerBattle and InitBattle from a harness and never run the loop, so none of them can prove this. Compared surface is choreography (battle result, wIsInBattle, wCurOpponent cleared, map-script indices, the persistent beaten flag, the .battleOccurred status-flag work, map and coords) plus the two zero-RNG reward bytes (player money BCD, lead mon EXP). Damage and HP are deliberately NOT compared: pinning them would require RNG lockstep through live menu timing, and per-turn damage math is already covered by battle_faint and 45/46"
+    },
+    {
+      "name": "battle_exp_all",
+      "id": 66,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_EXPALL=1",
+      "port_entry_gate": "DEBUG_BATTLE_EXPALL",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_exp_all.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "ExecutePlayerMove",
+        "HandleEnemyMonFainted",
+        "FaintEnemyPokemon",
+        "IsItemInBag",
+        "GainExperience",
+        "DivideExpDataByNumMonsGainingExp"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the Exp. All whole-party branch of FaintEnemyPokemon, which no scenario had ever entered because the seeded bag holds no EXP_ALL. Both sides pin item 15's id to EXP_ALL (wBagItems + i*2 -- the LIST, no +1; wNumBagItems is the separate count byte) so the bag compares clean. The branch halves wEnemyMonBaseStats and runs GainExperience a SECOND time over the whole party; the golden's dump landmark is the LAST party slot gaining EXP, which only the whole-party pass credits, so a run that silently fell back to the fought-mon-only path fails instead of passing. Reaching it is what exposed the DivideExpDataByNumMonsGainingExp runaway loop fixed in 17d670c2f -- that routine is unreachable without Exp. All. Deterministic by matchup, exactly as battle_faint: STRENGTH's minimum roll overkills PIDGEY's 36 HP and SNORLAX outspeeds it, and each mon's share is a function of base EXP, level and the number of mons gaining EXP, never a roll"
     }
   ],
   "disabled_scenarios": []

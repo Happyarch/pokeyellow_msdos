@@ -2636,6 +2636,18 @@ RunBattleTest:
     ; version added that +1, wrote item 15's QUANTITY instead, and the dump still
     ; read id $4F (PP_UP), i.e. the pin silently did nothing.
     mov byte [ebp + wBagItems + 15 * 2], EXP_ALL      ; PP_UP slot -> EXP_ALL
+    ; THE ENEMY MUST NOT ACT, and this is not the same argument battle_faint
+    ; makes. battle_faint assumes SNORLAX outspeeds the L13 PIDGEY, which it
+    ; does — but in YELLOW a L13 PIDGEY knows QUICK ATTACK, whose +1 priority
+    ; beats any speed, and whether the AI picks it is a roll. MEASURED while
+    ; building this scenario: the golden's SNORLAX took 3 HP on one run and 2 on
+    ; the next, and wBattleMon HP is compared, so the pair could never converge.
+    ; This gate calls ExecutePlayerMove directly and gives the enemy no turn at
+    ; all, so the fix is to remove the enemy's turn on the GOLDEN side too — a
+    ; seeded sleep counter, the same pin and the same reasoning as
+    ; DEBUG_BATTLE_WRAP above. It masks nothing: the enemy is knocked out this
+    ; turn either way.
+    mov byte [ebp + wEnemyMonStatus], 7               ; SLP counter (7 turns)
 %ifdef EXPALL_PARTY_COUNT
     ; Diagnosis knob: shrink the party so the whole-party EXP walk has fewer
     ; slots to visit. Used to localise the crash by bisection rather than by
@@ -2650,6 +2662,18 @@ RunBattleTest:
     or al, [ebp + wEnemyMonHP + 1]
     jnz .expAllAlive
     call HandleEnemyMonFainted          ; FaintEnemyPokemon -> the EXP ALL branch
+    ; DUMPING HERE IS NOT OBSERVABLE ON THE GOLDEN, which is why this gate ends
+    ; like DEBUG_BATTLE_PAYDAY rather than like DEBUG_BATTLE_FAINT. Straight
+    ; after HandleEnemyMonFainted the port still has wIsInBattle == 1, and on
+    ; the ROM there is NO FRAME in that state once the whole-party pass has run:
+    ; DrawPlayerHUDAndHPBar's wLoadedMon staging and the battle teardown fall
+    ; inside a single frame, so a golden polling for
+    ; "wIsInBattle == 1 AND wLoadedMonLevel == 80" never fires (measured — it
+    ; ran to its 3600-frame cap and failed). battle_faint gets away with the
+    ; earlier instant only because its landmark is satisfied much sooner, by
+    ; GainExperience's own LoadMonData for slot 0. So carry on into EndOfBattle
+    ; and dump the settled post-battle state, which both sides can name.
+    call EndOfBattle                    ; wild win teardown; wIsInBattle -> 0
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 .expAllAlive:
     mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN

@@ -718,6 +718,40 @@ SCENARIOS = {
             ],
         }),
     },
+    "battle_exp_all": {
+        # datastruct: battle_faint's resolved turn with EXP_ALL in the bag, so
+        # FaintEnemyPokemon halves wEnemyMonBaseStats and runs GainExperience a
+        # SECOND time over the whole party. What is pinned is every party slot's
+        # EXP and stat EXP -- not just the fought mon's -- plus the zeroed enemy
+        # HP and wBattleResult.
+        #
+        # RNG-independent for battle_faint's reasons, which transfer verbatim:
+        # STRENGTH's minimum roll from L80 overkills PIDGEY's 36 HP so the KO is
+        # one turn for every roll, SNORLAX outspeeds PIDGEY so the enemy never
+        # acts, and each mon's share is a function of the enemy's base EXP, its
+        # level and the number of mons gaining EXP. The damage VALUE differs
+        # between the sides and is not compared.
+        #
+        # The wLoadedMon stat mask below is battle_faint's, for the same reason
+        # and with the same evidence: both sides dump at the instant
+        # DrawPlayerHUDAndHPBar has staged the party mon, and that buffer's four
+        # stat words are a badge-boosted copy of wBattleMon, which is compared
+        # UNMASKED in this same scenario.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_EXPALL=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            "wLoadedMon": [
+                ((36, 43), "Attack/Defense/Speed/Special of the wLoadedMon "
+                           "STAGING buffer -- see battle_faint's identical mask "
+                           "for the measurement: the flow writes this buffer "
+                           "from LoadMonData (unboosted party copy) and then "
+                           "from DrawPlayerHUDAndHPBar (badge-boosted "
+                           "wBattleMon copy, pret core.asm:1904), and the two "
+                           "sides' dump instants straddle that second write. "
+                           "wBattleMon itself is compared unmasked here."),
+            ],
+        }),
+    },
     "battle_blackout": {
         # datastruct: the WRAM outcome of the PLAYER's mon fainting with no
         # other mon alive — the first scenario in the suite where that happens.

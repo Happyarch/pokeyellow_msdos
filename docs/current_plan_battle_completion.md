@@ -1578,107 +1578,84 @@ provider shapes below, not their runtime behavior.
       as its eventual home, and that transfer should happen after the 2a/2c
       pret-label rename lands, not before. Run `label_status --callers` and
       repair every stub-era extern/provider comment and assumption.
-- [~] **3e. EXP ALL.** Establish a deterministic whole-party EXP scenario before
-      deciding whether any defect remains. Compare participants, EXP, levels,
-      stats, moves, and `wIsInBattle`; do not preserve the old audit/repro claim
-      without a current failing execution.
+- [x] **3e. EXP ALL.** DONE 2026-08-12. Registered golden `battle_exp_all`
+      (id 66, tier full), and reaching the branch found and fixed a page fault
+      that had made it unreachable in the port for its whole existence.
 
-      **GATE BUILT 2026-08-12, NOT REGISTERED — and entering the branch is
-      itself the finding.** `DEBUG_BATTLE_EXPALL=1` is `battle_faint`'s shape
-      (STRENGTH KO, then `HandleEnemyMonFainted`) with the seeded bag's last
-      slot swapped to `EXP_ALL`, so `FaintEnemyPokemon` takes its whole-party
-      branch. Reachability was checked first, per the 3a lesson: the branch is
-      inside `FaintEnemyPokemon`, reached from `HandleEnemyMonFainted` at
-      core.asm:2861, the call this template already makes — no
-      `MainInBattleLoop` harness needed.
+      **THE DEFECT (fixed 17d670c2f).** `DivideExpDataByNumMonsGainingExp` —
+      reachable ONLY through Exp. All, because a single mon gaining EXP returns
+      at its `cp 2` — kept pret's `c` (the 7-byte count over
+      `wEnemyMonBaseStats..wEnemyMonBaseExp`) in **CL**. pret can, because
+      `home/math.asm Divide` is `push bc ... pop bc`; the port's wrapper mirrors
+      that as `push bx / pop bx` and cannot preserve ECX, since `_Divide` does
+      `movzx ecx, byte [ebp + H_DIVISOR]` and `div ecx`. So every `call Divide`
+      reloaded the counter with the DIVISOR, the loop never terminated, and ESI
+      walked past the block writing quotient bytes across WRAM until it left the
+      DPMI allocation and page-faulted. The first two stray writes land on
+      `wIsInBattle` and `wPartyGainExpFlags`, which is why an earlier trace
+      showed `HandleEnemyMonFainted` taking the TRAINER branch out of a WILD
+      battle. Fix: put the counter in **BL**, where the register map already
+      says pret's `c` lives. No guard, no masking.
 
-      **Step 1, and it is a warning about pins generally.** The first pin wrote
-      `wBagItems + 1 + 15*2` and SILENTLY DID NOTHING: `wNumBagItems` (`$D31C`)
-      is the count and `wBagItems` (`$D31D`) is the LIST, so item *i*'s id is at
-      `wBagItems + i*2` with no `+1`. The `+1` landed on item 15's QUANTITY, and
-      the dump still read id `$4F` (PP_UP). **The run looked fine and the branch
-      was never entered.** Always read back the byte a pin is supposed to have
-      changed.
+      **HOW IT WAS FOUND, because the method is the reusable part.** Three
+      rounds of bisection (party size, then stub-bisecting
+      `CalculateModifiedStats` and `ModifyPikachuHappiness`) all pointed at the
+      wrong half of the program. What settled it in one shot was a **BPLM
+      memory-change watchpoint on the byte that was corrupted** —
+      `set_watchpoint("D056")` — instead of a breakpoint on the code under
+      suspicion. It broke inside `.divideLoop` with `ESI=0000D056 ECX=00000002`
+      and again at `ESI=0000D057`; ESI is supposed to run `D001..D007`, and ECX
+      sitting at the divisor instead of counting down named the cause. **When a
+      fault's neighbourhood makes no sense, watch the corrupted byte — it knows
+      who wrote it.** Logged as stigmergy
+      `bug-class-loop-counter-in-cl-across-a-clobbering-call`, with 37
+      candidate sites tree-wide (exposure, NOT a defect tally — most callees are
+      `pushad`-wrapped or preserve ECX; none audited).
 
-      **Step 2: with the pin corrected, the run produces NO DUMP AT ALL.**
+      **TWO PINS THE SCENARIO NEEDED, each measured.**
+      * *The bag pin.* `wNumBagItems` (`$D31C`) is the COUNT and `wBagItems`
+        (`$D31D`) is the LIST, so item *i*'s id is at `wBagItems + i*2` — NO
+        `+1`. The first port-side version added the `+1`, wrote item 15's
+        QUANTITY, and the branch was simply never entered while the run looked
+        healthy. **Always read back the byte a pin should have changed.**
+      * *The enemy asleep.* battle_faint's determinism argument — "SNORLAX
+        outspeeds the L13 PIDGEY so the enemy never acts" — IS WRONG, and this
+        scenario measured it: a YELLOW L13 PIDGEY knows QUICK ATTACK, whose +1
+        priority beats speed, and whether the AI picks it is a roll. Before the
+        pin the golden's SNORLAX finished on 359 HP one run and 360 the next
+        while the port held 362. Both sides now seed `wEnemyMonStatus = 7`, the
+        same pin battle_wrap uses. *(battle_faint carries the same latent
+        hazard; it has not been re-pinned and that is a loose end.)*
 
-      **Step 3, the frame captures (2026-08-12).** It is a CRASH, not a stall:
-      `AUTOKEY_DUMP_FRAME` dumps at 500 and 600 and produces nothing at 700,
-      800, 1000, 1500 or 3000. A stall would keep dumping.
+      **THE DUMP INSTANT MOVED, and not by preference.** battle_faint's instant
+      (`wLoadedMonLevel == 80` with `wIsInBattle` still 1, right after
+      `HandleEnemyMonFainted`) **does not exist on the ROM** once the
+      whole-party pass has run: `DrawPlayerHUDAndHPBar`'s staging and the battle
+      teardown fall inside one frame. A poll for both bytes in a SINGLE
+      `read_range` ran to its 3600-frame cap and failed. (An earlier version
+      *seemed* to work only because it read the two bytes in two `read_range`
+      calls — two frames — so the condition was never true simultaneously and
+      the golden came out `$00` while the assert claimed `$01`. **Two reads in a
+      poll are two frames.**) The port gate therefore continues into
+      `EndOfBattle`, as `DEBUG_BATTLE_PAYDAY` does, and both sides dump the
+      settled post-battle state. Also: the test and the dump share ONE yielded
+      thunk, because every `scenario.*` helper is a frame.
 
-      **The branch really does run, and the whole-party payment starts.** The
-      frame-600 capture reads **"PIKACHU gained 10 E…"** — PIKACHU is party slot
-      3, a NON-PARTICIPANT, so `FaintEnemyPokemon` took the EXP ALL arm and was
-      part-way through crediting the party when it died. That is the first
-      execution of this branch in the project.
+      **EVIDENCE.** `goldencheck battle_exp_all` PASS (WRAM OK, 13 regions, 0
+      skipped; 2 pre-existing justified masks). Golden reproducible — two fresh
+      generations and the committed file all sha1 `b24c5456`. **SABOTAGE
+      (removing the port's bag pin so the branch is not taken): 44 divergences**,
+      decomposing exactly as the mechanic predicts — every non-participant slot
+      loses its EXP and stat-EXP, and slot 0 gains the FULL unhalved amount
+      (`$09C466` vs `$09C439`). `make fidelity` EXIT=0, 16 PASS;
+      `lint_pret_labels` 0 in both modes; `validate_scenarios` 64 consistent.
 
-      **WHAT IS NOT ESTABLISHED, and must not be written down as if it were: is
-      this a PORT DEFECT or an artefact of the synthetic entry?** This gate
-      reaches `HandleEnemyMonFainted` from the `DEBUG_BATTLE_GOLDEN` scene, not
-      through `MainInBattleLoop`, and a whole-party loop reads state the normal
-      entry sets. One hypothesis is already RULED OUT by measurement — forcing
-      `wPartyGainExpFlags = $3F` (all six mons) does not change the crash.
-      Remaining candidates, in order: `wPartyFoughtCurrentEnemyFlags` (the scene
-      sets slot 0 only), `wPlayerMonNumber` / `wWhichPokemon`, and anything
-      `MainInBattleLoop` initialises that a direct `call` skips.
-
-      **Step 4: HOW FAR THE DISTRIBUTION GETS, from the dumps (2026-08-12).**
-      Comparing party EXP against the run where the pin missed (so EXP ALL was
-      never entered), at frame 600:
-
-      | slot | species | EXP delta |
-      |---:|---|---:|
-      | 0 | SNORLAX (the participant) | **-52** |
-      | 1 | PERSIAN | +10 |
-      | 2 | JIGGLYPUFF | 0 |
-      | 3 | PIKACHU | +10 |
-      | 4 | CHARIZARD | 0 |
-      | 5 | LAPRAS | 0 |
-
-      The participant's **-52** is expected and is itself confirmation the arm
-      ran: EXP ALL halves `wEnemyMonBaseStats`, so the mon that fought earns
-      LESS than it would have. Two of the five non-participants are credited.
-
-      **The crash is between frames 600 and 660** (660 produces no dump), so it
-      dies part-way through the party walk, with three mons still uncredited.
-
-      **Step 5: BISECTED BY PARTY SIZE (2026-08-12).** A diagnosis knob,
-      `EXPALL_PARTY_COUNT=<n>`, shrinks the party so the whole-party walk has
-      fewer slots:
-      * `EXPALL_PARTY_COUNT=1` (the participant alone) — **SURVIVES and dumps**;
-      * `EXPALL_PARTY_COUNT=2` (participant + PERSIAN) — **crashes**.
-      So it dies on the FIRST NON-PARTICIPANT, which is a far tighter target
-      than "somewhere in the party walk".
-
-      **Step 6: TWO CANDIDATES ELIMINATED, and they were mine.** Both routines
-      this session added with NO execution evidence sit on the EXP path, so both
-      were suspects. Stubbing each back to a bare `ret` and re-running
-      `EXPALL_PARTY_COUNT=2`:
-      * `CalculateModifiedStats` (57ea6299d) — still crashes. NOT it.
-      * `ModifyPikachuHappiness` (9ce747c2e) — still crashes. NOT it.
-      Both commits are cleared by measurement rather than by argument. Remaining
-      suspects are the per-mon award path itself (`LoadMonData`, the experience
-      routines) and the display stubs `PrintStatsBox` / `LearnMoveFromLevelUp`.
-
-      **NEXT STEP: still the faulting EIP.** The DPMI fault prints a register
-      dump to the DOS console, which only a screenshot of the emulated screen
-      can read — `FRAME.BIN` and `GBSTATE.BIN` structurally cannot.
-      **dosbox-mcp ordering rule, learned the hard way four times in one
-      session: call `pause_exec` FIRST and only call `screenshot` once it has
-      returned a literal `BREAK` line. "Already paused." IS NOT A BREAK** — it
-      means the debugger is idle while the emulator runs, and a `screenshot`
-      after it wedges the session exactly as one issued with no pause at all.
-      Call `pause_exec` again until it answers `BREAK`. Calling `screenshot` while the emulator is running
-      leaves a pending response that wedges the whole session, and every
-      subsequent call fails until the emulator is killed. Also: check
-      `pgrep -f dosbox-x-mcp` before launching (repeated launches leave several
-      instances), remove a stale `/tmp/dosbox-mcp.sock`, and launch from the
-      REPO ROOT. The debugger-free alternative remains a breadcrumb region
-      written at each step of the distribution loop.
-
-      Also landed in the same change: `EXP_ALL` moved from a file-local `equ` in
-      `core.asm` to `include/gb_constants.inc`, since the debug gate needs it
-      too.
+      Also landed along the way: `EXP_ALL` moved from a file-local `equ` in
+      `core.asm` to `include/gb_constants.inc`, and `ModifyPikachuHappiness`'s
+      reason code was taking the wrong register at 8 of 9 call sites (pret
+      passes it in `d`, the port wrote AL — `2df28308a`; witness still owed,
+      since the routine returns early unless the acted-on mon is the starter
+      Pikachu).
 
 ## Stage 4 — special battle types
 
