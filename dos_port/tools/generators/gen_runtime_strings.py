@@ -32,11 +32,34 @@ FILES = {
         ("str_speed", ["SPEED", [0x50]]), ("str_special", ["SPECIAL", [0x50]]),
         # Tutorial-battle stand-in names (pret core.asm .oldManName/.profOakName,
         # copied over wPlayerName for the simulated battle menu so battle text
-        # reads "PROF.OAK used ..."). pret db's "OLD MAN@"/"PROF.OAK@" and copies
-        # NAME_LENGTH (11) bytes — the tail bytes past the @ are incidental code
-        # in pret; the port pads with terminators instead (render-identical).
-        ("str_oldman_name", ["OLD MAN", [0x50, 0x50, 0x50, 0x50]]),
-        ("str_profoak_name", ["PROF.OAK", [0x50, 0x50, 0x50]]),
+        # reads "PROF.OAK used ...").
+        #
+        # THE TAILS ARE NOT PADDING — they are what the hardware actually copies,
+        # and this comment previously said the opposite ("the tail bytes past the
+        # @ are incidental code in pret; the port pads with terminators instead
+        # (render-identical)"). Render-identical is true and is NOT the whole
+        # story: wPlayerName is a compared golden region (all NAME_LENGTH bytes,
+        # lib/dump.lua), so padding is a measurable divergence.
+        #
+        # pret db's "OLD MAN@" (8 bytes) and "PROF.OAK@" (9) but copies
+        # NAME_LENGTH = 11, so it reads past each literal. MEASURED from
+        # pokeyellow.gbc at 0f:4fe7 = file offset 0x3CFE7:
+        #     0003cfe7: 8e 8b 83 7f 8c 80 8d 50 8f 91 8e 85 e8 8e 80 8a
+        #     0003cff7: 50 fa 2d ...
+        #   .oldManName  + 11 -> "OLD MAN" 50 | 8F 91 8E   ("PRO", the start of
+        #                        .profOakName immediately after it)
+        #   .profOakName + 11 -> "PROF.OAK" 50 | FA 2D     (the first two bytes
+        #                        of the FOLLOWING CODE, ld a,[wBattleAndStart-
+        #                        SavedMenuItem] = fa 2d cc)
+        #
+        # ⚠ FRAGILITY, stated because it is real and someone will hit it: the
+        # PROF.OAK tail is pret CODE, not data. If upstream ever moves or edits
+        # DisplayBattleMenu.handleBattleMenuInput, those two bytes change and the
+        # port silently diverges again. Re-measure at the offset above rather
+        # than trusting FA 2D. The OLD MAN tail is data-adjacency and is stable
+        # as long as .profOakName follows .oldManName.
+        ("str_oldman_name", ["OLD MAN", [0x50, 0x8F, 0x91, 0x8E]]),
+        ("str_profoak_name", ["PROF.OAK", [0x50, 0xFA, 0x2D]]),
         # Tutorial-battle one-item bag (pret SimulatedInputBattleItemList):
         # the box shows the single POKe BALL and its x1 quantity.
         ("str_pokeball", ["POKé BALL", [0x50]]),
