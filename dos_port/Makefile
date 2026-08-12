@@ -2385,33 +2385,49 @@ FIDELITY_SCENARIOS_CORE := $(shell python3 tools/generators/gen_scenario_registr
 FIDELITY_SCENARIOS_FULL := $(shell python3 tools/generators/gen_scenario_registry.py --names full)
 FIDELITY_SCENARIOS ?= $(FIDELITY_SCENARIOS_CORE)
 
+# BOTH TIERS RUN IN PARALLEL BY DEFAULT (2026-08-12, maintainer request).
+#
+# tools/pgate.sh gives each scenario its own tmpfs shadow copy, so the shared
+# PKMN.EXE / PKMN.IMG contention that forced a serial loop does not exist. It
+# was added 2026-08-08 (c27b3720e) but was never wired into these targets --
+# `git log -S pgate -- Makefile` was empty until now -- so the documented gate
+# commands stayed serial while a parallel runner sat unused next to them.
+#
+# MEASURED on a 96-thread host, same tree, same scenarios:
+#   full   66 scenarios   serial ~1750 s   ->   parallel 378 s   (~4.6x)
+# The stale "core ~2m50s, full ~4m45s" note above dated from the 17-scenario
+# battery era and is why "fidelity-full is ~15 min" is still repeated; the
+# registry is 66 now. Re-measure rather than quoting any of these numbers.
+#
+# The SERIAL recipes are kept verbatim as -serial targets: they are the
+# reference semantics, they need no tmpfs, and if the two ever disagree the
+# serial one is the arbiter.
+#
+# OUTDIR must be a path -- pgate rejects a bare word, because `pgate.sh full`
+# once consumed the tier name as the outdir, ran zero scenarios and exited 0.
+FIDELITY_PAR_OUT      ?= /tmp/pgate-out/core
+FIDELITY_PAR_OUT_FULL ?= /tmp/pgate-out/full
+
 fidelity:
+	@mkdir -p $(FIDELITY_PAR_OUT)
+	tools/pgate.sh $(FIDELITY_PAR_OUT) $(FIDELITY_SCENARIOS_CORE)
+
+fidelity-full:
+	@mkdir -p $(FIDELITY_PAR_OUT_FULL)
+	tools/pgate.sh $(FIDELITY_PAR_OUT_FULL) $(FIDELITY_SCENARIOS_FULL)
+
+# Alias kept because b24dcf744 introduced this name one commit ago.
+fidelity-full-par: fidelity-full
+
+fidelity-serial:
 	@fail=0; for s in $(FIDELITY_SCENARIOS_CORE); do \
 		tools/goldencheck.sh $$s || fail=1; \
 	done; exit $$fail
 
-fidelity-full:
+fidelity-full-serial:
 	@fail=0; for s in $(FIDELITY_SCENARIOS_FULL); do \
 		tools/goldencheck.sh $$s || fail=1; \
 	done; exit $$fail
-
-# fidelity-full-par — the SAME full registry, run in parallel via tools/pgate.sh.
-#
-# Prefer this over `fidelity-full`. The serial target runs 66 scenarios one at a
-# time, each a full `make image` plus a headless dosbox-x: measured 2026-08-12 on
-# a 96-thread host it took ~30 minutes wall clock. pgate gives each scenario its
-# own tmpfs shadow copy (so the shared PKMN.EXE/PKMN.IMG contention that forces
-# the serial loop does not exist) and bounds concurrency.
-#
-# The serial target is KEPT, deliberately: it is the reference semantics, it
-# needs no tmpfs, and if the two ever disagree the serial one is the arbiter.
-#
-# OUTDIR must be a path — pgate rejects a bare word, because `pgate.sh full`
-# once ran zero scenarios and still exited 0.
-FIDELITY_PAR_OUT ?= /tmp/pgate-out/full
-fidelity-full-par:
-	@mkdir -p $(FIDELITY_PAR_OUT)
-	tools/pgate.sh $(FIDELITY_PAR_OUT) $(FIDELITY_SCENARIOS_FULL)
 
 # Generate all tileset gfx/blocks/coll + map blk inc files.
 # Requires gfx/tilesets/*.2bpp, built by 'make' in the repo root.
