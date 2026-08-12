@@ -2395,6 +2395,24 @@ fidelity-full:
 		tools/goldencheck.sh $$s || fail=1; \
 	done; exit $$fail
 
+# fidelity-full-par — the SAME full registry, run in parallel via tools/pgate.sh.
+#
+# Prefer this over `fidelity-full`. The serial target runs 66 scenarios one at a
+# time, each a full `make image` plus a headless dosbox-x: measured 2026-08-12 on
+# a 96-thread host it took ~30 minutes wall clock. pgate gives each scenario its
+# own tmpfs shadow copy (so the shared PKMN.EXE/PKMN.IMG contention that forces
+# the serial loop does not exist) and bounds concurrency.
+#
+# The serial target is KEPT, deliberately: it is the reference semantics, it
+# needs no tmpfs, and if the two ever disagree the serial one is the arbiter.
+#
+# OUTDIR must be a path — pgate rejects a bare word, because `pgate.sh full`
+# once ran zero scenarios and still exited 0.
+FIDELITY_PAR_OUT ?= /tmp/pgate-out/full
+fidelity-full-par:
+	@mkdir -p $(FIDELITY_PAR_OUT)
+	tools/pgate.sh $(FIDELITY_PAR_OUT) $(FIDELITY_SCENARIOS_FULL)
+
 # Generate all tileset gfx/blocks/coll + map blk inc files.
 # Requires gfx/tilesets/*.2bpp, built by 'make' in the repo root.
 # Authored map edits (assets/map_overrides/*.json, map-tool C5) are merged
