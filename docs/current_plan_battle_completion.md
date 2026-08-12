@@ -2021,6 +2021,28 @@ provider shapes below, not their runtime behavior.
       divergence using the already-translated item-owned `ItemUseBait`,
       `ItemUseRock`, and `ItemUseBall` effects. Safari maps, steps, and story
       entry/exit remain overworld-owned.
+      - **UNBLOCKED 2026-08-12.** The harness prerequisite is done: the golden
+        staging can now stage a `wBattleType != 0` battle
+        (`63a37b2e4`), and `battle_oldman`/`battle_pikachu` are the worked
+        examples. A Safari scenario follows the identical recipe — see memory
+        `battle-4a-4b-tutorial-menu-scenarios` for the four steps.
+      - **`PrintSafariZoneBattleText` TRANSLATED 2026-08-12.** The whole routine
+        half of pret `engine/battle/safari_zone.asm`, in the mirror, faithdiff
+        clean (3/3 calls, 2/2 stores). It carries the per-turn bait/angry
+        message and the catch-rate refresh when the escape factor hits zero.
+        * Its two text streams did not exist in the port at all until this
+          change added `engine/battle/safari_zone.asm` to
+          `gen_battle_text.py`'s `BATTLE_SRC` — the file had never been
+          scanned, exactly as `trainer_ai.asm` had not been until 2026-08-11.
+          Generated label count 150 → 152, both new labels Safari.
+        * **UNWITNESSED**: nothing calls it yet. Its caller is the Safari turn
+          flow, which is the rest of this box.
+      - **STILL MEASURED AS OPEN:** pret has **12** `BATTLE_TYPE_SAFARI` sites
+        against the port's 9. (An earlier note here said "13/32 branch
+        coverage"; that figure's provenance could not be established and it
+        does not correspond to this measurement — re-measure rather than citing
+        it.) The remaining implementation is the turn/flee divergence in
+        `core.asm` around those sites.
 - [ ] Add one must-hit scenario per battle type, comparing the relevant menu,
       WRAM state, item/event result, and exit. Add live traversal only when its
       owning overworld story batch lands.

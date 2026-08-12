@@ -2130,6 +2130,7 @@ FRONTEND_SRCS := \
     src/engine/battle/common_text.asm \
     src/engine/battle/scroll_draw_trainer_pic.asm \
     src/engine/battle/ghost_marowak_anim.asm \
+    src/engine/battle/safari_zone.asm \
     src/engine/battle/unused_stats_functions.asm \
     src/engine/battle/battle_hud.asm \
     src/engine/battle/scale_sprites.asm \

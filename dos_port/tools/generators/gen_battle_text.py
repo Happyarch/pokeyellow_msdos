@@ -50,6 +50,13 @@ BATTLE_SRC = [
     # restoring pret's `ld hl, AIBattleWithdrawText / call PrintText` (battle
     # plan 1e). Hand-encoding it in the .asm is forbidden by the two-tier rule.
     "engine/battle/trainer_ai.asm",
+    # Safari-battle messages (SafariZoneEatingText / SafariZoneAngryText).
+    # ADDED 2026-08-12 (battle plan 4d): this file was absent from the scan for
+    # the same reason trainer_ai.asm was above, with the same consequence — the
+    # two streams did not exist in the port at all, so PrintSafariZoneBattleText
+    # could not be translated without hand-encoding them, which the two-tier
+    # rule forbids. The omission is invisible until something needs the text.
+    "engine/battle/safari_zone.asm",
     # Switch-out message wrappers (PlayerMon2Text and the four outcome lines it
     # selects: Enough / ComeBack / OKExclamation / Good), plus the rest of the
     # shared battle messages. ADDED 2026-08-12: absent from the scan, so none of
