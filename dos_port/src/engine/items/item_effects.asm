@@ -2980,11 +2980,15 @@ PrintItemUseTextAndRemoveItem:
 ; Source: engine/items/item_effects.asm — ItemUseXAccuracy, ItemUseGuardSpec,
 ; ItemUseDireHit, ItemUseXStat, ItemUsePokeDoll.
 ;
-; All five are in-battle-only. `farcall_ModifyPikachuHappiness <id>` passes the id
-; in D on the GB; the port's convention (already used by ItemUseMedicine and
-; ItemUseTMHM) is AL. ModifyPikachuHappiness is still a ret-stub
-; (battle_exp_stubs.asm) — the calls are placed faithfully so the destub is a
-; one-file change.
+; All five are in-battle-only. `farcall_ModifyPikachuHappiness <id>` (macros/
+; farcall.asm:81) passes the id in **D**, and ModifyPikachuHappiness opens
+; `ld a, d` — so the port passes it in DH, per the register map.
+;
+; THIS COMMENT USED TO SAY THE OPPOSITE ("the port's convention ... is AL") and
+; that is precisely how the defect fixed in 2df28308a survived: eight of the
+; nine call sites wrote AL, the routine read garbage out of DH, and the comment
+; asserted it was intentional. It was harmless only while the routine was a
+; ret-stub. It is REAL now (engine/events/pikachu_happiness.asm, 9ce747c2e).
 ; ===========================================================================
 
 global ItemUseXAccuracy

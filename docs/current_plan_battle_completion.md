@@ -1513,117 +1513,46 @@ provider shapes below, not their runtime behavior.
 - [x] **3c (original entry) — SUPERSEDED.** Every clause of this text is covered and
       witnessed by 3c above (`battle_self_destruct`, id 65); kept only as the record of what the box originally
       asked for. The narrative lives in git history, per this plan's own rule.
-- [~] **3d. Empty `battle_exp_stubs.asm`.** PARTIAL 2026-08-11: `PrintEmptyString`
-      is RETIRED — real pret body (core.asm:6720) in the core.asm mirror, stub
-      label removed, both extern comments repointed, `faithdiff` 1/1 with the
-      documented `PrintText` -> `PrintBattleText` wrapper swap. 23/23 scenarios
-      PASS, but that is NON-REGRESSION ONLY: the goldencheck output is
-      byte-identical to the pre-change run. It IS executed (`battle_faint`
-      must-hits `FaintEnemyPokemon`, whose call at core.asm:5924 is
-      unconditional once `AnyPartyAlive` passes), but `battle_faint` is
-      datastruct class so TILEMAP/VRAM/OAM are SKIPPED, and `battle_menu` dumps
-      after `DisplayBattleMenu` has redrawn the box. Reachable is not witnessed.
-      **`DoubleOrHalveSelectedStats` RETIRED 2026-08-12.** Its ordering
-      constraint is gone — 2c landed the in-battle ITEM menu — so the real body
-      is now in the `core.asm` mirror (`call DoubleSelectedStats` /
-      `jmp HalveSelectedStats`, `DEVIATION{class=banking}` for the callfar/jpfar),
-      over a new pret mirror `src/engine/battle/unused_stats_functions.asm`
-      carrying both bodies. faithdiff: both callees clean;
-      `DoubleOrHalveSelectedStats` shows `+ ADDED HalveSelectedStats (jmp)`
-      because pret's `jpfar` is a bank thunk the pret side does not count as a
-      call — that is what the annotation covers. `lint_pret_labels` caught the
-      stale extern comment in `item_effects.asm` on the first run; repointed.
+- [~] **3d. Empty `battle_exp_stubs.asm`.** ALL FOUR NAMED PROVIDERS ARE DONE
+      2026-08-12; the box stays open on ONE deferred stub, not on unfinished
+      work. Measured with `label_status`, not read off a comment:
 
-      **This change is UNWITNESSABLE BY CONSTRUCTION, and that is a proof, not a
-      hedge.** Both routines gate every stat on a bit from
-      `wPlayerStatsToDouble` / `wPlayerStatsToHalve` (and the enemy twins), which
-      pret's own comment describes as never set outside glitches and which
-      `gb_memmap.inc` records as "always 0". With the mask 0 the `srl b` never
-      sets carry, no stat is touched, and the routine returns after four
-      iterations — byte-for-byte the same observable behaviour as the `ret` it
-      replaced. No scenario can distinguish them; do not read a green suite as
-      evidence either way. What the translation buys is the glitch paths that DO
-      set those bytes, where a ret-only body would silently diverge.
+      | label | status | provider |
+      |---|---|---|
+      | `PrintEmptyString` | translated | `core.asm` (retired 2026-08-11) |
+      | `CalculateModifiedStats` | translated | `core.asm` (`57ea6299d`) |
+      | `DoubleOrHalveSelectedStats` | translated | `core.asm` (`a50872654`) |
+      | `ModifyPikachuHappiness` | translated | `engine/events/pikachu_happiness.asm` (`9ce747c2e`) |
 
-      **`CalculateModifiedStats` RETIRED 2026-08-12 too**, with
-      `CalculateModifiedStat` beside it in the `core.asm` mirror. The survey was
-      right that nothing was missing: `StatModifierRatios` was already generated
-      into `src/data/battle_data.asm:52`, `Multiply`/`Divide` were translated,
-      and every WRAM/HRAM symbol existed — it was pure translation.
+      `battle_exp_stubs.asm` is down to a single body, `RespawnOverworldPikachu`,
+      which THIS BOX'S OWN TEXT defers to the Yellow Pikachu-follow engine. So
+      "empty the file" is blocked on a transfer, not on a translation.
 
-      *Two things the translation turned on, both recorded because they are easy
-      to get silently wrong.* pret uses `BC` as a 16-bit POINTER
-      (`ld bc, wPlayerMonStatMods` … `ld a,[bc]`), which collides with the port's
-      B=BH/C=BL split — loading it with a 32-bit `mov ebx, addr` rather than
-      `mov bx` keeps EBX clean for the `[ebp + ebx]` dereference. And ESI holds
-      TWO ADDRESS SPACES in one routine: the stat pointers are GB memory
-      (`[ebp + esi]`) while `StatModifierRatios` is a flat program table
-      (`[esi]`), which is what the `DEVIATION{class=projection}` documents.
+      **THE COMMENT SWEEP THIS BOX ASKS FOR IS DONE, and it was not cosmetic.**
+      Four stub-era comments still asserted things that had become false, and
+      `lint_pret_labels --strict-claims` cannot see any of them because they are
+      prose rather than `extern` lines:
+      * `bills_pc.asm:45` and `:481` — "ModifyPikachuHappiness → …
+        battle_exp_stubs.asm (STUB)" / "ret-stub today";
+      * `core.asm:5024` — "`call PrintEmptyString ; (STUB — battle_exp_stubs.asm)`";
+      * `item_effects.asm:2984` — **the worst of the four.** It documented the
+        WRONG register as deliberate: "`farcall_ModifyPikachuHappiness <id>`
+        passes the id in D on the GB; the port's convention … is AL." That is
+        exactly how the defect fixed in `2df28308a` survived — eight of nine
+        call sites wrote AL, the routine read garbage out of DH, and the comment
+        said it was on purpose. Harmless only while the routine was a ret-stub.
+      All four now state what is true and cite the commit that made it true.
 
-      *faithdiff:* `CalculateModifiedStats` clean 1/1. `CalculateModifiedStat`
-      2/2 calls, and `3 pret / 4 port` stores with `+ ADDED [hDividend]` — **a
-      tool artifact, decomposed rather than suppressed.** Both sides write
-      exactly seven bytes, same names, same displacements
-      (`hMultiplicand`, `+1`, `+2`, `hMultiplier`, `hDivisor`, `hDividend + 2`,
-      `hDividend + 3`); faithdiff recognises the port's
-      `mov byte [ebp + hDividend + 2]` but not pret's `ldh [hDividend + 2], a`,
-      so it counts the name on one side only. Nothing was added to the
-      suppression file.
+- [~] **3d (original entry) — one clause left, and it is a TRANSFER.** Its four
+      named providers and its comment-sweep clause are satisfied (see 3d above,
+      with the measured `label_status` table). What remains is
+      `RespawnOverworldPikachu`, still a ret-stub in `battle_exp_stubs.asm` and
+      still called from `item_effects.asm`'s Rare Candy path. This entry's own
+      text made the transfer conditional on "the 2a/2c pret-label rename",
+      which has since landed with Stage 2; a future iteration should move the
+      stub to the Pikachu-follow owner rather than translating it here, and that
+      decision is the maintainer's, not an agent's.
 
-      *Execution status, stated exactly:* it IS called — `experience.asm`'s
-      `.recalcStatChanges` does `mov esi, CalculateModifiedStats / call
-      CallBattleCore` on the level-up path, mirroring pret. `label_status
-      --callers` reports ZERO because the target is address-taken and dispatched
-      indirectly, which is the documented blind spot, not dead code. But no
-      scenario levels a mon up mid-battle, so this landed with **no execution
-      evidence**; unlike the `unused_stats_functions` pair it is NOT a provable
-      no-op, and the 60/60 full tier is non-regression only. Three comments in
-      `experience.asm` claiming it "is still a stub" were corrected in the same
-      change.
-
-      **`ModifyPikachuHappiness` RETIRED 2026-08-12 — 3d's last provider.**
-      Real body at its pret-owned path, `src/engine/events/pikachu_happiness.asm`
-      (118 pret lines: the routine plus `HappinessChangeTable` and
-      `PikachuMoods`, which stay in the engine file because that is where pret
-      defines them). faithdiff clean, 2/2 calls and 2/2 stores.
-      `battle_exp_stubs.asm` is now down to `RespawnOverworldPikachu` alone.
-
-      **NINE call sites stop being inert:** `GainExperience`,
-      `ItemUseMedicine` (x2), `ItemUseTMHM`, `ItemUseXAccuracy`,
-      `ItemUseGuardSpec`, `ItemUseDireHit`, `ItemUseXStat` and
-      `BillsPCDeposit`. Added the six missing `PIKAHAPPY_*` constants (4, 6,
-      8-11); `lint_pret_labels` caught all three stale extern comments.
-
-      *Two original-game quirks reproduced, not fixed:* the table index is
-      `dec c` + three `add hl, bc` with no bounds check, and the delta's sign
-      test is `cp 100` rather than `cp 128` — pret's own comment calls the
-      latter "inexplicable". It is unreachable (the largest positive delta is 5)
-      rather than wrong, so it is left exactly as the ROM has it.
-
-      **NOT WITNESSED, and it cannot be with today's dumps — measured, not
-      assumed.** `wPikachuHappiness` (`$D46F`) and `wPikachuMood` (`$D470`) are
-      in NO `gbregion` in `debug_dump.asm`, so no scenario compares them. And
-      the one live path a scenario does drive — `bills_pc_ops` -> `BillsPCDeposit`
-      — deposits PERSIAN and JIGGLYPUFF, never the starter Pikachu, so
-      `IsThisPartyMonStarterPikachu` fails and the routine takes its `ret nc`
-      early-out. 60/60 full tier is therefore non-regression only. A witness is
-      cheap: add those two bytes as a scenario-local region and deposit party
-      slot 3 (STARTER_PIKACHU) in a `bills_pc` variant.
-
-      STILL OPEN: `RespawnOverworldPikachu` only — and that one is deferred by
-      this box's own text, pending the Yellow Pikachu-follow engine.
-- [ ] **3d (original entry).** Implement and retire the battle-owned
-      providers `PrintEmptyString`, `CalculateModifiedStats`, and
-      `DoubleOrHalveSelectedStats`; implement `ModifyPikachuHappiness` at its
-      pret-owned interface so the existing battle/item callers stop being inert.
-      **Ordering constraint: `DoubleOrHalveSelectedStats` is blocked on item 2c** —
-      it needs the in-battle ITEM menu (`BagWasSelected`/`BattleItemMenu`);
-      until 2c lands, no item can be used mid-battle and this stays unreachable.
-      `RespawnOverworldPikachu` stays in this item for now rather than
-      transferring out; its in-tree TODO names the Yellow Pikachu-follow engine
-      as its eventual home, and that transfer should happen after the 2a/2c
-      pret-label rename lands, not before. Run `label_status --callers` and
-      repair every stub-era extern/provider comment and assumption.
 - [x] **3e. EXP ALL.** DONE 2026-08-12. Registered golden `battle_exp_all`
       (id 66, tier full), and reaching the branch found and fixed a page fault
       that had made it unreachable in the port for its whole existence.

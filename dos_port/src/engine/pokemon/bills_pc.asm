@@ -42,7 +42,8 @@
 ;   ChangeBox               → src/engine/menus/save.asm (first live caller here)
 ;   PrintPCBox              → src/engine/printer/printer_stubs.asm (STUB)
 ;   PlayCry                 → src/home/home_stubs.asm (STUB)
-;   ModifyPikachuHappiness  → src/engine/battle/battle_exp_stubs.asm (STUB)
+;   ModifyPikachuHappiness  → src/engine/events/pikachu_happiness.asm (REAL,
+;                             since 9ce747c2e; it was a stub until then)
 
 bits 32
 
@@ -478,7 +479,7 @@ BillsPCDeposit:
     call PlayCry                             ; ret-stub today (home_stubs.asm)
 .asm_215cf:
     mov dh, PIKAHAPPY_DEPOSITED              ; farcall_ModifyPikachuHappiness: ld d, kind
-    call ModifyPikachuHappiness              ; ret-stub today (battle_exp_stubs.asm)
+    call ModifyPikachuHappiness              ; REAL (engine/events/pikachu_happiness.asm)
     mov byte [ebp + wMoveMonType], PARTY_TO_BOX
     call MoveMon
     xor al, al

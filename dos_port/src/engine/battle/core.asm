@@ -5021,7 +5021,7 @@ SendOutMon:
     mov al, [ebp + wCurPartySpecies]     ; ld a,[wCurPartySpecies]
     call PlayCry                         ; (STUB — home_stubs.asm)
 .done:
-    call PrintEmptyString                ; (STUB — battle_exp_stubs.asm)
+    call PrintEmptyString                ; REAL (this file, pret core.asm:6720)
     jmp SaveScreenTilesToBuffer1         ; jp SaveScreenTilesToBuffer1
 
 ; ===========================================================================
