@@ -1024,6 +1024,20 @@ ifdef BATTLE_SWITCH_WINDOW_PROBE
 NASMFLAGS += -D BATTLE_SWITCH_WINDOW_PROBE
 endif
 endif
+# In-battle ITEM gate (battle_item_potion golden, battle plan 2c): the
+# DEBUG_BATTLE_GOLDEN scene with the active mon knocked to POTION_SEED_HP, then
+# the REAL DisplayBattleMenu driven ITEM -> POTION -> the active mon by the
+# AUTOKEY_BATTLE_ITEM script, then GBSTATE.BIN the instant DisplayBattleMenu
+# returns. The only gate that opens the battle BAG: ball_catch presets wCurItem
+# and calls UseItem directly, so it proves nothing about the menu leg 2c ported.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_ITEM=1" /tmp/potion
+ifdef DEBUG_BATTLE_ITEM
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_ITEM -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLE_ITEM -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_BATTLE_BLACKOUT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_BLACKOUT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

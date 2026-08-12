@@ -2219,6 +2219,48 @@ RunBattleTest:
     mov byte [ebp + W_TILEMAP], 0xEE
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
+%elifdef DEBUG_BATTLE_ITEM
+    ; --- in-battle ITEM: a POTION used on the active mon (battle plan 2c) ---
+    ; The second of the Stage 2 scenario box's five, and the first execution
+    ; evidence 2c has: BagWasSelected / DisplayBagMenu / UseBagItem were ported
+    ; on 2026-08-12 and nothing in the registry opened the battle bag.
+    ; ball_catch does NOT count -- it presets wCurItem and calls UseItem
+    ; directly, bypassing the whole menu leg (see the DEBUG_ITEMBALL gate).
+    ;
+    ; Same discipline as DEBUG_BATTLE_SWITCH: the production DisplayBattleMenu
+    ; is the only entry point, and the item is reached by pressing keys through
+    ; it. Nothing here calls UseItem.
+    ;
+    ; DAMAGE SEED. A POTION on a full-HP mon takes ItemUseMedicine's no-effect
+    ; branch, which is a DIFFERENT scenario (the box's "failed item"). So the
+    ; active mon is knocked down to POTION_SEED_HP first, in BOTH the party slot
+    ; and the loaded battle mon -- the golden writes the identical pair. HP is a
+    ; big-endian word (Gen-1 byte order rule), hence the byte-swapped immediate.
+%ifndef POTION_SEED_HP
+%define POTION_SEED_HP 100
+%endif
+    mov word [ebp + wPartyMon1HP], ((POTION_SEED_HP & 0xFF) << 8) | (POTION_SEED_HP >> 8)
+    mov word [ebp + wBattleMonHP], ((POTION_SEED_HP & 0xFF) << 8) | (POTION_SEED_HP >> 8)
+    call DrawHUDsAndHPBars              ; so the seeded HP is on screen, as the golden's is
+    ;
+    ; DUMP POINT: the instant DisplayBattleMenu returns, i.e. UseBagItem's own
+    ; ret (pret core.asm:2344-2403). The golden polls the healed HP, which
+    ; UseItem writes well before that return -- see the scenario header for why
+    ; the window between them is WRAM-stable.
+    call DisplayBattleMenu
+    ; The heal must have HAPPENED: POTION restores 20 HP (pret
+    ; engine/items/item_effects.asm), so the active mon is at seed + 20.
+    mov al, [ebp + wBattleMonHP]
+    cmp al, (POTION_SEED_HP + 20) >> 8
+    jne .potionNotUsed
+    mov al, [ebp + wBattleMonHP + 1]
+    cmp al, (POTION_SEED_HP + 20) & 0xFF
+    jne .potionNotUsed
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+.potionNotUsed:
+    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    call DelayFrame
+    call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_MENU
     ; The REAL battle menu: DisplayBattleMenu draws HUDs + boxes and parks in
     ; HandleMenuInput with the ▶ on FIGHT; AUTOKEY_QUIET photographs it at
@@ -2751,7 +2793,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 
@@ -4808,6 +4850,29 @@ autokey_script:
     dd  720,  730, PAD_A        ; choose slot 1 -> SWITCH/STATS/CANCEL box
     dd  900,  910, PAD_A        ; SWITCH (item 0) -> SwitchPlayerMon
     dd 1260, 1270, PAD_A        ; spare: answers anything the send-out prompts
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_BATTLE_ITEM
+    ; battle plan 2c: FIGHT-menu -> ITEM -> POTION -> the active mon.
+    ;
+    ; MENU GEOMETRY, same source as AUTOKEY_BATTLE_SWITCH above (pret
+    ; core.asm:2150-2270). ITEM is the LEFT column's bottom item, so it is DOWN
+    ; then A -- no column change. Its pre-swap id 1 becomes 2, which is the
+    ; `cp $2` that falls into BagWasSelected.
+    ;
+    ; Then: the battle bag lists the seeded inventory with POTION first
+    ; (DebugNewGameItemsList), so A takes it with no cursor movement. A POTION
+    ; is medicine, so ItemUseMedicine opens the PARTY menu to pick a target;
+    ; it opens on slot 0, which is the mon that is out and the one this
+    ; scenario heals, so that is another bare A.
+    ;
+    ; CADENCE: 180-frame gaps, the value battle_switch used unchanged. See that
+    ; note for why a fixed-frame table is tuned generously from the start.
+    dd  180,  190, PAD_DOWN     ; FIGHT -> ITEM (left column, bottom)
+    dd  360,  370, PAD_A        ; select ITEM -> BagWasSelected -> the bag list
+    dd  540,  550, PAD_A        ; select POTION (first item) -> UseBagItem
+    dd  720,  730, PAD_A        ; party menu: the active mon (slot 0) -> heal
+    dd  900,  910, PAD_A        ; walk the "recovered HP" message
+    dd 1080, 1090, PAD_A        ; spare
     dd   -1,   -1, 0
 %elifdef AUTOKEY_TRAINERCARD
     ; Trainer-card ENTER **and EXIT** (the default script above can only enter a

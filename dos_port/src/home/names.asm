@@ -93,15 +93,40 @@ GetMoveName:
 
 ; ---------------------------------------------------------------------------
 ; GetItemName — name of item [wNamedObjectIndex] → wNameBuffer (TM/HM → machine).
+;
+; IT RETURNS EDX = wNameBuffer, AND THAT IS A CONTRACT, not a side effect. pret's
+; `.Finish` is `ld de, wNameBuffer` (home/names.asm:47) on BOTH arms, and
+; UseBagItem's `call GetItemName / call CopyToStringBuffer`
+; (engine/battle/core.asm:2348-2349) passes nothing — it relies on it.
+;
+; FIXED 2026-08-12. This routine used to tail-jump to GetName / GetMachineName
+; and never set EDX, so the in-battle bag PAGE-FAULTED the moment an item was
+; chosen: GetName leaves EDX pointing at the FLAT name-table entry it copied
+; from (names2.asm `.nextName`), CopyToStringBuffer reads its source as
+; `[ebp + edx]`, and a flat pointer biased by the GB base is far outside GB
+; memory. Measured: `Page Fault cr2=00716616 at eip=39c5` = CopyToStringBuffer's
+; `.copy`, with edx=00166616 — an ItemNames offset, not a GB address.
+; Nothing caught it for two reasons worth remembering: the overworld bag reaches
+; the same printer through DisplayListMenuID, which sets EDX itself
+; (src/home/list_menu.asm:423), and the ball_catch scenario presets wCurItem and
+; calls UseItem directly, so the registry had no path through UseBagItem at all.
+; The battle_item_potion scenario is what exposed it, on its first run.
 ; ---------------------------------------------------------------------------
 GetItemName:
     mov al, [ebp + wNamedObjectIndex]
     cmp al, HM01
-    jae GetMachineName
+    jae .Machine
     mov [ebp + wNameListIndex], al
     mov al, ITEM_NAME
     mov [ebp + wNameListType], al
-    jmp GetName                              ; tail call
+    mov byte [ebp + wPredefBank], 0x01       ; BANK(ItemNames) — flat: bookkeeping
+    call GetName
+    jmp .Finish
+.Machine:
+    call GetMachineName
+.Finish:
+    mov edx, wNameBuffer                     ; pret: ld de, wNameBuffer
+    ret
 
 ; ---------------------------------------------------------------------------
 ; GetMachineName — build "TMnn"/"HMnn" for TM/HM id [wNamedObjectIndex] →

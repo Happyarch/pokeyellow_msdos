@@ -786,6 +786,22 @@ SCENARIOS = {
         "flags": "DEBUG_BATTLE_SWITCH=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_item_potion": {
+        # datastruct: the WRAM outcome of using a POTION from the BATTLE BAG on
+        # the active mon — the first scenario that opens the in-battle bag at
+        # all. ball_catch presets wCurItem and calls UseItem directly, so it
+        # proves nothing about BagWasSelected / DisplayBagMenu / UseBagItem.
+        #
+        # RNG-independent BY CONSTRUCTION: the active mon is SEEDED to 100 HP on
+        # both sides rather than damaged in a turn, so the compared result is
+        # arithmetic (100 + 20) with no damage roll and no accuracy check
+        # anywhere in the flow. What is compared is the heal (party slot and
+        # wBattleMon both at 120/362) and the consumed bag slot (16 items -> 15,
+        # POTION gone). Both sides dump before the enemy's free turn.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_ITEM=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "trainer_battle_init": {
         # The two sides reach the same InitBattleCommon checkpoint through
         # different outer presentation paths. The scenario-local trainerInit

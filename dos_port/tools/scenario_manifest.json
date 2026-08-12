@@ -511,6 +511,39 @@
       "verification": "the FIRST scenario in the registry that presses PKMN. Both sides drive the real 2x2 battle menu (RIGHT then A) into the real party menu and take SWITCH, so PartyMenuOrRockOrRun, SwitchPlayerMon, RetreatMon and AnimateRetreatingPlayerMon execute for the first time -- battle plan 2a and 2b both landed with zero execution evidence behind this gap. Neither side calls SwitchPlayerMon directly: a harness that duplicates the production sequence inherits production's bug and cannot witness its own fix. Compared surface is the switch's WRAM outcome, above all wBattleMon holding the NEW mon (PERSIAN L80) fully sent out. No roll is involved: no move is used and no damage is dealt before the dump"
     },
     {
+      "name": "battle_item_potion",
+      "id": 60,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_ITEM=1",
+      "port_entry_gate": "DEBUG_BATTLE_ITEM",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_item_potion.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "DisplayBattleMenu",
+        "BagWasSelected",
+        "DisplayBagMenu",
+        "UseBagItem",
+        "UseItem",
+        "GetItemName"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the FIRST scenario that opens the in-battle BAG. ball_catch does not count: its gate presets wCurItem and calls UseItem directly, bypassing the whole menu leg battle plan 2c ported, so BagWasSelected, DisplayBagMenu and UseBagItem had no execution evidence at all. Both sides drive the real menus (DOWN+A to ITEM, A on POTION, A on the party target). It found a real defect on its first run: GetItemName dropped pret's `.Finish: ld de, wNameBuffer`, so UseBagItem's CopyToStringBuffer read from a flat name-table pointer and the port page-faulted the moment an item was chosen. Compared surface is the heal arithmetic (seeded HP + 20, no roll anywhere) and the consumed bag slot"
+    },
+    {
       "name": "battle_damage",
       "id": 43,
       "tier": "full",

@@ -1042,12 +1042,43 @@ their current bodies auto-answer and auto-select.
       `BATTLE_SWITCH_WINDOW_PROBE=1` knob — the differ joins regions by NAME and
       the golden side has no counterpart for port memory.
 
-      **STILL OPEN — 4 of 5.** Forced switch (2b, still unwitnessed), a
-      successful medicine/battle-item use, a failed item, and a ball capture
-      entered through the real bag rather than the preset `DEBUG_ITEMBALL` gate.
-      2c landed the real `BagWasSelected` / `DisplayBagMenu` / `UseBagItem`, so
-      the last three are now reachable the same way this one was: drive
-      `DisplayBattleMenu` with autokey presses through ITEM.
+      **2 of 5 DONE 2026-08-12: `battle_item_potion` (scenario id 60) is in the
+      registry and PASSES.** A POTION used from the BATTLE BAG on the active mon
+      — the first scenario that opens the in-battle bag at all, so 2c's
+      `BagWasSelected` / `DisplayBagMenu` / `UseBagItem` finally execute.
+      `ball_catch` never counted: its gate presets `wCurItem` and calls `UseItem`
+      directly, bypassing the whole menu leg.
+
+      **IT FOUND A REAL DEFECT ON ITS FIRST RUN — a page fault.** `GetItemName`
+      had dropped pret's `.Finish: ld de, wNameBuffer` (home/names.asm:47) and
+      tail-jumped to `GetName` instead, so `UseBagItem`'s
+      `call GetItemName / call CopyToStringBuffer` (core.asm:2348-2349) copied
+      from whatever `GetName` had left in EDX — the FLAT name-table entry it
+      copied from. `CopyToStringBuffer` reads its source as `[ebp + edx]`, so the
+      port faulted the instant an item was chosen: `Page Fault cr2=00716616 at
+      eip=39c5` with `edx=00166616`. Nothing had caught it because the overworld
+      bag reaches the same printer through `DisplayListMenuID`, which sets EDX
+      itself (list_menu.asm:423). Fixed by restoring pret's shape (call + the
+      `.Finish` store); the dropped `wPredefBank` store went back at the same
+      time, so faithdiff is now 2/2 calls and 3/3 stores.
+
+      *Zero RNG by construction:* the active mon is SEEDED to 100 HP on both
+      sides rather than damaged in a turn, so the compared result is arithmetic
+      (100 + 20). *Dump points aligned rather than masked:* the golden waits for
+      `wLoadedMon` to hold the active species again, because the party menu's own
+      draw leaves the LAST party mon in that staging buffer and the port gate
+      dumps after the battle screen is restored. The first attempt diverged on
+      all 15 `wLoadedMon` fields for no reason but timing; aligning the landmark
+      removed the need for a mask entirely. *Non-vacuity:* rebuilding with
+      `POTION_SEED_HP=101` fails with 3 divergences (`wBattleMon`, `wLoadedMon`
+      and `wPartyData mon 0` HP all `want 120 | got 121`), so the comparison
+      really reads the heal. The golden is deterministic (md5 `2c746709…` twice).
+
+      **STILL OPEN — 3 of 5.** Forced switch (2b, still unwitnessed), a failed
+      item, and a ball capture entered through the real bag rather than the
+      preset `DEBUG_ITEMBALL` gate. The failed-item case is now nearly free:
+      `battle_item_potion` with the seed removed takes `ItemUseMedicine`'s
+      no-effect branch.
 
       **THIS WAS THE BLOCKING BOX FOR THE WHOLE STAGE, and for Stage 3 as
       well.** 2a and 2b both landed with ZERO execution evidence; memory
