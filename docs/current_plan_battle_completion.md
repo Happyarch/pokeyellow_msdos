@@ -431,7 +431,7 @@ result gates deliberately stop after initialization and drive one terminal turn.
       Proven by scenarios 45/46: the same generated Route 3 header is used on
       both sides; only the victory result sets its persistent bit. The loss path
       reaches the `$ff` early exit before `TrainerFlagAction`.
-- [ ] **1d. Trainer presentation and exit.** Generate class-specific end-battle
+- [x] **1d. Trainer presentation and exit.** Generate class-specific end-battle
       streams (the `text_far`/`text_asm` continuation truncation is already
       retired — TX_ASM has real dispatch, TX_FAR its flat splice, and
       `_TrainerNameText` is generated Tier-1 in `assets/trainer_text.inc`; what
@@ -468,7 +468,40 @@ result gates deliberately stop after initialization and drive one terminal turn.
       translated"). All 9 fixed in the same change; both `lint_pret_labels`
       modes back to 0.
 
-      **Still open in 1d, and only this: the per-header win/lose text DATA.**
+      **THE PER-HEADER WIN/LOSE TEXT DATA WAS ALREADY DONE — MEASURED
+      2026-08-12, and 1d is ticked on that measurement.** This item survived on
+      the plan because nobody had checked it. Two independent facts, not one
+      aggregate:
+
+      1. **Slot-for-slot agreement with pret, across every map.** pret's
+         `trainer` macro (`macros/scripts/maps.asm:117`) emits
+         `dw \3, \5, \4, \4` — before, after, end, end — so the win and lose
+         pointers are deliberately THE SAME pointer, and the port's generated
+         `assets/trainer_headers.inc` emits exactly that. Parsed both sides and
+         compared view range plus all four pointers per header: **316 of 317
+         pret headers present and 0 mismatched.**
+      2. **Every one of those 1264 pointers resolves at link time**, which is a
+         different claim from "the slots are right" — the build would fail on
+         an undefined text label, and it does not.
+
+      **The one exception is `ArticunoTrainerHeader`, and it is a generator
+      CONTRACT gap, not a data error.** `gen_trainer_headers.py` anchors on a
+      `<Map>TrainerHeaders:` label; `scripts/SeafoamIslandsB4F.asm` has none,
+      because pret deliberately gives Articuno a bare `def_trainers 2` +
+      `ArticunoTrainerHeader:` — its own comment explains why ("its sight range
+      is 0, and trainer headers were not stored by
+      `ExecuteCurMapScriptInTable`"). So the port emits no header for that map.
+      **Latent, not live:** nothing in the port references
+      `ArticunoTrainerHeader` today, and it only becomes a defect when Seafoam
+      Islands B4F's script layer is ported. Recorded here rather than left to be
+      rediscovered; the fix is to teach the generator the standalone
+      `def_trainers`-anchored form (and collect that map's text streams with it).
+
+      Related and now unblocked: the `.inc`'s own "TRUNCATED TAILS" inventory
+      lists three wrappers whose `text_asm` tails are `call PlayCry / call
+      WaitForSoundToFinish` (Mewtwo, Zapdos, Moltres). `PlayCry` became a real
+      body on 2026-08-12, so those tails are implementable whenever their maps'
+      script layers land.
 
       1. **`SaveTrainerName` stub RETIRED.** Its stated blocker — "needs the
          Tier-1 `TrainerNamePointers` name table, not yet generated" — was
