@@ -207,6 +207,10 @@ extern DrawBattleMenuBox         ; battle_menu.asm
 extern ExecutePlayerMove         ; core.asm — the real player-turn/damage pipeline
 extern HandleEnemyMonFainted     ; core.asm — faint + EXP chain (FaintEnemyPokemon, GainExperience)
 %endif
+%ifdef DEBUG_BATTLE_SWITCH
+extern g_window_count                ; src/ppu/ppu.asm — window descriptor count
+extern g_windows                     ; src/ppu/ppu.asm — descriptor array
+%endif
 %ifdef DEBUG_BATTLE_BLACKOUT
 extern ExecuteEnemyMove          ; core.asm — the real enemy-turn/damage pipeline
 extern HandlePlayerMonFainted    ; core.asm — RemoveFaintedPlayerMon + the black-out branch
@@ -870,6 +874,18 @@ gbstate_regions:
     ; rows there is no volatile scratch inside it -- every byte is saved data, so
     ; the enclosing block IS the tight span.
     gbregion "wBoxData",      wBoxDataStart, wBoxDataEnd - wBoxDataStart
+%endif
+%ifdef DEBUG_BATTLE_SWITCH
+    ; --- window-layer diagnosis for the post-switch render defect ---
+    ; DIAGNOSIS ONLY; this gate is a viewer, not a golden, so these rows cost
+    ; nothing. regression-battle-switch-screen-stuck-on-party-menu narrowed the
+    ; symptom to the composite alone — WRAM and W_TILEMAP are both correct after
+    ; the switch, yet the frame shows a stale PARTIAL party panel — and the next
+    ; question is what the window layer actually holds. hide_window (count=0,
+    ; H_WY=RENDER_H) changed nothing, so the descriptor LIST was not the whole
+    ; story; dump it and see. Both live in port memory, hence gbregion_flat.
+    gbregion_flat "g_window_count", g_window_count, 4
+    gbregion_flat "g_windows",      g_windows, MAX_WINDOWS * WIN_DESC_SIZE
 %endif
 %ifdef DEBUG_BILLSPC
     ; --- Bill's PC box-behaviour flow (sram plan stage 6) ---
