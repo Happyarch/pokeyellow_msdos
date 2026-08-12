@@ -48,6 +48,46 @@ So the divergences are printed, counted, and listed here instead.
   battle and never reach that loop. The call was genuinely dropped and restoring
   it is correct on faithfulness grounds, but it is not the fix for this family.
 
+## THE HEADLINE: 204 of 467 are ONE register, and it is a harness property
+
+Measured 2026-08-11 across the whole 56-scenario tier by SIGNATURE, not by gate.
+
+Count every divergence matching `OBJ pal4-7 … port=(31,31,31)` — the shape that
+means the port's `IO_OBP1` is 0 where hardware holds a real value:
+
+**204 of 467, across 26 scenarios.** They are: the 14 `route*_sight`,
+`overworld_pallet`, `sign_pallet`, `start_menu`, `options_menu`, `oak_intro`,
+`save_real_load`, `save_boxes_load`, `item_pp_restore`, `item_tm_teach`,
+`item_stone_evolve`, `ball_catch`, and `trainer_battle_win` / `_loss` (whose 8
+each are already inside their own gate-stop bucket — do not double-count).
+
+**The control group makes it a dichotomy rather than a correlation.** Every
+scenario whose gate drives the game's own loop reports ZERO of this family:
+
+| runs the real loop | total divergences | of THIS family |
+|---|---:|---:|
+| `ledge_hop`, `surf_round_trip`, `trainer_battle_route` | 0 | 0 |
+| `battle_menu`, `move_selection`, `battle_faint`, `battle_blackout` | 0 | 0 |
+| `fish_old_rod` | **24** | **0** |
+
+`fish_old_rod` is the load-bearing row: it has 24 divergences and none of them
+are this family, so this is not "scenarios with problems have problems
+everywhere" — the family tracks the LOOP, not the scenario.
+
+Mechanism, confirmed by source-reading on four of the gates (`RunMapScriptSightTest`,
+`DEBUG_TRANSITION`, `DEBUG_SIGNTEXT`, `DEBUG_STARTMENU`): they dump from inside
+`EnterMap` or a sub-flow and never enter `OverworldLoopLessDelay`, the only
+caller of `LoadGBPal` — which is the only thing that puts `$E0` in `rOBP1` on the
+overworld. Hardware's goldens all carry a real value because they actually played
+the game to get there.
+
+**CORRECTION to an earlier number in this file: I previously reported this class
+as 128.** That was the `rom=BLACKISH` SUBSET of the signature — each affected
+scenario contributes 4 blackish rows (colour3) and 4 non-blackish (colour2), so
+counting one colour undercounted the family by 76. Count by the port side
+(`port=(31,31,31)` on `OBJ pal4-7`), which is what the mechanism actually
+predicts, not by a particular rom colour.
+
 ## Running totals, 2026-08-11 (re-derived each time from the run, never carried)
 
 **467 across the 56-scenario tier**, 56/56 PASS. Two real defects fixed today
