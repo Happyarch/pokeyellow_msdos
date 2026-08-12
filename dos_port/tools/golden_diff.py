@@ -820,6 +820,21 @@ SCENARIOS = {
         "flags": "DEBUG_BATTLE_NEXTMON=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_item_no_effect": {
+        # datastruct: the WRAM outcome of an item that FAILS — a POTION on a
+        # FULL-HP mon, ItemUseMedicine's .healingItemNoEffect branch. The only
+        # scenario that takes an item failure path; battle_item_potion covers
+        # the success path.
+        #
+        # RNG-independent BY CONSTRUCTION and with no seeding at all: the party
+        # is already at the seed's full HP, so the failure is structural. What
+        # is compared is that NOTHING happened — the bag still holds 16 entries
+        # with POTION x1 (RemoveUsedItem is never reached) and every party HP is
+        # untouched. Both sides dump before the enemy can act.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_ITEM_FAIL=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "trainer_battle_init": {
         # The two sides reach the same InitBattleCommon checkpoint through
         # different outer presentation paths. The scenario-local trainerInit

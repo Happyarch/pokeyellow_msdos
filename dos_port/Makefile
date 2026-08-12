@@ -1048,6 +1048,18 @@ endif
 # Two mons alive: slot 3 (PIKACHU L5) at 1 HP as the active one, slot 5 (LAPRAS
 # L34) at full as the replacement -- see the gate header for why the gap matters.
 #   dos_port/tools/run_headless.sh "DEBUG_BATTLE_NEXTMON=1" /tmp/nextmon
+# Failed in-battle ITEM gate (battle_item_no_effect, battle plan 2c): a POTION
+# used on a FULL-HP mon, which takes ItemUseMedicine's .healingItemNoEffect
+# branch. The dump is state-gated (AutoKeyDrive), because on failure UseBagItem
+# loops back into the bag menu and DisplayBattleMenu never returns.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_ITEM_FAIL=1" /tmp/itemfail
+ifdef DEBUG_BATTLE_ITEM_FAIL
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_ITEM_FAIL -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLE_ITEM_FAIL -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_BATTLE_NEXTMON
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_NEXTMON -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

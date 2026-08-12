@@ -2276,6 +2276,27 @@ RunBattleTest:
     mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
+%elifdef DEBUG_BATTLE_ITEM_FAIL
+    ; --- in-battle ITEM that FAILS: a POTION on a full-HP mon (battle plan 2c) ---
+    ; The last of the Stage 2 scenario box's five, and the shape that forced a
+    ; state-gated dump: on failure UseBagItem is `jp z, BagWasSelected` when
+    ; wActionResultOrTookBattleTurn == 0 (pret core.asm:2360-2362), so EVERY
+    ; failed item loops back into the bag menu and DisplayBattleMenu NEVER
+    ; RETURNS. battle_item_potion, battle_switch and ball_catch all hang their
+    ; dump on that return and none of them can be copied here.
+    ;
+    ; No HP seed: the whole seeded party is at full HP, so ItemUseMedicine takes
+    ; .healingItemNoEffect -> ItemUseNoEffect, which prints "It won't have any
+    ; effect." and zeroes wActionResultOrTookBattleTurn (UseItem_ had set it to
+    ; 1 on entry, item_effects.asm:UseItem_). The target is party slot 1
+    ; (PERSIAN L80), NOT slot 0: wUsedItemOnWhichPokemon is 0 in cleared WRAM,
+    ; so slot 0 would give a landmark indistinguishable from "never ran".
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    call DisplayBattleMenu              ; does not return on this path — see above
+.itemFailHang:
+    call DelayFrame
+    jmp .itemFailHang
 %elifdef DEBUG_BATTLE_MENU
     ; The REAL battle menu: DisplayBattleMenu draws HUDs + boxes and parks in
     ; HandleMenuInput with the ▶ on FIGHT; AUTOKEY_QUIET photographs it at
@@ -2907,7 +2928,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 
@@ -4180,6 +4201,31 @@ AutoKeyDrive:
     call DumpBackbuffer                 ; FRAME.BIN, then exits
 .noBattleDump:
 %endif
+%ifdef DEBUG_BATTLE_ITEM_FAIL
+    ; battle_item_no_effect's dump, state-gated for the same structural reason
+    ; as battle_choose_next_mon's: the flow it photographs never returns.
+    ; The triple is the failure itself, and each clause earns its place:
+    ;   wCurItem == POTION            - the item that was chosen;
+    ;   wUsedItemOnWhichPokemon == 1  - ItemUseMedicine got past the party
+    ;                                   choice (1, not 0: 0 is cleared WRAM);
+    ;   wActionResultOrTookBattleTurn == 0 - and then FAILED. UseItem_ sets this
+    ;                                   to 1 on entry, so 0 here is the failure
+    ;                                   edge, not an initial value.
+%ifndef ITEMFAIL_TARGET_SLOT
+%define ITEMFAIL_TARGET_SLOT 1          ; PERSIAN L80 (lib/seed.lua DEBUG_PARTY[2])
+%endif
+%ifndef ITEMFAIL_ITEM_ID
+%define ITEMFAIL_ITEM_ID 0x14           ; POTION
+%endif
+    cmp byte [ebp + wCurItem], ITEMFAIL_ITEM_ID
+    jne .noItemFailDump
+    cmp byte [ebp + wUsedItemOnWhichPokemon], ITEMFAIL_TARGET_SLOT
+    jne .noItemFailDump
+    cmp byte [ebp + wActionResultOrTookBattleTurn], 0
+    jne .noItemFailDump
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN, then exits
+.noItemFailDump:
+%endif
 %ifdef DEBUG_BATTLE_NEXTMON
     ; ------------------------------------------------------------------
     ; battle_choose_next_mon's dump, and it MUST be state-gated (2026-08-12).
@@ -5043,6 +5089,25 @@ autokey_script:
     dd  720,  730, PAD_A        ; party menu: the active mon (slot 0) -> heal
     dd  900,  910, PAD_A        ; walk the "recovered HP" message
     dd 1080, 1090, PAD_A        ; spare
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_BATTLE_ITEM_FAIL
+    ; battle plan 2c, the failure half: FIGHT-menu -> ITEM -> POTION -> party
+    ; slot 1. Same geometry as AUTOKEY_BATTLE_ITEM (ITEM is the LEFT column's
+    ; bottom item, so DOWN then A; POTION is the first bag entry), but the
+    ; party target is slot 1 rather than the active mon, so one DOWN in the
+    ; party menu before the A. The trailing A train walks "It won't have any
+    ; effect." and whatever the bag redraws; the dump is state-gated, so an
+    ; extra press cannot overshoot it.
+    dd  180,  190, PAD_DOWN     ; FIGHT -> ITEM
+    dd  360,  370, PAD_A        ; select ITEM -> BagWasSelected -> the bag list
+    dd  540,  550, PAD_A        ; select POTION -> UseBagItem -> ItemUseMedicine
+    dd  720,  730, PAD_DOWN     ; party menu: slot 0 -> slot 1
+    dd  900,  910, PAD_A        ; use it on PERSIAN (full HP) -> no effect
+%assign AK_F 1080
+%rep 60
+    dd AK_F, AK_F + 8, PAD_A
+%assign AK_F AK_F + 20
+%endrep
     dd   -1,   -1, 0
 %elifdef AUTOKEY_BATTLE_NEXTMON
     ; battle plan 2b: walk the faint messages, answer "Use next POKéMON?" YES,

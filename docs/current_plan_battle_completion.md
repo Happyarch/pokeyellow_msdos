@@ -998,7 +998,7 @@ their current bodies auto-answer and auto-select.
       `class=data-model` deviation and 4b owning the real list. And
       `SAFARI_BAIT` = `BOULDERBADGE` = `$15`, the same deliberate overload as
       `SAFARI_ROCK`.
-- [~] Add separate must-hit scenarios for voluntary switch, forced switch, a
+- [x] Add separate must-hit scenarios for voluntary switch, forced switch, a
       successful medicine/battle-item use, a failed item, and ball capture entered
       through `BattleItemMenu`. The existing `party_menu`, `battle_menu`, and
       `ball_catch` scenarios do not prove these routes.
@@ -1136,75 +1136,43 @@ their current bodies auto-answer and auto-select.
       `wPartyData mon 4 HP: want $0000 | got $0094`. *Determinism:* two
       consecutive golden generations are byte-identical (md5 `61c3c400…`).
 
-      **STILL OPEN — 1 of 5: the failed item.**
+      **5 of 5 DONE 2026-08-12: `battle_item_no_effect` (scenario id 62)
+      closes this box.** A POTION used from the battle bag on a FULL-HP mon, so
+      `ItemUseMedicine` reaches `.healingItemNoEffect` -> `ItemUseNoEffect` —
+      the only scenario in the registry that takes an item's FAILURE path.
+      `WRAM: OK (13 regions, 0 skipped)`, no masks.
 
-      **CORRECTION: the failed item is NOT "nearly free", as this box claimed
-      earlier today.** Measured: `UseBagItem` is
-      `jp z, BagWasSelected` when `wActionResultOrTookBattleTurn == 0` (pret
-      core.asm:2360-2362), so EVERY failed item — no-effect medicine, a
-      can't-use-here item, a declined ball — loops back into the bag menu and
-      `DisplayBattleMenu` NEVER RETURNS. Both scenarios landed today depend on
-      that return being the dump point, so the failed-item case cannot copy them.
-      It needs a STATE-GATED dump instead, and the precedent already exists:
-      `AUTOKEY_DUMP_ON_FOLLOW` in `debug_dump.asm` dumps GBSTATE the first frame
-      a WRAM condition holds. Whoever takes it should start there, not from
-      `battle_item_potion`.
+      *It is the case that forced the state-gated dump,* and the earlier
+      correction in this box is why it was built that way from the start: on
+      failure `UseBagItem` is `jp z, BagWasSelected` when
+      `wActionResultOrTookBattleTurn == 0` (pret core.asm:2360-2362), so every
+      failed item loops back into the bag and `DisplayBattleMenu` never returns.
+      Landmark: `wCurItem == POTION` AND `wUsedItemOnWhichPokemon == 1` AND
+      `wActionResultOrTookBattleTurn == 0` — the last is the failure EDGE, since
+      `UseItem_` sets it to 1 on entry. The target is slot 1 rather than slot 0
+      because 0 is cleared WRAM and could not distinguish "failed" from "never
+      ran".
 
-      **THIS WAS THE BLOCKING BOX FOR THE WHOLE STAGE, and for Stage 3 as
-      well.** 2a and 2b both landed with ZERO execution evidence; memory
-      `battle-stage3-blocked-on-mechanics-scenarios` records 3a/3b in the same
-      state. The bottleneck is scenario capability, not translation.
+      *No seeding at all and no RNG:* the party is already at full HP, so the
+      failure is structural. What is compared is that NOTHING happened — the bag
+      still holds 16 entries with POTION x1 (`RemoveUsedItem` is never reached)
+      and every party HP is untouched. **A "nothing happened" comparison needs
+      its non-vacuity proof more than any other**, so: perturbing one compared
+      byte in the port gate (ANTIDOTE qty 3 -> 2) fails with
+      `wBagItems slot 1 quantity: want $03 | got $02`. Determinism: two
+      consecutive golden generations byte-identical (md5 `51bafd62…`).
 
-      **`battle_switch` design — the measured parts, so the next pass does not
-      re-derive them.**
-
-      *Menu geometry (read out of the port's `DisplayBattleMenu` and confirmed
-      against pret core.asm:2236-2270, not guessed).* The battle menu is 2x2 and
-      the right column adds 2 to `wCurrentMenuItem`, then ITEM/PKMN ids are
-      swapped:
-
-      | on screen | pre-swap id | after the swap | branch |
-      |---|---:|---:|---|
-      | FIGHT (left, top)    | 0 | 0 | FIGHT |
-      | ITEM  (left, bottom) | 1 | 2 | `BagWasSelected` |
-      | PKMN  (right, top)   | 2 | 1 | `PartyMenuOrRockOrRun` |
-      | RUN   (right, bottom)| 3 | 3 | `BattleMenu_RunWasSelected` |
-
-      So **selecting PKMN is exactly `RIGHT` then `A`** from the menu's initial
-      state — a two-press sequence, no vertical movement.
-
-      *Dispatch verified 2026-08-12.* At `.partyMenuOrRun` AL is 1 (PKMN) or 3
-      (RUN), and `PartyMenuOrRockOrRun`'s head `dec al` sends 1 → 0 → party menu
-      and 3 → 2 → RUN. That is pret's mapping exactly. Worth stating because
-      nothing executes it: a mistake in the dispatch 2a rewrote would currently
-      be invisible.
-
-      *Shape.* Take `battle_blackout` as the template — it is the closest
-      existing scenario (wild battle, reshaped party) — but leave **two** mons
-      alive instead of one, so the party menu has a legal target. Its header
-      already explains why it leaves only one: the party menu was "untimeable
-      against a golden". That constraint is what this box has to solve, and 2a
-      landing means the menu now exists on both sides.
-
-      *must_hit* should name `PartyMenuOrRockOrRun`, `SwitchPlayerMon`,
-      `RetreatMon` and `AnimateRetreatingPlayerMon` — but note the standing
-      warning: `must_hit` names symbols the HARNESS reaches, which is not proof
-      the routine under test ran. Pair it with a dump-diff against the
-      pre-switch state so a no-op switch fails loudly.
-
-      **THE FALSE-WITNESS CONSTRAINT, restated because this box is exactly where
-      it bites.** The port gate must drive the REAL `DisplayBattleMenu` with
-      autokey presses; it must NOT reimplement the sequence by calling
-      `SwitchPlayerMon` directly. Instance 3 of `bug-class-false-witness-scenario`
-      is precisely that shape — a harness that duplicates production inherits
-      production's bug and cannot witness its own fix.
-
-      **Budget the cadence work.** The autokey schedule is a fixed absolute-frame
-      table, and `playcry-blocking-contract-destubbed` records what that costs:
-      adding one blocking call desynced two SRAM gates by a whole menu state.
-      The switch flow contains `RetreatMon` (a `PrintText`), a 50-frame wait, the
-      retreat animation and `SendOutMon` (which now plays a real, blocking cry) —
-      so pick generous gaps from the start rather than tuning down.
+      **THE BOX IS CLOSED. Registry is 60 scenarios and all 60 PASS.** What it
+      bought, in order: `battle_switch` (59) executes `PartyMenuOrRockOrRun` /
+      `SwitchPlayerMon` / `RetreatMon` / `AnimateRetreatingPlayerMon`;
+      `battle_item_potion` (60) executes `BagWasSelected` / `DisplayBagMenu` /
+      `UseBagItem` and found a page fault in `GetItemName`; `ball_catch` now
+      reaches the capture through the real bag instead of a preset;
+      `battle_choose_next_mon` (61) executes `DoUseNextMonDialogue` /
+      `ChooseNextMon`; and this one executes `ItemUseNoEffect`. Stage 2 and the
+      2a/2b/2c boxes now all have execution evidence, and the Stage 3 boxes that
+      were blocked behind "scenario capability" are unblocked as a technique —
+      each still needs its own scenario.
 
 ## Stage 3 — close backend and stub-era leaves
 
