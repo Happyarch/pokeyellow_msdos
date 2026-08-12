@@ -1074,11 +1074,44 @@ their current bodies auto-answer and auto-select.
       and `wPartyData mon 0` HP all `want 120 | got 121`), so the comparison
       really reads the heal. The golden is deterministic (md5 `2c746709…` twice).
 
-      **STILL OPEN — 3 of 5.** Forced switch (2b, still unwitnessed), a failed
-      item, and a ball capture entered through the real bag rather than the
-      preset `DEBUG_ITEMBALL` gate. The failed-item case is now nearly free:
-      `battle_item_potion` with the seed removed takes `ItemUseMedicine`'s
-      no-effect branch.
+      **3 of 5 DONE 2026-08-12: the ball capture now goes through the real bag.**
+      No new scenario — `ball_catch`'s PORT side was the problem. Its golden has
+      navigated the real battle bag since it was written
+      (`ball_catch.lua:53-57`), while the gate preset `wCurItem` /
+      `wWhichPokemon` / `wPseudoItemID` and called `UseItem` directly, so the two
+      sides reached the same OUTCOME by different ROUTES and the port's menu leg
+      was never executed by anything. The bypass is deleted: `AUTOKEY_ITEMBALL`
+      now presses DOWN+A to ITEM and DOWN DOWN+A to MASTER BALL through the
+      production `DisplayBattleMenu`, and the gate asserts `wBattleResult == 2`
+      (only `.returnAfterCapturingMon` sets it) before dumping.
+
+      **The committed golden was NOT regenerated — the port converged onto the
+      existing one.** That is the strong form of the evidence: same golden bytes,
+      real menu route. Non-vacuity: dropping a single DOWN from the press table
+      makes the run produce no dump at all (goldencheck exits 2), so the exact
+      sequence is load-bearing.
+
+      *Press ORDER matters and is why this needed its own autokey script.* The
+      catch flow ends at the live `AskName` prompt and B is what declines the
+      nickname — but a B landing while the BAG LIST is still up cancels the list
+      instead. `AUTOKEY_APRESS`'s `DEBUG_ITEMBALL` arm is B from frame 30, so it
+      could not be reused; the new script does the navigation first and starts
+      the B train only after the ball is thrown.
+
+      **STILL OPEN — 2 of 5.** Forced switch (2b, still unwitnessed) and the
+      failed item.
+
+      **CORRECTION: the failed item is NOT "nearly free", as this box claimed
+      earlier today.** Measured: `UseBagItem` is
+      `jp z, BagWasSelected` when `wActionResultOrTookBattleTurn == 0` (pret
+      core.asm:2360-2362), so EVERY failed item — no-effect medicine, a
+      can't-use-here item, a declined ball — loops back into the bag menu and
+      `DisplayBattleMenu` NEVER RETURNS. Both scenarios landed today depend on
+      that return being the dump point, so the failed-item case cannot copy them.
+      It needs a STATE-GATED dump instead, and the precedent already exists:
+      `AUTOKEY_DUMP_ON_FOLLOW` in `debug_dump.asm` dumps GBSTATE the first frame
+      a WRAM condition holds. Whoever takes it should start there, not from
+      `battle_item_potion`.
 
       **THIS WAS THE BLOCKING BOX FOR THE WHOLE STAGE, and for Stage 3 as
       well.** 2a and 2b both landed with ZERO execution evidence; memory

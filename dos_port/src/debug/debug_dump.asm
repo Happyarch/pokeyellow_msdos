@@ -2308,20 +2308,39 @@ RunBattleTest:
     ; path ends in the interactive naming screen; the golden declines the
     ; nickname prompt with B, converging on the port's species-name default)
     mov byte [ebp + wPartyCount], 5
-    mov byte [ebp + wWhichPokemon], ITEMBALL_SLOT   ; bag INDEX (RemoveItemFromInventory)
-    mov byte [ebp + wCurItem], ITEMBALL_ID
-    mov byte [ebp + wPseudoItemID], 0
-    call UseItem
+    ; --- 2026-08-12: the bypass is GONE. This gate now drives the REAL menu. ---
+    ; It used to preset wWhichPokemon / wCurItem / wPseudoItemID and `call
+    ; UseItem`, because the port's in-battle ITEM menu was a battle-plan stub.
+    ; 2c ported BagWasSelected / DisplayBagMenu / UseBagItem, so the bypass has
+    ; no reason to exist — and it was load-bearing in the wrong direction: the
+    ; GOLDEN side of this scenario has always navigated the real battle bag
+    ; (tools/mgba_harness/scenarios/ball_catch.lua:53-57), so the two sides were
+    ; comparing the same OUTCOME reached by different ROUTES, and the port's
+    ; route was never executed by anything.
+    ;
+    ; AUTOKEY_ITEMBALL drives DOWN+A to ITEM and DOWN DOWN+A to MASTER BALL
+    ; (seeded bag slot 2). wCurItem, wWhichPokemon and wPseudoItemID are now all
+    ; set by the production path, exactly as on hardware.
+    call DisplayBattleMenu
+    ; The capture must have HAPPENED — `.returnAfterCapturingMon` is the only
+    ; path that sets wBattleResult = 2 (pret core.asm:2395).
+    cmp byte [ebp + wBattleResult], 2
+    jne .ballNotThrown
     ; UseBagItem's post-capture tail — the golden's dump trigger polls
     ; wBattleResult == 2 at frame granularity, and by that frame boundary the
     ; GB has already returned up the battle loop into EndOfBattle, whose
     ; .resetVariables zeroed wIsInBattle (measured: the one-field first diff).
     ; Run the REAL EndOfBattle here too — result 2 skips its pay-day/evolution
     ; leg, and nothing after .resetVariables touches compared WRAM.
-    mov byte [ebp + wCapturedMonSpecies], 0
-    mov byte [ebp + wBattleResult], 2
+    ; (The wCapturedMonSpecies clear and the wBattleResult store this gate used
+    ; to make by hand are gone: `.returnAfterCapturingMon` performs both, and
+    ; restating them was only ever a consequence of the bypass.)
     call EndOfBattle
     call DebugDumpMemory                ; GBSTATE.BIN (id 20) + DUMP.BIN + exit
+.ballNotThrown:
+    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    call DelayFrame
+    call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_DAMAGE
     ; Numerical damage oracle. The emulators run the real numerical pipelines
     ; but keep independent RNG streams, so select semantic cases rather than
@@ -4274,6 +4293,10 @@ autokey_script:
     ; Nothing to navigate: answer every <PROMPT> / button wait the flow raises.
     ; DEBUG_ITEMBALL alone uses B so the live AskName prompt deterministically
     ; declines the nickname; TM/stone/sign flows require affirmative A presses.
+    ; NOTE 2026-08-12: the ball_catch gate no longer selects this script — it
+    ; navigates the real battle bag now and uses AUTOKEY_ITEMBALL, which does the
+    ; presses first and only then starts the B train. The arm below stays for a
+    ; hand-run `DEBUG_ITEMBALL=1 AUTOKEY_APRESS=1` variant and is otherwise unused.
     ; Keep the train long: a flow that outlives it blocks forever on the next
     ; prompt (the harness has no other input source) and reads as a hang.
     ; AUTOKEY_APRESS_COUNT overrides the length for a flow that needs a longer
@@ -4873,6 +4896,39 @@ autokey_script:
     dd  720,  730, PAD_A        ; party menu: the active mon (slot 0) -> heal
     dd  900,  910, PAD_A        ; walk the "recovered HP" message
     dd 1080, 1090, PAD_A        ; spare
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_ITEMBALL
+    ; ball_catch, since 2026-08-12: FIGHT-menu -> ITEM -> MASTER BALL, through
+    ; the REAL menus. Before this the gate preset wCurItem and called UseItem,
+    ; while the GOLDEN side navigated the real bag all along — the two sides
+    ; reached the same outcome by different routes and the port's route was
+    ; never executed.
+    ;
+    ; Geometry: ITEM is the LEFT column's bottom item (DOWN then A, no column
+    ; change — pret core.asm:2150-2270), and MASTER BALL is bag entry 2 of the
+    ; seeded list POTION / ANTIDOTE / MASTER BALL / ... (DebugNewGameItemsList),
+    ; so two DOWNs then A.
+    ;
+    ; THEN B, NOT A, AND THE ORDER MATTERS. The catch flow ends at the live
+    ; AskName prompt, and B is what declines the nickname so the mon keeps its
+    ; species default — which is what the golden does
+    ; (ball_catch.lua declines with B). But a B landing while the BAG LIST is
+    ; still up cancels the list instead, so the B train starts only after the
+    ; ball has been thrown. That ordering is the whole reason this cannot just
+    ; reuse AUTOKEY_APRESS, whose DEBUG_ITEMBALL arm is B from frame 30.
+    dd  180,  190, PAD_DOWN     ; FIGHT -> ITEM
+    dd  360,  370, PAD_A        ; select ITEM -> BagWasSelected -> the bag list
+    dd  540,  550, PAD_DOWN     ; POTION -> ANTIDOTE
+    dd  660,  670, PAD_DOWN     ; ANTIDOTE -> MASTER BALL
+    dd  780,  790, PAD_A        ; throw it -> UseBagItem -> ItemUseBall
+%ifndef AUTOKEY_ITEMBALL_BCOUNT
+%define AUTOKEY_ITEMBALL_BCOUNT 300
+%endif
+%assign AK_B 900
+%rep AUTOKEY_ITEMBALL_BCOUNT
+    dd AK_B, AK_B + 5, PAD_B    ; walk the catch/dex text, decline the nickname
+%assign AK_B AK_B + 20
+%endrep
     dd   -1,   -1, 0
 %elifdef AUTOKEY_TRAINERCARD
     ; Trainer-card ENTER **and EXIT** (the default script above can only enter a

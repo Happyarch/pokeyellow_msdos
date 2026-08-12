@@ -402,6 +402,10 @@
       },
       "must_hit": [
         "RunBattleTest",
+        "DisplayBattleMenu",
+        "BagWasSelected",
+        "DisplayBagMenu",
+        "UseBagItem",
         "UseItem"
       ],
       "comparison": {
@@ -411,7 +415,7 @@
         "projection": "golden_diff.SCENARIOS",
         "masks": "golden_diff.SCENARIOS"
       },
-      "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
+      "verification": "BOTH sides now navigate the real battle bag. Until 2026-08-12 the port gate preset wCurItem/wWhichPokemon/wPseudoItemID and called UseItem directly while the golden side navigated ITEM -> MASTER BALL for real, so the two sides reached the same outcome by different routes and the port's menu leg was never executed. 2c ported BagWasSelected / DisplayBagMenu / UseBagItem, so the bypass was replaced by an AUTOKEY_ITEMBALL press sequence through the production DisplayBattleMenu; the gate asserts wBattleResult == 2 (only .returnAfterCapturingMon sets it) before dumping. The committed golden was NOT regenerated -- the port converged onto the existing one, and dropping a single DOWN from the press table makes the run produce no dump at all. State verification, not UI verification"
     },
     {
       "name": "battle_faint",

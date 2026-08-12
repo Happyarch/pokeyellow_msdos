@@ -955,7 +955,10 @@ endif
 ifdef DEBUG_ITEMBALL
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_ITEMBALL -D DEBUG_BATTLE -D SKIP_TITLE
-NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+# AUTOKEY_ITEMBALL, not AUTOKEY_APRESS: since 2026-08-12 this gate drives the
+# REAL battle menu (ITEM -> MASTER BALL) instead of presetting wCurItem and
+# calling UseItem, so it needs the navigation presses, not just A-mashing.
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_ITEMBALL -D DEBUG_SEED_PARTY
 ifdef ITEMBALL_ID
 NASMFLAGS += -D ITEMBALL_ID=$(ITEMBALL_ID)
 endif
