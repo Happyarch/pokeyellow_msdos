@@ -808,11 +808,30 @@ their current bodies auto-answer and auto-select.
         switch-out line was chosen from whatever WRAM held. pret's second write
         site is inside `PrintSendOutMonMessage`, which is still a stub.
 
-      **EVIDENCE CLASS.** `PartyMenuOrRockOrRun` is now on a live path
-      (`DisplayBattleMenu`), so the battle scenarios exercise the DISPATCH; they
-      do not exercise the party menu, because no scenario presses PKMN. The
-      switch itself therefore still has zero execution evidence, and the Stage 2
-      scenario box below is where that debt sits.
+      **EVIDENCE CLASS — UPGRADED 2026-08-12 (`fb58e5ea6`).** It is no longer
+      zero. The `DEBUG_BATTLE_SWITCH` viewer gate drives the production
+      `DisplayBattleMenu` through PKMN → slot 1 → SWITCH, and the flow is proven
+      to run, decomposed rather than asserted:
+
+      * `wBattleMon` species `$90` / `wBattleMonNick` = PERSIAN — party slot 1 —
+        where the scene had sent out slot 0 (`$84` / SNORLAX). So
+        `PartyMenuOrRockOrRun` → `.switchMon` → `SwitchPlayerMon` →
+        `LoadBattleMonFromParty` → `SendOutMon` all execute.
+      * **The probe discriminates.** A control run pressing B instead of A at
+        the SWITCH box leaves `wBattleMon` at `$84` / SNORLAX, so it would have
+        reported the broken input.
+      * `W_TILEMAP` at the dump holds the battle screen with PERSIAN L80 210/210
+        in the HUD **and the dialog "SNORLAX good. / Come back"** — which is
+        `PlayerMon2Text`'s outcome selector picking GoodText → ComeBackText.
+        That is execution evidence for the 2a switch-out TEXT chain too, not
+        just the switch.
+
+      It is still not a registered golden (no manifest entry, no mGBA side) —
+      that remains the Stage 2 scenario box's job. And the gate immediately
+      surfaced an open render-layer defect: see
+      `regression-battle-switch-screen-stuck-on-party-menu`. WRAM and the
+      tilemap are both correct; only the composited frame is wrong, so a
+      datastruct-class golden would pass over it.
 - [x] **2b. Forced switch.** Replace the automatic Yes and first-live-mon paths
       in `DoUseNextMonDialogue`/`ChooseNextMon` with the faithful Yes/No and party
       menus, including wild-run behavior and the no-cancel forced selection.
