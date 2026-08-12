@@ -712,9 +712,35 @@ result gates deliberately stop after initialization and drive one terminal turn.
 
       WHAT THAT LEAVES: nothing in this box is unimplemented. It stays `[~]`
       SOLELY because none of it is witnessed — the restored switch
-      is UNWITNESSED — 56/56 full tier passed byte-identical, because no scenario
-      makes the AI choose to switch. Same gap as 3a/3b/3d
-      (`battle-stage3-blocked-on-mechanics-scenarios`).
+      is UNWITNESSED — the full tier passes byte-identical because no scenario
+      makes the AI choose to switch. Same gap 3a/3b/3d had, and all three of
+      those are now closed by scenarios, so this is the last of that family.
+
+      **THE ROUTE TO A WITNESS IS MEASURED AND IT IS DETERMINISTIC — the next
+      iteration does not need to re-derive it.**
+      * `SwitchEnemyMon` has exactly ONE port caller: `AISwitchIfEnoughMons`
+        (`trainer_ai.asm:990`, `jnc`). Its condition is arithmetic, not a roll:
+        count unfainted mons in `wEnemyMon1HP` over `wEnemyPartyCount` entries,
+        and `cp 2 / jp nc, SwitchEnemyMon` — **two or more unfainted enemy mons
+        and it switches.**
+      * THREE AI classes reach it, and **`JugglerAI` reaches it
+        UNCONDITIONALLY** (`trainer_ai.asm:607`, a bare `jmp`). The other two —
+        Cooltrainer-F (`:647`) and `AgathaAI` (`:754`) — gate on
+        `AICheckIfHPBelowFraction` first.
+      * `TrainerAI`'s INVOCATION is not random-gated either (pret
+        trainer_ai.asm:290-318): it needs `wIsInBattle == 2`, not a link battle,
+        the enemy not locked (CHARGING_UP / THRASHING_ABOUT / STORING_ENERGY /
+        USING_RAGE) and `wAICount != 0`, then dispatches on `wTrainerClass`.
+      So: **trainer class JUGGLER + `wAICount != 0` + an enemy party with two
+      unfainted mons ⇒ `SwitchEnemyMon` runs, with NO roll anywhere on the
+      decision.** That is the same class of deterministic setup `battle_wrap` /
+      `battle_bide` / `battle_thrash` use, so the gate can follow their shape
+      (`jmp MainInBattleLoop`, pins in `AutoKeyDrive`, latch + dump).
+      What still needs deciding when it is built: the compared landmark. The
+      obvious one is `wEnemyMonPartyPos` changing together with the withdrawn
+      mon's HP appearing in its roster slot — that pair is exactly what the
+      2026-08-11 defect got wrong (it wrote the roster back and never sent the
+      replacement out), so it is the pair that must be able to move.
 - [x] **1e (original entry).** Complete `SwitchEnemyMon` through withdrawal,
       `EnemySendOut`, and its return flags; complete AI item text/effect/HP-bar
       paths without duplicating item-owned player handlers.
