@@ -84,9 +84,77 @@ Same class as `battle_damage`'s residual 8. These want a per-scenario mask with
 that justification when `PALETTE_GATING` flips, NOT a code change — and chasing
 them as defects would be 112 divergences of wasted effort.
 
+### Another 112: the `route*_sight` family, one cause across 14 scenarios
+
+All fourteen `route*_sight` scenarios report **exactly 8** divergences and their
+palette sections are BYTE-IDENTICAL (same md5), so it is one cause, not
+fourteen. Signature: `OBJ pal4-7 colour2/3`, `port=WHITE` against
+`rom=(11,23,31)` / `(3,3,3)` — the OBJ pal4-7 family, i.e. `IO_OBP1 = 0` where
+hardware holds `$E0`.
+
+Cause, read from the source: their harness `RunMapScriptSightTest`
+(`src/debug/debug_dump.asm:485`) is `UpdateSprites / RunMapScript / DelayFrame`
+and never enters `OverworldLoopLessDelay` — which is the ONLY caller of
+`LoadGBPal`, the routine that puts `$E0` in `rOBP1` on the overworld. Same
+harness whose reach was documented in `bug-class-false-witness-scenario`
+instance 1.
+
+**Control group proves the port itself is fine here:** `ledge_hop`,
+`surf_round_trip` and `trainer_battle_route` all drive the real `OverworldLoop`
+and report **0** palette divergences.
+
+### 16 more with the same signature but NO established cause
+
+`overworld_pallet` (8) and `sign_pallet` (8) show the identical signature, but
+their gates are different (`DEBUG_TRANSITION`, `DEBUG_SIGNTEXT`) and
+`DEBUG_TRANSITION` *does* reference `OverworldLoop` — so the sight-family
+explanation does NOT transfer to them. Do not assume it does; measure these two
+separately. They may be a real defect (a dump taken before the first
+`LoadGBPal`, or mid-transition).
+
+### 48 more, unexplained: hardware is WHITED OUT and the port is not
+
+`item_potion_use` (28) and `continue_seed` (20) are the only scenarios where
+**every** divergence has `rom=(31,31,31)` — hardware white across BG pal0-3
+colours 1-3, consistent with `rBGP = 0` (every index mapping to base colour 0),
+while the port holds real colours. Both are `datastruct` class. Cause not
+established: either the port is missing a `GBPalWhiteOut`/fade on those exits,
+or the two sides stop at different points of one. Worth a trace probe.
+
 ### What that leaves as genuine port-defect candidates
 
-Roughly **367**, and the two dominant signatures across the whole tier are:
+After the 112 trainer + 112 sight artifacts, roughly **255** — and of those, 48
+(`item_potion_use` + `continue_seed`) and 16 (`overworld_pallet` +
+`sign_pallet`) have an identified signature but no established cause yet, so the
+confidently-real remainder is nearer **190**.
+
+**A REGION-POLICY QUESTION FOR THE MAINTAINER, not something to change
+unilaterally.** By `scenario_class`, the 479 split:
+
+| class | divergences | scenarios |
+|---|---:|---:|
+| `datastruct` | **394** | 27 |
+| `default` | 77 | 11 |
+| `semantic` | 8 | 1 |
+
+82% sit in `datastruct` scenarios — the class whose own justification string
+says the dump point is "a post-flow WRAM gate — the screen holds a transient
+message/menu frame whose exact tilemap/vram/oam state is timing-coupled", and
+which therefore SKIPS tilemap, VRAM and OAM. `cgb_palettes` is screen state by
+the same argument, yet it is compared there. The trainer-gate and sight-harness
+findings above are both instances of exactly that coupling.
+
+The tempting move is to skip the palette region for `datastruct` scenarios, and
+it would take the reported backlog from 479 to ~85. **It is deliberately NOT
+done here.** Two reasons: it is a policy change to a brand-new instrument
+(`golden-cgb-palettes-region`, built 2026-08-11) and belongs to its author; and
+a blanket skip would discard real signal, since palettes are plausibly LESS
+timing-coupled than a scrolling message — the datastruct justification cites
+"message scroll and blink phase", which affects tilemap, not palette RAM. The
+evidence above shows some datastruct palette divergences are genuine stop-point
+artifacts; it does not show all of them are.
+
+The dominant signatures across the whole tier:
 
 | signature | count |
 |---|---:|
