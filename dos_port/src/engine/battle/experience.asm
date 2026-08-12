@@ -464,8 +464,9 @@ GainExperience:
     call CopyData                   ; FIX: was EDI, must be EDX for copy.asm
 
 .recalcStatChanges:
-    ; CalculateModifiedStats is still a stub. The burn/paralysis, badge-boost,
-    ; HUD and screen-buffer targets below are real linked providers.
+    ; Every target on this sequence is a real linked provider as of 2026-08-12,
+    ; when CalculateModifiedStats stopped being a stub (battle plan 3d). The
+    ; comment that used to say otherwise outlived the code by one commit.
     xor al, al
     mov [ebp + wCalculateWhoseStats], al   ; 0 = player's mon
     mov esi, CalculateModifiedStats
@@ -654,14 +655,17 @@ BoostExp:
 ; SM83: `ld b, BANK(BattleCore); jp Bankswitch` — dispatches to a BattleCore
 ; function via HL (the function pointer passed by the caller in pret).
 ; x86 flat model: bankswitching is a no-op; ESI holds the function pointer
-; directly. CalculateModifiedStats remains the one stub target on this sequence;
-; the penalties, badge boost, HUD and screen helpers are real.
+; directly. Every target on this sequence is real: CalculateModifiedStats was
+; the last stub among them and landed 2026-08-12 (battle plan 3d).
 ;
 ; pret ref: engine/battle/experience.asm:CallBattleCore
 ; ---------------------------------------------------------------------------
 CallBattleCore:
     ; In the flat x86 model, call the function whose address is in ESI.
-    ; The eventual CalculateModifiedStats body links through this unchanged.
+    ; NOTE for the dependency graph: because the target is address-taken and
+    ; called indirectly here, `label_status --callers CalculateModifiedStats`
+    ; reports ZERO callers even though this is a live call. That is the
+    ; documented address-taken blind spot, not evidence of dead code.
     call esi
     ret
 

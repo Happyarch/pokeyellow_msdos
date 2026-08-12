@@ -1,11 +1,11 @@
 ; battle_exp_stubs.asm — link-only stubs for GainExperience's deferred UI/display
 ; externs (Wave 2, Stage 3). The EXP/stat/level data update in GainExperience is
 ; live, but these no-op providers are not uniformly cosmetic:
-; CalculateModifiedStats affects the active battle-mon stats after a level-up,
-; and DoubleOrHalveSelectedStats restores selected Reflect/Light Screen stats
-; after an in-battle status cure. Current scenarios do not enter either branch.
-; PrintEmptyString is presentation-only but executes on the faint path. See the
-; measured stub table in docs/current_plan_battle_completion.md.
+; Both of the mechanics stubs are now REAL: CalculateModifiedStats (the
+; active battle-mon stat recompute after a level-up) and
+; DoubleOrHalveSelectedStats (the Reflect/Light Screen restore after an
+; in-battle status cure) live in the engine/battle/core.asm mirror as of
+; 2026-08-12. What is left here is display/Pikachu-engine deferral only.
 ;
 ; LATENT COLLISION (intentional, documented): ApplyBadgeStatBoosts (badge_boosts.asm),
 ; ApplyBurnAndParalysisPenaltiesToPlayer (status_penalties.asm) and LearnMoveFromLevelUp
@@ -24,7 +24,6 @@ global ModifyPikachuHappiness
 ; no longer stubbed (they snapshot/restore the battle screen for the EXP display too).
 ; PrintEmptyString is now REAL (engine/battle/core.asm, the pret mirror — it prints a
 ; zero-length stream so PrintText redraws the battle message box) — no longer stubbed.
-global CalculateModifiedStats
 ; RespawnOverworldPikachu (pret engine/pikachu/pikachu_movement.asm) is reached by
 ; ItemUseMedicine (engine/items/item_use.asm) whenever a fainted mon is revived or
 ; a mon levels up (Yellow re-places the overworld Pikachu).
@@ -44,6 +43,5 @@ global RespawnOverworldPikachu
 ; LearnMoveFromLevelUp is now REAL (evos_moves.asm) — no longer stubbed.
 
 ModifyPikachuHappiness:
-CalculateModifiedStats:
 RespawnOverworldPikachu:
     ret

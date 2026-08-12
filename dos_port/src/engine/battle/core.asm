@@ -175,6 +175,8 @@ global PartyMenuOrRockOrRun             ; pret core.asm:2404 (plan 2a)
 global BagWasSelected                   ; pret core.asm:2292 (plan 2c)
 global UseBagItem                       ; pret core.asm:2344 (plan 2c)
 global TrainerBattleVictory
+global CalculateModifiedStats            ; pret core.asm:6550 (plan 3d)
+global CalculateModifiedStat            ; pret core.asm:6560 (plan 3d)
 global DoubleOrHalveSelectedStats        ; pret core.asm:6449 (plan 3d)
 global ScrollTrainerPicAfterBattle      ; pret core.asm:6453 jpfar thunk
 
@@ -1240,6 +1242,7 @@ extern str_oldman_name                 ; battle_menu.asm (assets/battle_menu_run
 extern str_profoak_name                ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern MultiHitText                    ; battle_text.inc
 extern _ScrollTrainerPicAfterBattle    ; scroll_draw_trainer_pic.asm — pret jpfar target
+extern StatModifierRatios               ; src/data/battle_data.asm (flat Tier-1 table)
 extern DoubleSelectedStats              ; engine/battle/unused_stats_functions.asm
 extern HalveSelectedStats               ; engine/battle/unused_stats_functions.asm
 extern PrintEndBattleText              ; src/home/trainers.asm — class-specific end text
@@ -5233,6 +5236,137 @@ ReplaceFaintedEnemyMon:
     mov byte [ebp + wAILayer2Encouragement], 0
     mov al, 1
     and al, al                                     ; ZF=0 → sent out (did not run)
+    ret
+
+; ===========================================================================
+; CalculateModifiedStats — pret core.asm:6550. Recompute the four modifiable
+; battle stats (attack, defense, speed, special) from the UNMODIFIED stats and
+; the current stat-stage modifiers. Called after a level-up in GainExperience
+; and by the stat-stage effects.
+;
+; PORTED 2026-08-12 (battle plan 3d). It was a ret-only STUB in
+; battle_exp_stubs.asm because CalculateModifiedStat read `missing`. Everything
+; it needs already existed: StatModifierRatios (src/data/battle_data.asm),
+; Multiply and Divide (src/home/math.asm), and every WRAM/HRAM symbol.
+;
+; UNLIKE DoubleSelectedStats/HalveSelectedStats BELOW, THIS IS NOT A NO-OP. Those
+; two are gated on masks that are always 0; this one runs unconditionally and
+; rewrites wBattleMonAttack..Special, so it changes behaviour and needs a witness.
+;
+; The counter is pret's 8-bit `ld c,0 … cp NUM_STATS - 1`, kept 8-bit here.
+; CalculateModifiedStat preserves BC (push/pop), so BL survives the call.
+; ===========================================================================
+CalculateModifiedStats:
+    mov bl, 0                               ; ld c, 0
+.loop:
+    call CalculateModifiedStat
+    inc bl                                  ; inc c
+    mov al, bl                              ; ld a, c
+    cmp al, NUM_STATS - 1                   ; cp NUM_STATS - 1
+    jne .loop                               ; jr nz
+    ret
+
+; ===========================================================================
+; CalculateModifiedStat — pret core.asm:6560. One stat, selected by C
+; (0 = attack, 1 = defense, 2 = speed, 3 = special):
+;   stat = unmodified * StatModifierRatios[stage].num / .den, capped at
+;   MAX_STAT_VALUE (999) and floored at 1.
+; In:  BL (pret C) = stat index; wCalculateWhoseStats (0 = player, else enemy).
+; Out: the stat word rewritten in place. BC preserved.
+;
+; TWO ADDRESS SPACES IN ESI, DELIBERATELY. pret keeps everything in HL; the port
+; does not, because wBattleMonAttack is GB memory (read `[ebp + esi]`) while
+; StatModifierRatios is a FLAT program table in .data (read `[esi]`). The stat
+; pointer is therefore pushed across the ratio-table walk, exactly as pret's
+; `push hl` does, and each dereference below says which space it is in.
+;
+; hMultiplier AND hDivisor ARE THE SAME BYTE ($FF99) — pret's own union. The
+; sequence write-hMultiplier / Multiply / write-hDivisor / Divide is load-bearing
+; and must not be reordered or hoisted.
+;
+; DEVIATION{class=projection; pret=engine/battle/core.asm:CalculateModifiedStat; behavior=StatModifierRatios is walked as a flat program pointer with [esi] while the stat and unmodified-stat pointers stay GB-relative with [ebp+esi] and [ebp+edx]; evidence=the ratio table is Tier-1 data emitted into the port image by src/data/battle_data.asm rather than into emulated GB memory, the same split every other flat table read in this port uses, and the arithmetic including the pointer walk is unchanged; lifetime=permanent while the port keeps generated tables in the program image}
+; ===========================================================================
+CalculateModifiedStat:
+    push ebx                                ; push bc — caller's stat index
+    push ebx                                ; push bc — again (pret does)
+    mov al, [ebp + wCalculateWhoseStats]
+    test al, al                             ; and a
+    ; pret's ld a,c / ld hl / ld de / ld bc are flag-neutral, and so are these
+    ; movs, so the ZF above survives to the branch.
+    mov al, bl                              ; ld a, c — the stat index
+    mov esi, wBattleMonAttack               ; GB pointer
+    mov edx, wPlayerMonUnmodifiedAttack     ; GB pointer
+    mov ebx, wPlayerMonStatMods             ; 32-bit: keeps EBX clean for [ebp+ebx]
+    jz .next                                ; jr z
+    mov esi, wEnemyMonAttack
+    mov edx, wEnemyMonUnmodifiedAttack
+    mov ebx, wEnemyMonStatMods
+.next:
+    add al, bl                              ; add c   — index + low(statmods)
+    mov bl, al                              ; ld c, a
+    jnc .noCarry1                           ; jr nc
+    inc bh
+.noCarry1:
+    mov al, [ebp + ebx]                     ; ld a,[bc] — the stat's stage
+    pop ebx                                 ; pop bc  — C = stat index again
+    mov bh, al                              ; ld b, a — B = stage
+    push ebx                                ; push bc
+    shl bl, 1                               ; sla c   — index * 2
+    mov bh, 0                               ; ld b, 0
+    movzx ecx, bx                           ; (16-bit BC, as `add hl,bc` sees it)
+    add esi, ecx                            ; add hl, bc — &stat word
+    mov al, bl                              ; ld a, c
+    add al, dl                              ; add e
+    mov dl, al                              ; ld e, a
+    jnc .noCarry2                           ; jr nc
+    inc dh
+.noCarry2:                                  ; EDX = &unmodified stat word
+    pop ebx                                 ; pop bc — B = stage, C = index
+    push esi                                ; push hl — save the GB stat pointer
+    mov esi, StatModifierRatios             ; FLAT table from here until the pop
+    dec bh                                  ; dec b  — stage - 1
+    shl bh, 1                               ; sla b  — * 2 (num/den pairs)
+    mov bl, bh                              ; ld c, b
+    mov bh, 0                               ; ld b, 0
+    movzx ecx, bx
+    add esi, ecx                            ; add hl, bc — &ratio pair
+    xor al, al
+    mov [ebp + hMultiplicand], al
+    mov al, [ebp + edx]                     ; ld a,[de] — unmodified stat, high
+    mov [ebp + hMultiplicand + 1], al
+    inc edx                                 ; inc de
+    mov al, [ebp + edx]                     ; ld a,[de] — unmodified stat, low
+    mov [ebp + hMultiplicand + 2], al
+    mov al, [esi]                           ; ld a,[hli] — numerator (FLAT)
+    inc esi
+    mov [ebp + hMultiplier], al
+    call Multiply
+    mov al, [esi]                           ; ld a,[hl]  — denominator (FLAT)
+    mov [ebp + hDivisor], al                ; same byte as hMultiplier — see above
+    mov bh, 4                               ; ld b, $4
+    call Divide
+    pop esi                                 ; pop hl — the GB stat pointer is back
+    ; Cap at MAX_STAT_VALUE. pret's two-byte compare is a borrow chain, so the
+    ; `mov` between the halves must not touch CF — on x86 it does not.
+    mov al, [ebp + hDividend + 3]
+    sub al, MAX_STAT_VALUE & 0xFF           ; sub LOW(MAX_STAT_VALUE)
+    mov al, [ebp + hDividend + 2]
+    sbb al, MAX_STAT_VALUE >> 8             ; sbc HIGH(MAX_STAT_VALUE)
+    jc .storeNewStatValue                   ; jp c
+    mov byte [ebp + hDividend + 2], MAX_STAT_VALUE >> 8
+    mov byte [ebp + hDividend + 3], MAX_STAT_VALUE & 0xFF
+.storeNewStatValue:
+    mov al, [ebp + hDividend + 2]
+    mov [ebp + esi], al                     ; ld [hli],a — stat word, HIGH byte
+    inc esi
+    mov bh, al                              ; ld b, a
+    mov al, [ebp + hDividend + 3]
+    mov [ebp + esi], al                     ; ld [hl],a  — stat word, LOW byte
+    or al, bh                               ; or b — ZF = the whole word is 0
+    jnz .done                               ; jr nz
+    inc byte [ebp + esi]                    ; inc [hl] — a 0 stat becomes 1
+.done:
+    pop ebx                                 ; pop bc
     ret
 
 ; ===========================================================================

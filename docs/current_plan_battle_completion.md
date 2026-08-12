@@ -1316,9 +1316,43 @@ provider shapes below, not their runtime behavior.
       evidence either way. What the translation buys is the glitch paths that DO
       set those bytes, where a ret-only body would silently diverge.
 
-      STILL OPEN: `CalculateModifiedStats` (needs `CalculateModifiedStat` and
-      the `StatModifierRatios` table, both `missing`) and
-      `ModifyPikachuHappiness`.
+      **`CalculateModifiedStats` RETIRED 2026-08-12 too**, with
+      `CalculateModifiedStat` beside it in the `core.asm` mirror. The survey was
+      right that nothing was missing: `StatModifierRatios` was already generated
+      into `src/data/battle_data.asm:52`, `Multiply`/`Divide` were translated,
+      and every WRAM/HRAM symbol existed — it was pure translation.
+
+      *Two things the translation turned on, both recorded because they are easy
+      to get silently wrong.* pret uses `BC` as a 16-bit POINTER
+      (`ld bc, wPlayerMonStatMods` … `ld a,[bc]`), which collides with the port's
+      B=BH/C=BL split — loading it with a 32-bit `mov ebx, addr` rather than
+      `mov bx` keeps EBX clean for the `[ebp + ebx]` dereference. And ESI holds
+      TWO ADDRESS SPACES in one routine: the stat pointers are GB memory
+      (`[ebp + esi]`) while `StatModifierRatios` is a flat program table
+      (`[esi]`), which is what the `DEVIATION{class=projection}` documents.
+
+      *faithdiff:* `CalculateModifiedStats` clean 1/1. `CalculateModifiedStat`
+      2/2 calls, and `3 pret / 4 port` stores with `+ ADDED [hDividend]` — **a
+      tool artifact, decomposed rather than suppressed.** Both sides write
+      exactly seven bytes, same names, same displacements
+      (`hMultiplicand`, `+1`, `+2`, `hMultiplier`, `hDivisor`, `hDividend + 2`,
+      `hDividend + 3`); faithdiff recognises the port's
+      `mov byte [ebp + hDividend + 2]` but not pret's `ldh [hDividend + 2], a`,
+      so it counts the name on one side only. Nothing was added to the
+      suppression file.
+
+      *Execution status, stated exactly:* it IS called — `experience.asm`'s
+      `.recalcStatChanges` does `mov esi, CalculateModifiedStats / call
+      CallBattleCore` on the level-up path, mirroring pret. `label_status
+      --callers` reports ZERO because the target is address-taken and dispatched
+      indirectly, which is the documented blind spot, not dead code. But no
+      scenario levels a mon up mid-battle, so this landed with **no execution
+      evidence**; unlike the `unused_stats_functions` pair it is NOT a provable
+      no-op, and the 60/60 full tier is non-regression only. Three comments in
+      `experience.asm` claiming it "is still a stub" were corrected in the same
+      change.
+
+      STILL OPEN: `ModifyPikachuHappiness` only.
 - [ ] **3d (original entry).** Implement and retire the battle-owned
       providers `PrintEmptyString`, `CalculateModifiedStats`, and
       `DoubleOrHalveSelectedStats`; implement `ModifyPikachuHappiness` at its
