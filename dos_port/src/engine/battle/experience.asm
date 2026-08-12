@@ -483,9 +483,11 @@ GainExperience:
 
 .printGrewLevelText:
     ; Deferred: Pikachu happiness + level-up display + move learning (Wave 2).
-    ; PIKAHAPPY_LEVELUP = 1 (pikachu_emotion_constants.asm)
-    mov al, PIKAHAPPY_LEVELUP
-    call ModifyPikachuHappiness     ; DEFERRED stub
+    ; PIKAHAPPY_LEVELUP = 1 (pikachu_emotion_constants.asm). The reason code
+    ; goes in D, not A: macros/farcall.asm's farcall_ModifyPikachuHappiness
+    ; expands to `ld d, \1`, and the routine's first instruction is `ld a, d`.
+    mov dh, PIKAHAPPY_LEVELUP       ; farcall_ModifyPikachuHappiness: ld d, kind
+    call ModifyPikachuHappiness
     call ShowGrewLevelText          ; front end: "<nick> grew to level N!" (no wait)
     xor al, al
     mov [ebp + wMonDataLocation], al

@@ -1059,8 +1059,8 @@ ItemUseMedicine:
     jae .noHappinessBoost               ; jr nc
     push esi
     push edx
-    mov al, PIKAHAPPY_USEDITEM
-    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    mov dh, PIKAHAPPY_USEDITEM          ; farcall_ModifyPikachuHappiness: ld d, kind
+    call ModifyPikachuHappiness
     pop edx
     pop esi
 .noHappinessBoost:
@@ -1467,7 +1467,7 @@ ItemUseMedicine:
     call LearnMoveFromLevelUp           ; predef
 
     mov byte [ebp + wForceEvolution], 0
-    mov al, PIKAHAPPY_LEVELUP
+    mov dh, PIKAHAPPY_LEVELUP           ; farcall_ModifyPikachuHappiness: ld d, kind
     call ModifyPikachuHappiness
     call .respawnPikachuForUsedMon      ; leaves wWhichPokemon = the party index
     call TryEvolvingMon                 ; callfar TryEvolvingMon — reads wWhichPokemon
@@ -2778,7 +2778,7 @@ ItemUseTMHM:
     push eax
     mov al, dh
     mov [ebp + wWhichPokemon], al       ; the happiness/Pikachu checks want the mon
-    mov al, PIKAHAPPY_USEDTMHM
+    mov dh, PIKAHAPPY_USEDTMHM          ; farcall_ModifyPikachuHappiness: ld d, kind
     call ModifyPikachuHappiness
     call IsThisPartyMonStarterPikachu   ; CF = it's the player's own Pikachu
     jnc .notTeachingThunderboltOrThunderToPikachu
@@ -2993,8 +2993,8 @@ ItemUseXAccuracy:
     test al, al
     jz ItemUseNotTime                   ; pret: jp z, ItemUseNotTime
     or byte [ebp + wPlayerBattleStatus2], 1 << USING_X_ACCURACY
-    mov al, PIKAHAPPY_USEDXITEM
-    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    mov dh, PIKAHAPPY_USEDXITEM         ; farcall_ModifyPikachuHappiness: ld d, kind
+    call ModifyPikachuHappiness
     jmp PrintItemUseTextAndRemoveItem
 
 global ItemUseGuardSpec
@@ -3008,8 +3008,8 @@ ItemUseGuardSpec:
     push eax                            ; push af
     mov al, [ebp + wPlayerMonNumber]
     mov [ebp + wWhichPokemon], al
-    mov al, PIKAHAPPY_USEDXITEM
-    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    mov dh, PIKAHAPPY_USEDXITEM         ; farcall_ModifyPikachuHappiness: ld d, kind
+    call ModifyPikachuHappiness
     pop eax                             ; pop af
     mov [ebp + wWhichPokemon], al
     or byte [ebp + wPlayerBattleStatus2], 1 << PROTECTED_BY_MIST
@@ -3026,8 +3026,8 @@ ItemUseDireHit:
     push eax                            ; push af
     mov al, [ebp + wPlayerMonNumber]
     mov [ebp + wWhichPokemon], al
-    mov al, PIKAHAPPY_USEDXITEM
-    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    mov dh, PIKAHAPPY_USEDXITEM         ; farcall_ModifyPikachuHappiness: ld d, kind
+    call ModifyPikachuHappiness
     pop eax                             ; pop af
     mov [ebp + wWhichPokemon], al
     or byte [ebp + wPlayerBattleStatus2], 1 << GETTING_PUMPED   ; Focus Energy
@@ -3082,8 +3082,8 @@ ItemUseXStat:
     push eax                            ; push af
     mov al, [ebp + wPlayerMonNumber]
     mov [ebp + wWhichPokemon], al
-    mov al, PIKAHAPPY_USEDXITEM
-    call ModifyPikachuHappiness         ; farcall_ModifyPikachuHappiness
+    mov dh, PIKAHAPPY_USEDXITEM         ; farcall_ModifyPikachuHappiness: ld d, kind
+    call ModifyPikachuHappiness
     pop eax                             ; pop af
     mov [ebp + wWhichPokemon], al
 
