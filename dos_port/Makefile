@@ -1092,6 +1092,17 @@ endif
 # the only way to reach CheckNumAttacksLeft. AutoKeyDrive pins the rolled attack
 # count to 1 and dumps when the turn tail clears USING_TRAPPING_MOVE.
 #   dos_port/tools/run_headless.sh "DEBUG_BATTLE_WRAP=1" /tmp/wrap
+# Mutual-faint gate (battle_self_destruct, battle plan 3c): SNORLAX L80 uses
+# SELFDESTRUCT on the spec wild PIDGEY L13, so both mons hit 0 HP in the same
+# turn and FaintEnemyPokemon takes its player-also-fainted arm.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_SELFDESTRUCT=1" /tmp/boom
+ifdef DEBUG_BATTLE_SELFDESTRUCT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_SELFDESTRUCT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_BATTLE_WRAP
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_WRAP -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

@@ -1427,8 +1427,43 @@ provider shapes below, not their runtime behavior.
       sensitive and the fix really is emitted at level 2. All three levels build.
       `faithdiff FaintEnemyPokemon` is unchanged by the edit.
 
+      **THE SCENARIO WAS BUILT 2026-08-12 AND IS NOT REGISTERED, because its
+      own sabotage check disproved it.** `DEBUG_BATTLE_SELFDESTRUCT=1` +
+      `tools/mgba_harness/scenarios/battle_self_destruct.lua` exist and the diff
+      PASSES (`WRAM: OK (13 regions, 0 skipped)`, no masks) — but that pass is
+      not evidence, and here is the measurement that says so.
+
+      SNORLAX L80 uses SELFDESTRUCT on the spec wild PIDGEY L13; both mons reach
+      0 HP, and hardware and the port agree on every compared byte including
+      party slot 0's HP going to 0. Deterministic by construction: `ExplodeEffect`
+      zeroes the USER's HP with no accuracy test, and a power-130 hit from L80
+      overkills 36 HP on every roll.
+
+      **THEN THE SABOTAGE PASSED.** Deleting the `call RemoveFaintedPlayerMon`
+      from `FaintEnemyPokemon`'s `.sfxplayed` player-also-fainted arm — the exact
+      line this box is about — left the comparison GREEN. So whatever writes
+      party slot 0's HP to 0 in this flow, it is NOT that call, and the scenario
+      does not witness the arm. Registering it would have added a scenario that
+      looks like coverage and is not.
+
+      **WHAT THE NEXT PASS NEEDS:** a compared byte that ONLY the mutual-faint
+      arm writes. `RemoveFaintedPlayerMon` also clears the fainted mon's
+      `wPartyGainExpFlags` bit and sets `wBattleResult`; neither is in a compared
+      region today (`wBattleFlags` covers only `wIsInBattle..wBattleType`,
+      `$D057-$D05A`), so a scenario-local `gbregion` for one of them is the
+      obvious next move — then re-run the same sabotage and require it to FAIL
+      before registering anything.
+
+      Also learned and worth keeping: `battle_faint`'s wLoadedMon alignment
+      (wait for `wLoadedMonLevel == 80`) does NOT transfer to a mutual faint. The
+      player's mon is also down, so the GB continues into
+      `HandlePlayerMonFainted` and the next-mon dialogue instead of redrawing the
+      player's HUD; that poll spins to the 36000-frame cap. The dump lands on the
+      write-back instead.
+
       STILL OWED, which is why this is `[~]`: the must-hit scenario for the
-      mutual-faint terminal state. Same bottleneck as 3a/3b — see stigmergy
+      mutual-faint terminal state — with a landmark that its own sabotage can
+      break. Same bottleneck as 3a/3b — see stigmergy
       `battle-stage3-blocked-on-mechanics-scenarios`. The remaining trainer-faint
       SFX at `.sfxplayed` is a `TODO-HW` audio item (Phase 3), not this box.
 - [ ] **3c (original entry).** Reconstruct the

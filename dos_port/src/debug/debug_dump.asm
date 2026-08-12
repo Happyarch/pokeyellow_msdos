@@ -215,6 +215,12 @@ extern g_windows                     ; src/ppu/ppu.asm — descriptor array
 extern ExecuteEnemyMove          ; core.asm — the real enemy-turn/damage pipeline
 extern HandlePlayerMonFainted    ; core.asm — RemoveFaintedPlayerMon + the black-out branch
 %endif
+%ifdef DEBUG_BATTLE_SELFDESTRUCT
+; Declared with the other battle externs, not at the gate — NASM sizes on first
+; sight and a late extern shifts every later label.
+extern ExecutePlayerMove         ; core.asm — the real player-turn/damage pipeline
+extern HandleEnemyMonFainted     ; core.asm — FaintEnemyPokemon + the .sfxplayed arm
+%endif
 %ifdef DEBUG_BATTLE_PAYDAY
 ; Declared HERE, with the other battle externs, not down at the gate: NASM sizes
 ; a symbol on first sight, so a late `extern` shifts every later label and the
@@ -2585,6 +2591,46 @@ RunBattleTest:
 .faintKO:
     call HandleEnemyMonFainted          ; FaintEnemyPokemon -> GainExperience
     call DebugDumpMemory                ; GBSTATE.BIN (id 21) + DUMP.BIN + exit
+%elifdef DEBUG_BATTLE_SELFDESTRUCT
+    ; ------------------------------------------------------------------
+    ; battle_self_destruct golden gate (battle plan 3c). The MUTUAL FAINT:
+    ; SNORLAX L80 uses SELFDESTRUCT on the spec wild PIDGEY L13, so BOTH mons
+    ; reach 0 HP in the same turn and FaintEnemyPokemon's `.sfxplayed` block
+    ; (pret core.asm:805-815) takes its player-also-fainted arm — the
+    ; wInHandlePlayerMonFainted guard, and the RemoveFaintedPlayerMon call that
+    ; writes the player mon's 0 HP back to its party slot.
+    ;
+    ; REACHABILITY CHECKED BEFORE BUILDING (the lesson from 3a): FaintEnemyPokemon
+    ; is called from HandleEnemyMonFainted at core.asm:2861, which this gate
+    ; template already calls directly — so unlike CheckNumAttacksLeft this does
+    ; NOT need the real MainInBattleLoop, and battle_faint's shape applies.
+    ;
+    ; DETERMINISTIC BY CONSTRUCTION. ExplodeEffect zeroes the USER's HP
+    ; unconditionally (effects.asm — no accuracy test), so SNORLAX faints on
+    ; every roll; and SELFDESTRUCT's power-130 hit from L80 overkills PIDGEY's
+    ; 36 HP on every roll, so the enemy faints too. The damage VALUE is not
+    ; compared — both HP words end at 0 either way.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    mov byte [ebp + wPlayerMoveListIndex], 0
+    mov byte [ebp + wBattleMonMoves], SELFDESTRUCT
+    mov byte [ebp + wPlayerSelectedMove], SELFDESTRUCT
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    call ExecutePlayerMove
+    ; BOTH must be down, or this is not the scenario's subject.
+    mov al, [ebp + wEnemyMonHP]
+    or al, [ebp + wEnemyMonHP + 1]
+    jnz .selfDestructAlive
+    mov al, [ebp + wBattleMonHP]
+    or al, [ebp + wBattleMonHP + 1]
+    jnz .selfDestructAlive
+    call HandleEnemyMonFainted          ; FaintEnemyPokemon -> the .sfxplayed arm
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+.selfDestructAlive:
+    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    call DelayFrame
+    call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_WRAP
     ; ------------------------------------------------------------------
     ; battle_wrap golden gate (battle plan 3a). The FIRST gate that lets the
@@ -3032,7 +3078,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 
