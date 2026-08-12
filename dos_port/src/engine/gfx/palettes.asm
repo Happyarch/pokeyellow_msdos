@@ -97,9 +97,21 @@ _RunPaletteCommand:
     ; (2026-08-05), which stopped hardcoding SET_PAL_DEFAULT -> SetPal_Generic and
     ; started honouring wDefaultPaletteCommand. Before that the missing publish was
     ; masked because the hardcoded answer happened to be the right one here.
+    ; ⚠ SET_PAL_PARTY_MENU_HP_BARS ($fc) IS DROPPED HERE — the party menu's HP
+    ; bars are consequently never coloured. pret handles this id BEFORE its
+    ; dispatch table (`cp SET_PAL_PARTY_MENU_HP_BARS / jp z,
+    ; UpdatePartyMenuBlkPacket`), and on CGB the packet it updates really is
+    ; consumed (SendSGBPackets runs BOTH packets through InitCGBPalettes). The
+    ; port cannot follow: its palette HAL is per-TILE-ID (tile_pal) and all six
+    ; party HP bars share tile ids, so a per-row colour needs duplicated
+    ; palette-able tiles first — the trick DuplicateEnemyHPBarTiles already uses
+    ; for the battle gauge. Caller: SetPartyMenuHPBarColor
+    ; (src/engine/menus/party_menu.asm). Owner: docs/current_plan_backlog.md
+    ; item 10b.
+    ; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:_RunPaletteCommand; behavior=the SET_PAL_PARTY_MENU_HP_BARS command id is ignored instead of updating the party-menu attribute packet so party HP bars keep whatever colour the palette slots already hold; evidence=pret dispatches this id to UpdatePartyMenuBlkPacket which edits an SGB BLK packet that SendSGBPackets feeds to InitCGBPalettes on colour hardware while this port has no packet path at all and colours per tile id through tile_pal which cannot distinguish six rows drawn from the same tile ids; lifetime=until backlog item 10b gives the party menu palette-able HP-bar tile ids}
     cmp al, SET_PAL_SURFING_PIKACHU_MINIGAME
-    ja .done                                ; SET_PAL_PARTY_MENU_HP_BARS ($fc) and any
-                                            ; out-of-range id: no port handler, as before
+    ja .done                                ; incl. SET_PAL_PARTY_MENU_HP_BARS ($fc) —
+                                            ; see the banner immediately above
     movzx eax, al
     jmp [SetPalFunctions + eax*4]
 .done:
@@ -486,6 +498,12 @@ SetPal_NidorinoIntro:           mov al, SET_PAL_NIDORINO_INTRO
                                 jmp SetPal_Screen
 SetPal_Generic:                 mov al, SET_PAL_GENERIC
                                 jmp SetPal_Screen
+; SetPal_PartyMenu applies the STATIC row only. pret returns PalPacket_PartyMenu
+; AND wPartyMenuBlkPacket, the second of which carries the per-row HP-bar
+; colours. Same defect shape SetPal_StatusScreen had before eda16b214 fixed it;
+; this one cannot be fixed the same way until the bars have palette-able tile
+; ids. See _RunPaletteCommand's banner and docs/current_plan_backlog.md item 10b.
+; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:SetPal_PartyMenu; behavior=applies only the static party-menu palette row and never the per-row HP-bar packet pret pairs with it; evidence=pret returns wPartyMenuBlkPacket alongside PalPacket_PartyMenu and SendSGBPackets feeds both to InitCGBPalettes on colour hardware while this port has no packet path and its per-tile-id tile_pal cannot colour six rows that share tile ids; lifetime=until backlog item 10b gives the party menu palette-able HP-bar tile ids}
 SetPal_PartyMenu:               mov al, SET_PAL_PARTY_MENU
                                 jmp SetPal_Screen
 SetPal_PokemonWholeScreen:      mov al, SET_PAL_POKEMON_WHOLE_SCREEN

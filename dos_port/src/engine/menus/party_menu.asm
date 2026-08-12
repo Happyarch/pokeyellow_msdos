@@ -473,17 +473,32 @@ PartyMenuPromptWait:
     ret
 
 ; ---------------------------------------------------------------------------
-; SetPartyMenuHPBarColor — store the current bar's color for the animation
-; pacing (and, on SGB, recolor it — TODO-HW).
+; SetPartyMenuHPBarColor — store the current bar's color, then ask the palette
+; layer to recolor that row.
 ; pret ref: engine/menus/party_menu.asm:SetPartyMenuHPBarColor.
 ; In: DL = HP-bar pixels (DrawHP2's HPBarLength result survives in e, as pret).
+;
+; ⚠ THE RECOLOR DOES NOT HAPPEN YET — THIS IS THE CALL SITE TO COME BACK TO.
+; Everything here is correct and faithful: the per-mon colour really is computed
+; into wPartyMenuHPBarColors, and RunPaletteCommand really is issued. The
+; command is then DROPPED by _RunPaletteCommand (src/engine/gfx/palettes.asm),
+; because the port's palette HAL cannot express a per-ROW colour — its tile_pal
+; is per-TILE-ID and all six bars share ids. Visible symptom, maintainer-observed
+; 2026-08-12 in a real battle: every bar is the wrong colour (red at full health)
+; and all six snap green on leaving the menu, because they are showing whatever
+; the battle left in the palette slots.
+; Owner + the fix shape (duplicate the bar tiles for palette-able ids, as
+; DuplicateEnemyHPBarTiles already does for the battle gauge):
+; docs/current_plan_backlog.md item 10b.
+;
+; DEVIATION{class=HAL; pret=engine/menus/party_menu.asm:SetPartyMenuHPBarColor; behavior=the RunPaletteCommand SET_PAL_PARTY_MENU_HP_BARS issued here has no effect so the per-mon HP-bar colour never reaches the screen; evidence=_RunPaletteCommand in src/engine/gfx/palettes.asm drops that command id and the port palette HAL assigns colour per tile id via tile_pal while all six party HP bars share the same tile ids so a per-row colour is not expressible without duplicated palette-able tiles; lifetime=until backlog item 10b gives the party menu palette-able HP-bar tile ids}
 ; ---------------------------------------------------------------------------
 SetPartyMenuHPBarColor:
     movzx eax, byte [ebp + wWhichPartyMenuHPBar]
     lea esi, [eax + wPartyMenuHPBarColors]  ; ld hl,wPartyMenuHPBarColors / add
     call GetHealthBarColor                  ; DL=pixels → [ebp+esi] = color
     mov bh, SET_PAL_PARTY_MENU_HP_BARS      ; ld b, SET_PAL_PARTY_MENU_HP_BARS
-    call RunPaletteCommand                  ; (palette-HAL stub — see .afterDrawingMonEntries)
+    call RunPaletteCommand                  ; dropped today — see the banner above
     inc byte [ebp + wWhichPartyMenuHPBar]   ; ld hl,… / inc [hl]
     ret
 

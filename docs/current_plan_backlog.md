@@ -531,6 +531,68 @@ From `docs/plans/battle_ui.md`. The battle scene is still GB-centred on the
 
 ## Menus / screens
 
+### 10b. Party-menu HP-bar colours need palette-able tile ids (palette HAL)
+
+**FILED 2026-08-12 at the maintainer's direction, back-burnered.** Found while
+box 2a of `docs/current_plan_battle_completion.md` made the party menu reachable
+from battle for the first time; observed by the maintainer in real gameplay
+(`dos_port/run TRAINER_ROUTE_PILOT=1`, engage the Route 3 trainer, PKMN, switch).
+
+**Symptom.** Every party mon's HP bar shows the wrong colour — red at full
+health — and all six snap to green the moment you leave the menu.
+
+**Root cause, measured end to end.** The chain is intact until the last step:
+* `SetPartyMenuHPBarColor` (`src/engine/menus/party_menu.asm`) computes the
+  per-mon colour into `wPartyMenuHPBarColors` via `GetHealthBarColor` —
+  correct, faithful.
+* It issues `RunPaletteCommand SET_PAL_PARTY_MENU_HP_BARS` — correct, faithful.
+* `_RunPaletteCommand` (`src/engine/gfx/palettes.asm`) **drops that id**:
+  `cmp al, SET_PAL_SURFING_PIKACHU_MINIGAME` / `ja .done`. pret handles it
+  *before* the dispatch table (`jp z, UpdatePartyMenuBlkPacket`).
+* `SetPal_PartyMenu` is likewise a static one-liner where pret returns a palette
+  packet **and** `wPartyMenuBlkPacket`.
+
+So the bars are never coloured; they display whatever the palette slots already
+hold. Entered from battle those slots hold the player's and the enemy's HP-bar
+colours — both green at full HP — which is exactly why all six snap green on
+exit.
+
+**Why it is not a one-liner, and what the real shape is.** On CGB the BLK packet
+is NOT ignored: `SendSGBPackets` pushes `de`, calls `InitCGBPalettes`, pops
+`hl`, calls it again — both packets. pret genuinely colours each row on colour
+hardware. But this port has no packet path *by design*: see the
+`DEVIATION{class=HAL}` on `YellowIntroPaletteAction`
+(`src/engine/gfx/palettes.asm`), which records that `InitCGBPalettes`,
+`GetCGBBasePalAddress`, `DMGPalToCGBPal`, `TransferCurBGPData` and
+`SendSGBPacket` have no port counterpart because `commit_palette` rebuilds
+everything each frame from 4 `bg_slot_pal` + 4 `obj_slot_pal` entries plus a
+**per-tile-id** `tile_pal` array.
+
+**Per-tile-id cannot express per-row colour** — all six bars use the same tile
+ids, so `tile_pal` cannot give row 1 a red bar and row 2 a green one. Writing
+the missing `$fc` handler is necessary but not sufficient; it needs
+palette-able ids to write into.
+
+**Precedent to copy, already in this tree:** `DuplicateEnemyHPBarTiles`
+(`src/engine/battle/battle_hud.asm`) exists to give the battle's enemy gauge
+"distinct palette-able IDs" for exactly this reason. The party menu needs the
+same trick — three colours, or six rows.
+
+**Where it is marked in the source** (so this entry is reachable from the code,
+per the maintainer's instruction): a `DEVIATION{class=HAL}` sits at BOTH the
+call site, `SetPartyMenuHPBarColor` in `src/engine/menus/party_menu.asm`, and
+the drop site in `_RunPaletteCommand` / `SetPal_PartyMenu` in
+`src/engine/gfx/palettes.asm`. Grep `SET_PAL_PARTY_MENU_HP_BARS`.
+
+**Related and probably the same family:** the status screen had the identical
+defect shape (a static one-liner where pret overwrites packet entries at run
+time) and was fixed 2026-08-11 in `eda16b214` — worth reading as the pattern.
+`regression-battle-backsprite-palette-silhouette` may also belong here.
+
+Full detail, symptom list and the eliminated hypotheses:
+stigmergy `regression-battle-party-menu-graphics-not-set-up`.
+
+
 ### 11. Bill's PC full UI — DONE 2026-07-31 (sram plan C1-C5, a2ea6550..c0b34720)
 From `docs/plans/pokemon_behavior.md`. Closed: the whole Bill's PC UI is the
 faithful pret mirror in `src/engine/pokemon/bills_pc.asm`, LINKED, and driven
