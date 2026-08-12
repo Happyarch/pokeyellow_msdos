@@ -1001,6 +1001,21 @@ endif
 # enemy's moves so nothing compared depends on an RNG roll -- see the gate's
 # header in src/debug/debug_dump.asm.
 # make DEBUG_BATTLE_BLACKOUT=1
+# Voluntary in-battle SWITCH viewer (battle plan 2a): the DEBUG_BATTLE_GOLDEN
+# scene, then the REAL DisplayBattleMenu driven PKMN -> slot 1 -> SWITCH by the
+# AUTOKEY_BATTLE_SWITCH script, then FRAME.BIN at AUTOKEY_DUMP_FRAME. This is the
+# first gate that executes PartyMenuOrRockOrRun / SwitchPlayerMon / RetreatMon /
+# AnimateRetreatingPlayerMon at all -- nothing in the scenario registry presses
+# PKMN. It is a VIEWER, not a registered golden scenario yet; the golden pair is
+# the Stage 2 scenario box's job.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_SWITCH=1" /tmp/switch
+ifdef DEBUG_BATTLE_SWITCH
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_SWITCH -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLE_SWITCH -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 1500
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_BATTLE_BLACKOUT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_BLACKOUT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

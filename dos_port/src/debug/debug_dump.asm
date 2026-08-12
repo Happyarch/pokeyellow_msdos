@@ -2158,7 +2158,30 @@ RunBattleTest:
     ; witness the send-out, and the OBJ pal4-7 divergence survived a SendOutMon
     ; restoration that changed nothing (battle_completion 1f/1g).
     call SendOutMon
-%ifdef DEBUG_BATTLE_MENU
+%ifdef DEBUG_BATTLE_SWITCH
+    ; --- voluntary in-battle SWITCH (battle plan 2a) ---
+    ; The first gate that drives PKMN -> party menu -> SWITCH, so
+    ; PartyMenuOrRockOrRun / SwitchPlayerMon / RetreatMon /
+    ; AnimateRetreatingPlayerMon finally execute. Before this they were linked
+    ; and unreached: nothing in the registry pressed PKMN.
+    ;
+    ; IT CALLS THE PRODUCTION ENTRY POINT AND NOTHING ELSE. DisplayBattleMenu
+    ; is the real routine; the switch is reached by pressing keys through it,
+    ; NOT by calling SwitchPlayerMon here. That distinction is the whole point:
+    ; a harness that duplicates the production sequence inherits production's
+    ; bug and cannot witness its own fix (bug-class-false-witness-scenario
+    ; instance 3 — this very file's DEBUG_BATTLE_GOLDEN did exactly that with
+    ; SendOutMon and blinded five scenarios).
+    ;
+    ; The scene above sent out party slot 0, so the party menu opens with its
+    ; cursor ON THE ACTIVE MON. Selecting it would print AlreadyOutText and
+    ; bounce back, which is why the script presses DOWN first — see the
+    ; AUTOKEY_BATTLE_SWITCH cadence note.
+    call DisplayBattleMenu
+.goldenswitchhang:
+    call DelayFrame
+    jmp .goldenswitchhang
+%elifdef DEBUG_BATTLE_MENU
     ; The REAL battle menu: DisplayBattleMenu draws HUDs + boxes and parks in
     ; HandleMenuInput with the ▶ on FIGHT; AUTOKEY_QUIET photographs it at
     ; AUTOKEY_DUMP_FRAME (the Makefile adds DEBUG_AUTOKEY).
@@ -4718,6 +4741,36 @@ autokey_script:
     dd 330, 336, PAD_A          ; select FLY → Town Map (ChooseFlyDestination)
     dd 470, 476, PAD_A          ; select the highlighted town → arm the Fly warp
     dd  -1,  -1, 0
+%elifdef AUTOKEY_BATTLE_SWITCH
+    ; battle plan 2a: FIGHT-menu -> PKMN -> party slot 1 -> SWITCH.
+    ;
+    ; MENU GEOMETRY, measured out of DisplayBattleMenu and cross-checked against
+    ; pret core.asm:2236-2270 rather than guessed. The battle menu is 2x2, the
+    ; RIGHT column adds 2 to wCurrentMenuItem, and ITEM/PKMN ids are then
+    ; swapped:
+    ;     FIGHT (left, top)     pre-swap 0 -> 0
+    ;     ITEM  (left, bottom)  pre-swap 1 -> 2
+    ;     PKMN  (right, top)    pre-swap 2 -> 1   <- what we want
+    ;     RUN   (right, bottom) pre-swap 3 -> 3
+    ; So PKMN is exactly RIGHT then A, with no vertical movement.
+    ;
+    ; Then: the party menu opens on slot 0, which IS the mon that is already
+    ; out, so DOWN moves to slot 1 before A. A on the SWITCH/STATS/CANCEL box
+    ; takes SWITCH, which is item 0 and where the cursor starts.
+    ;
+    ; CADENCE: 180-frame gaps, deliberately generous from the start. The switch
+    ; tail is not cheap — RetreatMon prints text, then a 50-frame DelayFrames,
+    ; then the retreat animation, then SendOutMon, which plays a REAL BLOCKING
+    ; cry as of d9bca84c4. A fixed-frame schedule tuned tight is exactly what
+    ; desynced bills_pc_ops and box_change_roundtrip when PlayCry stopped being
+    ; a no-op, and both had to have their cadence doubled.
+    dd  180,  190, PAD_RIGHT    ; FIGHT -> the right column (PKMN)
+    dd  360,  370, PAD_A        ; select PKMN -> PartyMenuOrRockOrRun
+    dd  540,  550, PAD_DOWN     ; party list slot 0 -> slot 1 (not the active mon)
+    dd  720,  730, PAD_A        ; choose slot 1 -> SWITCH/STATS/CANCEL box
+    dd  900,  910, PAD_A        ; SWITCH (item 0) -> SwitchPlayerMon
+    dd 1260, 1270, PAD_A        ; spare: answers anything the send-out prompts
+    dd   -1,   -1, 0
 %elifdef AUTOKEY_TRAINERCARD
     ; Trainer-card ENTER **and EXIT** (the default script above can only enter a
     ; submenu — it has a single A press). DEBUG_SEED_PARTY sets EVENT_GOT_POKEDEX
