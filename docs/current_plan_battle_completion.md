@@ -593,22 +593,62 @@ result gates deliberately stop after initialization and drive one terminal turn.
       zero-RNG reward bytes still match, but it does retire the incidental
       move-selection witness the cadence used to give. Full reasoning is in the
       mask's own why-string.
-- [~] **1g's original entry, kept as the record.** pret calls `SendOutMon` from THREE sites —
-      `StartBattle` (core.asm:259, the initial send-out, immediately before
-      `jr MainInBattleLoop`), `ChooseNextMon` (:1163) and `SwitchPlayerMon`
-      (:2541). The port has only `ChooseNextMon`. `StartBattle` is `missing`:
-      the port's `_InitBattleCommon` absorbed the wild/trainer orchestration and
-      performs the initial send-out inline, so nothing reaches `SendOutMon` at
-      battle start.
+- [x] **1g's original entry — DONE 2026-08-12, acceptance test MEASURED and
+      DECOMPOSED.** The premise below is now FALSE and is kept as the record.
 
-      That is what actually keeps `IO_OBP1` at 0 for the five battle
-      checkpoints: hardware gets `$6C` from `SetAnimationPalette` via
-      `StartBattle` → `SendOutMon` → `PlayMoveAnimation POOF_ANIM`. Closing this
-      is what should retire the 12-divergence `OBJ pal4-7` signature in
-      `battle_intro` / `battle_menu` / `move_selection` / `ball_catch` /
-      `battle_damage`, and it is the acceptance test for this box — a passing
-      suite alone is not, since the suite passed while the code was unreached.
-      `SwitchPlayerMon` is Stage 2a's, not this box's.
+      **THE PREMISE IS STALE.** It said "The port has only `ChooseNextMon`" and
+      "nothing reaches `SendOutMon` at battle start". Measured today with
+      `label_status --callers SendOutMon`: the port has FOUR callers —
+      `ChooseNextMon` (core.asm:4938), `SwitchPlayerMon` (core.asm:3379),
+      `_InitBattleCommon` (init_battle.asm:446) and the harness's
+      `RunBattleTest`. The battle-start site landed in `145754975` and carries a
+      `DEVIATION{class=projection}` at the call explaining that
+      `_InitBattleCommon` collapses pret's `InitWildBattle` + `_InitBattleCommon`
+      + `StartBattle`, so it holds `StartBattle`'s `call SendOutMon` inline.
+
+      **THE ACCEPTANCE TEST, per scenario, from the 65-scenario `fidelity-full`
+      run (65 PASS / 0 FAIL) — this is the decomposition the box demanded, not a
+      suite-passed claim.** Note first that `golden_diff` prints a `PALETTE:`
+      line ONLY when there is at least one divergence (`if pal_all:`), so
+      "no PALETTE line" means ZERO. That is unambiguous here because
+      `cgb_palettes` is emitted unconditionally on both sides
+      (debug_dump.asm:806's shared region table; every golden carries it).
+
+      | scenario | was (2026-08-11) | now | verdict |
+      |---|---|---|---|
+      | `battle_intro` | 12, OBJ pal4-7 | **0** | RETIRED |
+      | `battle_menu` | 12 | **0** | RETIRED |
+      | `move_selection` | 12 | **0** | RETIRED |
+      | `battle_damage` | 12, OBJ pal4-7 | **8** | NOT this family — see below |
+      | `ball_catch` | 12 | **12** | a DIFFERENT family, already decomposed |
+
+      **`battle_damage`'s residue is a HARNESS ROUTE ASYMMETRY, not a port
+      defect, and it is structurally unfixable in that scenario.** The signature
+      changed shape, which is what gave it away: the port no longer shows white,
+      it shows the RIGHT colours with indices 1 and 3 EXCHANGED
+      (`OBJ pal4 colour1: rom=(3,3,3) port=(31,31,0)` against
+      `colour3: rom=(31,31,0) port=(3,3,3)`, and the same for pal5-7). `(3,3,3)`
+      is the darkest shade, so the ROM is mapping index 1 to it — that is
+      `$6C` (`%01101100`), `SetAnimationPalette`'s value — while the port maps
+      index 3 to it, i.e. `$E4`, the identity the send-out left. So the port
+      simply never runs `SetAnimationPalette` here, and the reason is by design:
+      the `DEBUG_BATTLE_DAMAGE` gate calls the numerical spine directly
+      (`GetCurrentMove` → `GetDamageVarsForPlayerAttack` → `CalculateDamage` →
+      `AdjustDamageForMoveType` → `RandomizeDamage`) and contains NO animation,
+      palette, `SendOutMon`, `MainInBattleLoop` or `ExecutePlayerMove` call at
+      all — grep-verified — precisely "so text and animation waits cannot
+      dominate a headless arithmetic check". The golden reaches the same numbers
+      through REAL TURNS, which animate. Two different routes, so the palette is
+      a side effect of the road not taken. **It must NOT be masked** (masking is
+      how this class hid for a week) and it cannot be fixed without defeating
+      the gate's purpose; it belongs to the palette plan as a known
+      route-asymmetry, and the OBP1 family's real witnesses are the three
+      scenarios above, which are at 0.
+
+      `ball_catch`'s 12 are `BG pal0-3 / OBJ pal0-7 colour3: rom=(16,31,4)
+      port=(31,31,31)` — every palette's colour 3, BG included. Not OBJ pal4-7,
+      not this box; the mis-grouping was already corrected in-tree on 2026-08-11.
+
       *What 1f looked like when it was opened, kept as the record of the defect
       and of one claim that turned out to be wrong.* It came from a measured
       palette-fidelity root cause, not from a survey. `faithdiff SendOutMon`
