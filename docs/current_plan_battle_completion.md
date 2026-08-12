@@ -1537,9 +1537,11 @@ provider shapes below, not their runtime behavior.
 >   wiring is there (port core.asm:568, :3199, :6377); the turn/flee mechanics
 >   and the text layer are what is thin.
 >
-> Not measured this pass, and therefore NOT covered by the above: 4a's two
-> remaining open sub-items (its golden and the happiness-init audit), and
-> whether any of 4b's branches are CORRECT rather than merely present. 4a's
+> Not measured this pass, and therefore NOT covered by the above: 4a's golden,
+> and whether any of 4b's branches are CORRECT rather than merely present.
+> (4a's happiness-init audit WAS since done — 2026-08-12, see the box; it found
+> three missing calls and a scanner blind spot that had hidden all 15 of pret's
+> call sites to `ModifyPikachuHappiness`.) 4a's
 > THIRD sub-item — the Oak follow stall — was re-measured and is DEAD; see the
 > box itself.
 
@@ -1561,11 +1563,55 @@ provider shapes below, not their runtime behavior.
         `DEBUG_SEAM_KEEP_BATTLES=1 AUTOKEY_DUMP_ON_BATTLE=1` (gate dumps on
         `wCurOpponent`/`wBattleType`; boot-drift-robust).
       - STILL OPEN: (1) the must-hit Pikachu-battle golden scenario is not yet
-        authored; (2) happiness init (`ModifyPikachuHappiness`) not audited —
-        and note that the routine itself has been REAL since `9ce747c2e`, with
-        its reason-code register fixed at 8 of 9 call sites in `2df28308a`, so
-        this audit is now about the Pikachu-battle INIT path rather than about a
-        stub.
+        authored.
+      - **(2) THE HAPPINESS-INIT AUDIT IS DONE (2026-08-12). It found three
+        MISSING calls, and — more importantly — the reason no gate had ever
+        reported them.**
+        - pret reaches `ModifyPikachuHappiness` from **15** sites, and every one
+          of them goes through `farcall_ModifyPikachuHappiness` /
+          `callfar_ModifyPikachuHappiness` (`macros/farcall.asm:74,81`). Those
+          macros carry the CALLEE IN THE MACRO NAME and take the reason code as
+          their operand, so the pret-side scanners — which match
+          `farcall <Label>` — saw the operand `PIKAHAPPY_GYMLEADER`, not the
+          routine. **`ModifyPikachuHappiness` therefore read as having ZERO pret
+          callers**, and faithdiff could not report a dropped call to it in
+          either direction. The port's 9 real calls were being reported as
+          spurious `+ ADDED` lines instead.
+        - Fixed in BOTH scanners (they duplicate the regexes rather than sharing
+          them, which is why fixing one did not fix the other):
+          `update_label_db` and `faithdiff` now match
+          `(farcall|callfar)_<Label> <arg>`. Non-vacuity, fully decomposed:
+          pret edges **7406 → 7421, delta +15, zero dropped**, and all 15 are
+          `-> ModifyPikachuHappiness` at the exact enumerated lines. Per-label:
+          `RemoveFaintedPlayerMon` 9→10 pret calls, `InitBattleCommon` 8→9.
+        - The three missing calls, now RESTORED:
+          `InitBattleCommon` `PIKAHAPPY_GYMLEADER` (pret init_battle.asm:57,
+          gated on `wLoneAttackNo` — the major-story-battle marker `ReadTrainer`
+          also reads); and `RemoveFaintedPlayerMon`'s `PIKAHAPPY_FAINTED` /
+          `PIKAHAPPY_CARELESSTRAINER` pair (pret core.asm:1067-1083, chosen by
+          whether the enemy outlevelled the player by 30+). The latter also
+          restored pret's `wWhichPokemon` store, which is not cosmetic — it
+          selects the mon `IsThisPartyMonStarterPikachu` tests, so without it
+          the happiness call would read whatever the last consumer left there.
+          faithdiff's `- DROPPED [wWhichPokemon]` on `RemoveFaintedPlayerMon` is
+          gone as a result.
+        - **The port's own comment had documented this as a HAL deferral** —
+          `RemoveFaintedPlayerMon`'s header listed `ModifyPikachuHappiness`
+          alongside `PlayCry` under "Deferred (ANIMATION/audio/Yellow)". It is
+          pure WRAM arithmetic with no HAL boundary in it. Same failure mode as
+          the `item_effects.asm` comment that documented a wrong register as the
+          port's convention (`8a7f920c9`): a comment asserting a defect is
+          intentional, which no linter can see.
+        - **NOT restored, and each is a different reason, not one excuse:**
+          `TradeCenter_Trade` `PIKAHAPPY_TRADE` (cable_club.asm:801) — the link
+          serial HAL is a Phase-4 boundary; and the two `poison.asm` sites
+          (`ApplyOutOfBattlePoisonDamage` PIKAHAPPY_PSNFNT,
+          `UpdatePikachuHappinessAndMood` PIKAHAPPY_WALKING) — measured
+          2026-08-12, **`engine/events/poison.asm` is entirely unported**,
+          neither label exists anywhere under `dos_port/src/`. That is a whole
+          missing file, not a dropped call, and it owns the out-of-battle
+          happiness drift (the 256-step walking bonus and the mood convergence).
+          It belongs to an overworld-events plan, not to this one.
       - **ITEM (3) IS DEAD AND HAS BEEN SINCE 2026-08-07 — do not treat it as a
         blocker.** It read: "DOWNSTREAM the post-battle `PLAYER_FOLLOWS_OAK`
         step STALLS … this is what still blocks the Oak intro from reaching the

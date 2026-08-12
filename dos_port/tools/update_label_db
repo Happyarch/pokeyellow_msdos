@@ -121,6 +121,23 @@ PRET_MACRO_RE = re.compile(
     r'^\s*(predef_jump|predef|farcall|callfar|callba|callab|homecall)'
     r'\s+([A-Za-z_][A-Za-z0-9_]*)\s*$')
 
+# The callee-in-the-macro-NAME form: `farcall_ModifyPikachuHappiness PIKAHAPPY_X`
+# (macros/farcall.asm:74,81). The operand is the macro's ARGUMENT, not the callee,
+# so PRET_MACRO_RE above cannot match it and every such call is invisible on the
+# pret side — while the port, having no macro, emits a plain `call <Label>` that
+# faithdiff then reports as a spurious `+ ADDED`.
+#
+# MEASURED 2026-08-12, and this is why it matters rather than being a tidy-up:
+# both macros exist solely for ModifyPikachuHappiness, and they cover 15 call
+# sites (13 farcall_, 2 callfar_) — i.e. EVERY caller it has. So before this
+# rule the routine read as having no pret callers at all, and a genuinely
+# missing call (InitBattleCommon's PIKAHAPPY_GYMLEADER, RemoveFaintedPlayerMon's
+# FAINTED/CARELESSTRAINER) could not be surfaced by faithdiff in either
+# direction. The pattern is kept general rather than hardcoding the one label,
+# so a future macro of this shape is covered on the day it lands.
+PRET_MACRO_NAMED_RE = re.compile(
+    r'^\s*(?:farcall|callfar)_([A-Za-z_][A-Za-z0-9_]*)\s+\S')
+
 def scan_pret():
     """Yield (labels, calls): labels = {name: relpath (first wins)},
     calls = [(caller, callee, kind, file, line)]."""
@@ -148,6 +165,12 @@ def scan_pret():
                     m = PRET_CALL_RE.match(line) or PRET_MACRO_RE.match(line)
                     if m:
                         calls.append((cur, m.group(2), m.group(1), rel, ln))
+                        continue
+                    m = PRET_MACRO_NAMED_RE.match(line)
+                    if m:
+                        # kind is spelled 'farcall' so it groups with the other
+                        # far calls in every consumer that switches on kind.
+                        calls.append((cur, m.group(1), 'farcall', rel, ln))
     return labels, calls
 
 # ── pret scripts/ provenance (names only) ───────────────────────────────────────

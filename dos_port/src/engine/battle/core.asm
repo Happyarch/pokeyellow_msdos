@@ -268,6 +268,7 @@ extern WriteMonMoves                   ; evos_moves.asm — level-up moveset (pr
 extern LoadMovePPs                     ; add_mon.asm — PPs (predef: wPredefHL/DE)
 extern IndexToPokedex                  ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern FlagAction                      ; flag_action.asm — ESI=array, CL=bit, BH=action
+extern ModifyPikachuHappiness          ; engine/events/pikachu_happiness.asm — DH = PIKAHAPPY_*
 extern MoveAnimation                   ; animations.asm — pret predef, direct call (Stage 2b)
 extern Func_78e98                      ; animations.asm — BG save/clear/restore around the anim
 
@@ -4798,8 +4799,12 @@ HasMonFainted:
 ; gain-exp flag, resets the enemy's multi-attack + accumulated Bide damage,
 ; sets wBattleResult=loss, and (only when called from HandlePlayerMonFainted,
 ; i.e. wInHandlePlayerMonFainted==1) plays the cry + "<mon> fainted!" message.
-; Deferred (ANIMATION/audio/Yellow): low-health alarm, SlideDownFaintedMonPic
-; animation, PlayCry, ModifyPikachuHappiness.
+; Deferred (audio HAL): the low-health alarm and the cry (PlayCry, and the Yellow
+; starter-Pikachu arm that replaces it).
+;
+; ModifyPikachuHappiness was ALSO listed here as deferred, and that was wrong —
+; it is pure WRAM arithmetic with no HAL boundary anywhere in it. Restored
+; 2026-08-12 (battle plan 4a); see the block at .regularFaint.
 ; ===========================================================================
 RemoveFaintedPlayerMon:
     ; clear gain-exp flag for the fainted mon (pret: predef FlagActionPredef, FLAG_RESET)
@@ -4826,9 +4831,38 @@ RemoveFaintedPlayerMon:
     mov al, [ebp + wInHandlePlayerMonFainted]
     and al, al
     jz .ret
-    ; TODO-HW: PlayCry(wBattleMonSpecies) (audio HAL); Yellow ModifyPikachuHappiness.
+    ; TODO-HW: PlayCry(wBattleMonSpecies) (audio HAL). The Pikachu cry arm
+    ; (IsThisPartyMonStarterPikachu / ldpikacry PikachuCry4 / PlayPikachuSoundClip,
+    ; pret core.asm:1056-1060) rides with it.
+    ;
+    ; pret core.asm:1054 — wWhichPokemon selects the mon IsThisPartyMonStarterPikachu
+    ; tests, and BOTH the cry arm above and the happiness block below read it. pret
+    ; stores it twice (1054 and 1067) because PrintText sits between; the second
+    ; store is the one the happiness block depends on, so it is NOT redundant here
+    ; even with the cry arm deferred.
+    mov al, [ebp + wPlayerMonNumber]
+    mov [ebp + wWhichPokemon], al
     mov eax, PlayerMonFaintedText
     call PrintBattleText                 ; "<nick> fainted!"
+    ; pret core.asm:1067-1083 — the fainting penalty. Two reason codes, chosen by
+    ; how badly outlevelled the player was.
+    mov al, [ebp + wPlayerMonNumber]
+    mov [ebp + wWhichPokemon], al
+    mov al, [ebp + wBattleMonLevel]
+    mov bh, al                           ; ld b, a
+    mov al, [ebp + wEnemyMonLevel]
+    sub al, bh                           ; enemylevel - playerlevel; CF = we were stronger
+    jb .regularFaint                     ; jr c — deduct happiness regularly
+    cmp al, 30                           ; enemy 30+ levels above us?
+    jae .carelessTrainer                 ; jr nc — punish the careless trainer
+.regularFaint:
+    mov dh, PIKAHAPPY_FAINTED            ; farcall_ModifyPikachuHappiness: ld d, kind
+    call ModifyPikachuHappiness
+    ret
+.carelessTrainer:
+    mov dh, PIKAHAPPY_CARELESSTRAINER    ; farcall_ModifyPikachuHappiness: ld d, kind
+    call ModifyPikachuHappiness
+    ret
 .ret:
     ret
 

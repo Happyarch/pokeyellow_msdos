@@ -45,6 +45,21 @@ PRET_CALL_RE = re.compile(
 PRET_MACRO_RE = re.compile(
     r'^\s*(predef_jump|predef|farcall|callfar|callba|callab|homecall)'
     r'\s+([A-Za-z_][A-Za-z0-9_]*)\s*$')
+# The callee-in-the-macro-NAME form: `farcall_ModifyPikachuHappiness PIKAHAPPY_X`
+# (macros/farcall.asm:74,81). The operand is the macro ARGUMENT, so PRET_MACRO_RE
+# cannot match and the call is invisible on the pret side, while the port's plain
+# `call ModifyPikachuHappiness` reads as a spurious `+ ADDED`. Kept in sync with
+# the identical rule in update_label_db (which this file duplicates rather than
+# imports — the duplication is why fixing one did not fix the other).
+#
+# NOTE this is the SAME failure mode the Jcc note below records: a gate that
+# cannot see a construct reports a faithful translation as a divergence, and the
+# tempting "fix" is to contort the assembly. Measured 2026-08-12: these two
+# macros are ModifyPikachuHappiness's ONLY callers (15 sites), so the routine
+# read as having zero pret callers and neither a real drop nor a real addition
+# could be distinguished.
+PRET_MACRO_NAMED_RE = re.compile(
+    r'^\s*(?:farcall|callfar)_([A-Za-z_][A-Za-z0-9_]*)\s+\S')
 # ld [wX], … / ld [hX], … / ldh [hX], …  (stores only: bracket operand first)
 PRET_STORE_RE = re.compile(
     r'^\s*ldh?\s+\[\s*([whWH][A-Za-z0-9_]*)\s*\]\s*,')
@@ -124,6 +139,10 @@ def pret_sets(body):
         m = PRET_CALL_RE.match(line) or PRET_MACRO_RE.match(line)
         if m:
             calls.setdefault(m.group(2), []).append(m.group(1))
+        else:
+            m = PRET_MACRO_NAMED_RE.match(line)
+            if m:
+                calls.setdefault(m.group(1), []).append('farcall')
         m = PRET_STORE_RE.match(line)
         if m and m.group(1) not in PRET_REG_INDIRECT:
             stores[m.group(1)] = stores.get(m.group(1), 0) + 1

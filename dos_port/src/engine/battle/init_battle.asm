@@ -116,6 +116,7 @@ extern EndOfBattle                       ; end_of_battle.asm — post-battle (EX
 extern EndBattleScreen                   ; battle_menu.asm — clean terminal
 extern GetTrainerInformation             ; src/home/trainers2.asm — name/pic/prize metadata
 extern ReadTrainer                       ; read_trainer_party.asm — generated roster -> enemy party
+extern ModifyPikachuHappiness            ; engine/events/pikachu_happiness.asm — DH = PIKAHAPPY_*
 extern trainer_pic_ptr                   ; src/home/trainers2.asm — flat picture pointer
 extern trainer_pic_len                   ; src/home/trainers2.asm — matching compressed byte length
 extern LoadMonPicToVRAM                  ; src/home/pics.asm — staged compressed pic -> vFrontPic
@@ -189,6 +190,19 @@ InitBattleCommon:
     mov byte [ebp + wAICount], 0xFF
     mov byte [ebp + wEnemyMonPartyPos], 0xFF
     mov byte [ebp + wIsInBattle], 2
+    ; Is this a major story battle? pret init_battle.asm:53-58. wLoneAttackNo is
+    ; the gym-leader/rival marker ReadTrainer also reads (read_trainer_party.asm:
+    ; "if [wLoneAttackNo] != 0, one pokemon on the team has a special move"), so
+    ; the two consumers agree on what makes a battle major.
+    ;
+    ; pret's trailing comment on this line is "useless since already in bank3d".
+    ; That is about the farcall's BANK switch being redundant — NOT about the
+    ; call. The happiness change is real and is the whole point of the branch.
+    mov al, [ebp + wLoneAttackNo]
+    test al, al
+    jz _InitBattleCommon                     ; jp z
+    mov dh, PIKAHAPPY_GYMLEADER              ; farcall_ModifyPikachuHappiness: ld d, kind
+    call ModifyPikachuHappiness
     jmp _InitBattleCommon
 
 InitWildBattle:
