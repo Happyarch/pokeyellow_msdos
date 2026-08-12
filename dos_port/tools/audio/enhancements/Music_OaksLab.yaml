@@ -1,0 +1,196 @@
+# Music_OaksLab — hand-crafted tier-1 + tier-3 enhancement (Phase E).
+#
+# Authored against analysis/Music_OaksLab.yaml (frame-exact) and the
+# score-analysis description for Professor Oak's Lab (per the
+# audio-enhance-opl3 / audio-enhance-mt32 skills).
+#
+# The track: A major, 4/4. The grid is 33 measures because the loop point
+# is NOT grid-aligned: the song opens with a 2-beat Bm7 pickup (the rising
+# scale run), then a 16-measure body that runs grid m1 b3 .. m17 b2 and
+# loops back to m17 b3 (frame 1732; period 1680 frames = 16 measures).
+# Pass 2 (m17 b3 .. m33 b2) is content-identical to pass 1, so the loop is
+# seamless. Per the score analysis, the 16-measure body is two statements
+# of an 8-measure phrase whose only difference is the wave channel's
+# texture (off-beat syncopation in statement 1, steady eighths in
+# statement 2); the square channels repeat identically.
+#
+# Register audit: the three GB voices pack A3(57)..A5(81) continuously —
+# melody ch2 on top (G#4..A5), ch1 harmony (E4..E5), the wave ostinato
+# below (A3..A4). The entire low end BELOW A3 is empty, exactly what the
+# GB speaker forced Masuda to omit. That is where the whole tier-1 layer
+# goes, same reasoning as the approved Music_PalletTown file (same Masuda
+# town-theme family, same [q. xx] motive lineage):
+#
+#   * sub_bass — chord roots in octave 2 (C#2..B2), one sustained note per
+#                half-measure chord change (whole-measure on the held D/A).
+#   * low_pad  — octave-3 chord tones (C#3..G#3), voice-led by step,
+#                never above G#3 so it can never touch the wave's A3 floor.
+#
+# Harmony was read from the sounding pitches of the frame-exact sim, not
+# the template labels, where they disagreed: m1 b3 / m9 b3 sound A-major
+# (A+C#, the analysis' "C#aug" is a template artifact) so the bass takes
+# A2; m7 b3 sounds G#dim (G#+B+D — the analysis says Amaj7) which mirrors
+# m15 b3, the correctly-labeled G#dim in statement 2.
+#
+# Voice leading: the pad moves only by step or P5, and the bass+pad pair
+# was checked half-measure by half-measure — no parallel 5ths/8ves (the
+# pad's G#3 at m7 b3 instead of E3 is what keeps the A2->B2 bass move
+# clean of a parallel 5th). Pad vs bass intervals are P5 or wider except
+# the intentional dim-5th sonority of G#dim which the GB voices already
+# carry at the octave.
+#
+# Loop handling: the body is offset 2 beats from the grid, so patterns are
+# authored as 17 grid-aligned measures and instanced at m1 and m17:
+#   * instance m1 covers grid m1..m17 — the Bm7 pickup (direct events,
+#     plays once), the 16-measure body, and the E7 tail at m17 b1-b2;
+#   * instance m17 covers grid m17 b3..m33 b2 — the loop body (the stream
+#     jumps to frame 1732 at the loop, so this instance is what repeats);
+#   * pattern m1 b1-b2 and m17 b3-b4 are rests, so the two instances
+#     neither overlap nor gap; the m17 b1 note (d 1.9) releases a few
+#     frames before the loop point (frame 1732) / song end.
+#
+# Tier 2 (MT-32-only) is deliberately absent: the tier-1 low_pad already
+# cascades to MT-32 as a warm string tenor (patch 49), and the GB voices
+# leave no clean alto register for a second sustained layer (ch1 packs
+# E4..E5, ch3 packs A3..A4 — any additional mid voice unison-collides,
+# exactly the proven Music_PalletTown situation). Tier 3 adds the one
+# thing that fits: celesta sparkle ABOVE the melody (B5..F#6, clear of the
+# A5 ceiling) marking the phrase opens and cadences of BOTH statements.
+#
+# Patches mirror the approved Pallet Town set (same family, proven in
+# audition): sub_bass -> MT-32 SynBass1/GM Synth Bass 1; soft_pad ->
+# MT-32 Str Sect 1/GM Pad 2 (warm); celesta -> MT-32 Celesta 1/GM Celesta.
+
+schema: 1
+song: Music_OaksLab
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass
+    mt32_patch: 29        # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39        # GM Synth Bass 1
+    pan: center
+    volume: 54            # Pallet-Town-proven level (auditioned 2026-07-07)
+    velocity: 76
+    events:
+      - {m: 1, b: 1, d: 2, n: B2}        # intro pickup, Bm7 root — once
+      - {at: 1,  pattern: bass_cycle}
+      - {at: 17, pattern: bass_cycle}
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad
+    mt32_patch: 49        # MT-32 Str Sect1 (warm string pad)
+    gm_program: 90        # GM Pad 2 (warm)
+    pan: center
+    volume: 72
+    velocity: 84
+    events:
+      - {m: 1, b: 1, d: 2, n: F#3}       # intro pickup, Bm7 5th — once
+      - {at: 1,  pattern: pad_cycle}
+      - {at: 17, pattern: pad_cycle}
+
+  # --- Tier 2-3 (MT-32 / GM only; never OPL) --------------------------------
+  # One tier-3 color layer; no tier-2 (see header — no clean register).
+  - name: sparkle
+    tier: 3                 # color/flourish — dropped first under polyphony
+    mt32_patch: 23          # MT-32 Celesta 1
+    gm_program: 9           # GM Celesta
+    pan: center
+    volume: 64
+    velocity: 80
+    events:
+      - {at: 1,  pattern: sparkle_cycle}
+      - {at: 17, pattern: sparkle_cycle}
+
+patterns:
+  # Chord roots, octave 2 (C#2..B2) — far below the wave's A3 floor, so no
+  # contact with any GB channel (their lowest note is A3 = 57).
+  # Half-measure harmony from the sounding-pitch audit; the held D (m5/m13)
+  # and A (m6/m14) get whole-measure notes.
+  bass_cycle:
+    measures: 17
+    events:
+      - {m: 1,  b: 3, d: 2, n: A2}     # A       (analysis label C#aug; sounds A)
+      - {m: 2,  b: 1, d: 2, n: A2}     # Amaj7
+      - {m: 2,  b: 3, d: 2, n: F#2}    # F#m7
+      - {m: 3,  b: 1, d: 2, n: A2}     # Amaj7
+      - {m: 3,  b: 3, d: 2, n: D2}     # D
+      - {m: 4,  b: 1, d: 2, n: F#2}    # F#7
+      - {m: 4,  b: 3, d: 2, n: D2}     # Dmaj7
+      - {m: 5,  b: 1, d: 2, n: F#2}    # F#7
+      - {m: 5,  b: 3, d: 4, n: D2}     # D, held
+      - {m: 6,  b: 3, d: 4, n: A2}     # A, held
+      - {m: 7,  b: 3, d: 2, n: G#2}    # G#dim (analysis label Amaj7; sounds G#dim)
+      - {m: 8,  b: 1, d: 2, n: B2}     # Bm7
+      - {m: 8,  b: 3, d: 2, n: E2}     # E
+      - {m: 9,  b: 1, d: 2, n: E2}     # E7
+      - {m: 9,  b: 3, d: 2, n: A2}     # A       (analysis label C#aug; sounds A)
+      - {m: 10, b: 1, d: 2, n: A2}     # Amaj7
+      - {m: 10, b: 3, d: 2, n: F#2}    # F#m7
+      - {m: 11, b: 1, d: 2, n: C#2}    # C#m7
+      - {m: 11, b: 3, d: 2, n: D2}     # Dmaj7
+      - {m: 12, b: 1, d: 2, n: F#2}    # F#m7
+      - {m: 12, b: 3, d: 2, n: D2}     # Dmaj7
+      - {m: 13, b: 1, d: 2, n: F#2}    # F#m7
+      - {m: 13, b: 3, d: 4, n: D2}     # D, held
+      - {m: 14, b: 3, d: 4, n: A2}     # A, held
+      - {m: 15, b: 3, d: 2, n: G#2}    # G#dim
+      - {m: 16, b: 1, d: 2, n: B2}     # Bm7
+      - {m: 16, b: 3, d: 2, n: E2}     # E
+      - {m: 17, b: 1, d: 1.9, n: E2}   # E7 — releases a few frames before the loop point / song end
+
+  # Octave-3 tenor pad: chord 3rd/5th/7th tones, nearest-motion voice
+  # leading. Stays in C#3..G#3 (49..56) — below every GB channel (their
+  # floor is A3 = 57) and at least a P5 above the octave-2 bass except the
+  # G#dim root octave. No unison contact with the base channels is
+  # possible; the pad line moves only by step or P5.
+  pad_cycle:
+    measures: 17
+    events:
+      - {m: 1,  b: 3, d: 2, n: C#3}    # A       (3rd)
+      - {m: 2,  b: 1, d: 2, n: E3}     # Amaj7   (5th)
+      - {m: 2,  b: 3, d: 2, n: E3}     # F#m7    (7th) — E held
+      - {m: 3,  b: 1, d: 2, n: E3}     # Amaj7   (5th) — E held
+      - {m: 3,  b: 3, d: 2, n: F#3}    # D       (3rd; root D3 would make a hidden 8ve w/ bass A2->D2)
+      - {m: 4,  b: 1, d: 2, n: C#3}    # F#7     (5th)
+      - {m: 4,  b: 3, d: 2, n: D3}     # Dmaj7   (root)
+      - {m: 5,  b: 1, d: 2, n: C#3}    # F#7     (5th)
+      - {m: 5,  b: 3, d: 4, n: F#3}    # D       (3rd), held
+      - {m: 6,  b: 3, d: 4, n: E3}     # A       (5th), held
+      - {m: 7,  b: 3, d: 2, n: G#3}    # G#dim   (root, octave w/ bass; dim 5th D5 is in ch1)
+      - {m: 8,  b: 1, d: 2, n: F#3}    # Bm7     (5th)
+      - {m: 8,  b: 3, d: 2, n: G#3}    # E       (3rd)
+      - {m: 9,  b: 1, d: 2, n: G#3}    # E7      (3rd) — G# held
+      - {m: 9,  b: 3, d: 2, n: C#3}    # A       (3rd)
+      - {m: 10, b: 1, d: 2, n: E3}     # Amaj7   (5th)
+      - {m: 10, b: 3, d: 2, n: F#3}    # F#m7    (root)
+      - {m: 11, b: 1, d: 2, n: E3}     # C#m7    (7th)
+      - {m: 11, b: 3, d: 2, n: D3}     # Dmaj7   (root)
+      - {m: 12, b: 1, d: 2, n: C#3}    # F#m7    (5th)
+      - {m: 12, b: 3, d: 2, n: D3}     # Dmaj7   (root)
+      - {m: 13, b: 1, d: 2, n: C#3}    # F#m7    (5th)
+      - {m: 13, b: 3, d: 4, n: F#3}    # D       (3rd), held
+      - {m: 14, b: 3, d: 4, n: E3}     # A       (5th), held
+      - {m: 15, b: 3, d: 2, n: G#3}    # G#dim   (root)
+      - {m: 16, b: 1, d: 2, n: F#3}    # Bm7     (5th)
+      - {m: 16, b: 3, d: 2, n: G#3}    # E       (3rd)
+      - {m: 17, b: 1, d: 1.9, n: G#3}   # E7      (3rd) — releases a few frames before the loop point / song end
+
+  # Tier-3 celesta sparkle: chord-tone twinkles ABOVE the melody's ceiling
+  # (A5 = 81; sparkle sits B5..F#6 = 83..90, so unison with a GB channel is
+  # impossible), marking phrase opens and cadences of both statements —
+  # m1/m9 (A), m4/m12 (Dmaj7), m6/m14 (A), m8/m16 (E). Sparse by design;
+  # the valleys (m2 b4..m4 b3) rest untouched.
+  sparkle_cycle:
+    measures: 17
+    events:
+      - {m: 1,  b: 3, d: 1, n: E6}     # A    (5th)  — phrase open
+      - {m: 4,  b: 3, d: 1, n: F#6}    # Dmaj7 (3rd)
+      - {m: 6,  b: 3, d: 1, n: C#6}    # A    (3rd)  — arrival after the held D
+      - {m: 8,  b: 3, d: 1, n: B5}     # E    (5th)  — statement-1 cadence
+      - {m: 9,  b: 3, d: 1, n: E6}     # A    (5th)  — statement-2 open
+      - {m: 12, b: 3, d: 1, n: F#6}    # Dmaj7 (3rd)
+      - {m: 14, b: 3, d: 1, n: C#6}    # A    (3rd)
+      - {m: 16, b: 3, d: 1, n: B5}     # E    (5th)  — final cadence, turns the loop
