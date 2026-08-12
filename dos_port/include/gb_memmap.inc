@@ -295,6 +295,12 @@ wMoveMenuType          equ 0xCCDB
 wPlayerSelectedMove    equ 0xCCDC
 wEnemySelectedMove     equ 0xCCDD
 wEnemyMoveListIndex    equ 0xCCE2
+; The enemy mon's HP when it (or the current player mon) was last switched in,
+; whichever was more recent — big-endian word, pret ram/wram.asm:619. Read only
+; by PlayerMon2Text, which turns the drop since then into the switch-out message
+; (Enough / Come back / OK! / Good). ADDRESS VERIFIED against pokeyellow.sym
+; (`00:cce3 wLastSwitchInEnemyMonHP`), not inferred from its neighbours.
+wLastSwitchInEnemyMonHP equ 0xCCE3  ; dw
 wTotalPayDayMoney      equ 0xCCE5   ; Pay Day running total (BCD, 3 bytes)
 wTransformedEnemyMonOriginalDVs equ 0xCCEB  ; Transform: saved target DVs (word)
 wPlayerDisabledMoveNumber equ 0xCCEE

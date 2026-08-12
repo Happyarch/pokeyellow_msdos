@@ -168,6 +168,8 @@ global ReloadMoveData
 global RemoveFaintedPlayerMon
 global ReplaceFaintedEnemyMon
 global SendOutMon
+global AnimateRetreatingPlayerMon       ; pret core.asm:1828 (plan 2a)
+global SwitchPlayerMon                  ; pret core.asm:2525 (plan 2a)
 global TrainerBattleVictory
 global ScrollTrainerPicAfterBattle      ; pret core.asm:6453 jpfar thunk
 
@@ -178,6 +180,7 @@ extern TrainerAI                       ; trainer_ai.asm (CF if AI used item/swit
 extern AnimateEnemyHPBar               ; battle_hud.asm — gradual enemy HP-bar drain (ECX=old HP)
 extern AnimatePlayerHPBar              ; battle_hud.asm — gradual player HP-bar drain (ECX=old HP)
 extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
+extern RetreatMon                      ; engine/battle/common_text.asm — switch-out line
 extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm — restore clean screen
 extern DrawEmptyDialogBox              ; pret PrintEmptyString equiv (blank dialog box)
 extern DrawBattleMenuBox               ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE) equiv
@@ -260,6 +263,8 @@ extern PrintSendOutMonMessage          ; battle_stubs.asm (STUB) — pret engine
 extern AnimateSendingOutMon            ; engine/battle/init_battle.asm — send-out pic animation
 extern LoadMonBackPic                  ; engine/battle/init_battle.asm — sent-out mon back pic
 extern IsThisPartyMonStarterPikachu    ; engine/pikachu/pikachu_status.asm — CF=1 when starter
+extern CopyDownscaledMonTiles          ; animations.asm — predef; ESI dest, BH rows, BL cols
+extern AnimationSlideMonOff            ; animations.asm — starter-Pikachu retreat walk-off
 extern StarterPikachuBattleEntranceAnimation ; battle_stubs.asm (STUB) — pret engine/battle/pikachu_entrance_anim.asm
 extern IsPlayerPikachuAsleepInParty    ; pikachu_stubs.asm (STUB) — pret engine/pikachu/pikachu_emotions.asm
 extern PlayPikachuSoundClip            ; src/audio/pikachu_pcm.asm
@@ -2879,6 +2884,71 @@ HandlePlayerMonFainted:
     ret
 
 ; ---------------------------------------------------------------------------
+; AnimateRetreatingPlayerMon — pret core.asm:1828. The withdraw animation: the
+; player's mon shrinks 7x7 -> 5x5 -> 3x3 -> a single ball tile, then the frame is
+; cleared. The starter Pikachu takes a different path entirely (it walks off via
+; AnimationSlideMonOff rather than returning to a ball).
+;
+; PORTED 2026-08-12 (battle plan 2a). It read `missing` in the label DB; the
+; voluntary switch (PartyMenuOrRockOrRun -> SwitchPlayerMon) cannot be faithful
+; without it.
+;
+; DEVIATION{class=projection; pret=engine/battle/core.asm:AnimateRetreatingPlayerMon; behavior=the four tilemap positions are BCOORD(1,5) BCOORD(3,7) BCOORD(4,9) and BCOORD(5,11) on the port's 40x25 canvas instead of pret's raw hlcoord/ldcoord_a addresses; evidence=every in-battle screen in this port is drawn through the BCOORD battle-frame projection in include/coords.inc which offsets pret hlcoords by +10 columns and +3 rows, and the send-out twin of this animation in init_battle.asm already uses it for the same mon area; lifetime=permanent while the port renders a 40x25 canvas}
+;
+; The predef CopyDownscaledMonTiles is called directly (ESI dest, BH rows, BL
+; cols) under the port's standing no-predef-dispatcher convention, which that
+; routine already carries its own DEVIATION{class=HAL} for.
+;
+; In: EBP = GB base, [wPlayerMonNumber], [wWhichPokemon].
+; ---------------------------------------------------------------------------
+AnimateRetreatingPlayerMon:
+    mov al, [ebp + wWhichPokemon]
+    push eax                                ; pret: push af (A = caller's wWhichPokemon)
+    mov al, [ebp + wPlayerMonNumber]
+    mov [ebp + wWhichPokemon], al
+    call IsThisPartyMonStarterPikachu       ; callfar; CF=1 iff it is our Pikachu
+    pop ebx                                 ; pret: pop bc — b = the saved value.
+                                            ; pret's push af/pop bc lands it in B
+                                            ; because af pushes A high; the port's
+                                            ; push eax/pop ebx lands it in BL.
+    mov al, bl                              ; pret: ld a, b
+    mov [ebp + wWhichPokemon], al           ; restore the caller's index
+    jc .starterPikachu                      ; jr c  (pop/mov do not touch CF)
+    mov esi, BCOORD(1, 5)                   ; PROJ — pret hlcoord 1, 5
+    mov bh, 7                               ; lb bc, 7, 7
+    mov bl, 7
+    call ClearScreenArea
+    mov esi, BCOORD(3, 7)                   ; PROJ — pret hlcoord 3, 7
+    mov bh, 5                               ; lb bc, 5, 5
+    mov bl, 5
+    mov byte [ebp + wDownscaledMonSize], 0  ; xor a / ld [wDownscaledMonSize], a
+    mov byte [ebp + hBaseTileID], 0         ; ldh [hBaseTileID], a
+    call CopyDownscaledMonTiles             ; predef
+    mov bl, 4                               ; ld c, 4
+    call DelayFrames
+    call .clearScreenArea
+    mov esi, BCOORD(4, 9)                   ; PROJ — pret hlcoord 4, 9
+    mov bh, 3                               ; lb bc, 3, 3
+    mov bl, 3
+    mov byte [ebp + wDownscaledMonSize], 1  ; ld a,1 / ld [wDownscaledMonSize],a
+    mov byte [ebp + hBaseTileID], 0         ; xor a / ldh [hBaseTileID], a
+    call CopyDownscaledMonTiles             ; predef
+    call Delay3
+    call .clearScreenArea
+    mov byte [ebp + BCOORD(5, 11)], 0x4c    ; PROJ — pret ld a,$4c / ldcoord_a 5,11
+    jmp short .clearScreenArea              ; jr .clearScreenArea (tail)
+.starterPikachu:
+    mov byte [ebp + hWhoseTurn], 0          ; xor a / ldh [hWhoseTurn], a
+    call AnimationSlideMonOff               ; callfar
+    ret
+.clearScreenArea:
+    mov esi, BCOORD(1, 5)                   ; PROJ — pret hlcoord 1, 5
+    mov bh, 7                               ; lb bc, 7, 7
+    mov bl, 7
+    call ClearScreenArea
+    ret
+
+; ---------------------------------------------------------------------------
 ; ReadPlayerMonCurHPAndStatus — pret core.asm:1875. "Copies player's current
 ; pokemon's current HP, party pos, and status into the party struct data so it
 ; stays after battle or switching." The copy runs BATTLE MON -> PARTY, four bytes
@@ -2932,6 +3002,53 @@ CheckNumAttacksLeft:
     ; enemy has 0 attacks left
     and byte [ebp + wEnemyBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
 .done:
+    ret
+
+; ---------------------------------------------------------------------------
+; SwitchPlayerMon — pret core.asm:2525. Withdraw the active mon and send out the
+; one the player picked. Reached two ways in pret: as the fall-through tail of
+; PartyMenuOrRockOrRun's `.switchMon` (the voluntary switch, battle plan 2a), and
+; by the forced-switch path (2b).
+;
+; PORTED 2026-08-12 (battle plan 2a). It read `missing`, along with its two
+; callees RetreatMon (now src/engine/battle/common_text.asm) and
+; AnimateRetreatingPlayerMon (above in this file).
+;
+; The 50-frame wait is pret's and it is load-bearing rather than decorative:
+; RetreatMon has just printed the trainer's parting line, and the wait is what
+; leaves it on screen before the withdraw animation paints over it.
+;
+; DEVIATION{class=banking; pret=engine/battle/core.asm:SwitchPlayerMon; behavior=RetreatMon is called directly and the two FlagActionPredef predef calls are plain FlagAction calls; evidence=the port has one flat address space so callfar is a plain call, and it has no predef dispatcher so every predef target is called directly with its arguments in registers - the same standing convention CopyDownscaledMonTiles and UpdateHPBar2 already carry their own annotations for; lifetime=permanent while the port is flat-addressed and dispatcher-free}
+;
+; Out: wCurrentMenuItem = 2, and ZF=0 — pret sets A=2 and then does `and a`, so
+;      the closing flags say NON-ZERO. The caller reads that as "a turn was
+;      taken" (the same shape BattleMenu_RunWasSelected returns).
+; ---------------------------------------------------------------------------
+SwitchPlayerMon:
+    call RetreatMon                     ; callfar — "<TRAINER>: Good! Come back!"
+    mov bl, 50                          ; ld c, 50
+    call DelayFrames
+    call AnimateRetreatingPlayerMon
+    mov al, [ebp + wWhichPokemon]
+    mov [ebp + wPlayerMonNumber], al
+    ; pret: ld c,a / ld b,FLAG_SET / push bc / ... / pop bc / ... — the same
+    ; (bit, action) pair is used for BOTH flag arrays, which is why it is saved.
+    mov cl, al                          ; ld c, a  (bit index = party slot)
+    mov bh, FLAG_SET                    ; ld b, FLAG_SET
+    push ebx                            ; push bc
+    push ecx
+    mov esi, wPartyGainExpFlags
+    call FlagAction                     ; predef FlagActionPredef
+    pop ecx                             ; pop bc (restore bit + action)
+    pop ebx
+    mov esi, wPartyFoughtCurrentEnemyFlags
+    call FlagAction                     ; predef FlagActionPredef
+    call LoadBattleMonFromParty
+    call SendOutMon
+    call SaveScreenTilesToBuffer1
+    mov al, 2                           ; ld a, $2
+    mov [ebp + wCurrentMenuItem], al    ; ld [wCurrentMenuItem], a
+    and al, al                          ; and a — A=2, so ZF=0
     ret
 
 ; ---------------------------------------------------------------------------

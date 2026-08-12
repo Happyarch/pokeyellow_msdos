@@ -50,6 +50,13 @@ BATTLE_SRC = [
     # restoring pret's `ld hl, AIBattleWithdrawText / call PrintText` (battle
     # plan 1e). Hand-encoding it in the .asm is forbidden by the two-tier rule.
     "engine/battle/trainer_ai.asm",
+    # Switch-out message wrappers (PlayerMon2Text and the four outcome lines it
+    # selects: Enough / ComeBack / OKExclamation / Good), plus the rest of the
+    # shared battle messages. ADDED 2026-08-12: absent from the scan, so none of
+    # those five existed in the port and RetreatMon could not be ported at all
+    # (battle plan 2a). Same shape as the trainer_ai.asm addition above; the
+    # two-tier rule forbids hand-encoding them in the .asm.
+    "engine/battle/common_text.asm",
     # Evolution message wrappers (IsEvolving/Evolved/Into/StoppedEvolving) —
     # consumed by src/engine/movie/evolution.asm (current_plan_pokemon_behavior).
     "engine/pokemon/evos_moves.asm",
@@ -419,6 +426,18 @@ EXTRA_FAR = [
     # WithExpAllText / BoostedText (all three emitted as ordinary wrappers).
     "_GainedText",
     "_WithExpAllText",
+    # engine/battle/common_text.asm:PlayerMon2Text and the three outcome lines it
+    # selects. ADDED 2026-08-12 (battle plan 2a). Same shape again: PlayerMon2Text
+    # is `text_far _PlayerMon2Text` + a text_asm that measures how much the enemy
+    # mon's HP fell since the last switch-in and returns EnoughText /
+    # OKExclamationText / GoodText / ComeBackText; those three in turn are
+    # `text_far` + a text_asm that chains to ComeBackText. ComeBackText itself is a
+    # plain wrapper and IS generated normally. Without these four intros RetreatMon
+    # could not be ported at all, and hand-encoding them is forbidden.
+    "_PlayerMon2Text",
+    "_EnoughText",
+    "_OKExclamationText",
+    "_GoodText",
 ]
 
 def main():
