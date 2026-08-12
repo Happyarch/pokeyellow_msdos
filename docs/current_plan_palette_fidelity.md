@@ -159,7 +159,42 @@ state-driven dump lands inside a whiteout phase that the port's fixed-frame dump
 misses. Note the port gate is FIXED-FRAME while the golden is STATE-DRIVEN,
 which makes (b) entirely plausible.
 
-**EXPERIMENT RUN 2026-08-11 — result is UNDER-POWERED, read the limitation.**
+### RESOLVED 2026-08-11: hypothesis (a). The port really does not white out.
+
+`tools/mgba_harness/scenarios/item_palette_trace.lua` — a `*_trace` recorder
+running item_potion_use's EXACT navigation with a per-frame watcher on
+`rBGP`/`rOBP0`/`rOBP1`. Run it with
+`tools/mgba_harness/make_goldens.sh item_palette_trace`. Measured on hardware:
+
+    ---- after the heal message   (f4084): rBGP=00 rOBP0=00 rOBP1=00  FULLY WHITE
+    ---- THE DUMP INSTANT         (f4397): rBGP=00 rOBP0=00 rOBP1=00  FULLY WHITE
+    TOTAL frames fully white: 545 of 4397
+    contiguous white runs: 77, 9, 19, 16, 41, 52, 51, 51, 67, 28, 59, 28,
+                           and 47 STILL RUNNING at the dump
+
+**The whiteout is not a 3-frame transient.** Hardware sits fully white for
+sustained stretches (28-77 frames) throughout this flow, and is 47 frames into
+one when the golden dumps. That is far too long for the port's 60-frame sampling
+to have missed by luck — and the port read the IDENTICAL coloured value at all
+six samples, i.e. no whiteout anywhere in its post-flow span.
+
+Both sides are compared at their SETTLED END STATE (the port's autokey ends at
+frame 746 and it was probed 760-1000; hardware's state-driven navigation ends
+around f4350 and stays white), and the WRAM comparison passes, so the two flows
+did the same things. **Hardware's settled end state is white; the port's is
+coloured.** That is hypothesis (a): a real behavioural difference, the port
+failing to reach (or immediately undoing) the whiteout at the end of the item
+flow.
+
+This REVERSES the leading hypothesis recorded below. The earlier probe pointed at
+(b) only because it was under-powered; a properly-powered probe points at (a).
+
+Still to pin down before fixing: WHICH whiteout. `faithdiff StartMenu_Item`
+shows the calls present and matched, so it is not a missing call at that label —
+look instead at whether the port's `LoadGBPal`/`CloseTextDisplay` un-white runs
+where pret's does not, or at a site outside `StartMenu_Item`.
+
+**SUPERSEDED — the under-powered experiment, kept for the reasoning:**
 Ran the port gate at six dump frames (760/820/860/900/940/1000) via
 `run_headless.sh` and decoded `cgb_palettes` from each `GBSTATE.BIN`:
 
