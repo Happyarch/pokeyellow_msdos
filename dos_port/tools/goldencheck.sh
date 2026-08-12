@@ -35,7 +35,21 @@ cp PKMN.IMG "$SCRATCH/pkmn.img"
 # any save-reading scenario loads it. That is a pass on data the run never
 # produced. Always delete it; scenarios that need one declare it below, and get
 # a freshly converted copy.
-for f in GBSTATE.BIN DUMP.BIN FRAME.BIN POKEMON.DSV; do
+#
+# PAL.BIN belongs in this list for exactly the F-11 reason above, and was missing
+# from it until 2026-08-12 (tools/run_headless.sh has always had it). `make image`
+# REUSES an existing PKMN.IMG — it only mcopies PKMN.EXE and the DPMI host in —
+# so every other file already inside persists across builds indefinitely. A
+# PAL.BIN written by an earlier scenario therefore survives into a later run, and
+# a run that does not write one gets the PREVIOUS scenario's palette mcopy'd out
+# and compared as if it had produced it.
+# NOT claimed: that this explains today's pattern of which scenarios report a
+# PALETTE section. That hypothesis was TESTED AND FALSIFIED — if stale
+# persistence drove it, the reporting scenarios would be a contiguous tail of the
+# run order, and in a 65-scenario full-tier run 25 scenarios AFTER the first
+# reporting one still report nothing. This is a latent hazard being closed, not a
+# diagnosis of anything currently observed.
+for f in GBSTATE.BIN DUMP.BIN FRAME.BIN PAL.BIN POKEMON.DSV; do
     mdel -i "$SCRATCH/pkmn.img@@1048576" "::$f" 2>/dev/null || true
 done
 
