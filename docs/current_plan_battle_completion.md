@@ -1827,9 +1827,35 @@ enemy-gauge clone tile ids and VRAM slots.
       shake/blink/palette commands, backend `wAnimationType` setup, and exact
       `BIT_BATTLE_ANIMATION` option gate; retire the shake stub. Preserve the
       current ANIMATION=OFF behavior as the option-off route, not as the engine.
-- [ ] **6e. Retire F-19.** Remove the enemy-gauge clone-id divergence, restore
-      canonical gauge tile identities, and delete every F-19-owned tilemap/VRAM
-      mask. Do not close the finding while its masks remain.
+- [ ] **6e. Retire F-19 — BLOCKED 2026-08-12 on the CGB per-cell BG attribute
+      plane, which is another plan's Stage 1 and lives OUTSIDE this repo.**
+      Remove the enemy-gauge clone-id divergence, restore canonical gauge tile
+      identities, and delete every F-19-owned tilemap/VRAM mask. Do not close
+      the finding while its masks remain.
+
+      **WHY IT IS BLOCKED, traced rather than assumed.** `golden_diff.py:216-221`
+      states F-19's mechanism outright: the port *clones the nine enemy-gauge
+      patterns into vFont ids `$C0-$C8` for per-tile palette binding*, and
+      *"retiring F-19's mechanism (per-cell palettes) deletes this mask"*. The
+      port's palette is today a pure function of TILE ID (`tile_pal`, 384 bytes,
+      ORed into `tile_cache` at decode time, `ppu.asm:817-834`) and never of
+      tilemap CELL — so the clone trick exists precisely because there is no
+      per-cell plane. Building one is the CGB colour plan's Stage 1, and that
+      plan is deliberately NOT in this repo (maintainer-confirmed; a markdown
+      artifact — see stigmergy `cgb-colour-scoping-2026-08-08` for the URL).
+      **Do not create `docs/current_plan_cgb_colour.md`.**
+
+      Worse for 6e specifically: that plan's Stage 0 measured every
+      statically-resolvable screen as collision-free, but records BATTLE as
+      **unresolved** — its four slots are built at runtime from mon palettes —
+      and names battle as one of only two real candidates for the per-cell
+      compositor work. So F-19 sits on the *hardest* remaining case, not the
+      easy one.
+
+      **Nothing in this box should be attempted here.** Retiring the masks
+      before the mechanism exists would be masking a divergence to get green,
+      which this plan's preamble forbids. Re-check when the CGB plan's Stage 1
+      lands; the report-in below is still accurate and unaffected.
       > **Report in from `plans/battle_animations.md` Stage 6 (2026-08-08),
       > as that plan's evaluate-and-report box requires — no mask was changed.**
       > The now-real Stage 4/5 animation route does **not** affect F-19. F-19
