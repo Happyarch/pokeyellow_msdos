@@ -847,7 +847,7 @@ extern LearnMoveFromLevelUp ; engine/pokemon/evos_moves.asm (predef)
 extern TryEvolvingMon       ; engine/pokemon/evos_moves.asm
 extern ModifyPikachuHappiness    ; battle_exp_stubs.asm (deferred)
 extern RespawnOverworldPikachu   ; battle_exp_stubs.asm (deferred)
-extern DoubleOrHalveSelectedStats ; battle_exp_stubs.asm (deferred)
+extern DoubleOrHalveSelectedStats   ; engine/battle/core.asm (pret mirror; bodies in unused_stats_functions.asm)
 
 ; --- screen / text / sound ---
 extern ClearScreen          ; home/copy2.asm

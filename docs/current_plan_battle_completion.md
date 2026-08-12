@@ -1294,8 +1294,31 @@ provider shapes below, not their runtime behavior.
       unconditional once `AnyPartyAlive` passes), but `battle_faint` is
       datastruct class so TILEMAP/VRAM/OAM are SKIPPED, and `battle_menu` dumps
       after `DisplayBattleMenu` has redrawn the box. Reachable is not witnessed.
-      STILL OPEN: `CalculateModifiedStats`, `ModifyPikachuHappiness`, and
-      `DoubleOrHalveSelectedStats` (blocked on 2c per this plan's ordering rule).
+      **`DoubleOrHalveSelectedStats` RETIRED 2026-08-12.** Its ordering
+      constraint is gone — 2c landed the in-battle ITEM menu — so the real body
+      is now in the `core.asm` mirror (`call DoubleSelectedStats` /
+      `jmp HalveSelectedStats`, `DEVIATION{class=banking}` for the callfar/jpfar),
+      over a new pret mirror `src/engine/battle/unused_stats_functions.asm`
+      carrying both bodies. faithdiff: both callees clean;
+      `DoubleOrHalveSelectedStats` shows `+ ADDED HalveSelectedStats (jmp)`
+      because pret's `jpfar` is a bank thunk the pret side does not count as a
+      call — that is what the annotation covers. `lint_pret_labels` caught the
+      stale extern comment in `item_effects.asm` on the first run; repointed.
+
+      **This change is UNWITNESSABLE BY CONSTRUCTION, and that is a proof, not a
+      hedge.** Both routines gate every stat on a bit from
+      `wPlayerStatsToDouble` / `wPlayerStatsToHalve` (and the enemy twins), which
+      pret's own comment describes as never set outside glitches and which
+      `gb_memmap.inc` records as "always 0". With the mask 0 the `srl b` never
+      sets carry, no stat is touched, and the routine returns after four
+      iterations — byte-for-byte the same observable behaviour as the `ret` it
+      replaced. No scenario can distinguish them; do not read a green suite as
+      evidence either way. What the translation buys is the glitch paths that DO
+      set those bytes, where a ret-only body would silently diverge.
+
+      STILL OPEN: `CalculateModifiedStats` (needs `CalculateModifiedStat` and
+      the `StatModifierRatios` table, both `missing`) and
+      `ModifyPikachuHappiness`.
 - [ ] **3d (original entry).** Implement and retire the battle-owned
       providers `PrintEmptyString`, `CalculateModifiedStats`, and
       `DoubleOrHalveSelectedStats`; implement `ModifyPikachuHappiness` at its

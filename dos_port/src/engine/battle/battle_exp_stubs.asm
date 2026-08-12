@@ -25,18 +25,14 @@ global ModifyPikachuHappiness
 ; PrintEmptyString is now REAL (engine/battle/core.asm, the pret mirror — it prints a
 ; zero-length stream so PrintText redraws the battle message box) — no longer stubbed.
 global CalculateModifiedStats
-; RespawnOverworldPikachu (pret engine/pikachu/pikachu_movement.asm) and
-; DoubleOrHalveSelectedStats (pret engine/battle/core.asm, a predef) are reached by
-; ItemUseMedicine (engine/items/item_use.asm): the first whenever a fainted mon is
-; revived or a mon levels up (Yellow re-places the overworld Pikachu), the second
-; when a Full Heal cures the ACTIVE battler (the in-battle stat copy must re-apply
-; the Reflect/Light Screen doubling). The latter is a mechanics deferral, not a
-; display-only no-op; it stays unreachable until the in-battle ITEM menu lands.
+; RespawnOverworldPikachu (pret engine/pikachu/pikachu_movement.asm) is reached by
+; ItemUseMedicine (engine/items/item_use.asm) whenever a fainted mon is revived or
+; a mon levels up (Yellow re-places the overworld Pikachu).
+; DoubleOrHalveSelectedStats is now REAL (engine/battle/core.asm, the pret mirror,
+; over the two bodies in unused_stats_functions.asm) — no longer stubbed. It was
+; blocked on the in-battle ITEM menu, which landed with battle plan 2c.
 ; TODO(pikachu):     RespawnOverworldPikachu — with the Yellow Pikachu-follow engine.
-; TODO(battle plan): DoubleOrHalveSelectedStats — with the in-battle ITEM menu
-;                    (until then no item can be used mid-battle, so it is unreachable).
 global RespawnOverworldPikachu
-global DoubleOrHalveSelectedStats
 ; DrawPlayerHUDAndHPBar is now REAL (engine/battle/core.asm — alias → battle_hud.asm
 ; DrawPlayerHUD) — no longer stubbed here (retired with the enemy-side
 ; DrawEnemyHUDAndHPBar pattern).
@@ -50,5 +46,4 @@ global DoubleOrHalveSelectedStats
 ModifyPikachuHappiness:
 CalculateModifiedStats:
 RespawnOverworldPikachu:
-DoubleOrHalveSelectedStats:
     ret

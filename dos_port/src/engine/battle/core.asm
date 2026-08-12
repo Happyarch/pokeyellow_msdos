@@ -175,6 +175,7 @@ global PartyMenuOrRockOrRun             ; pret core.asm:2404 (plan 2a)
 global BagWasSelected                   ; pret core.asm:2292 (plan 2c)
 global UseBagItem                       ; pret core.asm:2344 (plan 2c)
 global TrainerBattleVictory
+global DoubleOrHalveSelectedStats        ; pret core.asm:6449 (plan 3d)
 global ScrollTrainerPicAfterBattle      ; pret core.asm:6453 jpfar thunk
 
 ; --- backend (already-faithful translations in other files) ---
@@ -1239,6 +1240,8 @@ extern str_oldman_name                 ; battle_menu.asm (assets/battle_menu_run
 extern str_profoak_name                ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern MultiHitText                    ; battle_text.inc
 extern _ScrollTrainerPicAfterBattle    ; scroll_draw_trainer_pic.asm — pret jpfar target
+extern DoubleSelectedStats              ; engine/battle/unused_stats_functions.asm
+extern HalveSelectedStats               ; engine/battle/unused_stats_functions.asm
 extern PrintEndBattleText              ; src/home/trainers.asm — class-specific end text
 
 ; Faithful port of pret engine/battle/core.asm:ExecutePlayerMove (3244). Re-entry
@@ -5231,6 +5234,24 @@ ReplaceFaintedEnemyMon:
     mov al, 1
     and al, al                                     ; ZF=0 → sent out (did not run)
     ret
+
+; ===========================================================================
+; DoubleOrHalveSelectedStats — pret core.asm:6449. Two far calls and nothing
+; else; the bodies live in the pret-mirrored
+; src/engine/battle/unused_stats_functions.asm.
+;
+; PORTED 2026-08-12 (battle plan 3d). It was a ret-only STUB in
+; battle_exp_stubs.asm because both callees read `missing`. Its one caller is
+; ItemUseMedicine, which invokes it after curing the ACTIVE battler so the
+; in-battle stat copy re-applies any Reflect/Light Screen doubling — a path that
+; only became reachable when the in-battle ITEM menu landed (plan item 2c), and
+; which the plan's ordering rule blocked this box on until then.
+;
+; DEVIATION{class=banking; pret=engine/battle/core.asm:DoubleOrHalveSelectedStats; behavior=the callfar and jpfar are a plain call and a plain tail jump; evidence=the port has one flat address space so a far call is an ordinary call and jpfar is jmp - the same standing convention ScrollTrainerPicAfterBattle below and SwitchPlayerMon already carry; lifetime=permanent while the port is flat-addressed}
+; ===========================================================================
+DoubleOrHalveSelectedStats:
+    call DoubleSelectedStats            ; pret: callfar
+    jmp HalveSelectedStats              ; pret: jpfar (tail)
 
 ; ===========================================================================
 ; ScrollTrainerPicAfterBattle — pret core.asm:6453 (`jpfar
