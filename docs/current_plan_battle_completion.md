@@ -554,7 +554,17 @@ result gates deliberately stop after initialization and drive one terminal turn.
       clause** — `trainer_ai.asm:818`'s "Deferred UI: X used [wAIItem] on Z!
       (GetItemName + PrintText)" was waiting on the same asset.
 
-      STILL OPEN: the AI item text/effect/HP-bar paths. And the restored switch
+      SECOND CLAUSE DONE 2026-08-11 too: `AIPrintItemUse_` (2/2, 1 matched —
+      only the `PrintBattleText` wrapper) and `AIPrintItemUseAndUpdateHPBar`
+      (3/3 matched, CLEAN) were both bare stubs under "Deferred UI ... Wave 2
+      front-end". `GetItemName`, `UpdateHPBar2`, `PrintText` and
+      `DecrementAICount` had all been linked for a long time; the only real
+      blocker was the same missing generated asset (`AIBattleUseItemText`).
+      `AIRecoverHP` already stages `wHPBarOldHP/NewHP/MaxHP`, matching pret, so
+      only the coordinate and `wHPBarType` needed setting.
+
+      WHAT THAT LEAVES: nothing in this box is unimplemented. It stays `[~]`
+      SOLELY because none of it is witnessed — the restored switch
       is UNWITNESSED — 56/56 full tier passed byte-identical, because no scenario
       makes the AI choose to switch. Same gap as 3a/3b/3d
       (`battle-stage3-blocked-on-mechanics-scenarios`).

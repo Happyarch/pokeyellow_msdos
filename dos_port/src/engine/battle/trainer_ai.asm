@@ -46,6 +46,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "coords.inc"                 ; BCOORD — pret battle hlcoords onto the 40x25 canvas
 
 ; ---------------------------------------------------------------------------
 ; File-local derived constants. All shared WRAM aliases (wAICount, wAIItem,
@@ -70,6 +71,9 @@ extern AddNTimes
 extern CopyData
 extern EnemySendOut                  ; engine/battle/core.asm — send out the replacement
 extern PrintBattleText               ; engine/battle/core.asm — PrintText + battle msgbox
+extern GetItemName                   ; src/home/names.asm — wNamedObjectIndex -> wcd6d
+extern UpdateHPBar2                  ; engine/gfx/hp_bar.asm (In: ESI = bar tilemap pos)
+extern AIBattleUseItemText           ; assets/battle_text.inc (generated Tier-1)
 extern AIBattleWithdrawText          ; assets/battle_text.inc (generated Tier-1)
 extern Random
 extern Divide
@@ -818,15 +822,34 @@ AIPlayRestoringSFX:
     ret
 
 ; --- AIPrintItemUse_ ---
-; Deferred UI: "X used [wAIItem] on Z!" (GetItemName + PrintText).
+; pret trainer_ai.asm:741 — print "<trainer> used <item> on <mon>!".
+; IMPLEMENTED 2026-08-11 (battle plan 1e). The old body was a bare ret under
+; "Deferred UI ... Wave 2 front-end". The front end was never the blocker:
+; GetItemName and PrintText have both been linked for a long time, and the one
+; genuinely missing piece was AIBattleUseItemText, which did not exist because
+; gen_battle_text.py's scan list omitted engine/battle/trainer_ai.asm. Adding
+; that file to the generator (same change that unblocked SwitchEnemyMon) is what
+; made this implementable; hand-encoding the string here is forbidden by the
+; two-tier rule.
 AIPrintItemUse_:
-    ; TODO-UI: deferred Wave 2 front-end
-    ret
+    mov al, [ebp + wAIItem]                ; ld a, [wAIItem]
+    mov [ebp + wNamedObjectIndex], al      ; ld [wNamedObjectIndex], a
+    call GetItemName
+    mov eax, AIBattleUseItemText           ; ld hl, AIBattleUseItemText
+    jmp PrintBattleText                    ; jp PrintText (battle msgbox projection)
 
 ; --- AIPrintItemUseAndUpdateHPBar ---
-; Deferred UI: item text + UpdateHPBar2.
+; pret trainer_ai.asm:555 — the item message, then animate the enemy HP bar.
+; IMPLEMENTED 2026-08-11 (battle plan 1e), same unblocking as AIPrintItemUse_.
+; The bar inputs are already staged by the caller: AIRecoverHP writes
+; wHPBarOldHP / wHPBarNewHP / wHPBarMaxHP before jumping here, exactly as pret's
+; does, so only the coordinate and wHPBarType are set here.
+; DEVIATION{class=HAL; pret=engine/battle/trainer_ai.asm:AIPrintItemUseAndUpdateHPBar; behavior=calls UpdateHPBar2 directly with the tilemap position in ESI instead of pret's predef UpdateHPBar2 which carries it in hl through the predef dispatcher; evidence=the port has no predef dispatcher so wPredefRegisters is never staged and GetPredefRegisters would load garbage over the live registers, the identical convention ItemUseMedicine and CopyDownscaledMonTiles already use for this same routine; lifetime=permanent, the port calls predef targets directly}
 AIPrintItemUseAndUpdateHPBar:
-    ; TODO-UI: deferred Wave 2 front-end
+    call AIPrintItemUse_
+    mov esi, BCOORD(2, 2)                  ; PROJ battle — pret hlcoord 2, 2
+    mov byte [ebp + wHPBarType], 0         ; xor a / ld [wHPBarType], a
+    call UpdateHPBar2                      ; predef UpdateHPBar2
     jmp DecrementAICount
 
 ; --- AIUsePotion, AIUseSuperPotion, AIUseHyperPotion ---
