@@ -103,14 +103,31 @@ instance 1.
 `surf_round_trip` and `trainer_battle_route` all drive the real `OverworldLoop`
 and report **0** palette divergences.
 
-### 16 more with the same signature but NO established cause
+### 16 more, RESOLVED — same cause after all
 
-`overworld_pallet` (8) and `sign_pallet` (8) show the identical signature, but
-their gates are different (`DEBUG_TRANSITION`, `DEBUG_SIGNTEXT`) and
-`DEBUG_TRANSITION` *does* reference `OverworldLoop` — so the sight-family
-explanation does NOT transfer to them. Do not assume it does; measure these two
-separately. They may be a real defect (a dump taken before the first
-`LoadGBPal`, or mid-transition).
+`overworld_pallet` (8) and `sign_pallet` (8) turned out to be the same thing.
+An earlier note here said the sight-family explanation "does NOT transfer"
+because `DEBUG_TRANSITION` references `OverworldLoop`; that was wrong — the grep
+matched surrounding context, not a call. Both gates are hooks that **dump and
+exit without ever returning to the loop**:
+
+- `DEBUG_TRANSITION` (`src/home/overworld.asm:624`) lives inside `EnterMap` and
+  ends `DelayFrame ×3 / DumpBackbuffer` (which never returns).
+- `DEBUG_SIGNTEXT` (`src/home/overworld.asm:691`) calls `DoSignInteraction`
+  ("never returns" per its own comment) then `DumpBackbuffer`.
+
+Neither reaches `OverworldLoopLessDelay`, so neither calls `LoadGBPal`.
+
+**That completes the largest signature class exactly.** The tier-wide
+`OBJ palN colourN: rom=BLACKISH port=WHITE` count is **128**, and
+14 sight × 8 + `overworld_pallet` 8 + `sign_pallet` 8 = **128**. No residue: the
+whole class is one harness property.
+
+**The systemic point, worth stating once:** a large part of the DEBUG harness
+family dumps from *inside* `EnterMap` or a sub-flow rather than running
+`OverworldLoop`. Any state the loop maintains per frame — `LoadGBPal`'s palette
+registers being the clear case — is therefore absent at those checkpoints by
+construction. That is a property of the gates, not of the port.
 
 ### 48 more, unexplained: hardware is WHITED OUT and the port is not
 
@@ -123,10 +140,10 @@ or the two sides stop at different points of one. Worth a trace probe.
 
 ### What that leaves as genuine port-defect candidates
 
-After the 112 trainer + 112 sight artifacts, roughly **255** — and of those, 48
-(`item_potion_use` + `continue_seed`) and 16 (`overworld_pallet` +
-`sign_pallet`) have an identified signature but no established cause yet, so the
-confidently-real remainder is nearer **190**.
+After the 112 trainer-gate + 128 loop-bypass artifacts (240 total), roughly
+**239** — and of those, 48 (`item_potion_use` + `continue_seed`) still have an
+identified signature but no established cause, so the confidently-real remainder
+is nearer **190**.
 
 **A REGION-POLICY QUESTION FOR THE MAINTAINER, not something to change
 unilaterally.** By `scenario_class`, the 479 split:
