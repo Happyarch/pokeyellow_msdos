@@ -540,7 +540,25 @@ result gates deliberately stop after initialization and drive one terminal turn.
       link is 1g: the port's battle ENTRY never calls `SendOutMon`. Read the
       block above as the description of a real defect that was fixed, not as a
       prediction that came true.
-- [ ] **1e. AI execution leaves.** Complete `SwitchEnemyMon` through withdrawal,
+- [~] **1e. AI execution leaves.** FIRST CLAUSE DONE 2026-08-11 (`b4cb88001`):
+      `SwitchEnemyMon` restored through withdrawal and send-out — `faithdiff`
+      4 pret / 4 port, 3 matched (was 1), stores 1/1 (was 0/1). It had been
+      copying the withdrawn mon's HP back to the roster and then never sending
+      the replacement out.
+
+      **The blocker was a missing generated asset, not deferred UI work.**
+      `AIBattleWithdrawText` did not exist in the port because
+      `gen_battle_text.py`'s `BATTLE_SRC` never listed
+      `engine/battle/trainer_ai.asm`. One line in the generator; it now emits the
+      AI wrappers (133 -> 135 labels). **That also unblocks this box's SECOND
+      clause** — `trainer_ai.asm:818`'s "Deferred UI: X used [wAIItem] on Z!
+      (GetItemName + PrintText)" was waiting on the same asset.
+
+      STILL OPEN: the AI item text/effect/HP-bar paths. And the restored switch
+      is UNWITNESSED — 56/56 full tier passed byte-identical, because no scenario
+      makes the AI choose to switch. Same gap as 3a/3b/3d
+      (`battle-stage3-blocked-on-mechanics-scenarios`).
+- [ ] **1e (original entry).** Complete `SwitchEnemyMon` through withdrawal,
       `EnemySendOut`, and its return flags; complete AI item text/effect/HP-bar
       paths without duplicating item-owned player handlers.
 - [x] Add deterministic trainer win and loss scenarios. Must-hit lists must name
