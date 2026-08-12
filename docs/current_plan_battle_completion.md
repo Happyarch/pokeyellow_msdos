@@ -1205,11 +1205,43 @@ provider shapes below, not their runtime behavior.
       as surfacing this way (stores match by NAME, and pret's are
       pointer-indirect).
 
-      **Unwitnessed, like 3b.** No scenario uses a multi-turn move, so the suite
-      proves only that clearing an already-clear bit changes nothing. The
-      remaining work — the counter/accumulation/release flow and its quirks —
-      needs a deterministic Wrap or Bide scenario, and that is what would let
-      this box be ticked.
+      **Unwitnessed.** No scenario uses a multi-turn move, so the suite proves
+      only that clearing an already-clear bit changes nothing.
+
+      **MEASURED 2026-08-12, AND IT CHANGES THE APPROACH: the `battle_pay_day`
+      template does NOT extend to this box.** I recorded in
+      `battle-stage3-blocked-on-mechanics-scenarios` that 3a could copy 3b's
+      shape. That is wrong, and here is the measurement. `CheckNumAttacksLeft`
+      has exactly two call sites, pret core.asm:448 and :476, mirrored at
+      `src/engine/battle/core.asm:432` and `:458` — and BOTH are in
+      `MainInBattleLoop`'s turn tail, after `HandlePoisonBurnLeechSeed` and
+      `DrawHUDsAndHPBars`. It is NOT reachable from `ExecutePlayerMove`
+      (`grep -c` over that routine's body: **0**). So the pay_day gate shape —
+      preset the move, `call ExecutePlayerMove`, call the tail yourself — cannot
+      reach it, and a gate that called `CheckNumAttacksLeft` directly after
+      `ExecutePlayerMove` would be duplicating production's sequencing: instance
+      4 of `bug-class-false-witness-scenario`, proving only that the routine
+      runs when you run it.
+
+      **WHAT A FAITHFUL WITNESS ACTUALLY NEEDS**, so the next pass budgets for it
+      rather than discovering it mid-build:
+      1. the REAL `MainInBattleLoop` completing a whole turn — it is already
+         externed in `debug_dump.asm:151`, and `battle_choose_next_mon` ends up
+         inside it, so this is a known-good direction, just a bigger harness than
+         any gate built so far;
+      2. TWO turns, because the release is what distinguishes the routine from a
+         no-op: turn 1 sets `USING_TRAPPING_MOVE`, turn 2's tail decrements to 0
+         and clears it;
+      3. a PIN on the rolled attack count. Wrap and Bide both roll
+         `wPlayerNumAttacksLeft` (2-5 / 2-3) and the two emulators do not share
+         an RNG stream, so the count must be forced on both sides between the
+         turns — the same class of pin `battle_blackout` uses for GUST. Compare
+         the FLAG (`wPlayerBattleStatus1`'s `USING_TRAPPING_MOVE`) and the
+         zeroed counter, not the rolled value;
+      4. a scenario-local `gbregion`: `wPlayerBattleStatus1` (`$D062`) is in NO
+         compared region today — `wBattleFlags` covers only
+         `wIsInBattle..wBattleType` (`$D057-$D05A`). Precedents for a
+         scenario-local row: `trainerResult`, `wBoxData`, `wMenuState`.
 - [ ] **3a (original entry).** Replace the linked ret-only
       `CheckNumAttacksLeft` body and verify the complete Bide/Thrash/trapping
       counter, accumulation, release, and cleanup flow on both turns. Preserve
