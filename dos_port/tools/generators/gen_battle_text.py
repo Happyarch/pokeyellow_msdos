@@ -44,6 +44,12 @@ BATTLE_SRC = [
     "engine/battle/misc.asm",
     "engine/battle/end_of_battle.asm",
     "engine/battle/print_type.asm",
+    # Trainer-AI message wrappers (AIBattleWithdraw / the AIUse* item lines).
+    # ADDED 2026-08-11: this file was absent from the scan, so AIBattleWithdrawText
+    # did not exist in the port at all — which is what blocked SwitchEnemyMon from
+    # restoring pret's `ld hl, AIBattleWithdrawText / call PrintText` (battle
+    # plan 1e). Hand-encoding it in the .asm is forbidden by the two-tier rule.
+    "engine/battle/trainer_ai.asm",
     # Evolution message wrappers (IsEvolving/Evolved/Into/StoppedEvolving) —
     # consumed by src/engine/movie/evolution.asm (current_plan_pokemon_behavior).
     "engine/pokemon/evos_moves.asm",

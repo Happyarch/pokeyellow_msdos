@@ -68,6 +68,9 @@ MASK_CLEAR_BADLY_POISONED equ (0xFF ^ (1 << BADLY_POISONED))
 ; ---------------------------------------------------------------------------
 extern AddNTimes
 extern CopyData
+extern EnemySendOut                  ; engine/battle/core.asm — send out the replacement
+extern PrintBattleText               ; engine/battle/core.asm — PrintText + battle msgbox
+extern AIBattleWithdrawText          ; assets/battle_text.inc (generated Tier-1)
 extern Random
 extern Divide
 extern Moves
@@ -941,17 +944,27 @@ SwitchEnemyMon:
     mov bx, PARTYMON_STRUCT_LENGTH
     call AddNTimes
     ; esi = wEnemyMon1HP + partyPos * PARTYMON_STRUCT_LENGTH
-    mov edx, wEnemyMonHP
-    mov ecx, (MON_STATUS + 1 - MON_HP)     ; = 4 bytes
-.switchMon_copy:
-    mov al, [ebp + edx]
-    mov [ebp + esi], al
-    inc edx
-    inc esi
-    dec ecx
-    jnz .switchMon_copy
-    ; TODO-UI: PrintText AIBattleWithdrawText (deferred Wave 2)
-    ; TODO-UI: EnemySendOut (deferred Wave 2)
+    ; pret: ld d,h / ld e,l  (DE = the party slot) then ld hl, wEnemyMonHP and
+    ; `call CopyData`. The port had a hand-rolled byte loop here, which is why
+    ; faithdiff reported a DROPPED CopyData; this is pret's own call.
+    mov edx, esi                           ; ld d, h / ld e, l  (dest = party slot)
+    mov esi, wEnemyMonHP                   ; ld hl, wEnemyMonHP  (source)
+    mov ebx, MON_STATUS + 1 - MON_HP       ; ld bc, ... (HP word, party pos, status)
+    call CopyData
+    ; RESTORED 2026-08-11 (battle plan 1e). These two were `TODO-UI ... deferred
+    ; Wave 2`; the deferral is over. AIBattleWithdrawText did not exist in the
+    ; port at all until this change added engine/battle/trainer_ai.asm to
+    ; gen_battle_text.py's scan list (hand-encoding it is forbidden by the
+    ; two-tier rule), and EnemySendOut has been translated and linked for some
+    ; time — without it the AI "switch" copied the HP back to the roster and then
+    ; never actually sent the replacement mon out.
+    mov eax, AIBattleWithdrawText          ; ld hl, AIBattleWithdrawText
+    call PrintBattleText                   ; call PrintText (battle msgbox projection)
+    ; pret's comment: wFirstMonsNotOutYet is ABUSED here to stop the player
+    ; switching in response to this switch. Faithful, including the abuse.
+    mov byte [ebp + wFirstMonsNotOutYet], 1
+    call EnemySendOut                      ; callfar EnemySendOut
+    mov byte [ebp + wFirstMonsNotOutYet], 0 ; xor a / ld [wFirstMonsNotOutYet], a
     ; pret trainer_ai.asm:618-622 — CF=0 mid-link-battle, CF=1 otherwise. The
     ; direct callfar site (core.asm:377) is reached only inside a link battle.
     mov al, [ebp + wLinkState]
