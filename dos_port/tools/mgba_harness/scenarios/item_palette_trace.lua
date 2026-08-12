@@ -124,6 +124,15 @@ scenario.run(function()
 
 	scenario.exec(function()
 		probe("THE DUMP INSTANT (item_potion_use dumps here)")
+	end)
+
+	-- CRITICAL FOLLOW-ON: keep watching PAST the dump. If the white run ends
+	-- shortly after, the dump landed inside a transient (RestoreScreenTiles...
+	-- reloads tile patterns with the LCD off, which is slow) and this is a PHASE
+	-- artifact, not a missing whiteout. If it persists, it is a settled state.
+	scenario.wait(400)
+	scenario.exec(function()
+		probe("400 FRAMES AFTER the dump instant")
 		console:log("========== rBGP/rOBP0/rOBP1 change timeline ==========")
 		for _, line in ipairs(timeline) do console:log("  " .. line) end
 		console:log(("========== %d transitions =========="):format(#timeline))

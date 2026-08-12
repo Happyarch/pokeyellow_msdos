@@ -159,7 +159,39 @@ state-driven dump lands inside a whiteout phase that the port's fixed-frame dump
 misses. Note the port gate is FIXED-FRAME while the golden is STATE-DRIVEN,
 which makes (b) entirely plausible.
 
-### RESOLVED 2026-08-11: hypothesis (a). The port really does not white out.
+### RESOLVED 2026-08-11: hypothesis (b), a PHASE ARTIFACT. (a) was my error.
+
+**Final answer, from extending the trace PAST the dump:**
+
+    ---- THE DUMP INSTANT            (f4397): 00 00 00  FULLY WHITE
+    ---- 400 FRAMES AFTER the dump   (f4798): E4 D0 E0  coloured
+    the white run starting f4351 is len=59 — it ENDS 13 frames after the dump
+
+Hardware's whiteout is a **59-frame transient**, not a settled state. It ends
+just after the golden photographs it, and hardware then settles to E4/D0/E0 —
+the ordinary `LoadGBPal` values, which is what the port also holds. **Both sides
+settle to the same palette.** The golden's state-driven dump simply lands inside
+the transient; the port's fixed-frame dump lands outside it.
+
+Mechanism, now consistent with the code: pret's `StartMenu_Item` does
+`GBPalWhiteOutWithDelay3` + `RestoreScreenTilesAndReloadTilePatterns` after
+`UseItem`, then `jp StartMenu_Item`, which re-enters `DisplayListMenuID` whose
+`.notOldManBattle` arm calls `LoadGBPal` and un-whites. The port has the same
+calls in the same places — `faithdiff StartMenu_Item` matches them, and pret's
+`home/list_menu.asm:82` `.notOldManBattle: call LoadGBPal` is identical to the
+port's `list_menu.asm:322`. There was never a missing whiteout.
+
+**So these 48 belong with the gate artifacts after all**: they want a mask with
+this justification when `PALETTE_GATING` flips, not a code change.
+
+**MY ERROR, recorded because the data was there to catch it.** The first trace
+stopped AT the dump and printed the run as "47 STILL WHITE at the dump". I read
+"still running when I stopped looking" as "persistent" and wrote it up as a
+confirmed port defect. The run was 59 long; I had simply not looked 13 frames
+further. A trace that ends at the moment of interest cannot distinguish a
+transient from a steady state — always sample past it.
+
+**SUPERSEDED — the (a) reading, kept so the error is visible:**
 
 `tools/mgba_harness/scenarios/item_palette_trace.lua` — a `*_trace` recorder
 running item_potion_use's EXACT navigation with a per-frame watcher on
