@@ -1180,7 +1180,8 @@ Re-derive each routine from pret at implementation time; do not carry the old
 audit's finding status forward. Current generated/source evidence establishes the
 provider shapes below, not their runtime behavior.
 
-- [~] **3a. Multi-turn state.** `CheckNumAttacksLeft` TRANSLATED 2026-08-11; the
+- [x] **3a. Multi-turn state.** `CheckNumAttacksLeft` TRANSLATED 2026-08-11,
+      WITNESSED 2026-08-12 by `battle_wrap` (id 64); the
       rest of the box (verifying the full Bide/Thrash/trapping counter,
       accumulation, release and cleanup flow on both turns) is NOT done, so this
       stays `[~]`.
@@ -1301,14 +1302,34 @@ provider shapes below, not their runtime behavior.
       `wPlayerUsedMove == WRAP` clause; the latch already makes the same claim,
       so it was dropped.
 
-      **STILL OWED: the golden side.** And one thing to decide before writing
-      it, because it is visible in the port dump already: the enemy ends at 601
-      of 999 HP, and that value is a DAMAGE ROLL over the two trapping hits.
-      `wEnemyMon` is a compared region and the emulators do not share an RNG
-      stream, so this scenario will need a documented `wram_skip` for
-      `wEnemyMon` — the `trainer_battle_init` precedent — stating that what it
-      pins is the counter and the flag, not the damage. Decide that BEFORE
-      generating the golden rather than after it fails.
+      **DONE 2026-08-12: `battle_wrap` is scenario id 64 and PASSES.**
+      `WRAM: OK (13 regions, 2 skipped)`. Registry is 62, all 62 PASS.
+
+      **The sabotage is the strongest this plan has produced.** Deleting the
+      bit-clear from `CheckNumAttacksLeft` itself makes the run produce NO DUMP
+      AT ALL — the landmark depends on the routine under test doing its job, so
+      the scenario cannot pass without it. Determinism: two consecutive golden
+      generations byte-identical (md5 `b181f3a8…`).
+
+      **TWO SKIPS, both narrow and both justified in `golden_diff.py`.**
+      `wEnemyMon`: its remaining HP is the accumulated damage of the trapping
+      hits, i.e. a roll, and the emulators do not share an RNG stream; the mon is
+      seeded to 999 only so it SURVIVES, so the value carries no information
+      about this box. `wLoadedMon`: the HUD staging buffer — and **alignment was
+      tried first and is recorded as not working here**, which is the honest
+      part. At the release instant the golden holds the PLAYER mon (level `$50`)
+      and the port holds the ENEMY (`$0D`); adding `wLoadedMonLevel == 80` to
+      both dump conditions — the fix that worked for `battle_item_potion` and
+      `battle_choose_next_mon` — makes the PORT never dump at all, because it
+      never re-stages the player inside the released window before the next cast.
+
+      **OPEN QUESTION, left visible rather than buried in the skip:** whether
+      that staging difference is only frame granularity or a real ordering
+      difference in when `DrawHUDsAndHPBars` stages each mon. It is not a hole in
+      this scenario — what it pins is the scenario-local `wPlyStatus1` /
+      `wPlyAtksLeft` pair, and the party and `wBattleMon` are compared UNMASKED —
+      but it is the first thing to look at if a later scenario trips on the same
+      buffer.
 
       Also still owed once it terminates: the golden, the manifest row, and the
       `wPlyStatus1`/`wPlyAtksLeft` scenario-local rows (already written into the

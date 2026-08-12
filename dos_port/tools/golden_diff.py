@@ -855,6 +855,49 @@ SCENARIOS = {
         "flags": "DEBUG_BATTLE_PAYDAY=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_wrap": {
+        # datastruct: the RELEASE of a trapping move — the turn tail's
+        # CheckNumAttacksLeft clearing USING_TRAPPING_MOVE once the counter
+        # reaches 0. The only scenario in which that routine clears a SET bit.
+        # What it pins is the scenario-local pair wPlyStatus1 / wPlyAtksLeft.
+        #
+        # wEnemyMon IS SKIPPED, deliberately and narrowly: the enemy's HP at the
+        # dump is the accumulated DAMAGE of the trapping hits, which is a roll,
+        # and the two emulators do not share an RNG stream (mgba_harness/
+        # lib/seed.lua). Pinning it would require RNG lockstep through two live
+        # turns. The mon is seeded to 999 HP purely so it SURVIVES — a KO takes
+        # `jp z, HandleEnemyMonFainted` and skips the turn tail, i.e. the
+        # routine under test — so its exact remaining HP carries no information
+        # about this box. Everything else, including the whole party and
+        # wBattleMon, is compared unmasked; the enemy is asleep precisely so
+        # that wBattleMon stays roll-free.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_WRAP=1",
+        "wram_skip": {
+            "wLoadedMon": "the HUD staging buffer, and the two sides straddle the "
+                          "turn tail's DrawHUDsAndHPBars: at the release instant the "
+                          "golden holds the PLAYER mon (level $50) and the port holds "
+                          "the ENEMY (level $0D). ALIGNMENT WAS TRIED FIRST and is "
+                          "recorded as not working here — adding wLoadedMonLevel == 80 "
+                          "to both dump conditions, the fix that worked for "
+                          "battle_item_potion and battle_choose_next_mon, makes the "
+                          "PORT never dump, because it never re-stages the player "
+                          "inside the released window before the next cast. OPEN "
+                          "QUESTION, deliberately left visible rather than buried: "
+                          "whether that is only frame granularity or a real ordering "
+                          "difference in when DrawHUDsAndHPBars stages each mon. It is "
+                          "not a hole in this scenario -- what it pins is the "
+                          "scenario-local wPlyStatus1/wPlyAtksLeft pair, and the party "
+                          "and wBattleMon are compared UNMASKED.",
+            "wEnemyMon": "the enemy's remaining HP is the accumulated damage of "
+                         "the trapping hits, i.e. a roll, and the two sides do not "
+                         "share an RNG stream. It is seeded to 999 only so it "
+                         "survives the sequence (a KO skips the turn tail where "
+                         "CheckNumAttacksLeft lives), so its value carries no "
+                         "information about what this scenario pins.",
+        },
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "trainer_battle_init": {
         # The two sides reach the same InitBattleCommon checkpoint through
         # different outer presentation paths. The scenario-local trainerInit

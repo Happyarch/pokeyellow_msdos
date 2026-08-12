@@ -646,6 +646,37 @@
       "verification": "the ONLY scenario that enters EndOfBattle's Pay Day payout branch, which is gated on wTotalPayDayMoney != 0 and therefore dead in every other scenario -- battle plan 3b stood implemented-but-unticked for want of it. SNORLAX L80 uses PAY_DAY on the spec wild PIDGEY L13 through the real FIGHT menu; the KO ends the battle and EndOfBattle pays out with AddBCD. BOTH SIDES SEED wPlayerMoney TO 001000 FIRST: measured, the debug seed leaves it at the BCD maximum 999999, where AddBCD saturates and the payout would leave the compared bytes unchanged -- the scenario would pass while proving nothing. Expected end state 001160, i.e. level*2 = 160, which is RNG-free; the damage roll only decides whether the KO happens and PAY_DAY at power 40 from L80 overkills 36 HP on every roll"
     },
     {
+      "name": "battle_wrap",
+      "id": 64,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_WRAP=1",
+      "port_entry_gate": "DEBUG_BATTLE_WRAP",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_wrap.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "MainInBattleLoop",
+        "ExecutePlayerMove",
+        "TrappingEffect",
+        "CheckNumAttacksLeft"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the ONLY scenario in which CheckNumAttacksLeft clears a SET bit. Its two call sites are both in MainInBattleLoop's turn tail and neither is reachable from ExecutePlayerMove, so this is the first harness on either side that lets the real MainInBattleLoop run turns. SNORLAX L80 wraps the spec wild PIDGEY L13; the scenario-local rows wPlyStatus1 and wPlyAtksLeft pin the release. Three pins, each measured: enemy HP 999 because a KO takes `jp z, HandleEnemyMonFainted` and skips the turn tail entirely; enemy asleep because its damage to SNORLAX is a roll and wBattleMon is compared; and the trapping counter forced to 1 because TrappingEffect rolls it 2-5 and the emulators do not share an RNG stream"
+    },
+    {
       "name": "battle_damage",
       "id": 43,
       "tier": "full",
