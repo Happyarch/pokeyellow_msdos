@@ -37,22 +37,11 @@ global StarterPikachuBattleEntranceAnimation
 StarterPikachuBattleEntranceAnimation:
     ret
 
-; UseBagItem — pret engine/battle/core.asm:2344. "Either use an item from the bag
-; or use a safari zone item": names the item, runs UseItem_, then decides whether
-; the enemy gets a free turn and whether the battle ended (ball capture).
-;
-; ADDED AS A STUB 2026-08-12 (battle plan 2a). PartyMenuOrRockOrRun's safari arm
-; is `ld a, SAFARI_ROCK / ld [wCurItem], a / jp UseBagItem`, and porting that
-; routine with pret's shape needs the label to resolve. The real body is 2c's
-; work (it is the tail of BagWasSelected, the in-battle bag), so this is a
-; link-time stand-in and NOT a claim that the safari rock works.
-;
-; The safari arm is unreachable in the port today for a second, independent
-; reason: no scenario or gate enters a BATTLE_TYPE_SAFARI battle.
-; STUB{label=UseBagItem; class=stub; pret=engine/battle/core.asm:UseBagItem; behavior=return without naming the item, running UseItem_, or deciding whether the enemy takes a free turn, so the safari ROCK arm of PartyMenuOrRockOrRun does nothing; evidence=label DB reports UseBagItem missing and the in-battle bag flow BagWasSelected that owns its body is unported; lifetime=until the in-battle bag lands under battle_completion 2c}
-global UseBagItem
-UseBagItem:
-    ret
+; UseBagItem — STUB RETIRED 2026-08-12 (battle plan 2c). The real body is in its
+; pret-mirrored home, src/engine/battle/core.asm, together with BagWasSelected,
+; DisplayPlayerBag and DisplayBagMenu. It was added here by 2a purely so
+; PartyMenuOrRockOrRun's safari-ROCK arm could keep pret's shape while the
+; in-battle bag was unported; that arm now reaches the real routine.
 
 ; LinkBattleExchangeData — pret engine/battle/core.asm:LinkBattleExchangeData.
 ; The per-turn link-cable exchange: both sides swap their chosen action and the

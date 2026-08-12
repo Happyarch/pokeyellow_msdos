@@ -172,6 +172,8 @@ global SendOutMon
 global AnimateRetreatingPlayerMon       ; pret core.asm:1828 (plan 2a)
 global SwitchPlayerMon                  ; pret core.asm:2525 (plan 2a)
 global PartyMenuOrRockOrRun             ; pret core.asm:2404 (plan 2a)
+global BagWasSelected                   ; pret core.asm:2292 (plan 2c)
+global UseBagItem                       ; pret core.asm:2344 (plan 2c)
 global TrainerBattleVictory
 global ScrollTrainerPicAfterBattle      ; pret core.asm:6453 jpfar thunk
 
@@ -198,7 +200,12 @@ extern AnimationSubstitute             ; engine/battle/animations.asm
 extern AnimationMinimizeMon            ; engine/battle/animations.asm
 extern LoadMonFrontSprite              ; src/home/pics.asm — EDX = VRAM dest
 extern FillMemory                      ; src/home/copy2.asm — ESI dest, BX count, AL value
-extern UseBagItem                      ; battle_stubs.asm (STUB) — 2c owns the body
+extern ShowSimulatedInputBagBox        ; battle_menu.asm — tutorial one-item box
+extern DisplayListMenuID               ; src/home/list_menu.asm — CF=1 iff cancelled
+extern UseItem                         ; src/home/item.asm
+extern GetItemName                     ; src/home/names.asm
+extern CopyToStringBuffer              ; src/home/copy_string.asm
+extern ItemsCantBeUsedHereText         ; assets/battle_text.inc (generated Tier-1)
 extern g_window_count                  ; src/ppu/ppu.asm — window descriptor count
 extern g_bg_whiteout                   ; src/ppu/ppu.asm — 1 = blank BG, skip the tilemap
 extern LinkBattleExchangeData          ; battle_stubs.asm (STUB) — link play is unported
@@ -230,7 +237,6 @@ extern PrintMoveType                   ; engine/battle/print_type.asm — pret p
 extern Delay3                          ; src/home/palettes.asm
 
 ; --- deferred in-battle sub-UIs (bag / party-switch) — call faithfully, body deferred ---
-extern BattleItemMenu                  ; ITEM → bag (deferred; re-shows the menu)
 
 ; --- move-execution backend (already-faithful, in other files) ---
 extern AddNTimes                       ; home/array.asm — ESI += BX * AL (party index)
@@ -541,16 +547,26 @@ DisplayBattleMenu:
 .upperLeftMenuItemWasNotSelected:
     cmp al, 2
     jne .partyMenuOrRun
-    ; --- ITEM (bag) selected ---
-    ; pret: jp BagWasSelected — a TAIL, so BagWasSelected's CF is
-    ; DisplayBattleMenu's CF: CF=1 after a capture ends the special battle at
-    ; the caller (StartBattle's safari-style loop / _InitBattleCommon's
-    ; .specialBattleLoop). CF=0 redisplays, exactly as before.
-    call BattleItemMenu
-    jc .itemEndedBattle
-    jmp DisplayBattleMenu
-.itemEndedBattle:
-    ret
+    ; --- ITEM (bag), or BAIT in the Safari Zone ---
+    ; pret falls straight through here into the link check and then
+    ; BagWasSelected, and the flow's own `ret` (in UseBagItem) IS
+    ; DisplayBattleMenu's return: CF=1 when a capture ended the battle, CF=0
+    ; otherwise. The port used to `call BattleItemMenu` and re-dispatch on CF —
+    ; a port-only shape that existed only because the bag was a stub. Restored
+    ; to pret's fall-through by battle plan 2c.
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    jne .notLinkBattle                  ; jr nz
+    ; can't use items in link battles
+    mov esi, ItemsCantBeUsedHereText
+    call PrintText
+    jmp DisplayBattleMenu               ; jp
+.notLinkBattle:
+    call SaveScreenTilesToBuffer2
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
+    jne BagWasSelected                  ; jr nz
+    ; bait was selected
+    mov byte [ebp + wCurItem], SAFARI_BAIT
+    jmp UseBagItem                      ; jr
 .partyMenuOrRun:
     ; pret: jp PartyMenuOrRockOrRun — the dec-a run check is the HEAD of that
     ; routine, not of this one. It used to be inlined here with a call to the
@@ -3023,6 +3039,124 @@ CheckNumAttacksLeft:
     ; enemy has 0 attacks left
     and byte [ebp + wEnemyBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
 .done:
+    ret
+
+; ---------------------------------------------------------------------------
+; BagWasSelected / DisplayPlayerBag / DisplayBagMenu / UseBagItem —
+; pret core.asm:2292-2400. The in-battle bag: pick an item off the real list
+; menu, run it through the shared item dispatcher, and decide whether the enemy
+; got a turn and whether the battle ended.
+;
+; PORTED 2026-08-12 (battle plan 2c). It replaces the port-only `BattleItemMenu`,
+; which is DELETED rather than renamed — pret's body belongs here in core.asm
+; under the mirror rule, exactly as 2a did for BattlePartyMenu. Nothing about
+; the item EFFECTS is forked: this calls the same UseItem the overworld bag uses.
+;
+; DEVIATION{class=data-model; pret=engine/battle/core.asm:BagWasSelected; behavior=the OLD_MAN and PIKACHU tutorial branch keeps the port's one-line POKe BALL presentation instead of pointing wListPointer at pret SimulatedInputBattleItemList and running the list menu over it; evidence=wListPointer is a 16-bit GB address in this port and DisplayListMenuID reads the list through it as [ebp+esi], so a flat program-image table cannot be stored there without first staging a copy into GB memory, and the tutorial flow only ever makes the one scripted selection that presentation already performs; lifetime=until battle_completion 4b stages the simulated-input list into GB memory}
+;
+; DEVIATION{class=projection; pret=engine/battle/core.asm:UseBagItem; behavior=every path back to the battle screen clears the port-only g_window_count and g_bg_whiteout and re-asserts text_msgbox; evidence=the port draws the bag through the list menu which registers its own window descriptors in list_draw_box_border and blanks the background, so without the teardown the restored battle screen is composited as a blank frame - the same three obligations PartyMenuOrRockOrRun already carries and which start_sub_menus.asm performs for the START-menu bag; lifetime=permanent while the port composites windows over a blankable background}
+; ---------------------------------------------------------------------------
+BagWasSelected:
+    call LoadScreenTilesFromBuffer1
+    cmp byte [ebp + wBattleType], 0     ; is it a normal battle?
+    jne .next                           ; jr nz
+    call DrawHUDsAndHPBars
+.next:
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_OLD_MAN         ; the old man tutorial?
+    je .simulatedInputBattle
+    cmp al, BATTLE_TYPE_PIKACHU         ; the Prof. Oak / Pikachu battle?
+    je .simulatedInputBattle
+    jmp DisplayPlayerBag                ; jr
+.simulatedInputBattle:
+    ; pret points wListPointer at SimulatedInputBattleItemList (one POKé BALL)
+    ; and lets the simulated input select it. See the class=data-model note
+    ; above for why the port cannot store that flat table in wListPointer; the
+    ; scripted selection is performed directly instead. 4b owns the real list.
+    call ShowSimulatedInputBagBox       ; port-only presentation (was BattleItemMenu)
+    mov byte [ebp + wCurItem], POKE_BALL
+    jmp UseBagItem
+
+DisplayPlayerBag:
+    ; get the pointer to the player's bag when in a normal battle
+    mov word [ebp + wListPointer], wNumBagItems
+DisplayBagMenu:
+    ; PORT-ONLY: raise the background whiteout for the duration of the list.
+    ; The port draws the list menu into the scratch AND shows it through window
+    ; descriptors (list_draw_box_border); with the battle canvas still
+    ; composited underneath, BOTH copies are visible — measured 2026-08-12, the
+    ; bag rendered twice, once top-left and once top-right. Every other in-game
+    ; caller that owns the screen for a list raises this first
+    ; (bills_pc.asm:308). RestoreBattleScreenState clears it on every exit.
+    mov dword [g_bg_whiteout], 1
+    mov byte [ebp + wPrintItemPrices], 0            ; xor a
+    mov byte [ebp + wListMenuID], ITEMLISTMENU
+    mov al, [ebp + wBagSavedMenuItem]
+    mov [ebp + wCurrentMenuItem], al
+    call DisplayListMenuID
+    mov al, [ebp + wCurrentMenuItem]
+    mov [ebp + wBagSavedMenuItem], al
+    mov byte [ebp + wMenuWatchMovingOutOfBounds], 0
+    mov byte [ebp + wMenuItemToSwap], 0
+    jnc UseBagItem                                  ; pret: jp c, DisplayBattleMenu
+    call RestoreBattleScreenState                   ; cancelled — port-only teardown
+    jmp DisplayBattleMenu
+
+UseBagItem:
+    ; either use an item from the bag or use a safari zone item
+    mov al, [ebp + wCurItem]
+    mov [ebp + wNamedObjectIndex], al
+    call GetItemName
+    call CopyToStringBuffer
+    mov byte [ebp + wPseudoItemID], 0               ; xor a
+    call UseItem
+    call LoadHudTilePatterns
+    call ClearSprites
+    mov byte [ebp + wCurrentMenuItem], 0            ; xor a
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
+    je .checkIfMonCaptured                          ; jr z
+    mov al, [ebp + wActionResultOrTookBattleTurn]
+    and al, al                                      ; was the item used successfully?
+    jz BagWasSelected                               ; jp z — back to the bag menu
+    mov al, [ebp + wPlayerBattleStatus1]
+    test al, (1 << USING_TRAPPING_MOVE)             ; mid-Wrap?
+    jz .checkIfMonCaptured                          ; jr z
+    dec byte [ebp + wPlayerNumAttacksLeft]
+    jnz .checkIfMonCaptured                         ; jr nz
+    and byte [ebp + wPlayerBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
+.checkIfMonCaptured:
+    mov al, [ebp + wCapturedMonSpecies]
+    and al, al                                      ; captured with a ball?
+    jnz .returnAfterCapturingMon                    ; jr nz
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
+    je .returnAfterUsingItem_NoCapture               ; jr z
+; not a safari battle
+    call RestoreBattleScreenState                   ; port-only teardown, then pret's:
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    call Delay3
+.returnAfterUsingItem_NoCapture:
+    call GBPalNormal
+    and al, al                                      ; reset carry
+    ret
+.returnAfterCapturingMon:
+    call GBPalNormal
+    mov byte [ebp + wCapturedMonSpecies], 0         ; xor a
+    mov byte [ebp + wBattleResult], 2               ; ld a,$2
+    stc                                             ; scf — the battle is over
+    ret
+
+; ---------------------------------------------------------------------------
+; RestoreBattleScreenState — port-only. Undo the list menu's screen takeover so
+; the battle screen composites again: drop its window descriptors, clear the
+; background whiteout, and put the text projection back on the battle record.
+; pret has no counterpart; see the class=projection note on UseBagItem, and the
+; identical trio in PartyMenuOrRockOrRun.
+; ---------------------------------------------------------------------------
+RestoreBattleScreenState:
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [text_msgbox], msgbox_centered
     ret
 
 ; ---------------------------------------------------------------------------

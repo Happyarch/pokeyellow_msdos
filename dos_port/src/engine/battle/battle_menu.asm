@@ -98,7 +98,7 @@ global EndBattleScreen
 global ShowGainedExpText
 global ShowGrewLevelText
 global FindMoveName
-global BattleItemMenu
+global ShowSimulatedInputBagBox
 global DoEnemyAttackDamage
 
 extern TextBoxBorder                 ; unified text engine (text.asm), stride-aware
@@ -174,32 +174,23 @@ EndBattleScreen:
     call DelayFrame
     ret
 
-; BattleItemMenu — pret engine/battle/core.asm:BagWasSelected. REAL for the
-; tutorial battles (2026-08-06, battle-completion Stage 4a): pret swaps the bag
-; for SimulatedInputBattleItemList (one POKé BALL) in OLD_MAN / PIKACHU battles
-; and the simulated input throws it; the capture tail (pret
-; .checkIfMonCaptured / .returnAfterCapturingMon) clears wCapturedMonSpecies,
-; sets wBattleResult=2 and returns CF=1, which ends the special battle at the
-; caller (_InitBattleCommon .specialBattleLoop / DisplayBattleMenu's ITEM tail).
+; ShowSimulatedInputBagBox — port-only presentation for the OLD_MAN / PIKACHU
+; tutorial battles: pret swaps the bag for SimulatedInputBattleItemList (one
+; POKé BALL) and lets the simulated input select it; this draws that one-item
+; box and dwells for the same beat.
 ;
-; The NORMAL-battle branch is still the no-op (CF=0 → the menu redisplays,
-; exactly the old stub behavior); the real in-battle bag UI belongs to
-; battle-completion item 2c. The naming CONVENTION DEBT below it stands: this
-; label should become pret's BagWasSelected when 2c lands (measured 2026-08-01,
-; a stub-file move is mechanically rejected for a port_only-status name).
-;
-; DEVIATION{class=temporary; pret=engine/battle/core.asm:BagWasSelected; behavior=the tutorial-battle bag presentation is a one-line POKe BALL x1 box with a fixed dwell instead of pret's DisplayBagMenu list UI over SimulatedInputBattleItemList, the normal-battle branch remains a no-op, and pret's no-capture HUD-redraw and GBPalNormal tail is dropped; evidence=the in-battle DisplayBagMenu and DisplayListMenuID stack is unported (battle-completion item 2c) and the tutorial flow needs only the single scripted POKE BALL selection pret's simulated input always makes, while OLD_MAN and PIKACHU capture on the scripted first throw so the no-capture tail is one retrained-old-man shake away from unreachable; lifetime=battle-completion items 2c and 4b}
-BattleItemMenu:
-    mov al, [ebp + wBattleType]
-    cmp al, BATTLE_TYPE_OLD_MAN
-    je .simulatedInputBattle
-    cmp al, BATTLE_TYPE_PIKACHU
-    je .simulatedInputBattle
-    clc                                 ; normal battle: bag UI deferred (item 2c)
-    ret
-.simulatedInputBattle:
-    ; the one-item bag (pret SimulatedInputBattleItemList): show it, dwell as
-    ; the simulated cursor "selects" the ball, then use it.
+; RENAMED AND NARROWED 2026-08-12 (battle plan 2c). It used to be
+; `BattleItemMenu`, a port-only FORKED NAME standing in for pret's
+; BagWasSelected, with the normal-battle branch a no-op and the item use plus
+; capture tail inline. All of that moved to pret's own routines in
+; src/engine/battle/core.asm, where the mirror rule puts them; what is left here
+; is the one genuinely port-only piece — the substitute presentation — under a
+; descriptive name that claims no pret label. Its caller is
+; BagWasSelected.simulatedInputBattle, and the class=data-model note there
+; records why the port cannot use pret's list (wListPointer is a 16-bit GB
+; address, so a flat program-image table cannot be stored in it).
+; Retires when battle_completion 4b stages that list into GB memory.
+ShowSimulatedInputBagBox:
     mov dword [menu_item_step], 2 * FW
     mov esi, W_TILEMAP + OUTER_OFF
     mov bh, OUTER_H
@@ -213,18 +204,6 @@ BattleItemMenu:
     call PlaceString
     mov bl, 30
     call DelayFrames
-    mov byte [ebp + wCurItem], POKE_BALL
-    call UseItem                        ; -> ItemUseBall: throw, shakes, catch text
-    ; pret BagWasSelected tail (.checkIfMonCaptured):
-    mov al, [ebp + wCapturedMonSpecies]
-    test al, al
-    jz .noCapture
-    mov byte [ebp + wCapturedMonSpecies], 0
-    mov byte [ebp + wBattleResult], 2   ; pret: ld a,$2 / ld [wBattleResult],a
-    stc                                 ; pret: scf — the battle is over
-    ret
-.noCapture:
-    clc                                 ; pret: and a
     ret
 
 ; BattlePartyMenu — DELETED 2026-08-12 (battle plan 2a). It was a port-only

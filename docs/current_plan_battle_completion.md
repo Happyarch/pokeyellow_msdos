@@ -918,7 +918,7 @@ their current bodies auto-answer and auto-select.
       `IsGhostBattle`, `LinkBattleExchangeData`, `LoadScreenTilesFromBuffer1`
       and `PrintText` (11 pret / 7 port). Those predate this box and belong to
       4c (ghost) and the run-message work, not here.
-- [ ] **2c. In-battle bag.** Rename the port-only `BattleItemMenu` to its pret
+- [x] **2c. In-battle bag.** Rename the port-only `BattleItemMenu` to its pret
       counterpart `BagWasSelected` (pret engine/battle/core.asm:2270-2300,
       including the link-battle and safari-bait preamble), then implement it
       over the existing bag and
@@ -965,6 +965,39 @@ their current bodies auto-answer and auto-select.
       None of that is visible to `faithdiff`, which stayed at 24/24 across both
       of 2a's fixes because all three are port memory. Verify 2c with a rendered
       frame, not just the gates.
+
+      **DONE 2026-08-12.** `BagWasSelected`, `DisplayPlayerBag`, `DisplayBagMenu`
+      and `UseBagItem` are ported into the mirror; the port-only
+      `BattleItemMenu` is DELETED and the `UseBagItem` stub 2a added is RETIRED.
+      The tutorial presentation survives as the descriptively-named port-only
+      `ShowSimulatedInputBagBox`, which claims no pret label.
+
+      * `DisplayPlayerBag` clean; `DisplayBagMenu` 6/6 stores;
+        `UseBagItem` 10/10 calls matched. The ADDED entries are the port-only
+        `RestoreBattleScreenState` and the x86 lowering of pret's
+        `ld hl`-indirect writes to `wPlayerBattleStatus1` /
+        `wPlayerNumAttacksLeft`.
+      * pret's fall-through is restored: the ITEM slot no longer `call`s a
+        helper and re-dispatches on CF — the flow's own `ret` in `UseBagItem`
+        IS `DisplayBattleMenu`'s return, as pret intends.
+      * Item effects are NOT forked: this calls the same `UseItem` the overworld
+        bag uses.
+
+      **The warning above paid off twice.** First, `RestoreBattleScreenState`
+      applies the three obligations on every exit. Second — and only a rendered
+      frame showed it — the bag initially drew TWICE, once on the canvas and
+      once through the list menu's own window descriptors, because the battle
+      canvas is composited while the overworld's is not. Fixed by raising
+      `g_bg_whiteout` for the duration of the list, which is what every other
+      in-game list-menu owner does (`bills_pc.asm:308`). Verified by frame: one
+      clean list, cursor on POTION, real bag contents.
+
+      Two constraints found and recorded: `wListPointer` is a **16-bit GB
+      address** in this port, so pret's flat `SimulatedInputBattleItemList`
+      cannot be stored in it without staging a copy into GB memory — hence the
+      `class=data-model` deviation and 4b owning the real list. And
+      `SAFARI_BAIT` = `BOULDERBADGE` = `$15`, the same deliberate overload as
+      `SAFARI_ROCK`.
 - [ ] Add separate must-hit scenarios for voluntary switch, forced switch, a
       successful medicine/battle-item use, a failed item, and ball capture entered
       through `BattleItemMenu`. The existing `party_menu`, `battle_menu`, and

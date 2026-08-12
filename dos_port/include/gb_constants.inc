@@ -130,6 +130,10 @@ SAFARI_BALL             equ 0x08
 ; SAFARI_ROCK is pret's deliberate OVERLOAD of the CASCADEBADGE item id
 ; (constants/item_constants.asm:34 — `DEF SAFARI_ROCK EQU CASCADEBADGE`, $16).
 ; PartyMenuOrRockOrRun stores it in wCurItem so UseBagItem runs the rock.
+; SAFARI_BAIT is pret's matching overload of the BOULDERBADGE item id
+; (constants/item_constants.asm:32 — `DEF SAFARI_BAIT EQU BOULDERBADGE`, $15).
+; DisplayBattleMenu's ITEM slot stores it in wCurItem in a Safari battle.
+SAFARI_BAIT             equ 0x15
 SAFARI_ROCK             equ 0x16
 HP_UP                   equ 0x23    ; first vitamin (PROTEIN/IRON/CARBOS/CALCIUM follow)
 PROTEIN                 equ 0x24
