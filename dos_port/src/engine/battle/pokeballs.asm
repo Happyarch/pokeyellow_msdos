@@ -41,8 +41,12 @@ bits 32
 %define EB_X   (UI_ENEMY_BALLS_OAM_X + (UI_ENEMY_BALLS_GBW - 1) * 8)
 %define EB_Y   UI_ENEMY_BALLS_OAM_Y
 
-section .data
-ball_gfx: incbin "../gfx/battle/balls.2bpp"      ; 4 tiles (ok/status/fainted/empty)
+; NOTE: this file used to carry `ball_gfx: incbin "../gfx/battle/balls.2bpp"` —
+; a SECOND copy of the blob the mirror file draw_hud_pokeball_gfx.asm already
+; holds as PokeballTileGraphics. Retired 2026-08-12 together with the forked
+; LoadPokeballGfx; the loader now lives in the mirror under pret's own name,
+; LoadPartyPokeballGfx, because the tile count is a DIVISION of the blob's size
+; and that cannot be computed across an object file.
 
 section .bss
 pb_x:     resb 1            ; current OAM X
@@ -56,28 +60,10 @@ section .text
 
 global DrawBattlePokeballs
 global HideBattlePokeballs
-global LoadPokeballGfx
 extern PrepareStaticOAM
 extern HideSprites
 extern DrawPlayerHUDFrame
-extern g_tilecache_dirty        ; src/ppu/ppu.asm — arm cache re-decode after a vChars write
-
-; ---------------------------------------------------------------------------
-; LoadPokeballGfx — copy the 4 ball tiles to pret's OBJ slots $31-$34 (pret
-; LoadPartyPokeballGfx: `ld hl, vSprites tile $31`). EBP = GB base.
-;
-; render_sprites composites from tile_cache as of the compositor-perf plan
-; (docs/plans/compositor_perf.md Stage 4b) — it no longer bit-decodes raw OBJ
-; VRAM — so this write MUST arm g_tilecache_dirty or the balls draw whatever
-; those cache slots held before.
-; ---------------------------------------------------------------------------
-LoadPokeballGfx:
-    mov byte [g_tilecache_dirty], 1      ; VRAM tile data changes → rebuild decode cache
-    mov esi, ball_gfx
-    lea edi, [ebp + GB_VCHARS0 + BALL_OK * 16]  ; $8310 → OBJ tiles $31..$34
-    mov ecx, (4 * 16) / 4                ; 64 bytes
-    rep movsd
-    ret
+extern LoadPartyPokeballGfx     ; draw_hud_pokeball_gfx.asm — pret's own loader
 
 ; ---------------------------------------------------------------------------
 ; DrawBattlePokeballs — load gfx, build the player ball row (and the enemy's in a
@@ -85,7 +71,7 @@ LoadPokeballGfx:
 ; In: EBP = GB base; wPartyCount/wPartyMons (+ wEnemyPartyCount/wEnemyMons) seeded.
 ; ---------------------------------------------------------------------------
 DrawBattlePokeballs:
-    call LoadPokeballGfx
+    call LoadPartyPokeballGfx             ; pret's loader, in the mirror file
     call DrawPlayerHUDFrame               ; the shelf the player's balls sit on
     ; Zero the whole $FE00 OAM first: the row overwrites entries 0..5 (0..11 for
     ; a trainer), and everything beyond must read HIDDEN — the GB's shadow OAM
