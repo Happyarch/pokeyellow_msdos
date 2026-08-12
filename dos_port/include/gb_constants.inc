@@ -590,6 +590,7 @@ GUST                    equ 0x10    ; the battle_blackout gate pins the wild
 CUT                     equ 0x0F
 FLY                     equ 0x13
 SURF                    equ 0x39
+PAY_DAY                 equ 0x06    ; constants/move_constants.asm
 STRENGTH                equ 0x46
 DIG                     equ 0x5B
 TELEPORT                equ 0x64

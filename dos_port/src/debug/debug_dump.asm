@@ -215,6 +215,14 @@ extern g_windows                     ; src/ppu/ppu.asm — descriptor array
 extern ExecuteEnemyMove          ; core.asm — the real enemy-turn/damage pipeline
 extern HandlePlayerMonFainted    ; core.asm — RemoveFaintedPlayerMon + the black-out branch
 %endif
+%ifdef DEBUG_BATTLE_PAYDAY
+; Declared HERE, with the other battle externs, not down at the gate: NASM sizes
+; a symbol on first sight, so a late `extern` shifts every later label and the
+; assemble fails with `label ... changed during code generation`.
+extern ExecutePlayerMove         ; core.asm — the real player-turn/damage pipeline
+extern HandleEnemyMonFainted     ; core.asm — faint + EXP chain
+extern EndOfBattle               ; engine/battle/end_of_battle.asm — the Pay Day payout
+%endif
 %ifdef DEBUG_BATTLE_NEXTMON
 extern ExecuteEnemyMove          ; core.asm — the real enemy-turn/damage pipeline
 extern HandlePlayerMonFainted    ; core.asm — RemoveFaintedPlayerMon + DoUseNextMonDialogue/ChooseNextMon
@@ -2569,6 +2577,54 @@ RunBattleTest:
 .faintKO:
     call HandleEnemyMonFainted          ; FaintEnemyPokemon -> GainExperience
     call DebugDumpMemory                ; GBSTATE.BIN (id 21) + DUMP.BIN + exit
+%elifdef DEBUG_BATTLE_PAYDAY
+    ; ------------------------------------------------------------------
+    ; battle_pay_day golden gate (battle plan 3b). The payout branch in
+    ; EndOfBattle is gated on wTotalPayDayMoney != 0, which is 0 in every other
+    ; scenario in the registry — so the suite has never entered it and 3b has
+    ; stood IMPLEMENTED-BUT-NOT-TICKED for want of exactly this.
+    ;
+    ; Shape: battle_faint's gate with the move swapped. SNORLAX L80 uses PAY_DAY
+    ; on the spec wild PIDGEY L13 (36 HP); the move's effect accumulates into
+    ; wTotalPayDayMoney, the KO ends the wild battle, and EndOfBattle pays it
+    ; out with AddBCD into wPlayerMoney.
+    ;
+    ; ZERO RNG IN THE COMPARED VALUE, and that is the point of choosing this
+    ; matchup: the payout is level * 2 in BCD (PayDayEffect_), so it depends on
+    ; nothing but SNORLAX's level. The damage roll and any critical hit change
+    ; only WHETHER the KO happens, and PAY_DAY at power 40 from L80 overkills 36
+    ; HP on every roll — the same argument battle_faint makes for STRENGTH.
+    ; ------------------------------------------------------------------
+    call LoadScreenTilesFromBuffer1
+    call DrawHUDsAndHPBars
+    ; SEED THE WALLET LOW, OR THE SCENARIO IS VACUOUS. MEASURED: the debug seed
+    ; leaves wPlayerMoney at the BCD maximum 999999, so AddBCD saturates and the
+    ; payout leaves the compared bytes unchanged — the scenario would PASS while
+    ; proving nothing. 001000 leaves room for the whole payout.
+    mov byte [ebp + wPlayerMoney + 0], 0x00
+    mov byte [ebp + wPlayerMoney + 1], 0x10
+    mov byte [ebp + wPlayerMoney + 2], 0x00
+    mov byte [ebp + wPlayerMoveListIndex], 0
+    mov byte [ebp + wBattleMonMoves], PAY_DAY
+    mov byte [ebp + wPlayerSelectedMove], PAY_DAY
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0
+    call ExecutePlayerMove
+    mov al, [ebp + wEnemyMonHP]
+    or al, [ebp + wEnemyMonHP + 1]      ; big-endian word, either byte set = alive
+    jnz .payDayAlive
+    ; The effect must have accumulated, or the payout branch is unreachable and
+    ; this scenario would silently prove nothing.
+    mov al, [ebp + wTotalPayDayMoney]
+    or al, [ebp + wTotalPayDayMoney + 1]
+    or al, [ebp + wTotalPayDayMoney + 2]
+    jz .payDayAlive
+    call HandleEnemyMonFainted          ; FaintEnemyPokemon -> GainExperience
+    call EndOfBattle                    ; the payout: AddBCD into wPlayerMoney
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
+.payDayAlive:
+    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    call DelayFrame
+    call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_BLACKOUT
     ; ------------------------------------------------------------------
     ; battle_blackout golden gate — the OTHER half of the faint coverage
@@ -2928,7 +2984,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 

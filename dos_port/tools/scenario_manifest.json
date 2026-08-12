@@ -615,6 +615,37 @@
       "verification": "the only scenario that takes an item's FAILURE path: a POTION on a FULL-HP mon, so ItemUseMedicine reaches .healingItemNoEffect -> ItemUseNoEffect. battle_item_potion covers the success path. The dump is STATE-GATED on both sides rather than return-based, because on failure UseBagItem is `jp z, BagWasSelected` (pret core.asm:2360-2362) and DisplayBattleMenu never returns -- the landmark is wCurItem == POTION AND wUsedItemOnWhichPokemon == 1 AND wActionResultOrTookBattleTurn == 0, the last being the failure edge since UseItem_ sets it to 1 on entry. Target is slot 1, not slot 0, because 0 is cleared WRAM and would not distinguish 'failed' from 'never ran'. What is compared is that NOTHING happened: the bag still holds 16 entries with POTION x1 and every party HP is untouched"
     },
     {
+      "name": "battle_pay_day",
+      "id": 63,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_PAYDAY=1",
+      "port_entry_gate": "DEBUG_BATTLE_PAYDAY",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_pay_day.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "ExecutePlayerMove",
+        "HandleEnemyMonFainted",
+        "EndOfBattle",
+        "AddBCD"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the ONLY scenario that enters EndOfBattle's Pay Day payout branch, which is gated on wTotalPayDayMoney != 0 and therefore dead in every other scenario -- battle plan 3b stood implemented-but-unticked for want of it. SNORLAX L80 uses PAY_DAY on the spec wild PIDGEY L13 through the real FIGHT menu; the KO ends the battle and EndOfBattle pays out with AddBCD. BOTH SIDES SEED wPlayerMoney TO 001000 FIRST: measured, the debug seed leaves it at the BCD maximum 999999, where AddBCD saturates and the payout would leave the compared bytes unchanged -- the scenario would pass while proving nothing. Expected end state 001160, i.e. level*2 = 160, which is RNG-free; the damage roll only decides whether the KO happens and PAY_DAY at power 40 from L80 overkills 36 HP on every roll"
+    },
+    {
       "name": "battle_damage",
       "id": 43,
       "tier": "full",

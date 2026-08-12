@@ -1215,8 +1215,9 @@ provider shapes below, not their runtime behavior.
       counter, accumulation, release, and cleanup flow on both turns. Preserve
       original-game quirks only when pret or the current bug reference supports
       them, with the required `BUG`/`GLITCH` tags.
-- [~] **3b. Pay Day and end-of-battle money.** IMPLEMENTED 2026-08-11, NOT
-      TICKED — the code is in, the acceptance evidence is not.
+- [x] **3b. Pay Day and end-of-battle money.** IMPLEMENTED 2026-08-11,
+      WITNESSED 2026-08-12 — the acceptance evidence the box was waiting for is
+      `battle_pay_day`, scenario id 63.
 
       The payout is now real in `EndOfBattle`: `AddBCD` (3-byte BCD, both
       pointers starting at their array's least-significant byte, exactly as
@@ -1234,12 +1235,37 @@ provider shapes below, not their runtime behavior.
       `wTotalPayDayMoney` (`move_effects/pay_day.asm:134`). The comment is
       deleted and replaced with the measurement.
 
-      **WHAT IS OWED — a must-hit scenario.** No existing scenario can witness
-      this: the branch is gated on `wTotalPayDayMoney != 0`, which is 0 in every
-      scenario in the manifest, so the suite proves non-regression and nothing
-      more. It needs a deterministic battle in which Pay Day is used and won,
-      comparing `wPlayerMoney` (BCD) against the golden. Until that exists this
-      box stays `[~]`. Do not read a green suite as evidence for it.
+      **THE SCENARIO EXISTS: `battle_pay_day` (id 63), and it PASSES.** SNORLAX
+      L80 uses PAY_DAY on the spec wild PIDGEY L13 through the real FIGHT menu;
+      the KO ends the battle and `EndOfBattle` pays out with `AddBCD`.
+      `WRAM: OK (13 regions, 0 skipped)`, no masks. Registry is 61, all 61 PASS.
+
+      **THE SEEDED WALLET IS LOAD-BEARING, AND FINDING OUT WHY IS THE MAIN
+      LESSON HERE.** MEASURED: the debug seed leaves `wPlayerMoney` at the BCD
+      maximum **999999**, where `AddBCD` saturates — so the payout would have
+      left every compared byte unchanged and the scenario would have PASSED
+      while proving nothing whatsoever. Both sides now seed `001000` first and
+      the end state is `001160`. Any "nothing changed, therefore fine" reading
+      of a money comparison in this project should check the ceiling first.
+
+      *Zero RNG in the compared value:* the payout is `level * 2` in BCD
+      (`PayDayEffect_`), so it depends only on SNORLAX's level. The damage roll
+      decides only whether the KO happens, and PAY_DAY at power 40 from L80
+      overkills 36 HP on every roll — `battle_faint`'s argument, same matchup.
+
+      *Non-vacuity:* seeding `001001` instead fails with
+      `wPlayerMoney +2: want $60 | got $61`. *Determinism:* two consecutive
+      golden generations byte-identical (md5 `fdcd15bf…`).
+
+      **TWO HARNESS TRAPS, both hit and both written into the scenario so the
+      next author does not repeat them.** (1) An `assert wTotalPayDayMoney != 0`
+      right after the KO looks like the obvious mid-flow check and is WRONG:
+      `EndOfBattle` zeroes that counter after paying, and the KO poll only exits
+      at a frame boundary which can already be past it. It fired, and briefly
+      looked like a port divergence. (2) Polling on the money alone dumps DURING
+      `EndOfBattle`, before `.resetVariables`, and diverges on exactly one byte
+      — `wBattleFlags wIsInBattle: want $01 | got $00`. The landmark is now the
+      pair `wPlayerMoney == 001160 AND wIsInBattle == 0`.
 
       One thing to check when that scenario is built: this branch now calls
       `PrintText` at battle exit. pret does the same, so it is faithful, but if

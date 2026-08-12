@@ -1082,6 +1082,18 @@ ifdef AUTOKEY_NEXTMON_APRESS_END
 NASMFLAGS += -D AUTOKEY_NEXTMON_APRESS_END=$(AUTOKEY_NEXTMON_APRESS_END)
 endif
 endif
+# Pay Day payout gate (battle_pay_day, battle plan 3b): SNORLAX L80 uses PAY_DAY
+# on the spec wild PIDGEY L13, the KO ends the battle, and EndOfBattle pays the
+# accumulated wTotalPayDayMoney into wPlayerMoney with AddBCD. The payout is
+# level*2 in BCD, so the compared value has no RNG in it.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_PAYDAY=1" /tmp/payday
+ifdef DEBUG_BATTLE_PAYDAY
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_PAYDAY -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 ifdef DEBUG_BATTLE_BLACKOUT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_BLACKOUT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

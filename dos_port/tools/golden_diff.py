@@ -835,6 +835,26 @@ SCENARIOS = {
         "flags": "DEBUG_BATTLE_ITEM_FAIL=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_pay_day": {
+        # datastruct: the WRAM outcome of the PAY DAY payout — the only scenario
+        # that enters EndOfBattle's payout branch, which is gated on
+        # wTotalPayDayMoney != 0 and dead everywhere else.
+        #
+        # Both sides seed wPlayerMoney to 001000 BCD before the turn. That is
+        # load-bearing, not cosmetic: the debug seed leaves it at the BCD
+        # maximum 999999, where AddBCD saturates and the payout would leave the
+        # compared bytes untouched — a scenario that passes while proving
+        # nothing. Expected end state 001160.
+        #
+        # RNG-independent in the compared value: the payout is level * 2
+        # (PayDayEffect_), so it depends only on SNORLAX's level. The damage roll
+        # decides only whether the KO happens, and PAY_DAY at power 40 from L80
+        # overkills PIDGEY's 36 HP on every roll — battle_faint's argument for
+        # STRENGTH, same matchup.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_PAYDAY=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "trainer_battle_init": {
         # The two sides reach the same InitBattleCommon checkpoint through
         # different outer presentation paths. The scenario-local trainerInit
