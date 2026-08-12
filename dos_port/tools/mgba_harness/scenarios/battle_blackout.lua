@@ -146,8 +146,27 @@ scenario.run(function()
 	-- COVERAGE NOTE: because this stops inside RemoveFaintedPlayerMon, pret's
 	-- HandlePlayerBlackOut side effect (res BIT_ALWAYS_ON_BIKE in wStatusFlags6,
 	-- core.asm:1200) is NOT compared here. The port's HandlePlayerBlackOut does
-	-- execute (it is in the gate's must_hit list) but omits that store; covering
-	-- it needs a landmark between the black-out and EndOfBattle.
+	-- execute (it is in the gate's must_hit list); covering the store needs a
+	-- landmark between the black-out and EndOfBattle.
+	--
+	-- CORRECTION 2026-08-11: this note used to add "but omits that store". That
+	-- is no longer true -- e377b43ef restored HandlePlayerBlackOut to faithdiff
+	-- 6/6 with stores 1/1 matched, so the port makes the store now.
+	--
+	-- THE DUMP POINTS ARE NOT ALIGNED, and the same commit made that visible.
+	-- RemoveFaintedPlayerMon runs BEFORE HandlePlayerBlackOut (pret core.asm:984
+	-- vs :987), so THIS side's snapshot is strictly PRE-black-out, while the
+	-- port gate dumps after `call HandlePlayerMonFainted` returns, i.e.
+	-- POST-black-out. That asymmetry was invisible while the port's
+	-- HandlePlayerBlackOut was a three-line stand-in; now that it runs pret's
+	-- RunPaletteCommand SET_PAL_BATTLE_BLACK, the reporting-only cgb_palettes
+	-- region shows 24 divergences of the shape `port=(3,3,3)` against real
+	-- colours -- the port correctly black, this side not yet.
+	-- MEASURED, not inferred: disabling just that one call takes battle_blackout
+	-- from 24 palette divergences to 0 and leaves trainer_battle_loss's 48
+	-- untouched. The WRAM regions this scenario exists to compare are unaffected
+	-- either way (it PASSes in both states). Do not "fix" this by removing the
+	-- palette command -- align the landmarks instead.
 	local resolved = false
 	for _ = 1, 3600 do
 		if read_be("wBattleResult", 1) == 1 then

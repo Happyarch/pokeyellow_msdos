@@ -433,6 +433,38 @@ across 42 scenarios**.
   green, so this is pre-existing, not caused by it.) `trainer_battle_init` (36)
   and `trainer_battle_win` (28) share the shape.
 
+  **HALF OF THAT DIAGNOSIS IS NOW DISPROVEN — "`SetPal_BattleBlack`'s effect is
+  absent" is FALSE for the loss path; only "overwritten" survives.** Measured
+  2026-08-11 by A/B, not reasoned: `HandlePlayerBlackOut` was restored in
+  e377b43ef and now really does run pret's
+  `RunPaletteCommand SET_PAL_BATTLE_BLACK` (it is on the trainer-loss oracle's
+  path — `debug_dump.asm` calls `HandlePlayerBlackOut` directly at the
+  `DEBUG_TRAINER_LOSS` terminal leaf). `trainer_battle_loss` reports **48 with
+  the call and 48 without it** — byte-for-byte the same signature, all 48
+  `rom=(3,3,3) port=(31,31,31)`. So the port DOES black out and is repainted
+  white again before its dump: the oracle runs `EndOfBattle`,
+  `FinalizeTrainerBattleOutcome`, `EndTrainerBattle` and
+  `ResetStatusAndHalveMoneyOnBlackout` after the black-out and before staging
+  the dump. **Next probe for this box: find which of those four repaints, not
+  another missing writer.** Do not re-derive this by reading
+  `HandlePlayerBlackOut` — it is faithful (faithdiff 6/6, stores 1/1).
+
+  **`battle_blackout` acquired 24 divergences in the SAME commit, and they are a
+  DUMP-POINT ASYMMETRY, not a defect.** It had 0 before. Signature is the
+  MIRROR of the family above — `port=(3,3,3)` against real rom colours, i.e. the
+  port black and hardware not. Mechanism, from pret's own control flow:
+  `HandlePlayerMonFainted` calls `RemoveFaintedPlayerMon` (core.asm:984) BEFORE
+  `HandlePlayerBlackOut` (:987); the golden's landmark is `wBattleResult == 1`,
+  stored *inside* `RemoveFaintedPlayerMon`, so the mGBA snapshot is strictly
+  PRE-black-out, while the port gate dumps after `call HandlePlayerMonFainted`
+  returns and is POST-black-out. A/B: disabling only that one
+  `RunPaletteCommand` takes `battle_blackout` 24 → 0 and leaves
+  `trainer_battle_loss` at 48. The scenario PASSes either way — its WRAM regions
+  are unaffected. **Owed: align the landmarks** (the scenario header records that
+  moving the golden later overshoots into `EndOfBattle`'s `wIsInBattle` reset, so
+  this needs a landmark between the black-out and `EndOfBattle`). Do NOT close it
+  by deleting the palette command; that is masking a faithful call.
+
   **ROOT-CAUSED for the five battle scenarios — 2026-08-11, measured, not
   inferred.** The missing writer is `SetAnimationPalette`
   (pret `engine/battle/animations.asm:565`, `ld a, $6c / ldh [rOBP1], a`), and
