@@ -1786,6 +1786,57 @@ provider shapes below, not their runtime behavior.
          `move_selection` and `trainer_battle_route` photograph, so it will need
          golden regeneration and a `fidelity-full`, not just a core tier.
 
+         **STARTED 2026-08-12 — STEP 1 OF N LANDED (`8a238be51`).**
+         `LoadPartyPokeballGfx` is home in the mirror under its pret name, a
+         literal translation tail-calling `CopyVideoData`; it also deleted
+         `ball_gfx`, a SECOND `incbin` of `gfx/battle/balls.2bpp` that
+         `pokeballs.asm` kept beside the mirror's own `PokeballTileGraphics`.
+         Gates: faithdiff 0 lines, lint 0 both modes, static_gate PASS,
+         `battle_intro` + `battle_menu` PASS. **Note the fork retirement is
+         SEPARABLE from the intro replacement above** — this step moved a label
+         with zero golden movement. Retire the fork first, then do the intro.
+
+         *That label had to go first, and the reason generalises to any fork
+         retirement:* its tile count is `(End - Start) / TILE_SIZE`, a DIVISION
+         of a label difference, and non-linear assembly-time arithmetic on an
+         external is impossible in NASM. A routine that computes its own blob's
+         size can only live where the blob is defined — which is exactly why the
+         forked copy had both a hardcoded count and a private copy of the blob.
+
+         **TWO CORRECTIONS TO THE SCOPE AS PREVIOUSLY RECORDED, both measured:**
+         1. *The fork is wider than this plan and its memory said.* It also
+            spans `engine/battle/battle_hud.asm`: pret `PlaceHUDTiles`,
+            `PlacePlayerHUDTiles` and `PlaceEnemyHUDTiles` are forked there as
+            `place_hud_frame`, `DrawPlayerHUDFrame`, `DrawEnemyHUDFrame`. That
+            half is also a DATA-MODEL divergence, not just a rename: pret copies
+            a 3-byte table into `wHUDGraphicsTiles` and reads the corner and
+            triangle tiles back out of WRAM, where the port passes them as
+            immediates and never touches that WRAM.
+         2. *The remainder is NOT a mechanical rename.* pret's
+            `WritePokeballOAMData` writes `wShadowOAM` ($C300); the port's
+            `build_ball_row` writes `$FE00` directly and publishes through
+            `PrepareStaticOAM`, which reads `$FE00`. This is deliberate —
+            `src/home/vblank.asm:update_oam` records that
+            `wUpdateSpritesEnabled == $FF` skips the shadow→`$FE00` DMA
+            precisely because the ball row relies on not being re-copied over,
+            since the normal path runs `PrepareOAMData` first and would rebuild
+            shadow OAM from `wSpriteStateData`, destroying the entries. A
+            faithful `wShadowOAM` translation is therefore possible but needs an
+            explicit port-only publish (shadow → `$FE00`, the DMA the GB does,
+            then `PrepareStaticOAM`). It would be strictly MORE faithful than
+            today, and it CHANGES COMPARED WRAM — so that step needs golden runs,
+            not just a static gate.
+
+         Still forked after step 1: `DrawAllPokeballs`, `DrawEnemyPokeballs`,
+         `SetupOwnPartyPokeballs`, `SetupEnemyPartyPokeballs`, `SetupPokeballs`,
+         `PickPokeball`, `WritePokeballOAMData`,
+         `SetupPlayerAndEnemyPokeballs`, plus the three `battle_hud.asm` labels.
+         Five WRAM equates are owed first, addresses already resolved against
+         `pokeyellow.sym`: `wHUDPokeballGfxOffsetX` $CD3E, `wHUDGraphicsTiles`
+         $CD3F, `wHUDCornerTile` $CD40, `wHUDTriangleTile` $CD41,
+         `wHUDGraphicsTilesEnd` $CD42 (that range is heavily unioned in the port
+         and in pret — confirm no live battle overlap before adding).
+
 - [x] **4c (original folding note) — SUPERSEDED 2026-08-12, not open work.**
       It asked for `MarowakAnim` + `CopyMonPicFromBGToSpriteVRAM` to be folded
       in from the archived animations plan. Both were translated into the mirror
