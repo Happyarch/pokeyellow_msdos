@@ -48,6 +48,47 @@ So the divergences are printed, counted, and listed here instead.
   battle and never reach that loop. The call was genuinely dropped and restoring
   it is correct on faithfulness grounds, but it is not the fix for this family.
 
+## Running totals, 2026-08-11 (re-derived each time from the run, never carried)
+
+**467 across the 56-scenario tier**, 56/56 PASS. Two real defects fixed today
+took it 499 -> 479 -> 467; the accounting below covers **304** of what is left.
+
+| bucket | count | verdict |
+|---|---:|---|
+| trainer-gate stop points | 112 | artifact — gate returns before `SetPal_Battle` |
+| loop-bypass (no `LoadGBPal`) | 128 | artifact — 16 scenarios, one harness property |
+| item/continue whiteout phase | 48 | artifact — 59-frame transient, both sides settle equal |
+| `main_menu` SKIP_INTRO | 16 | artifact — see below |
+| **accounted** | **304** | |
+| remaining | 163 | not yet investigated |
+
+### `main_menu`'s 16: SKIP_INTRO leaves `wDefaultPaletteCommand` unpublished
+
+Signature: the port holds `PAL_BLACK` in every slot (colour0 white, colours 1-3
+`(3,3,3)`) where hardware has the real menu colours.
+
+Mechanism, read from source: `DEBUG_MAINMENU_LIVE` sets `-D SKIP_INTRO`, and
+`src/home/init.asm:189` guards `call PlayIntro` with `%ifndef SKIP_TITLE` /
+`%ifndef SKIP_INTRO`. The GameFreak intro inside `PlayIntro` is the ONLY thing
+that publishes `wDefaultPaletteCommand` (via `SetPal_GameFreakIntro`), so it
+stays at its zeroed value — which is `SET_PAL_BATTLE_BLACK` — and `MainMenu`'s
+faithful `RunDefaultPaletteCommand` duly paints everything black. The golden
+boots the real intro and gets `SET_PAL_GENERIC`.
+
+**The live game is unaffected** (a real boot runs `PlayIntro`), and pret would do
+exactly the same with its intro skipped, so the port is faithful here. Same
+family as `regression-palettes-setpalfunctions-dispatch-flattened`, which fixed
+the *reachability* of that publish on 2026-08-10; this is the remaining
+gate-shape consequence.
+
+**Do NOT generalize this by gate.** 46 of the 77 default-class divergences sit in
+gates that skip `PlayIntro`, which looks like one big family and is not: only
+`main_menu`'s 16 actually carry the `PAL_BLACK` signature. `overworld_pallet` and
+`sign_pallet` share the gate property but were already traced to the loop-bypass
+cause, and `start_menu` / `options_menu` / `pokedex_*` / `naming_screen` /
+`oak_intro` have zero `PAL_BLACK` divergences between them. Decompose by
+SIGNATURE, then confirm the mechanism per scenario.
+
 ## Where the remaining divergences actually are — full-tier decomposition, 2026-08-11
 
 **479 across the 56-scenario tier** (56/56 PASS; the region is reporting-only).
