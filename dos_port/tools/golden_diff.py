@@ -802,6 +802,24 @@ SCENARIOS = {
         "flags": "DEBUG_BATTLE_ITEM=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_choose_next_mon": {
+        # datastruct: the WRAM outcome of a FORCED SWITCH — the player's mon
+        # faints with another alive, so AnyPartyAlive succeeds and
+        # DoUseNextMonDialogue + ChooseNextMon run. The third door out of
+        # HandlePlayerMonFainted; battle_faint takes the enemy-faint door and
+        # battle_blackout the black-out door.
+        #
+        # RNG-independent BY MATCHUP, the same construction battle_blackout
+        # uses: PIKACHU L5 (slot 3, seeded to 1 HP) is slower than the spec
+        # PIDGEY L13, so the enemy always moves first and the 1-HP mon faints
+        # before ever acting; the enemy's moves are pinned to GUST so move
+        # selection cannot diverge. What is compared is the end state — slot 3
+        # at 0 HP, LAPRAS L34 (slot 5) loaded into wBattleMon at full HP, and
+        # the gain-exp / fought flags ChooseNextMon sets for it.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_NEXTMON=1",
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "trainer_battle_init": {
         # The two sides reach the same InitBattleCommon checkpoint through
         # different outer presentation paths. The scenario-local trainerInit

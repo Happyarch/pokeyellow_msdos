@@ -2703,11 +2703,16 @@ RunBattleTest:
     ; The real faint handler: RemoveFaintedPlayerMon, then — because a mon is
     ; still alive — DoUseNextMonDialogue and ChooseNextMon, driven by
     ; AUTOKEY_BATTLE_NEXTMON.
+    ;
+    ; IT DOES NOT RETURN, AND THAT IS PRET'S SHAPE, NOT A BUG. On the
+    ; forced-switch path HandlePlayerMonFainted ends in `jp MainInBattleLoop`
+    ; (pret core.asm:1006). So there is nothing to assert after this call and no
+    ; return-based dump is possible; AutoKeyDrive's state-gated
+    ; DEBUG_BATTLE_NEXTMON dump takes the snapshot instead, the first frame
+    ; wPlayerMonNumber and wLoadedMonSpecies both say the replacement is out.
+    ; The first version of this gate asserted after the call, produced no dump
+    ; ever, and was written up as a port stall — it was the harness.
     call HandlePlayerMonFainted
-    ; The replacement must be OUT. Only ChooseNextMon's send-out sets this.
-    cmp byte [ebp + wPlayerMonNumber], 5
-    jne .nextMonAlive
-    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 .nextMonAlive:
     mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
@@ -4174,6 +4179,58 @@ AutoKeyDrive:
     jne .noBattleDump
     call DumpBackbuffer                 ; FRAME.BIN, then exits
 .noBattleDump:
+%endif
+%ifdef DEBUG_BATTLE_NEXTMON
+    ; ------------------------------------------------------------------
+    ; battle_choose_next_mon's dump, and it MUST be state-gated (2026-08-12).
+    ;
+    ; The first version of this gate did `call HandlePlayerMonFainted` and then
+    ; asserted + dumped after the return. That can never run: on the
+    ; forced-switch path HandlePlayerMonFainted ends in `jp MainInBattleLoop`
+    ; (pret core.asm:1006, mirrored in the port) — it TAIL-JUMPS into the battle
+    ; loop and does not return. It returns only for a wild enemy faint, a
+    ; successful run, or the black-out branch, which is precisely why
+    ; battle_faint and battle_blackout could use a return-based dump and this
+    ; scenario cannot. The "port stalls in ChooseNextMon" report that came out
+    ; of that gate was a harness artifact; the port was doing pret's thing.
+    ;
+    ; LANDMARK: wPlayerMonNumber == the replacement slot AND wLoadedMon's
+    ; species == the replacement's. ChooseNextMon sets wPlayerMonNumber before
+    ; LoadBattleMonFromParty, and SendOutMon's DrawPlayerHUDAndHPBar is what
+    ; stages the mon into wLoadedMon (DrawEnemyHUDAndHPBar stages the ENEMY
+    ; first, so species alone would fire one routine too early). Requiring both
+    ; puts the dump after the HUDs are drawn and before anything else can move
+    ; the compared data — the same alignment battle_item_potion needed, and the
+    ; reason it needs no wLoadedMon mask.
+    ; ------------------------------------------------------------------
+%ifndef NEXTMON_TARGET_SLOT
+%define NEXTMON_TARGET_SLOT 5           ; LAPRAS L34 (lib/seed.lua DEBUG_PARTY[6])
+%endif
+%ifndef NEXTMON_TARGET_SPECIES
+%define NEXTMON_TARGET_SPECIES 19       ; LAPRAS, internal species id
+%endif
+    cmp byte [ebp + wPlayerMonNumber], NEXTMON_TARGET_SLOT
+    jne .noNextMonDump
+    cmp byte [ebp + wLoadedMonSpecies], NEXTMON_TARGET_SPECIES
+    jne .noNextMonDump
+    ; ...and the staging must be DrawPlayerHUDAndHPBar's, not LoadMonData's.
+    ; MEASURED: species alone fires too early, because ChooseNextMon's party
+    ; menu draws all six mons through LoadMonData and the LAST one it stages is
+    ; slot 5 — the replacement itself. So wLoadedMon already says LAPRAS before
+    ; SendOutMon runs, and the two sides then disagree on exactly the four stat
+    ; words, in the ratio 9/8: LoadMonData copies the party's TRUE stats while
+    ; DrawPlayerHUDAndHPBar copies wBattleMon's BADGE-BOOSTED ones (pret
+    ; core.asm:1904 — the divergence battle_faint documents and masks).
+    ; Requiring wLoadedMon's attack to equal wBattleMon's picks the boosted
+    ; staging on both sides, so this scenario needs no mask at all.
+    mov al, [ebp + wLoadedMonAttack]
+    cmp al, [ebp + wBattleMonAttack]
+    jne .noNextMonDump
+    mov al, [ebp + wLoadedMonAttack + 1]
+    cmp al, [ebp + wBattleMonAttack + 1]
+    jne .noNextMonDump
+    call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN, then exits
+.noNextMonDump:
 %endif
     xor edx, edx                        ; DL = held mask for this frame
     lea esi, [autokey_script]

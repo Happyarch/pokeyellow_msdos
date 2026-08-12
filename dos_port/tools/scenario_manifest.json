@@ -548,6 +548,40 @@
       "verification": "the FIRST scenario that opens the in-battle BAG. ball_catch does not count: its gate presets wCurItem and calls UseItem directly, bypassing the whole menu leg battle plan 2c ported, so BagWasSelected, DisplayBagMenu and UseBagItem had no execution evidence at all. Both sides drive the real menus (DOWN+A to ITEM, A on POTION, A on the party target). It found a real defect on its first run: GetItemName dropped pret's `.Finish: ld de, wNameBuffer`, so UseBagItem's CopyToStringBuffer read from a flat name-table pointer and the port page-faulted the moment an item was chosen. Compared surface is the heal arithmetic (seeded HP + 20, no roll anywhere) and the consumed bag slot"
     },
     {
+      "name": "battle_choose_next_mon",
+      "id": 61,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_NEXTMON=1",
+      "port_entry_gate": "DEBUG_BATTLE_NEXTMON",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_choose_next_mon.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "ExecuteEnemyMove",
+        "HandlePlayerMonFainted",
+        "RemoveFaintedPlayerMon",
+        "AnyPartyAlive",
+        "DoUseNextMonDialogue",
+        "ChooseNextMon",
+        "SendOutMon"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the FORCED SWITCH: the third door out of HandlePlayerMonFainted and the only one nothing had opened. battle_faint kills the ENEMY, battle_blackout kills the player's LAST mon; this one kills the player's mon with another alive, so AnyPartyAlive succeeds and DoUseNextMonDialogue + ChooseNextMon run for the first time (battle plan 2b landed both with zero execution evidence). Both sides drive the real menus: YES to \"Use next POKeMON?\", then the party cursor to slot 5. The dump is STATE-GATED on both sides rather than return-based, because on this path HandlePlayerMonFainted ends in `jp MainInBattleLoop` and never returns -- the landmark is wPlayerMonNumber == 5 AND wLoadedMon species == LAPRAS, which is after SendOutMon's DrawPlayerHUDAndHPBar so wLoadedMon needs no mask"
+    },
+    {
       "name": "battle_damage",
       "id": 43,
       "tier": "full",

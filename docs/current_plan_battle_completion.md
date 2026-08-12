@@ -1098,71 +1098,45 @@ their current bodies auto-answer and auto-select.
       could not be reused; the new script does the navigation first and starts
       the B train only after the ball is thrown.
 
-      **STILL OPEN — 2 of 5, and the forced switch is now BLOCKED on a defect,
-      not on scenario capability.** See the block below.
+      **4 of 5 DONE 2026-08-12: `battle_choose_next_mon` (scenario id 61) is in
+      the registry and PASSES — the FORCED SWITCH.** It is the third door out of
+      `HandlePlayerMonFainted` and the only one nothing had ever opened:
+      `battle_faint` kills the ENEMY, `battle_blackout` kills the player's LAST
+      mon (`AnyPartyAlive` fails), and this one kills the player's mon with
+      another alive, so `DoUseNextMonDialogue` and `ChooseNextMon` — both ported
+      by 2b with zero execution evidence — finally run. `WRAM: OK (13 regions,
+      0 skipped)`, no masks.
 
-      **FORCED SWITCH (2b): the gate is built, and it found a hard stall.**
-      `DEBUG_BATTLE_NEXTMON=1` (2026-08-12) is the third door out of
-      `HandlePlayerMonFainted` — `battle_faint` kills the ENEMY, `battle_blackout`
-      kills the player's LAST mon, and this one kills the player's mon with
-      another alive, so `AnyPartyAlive` succeeds and `DoUseNextMonDialogue` +
-      `ChooseNextMon` run. Party: slot 3 (PIKACHU L5) at 1 HP as the active mon,
-      slot 5 (LAPRAS L34) at full as the replacement, slots 0/1/2/4 zeroed. The
-      gap between 3 and 5 is deliberate — a wrong cursor lands on a FAINTED mon
-      rather than silently selecting the right one.
+      **THE "PORT STALL" REPORTED YESTERDAY WAS MY HARNESS, AND THE PORT WAS
+      RIGHT.** The first gate did `call HandlePlayerMonFainted` and asserted
+      after the return. On the forced-switch path that routine ends in
+      `jp MainInBattleLoop` (pret core.asm:1006, mirrored faithfully in the
+      port) — it TAIL-JUMPS into the battle loop and never returns. So the dump
+      was unreachable by construction, and the "loops back into a party menu"
+      observation was `MainInBattleLoop` doing exactly its job. `battle_faint`
+      and `battle_blackout` can use a return-based dump precisely because they
+      take the two doors that DO return. The regression memory
+      `regression-battle-choosenextmon-party-menu-never-returns` is closed with
+      that finding.
 
-      It is **NOT registered as a scenario**: the flow never returns from
-      `HandlePlayerMonFainted`, so `run_headless.sh "DEBUG_BATTLE_NEXTMON=1"`
-      produces no dump at all.
+      *The dump is state-gated on both sides:* `wPlayerMonNumber == 5` AND
+      `wLoadedMon` species == LAPRAS AND `wLoadedMonAttack == wBattleMonAttack`.
+      The third clause is not decoration — MEASURED: `ChooseNextMon`'s party
+      menu draws all six mons through `LoadMonData` and the LAST one it stages
+      is slot 5, the replacement itself, so species alone fires before
+      `SendOutMon` and the two sides then disagree on exactly the four stat
+      words in the ratio **9/8** (golden 68/64/50/73 vs port 76/72/56/82) —
+      `LoadMonData` copies the party's TRUE stats, `DrawPlayerHUDAndHPBar`
+      copies `wBattleMon`'s BADGE-BOOSTED ones (pret core.asm:1904, the
+      divergence `battle_faint` documents and masks). Requiring the attack words
+      to agree picks the boosted staging on both sides, so this scenario needs
+      **no mask at all**.
 
-      **RETRACTED, and this matters more than the finding.** The first pass wrote
-      here that "the selection never completes; `DisplayPartyMenu` never
-      RETURNS; the stall is inside `HandlePartyMenuInput`", citing an execution
-      breakpoint on `ChooseNextMon.goBackToPartyMenu` that never fired in 300 s.
-      **That evidence was void.** The breakpoint ran on an emulator that had
-      already passed the end of the fixed-frame autokey script, and this flow
-      only advances on a press — so nothing could have fired, whatever the state.
-      A fixed-frame harness has an EXPIRY (this one's last press is frame 4680,
-      ~78 s after PKMN.EXE starts), and any live-debugger conclusion drawn after
-      it is worthless. Do not re-cite the retracted claim.
+      *Non-vacuity:* leaving party slot 4 alive in the port gate fails with
+      `wPartyData mon 4 HP: want $0000 | got $0094`. *Determinism:* two
+      consecutive golden generations are byte-identical (md5 `61c3c400…`).
 
-      **WHAT IS ACTUALLY TRUE (2026-08-12, all from headless GBSTATE dumps at
-      chosen frames — build with `BATTLE_NEXTMON_MENU_PROBE=1`).**
-
-      1. **The selection DOES complete, early.** By frame 1100 `wBattleMon` holds
-         species 19 / 139 HP / nick `LAPRAS` — so `HandlePartyMenuInput` returned
-         CF=0 and `ChooseNextMon` already ran `wPlayerMonNumber = 5` and
-         `LoadBattleMonFromParty`. At frame 700 it was still PIKACHU (species
-         84, 0 HP).
-      2. **The tail ran into `SendOutMon`.** At frame 1500 `wLoadedMon` holds
-         PIDGEY **L13** — the ENEMY — which only `DrawEnemyHUDAndHPBar`, inside
-         `SendOutMon`, stages. `RunPaletteCommand SET_PAL_BATTLE` had already
-         run too: `cgb_palettes` differs by 39 bytes between frames 700 and
-         1100 and is then byte-stable.
-      3. **An animation is running, not a dead hang.** `oam` differs by 88 bytes
-         (700→1100) and 48 (1100→1500), with the non-zero count falling
-         80 → 48 → 16; `vram_tiles` churns by >1100 bytes across both windows.
-      4. **By frame 3000 the flow has LOOPED BACK to a party menu**, and it is
-         live: `wCurrentMenuItem` reads 0 at frame 3000 and 1 at frame 7000,
-         with `wTopMenuItemY`/`X` = `$0F`/`$0F` and `wMenuWatchedKeys` = `$C7` —
-         none of which `PartyMenuInit` writes (Y=1, X=0, `PAD_A|PAD_B`). The
-         screen at 7000 is the party menu again.
-      5. **Not press timing** (90 A presses of 15 frames at a 40-frame period
-         change nothing), **not the fainted-mon rejection** (the chosen slot's
-         party HP word at `$D247` reads `$008B` = 139), **not the SELECT-swap
-         re-entry** (`wMenuItemToSwap` `$CC35` = 0, `wForcePlayerToChooseMon`
-         `$D11E` = 0).
-      6. **A red herring, resolved.** `wPartyMenuTypeOrMessageID` (`$D07C`) goes
-         `$02` (BATTLE_PARTY_MENU) at frame 700 → `$4F` by 1100. That is pret's
-         own union, not a port bug: `pokeyellow.sym` puts `wNamingScreenType`,
-         `wPartyMenuTypeOrMessageID` and `wTempTilesetNumTiles` all at `$D07C`,
-         and `ChooseNextMon`'s tail calls `LoadHudTilePatterns`. It corroborates
-         (1) and (2) rather than explaining the stall.
-
-      **So the question is no longer "why won't it select" but "why does the
-      flow come back".** Start at `ChooseNextMon`'s tail and `HandlePlayerMonFainted`
-      — something after `SendOutMon` re-enters the party menu instead of
-      returning.
+      **STILL OPEN — 1 of 5: the failed item.**
 
       **CORRECTION: the failed item is NOT "nearly free", as this box claimed
       earlier today.** Measured: `UseBagItem` is
