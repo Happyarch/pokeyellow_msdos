@@ -804,6 +804,23 @@ wWhichTownMapLocation  equ 0xCD3D
 wFlyAnimUsingCoordList equ 0xCD3D
 wFlyLocationsList      equ 0xCD3E   ; NUM_CITY_MAPS + 2
 wTownMapCoords         equ 0xCEE9
+
+; Battle-HUD scratch — pret ram/wram.asm:863-868, another lane of the same
+; $CD3E union. Addresses CONFIRMED against the ROM symbol file (pokeyellow.sym),
+; not inferred from the union's ordering.
+;
+; THE OVERLAP WITH wBattleTransitionCircleScreenQuadrantX ($CD3E, above) IS
+; FAITHFUL, NOT A COLLISION, AND THAT WAS MEASURED RATHER THAN ASSUMED:
+; pokeyellow.sym lists BOTH names at 00:cd3e, i.e. the real hardware aliases them
+; in the same union (pret wram.asm:815 and :863 are separate NEXTU lanes). The
+; transition animation completes before the battle HUD and the pokeball rows are
+; drawn, which is exactly why the original could share the byte.
+wHUDPokeballGfxOffsetX equ 0xCD3E   ; signed X delta between adjacent pokeballs
+wHUDGraphicsTiles      equ 0xCD3F   ; 3-byte table copied from ROM per HUD side
+wHUDUnusedTopTile      equ 0xCD3F   ; [0] unused — $73 is hardcoded in PlaceHUDTiles
+wHUDCornerTile         equ 0xCD40   ; [1] corner tile of the HUD underline
+wHUDTriangleTile       equ 0xCD41   ; [2] triangle tile at the far end
+wHUDGraphicsTilesEnd   equ 0xCD42
 W_SHADOW_OAM_END    equ 0xC3A0
 W_SHADOW_OAM_SIZE   equ 0xA0       ; 160 bytes
 W_TILEMAP           equ 0xC3A0     ; wTileMap — 40×25 screen tile buffer

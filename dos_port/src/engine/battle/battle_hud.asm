@@ -50,12 +50,13 @@ bits 32
 ; BattleHudTiles, not the font_extra "ID No." placeholders): pret PlaceHUDTiles uses
 ; $73 (vertical connector), corner ($74 enemy / $77 player), $76 line, triangle
 ; ($78 enemy / $6f player).
-%define T_HUD_73   0x73            ; vertical connector
-%define T_HUD_LINE 0x76            ; horizontal underline segment
-%define T_PCORNER  0x77            ; player corner (bottom-right)
-%define T_PTRI     0x6f            ; player triangle (bottom-left)
-%define T_ECORNER  0x74            ; enemy corner (bottom-left)
-%define T_ETRI     0x78            ; enemy triangle (bottom-right)
+%define T_HUD_73   0x73            ; vertical connector (DrawPlayerHUD's own, below)
+; T_HUD_LINE / T_PCORNER / T_PTRI / T_ECORNER / T_ETRI were deleted 2026-08-12
+; with the PlaceHUDTiles fork. Their values now live where pret keeps them, in
+; PlayerBattleHUDGraphicsTiles / EnemyBattleHUDGraphicsTiles in the mirror file
+; draw_hud_pokeball_gfx.asm — and are read through wHUDCornerTile /
+; wHUDTriangleTile, as on hardware. Leaving the immediates here would have been a
+; second source of truth for the same six tile numbers.
 %define CHAR_DIG0 0xF6             ; '0'; digit d → +d
 %define CHAR_SLSH 0xF3             ; /
 %define T_SP      0x7F             ; blank/space
@@ -95,8 +96,8 @@ section .text
 global DrawBattleHUDs
 global DrawEnemyHUD
 global DrawPlayerHUD
-global DrawEnemyHUDFrame
-global DrawPlayerHUDFrame
+extern PlaceEnemyHUDTiles                ; draw_hud_pokeball_gfx.asm (pret mirror)
+extern PlacePlayerHUDTiles               ; draw_hud_pokeball_gfx.asm (pret mirror)
 global AnimateEnemyHPBar
 global AnimatePlayerHPBar
 extern PlaceString
@@ -132,7 +133,7 @@ DrawPlayerHUD:
     ; right cap $6D — pret's second $73 is dead the moment the bar draws. The
     ; port used to draw the frame/connector last, leaving $73 where the golden
     ; shows $6D (F-18). Frame first, bar last, like pret.
-    call DrawPlayerHUDFrame
+    call PlacePlayerHUDTiles
     mov byte [ebp + W_TILEMAP + P_FRAME_CONN], T_HUD_73
     ; pret stages the battle mon in wLoadedMon — species..DVs then level..PP
     ; (core.asm:1903-1910); PrintLevel/DrawHP read it there, and it is
@@ -191,49 +192,21 @@ DrawEnemyHUD:
     call GetHealthBarColor
     mov edi, W_TILEMAP + E_HPBAR
     call draw_enemy_hp_bar
-    call DrawEnemyHUDFrame
+    call PlaceEnemyHUDTiles
     ret
 
 ; ---------------------------------------------------------------------------
-; DrawEnemyHUDFrame / DrawPlayerHUDFrame — the HUD underline "shelf" (pret
-; PlaceEnemyHUDTiles / PlacePlayerHUDTiles + PlaceHUDTiles): a $73 connector with
-; the row below = corner + 8×$76 underline + triangle, at the centered (+10,+3)
-; positions. The enemy frame sits below the enemy HP bar; the player frame is the
-; shelf under the intro pokéball row. EBP = GB base. Clobbers EAX/EBX/ECX/ESI/EDI.
+; The HUD "shelf" routines used to live here as DrawEnemyHUDFrame /
+; DrawPlayerHUDFrame / place_hud_frame. They were pret's PlaceEnemyHUDTiles /
+; PlacePlayerHUDTiles / PlaceHUDTiles under port-only names — a forked half of
+; engine/battle/draw_hud_pokeball_gfx.asm — and moved to that mirror file under
+; pret's own names on 2026-08-12 (pokeballs fork retirement, step 2).
+;
+; The tile VALUES here were already right; what the move restored is pret's
+; DATA MODEL, which this version did not have: pret copies a 3-byte table into
+; wHUDGraphicsTiles and reads the corner and triangle back out of WRAM, where
+; this version passed them as immediates in BH/BL and left that WRAM untouched.
 ; ---------------------------------------------------------------------------
-DrawEnemyHUDFrame:
-    ; PROJ battle: $73 connector = UI_ENEMY_HUD_FRAME_OFS (element top-left)
-    mov edi, W_TILEMAP + UI_ENEMY_HUD_FRAME_OFS
-    mov esi, 1                            ; underline marches right
-    mov bh, T_ECORNER
-    mov bl, T_ETRI
-    jmp place_hud_frame
-; (P_FRAME_CONN defined with the other P_* equates at the top of the file —
-; DrawPlayerHUD uses it too, and %defines must precede first use.)
-DrawPlayerHUDFrame:
-    ; pret PlacePlayerHUDTiles: ONE $73 connector + the shelf row below. The
-    ; element rect's top row is the UPPER connector row (DrawPlayerHUD's, F-18),
-    ; so this frame's $73 sits one row down at +FW.
-    mov edi, W_TILEMAP + P_FRAME_CONN + FW
-    mov esi, -1                           ; underline marches left
-    mov bh, T_PCORNER
-    mov bl, T_PTRI
-    ; fall through
-; place_hud_frame — EDI=GB offset of the $73 tile, ESI=signed step (±1),
-; BH=corner tile, BL=triangle tile.
-place_hud_frame:
-    mov byte [ebp + edi], T_HUD_73
-    add edi, FW                           ; row below
-    mov [ebp + edi], bh                   ; corner
-    mov ecx, 8
-.line:
-    add edi, esi
-    mov byte [ebp + edi], T_HUD_LINE
-    dec ecx
-    jnz .line
-    add edi, esi
-    mov [ebp + edi], bl                   ; triangle
-    ret
 
 ; --- draw_hp_bar — 6-segment HP gauge at [ebp+EDI]; EDX = fill pixels (0..48) ---
 ; "HP" + ":"gauge-left + 6 segments + cap. Clobbers EAX/ECX/EDX/EDI.

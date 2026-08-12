@@ -20,12 +20,25 @@
 bits 32
 
 %include "gb_memmap.inc"
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
 
 extern CopyVideoData            ; home/copy2.asm — arms g_tilecache_dirty itself
 
 global PokeballTileGraphics
 global PokeballTileGraphicsEnd
 global LoadPartyPokeballGfx
+global PlaceHUDTiles
+global PlacePlayerHUDTiles
+global PlaceEnemyHUDTiles
+global PlayerBattleHUDGraphicsTiles
+global EnemyBattleHUDGraphicsTiles
+
+; The $73 connector sits at the RIGHT end of the player HUD frame element; the
+; shelf row is one canvas row below it. Same expression battle_hud.asm uses for
+; DrawPlayerHUD's own connector — it is the projected form of pret's
+; `hlcoord 18, 10`.
+%define P_FRAME_CONN (UI_PLAYER_HUD_FRAME_OFS + UI_PLAYER_HUD_FRAME_GBW - 1)
 
 section .data
 
@@ -34,6 +47,19 @@ section .data
 PokeballTileGraphics:
     incbin "../gfx/battle/balls.2bpp"
 PokeballTileGraphicsEnd:
+
+; The tile numbers for specific parts of the battle display — pret's own
+; comments, and pret's own byte values (verified against the immediates
+; battle_hud.asm previously hardcoded: $77/$6F and $74/$78 respectively).
+PlayerBattleHUDGraphicsTiles:
+    db 0x73     ; unused ($73 is hardcoded into the routine that uses these bytes)
+    db 0x77     ; lower-right corner tile of the HUD
+    db 0x6F     ; lower-left triangle tile of the HUD
+
+EnemyBattleHUDGraphicsTiles:
+    db 0x73     ; unused ($73 is hardcoded in the routine that uses these bytes)
+    db 0x74     ; lower-left corner tile of the HUD
+    db 0x78     ; lower-right triangle tile of the HUD
 
 section .text
 
@@ -73,3 +99,73 @@ LoadPartyPokeballGfx:
     mov bh, 0                                     ; BANK(): no-op under the flat model
     mov bl, (PokeballTileGraphicsEnd - PokeballTileGraphics) / TILE_SIZE
     jmp CopyVideoData                             ; jp (tail call)
+
+; ---------------------------------------------------------------------------
+; PlacePlayerHUDTiles / PlaceEnemyHUDTiles / PlaceHUDTiles — pret
+; draw_hud_pokeball_gfx.asm:115, :132, :149. The HUD "shelf": a $73 connector
+; with, on the row below, corner + 8x$76 underline + triangle. The player's
+; marches LEFT from its connector, the enemy's marches RIGHT.
+;
+; RETIRED FROM battle_hud.asm 2026-08-12 (pokeballs fork, step 2), where these
+; lived as the port-only DrawPlayerHUDFrame / DrawEnemyHUDFrame /
+; place_hud_frame. The tile VALUES there were already correct — this is a naming
+; and data-model fork, not a value bug, and that was checked byte by byte
+; against pret's two tables before moving.
+;
+; THE DATA-MODEL HALF IS THE REAL CHANGE. pret copies a 3-byte table into
+; wHUDGraphicsTiles and reads the corner and triangle back OUT of WRAM;
+; battle_hud.asm passed them as immediates in BH/BL and never touched that WRAM.
+; Restoring the WRAM path is what makes wHUDCornerTile / wHUDTriangleTile hold
+; what hardware holds — see the equates in gb_memmap.inc, whose addresses were
+; confirmed against pokeyellow.sym.
+;
+; DEVIATION{class=banking; pret=engine/battle/draw_hud_pokeball_gfx.asm:PlacePlayerHUDTiles; behavior=the 3-byte HUD tile table is copied to wHUDGraphicsTiles with an inline rep movsb instead of through CopyData; evidence=pret reaches the table through a ROM bank mapped inside the GB address space so its CopyData is a GB-to-GB copy, and the port has no ROM banks - the table is a flat .data label outside the EBP window - so home/copy.asm CopyData, which does lea esi [ebp+esi] on its source, structurally cannot express it, measured across all 20 of its call sites which pass a GB address without exception; lifetime=permanent while ROM data lives outside the emulated GB address space}
+; ---------------------------------------------------------------------------
+PlacePlayerHUDTiles:
+    mov esi, PlayerBattleHUDGraphicsTiles         ; ld hl — flat .data, see DEVIATION
+    lea edi, [ebp + wHUDGraphicsTiles]            ; ld de, wHUDGraphicsTiles
+    mov ecx, wHUDGraphicsTilesEnd - wHUDGraphicsTiles   ; ld bc
+    rep movsb                                     ; call CopyData
+    ; PROJ battle: pret `hlcoord 18, 10`. The raw GB column would land in the
+    ; middle of the 40-wide canvas — see regression-battle-second-battle-hud-tile-band,
+    ; where exactly that mistake left a ghost tile band at cols 12-18.
+    mov esi, W_TILEMAP + P_FRAME_CONN + SCREEN_WIDTH
+    mov edx, -1                                   ; ld de, -1 — underline marches left
+    jmp PlaceHUDTiles                             ; jr
+
+PlaceEnemyHUDTiles:
+    mov esi, EnemyBattleHUDGraphicsTiles
+    lea edi, [ebp + wHUDGraphicsTiles]
+    mov ecx, wHUDGraphicsTilesEnd - wHUDGraphicsTiles
+    rep movsb
+    mov esi, W_TILEMAP + UI_ENEMY_HUD_FRAME_OFS   ; PROJ — pret `hlcoord 1, 2`
+    mov edx, 1                                    ; ld de, $1 — marches right
+    ; pret writes `jr PlaceHUDTiles` here because EnemyBattleHUDGraphicsTiles
+    ; sits BETWEEN the two routines in its file. The port keeps that data in
+    ; .data, so this would fall straight through — but the jump is written out
+    ; anyway, because falling through would DROP a call edge pret has and
+    ; faithdiff would (correctly) report it.
+    jmp PlaceHUDTiles                             ; jr PlaceHUDTiles
+
+; In: ESI = GB offset of the $73 connector (pret HL), EDX = signed step (pret DE).
+;
+; EDX carries pret's DE as a FULL 32-BIT signed step rather than DX. pret's
+; `add hl, de` is 16-bit with de = $FFFF for -1; here ESI is a 32-bit canvas
+; offset, so the step must sign-extend across the whole register or a westward
+; walk would add $0000FFFF instead of subtracting one. The two callers above are
+; the only ones, and both set EDX with a 32-bit immediate.
+PlaceHUDTiles:
+    mov byte [ebp + esi], 0x73                    ; ld [hl], $73
+    add esi, SCREEN_WIDTH                         ; ld bc, SCREEN_WIDTH / add hl, bc
+    mov al, [ebp + wHUDCornerTile]                ; leftmost tile
+    mov [ebp + esi], al
+    mov al, 8
+.loop:
+    add esi, edx                                  ; add hl, de
+    mov byte [ebp + esi], 0x76
+    dec al                                        ; dec a — 8-bit, entered at 8
+    jnz .loop
+    add esi, edx
+    mov al, [ebp + wHUDTriangleTile]              ; rightmost tile
+    mov [ebp + esi], al
+    ret

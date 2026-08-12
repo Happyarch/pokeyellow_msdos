@@ -1812,6 +1812,27 @@ provider shapes below, not their runtime behavior.
             a 3-byte table into `wHUDGraphicsTiles` and reads the corner and
             triangle tiles back out of WRAM, where the port passes them as
             immediates and never touches that WRAM.
+            **DONE — STEP 2, 2026-08-12.** All three are in the mirror under
+            pret's names, with `PlayerBattleHUDGraphicsTiles` /
+            `EnemyBattleHUDGraphicsTiles` and the WRAM path restored; the five
+            `wHUD*` equates ($CD3E-$CD42) are in `gb_memmap.inc` with addresses
+            taken from `pokeyellow.sym`, not inferred. The five now-dead tile
+            `%define`s were deleted rather than left as a second source of truth.
+            *Tilemap output is unchanged by construction and that was CHECKED,
+            not assumed:* the table bytes ($73/$77/$6F and $73/$74/$78) are
+            byte-for-byte the immediates the forked version passed in BH/BL. The
+            genuinely new observable is that `wHUDCornerTile`/`wHUDTriangleTile`
+            now hold what hardware holds.
+            *The `$CD3E` union overlap the earlier note flagged as owed is
+            RESOLVED and is not a collision:* `pokeyellow.sym` lists both
+            `wHUDPokeballGfxOffsetX` and
+            `wBattleTransitionCircleScreenQuadrantX` at `00:cd3e`, so the real
+            hardware aliases them too (pret wram.asm:815 and :863 are separate
+            `NEXTU` lanes) — the transition finishes before the HUD draws. Note
+            also `wNumFieldMoves` aliases `wHUDTriangleTile` at $CD41 and the
+            party menu IS reachable mid-battle; that is safe because
+            `PlacePlayerHUDTiles`/`PlaceEnemyHUDTiles` re-copy the table on
+            every call, which is pret's own protection.
          2. *The remainder is NOT a mechanical rename.* pret's
             `WritePokeballOAMData` writes `wShadowOAM` ($C300); the port's
             `build_ball_row` writes `$FE00` directly and publishes through

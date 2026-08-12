@@ -62,7 +62,7 @@ global DrawBattlePokeballs
 global HideBattlePokeballs
 extern PrepareStaticOAM
 extern HideSprites
-extern DrawPlayerHUDFrame
+extern PlacePlayerHUDTiles      ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern LoadPartyPokeballGfx     ; draw_hud_pokeball_gfx.asm — pret's own loader
 
 ; ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ extern LoadPartyPokeballGfx     ; draw_hud_pokeball_gfx.asm — pret's own loade
 ; ---------------------------------------------------------------------------
 DrawBattlePokeballs:
     call LoadPartyPokeballGfx             ; pret's loader, in the mirror file
-    call DrawPlayerHUDFrame               ; the shelf the player's balls sit on
+    call PlacePlayerHUDTiles              ; the shelf the player's balls sit on
     ; Zero the whole $FE00 OAM first: the row overwrites entries 0..5 (0..11 for
     ; a trainer), and everything beyond must read HIDDEN — the GB's shadow OAM
     ; beyond the row holds Y=160-parked leftovers (hidden), and the golden diff
