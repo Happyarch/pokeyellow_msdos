@@ -1242,6 +1242,32 @@ provider shapes below, not their runtime behavior.
          compared region today — `wBattleFlags` covers only
          `wIsInBattle..wBattleType` (`$D057-$D05A`). Precedents for a
          scenario-local row: `trainerResult`, `wBoxData`, `wMenuState`.
+
+      **THE TWO RISKY UNKNOWNS ARE NOW MEASURED (2026-08-12), so the build is
+      mechanical from here.**
+
+      *(a) The battle menu is SKIPPED while trapped, so turn 2 needs no menu
+      input.* `MainInBattleLoop` (pret core.asm:322-324) reads
+      `wPlayerBattleStatus1`, masks
+      `(1 << STORING_ENERGY) | (1 << USING_TRAPPING_MOVE)` and jumps straight to
+      `.selectEnemyMove` when either is set — the player's move auto-repeats.
+      So the autokey is: FIGHT + A once to pick the move, then a plain A train to
+      walk text. That is much smaller than "drive two full menu turns", which is
+      what this box previously implied.
+
+      *(b) The counter the box is about is NOT the one at core.asm:3419.* That
+      decrement belongs to `ATTACKING_MULTIPLE_TIMES` — multi-hit moves like
+      Double Slap — and is a different mechanic. The trapping counter is
+      decremented by the trapping effect in `engine/battle/effects.asm`, and
+      separately at core.asm:2368 on the in-battle ITEM path. Do not witness the
+      wrong one: a scenario built around a multi-hit move would exercise
+      core.asm:3419 and never touch `CheckNumAttacksLeft` at all.
+
+      What remains for the next pass is the mechanical part: the gate
+      (`jmp MainInBattleLoop` with WRAP preset), a state-gated PIN of
+      `wPlayerNumAttacksLeft` in `AutoKeyDrive` (new machinery, but the same
+      class of pin `battle_blackout` uses for GUST), the state-gated dump, the
+      scenario-local region, and the golden.
 - [ ] **3a (original entry).** Replace the linked ret-only
       `CheckNumAttacksLeft` body and verify the complete Bide/Thrash/trapping
       counter, accumulation, release, and cleanup flow on both turns. Preserve
