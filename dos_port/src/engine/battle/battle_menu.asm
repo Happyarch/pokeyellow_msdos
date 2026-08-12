@@ -99,7 +99,6 @@ global ShowGainedExpText
 global ShowGrewLevelText
 global FindMoveName
 global BattleItemMenu
-global BattlePartyMenu
 global DoEnemyAttackDamage
 
 extern TextBoxBorder                 ; unified text engine (text.asm), stride-aware
@@ -228,12 +227,13 @@ BattleItemMenu:
     clc                                 ; pret: and a
     ret
 
-; BattlePartyMenu — still the deferred no-op (battle-completion item 2a owns
-; the voluntary-switch body; pret counterpart is the TAIL of
-; PartyMenuOrRockOrRun from pret core.asm:2409 — the dec-a run check is already
-; inline in DisplayBattleMenu .partyMenuOrRun). Same naming debt as above.
-BattlePartyMenu:
-    ret
+; BattlePartyMenu — DELETED 2026-08-12 (battle plan 2a). It was a port-only
+; ret-only helper standing in for pret's PartyMenuOrRockOrRun, i.e. a forked
+; name, which is exactly what the Preserve-pret-Labels rule forbids. The real
+; body now lives under pret's own name in src/engine/battle/core.asm, where the
+; mirror rule puts it, and DisplayBattleMenu tail-jumps to it. The name is gone
+; rather than renamed: renaming would have moved a pret label into the wrong
+; file.
 
 ; ===========================================================================
 ; EXP / level-up display — called by GainExperience (experience.asm) per mon.

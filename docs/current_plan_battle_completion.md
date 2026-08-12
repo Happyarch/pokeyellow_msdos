@@ -728,7 +728,7 @@ effects they need are already translated. `DoUseNextMonDialogue` and
 `ChooseNextMon` are linked partial implementations called from faint handling;
 their current bodies auto-answer and auto-select.
 
-- [ ] **2a. Voluntary switch.** Rename the port-only `BattlePartyMenu` to its
+- [x] **2a. Voluntary switch.** Rename the port-only `BattlePartyMenu` to its
       pret counterpart — the TAIL of `PartyMenuOrRockOrRun` (pret
       engine/battle/core.asm:2409; the head, the dec-a run check, is already
       inline in `DisplayBattleMenu.partyMenuOrRun`) — then implement it with pret's
@@ -773,6 +773,46 @@ their current bodies auto-answer and auto-select.
       switch, so this box lands with zero execution evidence until the Stage 2
       scenario box below supplies one. Budget that scenario as part of 2a, not
       after it.
+
+      **DONE 2026-08-12, in two commits (72011a746 the callees, then the menu
+      body).** `PartyMenuOrRockOrRun` is `24/24 calls (23 matched)` and
+      `9/9 pret stores matched`.
+
+      * The forked name is GONE, not renamed. `BattlePartyMenu` was a port-only
+        ret-only helper standing in for a pret routine; renaming it would have
+        parked a pret label in `battle_menu.asm` when the mirror rule puts the
+        body in `core.asm`. `DisplayBattleMenu.partyMenuOrRun` now tail-jumps to
+        `PartyMenuOrRockOrRun` exactly as pret's `jp` does, so the `dec a` run
+        check sits at the routine's head where pret keeps it — the plan's
+        "already inline in DisplayBattleMenu" note described the old split and
+        no longer applies.
+      * Two annotated deviations, both standing conventions: `class=projection`
+        for the deselect wipe (`BCOORD(11, 11)`, and pret's own
+        `6 * SCREEN_WIDTH + 9` carrying the port's 40-wide canvas), and
+        `class=banking` for the two `StatusScreen` predefs being direct calls
+        and pret's `Bankswitch` becoming the indirect `call esi` — which is the
+        single unsuppressed ADDED call.
+      * The 6 ADDED stores are an extraction asymmetry, not a divergence: pret
+        writes the menu block through an `ld hl, wTopMenuItemY` + `ld [hli], a`
+        walk that faithdiff cannot attribute to names, while the port writes
+        `wTopMenuItemY/X`, `wCurrentMenuItem`, `wMaxMenuItem`,
+        `wMenuWatchedKeys` and `wLastMenuItem` by name. Same class as
+        `PlayerMon2Text`'s `hMultiplicand`.
+      * `UseBagItem` is a declared `STUB{class=stub}` in `battle_stubs.asm`, so
+        the safari `SAFARI_ROCK` arm keeps pret's shape while 2c owns the body.
+        That arm is unreachable today for a second, independent reason: nothing
+        enters a `BATTLE_TYPE_SAFARI` battle.
+      * Supporting fix: `EnemySendOutFirstMon` had DROPPED both
+        `wLastSwitchInEnemyMonHP` stores (pret core.asm:1398-1402). Restored —
+        it is the baseline `PlayerMon2Text` subtracts from, so without it the
+        switch-out line was chosen from whatever WRAM held. pret's second write
+        site is inside `PrintSendOutMonMessage`, which is still a stub.
+
+      **EVIDENCE CLASS.** `PartyMenuOrRockOrRun` is now on a live path
+      (`DisplayBattleMenu`), so the battle scenarios exercise the DISPATCH; they
+      do not exercise the party menu, because no scenario presses PKMN. The
+      switch itself therefore still has zero execution evidence, and the Stage 2
+      scenario box below is where that debt sits.
 - [ ] **2b. Forced switch.** Replace the automatic Yes and first-live-mon paths
       in `DoUseNextMonDialogue`/`ChooseNextMon` with the faithful Yes/No and party
       menus, including wild-run behavior and the no-cancel forced selection.

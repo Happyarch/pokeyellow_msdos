@@ -170,6 +170,7 @@ global ReplaceFaintedEnemyMon
 global SendOutMon
 global AnimateRetreatingPlayerMon       ; pret core.asm:1828 (plan 2a)
 global SwitchPlayerMon                  ; pret core.asm:2525 (plan 2a)
+global PartyMenuOrRockOrRun             ; pret core.asm:2404 (plan 2a)
 global TrainerBattleVictory
 global ScrollTrainerPicAfterBattle      ; pret core.asm:6453 jpfar thunk
 
@@ -181,6 +182,22 @@ extern AnimateEnemyHPBar               ; battle_hud.asm — gradual enemy HP-bar
 extern AnimatePlayerHPBar              ; battle_hud.asm — gradual player HP-bar drain (ECX=old HP)
 extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
 extern RetreatMon                      ; engine/battle/common_text.asm — switch-out line
+extern SaveScreenTilesToBuffer2        ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer2      ; src/home/tilemap.asm
+extern DisplayPartyMenu                ; src/home/pokemon.asm — CF=0 iff a mon was chosen
+extern GoBackToPartyMenu               ; src/home/pokemon.asm
+extern GBPalWhiteOut                   ; src/home/palettes.asm
+extern GBPalNormal                     ; src/home/palettes.asm
+extern RunDefaultPaletteCommand        ; src/home/palettes.asm
+extern DisplayTextBoxID                ; src/home/textbox.asm
+extern PlaceUnfilledArrowMenuCursor    ; src/home/window.asm
+extern StatusScreen                    ; engine/menus/status_screen.asm — predef
+extern StatusScreen2                   ; engine/menus/status_screen.asm — predef
+extern AnimationSubstitute             ; engine/battle/animations.asm
+extern AnimationMinimizeMon            ; engine/battle/animations.asm
+extern LoadMonFrontSprite              ; src/home/pics.asm — EDX = VRAM dest
+extern FillMemory                      ; src/home/copy2.asm — ESI dest, BX count, AL value
+extern UseBagItem                      ; battle_stubs.asm (STUB) — 2c owns the body
 extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm — restore clean screen
 extern DrawEmptyDialogBox              ; pret PrintEmptyString equiv (blank dialog box)
 extern DrawBattleMenuBox               ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE) equiv
@@ -209,7 +226,6 @@ extern Delay3                          ; src/home/palettes.asm
 
 ; --- deferred in-battle sub-UIs (bag / party-switch) — call faithfully, body deferred ---
 extern BattleItemMenu                  ; ITEM → bag (deferred; re-shows the menu)
-extern BattlePartyMenu                 ; PKMN → party/switch (deferred; re-shows the menu)
 
 ; --- move-execution backend (already-faithful, in other files) ---
 extern AddNTimes                       ; home/array.asm — ESI += BX * AL (party index)
@@ -531,11 +547,11 @@ DisplayBattleMenu:
 .itemEndedBattle:
     ret
 .partyMenuOrRun:
-    dec al                              ; pret PartyMenuOrRockOrRun: dec a; nz → Run
-    jnz BattleMenu_RunWasSelected       ; id 3 (RUN) → tail-jump (returns CF)
-    ; --- PKMN (party) selected --- (deferred sub-UI; re-show the menu after)
-    call BattlePartyMenu
-    jmp DisplayBattleMenu
+    ; pret: jp PartyMenuOrRockOrRun — the dec-a run check is the HEAD of that
+    ; routine, not of this one. It used to be inlined here with a call to the
+    ; port-only ret-stub BattlePartyMenu; battle plan 2a replaced both with
+    ; pret's own routine, so this is a plain tail jump again.
+    jmp PartyMenuOrRockOrRun
 
 .doSimulatedMenuInput:
     ; pret 2107-2137: park the real player name in wLinkEnemyTrainerName (the
@@ -3005,6 +3021,134 @@ CheckNumAttacksLeft:
     ret
 
 ; ---------------------------------------------------------------------------
+; PartyMenuOrRockOrRun — pret core.asm:2404. The battle menu's third slot: PKMN
+; on a normal battle, ROCK in the Safari Zone, and RUN when the id says so.
+;
+; PORTED 2026-08-12 (battle plan 2a). It replaces the port-only ret-only helper
+; `BattlePartyMenu`, which was a forked name for this routine's tail; that name
+; is gone rather than renamed, because the mirror rule puts pret's body here in
+; core.asm. `DisplayBattleMenu.partyMenuOrRun` now tail-jumps here exactly as
+; pret's `jp PartyMenuOrRockOrRun` does, so the `dec a` run check lives at the
+; head of this routine where pret keeps it.
+;
+; Structure, all pret's: pick the party mon, then SWITCH / STATS / CANCEL.
+; STATS opens both status screens and then RELOADS the enemy pic (substitute or
+; minimized forms take their animation instead) before returning to the list.
+; SWITCH refuses a mon that is already out or fainted, and otherwise falls
+; through into SwitchPlayerMon below — pret's own fall-through, preserved.
+;
+; DEVIATION{class=projection; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=the deselect wipe starts at BCOORD(11, 11) and its length uses the port SCREEN_WIDTH of 40 rather than the Game Boy 20; evidence=every in-battle screen here is drawn through the BCOORD battle-frame projection in include/coords.inc and the port redefines SCREEN_WIDTH to SCREEN_TILES_W as ClearScreenArea already documents, so pret's 6 * SCREEN_WIDTH + 9 expression carries the canvas width unchanged; lifetime=permanent while the port renders a 40x25 canvas}
+;
+; DEVIATION{class=banking; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=the two StatusScreen predefs are direct calls and the enemy-animation Bankswitch is an indirect call through ESI; evidence=the port has one flat address space and no predef dispatcher so every predef target is called directly, and pret's Bankswitch is a bank load plus jp hl which in a flat image is just the indirect call; lifetime=permanent while the port is flat-addressed and dispatcher-free}
+;
+; In: AL = the battle-menu item id (2 = PKMN/ROCK, 3 = RUN).
+; ---------------------------------------------------------------------------
+PartyMenuOrRockOrRun:
+    dec al                              ; was Run selected?
+    jnz BattleMenu_RunWasSelected       ; jp nz
+; party menu or rock was selected
+    call SaveScreenTilesToBuffer2
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_SAFARI
+    jne .partyMenuWasSelected           ; jr nz
+; safari battle
+    mov byte [ebp + wCurItem], SAFARI_ROCK
+    jmp UseBagItem                      ; jp — STUB today, retired by plan 2c
+.partyMenuWasSelected:
+    call LoadScreenTilesFromBuffer1
+    mov byte [ebp + wPartyMenuTypeOrMessageID], NORMAL_PARTY_MENU  ; xor a
+    mov byte [ebp + wMenuItemToSwap], 0
+    call DisplayPartyMenu
+.checkIfPartyMonWasSelected:
+    jnc .partyMonWasSelected            ; jp nc — CF=0 means a mon was chosen
+.quitPartyMenu:
+    call ClearSprites
+    call GBPalWhiteOut
+    call LoadHudTilePatterns
+    call LoadScreenTilesFromBuffer2
+    call RunDefaultPaletteCommand
+    call GBPalNormal
+    jmp DisplayBattleMenu               ; jp
+.partyMonDeselected:
+    ; wipe the SWITCH/STATS/CANCEL box before going back to the list
+    mov esi, BCOORD(11, 11)             ; PROJ — pret hlcoord 11, 11
+    mov bx, 6 * SCREEN_WIDTH + 9        ; ld bc, ... (FillMemory count in BX)
+    mov al, 0x7f                        ; ld a, " " — the blank tile
+    call FillMemory
+    mov byte [ebp + wPartyMenuTypeOrMessageID], NORMAL_PARTY_MENU  ; xor a
+    call GoBackToPartyMenu
+    jmp .checkIfPartyMonWasSelected     ; jr
+.partyMonWasSelected:
+    mov byte [ebp + wTextBoxID], SWITCH_STATS_CANCEL_MENU_TEMPLATE
+    call DisplayTextBoxID
+    ; pret walks hl from wTopMenuItemY; the port writes each field directly.
+    mov byte [ebp + wTopMenuItemY], 0x0c
+    mov byte [ebp + wTopMenuItemX], 0x0c
+    mov byte [ebp + wCurrentMenuItem], 0
+    mov byte [ebp + wMaxMenuItem], 2
+    mov byte [ebp + wMenuWatchedKeys], PAD_B | PAD_A
+    mov byte [ebp + wLastMenuItem], 0
+    call HandleMenuInput
+    test al, PAD_B                      ; bit B_PAD_B, a
+    jnz .partyMonDeselected             ; jr nz — B cancels
+; A was pressed
+    call PlaceUnfilledArrowMenuCursor
+    mov al, [ebp + wCurrentMenuItem]
+    cmp al, 2                           ; was Cancel selected?
+    je .quitPartyMenu                   ; jr z
+    and al, al                          ; was Switch selected?
+    jz .switchMon                       ; jr z
+; Stats was selected
+    mov byte [ebp + wMonDataLocation], 0    ; xor a — PLAYER_PARTY_DATA
+    mov esi, wPartyMon1                     ; ld hl, wPartyMon1
+    call ClearSprites
+    call StatusScreen                       ; predef
+    call StatusScreen2                      ; predef
+; now we need to reload the enemy mon pic
+    mov byte [ebp + hWhoseTurn], 1
+    mov al, [ebp + wEnemyBattleStatus2]
+    test al, (1 << HAS_SUBSTITUTE_UP)       ; does the enemy mon have a substitute?
+    mov esi, AnimationSubstitute            ; ld hl, AnimationSubstitute
+    jnz .doEnemyMonAnimation                ; jr nz
+; enemy mon doesn't have substitute
+    mov al, [ebp + wEnemyMonMinimized]
+    test al, al                             ; has the enemy mon used Minimize?
+    mov esi, AnimationMinimizeMon           ; ld hl, AnimationMinimizeMon
+    jnz .doEnemyMonAnimation                ; jr nz
+; enemy mon is not minimized
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wCurSpecies], al
+    call GetMonHeader
+    mov edx, vFrontPic                      ; ld de, vFrontPic
+    call LoadMonFrontSprite
+    jmp .enemyMonPicReloaded                ; jr
+.doEnemyMonAnimation:
+    call esi                                ; pret: ld b, BANK(...) / call Bankswitch
+.enemyMonPicReloaded:
+    jmp .partyMenuWasSelected               ; jp — back to the list
+.switchMon:
+    mov dh, [ebp + wPlayerMonNumber]        ; ld a,[wPlayerMonNumber] / ld d,a
+    mov al, [ebp + wWhichPokemon]
+    cmp al, dh                              ; already out?
+    jne .notAlreadyOut                      ; jr nz
+; mon is already out
+    mov esi, AlreadyOutText
+    call PrintText
+    jmp .partyMonDeselected                 ; jp
+.notAlreadyOut:
+    call HasMonFainted
+    jz .partyMonDeselected                  ; jp z — can't switch to a fainted mon
+    mov byte [ebp + wActionResultOrTookBattleTurn], 1
+    call GBPalWhiteOut
+    call ClearSprites
+    call LoadHudTilePatterns
+    call LoadScreenTilesFromBuffer1
+    call RunDefaultPaletteCommand
+    call GBPalNormal
+    ; fall through to SwitchPlayerMon, exactly as pret does
+
+; ---------------------------------------------------------------------------
 ; SwitchPlayerMon — pret core.asm:2525. Withdraw the active mon and send out the
 ; one the player picked. Reached two ways in pret: as the fall-through tail of
 ; PartyMenuOrRockOrRun's `.switchMon` (the voluntary switch, battle plan 2a), and
@@ -4792,6 +4936,15 @@ EnemySendOutFirstMon:
     mov [ebp + wEnemyMonSpecies2], al
     mov [ebp + wCurPartySpecies], al
     call LoadEnemyMonData                        ; pret: load the selected trainer mon + EXP fields
+    ; pret core.asm:1398-1402 — snapshot the incoming enemy mon's HP. RESTORED
+    ; 2026-08-12 (battle plan 2a): both stores were dropped, and the word was not
+    ; even declared in gb_memmap.inc until this plan. It is the baseline
+    ; PlayerMon2Text subtracts from to decide the player's switch-out line, so
+    ; without it that message is chosen from whatever WRAM happened to hold.
+    mov al, [ebp + wEnemyMonHP]                  ; ld a,[hli] (big-endian high)
+    mov [ebp + wLastSwitchInEnemyMonHP], al
+    mov al, [ebp + wEnemyMonHP + 1]              ; ld a,[hl]  (low)
+    mov [ebp + wLastSwitchInEnemyMonHP + 1], al
     mov byte [ebp + wCurrentMenuItem], 1         ; pret: default (no player switch)
     ; TODO(faithful): the BIT_BATTLE_SHIFT "TrainerAboutToUse / switch?" prompt +
     ; the party-menu path + SwitchPlayerMon. Treated as SET mode (no prompt).
