@@ -1649,9 +1649,39 @@ provider shapes below, not their runtime behavior.
       FAIL.
 
       **UNWITNESSED, and that is not glossed:** nothing calls `MarowakAnim` yet.
-      The rest of 4c below — ghost initialization/identity, unidentified-ghost
-      move refusal, escape rules, the Poké Doll consumer — is what makes it
-      reachable and is NOT in this change.
+      **THE REST OF 4c, MEASURED 2026-08-12 — three of its four named items were
+      ALREADY PRESENT, so the box overstated the work.** Checked one by one:
+      * *Escape rules* — DONE (`af3910228`): `IsGhostBattle` is wired into
+        `TryRunningFromBattle`, clearing the port's own `TODO(faithful)` and
+        faithdiff's `- DROPPED IsGhostBattle`. It carries an UNDOCUMENTED Gen-1
+        bug with it, annotated `BUG{class=data-model}` at the site and recorded
+        in `gen1-quirk-silph-scope-run-odds-pointer-clobber`.
+      * *Unidentified-ghost refusal* — the CATCH half is already wired:
+        `ItemUseBall` (`item_effects.asm:1778`) does `call IsGhostBattle` and
+        takes the can't-be-caught value on ZF. `PrintGhostText` is translated
+        and faithdiff **CLEAN** (2/2 calls), and the `cp GHOST` type checks
+        exist (`core.asm:7353`/`:7356`).
+      * *The Poké Doll consumer* — already MATCHES pret: `ItemUsePokeDoll` is a
+        plain wild-battle check, because the scripted-battle special case lives
+        in the battle engine and not in the item. The port says so in place.
+
+      **WHAT IS ACTUALLY LEFT IS TWO WIRE-UPS**, named with their pret line
+      ranges so the next attempt does not re-survey:
+      1. **Ghost IDENTITY at battle init.** pret `engine/battle/init_battle.asm`
+         (~:76-90) sets `wEnemyMonNick` to "GHOST", pushes `wCurPartySpecies`,
+         substitutes `MON_GHOST`, loads the ghost front sprite, then restores
+         the species. The port has **no `MON_GHOST` reference in
+         init_battle.asm at all** — grep is empty. **TRAP:** pret writes the
+         name with `ld_hli_a_string "GHOST@"`, and this project's hard rule is
+         that any human-rendered string is Tier-1 DATA emitted by a generator
+         into `assets/*.inc`. Hand-encoding charmap bytes in a `.asm` is the
+         most-repeated violation here, so this needs a generator entry, not an
+         inline string.
+      2. **The unveil sequence — what makes `MarowakAnim` REACHABLE.** pret
+         `engine/battle/common_text.asm` (~:70-76) runs `UnveiledGhostText` ->
+         `LoadEnemyMonData` -> `callfar MarowakAnim` -> `WildMonAppearedText`.
+         The port's `common_text.asm` has **no `MarowakAnim` call site** — grep
+         is empty. Until this lands, the animation stays unwitnessed.
 
 - [ ] **4c. Ghost Marowak (original folding note).** FOLDED IN 2026-08-11 from the archived animations
       plan (maintainer instruction), which had it as an optional tail explicitly
