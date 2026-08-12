@@ -1,0 +1,27 @@
+# Music_SSAnne — per-song MIDI overrides (see README.md for schema).
+# Registers verified from the frame-exact sim 2026-08-12: ch1 is the
+# thematic square-1 line (E4-G#4, stated three times before the descending
+# sequence); ch2 is the high ornamental descant (A4-E5); ch3 is the wave
+# ostinato (E4-D5). The whole texture packs the mid/upper register with no
+# low end — the tier-1 enhancement layer (sub_bass + low_pad) is what
+# grounds it.
+#
+# The default placeholder is 80/80/38 (two square leads + synth bass) —
+# wrong for this "luxury liner on the water" mood. Overridden to a
+# water/sailing family, one distinct timbre per line (mirrors the proven
+# Music_PalletTown set for the same Masuda town/route family):
+channels:
+  1:
+    mt32_program: "Flute 1"     # the singing sea-shanty theme melody
+    gm_program: "Flute"
+    volume: 100
+    pan: 54
+  2:
+    mt32_program: "Str Sect 3"  # high shimmer above the theme (proved in
+    gm_program: "String Ensemble 1"  # this register on Pallet's ch2)
+    volume: 92
+    pan: 74
+  3:
+    mt32_program: "Harp 1"      # plucked water-sparkle for the wave ostinato
+    gm_program: "Orchestral Harp"
+    volume: 104
