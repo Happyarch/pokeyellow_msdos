@@ -1,0 +1,147 @@
+# Music_Vermilion — Vermilion City. Tier-1 only (Phase E).
+#
+# Authored against analysis/Music_Vermilion.yaml (frame-exact) and the
+# user-supplied score-analysis note (relentless enthusiasm, no rest, a
+# singular A-major texture that never wavers). Per audio-enhance-opl3 /
+# audio-enhance-mt32 / music-theory skills.
+#
+# The track: A major (K-S 0.903; runner-up E major 0.829, not ambiguous),
+# 4/4, tempo 156, 12 measures. Loop is the whole piece (loop_start 0,
+# loop.m 1 / loop.b 1.0, frames.end 1404). Four channels, all dense
+# (ch1 1.92 / ch2 0.83 / ch3 2.0 / ch4 3.08) — the Cities1 remaster
+# spec's "everything plays all the time" city bracket. Melody is ch2
+# (A4–B5, long tones); ch1 is the motoric inner line (C#4–E5); ch3 is a
+# HIGH wave ostinato (E4–B4, A–E / G#–E figures); ch4 is a constant
+# drum_note-6 motor. There is not a single rest in the GB source.
+#
+# Register audit (simulate_song): the three pitched GB voices pack
+# C#4(61)..B5(83) continuously. The entire low end BELOW C#4 is empty —
+# the GB speaker omitting what OPL3/MT-32 can actually play. That is
+# the only clean gap. Mid/alto is already the motor + ostinato; above
+# B5 would be a sparkle pass this track does not want.
+#
+#   Tier 1 (1–2 voices — town-theme ceiling, held for a busy city):
+#     sub_bass — chord roots in octave 2, one note per half-measure
+#                change (whole-measure on the held I). Grounds the
+#                high wave ostinato. Nothing to double down there.
+#     low_pad  — octave-3 chord tones (C#3..F#3), voice-led by step /
+#                common tone / 3rd. 3rds and 5ths only: never the
+#                leading tone G#, never a chord 7th. Stays under the
+#                GB floor so unison is impossible.
+#
+#   Tier 2: omitted. The cascaded tier-1 pad is already the MT-32
+#           string tenor (patch 49), and there is no clean mid register
+#           for a second sustained layer (ch1 packs C#4–E5, ch3 packs
+#           E4–B4). A piano/brass comp would fight ch4 and the motoric
+#           inner line — the listed failure mode for this family.
+#
+#   Tier 3: omitted. Not a sparkle pass. The loop lands on V (half
+#           cadence, B7 → E) so it can restart on I; a choir/celesta
+#           hit there would make the 12-bar cycle feel finished.
+#
+# Harmony follows the analysis template and was cross-checked against
+# sounding pitches. m12 b1 is labeled B7 (II7 = V/V) — the GB voices
+# state B–F#–A plus the ostinato E, and never the 3rd D#. The bass
+# takes B; the pad holds E3 (already in ch3) rather than inventing D#
+# to "complete" the applied dominant. The missing 3rd is left as the
+# source wrote it. The E-major runner-up is the dominant of the home
+# key, not a rival tonic — not "fixed."
+#
+# Voice leading (pad vs bass, half-measure): no parallel P5/P8. The
+# F#m7 bars take C#3 (5th) rather than E3 (the 7th, and a P5 above
+# F#2 that would parallel the preceding E2/E3 octave). m4 F#m7 → m5 I
+# keeps C#3 (3rd of A) so F#2/C#3 P5 does not move to A2/E3 P5. Loop
+# seam is an E3 common tone (V root → I 5th) against E2 → A2.
+#
+# Loop seam: no note may cross frame 0 (the loop IS bar 1). Last
+# events release a few frames early (d 1.95) because beat 48 is not
+# on the map (f1 == end is legal; f1 > end is not).
+#
+# Patches match the approved Pallet Town / Oak's Lab / S.S. Anne set
+# (same high-register Masuda family): sub_bass → MT-32 SynBass1 / GM
+# Synth Bass 1; soft_pad → MT-32 Str Sect 1 / GM Pad 2 (warm).
+
+schema: 1
+song: Music_Vermilion
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 56                   # Pallet-ish; don't boom under the ch4 motor
+    velocity: 76
+    events:
+      - {at: 1, pattern: bass_body}
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 64                   # under Pallet's 72 — three GB lines + drums
+    velocity: 80
+    events:
+      - {at: 1, pattern: pad_body}
+
+patterns:
+  # Chord roots, octave 2 (C#2..B2) — far below the wave's E4 floor.
+  # Half-measure harmonic rhythm from the analysis; I bars hold.
+  bass_body:
+    measures: 12
+    events:
+      - {m: 1,  b: 1, d: 4,    n: A2}     # A      (I)
+      - {m: 2,  b: 1, d: 2,    n: E2}     # E      (V)
+      - {m: 2,  b: 3, d: 2,    n: F#2}    # F#m7   (vi7)
+      - {m: 3,  b: 1, d: 2,    n: A2}     # A      (I)
+      - {m: 3,  b: 3, d: 2,    n: A2}     # Amaj7  (I7) — same root
+      - {m: 4,  b: 1, d: 2,    n: E2}     # E      (V)
+      - {m: 4,  b: 3, d: 2,    n: F#2}    # F#m7   (vi7)
+      - {m: 5,  b: 1, d: 4,    n: A2}     # A      (I) — m5 ≡ m1
+      - {m: 6,  b: 1, d: 2,    n: E2}     # E      (V)
+      - {m: 6,  b: 3, d: 2,    n: F#2}    # F#m7   (vi7)
+      - {m: 7,  b: 1, d: 2,    n: A2}     # A      (I)
+      - {m: 7,  b: 3, d: 2,    n: D2}     # Dmaj7  (IV7)
+      - {m: 8,  b: 1, d: 2,    n: E2}     # E      (V)
+      - {m: 8,  b: 3, d: 2,    n: F#2}    # F#m7   (vi7)
+      - {m: 9,  b: 1, d: 2,    n: C#2}    # C#m7   (iii7)
+      - {m: 9,  b: 3, d: 2,    n: E2}     # E7     (V7)
+      - {m: 10, b: 1, d: 2,    n: F#2}    # F#m7   (vi7)
+      - {m: 10, b: 3, d: 2,    n: C#2}    # C#m7   (iii7)
+      - {m: 11, b: 1, d: 2,    n: A2}     # Amaj7  (I7)
+      - {m: 11, b: 3, d: 2,    n: E2}     # E      (V)
+      - {m: 12, b: 1, d: 2,    n: B2}     # B7     (II7 = V/V)
+      - {m: 12, b: 3, d: 1.95, n: E2}     # E      (V) — HC into the loop
+
+  # Octave-3 tenor: 3rd/5th only, nearest-motion. Ceiling F#3 — a minor
+  # 6th under the GB floor (C#4). E3 is the home common tone (I 5th /
+  # V root); it steps off to C#3 on every vi7 so the pad never takes
+  # the 7th. V→vi is contrary P8→P5 (E2/E3 → F#2/C#3). m5 keeps C#3
+  # so vi→I is not F#2/C#3 P5 → A2/E3 P5.
+  pad_body:
+    measures: 12
+    events:
+      - {m: 1,  b: 1, d: 4,    n: E3}     # A      5th — open, holds into V
+      - {m: 2,  b: 1, d: 2,    n: E3}     # E      root (not G# — LT)
+      - {m: 2,  b: 3, d: 2,    n: C#3}    # F#m7   5th (not E — 7th)
+      - {m: 3,  b: 1, d: 4,    n: C#3}    # A / Amaj7  3rd (not G# — I7)
+      - {m: 4,  b: 1, d: 2,    n: E3}     # E      root
+      - {m: 4,  b: 3, d: 2,    n: C#3}    # F#m7   5th
+      - {m: 5,  b: 1, d: 4,    n: C#3}    # A      3rd (hold — dodge P5)
+      - {m: 6,  b: 1, d: 2,    n: E3}     # E      root
+      - {m: 6,  b: 3, d: 2,    n: C#3}    # F#m7   5th
+      - {m: 7,  b: 1, d: 2,    n: C#3}    # A      3rd
+      - {m: 7,  b: 3, d: 2,    n: F#3}    # Dmaj7  3rd (not C# — 7th)
+      - {m: 8,  b: 1, d: 2,    n: E3}     # E      root
+      - {m: 8,  b: 3, d: 2,    n: C#3}    # F#m7   5th
+      - {m: 9,  b: 1, d: 2,    n: E3}     # C#m7   3rd (not B — 7th)
+      - {m: 9,  b: 3, d: 2,    n: E3}     # E7     root (not D — 7th, not G#)
+      - {m: 10, b: 1, d: 2,    n: C#3}    # F#m7   5th
+      - {m: 10, b: 3, d: 2,    n: E3}     # C#m7   3rd
+      - {m: 11, b: 1, d: 2,    n: E3}     # Amaj7  5th (not G# — 7th)
+      - {m: 11, b: 3, d: 2,    n: E3}     # E      root — E3 pedal into the HC
+      - {m: 12, b: 1, d: 2,    n: E3}     # B7     11th already in ch3; not D# / A
+      - {m: 12, b: 3, d: 1.95, n: E3}     # E      root — common tone back to m1
