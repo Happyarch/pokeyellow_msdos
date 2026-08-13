@@ -2485,11 +2485,35 @@ provider shapes below, not their runtime behavior.
         a runtime checkpoint proving a given input actually EXECUTES the
         selected animation body. Static agreement on the selection tables and
         arithmetic is not that.
-      - **AND NO EXISTING SCENARIO CAN BE PROMOTED INTO ONE**, measured:
-        `wBattleTransitionSpiralDirection` is `0xCD47` and **no dumped GBSTATE
-        region covers it**, so the selector's own output is invisible to every
-        scenario in the registry. A checkpoint needs a new dumped region (which
-        changes the schema for all 69 goldens) or a new scenario.
+      - **THE FIRST RUNTIME CHECKPOINT LANDED 2026-08-13.**
+        `wBattleTransitionSpiralDirection` (`$CD47`) is now a scenario-local
+        dumped region on `trainer_battle_init` — the selector's OWN OUTPUT,
+        written by `GetBattleTransitionID_CompareLevels` on every battle entry,
+        so a live trainer entry pins it with no extra staging.
+        * **Hardware says `01`** (inward spiral — the enemy is the stronger
+          side at that entry) and the port agrees: `trainer_battle_init` PASSES
+          with the row in place.
+        * **NON-VACUITY, and it is exact:** inverting the selector's two writes
+          makes the scenario FAIL with `wTransSpiral +0: want $01 | got $00` —
+          **1 unmasked divergence and nothing else**. Probe reverted, green
+          again.
+        * Golden regenerated from the pinned ROM for this scenario only.
+          DECOMPOSED against the committed one: regions **18 -> 19**, added
+          exactly `['wTransSpiral']`, removed none, **no pre-existing region's
+          bytes changed**, dump frame unchanged at 5804.
+      - **CORRECTION — "a new dumped region changes the schema for all 69
+        goldens" WAS WRONG, and it had been used to call three things blocked.**
+        Only adding to the SHARED region set relayouts every golden. A
+        SCENARIO-LOCAL row (port `gbregion` under that scenario's `%ifdef`, plus
+        the matching `r[#r+1]` row in its `.lua`) regenerates ONE golden. The
+        pattern was already established in-tree — `wBoxData`, `wBattleResult`
+        and the sight rows all do exactly this, and `debug_dump.asm` says so in
+        the `wBoxData` comment. Regeneration is fully local:
+        `dos_port/tools/mgba_build/mgba-lua-runner` plus the pinned
+        `../pokeyellow_msdos-pret-golden` worktree, both present.
+      - Still open, and now the ONLY thing this box owes: a checkpoint proving
+        the selected ANIMATION BODY executes. The selector is now witnessed;
+        the body is not.
 
 ## Stage 6 — battle animations and battle-mask closure
 

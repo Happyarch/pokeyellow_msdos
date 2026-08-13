@@ -878,6 +878,22 @@ gbstate_regions:
     ; share an RNG stream; roster identity, levels, active selection, prize
     ; metadata, AI reset, battle type and name prefix are exact.
     gbregion "trainerInit",      wBuffer,        30
+    ; --- Stage-5 transition checkpoint (battle plan, 2026-08-13) ---
+    ; wBattleTransitionSpiralDirection is the SELECTOR'S OWN OUTPUT: 0 = outward
+    ; (player's mon is the stronger side), 1 = inward. GetBattleTransitionID_-
+    ; CompareLevels writes it on every battle entry, so a live trainer entry
+    ; pins it without any extra staging.
+    ;
+    ; SCENARIO-LOCAL, same rule as wBoxData below and the sight rows: adding it
+    ; to the SHARED set would relayout every committed golden, whereas a
+    ; scenario-local row only regenerates this one. Mirrored by
+    ; tools/mgba_harness/scenarios/trainer_battle_init.lua; the differ joins by
+    ; NAME and fails loudly if only one side has it.
+    ;
+    ; Before this row NOTHING in the registry observed the transition selector:
+    ; $CD47 is inside no dumped region, so the whole Stage-5 selection path was
+    ; verified statically only.
+    gbregion "wTransSpiral",  wBattleTransitionSpiralDirection, 1   ; $CD47
 %endif
 %ifdef DEBUG_TRAINER_RESULT
     ; Compact terminal-state projection for the guarded trainer win/loss pair.

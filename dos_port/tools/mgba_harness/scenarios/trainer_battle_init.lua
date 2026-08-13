@@ -33,6 +33,12 @@ local PARTYMON_STRUCT_LENGTH = 44
 local function regions()
 	local out = dump.standard_regions(sym)
 	out[#out + 1] = { name = "trainerInit", addr = sym:addr("wBuffer"), size = 30 }
+	-- Stage-5 transition checkpoint: the selector's own output
+	-- (GetBattleTransitionID_CompareLevels writes 0 = outward / 1 = inward on
+	-- every battle entry). Mirrors the scenario-local gbregion row in
+	-- src/debug/debug_dump.asm under DEBUG_TRAINER_INIT.
+	out[#out + 1] = { name = "wTransSpiral",
+		addr = sym:addr("wBattleTransitionSpiralDirection"), size = 1 }
 	return out
 end
 
