@@ -2029,6 +2029,19 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
 AUTOKEY_DUMP_FRAME ?= 30
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# battle_short_nick: the same FIGHT menu, with party slot 0 renamed to a FOUR
+# letter species name (ABRA, read from the generated MonsterNames table). It is
+# the only scenario that leaves CenterMonName's UNSHIFTED bucket: every other
+# battle mon is named 5+ characters, so the routine could be deleted and nothing
+# in the suite would notice.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_SHORTNICK=1" /tmp/shortnick
+ifdef DEBUG_BATTLE_SHORTNICK
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_BATTLE_SHORTNICK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 30
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
 # make DEBUG_BATTLE_LIVE=1 (then dos_port/run).

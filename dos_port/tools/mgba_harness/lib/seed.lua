@@ -314,6 +314,13 @@ function seed.party(sym, name_bytes, party)
 		#party, seed.DV_BYTES[1], seed.DV_BYTES[2], seed.PLAYER_ID))
 end
 
+-- The default nickname a species gets, straight out of the ROM's MonsterNames
+-- table (10 bytes, @-padded). Exported because battle_short_nick renames one
+-- party slot WITHOUT changing its species, so it needs the name on its own —
+-- and reading it from ROM is what keeps the golden's nickname the same bytes
+-- the port's GetMonName produces, with neither side spelling it out.
+seed.monster_name = monster_name
+
 -- Seed the bag (default: the port's debug item list): wNumBagItems, then
 -- (id,qty) pairs, then the $FF terminator — the layout AddItemToInventory_
 -- maintains.

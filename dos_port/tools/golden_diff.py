@@ -655,6 +655,22 @@ SCENARIOS = {
         "masks": {"vram": list(_BATTLE_VRAM_MASKS)},
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_short_nick": {
+        # The FIGHT menu with the player's mon under a FOUR-letter nickname.
+        # THE ONLY SCENARIO THAT LEAVES CenterMonName's UNSHIFTED BUCKET: the
+        # routine shifts a name right by 2/1/0 columns for 1-2/3-4/5+ characters,
+        # and every other battle mon in the suite is named 5+ (the debug party's
+        # SNORLAX is 7), so the routine could be deleted and nothing would notice.
+        # Four letters and not two on purpose — only the 3-4 arm runs both of
+        # CenterMonName's pair iterations and its 8-bit `dec b` counter.
+        #
+        # datastruct + one projected span: the dialog area here is battle_menu's,
+        # already pinned there; what THIS scenario is for is the HUD name row.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_SHORTNICK=1 AUTOKEY_DUMP_FRAME=300",
+        "window": (10, 3),
+        "projected": {"pHudName": (10, 7)},
+    },
     "battle_low_hp": {
         # The FIGHT menu with the player's mon at 20/362 — RED bar, still ALIVE.
         # THE ONLY SCENARIO THAT OBSERVES wLowHealthAlarm ARMED: the bit is set by

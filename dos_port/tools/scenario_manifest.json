@@ -2115,6 +2115,34 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "the low-health alarm armed at red HP, plus the red-tier HP bar and fraction"
+    },
+    {
+      "name": "battle_short_nick",
+      "id": 73,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_SHORTNICK=1 AUTOKEY_DUMP_FRAME=300",
+      "port_entry_gate": "DEBUG_BATTLE_SHORTNICK",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_short_nick.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayBattleMenu",
+        "CenterMonName"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "CenterMonName's 3-4 character column shift, the only scenario outside its unshifted bucket"
     }
   ],
   "disabled_scenarios": []

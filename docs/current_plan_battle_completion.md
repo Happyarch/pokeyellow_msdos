@@ -3267,6 +3267,36 @@ enemy-gauge clone tile ids and VRAM slots.
         `wPartyMonNicks` slot 0 on both sides (port debug gate + `seed.party`
         in `tools/mgba_harness/lib/seed.lua`) exercises the player HUD without
         touching species, stats or damage.
+        * **SCENARIO LANDED 2026-08-13 — `battle_short_nick` (id 73) — BUT ITS
+          NON-VACUITY PROBE IS NOT YET RUN. Do that before ticking anything.**
+          It is `battle_menu`'s flow with party slot 0 renamed to a FOUR-letter
+          name. Four and not two on purpose: only the 3-4 bucket runs BOTH of
+          `CenterMonName`'s pair iterations and its 8-bit `dec bh` counter.
+        * The name is ABRA's, read from the ROM/`MonsterNames` table on BOTH
+          sides (`GetMonName` on the port, an exported `seed.monster_name` on
+          the golden) — so no charmap byte is hand-encoded and the two sides
+          cannot drift on the encoding. Only the NICKNAME changes; species,
+          stats and DVs stay exactly as `battle_menu` has them.
+        * **THE GOLDEN SHOWS THE SHIFT DIRECTLY**, which is the measurement
+          that matters: `pHudName` at GB (10,7) reads
+          `7f 80 81 91 80 7f ...` — a BLANK at column 10, then "ABRA" at
+          column 11. An unshifted draw would read `80 81 91 80 7f ...`.
+          `wBattleMonNick` = `80 81 91 80 50` = `ABRA@`. The port matches:
+          `goldencheck battle_short_nick` PASS, WRAM 14 regions 0 skipped.
+        * Both sides assert the seed reached `wBattleMonNick` before dumping,
+          so a staging drift fails loudly rather than photographing SNORLAX.
+        * **STILL OWED:** delete the `CenterMonName` call from
+          `DrawPlayerHUDAndHPBar` and confirm this scenario FAILS on
+          `pHudName`. Until that is measured the scenario is only *believed*
+          to discriminate — the exact standard the rest of this plan applies.
+        * Trap banked on the way (cost one build): `extern` + `equ` added next
+          to `extern GetMoveName` landed INSIDE that file's
+          `%ifdef DEBUG_ANIM_SHOW` block, so both symbols were undefined in
+          this build. NASM sized the forward references at 32 bits and then
+          shrank, failing with 15 `label ... changed during code generation`
+          errors pointing at unrelated routines 1800 lines away. The
+          declare-before-use rule has a CONDITIONAL form: check which `%ifdef`
+          you are inside, not just the line number.
       * **`SlideTrainerPicOffScreen`** — the one translatable member of the old
         intro-slide grouping, currently dropped under `ANIMATION=OFF`. Details
         in the closed inventory box above.

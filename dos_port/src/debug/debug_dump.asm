@@ -193,6 +193,15 @@ extern ResetStatusAndHalveMoneyOnBlackout
 extern LoadEnemyMonData               ; engine/battle/core.asm — real wild loader
 extern CalcStats                 ; home/move_mon.asm — stat recompute from the spec DVs
 extern CopyData                  ; home/copy.asm
+extern GetMonName                ; src/home/names.asm — [wNamedObjectIndex] -> wNameBuffer
+; battle_short_nick's species. ABRA is internal index $94 (pret
+; constants/pokemon_constants.asm:157) and its name is FOUR letters
+; (data/pokemon/names.asm:150) — the 3-4 bucket of CenterMonName's pair count,
+; which is the arm that runs BOTH loop iterations and therefore exercises the
+; 8-bit `dec bh` counter. A 1-2 letter name would exit on the first compare.
+; The NAME ITSELF is never spelled here: it is read out of the generated
+; MonsterNames table by GetMonName, so no charmap byte is hand-encoded.
+BATTLE_SHORTNICK_SPECIES equ 0x94
 extern LoadFrontSpriteByMonIndex ; src/home/pokemon.asm — real enemy front pic
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — real send-out loader
 extern FlagAction                ; flag_action.asm
@@ -442,6 +451,8 @@ GBSTATE_SCENARIO equ 16
 GBSTATE_SCENARIO equ 15
 %elifdef DEBUG_BATTLE_LOWHP
 GBSTATE_SCENARIO equ 72                 ; battle_low_hp — the red-HP alarm witness
+%elifdef DEBUG_BATTLE_SHORTNICK
+GBSTATE_SCENARIO equ 73                 ; battle_short_nick — the CenterMonName witness
 %elifdef DEBUG_BATTLE_MENU
 GBSTATE_SCENARIO equ 14                 ; battle menu golden (Stage 2; was reserved)
 %elifdef DEBUG_BATTLE
@@ -1003,6 +1014,12 @@ gbstate_regions:
     gbregion "pHudLv",   W_TILEMAP + (8 + 3) * SCREEN_TILES_W + (14 + 10), 6  ; GB (14,8)
     gbregion "pHudBar",  W_TILEMAP + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9  ; GB (10,9)
     gbregion "pHudFrac", W_TILEMAP + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8 ; GB (11,10)
+%endif
+%ifdef DEBUG_BATTLE_SHORTNICK
+    ; The player HUD's nickname row IS the comparison: CenterMonName shifts a
+    ; 3-4 letter name one column right of pret's hlcoord 10,7, so an unshifted
+    ; draw and a shifted one differ in this span and nowhere else.
+    gbregion "pHudName", W_TILEMAP + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11 ; GB (10,7)
 %endif
 %ifdef DEBUG_BATTLE_LOWHP
     ; The alarm byte itself — the thing this scenario exists to pin. Bit 7 is
@@ -2425,6 +2442,26 @@ RunBattleTest:
     mov byte [ebp + wPartyMon1HP], 0
     mov byte [ebp + wPartyMon1HP + 1], 20
 %endif
+%ifdef DEBUG_BATTLE_SHORTNICK
+    ; --- battle_short_nick (battle plan, 2026-08-13): the CenterMonName witness ---
+    ; CenterMonName shifts a battle nickname right by 2 / 1 / 0 columns for a name
+    ; of 1-2 / 3-4 / 5+ characters. EVERY existing scenario's battle mon is named
+    ; 5+ (the debug party's SNORLAX is 7), i.e. every one of them sits in the
+    ; UNSHIFTED bucket — so the whole routine could be deleted and nothing in the
+    ; suite would notice. This gate renames party slot 0 to a FOUR-letter name.
+    ;
+    ; The name is fetched from the generated MonsterNames table rather than
+    ; written as charmap bytes (the text-is-data rule), and it is written to the
+    ; PARTY slot rather than wBattleMonNick so the real LoadBattleMonFromParty
+    ; below carries it across as it would in play — the same shape as the red-HP
+    ; seed above, and it lets the golden express the seed with one ROM read.
+    mov byte [ebp + wNamedObjectIndex], BATTLE_SHORTNICK_SPECIES
+    call GetMonName                     ; -> wNameBuffer = the species' default name
+    mov esi, wNameBuffer
+    mov edx, wPartyMonNicks             ; slot 0
+    mov ebx, NAME_LENGTH
+    call CopyData
+%endif
     call LoadBattleMonFromParty
     ; pret StartBattle.playerSendOutFirstMon calls SendOutMon here, not the
     ; back-pic decode alone. This gate called LoadMonBackPic — the same
@@ -2545,6 +2582,15 @@ RunBattleTest:
 .goldenmenuhang:
     call DelayFrame
     jmp .goldenmenuhang
+%elifdef DEBUG_BATTLE_SHORTNICK
+    ; Identical staging to DEBUG_BATTLE_MENU above — the difference is the
+    ; four-letter nickname seeded further up, which puts DrawPlayerHUDAndHPBar's
+    ; CenterMonName call in its 3-4 character arm instead of the unshifted one
+    ; every other scenario lands in.
+    call DisplayBattleMenu
+.goldenshortnickhang:
+    call DelayFrame
+    jmp .goldenshortnickhang
 %elifdef DEBUG_BATTLE_LOWHP
     ; Identical staging to DEBUG_BATTLE_MENU above — the difference is the
     ; red-HP party seed further up, which makes DisplayBattleMenu's
@@ -3592,7 +3638,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_BIDE, DEBUG_BATTLE_THRASH, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_BATTLE_LOWHP, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_BIDE, DEBUG_BATTLE_THRASH, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_BATTLE_LOWHP, DEBUG_BATTLE_SHORTNICK, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 
