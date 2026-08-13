@@ -1689,7 +1689,7 @@ provider shapes below, not their runtime behavior.
         all-fainted, blacking the player out to `SetupPlayerSprite`'s (8,8).
         **A stale blocker in a plan is worse than no note, because the next
         agent treats it as live work.** Re-measure before re-adding one.
-- [ ] **4b. `BATTLE_TYPE_OLD_MAN`.** Implement the tutorial identity/menu and
+- [x] **4b. `BATTLE_TYPE_OLD_MAN`.** Implement the tutorial identity/menu and
       scripted throw behavior behind a deterministic battle scenario. The
       Viridian script and story reachability belong to overworld-events Stage 5.
       - **BRANCH-CORRECTNESS AUDIT DONE 2026-08-12** — this answers the gate
@@ -1728,10 +1728,12 @@ provider shapes below, not their runtime behavior.
         (`lib/dump.lua:92`, all `NAME_LENGTH` bytes), so any golden photographed
         between the rename and the ball throw would diverge on 3 bytes (old man)
         or 2 (Pikachu).
-      - **WHY NOTHING CAUGHT IT:** no scenario exercises the simulated-menu
-        path. 4a's Pikachu golden is still unauthored and there is no old-man
-        scenario at all — so this is precisely the class of defect the "add a
-        must-hit scenario" rule exists for, and the fix should land with one.
+      - **WHY NOTHING CAUGHT IT (as of the finding):** no scenario exercised
+        the simulated-menu path — 4a's Pikachu golden was unauthored and there
+        was no old-man scenario at all. Precisely the class of defect the "add
+        a must-hit scenario" rule exists for. *Both goldens now exist
+        (`battle_oldman` id 69, `battle_pikachu` id 70) and both gate these
+        bytes, so this paragraph is history, not a live gap.*
       - **FIX LANDED 2026-08-12 (`dbe6e797b`)**, generator-side per the Tier-1
         rule. `assets/battle_menu_runtime_strings.inc` now matches the ROM byte
         for byte.
