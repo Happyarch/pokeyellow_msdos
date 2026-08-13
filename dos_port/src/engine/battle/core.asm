@@ -2427,6 +2427,7 @@ EnemyCanExecuteMove:                    ; pret 5692 — Rage continuation
     jnc EnemyCalcMoveDamage
     call JumpMoveEffect
 EnemyCalcMoveDamage:                    ; pret 5706 — Thrash continuation
+    call SwapPlayerAndEnemyLevels       ; pret :5707 — swap ON for the enemy turn
     mov al, [ebp + wEnemyMoveEffect]
     mov esi, SetDamageEffects
     mov edx, 1
@@ -2435,7 +2436,13 @@ EnemyCalcMoveDamage:                    ; pret 5706 — Thrash continuation
     call CriticalHitTest
     call HandleCounterMove              ; real; non-counter returns ZF=0
     jz  HandleIfEnemyMoveMissed
+    ; pret :5716-5718 swaps OFF across GetDamageVarsForEnemyAttack precisely so
+    ; it reads the TRUE enemy level (`ld a,[wEnemyMonLevel] / ld e,a`), then
+    ; back ON for CalculateDamage — which takes the level in E and reads no
+    ; level byte itself.
+    call SwapPlayerAndEnemyLevels
     call GetDamageVarsForEnemyAttack
+    call SwapPlayerAndEnemyLevels
     call CalculateDamage
     jz  EnemyCheckIfFlyOrChargeEffect   ; jp z — 0 BP status move
     call AdjustDamageForMoveType
@@ -2451,11 +2458,13 @@ EnemyMoveHitTest:
 HandleIfEnemyMoveMissed:                ; pret 5726 — Bide continuation
     mov al, [ebp + wMoveMissed]
     and al, al
-    jz  GetEnemyAnimationType
+    jz  .moveDidNotMiss
     mov al, [ebp + wEnemyMoveEffect]
     cmp al, EXPLODE_EFFECT
     je  HandleExplosionMiss
     jmp EnemyCheckIfFlyOrChargeEffect
+.moveDidNotMiss:                        ; pret :5734-5735
+    call SwapPlayerAndEnemyLevels       ; swap OFF before damage application
 GetEnemyAnimationType:                  ; pret 5737 — Trapping continuation / multi-hit loop
     mov al, [ebp + wEnemyMoveEffect]
     and al, al
@@ -2474,7 +2483,10 @@ HandleExplosionMiss:                    ; pret core.asm:5744
     ; wEnemyMoveEffect in AL — so a missed enemy Explosion/Selfdestruct set
     ; wAnimationType = EXPLODE_EFFECT instead of 0.
     ;
-    ; DEVIATION{class=projection; pret=engine/battle/core.asm:HandleExplosionMiss; behavior=pret opens this label with call SwapPlayerAndEnemyLevels and the port does not; evidence=the port omits pret's level swaps as a consistent whole - it has neither the swap in EnemyCalcMoveDamage nor the un-swaps in the HandleIfEnemyMoveMissed continuations - and a complete enumeration of every wBattleMonLevel and wEnemyMonLevel reference in home and engine found none inside pret's swapped windows, so the two designs agree on every level read - adding a swap only here would leave it un-undone, which the note at the enemy Bide site already records; lifetime=retire if the full swap set is ever restored, tracked in regression-battle-swapplayerandenemylevels-never-called}
+    ; The DEVIATION that used to sit here — "the port omits pret's level swaps
+    ; as a consistent whole" — is RETIRED 2026-08-13: all 7 swap sites are
+    ; restored, so this one is paired again.
+    call SwapPlayerAndEnemyLevels       ; pret :5745 — swap OFF on the miss arm
     xor al, al                          ; pret `xor a` — animation type 0
 PlayEnemyMoveAnimation:
     push eax
@@ -2493,6 +2505,7 @@ PlayEnemyMoveAnimation:
     call ReshowSubstituteAnim
     jmp EnemyCheckIfMirrorMoveEffect
 EnemyCheckIfFlyOrChargeEffect:          ; pret 5767
+    call SwapPlayerAndEnemyLevels       ; pret :5768 — swap OFF on this arm too
     mov bl, 30
     call DelayFrames
     mov al, [ebp + wEnemyMoveEffect]
@@ -2951,9 +2964,12 @@ CheckEnemyStatusConditions:
     mov byte [ebp + wEnemyBideAccumulatedDamage], 0
     mov byte [ebp + wEnemyBideAccumulatedDamage + 1], 0
     mov byte [ebp + wEnemyMoveNum], BIDE
-    ; pret's enemy Bide unleash (core.asm:6085 region) pairs its swap with the
-    ; un-swaps in HandleIfEnemyMoveMissed continuations, which the port stripped
-    ; (hWhoseTurn-based routines). A swap here would never be undone.
+    ; pret :6085. This swap pairs with the un-swaps on the
+    ; HandleIfEnemyMoveMissed continuations (.moveDidNotMiss,
+    ; HandleExplosionMiss, EnemyCheckIfFlyOrChargeEffect) — restored 2026-08-13
+    ; as a SET, which is what makes it safe. The earlier note here was right
+    ; that adding this one alone would leave it un-undone.
+    call SwapPlayerAndEnemyLevels
     mov esi, HandleIfEnemyMoveMissed
     jmp .eReturnToHL
 

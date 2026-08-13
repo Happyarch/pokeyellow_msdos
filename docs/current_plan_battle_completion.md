@@ -2362,7 +2362,7 @@ enemy-gauge clone tile ids and VRAM slots.
 
 ## Stage 7 — retirement and archival
 
-- [ ] **FINDING FROM THE STAGE-7 SWEEP (2026-08-12): `SwapPlayerAndEnemyLevels`
+- [x] **FINDING FROM THE STAGE-7 SWEEP (2026-08-12): `SwapPlayerAndEnemyLevels`
       is TRANSLATED BUT NEVER CALLED — pret calls it at 7 sites, the port at 0.**
       `label_status --callers` reports "port callers (0)"; faithdiff reports
       `DROPPED SwapPlayerAndEnemyLevels` on **4** of the 5 pret routines that use
@@ -2426,7 +2426,28 @@ enemy-gauge clone tile ids and VRAM slots.
         HandleIfEnemyMoveMissed continuations, which the port stripped… A swap
         here would never be undone." That is ACCURATE — the port omits the swaps
         as a consistent whole — and it is why adding one in isolation is wrong.
-      * **ACTION (still open): restore the 7 calls for STRUCTURAL fidelity** — it closes 4
+      * **DONE 2026-08-13 — all 7 restored as a SET, and the analysis is now
+        empirically confirmed.** Port callers 0 -> 7, at pret's exact sites.
+        faithdiff on all five pret users is fully matched:
+        `EnemyCalcMoveDamage` 11/11, `CheckEnemyStatusConditions` 10/10,
+        `EnemyCheckIfFlyOrChargeEffect` 4/4, `HandleIfEnemyMoveMissed` 3/3,
+        `HandleExplosionMiss` 1/1. Restoring them as a set is exactly what
+        answers the prior agent's objection — the Bide swap is paired again by
+        the un-swaps on `.moveDidNotMiss`, `HandleExplosionMiss` and
+        `EnemyCheckIfFlyOrChargeEffect`. The `DEVIATION{class=projection}` on
+        `HandleExplosionMiss` that recorded the omission is retired with it.
+        * **THE GREEN IS NOT VACUOUS, AND PROVING THAT CHANGED THE ANSWER.**
+          The recorded gate (`battle_damage`, `battle_faint`) passes — but a
+          sensitivity probe removing ONE un-swap, so the count goes odd and the
+          levels leak, **also passes both of them**. Those two scenarios cannot
+          see this. Re-probed across the whole enemy-turn set, **exactly two
+          scenarios catch it**: `battle_blackout` and `battle_choose_next_mon`,
+          which fail with `wBattleMon level: want $05 | got $0D` and
+          `wEnemyMon level: want $0D | got $05` — the pair literally exchanged.
+          Probe reverted, both green again. **Use `battle_blackout` /
+          `battle_choose_next_mon` as this finding's gate, NOT `battle_damage` /
+          `battle_faint`.**
+      * *(superseded action line)* restore the 7 calls for STRUCTURAL fidelity — it closes 4
         faithdiff findings and matches pret exactly — **not as a bug fix.** Gate
         with `battle_damage` and `battle_faint` (both drive enemy attacks): green
         is the empirical confirmation of the analysis; red means the consumer has
