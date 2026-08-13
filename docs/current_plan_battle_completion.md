@@ -3306,8 +3306,13 @@ enemy-gauge clone tile ids and VRAM slots.
         `wPartyMonNicks` slot 0 on both sides (port debug gate + `seed.party`
         in `tools/mgba_harness/lib/seed.lua`) exercises the player HUD without
         touching species, stats or damage.
-        * **SCENARIO LANDED 2026-08-13 — `battle_short_nick` (id 73) — BUT ITS
-          NON-VACUITY PROBE IS NOT YET RUN. Do that before ticking anything.**
+        * **SCENARIO LANDED AND ITS NON-VACUITY PROBE PASSED 2026-08-13 —
+          `battle_short_nick` (id 73).** Deleting only the player-side
+          `CenterMonName` call made `goldencheck` fail on exactly five
+          `pHudName` bytes: `+0 want $7F got $80`, then the four ABRA glyphs
+          shifted one cell left. Restoring the call returned the scenario to
+          `WRAM: OK (14 regions, 0 skipped)`, so the scenario both reaches the
+          call and distinguishes its one-column 3-4-character result.
           It is `battle_menu`'s flow with party slot 0 renamed to a FOUR-letter
           name. Four and not two on purpose: only the 3-4 bucket runs BOTH of
           `CenterMonName`'s pair iterations and its 8-bit `dec bh` counter.
@@ -3324,10 +3329,6 @@ enemy-gauge clone tile ids and VRAM slots.
           `goldencheck battle_short_nick` PASS, WRAM 14 regions 0 skipped.
         * Both sides assert the seed reached `wBattleMonNick` before dumping,
           so a staging drift fails loudly rather than photographing SNORLAX.
-        * **STILL OWED:** delete the `CenterMonName` call from
-          `DrawPlayerHUDAndHPBar` and confirm this scenario FAILS on
-          `pHudName`. Until that is measured the scenario is only *believed*
-          to discriminate — the exact standard the rest of this plan applies.
         * Trap banked on the way (cost one build): `extern` + `equ` added next
           to `extern GetMoveName` landed INSIDE that file's
           `%ifdef DEBUG_ANIM_SHOW` block, so both symbols were undefined in
