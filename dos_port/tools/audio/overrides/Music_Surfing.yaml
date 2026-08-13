@@ -1,0 +1,28 @@
+# Music_Surfing — per-song MIDI overrides (see README.md for schema).
+#
+# Frame-exact register/role audit: ch1 is the lower thematic square line
+# (E3-D5, E4-D5 in the loop body), ch2 is the high singing/counter line
+# (E4-C#6), and ch3 is the A3-E5 triplet wave figure that supplies the surf
+# sway. The default placeholder 80/80/38 is two saxes plus a bell on MT-32
+# (and two square leads plus synth bass on GM), which makes this long water
+# cue hard-edged and assigns a bass timbre to a high arpeggio.
+#
+# Use the same proven water family as S.S. Anne, with one distinct timbre per
+# GB line: flute for the theme, soft strings for the high answering line, and
+# harp for the wave figure. The additive enhancement supplies the real low
+# bass separately; no drum override is appropriate for this three-channel cue.
+channels:
+  1:
+    mt32_program: "Flute 1"
+    gm_program: "Flute"
+    volume: 98
+    pan: 54
+  2:
+    mt32_program: "Str Sect 3"
+    gm_program: "String Ensemble 1"
+    volume: 90
+    pan: 74
+  3:
+    mt32_program: "Harp 1"
+    gm_program: "Orchestral Harp"
+    volume: 98

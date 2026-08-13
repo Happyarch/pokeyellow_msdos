@@ -10,8 +10,8 @@ _Last generated: 2026-08-13 09:16 UTC_
 
 | metric | count | of 49 |
 | --- | --- | --- |
-| has enhancements/*.yaml | 12 | 12/49 |
-| has overrides/*.yaml | 10 | 10/49 |
+| has enhancements/*.yaml | 13 | 13/49 |
+| has overrides/*.yaml | 11 | 11/49 |
 | approved (signed off) | 3 | 3/49 |
 
 ## Per-song status
@@ -59,7 +59,7 @@ _Last generated: 2026-08-13 09:16 UTC_
 | Music_SafariZone | — | — | — | — |
 | Music_SilphCo | — | — | — | — |
 | Music_SSAnne | yes | 1,3 | yes | — |
-| Music_Surfing | — | — | — | — |
+| Music_Surfing | yes | 1,3 | yes | — |
 | Music_SurfingPikachu | — | — | — | — |
 | Music_TitleScreen | yes | 1,2,3 | yes | — |
 | Music_TrainerBattle | — | — | — | — |
@@ -238,6 +238,24 @@ Drums: velocity 108, 1 noise-id → GM-drum mapping(s).
 | 1 | Flute 1 | Flute | — | 100 | 54 |
 | 2 | Str Sect 3 | String Ensemble 1 | — | 92 | 74 |
 | 3 | Harp 1 | Orchestral Harp | — | 104 | — |
+
+### Music_Surfing (`MUSIC_SURFING`)
+
+**Enhancement channels** — OPL3-specific patch is `opl_patch` (tier 1 only); MT-32/GM patches are `mt32_patch`/`gm_program` on every tier:
+
+| Channel | Tier | OPL Patch | MT-32 Patch | GM Program | Pan | Volume |
+| --- | --- | --- | --- | --- | --- | --- |
+| ocean_bass | 1 | sub_bass | 29 | 39 | center | 54 |
+| undercurrent | 1 | soft_pad | 49 | 90 | center | 56 |
+| surface_glint | 3 | — | 23 | 9 | right | 48 |
+
+**MT-32/MIDI overrides** (base 4 GB channels 1-3; drums = channel 4/noise):
+
+| GB Channel | MT-32 Program | GM Program | Program (fallback) | Volume | Pan |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Flute 1 | Flute | — | 98 | 54 |
+| 2 | Str Sect 3 | String Ensemble 1 | — | 90 | 74 |
+| 3 | Harp 1 | Orchestral Harp | — | 98 | — |
 
 ### Music_TitleScreen (`MUSIC_TITLE_SCREEN`)
 
