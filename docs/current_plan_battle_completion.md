@@ -2379,7 +2379,7 @@ enemy-gauge clone tile ids and VRAM slots.
         `DEVIATION{class=temporary}` asserting "the port already translates
         `EnemyCalcMoveDamage` faithfully". That claim is FALSE.
       * Memory: `regression-battle-swapplayerandenemylevels-never-called`.
-- [ ] **CORE.ASM MISSING-LABEL INVENTORY (measured 2026-08-12): 14 of 207
+- [x] **CORE.ASM MISSING-LABEL INVENTORY (measured 2026-08-12): 14 of 207
       labels, i.e. 93% translated.** Most are explained by deviations already
       documented — `StartBattle` (the collapse), `SimulatedInputBattleItemList`
       (`wListPointer` is a 16-bit GB address) and `BattleCore` (a section
@@ -2495,6 +2495,28 @@ enemy-gauge clone tile ids and VRAM slots.
         That found `EnemyMoveHitTest` and this in one pass, where targeted
         searching had found neither. Memory:
         `battle-core-missing-label-inventory`.
+- [ ] **RESIDUE OF THE CORE.ASM INVENTORY (opened 2026-08-12 when that box
+      closed).** Three items, none of them blocked, all measured:
+      * **The HUD alias fork.** `DrawPlayerHUDAndHPBar` and
+        `DrawEnemyHUDAndHPBar` are bare `jmp`s to the port-only `DrawPlayerHUD`
+        / `DrawEnemyHUD`, so faithdiff sees 9 pret calls against 1 port on each
+        and attributes the whole body elsewhere. That is why `CenterMonName`
+        and `GetBattleHealthBarColor` still read DROPPED at both sites even
+        though both calls are real. Same shape as `EnemyMoveHitTest`, which was
+        closed by a rename. Retiring it means moving the bodies under the pret
+        names, which the port-only split has to survive — the battle intro
+        calls `DrawEnemyHUD` alone, with no player mon out.
+      * **No permanent witness for `CenterMonName`.** Needs a scenario whose
+        battle mon has a nickname of 4 characters or fewer; every current one
+        is 5+ and therefore in the unshifted bucket. Cheapest shape measured:
+        the nickname is independent of species, so seeding
+        `wPartyMonNicks` slot 0 on both sides (port debug gate + `seed.party`
+        in `tools/mgba_harness/lib/seed.lua`) exercises the player HUD without
+        touching species, stats or damage.
+      * **`SlideTrainerPicOffScreen`** — the one translatable member of the old
+        intro-slide grouping, currently dropped under `ANIMATION=OFF`. Details
+        in the closed inventory box above.
+
 - [ ] Remove temporary guards and stand-ins whose real providers landed. Run
       `label_status --callers` for each retired stub, update the label DB, run
       default/strict label lint and `fidelity_gate`, and sweep related `STUB`,
