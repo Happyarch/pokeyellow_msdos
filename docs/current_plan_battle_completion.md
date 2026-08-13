@@ -2291,12 +2291,23 @@ provider shapes below, not their runtime behavior.
         translating `PrintBeginningBattleText` needs four things**, measured
         2026-08-13 — it is NOT a single-file translation.
         1. The mirror file `dos_port/src/engine/battle/common_text.asm`.
-        2. **Five of its six text streams do not exist in the port.** Only
-           `_WildMonAppearedText` is present (`init_battle.asm`);
-           `_HookedMonAttackedText`, `_EnemyAppearedText`,
-           `_TrainerWantsToFightText`, `_UnveiledGhostText` and
-           `_GhostCantBeIDdText` are absent from `assets/` and `src/` entirely.
-           Tier-1 rule: they come from a generator, never hand-encoded.
+        2. ~~Five of its six text streams do not exist in the port.~~
+           **THAT WAS WRONG — CORRECTED 2026-08-13, ALL SIX ALREADY EXIST.**
+           `engine/battle/common_text.asm` has been in `gen_battle_text.py`'s
+           `BATTLE_SRC` all along, and `assets/battle_text.inc` already defines
+           `WildMonAppearedText`, `HookedMonAttackedText`, `EnemyAppearedText`,
+           `TrainerWantsToFightText`, `UnveiledGhostText` and
+           `GhostCantBeIDdText`. **Nothing is owed here.**
+           * The wrong claim came from grepping the pret FAR-STREAM names
+             (`_WildMonAppearedText`, leading underscore). The generator
+             FLATTENS `text_far _X` into a stream emitted under the WRAPPER
+             name `X`, so the underscore form never survives into the port and
+             a grep for it finds nothing while the data is present. Grep the
+             wrapper name, or `grep -c '^Label:' assets/battle_text.inc`.
+           * Proven by trying it: adding `common_text.asm` to `BATTLE_SRC`
+             produced a DUPLICATE entry and **0 new labels** — the generator
+             still reported exactly 146, before and after. That null result is
+             what exposed the error; it was then reverted.
         3. `DrawAllPokeballs` is `missing` and is the recorded pokeballs
            forked-name debt (blocked on the shadow-OAM publish design). It is
            reached only on the `wBattleType == 0` arm, so the SPECIAL-battle
@@ -2305,7 +2316,29 @@ provider shapes below, not their runtime behavior.
         4. `IsPlayerPikachuAsleepInParty` is a `stub`, on the
            `BATTLE_TYPE_PIKACHU` arm.
         Everything else it calls is translated (`IsItemInBag`, `PlayCry`,
-        `PrintText`, `DelayFrames`, `LoadEnemyMonData`, `PlayPikachuSoundClip`).
+        `PrintText`, `DelayFrames`, `LoadEnemyMonData`, `PlayPikachuSoundClip`,
+        `PlaySound`, `WaitForSoundToFinish`, `MarowakAnim`), and every constant
+        it needs resolves except `SILPH_SCOPE`, which is not yet in the port's
+        includes.
+      - **THE REAL COST IS THE WIRING, NOT THE TRANSLATION — measured
+        2026-08-13, and it is why this was not started this iteration rather
+        than half-done.** pret calls `PrintBeginningBattleText` once, as the
+        tail of `SlidePlayerAndEnemySilhouettesOnScreen`, and it covers all
+        three cases (wild / trainer / special). The port instead has THREE
+        separate call sites in `_InitBattleCommon` — `DrawBattleIntroBox` on
+        the wild and special arms and `DrawEmptyDialogBox` on the trainer arm.
+        * `DrawBattleIntroBox` is not a thin wrapper: it HAND-DRAWS the bottom
+          dialog box into `W_TILEMAP` at stride 40 (corners, walls, interior
+          fill) and then prints. pret's path draws its box through `PrintText`
+          and the msgbox projection. Substituting one for the other is a
+          mechanism change on the battle intro, so it WILL move
+          `battle_intro` / `battle_menu` / `battle_safari` — the only three
+          scenarios that compare a tilemap.
+        * Recommended shape for whoever takes it: translate and wire in ONE
+          commit, not two. A translated-but-unwired
+          `PrintBeginningBattleText` would be exactly the
+          translated-but-uncalled state that hid `SwapPlayerAndEnemyLevels`
+          for months, and this session added enough of those already.
 
 ## Stage 5 — battle transitions
 
