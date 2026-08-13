@@ -2678,6 +2678,16 @@ enemy-gauge clone tile ids and VRAM slots.
       converge carefully. Compare ordered checkpoints rather
       than only the terminal screen; keep every remaining mask measured and
       justified.
+      - **FIRST CALIBRATION RESULT 2026-08-13 — `battle_faint` cannot be
+        repurposed for the physical checkpoint.** It does enter the real menu
+        turn (`FIGHT` -> `STRENGTH`) and therefore executes the production
+        animation path, but its documented dump point is deliberately after
+        enemy HP reaches zero, EXP is paid, and `DrawPlayerHUDAndHPBar` has
+        restaged `wLoadedMon`. At that instant the OAM frame blocks required by
+        the physical spec have already been cleaned up, so its green
+        datastruct result proves the resolved turn only, not animation. A
+        Stage-6 physical scenario needs an earlier state-gated landmark while
+        the OAM block is live; do not relabel this post-flow scenario as one.
 
 ## Stage 7 — retirement and archival
 
