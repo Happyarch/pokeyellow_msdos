@@ -2571,7 +2571,34 @@ enemy-gauge clone tile ids and VRAM slots.
           4. `DrawHP` / `DrawHPBar` / `Multiply` / `Divide` dropped in favour
              of the port's `calc_hp_pixels` + `draw_hp_bar` — the last of the
              fork class and the biggest: the whole HP-bar pixel computation,
-             not a printer. OPEN.
+             not a printer. **ANALYSED 2026-08-13 and it is TWO items, one
+             actionable and one blocked. Not attempted; this is the analysis,
+             not a fix.**
+             * **Player half — plausibly actionable.** pret does
+               `hlcoord 10,9 / predef DrawHP`, and `DrawHP` draws the bar AND
+               the "cur/max" fraction. The port's coordinates already line up:
+               `UI_PLAYER_HPBAR` is GB(10,9) and `UI_PLAYER_HPFRAC` is
+               GB(11,10), which is where `DrawHP` puts the fraction. The player
+               bar also already uses the standard `$62/$63/$6b/$6d` tiles that
+               `DrawHPBar` hardcodes, so there is no tile conflict on this side.
+               MUST BE CHECKED FIRST, and is the reason this was not attempted
+               in the same iteration: `DrawHP` reads `wLoadedMonHP` /
+               `wLoadedMonMaxHP`, and the port's player half stages `wLoadedMon`
+               with `CopyData` over `wBattleMonSpecies .. wBattleMonDVs` — the
+               MaxHP offset inside `wBattleMon` is NOT obviously the one
+               `wLoadedMon` uses, and getting that wrong silently draws the
+               wrong bar length rather than failing.
+             * **Enemy half — BLOCKED on a deliberate port design, not on
+               effort.** pret's `DrawHPBar` writes the literal tile IDs
+               `$63-$6b`. The port's enemy bar deliberately uses CLONES of
+               those patterns at `$C0+` (`DuplicateEnemyHPBarTiles`,
+               `battle_hud.asm`) so the two HP bars can own distinct palette
+               slots — that is exactly the 6-cell difference decomposed under
+               item 1. Calling pret's `DrawHPBar` on the enemy side would write
+               the shared IDs and destroy that mechanism. Retiring this fork
+               needs a decision about how the enemy bar gets its own palette
+               slot without a second implementation; it is not a translation
+               task. **Maintainer input wanted.**
           5. The low-health alarm — FIXED, below.
       * **THE LOW-HEALTH ALARM NEVER ARMED — FIXED 2026-08-13.** pret's
         `DrawPlayerHUDAndHPBar.setLowHealthAlarm` tail is the game's ONLY
