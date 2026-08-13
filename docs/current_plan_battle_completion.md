@@ -2379,6 +2379,27 @@ enemy-gauge clone tile ids and VRAM slots.
         `DEVIATION{class=temporary}` asserting "the port already translates
         `EnemyCalcMoveDamage` faithfully". That claim is FALSE.
       * Memory: `regression-battle-swapplayerandenemylevels-never-called`.
+- [ ] **CORE.ASM MISSING-LABEL INVENTORY (measured 2026-08-12): 14 of 207
+      labels, i.e. 93% translated.** Most are explained by deviations already
+      documented — `StartBattle` (the collapse), `SimulatedInputBattleItemList`
+      (`wListPointer` is a 16-bit GB address), the intro-slide family
+      (`SlidePlayerAndEnemySilhouettesOnScreen`, `SlideTrainerPicOffScreen`,
+      `SlidePlayerHeadLeft`, `SetScrollXForSlidingPlayerBodyLeft`, `asm_3d52d`,
+      `Func_3d4f5/523/529/536` — the port has `SlideBattlePicsIn`; NOT audited as
+      a fork), and `BattleCore` (a section label).
+      * **ACTIONABLE: `GetBattleHealthBarColor` is DROPPED AT BOTH CALL SITES** —
+        faithdiff confirms it on `ReplaceFaintedEnemyMon` (pret :904) and
+        `DrawPlayerHUDAndHPBar` (:1927). pret republishes the battle palette
+        **only when the HP-bar colour actually CHANGES**
+        (`ld b,[hl] / call GetHealthBarColor / cp b / ret z / SET_PAL_BATTLE`);
+        the port calls `SetPal_Battle` UNCONDITIONALLY from `DrawBattleHUDs`, so
+        it does the palette work every draw where hardware does it on transition
+        only. Behavioural impact NOT measured. Sits in the palette area.
+      * `CenterMonName` — not investigated.
+      * Method: enumerate a REGION's labels and print only the `missing` ones.
+        That found `EnemyMoveHitTest` and this in one pass, where targeted
+        searching had found neither. Memory:
+        `battle-core-missing-label-inventory`.
 - [ ] Remove temporary guards and stand-ins whose real providers landed. Run
       `label_status --callers` for each retired stub, update the label DB, run
       default/strict label lint and `fidelity_gate`, and sweep related `STUB`,
