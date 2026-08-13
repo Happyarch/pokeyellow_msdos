@@ -1,0 +1,29 @@
+# Music_Vermilion — per-song MIDI overrides (see README.md for schema).
+#
+# Default placeholder is 80/80/38: MT-32 factory "Sax 3" + "Sax 3" +
+# "Warm Bell". That is how Celadon lost its second square — identical
+# saxes collapse wherever the lines move together, and the bell's long
+# decay + hall reverb washes the ostinato over both pulses. Vermilion
+# is 4-channel and busier than Celadon (no rest, ch4 running the whole
+# 12-bar loop), so the same default would bury the motoric inner line.
+#
+# Registers from the frame-exact sim: ch2 is the melody (A4–B5, long
+# tones); ch1 is the motoric inner line (C#4–E5); ch3 is the high wave
+# ostinato (E4–B4). Distinct instrument FAMILY per GB channel (Celadon's
+# rule). Not a trumpet fanfare — the score note is optimistic port-town
+# enthusiasm, not a heroic lead.
+channels:
+  1:
+    mt32_program: "Square Wave"   # keep the chip-motor character on the
+    gm_program: "Lead 1 (square)" # inner line so it stays articulate
+    volume: 100
+    pan: 44                       # inner slightly left / melody right
+  2:
+    mt32_program: "Clarinet 1"    # singing woodwind for the long-tone
+    gm_program: "Clarinet"        # tune — not sax, not trumpet
+    volume: 106                   # nudge the melody above the motor
+    pan: 84
+  3:
+    mt32_program: "Pizzicato"     # dry pluck for the A–E / G#–E bounce;
+    gm_program: "Pizzicato Strings"  # kills the Warm Bell decay wash
+    volume: 68                    # sit the ostinato under both squares
