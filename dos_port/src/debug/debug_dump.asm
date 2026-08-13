@@ -2881,12 +2881,26 @@ RunBattleTest:
 %ifdef DEBUG_BATTLE_ANIM_PHYSICAL
     call DrawEnemyHUDAndHPBar             ; make the pinned SLP state visible like the real menu path
 %endif
+%ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
+    call DrawEnemyHUDAndHPBar             ; same visible SLP pin as the physical gate
+%endif
     ; The debug party pokes STRENGTH into SNORLAX's move slot 4
     ; (tools/mgba_harness/lib/seed.lua DEBUG_PARTY[1].pokes[4]), so the
     ; 0-based list index is 3. Both are set: GetCurrentMove reads
     ; wPlayerSelectedMove, DecrementPP reads wPlayerMoveListIndex.
     mov byte [ebp + wPlayerMoveListIndex], 3
+%ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
+    ; The elemental checkpoint needs an ELEMENTAL move in that same slot, and
+    ; the shared debug party has none (SNORLAX carries the four HMs). Rather
+    ; than change the party every other golden already pins, this gate
+    ; overwrites move slot 4 in the LOADED battle mon only — the golden side
+    ; makes the identical write, so wBattleMon still compares clean. PP is left
+    ; as slot 4's, which DecrementPP consumes without reading the move id.
+    mov byte [ebp + wBattleMonMoves + 3], THUNDERSHOCK
+    mov byte [ebp + wPlayerSelectedMove], THUNDERSHOCK
+%else
     mov byte [ebp + wPlayerSelectedMove], STRENGTH
+%endif
     ; not an item/run/switch turn -- ExecutePlayerMove bails to
     ; ExecutePlayerMoveDone if this is nonzero (core.asm:3257)
     mov byte [ebp + wActionResultOrTookBattleTurn], 0

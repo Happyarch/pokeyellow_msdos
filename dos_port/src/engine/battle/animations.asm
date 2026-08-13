@@ -137,6 +137,9 @@ global MoveAnimationTiles1
 %ifdef DEBUG_BATTLE_ANIM_PHYSICAL
 extern DebugDumpMemory                   ; debug_dump.asm — terminates at the first live OAM frame block
 %endif
+%ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
+extern DebugDumpMemory                   ; debug_dump.asm — same checkpoint, elemental move id
+%endif
 
 ; --- Stage 3: screen / palette special effects ---
 global AnimationFlashScreen
@@ -369,6 +372,13 @@ DrawFrameBlock:
     jne .notPhysicalScenarioFrame
     call DebugDumpMemory                       ; first real-turn STRENGTH OAM frame block
 .notPhysicalScenarioFrame:
+%endif
+; DEVIATION{class=temporary; pret=engine/battle/animations.asm:DrawFrameBlock; behavior=DEBUG_BATTLE_ANIM_ELEMENTAL terminates at the first published THUNDERSHOCK OAM frame block; evidence=the Stage-6 elemental witness must compare live OAM and the subanimation palette state before animation cleanup, on the same landmark the physical witness already proved sensitive; lifetime=retire only with this debug scenario or when a production landmark can replace it}
+%ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
+    cmp byte [ebp + wAnimationID], THUNDERSHOCK
+    jne .notElementalScenarioFrame
+    call DebugDumpMemory                       ; first real-turn THUNDERSHOCK OAM frame block
+.notElementalScenarioFrame:
 %endif
     mov bl, [ebp + wSubAnimFrameDelay]       ; ld c,a → BL
     call DelayFrames

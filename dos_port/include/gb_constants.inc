@@ -594,6 +594,9 @@ EXP_ALL                 equ 0x4B    ; constants/item_constants.asm (was a file-l
 PAY_DAY                 equ 0x06    ; constants/move_constants.asm
 WRAP                    equ 0x23    ; constants/move_constants.asm (trapping move)
 STRENGTH                equ 0x46
+THUNDERSHOCK            equ 0x54    ; constants/move_constants.asm; the Stage-6
+                                    ; elemental animation gate pins it into the
+                                    ; player's move slot 4 (see debug_dump.asm)
 DIG                     equ 0x5B
 TELEPORT                equ 0x64
 SOFTBOILED              equ 0x87

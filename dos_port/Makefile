@@ -58,6 +58,17 @@ AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 
+# Stage-6 elemental-animation checkpoint: same shape as the physical gate above,
+# but the selected move is an elemental one so the checkpoint lands on the
+# subanimation/flash path rather than the physical frame blocks.
+ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_ANIM_ELEMENTAL -D DEBUG_BATTLE_FAINT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 define flag_gate
 ifdef $(1)
 NASMFLAGS += -D $(1)

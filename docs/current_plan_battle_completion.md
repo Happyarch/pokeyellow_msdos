@@ -2702,14 +2702,38 @@ enemy-gauge clone tile ids and VRAM slots.
         sensitive. `goldens-verify` regenerated all 72 artifacts with no
         drift. Elemental, ball, shake/blink and option-off remain open in this
         same box.
-      - **ELEMENTAL PROBE BLOCKED 2026-08-13.** A scoped `THUNDERSHOCK`
-        `DEBUG_BATTLE_ANIM_ELEMENTAL` gate was attempted using the same real
-        `ExecutePlayerMove` setup, but NASM rejects the enabled build with
+      - **~~ELEMENTAL PROBE BLOCKED 2026-08-13~~ — THAT BLOCKER DOES NOT
+        REPRODUCE, AND THE PORT SIDE IS NOW BUILT AND MEASURED (2026-08-13,
+        later session).** The recorded symptom was
         `debug_dump.asm:4297: label DumpGBState.ret changed during code
-        generation` followed by the later dump labels. No elemental source,
-        registry or golden artifact was retained. Resolve the debug-gate
-        layout/late-label cause before retrying; do not guess at a checkpoint
-        or add a mask to turn this into a green result.
+        generation`. A `DEBUG_BATTLE_ANIM_ELEMENTAL` gate of the *same shape as
+        the physical one* was rebuilt from scratch and **assembles and links
+        cleanly** (`make DEBUG_BATTLE_ANIM_ELEMENTAL=1`, exit 0 read from a
+        status file). The failure was therefore specific to the reverted edit,
+        not a property of `debug_dump.asm`'s conditional layout — most likely
+        the same mid-file `extern`/`equ` ordering fault recorded in
+        `battle-3b-pay-day-witnessed`; there are no `extern`s below line 2000 in
+        that file today, so a new gate must keep them at the top. **Do not carry
+        the "debug-gate layout" diagnosis forward.**
+        * **THE CHECKPOINT WORKS AND WAS DECOMPOSED, not aggregated.**
+          `tools/run_headless.sh "DEBUG_BATTLE_ANIM_ELEMENTAL=1"` produced a
+          17-region GBSTATE. `wBattleMon` moves read `13 0F 39 54` =
+          FLY/CUT/SURF/**THUNDERSHOCK**, so the gate's move pin took;
+          `wEnemyMon` HP reads **36 (alive)**, so the dump is *before* damage
+          application, i.e. it is the animation landmark and not the faint
+          gate's post-KO dump; OAM holds 4 live entries (16 non-zero bytes), so
+          a frame block is genuinely published.
+        * **NOT YET REGISTERED, deliberately.** `assets/scenario_registry.inc`
+          is generated from `scenario_manifest.json`, and every registered
+          scenario joins the `full` tier — so registering before the mGBA
+          reference `.lua` and golden exist would add a guaranteed failure.
+          Until then the gate stamps the implied `DEBUG_BATTLE_FAINT` id 33, not
+          75. Id **75 is reserved** for `battle_anim_elemental`.
+        * Remaining for this sub-item: the mGBA reference script (mirroring
+          `tools/mgba_harness/scenarios/battle_anim_physical.lua`, and it must
+          make the identical `wBattleMonMoves+3` write), manifest registration
+          at id 75, golden generation, and a sabotage check proving the witness
+          is sensitive. Ball, shake/blink and option-off remain untouched.
 
 ## Stage 7 — retirement and archival
 
