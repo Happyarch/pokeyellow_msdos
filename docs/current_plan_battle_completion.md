@@ -2058,7 +2058,7 @@ provider shapes below, not their runtime behavior.
       is already wired, and `ItemUsePokeDoll` already MATCHES pret. **The
       remaining 4c work, and its recorded blocker chain, live in that box; track
       it there and nowhere else.** Ticked as a duplicate, NOT as completed work.
-- [ ] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
+- [x] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
       divergence using the already-translated item-owned `ItemUseBait`,
       `ItemUseRock`, and `ItemUseBall` effects. Safari maps, steps, and story
       entry/exit remain overworld-owned.
@@ -2109,6 +2109,27 @@ provider shapes below, not their runtime behavior.
         `_OutOfSafariBallsText` added, battle_text.inc 153 → 154, delta +1, and
         losing pret's wrapper `text_end` is harmless because the far stream ends
         in `prompt` ($58), which terminates the engine — checked, not assumed.
+      - **WHAT THIS TICK DOES AND DOES NOT CLAIM (2026-08-13).** The box asks
+        for the menu and the turn/flee divergence to be IMPLEMENTED, and they
+        are: 6/6 `DisplayBattleMenu` Safari branches, `PrintSafariZoneBattleText`
+        (faithdiff clean), and `.specialBattleLoop` translating pret
+        `StartBattle:176-216`. `battle_safari` (id 71) compares the rendered
+        menu against hardware.
+        * **The turn/flee loop itself is `reachable`, NOT `executed`** — those
+          are different evidence per the verification-terms rule, and no
+          scenario has yet driven a Safari TURN. `battle_safari` photographs
+          the menu before any action, so `PrintSafariZoneBattleText`, the bait
+          and escape-factor arithmetic and the flee roll are all unwitnessed.
+        * **Why that witness is not trivial, so the next agent does not assume
+          it is a small add:** the flee decision consumes `Random`, and the two
+          emulators do not share an RNG stream (`mgba_harness/lib/seed.lua`),
+          so the OUTCOME cannot be compared directly. A usable scenario has to
+          dump on the deterministic part — the bait/angry text and
+          `wSafariBaitFactor` / `wSafariEscapeFactor` after a BAIT — before the
+          roll can end the battle.
+        * Transferred to the "one must-hit scenario per battle type" box below,
+          which already owns the RESULT/EXIT coverage gap. Tracked there, not
+          here.
       - *(historical, for the reasoning that got there)* **IT WAS BLOCKED ON ONE
         TEXT STREAM (measured 2026-08-12).** pret's loop is `StartBattle:176-216`
         (`.displaySafariZoneBattleMenu`): the action-taken re-loop, the
