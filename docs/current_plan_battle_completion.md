@@ -2875,6 +2875,35 @@ enemy-gauge clone tile ids and VRAM slots.
                slots so the enemy bar can own its own palette slot. Identical
                pixels, deliberately different tile IDs.
           2. `PrintStatusConditionNotFainted` dropped — FIXED 2026-08-13.
+             **A PERMANENT WITNESS WAS ATTEMPTED 2026-08-13 AND IS BLOCKED ON
+             ONE TOOLING GAP — measured, and the gap is small and named.**
+             The right lever is NOT promoting `battle_wrap` to a full rendered
+             comparison: its dump point is mid-message and the dialog area is
+             timing-coupled between the emulators, which is exactly why it is
+             `datastruct`. The enemy HUD is static once drawn, so two ROW SPANS
+             are comparable while the screen as a whole is not. Both were
+             confirmed byte-identical to hardware first:
+             `eHudName` GB(1,0)..(10,0) = `8f 88 83 86 84 98 7f 7f 7f 7f`
+             ("PIDGEY"), `eHudLv` GB(0,1)..(11,1) =
+             `7f 7f 7f 7f 7f 92 8b 8f 7f 7f 7f 7f` (blank + "SLP").
+             * Both sides were wired, and the golden regenerated SURGICALLY:
+               regions 19 -> 21, added exactly `['eHudLv','eHudName']`, **no
+               pre-existing region's bytes changed**, frame unchanged at 7039.
+             * **`goldencheck` then rejected it, correctly**, with
+               `REGION LAYOUT MISMATCH`: `check_addresses` cross-checks that
+               both sides declare the SAME address, and a tilemap span cannot —
+               the golden's `wTileMap` is 20 wide at `$C3A1`, the port's canvas
+               is 40 wide with the (+10,+3) battle projection at `$C423`. The
+               check exists to catch a label moving on one side only, so it is
+               doing its job; it simply has no notion of a PROJECTED span.
+             * **The tooling change needed, stated exactly:** `check_addresses`
+               (`golden_diff.py:1727`) skips `VIDEO_REGIONS` and the
+               `FLAT_ADDR_SENTINEL` composed regions. A projected GB-memory
+               span is neither. It needs a third, declared case — a per-region
+               "projected" marker carrying the expected (dx, dy) — so the
+               address difference is asserted rather than ignored. Reverted in
+               full rather than bent: weakening a safety check to land a witness
+               is the wrong trade, and `battle_wrap` is green again.
              Both halves now print the status condition one cell right of the
              level cell and print the level only when there is none, per pret
              :1913-1918 / :1963-1972. **HARDWARE TRUTH CAME OUT OF THE GOLDEN
