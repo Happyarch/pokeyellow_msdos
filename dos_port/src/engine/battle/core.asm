@@ -6622,6 +6622,12 @@ DrawHUDsAndHPBars:
     ret
 DrawPlayerHUDAndHPBar:
     ; ===== player HUD (lower-right) =====
+    ; BUG{class=projection; pret=engine/battle/core.asm:DrawPlayerHUDAndHPBar; behavior=on the potion and drain HP-sweep paths the player HP fraction ends BLANK where hardware shows the number, because this clear wipes the fraction cells and nothing redraws them before the screen settles; evidence=measured 2026-08-13 with run_headless DEBUG_BATTLE_ITEM=1 against the battle_item_potion golden - the port's GB(11,10) span reads 7f 7f 7f 7f 7f 7f 7f 73 where hardware reads f7 f8 f6 f3 f9 fc f8 73 which decodes 120/362, and deleting only this ClearScreenArea call makes the port draw f7 f6 f6 f3 f9 fc f8 73 instead so the clear is the cause; lifetime=until the sweep paths redraw the fraction after the clear, tracked in regression-battle-hp-fraction-blanked-by-hud-clear}
+    ; The clear itself is FAITHFUL — pret does it too — so the defect is that
+    ; the port's port-only AnimateHPBar sweep paths do not restore the fraction
+    ; the way pret's DrawHP-per-step cadence does. Do NOT "fix" it by deleting
+    ; the clear: that reintroduces the stale-glyph defect 08558f48d closed, and
+    ; battle_wrap's eHudLv span now catches that.
     ; pret DrawPlayerHUDAndHPBar:1893-1894 — `hlcoord 9, 7 / lb bc, 5, 11`.
     ; Restored 2026-08-13; the alias fork had hidden the dropped call, and the
     ; comment that justified it ("home/copy2.asm not linked here") was false.

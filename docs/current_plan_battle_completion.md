@@ -2946,6 +2946,32 @@ enemy-gauge clone tile ids and VRAM slots.
                  previously unwitnessed fixes — the status rule, the HUD clear,
                  `DrawHP` and `PrintLevel` — without promoting its
                  timing-coupled screen.
+               * **AND THE SPANS IMMEDIATELY FOUND A REGRESSION I HAD
+                 INTRODUCED (2026-08-13).** Before adding the same spans to
+                 `battle_item_potion` I checked them against its golden, as the
+                 recipe requires. Five of six match — including `pHudBar`
+                 `71 62 6b 6b 63 63 63 63 6d`, the PARTIAL-bar path that
+                 `battle_wrap`'s full bar cannot exercise. But `pHudFrac` does
+                 not: the port reads `7f 7f 7f 7f 7f 7f 7f 73` (blank) where
+                 hardware reads `f7 f8 f6 f3 f9 fc f8 73` = "120/362".
+                 * **Cause measured, not guessed:** deleting ONLY the
+                   player-half `ClearScreenArea` makes the port draw
+                   `f7 f6 f6 f3 f9 fc f8 73` instead of blanks. The clear I
+                   restored in `08558f48d` wipes the fraction and the
+                   `AnimateHPBar` sweep paths (potion / drain / heal, via
+                   `UpdateCurMonHPBar`) never restore it.
+                 * **The clear is FAITHFUL and must stay** — pret does it, and
+                   deleting it reintroduces the stale-glyph defect that
+                   `eHudLv` now catches. The defect is that the port's
+                   port-only sweep lacks pret's per-step `DrawHP` redraw.
+                   `BUG{class=projection}` filed at the clear site; memory
+                   `regression-battle-hp-fraction-blanked-by-hud-clear`.
+                 * `battle_item_potion` spans NOT added this iteration: the
+                   fraction is also genuinely timing-coupled there (the port
+                   shows "100" mid-sweep where hardware shows "120"), so
+                   `pHudFrac` is not a usable span for it regardless, and
+                   adding the other five while a live defect sits in the sixth
+                   needs the fix first.
              Both halves now print the status condition one cell right of the
              level cell and print the level only when there is none, per pret
              :1913-1918 / :1963-1972. **HARDWARE TRUTH CAME OUT OF THE GOLDEN
