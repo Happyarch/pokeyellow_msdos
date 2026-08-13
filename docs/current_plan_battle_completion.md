@@ -3017,11 +3017,29 @@ enemy-gauge clone tile ids and VRAM slots.
           explicitly; `PrintMoveType` reaches `PlaceString` and never touches
           the stride. `home/pokemon.asm:539` places the 7x7 pic at the runtime
           stride, but it draws INSIDE the window so the goldens do gate it.
-          Structurally identical to the bug and worth watching:
+          Structurally identical to the bug, so it was chased to a conclusion:
           `UpdateHPBar_PrintHPNumber` (`hp_bar.asm:285`) uses the same
           `stride + 1` expression and is reached from `ItemUseMedicine` and
-          `AIPrintItemUseAndUpdateHPBar` — measured clean in these five, but it
-          is the same shape.
+          `AIPrintItemUseAndUpdateHPBar`. **BOTH SITES ARE SAFE, for two
+          DIFFERENT reasons, and settling it produced the invariant:**
+          * `ItemUseMedicine` sets `BIT_PARTY_MENU_HP_BAR` before the call, and
+            the routine then overwrites ECX with **9** — a pure horizontal
+            offset — so the stride is NEVER READ on that path.
+          * `AIPrintItemUseAndUpdateHPBar` begins with `AIPrintItemUse_`, which
+            tail-jumps to `PrintBattleText` -> `PrintText`, and `PrintText`
+            republishes the stride from `[text_msgbox]`. The battle record
+            `msgbox_centered` (`core.asm:1335`) has `MB_STRIDE = FW` = 40, so
+            the stride is freshly correct when read.
+          * **THE INVARIANT:** a stride reader is safe iff EITHER it never
+            reaches the stride branch, OR a battle `PrintText` immediately
+            precedes it. Anything else must republish.
+          * **And that is why `DrawHP` was the one that broke.**
+            `DrawPlayerHUDAndHPBar` is reached from HUD-redraw paths with no
+            battle `PrintText` immediately before — after the bag menu the last
+            `PrintText` used a different msgbox record. It satisfied neither
+            condition, so it had to republish. The fix now has a reason rather
+            than being a patch. Memory:
+            `golden-window-hides-the-canvas-margins`.
              Both halves now print the status condition one cell right of the
              level cell and print the level only when there is none, per pret
              :1913-1918 / :1963-1972. **HARDWARE TRUTH CAME OUT OF THE GOLDEN
