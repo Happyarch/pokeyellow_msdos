@@ -907,6 +907,14 @@ gbstate_regions:
     ; $CD47 is inside no dumped region, so the whole Stage-5 selection path was
     ; verified statically only.
     gbregion "wTransSpiral",  wBattleTransitionSpiralDirection, 1   ; $CD47
+    ; The harness clears this scratch byte before entering battle, then turns it
+    ; into a boolean after InitBattle: the selected inward-spiral BODY alone
+    ; makes it nonzero. The raw terminal counter is deliberately NOT compared:
+    ; pret's 20x18 body leaves 5 while the port's documented 40x25 projection
+    ; leaves 13. The normalized value has a false-witness-sensitive meaning:
+    ; 1 = body completed, 0 = it was skipped. Mirrored by
+    ; trainer_battle_init.lua.
+    gbregion "wTransInSpiral", wInwardSpiralUpdateScreenCounter, 1  ; $CD3D
 %endif
 %ifdef DEBUG_TRAINER_RESULT
     ; Compact terminal-state projection for the guarded trainer win/loss pair.
@@ -2040,6 +2048,10 @@ RunBattleTest:
     ; Route 3's first sight trainer: BUG CATCHER, roster 4.
     mov byte [ebp + wEngagedTrainerClass], OPP_ID_OFFSET + 2
     mov byte [ebp + wEngagedTrainerSet], 4
+    ; Stage-5 transition-body checkpoint precondition. InitBattle's selected
+    ; inward spiral is the only path between this clear and the normalization
+    ; below that writes wInwardSpiralUpdateScreenCounter.
+    mov byte [ebp + wInwardSpiralUpdateScreenCounter], 0
     call StartTrainerBattle              ; seeds wCurOpponent, then returns
     ; Stage 1b: StartTrainerBattle no longer runs the battle — OverworldLoop's
     ; wCurOpponent poll does (src/home/overworld.asm). This harness never runs
@@ -2047,6 +2059,13 @@ RunBattleTest:
     ; through NewBattle. _InitBattleCommon's DEBUG_TRAINER_INIT stop still ends
     ; it right after the first active enemy mon is selected.
     call InitBattle
+
+    ; Normalize the geometry-dependent raw counter (pret=5, port=13) into the
+    ; scenario-local Stage-5 body-completed witness. `setnz` immediately reads
+    ; the preceding test, so skipping BattleTransition_InwardSpiral records 0.
+    test byte [ebp + wInwardSpiralUpdateScreenCounter], 0xff
+    setnz al
+    mov [ebp + wInwardSpiralUpdateScreenCounter], al
 
     lea edi, [ebp + wBuffer]
     mov al, [ebp + wCurOpponent]

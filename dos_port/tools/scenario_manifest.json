@@ -1787,6 +1787,11 @@
         "InitBattle",
         "GetTrainerInformation",
         "ReadTrainer",
+        "BattleTransition",
+        "GetBattleTransitionID_WildOrTrainer",
+        "GetBattleTransitionID_CompareLevels",
+        "BattleTransition_Spiral",
+        "BattleTransition_InwardSpiral",
         "_LoadTrainerPic",
         "EnemySendOutFirstMon",
         "LoadEnemyMonFromParty"
@@ -1798,7 +1803,7 @@
         "projection": "golden_diff.SCENARIOS",
         "masks": "golden_diff.SCENARIOS"
       },
-      "verification": "real Route 3 trainer-sight entry on pret versus StartTrainerBattle on the port, stopped after roster load and first-mon selection; deterministic trainer initialization state only, not trainer presentation or battle completion"
+      "verification": "real Route 3 trainer-sight entry on pret versus StartTrainerBattle on the port, stopped after roster load and first-mon selection; deterministic trainer initialization plus the inward-spiral transition selector/body checkpoint, not trainer presentation or battle completion"
     },
     {
       "name": "trainer_battle_win",

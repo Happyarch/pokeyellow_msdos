@@ -115,9 +115,15 @@
       "gb_addr": "0xCD47",
       "name": "wTransSpiral",
       "size": 1
+    },
+    {
+      "file_offset": 7455,
+      "gb_addr": "0xCD3D",
+      "name": "wTransInSpiral",
+      "size": 1
     }
   ],
   "rom_title": "POKEMON YEL",
   "scenario": "trainer_battle_init",
-  "total_size": 7455
+  "total_size": 7456
 }

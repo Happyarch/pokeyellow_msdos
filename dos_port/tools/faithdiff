@@ -63,6 +63,11 @@ PRET_MACRO_NAMED_RE = re.compile(
 # ld [wX], … / ld [hX], … / ldh [hX], …  (stores only: bracket operand first)
 PRET_STORE_RE = re.compile(
     r'^\s*ldh?\s+\[\s*([whWH][A-Za-z0-9_]*)\s*\]\s*,')
+# These operand spellings name registers / register-indirect forms, never a
+# callee. `jp hl` is the normal pret jump-table dispatch (BattleTransition is
+# one such site); counting it as a dropped call forces an impossible x86 label
+# match because the corresponding port form is `jmp [Table + index * 4]`.
+# Keep this shared with the store filter below.
 PRET_REG_INDIRECT = {'hl', 'hli', 'hld', 'bc', 'de', 'c', 'hLoadedROMBank'}
 
 # call / jmp / **any Jcc** to a named target. The conditional forms are not
@@ -137,7 +142,7 @@ def pret_sets(body):
     calls, stores = {}, {}
     for line in body:
         m = PRET_CALL_RE.match(line) or PRET_MACRO_RE.match(line)
-        if m:
+        if m and m.group(2) not in PRET_REG_INDIRECT:
             calls.setdefault(m.group(2), []).append(m.group(1))
         else:
             m = PRET_MACRO_NAMED_RE.match(line)

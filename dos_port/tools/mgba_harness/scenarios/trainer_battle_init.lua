@@ -39,6 +39,12 @@ local function regions()
 	-- src/debug/debug_dump.asm under DEBUG_TRAINER_INIT.
 	out[#out + 1] = { name = "wTransSpiral",
 		addr = sym:addr("wBattleTransitionSpiralDirection"), size = 1 }
+	-- The harness normalizes the geometry-dependent raw terminal counter to 1
+	-- after the selected inward-spiral body has made it nonzero. A pre-cleared 0
+	-- therefore proves the body was skipped; this is wTransSpiral's animation-body
+	-- counterpart.
+	out[#out + 1] = { name = "wTransInSpiral",
+		addr = sym:addr("wInwardSpiralUpdateScreenCounter"), size = 1 }
 	return out
 end
 
@@ -59,6 +65,9 @@ scenario.run(function()
 
 	scenario.exec(function()
 		seed.debug_new_game(sym, text:encode(seed.PLAYER_NAME))
+		-- Stage-5 transition-body witness precondition. The selected inward spiral
+		-- is the only operation before the dump that may make this nonzero.
+		emu:write8(sym:addr("wInwardSpiralUpdateScreenCounter"), 0)
 		local view = sym:addr("wOverworldMap") + 7 + ROUTE_3_WIDTH
 			+ (ROUTE_3_WIDTH + 6) * (SIGHT_Y >> 1) + (SIGHT_X >> 1)
 		local ptr = sym:addr("wCurrentTileBlockMapViewPointer")
@@ -95,6 +104,10 @@ scenario.run(function()
 
 	-- Mirror the port gate's 30-byte deterministic projection in wBuffer.
 	scenario.exec(function()
+		-- Normalize the geometry-dependent raw terminal counter (pret=5,
+		-- port=13) into a false-witness-sensitive body-completed boolean.
+		local body_completed = emu:read8(sym:addr("wInwardSpiralUpdateScreenCounter")) ~= 0
+		emu:write8(sym:addr("wInwardSpiralUpdateScreenCounter"), body_completed and 1 or 0)
 		local bytes = {
 			emu:read8(sym:addr("wCurOpponent")),
 			emu:read8(sym:addr("wTrainerClass")),

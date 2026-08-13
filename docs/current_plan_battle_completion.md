@@ -2477,7 +2477,7 @@ provider shapes below, not their runtime behavior.
       DONE 2026-08-07 (6a849f15): BUG{class=data-model} at
       `GetBattleTransitionID_CompareLevels` with a `BUG_FIX_LEVEL >= 2`
       wPartyCount bound.
-- [ ] Add deterministic frame/state checkpoints for each selected transition and
+- [x] Add deterministic frame/state checkpoints for each selected transition and
       must-hit its selector plus animation body. Cover wild, trainer, dungeon,
       and scripted inputs; a final `FRAME.BIN` alone is regression evidence, not
       proof that the transition executed.
@@ -2542,9 +2542,28 @@ provider shapes below, not their runtime behavior.
         the `wBoxData` comment. Regeneration is fully local:
         `dos_port/tools/mgba_build/mgba-lua-runner` plus the pinned
         `../pokeyellow_msdos-pret-golden` worktree, both present.
-      - Still open, and now the ONLY thing this box owes: a checkpoint proving
-        the selected ANIMATION BODY executes. The selector is now witnessed;
-        the body is not.
+      - **ANIMATION-BODY CHECKPOINT LANDED 2026-08-13.** The same real Route 3
+        trainer entry now clears `$CD3D` before battle, then emits
+        `wTransInSpiral = 1` only when the selected
+        `BattleTransition_InwardSpiral` has made its body counter nonzero. This
+        normalizes the intentional geometry result (pret's 20x18 body finishes
+        at `$05`, the documented 40x25 projection at `$0D`) without comparing
+        unlike implementations; a skipped body remains the cleared `$00`.
+        `trainer_battle_init` now declares `BattleTransition`, both selector
+        labels, `BattleTransition_Spiral`, and
+        `BattleTransition_InwardSpiral` in its must-hit contract.
+        * Both ROM and port dump `$01`; `make -C dos_port goldencheck
+          SCENARIO=trainer_battle_init` passes with **10 compared WRAM regions,
+          6 explicitly skipped**, and the existing reporting-only palette
+          decomposition unchanged.
+        * **NON-VACUITY:** a generated port GBSTATE with only this final byte
+          corrupted to `$00` reports exactly `wTransInSpiral +0: want $01 | got
+          $00` — **1 unmasked divergence**. The clean extracted GBSTATE passes.
+        * Golden regenerated from the pinned ROM for this scenario only:
+          regions **19 -> 20**, added exactly `['wTransInSpiral']`, removed
+          none, dump frame unchanged at 5804. `run_headless DEBUG_TRAINER_INIT`
+          also extracted both GBSTATE.BIN and DUMP.BIN, exercising the
+          DEBUG-gated region table rather than relying on a plain build.
 
 ## Stage 6 — battle animations and battle-mask closure
 
