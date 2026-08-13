@@ -2548,10 +2548,31 @@ enemy-gauge clone tile ids and VRAM slots.
                DEBUG_BATTLE_WRAP=1`.
              * `PrintLevel` itself stays dropped — the port keeps its own
                `print_level`. That is fork item 3, not this one.
-          3. `DrawHP` / `DrawHPBar` / `Multiply` / `Divide` dropped in favour
-             of the port's `calc_hp_pixels` + `draw_hp_bar` — more of the same
-             fork class. OPEN.
-          4. The low-health alarm — FIXED, below.
+          3. `PrintLevel` dropped — FIXED 2026-08-13 (`77e8fa968`). Both
+             halves now call pret's `PrintLevel` (`home/pokemon.asm`, already
+             hardware-gated by `status_p1` / `party_menu`) instead of the
+             port-only duplicate `print_level`, now dead and unexported.
+             * **The two changes had to land in this order.** pret's
+               `PrintLevel` runs `PrintNumber` with `LEFT_ALIGN`, which for a
+               leading zero writes NOTHING and does not advance the cursor —
+               it relies on the `ClearScreenArea` restored in item 1 having
+               blanked the cell. The port's `print_level` padded with a leading
+               SPACE instead, which is what a printer without a clear has to
+               do. Fixing the printer first would have left a stale glyph.
+             * MEASURED, two-digit case (every level any scenario uses):
+               **0 canvas cells changed** by the switch.
+             * MEASURED, one-digit case, the only case that differs —
+               `run_headless DEBUG_BATTLE_WRAP=1`, `wEnemyMonLevel` poked to 5
+               and the SLP cleared, same build, old path vs new:
+               old `6e 7f fb 7f` = `:L 5`; new `6e fb 7f 7f` = `:L5`. pret's
+               is the left-aligned form. All pokes reverted before gating.
+             * NOT claimed: no hardware golden contains a single-digit level,
+               so that case is verified against pret's routine, not mGBA.
+          4. `DrawHP` / `DrawHPBar` / `Multiply` / `Divide` dropped in favour
+             of the port's `calc_hp_pixels` + `draw_hp_bar` — the last of the
+             fork class and the biggest: the whole HP-bar pixel computation,
+             not a printer. OPEN.
+          5. The low-health alarm — FIXED, below.
       * **THE LOW-HEALTH ALARM NEVER ARMED — FIXED 2026-08-13.** pret's
         `DrawPlayerHUDAndHPBar.setLowHealthAlarm` tail is the game's ONLY
         setter of `BIT_LOW_HEALTH_ALARM` and had no port counterpart, so the

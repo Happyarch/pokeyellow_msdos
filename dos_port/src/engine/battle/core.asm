@@ -318,6 +318,7 @@ extern PlacePlayerHUDTiles             ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern PlaceEnemyHUDTiles              ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern PrintStatusConditionNotFainted  ; home/pokemon.asm -> PrintStatusAilment
 extern ClearScreenArea                 ; home/copy2.asm — BH rows x BL cols of blanks at ESI
+extern PrintLevel                      ; home/pokemon.asm — ':L' + wLoadedMonLevel at ESI
 ; --- HUD geometry for DrawHUDsAndHPBars and its two halves, moved here with
 ; --- them from battle_hud.asm. Values come from the generated battle UI layout
 ; --- (assets/ui_layout_battle.inc); never hand-edit an offset here.
@@ -6431,7 +6432,6 @@ extern LoadMonBackPicToVRAM            ; src/home/pics.asm — decode + 2x scale
 extern draw_hp_bar                     ; battle_hud.asm — port-only HUD gauge/number helpers
 extern draw_enemy_hp_bar               ; battle_hud.asm
 extern calc_hp_pixels                  ; battle_hud.asm
-extern print_level                     ; battle_hud.asm
 extern hud_print_num3                  ; battle_hud.asm (battle_menu.asm has its own file-local print_num3)
 extern SlideBattlePicsIn               ; src/home/pics.asm — the port's slide realization
 global TryRunningFromBattle
@@ -6658,9 +6658,14 @@ DrawPlayerHUDAndHPBar:
     mov esi, W_TILEMAP + P_LV + 1        ; pret: hlcoord 14,8 / push hl / inc hl
     call PrintStatusConditionNotFainted
     jnz .doNotPrintLevel                 ; jr nz — status shown, no level
-    movzx eax, byte [ebp + wBattleMonLevel]
-    mov edi, W_TILEMAP + P_LV
-    call print_level
+    ; pret :1919 `call PrintLevel`, reading the wLoadedMonLevel the CopyData
+    ; above staged. The port used its own print_level, which PADS a one-digit
+    ; level with a leading space; pret's PrintNumber runs LEFT_ALIGN, which
+    ; writes nothing for a leading zero and does not advance — it relies on the
+    ; ClearScreenArea above having blanked the cell. Those two belong together,
+    ; which is why this follows the clear rather than preceding it.
+    mov esi, W_TILEMAP + P_LV
+    call PrintLevel
 .doNotPrintLevel:
     mov ebx, wBattleMonHP
     mov esi, wBattleMonMaxHP
@@ -6735,12 +6740,12 @@ DrawEnemyHUDAndHPBar:
     mov esi, W_TILEMAP + E_LV + 1        ; pret: hlcoord 4,1 / push hl / inc hl
     call PrintStatusConditionNotFainted
     jnz .skipPrintLevel                  ; jr nz
-    movzx eax, byte [ebp + wEnemyMonLevel]
     ; pret DrawEnemyHUDAndHPBar stages the level in wLoadedMonLevel before
-    ; PrintLevel (core.asm:1969-1970) — battle-visible WRAM the goldens compare.
+    ; PrintLevel (core.asm:1969-1971) — battle-visible WRAM the goldens compare.
+    mov al, [ebp + wEnemyMonLevel]
     mov [ebp + wLoadedMonLevel], al
-    mov edi, W_TILEMAP + E_LV
-    call print_level
+    mov esi, W_TILEMAP + E_LV
+    call PrintLevel
 .skipPrintLevel:
     mov ebx, wEnemyMonHP                 ; calc_hp_pixels: EBX=curHP addr, ESI=maxHP addr
     mov esi, wEnemyMonMaxHP

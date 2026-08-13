@@ -100,7 +100,6 @@ section .text
 global draw_hp_bar                     ; port-only helpers, now called from core.asm
 global draw_enemy_hp_bar
 global calc_hp_pixels
-global print_level
 global hud_print_num3                  ; distinct from battle_menu.asm's file-local print_num3
 extern PlaceEnemyHUDTiles                ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern PlacePlayerHUDTiles               ; draw_hud_pokeball_gfx.asm (pret mirror)
