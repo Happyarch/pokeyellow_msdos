@@ -489,6 +489,9 @@ wExpAmountGained       equ 0xCF4A   ; word (union wStringBuffer region)
 wGainBoostedExp        equ 0xCF4C
 wTempByteValue         equ 0xD11D
 wPartyFoughtCurrentEnemyFlags equ 0xCCF5
+; Set when the player has already won, so DrawPlayerHUDAndHPBar must not re-arm
+; the red-HP alarm. Address from pokeyellow.sym (00:ccf6), not inferred.
+wLowHealthAlarmDisabled equ 0xCCF6
 wLearnMoveMonName      equ 0xD035
 ; UNION with wLearnMoveMonName (ram/wram.asm) — ItemUseTMHM parks the move name here
 ; across DisplayPartyMenu, which overwrites wStringBuffer.

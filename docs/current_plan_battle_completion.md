@@ -2497,15 +2497,50 @@ enemy-gauge clone tile ids and VRAM slots.
         `battle-core-missing-label-inventory`.
 - [ ] **RESIDUE OF THE CORE.ASM INVENTORY (opened 2026-08-12 when that box
       closed).** Three items, none of them blocked, all measured:
-      * **The HUD alias fork.** `DrawPlayerHUDAndHPBar` and
-        `DrawEnemyHUDAndHPBar` are bare `jmp`s to the port-only `DrawPlayerHUD`
-        / `DrawEnemyHUD`, so faithdiff sees 9 pret calls against 1 port on each
-        and attributes the whole body elsewhere. That is why `CenterMonName`
-        and `GetBattleHealthBarColor` still read DROPPED at both sites even
-        though both calls are real. Same shape as `EnemyMoveHitTest`, which was
-        closed by a rename. Retiring it means moving the bodies under the pret
-        names, which the port-only split has to survive — the battle intro
-        calls `DrawEnemyHUD` alone, with no player mon out.
+      * **The HUD alias fork — RETIRED 2026-08-13 (`0698bb0eb`).** The three
+        bodies moved from the port-only `battle_hud.asm` into the mirror file
+        under pret's names. faithdiff, before -> after:
+        `DrawHUDsAndHPBars` 0 -> 2 matched, `DrawPlayerHUDAndHPBar` 0 -> 5
+        (9 pret / 9 port), `DrawEnemyHUDAndHPBar` 0 -> 3. `battle_hud.asm`'s
+        `print_num3` had to be exported as `hud_print_num3` — `battle_menu.asm`
+        has its own file-local `print_num3`, and globalising the shadowed name
+        is a link error.
+        * **IT EXPOSED FOUR REAL DIVERGENCES NOTHING HAD EVER REPORTED**, and
+          the alias-era comments justifying them are measurably false: every
+          callee below is `translated` and linked, so "not available yet" is
+          not the reason for any of them.
+          1. `ClearScreenArea` dropped — the comment said `home/copy2.asm` was
+             "not linked here". OPEN.
+          2. `PrintStatusConditionNotFainted` + `PrintLevel` dropped, so the
+             port prints the level UNCONDITIONALLY where pret prints it only
+             when there is no status condition. The comment blamed
+             "status_ailments.asm is an empty placeholder"; the routine is in
+             `home/pokemon.asm` and is translated. OPEN, and this one is a
+             visible behaviour difference on a statused mon.
+          3. `DrawHP` / `DrawHPBar` / `Multiply` / `Divide` dropped in favour
+             of the port's `calc_hp_pixels` + `draw_hp_bar` — more of the same
+             fork class. OPEN.
+          4. The low-health alarm — FIXED, below.
+      * **THE LOW-HEALTH ALARM NEVER ARMED — FIXED 2026-08-13.** pret's
+        `DrawPlayerHUDAndHPBar.setLowHealthAlarm` tail is the game's ONLY
+        setter of `BIT_LOW_HEALTH_ALARM` and had no port counterpart, so the
+        red-HP beeping could not sound in any battle. All nine port writes to
+        `wLowHealthAlarm` were enumerated: eight are clears or a save/restore,
+        and the ninth (`low_health_alarm.asm:48`) re-ORs the bit INSIDE
+        `Music_DoLowHealthAlarm`, which returns at :23 unless the bit is
+        already set — so the alarm could perpetuate but never start. Tail now
+        translated, with `wLowHealthAlarmDisabled` added to the memmap at
+        `0xCCF6` taken from `pokeyellow.sym`, not inferred.
+        * **No scenario can witness it** (none drives the player mon to red
+          HP, and no dumped region covers `0xD082`), so it was measured
+          directly: a temporary `wLowHealthAlarm` region row plus a 1-HP poke,
+          two `run_headless` runs of `DEBUG_BATTLE_MENU` differing only in
+          whether the tail runs. With the tail `wLowHealthAlarm = 0x83` (bit 7
+          set, timer 3); without it `0x00`; `wBattleMonHP = 0001` in both. All
+          three temporary edits reverted before the gates ran.
+        * Still owed: a permanent witness. That needs both a scenario that
+          reaches red HP and `wLowHealthAlarm` in the dumped region set, and
+          adding a region changes the GBSTATE schema for all 69 goldens.
       * **No permanent witness for `CenterMonName`.** Needs a scenario whose
         battle mon has a nickname of 4 characters or fewer; every current one
         is 5+ and therefore in the unshifted bucket. Cheapest shape measured:

@@ -44,6 +44,7 @@ wPartyMon1Species equ wPartyMon1
 wEnemyMon1        equ wEnemyMons
 wEnemyMon1Level   equ (wEnemyMons + MON_LEVEL)
 MIRROR_MOVE       equ 0x4D
+HP_BAR_RED        equ 2       ; constants/gfx_constants.asm
 
 ; battle menu geometry — the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
@@ -6582,7 +6583,7 @@ CenterMonName:
 ;      through the shared routines; the port uses calc_hp_pixels + draw_hp_bar.
 ;      A second implementation of a translated pret routine, i.e. more of the
 ;      same fork class this move is retiring.
-;   4. The low-health alarm tail — see the BUG on DrawPlayerHUDAndHPBar below.
+;   4. The low-health alarm tail — FIXED 2026-08-13, see .fainted below.
 ; Tracked in docs/current_plan_battle_completion.md under the core.asm-residue
 ; box; none is fixed here, because this box is the naming/placement half.
 ; ---------------------------------------------------------------------------
@@ -6601,7 +6602,6 @@ DrawHUDsAndHPBars:
     ; palette slots together (the enemy uses cloned gauge tile IDs).
     call SetPal_Battle
     ret
-; BUG{class=stub; pret=engine/battle/core.asm:DrawPlayerHUDAndHPBar; behavior=the port never arms the low-health alarm, so the beeping that hardware starts when the player mon's HP bar turns red never sounds in any battle; evidence=pret's .setLowHealthAlarm tail sets BIT_LOW_HEALTH_ALARM in wLowHealthAlarm and is the game's ONLY setter, and all nine port writes to wLowHealthAlarm were enumerated 2026-08-13 as clears or restores except low_health_alarm.asm:48 which re-ORs the bit inside Music_DoLowHealthAlarm and is gated at :23 on the bit already being set, so the alarm can perpetuate but can never start; lifetime=retire when the alarm tail is translated, tracked in the battle plan core.asm-residue box}
 DrawPlayerHUDAndHPBar:
     ; ===== player HUD (lower-right) =====
     ; pret DrawPlayerHUDAndHPBar draws the frame FIRST: PlacePlayerHUDTiles +
@@ -6658,6 +6658,34 @@ DrawPlayerHUDAndHPBar:
     mov al, [ebp + wBattleMonMaxHP + 1]
     mov edi, W_TILEMAP + P_HPFRAC + 4
     call hud_print_num3
+    ; --- pret DrawPlayerHUDAndHPBar tail (core.asm:1929-1949): the low-health
+    ; --- alarm. Translated 2026-08-13; before that the port stopped at the HP
+    ; --- fraction and .setLowHealthAlarm, the game's ONLY setter of
+    ; --- BIT_LOW_HEALTH_ALARM, had no counterpart, so the red-HP beeping could
+    ; --- never start (Music_DoLowHealthAlarm returns unless the bit is already
+    ; --- set). The alias fork hid it from faithdiff for its whole life.
+    mov al, [ebp + wBattleMonHP]         ; ld a, [hli]
+    or  al, [ebp + wBattleMonHP + 1]     ; or [hl]  — BIG-ENDIAN pair, both halves
+    jz .fainted                          ; jr z
+    mov al, [ebp + wLowHealthAlarmDisabled]
+    test al, al                          ; and a — already won?
+    jnz .doneAlarm                       ; ret nz
+    mov al, [ebp + wPlayerHPBarColor]
+    cmp al, HP_BAR_RED                   ; cp HP_BAR_RED
+    je .setLowHealthAlarm                ; jr z
+.fainted:
+    ; pret: ld hl, wLowHealthAlarm / bit BIT_LOW_HEALTH_ALARM, [hl] / ld [hl], 0
+    ; The STORE happens before the branch on the bit — `ld [hl], 0` is
+    ; flag-neutral on SM83, so the ZF that `ret z` reads is still the BIT's.
+    mov al, [ebp + wLowHealthAlarm]
+    mov byte [ebp + wLowHealthAlarm], 0
+    test al, 1 << BIT_LOW_HEALTH_ALARM
+    jz .doneAlarm                        ; ret z — alarm was not running
+    mov byte [ebp + wChannelSoundIDs + CHAN5], 0
+.doneAlarm:
+    ret
+.setLowHealthAlarm:
+    or byte [ebp + wLowHealthAlarm], 1 << BIT_LOW_HEALTH_ALARM
     ret
 
 DrawEnemyHUDAndHPBar:
