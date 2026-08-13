@@ -2450,6 +2450,46 @@ provider shapes below, not their runtime behavior.
       must-hit its selector plus animation body. Cover wild, trainer, dungeon,
       and scripted inputs; a final `FRAME.BIN` alone is regression evidence, not
       proof that the transition executed.
+      - **THE STATIC HALF IS VERIFIED 2026-08-13 — the SELECTION is proven; the
+        EXECUTION is not, and that is what still owes a scenario.** Five checks,
+        each decomposed:
+        1. **Bit positions identical.** `BIT_TRAINER_BATTLE_TRANSITION` 0,
+           `BIT_STRONGER_` 1, `BIT_DUNGEON_` 2 — same as pret's `const_def`
+           block (`engine/battle/battle_transitions.asm:67-71`). An off-by-one
+           here would silently pick a different transition and NO faithdiff
+           would see it, because the composition is arithmetic, not calls.
+        2. **`BattleTransitions` table identical** — 8 entries, same routines,
+           same order, including `Spiral` appearing at BOTH `%001` and `%011`.
+        3. **`DungeonMaps1` / `DungeonMaps2` are BYTE-IDENTICAL TO THE ROM.**
+           The port writes these as symbolic names resolved through the
+           generated `assets/map_dims.inc`, so the source matching pret proves
+           nothing — the RESOLVED bytes were compared against `pokeyellow.gbc`
+           at `1c:4aa9` and `1c:4aae` (file offsets `0x070AA9` / `0x070AAE`).
+           **12 of 12 constants plus both `$FF` terminators match**:
+           VIRIDIAN_FOREST `33`, ROCK_TUNNEL_1F `52`, SEAFOAM_ISLANDS_1F `C0`,
+           ROCK_TUNNEL_B1F `E8`; MT_MOON_1F `3B`, MT_MOON_B2F `3D`,
+           SS_ANNE_1F `5F`, HALL_OF_FAME `76`, LAVENDER_POKECENTER `8D`,
+           LAVENDER_CUBONE_HOUSE `97`, SILPH_CO_2F `CF`, CERULEAN_CAVE_1F `E4`.
+           * NON-VACUITY: re-run with `SILPH_CO_2F` corrupted by one bit, the
+             comparison reports exactly 1 mismatch (`port=0xCE rom=0xCF`). The
+             zero is a real zero.
+        4. **All three selectors faithdiff CLEAN** —
+           `GetBattleTransitionID_WildOrTrainer`, `_CompareLevels`,
+           `_IsDungeonMap`.
+        5. **The dispatch composes faithfully.** `xor ebx, ebx` is pret's
+           `ld bc, 0`; the three selectors set bits in BL (pret's `c`); the
+           table index scales by 4 for the port's `dd` where pret double-adds
+           for `dw`. `_CompareLevels` also preserves pret's unbounded
+           all-fainted party scan, guarded at `BUG_FIX_LEVEL >= 2`.
+      - **WHAT REMAINS IS EXACTLY WHAT THE BOX ASKS FOR AND IT IS NOT DONE:**
+        a runtime checkpoint proving a given input actually EXECUTES the
+        selected animation body. Static agreement on the selection tables and
+        arithmetic is not that.
+      - **AND NO EXISTING SCENARIO CAN BE PROMOTED INTO ONE**, measured:
+        `wBattleTransitionSpiralDirection` is `0xCD47` and **no dumped GBSTATE
+        region covers it**, so the selector's own output is invisible to every
+        scenario in the registry. A checkpoint needs a new dumped region (which
+        changes the schema for all 69 goldens) or a new scenario.
 
 ## Stage 6 — battle animations and battle-mask closure
 
