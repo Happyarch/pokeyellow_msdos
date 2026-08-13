@@ -2763,8 +2763,32 @@ enemy-gauge clone tile ids and VRAM slots.
         `; ANIMATION=OFF:` convention (`core.asm:5296`), which is the port's
         tracked animation-deferral class rather than an unannotated divergence,
         so nothing is owed here now — but this is the ONLY member of the
-        original nine that a later stage should actually translate. Its call
-        sites need PROJ coordinates for the 40-wide canvas.
+        original nine that a later stage should actually translate.
+      * **ANALYSED 2026-08-13, AND "needs PROJ coordinates" UNDERSTATES IT.**
+        Projecting the two call sites is not enough, because pret's whole
+        MECHANISM is "shift until the pic leaves the 20-wide screen", and the
+        port's canvas is 40 wide with the GB window at +10. Computed:
+        * player pic GB(1,5) = canvas col 11, slid LEFT 9 -> **canvas col 2**;
+        * enemy pic GB(18,0) = canvas col 28, slid RIGHT 8 -> **canvas col 36**.
+        Both land ON the canvas, in the margin, and **both are outside the
+        compared window (cols 10-29)** — the same unguarded region where the
+        stray `120/362` hid until 2026-08-13. A naive translation would park a
+        trainer pic in the margin, visible on screen and reportable by no
+        golden.
+      * **THE DECISION IT NEEDS, so the next attempt starts from it:** keep
+        pret's step count and timing (8/9 steps, `DelayFrames 2` each — that is
+        the animation) and BLANK the residual cells at the end, as a
+        `DEVIATION{class=projection}`. The alternative — sliding far enough to
+        leave a 40-wide canvas — changes the animation's duration and is
+        therefore less faithful, not more.
+      * Also needed: `hSlideAmount` has no port memmap slot (`oak_speech2.asm`
+        keeps its own file-local `.bss` copy for the same pret name), so the
+        translation must either add the HRAM equate or follow that precedent.
+      * **NOT LANDED BLIND, deliberately.** The harness's hand-rolled intro
+        does not call it, so no scenario reaches it, and its end state lands in
+        the unguarded margin. Landing an unwitnessed change whose only artifact
+        appears where nothing can report it is the exact combination this plan
+        has spent several iterations learning to refuse.
       * **THE PRET-NAMED ENTRY POINT LANDED 2026-08-12.**
         `SlidePlayerAndEnemySilhouettesOnScreen` now exists in the mirror file
         `dos_port/src/engine/battle/core.asm` as `call LoadPlayerBackPic /
