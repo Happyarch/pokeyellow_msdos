@@ -2421,7 +2421,7 @@ HandleIfEnemyMoveMissed:                ; pret 5726 — Bide continuation
     jz  GetEnemyAnimationType
     mov al, [ebp + wEnemyMoveEffect]
     cmp al, EXPLODE_EFFECT
-    je  PlayEnemyMoveAnimation
+    je  HandleExplosionMiss
     jmp EnemyCheckIfFlyOrChargeEffect
 GetEnemyAnimationType:                  ; pret 5737 — Trapping continuation / multi-hit loop
     mov al, [ebp + wEnemyMoveEffect]
@@ -2429,6 +2429,20 @@ GetEnemyAnimationType:                  ; pret 5737 — Trapping continuation / 
     mov al, ANIMATIONTYPE_BLINK_ENEMY_MON_SPRITE
     jz  PlayEnemyMoveAnimation
     mov al, ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT
+    jmp PlayEnemyMoveAnimation          ; pret `jr PlayEnemyMoveAnimation` — the
+                                        ; explosion-miss arm now sits between
+                                        ; these two, so this can no longer fall
+                                        ; through as it used to
+HandleExplosionMiss:                    ; pret core.asm:5744
+    ; A IS THE ANIMATION TYPE, and pret zeroes it here. PlayEnemyMoveAnimation
+    ; below does `push af ... pop af / ld [wAnimationType], a`, so whatever is
+    ; in A at entry BECOMES wAnimationType. The port used to jump straight to
+    ; PlayEnemyMoveAnimation from the EXPLODE_EFFECT test above, still carrying
+    ; wEnemyMoveEffect in AL — so a missed enemy Explosion/Selfdestruct set
+    ; wAnimationType = EXPLODE_EFFECT instead of 0.
+    ;
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:HandleExplosionMiss; behavior=pret opens this label with call SwapPlayerAndEnemyLevels and the port does not; evidence=the port omits pret's level swaps as a consistent whole - it has neither the swap in EnemyCalcMoveDamage nor the un-swaps in the HandleIfEnemyMoveMissed continuations - and a complete enumeration of every wBattleMonLevel and wEnemyMonLevel reference in home and engine found none inside pret's swapped windows, so the two designs agree on every level read - adding a swap only here would leave it un-undone, which the note at the enemy Bide site already records; lifetime=retire if the full swap set is ever restored, tracked in regression-battle-swapplayerandenemylevels-never-called}
+    xor al, al                          ; pret `xor a` — animation type 0
 PlayEnemyMoveAnimation:
     push eax
     test byte [ebp + wEnemyBattleStatus2], 1 << HAS_SUBSTITUTE_UP

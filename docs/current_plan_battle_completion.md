@@ -2349,7 +2349,22 @@ enemy-gauge clone tile ids and VRAM slots.
       * **Residual uncertainty, stated:** this traced static references BY
         SYMBOL NAME. A pointer access reaching the byte without naming it would
         not appear, so the claim is "no NAMED reader depends on the swap".
-      * **ACTION: restore the 7 calls for STRUCTURAL fidelity** — it closes 4
+      * **A SEPARATE, REAL BUG WAS FOUND WHILE CHECKING THIS AND IS FIXED
+        2026-08-12.** pret's `HandleExplosionMiss` opens `call Swap` + **`xor a`**
+        and falls into `PlayEnemyMoveAnimation`, which does
+        `push af … pop af / ld [wAnimationType], a` — so **A at entry BECOMES
+        `wAnimationType`**. The port had no such label: the `EXPLODE_EFFECT`
+        test jumped straight to `PlayEnemyMoveAnimation` still carrying
+        `wEnemyMoveEffect` in AL, so a MISSED enemy Explosion/Selfdestruct set
+        `wAnimationType = EXPLODE_EFFECT` instead of 0. The label is now
+        restored with its `xor`, taking `HandleExplosionMiss` from `missing` to
+        `translated`. This is independent of the swaps.
+      * **A PRIOR AGENT ALREADY REASONED ABOUT THE SWAPS**, in a note at the
+        enemy Bide site: pret's swap there "pairs with the un-swaps in
+        HandleIfEnemyMoveMissed continuations, which the port stripped… A swap
+        here would never be undone." That is ACCURATE — the port omits the swaps
+        as a consistent whole — and it is why adding one in isolation is wrong.
+      * **ACTION (still open): restore the 7 calls for STRUCTURAL fidelity** — it closes 4
         faithdiff findings and matches pret exactly — **not as a bug fix.** Gate
         with `battle_damage` and `battle_faint` (both drive enemy attacks): green
         is the empirical confirmation of the analysis; red means the consumer has
