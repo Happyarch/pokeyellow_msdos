@@ -55,6 +55,14 @@ MIRROR_MOVE       equ 0x4D
 %define MENU_ROW    UI_ACTION_CUR_L_ROW ; pret wTopMenuItemY $e; rows +0/+2
 %define CUR_COL_L   UI_ACTION_CUR_L_COL ; left column  — FIGHT / PKMN
 %define CUR_COL_R   UI_ACTION_CUR_R_COL ; right column — ITEM / RUN
+; PROJ battle: the Safari menu replaces the action menu with full-width labels,
+; so its two cursor columns sit at different GB x than FIGHT/PKMN's. pret uses
+; raw `ld b, $1` / `ld b, $d`; these are the same values projected, from the
+; generated layout records (never literals — regression-battle-second-battle-hud-tile-band).
+%define SAF_ROW     UI_SAFARI_CUR_L_ROW ; == MENU_ROW: both are pret's row 14
+%define SAF_COL_L   UI_SAFARI_CUR_L_COL ; pret ld b, $1  — SAFARI BALL / THROW ROCK
+%define SAF_COL_R   UI_SAFARI_CUR_R_COL ; pret ld b, $d  — BAIT / RUN
+%define SAF_BALLS   UI_SAFARI_BALLS_COL ; pret hlcoord 7, 14 — the ball counter
 %define T_SPACE     0x7F
 %define T_H         0x7A        ; box ─
 %define T_BR        0x7E        ; box ┘
@@ -530,11 +538,32 @@ DisplayBattleMenu:
     mov [ebp + wLastMenuItem], al
     jmp .rightColumn
 .leftColumn:
-    ; clear the right-column cursor cells, watch RIGHT|A
-    mov byte [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_R], T_SPACE
-    mov byte [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_R], T_SPACE
+    ; pret 2151-2166. The blank tile is loaded into A BEFORE the branch and used
+    ; by both arms, and the compare's ZF crosses that flag-neutral load exactly
+    ; as pret writes it (`cp BATTLE_TYPE_SAFARI / ld a, ' ' / jr z`).
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
+    mov al, T_SPACE                     ; ld a, ' ' — flag-neutral
+    je .safariLeftColumn
+    ; clear the right-column cursor cells, top item X = the left column
+    mov [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_R], al
+    mov [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_R], al
+    mov bh, CUR_COL_L                   ; ld b, $9
+    jmp .leftColumn_WaitForInput
+.safariLeftColumn:
+    mov [ebp + W_TILEMAP + SAF_ROW * FW + SAF_COL_R], al
+    mov [ebp + W_TILEMAP + (SAF_ROW + 2) * FW + SAF_COL_R], al
+    ; The Safari menu shows how many balls are left. BH/BL are PrintNumber's
+    ; arguments and it clobbers them, which is why pret sets `ld b, $1` AFTER
+    ; the call and not before — keep that order.
+    mov esi, W_TILEMAP + SAF_ROW * FW + SAF_BALLS
+    mov edx, wNumSafariBalls
+    mov bh, 1                           ; lb bc, 1, 2 — 1 source byte
+    mov bl, 2                           ;               2 digits
+    call PrintNumber
+    mov bh, SAF_COL_L                   ; ld b, $1
+.leftColumn_WaitForInput:
     mov byte [ebp + wTopMenuItemY], MENU_ROW
-    mov byte [ebp + wTopMenuItemX], CUR_COL_L
+    mov [ebp + wTopMenuItemX], bh
     mov byte [ebp + wMaxMenuItem], 1
     mov byte [ebp + wMenuWatchedKeys], PAD_RIGHT | PAD_A
     call HandleMenuInput
@@ -542,11 +571,27 @@ DisplayBattleMenu:
     jnz .rightColumn
     jmp .AButtonPressed
 .rightColumn:
-    ; clear the left-column cursor cells, watch LEFT|A
-    mov byte [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_L], T_SPACE
-    mov byte [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_L], T_SPACE
+    ; pret 2184-2199, the mirror of the above.
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
+    mov al, T_SPACE                     ; ld a, ' ' — flag-neutral
+    je .safariRightColumn
+    ; clear the left-column cursor cells, top item X = the right column
+    mov [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_L], al
+    mov [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_L], al
+    mov bh, CUR_COL_R                   ; ld b, $f
+    jmp .rightColumn_WaitForInput
+.safariRightColumn:
+    mov [ebp + W_TILEMAP + SAF_ROW * FW + SAF_COL_L], al
+    mov [ebp + W_TILEMAP + (SAF_ROW + 2) * FW + SAF_COL_L], al
+    mov esi, W_TILEMAP + SAF_ROW * FW + SAF_BALLS
+    mov edx, wNumSafariBalls
+    mov bh, 1
+    mov bl, 2
+    call PrintNumber
+    mov bh, SAF_COL_R                   ; ld b, $d
+.rightColumn_WaitForInput:
     mov byte [ebp + wTopMenuItemY], MENU_ROW
-    mov byte [ebp + wTopMenuItemX], CUR_COL_R
+    mov [ebp + wTopMenuItemX], bh
     mov byte [ebp + wMaxMenuItem], 1
     mov byte [ebp + wMenuWatchedKeys], PAD_LEFT | PAD_A
     call HandleMenuInput

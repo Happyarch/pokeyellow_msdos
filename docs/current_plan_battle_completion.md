@@ -2076,13 +2076,22 @@ provider shapes below, not their runtime behavior.
           observes this box, and its PASS means the normal path is untouched.
           `DrawBattleMenuBox` is NOT dead: `DrawBattleMenu` still uses it for
           the non-interactive DEBUG dump harness.
-        * `:2151` / `:2184` are the Safari **cursor columns** — pret clears
-          different cells (13,14/13,16 and 1,14/1,16 instead of 15,x and 9,x)
-          and uses different top-item X values. These are raw GB coordinates and
-          need the battle projection, so they must go through the generated
-          `ui_layout_battle` records rather than literals (see
-          `regression-battle-second-battle-hud-tile-band` for what raw coords
-          cost last time).
+        * `:2151` / `:2184` — **DONE 2026-08-12. `DisplayBattleMenu` is now 6 of
+          pret's 6 Safari sites.** The Safari cursor columns, plus the ball
+          counter both arms print (`PrintNumber` at pret `hlcoord 7,14`), which
+          closed a FOURTH faithdiff finding (calls matched 12 → 13).
+          Three layout records were added to the sidecar and regenerated rather
+          than hand-written — `SAFARI_CUR_L` (gb 1 → col 11), `SAFARI_CUR_R`
+          (gb 13 → col 23) and `SAFARI_BALLS` (gb 7 → col 17), all row 14 → 17.
+          Verified additive: no existing record's offset changed.
+          *Flag trap, same family as the others:* pret loads the blank tile into
+          A **before** the branch (`cp BATTLE_TYPE_SAFARI / ld a, ' ' / jr z`),
+          and `PrintNumber` clobbers BH/BL — which is why pret sets the top-item
+          X **after** the call, not before. Both orders are preserved.
+          *Non-vacuity:* pointing the left column at the Safari column makes
+          `battle_menu` fail on exactly 2 tilemap cells (the cursor cells), so
+          the scenario observes them and its PASS means the normal path is
+          untouched.
 - [ ] Add one must-hit scenario per battle type, comparing the relevant menu,
       WRAM state, item/event result, and exit. Add live traversal only when its
       owning overworld story batch lands.
