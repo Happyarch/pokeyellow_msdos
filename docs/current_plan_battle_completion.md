@@ -2334,11 +2334,35 @@ provider shapes below, not their runtime behavior.
           mechanism change on the battle intro, so it WILL move
           `battle_intro` / `battle_menu` / `battle_safari` — the only three
           scenarios that compare a tilemap.
-        * Recommended shape for whoever takes it: translate and wire in ONE
-          commit, not two. A translated-but-unwired
-          `PrintBeginningBattleText` would be exactly the
-          translated-but-uncalled state that hid `SwapPlayerAndEnemyLevels`
-          for months, and this session added enough of those already.
+        * **TRANSLATED 2026-08-13, DELIBERATELY NOT WIRED — and that reverses
+          the recommendation this bullet used to carry.** The routine is in the
+          mirror `dos_port/src/engine/battle/common_text.asm` (appended to the
+          existing `RetreatMon` half of that file), `missing` -> `translated`,
+          faithdiff **11 pret / 11 port, 10 matched**. The single ADDED/DROPPED
+          pair is `DrawAllPokeballs` -> `DrawBattlePokeballs`, carrying its own
+          `DEVIATION{class=stub}` — the pokeballs forked-name debt. Stores 3/3
+          matched.
+        * **`PrintBeginningBattleText` HAS 0 PORT CALLERS. That is the exact
+          state that hid `SwapPlayerAndEnemyLevels`, and it is accepted here
+          only because the wiring turned out to be a RECONCILIATION rather than
+          a substitution** — which was not visible until pret's side was read
+          line by line: pret reaches it from the
+          `SlidePlayerAndEnemySilhouettesOnScreen` tail and then runs
+          `PrintText(.emptyString)` + `SaveScreenTilesToBuffer1` + `ClearScreen`
+          + a vBGMap0/vBGMap1 dance + `LoadScreenTilesFromBuffer1` + two
+          `ClearScreenArea`s, while the port's `_InitBattleCommon` runs
+          `DrawBattleIntroBox` -> `SaveBattleScreen` -> `DrawBattlePokeballs`
+          -> `WaitForAPress`. pret draws the ball row INSIDE
+          `PrintBeginningBattleText`; the port draws it after its screen
+          snapshot. Those two orders cannot be swapped one call at a time.
+        * **NEXT BOX, and it is the whole job: reconcile the two intro
+          sequences.** Gate it with `battle_intro`, `battle_menu` and
+          `battle_safari` — the only three scenarios that compare a tilemap —
+          and expect them to MOVE. Do not start it as a tail-of-iteration add.
+        * Pre-existing annotation corrected in the same commit: the
+          `DEVIATION{class=temporary}` at `init_battle.asm` had
+          `evidence=PrintBeginningBattleText is label_status missing`, which is
+          now false. Its evidence field records the reconciliation instead.
 
 ## Stage 5 — battle transitions
 

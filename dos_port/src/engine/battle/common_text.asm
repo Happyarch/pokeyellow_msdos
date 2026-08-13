@@ -43,9 +43,20 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "assets/map_dims.inc"        ; POKEMON_TOWER_3F / _7F map ids (generated)
+%include "assets/audio_constants.inc" ; SFX_TRAINER_APPEARED (generated)
 
 TX_FAR_CMD equ 0x17                 ; TextCommandProcessor TX_FAR  (src/home/text.asm)
 TX_ASM_CMD equ 0x08                 ; TextCommandProcessor TX_ASM
+; --- PrintBeginningBattleText constants (added 2026-08-13) ---
+; pret constants/item_constants.asm — the const_def run puts SILPH_SCOPE at $48.
+; File-local: this is its only consumer in the port so far.
+SILPH_SCOPE equ 0x48
+; pret macros/pikachu.asm `ldpikacry e, PikachuCryNN` resolves to the 0-based
+; index into PikachuCriesPointerTable. Same two values SendOutMon already uses
+; (core.asm .starterPikachu) — taken from there rather than re-derived.
+PIKACRY_37  equ 36
+PIKACRY_11  equ 10
 
 extern PrintText                    ; src/home/window.asm — ESI = stream
 extern Multiply                     ; src/home/math.asm — hMultiplicand x hMultiplier
@@ -55,6 +66,27 @@ extern _EnoughText                  ; assets/battle_text.inc
 extern _OKExclamationText           ; assets/battle_text.inc
 extern _GoodText                    ; assets/battle_text.inc
 extern ComeBackText                 ; assets/battle_text.inc (ordinary generated wrapper)
+; --- PrintBeginningBattleText callees (added 2026-08-13). PrintText above is
+; --- shared with RetreatMon's chain and is deliberately not re-declared. ---
+extern PlayCry                      ; src/home/pokemon.asm
+extern DelayFrames                  ; src/home/delay.asm — BL = frame count
+extern IsItemInBag                  ; src/home/map_objects.asm — BH = item, BH = qty out
+extern LoadEnemyMonData             ; engine/battle/core.asm
+extern MarowakAnim                  ; engine/battle/ghost_marowak_anim.asm
+extern PlaySound                    ; src/home/audio.asm
+extern WaitForSoundToFinish         ; src/home/delay.asm
+extern IsPlayerPikachuAsleepInParty ; pikachu_stubs.asm (STUB — returns CF=0)
+extern PlayPikachuSoundClip         ; src/audio/pikachu_pcm.asm — DL = clip index
+extern DrawBattlePokeballs          ; engine/battle/pokeballs.asm — see the DEVIATION
+; Generated Tier-1 streams (assets/battle_text.inc). gen_battle_text FLATTENS
+; `text_far _X` into a stream emitted under the WRAPPER name X, which is why
+; these carry no leading underscore — unlike the EXTRA_FAR raw streams above.
+extern WildMonAppearedText
+extern HookedMonAttackedText
+extern EnemyAppearedText
+extern TrainerWantsToFightText
+extern UnveiledGhostText
+extern GhostCantBeIDdText
 
 global RetreatMon
 global PlayerMon2Text
@@ -62,6 +94,7 @@ global EnoughText
 global OKExclamationText
 global GoodText
 global PrintComeBackText
+global PrintBeginningBattleText
 
 section .text
 
@@ -155,4 +188,98 @@ GoodText:
 
 PrintComeBackText:
     mov esi, ComeBackText                       ; pret: ld hl, ComeBackText
+    ret
+
+; ---------------------------------------------------------------------------
+; PrintBeginningBattleText — pret engine/battle/common_text.asm:1.
+;
+; DEVIATION{class=stub; pret=engine/battle/common_text.asm:PrintBeginningBattleText; behavior=the wild-battle arm calls the port-only DrawBattlePokeballs where pret does callfar DrawAllPokeballs; evidence=DrawAllPokeballs is label_status missing because the routine half of pret draw_hud_pokeball_gfx.asm still lives in engine/battle/pokeballs.asm under port-only names, which is the pokeballs forked-name debt whose remaining blocker is the shadow-OAM publish path; lifetime=retire when the 8 OAM pokeball routines take their pret names, tracked in battle-pokeballs-forked-name-debt-blocks-battle-intro}
+; ---------------------------------------------------------------------------
+PrintBeginningBattleText:
+    mov al, [ebp + wIsInBattle]
+    dec al
+    jnz .trainerBattle                   ; jr nz
+    mov al, [ebp + wCurMap]
+    cmp al, POKEMON_TOWER_3F
+    jb .notPokemonTower                  ; jr c
+    cmp al, POKEMON_TOWER_7F + 1
+    jb .pokemonTower                     ; jr c
+.notPokemonTower:
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_PIKACHU
+    jne .notPikachuBattle                ; jr nz
+    call IsPlayerPikachuAsleepInParty    ; callfar (STUB, returns CF=0)
+    mov dl, PIKACRY_37                   ; ldpikacry e, PikachuCry37
+    jc .asm_f4026                        ; jr c
+    mov dl, PIKACRY_11                   ; ldpikacry e, PikachuCry11
+.asm_f4026:
+    call PlayPikachuSoundClip            ; callfar
+    jmp .continue                        ; jr
+.notPikachuBattle:
+    mov al, [ebp + wEnemyMonSpecies2]
+    call PlayCry
+.continue:
+    mov esi, WildMonAppearedText
+    mov al, [ebp + wMoveMissed]
+    and al, al
+    jz .notFishing                       ; jr z
+    mov esi, HookedMonAttackedText       ; the Old/Good/Super Rod hook-up line
+.notFishing:
+    jmp .wildBattle                      ; jr
+.trainerBattle:
+    call .playSFX
+    mov bl, 20                           ; ld c, 20
+    call DelayFrames
+    mov esi, TrainerWantsToFightText
+.wildBattle:
+    mov al, [ebp + wBattleType]
+    and al, al
+    jnz .doNotDrawPokeballs              ; jr nz — no ball row in a special battle
+    push esi                             ; push hl
+    call DrawBattlePokeballs             ; pret: callfar DrawAllPokeballs (see DEVIATION)
+    pop esi                              ; pop hl
+.doNotDrawPokeballs:
+    call PrintText
+    jmp .done                            ; jr
+.pokemonTower:
+    mov bh, SILPH_SCOPE                  ; ld b, SILPH_SCOPE
+    call IsItemInBag                     ; returns BH = quantity
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wCurPartySpecies], al
+    cmp al, RESTLESS_SOUL
+    je .isMarowak                        ; jr z
+    mov al, bh                           ; ld a, b
+    and al, al
+    jz .noSilphScope                     ; jr z — no scope: the mon stays a GHOST
+    call LoadEnemyMonData                ; callfar
+    jmp .notPokemonTower                 ; jr
+.noSilphScope:
+    mov esi, EnemyAppearedText
+    call PrintText
+    mov esi, GhostCantBeIDdText
+    call PrintText
+    jmp .done                            ; jr
+.isMarowak:
+    mov al, bh                           ; ld a, b
+    and al, al
+    jz .noSilphScope                     ; jr z
+    mov esi, EnemyAppearedText
+    call PrintText
+    mov esi, UnveiledGhostText
+    call PrintText
+    call LoadEnemyMonData                ; callfar
+    call MarowakAnim                     ; callfar
+    mov esi, WildMonAppearedText
+    call PrintText
+    ; FALLS THROUGH into .playSFX — that is pret's control flow, not an
+    ; omission. pret has a blank line here and no jump, so the unveiled-Marowak
+    ; path plays the trainer-appeared SFX and returns through
+    ; WaitForSoundToFinish. Reproduced verbatim.
+.playSFX:
+    mov byte [ebp + wFrequencyModifier], 0   ; xor a / ld [wFrequencyModifier], a
+    mov byte [ebp + wTempoModifier], 0x80
+    mov al, SFX_TRAINER_APPEARED
+    call PlaySound
+    jmp WaitForSoundToFinish             ; jp
+.done:
     ret
