@@ -375,40 +375,6 @@ draw_animated_hp_bar:
     je draw_hp_bar
     jmp draw_enemy_hp_bar
 
-; --- print_num2 — 2-digit (tens, ones) at [ebp+EDI]; AL = value (<100) ---
-; Leading space if tens == 0. Clobbers EAX/ECX/EDX.
-print_num2:
-    movzx eax, al
-    xor edx, edx
-    mov ecx, 10
-    div ecx                              ; EAX=tens, EDX=ones
-    test al, al
-    jnz .tens
-    mov byte [ebp + edi], T_SP
-    jmp .ones
-.tens:
-    add al, CHAR_DIG0
-    mov [ebp + edi], al
-.ones:
-    add dl, CHAR_DIG0
-    mov [ebp + edi + 1], dl
-    ret
-
-; --- print_level — EDI = ":L" tile position, AL = level. Faithful to pret
-; PrintLevel (home/pokemon.asm:PrintLevel): level < 100 → ":L" + 2 digits at
-; EDI/EDI+1; level >= 100 → overwrite the ":L" tile with 3 digits at EDI.
-print_level:
-    cmp al, 100
-    jae .threeDigits
-    mov byte [ebp + edi], TILE_LV
-    inc edi
-    call print_num2
-    ret
-.threeDigits:
-    movzx eax, al                        ; 3 digits start where ":L" was
-    call hud_print_num3
-    ret
-
 ; --- print_num3 — 3-digit (hundreds, tens, ones) at [ebp+EDI]; AX = value ---
 ; Leading spaces for leading zeros. Clobbers EAX/EBX/ECX/EDX. (Mirrors party_menu.)
 hud_print_num3:

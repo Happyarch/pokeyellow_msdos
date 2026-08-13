@@ -319,6 +319,7 @@ extern PlaceEnemyHUDTiles              ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern PrintStatusConditionNotFainted  ; home/pokemon.asm -> PrintStatusAilment
 extern ClearScreenArea                 ; home/copy2.asm — BH rows x BL cols of blanks at ESI
 extern PrintLevel                      ; home/pokemon.asm — ':L' + wLoadedMonLevel at ESI
+extern DrawHP                          ; engine/pokemon/status_screen.asm — predef DrawHP
 ; --- HUD geometry for DrawHUDsAndHPBars and its two halves, moved here with
 ; --- them from battle_hud.asm. Values come from the generated battle UI layout
 ; --- (assets/ui_layout_battle.inc); never hand-edit an offset here.
@@ -6429,10 +6430,8 @@ global DrawHUDsAndHPBars
 global LoadPlayerBackPic
 global SlidePlayerAndEnemySilhouettesOnScreen ; pret entry point for the battle-entry slide
 extern LoadMonBackPicToVRAM            ; src/home/pics.asm — decode + 2x scale + merge
-extern draw_hp_bar                     ; battle_hud.asm — port-only HUD gauge/number helpers
 extern draw_enemy_hp_bar               ; battle_hud.asm
-extern calc_hp_pixels                  ; battle_hud.asm
-extern hud_print_num3                  ; battle_hud.asm (battle_menu.asm has its own file-local print_num3)
+extern calc_hp_pixels                  ; battle_hud.asm — port-only enemy-bar helpers
 extern SlideBattlePicsIn               ; src/home/pics.asm — the port's slide realization
 global TryRunningFromBattle
 extern WaitForAPress                   ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
@@ -6564,9 +6563,10 @@ CenterMonName:
 ; port kept a separate entry, is pret's own DrawEnemyHUDAndHPBar and is called
 ; by that name from _InitBattleCommon.
 ;
-; The port-only helpers these bodies call (draw_hp_bar, draw_enemy_hp_bar,
-; calc_hp_pixels, print_level, hud_print_num3) stay in battle_hud.asm and are now
-; global; they have no pret counterpart to take a name from.
+; The port-only helpers these bodies still call (calc_hp_pixels,
+; draw_enemy_hp_bar — both enemy-side only) stay in battle_hud.asm; they have
+; no pret counterpart to take a name from. The player side no longer uses any
+; of them: it goes through pret's DrawHP.
 ;
 ; RETIRING THE FORK MADE FOUR REAL DIVERGENCES VISIBLE FOR THE FIRST TIME. They
 ; are pre-existing, not introduced by the move, and the alias is exactly why
@@ -6667,30 +6667,28 @@ DrawPlayerHUDAndHPBar:
     mov esi, W_TILEMAP + P_LV
     call PrintLevel
 .doNotPrintLevel:
-    mov ebx, wBattleMonHP
-    mov esi, wBattleMonMaxHP
-    call calc_hp_pixels
-    ; pret DrawPlayerHUDAndHPBar:1927 calls GetBattleHealthBarColor, not the bare
-    ; GetHealthBarColor: it republishes the battle palette ONLY on a colour
-    ; transition. The joint SetPal_Battle in DrawHUDsAndHPBars stays — it is the
-    ; port's own two-slot publish and republishing the same values is harmless —
-    ; but the pret call site is now present rather than dropped.
+    ; pret :1922-1926 — `ld a,[wLoadedMonSpecies] / ld [wCurPartySpecies],a /
+    ; hlcoord 10,9 / predef DrawHP`. DrawHP draws the gauge AND the cur/max
+    ; fraction (one row down, one column right, at [text_row_stride]) and
+    ; returns DL = bar pixels, which is exactly what GetBattleHealthBarColor
+    ; consumes next — that return is why pret can order them this way.
+    ; Replaces the port-only calc_hp_pixels + draw_hp_bar + hud_print_num3
+    ; trio. The wLoadedMon staging feeding it is the two CopyDatas above:
+    ; MEASURED against pret macros/ram.asm — copy 1 is battle_struct offsets
+    ; 0..11 into party_struct 0..11 (same fields, so wLoadedMonHP is right) and
+    ; copy 2 is battle_struct Level..Special into party_struct Level..Special
+    ; (so wLoadedMonMaxHP at party offset 34 is right). The two structs differ
+    ; in the middle, which is why this needed checking rather than assuming.
+    mov al, [ebp + wLoadedMonSpecies]
+    mov [ebp + wCurPartySpecies], al
+    mov esi, W_TILEMAP + P_HPBAR
+    call DrawHP
+    ; pret :1928 — GetBattleHealthBarColor, not the bare GetHealthBarColor: it
+    ; republishes the battle palette ONLY on a colour transition. The joint
+    ; SetPal_Battle in DrawHUDsAndHPBars stays — it is the port's own two-slot
+    ; publish and republishing the same values is harmless.
     mov esi, wPlayerHPBarColor
     call GetBattleHealthBarColor
-    mov edi, W_TILEMAP + P_HPBAR
-    call draw_hp_bar
-    ; player HP fraction: cur / max
-    movzx eax, byte [ebp + wBattleMonHP]
-    shl eax, 8
-    mov al, [ebp + wBattleMonHP + 1]
-    mov edi, W_TILEMAP + P_HPFRAC
-    call hud_print_num3
-    mov byte [ebp + W_TILEMAP + P_HPFRAC + 3], CHAR_SLSH
-    movzx eax, byte [ebp + wBattleMonMaxHP]
-    shl eax, 8
-    mov al, [ebp + wBattleMonMaxHP + 1]
-    mov edi, W_TILEMAP + P_HPFRAC + 4
-    call hud_print_num3
     ; --- pret DrawPlayerHUDAndHPBar tail (core.asm:1929-1949): the low-health
     ; --- alarm. Translated 2026-08-13; before that the port stopped at the HP
     ; --- fraction and .setLowHealthAlarm, the game's ONLY setter of

@@ -2636,7 +2636,39 @@ enemy-gauge clone tile ids and VRAM slots.
              not a printer. **ANALYSED 2026-08-13 and it is TWO items, one
              actionable and one blocked. Not attempted; this is the analysis,
              not a fix.**
-             * **Player half — plausibly actionable.** pret does
+             * **PLAYER HALF DONE 2026-08-13.** It now runs pret's
+               `ld a,[wLoadedMonSpecies] / ld [wCurPartySpecies],a /
+               hlcoord 10,9 / predef DrawHP`, replacing the port-only
+               `calc_hp_pixels` + `draw_hp_bar` + `hud_print_num3` trio.
+               **`DrawPlayerHUDAndHPBar` faithdiff is now 9 pret / 9 port with
+               9 MATCHED — zero DROPPED, zero ADDED calls**, and the
+               `[wCurPartySpecies]` store matches too. The three store lines
+               left are the documented `hAutoBGTransferEnabled` deviation and
+               two ADDEDs that are the faithdiff store-matching limitation
+               (pret writes `wLowHealthAlarm` / `wChannelSoundIDs` through
+               `hl`).
+               * The offset question this box flagged RESOLVED by reading
+                 `macros/ram.asm`: copy 1 moves battle_struct offsets 0..11 into
+                 party_struct 0..11 (same fields, so `wLoadedMonHP` is right),
+                 copy 2 moves battle_struct `Level..Special` into party_struct
+                 `Level..Special` (so `wLoadedMonMaxHP` at party offset 34 is
+                 right). The two structs genuinely differ in the middle, which
+                 is why it needed checking.
+               * `DrawHP` returns DL = bar pixels, which is exactly what
+                 `GetBattleHealthBarColor` consumes next — that return is why
+                 pret can order them this way, and the port now does.
+               * MEASURED: `run_headless DEBUG_BATTLE_WRAP=1` before vs after,
+                 **0 canvas cells changed**, and the player rectangle is 0/55
+                 mismatches against the hardware golden. Because "0 changed"
+                 is only worth as much as the check's sensitivity, a second
+                 very different input was probed — HP poked to 7 of 362 — and
+                 `DrawHP` produced `__7/362` with a 1-pixel gauge sliver, i.e.
+                 the right cells and the right right-aligned formatting.
+               * Dead after the switch and removed: `print_level`,
+                 `print_num2`. NOT removed: `draw_hp_bar`, which is still live
+                 — `AnimateHPBar` tail-jumps to it (`battle_hud.asm:375`).
+                 Checking that before deleting is the whole reason it survived.
+             * *(historical)* **Player half — plausibly actionable.** pret does
                `hlcoord 10,9 / predef DrawHP`, and `DrawHP` draws the bar AND
                the "cur/max" fraction. The port's coordinates already line up:
                `UI_PLAYER_HPBAR` is GB(10,9) and `UI_PLAYER_HPFRAC` is
