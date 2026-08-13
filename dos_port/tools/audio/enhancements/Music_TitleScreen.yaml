@@ -1,0 +1,177 @@
+# Music_TitleScreen — tier 1–3 enhancement (Phase E).
+#
+# G major, 4/4, tempo 144. audio/music/titlescreen.asm is a 4-channel
+# fanfare: 2-measure slam intro, then a looping body that states the
+# iconic G–B–D title melody four times and lands on a dominant-pedal
+# D-hit coda. analysis/Music_TitleScreen.yaml: 27 grid measures, loop
+# at m3 b2 (frame 243), end frame 2835. Melody is ch2 (D3–D6); ch1 is
+# the register-jumping inner line (D3–D5); ch3 is the high wave ostinato
+# (C3–D6); ch4 is continuous noise. Key score 0.784 G major (runner-up
+# D minor 0.681 — the D-pedal tail pulling the correlation).
+#
+# Score analysis (Title Screen): the rising major-triad motive (G–B–D)
+# and the chromatic F–E–D#–D descent are the two cells Masuda restates
+# across the whole generation. The I–bVII–I shift under the first and
+# third statements is "the most important chord progression found in
+# the entire game." The last four measures are a dominant pedal with
+# portamento glissandi, expanding the Opening Battle! cadence — not a
+# PAC. Register jumping on ch1 is an 8-bit identity, not a gap to fill.
+# Do not "correct" the bVII, the modal-mixture i / bIII later, or the
+# leaps.
+#
+# Register gap: nothing in the GB mix sits below C3 (wave floor). Ch1/ch2
+# pack D3–D6; ch3 saturates C3–G4 with the ostinato and later rides the
+# D glissandi up to D6. A mid-register pad unison-collides with the
+# jumping inner line the score analysis tells us to leave alone. The
+# empty band is the whole low end below C3 — the foundation the tiny
+# speaker omitted.
+#
+#   Tier 1 (OPL3 + MT-32/GM), title-theme budget of 2 (the GB already
+#   runs a full band; mid-register is Masuda's):
+#     title_bass — chord roots in octave 1, one note per structural
+#                  change. I and bVII are stated as G1 / F1 so the
+#                  signature progression reads in the floor.
+#     title_pad  — tenor in A2–B2 (E3 only at the IV climax) on the
+#                  3rd, or the 5th when the 3rd would unison or double
+#                  a leading tone. Stepwise / common-tone. Never the
+#                  same pitch-class as the bass.
+#
+#   Tier 2 (MT-32/GM only):
+#     triad_horn — French horn on D2 (5th of I / i). Sounds only on G
+#                  pillars so the I–bVII contrast stays a two-chord
+#                  event, not a washed-out pad. Rests the D pedal
+#                  (bass already owns D2; the pedal must stay thin).
+#
+#   Tier 3 (MT-32/GM only):
+#     title_bells — short G5 (the triad root, one octave above the
+#                   melody's G4) at the intro slam and each of the four
+#                   statement downbeats. One D6 at the pedal entry.
+#                   Not a music box.
+#
+# Loop seam: no note may cross frame 243 (gen_enh_streams.py skips the
+# song if one does). The intro is written literal up to m3 b2; the body
+# starts on that beat. The last note of each channel is shaved so it
+# releases at or before frame 2835. Authority: notes and loop point
+# from the analysis / pret source. Chord labels follow the analysis;
+# I/i sharing a G root are left on G1 (do not "fix" Gm7 to G).
+#
+schema: 1
+song: Music_TitleScreen
+
+channels:
+  # ── Tier 1 ────────────────────────────────────────────────────────────────
+  - name: title_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; sits under the pulse shim
+    mt32_patch: 29               # SynBass1 (round, sustaining)
+    gm_program: 39               # Synth Bass 1
+    pan: center
+    volume: 60
+    velocity: 80
+    events:
+      # Intro (m1–m3 b2). G ostinato then bVII pickup; release on the loop.
+      - {m: 1, b: 1, d: 6, n: G1}           # Gmaj7 / G (I) through the slam
+      - {m: 2, b: 3, d: 3, n: F1}           # F (bVII) triplets + F# pickup
+      # Loop body. m3 b2 is frame 243 — first legal body attack.
+      - {m: 3,  b: 2, d: 2, n: G1}          # G (I) — statement 1 triad
+      - {m: 4,  b: 1, d: 2, n: D2}          # Dm7 (v7)
+      - {m: 4,  b: 3, d: 2, n: F1}          # F (bVII) — signature I–bVII
+      - {m: 5,  b: 1, d: 4, n: D2}          # Dm7 / Dm (v)
+      - {m: 6,  b: 1, d: 8, n: G1}          # G7 / G (I) through m7
+      - {m: 8,  b: 1, d: 2, n: D2}          # Dm7 (v7)
+      - {m: 8,  b: 3, d: 2, n: F1}          # Fmaj7 (bVII7)
+      - {m: 9,  b: 1, d: 2, n: C2}          # Cmaj7 (IV7)
+      - {m: 9,  b: 3, d: 2, n: G1}          # G7 (I7)
+      - {m: 10, b: 1, d: 2, n: E2}          # Em7 (vi7)
+      - {m: 10, b: 3, d: 6, n: G1}          # G (I) through m11
+      - {m: 12, b: 1, d: 2, n: D2}          # Dm7 (v7)
+      - {m: 12, b: 3, d: 2, n: F1}          # F (bVII)
+      - {m: 13, b: 1, d: 4, n: D2}          # Dm7 (v7)
+      - {m: 14, b: 1, d: 8, n: G1}          # G7 / G (I) through m15
+      - {m: 16, b: 1, d: 2, n: D2}          # Dm7 (v7)
+      - {m: 16, b: 3, d: 2, n: F1}          # Fmaj7 (bVII7)
+      - {m: 17, b: 1, d: 2, n: C2}          # C (IV)
+      - {m: 17, b: 3, d: 4, n: G1}          # Gm7 (i7) → G (I) — same root
+      - {m: 18, b: 3, d: 2, n: D2}          # Dm (v)
+      - {m: 19, b: 1, d: 6, n: A#1}         # A#maj7 / A# (bIII) — mixture
+      - {m: 20, b: 3, d: 2, n: G1}          # Gm7 (i7)
+      - {m: 21, b: 1, d: 8, n: C2}          # Cmaj7 / C (IV) climax
+      - {m: 23, b: 1, d: 14, n: D2}         # D pedal (V) — do not resolve
+      - {m: 26, b: 3, d: 2, n: C2}          # C (IV) turnaround
+      - {m: 27, b: 1, d: 0.95, n: C2}       # Cmaj7 — shaved for song end
+
+  - name: title_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not strings
+    mt32_patch: 49               # Str Sect 1 — cascades as real strings on MT-32
+    gm_program: 90               # Pad 2 (warm)
+    pan: center
+    volume: 58
+    velocity: 76
+    events:
+      # 3rd of I (B2) held through the slam; 3rd of bVII (A2) is a step.
+      - {m: 1, b: 1, d: 6, n: B2}           # G, 3rd
+      - {m: 2, b: 3, d: 3, n: A2}           # F, 3rd
+      - {m: 3,  b: 2, d: 2, n: B2}          # G, 3rd
+      - {m: 4,  b: 1, d: 2, n: A2}          # Dm, 5th (common tone into F)
+      - {m: 4,  b: 3, d: 2, n: A2}          # F, 3rd
+      - {m: 5,  b: 1, d: 4, n: A2}          # Dm, 5th
+      - {m: 6,  b: 1, d: 8, n: B2}          # G, 3rd
+      - {m: 8,  b: 1, d: 2, n: A2}          # Dm, 5th
+      - {m: 8,  b: 3, d: 2, n: A2}          # Fmaj7, 3rd
+      - {m: 9,  b: 1, d: 2, n: G2}          # C, 5th (A2→G2 step; 3rd is E3)
+      - {m: 9,  b: 3, d: 2, n: B2}          # G, 3rd
+      - {m: 10, b: 1, d: 8, n: B2}          # Em 5th → G 3rd (common tone)
+      - {m: 12, b: 1, d: 2, n: A2}          # Dm, 5th
+      - {m: 12, b: 3, d: 2, n: A2}          # F, 3rd
+      - {m: 13, b: 1, d: 4, n: A2}          # Dm, 5th
+      - {m: 14, b: 1, d: 8, n: B2}          # G, 3rd
+      - {m: 16, b: 1, d: 2, n: A2}          # Dm, 5th
+      - {m: 16, b: 3, d: 2, n: A2}          # Fmaj7, 3rd
+      - {m: 17, b: 1, d: 2, n: G2}          # C, 5th
+      - {m: 17, b: 3, d: 2, n: A#2}         # Gm, 3rd — mixture color
+      - {m: 18, b: 1, d: 2, n: B2}          # G, 3rd (Bb→B chromatic)
+      - {m: 18, b: 3, d: 2, n: A2}          # Dm, 5th
+      - {m: 19, b: 1, d: 6, n: F2}          # A#, 5th
+      - {m: 20, b: 3, d: 2, n: A#2}         # Gm, 3rd
+      - {m: 21, b: 1, d: 8, n: E3}          # C, 3rd — IV climax (E3 is empty)
+      - {m: 23, b: 1, d: 14, n: A2}         # D, 5th (no F# — pedal stays open)
+      - {m: 26, b: 3, d: 2, n: E3}          # C, 3rd (A2→E3 avoids P5∥ with bass)
+      - {m: 27, b: 1, d: 0.95, n: E3}       # Cmaj7, 3rd
+
+  # ── Tier 2 ────────────────────────────────────────────────────────────────
+  # Cascaded tier-1 pad is already the string tenor on MT-32, so do not
+  # add another mid pad. Horn is the thing FM cannot do: a slow brass
+  # swell that reads as the triad's 5th. I pillars only — bVII and the
+  # D pedal stay thin so the form still reads.
+  - name: triad_horn
+    tier: 2
+    mt32_patch: 93               # Fr Horn 1
+    gm_program: 61               # French Horn
+    pan: left
+    volume: 52
+    velocity: 72
+    events:
+      - {m: 1,  b: 1, d: 6, n: D2}          # intro I, 5th
+      - {m: 3,  b: 2, d: 2, n: D2}          # statement 1
+      - {m: 6,  b: 1, d: 8, n: D2}          # statement 2 I return
+      - {m: 9,  b: 3, d: 2, n: D2}          # G7 after IV
+      - {m: 10, b: 3, d: 6, n: D2}          # statement 3 I
+      - {m: 14, b: 1, d: 8, n: D2}          # statement 4 I
+      - {m: 17, b: 3, d: 4, n: D2}          # i7 → I (same 5th)
+
+  # ── Tier 3 ────────────────────────────────────────────────────────────────
+  - name: title_bells
+    tier: 3
+    mt32_patch: 103              # Tube Bell
+    gm_program: 15               # Tubular Bells
+    pan: right
+    volume: 56
+    velocity: 78
+    events:
+      - {m: 1,  b: 3, d: 0.5, n: G5}        # intro slam (melody is G4)
+      - {m: 3,  b: 3, d: 0.5, n: G5}        # statement 1 triad
+      - {m: 7,  b: 3, d: 0.5, n: G5}        # statement 2
+      - {m: 11, b: 3, d: 0.5, n: G5}        # statement 3
+      - {m: 15, b: 3, d: 0.5, n: G5}        # statement 4
+      - {m: 23, b: 1, d: 1,   n: D6}        # dominant-pedal entry
