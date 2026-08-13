@@ -2037,12 +2037,43 @@ provider shapes below, not their runtime behavior.
           Generated label count 150 → 152, both new labels Safari.
         * **UNWITNESSED**: nothing calls it yet. Its caller is the Safari turn
           flow, which is the rest of this box.
-      - **STILL MEASURED AS OPEN:** pret has **12** `BATTLE_TYPE_SAFARI` sites
-        against the port's 9. (An earlier note here said "13/32 branch
-        coverage"; that figure's provenance could not be established and it
-        does not correspond to this measurement — re-measure rather than citing
-        it.) The remaining implementation is the turn/flee divergence in
-        `core.asm` around those sites.
+      - **THE GAP IS DECOMPOSED PER ROUTINE (2026-08-12), and it is narrower
+        than the totals suggest.** pret has 12 `BATTLE_TYPE_SAFARI` sites to the
+        port's 9, but the shortfall is **entirely inside `DisplayBattleMenu`**:
+          `TryRunningFromBattle`  pret 1 / port 1  ✔
+          `UseBagItem`            pret 2 / port 2  ✔
+          `PartyMenuOrRockOrRun`  pret 1 / port 1  ✔
+          `DisplayBattleMenu`     pret 6 / port 1  ← the whole gap
+          (+ 4 matched sites in `item_effects.asm`)
+        (An earlier note said "13/32 branch coverage"; that figure could not be
+        reconciled with any measurement reproducible here — re-measure rather
+        than citing it.)
+      - **TWO OF THE SIX RESTORED 2026-08-12**, both pure selection logic with
+        no coordinate projection, so they were separable from the rest:
+        * pret `:2224` — a Safari battle **skips the ITEM/PKMN id swap**, since
+          its four items are already in menu order. The compare's ZF crosses two
+          flag-neutral loads exactly as pret writes it; anything flag-writing
+          between silently makes Safari take the swap.
+        * pret `:2246` — the upper-left item is **SAFARI BALL, not FIGHT**
+          (`jp UseBagItem`, not a call — `UseBagItem` owns the rest of the turn).
+        `DisplayBattleMenu` code sites: 1 → 3 of pret's 6.
+      - **THE REMAINING THREE ARE ENTANGLED WITH AN EXISTING DIVERGENCE**, which
+        is why they were not done in the same pass:
+        * `:2086` needs the **`SAFARI_BATTLE_MENU_TEMPLATE`** box. The data all
+          exists already (constant `$1B`, a `text_box.asm` entry and a
+          `ui_layout_battle` record) — what is missing is a way to select it,
+          because the port calls a port-only `DrawBattleMenuBox` wrapper where
+          pret sets `wTextBoxID` and calls `DisplayTextBoxID`. faithdiff already
+          reports `DisplayTextBoxID` and `[wTextBoxID]` as DROPPED on this
+          routine (pre-existing), so restoring the Safari template and closing
+          that finding are the same job.
+        * `:2151` / `:2184` are the Safari **cursor columns** — pret clears
+          different cells (13,14/13,16 and 1,14/1,16 instead of 15,x and 9,x)
+          and uses different top-item X values. These are raw GB coordinates and
+          need the battle projection, so they must go through the generated
+          `ui_layout_battle` records rather than literals (see
+          `regression-battle-second-battle-hud-tile-band` for what raw coords
+          cost last time).
 - [ ] Add one must-hit scenario per battle type, comparing the relevant menu,
       WRAM state, item/event result, and exit. Add live traversal only when its
       owning overworld story batch lands.

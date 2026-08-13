@@ -529,8 +529,22 @@ DisplayBattleMenu:
     add al, 2
     mov [ebp + wCurrentMenuItem], al
 .AButtonPressed:
+    ; pret 2224-2231. THE SAFARI TEST COMES FIRST AND ITS FLAGS CROSS TWO LOADS,
+    ; exactly as pret writes it:
+    ;     cp BATTLE_TYPE_SAFARI
+    ;     ld a, [wCurrentMenuItem]
+    ;     ld [wBattleAndStartSavedMenuItem], a
+    ;     jr z, .handleMenuSelection
+    ; The two `ld`s are flag-neutral on SM83 and the two `mov`s are flag-neutral
+    ; in x86, so the branch still reads the COMPARE's ZF. Putting the compare
+    ; after the loads, or using anything flag-writing between, silently makes
+    ; the Safari menu take the ID swap below.
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
     mov al, [ebp + wCurrentMenuItem]
     mov [ebp + wBattleAndStartSavedMenuItem], al
+    ; A Safari battle SKIPS the swap: its four items (SAFARI BALL / BAIT / ROCK
+    ; / RUN) are already in menu order, so ids 0-3 mean what they say.
+    je .handleMenuSelection
     ; swap ITEM(1)/PKMN(2) ids (Gen-1 English versions swapped their on-screen order)
     cmp al, 1
     jne .notItemMenu
@@ -543,11 +557,20 @@ DisplayBattleMenu:
 .handleMenuSelection:
     and al, al
     jnz .upperLeftMenuItemWasNotSelected
+    ; pret 2249-2251: in a Safari battle the upper-left item is not FIGHT, it is
+    ; SAFARI BALL — the only way to throw one, since the Safari bag has no ball.
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
+    je .throwSafariBallWasSelected
     ; --- FIGHT selected ---
     mov byte [ebp + wNumRunAttempts], 0
     call LoadScreenTilesFromBuffer1     ; restore clean screen and return (CF=0)
     clc
     ret
+.throwSafariBallWasSelected:
+    ; pret 2256-2259. Note it is `jp UseBagItem`, NOT a call: UseBagItem owns the
+    ; rest of the turn from here (it is the same tail the BAIT branch below uses).
+    mov byte [ebp + wCurItem], SAFARI_BALL
+    jmp UseBagItem
 .upperLeftMenuItemWasNotSelected:
     cmp al, 2
     jne .partyMenuOrRun
