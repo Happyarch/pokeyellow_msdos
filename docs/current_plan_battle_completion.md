@@ -2702,6 +2702,14 @@ enemy-gauge clone tile ids and VRAM slots.
         sensitive. `goldens-verify` regenerated all 72 artifacts with no
         drift. Elemental, ball, shake/blink and option-off remain open in this
         same box.
+      - **ELEMENTAL PROBE BLOCKED 2026-08-13.** A scoped `THUNDERSHOCK`
+        `DEBUG_BATTLE_ANIM_ELEMENTAL` gate was attempted using the same real
+        `ExecutePlayerMove` setup, but NASM rejects the enabled build with
+        `debug_dump.asm:4297: label DumpGBState.ret changed during code
+        generation` followed by the later dump labels. No elemental source,
+        registry or golden artifact was retained. Resolve the debug-gate
+        layout/late-label cause before retrying; do not guess at a checkpoint
+        or add a mask to turn this into a green result.
 
 ## Stage 7 — retirement and archival
 
