@@ -2996,6 +2996,32 @@ enemy-gauge clone tile ids and VRAM slots.
                    surgically: regions 17 -> 23, exactly the six names, no
                    pre-existing region's bytes changed, frame unchanged at
                    6163.
+      - **THE STRIDE LEAK WAS SWEPT AS A CLASS 2026-08-13, AND IT CAME UP
+        CLEAN.** The fix above raised an obvious question the goldens cannot
+        answer: **the compared window is GB cols 10-29, so ANYTHING the port
+        draws outside it is invisible to every scenario by construction.** That
+        is exactly where the stray `120/362` had been hiding.
+        * **The check:** dump the port's whole 40x25 canvas and report every
+          non-blank cell at canvas cols 0-9 or 30-39. Cheap, and it needs no
+          golden at all — hardware has no opinion about those columns.
+        * **Result: 0 stray cells across five battle scenarios** —
+          `battle_item_potion` (post-fix), `battle_wrap`, `battle_menu`,
+          `battle_safari`, `battle_faint`.
+        * **NON-VACUITY, from the pre-fix dump:** the same scan on the
+          PRE-fix potion run reports exactly 7 cells —
+          `F7 F8 F6 F3 F9 FC F8` at row 13, cols 1-7 = "120/362". The zero is
+          a real zero.
+        * Every other `text_row_stride` consumer was classified while sweeping.
+          Safe by caller: `print_type.asm`'s two reads are `PrintMonType` /
+          `EraseType2Text`, whose only caller `StatusScreen` sets 40
+          explicitly; `PrintMoveType` reaches `PlaceString` and never touches
+          the stride. `home/pokemon.asm:539` places the 7x7 pic at the runtime
+          stride, but it draws INSIDE the window so the goldens do gate it.
+          Structurally identical to the bug and worth watching:
+          `UpdateHPBar_PrintHPNumber` (`hp_bar.asm:285`) uses the same
+          `stride + 1` expression and is reached from `ItemUseMedicine` and
+          `AIPrintItemUseAndUpdateHPBar` — measured clean in these five, but it
+          is the same shape.
              Both halves now print the status condition one cell right of the
              level cell and print the level only when there is none, per pret
              :1913-1918 / :1963-1972. **HARDWARE TRUTH CAME OUT OF THE GOLDEN
