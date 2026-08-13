@@ -2922,7 +2922,9 @@ enemy-gauge clone tile ids and VRAM slots.
         searching had found neither. Memory:
         `battle-core-missing-label-inventory`.
 - [ ] **RESIDUE OF THE CORE.ASM INVENTORY (opened 2026-08-12 when that box
-      closed).** Three items, none of them blocked, all measured:
+      closed).** Three items, all measured: two are complete and the remaining
+      `SlideTrainerPicOffScreen` translation is blocked on a witness that can
+      compare its projected final state.
       * **The HUD alias fork — RETIRED 2026-08-13 (`0698bb0eb`).** The three
         bodies moved from the port-only `battle_hud.asm` into the mirror file
         under pret's names. faithdiff, before -> after:
