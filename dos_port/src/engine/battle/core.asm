@@ -6404,7 +6404,9 @@ global DrawEnemyHUDAndHPBar
 global DrawPlayerHUDAndHPBar
 global DrawHUDsAndHPBars
 global LoadPlayerBackPic
+global SlidePlayerAndEnemySilhouettesOnScreen ; pret entry point for the battle-entry slide
 extern LoadMonBackPicToVRAM            ; src/home/pics.asm — decode + 2x scale + merge
+extern SlideBattlePicsIn               ; src/home/pics.asm — the port's slide realization
 global TryRunningFromBattle
 extern DrawEnemyHUD                    ; battle_hud.asm — enemy name+level+HP bar+frame
 extern DrawPlayerHUD                   ; battle_hud.asm — player name+level+HP bar+frame
@@ -6584,6 +6586,33 @@ LoadPlayerBackPic:
     mov byte [ebp + wSpriteFlipped], 0
     mov edx, GB_VCHARS2 + 0x31 * 16        ; vBackPic -> signed tile ID $31
     jmp LoadMonBackPicToVRAM               ; decode -> 2x scale -> merge to VRAM
+
+; ---------------------------------------------------------------------------
+; SlidePlayerAndEnemySilhouettesOnScreen — pret engine/battle/core.asm:9. The
+; pret-named ENTRY POINT for the battle-entry silhouette slide, which the port
+; realizes with a different mechanism (SlideBattlePicsIn, src/home/pics.asm).
+;
+; This exists so pret's one call site — `callfar
+; SlidePlayerAndEnemySilhouettesOnScreen` at engine/battle/init_battle.asm:103
+; — has a counterpart by name instead of an open-coded pair, per the
+; Preserve-pret-Labels rule ("where pret's structure splits differently in the
+; port, keep pret's names on both halves"). SlideBattlePicsIn keeps its
+; port-only name because it has NO pret counterpart to inherit one from: pret's
+; slide is inline in this routine's .slideSilhouettesLoop.
+;
+; AUDITED 2026-08-12 (battle plan, core.asm inventory): the omitted pret
+; internals are a HAL boundary, not a fork. SetScrollXForSlidingPlayerBodyLeft
+; is a self-loop on rLY (`ldh a,[rLY] / cp l / jr nz` to its own label) and rLY
+; is inert in the port, so a literal translation never terminates;
+; SlidePlayerHeadLeft exists only because that raster trick forces the player's
+; head to be an OBJ while his body is BG, and the port composites both pics into
+; W_TILEMAP with no such split.
+;
+; DEVIATION{class=HAL; pret=engine/battle/core.asm:SlidePlayerAndEnemySilhouettesOnScreen; behavior=the per-scanline SCX raster slide plus its OBJ-head helper are replaced by a whole-canvas tilemap recomposition per step in SlideBattlePicsIn, and this entry point omits pret's DisableLCD or EnableLCD bracket, the vBGMap0 clear and work-RAM-to-VRAM tilemap copy, the hWY and hAutoBGTransferEnabled and hTileAnimations register staging, the trailing CopyUncompressedPicToTilemap plus HideSprites, and the closing jpfar PrintBeginningBattleText; evidence=SetScrollXForSlidingPlayerBodyLeft polls rLY in a self-loop and rLY is never written by the port so a literal translation cannot terminate, the port has no torus tilemap or auto-BG-transfer for the VRAM copy and register staging to drive, and the intro text plus final pic placement are already owned by the caller in _InitBattleCommon which calls DrawBattleIntroBox or DrawEmptyDialogBox after this returns; lifetime=permanent, the software compositor is by design}
+; ---------------------------------------------------------------------------
+SlidePlayerAndEnemySilhouettesOnScreen:
+    call LoadPlayerBackPic                 ; pret core.asm:10
+    jmp SlideBattlePicsIn                  ; the port's realization of the slide
 
 section .data
 align 4

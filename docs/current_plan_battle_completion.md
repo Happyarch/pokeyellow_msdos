@@ -2420,16 +2420,22 @@ enemy-gauge clone tile ids and VRAM slots.
         so nothing is owed here now — but this is the ONLY member of the
         original nine that a later stage should actually translate. Its call
         sites need PROJ coordinates for the 40-wide canvas.
-      * **RESIDUE AFTER THIS AUDIT: the pret-named ENTRY POINT is still
-        absent.** pret's caller is `callfar SlidePlayerAndEnemySilhouettesOnScreen`
-        (`engine/battle/init_battle.asm:103`); the port's `_InitBattleCommon`
-        instead does `call LoadPlayerBackPic / call SlideBattlePicsIn`, so no
-        symbol in the port carries pret's name for that step. The
-        Preserve-pret-Labels rule wants pret's name on the entry point even
-        when the body is a projection ("keep pret's names on both halves"). Not
-        done here — it is a separate, deliberate change to `_InitBattleCommon`
-        and `src/home/pics.asm`, and the mechanism helper `SlideBattlePicsIn`
-        legitimately has no pret counterpart to inherit a name from.
+      * **THE PRET-NAMED ENTRY POINT LANDED 2026-08-12.**
+        `SlidePlayerAndEnemySilhouettesOnScreen` now exists in the mirror file
+        `dos_port/src/engine/battle/core.asm` as `call LoadPlayerBackPic /
+        jmp SlideBattlePicsIn`, carrying a `DEVIATION{class=HAL}` that names
+        every omitted pret internal. Both port call sites — `_InitBattleCommon`
+        and `.specialBattleIntro` — call it instead of open-coding the pair, so
+        pret's single `callfar` (`engine/battle/init_battle.asm:103`) has a
+        counterpart by name. MEASURED: `_InitBattleCommon` faithdiff matched
+        3 -> 4, port calls 24 -> 23, and both the `DROPPED
+        SlidePlayerAndEnemySilhouettesOnScreen` and the `ADDED
+        LoadPlayerBackPic` lines are gone. `SlideBattlePicsIn` keeps its
+        port-only name deliberately: pret's slide is inline in
+        `.slideSilhouettesLoop`, so there is no pret label for it to inherit.
+        Execution order is unchanged, which was VERIFIED rather than assumed —
+        core tier 16/16 plus `battle_intro`, `battle_pikachu`, `battle_oldman`
+        and `battle_safari` individually, all PASS.
       * **`GetBattleHealthBarColor` TRANSLATED AND WIRED 2026-08-12** — the
         routine is `missing` -> `translated`, its own faithdiff is CLEAN (2/2
         calls), and both pret call sites now make the call:

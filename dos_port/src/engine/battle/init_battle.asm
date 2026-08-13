@@ -102,8 +102,7 @@ extern LoadFrontSpriteByMonIndex         ; src/home/pokemon.asm — enemy front 
 extern HasMonFainted                  ; engine/battle/core.asm — ZF=1 → fainted
 extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — build wBattleMon* + stat mods
-extern LoadPlayerBackPic         ; home/pics.asm — player trainer (Red) back pic
-extern SlideBattlePicsIn                 ; home/pics.asm — silhouette slide-in
+extern SlidePlayerAndEnemySilhouettesOnScreen ; core.asm — pret entry point for the slide
 extern SaveBattleScreen                  ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern DrawEnemyHUDAndHPBar              ; core.asm — wild enemy HUD (pret _InitBattleCommon)
 extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
@@ -446,8 +445,10 @@ _InitBattleCommon:
     call SetPal_Battle
 
     ; --- intro scene (proven DEBUG_BATTLE_LIVE order) ---
-    call LoadPlayerBackPic             ; player trainer (Red) back pic — fixed sprite
-    call SlideBattlePicsIn                      ; silhouette slide-in
+    ; pret _InitBattleCommon:103 — `callfar SlidePlayerAndEnemySilhouettesOnScreen`.
+    ; That routine's first act is `call LoadPlayerBackPic`, so the pair the port
+    ; used to open-code here is now behind pret's own entry point.
+    call SlidePlayerAndEnemySilhouettesOnScreen
     cmp byte [ebp + wIsInBattle], 2
     jne .drawWildIntro
     ; DEVIATION{class=temporary; pret=engine/battle/common_text.asm:PrintBeginningBattleText; behavior=trainer initialization draws a blank dialog surface before the party-ball rows instead of the class-specific wants-to-fight stream; evidence=PrintBeginningBattleText is label_status missing - the port has no translation of it at all - and its DrawAllPokeballs callee is missing too because the routine half of pret draw_hud_pokeball_gfx.asm lives in engine/battle/pokeballs.asm under port-only names as pre-existing mirror debt this plan owns; lifetime=retire together with PrintBeginningBattleText and the pokeballs forked-name debt, tracked in battle plan 4c}
@@ -524,8 +525,9 @@ _InitBattleCommon:
     ; shows a trainer pic (Oak / the old man), so the player-species slot may
     ; hold a stale id — cosmetic only, the enemy binding is what matters here.
     call SetPal_Battle
-    call LoadPlayerBackPic             ; wBattleType-dispatched: PROF.OAK / OLD MAN pic
-    call SlideBattlePicsIn
+    ; same pret entry point as the main path above; LoadPlayerBackPic inside it
+    ; is the wBattleType dispatch that picks the PROF.OAK / OLD MAN back pic.
+    call SlidePlayerAndEnemySilhouettesOnScreen
     call DrawBattleIntroBox            ; wild-style "Wild PIKACHU appeared!"
     ; pret _InitBattleCommon (init_battle.asm) draws the enemy HUD here for a WILD
     ; battle (wIsInBattle==1) — and BATTLE_TYPE_PIKACHU / OLD_MAN are wild — while
