@@ -2130,6 +2130,17 @@ provider shapes below, not their runtime behavior.
         * Transferred to the "one must-hit scenario per battle type" box below,
           which already owns the RESULT/EXIT coverage gap. Tracked there, not
           here.
+        * **SAFARI BAIT WITNESS PROBE, 2026-08-13 — not registered and fully
+          reverted.** A temporary gate entered production `_InitBattleCommon`,
+          pinned `wEnemyMonSpeed+1 = 0` so the post-BAIT flee threshold would be
+          zero, scheduled DOWN then A, and waited to dump at
+          `wSafariBaitFactor == 4` (the real loop's 5 -> 4 decrement before its
+          text print). `run_headless` built successfully but produced no dump.
+          This does **not** establish that the port loop is
+          wrong: the uninstrumented run cannot distinguish failure to reach the
+          special loop, a missed fixed-time menu input, or a failed BAIT action.
+          The next attempt must add diagnostic state capture for those three
+          phases before adding a scenario row or golden artifact.
       - *(historical, for the reasoning that got there)* **IT WAS BLOCKED ON ONE
         TEXT STREAM (measured 2026-08-12).** pret's loop is `StartBattle:176-216`
         (`.displaySafariZoneBattleMenu`): the action-taken re-loop, the
