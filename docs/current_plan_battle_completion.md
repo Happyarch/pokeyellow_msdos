@@ -1546,7 +1546,7 @@ provider shapes below, not their runtime behavior.
 > box itself.
 
 
-- [ ] **4a. `BATTLE_TYPE_PIKACHU`.** Audit every pret branch and implement the
+- [x] **4a. `BATTLE_TYPE_PIKACHU`.** Audit every pret branch and implement the
       starter-battle menu, ball refusal, initialization, loss/result, and
       happiness behavior. Overworld-events Stage 1 seeds `wCurOpponent`,
       `wBattleType`, and `wCurEnemyLevel`; its Oak milestone is incomplete until
@@ -1634,6 +1634,45 @@ provider shapes below, not their runtime behavior.
           missing file, not a dropped call, and it owns the out-of-battle
           happiness drift (the 256-step walking bonus and the mood convergence).
           It belongs to an overworld-events plan, not to this one.
+      - **(4) THE BRANCH ENUMERATION IS DONE 2026-08-13 — this is the "audit
+        every pret branch" the box header asks for, done the same way 4b's
+        was.** pret has **9** `BATTLE_TYPE_PIKACHU` sites outside the constant
+        definition. **7 are present in the port and faithful in structure and
+        ordering** (same value order OLD_MAN-then-PIKACHU, same branch targets):
+        * `scripts/PalletTown.asm:143` -> `src/scripts/pallet_town.asm:208`
+        * `core.asm:2097` `DisplayBattleMenu` `.doSimulatedMenuInput`
+          -> port `core.asm:555`
+        * `core.asm:2305` `BagWasSelected` `.simulatedInputBattle`
+          -> port `core.asm:3230`
+        * `core.asm:6390` `LoadPlayerBackPic` -> port `core.asm:6788`
+        * `item_effects.asm:119` (skip the party/box-full check),
+          `:160` (`.oldManBattle`), `:531` (`.oldManCaughtMon`)
+          -> port `item_effects.asm:1749`, `:1785`, `:2101`
+        **The 2 absent ones are pre-existing documented deviations, not new
+        gaps**, and each is a different one:
+        * `common_text.asm:12` — the asleep-Pikachu cry branch. Its whole
+          containing routine `PrintBeginningBattleText` is `label_status
+          missing`, which the `DEVIATION{class=temporary}` at
+          `init_battle.asm` already records; it retires with 4c and the
+          pokeballs debt. (`IsPlayerPikachuAsleepInParty` is a `stub` too.)
+        * `core.asm:165` `StartBattle.checkAnyPartyAlive` — folded into the
+          documented `StartBattle` collapse. **Stating precisely what that
+          collapse costs, because it had never been written down:** pret makes
+          TWO decisions there, and the port implements only one. Decision 2
+          ("any nonzero `wBattleType` skips the player send-out") IS
+          implemented, at `init_battle.asm:396`. Decision 1 ("`BATTLE_TYPE_RUN`
+          and `BATTLE_TYPE_PIKACHU` skip the `AnyPartyAlive` ->
+          `HandlePlayerBlackOut` check, everything else runs it") is NOT — the
+          port has no battle-ENTRY blackout check at all, for any type.
+          MEASURED: `label_status --callers AnyPartyAlive` gives the port 5
+          callers, all fainting, post-battle or overworld paths; pret's
+          `core.asm:167` entry call has no port counterpart. Practical impact
+          is bounded rather than absent: the port DOES keep pret's overworld
+          walking check (`OverworldLoopLessDelay`, pret
+          `home/overworld.asm:289`), so an all-fainted player blacks out before
+          reaching a battle. Recorded here rather than "fixed" speculatively —
+          restoring it belongs with the `StartBattle` collapse, not with 4a.
+
       - **ITEM (3) IS DEAD AND HAS BEEN SINCE 2026-08-07 — do not treat it as a
         blocker.** It read: "DOWNSTREAM the post-battle `PLAYER_FOLLOWS_OAK`
         step STALLS … this is what still blocks the Oak intro from reaching the
