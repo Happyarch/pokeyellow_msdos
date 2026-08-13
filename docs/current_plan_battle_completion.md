@@ -2059,6 +2059,32 @@ provider shapes below, not their runtime behavior.
           Generated label count 150 → 152, both new labels Safari.
         * **UNWITNESSED**: nothing calls it yet. Its caller is the Safari turn
           flow, which is the rest of this box.
+      - **THE TURN/FLEE LOOP IS THE LAST PIECE, AND IT IS BLOCKED ON ONE TEXT
+        STREAM (measured 2026-08-12).** pret's loop is `StartBattle:176-216`
+        (`.displaySafariZoneBattleMenu`): the action-taken re-loop, the
+        out-of-balls arm, the `PrintSafariZoneBattleText` call — which would
+        finally give that already-translated routine a caller — and the flee
+        roll (`b = (enemy speed low byte) * 2`, `jp c, EnemyRan`; bait halves it
+        twice; escape doubles it capped at $FF; `Random` vs `b`). The port's
+        `.specialBattleLoop` (`init_battle.asm`) already carries a
+        `DEVIATION{class=temporary}` whose `lifetime=` names THIS box, so
+        landing it retires that annotation.
+        * `EnemyRan` and `Random` are translated. The blocker is
+          **`OutOfSafariBallsText`**, which does not exist in the port.
+        * **DO NOT FIX IT BY WIDENING THE TEXT GENERATOR'S REGEX — measured and
+          UNSAFE.** pret spells it `.outOfSafariBallsText`: a dot-local with a
+          LOWERCASE initial. `gen_battle_text.py` learned dot-locals in
+          `bb5c29b98` but requires an uppercase initial, so the tempting change
+          is to allow `[a-z]`. Of the **11** lowercase dot-local `*Text` labels
+          across `BATTLE_SRC`, **10 are CODE labels** — `.printText` is
+          `call PrintText`, `.gotText` is `ret` — and only
+          `.outOfSafariBallsText` is a real `text_far` wrapper. Widening the
+          regex would hand ten code bodies to the text parser.
+        * The safe mechanism is the generator's existing **`EXTRA_FAR`** list
+          ("raw `_Xxx` far streams to emit even though no generatable wrapper
+          references them"): add `_OutOfSafariBallsText`. Check first that what
+          it emits TERMINATES — pret's wrapper is `text_far` + `text_end`, so
+          the trailing `$50` matters.
       - **THE GAP IS DECOMPOSED PER ROUTINE (2026-08-12), and it is narrower
         than the totals suggest.** pret has 12 `BATTLE_TYPE_SAFARI` sites to the
         port's 9, but the shortfall is **entirely inside `DisplayBattleMenu`**:
