@@ -1,0 +1,29 @@
+# Music_TitleScreen — per-song MIDI overrides (see README.md for schema).
+# Registers verified from the frame-exact sim 2026-08-13: ch2 is the
+# iconic G–B–D title melody (D3–D6, stated four times from m3 b2);
+# ch1 is the register-jumping inner line (D3–D5) that fills harmonic
+# gaps with octave-plus leaps — an 8-bit identity, not a line to
+# orchestrate away; ch3 is the high wave ostinato (C3–D6) that later
+# rides the D-pedal portamento glissandi. The GB mix has no low end
+# (wave floor C3); the tier-1 enhancement layer is what grounds it.
+#
+# Default placeholder 80/80/38 (two saxes + a bell on MT-32) is the
+# wrong family for a title fanfare. Melody becomes a trumpet so the
+# universal G–B–D cell sings; ch1 stays a square so the leaps stay
+# articulate; ch3 is Atmosphere so the ostinato and the glissandi
+# both have a bed (same wave treatment as Gym Leader / Final Battle).
+channels:
+  1:
+    mt32_program: "Square Wave"   # keep the jumping inner line 8-bit-sharp
+    gm_program: "Lead 1 (square)"
+    volume: 100
+    pan: 48
+  2:
+    mt32_program: "Trumpet 1"     # the iconic title melody, foreground
+    gm_program: "Trumpet"
+    volume: 110
+    pan: 64
+  3:
+    mt32_program: "Atmosphere"    # ostinato + D-pedal glissandi
+    gm_program: "FX 4 (atmosphere)"
+    volume: 88
