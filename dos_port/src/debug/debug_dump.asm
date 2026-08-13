@@ -451,6 +451,8 @@ GBSTATE_SCENARIO equ 16
 GBSTATE_SCENARIO equ 15
 %elifdef DEBUG_BATTLE_LOWHP
 GBSTATE_SCENARIO equ 72                 ; battle_low_hp — the red-HP alarm witness
+%elifdef DEBUG_BATTLE_ANIM_PHYSICAL
+GBSTATE_SCENARIO equ 74                 ; Stage-6 real STRENGTH frame-block checkpoint
 %elifdef DEBUG_BATTLE_SHORTNICK
 GBSTATE_SCENARIO equ 73                 ; battle_short_nick — the CenterMonName witness
 %elifdef DEBUG_BATTLE_MENU
@@ -2876,6 +2878,9 @@ RunBattleTest:
     ; battle_wrap / battle_bide / battle_thrash / battle_exp_all, and the
     ; golden makes the identical write.
     mov byte [ebp + wEnemyMonStatus], 7  ; SLP counter (7 turns)
+%ifdef DEBUG_BATTLE_ANIM_PHYSICAL
+    call DrawEnemyHUDAndHPBar             ; make the pinned SLP state visible like the real menu path
+%endif
     ; The debug party pokes STRENGTH into SNORLAX's move slot 4
     ; (tools/mgba_harness/lib/seed.lua DEBUG_PARTY[1].pokes[4]), so the
     ; 0-based list index is 3. Both are set: GetCurrentMove reads
@@ -3657,7 +3662,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_BIDE, DEBUG_BATTLE_THRASH, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_BATTLE_LOWHP, DEBUG_BATTLE_SHORTNICK, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_ANIM_PHYSICAL, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_BIDE, DEBUG_BATTLE_THRASH, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_BATTLE_LOWHP, DEBUG_BATTLE_SHORTNICK, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 

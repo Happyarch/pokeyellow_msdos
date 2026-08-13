@@ -46,6 +46,18 @@ NASMFLAGS += -D SKIP_TITLE
 endif
 endef
 
+# Stage-6 physical-animation checkpoint: reuse the real STRENGTH turn seeded by
+# its real ExecutePlayerMove setup, but terminate at DrawFrameBlock's first
+# published OAM. It reuses DEBUG_BATTLE_FAINT's setup; the generated registry
+# declares this gate before that implied flag so it stamps id 74, not id 33.
+ifdef DEBUG_BATTLE_ANIM_PHYSICAL
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_ANIM_PHYSICAL -D DEBUG_BATTLE_FAINT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 define flag_gate
 ifdef $(1)
 NASMFLAGS += -D $(1)

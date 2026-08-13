@@ -418,6 +418,40 @@
       "verification": "BOTH sides now navigate the real battle bag. Until 2026-08-12 the port gate preset wCurItem/wWhichPokemon/wPseudoItemID and called UseItem directly while the golden side navigated ITEM -> MASTER BALL for real, so the two sides reached the same outcome by different routes and the port's menu leg was never executed. 2c ported BagWasSelected / DisplayBagMenu / UseBagItem, so the bypass was replaced by an AUTOKEY_ITEMBALL press sequence through the production DisplayBattleMenu; the gate asserts wBattleResult == 2 (only .returnAfterCapturingMon sets it) before dumping. The committed golden was NOT regenerated -- the port converged onto the existing one, and dropping a single DOWN from the press table makes the run produce no dump at all. State verification, not UI verification"
     },
     {
+      "name": "battle_anim_physical",
+      "id": 74,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_ANIM_PHYSICAL=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_PHYSICAL",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_physical.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ExecutePlayerMove",
+        "MoveAnimation",
+        "PlayMoveAnimation",
+        "PlaySubanimation",
+        "DrawFrameBlock"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 physical move-animation witness: a real wild-battle FIGHT -> STRENGTH turn, stopped at DrawFrameBlock's first published live OAM frame. The reference watches for a CHANGE from parked battle-menu OAM rather than merely nonzero OAM, so the compared unmasked OAM entries cannot be stale menu state. The port reuses DEBUG_BATTLE_FAINT's faithful ExecutePlayerMove entry and dumps at the matching projection boundary before the faint path cleans OAM."
+    },
+    {
       "name": "battle_faint",
       "id": 33,
       "tier": "full",

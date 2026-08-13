@@ -2688,6 +2688,20 @@ enemy-gauge clone tile ids and VRAM slots.
         datastruct result proves the resolved turn only, not animation. A
         Stage-6 physical scenario needs an earlier state-gated landmark while
         the OAM block is live; do not relabel this post-flow scenario as one.
+      - **PHYSICAL COMPLETE 2026-08-13 — `battle_anim_physical` (id 74).** The
+        reference takes the real wild-battle `FIGHT` -> `STRENGTH` path and
+        waits for OAM to CHANGE from the parked menu state; the port reuses the
+        real `ExecutePlayerMove` spine and stops at `DrawFrameBlock` only when
+        `wAnimationID == STRENGTH`, after publishing its first live frame.
+        This condition matters: the first version stopped on the send-out
+        `POOF_ANIM` and the tilemap/OAM disagreed, proving it was not the move
+        landmark. The finished check has unmasked TILEMAP/VRAM/OAM/WRAM all
+        matching; the one `wLoadedMon` level byte is an explicitly documented
+        debug-staging mask. A deliberate one-bit corruption of canonical OAM
+        failed exactly OAM entry 0 (`Y=48` -> `49`), so the witness is
+        sensitive. `goldens-verify` regenerated all 72 artifacts with no
+        drift. Elemental, ball, shake/blink and option-off remain open in this
+        same box.
 
 ## Stage 7 — retirement and archival
 

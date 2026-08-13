@@ -764,6 +764,28 @@ SCENARIOS = {
             ],
         }),
     },
+    "battle_anim_physical": {
+        # The real FIGHT -> STRENGTH turn stops at DrawFrameBlock's first
+        # published OAM frame.  It is after the move-list picture/animation
+        # bank has been used, so it carries the post-send-out placement masks
+        # already measured for battle_menu/move_selection; OAM itself is
+        # deliberately unmasked. PublishProjectedOAM keeps canonical GB OAM
+        # bytes unchanged and projects only the renderer's native positions.
+        "flags": "DEBUG_BATTLE_ANIM_PHYSICAL=1",
+        "window": (10, 3),
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            "wLoadedMon": [
+                ((33, 33), "level in the wLoadedMon staging buffer: the reference "
+                           "reaches STRENGTH through the menu, whose last HUD draw "
+                           "staged the player L80, while this debug-only port gate "
+                           "calls DrawEnemyHUDAndHPBar after pinning sleep and leaves "
+                           "the L13 enemy there. It is transient presentation scratch; "
+                           "the unmasked battle-mon and OAM frame data are the witness."),
+            ],
+        }),
+    },
     "battle_exp_all": {
         # datastruct: battle_faint's resolved turn with EXP_ALL in the bag, so
         # FaintEnemyPokemon halves wEnemyMonBaseStats and runs GainExperience a

@@ -134,6 +134,10 @@ global MoveAnimationTiles0
 global MoveAnimationTiles2
 global MoveAnimationTiles1
 
+%ifdef DEBUG_BATTLE_ANIM_PHYSICAL
+extern DebugDumpMemory                   ; debug_dump.asm — terminates at the first live OAM frame block
+%endif
+
 ; --- Stage 3: screen / palette special effects ---
 global AnimationFlashScreen
 global AnimationFlashScreenLong
@@ -359,6 +363,13 @@ DrawFrameBlock:
     mov eax, 80                               ; battle-frame origin X
     mov ebx, 24                               ; battle-frame origin Y
     call PublishProjectedOAM                  ; preserves EDX (the wShadowOAM cursor); all regs restored
+; DEVIATION{class=temporary; pret=engine/battle/animations.asm:DrawFrameBlock; behavior=DEBUG_BATTLE_ANIM_PHYSICAL terminates at the first published STRENGTH OAM frame block; evidence=the Stage-6 physical witness must compare live OAM before animation cleanup, and its mGBA side stops at the first changed hardware-OAM frame after the real FIGHT to STRENGTH selection; lifetime=retire only with this debug scenario or when a production landmark can replace it}
+%ifdef DEBUG_BATTLE_ANIM_PHYSICAL
+    cmp byte [ebp + wAnimationID], STRENGTH
+    jne .notPhysicalScenarioFrame
+    call DebugDumpMemory                       ; first real-turn STRENGTH OAM frame block
+.notPhysicalScenarioFrame:
+%endif
     mov bl, [ebp + wSubAnimFrameDelay]       ; ld c,a → BL
     call DelayFrames
     mov al, [ebp + wFBMode]
