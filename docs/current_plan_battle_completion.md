@@ -2511,12 +2511,25 @@ enemy-gauge clone tile ids and VRAM slots.
           not the reason for any of them.
           1. `ClearScreenArea` dropped — the comment said `home/copy2.asm` was
              "not linked here". OPEN.
-          2. `PrintStatusConditionNotFainted` + `PrintLevel` dropped, so the
-             port prints the level UNCONDITIONALLY where pret prints it only
-             when there is no status condition. The comment blamed
-             "status_ailments.asm is an empty placeholder"; the routine is in
-             `home/pokemon.asm` and is translated. OPEN, and this one is a
-             visible behaviour difference on a statused mon.
+          2. `PrintStatusConditionNotFainted` dropped — FIXED 2026-08-13.
+             Both halves now print the status condition one cell right of the
+             level cell and print the level only when there is none, per pret
+             :1913-1918 / :1963-1972. **HARDWARE TRUTH CAME OUT OF THE GOLDEN
+             BLOBS**: `battle_wrap` and `battle_bide` seed `wEnemyMonStatus`
+             05/06 and their golden `wTileMap[24:28]` is `7f 92 8b 8f` — blank
+             then "SLP" — where the port was writing `:L13`. Seven battle
+             scenarios seed enemy SLP, but ALL of them are `class: datastruct`
+             and never compare the tilemap, which is why nothing ever failed.
+             `PrintStatusConditionNotFainted` needed a `global` in
+             `home/pokemon.asm`; it had never been exported.
+             * Residual, and it is item 1 below, now with a number: the port's
+               enemy LV cells read `6e 92 8b 8f` against hardware's
+               `7f 92 8b 8f`. The "SLP" matches exactly; cell 174 keeps a stale
+               `6e` (the `:L` glyph) from an earlier draw because the port skips
+               pret's leading `ClearScreenArea`. Measured with `run_headless
+               DEBUG_BATTLE_WRAP=1`.
+             * `PrintLevel` itself stays dropped — the port keeps its own
+               `print_level`. That is fork item 3, not this one.
           3. `DrawHP` / `DrawHPBar` / `Multiply` / `Divide` dropped in favour
              of the port's `calc_hp_pixels` + `draw_hp_bar` — more of the same
              fork class. OPEN.

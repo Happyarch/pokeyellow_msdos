@@ -316,6 +316,7 @@ extern GetHealthBarColor               ; home/palettes.asm — DL = HP pixels, E
 extern SetPal_Battle                   ; engine/gfx/palettes.asm — publish both HP-bar slots
 extern PlacePlayerHUDTiles             ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern PlaceEnemyHUDTiles              ; draw_hud_pokeball_gfx.asm (pret mirror)
+extern PrintStatusConditionNotFainted  ; home/pokemon.asm -> PrintStatusAilment
 ; --- HUD geometry for DrawHUDsAndHPBars and its two halves, moved here with
 ; --- them from battle_hud.asm. Values come from the generated battle UI layout
 ; --- (assets/ui_layout_battle.inc); never hand-edit an offset here.
@@ -6631,9 +6632,23 @@ DrawPlayerHUDAndHPBar:
     call CenterMonName                   ; adjusts ESI; restores EDX
     lea eax, [ebp + wBattleMonNick]      ; PlaceString src = flat-linear
     call PlaceString
+    ; pret DrawPlayerHUDAndHPBar:1913-1918 prints the STATUS CONDITION one cell
+    ; right of the level cell, and prints the level ONLY when there is none.
+    ; The port printed the level unconditionally; the alias fork hid the dropped
+    ; call, and the comment that justified it ("status_ailments.asm is an empty
+    ; placeholder") was false — PrintStatusAilment is a complete implementation.
+    ; ZF contract: PrintStatusAilment rets Z when the mon is healthy and printed
+    ; nothing, and NZ otherwise (its printing tail ends `add esi, 3` on a nonzero
+    ; tilemap offset). `pop`/`mov` are flag-neutral, so the flag survives to here
+    ; exactly as pret's `pop hl` lets it survive.
+    mov edx, wLoadedMonStatus
+    mov esi, W_TILEMAP + P_LV + 1        ; pret: hlcoord 14,8 / push hl / inc hl
+    call PrintStatusConditionNotFainted
+    jnz .doNotPrintLevel                 ; jr nz — status shown, no level
     movzx eax, byte [ebp + wBattleMonLevel]
     mov edi, W_TILEMAP + P_LV
     call print_level
+.doNotPrintLevel:
     mov ebx, wBattleMonHP
     mov esi, wBattleMonMaxHP
     call calc_hp_pixels
@@ -6695,12 +6710,19 @@ DrawEnemyHUDAndHPBar:
     call CenterMonName
     lea eax, [ebp + wEnemyMonNick]
     call PlaceString
+    ; pret DrawEnemyHUDAndHPBar:1963-1972 — same status-vs-level rule as the
+    ; player half above, reading wEnemyMonStatus directly.
+    mov edx, wEnemyMonStatus
+    mov esi, W_TILEMAP + E_LV + 1        ; pret: hlcoord 4,1 / push hl / inc hl
+    call PrintStatusConditionNotFainted
+    jnz .skipPrintLevel                  ; jr nz
     movzx eax, byte [ebp + wEnemyMonLevel]
     ; pret DrawEnemyHUDAndHPBar stages the level in wLoadedMonLevel before
     ; PrintLevel (core.asm:1969-1970) — battle-visible WRAM the goldens compare.
     mov [ebp + wLoadedMonLevel], al
     mov edi, W_TILEMAP + E_LV
     call print_level
+.skipPrintLevel:
     mov ebx, wEnemyMonHP                 ; calc_hp_pixels: EBX=curHP addr, ESI=maxHP addr
     mov esi, wEnemyMonMaxHP
     call calc_hp_pixels                  ; → EDX = fill pixels

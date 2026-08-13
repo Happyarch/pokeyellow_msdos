@@ -99,6 +99,7 @@ global PartyMenuInit
 global HandlePartyMenuInput
 global DrawPartyMenu
 global RedrawPartyMenu
+global PrintStatusConditionNotFainted   ; pret entry used by both battle HUD halves
 global PrintStatusCondition
 global DrawHPBar
 global LoadMonData
