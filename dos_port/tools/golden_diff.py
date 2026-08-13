@@ -944,6 +944,28 @@ SCENARIOS = {
                           "and same reason as battle_oldman and battle_faint.",
         },
     },
+    "battle_safari": {
+        # RENDERED (default class): battle plan 4d's witness. What the Safari
+        # branches produce IS the screen, so the tilemap is the comparison --
+        # box, labels, cursor column and the ball counter all at once.
+        #
+        # No wram_skip. The tutorial scenarios skip wLoadedMon because their
+        # dump lands mid-flow; this one parks in HandleMenuInput with nothing
+        # in motion, so anything that diverges here is a finding.
+        "class": "default",
+        "flags": "DEBUG_BATTLE_SAFARI=1 AUTOKEY_DUMP_FRAME=300",
+        "window": (10, 3),
+        "oam_window": True,
+        # The SHARED rendered-battle mask sets, the same ones battle_menu and
+        # move_selection carry -- not new masking. Measured on this scenario:
+        # the 6 residual tilemap cells are the F-19 cloned enemy-gauge tiles
+        # ($C8 where hardware has $6B), and the VRAM slots are the battle
+        # sprite/back-pic patterns. Both are pre-existing, plan-owned
+        # divergences with their justifications in those mask lists.
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_thrash": {
         # datastruct: the END of a thrash — .thrashingAboutCheck clearing
         # THRASHING_ABOUT and setting CONFUSED once the rolled counter runs out.

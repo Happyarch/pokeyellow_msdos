@@ -1149,6 +1149,17 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# battle_safari (battle plan 4d): the SAFARI battle menu, rendered. Unlike the
+# two tutorial gates this uses AUTOKEY_QUIET + a fixed dump frame (battle_menu's
+# shape), because the Safari menu parks in HandleMenuInput with nothing to poll.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_SAFARI=1" /tmp/safari
+ifdef DEBUG_BATTLE_SAFARI
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_SAFARI -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 300
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # battle_pikachu (battle plan 4a): the Prof. Oak / Pikachu SIMULATED battle
 # menu — the same .doSimulatedMenuInput as the old-man gate, differing only in
 # which name is copied over wPlayerName.

@@ -200,6 +200,7 @@ extern DisplayBattleMenu         ; core.asm — real menu (parks in HandleMenuIn
 extern SendOutMon                ; engine/battle/core.asm — pret StartBattle's send-out (HUDs, back pic, POOF_ANIM, cry)
 extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern DrawHUDsAndHPBars         ; engine/battle/core.asm
+extern DrawEnemyHUDAndHPBar      ; engine/battle/core.asm — special-battle intro (no player mon out)
 extern DrawEmptyDialogBox        ; battle_menu.asm
 extern SaveScreenTilesToBuffer1  ; src/home/tilemap.asm
 extern DrawBattleMenuBox         ; battle_menu.asm
@@ -2199,13 +2200,67 @@ RunBattleTest:
     ;     pokéballs; NO HUDs — the GB first draws them at the battle menu) ---
     mov al, [ebp + wEnemyMonSpecies2]
     mov [ebp + wCurPartySpecies], al
+    ; BATTLE TYPE IS STAGED BEFORE THE INTRO, not before the send-out. The
+    ; intro itself branches on it (special battles draw the enemy HUD and no
+    ; pokeballs), so setting it later meant the intro still ran its NORMAL
+    ; path -- measured: battle_safari stayed 94 divergences until this moved.
+%ifdef DEBUG_BATTLE_SAFARI
+    ; battle plan 4d. Same staging reason as the two tutorial gates below:
+    ; BATTLE_TYPE_SAFARI is a special type, so pret skips the player send-out
+    ; (StartBattle:171 tests wBattleType against 0, not a specific type) and
+    ; wBattleMon stays zero for the whole battle.
+    ;
+    ; The Safari bag is also seeded here, because the menu PRINTS the ball count
+    ; (pret DisplayBattleMenu hlcoord 7,14 / wNumSafariBalls) and a compared
+    ; tilemap would otherwise photograph whatever the debug new-game left.
+    mov byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
+    mov byte [ebp + wNumSafariBalls], 30    ; pret SAFARI_BALLS at zone entry
+%endif
+%ifdef DEBUG_BATTLE_PIKACHU
+    ; battle plan 4a. Same staging as the old-man gate below and for the same
+    ; reason — BATTLE_TYPE_PIKACHU is a special type, so pret skips the player
+    ; send-out for it too (StartBattle:171 tests wBattleType against 0, not
+    ; against a specific type).
+    mov byte [ebp + wBattleType], BATTLE_TYPE_PIKACHU
+%endif
+%ifdef DEBUG_BATTLE_OLDMAN
+    ; SET BEFORE THE SEND-OUT DECISION, not in the gate body further down —
+    ; that is the whole point. A gate that sets wBattleType in its own block
+    ; runs AFTER this staging has already sent the player's mon out, which is
+    ; what left battle_oldman 32 fields adrift from hardware (199192742).
+    mov byte [ebp + wBattleType], BATTLE_TYPE_OLD_MAN
+%endif
     mov esi, W_TILEMAP + 12         ; hlcoord 12,0 (stride 40)
     call LoadFrontSpriteByMonIndex  ; real enemy front pic (not the stub)
     call LoadPlayerBackPic
     call SlideBattlePicsIn
     call DrawBattleIntroBox
+    ; The enemy HUD must be drawn BEFORE the screen is saved: a special
+    ; battle's menu opens with LoadScreenTilesFromBuffer1 (pret StartBattle
+    ; .specialBattle), so anything drawn after the save is restored away.
+    ; Measured: with the HUD after the save, battle_safari still read 29
+    ; tilemap cells adrift -- the exact count of the missing HUD.
+    cmp byte [ebp + wBattleType], 0
+    je .normalIntroStagingSave
+    call DrawEnemyHUDAndHPBar
+.normalIntroStagingSave:
     call SaveBattleScreen
+    ; THE INTRO DIFFERS BY BATTLE TYPE, and this staging modelled only the normal
+    ; one. The port's PRODUCTION special-battle path (init_battle.asm:531,
+    ; `.specialBattleIntro`) draws the ENEMY HUD and no party pokéballs — there
+    ; is no player mon to have a ball row for, since a special battle never sends
+    ; one out. This staging drew the pokéballs and no HUD, which is correct for a
+    ; NORMAL battle only because DisplayBattleMenu redraws the HUDs there; for a
+    ; special type it skips DrawHUDsAndHPBars (pret core.asm:2078-2082), so the
+    ; omission became visible the moment a rendered Safari scenario existed:
+    ; battle_safari read 29 tilemap cells (the missing enemy HUD) and 6 OAM
+    ; entries (pokéballs hardware does not show) adrift.
+    ;
+    ; This mirrors production rather than inventing a third intro.
+    cmp byte [ebp + wBattleType], 0
+    jne .introStagingDone
     call DrawBattlePokeballs
+.introStagingDone:
 %ifdef DEBUG_BATTLE_INTRO
     ; Dump at the parked "Wild PIDGEY appeared!" prompt. The ▼ poke at GB
     ; (16,18) = canvas (19,28) replicates the text engine's parked prompt
@@ -2222,20 +2277,6 @@ RunBattleTest:
     ; LoadBattleMonFromParty; its back pic
     ; replaces Red's. Mirrors _InitBattleCommon's scan outcome + the
     ; pret StartBattle EXP/fought flag sets. ---
-%ifdef DEBUG_BATTLE_PIKACHU
-    ; battle plan 4a. Same staging as the old-man gate below and for the same
-    ; reason — BATTLE_TYPE_PIKACHU is a special type, so pret skips the player
-    ; send-out for it too (StartBattle:171 tests wBattleType against 0, not
-    ; against a specific type).
-    mov byte [ebp + wBattleType], BATTLE_TYPE_PIKACHU
-%endif
-%ifdef DEBUG_BATTLE_OLDMAN
-    ; SET BEFORE THE SEND-OUT DECISION, not in the gate body further down —
-    ; that is the whole point. A gate that sets wBattleType in its own block
-    ; runs AFTER this staging has already sent the player's mon out, which is
-    ; what left battle_oldman 32 fields adrift from hardware (199192742).
-    mov byte [ebp + wBattleType], BATTLE_TYPE_OLD_MAN
-%endif
     ; pret StartBattle .specialBattle (engine/battle/core.asm:171-174):
     ;     ld a, [wBattleType] / and a / jp z, .playerSendOutFirstMon
     ; ONLY a normal battle sends out the player's mon. Safari, old man, Pikachu
@@ -2802,6 +2843,27 @@ RunBattleTest:
     mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
+%elifdef DEBUG_BATTLE_SAFARI
+    ; ------------------------------------------------------------------
+    ; battle_safari golden gate (battle plan 4d). The first scenario to render
+    ; the SAFARI battle menu, and the witness for everything 4d has landed:
+    ; the SAFARI_BATTLE_MENU_TEMPLATE box, the BALL/BAIT/THROW ROCK/RUN labels,
+    ; the two Safari cursor columns, and the remaining-ball counter.
+    ;
+    ; UNLIKE the two tutorial gates this is a RENDERED scenario, because what
+    ; the Safari branches produce IS the screen. Its dump therefore compares the
+    ; tilemap against hardware rather than a WRAM byte, and the differ's
+    ; GB-window projection (col 10, row 3) is what lines the two up.
+    ;
+    ; Shape is battle_menu's, not the tutorial gates': DisplayBattleMenu draws
+    ; and then parks in HandleMenuInput, and AUTOKEY_QUIET photographs it at
+    ; AUTOKEY_DUMP_FRAME. No landmark poll is needed because nothing here is
+    ; RNG-dependent — the Safari menu has no simulated input and no roll.
+    ; ------------------------------------------------------------------
+    call DisplayBattleMenu
+.goldensafarihang:
+    call DelayFrame
+    jmp .goldensafarihang
 %elifdef DEBUG_BATTLE_PIKACHU
     ; ------------------------------------------------------------------
     ; battle_pikachu golden gate (battle plan 4a — the must-hit Pikachu-battle

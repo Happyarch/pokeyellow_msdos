@@ -2021,11 +2021,33 @@ provider shapes below, not their runtime behavior.
       divergence using the already-translated item-owned `ItemUseBait`,
       `ItemUseRock`, and `ItemUseBall` effects. Safari maps, steps, and story
       entry/exit remain overworld-owned.
-      - **UNBLOCKED 2026-08-12.** The harness prerequisite is done: the golden
-        staging can now stage a `wBattleType != 0` battle
-        (`63a37b2e4`), and `battle_oldman`/`battle_pikachu` are the worked
-        examples. A Safari scenario follows the identical recipe — see memory
-        `battle-4a-4b-tutorial-menu-scenarios` for the four steps.
+      - **WITNESSED 2026-08-12 — `battle_safari` (id 71) is registered and
+        PASSES.** The first scenario to RENDER the Safari menu, so everything
+        4d landed is now compared against hardware: the full-width
+        `SAFARI_BATTLE_MENU_TEMPLATE` box, the BALL/BAIT/THROW ROCK/RUN labels,
+        both cursor columns and the ball counter. Tilemap, VRAM, OAM and WRAM
+        all OK.
+        * **It found a SECOND staging bug of the same family as the send-out
+          one.** The golden staging hand-rolls a NORMAL battle intro
+          (pokéballs, no HUD) because `DisplayBattleMenu` redraws the HUDs when
+          `wBattleType == 0`. A special battle SKIPS `DrawHUDsAndHPBars`
+          (pret `core.asm:2078-2082`), so the omission was invisible until a
+          rendered special-battle scenario existed: 29 tilemap cells (the
+          missing enemy HUD) and 6 OAM entries (pokéballs hardware does not
+          show). The port's PRODUCTION path was right all along —
+          `init_battle.asm:531` `.specialBattleIntro` draws the enemy HUD and
+          no pokéballs — so the staging now mirrors production.
+        * **Two ordering facts that cost a measurement each**, both now in the
+          source: the battle type must be staged BEFORE the intro (setting it
+          before the send-out left the intro on its normal path — 94
+          divergences unchanged), and the enemy HUD must be drawn BEFORE
+          `SaveBattleScreen`, because a special battle's menu opens with
+          `LoadScreenTilesFromBuffer1` and restores away anything later
+          (29 cells adrift until moved).
+        * Progression, decomposed: 94 → 91 → 68 → PASS. The 68 masked hits are
+          the SHARED rendered-battle mask sets `battle_menu` and
+          `move_selection` already carry (the F-19 cloned enemy-gauge tiles and
+          the battle sprite patterns) — not new masking.
       - **`PrintSafariZoneBattleText` TRANSLATED 2026-08-12.** The whole routine
         half of pret `engine/battle/safari_zone.asm`, in the mirror, faithdiff
         clean (3/3 calls, 2/2 stores). It carries the per-turn bait/angry

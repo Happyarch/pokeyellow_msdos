@@ -2056,6 +2056,37 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "battle plan 4a's must-hit Pikachu-battle scenario. Same .doSimulatedMenuInput as battle_oldman -- DisplayBattleMenu dispatches BATTLE_TYPE_OLD_MAN and BATTLE_TYPE_PIKACHU to it identically (pret core.asm:2094-2098) -- so what this adds is the OTHER name. It witnesses the half battle_oldman structurally cannot: str_profoak_name's 11-byte tail is pret CODE (FA 2D, the first two bytes of ld a,[wBattleAndStartSavedMenuItem]) rather than the data-adjacency the old-man tail is, and the generator's warning that those bytes drift if upstream edits handleBattleMenuInput had no enforcement before this. wBattleMon stays ZERO on both sides throughout: a special battle never sends out the player's mon (pret StartBattle core.asm:171) and never enters MainInBattleLoop (it loops on DisplayBattleMenu, core.asm:176)"
+    },
+    {
+      "name": "battle_safari",
+      "id": 71,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_SAFARI=1 AUTOKEY_DUMP_FRAME=300",
+      "port_entry_gate": "DEBUG_BATTLE_SAFARI",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_safari.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "DisplayBattleMenu"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "battle plan 4d's witness: the first scenario to RENDER the Safari battle menu. Compares the tilemap, because what the Safari branches produce IS the screen -- the SAFARI_BATTLE_MENU_TEMPLATE full-width box, the BALL/BAIT/THROW ROCK/RUN labels, the two Safari cursor columns (pret ld b,$1 and ld b,$d) and the remaining-ball counter (pret hlcoord 7,14 + PrintNumber). wBattleType is pinned EARLY and every frame: late, the ROM sends the player's mon out and the two sides photograph different phases (pret StartBattle:171 skips the send-out for any non-zero wBattleType). wNumSafariBalls is pinned to 30 because the menu PRINTS it into the compared tilemap. Red's back pic is on screen on both sides because LoadPlayerBackPic runs in the battle intro, before the send-out decision"
     }
   ],
   "disabled_scenarios": []
