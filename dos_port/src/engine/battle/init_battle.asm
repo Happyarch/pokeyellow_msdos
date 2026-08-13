@@ -90,7 +90,6 @@ extern hide_window
 extern LoadHpBarAndStatusTilePatterns
 extern LoadHudTilePatterns
 extern DuplicateEnemyHPBarTiles        ; battle_hud.asm — distinct palette-able enemy gauge IDs
-extern DrawBattleHUDs
 extern SetPal_Battle                    ; engine/gfx/palettes.asm
 
 ; --- _InitBattleCommon dependencies (the real overworld→battle orchestration) ---
@@ -670,7 +669,7 @@ DrawBattleIntroBox:
     ; F-17 FIX (fidelity plan Stage 2, golden-measured): the GB draws NO HUDs
     ; during the wild intro — pret PrintBeginningBattleText is cry + pokéballs +
     ; PrintText only, and both HUDs first appear via DisplayBattleMenu →
-    ; DrawHUDsAndHPBars. This routine used to call DrawEnemyHUD here ("a wild
+    ; DrawHUDsAndHPBars. This routine used to call the enemy-only half here ("a wild
     ; mon is already out"), which was generalized from the port's own flow, not
     ; pret — the battle_intro golden showed blank HUD rows where the port drew
     ; the enemy name/HP bar. The call is gone; the enemy HUD now first draws

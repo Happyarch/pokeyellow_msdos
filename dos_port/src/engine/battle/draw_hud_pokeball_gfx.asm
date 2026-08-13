@@ -36,7 +36,7 @@ global EnemyBattleHUDGraphicsTiles
 
 ; The $73 connector sits at the RIGHT end of the player HUD frame element; the
 ; shelf row is one canvas row below it. Same expression battle_hud.asm uses for
-; DrawPlayerHUD's own connector — it is the projected form of pret's
+; DrawPlayerHUDAndHPBar's own connector — it is the projected form of pret's
 ; `hlcoord 18, 10`.
 %define P_FRAME_CONN (UI_PLAYER_HUD_FRAME_OFS + UI_PLAYER_HUD_FRAME_GBW - 1)
 

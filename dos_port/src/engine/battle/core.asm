@@ -132,7 +132,7 @@ global HandlePlayerMonFainted
 global ReadPlayerMonCurHPAndStatus
 global CheckNumAttacksLeft
 global BattleMenu_RunWasSelected
-global GetBattleHealthBarColor         ; pret core.asm — used by DrawPlayerHUD (battle_hud.asm)
+global GetBattleHealthBarColor         ; pret core.asm — used by DrawPlayerHUDAndHPBar, below
 global CenterMonName                   ; pret core.asm — used by both HUD draws (battle_hud.asm)
 
 ; --- consolidated from other port files (grind session 8) ---
@@ -312,6 +312,25 @@ extern PlayPikachuSoundClip            ; src/audio/pikachu_pcm.asm
 extern PlayCry                         ; src/home/pokemon.asm — pret home/pokemon.asm:140
 extern RunPaletteCommand               ; home/palettes.asm
 extern GetHealthBarColor               ; home/palettes.asm — DL = HP pixels, ESI = colour addr
+extern SetPal_Battle                   ; engine/gfx/palettes.asm — publish both HP-bar slots
+extern PlacePlayerHUDTiles             ; draw_hud_pokeball_gfx.asm (pret mirror)
+extern PlaceEnemyHUDTiles              ; draw_hud_pokeball_gfx.asm (pret mirror)
+; --- HUD geometry for DrawHUDsAndHPBars and its two halves, moved here with
+; --- them from battle_hud.asm. Values come from the generated battle UI layout
+; --- (assets/ui_layout_battle.inc); never hand-edit an offset here.
+; PROJ battle: enemy HUD = UI_ENEMY_{NAME,LV,HPBAR}_OFS
+; PROJ battle: player HUD = UI_PLAYER_{NAME,LV,HPBAR,HPFRAC}_OFS
+%define E_NAME    UI_ENEMY_NAME_OFS
+%define E_LV      UI_ENEMY_LV_OFS
+%define E_HPBAR   UI_ENEMY_HPBAR_OFS
+%define P_NAME    UI_PLAYER_NAME_OFS
+%define P_LV      UI_PLAYER_LV_OFS
+%define P_HPBAR   UI_PLAYER_HPBAR_OFS
+%define P_HPFRAC  UI_PLAYER_HPFRAC_OFS
+; PROJ battle: the player connectors stack in the element's top-RIGHT column
+%define P_FRAME_CONN (UI_PLAYER_HUD_FRAME_OFS + UI_PLAYER_HUD_FRAME_GBW - 1)
+%define T_HUD_73  0x73                 ; HUD vertical connector
+%define CHAR_SLSH 0xF3                 ; '/' in the HP fraction
 extern SkipFixedLengthTextEntries      ; home/array.asm
 
 
@@ -6406,11 +6425,13 @@ global DrawHUDsAndHPBars
 global LoadPlayerBackPic
 global SlidePlayerAndEnemySilhouettesOnScreen ; pret entry point for the battle-entry slide
 extern LoadMonBackPicToVRAM            ; src/home/pics.asm — decode + 2x scale + merge
+extern draw_hp_bar                     ; battle_hud.asm — port-only HUD gauge/number helpers
+extern draw_enemy_hp_bar               ; battle_hud.asm
+extern calc_hp_pixels                  ; battle_hud.asm
+extern print_level                     ; battle_hud.asm
+extern hud_print_num3                  ; battle_hud.asm (battle_menu.asm has its own file-local print_num3)
 extern SlideBattlePicsIn               ; src/home/pics.asm — the port's slide realization
 global TryRunningFromBattle
-extern DrawEnemyHUD                    ; battle_hud.asm — enemy name+level+HP bar+frame
-extern DrawPlayerHUD                   ; battle_hud.asm — player name+level+HP bar+frame
-extern DrawBattleHUDs                  ; battle_hud.asm — both HUDs, pret player-then-enemy order
 extern WaitForAPress                   ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
 ; (str_gotaway/str_cantesc/str_norun1-3 externs retired 2026-08-06: the run
 ; messages now print their generated battle_text.inc streams — CantEscapeText /
@@ -6448,28 +6469,11 @@ global HandleExplodingAnimation
 %define MSG_LINE1    UI_DIALOG_LINE1_OFS
 %define DLG_INT(n)   (UI_DIALOG_BOX_OFS + (n) * FW + 1)
 
-; ---------------------------------------------------------------------------
-; DrawEnemyHUDAndHPBar — faithful enemy-ONLY HUD+HP-bar redraw (pret
-; engine/battle/core.asm:1951). Used where the port previously substituted the
-; both-bars DrawHUDsAndHPBars. The port's DrawEnemyHUD already is the faithful
-; enemy-only name+level+HP-bar+frame redraw (stride-agnostic, writing W_TILEMAP that
-; render_bg blits every frame). DIVERGENCES vs pret (all hardware/pre-existing, not
-; invented here): pret's hAutoBGTransferEnabled suspend/resume bracket is dropped —
-; it gates the GB torus-tilemap DMA (do_bg_transfer, vblank.asm) which the native
-; render_bg does not use and which the overworld deliberately keeps disabled, so
-; forcing it on would run a pointless per-frame copy; pret's leading ClearScreenArea
-; of the 12×4 HUD tile area (home/copy2.asm not linked here; only needed when the
-; enemy name changes length — a multi-mon case not reachable in a wild battle);
-; status-condition-vs-level
-; (status_ailments.asm is an empty placeholder → always prints level); the
-; GetBattleHealthBarColor/RunPaletteCommand recolor tail (Phase-5 palette deferral).
-DrawEnemyHUDAndHPBar:
-    jmp DrawEnemyHUD                              ; name + level + HP bar + frame (enemy-only)
 
 ; ---------------------------------------------------------------------------
 ; DrawPlayerHUDAndHPBar — faithful player-ONLY HUD+HP-bar redraw (pret
 ; engine/battle/core.asm:DrawPlayerHUDAndHPBar). Retires the former bare-ret stub in
-; battle_exp_stubs.asm: the port's DrawPlayerHUD already is the faithful player-side
+; battle_exp_stubs.asm: the player-side
 ; name+level+HP-bar+frame redraw into W_TILEMAP, so this is the pret-named alias
 ; (same shape as DrawEnemyHUDAndHPBar above). Same Phase-5 palette / hAutoBGTransfer
 ; divergences as the enemy-side alias apply.
@@ -6479,7 +6483,7 @@ DrawEnemyHUDAndHPBar:
 ;     (wPlayerHPBarColor / wEnemyHPBarColor); DL (pret E) = HP-bar pixels.
 ;
 ; It republishes the battle palette ONLY WHEN THE COLOUR ACTUALLY CHANGED. The
-; port previously called GetHealthBarColor bare and let DrawBattleHUDs publish
+; port previously called GetHealthBarColor bare and let DrawHUDsAndHPBars publish
 ; unconditionally, so it did the palette work on every HUD draw where hardware
 ; does it on a green->yellow->red transition only. faithdiff reported this as a
 ; DROPPED GetBattleHealthBarColor on BOTH of pret's call sites.
@@ -6540,12 +6544,144 @@ CenterMonName:
     pop edx                            ; pop de
     ret
 
-DrawPlayerHUDAndHPBar:
-    jmp DrawPlayerHUD                             ; name + level + HP bar + frame (player-only)
-
-; DrawHUDsAndHPBars (pret name) — alias to the centered-canvas HUD draw helper.
+; ---------------------------------------------------------------------------
+; DrawHUDsAndHPBars / DrawPlayerHUDAndHPBar / DrawEnemyHUDAndHPBar — pret
+; engine/battle/core.asm:1885/1889/1951. Moved here from the port-only file
+; src/engine/battle/battle_hud.asm on 2026-08-13, where the three bodies had
+; lived under the port-only names DrawBattleHUDs / DrawPlayerHUD / DrawEnemyHUD
+; while this file carried the pret names as bare `jmp` aliases. faithdiff
+; therefore saw 9 pret calls against 1 port on each of the two halves and
+; attributed the whole body to a name it does not model — the same forked-name
+; shape as EnemyMoveHitTest, and the reason CenterMonName and
+; GetBattleHealthBarColor read DROPPED at call sites where the call was real.
+;
+; pret splits the work exactly this way too (DrawHUDsAndHPBars calls the player
+; half and tail-jumps the enemy half), so the port's split needed no invention —
+; only the names. The battle intro's enemy-only draw, which was the reason the
+; port kept a separate entry, is pret's own DrawEnemyHUDAndHPBar and is called
+; by that name from _InitBattleCommon.
+;
+; The port-only helpers these bodies call (draw_hp_bar, draw_enemy_hp_bar,
+; calc_hp_pixels, print_level, hud_print_num3) stay in battle_hud.asm and are now
+; global; they have no pret counterpart to take a name from.
+;
+; RETIRING THE FORK MADE FOUR REAL DIVERGENCES VISIBLE FOR THE FIRST TIME. They
+; are pre-existing, not introduced by the move, and the alias is exactly why
+; nothing reported them: faithdiff attributed the body to a port-only name.
+; Measured 2026-08-13 with label_status — every one of these callees is
+; `translated` and linked, so "not available yet" is NOT the reason for any of
+; them, and the alias-era comments that said so were wrong:
+;   1. ClearScreenArea (home/copy2.asm) — pret clears the HUD tile area before
+;      drawing. The old comment claimed copy2.asm was "not linked here".
+;   2. PrintStatusConditionNotFainted + PrintLevel (home/pokemon.asm) — pret
+;      prints the status condition and prints the level ONLY when there is
+;      none. The old comment blamed "status_ailments.asm is an empty
+;      placeholder"; the routine lives in home/pokemon.asm and is translated.
+;      The port prints the level unconditionally, via its own print_level.
+;   3. DrawHP (predef) / DrawHPBar + Multiply + Divide — pret computes the bar
+;      through the shared routines; the port uses calc_hp_pixels + draw_hp_bar.
+;      A second implementation of a translated pret routine, i.e. more of the
+;      same fork class this move is retiring.
+;   4. The low-health alarm tail — see the BUG on DrawPlayerHUDAndHPBar below.
+; Tracked in docs/current_plan_battle_completion.md under the core.asm-residue
+; box; none is fixed here, because this box is the naming/placement half.
+; ---------------------------------------------------------------------------
 DrawHUDsAndHPBars:
-    jmp DrawBattleHUDs
+    ; HUD names are drawn with PlaceString, which (like pret's PlaceNextChar) calls
+    ; PrintLetterDelay — so make sure the per-letter delay is OFF here (BIT_TEXT_DELAY is
+    ; set only while a dialog MESSAGE prints). Otherwise the mon names would type out.
+    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    ; pret DrawHUDsAndHPBars order: PLAYER first, then ENEMY (core.asm:1886).
+    ; Load-bearing since the wLoadedMon staging landed: both HUDs write
+    ; wLoadedMonLevel, and the surviving value must be the ENEMY's (measured in
+    ; the battle_menu golden: wLoadedMon = battle mon, level byte = enemy's).
+    call DrawPlayerHUDAndHPBar
+    call DrawEnemyHUDAndHPBar
+    ; Both bars have now refreshed their color IDs; publish their independent
+    ; palette slots together (the enemy uses cloned gauge tile IDs).
+    call SetPal_Battle
+    ret
+; BUG{class=stub; pret=engine/battle/core.asm:DrawPlayerHUDAndHPBar; behavior=the port never arms the low-health alarm, so the beeping that hardware starts when the player mon's HP bar turns red never sounds in any battle; evidence=pret's .setLowHealthAlarm tail sets BIT_LOW_HEALTH_ALARM in wLowHealthAlarm and is the game's ONLY setter, and all nine port writes to wLowHealthAlarm were enumerated 2026-08-13 as clears or restores except low_health_alarm.asm:48 which re-ORs the bit inside Music_DoLowHealthAlarm and is gated at :23 on the bit already being set, so the alarm can perpetuate but can never start; lifetime=retire when the alarm tail is translated, tracked in the battle plan core.asm-residue box}
+DrawPlayerHUDAndHPBar:
+    ; ===== player HUD (lower-right) =====
+    ; pret DrawPlayerHUDAndHPBar draws the frame FIRST: PlacePlayerHUDTiles +
+    ; the (18,9) $73 connector, which DrawHP later OVERWRITES with the HP bar's
+    ; right cap $6D — pret's second $73 is dead the moment the bar draws. The
+    ; port used to draw the frame/connector last, leaving $73 where the golden
+    ; shows $6D (F-18). Frame first, bar last, like pret.
+    call PlacePlayerHUDTiles
+    mov byte [ebp + W_TILEMAP + P_FRAME_CONN], T_HUD_73
+    ; pret stages the battle mon in wLoadedMon — species..DVs then level..PP
+    ; (core.asm:1903-1910); PrintLevel/DrawHP read it there, and it is
+    ; battle-visible WRAM the goldens compare. The enemy HUD (drawn after,
+    ; pret order) then overwrites wLoadedMonLevel with the enemy's level.
+    mov esi, wBattleMonSpecies
+    mov edx, wLoadedMon
+    mov ebx, wBattleMonDVs - wBattleMonSpecies
+    call CopyData
+    mov esi, wBattleMonLevel
+    mov edx, wLoadedMonLevel
+    mov ebx, wBattleMonPP - wBattleMonLevel
+    call CopyData
+    ; pret DrawPlayerHUDAndHPBar:1901 runs CenterMonName between the coord load
+    ; and PlaceString: a 1-2 letter nick shifts 2 columns right, 3-4 shifts 1,
+    ; 5+ is unshifted. The port placed every name flush-left.
+    mov esi, W_TILEMAP + P_NAME
+    mov edx, wBattleMonNick              ; CenterMonName reads the nick via [ebp+EDX]
+    call CenterMonName                   ; adjusts ESI; restores EDX
+    lea eax, [ebp + wBattleMonNick]      ; PlaceString src = flat-linear
+    call PlaceString
+    movzx eax, byte [ebp + wBattleMonLevel]
+    mov edi, W_TILEMAP + P_LV
+    call print_level
+    mov ebx, wBattleMonHP
+    mov esi, wBattleMonMaxHP
+    call calc_hp_pixels
+    ; pret DrawPlayerHUDAndHPBar:1927 calls GetBattleHealthBarColor, not the bare
+    ; GetHealthBarColor: it republishes the battle palette ONLY on a colour
+    ; transition. The joint SetPal_Battle in DrawHUDsAndHPBars stays — it is the
+    ; port's own two-slot publish and republishing the same values is harmless —
+    ; but the pret call site is now present rather than dropped.
+    mov esi, wPlayerHPBarColor
+    call GetBattleHealthBarColor
+    mov edi, W_TILEMAP + P_HPBAR
+    call draw_hp_bar
+    ; player HP fraction: cur / max
+    movzx eax, byte [ebp + wBattleMonHP]
+    shl eax, 8
+    mov al, [ebp + wBattleMonHP + 1]
+    mov edi, W_TILEMAP + P_HPFRAC
+    call hud_print_num3
+    mov byte [ebp + W_TILEMAP + P_HPFRAC + 3], CHAR_SLSH
+    movzx eax, byte [ebp + wBattleMonMaxHP]
+    shl eax, 8
+    mov al, [ebp + wBattleMonMaxHP + 1]
+    mov edi, W_TILEMAP + P_HPFRAC + 4
+    call hud_print_num3
+    ret
+
+DrawEnemyHUDAndHPBar:
+    ; ===== enemy HUD (upper-left) =====
+    mov esi, W_TILEMAP + E_NAME          ; PlaceString: ESI=dest(GB offset), EAX=src(flat)
+    mov edx, wEnemyMonNick               ; pret DrawEnemyHUDAndHPBar:1960 — same centering
+    call CenterMonName
+    lea eax, [ebp + wEnemyMonNick]
+    call PlaceString
+    movzx eax, byte [ebp + wEnemyMonLevel]
+    ; pret DrawEnemyHUDAndHPBar stages the level in wLoadedMonLevel before
+    ; PrintLevel (core.asm:1969-1970) — battle-visible WRAM the goldens compare.
+    mov [ebp + wLoadedMonLevel], al
+    mov edi, W_TILEMAP + E_LV
+    call print_level
+    mov ebx, wEnemyMonHP                 ; calc_hp_pixels: EBX=curHP addr, ESI=maxHP addr
+    mov esi, wEnemyMonMaxHP
+    call calc_hp_pixels                  ; → EDX = fill pixels
+    mov esi, wEnemyHPBarColor
+    call GetHealthBarColor
+    mov edi, W_TILEMAP + E_HPBAR
+    call draw_enemy_hp_bar
+    call PlaceEnemyHUDTiles
+    ret
 
 ; ---------------------------------------------------------------------------
 ; LoadPlayerBackPic — decode the PLAYER (Red/Yellow) back sprite to vBackPic

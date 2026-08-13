@@ -5,7 +5,7 @@
 ; the turn loop, Render*/Do*AttackDamage, the fainted/no-PP/run message draws) has been
 ; replaced by the faithful translation in core.asm (engine/battle/core.asm). What remains
 ; here are: (1) the centered-canvas draw primitives core.asm calls (DrawEmptyDialogBox /
-; DrawBattleMenuBox / DrawBattleHUDs); (2) the EXP/level-up display
+; DrawBattleMenuBox / DrawHUDsAndHPBars); (2) the EXP/level-up display
 ; routines that GainExperience (experience.asm) calls inside its per-mon loop; (3) the
 ; move TYPE/PP box and FindMoveName helper.
 ;

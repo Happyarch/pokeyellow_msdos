@@ -158,7 +158,6 @@ extern wBattleOver
 extern WaitForAPress
 extern DrawBattlePokeballs
 extern HideBattlePokeballs
-extern DrawBattleHUDs
 extern DoEnemyAttackDamage
 extern LoadWildMonMoves
 extern SelectEnemyMove
@@ -3660,7 +3659,7 @@ anim_show_label:
 %ifdef DEBUG_BATTLE_TRAINER
     ; enemy send-out: the TRAINER sends out its first mon, so the trainer sprite is
     ; replaced by the enemy mon's front pic (decode over VRAM $00, same tilemap block);
-    ; DisplayBattleMenu's DrawBattleHUDs then draws the enemy HP bar (was suppressed for
+    ; DisplayBattleMenu's DrawHUDsAndHPBars then draws the enemy HP bar (was suppressed for
     ; the trainer intro). TODO(send-out): trainer slide-out + the real enemy-mon throw.
     call DebugLoadEmbeddedEnemyFrontPic     ; enemy mon (PIDGEY) front → VRAM $00 (replaces Bug Catcher)
 %endif

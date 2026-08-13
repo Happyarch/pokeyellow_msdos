@@ -32,7 +32,7 @@ section .text
 ; TODO(pikachu):     RespawnOverworldPikachu — with the Yellow Pikachu-follow engine.
 global RespawnOverworldPikachu
 ; DrawPlayerHUDAndHPBar is now REAL (engine/battle/core.asm — alias → battle_hud.asm
-; DrawPlayerHUD) — no longer stubbed here (retired with the enemy-side
+; DrawPlayerHUDAndHPBar) — no longer stubbed here (retired with the enemy-side
 ; DrawEnemyHUDAndHPBar pattern).
 ; LoadMonData is now REAL (src/home/pokemon.asm wrapper → LoadMonData_) — no longer stubbed;
 ; it populates wLoadedMon so GainExperience's CalcLevelFromExperience reads the right mon.

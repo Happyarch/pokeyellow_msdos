@@ -29,7 +29,7 @@
 ;      both HP bars (it tail-calls DrawHUDsAndHPBars) — i.e. it is the faithful
 ;      stand-in for all three pret predefs at once, not just UpdateHPBar2. This
 ;      also avoids referencing DrawEnemyHUDAndHPBar directly (it is defined in
-;      engine/battle/core.asm as an alias of battle_hud.asm's DrawEnemyHUD).
+;      engine/battle/core.asm; body moved there from battle_hud.asm 2026-08-13).
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=EBX here — full word offsets, not BX), D/E
 ; folded into EDX (DE=EDX), HL=ESI, EBP=GB base. GB memory at [EBP+addr];
