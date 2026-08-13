@@ -2788,10 +2788,16 @@ enemy-gauge clone tile ids and VRAM slots.
           So the constant is correct in the overworld and WRONG in all five
           non-default projections that exist: battle (`core.asm:1341`,
           `BTXT_LINE2`), `bills_pc`, `players_pc`, `party_menu`, `oak_speech`.
-          Fix is the same one operand. **Held back deliberately**: it is
-          UNWITNESSED — no current scenario compares a rendered `TX_SCROLL` line
-          in a non-default projection — so it needs its own witness or an
-          explicit unwitnessed-fix note, and it must not ride the ball commit.
+          Fix is the same one operand. **FIXED separately from the ball commit,
+          and it is UNWITNESSABLE — which is a measured property of the DATA,
+          not a gap in the suite.** No text stream anywhere in pret emits
+          `TX_SCROLL`: a repo-wide search for `text_scroll` outside `dos_port/`
+          returns only the macro definition in `macros/scripts/text.asm`. So the
+          handler is unreachable through game text and no scenario can ever
+          compare it — do not open a "needs a witness" item for it. Corrected
+          anyway so the two identical siblings do not disagree, with the
+          reasoning recorded at the site. Gates: lint 0 both modes, core tier
+          16/16.
         * Shake/blink and option-off remain open in this same box.
       - **BALL SUB-ITEM SCOPING (read-only measurement made before building it;
         both facts held).**

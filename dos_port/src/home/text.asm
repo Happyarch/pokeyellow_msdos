@@ -1309,11 +1309,25 @@ TextCommandProcessor:
     jnz .dots_loop
     jmp .next_cmd
 
-; --- TX_SCROLL ($07): scroll text up two lines ---
+; --- TX_SCROLL ($07): scroll text up two lines, then reposition to the box's
+;     2nd text line. Pret ref: home/text.asm:TextCommand_SCROLL.
+;
+;     Same one-operand correction as .cmd_low above, and for the same reason:
+;     the hardcoded `W_TILEMAP + 16 * SCREEN_W_TILES + 1` is pret's GB offset
+;     used as a raw flat index into the port's 40-wide tilemap. [text_line2] is
+;     that coordinate, republished per projection by PrintText.
+;
+;     UNWITNESSABLE, and that is a measured property of the DATA, not a gap in
+;     the suite: no text stream anywhere in pret emits TX_SCROLL -- a repo-wide
+;     search for `text_scroll` outside dos_port/ finds only the macro definition
+;     in macros/scripts/text.asm. So this handler is unreachable through game
+;     text and no scenario can ever compare it. Fixed anyway, because leaving one
+;     of two identical siblings wrong is how the next reader gets bitten; see
+;     regression-text-txlow-raw-gb-coord for the sibling that WAS reachable. ---
 .cmd_scroll:
     call scroll_text_up
     call scroll_text_up
-    mov ebx, W_TILEMAP + 16 * SCREEN_W_TILES + 1
+    mov ebx, [text_line2]
     jmp .next_cmd
 
 ; --- TX_RAM ($01): write an '@'-terminated string from a RAM address ---
