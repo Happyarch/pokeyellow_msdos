@@ -2300,6 +2300,31 @@ enemy-gauge clone tile ids and VRAM slots.
 
 ## Stage 7 — retirement and archival
 
+- [ ] **FINDING FROM THE STAGE-7 SWEEP (2026-08-12): `SwapPlayerAndEnemyLevels`
+      is TRANSLATED BUT NEVER CALLED — pret calls it at 7 sites, the port at 0.**
+      `label_status --callers` reports "port callers (0)"; faithdiff reports
+      `DROPPED SwapPlayerAndEnemyLevels` on **4** of the 5 pret routines that use
+      it: `EnemyCalcMoveDamage` (3 of the 7 sites), `HandleIfEnemyMoveMissed`,
+      `EnemyCheckIfFlyOrChargeEffect`, `CheckEnemyStatusConditions`.
+      * The routine exchanges `wBattleMonLevel` and `wEnemyMonLevel` so shared
+        code that reads the PLAYER slot operates on the ENEMY's level during an
+        enemy turn. pret swaps an ODD number of times before `CalculateDamage`.
+      * **BEHAVIOURAL IMPACT IS NOT ESTABLISHED and must not be assumed.**
+        `CalculateDamage` takes the level in register E (its own header says
+        `e: level`), supplied by `GetDamageVarsForEnemyAttack`, which pret runs
+        UNSWAPPED — so the swap matters only for direct WRAM level reads further
+        in. Tracing that is the next step, along with checking whether the
+        port's `GetDamageVarsForEnemyAttack` loads the enemy level itself
+        (which would make the port self-consistent and the omission benign).
+      * **How it survived:** a translated-but-uncalled routine trips nothing —
+        lint is clean, `label_status` says `translated`, and no scenario drives
+        an enemy attack where a level difference would show. Only `faithdiff`
+        per routine, or a CALLERS query, sees it.
+      * **It was found by disbelieving a comment.** The harness-only
+        `DoEnemyAttackDamage` (`battle_menu.asm`) carries a
+        `DEVIATION{class=temporary}` asserting "the port already translates
+        `EnemyCalcMoveDamage` faithfully". That claim is FALSE.
+      * Memory: `regression-battle-swapplayerandenemylevels-never-called`.
 - [ ] Remove temporary guards and stand-ins whose real providers landed. Run
       `label_status --callers` for each retired stub, update the label DB, run
       default/strict label lint and `fidelity_gate`, and sweep related `STUB`,
