@@ -142,6 +142,7 @@ extern InitBattle                ; init_battle.asm — the pret wild/trainer dis
                                  ; The trainer oracles call it directly to stand in for
                                  ; OverworldLoop's wCurOpponent poll (Stage 1b).
 extern DrawBattleIntroBox
+extern SlidePlayerAndEnemySilhouettesOnScreen  ; core.asm — pret slide entry (LoadPlayerBackPic + slide)
 extern SlideBattlePicsIn
 extern DebugLoadEmbeddedEnemyFrontPic
 extern LoadPlayerBackPic
@@ -2231,8 +2232,14 @@ RunBattleTest:
 %endif
     mov esi, W_TILEMAP + 12         ; hlcoord 12,0 (stride 40)
     call LoadFrontSpriteByMonIndex  ; real enemy front pic (not the stub)
-    call LoadPlayerBackPic
-    call SlideBattlePicsIn
+    ; STEP 1 of retiring this staging's duplication of production (2026-08-13).
+    ; These two calls WERE `call LoadPlayerBackPic / call SlideBattlePicsIn`,
+    ; which is exactly what the pret-named entry point does — so routing through
+    ; it is a no-op today and makes the harness track production automatically
+    ; instead of re-deriving it. Duplicated staging is what left this gate
+    ; chasing production twice already (the send-out and the special-battle
+    ; intro), each time found only by a golden failure.
+    call SlidePlayerAndEnemySilhouettesOnScreen
     call DrawBattleIntroBox
     ; The enemy HUD must be drawn BEFORE the screen is saved: a special
     ; battle's menu opens with LoadScreenTilesFromBuffer1 (pret StartBattle
