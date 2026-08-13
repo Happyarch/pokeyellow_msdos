@@ -2922,6 +2922,30 @@ enemy-gauge clone tile ids and VRAM slots.
                * **This is the first rendered-surface witness on a `datastruct`
                  scenario**, and the pattern generalises: a static sub-rectangle
                  can be pinned without promoting a whole timing-coupled screen.
+               * **IT RETROACTIVELY WITNESSES `ClearScreenArea` TOO
+                 (`08558f48d`), which was probed 2026-08-13 as witnessed by
+                 NOTHING in the suite.** Re-running that probe — both HUD clears
+                 deleted — now FAILS `battle_wrap` with
+                 `eHudLv +4: want $7F | got $6E`: exactly the stale `:L` glyph
+                 measured by hand when the fix landed. One span, two fixes
+                 gated.
+               * **THE PLAYER HUD IS COVERED TOO (2026-08-13).** Four more
+                 projected spans on the same scenario — `pHudName` GB(10,7)x11,
+                 `pHudLv` GB(14,8)x6, `pHudBar` GB(10,9)x9, `pHudFrac`
+                 GB(11,10)x8 — all confirmed byte-identical to hardware before
+                 being added. They gate the two HUD fixes that had NO witness:
+                 `DrawHP` (`8b9e53060`, whose switch measured 0 changed cells,
+                 so nothing could see it) and `PrintLevel` (`3beebbb9c`).
+                 * NON-VACUITY: skipping the `DrawHP` call fails with **16
+                   unmasked divergences**, all in `pHudBar` (9) and `pHudFrac`
+                   (7 of 8 — one byte coincidentally matches).
+                 * Golden regenerated surgically again: regions 21 -> 25, added
+                   exactly the four `pHud*` names, no pre-existing region's
+                   bytes changed, frame unchanged at 7039.
+               * Net: `battle_wrap` went from pinning WRAM only to gating FOUR
+                 previously unwitnessed fixes — the status rule, the HUD clear,
+                 `DrawHP` and `PrintLevel` — without promoting its
+                 timing-coupled screen.
              Both halves now print the status condition one cell right of the
              level cell and print the level only when there is none, per pret
              :1913-1918 / :1963-1972. **HARDWARE TRUTH CAME OUT OF THE GOLDEN

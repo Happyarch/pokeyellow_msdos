@@ -1033,7 +1033,9 @@ SCENARIOS = {
         # even though this scenario stays datastruct (its dialog area is
         # timing-coupled). Declared PROJECTED: golden_diff recomputes and asserts
         # both sides' addresses from these GB (col, row) origins.
-        "projected": {"eHudName": (1, 0), "eHudLv": (0, 1)},
+        "projected": {"eHudName": (1, 0), "eHudLv": (0, 1),
+                      "pHudName": (10, 7), "pHudLv": (14, 8),
+                      "pHudBar": (10, 9), "pHudFrac": (11, 10)},
         "window": (10, 3),
         "class": "datastruct",
         "flags": "DEBUG_BATTLE_WRAP=1",

@@ -978,6 +978,15 @@ gbstate_regions:
     ; tools/mgba_harness/scenarios/battle_wrap.lua.
     gbregion "eHudName", W_TILEMAP + (0 + 3) * SCREEN_TILES_W + (1 + 10), 10  ; GB (1,0)
     gbregion "eHudLv",   W_TILEMAP + (1 + 3) * SCREEN_TILES_W + (0 + 10), 12  ; GB (0,1)
+    ; Player-HUD spans, same projected mechanism. These gate the HUD work that
+    ; had no witness at all: DrawHP (8b9e53060 — pBar + pFrac are its whole
+    ; output) and PrintLevel (3beebbb9c — pLv). All four were confirmed
+    ; byte-identical to hardware before being added, and the player HUD is
+    ; static at this dump point for the same reason the enemy HUD is.
+    gbregion "pHudName", W_TILEMAP + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11  ; GB (10,7)
+    gbregion "pHudLv",   W_TILEMAP + (8 + 3) * SCREEN_TILES_W + (14 + 10), 6   ; GB (14,8)
+    gbregion "pHudBar",  W_TILEMAP + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9   ; GB (10,9)
+    gbregion "pHudFrac", W_TILEMAP + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8  ; GB (11,10)
 %endif
 %ifdef BATTLE_NEXTMON_MENU_PROBE
     ; --- ChooseNextMon party-menu stall probe (battle plan 2b) ---

@@ -77,6 +77,11 @@ local function regions(s)
 	-- "projected" declaration asserts both addresses against GB (col,row).
 	r[#r + 1] = { name = "eHudName", addr = s:addr("wTileMap") + 0 * 20 + 1, size = 10 }
 	r[#r + 1] = { name = "eHudLv",   addr = s:addr("wTileMap") + 1 * 20 + 0, size = 12 }
+	-- Player-HUD spans: pBar + pFrac are DrawHP's whole output, pLv is PrintLevel.
+	r[#r + 1] = { name = "pHudName", addr = s:addr("wTileMap") +  7 * 20 + 10, size = 11 }
+	r[#r + 1] = { name = "pHudLv",   addr = s:addr("wTileMap") +  8 * 20 + 14, size = 6 }
+	r[#r + 1] = { name = "pHudBar",  addr = s:addr("wTileMap") +  9 * 20 + 10, size = 9 }
+	r[#r + 1] = { name = "pHudFrac", addr = s:addr("wTileMap") + 10 * 20 + 11, size = 8 }
 	return r
 end
 
