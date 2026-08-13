@@ -486,6 +486,42 @@
       "verification": "Stage 6 elemental move-animation witness, the twin of battle_anim_physical: a real wild-battle FIGHT -> THUNDERSHOCK turn stopped at DrawFrameBlock's first published live OAM frame. The reference watches for a CHANGE from parked battle-menu OAM rather than merely nonzero OAM, so the compared unmasked OAM entries cannot be stale menu state. The shared debug party carries no elemental move, so BOTH sides pin wBattleMonMoves+3 to THUNDERSHOCK and leave its PP alone; wBattleMon therefore still compares clean. Unlike the physical twin this checkpoint sits on the subanimation/flash path."
     },
     {
+      "name": "battle_anim_ball",
+      "id": 76,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_ITEMBALL=1 DEBUG_BATTLE_ANIM_BALL=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_BALL",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_ball.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayBattleMenu",
+        "BagWasSelected",
+        "UseBagItem",
+        "UseItem",
+        "ItemUseBall",
+        "PlayAnimation",
+        "DrawFrameBlock"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 ball move-animation witness. Same landmark as its physical/elemental siblings -- DrawFrameBlock's first published live OAM frame -- but entered through the real battle ITEM menu (ITEM -> MASTER BALL) rather than FIGHT. It exists because ball_catch (id 20) cannot witness this: that scenario is datastruct/WRAM-only and dumps only after wBattleResult goes 2, by which point every toss frame block has been cleaned up. The animation under test is ULTRATOSS_ANIM ($C6), which is what pret selects for a MASTER BALL (engine/battle/animations.asm:2795) -- NOT TOSS_ANIM ($C1). The party is still 5 at the dump, which is what distinguishes this instant from ball_catch's post-capture one."
+    },
+    {
       "name": "battle_faint",
       "id": 33,
       "tier": "full",

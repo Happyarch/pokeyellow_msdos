@@ -594,6 +594,10 @@ EXP_ALL                 equ 0x4B    ; constants/item_constants.asm (was a file-l
 PAY_DAY                 equ 0x06    ; constants/move_constants.asm
 WRAP                    equ 0x23    ; constants/move_constants.asm (trapping move)
 STRENGTH                equ 0x46
+ULTRATOSS_ANIM          equ 0xC6    ; constants/move_constants.asm; the toss
+                                    ; animation pret picks for any ball that is
+                                    ; not POKE_BALL/GREAT_BALL, i.e. the one the
+                                    ; MASTER BALL route in ball_catch plays
 THUNDERSHOCK            equ 0x54    ; constants/move_constants.asm; the Stage-6
                                     ; elemental animation gate pins it into the
                                     ; player's move slot 4 (see debug_dump.asm)

@@ -810,6 +810,18 @@ SCENARIOS = {
             ],
         }),
     },
+    "battle_anim_ball": {
+        # The ball twin of battle_anim_physical/_elemental: the same
+        # DrawFrameBlock landmark, but entered through the real battle ITEM menu
+        # and stopped on the MASTER BALL toss (ULTRATOSS_ANIM). Masks start as
+        # the menu-derived set its siblings carry; anything beyond that is a
+        # divergence to explain, not to add here.
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_ITEMBALL=1 DEBUG_BATTLE_ANIM_BALL=1",
+        "window": (10, 3),
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_exp_all": {
         # datastruct: battle_faint's resolved turn with EXP_ALL in the bag, so
         # FaintEnemyPokemon halves wEnemyMonBaseStats and runs GainExperience a

@@ -140,6 +140,9 @@ extern DebugDumpMemory                   ; debug_dump.asm — terminates at the 
 %ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
 extern DebugDumpMemory                   ; debug_dump.asm — same checkpoint, elemental move id
 %endif
+%ifdef DEBUG_BATTLE_ANIM_BALL
+extern DebugDumpMemory                   ; debug_dump.asm — same checkpoint, ball toss animation
+%endif
 
 ; --- Stage 3: screen / palette special effects ---
 global AnimationFlashScreen
@@ -379,6 +382,13 @@ DrawFrameBlock:
     jne .notElementalScenarioFrame
     call DebugDumpMemory                       ; first real-turn THUNDERSHOCK OAM frame block
 .notElementalScenarioFrame:
+%endif
+; DEVIATION{class=temporary; pret=engine/battle/animations.asm:DrawFrameBlock; behavior=DEBUG_BATTLE_ANIM_BALL terminates at the first published ULTRATOSS_ANIM OAM frame block; evidence=the Stage-6 ball witness must compare live toss OAM before the capture resolves, since ball_catch's own dump point is after wBattleResult goes 2 and every toss frame block is cleaned up by then, and ULTRATOSS_ANIM is the animation pret selects for the MASTER BALL that route throws; lifetime=retire only with this debug scenario or when a production landmark can replace it}
+%ifdef DEBUG_BATTLE_ANIM_BALL
+    cmp byte [ebp + wAnimationID], ULTRATOSS_ANIM
+    jne .notBallScenarioFrame
+    call DebugDumpMemory                       ; first real-item-path toss OAM frame block
+.notBallScenarioFrame:
 %endif
     mov bl, [ebp + wSubAnimFrameDelay]       ; ld c,a → BL
     call DelayFrames

@@ -2745,8 +2745,57 @@ enemy-gauge clone tile ids and VRAM slots.
           else; the probe was then reverted. So the PASS above is a measurement,
           not an absence of comparison.
         * Ball, shake/blink and option-off remain open in this same box.
-      - **BALL SUB-ITEM SCOPED 2026-08-13 (read-only measurement, not started).**
-        Two facts that change how it must be built:
+      - **BALL COMPLETE 2026-08-13 — `battle_anim_ball` (id 76), AND IT CAUGHT A
+        REAL PRODUCTION BUG ON ITS FIRST RUN.** Registered, golden committed,
+        `goldencheck` **PASS** with TILEMAP / VRAM / OAM / WRAM all clean
+        unmasked and **no wram mask of its own at all**. Entered through the
+        real battle ITEM menu (ITEM -> MASTER BALL) rather than FIGHT; the dump
+        instant is distinguished from `ball_catch`'s by the party still being 5.
+        * **THE BUG: `TX_LOW` printed the second dialogue line OUTSIDE the text
+          box.** `dos_port/src/home/text.asm` `.cmd_low` hardcoded
+          `W_TILEMAP + 16 * SCREEN_W_TILES + 1` — pret's GB offset
+          (`hlcoord 1,16`) used as a **raw flat index into the port's 40-wide
+          tilemap** — so the line landed at canvas (row 8, col 1), eleven rows
+          above the box, while line 1 was placed correctly. Fix is one operand:
+          `mov ebx, [text_line2]`. **The port already had the mechanism** —
+          `text_line2` is exactly that coordinate and every other `(1,16)` site
+          in the file (`handle_para`, both scroll anchors) already read it;
+          `.cmd_low` was the one site that did not.
+        * **Blast radius is wider than the ball.** `text_low` is a text-stream
+          command, so every stream using it was affected —
+          `ItemUseText00` (all four ball types plus every medicine/TM item use)
+          and `GotOnBicycleText` are two confirmed users in pret. No existing
+          scenario had ever compared a rendered `text_low` second line, which is
+          why 73 green scenarios never saw it. Recorded as
+          `regression-text-txlow-raw-gb-coord`.
+        * **NOT FOUND BY LOOKING FOR IT** — the scenario's first run reported 14
+          unmasked tilemap cells with `OAM/VRAM/WRAM all OK`, which is what said
+          "same animation frame, different text placement". Rendering both
+          tilemaps side by side located the string. The fix took the count 14 ->
+          0, so the tilemap surface is demonstrably sensitive here.
+        * **OAM sensitivity proved separately by sabotage:** a one-byte OAM
+          corruption at the checkpoint failed on exactly entry 0 (`Y=88` ->
+          `89`) and nothing else; probe reverted.
+        * **SIBLING SWEEP (the raw-coord class says to do one): `TX_SCROLL` has
+          the SAME defect and is NOT yet fixed.** `dos_port/src/home/text.asm`
+          `.cmd_scroll` ($07) ends with the identical
+          `mov ebx, W_TILEMAP + 16 * SCREEN_W_TILES + 1`, for the identical
+          purpose — repositioning the cursor to the box's second line after
+          scrolling. Decomposed rather than asserted: `PrintText`
+          (`src/home/window.asm:143`) publishes the active projection record's
+          `MB_LINE2` into `text_line2` on every call, and the DEFAULT overworld
+          record's `MB_LINE2` (`text.asm:1480`) is literally that same constant.
+          So the constant is correct in the overworld and WRONG in all five
+          non-default projections that exist: battle (`core.asm:1341`,
+          `BTXT_LINE2`), `bills_pc`, `players_pc`, `party_menu`, `oak_speech`.
+          Fix is the same one operand. **Held back deliberately**: it is
+          UNWITNESSED — no current scenario compares a rendered `TX_SCROLL` line
+          in a non-default projection — so it needs its own witness or an
+          explicit unwitnessed-fix note, and it must not ride the ball commit.
+        * Shake/blink and option-off remain open in this same box.
+      - **BALL SUB-ITEM SCOPING (read-only measurement made before building it;
+        both facts held).**
+        Two facts that changed how it had to be built:
         * **`ball_catch` (id 20) CANNOT be promoted into this witness.** It is
           `scenario_class: datastruct` (`regions: ["wram"]`) and its gate dumps
           only after asserting `wBattleResult == 2`, i.e. after the capture has

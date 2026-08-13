@@ -976,6 +976,17 @@ endif
 # Ball-throw gate (items-plan Stage 6): seed a wild battle (the DEBUG_BATTLE path),
 # throw ITEMBALL_ID (default MASTER_BALL) from bag slot ITEMBALL_SLOT, dump the
 # capture WRAM to DUMP.BIN and exit. Headless; AUTOKEY answers the <PROMPT> waits in
+# Stage-6 ball-animation checkpoint. It is a MODIFIER on the DEBUG_ITEMBALL gate
+# below, not a gate of its own: the whole real ITEM -> MASTER BALL route is
+# reused and only the stopping point moves earlier, to DrawFrameBlock's first
+# published ULTRATOSS_ANIM frame block. So it is always passed ALONGSIDE
+# DEBUG_ITEMBALL=1 (see the scenario's build_flags), which is also what keeps the
+# generated registry from stamping it with ball_catch's id -- that generator
+# orders gates by build_flags token count, descending.
+ifdef DEBUG_BATTLE_ANIM_BALL
+NASMFLAGS += -D DEBUG_BATTLE_ANIM_BALL
+endif
+
 # the caught/dex messages. make DEBUG_ITEMBALL=1 [ITEMBALL_ID=0x04 ITEMBALL_SLOT=n]
 ifdef DEBUG_ITEMBALL
 NEED_DEBUG_DUMP := 1

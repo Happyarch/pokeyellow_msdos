@@ -1240,9 +1240,21 @@ TextCommandProcessor:
     pop esi                         ; restore stream ptr
     jmp .next_cmd
 
-; --- TX_LOW ($05): cursor to coord(1,16) ---
+; --- TX_LOW ($05): cursor to the box's 2nd text line. Pret ref:
+;     home/text.asm:TextCommand_LOW, `bccoord 1, 16`.
+;
+;     [text_line2] IS THAT COORDINATE, and this was the one site in this file
+;     that did not read it. It hardcoded `W_TILEMAP + 16 * SCREEN_W_TILES + 1`
+;     — pret's GB offset used as a raw flat index into the port's 40-wide
+;     tilemap — so a text_low stream printed its second line 11 rows above the
+;     box, at canvas (row 8, col 1), while its first line was placed correctly.
+;     MEASURED by the battle_anim_ball scenario: the golden showed "MASTER
+;     BALL!" on the box's second line and the port showed it outside the box,
+;     with the tail "LL!" the only part inside the compared window. Every other
+;     (1,16) site here (handle_para, and the two scroll anchors) already used
+;     [text_line2]; this one was missed. ---
 .cmd_low:
-    mov ebx, W_TILEMAP + 16 * SCREEN_W_TILES + 1
+    mov ebx, [text_line2]
     jmp .next_cmd
 
 ; --- TX_PROMPT_BUTTON ($06): show ▼ and wait for A/B; in a link battle, defer to
