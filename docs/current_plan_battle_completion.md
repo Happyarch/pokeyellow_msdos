@@ -2228,6 +2228,51 @@ provider shapes below, not their runtime behavior.
       - Still owed even for the four covered types: the box asks for the
         item/event RESULT and EXIT as well as the menu, and none of the three
         new scenarios follows the battle to its end.
+      - **MEASURED 2026-08-13 — THE COVERAGE IS THINNER THAN "FOUR OF FIVE
+        TYPES" SUGGESTS, AND THE BOX'S OWN WORDING IS WHERE IT SHOWS.** The box
+        asks for a scenario "comparing the relevant MENU". Of the **22** battle
+        scenarios in the registry, only **3 compare the tilemap at all** —
+        `battle_intro`, `battle_menu` and `battle_safari`. Eighteen are
+        `class: datastruct` (WRAM only) and one (`battle_damage`) is
+        `class: semantic` (damage oracle only).
+        * **So `battle_oldman` and `battle_pikachu` do NOT compare the menus
+          they were built for.** They pin WRAM — which is how they caught the
+          `.oldManName` / `.profOakName` ROM-tail bytes, a real result — but no
+          scenario has ever compared a rendered OLD_MAN or PIKACHU screen.
+        * This is the same shape as the three witness gaps found 2026-08-12/13
+          (the SLP status rule, `CenterMonName`, the level swaps): the scenario
+          reaches the code and compares a surface where the defect cannot show.
+          Recorded as a fourth instance in `bug-class-false-witness-scenario`.
+      - **PROMOTING `battle_oldman` TO A RENDERED COMPARISON IS BLOCKED, and it
+        is blocked on 4c, not on effort.** Measured directly: class flipped to
+        `default` with `window (10,3)` + `oam_window`, manifest regions widened
+        to `tilemap,vram,oam,wram`, then `goldencheck`. Result **120 unmasked
+        divergences**, fully decomposed:
+        * **6 tilemap cells** — GB col 2, rows 4-9, `want $6B | got $C8`. The
+          `DuplicateEnemyHPBarTiles` gauge clone, i.e. the F-19 mask set
+          `battle_menu` / `battle_safari` already carry. Deliberate design.
+        * **13 tilemap cells** — GB rows 14 and 16, cols 1-7: hardware has
+          BLANKS, the port has `Wild PI…` / `appeare…`. This is the missing
+          `PrintBeginningBattleText`. pret prints the tutorial/beginning stream
+          there; the port's `.specialBattleIntro` substitutes
+          `DrawBattleIntroBox`, the wild-style box, which is exactly what the
+          `DEVIATION{class=temporary}` in `init_battle.asm` records and what 4c
+          retires.
+        * **101 VRAM tile slots**, all in `$8000` (vChars0) — golden zero, port
+          populated, i.e. the port has battle pic/anim patterns loaded where
+          hardware does not at this frame. Same family as `battle_safari`'s
+          documented `$8000-$87FF` mask, but NOT verified to be the same set.
+        * **Not masked, deliberately.** Masking 13 cells of a known-missing
+          routine plus 101 unverified VRAM slots to get a green tick is what
+          the preamble forbids. The experiment was reverted in full;
+          `battle_oldman` is green again on its `datastruct` config and the
+          registry is untouched at 69.
+        * **The order this implies: land `PrintBeginningBattleText` (4c) FIRST,
+          then promote both special-battle scenarios to rendered.** At that
+          point the only expected residue is the shared F-19 gauge mask.
+        * `battle_pikachu` was NOT measured. It shares
+          `.specialBattleIntro`, so the same 13-cell text divergence is
+          EXPECTED there — expected, not measured.
 
 ## Stage 5 — battle transitions
 
