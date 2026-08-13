@@ -2273,6 +2273,39 @@ provider shapes below, not their runtime behavior.
         * `battle_pikachu` was NOT measured. It shares
           `.specialBattleIntro`, so the same 13-cell text divergence is
           EXPECTED there — expected, not measured.
+      - **THE THREE RENDERED SCENARIOS DO NOT WITNESS A MISSING HUD CLEAR
+        EITHER (probed 2026-08-13).** Applying the break-it probe to this
+        session's own `ClearScreenArea` restoration (`08558f48d`): both HUD
+        clears deleted, rebuilt, then `battle_intro`, `battle_menu` and
+        `battle_safari` re-run — **all three still PASS**. So nothing in the
+        69-scenario suite can see that fix; it stands on the `run_headless` +
+        golden-blob measurement recorded in its own commit, and the eight
+        scenarios that commit lists are regression evidence only.
+        * The first attempt at this probe silently did NOT apply (a literal
+          matched 7 sites, not 2, and the guard assert caught it) — and the
+          three passes it produced looked exactly like the real result. That is
+          instance 2 of the false-witness class in miniature: **a probe that
+          did not apply reads identically to a probe that found nothing.**
+          Assert the edit landed before trusting the run.
+      - **SIZING FOR THE NEXT STEP, so it is not restarted from scratch:
+        translating `PrintBeginningBattleText` needs four things**, measured
+        2026-08-13 — it is NOT a single-file translation.
+        1. The mirror file `dos_port/src/engine/battle/common_text.asm`.
+        2. **Five of its six text streams do not exist in the port.** Only
+           `_WildMonAppearedText` is present (`init_battle.asm`);
+           `_HookedMonAttackedText`, `_EnemyAppearedText`,
+           `_TrainerWantsToFightText`, `_UnveiledGhostText` and
+           `_GhostCantBeIDdText` are absent from `assets/` and `src/` entirely.
+           Tier-1 rule: they come from a generator, never hand-encoded.
+        3. `DrawAllPokeballs` is `missing` and is the recorded pokeballs
+           forked-name debt (blocked on the shadow-OAM publish design). It is
+           reached only on the `wBattleType == 0` arm, so the SPECIAL-battle
+           path this box needs does not touch it — but a faithful whole-routine
+           translation does.
+        4. `IsPlayerPikachuAsleepInParty` is a `stub`, on the
+           `BATTLE_TYPE_PIKACHU` arm.
+        Everything else it calls is translated (`IsItemInBag`, `PlayCry`,
+        `PrintText`, `DelayFrames`, `LoadEnemyMonData`, `PlayPikachuSoundClip`).
 
 ## Stage 5 — battle transitions
 
