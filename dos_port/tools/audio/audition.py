@@ -83,8 +83,8 @@ def pick_port(target: str) -> str:
     out = subprocess.run(["aplaymidi", "-l"], capture_output=True, text=True,
                          check=True).stdout
     for line in out.splitlines()[1:]:
-        parts = line.split(None, 2)
-        if len(parts) == 3 and any(w in parts[2].lower() for w in want):
+        parts = line.split(None, 1)
+        if len(parts) == 2 and any(w in line.lower() for w in want):
             return parts[0]
     raise SystemExit(
         f"no ALSA port matching {want} — is the synth running? "
