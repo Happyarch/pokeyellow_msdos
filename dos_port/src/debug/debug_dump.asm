@@ -956,6 +956,28 @@ gbstate_regions:
     ; trainerResult and wBoxData. The golden mirrors both rows BY NAME.
     gbregion "wPlyStatus1",  wPlayerBattleStatus1,  1   ; $D061 — USING_TRAPPING_MOVE
     gbregion "wPlyAtksLeft", wPlayerNumAttacksLeft, 1   ; $D069 — the trapping counter
+    ; --- enemy-HUD checkpoint rows: the witness for the status-vs-level rule
+    ; --- (de0ee1f58), added 2026-08-13 ---
+    ; pret prints the status condition one cell right of the level cell and
+    ; prints the level ONLY when there is none; the port printed it
+    ; unconditionally. This scenario seeds wEnemyMonStatus = SLP, so hardware
+    ; shows blank + "SLP" where the old port showed ":L13" — but the scenario
+    ; is `datastruct` and compared no tilemap, so nothing gated the fix.
+    ;
+    ; A whole-tilemap promotion is the WRONG lever here: this dump point is
+    ; mid-message and its dialog area is timing-coupled between the emulators,
+    ; which is why the scenario is datastruct in the first place. The enemy HUD
+    ; is static once drawn, so these two ROW SPANS are comparable while the
+    ; screen as a whole is not.
+    ;
+    ; These are PROJECTED spans: the same GB cells at a different address on
+    ; each side (canvas is SCREEN_TILES_W wide with the battle window applied;
+    ; the golden's wTileMap is 20 wide with none). golden_diff's "projected"
+    ; declaration recomputes and ASSERTS both addresses from the GB (col,row)
+    ; below — it does not skip the check. Mirrored in
+    ; tools/mgba_harness/scenarios/battle_wrap.lua.
+    gbregion "eHudName", W_TILEMAP + (0 + 3) * SCREEN_TILES_W + (1 + 10), 10  ; GB (1,0)
+    gbregion "eHudLv",   W_TILEMAP + (1 + 3) * SCREEN_TILES_W + (0 + 10), 12  ; GB (0,1)
 %endif
 %ifdef BATTLE_NEXTMON_MENU_PROBE
     ; --- ChooseNextMon party-menu stall probe (battle plan 2b) ---

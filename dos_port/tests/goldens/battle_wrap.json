@@ -115,9 +115,21 @@
       "gb_addr": "0xD069",
       "name": "wPlyAtksLeft",
       "size": 1
+    },
+    {
+      "file_offset": 7426,
+      "gb_addr": "0xC3A1",
+      "name": "eHudName",
+      "size": 10
+    },
+    {
+      "file_offset": 7436,
+      "gb_addr": "0xC3B4",
+      "name": "eHudLv",
+      "size": 12
     }
   ],
   "rom_title": "POKEMON YEL",
   "scenario": "battle_wrap",
-  "total_size": 7426
+  "total_size": 7448
 }

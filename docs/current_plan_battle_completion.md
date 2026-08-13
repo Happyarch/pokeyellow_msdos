@@ -2896,14 +2896,32 @@ enemy-gauge clone tile ids and VRAM slots.
                is 40 wide with the (+10,+3) battle projection at `$C423`. The
                check exists to catch a label moving on one side only, so it is
                doing its job; it simply has no notion of a PROJECTED span.
-             * **The tooling change needed, stated exactly:** `check_addresses`
-               (`golden_diff.py:1727`) skips `VIDEO_REGIONS` and the
-               `FLAT_ADDR_SENTINEL` composed regions. A projected GB-memory
-               span is neither. It needs a third, declared case — a per-region
-               "projected" marker carrying the expected (dx, dy) — so the
-               address difference is asserted rather than ignored. Reverted in
-               full rather than bent: weakening a safety check to land a witness
-               is the wrong trade, and `battle_wrap` is green again.
+             * **THE TOOLING GAP IS CLOSED AND THE WITNESS IS LIVE
+               (2026-08-13).** `check_addresses` gained a third, DECLARED case:
+               a scenario may list `"projected": {name: (col, row)}`, and both
+               addresses are then RECOMPUTED from each side's own `wTileMap`
+               base, that side's stride, and the scenario's `window` — and
+               ASSERTED. It is deliberately NOT a skip: this is strictly
+               STRONGER than the address equality it replaces for these
+               regions, because it pins which CELL the span covers on both
+               sides, so a wrong row, a wrong column or a wrong window all
+               fail.
+               * `battle_wrap` now carries `eHudName` GB(1,0) 10B and `eHudLv`
+                 GB(0,1) 12B on both sides and PASSES.
+               * **WITNESS NON-VACUITY:** removing the status-vs-level call
+                 makes it FAIL with exactly
+                 `eHudLv +4..+7: want $7F $92 $8B $8F | got $6E $F7 $F9 $7F` —
+                 blank+"SLP" against ":L13", i.e. the precise defect.
+               * **CHECK NON-VACUITY:** mis-declaring `eHudLv` as GB(0,2)
+                 instead of (0,1) is rejected with
+                 `projected at GB (0,2) => golden should be $C3C8, dump says
+                 $C3B4` and the matching port line. The new case can fail.
+               * Golden regenerated surgically: regions 19 -> 21, added exactly
+                 `['eHudLv','eHudName']`, no pre-existing region's bytes
+                 changed, frame unchanged at 7039.
+               * **This is the first rendered-surface witness on a `datastruct`
+                 scenario**, and the pattern generalises: a static sub-rectangle
+                 can be pinned without promoting a whole timing-coupled screen.
              Both halves now print the status condition one cell right of the
              level cell and print the level only when there is none, per pret
              :1913-1918 / :1963-1972. **HARDWARE TRUTH CAME OUT OF THE GOLDEN

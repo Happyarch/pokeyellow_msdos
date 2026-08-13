@@ -1029,6 +1029,12 @@ SCENARIOS = {
         # about this box. Everything else, including the whole party and
         # wBattleMon, is compared unmasked; the enemy is asleep precisely so
         # that wBattleMon stays roll-free.
+        # The enemy HUD is static once drawn, so these two row spans are comparable
+        # even though this scenario stays datastruct (its dialog area is
+        # timing-coupled). Declared PROJECTED: golden_diff recomputes and asserts
+        # both sides' addresses from these GB (col, row) origins.
+        "projected": {"eHudName": (1, 0), "eHudLv": (0, 1)},
+        "window": (10, 3),
         "class": "datastruct",
         "flags": "DEBUG_BATTLE_WRAP=1",
         "wram_skip": {
@@ -1724,15 +1730,47 @@ def load_gbstate(path):
     return {"scenario_id": scenario_id, "completed": completed, "regions": regions}
 
 
-def check_addresses(golden, port, scenario):
+def check_addresses(golden, port, scenario, cfg=None):
     """Both sides name their regions the same; assert they also AGREE ON THE ADDRESS.
 
     The port table is built from gb_memmap.inc, the golden's from pret's .sym. If a
     label moves on one side only, the bytes would still line up positionally and the
     diff would silently compare the wrong memory. Catch it here instead.
+
+    PROJECTED SPANS (cfg["projected"]) are the one case where the two addresses
+    are SUPPOSED to differ: a slice of the tilemap lives at a different address on
+    each side, because the golden's wTileMap is GB_W wide with no offset while the
+    port's canvas is PORT_CANVAS_W wide with the scenario's (dx, dy) window applied.
+    Those are NOT skipped — that would just silence the check. Each one declares the
+    GB (col, row) it starts at, and both addresses are then RECOMPUTED from each
+    side's own wTileMap base and stride and asserted. That is a strictly stronger
+    statement than address equality: it pins which CELL the span covers on both
+    sides, so a wrong row, a wrong column or a wrong window all fail here.
     """
     bad = []
+    projected = (cfg or {}).get("projected", {})
+    win_dx, win_dy = (cfg or {}).get("window", (0, 0))
     for name in sorted(set(golden) & set(port)):
+        if name in projected:
+            col, row = projected[name]
+            g, p = golden[name], port[name]
+            if "wTileMap" not in golden or "wTileMap" not in port:
+                bad.append(f"  {name}: declared projected, but one side dumps no wTileMap "
+                           f"region to anchor it against")
+                continue
+            want_g = golden["wTileMap"]["addr"] + row * GB_W + col
+            want_p = port["wTileMap"]["addr"] + (row + win_dy) * PORT_CANVAS_W + (col + win_dx)
+            if g["size"] != p["size"]:
+                bad.append(f"  {name}: projected span sizes differ — golden {g['size']}B "
+                           f"!= port {p['size']}B")
+            if g["addr"] != want_g:
+                bad.append(f"  {name}: projected at GB ({col},{row}) => golden should be "
+                           f"${want_g:04X}, dump says ${g['addr']:04X}")
+            if p["addr"] != want_p:
+                bad.append(f"  {name}: projected at GB ({col},{row}) with window "
+                           f"({win_dx},{win_dy}) => port should be ${want_p:04X}, dump says "
+                           f"${p['addr']:04X}")
+            continue
         if name in VIDEO_REGIONS:
             # wTileMap is deliberately a different size (canvas vs screen), and
             # cgb_palettes has no comparable address on either side.
@@ -2125,7 +2163,7 @@ def main():
         sys.exit(f"{args.gbstate}: scenario id {port_state['scenario_id']} does not match "
                  f"{args.scenario} ({expected_id}); dump is not proof this gate completed")
     port_regions = port_state["regions"]
-    check_addresses(golden_regions, port_regions, args.scenario)
+    check_addresses(golden_regions, port_regions, args.scenario, cfg)
 
     golden = {k: v["data"] for k, v in golden_regions.items()}
     port = {

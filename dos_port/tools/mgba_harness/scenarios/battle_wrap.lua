@@ -71,6 +71,12 @@ local function regions(s)
 	local r = dump.standard_regions(s)
 	r[#r + 1] = { name = "wPlyStatus1",  addr = s:addr("wPlayerBattleStatus1"),  size = 1 }
 	r[#r + 1] = { name = "wPlyAtksLeft", addr = s:addr("wPlayerNumAttacksLeft"), size = 1 }
+	-- Enemy-HUD checkpoint rows (witness for the status-vs-level rule). Same GB
+	-- cells as the port's gbregion pair in src/debug/debug_dump.asm, expressed in
+	-- this side's stride: wTileMap is 20 wide with no projection. golden_diff's
+	-- "projected" declaration asserts both addresses against GB (col,row).
+	r[#r + 1] = { name = "eHudName", addr = s:addr("wTileMap") + 0 * 20 + 1, size = 10 }
+	r[#r + 1] = { name = "eHudLv",   addr = s:addr("wTileMap") + 1 * 20 + 0, size = 12 }
 	return r
 end
 
