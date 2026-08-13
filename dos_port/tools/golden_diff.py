@@ -650,6 +650,31 @@ SCENARIOS = {
         "masks": {"vram": list(_BATTLE_VRAM_MASKS)},
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_low_hp": {
+        # The FIGHT menu with the player's mon at 20/362 — RED bar, still ALIVE.
+        # THE ONLY SCENARIO THAT OBSERVES wLowHealthAlarm ARMED: the bit is set by
+        # DrawPlayerHUDAndHPBar's tail while a live mon is at red HP and cleared the
+        # instant it faints, and every other dump point is post-faint (measured:
+        # battle_choose_next_mon seeds a 1 HP mon and still reads 00).
+        #
+        # datastruct + three projected spans: the dialog area at this dump point is
+        # the same one battle_menu compares, but what this scenario is FOR is the
+        # alarm byte and the red-tier bar, so it pins those rather than the screen.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_LOWHP=1 AUTOKEY_DUMP_FRAME=300",
+        "window": (10, 3),
+        "projected": {"pHudBar": (10, 9), "pHudFrac": (11, 10)},
+        "wram_bit_masks": {
+            # Bit 7 is BIT_LOW_HEALTH_ALARM and IS compared — it is the whole point.
+            # Bits 0-6 are LOW_HEALTH_TIMER_MASK, the alarm's tone timer, which
+            # Music_DoLowHealthAlarm decrements on its own cadence; the two audio
+            # engines do not share it, so its instantaneous value at a fixed frame
+            # is not comparable (measured: golden $91 vs port $83 — both armed,
+            # timers 17 vs 3).
+            "wLowHPAlarm": {0: (0x7F, "LOW_HEALTH_TIMER_MASK: free-running alarm tone "
+                                      "timer, not shared between the two audio engines")},
+        },
+    },
     "battle_menu": {
         # dump frame 300: well past the intro slide-in + send-out draws — the
         # screen is parked in HandleMenuInput long before (state, not timing)
@@ -1991,12 +2016,25 @@ def compare_wram(golden, port, cfg, max_report):
 
         g, p = golden[name]["data"], port[name]["data"]
         region_masks = masks.get(name, [])
+        region_bits = cfg.get("wram_bit_masks", {}).get(name, {})
         decoder = WRAM_DECODERS.get(name)
         reported = set()  # field starts already reported (multi-byte -> one line)
 
         for off in range(len(g)):
             if g[off] == p[off]:
                 continue
+            # Bit-level mask: ignore only the named bits of this byte, still
+            # comparing every other bit. A whole-byte wram_mask cannot express
+            # "this byte carries a free-running counter in its low bits AND a
+            # fidelity-relevant flag in its high bit" — it would hide both.
+            bit_entry = region_bits.get(off)
+            if bit_entry is not None:
+                ignore, bit_why = bit_entry
+                if (g[off] ^ p[off]) & ~ignore & 0xFF == 0:
+                    masked_hits.append(
+                        f"wram {name} +{off} (bits ${ignore:02X}): {bit_why} "
+                        f"[golden ${g[off]:02X} vs port ${p[off]:02X}; compared bits agree]")
+                    continue
             why = next((w for (lo, hi), w in region_masks if lo <= off <= hi), None)
             if why:
                 masked_hits.append(f"wram {name} +{off}: {why}")

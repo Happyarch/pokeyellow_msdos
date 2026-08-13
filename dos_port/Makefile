@@ -2016,6 +2016,19 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
 AUTOKEY_DUMP_FRAME ?= 30
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# battle_low_hp (battle plan, 2026-08-13): the battle menu with the player's mon
+# seeded to 20/362 HP -- inside GetHealthBarColor's RED band and still ALIVE.
+# It is the only scenario that can observe wLowHealthAlarm SET: the bit is armed
+# by DrawPlayerHUDAndHPBar's tail and cleared the instant the mon faints, and
+# every other dump point is post-faint.
+#   dos_port/tools/run_headless.sh "DEBUG_BATTLE_LOWHP=1" /tmp/lowhp
+ifdef DEBUG_BATTLE_LOWHP
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_BATTLE_LOWHP
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 30
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Live battle view: same setup as DEBUG_BATTLE but holds the screen (loops
 # DelayFrame) so you can visually inspect it instead of dumping+exiting. Esc quits.
 # make DEBUG_BATTLE_LIVE=1 (then dos_port/run).

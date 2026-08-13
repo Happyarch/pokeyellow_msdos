@@ -3209,6 +3209,33 @@ enemy-gauge clone tile ids and VRAM slots.
             live mon is at red HP** — a dump-point constraint, not merely a
             "seed low HP" one. That is what no current scenario provides, and
             `battle_choose_next_mon` was the closest miss.
+          * **CLOSED 2026-08-13 (`battle_low_hp`, scenario id 72).** A new
+            scenario supplies exactly that dump point: `battle_menu`'s flow
+            with party slot 0 seeded to **20/362 HP** (5.5%, inside
+            `GetHealthBarColor`'s red band) and the mon still **ALIVE** when
+            the dump is taken, so the arming window is caught open. The seed
+            goes on the PARTY slot, not `wBattleMon`, so the real
+            `LoadBattleMonFromParty` carries it across as it would in play;
+            the Lua asserts `wBattleMonHP == 20` before dumping so a staging
+            drift fails loudly instead of photographing a full-HP mon.
+            * **CONFIRMED AGAINST HARDWARE — the first observation of the
+              alarm ARMED on either side:** golden `wLowHealthAlarm = $91`,
+              port `$83`, **both with bit 7 set**. `pHudBar`
+              (`71 62 65 63 63 63 63 63 6d`) and `pHudFrac` (`" 20/362"`) are
+              byte-identical, so the red-tier bar and its fraction render
+              exactly right too.
+            * **NON-VACUITY:** disabling the arming tail fails the scenario
+              with `wLowHPAlarm +0: want $91 | got $00`, 1 unmasked
+              divergence. This is the discrimination
+              `battle_choose_next_mon` could not provide.
+            * The low bits genuinely are not comparable — they are
+              `LOW_HEALTH_TIMER_MASK`, the alarm's tone timer, ticked on each
+              audio engine's own cadence (golden 17, port 3). A whole-byte
+              `wram_mask` would have hidden bit 7 along with them, i.e. masked
+              the thing under test, so `golden_diff` gained a narrow
+              **`wram_bit_masks`** case that ignores named BITS of a byte and
+              compares the rest. The probe above is its non-vacuity proof too,
+              since bit 7 still reports through the mask.
       * **No permanent witness for `CenterMonName`.** Needs a scenario whose
         battle mon has a nickname of 4 characters or fewer; every current one
         is 5+ and therefore in the unshifted bucket. **Same correction as the

@@ -440,6 +440,8 @@ GBSTATE_SCENARIO equ 20                 ; before DEBUG_BATTLE: ITEMBALL implies 
 GBSTATE_SCENARIO equ 16
 %elifdef DEBUG_BATTLE_INTRO
 GBSTATE_SCENARIO equ 15
+%elifdef DEBUG_BATTLE_LOWHP
+GBSTATE_SCENARIO equ 72                 ; battle_low_hp — the red-HP alarm witness
 %elifdef DEBUG_BATTLE_MENU
 GBSTATE_SCENARIO equ 14                 ; battle menu golden (Stage 2; was reserved)
 %elifdef DEBUG_BATTLE
@@ -999,6 +1001,16 @@ gbstate_regions:
     gbregion "eHudLv",   W_TILEMAP + (1 + 3) * SCREEN_TILES_W + (0 + 10), 12  ; GB (0,1)
     gbregion "pHudName", W_TILEMAP + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11 ; GB (10,7)
     gbregion "pHudLv",   W_TILEMAP + (8 + 3) * SCREEN_TILES_W + (14 + 10), 6  ; GB (14,8)
+    gbregion "pHudBar",  W_TILEMAP + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9  ; GB (10,9)
+    gbregion "pHudFrac", W_TILEMAP + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8 ; GB (11,10)
+%endif
+%ifdef DEBUG_BATTLE_LOWHP
+    ; The alarm byte itself — the thing this scenario exists to pin. Bit 7 is
+    ; BIT_LOW_HEALTH_ALARM; the low bits are the tone timer, which ticks, so the
+    ; comparison is on the whole byte and the golden decides what it should be.
+    gbregion "wLowHPAlarm", wLowHealthAlarm, 1        ; $D082
+    ; The HUD spans too: a red bar is a different draw from every other
+    ; scenario's (full or partial-but-yellow), so these pin the red rendering.
     gbregion "pHudBar",  W_TILEMAP + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9  ; GB (10,9)
     gbregion "pHudFrac", W_TILEMAP + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8 ; GB (11,10)
 %endif
@@ -2383,6 +2395,20 @@ RunBattleTest:
     mov bh, FLAG_SET
     mov esi, wPartyFoughtCurrentEnemyFlags
     call FlagAction
+%ifdef DEBUG_BATTLE_LOWHP
+    ; --- battle_low_hp (battle plan, 2026-08-13): the RED-HP witness ---
+    ; The low-health alarm is armed by DrawPlayerHUDAndHPBar's tail only while a
+    ; LIVE mon sits at red HP, and cleared the instant it faints. Every other
+    ; scenario dumps at a settled post-faint state, so none can observe it —
+    ; battle_choose_next_mon has a 1 HP mon but photographs it after the faint.
+    ; This gate seeds the PARTY slot (not wBattleMon) so the REAL
+    ; LoadBattleMonFromParty below carries the value across exactly as it would
+    ; in play, and so the golden can express the same seed with one write.
+    ; 20/362 is 5.5% — comfortably inside GetHealthBarColor's red band — and the
+    ; mon stays ALIVE, which is the whole point.
+    mov byte [ebp + wPartyMon1HP], 0
+    mov byte [ebp + wPartyMon1HP + 1], 20
+%endif
     call LoadBattleMonFromParty
     ; pret StartBattle.playerSendOutFirstMon calls SendOutMon here, not the
     ; back-pic decode alone. This gate called LoadMonBackPic — the same
@@ -2503,6 +2529,16 @@ RunBattleTest:
 .goldenmenuhang:
     call DelayFrame
     jmp .goldenmenuhang
+%elifdef DEBUG_BATTLE_LOWHP
+    ; Identical staging to DEBUG_BATTLE_MENU above — the difference is the
+    ; red-HP party seed further up, which makes DisplayBattleMenu's
+    ; DrawHUDsAndHPBars arm the low-health alarm while the mon is still alive.
+    ; The dump therefore catches wLowHealthAlarm SET, which no other scenario
+    ; can: the bit is transient and every other dump point is post-faint.
+    call DisplayBattleMenu
+.goldenlowhphang:
+    call DelayFrame
+    jmp .goldenlowhphang
 %elifdef DEBUG_MOVEMENU
     ; The menu screen first (DisplayBattleMenu's draw half — the golden's move
     ; list draws over the real menu screen), then the FIGHT sub-menu parks in
@@ -3540,7 +3576,7 @@ anim_show_label:
     call DelayFrame
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 %else
-%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_BIDE, DEBUG_BATTLE_THRASH, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
+%error DEBUG_BATTLE_GOLDEN needs DEBUG_BATTLE_INTRO, DEBUG_BATTLE_MENU, DEBUG_MOVEMENU, DEBUG_ITEMBALL, DEBUG_BATTLE_FAINT, DEBUG_BATTLE_BLACKOUT, DEBUG_BATTLE_PAYDAY, DEBUG_BATTLE_WRAP, DEBUG_BATTLE_BIDE, DEBUG_BATTLE_THRASH, DEBUG_BATTLE_SELFDESTRUCT, DEBUG_BATTLE_EXPALL, DEBUG_BATTLE_NEXTMON, DEBUG_BATTLE_SWITCH, DEBUG_BATTLE_ITEM, DEBUG_BATTLE_ITEM_FAIL, DEBUG_BATTLE_LOWHP, DEBUG_ANIM_DEMO or DEBUG_ANIM_SHOW
 %endif
 %endif
 
