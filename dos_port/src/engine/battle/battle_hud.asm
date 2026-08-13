@@ -105,6 +105,7 @@ extern DelayFrame
 extern Delay3                          ; src/home/palettes.asm — wait 3 frames (pret UpdateHPBar2 tail)
 extern g_tilecache_dirty                ; ppu.asm — cloned VRAM patterns need re-decode
 extern GetHealthBarColor                ; src/home/palettes.asm — pixel length -> green/yellow/red id
+extern GetBattleHealthBarColor          ; engine/battle/core.asm — colour + republish on change
 extern SetPal_Battle                    ; palettes.asm — consume both live HP-color ids
 extern CopyData                         ; home/copy.asm — wLoadedMon staging
 
@@ -156,8 +157,13 @@ DrawPlayerHUD:
     mov ebx, wBattleMonHP
     mov esi, wBattleMonMaxHP
     call calc_hp_pixels
+    ; pret DrawPlayerHUDAndHPBar:1927 calls GetBattleHealthBarColor, not the bare
+    ; GetHealthBarColor: it republishes the battle palette ONLY on a colour
+    ; transition. The joint SetPal_Battle in DrawBattleHUDs stays — it is the
+    ; port's own two-slot publish and republishing the same values is harmless —
+    ; but the pret call site is now present rather than dropped.
     mov esi, wPlayerHPBarColor
-    call GetHealthBarColor
+    call GetBattleHealthBarColor
     mov edi, W_TILEMAP + P_HPBAR
     call draw_hp_bar
     ; player HP fraction: cur / max

@@ -132,6 +132,7 @@ global HandlePlayerMonFainted
 global ReadPlayerMonCurHPAndStatus
 global CheckNumAttacksLeft
 global BattleMenu_RunWasSelected
+global GetBattleHealthBarColor         ; pret core.asm — used by DrawPlayerHUD (battle_hud.asm)
 
 ; --- consolidated from other port files (grind session 8) ---
 global GetCurrentMove
@@ -309,6 +310,7 @@ extern IsPlayerPikachuAsleepInParty    ; pikachu_stubs.asm (STUB) — pret engin
 extern PlayPikachuSoundClip            ; src/audio/pikachu_pcm.asm
 extern PlayCry                         ; src/home/pokemon.asm — pret home/pokemon.asm:140
 extern RunPaletteCommand               ; home/palettes.asm
+extern GetHealthBarColor               ; home/palettes.asm — DL = HP pixels, ESI = colour addr
 extern SkipFixedLengthTextEntries      ; home/array.asm
 
 
@@ -5391,7 +5393,14 @@ EnemySendOutFirstMon:
 ; (single-player never "runs"; the ZF=1 → EnemyRan path is link-only).
 ; ===========================================================================
 ReplaceFaintedEnemyMon:
-    ; ANIMATION=OFF/palette: GetBattleHealthBarColor, OBP palettes, DrawEnemyPokeballs.
+    ; pret :902-904 — refresh the ENEMY bar's colour for the incoming mon at a
+    ; full bar ($30 = 48 px) and republish the battle palette only if that
+    ; changes the colour. This was listed as an ANIMATION/palette TODO here; the
+    ; routine now exists, so the call is real rather than deferred.
+    mov esi, wEnemyHPBarColor                      ; ld hl, wEnemyHPBarColor
+    mov dl, 0x30                                   ; ld e, $30 — full bar
+    call GetBattleHealthBarColor
+    ; TODO-HW: OBP palettes (ldpal/rOBP0), DrawEnemyPokeballs.
     ; TODO-HW: link-battle LinkBattleExchangeData → LINKBATTLE_RUN → ret z (EnemyRan).
     call EnemySendOut
     mov byte [ebp + wEnemyMoveNum], 0
@@ -6461,6 +6470,32 @@ DrawEnemyHUDAndHPBar:
 ; name+level+HP-bar+frame redraw into W_TILEMAP, so this is the pret-named alias
 ; (same shape as DrawEnemyHUDAndHPBar above). Same Phase-5 palette / hAutoBGTransfer
 ; divergences as the enemy-side alias apply.
+; ---------------------------------------------------------------------------
+; GetBattleHealthBarColor — pret engine/battle/core.asm:GetBattleHealthBarColor.
+; In: ESI (pret HL) = flat GB address of the bar's colour byte
+;     (wPlayerHPBarColor / wEnemyHPBarColor); DL (pret E) = HP-bar pixels.
+;
+; It republishes the battle palette ONLY WHEN THE COLOUR ACTUALLY CHANGED. The
+; port previously called GetHealthBarColor bare and let DrawBattleHUDs publish
+; unconditionally, so it did the palette work on every HUD draw where hardware
+; does it on a green->yellow->red transition only. faithdiff reported this as a
+; DROPPED GetBattleHealthBarColor on BOTH of pret's call sites.
+;
+; The old value must be read BEFORE GetHealthBarColor overwrites it — that read
+; is the whole routine. BH survives the call (GetHealthBarColor touches only
+; DH/DL and [ESI]), which is why pret can keep it in `b` across it.
+; ---------------------------------------------------------------------------
+GetBattleHealthBarColor:
+    mov bh, [ebp + esi]                           ; ld b, [hl] — the OLD colour
+    call GetHealthBarColor                        ; writes the new colour to [hl]
+    mov al, [ebp + esi]                           ; ld a, [hl]
+    cmp al, bh                                    ; cp b
+    je .unchanged                                 ; ret z — no transition, no publish
+    mov bh, SET_PAL_BATTLE                        ; ld b, SET_PAL_BATTLE
+    jmp RunPaletteCommand                         ; jp (tail)
+.unchanged:
+    ret
+
 DrawPlayerHUDAndHPBar:
     jmp DrawPlayerHUD                             ; name + level + HP bar + frame (player-only)
 

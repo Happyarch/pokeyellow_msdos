@@ -2387,7 +2387,19 @@ enemy-gauge clone tile ids and VRAM slots.
       `SlidePlayerHeadLeft`, `SetScrollXForSlidingPlayerBodyLeft`, `asm_3d52d`,
       `Func_3d4f5/523/529/536` — the port has `SlideBattlePicsIn`; NOT audited as
       a fork), and `BattleCore` (a section label).
-      * **ACTIONABLE: `GetBattleHealthBarColor` is DROPPED AT BOTH CALL SITES** —
+      * **`GetBattleHealthBarColor` TRANSLATED AND WIRED 2026-08-12** — the
+        routine is `missing` -> `translated`, its own faithdiff is CLEAN (2/2
+        calls), and both pret call sites now make the call:
+        `ReplaceFaintedEnemyMon` matched 1 -> 2 calls (its DROPPED line is
+        gone), and `DrawPlayerHUD` uses it in place of the bare
+        `GetHealthBarColor`. The port's joint `SetPal_Battle` in
+        `DrawBattleHUDs` is deliberately kept — it is the port's own two-slot
+        publish, and republishing identical values is harmless.
+        *`DrawPlayerHUDAndHPBar` still reports the DROPPED line*, and that is a
+        pre-existing ALIAS artifact rather than a missing call: the port's
+        `DrawPlayerHUDAndHPBar` is a bare `jmp DrawPlayerHUD`, so faithdiff sees
+        9 pret calls against 1 port and attributes the real body elsewhere.
+      * *(historical)* **It WAS DROPPED AT BOTH CALL SITES** —
         faithdiff confirms it on `ReplaceFaintedEnemyMon` (pret :904) and
         `DrawPlayerHUDAndHPBar` (:1927). pret republishes the battle palette
         **only when the HP-bar colour actually CHANGES**
