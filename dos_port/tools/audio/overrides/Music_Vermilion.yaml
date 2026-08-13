@@ -14,14 +14,14 @@
 # enthusiasm, not a heroic lead.
 channels:
   1:
-    mt32_program: "Square Wave"   # keep the chip-motor character on the
-    gm_program: "Lead 1 (square)" # inner line so it stays articulate
-    volume: 100
-    pan: 44                       # inner slightly left / melody right
+    mt32_program: "Fr Horn 2"   
+    gm_program: "Trombone" 
+    volume: 90
+    pan: 44                      
   2:
-    mt32_program: "Clarinet 1"    # singing woodwind for the long-tone
-    gm_program: "Clarinet"        # tune — not sax, not trumpet
-    volume: 106                   # nudge the melody above the motor
+    mt32_program: "Fr Horn 1"    # dual horns with separation
+    gm_program: "Trumpet"   # GM only has one French Horn; improvised around using complementary brass
+    volume: 106                  
     pan: 84
   3:
     mt32_program: "Pizzicato"     # dry pluck for the A–E / G#–E bounce;

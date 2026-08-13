@@ -42,7 +42,7 @@ ROOT = Path(__file__).resolve().parents[3]
 MIDI_DIR = ROOT / "dos_port" / "assets" / "midi"
 TIMBRES = Path(__file__).resolve().parent / "mt32" / "timbres.yaml"
 
-SYSEX_GAP_TICKS = 4               # ~66 ms between setup messages @60 tps
+SYSEX_GAP_TICKS = 4  # ~66 ms between setup messages @60 tps
 
 
 def vlq(n: int) -> bytes:
@@ -62,7 +62,7 @@ def sysex_track(msgs: list[bytes]) -> bytes:
         assert msg[0] == 0xF0
         data += vlq(delta) + bytes((0xF0,)) + vlq(len(msg) - 1) + msg[1:]
         delta = SYSEX_GAP_TICKS
-    data += vlq(60) + b"\xff\x2f\x00"     # 1 s settle before the song
+    data += vlq(60) + b"\xff\x2f\x00"  # 1 s settle before the song
     return b"MTrk" + struct.pack(">I", len(data)) + bytes(data)
 
 
@@ -79,50 +79,66 @@ def with_setup(mid: bytes, msgs: list[bytes]) -> bytes:
 
 def pick_port(target: str) -> str:
     """First ALSA writable port whose client name matches the synth."""
-    want = ("mt32", "munt") if target == "mt32" else ("fluid", "synth", "timid")
-    out = subprocess.run(["aplaymidi", "-l"], capture_output=True, text=True,
-                         check=True).stdout
+    want = (
+        ("mt32", "munt", "Munt MT-32")
+        if target == "mt32"
+        else ("fluid", "synth", "timid")
+    )
+    out = subprocess.run(
+        ["aplaymidi", "-l"], capture_output=True, text=True, check=True
+    ).stdout
     for line in out.splitlines()[1:]:
         parts = line.split(None, 1)
         if len(parts) == 2 and any(w in line.lower() for w in want):
             return parts[0]
     raise SystemExit(
         f"no ALSA port matching {want} — is the synth running? "
-        f"(aplaymidi -l to inspect, --port to override)\n{out}")
+        f"(aplaymidi -l to inspect, --port to override)\n{out}"
+    )
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("song", help="header label or unique substring "
-                                 "(e.g. Music_PalletTown or PalletTown)")
+    ap.add_argument(
+        "song",
+        help="header label or unique substring (e.g. Music_PalletTown or PalletTown)",
+    )
     ap.add_argument("--target", choices=("mt32", "gm"), default="mt32")
     ap.add_argument("--port", help="ALSA port (default: auto-detect)")
-    ap.add_argument("--setup", action="store_true",
-                    help="prepend the MT-32 setup SysEx (reverb/reserves/"
-                         "routing/vol). OFF by default: standalone mt32emu-qt "
-                         "mishandles this System Area write on its live input "
-                         "and shifts part routing. Use dos_port/run-mt32 for "
-                         "the real boot upload.")
+    ap.add_argument(
+        "--setup",
+        action="store_true",
+        help="prepend the MT-32 setup SysEx (reverb/reserves/"
+        "routing/vol). OFF by default: standalone mt32emu-qt "
+        "mishandles this System Area write on its live input "
+        "and shifts part routing. Use dos_port/run-mt32 for "
+        "the real boot upload.",
+    )
     args = ap.parse_args()
 
     mdir = MIDI_DIR / args.target
     if not mdir.is_dir():
-        raise SystemExit(f"{mdir} missing — run `make assets` "
-                         f"(or gb_to_midi.py --target {args.target})")
+        raise SystemExit(
+            f"{mdir} missing — run `make assets` "
+            f"(or gb_to_midi.py --target {args.target})"
+        )
     hits = sorted(p for p in mdir.glob("*.mid") if args.song in p.stem)
     exact = [p for p in hits if p.stem == args.song]
     if exact:
         hits = exact
     if len(hits) != 1:
-        raise SystemExit(f"song {args.song!r} matches "
-                         f"{[p.stem for p in hits] or 'nothing'}")
+        raise SystemExit(
+            f"song {args.song!r} matches {[p.stem for p in hits] or 'nothing'}"
+        )
     mid = hits[0].read_bytes()
 
     if args.target == "mt32" and args.setup:
         msgs = build_messages(yaml.safe_load(TIMBRES.read_text()) or {})
         mid = with_setup(mid, msgs)
-        print(f"prepended {len(msgs)} setup SysEx messages "
-              "(--setup: expect shifted part routing on standalone MUNT)")
+        print(
+            f"prepended {len(msgs)} setup SysEx messages "
+            "(--setup: expect shifted part routing on standalone MUNT)"
+        )
 
     port = args.port or pick_port(args.target)
     with tempfile.NamedTemporaryFile(suffix=".mid") as tmp:
