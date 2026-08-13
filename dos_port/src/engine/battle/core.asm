@@ -133,6 +133,7 @@ global ReadPlayerMonCurHPAndStatus
 global CheckNumAttacksLeft
 global BattleMenu_RunWasSelected
 global GetBattleHealthBarColor         ; pret core.asm — used by DrawPlayerHUD (battle_hud.asm)
+global CenterMonName                   ; pret core.asm — used by both HUD draws (battle_hud.asm)
 
 ; --- consolidated from other port files (grind session 8) ---
 global GetCurrentMove
@@ -6457,7 +6458,7 @@ global HandleExplodingAnimation
 ; forcing it on would run a pointless per-frame copy; pret's leading ClearScreenArea
 ; of the 12×4 HUD tile area (home/copy2.asm not linked here; only needed when the
 ; enemy name changes length — a multi-mon case not reachable in a wild battle);
-; CenterMonName (never ported → short names flush-left); status-condition-vs-level
+; status-condition-vs-level
 ; (status_ailments.asm is an empty placeholder → always prints level); the
 ; GetBattleHealthBarColor/RunPaletteCommand recolor tail (Phase-5 palette deferral).
 DrawEnemyHUDAndHPBar:
@@ -6494,6 +6495,47 @@ GetBattleHealthBarColor:
     mov bh, SET_PAL_BATTLE                        ; ld b, SET_PAL_BATTLE
     jmp RunPaletteCommand                         ; jp (tail)
 .unchanged:
+    ret
+
+; ---------------------------------------------------------------------------
+; CenterMonName — pret engine/battle/core.asm:CenterMonName.
+; In:  ESI (pret HL) = tilemap offset the name would be placed at
+;      EDX (pret DE) = GB address of the nickname
+; Out: ESI advanced by 2 / 1 / 0 columns for a name of 1-2 / 3-4 / 5+ chars.
+; Clobbers AL and BH, exactly as pret clobbers A and B; EDX is restored.
+;
+; It counts in PAIRS: `inc de` before each read, so the FIRST character is
+; skipped and each loop iteration consumes two more. Two iterations, so it
+; stops looking after character 5 — which is why every name of 5 or more
+; characters lands at the unshifted coordinate.
+;
+; `dec bh`, not `dec ebx`: pret's counter is the 8-bit B, preloaded with 2 and
+; never entered at 0, so the width is not load-bearing here — but keeping it
+; 8-bit keeps the translation exact and costs nothing.
+;
+; The column step is +/-1 BYTE in the port as it is on the GB: W_TILEMAP is
+; row-major with stride FW, so pret's `inc hl` / `dec hl` need no projection.
+; ---------------------------------------------------------------------------
+CHAR_TERMINATOR equ 0x50               ; '@' — end of a charmap string
+
+CenterMonName:
+    push edx                           ; push de
+    lea esi, [esi + 2]                 ; inc hl / inc hl
+    mov bh, 2                          ; ld b, $2
+.loop:
+    inc edx                            ; inc de
+    mov al, [ebp + edx]                ; ld a, [de]
+    cmp al, CHAR_TERMINATOR            ; cp "@"
+    je .done                           ; jr z, .done
+    inc edx                            ; inc de
+    mov al, [ebp + edx]                ; ld a, [de]
+    cmp al, CHAR_TERMINATOR            ; cp "@"
+    je .done                           ; jr z, .done
+    dec esi                            ; dec hl
+    dec bh                             ; dec b
+    jnz .loop                          ; jr nz, .loop
+.done:
+    pop edx                            ; pop de
     ret
 
 DrawPlayerHUDAndHPBar:

@@ -106,6 +106,7 @@ extern Delay3                          ; src/home/palettes.asm — wait 3 frames
 extern g_tilecache_dirty                ; ppu.asm — cloned VRAM patterns need re-decode
 extern GetHealthBarColor                ; src/home/palettes.asm — pixel length -> green/yellow/red id
 extern GetBattleHealthBarColor          ; engine/battle/core.asm — colour + republish on change
+extern CenterMonName                    ; engine/battle/core.asm — short-nick column shift
 extern SetPal_Battle                    ; palettes.asm — consume both live HP-color ids
 extern CopyData                         ; home/copy.asm — wLoadedMon staging
 
@@ -148,7 +149,12 @@ DrawPlayerHUD:
     mov edx, wLoadedMonLevel
     mov ebx, wBattleMonPP - wBattleMonLevel
     call CopyData
+    ; pret DrawPlayerHUDAndHPBar:1901 runs CenterMonName between the coord load
+    ; and PlaceString: a 1-2 letter nick shifts 2 columns right, 3-4 shifts 1,
+    ; 5+ is unshifted. The port placed every name flush-left.
     mov esi, W_TILEMAP + P_NAME
+    mov edx, wBattleMonNick              ; CenterMonName reads the nick via [ebp+EDX]
+    call CenterMonName                   ; adjusts ESI; restores EDX
     lea eax, [ebp + wBattleMonNick]      ; PlaceString src = flat-linear
     call PlaceString
     movzx eax, byte [ebp + wBattleMonLevel]
@@ -183,6 +189,8 @@ DrawPlayerHUD:
 DrawEnemyHUD:
     ; ===== enemy HUD (upper-left) =====
     mov esi, W_TILEMAP + E_NAME          ; PlaceString: ESI=dest(GB offset), EAX=src(flat)
+    mov edx, wEnemyMonNick               ; pret DrawEnemyHUDAndHPBar:1960 — same centering
+    call CenterMonName
     lea eax, [ebp + wEnemyMonNick]
     call PlaceString
     movzx eax, byte [ebp + wEnemyMonLevel]

@@ -2407,7 +2407,41 @@ enemy-gauge clone tile ids and VRAM slots.
         the port calls `SetPal_Battle` UNCONDITIONALLY from `DrawBattleHUDs`, so
         it does the palette work every draw where hardware does it on transition
         only. Behavioural impact NOT measured. Sits in the palette area.
-      * `CenterMonName` — not investigated.
+      * **`CenterMonName` TRANSLATED AND WIRED 2026-08-12** — `missing` ->
+        `translated`, own faithdiff CLEAN (0/0 calls, it makes none), and both
+        pret call sites now make the call: `DrawPlayerHUD` (pret
+        `DrawPlayerHUDAndHPBar`:1901) and `DrawEnemyHUD` (pret
+        `DrawEnemyHUDAndHPBar`:1960). It shifts a nickname right by 2 columns
+        at 1-2 characters, 1 column at 3-4, and not at all at 5+; the port
+        placed every name flush-left. The column step needed no projection —
+        `W_TILEMAP` is row-major, so pret's `inc hl`/`dec hl` are +/-1 byte on
+        both sides. Counter kept 8-bit (`dec bh`) per the counter-width rule.
+      * **NO EXISTING SCENARIO CAN WITNESS IT, and the core tier passing is
+        therefore VACUOUS for this change.** Every battle scenario's mons are
+        SNORLAX (7), PIDGEY (6) and ZUBAT (5) — all in the unshifted 5+ bucket,
+        so the goldens are byte-identical by construction and 16/16 PASS proves
+        only no regression. Non-vacuity was measured separately, with a
+        temporary nickname poke and two headless `DEBUG_BATTLE_MENU` runs that
+        differ ONLY in whether the two calls are present. Decomposed:
+        - 3-char player nick, `wTileMap` row 21: without the call cols 0,1,2 =
+          `80 84 96`; with it col 0 = `7F` and cols 1,2,3 = `80 84 96`.
+          **Shift = exactly 1 column.**
+        - 2-char enemy nick, row 6: without the call cols 11,12 = `80 81`; with
+          it cols 13,14 = `80 81` (cols 11,12 keep PIDGEY's `8F 88`).
+          **Shift = exactly 2 columns.**
+        Both poke and disable were reverted before the gates ran; the committed
+        tree contains neither. A permanent witness would need a new scenario
+        with a <=4-character nickname — NOT added, and recorded here as the
+        residue of this box.
+      * **The two pret HUD entry points are an ALIAS FORK, still open.** Both
+        `DrawPlayerHUDAndHPBar` and `DrawEnemyHUDAndHPBar` are bare `jmp`s to
+        the port-only `DrawPlayerHUD` / `DrawEnemyHUD`, so faithdiff reports 9
+        pret calls against 1 port on each and attributes the entire body
+        elsewhere — the same fork shape as `EnemyMoveHitTest`, and the reason
+        `CenterMonName` still reads DROPPED at both sites even though the call
+        is now real. Pre-existing, not introduced by this box. Retiring it
+        means moving the bodies under the pret names, which the port-only split
+        (the intro draws the enemy HUD alone) has to survive.
       * Method: enumerate a REGION's labels and print only the `missing` ones.
         That found `EnemyMoveHitTest` and this in one pass, where targeted
         searching had found neither. Memory:
