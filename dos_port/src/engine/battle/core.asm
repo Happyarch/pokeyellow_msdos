@@ -2404,7 +2404,7 @@ EnemyCalcMoveDamage:                    ; pret 5706 — Thrash continuation
     mov esi, SetDamageEffects
     mov edx, 1
     call IsInArray
-    jc  .eMoveHitTest
+    jc  EnemyMoveHitTest
     call CriticalHitTest
     call HandleCounterMove              ; real; non-counter returns ZF=0
     jz  HandleIfEnemyMoveMissed
@@ -2413,7 +2413,13 @@ EnemyCalcMoveDamage:                    ; pret 5706 — Thrash continuation
     jz  EnemyCheckIfFlyOrChargeEffect   ; jp z — 0 BP status move
     call AdjustDamageForMoveType
     call RandomizeDamage
-.eMoveHitTest:
+; pret core.asm:5724. This was `.eMoveHitTest`, a routine-local label — the same
+; code under a FORKED NAME, which is what made faithdiff report both a DROPPED
+; EnemyMoveHitTest and an ADDED MoveHitTest on EnemyCalcMoveDamage: with the
+; body local, its `call MoveHitTest` counted as EnemyCalcMoveDamage's own.
+; Restoring pret's global name is behaviour-identical (same code, same
+; fall-through into HandleIfEnemyMoveMissed) and closes both lines.
+EnemyMoveHitTest:
     call MoveHitTest
 HandleIfEnemyMoveMissed:                ; pret 5726 — Bide continuation
     mov al, [ebp + wMoveMissed]
