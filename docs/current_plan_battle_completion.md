@@ -2355,10 +2355,45 @@ provider shapes below, not their runtime behavior.
           -> `WaitForAPress`. pret draws the ball row INSIDE
           `PrintBeginningBattleText`; the port draws it after its screen
           snapshot. Those two orders cannot be swapped one call at a time.
-        * **NEXT BOX, and it is the whole job: reconcile the two intro
-          sequences.** Gate it with `battle_intro`, `battle_menu` and
-          `battle_safari` — the only three scenarios that compare a tilemap —
-          and expect them to MOVE. Do not start it as a tail-of-iteration add.
+        * **THE WIRING WAS ATTEMPTED 2026-08-13 AND DELIBERATELY REVERTED.
+          The gate this bullet recommended does not work, and finding out why
+          is the important result.** The change was made — `_InitBattleCommon`
+          calling `PrintBeginningBattleText` in place of `DrawBattleIntroBox` /
+          `DrawEmptyDialogBox` / `DrawBattlePokeballs` / `WaitForAPress`; it
+          built, and `battle_intro`, `battle_menu` and `battle_safari` all
+          PASSED with `battle_intro` reporting `TILEMAP: OK (360 cells)`.
+          **That green is worthless, and here is the decomposition.**
+        * **`battle_intro`'s harness NEVER ENTERS `_InitBattleCommon`.**
+          `RunBattleTest` (`debug_dump.asm:2233-2236`) hand-rolls the intro:
+          `LoadFrontSpriteByMonIndex` -> `LoadPlayerBackPic` ->
+          `SlideBattlePicsIn` -> `DrawBattleIntroBox`. It calls
+          `DrawBattleIntroBox` DIRECTLY, so it was still measuring the routine
+          the change was replacing. Instance 3 of
+          `bug-class-false-witness-scenario` — the harness duplicates
+          production — and it applies to all three rendered scenarios.
+        * **The scenarios that DO enter `_InitBattleCommon` cannot see a
+          tilemap.** `trainer_battle_route`, `trainer_battle_init`,
+          `trainer_battle_win`, `trainer_battle_loss` and `battle_blackout`
+          all drive the live path and are all `class: datastruct`, WRAM only.
+          All five pass, and none of them can observe an intro redraw.
+        * **So NO scenario in the 69-scenario suite can witness a change to
+          the battle intro.** Landing a rewrite of every battle entry in the
+          game on that basis is exactly the failure this plan keeps
+          documenting, so it was reverted rather than committed green. The
+          translation stays (it is committed, faithdiff-clean and honestly
+          labelled as having 0 callers).
+        * **WHAT THE NEXT ATTEMPT NEEDS FIRST — a witness, not more code.**
+          Either point `RunBattleTest`'s intro staging at `_InitBattleCommon`
+          instead of duplicating it (which is the right fix and also retires
+          an instance-3 duplicate), or add a rendered scenario on the live
+          battle-entry path. Until one of those exists the wiring cannot be
+          landed responsibly, and this is a BLOCKER on evidence rather than on
+          effort.
+        * Attempted and abandoned as impractical this iteration: bespoke
+          runtime evidence. `run_headless` cannot stage the seed `.sav` those
+          live scenarios need, and `goldencheck.sh` deletes its scratch dir on
+          exit, so the port's own GBSTATE for a live battle is not reachable
+          without harness work of its own.
         * Pre-existing annotation corrected in the same commit: the
           `DEVIATION{class=temporary}` at `init_battle.asm` had
           `evidence=PrintBeginningBattleText is label_status missing`, which is
