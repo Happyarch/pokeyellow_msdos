@@ -440,6 +440,18 @@ PLAIN = [
 # which picks one of MadeWhirlwindText / TookInSunlightText / LoweredItsHeadText /
 # SkyAttackGlowingText / FlewUpHighText / DugAHoleText (all emitted as wrappers).
 EXTRA_FAR = [
+    # _OutOfSafariBallsText — pret core.asm's wrapper is `.outOfSafariBallsText`,
+    # a dot-local with a LOWERCASE initial, which collect_wrappers cannot match.
+    # ADDED 2026-08-12 (battle plan 4d) THROUGH THIS LIST RATHER THAN BY WIDENING
+    # THE REGEX, and that choice was measured: of the 11 lowercase dot-local
+    # *Text labels across BATTLE_SRC, TEN ARE CODE LABELS (.printText is
+    # `call PrintText`, .gotText is `ret`) and only this one is a real
+    # text_far wrapper. Allowing [a-z] would hand ten code bodies to the text
+    # parser.
+    # Losing the wrapper's trailing text_end ($50) is harmless here and that was
+    # checked: the far stream ends in `prompt` ($58), which terminates the text
+    # engine, so the byte after it is unreachable.
+    "_OutOfSafariBallsText",
     "_ChargeMoveEffectText",
     # engine/battle/experience.asm:GainedText / WithExpAllText — same shape: a
     # text_far intro, then a text_asm selector picking ExpPointsText /

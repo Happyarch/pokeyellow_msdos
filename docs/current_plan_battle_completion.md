@@ -2059,8 +2059,17 @@ provider shapes below, not their runtime behavior.
           Generated label count 150 → 152, both new labels Safari.
         * **UNWITNESSED**: nothing calls it yet. Its caller is the Safari turn
           flow, which is the rest of this box.
-      - **THE TURN/FLEE LOOP IS THE LAST PIECE, AND IT IS BLOCKED ON ONE TEXT
-        STREAM (measured 2026-08-12).** pret's loop is `StartBattle:176-216`
+      - **THE TURN/FLEE LOOP IS DONE 2026-08-12.** pret `StartBattle:176-216`
+        is translated into `.specialBattleLoop`, which retires the
+        `DEVIATION{class=temporary}` that sat there naming this box as its
+        lifetime. `PrintSafariZoneBattleText` finally has a caller (it had none
+        since it was translated), so it is reachable rather than merely linked.
+        The blocker below was resolved through `EXTRA_FAR`, as planned:
+        `_OutOfSafariBallsText` added, battle_text.inc 153 → 154, delta +1, and
+        losing pret's wrapper `text_end` is harmless because the far stream ends
+        in `prompt` ($58), which terminates the engine — checked, not assumed.
+      - *(historical, for the reasoning that got there)* **IT WAS BLOCKED ON ONE
+        TEXT STREAM (measured 2026-08-12).** pret's loop is `StartBattle:176-216`
         (`.displaySafariZoneBattleMenu`): the action-taken re-loop, the
         out-of-balls arm, the `PrintSafariZoneBattleText` call — which would
         finally give that already-translated routine a caller — and the flee

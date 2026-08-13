@@ -116,6 +116,12 @@ extern EndOfBattle                       ; end_of_battle.asm — post-battle (EX
 extern EndBattleScreen                   ; battle_menu.asm — clean terminal
 extern GetTrainerInformation             ; src/home/trainers2.asm — name/pic/prize metadata
 extern ReadTrainer                       ; read_trainer_party.asm — generated roster -> enemy party
+extern PrintSafariZoneBattleText         ; engine/battle/safari_zone.asm — bait/angry line
+extern EnemyRan                          ; core.asm — the wild mon fled
+extern Random                            ; home/random.asm
+extern LoadScreenTilesFromBuffer1        ; home/tilemap.asm
+extern PrintText                         ; home/window.asm — ESI = flat stream
+extern _OutOfSafariBallsText             ; dos_port/assets/battle_text.inc
 extern ModifyPikachuHappiness            ; engine/events/pikachu_happiness.asm — DH = PIKAHAPPY_*
 extern trainer_pic_ptr                   ; src/home/trainers2.asm — flat picture pointer
 extern trainer_pic_len                   ; src/home/trainers2.asm — matching compressed byte length
@@ -475,7 +481,7 @@ _InitBattleCommon:
     ; This site used to call LoadMonBackPic alone — the back-pic decode only —
     ; which is why nothing in the port ever reached SetAnimationPalette at battle
     ; entry and IO_OBP1 stayed 0 (battle_completion 1g).
-    ; DEVIATION{class=projection; pret=engine/battle/core.asm:StartBattle; behavior=the port's _InitBattleCommon carries StartBattle's call SendOutMon inline because it already collapses pret's InitWildBattle plus _InitBattleCommon plus StartBattle into one routine, so faithdiff reports SendOutMon as ADDED here and StartBattle as DROPPED; evidence=pret StartBattle.playerSendOutFirstMon ends call LoadBattleMonFromParty then call SendOutMon then jr MainInBattleLoop and this site sits in exactly that position with MainInBattleLoop next, and routing it here moved battle_menu and move_selection from 12 palette divergences to 0 by finally reaching SetAnimationPalette; lifetime=until the collapsed StartBattle is restored as its own pret-labeled routine}
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:StartBattle; behavior=the port's _InitBattleCommon carries StartBattle's call SendOutMon inline because it already collapses pret's InitWildBattle plus _InitBattleCommon plus StartBattle into one routine, so faithdiff reports SendOutMon as ADDED here and StartBattle as DROPPED, and the same collapse is why StartBattle's other callees - the Safari turn tail's PrintSafariZoneBattleText, EnemyRan, Random, LoadScreenTilesFromBuffer1 and PrintText - also read as ADDED on this routine rather than on StartBattle; evidence=pret StartBattle.playerSendOutFirstMon ends call LoadBattleMonFromParty then call SendOutMon then jr MainInBattleLoop and this site sits in exactly that position with MainInBattleLoop next, and routing it here moved battle_menu and move_selection from 12 palette divergences to 0 by finally reaching SetAnimationPalette; lifetime=until the collapsed StartBattle is restored as its own pret-labeled routine}
     call SendOutMon
 
     ; --- the battle itself ---
@@ -535,8 +541,50 @@ _InitBattleCommon:
 .specialBattleLoop:                    ; pret StartBattle .displaySafariZoneBattleMenu
     call DisplayBattleMenu
     jc .battleFinished                 ; CF=1: ran, or the ball captured (wBattleResult=2)
-    ; DEVIATION{class=temporary; pret=engine/battle/core.asm:StartBattle; behavior=the safari flee roll and safari-ball-count tail pret runs between special-battle menu iterations is omitted so the loop redisplays the menu directly; evidence=OLD_MAN and PIKACHU capture on the scripted first throw (item_effects.asm ItemUseBall .oldManBattle forces it) so the tail is unreachable for them, and BATTLE_TYPE_SAFARI itself is unreachable until the Safari Zone maps and battle-completion Stage 4d land; lifetime=battle-completion Stage 4d}
-    jmp .specialBattleLoop
+    ; pret StartBattle:179-181 — if the item was not used successfully, no turn
+    ; passed: redisplay the menu without running the flee roll below.
+    cmp byte [ebp + wActionResultOrTookBattleTurn], 0
+    je .specialBattleLoop              ; jr z
+    ; pret :182-187 — out of SAFARI BALLs ends the battle with the PA line. Note
+    ; `jp PrintText`, not a call: PrintText's return IS this routine's return.
+    cmp byte [ebp + wNumSafariBalls], 0
+    jne .notOutOfSafariBalls           ; jr nz
+    call LoadScreenTilesFromBuffer1
+    mov esi, _OutOfSafariBallsText
+    jmp PrintText                      ; jp
+.notOutOfSafariBalls:
+    ; pret :188 — the bait/angry line, and the catch-rate refresh when the
+    ; escape factor runs out. This is PrintSafariZoneBattleText's ONLY caller.
+    call PrintSafariZoneBattleText     ; callfar
+    ; pret :189-192 — the flee roll's base is (enemy speed % 256) * 2.
+    ; wEnemyMonSpeed is BIG-ENDIAN, so `wEnemyMonSpeed + 1` is the LOW byte,
+    ; exactly as pret indexes it. `add` sets CF and the two `mov`s below are
+    ; flag-neutral, so the branch still reads the doubling's carry: a speed low
+    ; byte above 127 means the mon runs outright.
+    mov al, [ebp + wEnemyMonSpeed + 1]
+    add al, al                         ; add a — CF = overflow past 255
+    mov bh, al                         ; ld b, a (flag-neutral)
+    jc EnemyRan                        ; jp c
+    ; pret :193-198 — bait makes it LESS likely to run: b /= 4.
+    cmp byte [ebp + wSafariBaitFactor], 0
+    je .checkEscapeFactor              ; jr z
+    shr bh, 1                          ; srl b
+    shr bh, 1                          ; srl b
+.checkEscapeFactor:
+    ; pret :199-205 — a rock (escape factor) makes it MORE likely: b *= 2,
+    ; capped at 255 rather than wrapping.
+    cmp byte [ebp + wSafariEscapeFactor], 0
+    je .compareWithRandomValue         ; jr z
+    shl bh, 1                          ; sla b
+    jnc .compareWithRandomValue        ; jr nc
+    mov bh, 0xFF                       ; ld b, $ff
+.compareWithRandomValue:
+    call Random
+    cmp al, bh                         ; cp b
+    jae .specialBattleLoop             ; jr nc — it stayed; pret goes back through
+                                       ; .checkAnyPartyAlive, which for a special
+                                       ; battle is this same menu loop
+    jmp EnemyRan                       ; jr EnemyRan — b beat the roll
 
 ; ---------------------------------------------------------------------------
 ; _LoadTrainerPic — production trainer-picture loader.
