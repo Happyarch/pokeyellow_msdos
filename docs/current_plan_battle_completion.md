@@ -2059,14 +2059,23 @@ provider shapes below, not their runtime behavior.
         `DisplayBattleMenu` code sites: 1 → 3 of pret's 6.
       - **THE REMAINING THREE ARE ENTANGLED WITH AN EXISTING DIVERGENCE**, which
         is why they were not done in the same pass:
-        * `:2086` needs the **`SAFARI_BATTLE_MENU_TEMPLATE`** box. The data all
-          exists already (constant `$1B`, a `text_box.asm` entry and a
-          `ui_layout_battle` record) — what is missing is a way to select it,
-          because the port calls a port-only `DrawBattleMenuBox` wrapper where
-          pret sets `wTextBoxID` and calls `DisplayTextBoxID`. faithdiff already
-          reports `DisplayTextBoxID` and `[wTextBoxID]` as DROPPED on this
-          routine (pre-existing), so restoring the Safari template and closing
-          that finding are the same job.
+        * `:2086` — **DONE 2026-08-12.** It was one job with a pre-existing
+          faithdiff finding, as predicted: the port called a port-only
+          `DrawBattleMenuBox` wrapper that hardcoded the battle template's
+          geometry, so `DisplayTextBoxID` and `[wTextBoxID]` both read DROPPED
+          and there was no way to ask for the Safari box at all. Replaced with
+          pret's exact sequence (`wTextBoxID` = BATTLE_ or
+          SAFARI_BATTLE_MENU_TEMPLATE, then `DisplayTextBoxID`).
+          **Three findings closed, none added** — calls matched 11 → 12, stores
+          5 → 6: DROPPED `DisplayTextBoxID`, ADDED `DrawBattleMenuBox` and
+          DROPPED `[wTextBoxID]` are all gone.
+          *Drawing is unchanged and that was DEMONSTRATED, not argued:* both
+          templates resolve to the same generated layout records the wrapper
+          used, and forcing the Safari box as a probe makes `battle_menu` fail
+          with **32 tilemap cell mismatches** — so the scenario genuinely
+          observes this box, and its PASS means the normal path is untouched.
+          `DrawBattleMenuBox` is NOT dead: `DrawBattleMenu` still uses it for
+          the non-interactive DEBUG dump harness.
         * `:2151` / `:2184` are the Safari **cursor columns** — pret clears
           different cells (13,14/13,16 and 1,14/1,16 instead of 15,x and 9,x)
           and uses different top-item X values. These are raw GB coordinates and

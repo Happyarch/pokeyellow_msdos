@@ -485,7 +485,34 @@ DisplayBattleMenu:
     call DrawEmptyDialogBox             ; pret PrintEmptyString — blank dialog box
     call SaveScreenTilesToBuffer1
 .nonstandardbattle:
-    call DrawBattleMenuBox              ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE)
+    ; pret 2086-2092 — the menu box, and WHICH box depends on the battle type:
+    ;     ld a, [wBattleType]
+    ;     cp BATTLE_TYPE_SAFARI
+    ;     ld a, BATTLE_MENU_TEMPLATE
+    ;     jr nz, .menuselected
+    ;     ld a, SAFARI_BATTLE_MENU_TEMPLATE
+    ;   .menuselected
+    ;     ld [wTextBoxID], a
+    ;     call DisplayTextBoxID
+    ; The compare's ZF crosses a flag-neutral `ld` again; the `mov` below is
+    ; equally flag-neutral, so the branch still reads the compare.
+    ;
+    ; THIS REPLACES A PORT-ONLY WRAPPER, and doing so closes a faithdiff finding
+    ; rather than adding one. `DrawBattleMenuBox` hardcoded the battle template's
+    ; geometry, so DisplayTextBoxID and [wTextBoxID] both read DROPPED on this
+    ; routine and there was no way to ask for the Safari box at all. Both
+    ; templates resolve to the same generated layout records the wrapper used
+    ; (BATTLE_MENU_TEMPLATE -> UI_ACTION_MENU_BOX_* + BattleMenuText at
+    ; UI_ACTION_TEXT_*), so the normal-battle drawing is unchanged — verified by
+    ; battle_menu / move_selection / battle_oldman / battle_pikachu.
+    mov al, [ebp + wBattleType]
+    cmp al, BATTLE_TYPE_SAFARI
+    mov al, BATTLE_MENU_TEMPLATE
+    jne .menuselected                   ; jr nz
+    mov al, SAFARI_BATTLE_MENU_TEMPLATE
+.menuselected:
+    mov [ebp + wTextBoxID], al
+    call DisplayTextBoxID
     ; pret 2093-2101: the old-man tutorial and the Prof. Oak Pikachu battle run
     ; this menu on SIMULATED input — the cursor walks itself to ITEM.
     mov al, [ebp + wBattleType]
