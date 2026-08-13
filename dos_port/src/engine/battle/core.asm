@@ -601,6 +601,12 @@ DisplayBattleMenu:
     add al, 2
     mov [ebp + wCurrentMenuItem], al
 .AButtonPressed:
+    ; pret 2225-2227: the unused BATTLE_TYPE_RUN arm is tested FIRST, before the
+    ; Safari one. It is the "Hurry, get away!" forced-run battle -- unused in the
+    ; shipped game, but it is a real branch of this routine and its absence was
+    ; the DROPPED BattleMenu_RunWasSelected faithdiff has reported here.
+    cmp byte [ebp + wBattleType], BATTLE_TYPE_RUN
+    je .handleUnusedBattle
     ; pret 2224-2231. THE SAFARI TEST COMES FIRST AND ITS FLAGS CROSS TWO LOADS,
     ; exactly as pret writes it:
     ;     cp BATTLE_TYPE_SAFARI
@@ -638,6 +644,14 @@ DisplayBattleMenu:
     call LoadScreenTilesFromBuffer1     ; restore clean screen and return (CF=0)
     clc
     ret
+.handleUnusedBattle:
+    ; pret 2256-2261. Only menu item 3 (RUN) does anything; everything else just
+    ; prints "Hurry, get away!" and redraws the menu.
+    cmp byte [ebp + wCurrentMenuItem], 3
+    je BattleMenu_RunWasSelected        ; jp z
+    mov esi, RunAwayText                ; ld hl, .RunAwayText
+    call PrintText
+    jmp DisplayBattleMenu               ; jp
 .throwSafariBallWasSelected:
     ; pret 2256-2259. Note it is `jp UseBagItem`, NOT a call: UseBagItem owns the
     ; rest of the turn from here (it is the same tail the BAIT branch below uses).
@@ -6379,6 +6393,7 @@ extern StatModifierUpEffect            ; src/engine/battle/effects.asm
 extern BuildingRageText                ; dos_port/assets/battle_text.inc
 extern EnemyMonFaintedText             ; dos_port/assets/battle_text.inc (global label, battle_text stream)
 extern DoesntAffectMonText             ; dos_port/assets/battle_text.inc
+extern RunAwayText                     ; dos_port/assets/battle_text.inc
 extern AttackMissedText                ; dos_port/assets/battle_text.inc
 extern UnaffectedText                  ; dos_port/assets/battle_text.inc
 extern KeptGoingAndCrashedText         ; dos_port/assets/battle_text.inc

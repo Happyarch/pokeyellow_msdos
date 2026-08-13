@@ -305,8 +305,21 @@ def collect_wrappers(cm, mem, far_db):
             # So do pret's address-suffixed ones, where the disassembler had no name
             # for the label and used its ROM offset (PartyMenuText_12cc) — "Text" is
             # in the middle, not at the end.
-            m = re.match(r'([A-Z]\w*Text(?:\d*|_[0-9a-f]+)|StartedSleepingEffect):',
-                         lines[i].strip())
+            # A leading '.' is allowed and STRIPPED from the emitted name.
+            # pret writes some wrappers as routine-local labels (.RunAwayText in
+            # DisplayBattleMenu); without this they matched nothing and the
+            # stream simply did not exist in the port, silently — the same class
+            # of omission as a source file missing from BATTLE_SRC. Measured
+            # 2026-08-12: exactly 3 such wrappers exist across BATTLE_SRC.
+            head = lines[i].strip()
+            # A routine-local wrapper may be written WITHOUT a trailing colon
+            # (rgbds allows it), which is how .RunAwayText in DisplayBattleMenu
+            # is spelled. Normalise before matching, and strip the leading '.'
+            # from the emitted name.
+            if head.startswith('.') and ':' not in head:
+                head += ':'
+            m = re.match(r'\.?([A-Z]\w*Text(?:\d*|_[0-9a-f]+)|StartedSleepingEffect):',
+                         head)
             if not m:
                 i += 1; continue
             label = m.group(1)

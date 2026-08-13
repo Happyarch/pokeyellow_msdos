@@ -2117,6 +2117,20 @@ provider shapes below, not their runtime behavior.
 - [ ] Add one must-hit scenario per battle type, comparing the relevant menu,
       WRAM state, item/event result, and exit. Add live traversal only when its
       owning overworld story batch lands.
+      - **FOUR OF FIVE TYPES NOW HAVE ONE (2026-08-12):** NORMAL (`battle_menu`
+        and the rest of the battle tier), OLD_MAN (`battle_oldman`, id 69),
+        SAFARI (`battle_safari`, id 71, RENDERED) and PIKACHU (`battle_pikachu`,
+        id 70). All pass; registry 69.
+      - **`BATTLE_TYPE_RUN` (3) has no scenario and is the honest remainder.**
+        Its `.handleUnusedBattle` arm is now TRANSLATED (2026-08-12) — that was
+        the DROPPED `BattleMenu_RunWasSelected` faithdiff reported on
+        `DisplayBattleMenu`, and closing it took the routine to 14/17 matched
+        calls. But the type is unused in the shipped game and nothing sets it,
+        so the arm is faithful and unreachable, exactly like the Safari
+        branches were before `battle_safari`.
+      - Still owed even for the four covered types: the box asks for the
+        item/event RESULT and EXIT as well as the menu, and none of the three
+        new scenarios follows the battle to its end.
 
 ## Stage 5 — battle transitions
 
