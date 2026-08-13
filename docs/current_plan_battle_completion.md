@@ -2236,6 +2236,13 @@ provider shapes below, not their runtime behavior.
         calls. But the type is unused in the shipped game and nothing sets it,
         so the arm is faithful and unreachable, exactly like the Safari
         branches were before `battle_safari`.
+        * **BLOCKED 2026-08-13 on cross-emulator staging, not implementation.**
+          The port-only probe reaches its forced-escape checkpoint and writes
+          both GBSTATE.BIN and DUMP.BIN. The matching mGBA attempt continuously
+          wrote `wBattleType=3` and the saved RUN item after `enter_wild()`, but
+          never observed `wEscapedFromBattle` in 3600 frames. Do not register a
+          one-sided scenario: a new mGBA entry method must set the type before
+          StartBattle's special-battle decision, rather than racing the menu.
       - Still owed even for the four covered types: the box asks for the
         item/event RESULT and EXIT as well as the menu, and none of the three
         new scenarios follows the battle to its end.
