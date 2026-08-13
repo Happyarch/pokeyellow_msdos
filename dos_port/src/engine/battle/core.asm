@@ -6622,12 +6622,6 @@ DrawHUDsAndHPBars:
     ret
 DrawPlayerHUDAndHPBar:
     ; ===== player HUD (lower-right) =====
-    ; BUG{class=projection; pret=engine/battle/core.asm:DrawPlayerHUDAndHPBar; behavior=on the potion and drain HP-sweep paths the player HP fraction ends BLANK where hardware shows the number, because this clear wipes the fraction cells and nothing redraws them before the screen settles; evidence=measured 2026-08-13 with run_headless DEBUG_BATTLE_ITEM=1 against the battle_item_potion golden - the port's GB(11,10) span reads 7f 7f 7f 7f 7f 7f 7f 73 where hardware reads f7 f8 f6 f3 f9 fc f8 73 which decodes 120/362, and deleting only this ClearScreenArea call makes the port draw f7 f6 f6 f3 f9 fc f8 73 instead so the clear is the cause; lifetime=until the sweep paths redraw the fraction after the clear, tracked in regression-battle-hp-fraction-blanked-by-hud-clear}
-    ; The clear itself is FAITHFUL — pret does it too — so the defect is that
-    ; the port's port-only AnimateHPBar sweep paths do not restore the fraction
-    ; the way pret's DrawHP-per-step cadence does. Do NOT "fix" it by deleting
-    ; the clear: that reintroduces the stale-glyph defect 08558f48d closed, and
-    ; battle_wrap's eHudLv span now catches that.
     ; pret DrawPlayerHUDAndHPBar:1893-1894 — `hlcoord 9, 7 / lb bc, 5, 11`.
     ; Restored 2026-08-13; the alias fork had hidden the dropped call, and the
     ; comment that justified it ("home/copy2.asm not linked here") was false.
@@ -6703,6 +6697,15 @@ DrawPlayerHUDAndHPBar:
     ; in the middle, which is why this needed checking rather than assuming.
     mov al, [ebp + wLoadedMonSpecies]
     mov [ebp + wCurPartySpecies], al
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:DrawPlayerHUDAndHPBar; behavior=the battle canvas row stride is republished here before predef DrawHP where pret needs no such step; evidence=the port made DrawHP stride-parameterised through text_row_stride so one routine can serve the 20-wide status and party screens and the 40-wide battle canvas, and DrawHP places the cur/max fraction at bar plus one stride plus one - so whatever stride the last PrintText published decides where the fraction lands, and the bag and item flow leaves it at 20; lifetime=permanent while DrawHP stays stride-parameterised}
+    ;
+    ; MEASURED 2026-08-13 (run_headless DEBUG_BATTLE_ITEM=1): without this the
+    ; potion path drew a correct "120/362" at canvas row 13 col 1 — one 20-cell
+    ; stride below the bar instead of one 40-cell stride — which is off the
+    ; GB-projected window entirely, so the golden could never see it while it
+    ; was plainly on the port's widescreen screen. The HUD's own cells were
+    ; left blank by the ClearScreenArea above.
+    mov dword [text_row_stride], FW
     mov esi, W_TILEMAP + P_HPBAR
     call DrawHP
     ; pret :1928 — GetBattleHealthBarColor, not the bare GetHealthBarColor: it

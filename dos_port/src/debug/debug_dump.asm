@@ -988,6 +988,20 @@ gbstate_regions:
     gbregion "pHudBar",  W_TILEMAP + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9   ; GB (10,9)
     gbregion "pHudFrac", W_TILEMAP + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8  ; GB (11,10)
 %endif
+%ifdef DEBUG_BATTLE_ITEM
+    ; --- HUD spans for the POTION path (battle plan, 2026-08-13) ---
+    ; Same six projected spans as DEBUG_BATTLE_WRAP above, on a scenario whose
+    ; HP bar is PARTIAL (120/362) rather than full. That is the point: it is the
+    ; only witness for draw_hp_bar's partial-segment path and for the cur/max
+    ; fraction, and adding it is what exposed the text_row_stride leak fixed in
+    ; DrawPlayerHUDAndHPBar.
+    gbregion "eHudName", W_TILEMAP + (0 + 3) * SCREEN_TILES_W + (1 + 10), 10  ; GB (1,0)
+    gbregion "eHudLv",   W_TILEMAP + (1 + 3) * SCREEN_TILES_W + (0 + 10), 12  ; GB (0,1)
+    gbregion "pHudName", W_TILEMAP + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11 ; GB (10,7)
+    gbregion "pHudLv",   W_TILEMAP + (8 + 3) * SCREEN_TILES_W + (14 + 10), 6  ; GB (14,8)
+    gbregion "pHudBar",  W_TILEMAP + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9  ; GB (10,9)
+    gbregion "pHudFrac", W_TILEMAP + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8 ; GB (11,10)
+%endif
 %ifdef BATTLE_NEXTMON_MENU_PROBE
     ; --- ChooseNextMon party-menu stall probe (battle plan 2b) ---
     ; HARNESS-DIAGNOSIS PROBE, NOT part of any golden (the BILLSPC_MENU_PROBE

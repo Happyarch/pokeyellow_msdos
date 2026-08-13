@@ -143,8 +143,21 @@ scenario.run(function()
 	assert(healed, ("battle_item_potion: the POTION never healed — wBattleMonHP " ..
 		"did not reach %d"):format(SEED_HP + POTION_HEAL))
 
+	local function regions()
+		local r = dump.standard_regions(sym)
+		-- HUD spans, mirroring the port's gbregion block under DEBUG_BATTLE_ITEM.
+		-- Declared "projected" in golden_diff: same GB cells, each side's stride.
+		r[#r + 1] = { name = "eHudName", addr = sym:addr("wTileMap") +  0 * 20 +  1, size = 10 }
+		r[#r + 1] = { name = "eHudLv",   addr = sym:addr("wTileMap") +  1 * 20 +  0, size = 12 }
+		r[#r + 1] = { name = "pHudName", addr = sym:addr("wTileMap") +  7 * 20 + 10, size = 11 }
+		r[#r + 1] = { name = "pHudLv",   addr = sym:addr("wTileMap") +  8 * 20 + 14, size = 6 }
+		r[#r + 1] = { name = "pHudBar",  addr = sym:addr("wTileMap") +  9 * 20 + 10, size = 9 }
+		r[#r + 1] = { name = "pHudFrac", addr = sym:addr("wTileMap") + 10 * 20 + 11, size = 8 }
+		return r
+	end
+
 	scenario.exec(function()
-		dump.write("battle_item_potion", dump.standard_regions(sym), {
+		dump.write("battle_item_potion", regions(), {
 			frame = scenario.frame(),
 			description = "a POTION used from the BATTLE BAG on the active mon " ..
 				"(SNORLAX L80, seeded to " .. SEED_HP .. " HP) against the spec " ..

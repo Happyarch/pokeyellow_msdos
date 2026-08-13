@@ -2966,12 +2966,36 @@ enemy-gauge clone tile ids and VRAM slots.
                    port-only sweep lacks pret's per-step `DrawHP` redraw.
                    `BUG{class=projection}` filed at the clear site; memory
                    `regression-battle-hp-fraction-blanked-by-hud-clear`.
-                 * `battle_item_potion` spans NOT added this iteration: the
-                   fraction is also genuinely timing-coupled there (the port
-                   shows "100" mid-sweep where hardware shows "120"), so
-                   `pHudFrac` is not a usable span for it regardless, and
-                   adding the other five while a live defect sits in the sixth
-                   needs the fix first.
+                 * **FIXED 2026-08-13, and the filed diagnosis was WRONG.**
+                   The fraction was never "not restored": `DrawHP` DID redraw
+                   it, with the correct value, at the WRONG PLACE. `DrawHP` is
+                   stride-parameterised through `text_row_stride` so one
+                   routine serves the 20-wide status/party screens and the
+                   40-wide battle canvas, and it puts the fraction at
+                   `bar + stride + 1`. The bag/item flow leaves the stride at
+                   20, so the fraction landed at canvas **row 13, col 1** —
+                   one 20-cell step below the bar instead of one 40-cell step.
+                   That is OFF the GB-projected window (which starts at col
+                   10), so the golden could never see it while it sat plainly
+                   on the port's widescreen screen; the HUD's own cells were
+                   left blank by the `ClearScreenArea`.
+                 * Fix: republish the canvas stride at the `DrawHP` call site,
+                   with a `DEVIATION{class=projection}`. MEASURED after:
+                   the fraction reads `f7 f8 f6 f3 f9 fc f8 73` at
+                   `bar+40+1` — byte-identical to hardware's "120/362" — and
+                   `bar+20+1` is all `7f`, i.e. the stray text is gone.
+                 * **The fix made the fraction DETERMINISTIC, which un-blocked
+                   the span I had deferred.** All SIX spans now match on
+                   `battle_item_potion` and are registered there. It is the
+                   only witness for `draw_hp_bar`'s PARTIAL-segment path — its
+                   bar is `71 62 6b 6b 63 63 63 63 6d` (120/362), where
+                   `battle_wrap`'s is full and cannot exercise it.
+                 * NON-VACUITY: removing the stride republish fails
+                   `battle_item_potion` with **7 unmasked divergences**, all
+                   `pHudFrac` (`want $F7 | got $7F`, …). Golden regenerated
+                   surgically: regions 17 -> 23, exactly the six names, no
+                   pre-existing region's bytes changed, frame unchanged at
+                   6163.
              Both halves now print the status condition one cell right of the
              level cell and print the level only when there is none, per pret
              :1913-1918 / :1963-1972. **HARDWARE TRUTH CAME OUT OF THE GOLDEN

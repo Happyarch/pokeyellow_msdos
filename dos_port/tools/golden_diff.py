@@ -832,6 +832,13 @@ SCENARIOS = {
         # anywhere in the flow. What is compared is the heal (party slot and
         # wBattleMon both at 120/362) and the consumed bag slot (16 items -> 15,
         # POTION gone). Both sides dump before the enemy's free turn.
+        # The HUD is static at this dump point, so these six spans are comparable
+        # even though the scenario stays datastruct. This is the ONLY witness for
+        # draw_hp_bar's partial-segment path (the bar here is 120/362, not full).
+        "projected": {"eHudName": (1, 0), "eHudLv": (0, 1),
+                      "pHudName": (10, 7), "pHudLv": (14, 8),
+                      "pHudBar": (10, 9), "pHudFrac": (11, 10)},
+        "window": (10, 3),
         "class": "datastruct",
         "flags": "DEBUG_BATTLE_ITEM=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),

@@ -103,9 +103,45 @@
       "gb_addr": "0xD013",
       "name": "wBattleMon",
       "size": 29
+    },
+    {
+      "file_offset": 7424,
+      "gb_addr": "0xC3A1",
+      "name": "eHudName",
+      "size": 10
+    },
+    {
+      "file_offset": 7434,
+      "gb_addr": "0xC3B4",
+      "name": "eHudLv",
+      "size": 12
+    },
+    {
+      "file_offset": 7446,
+      "gb_addr": "0xC436",
+      "name": "pHudName",
+      "size": 11
+    },
+    {
+      "file_offset": 7457,
+      "gb_addr": "0xC44E",
+      "name": "pHudLv",
+      "size": 6
+    },
+    {
+      "file_offset": 7463,
+      "gb_addr": "0xC45E",
+      "name": "pHudBar",
+      "size": 9
+    },
+    {
+      "file_offset": 7472,
+      "gb_addr": "0xC473",
+      "name": "pHudFrac",
+      "size": 8
     }
   ],
   "rom_title": "POKEMON YEL",
   "scenario": "battle_item_potion",
-  "total_size": 7424
+  "total_size": 7480
 }
