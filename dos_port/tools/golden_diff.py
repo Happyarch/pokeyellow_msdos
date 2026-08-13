@@ -786,6 +786,30 @@ SCENARIOS = {
             ],
         }),
     },
+    "battle_anim_elemental": {
+        # The elemental twin of battle_anim_physical: the same real FIGHT ->
+        # move-menu turn and the same DrawFrameBlock landmark, but on an
+        # ELEMENTAL move, so the checkpoint sits on the subanimation/flash path.
+        # Same menu-derived placement masks for the same reason; OAM stays
+        # deliberately unmasked. Both sides pin wBattleMonMoves+3 to
+        # THUNDERSHOCK, so the move byte is compared, not masked.
+        "flags": "DEBUG_BATTLE_ANIM_ELEMENTAL=1",
+        "window": (10, 3),
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            "wLoadedMon": [
+                ((33, 33), "level in the wLoadedMon staging buffer: same "
+                           "asymmetry battle_anim_physical documents -- the "
+                           "reference reaches the move through the menu, whose "
+                           "last HUD draw staged the player L80, while this "
+                           "debug-only port gate calls DrawEnemyHUDAndHPBar "
+                           "after pinning sleep and leaves the L13 enemy there. "
+                           "Transient presentation scratch; the unmasked "
+                           "battle-mon and OAM frame data are the witness."),
+            ],
+        }),
+    },
     "battle_exp_all": {
         # datastruct: battle_faint's resolved turn with EXP_ALL in the bag, so
         # FaintEnemyPokemon halves wEnemyMonBaseStats and runs GainExperience a

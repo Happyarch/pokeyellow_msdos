@@ -452,6 +452,40 @@
       "verification": "Stage 6 physical move-animation witness: a real wild-battle FIGHT -> STRENGTH turn, stopped at DrawFrameBlock's first published live OAM frame. The reference watches for a CHANGE from parked battle-menu OAM rather than merely nonzero OAM, so the compared unmasked OAM entries cannot be stale menu state. The port reuses DEBUG_BATTLE_FAINT's faithful ExecutePlayerMove entry and dumps at the matching projection boundary before the faint path cleans OAM."
     },
     {
+      "name": "battle_anim_elemental",
+      "id": 75,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_ANIM_ELEMENTAL=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_ELEMENTAL",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_elemental.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ExecutePlayerMove",
+        "MoveAnimation",
+        "PlayMoveAnimation",
+        "PlaySubanimation",
+        "DrawFrameBlock"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 elemental move-animation witness, the twin of battle_anim_physical: a real wild-battle FIGHT -> THUNDERSHOCK turn stopped at DrawFrameBlock's first published live OAM frame. The reference watches for a CHANGE from parked battle-menu OAM rather than merely nonzero OAM, so the compared unmasked OAM entries cannot be stale menu state. The shared debug party carries no elemental move, so BOTH sides pin wBattleMonMoves+3 to THUNDERSHOCK and leave its PP alone; wBattleMon therefore still compares clean. Unlike the physical twin this checkpoint sits on the subanimation/flash path."
+    },
+    {
       "name": "battle_faint",
       "id": 33,
       "tier": "full",

@@ -2870,6 +2870,23 @@ RunBattleTest:
     ; returns at the `ld a,[wIsInBattle] / dec a / ret z` wild exit.
     ; ------------------------------------------------------------------
     call LoadScreenTilesFromBuffer1
+%ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
+    ; The elemental checkpoint needs an ELEMENTAL move in the move slot the
+    ; physical gate takes STRENGTH from, and the shared debug party has none
+    ; (SNORLAX carries the four HMs). Rather than change a party every other
+    ; golden already compares, this gate overwrites move slot 4 of the LOADED
+    ; battle mon; the reference makes the identical write, so wBattleMon still
+    ; compares clean. PP is left as slot 4's, which DecrementPP consumes without
+    ; reading the move id.
+    ;
+    ; THIS MUST PRECEDE DrawHUDsAndHPBars, and that is measured, not assumed:
+    ; pret's DrawPlayerHUDAndHPBar copies wBattleMonSpecies..wBattleMonDVs — a
+    ; range that SPANS THE MOVES — into wLoadedMon (core.asm:1903). Pinning
+    ; after the draw left the port's wLoadedMon move 4 at STRENGTH while the
+    ; reference (which pins before its menu path draws the HUD) held
+    ; THUNDERSHOCK, and goldencheck reported exactly that one unmasked field.
+    mov byte [ebp + wBattleMonMoves + 3], THUNDERSHOCK
+%endif
     call DrawHUDsAndHPBars
     ; THE ENEMY MUST NOT ACT, and the reason this gate gave for years was
     ; WRONG — see the RNG-independence note above. A Yellow L13 PIDGEY knows
@@ -2890,14 +2907,7 @@ RunBattleTest:
     ; wPlayerSelectedMove, DecrementPP reads wPlayerMoveListIndex.
     mov byte [ebp + wPlayerMoveListIndex], 3
 %ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
-    ; The elemental checkpoint needs an ELEMENTAL move in that same slot, and
-    ; the shared debug party has none (SNORLAX carries the four HMs). Rather
-    ; than change the party every other golden already pins, this gate
-    ; overwrites move slot 4 in the LOADED battle mon only — the golden side
-    ; makes the identical write, so wBattleMon still compares clean. PP is left
-    ; as slot 4's, which DecrementPP consumes without reading the move id.
-    mov byte [ebp + wBattleMonMoves + 3], THUNDERSHOCK
-    mov byte [ebp + wPlayerSelectedMove], THUNDERSHOCK
+    mov byte [ebp + wPlayerSelectedMove], THUNDERSHOCK   ; pinned into the slot above
 %else
     mov byte [ebp + wPlayerSelectedMove], STRENGTH
 %endif

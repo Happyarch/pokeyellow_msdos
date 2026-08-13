@@ -2723,17 +2723,52 @@ enemy-gauge clone tile ids and VRAM slots.
           application, i.e. it is the animation landmark and not the faint
           gate's post-KO dump; OAM holds 4 live entries (16 non-zero bytes), so
           a frame block is genuinely published.
-        * **NOT YET REGISTERED, deliberately.** `assets/scenario_registry.inc`
-          is generated from `scenario_manifest.json`, and every registered
-          scenario joins the `full` tier — so registering before the mGBA
-          reference `.lua` and golden exist would add a guaranteed failure.
-          Until then the gate stamps the implied `DEBUG_BATTLE_FAINT` id 33, not
-          75. Id **75 is reserved** for `battle_anim_elemental`.
-        * Remaining for this sub-item: the mGBA reference script (mirroring
-          `tools/mgba_harness/scenarios/battle_anim_physical.lua`, and it must
-          make the identical `wBattleMonMoves+3` write), manifest registration
-          at id 75, golden generation, and a sabotage check proving the witness
-          is sensitive. Ball, shake/blink and option-off remain untouched.
+      - **ELEMENTAL COMPLETE 2026-08-13 — `battle_anim_elemental` (id 75).**
+        Registered, golden committed, `goldencheck` **PASS** with
+        **TILEMAP / VRAM / OAM / WRAM all clean unmasked** (360 cells, 384 tile
+        slots, 40 OAM entries, 13 WRAM regions / 0 skipped). The only wram mask
+        is the same `wLoadedMon +33` level-staging asymmetry the physical twin
+        already documents. `validate_scenarios`: 73 consistent.
+        * **THE ONE REAL DIVERGENCE WAS FOUND AND FIXED, NOT MASKED.** The first
+          run reported exactly one unmasked field —
+          `wLoadedMon move 4: want $54 | got $46`. Cause, read out of pret
+          rather than guessed: `DrawPlayerHUDAndHPBar` copies
+          `wBattleMonSpecies..wBattleMonDVs` into `wLoadedMon`
+          (`engine/battle/core.asm:1903`) and **that range spans the moves**, so
+          a move pinned *after* the HUD draw is invisible to the staging buffer.
+          The reference pins before its menu path draws the HUD; the port gate
+          pinned after. Moving the port's pin ahead of `DrawHUDsAndHPBars`
+          closed it. A mask here would have hidden a real ordering difference.
+        * **THE WITNESS IS SENSITIVE, PROVED BY SABOTAGE.** A deliberate
+          one-byte OAM corruption at the checkpoint (`inc [$FE00]`) made the
+          scenario FAIL on exactly OAM entry 0 (`Y=40` -> `41`) and nothing
+          else; the probe was then reverted. So the PASS above is a measurement,
+          not an absence of comparison.
+        * Ball, shake/blink and option-off remain open in this same box.
+      - **BALL SUB-ITEM SCOPED 2026-08-13 (read-only measurement, not started).**
+        Two facts that change how it must be built:
+        * **`ball_catch` (id 20) CANNOT be promoted into this witness.** It is
+          `scenario_class: datastruct` (`regions: ["wram"]`) and its gate dumps
+          only after asserting `wBattleResult == 2`, i.e. after the capture has
+          RESOLVED. Every toss frame block is long cleaned up by then. This is
+          the same shape as the `battle_faint` finding above — reaches the code,
+          compares a surface where the animation cannot show. A ball animation
+          scenario needs its own earlier `DrawFrameBlock` landmark.
+        * **THE SPEC'S `TOSS_ANIM` IS THE WRONG CONSTANT FOR THAT ROUTE.**
+          `ball_catch` throws a MASTER BALL, and pret picks the toss animation
+          by item (`engine/battle/animations.asm:2795`): `POKE_BALL` ->
+          `TOSS_ANIM`, `GREAT_BALL` -> `GREATTOSS_ANIM`, everything else ->
+          `ULTRATOSS_ANIM`. Values derived from `constants/move_constants.asm`
+          and cross-checked against two knowns (`STRENGTH` $46, `THUNDERSHOCK`
+          $54 both reproduce): `TOSS_ANIM` = **$C1**, `GREATTOSS_ANIM` = $C5,
+          `ULTRATOSS_ANIM` = **$C6**. So a checkpoint reusing `ball_catch`'s
+          MASTER BALL must key on `$C6`; keying on `TOSS_ANIM` would silently
+          never fire. Either key on `$C6` or change the thrown ball — decide
+          explicitly, do not inherit the spec's wording.
+        * Note the entry point differs from the two landed scenarios: the toss
+          runs through `PlayAnimation` (a 5-animation sequence: POOF, HIDEPIC,
+          SHAKE, POOF, SHOWPIC), not `MoveAnimation`, so the `must_hit` list
+          must be re-derived rather than copied from `battle_anim_physical`.
 
 ## Stage 7 — retirement and archival
 
