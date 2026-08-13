@@ -308,7 +308,7 @@ extern IsThisPartyMonStarterPikachu    ; engine/pikachu/pikachu_status.asm — C
 extern CopyDownscaledMonTiles          ; animations.asm — predef; ESI dest, BH rows, BL cols
 extern AnimationSlideMonOff            ; animations.asm — starter-Pikachu retreat walk-off
 extern StarterPikachuBattleEntranceAnimation ; battle_stubs.asm (STUB) — pret engine/battle/pikachu_entrance_anim.asm
-extern IsPlayerPikachuAsleepInParty    ; pikachu_stubs.asm (STUB) — pret engine/pikachu/pikachu_emotions.asm
+extern IsPlayerPikachuAsleepInParty    ; engine/pikachu/pikachu_emotions.asm — real party scan
 extern PlayPikachuSoundClip            ; src/audio/pikachu_pcm.asm
 extern PlayCry                         ; src/home/pokemon.asm — pret home/pokemon.asm:140
 extern RunPaletteCommand               ; home/palettes.asm
@@ -5160,9 +5160,11 @@ ChooseNextMon:
 ; every battle golden. Measurement: docs/current_plan_palette_fidelity.md and
 ; memory regression-battle-sendoutmon-animation-tail-dropped.
 ;
-; Three callees are ret-stubs, each with its own STUB annotation at its stub
+; Two callees are ret-stubs, each with its own STUB annotation at its stub
 ; site: PrintSendOutMonMessage and StarterPikachuBattleEntranceAnimation
-; (battle_stubs.asm), IsPlayerPikachuAsleepInParty (pikachu_stubs.asm). PlayCry
+; (battle_stubs.asm). IsPlayerPikachuAsleepInParty was the third until
+; 2026-08-13, when it was translated into the mirror
+; engine/pikachu/pikachu_emotions.asm. PlayCry
 ; and PrintEmptyString were already linked stubs. The call SHAPE is pret's; the
 ; stubs are what remains to retire.
 ; ===========================================================================
@@ -5216,7 +5218,7 @@ SendOutMon:
     mov byte [ebp + hWhoseTurn], 0       ; xor a / ldh [hWhoseTurn],a
     mov byte [ebp + hAutoBGTransferEnabled], 1
     call StarterPikachuBattleEntranceAnimation ; callfar (STUB)
-    call IsPlayerPikachuAsleepInParty    ; callfar (STUB, returns CF=0)
+    call IsPlayerPikachuAsleepInParty    ; callfar — CF=1 when the starter is asleep
     mov dl, 36                           ; ldpikacry e, PikachuCry37 (0-based)
     jc .asm_3cd81                        ; jr c
     mov dl, 10                           ; ldpikacry e, PikachuCry11 (0-based)

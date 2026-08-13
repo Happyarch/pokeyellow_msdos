@@ -75,7 +75,7 @@ extern LoadEnemyMonData             ; engine/battle/core.asm
 extern MarowakAnim                  ; engine/battle/ghost_marowak_anim.asm
 extern PlaySound                    ; src/home/audio.asm
 extern WaitForSoundToFinish         ; src/home/delay.asm
-extern IsPlayerPikachuAsleepInParty ; pikachu_stubs.asm (STUB — returns CF=0)
+extern IsPlayerPikachuAsleepInParty ; engine/pikachu/pikachu_emotions.asm
 extern PlayPikachuSoundClip         ; src/audio/pikachu_pcm.asm — DL = clip index
 extern DrawBattlePokeballs          ; engine/battle/pokeballs.asm — see the DEVIATION
 ; Generated Tier-1 streams (assets/battle_text.inc). gen_battle_text FLATTENS
@@ -208,7 +208,7 @@ PrintBeginningBattleText:
     mov al, [ebp + wBattleType]
     cmp al, BATTLE_TYPE_PIKACHU
     jne .notPikachuBattle                ; jr nz
-    call IsPlayerPikachuAsleepInParty    ; callfar (STUB, returns CF=0)
+    call IsPlayerPikachuAsleepInParty    ; callfar — CF=1 when the starter is asleep
     mov dl, PIKACRY_37                   ; ldpikacry e, PikachuCry37
     jc .asm_f4026                        ; jr c
     mov dl, PIKACRY_11                   ; ldpikacry e, PikachuCry11

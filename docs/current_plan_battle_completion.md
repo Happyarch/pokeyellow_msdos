@@ -3190,6 +3190,35 @@ enemy-gauge clone tile ids and VRAM slots.
       `label_status --callers` for each retired stub, update the label DB, run
       default/strict label lint and `fidelity_gate`, and sweep related `STUB`,
       `TODO-HW`, extern-provider, allowlist, plan, skill, and stigmergy claims.
+      - **INVENTORY 2026-08-13 — 9 battle-area stubs, 1 RETIRED, 8 classified.**
+        * **RETIRED: `IsPlayerPikachuAsleepInParty`.** Every dependency was
+          already present (`IsThisPartyMonStarterPikachu` and `AddNTimes` both
+          `translated`; `STARTER_PIKACHU` and `SLP_MASK` both defined), so it
+          was translated into a new mirror file
+          `dos_port/src/engine/pikachu/pikachu_emotions.asm` — pret's path, not
+          a neighbour. `stub` -> `translated`, faithdiff **CLEAN** (2/2 calls,
+          1/1 stores).
+        * The retirement SWEEP is the part the box is really about, and it had
+          teeth: removing the stub made `lint_pret_labels` fail with **2
+          `stale_extern` findings** — `core.asm` and `common_text.asm` both had
+          extern comments still pointing at `pikachu_stubs.asm`. Both swept,
+          along with two `(STUB, returns CF=0)` call-site comments and a
+          `SendOutMon` header that still listed it as one of three ret-stubs.
+          Lint back to 0 in both modes.
+        * **REACHED BUT NOT WITNESSED — measured, and the distinction matters.**
+          The debug party seeds `STARTER_PIKACHU` at slot 3 and
+          `battle_choose_next_mon` sends it out, so `SendOutMon.starterPikachu`
+          really does execute the routine. But inverting it to always report
+          "asleep" **still PASSES** that scenario: the CF result only chooses
+          between two Pikachu cry clips, which nothing compares. So the path is
+          `executed`, the result is not `observed`.
+        * **STILL STUBBED (8), with the reason each is not retirable now:**
+          `TradeHidePokemon`, `TradeShakePokeball`, `TradeJumpPokeball`,
+          `LinkBattleExchangeData` — link/serial, a Phase-4 HAL boundary;
+          `StarterPikachuBattleEntranceAnimation` — animation, Stage 6;
+          `PrintSendOutMonMessage`, `FormatMovesString` — untranslated pret
+          routines, not stubs shadowing a landed provider;
+          `RespawnOverworldPikachu` — explicitly deferred by box 3d.
 - [ ] Run targeted scenarios, the core tier, `fidelity-full`, and
       `goldens-verify` when scenario/golden artifacts changed. Close or transfer
       every battle-owned mask/finding with explicit evidence.

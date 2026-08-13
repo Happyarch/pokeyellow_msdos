@@ -518,6 +518,7 @@ POKEMON_SRCS := \
     src/engine/gfx/hp_bar.asm \
     src/engine/pokemon/status_screen.asm \
     src/engine/pikachu/pikachu_status.asm \
+    src/engine/pikachu/pikachu_emotions.asm \
     src/engine/pikachu/pikachu_stubs.asm \
     src/engine/movie/evolution.asm \
     src/engine/movie/evolution_stubs.asm \
