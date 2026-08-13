@@ -2037,7 +2037,19 @@ $(eval $(call battle_gate,DEBUG_BATTLE_LIVE))
 # waits, then dump battle WRAM to DUMP.BIN. make DEBUG_BATTLE_ENEMYHIT=1
 $(eval $(call battle_gate,DEBUG_BATTLE_ENEMYHIT))
 # Battle intro screen dump (scene + "Wild <nick> appeared!", no menu) → FRAME.BIN.
-$(eval $(call battle_gate,DEBUG_BATTLE_INTRO))
+# FRAME-DRIVEN since 2026-08-13, like DEBUG_BATTLE_MENU/SAFARI: the harness parks
+# in a DelayFrame loop and AUTOKEY_QUIET photographs it at AUTOKEY_DUMP_FRAME.
+# It was an INLINE dump, which cannot photograph a screen that blocks — and pret's
+# intro box does block, on PrintBeginningBattleText's own prompt. Wiring that
+# routine is unwitnessable until the dump is frame-driven (measured: the attempt
+# TIMED OUT here with no dump while battle_menu/battle_safari compared normally).
+ifdef DEBUG_BATTLE_INTRO
+DEBUG_BATTLE := 1
+NASMFLAGS += -D DEBUG_BATTLE_INTRO
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 30
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Bug Catcher trainer test: seeds a trainer battle (enemy = trainer + ball row +
 # party-status variety). Combine with DEBUG_BATTLE_INTRO (dump) or DEBUG_BATTLE_LIVE.
 $(eval $(call battle_gate,DEBUG_BATTLE_TRAINER))

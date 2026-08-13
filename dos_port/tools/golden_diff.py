@@ -644,7 +644,12 @@ SCENARIOS = {
     # (DVs $98 $76, real loaders on both sides — see seed.enemy /
     # DEBUG_BATTLE_GOLDEN). Masks are measured, per entry. ---
     "battle_intro": {
-        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_INTRO=1",
+        # FRAME-DRIVEN since 2026-08-13. The dump was inline (fall-through), which
+        # cannot photograph a blocking screen — and pret's intro box blocks on
+        # PrintBeginningBattleText's prompt, so wiring that routine could not be
+        # witnessed here (measured: it timed out with no dump). 300 is the same
+        # frame battle_menu and battle_safari use.
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_INTRO=1 AUTOKEY_DUMP_FRAME=300",
         "window": (10, 3),
         "oam_window": True,  # battle canvas = fixed GB-centering; OBJ shift with it
         "masks": {"vram": list(_BATTLE_VRAM_MASKS)},

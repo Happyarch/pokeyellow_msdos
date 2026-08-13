@@ -298,7 +298,7 @@
       "id": 15,
       "tier": "full",
       "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_INTRO=1",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_INTRO=1 AUTOKEY_DUMP_FRAME=300",
       "port_entry_gate": "DEBUG_BATTLE_INTRO",
       "navigation_script": "tools/mgba_harness/scenarios/battle_intro.lua",
       "dump": {

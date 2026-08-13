@@ -2406,6 +2406,26 @@ provider shapes below, not their runtime behavior.
             POKES a fake `▼` at GB (16,18) because "the port box prints
             instantly, promptless". So the wiring FIXES a real fidelity gap
             and `battle_intro` needs a frame-based dump before it can land.
+            * **THAT PREREQUISITE IS NOW DONE (2026-08-13).** `battle_intro`'s
+              dump is FRAME-DRIVEN: the harness parks in a `DelayFrame` loop
+              and `AutoKeyDrive` photographs it at `AUTOKEY_DUMP_FRAME=300`,
+              the same frame `battle_menu` and `battle_safari` use. Flags
+              synced in the Makefile gate, `scenario_manifest.json` and
+              `golden_diff.SCENARIOS` (`validate_scenarios` cross-checks the
+              last two: 70 consistent).
+            * **IT IS A MEASURED NO-OP on the compared surface**, which is the
+              result that lets it land ahead of the wiring: `TILEMAP: OK (360
+              cells)`, VRAM/OAM/WRAM OK, **59 masked divergences — identical to
+              the pre-change baseline**, golden untouched. 300 frames of
+              hanging changed nothing.
+            * **NON-VACUITY, and it reproduces the wiring symptom in
+              miniature:** replacing the loop's `call DelayFrame` with a bare
+              spin makes the scenario TIME OUT with **no `GBSTATE.BIN` at
+              all** — `AutoKeyDrive` runs from the `DelayFrame` pipeline
+              (`src/home/vblank.asm:183`), not the joypad ISR. Probe reverted.
+            * What this does NOT do is make the intro wiring landable on its
+              own — FINDING 2 below (the `SaveBattleScreen` interaction) is
+              untouched and is still the remaining design work.
           * **FINDING 2 — the screen-save interaction, not the text, is the
             hard part.** `battle_safari` came back with **133 unmasked
             divergences: 132 tilemap cells + 1 WRAM field**, VRAM and OAM both

@@ -2346,9 +2346,25 @@ RunBattleTest:
     ; (the port box prints instantly, promptless). wBattleMon is NOT loaded
     ; yet — the GB loads it at send-out, after this screen (golden: zeros).
     mov byte [ebp + W_TILEMAP + (19 * 40 + 28)], 0xEE
-    call DelayFrame
-    call DumpBackbuffer
+    ; THE DUMP IS FRAME-DRIVEN, NOT INLINE (2026-08-13), and that is a
+    ; PREREQUISITE, not a tidy-up. This block used to be
+    ; `call DelayFrame / call DumpBackbuffer` — a dump the harness reaches by
+    ; falling into it. That structurally cannot photograph a BLOCKING screen,
+    ; and pret's intro box IS blocking: `PrintBeginningBattleText` ends in the
+    ; text stream's own prompt, which is exactly why the port's promptless
+    ; `DrawBattleIntroBox` needs the ▼ poked above. Measured last iteration:
+    ; giving the slide pret's `jmp PrintBeginningBattleText` tail made this
+    ; scenario TIME OUT WITH NO DUMP AT ALL, while the two frame-driven battle
+    ; scenarios (battle_menu, battle_safari) got through and compared normally.
+    ; So the wiring of PrintBeginningBattleText cannot be witnessed here until
+    ; the dump stops depending on reaching a fall-through.
+    ;
+    ; THE HANG MUST CALL DelayFrame, NOT SPIN. AutoKeyDrive runs from the
+    ; DelayFrame pipeline (src/home/vblank.asm:183), not from the joypad ISR,
+    ; so a bare `jmp $` freezes the frame counter and the dump never fires —
+    ; the same trap pokedex.asm's two hang loops already document.
 .goldenintrohang:
+    call DelayFrame                 ; ticks AutoKeyDrive -> dump at AUTOKEY_DUMP_FRAME
     jmp .goldenintrohang
 %else
     ; --- send-out (the golden pressed A on "appeared!"): the pokéballs give
