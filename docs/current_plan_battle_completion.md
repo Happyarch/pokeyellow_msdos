@@ -2994,12 +2994,25 @@ enemy-gauge clone tile ids and VRAM slots.
           whether the tail runs. With the tail `wLowHealthAlarm = 0x83` (bit 7
           set, timer 3); without it `0x00`; `wBattleMonHP = 0001` in both. All
           three temporary edits reverted before the gates ran.
-        * Still owed: a permanent witness. That needs both a scenario that
-          reaches red HP and `wLowHealthAlarm` in the dumped region set, and
-          adding a region changes the GBSTATE schema for all 69 goldens.
+        * Still owed: a permanent witness — **and the reason recorded here was
+          WRONG, corrected 2026-08-13.** It said adding a region "changes the
+          GBSTATE schema for all 69 goldens". It does not: a SCENARIO-LOCAL row
+          regenerates ONE golden, and that path is now proven end to end (see
+          the Stage-5 `wTransSpiral` checkpoint, `1b915a3ed`).
+        * **What is actually owed is STAGING, not a region.** The alarm only
+          arms at RED HP, and no scenario drives the player's mon there — the
+          debug party's L80 SNORLAX has ~360 HP and nothing in the battle tier
+          takes it low. So this needs a scenario whose staging seeds low HP,
+          which is new-scenario work rather than a one-line region row. That is
+          a smaller and much better-understood blocker than the one it
+          replaces, but it is not free.
       * **No permanent witness for `CenterMonName`.** Needs a scenario whose
         battle mon has a nickname of 4 characters or fewer; every current one
-        is 5+ and therefore in the unshifted bucket. Cheapest shape measured:
+        is 5+ and therefore in the unshifted bucket. **Same correction as the
+        alarm above: the blocker is STAGING, not the region schema.** The
+        nickname is part of the compared `wBattleMonNick` region and the
+        tilemap, so shortening it in an existing scenario changes what that
+        scenario pins — hence a new scenario, not a row. Cheapest shape measured:
         the nickname is independent of species, so seeding
         `wPartyMonNicks` slot 0 on both sides (port debug gate + `seed.party`
         in `tools/mgba_harness/lib/seed.lua`) exercises the player HUD without
