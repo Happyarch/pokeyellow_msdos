@@ -2509,8 +2509,26 @@ enemy-gauge clone tile ids and VRAM slots.
           the alias-era comments justifying them are measurably false: every
           callee below is `translated` and linked, so "not available yet" is
           not the reason for any of them.
-          1. `ClearScreenArea` dropped — the comment said `home/copy2.asm` was
-             "not linked here". OPEN.
+          1. `ClearScreenArea` dropped — FIXED 2026-08-13. Both halves now
+             clear pret's rectangle first (`BCOORD(9,7)` 5x11 player,
+             `BCOORD(0,0)` 4x12 enemy). The comment said `home/copy2.asm` was
+             "not linked here"; it has 21 port callers. `BCOORD` is the same
+             uniform (X+10, Y+3) projection the generated UI_* layout uses —
+             verified by measurement, not assumed: every port HUD element
+             (`UI_{ENEMY,PLAYER}_{NAME,LV,HPBAR,HPFRAC}`) carries pret's exact
+             GB coordinate, so the rectangle is pret's rather than a new one.
+             * DECOMPOSED against the `battle_wrap` hardware golden, port
+               canvas vs golden GB coords, before -> after:
+               player rect 5x11 = 55 cells, **0 -> 0** mismatches (this
+               scenario never had a stale player cell); enemy rect 4x12 = 48
+               cells, **7 -> 6**. So the clear fixed exactly ONE cell: the
+               stale `:L` glyph at the enemy LV cell.
+             * The 6 that remain are NOT this defect and are not a regression:
+               all six are row GB y=2, x=4..9 — the enemy HP gauge — where the
+               golden has `6B/69/63` and the port has `C8/C4/C0`. That is
+               `DuplicateEnemyHPBarTiles` cloning `$63-$6b` into unused glyph
+               slots so the enemy bar can own its own palette slot. Identical
+               pixels, deliberately different tile IDs.
           2. `PrintStatusConditionNotFainted` dropped — FIXED 2026-08-13.
              Both halves now print the status condition one cell right of the
              level cell and print the level only when there is none, per pret

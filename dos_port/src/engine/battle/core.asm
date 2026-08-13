@@ -317,6 +317,7 @@ extern SetPal_Battle                   ; engine/gfx/palettes.asm — publish bot
 extern PlacePlayerHUDTiles             ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern PlaceEnemyHUDTiles              ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern PrintStatusConditionNotFainted  ; home/pokemon.asm -> PrintStatusAilment
+extern ClearScreenArea                 ; home/copy2.asm — BH rows x BL cols of blanks at ESI
 ; --- HUD geometry for DrawHUDsAndHPBars and its two halves, moved here with
 ; --- them from battle_hud.asm. Values come from the generated battle UI layout
 ; --- (assets/ui_layout_battle.inc); never hand-edit an offset here.
@@ -6605,6 +6606,18 @@ DrawHUDsAndHPBars:
     ret
 DrawPlayerHUDAndHPBar:
     ; ===== player HUD (lower-right) =====
+    ; pret DrawPlayerHUDAndHPBar:1893-1894 — `hlcoord 9, 7 / lb bc, 5, 11`.
+    ; Restored 2026-08-13; the alias fork had hidden the dropped call, and the
+    ; comment that justified it ("home/copy2.asm not linked here") was false.
+    ; Without it a previous draw's glyphs survive wherever this draw writes
+    ; fewer cells — measured as a stale `:L` at the enemy LV cell once the
+    ; status-condition rule started suppressing the level.
+    ; PROJ battle: BCOORD is the uniform (X+10, Y+3) battle projection the
+    ; generated UI_* layout uses, so the rectangle is pret's, not a new one.
+    mov esi, BCOORD(9, 7)
+    mov bh, 5                            ; b = rows
+    mov bl, 11                           ; c = width
+    call ClearScreenArea
     ; pret DrawPlayerHUDAndHPBar draws the frame FIRST: PlacePlayerHUDTiles +
     ; the (18,9) $73 connector, which DrawHP later OVERWRITES with the HP bar's
     ; right cap $6D — pret's second $73 is dead the moment the bar draws. The
@@ -6705,6 +6718,12 @@ DrawPlayerHUDAndHPBar:
 
 DrawEnemyHUDAndHPBar:
     ; ===== enemy HUD (upper-left) =====
+    ; pret DrawEnemyHUDAndHPBar:1955-1956 — `hlcoord 0, 0 / lb bc, 4, 12`.
+    ; Same restoration and same BCOORD projection as the player half above.
+    mov esi, BCOORD(0, 0)
+    mov bh, 4                            ; b = rows
+    mov bl, 12                           ; c = width
+    call ClearScreenArea
     mov esi, W_TILEMAP + E_NAME          ; PlaceString: ESI=dest(GB offset), EAX=src(flat)
     mov edx, wEnemyMonNick               ; pret DrawEnemyHUDAndHPBar:1960 — same centering
     call CenterMonName
