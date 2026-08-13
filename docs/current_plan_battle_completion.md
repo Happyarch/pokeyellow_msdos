@@ -3164,13 +3164,27 @@ enemy-gauge clone tile ids and VRAM slots.
           GBSTATE schema for all 69 goldens". It does not: a SCENARIO-LOCAL row
           regenerates ONE golden, and that path is now proven end to end (see
           the Stage-5 `wTransSpiral` checkpoint, `1b915a3ed`).
-        * **What is actually owed is STAGING, not a region.** The alarm only
-          arms at RED HP, and no scenario drives the player's mon there — the
-          debug party's L80 SNORLAX has ~360 HP and nothing in the battle tier
-          takes it low. So this needs a scenario whose staging seeds low HP,
-          which is new-scenario work rather than a one-line region row. That is
-          a smaller and much better-understood blocker than the one it
-          replaces, but it is not free.
+        * **What is actually owed is STAGING, not a region — and 2026-08-13
+          sharpened WHICH staging, by trying the best candidate and failing.**
+          `battle_choose_next_mon` DOES seed a mon at red HP: slot 3,
+          STARTER_PIKACHU L5 **at 1 HP**, and it is sent out, so the arming
+          path genuinely runs mid-scenario. A `wLowHealthAlarm` region was
+          added to both sides and the golden regenerated to check.
+          **HARDWARE READS `00` AT THE DUMP** — by then the Pikachu has
+          fainted and LAPRAS (139/139) is out, and the faint path clears the
+          bit. The port agrees, so the scenario PASSES.
+          * **But the row cannot DISCRIMINATE, which is what disqualifies it:**
+            disabling the arming tail entirely **also passes**, because both
+            states read `00` at a settled dump. Adding it would have been
+            coverage that reads as clearance, so the whole probe — port row,
+            Lua row and regenerated golden — was reverted.
+          * **THE BLOCKER, STATED PRECISELY:** the alarm bit is TRANSIENT. It
+            is set while a LIVE mon sits at red HP and cleared the moment that
+            mon faints or is replaced. Every scenario's dump point is a settled
+            post-faint state. A witness therefore needs a dump taken **WHILE a
+            live mon is at red HP** — a dump-point constraint, not merely a
+            "seed low HP" one. That is what no current scenario provides, and
+            `battle_choose_next_mon` was the closest miss.
       * **No permanent witness for `CenterMonName`.** Needs a scenario whose
         battle mon has a nickname of 4 characters or fewer; every current one
         is 5+ and therefore in the unshifted bucket. **Same correction as the
