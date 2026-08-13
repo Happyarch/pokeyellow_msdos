@@ -2901,6 +2901,13 @@ RunBattleTest:
 %ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
     call DrawEnemyHUDAndHPBar             ; same visible SLP pin as the physical gate
 %endif
+%ifdef DEBUG_BATTLE_ANIM_BLINK
+    ; Same visible SLP pin. MEASURED, not copied on faith: without this the
+    ; enemy HUD kept showing the LEVEL where the reference's menu path shows
+    ; "SLP" (PrintStatusConditionNotFainted takes the status branch and skips
+    ; PrintLevel), and goldencheck reported exactly those 4 tilemap cells.
+    call DrawEnemyHUDAndHPBar
+%endif
     ; The debug party pokes STRENGTH into SNORLAX's move slot 4
     ; (tools/mgba_harness/lib/seed.lua DEBUG_PARTY[1].pokes[4]), so the
     ; 0-based list index is 3. Both are set: GetCurrentMove reads

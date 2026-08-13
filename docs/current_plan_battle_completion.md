@@ -2799,6 +2799,46 @@ enemy-gauge clone tile ids and VRAM slots.
           reasoning recorded at the site. Gates: lint 0 both modes, core tier
           16/16.
         * Shake/blink and option-off remain open in this same box.
+      - **SHAKE/BLINK BUILT AND MEASURED 2026-08-13, BLOCKED ON ONE WRAM FIELD —
+        DELIBERATELY NOT REGISTERED.** Port gate `DEBUG_BATTLE_ANIM_BLINK` and
+        reference `tools/mgba_harness/scenarios/battle_anim_blink.lua` both
+        exist and both reach the intended instant; the manifest / `golden_diff`
+        / golden were backed out again so the suite stays green (registry is 74,
+        `validate_scenarios` consistent). **Id 77 is reserved.**
+        * **THE PATH.** After a move's own animation, `MoveAnimation` calls
+          `PlayApplyingAttackAnimation`, which dispatches on `wAnimationType`
+          (`engine/battle/animations.asm:506`). Type 4 — player used a damaging
+          move without a side effect, which is what STRENGTH selects — is
+          `BlinkEnemyMonSprite` -> `AnimationBlinkMon`, six iterations of
+          {hide pic, 5 frames, show pic, 5 frames}. The landmark is the FIRST
+          hide. `DebugDumpMemory` never returns, so "first" needs no counter.
+        * **THE INSTANT IS PINNED BY TWO CONDITIONS, not one.** Measured on the
+          port: the enemy's 7x7 pic block at GB (12,0) is blank AND
+          `wEnemyMon` HP is still 36. Damage is applied only after
+          `MoveAnimation` returns, so full HP is what separates a blink hide
+          from any later hide. It sits strictly between `battle_anim_physical`
+          (stops earlier, inside the move animation) and `battle_faint` (stops
+          after the KO) — a gap nothing had covered.
+        * **ONE DEFECT IN THE GATE FOUND AND FIXED:** omitting the
+          `DrawEnemyHUDAndHPBar` call its siblings make left the enemy HUD
+          showing the LEVEL where the reference shows `SLP`
+          (`PrintStatusConditionNotFainted` takes the status branch and skips
+          `PrintLevel`). goldencheck reported exactly those 4 tilemap cells;
+          adding the call took TILEMAP to OK.
+        * **WHAT BLOCKS REGISTRATION — 2 unmasked WRAM fields, both
+          `wLoadedMon`:** `level: want $50 got $0D` and
+          `speed stat exp: want $9876 got $0000`. TILEMAP, VRAM and OAM are all
+          clean. The level half is understood and is the same staging asymmetry
+          the physical/elemental scenarios mask: `DrawEnemyHUDAndHPBar` writes
+          `wLoadedMonLevel` ONLY when the mon has no status (`core.asm:1968-1970`
+          — with SLP pinned it jumps to `.skipPrintLevel`), so the 13 is residue
+          from the earlier `DrawHUDsAndHPBars` when the enemy was not yet
+          asleep. **The stat-exp half is NOT understood**, and it is the reason
+          this is not being masked: neither HUD routine writes that field, and
+          the physical/elemental scenarios — same route, same masks — match
+          there, so something between their instant and the blink zeroes it on
+          the port side only. Resolve that before registering; do not widen the
+          `wLoadedMon` mask to make it green.
       - **BALL SUB-ITEM SCOPING (read-only measurement made before building it;
         both facts held).**
         Two facts that changed how it had to be built:

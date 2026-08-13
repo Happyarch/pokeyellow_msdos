@@ -143,6 +143,9 @@ extern DebugDumpMemory                   ; debug_dump.asm — same checkpoint, e
 %ifdef DEBUG_BATTLE_ANIM_BALL
 extern DebugDumpMemory                   ; debug_dump.asm — same checkpoint, ball toss animation
 %endif
+%ifdef DEBUG_BATTLE_ANIM_BLINK
+extern DebugDumpMemory                   ; debug_dump.asm — the shake/blink checkpoint
+%endif
 
 ; --- Stage 3: screen / palette special effects ---
 global AnimationFlashScreen
@@ -3010,6 +3013,10 @@ AnimationBlinkMon:
 .loop:
     push ebx
     call AnimationHideMonPic
+; DEVIATION{class=temporary; pret=engine/battle/animations.asm:AnimationBlinkMon; behavior=DEBUG_BATTLE_ANIM_BLINK terminates at the first hidden-pic instant of the blink; evidence=the Stage-6 shake/blink witness must compare the pic-hidden half of PlayApplyingAttackAnimation's wAnimationType 4 arm, which no scenario reaches because the physical witness stops earlier in the move animation and battle_faint stops after the KO, and DebugDumpMemory never returns so this is definitionally the FIRST hide with no counter needed; lifetime=retire only with this debug scenario or when a production landmark can replace it}
+%ifdef DEBUG_BATTLE_ANIM_BLINK
+    call DebugDumpMemory                     ; first blink hide; never returns
+%endif
     mov bl, 5
     call DelayFrames
     call AnimationShowMonPic

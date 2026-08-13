@@ -69,6 +69,18 @@ AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 
+# Stage-6 shake/blink checkpoint: same real STRENGTH turn as the physical gate,
+# but the landmark is the first hidden-pic instant of AnimationBlinkMon, i.e.
+# PlayApplyingAttackAnimation's wAnimationType 4 arm, which runs AFTER the move
+# animation and BEFORE damage is applied.
+ifdef DEBUG_BATTLE_ANIM_BLINK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_ANIM_BLINK -D DEBUG_BATTLE_FAINT -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 define flag_gate
 ifdef $(1)
 NASMFLAGS += -D $(1)
