@@ -2382,11 +2382,54 @@ enemy-gauge clone tile ids and VRAM slots.
 - [ ] **CORE.ASM MISSING-LABEL INVENTORY (measured 2026-08-12): 14 of 207
       labels, i.e. 93% translated.** Most are explained by deviations already
       documented — `StartBattle` (the collapse), `SimulatedInputBattleItemList`
-      (`wListPointer` is a 16-bit GB address), the intro-slide family
-      (`SlidePlayerAndEnemySilhouettesOnScreen`, `SlideTrainerPicOffScreen`,
-      `SlidePlayerHeadLeft`, `SetScrollXForSlidingPlayerBodyLeft`, `asm_3d52d`,
-      `Func_3d4f5/523/529/536` — the port has `SlideBattlePicsIn`; NOT audited as
-      a fork), and `BattleCore` (a section label).
+      (`wListPointer` is a 16-bit GB address) and `BattleCore` (a section
+      label), plus the nine labels this box called "the intro-slide family".
+      * **THE "INTRO-SLIDE FAMILY" AUDIT IS DONE 2026-08-12, AND THE GROUPING
+        WAS WRONG.** It is not one family of nine; it is three groups, and only
+        one of them is open work. Measured against pret `engine/battle/core.asm`
+        and every call site.
+      * **(a) Genuine HAL boundary, correctly absent — 3 labels.**
+        `SlidePlayerAndEnemySilhouettesOnScreen`, `SlidePlayerHeadLeft`,
+        `SetScrollXForSlidingPlayerBodyLeft`. This is NOT a fork of convenience
+        like `EnemyMoveHitTest`: `SetScrollXForSlidingPlayerBodyLeft` is a
+        self-loop on `rLY` (`ldh a, [rLY] / cp l / jr nz` to its own label),
+        and `rLY` is INERT in the port — a literal translation never
+        terminates. `SlidePlayerHeadLeft` exists ONLY because that raster trick
+        forces the player's head to be an OBJ while his body is BG; the port
+        composites both pics into `W_TILEMAP` per frame, so there is no
+        head/body split for it to drive. The port's `SlideBattlePicsIn`
+        (`src/home/pics.asm`) is a different mechanism, not a renamed copy.
+      * **(b) NOT THIS FAMILY AT ALL — 5 labels, and they are permanently out
+        of scope.** `Func_3d4f5`, `Func_3d523`, `Func_3d529`, `asm_3d52d`,
+        `Func_3d536` are pret's **_DEBUG test-battle move-selection harness**
+        (they read/write `wTestBattlePlayerSelectedMove` and print it at
+        `hlcoord 10,16`). Every call site is inside an `IF DEF(_DEBUG)` block —
+        `MoveSelectionMenu`'s START/LEFT/RIGHT handlers (core.asm:2721-2728)
+        and `SwapMovesInMenu` (:2929) — so they are unreachable in a retail
+        build. They were only ever adjacent to the slide routines by ADDRESS.
+        Strike them from the residue; they are not work.
+      * **(c) The one real open item — `SlideTrainerPicOffScreen`.** It is a
+        pure `wTileMap` column shift (`ld a,[hld] / ld [hli],a` per cell, no
+        `rLY`, no hardware scroll), so unlike (a) it IS translatable, and both
+        of its call sites are retail: `StartBattle`'s player send-out
+        (core.asm:246, `hlcoord 1,5`, 9 columns) and `EnemySendOutFirstMon`
+        (:1351, `hlcoord 18,0`, 8 columns — the direction switch is
+        `hSlideAmount == 8`). The port drops both under the existing
+        `; ANIMATION=OFF:` convention (`core.asm:5296`), which is the port's
+        tracked animation-deferral class rather than an unannotated divergence,
+        so nothing is owed here now — but this is the ONLY member of the
+        original nine that a later stage should actually translate. Its call
+        sites need PROJ coordinates for the 40-wide canvas.
+      * **RESIDUE AFTER THIS AUDIT: the pret-named ENTRY POINT is still
+        absent.** pret's caller is `callfar SlidePlayerAndEnemySilhouettesOnScreen`
+        (`engine/battle/init_battle.asm:103`); the port's `_InitBattleCommon`
+        instead does `call LoadPlayerBackPic / call SlideBattlePicsIn`, so no
+        symbol in the port carries pret's name for that step. The
+        Preserve-pret-Labels rule wants pret's name on the entry point even
+        when the body is a projection ("keep pret's names on both halves"). Not
+        done here — it is a separate, deliberate change to `_InitBattleCommon`
+        and `src/home/pics.asm`, and the mechanism helper `SlideBattlePicsIn`
+        legitimately has no pret counterpart to inherit a name from.
       * **`GetBattleHealthBarColor` TRANSLATED AND WIRED 2026-08-12** — the
         routine is `missing` -> `translated`, its own faithdiff is CLEAN (2/2
         calls), and both pret call sites now make the call:
