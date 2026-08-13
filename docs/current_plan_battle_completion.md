@@ -2309,13 +2309,24 @@ enemy-gauge clone tile ids and VRAM slots.
       * The routine exchanges `wBattleMonLevel` and `wEnemyMonLevel` so shared
         code that reads the PLAYER slot operates on the ENEMY's level during an
         enemy turn. pret swaps an ODD number of times before `CalculateDamage`.
-      * **BEHAVIOURAL IMPACT IS NOT ESTABLISHED and must not be assumed.**
-        `CalculateDamage` takes the level in register E (its own header says
-        `e: level`), supplied by `GetDamageVarsForEnemyAttack`, which pret runs
-        UNSWAPPED — so the swap matters only for direct WRAM level reads further
-        in. Tracing that is the next step, along with checking whether the
-        port's `GetDamageVarsForEnemyAttack` loads the enemy level itself
-        (which would make the port self-consistent and the omission benign).
+      * **BEHAVIOURAL IMPACT STILL NOT ESTABLISHED, and the trace so far points
+        AWAY from a damage bug** (measured 2026-08-12, partial):
+        1. pret's `GetDamageVarsForEnemyAttack` loads the level with
+           `ld a, [wEnemyMonLevel] / ld e, a` — **directly from the enemy slot**
+           — and pret runs it in the UNSWAPPED window (swap off at :5716, swap
+           back on at :5718). So the level handed to `CalculateDamage` in E is
+           correct WITHOUT any swap.
+        2. `CalculateDamage` (pret 4470-4638) contains **no** WRAM level read at
+           all; it takes the level in E per its own header (`e: level`).
+        3. Neither `CriticalHitTest` (4649-4718) nor `HandleCounterMove` reads a
+           level byte.
+        So none of the three routines that execute in the SWAPPED window
+        consumes the swap. The consumer must be a CALLEE of one of them, or code
+        after the enemy path that reads the levels while still exchanged — NOT
+        yet identified.
+      * **DO NOT "FIX" THIS BY ADDING THE 7 CALLS BLIND.** If the port's damage
+        path is self-consistent, adding the swaps could INTRODUCE the bug this
+        was feared to be. Identify the consumer first.
       * **How it survived:** a translated-but-uncalled routine trips nothing —
         lint is clean, `label_status` says `translated`, and no scenario drives
         an enemy attack where a level difference would show. Only `faithdiff`
