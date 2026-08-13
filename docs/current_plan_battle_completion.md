@@ -2382,13 +2382,41 @@ provider shapes below, not their runtime behavior.
           documenting, so it was reverted rather than committed green. The
           translation stays (it is committed, faithdiff-clean and honestly
           labelled as having 0 callers).
-        * **WHAT THE NEXT ATTEMPT NEEDS FIRST — a witness, not more code.**
-          Either point `RunBattleTest`'s intro staging at `_InitBattleCommon`
-          instead of duplicating it (which is the right fix and also retires
-          an instance-3 duplicate), or add a rendered scenario on the live
-          battle-entry path. Until one of those exists the wiring cannot be
-          landed responsibly, and this is a BLOCKER on evidence rather than on
-          effort.
+        * **THE WITNESS NOW EXISTS — built 2026-08-13 in two steps, and step 2
+          produced the real diagnosis.**
+          * **Step 1 LANDED (`d6574e31c`).** The staging's
+            `LoadPlayerBackPic` + `SlideBattlePicsIn` pair is exactly
+            `SlidePlayerAndEnemySilhouettesOnScreen`, so it now calls that
+            shared routine. Verified non-vacuous: callers 2 -> 3, with
+            `RunBattleTest` joining the two `_InitBattleCommon` sites. A no-op
+            today, and from now on the harness tracks the routine instead of
+            re-deriving it.
+          * **Step 2 was built, MEASURED, and reverted.** Giving the slide
+            pret's `jmp PrintBeginningBattleText` tail and deleting both the
+            harness's and production's `DrawBattleIntroBox` **made the three
+            rendered scenarios FAIL — which is the proof the witness works**,
+            since last iteration the identical change passed all three.
+          * **FINDING 1 — the port's intro box is PROMPTLESS and pret's is
+            not.** `battle_intro` did not fail on a comparison: it TIMED OUT
+            with no dump at all. Its harness dumps INLINE, and the faithful
+            path blocks on the text stream's own prompt, so the dump is never
+            reached. `battle_menu` and `battle_safari`, which are frame-driven
+            (`AUTOKEY_DUMP_FRAME=300`), got through and compared normally.
+            The harness already documented the gap without naming it — it
+            POKES a fake `▼` at GB (16,18) because "the port box prints
+            instantly, promptless". So the wiring FIXES a real fidelity gap
+            and `battle_intro` needs a frame-based dump before it can land.
+          * **FINDING 2 — the screen-save interaction, not the text, is the
+            hard part.** `battle_safari` came back with **133 unmasked
+            divergences: 132 tilemap cells + 1 WRAM field**, VRAM and OAM both
+            OK. The 132 are the port's canvas going BLANK (`got $7F`) where
+            hardware has the enemy HUD — `PIDGEY`, `:L13`, the HP bar. So the
+            new path changes what is on screen at `SaveBattleScreen` time, and
+            a special battle's menu restores that snapshot via
+            `LoadScreenTilesFromBuffer1`. Reconciling THAT is the remaining
+            work, and it is design, not translation.
+          * Step 2 reverted in full; `dos_port/src` is byte-identical to
+            `d6574e31c` and `battle_intro` / `battle_safari` are green again.
         * Attempted and abandoned as impractical this iteration: bespoke
           runtime evidence. `run_headless` cannot stage the seed `.sav` those
           live scenarios need, and `goldencheck.sh` deletes its scratch dir on
