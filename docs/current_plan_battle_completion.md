@@ -2324,9 +2324,37 @@ enemy-gauge clone tile ids and VRAM slots.
         consumes the swap. The consumer must be a CALLEE of one of them, or code
         after the enemy path that reads the levels while still exchanged — NOT
         yet identified.
-      * **DO NOT "FIX" THIS BY ADDING THE 7 CALLS BLIND.** If the port's damage
-        path is self-consistent, adding the swaps could INTRODUCE the bug this
-        was feared to be. Identify the consumer first.
+      * **RESOLVED AS BENIGN 2026-08-12 — the consumer search is COMPLETE and
+        found none.** Every reference to either level byte in `home/` +
+        `engine/`, in ALL addressing forms, was enumerated:
+        `wBattleMonLevel` — RemoveFaintedPlayerMon, LoadBattleMonFromParty (x3,
+        copy bounds), DrawPlayerHUDAndHPBar, CheckForDisobedience,
+        GetDamageVarsForPlayerAttack, ApplyAttackToEnemyPokemon, GainExperience,
+        SwitchAndTeleportEffect (x2), PayDayEffect_;
+        `wEnemyMonLevel` — GainExperience, PayDayEffect_, RemoveFaintedPlayerMon,
+        LoadEnemyMonFromParty (x3), DrawEnemyHUDAndHPBar,
+        GetDamageVarsForEnemyAttack, GetEnemyMonStat, ApplyAttackToPlayerPokemon,
+        LoadEnemyMonData (x2), plus (outside the battle engine) only the dead
+        debug menu and `item_effects` on player item use.
+        **Not one sits inside a swapped window.** Each runs outside it, reads
+        BOTH sides explicitly (`SwitchAndTeleportEffect`), or branches on
+        `hWhoseTurn` itself (`PayDayEffect_`).
+      * Two structural confirmations: pret turns the swap OFF around
+        `GetDamageVarsForEnemyAttack` precisely so it reads the TRUE enemy level
+        — which the port gets for free by never swapping; and
+        `.moveDidNotMiss` restores BEFORE damage application, so
+        `ApplyAttackToPlayerPokemon.specialDamage` (Seismic Toss / Night Shade,
+        which read `wEnemyMonLevel` as the USER's level) runs UNSWAPPED, matching
+        Gen-1 behaviour and what the port already does.
+      * **Residual uncertainty, stated:** this traced static references BY
+        SYMBOL NAME. A pointer access reaching the byte without naming it would
+        not appear, so the claim is "no NAMED reader depends on the swap".
+      * **ACTION: restore the 7 calls for STRUCTURAL fidelity** — it closes 4
+        faithdiff findings and matches pret exactly — **not as a bug fix.** Gate
+        with `battle_damage` and `battle_faint` (both drive enemy attacks): green
+        is the empirical confirmation of the analysis; red means the consumer has
+        been found, which is equally a result. Do not describe the current state
+        as a damage defect.
       * **How it survived:** a translated-but-uncalled routine trips nothing —
         lint is clean, `label_status` says `translated`, and no scenario drives
         an enemy attack where a level difference would show. Only `faithdiff`
