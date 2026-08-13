@@ -1,0 +1,32 @@
+schema: 1
+song: Music_Dungeon2
+
+# Viridian Forest / Seafoam Islands. The frame-exact analysis resolves a full
+# 56-measure meta-cycle: ch1/ch2 repeat after 28 measures while ch3 changes
+# role across the second half. Preserve that disorientation rather than
+# harmonizing the analysis' chromatic/augmented/diminished template matches.
+#
+# Cave/forest cap: no tier 1. The GB wave voice already spans A#2-D6, so there
+# is no honest low-register gap for an OPL pad or sub-bass. One quiet tier-2
+# atmosphere is the entire additive arrangement; tier 3 is intentionally
+# absent. Its E6 appears only over three already-complete E-centered octave
+# stacks, stays above every simultaneous GB pitch, and rests through the
+# exposed channel dropouts and the high ch3 Team Rocket-related melody.
+channels:
+  - name: canopy_haze
+    tier: 2
+    mt32_patch: 38         # MT-32 Atmosphere: slow, reverb-friendly LA color
+    gm_program: 100        # GM FX 4 (Atmosphere)
+    pan: center
+    volume: 40
+    velocity: 56
+    events:
+      - {at: 1,  pattern: haze_breath}
+      - {at: 9,  pattern: haze_breath}
+      - {at: 37, pattern: haze_breath}
+
+patterns:
+  haze_breath:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 4, n: E6}

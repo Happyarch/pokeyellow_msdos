@@ -1,0 +1,27 @@
+# Music_Dungeon2 (Viridian Forest / Seafoam Islands) — per-song MIDI map.
+#
+# The default MT-32 80/80/38 map is two saxes plus a bell, while the default
+# GM map treats the wave channel as a synth bass even though ch3 spans A#2-D6
+# and carries both the E ostinato and the high chromatic melody. Use three
+# distinct, thin synthetic families instead: shimmer for the block/leaping
+# ch1 line, a focused odd lead for ch2, and rain-like texture for ch3's wide
+# role changes. This keeps the forest strange rather than warm or orchestral.
+channels:
+  1:
+    mt32_program: "Fantasy"
+    gm_program: "FX 3 (crystal)"
+    volume: 90
+    pan: 44
+  2:
+    mt32_program: "Doctor Solo"
+    gm_program: "Lead 4 (chiff)"
+    volume: 100
+    pan: 84
+  3:
+    mt32_program: "Ice Rain"
+    gm_program: "FX 1 (rain)"
+    volume: 92
+    pan: 64
+
+drums:
+  velocity: 86
