@@ -2296,6 +2296,47 @@ provider shapes below, not their runtime behavior.
           up as exactly those fields, in BOTH directions as the pin was moved
           from one side to the other. This scenario pins the enemy with SLEEP
           ONLY — `battle_oldman`'s 65535-HP pin outlives the battle here.
+      - **SAFARI's RESULT/EXIT — THE BLOCKER IS CLEARED 2026-08-14
+        (`42ee0a359`). What remains is ordinary scenario work, not a capability
+        gap.** The blocker was measured with four in-WRAM markers in ONE build:
+        production's `_InitBattleCommon.specialBattleLoop` — which holds the
+        WHOLE Safari turn tail (out-of-balls exit,
+        `PrintSafariZoneBattleText`, the flee roll) — was entered by no
+        scenario, because `battle_safari`'s gate calls `DisplayBattleMenu`
+        directly. A result gate written the way the tutorial gates are would
+        have witnessed the gate's logic instead of the port's.
+        * **The fix is a harness-only TRAMPOLINE**, `%ifdef`-gated on
+          `DEBUG_BATTLE_SAFARI_RESULT`, exporting pret's own label name
+          (`StartBattle_displaySafariZoneBattleMenu`) and jumping into the loop
+          from outside the routine. `DEVIATION{class=temporary}`; its lifetime
+          is `RunBattleTest` entering battles through `_InitBattleCommon`
+          instead of replicating its intro, which stays the real fix.
+        * **IT MUST BE A TRAMPOLINE, MEASURED NOT CHOSEN.** A `global` label
+          written above `.specialBattleLoop` becomes the local-label PARENT for
+          the rest of the routine; every following `.local` re-parents and NASM
+          fails with 18 `changed during code generation` errors on labels as far
+          away as `CopyUncompressedPicToHL`. Second instance of that NASM trap
+          in this plan.
+        * **The flee is made RNG-FREE rather than seeded.** The tail's first
+          decision is `ld a,[wEnemyMonSpeed+1] / add a / jp c, EnemyRan`, so a
+          speed LOW byte above 127 runs BEFORE `Random` is called. The gate pins
+          `wEnemyMonSpeed+1 = $80` immediately before the call (staged earlier
+          it is overwritten by the enemy load).
+        * **MEASURED, decomposed:** the gate now dumps where it previously hung
+          for the full 150 s with no dump at all. Tilemap row 17 reads
+          `96 a8 ab a3 7f 8f 88 83 86 84 98` = "Wild PIDGEY", row 19 reads
+          `b1 a0 ad e7` = "ran!" — `WildRanText`, printed by `EnemyRan`, which
+          is reachable here only through the menu -> bait -> flee roll. Enemy
+          speed reads `00 80`, so the pin took.
+        * **The A pulses are load-bearing, not padding:** with only RIGHT+A the
+          bait tail parks in `WaitForTextScrollButtonPress` and the run hangs.
+          `AUTOKEY_SAFARI` carries eight.
+        * **STILL OWED:** the mGBA reference, the manifest entry, the
+          `golden_diff` row, the golden and a non-vacuity probe. Watch the
+          gate-ordering rule — this variant also defines `DEBUG_BATTLE_SAFARI`,
+          so its `build_flags` list must be LONGER than `battle_safari`'s or it
+          stamps id 71 (which is exactly what the current unregistered dump
+          reports).
       - **NORMAL IS ALREADY COVERED — measured 2026-08-14, so DO NOT build a
         third scenario for it.** The box's result/exit ask is satisfied for
         BATTLE_TYPE_NORMAL by two existing scenarios, one per way a normal
