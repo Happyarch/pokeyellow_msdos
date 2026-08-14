@@ -37,6 +37,7 @@ case "$SCENARIO" in
     bagmenu)    FLAGS="DEBUG_BAGMENU=1" ;;                      # stacked window descriptors
     pokedex)    FLAGS="DEBUG_G1=1" ;;                           # flat wTileMap path
     battle)     FLAGS="DEBUG_BATTLE=1" ;;                       # flat path + sprites
+    battlehud)  FLAGS="DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_MENU=1 AUTOKEY_DUMP_FRAME=${AUTOKEY_DUMP_FRAME:-300}" ;;
     status)     FLAGS="DEBUG_STATUS=1" ;;                       # flat path + pics
     # Cinematic projection/clipping/wrap markers (menu-intro A1.6). Offsets come
     # from the MARKER_SX/MARKER_SY environment variables so one scenario drives

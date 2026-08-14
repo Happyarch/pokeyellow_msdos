@@ -790,13 +790,21 @@ build_id_cache_lut:
 ; ---------------------------------------------------------------------------
 decode_tile:
     push esi
-    movzx eax, al
-    mov esi, [id_cache_lut + eax*4]
-    ; Per-cell attribute override (CGB Stage 5). One compare against a .data byte
-    ; that is zero on every cell of every screen that has no override — i.e. all
-    ; of them today except the battle gauge and the party HP bars.
+    ; Per-cell attribute override (CGB Stage 5). AH carries the cell's attribute
+    ; and is zero on every cell of every screen that has no override — i.e. all
+    ; of them today except the battle gauge.
+    ;
+    ; *** TEST AH BEFORE THE movzx. *** `movzx eax, al` zero-extends AL into the
+    ; whole of EAX and therefore DESTROYS AH. Testing after it always reads 0, so
+    ; the override path becomes unreachable and every cell silently renders with
+    ; its tile_pal binding instead. That is not hypothetical: it shipped in
+    ; d1c52038a and left the F-19 enemy gauge (ec82fa9ba) drawing in the PLAYER's
+    ; HP colour. It was invisible to every gate — the layer was inert when the
+    ; bug landed, and no golden compares composited pixels.
     test ah, BG_ATTR_PRESENT               ; caller-supplied per-cell attribute
     jnz .attr
+    movzx eax, al
+    mov esi, [id_cache_lut + eax*4]
 %assign _row 0
 %rep 8
     mov eax, [esi + _row * 8]
@@ -808,7 +816,11 @@ decode_tile:
     pop esi
     ret
 .attr:
-    mov [decode_cell_attr], ah             ; one store, override cells only
+    mov [decode_cell_attr], ah             ; one store, override cells only —
+                                           ; and BEFORE the movzx eats AH
+    movzx eax, al
+    mov esi, [id_cache_lut + eax*4]        ; resolve the tile here too: the fast
+                                           ; path's lookup now sits below the test
     call decode_tile_attr                  ; preserves everything (pushad)
     pop esi
     ret
