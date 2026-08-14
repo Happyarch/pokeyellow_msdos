@@ -67,7 +67,24 @@ PrintNumber:
     ; --- decode flags / counts ---
     movzx eax, bh
     mov   [pn_flags], al             ; stash flags byte (DS-flat)
-    and   eax, 0x0F                  ; EAX = source byte count (1..3)
+    and   eax, 0x0F                  ; EAX = source byte count nibble (0..15)
+    ; pret does NOT loop on this count — it DISPATCHES: `cp 1 / jr z,.byte`,
+    ; `cp 2 / jr z,.word`, and everything else falls through to `.long`, which
+    ; reads exactly 3 bytes. The port replaced that with a counted read loop, so
+    ; it diverged for every nibble outside {1,2,3}: 0 ran `dec eax` from zero for
+    ; ~4 billion reads, and 4..15 read that many bytes where the GB reads 3.
+    ; This restores pret's mapping for all 16 values. Not a guard — a guard
+    ; would read 0 bytes where the GB reads 3.
+    ; REACHABLE, not theoretical: TextCommand_NUM (home/text.asm) takes this
+    ; nibble from the TEXT STREAM's format byte, and a corrupted stream is a
+    ; failure mode this project has already had (the <DONE> sentinel incident,
+    ; regression-battle-anim-interp-runtime-crash).
+    cmp   eax, 1
+    je    .haveCount
+    cmp   eax, 2
+    je    .haveCount
+    mov   eax, 3                     ; pret .long
+.haveCount:
     movzx ecx, bl                    ; ECX = digit count (grab before BL is clobbered)
     push  ecx
 
