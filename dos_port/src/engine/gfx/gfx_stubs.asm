@@ -55,14 +55,37 @@ section .text
 ; INTENT, not behaviour. With the buffer reading zero, the call fires for every
 ; badge and ALL eight faces are zeroed regardless of what the player earned.
 ;
-; NOT ESTABLISHED, and it is the one thing left to check before implementing:
-; that the buffer really does read zero at this point. "No writer by name" is not
-; "always zero" -- a neighbouring WRAM write could spill into its 55 bytes, and
-; that was not traced. If it does read zero, the faithful port is simply an
-; unconditional publish of palette 0 over the eight 2x2 boxes and needs no buffer
-; at all; if it does not, model the buffer first.
+; *** ANSWERED, AND IT IS NOT ZERO: THE BUFFER IS A UNION ALIAS. ***
+; wTrainerCardBadgeAttributes is $CC5D (pokeyellow.sym) and sits inside a UNION
+; in ram/wram.asm. The same 55 bytes are also the misc battle-data block
+; (wEnemyBideAccumulatedDamage / wEnemyNumHits, ending at wMiscBattleDataEnd) and
+; wPikaPicUsedGFXCount / wPikaPicUsedGFX. So "nothing writes it" is true only OF
+; THE NAME: those bytes are written constantly under the aliases, and what
+; HandleBadgeFaceAttributes reads is whatever the battle engine or the Pikachu
+; pic animator last left there. The earlier guess that it reads zero -- and the
+; tidy conclusion that the faithful port is an unconditional publish -- are both
+; WITHDRAWN.
 ;
-; STUB{class=stub; label=HandleBadgeFaceAttributes; pret=engine/gfx/bg_map_attributes.asm:HandleBadgeFaceAttributes; behavior=unearned badge faces keep the earned palette instead of being zeroed, because the port has no per-cell attribute channel to clear and does not model wTrainerCardBadgeAttributes; evidence=pret zeroes individual vBGMap1 cells at fixed offsets, which the port's per-tile-id tile_pal cannot express; lifetime=the per-cell layer exists and the plane is traced as the WINDOW one whose mirror is 1:1 so pret's literal vBGMap1 offsets do transfer, leaving one question before implementation, whether wTrainerCardBadgeAttributes reads zero given that nothing in pret ever writes it}
+; Consequence for pret: the routine's own comment ("zero out the attributes if
+; the player doesn't have the respective badge") cannot be what it does. The test
+; is driven by stale unrelated data, so which badge faces get zeroed depends on
+; what happened before the card was opened, not on which badges were earned.
+;
+; Consequence for the port: this is CHEAP to reproduce exactly, because the port
+; models the GB address space FLAT -- the union aliasing happens for free, the
+; same byte at the same address. A literal translation would be faithful garbage
+; and all, needing no new buffer.
+;
+; SO WHAT IS LEFT IS A JUDGEMENT, NOT AN UNKNOWN, and it wants the maintainer:
+; faithfully reproducing a read of aliased stale data is arguably porting an
+; upstream defect, which is what the structured defect annotation and
+; BUG_FIX_LEVEL exist for. NOT TRACED: which alias is
+; actually live when the card opens. Pikachu-pic data is the plausible one (the
+; card is reached from the START menu in the overworld, where Pikachu follows the
+; player), and if it is non-zero the faces are NOT zeroed -- which is what this
+; stub already does, though by accident rather than by construction.
+;
+; STUB{class=stub; label=HandleBadgeFaceAttributes; pret=engine/gfx/bg_map_attributes.asm:HandleBadgeFaceAttributes; behavior=unearned badge faces keep the earned palette instead of being zeroed, because the port has no per-cell attribute channel to clear and does not model wTrainerCardBadgeAttributes; evidence=pret zeroes individual vBGMap1 cells at fixed offsets, which the port's per-tile-id tile_pal cannot express; lifetime=mechanism and geometry are fully traced and a literal translation would be faithful for free because the port models GB memory flat so the buffer's UNION aliasing reproduces itself, leaving only a maintainer judgement on whether reproducing pret's read of aliased stale battle or Pikachu-pic data is porting a defect that wants a BUG annotation}
 HandleBadgeFaceAttributes:
     ret
 
