@@ -866,6 +866,10 @@ gbstate_regions:
     gbregion "pWhichMon",     wWhichPokemon,    1
     gbregion "pAICount",      wAICount,         1
     gbregion "pTrainerCls",   wTrainerClass,    1
+    ; TrainerAI's four early-outs, all of which precede the wAICount read
+    ; (pret trainer_ai.asm:289-300). wIsInBattle is already inside wBattleFlags.
+    gbregion "pEnemyStat12",  wEnemyBattleStatus1, 2   ; D066 status1, D067 status2
+    gbregion "pLinkState",    wLinkState,       1
 %endif
 %endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph
@@ -5041,6 +5045,11 @@ RunStoneTest:
 %ifndef AUTOKEY_DUMP_FRAME
 %define AUTOKEY_DUMP_FRAME 200
 %endif
+%ifdef AISWITCH_PROBE
+%ifndef AISWITCH_PROBE_FRAME
+%define AISWITCH_PROBE_FRAME 900         ; ~15 s of battle: several turns in
+%endif
+%endif
 %ifndef AK_WALK_BASE
 %define AK_WALK_BASE 9000               ; AUTOKEY_ROUTE_WALK post-battle walk start
 %endif
@@ -5122,14 +5131,35 @@ AutoKeyDrive:
     ; and wEnemyMonNick is all zeroes. That is battle INITIALIZATION, before the
     ; first enemy mon is loaded. The $FF is rejected in both modes now.
     ;
-    ; *** NO SWITCH HAS BEEN OBSERVED. *** With the class pinned ($20 confirmed
-    ; in the dump) and HP inside the band, a latch on a real party slot (1..5)
-    ; never fires, and wAICount reads $FF at the END of the run — TrainerAI is
-    ; not reaching the reload at all. Which of its four early-outs is taken has
-    ; NOT been measured, and that is the next thing to instrument.
+    ; *** NO SWITCH HAS BEEN OBSERVED, and the gates are NOT the reason. ***
+    ; A mid-battle snapshot (AISWITCH_PROBE, 900 in-battle frames) reads
+    ;     wBattleFlags  02 01 ca 00   -> wIsInBattle = 2
+    ;     pLinkState    00            -> not a link battle
+    ;     pEnemyStat12  00 00         -> no locked move, no USING_RAGE
+    ;     pTrainerCls   20            -> the COOLTRAINER_F pin holds
+    ; so ALL FOUR of TrainerAI's early-outs pass. wAICount reading $FF proves
+    ; NOTHING either way, and an earlier note here said it did: EnemySendOut
+    ; FALLS THROUGH into EnemySendOutFirstMon, which sets wAICount = $FF, so
+    ; $FF is the expected value after any send-out.
+    ; What is still unexplained: eRoster1HP reads the roster's REAL 30, never
+    ; the pinned 13106, so SwitchEnemyMon's CopyData has not run. The next
+    ; instrument belongs INSIDE the AI dispatch, not in this table.
     movzx eax, byte [ebp + wEnemyMonPartyPos]
     test eax, eax
     jz .noAiSwitch
+%ifdef AISWITCH_PROBE
+    ; MID-BATTLE SNAPSHOT, not a landmark. The partyPos latch cannot answer "why
+    ; was the AI never consulted" — it never fires, so the only dump that lands
+    ; is the underlying trainer-route gate's, at a moment when the battle may
+    ; already be over. Count frames spent in the battle and photograph one well
+    ; after several turns have passed, so wEnemyBattleStatus1/2 and wLinkState
+    ; are read while TrainerAI would be being called.
+    inc dword [aiswitch_battle_frames]
+    cmp dword [aiswitch_battle_frames], AISWITCH_PROBE_FRAME
+    jne .noAiSwitchProbeDump
+    call DebugDumpMemory
+.noAiSwitchProbeDump:
+%endif
     ; The $FF must be rejected in BOTH modes. MEASURED: it is battle
     ; INITIALIZATION, not a switch — at that instant wAICount is still the $FF
     ; sentinel, wWhichPokemon is 0 and wEnemyMonNick is all zeroes.
@@ -5523,6 +5553,11 @@ AutoKeyDrive:
 
 section .data
 autokey_frame: dd 0
+%ifdef AISWITCH_PROBE
+; battle plan 1e probe: frames spent with wIsInBattle == 2, so the snapshot can
+; land mid-battle rather than at whatever moment the trainer-route gate dumps.
+aiswitch_battle_frames: dd 0
+%endif
 %ifdef DEBUG_BATTLE_WRAP
 align 4
 wrap_pin_seen: dd 0            ; set once USING_TRAPPING_MOVE has been observed
