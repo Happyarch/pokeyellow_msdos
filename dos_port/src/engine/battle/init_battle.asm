@@ -94,7 +94,6 @@ extern ClearSprites
 extern hide_window
 extern LoadHpBarAndStatusTilePatterns
 extern LoadHudTilePatterns
-extern DuplicateEnemyHPBarTiles        ; battle_hud.asm — distinct palette-able enemy gauge IDs
 extern SetPal_Battle                    ; engine/gfx/palettes.asm
 
 ; --- _InitBattleCommon dependencies (the real overworld→battle orchestration) ---
@@ -399,7 +398,6 @@ InitBattleCanvas:
     ; clobber the box drawn below despite the load_font.asm warning.
     call LoadHpBarAndStatusTilePatterns
     call LoadHudTilePatterns                 ; HUD frame/divider tiles ($6d-$6f, $73-$78)
-    call DuplicateEnemyHPBarTiles            ; $63-$6b -> battle-local vFont clones
 
     ; --- full-screen blank: clear the whole 40×25 canvas to the space tile ---
     ; (per pret init order — blank the entire screen before drawing the layout).

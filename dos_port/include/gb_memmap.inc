@@ -1916,6 +1916,23 @@ SCREEN_H        equ 144        ; logical pixels
 SCREEN_TILES_W  equ 40         ; viewport width in tiles (= RENDER_W / TILE_WIDTH)
 SCREEN_TILES_H  equ 25         ; viewport height in tiles (= RENDER_H / TILE_HEIGHT)
 
+; --- per-cell BG attribute layer (src/ppu/ppu.asm) ---------------------------
+; The CGB BG attribute byte, as carried by the port's per-cell override plane.
+; These live here rather than in ppu.asm because a SCREEN publishing overrides
+; (via SetBGCellAttrFlat) needs them as much as the compositor consuming them.
+; The full rationale — why the full CGB format, which bits are implemented, and
+; why the sentinel is a bit rather than a magic value — is at ppu.asm's
+; BG_ATTR_PRESENT block. Keep the two in step.
+BG_ATTR_PAL_MASK  equ 0x07     ; bits 0-2  palette 0-7            IMPLEMENTED
+BG_ATTR_BANK      equ 0x08     ; bit 3     tile pattern bank      RESERVED (Gen 2)
+BG_ATTR_PRESENT   equ 0x10     ; bit 4     port-only "override present" sentinel;
+                               ;           unused by the CGB hardware format, so
+                               ;           0 = no override and BSS zero-fill is
+                               ;           the inert state by construction
+BG_ATTR_XFLIP     equ 0x20     ; bit 5                            IMPLEMENTED
+BG_ATTR_YFLIP     equ 0x40     ; bit 6                            IMPLEMENTED
+BG_ATTR_PRIORITY  equ 0x80     ; bit 7     BG-over-OBJ            RESERVED
+
 ; Player standing tile in wTileMap — derived from render_sprites +36/+96 shift and
 ; the Pallet Town view pointer (bg_scy=32, bg_scx=32 → sprite feet at bg_surface Y=143).
 PLAYER_STANDING_ROW equ 17     ; wTileMap row containing player's feet

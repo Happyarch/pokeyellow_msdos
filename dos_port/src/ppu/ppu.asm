@@ -156,12 +156,8 @@ TILE_BLANK        equ 0x7F                      ; blank space tile (ClearScreen 
 ; override here" marker makes 0 mean "none", so BSS zero-fill is correct BY
 ; CONSTRUCTION and the plane needs no initialiser and no second "is the layer
 ; active" global to fall out of step with it.
-BG_ATTR_PRESENT   equ 0x10                      ; bit 4: this cell HAS an override
-BG_ATTR_PAL_MASK  equ 0x07                      ; bits 0-2
-BG_ATTR_BANK      equ 0x08                      ; bit 3 — RESERVED (Gen 2 tile bank)
-BG_ATTR_XFLIP     equ 0x20                      ; bit 5
-BG_ATTR_YFLIP     equ 0x40                      ; bit 6
-BG_ATTR_PRIORITY  equ 0x80                      ; bit 7 — RESERVED
+; The BG_ATTR_* bit values themselves live in include/gb_memmap.inc, because a
+; screen PUBLISHING an override needs them as much as this file consuming one.
 BG_ATTR_RAW_COLOR equ 0x03                      ; keeps the 2-bit GB colour, drops the band
 
 ; PUBLISH_CELL_ATTR — hand decode_tile the attribute of the cell about to be
@@ -815,6 +811,50 @@ decode_tile:
     mov [decode_cell_attr], ah             ; one store, override cells only
     call decode_tile_attr                  ; preserves everything (pushad)
     pop esi
+    ret
+
+; ---------------------------------------------------------------------------
+; SetBGCellAttrFlat — publish ONE per-cell BG attribute override, addressed the
+; way a screen on the flat 40x25 canvas already thinks: by W_TILEMAP cell offset.
+;
+; This is the publisher API for the per-cell layer. It lives here, not in the
+; screens, because the canvas-offset -> surface-cell mapping is the flat
+; decoder's own geometry (row r of the 40-wide canvas is surface cell r*48) and
+; a screen that open-coded it would silently rot if the surface ever resized.
+;
+; In:  EAX = cell offset into W_TILEMAP (0 .. SCREEN_TILES_W*SCREEN_TILES_H-1)
+;      DL  = the CGB attribute byte, INCLUDING BG_ATTR_PRESENT; DL = 0 clears
+;            the override and returns the cell to its tile_pal binding
+; Out: all registers preserved.
+;
+; ARMS surf_force WHEN — AND ONLY WHEN — THE BYTE ACTUALLY CHANGES. Both halves
+; matter. It must arm, because the cell's TILE ID is unchanged and the id shadow
+; alone would skip the re-decode, leaving the old colour on screen. It must not
+; arm unconditionally, because a caller that republishes an unchanged attribute
+; every frame (an HP-bar animation redrawing its bar) would force a full
+; 1728-cell re-decode every frame.
+;
+; Note a colour CHANGE does not come through here at all: the attribute names a
+; palette SLOT, and repointing that slot at a different RGB is a DAC reprogram
+; (commit_palette) with no re-decode. So an HP bar going green -> yellow costs
+; nothing here; only its first publish does.
+; ---------------------------------------------------------------------------
+global SetBGCellAttrFlat
+SetBGCellAttrFlat:
+    pushad
+    mov bl, dl                             ; the attribute; EDX is about to be the
+                                           ; div remainder
+    xor edx, edx
+    mov ecx, SCREEN_TILES_W
+    div ecx                                ; EAX = canvas row, EDX = canvas column
+    imul eax, eax, SURF_W_TILES            ; the flat decoder's row stride
+    add eax, edx                           ; → surface cell index
+    cmp byte [bg_cell_attr + eax], bl
+    je .unchanged                          ; no re-decode owed
+    mov [bg_cell_attr + eax], bl
+    mov byte [surf_force], 1               ; tile ids unchanged → the shadow would skip it
+.unchanged:
+    popad
     ret
 
 ; ---------------------------------------------------------------------------

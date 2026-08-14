@@ -108,7 +108,7 @@ global AnimatePlayerHPBar
 extern PlaceString
 extern DelayFrame
 extern Delay3                          ; src/home/palettes.asm — wait 3 frames (pret UpdateHPBar2 tail)
-extern g_tilecache_dirty                ; ppu.asm — cloned VRAM patterns need re-decode
+extern SetBGCellAttrFlat               ; ppu.asm — publish one per-cell BG attribute
 extern GetHealthBarColor                ; src/home/palettes.asm — pixel length -> green/yellow/red id
 extern GetBattleHealthBarColor          ; engine/battle/core.asm — colour + republish on change
 extern CenterMonName                    ; engine/battle/core.asm — short-nick column shift
@@ -153,8 +153,27 @@ draw_hp_bar:
     jnz .seg
     ret
 
-; draw_enemy_hp_bar — same geometry, but its 9 gauge patterns come from the
-; battle-local copies made by DuplicateEnemyHPBarTiles.
+; draw_enemy_hp_bar — identical geometry AND identical tile ids to the player's
+; bar; only the right cap differs (pret's wHPBarType switch, see HPB_END_*).
+;
+; F-19 RETIRED 2026-08-14. This used to draw the six gauge segments from
+; battle-local CLONES of $63-$6b at ids $C0-$C8, made by DuplicateEnemyHPBarTiles.
+; The clones existed for one reason: the port bound palette per TILE ID
+; (tile_pal), so the enemy gauge could only take the enemy HP colour by being a
+; different tile id from the player's. That cost a permanent divergence from
+; hardware -- the golden's tilemap has $63-$6b in these cells and its vFont
+; $C0-$C8 holds untouched kana -- carried as two mask families across 13
+; scenarios.
+;
+; The per-cell BG attribute layer (ppu.asm) expresses it directly instead: the
+; six cells keep the CANONICAL ids and carry a per-cell override naming the
+; enemy HP palette slot. Same pixels, no divergence.
+;
+; ENEMY_GAUGE_SLOT is 1 because SetPal_Battle publishes wEnemyHPBarColor into
+; bg_slot_pal[1] (engine/gfx/palettes.asm) -- which is exactly the slot the
+; retired clones carried in battle_tile_pal, so the colour is unchanged by
+; construction, not by hope.
+ENEMY_GAUGE_SLOT equ 1
 draw_enemy_hp_bar:
     mov byte [ebp + edi], HPB_HP
     mov byte [ebp + edi + 1], HPB_LEFT
@@ -164,46 +183,28 @@ draw_enemy_hp_bar:
 .seg:
     cmp edx, 8
     jb .partial
-    mov al, [enemy_hp_tile_ids + 8]
-    mov [ebp + edi], al
+    mov byte [ebp + edi], HPB_FULL
     sub edx, 8
     jmp .next
 .partial:
-    mov al, [enemy_hp_tile_ids + edx]
+    lea eax, [edx + HPB_EMPTY]             ; $63 + n-pixel partial (n=0 -> empty)
     mov [ebp + edi], al
     xor edx, edx
 .next:
+    ; Bind THIS cell to the enemy HP palette slot. Scoped to the six segments and
+    ; no wider: those are exactly the cells the clone ids covered, so the change
+    ; is colour-preserving. The HP/gauge-left/cap cells stay on slot 0 as they
+    ; already were -- widening them here would be an unwitnessed colour change,
+    ; since no golden compares composited pixels.
+    push edx
+    mov eax, edi
+    sub eax, W_TILEMAP                     ; EBP-relative offset -> canvas cell
+    mov dl, ENEMY_GAUGE_SLOT | BG_ATTR_PRESENT
+    call SetBGCellAttrFlat
+    pop edx
     inc edi
     dec ecx
     jnz .seg
-    ret
-
-; Copy $63-$6b (empty, partial 1..7, full) to unused English glyph slots.
-; Called after the source HP/HUD patterns are loaded; all registers preserved.
-global DuplicateEnemyHPBarTiles
-DuplicateEnemyHPBarTiles:
-    pushad
-    mov esi, GB_VCHARS2 + HPB_EMPTY * TILE_SIZE
-    xor ecx, ecx
-.copy:
-    movzx eax, byte [enemy_hp_tile_ids + ecx]
-    sub eax, 0x80
-    shl eax, 4
-    lea edi, [ebp + GB_VFONT + eax]
-    mov eax, [ebp + esi]
-    mov [edi], eax
-    mov eax, [ebp + esi + 4]
-    mov [edi + 4], eax
-    mov eax, [ebp + esi + 8]
-    mov [edi + 8], eax
-    mov eax, [ebp + esi + 12]
-    mov [edi + 12], eax
-    add esi, TILE_SIZE
-    inc ecx
-    cmp ecx, 9
-    jb .copy
-    mov byte [g_tilecache_dirty], 1
-    popad
     ret
 
 ; --- calc_hp_pixels — EBX=curHP addr, ESI=maxHP addr (big-endian words) ---
@@ -407,13 +408,4 @@ hud_print_num3:
     mov [ebp + edi + 2], cl
     ret
 
-section .data
-; $63+$n (n=0..8): empty, partial 1..7, full.  These IDs are deliberately
-; noncontiguous so no live English battle glyph is overwritten.
-; F-19 FIX (fidelity plan Stage 2): these ids used to be $E9,$EA,$EB,$EC,$EE,
-; $EF,$F0,$F1,$F4 — claimed "unused English glyph slots", but only $E9-$EB are
-; unused (charmap.asm): $EC=▷, $EE=▼(!), $EF=♂, $F0=¥, $F1=×, $F4=comma. The
-; clones clobbered the battle dialog's ▼ prompt glyph (and ×/¥/▷ wherever they
-; appear in battle text). Ids $C0-$DF have NO charmap mapping at all — no text
-; can ever reference them — so the nine clones live there now.
-enemy_hp_tile_ids: db 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8
+

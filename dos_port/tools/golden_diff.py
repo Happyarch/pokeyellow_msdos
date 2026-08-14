@@ -213,13 +213,6 @@ _BATTLE_VRAM_MASKS = [
     *[(s, "pic bank placement: golden's $8000-addressing copy of the front pic; the port "
           "draws from the matching (compared) $9310 copy — port $80xx is undisplayed "
           "OBJ leftovers") for s in range(0x00, 0x31)],
-    # F-19: the port clones the nine enemy-gauge patterns into vFont ids
-    # $C0-$C8 for per-tile palette binding (ids the charmap never maps, so no
-    # text can reference them); the golden holds the never-referenced Japanese
-    # kana font tiles there. Retiring F-19's mechanism (per-cell palettes)
-    # deletes this mask.
-    *[(s, "F-19 enemy-gauge clone slots $C0-$C8: port palette-HAL clones vs golden's "
-          "never-referenced kana glyphs") for s in range(0xC0, 0xC9)],
 ]
 
 # Post-send-out variant (battle_menu / move_selection): the GB has by now used
@@ -234,17 +227,20 @@ _BATTLE_VRAM_MASKS_MENU = [
     *[(s, "GB battle anim/pic bank ($8000-$87FF) post-send-out: back pic + POOF/slide "
           "anim tiles on the golden; the port draws from the matching (compared) $93xx "
           "copies and its $80xx is undisplayed after the intro") for s in range(0x00, 0x80)],
-    *[(s, "F-19 enemy-gauge clone slots $C0-$C8: port palette-HAL clones vs golden's "
-          "never-referenced kana glyphs") for s in range(0xC0, 0xC9)],
 ]
 
-# The enemy HP gauge's six segment cells carry the F-19 clone ids on the port
-# ($C0-$C8 band) where the golden has the shared $62-$6B gauge ids. GB cells
-# (row 2, cols 4-9). Retiring F-19 deletes this mask too.
-_BATTLE_TILEMAP_MASKS_MENU = [
-    ((2, 4, 2, 9), "F-19: enemy gauge segments use the port's palette-HAL clone tile ids; "
-                   "the golden uses the shared $62-$6B gauge ids"),
-]
+# F-19 IS RETIRED (2026-08-14). The enemy HP gauge used to carry clone tile ids
+# $C0-$C8 in these six cells where the golden has the shared $62-$6B gauge ids,
+# because the port bound palette per TILE ID and the enemy gauge could only take
+# the enemy HP colour by being a different tile. The per-cell BG attribute layer
+# (ppu.asm) expresses it directly, so the cells now hold the canonical ids and
+# there is nothing left to mask.
+#
+# The list is deliberately kept EMPTY rather than deleted: twelve scenarios name
+# it, and an empty shared family is a truthful "this screen masks nothing here"
+# that a future divergence can be added back to. Deleting it would mean twelve
+# edits to prove the same thing.
+_BATTLE_TILEMAP_MASKS_MENU = []
 
 # Shared WRAM masks for the Stage 2 battle scenarios.
 _BATTLE_WRAM_MASKS = {
