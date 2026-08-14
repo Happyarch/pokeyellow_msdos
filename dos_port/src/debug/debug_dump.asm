@@ -2901,6 +2901,17 @@ RunBattleTest:
 %ifdef DEBUG_BATTLE_ANIM_ELEMENTAL
     call DrawEnemyHUDAndHPBar             ; same visible SLP pin as the physical gate
 %endif
+%ifdef DEBUG_BATTLE_ANIM_OPTOFF
+    ; Same visible SLP pin as every sibling gate (see the BLINK note below).
+    call DrawEnemyHUDAndHPBar
+    ; THE SUBJECT OF THIS SCENARIO: battle animations OFF. MoveAnimation skips
+    ; ShareMoveAnimations + PlayAnimation for a flat 30-frame delay when this
+    ; bit is set (animations.asm:604-612) but STILL calls
+    ; PlayApplyingAttackAnimation, so the blink landmark is reached either way.
+    ; The reference sets the identical bit, and wOptions lives in the compared
+    ; wOptionsBlock region, so the pin itself is compared rather than assumed.
+    or byte [ebp + wOptions], 1 << BIT_BATTLE_ANIMATION
+%endif
 %ifdef DEBUG_BATTLE_ANIM_BLINK
     ; Same visible SLP pin. MEASURED, not copied on faith: without this the
     ; enemy HUD kept showing the LEVEL where the reference's menu path shows

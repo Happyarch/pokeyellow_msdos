@@ -2745,6 +2745,40 @@ enemy-gauge clone tile ids and VRAM slots.
           else; the probe was then reverted. So the PASS above is a measurement,
           not an absence of comparison.
         * Ball, shake/blink and option-off remain open in this same box.
+      - **OPTION-OFF BUILT, THEN DELIBERATELY NOT REGISTERED 2026-08-13 — THE
+        LANDMARK CANNOT WITNESS THE OPTION.** Port gate
+        `DEBUG_BATTLE_ANIM_OPTOFF` and reference `battle_anim_optoff.lua` both
+        exist and both reach their instant; `goldencheck` PASSED on the first
+        run with TILEMAP/VRAM/OAM/WRAM clean. It was backed out anyway, because
+        a PASS there does not mean what the box asks for. **Id 78 is reserved.**
+        * **THE DESIGN.** With `wOptions BIT_BATTLE_ANIMATION` set,
+          `MoveAnimation` skips `ShareMoveAnimations` + `PlayAnimation` for a
+          flat 30-frame delay (`animations.asm:437-446`) but STILL calls
+          `PlayApplyingAttackAnimation`. So the scenario reused
+          `battle_anim_blink`'s first-hidden-pic landmark — the one landmark the
+          animated and animations-off routes share.
+        * **WHY IT FAILS AS A WITNESS, and how the error was caught.** A port
+          run with animations OFF differs from one with animations ON, at that
+          same landmark, in exactly two places: **79 VRAM tile slots (49..127)**
+          and the `wOptions` byte. Every one of those 79 slots is INSIDE the
+          family's pre-existing `_BATTLE_VRAM_MASKS_MENU`, which covers
+          `0x00..0x7F` — the whole `$8000-$87FF` bank. So the only unmasked
+          evidence the scenario has is the `wOptions` byte, which is the PIN
+          both sides write. **If the port ignored the option and played the
+          animation anyway, this scenario would still PASS.**
+        * **THE ERROR WAS MINE AND IT IS THE AGGREGATE TRAP.** An earlier note
+          in this box claimed all 79 slots fell OUTSIDE the masks. That was
+          derived from `goldencheck`'s printed *hit* range (`vram slot 0 .. 48`)
+          rather than from the mask DEFINITION. The sabotage run is what exposed
+          it: dropping the port's option pin moved the masked VRAM hit count
+          from 49 to **128** and the run still failed only on `wOptions`. Read
+          the mask definition, never the differ's hit summary.
+        * **WHAT A REAL OPTION-OFF WITNESS NEEDS:** a landmark INSIDE the
+          `.animationsDisabled` 30-frame delay, where the ROM has no animation
+          OAM. If the port wrongly played the animation, its OAM would carry
+          particles at that instant and OAM is unmasked. The cost is that the
+          reference must reach a frame-counted point rather than a state-gated
+          one, which is why it is not being guessed at here.
       - **BALL COMPLETE 2026-08-13 — `battle_anim_ball` (id 76), AND IT CAUGHT A
         REAL PRODUCTION BUG ON ITS FIRST RUN.** Registered, golden committed,
         `goldencheck` **PASS** with TILEMAP / VRAM / OAM / WRAM all clean
