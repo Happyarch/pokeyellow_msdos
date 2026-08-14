@@ -3159,7 +3159,17 @@ enemy-gauge clone tile ids and VRAM slots.
       shake/blink/palette commands, backend `wAnimationType` setup, and exact
       `BIT_BATTLE_ANIMATION` option gate; retire the shake stub. Preserve the
       current ANIMATION=OFF behavior as the option-off route, not as the engine.
-- [ ] **6e. RE-MEASURED 2026-08-14 AND THE BLOCKER HOLDS — not inherited, checked.**
+- [x] **6e. TRANSFERRED OUT 2026-08-14 (maintainer instruction) to the CGB
+      colour plan, which owns its blocker. NOT done — re-homed.** It is now
+      that plan's **Stage 5**, published at the same artifact URL recorded in
+      stigmergy `cgb-colour-scoping-2026-08-08`. Everything below is kept
+      verbatim as the record of what was measured here, and the Stage 5 text
+      carries the mask inventory, the `DrawHPBar` / `DuplicateEnemyHPBarTiles`
+      production sites, and the acceptance test (the eight battle scenarios
+      must pass `fidelity-full` with the masks REMOVED). This was the
+      maintainer's option 1 in the archival box below. **Do not re-open 6e
+      here and do not retire an F-19 mask from this plan.**
+      **RE-MEASURED 2026-08-14 AND THE BLOCKER HOLDS — not inherited, checked.**
       `src/engine/gfx/bg_map_attributes.asm` still resolves the attribute plane
       to a per-TILE-ID band at load time (`tile_pal[tile id] = attribute`) and
       the compositor still bakes palette into `tile_cache` per tile id; there is
@@ -4504,8 +4514,8 @@ enemy-gauge clone tile ids and VRAM slots.
         "transfer" this box asks for:
         | mask | what it covers | retired by |
         |---|---|---|
-        | `_BATTLE_TILEMAP_MASKS_MENU` (8 users) | GB (2,4)-(2,9), the 6 enemy-gauge cells | **F-19 / box 6e** — blocked on CGB per-cell BG attributes |
-        | `_BATTLE_VRAM_MASKS_MENU` slots `$C0-$C9` (8 users) | the F-19 gauge CLONE slots | **F-19 / box 6e**, same blocker |
+        | `_BATTLE_TILEMAP_MASKS_MENU` (8 users) | GB (2,4)-(2,9), the 6 enemy-gauge cells | **F-19** — now the CGB colour plan's Stage 5 (6e transferred out 2026-08-14); blocked on CGB per-cell BG attributes |
+        | `_BATTLE_VRAM_MASKS_MENU` slots `$C0-$C9` (8 users) | the F-19 gauge CLONE slots | **F-19** — same, CGB plan Stage 5 |
         | `_BATTLE_VRAM_MASKS_MENU` slots `$00-$7F` (8 users) | the `$8000-$87FF` anim/pic bank post-send-out | the port draws from the COMPARED `$93xx` copies; retires only if the port stops mirroring pics into `$80xx` |
         | `_BATTLE_WRAM_MASKS` -> `wOptionsBlock +3` (27 users) | `wLetterPrintingDelayFlags` | sanctioned draw-layer divergence (`PlaceString` always delays); retires with a per-message text-delay gate |
         | `wLoadedMon` per-scenario (7: `battle_faint`, `battle_blackout`, `battle_exp_all`, and the four `battle_anim_*`) | staging-buffer residue at +23/+24 and +33 | route asymmetry between a synthetic gate and the menu path — retires if a gate ever reaches its landmark through the real menu |
@@ -4519,6 +4529,11 @@ enemy-gauge clone tile ids and VRAM slots.
 - [ ] Archive only when `project_state --plans` reports no open checklist items
       here and the default game can enter, play, and exit all in-scope battle
       types through their owning live routes.
+      - **RESOLVED 2026-08-14 — the maintainer took option 1: 6e is TRANSFERRED
+        to the CGB colour plan** (its Stage 5, same artifact URL). This plan no
+        longer holds an item that waits on out-of-repo work, so the FIRST clause
+        of this box is satisfiable from here. The second clause below is not,
+        and is what still holds archival.
       - **THE PLAN'S TERMINAL STATE, as of 2026-08-14 — and it needs a
         maintainer decision, not more work here.** With box 2225 and the gates
         box closed, the ONLY thing standing between this plan and archival is
@@ -4538,6 +4553,7 @@ enemy-gauge clone tile ids and VRAM slots.
         other cross-plan tail (`battle_transitions`, `battle_animations` were
         both archived with their open tails transferred by name), but moving a
         box between plans is not a change an agent should make unilaterally.
+        **The maintainer chose option 1 on 2026-08-14 and it is executed.**
       - The second clause — "the default game can enter, play, and exit all
         in-scope battle types through their owning live routes" — is **NOT
         satisfied by the scenario work and must not be read as satisfied by
