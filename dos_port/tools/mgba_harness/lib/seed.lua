@@ -447,17 +447,24 @@ end
 -- and the unmodified level+stats snapshot LoadEnemyMonData took from the rolled
 -- DVs. The port's DEBUG_BATTLE_GOLDEN gate performs the same overwrite after
 -- its own real LoadEnemyMonData call, so both sides converge byte-for-byte.
-function seed.enemy(sym)
+-- `spec` defaults to seed.ENEMY (PIDGEY L13, what the wild-battle scenarios
+-- stage). battle_ghost passes { species = RESTLESS_SOUL, level = 30 } because a
+-- FORCED wCurOpponent battle picks its own species and the level is seeded, not
+-- rolled. Nothing below is PIDGEY-specific — base stats, learnset and PP all
+-- come from the ROM by species — so the only change was to stop reading the
+-- module default directly.
+function seed.enemy(sym, spec)
+	spec = spec or seed.ENEMY
 	local function rd(label)
 		return emu:read8(sym:addr(label))
 	end
-	assert(rd("wEnemyMonSpecies") == seed.ENEMY.species,
+	assert(rd("wEnemyMonSpecies") == spec.species,
 		("seed.enemy: loader put species %02X in wEnemyMon"):format(rd("wEnemyMonSpecies")))
-	assert(rd("wEnemyMonLevel") == seed.ENEMY.level,
+	assert(rd("wEnemyMonLevel") == spec.level,
 		("seed.enemy: loader put level %d in wEnemyMon"):format(rd("wEnemyMonLevel")))
 	assert(rd("wEnemyMonStatus") == 0, "seed.enemy: nonzero status on a fresh wild mon")
 
-	local dex = index_to_dex(sym, seed.ENEMY.species)
+	local dex = index_to_dex(sym, spec.species)
 	local bs = base_stats(sym, dex)
 	local hp_base, atk, def, spd, spc = bs:byte(2, 6)
 	assert(rd("wEnemyMonType1") == bs:byte(7) and rd("wEnemyMonType2") == bs:byte(8),
@@ -468,7 +475,7 @@ function seed.enemy(sym)
 	-- moves exactly as the wild path builds them: the 4 base-stats moves, then
 	-- WriteMonMoves folds in the level-up learnset; PP from the FINAL moves.
 	local moves = write_mon_moves({ bs:byte(16, 19) },
-		mon_learnset(sym, seed.ENEMY.species), seed.ENEMY.level)
+		mon_learnset(sym, spec.species), spec.level)
 	for slot = 1, 4 do
 		local got = emu:read8(sym:addr("wEnemyMonMoves") + slot - 1)
 		assert(got == moves[slot],
@@ -481,16 +488,16 @@ function seed.enemy(sym)
 
 	-- overwrite the RNG-derived parts
 	write_bytes(sym:addr("wEnemyMonDVs"), string.char(seed.DV_BYTES[1], seed.DV_BYTES[2]))
-	local max_hp = calc_stat(hp_base, DV.hp, seed.ENEMY.level, true)
+	local max_hp = calc_stat(hp_base, DV.hp, spec.level, true)
 	local stats = u16be(max_hp)
-		.. u16be(calc_stat(atk, DV.atk, seed.ENEMY.level, false))
-		.. u16be(calc_stat(def, DV.def, seed.ENEMY.level, false))
-		.. u16be(calc_stat(spd, DV.spd, seed.ENEMY.level, false))
-		.. u16be(calc_stat(spc, DV.spc, seed.ENEMY.level, false))
+		.. u16be(calc_stat(atk, DV.atk, spec.level, false))
+		.. u16be(calc_stat(def, DV.def, spec.level, false))
+		.. u16be(calc_stat(spd, DV.spd, spec.level, false))
+		.. u16be(calc_stat(spc, DV.spc, spec.level, false))
 	write_bytes(sym:addr("wEnemyMonMaxHP"), stats)
 	write_bytes(sym:addr("wEnemyMonHP"), u16be(max_hp))
 	-- the snapshot is 1 + NUM_STATS*2 bytes copied from wEnemyMonLevel
-	write_bytes(sym:addr("wEnemyMonUnmodifiedLevel"), string.char(seed.ENEMY.level) .. stats)
+	write_bytes(sym:addr("wEnemyMonUnmodifiedLevel"), string.char(spec.level) .. stats)
 	console:log(("seed: enemy DVs %02X %02X, stats %d/%d HP recomputed"):format(
 		seed.DV_BYTES[1], seed.DV_BYTES[2], max_hp, max_hp))
 end

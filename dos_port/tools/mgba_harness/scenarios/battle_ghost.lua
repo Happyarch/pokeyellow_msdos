@@ -49,6 +49,8 @@ local PALLET_TOWN = 0
 local ROUTE_1 = 12
 local ROUTE_1_WIDTH = 10   -- blocks; constants/map_constants.asm
 local BIT_WARP_FROM_CUR_SCRIPT = 3 -- constants/ram_constants.asm
+local GHOST_LEVEL = 30     -- must equal debug_dump.asm's GHOST_LEVEL
+local GHOST_DUMP_DELAY = 120 -- must equal debug_dump.asm's GHOST_DUMP_DELAY
 
 scenario.run(function()
 	navigate.boot_to_main_menu()
@@ -107,6 +109,10 @@ scenario.run(function()
 	-- clear it; this one byte is what makes the next step a ghost battle.
 	scenario.exec(function()
 		emu:write8(sym:addr("wCurOpponent"), RESTLESS_SOUL)
+		-- A FORCED battle has no encounter roll, so nothing sets the level.
+		-- Measured 2026-08-14: without this the loader built a LEVEL-0 Marowak
+		-- (HP 10, all stats 5). The port's gate seeds the same GHOST_LEVEL.
+		emu:write8(sym:addr("wCurEnemyLevel"), GHOST_LEVEL)
 	end)
 
 	-- One step is the whole trigger.
@@ -120,21 +126,59 @@ scenario.run(function()
 	end
 	scenario.log(("battle_ghost: wIsInBattle set at frame %d"):format(scenario.frame()))
 
-	navigate.wait_for_text(text:encode("appeared"), 3600)
-	scenario.wait(30) -- settle: intro text fully revealed, parked at the prompt
+	-- Wait for the REAL LoadEnemyMonData, then overwrite only the RNG-derived
+	-- parts. A wild mon's DVs come from BattleRandom, so the two sides can never
+	-- agree unaided; the port's gate performs the matching overwrite the moment
+	-- wEnemyMonSpecies goes nonzero. seed.enemy asserts every loader-derived
+	-- field first, so a loader regression fails here instead of being papered
+	-- over.
+	do
+		local deadline = scenario.frame() + 3600
+		while navigate.read8("wEnemyMonSpecies") == 0 do
+			assert(scenario.frame() < deadline,
+				"battle_ghost: LoadEnemyMonData never populated wEnemyMon")
+			scenario.wait(2)
+		end
+	end
+	scenario.exec(function()
+		seed.enemy(sym, { species = RESTLESS_SOUL, level = GHOST_LEVEL })
+	end)
+
+	-- Dismiss the intro prompt, pulsed. PrintBeginningBattleText ends in the
+	-- stream's own prompt and the wait needs a fresh PRESS, so a held A never
+	-- releases it. Stop the moment wBattleMonSpecies goes nonzero — send-out is
+	-- done and the battle menu is next, where an A would select FIGHT. The port
+	-- gate pulses on exactly the same condition.
+	do
+		local deadline = scenario.frame() + 3600
+		while navigate.read8("wBattleMonSpecies") == 0 do
+			assert(scenario.frame() < deadline,
+				"battle_ghost: the send-out never happened — intro prompt not dismissed?")
+			input.tap("A", 8, 56)
+		end
+	end
+	scenario.log(("battle_ghost: sent out at frame %d"):format(scenario.frame()))
+
+	-- Settle the same number of in-battle frames the port's GHOST_DUMP_DELAY
+	-- counts from this same state edge.
+	scenario.wait(GHOST_DUMP_DELAY)
 
 	-- The subject of the scenario, asserted before the photograph so a silent
-	-- non-ghost battle cannot pass as one.
-	local nick = scenario.read_range(sym:addr("wEnemyMonNick"), 5)
-	assert(nick == text:encode("GHOST"),
-		"battle_ghost: enemy nick is not GHOST — the ghost arm did not run")
+	-- non-ghost battle cannot pass as one. It has to be checked HERE and not
+	-- straight after the loader: InitWildBattle writes the nick in its .isGhost
+	-- arm, which runs AFTER LoadEnemyMonData and after the battle transition.
+	do
+		local nick = scenario.read_range(sym:addr("wEnemyMonNick"), 5)
+		assert(nick == text:encode("GHOST"),
+			"battle_ghost: enemy nick is not GHOST — the ghost arm did not run")
+	end
 
 	scenario.exec(function()
 		dump.write("battle_ghost", dump.standard_regions(sym), {
 			frame = scenario.frame(),
 			description = "forced RESTLESS_SOUL battle on Route 1 (10,7): the " ..
-				"ghost identity — GhostPic, the GHOST nick — parked at the " ..
-				"intro prompt",
+				"ghost identity — GhostPic, the GHOST nick — photographed after " ..
+				"send-out",
 		})
 	end)
 end)

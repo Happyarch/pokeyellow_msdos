@@ -2495,12 +2495,33 @@ provider shapes below, not their runtime behavior.
            because `RunBattleTest` stages the intro without it. Photographing
            after send-out avoids it; FIXING it is a separate box.
         4. The `▼` blink-phase cell, which only `battle_intro` currently pins.
-      * **The registry was rolled back to 81 and `validate_scenarios` is
-        consistent** — a red scenario is not left in the suite. The port gate and
-        the `.lua` stay, because both are proven and are most of the work.
-        Remaining: the species/level-parameterised enemy convergence on both
-        sides, then dump after send-out, register, `goldencheck`, non-vacuity
-        proof, `fidelity-full`.
+      * **SECOND PASS 2026-08-14: the enemy convergence is DONE, and the
+        scenario is now blocked on a REAL PORT DEFECT rather than on harness
+        work.** `seed.enemy` is parameterised by `{species, level}` (nothing in
+        it was ever PIDGEY-specific — base stats, learnset and PP all come from
+        the ROM by species), both sides seed `wCurEnemyLevel = 30`, and the port
+        gate performs seed.enemy's twin overwrite once, state-gated on
+        `wEnemyMonSpecies`. That took WRAM from 36 mismatched fields to 13.
+      * **WHAT BLOCKS IT: `wBattleMonSpecies` goes nonzero at a DIFFERENT POINT
+        IN THE FLOW on each side, because the port loads `wBattleMon` before the
+        intro and the GB loads it at send-out after.** Any state gate keyed on
+        it therefore fires at the intro on the port and after send-out on
+        hardware — measured: the golden photographs the enemy HUD ("GHOST",
+        ":L30", HP bar) where the port has 85 blank cells, plus 121 VRAM slots
+        and the 13 `wLoadedMon` staging fields. The gate is not the problem; the
+        ordering is, and it is the same divergence this box already recorded.
+      * **So the next step is NOT more harness tuning — it is fixing the
+        ordering** so `LoadBattleMonFromParty` runs after the intro as pret's
+        `StartBattle.playerSendOutFirstMon` does. That makes the state gate
+        legitimate on both sides AND removes the `wBattleMon` divergence at its
+        source. It is a restructure of the collapsed `_InitBattleCommon` with
+        blast radius across every battle scenario, so it deserves its own box
+        and its own `fidelity-full`.
+      * **The registry is rolled back to 81 and `validate_scenarios` is
+        consistent** — no red scenario is left in the suite, twice now. The port
+        gate and the `.lua` stay: both are proven, and the remaining work is in
+        production code, not in them. **This is the witness doing its job — it
+        found a real defect before it could pass.**
 
 - [x] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
       divergence using the already-translated item-owned `ItemUseBait`,

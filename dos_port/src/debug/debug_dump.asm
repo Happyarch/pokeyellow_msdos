@@ -131,6 +131,8 @@ global RunTrainerRouteTestSeed
 extern PrepareNewGameDebug
 %endif
 %endif
+extern CalcStats                 ; home/move_mon.asm — stat recompute from the spec DVs
+extern CopyData                  ; home/copy.asm
 global RunGhostBattleTestSeed
 %endif
 %ifdef DEBUG_ITEMSTONE
@@ -1910,6 +1912,7 @@ section .text
 ;
 ; In: EBP = GB memory base.  Returns.
 ; ---------------------------------------------------------------------------
+GHOST_LEVEL equ 30                              ; pret's Pokemon Tower ghost Marowak
 RunGhostBattleTestSeed:
     cmp byte [ghost_battle_seeded], 0
     jne .alreadySeeded
@@ -1921,11 +1924,18 @@ RunGhostBattleTestSeed:
     call PrepareNewGameDebug
     ; The forced opponent. This is the only line that makes it a ghost battle.
     mov byte [ebp + wCurOpponent], RESTLESS_SOUL
+    ; A FORCED battle has no encounter roll, so nothing sets the level — and an
+    ; unseeded wCurEnemyLevel is not "whatever the port had": measured
+    ; 2026-08-14, the golden loaded a LEVEL-0 Marowak (HP 10, all stats 5)
+    ; against the port's stale 34. Both sides seed the same value.
+    mov byte [ebp + wCurEnemyLevel], GHOST_LEVEL
 .alreadySeeded:
     ret
 
 section .bss
 ghost_battle_seeded: resb 1                     ; 0 = seed on first EnterMap only
+ghost_enemy_seeded:  resb 1                     ; 0 = spec-overwrite wEnemyMon once
+ghost_dump_frame:    resd 1                     ; in-battle frames since send-out
 section .text
 %endif
 
@@ -5113,6 +5123,11 @@ RunStoneTest:
 %ifndef AUTOKEY_DUMP_FRAME
 %define AUTOKEY_DUMP_FRAME 200
 %endif
+%ifdef DEBUG_BATTLE_GHOST
+%ifndef GHOST_DUMP_DELAY
+%define GHOST_DUMP_DELAY 120            ; in-battle frames after send-out; the
+%endif                                  ; golden waits the same count
+%endif
 %ifdef AISWITCH_PROBE
 %ifndef AISWITCH_PROBE_FRAME
 %define AISWITCH_PROBE_FRAME 2400        ; well past the pin delay below
@@ -5348,6 +5363,67 @@ AutoKeyDrive:
 .doFollowDump:
     call DumpBackbuffer                 ; GBSTATE.BIN + FRAME.BIN, then exits
 .noFollowDump:
+%endif
+%ifdef DEBUG_BATTLE_GHOST
+    ; ------------------------------------------------------------------
+    ; battle_ghost's three state-gated jobs. All keyed on GAME STATE rather than
+    ; frames, so neither emulator's boot drift can move them apart.
+    ;
+    ; (1) SPEC-OVERWRITE THE ENEMY, ONCE, after the real LoadEnemyMonData has
+    ;     run. A wild mon's DVs come from BattleRandom, so the two sides can
+    ;     never agree unaided — this is seed.enemy's twin, exactly as the
+    ;     DEBUG_BATTLE_GOLDEN staging does it, and the golden performs the
+    ;     matching overwrite. wEnemyMonSpecies is zero until the loader runs, so
+    ;     it doubles as the "loader has finished" gate.
+    cmp byte [ghost_enemy_seeded], 0
+    jne .ghostEnemyDone
+    cmp byte [ebp + wEnemyMonSpecies], 0
+    je .ghostEnemyDone
+    mov byte [ghost_enemy_seeded], 1
+    mov byte [ebp + wEnemyMonDVs], 0x98
+    mov byte [ebp + wEnemyMonDVs + 1], 0x76
+    mov edx, wEnemyMonLevel + 1     ; stat block dest (wEnemyMonMaxHP)
+    mov bh, 0                       ; no stat exp
+    mov esi, wEnemyMonHP
+    call CalcStats
+    mov al, [ebp + wEnemyMonMaxHP]  ; HP = MaxHP, big-endian word verbatim
+    mov [ebp + wEnemyMonHP], al
+    mov al, [ebp + wEnemyMonMaxHP + 1]
+    mov [ebp + wEnemyMonHP + 1], al
+    mov esi, wEnemyMonLevel         ; refresh the unmodified snapshot the loader
+    mov edx, wEnemyMonUnmodifiedLevel ; took from the ROLLED DVs
+    mov ebx, 1 + NUM_STATS * 2
+    call CopyData
+.ghostEnemyDone:
+
+    ; (2) DISMISS THE INTRO PROMPT — pulsed, and only while parked at it.
+    ;     PrintBeginningBattleText ends in the stream's own prompt and
+    ;     BattlePromptWait waits for a fresh PRESS, so a held A never releases
+    ;     it: pulse 8 frames on / 56 off. The gate closes the moment
+    ;     wBattleMonSpecies goes nonzero (send-out done), which is what keeps
+    ;     these presses off the battle menu that comes up next — an A there
+    ;     would select FIGHT.
+    cmp byte [ebp + wIsInBattle], 0
+    je .ghostNoKey
+    cmp byte [ebp + wBattleMonSpecies], 0
+    jne .ghostNoKey
+    mov eax, [autokey_frame]
+    and eax, 63
+    cmp eax, 8
+    jae .ghostNoKey
+    or dl, PAD_A
+.ghostNoKey:
+
+    ; (3) PHOTOGRAPH after send-out, delay-counted from the SAME state edge the
+    ;     golden uses (wBattleMonSpecies nonzero), so both sides settle the same
+    ;     number of frames into the post-send-out screen.
+    cmp byte [ebp + wBattleMonSpecies], 0
+    je .noGhostDump
+    inc dword [ghost_dump_frame]
+    cmp dword [ghost_dump_frame], GHOST_DUMP_DELAY
+    jne .noGhostDump
+    call DumpBackbuffer                 ; GBSTATE.BIN + FRAME.BIN, then exits
+.noGhostDump:
 %endif
 %ifdef AUTOKEY_DUMP_ON_BATTLE
     ; State-gated battle photograph (boot-drift-robust, measured 2026-08-06). A
