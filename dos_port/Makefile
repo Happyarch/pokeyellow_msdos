@@ -918,6 +918,19 @@ endif
 # sets no MAPSCRIPT_* variable (it seeds its spawn directly in the EnterMap block
 # in src/home/overworld.asm), so it takes no part in that block's `?=`
 # first-set-wins chain and cannot perturb the sight scenarios' defaults.
+# battle_ai_switch (battle plan 1e): DEBUG_TRAINER_ROUTE's real Route 3 sight
+# battle, with wTrainerClass pinned to COOLTRAINER_F and the enemy's HP pinned
+# into CooltrainerFAI's switch band, so the trainer AI CHOOSES TO SWITCH. Nothing
+# else in the suite reaches SwitchEnemyMon. Dumps on the latch, not on a frame.
+ifdef DEBUG_BATTLE_AISWITCH
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_AISWITCH -D DEBUG_TRAINER_ROUTE
+NASMFLAGS += -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_TRAINER_ROUTE
+AUTOKEY_DUMP_FRAME ?= 30000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 # make DEBUG_TRAINER_ROUTE=1 [AUTOKEY_DUMP_FRAME=1500]
 ifdef DEBUG_TRAINER_ROUTE
 NEED_DEBUG_DUMP := 1

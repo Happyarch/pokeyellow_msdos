@@ -850,6 +850,17 @@ gbstate_regions:
     gbregion "wEnemyMon",      wEnemyMon,      BATTLEMON_STRUCT_LENGTH
     gbregion "wBattleMonNick", wBattleMonNick, NAME_LENGTH
     gbregion "wBattleMon",     wBattleMon,     BATTLEMON_STRUCT_LENGTH
+%ifdef DEBUG_BATTLE_AISWITCH
+    ; battle plan 1e: the ENEMY ROSTER, which no standard region covers. The
+    ; 2026-08-11 defect was that SwitchEnemyMon copied the withdrawn mon's HP
+    ; back to the roster and NEVER SENT THE REPLACEMENT OUT, so the pair that
+    ; must be able to move is wEnemyMonPartyPos (already inside the compared
+    ; wEnemyMon region) TOGETHER WITH the withdrawn mon's HP landing here. A
+    ; landmark checking only one of the two would have passed against the
+    ; original defect.
+    gbregion "eRosterCount",  wEnemyPartyCount, 1
+    gbregion "eRoster1HP",    wEnemyMon1HP,     2
+%endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph
 ; (AUTOKEY_DUMP_ON_BATTLE) or the state-gated follow-stall probe
 ; (AUTOKEY_DUMP_ON_FOLLOW). NASM %ifdef has no OR, so fold both into one helper.
@@ -5035,6 +5046,83 @@ AutoKeyDrive:
     jne .noDump
     call DumpBackbuffer                 ; FRAME.BIN, then exits
 .noDump:
+%ifdef DEBUG_BATTLE_AISWITCH
+    ; ------------------------------------------------------------------
+    ; battle plan 1e's witness: make the trainer AI CHOOSE TO SWITCH.
+    ;
+    ; SwitchEnemyMon has exactly one caller, AISwitchIfEnoughMons, and nothing in
+    ; the suite has ever reached it — the full tier passes byte-identical because
+    ; no scenario makes the AI switch. This gate rides DEBUG_TRAINER_ROUTE's real
+    ; Route 3 sight battle (which already fights a 3-mon roster through the real
+    ; MainInBattleLoop, where TrainerAI is called from) and adds exactly two
+    ; per-frame pins.
+    ;
+    ; PIN 1 — wTrainerClass = COOLTRAINER_F. That class is the ONLY RNG-free
+    ; route to AISwitchIfEnoughMons, and only by a documented Gen-1 bug: pret
+    ; writes `cp 25 percent + 1` with the following `ret nc` COMMENTED OUT, so
+    ; the compare is discarded and the class always proceeds. Every other class
+    ; opens `cp <threshold> / ret nc` against the byte TrainerAI's
+    ; `call Random / jp hl` just produced, and the two emulators share no RNG
+    ; stream. (JugglerAI is NOT the unconditional one — its `jmp` sits behind
+    ; exactly that compare. See the plan's 1e box.)
+    ;
+    ; wAICount deliberately gets NO pin: EnemySendOutFirstMon leaves it $FF,
+    ; which is a SENTINEL, and TrainerAI's `inc a / jr nz` path reloads the count
+    ; from the CLASS table — ai_pointers.asm:38 is `dbw 1, CooltrainerFAI`. So
+    ; pinning the class sets the count too.
+    ;
+    ; PIN 2 — enemy HP into the switch band. CooltrainerFAI wants
+    ;     maxHP/10 <= wEnemyMonHP < maxHP/5
+    ; below 1/5 so the second AICheckIfHPBelowFraction carries, but NOT below
+    ; 1/10 or it reaches for a Hyper Potion instead. COMPUTED from the maxHP
+    ; actually read, never hardcoded — the band is only a few HP wide at L10.
+    ; ------------------------------------------------------------------
+    cmp byte [ebp + wIsInBattle], 2
+    jne .noAiSwitch
+    mov byte [ebp + wTrainerClass], OPP_COOLTRAINER_F - OPP_ID_OFFSET
+    ; *** THE ENEMY MUST SURVIVE THE PLAYER'S HIT, and that is not a detail —
+    ; it is the whole reason maxHP is pinned rather than left real. MEASURED:
+    ; with the roster's real L10 maxHP (25) the band is [2,4], the debug party's
+    ; L80 lead one-shots it, and MainInBattleLoop's .playerMovesFirst branch
+    ; takes `test bh,bh / jz HandleEnemyMonFainted` BEFORE it ever reaches
+    ; TrainerAI (port core.asm:475-481). The first attempt pinned only HP and
+    ; the AI was never consulted at all — the dump came from the underlying
+    ; DEBUG_TRAINER_ROUTE gate, with partyPos still 0.
+    ;
+    ; 65535 is battle_wrap / battle_thrash's survive-the-sequence pin, reused
+    ; for the same reason. It moves the band to [6553, 13106], and a single L80
+    ; STRENGTH hit is nowhere near that wide, so the enemy is still inside the
+    ; band when TrainerAI is finally called.
+    mov word [ebp + wEnemyMonMaxHP], 0xFFFF
+    movzx eax, byte [ebp + wEnemyMonMaxHP]
+    shl eax, 8
+    mov al, [ebp + wEnemyMonMaxHP + 1]
+    test eax, eax
+    jz .noAiSwitch                          ; no mon staged yet
+    xor edx, edx
+    mov ecx, 5
+    div ecx                                 ; EAX = maxHP/5
+    test eax, eax
+    jz .noAiSwitch                          ; maxHP < 5: no value can satisfy both
+    dec eax                                 ; the largest HP strictly below maxHP/5
+    mov [ebp + wEnemyMonHP], ah
+    mov [ebp + wEnemyMonHP + 1], al
+    ; LATCH — and it must require a COMPLETED switch, not merely a changed byte.
+    ; MEASURED: `wEnemyMonPartyPos != 0` alone fires MID-SWITCH, on a transient
+    ; $FF with wEnemyMonSpecies still 0 and the struct half-cleared. Requiring a
+    ; real replacement to be loaded (species non-zero, party position in 1..5)
+    ; lands both sides after SwitchEnemyMon has run to its end, which is the
+    ; state the 2026-08-11 defect could not produce.
+    movzx eax, byte [ebp + wEnemyMonPartyPos]
+    test eax, eax
+    jz .noAiSwitch
+    cmp eax, PARTY_LENGTH
+    jae .noAiSwitch                         ; rejects the transient $FF
+    cmp byte [ebp + wEnemyMonSpecies], 0
+    je .noAiSwitch                          ; replacement not loaded yet
+    call DebugDumpMemory                    ; GBSTATE.BIN + DUMP.BIN, then exits
+.noAiSwitch:
+%endif
 %ifdef AUTOKEY_DUMP_ON_FOLLOW
     ; State-gated follow-stall probe: dump GBSTATE (+FRAME) and exit the FIRST
     ; frame the Pallet cutscene reaches PLAYER_FOLLOWS_OAK (script 7). That is the
