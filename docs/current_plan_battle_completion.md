@@ -3100,6 +3100,41 @@ enemy-gauge clone tile ids and VRAM slots.
         the unguarded margin. Landing an unwitnessed change whose only artifact
         appears where nothing can report it is the exact combination this plan
         has spent several iterations learning to refuse.
+      * **RE-MEASURED 2026-08-14 — THE WITNESS HALF OF THAT REFUSAL IS NOW
+        CLOSED, and the other premises still hold.**
+        * `label_status --callers SlideTrainerPicOffScreen`: still `missing`,
+          **0 port callers**. Unchanged.
+        * **The "nothing can report it" half is no longer true.** This plan's
+          own stride-leak sweep built a margin scan — dump the port's whole
+          40x25 canvas, report every non-blank cell at canvas cols 0-9 or 30-39
+          — and it is now PROVEN SENSITIVE AT EXACTLY THE TWO COLUMNS A SLID PIC
+          WOULD LAND ON. In-vitro sabotage of a clean `battle_anim_blink`
+          canvas: a glyph parked at canvas (row 8, **col 2**) — the player pic's
+          computed landing column — is reported, and one at (row 3, **col 36**)
+          — the enemy pic's — is reported too; clean scan is 0, sabotaged scan
+          is 2 then 3. So a naive translation parking a pic in the margin WOULD
+          be caught, by a check that needs no golden.
+        * **The `hSlideAmount` question the box raises is already answered by an
+          established precedent**, not an open decision:
+          `src/engine/movie/oak_speech/oak_speech2.asm` uses file-local `.bss`
+          (`slide_dir` / `slide_steps` / region) under a
+          `DEVIATION{class=projection}` that names exactly that substitution for
+          pret's `hSlideDirection`/`hSlideAmount`/`hSlidingRegionSize`.
+        * **WHAT ACTUALLY REMAINS is the translation and its regression
+          surface, which is NOT small:** pret calls this between
+          `LoadScreenTilesFromBuffer1` and `SaveScreenTilesToBuffer1` at BOTH
+          sites (`core.asm:243-247` and `:1349-1353`), so the slide changes what
+          gets SAVED into the screen buffer, not just what is momentarily drawn.
+          That is a broad-surface change wanting `fidelity-full`, and it is the
+          honest reason it is still not landed — not the witness gap.
+      - **MARGIN SCAN EXTENDED 2026-08-14 to the four scenarios added this
+        session** — `battle_anim_elemental`, `battle_anim_ball`,
+        `battle_anim_blink`, `battle_anim_optoff`: **0 stray cells each** at
+        canvas cols 0-9 / 30-39. The earlier sweep covered `battle_item_potion`,
+        `battle_wrap`, `battle_menu`, `battle_safari` and `battle_faint`, so all
+        nine battle scenarios that have been scanned are clean. Non-vacuity is
+        the sabotage above, plus the original sweep's pre-fix potion run which
+        reported exactly 7 cells (`F7 F8 F6 F3 F9 FC F8` = "120/362").
       * **THE PRET-NAMED ENTRY POINT LANDED 2026-08-12.**
         `SlidePlayerAndEnemySilhouettesOnScreen` now exists in the mirror file
         `dos_port/src/engine/battle/core.asm` as `call LoadPlayerBackPic /
