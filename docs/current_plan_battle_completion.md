@@ -2523,6 +2523,38 @@ provider shapes below, not their runtime behavior.
         production code, not in them. **This is the witness doing its job — it
         found a real defect before it could pass.**
 
+- [ ] **Restore pret's send-out ORDER: `LoadBattleMonFromParty` belongs AFTER the
+      intro, not before it. FOUND 2026-08-14 by the ghost scenario, which is
+      blocked on it.**
+      The port's collapsed `_InitBattleCommon` picks the first alive party mon,
+      sets the EXP/fought flags and calls `LoadBattleMonFromParty` BEFORE
+      `PrintBeginningBattleText`. pret does all of that in
+      `StartBattle.playerSendOutFirstMon` — i.e. AFTER the intro text
+      (`engine/battle/core.asm:135-175` reaches `.playerSendOutFirstMon` only
+      past `.checkAnyPartyAlive` / `.specialBattle`).
+
+      **MEASURED, not inferred.** With both sides in the same forced battle, the
+      golden has `wBattleMon` all zero and nick `???????????` at the parked
+      intro while the port already holds SNORLAX fully loaded — 21 WRAM fields.
+      `battle_intro`'s own golden records the same expectation in prose:
+      "wBattleMon is NOT loaded yet — the GB loads it at send-out, after this
+      screen (golden: zeros)".
+
+      **WHY NO EXISTING SCENARIO SEES IT:** every battle golden is staged by
+      `RunBattleTest`, which builds the intro itself and never calls
+      `LoadBattleMonFromParty` first. Only a scenario entering through the live
+      `InitBattle` can expose it — which is exactly what the ghost gate does.
+
+      **WHY IT IS WORTH FIXING RATHER THAN MASKING:** it is not cosmetic. Any
+      state gate keyed on `wBattleMonSpecies` — the natural "has send-out
+      happened" test — fires at the wrong point on the port, which is what
+      blocks the ghost scenario. Masking `wBattleMon` would also blind the suite
+      to the field it most wants to compare.
+
+      Blast radius: every battle scenario. Needs its own `fidelity-full`, and
+      the `DEVIATION{class=projection}` on `_InitBattleCommon` (which documents
+      the StartBattle collapse) should be narrowed or retired with it.
+
 - [x] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
       divergence using the already-translated item-owned `ItemUseBait`,
       `ItemUseRock`, and `ItemUseBall` effects. Safari maps, steps, and story
