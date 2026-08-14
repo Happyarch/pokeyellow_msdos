@@ -2296,6 +2296,34 @@ provider shapes below, not their runtime behavior.
           up as exactly those fields, in BOTH directions as the pin was moved
           from one side to the other. This scenario pins the enemy with SLEEP
           ONLY — `battle_oldman`'s 65535-HP pin outlives the battle here.
+      - **NORMAL IS ALREADY COVERED — measured 2026-08-14, so DO NOT build a
+        third scenario for it.** The box's result/exit ask is satisfied for
+        BATTLE_TYPE_NORMAL by two existing scenarios, one per way a normal
+        battle resolves: `ball_catch` (id 20) asserts `wBattleResult == 2` and
+        runs the real `EndOfBattle` before dumping (the CAPTURE result, must_hit
+        `UseBagItem`/`UseItem`), and `battle_faint` (id 33) covers the KO result
+        (must_hit `HandleEnemyMonFainted`/`FaintEnemyPokemon`/`GainExperience`).
+        The remaining result/exit work is SAFARI only, plus BATTLE_TYPE_RUN
+        which has no scenario at all.
+      - **SAFARI RESULT DESIGNED 2026-08-14, AND IT IS RNG-FREE — the recipe
+        does NOT transfer, but a better landmark exists.** `battle_safari`
+        (id 71) calls `DisplayBattleMenu` and then parks in a `DelayFrame` loop,
+        so it never takes a turn; the flee roll has never been witnessed.
+        * The tutorials' `wBattleResult == 2` landmark does not apply: a SAFARI
+          capture goes through the party/box-full checks
+          (`item_effects.asm:117-130`) that the tutorial types skip, so with the
+          seeded 6-mon party the caught mon lands in the BOX.
+        * **THE DETERMINISTIC EXIT IS THE LANDMARK.** pret's safari tail reads
+          `ld a,[wEnemyMonSpeed + 1] / add a / jp c, EnemyRan` — "if
+          (enemy speed % 256) > 127, the enemy runs" — **with no roll at all**;
+          the RNG comparison is only reached when that carry is clear.
+        * Measured: the spec PIDGEY's speed is **21**, so it does NOT take that
+          path by default. Pinning `wEnemyMonSpeed + 1` to >= `$80` on BOTH
+          sides forces it, which is the same "RNG-independence BY MATCHUP" move
+          `battle_faint` and `battle_blackout` already use.
+        * Still to build: the port gate needs AUTOKEY presses to select a Safari
+          menu item (its menu is interactive, unlike the tutorials' simulated
+          input), and the reference needs the matching taps plus the speed pin.
       - **PIKACHU DONE TOO — `battle_pikachu_result` (id 80), 2026-08-14.** The
         recipe applied cheaply: the gate is the OLD_MAN pattern with the
         65535-HP pin `%ifndef`'d out, the rename dump compiled out, the same
