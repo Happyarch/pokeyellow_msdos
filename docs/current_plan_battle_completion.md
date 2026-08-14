@@ -2005,6 +2005,20 @@ provider shapes below, not their runtime behavior.
         animation — both hypotheses show Marowak under that text. Deciding it
         needs a finer instrument than a frame dump every 40 frames, and the
         goldens cannot help: they photograph after send-out, long past it.
+      * **MEASURED 2026-08-14, and it CORRECTS the claim below.** With
+        `MarowakAnim` finally executing (`battle_ghost_unveil`), an in-routine
+        probe sampled `spr_oam_valid` — the count the compositor actually draws
+        — at each of its `Delay3`/`DelayFrames` points: **9 samples, entered
+        once, max 4**. So OBJ publishing is NOT identically zero during the
+        animation, and "the records draw nothing" is **false as a blanket
+        statement**. But 4 is nowhere near 36, so the animation's own sprite set
+        is plainly not being published either — the honest reading is that
+        something publishes a handful of OBJ across the window while
+        `MarowakAnim`'s 36 records do not reach the screen as a set.
+        **Two earlier probe attempts read 0 and were VACUOUS** — sampling from
+        `AutoKeyDrive` never fired inside the routine (0 frames with the bracket
+        open, caught only because the probe carried a positive control). A zero
+        from that instrument proves nothing; sample inside the routine.
       * The 36 OAM records go to `wShadowOAM` exactly as pret writes them, and
         on this port that DRAWS NOTHING without a `PublishProjectedOAM` — whose
         projection OFFSET is a property of the screen that owns the canvas, and
