@@ -142,7 +142,11 @@ StatusScreen:
     call CalcStats
 .DontRecalculate:
     or byte [ebp + W_STATUS_FLAGS_2], (1 << BIT_NO_AUDIO_FADE_OUT)   ; set BIT_NO_AUDIO_FADE_OUT
-    ; TODO-HW: audio HAL (Phase 3) — ld a,$33 / ldh [rAUDVOL],a (reduce volume).
+    ; The "TODO-HW: audio HAL (Phase 3)" here was STALE — retired 2026-08-14.
+    ; The APU is NOT a translation boundary in this port: its registers live in
+    ; emulated GB memory under pret's own names and the per-device shim reads
+    ; them once per audio_tick, so pret's `ldh [rAUDVOL], a` is a literal store.
+    mov byte [ebp + rAUDVOL], 0x33                ; ld a,$33 / ldh [rAUDVOL],a — reduce volume
     ; Disable sprite updates BEFORE the whiteout/clear DelayFrames. On the GB,
     ; DelayFrame only DMAs the existing shadow OAM; the port's update_oam instead
     ; rebuilds it via PrepareOAMData whenever W_UPDATE_SPRITES_ENABLED==1, so the
@@ -734,7 +738,9 @@ StatusScreen2:
     call WaitForTextScrollButtonPress
     mov al, [ss_saved_tileanim]                       ; restore BG tile animations (pret: pop af)
     mov [ebp + hTileAnimations], al
-    ; TODO-HW: rAUDVOL (audio HAL, Phase 3).
+    ; Stale TODO-HW retired 2026-08-14, same reason as the reduce-volume write
+    ; on the way in: the APU registers are emulated GB memory, not a boundary.
+    mov byte [ebp + rAUDVOL], 0x77                ; ld a,$77 / ldh [rAUDVOL],a — restore volume
     and byte [ebp + W_STATUS_FLAGS_2], ~(1 << BIT_NO_AUDIO_FADE_OUT) & 0xFF
     call GBPalWhiteOut
     jmp ClearScreen                                   ; tail (pret jp ClearScreen)
