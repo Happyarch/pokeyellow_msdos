@@ -48,12 +48,6 @@ bits 32
 ; and that cannot be computed across an object file.
 
 section .bss
-pb_x:     resb 1            ; current OAM X
-pb_y:     resb 1            ; OAM Y
-pb_step:  resb 1            ; signed OAM X step per ball
-pb_cnt_a: resd 1            ; GB addr of the party COUNT byte (pret's DE)
-pb_oam:   resd 1            ; GB offset of the current OAM entry
-pb_base:  resd 1            ; party struct base (GB addr)
 
 section .text
 
@@ -64,6 +58,7 @@ extern HideSprites
 extern PlacePlayerHUDTiles      ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern LoadPartyPokeballGfx     ; draw_hud_pokeball_gfx.asm — pret's own loader
 extern SetupPokeballs           ; draw_hud_pokeball_gfx.asm — pret's wBuffer filler
+extern WritePokeballOAMData     ; draw_hud_pokeball_gfx.asm — pret's OAM loop
 
 ; ---------------------------------------------------------------------------
 ; DrawBattlePokeballs — load gfx, build the player ball row (and the enemy's in a
@@ -83,23 +78,35 @@ DrawBattlePokeballs:
     mov ecx, 40 * 4 / 4
     rep stosd
     ; player row → OAM entries 0..5
-    mov dword [pb_oam], GB_OAM
-    mov dword [pb_base], wPartyMons
-    mov dword [pb_cnt_a], wPartyCount
-    mov byte [pb_x], PB_X
-    mov byte [pb_y], PB_Y
-    mov byte [pb_step], 8
-    call build_ball_row
+    ; pret SetupOwnPartyPokeballs: fill wBuffer, seed the OAM cursor variables,
+    ; then let WritePokeballOAMData lay the row down. The coordinates are the
+    ; port's projected ones (see that routine's DEVIATION); wdef4 is pret's own
+    ; OAM attribute byte, 0 for the player's row.
+    mov esi, wPartyMons
+    mov edx, wPartyCount
+    call SetupPokeballs
+    mov byte [ebp + wBaseCoordX], PB_X
+    mov byte [ebp + wBaseCoordY], PB_Y
+    mov byte [ebp + wHUDPokeballGfxOffsetX], 8
+    mov byte [ebp + wdef4], 0
+    mov esi, GB_OAM
+    call WritePokeballOAMData
     mov ecx, 6                            ; entries so far
-    ; trainer battle → enemy row at entries 6..11 (pb_oam already at entry 6)
+    ; trainer battle → enemy row at OAM entries 6..11
     cmp byte [ebp + wIsInBattle], 2
     jne .publish
-    mov dword [pb_base], wEnemyMons
-    mov dword [pb_cnt_a], wEnemyPartyCount
-    mov byte [pb_x], EB_X
-    mov byte [pb_y], EB_Y
-    mov byte [pb_step], -8
-    call build_ball_row
+    ; pret SetupEnemyPartyPokeballs: same shape, marching the other way, and
+    ; wdef4 = 1 — pret's enemy row uses OAM attribute 1 where the port's forked
+    ; loop hardcoded 0 for both rows.
+    mov esi, wEnemyMons
+    mov edx, wEnemyPartyCount
+    call SetupPokeballs
+    mov byte [ebp + wBaseCoordX], EB_X
+    mov byte [ebp + wBaseCoordY], EB_Y
+    mov byte [ebp + wHUDPokeballGfxOffsetX], -8
+    mov byte [ebp + wdef4], 1
+    mov esi, GB_OAM + 6 * 4
+    call WritePokeballOAMData
     mov ecx, 12
 .publish:
     call PrepareStaticOAM                 ; ECX entries → DOS position tables
@@ -132,35 +139,3 @@ HideBattlePokeballs:
     ; re-enable in init_battle.asm (W-1 fix) is now redundant defense.
     ret
 
-; ---------------------------------------------------------------------------
-; build_ball_row — write PARTY_LENGTH OAM entries from the pb_* params: each ball's
-; tile is ok / status / fainted (per the mon's HP+status) or empty (past the count).
-; Faithful to PickPokeball. Advances pb_oam/pb_x. Clobbers EAX/EBX/ESI/EDI.
-; ---------------------------------------------------------------------------
-build_ball_row:
-    ; TILE CHOICE IS PRET'S NOW. This routine used to decide ok/status/fainted/
-    ; empty inline, slot-indexed — a fork of PickPokeball under a port-only name.
-    ; SetupPokeballs (mirror file, pret's own name and split) fills wBuffer with
-    ; one tile id per slot, walking the party structs exactly as pret does; what
-    ; is left here is only the port's OAM PROJECTION, which is step 3.
-    mov esi, [pb_base]                    ; HL = party struct base
-    mov edx, [pb_cnt_a]                   ; DE = address of the count byte
-    call SetupPokeballs                   ; -> wBuffer[0..PARTY_LENGTH-1]
-    xor ebx, ebx                          ; bl = slot 0..5
-.slot:
-    mov edi, [pb_oam]
-    mov al, [pb_y]
-    mov [ebp + edi], al                   ; OAM Y
-    mov al, [pb_x]
-    mov [ebp + edi + 1], al               ; OAM X
-    mov al, [pb_step]
-    add [pb_x], al                        ; next ball's X
-    movzx esi, bl
-    mov al, [ebp + esi + wBuffer]         ; tile id chosen by PickPokeball
-    mov [ebp + edi + 2], al               ; OAM tile
-    mov byte [ebp + edi + 3], 0           ; OAM attr (OBP0, no flip, no priority)
-    add dword [pb_oam], 4                 ; next OAM entry
-    inc bl
-    cmp bl, PARTY_LENGTH
-    jb .slot
-    ret

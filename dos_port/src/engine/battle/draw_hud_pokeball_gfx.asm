@@ -260,3 +260,43 @@ PickPokeball:
     mov [ebp + edx], al                  ; ld [de], a
     add esi, PARTYMON_STRUCT_LENGTH - MON_STATUS   ; add hl, bc — next mon struct
     ret
+
+; ===========================================================================
+; WritePokeballOAMData — pret engine/battle/draw_hud_pokeball_gfx.asm.
+;
+; FORK RETIREMENT, step 3 (battle plan 4c). This was the second half of the
+; port-only `build_ball_row`: an OAM loop driven by file-local pb_x / pb_y /
+; pb_step scratch. It is pret's own loop now, reading pret's own WRAM variables
+; (wBaseCoordX / wBaseCoordY / wHUDPokeballGfxOffsetX / wdef4) and consuming the
+; wBuffer tiles SetupPokeballs wrote.
+;
+; DEVIATION{class=projection; pret=engine/battle/draw_hud_pokeball_gfx.asm:WritePokeballOAMData; behavior=the routine is literal but its callers seed wBaseCoordX/wBaseCoordY with the port's widescreen OAM coordinates from the generated battle layout instead of pret's $60/$60 and $48/$20; evidence=the port composites a 40-tile-wide canvas so every battle element carries a projected coordinate and the golden differ reconciles the two sides through its oam_window projection which is why battle_intro compares OAM and passes with the projected values; lifetime=retire if the port ever composites at the GB's 20-tile width}
+;
+; In: ESI = HL = OAM write cursor (GB offset of the first entry to write).
+; ===========================================================================
+global WritePokeballOAMData
+WritePokeballOAMData:
+    mov edx, wBuffer                     ; ld de, wBuffer
+    mov bl, PARTY_LENGTH                 ; ld c, PARTY_LENGTH — 8-bit, as pret
+.loop:
+    mov al, [ebp + wBaseCoordY]          ; ld a, [wBaseCoordY]
+    mov [ebp + esi], al                  ; ld [hli], a
+    lea esi, [esi + 1]
+    mov al, [ebp + wBaseCoordX]          ; ld a, [wBaseCoordX]
+    mov [ebp + esi], al                  ; ld [hli], a
+    lea esi, [esi + 1]
+    mov al, [ebp + edx]                  ; ld a, [de]  — the tile PickPokeball chose
+    mov [ebp + esi], al                  ; ld [hli], a
+    lea esi, [esi + 1]
+    mov al, [ebp + wdef4]                ; ld a, [wdef4] — OAM attribute
+    mov [ebp + esi], al                  ; ld [hli], a
+    lea esi, [esi + 1]
+    mov al, [ebp + wBaseCoordX]          ; ld a, [wBaseCoordX]
+    mov bh, al                           ; ld b, a
+    mov al, [ebp + wHUDPokeballGfxOffsetX] ; ld a, [wHUDPokeballGfxOffsetX]
+    add al, bh                           ; add b
+    mov [ebp + wBaseCoordX], al          ; ld [wBaseCoordX], a
+    lea edx, [edx + 1]                   ; inc de
+    dec bl                               ; dec c — 8-bit, as pret
+    jnz .loop
+    ret
