@@ -547,147 +547,6 @@ result gates deliberately stop after initialization and drive one terminal turn.
       ungated and DO run in `battle_blackout`. Witnessing the trainer
       presentation needs a scenario that samples the end-battle text moment —
       Stage 6's final box owns that.
-- [x] **1f. Restore `SendOutMon`'s send-out sequence.** DONE 2026-08-11 (two
-      commits: `AnimateSendingOutMon` ported, then the call graph restored).
-      `faithdiff SendOutMon` is now `calls: 14 pret / 14 port (14 matched)`.
-      Three callees land as annotated ret-stubs — `PrintSendOutMonMessage` and
-      `StarterPikachuBattleEntranceAnimation` (`battle_stubs.asm`),
-      `IsPlayerPikachuAsleepInParty` (new `src/engine/pikachu/pikachu_stubs.asm`)
-      — so the SHAPE is pret's and the stubs are what remains to retire.
-
-      **It did NOT close the palette family, and the reason is a separate
-      defect — see 1g.** Measured: 11 battle-tier scenarios PASS, and their
-      goldencheck output is BYTE-IDENTICAL to a stashed-baseline re-run
-      (`battle_menu` / `battle_faint` / `trainer_battle_loss` diffed in full).
-      Identical output means the restored code did not execute:
-      `label_status --callers SendOutMon` reports ONE port caller,
-      `ChooseNextMon`. So those 11 passes are no-regression evidence only.
-- [x] **1g. Route the battle-entry send-out through `SendOutMon`.** DONE
-      2026-08-11. **The truncation was in TWO places, and the second is why 1f
-      looked like it did nothing.** Besides the production `_InitBattleCommon`,
-      the `DEBUG_BATTLE_GOLDEN` gate in `src/debug/debug_dump.asm` does not call
-      `_InitBattleCommon` at all — it hand-rebuilds the intro scene and ended its
-      send-out at `LoadMonBackPic`, carrying its own copy of the same omission.
-      So the scenario that was supposed to witness the fix contained the bug
-      (`bug-class-false-witness-scenario`). Both sites now call `SendOutMon`.
-
-      Measured result — the first execution evidence in this workstream:
-      `battle_menu` and `move_selection` palette divergences **12 → 0**, and
-      `battle_menu`'s `$80xx` VRAM mask hits **128 → 49**. TILEMAP, VRAM and WRAM
-      stayed OK, so drawing both HUDs at send-out does not disturb the screen.
-
-      It also exposed a real second defect, now fixed: `AnimationCleanOAM` left
-      12 stale OAM entries (the POOF particles) in canonical `$FE00`. On the GB,
-      `ClearSprites` zeroes `wShadowOAM` and the next VBlank DMA carries the
-      zeros into `$FE00`; the port has no hardware DMA and `update_oam` skips the
-      copy while `wUpdateSpritesEnabled` is `$FF`, as it is in battle. Rendering
-      was unaffected (`spr_oam_valid` is zeroed), so only the compared bytes
-      diverged. `AnimationCleanOAM` now republishes the cleared shadow, under a
-      `DEVIATION{class=projection}` matching `DrawFrameBlock`'s.
-
-      **One judgement call for maintainer review:** `trainer_battle_route` now
-      needs a mask on the lead mon's PP. The send-out animation moves the port's
-      RNG stream, so it took 4 turns where the golden took 3. This is the same
-      class the scenario already declares (its `wLoadedMon` skip says the sides
-      "fight the roster over a different number of RNG-dependent turns"), and the
-      zero-RNG reward bytes still match, but it does retire the incidental
-      move-selection witness the cadence used to give. Full reasoning is in the
-      mask's own why-string.
-      * **1g's original entry — DONE 2026-08-12, acceptance test MEASURED and
-        DECOMPOSED.** The premise below is now FALSE and is kept as the record.
-
-        **THE PREMISE IS STALE.** It said "The port has only `ChooseNextMon`" and
-        "nothing reaches `SendOutMon` at battle start". Measured today with
-        `label_status --callers SendOutMon`: the port has FOUR callers —
-        `ChooseNextMon` (core.asm:4938), `SwitchPlayerMon` (core.asm:3379),
-        `_InitBattleCommon` (init_battle.asm:446) and the harness's
-        `RunBattleTest`. The battle-start site landed in `145754975` and carries a
-        `DEVIATION{class=projection}` at the call explaining that
-        `_InitBattleCommon` collapses pret's `InitWildBattle` + `_InitBattleCommon`
-        + `StartBattle`, so it holds `StartBattle`'s `call SendOutMon` inline.
-
-        **THE ACCEPTANCE TEST, per scenario, from the 65-scenario `fidelity-full`
-        run (65 PASS / 0 FAIL) — this is the decomposition the box demanded, not a
-        suite-passed claim.** Note first that `golden_diff` prints a `PALETTE:`
-        line ONLY when there is at least one divergence (`if pal_all:`), so
-        "no PALETTE line" means ZERO. That is unambiguous here because
-        `cgb_palettes` is emitted unconditionally on both sides
-        (debug_dump.asm:806's shared region table; every golden carries it).
-
-        | scenario | was (2026-08-11) | now | verdict |
-        |---|---|---|---|
-        | `battle_intro` | 12, OBJ pal4-7 | **0** | RETIRED |
-        | `battle_menu` | 12 | **0** | RETIRED |
-        | `move_selection` | 12 | **0** | RETIRED |
-        | `battle_damage` | 12, OBJ pal4-7 | **8** | NOT this family — see below |
-        | `ball_catch` | 12 | **12** | a DIFFERENT family, already decomposed |
-
-        **`battle_damage`'s residue is a HARNESS ROUTE ASYMMETRY, not a port
-        defect, and it is structurally unfixable in that scenario.** The signature
-        changed shape, which is what gave it away: the port no longer shows white,
-        it shows the RIGHT colours with indices 1 and 3 EXCHANGED
-        (`OBJ pal4 colour1: rom=(3,3,3) port=(31,31,0)` against
-        `colour3: rom=(31,31,0) port=(3,3,3)`, and the same for pal5-7). `(3,3,3)`
-        is the darkest shade, so the ROM is mapping index 1 to it — that is
-        `$6C` (`%01101100`), `SetAnimationPalette`'s value — while the port maps
-        index 3 to it, i.e. `$E4`, the identity the send-out left. So the port
-        simply never runs `SetAnimationPalette` here, and the reason is by design:
-        the `DEBUG_BATTLE_DAMAGE` gate calls the numerical spine directly
-        (`GetCurrentMove` → `GetDamageVarsForPlayerAttack` → `CalculateDamage` →
-        `AdjustDamageForMoveType` → `RandomizeDamage`) and contains NO animation,
-        palette, `SendOutMon`, `MainInBattleLoop` or `ExecutePlayerMove` call at
-        all — grep-verified — precisely "so text and animation waits cannot
-        dominate a headless arithmetic check". The golden reaches the same numbers
-        through REAL TURNS, which animate. Two different routes, so the palette is
-        a side effect of the road not taken. **It must NOT be masked** (masking is
-        how this class hid for a week) and it cannot be fixed without defeating
-        the gate's purpose; it belongs to the palette plan as a known
-        route-asymmetry, and the OBP1 family's real witnesses are the three
-        scenarios above, which are at 0.
-
-        `ball_catch`'s 12 are `BG pal0-3 / OBJ pal0-7 colour3: rom=(16,31,4)
-        port=(31,31,31)` — every palette's colour 3, BG included. Not OBJ pal4-7,
-        not this box; the mis-grouping was already corrected in-tree on 2026-08-11.
-
-        *What 1f looked like when it was opened, kept as the record of the defect
-        and of one claim that turned out to be wrong.* It came from a measured
-        palette-fidelity root cause, not from a survey. `faithdiff SendOutMon`
-        reported `calls: 14 pret / 2 port (1 matched)`: 13 DROPPED
-        (`PrintSendOutMonMessage`, `DrawEnemyHUDAndHPBar`, `DrawPlayerHUDAndHPBar`,
-        `LoadMonBackPic`, `PlayMoveAnimation`, `AnimateSendingOutMon`,
-        `IsThisPartyMonStarterPikachu`, `StarterPikachuBattleEntranceAnimation`,
-        `IsPlayerPikachuAsleepInParty`, `PlayPikachuSoundClip`, `PlayCry`,
-        `PrintEmptyString`, `SaveScreenTilesToBuffer1`), 1 ADDED (port-only
-        `DrawHUDsAndHPBars`), plus dropped `[hStartTileID]` / `[hWhoseTurn]` /
-        `[hAutoBGTransferEnabled]` stores and pret's enemy-HP-zero skip of the
-        enemy HUD. `AnimateSendingOutMon` (pret `init_battle.asm:181`) and
-        `StarterPikachuBattleEntranceAnimation` are both `missing`; everything
-        else it needs is translated and linked.
-
-        The in-source comment `; ANIMATION=OFF: PlayMoveAnimation(POOF_ANIM) /
-        AnimateSendingOutMon / Pikachu.` is STALE — `PlayMoveAnimation` has been
-        live since the battle-animations plan landed. Do not read it as a
-        sanctioned deferral.
-
-        Measured consequence: pret's `PlayMoveAnimation POOF_ANIM` reaches
-        `SetAnimationPalette`, the ONLY writer of `rOBP1 = $6C`, so hardware holds
-        `$6C` at the `battle_menu` / `battle_faint` / `battle_damage` /
-        `move_selection` / `battle_blackout` checkpoints (each solves to that value
-        UNIQUELY from its committed `cgb_palettes` golden) while the port holds 0.
-        That is 12 palette divergences per scenario, all `OBJ pal4..7 colour1..3`.
-        Decomposition and method: `docs/current_plan_palette_fidelity.md`.
-        Restoring this should also RETIRE the battle goldens' 128-slot `$80xx`
-        VRAM mask rather than needing a new one — check that when it lands.
-
-        **CORRECTED 2026-08-11, same day, by the restoration itself.** The last two
-        sentences above were wrong in their conclusion, though right about the
-        mechanism: restoring `SendOutMon` changed NOTHING — `battle_menu` still
-        reports the identical 12 divergences, the `$80xx` mask still hits 128
-        times, and a stashed-baseline re-run diffed byte-identical. The missing
-        link is 1g: the port's battle ENTRY never calls `SendOutMon`. Read the
-        block above as the description of a real defect that was fixed, not as a
-        prediction that came true.
-
 - [x] **1e. AI execution leaves — CLOSED 2026-08-14 (`04adbf0cb`).** Both clauses
       were implemented since 2026-08-11; the box HAD stayed `[~]` SOLELY for want
       of a witness, and `battle_ai_switch` (id 83) is it — the first scenario ever to
@@ -906,6 +765,147 @@ result gates deliberately stop after initialization and drive one terminal turn.
         are the Route 3 youngster), so the AI item and switch paths have zero
         execution evidence. That is a scenario debt, and Stage 2's scenario box
         is where it belongs.
+
+- [x] **1f. Restore `SendOutMon`'s send-out sequence.** DONE 2026-08-11 (two
+      commits: `AnimateSendingOutMon` ported, then the call graph restored).
+      `faithdiff SendOutMon` is now `calls: 14 pret / 14 port (14 matched)`.
+      Three callees land as annotated ret-stubs — `PrintSendOutMonMessage` and
+      `StarterPikachuBattleEntranceAnimation` (`battle_stubs.asm`),
+      `IsPlayerPikachuAsleepInParty` (new `src/engine/pikachu/pikachu_stubs.asm`)
+      — so the SHAPE is pret's and the stubs are what remains to retire.
+
+      **It did NOT close the palette family, and the reason is a separate
+      defect — see 1g.** Measured: 11 battle-tier scenarios PASS, and their
+      goldencheck output is BYTE-IDENTICAL to a stashed-baseline re-run
+      (`battle_menu` / `battle_faint` / `trainer_battle_loss` diffed in full).
+      Identical output means the restored code did not execute:
+      `label_status --callers SendOutMon` reports ONE port caller,
+      `ChooseNextMon`. So those 11 passes are no-regression evidence only.
+- [x] **1g. Route the battle-entry send-out through `SendOutMon`.** DONE
+      2026-08-11. **The truncation was in TWO places, and the second is why 1f
+      looked like it did nothing.** Besides the production `_InitBattleCommon`,
+      the `DEBUG_BATTLE_GOLDEN` gate in `src/debug/debug_dump.asm` does not call
+      `_InitBattleCommon` at all — it hand-rebuilds the intro scene and ended its
+      send-out at `LoadMonBackPic`, carrying its own copy of the same omission.
+      So the scenario that was supposed to witness the fix contained the bug
+      (`bug-class-false-witness-scenario`). Both sites now call `SendOutMon`.
+
+      Measured result — the first execution evidence in this workstream:
+      `battle_menu` and `move_selection` palette divergences **12 → 0**, and
+      `battle_menu`'s `$80xx` VRAM mask hits **128 → 49**. TILEMAP, VRAM and WRAM
+      stayed OK, so drawing both HUDs at send-out does not disturb the screen.
+
+      It also exposed a real second defect, now fixed: `AnimationCleanOAM` left
+      12 stale OAM entries (the POOF particles) in canonical `$FE00`. On the GB,
+      `ClearSprites` zeroes `wShadowOAM` and the next VBlank DMA carries the
+      zeros into `$FE00`; the port has no hardware DMA and `update_oam` skips the
+      copy while `wUpdateSpritesEnabled` is `$FF`, as it is in battle. Rendering
+      was unaffected (`spr_oam_valid` is zeroed), so only the compared bytes
+      diverged. `AnimationCleanOAM` now republishes the cleared shadow, under a
+      `DEVIATION{class=projection}` matching `DrawFrameBlock`'s.
+
+      **One judgement call for maintainer review:** `trainer_battle_route` now
+      needs a mask on the lead mon's PP. The send-out animation moves the port's
+      RNG stream, so it took 4 turns where the golden took 3. This is the same
+      class the scenario already declares (its `wLoadedMon` skip says the sides
+      "fight the roster over a different number of RNG-dependent turns"), and the
+      zero-RNG reward bytes still match, but it does retire the incidental
+      move-selection witness the cadence used to give. Full reasoning is in the
+      mask's own why-string.
+      * **1g's original entry — DONE 2026-08-12, acceptance test MEASURED and
+        DECOMPOSED.** The premise below is now FALSE and is kept as the record.
+
+        **THE PREMISE IS STALE.** It said "The port has only `ChooseNextMon`" and
+        "nothing reaches `SendOutMon` at battle start". Measured today with
+        `label_status --callers SendOutMon`: the port has FOUR callers —
+        `ChooseNextMon` (core.asm:4938), `SwitchPlayerMon` (core.asm:3379),
+        `_InitBattleCommon` (init_battle.asm:446) and the harness's
+        `RunBattleTest`. The battle-start site landed in `145754975` and carries a
+        `DEVIATION{class=projection}` at the call explaining that
+        `_InitBattleCommon` collapses pret's `InitWildBattle` + `_InitBattleCommon`
+        + `StartBattle`, so it holds `StartBattle`'s `call SendOutMon` inline.
+
+        **THE ACCEPTANCE TEST, per scenario, from the 65-scenario `fidelity-full`
+        run (65 PASS / 0 FAIL) — this is the decomposition the box demanded, not a
+        suite-passed claim.** Note first that `golden_diff` prints a `PALETTE:`
+        line ONLY when there is at least one divergence (`if pal_all:`), so
+        "no PALETTE line" means ZERO. That is unambiguous here because
+        `cgb_palettes` is emitted unconditionally on both sides
+        (debug_dump.asm:806's shared region table; every golden carries it).
+
+        | scenario | was (2026-08-11) | now | verdict |
+        |---|---|---|---|
+        | `battle_intro` | 12, OBJ pal4-7 | **0** | RETIRED |
+        | `battle_menu` | 12 | **0** | RETIRED |
+        | `move_selection` | 12 | **0** | RETIRED |
+        | `battle_damage` | 12, OBJ pal4-7 | **8** | NOT this family — see below |
+        | `ball_catch` | 12 | **12** | a DIFFERENT family, already decomposed |
+
+        **`battle_damage`'s residue is a HARNESS ROUTE ASYMMETRY, not a port
+        defect, and it is structurally unfixable in that scenario.** The signature
+        changed shape, which is what gave it away: the port no longer shows white,
+        it shows the RIGHT colours with indices 1 and 3 EXCHANGED
+        (`OBJ pal4 colour1: rom=(3,3,3) port=(31,31,0)` against
+        `colour3: rom=(31,31,0) port=(3,3,3)`, and the same for pal5-7). `(3,3,3)`
+        is the darkest shade, so the ROM is mapping index 1 to it — that is
+        `$6C` (`%01101100`), `SetAnimationPalette`'s value — while the port maps
+        index 3 to it, i.e. `$E4`, the identity the send-out left. So the port
+        simply never runs `SetAnimationPalette` here, and the reason is by design:
+        the `DEBUG_BATTLE_DAMAGE` gate calls the numerical spine directly
+        (`GetCurrentMove` → `GetDamageVarsForPlayerAttack` → `CalculateDamage` →
+        `AdjustDamageForMoveType` → `RandomizeDamage`) and contains NO animation,
+        palette, `SendOutMon`, `MainInBattleLoop` or `ExecutePlayerMove` call at
+        all — grep-verified — precisely "so text and animation waits cannot
+        dominate a headless arithmetic check". The golden reaches the same numbers
+        through REAL TURNS, which animate. Two different routes, so the palette is
+        a side effect of the road not taken. **It must NOT be masked** (masking is
+        how this class hid for a week) and it cannot be fixed without defeating
+        the gate's purpose; it belongs to the palette plan as a known
+        route-asymmetry, and the OBP1 family's real witnesses are the three
+        scenarios above, which are at 0.
+
+        `ball_catch`'s 12 are `BG pal0-3 / OBJ pal0-7 colour3: rom=(16,31,4)
+        port=(31,31,31)` — every palette's colour 3, BG included. Not OBJ pal4-7,
+        not this box; the mis-grouping was already corrected in-tree on 2026-08-11.
+
+        *What 1f looked like when it was opened, kept as the record of the defect
+        and of one claim that turned out to be wrong.* It came from a measured
+        palette-fidelity root cause, not from a survey. `faithdiff SendOutMon`
+        reported `calls: 14 pret / 2 port (1 matched)`: 13 DROPPED
+        (`PrintSendOutMonMessage`, `DrawEnemyHUDAndHPBar`, `DrawPlayerHUDAndHPBar`,
+        `LoadMonBackPic`, `PlayMoveAnimation`, `AnimateSendingOutMon`,
+        `IsThisPartyMonStarterPikachu`, `StarterPikachuBattleEntranceAnimation`,
+        `IsPlayerPikachuAsleepInParty`, `PlayPikachuSoundClip`, `PlayCry`,
+        `PrintEmptyString`, `SaveScreenTilesToBuffer1`), 1 ADDED (port-only
+        `DrawHUDsAndHPBars`), plus dropped `[hStartTileID]` / `[hWhoseTurn]` /
+        `[hAutoBGTransferEnabled]` stores and pret's enemy-HP-zero skip of the
+        enemy HUD. `AnimateSendingOutMon` (pret `init_battle.asm:181`) and
+        `StarterPikachuBattleEntranceAnimation` are both `missing`; everything
+        else it needs is translated and linked.
+
+        The in-source comment `; ANIMATION=OFF: PlayMoveAnimation(POOF_ANIM) /
+        AnimateSendingOutMon / Pikachu.` is STALE — `PlayMoveAnimation` has been
+        live since the battle-animations plan landed. Do not read it as a
+        sanctioned deferral.
+
+        Measured consequence: pret's `PlayMoveAnimation POOF_ANIM` reaches
+        `SetAnimationPalette`, the ONLY writer of `rOBP1 = $6C`, so hardware holds
+        `$6C` at the `battle_menu` / `battle_faint` / `battle_damage` /
+        `move_selection` / `battle_blackout` checkpoints (each solves to that value
+        UNIQUELY from its committed `cgb_palettes` golden) while the port holds 0.
+        That is 12 palette divergences per scenario, all `OBJ pal4..7 colour1..3`.
+        Decomposition and method: `docs/current_plan_palette_fidelity.md`.
+        Restoring this should also RETIRE the battle goldens' 128-slot `$80xx`
+        VRAM mask rather than needing a new one — check that when it lands.
+
+        **CORRECTED 2026-08-11, same day, by the restoration itself.** The last two
+        sentences above were wrong in their conclusion, though right about the
+        mechanism: restoring `SendOutMon` changed NOTHING — `battle_menu` still
+        reports the identical 12 divergences, the `$80xx` mask still hits 128
+        times, and a stashed-baseline re-run diffed byte-identical. The missing
+        link is 1g: the port's battle ENTRY never calls `SendOutMon`. Read the
+        block above as the description of a real defect that was fixed, not as a
+        prediction that came true.
 
 - [x] Add deterministic trainer win and loss scenarios. Must-hit lists must name
       trainer initialization, party loading, battle entry, result handling, and
