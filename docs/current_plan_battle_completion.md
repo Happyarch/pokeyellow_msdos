@@ -2799,12 +2799,30 @@ enemy-gauge clone tile ids and VRAM slots.
           reasoning recorded at the site. Gates: lint 0 both modes, core tier
           16/16.
         * Shake/blink and option-off remain open in this same box.
-      - **SHAKE/BLINK BUILT AND MEASURED 2026-08-13, BLOCKED ON ONE WRAM FIELD —
-        DELIBERATELY NOT REGISTERED.** Port gate `DEBUG_BATTLE_ANIM_BLINK` and
-        reference `tools/mgba_harness/scenarios/battle_anim_blink.lua` both
-        exist and both reach the intended instant; the manifest / `golden_diff`
-        / golden were backed out again so the suite stays green (registry is 74,
-        `validate_scenarios` consistent). **Id 77 is reserved.**
+      - **SHAKE/BLINK COMPLETE 2026-08-13 — `battle_anim_blink` (id 77).**
+        Registered, golden committed, `goldencheck` **PASS** with TILEMAP /
+        VRAM / OAM / WRAM all clean unmasked. Its two `wLoadedMon` masks are
+        both reported as HIT, so neither is vacuous. Sensitivity proved by
+        sabotage: a one-byte corruption of a compared tilemap cell failed on
+        exactly that cell (`(0,0) want $7F got $80`) and nothing else; probe
+        reverted.
+        * **THE BLOCKER FROM THE PREVIOUS PASS IS RESOLVED, AND THE PREVIOUS
+          PASS'S "NOT UNDERSTOOD" WAS WRONG.** The `wLoadedMon` speed stat-EXP
+          word is a PREVIOUSLY ADJUDICATED field: `battle_blackout` has masked
+          `wLoadedMon +23..+24` since 2026-07-26, with the same two values
+          (golden `$9876`, port `$0000`) and the same reasoning — neither dump-
+          point routine writes it, because `DrawPlayerHUDAndHPBar` copies two
+          disjoint runs (0-11 and 33-43) and leaves 12-32 as scratch. Checking
+          `memory_search` before declaring a mystery would have found it.
+        * **The measurement still refined the precedent's account, so it was
+          worth taking:** at `battle_anim_physical`'s earlier instant BOTH sides
+          read `$0000`, so the ROM writes that word somewhere between that
+          instant and the blink rather than carrying it in from an earlier
+          `LoadMonData`. It is a single 2-byte word — the rest of the 12-32
+          window is zero on both sides — so it is scratch reuse, not a staging
+          call the port omits: a `LoadMonData` would have populated OT id, EXP,
+          the other four stat-EXP words and the DVs. `wBattleMon`, where those
+          values actually live, is compared UNMASKED and matches.
         * **THE PATH.** After a move's own animation, `MoveAnimation` calls
           `PlayApplyingAttackAnimation`, which dispatches on `wAnimationType`
           (`engine/battle/animations.asm:506`). Type 4 — player used a damaging
@@ -2825,20 +2843,18 @@ enemy-gauge clone tile ids and VRAM slots.
           (`PrintStatusConditionNotFainted` takes the status branch and skips
           `PrintLevel`). goldencheck reported exactly those 4 tilemap cells;
           adding the call took TILEMAP to OK.
-        * **WHAT BLOCKS REGISTRATION — 2 unmasked WRAM fields, both
-          `wLoadedMon`:** `level: want $50 got $0D` and
-          `speed stat exp: want $9876 got $0000`. TILEMAP, VRAM and OAM are all
-          clean. The level half is understood and is the same staging asymmetry
-          the physical/elemental scenarios mask: `DrawEnemyHUDAndHPBar` writes
-          `wLoadedMonLevel` ONLY when the mon has no status (`core.asm:1968-1970`
-          — with SLP pinned it jumps to `.skipPrintLevel`), so the 13 is residue
-          from the earlier `DrawHUDsAndHPBars` when the enemy was not yet
-          asleep. **The stat-exp half is NOT understood**, and it is the reason
-          this is not being masked: neither HUD routine writes that field, and
-          the physical/elemental scenarios — same route, same masks — match
-          there, so something between their instant and the blink zeroes it on
-          the port side only. Resolve that before registering; do not widen the
-          `wLoadedMon` mask to make it green.
+        * **THE TWO MASKS.** `wLoadedMon +23..+24` (the stat-EXP word above) and
+          `wLoadedMon +33` (level: `DrawEnemyHUDAndHPBar` writes
+          `wLoadedMonLevel` only on the no-status path, `core.asm:1966-1970`, so
+          with the SLP pin the port's 13 is residue from the earlier
+          `DrawHUDsAndHPBars` while the reference's menu path last staged the
+          player L80 — the same asymmetry physical/elemental document). Both are
+          reported HIT by `goldencheck`, so neither is dead weight.
+          **A NOTE ON THE EARLIER DRAFT OF THIS BOX:** it claimed the port
+          "zeroes it on the port side only". That was wrong — measured, the port
+          reads `$0000` at BOTH instants and it is the ROM that writes the word.
+          A wrong causal story in a plan is how the next agent hunts a
+          non-existent port bug.
       - **BALL SUB-ITEM SCOPING (read-only measurement made before building it;
         both facts held).**
         Two facts that changed how it had to be built:

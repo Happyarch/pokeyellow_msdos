@@ -486,6 +486,42 @@
       "verification": "Stage 6 elemental move-animation witness, the twin of battle_anim_physical: a real wild-battle FIGHT -> THUNDERSHOCK turn stopped at DrawFrameBlock's first published live OAM frame. The reference watches for a CHANGE from parked battle-menu OAM rather than merely nonzero OAM, so the compared unmasked OAM entries cannot be stale menu state. The shared debug party carries no elemental move, so BOTH sides pin wBattleMonMoves+3 to THUNDERSHOCK and leave its PP alone; wBattleMon therefore still compares clean. Unlike the physical twin this checkpoint sits on the subanimation/flash path."
     },
     {
+      "name": "battle_anim_blink",
+      "id": 77,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_ANIM_BLINK=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_BLINK",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_blink.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ExecutePlayerMove",
+        "MoveAnimation",
+        "PlayApplyingAttackAnimation",
+        "BlinkEnemyMonSprite",
+        "AnimationBlinkEnemyMon",
+        "AnimationBlinkMon",
+        "AnimationHideMonPic"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 shake/blink witness, the first of the family whose landmark is not a frame block. After a move's own animation MoveAnimation calls PlayApplyingAttackAnimation, which dispatches on wAnimationType; type 4 (player used a damaging move without a side effect, which STRENGTH selects) is BlinkEnemyMonSprite -> AnimationBlinkMon, six hide/show iterations. Both sides stop at the FIRST hidden-pic instant, pinned by TWO conditions: the enemy's 7x7 pic block at GB (12,0) is blank AND enemy HP is still nonzero -- damage is applied only after MoveAnimation returns, so full HP separates a blink hide from any later hide. Sits strictly between battle_anim_physical (stops earlier, inside the move animation) and battle_faint (stops after the KO), a gap nothing had covered."
+    },
+    {
       "name": "battle_anim_ball",
       "id": 76,
       "tier": "full",

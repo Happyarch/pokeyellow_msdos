@@ -810,6 +810,51 @@ SCENARIOS = {
             ],
         }),
     },
+    "battle_anim_blink": {
+        # The shake/blink arm of PlayApplyingAttackAnimation (wAnimationType 4,
+        # BlinkEnemyMonSprite), stopped at the first hidden-pic instant of
+        # AnimationBlinkMon -- after the move animation, before damage is
+        # applied. Same menu-derived placement masks as the rest of the family.
+        "flags": "DEBUG_BATTLE_ANIM_BLINK=1",
+        "window": (10, 3),
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            "wLoadedMon": [
+                ((23, 24), "wLoadedMon's speed stat-EXP word -- the SAME field, "
+                           "the same two values and the same reasoning already "
+                           "adjudicated for battle_blackout, whose entry below "
+                           "carries the long form. Neither side's dump-point "
+                           "routine writes it: DrawPlayerHUDAndHPBar copies two "
+                           "disjoint runs, species..moves (0-11) and "
+                           "level..stats (33-43), so bytes 12-32 are scratch. "
+                           "MEASURED HERE rather than inherited, and the "
+                           "measurement refines battle_blackout's account: at "
+                           "battle_anim_physical's earlier instant BOTH sides "
+                           "read $0000, so the ROM writes this word somewhere "
+                           "between that instant and the blink, and the port "
+                           "does not. It is a single 2-byte word -- the rest of "
+                           "the 12-32 residue window is zero on BOTH sides -- "
+                           "so it is scratch reuse, not a staging call the port "
+                           "omits (a LoadMonData would have populated OT id, "
+                           "EXP, all four other stat-EXP words and the DVs). "
+                           "Not a hole: wBattleMon, where these values actually "
+                           "live, is compared UNMASKED here and matches."),
+                ((33, 33), "level in the wLoadedMon staging buffer: the same "
+                           "asymmetry battle_anim_physical and _elemental "
+                           "document. pret's DrawEnemyHUDAndHPBar writes "
+                           "wLoadedMonLevel ONLY on the no-status path "
+                           "(core.asm:1966-1970 -- with the gate's SLP pin the "
+                           "status branch is taken and PrintLevel is skipped), "
+                           "so the port's 13 is residue from the earlier "
+                           "DrawHUDsAndHPBars when the enemy was not yet "
+                           "asleep, while the reference's menu path last staged "
+                           "the player L80. Transient presentation scratch; the "
+                           "unmasked battle-mon and the tilemap are the "
+                           "witness."),
+            ],
+        }),
+    },
     "battle_anim_ball": {
         # The ball twin of battle_anim_physical/_elemental: the same
         # DrawFrameBlock landmark, but entered through the real battle ITEM menu
