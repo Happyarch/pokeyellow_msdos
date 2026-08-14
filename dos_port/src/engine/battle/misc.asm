@@ -79,15 +79,13 @@ global InitList
 ; wEnemyMonOT / wItemList / wListPointer are WRAM address equs from gb_memmap.inc,
 ; not link-time symbols, so they take no extern (NASM 2.16 rejects extern on a
 ; defined equ).
-extern wInitListType
-extern INIT_ENEMYOT_LIST
-extern INIT_PLAYEROT_LIST
-extern INIT_MON_LIST
+; wInitListType / wItemPrices are WRAM address equs and the INIT_*_LIST
+; selectors are constants (constants/list_constants.asm) — all now in the
+; includes, so like the names above they take NO extern. They were declared
+; extern here while this file was check-only, which is why it never linked.
 extern MonsterNames
-extern INIT_BAG_ITEM_LIST
 extern ItemNames
 extern ItemPrices
-extern wItemPrices
 ; *_NAME type ids (MONSTER_NAME/ITEM_NAME/PLAYEROT_NAME/ENEMYOT_NAME) and
 ; wUnusedNamePointer now come from the includes.
 

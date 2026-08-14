@@ -3614,9 +3614,48 @@ enemy-gauge clone tile ids and VRAM slots.
           `TradeHidePokemon`, `TradeShakePokeball`, `TradeJumpPokeball`,
           `LinkBattleExchangeData` — link/serial, a Phase-4 HAL boundary;
           `StarterPikachuBattleEntranceAnimation` — animation, Stage 6;
-          `PrintSendOutMonMessage`, `FormatMovesString` — untranslated pret
-          routines, not stubs shadowing a landed provider;
+          `PrintSendOutMonMessage` — an untranslated pret routine, not a stub
+          shadowing a landed provider;
           `RespawnOverworldPikachu` — explicitly deferred by box 3d.
+      - **`FormatMovesString` WAS MISCLASSIFIED ABOVE, AND CHASING IT FOUND A
+        REAL DEFECT (2026-08-13).** The line above used to group it with
+        `PrintSendOutMonMessage` as "an untranslated pret routine". It is not:
+        `label_status` reports it **`translated`**, with a faithful body in the
+        mirror `src/engine/battle/misc.asm` AND a stand-in in `core_stubs.asm`
+        — exactly the "stand-in shadowing a landed provider" shape this box
+        exists to retire.
+        * **The stand-in's stated reason is FALSE.** It reads "GetName/names.asm
+          is not yet link-ready (TrainerNames is undefined)". `TrainerNames` is
+          defined in `assets/trainer_names.inc`, `names2.o` links, and the
+          symbol RESOLVES in `PKMN.EXE` at `0x00170475`.
+        * **THE RETIREMENT WAS ATTEMPTED AND BACKED OUT, because it exposed a
+          REAL PORT BUG that is the actual blocker.** The port's `GetName`
+          clobbers `EBX`/`EDX`/`ESI` where pret's preserves `BC`/`DE`/`HL`
+          (`home/names2.asm`: `push af/hl/bc/de` … `pop de/pop bc/pop hl`).
+          `FormatMovesString` keeps its move-slot counter in `BH` across
+          `call GetName`, exactly as pret keeps it in `B`, so linking the
+          faithful body destroys the loop bound and the writer runs away across
+          WRAM. MEASURED: build and link CLEAN, faithdiff CLEAN on both
+          `misc.asm` routines — and `goldencheck move_selection` then produces
+          **no `GBSTATE.BIN` at all**. Same shape as the EXP ALL crash.
+        * **Not a one-line fix, which is why it was not rushed:** the port's
+          `GetName` TAIL-JUMPS out of its own body twice (`je GetMonName`,
+          `jae GetMachineName`), so a naive push/pop epilogue is bypassed on
+          both paths. pret puts the `HM01` test BEFORE its pushes and calls
+          `GetMonName` INSIDE them. Recorded as
+          `regression-getname-does-not-preserve-bc`.
+        * **KEPT from the attempt** (all safe, `make check` green): the
+          `wInitListType`/`wItemPrices` WRAM equs and the five `INIT_*_LIST`
+          selectors added to the includes; the seven bogus `extern`s deleted
+          from `misc.asm` (they are equs/immediates, the case that file's own
+          header note describes); and `misc.asm`'s `mov al, '-'` corrected to
+          `0xE3` — NASM would assemble the literal to ASCII `0x2D`, while pret's
+          charmap maps `-` to `$e3` (`constants/charmap.asm:163`). The file is
+          now link-ready apart from the `GetName` bug.
+        * **The witnesses are already in place for the eventual swap:**
+          `FormatMovesString` has three callers — `MoveSelectionMenu`,
+          `TryingToLearn`, `StatusScreen2` — and two are gated by tilemap-
+          comparing scenarios, `move_selection` and `status_p2`, both PASSing.
 - [ ] Run targeted scenarios, the core tier, `fidelity-full`, and
       `goldens-verify` when scenario/golden artifacts changed. Close or transfer
       every battle-owned mask/finding with explicit evidence.

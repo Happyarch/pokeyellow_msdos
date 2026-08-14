@@ -1357,6 +1357,8 @@ W_CURRENT_MAP_SCRIPT_FLAGS   equ 0xD125 ; wCurrentMapScriptFlags
 ; Letter-printing delay and text speed options (text engine)
 ; Pret ref: constants/ram_constants.asm, engine/menus/main_menu.asm:InitOptions
 W_OPTIONS                    equ 0xD354 ; wOptions — bits 3-0 = text speed
+wInitListType                equ 0xD11A ; pret sym d11a; InitList's selector (engine/battle/misc.asm)
+wItemPrices                  equ 0xCF8E ; pret sym cf8e; InitList stashes the ItemPrices pointer here
 wOptions                     equ W_OPTIONS ; pret-name alias (bit 6 = battle style, 7 = battle anim)
 W_LETTER_PRINTING_DELAY      equ 0xD357 ; wLetterPrintingDelayFlags
 

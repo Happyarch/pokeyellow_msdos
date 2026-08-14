@@ -581,6 +581,13 @@ CRABHAMMER              equ 0x98
 SLASH                   equ 0xA3
 STRUGGLE                equ 0xA5
 
+; --- InitList selectors (constants/list_constants.asm, const_def 1) ---
+INIT_ENEMYOT_LIST       equ 1
+INIT_BAG_ITEM_LIST      equ 2
+INIT_OTHER_ITEM_LIST    equ 3
+INIT_PLAYEROT_LIST      equ 4
+INIT_MON_LIST           equ 5
+
 ; --- other move ids used by name (constants/move_constants.asm) ---
 GUST                    equ 0x10    ; the battle_blackout gate pins the wild
                                     ; enemy's 4 moves to it so its turn always
