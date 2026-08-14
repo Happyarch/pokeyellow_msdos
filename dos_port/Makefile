@@ -2556,7 +2556,7 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 # Targets
 # ---------------------------------------------------------------------------
 
-.PHONY: all clean clean-image image check assets regen goldens goldens-verify goldencheck fidelity fidelity-full static_gate install-hooks
+.PHONY: all clean clean-image image check assets regen goldens goldens-verify goldencheck fidelity fidelity-full static_gate install-hooks pixellock pixellock-bless
 .DEFAULT_GOAL := all
 
 # Regenerate the committed mGBA goldens (tests/goldens/) from the
@@ -2620,6 +2620,20 @@ goldens-verify:
 # Diff the port's GB state against an mGBA golden (fidelity plan Stage 1.4):
 # build the scenario's DEBUG_* image, run it headless, extract GBSTATE.BIN,
 # cell/slot-diff vs tests/goldens/<scenario>.  make goldencheck SCENARIO=status_p1
+# pixellock — ratchet over the COMPOSITED FRAME, which no other gate checks.
+# The golden suite compares GB STATE (tilemap/VRAM/WRAM/OAM/palette RAM) and
+# never the pixels the port draws; measured twice, that blind spot let a
+# per-cell palette override sit unreachable for two commits while fidelity-full
+# stayed 83/83. Self-referential (port-now vs port-when-blessed), NOT fidelity.
+# Deliberately NOT wired into the pre-commit hook: five rebuilds + headless runs
+# is minutes, not seconds. Run it when touching the compositor or a palette path.
+pixellock:
+	@tools/pixellock
+
+# Re-record after an INTENDED rendering change. Say what changed in the commit.
+pixellock-bless:
+	@tools/pixellock --bless
+
 goldencheck:
 	tools/goldencheck.sh $(SCENARIO)
 

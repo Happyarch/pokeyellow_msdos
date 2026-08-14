@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""pixellock — a ratchet over the COMPOSITED FRAME, which no other gate checks.
+
+WHY THIS EXISTS
+The golden suite (goldencheck / fidelity / fidelity-full) compares GB STATE:
+tilemap, VRAM, WRAM, OAM, palette RAM. It never compares the pixels the port
+actually draws. That blind spot is not theoretical -- it has been measured twice:
+
+  * A control build with a per-cell palette override forced onto EVERY cell,
+    moving 99% of screen pixels, still PASSED `goldencheck battle_menu` and the
+    core 16-scenario tier.
+  * The per-cell override path was silently unreachable for two commits
+    (`movzx eax, al` destroys AH; fixed in 412a7d6ce). The enemy HP gauge
+    rendered in the PLAYER's colour that whole time. fidelity-full was 83/83
+    before, during and after -- it could not have caught it, because the tilemap
+    ids were genuinely correct.
+
+Two live fixes currently rest on pixel evidence alone and are gated by nothing:
+the F-19 enemy-gauge colour and the party-menu HP-bar colours. This closes that.
+
+WHAT IT IS, AND WHAT IT IS NOT
+It is a SELF-REFERENTIAL lock: port-now against port-when-blessed. It is NOT a
+fidelity check -- the port composites 320x200, which has no hardware counterpart,
+so there is nothing external to compare against. A mismatch means "the composited
+output changed"; whether that change is right is a human judgement. Use
+`tools/pixelcheck.sh <scenario> -o f.bin` and diff the frames to see WHAT moved.
+
+Storing hashes rather than the 64000-byte frames is deliberate: the frames are
+build artifacts and would add ~320 KB of binary churn per bless. The cost is that
+a mismatch tells you THAT something moved, not what -- hence the pointer above.
+
+SOUNDNESS
+Frames are deterministic: repeat captures of the same build are byte-identical
+(measured 2026-08-14 on battlehud and pallet). If that ever stops being true this
+gate turns into noise, so `--verify-determinism` re-checks it on demand.
+
+USAGE
+    tools/pixellock                      # check every locked scenario
+    tools/pixellock --only battlehud     # check one
+    tools/pixellock --bless              # re-record after an INTENDED change
+    tools/pixellock --verify-determinism # capture each scenario twice, compare
+Exit 0 = all match. Exit 1 = a mismatch. Exit 2 = a capture failed.
+"""
+
+import argparse
+import hashlib
+import json
+import pathlib
+import subprocess
+import sys
+import tempfile
+
+HERE = pathlib.Path(__file__).resolve().parent
+DOS_PORT = HERE.parent
+LOCKFILE = HERE / "pixel_lock.json"
+
+# The scenarios worth locking: one per compositor path, plus the two screens
+# whose colour fixes have no other witness. Keep this list SHORT -- each entry
+# costs a full rebuild and a headless DOSBox run.
+SCENARIOS = {
+    "pallet":    "overworld surface path (decode_surface_overworld)",
+    "battle":    "flat wTileMap path + sprites (decode_surface_flat)",
+    "bagmenu":   "window layer, stacked descriptors (decode_win_row8)",
+    "battlehud": "battle HUD -- the ONLY witness for the F-19 enemy-gauge colour",
+    "partymenu": "party menu -- the ONLY witness for the HP-bar colours (10b)",
+}
+
+
+def capture(scenario: str, out: pathlib.Path) -> None:
+    subprocess.run(
+        [str(HERE / "pixelcheck.sh"), scenario, "-o", str(out)],
+        cwd=str(DOS_PORT), check=True,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+
+
+def digest(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load_lock() -> dict:
+    if not LOCKFILE.exists():
+        return {}
+    return json.loads(LOCKFILE.read_text()).get("frames", {})
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--bless", action="store_true",
+                    help="re-record hashes after an INTENDED change")
+    ap.add_argument("--only", metavar="SCENARIO",
+                    help="check a single scenario")
+    ap.add_argument("--verify-determinism", action="store_true",
+                    help="capture each scenario twice and compare")
+    args = ap.parse_args()
+
+    names = [args.only] if args.only else list(SCENARIOS)
+    for n in names:
+        if n not in SCENARIOS:
+            print(f"pixellock: unknown scenario {n!r}; known: {', '.join(SCENARIOS)}",
+                  file=sys.stderr)
+            return 2
+
+    locked = load_lock()
+    results, failures = {}, []
+
+    with tempfile.TemporaryDirectory() as td:
+        tmp = pathlib.Path(td)
+        for name in names:
+            a = tmp / f"{name}.bin"
+            try:
+                capture(name, a)
+            except subprocess.CalledProcessError:
+                print(f"  CAPTURE-FAIL {name}: pixelcheck could not produce a frame",
+                      file=sys.stderr)
+                return 2
+            got = digest(a)
+            results[name] = got
+
+            if args.verify_determinism:
+                b = tmp / f"{name}.2.bin"
+                capture(name, b)
+                same = digest(b) == got
+                print(f"  {'DETERMINISTIC' if same else 'NONDETERMINISTIC'}  {name}")
+                if not same:
+                    failures.append(name)
+                continue
+
+            if args.bless:
+                print(f"  BLESSED  {name}  {got[:16]}…")
+                continue
+
+            want = locked.get(name)
+            if want is None:
+                print(f"  UNLOCKED {name}  (no recorded hash — run --bless)")
+                failures.append(name)
+            elif want == got:
+                print(f"  MATCH    {name}")
+            else:
+                print(f"  MISMATCH {name}")
+                print(f"           locked {want[:16]}…  got {got[:16]}…")
+                print(f"           inspect: tools/pixelcheck.sh {name} -o /tmp/{name}.bin")
+                failures.append(name)
+
+    if args.bless:
+        LOCKFILE.write_text(json.dumps({
+            "_comment": "sha256 of each scenario's composited FRAME.BIN. "
+                        "Self-referential lock, not a fidelity check — see tools/pixellock. "
+                        "Re-bless only for an INTENDED rendering change, and say what changed.",
+            "frames": {**locked, **results},
+        }, indent=2, sort_keys=True) + "\n")
+        print(f"pixellock: recorded {len(results)} hash(es) to {LOCKFILE.name}")
+        return 0
+
+    if failures:
+        print(f"\npixellock: FAIL — {len(failures)} scenario(s): {', '.join(failures)}")
+        return 1
+    print(f"\npixellock: PASS — {len(names)} scenario(s) match")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
