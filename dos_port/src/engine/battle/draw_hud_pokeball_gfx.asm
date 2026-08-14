@@ -300,3 +300,65 @@ WritePokeballOAMData:
     dec bl                               ; dec c — 8-bit, as pret
     jnz .loop
     ret
+
+; ===========================================================================
+; DrawAllPokeballs / SetupOwnPartyPokeballs / SetupEnemyPartyPokeballs —
+; pret engine/battle/draw_hud_pokeball_gfx.asm.
+;
+; FORK RETIREMENT, step 5 and last of the routine half (battle plan 4c). These
+; three composed the ball rows and were the only part still living inline in the
+; port-only DrawBattlePokeballs. `DrawAllPokeballs` was 4c's named blocker for
+; PrintBeginningBattleText; with these it is `translated`.
+;
+; PROJECTED INPUTS, same deviation WritePokeballOAMData carries: pret's $60/$60
+; and $48/$20 become the generated battle layout's widescreen OAM coordinates,
+; and pret's wShadowOAM / wShadowOAMSprite06 destinations become GB_OAM and
+; GB_OAM + 6*4. The destination is NOT a free choice — src/home/vblank.asm's
+; update_oam SKIPS the shadow->$FE00 DMA while wUpdateSpritesEnabled == $FF,
+; precisely so this row is not overwritten, so writing $FE00 directly is what
+; makes the row survive. Recorded in the pokeballs memory as a measured
+; constraint, honoured here rather than crossed.
+;
+; DEVIATION{class=projection; pret=engine/battle/draw_hud_pokeball_gfx.asm:SetupOwnPartyPokeballs; behavior=the pokeball row coordinates are the port's widescreen layout values instead of pret's $60/$60 and $48/$20 and the OAM destination is GB_OAM instead of wShadowOAM; evidence=the port composites a 40-tile-wide canvas so every battle element carries a projected coordinate and update_oam deliberately skips the shadow to FE00 DMA while the ball row is up which makes the shadow buffer the wrong destination on this port; lifetime=retire if the port ever composites at the GB width and runs the shadow OAM DMA during the battle intro}
+; ===========================================================================
+%define PB_X   UI_PLAYER_BALLS_OAM_X
+%define PB_Y   UI_PLAYER_BALLS_OAM_Y
+%define EB_X   (UI_ENEMY_BALLS_OAM_X + (UI_ENEMY_BALLS_GBW - 1) * 8)
+%define EB_Y   UI_ENEMY_BALLS_OAM_Y
+
+global DrawAllPokeballs
+DrawAllPokeballs:
+    call LoadPartyPokeballGfx
+    call SetupOwnPartyPokeballs
+    mov al, [ebp + wIsInBattle]          ; ld a, [wIsInBattle]
+    dec al                               ; dec a
+    jz .wild                             ; ret z — wild battle, player row only
+    jmp SetupEnemyPartyPokeballs         ; jp SetupEnemyPartyPokeballs
+.wild:
+    ret
+
+global SetupOwnPartyPokeballs
+SetupOwnPartyPokeballs:
+    call PlacePlayerHUDTiles
+    mov esi, wPartyMons                  ; ld hl, wPartyMons
+    mov edx, wPartyCount                 ; ld de, wPartyCount
+    call SetupPokeballs
+    mov byte [ebp + wBaseCoordX], PB_X   ; PROJ — pret ld a, $60 / ld [hli], a
+    mov byte [ebp + wBaseCoordY], PB_Y   ; PROJ — pret ld [hl], a
+    mov byte [ebp + wHUDPokeballGfxOffsetX], 8
+    mov byte [ebp + wdef4], 0            ; xor a / ld [wdef4], a
+    mov esi, GB_OAM                      ; PROJ — pret ld hl, wShadowOAM
+    jmp WritePokeballOAMData             ; jp WritePokeballOAMData
+
+global SetupEnemyPartyPokeballs
+SetupEnemyPartyPokeballs:
+    call PlaceEnemyHUDTiles
+    mov esi, wEnemyMons                  ; ld hl, wEnemyMons
+    mov edx, wEnemyPartyCount            ; ld de, wEnemyPartyCount
+    call SetupPokeballs
+    mov byte [ebp + wBaseCoordX], EB_X   ; PROJ — pret ld a, $48
+    mov byte [ebp + wBaseCoordY], EB_Y   ; PROJ — pret ld [hl], $20
+    mov byte [ebp + wHUDPokeballGfxOffsetX], -8
+    mov byte [ebp + wdef4], 1            ; ld a, $1 / ld [wdef4], a
+    mov esi, GB_OAM + 6 * 4              ; PROJ — pret ld hl, wShadowOAMSprite06
+    jmp WritePokeballOAMData             ; jp WritePokeballOAMData

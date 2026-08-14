@@ -55,10 +55,7 @@ global DrawBattlePokeballs
 global HideBattlePokeballs
 extern PrepareStaticOAM
 extern HideSprites
-extern PlacePlayerHUDTiles      ; draw_hud_pokeball_gfx.asm (pret mirror)
-extern LoadPartyPokeballGfx     ; draw_hud_pokeball_gfx.asm — pret's own loader
-extern SetupPokeballs           ; draw_hud_pokeball_gfx.asm — pret's wBuffer filler
-extern WritePokeballOAMData     ; draw_hud_pokeball_gfx.asm — pret's OAM loop
+extern DrawAllPokeballs         ; draw_hud_pokeball_gfx.asm — pret's whole composition
 
 ; ---------------------------------------------------------------------------
 ; DrawBattlePokeballs — load gfx, build the player ball row (and the enemy's in a
@@ -66,9 +63,11 @@ extern WritePokeballOAMData     ; draw_hud_pokeball_gfx.asm — pret's OAM loop
 ; In: EBP = GB base; wPartyCount/wPartyMons (+ wEnemyPartyCount/wEnemyMons) seeded.
 ; ---------------------------------------------------------------------------
 DrawBattlePokeballs:
-    call LoadPartyPokeballGfx             ; pret's loader, in the mirror file
-    call PlacePlayerHUDTiles              ; the shelf the player's balls sit on
-    ; Zero the whole $FE00 OAM first: the row overwrites entries 0..5 (0..11 for
+    ; PORT-ONLY WRAPPER. Everything pret does now lives in DrawAllPokeballs
+    ; (mirror file, pret's own name); what is left here is the port's OAM HAL:
+    ; the $FE00 pre-clear, the PrepareStaticOAM publish, and the OBJ enable.
+    ;
+    ; Zero the whole $FE00 OAM first: the rows overwrite entries 0..5 (0..11 for
     ; a trainer), and everything beyond must read HIDDEN — the GB's shadow OAM
     ; beyond the row holds Y=160-parked leftovers (hidden), and the golden diff
     ; treats hidden-on-both-sides as equal; stale visible-coordinate garbage
@@ -77,36 +76,13 @@ DrawBattlePokeballs:
     xor eax, eax
     mov ecx, 40 * 4 / 4
     rep stosd
-    ; player row → OAM entries 0..5
-    ; pret SetupOwnPartyPokeballs: fill wBuffer, seed the OAM cursor variables,
-    ; then let WritePokeballOAMData lay the row down. The coordinates are the
-    ; port's projected ones (see that routine's DEVIATION); wdef4 is pret's own
-    ; OAM attribute byte, 0 for the player's row.
-    mov esi, wPartyMons
-    mov edx, wPartyCount
-    call SetupPokeballs
-    mov byte [ebp + wBaseCoordX], PB_X
-    mov byte [ebp + wBaseCoordY], PB_Y
-    mov byte [ebp + wHUDPokeballGfxOffsetX], 8
-    mov byte [ebp + wdef4], 0
-    mov esi, GB_OAM
-    call WritePokeballOAMData
-    mov ecx, 6                            ; entries so far
-    ; trainer battle → enemy row at OAM entries 6..11
+    call DrawAllPokeballs                 ; pret's own composition
+    ; PrepareStaticOAM needs the entry COUNT, which pret has no notion of — it
+    ; DMAs the whole shadow buffer. Re-derive it from the same test
+    ; DrawAllPokeballs used.
+    mov ecx, 6
     cmp byte [ebp + wIsInBattle], 2
     jne .publish
-    ; pret SetupEnemyPartyPokeballs: same shape, marching the other way, and
-    ; wdef4 = 1 — pret's enemy row uses OAM attribute 1 where the port's forked
-    ; loop hardcoded 0 for both rows.
-    mov esi, wEnemyMons
-    mov edx, wEnemyPartyCount
-    call SetupPokeballs
-    mov byte [ebp + wBaseCoordX], EB_X
-    mov byte [ebp + wBaseCoordY], EB_Y
-    mov byte [ebp + wHUDPokeballGfxOffsetX], -8
-    mov byte [ebp + wdef4], 1
-    mov esi, GB_OAM + 6 * 4
-    call WritePokeballOAMData
     mov ecx, 12
 .publish:
     call PrepareStaticOAM                 ; ECX entries → DOS position tables
