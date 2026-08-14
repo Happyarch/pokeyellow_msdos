@@ -17,6 +17,13 @@ bits 32
 
 global MonFrontPics
 global MonBackPics                       ; dex-ordered player send-out back sprites (LoadMonBackPic)
+; The three non-dex front pics keep their pret gfx/pics.asm label names, and
+; SpecialMonPics is the port-only { dd ptr, dd len } table that makes them
+; addressable without a dex number (index = SPECIAL_PIC_* - 1, gb_constants.inc).
+global SpecialMonPics
+global GhostPic
+global FossilKabutopsPic
+global FossilAerodactylPic
 
 section .data
 align 4

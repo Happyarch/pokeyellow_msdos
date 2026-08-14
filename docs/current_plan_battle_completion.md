@@ -2013,8 +2013,64 @@ provider shapes below, not their runtime behavior.
 
       **WHAT IS ACTUALLY LEFT IS TWO WIRE-UPS**, named with their pret line
       ranges so the next attempt does not re-survey:
-      1. **Ghost IDENTITY at battle init — BLOCKED 2026-08-12 on a MISSING
-         ASSET, not on battle code.** pret `engine/battle/init_battle.asm`
+      1. **Ghost IDENTITY at battle init — DONE 2026-08-14. Both halves landed
+         together, as the entry below required.** What shipped:
+         * **The asset**: `gen_mon_pics.py` now emits `FossilKabutopsPic`,
+           `GhostPic` and `FossilAerodactylPic` under their pret
+           `gfx/pics.asm` label names, plus a port-only `SpecialMonPics`
+           `{ dd ptr, dd len }` table. VERIFIED BY DECOMPOSITION, not by "it
+           linked": the three `pkmn.sym` addresses are 403 / 342 / 383 bytes
+           apart — exactly the three source file sizes — the record block sits
+           at the `SpecialMonPics` symbol address with those same three
+           pointer/length pairs, and all three blobs are byte-identical to
+           `gfx/battle/ghost.pic` / `fossilkabutops.pic` / `fossilaerodactyl.pic`
+           inside `PKMN.EXE`.
+         * **The data model**, which was the real blocker: `wMonHFrontSprite`
+           now carries a small `SPECIAL_PIC_*` handle where pret carries the
+           pic's GB ROM address, and `UncompressMonSprite` dereferences it
+           through `SpecialMonPics`. That is **pret's own mechanism**, not a new
+           one — pret's `UncompressMonSprite` reads the front-pic pointer out of
+           the loaded mon header, which is the only reason a non-dex pic is
+           addressable at all; the port simply could not follow it while the
+           field held a meaningless ROM address. Handle 0 keeps the dex path
+           unchanged, and it cannot collide: `gen_base_stats.py` zeroes the
+           sprite-dim and both pic pointers in every `BaseStats` row.
+           `GetMonHeader.specialID` writes the handle under a
+           `DEVIATION{class=data-model}` that supersedes the 2026-07-13 TODO-HW
+           (which was accurate when written and is now false).
+         * **The ghost arm** of `InitWildBattle` is translated: `RESTLESS_SOUL`
+           test, `IsGhostBattle` fallback, `wMonHSpriteDim = $66`, the "GHOST"
+           nick (Tier-1, `ghost_nick` via `gen_runtime_strings.py`), the
+           `wCurPartySpecies` save/substitute/restore, and `LoadMonFrontSprite`
+           to `vFrontPic`. **This IMPROVED the faithdiff**: `IsGhostBattle` and
+           `LoadMonFrontSprite` were both DROPPED before and now match (4 of 5
+           pret calls, up from 2). The one remaining DROPPED call is pret's
+           `predef CopyUncompressedPicToTilemap`, ADDED back as
+           `CopyUncompressedPicToHL` — the same body one label later
+           (`init_battle.asm:221` falls through to `:227`), which is exactly how
+           pret's own `home/pokemon.asm:133` reaches it.
+         * **ONE HAZARD THE CHANGE INTRODUCED AND CLOSED IN THE SAME COMMIT.**
+           Making the port read the header re-imports pret's staleness contract
+           ("assumes the corresponding mon header is already loaded",
+           `home/pics.asm:UncompressMonSprite`) into a path that was previously
+           immune to it — neither pret's nor the port's
+           `LoadFrontSpriteByMonIndex` calls `GetMonHeader`, so a handle left in
+           the header by a ghost battle the player RAN FROM would have hijacked
+           the next pokédex / status / party pic. The dex entry now clears the
+           handle before loading, which is sound by construction: it has just
+           proved the species has a dex number, and $B6-$B8 cannot arrive there
+           in either codebase because they take the Rhydon trap. Cost: one
+           `+ ADDED [wMonHFrontSprite]` store on that label's faithdiff.
+         * **UNWITNESSED, and that is not glossed.** No scenario enters a ghost
+           battle, and none cheaply can: the mGBA side plays the real game with
+           no synthetic staging (`lib/battle.lua` walks Pallet -> Route 1), so a
+           witness needs a navigated route to Pokémon Tower 3F-6F without the
+           Silph Scope. That is its own scenario box, listed below. What the
+           suite DOES witness is the regression direction: every wild-battle
+           scenario now executes the new `call IsGhostBattle`, so a wrong ZF
+           would send them all down the ghost arm and break loudly.
+         *(original diagnosis, kept because it is what the work was aimed at)*
+         **BLOCKED 2026-08-12 on a MISSING ASSET, not on battle code.** pret `engine/battle/init_battle.asm`
          (~:76-90) hand-writes the mon header (`wMonHSpriteDim` = `$66`, front-pic
          pointer = `GhostPic`), sets `wEnemyMonNick` to "GHOST", substitutes
          `MON_GHOST` into `wCurPartySpecies`, calls `LoadMonFrontSprite`, then

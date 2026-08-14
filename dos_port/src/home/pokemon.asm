@@ -145,19 +145,29 @@ GetMonHeader:
 
 .kabutops:
     mov bl, 0x66                      ; size of Kabutops fossil sprite
+    mov cl, SPECIAL_PIC_FOSSIL_KABUTOPS
     jmp .specialID
 .ghost:
     mov bl, 0x66                      ; size of Ghost sprite
+    mov cl, SPECIAL_PIC_GHOST
     jmp .specialID
 .aerodactyl:
     mov bl, 0x77                      ; size of Aerodactyl fossil sprite
+    mov cl, SPECIAL_PIC_FOSSIL_AERODACTYL
 .specialID:
     mov [ebp + wMonHSpriteDim], bl    ; write sprite dimensions
-    ; TODO-HW: front-pic pointer (FossilKabutopsPic / GhostPic / FossilAerodactylPic).
-    ; Verified 2026-07-13 (row 11): none of the three exists in the port — no symbol
-    ; in pkmn.sym, no data blob, no generator emits them — so there is nothing to point
-    ; at. 0 is written so the guard still skips the out-of-bounds BaseStats read.
-    mov word [ebp + wMonHFrontSprite], 0
+    ; DEVIATION{class=data-model; pret=home/pokemon.asm:GetMonHeader; behavior=stores a small SPECIAL_PIC_* handle in wMonHFrontSprite where pret stores the pic's 16-bit GB ROM address; evidence=the three pics now ship as generated blobs under their pret names (assets/mon_pics.inc via gen_mon_pics.py) and src/home/pics.asm UncompressMonSprite resolves the handle through SpecialMonPics - a ROM address has no meaning in a flat DPMI image and every BaseStats row zeroes this field (gen_base_stats.py) so handles 1-3 cannot collide with dex data; lifetime=permanent - the port has no GB ROM address space to point into}
+    ;
+    ; SUPERSEDES the TODO-HW that stood here (verified 2026-07-13, accurate then):
+    ; "none of the three exists in the port - no symbol in pkmn.sym, no data blob,
+    ; no generator emits them - so there is nothing to point at". All three now
+    ; exist. Measured 2026-08-14: gfx/battle/ghost.pic 342 B,
+    ; gfx/pokemon/front/fossilkabutops.pic 403 B, fossilaerodactyl.pic 383 B, and
+    ; their leading dims bytes are $66/$66/$77 - matching the three constants
+    ; written just above, which is the cross-check that the handles are aimed at
+    ; the right blobs.
+    movzx ecx, cl
+    mov [ebp + wMonHFrontSprite], cx
 
 .writeIndex:
     ; wMonHIndex = wCurSpecies (write internal index back over the dex byte)
@@ -526,6 +536,17 @@ LoadFrontSpriteByMonIndex:
     cmp al, NUM_POKEMON + 1
     jae .invalidDexNumber                   ; dex > #151 invalid (unsigned)
     ; valid dex (1..151)
+    ; This entry is dex-keyed BY CONSTRUCTION — it just proved the species has a
+    ; dex number — so clear any special-pic handle left in the mon header by an
+    ; earlier ghost/fossil load. pret does not need this because its
+    ; LoadMonFrontSprite ALWAYS reads the header pointer and every pret caller
+    ; loads a header first ("assumes the corresponding mon header is already
+    ; loaded", home/pics.asm:UncompressMonSprite); the port's dex path ignores
+    ; the header, so without this a stale handle would hijack the next pokédex /
+    ; status / party pic drawn after a ghost battle the player ran from. The
+    ; three special pics cannot arrive through here in either codebase: $B6-$B8
+    ; have no dex number and take the Rhydon trap above.
+    mov word [ebp + wMonHFrontSprite], SPECIAL_PIC_NONE
     dec eax                                  ; dex-1 = index into MonFrontPics
     mov edx, GB_VCHARS2                       ; VRAM dest FIXED = vFrontPic ($9000)
     call LoadMonFrontSprite                  ; stage + decode + center/merge -> $9000

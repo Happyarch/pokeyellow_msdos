@@ -24,6 +24,16 @@ Emits (data only; a Tier-2 wrapper .asm supplies section/globals):
   MonFrontPics:   151 records of `dd monfp_<name>, (monfp_<name>_end - monfp_<name>)`
   monbp_<name>:   incbin "../gfx/pokemon/back/<name>b.pic"   (one per dex mon)
   MonBackPics:    151 records of `dd monbp_<name>, (monbp_<name>_end - monbp_<name>)`
+  FossilKabutopsPic / GhostPic / FossilAerodactylPic + SpecialMonPics
+
+THE THREE SPECIAL PICS (added 2026-08-14, battle plan 4c). pret gfx/pics.asm
+labels three front pics that belong to no dex mon: FossilKabutopsPic,
+GhostPic and FossilAerodactylPic, addressed by species ids $B6/$B8/$B7. They
+keep their pret label names here. Because they have no dex number they cannot
+live in MonFrontPics (indexed by dex-1), so they also get SpecialMonPics — a
+port-only 3-record table in SPECIAL_PIC_* order (gb_constants.inc), which is
+the handle GetMonHeader writes into wMonHFrontSprite where pret writes the pic's
+ROM address. src/home/pics.asm:UncompressMonSprite resolves it.
 
 DO NOT EDIT the generated .inc by hand.  Run from repo root (or dos_port/):
   python3 dos_port/tools/generators/gen_mon_pics.py
@@ -37,6 +47,14 @@ BASE_STATS_ASM = ROOT / "data" / "pokemon" / "base_stats.asm"
 DST = ROOT / "dos_port" / "assets" / "mon_pics.inc"
 
 NUM_POKEMON = 151
+
+# pret gfx/pics.asm labels -> .pic path, in SPECIAL_PIC_* handle order
+# (gb_constants.inc: 1 = FOSSIL_KABUTOPS, 2 = GHOST, 3 = FOSSIL_AERODACTYL).
+SPECIAL_PICS = [
+    ("FossilKabutopsPic", "gfx/pokemon/front/fossilkabutops.pic"),
+    ("GhostPic", "gfx/battle/ghost.pic"),
+    ("FossilAerodactylPic", "gfx/pokemon/front/fossilaerodactyl.pic"),
+]
 
 
 def label(pic_rel: str) -> str:
@@ -111,9 +129,20 @@ def main() -> None:
         out.append(f"    dd {lbl}, {lbl}_end - {lbl}")
     out.append("")
 
+    # the three non-dex front pics, under their pret gfx/pics.asm label names.
+    for lbl, rel in SPECIAL_PICS:
+        if not (ROOT / rel).is_file():
+            sys.exit(f"special pic missing: {rel} (for {lbl})")
+        out.append(f'{lbl}: incbin "../{rel}"')
+        out.append(f"{lbl}_end:")
+    out += ["", "SpecialMonPics: ; { dd flat_ptr, dd blob_len }, index = SPECIAL_PIC_* - 1"]
+    for lbl, _ in SPECIAL_PICS:
+        out.append(f"    dd {lbl}, {lbl}_end - {lbl}")
+    out.append("")
+
     DST.parent.mkdir(parents=True, exist_ok=True)
     DST.write_text("\n".join(out) + "\n")
-    print(f"wrote {DST} ({len(pics)} front + {len(backs)} back pics)")
+    print(f"wrote {DST} ({len(pics)} front + {len(backs)} back + {len(SPECIAL_PICS)} special pics)")
 
 
 if __name__ == "__main__":

@@ -730,6 +730,20 @@ FOSSIL_KABUTOPS         equ 0xB6
 FOSSIL_AERODACTYL       equ 0xB7
 MON_GHOST               equ 0xB8
 
+; PORT-ONLY front-pic handles for those same three mons. pret stores each pic's
+; ROM address in wMonHFrontSprite (a 16-bit GB pointer) and UncompressMonSprite
+; dereferences it; a GB ROM address means nothing here, so the port stores a
+; small handle in the same field and UncompressMonSprite resolves it through the
+; generated SpecialMonPics table (assets/mon_pics.inc, same order). 0 = "not a
+; special pic, use the dex-keyed MonFrontPics table" — which is what every dex
+; mon carries, because gen_base_stats.py zeroes the sprite-dim + both pic
+; pointers in every BaseStats row, so the handle range can never collide with
+; real data. See the DEVIATION at src/home/pokemon.asm:GetMonHeader.specialID.
+SPECIAL_PIC_NONE              equ 0
+SPECIAL_PIC_FOSSIL_KABUTOPS   equ 1
+SPECIAL_PIC_GHOST             equ 2
+SPECIAL_PIC_FOSSIL_AERODACTYL equ 3
+
 ; ---------------------------------------------------------------------------
 ; Trainer classes and opponent ids (constants/trainer_constants.asm).
 ; Folded in 2026-07-27 from the retired include/m8_2_pending_symbols.inc scaffold.

@@ -79,6 +79,10 @@ global DebugLoadEmbeddedTrainerPic
 ; src/data/mon_pics.asm is added to the link set. See M6.3 SUMMARY "data follow-up".
 %ifdef MON_FRONT_PICS
 extern MonFrontPics
+; SpecialMonPics: the same generator's 3-record table for the non-dex front pics
+; (FossilKabutopsPic / GhostPic / FossilAerodactylPic), indexed by
+; SPECIAL_PIC_* - 1. Reached only through a wMonHFrontSprite handle.
+extern SpecialMonPics
 %endif
 
 ; pret constants not carried in gb_constants.inc:
@@ -307,6 +311,8 @@ ApplyMonFrontRepaint:
     push ebx
     mov byte [repaint_active], 0
     mov eax, [pic_repaint_index]
+    test eax, eax
+    js .done                                 ; -1 = non-dex special pic, no record
     mov esi, [repaint_front_table + eax*4]
     test esi, esi
     jz .done
@@ -447,13 +453,39 @@ RefreshMonFrontRepaintPalette:
     popad
     ret
 
-; In: EAX = dex-1. Stage the compressed front pic into GB scratch, point the decoder
-; at it, and decode the two 1bpp chunks into sSpriteBuffer1/2 (tail-calls the decoder).
+; In: EAX = dex-1, OR [wMonHFrontSprite] = a SPECIAL_PIC_* handle (1..3), in which
+; case EAX is ignored. Stage the compressed front pic into GB scratch, point the
+; decoder at it, and decode the two 1bpp chunks into sSpriteBuffer1/2 (tail-calls
+; the decoder).
+;
+; THE SPECIAL-PIC ARM IS PRET'S OWN MECHANISM, not an addition: pret's
+; UncompressMonSprite reads the front-pic pointer straight out of the loaded mon
+; header (`ld hl, wMonHFrontSprite - wMonHeader` from its caller, then
+; `ld a,[hli]` into wSpriteInputPtr), which is exactly how a non-dex pic —
+; GhostPic, FossilKabutopsPic, FossilAerodactylPic — is addressable at all. The
+; port could not follow it while wMonHFrontSprite held a meaningless GB ROM
+; address, so the field now carries a port handle instead and this is where it
+; is dereferenced. The dex path is unchanged: every BaseStats row zeroes that
+; field (gen_base_stats.py), so handle 0 selects MonFrontPics as before.
 UncompressMonSprite:
 %ifdef MON_FRONT_PICS
+    movzx ecx, word [ebp + wMonHFrontSprite]  ; pret: the header's front-pic pointer
+    test ecx, ecx
+    jz .fromDexTable                          ; SPECIAL_PIC_NONE -> dex-keyed path
+    cmp ecx, SPECIAL_PIC_FOSSIL_AERODACTYL
+    ja .fromDexTable                          ; not a handle we know; fail safe
+    ; A non-dex pic has no MonFrontPics row and therefore no repaint record
+    ; either; -1 tells ApplyMonFrontRepaint to leave the decode untouched.
+    mov dword [pic_repaint_index], -1
+    lea esi, [SpecialMonPics + ecx*8 - 8]     ; handle-1 -> record
+    mov ecx, [esi + 4]
+    mov esi, [esi]
+    jmp .staged
+.fromDexTable:
     lea esi, [MonFrontPics + eax*8]          ; record: dd flatptr, dd len
     mov ecx, [esi + 4]                        ; blob length
     mov esi, [esi]                            ; flat ptr to the compressed .pic
+.staged:
 %else
     ; FALLBACK (build without -D MON_FRONT_PICS): stage the single embedded debug
     ; front pic (pidgey) for EVERY mon. The real per-mon MonFrontPics table now

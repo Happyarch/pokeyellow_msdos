@@ -96,6 +96,13 @@ FILES = {
     ],
     "battle_intro_runtime_strings.inc": [
         ("intro_line1", ["Wild "]), ("intro_line2", ["appeared!"]),
+        # pret engine/battle/init_battle.asm InitWildBattle.isGhost:
+        #   ld hl, wEnemyMonNick / ld_hli_a_string "GHOST@"
+        # The nick the ghost battle shows until the Silph Scope unveils it. A
+        # rendered string is Tier-1 data, so it is generated rather than
+        # hand-encoded; the trailing 0x50 is pret's "@" terminator, inside the
+        # literal because pret copies the whole 6 bytes.
+        ("ghost_nick", ["GHOST", [0x50]]),
     ],
     "stat_mod_runtime_strings.inc": [
         ("StatModTextStrings", ["ATTACK", [0x50], "DEFENSE", [0x50], "SPEED", [0x50],
@@ -140,6 +147,8 @@ def main():
                 lines.append("INTRO_LINE1_LEN equ $ - intro_line1")
             elif label == "intro_line2":
                 lines.append("INTRO_LINE2_LEN equ $ - intro_line2")
+            elif label == "ghost_nick":
+                lines.append("GHOST_NICK_LEN equ $ - ghost_nick")
             elif label.startswith("oak_"):
                 lines.append(f"{label}_end:")
         (ASSETS / name).write_text("\n".join(lines) + "\n", encoding="utf-8")

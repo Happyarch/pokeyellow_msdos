@@ -99,6 +99,8 @@ extern LoadTextBoxTilePatterns           ; home/load_font.asm
 extern LoadEnemyMonData               ; engine/battle/core.asm — build wEnemyMon*
 extern EnemySendOutFirstMon           ; engine/battle/core.asm — select/reset first trainer mon
 extern LoadFrontSpriteByMonIndex         ; src/home/pokemon.asm — enemy front pic (generic)
+extern LoadMonFrontSprite                ; src/home/pics.asm — VRAM decode only (EDX=dest, EAX=dex-1 or wMonHFrontSprite handle)
+extern IsGhostBattle                     ; engine/battle/core.asm — ZF=1 -> disguised ghost
 extern HasMonFainted                  ; engine/battle/core.asm — ZF=1 → fainted
 extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — build wBattleMon* + stat mods
@@ -245,9 +247,53 @@ InitWildBattle:
     ; LoadFrontSpriteByMonIndex also performs is the part that mattered and is
     ; unaffected. Corrected regardless: an anchor that is only harmless because
     ; a later routine happens to wipe it is a landmine for whoever changes that
-    ; routine.
+    ; routine. (Both arms below use that projected anchor.)
+
+    ; --- pret InitWildBattle:65-89, the ghost arm (battle plan 4c) -------------
+    ; `ld a,[wCurOpponent] / cp RESTLESS_SOUL / jr z,.isGhost` then the
+    ; `callfar IsGhostBattle / jr nz,.isNoGhost` fallback. RESTLESS_SOUL is
+    ; MAROWAK: the Pokémon Tower ghost is a real Marowak encounter, so the first
+    ; test catches the scripted one and IsGhostBattle catches the random tower
+    ; encounters while the Silph Scope is unused.
+    mov al, [ebp + wCurOpponent]
+    cmp al, RESTLESS_SOUL
+    je .isGhost
+    call IsGhostBattle                       ; ZF=1 -> ghost (pret: jr nz,.isNoGhost)
+    jnz .isNoGhost
+.isGhost:
+    mov byte [ebp + wMonHSpriteDim], 0x66    ; pret: ld a,$66 / ld [hli],a
+    ; pret writes GhostPic's ROM address into the same field; the port writes the
+    ; handle that resolves to the same blob (see gb_constants.inc SPECIAL_PIC_*
+    ; and the DEVIATION at home/pokemon.asm:GetMonHeader.specialID).
+    mov word [ebp + wMonHFrontSprite], SPECIAL_PIC_GHOST
+    ; pret: ld hl, wEnemyMonNick / ld_hli_a_string "GHOST@"
+    mov esi, ghost_nick                      ; Tier-1 generated, terminator included
+    lea edi, [ebp + wEnemyMonNick]
+    mov ecx, GHOST_NICK_LEN
+    rep movsb
+    movzx eax, byte [ebp + wCurPartySpecies] ; pret: push af
+    push eax
+    mov byte [ebp + wCurPartySpecies], MON_GHOST
+    mov byte [ebp + wSpriteFlipped], 0
+    mov edx, GB_VCHARS2                      ; pret: ld de, vFrontPic
+    xor eax, eax                             ; dex index unused on the handle path
+    call LoadMonFrontSprite                  ; pret: call LoadMonFrontSprite
+    pop eax                                  ; pret: pop af
+    mov [ebp + wCurPartySpecies], al
+    ; pret places the 7x7 block after .spriteLoaded for BOTH arms
+    ; (`hlcoord 12,0 / predef CopyUncompressedPicToTilemap`). The port folded
+    ; that placement into LoadFrontSpriteByMonIndex, which the ghost cannot use
+    ; (MON_GHOST has no dex number, so it would take the Rhydon trap), so the
+    ; ghost arm does the placement itself with the same projected anchor.
+    lea edi, [ebp + W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL]
+    xor al, al                               ; hStartTileID = 0
+    mov edx, [text_row_stride]
+    call CopyUncompressedPicToHL
+    jmp .spriteLoaded
+.isNoGhost:
     mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     call LoadFrontSpriteByMonIndex
+.spriteLoaded:
     mov byte [ebp + wTrainerClass], 0
     jmp _InitBattleCommon
 
