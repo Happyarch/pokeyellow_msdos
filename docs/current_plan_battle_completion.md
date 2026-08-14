@@ -593,103 +593,104 @@ result gates deliberately stop after initialization and drive one terminal turn.
       zero-RNG reward bytes still match, but it does retire the incidental
       move-selection witness the cadence used to give. Full reasoning is in the
       mask's own why-string.
-- [x] **1g's original entry — DONE 2026-08-12, acceptance test MEASURED and
-      DECOMPOSED.** The premise below is now FALSE and is kept as the record.
+      * **1g's original entry — DONE 2026-08-12, acceptance test MEASURED and
+        DECOMPOSED.** The premise below is now FALSE and is kept as the record.
 
-      **THE PREMISE IS STALE.** It said "The port has only `ChooseNextMon`" and
-      "nothing reaches `SendOutMon` at battle start". Measured today with
-      `label_status --callers SendOutMon`: the port has FOUR callers —
-      `ChooseNextMon` (core.asm:4938), `SwitchPlayerMon` (core.asm:3379),
-      `_InitBattleCommon` (init_battle.asm:446) and the harness's
-      `RunBattleTest`. The battle-start site landed in `145754975` and carries a
-      `DEVIATION{class=projection}` at the call explaining that
-      `_InitBattleCommon` collapses pret's `InitWildBattle` + `_InitBattleCommon`
-      + `StartBattle`, so it holds `StartBattle`'s `call SendOutMon` inline.
+        **THE PREMISE IS STALE.** It said "The port has only `ChooseNextMon`" and
+        "nothing reaches `SendOutMon` at battle start". Measured today with
+        `label_status --callers SendOutMon`: the port has FOUR callers —
+        `ChooseNextMon` (core.asm:4938), `SwitchPlayerMon` (core.asm:3379),
+        `_InitBattleCommon` (init_battle.asm:446) and the harness's
+        `RunBattleTest`. The battle-start site landed in `145754975` and carries a
+        `DEVIATION{class=projection}` at the call explaining that
+        `_InitBattleCommon` collapses pret's `InitWildBattle` + `_InitBattleCommon`
+        + `StartBattle`, so it holds `StartBattle`'s `call SendOutMon` inline.
 
-      **THE ACCEPTANCE TEST, per scenario, from the 65-scenario `fidelity-full`
-      run (65 PASS / 0 FAIL) — this is the decomposition the box demanded, not a
-      suite-passed claim.** Note first that `golden_diff` prints a `PALETTE:`
-      line ONLY when there is at least one divergence (`if pal_all:`), so
-      "no PALETTE line" means ZERO. That is unambiguous here because
-      `cgb_palettes` is emitted unconditionally on both sides
-      (debug_dump.asm:806's shared region table; every golden carries it).
+        **THE ACCEPTANCE TEST, per scenario, from the 65-scenario `fidelity-full`
+        run (65 PASS / 0 FAIL) — this is the decomposition the box demanded, not a
+        suite-passed claim.** Note first that `golden_diff` prints a `PALETTE:`
+        line ONLY when there is at least one divergence (`if pal_all:`), so
+        "no PALETTE line" means ZERO. That is unambiguous here because
+        `cgb_palettes` is emitted unconditionally on both sides
+        (debug_dump.asm:806's shared region table; every golden carries it).
 
-      | scenario | was (2026-08-11) | now | verdict |
-      |---|---|---|---|
-      | `battle_intro` | 12, OBJ pal4-7 | **0** | RETIRED |
-      | `battle_menu` | 12 | **0** | RETIRED |
-      | `move_selection` | 12 | **0** | RETIRED |
-      | `battle_damage` | 12, OBJ pal4-7 | **8** | NOT this family — see below |
-      | `ball_catch` | 12 | **12** | a DIFFERENT family, already decomposed |
+        | scenario | was (2026-08-11) | now | verdict |
+        |---|---|---|---|
+        | `battle_intro` | 12, OBJ pal4-7 | **0** | RETIRED |
+        | `battle_menu` | 12 | **0** | RETIRED |
+        | `move_selection` | 12 | **0** | RETIRED |
+        | `battle_damage` | 12, OBJ pal4-7 | **8** | NOT this family — see below |
+        | `ball_catch` | 12 | **12** | a DIFFERENT family, already decomposed |
 
-      **`battle_damage`'s residue is a HARNESS ROUTE ASYMMETRY, not a port
-      defect, and it is structurally unfixable in that scenario.** The signature
-      changed shape, which is what gave it away: the port no longer shows white,
-      it shows the RIGHT colours with indices 1 and 3 EXCHANGED
-      (`OBJ pal4 colour1: rom=(3,3,3) port=(31,31,0)` against
-      `colour3: rom=(31,31,0) port=(3,3,3)`, and the same for pal5-7). `(3,3,3)`
-      is the darkest shade, so the ROM is mapping index 1 to it — that is
-      `$6C` (`%01101100`), `SetAnimationPalette`'s value — while the port maps
-      index 3 to it, i.e. `$E4`, the identity the send-out left. So the port
-      simply never runs `SetAnimationPalette` here, and the reason is by design:
-      the `DEBUG_BATTLE_DAMAGE` gate calls the numerical spine directly
-      (`GetCurrentMove` → `GetDamageVarsForPlayerAttack` → `CalculateDamage` →
-      `AdjustDamageForMoveType` → `RandomizeDamage`) and contains NO animation,
-      palette, `SendOutMon`, `MainInBattleLoop` or `ExecutePlayerMove` call at
-      all — grep-verified — precisely "so text and animation waits cannot
-      dominate a headless arithmetic check". The golden reaches the same numbers
-      through REAL TURNS, which animate. Two different routes, so the palette is
-      a side effect of the road not taken. **It must NOT be masked** (masking is
-      how this class hid for a week) and it cannot be fixed without defeating
-      the gate's purpose; it belongs to the palette plan as a known
-      route-asymmetry, and the OBP1 family's real witnesses are the three
-      scenarios above, which are at 0.
+        **`battle_damage`'s residue is a HARNESS ROUTE ASYMMETRY, not a port
+        defect, and it is structurally unfixable in that scenario.** The signature
+        changed shape, which is what gave it away: the port no longer shows white,
+        it shows the RIGHT colours with indices 1 and 3 EXCHANGED
+        (`OBJ pal4 colour1: rom=(3,3,3) port=(31,31,0)` against
+        `colour3: rom=(31,31,0) port=(3,3,3)`, and the same for pal5-7). `(3,3,3)`
+        is the darkest shade, so the ROM is mapping index 1 to it — that is
+        `$6C` (`%01101100`), `SetAnimationPalette`'s value — while the port maps
+        index 3 to it, i.e. `$E4`, the identity the send-out left. So the port
+        simply never runs `SetAnimationPalette` here, and the reason is by design:
+        the `DEBUG_BATTLE_DAMAGE` gate calls the numerical spine directly
+        (`GetCurrentMove` → `GetDamageVarsForPlayerAttack` → `CalculateDamage` →
+        `AdjustDamageForMoveType` → `RandomizeDamage`) and contains NO animation,
+        palette, `SendOutMon`, `MainInBattleLoop` or `ExecutePlayerMove` call at
+        all — grep-verified — precisely "so text and animation waits cannot
+        dominate a headless arithmetic check". The golden reaches the same numbers
+        through REAL TURNS, which animate. Two different routes, so the palette is
+        a side effect of the road not taken. **It must NOT be masked** (masking is
+        how this class hid for a week) and it cannot be fixed without defeating
+        the gate's purpose; it belongs to the palette plan as a known
+        route-asymmetry, and the OBP1 family's real witnesses are the three
+        scenarios above, which are at 0.
 
-      `ball_catch`'s 12 are `BG pal0-3 / OBJ pal0-7 colour3: rom=(16,31,4)
-      port=(31,31,31)` — every palette's colour 3, BG included. Not OBJ pal4-7,
-      not this box; the mis-grouping was already corrected in-tree on 2026-08-11.
+        `ball_catch`'s 12 are `BG pal0-3 / OBJ pal0-7 colour3: rom=(16,31,4)
+        port=(31,31,31)` — every palette's colour 3, BG included. Not OBJ pal4-7,
+        not this box; the mis-grouping was already corrected in-tree on 2026-08-11.
 
-      *What 1f looked like when it was opened, kept as the record of the defect
-      and of one claim that turned out to be wrong.* It came from a measured
-      palette-fidelity root cause, not from a survey. `faithdiff SendOutMon`
-      reported `calls: 14 pret / 2 port (1 matched)`: 13 DROPPED
-      (`PrintSendOutMonMessage`, `DrawEnemyHUDAndHPBar`, `DrawPlayerHUDAndHPBar`,
-      `LoadMonBackPic`, `PlayMoveAnimation`, `AnimateSendingOutMon`,
-      `IsThisPartyMonStarterPikachu`, `StarterPikachuBattleEntranceAnimation`,
-      `IsPlayerPikachuAsleepInParty`, `PlayPikachuSoundClip`, `PlayCry`,
-      `PrintEmptyString`, `SaveScreenTilesToBuffer1`), 1 ADDED (port-only
-      `DrawHUDsAndHPBars`), plus dropped `[hStartTileID]` / `[hWhoseTurn]` /
-      `[hAutoBGTransferEnabled]` stores and pret's enemy-HP-zero skip of the
-      enemy HUD. `AnimateSendingOutMon` (pret `init_battle.asm:181`) and
-      `StarterPikachuBattleEntranceAnimation` are both `missing`; everything
-      else it needs is translated and linked.
+        *What 1f looked like when it was opened, kept as the record of the defect
+        and of one claim that turned out to be wrong.* It came from a measured
+        palette-fidelity root cause, not from a survey. `faithdiff SendOutMon`
+        reported `calls: 14 pret / 2 port (1 matched)`: 13 DROPPED
+        (`PrintSendOutMonMessage`, `DrawEnemyHUDAndHPBar`, `DrawPlayerHUDAndHPBar`,
+        `LoadMonBackPic`, `PlayMoveAnimation`, `AnimateSendingOutMon`,
+        `IsThisPartyMonStarterPikachu`, `StarterPikachuBattleEntranceAnimation`,
+        `IsPlayerPikachuAsleepInParty`, `PlayPikachuSoundClip`, `PlayCry`,
+        `PrintEmptyString`, `SaveScreenTilesToBuffer1`), 1 ADDED (port-only
+        `DrawHUDsAndHPBars`), plus dropped `[hStartTileID]` / `[hWhoseTurn]` /
+        `[hAutoBGTransferEnabled]` stores and pret's enemy-HP-zero skip of the
+        enemy HUD. `AnimateSendingOutMon` (pret `init_battle.asm:181`) and
+        `StarterPikachuBattleEntranceAnimation` are both `missing`; everything
+        else it needs is translated and linked.
 
-      The in-source comment `; ANIMATION=OFF: PlayMoveAnimation(POOF_ANIM) /
-      AnimateSendingOutMon / Pikachu.` is STALE — `PlayMoveAnimation` has been
-      live since the battle-animations plan landed. Do not read it as a
-      sanctioned deferral.
+        The in-source comment `; ANIMATION=OFF: PlayMoveAnimation(POOF_ANIM) /
+        AnimateSendingOutMon / Pikachu.` is STALE — `PlayMoveAnimation` has been
+        live since the battle-animations plan landed. Do not read it as a
+        sanctioned deferral.
 
-      Measured consequence: pret's `PlayMoveAnimation POOF_ANIM` reaches
-      `SetAnimationPalette`, the ONLY writer of `rOBP1 = $6C`, so hardware holds
-      `$6C` at the `battle_menu` / `battle_faint` / `battle_damage` /
-      `move_selection` / `battle_blackout` checkpoints (each solves to that value
-      UNIQUELY from its committed `cgb_palettes` golden) while the port holds 0.
-      That is 12 palette divergences per scenario, all `OBJ pal4..7 colour1..3`.
-      Decomposition and method: `docs/current_plan_palette_fidelity.md`.
-      Restoring this should also RETIRE the battle goldens' 128-slot `$80xx`
-      VRAM mask rather than needing a new one — check that when it lands.
+        Measured consequence: pret's `PlayMoveAnimation POOF_ANIM` reaches
+        `SetAnimationPalette`, the ONLY writer of `rOBP1 = $6C`, so hardware holds
+        `$6C` at the `battle_menu` / `battle_faint` / `battle_damage` /
+        `move_selection` / `battle_blackout` checkpoints (each solves to that value
+        UNIQUELY from its committed `cgb_palettes` golden) while the port holds 0.
+        That is 12 palette divergences per scenario, all `OBJ pal4..7 colour1..3`.
+        Decomposition and method: `docs/current_plan_palette_fidelity.md`.
+        Restoring this should also RETIRE the battle goldens' 128-slot `$80xx`
+        VRAM mask rather than needing a new one — check that when it lands.
 
-      **CORRECTED 2026-08-11, same day, by the restoration itself.** The last two
-      sentences above were wrong in their conclusion, though right about the
-      mechanism: restoring `SendOutMon` changed NOTHING — `battle_menu` still
-      reports the identical 12 divergences, the `$80xx` mask still hits 128
-      times, and a stashed-baseline re-run diffed byte-identical. The missing
-      link is 1g: the port's battle ENTRY never calls `SendOutMon`. Read the
-      block above as the description of a real defect that was fixed, not as a
-      prediction that came true.
+        **CORRECTED 2026-08-11, same day, by the restoration itself.** The last two
+        sentences above were wrong in their conclusion, though right about the
+        mechanism: restoring `SendOutMon` changed NOTHING — `battle_menu` still
+        reports the identical 12 divergences, the `$80xx` mask still hits 128
+        times, and a stashed-baseline re-run diffed byte-identical. The missing
+        link is 1g: the port's battle ENTRY never calls `SendOutMon`. Read the
+        block above as the description of a real defect that was fixed, not as a
+        prediction that came true.
+
 - [x] **1e. AI execution leaves — CLOSED 2026-08-14 (`04adbf0cb`).** Both clauses
-      were implemented since 2026-08-11; the box stayed `[~]` SOLELY for want of a
-      witness, and `battle_ai_switch` (id 83) is it — the first scenario ever to
+      were implemented since 2026-08-11; the box HAD stayed `[~]` SOLELY for want
+      of a witness, and `battle_ai_switch` (id 83) is it — the first scenario ever to
       reach `SwitchEnemyMon`. PASS, WRAM OK (25 regions, 1 skipped), registry 81,
       `fidelity-full` 81/81 nonzero=0.
       * **IT FOUND A REAL PRODUCTION DEFECT ON ITS FIRST GREEN RUN**
@@ -741,11 +742,14 @@ result gates deliberately stop after initialization and drive one terminal turn.
       `AIRecoverHP` already stages `wHPBarOldHP/NewHP/MaxHP`, matching pret, so
       only the coordinate and `wHPBarType` needed setting.
 
-      WHAT THAT LEAVES: nothing in this box is unimplemented. It stays `[~]`
-      SOLELY because none of it is witnessed — the restored switch
-      is UNWITNESSED — the full tier passes byte-identical because no scenario
-      makes the AI choose to switch. Same gap 3a/3b/3d had, and all three of
-      those are now closed by scenarios, so this is the last of that family.
+      WHAT THAT LEFT (superseded 2026-08-14 — this paragraph is the state
+      BEFORE the witness landed, kept as the record of what the box was waiting
+      on; the tick above is the current state): nothing in this box was
+      unimplemented, and it stayed `[~]` SOLELY because none of it was
+      witnessed — the restored switch was UNWITNESSED, and the full tier passed
+      byte-identical because no scenario made the AI choose to switch. Same gap
+      3a/3b/3d had, and all three of those are now closed by scenarios, so this
+      was the last of that family. `battle_ai_switch` closed it.
 
       **NOT STARTED 2026-08-12, and the reason is the GOLDEN side, not the
       gate.** `tools/mgba_harness/lib/battle.lua` exposes `enter_wild` and
@@ -868,40 +872,41 @@ result gates deliberately stop after initialization and drive one terminal turn.
       mon's HP appearing in its roster slot — that pair is exactly what the
       2026-08-11 defect got wrong (it wrote the roster back and never sent the
       replacement out), so it is the pair that must be able to move.
-- [x] **1e (original entry).** Complete `SwitchEnemyMon` through withdrawal,
-      `EnemySendOut`, and its return flags; complete AI item text/effect/HP-bar
-      paths without duplicating item-owned player handlers.
+      * **1e (original entry).** Complete `SwitchEnemyMon` through withdrawal,
+        `EnemySendOut`, and its return flags; complete AI item text/effect/HP-bar
+        paths without duplicating item-owned player handlers.
 
-      DONE 2026-08-12, structurally, with the evidence class stated below.
-      * `SwitchEnemyMon` — `4/4 calls (3 matched), 1/1 stores`. Withdrawal via
-        pret's own `CopyData` (a hand-rolled byte loop had been standing in),
-        `AIBattleWithdrawText`, the `wFirstMonsNotOutYet` 1/0 abuse pret
-        comments on, `EnemySendOut`, and the `LINK_STATE_BATTLING` CF=0 /
-        CF=1 return contract. The one diff is the standing
-        `PrintText`→`PrintBattleText` battle-box projection.
-      * AI item paths — `AIPrintItemUseAndUpdateHPBar` 3/3 clean;
-        `AIUseFullHeal` 3/3 clean; `AIUseSuperPotion` / `AIUsePotion` /
-        `AIUseHyperPotion` / `AISwitchIfEnoughMons` clean; `AIPrintItemUse_`,
-        `AIRecoverHP`, `AIUseFullRestore` and `AIIncreaseStat` match on calls
-        with ADDED stores that are x86 lowering of pret's `ld hl`-indirect
-        writes. No player item handler is duplicated: the AI path calls the
-        shared `StatModifierUpEffect` and `UpdateHPBar2` rather than forking.
-      * `AIPlayRestoringSFX` — was `ret` under "TODO-HW: audio HAL Phase 3.
-        Stub no-op." **False blocker, and the fourth of its kind this week:**
-        `PlaySoundWaitForCurrent` is a translated routine with ten other
-        callers and `SFX_HEAL_AILMENT` is generated as `$8E`. Now
-        `1/1 clean` — and, like `PlayCry`, the point is that
-        `PlaySoundWaitForCurrent` BLOCKS, so the `ret` had been deleting a
-        wait the item-use pacing depends on.
-      * The file header's "per-trainer AI stubs — deferred UI paths" and
-        "item/switch actions (UI stubbed)" claims are retired: measured, all
-        eleven per-class bodies match pret's call graph exactly.
+        DONE 2026-08-12, structurally, with the evidence class stated below.
+        * `SwitchEnemyMon` — `4/4 calls (3 matched), 1/1 stores`. Withdrawal via
+          pret's own `CopyData` (a hand-rolled byte loop had been standing in),
+          `AIBattleWithdrawText`, the `wFirstMonsNotOutYet` 1/0 abuse pret
+          comments on, `EnemySendOut`, and the `LINK_STATE_BATTLING` CF=0 /
+          CF=1 return contract. The one diff is the standing
+          `PrintText`→`PrintBattleText` battle-box projection.
+        * AI item paths — `AIPrintItemUseAndUpdateHPBar` 3/3 clean;
+          `AIUseFullHeal` 3/3 clean; `AIUseSuperPotion` / `AIUsePotion` /
+          `AIUseHyperPotion` / `AISwitchIfEnoughMons` clean; `AIPrintItemUse_`,
+          `AIRecoverHP`, `AIUseFullRestore` and `AIIncreaseStat` match on calls
+          with ADDED stores that are x86 lowering of pret's `ld hl`-indirect
+          writes. No player item handler is duplicated: the AI path calls the
+          shared `StatModifierUpEffect` and `UpdateHPBar2` rather than forking.
+        * `AIPlayRestoringSFX` — was `ret` under "TODO-HW: audio HAL Phase 3.
+          Stub no-op." **False blocker, and the fourth of its kind this week:**
+          `PlaySoundWaitForCurrent` is a translated routine with ten other
+          callers and `SFX_HEAL_AILMENT` is generated as `$8E`. Now
+          `1/1 clean` — and, like `PlayCry`, the point is that
+          `PlaySoundWaitForCurrent` BLOCKS, so the `ret` had been deleting a
+          wait the item-use pacing depends on.
+        * The file header's "per-trainer AI stubs — deferred UI paths" and
+          "item/switch actions (UI stubbed)" claims are retired: measured, all
+          eleven per-class bodies match pret's call graph exactly.
 
-      **EVIDENCE CLASS: structural only.** No scenario in the 56-scenario
-      registry fights a trainer that carries items (the only trainer scenarios
-      are the Route 3 youngster), so the AI item and switch paths have zero
-      execution evidence. That is a scenario debt, and Stage 2's scenario box
-      is where it belongs.
+        **EVIDENCE CLASS: structural only.** No scenario in the 56-scenario
+        registry fights a trainer that carries items (the only trainer scenarios
+        are the Route 3 youngster), so the AI item and switch paths have zero
+        execution evidence. That is a scenario debt, and Stage 2's scenario box
+        is where it belongs.
+
 - [x] Add deterministic trainer win and loss scenarios. Must-hit lists must name
       trainer initialization, party loading, battle entry, result handling, and
       the flag/script consumer. Compare party/enemy state, money, event/script
@@ -1373,11 +1378,15 @@ Re-derive each routine from pret at implementation time; do not carry the old
 audit's finding status forward. Current generated/source evidence establishes the
 provider shapes below, not their runtime behavior.
 
-- [x] **3a. Multi-turn state.** `CheckNumAttacksLeft` TRANSLATED 2026-08-11,
-      WITNESSED 2026-08-12 by `battle_wrap` (id 64); the
-      rest of the box (verifying the full Bide/Thrash/trapping counter,
-      accumulation, release and cleanup flow on both turns) is NOT done, so this
-      stays `[~]`.
+- [x] **3a. Multi-turn state — CLOSED.** `CheckNumAttacksLeft` TRANSLATED
+      2026-08-11 and WITNESSED 2026-08-12 by `battle_wrap` (id 64), which is the
+      TRAPPING third. The other two thirds — Bide and Thrash — were witnessed
+      the same day by `battle_bide` (id 67) and `battle_thrash` (id 68); the
+      per-third evidence is in the folded original entry below.
+      *(This head used to read "the rest of the box is NOT done, so this stays
+      `[~]`". That was true when written and was left standing after the box was
+      ticked — corrected in place 2026-08-14 rather than appended to, which is
+      how the duplicate-entry drift started.)*
 
       The ret-only body carried the comment "No-op until the multi-turn move
       effects are wired." Measured: they ARE wired and linked — `TrappingEffect_`
@@ -1527,98 +1536,98 @@ provider shapes below, not their runtime behavior.
       Also still owed once it terminates: the golden, the manifest row, and the
       `wPlyStatus1`/`wPlyAtksLeft` scenario-local rows (already written into the
       gate) mirrored by name on the mGBA side.
-- [x] **3a (original entry) — DONE 2026-08-12. All three thirds witnessed.**
-      This box asked for "the complete Bide/Thrash/trapping counter,
-      accumulation, release and cleanup flow"; the ticked 3a above covers only
-      the trapping third, which is why this entry stayed live.
+      * **3a (original entry) — DONE 2026-08-12. All three thirds witnessed.**
+        This box asked for "the complete Bide/Thrash/trapping counter,
+        accumulation, release and cleanup flow"; the ticked 3a above covers only
+        the trapping third, which is why this entry stayed live.
 
-      * **Trapping — DONE** by `battle_wrap` (id 64, 782638274). See 3a above.
-      * **Bide — DONE 2026-08-12** by `battle_bide` (id 67). `DEBUG_BATTLE_BIDE`
-        has `battle_wrap`'s shape for the same structural reason: the store and
-        release arms live in `ExecutePlayerMove` (`.bideCheck` /
-        `.unleashEnergy`, port core.asm:1799-1843) and only mean anything across
-        TWO turns, which only the real `MainInBattleLoop` drives. Nothing in the
-        registry had ever set `STORING_ENERGY`, let alone released it.
+        * **Trapping — DONE** by `battle_wrap` (id 64, 782638274). See 3a above.
+        * **Bide — DONE 2026-08-12** by `battle_bide` (id 67). `DEBUG_BATTLE_BIDE`
+          has `battle_wrap`'s shape for the same structural reason: the store and
+          release arms live in `ExecutePlayerMove` (`.bideCheck` /
+          `.unleashEnergy`, port core.asm:1799-1843) and only mean anything across
+          TWO turns, which only the real `MainInBattleLoop` drives. Nothing in the
+          registry had ever set `STORING_ENERGY`, let alone released it.
 
-        **FOUR PINS, and two of them are not obvious.** Enemy HP 999 (the
-        release deals 200; the spec PIDGEY's 36 would be an overkill) and enemy
-        asleep are `battle_wrap`'s. The other two are specific to Bide: the
-        rolled counter is forced to 1, and **the accumulator is forced to 100
-        with `wDamage` zeroed alongside it**. Bide accumulates the damage the
-        USER TAKES, so with the enemy asleep the accumulated total is 0 and
-        `.unleashEnergy` would take its `wMoveMissed = 1` arm — an unpinned run
-        photographs the DEGENERATE release and proves nothing. `wDamage` is
-        zeroed because `.bideCheck` ADDS it into the accumulator every storing
-        turn, so without it the compared total depends on scratch residue.
-        **Every mid-battle write is gated on `STORING_ENERGY` being SET**, on
-        both sides: `.unleashEnergy` clears the bit before it writes `wDamage`,
-        so that condition is what guarantees a pin can never land between the
-        release computing its damage and `HandleIfPlayerMoveMissed` applying it.
+          **FOUR PINS, and two of them are not obvious.** Enemy HP 999 (the
+          release deals 200; the spec PIDGEY's 36 would be an overkill) and enemy
+          asleep are `battle_wrap`'s. The other two are specific to Bide: the
+          rolled counter is forced to 1, and **the accumulator is forced to 100
+          with `wDamage` zeroed alongside it**. Bide accumulates the damage the
+          USER TAKES, so with the enemy asleep the accumulated total is 0 and
+          `.unleashEnergy` would take its `wMoveMissed = 1` arm — an unpinned run
+          photographs the DEGENERATE release and proves nothing. `wDamage` is
+          zeroed because `.bideCheck` ADDS it into the accumulator every storing
+          turn, so without it the compared total depends on scratch residue.
+          **Every mid-battle write is gated on `STORING_ENERGY` being SET**, on
+          both sides: `.unleashEnergy` clears the bit before it writes `wDamage`,
+          so that condition is what guarantees a pin can never land between the
+          release computing its damage and `HandleIfPlayerMoveMissed` applying it.
 
-        **`wEnemyMon` IS COMPARED here, unlike in `battle_wrap`.** A trapping
-        move's chip damage is a roll; the Bide release is exactly twice the
-        pinned accumulator and jumps straight to `HandleIfPlayerMoveMissed`,
-        skipping the damage calculation and the accuracy test — so 999-200=799
-        is arithmetic. It is the scenario's landmark, together with a latch
-        proving `STORING_ENERGY` was seen set (bit-clear-and-accumulator-zero is
-        also the pre-battle state).
+          **`wEnemyMon` IS COMPARED here, unlike in `battle_wrap`.** A trapping
+          move's chip damage is a roll; the Bide release is exactly twice the
+          pinned accumulator and jumps straight to `HandleIfPlayerMoveMissed`,
+          skipping the damage calculation and the accuracy test — so 999-200=799
+          is arithmetic. It is the scenario's landmark, together with a latch
+          proving `STORING_ENERGY` was seen set (bit-clear-and-accumulator-zero is
+          also the pre-battle state).
 
-        **EVIDENCE.** `goldencheck battle_bide` PASS, `WRAM: OK (16 regions, 0
-        skipped)`, one pre-existing datastruct mask, NO scenario-specific skips
-        — a cleaner comparison than `battle_wrap`, which has to skip
-        `wLoadedMon` and `wEnemyMon`. Golden reproducible: two fresh generations
-        and the committed file all sha1 `c1656988`. **SABOTAGE: deleting
-        `.unleashEnergy`'s two accumulator-clearing stores fails with exactly
-        `wPlyBideDmg +1: want $00 | got $64`** — the precise byte the cleanup
-        writes, which is the "cleanup flow" clause of this box. `make fidelity`
-        16 PASS; `lint_pret_labels` 0 both modes; `validate_scenarios` 65.
-      * **Thrash / Petal Dance — DONE 2026-08-12** by `battle_thrash` (id 68).
-        `.thrashingAboutCheck` (port core.asm:1845) had never executed;
-        THRASHING_ABOUT had never been set by anything in the registry. Same
-        `MainInBattleLoop` gate shape as the other two.
+          **EVIDENCE.** `goldencheck battle_bide` PASS, `WRAM: OK (16 regions, 0
+          skipped)`, one pre-existing datastruct mask, NO scenario-specific skips
+          — a cleaner comparison than `battle_wrap`, which has to skip
+          `wLoadedMon` and `wEnemyMon`. Golden reproducible: two fresh generations
+          and the committed file all sha1 `c1656988`. **SABOTAGE: deleting
+          `.unleashEnergy`'s two accumulator-clearing stores fails with exactly
+          `wPlyBideDmg +1: want $00 | got $64`** — the precise byte the cleanup
+          writes, which is the "cleanup flow" clause of this box. `make fidelity`
+          16 PASS; `lint_pret_labels` 0 both modes; `validate_scenarios` 65.
+        * **Thrash / Petal Dance — DONE 2026-08-12** by `battle_thrash` (id 68).
+          `.thrashingAboutCheck` (port core.asm:1845) had never executed;
+          THRASHING_ABOUT had never been set by anything in the registry. Same
+          `MainInBattleLoop` gate shape as the other two.
 
-        **THE ENEMY-HP PIN DOES NOT COPY, AND THAT COST A RUN TO FIND.**
-        `battle_wrap`'s 999 is sized for WRAP's power 15; THRASH is power 90, so
-        two hits from L80 go straight through it, the enemy faints, and the
-        thrash ends because the BATTLE ended rather than because the routine
-        ran. **The failure is silent and reads exactly like a broken feature** —
-        the probe showed THRASHING_ABOUT set and then cleared with CONFUSED
-        never set, forever. Seeded to 65535 now. When copying a
-        survive-the-sequence pin between scenarios, re-derive it from the MOVE'S
-        POWER.
+          **THE ENEMY-HP PIN DOES NOT COPY, AND THAT COST A RUN TO FIND.**
+          `battle_wrap`'s 999 is sized for WRAP's power 15; THRASH is power 90, so
+          two hits from L80 go straight through it, the enemy faints, and the
+          thrash ends because the BATTLE ended rather than because the routine
+          ran. **The failure is silent and reads exactly like a broken feature** —
+          the probe showed THRASHING_ABOUT set and then cleared with CONFUSED
+          never set, forever. Seeded to 65535 now. When copying a
+          survive-the-sequence pin between scenarios, re-derive it from the MOVE'S
+          POWER.
 
-        **ALIGNMENT WORKED HERE, WHERE `battle_wrap` RECORDS THAT IT DOES NOT.**
-        The first run's ONLY divergence was `wLoadedMon level: want $50 | got
-        $0D` — the HUD staging buffer, golden holding the player mon and port
-        the enemy, i.e. the two sides straddling the turn tail's
-        `DrawHUDsAndHPBars`. That is `battle_wrap`'s exact symptom, and
-        `battle_wrap` skips the whole region for it. Rather than copy the mask,
-        both dump conditions got `wLoadedMonLevel == 80` — and it converged.
-        **So `battle_wrap`'s "alignment does not work" note is scenario-specific,
-        not a general truth: the difference is WINDOW WIDTH.** A released trap
-        exists for a handful of frames before the next cast; CONFUSED persists
-        for turns. `battle_thrash` therefore COMPARES `wLoadedMon`, and skips
-        only two regions where `battle_wrap` skips three.
+          **ALIGNMENT WORKED HERE, WHERE `battle_wrap` RECORDS THAT IT DOES NOT.**
+          The first run's ONLY divergence was `wLoadedMon level: want $50 | got
+          $0D` — the HUD staging buffer, golden holding the player mon and port
+          the enemy, i.e. the two sides straddling the turn tail's
+          `DrawHUDsAndHPBars`. That is `battle_wrap`'s exact symptom, and
+          `battle_wrap` skips the whole region for it. Rather than copy the mask,
+          both dump conditions got `wLoadedMonLevel == 80` — and it converged.
+          **So `battle_wrap`'s "alignment does not work" note is scenario-specific,
+          not a general truth: the difference is WINDOW WIDTH.** A released trap
+          exists for a handful of frames before the next cast; CONFUSED persists
+          for turns. `battle_thrash` therefore COMPARES `wLoadedMon`, and skips
+          only two regions where `battle_wrap` skips three.
 
-        **`wPlayerConfusedCounter` IS CARRIED BUT SKIPPED, deliberately.** It is
-        a second `BattleRandom` roll (2-5 turns, pret core.asm:3716-3720), so
-        the two emulators cannot be made to agree on it, and PINNING it would be
-        a tautology — the harness writing a byte on both sides and then checking
-        both read it back. Both sides happen to read `$05` today; that is a
-        coincidence of two independent streams, not agreement, and the skip's
-        why-string says so explicitly so nobody deletes it on the strength of a
-        passing run. `wPlyMoveNum` is carried too and is likewise NOT
-        discriminating — `GetCurrentMove` already wrote the selected move there
-        (pret core.asm:1781) and the selected move IS THRASH, so it reads `$25`
-        whether or not the block under test ran.
+          **`wPlayerConfusedCounter` IS CARRIED BUT SKIPPED, deliberately.** It is
+          a second `BattleRandom` roll (2-5 turns, pret core.asm:3716-3720), so
+          the two emulators cannot be made to agree on it, and PINNING it would be
+          a tautology — the harness writing a byte on both sides and then checking
+          both read it back. Both sides happen to read `$05` today; that is a
+          coincidence of two independent streams, not agreement, and the skip's
+          why-string says so explicitly so nobody deletes it on the strength of a
+          passing run. `wPlyMoveNum` is carried too and is likewise NOT
+          discriminating — `GetCurrentMove` already wrote the selected move there
+          (pret core.asm:1781) and the selected move IS THRASH, so it reads `$25`
+          whether or not the block under test ran.
 
-        **EVIDENCE.** `goldencheck battle_thrash` PASS, `WRAM: OK (15 regions, 2
-        skipped)`. Golden reproducible: two fresh generations and the committed
-        file all sha1 `c784b331`. **SABOTAGE (delete the `or … 1 << CONFUSED` at
-        the thrash end): the run produces NO DUMP AT ALL** — the transition IS
-        the dump condition, the same shape of proof `battle_wrap` gives.
-        `make fidelity` 16 PASS; `lint_pret_labels` 0 both modes;
-        `validate_scenarios` 66.
+          **EVIDENCE.** `goldencheck battle_thrash` PASS, `WRAM: OK (15 regions, 2
+          skipped)`. Golden reproducible: two fresh generations and the committed
+          file all sha1 `c784b331`. **SABOTAGE (delete the `or … 1 << CONFUSED` at
+          the thrash end): the run produces NO DUMP AT ALL** — the transition IS
+          the dump condition, the same shape of proof `battle_wrap` gives.
+          `make fidelity` 16 PASS; `lint_pret_labels` 0 both modes;
+          `validate_scenarios` 66.
 
 ## Stage 4 — special battle types
 
@@ -2253,23 +2262,24 @@ provider shapes below, not their runtime behavior.
          $CD3F, `wHUDCornerTile` $CD40, `wHUDTriangleTile` $CD41,
          `wHUDGraphicsTilesEnd` $CD42 (that range is heavily unioned in the port
          and in pret — confirm no live battle overlap before adding).
+      * **4c (original entry) — SUPERSEDED 2026-08-12, not open work.** Its scope
+        (ghost initialization/identity, unidentified-ghost move refusal, escape
+          rules, the item-owned Poké Doll consumer, and the note that Pokémon
+          Tower/Silph Scope reachability stays overworld-owned) is enumerated in
+          full, with per-item measurement, inside the consolidated 4c box above —
+          including the two findings that entry predates: the refusal's CATCH half
+          is already wired, and `ItemUsePokeDoll` already MATCHES pret. **The
+          remaining 4c work, and its recorded blocker chain, live in that box; track
+          it there and nowhere else.** Ticked as a duplicate, NOT as completed work.
+      * **4c (original folding note) — SUPERSEDED 2026-08-12, not open work.**
+        It asked for `MarowakAnim` + `CopyMonPicFromBGToSpriteVRAM` to be folded
+        in from the archived animations plan. Both were translated into the mirror
+        `dos_port/src/engine/battle/ghost_marowak_anim.asm` on 2026-08-12
+        (`83d8cf1c1`), which is the "ANIMATION HALF DONE" half of the consolidated
+        4c box above. Nothing here is outstanding; ticked so it stops reading as a
+        third open 4c.
 
-- [x] **4c (original folding note) — SUPERSEDED 2026-08-12, not open work.**
-      It asked for `MarowakAnim` + `CopyMonPicFromBGToSpriteVRAM` to be folded
-      in from the archived animations plan. Both were translated into the mirror
-      `dos_port/src/engine/battle/ghost_marowak_anim.asm` on 2026-08-12
-      (`83d8cf1c1`), which is the "ANIMATION HALF DONE" half of the consolidated
-      4c box above. Nothing here is outstanding; ticked so it stops reading as a
-      third open 4c.
-- [x] **4c (original entry) — SUPERSEDED 2026-08-12, not open work.** Its scope
-      (ghost initialization/identity, unidentified-ghost move refusal, escape
-      rules, the item-owned Poké Doll consumer, and the note that Pokémon
-      Tower/Silph Scope reachability stays overworld-owned) is enumerated in
-      full, with per-item measurement, inside the consolidated 4c box above —
-      including the two findings that entry predates: the refusal's CATCH half
-      is already wired, and `ItemUsePokeDoll` already MATCHES pret. **The
-      remaining 4c work, and its recorded blocker chain, live in that box; track
-      it there and nowhere else.** Ticked as a duplicate, NOT as completed work.
+
 - [x] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
       divergence using the already-translated item-owned `ItemUseBait`,
       `ItemUseRock`, and `ItemUseBall` effects. Safari maps, steps, and story
