@@ -3614,10 +3614,38 @@ enemy-gauge clone tile ids and VRAM slots.
           with the reason each is not retirable now:**
           `TradeHidePokemon`, `TradeShakePokeball`, `TradeJumpPokeball`,
           `LinkBattleExchangeData` — link/serial, a Phase-4 HAL boundary;
-          `StarterPikachuBattleEntranceAnimation` — animation, Stage 6;
+          `StarterPikachuBattleEntranceAnimation` — an untranslated pret
+          routine (`engine/battle/pikachu_entrance_anim.asm`); the old reason
+          here said "animation, Stage 6", which is stale now that Stage 6's
+          scenario box is closed — the deferral is that nothing has translated
+          it, not that a stage owns it;
           `PrintSendOutMonMessage` — an untranslated pret routine, not a stub
           shadowing a landed provider;
           `RespawnOverworldPikachu` — explicitly deferred by box 3d.
+      - **THE REMAINING 7 WERE RE-VERIFIED 2026-08-13, and none is a stand-in
+        shadowing a landed provider** — which is the specific thing this box
+        retires. Measured directly rather than re-read: each of
+        `TradeHidePokemon`, `TradeShakePokeball`, `TradeJumpPokeball`,
+        `LinkBattleExchangeData`, `StarterPikachuBattleEntranceAnimation`,
+        `PrintSendOutMonMessage` and `RespawnOverworldPikachu` is defined in
+        exactly ONE place — its own stub file — so the `FormatMovesString`
+        pattern (a faithful body sitting unlinked elsewhere) does not repeat.
+        Retiring any of them is new translation work, not a sweep.
+      - **THE SWEEP FOUND THREE STALE CLAIMS ELSEWHERE, and two are NOT MINE TO
+        FIX (2026-08-13).**
+        * Swept: the `Makefile` `BATTLE_SRCS` comment still listed
+          `misc/InitList` as a deferred closure and `FormatMovesString` as
+          link-time-stubbed by `core_stubs.asm`; and
+          `docs/bug_categorization.md` recorded a spot-check confirming
+          `misc.asm` "is still check-only". Both corrected.
+        * **MAINTAINER ACTION OWED — two `suppress` rows in
+          `dos_port/tools/pret_label_allowlist.json`, both keyed
+          `FormatMovesString`, are now stale debt:** the `dup_def` row ("known
+          interim: core_stubs.asm body is linked; misc.asm's is check-only" —
+          there is no dup any more) and the `non_ret_stub` row, whose own stated
+          resolution was "should move to a non-stub file **or ride misc.asm's
+          promotion**" — which is exactly what happened. **Agents may not edit
+          that registry**, so they are reported here rather than removed.
       - **`FormatMovesString` WAS MISCLASSIFIED ABOVE, AND CHASING IT FOUND A
         REAL DEFECT (2026-08-13).** The line above used to group it with
         `PrintSendOutMonMessage` as "an untranslated pret routine". It is not:

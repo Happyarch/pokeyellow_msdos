@@ -24,6 +24,14 @@ Separately swept `dos_port/tools/pret_label_allowlist.json` for staleness: every
 is still check-only — confirmed, still excluded from `LINK_SRCS`). No new
 doubts to report.
 
+**Superseded 2026-08-13:** that `FormatMovesString` spot-check is now FALSE.
+`misc.asm` was promoted to `FRONTEND_SRCS` and the `core_stubs.asm` stand-in was
+deleted (`68179b4b6`), so there is no dup and no stub. BOTH allowlist `suppress`
+rows keyed `FormatMovesString` — `dup_def` and `non_ret_stub` — are now stale
+debt; the `non_ret_stub` row's own stated resolution ("should move to a non-stub
+file or ride misc.asm's promotion") is exactly what happened. Retiring them is a
+maintainer action: agents may not edit that registry.
+
 **Correction (2026-08-02):** the paragraph above previously quoted the
 allowlist's header as a standing `"DRAFT (Session H 2026-07-07)... Flagged for
 user review"` note and cited counts of 56 `relocated_files` / 261

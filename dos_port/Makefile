@@ -592,11 +592,13 @@ ITEMS_SRCS := \
 # NOTE: this list is CHECK-ONLY (assembled by `make check`, not linked). The faithful
 # battle loop (core.asm, FRONTEND_SRCS) needs only a curated subset of it, and that
 # subset has been MOVED to FRONTEND_SRCS (decrement_pp, animations); the deeper closures
-# here (effects + all move_effects, residual_damage, trainer_ai, misc/InitList, names,
+# here (effects + all move_effects, residual_damage, trainer_ai, names,
 # read_trainer_party) still depend on deferred predefs/UI/text and are stubbed at
-# link time by core_stubs.asm (JumpMoveEffect / HandlePoisonBurnLeechSeed / TrainerAI /
-# FormatMovesString). Every file here still assembles (make check) and the pure-math
+# link time by core_stubs.asm (JumpMoveEffect / HandlePoisonBurnLeechSeed /
+# TrainerAI). Every file here still assembles (make check) and the pure-math
 # routines are native-ELF-harness validated.
+# (misc.asm / InitList / FormatMovesString were dropped from those two lists
+# 2026-08-13: misc.asm now LINKS and its FormatMovesString stand-in is retired.)
 # misc.asm PROMOTED to FRONTEND_SRCS 2026-08-13 (Stage-7 retirement sweep). Two
 # claims had to fall first, both measured: core_stubs.asm's "GetName/names.asm is
 # not yet link-ready (TrainerNames is undefined)" is FALSE (TrainerNames resolves

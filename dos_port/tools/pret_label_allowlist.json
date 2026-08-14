@@ -1,36 +1,26 @@
 {
-  "_comment": [
-    "Sidecar allowlist for update_label_db / lint_pret_labels (fidelity plan Stage 2.1).",
-    "relocated_files / relocated_labels are a LEGACY-DEBT inventory, not permission or precedent. NEW RELOCATIONS ARE FORBIDDEN.",
-    "Every pret counterpart belongs at dos_port/src/<pret path>; move legacy entries back to their mirrors when touched.",
-    "structural_findings records audited legacy violations as OPEN debt, never precedent or authority for new work.",
-    "Agents may not add entries or edit either category to make their own lint failure pass; registry edits may only retire/reclassify debt and the exact file hash is approved outside the worktree.",
-    "suppress: linter suppressions [{rule, key, why}].",
-    "Legacy entries began as a 2026-07-07 full-tree inventory and remain subject to structural audit."
-  ],
-  "structural_findings": {},
-  "relocated_files": {},
-  "relocated_labels": {},
-  "suppress": [
-    {
-      "rule": "non_ret_stub",
-      "key": "DisplayPCMainMenu",
-      "why": "documented DEVIATION integration stub: arms menu vars (wMaxMenuItem etc.) so PCMainMenu dispatch runs on defined state — minimal contract, no box draw"
-    },
-    {
-      "rule": "non_ret_stub",
-      "key": "FormatMovesString",
-      "why": "DECISION-FOR-USER (Session H): full faithful body lives in core_stubs.asm because misc.asm is check-only and its GetName dep isn't link-ready; should move to a non-stub file or ride misc.asm's promotion"
-    },
-    {
-      "rule": "dup_def",
-      "key": "FormatMovesString",
-      "why": "known interim: core_stubs.asm body is linked; misc.asm's is check-only (BATTLE_SRCS). Resolve with the non_ret_stub decision above"
-    },
-    {
-      "rule": "dup_def",
-      "key": "StartSlotMachine",
-      "why": "known interim (overworld-events Stage 3): hidden_object_stubs.asm ret-stub is linked (a HiddenEventMaps handler for Game Corner slot tiles); the real body in engine/slots/game_corner_slots.asm is unlisted (in no Makefile SRCS list). Delete the stub when game_corner_slots.asm is promoted to a linked list (Stage 5 Celadon)"
-    }
-  ]
+ "_comment": [
+  "Sidecar allowlist for update_label_db / lint_pret_labels (fidelity plan Stage 2.1).",
+  "relocated_files / relocated_labels are a LEGACY-DEBT inventory, not permission or precedent. NEW RELOCATIONS ARE FORBIDDEN.",
+  "Every pret counterpart belongs at dos_port/src/<pret path>; move legacy entries back to their mirrors when touched.",
+  "structural_findings records audited legacy violations as OPEN debt, never precedent or authority for new work.",
+  "Agents may not add entries or edit either category to make their own lint failure pass; registry edits may only retire/reclassify debt and the exact file hash is approved outside the worktree.",
+  "suppress: linter suppressions [{rule, key, why}].",
+  "Legacy entries began as a 2026-07-07 full-tree inventory and remain subject to structural audit."
+ ],
+ "structural_findings": {},
+ "relocated_files": {},
+ "relocated_labels": {},
+ "suppress": [
+  {
+   "rule": "non_ret_stub",
+   "key": "DisplayPCMainMenu",
+   "why": "documented DEVIATION integration stub: arms menu vars (wMaxMenuItem etc.) so PCMainMenu dispatch runs on defined state \u2014 minimal contract, no box draw"
+  },
+  {
+   "rule": "dup_def",
+   "key": "StartSlotMachine",
+   "why": "known interim (overworld-events Stage 3): hidden_object_stubs.asm ret-stub is linked (a HiddenEventMaps handler for Game Corner slot tiles); the real body in engine/slots/game_corner_slots.asm is unlisted (in no Makefile SRCS list). Delete the stub when game_corner_slots.asm is promoted to a linked list (Stage 5 Celadon)"
+  }
+ ]
 }
