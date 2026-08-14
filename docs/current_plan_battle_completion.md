@@ -738,6 +738,51 @@ result gates deliberately stop after initialization and drive one terminal turn.
         UNCONDITIONALLY** (`trainer_ai.asm:607`, a bare `jmp`). The other two —
         Cooltrainer-F (`:647`) and `AgathaAI` (`:754`) — gate on
         `AICheckIfHPBelowFraction` first.
+
+      **⚠ THE TWO BULLETS ABOVE ARE WRONG, AND THEY ARE WRONG IN BOTH
+      DIRECTIONS — MEASURED 2026-08-14. Do not build on them.** The class that
+      is RNG-free is the one this note dismissed, and the class it promoted as
+      "unconditional" is the one carrying the roll.
+      * **`JugglerAI` IS ROLL-GATED.** Port `trainer_ai.asm:604-607` reads
+        `cmp al, PERCENT_25 / jnc .done / jmp AISwitchIfEnoughMons`, and pret
+        is identical (`cp 25 percent + 1 / ret nc / jp AISwitchIfEnoughMons`).
+        Line 607 IS a bare `jmp` — but only because the two lines above it did
+        the branching. Reading the jump without its guard is how this note came
+        to claim there is "NO roll anywhere on the decision".
+      * **`TrainerAI` ITSELF ENDS IN `call Random / jp hl`** (pret
+        `trainer_ai.asm:325-326`), which is where that `A` comes from. Every AI
+        class is entered with a fresh random byte, so "no roll on the decision"
+        could not have been true of any of them without checking the entry gate.
+      * **`CooltrainerFAI` IS THE RNG-FREE ONE, by a documented Gen-1 bug.**
+        pret writes `cp 25 percent + 1` with the following `ret nc`
+        **commented out** ("The intended 25% chance to consider switching will
+        not apply"), so the compare result is discarded and the class always
+        proceeds. The port preserves this faithfully and annotates it —
+        `BUG{class=data-model}` at `trainer_ai.asm:633`, `; jnc .done <-- 
+        intentionally omitted`. Surveyed all 18 AI classes: it is the ONLY one
+        whose entry is not `cp <threshold> / ret nc` (`GenericAI` just returns).
+      * **So the deterministic route is COOLTRAINER_F, and its gate is PINNABLE
+        STATE rather than a roll.** After the discarded compare it runs
+        `ld a, 10 / AICheckIfHPBelowFraction / jp c, AIUseHyperPotion` and then
+        `ld a, 5 / AICheckIfHPBelowFraction / ret nc / jp AISwitchIfEnoughMons`.
+        `AICheckIfHPBelowFraction` divides `wEnemyMonMaxHP` by A and compares
+        `wEnemyMonHP` against the quotient (port `:787-805`), so the switch
+        needs enemy HP in the band **maxHP/10 <= HP < maxHP/5** — below 1/5 so
+        the second check carries, but NOT below 1/10 or it reaches for a Hyper
+        Potion instead. That is exactly the kind of pin `battle_low_hp` already
+        does on the player side, and it costs no RNG alignment.
+      * **This also changes the harness bill, downward.** The box below says a
+        witness needs a trainer-entry helper written from scratch because
+        `battle.lua` exposes only `enter_wild`. But `wTrainerClass` is a pinnable
+        byte like `wBattleType`, and `trainer_battle_init` / `trainer_battle_route`
+        already reach a REAL trainer battle through the Route 3 sight script —
+        so the roster comes from real trainer data and no enemy-party seeder is
+        needed. **What still must be checked before building:** `TrainerAI`
+        requires `wAICount != 0`, and that byte is loaded from the ORIGINAL
+        class in `ReadTrainer`, so pinning `wTrainerClass` alone may leave it
+        zero; pin both, on both sides. Also confirm the chosen Route 3 trainer
+        has two or more unfainted mons, since `AISwitchIfEnoughMons` needs
+        `cp 2 / jp nc`.
       * `TrainerAI`'s INVOCATION is not random-gated either (pret
         trainer_ai.asm:290-318): it needs `wIsInBattle == 2`, not a link battle,
         the enemy not locked (CHARGING_UP / THRASHING_ABOUT / STORING_ENERGY /
