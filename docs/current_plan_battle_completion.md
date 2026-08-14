@@ -2005,20 +2005,27 @@ provider shapes below, not their runtime behavior.
         animation — both hypotheses show Marowak under that text. Deciding it
         needs a finer instrument than a frame dump every 40 frames, and the
         goldens cannot help: they photograph after send-out, long past it.
-      * **MEASURED 2026-08-14, and it CORRECTS the claim below.** With
-        `MarowakAnim` finally executing (`battle_ghost_unveil`), an in-routine
-        probe sampled `spr_oam_valid` — the count the compositor actually draws
-        — at each of its `Delay3`/`DelayFrames` points: **9 samples, entered
-        once, max 4**. So OBJ publishing is NOT identically zero during the
-        animation, and "the records draw nothing" is **false as a blanket
-        statement**. But 4 is nowhere near 36, so the animation's own sprite set
-        is plainly not being published either — the honest reading is that
-        something publishes a handful of OBJ across the window while
-        `MarowakAnim`'s 36 records do not reach the screen as a set.
-        **Two earlier probe attempts read 0 and were VACUOUS** — sampling from
-        `AutoKeyDrive` never fired inside the routine (0 frames with the bracket
-        open, caught only because the probe carried a positive control). A zero
-        from that instrument proves nothing; sample inside the routine.
+      * **MEASURED 2026-08-14, and the claim below is CONFIRMED — after I
+        briefly and wrongly "corrected" it.** With `MarowakAnim` finally
+        executing (`battle_ghost_unveil`), an in-routine probe sampled
+        `spr_oam_valid` — the count the compositor actually draws — at each of
+        its `Delay3`/`DelayFrames` points. Final numbers: entered once, **9
+        samples, value at ENTRY 4, MAX during 4, and 5 of the 9 samples DIFFER
+        from the entry value.** Since the max never exceeds what the routine
+        INHERITED, and the value only ever moves downward (its own
+        `ClearSprites`), **`MarowakAnim` publishes no OBJ of its own** — the 4
+        was already there when it started. The note below stands.
+        **THE MEASUREMENT TOOK THREE ATTEMPTS AND TWO OF THEM LIED:**
+        1. Sampling from `AutoKeyDrive` read 0 — VACUOUS: the hook never fires
+           inside the routine (0 frames with the bracket open). Caught only
+           because the probe counted its own firings.
+        2. An in-routine probe using `$+9` short jumps read max 4 with **0
+           samples** — the jumps skipped the counter. That reading is what
+           produced the "false as written" verdict, which was wrong: 4 was
+           simply the entry value, unmeasured.
+        3. Proper labels plus an entry-value comparison gave the numbers above.
+        Rules banked: a probe that can only report zero must count its own
+        firings, and a max is meaningless without the value it started from.
       * The 36 OAM records go to `wShadowOAM` exactly as pret writes them, and
         on this port that DRAWS NOTHING without a `PublishProjectedOAM` — whose
         projection OFFSET is a property of the screen that owns the canvas, and
