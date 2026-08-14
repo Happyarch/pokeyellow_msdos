@@ -2222,16 +2222,52 @@ provider shapes below, not their runtime behavior.
           `battle_menu` fail on exactly 2 tilemap cells (the cursor cells), so
           the scenario observes them and its PASS means the normal path is
           untouched.
-- [ ] Add one must-hit scenario per battle type, comparing the relevant menu,
+- [x] Add one must-hit scenario per battle type, comparing the relevant menu,
       WRAM state, item/event result, and exit. Add live traversal only when its
       owning overworld story batch lands.
-      - **WHAT IS LEFT IN THIS BOX, as of 2026-08-14: `BATTLE_TYPE_RUN` ONLY.**
-        The menu half is covered for all four reachable types, and the
-        result/exit half is now covered for all three that have one —
-        `battle_oldman_result` (79), `battle_pikachu_result` (80) and
-        `battle_safari_result` (81); NORMAL was measured already-covered by
-        `ball_catch` + `battle_faint`. `BATTLE_TYPE_RUN` remains blocked on
-        cross-emulator staging (below), not on implementation.
+      - **CLOSED 2026-08-14. ALL FIVE TYPES NOW HAVE BOTH HALVES.**
+        | type | menu | result/exit |
+        |---|---|---|
+        | NORMAL (0) | `battle_menu` + the battle tier | `ball_catch` (20), `battle_faint` (33) |
+        | OLD_MAN (1) | `battle_oldman` (69) | `battle_oldman_result` (79) |
+        | SAFARI (2) | `battle_safari` (71) | `battle_safari_result` (81) |
+        | RUN (3) | `battle_run_type` (82) | `battle_run_type` (82) |
+        | PIKACHU (4) | `battle_pikachu` (70) | `battle_pikachu_result` (80) |
+      - **The `BATTLE_TYPE_RUN` blocker recorded below was a MISDIAGNOSIS, and
+        naming it precisely is the finding.** It read "blocked on cross-emulator
+        staging — a new mGBA entry method must set the type before StartBattle's
+        special-battle decision". Measured: the earlier attempt pinned
+        `wBattleAndStartSavedMenuItem`, but pret's `.handleUnusedBattle` reads
+        **`wCurrentMenuItem`** (`core.asm:2257`). The pin could never select
+        RUN, so the arm did exactly what pret does for every OTHER selection —
+        print "Hurry, get away!" and redraw the menu forever. It presented as a
+        staging failure and was a wrong-variable failure; ordinary key presses
+        fix it and no menu pin is needed at all.
+        * Two facts, read out of pret, made it buildable. **RUN reaches the SAME
+          loop as SAFARI** (`.checkAnyPartyAlive` sends it to `.specialBattle`,
+          which falls into `.displaySafariZoneBattleMenu` because `wBattleType`
+          is non-zero), so the port gate enters through the trampoline
+          `battle_safari_result` added — generalised to two consumers with a
+          `%define` helper, since NASM `%ifdef` has no OR. And **it is RNG-free**:
+          `TryRunningFromBattle` tests `cp BATTLE_TYPE_RUN / jp z, .canEscape`
+          before the speed comparison and before `Random`.
+        * Navigation from `core.asm:2215-2217`: `wCurrentMenuItem` is ROW plus 2
+          in the RIGHT COLUMN, so RUN is item 3 — DOWN then RIGHT.
+        * PASS: TILEMAP OK (360 cells), VRAM OK, OAM OK, WRAM OK (13 regions, 0
+          skipped); 68 masked hits, all three PRE-EXISTING shared families.
+          Measured on the port before any golden existed: tilemap row 17 reads
+          `86 AE B3 7F A0 B6 A0 B8 7F B2 A0 A5 A4 AB B8 E7` = "Got away safely!".
+        * **NON-VACUITY IS THE WEAKER NO-DUMP KIND, stated rather than dressed
+          up as a divergence count.** Changing `.handleUnusedBattle`'s compare
+          from 3 to 2 makes `goldencheck` fail with `no GBSTATE.BIN in image`.
+          That is correct here — breaking the arm means the port cannot reach
+          the landmark — and it is NOT the `goldencheck-timeout-looks-like-a-crash`
+          ambiguity, because the unsabotaged build of the same image dumps at
+          frame 5868 and the two builds differ by one immediate byte.
+        * **LIMITATION, recorded rather than glossed:** the scenario proves the
+          RUN arm is reached and escapes, but does NOT pin WHICH menu item
+          triggered it — `wCurrentMenuItem` is not a dumped region, so a port
+          that escaped on any item would also pass.
       - **FOUR OF FIVE TYPES NOW HAVE ONE (2026-08-12):** NORMAL (`battle_menu`
         and the rest of the battle tier), OLD_MAN (`battle_oldman`, id 69),
         SAFARI (`battle_safari`, id 71, RENDERED) and PIKACHU (`battle_pikachu`,
