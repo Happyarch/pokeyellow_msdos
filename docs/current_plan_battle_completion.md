@@ -1992,8 +1992,19 @@ provider shapes below, not their runtime behavior.
       **TWO THINGS DELIBERATELY NOT DONE, both stated in the source:**
       * `hAutoBGTransferEnabled` writes are faithful but INERT (the port retired
         pret's VBlank auto-transfer), so the BG ghost->Marowak swap is not
-        hidden the way the Game Boy hides it. That is a behavioural question for
-        whoever first puts this on screen.
+        hidden the way the Game Boy hides it. That was "a behavioural question
+        for whoever first puts this on screen" — **it is now on screen, and the
+        END STATE is verified: `battle_ghost_unveil` renders the real Marowak
+        with the correct nick and level, and the golden comparison is clean on
+        all four regions.**
+        **What is still NOT established, stated so nobody reads the above as
+        more than it is:** whether `MarowakAnim`'s 30-frame sprite flourish
+        renders at all. Frame-sampling the port at 400/440/480/540/600 cannot
+        separate "the animation ran" from "the swap happened early", because
+        `PrintText` leaves the UnveiledGhostText box on screen ACROSS the
+        animation — both hypotheses show Marowak under that text. Deciding it
+        needs a finer instrument than a frame dump every 40 frames, and the
+        goldens cannot help: they photograph after send-out, long past it.
       * The 36 OAM records go to `wShadowOAM` exactly as pret writes them, and
         on this port that DRAWS NOTHING without a `PublishProjectedOAM` — whose
         projection OFFSET is a property of the screen that owns the canvas, and
