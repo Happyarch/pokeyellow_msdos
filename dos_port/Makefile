@@ -1529,7 +1529,16 @@ ifdef DEBUG_FISH
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_FISH -D DEBUG_SEED_PARTY -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_FISH
-AUTOKEY_DUMP_FRAME ?= 2000
+# 2000 -> 1800 (2026-08-14, with the PrintBeginningBattleText wiring). This gate
+# photographs the bag OPEN with wCurOpponent armed and the battle NOT yet started
+# — golden_diff.py says so in its own entry. The faithful intro changed how this
+# flow's prompts consume the AUTOKEY_FISH train, and at 2000 the port had already
+# entered the battle: the ONLY divergence was wLetterPrintingDelayFlags $03 vs
+# $01, i.e. InitBattleCanvas' port-only BIT_FAST_TEXT_DELAY, with every other
+# field still matching. Measured: PASS at 1700 and at 1850, FAIL at 2000/2160/2300.
+# So this retimes the photograph back onto the instant the scenario documents,
+# rather than masking a field it was never meant to capture.
+AUTOKEY_DUMP_FRAME ?= 1800
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 

@@ -1940,7 +1940,14 @@ provider shapes below, not their runtime behavior.
           class `datastruct`, gate `DEBUG_BATTLE_OLDMAN`) and the
           `golden_diff.SCENARIOS` row, then `make assets` (the
           `GBSTATE_SCENARIO equ 69` row is generated from the manifest).
-- [~] **4c. Ghost Marowak — ANIMATION HALF DONE 2026-08-12. The rest of the box
+- [x] **4c. Ghost Marowak — CLOSED 2026-08-14. Both halves landed.** Ghost
+      identity (`07eb7f60b`) and the unveil wiring (this commit). The chain is
+      live end to end for the first time: `_InitBattleCommon` ->
+      `PrintBeginningBattleText` -> its `.isMarowak` arm -> `LoadEnemyMonData` ->
+      **`MarowakAnim`, which now has a caller** (`label_status --callers`
+      previously reported none). `fidelity-full` 81/81 with the faithful intro,
+      lint 0 in both modes, `static_gate` PASS.
+      *(original heading)* **ANIMATION HALF DONE 2026-08-12. The rest of the box
       is untouched.** `MarowakAnim` and `CopyMonPicFromBGToSpriteVRAM` are
       translated into the mirror `dos_port/src/engine/battle/ghost_marowak_anim.asm`
       and linked; both were `missing`, and every other callee was already

@@ -142,6 +142,7 @@ extern InitBattle                ; init_battle.asm — the pret wild/trainer dis
                                  ; The trainer oracles call it directly to stand in for
                                  ; OverworldLoop's wCurOpponent poll (Stage 1b).
 extern DrawBattleIntroBox
+extern PrintBeginningBattleText          ; engine/battle/common_text.asm — pret's one intro dispatcher
 extern SlidePlayerAndEnemySilhouettesOnScreen  ; core.asm — pret slide entry (LoadPlayerBackPic + slide)
 extern SlideBattlePicsIn
 extern DebugLoadEmbeddedEnemyFrontPic
@@ -2398,7 +2399,12 @@ RunBattleTest:
     ; chasing production twice already (the send-out and the special-battle
     ; intro), each time found only by a golden failure.
     call SlidePlayerAndEnemySilhouettesOnScreen
-    call DrawBattleIntroBox
+    ; STEP 2 of retiring this staging's duplication of production (2026-08-14):
+    ; production calls pret's one intro dispatcher here, so the staging does too.
+    ; It covers every battle type itself and draws the ball row via
+    ; DrawAllPokeballs, which is why the explicit DrawBattlePokeballs below went
+    ; with it. IT ALSO BLOCKS at the stream's own prompt — see autokey_script.
+    call PrintBeginningBattleText
     ; The enemy HUD must be drawn BEFORE the screen is saved: a special
     ; battle's menu opens with LoadScreenTilesFromBuffer1 (pret StartBattle
     ; .specialBattle), so anything drawn after the save is restored away.
@@ -2421,16 +2427,13 @@ RunBattleTest:
     ; entries (pokéballs hardware does not show) adrift.
     ;
     ; This mirrors production rather than inventing a third intro.
-    cmp byte [ebp + wBattleType], 0
-    jne .introStagingDone
-    call DrawBattlePokeballs
 .introStagingDone:
 %ifdef DEBUG_BATTLE_INTRO
-    ; Dump at the parked "Wild PIDGEY appeared!" prompt. The ▼ poke at GB
-    ; (16,18) = canvas (19,28) replicates the text engine's parked prompt
-    ; (the port box prints instantly, promptless). wBattleMon is NOT loaded
-    ; yet — the GB loads it at send-out, after this screen (golden: zeros).
-    mov byte [ebp + W_TILEMAP + (19 * 40 + 28)], 0xEE
+    ; Dump at the parked "Wild PIDGEY appeared!" prompt. wBattleMon is NOT
+    ; loaded yet — the GB loads it at send-out, after this screen (golden:
+    ; zeros). The ▼ poke that used to sit here MOVED to AutoKeyDrive's dump
+    ; instant (see the note there): PrintBeginningBattleText parks at its own
+    ; prompt, so nothing after the intro call runs any more.
     ; THE DUMP IS FRAME-DRIVEN, NOT INLINE (2026-08-13), and that is a
     ; PREREQUISITE, not a tidy-up. This block used to be
     ; `call DelayFrame / call DumpBackbuffer` — a dump the harness reaches by
@@ -5068,8 +5071,67 @@ AutoKeyDrive:
     pushad
     mov ecx, [autokey_frame]
     inc dword [autokey_frame]
+%ifdef DEBUG_BATTLE_GOLDEN
+%ifndef DEBUG_BATTLE_INTRO
+    ; ------------------------------------------------------------------
+    ; THE FAITHFUL INTRO COSTS FRAMES, SO SHIFT THE WHOLE AUTOKEY TIMELINE
+    ; (2026-08-14, with the PrintBeginningBattleText wiring).
+    ;
+    ; pret's intro TYPES its text and then PARKS at the stream's own prompt,
+    ; where the port's old DrawBattleIntroBox printed instantly and promptless.
+    ; That inserts a wait the battle gates' scripts were never written for, and
+    ; the damage is NOT "a press is missing" — every hand-tuned script
+    ; (AUTOKEY_BATTLE_SWITCH / _ITEM / _NEXTMON, AUTOKEY_SAFARI,
+    ; AUTOKEY_BATTLERUN, the AUTOKEY_APRESS train) is internally consistent but
+    ; now sits ~130 frames EARLY relative to the flow it drives. Measured:
+    ; battle_wrap came out 2 PP adrift (want $0E got $0C — the port executed
+    ; extra turns) precisely because its dense A train kept its old frames while
+    ; the flow moved later.
+    ;
+    ; So do it in ONE place instead of re-deriving twelve scripts: emit the
+    ; single A that dismisses the intro prompt, then run the rest of the
+    ; timeline — script frames AND AUTOKEY_DUMP_FRAME alike — against a counter
+    ; shifted past it. Every existing script and every manifest dump frame keeps
+    ; its measured value and its internal alignment.
+    ;
+    ; ONE press, not a train: the battle menu comes up the instant the prompt is
+    ; dismissed, so a second A would select FIGHT and a third pick a move
+    ; (measured — a 20-frame train left battle_menu 21 cells adrift with the
+    ; whole FIGHT/ITEM/PKMN/RUN box missing).
+    ;
+    ; battle_intro is excluded because its subject IS the parked prompt.
+%ifndef AUTOKEY_BATTLE_INTRO_A
+%define AUTOKEY_BATTLE_INTRO_A 140
+%endif
+%ifndef AUTOKEY_BATTLE_INTRO_SHIFT
+%define AUTOKEY_BATTLE_INTRO_SHIFT (AUTOKEY_BATTLE_INTRO_A + 20)
+%endif
+    mov byte [autokey_intro_press], 0
+    cmp ecx, AUTOKEY_BATTLE_INTRO_A
+    jb .introWindowDone
+    cmp ecx, AUTOKEY_BATTLE_INTRO_A + 8
+    ja .introWindowDone
+    mov byte [autokey_intro_press], 1   ; dismiss the intro's own prompt
+.introWindowDone:
+    sub ecx, AUTOKEY_BATTLE_INTRO_SHIFT ; the rest of the timeline starts here
+    jb .introOnly                       ; still inside the intro window
+%endif
+%endif
     cmp ecx, AUTOKEY_DUMP_FRAME
     jne .noDump
+%ifdef DEBUG_BATTLE_INTRO
+    ; THE ONE CELL THAT CANNOT BE COMPARED: the parked prompt's blinking ▼ at
+    ; GB (18,16) = canvas (19,28). Both sides blink it and both are ON at their
+    ; own dump instant, but the PHASE is unrelated — hardware spins
+    ; HandleDownArrowBlinkTiming inside JoypadLowSensitivity's busy-wait while
+    ; the port calls it once per frame on deliberately re-timed counters
+    ; (window.asm:457-467). This scenario has ALWAYS forced this cell; now that
+    ; the faithful intro really does park at its own prompt, the old inline poke
+    ; is unreachable and the force has to happen at the photograph. It pins
+    ; PHASE only — arrow, cell and erase are the port's own, and 359 of 360
+    ; cells are compared unforced.
+    mov byte [ebp + W_TILEMAP + (19 * 40 + 28)], 0xEE
+%endif
     call DumpBackbuffer                 ; FRAME.BIN, then exits
 .noDump:
 %ifdef DEBUG_BATTLE_AISWITCH
@@ -5497,7 +5559,22 @@ AutoKeyDrive:
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN, then exits
 .noNextMonDump:
 %endif
+%ifdef DEBUG_BATTLE_GOLDEN
+%ifndef DEBUG_BATTLE_INTRO
+.introOnly:                             ; inside the intro window: no dump, no script
+%endif
+%endif
     xor edx, edx                        ; DL = held mask for this frame
+%ifdef DEBUG_BATTLE_GOLDEN
+%ifndef DEBUG_BATTLE_INTRO
+    ; the intro-dismiss press recorded above (DL is only cleared here, so the
+    ; press cannot be OR'd in at the point it is decided)
+    cmp byte [autokey_intro_press], 0
+    je .noIntroPress
+    or dl, PAD_A
+.noIntroPress:
+%endif
+%endif
     lea esi, [autokey_script]
 .scan:
     mov eax, [esi]
@@ -5563,6 +5640,12 @@ AutoKeyDrive:
 
 section .data
 autokey_frame: dd 0
+%ifdef DEBUG_BATTLE_GOLDEN
+%ifndef DEBUG_BATTLE_INTRO
+; set for the frames of the intro-dismiss press window; applied where DL is built
+autokey_intro_press: db 0
+%endif
+%endif
 %ifdef DEBUG_BATTLE_AISWITCH
 ; Frames spent with wIsInBattle == 2. Gates the pin so the battle intro can
 ; finish unpinned, and (under AISWITCH_PROBE) places the mid-battle snapshot.
@@ -5598,7 +5681,9 @@ autokey_script:
     ; No presses, ever — the harness only wants AutoKeyDrive's AUTOKEY_DUMP_FRAME
     ; timer, so a screen that parks in its own key-wait loop (e.g. DEBUG_LISTMENU_QTY's
     ; DisplayChooseQuantityMenu) can be photographed mid-wait instead of run to a
-    ; DumpBackbuffer the routine never reaches.
+    ; DumpBackbuffer the routine never reaches. NOTE: the battle golden gates keep
+    ; this AND still get one A — AutoKeyDrive emits the intro-prompt dismiss
+    ; outside the script, then runs this timeline shifted past it.
     dd  -1,  -1, 0
 %elifdef AUTOKEY_SAFARI
     ; battle_safari_result: drive the SAFARI menu to BAIT, which is the only

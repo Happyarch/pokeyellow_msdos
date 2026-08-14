@@ -65,6 +65,10 @@ section .data
 ; _InitBattleCommon tail.
 global saved_ow_view_ptr               ; also written by DoBattleTransitionAndInitBattleVariables (core.asm)
 saved_ow_view_ptr: dw 0
+; pret pushes wLetterPrintingDelayFlags in InitBattleCommon and pops it at the end
+; of _InitBattleCommon; the port's flow is collapsed across routines, so the saved
+; byte lives here rather than on the stack.
+saved_letter_printing_delay: db 0
 
 section .text
 
@@ -101,6 +105,7 @@ extern EnemySendOutFirstMon           ; engine/battle/core.asm — select/reset 
 extern LoadFrontSpriteByMonIndex         ; src/home/pokemon.asm — enemy front pic (generic)
 extern LoadMonFrontSprite                ; src/home/pics.asm — VRAM decode only (EDX=dest, EAX=dex-1 or wMonHFrontSprite handle)
 extern IsGhostBattle                     ; engine/battle/core.asm — ZF=1 -> disguised ghost
+extern PrintBeginningBattleText           ; engine/battle/common_text.asm — pret's one intro dispatcher (all battle types)
 extern HasMonFainted                  ; engine/battle/core.asm — ZF=1 → fainted
 extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit, BH=action
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — build wBattleMon* + stat mods
@@ -320,7 +325,16 @@ InitBattleCanvas:
     ; delay is enabled ONLY while a dialog MESSAGE prints (like TextCommandProcessor) —
     ; PlaceString/WidePlaceString call PrintLetterDelay unconditionally, so with the bit
     ; off here the menus/HUD/boxes type out instantly; only messages reveal char-by-char.
+    ; SAVE IT FIRST — pret does (`ld hl, wLetterPrintingDelayFlags / ld a,[hl] /
+    ; push af`, init_battle.asm:28) and RESTORES it at the end of
+    ; _InitBattleCommon (`pop af / ld [wLetterPrintingDelayFlags], a`, :133).
+    ; The port modified the flag and never put it back, so the battle's config
+    ; LEAKED into everything after the battle. Measured 2026-08-14 by
+    ; fish_old_rod, whose dump reads wLetterPrintingDelayFlags $03 against
+    ; hardware's $01 — the extra bit is exactly this routine's port-only
+    ; BIT_FAST_TEXT_DELAY, still set long after the battle ended.
     mov al, [ebp + W_LETTER_PRINTING_DELAY]
+    mov [saved_letter_printing_delay], al
     or  al, (1 << BIT_FAST_TEXT_DELAY)
     and al, (~(1 << BIT_TEXT_DELAY)) & 0xFF
     mov [ebp + W_LETTER_PRINTING_DELAY], al
@@ -508,17 +522,18 @@ _InitBattleCommon:
     ; That routine's first act is `call LoadPlayerBackPic`, so the pair the port
     ; used to open-code here is now behind pret's own entry point.
     call SlidePlayerAndEnemySilhouettesOnScreen
-    cmp byte [ebp + wIsInBattle], 2
-    jne .drawWildIntro
-    ; DEVIATION{class=temporary; pret=engine/battle/common_text.asm:PrintBeginningBattleText; behavior=trainer initialization draws a blank dialog surface before the party-ball rows instead of the class-specific wants-to-fight stream; evidence=PrintBeginningBattleText is TRANSLATED as of 2026-08-13 in the mirror engine/battle/common_text.asm but is NOT YET CALLED - wiring it means reconciling two different intro sequences because pret reaches it from the SlidePlayerAndEnemySilhouettesOnScreen tail and then runs an empty-string print plus a SaveScreenTilesToBuffer1 and ClearScreen dance where the port runs DrawBattleIntroBox then SaveBattleScreen then DrawBattlePokeballs then WaitForAPress - and its DrawAllPokeballs callee was missing until 337a2b0ab which retired the pokeballs forked-name debt so that callee is now translated and this evidence clause is corrected 2026-08-14; lifetime=retire together with PrintBeginningBattleText whose remaining blocker is the SaveBattleScreen ordering reconciliation not a missing routine, tracked in battle plan 4c}
-    call DrawEmptyDialogBox
-    jmp .introDrawn
-.drawWildIntro:
-    call DrawBattleIntroBox                      ; box + "Wild <nick> appeared!"
-.introDrawn:
+    ; The wild/trainer split that used to be here is GONE: the routine below IS
+    ; pret's dispatcher (`ld a,[wIsInBattle] / dec a / jr nz,.trainerBattle` are
+    ; its first three instructions, and `.wildBattle` skips the ball row itself
+    ; for any nonzero wBattleType). Branching first decided the same thing twice.
+    ; pret reaches it from the SlidePlayerAndEnemySilhouettesOnScreen tail
+    ; (`jp PrintBeginningBattleText`), so this call sits where that tail lands.
+    ; It retires DrawBattleIntroBox / DrawEmptyDialogBox and the separate
+    ; DrawBattlePokeballs + WaitForAPress: it draws the ball row via
+    ; DrawAllPokeballs and its stream ENDS IN ITS OWN PROMPT, which is what
+    ; WaitForAPress was standing in for.
+    call PrintBeginningBattleText
     call SaveBattleScreen                        ; snapshot for menu re-entry
-    call DrawBattlePokeballs                      ; party-status ball row
-    call WaitForAPress
     call HideBattlePokeballs
     cmp byte [ebp + wIsInBattle], 2
     jne .enemyFrontReady
@@ -575,6 +590,10 @@ _InitBattleCommon:
     ;     one place a battle's centered box could otherwise outlive the battle. ---
     mov dword [text_row_stride], 20
     mov dword [text_msgbox], msgbox_dialog
+    ; pret _InitBattleCommon:133 — `pop af / ld [wLetterPrintingDelayFlags], a`.
+    ; Paired with the save in InitBattleCanvas; see the note there.
+    mov al, [saved_letter_printing_delay]
+    mov [ebp + W_LETTER_PRINTING_DELAY], al
     stc                                          ; pret _InitBattleCommon: scf
     ret
 
@@ -587,7 +606,9 @@ _InitBattleCommon:
     ; same pret entry point as the main path above; LoadPlayerBackPic inside it
     ; is the wBattleType dispatch that picks the PROF.OAK / OLD MAN back pic.
     call SlidePlayerAndEnemySilhouettesOnScreen
-    call DrawBattleIntroBox            ; wild-style "Wild PIKACHU appeared!"
+    ; Same pret dispatcher as the normal arm; it draws no ball row for a nonzero
+    ; wBattleType, which is why this arm needed a stand-in before.
+    call PrintBeginningBattleText      ; wild-style "Wild PIKACHU appeared!"
     ; pret _InitBattleCommon (init_battle.asm) draws the enemy HUD here for a WILD
     ; battle (wIsInBattle==1) — and BATTLE_TYPE_PIKACHU / OLD_MAN are wild — while
     ; DisplayBattleMenu skips DrawHUDsAndHPBars for wBattleType!=0. Drawing it before
