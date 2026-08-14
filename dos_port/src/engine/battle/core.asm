@@ -319,6 +319,8 @@ extern GetHealthBarColor               ; home/palettes.asm — DL = HP pixels, E
 extern SetPal_Battle                   ; engine/gfx/palettes.asm — publish both HP-bar slots
 extern PlacePlayerHUDTiles             ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern PlaceEnemyHUDTiles              ; draw_hud_pokeball_gfx.asm (pret mirror)
+extern UpdateCGBPal_OBP0               ; src/home/cgb_palettes.asm — arms g_pal_dirty
+extern UpdateCGBPal_OBP1               ; src/home/cgb_palettes.asm — arms g_pal_dirty
 extern PrintStatusConditionNotFainted  ; home/pokemon.asm -> PrintStatusAilment
 extern ClearScreenArea                 ; home/copy2.asm — BH rows x BL cols of blanks at ESI
 extern PrintLevel                      ; home/pokemon.asm — ':L' + wLoadedMonLevel at ESI
@@ -5554,8 +5556,29 @@ ReplaceFaintedEnemyMon:
     mov esi, wEnemyHPBarColor                      ; ld hl, wEnemyHPBarColor
     mov dl, 0x30                                   ; ld e, $30 — full bar
     call GetBattleHealthBarColor
-    ; TODO-HW: OBP palettes (ldpal/rOBP0), DrawEnemyPokeballs.
-    ; TODO-HW: link-battle LinkBattleExchangeData → LINKBATTLE_RUN → ret z (EnemyRan).
+    ; pret :905-909 — the OBP half of that TODO-HW was STALE and is retired
+    ; 2026-08-14. rOBP0/rOBP1 are NOT a hardware boundary in this port: a write
+    ; to [ebp + IO_OBP*] IS the whole effect, because commit_palette (boot/
+    ; video.asm) runs from DelayFrame and early-outs unless one of the three DMG
+    ; palette registers changed — which is exactly how the whole battle-animation
+    ; flash family is translated. UpdateCGBPal_OBP0/1 are translated and linked.
+    ; pret's `ldpal a, SHADE_BLACK, SHADE_DARK, SHADE_LIGHT, SHADE_WHITE` packs
+    ; (3<<6)|(2<<4)|(1<<2)|0 = $E4, the identity sprite palette DrawBattlePokeballs
+    ; already writes by that name.
+    mov al, 0xE4                                   ; ldpal a, BLACK,DARK,LIGHT,WHITE
+    mov [ebp + IO_OBP0], al                        ; ldh [rOBP0], a
+    mov [ebp + IO_OBP1], al                        ; ldh [rOBP1], a
+    call UpdateCGBPal_OBP0
+    call UpdateCGBPal_OBP1
+    ; STILL DROPPED, and each for its own reason rather than one blanket TODO:
+    ;   * DrawEnemyPokeballs — now translatable (every callee took its pret name
+    ;     in 337a2b0ab) but NOT yet wired, because pret reaches the screen through
+    ;     a shadow-OAM DMA this port deliberately skips while a ball row is up;
+    ;     wiring it needs the PrepareStaticOAM publish DrawBattlePokeballs
+    ;     carries, and that is a HAL decision, not a translation.
+    ;   * LinkBattleExchangeData / LINKBATTLE_RUN → EnemyRan — link battle,
+    ;     TODO-HW: network HAL (Phase 4).
+    ;   * LoadScreenTilesFromBuffer1 — on the link arm only, same reason.
     call EnemySendOut
     mov byte [ebp + wEnemyMoveNum], 0
     mov byte [ebp + wActionResultOrTookBattleTurn], 0
