@@ -2517,11 +2517,33 @@ provider shapes below, not their runtime behavior.
         source. It is a restructure of the collapsed `_InitBattleCommon` with
         blast radius across every battle scenario, so it deserves its own box
         and its own `fidelity-full`.
+      * **THIRD PASS 2026-08-14: the ordering defect it found is FIXED
+        (`1c179f09d`, `fidelity-full` 81/81), and the scenario is now EIGHT
+        TILEMAP CELLS from registering — WRAM, VRAM and OAM all compare CLEAN.**
+        The port renders the whole post-send-out screen correctly: GHOST :L30
+        with its HP bar, SNORLAX 362/362, and the action menu.
+      * **What those 8 cells are, decomposed:**
+        1. **Six at GB (2,4)-(2,9): the F-19 enemy-gauge clones** (`want $6B`,
+           `got $C8`) — the sanctioned divergence eight other battle scenarios
+           already cover with the shared `_BATTLE_TILEMAP_MASKS_MENU` family,
+           now owned by the CGB colour plan's Stage 5. Registering this scenario
+           means REUSING that existing family, not inventing a mask.
+        2. **Two at GB (11,0) and (11,8): a REAL, newly-found divergence.** The
+           port writes the player HUD's lower-left triangle (`$6F`,
+           `PlayerBattleHUDGraphicsTiles`) where hardware leaves spaces.
+           **The 2-cell shape is itself the diagnosis:** `PlaceHUDTiles` lays a
+           uniform run of `$76` between a corner tile and the triangle, and
+           shifting such a run by one cell changes ONLY its two endpoints — so
+           this is an off-by-one in the player HUD's projected anchor
+           (`W_TILEMAP + P_FRAME_CONN + SCREEN_WIDTH` against pret's
+           `hlcoord 18, 10`), not a stray write. Same family as
+           `regression-battle-second-battle-hud-tile-band`, which is what the
+           projected anchor exists to avoid.
       * **The registry is rolled back to 81 and `validate_scenarios` is
-        consistent** — no red scenario is left in the suite, twice now. The port
-        gate and the `.lua` stay: both are proven, and the remaining work is in
-        production code, not in them. **This is the witness doing its job — it
-        found a real defect before it could pass.**
+        consistent** — no red scenario left in the suite. The port gate and the
+        `.lua` stay: both are proven, and what remains is one production
+        off-by-one plus reusing an existing mask family. **This is the witness
+        doing its job — it has now found two real defects, and fixed one.**
 
 - [x] **Restore pret's send-out ORDER — DONE 2026-08-14. `fidelity-full` 81/81.**
       The player send-out block (first-alive scan, `wPlayerMonNumber`, the two
