@@ -5054,8 +5054,11 @@ RunStoneTest:
 %endif
 %ifdef AISWITCH_PROBE
 %ifndef AISWITCH_PROBE_FRAME
-%define AISWITCH_PROBE_FRAME 900         ; ~15 s of battle: several turns in
+%define AISWITCH_PROBE_FRAME 2400        ; well past the pin delay below
 %endif
+%endif
+%ifndef AISWITCH_PIN_DELAY
+%define AISWITCH_PIN_DELAY 900           ; in-battle frames to let the intro finish
 %endif
 %ifndef AK_WALK_BASE
 %define AK_WALK_BASE 9000               ; AUTOKEY_ROUTE_WALK post-battle walk start
@@ -5102,6 +5105,15 @@ AutoKeyDrive:
     ; ------------------------------------------------------------------
     cmp byte [ebp + wIsInBattle], 2
     jne .noAiSwitch
+    inc dword [aiswitch_battle_frames]      ; ticks in BOTH builds, before the check
+    ; *** THE PIN MUST NOT RUN DURING THE INTRO. *** MEASURED: pinning from the
+    ; first in-battle frame leaves MainInBattleLoop NEVER ENTERED (marker bit5
+    ; clear over a whole run), so the turn loop never starts and the AI is never
+    ; consulted. Rewriting wEnemyMonHP/MaxHP every frame while the intro is still
+    ; drawing means anything that animates toward a target HP cannot converge.
+    ; Let the battle settle first, then pin.
+    cmp dword [aiswitch_battle_frames], AISWITCH_PIN_DELAY
+    jb .noAiSwitch
     mov byte [ebp + wTrainerClass], OPP_COOLTRAINER_F - OPP_ID_OFFSET
     ; *** THE ENEMY MUST SURVIVE THE PLAYER'S HIT, and that is not a detail —
     ; it is the whole reason maxHP is pinned rather than left real. MEASURED:
@@ -5130,6 +5142,24 @@ AutoKeyDrive:
     dec eax                                 ; the largest HP strictly below maxHP/5
     mov [ebp + wEnemyMonHP], ah
     mov [ebp + wEnemyMonHP + 1], al
+%ifdef AISWITCH_PROBE
+    ; MID-BATTLE SNAPSHOT, not a landmark. The partyPos latch cannot answer "why
+    ; was the AI never consulted" — it never fires, so the only dump that lands
+    ; is the underlying trainer-route gate's, at a moment when the battle may
+    ; already be over. Count frames spent in the battle and photograph one well
+    ; after several turns have passed, so wEnemyBattleStatus1/2 and wLinkState
+    ; are read while TrainerAI would be being called.
+    ; NON-VACUITY BIT for the marker mechanism itself. This block provably runs
+    ; (the snapshot dump fires from it), so bit7 MUST come back set. Without it a
+    ; pAIMarks of 0 is ambiguous between "the AI never ran" and "the probe is
+    ; broken" — a flat .data byte read through gbregion_flat has several ways to
+    ; silently read back zero.
+    or byte [aiswitch_marks], 1<<7
+    cmp dword [aiswitch_battle_frames], AISWITCH_PROBE_FRAME
+    jne .noAiSwitchProbeDump
+    call DebugDumpMemory
+.noAiSwitchProbeDump:
+%endif
     ; LATCH — and it must require a COMPLETED switch, not merely a changed byte.
     ; MEASURED, AND THE FIRST READING OF THIS WAS WRONG. `wEnemyMonPartyPos != 0`
     ; alone fires on a transient $FF, which I first read as SwitchEnemyMon
@@ -5154,25 +5184,6 @@ AutoKeyDrive:
     movzx eax, byte [ebp + wEnemyMonPartyPos]
     test eax, eax
     jz .noAiSwitch
-%ifdef AISWITCH_PROBE
-    ; MID-BATTLE SNAPSHOT, not a landmark. The partyPos latch cannot answer "why
-    ; was the AI never consulted" — it never fires, so the only dump that lands
-    ; is the underlying trainer-route gate's, at a moment when the battle may
-    ; already be over. Count frames spent in the battle and photograph one well
-    ; after several turns have passed, so wEnemyBattleStatus1/2 and wLinkState
-    ; are read while TrainerAI would be being called.
-    ; NON-VACUITY BIT for the marker mechanism itself. This block provably runs
-    ; (the snapshot dump fires from it), so bit7 MUST come back set. Without it a
-    ; pAIMarks of 0 is ambiguous between "the AI never ran" and "the probe is
-    ; broken" — a flat .data byte read through gbregion_flat has several ways to
-    ; silently read back zero.
-    or byte [aiswitch_marks], 1<<7
-    inc dword [aiswitch_battle_frames]
-    cmp dword [aiswitch_battle_frames], AISWITCH_PROBE_FRAME
-    jne .noAiSwitchProbeDump
-    call DebugDumpMemory
-.noAiSwitchProbeDump:
-%endif
     ; The $FF must be rejected in BOTH modes. MEASURED: it is battle
     ; INITIALIZATION, not a switch — at that instant wAICount is still the $FF
     ; sentinel, wWhichPokemon is 0 and wEnemyMonNick is all zeroes.
@@ -5566,10 +5577,12 @@ AutoKeyDrive:
 
 section .data
 autokey_frame: dd 0
-%ifdef AISWITCH_PROBE
-; battle plan 1e probe: frames spent with wIsInBattle == 2, so the snapshot can
-; land mid-battle rather than at whatever moment the trainer-route gate dumps.
+%ifdef DEBUG_BATTLE_AISWITCH
+; Frames spent with wIsInBattle == 2. Gates the pin so the battle intro can
+; finish unpinned, and (under AISWITCH_PROBE) places the mid-battle snapshot.
 aiswitch_battle_frames: dd 0
+%endif
+%ifdef AISWITCH_PROBE
 global aiswitch_marks
 aiswitch_marks: db 0
 %endif
