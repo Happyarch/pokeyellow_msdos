@@ -271,7 +271,6 @@ YellowIntroScene1:
 ; In: AL = palette to publish (1 to set, 0 to clear). All registers preserved.
 ; ---------------------------------------------------------------------------
 YellowIntro_PublishGraphicAttr:
-YellowIntro_PublishGraphicAttr:
     pushad
     mov bl, al                          ; palette value
     mov edx, 0x90                       ; first row's base tile id
