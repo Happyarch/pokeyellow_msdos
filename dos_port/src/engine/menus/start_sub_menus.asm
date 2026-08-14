@@ -778,11 +778,15 @@ DrawTrainerInfo:
     mov dword [text_row_stride], TCSCR_W        ; port: this screen owns the stride-20 scratch
     ; ld de, RedPicFront / lb bc, BANK, $01 / predef DisplayPicCenteredOrUpperRight
     ; — display Red's front pic upper-right (c=$01).
-    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=use the caller-specific TrainerInfo_DisplayPlayerPic helper instead of missing DisplayPicCenteredOrUpperRight; evidence=project_state reports DisplayPicCenteredOrUpperRight missing; lifetime=until the shared picture predef is ported}
-    ; DisplayPicCenteredOrUpperRight is not translated
-    ; (label DB: missing). TrainerInfo_DisplayPlayerPic below does the c=$01 half of it
-    ; for this one caller — see its header for the pic path and the column clamp. Retire
-    ; it when the predef lands: this call becomes the predef with de/bc as pret sets them.
+    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=use the caller-specific TrainerInfo_DisplayPlayerPic helper instead of the shared DisplayPicCenteredOrUpperRight predef; evidence=the predef is now translated at engine/movie/oak_speech/oak_speech.asm:439 so the original missing-label evidence is FALSE as of 2026-08-14, but it has zero port callers and switching this one over changes what the trainer_card golden photographs which makes it a witnessed change rather than a comment fix; lifetime=retire by routing this call through the predef with de and bc as pret sets them and re-gating trainer_card}
+    ; *** THE EVIDENCE ABOVE WAS FALSE AND IS CORRECTED 2026-08-14. *** This said
+    ; "DisplayPicCenteredOrUpperRight is not translated (label DB: missing)".
+    ; label_status reports it TRANSLATED, defined at
+    ; src/engine/movie/oak_speech/oak_speech.asm:439 with 0 port callers — so the
+    ; lifetime condition ("until the shared picture predef is ported") is MET and
+    ; only the retirement itself is outstanding. That retirement is NOT a comment
+    ; fix: trainer_card is a golden scenario, so switching this call must be
+    ; measured, not assumed.
     call TrainerInfo_DisplayPlayerPic
     call DisableLCD
     ; hlcoord 0,2 / ' ' vline ; hlcoord 1,2 / ' ' vline — blank the two columns the

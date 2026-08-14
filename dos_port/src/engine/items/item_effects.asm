@@ -14,8 +14,14 @@
 ;
 ; Register map: a=AL, b=BH, c=BL, hl=ESI, de=EDX. GB memory at [EBP+addr].
 ;
-; DEFERRED: Func_d85d (ItemUseEvoStone applicability check) is NOT translated
-; here. It walks EvosMovesPointerTable + FarCopyData to test whether the used
+; *** THE 'DEFERRED' NOTE THAT STOOD HERE WAS FALSE, corrected 2026-08-14. ***
+; It read "DEFERRED: Func_d85d (ItemUseEvoStone applicability check) is NOT
+; translated here." — while Func_d85d is DEFINED IN THIS FILE at line 2906 and
+; label_status reports it `translated` with one port caller. The paragraph below
+; is kept because its DESCRIPTION of the flat-addressing problem is still the
+; reason the routine looks the way it does; only the not-translated claim was
+; wrong.
+; Func_d85d (ItemUseEvoStone applicability check): It walks EvosMovesPointerTable + FarCopyData to test whether the used
 ; stone evolves the selected mon, but the DOS port stores EvosMovesPointerTable
 ; with its own flat addressing (see src/engine/pokemon/evos_moves.asm) — the
 ; pret `add hl,bc` twice / copy-2-bytes-as-a-16-bit-pointer logic does not carry
