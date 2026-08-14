@@ -3653,7 +3653,14 @@ LoadEnemyMonData:
     test al, 1 << TRANSFORMED
     mov esi, wTransformedEnemyMonOriginalDVs
     mov al, [ebp + esi]                 ; a = orig DV byte 1
-    inc esi
+    ; FLAG PRESERVATION, and this WAS the defect: `inc esi` writes ZF, so the
+    ; `jnz` below read the INCREMENT's result instead of the TRANSFORMED test.
+    ; ESI is a WRAM address and never zero, so ZF was always clear, the branch
+    ; was ALWAYS taken, and every enemy mon got its DVs from
+    ; wTransformedEnemyMonOriginalDVs — zero in an ordinary battle. pret's
+    ; `ld a,[hli]` / `ld b,[hl]` are flag-neutral on SM83, which is why the
+    ; sequence works there. `lea` is the flag-neutral x86 equivalent.
+    lea esi, [esi + 1]
     mov bh, [ebp + esi]                 ; b = orig DV byte 2
     jnz .storeDVs                       ; transformed → keep original DVs
     mov al, [ebp + wIsInBattle]
