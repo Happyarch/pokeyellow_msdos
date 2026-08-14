@@ -4358,9 +4358,33 @@ enemy-gauge clone tile ids and VRAM slots.
           `FormatMovesString` has three callers — `MoveSelectionMenu`,
           `TryingToLearn`, `StatusScreen2` — and two are gated by tilemap-
           comparing scenarios, `move_selection` and `status_p2`, both PASSing.
-- [ ] Run targeted scenarios, the core tier, `fidelity-full`, and
+- [x] Run targeted scenarios, the core tier, `fidelity-full`, and
       `goldens-verify` when scenario/golden artifacts changed. Close or transfer
       every battle-owned mask/finding with explicit evidence.
+      - **ALL FOUR RAN GREEN ON THIS TREE, 2026-08-14, and each is decomposed
+        rather than quoted as a total** — a bare "0 differences" is the aggregate
+        this plan's preamble forbids:
+        * **targeted:** `goldencheck battle_safari_result` and
+          `goldencheck battle_run_type`, each PASS on its first check, each with
+          a named non-vacuity probe (49 unmasked tilemap divergences; a no-dump
+          failure).
+        * **core tier:** `reported=16/16 nonzero=0`.
+        * **`fidelity-full`:** `reported=80/80 nonzero=0`. Reported per
+          `pgate`'s gap check, which is the part that matters — a scenario that
+          never runs emits neither PASS nor FAIL, and this run's `reported`
+          count equals the registry count.
+        * **`goldens-verify`:** exit 0, **81 goldens regenerated and compared,
+          81 dumps written, 0 `differs`**. The log carries 85 headers, and the
+          4 without a dump are `battle_palette_trace`, `item_palette_trace`,
+          `oak_palette_trace` and `title_trace` — `*_trace` recorders that have
+          no committed golden and are skipped by design, NOT silent failures.
+          Both goldens added this session are in the compared set
+          (`battle_run_type` at log line 252, `battle_safari_result` at 274).
+      - **The mask half of this box is "transfer", and the inventory below IS
+        that transfer**: every battle-owned mask names the condition that
+        retires it, and none is closable today. No mask was added this session —
+        the two new scenarios reuse the three pre-existing shared families
+        verbatim.
       - **MASK INVENTORY, MEASURED 2026-08-14 (enumerated from `golden_diff.py`,
         not recalled).** 76 scenario entries, 27 battle-ish. There are exactly
         THREE shared mask families plus SEVEN per-scenario masks, and **none is
@@ -4384,6 +4408,33 @@ enemy-gauge clone tile ids and VRAM slots.
 - [ ] Archive only when `project_state --plans` reports no open checklist items
       here and the default game can enter, play, and exit all in-scope battle
       types through their owning live routes.
+      - **THE PLAN'S TERMINAL STATE, as of 2026-08-14 — and it needs a
+        maintainer decision, not more work here.** With box 2225 and the gates
+        box closed, the ONLY thing standing between this plan and archival is
+        **6e**, and 6e is blocked on the CGB per-cell BG attribute plane, which
+        is another plan's Stage 1 and lives OUTSIDE this repo (maintainer-
+        confirmed). 6e's own text already says "Nothing in this box should be
+        attempted here."
+      - So this condition, as written, can never be met from inside this plan:
+        archival waits on zero open items, and one open item waits on work that
+        is deliberately not in this repository. The two ways out are both the
+        maintainer's call:
+        1. **Transfer 6e** to the CGB colour plan that owns its blocker, leaving
+           this plan archivable now; or
+        2. **Keep 6e here** and accept that this plan stays open as the holder
+           of the F-19 mask retirement until that plan's Stage 1 lands.
+        Option 1 is the one consistent with how this plan has handled every
+        other cross-plan tail (`battle_transitions`, `battle_animations` were
+        both archived with their open tails transferred by name), but moving a
+        box between plans is not a change an agent should make unilaterally.
+      - The second clause — "the default game can enter, play, and exit all
+        in-scope battle types through their owning live routes" — is **NOT
+        satisfied by the scenario work and must not be read as satisfied by
+        it.** Every battle type now has golden coverage, but four of the five
+        are reached through `RunBattleTest`'s synthetic staging, not through a
+        live overworld route. `trainer_battle_route` (51) is the only live-route
+        battle in the suite. This clause is about playing the game, and it wants
+        a human at the controls.
 
 ## Fidelity and acceptance
 
