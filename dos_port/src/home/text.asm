@@ -1263,7 +1263,18 @@ TextCommandProcessor:
     movzx eax, byte [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
     je .cmd_wait_btn                    ; in battle: no arrow (fall to WAIT_BUTTON path)
-    call manual_text_scroll             ; shows ▼, blinks it, waits for A/B, erases it
+    ; text_pause, NOT manual_text_scroll: the ▼ + wait must go through the
+    ; [text_prompt_hook] dispatch so it lands on the ACTIVE msgbox projection.
+    ; manual_text_scroll is the overworld display specifically — it writes the
+    ; arrow into GB_TILEMAP1 and hijacks the dialog WINDOW — so on the battle
+    ; canvas (msgbox_centered, no window, box drawn straight into W_TILEMAP) it
+    ; put the arrow in a buffer nothing on screen reads and opened the overworld
+    ; dialog window over the battle. That is the same defect text_pause's own
+    ; header records; it was fixed for <PROMPT>/<CONT>/<PARA> and this command
+    ; was missed. MEASURED 2026-08-14: with PrintBeginningBattleText wired,
+    ; battle_intro's LAST divergence was exactly the ▼ cell at GB (18,16),
+    ; want $EE got $7F.
+    call text_pause                     ; shows ▼, blinks it, waits for A/B, erases it
     jmp .next_cmd
 
 ; --- TX_WAIT_BUTTON ($0D): wait for A/B, NO arrow. Pret ref: TextCommand_WAIT_BUTTON. ---

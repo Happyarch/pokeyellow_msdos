@@ -2135,8 +2135,50 @@ provider shapes below, not their runtime behavior.
          `("ghost_nick", ["GHOST", [0x50]])` — the same shape as `intro_line1`.
          Hand-encoding charmap bytes in a `.asm` is this project's
          most-repeated violation, so it must go through the generator.
-      2. **The unveil sequence — what makes `MarowakAnim` REACHABLE. TRACED
-         2026-08-12 to a bigger, already-owned blocker.** The unveil arm is not
+      2. **The unveil sequence — MEASURED END TO END 2026-08-14. It is now ONE
+         CELL from converging, and the measurement found two real production
+         defects on the way.**
+         * **The recipe, so the next attempt does not re-derive it.** Wiring
+           production's `_InitBattleCommon` is NOT witnessable: every
+           `RunBattleTest` scenario calls `DrawBattleIntroBox` from the harness
+           staging (`debug_dump.asm:2401`), not from production. Patching
+           production alone gave FOUR VACUOUS PASSES (`battle_intro`,
+           `battle_menu`, `move_selection`, `battle_safari` all green while
+           executing none of the change). The witnessable site is the staging
+           call itself. `tools/goldencheck.sh` now honours
+           `GOLDENCHECK_EXTRA_FLAGS`, which is how the gated build was measured.
+         * **Defect 1 — the message-box projection. FIXED.** The port's
+           `PrintText` republishes geometry from `[text_msgbox]` on EVERY call,
+           so `PrintBeginningBattleText`'s bare `PrintText` drew the box wherever
+           the last printer left the record: **115 unmasked divergences, the
+           dialog border painted over the enemy front pic at rows 4-5 with the
+           pic cells blank.** It now publishes `msgbox_centered` first, under a
+           `DEVIATION{class=projection}` — the same wrapper `PrintBattleText` and
+           `PrintEmptyString` already use. 115 -> 1.
+         * **Defect 2 — `TX_PROMPT_BUTTON` bypassed the prompt dispatch. FIXED.**
+           `.cmd_prompt_btn` called `manual_text_scroll` directly instead of
+           `text_pause`. `manual_text_scroll` IS the overworld display — it writes
+           the arrow into `GB_TILEMAP1` and hijacks the dialog WINDOW — so on the
+           battle canvas it put the arrow in a buffer nothing on screen reads and
+           opened the overworld window over the battle. That is the exact defect
+           `text_pause`'s own header records; it had been fixed for
+           `<PROMPT>`/`<CONT>`/`<PARA>` and this one command was missed. Both
+           fixes are correct with the wiring still OFF and are landed separately.
+         * **WHAT REMAINS IS ONE CELL: the `▼` at GB (18,16), want `$EE` got
+           `$7F`** — blink PHASE, not absence. The arrow cell is right
+           (`UI_DIALOG_ARROW_OFS` 788 = canvas row 19 col 28 = GB (18,16)) and
+           `BattlePromptWait` blinks it on a 20-frame half-period, while pret
+           spins `HandleDownArrowBlinkTiming` inside `JoypadLowSensitivity`'s
+           busy-wait — which is why `window.asm:457-467` deliberately re-timed
+           the port's counters. So the two sides' phases at their respective dump
+           instants are not related, and the harness has ALWAYS forced this cell
+           (the `$EE` poke at `debug_dump.asm`, justified as "the port box prints
+           instantly, promptless"). With the faithful path the intro BLOCKS, so
+           that poke is never reached — it has to move into the dump path, which
+           is the one remaining decision and is a harness question, not a
+           translation one. **Do not close it by adding a mask.**
+         *(original tracing, 2026-08-12, kept for the dependency chain)*
+         **TRACED 2026-08-12 to a bigger, already-owned blocker.** The unveil arm is not
          a standalone call site: it lives inside pret's
          `PrintBeginningBattleText` (`engine/battle/common_text.asm`, the
          `.isMarowak` arm at ~:65-76 —  `EnemyAppearedText` ->

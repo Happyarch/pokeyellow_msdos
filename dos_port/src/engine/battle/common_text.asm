@@ -59,6 +59,8 @@ PIKACRY_37  equ 36
 PIKACRY_11  equ 10
 
 extern PrintText                    ; src/home/window.asm — ESI = stream
+extern text_msgbox                  ; src/home/text.asm — active msgbox projection record
+extern msgbox_centered              ; engine/battle/core.asm — the battle dialog box geometry
 extern Multiply                     ; src/home/math.asm — hMultiplicand x hMultiplier
 extern Divide                       ; src/home/math.asm — hDividend / hDivisor, BH = bytes
 extern _PlayerMon2Text              ; assets/battle_text.inc (generated Tier-1 intro)
@@ -206,6 +208,8 @@ PrintComeBackText:
 ; DrawAllPokeballs directly would compose the row and never publish it.
 ; ---------------------------------------------------------------------------
 PrintBeginningBattleText:
+    ; DEVIATION{class=projection; pret=engine/battle/common_text.asm:PrintBeginningBattleText; behavior=publishes the battle message-box geometry before the first PrintText where pret publishes nothing; evidence=pret's box id is fixed at MESSAGE_BOX inside DisplayTextBoxID while the port's PrintText republishes geometry from text_msgbox on EVERY call so a bare PrintText draws wherever the last printer left the record - measured 2026-08-14 as 115 unmasked battle_intro divergences with the dialog border drawn over the enemy front pic at rows 4-5 and the pic cells blank - and this is the same wrapper the rest of the battle text uses see PrintBattleText and PrintEmptyString in core.asm; lifetime=until PrintText takes its geometry from a battle-scoped record instead of a global}
+    mov dword [text_msgbox], msgbox_centered
     mov al, [ebp + wIsInBattle]
     dec al
     jnz .trainerBattle                   ; jr nz

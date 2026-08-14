@@ -12,7 +12,7 @@ SCENARIO="${1:?usage: goldencheck.sh <scenario>}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"   # dos_port/
 cd "$HERE"
 
-FLAGS="$(python3 tools/golden_diff.py "$SCENARIO" --flags)"
+FLAGS="$(python3 tools/golden_diff.py "$SCENARIO" --flags) ${GOLDENCHECK_EXTRA_FLAGS:-}"
 
 SCRATCH="${TMPDIR:-/tmp}/goldencheck.$$"
 mkdir -p "$SCRATCH"
