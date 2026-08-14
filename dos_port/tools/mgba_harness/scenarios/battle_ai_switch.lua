@@ -77,7 +77,6 @@ local ROUTE3_EVENT_BYTE = 0xD7C2
 local ROUTE3_EVENT_MASK = 1 << 2
 local COOLTRAINER_F = 0x20      -- constants/trainer_constants.asm
 local PARTY_LENGTH = 6
-local SEED_DELAY = 300          -- in-battle frames: let the intro finish first
 
 -- Mirrors the port's DEBUG_BATTLE_AISWITCH gbregion list, joined by NAME. The
 -- enemy ROSTER is the addition no standard region covers, and it carries the
@@ -179,8 +178,17 @@ scenario.run(function()
 				emu:write8(cls, COOLTRAINER_F)         -- staging write 1, per frame
 			end)
 
-			if not seeded and battleFrames >= SEED_DELAY
-				and navigate.read8("wEnemyMonSpecies") ~= 0 then
+			-- SEED ON A STATE BOTH SIDES REACH IDENTICALLY, NOT ON A FRAME COUNT.
+			-- Measured: a frame delay does NOT align the emulators — this
+			-- script's A-tap cadence advances the battle faster than the port's
+			-- AUTOKEY_TRAINER_ROUTE, so at 300 in-battle frames the port still
+			-- had its first roster mon out while hardware had already fainted it
+			-- and sent the second, and the two sides seeded different mons.
+			-- wBattleMonSpecies becoming non-zero is the player send-out
+			-- completing: after all enemy loading, before the first turn, on both.
+			if not seeded
+				and navigate.read8("wEnemyMonSpecies") ~= 0
+				and navigate.read8("wBattleMonSpecies") ~= 0 then
 				local mb = scenario.read_range(maxhp, 2)
 				local m = mb:byte(1) * 256 + mb:byte(2)     -- big-endian
 				if m >= 5 then

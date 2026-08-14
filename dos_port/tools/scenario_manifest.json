@@ -2453,6 +2453,39 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "The LAST battle type in box 2225. BATTLE_TYPE_RUN is unused in the shipped game, so its arms were faithful but reachable by nothing. THE PLAN RECORDED THIS AS BLOCKED ON CROSS-EMULATOR STAGING AND THAT DIAGNOSIS WAS WRONG: the earlier attempt pinned wBattleAndStartSavedMenuItem, but pret's .handleUnusedBattle reads wCurrentMenuItem (core.asm:2257), so the pin never selected RUN and the arm did what pret says it does for every OTHER selection -- print \"Hurry, get away!\" and redraw the menu. Real key presses fix it and no menu pin is needed. NAVIGATION read out of pret: the battle menu builds wCurrentMenuItem as ROW plus 2 if in the RIGHT COLUMN (core.asm:2215-2217), so RUN is row 1 + column 2 = item 3, i.e. DOWN then RIGHT. IT IS RNG-FREE, which is what makes it comparable: TryRunningFromBattle tests `cp BATTLE_TYPE_RUN / jp z, .canEscape` BEFORE the speed comparison and before Random is called, so the run always succeeds. BATTLE_TYPE_RUN also reaches the SAME special-battle loop as SAFARI -- pret .checkAnyPartyAlive sends it to .specialBattle, which falls into .displaySafariZoneBattleMenu because wBattleType is non-zero -- so the port gate enters through the trampoline battle_safari_result added. LANDMARK is \"Got away safely!\" on the tilemap AND wIsInBattle back to 0: the text alone would catch the message mid-battle, while the port gate's call returns only after .battleFinished has run EndOfBattle, so both sides land POST-TEARDOWN."
+    },
+    {
+      "name": "battle_ai_switch",
+      "id": 83,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_AISWITCH=1 AUTOKEY_DUMP_FRAME=30000",
+      "port_entry_gate": "DEBUG_BATTLE_AISWITCH",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_ai_switch.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 600,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "MainInBattleLoop",
+        "TrainerAI",
+        "CooltrainerFAI",
+        "AISwitchIfEnoughMons",
+        "SwitchEnemyMon",
+        "EnemySendOut"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Battle plan 1e's witness: the trainer AI CHOOSING TO SWITCH. SwitchEnemyMon has exactly one caller (AISwitchIfEnoughMons) and until 2026-08-14 NOTHING in the suite reached it, which is why the 2026-08-11 defect -- the routine copied the withdrawn mon's HP back to the roster and NEVER SENT THE REPLACEMENT OUT -- could not have been caught by any gate then in existence. Entry is trainer_battle_route's real Route 3 sight battle against OPP_BUG_CATCHER party 4 (CATERPIE/WEEDLE/CATERPIE L10, three mons, over AISwitchIfEnoughMons' `cp 2`). TWO STAGING WRITES, deliberately asymmetric: wTrainerClass = COOLTRAINER_F every frame (safe, nothing animates toward it, and it is the ONLY RNG-free route to the switch because pret COMMENTED OUT the `ret nc` after that class's `cp 25 percent + 1`, so it alone ignores TrainerAI's Random byte); and wEnemyMonHP SEEDED ONCE into CooltrainerFAI's band maxHP/10 <= HP < maxHP/5, COMPUTED from the maxHP read, then never touched again. THE SEED MUST NOT BECOME A PER-FRAME PIN -- measured twice, a per-frame HP write stalls the flow SILENTLY because anything animating toward a target HP cannot converge. THE SEED FIRES ON A STATE, NOT A FRAME COUNT: wBattleMonSpecies becoming non-zero (the player send-out completing). A frame delay does NOT align the two emulators -- measured, the reference's A-tap cadence advances the battle faster than the port's AUTOKEY_TRAINER_ROUTE, so at a fixed delay the two sides seeded different mons. One seed suffices because the debug lead SNORLAX L80's move slot 0 is FLY, a TWO-TURN move: turn 1 is the charge, so the enemy survives to be consulted -- unlike trainer_battle_route this scenario must NOT select STRENGTH by name. LANDMARK: wEnemyMonPartyPos in 1..5, a replacement loaded, AND eRoster1HP NON-ZERO. The roster HP is what separates a SWITCH from a FAINT and leaving it out photographed the wrong event: the first golden caught WEEDLE at partyPos 1 with eRoster1HP 0000, the faint path, while the port had genuinely switched."
     }
   ],
   "disabled_scenarios": []

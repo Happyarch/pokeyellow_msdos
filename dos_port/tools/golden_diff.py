@@ -1233,6 +1233,36 @@ SCENARIOS = {
                   "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_ai_switch": {
+        # DATASTRUCT (wram only): what this witnesses is a WRAM transition — the
+        # enemy roster and the active-mon struct after the AI withdraws mon 0
+        # and sends out the replacement. The screen at that instant is mid-flow
+        # and timing-coupled, exactly as battle_wrap's is.
+        #
+        # The ONLY scenario that reaches SwitchEnemyMon.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_AISWITCH=1 AUTOKEY_DUMP_FRAME=30000",
+        "wram_skip": {
+            "wLoadedMon": "the HUD staging buffer, half-written at this dump: the "
+                          "landmark is a COMPLETED SwitchEnemyMon, which lands "
+                          "mid-send-out, and the two sides straddle the redraw. The "
+                          "compared evidence is wEnemyMon + eRoster1HP, not this.",
+        },
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: a SANCTIONED port-only "
+                         "mechanism, and this is the first scenario to dump MID-BATTLE "
+                         "while comparing this region. The compositor renders the "
+                         "overworld whenever the pointer is nonzero, so InitBattle "
+                         "SAVES it to saved_ow_view_ptr and ZEROES it "
+                         "(init_battle.asm:315-319), then .battleFinished restores it "
+                         "(:512). trainer_battle_route compares the same region and "
+                         "matches because it dumps AFTER the restore. Hardware keeps "
+                         "its overworld value ($93C7) throughout. Retires if the port "
+                         "ever renders battle without hijacking this pointer."),
+            ],
+        }),
+    },
     "battle_run_type": {
         # RENDERED: what BATTLE_TYPE_RUN produces is a screen — the battle menu
         # reached with wCurrentMenuItem 3, then "Got away safely!". The type is

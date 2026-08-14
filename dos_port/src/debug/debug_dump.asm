@@ -5129,8 +5129,15 @@ AutoKeyDrive:
     jne .aiSeedDone
     cmp byte [ebp + wEnemyMonSpecies], 0
     je .noAiSwitch                          ; enemy not loaded yet
-    cmp dword [aiswitch_battle_frames], AISWITCH_SEED_DELAY
-    jb .noAiSwitch                          ; let the intro finish first
+    ; SEED ON A STATE BOTH SIDES REACH IDENTICALLY, NOT ON A FRAME COUNT.
+    ; MEASURED: an in-battle frame delay does NOT align the two emulators — the
+    ; reference's A-tap cadence advances the battle faster than this gate's
+    ; AUTOKEY_TRAINER_ROUTE script, so at frame 300 the port still had its first
+    ; roster mon out while hardware had already fainted it and sent the second.
+    ; wBattleMonSpecies becoming non-zero is the player send-out completing,
+    ; which is after all enemy loading and before the first turn on BOTH sides.
+    cmp byte [ebp + wBattleMonSpecies], 0
+    je .noAiSwitch
     movzx eax, byte [ebp + wEnemyMonMaxHP]
     shl eax, 8
     mov al, [ebp + wEnemyMonMaxHP + 1]
