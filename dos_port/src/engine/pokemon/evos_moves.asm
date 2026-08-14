@@ -529,7 +529,12 @@ RenameEvolvedMon:
     mov al, [ebp + edi]
     inc edi
     cmp al, [ebp + esi]
-    inc esi
+    ; FLAG PRESERVATION: pret's `inc hl` is flag-neutral on SM83, so its
+    ; `jr nz, .return` reads the `cp`. `inc esi` writes ZF, and ESI is a WRAM
+    ; address that is never zero, so ZF was always clear and this branch was
+    ; ALWAYS TAKEN — every evolving mon read as "had a nickname" and its name
+    ; was never updated to the new species.
+    lea esi, [esi + 1]
     jne .return                     ; differs → had a nickname, keep it
     cmp al, 0x50                    ; charmap '@' = 0x50 terminator (NOT NASM ASCII 0x40)
     jne .compareNamesLoop           ; not terminator → keep comparing

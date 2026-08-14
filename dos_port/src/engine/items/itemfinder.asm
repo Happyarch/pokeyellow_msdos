@@ -30,8 +30,10 @@ HiddenItemNear:
     push bx
     push esi
     
-    ; UNVERIFIED (no harness until Stage 11 wires ITEMFINDER; this file is not yet
-    ; linked). Three mechanical bugs fixed 2026-07-12 alongside the evolution-path
+    ; UNVERIFIED by any scenario, but NOT unlinked — that half of this note was
+    ; stale and is corrected 2026-08-14: label_status reports HiddenItemNear with
+    ; one port caller, ItemUseItemfinder (item_effects.asm:1625), so this runs in
+    ; the shipped build. Three mechanical bugs fixed 2026-07-12 alongside the evolution-path
     ; repair, all of which would have made this silently read the wrong flag:
     ;   - the flag array went in EDI; FlagAction takes it in ESI (HL).
     ;   - FLAG_TEST is 2, not 1 (1 is FLAG_SET — this would have SET the flag).
@@ -51,11 +53,17 @@ HiddenItemNear:
     inc bh
     test ah, ah
     
-    inc esi
+    ; FLAG PRESERVATION: pret's `and a` sets ZF and its three `inc hl` are
+    ; FLAG-NEUTRAL on SM83 (16-bit inc writes no flags), so its `jr nz` reads the
+    ; flag test. `inc esi` DOES write ZF, and ESI here is a flat table address
+    ; that is never zero, so ZF was always clear and this branch was ALWAYS
+    ; TAKEN — every hidden item read as already-obtained and the Itemfinder
+    ; could never report one. `lea` is the flag-neutral x86 equivalent.
+    lea esi, [esi + 1]
     mov dh, byte [esi] ; d = [hl]
-    inc esi
+    lea esi, [esi + 1]
     mov dl, byte [esi] ; e = [hl]
-    inc esi
+    lea esi, [esi + 1]
     jnz .loop ; if item has already been obtained
     
     ; check if the item is within 4-5 tiles

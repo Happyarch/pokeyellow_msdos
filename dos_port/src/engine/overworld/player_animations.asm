@@ -527,7 +527,12 @@ InitFacingDirectionList:
 ; find the place in the list that matches the current facing direction
 .loop:
     cmp al, [ebp + esi]                       ; cp [hl]
-    inc esi                                    ; inc hl
+    ; FLAG PRESERVATION: pret's `inc hl` is flag-neutral on SM83, so its
+    ; `jr nz, .loop` reads the `cp`. `inc esi` writes ZF, and ESI is a WRAM
+    ; address that is never zero, so ZF was always clear and this branch was
+    ; ALWAYS TAKEN — the search for the current facing direction never
+    ; terminated and ran off the end of the list.
+    lea esi, [esi + 1]                         ; inc hl
     jne .loop
     dec esi                                    ; dec hl
     ret
