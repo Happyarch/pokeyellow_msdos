@@ -113,11 +113,111 @@ SURF_TILE_ROW     equ SURF_W * 8                ; 3072 B — one tile row of sur
 TILE_BLANK        equ 0x7F                      ; blank space tile (ClearScreen fill)
 
 ; ---------------------------------------------------------------------------
+; PER-CELL BG ATTRIBUTE LAYER (CGB plan Stage 5)
+;
+; tile_pal binds a palette to a TILE ID, which cannot express two cells drawing
+; the SAME id under different palettes. That has two live consumers: the battle
+; enemy HP gauge (worked around today by cloning the nine gauge patterns into
+; vFont ids $C0-$C8 — golden finding F-19) and the party menu's six HP bars (not
+; worked around at all — they are simply never coloured).
+;
+; This layer is the general fix: one attribute byte per SURFACE CELL, overriding
+; the tile-id binding for that cell alone.
+;
+; FORMAT — the FULL CGB BG attribute byte, deliberately, not just the palette
+; bits Yellow happens to use. A Gen 2 port needs bit 3 to select the tile PATTERN
+; bank, and widening the format later would mean re-opening these same
+; compositor_perf-governed hot loops a second time:
+;     bits 0-2  palette 0-7          IMPLEMENTED
+;     bit  3    tile pattern bank    RESERVED — see the Gen 2 note at TILE_CACHE_TILES
+;     bit  4    unused on CGB
+;     bit  5    X flip               IMPLEMENTED
+;     bit  6    Y flip               IMPLEMENTED
+;     bit  7    BG-over-OBJ priority RESERVED — render_bg has no OBJ ordering
+; Reserved bits are carried in the byte but not acted on. Nothing in Yellow sets
+; them (Stage 0 measured bits 3-7 zero across all 13 attribute tables), so
+; implementing them would ship an unwitnessed path.
+;
+; WHY AN OVERRIDE, and not "resolve every cell from a plane". tile_cache keeps
+; its baked tile_pal band, so render_sprites, decode_win_row8 and the steady-state
+; dirty-skip stay LITERALLY UNTOUCHED — which is what the compositor_perf
+; invariant protects. Only a cell carrying an override pays, and that path strips
+; the baked band (`and BG_ATTR_RAW_COLOR`) before OR-ing its own. Today that is
+; ~12 cells in the whole game. A Gen 2 port, where EVERY cell carries an
+; attribute, wants the other shape — an unbaked tile_cache with the attribute
+; applied at decode for all cells. That is a redesign, not a widening, and is
+; deliberately not built here.
+;
+; BG_ATTR_NONE is why bg_cell_attr lives in .data and not .bss: BSS zero-fill
+; would read as "palette 0 override" on every cell and strip the baked band
+; screen-wide.
+BG_ATTR_NONE      equ 0xFF                      ; this cell has no override
+BG_ATTR_PAL_MASK  equ 0x07                      ; bits 0-2
+BG_ATTR_BANK      equ 0x08                      ; bit 3 — RESERVED (Gen 2 tile bank)
+BG_ATTR_XFLIP     equ 0x20                      ; bit 5
+BG_ATTR_YFLIP     equ 0x40                      ; bit 6
+BG_ATTR_PRIORITY  equ 0x80                      ; bit 7 — RESERVED
+BG_ATTR_RAW_COLOR equ 0x03                      ; keeps the 2-bit GB colour, drops the band
+
+; PUBLISH_CELL_ATTR — hand decode_tile the attribute of the cell about to be
+; painted. %1 = the loop's surf_shadow cursor, %2 = its displacement to that cell
+; (0 in the force paths, -1 in the scan paths, where `repe cmpsb` has already
+; stepped past the mismatch). bg_cell_attr is indexed identically to surf_shadow,
+; so the cell index is just the cursor's offset into the shadow.
+;
+; UNCONDITIONAL on purpose — there is no "is the layer active" test. bg_cell_attr
+; reads BG_ATTR_NONE when nothing has published an override, so the inert case
+; costs one load and one store on a cell that was going to be re-decoded anyway,
+; and needs no second global to fall out of step with the plane itself.
+%macro PUBLISH_CELL_ATTR 2
+    push eax
+    lea eax, [%1 + %2]
+    sub eax, surf_shadow                        ; cursor → surface cell index
+    mov al, [bg_cell_attr + eax]
+    mov [decode_cell_attr], al
+    pop eax
+%endmacro
+
+; PUBLISH_CELL_ATTR_EAX — the same thing, but it CLOBBERS EAX instead of saving
+; it, so it must be placed BEFORE the loop loads the tile id into AL.
+;
+; This exists because the saving is measured, not cosmetic. The force paths
+; re-decode all 1728 cells, and the push/pop pair in the macro above cost a
+; REPRODUCIBLE +1.17 ms on those frames (two independent 300-frame captures
+; agreed to within 0.007 ms) — enough to push 2 more frames per 300 past the
+; deadline. The force paths can simply fetch the attribute first, so they do.
+; The scan paths keep the saving form: they touch only CHANGED cells, where the
+; per-cell cost is irrelevant and not disturbing a live EAX matters more.
+%macro PUBLISH_CELL_ATTR_EAX 1
+    mov eax, %1
+    sub eax, surf_shadow                        ; cursor → surface cell index
+    mov al, [bg_cell_attr + eax]
+    mov [decode_cell_attr], al
+%endmacro
+
+; ---------------------------------------------------------------------------
 ; DATA (initialized — must start "dirty" so the first frame builds the cache)
 ; ---------------------------------------------------------------------------
 section .data
 align 4
 g_tilecache_dirty: db 1     ; nonzero → render_bg rebuilds tile_cache this frame
+
+; --- per-cell BG attribute override plane (see the format block above) ---------
+; One byte per surface cell, parallel to surf_shadow and indexed identically.
+; BG_ATTR_NONE everywhere = the layer is inert and every decode takes the
+; untouched fast path. A publisher writes the cells it owns and MUST arm
+; surf_force, because the tile IDS are unchanged and the id shadow alone would
+; skip the re-decode.
+align 4
+global bg_cell_attr
+bg_cell_attr:
+    times SURF_CELLS db BG_ATTR_NONE
+
+; The attribute decode_tile should apply to the cell it is about to paint. The
+; surface decoders publish it per cell; decode_tile consumes it. Passing it in a
+; register was not possible without disturbing the scan loops' live cursors.
+align 4
+decode_cell_attr: db BG_ATTR_NONE
 
 ; --- bg_surface dirty-skip state (compositor-perf Stage 1b) --------------------
 ; bg_surface is a pure function of (tile id per cell, tile_cache, tiledata_mode),
@@ -670,6 +770,11 @@ decode_tile:
     push esi
     movzx eax, al
     mov esi, [id_cache_lut + eax*4]
+    ; Per-cell attribute override (CGB Stage 5). One compare against a .data byte
+    ; that is BG_ATTR_NONE on every cell of every screen that has no override —
+    ; i.e. all of them today except the battle gauge and the party HP bars.
+    cmp byte [decode_cell_attr], BG_ATTR_NONE
+    jne .attr
 %assign _row 0
 %rep 8
     mov eax, [esi + _row * 8]
@@ -679,6 +784,84 @@ decode_tile:
 %assign _row _row + 1
 %endrep
     pop esi
+    ret
+.attr:
+    call decode_tile_attr                  ; preserves everything (pushad)
+    pop esi
+    ret
+
+; ---------------------------------------------------------------------------
+; decode_tile_attr — paint one cell under a per-cell BG attribute override.
+;
+; In:  ESI = the cell's decoded tile in tile_cache (64 B), EDI = bg_surface dest,
+;      [decode_cell_attr] = the CGB attribute byte. All registers preserved.
+;
+; The cached tile already carries tile_pal's baked band (rebuild_tile_cache ORs
+; tile_pal[id] << 2 into every pixel), so this STRIPS that band back to the raw
+; 2-bit GB colour and ORs the cell's own palette in its place. Getting that
+; backwards would tint on top of a tint rather than replace it.
+;
+; Deliberately a per-BYTE loop rather than the fast path's dword copies: X flip
+; reverses the eight pixels of a row, and `bswap` — the obvious way to do that —
+; is a 486 instruction, while this port targets 386+. A per-byte loop is ~8x the
+; work of a dword copy and is the right trade here, because an override cell is
+; rare (about 12 in the whole game) and correctness on a 386 is not negotiable.
+;
+; EBP is the GB memory base and is NOT used as scratch here, even though pushad
+; would restore it.
+; ---------------------------------------------------------------------------
+decode_tile_attr:
+    pushad
+    movzx ebx, byte [decode_cell_attr]     ; BL = the attribute
+    mov edx, ebx
+    and edx, BG_ATTR_PAL_MASK
+    shl edx, 2                             ; DL = this cell's palette band (bits 2-4)
+    xor ecx, ecx                           ; ECX = destination row 0..7
+.row:
+    mov eax, ecx
+    test bl, BG_ATTR_YFLIP
+    jz .have_src_row
+    mov eax, 7
+    sub eax, ecx                           ; Y flip: read row 7-n for row n
+.have_src_row:
+    push esi
+    push edi
+    push ecx
+    lea esi, [esi + eax*8]                 ; source row (8 raw bytes)
+    imul eax, ecx, SURF_W
+    add edi, eax                           ; destination scanline
+    mov ecx, 8                             ; 8 pixels
+    test bl, BG_ATTR_XFLIP
+    jnz .xflip
+.fwd:
+    mov al, [esi]
+    and al, BG_ATTR_RAW_COLOR              ; drop tile_pal's baked band
+    or  al, dl                             ; apply this cell's palette
+    mov [edi], al
+    inc esi
+    inc edi
+    dec ecx
+    jnz .fwd
+    jmp .row_done
+.xflip:
+    add esi, 7                             ; walk the source row backwards
+.xf:
+    mov al, [esi]
+    and al, BG_ATTR_RAW_COLOR
+    or  al, dl
+    mov [edi], al
+    dec esi
+    inc edi
+    dec ecx
+    jnz .xf
+.row_done:
+    pop ecx
+    pop edi
+    pop esi
+    inc ecx
+    cmp ecx, 8
+    jb .row
+    popad
     ret
 
 ; ---------------------------------------------------------------------------
@@ -715,6 +898,7 @@ decode_surface_overworld:
     ; slot = [edi-1], and the cell's column is (width-1) - ECX.
     mov al, [esi - 1]
     mov [edi - 1], al
+    PUBLISH_CELL_ATTR edi, -1
     mov ebx, SURF_W_TILES - 1
     sub ebx, ecx
     push edi
@@ -739,6 +923,7 @@ decode_surface_overworld:
 .force_row:
     mov ecx, SURF_W_TILES
 .force_cell:
+    PUBLISH_CELL_ATTR_EAX edx              ; before the id load — it clobbers EAX
     mov al, [ebx]
     mov [edx], al
     inc ebx
@@ -789,6 +974,7 @@ decode_surface_flat:
     je .row_done
     mov al, [esi - 1]
     mov [edi - 1], al
+    PUBLISH_CELL_ATTR edi, -1
     mov ebx, SCREEN_TILES_W - 1
     sub ebx, ecx
     push edi
@@ -815,6 +1001,7 @@ decode_surface_flat:
 .force_row:
     xor ecx, ecx                           ; column
 .force_cell:
+    PUBLISH_CELL_ATTR_EAX edx              ; before the id resolution — clobbers EAX
     mov al, TILE_BLANK
     cmp dword [surf_row_ctr], SCREEN_TILES_H   ; row ≥ 25 → padding
     jae .have_id
@@ -822,7 +1009,7 @@ decode_surface_flat:
     jae .have_id
     mov al, [ebx + ecx]                    ; EBX = wTileMap row base (live rows only)
 .have_id:
-    mov [edx], al
+    mov [edx], al                          ; attribute already published at .force_cell
     inc edx
     call decode_tile                       ; EDI = dest, preserved
     add edi, 8
