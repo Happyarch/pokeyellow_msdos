@@ -2055,8 +2055,13 @@ provider shapes below, not their runtime behavior.
          `.isMarowak` arm at ~:65-76 —  `EnemyAppearedText` ->
          `UnveiledGhostText` -> `LoadEnemyMonData` -> `callfar MarowakAnim` ->
          `WildMonAppearedText`). The dependency chain, measured:
-         * **`PrintBeginningBattleText` is `label_status` MISSING** — the port
-           has no translation of it at all. What stands in its place is the
+         * ~~**`PrintBeginningBattleText` is `label_status` MISSING** — the port
+           has no translation of it at all.~~ **STALE, corrected 2026-08-14.**
+           It is `translated` (`src/engine/battle/common_text.asm`), faithdiff
+           **11 pret / 11 port, 10 matched**, stores 3/3, with **0 port
+           callers** — written but never wired. The blocker was never the
+           translation; see the two measured findings in
+           `battle-printbeginningbattletext-wiring-is-a-reconciliation`. What stands in its place is the
            ad-hoc intro in `init_battle.asm` (`DrawBattleIntroBox` /
            `DrawEmptyDialogBox`) under a `DEVIATION{class=temporary}`.
          * **That deviation's evidence clause was STALE and is corrected in the
@@ -2067,8 +2072,21 @@ provider shapes below, not their runtime behavior.
            `GhostCantBeIDdText`, `UnveiledGhostText`, `HookedMonAttackedText`).
            Its `lifetime=` also named Stage 1d, which is TICKED — a retirement
            condition that has already passed without the routine landing.
-         * **The real blocker is `DrawAllPokeballs`, and it is debt this plan
-           already owns.** It is `missing`; the ROUTINE half of pret
+         * ~~**The real blocker is `DrawAllPokeballs`**~~ — **RETIRED
+           2026-08-14 (`337a2b0ab`).** `DrawAllPokeballs` is `translated`, with
+           `SetupOwnPartyPokeballs` and `SetupEnemyPartyPokeballs` beside it,
+           all three faithdiff 3/3 calls matched. The five-step fork retirement
+           (`8a238be51`, `6ff7f160a`, `ae684a27e`, `72db8892b`, `337a2b0ab`)
+           landed with ZERO golden movement throughout, which is what the
+           separability argument predicted. **WHAT NOW BLOCKS THE WIRING IS
+           DESIGN, NOT A MISSING ROUTINE** — two measured findings: `battle_intro`
+           dumps INLINE and the faithful path parks at the text stream's prompt,
+           so it times out and needs a FRAME-BASED dump (and therefore a
+           regenerated golden); and `battle_safari` shows 132 blank tilemap
+           cells because the new path changes what is on screen when
+           `SaveBattleScreen` snapshots, which a special battle's menu then
+           restores. Reconciling that ordering is design work.
+           *(historical)* It was `missing`; the ROUTINE half of pret
            `engine/battle/draw_hud_pokeball_gfx.asm` (`DrawAllPokeballs`,
            `LoadPartyPokeballGfx`, `SetupPokeballs`, `PickPokeball`,
            `WritePokeballOAMData`, `PlaceHUDTiles`) lives in
