@@ -4806,11 +4806,20 @@ enemy-gauge clone tile ids and VRAM slots.
       - The second clause — "the default game can enter, play, and exit all
         in-scope battle types through their owning live routes" — is **NOT
         satisfied by the scenario work and must not be read as satisfied by
-        it.** Every battle type now has golden coverage, but four of the five
-        are reached through `RunBattleTest`'s synthetic staging, not through a
-        live overworld route. `trainer_battle_route` (51) is the only live-route
-        battle in the suite. This clause is about playing the game, and it wants
-        a human at the controls.
+        it.** Every battle type now has golden coverage, but most are reached
+        through `RunBattleTest`'s synthetic staging, not through a live
+        overworld route. This clause is about playing the game, and it wants a
+        human at the controls.
+      - **NARROWED 2026-08-14, and the old wording is corrected rather than left
+        standing.** This box used to say `trainer_battle_route` (51) is "the
+        only live-route battle in the suite". That is now false: `battle_ghost`
+        (84) also drives the real `OverworldLoop` into `NewBattle` ->
+        `InitBattle`, so there are TWO live-entry battles — one trainer, one
+        wild. **It does not satisfy the clause**, and should not be read as
+        doing so: `battle_ghost` SEEDS `wCurOpponent` where the real game sets
+        it from a map script, so it proves the entry PATH, not that a player can
+        reach it. The gap is now "a human plays each type" rather than "nothing
+        but staging exists".
 
 ## Fidelity and acceptance
 
