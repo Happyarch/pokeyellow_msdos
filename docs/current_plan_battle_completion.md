@@ -2339,12 +2339,39 @@ provider shapes below, not their runtime behavior.
             new flag, and let `_InitBattleCommon`'s `.specialBattleLoop` drive.
             In such a build every `EnemyRan` entry is the Safari one, so the
             landmark needs no discriminator.
-          * **What is still genuinely unknown, and must not be guessed:** the
-            AUTOKEY press sequence that selects a Safari menu item. The Safari
-            menu is interactive (unlike the tutorials' simulated input) and its
-            cursor columns differ from the normal menu's — `battle_safari` (71)
-            never presses anything, so no existing press table covers it.
-            Derive it from the rendered Safari menu before writing the gate.
+          * **THE PRESS GEOMETRY IS NOW MEASURED (2026-08-14), read off
+            `battle_safari`'s golden tilemap rather than guessed:**
+            ```
+            row 14 |?>BALL???.....BAIT.?|   cursor $ED at col 1 on open
+            row 16 |?.THROW.ROCK..RUN..?|
+            ```
+            So BALL is already selected and ONE `PAD_RIGHT` reaches BAIT.
+            **BAIT, NOT BALL, is the correct selection:** a Safari ball attempts
+            a CATCH, which is a roll, and a successful catch exits before the
+            flee tail ever runs. Bait takes the turn with no catch attempt, so
+            the speed-pinned `jc EnemyRan` is guaranteed to be the exit.
+          * **BUT THE BUILD IS BLOCKED ON HARNESS SHAPE — probed and reverted
+            2026-08-14, so this is measured, not predicted.** A full probe was
+            written (staging speed pin, an `AUTOKEY_SAFARI` table doing
+            RIGHT then A, and a checkpoint inside the production `EnemyRan`) and
+            it **TIMED OUT at 150 s with no dump at all**.
+            * **Cause: `DEBUG_BATTLE_SAFARI`'s gate body ends in a deliberate
+              infinite hang** — `call DisplayBattleMenu` then
+              `.goldensafarihang: call DelayFrame / jmp .goldensafarihang`. A
+              RESULT variant that defines that flag inherits the hang, so the
+              turn is never taken.
+            * **And the port's Safari tail is NOT reachable from a gate:** it
+              lives INSIDE `_InitBattleCommon` as the local
+              `.specialBattleLoop` (`init_battle.asm:566-602`), so a gate body
+              cannot call it. `RunBattleTest` does enter via `InitBattle`, but
+              by the time the gate body runs, control has already returned.
+            * **So the remaining work is a HARNESS question, not a scenario
+              one:** either the RESULT variant replaces the safari gate body
+              entirely with something that re-enters production's special-battle
+              loop, or `RunBattleTest` gains a path that lets that loop run to
+              its natural end. Settle that before rebuilding the probe — the
+              press table and the speed pin above are already correct and can be
+              lifted straight back in.
       - **PIKACHU DONE TOO — `battle_pikachu_result` (id 80), 2026-08-14.** The
         recipe applied cheaply: the gate is the OLD_MAN pattern with the
         65535-HP pin `%ifndef`'d out, the rename dump compiled out, the same
