@@ -2519,6 +2519,38 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "forced RESTLESS_SOUL opponent plus wCurEnemyLevel seeded on Route 1 (10,7) on both sides, then ONE live overworld step: NewBattle -> InitBattle -> InitOpponent -> InitWildBattle.isGhost. Photographed after send-out, state-gated on wBattleMonSpecies. The ONLY scenario entering through the live InitBattle rather than RunBattleTest staging, and the only witness of battle plan 4c's ghost identity - GhostPic through the SpecialMonPics handle, the GHOST nick, the MON_GHOST substitution"
+    },
+    {
+      "name": "battle_ghost_unveil",
+      "id": 85,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_UNVEIL=1 DEBUG_BATTLE_GHOST=1",
+      "port_entry_gate": "DEBUG_BATTLE_UNVEIL",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_ghost_unveil.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "PrintBeginningBattleText",
+        "LoadEnemyMonData",
+        "MarowakAnim"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the ghost UNVEIL: forced RESTLESS_SOUL plus wCurMap in POKEMON_TOWER_3F and the SILPH SCOPE in the bag on both sides, so PrintBeginningBattleText takes .isMarowak - EnemyAppearedText, UnveiledGhostText, a second LoadEnemyMonData, MarowakAnim, WildMonAppearedText. The ONLY execution of MarowakAnim, which had a caller but had never run. Landmark is the GHOST->MAROWAK nick TRANSITION, not the value"
     }
   ],
   "disabled_scenarios": []

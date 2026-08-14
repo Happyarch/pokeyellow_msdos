@@ -2445,6 +2445,39 @@ provider shapes below, not their runtime behavior.
 
       Golden determinism checked: two consecutive generations byte-identical.
 
+- [x] **Ghost UNVEIL golden — DONE 2026-08-14. `battle_ghost_unveil` (id 85)
+      PASSES, and it is the FIRST EXECUTION OF `MarowakAnim`.**
+      `MarowakAnim` gained a caller when `PrintBeginningBattleText` was wired
+      (`db4379620`) but had never run: its `.isMarowak` arm needs `wCurMap`
+      inside `POKEMON_TOWER_3F..7F` AND the SILPH SCOPE in the bag — two
+      conditions the ghost IDENTITY arm does not need. Both sides now seed them
+      and take the arm: `EnemyAppearedText` -> `UnveiledGhostText` -> a second
+      `LoadEnemyMonData` -> `MarowakAnim` -> `WildMonAppearedText`. Tilemap,
+      VRAM, OAM and WRAM all clean.
+      * **The landmark is the GHOST -> MAROWAK nick TRANSITION, not the value,
+        and that distinction was measured the hard way.** `LoadEnemyMonData`
+        names the enemy from its SPECIES first, so it is briefly MAROWAK
+        *before* `.isGhost` renames it GHOST. Waiting on "nick == MAROWAK"
+        alone reported "unveiled at frame 5066" against a battle that started at
+        5063 — a false witness of the exact kind the recipe warns about. With
+        GHOST required first it reports 5600.
+      * **`wCurMap` is seeded at the BATTLE EDGE, not in the overworld**, so the
+        loop never runs a Pokémon Tower map script against Route 1's loaded
+        data. The bag is safe to seed early.
+      * **The post-unveil re-convergence needed the real header.** The second
+        `LoadEnemyMonData` re-rolls DVs, so the spec overwrite fires twice; the
+        second fire must reload the mon header first, because by then
+        `.isGhost` has replaced it with the GHOST header (dims `$66` and a pic
+        handle, no base stats). Measured without it: HP 142 against the golden's
+        82, every stat adrift while the DVs matched.
+      * **Gate ordering:** `build_flags` carries TWO tokens
+        (`DEBUG_BATTLE_UNVEIL=1 DEBUG_BATTLE_GHOST=1`) because the registry
+        sorts by token count DESCENDING and this gate also defines
+        `DEBUG_BATTLE_GHOST` — with one token each it tied and the port stamped
+        scenario id 84 into this gate's dump.
+      * **Non-vacuity:** removing the SILPH SCOPE makes the run produce no dump
+        at all (`.isMarowak` never fires, so the state gate never opens).
+
 - [x] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
       divergence using the already-translated item-owned `ItemUseBait`,
       `ItemUseRock`, and `ItemUseBall` effects. Safari maps, steps, and story

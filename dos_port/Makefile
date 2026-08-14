@@ -944,6 +944,14 @@ endif
 # absent Silph Scope: those gate IsGhostBattle and the .isMarowak unveil arm, not
 # the identity. AUTOKEY_BATTLE_GHOST presses the one DOWN; the dump is frame
 # based like battle_intro's because the faithful intro parks at its own prompt.
+# battle_ghost_unveil: the .isMarowak UNVEIL arm, which needs the tower map AND
+# the Silph Scope on top of the ghost gate's forced opponent. It is the only way
+# to execute MarowakAnim, which has a caller but has never run.
+ifdef DEBUG_BATTLE_UNVEIL
+DEBUG_BATTLE_GHOST := 1
+NASMFLAGS += -D DEBUG_BATTLE_UNVEIL
+endif
+
 ifdef DEBUG_BATTLE_GHOST
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_GHOST -D DEBUG_SEED_PARTY -D SKIP_TITLE

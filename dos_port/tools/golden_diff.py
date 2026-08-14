@@ -672,6 +672,29 @@ SCENARIOS = {
                   "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_ghost_unveil": {
+        # The ghost UNVEIL — the only execution of MarowakAnim, which had a
+        # caller (PrintBeginningBattleText's .isMarowak arm) but had never run.
+        # Needs TWO things battle_ghost does not: wCurMap inside
+        # POKEMON_TOWER_3F..7F and the SILPH SCOPE in the bag. Both sides seed
+        # the bag in the overworld and wCurMap at the battle edge — seeding the
+        # map earlier would run a tower script against Route 1's loaded data.
+        #
+        # LANDMARK IS THE GHOST->MAROWAK NICK TRANSITION, not the value:
+        # LoadEnemyMonData names the enemy from its SPECIES first, so it is
+        # briefly MAROWAK before .isGhost renames it GHOST. Waiting on the value
+        # alone fired 3 frames into the battle (measured) — a false witness.
+        # TWO tokens on purpose: the registry sorts gates by build_flags token
+        # count DESCENDING, and DEBUG_BATTLE_UNVEIL also defines
+        # DEBUG_BATTLE_GHOST. With one token each it tied with battle_ghost and
+        # the port stamped scenario id 84 into this gate's dump.
+        "flags": "DEBUG_BATTLE_UNVEIL=1 DEBUG_BATTLE_GHOST=1",
+        "window": (10, 3),
+        "oam_window": True,
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_intro": {
         # FRAME-DRIVEN since 2026-08-13. The dump was inline (fall-through), which
         # cannot photograph a blocking screen — and pret's intro box blocks on

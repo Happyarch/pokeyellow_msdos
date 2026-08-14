@@ -133,6 +133,9 @@ extern PrepareNewGameDebug
 %endif
 extern CalcStats                 ; home/move_mon.asm — stat recompute from the spec DVs
 extern CopyData                  ; home/copy.asm
+%ifdef DEBUG_BATTLE_UNVEIL
+extern GetMonHeader              ; src/home/pokemon.asm — real base stats for CalcStats
+%endif
 global RunGhostBattleTestSeed
 %endif
 %ifdef DEBUG_ITEMSTONE
@@ -1913,6 +1916,15 @@ section .text
 ; In: EBP = GB memory base.  Returns.
 ; ---------------------------------------------------------------------------
 GHOST_LEVEL equ 30                              ; pret's Pokemon Tower ghost Marowak
+%ifdef DEBUG_BATTLE_UNVEIL
+SILPH_SCOPE equ 0x48                            ; pret constants/item_constants.asm
+; POKEMON_TOWER_3F is $90 (assets/map_dims.inc; NOT %included here — same reason
+; BT_DEMO_DUNGEON_MAP and the CAVERN tileset id are defined locally). Leaving it
+; undefined does NOT fail loudly: NASM sizes the instruction differently across
+; passes and the file dies with "label changed during code generation" pointing
+; at AutoKeyDrive, nowhere near the real cause.
+%define UNVEIL_TOWER_MAP 0x90
+%endif
 RunGhostBattleTestSeed:
     cmp byte [ghost_battle_seeded], 0
     jne .alreadySeeded
@@ -1929,12 +1941,25 @@ RunGhostBattleTestSeed:
     ; 2026-08-14, the golden loaded a LEVEL-0 Marowak (HP 10, all stats 5)
     ; against the port's stale 34. Both sides seed the same value.
     mov byte [ebp + wCurEnemyLevel], GHOST_LEVEL
+%ifdef DEBUG_BATTLE_UNVEIL
+    ; The UNVEIL arm of PrintBeginningBattleText (.pokemonTower -> .isMarowak)
+    ; needs BOTH: wCurMap inside POKEMON_TOWER_3F..7F and the SILPH SCOPE in the
+    ; bag. Those are the two conditions the ghost-identity arm does NOT need —
+    ; it keys on wCurOpponent alone — which is why this is a separate gate.
+    ; The BAG is safe to seed here; wCurMap is NOT — see the in-battle hook.
+    mov byte [ebp + wNumBagItems], 1
+    mov byte [ebp + wBagItems], SILPH_SCOPE
+    mov byte [ebp + wBagItems + 1], 1        ; quantity
+    mov byte [ebp + wBagItems + 2], 0xFF     ; terminator
+%endif
 .alreadySeeded:
     ret
 
 section .bss
 ghost_battle_seeded: resb 1                     ; 0 = seed on first EnterMap only
 ghost_enemy_seeded:  resb 1                     ; 0 = spec-overwrite wEnemyMon once
+ghost_enemy_rearmed: resb 1                     ; unveil: 0 none, 1 re-armed, 2 done
+ghost_saw_ghost_nick: resb 1                    ; the GHOST rename was observed
 ghost_dump_frame:    resd 1                     ; in-battle frames since send-out
 ghost_press_a:       resb 1                     ; this frame's intro-dismiss pulse
 section .text
@@ -5376,13 +5401,60 @@ AutoKeyDrive:
     ;     DEBUG_BATTLE_GOLDEN staging does it, and the golden performs the
     ;     matching overwrite. wEnemyMonSpecies is zero until the loader runs, so
     ;     it doubles as the "loader has finished" gate.
+%ifdef DEBUG_BATTLE_UNVEIL
+    ; THE UNVEIL RELOADS THE ENEMY, so the spec overwrite must fire TWICE. The
+    ; .isMarowak arm calls LoadEnemyMonData a SECOND time (after UnveiledGhostText)
+    ; and that re-rolls the DVs, so a once-only latch leaves the compared mon
+    ; RNG-derived. Re-arm when the nick turns MAROWAK — the observable edge of
+    ; the reload, since the ghost battle carries species MAROWAK from the start
+    ; and only the NICK changes.
+    ; ⚠ THE TRANSITION, NOT THE VALUE. LoadEnemyMonData sets the nick from the
+    ; SPECIES first, so the enemy is briefly called MAROWAK *before*
+    ; InitWildBattle.isGhost renames it GHOST. Latching on "nick == MAROWAK"
+    ; alone therefore fires 3 frames into the battle, long before the unveil —
+    ; measured on the golden side, which reported "unveiled at frame 5066"
+    ; against a battle that started at 5063. Require GHOST to have been seen.
+    cmp byte [ebp + wEnemyMonNick], 0x86            ; 'G' — the ghost rename
+    jne .ghostNotGhostNick
+    mov byte [ghost_saw_ghost_nick], 1
+.ghostNotGhostNick:
+    cmp byte [ghost_saw_ghost_nick], 0
+    je .ghostNoRearm
+    cmp byte [ghost_enemy_seeded], 1
+    jne .ghostNoRearm
+    cmp byte [ebp + wEnemyMonNick], 0x8C            ; 'M' — MAROWAK again = unveiled
+    jne .ghostNoRearm
+    mov byte [ghost_enemy_seeded], 0                ; fire once more
+    mov byte [ghost_enemy_rearmed], 1
+.ghostNoRearm:
+    cmp byte [ghost_enemy_rearmed], 2
+    je .ghostEnemyDone
+%endif
     cmp byte [ghost_enemy_seeded], 0
     jne .ghostEnemyDone
     cmp byte [ebp + wEnemyMonSpecies], 0
     je .ghostEnemyDone
     mov byte [ghost_enemy_seeded], 1
+%ifdef DEBUG_BATTLE_UNVEIL
+    cmp byte [ghost_enemy_rearmed], 1
+    jne .ghostNoSecond
+    mov byte [ghost_enemy_rearmed], 2               ; second (post-unveil) fire done
+.ghostNoSecond:
+%endif
     mov byte [ebp + wEnemyMonDVs], 0x98
     mov byte [ebp + wEnemyMonDVs + 1], 0x76
+%ifdef DEBUG_BATTLE_UNVEIL
+    ; RELOAD THE REAL HEADER BEFORE CalcStats. CalcStat reads base stats out of
+    ; wMonHeader, and by the second (post-unveil) fire InitWildBattle.isGhost has
+    ; long since overwritten it with the GHOST header — dims $66 and a pic
+    ; handle, no base stats. Measured without this: HP 142 against the golden's
+    ; 82, with attack/defense/speed/special all adrift while the DVs matched.
+    ; battle_ghost never needed it because its single fire happens at the FIRST
+    ; LoadEnemyMonData, before that substitution.
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [ebp + wCurSpecies], al
+    call GetMonHeader
+%endif
     mov edx, wEnemyMonLevel + 1     ; stat block dest (wEnemyMonMaxHP)
     mov bh, 0                       ; no stat exp
     mov esi, wEnemyMonHP
@@ -5396,6 +5468,23 @@ AutoKeyDrive:
     mov ebx, 1 + NUM_STATS * 2
     call CopyData
 .ghostEnemyDone:
+
+%ifdef DEBUG_BATTLE_UNVEIL
+    ; (1b) LIE ABOUT THE MAP, but only once the battle owns the screen.
+    ;      PrintBeginningBattleText reads wCurMap only after the battle has
+    ;      started, so setting it here is sufficient, and it keeps the overworld
+    ;      loop from ever running Pokemon Tower's map script against Route 1's
+    ;      loaded data. Both sides do the same thing at the same state edge.
+    ;      (An earlier comment here claimed seeding it in the overworld seed
+    ;      routine had been MEASURED to hang. It had not: all three of those runs
+    ;      died on the undefined POKEMON_TOWER_3F above, which reports itself as
+    ;      a label-size error in AutoKeyDrive. Whether the overworld placement
+    ;      also works is untested; this placement is chosen on its merits.)
+    cmp byte [ebp + wIsInBattle], 0
+    je .ghostNoMapLie
+    mov byte [ebp + wCurMap], UNVEIL_TOWER_MAP
+.ghostNoMapLie:
+%endif
 
     ; (2) DISMISS THE INTRO PROMPT — pulsed, and only while parked at it.
     ;     PrintBeginningBattleText ends in the stream's own prompt and
@@ -5424,6 +5513,10 @@ AutoKeyDrive:
     ;     number of frames into the post-send-out screen.
     cmp byte [ebp + wBattleMonSpecies], 0
     je .noGhostDump
+%ifdef DEBUG_BATTLE_UNVEIL
+    cmp byte [ghost_enemy_rearmed], 2               ; unveil done AND re-converged
+    jne .noGhostDump
+%endif
     inc dword [ghost_dump_frame]
     cmp dword [ghost_dump_frame], GHOST_DUMP_DELAY
     jne .noGhostDump
