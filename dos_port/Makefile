@@ -1241,6 +1241,18 @@ endif
 # DEBUG_AUTOKEY is required and not optional, because this gate's dump lives in
 # AutoKeyDrive, which vblank.asm only calls under %ifdef DEBUG_AUTOKEY.
 #   dos_port/tools/run_headless.sh "DEBUG_BATTLE_OLDMAN=1" /tmp/oldman
+# battle_oldman_result: the RESULT/EXIT half of the per-battle-type box. Same
+# staging as DEBUG_BATTLE_OLDMAN (it defines that flag), but the rename dump is
+# compiled out and the gate runs the tutorial to its capture tail instead.
+ifdef DEBUG_BATTLE_OLDMAN_RESULT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_OLDMAN_RESULT -D DEBUG_BATTLE_OLDMAN
+NASMFLAGS += -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 ifdef DEBUG_BATTLE_OLDMAN
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_OLDMAN -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

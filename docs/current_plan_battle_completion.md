@@ -2271,6 +2271,30 @@ provider shapes below, not their runtime behavior.
           `wPokedex` **UNCHANGED**, `wBagItems` with the ball consumed, and
           `wBattleResult`. A port that wrongly took the normal catch path would
           hand the player a WEEDLE and fail on party + dex.
+        * **PROBED 2026-08-14, AND THE DESIGN ABOVE IS PARTLY WRONG — three
+          measured corrections.** A `DEBUG_BATTLE_OLDMAN_RESULT` gate was built
+          and run (`run_headless`), and it settles more than it opens:
+          1. **`wBattleResult` is NOT this battle's landmark.** It lives at
+             `$CF0B`, is in no compared region, and the first version polling
+             `== 2` never fired while the screen plainly read "PIDGEY was /
+             caught!". The tutorial never takes `ball_catch`'s
+             `.returnAfterCapturingMon`.
+          2. **THE PORT'S TUTORIAL IS CORRECT, and this is the first time that
+             has been OBSERVED rather than assumed.** At the terminal instant:
+             `wPartyData` count = **6** — the mon was caught and NOT given to
+             the player, i.e. `ItemUseBall` really does take `.oldManCaughtMon`;
+             and `wPlayerName` = `91 84 83 50…` = "RED" **restored**, so the
+             Missingno-pair restore half ran and erased the rename.
+          3. **AN UNSETTLED FIDELITY QUESTION BLOCKS REGISTRATION.** The port
+             reaches that instant because `DisplayBattleMenu` returns **CARRY**
+             (pret's "the player ran") after the scripted throw. pret instead
+             routes EVERY non-zero `wBattleType` past the menu loop into the
+             **SAFARI tail** (`core.asm:182+`: `wNumSafariBalls`,
+             `PrintSafariZoneBattleText`, the enemy-run rolls). Whether the
+             port's early carry return is faithful is unresolved, and **a golden
+             built on an unfaithful exit would pin the divergence in place** —
+             so the gate is kept as documented, UNREGISTERED groundwork and id
+             79 stays reserved. Settle the carry question first.
         * **Build it as a NEW scenario (id 79 reserved), not by moving
           `battle_oldman`'s dump point** — the menu witness it provides today is
           what caught the `.oldManName` ROM-tail bytes, and scenario-local

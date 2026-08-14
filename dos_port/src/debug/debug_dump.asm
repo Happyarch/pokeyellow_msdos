@@ -3182,6 +3182,28 @@ RunBattleTest:
     cmp byte [ebp + wActionResultOrTookBattleTurn], 0
     je .oldManMenuLoop
 .oldManRan:
+%ifdef DEBUG_BATTLE_OLDMAN_RESULT
+    ; --- battle_oldman RESULT/EXIT probe (box 2225's second half) ---
+    ; UNREGISTERED GROUNDWORK, kept because it MEASURED three things the plan
+    ; had only assumed. Reaching here means DisplayBattleMenu returned CARRY --
+    ; pret's "the player ran" -- which the port evidently does after the
+    ; tutorial's scripted throw, so the fall-through landmark this gate first
+    ; tried can never fire.
+    ; MEASURED AT THIS INSTANT (run_headless DEBUG_BATTLE_OLDMAN_RESULT=1):
+    ;   wPartyData count = 6  -> the tutorial did NOT give the player the mon,
+    ;                            i.e. ItemUseBall took .oldManCaughtMon. First
+    ;                            time that branch has been observed in the port.
+    ;   wPlayerName = 91 84 83 50.. -> "RED" restored (the Missingno-pair
+    ;                            restore half ran and erased the rename).
+    ;   wIsInBattle = 1, screen reads "PIDGEY was / caught!".
+    ; NOT REGISTERED because the landmark depends on that carry return, and
+    ; whether the port is faithful there is unsettled: pret routes EVERY
+    ; non-zero wBattleType past the menu loop into the SAFARI tail
+    ; (core.asm:182+, wNumSafariBalls / PrintSafariZoneBattleText / enemy-run
+    ; rolls) rather than returning early. Settle that first; a golden built on
+    ; an unfaithful exit would pin the divergence in place.
+    call DebugDumpMemory
+%endif
     ; The dump fires from AutoKeyDrive the instant the rename is visible, which
     ; is INSIDE DisplayBattleMenu's cursor walk, so control normally never gets
     ; here. Reaching it means the menu completed without the rename ever
@@ -5043,7 +5065,11 @@ AutoKeyDrive:
     call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN, then exits
 .noPikaDump:
 %endif
-%ifdef DEBUG_BATTLE_OLDMAN
+%ifdef DEBUG_BATTLE_OLDMAN_RESULT
+; DEBUG_BATTLE_OLDMAN_RESULT reuses this gate's staging but must NOT dump on the
+; rename — its landmark is the capture tail, far later. The rename dump below is
+; therefore compiled out for it; the gate body's own result branch dumps instead.
+%else
     ; --- battle_oldman: the dump, on the rename itself (battle plan 4b) ---
     ; NO PIN AND NO LATCH ARE NEEDED HERE, and that is worth stating because
     ; every neighbouring battle gate has both. Those exist to force an RNG roll
