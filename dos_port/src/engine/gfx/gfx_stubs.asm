@@ -25,26 +25,44 @@ section .text
 ; trainer card is reachable, so this IS called; it currently leaves every badge
 ; face at its earned-badge palette.
 ;
-; TRACED 2026-08-14, so the next attempt starts here rather than re-deriving it:
-;   * PLANE: the WINDOW one. The trainer card mirrors its badge rect into
-;     GB_TILEMAP1 and shows it through UI_TRAINER_CARD_BADGES, so the publisher
-;     is SetBGCellAttrWin (ppu.asm), not SetBGCellAttrFlat.
-;   * LIVE, not harness-only: DrawBadges is called from StartMenu_TrainerInfo
-;     (engine/menus/start_sub_menus.asm), as well as from two test gates.
-;   * GEOMETRY AGREES. pret zeroes a 2x2 attribute box per badge at vBGMap1
-;     offsets $183 $187 $18b $18f $1e3 $1e7 $1eb $1ef -- rows 12 and 15, columns
-;     3, 7, 11, 15. The port draws its badge grid at scratch rows 11 and 14 from
-;     column 2, so each badge's FACE cell lands exactly on pret's coordinates.
-;   * THE CATCH, and it is why this is not a five-line change: the port
-;     RE-ORIGINS the rect when mirroring. BadgesTestMirror copies scratch rows
-;     11-16 / columns 2-17 to GB_TILEMAP1 rows 0-5 / column 0, so pret's literal
-;     vBGMap1 offsets do NOT transfer -- they must have the mirror's transform
-;     applied. NOT VERIFIED: whether the LIVE StartMenu_TrainerInfo path uses
-;     that same mirror or a different presentation. Check that first.
-;   * Still unmodelled either way: the wTrainerCardBadgeAttributes buffer, which
-;     is what says whether a badge is earned.
+; TRACED 2026-08-14. Two of the three things that looked like blockers are not.
 ;
-; STUB{class=stub; label=HandleBadgeFaceAttributes; pret=engine/gfx/bg_map_attributes.asm:HandleBadgeFaceAttributes; behavior=unearned badge faces keep the earned palette instead of being zeroed, because the port has no per-cell attribute channel to clear and does not model wTrainerCardBadgeAttributes; evidence=pret zeroes individual vBGMap1 cells at fixed offsets, which the port's per-tile-id tile_pal cannot express; lifetime=the per-cell layer exists and the plane is now traced as the WINDOW one so the remaining blockers are the wTrainerCardBadgeAttributes buffer and the fact that the port re-origins the badge rect when mirroring it to GB_TILEMAP1 which means pret's literal vBGMap1 offsets cannot be reused verbatim}
+;   * PLANE: the WINDOW one. StartMenu_TrainerInfo -> trainer_card_present, which
+;     mirrors via tc_mirror and shows GB_TILEMAP1 as one window. The publisher is
+;     SetBGCellAttrWin (ppu.asm), not SetBGCellAttrFlat.
+;
+;   * pret's LITERAL OFFSETS TRANSFER. tc_mirror is 1:1 -- W_TILEMAP row r at
+;     stride TCSCR_W becomes GB_TILEMAP1 + r*32, columns 0-19 -- so a GB
+;     coordinate IS a GB_TILEMAP1 offset and vBGMap1 + $183 is GB_TILEMAP1 + $183.
+;     (An earlier note here warned that the port re-origins the rect. That is
+;     true only of BadgesTestMirror, which serves the TEST gate RunDrawBadgesTest
+;     and moves rows 11-16/cols 2-17 to rows 0-5/col 0. It is NOT the live path.)
+;
+;   * GEOMETRY AGREES. pret zeroes a 2x2 box per badge at vBGMap1 $183 $187 $18b
+;     $18f $1e3 $1e7 $1eb $1ef = rows 12 and 15, columns 3/7/11/15.
+;     ZeroOutCurrentBadgeAttributes writes base, base+1, base+32, base+33 -- a
+;     clean 2x2 (the `ld bc,$1f` reads like a staircase until you notice the
+;     second store does not post-increment). The port draws its grid at scratch
+;     rows 11 and 14 from column 2, so each badge's FACE cell lands exactly there.
+;
+; *** AND THE BUFFER THIS WAS WAITING FOR IS NEVER WRITTEN BY PRET. ***
+; Measured tree-wide: wTrainerCardBadgeAttributes appears ONLY as the eight reads
+; inside HandleBadgeFaceAttributes plus its ram/wram.asm declaration. Nothing
+; populates it. (Control: the same grep over wPartyMenuBlkPacket does find its
+; writers, so the search shape is sound.) So the `ld a,[de] / and a / call z`
+; test is not driven by badge state at all, and pret's own comment -- "zero out
+; the attributes if the player doesn't have the respective badge" -- describes
+; INTENT, not behaviour. With the buffer reading zero, the call fires for every
+; badge and ALL eight faces are zeroed regardless of what the player earned.
+;
+; NOT ESTABLISHED, and it is the one thing left to check before implementing:
+; that the buffer really does read zero at this point. "No writer by name" is not
+; "always zero" -- a neighbouring WRAM write could spill into its 55 bytes, and
+; that was not traced. If it does read zero, the faithful port is simply an
+; unconditional publish of palette 0 over the eight 2x2 boxes and needs no buffer
+; at all; if it does not, model the buffer first.
+;
+; STUB{class=stub; label=HandleBadgeFaceAttributes; pret=engine/gfx/bg_map_attributes.asm:HandleBadgeFaceAttributes; behavior=unearned badge faces keep the earned palette instead of being zeroed, because the port has no per-cell attribute channel to clear and does not model wTrainerCardBadgeAttributes; evidence=pret zeroes individual vBGMap1 cells at fixed offsets, which the port's per-tile-id tile_pal cannot express; lifetime=the per-cell layer exists and the plane is traced as the WINDOW one whose mirror is 1:1 so pret's literal vBGMap1 offsets do transfer, leaving one question before implementation, whether wTrainerCardBadgeAttributes reads zero given that nothing in pret ever writes it}
 HandleBadgeFaceAttributes:
     ret
 
