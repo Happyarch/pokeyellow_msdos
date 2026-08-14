@@ -2365,13 +2365,34 @@ provider shapes below, not their runtime behavior.
               `.specialBattleLoop` (`init_battle.asm:566-602`), so a gate body
               cannot call it. `RunBattleTest` does enter via `InitBattle`, but
               by the time the gate body runs, control has already returned.
-            * **So the remaining work is a HARNESS question, not a scenario
-              one:** either the RESULT variant replaces the safari gate body
-              entirely with something that re-enters production's special-battle
-              loop, or `RunBattleTest` gains a path that lets that loop run to
-              its natural end. Settle that before rebuilding the probe — the
-              press table and the speed pin above are already correct and can be
-              lifted straight back in.
+            * **THREE FOLLOW-UP EXPERIMENTS, 2026-08-14 — two unknowns closed,
+              one left. All reverted; the tree carries none of them.**
+              1. **The presses reach the menu and the geometry is right.**
+                 Giving the EXISTING safari gate the `PAD_RIGHT` table and
+                 photographing frame 420 shows the cursor moved:
+                 `|?.BALL???....>BAIT.?|`. So `PAD_RIGHT` does select BAIT on
+                 the port, exactly as the golden's layout predicted.
+              2. **The A press IS consumed and `DisplayBattleMenu` DOES
+                 return.** A frozen menu at frame 900 was consistent with both
+                 "A never consumed" and "A consumed, gate hung with the menu
+                 still drawn", so a marker byte was written after the call:
+                 `W_TILEMAP[0]` reads `$EE`, so the call returned. The earlier
+                 timeout was therefore NOT a press failure.
+              3. **STILL OPEN — which `DisplayBattleMenu` the presses feed.**
+                 `.specialBattleLoop` is PRODUCTION (`init_battle.asm:556`) and
+                 calls `DisplayBattleMenu` itself, and the debug gate body calls
+                 it AGAIN afterwards. With `AUTOKEY_QUIET` production's loop
+                 would block there and the gate body would never run at all,
+                 which suggests the gate body may be dead code for this type;
+                 but the marker in experiment 2 fired, so the gate body's call
+                 DID return. Those two facts are not yet reconciled, and the
+                 reconciliation decides whether a RESULT gate should drive
+                 production or replace it.
+              * **Do not rebuild the probe until (3) is settled** — the press
+                table and the speed pin are correct and lift straight back in,
+                but a gate that races production for the same input is exactly
+                how a scenario ends up witnessing the harness instead of the
+                port.
       - **PIKACHU DONE TOO — `battle_pikachu_result` (id 80), 2026-08-14.** The
         recipe applied cheaply: the gate is the OLD_MAN pattern with the
         65535-HP pin `%ifndef`'d out, the rename dump compiled out, the same
