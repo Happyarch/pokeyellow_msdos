@@ -111,6 +111,7 @@ extern FlagAction                        ; flag_action.asm — ESI=array, CL=bit
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — build wBattleMon* + stat mods
 extern SlidePlayerAndEnemySilhouettesOnScreen ; core.asm — pret entry point for the slide
 extern SaveBattleScreen                  ; src/home/tilemap.asm — alias of the Buffer1 pair
+extern ClearScreenArea                   ; src/home/copy2.asm — pret _InitBattleCommon's two clears
 extern DrawEnemyHUDAndHPBar              ; core.asm — wild enemy HUD (pret _InitBattleCommon)
 extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
 extern WaitForAPress                     ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
@@ -487,7 +488,31 @@ _InitBattleCommon:
     ; WaitForAPress was standing in for.
     call PrintBeginningBattleText
     call SaveBattleScreen                        ; snapshot for menu re-entry
-    call HideBattlePokeballs
+    ; pret _InitBattleCommon:126-130 — two ClearScreenAreas then ClearSprites,
+    ; RESTORED 2026-08-14. faithdiff had them as DROPPED and they are not
+    ; cosmetic: DrawAllPokeballs (inside PrintBeginningBattleText) lays the HUD
+    ; frame tiles, and the send-out block's SlideTrainerPicOffScreen then shifts
+    ; GB cols 1-9 into 0-8 across those rows. With the areas left dirty the
+    ; slide DRAGS the player HUD's lower-left triangle leftwards.
+    ;
+    ; MEASURED with a per-frame probe: GB (11,9) turns $6F at frame 195 (the
+    ; legitimate triangle), then (11,8) at 257 and (11,0) at 273 — a leftward
+    ; smear, against hardware's single $6F at col 9. PlaceHUDTiles itself was
+    ; measured innocent: all four of its writes land correctly.
+    ;
+    ; The second SaveBattleScreen mirrors pret StartBattle:160, which re-snapshots
+    ; AFTER the clears — otherwise the send-out block's LoadScreenTilesFromBuffer1
+    ; would restore the dirty screen and the smear would come straight back.
+    mov esi, BCOORD(9, 7)
+    mov bh, 5                                    ; lb bc, 5, 10
+    mov bl, 10
+    call ClearScreenArea
+    mov esi, BCOORD(1, 0)
+    mov bh, 4                                    ; lb bc, 4, 10
+    mov bl, 10
+    call ClearScreenArea
+    call HideBattlePokeballs                     ; pret's ClearSprites
+    call SaveBattleScreen                        ; pret StartBattle:160
     cmp byte [ebp + wIsInBattle], 2
     jne .enemyFrontReady
     ; EnemySendOutFirstMon selected/loaded the first trainer mon before the
