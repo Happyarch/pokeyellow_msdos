@@ -2225,6 +2225,13 @@ provider shapes below, not their runtime behavior.
 - [ ] Add one must-hit scenario per battle type, comparing the relevant menu,
       WRAM state, item/event result, and exit. Add live traversal only when its
       owning overworld story batch lands.
+      - **WHAT IS LEFT IN THIS BOX, as of 2026-08-14: `BATTLE_TYPE_RUN` ONLY.**
+        The menu half is covered for all four reachable types, and the
+        result/exit half is now covered for all three that have one —
+        `battle_oldman_result` (79), `battle_pikachu_result` (80) and
+        `battle_safari_result` (81); NORMAL was measured already-covered by
+        `ball_catch` + `battle_faint`. `BATTLE_TYPE_RUN` remains blocked on
+        cross-emulator staging (below), not on implementation.
       - **FOUR OF FIVE TYPES NOW HAVE ONE (2026-08-12):** NORMAL (`battle_menu`
         and the rest of the battle tier), OLD_MAN (`battle_oldman`, id 69),
         SAFARI (`battle_safari`, id 71, RENDERED) and PIKACHU (`battle_pikachu`,
@@ -2331,12 +2338,34 @@ provider shapes below, not their runtime behavior.
         * **The A pulses are load-bearing, not padding:** with only RIGHT+A the
           bait tail parks in `WaitForTextScrollButtonPress` and the run hangs.
           `AUTOKEY_SAFARI` carries eight.
-        * **STILL OWED:** the mGBA reference, the manifest entry, the
-          `golden_diff` row, the golden and a non-vacuity probe. Watch the
-          gate-ordering rule — this variant also defines `DEBUG_BATTLE_SAFARI`,
-          so its `build_flags` list must be LONGER than `battle_safari`'s or it
-          stamps id 71 (which is exactly what the current unregistered dump
-          reports).
+        * **LANDED SAME DAY — `battle_safari_result` (id 81), `e96f765cd`.
+          PASS on the first check**: TILEMAP OK (360 cells), VRAM OK (384
+          slots), OAM OK (40 entries), WRAM OK (13 regions, 0 skipped). The 64
+          masked hits are the three PRE-EXISTING shared battle families only —
+          no new mask was added for it.
+          * **LANDMARK: the enemy pic GONE *and* "ran!" on the tilemap.** Both
+            halves are required: "ran!" alone fires during `PrintText`, BEFORE
+            pret's `jpfar AnimationSlideEnemyMonOff` tail, at which instant the
+            two sides disagree about the pic band by construction. Together they
+            are true only after `EnemyRan` has run to its end — exactly where
+            the port's gate returns.
+          * **NON-VACUITY:** reverting only the `AnimationSlideEnemyMonOff` tail
+            fails it with **exactly 49 unmasked tilemap divergences**, all in the
+            7x7 block at GB(12,0) (`(0,12) want $7F got $00`, …). Reverted
+            before the gates ran.
+          * The gate-ordering rule bit as predicted and was handled: the entry
+            carries THREE `build_flags` tokens against `battle_safari`'s two, so
+            the registry chain puts `DEBUG_BATTLE_SAFARI_RESULT` at line 15 and
+            `DEBUG_BATTLE_SAFARI` at line 31. The pre-registration dump reported
+            `scenario_id 71`, which is that collision showing up early.
+          * Trap banked, cost one golden generation: `navigate.tilemap()` reads
+            through the coroutine and must NOT be called inside a
+            `scenario.exec` thunk — "attempt to yield from outside a coroutine".
+        * **AND IT PAID FOR ITSELF IMMEDIATELY — see `6070684b0`.** Executing
+          the tail for the first time exposed four dropped pret behaviours in
+          `EnemyRan`, all hidden behind a comment asserting the routine was a
+          link-only safety path. That comment was measurably false; the SAFARI
+          flee reaches `EnemyRan` in single player.
       - **NORMAL IS ALREADY COVERED — measured 2026-08-14, so DO NOT build a
         third scenario for it.** The box's result/exit ask is satisfied for
         BATTLE_TYPE_NORMAL by two existing scenarios, one per way a normal
