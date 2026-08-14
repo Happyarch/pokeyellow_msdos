@@ -2041,6 +2041,28 @@ provider shapes below, not their runtime behavior.
          pics) plus a loader entry point that accepts an explicit pic pointer.
          Both are outside the battle plan's scope and neither should be
          improvised here.
+         * **THE ASSET HALF IS MECHANICAL — MEASURED 2026-08-14, so the next
+           attempt does not have to re-derive it.** All three `.pic` files are
+           present in the checkout (`gfx/battle/ghost.pic` 342 B,
+           `gfx/pokemon/front/fossilkabutops.pic` 403 B,
+           `fossilaerodactyl.pic` 383 B), and they are the SAME compressed
+           format `tools/generators/gen_mon_pics.py` already consumes — it emits
+           `incbin` blobs plus `{ dd flat_ptr, dd blob_len }` records for all 151
+           dex mons. Emitting three more is a generator change, not a design one.
+         * **BUT EMITTING IT ALONE WOULD BE DEAD DATA, which is why this stays
+           blocked rather than half-done.** `wMonHFrontSprite` is a 16-bit GB
+           pointer field and these three pics have no dex number, so nothing can
+           address them: `LoadFrontSpriteByMonIndex` goes
+           `wCurPartySpecies -> IndexToPokedex -> MonFrontPics[dex-1]`, and
+           `MON_GHOST` ($B8) has no dex entry. Generating the blobs would move
+           the gap from "no data" to "data nothing can reach".
+         * **SO THE REAL BLOCKER IS THE DATA MODEL, not the asset**: the port
+           needs a pic path that takes an explicit flat pointer + length. One
+           already exists in a different shape —
+           `IntroDisplayPicCenteredOrUpperRight` takes exactly `ESI = flat
+           pointer, ECX = length` — so the shape is proven, it simply is not
+           reachable from the mon-header route. Do the two together or not at
+           all.
          **The string half IS ready and is not the blocker:** "GHOST" belongs in
          `tools/generators/gen_runtime_strings.py` under
          `battle_intro_runtime_strings.inc` (which `init_battle.asm` already
