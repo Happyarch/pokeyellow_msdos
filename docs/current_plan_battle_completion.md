@@ -2404,8 +2404,39 @@ provider shapes below, not their runtime behavior.
                  tail. The next step is to instrument
                  `wActionResultOrTookBattleTurn` around the bait item-use path
                  rather than to keep adjusting presses.
-              6. **THE EVIDENCE IS NOW CONTRADICTORY, AND THAT IS THE HONEST
-                 STATE (2026-08-14). DO NOT BUILD ON IT.** Two experiments
+              6. **RESOLVED 2026-08-14 BY A SINGLE-BUILD, FOUR-MARKER PROBE —
+                 AND IT CORRECTS TWO EARLIER ENTRIES BELOW.** Both
+                 `DisplayBattleMenu` call sites were marked in ONE build, with
+                 the markers in `wPokedexOwned` scratch (a dumped region nothing
+                 in this flow writes) rather than the tilemap:
+                 | marker | value | meaning |
+                 |---|---|---|
+                 | production, before call | `$FF` untouched | **never reached** |
+                 | production, returned | `$FF` | — |
+                 | gate body, before call | `$33` | **reached** |
+                 | gate body, returned | `$44` | **returned** |
+                 * **THE GATE BODY IS LIVE, NOT DEAD CODE.** The earlier
+                   "dead code" reading was an ARTEFACT of the marker location:
+                   it was written into the tilemap margin, and
+                   `LoadScreenTilesFromBuffer1` restores the WHOLE 40x25 canvas
+                   from `screen_save`, wiping it. Probe markers must live in a
+                   dumped WRAM region nothing in the flow writes — the tilemap
+                   is not such a place, and neither is `wLoadedMon +33..43`,
+                   which `DrawPlayerHUDAndHPBar` copies into.
+                 * **PRODUCTION'S `.specialBattleLoop` IS NEVER REACHED under
+                   the golden harness.** So the port's real Safari turn/flee
+                   tail — the `jc EnemyRan` deterministic exit and everything
+                   after it — is not executed by ANY scenario, and cannot be
+                   while `RunBattleTest` drives the battle this way.
+                 * **CONSEQUENCE FOR THE BOX:** a SAFARI result scenario built
+                   on the gate body would witness the GATE's logic, not the
+                   port's. The box is blocked on a HARNESS capability —
+                   `RunBattleTest` needs a path that enters
+                   `_InitBattleCommon`'s special-battle loop and lets it run —
+                   not on scenario design, press geometry or the speed pin, all
+                   of which are already correct and recorded above.
+              7. **SUPERSEDED — the contradiction recorded here was the marker
+                 artefact above, now explained:** Two experiments
                  disagree about whether the gate body runs:
                  * With **no presses** (stock `AUTOKEY_QUIET`), an entry marker
                    in the gate body stays UNWRITTEN -> production blocks in its
