@@ -446,6 +446,28 @@ id_cache_lut:      resd 256          ; tile id → tile_cache pointer (rebuilt o
 ; px). Every scanline of a tile row therefore costs one straight copy out of it;
 ; the decode happens once per 8 scanlines, not once per scanline (Stage 2a).
 win_rowbuf8:     resb 8 * 256
+
+; --- per-cell BG attribute plane for the WINDOW layer -------------------------
+; The surface plane (bg_cell_attr) is indexed by SURFACE CELL, which the window
+; path never computes: decode_win_row8 walks a GB TILEMAP row directly. So the
+; window needs its own plane, indexed by GB tilemap address, covering
+; GB_TILEMAP0 ($9800) through the end of GB_TILEMAP1 ($9FFF) — 2 KB, both maps,
+; because a descriptor may sample either.
+;
+; This exists because the party menu (and every other window-drawn screen) is
+; UNREACHABLE from the surface plane — measured 2026-08-14. Its HP bars are
+; drawn into a stride-20 scratch, mirrored to GB_TILEMAP1 by PartyMenuMirror,
+; and presented through a window descriptor.
+;
+; A zero byte means "no override", as on the surface plane, so BSS zero-fill is
+; the inert state. NO force flag is needed here and that is not an oversight:
+; decode_win_row8 re-gathers every open descriptor's rows EVERY frame, so a
+; changed attribute is picked up on the next frame by construction. The surface
+; plane needs surf_force only because it has a dirty-skip the window path lacks.
+global win_cell_attr
+win_cell_attr:   resb 2048
+WIN_ATTR_BYTES   equ 2048
+WIN_ATTR_DELTA   equ win_cell_attr - GB_TILEMAP0
 win_rotbuf:      resb 256  ; source row rotated left by WIN_SRC_X (fine path only)
 win_ntiles:      resd 1    ; tiles to decode this row = ceil(clip_w/8), capped at 32
 win_src:         resd 1    ; win_rowbuf8 + (WLY & 7)*256 — this scanline's source
@@ -866,6 +888,31 @@ SetBGCellAttrFlat:
     mov [bg_cell_attr + eax], bl
     mov byte [surf_force], 1               ; tile ids unchanged → the shadow would skip it
 .unchanged:
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; SetBGCellAttrWin — publish one per-cell BG attribute for the WINDOW layer,
+; addressed by GB TILEMAP ADDRESS, which is what a window descriptor samples.
+;
+; In:  EAX = GB tilemap address, GB_TILEMAP0 .. GB_TILEMAP1 + $3FF
+;      DL  = the CGB attribute byte including BG_ATTR_PRESENT; 0 clears it
+; Out: all registers preserved. Out-of-range addresses are ignored rather than
+;      scribbling past the plane.
+;
+; No force flag, unlike SetBGCellAttrFlat: decode_win_row8 re-gathers every open
+; descriptor every frame, so a changed attribute lands on the next frame by
+; construction. See the win_cell_attr block for why the window needs a plane of
+; its own at all.
+; ---------------------------------------------------------------------------
+global SetBGCellAttrWin
+SetBGCellAttrWin:
+    pushad
+    sub eax, GB_TILEMAP0
+    cmp eax, WIN_ATTR_BYTES
+    jae .done                              ; not a tilemap address — ignore
+    mov [win_cell_attr + eax], dl
+.done:
     popad
     ret
 
@@ -1786,8 +1833,16 @@ decode_win_row8:
     mov ecx, [win_ntiles]
     mov edi, win_rowbuf8               ; dest cursor: advances 8 px per tile
 .tile:
-    movzx eax, byte [ebp + edx]        ; tile id
+    movzx eax, byte [ebp + edx]        ; tile id (movzx clears AH — see below)
+    ; The cell's per-cell attribute. EBX, not AH: the id is about to index
+    ; id_cache_lut through the FULL EAX, so anything left in AH would corrupt the
+    ; lookup. (The surface path can use AH only because its caller supplies the
+    ; attribute BEFORE the id is widened — and getting that order wrong there is
+    ; exactly the bug fixed in 412a7d6ce.)
+    mov bl, [edx + WIN_ATTR_DELTA]
     mov esi, [id_cache_lut + eax*4]    ; → its 64-byte decoded tile in tile_cache
+    test bl, BG_ATTR_PRESENT
+    jnz .attr_tile
 %assign _r 0
 %rep 8
     mov eax, [esi + _r * 8]
@@ -1796,11 +1851,42 @@ decode_win_row8:
     mov [edi + _r * 256 + 4], eax
 %assign _r _r + 1
 %endrep
+.next_tile:
     inc edx
     add edi, 8
     dec ecx
     jnz .tile
     ret
+
+    ; --- per-cell override: strip tile_pal's baked band, apply this cell's -----
+    ; Fully unrolled 8x8 so it needs no loop counters at all — every register in
+    ; this routine is already carrying a cursor. Rare path (one screen family),
+    ; so 64 byte-moves are the right trade against the register pressure a
+    ; counted loop would add.
+    ;
+    ; PALETTE ONLY. X/Y flip are implemented on the surface path but NOT here:
+    ; nothing in Yellow sets them (Stage 0 measured bits 3-7 zero across all 13
+    ; attribute tables) and the window path has no consumer that would witness
+    ; them, so building it would ship an untested path. The bits still parse.
+.attr_tile:
+    pushad
+    movzx ebx, bl
+    and ebx, BG_ATTR_PAL_MASK
+    shl ebx, 2                         ; BL = this cell's palette band
+%assign _r 0
+%rep 8
+  %assign _c 0
+  %rep 8
+    mov al, [esi + _r * 8 + _c]
+    and al, BG_ATTR_RAW_COLOR          ; drop the baked tile_pal band
+    or  al, bl                         ; apply this cell's palette
+    mov [edi + _r * 256 + _c], al
+  %assign _c _c + 1
+  %endrep
+%assign _r _r + 1
+%endrep
+    popad
+    jmp .next_tile
 
 ; ---------------------------------------------------------------------------
 ; draw_player_marker — paint the player placeholder into the back buffer.
