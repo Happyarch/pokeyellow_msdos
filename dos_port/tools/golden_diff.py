@@ -643,6 +643,35 @@ SCENARIOS = {
     # _NONBATTLE_WRAM_SKIP): the enemy is the convergence-spec wild PIDGEY L13
     # (DVs $98 $76, real loaders on both sides — see seed.enemy /
     # DEBUG_BATTLE_GOLDEN). Masks are measured, per entry. ---
+    "battle_ghost": {
+        # Battle plan 4c's witness: the ghost identity arm of InitWildBattle,
+        # which no other scenario reaches. BOTH sides seed a forced
+        # RESTLESS_SOUL (MAROWAK) opponent plus wCurEnemyLevel on Route 1 (10,7)
+        # and take ONE live overworld step; NewBattle -> InitBattle ->
+        # InitOpponent -> InitWildBattle.isGhost does the rest. It needs no
+        # Pokemon Tower map and no absent Silph Scope — measured on both sides,
+        # those gate only IsGhostBattle and the .isMarowak unveil arm, while the
+        # identity arm keys on wCurOpponent alone.
+        #
+        # THE ONLY SCENARIO THAT ENTERS THROUGH THE LIVE InitBattle. Every other
+        # battle golden is staged by RunBattleTest, which builds the intro
+        # itself; that blind spot hid two real defects this scenario found —
+        # wBattleMon loaded before the intro, and the HUD smear from the two
+        # missing ClearScreenAreas.
+        #
+        # Route 1 column 7 is the ledge scenario's proven lane: clear of both
+        # Route 1 NPCs and of grass, so no encounter roll can fire first. (10,7)
+        # is one row BELOW the ledge at (9,7), so the step is a walk not a hop.
+        "flags": "DEBUG_BATTLE_GHOST=1",
+        "window": (10, 3),
+        "oam_window": True,  # battle canvas = fixed GB-centering; OBJ shift with it
+        # The 6 enemy-gauge cells are F-19's clone ids — the SHARED family eight
+        # other battle scenarios already carry, now owned by the CGB colour
+        # plan's Stage 5. Reused verbatim; no new mask was invented here.
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_intro": {
         # FRAME-DRIVEN since 2026-08-13. The dump was inline (fall-through), which
         # cannot photograph a blocking screen — and pret's intro box blocks on

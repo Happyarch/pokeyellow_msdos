@@ -2406,210 +2406,44 @@ provider shapes below, not their runtime behavior.
         third open 4c.
 
 
-- [ ] **Ghost-battle golden — the one witness 4c owes. SCOPED AND MEASURED
-      2026-08-14; the mechanism is proven, only the build remains.**
-      4c's ghost arm (`InitWildBattle.isGhost`: `GhostPic`, the "GHOST" nick,
-      the `MON_GHOST` species substitution) has NO scenario. I introduced that
-      gap and flagged it as "its own scenario box, listed below" — this is that
-      box, which did not exist until now.
+- [x] **Ghost-battle golden — DONE 2026-08-14. `battle_ghost` (id 84) PASSES,
+      and it found TWO real port defects on the way in.**
+      4c's ghost arm (`GhostPic`, the "GHOST" nick, the `MON_GHOST`
+      substitution) now has a witness. Tilemap, VRAM, OAM and WRAM all compare
+      CLEAN; `fidelity-full` 82/82.
 
-      **IT DOES NOT NEED A POKÉMON TOWER ROUTE. That earlier claim was wrong and
-      is the reason to read this box before starting.** Measured on both sides:
-      `InitWildBattle` tests `wCurOpponent == RESTLESS_SOUL` FIRST and takes
-      `.isGhost` on that alone — pret `engine/battle/init_battle.asm:64-67`, port
-      `init_battle.asm:263-268`. No `wCurMap` in the tower range and no absent
-      Silph Scope are required; those gate only `IsGhostBattle` (the random tower
-      encounters) and `PrintBeginningBattleText`'s `.isMarowak` UNVEIL arm.
-      `RESTLESS_SOUL` is `MAROWAK`.
+      **HOW IT WORKS, and why it is cheap.** `InitWildBattle` takes `.isGhost` on
+      `wCurOpponent == RESTLESS_SOUL` ALONE (pret `init_battle.asm:64-67`, port
+      `:263-268`) — no Pokémon Tower map, no absent Silph Scope; those gate only
+      `IsGhostBattle` and the `.isMarowak` unveil arm. So both sides seed
+      `wCurOpponent` + `wCurEnemyLevel` on Route 1 (10,7) and take ONE live
+      overworld step: `NewBattle` -> `InitBattle` -> `InitOpponent` ->
+      `InitWildBattle.isGhost`. No encounter roll, no map dependency, no bag
+      state.
 
-      **THE ENTRY PATH, traced end to end and RNG-free:** seed
-      `wCurOpponent = RESTLESS_SOUL`, then take one overworld step.
-      `NewBattle` (pret `home/overworld.asm:324`) tail-jumps to `InitBattle`
-      past three flag guards; `InitBattle` sees `wCurOpponent != 0` and takes
-      `InitOpponent`, which sets `wCurPartySpecies`/`wEnemyMonSpecies2`;
-      `InitBattleCommon` does `sub OPP_ID_OFFSET` and MAROWAK is below it, so it
-      falls to `InitWildBattle` -> `.isGhost`. The port mirrors all three
-      `call NewBattle` sites (`src/home/overworld.asm:1083`, `:1302`, `:1375`).
-      **No encounter roll, no map dependency, no item state** — which is exactly
-      what makes it cheap to converge, unlike `trainer_battle_route`'s hard-won
-      cadence.
+      **IT IS THE ONLY SCENARIO ENTERING THROUGH THE LIVE `InitBattle`** — every
+      other battle golden is staged by `RunBattleTest`, which builds the intro
+      itself. That blind spot had been hiding two real defects, both now fixed:
+      * `wBattleMon` was loaded BEFORE the intro instead of at send-out
+        (`1c179f09d`);
+      * the two `ClearScreenArea`s pret runs after the intro were missing, so
+        `SlideTrainerPicOffScreen` SMEARED the player HUD's triangle leftwards
+        (`645f7aef4`).
 
-      **BUILD SHAPE:**
-      * Port: a `RunGhostBattleTestSeed` gate on the `RunTrainerRouteTestSeed`
-        pattern (`debug_dump.asm:1840`) — seed-and-return, one-shot latched, with
-        the spawn seeded in `EnterMap` before `LoadMapData` like the
-        `DEBUG_TRAINER_ROUTE` block (`src/home/overworld.asm:369`). It must seed
-        `wCurOpponent` and let the REAL `OverworldLoop` run; `RunBattleTest`
-        cannot be reused, because it stages the intro directly and never enters
-        `InitBattle`.
-      * mGBA: `battle_ghost.lua` — boot, new game, `seed.debug_new_game`, write
-        `wCurOpponent`, one directional press, wait on `wIsInBattle`, wait for
-        the intro text, dump. It needs NO walk to Route 1 (the bedroom is a legal
-        place to step), so it avoids `lib/battle.lua`'s whole navigation leg.
-      * Then: manifest entry + `gen_scenario_registry.py` + `validate_scenarios`,
-        `make goldens` for the new one, `goldencheck`, `fidelity-full`.
+      **NON-VACUITY PROVED TWICE** (the recipe's rule): breaking the pic handle
+      (`SPECIAL_PIC_GHOST` -> `NONE`) gives 36 VRAM slots; breaking the nick
+      gives 7 tilemap cells + 1 WRAM field.
+      *A third sabotage PASSED and that is a finding, not a gap:* removing
+      `wCurPartySpecies = MON_GHOST` changes nothing here, because the port
+      selects the pic through the `wMonHFrontSprite` handle while pret uses that
+      species only to pick a ROM BANK. The line is faithful but inert in a flat
+      image.
 
-      **PREREQUISITES VERIFIED 2026-08-14, so nobody has to re-check:** the
-      pinned golden worktree exists and its ROM matches `roms.sha1`
-      (`cc7d03262ebfaf2f06772c1a480c7d9d5f4a38e1`), and
-      `dos_port/tools/mgba_build/mgba-lua-runner` is built.
+      **Masks: the 6 enemy-gauge cells reuse the SHARED
+      `_BATTLE_TILEMAP_MASKS_MENU` family** that eight scenarios already carry
+      (F-19, owned by the CGB colour plan's Stage 5). No new mask was invented.
 
-      **STARTED 2026-08-14 AND HALF LANDED. What works, what is left, measured.**
-      * **The port gate is IN and the ghost RENDERS — the first time this port
-        has ever displayed it.** `DEBUG_BATTLE_GHOST` (`RunGhostBattleTestSeed`,
-        the seed-and-return shape) spawns on Route 1 (10,7), seeds
-        `wCurOpponent = RESTLESS_SOUL`, and one autokey DOWN drives the REAL
-        `OverworldLoop` into the battle. `tools/run_headless.sh
-        "DEBUG_BATTLE_GHOST=1"` produces a frame showing the GhostPic sprite and
-        "Wild GHOST appeared!" — end-to-end proof of the 4c chain: the `GhostPic`
-        blob -> `SpecialMonPics` -> the `wMonHFrontSprite` handle ->
-        `UncompressMonSprite` -> the `.isGhost` arm's dims and nick.
-      * **The golden side runs and is DETERMINISTIC.**
-        `tools/mgba_harness/scenarios/battle_ghost.lua` reaches the same state on
-        hardware — its `wEnemyMonNick == "GHOST"` assertion PASSES, so the ROM
-        takes the ghost arm from the same one-byte seed — and two consecutive
-        generations were byte-identical (`a4f8c5b7…`). It reuses `ledge_hop`'s
-        script-warp onto Route 1 because `walk_to_route1` lands at (35,10), 25
-        rows south with a blocked lane (measured: walking LEFT from there times
-        out).
-      * **NOT REGISTERED, because it does not COMPARE yet, and the reason is a
-        real gap in my scenario rather than a port defect.** `goldencheck` gave
-        37 divergences, decomposed:
-        1. **The enemy is unseeded.** A forced `wCurOpponent` battle needs
-           `wCurEnemyLevel`, which neither side sets, so the golden loaded a
-           level-0 Marowak (HP 10, all stats 5) against the port's level 34. And
-           a wild mon's DVs are RNG-rolled, so they can never agree by
-           themselves.
-        2. **`seed.enemy` cannot fix it as written** — it asserts the loader
-           produced `seed.ENEMY` (PIDGEY L13). A Marowak battle needs that
-           convergence spec parameterised by species/level, plus the matching
-           once-only overwrite on the port when `wIsInBattle` goes nonzero (the
-           `DEBUG_BATTLE_AISWITCH` gate's seeding pattern).
-        3. **A REAL ORDERING FINDING, worth keeping either way: the port loads
-           `wBattleMon` BEFORE the intro, hardware at send-out AFTER it.** The
-           golden has `wBattleMon` all zero and nick `???????????` where the port
-           has SNORLAX fully loaded. The port's collapsed `_InitBattleCommon`
-           calls `LoadBattleMonFromParty` ahead of
-           `PrintBeginningBattleText`; pret's `StartBattle` calls it in
-           `.playerSendOutFirstMon`, after. No existing scenario can see this
-           because `RunBattleTest` stages the intro without it. Photographing
-           after send-out avoids it; FIXING it is a separate box.
-        4. The `▼` blink-phase cell, which only `battle_intro` currently pins.
-      * **SECOND PASS 2026-08-14: the enemy convergence is DONE, and the
-        scenario is now blocked on a REAL PORT DEFECT rather than on harness
-        work.** `seed.enemy` is parameterised by `{species, level}` (nothing in
-        it was ever PIDGEY-specific — base stats, learnset and PP all come from
-        the ROM by species), both sides seed `wCurEnemyLevel = 30`, and the port
-        gate performs seed.enemy's twin overwrite once, state-gated on
-        `wEnemyMonSpecies`. That took WRAM from 36 mismatched fields to 13.
-      * **WHAT BLOCKS IT: `wBattleMonSpecies` goes nonzero at a DIFFERENT POINT
-        IN THE FLOW on each side, because the port loads `wBattleMon` before the
-        intro and the GB loads it at send-out after.** Any state gate keyed on
-        it therefore fires at the intro on the port and after send-out on
-        hardware — measured: the golden photographs the enemy HUD ("GHOST",
-        ":L30", HP bar) where the port has 85 blank cells, plus 121 VRAM slots
-        and the 13 `wLoadedMon` staging fields. The gate is not the problem; the
-        ordering is, and it is the same divergence this box already recorded.
-      * **So the next step is NOT more harness tuning — it is fixing the
-        ordering** so `LoadBattleMonFromParty` runs after the intro as pret's
-        `StartBattle.playerSendOutFirstMon` does. That makes the state gate
-        legitimate on both sides AND removes the `wBattleMon` divergence at its
-        source. It is a restructure of the collapsed `_InitBattleCommon` with
-        blast radius across every battle scenario, so it deserves its own box
-        and its own `fidelity-full`.
-      * **THIRD PASS 2026-08-14: the ordering defect it found is FIXED
-        (`1c179f09d`, `fidelity-full` 81/81), and the scenario is now EIGHT
-        TILEMAP CELLS from registering — WRAM, VRAM and OAM all compare CLEAN.**
-        The port renders the whole post-send-out screen correctly: GHOST :L30
-        with its HP bar, SNORLAX 362/362, and the action menu.
-      * **What those 8 cells are, decomposed:**
-        1. **Six at GB (2,4)-(2,9): the F-19 enemy-gauge clones** (`want $6B`,
-           `got $C8`) — the sanctioned divergence eight other battle scenarios
-           already cover with the shared `_BATTLE_TILEMAP_MASKS_MENU` family,
-           now owned by the CGB colour plan's Stage 5. Registering this scenario
-           means REUSING that existing family, not inventing a mask.
-        2. **Two at GB (11,0) and (11,8): a REAL divergence, now MEASURED
-           rather than inferred — and my first reading of it was wrong.**
-           Dumped row 11 from both sides:
-           ```
-           hardware : 7F 37 3E 45 4C 53 5A 61 7F 6F 76 76 76 76 76 76 76 76 77 7F
-           port     : 6F 37 3E 45 4C 53 5A 61 6F 6F 76 76 76 76 76 76 76 76 77 7F
-                      ^^                      ^^
-           ```
-           So it is **NOT an off-by-one shift** (I guessed that from the
-           two-cell count last iteration): the triangle at col 9, the eight
-           `$76` and the corner at col 18 are all in the RIGHT places. The port
-           writes **two EXTRA `$6F`** at cols 0 and 8, exactly one row above the
-           two box corners (`$79`) that row 12 shows — and row 12 itself
-           matches.
-           **It is ENTRY-PATH SPECIFIC.** `battle_menu` and `battle_intro`
-           goldens both show `$7F` at those cells and `battle_menu` PASSES, so
-           the staged `RunBattleTest` path is clean; only the live
-           `InitBattle` entry produces them.
-           **Ruled out by grep, so the next attempt does not repeat it:** the
-           only tilemap writer of `$6F` is `PlaceHUDTiles` through
-           `wHUDTriangleTile` (`status_screen.asm`'s `LB_ARROW` is a different
-           screen, and `animations.asm`'s `$6F` pair is a BGP palette value, not
-           a tile). `P_FRAME_CONN` resolves to GB (18,10) — pret's exact
-           `hlcoord 18, 10` — so the anchor constant is right.
-           **NEXT STEP: bisect which call reaches `PlaceHUDTiles` with a third
-           anchor on the live path.** It runs from `DrawPlayerHUDAndHPBar` and
-           from `DrawAllPokeballs`; three `$6F` on screen means three arrivals,
-           and the staged path shows only one. That is a debugging session, not
-           a guess.
-      * **The registry is rolled back to 81 and `validate_scenarios` is
-        consistent** — no red scenario left in the suite. The port gate and the
-        `.lua` stay: both are proven, and what remains is one production
-        off-by-one plus reusing an existing mask family. **This is the witness
-        doing its job — it has now found two real defects, and fixed one.**
-
-- [x] **Restore pret's send-out ORDER — DONE 2026-08-14. `fidelity-full` 81/81.**
-      The player send-out block (first-alive scan, `wPlayerMonNumber`, the two
-      `FlagAction` sets, `LoadBattleMonFromParty`, and `SetPal_Battle` with it)
-      now runs AFTER `PrintBeginningBattleText`, where pret's
-      `StartBattle.playerSendOutFirstMon` has it.
-      * **PROVED by the thing that found it:** with the fix, the ghost
-        scenario's WRAM, VRAM and OAM all compare CLEAN (they were 33 WRAM
-        fields and 121 VRAM slots adrift), and `wBattleMonSpecies` is finally a
-        legitimate "has send-out happened" state gate on both sides.
-      * **ONE HARNESS CARVE-OUT, restoring prior behaviour rather than adding
-        any.** `trainer_battle_win` / `trainer_battle_loss` carry no
-        `DEBUG_AUTOKEY`, so they have no input source, and the intro now parks
-        at the text stream's prompt — measured: both hung and dumped nothing.
-        Their own note already says presentation stays OUTSIDE these
-        checkpoints, which used to be free because the stop fired before any of
-        it ran; a `%ifdef DEBUG_TRAINER_RESULT / jmp .playerSendOut` makes that
-        literally true again.
-      *(original entry)* **FOUND 2026-08-14 by the ghost scenario, which was
-      blocked on it.**
-      The port's collapsed `_InitBattleCommon` picks the first alive party mon,
-      sets the EXP/fought flags and calls `LoadBattleMonFromParty` BEFORE
-      `PrintBeginningBattleText`. pret does all of that in
-      `StartBattle.playerSendOutFirstMon` — i.e. AFTER the intro text
-      (`engine/battle/core.asm:135-175` reaches `.playerSendOutFirstMon` only
-      past `.checkAnyPartyAlive` / `.specialBattle`).
-
-      **MEASURED, not inferred.** With both sides in the same forced battle, the
-      golden has `wBattleMon` all zero and nick `???????????` at the parked
-      intro while the port already holds SNORLAX fully loaded — 21 WRAM fields.
-      `battle_intro`'s own golden records the same expectation in prose:
-      "wBattleMon is NOT loaded yet — the GB loads it at send-out, after this
-      screen (golden: zeros)".
-
-      **WHY NO EXISTING SCENARIO SEES IT:** every battle golden is staged by
-      `RunBattleTest`, which builds the intro itself and never calls
-      `LoadBattleMonFromParty` first. Only a scenario entering through the live
-      `InitBattle` can expose it — which is exactly what the ghost gate does.
-
-      **WHY IT IS WORTH FIXING RATHER THAN MASKING:** it is not cosmetic. Any
-      state gate keyed on `wBattleMonSpecies` — the natural "has send-out
-      happened" test — fires at the wrong point on the port, which is what
-      blocks the ghost scenario. Masking `wBattleMon` would also blind the suite
-      to the field it most wants to compare.
-
-      Blast radius: every battle scenario. Needs its own `fidelity-full`, and
-      the `DEVIATION{class=projection}` on `_InitBattleCommon` (which documents
-      the StartBattle collapse) should be narrowed or retired with it.
+      Golden determinism checked: two consecutive generations byte-identical.
 
 - [x] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
       divergence using the already-translated item-owned `ItemUseBait`,

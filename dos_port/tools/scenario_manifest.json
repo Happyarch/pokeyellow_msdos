@@ -2486,6 +2486,39 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "Battle plan 1e's witness: the trainer AI CHOOSING TO SWITCH. SwitchEnemyMon has exactly one caller (AISwitchIfEnoughMons) and until 2026-08-14 NOTHING in the suite reached it, which is why the 2026-08-11 defect -- the routine copied the withdrawn mon's HP back to the roster and NEVER SENT THE REPLACEMENT OUT -- could not have been caught by any gate then in existence. Entry is trainer_battle_route's real Route 3 sight battle against OPP_BUG_CATCHER party 4 (CATERPIE/WEEDLE/CATERPIE L10, three mons, over AISwitchIfEnoughMons' `cp 2`). TWO STAGING WRITES, deliberately asymmetric: wTrainerClass = COOLTRAINER_F every frame (safe, nothing animates toward it, and it is the ONLY RNG-free route to the switch because pret COMMENTED OUT the `ret nc` after that class's `cp 25 percent + 1`, so it alone ignores TrainerAI's Random byte); and wEnemyMonHP SEEDED ONCE into CooltrainerFAI's band maxHP/10 <= HP < maxHP/5, COMPUTED from the maxHP read, then never touched again. THE SEED MUST NOT BECOME A PER-FRAME PIN -- measured twice, a per-frame HP write stalls the flow SILENTLY because anything animating toward a target HP cannot converge. THE SEED FIRES ON A STATE, NOT A FRAME COUNT: wBattleMonSpecies becoming non-zero (the player send-out completing). A frame delay does NOT align the two emulators -- measured, the reference's A-tap cadence advances the battle faster than the port's AUTOKEY_TRAINER_ROUTE, so at a fixed delay the two sides seeded different mons. One seed suffices because the debug lead SNORLAX L80's move slot 0 is FLY, a TWO-TURN move: turn 1 is the charge, so the enemy survives to be consulted -- unlike trainer_battle_route this scenario must NOT select STRENGTH by name. LANDMARK: wEnemyMonPartyPos in 1..5, a replacement loaded, AND eRoster1HP NON-ZERO. The roster HP is what separates a SWITCH from a FAINT and leaving it out photographed the wrong event: the first golden caught WEEDLE at partyPos 1 with eRoster1HP 0000, the faint path, while the port had genuinely switched."
+    },
+    {
+      "name": "battle_ghost",
+      "id": 84,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GHOST=1",
+      "port_entry_gate": "DEBUG_BATTLE_GHOST",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_ghost.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "InitBattle",
+        "InitOpponent",
+        "InitWildBattle",
+        "PrintBeginningBattleText"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "forced RESTLESS_SOUL opponent plus wCurEnemyLevel seeded on Route 1 (10,7) on both sides, then ONE live overworld step: NewBattle -> InitBattle -> InitOpponent -> InitWildBattle.isGhost. Photographed after send-out, state-gated on wBattleMonSpecies. The ONLY scenario entering through the live InitBattle rather than RunBattleTest staging, and the only witness of battle plan 4c's ghost identity - GhostPic through the SpecialMonPics handle, the GHOST nick, the MON_GHOST substitution"
     }
   ],
   "disabled_scenarios": []
