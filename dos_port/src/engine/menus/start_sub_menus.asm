@@ -778,15 +778,25 @@ DrawTrainerInfo:
     mov dword [text_row_stride], TCSCR_W        ; port: this screen owns the stride-20 scratch
     ; ld de, RedPicFront / lb bc, BANK, $01 / predef DisplayPicCenteredOrUpperRight
     ; — display Red's front pic upper-right (c=$01).
-    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=use the caller-specific TrainerInfo_DisplayPlayerPic helper instead of the shared DisplayPicCenteredOrUpperRight predef; evidence=the predef is now translated at engine/movie/oak_speech/oak_speech.asm:439 so the original missing-label evidence is FALSE as of 2026-08-14, but it has zero port callers and switching this one over changes what the trainer_card golden photographs which makes it a witnessed change rather than a comment fix; lifetime=retire by routing this call through the predef with de and bc as pret sets them and re-gating trainer_card}
-    ; *** THE EVIDENCE ABOVE WAS FALSE AND IS CORRECTED 2026-08-14. *** This said
-    ; "DisplayPicCenteredOrUpperRight is not translated (label DB: missing)".
-    ; label_status reports it TRANSLATED, defined at
-    ; src/engine/movie/oak_speech/oak_speech.asm:439 with 0 port callers — so the
-    ; lifetime condition ("until the shared picture predef is ported") is MET and
-    ; only the retirement itself is outstanding. That retirement is NOT a comment
-    ; fix: trainer_card is a golden scenario, so switching this call must be
-    ; measured, not assumed.
+    ; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:DrawTrainerInfo; behavior=the player pic is placed by the caller-specific TrainerInfo_DisplayPlayerPic instead of the shared DisplayPicCenteredOrUpperRight predef because the two callers draw onto DIFFERENT port surfaces; evidence=both routines target pret hlcoord 15 1 but the shared one hardcodes OAKPIC_UPRIGHT which is that coordinate projected onto the 40-wide canvas with the Oak-speech element offsets while the trainer card composites through a 20-wide scratch where the same coordinate is TC_HL 15 1 at the tilemap origin, so pret can share one routine because both of its callers write the same 20-wide wTileMap and this port cannot until the shared routine takes its destination as a parameter; lifetime=retire by parameterising the destination of IntroDisplayPicCenteredOrUpperRight and re-gating trainer_card}
+    ;
+    ; *** THIS ANNOTATION HAS BEEN WRONG TWICE, and the measurement is recorded
+    ; so it is not re-derived a third time. ***
+    ;   v1 said `evidence=project_state reports DisplayPicCenteredOrUpperRight
+    ;      missing`. FALSE — it is `translated` at
+    ;      src/engine/movie/oak_speech/oak_speech.asm:439.
+    ;   v2 (2026-08-14, mine) corrected that but concluded only that "the
+    ;      retirement must be measured". Now measured, and it is NOT a call
+    ;      swap: pret uses `hlcoord 15, 1` for the upper-right case and
+    ;      `hlcoord 6, 4` for the centred one, and the port's shared routine
+    ;      encodes those as OAKPIC_UPRIGHT / OAKPIC_CENTER against the
+    ;      Oak-speech surface. The trainer card's own 20-wide scratch puts the
+    ;      SAME GB coordinate somewhere else entirely.
+    ; So the fork is a SURFACE difference, not a missing label and not laziness,
+    ; and retiring it means giving the shared routine a destination parameter.
+    ;
+    ; TrainerInfo_DisplayPlayerPic below does the c=$01 half for this one caller
+    ; — see its header for the pic path and the 5-column clamp.
     call TrainerInfo_DisplayPlayerPic
     call DisableLCD
     ; hlcoord 0,2 / ' ' vline ; hlcoord 1,2 / ' ' vline — blank the two columns the
