@@ -2177,17 +2177,64 @@ provider shapes below, not their runtime behavior.
              port converges to the existing one. The feared four-golden blast
              radius is not real, because `battle_intro` already moved to a
              frame-based dump (`79321af47`).
-           * **`battle_menu` does NOT: 165 unmasked divergences, including OBJ
-             palette entries (pal5-7).** That is the `SaveBattleScreen` / ball-row
-             ORDERING, which is what this box always said the blocker was: pret
-             draws the balls INSIDE the routine (before its snapshot) and clears
-             them after the restore with two `ClearScreenArea`s, where the port
-             draws them AFTER `SaveBattleScreen` and clears them with
-             `HideBattlePokeballs`. Moving the draw inside changes what buffer1
-             holds, and the menu restores buffer1.
-           * So the remaining work is precisely: reconcile the ball row's
-             position relative to the snapshot, and account for the OBJ palette
-             difference that comes with it. Everything else converges.
+           * **`battle_menu` did NOT — and the ORDERING DIAGNOSIS WAS WRONG.**
+             It is corrected here rather than left standing. The 165 divergences
+             decompose as 84 tilemap + 42 VRAM + 6 OAM + 33 WRAM, and the 84
+             cells are **both HUD blocks blank on the port side** — enemy
+             `PIDGEY` / `:L13` / HP bar at rows 0-3 and player `SNORLAX` /
+             `:L80` / HP bar at rows 7-9. Nothing after the intro had run at
+             all. `SaveScreenTilesToBuffer1` snapshots the TILEMAP and the ball
+             row is OAM, so the ball/snapshot order could not have caused it;
+             the earlier claim was inference, not measurement.
+           * **THE REAL CAUSE: the battle golden gates are built `AUTOKEY_QUIET`
+             — no key presses at all** — which was sufficient only while the
+             port's intro printed instantly and promptless. pret's intro TYPES
+             its text and parks at the stream's own prompt, so under QUIET the
+             flow stops there forever.
+           * **FIXED, and `battle_menu` PASSES.** `autokey_script` gained a
+             `DEBUG_BATTLE_GOLDEN` branch — placed AFTER every specific
+             `AUTOKEY_*` script so those still win, and BEFORE `AUTOKEY_QUIET`,
+             with `DEBUG_BATTLE_INTRO` excluded because its subject IS the
+             parked prompt. It emits **ONE positioned A, not a train**: a train
+             overshoots, because the menu comes up the instant the prompt is
+             dismissed and the next A selects FIGHT (measured — a 20-frame train
+             left 21 cells adrift with the whole FIGHT/ITEM/PKMN/RUN box
+             missing, identically at dump frame 300 AND 460, a stable wrong
+             state rather than a shortfall of time).
+           * **WHAT REMAINS IS PER-SCENARIO AUTOKEY TIMING — mechanical, but a
+             LONG TAIL, and that is the honest size of the job.** With A at
+             frame 300, `battle_menu` PASSES at `AUTOKEY_DUMP_FRAME` 460 (it
+             fails at 300 because the press and the photograph coincide). Raising
+             a dump frame is a VALUE change, not a new `build_flags` token, so
+             scenario-gate ordering is unaffected. But `fidelity-full` with the
+             wiring in leaves **17 battle scenarios** to re-derive:
+             `battle_menu`, `move_selection`, `battle_low_hp`,
+             `battle_short_nick`, `ball_catch`, `battle_anim_ball`,
+             `battle_anim_elemental`, `battle_item_potion`, `battle_item_no_effect`,
+             `battle_self_destruct`, `battle_wrap`, `battle_switch`,
+             `battle_choose_next_mon`, `battle_safari`, `battle_safari_result`,
+             `battle_run_type`, `fish_old_rod`. **About ten of those carry
+             HAND-TUNED `AUTOKEY_*` scripts** (`AUTOKEY_BATTLE_SWITCH`,
+             `_ITEM`, `_NEXTMON`, `AUTOKEY_SAFARI`, `AUTOKEY_BATTLERUN`, …) whose
+             frame numbers were measured against the INSTANT intro; a single
+             global rule cannot fix them, because each script's presses have to
+             land inside their own menu windows (see `AUTOKEY_BATTLE_NEXTMON`'s
+             before-half/after-half note for why sprinkling presses is unsafe).
+             Budget a dedicated iteration for that tail, one scenario at a time,
+             ~90 s per probe.
+           * **Reverted for the second time to keep the tree green** (core tier
+             16/16 after). Nothing about the wiring is in doubt any more — what
+             is left is harness bookkeeping, not translation.
+           * **TWO TRAPS BANKED, both of which produced byte-identical results
+             that looked like "the change did nothing":**
+             1. **`%elif defined(X) && !defined(Y)` is NOT NASM.** It assembles
+                without error and the branch is simply never taken. Use
+                `%ifdef` / `%elifdef` and nest for the exclusion. Three
+                different A trains gave identical output before this was found.
+             2. **`nasm -E` cannot preprocess `debug_dump.asm`** ("symbol
+                references not supported in preprocess-only mode"), so its
+                truncated output is NOT evidence that a block emitted nothing.
+                Assemble and inspect, or measure at runtime.
            **Reverted to keep the tree green; the two defects it found are landed
            separately and are green at 81/81.**
          * **The `▼` cell — SOLVED, and the solution is reusable.** It read want
