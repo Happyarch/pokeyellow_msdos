@@ -870,6 +870,13 @@ gbstate_regions:
     ; (pret trainer_ai.asm:289-300). wIsInBattle is already inside wBattleFlags.
     gbregion "pEnemyStat12",  wEnemyBattleStatus1, 2   ; D066 status1, D067 status2
     gbregion "pLinkState",    wLinkState,       1
+    ; Control-flow marks, set from inside the AI dispatch. A FLAT host byte, not
+    ; GB memory: golden-harness-probe-marker-placement's rule is that a marker
+    ; must live somewhere the flow never writes, and the game cannot reach this.
+    ;   bit0 TrainerAI entered      bit1 passed all four gates
+    ;   bit2 CooltrainerFAI entered bit3 AISwitchIfEnoughMons entered
+    ;   bit4 SwitchEnemyMon entered
+    gbregion_flat "pAIMarks",  aiswitch_marks,  1
 %endif
 %endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph
@@ -5154,6 +5161,12 @@ AutoKeyDrive:
     ; already be over. Count frames spent in the battle and photograph one well
     ; after several turns have passed, so wEnemyBattleStatus1/2 and wLinkState
     ; are read while TrainerAI would be being called.
+    ; NON-VACUITY BIT for the marker mechanism itself. This block provably runs
+    ; (the snapshot dump fires from it), so bit7 MUST come back set. Without it a
+    ; pAIMarks of 0 is ambiguous between "the AI never ran" and "the probe is
+    ; broken" — a flat .data byte read through gbregion_flat has several ways to
+    ; silently read back zero.
+    or byte [aiswitch_marks], 1<<7
     inc dword [aiswitch_battle_frames]
     cmp dword [aiswitch_battle_frames], AISWITCH_PROBE_FRAME
     jne .noAiSwitchProbeDump
@@ -5557,6 +5570,8 @@ autokey_frame: dd 0
 ; battle plan 1e probe: frames spent with wIsInBattle == 2, so the snapshot can
 ; land mid-battle rather than at whatever moment the trainer-route gate dumps.
 aiswitch_battle_frames: dd 0
+global aiswitch_marks
+aiswitch_marks: db 0
 %endif
 %ifdef DEBUG_BATTLE_WRAP
 align 4
