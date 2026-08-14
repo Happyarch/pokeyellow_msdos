@@ -2378,7 +2378,33 @@ provider shapes below, not their runtime behavior.
                  still drawn", so a marker byte was written after the call:
                  `W_TILEMAP[0]` reads `$EE`, so the call returned. The earlier
                  timeout was therefore NOT a press failure.
-              3. **STILL OPEN — which `DisplayBattleMenu` the presses feed.**
+              3. **RECONCILED — the gate body is DEAD CODE for this battle
+                 type.** An entry marker written at the top of the
+                 `DEBUG_BATTLE_SAFARI` gate body stays UNWRITTEN (`$7F`, not the
+                 `$AA` it writes) under the stock config. So production's
+                 `.specialBattleLoop` blocks in its own `DisplayBattleMenu` and
+                 control never reaches the gate; `battle_safari` (71) works
+                 purely because AutoKeyDrive's timer dump fires while production
+                 is blocked. **A RESULT gate must therefore NOT add a menu loop
+                 — production already drives it.**
+              4. **AND THAT DIAGNOSED THE FIRST PROBE'S TIMEOUT: the speed pin
+                 was in the wrong place.** Staged before `InitBattle`, the
+                 enemy load overwrites it (the spec PIDGEY's speed is 21), so
+                 the deterministic branch is never taken and the RNG comparison
+                 runs instead. Moving the pin to `.specialBattleLoop`'s entry
+                 puts it after the load and on every iteration.
+              5. **STILL BLOCKED, and the pin was NOT the whole story.** With
+                 the pin correctly placed, a second probe (press table +
+                 `EnemyRan` checkpoint) **still timed out at 150 s with no
+                 dump**. Since `PAD_RIGHT`/`PAD_A` are confirmed to reach and
+                 return from `DisplayBattleMenu`, and the pin now survives the
+                 load, the remaining failure is that **the BAIT selection is not
+                 registering a taken turn** — production loops back to
+                 `.specialBattleLoop` instead of falling through to the flee
+                 tail. The next step is to instrument
+                 `wActionResultOrTookBattleTurn` around the bait item-use path
+                 rather than to keep adjusting presses.
+              6. **SUPERSEDED — the earlier open question:**
                  `.specialBattleLoop` is PRODUCTION (`init_battle.asm:556`) and
                  calls `DisplayBattleMenu` itself, and the debug gate body calls
                  it AGAIN afterwards. With `AUTOKEY_QUIET` production's loop
