@@ -597,17 +597,12 @@ ITEMS_SRCS := \
 # link time by core_stubs.asm (JumpMoveEffect / HandlePoisonBurnLeechSeed / TrainerAI /
 # FormatMovesString). Every file here still assembles (make check) and the pure-math
 # routines are native-ELF-harness validated.
-# misc.asm STAYS CHECK-ONLY, but NOT for the reason core_stubs.asm gives. Measured
-# 2026-08-13: the stub's "GetName/names.asm is not yet link-ready (TrainerNames is
-# undefined)" is FALSE -- TrainerNames is defined in assets/trainer_names.inc,
-# names2.o links, and the symbol resolves in PKMN.EXE. The REAL blocker is that
-# the port's GetName does not preserve EBX/EDX/ESI where pret's preserves BC/DE/HL
-# (home/names2.asm `push bc` ... `pop de / pop bc / pop hl`), so the faithful
-# FormatMovesString's `bh` slot counter is destroyed across `call GetName` and the
-# loop runs away. Linking it crashes move_selection with no dump at all.
-# See regression-getname-does-not-preserve-bc.
+# misc.asm PROMOTED to FRONTEND_SRCS 2026-08-13 (Stage-7 retirement sweep). Two
+# claims had to fall first, both measured: core_stubs.asm's "GetName/names.asm is
+# not yet link-ready (TrainerNames is undefined)" is FALSE (TrainerNames resolves
+# in PKMN.EXE), and the REAL blocker -- the port's GetName not preserving
+# BC/DE/HL where pret's does -- is fixed in src/home/names2.asm.
 BATTLE_SRCS := \
-    src/engine/battle/misc.asm \
     src/engine/battle/move_category.asm
 # wild_encounters.asm MOVED to GAME_SRCS (wild-live promotion): TryDoWildEncounter
 # is the random-encounter roll NewBattle calls; its closure resolves now that
@@ -2302,6 +2297,7 @@ FRONTEND_SRCS := \
     src/engine/overworld/emotion_bubbles.asm \
     src/engine/battle/trainer_ai.asm \
     src/engine/battle/read_trainer_party.asm \
+    src/engine/battle/misc.asm \
     src/engine/battle/end_of_battle.asm \
     src/engine/flag_action.asm
 

@@ -15,7 +15,6 @@
 bits 32
 section .text
 
-global FormatMovesString
 ; TrainerAI is now LIVE in trainer_ai.asm (class-based move/item/switch AI; pret
 ; engine/battle/trainer_ai.asm) — its stub here was removed when trainer_ai.asm
 ; linked into the EXE (battle-swarm-C: SelectEnemyMove→AIEnemyTrainerChooseMoves wiring).
@@ -25,63 +24,14 @@ global FormatMovesString
 ; JumpMoveEffect is now LIVE in effects.asm (MoveEffectPointerTable dispatch) — its
 ; stub here was removed when the move-effect scaffold linked effects.asm into the EXE.
 
-extern FindMoveName              ; battle_menu.asm — AL = move id → EAX = flat name ptr
 
-; ---------------------------------------------------------------------------
-; FormatMovesString — faithful copy of misc.asm:FormatMovesString OUTPUT: walk wMoves,
-; emit each move's name with a 0x4E (<NEXT>) separator, a '-' (0xE3) for each empty slot,
-; a 0x50 ('@') terminator, and record wNumMovesMinusOne. Names are resolved via the flat
-; MoveNames walk (FindMoveName) rather than GetName, because GetName/names.asm is not yet
-; link-ready (TrainerNames is undefined). The produced string — and the '-' empty-slot
-; placeholder the user flagged — is byte-identical to the faithful routine's.
-; (NOTE: '-' is the charmap tile 0xE3; misc.asm's `mov al,'-'` would assemble to ASCII
-; 0x2D in NASM — a latent port bug in that never-linked file. We emit 0xE3 here.)
-; In: wMoves seeded (core.asm copies wBattleMonMoves → wMoves first). EBP = GB base.
-; ---------------------------------------------------------------------------
-FormatMovesString:
-    mov esi, wMoves
-    mov edx, wMovesString
-    xor bh, bh                          ; bh = slot counter
-.nameLoop:
-    mov al, [ebp + esi]
-    inc esi
-    test al, al
-    jz .dashLoop                        ; 0 → empty slot (and all remaining)
-    push esi
-    push edx                            ; FindMoveName clobbers DL — preserve the dest cursor
-    call FindMoveName                   ; AL=id → EAX = flat name ptr ('@'-terminated)
-    pop edx
-    mov esi, eax
-.copyName:
-    mov al, [esi]                       ; flat read
-    inc esi
-    cmp al, 0x50                        ; '@'
-    jz .doneName
-    mov [ebp + edx], al
-    inc edx
-    jmp .copyName
-.doneName:
-    mov [ebp + wNumMovesMinusOne], bh
-    inc bh
-    mov byte [ebp + edx], 0x4E          ; <NEXT>
-    inc edx
-    pop esi
-    cmp bh, NUM_MOVES
-    jz .done
-    jmp .nameLoop
-.dashLoop:
-    mov byte [ebp + edx], 0xE3          ; '-' (charmap dash tile)
-    inc edx
-    inc bh
-    cmp bh, NUM_MOVES
-    jz .done
-    mov byte [ebp + edx], 0x4E          ; <NEXT>
-    inc edx
-    jmp .dashLoop
-.done:
-    mov byte [ebp + edx], 0x50          ; '@'
-    ret
-
+; FormatMovesString: RETIRED 2026-08-13 (Stage-7 retirement sweep) — the real body
+; is the faithful mirror src/engine/battle/misc.asm:FormatMovesString, which now
+; LINKS. This stand-in's stated reason ("GetName/names.asm is not yet link-ready
+; (TrainerNames is undefined)") was measurably false: TrainerNames is defined in
+; assets/trainer_names.inc and resolves in PKMN.EXE. The real blocker was that the
+; port's GetName clobbered BC/DE/HL, destroying the faithful body's BH slot counter;
+; fixed in src/home/names2.asm. See regression-getname-does-not-preserve-bc.
 ; ===========================================================================
 ; ExecutePlayerMove/ExecuteEnemyMove special-move leaves — NOW FAITHFULLY PORTED
 ; (battle-swarm-A). Each is its own file under src/engine/battle/; core.asm's

@@ -64,7 +64,7 @@ extern GetMoveName                  ; src/home/names.asm — [wNamedObjectIndex]
 extern IsMoveHM                     ; src/home/names.asm — AL=move id -> CF
 extern TextBoxBorder                ; src/home/text.asm — ESI=top-left, BL=width, BH=height
 extern PlaceString                  ; src/home/text.asm — EAX=flat src, ESI=dest
-extern FormatMovesString            ; src/engine/battle/core_stubs.asm — wMoves -> wMovesString
+extern FormatMovesString            ; src/engine/battle/misc.asm — wMoves -> wMovesString
 extern HandleMenuInput              ; src/home/window.asm — AL = watched key(s) that ended input
 extern text_row_stride              ; src/home/text.asm — current W_TILEMAP row stride
 extern menu_item_step               ; src/home/window.asm — HandleMenuInput cursor row step

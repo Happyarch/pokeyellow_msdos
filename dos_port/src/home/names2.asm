@@ -111,10 +111,25 @@ GetName:
     cmp al, HM01
     jae GetMachineName
 
+    ; pret pushes hl/bc/de HERE — after the HM01 tail-jump, before the body —
+    ; and pops de/bc/hl at .gotPtr, so BC, DE and HL all survive a GetName call
+    ; (home/names2.asm). The port did not save them: the entry walk below does
+    ; `movzx ebx, ...` and the copy clobbers EDX/ESI. That silently broke the one
+    ; caller that relies on it, misc.asm:FormatMovesString, which keeps its
+    ; move-slot counter in BH across `call GetName` exactly as pret keeps it in B
+    ; — the counter died, the loop bound never held, and the writer ran away
+    ; across WRAM. See regression-getname-does-not-preserve-bc.
+    push esi                            ; pret: push hl
+    push ebx                            ; pret: push bc
+    push edx                            ; pret: push de
+
     mov al, [ebp + wNameListType]
     cmp al, MONSTER_NAME
-    je GetMonName                       ; fixed-width path (tail)
+    jne .otherEntries
+    call GetMonName                     ; pret CALLS it inside the pushes
+    jmp .gotPtr
 
+.otherEntries:
     ; types 2-7: esi = NamePointers[type-1]  (flat read of our own .data table)
     movzx eax, al
     dec eax
@@ -162,10 +177,16 @@ GetName:
     inc edi
     dec ecx
     jnz .copy
-    ret
+    jmp .gotPtr
 
 %if BUG_FIX_LEVEL >= 2
 .placeholder:
     mov byte [ebp + wNameBuffer], 0x50       ; empty, terminated name
-    ret
+    ; fall through to the restore — the guard must not skip it
 %endif
+
+.gotPtr:
+    pop edx                                  ; pret: pop de
+    pop ebx                                  ; pret: pop bc
+    pop esi                                  ; pret: pop hl
+    ret

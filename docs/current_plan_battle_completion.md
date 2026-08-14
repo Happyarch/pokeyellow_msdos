@@ -3610,7 +3610,8 @@ enemy-gauge clone tile ids and VRAM slots.
           "asleep" **still PASSES** that scenario: the CF result only chooses
           between two Pikachu cry clips, which nothing compares. So the path is
           `executed`, the result is not `observed`.
-        * **STILL STUBBED (8), with the reason each is not retirable now:**
+        * **STILL STUBBED (7 after the FormatMovesString retirement below),
+          with the reason each is not retirable now:**
           `TradeHidePokemon`, `TradeShakePokeball`, `TradeJumpPokeball`,
           `LinkBattleExchangeData` — link/serial, a Phase-4 HAL boundary;
           `StarterPikachuBattleEntranceAnimation` — animation, Stage 6;
@@ -3628,8 +3629,8 @@ enemy-gauge clone tile ids and VRAM slots.
           is not yet link-ready (TrainerNames is undefined)". `TrainerNames` is
           defined in `assets/trainer_names.inc`, `names2.o` links, and the
           symbol RESOLVES in `PKMN.EXE` at `0x00170475`.
-        * **THE RETIREMENT WAS ATTEMPTED AND BACKED OUT, because it exposed a
-          REAL PORT BUG that is the actual blocker.** The port's `GetName`
+        * **RETIRED 2026-08-13 — but only after fixing the REAL PORT BUG the
+          first attempt exposed.** The port's `GetName`
           clobbers `EBX`/`EDX`/`ESI` where pret's preserves `BC`/`DE`/`HL`
           (`home/names2.asm`: `push af/hl/bc/de` … `pop de/pop bc/pop hl`).
           `FormatMovesString` keeps its move-slot counter in `BH` across
@@ -3638,13 +3639,32 @@ enemy-gauge clone tile ids and VRAM slots.
           WRAM. MEASURED: build and link CLEAN, faithdiff CLEAN on both
           `misc.asm` routines — and `goldencheck move_selection` then produces
           **no `GBSTATE.BIN` at all**. Same shape as the EXP ALL crash.
-        * **Not a one-line fix, which is why it was not rushed:** the port's
-          `GetName` TAIL-JUMPS out of its own body twice (`je GetMonName`,
-          `jae GetMachineName`), so a naive push/pop epilogue is bypassed on
-          both paths. pret puts the `HM01` test BEFORE its pushes and calls
-          `GetMonName` INSIDE them. Recorded as
-          `regression-getname-does-not-preserve-bc`.
-        * **KEPT from the attempt** (all safe, `make check` green): the
+        * **THE FIX (2026-08-13), and it had to respect two tail-jumps.** The
+          port's `GetName` leaves its own body twice — `jae GetMachineName` and
+          `je GetMonName` — so a naive push/pop epilogue would be bypassed on
+          both. pret's structure decides it: the `HM01` test happens BEFORE the
+          pushes (so that tail-jump is faithful and stays), and MONSTER_NAME is
+          a `call GetMonName` INSIDE them. The port now matches: `push esi/ebx/edx`
+          after the HM01 branch, `.otherEntries` for the walk, and a single
+          `.gotPtr` epilogue popping `edx/ebx/esi` that BOTH paths — including
+          the `BUG_FIX_LEVEL >= 2` runaway guard — fall through to.
+          * **faithdiff is UNCHANGED by the fix**, byte-for-byte against the
+            baseline: 2/4 calls matched with `BankswitchCommon` (flat model) and
+            `CopyData` (hand-rolled bounded copy) DROPPED, `[hSwapTemp]` DROPPED
+            and `[wNameBuffer]` ADDED — all pre-existing and already sanctioned;
+            lint 0 in both modes. The fix adds and drops nothing.
+          * **NON-VACUITY, decomposed:** with `misc.asm` linked, reverting ONLY
+            `names2.asm` reproduces the crash exactly — `goldencheck
+            move_selection` again produces **no `GBSTATE.BIN` at all**. With the
+            fix, `move_selection` and `status_p2` both PASS. So the register
+            contract is the whole difference.
+          * Recorded as `regression-getname-does-not-preserve-bc` (FIXED).
+        * **AND THE STAND-IN IS GONE.** `misc.asm` is promoted to
+          `FRONTEND_SRCS` and the `FormatMovesString` body in `core_stubs.asm`
+          is deleted, so the live routine is now the faithful mirror. Battle
+          stub inventory: **9 -> 7 retired-or-classified** (2 retired this
+          stage: `IsPlayerPikachuAsleepInParty`, `FormatMovesString`).
+        * **KEPT from the first attempt** (all safe, `make check` green): the
           `wInitListType`/`wItemPrices` WRAM equs and the five `INIT_*_LIST`
           selectors added to the includes; the seven bogus `extern`s deleted
           from `misc.asm` (they are equs/immediates, the case that file's own
