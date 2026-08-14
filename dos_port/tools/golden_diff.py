@@ -1233,6 +1233,25 @@ SCENARIOS = {
                   "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_run_type": {
+        # RENDERED: what BATTLE_TYPE_RUN produces is a screen — the battle menu
+        # reached with wCurrentMenuItem 3, then "Got away safely!". The type is
+        # unused in the shipped game, so nothing else reaches these arms.
+        #
+        # Enters production's special-battle loop through the same trampoline
+        # battle_safari_result uses: pret .checkAnyPartyAlive sends RUN to
+        # .specialBattle, which falls into .displaySafariZoneBattleMenu.
+        "class": "default",
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_RUNTYPE=1 "
+                 "AUTOKEY_DUMP_FRAME=999999",
+        "window": (10, 3),
+        "oam_window": True,
+        # Same SHARED rendered-battle mask sets the other battle scenarios
+        # carry -- no new masking is introduced here.
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_safari_result": {
         # RENDERED, and it has to be: what this scenario witnesses is a SCREEN
         # transition -- the wild mon's "ran!" message with its pic slid off by

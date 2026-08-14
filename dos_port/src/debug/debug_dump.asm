@@ -206,8 +206,16 @@ extern LoadFrontSpriteByMonIndex ; src/home/pokemon.asm — real enemy front pic
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — real send-out loader
 extern FlagAction                ; flag_action.asm
 extern DisplayBattleMenu         ; core.asm — real menu (parks in HandleMenuInput)
+; NASM %ifdef has no OR — fold both consumers of the special-battle loop entry
+; into one helper, the same pattern AUTOKEY_STALL_PROBE uses above.
 %ifdef DEBUG_BATTLE_SAFARI_RESULT
-extern StartBattle_displaySafariZoneBattleMenu ; engine/battle/init_battle.asm — harness entry into the PRODUCTION special-battle loop (see the gate body)
+%define NEED_SPECIAL_BATTLE_LOOP_ENTRY
+%endif
+%ifdef DEBUG_BATTLE_RUNTYPE
+%define NEED_SPECIAL_BATTLE_LOOP_ENTRY
+%endif
+%ifdef NEED_SPECIAL_BATTLE_LOOP_ENTRY
+extern StartBattle_displaySafariZoneBattleMenu ; engine/battle/init_battle.asm — harness entry into the PRODUCTION special-battle loop (see the gate bodies)
 %endif
 extern SendOutMon                ; engine/battle/core.asm — pret StartBattle's send-out (HUDs, back pic, POOF_ANIM, cry)
 extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
@@ -2330,6 +2338,13 @@ RunBattleTest:
     mov byte [ebp + wBattleType], BATTLE_TYPE_SAFARI
     mov byte [ebp + wNumSafariBalls], 30    ; pret SAFARI_BALLS at zone entry
 %endif
+%ifdef DEBUG_BATTLE_RUNTYPE
+    ; battle plan box 2225's last type. Same staging point and the same reason as
+    ; the three gates around it: BATTLE_TYPE_RUN is a special type, so pret's
+    ; StartBattle:171 skips the player send-out for it, and setting the type
+    ; after the intro would leave the intro on its NORMAL path.
+    mov byte [ebp + wBattleType], BATTLE_TYPE_RUN
+%endif
 %ifdef DEBUG_BATTLE_PIKACHU
     ; battle plan 4a. Same staging as the old-man gate below and for the same
     ; reason — BATTLE_TYPE_PIKACHU is a special type, so pret skips the player
@@ -3128,6 +3143,28 @@ RunBattleTest:
     call DelayFrame
     jmp .goldensafarihang
 %endif
+%elifdef DEBUG_BATTLE_RUNTYPE
+    ; ------------------------------------------------------------------
+    ; battle_run_type — the LAST battle type in box 2225, and the one the plan
+    ; recorded as blocked on cross-emulator staging. That diagnosis was wrong in
+    ; a specific way worth recording: the earlier attempt pinned
+    ; wBattleAndStartSavedMenuItem, but pret's .handleUnusedBattle reads
+    ; wCurrentMenuItem (core.asm:2257), so the pin could not select RUN and the
+    ; menu simply printed "Hurry, get away!" and redrew itself forever — which
+    ; IS what pret does for every other selection on this arm.
+    ;
+    ; BATTLE_TYPE_RUN USES THE SAME LOOP AS SAFARI. pret .checkAnyPartyAlive
+    ; (core.asm:161-166) sends it to .specialBattle, which falls into
+    ; .displaySafariZoneBattleMenu because wBattleType is non-zero. So this gate
+    ; enters through the same trampoline battle_safari_result added.
+    ;
+    ; AND THE ESCAPE IS RNG-FREE. TryRunningFromBattle tests
+    ; `cp BATTLE_TYPE_RUN / jp z, .canEscape` BEFORE any speed comparison or
+    ; Random call (pret core.asm, port core.asm:7007), so the run always
+    ; succeeds and nothing here depends on an RNG stream.
+    ; ------------------------------------------------------------------
+    call StartBattle_displaySafariZoneBattleMenu
+    call DebugDumpMemory                    ; GBSTATE.BIN + DUMP.BIN, then exits
 %elifdef DEBUG_BATTLE_PIKACHU
     ; ------------------------------------------------------------------
     ; battle_pikachu golden gate (battle plan 4a — the must-hit Pikachu-battle
@@ -5429,6 +5466,26 @@ autokey_script:
     dd 600, 608, PAD_A
     dd 640, 648, PAD_A
     dd 680, 688, PAD_A
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_BATTLERUN
+    ; battle_run_type: reach the battle menu's RUN item and take it.
+    ; pret builds wCurrentMenuItem as ROW + 2 IF IN THE RIGHT COLUMN
+    ; (core.asm:2215-2217), so RUN — bottom-right — is row 1 plus the column's
+    ; 2 = item 3. DOWN then RIGHT is therefore the whole navigation, and item 3
+    ; is the ONLY value .handleUnusedBattle acts on; every other selection just
+    ; prints "Hurry, get away!" and redraws.
+    ;   FIGHT  PKMN      item 0   item 2
+    ;   ITEM   RUN       item 1   item 3
+    ; The trailing A pulses walk the escape text, for the same measured reason
+    ; AUTOKEY_SAFARI carries them (WaitForTextScrollButtonPress).
+    dd 320, 328, PAD_DOWN
+    dd 360, 368, PAD_RIGHT
+    dd 400, 408, PAD_A
+    dd 440, 448, PAD_A
+    dd 480, 488, PAD_A
+    dd 520, 528, PAD_A
+    dd 560, 568, PAD_A
+    dd 600, 608, PAD_A
     dd  -1,  -1, 0
 %elifdef AUTOKEY_CHOOSENAME
     ; menu-intro A4.5f (DEBUG_CHOOSENAME): after the pic fade (~60 frames) and the

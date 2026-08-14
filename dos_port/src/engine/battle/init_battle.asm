@@ -601,7 +601,18 @@ _InitBattleCommon:
                                        ; battle is this same menu loop
     jmp EnemyRan                       ; jr EnemyRan — b beat the roll
 
+; NASM %ifdef has no OR, so fold both consumers into one helper — the same
+; pattern debug_dump.asm:844 uses for AUTOKEY_STALL_PROBE. BATTLE_TYPE_RUN and
+; BATTLE_TYPE_SAFARI reach the SAME loop: pret's .checkAnyPartyAlive sends RUN
+; to .specialBattle, which falls straight into .displaySafariZoneBattleMenu
+; because wBattleType is non-zero (core.asm:161-178).
 %ifdef DEBUG_BATTLE_SAFARI_RESULT
+%define SPECIAL_BATTLE_LOOP_ENTRY
+%endif
+%ifdef DEBUG_BATTLE_RUNTYPE
+%define SPECIAL_BATTLE_LOOP_ENTRY
+%endif
+%ifdef SPECIAL_BATTLE_LOOP_ENTRY
 ; DEVIATION{class=temporary; pret=engine/battle/core.asm:StartBattle.displaySafariZoneBattleMenu; behavior=a harness-only trampoline exports an entry into the special-battle menu loop above so the golden gate can drive PRODUCTION instead of calling DisplayBattleMenu directly and replicating the Safari turn tail; evidence=measured 2026-08-14 with four in-WRAM probe markers that the previous battle_safari gate never reached .specialBattleLoop at all so the port's Safari turn and flee roll were executed by no scenario, and RunBattleTest hand-rolls the battle intro rather than calling _InitBattleCommon so there is no production path into the middle of this routine, the same shape as the EnemyCalcMoveDamage harness entry in battle_menu.asm which carries this class; lifetime=retire when RunBattleTest enters battles through _InitBattleCommon rather than replicating its intro}
 ;
 ; IT IS A TRAMPOLINE, NOT A LABEL ON THE LOOP, and that was measured rather than

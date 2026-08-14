@@ -2418,6 +2418,41 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "The RESULT/EXIT half of the per-battle-type box for SAFARI, and the first scenario ever to execute production's _InitBattleCommon.specialBattleLoop -- measured 2026-08-14 with four in-WRAM markers, that loop (the out-of-balls exit, PrintSafariZoneBattleText and the flee roll) was entered by NO scenario, because battle_safari's gate calls DisplayBattleMenu directly. BAIT is chosen, not BALL: a ball attempts a catch (a roll) and a success exits through UseBagItem's carry return before the tail runs at all. THE FLEE IS RNG-FREE RATHER THAN SEEDED, which is what makes this deterministic across two emulators that share no RNG stream -- pret core.asm:189-192 opens `ld a,[wEnemyMonSpeed+1] / add a / jp c, EnemyRan`, so a speed LOW byte (big-endian, so +1) above 127 runs the mon outright BEFORE Random is called; both sides pin it to $80. LANDMARK is the enemy pic GONE *and* \"ran!\" on the tilemap, and both halves are required: \"ran!\" alone fires during PrintText, before pret's `jpfar AnimationSlideEnemyMonOff` tail, at which instant the two sides disagree about the pic band by construction. THE GATE ORDER MATTERS: this build also defines DEBUG_BATTLE_SAFARI, so its build_flags must carry MORE tokens than battle_safari's two or the registry's descending-token %ifdef chain stamps id 71 -- which is exactly what the pre-registration dump reported."
+    },
+    {
+      "name": "battle_run_type",
+      "id": 82,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_RUNTYPE=1 AUTOKEY_DUMP_FRAME=999999",
+      "port_entry_gate": "DEBUG_BATTLE_RUNTYPE",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_run_type.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "DisplayBattleMenu",
+        "StartBattle_displaySafariZoneBattleMenu",
+        "BattleMenu_RunWasSelected",
+        "TryRunningFromBattle",
+        "EndOfBattle"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "The LAST battle type in box 2225. BATTLE_TYPE_RUN is unused in the shipped game, so its arms were faithful but reachable by nothing. THE PLAN RECORDED THIS AS BLOCKED ON CROSS-EMULATOR STAGING AND THAT DIAGNOSIS WAS WRONG: the earlier attempt pinned wBattleAndStartSavedMenuItem, but pret's .handleUnusedBattle reads wCurrentMenuItem (core.asm:2257), so the pin never selected RUN and the arm did what pret says it does for every OTHER selection -- print \"Hurry, get away!\" and redraw the menu. Real key presses fix it and no menu pin is needed. NAVIGATION read out of pret: the battle menu builds wCurrentMenuItem as ROW plus 2 if in the RIGHT COLUMN (core.asm:2215-2217), so RUN is row 1 + column 2 = item 3, i.e. DOWN then RIGHT. IT IS RNG-FREE, which is what makes it comparable: TryRunningFromBattle tests `cp BATTLE_TYPE_RUN / jp z, .canEscape` BEFORE the speed comparison and before Random is called, so the run always succeeds. BATTLE_TYPE_RUN also reaches the SAME special-battle loop as SAFARI -- pret .checkAnyPartyAlive sends it to .specialBattle, which falls into .displaySafariZoneBattleMenu because wBattleType is non-zero -- so the port gate enters through the trampoline battle_safari_result added. LANDMARK is \"Got away safely!\" on the tilemap AND wIsInBattle back to 0: the text alone would catch the message mid-battle, while the port gate's call returns only after .battleFinished has run EndOfBattle, so both sides land POST-TEARDOWN."
     }
   ],
   "disabled_scenarios": []
