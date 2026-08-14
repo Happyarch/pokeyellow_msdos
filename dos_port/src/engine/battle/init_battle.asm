@@ -28,6 +28,7 @@
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "coords.inc"                    ; BCOORD — GB(col,row) -> canvas projection
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_battle.inc"
 
@@ -118,6 +119,8 @@ extern PrintSafariZoneBattleText         ; engine/battle/safari_zone.asm — bai
 extern EnemyRan                          ; core.asm — the wild mon fled
 extern Random                            ; home/random.asm
 extern LoadScreenTilesFromBuffer1        ; home/tilemap.asm
+extern SaveScreenTilesToBuffer1          ; home/tilemap.asm
+extern SlideTrainerPicOffScreen          ; engine/battle/core.asm — pret StartBattle's player-side slide
 extern PrintText                         ; home/window.asm — ESI = flat stream
 extern _OutOfSafariBallsText             ; dos_port/assets/battle_text.inc
 extern ModifyPikachuHappiness            ; engine/events/pikachu_happiness.asm — DH = PIKAHAPPY_*
@@ -420,6 +423,17 @@ _InitBattleCommon:
     mov al, [ebp + wPartySpecies + eax]
     mov [ebp + wCurPartySpecies], al
     mov [ebp + wBattleMonSpecies2], al
+    ; pret StartBattle:243-247 — restore the clean screen, slide the PLAYER pic
+    ; off to the left (amount 9 from hlcoord 1,5), then re-save. The port folded
+    ; StartBattle into this routine, so this is where those three calls belong.
+    ; The slide's writes stay inside the projected GB window: its shift window is
+    ; anchored to the screen edge (reads GB cols 1-9, writes 0-8), so BCOORD is
+    ; the whole projection — see the routine's header in core.asm.
+    call LoadScreenTilesFromBuffer1
+    mov esi, BCOORD(1, 5)                      ; hlcoord 1, 5
+    mov al, 9                                  ; ld a, $9 — != 8 → slide LEFT
+    call SlideTrainerPicOffScreen
+    call SaveScreenTilesToBuffer1
     ; flag this mon to gain EXP + as having fought the current enemy
     mov cl, [ebp + wWhichPokemon]
     mov bh, FLAG_SET

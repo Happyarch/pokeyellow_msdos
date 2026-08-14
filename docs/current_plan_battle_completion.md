@@ -2246,6 +2246,35 @@ provider shapes below, not their runtime behavior.
       - Still owed even for the four covered types: the box asks for the
         item/event RESULT and EXIT as well as the menu, and none of the three
         new scenarios follows the battle to its end.
+        * **CONFIRMED 2026-08-14, not assumed:** `battle_oldman`,
+          `battle_pikachu` and `battle_safari` all carry
+          `must_hit: [RunBattleTest, DisplayBattleMenu]`, and the first two are
+          `datastruct`/`wram`-only. None goes past the menu. This half is
+          **unstarted work, NOT blocked** — an earlier summary of this plan
+          called all five open boxes "blocked", which was wrong.
+      - **RESULT/EXIT WITNESS DESIGNED 2026-08-14 (specified, not yet built).**
+        The tutorial types are the tractable target because their terminal state
+        is *distinctive*, so the scenario proves a branch rather than just
+        reaching an end:
+        * **The path**, read out of pret: `DisplayBattleMenu.doSimulatedMenuInput`
+          (`core.asm:2101`) draws the fake cursor moves and ends
+          `ld a,$2 / jp .upperLeftMenuItemWasNotSelected` — it auto-selects
+          ITEM. `:2303` then routes OLD_MAN/PIKACHU to `.simulatedInputBattle`,
+          which points `wListPointer` at `SimulatedInputBattleItemList` and
+          throws the ball.
+        * **The distinctive terminal:** `ItemUseBall` at
+          `item_effects.asm:529-532` sends BOTH tutorial types to
+          `.oldManCaughtMon`, which prints the caught text and **skips giving
+          the player the mon** — no `IndexToPokedex`, no party add.
+        * **So the comparison is strong:** at `wBattleResult == 2` (the same
+          landmark `ball_catch` already polls), compare `wPartyData` and
+          `wPokedex` **UNCHANGED**, `wBagItems` with the ball consumed, and
+          `wBattleResult`. A port that wrongly took the normal catch path would
+          hand the player a WEEDLE and fail on party + dex.
+        * **Build it as a NEW scenario (id 79 reserved), not by moving
+          `battle_oldman`'s dump point** — the menu witness it provides today is
+          what caught the `.oldManName` ROM-tail bytes, and scenario-local
+          regions are cheap (see `golden-scenario-local-region-is-cheap-shared-is-not`).
       - **MEASURED 2026-08-13 — THE COVERAGE IS THINNER THAN "FOUR OF FIVE
         TYPES" SUGGESTS, AND THE BOX'S OWN WORDING IS WHERE IT SHOWS.** The box
         asks for a scenario "comparing the relevant MENU". Of the **22** battle
@@ -3112,8 +3141,27 @@ enemy-gauge clone tile ids and VRAM slots.
           wire it into. `EnemySendOutFirstMon` (pret `:1351`) is translated and
           live via `_InitBattleCommon`, and carries the real call now:
           `mov esi, BCOORD(18,0) / mov al, 8 / call SlideTrainerPicOffScreen`.
-          **The player half stays open and is blocked on translating
-          `StartBattle`** — a separate, larger item, not part of this one.
+          **BOTH SITES ARE NOW WIRED (same day, second pass).** The "blocked on
+          `StartBattle`" reading was itself too quick: `StartBattle` is `missing`
+          only because **the port ABSORBED its body into `_InitBattleCommon`**
+          (`init_battle.asm:355-357` says so: "pret splits this across
+          InitBattle -> InitWildBattle -> _InitBattleCommon -> StartBattle …
+          folded StartBattle … into the proven path"). So the player send-out
+          site exists — inside the merged routine — and pret's own ordering
+          located it exactly: `core.asm:243-247` puts the three calls between
+          `wBattleMonSpecies2` and the `FlagAction` pair, and the port had that
+          precise gap with all three missing. Now wired there:
+          `LoadScreenTilesFromBuffer1` / `BCOORD(1,5)` + `al=9` +
+          `SlideTrainerPicOffScreen` / `SaveScreenTilesToBuffer1`.
+          * `SlideTrainerPicOffScreen` port callers **0 -> 2**, matching pret's
+            two retail sites.
+          * `_InitBattleCommon` faithdiff, before -> after: **4 -> 5 matched**,
+            DROPPED lines **11 -> 10**, and none of the three added calls
+            registers as ADDED.
+          * For the record on why its counts look odd at all: that routine
+            carries pret's `StartBattle` body, so it will always show ADDED
+            calls relative to pret's own `_InitBattleCommon`. That is the
+            pre-existing absorption fork, not this change.
       * **SUPERSEDED — the analysis that deferred it (kept because being wrong
         here is the lesson):**
       * **ANALYSED 2026-08-13, AND "needs PROJ coordinates" UNDERSTATES IT.**
