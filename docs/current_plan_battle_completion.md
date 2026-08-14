@@ -2164,8 +2164,34 @@ provider shapes below, not their runtime behavior.
            `text_pause`'s own header records; it had been fixed for
            `<PROMPT>`/`<CONT>`/`<PARA>` and this one command was missed. Both
            fixes are correct with the wiring still OFF and are landed separately.
-         * **WHAT REMAINS IS ONE CELL: the `▼` at GB (18,16), want `$EE` got
-           `$7F`** — blink PHASE, not absence. The arrow cell is right
+         * **THE FULL WIRING WAS THEN BUILT AND MEASURED, AND IT IS REVERTED —
+           here is exactly how far it got, so the next attempt starts from the
+           measurement and not from scratch.** With all three intro arms and the
+           harness staging calling `PrintBeginningBattleText` (one call: the
+           routine is pret's own dispatcher — `ld a,[wIsInBattle] / dec a / jr
+           nz,.trainerBattle` is its first three instructions, and it skips the
+           ball row itself for any nonzero `wBattleType`), and with the `▼` poke
+           moved to `AutoKeyDrive`'s dump instant:
+           * **`battle_intro` PASSES OUTRIGHT** — tilemap OK 360/360, VRAM OK,
+             OAM OK, WRAM OK. **And the golden did NOT need regenerating**: the
+             port converges to the existing one. The feared four-golden blast
+             radius is not real, because `battle_intro` already moved to a
+             frame-based dump (`79321af47`).
+           * **`battle_menu` does NOT: 165 unmasked divergences, including OBJ
+             palette entries (pal5-7).** That is the `SaveBattleScreen` / ball-row
+             ORDERING, which is what this box always said the blocker was: pret
+             draws the balls INSIDE the routine (before its snapshot) and clears
+             them after the restore with two `ClearScreenArea`s, where the port
+             draws them AFTER `SaveBattleScreen` and clears them with
+             `HideBattlePokeballs`. Moving the draw inside changes what buffer1
+             holds, and the menu restores buffer1.
+           * So the remaining work is precisely: reconcile the ball row's
+             position relative to the snapshot, and account for the OBJ palette
+             difference that comes with it. Everything else converges.
+           **Reverted to keep the tree green; the two defects it found are landed
+           separately and are green at 81/81.**
+         * **The `▼` cell — SOLVED, and the solution is reusable.** It read want
+           `$EE` got `$7F` — blink PHASE, not absence. The arrow cell is right
            (`UI_DIALOG_ARROW_OFS` 788 = canvas row 19 col 28 = GB (18,16)) and
            `BattlePromptWait` blinks it on a 20-frame half-period, while pret
            spins `HandleDownArrowBlinkTiming` inside `JoypadLowSensitivity`'s
@@ -2174,9 +2200,11 @@ provider shapes below, not their runtime behavior.
            instants are not related, and the harness has ALWAYS forced this cell
            (the `$EE` poke at `debug_dump.asm`, justified as "the port box prints
            instantly, promptless"). With the faithful path the intro BLOCKS, so
-           that poke is never reached — it has to move into the dump path, which
-           is the one remaining decision and is a harness question, not a
-           translation one. **Do not close it by adding a mask.**
+           that poke is never reached. MOVING IT TO `AutoKeyDrive`'s dump instant
+           closes it, verified: `battle_intro` then compares 360/360 with no new
+           mask. It pins PHASE only — the arrow, its cell and its erase stay the
+           port's own. **It was closed without adding a mask, which is the bar
+           any future attempt should hold to.**
          *(original tracing, 2026-08-12, kept for the dependency chain)*
          **TRACED 2026-08-12 to a bigger, already-owned blocker.** The unveil arm is not
          a standalone call site: it lives inside pret's
