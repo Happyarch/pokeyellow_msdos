@@ -4719,6 +4719,21 @@ enemy-gauge clone tile ids and VRAM slots.
 - [ ] Archive only when `project_state --plans` reports no open checklist items
       here and the default game can enter, play, and exit all in-scope battle
       types through their owning live routes.
+      - **FIRST CLAUSE MET 2026-08-14.** With 4c closed (`db4379620`), every
+        checklist item in this plan except this box is `[x]`; `project_state
+        --plans` reports 36 completed / 1 open, and the 1 is this box itself.
+        Nothing else here is open, blocked, or transferred-pending.
+      - **THE SECOND CLAUSE IS THE ONLY THING LEFT, AND AN AGENT CANNOT MEET
+        IT.** It wants the default game to enter, play and exit all in-scope
+        battle types through their owning LIVE routes. Golden coverage exists
+        for every type, but four of five are reached through `RunBattleTest`'s
+        synthetic staging; `trainer_battle_route` (51) is still the only
+        live-route battle in the suite. This clause is about playing the game
+        and it wants a human at the controls — so **archival is a maintainer
+        decision, not an agent one.** Suggested check: `dos_port/run` a wild
+        encounter, a trainer sight battle, the Safari zone, the old-man
+        tutorial and the Pikachu battle, entering and leaving each from the
+        overworld.
       - **RESOLVED 2026-08-14 — the maintainer took option 1: 6e is TRANSFERRED
         to the CGB colour plan** (its Stage 5, same artifact URL). This plan no
         longer holds an item that waits on out-of-repo work, so the FIRST clause
