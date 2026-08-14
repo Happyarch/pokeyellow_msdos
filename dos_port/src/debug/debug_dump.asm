@@ -5057,8 +5057,8 @@ RunStoneTest:
 %define AISWITCH_PROBE_FRAME 2400        ; well past the pin delay below
 %endif
 %endif
-%ifndef AISWITCH_PIN_DELAY
-%define AISWITCH_PIN_DELAY 900           ; in-battle frames to let the intro finish
+%ifndef AISWITCH_SEED_DELAY
+%define AISWITCH_SEED_DELAY 300          ; in-battle frames to let the intro finish
 %endif
 %ifndef AK_WALK_BASE
 %define AK_WALK_BASE 9000               ; AUTOKEY_ROUTE_WALK post-battle walk start
@@ -5105,94 +5105,63 @@ AutoKeyDrive:
     ; ------------------------------------------------------------------
     cmp byte [ebp + wIsInBattle], 2
     jne .noAiSwitch
-    inc dword [aiswitch_battle_frames]      ; ticks in BOTH builds, before the check
-    ; *** THE PIN MUST NOT RUN DURING THE INTRO. *** MEASURED: pinning from the
-    ; first in-battle frame leaves MainInBattleLoop NEVER ENTERED (marker bit5
-    ; clear over a whole run), so the turn loop never starts and the AI is never
-    ; consulted. Rewriting wEnemyMonHP/MaxHP every frame while the intro is still
-    ; drawing means anything that animates toward a target HP cannot converge.
-    ; Let the battle settle first, then pin.
-    cmp dword [aiswitch_battle_frames], AISWITCH_PIN_DELAY
-    jb .noAiSwitch
+    inc dword [aiswitch_battle_frames]      ; ticks in BOTH builds, before any check
+    ; --- PIN 1: the AI class. Written every frame, which is safe because nothing
+    ;     in the engine animates toward wTrainerClass. This is the ONLY per-frame
+    ;     write left; see the seed below for why.
     mov byte [ebp + wTrainerClass], OPP_COOLTRAINER_F - OPP_ID_OFFSET
-    ; *** THE ENEMY MUST SURVIVE THE PLAYER'S HIT, and that is not a detail —
-    ; it is the whole reason maxHP is pinned rather than left real. MEASURED:
-    ; with the roster's real L10 maxHP (25) the band is [2,4], the debug party's
-    ; L80 lead one-shots it, and MainInBattleLoop's .playerMovesFirst branch
-    ; takes `test bh,bh / jz HandleEnemyMonFainted` BEFORE it ever reaches
-    ; TrainerAI (port core.asm:475-481). The first attempt pinned only HP and
-    ; the AI was never consulted at all — the dump came from the underlying
-    ; DEBUG_TRAINER_ROUTE gate, with partyPos still 0.
+    ; --- SEED (once, not a pin): bring the enemy into CooltrainerFAI's band.
     ;
-    ; 65535 is battle_wrap / battle_thrash's survive-the-sequence pin, reused
-    ; for the same reason. It moves the band to [6553, 13106], and a single L80
-    ; STRENGTH hit is nowhere near that wide, so the enemy is still inside the
-    ; band when TrainerAI is finally called.
-    mov word [ebp + wEnemyMonMaxHP], 0xFFFF
+    ; *** DO NOT TURN THIS BACK INTO A PER-FRAME PIN. *** MEASURED twice: writing
+    ; wEnemyMonHP/MaxHP every frame stalls the flow, because anything animating
+    ; toward a target HP cannot converge against a value rewritten under it.
+    ; From frame 0 it stalled the INTRO and MainInBattleLoop was never entered
+    ; (marker bit5 clear); delayed to frame 900 it stalled the TURN LOOP instead,
+    ; and CooltrainerFAI was never entered (bit2 clear) because every AI call had
+    ; already happened before the pin engaged. One write, then hands off.
+    ;
+    ; It holds because nothing damages the enemy in the meantime: the debug
+    ; party's lead is SNORLAX L80 whose move slot 0 is FLY, a two-turn move, so
+    ; turn 1 is the charge and the enemy survives to be consulted by the AI.
+    ; maxHP is left REAL — the 65535 pin existed only to survive a hit that no
+    ; longer lands on turn 1.
+    cmp byte [aiswitch_seeded], 0
+    jne .aiSeedDone
+    cmp byte [ebp + wEnemyMonSpecies], 0
+    je .noAiSwitch                          ; enemy not loaded yet
+    cmp dword [aiswitch_battle_frames], AISWITCH_SEED_DELAY
+    jb .noAiSwitch                          ; let the intro finish first
     movzx eax, byte [ebp + wEnemyMonMaxHP]
     shl eax, 8
     mov al, [ebp + wEnemyMonMaxHP + 1]
     test eax, eax
-    jz .noAiSwitch                          ; no mon staged yet
+    jz .noAiSwitch
     xor edx, edx
     mov ecx, 5
     div ecx                                 ; EAX = maxHP/5
     test eax, eax
-    jz .noAiSwitch                          ; maxHP < 5: no value can satisfy both
-    dec eax                                 ; the largest HP strictly below maxHP/5
+    jz .noAiSwitch                          ; maxHP < 5: no value satisfies both
+    dec eax                                 ; largest HP strictly below maxHP/5
     mov [ebp + wEnemyMonHP], ah
     mov [ebp + wEnemyMonHP + 1], al
+    mov byte [aiswitch_seeded], 1
+.aiSeedDone:
 %ifdef AISWITCH_PROBE
-    ; MID-BATTLE SNAPSHOT, not a landmark. The partyPos latch cannot answer "why
-    ; was the AI never consulted" — it never fires, so the only dump that lands
-    ; is the underlying trainer-route gate's, at a moment when the battle may
-    ; already be over. Count frames spent in the battle and photograph one well
-    ; after several turns have passed, so wEnemyBattleStatus1/2 and wLinkState
-    ; are read while TrainerAI would be being called.
-    ; NON-VACUITY BIT for the marker mechanism itself. This block provably runs
-    ; (the snapshot dump fires from it), so bit7 MUST come back set. Without it a
-    ; pAIMarks of 0 is ambiguous between "the AI never ran" and "the probe is
-    ; broken" — a flat .data byte read through gbregion_flat has several ways to
-    ; silently read back zero.
-    or byte [aiswitch_marks], 1<<7
+    or byte [aiswitch_marks], 1<<7          ; probe-alive (non-vacuity)
     cmp dword [aiswitch_battle_frames], AISWITCH_PROBE_FRAME
     jne .noAiSwitchProbeDump
     call DebugDumpMemory
 .noAiSwitchProbeDump:
 %endif
-    ; LATCH — and it must require a COMPLETED switch, not merely a changed byte.
-    ; MEASURED, AND THE FIRST READING OF THIS WAS WRONG. `wEnemyMonPartyPos != 0`
-    ; alone fires on a transient $FF, which I first read as SwitchEnemyMon
-    ; mid-flight. It is not: at that instant wAICount is still the $FF SENTINEL
-    ; (so TrainerAI has never reached its class-table reload), wWhichPokemon is 0
-    ; and wEnemyMonNick is all zeroes. That is battle INITIALIZATION, before the
-    ; first enemy mon is loaded. The $FF is rejected in both modes now.
-    ;
-    ; *** NO SWITCH HAS BEEN OBSERVED, and the gates are NOT the reason. ***
-    ; A mid-battle snapshot (AISWITCH_PROBE, 900 in-battle frames) reads
-    ;     wBattleFlags  02 01 ca 00   -> wIsInBattle = 2
-    ;     pLinkState    00            -> not a link battle
-    ;     pEnemyStat12  00 00         -> no locked move, no USING_RAGE
-    ;     pTrainerCls   20            -> the COOLTRAINER_F pin holds
-    ; so ALL FOUR of TrainerAI's early-outs pass. wAICount reading $FF proves
-    ; NOTHING either way, and an earlier note here said it did: EnemySendOut
-    ; FALLS THROUGH into EnemySendOutFirstMon, which sets wAICount = $FF, so
-    ; $FF is the expected value after any send-out.
-    ; What is still unexplained: eRoster1HP reads the roster's REAL 30, never
-    ; the pinned 13106, so SwitchEnemyMon's CopyData has not run. The next
-    ; instrument belongs INSIDE the AI dispatch, not in this table.
+    ; LATCH: a COMPLETED switch — a real party slot with a replacement loaded.
+    ; $FF is rejected: measured to be battle INITIALIZATION, not a switch.
     movzx eax, byte [ebp + wEnemyMonPartyPos]
     test eax, eax
     jz .noAiSwitch
-    ; The $FF must be rejected in BOTH modes. MEASURED: it is battle
-    ; INITIALIZATION, not a switch — at that instant wAICount is still the $FF
-    ; sentinel, wWhichPokemon is 0 and wEnemyMonNick is all zeroes.
     cmp eax, PARTY_LENGTH
     jae .noAiSwitch
-%ifndef AISWITCH_PROBE
     cmp byte [ebp + wEnemyMonSpecies], 0
-    je .noAiSwitch                          ; replacement not loaded yet
-%endif
+    je .noAiSwitch
     call DebugDumpMemory                    ; GBSTATE.BIN + DUMP.BIN, then exits
 .noAiSwitch:
 %endif
@@ -5581,6 +5550,7 @@ autokey_frame: dd 0
 ; Frames spent with wIsInBattle == 2. Gates the pin so the battle intro can
 ; finish unpinned, and (under AISWITCH_PROBE) places the mid-battle snapshot.
 aiswitch_battle_frames: dd 0
+aiswitch_seeded: db 0
 %endif
 %ifdef AISWITCH_PROBE
 global aiswitch_marks
