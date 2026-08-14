@@ -2454,10 +2454,53 @@ provider shapes below, not their runtime behavior.
       (`cc7d03262ebfaf2f06772c1a480c7d9d5f4a38e1`), and
       `dos_port/tools/mgba_build/mgba-lua-runner` is built.
 
-      **NOT STARTED, deliberately.** A scenario that commits a new golden
-      artifact is its own iteration (the Stage-6 animation box says the same),
-      and starting it at the end of an iteration risks leaving the tree with a
-      half-built gate. Everything above is measurement, not plan.
+      **STARTED 2026-08-14 AND HALF LANDED. What works, what is left, measured.**
+      * **The port gate is IN and the ghost RENDERS — the first time this port
+        has ever displayed it.** `DEBUG_BATTLE_GHOST` (`RunGhostBattleTestSeed`,
+        the seed-and-return shape) spawns on Route 1 (10,7), seeds
+        `wCurOpponent = RESTLESS_SOUL`, and one autokey DOWN drives the REAL
+        `OverworldLoop` into the battle. `tools/run_headless.sh
+        "DEBUG_BATTLE_GHOST=1"` produces a frame showing the GhostPic sprite and
+        "Wild GHOST appeared!" — end-to-end proof of the 4c chain: the `GhostPic`
+        blob -> `SpecialMonPics` -> the `wMonHFrontSprite` handle ->
+        `UncompressMonSprite` -> the `.isGhost` arm's dims and nick.
+      * **The golden side runs and is DETERMINISTIC.**
+        `tools/mgba_harness/scenarios/battle_ghost.lua` reaches the same state on
+        hardware — its `wEnemyMonNick == "GHOST"` assertion PASSES, so the ROM
+        takes the ghost arm from the same one-byte seed — and two consecutive
+        generations were byte-identical (`a4f8c5b7…`). It reuses `ledge_hop`'s
+        script-warp onto Route 1 because `walk_to_route1` lands at (35,10), 25
+        rows south with a blocked lane (measured: walking LEFT from there times
+        out).
+      * **NOT REGISTERED, because it does not COMPARE yet, and the reason is a
+        real gap in my scenario rather than a port defect.** `goldencheck` gave
+        37 divergences, decomposed:
+        1. **The enemy is unseeded.** A forced `wCurOpponent` battle needs
+           `wCurEnemyLevel`, which neither side sets, so the golden loaded a
+           level-0 Marowak (HP 10, all stats 5) against the port's level 34. And
+           a wild mon's DVs are RNG-rolled, so they can never agree by
+           themselves.
+        2. **`seed.enemy` cannot fix it as written** — it asserts the loader
+           produced `seed.ENEMY` (PIDGEY L13). A Marowak battle needs that
+           convergence spec parameterised by species/level, plus the matching
+           once-only overwrite on the port when `wIsInBattle` goes nonzero (the
+           `DEBUG_BATTLE_AISWITCH` gate's seeding pattern).
+        3. **A REAL ORDERING FINDING, worth keeping either way: the port loads
+           `wBattleMon` BEFORE the intro, hardware at send-out AFTER it.** The
+           golden has `wBattleMon` all zero and nick `???????????` where the port
+           has SNORLAX fully loaded. The port's collapsed `_InitBattleCommon`
+           calls `LoadBattleMonFromParty` ahead of
+           `PrintBeginningBattleText`; pret's `StartBattle` calls it in
+           `.playerSendOutFirstMon`, after. No existing scenario can see this
+           because `RunBattleTest` stages the intro without it. Photographing
+           after send-out avoids it; FIXING it is a separate box.
+        4. The `▼` blink-phase cell, which only `battle_intro` currently pins.
+      * **The registry was rolled back to 81 and `validate_scenarios` is
+        consistent** — a red scenario is not left in the suite. The port gate and
+        the `.lua` stay, because both are proven and are most of the work.
+        Remaining: the species/level-parameterised enemy convergence on both
+        sides, then dump after send-out, register, `goldencheck`, non-vacuity
+        proof, `fidelity-full`.
 
 - [x] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
       divergence using the already-translated item-owned `ItemUseBait`,

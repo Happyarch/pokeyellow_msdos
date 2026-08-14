@@ -937,6 +937,21 @@ NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 
 # make DEBUG_TRAINER_ROUTE=1 [AUTOKEY_DUMP_FRAME=1500]
+# battle_ghost (battle plan 4c's witness, 2026-08-14): the ghost identity arm has
+# no other witness. Seeds wCurOpponent = RESTLESS_SOUL on Route 1 and lets the
+# REAL OverworldLoop take one step into it — NewBattle -> InitBattle ->
+# InitOpponent -> InitWildBattle.isGhost. Needs no Pokemon Tower map and no
+# absent Silph Scope: those gate IsGhostBattle and the .isMarowak unveil arm, not
+# the identity. AUTOKEY_BATTLE_GHOST presses the one DOWN; the dump is frame
+# based like battle_intro's because the faithful intro parks at its own prompt.
+ifdef DEBUG_BATTLE_GHOST
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_GHOST -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLE_GHOST
+AUTOKEY_DUMP_FRAME ?= 900
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 ifdef DEBUG_TRAINER_ROUTE
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TRAINER_ROUTE -D DEBUG_SEED_PARTY -D SKIP_TITLE

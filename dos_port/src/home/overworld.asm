@@ -175,6 +175,7 @@ extern RunFishTestSeed                    ; src/debug/debug_dump.asm
 extern RunLedgeTestSeed                   ; src/debug/debug_dump.asm
 extern RunSurfTestSeed                    ; src/debug/debug_dump.asm
 extern RunTrainerRouteTestSeed            ; src/debug/debug_dump.asm (Stage 1b continuous gate)
+extern RunGhostBattleTestSeed             ; src/debug/debug_dump.asm (4c ghost witness)
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
 extern RunSavePerfTest                    ; src/engine/menus/save.asm (DEBUG_SAVEPERF)
@@ -470,6 +471,24 @@ EnterMap:
     ; DEBUG_SEAM / DEBUG_SURF).
     mov byte [ebp + W_CUR_MAP], ROUTE_1
     mov byte [ebp + W_Y_COORD], 8
+    mov byte [ebp + W_X_COORD], 7
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+%endif
+%ifdef DEBUG_BATTLE_GHOST
+    ; Ghost-battle gate (battle plan 4c's witness). Spawn on Route 1 column 7 —
+    ; the SAME column the ledge block above already proves is free of both Route 1
+    ; NPCs (YOUNGSTER1 wanders UP_DOWN in column 5, YOUNGSTER2 LEFT_RIGHT on row
+    ; 13) and free of grass, so no wild-encounter roll can fire and diverge the
+    ; two sides before the FORCED opponent does. (10,7) and (11,7) are both land
+    ; ($2C) per that block's measurement off maps/Route1.blk, so the single DOWN
+    ; step the autokey takes is legal and lands on plain ground.
+    ; Seeded BEFORE LoadMapData (same rule as DEBUG_SEAM / DEBUG_LEDGE).
+    ;
+    ; NOTE this deliberately does NOT reuse DEBUG_START_MAP: that pulls in
+    ; DEBUG_SEAM, which sets BIT_NO_BATTLES — the exact flag NewBattle tests
+    ; before jumping to InitBattle, so it would suppress the battle under test.
+    mov byte [ebp + W_CUR_MAP], ROUTE_1
+    mov byte [ebp + W_Y_COORD], 10
     mov byte [ebp + W_X_COORD], 7
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
@@ -1030,6 +1049,15 @@ EnterMap:
     call SeedDeterministicPlayerIdentity
     call SeamReseatView
     call RunTrainerRouteTestSeed             ; debug party, empty bag; RETURNS
+%endif
+%ifdef DEBUG_BATTLE_GHOST
+    ; Same shape as DEBUG_LEDGE/FISH/TRAINER_ROUTE above: seed, then FALL THROUGH
+    ; into the real OverworldLoop. One autokey DOWN takes a step, the loop's own
+    ; battle-entry poll calls NewBattle, and the seeded wCurOpponent turns that
+    ; into the forced Marowak battle that IS the ghost.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunGhostBattleTestSeed              ; debug party, empty bag, wCurOpponent; RETURNS
 %endif
 
     ; fall through to OverworldLoop

@@ -125,6 +125,14 @@ extern PrepareNewGameDebug
 %endif
 global RunTrainerRouteTestSeed
 %endif
+%ifdef DEBUG_BATTLE_GHOST
+%ifndef DEBUG_FISH
+%ifndef DEBUG_TRAINER_ROUTE
+extern PrepareNewGameDebug
+%endif
+%endif
+global RunGhostBattleTestSeed
+%endif
 %ifdef DEBUG_ITEMSTONE
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
@@ -1868,6 +1876,56 @@ RunTrainerRouteTestSeed:
 
 section .bss
 trainer_route_seeded: resb 1                    ; 0 = seed on first EnterMap only
+section .text
+%endif
+
+%ifdef DEBUG_BATTLE_GHOST
+; ---------------------------------------------------------------------------
+; RunGhostBattleTestSeed — the ghost-battle gate (battle plan 4c's witness).
+;
+; SEEDS AND RETURNS, exactly like RunLedgeTestSeed / RunTrainerRouteTestSeed:
+; EnterMap falls through into the real OverworldLoop and one autokey DOWN takes
+; the step that starts the battle. Nothing here calls into the battle at all —
+; that is the point. RunBattleTest CANNOT be reused for this scenario: it stages
+; the intro directly and never enters InitBattle, so it can never reach the
+; ghost arm.
+;
+; WHY A FORCED OPPONENT IS THE WHOLE TRICK, and why this needs no Pokemon Tower.
+; MEASURED on both sides (pret engine/battle/init_battle.asm:64-67, port
+; init_battle.asm:263-268): InitWildBattle tests `wCurOpponent == RESTLESS_SOUL`
+; FIRST and takes .isGhost on that ALONE. The tower map range and the absent
+; Silph Scope gate only IsGhostBattle (the RANDOM tower encounters) and
+; PrintBeginningBattleText's .isMarowak UNVEIL arm. RESTLESS_SOUL is MAROWAK.
+;
+; The entry path, all of it the game's own: NewBattle (pret home/overworld.asm
+; :324, mirrored at src/home/overworld.asm:1083/1302/1375) tail-jumps to
+; InitBattle past its three flag guards; InitBattle sees wCurOpponent != 0 and
+; takes InitOpponent; InitBattleCommon's `sub OPP_ID_OFFSET` puts MAROWAK below
+; the threshold, so it falls into InitWildBattle -> .isGhost. No encounter roll,
+; no map dependency, no bag state — nothing for the two emulators to diverge on.
+;
+; ONE-SHOT, same latch and the same reason as the trainer-route gate: EnterMap
+; re-runs this on every map re-entry, and the post-battle path is one.
+; Re-seeding wCurOpponent after the battle would start a second one forever.
+;
+; In: EBP = GB memory base.  Returns.
+; ---------------------------------------------------------------------------
+RunGhostBattleTestSeed:
+    cmp byte [ghost_battle_seeded], 0
+    jne .alreadySeeded
+    mov byte [ghost_battle_seeded], 1
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    ; The forced opponent. This is the only line that makes it a ghost battle.
+    mov byte [ebp + wCurOpponent], RESTLESS_SOUL
+.alreadySeeded:
+    ret
+
+section .bss
+ghost_battle_seeded: resb 1                     ; 0 = seed on first EnterMap only
 section .text
 %endif
 
@@ -5684,6 +5742,14 @@ autokey_script:
     ; DumpBackbuffer the routine never reaches. NOTE: the battle golden gates keep
     ; this AND still get one A — AutoKeyDrive emits the intro-prompt dismiss
     ; outside the script, then runs this timeline shifted past it.
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_BATTLE_GHOST
+    ; battle_ghost: ONE step to trigger the forced battle, then nothing. The
+    ; step must land after EnterMap has settled (SeedDeterministicPlayerIdentity
+    ; + SeamReseatView + the seed all run on the first EnterMap), and the intro
+    ; is left PARKED at its own prompt for the photograph — the same thing
+    ; battle_intro does, and the reason no A follows the DOWN.
+    dd  90,  98, PAD_DOWN
     dd  -1,  -1, 0
 %elifdef AUTOKEY_SAFARI
     ; battle_safari_result: drive the SAFARI menu to BAIT, which is the only
