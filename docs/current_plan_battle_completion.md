@@ -3120,8 +3120,31 @@ enemy-gauge clone tile ids and VRAM slots.
           (`slide_dir` / `slide_steps` / region) under a
           `DEVIATION{class=projection}` that names exactly that substitution for
           pret's `hSlideDirection`/`hSlideAmount`/`hSlidingRegionSize`.
-        * **WHAT ACTUALLY REMAINS is the translation and its regression
-          surface, which is NOT small:** pret calls this between
+        * **AND THE REGRESSION SURFACE WAS MEASURED 2026-08-14 — IT IS SMALLER
+          THAN FEARED, BUT SO IS THE UPSIDE.** Two facts settle the risk in
+          opposite directions, and both are measured:
+          1. **Nothing compares the slide's result, so it cannot BREAK a
+             scenario.** At `battle_intro`'s instant (class `default`, comparing
+             tilemap/vram/oam/wram) the golden's player-pic band
+             `GB(1,5)-(7,11)` holds **49 non-blank cells** — the BACK PIC,
+             drawn after the send-out. The slide's blanked band is transient and
+             immediately overwritten, so both sides already agree there.
+          2. **Nothing compares the saved buffer either.** pret slides between
+             `LoadScreenTilesFromBuffer1` and `SaveScreenTilesToBuffer1`, so the
+             blanked band is what hardware SAVES; the port currently saves
+             whatever it had. `wTileMapBackup` is NOT one of the 17 GBSTATE
+             regions, so that difference — a possible latent stale-pic defect —
+             is invisible to every scenario.
+          * **CONSEQUENCE: the translation is low-risk AND its positive effect
+            is unwitnessable.** The margin scan guards exactly one failure mode
+            (a pic parked at canvas col 2 / col 36); nothing can confirm the
+            animation actually plays or that the saved buffer is now correct.
+            That is the same combination this box already refused once, so it
+            stays deferred DELIBERATELY rather than for lack of analysis — but
+            it is now fully specified: decision made, precedent found, failure
+            mode guarded, risk bounded. A future session can land it in one
+            sitting.
+      * **The original framing of what remains:** pret calls this between
           `LoadScreenTilesFromBuffer1` and `SaveScreenTilesToBuffer1` at BOTH
           sites (`core.asm:243-247` and `:1349-1353`), so the slide changes what
           gets SAVED into the screen buffer, not just what is momentarily drawn.
