@@ -117,6 +117,9 @@ global PrintBattleText
 global PrintEmptyString                 ; pret core.asm:6720 — retired its battle_exp_stubs.asm stub
 extern DisplayUsedMoveText          ; src/engine/battle/used_move_text.asm
 extern PrintTextStaged                 ; src/home/window.asm — PrintText, stream already staged
+extern AnimationSlideEnemyMonOff       ; engine/battle/animations.asm — EnemyRan's tail
+extern PlaySoundWaitForCurrent         ; src/home/delay.asm — In: AL = sound id (also declared at its other use below)
+extern EnemyRanText                    ; dos_port/assets/battle_text.inc — EnemyRan, link arm
 global ExecutePlayerMove
 global ExecutePlayerMoveDone
 global MonsStatsRose
@@ -5289,17 +5292,40 @@ HandlePlayerBlackOut:
     ret                                  ; pret `ret z`: CF is clear here
 
 ; ===========================================================================
-; EnemyRan — pret core.asm:263. Reached (single-player) only as the ReplaceFainted-
-; EnemyMon "ran" tail, which is link-only, so this is effectively a safety path:
-; restore the screen, note the fled enemy, end the battle.
+; EnemyRan — pret core.asm:263.
+;
+; THE COMMENT THAT USED TO SIT HERE WAS WRONG, AND IT GUARDED THREE DROPS. It
+; read "Reached (single-player) only as the ReplaceFaintedEnemyMon 'ran' tail,
+; which is link-only, so this is effectively a safety path". MEASURED FALSE
+; 2026-08-14: the SAFARI flee reaches it in single player —
+; _InitBattleCommon.specialBattleLoop's `add a / jc EnemyRan` on the enemy speed
+; low byte — and a DEBUG_BATTLE_SAFARI_RESULT run stops here with "Wild PIDGEY /
+; ran!" on the tilemap. Nothing about this path is link-only or a safety net.
+;
+; The body is now pret's, including the link/non-link split that decides BOTH
+; the text and whether wBattleResult is written. The port previously printed
+; WildRanText unconditionally and wrote wBattleResult UNCONDITIONALLY, where
+; pret writes it only on the link arm.
 ; ===========================================================================
 EnemyRan:
     call LoadScreenTilesFromBuffer1
-    mov eax, WildRanText
-    call PrintBattleText
-    mov byte [ebp + wBattleResult], 0
-    ; ANIMATION=OFF: AnimationSlideEnemyMonOff.
-    ret
+    mov eax, WildRanText                 ; ld hl, WildRanText
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    jne .printText                       ; jr nz
+; link battle
+    mov byte [ebp + wBattleResult], 0    ; xor a / ld [wBattleResult], a
+    mov eax, EnemyRanText                ; ld hl, EnemyRanText
+.printText:
+    call PrintBattleText                 ; call PrintText (port battle msgbox wrapper)
+    mov al, SFX_RUN
+    call PlaySoundWaitForCurrent
+    mov byte [ebp + hWhoseTurn], 0       ; xor a / ldh [hWhoseTurn], a
+    ; NOT `ANIMATION=OFF` ANY MORE — the provider landed. AnimationSlideEnemyMonOff
+    ; was retired from core_stubs.asm on 2026-08-08 and is `translated`; the
+    ; deferral note here outlived it. pret's `jpfar` is a TAIL call, so the
+    ; slide's ret IS this routine's ret. The hWhoseTurn zeroing above is what
+    ; makes it slide the ENEMY: the routine goes through CallWithTurnFlipped.
+    jmp AnimationSlideEnemyMonOff        ; jpfar
 
 ; --- was src/engine/battle/faint_sendout.asm ---
 
