@@ -687,7 +687,38 @@ result gates deliberately stop after initialization and drive one terminal turn.
       link is 1g: the port's battle ENTRY never calls `SendOutMon`. Read the
       block above as the description of a real defect that was fixed, not as a
       prediction that came true.
-- [~] **1e. AI execution leaves.** FIRST CLAUSE DONE 2026-08-11 (`b4cb88001`):
+- [x] **1e. AI execution leaves — CLOSED 2026-08-14 (`04adbf0cb`).** Both clauses
+      were implemented since 2026-08-11; the box stayed `[~]` SOLELY for want of a
+      witness, and `battle_ai_switch` (id 83) is it — the first scenario ever to
+      reach `SwitchEnemyMon`. PASS, WRAM OK (25 regions, 1 skipped), registry 81,
+      `fidelity-full` 81/81 nonzero=0.
+      * **IT FOUND A REAL PRODUCTION DEFECT ON ITS FIRST GREEN RUN**
+        (`8e373b8b7`): `LoadEnemyMonData` had `inc esi` between
+        `test al, 1 << TRANSFORMED` and its `jnz`, and `inc` writes ZF. ESI is a
+        WRAM address and never zero, so the branch was ALWAYS taken and EVERY
+        enemy mon took its DVs from `wTransformedEnemyMonOriginalDVs` — zero in
+        an ordinary battle, making both the trainer-fixed and wild-random DV
+        paths unreachable. Fixed with the flag-neutral `lea esi, [esi + 1]`.
+        Invisible to every other scenario because they all seed enemy DVs
+        directly on both sides; it surfaced here because the compared mon is the
+        REPLACEMENT the game itself loads. 9 -> 2 divergences, the 7 being the
+        DV word, its five derived stats and the roster copy.
+      * **The design, and the three things that had to be right:** pin
+        `wTrainerClass = COOLTRAINER_F` per frame (the ONLY RNG-free route —
+        pret commented out that class's `ret nc`); SEED `wEnemyMonHP` ONCE into
+        `maxHP/10 <= HP < maxHP/5` and never touch it again (a per-frame pin
+        stalls the flow silently, measured twice); and fire the seed on a STATE
+        both sides reach identically (`wBattleMonSpecies` non-zero) rather than
+        a frame count, because the two emulators' input cadences advance the
+        battle at different rates.
+      * **The landmark needed the ROSTER HP**, and the golden caught it:
+        `partyPos in 1..5` alone does not tell a SWITCH from a FAINT. On a
+        switch `SwitchEnemyMon` writes the withdrawn mon's HP back non-zero.
+      * One mask added and justified: `wPlayerMapPos +1..+2` is
+        `wCurrentTileBlockMapViewPointer`, which `init_battle.asm:315-319` saves
+        and zeroes for the battle renderer and `:512` restores — this is the
+        first scenario to dump MID-battle while comparing that region.
+      * *(original entry)* FIRST CLAUSE DONE 2026-08-11 (`b4cb88001`):
       `SwitchEnemyMon` restored through withdrawal and send-out — `faithdiff`
       4 pret / 4 port, 3 matched (was 1), stores 1/1 (was 0/1). It had been
       copying the withdrawn mon's HP back to the roster and then never sending
