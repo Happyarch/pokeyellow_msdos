@@ -97,22 +97,21 @@ _RunPaletteCommand:
     ; (2026-08-05), which stopped hardcoding SET_PAL_DEFAULT -> SetPal_Generic and
     ; started honouring wDefaultPaletteCommand. Before that the missing publish was
     ; masked because the hardcoded answer happened to be the right one here.
-    ; ⚠ SET_PAL_PARTY_MENU_HP_BARS ($fc) IS DROPPED HERE — the party menu's HP
-    ; bars are consequently never coloured. pret handles this id BEFORE its
+    ; SET_PAL_PARTY_MENU_HP_BARS ($fc) is still not DISPATCHED here — but as of
+    ; 2026-08-14 its EFFECT does reach the screen. pret handles this id before its
     ; dispatch table (`cp SET_PAL_PARTY_MENU_HP_BARS / jp z,
-    ; UpdatePartyMenuBlkPacket`), and on CGB the packet it updates really is
-    ; consumed (SendSGBPackets runs BOTH packets through InitCGBPalettes). The
-    ; port cannot follow: its palette HAL is per-TILE-ID (tile_pal) and all six
-    ; party HP bars share tile ids, so a per-row colour is not expressible.
-    ; The former "duplicate the tiles, as DuplicateEnemyHPBarTiles does for the
-    ; battle gauge" answer is GONE — that clone trick was retired in ec82fa9ba
-    ; for the per-cell BG attribute layer (ppu.asm). This screen cannot reuse
-    ; that layer as built: the party menu renders through a WINDOW descriptor
-    ; and decode_win_row8 carries no attribute channel, unlike the flat canvas
-    ; path decode_tile serves. Caller: SetPartyMenuHPBarColor
-    ; (src/engine/menus/party_menu.asm). Owner: docs/current_plan_backlog.md
-    ; item 10b.
-    ; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:_RunPaletteCommand; behavior=the SET_PAL_PARTY_MENU_HP_BARS command id is ignored instead of updating the party-menu attribute packet so party HP bars keep whatever colour the palette slots already hold; evidence=pret dispatches this id to UpdatePartyMenuBlkPacket which edits an SGB BLK packet that SendSGBPackets feeds to InitCGBPalettes on colour hardware while this port has no packet path at all and colours per tile id through tile_pal which cannot distinguish six rows drawn from the same tile ids; lifetime=until the per-cell BG attribute layer reaches the WINDOW render path decode_win_row8 which is what the party menu draws through}
+    ; UpdatePartyMenuBlkPacket`), editing an SGB BLK packet that InitCGBPalettes
+    ; consumes on colour hardware. The port produces the same result from
+    ; SetPartyMenuHPBarColor (src/engine/menus/party_menu.asm), which publishes
+    ; the bar's six cells into the WINDOW per-cell attribute plane.
+    ;
+    ; The split is forced by addressing, not preference: pret's packet is indexed
+    ; by ROW INDEX (wPartyMenuBlkPacket + 8 + 1 + 6*index), so it needs nothing
+    ; but wWhichPartyMenuHPBar and can live here. The port's plane is indexed by
+    ; SCREEN CELL, and the only code holding the bar's live coordinate is the
+    ; caller. Moving it here would mean re-deriving that coordinate from the row
+    ; index — a second source of truth for the party menu's layout.
+    ; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:_RunPaletteCommand; behavior=the SET_PAL_PARTY_MENU_HP_BARS command id falls through this dispatch instead of being handled here so this routine performs no HP-bar recolour, though the recolour itself does happen in the caller; evidence=pret dispatches this id to UpdatePartyMenuBlkPacket which edits an SGB BLK packet indexed by row while the port publishes the same colours into a per-cell attribute plane indexed by screen cell and only SetPartyMenuHPBarColor holds the live bar coordinate; lifetime=permanent unless the port grows a row-indexed party-menu layout table that would let the handler live here as pret has it}
     cmp al, SET_PAL_SURFING_PIKACHU_MINIGAME
     ja .done                                ; incl. SET_PAL_PARTY_MENU_HP_BARS ($fc) —
                                             ; see the banner immediately above

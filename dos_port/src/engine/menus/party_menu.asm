@@ -79,6 +79,7 @@ extern PrintLevel                    ; home/pokemon.asm — ESI=dest, [wLoadedMo
 extern LoadMonData                   ; src/home/pokemon.asm
 extern ErasePartyMenuCursors         ; engine/menus/start_sub_menus.asm
 extern GetHealthBarColor             ; src/home/palettes.asm — DL=px, ESI=dest addr
+extern SetBGCellAttrWin              ; src/ppu/ppu.asm — publish one window per-cell BG attribute
 extern set_single_window             ; ppu/ppu.asm
 extern add_window
 extern g_bg_whiteout
@@ -476,41 +477,76 @@ PartyMenuPromptWait:
 ; SetPartyMenuHPBarColor — store the current bar's color, then ask the palette
 ; layer to recolor that row.
 ; pret ref: engine/menus/party_menu.asm:SetPartyMenuHPBarColor.
-; In: DL = HP-bar pixels (DrawHP2's HPBarLength result survives in e, as pret).
+; In: DL = HP-bar pixels (DrawHP2's HPBarLength result survives in e, as pret),
+;     ESI = the bar's W_TILEMAP offset (DrawHP_ pushes and restores it, so the
+;     coordinate the party loop passed to DrawHP2 is still live here).
 ;
-; ⚠ THE RECOLOR DOES NOT HAPPEN YET — THIS IS THE CALL SITE TO COME BACK TO.
-; Everything here is correct and faithful: the per-mon colour really is computed
-; into wPartyMenuHPBarColors, and RunPaletteCommand really is issued. The
-; command is then DROPPED by _RunPaletteCommand (src/engine/gfx/palettes.asm),
-; because the port's palette HAL cannot express a per-ROW colour — its tile_pal
-; is per-TILE-ID and all six bars share ids. Visible symptom, maintainer-observed
-; 2026-08-12 in a real battle: every bar is the wrong colour (red at full health)
-; and all six snap green on leaving the menu, because they are showing whatever
-; the battle left in the palette slots.
-; Owner: docs/current_plan_backlog.md item 10b.
-;
-; THE FIX SHAPE CHANGED 2026-08-14, and the old one is now impossible. This used
-; to say "duplicate the bar tiles for palette-able ids, as DuplicateEnemyHPBarTiles
-; already does for the battle gauge" — but that clone trick was RETIRED in
-; ec82fa9ba, replaced by the per-cell BG attribute layer (ppu.asm). The party
-; menu cannot simply reuse that layer: it renders through a WINDOW descriptor
-; (GB_TILEMAP1, via PartyMenuMirror) and the window path decode_win_row8 carries
-; no attribute channel, where the battle HUD draws on the flat W_TILEMAP canvas
-; that decode_tile serves. What this needs is a window-coordinate attribute
-; plane. The colour half is already right: pret assigns green/yellow/red to
-; palettes 1/2/3 and the port's command_pal_table row for SET_PAL_PARTY_MENU is
-; already PAL_MEWMON, PAL_GREENBAR, PAL_YELLOWBAR, PAL_REDBAR — so it is a pure
-; per-cell assignment with no palette-RAM write.
-;
-; DEVIATION{class=HAL; pret=engine/menus/party_menu.asm:SetPartyMenuHPBarColor; behavior=the RunPaletteCommand SET_PAL_PARTY_MENU_HP_BARS issued here has no effect so the per-mon HP-bar colour never reaches the screen; evidence=_RunPaletteCommand in src/engine/gfx/palettes.asm drops that command id and the port palette HAL assigns colour per tile id via tile_pal while all six party HP bars share the same tile ids so a per-row colour is not expressible; lifetime=until the per-cell BG attribute layer reaches the WINDOW render path decode_win_row8 which is what this screen draws through}
+; THE RECOLOR NOW HAPPENS. It reaches the screen through the WINDOW per-cell
+; attribute plane (ppu.asm win_cell_attr / SetBGCellAttrWin), not through
+; RunPaletteCommand: the port's plane is addressed by SCREEN CELL, and only this
+; caller holds the live coordinate. pret's own handler is addressed by ROW INDEX
+; (UpdatePartyMenuBlkPacket edits wPartyMenuBlkPacket + 8 + 1 + 6*index), which
+; is why it can live in _RunPaletteCommand there and cannot here. The
+; RunPaletteCommand call below is kept exactly as pret issues it.
 ; ---------------------------------------------------------------------------
 SetPartyMenuHPBarColor:
+    push esi                                ; the bar's coord — GetHealthBarColor is
+                                            ; about to take ESI as its DESTINATION
     movzx eax, byte [ebp + wWhichPartyMenuHPBar]
     lea esi, [eax + wPartyMenuHPBarColors]  ; ld hl,wPartyMenuHPBarColors / add
     call GetHealthBarColor                  ; DL=pixels → [ebp+esi] = color
+    mov bl, [ebp + esi]                     ; the colour it just stored
+    pop esi                                 ; back to the bar's coord
+    call PublishPartyHPBarAttr
     mov bh, SET_PAL_PARTY_MENU_HP_BARS      ; ld b, SET_PAL_PARTY_MENU_HP_BARS
-    call RunPaletteCommand                  ; dropped today — see the banner above
+    call RunPaletteCommand
     inc byte [ebp + wWhichPartyMenuHPBar]   ; ld hl,… / inc [hl]
+    ret
+
+; ---------------------------------------------------------------------------
+; PublishPartyHPBarAttr — port-only. Bind this bar's six gauge cells to the
+; palette slot pret gives them, through the window attribute plane.
+;
+; In:  ESI = the bar's W_TILEMAP offset (what DrawHPBar was handed)
+;      BL  = health colour, 0 green / 1 yellow / 2 red (GetHealthBarColor)
+; Out: all registers preserved.
+;
+; SLOT = COLOUR + 1, and that is pret's mapping, not a choice: its
+; UpdatePartyMenuBlkPacket (engine/gfx/palettes.asm) writes (1<<2)|1 for green,
+; (2<<2)|2 for yellow, (3<<2)|3 for red — BG palettes 1, 2, 3. The port already
+; holds exactly those colours in those slots, because command_pal_table's
+; SET_PAL_PARTY_MENU row is PalPacket_PartyMenu verbatim: PAL_MEWMON,
+; PAL_GREENBAR, PAL_YELLOWBAR, PAL_REDBAR. So this writes NO palette RAM — it is
+; a pure per-cell assignment, and cgb_palettes cannot move.
+;
+; The +2 and the count of 6 are DrawHPBar's own layout (home/pokemon.asm): it
+; writes "HP" then the gauge-left tile, and only then the six segments. The
+; stride-20 -> GB_TILEMAP1 conversion is PartyMenuMirror's mapping verbatim —
+; W_TILEMAP cell (r,c) at r*GBSCR_W + c becomes GB_TILEMAP1 + r*32 + c — because
+; the window samples GB_TILEMAP1, which is where the mirror puts these tiles.
+; ---------------------------------------------------------------------------
+PublishPartyHPBarAttr:
+    pushad
+    movzx ebx, bl
+    inc ebx                                 ; colour 0/1/2 → palette slot 1/2/3
+    and ebx, BG_ATTR_PAL_MASK
+    or  bl, BG_ATTR_PRESENT                 ; BL = the attribute byte
+    mov eax, esi
+    sub eax, W_TILEMAP                      ; → stride-20 cell index
+    xor edx, edx
+    mov ecx, GBSCR_W
+    div ecx                                 ; EAX = row, EDX = column
+    shl eax, 5                              ; row * 32, the GB tilemap stride
+    add eax, edx
+    add eax, GB_TILEMAP1 + 2                ; the first of the six gauge segments
+    mov ecx, 6
+.cell:
+    mov dl, bl
+    call SetBGCellAttrWin                   ; EAX = GB tilemap addr, DL = attribute
+    inc eax
+    dec ecx
+    jnz .cell
+    popad
     ret
 
 ; DrawHP / DrawHP2 / DrawHP_ — moved to their pret mirror,
