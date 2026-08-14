@@ -1,36 +1,24 @@
 ---@diagnostic disable: undefined-global -- emu/C/callbacks/console/socket are mGBA runtime globals (runner.c)
 -- battle_anim_optoff — Stage 6's animations-OFF witness, and the last of the
--- family. It reuses battle_anim_blink's landmark on purpose: with wOptions
--- BIT_BATTLE_ANIMATION SET, MoveAnimation skips ShareMoveAnimations and
--- PlayAnimation for a flat 30-frame delay (engine/battle/animations.asm:437-446)
--- but STILL calls PlayApplyingAttackAnimation, so the first hidden-pic instant of
--- AnimationBlinkMon is the one landmark BOTH routes share -- which is exactly what
--- makes the animated and animations-off runs comparable.
+-- family. With wOptions BIT_BATTLE_ANIMATION set, MoveAnimation skips
+-- ShareMoveAnimations and PlayAnimation for a flat 30-frame delay
+-- (engine/battle/animations.asm:437-446) and only then calls
+-- PlayApplyingAttackAnimation.
 --
--- IT IS NOT A DUPLICATE OF battle_anim_blink, and that was measured rather than
--- argued: at this same landmark the two port runs differ in 79 VRAM tile slots
--- (49..127, the move animation's tiles, absent here) plus the wOptions byte, and
--- ALL 79 slots fall OUTSIDE this family's shared VRAM masks. So the comparison
--- genuinely observes the disabled path.
+-- THE LANDMARK IS INSIDE THAT DISABLED ARM, and that choice is the whole point.
+-- An earlier version of this scenario stopped at battle_anim_blink's shared
+-- hidden-pic landmark and PASSED while proving nothing: at that instant the only
+-- surfaces separating the animated route from this one are 79 VRAM tile slots
+-- (49..127) and the wOptions byte, and every one of those slots is inside this
+-- family's _BATTLE_VRAM_MASKS_MENU ($8000-$87FF, slots 0x00-0x7F). A port that
+-- ignored the option would still have passed. Stopping inside the arm fixes that
+-- by construction: the port must TAKE the arm to dump at all, so a port that
+-- animated anyway never reaches the checkpoint and the run fails loudly.
 --
--- WHAT IT WITNESSES. After a move's own animation, MoveAnimation calls
--- PlayApplyingAttackAnimation, which dispatches on wAnimationType
--- (engine/battle/animations.asm:506). Type 4 -- "player mon has used a damaging
--- move without a side effect" -- is BlinkEnemyMonSprite -> AnimationBlinkEnemyMon
--- -> AnimationBlinkMon, which loops six times over
--- {hide pic, 5 frames, show pic, 5 frames}. STRENGTH selects exactly that arm.
---
--- THE LANDMARK is the FIRST hidden-pic instant: AnimationHideMonPic has cleared
--- the enemy's 7x7 pic block from the tilemap, the move animation is over, and
--- damage has NOT been applied yet (ApplyAttackToEnemyPokemon runs after
--- MoveAnimation returns). Both halves are checked below, because "the pic block
--- is blank" alone is not enough -- a blank block plus full enemy HP is what pins
--- this to the blink rather than to a later hide.
---
--- WHY NO EXISTING SCENARIO COVERS IT: battle_anim_physical stops EARLIER (inside
--- the move animation's first frame block) and battle_faint stops LATER (after the
--- KO and the HUD restage). The blink sits between them and nothing had ever
--- compared it.
+-- The reference stops at the matching ROM instant: the move-used message fully
+-- printed with the enemy pic still up. Nothing moves during the 30-frame delay,
+-- so the state is static across the whole window and the two sides need not
+-- agree on a frame number.
 
 local here = debug.getinfo(1, "S").source:match("^@(.*)$")
 local root = here and here:match("^(.*)[/\\]scenarios[/\\][^/\\]+$") or "."
@@ -55,16 +43,17 @@ local BLANK = 0x7F
 -- the enemy pic is a 7x7 block at GB (12,0) -- pret AnimationHideMonPic's
 -- enemy-turn branch (`ld a, 12`), which the port mirrors as BCOORD(12,0).
 local PIC_COL, PIC_ROW, PIC_SIZE = 12, 0, 7
+local MOVE_SLOT = 3 -- 0-based; STRENGTH sits in the debug party's move slot 4
 
-local function enemyPicHidden(tilemap)
+local function enemyPicVisible(tilemap)
 	for r = PIC_ROW, PIC_ROW + PIC_SIZE - 1 do
 		for c = PIC_COL, PIC_COL + PIC_SIZE - 1 do
 			if tilemap:byte(r * TILEMAP_W + c + 1) ~= BLANK then
-				return false
+				return true
 			end
 		end
 	end
-	return true
+	return false
 end
 
 scenario.run(function()
@@ -85,31 +74,40 @@ scenario.run(function()
 	navigate.choose(text:encode("FIGHT"))
 	navigate.ensure_text("A", text:encode("STRENGTH"), 3600)
 	scenario.wait(30)
+	-- PP BEFORE the turn. pret's order is DisplayUsedMoveText -> DecrementPP ->
+	-- ... -> PlayMoveAnimation (core.asm:3289-3346), so the message alone lands
+	-- in the small window BEFORE the decrement while the port's checkpoint is
+	-- inside MoveAnimation, i.e. after it. Measured, not guessed: the first
+	-- version stopped on the message alone and diverged on exactly wBattleMon
+	-- PP 4 and wPartyData mon 0 PP 4 (want $05, got $04). Waiting for the
+	-- decrement aligns the two instants.
+	local ppAddr = sym:addr("wBattleMonPP") + MOVE_SLOT
+	local ppBefore = scenario.read_range(ppAddr, 1):byte(1)
 	navigate.choose(text:encode("STRENGTH"))
 
-	-- Damage is applied only after MoveAnimation returns, so full enemy HP is
-	-- what separates a blink hide from any later one.
-	local hpAddr = sym:addr("wEnemyMonHP")
+	-- The move-used message complete, the PP spent, AND the enemy pic still up.
+	-- That triple is true only between DecrementPP and the applying-attack
+	-- animation, which is exactly the disabled arm's delay window. Requiring the
+	-- whole "used STRENGTH!" string rather than a prefix rules out catching the
+	-- text mid-print, when the tilemap would not yet match the port's.
+	local msg = text:encode("used STRENGTH!")
 	local found = false
 	for _ = 1, 3600 do
 		local tilemap = scenario.read_range(TILEMAP_ADDR, TILEMAP_W * 18)
-		-- read_range, not emu:read8 -- direct emu access outside scenario.exec
-		-- raises "Function called from invalid context".
-		local hp = scenario.read_range(hpAddr, 2) -- big-endian word
-		local alive = hp:byte(1) ~= 0 or hp:byte(2) ~= 0
-		if enemyPicHidden(tilemap) and alive then
+		local pp = scenario.read_range(ppAddr, 1):byte(1)
+		if tilemap:find(msg, 1, true) and pp < ppBefore and enemyPicVisible(tilemap) then
 			found = true
 			break
 		end
 	end
-	assert(found, "battle_anim_optoff: the enemy pic was never hidden with the mon still alive")
+	assert(found, "battle_anim_optoff: never reached the post-DecrementPP window with the pic up")
 
 	scenario.exec(function()
 		dump.write("battle_anim_optoff", dump.standard_regions(sym), {
 			frame = scenario.frame(),
-			description = "first hidden-pic instant of AnimationBlinkMon reached with battle " ..
-				"animations OFF (wOptions BIT_BATTLE_ANIMATION set), so MoveAnimation " ..
-				"took its 30-frame .animationsDisabled arm and no move animation ran",
+			description = "inside MoveAnimation's animations-disabled arm (wOptions " ..
+				"BIT_BATTLE_ANIMATION set): the move-used message is printed, the enemy " ..
+				"pic is up and no move animation ran",
 		})
 	end)
 end)

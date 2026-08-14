@@ -522,6 +522,37 @@
       "verification": "Stage 6 shake/blink witness, the first of the family whose landmark is not a frame block. After a move's own animation MoveAnimation calls PlayApplyingAttackAnimation, which dispatches on wAnimationType; type 4 (player used a damaging move without a side effect, which STRENGTH selects) is BlinkEnemyMonSprite -> AnimationBlinkMon, six hide/show iterations. Both sides stop at the FIRST hidden-pic instant, pinned by TWO conditions: the enemy's 7x7 pic block at GB (12,0) is blank AND enemy HP is still nonzero -- damage is applied only after MoveAnimation returns, so full HP separates a blink hide from any later hide. Sits strictly between battle_anim_physical (stops earlier, inside the move animation) and battle_faint (stops after the KO), a gap nothing had covered."
     },
     {
+      "name": "battle_anim_optoff",
+      "id": 78,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_ANIM_OPTOFF=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_OPTOFF",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_optoff.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ExecutePlayerMove",
+        "MoveAnimation"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 animations-OFF witness, the last of the family. With wOptions BIT_BATTLE_ANIMATION set, MoveAnimation skips ShareMoveAnimations and PlayAnimation for a flat 30-frame delay (engine/battle/animations.asm:437-446). THE LANDMARK IS INSIDE THAT DISABLED ARM, and that is the point: an earlier version stopped at battle_anim_blink's shared hidden-pic landmark and PASSED while proving nothing, because the only surfaces separating the animated route from this one there are 79 VRAM tile slots (49..127) and the wOptions byte, and every one of those slots is inside _BATTLE_VRAM_MASKS_MENU ($8000-$87FF). A port that ignored the option would still have passed. Stopping inside the arm fixes that BY CONSTRUCTION: the port must take the arm to dump at all, so a port that animated anyway never reaches the checkpoint and the run fails loudly rather than green. The reference stops at the matching ROM instant -- the move-used message fully printed with the enemy pic still up -- which is true only inside the delay window; nothing moves during those 30 frames, so the state is static and the sides need not agree on a frame number."
+    },
+    {
       "name": "battle_anim_ball",
       "id": 76,
       "tier": "full",

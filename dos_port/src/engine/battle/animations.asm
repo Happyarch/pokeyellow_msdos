@@ -610,7 +610,11 @@ MoveAnimation:
     call ShareMoveAnimations
     call PlayAnimation
     jmp .next
+; DEVIATION{class=temporary; pret=engine/battle/animations.asm:MoveAnimation; behavior=DEBUG_BATTLE_ANIM_OPTOFF terminates on entry to the animations-disabled arm, before its 30-frame delay; evidence=the Stage-6 option-off witness must compare an instant only this arm can reach, because at the later shared blink landmark every surface distinguishing the animated route from this one lies inside the masked 8000-87FF VRAM bank, so a port that ignored the option would still pass there and here it would never dump at all; lifetime=retire only with this debug scenario or when a production landmark can replace it}
 .animationsDisabled:
+%ifdef DEBUG_BATTLE_ANIM_OPTOFF
+    call DebugDumpMemory                     ; animations-off arm entered; never returns
+%endif
     mov bl, 30                               ; ld c,30 → BL
     call DelayFrames
 .next:
@@ -3019,10 +3023,6 @@ AnimationBlinkMon:
 ; DEVIATION{class=temporary; pret=engine/battle/animations.asm:AnimationBlinkMon; behavior=DEBUG_BATTLE_ANIM_BLINK terminates at the first hidden-pic instant of the blink; evidence=the Stage-6 shake/blink witness must compare the pic-hidden half of PlayApplyingAttackAnimation's wAnimationType 4 arm, which no scenario reaches because the physical witness stops earlier in the move animation and battle_faint stops after the KO, and DebugDumpMemory never returns so this is definitionally the FIRST hide with no counter needed; lifetime=retire only with this debug scenario or when a production landmark can replace it}
 %ifdef DEBUG_BATTLE_ANIM_BLINK
     call DebugDumpMemory                     ; first blink hide; never returns
-%endif
-; DEVIATION{class=temporary; pret=engine/battle/animations.asm:AnimationBlinkMon; behavior=DEBUG_BATTLE_ANIM_OPTOFF terminates at the same first hidden-pic instant as the blink gate, reached with wOptions BIT_BATTLE_ANIMATION SET; evidence=MoveAnimation skips ShareMoveAnimations and PlayAnimation for a 30-frame delay when that bit is set but still calls PlayApplyingAttackAnimation, so this landmark is the only one both the animated and the animations-off routes share and is what makes the two comparable; lifetime=retire only with this debug scenario or when a production landmark can replace it}
-%ifdef DEBUG_BATTLE_ANIM_OPTOFF
-    call DebugDumpMemory                     ; first blink hide, animations OFF; never returns
 %endif
     mov bl, 5
     call DelayFrames

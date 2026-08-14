@@ -2661,7 +2661,13 @@ enemy-gauge clone tile ids and VRAM slots.
       > the string is currently true — but it becomes false the moment a Stage 6
       > animation scenario exercises the shake. Re-measure it then rather than
       > carrying it forward.
-- [ ] Add must-hit animation scenarios for representative physical, elemental,
+- [x] **DONE 2026-08-13 — all five landed and sabotage-proved: `battle_anim_physical`
+      (74), `battle_anim_elemental` (75), `battle_anim_ball` (76),
+      `battle_anim_blink` (77), `battle_anim_optoff` (78). Registry 76,
+      `fidelity-full` green. The ball scenario caught a real production bug
+      (`TX_LOW`, see below); the option-off scenario had its first landmark
+      thrown out as blind before it was allowed to register.**
+      Add must-hit animation scenarios for representative physical, elemental,
       ball, shake/blink, and option-off paths. **SPEC FOLDED IN 2026-08-11 from
       the archived animations plan** (maintainer instruction), which tracked this
       same box: physical (Pound/Tackle), elemental flash (Thundershock), ball
@@ -2745,40 +2751,41 @@ enemy-gauge clone tile ids and VRAM slots.
           else; the probe was then reverted. So the PASS above is a measurement,
           not an absence of comparison.
         * Ball, shake/blink and option-off remain open in this same box.
-      - **OPTION-OFF BUILT, THEN DELIBERATELY NOT REGISTERED 2026-08-13 — THE
-        LANDMARK CANNOT WITNESS THE OPTION.** Port gate
-        `DEBUG_BATTLE_ANIM_OPTOFF` and reference `battle_anim_optoff.lua` both
-        exist and both reach their instant; `goldencheck` PASSED on the first
-        run with TILEMAP/VRAM/OAM/WRAM clean. It was backed out anyway, because
-        a PASS there does not mean what the box asks for. **Id 78 is reserved.**
-        * **THE DESIGN.** With `wOptions BIT_BATTLE_ANIMATION` set,
-          `MoveAnimation` skips `ShareMoveAnimations` + `PlayAnimation` for a
-          flat 30-frame delay (`animations.asm:437-446`) but STILL calls
-          `PlayApplyingAttackAnimation`. So the scenario reused
-          `battle_anim_blink`'s first-hidden-pic landmark — the one landmark the
-          animated and animations-off routes share.
-        * **WHY IT FAILS AS A WITNESS, and how the error was caught.** A port
-          run with animations OFF differs from one with animations ON, at that
-          same landmark, in exactly two places: **79 VRAM tile slots (49..127)**
-          and the `wOptions` byte. Every one of those 79 slots is INSIDE the
-          family's pre-existing `_BATTLE_VRAM_MASKS_MENU`, which covers
-          `0x00..0x7F` — the whole `$8000-$87FF` bank. So the only unmasked
-          evidence the scenario has is the `wOptions` byte, which is the PIN
-          both sides write. **If the port ignored the option and played the
-          animation anyway, this scenario would still PASS.**
-        * **THE ERROR WAS MINE AND IT IS THE AGGREGATE TRAP.** An earlier note
-          in this box claimed all 79 slots fell OUTSIDE the masks. That was
-          derived from `goldencheck`'s printed *hit* range (`vram slot 0 .. 48`)
-          rather than from the mask DEFINITION. The sabotage run is what exposed
-          it: dropping the port's option pin moved the masked VRAM hit count
-          from 49 to **128** and the run still failed only on `wOptions`. Read
-          the mask definition, never the differ's hit summary.
-        * **WHAT A REAL OPTION-OFF WITNESS NEEDS:** a landmark INSIDE the
-          `.animationsDisabled` 30-frame delay, where the ROM has no animation
-          OAM. If the port wrongly played the animation, its OAM would carry
-          particles at that instant and OAM is unmasked. The cost is that the
-          reference must reach a frame-counted point rather than a state-gated
-          one, which is why it is not being guessed at here.
+      - **OPTION-OFF COMPLETE 2026-08-13 — `battle_anim_optoff` (id 78), AFTER
+        ITS FIRST LANDMARK WAS THROWN OUT AS BLIND.** Registered, golden
+        committed, `goldencheck` **PASS** with TILEMAP/VRAM/OAM/WRAM all clean.
+        **This closes Stage 6's animation-scenario box: 5 of 5.**
+        * **THE LANDMARK IS INSIDE `MoveAnimation`'s `.animationsDisabled` ARM**
+          (`animations.asm`), before its 30-frame delay. That placement is the
+          whole design: **the port must TAKE the arm to dump at all**, so a port
+          that ignored the option cannot reach the checkpoint.
+        * **SENSITIVITY IS THEREFORE STRUCTURAL, AND IT WAS MEASURED.** Dropping
+          the port's option pin — making it take the ANIMATED arm — turns the
+          run into **89 unmasked divergences** (71 tilemap cells among them),
+          because the port never reaches this checkpoint and falls through to
+          the enclosing `DEBUG_BATTLE_FAINT` gate's own post-KO dump instead.
+          Loud, and faster than a timeout. Probe reverted.
+        * **A REAL ORDERING FACT CAME OUT OF THE FIRST FAILED RUN, and it was
+          the reference that was wrong, not the port.** The first aligned
+          attempt diverged on exactly `wBattleMon PP 4` and
+          `wPartyData mon 0 PP 4` (`want $05 got $04`). pret's order is
+          `DisplayUsedMoveText` -> `DecrementPP` -> ... -> `PlayMoveAnimation`
+          (`core.asm:3289-3346`), so the port's spent PP inside `MoveAnimation`
+          is FAITHFUL and the reference had stopped in the small window between
+          the text and the decrement. Fixed by making the reference wait for the
+          PP to actually drop (captured before the turn, compared after) rather
+          than for the message alone.
+        * **THE DISCARDED FIRST LANDMARK IS THE LESSON.** It reused
+          `battle_anim_blink`'s shared hidden-pic instant and PASSED on the first
+          run — while proving nothing, because the only surfaces separating the
+          animated route from this one there are 79 VRAM tile slots (49..127)
+          and the `wOptions` byte, and every one of those slots is inside
+          `_BATTLE_VRAM_MASKS_MENU` (`$8000-$87FF`, slots `0x00-0x7F`). A port
+          ignoring the option would still have passed. That mask range was
+          established by reading the mask DEFINITION; an earlier note in this
+          box had it wrong because it was derived from `goldencheck`'s printed
+          HIT range instead. Recorded in
+          `battle-stage6-optoff-landmark-is-blind`.
       - **BALL COMPLETE 2026-08-13 — `battle_anim_ball` (id 76), AND IT CAUGHT A
         REAL PRODUCTION BUG ON ITS FIRST RUN.** Registered, golden committed,
         `goldencheck` **PASS** with TILEMAP / VRAM / OAM / WRAM all clean
