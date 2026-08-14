@@ -2296,6 +2296,23 @@ provider shapes below, not their runtime behavior.
           up as exactly those fields, in BOTH directions as the pin was moved
           from one side to the other. This scenario pins the enemy with SLEEP
           ONLY — `battle_oldman`'s 65535-HP pin outlives the battle here.
+      - **PIKACHU DONE TOO — `battle_pikachu_result` (id 80), 2026-08-14.** The
+        recipe applied cheaply: the gate is the OLD_MAN pattern with the
+        65535-HP pin `%ifndef`'d out, the rename dump compiled out, the same
+        `wBattleResult == 2` / post-teardown landmark, and the reference is
+        `battle_oldman_result` with ONE constant changed
+        (`BATTLE_TYPE_PIKACHU = 4`). Both traps already recorded — the HP-pin
+        guard and the 2-token `build_flags` ordering — carried over and cost no
+        cycles. `goldencheck` PASS, WRAM clean (12 regions).
+        * **ITS GOLDEN IS BYTE-IDENTICAL TO `battle_oldman_result`'s, AND THAT
+          NEARLY MADE IT WORTHLESS — so it was tested, not argued.** Hardware
+          reaches the same terminal state for both tutorial types once the name
+          is restored, so a lazy read makes id 80 a duplicate occupying a suite
+          slot. **Proved distinct by measurement:** sabotaging ONLY the PIKACHU
+          arm of `ItemUseBall`'s tutorial check makes **id 80 FAIL while id 79
+          still PASSES**. The goldens coincide; the PORT paths do not, and only
+          80 discriminates. Recorded in the manifest so the identical goldens are
+          never mistaken for redundancy.
         * **SENSITIVITY IS REAL BUT NOT WHAT WAS DESIGNED — measured.** Forcing
           the port to skip `.oldManCaughtMon` makes the scenario FAIL, on
           **`wEnemyMon party pos, want $00 got $0D`**. `wPartyData` MATCHED

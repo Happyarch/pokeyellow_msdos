@@ -1229,6 +1229,18 @@ endif
 # menu — the same .doSimulatedMenuInput as the old-man gate, differing only in
 # which name is copied over wPlayerName.
 #   dos_port/tools/run_headless.sh "DEBUG_BATTLE_PIKACHU=1" /tmp/pika
+# battle_pikachu_result: the RESULT/EXIT half for BATTLE_TYPE_PIKACHU. Same
+# staging as DEBUG_BATTLE_PIKACHU (which it defines); the rename dump is compiled
+# out and the gate runs the tutorial to its capture tail instead.
+ifdef DEBUG_BATTLE_PIKACHU_RESULT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_PIKACHU_RESULT -D DEBUG_BATTLE_PIKACHU
+NASMFLAGS += -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 ifdef DEBUG_BATTLE_PIKACHU
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_PIKACHU -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

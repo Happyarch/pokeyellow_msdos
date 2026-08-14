@@ -1090,6 +1090,39 @@ SCENARIOS = {
         "flags": "DEBUG_BATTLE_PAYDAY=1",
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_pikachu_result": {
+        # datastruct: DisplayBattleMenu.doSimulatedMenuInput — the old-man /
+        # Prof. Oak tutorial menu, the first scenario to execute it.
+        #
+        # NO wram_skip, DELIBERATELY. The neighbouring battle scenarios skip
+        # wEnemyMon because a damage roll reaches it; here nothing rolls — the
+        # enemy is asleep and never acts, the menu walks its own cursor, and the
+        # player's mon is never even sent out. If a field diverges it is a
+        # finding, not noise, so nothing is masked in advance.
+        #
+        # What it pins needs no new row either: wPlayerName is already a
+        # STANDARD region compared in full, and it is the thing under test.
+        # pret copies NAME_LENGTH=11 out of the 8-byte .oldManName literal, so
+        # the correct bytes are
+        #   8E 8B 83 7F 8C 80 8D 50 8F 91 8E   = "OLD MAN" @ + "PRO"
+        # where the tail is the adjacent .profOakName, not padding.
+        "class": "datastruct",
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_PIKACHU_RESULT=1",
+        "wram_skip": {
+            "wLoadedMon": "the ONE field that survived the staging fix, and it "
+                          "is a scratch buffer rather than a result: golden "
+                          "holds level $0D, the port $00. The port is NOT "
+                          "dropping a store -- faithdiff LoadEnemyMonData "
+                          "reports all 8 pret stores matched -- and pret's only "
+                          "battle-path writer of wLoadedMon is core.asm:1904 "
+                          "inside DrawPlayerHUDAndHPBar, a NORMAL-battle path "
+                          "that a special battle never takes (no player mon is "
+                          "sent out). So the two sides simply have different "
+                          "last writers into a staging buffer at this instant, "
+                          "which is the same reason battle_faint skips it. "
+                          "Nothing in the path under test reads it.",
+        },
+    },
     "battle_oldman_result": {
         # datastruct: DisplayBattleMenu.doSimulatedMenuInput — the old-man /
         # Prof. Oak tutorial menu, the first scenario to execute it.

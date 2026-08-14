@@ -3115,8 +3115,12 @@ RunBattleTest:
     ; warning has no enforcement.
     ; ------------------------------------------------------------------
     call LoadScreenTilesFromBuffer1             ; pret StartBattle .specialBattle
+%ifndef DEBUG_BATTLE_PIKACHU_RESULT
+    ; The 65535-HP half of the pin outlives the battle in the RESULT variant and
+    ; showed up there as a one-field divergence — see the OLD_MAN gate's note.
     mov word [ebp + wEnemyMonHP], 0xFFFF
     mov word [ebp + wEnemyMonMaxHP], 0xFFFF
+%endif
     mov byte [ebp + wEnemyMonStatus], 7         ; SLP counter — keep the enemy inert
 .pikaMenuLoop:
     call DisplayBattleMenu                      ; the menu IS the loop for a special battle
@@ -3124,6 +3128,21 @@ RunBattleTest:
     cmp byte [ebp + wActionResultOrTookBattleTurn], 0
     je .pikaMenuLoop
 .pikaRan:
+%ifdef DEBUG_BATTLE_PIKACHU_RESULT
+    ; --- battle_pikachu_result: the tutorial's RESULT/EXIT landmark ---
+    ; Same shape and same reasoning as battle_oldman_result: reaching here means
+    ; DisplayBattleMenu returned CARRY, which pret's
+    ; UseBagItem.returnAfterCapturingMon sets together with wBattleResult=2, and
+    ; ItemUseBall routes BOTH tutorial types to .oldManCaughtMon
+    ; (item_effects.asm:529-532) — caught, but not handed to the player.
+    ; EndOfBattle runs first so both sides land POST-TEARDOWN; the reference can
+    ; only poll at frame granularity and the pre-teardown window is a few frames.
+    cmp byte [ebp + wBattleResult], 2
+    jne .pikaResultNotTwo
+    call EndOfBattle
+    call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN + exit
+.pikaResultNotTwo:
+%endif
     mov byte [ebp + W_TILEMAP], 0xEE            ; diagnosable marker, not a silent hang
     call DelayFrame
     call DumpBackbuffer
@@ -5072,7 +5091,10 @@ AutoKeyDrive:
     call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN, then exits
 .noThrashDump:
 %endif
-%ifdef DEBUG_BATTLE_PIKACHU
+%ifdef DEBUG_BATTLE_PIKACHU_RESULT
+; The RESULT variant's landmark is the capture tail, far past the rename, so the
+; rename dump below is compiled out for it; its gate body dumps instead.
+%elifdef DEBUG_BATTLE_PIKACHU
     ; --- battle_pikachu: the dump, on the rename (battle plan 4a) ---
     ; $8F is 'P' of "PROF.OAK". Like the old-man gate this needs no latch: the
     ; seeded identity is "RED" ($91 'R'), so $8F at wPlayerName[0] is reachable
