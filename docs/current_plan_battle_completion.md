@@ -2321,9 +2321,30 @@ provider shapes below, not their runtime behavior.
           path by default. Pinning `wEnemyMonSpeed + 1` to >= `$80` on BOTH
           sides forces it, which is the same "RNG-independence BY MATCHUP" move
           `battle_faint` and `battle_blackout` already use.
-        * Still to build: the port gate needs AUTOKEY presses to select a Safari
-          menu item (its menu is interactive, unlike the tutorials' simulated
-          input), and the reference needs the matching taps plus the speed pin.
+        * **THE BUILD SHAPE IS NOT THE TUTORIALS' — measured 2026-08-14, and
+          this rules out the obvious approach.** The port's Safari turn/flee
+          tail is ALREADY IMPLEMENTED IN PRODUCTION, faithfully, inside
+          `_InitBattleCommon` (`init_battle.asm:566-602`): the out-of-balls
+          text, `PrintSafariZoneBattleText`, the `add al,al / jc EnemyRan`
+          deterministic exit, the bait `srl b` pair, the escape-factor `sla b`
+          with its $FF cap, and the `Random`/`cp b` comparison — all present.
+          * **So the gate must DRIVE production, not replicate it.** The
+            tutorial RESULT gates work by re-running pret's menu loop inside the
+            gate body (`.oldManMenuLoop`), which is fine there because the loop
+            IS the battle. Doing that for SAFARI would put the GATE's copy of
+            the flee tail under test instead of the port's — a false witness of
+            exactly the kind this plan keeps catching.
+          * **The right shape is the ANIMATION-scenario one:** put the
+            checkpoint INSIDE the production routine — `EnemyRan` — under the
+            new flag, and let `_InitBattleCommon`'s `.specialBattleLoop` drive.
+            In such a build every `EnemyRan` entry is the Safari one, so the
+            landmark needs no discriminator.
+          * **What is still genuinely unknown, and must not be guessed:** the
+            AUTOKEY press sequence that selects a Safari menu item. The Safari
+            menu is interactive (unlike the tutorials' simulated input) and its
+            cursor columns differ from the normal menu's — `battle_safari` (71)
+            never presses anything, so no existing press table covers it.
+            Derive it from the rendered Safari menu before writing the gate.
       - **PIKACHU DONE TOO — `battle_pikachu_result` (id 80), 2026-08-14.** The
         recipe applied cheaply: the gate is the OLD_MAN pattern with the
         65535-HP pin `%ifndef`'d out, the rename dump compiled out, the same
