@@ -246,7 +246,16 @@ ClearScreenArea:
     rep stosb                        ; write `width` blanks; edi += width
     add edi, SCREEN_WIDTH            ; advance to same column on next row...
     sub edi, ebx                     ; ...= rowStart + SCREEN_WIDTH
-    dec edx
+    ; COUNTER WIDTH: pret is `dec b / jr nz` — 8-BIT, so a row count of 0 clears
+    ; 256 rows and stops. `dec edx` on the movzx'd value runs ~4 billion times
+    ; and walks EDI off the allocation. `dec dl` IS pret's bound, reproduced
+    ; exactly, so nothing diverges and no annotation is owed.
+    ; (The WIDTH counter below is a separate question, recorded in
+    ; audit-counter-width-remediation-staging rather than changed here: `rep
+    ; stosb` with ECX=0 writes NOTHING where pret's `dec c` writes 256. That is
+    ; a real difference, but converting it needs pret's inner-loop shape, not a
+    ; register narrowing.)
+    dec dl
     jnz .rowLoop
     pop edi
     pop edx
