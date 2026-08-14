@@ -2528,17 +2528,35 @@ provider shapes below, not their runtime behavior.
            already cover with the shared `_BATTLE_TILEMAP_MASKS_MENU` family,
            now owned by the CGB colour plan's Stage 5. Registering this scenario
            means REUSING that existing family, not inventing a mask.
-        2. **Two at GB (11,0) and (11,8): a REAL, newly-found divergence.** The
-           port writes the player HUD's lower-left triangle (`$6F`,
-           `PlayerBattleHUDGraphicsTiles`) where hardware leaves spaces.
-           **The 2-cell shape is itself the diagnosis:** `PlaceHUDTiles` lays a
-           uniform run of `$76` between a corner tile and the triangle, and
-           shifting such a run by one cell changes ONLY its two endpoints — so
-           this is an off-by-one in the player HUD's projected anchor
-           (`W_TILEMAP + P_FRAME_CONN + SCREEN_WIDTH` against pret's
-           `hlcoord 18, 10`), not a stray write. Same family as
-           `regression-battle-second-battle-hud-tile-band`, which is what the
-           projected anchor exists to avoid.
+        2. **Two at GB (11,0) and (11,8): a REAL divergence, now MEASURED
+           rather than inferred — and my first reading of it was wrong.**
+           Dumped row 11 from both sides:
+           ```
+           hardware : 7F 37 3E 45 4C 53 5A 61 7F 6F 76 76 76 76 76 76 76 76 77 7F
+           port     : 6F 37 3E 45 4C 53 5A 61 6F 6F 76 76 76 76 76 76 76 76 77 7F
+                      ^^                      ^^
+           ```
+           So it is **NOT an off-by-one shift** (I guessed that from the
+           two-cell count last iteration): the triangle at col 9, the eight
+           `$76` and the corner at col 18 are all in the RIGHT places. The port
+           writes **two EXTRA `$6F`** at cols 0 and 8, exactly one row above the
+           two box corners (`$79`) that row 12 shows — and row 12 itself
+           matches.
+           **It is ENTRY-PATH SPECIFIC.** `battle_menu` and `battle_intro`
+           goldens both show `$7F` at those cells and `battle_menu` PASSES, so
+           the staged `RunBattleTest` path is clean; only the live
+           `InitBattle` entry produces them.
+           **Ruled out by grep, so the next attempt does not repeat it:** the
+           only tilemap writer of `$6F` is `PlaceHUDTiles` through
+           `wHUDTriangleTile` (`status_screen.asm`'s `LB_ARROW` is a different
+           screen, and `animations.asm`'s `$6F` pair is a BGP palette value, not
+           a tile). `P_FRAME_CONN` resolves to GB (18,10) — pret's exact
+           `hlcoord 18, 10` — so the anchor constant is right.
+           **NEXT STEP: bisect which call reaches `PlaceHUDTiles` with a third
+           anchor on the live path.** It runs from `DrawPlayerHUDAndHPBar` and
+           from `DrawAllPokeballs`; three `$6F` on screen means three arrivals,
+           and the staged path shows only one. That is a debugging session, not
+           a guess.
       * **The registry is rolled back to 81 and `validate_scenarios` is
         consistent** — no red scenario left in the suite. The port gate and the
         `.lua` stay: both are proven, and what remains is one production
