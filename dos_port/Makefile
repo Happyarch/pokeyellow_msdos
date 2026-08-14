@@ -1218,6 +1218,20 @@ endif
 # two tutorial gates this uses AUTOKEY_QUIET + a fixed dump frame (battle_menu's
 # shape), because the Safari menu parks in HandleMenuInput with nothing to poll.
 #   dos_port/tools/run_headless.sh "DEBUG_BATTLE_SAFARI=1" /tmp/safari
+# battle_safari_result: the RESULT/EXIT half for BATTLE_TYPE_SAFARI. Same
+# staging as DEBUG_BATTLE_SAFARI (which it defines), but instead of calling
+# DisplayBattleMenu directly it ENTERS the production special-battle loop at
+# StartBattle.displaySafariZoneBattleMenu, so the Safari turn tail and flee roll
+# run for real. AUTOKEY_SAFARI (not AUTOKEY_QUIET) drives RIGHT+A to BAIT.
+ifdef DEBUG_BATTLE_SAFARI_RESULT
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLE_SAFARI_RESULT -D DEBUG_BATTLE_SAFARI
+NASMFLAGS += -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_SAFARI -D DEBUG_SEED_PARTY
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 ifdef DEBUG_BATTLE_SAFARI
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_SAFARI -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE -D SKIP_TITLE

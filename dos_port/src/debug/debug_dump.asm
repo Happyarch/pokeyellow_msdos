@@ -206,6 +206,9 @@ extern LoadFrontSpriteByMonIndex ; src/home/pokemon.asm — real enemy front pic
 extern LoadBattleMonFromParty         ; engine/battle/core.asm — real send-out loader
 extern FlagAction                ; flag_action.asm
 extern DisplayBattleMenu         ; core.asm — real menu (parks in HandleMenuInput)
+%ifdef DEBUG_BATTLE_SAFARI_RESULT
+extern StartBattle_displaySafariZoneBattleMenu ; engine/battle/init_battle.asm — harness entry into the PRODUCTION special-battle loop (see the gate body)
+%endif
 extern SendOutMon                ; engine/battle/core.asm — pret StartBattle's send-out (HUDs, back pic, POOF_ANIM, cry)
 extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern DrawHUDsAndHPBars         ; engine/battle/core.asm
@@ -3091,10 +3094,40 @@ RunBattleTest:
     ; AUTOKEY_DUMP_FRAME. No landmark poll is needed because nothing here is
     ; RNG-dependent — the Safari menu has no simulated input and no roll.
     ; ------------------------------------------------------------------
+%ifdef DEBUG_BATTLE_SAFARI_RESULT
+    ; ------------------------------------------------------------------
+    ; battle_safari_result — the RESULT/EXIT half for BATTLE_TYPE_SAFARI, and
+    ; the reason it needed an entry point rather than another gate body.
+    ;
+    ; MEASURED 2026-08-14, and it is why the first three attempts at this
+    ; witness proved nothing: the gate ABOVE calls DisplayBattleMenu DIRECTLY,
+    ; so production's _InitBattleCommon.specialBattleLoop — which holds the
+    ; whole Safari turn tail (the out-of-balls exit, PrintSafariZoneBattleText,
+    ; and the flee roll) — is entered by NO scenario. A result gate written in
+    ; this file the way the tutorial gates are would have replicated that tail
+    ; and then witnessed the replica. Four in-WRAM probe markers settled it:
+    ; production's before-call marker was never written, the gate body's was.
+    ;
+    ; So this variant JUMPS INTO PRODUCTION at pret's own
+    ; StartBattle.displaySafariZoneBattleMenu. It is a `call`, not a `jmp`:
+    ; the loop's escape is `jp EnemyRan`, and EnemyRan tail-jumps to
+    ; AnimationSlideEnemyMonOff, so the whole tail returns here normally.
+    ;
+    ; THE FLEE ROLL IS MADE RNG-FREE RATHER THAN SEEDED. The tail's first
+    ; decision is `ld a,[wEnemyMonSpeed+1] / add a / jp c, EnemyRan` — a speed
+    ; LOW byte (big-endian, so +1) above 127 runs outright, BEFORE `Random` is
+    ; ever called. Pinning it removes the cross-emulator RNG problem instead of
+    ; trying to align two streams, exactly as battle_safari's menu gate avoids
+    ; a roll by never taking a turn.
+    mov byte [ebp + wEnemyMonSpeed + 1], 0x80
+    call StartBattle_displaySafariZoneBattleMenu
+    call DebugDumpMemory                    ; GBSTATE.BIN + DUMP.BIN, then exits
+%else
     call DisplayBattleMenu
 .goldensafarihang:
     call DelayFrame
     jmp .goldensafarihang
+%endif
 %elifdef DEBUG_BATTLE_PIKACHU
     ; ------------------------------------------------------------------
     ; battle_pikachu golden gate (battle plan 4a — the must-hit Pikachu-battle
@@ -5372,6 +5405,30 @@ autokey_script:
     ; timer, so a screen that parks in its own key-wait loop (e.g. DEBUG_LISTMENU_QTY's
     ; DisplayChooseQuantityMenu) can be photographed mid-wait instead of run to a
     ; DumpBackbuffer the routine never reaches.
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_SAFARI
+    ; battle_safari_result: drive the SAFARI menu to BAIT, which is the only
+    ; choice that TAKES A TURN WITHOUT ENDING THE BATTLE — so the special-battle
+    ; loop's turn tail actually runs.
+    ;   BALL       BAIT        BALL exits on carry (a capture), like the
+    ;   THROW ROCK RUN         tutorial gates already witness; RUN exits too.
+    ; The cursor starts on BALL, so one RIGHT reaches BAIT and A confirms.
+    ; battle_safari photographs the same menu at frame 300, so it is up well
+    ; before these fire.
+    ; The A pulses after the selection are NOT padding: the bait tail prints
+    ; through PrintText/PrintSafariZoneBattleText, which parks in
+    ; WaitForTextScrollButtonPress. Measured — with only the selection press the
+    ; run hung for the full 150 s harness timeout and produced no dump at all.
+    dd 320, 328, PAD_RIGHT
+    dd 360, 368, PAD_A
+    dd 400, 408, PAD_A
+    dd 440, 448, PAD_A
+    dd 480, 488, PAD_A
+    dd 520, 528, PAD_A
+    dd 560, 568, PAD_A
+    dd 600, 608, PAD_A
+    dd 640, 648, PAD_A
+    dd 680, 688, PAD_A
     dd  -1,  -1, 0
 %elifdef AUTOKEY_CHOOSENAME
     ; menu-intro A4.5f (DEBUG_CHOOSENAME): after the pic fade (~60 frames) and the

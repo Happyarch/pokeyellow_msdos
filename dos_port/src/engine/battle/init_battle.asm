@@ -601,6 +601,23 @@ _InitBattleCommon:
                                        ; battle is this same menu loop
     jmp EnemyRan                       ; jr EnemyRan — b beat the roll
 
+%ifdef DEBUG_BATTLE_SAFARI_RESULT
+; DEVIATION{class=temporary; pret=engine/battle/core.asm:StartBattle.displaySafariZoneBattleMenu; behavior=a harness-only trampoline exports an entry into the special-battle menu loop above so the golden gate can drive PRODUCTION instead of calling DisplayBattleMenu directly and replicating the Safari turn tail; evidence=measured 2026-08-14 with four in-WRAM probe markers that the previous battle_safari gate never reached .specialBattleLoop at all so the port's Safari turn and flee roll were executed by no scenario, and RunBattleTest hand-rolls the battle intro rather than calling _InitBattleCommon so there is no production path into the middle of this routine, the same shape as the EnemyCalcMoveDamage harness entry in battle_menu.asm which carries this class; lifetime=retire when RunBattleTest enters battles through _InitBattleCommon rather than replicating its intro}
+;
+; IT IS A TRAMPOLINE, NOT A LABEL ON THE LOOP, and that was measured rather than
+; chosen: a `global` label written immediately above `.specialBattleLoop` becomes
+; the local-label PARENT for the rest of the routine, so every following `.local`
+; silently re-parents and NASM fails with 18 `changed during code generation`
+; errors on labels as far away as CopyUncompressedPicToHL. Jumping in from
+; outside leaves the routine's own label structure untouched.
+;
+; The name is pret's own label with the dot flattened — inventing a port name
+; here would fork the one symbol this entry exists to point at.
+global StartBattle_displaySafariZoneBattleMenu
+StartBattle_displaySafariZoneBattleMenu:
+    jmp _InitBattleCommon.specialBattleLoop
+%endif
+
 ; ---------------------------------------------------------------------------
 ; _LoadTrainerPic — production trainer-picture loader.
 ; pret: engine/battle/init_battle.asm:_LoadTrainerPic
