@@ -148,10 +148,15 @@ TILE_BLANK        equ 0x7F                      ; blank space tile (ClearScreen 
 ; applied at decode for all cells. That is a redesign, not a widening, and is
 ; deliberately not built here.
 ;
-; BG_ATTR_NONE is why bg_cell_attr lives in .data and not .bss: BSS zero-fill
-; would read as "palette 0 override" on every cell and strip the baked band
-; screen-wide.
-BG_ATTR_NONE      equ 0xFF                      ; this cell has no override
+; THE SENTINEL IS A BIT, NOT A MAGIC VALUE, and that is load-bearing. An earlier
+; revision used $FF for "no override", which forced bg_cell_attr into .data
+; (1728 initialised bytes) because BSS zero-fill would have read as "palette 0
+; override" on every cell and stripped the baked band screen-wide. Using CGB
+; bit 4 — which the hardware attribute format leaves UNUSED — as a "there is an
+; override here" marker makes 0 mean "none", so BSS zero-fill is correct BY
+; CONSTRUCTION and the plane needs no initialiser and no second "is the layer
+; active" global to fall out of step with it.
+BG_ATTR_PRESENT   equ 0x10                      ; bit 4: this cell HAS an override
 BG_ATTR_PAL_MASK  equ 0x07                      ; bits 0-2
 BG_ATTR_BANK      equ 0x08                      ; bit 3 — RESERVED (Gen 2 tile bank)
 BG_ATTR_XFLIP     equ 0x20                      ; bit 5
@@ -166,33 +171,36 @@ BG_ATTR_RAW_COLOR equ 0x03                      ; keeps the 2-bit GB colour, dro
 ; so the cell index is just the cursor's offset into the shadow.
 ;
 ; UNCONDITIONAL on purpose — there is no "is the layer active" test. bg_cell_attr
-; reads BG_ATTR_NONE when nothing has published an override, so the inert case
-; costs one load and one store on a cell that was going to be re-decoded anyway,
-; and needs no second global to fall out of step with the plane itself.
-%macro PUBLISH_CELL_ATTR 2
-    push eax
-    lea eax, [%1 + %2]
-    sub eax, surf_shadow                        ; cursor → surface cell index
-    mov al, [bg_cell_attr + eax]
-    mov [decode_cell_attr], al
-    pop eax
-%endmacro
-
-; PUBLISH_CELL_ATTR_EAX — the same thing, but it CLOBBERS EAX instead of saving
-; it, so it must be placed BEFORE the loop loads the tile id into AL.
+; reads 0 (no BG_ATTR_PRESENT bit) when nothing has published an override, so the
+; inert case is one load and one store on a cell that was going to be re-decoded
+; anyway, and there is no second global that can fall out of step with the plane.
 ;
-; This exists because the saving is measured, not cosmetic. The force paths
-; re-decode all 1728 cells, and the push/pop pair in the macro above cost a
-; REPRODUCIBLE +1.17 ms on those frames (two independent 300-frame captures
-; agreed to within 0.007 ms) — enough to push 2 more frames per 300 past the
-; deadline. The force paths can simply fetch the attribute first, so they do.
-; The scan paths keep the saving form: they touch only CHANGED cells, where the
-; per-cell cost is irrelevant and not disturbing a live EAX matters more.
-%macro PUBLISH_CELL_ATTR_EAX 1
-    mov eax, %1
-    sub eax, surf_shadow                        ; cursor → surface cell index
-    mov al, [bg_cell_attr + eax]
-    mov [decode_cell_attr], al
+; ONE INSTRUCTION FETCHES THE ATTRIBUTE, and that is why BG_ATTR_DELTA exists.
+; bg_cell_attr sits in the SAME SECTION as surf_shadow, so `bg_cell_attr -
+; surf_shadow` is an assembly-time constant and the cell's attribute is just a
+; fixed displacement off the cursor the loop already has. The earlier form —
+; materialise the index with `mov`/`sub`, then index the array — cost 3
+; instructions and a MEASURED +0.875 ms on force frames. Do not "simplify" this
+; back into an index computation; the displacement is the point.
+; IT IS ONE INSTRUCTION, AND BOTH HALVES OF THAT ARE DELIBERATE. decode_tile
+; already takes the tile id in AL, which leaves **AH** free to carry the cell's
+; attribute — so the publish is a single load into AH with NO memory write and no
+; stack traffic, and the same macro serves the scan and force paths alike.
+; Routing it through a global instead cost a store per cell and a measured
+; +0.303 ms of force-frame time (+0.875 -> +0.572 was the displacement fix;
+; +0.572 -> the current figure is this one).
+;
+; CONTRACT: EVERY caller of decode_tile MUST set AH. There are exactly four, all
+; in this file, all immediately below. A caller that forgets leaves whatever
+; happened to be in AH, and a stray BG_ATTR_PRESENT bit would send an ordinary
+; cell down the override path — so the count is asserted by grep, not by hope:
+; there must be exactly as many publish sites as decode_tile call sites, four of
+; each, and both lists are visible by grepping this file for the macro name and
+; for the call. (Two traps met while writing that check down: the call sites
+; carry trailing comments, so an end-of-line anchor matches none of them; and a
+; comment quoting its own grep pattern gets counted by it.)
+%macro PUBLISH_CELL_ATTR 2
+    mov ah, [%1 + %2 + BG_ATTR_DELTA]
 %endmacro
 
 ; ---------------------------------------------------------------------------
@@ -202,22 +210,12 @@ section .data
 align 4
 g_tilecache_dirty: db 1     ; nonzero → render_bg rebuilds tile_cache this frame
 
-; --- per-cell BG attribute override plane (see the format block above) ---------
-; One byte per surface cell, parallel to surf_shadow and indexed identically.
-; BG_ATTR_NONE everywhere = the layer is inert and every decode takes the
-; untouched fast path. A publisher writes the cells it owns and MUST arm
-; surf_force, because the tile IDS are unchanged and the id shadow alone would
-; skip the re-decode.
-align 4
-global bg_cell_attr
-bg_cell_attr:
-    times SURF_CELLS db BG_ATTR_NONE
-
 ; The attribute decode_tile should apply to the cell it is about to paint. The
 ; surface decoders publish it per cell; decode_tile consumes it. Passing it in a
 ; register was not possible without disturbing the scan loops' live cursors.
+; (The plane itself, bg_cell_attr, is in .bss beside surf_shadow — see there.)
 align 4
-decode_cell_attr: db BG_ATTR_NONE
+decode_cell_attr: db 0
 
 ; --- bg_surface dirty-skip state (compositor-perf Stage 1b) --------------------
 ; bg_surface is a pure function of (tile id per cell, tile_cache, tiledata_mode),
@@ -415,6 +413,34 @@ g_row_xoff:        resb RENDER_H
 bg_surface:        resb SURF_W * SURF_H_TILES * 8
 alignb 4
 surf_shadow:       resb SURF_CELLS   ; tile id each surface cell was last decoded from
+
+; --- per-cell BG attribute override plane (format block near BG_ATTR_PRESENT) ---
+; One byte per surface cell, indexed identically to surf_shadow. A zero byte —
+; no BG_ATTR_PRESENT bit — means "no override", so BSS zero-fill IS the inert
+; state and this plane needs no initialiser.
+;
+; DELIBERATELY DECLARED IMMEDIATELY AFTER surf_shadow, WITH NO `alignb` BETWEEN.
+; Both labels are in this one section, which makes BG_ATTR_DELTA below an
+; assembly-time constant, which is what lets the publish macros reach a cell's
+; attribute as a fixed displacement off the shadow cursor instead of computing
+; an index (measured: 3 instructions and +0.875 ms of force-frame cost). An
+; `alignb` here would still assemble and still be correct — the delta is
+; computed, not assumed — but SURF_CELLS is a multiple of 4, so none is needed.
+;
+; A publisher writes the cells it owns and MUST arm surf_force: the tile IDs are
+; unchanged, so the id shadow alone would skip the re-decode and the new colour
+; would never appear.
+global bg_cell_attr
+bg_cell_attr:      resb SURF_CELLS
+BG_ATTR_DELTA      equ bg_cell_attr - surf_shadow
+; The publish macros are only correct if this really is the distance between the
+; two parallel planes. Assert it rather than trust the declaration order: an
+; `alignb` slipped in above, or a field inserted between them, would otherwise
+; make every publish read a neighbouring cell's attribute — a silent, plausible,
+; off-by-a-few-cells colour bug rather than a build failure.
+%if BG_ATTR_DELTA != SURF_CELLS
+%error "bg_cell_attr must sit immediately after surf_shadow (BG_ATTR_DELTA != SURF_CELLS)"
+%endif
 alignb 4
 surf_row_base:     resd 1            ; bg_surface offset of the row being decoded (scan paths)
 surf_row_ctr:      resd 1            ; row counter for the force paths
@@ -771,10 +797,10 @@ decode_tile:
     movzx eax, al
     mov esi, [id_cache_lut + eax*4]
     ; Per-cell attribute override (CGB Stage 5). One compare against a .data byte
-    ; that is BG_ATTR_NONE on every cell of every screen that has no override —
-    ; i.e. all of them today except the battle gauge and the party HP bars.
-    cmp byte [decode_cell_attr], BG_ATTR_NONE
-    jne .attr
+    ; that is zero on every cell of every screen that has no override — i.e. all
+    ; of them today except the battle gauge and the party HP bars.
+    test ah, BG_ATTR_PRESENT               ; caller-supplied per-cell attribute
+    jnz .attr
 %assign _row 0
 %rep 8
     mov eax, [esi + _row * 8]
@@ -786,6 +812,7 @@ decode_tile:
     pop esi
     ret
 .attr:
+    mov [decode_cell_attr], ah             ; one store, override cells only
     call decode_tile_attr                  ; preserves everything (pushad)
     pop esi
     ret
@@ -923,9 +950,9 @@ decode_surface_overworld:
 .force_row:
     mov ecx, SURF_W_TILES
 .force_cell:
-    PUBLISH_CELL_ATTR_EAX edx              ; before the id load — it clobbers EAX
     mov al, [ebx]
     mov [edx], al
+    PUBLISH_CELL_ATTR edx, 0
     inc ebx
     inc edx
     call decode_tile                       ; EDI = dest, preserved
@@ -1001,7 +1028,7 @@ decode_surface_flat:
 .force_row:
     xor ecx, ecx                           ; column
 .force_cell:
-    PUBLISH_CELL_ATTR_EAX edx              ; before the id resolution — clobbers EAX
+    PUBLISH_CELL_ATTR edx, 0
     mov al, TILE_BLANK
     cmp dword [surf_row_ctr], SCREEN_TILES_H   ; row ≥ 25 → padding
     jae .have_id
