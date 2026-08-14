@@ -2617,7 +2617,18 @@ enemy-gauge clone tile ids and VRAM slots.
       shake/blink/palette commands, backend `wAnimationType` setup, and exact
       `BIT_BATTLE_ANIMATION` option gate; retire the shake stub. Preserve the
       current ANIMATION=OFF behavior as the option-off route, not as the engine.
-- [ ] **6e. Retire F-19 — BLOCKED 2026-08-12 on the CGB per-cell BG attribute
+- [ ] **6e. RE-MEASURED 2026-08-14 AND THE BLOCKER HOLDS — not inherited, checked.**
+      `src/engine/gfx/bg_map_attributes.asm` still resolves the attribute plane
+      to a per-TILE-ID band at load time (`tile_pal[tile id] = attribute`) and
+      the compositor still bakes palette into `tile_cache` per tile id; there is
+      no per-cell attribute layer in `render_bg`. That file's own
+      `DEVIATION{class=HAL}` names the same retirement condition — "retire when a
+      per-cell attribute layer lands in the compositor". Checked
+      `docs/current_plan_palette_fidelity.md` too: its 5 open boxes are OBJ
+      pal4-7, live mon/HP-bar palettes, the blackout path, a re-measure and the
+      `PALETTE_GATING` flip — none of them is the per-cell mechanism. So nothing
+      has moved and F-19 cannot retire yet.
+      **6e. Retire F-19 — BLOCKED 2026-08-12 on the CGB per-cell BG attribute
       plane, which is another plan's Stage 1 and lives OUTSIDE this repo.**
       Remove the enemy-gauge clone-id divergence, restore canonical gauge tile
       identities, and delete every F-19-owned tilemap/VRAM mask. Do not close
@@ -3584,7 +3595,13 @@ enemy-gauge clone tile ids and VRAM slots.
         intro-slide grouping, currently dropped under `ANIMATION=OFF`. Details
         in the closed inventory box above.
 
-- [ ] Remove temporary guards and stand-ins whose real providers landed. Run
+- [x] **DONE 2026-08-13/14.** 2 stubs retired (`IsPlayerPikachuAsleepInParty`,
+      `FormatMovesString` — the latter needed a real port bug fixed first, see
+      below), the other 7 measured as NOT stand-ins, 3 stale claims swept, and 2
+      dead allowlist `suppress` rows retired with the maintainer's hash approval.
+      `label_status --callers`, `update_label_db`, both lint modes and
+      `fidelity_gate` all run. Detail below.
+      Remove temporary guards and stand-ins whose real providers landed. Run
       `label_status --callers` for each retired stub, update the label DB, run
       default/strict label lint and `fidelity_gate`, and sweep related `STUB`,
       `TODO-HW`, extern-provider, allowlist, plan, skill, and stigmergy claims.
@@ -3707,6 +3724,26 @@ enemy-gauge clone tile ids and VRAM slots.
 - [ ] Run targeted scenarios, the core tier, `fidelity-full`, and
       `goldens-verify` when scenario/golden artifacts changed. Close or transfer
       every battle-owned mask/finding with explicit evidence.
+      - **MASK INVENTORY, MEASURED 2026-08-14 (enumerated from `golden_diff.py`,
+        not recalled).** 76 scenario entries, 27 battle-ish. There are exactly
+        THREE shared mask families plus SEVEN per-scenario masks, and **none is
+        closable today** — each is either blocked on 6e or is a documented
+        structural asymmetry. Each row names what retires it, which is the
+        "transfer" this box asks for:
+        | mask | what it covers | retired by |
+        |---|---|---|
+        | `_BATTLE_TILEMAP_MASKS_MENU` (8 users) | GB (2,4)-(2,9), the 6 enemy-gauge cells | **F-19 / box 6e** — blocked on CGB per-cell BG attributes |
+        | `_BATTLE_VRAM_MASKS_MENU` slots `$C0-$C9` (8 users) | the F-19 gauge CLONE slots | **F-19 / box 6e**, same blocker |
+        | `_BATTLE_VRAM_MASKS_MENU` slots `$00-$7F` (8 users) | the `$8000-$87FF` anim/pic bank post-send-out | the port draws from the COMPARED `$93xx` copies; retires only if the port stops mirroring pics into `$80xx` |
+        | `_BATTLE_WRAM_MASKS` -> `wOptionsBlock +3` (27 users) | `wLetterPrintingDelayFlags` | sanctioned draw-layer divergence (`PlaceString` always delays); retires with a per-message text-delay gate |
+        | `wLoadedMon` per-scenario (7: `battle_faint`, `battle_blackout`, `battle_exp_all`, and the four `battle_anim_*`) | staging-buffer residue at +23/+24 and +33 | route asymmetry between a synthetic gate and the menu path — retires if a gate ever reaches its landmark through the real menu |
+        * **The `$00-$7F` VRAM mask is the one with teeth**, and that was
+          measured this session: it is what made the first option-off landmark
+          blind (see the box above). Any future battle scenario whose subject
+          lives in `$8000-$87FF` cannot be witnessed by this family.
+        * **`wLoadedMon +23..+24` is precedent-covered, not novel** —
+          `battle_blackout` has masked it since 2026-07-26 with the same
+          `$9876`/`$0000` values.
 - [ ] Archive only when `project_state --plans` reports no open checklist items
       here and the default game can enter, play, and exit all in-scope battle
       types through their owning live routes.
