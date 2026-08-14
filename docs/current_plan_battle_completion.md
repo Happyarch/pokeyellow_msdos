@@ -2952,6 +2952,43 @@ enemy-gauge clone tile ids and VRAM slots.
       > the string is currently true — but it becomes false the moment a Stage 6
       > animation scenario exercises the shake. Re-measure it then rather than
       > carrying it forward.
+
+      **THAT CARRY-FORWARD IS DISCHARGED — RE-MEASURED 2026-08-14, NOW THAT ALL
+      FIVE STAGE-6 ANIMATION SCENARIOS EXIST (74-78). The trigger has not
+      fired, and the note was imprecise about WHICH mask could fire it.**
+      * **Mask family, measured from `golden_diff.py` rather than assumed:
+        `_BATTLE_VRAM_MASKS` (the intro variant, slots `$00-$30`) is referenced
+        by exactly ONE scenario — `battle_intro`.** Every animation scenario
+        (`battle_anim_physical`, `_elemental`, `_ball`, `_blink`, `_optoff`)
+        references `_BATTLE_VRAM_MASKS_MENU` instead, which masks `$00-$7F`
+        under a *different* justification (post-send-out anim/pic bank). So an
+        animation scenario cannot falsify the intro string by construction:
+        it never consults it. `battle_intro`'s own dump point precedes any move
+        selection, so the shake cannot run before it either.
+      * **The underlying concern is nonetheless real, and the port side is
+        measured, not inferred.** `AnimationShakeEnemyHUD`
+        (`animations.asm:2445`) opens with `mov esi, GB_VCHARS0` /
+        `mov ebx, PIC_SIZE` / `call CopyVideoData` — `PIC_SIZE` is 7x7 = 49, so
+        it does write slots 0-48 = `$8000-$830F`, exactly as the note feared,
+        and nothing restores those bytes afterwards (the tail restores the BG
+        map and OAM, not vSprites).
+      * **What actually gates it is the CALLER, and no current scenario is one.**
+        `SE_SHAKE_ENEMY_HUD` (`$E4`) appears in exactly one subanimation,
+        `EnemyHUDShakeAnim` (`data/moves/animations.asm:1177`), reached as
+        animation id `ENEMY_HUD_SHAKE_ANIM` — and that id is played only from
+        the stat-modifier effects (`engine/battle/effects.asm:141/257/264/272`;
+        the port mirrors all four at `effects.asm:328/458/464/471`). It is NOT
+        on `PlayApplyingAttackAnimation`'s path: that dispatches through
+        `AnimationTypePointerTable`, whose six entries are the screen shakes and
+        `BlinkEnemyMonSprite` — no HUD shake. And it cannot arrive as a plain
+        move animation either, since `MoveAnimation` does `ld a,[wAnimationID] /
+        and a / jr z,.animationFinished` (`animations.asm:425-427`), so
+        `NO_MOVE` returns before dispatch.
+      * The five animation scenarios use STRENGTH (physical, blink, optoff),
+        THUNDERSHOCK (elemental) and MASTER BALL (ball). **None is a stat move,
+        so none reaches the shake**, and the `$00-$30` justification string
+        stands unchanged. Re-check when a stat-modifier scenario lands — that,
+        not "any animation scenario", is the real trigger.
 - [x] **DONE 2026-08-13 — all five landed and sabotage-proved: `battle_anim_physical`
       (74), `battle_anim_elemental` (75), `battle_anim_ball` (76),
       `battle_anim_blink` (77), `battle_anim_optoff` (78). Registry 76,
@@ -3590,10 +3627,38 @@ enemy-gauge clone tile ids and VRAM slots.
         That found `EnemyMoveHitTest` and this in one pass, where targeted
         searching had found neither. Memory:
         `battle-core-missing-label-inventory`.
-- [ ] **RESIDUE OF THE CORE.ASM INVENTORY (opened 2026-08-12 when that box
-      closed).** Three items, all measured: two are complete and the remaining
-      `SlideTrainerPicOffScreen` translation is blocked on a witness that can
-      compare its projected final state.
+- [x] **RESIDUE OF THE CORE.ASM INVENTORY — CLOSED 2026-08-14.** All three
+      items landed, and the two witness gaps this box opened along the way were
+      closed by new scenarios rather than left as prose:
+      * The HUD alias fork — retired `0698bb0eb`, and it exposed four real
+        divergences (`ClearScreenArea`, `PrintStatusConditionNotFainted`,
+        `PrintLevel`, `DrawHP`) plus the never-armed low-health alarm. All five
+        fixed; the first four are gated by `battle_wrap`'s six projected HUD
+        spans, the alarm by `battle_low_hp` (id 72).
+      * `CenterMonName`'s missing witness — closed by `battle_short_nick`
+        (id 73), non-vacuity proved by deleting the player-side call.
+      * `SlideTrainerPicOffScreen` — **translated and BOTH retail call sites
+        wired 2026-08-14** (`cd3257078`, `74707909c`). The header this box
+        carried for two days ("blocked on a witness that can compare its
+        projected final state") was FALSE and the body records exactly why:
+        pret's loop is an edge-anchored fixed-window in-place shift, so no
+        write ever leaves the projected window and no margin garbage — the
+        entire premise of the deferral — is possible.
+      **ONE RESIDUE MOVES OUT OF THIS BOX RATHER THAN STAYING OPEN IN IT: the
+      `DrawHPBar` ENEMY half, and it is NOT a separate maintainer decision — it
+      is 6e's blocker under another name.** The box recorded it as "maintainer
+      input wanted: how does the enemy bar get its own palette slot without a
+      second implementation". Traced 2026-08-14: calling pret's `DrawHPBar` on
+      the enemy side means writing the shared `$63-$6b` ids, which IS retiring
+      `DuplicateEnemyHPBarTiles` (`battle_hud.asm:184`), which IS retiring F-19
+      — `golden_diff.py`'s F-19 comment says so outright ("retiring F-19's
+      mechanism (per-cell palettes) deletes this mask"), and the clone trick
+      exists only because the port's palette is a pure function of TILE ID
+      (`tile_pal`) and never of tilemap cell. So the answer to "how" is the CGB
+      per-cell BG attribute plane, which 6e is already blocked on and which
+      lives in another plan outside this repo. Tracking it twice would invite
+      two different answers; it is 6e's, and 6e already says do not attempt it
+      here.
       * **The HUD alias fork — RETIRED 2026-08-13 (`0698bb0eb`).** The three
         bodies moved from the port-only `battle_hud.asm` into the mirror file
         under pret's names. faithdiff, before -> after:
@@ -3892,7 +3957,11 @@ enemy-gauge clone tile ids and VRAM slots.
                the shared IDs and destroy that mechanism. Retiring this fork
                needs a decision about how the enemy bar gets its own palette
                slot without a second implementation; it is not a translation
-               task. **Maintainer input wanted.**
+               task. ~~**Maintainer input wanted.**~~ **RESOLVED 2026-08-14 —
+               there is no separate decision to make: retiring the clone
+               mechanism IS retiring F-19, so this is 6e's blocker (the CGB
+               per-cell BG attribute plane) reached from the other end. See
+               this box's closing note.**
           5. The low-health alarm — FIXED, below.
       * **THE LOW-HEALTH ALARM NEVER ARMED — FIXED 2026-08-13.** pret's
         `DrawPlayerHUDAndHPBar.setLowHealthAlarm` tail is the game's ONLY
@@ -4007,8 +4076,10 @@ enemy-gauge clone tile ids and VRAM slots.
           declare-before-use rule has a CONDITIONAL form: check which `%ifdef`
           you are inside, not just the line number.
       * **`SlideTrainerPicOffScreen`** — the one translatable member of the old
-        intro-slide grouping, currently dropped under `ANIMATION=OFF`. Details
-        in the closed inventory box above.
+        intro-slide grouping. **LANDED 2026-08-14** (`cd3257078` translation,
+        `74707909c` player-side call site); no longer dropped under
+        `ANIMATION=OFF`, port callers 0 -> 2. Details in the closed inventory
+        box above.
 
 - [x] **DONE 2026-08-13/14.** 2 stubs retired (`IsPlayerPikachuAsleepInParty`,
       `FormatMovesString` — the latter needed a real port bug fixed first, see
