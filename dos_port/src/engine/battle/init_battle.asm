@@ -458,6 +458,81 @@ _InitBattleCommon:
     cmp byte [ebp + wBattleType], 0
     jne .specialBattleIntro
 
+%ifdef DEBUG_TRAINER_RESULT
+    ; The trainer-result oracles stop right after both battlers are loaded, and
+    ; their own note says presentation stays OUTSIDE these checkpoints. Before
+    ; the send-out block moved below the intro they got that for free — the stop
+    ; fired before any of it ran. Keep it literally true by jumping straight to
+    ; the block: these gates carry no DEBUG_AUTOKEY, so they have no input
+    ; source, and pret's intro now parks at the text stream's own prompt.
+    ; Measured 2026-08-14: without this, trainer_battle_win and
+    ; trainer_battle_loss hang at that prompt and dump nothing.
+    jmp .playerSendOut
+%endif
+
+    ; --- intro scene (proven DEBUG_BATTLE_LIVE order) ---
+    ; pret _InitBattleCommon:103 — `callfar SlidePlayerAndEnemySilhouettesOnScreen`.
+    ; That routine's first act is `call LoadPlayerBackPic`, so the pair the port
+    ; used to open-code here is now behind pret's own entry point.
+    call SlidePlayerAndEnemySilhouettesOnScreen
+    ; The wild/trainer split that used to be here is GONE: the routine below IS
+    ; pret's dispatcher (`ld a,[wIsInBattle] / dec a / jr nz,.trainerBattle` are
+    ; its first three instructions, and `.wildBattle` skips the ball row itself
+    ; for any nonzero wBattleType). Branching first decided the same thing twice.
+    ; pret reaches it from the SlidePlayerAndEnemySilhouettesOnScreen tail
+    ; (`jp PrintBeginningBattleText`), so this call sits where that tail lands.
+    ; It retires DrawBattleIntroBox / DrawEmptyDialogBox and the separate
+    ; DrawBattlePokeballs + WaitForAPress: it draws the ball row via
+    ; DrawAllPokeballs and its stream ENDS IN ITS OWN PROMPT, which is what
+    ; WaitForAPress was standing in for.
+    call PrintBeginningBattleText
+    call SaveBattleScreen                        ; snapshot for menu re-entry
+    call HideBattlePokeballs
+    cmp byte [ebp + wIsInBattle], 2
+    jne .enemyFrontReady
+    ; EnemySendOutFirstMon selected/loaded the first trainer mon before the
+    ; trainer intro. Replace the trainer picture with that mon now; Stage 1d
+    ; owns the omitted throw/cry animation and text.
+    mov al, [ebp + wEnemyMonSpecies2]
+    mov [ebp + wCurPartySpecies], al
+    ; PROJ battle: projected enemy-pic cell, not pret's raw hlcoord 12,0 — same
+    ; reason as the send-out placement in core.asm (see the comment there). This
+    ; call runs AFTER SlideBattlePicsIn, so nothing clears the canvas behind it.
+    mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
+    call LoadFrontSpriteByMonIndex
+.enemyFrontReady:
+    ; send-out. pret StartBattle.playerSendOutFirstMon ends
+    ;   call LoadBattleMonFromParty / call LoadScreenTilesFromBuffer1 /
+    ;   call SendOutMon / jr MainInBattleLoop
+    ; and SendOutMon is what draws the HUDs, decodes the sent-out mon's back pic
+    ; (predef LoadMonBackPic), plays POOF_ANIM + AnimateSendingOutMon and the cry.
+    ; This site used to call LoadMonBackPic alone — the back-pic decode only —
+    ; which is why nothing in the port ever reached SetAnimationPalette at battle
+    ; entry and IO_OBP1 stayed 0 (battle_completion 1g).
+    ; ===================================================================
+.playerSendOut:
+    ; PLAYER SEND-OUT — MOVED HERE 2026-08-14 to restore pret's ORDER.
+    ;
+    ; This block used to run BEFORE the intro. pret does all of it in
+    ; StartBattle.playerSendOutFirstMon, which is reached only AFTER
+    ; _InitBattleCommon's intro text (engine/battle/core.asm:135-175 passes
+    ; through .checkAnyPartyAlive / .specialBattle first). The port had
+    ; collapsed StartBattle away and hoisted the block to the top, so
+    ; wBattleMon was fully loaded while the GB still had it zeroed.
+    ;
+    ; MEASURED: with both sides in the same forced battle, hardware holds
+    ; wBattleMon all-zero and the nick '???????????' at the parked intro while
+    ; the port already held SNORLAX — 21 WRAM fields. battle_intro's own golden
+    ; states the same expectation in prose ("wBattleMon is NOT loaded yet — the
+    ; GB loads it at send-out, after this screen"). No RunBattleTest scenario
+    ; can see it, because that staging builds the intro itself and never calls
+    ; LoadBattleMonFromParty first; only live InitBattle entry exposes it, which
+    ; is how the ghost gate found it.
+    ;
+    ; It is not cosmetic: wBattleMonSpecies is the natural "has send-out
+    ; happened" state gate, and while this block ran early that gate fired at
+    ; the intro on the port and post-send-out on hardware.
+    ; ===================================================================
     ; --- player send-out (pret StartBattle.playerSendOutFirstMon): first non-fainted mon ---
     ; PROJ(port safety): pret's StartBattle runs AnyPartyAlive→HandlePlayerBlackOut before
     ; this scan, guaranteeing a live mon; the port collapsed StartBattle away, so bound the
@@ -517,45 +592,6 @@ _InitBattleCommon:
     ; battle tile slots before the first cache rebuild/slide frame.
     call SetPal_Battle
 
-    ; --- intro scene (proven DEBUG_BATTLE_LIVE order) ---
-    ; pret _InitBattleCommon:103 — `callfar SlidePlayerAndEnemySilhouettesOnScreen`.
-    ; That routine's first act is `call LoadPlayerBackPic`, so the pair the port
-    ; used to open-code here is now behind pret's own entry point.
-    call SlidePlayerAndEnemySilhouettesOnScreen
-    ; The wild/trainer split that used to be here is GONE: the routine below IS
-    ; pret's dispatcher (`ld a,[wIsInBattle] / dec a / jr nz,.trainerBattle` are
-    ; its first three instructions, and `.wildBattle` skips the ball row itself
-    ; for any nonzero wBattleType). Branching first decided the same thing twice.
-    ; pret reaches it from the SlidePlayerAndEnemySilhouettesOnScreen tail
-    ; (`jp PrintBeginningBattleText`), so this call sits where that tail lands.
-    ; It retires DrawBattleIntroBox / DrawEmptyDialogBox and the separate
-    ; DrawBattlePokeballs + WaitForAPress: it draws the ball row via
-    ; DrawAllPokeballs and its stream ENDS IN ITS OWN PROMPT, which is what
-    ; WaitForAPress was standing in for.
-    call PrintBeginningBattleText
-    call SaveBattleScreen                        ; snapshot for menu re-entry
-    call HideBattlePokeballs
-    cmp byte [ebp + wIsInBattle], 2
-    jne .enemyFrontReady
-    ; EnemySendOutFirstMon selected/loaded the first trainer mon before the
-    ; trainer intro. Replace the trainer picture with that mon now; Stage 1d
-    ; owns the omitted throw/cry animation and text.
-    mov al, [ebp + wEnemyMonSpecies2]
-    mov [ebp + wCurPartySpecies], al
-    ; PROJ battle: projected enemy-pic cell, not pret's raw hlcoord 12,0 — same
-    ; reason as the send-out placement in core.asm (see the comment there). This
-    ; call runs AFTER SlideBattlePicsIn, so nothing clears the canvas behind it.
-    mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
-    call LoadFrontSpriteByMonIndex
-.enemyFrontReady:
-    ; send-out. pret StartBattle.playerSendOutFirstMon ends
-    ;   call LoadBattleMonFromParty / call LoadScreenTilesFromBuffer1 /
-    ;   call SendOutMon / jr MainInBattleLoop
-    ; and SendOutMon is what draws the HUDs, decodes the sent-out mon's back pic
-    ; (predef LoadMonBackPic), plays POOF_ANIM + AnimateSendingOutMon and the cry.
-    ; This site used to call LoadMonBackPic alone — the back-pic decode only —
-    ; which is why nothing in the port ever reached SetAnimationPalette at battle
-    ; entry and IO_OBP1 stayed 0 (battle_completion 1g).
     ; DEVIATION{class=projection; pret=engine/battle/core.asm:StartBattle; behavior=the port's _InitBattleCommon carries StartBattle's call SendOutMon inline because it already collapses pret's InitWildBattle plus _InitBattleCommon plus StartBattle into one routine, so faithdiff reports SendOutMon as ADDED here and StartBattle as DROPPED, and the same collapse is why StartBattle's other callees - the Safari turn tail's PrintSafariZoneBattleText, EnemyRan, Random, LoadScreenTilesFromBuffer1 and PrintText - also read as ADDED on this routine rather than on StartBattle; evidence=pret StartBattle.playerSendOutFirstMon ends call LoadBattleMonFromParty then call SendOutMon then jr MainInBattleLoop and this site sits in exactly that position with MainInBattleLoop next, and routing it here moved battle_menu and move_selection from 12 palette divergences to 0 by finally reaching SetAnimationPalette; lifetime=until the collapsed StartBattle is restored as its own pret-labeled routine}
     call SendOutMon
 

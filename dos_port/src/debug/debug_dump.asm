@@ -1936,6 +1936,7 @@ section .bss
 ghost_battle_seeded: resb 1                     ; 0 = seed on first EnterMap only
 ghost_enemy_seeded:  resb 1                     ; 0 = spec-overwrite wEnemyMon once
 ghost_dump_frame:    resd 1                     ; in-battle frames since send-out
+ghost_press_a:       resb 1                     ; this frame's intro-dismiss pulse
 section .text
 %endif
 
@@ -5403,6 +5404,10 @@ AutoKeyDrive:
     ;     wBattleMonSpecies goes nonzero (send-out done), which is what keeps
     ;     these presses off the battle menu that comes up next — an A there
     ;     would select FIGHT.
+    ; ⚠ RECORDED here, APPLIED after `xor edx, edx` further down — DL is the
+    ; held mask and is only cleared there, so an `or dl` at this point is wiped.
+    ; Measured: the pulse silently never reached the joypad and the gate hung.
+    mov byte [ghost_press_a], 0
     cmp byte [ebp + wIsInBattle], 0
     je .ghostNoKey
     cmp byte [ebp + wBattleMonSpecies], 0
@@ -5411,7 +5416,7 @@ AutoKeyDrive:
     and eax, 63
     cmp eax, 8
     jae .ghostNoKey
-    or dl, PAD_A
+    mov byte [ghost_press_a], 1
 .ghostNoKey:
 
     ; (3) PHOTOGRAPH after send-out, delay-counted from the SAME state edge the
@@ -5699,6 +5704,12 @@ AutoKeyDrive:
 %endif
 %endif
     xor edx, edx                        ; DL = held mask for this frame
+%ifdef DEBUG_BATTLE_GHOST
+    cmp byte [ghost_press_a], 0         ; the intro-dismiss pulse decided above
+    je .noGhostPress
+    or dl, PAD_A
+.noGhostPress:
+%endif
 %ifdef DEBUG_BATTLE_GOLDEN
 %ifndef DEBUG_BATTLE_INTRO
     ; the intro-dismiss press recorded above (DL is only cleared here, so the

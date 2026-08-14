@@ -948,7 +948,12 @@ ifdef DEBUG_BATTLE_GHOST
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_BATTLE_GHOST -D DEBUG_SEED_PARTY -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLE_GHOST
-AUTOKEY_DUMP_FRAME ?= 900
+# PARKED, like battle_safari_result / battle_run_type: this gate photographs on
+# GAME STATE (120 in-battle frames after wBattleMonSpecies goes nonzero), not on
+# a frame number. Measured 2026-08-14 — with a real value here the frame dump
+# fires FIRST and photographs the parked intro, which is how a state-gated gate
+# silently becomes a frame-gated one.
+AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 

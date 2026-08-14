@@ -2523,8 +2523,24 @@ provider shapes below, not their runtime behavior.
         production code, not in them. **This is the witness doing its job — it
         found a real defect before it could pass.**
 
-- [ ] **Restore pret's send-out ORDER: `LoadBattleMonFromParty` belongs AFTER the
-      intro, not before it. FOUND 2026-08-14 by the ghost scenario, which is
+- [x] **Restore pret's send-out ORDER — DONE 2026-08-14. `fidelity-full` 81/81.**
+      The player send-out block (first-alive scan, `wPlayerMonNumber`, the two
+      `FlagAction` sets, `LoadBattleMonFromParty`, and `SetPal_Battle` with it)
+      now runs AFTER `PrintBeginningBattleText`, where pret's
+      `StartBattle.playerSendOutFirstMon` has it.
+      * **PROVED by the thing that found it:** with the fix, the ghost
+        scenario's WRAM, VRAM and OAM all compare CLEAN (they were 33 WRAM
+        fields and 121 VRAM slots adrift), and `wBattleMonSpecies` is finally a
+        legitimate "has send-out happened" state gate on both sides.
+      * **ONE HARNESS CARVE-OUT, restoring prior behaviour rather than adding
+        any.** `trainer_battle_win` / `trainer_battle_loss` carry no
+        `DEBUG_AUTOKEY`, so they have no input source, and the intro now parks
+        at the text stream's prompt — measured: both hung and dumped nothing.
+        Their own note already says presentation stays OUTSIDE these
+        checkpoints, which used to be free because the stop fired before any of
+        it ran; a `%ifdef DEBUG_TRAINER_RESULT / jmp .playerSendOut` makes that
+        literally true again.
+      *(original entry)* **FOUND 2026-08-14 by the ghost scenario, which was
       blocked on it.**
       The port's collapsed `_InitBattleCommon` picks the first alive party mon,
       sets the EXP/fought flags and calls `LoadBattleMonFromParty` BEFORE
