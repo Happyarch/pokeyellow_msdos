@@ -2081,7 +2081,9 @@ provider shapes below, not their runtime behavior.
            battle, and none cheaply can: the mGBA side plays the real game with
            no synthetic staging (`lib/battle.lua` walks Pallet -> Route 1), so a
            witness needs a navigated route to Pokémon Tower 3F-6F without the
-           Silph Scope. That is its own scenario box, listed below. What the
+           Silph Scope. **THAT WAS WRONG FOR THE IDENTITY HALF — corrected
+           2026-08-14, see the ghost-scenario box below, which is now a cheap
+           job rather than a navigation epic.** What the
            suite DOES witness is the regression direction: every wild-battle
            scenario now executes the new `call IsGhostBattle`, so a wrong ZF
            would send them all down the ghost arm and break loudly.
@@ -2403,6 +2405,59 @@ provider shapes below, not their runtime behavior.
         4c box above. Nothing here is outstanding; ticked so it stops reading as a
         third open 4c.
 
+
+- [ ] **Ghost-battle golden — the one witness 4c owes. SCOPED AND MEASURED
+      2026-08-14; the mechanism is proven, only the build remains.**
+      4c's ghost arm (`InitWildBattle.isGhost`: `GhostPic`, the "GHOST" nick,
+      the `MON_GHOST` species substitution) has NO scenario. I introduced that
+      gap and flagged it as "its own scenario box, listed below" — this is that
+      box, which did not exist until now.
+
+      **IT DOES NOT NEED A POKÉMON TOWER ROUTE. That earlier claim was wrong and
+      is the reason to read this box before starting.** Measured on both sides:
+      `InitWildBattle` tests `wCurOpponent == RESTLESS_SOUL` FIRST and takes
+      `.isGhost` on that alone — pret `engine/battle/init_battle.asm:64-67`, port
+      `init_battle.asm:263-268`. No `wCurMap` in the tower range and no absent
+      Silph Scope are required; those gate only `IsGhostBattle` (the random tower
+      encounters) and `PrintBeginningBattleText`'s `.isMarowak` UNVEIL arm.
+      `RESTLESS_SOUL` is `MAROWAK`.
+
+      **THE ENTRY PATH, traced end to end and RNG-free:** seed
+      `wCurOpponent = RESTLESS_SOUL`, then take one overworld step.
+      `NewBattle` (pret `home/overworld.asm:324`) tail-jumps to `InitBattle`
+      past three flag guards; `InitBattle` sees `wCurOpponent != 0` and takes
+      `InitOpponent`, which sets `wCurPartySpecies`/`wEnemyMonSpecies2`;
+      `InitBattleCommon` does `sub OPP_ID_OFFSET` and MAROWAK is below it, so it
+      falls to `InitWildBattle` -> `.isGhost`. The port mirrors all three
+      `call NewBattle` sites (`src/home/overworld.asm:1083`, `:1302`, `:1375`).
+      **No encounter roll, no map dependency, no item state** — which is exactly
+      what makes it cheap to converge, unlike `trainer_battle_route`'s hard-won
+      cadence.
+
+      **BUILD SHAPE:**
+      * Port: a `RunGhostBattleTestSeed` gate on the `RunTrainerRouteTestSeed`
+        pattern (`debug_dump.asm:1840`) — seed-and-return, one-shot latched, with
+        the spawn seeded in `EnterMap` before `LoadMapData` like the
+        `DEBUG_TRAINER_ROUTE` block (`src/home/overworld.asm:369`). It must seed
+        `wCurOpponent` and let the REAL `OverworldLoop` run; `RunBattleTest`
+        cannot be reused, because it stages the intro directly and never enters
+        `InitBattle`.
+      * mGBA: `battle_ghost.lua` — boot, new game, `seed.debug_new_game`, write
+        `wCurOpponent`, one directional press, wait on `wIsInBattle`, wait for
+        the intro text, dump. It needs NO walk to Route 1 (the bedroom is a legal
+        place to step), so it avoids `lib/battle.lua`'s whole navigation leg.
+      * Then: manifest entry + `gen_scenario_registry.py` + `validate_scenarios`,
+        `make goldens` for the new one, `goldencheck`, `fidelity-full`.
+
+      **PREREQUISITES VERIFIED 2026-08-14, so nobody has to re-check:** the
+      pinned golden worktree exists and its ROM matches `roms.sha1`
+      (`cc7d03262ebfaf2f06772c1a480c7d9d5f4a38e1`), and
+      `dos_port/tools/mgba_build/mgba-lua-runner` is built.
+
+      **NOT STARTED, deliberately.** A scenario that commits a new golden
+      artifact is its own iteration (the Stage-6 animation box says the same),
+      and starting it at the end of an iteration risks leaving the tree with a
+      half-built gate. Everything above is measurement, not plan.
 
 - [x] **4d. Safari.** Implement the BAIT/ROCK/ball/run menu and the Safari turn/flee
       divergence using the already-translated item-owned `ItemUseBait`,
@@ -4719,10 +4774,13 @@ enemy-gauge clone tile ids and VRAM slots.
 - [ ] Archive only when `project_state --plans` reports no open checklist items
       here and the default game can enter, play, and exit all in-scope battle
       types through their owning live routes.
-      - **FIRST CLAUSE MET 2026-08-14.** With 4c closed (`db4379620`), every
-        checklist item in this plan except this box is `[x]`; `project_state
-        --plans` reports 36 completed / 1 open, and the 1 is this box itself.
-        Nothing else here is open, blocked, or transferred-pending.
+      - **FIRST CLAUSE MET 2026-08-14, then RE-OPENED BY ONE BOX THE SAME DAY —
+        honestly, because 4c owed a witness.** With 4c closed (`db4379620`)
+        every implementation item is `[x]`. But 4c's ghost arm has no scenario,
+        and the plan's own gate rule says to add a must-hit scenario when
+        nothing can witness a behaviour change, so the ghost-battle golden is
+        now a real box rather than a sentence promising one. `project_state
+        --plans` reports 36 completed / 2 open: that box and this one.
       - **THE SECOND CLAUSE IS THE ONLY THING LEFT, AND AN AGENT CANNOT MEET
         IT.** It wants the default game to enter, play and exit all in-scope
         battle types through their owning LIVE routes. Golden coverage exists
