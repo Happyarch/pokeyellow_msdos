@@ -27,10 +27,9 @@ bits 32
 ; PickPokeball: $31 regular, $32 black/status, $33 crossed/fainted, $34 empty).
 ; The port used to park these at tiles $00-$03 — golden-diverged in both the
 ; OAM tile bytes and the vChars0 slots; pret's slots are free here too.
-%define BALL_OK       0x31
-%define BALL_STATUS   0x32
-%define BALL_FAINTED  0x33
-%define BALL_EMPTY    0x34
+; The ball tile ids moved to draw_hud_pokeball_gfx.asm with PickPokeball, which
+; is the only thing that chose between them. BALL_EMPTY was the last one used
+; here and its user is gone too.
 
 ; OAM bases from the generated battle layout (the elements are the rows'
 ; LEFT tiles; OAM = screen px + (8,16), see PrepareStaticOAM).
@@ -52,7 +51,7 @@ section .bss
 pb_x:     resb 1            ; current OAM X
 pb_y:     resb 1            ; OAM Y
 pb_step:  resb 1            ; signed OAM X step per ball
-pb_count: resb 1            ; party count
+pb_cnt_a: resd 1            ; GB addr of the party COUNT byte (pret's DE)
 pb_oam:   resd 1            ; GB offset of the current OAM entry
 pb_base:  resd 1            ; party struct base (GB addr)
 
@@ -64,6 +63,7 @@ extern PrepareStaticOAM
 extern HideSprites
 extern PlacePlayerHUDTiles      ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern LoadPartyPokeballGfx     ; draw_hud_pokeball_gfx.asm — pret's own loader
+extern SetupPokeballs           ; draw_hud_pokeball_gfx.asm — pret's wBuffer filler
 
 ; ---------------------------------------------------------------------------
 ; DrawBattlePokeballs — load gfx, build the player ball row (and the enemy's in a
@@ -85,8 +85,7 @@ DrawBattlePokeballs:
     ; player row → OAM entries 0..5
     mov dword [pb_oam], GB_OAM
     mov dword [pb_base], wPartyMons
-    mov al, [ebp + wPartyCount]
-    mov [pb_count], al
+    mov dword [pb_cnt_a], wPartyCount
     mov byte [pb_x], PB_X
     mov byte [pb_y], PB_Y
     mov byte [pb_step], 8
@@ -96,8 +95,7 @@ DrawBattlePokeballs:
     cmp byte [ebp + wIsInBattle], 2
     jne .publish
     mov dword [pb_base], wEnemyMons
-    mov al, [ebp + wEnemyPartyCount]
-    mov [pb_count], al
+    mov dword [pb_cnt_a], wEnemyPartyCount
     mov byte [pb_x], EB_X
     mov byte [pb_y], EB_Y
     mov byte [pb_step], -8
@@ -140,6 +138,14 @@ HideBattlePokeballs:
 ; Faithful to PickPokeball. Advances pb_oam/pb_x. Clobbers EAX/EBX/ESI/EDI.
 ; ---------------------------------------------------------------------------
 build_ball_row:
+    ; TILE CHOICE IS PRET'S NOW. This routine used to decide ok/status/fainted/
+    ; empty inline, slot-indexed — a fork of PickPokeball under a port-only name.
+    ; SetupPokeballs (mirror file, pret's own name and split) fills wBuffer with
+    ; one tile id per slot, walking the party structs exactly as pret does; what
+    ; is left here is only the port's OAM PROJECTION, which is step 3.
+    mov esi, [pb_base]                    ; HL = party struct base
+    mov edx, [pb_cnt_a]                   ; DE = address of the count byte
+    call SetupPokeballs                   ; -> wBuffer[0..PARTY_LENGTH-1]
     xor ebx, ebx                          ; bl = slot 0..5
 .slot:
     mov edi, [pb_oam]
@@ -149,31 +155,8 @@ build_ball_row:
     mov [ebp + edi + 1], al               ; OAM X
     mov al, [pb_step]
     add [pb_x], al                        ; next ball's X
-    ; tile: empty if slot >= count
-    mov al, [pb_count]
-    cmp bl, al
-    jae .empty
     movzx esi, bl
-    imul esi, esi, PARTYMON_STRUCT_LENGTH
-    add esi, [pb_base]                    ; ESI = GB addr of this mon's struct
-    mov al, [ebp + esi + MON_HP]          ; HP high
-    or al, [ebp + esi + MON_HP + 1]       ; | HP low
-    jz .fainted                           ; HP == 0
-    mov al, [ebp + esi + MON_STATUS]
-    test al, al
-    jnz .status
-    mov al, BALL_OK
-    jmp .writeTile
-.status:
-    mov al, BALL_STATUS
-    jmp .writeTile
-.fainted:
-    mov al, BALL_FAINTED
-    jmp .writeTile
-.empty:
-    mov al, BALL_EMPTY
-.writeTile:
-    mov edi, [pb_oam]
+    mov al, [ebp + esi + wBuffer]         ; tile id chosen by PickPokeball
     mov [ebp + edi + 2], al               ; OAM tile
     mov byte [ebp + edi + 3], 0           ; OAM attr (OBP0, no flip, no priority)
     add dword [pb_oam], 4                 ; next OAM entry

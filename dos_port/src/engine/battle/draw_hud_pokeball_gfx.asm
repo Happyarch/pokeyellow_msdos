@@ -20,6 +20,15 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "gb_constants.inc"           ; PARTY_LENGTH, PARTYMON_STRUCT_LENGTH, MON_STATUS
+
+; Ball tile ids, pret's own ($31-$34). They lived in the port-only pokeballs.asm
+; while the tile-choosing logic did; they belong with PickPokeball, which is now
+; here under pret's name.
+%define BALL_OK       0x31
+%define BALL_STATUS   0x32
+%define BALL_FAINTED  0x33
+%define BALL_EMPTY    0x34
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_battle.inc"
 
@@ -168,4 +177,86 @@ PlaceHUDTiles:
     add esi, edx
     mov al, [ebp + wHUDTriangleTile]              ; rightmost tile
     mov [ebp + esi], al
+    ret
+
+; ===========================================================================
+; SetupPokeballs / PickPokeball — pret engine/battle/draw_hud_pokeball_gfx.asm.
+;
+; FORK RETIREMENT, step 2 (battle plan 4c). The tile-choosing logic lived in
+; pokeballs.asm's port-only `build_ball_row`, fused into its OAM writer and
+; indexed by slot instead of walking the party structs. These two are pret's own
+; split restored under pret's names: SetupPokeballs fills wBuffer[0..5] with the
+; empty-ball tile and then calls PickPokeball once per live mon; PickPokeball
+; chooses ok / status / fainted for one mon and advances to the next struct.
+; The OAM writer is NOT moved here yet — it is the next step, and keeping the
+; steps separable is what made step 1 land with zero golden movement.
+;
+; In:  ESI = HL = party struct base (wPartyMons / wEnemyMons)
+;      EDX = DE = address of the party COUNT byte
+; Out: wBuffer[0..PARTY_LENGTH-1] = one ball tile id per slot.
+; ===========================================================================
+global SetupPokeballs
+SetupPokeballs:
+    mov al, [ebp + edx]                  ; ld a, [de]
+    push eax                             ; push af
+    mov edx, wBuffer                     ; ld de, wBuffer
+    mov bl, PARTY_LENGTH                 ; ld c, PARTY_LENGTH
+    mov al, BALL_EMPTY                   ; ld a, $34 ; empty pokeball
+.emptyloop:
+    mov [ebp + edx], al                  ; ld [de], a
+    lea edx, [edx + 1]                   ; inc de
+    dec bl                               ; dec c — 8-bit, as pret
+    jnz .emptyloop
+    pop eax                              ; pop af
+    mov edx, wBuffer                     ; ld de, wBuffer
+    ; pret guards nothing here: a count of 0 would run the loop 256 times, as on
+    ; the GB. Every caller passes wPartyCount / wEnemyPartyCount, which are >= 1
+    ; whenever a ball row is drawn, so the boundary is not reachable — and `dec al`
+    ; reproduces pret's 8-bit bound exactly rather than a widened one.
+.monloop:
+    push eax                             ; push af
+    call PickPokeball
+    lea edx, [edx + 1]                   ; inc de
+    pop eax                              ; pop af
+    dec al                               ; dec a — 8-bit, as pret
+    jnz .monloop
+    ret
+
+; ---------------------------------------------------------------------------
+; PickPokeball — one mon's ball tile.
+; In:  ESI = HL positioned at the mon struct, EDX = DE = wBuffer slot.
+; Out: [DE] = tile id; ESI advanced to the next mon struct.
+;
+; FLAG PRESERVATION, and this routine is dense with it: pret's `ld b, $33` and
+; `ld b, $32` sit BETWEEN the `and a` and the `jr z`/`jr nz` that read it, which
+; is legal because `ld r, n` writes no flags on SM83 — and `mov bh, imm` writes
+; none in x86 either, so the order is kept verbatim. Every pointer step uses
+; `lea` rather than `inc`: pret's `inc hl` is flag-neutral on SM83 while `inc esi`
+; writes ZF, which is the defect class swept in e85b7fd44.
+; ---------------------------------------------------------------------------
+global PickPokeball
+PickPokeball:
+    lea esi, [esi + 1]                   ; inc hl
+    mov al, [ebp + esi]                  ; ld a, [hli]
+    lea esi, [esi + 1]
+    test al, al                          ; and a
+    jnz .alive                           ; jr nz, .alive
+    mov al, [ebp + esi]                  ; ld a, [hl]
+    test al, al                          ; and a
+    mov bh, BALL_FAINTED                 ; ld b, $33 — flag-neutral, as pret
+    jz .done_fainted                     ; jr z, .done_fainted
+.alive:
+    lea esi, [esi + 2]                   ; inc hl / inc hl
+    mov al, [ebp + esi]                  ; ld a, [hl] ; status
+    test al, al                          ; and a
+    mov bh, BALL_STATUS                  ; ld b, $32 — flag-neutral, as pret
+    jnz .done                            ; jr nz, .done
+    dec bh                               ; dec b ; regular ball
+    jmp .done                            ; jr .done
+.done_fainted:
+    lea esi, [esi + 2]                   ; inc hl / inc hl
+.done:
+    mov al, bh                           ; ld a, b
+    mov [ebp + edx], al                  ; ld [de], a
+    add esi, PARTYMON_STRUCT_LENGTH - MON_STATUS   ; add hl, bc — next mon struct
     ret
