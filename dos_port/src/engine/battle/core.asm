@@ -5304,6 +5304,79 @@ EnemyRan:
 ; --- was src/engine/battle/faint_sendout.asm ---
 
 ; ===========================================================================
+; SlideTrainerPicOffScreen — pret core.asm:1274.
+;
+; In: AL = slide amount (pret's `a`), ESI = tilemap top-left (pret's `hl`).
+;     amount 8 slides RIGHT (enemy trainer), anything else slides LEFT (player).
+;
+; THE MECHANISM, because it is easy to misread: this is a FIXED-WINDOW in-place
+; shift ANCHORED TO THE SCREEN EDGE, not a translation of the pic to a new
+; position. Simulated against pret cell-by-cell: the player pass (amount 9, from
+; GB col 1) READS cols 1-9 and WRITES cols 0-8; the enemy pass (amount 8, from
+; GB col 18) READS cols 18-11 and WRITES cols 19-12. Neither ever touches a cell
+; outside the 20-wide GB screen — the pic is destroyed AT the edge as blanks
+; propagate in from the far side, and after `amount` steps the window is empty.
+;
+; THAT IS WHY THIS NEEDS NO PROJECTION DEVIATION. Because the window is anchored
+; to the GB screen edge, every write stays inside the projected GB window
+; (canvas cols 10-29) once the caller passes a BCOORD origin. pret's row step is
+; `ld de, SCREEN_WIDTH / add hl, de`, and the port's SCREEN_WIDTH is 40 — the
+; same source expression, the canvas constant — so the row walk is literal too.
+; An earlier analysis in docs/current_plan_battle_completion.md concluded a slid
+; pic would land at canvas col 2 / col 36, out in the unguarded margin; that read
+; the slide as MOVING the pic `amount` columns. It does not move anywhere.
+;
+; DEVIATION{class=projection; pret=engine/battle/core.asm:SlideTrainerPicOffScreen; behavior=pret's hSlideAmount HRAM byte is realized as the file-local .bss byte slide_amount; evidence=hSlideAmount has no slot in the port memmap and engine/movie/oak_speech/oak_speech2.asm already sets the precedent of keeping pret's hSlideDirection/hSlideAmount/hSlidingRegionSize as file-local .bss under the same class; lifetime=retire if the port ever models pret HRAM directly}
+; ===========================================================================
+global SlideTrainerPicOffScreen
+SlideTrainerPicOffScreen:
+    mov [slide_amount], al                   ; ldh [hSlideAmount], a
+    mov bl, al                               ; ld c, a
+.slideStepLoop:                              ; each iteration slides the pic one tile
+    push ebx                                 ; push bc
+    push esi                                 ; push hl
+    mov bh, PIC_HEIGHT                       ; ld b, PIC_HEIGHT
+.rowLoop:
+    push esi                                 ; push hl
+    mov al, [slide_amount]
+    mov bl, al                               ; ld c, a
+.columnLoop:
+    mov al, [slide_amount]
+    cmp al, 8
+    jz .slideRight
+; slide player sprite left off screen
+    mov al, [ebp + esi]                      ; ld a, [hld]
+    dec esi
+    mov [ebp + esi], al                      ; ld [hli], a
+    inc esi
+    inc esi                                  ; inc hl
+    jmp short .nextColumn
+.slideRight:                                 ; slide enemy trainer sprite off screen
+    mov al, [ebp + esi]                      ; ld a, [hli]
+    inc esi
+    mov [ebp + esi], al                      ; ld [hld], a
+    dec esi
+    dec esi                                  ; dec hl
+.nextColumn:
+    dec bl                                   ; dec c — 8-bit, as pret
+    jnz .columnLoop
+    pop esi                                  ; pop hl
+    add esi, SCREEN_WIDTH                    ; ld de, SCREEN_WIDTH / add hl, de
+    dec bh                                   ; dec b — 8-bit, as pret
+    jnz .rowLoop
+    mov bl, 2                                ; ld c, 2
+    call DelayFrames
+    pop esi                                  ; pop hl
+    pop ebx                                  ; pop bc
+    dec bl                                   ; dec c — 8-bit, as pret
+    jnz .slideStepLoop
+    ret
+
+section .data
+slide_amount: db 0                           ; pret hSlideAmount (see the DEVIATION above)
+section .text
+
+; ===========================================================================
 ; EnemySendOut — pret core.asm:1315. Player-exp bookkeeping, then send out the
 ; enemy's next live mon (faint path enters the .next scan with b=$ff).
 ; ===========================================================================
@@ -5335,7 +5408,12 @@ EnemySendOutFirstMon:
     mov [ebp + wEnemyUsedMove], al
     mov byte [ebp + wAICount], 0xFF             ; pret: dec a → $ff
     and byte [ebp + wPlayerBattleStatus1], (~(1 << USING_TRAPPING_MOVE)) & 0xFF
-    ; ANIMATION=OFF: SlideTrainerPicOffScreen (trainer pic slide).
+    ; pret 1349-1352: hlcoord 18,0 / ld a,8 / call SlideTrainerPicOffScreen.
+    ; BCOORD is the GB->canvas projection; the routine's writes stay inside the
+    ; GB window because its shift window is anchored to the screen edge.
+    mov esi, BCOORD(18, 0)                       ; hlcoord 18, 0
+    mov al, 8                                    ; ld a, 8 — 8 = slide RIGHT
+    call SlideTrainerPicOffScreen
     call PrintEmptyString
     call SaveScreenTilesToBuffer1
     ; TODO-HW: link-battle received-switch index (Phase 4).

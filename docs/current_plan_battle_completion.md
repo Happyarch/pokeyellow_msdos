@@ -3075,6 +3075,47 @@ enemy-gauge clone tile ids and VRAM slots.
         tracked animation-deferral class rather than an unannotated divergence,
         so nothing is owed here now — but this is the ONLY member of the
         original nine that a later stage should actually translate.
+      * **TRANSLATED AND WIRED 2026-08-14 (maintainer directed). THE ANALYSIS
+        BELOW WAS WRONG, AND THAT IS THE WHOLE STORY OF THIS ITEM.** pret's loop
+        is a FIXED-WINDOW IN-PLACE SHIFT ANCHORED TO THE SCREEN EDGE, not a
+        translation of the pic to a new position. Simulated cell-by-cell against
+        the disassembly:
+        * player pass (amount 9, from GB col 1): READS cols 1-9, WRITES cols 0-8
+        * enemy pass (amount 8, from GB col 18): READS cols 18-11, WRITES 19-12
+        Neither ever touches a cell outside the 20-wide GB screen. The pic is
+        DESTROYED at the edge as blanks propagate in from the far side, and after
+        `amount` steps the window is empty. The "slid LEFT 9 -> canvas col 2 /
+        slid RIGHT 8 -> canvas col 36" reading below treated the slide as MOVING
+        the pic that many columns; it does not move anywhere.
+        * **CONSEQUENCE: no margin garbage is possible, and no residual-blanking
+          DEVIATION is needed.** Because the window is anchored to the GB screen
+          edge, every write stays inside the projected window (canvas cols
+          10-29) once the caller passes a `BCOORD` origin. The whole
+          "unwitnessable, lands where nothing can report it" premise — which
+          deferred this item twice — was false.
+        * **The row step needed no deviation either.** pret's
+          `ld de, SCREEN_WIDTH / add hl, de` is literal, because the port's
+          `SCREEN_WIDTH` IS 40 (`gb_memmap.inc:1689`) — same source expression,
+          canvas constant.
+        * **The only deviation is `hSlideAmount`**, realized as a file-local
+          `.bss` byte under `DEVIATION{class=projection}`, following the
+          established `oak_speech2.asm` precedent for pret's `hSlide*` HRAM.
+        * **MEASURED:** `faithdiff SlideTrainerPicOffScreen` = 1/1 calls matched,
+          one DROPPED store `[hSlideAmount]` (that documented substitution).
+          Its caller decomposed before -> after: `EnemySendOutFirstMon`
+          **23 pret / 10 port, 7 matched, `DROPPED SlideTrainerPicOffScreen`**
+          -> **23 pret / 11 port, 8 matched, that DROPPED line gone**. One
+          finding closed, none added. lint 0 in BOTH modes.
+        * **SCOPE LIMIT, measured not assumed: only ONE of the two retail call
+          sites could be wired.** `StartBattle` is `missing` in the port, so the
+          player send-out site (pret `core.asm:246`) has no enclosing routine to
+          wire it into. `EnemySendOutFirstMon` (pret `:1351`) is translated and
+          live via `_InitBattleCommon`, and carries the real call now:
+          `mov esi, BCOORD(18,0) / mov al, 8 / call SlideTrainerPicOffScreen`.
+          **The player half stays open and is blocked on translating
+          `StartBattle`** — a separate, larger item, not part of this one.
+      * **SUPERSEDED — the analysis that deferred it (kept because being wrong
+        here is the lesson):**
       * **ANALYSED 2026-08-13, AND "needs PROJ coordinates" UNDERSTATES IT.**
         Projecting the two call sites is not enough, because pret's whole
         MECHANISM is "shift until the pic leaves the 20-wide screen", and the
