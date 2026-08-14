@@ -5162,6 +5162,16 @@ AutoKeyDrive:
     jae .noAiSwitch
     cmp byte [ebp + wEnemyMonSpecies], 0
     je .noAiSwitch
+    ; THE ROSTER HP SEPARATES A SWITCH FROM A FAINT, and without it this latch
+    ; photographs the wrong event. On a FAINT the next mon also comes out with
+    ; wEnemyMonPartyPos non-zero and the roster slot reading 0000; on a SWITCH
+    ; SwitchEnemyMon writes the withdrawn mon's HP back NON-ZERO. Measured: the
+    ; first golden caught WEEDLE at partyPos 1 with eRoster1HP 0000 -- the faint
+    ; path -- while the port had genuinely switched, and the two sides disagreed
+    ; on every enemy stat as a result.
+    mov al, [ebp + wEnemyMon1HP]
+    or  al, [ebp + wEnemyMon1HP + 1]
+    jz .noAiSwitch
     call DebugDumpMemory                    ; GBSTATE.BIN + DUMP.BIN, then exits
 .noAiSwitch:
 %endif
