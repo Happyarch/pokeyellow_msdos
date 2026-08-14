@@ -103,12 +103,16 @@ _RunPaletteCommand:
     ; UpdatePartyMenuBlkPacket`), and on CGB the packet it updates really is
     ; consumed (SendSGBPackets runs BOTH packets through InitCGBPalettes). The
     ; port cannot follow: its palette HAL is per-TILE-ID (tile_pal) and all six
-    ; party HP bars share tile ids, so a per-row colour needs duplicated
-    ; palette-able tiles first — the trick DuplicateEnemyHPBarTiles already uses
-    ; for the battle gauge. Caller: SetPartyMenuHPBarColor
+    ; party HP bars share tile ids, so a per-row colour is not expressible.
+    ; The former "duplicate the tiles, as DuplicateEnemyHPBarTiles does for the
+    ; battle gauge" answer is GONE — that clone trick was retired in ec82fa9ba
+    ; for the per-cell BG attribute layer (ppu.asm). This screen cannot reuse
+    ; that layer as built: the party menu renders through a WINDOW descriptor
+    ; and decode_win_row8 carries no attribute channel, unlike the flat canvas
+    ; path decode_tile serves. Caller: SetPartyMenuHPBarColor
     ; (src/engine/menus/party_menu.asm). Owner: docs/current_plan_backlog.md
     ; item 10b.
-    ; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:_RunPaletteCommand; behavior=the SET_PAL_PARTY_MENU_HP_BARS command id is ignored instead of updating the party-menu attribute packet so party HP bars keep whatever colour the palette slots already hold; evidence=pret dispatches this id to UpdatePartyMenuBlkPacket which edits an SGB BLK packet that SendSGBPackets feeds to InitCGBPalettes on colour hardware while this port has no packet path at all and colours per tile id through tile_pal which cannot distinguish six rows drawn from the same tile ids; lifetime=until backlog item 10b gives the party menu palette-able HP-bar tile ids}
+    ; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:_RunPaletteCommand; behavior=the SET_PAL_PARTY_MENU_HP_BARS command id is ignored instead of updating the party-menu attribute packet so party HP bars keep whatever colour the palette slots already hold; evidence=pret dispatches this id to UpdatePartyMenuBlkPacket which edits an SGB BLK packet that SendSGBPackets feeds to InitCGBPalettes on colour hardware while this port has no packet path at all and colours per tile id through tile_pal which cannot distinguish six rows drawn from the same tile ids; lifetime=until the per-cell BG attribute layer reaches the WINDOW render path decode_win_row8 which is what the party menu draws through}
     cmp al, SET_PAL_SURFING_PIKACHU_MINIGAME
     ja .done                                ; incl. SET_PAL_PARTY_MENU_HP_BARS ($fc) —
                                             ; see the banner immediately above

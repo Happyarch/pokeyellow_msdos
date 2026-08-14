@@ -487,11 +487,22 @@ PartyMenuPromptWait:
 ; 2026-08-12 in a real battle: every bar is the wrong colour (red at full health)
 ; and all six snap green on leaving the menu, because they are showing whatever
 ; the battle left in the palette slots.
-; Owner + the fix shape (duplicate the bar tiles for palette-able ids, as
-; DuplicateEnemyHPBarTiles already does for the battle gauge):
-; docs/current_plan_backlog.md item 10b.
+; Owner: docs/current_plan_backlog.md item 10b.
 ;
-; DEVIATION{class=HAL; pret=engine/menus/party_menu.asm:SetPartyMenuHPBarColor; behavior=the RunPaletteCommand SET_PAL_PARTY_MENU_HP_BARS issued here has no effect so the per-mon HP-bar colour never reaches the screen; evidence=_RunPaletteCommand in src/engine/gfx/palettes.asm drops that command id and the port palette HAL assigns colour per tile id via tile_pal while all six party HP bars share the same tile ids so a per-row colour is not expressible without duplicated palette-able tiles; lifetime=until backlog item 10b gives the party menu palette-able HP-bar tile ids}
+; THE FIX SHAPE CHANGED 2026-08-14, and the old one is now impossible. This used
+; to say "duplicate the bar tiles for palette-able ids, as DuplicateEnemyHPBarTiles
+; already does for the battle gauge" — but that clone trick was RETIRED in
+; ec82fa9ba, replaced by the per-cell BG attribute layer (ppu.asm). The party
+; menu cannot simply reuse that layer: it renders through a WINDOW descriptor
+; (GB_TILEMAP1, via PartyMenuMirror) and the window path decode_win_row8 carries
+; no attribute channel, where the battle HUD draws on the flat W_TILEMAP canvas
+; that decode_tile serves. What this needs is a window-coordinate attribute
+; plane. The colour half is already right: pret assigns green/yellow/red to
+; palettes 1/2/3 and the port's command_pal_table row for SET_PAL_PARTY_MENU is
+; already PAL_MEWMON, PAL_GREENBAR, PAL_YELLOWBAR, PAL_REDBAR — so it is a pure
+; per-cell assignment with no palette-RAM write.
+;
+; DEVIATION{class=HAL; pret=engine/menus/party_menu.asm:SetPartyMenuHPBarColor; behavior=the RunPaletteCommand SET_PAL_PARTY_MENU_HP_BARS issued here has no effect so the per-mon HP-bar colour never reaches the screen; evidence=_RunPaletteCommand in src/engine/gfx/palettes.asm drops that command id and the port palette HAL assigns colour per tile id via tile_pal while all six party HP bars share the same tile ids so a per-row colour is not expressible; lifetime=until the per-cell BG attribute layer reaches the WINDOW render path decode_win_row8 which is what this screen draws through}
 ; ---------------------------------------------------------------------------
 SetPartyMenuHPBarColor:
     movzx eax, byte [ebp + wWhichPartyMenuHPBar]
