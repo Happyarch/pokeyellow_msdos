@@ -87,6 +87,13 @@ W_X_COORD              equ 0xD361
 W_PLAYER_MONEY           equ 0xD346
 wPlayerMoney             equ W_PLAYER_MONEY   ; 3-byte BCD (trainer-card money display)
 W_OBTAINED_BADGES        equ 0xD355
+; wTrainerCardBadgeAttributes — pret ram/wram.asm. READ ONLY by
+; HandleBadgeFaceAttributes, and pret never writes it under this name: it is a
+; UNION member sharing these bytes with the misc battle-data block
+; (wEnemyBideAccumulatedDamage / wEnemyNumHits) and with wPikaPicUsedGFXCount /
+; wPikaPicUsedGFX. The port models GB memory FLAT, so that aliasing reproduces
+; itself here for free — same byte, same address, exactly as on hardware.
+wTrainerCardBadgeAttributes equ 0xCC5D
 W_OBTAINED_HIDDEN_ITEMS_FLAGS equ 0xD6EF
 W_TOWN_VISITED_FLAG      equ 0xD70A
 W_RIVAL_STARTER          equ 0xD714

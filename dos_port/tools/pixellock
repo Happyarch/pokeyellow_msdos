@@ -63,6 +63,7 @@ SCENARIOS = {
     "bagmenu":   "window layer, stacked descriptors (decode_win_row8)",
     "battlehud": "battle HUD -- the ONLY witness for the F-19 enemy-gauge colour",
     "partymenu": "party menu -- the ONLY witness for the HP-bar colours (10b)",
+    "trainercard": "trainer card through the real palette command -- the only witness\n                    for HandleBadgeFaceAttributes, whose faithful branch replicates a\n                    pret defect and so must not drift silently",
 }
 
 

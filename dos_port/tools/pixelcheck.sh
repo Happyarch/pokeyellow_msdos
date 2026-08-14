@@ -39,6 +39,10 @@ case "$SCENARIO" in
     battle)     FLAGS="DEBUG_BATTLE=1" ;;                       # flat path + sprites
     battlehud)  FLAGS="DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_MENU=1 AUTOKEY_DUMP_FRAME=${AUTOKEY_DUMP_FRAME:-300}" ;;
     status)     FLAGS="DEBUG_STATUS=1" ;;                       # flat path + pics
+    # trainer card through the REAL palette command, so HandleBadgeFaceAttributes
+    # actually runs. (An older gate drew the card but skipped RunPaletteCommand and
+    # therefore never entered the code under test; it issues it now.)
+    trainercard) FLAGS="SKIP_TITLE=1 DEBUG_TRAINERCARD=1" ;;
     # Cinematic projection/clipping/wrap markers (menu-intro A1.6). Offsets come
     # from the MARKER_SX/MARKER_SY environment variables so one scenario drives
     # the whole sweep: 0..7 proves sub-tile motion, 252..255 proves GB wrap.

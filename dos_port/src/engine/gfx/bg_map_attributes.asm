@@ -29,7 +29,8 @@ global ApplyBGMapAttributes
 global g_bg_attr_table
 
 extern tile_pal, g_tilecache_dirty
-extern HandleBadgeFaceAttributes, HandlePartyHPBarAttributes  ; gfx_stubs.asm
+extern SetBGCellAttrWin             ; ppu.asm — window per-cell BG attribute plane
+extern HandlePartyHPBarAttributes   ; gfx_stubs.asm (HandleBadgeFaceAttributes is implemented below)
 extern text_row_stride              ; home/text.asm — the live tilemap row stride
 
 ; Mirrors ppu.asm's file-local constant of the same name (rLCDC bit 4: tile data
@@ -331,6 +332,124 @@ ApplyBGMapAttributes:
     popad
 .nothing:
     ret
+
+; ---------------------------------------------------------------------------
+; HandleBadgeFaceAttributes — pret engine/gfx/bg_map_attributes.asm.
+; Reached from LoadBGMapAttributes (and ApplyBGMapAttributes' per-frame
+; re-resolve) when the packet index is 4, the trainer card.
+;
+; pret zeroes a 2x2 attribute box over each badge's FACE, "if the player doesn't
+; have the respective badge" -- except that is not what it does. See the BUG
+; annotation below. This is the faithful translation, defect included, as the
+; maintainer directed; the corrected behaviour is behind BUG_FIX_LEVEL >= 2.
+;
+; ADDRESSING. The trainer card is presented as ONE WINDOW over GB_TILEMAP1
+; (StartMenu_TrainerInfo -> trainer_card_present -> tc_mirror), and tc_mirror is
+; 1:1 -- W_TILEMAP row r at stride TCSCR_W becomes GB_TILEMAP1 + r*32, columns
+; 0-19. So a GB coordinate IS a GB_TILEMAP1 offset and pret's literal vBGMap1
+; offsets transfer verbatim. (BadgesTestMirror re-origins the rect, but that
+; serves the TEST gate RunDrawBadgesTest and is NOT this path.)
+;
+; The publisher is the WINDOW per-cell attribute plane, because that is the plane
+; this screen renders through -- see ppu.asm SetBGCellAttrWin.
+;
+; In: EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+global HandleBadgeFaceAttributes
+HandleBadgeFaceAttributes:
+    pushad
+    xor ebx, ebx                            ; index into BadgeFaceAttrTable
+.badge:
+    movzx eax, byte [BadgeFaceAttrTable + ebx*4 + 2]   ; buffer index (pret's 6*N)
+%if BUG_FIX_LEVEL >= 2
+    ; FIXED: ask whether the badge is actually owned. Badge N is bit N of
+    ; wObtainedBadges, and the table's entry order IS badge order, so EBX is the
+    ; bit number -- no need for the aliased buffer at all.
+    mov al, [ebp + W_OBTAINED_BADGES]
+    mov ecx, ebx
+    shr eax, cl
+    test al, 1
+    jnz .next                               ; owned -> leave the face coloured
+%else
+    ; FAITHFUL: pret's own test, reading a buffer nothing populates.
+    mov al, [ebp + wTrainerCardBadgeAttributes + eax]
+    test al, al
+    jnz .next                               ; nonzero -> pret leaves it alone
+%endif
+    movzx eax, word [BadgeFaceAttrTable + ebx*4]       ; vBGMap1 offset
+    add eax, GB_TILEMAP1
+    call ZeroOutCurrentBadgeAttributes
+.next:
+    inc ebx
+    cmp ebx, BADGE_FACE_COUNT
+    jb .badge
+    popad
+    ret
+
+; BUG{class=data-model; pret=engine/gfx/bg_map_attributes.asm:HandleBadgeFaceAttributes; behavior=which badge faces get their attribute zeroed is decided by stale unrelated data rather than by which badges the player owns so the outcome depends on what ran before the trainer card was opened; evidence=wTrainerCardBadgeAttributes at 0xCC5D is never written under that name anywhere in pret and is a UNION member sharing its bytes with the misc battle-data block and wPikaPicUsedGFX so the ld a de and a call z test reads whatever the battle engine or the Pikachu pic animator last left there; lifetime=replicated deliberately as real game behaviour, corrected under BUG_FIX_LEVEL >= 2 which reads wObtainedBadges instead}
+
+; ---------------------------------------------------------------------------
+; ZeroOutCurrentBadgeAttributes — pret engine/gfx/bg_map_attributes.asm.
+; Clears one badge face's 2x2 attribute box to palette 0.
+;
+; In: EAX = GB tilemap address of the box's top-left cell. All regs preserved.
+;
+; pret writes base, base+1, base+32, base+33 -- a clean 2x2. Its `ld bc, $1f`
+; reads like a staircase until you notice the second store does not
+; post-increment.
+;
+; NOTE the published byte is BG_ATTR_PRESENT, not 0. In this port 0 means "no
+; override, inherit tile_pal", which is NOT the same as "palette 0" -- so
+; clearing to palette 0 means an override that IS present and names palette 0.
+; ---------------------------------------------------------------------------
+global ZeroOutCurrentBadgeAttributes
+ZeroOutCurrentBadgeAttributes:
+    pushad
+    mov dl, BG_ATTR_PRESENT                 ; present, palette 0
+    call SetBGCellAttrWin
+    inc eax
+    mov dl, BG_ATTR_PRESENT
+    call SetBGCellAttrWin
+    add eax, 31                             ; next row, back one column
+    mov dl, BG_ATTR_PRESENT
+    call SetBGCellAttrWin
+    inc eax
+    mov dl, BG_ATTR_PRESENT
+    call SetBGCellAttrWin
+    popad
+    ret
+
+section .data
+; pret's eight badge entries, in its order: { dw vBGMap1 offset, db buffer index,
+; db pad }. The buffer indices are pret's own 6*0..6*3 then 6*6..6*9 -- the gap at
+; 6*4 and 6*5 is pret's, and is reproduced rather than tidied.
+align 4
+BadgeFaceAttrTable:
+    dw 0x183
+    db 6 * 0
+    db 0
+    dw 0x187
+    db 6 * 1
+    db 0
+    dw 0x18b
+    db 6 * 2
+    db 0
+    dw 0x18f
+    db 6 * 3
+    db 0
+    dw 0x1e3
+    db 6 * 6
+    db 0
+    dw 0x1e7
+    db 6 * 7
+    db 0
+    dw 0x1eb
+    db 6 * 8
+    db 0
+    dw 0x1ef
+    db 6 * 9
+    db 0
+BADGE_FACE_COUNT equ 8
 
 section .bss
 TILE_PAL_BYTES equ 384
