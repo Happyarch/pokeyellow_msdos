@@ -63,7 +63,13 @@ def active_plans():
         # The backtick form (- `[x]`) is in live use — current_plan_audio.md is
         # written entirely that way and reported 0/0 until this was widened.
         done = len(re.findall(r'^\s*- `?\[x\]', text, re.M | re.I))
-        open_items = len(re.findall(r'^\s*- `?\[ \]', text, re.M))
+        # `[~]` (partially done) counts as OPEN, not as nothing. It used to match
+        # neither pattern, so a partial box was invisible here: the battle plan
+        # read 35 completed + 1 open against 37 checkbox lines, and 4c — genuinely
+        # half-finished — appeared in no column at all. That is load-bearing,
+        # because plans gate their own archival on "project_state --plans reports
+        # no open checklist items"; a `[~]` could satisfy it while still open.
+        open_items = len(re.findall(r'^\s*- `?\[( |~)\]', text, re.M))
         records.append({'path': str(path.relative_to(ROOT)), 'title': title,
                         'completed': done, 'open': open_items})
     return records
