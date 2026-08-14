@@ -337,6 +337,32 @@ DrawAllPokeballs:
 .wild:
     ret
 
+; ---------------------------------------------------------------------------
+; DrawEnemyPokeballs — pret's enemy-only entry. Two lines, and it needs no new
+; coordinates: SetupEnemyPartyPokeballs already carries the projected ones.
+;
+; UNWIRED ON PURPOSE, and the reason is a HAL decision rather than laziness.
+; pret calls this from ReplaceFaintedEnemyMon (core.asm:910) and reaches the
+; screen through the shadow-OAM DMA; this port's update_oam deliberately SKIPS
+; that DMA while a ball row is up, so a caller here would also need the
+; PrepareStaticOAM publish that the port-only DrawBattlePokeballs wrapper
+; carries. Whether the row should be visible at that moment is a behaviour
+; question no scenario can currently witness, so the call site keeps its
+; itemised drop note (core.asm ReplaceFaintedEnemyMon) instead of guessing.
+; The LABEL exists so the mirror is complete and label_status reports the truth.
+;
+; NOT TRANSLATED, deliberately: pret's SetupPlayerAndEnemyPokeballs (the fourth
+; entry in this file). Its coordinates are $50/$40 and $50/$68 — the LINK BATTLE
+; versus screen, which this port does not have (serial is TODO-HW, Phase 4).
+; Projecting them would mean inventing a widescreen placement for a screen
+; nobody can see, which is the same guess battle plan 4c refused for
+; MarowakAnim's OAM offsets.
+; ---------------------------------------------------------------------------
+global DrawEnemyPokeballs
+DrawEnemyPokeballs:
+    call LoadPartyPokeballGfx
+    jmp SetupEnemyPartyPokeballs         ; jp SetupEnemyPartyPokeballs
+
 global SetupOwnPartyPokeballs
 SetupOwnPartyPokeballs:
     call PlacePlayerHUDTiles
