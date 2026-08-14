@@ -148,6 +148,13 @@ LoadHpBarAndStatusTilePatterns:
 ; the status screen uses only tile 0 of _2 and tiles 0-1 of _3 (offset 3 tiles in).
 ; Call right after LoadHpBarAndStatusTilePatterns. In: EBP = GB base. Regs preserved.
 ; ---------------------------------------------------------------------------
+; DEVIATION{class=data-model; pret=engine/pokemon/status_screen.asm:StatusScreen; behavior=one port-only routine copies four PRE-CONVERTED 2bpp blobs straight into the discontiguous vChars2 slots where pret makes four CopyVideoDataDouble calls that expand 1bpp sources at runtime; evidence=CopyVideoDataDouble exists in the port and is used by town_map so this is not a missing routine - the difference is the ASSET PIPELINE, which emits these HUD pieces already doubled to 2bpp so there is no 1bpp source left to expand and a CopyVideoDataDouble call would double already-doubled data; lifetime=retire if the asset generator ever emits these four pieces as 1bpp, at which point the four pret calls can be inlined at their StatusScreen call sites}
+;
+; This fork was PROSE-ONLY until 2026-08-14 — the comment at the StatusScreen
+; call site explained it, but nothing machine-parsed recorded it, so
+; `faithdiff StatusScreen`'s `- DROPPED CopyVideoDataDouble` read like an
+; unexplained gap. The slots are deliberately NOT the battle bundle's $73-$78:
+; that range holds this screen's Nº and <ID> font glyphs.
 LoadStatusScreenHudTilePatterns:
     mov byte [g_tilecache_dirty], 1
     push eax
