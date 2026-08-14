@@ -25,7 +25,7 @@ section .text
 ; trainer card is reachable, so this IS called; it currently leaves every badge
 ; face at its earned-badge palette.
 ;
-; STUB{class=stub; label=HandleBadgeFaceAttributes; pret=engine/gfx/bg_map_attributes.asm:HandleBadgeFaceAttributes; behavior=unearned badge faces keep the earned palette instead of being zeroed, because the port has no per-cell attribute channel to clear and does not model wTrainerCardBadgeAttributes; evidence=pret zeroes individual vBGMap1 cells at fixed offsets, which the port's per-tile-id tile_pal cannot express; lifetime=retire with the per-cell attribute layer and the wTrainerCardBadgeAttributes buffer}
+; STUB{class=stub; label=HandleBadgeFaceAttributes; pret=engine/gfx/bg_map_attributes.asm:HandleBadgeFaceAttributes; behavior=unearned badge faces keep the earned palette instead of being zeroed, because the port has no per-cell attribute channel to clear and does not model wTrainerCardBadgeAttributes; evidence=pret zeroes individual vBGMap1 cells at fixed offsets, which the port's per-tile-id tile_pal cannot express; lifetime=the per-cell attribute layer this waited for now exists on both render paths so the remaining blockers are the wTrainerCardBadgeAttributes buffer and tracing which plane the trainer card draws through}
 HandleBadgeFaceAttributes:
     ret
 
@@ -36,12 +36,21 @@ HandleBadgeFaceAttributes:
 ; show green/yellow/red independently, reading wPartyHPBarAttributes. Reached
 ; from LoadBGMapAttributes when c == 5 (the party menu).
 ;
-; TODO(cgb-colour Stage 4): this is the one screen whose attributes are per-cell
-; BY CONSTRUCTION — the six bars share one set of HP-bar tile ids under three
-; different palettes, so it cannot be expressed per tile id at all and is not a
-; candidate for the Stage 1 resolve-at-load-time path. It needs the per-cell
-; attribute layer plus the wPartyHPBarAttributes buffer.
+; THE OBSERVABLE DEFECT THIS STUB USED TO CAUSE IS FIXED (3975ae039). The six
+; party HP bars DO now show per-mon green/yellow/red: SetPartyMenuHPBarColor
+; publishes each bar's six gauge cells into the window per-cell attribute plane
+; (ppu.asm win_cell_attr / SetBGCellAttrWin). Measured at pixel level, including
+; a per-row control in which the six bars take three different palette slots.
 ;
-; STUB{class=stub; label=HandlePartyHPBarAttributes; pret=engine/gfx/bg_map_attributes.asm:HandlePartyHPBarAttributes; behavior=all six party HP bars render in one palette instead of per-mon green/yellow/red, because the six bars reuse the same HP-bar tile ids and the port resolves palette per tile id; evidence=pret writes 7 attribute cells per bar from wPartyHPBarAttributes, a per-cell assignment with no per-tile-id equivalent; lifetime=retire with the per-cell attribute layer and the wPartyHPBarAttributes buffer}
+; So what remains here is STRUCTURAL, not visible: the port reaches the result
+; through the CALLER, where pret reaches it through this routine plus the
+; wPartyHPBarAttributes buffer. The split is forced by addressing — pret's
+; per-cell writes are indexed by ROW INDEX, the port's plane by SCREEN CELL, and
+; only SetPartyMenuHPBarColor holds the live bar coordinate.
+;
+; Do NOT "fix" this by also publishing from here: that would colour the same six
+; cells twice from two sources of truth for the party menu's layout.
+;
+; STUB{class=stub; label=HandlePartyHPBarAttributes; pret=engine/gfx/bg_map_attributes.asm:HandlePartyHPBarAttributes; behavior=this routine does nothing where pret writes 7 attribute cells per bar, so the port models no wPartyHPBarAttributes buffer, though the per-mon HP-bar colours it exists to produce ARE produced by SetPartyMenuHPBarColor publishing into the window per-cell attribute plane; evidence=pixelcheck partymenu shows the six bars taking three different palette slots under a per-row control, and pret's writes are indexed by row where the port's plane is indexed by screen cell so only the caller holds the live coordinate; lifetime=retire if the port ever grows a row-indexed party-menu layout table that would let the publish live here as pret has it}
 HandlePartyHPBarAttributes:
     ret
