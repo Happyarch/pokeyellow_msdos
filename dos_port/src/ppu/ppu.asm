@@ -70,6 +70,36 @@ PLAYER_MARKER_INNER equ 0       ; lightest shade for the inner square
 TILE_CACHE_TILES  equ 384
 TILE_CACHE_SIZE   equ TILE_CACHE_TILES * 64
 
+; ---------------------------------------------------------------------------
+; NOTE FOR A FUTURE GEN 2 PORT (Gold / Silver / Crystal): THIS CACHE MUST WIDEN.
+;
+; Yellow is a CGB-ENHANCED game whose tile PATTERNS all live in VRAM bank 0, so
+; 384 tiles and a 256-entry id->slot map (build_id_cache_lut) are sufficient and
+; a pattern is identified by its tile id alone. Gen 2 breaks that: it puts tile
+; patterns in bank 1 as well (pokecrystal ram/vram.asm:12-14, vTiles3/4/5), and
+; LoadTilesetGFX (pokecrystal home/map.asm:1340-1394) routinely splits ONE
+; tileset across both banks. There, a pattern is identified by (bank, id) and
+; 768 are addressable at once.
+;
+; So a Gen 2 port has to:
+;   * grow TILE_CACHE_TILES to 768 (48 KB of cache, up from 24 KB), and
+;   * re-key id_cache_lut on (bank, id) rather than a bare id. The bank comes
+;     from bit 3 of the CGB BG attribute byte (pokecrystal constants/hardware.inc
+;     :961-969), so the per-cell attribute plane is the natural carrier for it —
+;     which is why that plane is specified to hold the FULL CGB attribute byte
+;     and not just the palette bits Yellow's own 13 tables actually use (bits 3-7
+;     measured zero tree-wide, stigmergy cgb-stage0-collision-analysis).
+; Nothing in Yellow exercises either, so neither is built here: building an
+; unwitnessed 768-tile path would ship untested code. This note exists so that
+; work is scoped rather than rediscovered.
+;
+; Evidence: 2026-08-14 read-only survey of pret/pokecrystal + pret/pokegold
+; against this file; stigmergy memory gen2-render-architecture-assessment.
+; NOT established by that survey: that Crystal's CGB-exclusivity ($C0) versus
+; Gold's CGB-enhanced ($80) is CAUSED by the extended VRAM — the same bank-1
+; layout was cited in both repos. Do not plan around that distinction unverified.
+; ---------------------------------------------------------------------------
+
 ; bg_surface geometry — the decoded 8bpp mirror of wSurroundingTiles.
 ; NEVER spell these as the bare literals they happen to equal: SURF_W_TILES(48)
 ; and TILE_HEIGHT(8) collide numerically with nothing here today, but the same
@@ -591,6 +621,9 @@ ensure_id_cache_lut:
 ;   unsigned ($8000 base): id*16 packed → id*64 decoded
 ;   signed   ($9000 base): $1000 + sx(id)*16 packed → $4000 + sx(id)*64 decoded
 ; In: [tiledata_mode]. All registers preserved.
+;
+; GEN 2: this 256-entry, id-only key is one of the two things that must widen —
+; see the "NOTE FOR A FUTURE GEN 2 PORT" block at TILE_CACHE_TILES.
 ; ---------------------------------------------------------------------------
 build_id_cache_lut:
     pushad
