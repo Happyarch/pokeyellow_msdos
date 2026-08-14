@@ -1233,6 +1233,26 @@ SCENARIOS = {
                   "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
         "wram_masks": dict(_BATTLE_WRAM_MASKS),
     },
+    "battle_safari_result": {
+        # RENDERED, and it has to be: what this scenario witnesses is a SCREEN
+        # transition -- the wild mon's "ran!" message with its pic slid off by
+        # AnimationSlideEnemyMonOff. A wram-only class could see neither.
+        #
+        # It is the first scenario to execute production's
+        # _InitBattleCommon.specialBattleLoop. battle_safari (id 71)
+        # photographs the menu; this takes a BAIT turn and follows the battle
+        # out through the flee roll.
+        "class": "default",
+        "flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_SAFARI_RESULT=1 "
+                 "AUTOKEY_DUMP_FRAME=999999",
+        "window": (10, 3),
+        "oam_window": True,
+        # Same SHARED rendered-battle mask sets battle_safari carries -- no new
+        # masking is introduced here.
+        "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
+                  "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
+        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+    },
     "battle_thrash": {
         # datastruct: the END of a thrash — .thrashingAboutCheck clearing
         # THRASHING_ABOUT and setting CONFUSED once the rolled counter runs out.
