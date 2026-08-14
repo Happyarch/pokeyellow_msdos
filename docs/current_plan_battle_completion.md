@@ -3129,12 +3129,29 @@ enemy-gauge clone tile ids and VRAM slots.
              `GB(1,5)-(7,11)` holds **49 non-blank cells** — the BACK PIC,
              drawn after the send-out. The slide's blanked band is transient and
              immediately overwritten, so both sides already agree there.
-          2. **Nothing compares the saved buffer either.** pret slides between
-             `LoadScreenTilesFromBuffer1` and `SaveScreenTilesToBuffer1`, so the
-             blanked band is what hardware SAVES; the port currently saves
-             whatever it had. `wTileMapBackup` is NOT one of the 17 GBSTATE
-             regions, so that difference — a possible latent stale-pic defect —
-             is invisible to every scenario.
+          2. **Nothing compares the saved buffer either, and the reason is
+             deeper than "no region for it" (sharpened 2026-08-14).** pret slides
+             between `LoadScreenTilesFromBuffer1` and `SaveScreenTilesToBuffer1`,
+             so the blanked band is what hardware SAVES while the port saves
+             whatever it had — a possible latent stale-pic defect. The port's
+             `SaveScreenTilesToBuffer1` copies into **`screen_save`, a flat
+             host `.bss` buffer** (`mov edi, screen_save`), NOT into
+             `[ebp + wTileMapBackup]`. That is a sanctioned
+             `DEVIATION{class=data-model}` (`src/home/tilemap.asm:47`): pret
+             unions `wTileMapBackup` with `wSurroundingTiles`, and the port keeps
+             a persistent overworld map view that must survive in-overworld
+             menus, so the union would corrupt it.
+             * **So a witness is possible but costs real tooling**, and this is
+               the specific bill: the port side needs a `gbregion_flat` dump of
+               `screen_save` (1000 B, 40x25) against the golden's GB-region dump
+               of `wTileMapBackup` (360 B, 20x18) — different bases AND different
+               strides — and `check_addresses`' `projected` mechanism is
+               currently hardcoded to `wTileMap` (it recomputes from each side's
+               `wTileMap` base + stride + window, `golden_diff.py:1961-1973`).
+               Extending `projected` to accept an arbitrary base-region pair is
+               the enabling change. That is the same shape as the extension this
+               plan already paid for once when `check_addresses` rejected the
+               first HUD span, so it is a known, bounded path — not a wall.
           * **CONSEQUENCE: the translation is low-risk AND its positive effect
             is unwitnessable.** The margin scan guards exactly one failure mode
             (a pic parked at canvas col 2 / col 36); nothing can confirm the
