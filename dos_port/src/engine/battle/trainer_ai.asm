@@ -984,7 +984,15 @@ AISwitchIfEnoughMons:
     mov ecx, PARTYMON_STRUCT_LENGTH
     add esi, ecx
     pop ecx
-    dec ecx
+    ; COUNTER WIDTH: pret is `ld c, a` / `dec c / jr nz` — an 8-BIT counter, so
+    ; wEnemyPartyCount == 0 runs 256 times and stops. `dec ecx / jnz` on the
+    ; movzx'd value runs ~4 billion and walks ESI off the allocation instead.
+    ; Same input, same opcodes, catastrophically different blast radius; this is
+    ; the bug class CLAUDE.md names as the most repeated in this port. Narrowed
+    ; to `dec cl`, which IS pret's bound reproduced exactly, so nothing diverges
+    ; and no annotation is owed. (A zero-guard would NOT be equivalent: it writes
+    ; 0 iterations where the GB writes 256.)
+    dec cl
     jnz .aswitch_loop
     cmp edx, 2
     jnc SwitchEnemyMon
