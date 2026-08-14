@@ -860,6 +860,13 @@ gbstate_regions:
     ; original defect.
     gbregion "eRosterCount",  wEnemyPartyCount, 1
     gbregion "eRoster1HP",    wEnemyMon1HP,     2
+%ifdef AISWITCH_PROBE
+    ; PROBE-ONLY rows (never registered): who the AI picked, and whether the AI
+    ; was consulted at all. Removed before the scenario is proposed.
+    gbregion "pWhichMon",     wWhichPokemon,    1
+    gbregion "pAICount",      wAICount,         1
+    gbregion "pTrainerCls",   wTrainerClass,    1
+%endif
 %endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph
 ; (AUTOKEY_DUMP_ON_BATTLE) or the state-gated follow-stall probe
@@ -5108,18 +5115,30 @@ AutoKeyDrive:
     mov [ebp + wEnemyMonHP], ah
     mov [ebp + wEnemyMonHP + 1], al
     ; LATCH — and it must require a COMPLETED switch, not merely a changed byte.
-    ; MEASURED: `wEnemyMonPartyPos != 0` alone fires MID-SWITCH, on a transient
-    ; $FF with wEnemyMonSpecies still 0 and the struct half-cleared. Requiring a
-    ; real replacement to be loaded (species non-zero, party position in 1..5)
-    ; lands both sides after SwitchEnemyMon has run to its end, which is the
-    ; state the 2026-08-11 defect could not produce.
+    ; MEASURED, AND THE FIRST READING OF THIS WAS WRONG. `wEnemyMonPartyPos != 0`
+    ; alone fires on a transient $FF, which I first read as SwitchEnemyMon
+    ; mid-flight. It is not: at that instant wAICount is still the $FF SENTINEL
+    ; (so TrainerAI has never reached its class-table reload), wWhichPokemon is 0
+    ; and wEnemyMonNick is all zeroes. That is battle INITIALIZATION, before the
+    ; first enemy mon is loaded. The $FF is rejected in both modes now.
+    ;
+    ; *** NO SWITCH HAS BEEN OBSERVED. *** With the class pinned ($20 confirmed
+    ; in the dump) and HP inside the band, a latch on a real party slot (1..5)
+    ; never fires, and wAICount reads $FF at the END of the run — TrainerAI is
+    ; not reaching the reload at all. Which of its four early-outs is taken has
+    ; NOT been measured, and that is the next thing to instrument.
     movzx eax, byte [ebp + wEnemyMonPartyPos]
     test eax, eax
     jz .noAiSwitch
+    ; The $FF must be rejected in BOTH modes. MEASURED: it is battle
+    ; INITIALIZATION, not a switch — at that instant wAICount is still the $FF
+    ; sentinel, wWhichPokemon is 0 and wEnemyMonNick is all zeroes.
     cmp eax, PARTY_LENGTH
-    jae .noAiSwitch                         ; rejects the transient $FF
+    jae .noAiSwitch
+%ifndef AISWITCH_PROBE
     cmp byte [ebp + wEnemyMonSpecies], 0
     je .noAiSwitch                          ; replacement not loaded yet
+%endif
     call DebugDumpMemory                    ; GBSTATE.BIN + DUMP.BIN, then exits
 .noAiSwitch:
 %endif

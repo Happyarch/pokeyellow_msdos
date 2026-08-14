@@ -924,6 +924,11 @@ endif
 # else in the suite reaches SwitchEnemyMon. Dumps on the latch, not on a frame.
 ifdef DEBUG_BATTLE_AISWITCH
 NEED_DEBUG_DUMP := 1
+# AISWITCH_PROBE=1 loosens the latch to the first frame wEnemyMonPartyPos leaves
+# 0 and adds three probe-only regions. Investigation aid; never registered.
+ifdef AISWITCH_PROBE
+NASMFLAGS += -D AISWITCH_PROBE
+endif
 NASMFLAGS += -D DEBUG_BATTLE_AISWITCH -D DEBUG_TRAINER_ROUTE
 NASMFLAGS += -D DEBUG_SEED_PARTY -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_TRAINER_ROUTE
