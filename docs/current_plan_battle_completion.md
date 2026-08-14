@@ -2404,7 +2404,30 @@ provider shapes below, not their runtime behavior.
                  tail. The next step is to instrument
                  `wActionResultOrTookBattleTurn` around the bait item-use path
                  rather than to keep adjusting presses.
-              6. **SUPERSEDED — the earlier open question:**
+              6. **THE EVIDENCE IS NOW CONTRADICTORY, AND THAT IS THE HONEST
+                 STATE (2026-08-14). DO NOT BUILD ON IT.** Two experiments
+                 disagree about whether the gate body runs:
+                 * With **no presses** (stock `AUTOKEY_QUIET`), an entry marker
+                   in the gate body stays UNWRITTEN -> production blocks in its
+                   own `DisplayBattleMenu` and the gate body is dead code.
+                 * With **presses** (`AUTOKEY_SAFARI`), a marker AFTER the gate
+                   body's `DisplayBattleMenu` DOES fire -> the gate body ran,
+                   so production's loop must have exited first.
+                 Those reconcile IF the presses let production's loop finish and
+                 return. **But the direct test of that refutes it:** a probe that
+                 dumps UNCONDITIONALLY on both the carry and no-carry paths
+                 immediately after production's `DisplayBattleMenu`, with the
+                 same presses, **times out with no dump at all** — i.e.
+                 production's `DisplayBattleMenu` appears never to return, which
+                 the second experiment says it must.
+                 * All three probes are reverted; the tree carries none of them.
+                 * **The next person should start by re-establishing which
+                   `DisplayBattleMenu` is which** — most cheaply by giving the
+                   two call sites DISTINCT markers in a SINGLE build, rather
+                   than comparing markers across builds with different flags, as
+                   was done here. Comparing across configurations is very likely
+                   what produced the contradiction.
+              7. **SUPERSEDED — the earlier open question:**
                  `.specialBattleLoop` is PRODUCTION (`init_battle.asm:556`) and
                  calls `DisplayBattleMenu` itself, and the debug gate body calls
                  it AGAIN afterwards. With `AUTOKEY_QUIET` production's loop
