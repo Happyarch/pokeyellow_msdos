@@ -771,6 +771,46 @@ result gates deliberately stop after initialization and drive one terminal turn.
         the second check carries, but NOT below 1/10 or it reaches for a Hyper
         Potion instead. That is exactly the kind of pin `battle_low_hp` already
         does on the player side, and it costs no RNG alignment.
+      * **ALL THREE OPEN QUESTIONS ARE NOW MEASURED — 2026-08-14. The design is
+        BUILD-READY; the next iteration should not re-derive any of it.**
+        1. **`wAICount` needs NO pin — it resolves itself.** `EnemySendOutFirstMon`
+           sets `wAICount = $FF` (pret `core.asm:1346`, port
+           `core.asm:5409`), and `$FF` is a SENTINEL, not a count: `TrainerAI`
+           does `ld a,[wAICount] / and a / jr z,.done / inc hl / inc a /
+           jr nz,.getpointer`, so `$FF+1 = 0` falls through to
+           `dec hl / ld a,[hli] / ld [wAICount],a` — it loads the count from the
+           CLASS TABLE. `data/trainers/ai_pointers.asm:38` is
+           `dbw 1, CooltrainerFAI`, so pinning `wTrainerClass = COOLTRAINER_F`
+           ($20) makes `wAICount` become 1 by itself. **Pin the class only.**
+        2. **The trainer already has enough mons.** The sight trainer
+           `trainer_battle_route` engages is Route 3's
+           `object_event 10, 6, ... OPP_BUG_CATCHER, 4` (the scenario stands at
+           `SIGHT_Y 6, SIGHT_X 12`, same row, trainer facing RIGHT). Bug Catcher
+           party **4** is `db 10, CATERPIE, WEEDLE, CATERPIE, 0` —
+           **three mons at L10**, comfortably over `AISwitchIfEnoughMons`'
+           `cp 2`. Pinning `wTrainerClass` changes only the AI dispatch;
+           `ReadTrainer` has already loaded the real roster.
+        3. **`AIUseHyperPotion` is unreachable on this route, so its
+           no-items behaviour is moot.** It sits behind
+           `ld a, 10 / AICheckIfHPBelowFraction / jp c`, and the pin keeps HP at
+           or above `maxHP/10`, so that branch is never taken.
+      * **THE PIN, stated exactly.** `AICheckIfHPBelowFraction` divides
+        `wEnemyMonMaxHP` by A and carries when `wEnemyMonHP` is BELOW the
+        quotient, so the switch needs
+
+              maxHP/10  <=  wEnemyMonHP  <  maxHP/5
+
+        Both sides must COMPUTE it from the `wEnemyMonMaxHP` they read rather
+        than hardcoding a number — the band is only a few HP wide at L10 — and
+        both must assert the computed value satisfies both inequalities before
+        proceeding, so a staging drift fails loudly instead of quietly missing
+        the band in one direction.
+      * **SHAPE: a variant of `trainer_battle_route` (51), not a new entry.**
+        That scenario already walks a real new game to Route 3, takes the sight
+        trainer through `StartTrainerBattle`, and fights the battle through the
+        real `MainInBattleLoop` — which is where `TrainerAI` is called from
+        (port `core.asm:450` and `:485`). The variant adds two per-frame pins
+        during the battle and a different dump landmark.
       * **This also changes the harness bill, downward.** The box below says a
         witness needs a trainer-entry helper written from scratch because
         `battle.lua` exposes only `enter_wild`. But `wTrainerClass` is a pinnable
