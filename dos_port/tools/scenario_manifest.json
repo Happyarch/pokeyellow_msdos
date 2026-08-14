@@ -2206,6 +2206,38 @@
       "verification": "DisplayBattleMenu.doSimulatedMenuInput -- the old-man / Prof. Oak tutorial menu, the first scenario to execute it. Compares wPlayerName, already a STANDARD region: pret copies NAME_LENGTH=11 from the 8-byte .oldManName literal, so the correct bytes are 8E 8B 83 7F 8C 80 8D 50 8F 91 8E -- \"OLD MAN\" @ plus the adjacent \"PRO\" of .profOakName -- and a port padding with 0x50 differs in exactly the last three (the defect fixed in dbe6e797b). THE STAGING IS THE POINT: a special battle NEVER sends out the player's mon (pret StartBattle core.asm:171) and never enters MainInBattleLoop (it loops on DisplayBattleMenu, core.asm:176), so wBattleMon stays ZERO throughout on both sides. The harness sets wBattleType before the send-out decision rather than in the gate body, which is what makes the two sides agree"
     },
     {
+      "name": "battle_oldman_result",
+      "id": 79,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_OLDMAN_RESULT=1",
+      "port_entry_gate": "DEBUG_BATTLE_OLDMAN_RESULT",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_oldman_result.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "DisplayBattleMenu",
+        "BagWasSelected",
+        "UseBagItem",
+        "UseItem",
+        "ItemUseBall"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "The RESULT/EXIT half of the per-battle-type box for OLD_MAN: battle_oldman (id 69) stops at the rename inside the menu, this follows the same battle to its end. Landmark is wBattleResult == 2, the same one ball_catch polls -- pret's UseBagItem.returnAfterCapturingMon (core.asm:2393-2399) sets wBattleResult=2 and scf together, and .displaySafariZoneBattleMenu is `call DisplayBattleMenu / ret c`, so a capture exits the battle early and the SAFARI tail after it is reached only when carry is CLEAR. BOTH SIDES LAND POST-TEARDOWN (the port gate calls EndOfBattle before dumping) because the window where wBattleResult reads 2 while wIsInBattle is still 1 is only a few frames wide and the reference's A-taps step past it. SENSITIVITY, MEASURED not predicted: forcing the port to skip .oldManCaughtMon (so the tutorial takes the NORMAL catch path) makes this scenario FAIL -- on `wEnemyMon party pos, want $00 got $0D`. Note wPartyData MATCHED under that sabotage, so the sabotaged port did not actually gain a party mon; the discriminator is the enemy party-position field, not party/dex as first designed. PIN NOTE: unlike battle_oldman this scenario pins the enemy with SLEEP ONLY on both sides -- battle_oldman's 65535-HP pin outlives the battle here and showed up as a one-field divergence in whichever direction it was applied asymmetrically."
+    },
+    {
       "name": "battle_pikachu",
       "id": 70,
       "tier": "full",

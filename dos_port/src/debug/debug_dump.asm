@@ -3157,8 +3157,15 @@ RunBattleTest:
     ; The enemy must not act: an enemy turn puts a damage ROLL into wBattleMon,
     ; which is compared, and the two emulators do not share an RNG stream.
     ; 65535 HP + a seeded sleep counter is battle_thrash's pin, same reason.
+%ifndef DEBUG_BATTLE_OLDMAN_RESULT
+    ; The 65535-HP half of the pin is battle_oldman's, and it must NOT apply to
+    ; the RESULT variant: that gate runs to the capture tail, where this pin is
+    ; still live on the port while the reference (which drops it) shows the real
+    ; spec 36. Measured as exactly one unmasked field, wEnemyMon HP, in both
+    ; directions while the two sides were pinned asymmetrically.
     mov word [ebp + wEnemyMonHP], 0xFFFF
     mov word [ebp + wEnemyMonMaxHP], 0xFFFF
+%endif
     mov byte [ebp + wEnemyMonStatus], 7         ; SLP counter (7 turns)
     ; wBattleType is NOT set here — it is set in the staging above, BEFORE the
     ; send-out decision. Setting it here would be too late, which is exactly
@@ -3183,26 +3190,36 @@ RunBattleTest:
     je .oldManMenuLoop
 .oldManRan:
 %ifdef DEBUG_BATTLE_OLDMAN_RESULT
-    ; --- battle_oldman RESULT/EXIT probe (box 2225's second half) ---
-    ; UNREGISTERED GROUNDWORK, kept because it MEASURED three things the plan
-    ; had only assumed. Reaching here means DisplayBattleMenu returned CARRY --
-    ; pret's "the player ran" -- which the port evidently does after the
-    ; tutorial's scripted throw, so the fall-through landmark this gate first
-    ; tried can never fire.
-    ; MEASURED AT THIS INSTANT (run_headless DEBUG_BATTLE_OLDMAN_RESULT=1):
-    ;   wPartyData count = 6  -> the tutorial did NOT give the player the mon,
-    ;                            i.e. ItemUseBall took .oldManCaughtMon. First
-    ;                            time that branch has been observed in the port.
-    ;   wPlayerName = 91 84 83 50.. -> "RED" restored (the Missingno-pair
-    ;                            restore half ran and erased the rename).
-    ;   wIsInBattle = 1, screen reads "PIDGEY was / caught!".
-    ; NOT REGISTERED because the landmark depends on that carry return, and
-    ; whether the port is faithful there is unsettled: pret routes EVERY
-    ; non-zero wBattleType past the menu loop into the SAFARI tail
-    ; (core.asm:182+, wNumSafariBalls / PrintSafariZoneBattleText / enemy-run
-    ; rolls) rather than returning early. Settle that first; a golden built on
-    ; an unfaithful exit would pin the divergence in place.
-    call DebugDumpMemory
+    ; --- battle_oldman_result: the tutorial's RESULT/EXIT landmark ---
+    ; Reaching here means DisplayBattleMenu returned CARRY, and that is FAITHFUL,
+    ; not a port quirk: pret's UseBagItem.returnAfterCapturingMon
+    ; (core.asm:2393-2399) sets BOTH wBattleResult=2 AND `scf` on a capture, and
+    ; pret's own .displaySafariZoneBattleMenu is `call DisplayBattleMenu / ret c`
+    ; — so on a capture pret exits early too. The SAFARI tail below it is reached
+    ; only when carry is CLEAR (an item used without capturing).
+    ; MEASURED: wBattleResult reads 2 here, so this is ball_catch's landmark
+    ; reached through the tutorial's scripted throw.
+    ; WHAT MAKES IT A BRANCH WITNESS: ItemUseBall sends BOTH tutorial types to
+    ; .oldManCaughtMon (item_effects.asm:529-532), which catches the mon but does
+    ; NOT give it to the player — no IndexToPokedex, no party add. So the
+    ; compared state must show wPartyData and wPokedex UNCHANGED with the ball
+    ; consumed. A port that took the normal catch path would hand the player a
+    ; PIDGEY and fail on party + dex.
+    cmp byte [ebp + wBattleResult], 2
+    jne .oldManResultNotTwo
+    ; Run the real EndOfBattle tail before dumping, exactly as the ball_catch
+    ; gate does and for the same reason: the reference can only poll
+    ; wBattleResult at frame granularity, and the window where it reads 2 while
+    ; wIsInBattle is still 1 is a few frames wide. Landing BOTH sides after the
+    ; teardown removes the race instead of trying to hit it.
+    call EndOfBattle
+    call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN + exit
+.oldManResultNotTwo:
+    ; Loud, diagnosable marker rather than a silent hang if the capture tail did
+    ; not run (this path has never been taken).
+    mov byte [ebp + W_TILEMAP], 0xEE
+    call DelayFrame
+    call DumpBackbuffer
 %endif
     ; The dump fires from AutoKeyDrive the instant the rename is visible, which
     ; is INSIDE DisplayBattleMenu's cursor walk, so control normally never gets

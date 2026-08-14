@@ -2271,8 +2271,41 @@ provider shapes below, not their runtime behavior.
           `wPokedex` **UNCHANGED**, `wBagItems` with the ball consumed, and
           `wBattleResult`. A port that wrongly took the normal catch path would
           hand the player a WEEDLE and fail on party + dex.
+      - **LANDED 2026-08-14 — `battle_oldman_result` (id 79), the first witness
+        of a battle type's RESULT rather than its menu.** `goldencheck` PASS,
+        WRAM clean (12 regions). Registry 77. Getting there took four measured
+        corrections, and TWO OF THEM OVERTURNED CLAIMS MADE EARLIER THE SAME DAY
+        in this very box:
+        * **`wBattleResult` IS the landmark.** The "it is not" note below was
+          wrong REASONING, not a wrong measurement: the compare sat on the
+          fall-through side of `jc` and never executed. pret's
+          `UseBagItem.returnAfterCapturingMon` (`core.asm:2393-2399`) sets
+          `wBattleResult = 2` and `scf` together.
+        * **The carry return is FAITHFUL — there was no divergence to settle.**
+          pret's `.displaySafariZoneBattleMenu` is
+          `call DisplayBattleMenu / ret c`, so a capture exits early on hardware
+          too; the SAFARI tail is reached only when carry is CLEAR. The
+          "unsettled fidelity question" recorded below dissolved on measurement.
+        * **The reference must DRIVE THE TEXT.** With no A-taps it sat on
+          "All right! / PIDGEY was caught!" for 3600 frames and `wBattleResult`
+          never left 0 — `battle_oldman` never needed input because it dumps
+          inside the menu.
+        * **Both sides must land POST-TEARDOWN, and the pins must STOP at
+          resolution.** Re-asserting `wBattleType` and enemy HP past
+          `EndOfBattle` re-created state the flow had just torn down; it showed
+          up as exactly those fields, in BOTH directions as the pin was moved
+          from one side to the other. This scenario pins the enemy with SLEEP
+          ONLY — `battle_oldman`'s 65535-HP pin outlives the battle here.
+        * **SENSITIVITY IS REAL BUT NOT WHAT WAS DESIGNED — measured.** Forcing
+          the port to skip `.oldManCaughtMon` makes the scenario FAIL, on
+          **`wEnemyMon party pos, want $00 got $0D`**. `wPartyData` MATCHED
+          under that sabotage, so the sabotaged port did not actually gain a
+          party mon: the discriminator is the enemy party-position field, not
+          the party/dex pair the design predicted. The manifest records what
+          fired, not what was expected.
         * **PROBED 2026-08-14, AND THE DESIGN ABOVE IS PARTLY WRONG — three
-          measured corrections.** A `DEBUG_BATTLE_OLDMAN_RESULT` gate was built
+          measured corrections (SUPERSEDED by the four above; kept because two
+          of them were themselves wrong and that is the lesson).** A `DEBUG_BATTLE_OLDMAN_RESULT` gate was built
           and run (`run_headless`), and it settles more than it opens:
           1. **`wBattleResult` is NOT this battle's landmark.** It lives at
              `$CF0B`, is in no compared region, and the first version polling
