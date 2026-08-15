@@ -3579,14 +3579,28 @@ $(shell cmp -s $(NASMFLAGS_STAMP).tmp $(NASMFLAGS_STAMP) || cp $(NASMFLAGS_STAMP
 # content change (regen from an edited generator/pret source) used to NOT rebuild
 # the consuming object — the exact stale-object class that has bitten us
 # repeatedly. Asset regen is timestamp-gated, so listing them here only forces a
-# rebuild when an asset input actually changed, not on every make. `wildcard`
-# after `make assets` catches newly-created .inc names too, since the assets
-# target runs in a separate make phase for `image`/`all`.
+# rebuild when an asset input actually changed, not on every make.
+#
+# *** INC_DEPS CANNOT CREATE ORDERING, ONLY FRESHNESS. *** `$(wildcard ...)` is
+# expanded when this Makefile is PARSED, so in a tree where assets/ has not been
+# generated yet it expands to NOTHING and the objects end up with no dependency
+# on the generated headers at all. Nothing then pulls the generator rules in, so
+# `make` goes straight to assembling and dies on
+#     error: unable to open include file `assets/battle_anim_constants.inc'
+# This is NOT a parallelism race and `-j1` does not avoid it — measured
+# 2026-08-15 on a fresh worktree: -j1 and -j96 both fail identically. It never
+# bites a working tree because assets/ is already populated there, which is
+# exactly why it survived: it is invisible to everyone who has built once.
+#
+# The order-only prerequisite below is what supplies the ordering. `assets` is
+# .PHONY, so it is considered on every build, but its own prerequisites are real
+# timestamped files, so it is a no-op once generated — and being order-only, it
+# never forces an object to rebuild just because the phony target ran.
 INC_DEPS := $(wildcard include/*.inc) $(wildcard assets/*.inc) \
             $(wildcard assets/npc_dialogs/*.inc) \
             src/data/maps/special_warps.asm
 
-%.o: %.asm $(NASMFLAGS_STAMP) $(INC_DEPS)
+%.o: %.asm $(NASMFLAGS_STAMP) $(INC_DEPS) | assets
 	$(NASM) $(NASMFLAGS) -o $@ $<
 
 # Assemble-only check (no link): useful for syntax verification
