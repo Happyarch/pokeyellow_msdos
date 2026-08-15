@@ -2,8 +2,10 @@
 
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_text.inc"
 %include "coords.inc"
+%include "assets/audio_constants.inc"
 
 ; Tier-1 DATA: message streams and string constants from data/text/text_2.asm
 ; and engine/slots/slot_machine.asm.
@@ -28,6 +30,10 @@ global SlotMachine_UpdateThreeCoinBallTiles
 global SlotMachine_UpdateTwoCoinBallTiles
 global SlotMachine_UpdateOneCoinBallTiles
 global SlotMachine_UpdateBallTiles
+global SlotMachine_SubtractBetFromPlayerCoins
+global SlotMachine_PrintCreditCoins
+global SlotMachine_PrintPayoutCoins
+global SlotMachine_PayCoinsToPlayer
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -48,9 +54,23 @@ extern Random
 extern SlotMachineWheel1
 extern SlotMachineWheel2
 extern SlotMachineWheel3
+extern PrintBCDNumber           ; src/home/print_bcd.asm
+extern PrintNumber              ; src/home/print_num.asm
+extern SubBCDPredef             ; src/engine/math/bcd.asm
+extern AddBCDPredef             ; src/engine/math/bcd.asm
+extern WaitForSoundToFinish     ; src/home/delay.asm
+extern PlaySound                ; src/home/audio.asm
+extern UpdateCGBPal_OBP0        ; src/home/cgb_palettes.asm
+extern DelayFrames              ; src/home/delay.asm
 
 %define BIT_SLOTS_CAN_WIN 6
 %define BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR 7
+
+wPayoutCoins                    equ 0xCD4A
+wTempCoins1                     equ 0xCD46
+wTempCoins2                     equ 0xCD4A
+wSlotMachineWinningSymbol       equ 0xCD41
+SLOTSBAR                        equ 0x0604
 
 
 ; -----------------------------------------------------------------------------
@@ -381,4 +401,106 @@ SlotMachine_UpdateBallTiles:
     mov byte [ebp + esi], al
     add esi, 13
     mov byte [ebp + esi], al
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotMachine_SubtractBetFromPlayerCoins
+; -----------------------------------------------------------------------------
+SlotMachine_SubtractBetFromPlayerCoins:
+    mov esi, wTempCoins2 + 1
+    mov al, byte [ebp + wSlotMachineBet]
+    mov byte [ebp + esi], al
+    dec esi
+    xor al, al
+    mov byte [ebp + esi], al
+    inc esi
+    mov edx, wPlayerCoins + 1
+    mov cl, 2
+    call SubBCDPredef
+    ; NO ret — pret FALLS THROUGH into SlotMachine_PrintCreditCoins
+    ; (engine/slots/slot_machine.asm:646-648: `predef SubBCDPredef` is the last
+    ; instruction before the label). Subtracting the bet is what repaints the
+    ; credit counter; with a ret here the on-screen total goes stale the moment
+    ; you bet and only resyncs after a win, because PayCoinsToPlayer's loop calls
+    ; PrintCreditCoins itself. faithdiff cannot see this: a fall-through is not a
+    ; call, so all four faithdiffs returned 0 with the ret in place.
+
+; -----------------------------------------------------------------------------
+; SlotMachine_PrintCreditCoins
+; -----------------------------------------------------------------------------
+SlotMachine_PrintCreditCoins:
+    hlcoord 5, 1
+    mov edx, wPlayerCoins
+    mov bl, 2
+    jmp PrintBCDNumber
+
+; -----------------------------------------------------------------------------
+; SlotMachine_PrintPayoutCoins
+; -----------------------------------------------------------------------------
+SlotMachine_PrintPayoutCoins:
+    hlcoord 11, 1
+    mov edx, wPayoutCoins
+    mov bx, ((LEADING_ZEROES | 2) << 8) | 4 ; 2 bytes, 4 digits
+    jmp PrintNumber
+
+; -----------------------------------------------------------------------------
+; SlotMachine_PayCoinsToPlayer
+; -----------------------------------------------------------------------------
+SlotMachine_PayCoinsToPlayer:
+    mov byte [ebp + wMuteAudioAndPauseMusic], 1
+    call WaitForSoundToFinish
+
+; Put 1 in the temp coins variable. This value is added to the player's coins
+; repeatedly so the player can watch the value go up 1 coin at a time.
+    mov esi, wTempCoins1
+    xor al, al
+    mov byte [ebp + esi], al
+    inc esi
+    inc al
+    mov byte [ebp + esi], al
+
+    mov al, 5
+    mov byte [ebp + wAnimCounter], al
+
+; Subtract 1 from the payout amount and add 1 to the player's coins each
+; iteration until the payout amount reaches 0.
+.loop:
+    mov al, byte [ebp + wPayoutCoins + 1]
+    mov dl, al
+    mov al, byte [ebp + wPayoutCoins]
+    mov dh, al
+    or al, dl
+    jz .exit
+    dec dx
+    mov al, dl
+    mov byte [ebp + wPayoutCoins + 1], al
+    mov al, dh
+    mov byte [ebp + wPayoutCoins], al
+    mov esi, wTempCoins1 + 1
+    mov edx, wPlayerCoins + 1
+    mov cl, 2
+    call AddBCDPredef
+    call SlotMachine_PrintCreditCoins
+    call SlotMachine_PrintPayoutCoins
+    mov al, SFX_SLOTS_REWARD
+    call PlaySound
+    mov al, byte [ebp + wAnimCounter]
+    dec al
+    jnz .skip1
+    mov al, byte [ebp + 0xFF48]              ; ldh a, [rOBP0]
+    xor al, 0x40 ; make the slot wheel symbols flash
+    mov byte [ebp + 0xFF48], al              ; ldh [rOBP0], a
+    call UpdateCGBPal_OBP0
+    mov al, 5
+.skip1:
+    mov byte [ebp + wAnimCounter], al
+    mov al, byte [ebp + wSlotMachineWinningSymbol]
+    cmp al, (SLOTSBAR >> 8) + 1
+    mov bl, 8
+    jnc .skip2
+    shr bl, 1 ; bl = 4 (make the the coins transfer faster if the symbol was 7 or bar)
+.skip2:
+    call DelayFrames
+    jmp .loop
+.exit:
     ret
