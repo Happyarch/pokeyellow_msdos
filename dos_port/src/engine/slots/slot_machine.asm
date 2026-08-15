@@ -69,9 +69,9 @@ global SlotReward300Func
 global SlotRewardPointers
 
 extern Random
-extern SlotMachineWheel1
-extern SlotMachineWheel2
-extern SlotMachineWheel3
+extern SlotMachineWheel1        ; src/data/events/slot_machine_wheels.asm
+extern SlotMachineWheel2        ; src/data/events/slot_machine_wheels.asm
+extern SlotMachineWheel3        ; src/data/events/slot_machine_wheels.asm
 extern PrintBCDNumber           ; src/home/print_bcd.asm
 extern PrintNumber              ; src/home/print_num.asm
 extern SubBCDPredef             ; src/engine/math/bcd.asm
