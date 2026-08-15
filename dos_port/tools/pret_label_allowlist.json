@@ -16,11 +16,6 @@
    "rule": "non_ret_stub",
    "key": "DisplayPCMainMenu",
    "why": "documented DEVIATION integration stub: arms menu vars (wMaxMenuItem etc.) so PCMainMenu dispatch runs on defined state \u2014 minimal contract, no box draw"
-  },
-  {
-   "rule": "dup_def",
-   "key": "StartSlotMachine",
-   "why": "known interim (overworld-events Stage 3): hidden_object_stubs.asm ret-stub is linked (a HiddenEventMaps handler for Game Corner slot tiles); the real body in engine/slots/game_corner_slots.asm is unlisted (in no Makefile SRCS list). Delete the stub when game_corner_slots.asm is promoted to a linked list (Stage 5 Celadon)"
   }
  ]
 }

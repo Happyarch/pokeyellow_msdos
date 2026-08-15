@@ -776,4 +776,13 @@ OPP_LANCE               equ OPP_ID_OFFSET + 0x2F   ; plays the gym-leader battle
 ; Gym-leader name/city field width (constants/text_constants.asm:7).
 GYM_CITY_LENGTH         equ 17
 
+; --- slot symbols (constants/script_constants.asm:13-18) ---
+SLOTS7                  equ 0x0200
+SLOTSBAR                equ 0x0604
+SLOTSCHERRY             equ 0x0A08
+SLOTSFISH               equ 0x0E0C
+SLOTSBIRD               equ 0x1210
+SLOTSMOUSE              equ 0x1614
+
 %endif ; GB_CONSTANTS_INC
+
