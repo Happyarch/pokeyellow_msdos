@@ -536,15 +536,6 @@ InitBattleEnemyParameters:
     mov al, [ebp + wEngagedTrainerSet]     ; ld a, [wEngagedTrainerSet] (flags preserved)
     jb .noTrainer                           ; jr c, .noTrainer
     mov [ebp + wTrainerNo], al             ; ld [wTrainerNo], a
-    ; DIVERGENCE(M8.1): pret sets wTrainerClass later, inside InitBattle/InitOpponent
-    ; (engine/battle/init_battle.asm:34-36  `sub OPP_ID_OFFSET; ld [wTrainerClass],a`).
-    ; The port's InitBattle is wild-only and never runs that, so seed wTrainerClass
-    ; here (M8.1 task explicitly seeds wCurOpponent/wTrainerClass/wTrainerNo) so
-    ; trainer_ai.asm / read_trainer_party.asm see a valid class.  When InitOpponent
-    ; gains its trainer branch this store becomes redundant (harmless).
-    mov al, [ebp + wCurOpponent]
-    sub al, OPP_ID_OFFSET
-    mov [ebp + wTrainerClass], al
     ret
 .noTrainer:
     mov [ebp + wCurEnemyLevel], al         ; ld [wCurEnemyLevel], a

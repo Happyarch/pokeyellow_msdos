@@ -82,12 +82,47 @@ SCRIPT_SENTINEL = 0xFFFFFFFF
 # lives exactly where pret puts it: in the map's own text pointer table.
 # Applied only to maps in gen_map_script_tables.WIRED_MAPS — a map whose script
 # layer is not live keeps its "TRAINER!" stub (no scenario, no wire).
+# *** TWO SPELLINGS OF THE SAME HOOK. *** Most maps write the tail inline:
+#     text_asm / ld hl, <Map>TrainerHeaderN / call TalkToTrainer / jp TextScriptEnd
+# but FIVE maps factor the last two instructions into a map-local helper and jump
+# to it instead (MtMoonB2F, RockTunnel1F, Route9, Route15, ViridianForest):
+#     text_asm / ld hl, <Map>TrainerHeaderN / jr <Map>TalkToTrainer
+#     ...
+#     <Map>TalkToTrainer: call TalkToTrainer / jp TextScriptEnd
+# Matching only the first spelling silently degraded every trainer on those maps
+# to a LITERAL text entry: talking never entered TalkToTrainer, so the before/
+# after/end battle texts were unreachable and the text engine walked a stream
+# that was never meant to be walked — junk on screen, then a call through
+# garbage (GRP5 illegal call), reported live 2026-08-15 on VIRIDIAN_FOREST.
+# It read as correct before the battle only because pret's before-battle string
+# for those trainers happens to be the word "TRAINER!" itself.
+# ROUTE_9 and ROUTE_15 carried the same defect from the day they were wired; no
+# sight golden could see it, because they all dump at the moment of engagement.
 TRAINER_TALK_SENTINEL = 0xFFFFFFFE
 TRAINER_TALK_HOOK = re.compile(
     r"^\s*text_asm\s*\n"
     r"\s*ld hl, (\w+TrainerHeader\d+)\s*\n"
     r"\s*call TalkToTrainer\s*\n"
     r"\s*jp TextScriptEnd\s*$", re.M)
+# The factored form. The local helper is VERIFIED to be the standard pair before
+# this is honoured (see local_tail_is_standard) rather than trusted by name.
+TRAINER_TALK_HOOK_JR = re.compile(
+    r"^\s*text_asm\s*\n"
+    r"\s*ld hl, (\w+TrainerHeader\d+)\s*\n"
+    r"\s*(?:jr|jp) (\w+TalkToTrainer)\s*$", re.M)
+LOCAL_TAIL = re.compile(
+    r"^(\w+TalkToTrainer):\s*\n"
+    r"\s*call TalkToTrainer\s*\n"
+    r"\s*jp TextScriptEnd\s*$", re.M)
+
+
+def local_tail_is_standard(script_text, label):
+    """True only if <label> is literally `call TalkToTrainer / jp TextScriptEnd`.
+
+    Verified, not assumed: honouring the jr form on a helper that did anything
+    else would substitute the shared hook for different behaviour.
+    """
+    return any(m.group(1) == label for m in LOCAL_TAIL.finditer(script_text))
 SCRIPT_OVERRIDES = {
     'PalletTownOakText': 'PalletTownOakText',
 }
@@ -238,16 +273,26 @@ def _resolve_local_label(path: Path, label: str) -> str | None:
 def _resolve_trainer_talk_hook(path: Path, label: str) -> str | None:
     """Return the trainer-header label if `label:` is pret's standard talk hook.
 
-    Matches only the exact three-instruction form (see TRAINER_TALK_HOOK); a hook
-    with any extra logic falls through to the normal resolution and stays a
-    hand-port candidate, so the generic entry can never silently swallow one.
+    Matches pret's TWO spellings of the same hook (see TRAINER_TALK_HOOK and
+    TRAINER_TALK_HOOK_JR); anything with extra logic falls through to the normal
+    resolution and stays a hand-port candidate, so the generic entry can never
+    silently swallow one.
     """
     text = path.read_text(encoding='utf-8')
     body = re.search(rf'^{re.escape(label)}:\n((?:\t.*\n)+)', text, re.M)
     if not body:
         return None
-    m = TRAINER_TALK_HOOK.match(body.group(1).rstrip('\n'))
-    return m.group(1) if m else None
+    inner = body.group(1).rstrip('\n')
+    m = TRAINER_TALK_HOOK.match(inner)
+    if m:
+        return m.group(1)
+    # The factored form: `jr <Map>TalkToTrainer`. Honour it ONLY after confirming
+    # that helper really is `call TalkToTrainer / jp TextScriptEnd` — matching on
+    # the NAME alone would substitute the shared hook for whatever it actually did.
+    m = TRAINER_TALK_HOOK_JR.match(inner)
+    if m and local_tail_is_standard(text, m.group(2)):
+        return m.group(1)
+    return None
 
 
 # ---------------------------------------------------------------------------
