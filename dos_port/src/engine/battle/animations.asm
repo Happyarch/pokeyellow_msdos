@@ -133,6 +133,8 @@ global MoveAnimationTilesPointers
 global MoveAnimationTiles0
 global MoveAnimationTiles2
 global MoveAnimationTiles1
+global SlotMachineTiles2
+global SlotMachineTiles2End
 
 %ifdef DEBUG_BATTLE_ANIM_PHYSICAL
 extern DebugDumpMemory                   ; debug_dump.asm — terminates at the first live OAM frame block
@@ -3327,6 +3329,10 @@ MoveAnimationTiles2:
 ; splash stars tiles 3/19 (splash.asm LoadShootingStarGraphics).
 MoveAnimationTiles1:
     incbin "../gfx/battle/move_anim_1.2bpp"
+
+SlotMachineTiles2:
+    incbin "../gfx/slots/slots_2.2bpp"
+SlotMachineTiles2End:
 
 ; The generated battle-animation DATA (AttackAnimationPointers, subanimations,
 ; frame blocks, base coords, MoveSoundTable) lives in the data layer:
