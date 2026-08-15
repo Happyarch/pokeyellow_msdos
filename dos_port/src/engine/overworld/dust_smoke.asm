@@ -58,7 +58,7 @@ extern AdjustOAMBlockYPos          ; src/engine/battle/animations.asm (pret home
 extern AdjustOAMBlockXPos          ; src/engine/battle/animations.asm (pret home file)
 extern CopyVideoData               ; home/copy2.asm (In: ESI=VRAM dest, EDX=flat src, BL=count)
 extern Delay3                      ; src/home/palettes.asm
-extern LoadPlayerSpriteGraphics    ; engine/overworld/player_gfx.asm
+extern LoadPlayerSpriteGraphics    ; src/home/overworld.asm
 
 section .text
 

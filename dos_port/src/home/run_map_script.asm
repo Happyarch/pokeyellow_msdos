@@ -61,5 +61,13 @@ global DefaultMapScript
 ; Default _Script for maps without a ported one. Most pret map scripts that do
 ; nothing else are exactly `jp EnableAutoTextBoxDrawing`, so that is the faithful
 ; default (a few, e.g. Indigo Plateau, are a bare ret — close enough here).
+; Measured 2026-08-15: 209 of 224 pret scripts/*.asm map scripts match this
+; exact one-line body (`call`/`jp EnableAutoTextBoxDrawing`); IndigoPlateau_Script
+; is the lone bare-`ret` case found. DefaultMapScript has no single pret
+; counterpart label — it is port-only glue synthesizing that shared pattern for
+; the generated MapScriptPointers dispatch table (gen_map_scripts.py), exactly
+; as WildDataPointers/EvosMovesPointerTable synthesize their own defaults —
+; hence the DEVIATION below rather than a per-map fork.
+; DEVIATION{class=projection; pret=scripts/CeladonHotel.asm:CeladonHotel_Script; behavior=one shared port-only default routine stands in for the ~209 pret per-map _Script bodies that are exactly `jp EnableAutoTextBoxDrawing`, referenced by MapScriptPointers[wCurMap] instead of pret's per-map identical labels; evidence=grep across scripts/*.asm counts 209/224 matching this exact body, plus IndigoPlateau_Script as a bare-ret outlier tolerated here; lifetime=retires per map as each map real _Script is ported and wired into MapScriptPointers, shrinking DefaultMapScript's caller set toward zero}
 DefaultMapScript:
     jmp EnableAutoTextBoxDrawing

@@ -47,7 +47,7 @@ extern DelayFrame                         ; src/home/vblank.asm
 extern g_player_marker_on                 ; src/ppu/ppu.asm
 ; EnterMap reset-ladder leaves (OW-A.4): ClearVariablesOnEnterMap (clear_variables.asm,
 ; linked); the rest are ret-stubs in overworld_stubs.asm until their subsystems land.
-extern LoadPlayerSpriteGraphics        ; engine/overworld/player_gfx.asm (faithful pret dispatcher;
+extern LoadPlayerSpriteGraphics        ; src/home/overworld.asm (faithful pret dispatcher;
                                        ; the walking-only scaffold that lived here is retired)
 ; HandleBlackOut's closure (wild-live promotion)
 extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=0)
