@@ -5538,7 +5538,16 @@ EnemySendOutFirstMon:
     mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     call LoadFrontSpriteByMonIndex
     ; ANIMATION=OFF: AnimateSendingOutMon + PlayCry.
-    call DrawHUDsAndHPBars                         ; ~ DrawEnemyHUDAndHPBar
+    ; pret core.asm:1474 draws the ENEMY HUD ONLY here — the player mon is not
+    ; out yet at the first send-out, so wBattleMon is still zeroed. The old
+    ; `call DrawHUDsAndHPBars` stand-in painted a garbage player HUD (":L0",
+    ; empty HP) whose edge triangle then sat inside the player-pic slide window
+    ; and was dragged left by SlideTrainerPicOffScreen, and Buffer1 carried the
+    ; duplicate arrow into the battle menu. Invisible while the send-out ran
+    ; before the intro (the slide cleared the canvas each frame); measured
+    ; live 2026-08-15 (maintainer screenshot + DEBUG_TRAINER_ROUTE frames)
+    ; once 422a523d6 restored pret's send-out position.
+    call DrawEnemyHUDAndHPBar                      ; pret: call DrawEnemyHUDAndHPBar
     ; pret: `ld a,[wCurrentMenuItem]; and a; ret nz` — always nz here (we never prompt
     ; for a player switch), so the SwitchPlayerMon tail is unreachable and deferred.
     ret
