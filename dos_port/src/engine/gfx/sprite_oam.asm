@@ -33,12 +33,41 @@ extern spr_dos_sy, spr_dos_sx, spr_oam_valid
 global PrepareOAMData
 global PrepareStaticOAM
 global PublishProjectedOAM
+global GBScreenToCanvasXY
 
 section .bss
 dos_base_y_tmp: resd 1      ; per-sprite DOS base Y for extended viewport
 dos_base_x_tmp: resd 1      ; per-sprite DOS base X for extended viewport
 
 section .text
+
+; ---------------------------------------------------------------------------
+; GBScreenToCanvasXY — port-only shared OBJ projection: convert a Y/X pair
+; expressed in the GB's standard OAM-byte convention (screen row + 16, screen
+; col + 8 — i.e. as if about to be DMA'd verbatim to real hardware OAM) into
+; the extended 320x200 overworld canvas coords render_sprites reads from
+; spr_dos_sy/sx (src/ppu/ppu.asm).
+;
+; This factors out the fixed camera-centering constant PrepareOAMData (below)
+; applies to the player sprite (slot 0, see .dos_base_done):
+;   dos_base_y = H_SPRITE_SCREEN_Y + 36     ; H_SPRITE_SCREEN_Y is the sprite's
+;   dos_base_x = H_SPRITE_SCREEN_X + 96     ; PHYSICAL on-screen Y/X (no +16/+8)
+; An OAM-byte-convention Y/X is physical+16 / physical+8, so the same constant
+; collapses to input+20 (Y) / input+88 (X). WriteOAMBlock (src/home/oam.asm)
+; writes raw (Y, X, tile, attr) OAM-byte-convention entries directly into
+; wShadowOAM — this lets it publish the matching canvas position for the
+; software renderer instead of re-deriving the constant. See the annotation on
+; WriteOAMBlock for why that publish is required.
+;
+; In:  BH = signed OAM-byte-convention Y, BL = signed OAM-byte-convention X.
+; Out: EAX = canvas Y, EDX = canvas X. Clobbers EAX, EDX only.
+; ---------------------------------------------------------------------------
+GBScreenToCanvasXY:
+    movsx eax, bh
+    add eax, 20
+    movsx edx, bl
+    add edx, 88
+    ret
 
 ; ---------------------------------------------------------------------------
 ; PrepareStaticOAM — make render_sprites display ECX OAM entries that the caller
@@ -225,12 +254,22 @@ PrepareOAMData:
     ; Slots 1-15 (NPCs): MAPY/MAPX-based (32-bit, handles full map range).
     test esi, esi
     jnz .dos_base_npc
-    movsx eax, byte [ebp + H_SPRITE_SCREEN_Y]
-    add eax, 36
+    ; Shared with WriteOAMBlock (src/home/oam.asm) via GBScreenToCanvasXY, which
+    ; takes OAM-byte-convention (+16/+8) input; add that back on before calling
+    ; so this stays byte-identical to the direct H_SPRITE_SCREEN_Y+36 it replaced
+    ; (8-bit wraparound cancels: see GBScreenToCanvasXY's header).
+    ; EDX currently holds the facing-data-block pointer (set above, consumed
+    ; below by `mov ebx, edx` before .tileLoop) — the helper clobbers EDX, so
+    ; save/restore around the call.
+    push edx
+    mov bh, [ebp + H_SPRITE_SCREEN_Y]
+    add bh, 0x10
+    mov bl, [ebp + H_SPRITE_SCREEN_X]
+    add bl, 0x08
+    call GBScreenToCanvasXY
     mov [dos_base_y_tmp], eax
-    movsx eax, byte [ebp + H_SPRITE_SCREEN_X]
-    add eax, 96
-    mov [dos_base_x_tmp], eax
+    mov [dos_base_x_tmp], edx
+    pop edx
     jmp .dos_base_done
 .dos_base_npc:
     movsx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
@@ -365,8 +404,18 @@ PrepareOAMData:
     jae .ret                             ; ret nc (nothing to clear)
     movzx edi, al
     add edi, W_SHADOW_OAM
+; DEVIATION{class=projection; pret=engine/gfx/sprite_oam.asm:PrepareOAMData; behavior=the port additionally parks spr_dos_sy and spr_dos_sx off-canvas for every shadow-OAM index this loop clears, in addition to pret clearing only the OAM Y byte; evidence=this loop is the only place that marks an index unused, it never wrote spr_dos_sy/sx (only render_sprites in src/ppu/ppu.asm reads them, keyed on spr_oam_valid as a count from index 0), and WriteOAMBlock in src/home/oam.asm now grows spr_oam_valid past whatever index it publishes, so without this an index between the active count and WriteOAMBlock's target that this loop clears would still hold a stale or zero canvas position from a previous, larger sprite count and render garbage; lifetime=permanent, part of the software OBJ HAL WriteOAMBlock relies on}
 .clearLoop:
     mov byte [ebp + edi], 0xA0
+    push eax
+    push ecx
+    mov ecx, edi
+    sub ecx, W_SHADOW_OAM
+    shr ecx, 2                            ; ECX = OAM entry index 0..39
+    mov dword [spr_dos_sy + ecx*4], -1000 ; comfortably off both canvas edges
+    mov dword [spr_dos_sx + ecx*4], -1000
+    pop ecx
+    pop eax
     add edi, 4
     mov eax, edi
     sub eax, W_SHADOW_OAM                 ; back to 0-based offset

@@ -6,13 +6,25 @@
 ; WriteOAMBlock writes a 2x2 block of OAM entries (used by Cut/emotion-bubble/
 ; trade animations). In pret it targets wShadowOAM ($C300), the 40-entry shadow
 ; buffer that the DMA routine copies to real OAM ($FE00) each VBlank. THIS PORT
-; USES THE SAME SHADOW-OAM MODEL: PrepareOAMData (src/gfx/sprite_oam.asm) builds
-; wShadowOAM (= W_SHADOW_OAM, $C300) and vblank.asm:update_oam DMA-copies it to
-; GB_OAM ($FE00) each frame; the software PPU (ppu.asm render_sprites) reads the
-; 4-byte-per-entry (Y, X, tile, attr) layout out of $FE00. So writing the same
-; (Y, X, tile, attr) layout into wShadowOAM is exactly faithful — this is NOT
-; GB-OAM-torus/tilemap geometry, it is the flat 4-bytes-per-sprite array the
-; renderer already consumes.
+; USES THE SAME SHADOW-OAM MODEL: PrepareOAMData (src/engine/gfx/sprite_oam.asm)
+; builds wShadowOAM (= W_SHADOW_OAM, $C300) and vblank.asm:update_oam DMA-copies
+; it to GB_OAM ($FE00) each frame. Writing the (Y, X, tile, attr) layout into
+; wShadowOAM is the right target and is byte-faithful to pret — but it is NOT
+; sufficient on its own, and an earlier version of this comment claimed it was.
+;
+; render_sprites (src/ppu/ppu.asm) does NOT read sprite POSITION out of $FE00.
+; It takes tile/attr from $FE00 but takes each entry's screen position from the
+; port-only spr_dos_sx/spr_dos_sy tables, gated by spr_oam_valid (a count of
+; valid entries from index 0) — published exclusively by PrepareOAMData /
+; PrepareStaticOAM / PublishProjectedOAM / the mon-icon writers. A raw
+; wShadowOAM write that never touches those tables is invisible: this is
+; exactly how the trainer-sight emotion bubble regressed (diagnosed
+; 2026-08-15) — EmotionBubble wrote a faithful 2x2 block via this routine, but
+; nothing published its canvas position, so render_sprites' `cmp ecx,
+; [spr_oam_valid] / jae .nextSprite` skipped it every frame. WriteOAMBlock now
+; publishes spr_dos_sx/sy (and grows spr_oam_valid) for the slots it writes —
+; see the DEVIATION below and GBScreenToCanvasXY's header
+; (src/engine/gfx/sprite_oam.asm).
 ;
 ; INPUT (pret contract, mapped to the port register map):
 ;   AL = OAM block index (each block = 4 OAM entries = 16 shadow-OAM bytes)
@@ -41,10 +53,15 @@ bits 32
 
 global WriteOAMBlock
 
+extern spr_dos_sy, spr_dos_sx, spr_oam_valid  ; src/ppu/ppu.asm
+extern GBScreenToCanvasXY                      ; src/engine/gfx/sprite_oam.asm — shared GB-screen->canvas projection
+
 section .text
 
 ; ---------------------------------------------------------------------------
 ; WriteOAMBlock — write a 2x2 sprite block into shadow OAM (wShadowOAM).
+;
+; DEVIATION{class=projection; pret=home/oam.asm:WriteOAMBlock; behavior=in addition to the faithful (Y, X, tile, attr) writes into wShadowOAM, each entry also publishes its render_sprites canvas position into spr_dos_sy and spr_dos_sx and grows spr_oam_valid to at least cover its own index, without lowering an index some other publisher already raised the count past; evidence=render_sprites in src/ppu/ppu.asm positions every OAM entry exclusively from spr_dos_sy and spr_dos_sx gated by spr_oam_valid, never from the shadow-OAM Y and X bytes this routine writes, so a caller like EmotionBubble or the Cut animation that only calls WriteOAMBlock draws a faithful shadow-OAM block that the compositor then silently skips, diagnosed 2026-08-15 as the trainer-sight emotion-bubble-never-renders regression and independently corroborated; lifetime=permanent, part of the software OBJ HAL that publishing to real hardware OAM would not need}
 ; ---------------------------------------------------------------------------
 WriteOAMBlock:
     push eax
@@ -86,6 +103,13 @@ WriteOAMBlock:
 ;        BH = Y, BL = X.
 ;   Out: EDI += 4, ESI += 2. Clobbers AL (restored by the outer push eax).
 ;   Layout matches the renderer: byte0=Y, byte1=X, byte2=tile, byte3=attr.
+;
+;   Also publishes this entry's canvas position for render_sprites — see the
+;   annotation on WriteOAMBlock above. BH/BL are already the OAM-byte-convention
+;   Y/X being written to [edi]/[edi+1], so they feed GBScreenToCanvasXY
+;   directly. EDI's own bias gives the OAM entry index (0..39); spr_oam_valid
+;   is grown max-style (never lowered) so this never hides a higher slot some
+;   other publisher already raised the count past.
 ; ---------------------------------------------------------------------------
 .writeOneEntry:
     mov [edi],   bh                 ; Y coordinate   (pret: ld [hl], b)
@@ -94,6 +118,26 @@ WriteOAMBlock:
     mov [edi+2], al
     mov al, [esi+1]                 ; attribute      (pret: ld a,[de]; ld [hli],a)
     mov [edi+3], al
+
+    push eax
+    push ecx
+    push edx
+    mov ecx, edi
+    sub ecx, ebp
+    sub ecx, W_SHADOW_OAM
+    shr ecx, 2                       ; ECX = OAM entry index 0..39
+    call GBScreenToCanvasXY          ; in: BH/BL -> out: EAX=canvas Y, EDX=canvas X
+    mov [spr_dos_sy + ecx*4], eax
+    mov [spr_dos_sx + ecx*4], edx
+    inc ecx
+    cmp ecx, [spr_oam_valid]
+    jbe .skipValidBump
+    mov [spr_oam_valid], ecx
+.skipValidBump:
+    pop edx
+    pop ecx
+    pop eax
+
     add edi, 4
     add esi, 2
     ret
