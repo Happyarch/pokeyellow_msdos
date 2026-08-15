@@ -44,6 +44,7 @@ global SlotMachine_CheckForMatches
 global SlotMachine_SpinWheels
 global LoadSlotMachineTiles
 global MainSlotMachineLoop
+global PromptUserToPlaySlots
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -97,9 +98,28 @@ extern TextBoxBorder                ; src/home/text.asm
 extern PlaceString                  ; src/home/text.asm
 extern HandleMenuInput              ; src/home/window.asm
 extern DisplayTextBoxID             ; src/home/textbox.asm
+extern SaveScreenTilesToBuffer2     ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer2   ; src/home/tilemap.asm
+extern DisplayTextIDInit            ; src/engine/menus/display_text_id_init.asm
+extern Bankswitch                   ; src/home/bankswitch2.asm
+extern YesNoChoice                  ; src/home/yes_no.asm
+extern EmotionBubble                ; src/engine/overworld/emotion_bubbles.asm
+extern GBPalWhiteOutWithDelay3      ; src/home/palettes.asm
+extern LoadFontTilePatterns         ; src/home/load_font.asm
+extern RunPaletteCommand            ; src/home/palettes.asm
+extern Delay3                       ; src/home/palettes.asm
+extern GBPalNormal                  ; src/home/palettes.asm
+extern FillMemory                   ; src/home/copy2.asm
+extern RunDefaultPaletteCommand     ; src/home/palettes.asm
+extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
+extern ReloadTilesetTilePatterns    ; src/home/reload_tiles.asm
+extern CloseTextDisplay             ; src/home/text_script.asm
 
 %define BIT_SLOTS_CAN_WIN 6
 %define BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR 7
+
+SET_PAL_SLOTS                   equ 5
+SMILE_BUBBLE                    equ 2
 
 wPayoutCoins                    equ 0xCD4A
 wTempCoins1                     equ 0xCD46
@@ -1118,4 +1138,64 @@ MainSlotMachineLoop:
     jmp MainSlotMachineLoop
 .ret:
     ret
+
+; -----------------------------------------------------------------------------
+; PromptUserToPlaySlots
+; -----------------------------------------------------------------------------
+PromptUserToPlaySlots:
+    call SaveScreenTilesToBuffer2
+    mov al, (1 << BIT_NO_AUTO_TEXT_BOX)
+    mov byte [ebp + wAutoTextBoxDrawingControl], al
+    mov bh, al
+    mov esi, DisplayTextIDInit
+    call Bankswitch
+    mov esi, PlaySlotMachineText
+    call PrintText
+    call YesNoChoice
+    mov al, byte [ebp + wCurrentMenuItem]
+    and al, al
+    jnz .done
+    dec al
+    mov byte [ebp + wUpdateSpritesEnabled], al
+    mov esi, wSlotMachineRerollCounter
+    xor al, al
+    mov byte [ebp + esi], al
+    inc esi
+    mov byte [ebp + esi], SMILE_BUBBLE
+    call EmotionBubble
+    call GBPalWhiteOutWithDelay3
+    call LoadSlotMachineTiles
+    call LoadFontTilePatterns
+    mov bh, SET_PAL_SLOTS
+    call RunPaletteCommand
+    call Delay3
+    call GBPalNormal
+    mov al, 0xE4
+    mov byte [ebp + 0xFF48], al              ; ldh [rOBP0], a
+    call UpdateCGBPal_OBP0
+    mov esi, wStatusFlags5
+    or byte [ebp + esi], (1 << BIT_NO_TEXT_DELAY)
+    xor al, al
+    mov byte [ebp + W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER], al
+    mov esi, wStoppingWhichSlotMachineWheel
+    mov bx, 0x14
+    call FillMemory
+    call MainSlotMachineLoop
+    mov esi, wStatusFlags5
+    and byte [ebp + esi], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF
+    xor al, al
+    mov byte [ebp + W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER], al
+    call GBPalWhiteOutWithDelay3
+    mov byte [ebp + wUpdateSpritesEnabled], 1
+    call RunDefaultPaletteCommand
+    call ReloadMapSpriteTilePatterns
+    call ReloadTilesetTilePatterns
+.done:
+    call LoadScreenTilesFromBuffer2
+    call Delay3
+    call GBPalNormal
+    movzx eax, byte [ebp + wSlotMachineSavedROMBank]
+    push eax
+    jmp CloseTextDisplay
+
 
