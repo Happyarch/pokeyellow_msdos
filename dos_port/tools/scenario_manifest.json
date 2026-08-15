@@ -1768,6 +1768,41 @@
       "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
     },
     {
+      "name": "route17_trainer_battle",
+      "id": 55,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_ROUTE17=1",
+      "port_entry_gate": "DEBUG_TRAINER_ROUTE17",
+      "navigation_script": "tools/mgba_harness/scenarios/route17_trainer_battle.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 200,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "OverworldLoop",
+        "RunMapScript",
+        "TrainerMapScript",
+        "CheckFightingMapTrainers",
+        "ForceBikeDown",
+        "DisplayEnemyTrainerTextAndStartBattle",
+        "StartTrainerBattle",
+        "NewBattle",
+        "InitBattle"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the ROUTE_17 / ForceBikeDown witness (map-script fidelity plan, third attempt): unlike the route*_sight family, this scenario drives the port's REAL OverworldLoop -- the only loop that ever calls ForceBikeDown -- from a scripted warp onto Route 17 through map-script sight engagement to a confirmed trainer-battle start. RunMapScriptSightTest structurally cannot reach OverworldLoopLessDelay, so it can never witness ForceBikeDown; this scenario is shaped like trainer_battle_route (id 51) instead. It deliberately stops at battle start rather than fighting the roster out -- trainer_battle_route already proves the live menu/turn-loop/return choreography end to end on Route 3, so this scenario's only job is proving ForceBikeDown's forced southward drift reproduces ground truth's measured wYCoord ($79) through the real input path"
+    },
+    {
       "name": "route18_sight",
       "id": 56,
       "tier": "full",

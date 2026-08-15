@@ -1586,6 +1586,55 @@ SCENARIOS = {
             ],
         }),
     },
+    "route17_trainer_battle": {
+        # The ROUTE_17 / ForceBikeDown witness (map-script fidelity plan, third
+        # attempt). Shaped like trainer_battle_route: the port's REAL
+        # OverworldLoop drives map-script sight engagement -> ForceBikeDown's
+        # forced southward drift -> TrainerMapScript -> CheckFightingMapTrainers
+        # -> StartTrainerBattle -> the loop's own wCurOpponent poll -> InitBattle.
+        # Unlike trainer_battle_route, this scenario stops the instant the
+        # trainer battle is confirmed started rather than fighting the roster
+        # out — "engage a trainer" is the acceptance bar, and
+        # trainer_battle_route already proves the live turn-loop/return
+        # choreography on Route 3.
+        #
+        # wram_skip mirrors trainer_battle_route: the battle has just started, so
+        # the enemy/player battle-mon scratch (_NONBATTLE_WRAM_SKIP's four
+        # regions) and wLoadedMon are RNG-derived (enemy DVs are rolled, not
+        # collapsed the way 45/46 collapse them) and not part of the surface
+        # this scenario is proving. wPartyData IS compared — both sides seed the
+        # same deterministic debug party (RunTrainerRoute17TestSeed /
+        # seed.debug_new_game) and neither side has taken a turn yet, so it must
+        # match exactly.
+        #
+        # wram_masks carries the SAME MAP_BORDER divergence _MAP_SIGHT_COMMON
+        # masks: this scenario hand-seeds wYCoord/wXCoord in EnterMap and derives
+        # the view pointer via SeamReseatView, so wCurrentTileBlockMapViewPointer
+        # differs from the golden's for the same reason every route*_sight
+        # scenario masks it (port MAP_BORDER=7 vs pret's 3). wCurMap and
+        # wYCoord/wXCoord on either side of it — the actual ForceBikeDown
+        # witness — ARE compared.
+        "class": "datastruct",
+        "flags": "DEBUG_TRAINER_ROUTE17=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP, **{
+            "wLoadedMon": "battle just started, no turn taken: loader scratch is "
+                          "RNG-derived (enemy DVs rolled, not collapsed) on both "
+                          "sides and not part of this scenario's surface",
+        }),
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            # _BATTLE_WRAM_MASKS supplies the wOptionsBlock BIT_TEXT_DELAY mask
+            # every Stage 2 battle scenario carries (init_battle.asm text-delay
+            # config note) — the battle is live here too, so it applies unchanged.
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc), so the hand-seeded "
+                         "spawn's SeamReseatView derives a different pointer into a "
+                         "differently-sized wOverworldMap — the same sanctioned "
+                         "divergence _MAP_SIGHT_COMMON masks. wCurMap and "
+                         "wYCoord/wXCoord on either side of it ARE compared."),
+            ],
+        }),
+    },
     "battle_damage": {
         # The two emulators intentionally do not share an RNG stream. Their
         # damage bytes therefore need not be equal; validate each record

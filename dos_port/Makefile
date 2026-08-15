@@ -1064,6 +1064,31 @@ NASMFLAGS += -D AK_WALK_BASE=$(AK_WALK_BASE)
 endif
 endif
 
+# make DEBUG_TRAINER_ROUTE17=1
+# ROUTE_17 / ForceBikeDown witness (map-script fidelity plan, third attempt at
+# wiring ROUTE_17). ForceBikeDown is ported and faithdiff-clean but has never had
+# a runtime witness: RunMapScriptSightTest (the route*_sight family) never enters
+# OverworldLoopLessDelay, where the routine lives, so it structurally cannot
+# observe it (regression-overworld-forcebikedown-missing — measured twice, on
+# BOTH earlier attempts to wire ROUTE_17). This gate is shaped like
+# DEBUG_TRAINER_ROUTE: seed, then fall through into the REAL OverworldLoop, the
+# only loop that ever calls ForceBikeDown.
+#
+# Like DEBUG_BATTLE_GHOST, the dump is STATE-GATED (wIsInBattle==2 AND
+# wEnemyMonSpecies!=0, settled — see AUTOKEY_TRAINER_ROUTE17 in debug_dump.asm),
+# not frame-gated, so AUTOKEY_DUMP_FRAME is pushed far out to guarantee the
+# generic frame-based fallback dump in AutoKeyDrive never fires first.
+ifdef DEBUG_TRAINER_ROUTE17
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRAINER_ROUTE17 -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_TRAINER_ROUTE17
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+ifdef AK_ROUTE17_CYCLES
+NASMFLAGS += -D AK_ROUTE17_CYCLES=$(AK_ROUTE17_CYCLES)
+endif
+endif
+
 # Pallet Oak cutscene gate: seed Pallet's north-exit trigger, execute the Pallet
 # state-machine/battle-seed boundary deterministically, and dump GBSTATE+FRAME.
 # Drives RunOakIntroTest (src/debug/debug_dump.asm).

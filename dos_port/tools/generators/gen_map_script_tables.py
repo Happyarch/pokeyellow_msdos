@@ -117,22 +117,26 @@ WIRED_MAPS = {
                                   # distance == range MUST engage; a port using
                                   # a strict > would pass all seven older gates
                                   # and fail only this one
-    # ROUTE_17 IS STILL ABSENT, and porting ForceBikeDown did NOT unblock it —
-    # measured twice, do not try a third time without reading this.
-    # Batch 3 wired it, its golden failed goldencheck on wYCoord ($79 vs $78) and
-    # wTrainerScreenY ($0C vs $1C), and the cause was correctly identified as
-    # pret's ForceBikeDown (missing from the port) auto-scrolling the player one
-    # tile south on Cycling Road before engagement. Batch 4 PORTED ForceBikeDown
-    # (faithdiff clean) and re-wired ROUTE_17 — and got the IDENTICAL two
-    # divergences, byte for byte.
-    # The reason is the harness, not the routine: RunMapScriptSightTest
-    # (src/debug/debug_dump.asm) runs UpdateSprites -> RunMapScript -> DelayFrame
-    # and DELIBERATELY never enters OverworldLoopLessDelay, so it never reaches
-    # the joypad path ForceBikeDown lives in. Ground truth runs the real loop and
-    # takes the forced step; the port harness cannot, by design.
-    # So route17_sight can NEVER witness ForceBikeDown, and ROUTE_17 cannot be
-    # wired with a sight golden while the harness has that shape. Its witness has
-    # to be a scenario that drives the real OverworldLoop on ROUTE_17.
+    # ROUTE_17 — wired on the THIRD attempt (map-script fidelity plan). The first
+    # two both used route17_sight (RunMapScriptSightTest): batch 3 found the
+    # divergence (wYCoord $79 vs $78, wTrainerScreenY $0C vs $1C) and correctly
+    # diagnosed it as pret's ForceBikeDown (auto-scrolls the player one tile south
+    # on Cycling Road) missing from the port; batch 4 PORTED ForceBikeDown
+    # (faithdiff clean) and re-wired ROUTE_17 with the SAME sight scenario — and
+    # got the IDENTICAL two divergences, byte for byte. The reason was the
+    # harness, not the routine: RunMapScriptSightTest is
+    # UpdateSprites -> RunMapScript -> DelayFrame and DELIBERATELY never enters
+    # OverworldLoopLessDelay, so it never reaches the joypad path ForceBikeDown
+    # lives in — no sight golden can ever witness it.
+    # This third attempt uses route17_trainer_battle instead: shaped like
+    # trainer_battle_route (battle plan Stage 1b) — seed, then FALL THROUGH into
+    # the REAL OverworldLoop, the only loop that ever calls ForceBikeDown. It
+    # reuses the exact tile the two earlier attempts measured (ROUTE17_BIKER10 at
+    # (10,118) facing DOWN range 4; player seeded at (10,120)) and dumps as soon
+    # as the trainer battle is confirmed started, which is as far as "engage a
+    # trainer" requires — it does not fight the battle out (trainer_battle_route
+    # already proves that choreography on Route 3).
+    "ROUTE_17": "route17_trainer_battle",
     "ROUTE_18": "route18_sight",  # the SHORTEST header table (3 entries), last
                                   # header. With ROUTE_13's last-of-10 this
                                   # brackets the table walk at both extremes

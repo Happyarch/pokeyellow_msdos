@@ -175,6 +175,7 @@ extern RunFishTestSeed                    ; src/debug/debug_dump.asm
 extern RunLedgeTestSeed                   ; src/debug/debug_dump.asm
 extern RunSurfTestSeed                    ; src/debug/debug_dump.asm
 extern RunTrainerRouteTestSeed            ; src/debug/debug_dump.asm (Stage 1b continuous gate)
+extern RunTrainerRoute17TestSeed          ; src/debug/debug_dump.asm (ROUTE_17/ForceBikeDown witness)
 extern RunGhostBattleTestSeed             ; src/debug/debug_dump.asm (4c ghost witness)
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
@@ -435,6 +436,37 @@ EnterMap:
 %endif
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 .trroute_no_seed:
+%endif
+%ifdef DEBUG_TRAINER_ROUTE17
+    ; ROUTE_17 / ForceBikeDown witness (map-script fidelity plan, third attempt).
+    ;
+    ; ForceBikeDown (src/home/overworld.asm, called from OverworldLoopLessDelay
+    ; just before AreInputsSimulated) is faithful and faithdiff-clean, but a sight
+    ; golden can NEVER witness it: RunMapScriptSightTest never enters
+    ; OverworldLoopLessDelay, so it never reaches the joypad path the routine lives
+    ; in (regression-overworld-forcebikedown-missing, measured twice). This gate is
+    ; the third attempt, shaped like DEBUG_TRAINER_ROUTE: seed, then FALL THROUGH
+    ; into the REAL OverworldLoop, which is the only loop that ever calls
+    ; ForceBikeDown.
+    ;
+    ; Spawn tile is the ONE measured in both earlier route17_sight attempts:
+    ; ROUTE17_BIKER10 (data/maps/objects/Route17.asm) stands at (x=10, y=118)
+    ; facing DOWN with view range 4 (scripts/Route17.asm Route17TrainerHeader9),
+    ; so (x=10, y=120) is two tiles inside its sight line — already visible the
+    ; instant the map script runs, exactly as route17_sight seeded it. The
+    ; divergence that killed both earlier attempts (wYCoord $79 vs $78,
+    ; wTrainerScreenY $0C vs $1C — ground truth one tile further south by the time
+    ; TrainerEngage locks the battle in) is ForceBikeDown drifting the player south
+    ; every input-free frame while CheckFightingMapTrainers' approach sequence
+    ; catches up; a harness that actually runs OverworldLoop should reproduce that
+    ; drift instead of diverging from it. Reusing the measured tile keeps the
+    ; comparison the mechanical "does this now match" check the map-script-tables
+    ; note promised, not a fresh derivation.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    mov byte [ebp + W_CUR_MAP], ROUTE_17
+    mov byte [ebp + W_Y_COORD], 120
+    mov byte [ebp + W_X_COORD], 10
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
 %ifdef DEBUG_SURF
     ; Surfboard gate (items-plan Stage 11): spawn on the Pallet Town shore tile that
@@ -757,6 +789,7 @@ EnterMap:
 %endif
 %ifdef DEBUG_SEED_PARTY
 %ifndef DEBUG_TRAINER_ROUTE
+%ifndef DEBUG_TRAINER_ROUTE17
     ; Plain playable build with a seeded party: seed a full party + bag + money,
     ; then fall through to the normal OverworldLoop. No frame dump, no exit — reach
     ; the stats screen the real way (START → POKéMON → a mon → STATS), so the render
@@ -772,6 +805,8 @@ EnterMap:
     ; compares (EXP, stat exp, PP) while the beaten flag stayed correctly set.
     ; That scenario's party seed is RunTrainerRouteTestSeed (debug_dump.asm),
     ; which runs ONCE under its own guard and calls PrepareNewGameDebug itself.
+    ; *** ALSO EXCLUDED under DEBUG_TRAINER_ROUTE17, same reason. *** Its seed is
+    ; RunTrainerRoute17TestSeed, guarded the same way.
     ;
     ; *** NOW LATCHED (2026-08-15). *** The paragraph above described the damage
     ; and then left it in place for every non-TRAINER_ROUTE build, which made
@@ -779,7 +814,8 @@ EnterMap:
     ; silently broken: the trainer engages with the "!" and then never fights,
     ; because the post-battle EnterMap re-seed re-enters with wCurOpponent still
     ; set. Latching costs one byte and fixes the cause, so the seeded playable
-    ; build is now usable for exactly what a human tester reaches for.
+    ; build is now usable for exactly what a human tester reaches for. The two
+    ; %ifndef exclusions above are now belt-and-braces rather than the mechanism.
     cmp byte [seed_party_done], 0
     jne .seed_party_already
     mov byte [seed_party_done], 1
@@ -789,6 +825,7 @@ EnterMap:
     mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
     call PrepareNewGameDebug               ; seed party + bag + money (returns)
 .seed_party_already:
+%endif
 %endif
 %endif
 %ifdef DEBUG_ITEMUSE
@@ -1072,6 +1109,17 @@ EnterMap:
     call SeedDeterministicPlayerIdentity
     call SeamReseatView
     call RunTrainerRouteTestSeed             ; debug party, empty bag; RETURNS
+%endif
+%ifdef DEBUG_TRAINER_ROUTE17
+    ; Same shape as DEBUG_TRAINER_ROUTE above: seed, then FALL THROUGH into the real
+    ; OverworldLoop — the only loop that ever calls ForceBikeDown. The player spawns
+    ; already inside ROUTE17_BIKER10's sight line, so RunMapScript -> Route17's
+    ; TrainerMapScript -> CheckFightingMapTrainers engages on its own; AUTOKEY_
+    ; TRAINER_ROUTE17 only answers whatever pre-battle text appears, and the dump
+    ; fires as soon as the battle is confirmed started (state-gated in AutoKeyDrive).
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunTrainerRoute17TestSeed           ; debug party, empty bag; RETURNS
 %endif
 %ifdef DEBUG_BATTLE_GHOST
     ; Same shape as DEBUG_LEDGE/FISH/TRAINER_ROUTE above: seed, then FALL THROUGH
