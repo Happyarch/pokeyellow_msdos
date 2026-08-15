@@ -42,6 +42,7 @@ global SlotMachine_StopWheel2Early
 global SlotMachine_HandleInputWhileWheelsSpin
 global SlotMachine_CheckForMatches
 global SlotMachine_SpinWheels
+global LoadSlotMachineTiles
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -84,6 +85,11 @@ extern JoypadLowSensitivity     ; src/home/joypad2.asm
 extern PrintText                ; src/home/window.asm
 extern WaitForTextScrollButtonPress ; src/home/joypad2.asm
 extern CopyData                 ; src/home/copy.asm
+extern FarCopyData              ; src/home/copy.asm
+extern DisableLCD               ; src/home/lcd.asm
+extern EnableLCD                ; src/home/lcd.asm
+extern SlotMachineTiles2            ; pret engine/battle/animations.asm
+extern g_tilecache_dirty            ; src/ppu/ppu.asm
 
 %define BIT_SLOTS_CAN_WIN 6
 %define BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR 7
@@ -957,3 +963,55 @@ SlotMachine_SpinWheels:
     jmp .loop2
 .exit:
     ret
+
+; -----------------------------------------------------------------------------
+; LoadSlotMachineTiles
+; -----------------------------------------------------------------------------
+LoadSlotMachineTiles:
+    call DisableLCD
+    mov esi, SlotMachineTiles2
+    sub esi, ebp
+    mov edx, GB_VCHARS0
+; BUG{class=data-model; pret=engine/slots/slot_machine.asm:LoadSlotMachineTiles; behavior=copies $1c tiles of SlotMachineTiles2 where the blob is $18 tiles, over-reading 4 tiles past its end on both copies; evidence=gfx/slots/slots_2.2bpp is 384 bytes = 24 tiles = $18, and pret's own comment names the intended bound; lifetime=permanent, the faithful branch reproduces the over-read}
+%if BUG_FIX_LEVEL >= 2
+    mov bx, 0x18 * 16
+%else
+    mov bx, 0x1c * 16
+%endif
+    ; ld a, BANK(SlotMachineTiles2) — no-op under flat model
+    call FarCopyData
+    mov esi, SlotMachineTiles1
+    sub esi, ebp
+    mov edx, GB_VCHARS2
+    mov bx, SlotMachineTiles1End - SlotMachineTiles1
+    ; ld a, BANK(SlotMachineTiles1) — no-op under flat model
+    call FarCopyData
+    mov esi, SlotMachineTiles2
+    sub esi, ebp
+    mov edx, GB_VCHARS2 + 0x25 * 16
+%if BUG_FIX_LEVEL >= 2
+    mov bx, 0x18 * 16
+%else
+    mov bx, 0x1c * 16
+%endif
+    ; ld a, BANK(SlotMachineTiles2) — no-op under flat model
+    call FarCopyData
+    mov esi, SlotMachineMap
+    sub esi, ebp
+    decoord 0, 0
+    mov edx, edi
+    mov bx, SlotMachineMapEnd - SlotMachineMap
+    call CopyData
+    mov byte [g_tilecache_dirty], 1
+    call EnableLCD
+    mov esi, wSlotMachineWheel1Offset
+    mov al, 0x1c
+    mov byte [ebp + esi], al
+    inc esi
+    mov byte [ebp + esi], al
+    inc esi
+    mov byte [ebp + esi], al
+    call SlotMachine_AnimWheel1
+    call SlotMachine_AnimWheel2
+    jmp SlotMachine_AnimWheel3
+
