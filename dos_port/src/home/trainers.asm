@@ -127,6 +127,7 @@ extern TextScriptEnd            ; src/home/overworld_text.asm
 extern HideObject               ; src/engine/overworld/toggleable_objects.asm
 extern IsInArray                ; src/home/array2.asm (flat [ESI] reads; pass lea esi,[ebp+..] for WRAM)
 extern msgbox_dialog            ; src/home/text.asm — overworld dialog projection
+extern msgbox_centered          ; src/engine/battle/core.asm — battle msgbox projection
 extern text_msgbox              ; src/home/text.asm — active msgbox projection (msgbox.inc)
 extern AnyPartyAlive            ; src/engine/battle/core.asm — post-battle blackout test
                                 ; (FinalizeTrainerBattleOutcome only; StartTrainerBattle no
@@ -666,7 +667,15 @@ PrintEndBattleText:
     ; (assets/trainer_names.inc). It now fills wNameBuffer for the TX_RAM prefix below.
     call SaveTrainerName
     mov esi, TrainerEndBattleText   ; flat text-script
-    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
+    ; BATTLE projection, not the overworld dialog: this routine's only caller —
+    ; pret's too — is TrainerBattleVictory, which runs on the 40-wide battle
+    ; canvas. The msgbox_dialog record writes its box/lines at stride 20, so in
+    ; battle those writes land WRAPPED on the visible canvas (half-boxes at the
+    ; top of the screen, overwriting the scrolled-in trainer pic) while the
+    ; dialog window shows a second copy at the bottom. Measured 2026-08-15,
+    ; DEBUG_TRAINER_ROUTE AUTOKEY_DUMP_FRAME=3500. Same defect class as the
+    ; party-menu record leak (65aa5a233).
+    mov dword [text_msgbox], msgbox_centered   ; battle message-box projection
     call PrintText
     call SetEnemyTrainerToStayAndFaceAnyDirection ; real (npc_movement_2.asm)
     jmp WaitForSoundToFinish        ; pret: jp WaitForSoundToFinish (real, OW-A.14)

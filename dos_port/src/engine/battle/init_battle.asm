@@ -430,16 +430,23 @@ InitBattleCanvas:
 ;     opponent). Out: CF=1 (a battle occurred), matching pret _InitBattleCommon's scf.
 ; ---------------------------------------------------------------------------
 _InitBattleCommon:
+    ; The unconditional EnemySendOutFirstMon HOIST that stood here is GONE
+    ; (2026-08-15). pret reaches it only from StartBattle:157, AFTER the intro
+    ; (`ld a,[wIsInBattle] / dec a / call nz, EnemySendOutFirstMon`), and the
+    ; hoist was not the "selection boundary" its comment claimed: the routine's
+    ; .next4 tail decodes the first mon's front pic into vFrontPic, so running
+    ; it before the intro made SlideBattlePicsIn slide the MON in where the
+    ; trainer pic belongs on EVERY trainer battle (measured 2026-08-15,
+    ; DEBUG_TRAINER_ROUTE AUTOKEY_DUMP_FRAME=560/620: Caterpie in the enemy
+    ; slot during "BUG CATCHER wants to fight!"). The call now sits at pret's
+    ; own position below (see .noEnemySendOut).
+%ifdef DEBUG_TRAINER_INIT
+    ; Harness stop: run the first-mon selection the gate exists to witness at
+    ; its old deterministic instant (before any presentation), then stop.
+    ; Presentation and the turn loop are intentionally not entered.
     cmp byte [ebp + wIsInBattle], 2
     jne .enemyInitialized
-    ; StartBattle performs this selection upstream. The port's shared battle
-    ; flow is collapsed here, so select the trainer's first mon at the same
-    ; boundary before player send-out and presentation.
     call EnemySendOutFirstMon
-%ifdef DEBUG_TRAINER_INIT
-    ; Harness stop: StartTrainerBattle has now crossed every Stage-1a data leaf
-    ; and selected the first active mon. Presentation and the turn loop are
-    ; intentionally not entered so the dump instant is deterministic.
     stc
     ret
 %endif
@@ -466,6 +473,13 @@ _InitBattleCommon:
     ; source, and pret's intro now parks at the text stream's own prompt.
     ; Measured 2026-08-14: without this, trainer_battle_win and
     ; trainer_battle_loss hang at that prompt and dump nothing.
+    ; The oracles need BOTH battlers loaded, and the enemy's first mon is now
+    ; sent out at pret's post-intro position (skipped by this jump) — so run it
+    ; here, exactly as the old pre-intro hoist did for these gates.
+    cmp byte [ebp + wIsInBattle], 2
+    jne .resultNoEnemySendOut
+    call EnemySendOutFirstMon
+.resultNoEnemySendOut:
     jmp .playerSendOut
 %endif
 
@@ -510,20 +524,19 @@ _InitBattleCommon:
     mov bl, 10
     call ClearScreenArea
     call HideBattlePokeballs                     ; pret's ClearSprites
+    ; pret StartBattle:155-160 — a TRAINER battle sends out the enemy's first
+    ; mon HERE, after the intro: EnemySendOutFirstMon slides the trainer pic
+    ; off, prints "<TRAINER> sent out <MON>!", decodes + places the mon's front
+    ; pic and draws the HUDs (its .next4 tail), so the separate "replace the
+    ; trainer picture with that mon" block that stood here is retired with the
+    ; hoist — the routine does that placement itself, at pret's instant.
+    cmp byte [ebp + wIsInBattle], 2              ; ld a,[wIsInBattle] / dec a
+    jne .noEnemySendOut                          ; call nz, EnemySendOutFirstMon
+    call EnemySendOutFirstMon
+.noEnemySendOut:
+    mov bl, 40                                   ; ld c, 40
+    call DelayFrames                             ; pret StartBattle:158-159
     call SaveBattleScreen                        ; pret StartBattle:160
-    cmp byte [ebp + wIsInBattle], 2
-    jne .enemyFrontReady
-    ; EnemySendOutFirstMon selected/loaded the first trainer mon before the
-    ; trainer intro. Replace the trainer picture with that mon now; Stage 1d
-    ; owns the omitted throw/cry animation and text.
-    mov al, [ebp + wEnemyMonSpecies2]
-    mov [ebp + wCurPartySpecies], al
-    ; PROJ battle: projected enemy-pic cell, not pret's raw hlcoord 12,0 — same
-    ; reason as the send-out placement in core.asm (see the comment there). This
-    ; call runs AFTER SlideBattlePicsIn, so nothing clears the canvas behind it.
-    mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
-    call LoadFrontSpriteByMonIndex
-.enemyFrontReady:
     ; send-out. pret StartBattle.playerSendOutFirstMon ends
     ;   call LoadBattleMonFromParty / call LoadScreenTilesFromBuffer1 /
     ;   call SendOutMon / jr MainInBattleLoop
@@ -615,7 +628,7 @@ _InitBattleCommon:
     ; battle tile slots before the first cache rebuild/slide frame.
     call SetPal_Battle
 
-    ; DEVIATION{class=projection; pret=engine/battle/core.asm:StartBattle; behavior=the port's _InitBattleCommon carries StartBattle's call SendOutMon inline because it already collapses pret's InitWildBattle plus _InitBattleCommon plus StartBattle into one routine, so faithdiff reports SendOutMon as ADDED here and StartBattle as DROPPED, and the same collapse is why StartBattle's other callees - the Safari turn tail's PrintSafariZoneBattleText, EnemyRan, Random, LoadScreenTilesFromBuffer1 and PrintText - also read as ADDED on this routine rather than on StartBattle; evidence=pret StartBattle.playerSendOutFirstMon ends call LoadBattleMonFromParty then call SendOutMon then jr MainInBattleLoop and this site sits in exactly that position with MainInBattleLoop next, and routing it here moved battle_menu and move_selection from 12 palette divergences to 0 by finally reaching SetAnimationPalette; lifetime=until the collapsed StartBattle is restored as its own pret-labeled routine}
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:StartBattle; behavior=the port's _InitBattleCommon carries StartBattle's call SendOutMon inline because it already collapses pret's InitWildBattle plus _InitBattleCommon plus StartBattle into one routine, so faithdiff reports SendOutMon as ADDED here and StartBattle as DROPPED, and the same collapse is why StartBattle's other callees - EnemySendOutFirstMon and its 40-frame DelayFrames (StartBattle:157-159), the Safari turn tail's PrintSafariZoneBattleText, EnemyRan, Random, LoadScreenTilesFromBuffer1 and PrintText - also read as ADDED on this routine rather than on StartBattle; evidence=pret StartBattle.playerSendOutFirstMon ends call LoadBattleMonFromParty then call SendOutMon then jr MainInBattleLoop and this site sits in exactly that position with MainInBattleLoop next, and routing it here moved battle_menu and move_selection from 12 palette divergences to 0 by finally reaching SetAnimationPalette; lifetime=until the collapsed StartBattle is restored as its own pret-labeled routine}
     call SendOutMon
 
     ; --- the battle itself ---
