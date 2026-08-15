@@ -6918,10 +6918,27 @@ DrawEnemyHUDAndHPBar:
     mov ebx, wEnemyMonHP                 ; calc_hp_pixels: EBX=curHP addr, ESI=maxHP addr
     mov esi, wEnemyMonMaxHP
     call calc_hp_pixels                  ; → EDX = fill pixels
-    mov esi, wEnemyHPBarColor
-    call GetHealthBarColor
+    ; Draw the bar FIRST, colour SECOND — pret's order (DrawEnemyHUDAndHPBar
+    ; :2036-2040 runs DrawHPBar, then `ld hl, wEnemyHPBarColor / call
+    ; GetBattleHealthBarColor`). The fork here called the colour routine BEFORE
+    ; the draw, and GetHealthBarColor's faithful `ld d,0 / inc d` writes DH —
+    ; so a yellow verdict turned EDX into 256+px and a red one into 512+px, and
+    ; draw_enemy_hp_bar drew every damaged redraw as a FULL bar. MEASURED
+    ; 2026-08-15: E_HPBAR cells `62 6b×6 6c` with wEnemyMonHP = 0 at the
+    ; victory screen (maintainer screenshot: full red bar on a fainted mon).
+    ; The drain animation (AnimateEnemyHPBar) was correct all along; this
+    ; redraw snapped the bar back to full after every hit.
+    push edx                             ; draw consumes EDX; colour needs DL after
     mov edi, W_TILEMAP + E_HPBAR
     call draw_enemy_hp_bar
+    pop edx
+    ; pret uses GetBattleHealthBarColor (republish-on-transition), not the bare
+    ; GetHealthBarColor — matters when this routine runs OUTSIDE the joint
+    ; DrawHUDsAndHPBars (whose SetPal_Battle covered the gap): the send-out
+    ; sites call it alone, and the gauge's slot-1 palette must follow a
+    ; green→yellow→red transition immediately.
+    mov esi, wEnemyHPBarColor
+    call GetBattleHealthBarColor
     call PlaceEnemyHUDTiles
     ret
 
@@ -7301,8 +7318,14 @@ FaintEnemyPokemon:
     mov edx, BCOORD(12, 6)               ; PROJ — pret decoord 12, 6
     call SlideDownFaintedMonPic
 
-    ; ClearScreenArea IS real: pret `hlcoord 0,0 / lb bc,4,11`.
-    mov esi, W_TILEMAP + 0                    ; hlcoord 0, 0
+    ; ClearScreenArea IS real: pret `hlcoord 0,0 / lb bc,4,11` — wipe the enemy
+    ; HUD corner after the faint. FOURTH instance of the raw-GB-anchor class
+    ; (see regression-battle-second-battle-hud-tile-band): this was the bare
+    ; `W_TILEMAP + 0`, so the wipe landed in the blank canvas margin at (0,0)
+    ; and the fainted mon's HUD survived on screen through the victory text
+    ; (maintainer screenshot, 2026-08-15). The sibling clear in EnemySendOut
+    ; .next4 already used the projected anchor.
+    mov esi, BCOORD(0, 0)                     ; PROJ — pret hlcoord 0, 0
     mov bh, 4                                 ; b = 4 rows
     mov bl, 11                                ; c = 11 width
     call ClearScreenArea
