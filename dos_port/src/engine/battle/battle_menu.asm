@@ -221,6 +221,26 @@ ShowSimulatedInputBagBox:
 ; ShowGainedExpText — pret GainedText→ExpPointsText: "<nick> gained / N EXP. Points!"
 ; for wWhichPokemon; waits for A. N = wExpAmountGained (16-bit big-endian).
 ShowGainedExpText:
+    ; SESSION DISCIPLINE (fixed 2026-08-15): pret prints this via PrintText,
+    ; whose TextCommandProcessor saves the delay flags, sets the bit, and
+    ; RESTORES the saved value at TX_END. This hand-rolled front-end set the
+    ; bit and never cleared it, so the leak made every later PlaceString type
+    ; like dialog — most visibly HandleEnemyMonFainted's faithful direct
+    ; DrawPlayerHUDAndHPBar (the HUD name typed S..N..O.. on screen, maintainer
+    ; video + frame 3222 of the DEBUG_TRAINER_ROUTE run), and enemy-HUD
+    ; redraws at the next send-out. The joint DrawHUDsAndHPBars entry's
+    ; bit-clear had been masking this until the 2026-08-13 fork retirement
+    ; restored pret's DIRECT per-HUD calls. Save/restore, exactly like the
+    ; text engine's own session bracket.
+    ;
+    ; INTERIM (maintainer decision 2026-08-15): this whole routine and its twin
+    ; below are FORKED NAMES for pret's GainedText / GrewLevelText printing
+    ; (pret engine/battle/experience.asm:149,249 — `ld hl, GainedText /
+    ; call PrintText`; pret has no battle_menu.asm at all). The faithful fix
+    ; retires both in favour of the pret text streams under pret names, at
+    ; which point this bracket is deleted with the routine it patches.
+    movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
+    push eax
     or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
     call RestoreBattleScreen
     mov dword [menu_item_step], 2 * FW
@@ -245,11 +265,19 @@ ShowGainedExpText:
     call PlaceString
     mov esi, ebx
     call WaitForAPress
+    pop eax
+    mov [ebp + W_LETTER_PRINTING_DELAY], al   ; restore — end of the typing session
     ret
 
 ; ShowGrewLevelText — pret GrewLevelText: "<nick> grew / to level N!" (no wait; the
 ; stats box + a single WaitForTextScrollButtonPress follow). N = wCurEnemyLevel.
 ShowGrewLevelText:
+    ; Same session bracket as ShowGainedExpText above — this twin carried the
+    ; identical leak. Restoring at ret also makes the stats box that follows
+    ; place instantly, which is what hardware does (pret's session closes with
+    ; GrewLevelText before the box draws).
+    movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
+    push eax
     or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
     mov dword [menu_item_step], 2 * FW
     mov esi, W_TILEMAP + OUTER_OFF
@@ -274,6 +302,8 @@ ShowGrewLevelText:
     mov eax, str_excl
     call PlaceString
     mov esi, ebx
+    pop eax
+    mov [ebp + W_LETTER_PRINTING_DELAY], al   ; restore — end of the typing session
     ret
 
 
