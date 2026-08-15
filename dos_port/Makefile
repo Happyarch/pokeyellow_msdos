@@ -800,13 +800,27 @@ endif
 #                         the view-pointer formula's (width + 6) * (y >> 1) term is
 #                         an order of magnitude larger than on any other gate (whose
 #                         y is 3..16) — the arithmetic none of the others exercises.
-#   make DEBUG_MAPSCRIPT_SIGHT_R3=1   (or _R6 / _R11 / _R4 / _R8 / _R9 / _R10)
+#   make DEBUG_MAPSCRIPT_SIGHT_R3=1   (or _R6 / _R11 / _R4 / _R8 / _R9 / _R10 / _VF)
 ifdef DEBUG_MAPSCRIPT_SIGHT_R3
 DEBUG_MAPSCRIPT_SIGHT := 1
 NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R3
 MAPSCRIPT_MAP ?= 0x0E
 MAPSCRIPT_Y   ?= 6
 MAPSCRIPT_X   ?= 12
+endif
+# VIRIDIAN_FOREST (0x33): the first NON-ROUTE map on this gate, and the reason it
+# was added — a maintainer hand-testing battles found the forest's trainers shout
+# TRAINER! and never fight, because the map was table-only (parameter block
+# generated, MapScriptPointers still DefaultMapScript) so CheckFightingMapTrainers
+# never ran. ViridianForestTrainerHeader0 is YOUNGSTER2 at (x=30, y=33) facing LEFT
+# with view range 4 (scripts/ViridianForest.asm), so the player sits at (Y=33,
+# X=28): the second tile in its line of sight, same rule as Route 3.
+ifdef DEBUG_MAPSCRIPT_SIGHT_VF
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_VF
+MAPSCRIPT_MAP ?= 0x33
+MAPSCRIPT_Y   ?= 33
+MAPSCRIPT_X   ?= 28
 endif
 ifdef DEBUG_MAPSCRIPT_SIGHT_R6
 DEBUG_MAPSCRIPT_SIGHT := 1

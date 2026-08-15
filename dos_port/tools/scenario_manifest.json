@@ -1488,6 +1488,34 @@
       "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
     },
     {
+      "name": "viridian_forest_sight",
+      "id": 86,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_VF=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_VF",
+      "navigation_script": "tools/mgba_harness/scenarios/viridian_forest_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement on the first NON-ROUTE map on this gate. VIRIDIAN_FOREST was table-only until 2026-08-15 (parameter block generated, MapScriptPointers still DefaultMapScript), so its five trainers could be talked to but never fought and no ! ever appeared. This is the witness that wiring it is correct, not merely non-crashing; state verification, not UI verification"
+    },
+    {
       "name": "route6_sight",
       "id": 31,
       "tier": "full",

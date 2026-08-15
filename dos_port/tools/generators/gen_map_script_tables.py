@@ -65,6 +65,12 @@ WGAMEPROGRESSFLAGS = 0xD5EF
 # see the faithfulness-review skill, "Map scripts: no scenario, no wire".
 WIRED_MAPS = {
     "ROUTE_3": "route3_sight",
+    # VIRIDIAN_FOREST: wired 2026-08-15 after a maintainer found its five trainers
+    # could be talked to but never fought (table-only => MapScriptPointers still
+    # DefaultMapScript => CheckFightingMapTrainers never ran). The older note below
+    # excluded the three interiors for "the single indoor .blk slot"; that reason
+    # was TESTED here rather than taken on trust.
+    "VIRIDIAN_FOREST": "viridian_forest_sight",
     "ROUTE_6": "route6_sight",
     "ROUTE_11": "route11_sight",
     # Batch 2 (overworld-events Stage 5). Each sight tile was chosen for the
