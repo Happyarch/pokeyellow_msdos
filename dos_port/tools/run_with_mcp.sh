@@ -29,7 +29,12 @@ DOSPORT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # dosbox-x-mcp: the Happyarch/dosbox-x fork (submodule tools/dosbox-x, branch
 # mcp-debug), deliberately named so it never collides with the system dosbox-x.
 BINARY="${SCRIPT_DIR}/dosbox-x-mcp/dosbox-x-mcp"
-SOCK_PATH="/tmp/dosbox-mcp.sock"
+# Overridable so two worktrees can each run an instance at once. The default is
+# unchanged, so a single-tree workflow behaves exactly as before. This MUST stay
+# in sync with dosbox_mcp/server.py, which reads the same variable with the same
+# default -- point the server at one socket and the emulator at another and the
+# MCP tools connect to nothing, with no error that says why.
+SOCK_PATH="${DOSBOX_MCP_SOCKET:-/tmp/dosbox-mcp.sock}"
 LAUNCH_FILE="${DOSBOX_MCP_LAUNCH:-/tmp/dosbox-mcp.launch}"
 
 if [ ! -x "$BINARY" ]; then
