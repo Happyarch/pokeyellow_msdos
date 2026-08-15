@@ -13,6 +13,10 @@ section .text
 global SlotMachine_SetFlags
 global SlotMachine_FindWheel1Wheel2Matches
 global SlotMachine_CheckForMatch
+global SlotMachine_GetWheel3Tiles
+global SlotMachine_GetWheel2Tiles
+global SlotMachine_GetWheel1Tiles
+global SlotMachine_GetWheelTiles
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -30,6 +34,9 @@ global SlotMachineTiles1
 global SlotMachineTiles1End
 
 extern Random
+extern SlotMachineWheel1
+extern SlotMachineWheel2
+extern SlotMachineWheel3
 
 %define BIT_SLOTS_CAN_WIN 6
 %define BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR 7
@@ -183,4 +190,48 @@ SlotMachineMapEnd:
 SlotMachineTiles1:
     incbin "../gfx/slots/slots_1.2bpp"
 SlotMachineTiles1End:
+
+; -----------------------------------------------------------------------------
+; SlotMachine_GetWheel3Tiles
+; -----------------------------------------------------------------------------
+SlotMachine_GetWheel3Tiles:
+    mov edx, W_SLOT_MACHINE_WHEEL3_BOTTOM_TILE
+    mov esi, SlotMachineWheel3
+    mov al, [ebp + W_SLOT_MACHINE_WHEEL3_OFFSET]
+    call SlotMachine_GetWheelTiles
+
+; -----------------------------------------------------------------------------
+; SlotMachine_GetWheel2Tiles
+; -----------------------------------------------------------------------------
+SlotMachine_GetWheel2Tiles:
+    mov edx, W_SLOT_MACHINE_WHEEL2_BOTTOM_TILE
+    mov esi, SlotMachineWheel2
+    mov al, [ebp + W_SLOT_MACHINE_WHEEL2_OFFSET]
+    call SlotMachine_GetWheelTiles
+
+; -----------------------------------------------------------------------------
+; SlotMachine_GetWheel1Tiles
+; -----------------------------------------------------------------------------
+SlotMachine_GetWheel1Tiles:
+    mov edx, W_SLOT_MACHINE_WHEEL1_BOTTOM_TILE
+    mov esi, SlotMachineWheel1
+    mov al, [ebp + W_SLOT_MACHINE_WHEEL1_OFFSET]
+
+; -----------------------------------------------------------------------------
+; SlotMachine_GetWheelTiles
+; -----------------------------------------------------------------------------
+SlotMachine_GetWheelTiles:
+    movzx ecx, al
+    add esi, ecx
+    mov cl, 3
+.loop:
+    mov al, [esi]
+    inc esi
+    mov [ebp + edx], al
+    inc edx
+    inc esi
+    dec cl
+    jnz .loop
+    ret
+
 
