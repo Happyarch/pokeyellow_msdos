@@ -41,6 +41,7 @@ global SlotMachine_StopWheel1Early
 global SlotMachine_StopWheel2Early
 global SlotMachine_HandleInputWhileWheelsSpin
 global SlotMachine_CheckForMatches
+global SlotMachine_SpinWheels
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -924,3 +925,35 @@ SlotMachine_CheckForMatches:
     mov byte [ebp + 0xFF48], al              ; ldh [rOBP0], a
     call UpdateCGBPal_OBP0
     jmp .done
+
+; -----------------------------------------------------------------------------
+; SlotMachine_SpinWheels
+; -----------------------------------------------------------------------------
+SlotMachine_SpinWheels:
+    mov bl, 20
+.loop1:
+    push ebx
+    call SlotMachine_AnimWheel1
+    call SlotMachine_AnimWheel2
+    call SlotMachine_AnimWheel3
+    mov bl, 2
+    call DelayFrames
+    pop ebx
+    dec bl
+    jnz .loop1
+    xor al, al
+    mov byte [ebp + wStoppingWhichSlotMachineWheel], al
+.loop2:
+    call SlotMachine_HandleInputWhileWheelsSpin
+    call SlotMachine_StopOrAnimWheel1
+    call SlotMachine_StopOrAnimWheel2
+    call SlotMachine_StopOrAnimWheel3
+    jc .exit
+    mov al, byte [ebp + wOnSGB]
+    xor al, 1
+    inc al
+    mov bl, al
+    call DelayFrames
+    jmp .loop2
+.exit:
+    ret
