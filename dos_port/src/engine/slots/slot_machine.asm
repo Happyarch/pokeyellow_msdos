@@ -50,6 +50,14 @@ global SlotMachineMapEnd
 global SlotMachineTiles1
 global SlotMachineTiles1End
 
+global SlotMachine_PrintWinningSymbol
+global SymbolLinedUpSlotMachineText
+global SlotReward8Func
+global SlotReward15Func
+global SlotReward100Func
+global SlotReward300Func
+global SlotRewardPointers
+
 extern Random
 extern SlotMachineWheel1
 extern SlotMachineWheel2
@@ -62,6 +70,7 @@ extern WaitForSoundToFinish     ; src/home/delay.asm
 extern PlaySound                ; src/home/audio.asm
 extern UpdateCGBPal_OBP0        ; src/home/cgb_palettes.asm
 extern DelayFrames              ; src/home/delay.asm
+extern PrintText                ; src/home/window.asm
 
 %define BIT_SLOTS_CAN_WIN 6
 %define BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR 7
@@ -504,3 +513,119 @@ SlotMachine_PayCoinsToPlayer:
     jmp .loop
 .exit:
     ret
+
+; -----------------------------------------------------------------------------
+; SlotMachine_PrintWinningSymbol
+; prints winning symbol and down arrow in text box
+; -----------------------------------------------------------------------------
+SlotMachine_PrintWinningSymbol:
+    hlcoord 2, 14
+    mov al, byte [ebp + wSlotMachineWinningSymbol]
+    add al, 0x25
+    mov byte [ebp + esi], al
+    inc esi
+    inc al
+    mov byte [ebp + esi], al
+    dec esi
+    inc al
+    mov edx, -SCREEN_WIDTH
+    add esi, edx
+    mov byte [ebp + esi], al
+    inc esi
+    inc al
+    mov byte [ebp + esi], al
+    hlcoord 18, 16
+    mov byte [ebp + esi], CHAR_DOWN_ARROW
+    ret
+
+; -----------------------------------------------------------------------------
+; SymbolLinedUpSlotMachineText
+; -----------------------------------------------------------------------------
+SymbolLinedUpSlotMachineText:
+    text_asm
+    push ebx
+    call SlotMachine_PrintWinningSymbol
+    mov esi, LinedUpText
+    pop ebx
+    inc ebx
+    inc ebx
+    inc ebx
+    inc ebx
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotReward8Func
+; -----------------------------------------------------------------------------
+SlotReward8Func:
+    mov esi, W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER
+    mov al, byte [ebp + esi]
+    test al, al
+    jz .skip
+    dec byte [ebp + esi]
+.skip:
+    mov bh, 0x02
+    mov dx, 8
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotReward15Func
+; -----------------------------------------------------------------------------
+SlotReward15Func:
+    mov esi, W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER
+    mov al, byte [ebp + esi]
+    test al, al
+    jz .skip
+    dec byte [ebp + esi]
+.skip:
+    mov bh, 0x04
+    mov dx, 15
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotReward100Func
+; -----------------------------------------------------------------------------
+SlotReward100Func:
+    mov al, SFX_GET_KEY_ITEM
+    call PlaySound
+    xor al, al
+    mov byte [ebp + W_SLOT_MACHINE_FLAGS], al
+    mov bh, 0x08
+    mov dx, 100
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotReward300Func
+; -----------------------------------------------------------------------------
+SlotReward300Func:
+    mov esi, YeahText
+    call PrintText
+    mov al, SFX_GET_ITEM_2
+    call PlaySound
+    call Random
+    cmp al, 0x80
+    mov al, 0
+    jc .skip
+    mov byte [ebp + W_SLOT_MACHINE_FLAGS], al
+.skip:
+    mov byte [ebp + W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER], al
+    mov bh, 0x14
+    mov dx, 300
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotRewardPointers
+; -----------------------------------------------------------------------------
+SlotRewardPointers:
+    dd SlotReward300Func
+    dd SlotReward300Text
+    dd SlotReward100Func
+    dd SlotReward100Text
+    dd SlotReward8Func
+    dd SlotReward8Text
+    dd SlotReward15Func
+    dd SlotReward15Text
+    dd SlotReward15Func
+    dd SlotReward15Text
+    dd SlotReward15Func
+    dd SlotReward15Text
+
