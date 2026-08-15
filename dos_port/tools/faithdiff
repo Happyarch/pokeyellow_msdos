@@ -16,6 +16,18 @@ falls out automatically. Known translation boundaries (TODO-HW plumbing,
 DelayFrame pipeline, ds_base biasing, port cache bookkeeping) are silenced
 via tools/faithdiff_suppress.json:
 
+It ALSO compares call ORDER (added 2026-08-15, maintainer-endorsed): the
+first-occurrence sequence of the callees BOTH sides share. Two same-day
+regressions were pure reorders invisible to the set diff — the
+EnemySendOutFirstMon hoist above the battle intro (mon pic over the trainer
+pic) and the colour-before-draw swap in DrawEnemyHUDAndHPBar (full bar on a
+fainted mon). Order findings are `! ORDER` WARNINGS by default and never
+change the exit code (many collapsed routines legitimately interleave a
+folded callee's calls); pass --order-strict to make them violations. The
+check sees only callees named on BOTH sides — a reorder against a port-only
+or renamed callee (draw_enemy_hp_bar vs pret DrawHPBar) is structurally
+invisible to it, same as the rest of this tool.
+
   { "calls":  { "<Symbol>": "why it is expected on one side only", … },
     "stores": { "<Symbol>": "…" } }
 
@@ -139,37 +151,72 @@ def extract_body(path, label):
     return body if active else None
 
 def pret_sets(body):
-    calls, stores = {}, {}
+    calls, stores, seq = {}, {}, []
     for line in body:
         m = PRET_CALL_RE.match(line) or PRET_MACRO_RE.match(line)
         if m and m.group(2) not in PRET_REG_INDIRECT:
             calls.setdefault(m.group(2), []).append(m.group(1))
+            seq.append(m.group(2))
         else:
             m = PRET_MACRO_NAMED_RE.match(line)
             if m:
                 calls.setdefault(m.group(1), []).append('farcall')
+                seq.append(m.group(1))
         m = PRET_STORE_RE.match(line)
         if m and m.group(1) not in PRET_REG_INDIRECT:
             stores[m.group(1)] = stores.get(m.group(1), 0) + 1
-    return calls, stores
+    return calls, stores, seq
 
 def port_sets(body):
-    calls, stores = {}, {}
+    calls, stores, seq = {}, {}, []
     for line in body:
         m = PORT_CALL_RE.match(line)
         if m and not m.group(2).startswith('.'):
             calls.setdefault(m.group(2), []).append(m.group(1))
+            seq.append(m.group(2))
         m = PORT_STORE_RE.match(line)
         if m and m.group(1) not in PORT_REGS:
             stores[m.group(1)] = stores.get(m.group(1), 0) + 1
-    return calls, stores
+    return calls, stores, seq
+
+def first_occurrence_seq(seq, names):
+    """Project a raw call sequence onto `names`, keeping first occurrences only.
+
+    First-occurrence order is the deliberate granularity: it captures "X was
+    hoisted above Y" (the shipped regression class) while staying silent on
+    repeat-call interleavings, which faithful translations reshuffle freely
+    (loops unrolled differently, a folded callee's repeats).
+    """
+    out = []
+    for n in seq:
+        if n in names and n not in out:
+            out.append(n)
+    return out
+
+def lcs_keep(a, b):
+    """Names forming a longest common subsequence of a and b (small inputs)."""
+    dp = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
+    for i in range(len(a) - 1, -1, -1):
+        for j in range(len(b) - 1, -1, -1):
+            dp[i][j] = dp[i + 1][j + 1] + 1 if a[i] == b[j] \
+                else max(dp[i + 1][j], dp[i][j + 1])
+    i = j = 0
+    keep = []
+    while i < len(a) and j < len(b):
+        if a[i] == b[j]:
+            keep.append(a[i]); i += 1; j += 1
+        elif dp[i + 1][j] >= dp[i][j + 1]:
+            i += 1
+        else:
+            j += 1
+    return keep
 
 def norm_sym(s):
     """Case-fold + strip the port's W_/H_ prefixes so wTileMap == W_TILEMAP."""
     s = re.sub(r'^[wh]_?', '', s, flags=re.I)
     return s.replace('_', '').lower()
 
-def diff_one(cur, label, suppress, show_all):
+def diff_one(cur, label, suppress, show_all, order_strict=False):
     row = cur.execute("SELECT pret_file, port_file, status FROM labels "
                       "WHERE name=? AND pret_file IS NOT NULL", (label,)).fetchone()
     if not row:
@@ -197,8 +244,8 @@ def diff_one(cur, label, suppress, show_all):
               f"port={'ok' if port_body else 'MISSING'}) — rescan?")
         return 1
 
-    pcalls, pstores = pret_sets(pret_body)
-    qcalls, qstores = port_sets(port_body)
+    pcalls, pstores, pseq = pret_sets(pret_body)
+    qcalls, qstores, qseq = port_sets(port_body)
 
     violations = 0
     sup_calls  = suppress.get('calls', {})
@@ -247,6 +294,25 @@ def diff_one(cur, label, suppress, show_all):
             print(f"    + ADDED    [{name}]")
             violations += 1
 
+    # --- call ORDER: first-occurrence sequence of the shared callees ---------
+    shared = set(pcalls) & set(qcalls)
+    po = first_occurrence_seq(pseq, shared)
+    qo = first_occurrence_seq(qseq, shared)
+    if po != qo:
+        keep = set(lcs_keep(po, qo))
+        movers = [n for n in po if n not in keep]
+        tag = "VIOLATION" if order_strict else "warning, exit code unchanged"
+        print(f"  order: DIVERGES on {len(movers)} of {len(po)} shared callees ({tag})")
+        for n in movers:
+            print(f"    ! ORDER    {n}  (pret pos {po.index(n) + 1}, "
+                  f"port pos {qo.index(n) + 1})")
+        print(f"    pret: {' > '.join(po)}")
+        print(f"    port: {' > '.join(qo)}")
+        if order_strict:
+            violations += len(movers)
+    elif po:
+        print(f"  order: in pret order ({len(po)} shared callees)")
+
     if violations == 0:
         print("  clean (after suppressions)")
     return 1 if violations else 0
@@ -257,6 +323,9 @@ def main():
     ap.add_argument('labels', nargs='+', metavar='PretLabel')
     ap.add_argument('--all-hits', action='store_true',
                     help='also show suppressed items (with their whys)')
+    ap.add_argument('--order-strict', action='store_true',
+                    help='count call-ORDER divergence as a violation (default: '
+                         'warning only — collapsed routines interleave freely)')
     ap.add_argument('--db', default=DB_PATH,
                     help='read an alternate translation.db — e.g. a temp rescan, '
                          'so a caller can diff before/after without dirtying the '
@@ -271,7 +340,8 @@ def main():
     con = sqlite3.connect(args.db)
     rc = 0
     for label in args.labels:
-        rc |= diff_one(con.cursor(), label, suppress, args.all_hits)
+        rc |= diff_one(con.cursor(), label, suppress, args.all_hits,
+                       args.order_strict)
     sys.exit(rc)
 
 if __name__ == '__main__':
