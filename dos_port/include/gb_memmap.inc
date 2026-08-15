@@ -120,6 +120,29 @@ W_SLOT_MACHINE_FLAGS equ 0xCD4C
 W_SLOT_MACHINE_WHEEL1_SLIP_COUNTER equ 0xCD4D
 W_SLOT_MACHINE_WHEEL2_SLIP_COUNTER equ 0xCD4E
 W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER equ 0xD095
+
+; --- pret-named aliases for the slots / hidden-event bytes above -------------
+; The W_SLOT_MACHINE_* names are the port's legacy convention and stay as the
+; primary spelling for the files already using them; these are the pret labels
+; for the SAME addresses, so engine/slots/ can be a literal pret mirror. Adding
+; alongside, never renaming (CLAUDE.md "Preserve pret Labels").
+; Addresses verified against pokeyellow.sym, not inferred.
+wSlotMachineSevenAndBarModeChance equ 0xCC5B  ; == W_SLOT_MACHINE_SEVEN_AND_BAR_MODE_CHANCE
+wSlotMachineSavedROMBank          equ 0xCC5E
+wLuckySlotHiddenEventIndex        equ 0xCD05
+wHiddenEventIndex                 equ 0xCD3F  ; == W_SLOT_MACHINE_WHEEL2_OFFSET (union)
+wSpritePlayerStateData1ImageIndex equ 0xC102  ; player sprite slot, +2 = ImageIndex
+
+; *** wHiddenEventFunctionArgument and wCanPlaySlots ARE THE SAME BYTE ($CD3D),
+; and the slots path depends on reading one BEFORE the other overwrites it. ***
+; StartSlotMachine reads wHiddenEventFunctionArgument to pick the out-of-order /
+; out-to-lunch / someone's-keys message, THEN calls AbleToPlaySlotsCheck, whose
+; every exit does `ld [wCanPlaySlots], a` — clobbering the byte it just read.
+; That ordering is pret's and is correct there because the argument is spent by
+; then; it is recorded because a reordering that looks harmless is not.
+; wDayCareStartLevel (below) is a third alias of the same address.
+wHiddenEventFunctionArgument      equ 0xCD3D
+wCanPlaySlots                     equ 0xCD3D
 W_LOADED_MON_EXP         equ 0xCFA5
 W_CUR_SPECIES            equ 0xD0B4
 W_MON_H_GROWTH_RATE      equ 0xD0CA   ; sym-verified (wMonHeader $D0B7 + BASE_GROWTH_RATE $13). A prior pass wrongly "corrected" this to $D0CB on the false premise that wMonHeader was $D0B8; the symbols-branch pokeyellow.sym puts wMonHGrowthRate at $D0CA. experience.asm (CalcExperience) consumes it; was masked by the self-contained native harness.

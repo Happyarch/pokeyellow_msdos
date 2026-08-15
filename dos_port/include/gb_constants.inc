@@ -155,6 +155,7 @@ FULL_HEAL               equ 0x34
 REVIVE                  equ 0x35
 MAX_REVIVE              equ 0x36
 SURFBOARD               equ 0x07    ; ItemUseSurfboard (the SURF field-move item)
+COIN_CASE               equ 0x45    ; constants/item_constants.asm:81 — AbleToPlaySlotsCheck
 OLD_ROD                 equ 0x4C    ; constants/item_constants.asm — fishing rods
 GOOD_ROD                equ 0x4D
 SUPER_ROD               equ 0x4E
