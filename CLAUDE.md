@@ -614,6 +614,35 @@ the environment, installs may proceed without prompting.
 
 ---
 
+## Delegating to Gemini — the `agy` CLI invocation (stop rederiving this)
+
+The maintainer sometimes asks for a second-opinion study from Gemini via the
+`agy` CLI. The working headless invocation, learned the hard way three runs in
+a row (2026-08-15), is:
+
+```sh
+agy --model gemini-3.7-flash-high --effort high \
+    --dangerously-skip-permissions --print-timeout 15m \
+    -p "PROMPT TEXT" > /path/to/log 2>&1
+```
+
+The three traps, each of which produced a silent-looking failure:
+- **No TTY in a background shell.** Without `-p` agy launches its interactive
+  bubbletea UI and dies (`error opening TTY`). Always use `-p`/`--print`.
+- **The prompt is the VALUE of `-p`, not a positional argument.** A trailing
+  positional prompt is silently ignored — the model answers an empty prompt
+  with a greeting, exit code 0.
+- **Headless mode auto-denies its tool permissions** (`read_file` etc.), so a
+  repo investigation produces nothing. `--dangerously-skip-permissions` is the
+  maintainer's standard usage for these runs. Do **NOT** add `--sandbox` — it
+  breaks agy's MCP access.
+
+Conventions for these runs: state READ-ONLY explicitly in the prompt, demand
+file:line citations, and verify the repo is untouched afterward (`git status`).
+Treat the answer per the delegation lesson in episode 61: check the REASONING
+SCOPE, not just the citations. Report output lands on stdout (redirect it) or
+at an explicit `/home/happyarch/*.md` path named in the prompt.
+
 ## Commit Policy (stay within your task's scope)
 
 **Commit the work for the task you're doing — not unrelated changes.** Use git
