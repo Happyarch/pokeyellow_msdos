@@ -235,49 +235,56 @@ battle use DEBUG_TRAINER_ROUTE=1 with the autokey flags instead)
 endif
 endif
 ifdef DEBUG_NO_WILD
-ifdef DEBUG_SEAM_KEEP_BATTLES
-$(error conflicting flags: DEBUG_NO_WILD SETS wStatusFlags4 BIT_NO_BATTLES and \
-DEBUG_SEAM_KEEP_BATTLES exists to leave it CLEAR. They fight over one bit and \
-the winner depends on ordering. Pick the behaviour you actually want)
+ifdef DEBUG_SEAMWALK
+$(error conflicting flags: DEBUG_NO_WILD and DEBUG_SEAMWALK both set wStatusFlags4 \
+BIT_NO_BATTLES for different reasons. Use one)
 endif
 endif
 
-# Decode with tools/read_seamlog.py. Defaults to the Viridian City <-> Route 22 seam.
-#   make image DEBUG_SEAM=1 [DEBUG_SEAM_MAP=0x01 DEBUG_SEAM_X=3 DEBUG_SEAM_Y=16 DEBUG_SEAM_STEPS=8]
+# SEAM TRACE (DEBUG_SEAM=1): the original Viridian City <-> Route 22 investigation.
+# Spawn beside the connection, walk across it with the real movement primitives on a
+# SCRIPTED path, and sample state every frame into SEAMLOG.BIN.
+# Decode with tools/read_seamlog.py.
+#   make image DEBUG_SEAM=1 [DEBUG_SPAWN_MAP=0x01 DEBUG_SPAWN_X=3 DEBUG_SPAWN_Y=16 DEBUG_SEAM_STEPS=8]
+#
+# SPLIT FROM THE SPAWN, 2026-08-15. This flag used to be BOTH "spawn anywhere" and
+# "run the seam experiment", so every playable seeded build advertised itself as a
+# seam harness and silently inherited its behaviour — including battle suppression,
+# which cost a maintainer an evening of hand-testing battles that could not fire.
+# The spawn is now DEBUG_SPAWN; the two seam-specific halves are DEBUG_SEAMWALK
+# (scripted walk, needs determinism, so IT suppresses battles) and DEBUG_SEAMLOG
+# (the per-frame trace, which also claims the A button).
 ifdef DEBUG_SEAM
 NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_SEAM -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SPAWN -D DEBUG_SEAMWALK -D DEBUG_SEAMLOG -D SKIP_TITLE
 endif
-# Plain PLAYABLE build seeded at an arbitrary map/coord — no trace, no dump, A stays
-# a game button. Reuses the DEBUG_SEAM spawn seeding (EnterMap + SeamReseatView) with
-# DEBUG_SEAM_NOLOG to suppress vblank.asm's per-frame SeamLogRecord hook.
-#   make run DEBUG_START_MAP=0x0D DEBUG_START_X=3 DEBUG_START_Y=45   (Route 2, below
-#   the Viridian Forest south-gate warp)
+# Plain PLAYABLE build seeded at an arbitrary map/coord — no trace, no scripted walk,
+# BATTLES ON, and A stays a game button. This is the flag for hand-testing.
+#   dos_port/run DEBUG_START_MAP=0x0D DEBUG_START_X=3 DEBUG_START_Y=45   (Route 2,
+#   below the Viridian Forest south-gate warp)
 ifdef DEBUG_START_MAP
-NASMFLAGS += -D DEBUG_SEAM -D DEBUG_SEAM_LIVE -D DEBUG_SEAM_NOLOG -D SKIP_TITLE
-NASMFLAGS += -D DEBUG_SEAM_MAP=$(DEBUG_START_MAP)
+NASMFLAGS += -D DEBUG_SPAWN -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SPAWN_MAP=$(DEBUG_START_MAP)
 ifdef DEBUG_START_X
-NASMFLAGS += -D DEBUG_SEAM_X=$(DEBUG_START_X)
+NASMFLAGS += -D DEBUG_SPAWN_X=$(DEBUG_START_X)
 endif
 ifdef DEBUG_START_Y
-NASMFLAGS += -D DEBUG_SEAM_Y=$(DEBUG_START_Y)
+NASMFLAGS += -D DEBUG_SPAWN_Y=$(DEBUG_START_Y)
 endif
-NEED_DEBUG_DUMP := 1
 endif
-$(eval $(call value_gate,DEBUG_SEAM_MAP))
-$(eval $(call value_gate,DEBUG_SEAM_X))
-$(eval $(call value_gate,DEBUG_SEAM_Y))
+$(eval $(call value_gate,DEBUG_SPAWN_MAP))
+$(eval $(call value_gate,DEBUG_SPAWN_X))
+$(eval $(call value_gate,DEBUG_SPAWN_Y))
 $(eval $(call value_gate,DEBUG_SEAM_STEPS))
 $(eval $(call value_gate,DEBUG_SEAM_DIR))
 
-# Interactive variant: seed the spawn, then hand control to the real OverworldLoop
+# Interactive seam trace: seed the spawn, then hand control to the real OverworldLoop
 # (collision LIVE, keyboard driven). Every frame is sampled into a 2048-frame ring;
-# press A to write SEAMLOG.BIN + FRAME.BIN and quit. Implies DEBUG_SEAM.
-#   make run DEBUG_SEAM_LIVE=1 DEBUG_SEAM_MAP=0x21 DEBUG_SEAM_X=36 DEBUG_SEAM_Y=8
+# press A to write SEAMLOG.BIN + FRAME.BIN and quit. Spawn + trace, NO scripted walk.
+#   dos_port/run DEBUG_SEAM_LIVE=1 DEBUG_SPAWN_MAP=0x21 DEBUG_SPAWN_X=36 DEBUG_SPAWN_Y=8
 ifdef DEBUG_SEAM_LIVE
-DEBUG_SEAM := 1
 NEED_DEBUG_DUMP := 1
-NASMFLAGS += -D DEBUG_SEAM -D DEBUG_SEAM_LIVE -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SPAWN -D DEBUG_SEAMLOG -D SKIP_TITLE
 endif
 
 # Suppress wild encounters via the game's own wStatusFlags4 BIT_NO_BATTLES gate,
@@ -286,20 +293,28 @@ endif
 # make DEBUG_NO_WILD=1
 $(eval $(call flag_gate,DEBUG_NO_WILD))
 
-# DEBUG_SEAM_KEEP_BATTLES=1: leave BIT_NO_BATTLES CLEAR in a DEBUG_SEAM /
-# DEBUG_START_MAP spawn, for scenarios that NEED their battle (the Pallet Oak
+# DEBUG_SEAM_KEEP_BATTLES: RETIRED 2026-08-15. It existed to undo battle
+# suppression that a plain spawn should never have had. Battles are now ON by
+# default and suppression belongs to DEBUG_SEAMWALK, so this flag has nothing to
+# undo. Kept only as a loud error, because it appears in older notes and in
+# scenarios that NEED their battle (the Pallet Oak
 # Pikachu catch is silently skipped — not wedged — when the bit is set, because
 # the Pallet script does not wait on the battle state).
-$(eval $(call flag_gate,DEBUG_SEAM_KEEP_BATTLES))
+ifdef DEBUG_SEAM_KEEP_BATTLES
+$(error DEBUG_SEAM_KEEP_BATTLES is obsolete and no longer does anything. Battles \
+are now ON by default in any DEBUG_START_MAP / DEBUG_SPAWN build; suppression moved \
+to DEBUG_SEAMWALK, which is the scripted seam walk that actually needs determinism. \
+Just drop the flag)
+endif
 
 # AUTOKEY_DUMP_ON_BATTLE=1: photograph the intro battle screen DETERMINISTICALLY.
 # A fixed AUTOKEY_DUMP_FRAME cannot reliably catch the narrow intro-battle window
 # because boot drift (~150 frames) shifts every absolute frame. This gate dumps
 # FRAME.BIN AUTOKEY_BATTLE_DUMP_DELAY frames after wBattleType first goes non-zero
 # (the OLD_MAN / PIKACHU intro battle), so it lands mid-battle regardless of drift.
-# Pair with DEBUG_SEAM_KEEP_BATTLES=1 so the battle actually runs.
+# Battles run by default in a DEBUG_START_MAP build; nothing extra is needed.
 #   make DEBUG_START_MAP=0x00 DEBUG_START_X=10 DEBUG_START_Y=0 DEBUG_AUTOKEY=1 \
-#        AUTOKEY_APRESS=1 AUTOKEY_NO_PARTY=1 DEBUG_SEAM_KEEP_BATTLES=1 \
+#        AUTOKEY_APRESS=1 AUTOKEY_NO_PARTY=1 \
 #        AUTOKEY_DUMP_ON_BATTLE=1 [AUTOKEY_BATTLE_DUMP_DELAY=90]
 ifdef AUTOKEY_DUMP_ON_BATTLE
 AUTOKEY_BATTLE_DUMP_DELAY ?= 90
@@ -321,9 +336,9 @@ endif
 # (+FRAME.BIN) and exits the FIRST frame the Pallet cutscene reaches
 # PLAYER_FOLLOWS_OAK (script 7) — the instant PalletMovementScript_OakMoveLeft
 # reads wXCoord. Robust against the slow A-press battle's frame drift (a fixed
-# AUTOKEY_DUMP_FRAME cannot reliably land there). Pair with DEBUG_SEAM_KEEP_BATTLES=1.
+# AUTOKEY_DUMP_FRAME cannot reliably land there). Battles run by default.
 #   make DEBUG_START_MAP=0x00 DEBUG_START_X=10 DEBUG_START_Y=0 DEBUG_AUTOKEY=1 \
-#        AUTOKEY_APRESS=1 AUTOKEY_NO_PARTY=1 DEBUG_SEAM_KEEP_BATTLES=1 AUTOKEY_DUMP_ON_FOLLOW=1
+#        AUTOKEY_APRESS=1 AUTOKEY_NO_PARTY=1 AUTOKEY_DUMP_ON_FOLLOW=1
 ifdef AUTOKEY_DUMP_ON_FOLLOW
 NASMFLAGS += -D AUTOKEY_DUMP_ON_FOLLOW
 # AUTOKEY_FOLLOW_SCRIPT=N: dump the first frame wPalletTownCurScript >= N, to

@@ -80,7 +80,7 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
 %endif
-%ifdef DEBUG_SEAM
+%ifdef DEBUG_SPAWN
 %endif
 %ifdef DEBUG_NOCLIP
 %endif
@@ -112,7 +112,7 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %endif
 ; SeamReseatView: any harness that hand-seeds wYCoord/wXCoord must derive the view
 ; pointer itself (LoadMapData doesn't — that lives in LoadDestinationMapData).
-%ifdef DEBUG_SEAM
+%ifdef DEBUG_SPAWN
 %define NEED_SEAM_RESEAT
 %endif
 %ifdef DEBUG_SIGNTEXT
@@ -749,7 +749,7 @@ WalkSpeedSample:
     ret
 %endif
 
-%ifdef DEBUG_SEAM
+%ifdef DEBUG_SPAWN
 section .data
 seam_seeded: db 0        ; EnterMap is re-entered per map transition; seed once
 seam_reseat: db 0        ; derive the view ptr only for the hand-seeded spawn
@@ -797,7 +797,7 @@ section .text
 
 %ifdef NEED_SEAM_RESEAT
 ; ---------------------------------------------------------------------------
-; SeamReseatView — DEBUG harnesses only (DEBUG_SEAM, DEBUG_SIGNTEXT). Port-only
+; SeamReseatView — DEBUG harnesses only (DEBUG_SPAWN, DEBUG_SIGNTEXT). Port-only
 ; debug helper, no pret counterpart.
 ; LoadMapData loads the header + block map but does NOT derive the view pointer
 ; (that lives in LoadDestinationMapData). A harness that spawns on an arbitrary map

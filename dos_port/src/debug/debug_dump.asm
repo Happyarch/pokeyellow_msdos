@@ -356,7 +356,7 @@ global npc_log
 global npc_log_n
 global dbg_destTile
 %endif
-%ifdef DEBUG_SEAM
+%ifdef DEBUG_SEAMLOG
 global SeamLogRecord
 global DumpSeamLog
 %endif
@@ -1269,7 +1269,7 @@ GBSTATE_TOTAL        equ GBSTATE_HDR_SIZE + GBSTATE_DIR_SIZE + GBSTATE_PAYLOAD
 %ifdef DEBUG_NPC_WALK
 fnlog: db "NPCLOG.BIN", 0
 %endif
-%ifdef DEBUG_SEAM
+%ifdef DEBUG_SEAMLOG
 fseam: db "SEAMLOG.BIN", 0
 %endif
 
@@ -1464,7 +1464,7 @@ npc_log:     resb NPC_LOG_CAP    ; appended by movement.asm:npc_dbg_record
 npc_log_n:   resd 1              ; bytes written so far
 dbg_destTile: resb 1            ; tile CL at CanWalkOntoTile entry (saved before clobber)
 %endif
-%ifdef DEBUG_SEAM
+%ifdef DEBUG_SEAMLOG
 SEAM_REC_SIZE equ 12
 SEAM_LOG_CAP  equ 24576           ; 12-byte records → 2048 frames (~34 s of play)
 seam_log:     resb SEAM_LOG_CAP   ; RING buffer, appended by SeamLogRecord
@@ -4903,9 +4903,9 @@ zero_rmcs:
     pop eax
     ret
 
-%ifdef DEBUG_SEAM
+%ifdef DEBUG_SEAMLOG
 ; ===========================================================================
-; Seam-crossing trace harness (DEBUG_SEAM). Port-only debug code — no pret
+; Seam-crossing trace harness (DEBUG_SEAMLOG). Port-only debug code — no pret
 ; counterpart. Drives the real movement primitives across a map connection and
 ; records one 12-byte sample per rendered frame, so the host can see exactly
 ; when CheckMapConnections fires and whether the player's coordinates, the block
@@ -4964,7 +4964,7 @@ SeamLogRecord:
 .stored:
     mov [seam_log_i], eax
 
-%ifdef DEBUG_SEAM_LIVE
+%ifdef DEBUG_SEAMLOG
     ; Live mode: the player drives. Pressing A dumps the trace + the screen and quits.
     mov al, [ebp + H_JOY_PRESSED]
     test al, PAD_A
@@ -5992,7 +5992,7 @@ autokey_script:
     dd 195, 203, PAD_START      ; submit the name
     dd  -1,  -1, 0
 %elifdef AUTOKEY_SEAM
-    ; DEBUG_SEAM_LIVE companion: hold AUTOKEY_PAD (default PAD_UP) into the seeded
+    ; DEBUG_SEAMLOG companion: hold AUTOKEY_PAD (default PAD_UP) into the seeded
     ; map's edge with LIVE collision, then press A so SeamLogRecord writes
     ; SEAMLOG.BIN + FRAME.BIN. This is the harness that reproduced the Viridian
     ; Forest "stuck at the gate spawn" bug headlessly.

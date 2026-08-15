@@ -32,10 +32,8 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 
-%ifdef DEBUG_SEAM_LIVE
-%ifndef DEBUG_SEAM_NOLOG
-extern SeamLogRecord     ; src/debug/debug_dump.asm (DEBUG_SEAM_LIVE trace)
-%endif
+%ifdef DEBUG_SEAMLOG
+extern SeamLogRecord     ; src/debug/debug_dump.asm (seam trace)
 %endif
 extern wait_vblank
 extern wait_pit_tick
@@ -182,14 +180,13 @@ DelayFrame:
 %ifdef DEBUG_AUTOKEY
     call AutoKeyDrive                   ; scripted joypad: replay a button sequence
 %endif
-%ifdef DEBUG_SEAM_LIVE
-%ifndef DEBUG_SEAM_NOLOG
+%ifdef DEBUG_SEAMLOG
     ; Sample the seam trace once per rendered frame, after the joypad is read so
     ; SeamLogRecord can see hJoyPressed (A = dump SEAMLOG.BIN + FRAME.BIN and exit).
-    ; DEBUG_SEAM_NOLOG (see DEBUG_START_MAP) suppresses this: it reuses the spawn
-    ; seeding for a plain playable build, where A must stay a game button.
+    ; OPT-IN, and deliberately so: a plain DEBUG_SPAWN build must leave A as an
+    ; ordinary game button. This used to be opt-OUT via DEBUG_SEAM_NOLOG, which
+    ; meant every spawn build carried the trace unless it remembered to say no.
     call SeamLogRecord
-%endif
 %endif
     ; hFrameCounter guarded decrement — pret VBlank: `and a / jr z / dec [hl]`.
     ; Unblocks callers using pret's set-hFrameCounter-and-spin idiom (M2.1).

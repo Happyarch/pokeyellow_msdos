@@ -232,24 +232,30 @@ extern set_single_window                  ; src/ppu/ppu.asm
 EnterMap:
     ; ld a, PAD_BUTTONS | PAD_CTRL_PAD / ld [wJoyIgnore], a
     mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
-%ifdef DEBUG_SEAM
-    ; Seam-crossing trace harness: spawn on the target map next to a connection
-    ; edge, walk into it with the REAL movement primitives, and sample state every
-    ; frame into SEAMLOG.BIN. Must seed wCurMap/coords BEFORE LoadMapData reads them.
+%ifdef DEBUG_SPAWN
+    ; DEBUG SPAWN: start the game on an arbitrary map at arbitrary coordinates.
+    ; Must seed wCurMap/coords BEFORE LoadMapData reads them.
     ;
-    ; Default target is the Viridian City <-> Route 22 (west) seam, the reported
-    ; repro. wStatusFlags4 BIT_NO_BATTLES suppresses wild encounters through the
-    ; engine's own gate (NewBattle checks it) rather than by de-wiring the call —
-    ; keeps the seam-crossing trace deterministic (no random battle mid-walk).
-    ; (W-1, the old battle-return tile-cache clobber, is now fixed — commit 02cf0d2f.)
-%ifndef DEBUG_SEAM_MAP
-%define DEBUG_SEAM_MAP 0x01               ; VIRIDIAN_CITY
+    ; This began life as the Viridian City <-> Route 22 seam-trace harness and
+    ; was named for it; the SPAWN is the generally useful half and is now its own
+    ; flag. The seam-specific halves are DEBUG_SEAMWALK (the scripted walk across
+    ; the connection) and DEBUG_SEAMLOG (the per-frame SEAMLOG.BIN trace), both
+    ; opt-in. Renamed 2026-08-15: the old name meant every plain playable build
+    ; advertised itself as a seam harness and silently inherited its behaviour.
+    ;
+    ; *** BATTLES ARE NOT SUPPRESSED HERE. *** They used to be, because the seam
+    ; trace wants determinism, and every interactive build inherited that — so a
+    ; maintainer hand-testing battles found none and reasonably suspected the
+    ; battle engine. Suppression now belongs to DEBUG_SEAMWALK, which is the
+    ; thing that actually needs it.
+%ifndef DEBUG_SPAWN_MAP
+%define DEBUG_SPAWN_MAP 0x01               ; VIRIDIAN_CITY
 %endif
-%ifndef DEBUG_SEAM_X
-%define DEBUG_SEAM_X 3                    ; 3 tiles from the west edge
+%ifndef DEBUG_SPAWN_X
+%define DEBUG_SPAWN_X 3                    ; 3 tiles from the west edge
 %endif
-%ifndef DEBUG_SEAM_Y
-%define DEBUG_SEAM_Y 16                   ; inside Route 22's strip (Viridian y 8..25)
+%ifndef DEBUG_SPAWN_Y
+%define DEBUG_SPAWN_Y 16                   ; inside Route 22's strip (Viridian y 8..25)
 %endif
 %ifndef DEBUG_SEAM_STEPS
 %define DEBUG_SEAM_STEPS 8                ; x: 3,2,1,0,255(cross),then 3 more in Route 22
@@ -272,20 +278,20 @@ EnterMap:
     cmp byte [seam_seeded], 0
     jne .seam_no_seed
     mov byte [seam_seeded], 1
-%ifndef DEBUG_SEAM_KEEP_BATTLES
+%ifdef DEBUG_SEAMWALK
     ; BIT_NO_BATTLES suppresses EVERY poll-driven battle — trainer and forced
     ; battles included (the documented harness trap,
     ; regression-harness-no-battles-flag-wedges-trainer-battle). A scenario that
     ; NEEDS its battle (e.g. the Pallet Oak Pikachu catch — whose script does
     ; not wait on the battle, so suppression SILENTLY skips it rather than
-    ; wedging) must pass DEBUG_SEAM_KEEP_BATTLES=1. Measured 2026-08-06: a
+    ; wedging) simply must not use DEBUG_SEAMWALK. Measured 2026-08-06: a
     ; DEBUG_START_MAP Oak-intro run "completed" with the catch battle silently
     ; suppressed by this very bit — a false witness for battle behavior.
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
 %endif
-    mov byte [ebp + W_CUR_MAP],  DEBUG_SEAM_MAP
-    mov byte [ebp + W_X_COORD],  DEBUG_SEAM_X
-    mov byte [ebp + W_Y_COORD],  DEBUG_SEAM_Y
+    mov byte [ebp + W_CUR_MAP],  DEBUG_SPAWN_MAP
+    mov byte [ebp + W_X_COORD],  DEBUG_SPAWN_X
+    mov byte [ebp + W_Y_COORD],  DEBUG_SPAWN_Y
     ; $FF = "not a warp arrival": LoadTilesetHeader's faithful tail otherwise
     ; re-derives the coords from the stale wDestinationWarpID on any dungeon-
     ; tileset map (e.g. a seeded Viridian Forest spawned at warp 0's (1,0)).
@@ -311,7 +317,7 @@ EnterMap:
     ; wedges on Route 3 with wIsInBattle=00 / wCurOpponent=$CA, and the trainer's
     ; textbox renders as overworld character sprites. Any harness that sets this
     ; flag and then expects a trainer battle will hit it; that is why
-    ; DEBUG_START_MAP (which pulls in DEBUG_SEAM, which sets the same bit) cannot
+    ; DEBUG_START_MAP (which pulls in DEBUG_SPAWN) no longer sets that bit, so it cannot
     ; pilot one.
     ;
     ; THE GARBLED TEXTBOX IS NOT A SECOND BUG. vFont is shared with the walk tiles,
@@ -341,11 +347,11 @@ EnterMap:
     ; stands where the game lets you stand, so both sides see the same screen.
     ; Overridable (SIGNTEXT_MAP/Y/X/DIR) so any map's sign can be driven headlessly —
     ; used to prove F-10 on Route 5, whose sign was one of the 7 that id 0 swallowed.
-    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
     mov byte [ebp + W_CUR_MAP], SIGNTEXT_MAP   ; default PALLET_TOWN
     mov byte [ebp + W_Y_COORD], SIGNTEXT_Y
     mov byte [ebp + W_X_COORD], SIGNTEXT_X
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_PREDEFTEXT
     ; Predef-text gate (predef-text plan Stage 2 acceptance). Stand ON the SNES tile
@@ -353,11 +359,11 @@ EnterMap:
     ; (data/events/hidden_events.asm), which the port's generator emits as
     ; `db 5, 3` = y 5, x 3 (assets/hidden_events.inc, HiddenEventsFor_REDS_HOUSE_2F).
     ; ANY_FACING, so no facing is seeded.
-    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
     mov byte [ebp + W_CUR_MAP], REDS_HOUSE_2F
     mov byte [ebp + W_Y_COORD], 5
     mov byte [ebp + W_X_COORD], 3
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; Map-script sight gate (map-script fidelity plan, Stage 3): spawn inside a
@@ -366,11 +372,11 @@ EnterMap:
     ; (x=10, y=6) facing RIGHT with view range 2 (scripts/Route3.asm
     ; Route3TrainerHeader0), so the player is the second tile in its line of sight
     ; — far enough that TrainerWalkUpToPlayer has a step to take.
-    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
     mov byte [ebp + W_CUR_MAP], MAPSCRIPT_MAP
     mov byte [ebp + W_Y_COORD], MAPSCRIPT_Y
     mov byte [ebp + W_X_COORD], MAPSCRIPT_X
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_TRAINER_ROUTE
     ; Continuous trainer-route gate (battle plan Stage 1b): the scenario that drives
@@ -385,9 +391,9 @@ EnterMap:
     ; would additionally depend on the passability of Route 3 tiles nobody has
     ; measured, and a failure there would be indistinguishable from a choreography
     ; failure.
-    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
     ;
-    ; ONE-SHOT (same latch pattern and reason as DEBUG_SEAM's seam_seeded above):
+    ; ONE-SHOT (same latch pattern and reason as DEBUG_SPAWN's seam_seeded above):
     ; the post-battle tail is `jmp EnterMap`, and pret's battle-return EnterMap
     ; deliberately does NOT rebuild sprite slots (LoadMapHeader skips InitSprites
     ; on BIT_BATTLE_OVER_OR_BLACKOUT — sprite data survives a battle because the
@@ -427,7 +433,7 @@ EnterMap:
     mov byte [ebp + W_Y_COORD], 6
     mov byte [ebp + W_X_COORD], 12
 %endif
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 .trroute_no_seed:
 %endif
 %ifdef DEBUG_SURF
@@ -444,11 +450,11 @@ EnterMap:
     ; passable LAND, so the only way to be surfing while FACING land is to be
     ; standing on a shore tile — IsNextTileShoreOrWater keeps the surf state on the
     ; way in. Seeded BEFORE LoadMapData, which reads the coords (same rule as
-    ; DEBUG_SEAM / DEBUG_MAPSCRIPT_SIGHT).
+    ; DEBUG_SPAWN / DEBUG_MAPSCRIPT_SIGHT).
     mov byte [ebp + W_CUR_MAP], PALLET_TOWN
     mov byte [ebp + W_Y_COORD], 14
     mov byte [ebp + W_X_COORD], 5
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_FISH
     ; Fishing gate (items-plan Stage 11): the DEBUG_SURF spawn — Pallet (14,5),
@@ -460,7 +466,7 @@ EnterMap:
     mov byte [ebp + W_CUR_MAP], PALLET_TOWN
     mov byte [ebp + W_Y_COORD], 14
     mov byte [ebp + W_X_COORD], 5
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_LEDGE
     ; Ledge-hop gate (regression-overworld-ledge-hop-never-advanced): spawn on
@@ -473,11 +479,11 @@ EnterMap:
     ; Column 7 avoids both Route 1 NPCs (YOUNGSTER1 wanders UP_DOWN in column 5,
     ; YOUNGSTER2 LEFT_RIGHT on row 13) and the path has no grass tile, so no RNG
     ; can diverge the two sides. Seeded BEFORE LoadMapData (same rule as
-    ; DEBUG_SEAM / DEBUG_SURF).
+    ; DEBUG_SPAWN / DEBUG_SURF).
     mov byte [ebp + W_CUR_MAP], ROUTE_1
     mov byte [ebp + W_Y_COORD], 8
     mov byte [ebp + W_X_COORD], 7
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_BATTLE_GHOST
     ; Ghost-battle gate (battle plan 4c's witness). Spawn on Route 1 column 7 —
@@ -487,15 +493,15 @@ EnterMap:
     ; two sides before the FORCED opponent does. (10,7) and (11,7) are both land
     ; ($2C) per that block's measurement off maps/Route1.blk, so the single DOWN
     ; step the autokey takes is legal and lands on plain ground.
-    ; Seeded BEFORE LoadMapData (same rule as DEBUG_SEAM / DEBUG_LEDGE).
+    ; Seeded BEFORE LoadMapData (same rule as DEBUG_SPAWN / DEBUG_LEDGE).
     ;
     ; NOTE this deliberately does NOT reuse DEBUG_START_MAP: that pulls in
-    ; DEBUG_SEAM, which sets BIT_NO_BATTLES — the exact flag NewBattle tests
+    ; DEBUG_SEAMWALK, which sets BIT_NO_BATTLES — the exact flag NewBattle tests
     ; before jumping to InitBattle, so it would suppress the battle under test.
     mov byte [ebp + W_CUR_MAP], ROUTE_1
     mov byte [ebp + W_Y_COORD], 10
     mov byte [ebp + W_X_COORD], 7
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_PALLET_OAK
     ; Oak-intro state gate: start on the Pallet north-exit tile that triggers
@@ -506,18 +512,18 @@ EnterMap:
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
 %endif
     call LoadMapData
-%ifdef DEBUG_SEAM
+%ifdef DEBUG_SPAWN
     cmp byte [seam_reseat], 0
     je .seam_no_reseat
     mov byte [seam_reseat], 0
     call SeamReseatView                   ; LoadMapData does not derive the view ptr
 .seam_no_reseat:
-%ifdef DEBUG_SEAM_LIVE
-    ; Live mode: no scripted walk. Fall through to the real OverworldLoop so the
+%ifndef DEBUG_SEAMWALK
+    ; Default: no scripted walk. Fall through to the real OverworldLoop so the
     ; player drives with the keyboard and COLLISION IS LIVE (the scripted harness
-    ; bypasses it, and its traces came back clean). vblank.asm samples every frame;
-    ; pressing A writes SEAMLOG.BIN + FRAME.BIN and exits. Drive to the spot that
-    ; reproduces, then press A.
+    ; bypasses it, and its traces came back clean). Under DEBUG_SEAMLOG,
+    ; vblank.asm samples every frame and pressing A writes SEAMLOG.BIN +
+    ; FRAME.BIN and exits; without it, A stays an ordinary game button.
 %else
     mov ecx, DEBUG_SEAM_STEPS
 .seam_step:
@@ -571,8 +577,8 @@ EnterMap:
 .seam_done:
     call DumpSeamLog                      ; SEAMLOG.BIN (returns)
     call DumpBackbuffer                   ; FRAME.BIN: the final screen — then exits
-%endif ; DEBUG_SEAM_LIVE
-%endif ; DEBUG_SEAM
+%endif ; DEBUG_SEAMWALK
+%endif ; DEBUG_SPAWN
 %ifdef DEBUG_PALLET_OAK
     call SeamReseatView
     call RunOakIntroTest                      ; dumps GBSTATE+FRAME and exits
