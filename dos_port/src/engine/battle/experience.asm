@@ -90,13 +90,23 @@ extern FlagAction               ; src/engine/flag_action.asm (not the predef var
 ; COFF for type-checking but stays out of LINK_SRCS until Wave 2 wires them.
 ; ---------------------------------------------------------------------------
 ; Text / display
-; PrintText is intentionally NOT used here: the port's PrintText is the stride-20
-; OVERWORLD renderer (opens an overworld window) and would corrupt the 40-wide battle
-; canvas. The deferred per-mon "gained EXP" / "grew level" display is done by the front
-; end (battle_menu.asm:BattleWonGiveExp) via wide_text; the two former PrintText sites
-; below route to GainExpPrintStub (a no-op) so the validated math is untouched.
-extern ShowGainedExpText        ; front end (battle_menu.asm): "<nick> gained N EXP. Points!"
-extern ShowGrewLevelText        ; front end (battle_menu.asm): "<nick> grew to level N!"
+; The port's bare PrintText is the stride-20 OVERWORLD renderer (opens an
+; overworld window) and would corrupt the 40-wide battle canvas, so pret's
+; `ld hl, GainedText / call PrintText` and `ld hl, GrewLevelText / call PrintText`
+; (experience.asm:149,249) are translated through PrintBattleText
+; (engine/battle/core.asm), the battle-msgbox-record wrapper every other
+; in-battle text site in the port already uses (core.asm: PrintEmptyString,
+; DrawPlayerHUDAndHPBar's fainted line, SendOutMon, …): it sets ESI from EAX,
+; publishes [text_msgbox] = msgbox_centered so <LINE>/<PROMPT> land in the
+; battle dialog box and the ▼ lands on W_TILEMAP, then falls into the one
+; PrintText printer. Retired 2026-08-15 fork: this used to call the bespoke
+; front-ends ShowGainedExpText / ShowGrewLevelText (battle_menu.asm), which
+; painted the box and the number by hand instead of driving the text engine;
+; pret has no battle_menu.asm at all, so those were forked names for these two
+; pret labels. GainedText/GrewLevelText (below) and their far-text bodies now
+; carry the whole message, prompt included, so no separate WaitForAPress call
+; is needed at the call sites below.
+extern PrintBattleText          ; engine/battle/core.asm — pret PrintText, battle variant
 extern GetPartyMonName          ; deferred: party name lookup
 extern LoadMonData              ; deferred: load party/box mon into wLoadedMon
 extern ModifyPikachuHappiness   ; engine/events/pikachu_happiness.asm (pret mirror; DH = PIKAHAPPY_*)
@@ -340,13 +350,16 @@ GainExperience:
     ; Save ESI so we can advance to MON_LEVEL for the level-change check.
     push esi                        ; PUSH B: save EXP-high pointer
 
-    ; Deferred: display gained EXP text and reload mon data.
-    ; GetPartyMonName, PrintText, LoadMonData all just return in Wave 1.
+    ; Display "<nick> gained N EXP. Points!" and reload mon data.
+    ; pret: ld a,[wWhichPokemon] / ld hl,wPartyMonNicks / call GetPartyMonName
+    ;       / ld hl,GainedText / call PrintText
     mov al, [ebp + wWhichPokemon]
     mov esi, wPartyMonNicks
-    call GetPartyMonName            ; REAL (home/pokemon.asm); front end also reads the party nick directly
+    call GetPartyMonName            ; REAL (home/pokemon.asm) — stages the nick at wNameBuffer,
+                                     ; which GainedText's far intro reads via TX_RAM
 %ifndef DEBUG_TRAINER_RESULT
-    call ShowGainedExpText          ; front end: "<nick> gained N EXP. Points!" (+ wait)
+    mov eax, GainedText              ; ld hl, GainedText
+    call PrintBattleText             ; call PrintText (battle msgbox variant; see extern comment above)
 %endif
     xor al, al
     mov [ebp + wMonDataLocation], al
@@ -488,7 +501,10 @@ GainExperience:
     ; expands to `ld d, \1`, and the routine's first instruction is `ld a, d`.
     mov dh, PIKAHAPPY_LEVELUP       ; farcall_ModifyPikachuHappiness: ld d, kind
     call ModifyPikachuHappiness
-    call ShowGrewLevelText          ; front end: "<nick> grew to level N!" (no wait)
+    ; pret: ld hl, GrewLevelText / call PrintText — reuses the nick GetPartyMonName
+    ; staged at wNameBuffer above (pret stages it once per mon too; no second call).
+    mov eax, GrewLevelText
+    call PrintBattleText             ; call PrintText (battle msgbox variant)
     xor al, al
     mov [ebp + wMonDataLocation], al
     call LoadMonData                ; REAL (src/home/pokemon.asm wrapper) — populates wLoadedMon
@@ -705,13 +721,14 @@ CallBattleCore:
 ; ChargeMoveEffectText: a generated far intro, then a selector that returns the
 ; next stream in HL(ESI) for TextCommandProcessor to continue with.
 ;
-; NOT YET WIRED: pret reaches GainedText at experience.asm:149 with
-; `ld hl, GainedText / call PrintText`, but the port still calls the bespoke
-; ShowGainedExpText front end (battle_menu.asm), which paints the box and the
-; number itself instead of driving the text engine. Replacing that front end is a
-; live-battle-path change with no covering fidelity scenario, so it is tracked
-; separately (stigmergy: battle-text-composed-in-code-audit, OPEN 3) rather than
-; smuggled in here. These wrappers are correct and linked; they do not execute yet.
+; WIRED 2026-08-15: GainExperience's two former ShowGainedExpText /
+; ShowGrewLevelText call sites (battle_menu.asm — forked names, pret has no
+; battle_menu.asm) now do `mov eax, GainedText/GrewLevelText / call
+; PrintBattleText`, exactly `ld hl, GainedText / call PrintText` and
+; `ld hl, GrewLevelText / call PrintText` (pret experience.asm:149,249)
+; translated through the battle-msgbox-record wrapper. The fork and its
+; str_gained/str_exppts/str_grew/str_tolevel/str_excl/print_dec/get_party_nick
+; support code are deleted from battle_menu.asm.
 ; ---------------------------------------------------------------------------
 extern _GainedText                  ; assets/battle_text.inc
 extern _WithExpAllText              ; assets/battle_text.inc

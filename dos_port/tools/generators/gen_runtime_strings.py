@@ -18,16 +18,11 @@ def db(label, parts, cm):
 FILES = {
     "battle_menu_runtime_strings.inc": [
         ("BattleMenuText", ["FIGHT ", "<PK><MN>", [0x4E], "ITEM  RUN", [0x50]]),
-        ("str_excl", ["!", [0x50]]),
         ("str_gotaway", ["Got away safely!", [0x50]]),
         ("str_cantesc", ["Can't escape!", [0x50]]),
         ("str_norun1", ["No! There's no", [0x50]]),
         ("str_norun2", ["running from a", [0x50]]),
         ("str_norun3", ["trainer battle!", [0x50]]),
-        ("str_gained", [" gained", [0x50]]),
-        ("str_exppts", [" EXP. Points!", [0x50]]),
-        ("str_grew", [" grew", [0x50]]),
-        ("str_tolevel", ["to level ", [0x50]]),
         ("str_attack", ["ATTACK", [0x50]]), ("str_defense", ["DEFENSE", [0x50]]),
         ("str_speed", ["SPEED", [0x50]]), ("str_special", ["SPECIAL", [0x50]]),
         # Tutorial-battle stand-in names (pret core.asm .oldManName/.profOakName,

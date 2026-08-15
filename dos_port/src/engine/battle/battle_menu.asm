@@ -1,13 +1,15 @@
-; battle_menu.asm — battle DRAW HELPERS + EXP/level-up display.
+; battle_menu.asm — battle DRAW HELPERS.
 ;
 ; This file is the sanctioned DRAW-LAYER divergence point for the battle front end.
 ; The bespoke battle ORCHESTRATION it used to hold (DisplayBattleMenu, MoveSelectionMenu,
 ; the turn loop, Render*/Do*AttackDamage, the fainted/no-PP/run message draws) has been
 ; replaced by the faithful translation in core.asm (engine/battle/core.asm). What remains
 ; here are: (1) the centered-canvas draw primitives core.asm calls (DrawEmptyDialogBox /
-; DrawBattleMenuBox / DrawHUDsAndHPBars); (2) the EXP/level-up display
-; routines that GainExperience (experience.asm) calls inside its per-mon loop; (3) the
-; move TYPE/PP box and FindMoveName helper.
+; DrawBattleMenuBox / DrawHUDsAndHPBars); (2) the move TYPE/PP box and FindMoveName helper.
+; The EXP/level-up display routines GainExperience (experience.asm) used to call here
+; (ShowGainedExpText / ShowGrewLevelText, forked names for pret's GainedText /
+; GrewLevelText) were retired 2026-08-15 — GainExperience now drives the pret text
+; streams directly through PrintBattleText (core.asm).
 ;
 ; The pret engine/battle/core.asm labels this file used to carry — DrawHUDsAndHPBars
 ; and TryRunningFromBattle (with its private PrintRunLine helper) — now live in that
@@ -16,7 +18,8 @@
 ; src/engine/pokemon/evos_moves.asm; it still writes this file's lvl_mon_ptr scratch,
 ; which is exported for it. WaitForTextScrollButtonPress (with its WaitForAPress alias
 ; and the wtsbp_saved_c1/c2 counters) is a pret home/joypad2.asm label and moved to that
-; mirror, src/home/joypad2.asm; the routines here still call it as WaitForAPress.
+; mirror, src/home/joypad2.asm; no routine here calls it any more (its only caller was
+; the retired ShowGainedExpText).
 ;
 ; All draw coords come from the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
@@ -95,21 +98,17 @@ global DrawBattleMenu
 global DrawBattleMenuBox
 global DrawEmptyDialogBox
 global EndBattleScreen
-global ShowGainedExpText
-global ShowGrewLevelText
 global FindMoveName
 global ShowSimulatedInputBagBox
 global DoEnemyAttackDamage
 
 extern TextBoxBorder                 ; unified text engine (text.asm), stride-aware
 extern PlaceString                   ; unified text engine; src=EAX, returns end in EBX
-extern PrintLetterDelay              ; shared per-letter delay; gates on BIT_TEXT_DELAY
 extern menu_item_step                ; src/home/window.asm — menu cursor item spacing
 extern text_row_stride               ; text.asm — W_TILEMAP row stride (battle sets 40)
 extern MoveNames
 extern Moves
 extern DelayFrame
-extern WaitForAPress                  ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
 ; --- DEBUG_BATTLE_ENEMYHIT ground-truth scaffold only ---
 extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
 extern GetDamageVarsForEnemyAttack    ; engine/battle/core.asm
@@ -128,7 +127,6 @@ extern RandomizeDamage                ; engine/battle/core.asm
 ; too, alongside the pret names.
 extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1    ; src/home/tilemap.asm
-extern RestoreBattleScreen           ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern UseItem                       ; src/home/item.asm — In: [wCurItem]; Out: [wActionResultOrTookBattleTurn]
 extern DelayFrames                   ; src/home/delay.asm — In: BL = frame count
 
@@ -215,104 +213,32 @@ ShowSimulatedInputBagBox:
 ; file.
 
 ; ===========================================================================
-; EXP / level-up display — called by GainExperience (experience.asm) per mon.
+; EXP / level-up display — RETIRED 2026-08-15 (fork retirement).
+;
+; ShowGainedExpText / ShowGrewLevelText used to live here: forked names for
+; pret's GainedText / GrewLevelText (pret engine/battle/experience.asm:149,249
+; — `ld hl, GainedText / call PrintText`; pret has no battle_menu.asm at all).
+; They hand-painted the box and the EXP/level number with PlaceString/print_dec
+; instead of driving the text engine, which is also why they needed their own
+; W_LETTER_PRINTING_DELAY save/restore bracket (d9d97f186, interim) — pret's
+; PrintText/TextCommandProcessor already brackets that flag per session.
+;
+; Both call sites (experience.asm's GainExperience, per pret's own two
+; `ld hl, Xxx / call PrintText` sites) now call GainedText/GrewLevelText
+; directly through PrintBattleText (engine/battle/core.asm), the same
+; battle-msgbox-record wrapper every other in-battle text site in the port
+; uses. GainedText/WithExpAllText are real `text_far`+`text_asm` wrappers in
+; experience.asm; BoostedText/ExpPointsText/GrewLevelText are generated Tier-1
+; data (assets/battle_text.inc) carrying pret's own prompt/no-prompt shape, so
+; no bolted-on WaitForAPress is needed at the call sites either.
+;
+; Deleted with the fork: get_party_nick (nick staging now goes through the
+; real GetPartyMonName, which experience.asm already calls) and print_dec (its
+; only caller), plus the str_gained/str_exppts/str_grew/str_tolevel/str_excl
+; generated runtime strings (tools/generators/gen_runtime_strings.py) and the
+; RestoreBattleScreen extern above, all now unreferenced. print_num3 stays —
+; PrintStatsBox (engine/pokemon/status_screen.asm) still calls it.
 ; ===========================================================================
-
-; ShowGainedExpText — pret GainedText→ExpPointsText: "<nick> gained / N EXP. Points!"
-; for wWhichPokemon; waits for A. N = wExpAmountGained (16-bit big-endian).
-ShowGainedExpText:
-    ; SESSION DISCIPLINE (fixed 2026-08-15): pret prints this via PrintText,
-    ; whose TextCommandProcessor saves the delay flags, sets the bit, and
-    ; RESTORES the saved value at TX_END. This hand-rolled front-end set the
-    ; bit and never cleared it, so the leak made every later PlaceString type
-    ; like dialog — most visibly HandleEnemyMonFainted's faithful direct
-    ; DrawPlayerHUDAndHPBar (the HUD name typed S..N..O.. on screen, maintainer
-    ; video + frame 3222 of the DEBUG_TRAINER_ROUTE run), and enemy-HUD
-    ; redraws at the next send-out. The joint DrawHUDsAndHPBars entry's
-    ; bit-clear had been masking this until the 2026-08-13 fork retirement
-    ; restored pret's DIRECT per-HUD calls. Save/restore, exactly like the
-    ; text engine's own session bracket.
-    ;
-    ; INTERIM (maintainer decision 2026-08-15): this whole routine and its twin
-    ; below are FORKED NAMES for pret's GainedText / GrewLevelText printing
-    ; (pret engine/battle/experience.asm:149,249 — `ld hl, GainedText /
-    ; call PrintText`; pret has no battle_menu.asm at all). The faithful fix
-    ; retires both in favour of the pret text streams under pret names, at
-    ; which point this bracket is deleted with the routine it patches.
-    movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
-    push eax
-    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
-    call RestoreBattleScreen
-    mov dword [menu_item_step], 2 * FW
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call TextBoxBorder
-    mov esi, W_TILEMAP + MSG_LINE1
-    call get_party_nick
-    call PlaceString
-    mov esi, ebx
-    mov eax, str_gained
-    call PlaceString
-    mov esi, ebx
-    mov edi, W_TILEMAP + MSG_LINE2
-    movzx eax, byte [ebp + wExpAmountGained]
-    shl eax, 8
-    mov al, [ebp + wExpAmountGained + 1]
-    call print_dec
-    mov esi, edi
-    mov eax, str_exppts
-    call PlaceString
-    mov esi, ebx
-    call WaitForAPress
-    pop eax
-    mov [ebp + W_LETTER_PRINTING_DELAY], al   ; restore — end of the typing session
-    ret
-
-; ShowGrewLevelText — pret GrewLevelText: "<nick> grew / to level N!" (no wait; the
-; stats box + a single WaitForTextScrollButtonPress follow). N = wCurEnemyLevel.
-ShowGrewLevelText:
-    ; Same session bracket as ShowGainedExpText above — this twin carried the
-    ; identical leak. Restoring at ret also makes the stats box that follows
-    ; place instantly, which is what hardware does (pret's session closes with
-    ; GrewLevelText before the box draws).
-    movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
-    push eax
-    or  byte [ebp + W_LETTER_PRINTING_DELAY], (1 << BIT_TEXT_DELAY)
-    mov dword [menu_item_step], 2 * FW
-    mov esi, W_TILEMAP + OUTER_OFF
-    mov bh, OUTER_H
-    mov bl, OUTER_W
-    call TextBoxBorder
-    mov esi, W_TILEMAP + MSG_LINE1
-    call get_party_nick
-    call PlaceString
-    mov esi, ebx
-    mov eax, str_grew
-    call PlaceString
-    mov esi, ebx
-    mov esi, W_TILEMAP + MSG_LINE2
-    mov eax, str_tolevel
-    call PlaceString
-    mov esi, ebx
-    mov edi, esi
-    movzx eax, byte [ebp + wCurEnemyLevel]
-    call print_dec
-    mov esi, edi
-    mov eax, str_excl
-    call PlaceString
-    mov esi, ebx
-    pop eax
-    mov [ebp + W_LETTER_PRINTING_DELAY], al   ; restore — end of the typing session
-    ret
-
-
-; get_party_nick — EAX = flat ptr to the wWhichPokemon party nick.
-get_party_nick:
-    movzx eax, byte [ebp + wWhichPokemon]
-    imul eax, eax, NAME_LENGTH
-    lea eax, [ebp + eax + wPartyMonNicks]
-    ret
 
 ; print_num3 — EAX (0..999) → 3-digit right-aligned, space-padded, at [ebp+EDI..EDI+2].
 print_num3:
@@ -343,31 +269,6 @@ print_num3:
     mov [ebp + edi], al
 .num3done:
     pop ebx
-    ret
-
-; print_dec — EAX = value → decimal at [ebp+EDI], no leading zeros, EDI advanced.
-print_dec:
-    mov ebx, 10
-    xor ecx, ecx
-.div:
-    xor edx, edx
-    div ebx
-    push edx
-    inc ecx
-    test eax, eax
-    jnz .div
-.emit:
-    pop edx
-    add dl, CHAR_DIG0
-    mov [ebp + edi], dl
-    inc edi
-    push ecx
-    push edi
-    call PrintLetterDelay
-    pop edi
-    pop ecx
-    dec ecx
-    jnz .emit
     ret
 
 ; ===========================================================================
