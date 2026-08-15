@@ -208,6 +208,11 @@ extern seam_seeded                        ; src/engine/overworld/overworld.asm
 %ifdef DEBUG_TRAINER_ROUTE
 extern trroute_seeded                     ; src/engine/overworld/overworld.asm (one-shot spawn seed latch)
 %endif
+%ifdef DEBUG_SEED_PARTY
+%ifndef DEBUG_TRAINER_ROUTE
+extern seed_party_done                    ; src/engine/overworld/overworld.asm (one-shot party seed latch)
+%endif
+%endif
 extern set_single_window                  ; src/ppu/ppu.asm
 
 
@@ -761,11 +766,23 @@ EnterMap:
     ; compares (EXP, stat exp, PP) while the beaten flag stayed correctly set.
     ; That scenario's party seed is RunTrainerRouteTestSeed (debug_dump.asm),
     ; which runs ONCE under its own guard and calls PrepareNewGameDebug itself.
+    ;
+    ; *** NOW LATCHED (2026-08-15). *** The paragraph above described the damage
+    ; and then left it in place for every non-TRAINER_ROUTE build, which made
+    ; DEBUG_START_MAP + DEBUG_SEED_PARTY — the obvious way to hand-test battles —
+    ; silently broken: the trainer engages with the "!" and then never fights,
+    ; because the post-battle EnterMap re-seed re-enters with wCurOpponent still
+    ; set. Latching costs one byte and fixes the cause, so the seeded playable
+    ; build is now usable for exactly what a human tester reaches for.
+    cmp byte [seed_party_done], 0
+    jne .seed_party_already
+    mov byte [seed_party_done], 1
     mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
     mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
     mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
     mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
     call PrepareNewGameDebug               ; seed party + bag + money (returns)
+.seed_party_already:
 %endif
 %endif
 %ifdef DEBUG_ITEMUSE

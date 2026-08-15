@@ -210,6 +210,38 @@ $(eval $(call value_gate,DEBUG_WALK_STEPS))
 # Seam-crossing trace: spawn beside a map connection, walk into it with the real
 # movement primitives, sample state every frame to SEAMLOG.BIN (+ FRAME.BIN), exit.
 # Wild encounters are suppressed via wStatusFlags4 BIT_NO_BATTLES, not by de-wiring.
+# ---------------------------------------------------------------------------
+# CONFLICTING DEBUG FLAGS — fail the BUILD, do not produce a confusing binary.
+#
+# Every combination below was diagnosed the hard way, from a symptom that looked
+# like a game bug: the harness produced a plausible-looking build that behaved
+# wrongly in a way nothing announced. A build error costs seconds; "the trainer
+# engages and then never fights" cost an evening on 2026-08-15.
+#
+# Keep the message actionable — say what to run INSTEAD, not just what is wrong.
+# ---------------------------------------------------------------------------
+ifdef DEBUG_START_MAP
+ifdef DEBUG_TRAINER_ROUTE
+$(error conflicting flags: DEBUG_START_MAP and DEBUG_TRAINER_ROUTE both seed a \
+spawn (map, coords and party), and they disagree. Use ONE: DEBUG_START_MAP for \
+an arbitrary map, or TRAINER_ROUTE_PILOT=1 for a hand-playable Route 3 trainer)
+endif
+endif
+ifdef TRAINER_ROUTE_PILOT
+ifdef DEBUG_AUTOKEY
+$(error conflicting flags: TRAINER_ROUTE_PILOT means "the keyboard drives it" \
+and DEBUG_AUTOKEY means "a script drives it". Drop one. For a scripted trainer \
+battle use DEBUG_TRAINER_ROUTE=1 with the autokey flags instead)
+endif
+endif
+ifdef DEBUG_NO_WILD
+ifdef DEBUG_SEAM_KEEP_BATTLES
+$(error conflicting flags: DEBUG_NO_WILD SETS wStatusFlags4 BIT_NO_BATTLES and \
+DEBUG_SEAM_KEEP_BATTLES exists to leave it CLEAR. They fight over one bit and \
+the winner depends on ordering. Pick the behaviour you actually want)
+endif
+endif
+
 # Decode with tools/read_seamlog.py. Defaults to the Viridian City <-> Route 22 seam.
 #   make image DEBUG_SEAM=1 [DEBUG_SEAM_MAP=0x01 DEBUG_SEAM_X=3 DEBUG_SEAM_Y=16 DEBUG_SEAM_STEPS=8]
 ifdef DEBUG_SEAM

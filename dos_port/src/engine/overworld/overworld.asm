@@ -769,6 +769,32 @@ global trroute_seeded
 section .text
 %endif
 
+%ifdef DEBUG_SEED_PARTY
+%ifndef DEBUG_TRAINER_ROUTE
+section .data
+; One-shot latch for the DEBUG_SEED_PARTY party seed — the THIRD instance of this
+; same latch pattern in this file, for the third time the same root cause bit:
+; EnterMap is re-entered on every map transition AND on the post-battle return
+; (pret's .battleOccurred tail is `jp EnterMap`), so an unguarded debug seed runs
+; again after every battle.
+;
+; Unguarded, PrepareNewGameDebug REBUILT the party post-battle: measured
+; 2026-08-05 via a D179 watchpoint, _AddPartyMon wrote the seed EXP over the
+; earned +335, erasing EXP, stat exp and PP while the beaten flag stayed set. The
+; Makefile documented that as "do not combine DEBUG_START_MAP with
+; DEBUG_SEED_PARTY" and routed people to TRAINER_ROUTE_PILOT instead; that made
+; the plain seeded build unusable for interactive battle testing, which is how a
+; maintainer testing trainer battles hit it again on 2026-08-15 (trainers engaged
+; with the "!" and then never fought).
+;
+; Latching here fixes the cause rather than documenting the symptom, and it is
+; what RunTrainerRouteTestSeed already does under its own guard.
+seed_party_done: db 0
+global seed_party_done
+section .text
+%endif
+%endif
+
 %ifdef NEED_SEAM_RESEAT
 ; ---------------------------------------------------------------------------
 ; SeamReseatView — DEBUG harnesses only (DEBUG_SEAM, DEBUG_SIGNTEXT). Port-only
