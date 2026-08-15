@@ -5982,6 +5982,7 @@ AutoKeyDrive:
     jmp .padOk
 .routeWalkNo:
 %endif
+%ifndef DEBUG_BATTLE_AISWITCH
     cmp byte [ebp + wIsInBattle], 2
     jne .stripPad
     cmp byte [ebp + wTopMenuItemY], 0x0F
@@ -5991,6 +5992,40 @@ AutoKeyDrive:
 .stripPad:
     and dl, ~(PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT) & 0xFF
 .padOk:
+%else
+    ; DEBUG_BATTLE_AISWITCH: keep the move cursor on slot 0 (FLY) so turn 1
+    ; is the 2-turn charge and the AI is asked to switch with seeded HP intact.
+    and dl, ~(PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT) & 0xFF
+.padOk:
+%endif
+    ; *** STATE-GATED A->B (2026-08-15, enemy send-out prompt wiring). *** The
+    ; faithful "will <PLAYER> change POKEMON?" YES/NO box now appears before
+    ; each enemy replacement (EnemySendOutFirstMon, pret core.asm:1405-1451).
+    ; The mGBA golden answers it NO by pressing B (its script is tilemap-aware);
+    ; this frame-scheduled cadence cannot aim, and an A landing on the box
+    ; answers YES, opens the party menu, and diverges the choreography from the
+    ; committed golden (measured 2026-08-15: the run still completed with
+    ; matching WRAM, but wore party-menu palette residue on the post-battle
+    ; overworld — 15 unmasked cgb_palette divergences). Map A -> B while the box
+    ; is up so the cadence answers NO (AUTOKEY_TRAINER_ROUTE emits A and DOWN,
+    ; no B); the press SCHEDULE stays fixed, same rule as the D-pad gate above.
+    ; The box is identified by its live HandleMenuInput state: in battle,
+    ; watched keys exactly A|B, a 2-item menu, and a cursor column that is NOT
+    ; the move menu's ($0F — MoveSelectionMenu also watches A|B and can have
+    ; wMaxMenuItem 1 with a 2-move mon, so the column is the discriminator).
+    test dl, PAD_A
+    jz .aOk
+    cmp byte [ebp + wIsInBattle], 0
+    je .aOk
+    cmp byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
+    jne .aOk
+    cmp byte [ebp + wMaxMenuItem], 1
+    jne .aOk
+    cmp byte [ebp + wTopMenuItemX], 0x0F
+    je .aOk
+    and dl, ~PAD_A & 0xFF
+    or dl, PAD_B
+.aOk:
 %endif
 %ifdef AUTOKEY_TRAINER_ROUTE17
     ; *** STATE-GATED A (measured 2026-08-15): never press A while the trainer is

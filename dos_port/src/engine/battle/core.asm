@@ -209,6 +209,9 @@ extern GBPalWhiteOut                   ; src/home/palettes.asm
 extern GBPalNormal                     ; src/home/palettes.asm
 extern RunDefaultPaletteCommand        ; src/home/palettes.asm
 extern DisplayTextBoxID                ; src/home/textbox.asm
+extern yn_box_col                      ; home/yes_no.asm — two-option box top-left, GB X
+extern yn_box_row                      ; home/yes_no.asm — two-option box top-left, GB Y
+extern yn_proj_mode                    ; home/yes_no.asm — 0 = overworld anchor, 1 = battle
 extern PlaceUnfilledArrowMenuCursor    ; src/home/window.asm
 extern StatusScreen                    ; engine/menus/status_screen.asm — predef
 extern StatusScreen2                   ; engine/menus/status_screen.asm — predef
@@ -5509,8 +5512,59 @@ EnemySendOutFirstMon:
     mov al, [ebp + wEnemyMonHP + 1]              ; ld a,[hl]  (low)
     mov [ebp + wLastSwitchInEnemyMonHP + 1], al
     mov byte [ebp + wCurrentMenuItem], 1         ; pret: default (no player switch)
-    ; TODO(faithful): the BIT_BATTLE_SHIFT "TrainerAboutToUse / switch?" prompt +
-    ; the party-menu path + SwitchPlayerMon. Treated as SET mode (no prompt).
+    ; pret core.asm:1405-1451 — the BIT_BATTLE_SHIFT "TrainerAboutToUse / switch?"
+    ; prompt. RESTORED 2026-08-15 (battle plan tail). All four early-outs land
+    ; directly on .next4 (SET-mode/no-prompt), exactly as pret's four `jr z`s do.
+    mov al, [ebp + wFirstMonsNotOutYet]
+    dec al
+    jz .next4                                    ; jr z — first mons never went out
+    mov al, [ebp + wPartyCount]
+    dec al
+    jz .next4                                    ; jr z — solo party, nothing to switch to
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    je .next4                                    ; jr z — link battle: no prompt
+    test byte [ebp + wOptions], 1 << BIT_BATTLE_SHIFT
+    jnz .next4                                   ; jr nz — SET battle style: no prompt
+    mov eax, TrainerAboutToUseText
+    call PrintBattleText                         ; ld hl,.../call PrintText
+    ; pret: hlcoord 0, 7 / lb bc, 8, 1 / wTextBoxID=TWO_OPTION_MENU / DisplayTextBoxID.
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:EnemySendOutFirstMon; behavior=the switch-prompt YES/NO box is drawn from the port's YES_NO_MENU descriptor (4x3 interior, str_yes/str_no) at yn_box_col/row=(0,7) with yn_proj_mode=1 (battle anchor, X+10/Y+3) instead of pret's raw hlcoord 0,7 / lb bc,8,1 box; evidence=DisplayTwoOptionMenu is table-driven by wTwoOptionMenuID in this port (TwoOptionMenuDesc, engine/menus/text_box.asm) rather than pret's HL/BC triple, exactly as SaveTheGame_YesOrNo (engine/menus/save.asm) already established for the identical hlcoord 0,7 / lb bc,8,1 box, and this is the first caller to select yn_proj_mode=1 rather than the overworld default, closing engine/menus/text_box.asm's own TODO(battle-verify) note on that branch; lifetime=permanent window-compositor boundary, same as SaveTheGame_YesOrNo's}
+    mov dword [yn_box_col], 0
+    mov dword [yn_box_row], 7
+    mov dword [yn_proj_mode], 1                  ; battle anchor
+    mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
+    call DisplayTextBoxID
+    mov al, [ebp + wCurrentMenuItem]
+    and al, al
+    jnz .next4                                   ; jr nz — chose NO, skip the party menu
+    mov byte [ebp + wPartyMenuTypeOrMessageID], BATTLE_PARTY_MENU
+    call DisplayPartyMenu
+.next9:
+    mov byte [ebp + wCurrentMenuItem], 1
+    jc .next7                                    ; jr c — cancelled: keep SET-mode default
+    mov al, [ebp + wWhichPokemon]
+    cmp al, [ebp + wPlayerMonNumber]
+    jnz .next6                                   ; jr nz
+    mov eax, AlreadyOutText
+    call PrintBattleText
+.next8:
+    call GoBackToPartyMenu
+    jmp .next9                                   ; jr .next9
+.next6:
+    call HasMonFainted
+    jz .next8                                    ; jr z
+    mov byte [ebp + wCurrentMenuItem], 0         ; xor a
+.next7:
+    call GBPalWhiteOut
+    call LoadHudTilePatterns
+    ; PORT-ONLY TEARDOWN — the party menu is a full-screen takeover (two window
+    ; descriptors over a blanked background) and restores the OVERWORLD msgbox
+    ; record on exit; both are wrong here. Same trio PartyMenuOrRockOrRun and
+    ; RestoreBattleScreenState already carry for the identical reason.
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [text_msgbox], msgbox_centered
+    call LoadScreenTilesFromBuffer1
 .next4:
     call ClearSprites
     ; pret: hlcoord 0,0 / lb bc, 4, 11 / call ClearScreenArea — wipe the enemy
@@ -5549,7 +5603,27 @@ EnemySendOutFirstMon:
     ; same instant, so the defect was never in the tile data.
     mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     call LoadFrontSpriteByMonIndex
-    ; ANIMATION=OFF: AnimateSendingOutMon + PlayCry.
+    ; pret core.asm:1465-1473 — GetMonHeader/LoadMonFrontSprite are already folded
+    ; into LoadFrontSpriteByMonIndex above (see its comment); this stage is the
+    ; remaining "grow out of the ball" animation + cry, RESTORED 2026-08-15
+    ; (battle plan tail). Mirrors SendOutMon's own AnimateSendingOutMon call
+    ; (this file, above): hStartTileID staged, wPredefHL staged big-endian, then
+    ; the predef and the cry. Two differences from SendOutMon, both pret's own:
+    ; hStartTileID is pret's literal -$31 here (SendOutMon's caller zeroed it
+    ; instead — AnimateSendingOutMon adds $31 back either way, landing both at
+    ; tile 0, the enemy front-pic base), and there is no POOF_ANIM / starter-
+    ; Pikachu fork — pret's EnemySendOutFirstMon never had one.
+    mov al, -0x31                                ; ld a, -$31
+    mov [ebp + hStartTileID], al                 ; ldh [hStartTileID], a
+    ; PROJ battle: pret's hlcoord 15,6 is BCOORD(15,6) here — a cell inside the
+    ; enemy pic block (BCOORD(12,0), 7x7), offset (3,6), exactly like
+    ; UI_ENEMY_PIC_ROW/_COL's own +10/+3 anchor above.
+    mov eax, BCOORD(15, 6)                       ; hlcoord 15, 6
+    mov [ebp + wPredefHL + 1], al                 ; L (low byte)
+    mov [ebp + wPredefHL], ah                     ; H (high byte) — big-endian predef word
+    call AnimateSendingOutMon                     ; predef AnimateSendingOutMon
+    mov al, [ebp + wEnemyMonSpecies2]             ; ld a,[wEnemyMonSpecies2]
+    call PlayCry
     ; pret core.asm:1474 draws the ENEMY HUD ONLY here — the player mon is not
     ; out yet at the first send-out, so wBattleMon is still zeroed. The old
     ; `call DrawHUDsAndHPBars` stand-in painted a garbage player HUD (":L0",
@@ -5560,8 +5634,18 @@ EnemySendOutFirstMon:
     ; live 2026-08-15 (maintainer screenshot + DEBUG_TRAINER_ROUTE frames)
     ; once 422a523d6 restored pret's send-out position.
     call DrawEnemyHUDAndHPBar                      ; pret: call DrawEnemyHUDAndHPBar
-    ; pret: `ld a,[wCurrentMenuItem]; and a; ret nz` — always nz here (we never prompt
-    ; for a player switch), so the SwitchPlayerMon tail is unreachable and deferred.
+    ; pret core.asm:1475-1482 — RESTORED 2026-08-15 (battle plan tail). This tail
+    ; is reachable now that the switch prompt above can actually clear
+    ; wCurrentMenuItem: a player who accepts the switch-prompt and picks a live,
+    ; not-already-out mon falls through into SwitchPlayerMon exactly as pret does.
+    mov al, [ebp + wCurrentMenuItem]
+    and al, al
+    jnz .ret                                       ; ret nz
+    mov byte [ebp + wPartyGainExpFlags], 0          ; xor a
+    mov byte [ebp + wPartyFoughtCurrentEnemyFlags], 0
+    call SaveScreenTilesToBuffer1
+    jmp SwitchPlayerMon                             ; jp SwitchPlayerMon
+.ret:
     ret
 
 ; ===========================================================================

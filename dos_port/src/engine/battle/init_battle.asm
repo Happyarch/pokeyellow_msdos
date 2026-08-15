@@ -446,6 +446,9 @@ _InitBattleCommon:
     ; Presentation and the turn loop are intentionally not entered.
     cmp byte [ebp + wIsInBattle], 2
     jne .enemyInitialized
+    ; First send-out: suppress the switch prompt exactly as pret StartBattle:141
+    ; does on the live path (this gate stops before that block runs).
+    mov byte [ebp + wFirstMonsNotOutYet], 1
     call EnemySendOutFirstMon
     stc
     ret
@@ -478,6 +481,9 @@ _InitBattleCommon:
     ; here, exactly as the old pre-intro hoist did for these gates.
     cmp byte [ebp + wIsInBattle], 2
     jne .resultNoEnemySendOut
+    ; Same first-send-out prompt suppression as pret StartBattle:141 — this
+    ; jump skips the live block that sets it.
+    mov byte [ebp + wFirstMonsNotOutYet], 1
     call EnemySendOutFirstMon
 .resultNoEnemySendOut:
     jmp .playerSendOut
@@ -524,6 +530,26 @@ _InitBattleCommon:
     mov bl, 10
     call ClearScreenArea
     call HideBattlePokeballs                     ; pret's ClearSprites
+    ; pret StartBattle:136-141 — zero the gain-exp / fought / took-turn flags
+    ; and raise wFirstMonsNotOutYet before the first send-out. RESTORED
+    ; 2026-08-15: the port carried only the CLEARS of wFirstMonsNotOutYet
+    ; (MainInBattleLoop, trainer AI) and never this SET — harmless while the
+    ; send-out switch prompt was unwired, but the moment the faithful prompt
+    ; landed, every trainer battle opened with a "will you change POKeMON?"
+    ; box at BATTLE START (pret suppresses the first-send-out prompt through
+    ; exactly this flag; measured: trainer_battle_route stuck on the box at
+    ; frame 15000 with zero EXP gained).
+    xor al, al                                   ; xor a
+    mov [ebp + wPartyGainExpFlags], al
+    mov [ebp + wPartyFoughtCurrentEnemyFlags], al
+    mov [ebp + wActionResultOrTookBattleTurn], al
+    inc al                                       ; inc a
+    mov [ebp + wFirstMonsNotOutYet], al          ; ld [wFirstMonsNotOutYet], a
+    ; pret :142-154 (.findFirstAliveEnemyMonLoop) feeds ONLY
+    ; wSerialExchangeNybbleReceiveData, the link-battle mailbox that
+    ; EnemySendOutFirstMon's link arm reads — deferred with that arm
+    ; (TODO-HW: network HAL, Phase 4).
+    ;
     ; pret StartBattle:155-160 — a TRAINER battle sends out the enemy's first
     ; mon HERE, after the intro: EnemySendOutFirstMon slides the trainer pic
     ; off, prints "<TRAINER> sent out <MON>!", decodes + places the mon's front
