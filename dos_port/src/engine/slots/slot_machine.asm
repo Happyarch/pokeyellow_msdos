@@ -39,6 +39,7 @@ global SlotMachine_StopOrAnimWheel2
 global SlotMachine_StopOrAnimWheel3
 global SlotMachine_StopWheel1Early
 global SlotMachine_StopWheel2Early
+global SlotMachine_HandleInputWhileWheelsSpin
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -75,6 +76,8 @@ extern WaitForSoundToFinish     ; src/home/delay.asm
 extern PlaySound                ; src/home/audio.asm
 extern UpdateCGBPal_OBP0        ; src/home/cgb_palettes.asm
 extern DelayFrames              ; src/home/delay.asm
+extern DelayFrame               ; src/home/vblank.asm
+extern JoypadLowSensitivity     ; src/home/joypad2.asm
 extern PrintText                ; src/home/window.asm
 
 %define BIT_SLOTS_CAN_WIN 6
@@ -771,5 +774,35 @@ SlotMachine_StopWheel2Early:
     ret
 .exit:
     ret
+
+; -----------------------------------------------------------------------------
+; SlotMachine_HandleInputWhileWheelsSpin
+; -----------------------------------------------------------------------------
+SlotMachine_HandleInputWhileWheelsSpin:
+    call DelayFrame
+    call JoypadLowSensitivity
+    mov al, byte [ebp + H_JOY5]
+    and al, PAD_A
+    jz .exit
+    mov esi, wStoppingWhichSlotMachineWheel
+    mov al, byte [ebp + esi]
+    dec al
+    mov edx, wSlotMachineWheel1SlipCounter
+    jz .skip
+    dec al
+    mov edx, wSlotMachineWheel2SlipCounter
+    jz .skip
+.loop:
+    inc byte [ebp + esi]
+    mov al, SFX_SLOTS_STOP_WHEEL
+    jmp PlaySound
+.skip:
+    mov al, byte [ebp + edx]
+    test al, al
+    jnz .exit
+    jmp .loop
+.exit:
+    ret
+
 
 
