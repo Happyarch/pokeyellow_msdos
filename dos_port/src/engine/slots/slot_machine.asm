@@ -40,6 +40,7 @@ global SlotMachine_StopOrAnimWheel3
 global SlotMachine_StopWheel1Early
 global SlotMachine_StopWheel2Early
 global SlotMachine_HandleInputWhileWheelsSpin
+global SlotMachine_CheckForMatches
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -74,11 +75,14 @@ extern SubBCDPredef             ; src/engine/math/bcd.asm
 extern AddBCDPredef             ; src/engine/math/bcd.asm
 extern WaitForSoundToFinish     ; src/home/delay.asm
 extern PlaySound                ; src/home/audio.asm
+extern UpdateCGBPal_BGP         ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP0        ; src/home/cgb_palettes.asm
 extern DelayFrames              ; src/home/delay.asm
 extern DelayFrame               ; src/home/vblank.asm
 extern JoypadLowSensitivity     ; src/home/joypad2.asm
 extern PrintText                ; src/home/window.asm
+extern WaitForTextScrollButtonPress ; src/home/joypad2.asm
+extern CopyData                 ; src/home/copy.asm
 
 %define BIT_SLOTS_CAN_WIN 6
 %define BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR 7
@@ -95,11 +99,18 @@ wSlotMachineWheel1Offset        equ 0xCD3E
 wSlotMachineWheel2Offset        equ 0xCD3F
 wSlotMachineWheel3Offset        equ 0xCD40
 wSlotMachineWheel1BottomTile    equ 0xCD41
+wSlotMachineWheel1MiddleTile    equ 0xCD42
+wSlotMachineWheel1TopTile       equ 0xCD43
 wSlotMachineWheel2BottomTile    equ 0xCD44
+wSlotMachineWheel2MiddleTile    equ 0xCD45
+wSlotMachineWheel2TopTile       equ 0xCD46
 wSlotMachineWheel3BottomTile    equ 0xCD47
+wSlotMachineWheel3MiddleTile    equ 0xCD48
+wSlotMachineWheel3TopTile       equ 0xCD49
 wSlotMachineFlags               equ 0xCD4C
 wSlotMachineWheel1SlipCounter   equ 0xCD4D
 wSlotMachineWheel2SlipCounter   equ 0xCD4E
+wSlotMachineRerollCounter       equ 0xCD4F
 
 
 ; -----------------------------------------------------------------------------
@@ -804,5 +815,112 @@ SlotMachine_HandleInputWhileWheelsSpin:
 .exit:
     ret
 
+; -----------------------------------------------------------------------------
+; SlotMachine_CheckForMatches
+; -----------------------------------------------------------------------------
+SlotMachine_CheckForMatches:
+    call SlotMachine_GetWheel3Tiles
+    mov al, byte [ebp + wSlotMachineBet]
+    cmp al, 2
+    jz .checkMatchesFor2CoinBet
+    cmp al, 1
+    jz .checkMatchFor1CoinBet
+; 3 coin bet allows diagonal matches (plus the matches for 1/2 coin bets)
+    mov esi, wSlotMachineWheel1BottomTile
+    mov edi, wSlotMachineWheel2MiddleTile
+    mov ecx, wSlotMachineWheel3TopTile
+    call SlotMachine_CheckForMatch
+    jz .foundMatch
+    mov esi, wSlotMachineWheel1TopTile
+    mov edi, wSlotMachineWheel2MiddleTile
+    mov ecx, wSlotMachineWheel3BottomTile
+    call SlotMachine_CheckForMatch
+    jz .foundMatch
+; 2 coin bet allows top/bottom horizontal matches (plus the match for a 1 coin bet)
+.checkMatchesFor2CoinBet:
+    mov esi, wSlotMachineWheel1TopTile
+    mov edi, wSlotMachineWheel2TopTile
+    mov ecx, wSlotMachineWheel3TopTile
+    call SlotMachine_CheckForMatch
+    jz .foundMatch
+    mov esi, wSlotMachineWheel1BottomTile
+    mov edi, wSlotMachineWheel2BottomTile
+    mov ecx, wSlotMachineWheel3BottomTile
+    call SlotMachine_CheckForMatch
+    jz .foundMatch
+; 1 coin bet only allows a middle horizontal match
+.checkMatchFor1CoinBet:
+    mov esi, wSlotMachineWheel1MiddleTile
+    mov edi, wSlotMachineWheel2MiddleTile
+    mov ecx, wSlotMachineWheel3MiddleTile
+    call SlotMachine_CheckForMatch
+    jz .foundMatch
+    mov al, byte [ebp + wSlotMachineFlags]
+    and al, (1 << BIT_SLOTS_CAN_WIN) | (1 << BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR)
+    jz .noMatch
+    mov esi, wSlotMachineRerollCounter
+    dec byte [ebp + esi]
+    jnz .rollWheel3DownByOneSymbol
+.noMatch:
+    mov esi, NotThisTimeText
+    call PrintText
+.done:
+    xor al, al
+    mov byte [ebp + wMuteAudioAndPauseMusic], al
+    ret
+.rollWheel3DownByOneSymbol:
+    call SlotMachine_AnimWheel3
+    call DelayFrame
+    call SlotMachine_AnimWheel3
+    call DelayFrame
+    jmp SlotMachine_CheckForMatches
+.foundMatch:
+    mov al, byte [ebp + wSlotMachineFlags]
+    and al, (1 << BIT_SLOTS_CAN_WIN) | (1 << BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR)
+    jz .rollWheel3DownByOneSymbol ; roll wheel if player isn't allowed to win
+    and al, (1 << BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR)
+    jnz .acceptMatch
+; if 7/bar matches aren't enabled and the match was a 7/bar symbol, roll wheel
+    mov al, byte [ebp + esi]
+    cmp al, (SLOTSBAR >> 8) + 1
+    jc .rollWheel3DownByOneSymbol
+.acceptMatch:
+    mov al, byte [ebp + esi]
+    sub al, 2
+    mov byte [ebp + wSlotMachineWinningSymbol], al
+    movzx eax, al
+    mov edx, [SlotRewardPointers + eax * 2]
+    mov esi, [SlotRewardPointers + eax * 2 + 4]
+    push edx
+    sub esi, ebp
+    mov dx, wStringBuffer
+    mov bx, 4 ; every SlotReward*Text is at most 4 bytes
+    call CopyData
+    pop esi
+    push .flashScreenLoop
+    push esi
+    ret
 
-
+.flashScreenLoop:
+    mov al, byte [ebp + 0xFF47]              ; ldh a, [rBGP]
+    xor al, 0x40
+    mov byte [ebp + 0xFF47], al              ; ldh [rBGP], a
+    call UpdateCGBPal_BGP
+    mov bl, 5
+    call DelayFrames
+    dec bh
+    jnz .flashScreenLoop
+    mov esi, wPayoutCoins
+    mov byte [ebp + esi], dh
+    inc esi
+    mov byte [ebp + esi], dl
+    call SlotMachine_PrintPayoutCoins
+    mov esi, SymbolLinedUpSlotMachineText
+    call PrintText
+    call WaitForTextScrollButtonPress
+    call SlotMachine_PayCoinsToPlayer
+    call SlotMachine_PrintPayoutCoins
+    mov al, 0xE4
+    mov byte [ebp + 0xFF48], al              ; ldh [rOBP0], a
+    call UpdateCGBPal_OBP0
+    jmp .done
