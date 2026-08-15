@@ -16,11 +16,8 @@
 ; RETIREMENT: these are per-object handlers (project-conventions two-tier rule:
 ; behavior is Tier-2 code). Each retires when its owning subsystem / map lands:
 ;   * HiddenItems / HiddenCoins  -> overworld-events Stage 3 bullets 2-3 + items plan
-;   * StartSlotMachine           -> a real body exists in engine/slots/
-;                                   game_corner_slots.asm but that file is not yet
-;                                   in any Makefile SRCS list; promoting it there
-;                                   RETIRES this stub (delete it — dup global = loud
-;                                   link error, per the stub no-shadow rule).
+;   * StartSlotMachine           -> RETIRED 2026-08-15. engine/slots/ is in the
+;                                   Makefile SRCS list and supplies the real body.
 ;   * OpenPokemonCenterPC / OpenRedsPC / BillsHousePC / CableClub{Left,Right}Gameboy
 ;                                -> PC / cable-club service work (Stage 2 tails / Phase 4)
 ;   * Mansion{1..4}Script_Switches, GymTrashScript/GymStatues, the Print*Text
@@ -92,11 +89,6 @@ CableClubLeftGameboy:
     ret
 global CableClubRightGameboy
 CableClubRightGameboy:
-    ret
-
-; --- Game Corner slots (real body in engine/slots/game_corner_slots.asm, unlinked) ---
-global StartSlotMachine
-StartSlotMachine:
     ret
 
 ; --- Pokémon Mansion switch scripts (Stage 5: Cinnabar) ---

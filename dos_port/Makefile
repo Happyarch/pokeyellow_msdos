@@ -496,6 +496,10 @@ GAME_SRCS := \
     src/engine/overworld/hidden_events.asm \
     src/data/hidden_events_data.asm \
     src/engine/overworld/hidden_object_stubs.asm \
+    src/engine/slots/slot_machine.asm \
+    src/engine/slots/game_corner_slots.asm \
+    src/engine/slots/game_corner_slots2.asm \
+    src/data/events/slot_machine_wheels.asm \
     src/engine/menus/swap_items.asm \
     src/engine/link/cable_club.asm \
     src/engine/overworld/ledges.asm \

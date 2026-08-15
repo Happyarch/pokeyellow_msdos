@@ -460,7 +460,15 @@ SlotMachine_UpdateTwoCoinBallTiles:
 ; SlotMachine_UpdateOneCoinBallTiles
 ; -----------------------------------------------------------------------------
 SlotMachine_UpdateOneCoinBallTiles:
-    hlcoord 3, 6
+    ; pret: `hlcoord 3, 6`, expanded inline. This label's ONLY instruction is the
+    ; coord load and it then FALLS THROUGH into SlotMachine_UpdateBallTiles, which
+    ; is pret's own structure. update_label_db refuses to classify a boundary whose
+    ; last token is a macro it cannot prove returns control (hlcoord's body has a
+    ; %if, and a conditional arm could hold a jmp/ret), so it errors out rather
+    ; than manufacture a fall-through edge. Expanding the one instruction here
+    ; keeps the fall-through and lets the scanner see it; every other hlcoord in
+    ; this file is mid-routine and unaffected.
+    mov esi, (6) * SCREEN_WIDTH + (3) + W_TILEMAP
 
 ; -----------------------------------------------------------------------------
 ; SlotMachine_UpdateBallTiles
