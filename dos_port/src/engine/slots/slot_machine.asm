@@ -43,6 +43,7 @@ global SlotMachine_HandleInputWhileWheelsSpin
 global SlotMachine_CheckForMatches
 global SlotMachine_SpinWheels
 global LoadSlotMachineTiles
+global MainSlotMachineLoop
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -90,6 +91,12 @@ extern DisableLCD               ; src/home/lcd.asm
 extern EnableLCD                ; src/home/lcd.asm
 extern SlotMachineTiles2            ; pret engine/battle/animations.asm
 extern g_tilecache_dirty            ; src/ppu/ppu.asm
+extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
+extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm
+extern TextBoxBorder                ; src/home/text.asm
+extern PlaceString                  ; src/home/text.asm
+extern HandleMenuInput              ; src/home/window.asm
+extern DisplayTextBoxID             ; src/home/textbox.asm
 
 %define BIT_SLOTS_CAN_WIN 6
 %define BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR 7
@@ -1014,4 +1021,101 @@ LoadSlotMachineTiles:
     call SlotMachine_AnimWheel1
     call SlotMachine_AnimWheel2
     jmp SlotMachine_AnimWheel3
+
+; -----------------------------------------------------------------------------
+; MainSlotMachineLoop
+; -----------------------------------------------------------------------------
+MainSlotMachineLoop:
+    call SlotMachine_PrintCreditCoins
+    xor al, al
+    mov esi, wPayoutCoins
+    mov byte [ebp + esi], al
+    inc esi
+    mov byte [ebp + esi], al
+    call SlotMachine_PrintPayoutCoins
+    mov esi, BetHowManySlotMachineText
+    call PrintText
+    call SaveScreenTilesToBuffer1
+.loop:
+    mov al, PAD_A | PAD_B
+    mov byte [ebp + wMenuWatchedKeys], al
+    mov byte [ebp + wMaxMenuItem], 2
+    mov byte [ebp + wTopMenuItemY], 12
+    mov byte [ebp + wTopMenuItemX], 15
+    xor al, al
+    mov byte [ebp + wCurrentMenuItem], al
+    mov byte [ebp + wLastMenuItem], al
+    mov byte [ebp + wMenuWatchMovingOutOfBounds], al
+    hlcoord 14, 11
+    mov bh, 5
+    mov bl, 4
+    call TextBoxBorder
+    hlcoord 16, 12
+    mov eax, CoinMultiplierSlotMachineText
+    call PlaceString
+    call HandleMenuInput
+    and al, PAD_B
+    jnz LoadScreenTilesFromBuffer1
+    mov al, byte [ebp + wCurrentMenuItem]
+    mov bh, al
+    mov al, 3
+    sub al, bh
+    mov byte [ebp + wSlotMachineBet], al
+    mov esi, wPlayerCoins
+    mov bl, al
+    mov al, byte [ebp + esi]
+    inc esi
+    and al, al
+    jnz .skip1
+    mov al, byte [ebp + esi]
+    cmp al, bl
+    jnc .skip1
+    mov esi, NotEnoughCoinsSlotMachineText
+    call PrintText
+    jmp .loop
+.skip1:
+    call LoadScreenTilesFromBuffer1
+    call SlotMachine_SubtractBetFromPlayerCoins
+    call SlotMachine_LightBalls
+    call SlotMachine_SetFlags
+    mov al, 4
+    mov esi, wSlotMachineWheel1SlipCounter
+    mov byte [ebp + esi], al
+    inc esi
+    mov byte [ebp + esi], al
+    inc esi
+    mov byte [ebp + esi], al
+    call WaitForSoundToFinish
+    mov al, SFX_SLOTS_NEW_SPIN
+    call PlaySound
+    mov esi, StartSlotMachineText
+    call PrintText
+    call SlotMachine_SpinWheels
+    call SlotMachine_CheckForMatches
+    mov esi, wPlayerCoins
+    mov al, byte [ebp + esi]
+    inc esi
+    or al, byte [ebp + esi]
+    jnz .skip2
+    mov esi, OutOfCoinsSlotMachineText
+    call PrintText
+    mov bl, 60
+    jmp DelayFrames
+.skip2:
+    mov esi, OneMoreGoSlotMachineText
+    call PrintText
+    hlcoord 14, 12
+    mov bh, 13
+    mov bl, 15
+    xor al, al
+    mov byte [ebp + wTwoOptionMenuID], al
+    mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
+    call DisplayTextBoxID
+    mov al, byte [ebp + wCurrentMenuItem]
+    and al, al
+    jnz .ret
+    call SlotMachine_PutOutLitBalls
+    jmp MainSlotMachineLoop
+.ret:
+    ret
 
