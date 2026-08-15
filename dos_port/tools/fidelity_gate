@@ -129,6 +129,44 @@ BOLD, RED, GREEN, YELLOW, DIM, OFF = (
 # and the status. Anything else differing is a real divergence.
 HEADER_RE = re.compile(r'^pret: .*   port: .*   status: ')
 
+# faithdiff's call-ORDER report (added 3498bbe69, "tools: faithdiff learns call
+# ORDER") is noise for the move-battery comparison, not signal: a baseline
+# captured with an older faithdiff has no order block at all, so every clean
+# move would otherwise show a spurious divergence in every faithdiff'd
+# section. It's safe to drop: the battery's PRIMARY check is the whole-tree
+# line invariant (classify_lines/enumerate_decls below), which already catches
+# a genuine reorder as altered/moved code; and faithdiff's own order finding is
+# a warning by design (it does not change faithdiff's exit code unless
+# --order-strict is passed, which this tool never does), so stripping it from
+# this SECONDARY witness loses no coverage the battery is responsible for.
+#
+# Three line shapes, all emitted ONLY inside an order block:
+#   "  order: in pret order (5 shared callees)"
+#   "  order: DIVERGES on 3 of 6 shared callees (warning, exit code unchanged)"
+#   "    ! ORDER    PrintText  (pret pos 2, port pos 6)"
+#   "    pret: A > B > C"     (4-space indent, " > "-joined names)
+#   "    port: A > C > B"
+# The last two ("chain lines") must NOT be confused with HEADER_RE's section
+# header — that line sits at COLUMN 0 (no leading whitespace) and contains
+# "   status: ", whereas a chain line is always indented and contains " > ".
+# Anchoring ORDER_CHAIN_RE on leading whitespace keeps the two disjoint.
+ORDER_HEADER_RE = re.compile(r'^\s*order: ')
+ORDER_MOVER_RE = re.compile(r'^\s*! ORDER\b')
+ORDER_CHAIN_RE = re.compile(r'^\s+(pret|port): .* > .*')
+
+
+def strip_order_noise(lines):
+    """Drop faithdiff's call-ORDER report lines before diffing a move-battery
+    capture against its baseline. Applied at the COMPARISON SITE only — the
+    stored baseline.json/faithdiff.txt/faithdiff.after.txt files stay raw, so
+    a future reader sees exactly what was captured. See the ORDER_*_RE block
+    above for why this is safe to drop.
+    """
+    return [ln for ln in lines
+            if not ORDER_HEADER_RE.match(ln)
+            and not ORDER_MOVER_RE.match(ln)
+            and not ORDER_CHAIN_RE.match(ln)]
+
 # In a pure relocation the only lines that may legitimately APPEAR or VANISH are
 # declarations — everything else must move verbatim. A dropped or new line that
 # is not one of these means code was altered, invented, or lost.
@@ -569,7 +607,11 @@ def move_verify(outdir, gates, extra=None):
     after = faithdiff_capture(comparable, db=tmpdb)
     with open(os.path.join(outdir, "faithdiff.after.txt"), "w", encoding="utf-8") as fh:
         fh.write(after)
-    b, a = before.splitlines(), after.splitlines()
+    # Normalize away faithdiff's call-ORDER report before comparing — it is a
+    # secondary-witness concern (see ORDER_*_RE above), not something this
+    # comparison is responsible for catching.
+    b = strip_order_noise(before.splitlines())
+    a = strip_order_noise(after.splitlines())
     # A real unified diff, so an inserted line does not cascade every line after
     # it into the report. Only the changed lines are shown, and only lines that
     # are NOT the intended port:/status: header count as a divergence.
