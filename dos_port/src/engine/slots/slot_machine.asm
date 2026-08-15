@@ -17,6 +17,10 @@ global SlotMachine_GetWheel3Tiles
 global SlotMachine_GetWheel2Tiles
 global SlotMachine_GetWheel1Tiles
 global SlotMachine_GetWheelTiles
+global SlotMachine_AnimWheel1
+global SlotMachine_AnimWheel2
+global SlotMachine_AnimWheel3
+global SlotMachine_AnimWheel
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -233,5 +237,84 @@ SlotMachine_GetWheelTiles:
     dec cl
     jnz .loop
     ret
+
+; -----------------------------------------------------------------------------
+; SlotMachine_AnimWheel1
+; -----------------------------------------------------------------------------
+SlotMachine_AnimWheel1:
+    mov ebx, SlotMachineWheel1
+    mov edx, W_SLOT_MACHINE_WHEEL1_OFFSET
+    mov esi, W_SHADOW_OAM
+    mov byte [ebp + wBaseCoordX], 0x30
+    jmp SlotMachine_AnimWheel
+
+; -----------------------------------------------------------------------------
+; SlotMachine_AnimWheel2
+; -----------------------------------------------------------------------------
+SlotMachine_AnimWheel2:
+    mov ebx, SlotMachineWheel2
+    mov edx, W_SLOT_MACHINE_WHEEL2_OFFSET
+    mov esi, W_SHADOW_OAM + 12 * 4
+    mov byte [ebp + wBaseCoordX], 0x50
+    jmp SlotMachine_AnimWheel
+
+; -----------------------------------------------------------------------------
+; SlotMachine_AnimWheel3
+; -----------------------------------------------------------------------------
+SlotMachine_AnimWheel3:
+    mov ebx, SlotMachineWheel3
+    mov edx, W_SLOT_MACHINE_WHEEL3_OFFSET
+    mov esi, W_SHADOW_OAM + 24 * 4
+    mov byte [ebp + wBaseCoordX], 0x70
+
+; -----------------------------------------------------------------------------
+; SlotMachine_AnimWheel
+; -----------------------------------------------------------------------------
+SlotMachine_AnimWheel:
+    mov byte [ebp + wBaseCoordY], 0x58
+    push edx
+    movzx eax, byte [ebp + edx]
+    lea edx, [ebx + eax]
+.loop:
+    mov al, byte [ebp + wBaseCoordY]
+    mov byte [ebp + esi], al
+    inc esi
+    mov al, byte [ebp + wBaseCoordX]
+    mov byte [ebp + esi], al
+    inc esi
+    mov al, byte [edx]
+    mov byte [ebp + esi], al
+    inc esi
+    mov byte [ebp + esi], 0x80
+    inc esi
+    mov al, byte [ebp + wBaseCoordY]
+    mov byte [ebp + esi], al
+    inc esi
+    mov al, byte [ebp + wBaseCoordX]
+    add al, 8
+    mov byte [ebp + esi], al
+    inc esi
+    mov al, byte [edx]
+    inc al
+    mov byte [ebp + esi], al
+    inc esi
+    mov byte [ebp + esi], 0x80
+    inc esi
+    inc edx
+    mov al, byte [ebp + wBaseCoordY]
+    sub al, 8
+    mov byte [ebp + wBaseCoordY], al
+    cmp al, 0x28
+    jnz .loop
+    pop edx
+    mov al, byte [ebp + edx]
+    inc al
+    cmp al, 30
+    jnz .skip
+    xor al, al
+.skip:
+    mov byte [ebp + edx], al
+    ret
+
 
 
