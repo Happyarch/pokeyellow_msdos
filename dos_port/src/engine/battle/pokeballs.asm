@@ -1,44 +1,23 @@
-; pokeballs.asm — battle party-status pokéballs (Wave 2, battle-intro polish).
+; pokeballs.asm — battle party-status pokéballs: the port-only OAM HAL around
+; pret's DrawAllPokeballs.
 ;
-; Faithful-in-spirit port of engine/battle/draw_hud_pokeball_gfx.asm (DrawAllPokeballs
-; / SetupPokeballs / PickPokeball / WritePokeballOAMData). pret draws the party-status
-; balls as OAM sprites; the port's battle screen is BG-tilemap with OAM otherwise off,
-; and its $00-$7F BG tile range is fully used, so we keep pret's OAM approach: the four
-; ball tiles (gfx/battle/balls.2bpp: ok / status / fainted / empty) load into the free
-; OBJ tile area ($8000), the row is written as OAM entries, and PrepareStaticOAM +
-; render_sprites composite them. They are an INTRO element (faithful): shown over the
-; "Wild X appeared!" screen, then the HP-bar HUD replaces them for the battle proper.
+; DrawAllPokeballs / SetupPokeballs / PickPokeball / WritePokeballOAMData / the
+; HUD-tile placers are now ALL translated under their own pret names in the
+; mirror file, engine/battle/draw_hud_pokeball_gfx.asm (fork-retirement steps
+; 1-3 and 5, landed 2026-08-12). What is left here — DrawBattlePokeballs and
+; HideBattlePokeballs — has no pret counterpart at all (grepped the pret tree:
+; no such labels exist upstream); they are the port's own glue around the OAM
+; compositor, documented below with DEVIATION annotations rather than folded
+; into the mirror, because there is nothing pret-named to fold them under.
 ;
-; Wild battle: only the player's balls (pret returns early). Trainer battle
-; (wIsInBattle == 2): the enemy's row too.
-;
-; Positions follow pret's OAM coords + the port's battle centering (+80px X, +24px Y).
+; Wild battle: only the player's balls (pret returns early inside
+; DrawAllPokeballs). Trainer battle (wIsInBattle == 2): the enemy's row too.
 ;
 ; Register map: a=AL, EBP=GB base; GB memory [EBP+addr]. OAM/params via .bss/.data.
 
 bits 32
 
 %include "gb_memmap.inc"
-%include "gb_constants.inc"
-%define UI_LAYOUT_EQUATES_ONLY 1
-%include "assets/ui_layout_battle.inc"
-
-; pret's OBJ tile ids (LoadPartyPokeballGfx loads at vSprites tile $31;
-; PickPokeball: $31 regular, $32 black/status, $33 crossed/fainted, $34 empty).
-; The port used to park these at tiles $00-$03 — golden-diverged in both the
-; OAM tile bytes and the vChars0 slots; pret's slots are free here too.
-; The ball tile ids moved to draw_hud_pokeball_gfx.asm with PickPokeball, which
-; is the only thing that chose between them. BALL_EMPTY was the last one used
-; here and its user is gone too.
-
-; OAM bases from the generated battle layout (the elements are the rows'
-; LEFT tiles; OAM = screen px + (8,16), see PrepareStaticOAM).
-; PROJ battle: player row = UI_PLAYER_BALLS (OAM base = left ball, marches +8)
-%define PB_X   UI_PLAYER_BALLS_OAM_X
-%define PB_Y   UI_PLAYER_BALLS_OAM_Y
-; PROJ battle: enemy row = UI_ENEMY_BALLS (OAM base = RIGHT-end ball, marches -8)
-%define EB_X   (UI_ENEMY_BALLS_OAM_X + (UI_ENEMY_BALLS_GBW - 1) * 8)
-%define EB_Y   UI_ENEMY_BALLS_OAM_Y
 
 ; NOTE: this file used to carry `ball_gfx: incbin "../gfx/battle/balls.2bpp"` —
 ; a SECOND copy of the blob the mirror file draw_hud_pokeball_gfx.asm already
@@ -61,6 +40,8 @@ extern DrawAllPokeballs         ; draw_hud_pokeball_gfx.asm — pret's whole com
 ; DrawBattlePokeballs — load gfx, build the player ball row (and the enemy's in a
 ; trainer battle), publish them to the OAM compositor, and enable OBJ rendering.
 ; In: EBP = GB base; wPartyCount/wPartyMons (+ wEnemyPartyCount/wEnemyMons) seeded.
+;
+; DEVIATION{class=HAL; pret=engine/battle/draw_hud_pokeball_gfx.asm:DrawAllPokeballs; behavior=callers use this port-only wrapper where pret directly calls or falls into DrawAllPokeballs, adding a $FE00 pre-clear, a PrepareStaticOAM entry-count publish, and an explicit OBP0/LCDC OBJ-enable around pret own composition; evidence=on real hardware the shadow-OAM DMA and the always-on OBJ bit give pret those effects for free, the port instead composites OAM through spr_dos_sx/sy plus spr_oam_valid via PrepareStaticOAM and DMAs FE00 conditionally from update_oam, so nothing draws unless a routine on this side performs the publish and enable explicitly; lifetime=permanent while the port's OAM path is PrepareStaticOAM-driven rather than a literal shadow-OAM DMA}
 ; ---------------------------------------------------------------------------
 DrawBattlePokeballs:
     ; PORT-ONLY WRAPPER. Everything pret does now lives in DrawAllPokeballs
@@ -92,7 +73,11 @@ DrawBattlePokeballs:
 
 ; ---------------------------------------------------------------------------
 ; HideBattlePokeballs — remove the ball row when the HP-bar HUD takes over (the
-; intro → battle handoff): clear the OAM and turn OBJ rendering back off.
+; intro → battle handoff): clears both the shadow OAM and $FE00 directly. Does
+; NOT touch LCDCF_OBJ_ON any more — see the NOTE below, that bit stays enabled
+; through the whole battle now that move animations draw OAM particles.
+;
+; DEVIATION{class=HAL; pret=home/clear_sprites.asm:ClearSprites; behavior=callers use this port-only wrapper where pret calls ClearSprites, adding an explicit $FE00 zero-fill on top of the shadow-OAM clear; evidence=on real hardware a cleared shadow OAM reads as hidden the moment the next VBlank DMA runs it to FE00, but the port's update_oam DMA is itself gated on wUpdateSpritesEnabled and was skipped while the ball row was up, so FE00 still held the last published ball entries until this routine clears it directly, measured against the battle_menu golden first-diff; lifetime=permanent while update_oam conditionally skips the shadow-to-FE00 DMA during the battle intro}
 ; ---------------------------------------------------------------------------
 HideBattlePokeballs:
     call HideSprites                      ; zero shadow OAM + publish 0 valid entries

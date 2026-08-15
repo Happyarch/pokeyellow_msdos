@@ -1,8 +1,20 @@
-; load_enemy_moves.asm — LoadWildMonMoves (battle front-end, Wave 2 Stage 2b/3).
+; debug_battle_moveset.asm — DebugLoadWildMonMoves (debug harness only).
 ;
-; Faithful port of the wild-mon moveset path of engine/battle/core.asm:LoadEnemyMonData
-; (the `.copyStandardMoves` branch + `.loadMovePPs`). This is how the actual game
-; builds a wild Pokémon's moveset:
+; DEVIATION{class=temporary; pret=engine/battle/core.asm:LoadEnemyMonData; behavior=this routine duplicates only the .copyStandardMoves/.loadMovePPs slice of LoadEnemyMonData (base moves + level-up learnset + PP) so a debug harness can generate a real wild moveset while every other wEnemyMon* field is hand-seeded for deterministic visual inspection, instead of calling the full translated LoadEnemyMonData (dos_port/src/engine/battle/core.asm), which would also roll random DVs and recompute HP/stats/types and so clobber that hand-seeding; evidence=the routine's sole caller is the DEBUG_BATTLE synthetic-seed path in debug_dump.asm (the branch reached only when DEBUG_BATTLE is defined without DEBUG_BATTLE_GOLDEN — DEBUG_BATTLE_LIVE / DEBUG_BATTLE_ENEMYHIT / DEBUG_BATTLE_TRAINER, per label_status --callers LoadWildMonMoves 2026-08-15, exactly one port caller), none of which appear in tools/scenario_manifest.json, so it carries no golden coverage; lifetime=retire this file if/when the synthetic-seed harness is rewired onto the real LoadEnemyMonData path (not done today, because that would remove the deterministic HP/stat/type seeding those harnesses rely on for visual inspection)}
+;
+; Was dos_port/src/engine/battle/load_enemy_moves.asm ("LoadWildMonMoves"), sitting
+; in the engine/battle pret-mirror directory even though it has no pret counterpart
+; (pret builds a wild moveset INLINE inside LoadEnemyMonData; the port's faithful
+; translation of that whole routine already lives at
+; dos_port/src/engine/battle/core.asm:LoadEnemyMonData and is linked/used elsewhere
+; in this file, e.g. the DEBUG_BATTLE_GOLDEN branch's `call LoadEnemyMonData`).
+; Relocated here 2026-08-15 (remediation slice S4) because a debug-only helper with
+; no pret label does not belong beside real pret-mirrored translation, and renamed
+; with the file's `Debug*` convention (anim_show_label / DebugLoadEmbeddedEnemyFrontPic
+; / DebugDumpMemory) since it never carried a pret name to preserve.
+;
+; What it does — the wild-mon moveset slice of LoadEnemyMonData's
+; `.copyStandardMoves` + `.loadMovePPs`:
 ;   1. copy the species' 4 base moves from the mon header (wMonHMoves, from base
 ;      stats — for PIDGEY that's [GUST,0,0,0]);
 ;   2. WriteMonMoves walks the level-up learnset (assets/evos_moves.inc, the data
@@ -19,11 +31,11 @@
 ; In:  [wEnemyMonSpecies] = internal index, [wEnemyMonLevel] = level.
 ; Out: wEnemyMonMoves[0..3] + wEnemyMonPP[0..3] populated.
 ; Clobbers the wMonH* header scratch (via GetMonHeader); leaves wEnemyMon* stats
-; untouched (the caller/encounter path computes those separately).
+; untouched (the caller/harness computes/seeds those separately).
 ;
 ; Register map (CLAUDE.md): a=AL, hl=ESI, de=EDX, ecx scratch; GB memory [EBP+addr].
 ;
-; Build: nasm -f coff -I include/ -I . -o load_enemy_moves.o load_enemy_moves.asm
+; Build: nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0 -o debug_battle_moveset.o debug_battle_moveset.asm
 
 bits 32
 
@@ -32,12 +44,12 @@ bits 32
 
 section .text
 
-global LoadWildMonMoves
+global DebugLoadWildMonMoves
 extern GetMonHeader
 extern WriteMonMoves
 extern LoadMovePPs
 
-LoadWildMonMoves:
+DebugLoadWildMonMoves:
     ; header for the species — GetMonHeader populates wMonHMoves (base moves).
     mov al, [ebp + wEnemyMonSpecies]
     mov [ebp + wCurSpecies], al

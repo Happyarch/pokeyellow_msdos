@@ -179,12 +179,12 @@ extern SaveBattleScreen          ; src/home/tilemap.asm — alias of the Buffer1
 extern RestoreBattleScreen       ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern EndBattleScreen
 extern EndOfBattle               ; end_of_battle.asm — post-battle evolution + state reset
-extern wBattleOver
+; (wBattleOver is defined at the end of this file — relocated from battle_menu.asm)
 extern WaitForAPress
 extern DrawBattlePokeballs
 extern HideBattlePokeballs
-extern DoEnemyAttackDamage
-extern LoadWildMonMoves
+; (DoEnemyAttackDamage is defined at the end of this file — relocated from battle_menu.asm)
+extern DebugLoadWildMonMoves      ; src/debug/debug_battle_moveset.asm — port-only debug harness glue
 extern SelectEnemyMove
 extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
 extern GetDamageVarsForPlayerAttack   ; engine/battle/core.asm
@@ -1079,9 +1079,9 @@ gbstate_regions:
     ; --- HUD spans for the POTION path (battle plan, 2026-08-13) ---
     ; Same six projected spans as DEBUG_BATTLE_WRAP above, on a scenario whose
     ; HP bar is PARTIAL (120/362) rather than full. That is the point: it is the
-    ; only witness for draw_hp_bar's partial-segment path and for the cur/max
-    ; fraction, and adding it is what exposed the text_row_stride leak fixed in
-    ; DrawPlayerHUDAndHPBar.
+    ; only witness for the HP bar's partial-segment path (DrawHPBar, since the
+    ; draw_hp_bar fork retirement) and for the cur/max fraction, and adding it
+    ; is what exposed the text_row_stride leak fixed in DrawPlayerHUDAndHPBar.
     gbregion "eHudName", W_TILEMAP + (0 + 3) * SCREEN_TILES_W + (1 + 10), 10  ; GB (1,0)
     gbregion "eHudLv",   W_TILEMAP + (1 + 3) * SCREEN_TILES_W + (0 + 10), 12  ; GB (0,1)
     gbregion "pHudName", W_TILEMAP + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11 ; GB (10,7)
@@ -4166,7 +4166,7 @@ anim_show_label:
     jnz .seedEMods
     ; generate the wild enemy's moveset the real way (base moves + level-up learnset
     ; for PIDGEY $24 at its level) — replaces the old hardcoded move seed.
-    call LoadWildMonMoves
+    call DebugLoadWildMonMoves
     or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
@@ -7191,3 +7191,56 @@ RunCinematicMarkersTest:
 .hang:
     jmp .hang
 %endif
+
+; ===========================================================================
+; RELOCATED from src/engine/battle/battle_menu.asm 2026-08-15 (port-only file
+; remediation, slice S1): both are DEBUG-HARNESS-ONLY — label_status showed
+; their only referrers are this file's DEBUG_BATTLE_ENEMYHIT path, so they
+; belong in the debug subsystem, not beside live battle code.
+; ===========================================================================
+
+section .bss
+; wBattleOver — battle terminal state (legacy harness hook): 0 = ongoing.
+; core.asm uses wBattleResult; the DEBUG_BATTLE harness still seeds this for
+; compatibility.
+global wBattleOver
+wBattleOver: resb 1
+
+section .text
+; The damage-pipeline externs at the top of this file sit inside the DEBUG_*
+; brackets; these local ones keep the relocated routine assembling in every
+; build (core.asm is always linked, so they always resolve).
+extern GetCurrentMove                 ; engine/battle/core.asm
+extern GetDamageVarsForEnemyAttack    ; engine/battle/core.asm
+extern CalculateDamage                ; engine/battle/core.asm (ZF if 0 BP)
+extern AdjustDamageForMoveType        ; engine/battle/core.asm
+extern RandomizeDamage                ; engine/battle/core.asm
+
+; DoEnemyAttackDamage — run the faithful Gen-1 damage pipeline for the enemy's
+; selected move and apply the result to the player mon's HP.
+; DEVIATION{class=temporary; pret=engine/battle/core.asm:EnemyCalcMoveDamage; behavior=a harness-only entry point drives the damage pipeline pret runs inside the enemy turn loop and applies the result directly so a dump can be taken at a known point without stepping the whole turn loop; evidence=label_status reports its only caller as this file's DEBUG_BATTLE_ENEMYHIT path and the live enemy turn is translated faithfully in the core.asm mirror; lifetime=retire by pointing the DEBUG_BATTLE_ENEMYHIT harness at the live enemy-turn path}
+global DoEnemyAttackDamage
+DoEnemyAttackDamage:
+    mov byte [ebp + hWhoseTurn], 1
+    call GetCurrentMove
+    mov byte [ebp + wCriticalHitOrOHKO], 0
+    call GetDamageVarsForEnemyAttack
+    call CalculateDamage
+    jz .apply
+    call AdjustDamageForMoveType
+    call RandomizeDamage
+.apply:
+    movzx eax, byte [ebp + wBattleMonHP]
+    shl eax, 8
+    mov al, [ebp + wBattleMonHP + 1]
+    movzx ecx, byte [ebp + wDamage]
+    shl ecx, 8
+    mov cl, [ebp + wDamage + 1]
+    sub eax, ecx
+    jns .store
+    xor eax, eax
+.store:
+    mov [ebp + wBattleMonHP + 1], al
+    shr eax, 8
+    mov [ebp + wBattleMonHP], al
+    ret

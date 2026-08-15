@@ -651,8 +651,11 @@ ITEMS_SRCS := \
 # not yet link-ready (TrainerNames is undefined)" is FALSE (TrainerNames resolves
 # in PKMN.EXE), and the REAL blocker -- the port's GetName not preserving
 # BC/DE/HL where pret's does -- is fixed in src/home/names2.asm.
-BATTLE_SRCS := \
-    src/engine/battle/move_category.asm
+# BATTLE_SRCS is EMPTY as of 2026-08-15: its last member, move_category.asm
+# (IsTypeSpecial/IsMoveSpecial — zero callers, never linked), was deleted in the
+# port-only file remediation. The variable is kept so ALL_SRCS keeps its shape;
+# the next check-only battle file (if any) goes here.
+BATTLE_SRCS :=
 # wild_encounters.asm MOVED to GAME_SRCS (wild-live promotion): TryDoWildEncounter
 # is the random-encounter roll NewBattle calls; its closure resolves now that
 # player_state.asm (IsPlayerStandingOnDoorTileOrWarpTile) links and DisplayTextID
@@ -2438,7 +2441,6 @@ FRONTEND_SRCS := \
     src/engine/battle/ghost_marowak_anim.asm \
     src/engine/battle/safari_zone.asm \
     src/engine/battle/unused_stats_functions.asm \
-    src/engine/battle/battle_hud.asm \
     src/engine/battle/scale_sprites.asm \
     src/engine/battle/battle_menu.asm \
     src/engine/battle/core.asm \
@@ -2475,7 +2477,7 @@ FRONTEND_SRCS := \
     src/data/type_names.asm \
     src/home/random.asm \
     src/engine/battle/print_type.asm \
-    src/engine/battle/load_enemy_moves.asm \
+    src/debug/debug_battle_moveset.asm \
     src/engine/battle/pokeballs.asm \
     src/engine/battle/draw_hud_pokeball_gfx.asm \
     src/data/trainer_pics.asm \
@@ -2830,8 +2832,9 @@ assets/npc_sprite_data_table.inc:
 	python3 tools/generators/gen_all_assets.py
 
 # Alternate player sprite sheets (bike / surfing) — pret gfx/sprites.asm labels
-# RedBikeSprite / SeelSprite / SurfingPikachuSprite. Consumed by player_gfx.asm's
-# LoadPlayerSpriteGraphics dispatch (wild-live promotion).
+# RedBikeSprite / SeelSprite / SurfingPikachuSprite, hosted as data tables in
+# player_gfx.asm and consumed by home/overworld.asm's LoadPlayerSpriteGraphics
+# dispatch (wild-live promotion).
 assets/red_bike_sprite.inc assets/seel_sprite.inc assets/surfing_pikachu_sprite.inc:
 	python3 tools/generators/gen_all_assets.py
 
@@ -3447,7 +3450,7 @@ assets/ui_layout_battle.inc: assets/ui_layout_battle_sidecar.json \
 		tools/generators/gen_ui_layout.py tools/ui_layout/canvas.py tools/ui_layout/schema.py
 	python3 tools/generators/gen_ui_layout.py battle
 
-src/engine/battle/battle_hud.o src/engine/battle/init_battle.o \
+src/engine/battle/init_battle.o \
 src/engine/battle/pokeballs.o src/home/pics.o \
 src/engine/battle/core.o src/engine/battle/battle_menu.o: \
         assets/ui_layout_battle.inc

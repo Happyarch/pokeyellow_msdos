@@ -137,7 +137,7 @@ global ReadPlayerMonCurHPAndStatus
 global CheckNumAttacksLeft
 global BattleMenu_RunWasSelected
 global GetBattleHealthBarColor         ; pret core.asm — used by DrawPlayerHUDAndHPBar, below
-global CenterMonName                   ; pret core.asm — used by both HUD draws (battle_hud.asm)
+global CenterMonName                   ; pret core.asm — used by both HUD draws below
 
 ; --- consolidated from other port files (grind session 8) ---
 global GetCurrentMove
@@ -198,8 +198,7 @@ global ScrollTrainerPicAfterBattle      ; pret core.asm:6453 jpfar thunk
 extern TrainerAI                       ; trainer_ai.asm (CF if AI used item/switch)
 
 ; --- draw primitives (category-D divergence point; battle_menu.asm draw helpers) ---
-extern AnimateEnemyHPBar               ; battle_hud.asm — gradual enemy HP-bar drain (ECX=old HP)
-extern AnimatePlayerHPBar              ; battle_hud.asm — gradual player HP-bar drain (ECX=old HP)
+extern UpdateHPBar2                    ; engine/gfx/hp_bar.asm — pret animated HP-bar engine (ESI = bar coord)
 extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
 extern RetreatMon                      ; engine/battle/common_text.asm — switch-out line
 extern SaveScreenTilesToBuffer2        ; src/home/tilemap.asm
@@ -267,7 +266,6 @@ extern SetDamageEffects
 extern ResidualEffects2
 extern AlwaysHappenSideEffects
 extern SpecialEffects
-extern FindMoveName                    ; battle_menu.asm — move id → flat name ptr
 extern GainExperience                  ; experience.asm — EXP award + level-up display
 ; --- faint / switch lifecycle (battle-swarm-C) ---
 
@@ -325,6 +323,7 @@ extern PrintStatusConditionNotFainted  ; home/pokemon.asm -> PrintStatusAilment
 extern ClearScreenArea                 ; home/copy2.asm — BH rows x BL cols of blanks at ESI
 extern PrintLevel                      ; home/pokemon.asm — ':L' + wLoadedMonLevel at ESI
 extern DrawHP                          ; engine/pokemon/status_screen.asm — predef DrawHP
+extern DrawHPBar                       ; src/home/pokemon.asm — ESI coord, DH tiles, DL pixels, BL sliver
 ; --- HUD geometry for DrawHUDsAndHPBars and its two halves, moved here with
 ; --- them from battle_hud.asm. Values come from the generated battle UI layout
 ; --- (assets/ui_layout_battle.inc); never hand-edit an offset here.
@@ -1747,8 +1746,13 @@ ApplyDamageToEnemyPokemon:
     mov [ebp + wHPBarNewHP], al
     ; pret: hlcoord 2,2 / xor a / ld [wHPBarType],a / predef UpdateHPBar2 — gradual drain
     ; of the ENEMY bar (no HP number), from wHPBarOldHP down to the new struct HP.
-    movzx ecx, word [ebp + wHPBarOldHP]     ; old HP (pret little-endian) → drain start
-    call AnimateEnemyHPBar
+    ; Calls pret's real animated engine (engine/gfx/hp_bar.asm) directly since the
+    ; AnimateEnemyHPBar fork retirement; the wHPBar{Old,New,Max}HP staging above is
+    ; exactly the state UpdateHPBar2 consumes.
+    mov esi, W_TILEMAP + E_HPBAR             ; hlcoord 2,2 (BCOORD battle projection)
+    xor al, al                               ; xor a
+    mov [ebp + wHPBarType], al               ; ld [wHPBarType], a — enemy: no HP number
+    call UpdateHPBar2                        ; predef UpdateHPBar2
 ApplyAttackToEnemyPokemonDone:
     jmp DrawHUDsAndHPBars                    ; pret `jp DrawHUDsAndHPBars` (tail; its ret returns)
 
@@ -2696,8 +2700,16 @@ ApplyDamageToPlayerPokemon:
     mov [ebp + wHPBarNewHP], al
     ; pret: hlcoord 10,9 / ld a,1 / ld [wHPBarType],a / predef UpdateHPBar2 — gradual drain
     ; of the PLAYER bar (ticks the HP number too), from wHPBarOldHP down to new struct HP.
-    movzx ecx, word [ebp + wHPBarOldHP]     ; old HP (pret little-endian) → drain start
-    call AnimatePlayerHPBar
+    ; Calls pret's real animated engine directly since the AnimatePlayerHPBar fork
+    ; retirement. The stride republish carries the same justification as the
+    ; DrawPlayerHUDAndHPBar DEVIATION (class=projection) above: UpdateHPBar2's
+    ; number print places the cur digits at bar + [text_row_stride] + 1, and the
+    ; last dialog print may have left the stride at 20.
+    mov dword [text_row_stride], FW
+    mov esi, W_TILEMAP + P_HPBAR             ; hlcoord 10,9 (BCOORD battle projection)
+    mov al, 1                                ; ld a, $1
+    mov [ebp + wHPBarType], al               ; ld [wHPBarType], a — player: tick the number
+    call UpdateHPBar2                        ; predef UpdateHPBar2
 ApplyAttackToPlayerPokemonDone:
     jmp DrawHUDsAndHPBars                    ; pret `jp DrawHUDsAndHPBars` (tail; its ret returns)
 
@@ -6591,8 +6603,11 @@ global DrawHUDsAndHPBars
 global LoadPlayerBackPic
 global SlidePlayerAndEnemySilhouettesOnScreen ; pret entry point for the battle-entry slide
 extern LoadMonBackPicToVRAM            ; src/home/pics.asm — decode + 2x scale + merge
-extern draw_enemy_hp_bar               ; battle_hud.asm
-extern calc_hp_pixels                  ; battle_hud.asm — port-only enemy-bar helpers
+extern SetBGCellAttrFlat               ; ppu.asm — publish one per-cell BG attribute
+; ENEMY_GAUGE_SLOT is 1 because SetPal_Battle publishes wEnemyHPBarColor into
+; bg_slot_pal[1] (engine/gfx/palettes.asm); see the publish DEVIATION at
+; DrawEnemyHUDAndHPBar's bar draw.
+ENEMY_GAUGE_SLOT equ 1
 extern SlideBattlePicsIn               ; src/home/pics.asm — the port's slide realization
 global TryRunningFromBattle
 extern WaitForAPress                   ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
@@ -6724,10 +6739,11 @@ CenterMonName:
 ; port kept a separate entry, is pret's own DrawEnemyHUDAndHPBar and is called
 ; by that name from _InitBattleCommon.
 ;
-; The port-only helpers these bodies still call (calc_hp_pixels,
-; draw_enemy_hp_bar — both enemy-side only) stay in battle_hud.asm; they have
-; no pret counterpart to take a name from. The player side no longer uses any
-; of them: it goes through pret's DrawHP.
+; Both sides now go through pret's shared draw/animate machinery (DrawHP /
+; DrawHPBar / UpdateHPBar2): the battle_hud.asm fork engine (calc_hp_pixels,
+; draw_enemy_hp_bar, Animate{Player,Enemy}HPBar) was retired 2026-08-15 and the
+; file deleted. The one port-only step that survives is the enemy gauge's
+; per-cell palette publish, inlined below under its own DEVIATION.
 ;
 ; RETIRING THE FORK MADE FOUR REAL DIVERGENCES VISIBLE FOR THE FIRST TIME. They
 ; are pre-existing, not introduced by the move, and the alias is exactly why
@@ -6742,13 +6758,12 @@ CenterMonName:
 ;      none. The old comment blamed "status_ailments.asm is an empty
 ;      placeholder"; the routine lives in home/pokemon.asm and is translated.
 ;      The port prints the level unconditionally, via its own print_level.
-;   3. DrawHP (predef) / DrawHPBar + Multiply + Divide — pret computes the bar
-;      through the shared routines; the port uses calc_hp_pixels + draw_hp_bar.
-;      A second implementation of a translated pret routine, i.e. more of the
-;      same fork class this move is retiring.
+;   3. DrawHP (predef) / DrawHPBar + Multiply + Divide — FIXED (player side
+;      2026-08-13 via DrawHP; enemy side 2026-08-15: pret's inline bar math +
+;      DrawHPBar below, with the fork engine deleted).
 ;   4. The low-health alarm tail — FIXED 2026-08-13, see .fainted below.
 ; Tracked in docs/current_plan_battle_completion.md under the core.asm-residue
-; box; none is fixed here, because this box is the naming/placement half.
+; box.
 ; ---------------------------------------------------------------------------
 DrawHUDsAndHPBars:
     ; HUD names are drawn with PlaceString, which (like pret's PlaceNextChar) calls
@@ -6762,7 +6777,8 @@ DrawHUDsAndHPBars:
     call DrawPlayerHUDAndHPBar
     call DrawEnemyHUDAndHPBar
     ; Both bars have now refreshed their color IDs; publish their independent
-    ; palette slots together (the enemy uses cloned gauge tile IDs).
+    ; palette slots together (the enemy gauge takes slot 1 via the per-cell
+    ; attribute publish in DrawEnemyHUDAndHPBar — the F-19 tile clones are gone).
     call SetPal_Battle
     ret
 DrawPlayerHUDAndHPBar:
@@ -6915,22 +6931,69 @@ DrawEnemyHUDAndHPBar:
     mov esi, W_TILEMAP + E_LV
     call PrintLevel
 .skipPrintLevel:
-    mov ebx, wEnemyMonHP                 ; calc_hp_pixels: EBX=curHP addr, ESI=maxHP addr
-    mov esi, wEnemyMonMaxHP
-    call calc_hp_pixels                  ; → EDX = fill pixels
-    ; Draw the bar FIRST, colour SECOND — pret's order (DrawEnemyHUDAndHPBar
-    ; :2036-2040 runs DrawHPBar, then `ld hl, wEnemyHPBarColor / call
-    ; GetBattleHealthBarColor`). The fork here called the colour routine BEFORE
-    ; the draw, and GetHealthBarColor's faithful `ld d,0 / inc d` writes DH —
-    ; so a yellow verdict turned EDX into 256+px and a red one into 512+px, and
-    ; draw_enemy_hp_bar drew every damaged redraw as a FULL bar. MEASURED
-    ; 2026-08-15: E_HPBAR cells `62 6b×6 6c` with wEnemyMonHP = 0 at the
-    ; victory screen (maintainer screenshot: full red bar on a fainted mon).
-    ; The drain animation (AnimateEnemyHPBar) was correct all along; this
-    ; redraw snapped the bar back to full after every hit.
-    push edx                             ; draw consumes EDX; colour needs DL after
-    mov edi, W_TILEMAP + E_HPBAR
-    call draw_enemy_hp_bar
+    ; pret DrawEnemyHUDAndHPBar:1973-2036 — the bar length is computed INLINE
+    ; here (hMultiplicand/hDivisor scratch), not via GetHPBarLength: zero HP
+    ; short-circuits to an empty bar with NO sliver (ld c,a with a=0), and a
+    ; nonzero HP passes c=6 so DrawHPBar draws at least a 1-pixel sliver.
+    ; Native arithmetic keeps pret's truncations: when max HP >= 256 BOTH the
+    ; 16-bit product lane and the divisor are quarter-scaled (lossy) before the
+    ; byte divide — the product is <= 47952 (HP caps at 999), so the 16-bit
+    ; lane pret shifts is the whole product, the same argument
+    ; engine/gfx/hp_bar.asm:GetHPBarLength records. Draw FIRST, colour SECOND
+    ; is pret's own order (the fork's colour-before-draw let GetHealthBarColor
+    ; clobber DH and snap a damaged bar back to full — measured 2026-08-15,
+    ; fixed in ab0c30930; this faithful sequence keeps that order).
+    movzx eax, byte [ebp + wEnemyMonHP]  ; ld a,[hli] — current HP, big-endian
+    shl eax, 8
+    mov al, [ebp + wEnemyMonHP + 1]
+    test eax, eax                        ; or [hl] — is current HP zero?
+    jnz .hpNonzero
+    xor ebx, ebx                         ; ld c, a — sliver flag OFF
+    xor edx, edx                         ; ld e, a — 0 pixels
+    mov dh, 6                            ; ld d, $6 — bar is 6 tiles
+    jmp .drawHPBar
+.hpNonzero:
+    imul eax, eax, 48                    ; ld a,48 / call Multiply — current HP * 48
+    movzx ecx, byte [ebp + wEnemyMonMaxHP]   ; max HP, big-endian
+    shl ecx, 8
+    mov cl, [ebp + wEnemyMonMaxHP + 1]   ; ldh [hDivisor], a
+    cmp ecx, 0x100                       ; ld a,b / and a — is max HP > 255?
+    jb .doDivide
+    shr eax, 2                           ; srl/rr pairs — scale the product lane
+    shr ecx, 2                           ; and the divisor by 4, both truncating
+    and ecx, 0xFF                        ; the divide is by the BYTE, as pret stages it
+.doDivide:
+    ; DEVIATION{class=data-model; pret=engine/battle/core.asm:DrawEnemyHUDAndHPBar; behavior=zero max HP clamps to a full bar instead of executing native DIV by zero; evidence=pret byte Divide with divisor 0 spins its subtract loop harmlessly where native DIV faults under DPMI and max HP 0 is unreachable from real mon data, the same clamp GetHPBarLength in engine/gfx/hp_bar.asm carries; lifetime=permanent native safety boundary}
+    test ecx, ecx
+    jnz .divSafe
+    mov eax, 48
+    jmp .gotPixels
+.divSafe:
+    xor edx, edx
+    div ecx                              ; ld b,$2 / call Divide — (HP*48)/max
+.gotPixels:
+    mov dl, al                           ; ldh a,[hQuotient+3] / ld e,a — pixels
+    mov dh, 6                            ; ld d, a ($6) — bar is 6 tiles
+    mov bl, 6                            ; ld c, a — sliver flag ON
+.drawHPBar:
+    xor al, al                           ; xor a
+    mov [ebp + wHPBarType], al           ; ld [wHPBarType], a — enemy: cap $6C
+    mov esi, W_TILEMAP + E_HPBAR         ; hlcoord 2,2 (BCOORD battle projection)
+    call DrawHPBar                       ; DL survives (DrawHPBar preserves EDX)
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:DrawEnemyHUDAndHPBar; behavior=the six gauge segment cells additionally publish a per-cell BG attribute binding them to the enemy HP palette slot; evidence=the port composites from tile_cache whose palette band is baked per tile id, and both bars keep the canonical gauge tile ids 63-6B since the F-19 clone retirement, so only the per-cell attribute layer can give the enemy gauge its own colour - SetPal_Battle publishes wEnemyHPBarColor into bg_slot_pal slot 1; lifetime=permanent while the compositor bakes palette per tile id}
+    ; (Publish moved here verbatim from the retired draw_enemy_hp_bar; same six
+    ; cells, same slot, so the colour behaviour is unchanged. SetBGCellAttrFlat
+    ; preserves all registers, so DL still carries the pixel count to the
+    ; colour routine below, and it only arms a re-decode when the byte changes.)
+    push edx
+    mov eax, E_HPBAR + 2                 ; first of the six gauge segment cells
+    mov dl, ENEMY_GAUGE_SLOT | BG_ATTR_PRESENT
+    mov ecx, 6
+.publishGaugeAttr:
+    call SetBGCellAttrFlat
+    inc eax
+    dec ecx
+    jnz .publishGaugeAttr
     pop edx
     ; pret uses GetBattleHealthBarColor (republish-on-transition), not the bare
     ; GetHealthBarColor — matters when this routine runs OUTSIDE the joint
@@ -7164,8 +7227,8 @@ TryRunningFromBattle:
 ; Consolidated here from move_effect_helpers.asm (relocated-labels grind; that
 ; file was itself deleted in chunk 17): both
 ; are pret engine/battle/core.asm labels and belong in this mirror. Their
-; dependencies were already present in this file — AnimateEnemyHPBar /
-; AnimatePlayerHPBar / PrintText are externed above, and DoesntAffectMonText is
+; dependencies were already present in this file — UpdateHPBar2 /
+; PrintText are externed above, and DoesntAffectMonText is
 ; local here via the assets/battle_text.inc include (nm: R, not U), so it must
 ; NOT be re-externed. move_effect_helpers.asm went on to keep only the labels
 ; whose pret home was some other file, and chunk 17 sent those to their own
@@ -7184,29 +7247,31 @@ PrintDoesntAffectText:
 
 ; ===========================================================================
 ; UpdateCurMonHPBar — pret engine/battle/core.asm:677 (UpdateCurMonHPBar → predef
-; UpdateHPBar2). Faithful gradual, tick-by-tick HP-bar drain. Selects the bar by
-; hWhoseTurn exactly as pret: hWhoseTurn==0 (player's turn) → the PLAYER mon's bar
-; (pret hlcoord 10,9 / wHPBarType=1, i.e. the side that also ticks the HP number);
-; else → the ENEMY mon's bar (pret hlcoord 2,2 / wHPBarType=0, no number). The old HP
-; to start the drain from is wHPBarOldHP (pret stores it little-endian; each caller —
-; residual_damage / drain_hp / heal / recoil — populates wHPBar{Old,New,Max}HP and the
-; mon-struct HP before calling, matching pret). Animate{Player,Enemy}HPBar tick from
-; ECX(old HP) to the final struct HP (== wHPBarNewHP here), redrawing on each pixel
-; change with 2 DelayFrames per pixel — pret's UpdateHPBar cadence. pret preserves bc.
+; UpdateHPBar2). Selects the bar by hWhoseTurn exactly as pret: hWhoseTurn==0
+; (player's turn) → the PLAYER mon's bar (pret hlcoord 10,9 / wHPBarType=1, the
+; side that also ticks the HP number); else → the ENEMY mon's bar (pret hlcoord
+; 2,2 / wHPBarType=0, no number). Each caller — residual_damage / drain_hp /
+; heal / recoil — populates wHPBar{Old,New,Max}HP and the mon-struct HP before
+; calling, matching pret. Since the Animate{Player,Enemy}HPBar fork retirement
+; this goes through pret's real UpdateHPBar2 (engine/gfx/hp_bar.asm). The stride
+; republish carries the DrawPlayerHUDAndHPBar DEVIATION's justification
+; (class=projection): the number print places digits at bar+[text_row_stride]+1.
 ; ===========================================================================
 global UpdateCurMonHPBar
 UpdateCurMonHPBar:
-    push ebx                            ; pret UpdateCurMonHPBar: push bc / pop bc
-    movzx ecx, word [ebp + wHPBarOldHP] ; old HP (pret little-endian word) → drain start
+    mov esi, W_TILEMAP + P_HPBAR        ; hlcoord 10,9 — player HP bar (BCOORD)
     mov al, [ebp + hWhoseTurn]
     and al, al
-    jz .playerBar                       ; hWhoseTurn==0 → player's mon bar (wHPBarType=1)
-    call AnimateEnemyHPBar
-    jmp .done
-.playerBar:
-    call AnimatePlayerHPBar
-.done:
-    pop ebx
+    mov al, 1                           ; ld a, $1 (mov is flag-neutral, as pret's ld)
+    jz .playersTurn
+    mov esi, W_TILEMAP + E_HPBAR        ; hlcoord 2,2 — enemy HP bar (BCOORD)
+    xor al, al                          ; xor a
+.playersTurn:
+    push ebx                            ; push bc
+    mov [ebp + wHPBarType], al          ; ld [wHPBarType], a
+    mov dword [text_row_stride], FW     ; port stride republish (header note above)
+    call UpdateHPBar2                   ; predef UpdateHPBar2
+    pop ebx                             ; pop bc
     ret
 
 

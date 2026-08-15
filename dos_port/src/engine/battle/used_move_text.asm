@@ -29,7 +29,7 @@ bits 32
 global DisplayUsedMoveText
 
 extern PlaceString                   ; src/home/text.asm
-extern FindMoveName                  ; src/engine/battle/battle_menu.asm
+extern GetMoveName                   ; src/home/names.asm — pret home/names.asm:GetMoveName
 extern RunBattleTextStream           ; src/engine/battle/core.asm
 extern str_used_grammar              ; assets/battle_core_runtime_strings.inc via engine/battle/core.asm
 
@@ -57,9 +57,14 @@ DisplayUsedMoveText:
 .playerName:
     mov al, [ebp + wPlayerSelectedMove]
 .gotId:
-    call FindMoveName                   ; EAX = flat ptr to the move name
-    mov esi, eax
-    call .copyFlat
+    mov [ebp + wNamedObjectIndex], al   ; GetMoveName reads the id from here
+    push edi                            ; GetName clobbers EDI as scratch (no SM83
+                                         ; counterpart preserves it — see names2.asm);
+                                         ; this routine keeps its stream cursor in EDI
+    call GetMoveName                    ; pret home/names.asm:GetMoveName -> wNameBuffer
+    pop edi
+    mov esi, wNameBuffer
+    call .copyWram
     mov byte [edi], 0xE7                ; '!'
     inc edi
     mov byte [edi], 0x50                ; '@' (PlaceString terminator)
@@ -75,4 +80,14 @@ DisplayUsedMoveText:
     inc esi
     jmp .copyFlat
 .copyDone:
+    ret
+.copyWram:                              ; copy a $50-terminated WRAM string [EBP+ESI] → [EDI]
+    mov al, [ebp + esi]
+    cmp al, 0x50
+    je  .copyWramDone
+    mov [edi], al
+    inc edi
+    inc esi
+    jmp .copyWram
+.copyWramDone:
     ret

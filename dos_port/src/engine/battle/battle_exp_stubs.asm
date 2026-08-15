@@ -31,9 +31,9 @@ section .text
 ; blocked on the in-battle ITEM menu, which landed with battle plan 2c.
 ; TODO(pikachu):     RespawnOverworldPikachu — with the Yellow Pikachu-follow engine.
 global RespawnOverworldPikachu
-; DrawPlayerHUDAndHPBar is now REAL (engine/battle/core.asm — alias → battle_hud.asm
-; DrawPlayerHUDAndHPBar) — no longer stubbed here (retired with the enemy-side
-; DrawEnemyHUDAndHPBar pattern).
+; DrawPlayerHUDAndHPBar is now REAL (full body in engine/battle/core.asm since
+; the 2026-08-13 alias-fork retirement) — no longer stubbed here (retired with
+; the enemy-side DrawEnemyHUDAndHPBar pattern).
 ; LoadMonData is now REAL (src/home/pokemon.asm wrapper → LoadMonData_) — no longer stubbed;
 ; it populates wLoadedMon so GainExperience's CalcLevelFromExperience reads the right mon.
 ; ApplyBadgeStatBoosts (badge_boosts.asm) and ApplyBurnAndParalysisPenaltiesToPlayer

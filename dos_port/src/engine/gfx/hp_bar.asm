@@ -11,8 +11,10 @@
 ; the exact same sequence in native arithmetic: the product is ≤ 47952 (HP is
 ; capped at 999), so the 16-bit product lane pret shifts is the whole product.
 ;
-; The rest of pret's UpdateHPBar/UpdateHPBar2 (the animated drain loop) is
-; already ported in engine/battle/battle_hud.asm:AnimateHPBar.
+; pret's UpdateHPBar/UpdateHPBar2 (the animated drain loop) is translated for
+; real further down in THIS file, and since 2026-08-15 it is the only HP-bar
+; animation engine: the battle damage paths (core.asm) call it directly, and
+; the former battle_hud.asm fork (AnimateHPBar and friends) is deleted.
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB base.
 ;

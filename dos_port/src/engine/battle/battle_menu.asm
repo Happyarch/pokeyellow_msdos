@@ -4,8 +4,20 @@
 ; The bespoke battle ORCHESTRATION it used to hold (DisplayBattleMenu, MoveSelectionMenu,
 ; the turn loop, Render*/Do*AttackDamage, the fainted/no-PP/run message draws) has been
 ; replaced by the faithful translation in core.asm (engine/battle/core.asm). What remains
-; here are: (1) the centered-canvas draw primitives core.asm calls (DrawEmptyDialogBox /
-; DrawBattleMenuBox / DrawHUDsAndHPBars); (2) the move TYPE/PP box and FindMoveName helper.
+; here, current as of 2026-08-15 (this slice's remediation pass — see the DEVIATION
+; annotations on each routine for the evidence behind these classifications):
+;   DrawEmptyDialogBox / DrawBattleMenuBox   centered-canvas draw primitives core.asm calls
+;   DrawBattleMenu                           debug-harness-only composite of the two above
+;   EndBattleScreen                          canvas-blank exit; core.asm's DrawHUDsAndHPBars
+;                                             is NOT in this file, it lives in the core.asm
+;                                             mirror (see below)
+;   ShowSimulatedInputBagBox                 OLD_MAN/PIKACHU tutorial substitute presentation
+;   print_num3                               fork of home/print_num.asm:PrintNumber, flagged
+;                                             for retirement (DEVIATION below) but still the
+;                                             only caller path status_screen.asm uses
+;   lvl_mon_ptr                              exported scratch for evos_moves.asm
+; The move TYPE/PP box helper (PrintMoveInfoBox) and FindMoveName (a fork of pret's
+; GetMoveName) are BOTH gone — see the retirement notes at their old locations below.
 ; The EXP/level-up display routines GainExperience (experience.asm) used to call here
 ; (ShowGainedExpText / ShowGrewLevelText, forked names for pret's GainedText /
 ; GrewLevelText) were retired 2026-08-15 — GainExperience now drives the pret text
@@ -19,7 +31,10 @@
 ; which is exported for it. WaitForTextScrollButtonPress (with its WaitForAPress alias
 ; and the wtsbp_saved_c1/c2 counters) is a pret home/joypad2.asm label and moved to that
 ; mirror, src/home/joypad2.asm; no routine here calls it any more (its only caller was
-; the retired ShowGainedExpText).
+; the retired ShowGainedExpText). DoEnemyAttackDamage and wBattleOver (the
+; DEBUG_BATTLE_ENEMYHIT ground-truth scaffold) were debug-harness-only — see the
+; relocation note near the foot of this file — and moved to src/debug/debug_dump.asm,
+; their only referrer tree-wide.
 ;
 ; All draw coords come from the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc ← ui_layout_battle_sidecar.json; edit with
@@ -83,10 +98,6 @@ global str_norun3
 %include "assets/battle_menu_runtime_strings.inc"
 
 section .bss
-; Battle terminal state (legacy harness hook): 0 = ongoing. core.asm uses wBattleResult;
-; the DEBUG_BATTLE harness still seeds this for compatibility.
-global wBattleOver
-wBattleOver: resb 1
 ; screen_save moved to src/home/tilemap.asm with the Buffer1 routines
 ; (menu-intro review: the pret labels belong in the home/tilemap.asm mirror).
 global lvl_mon_ptr                        ; also written by LearnMoveFromLevelUp (evos_moves.asm)
@@ -98,26 +109,21 @@ global DrawBattleMenu
 global DrawBattleMenuBox
 global DrawEmptyDialogBox
 global EndBattleScreen
-global FindMoveName
 global ShowSimulatedInputBagBox
-global DoEnemyAttackDamage
 
 extern TextBoxBorder                 ; unified text engine (text.asm), stride-aware
 extern PlaceString                   ; unified text engine; src=EAX, returns end in EBX
 extern menu_item_step                ; src/home/window.asm — menu cursor item spacing
 extern text_row_stride               ; text.asm — W_TILEMAP row stride (battle sets 40)
-extern MoveNames
-extern Moves
 extern DelayFrame
-; --- DEBUG_BATTLE_ENEMYHIT ground-truth scaffold only ---
-extern GetCurrentMove                 ; engine/battle/core.asm — move record -> wPlayerMove*/wEnemyMove*
-extern GetDamageVarsForEnemyAttack    ; engine/battle/core.asm
-extern CalculateDamage                ; engine/battle/core.asm (ZF if 0 BP)
-extern AdjustDamageForMoveType        ; engine/battle/core.asm
-extern RandomizeDamage                ; engine/battle/core.asm
 
 ; ===========================================================================
-; Draw primitives (the sanctioned divergence point) under pret names.
+; Draw primitives — the sanctioned divergence point. Their names are
+; descriptive port-only labels, NOT pret names (none of DrawEmptyDialogBox /
+; DrawBattleMenuBox / DrawBattleMenu / EndBattleScreen matches a pret label;
+; see each routine's DEVIATION annotation for the pret call it substitutes
+; for). The externs immediately below ARE pret names (SaveScreenTilesToBuffer1
+; / LoadScreenTilesFromBuffer1), moved to their pret mirror elsewhere.
 ; ===========================================================================
 
 ; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 moved to their pret
@@ -132,6 +138,7 @@ extern DelayFrames                   ; src/home/delay.asm — In: BL = frame cou
 
 ; DrawEmptyDialogBox — pret PrintEmptyString: redraw the outer dialog box with a BLANK
 ; interior (clears any prior message). Labels/box are instant (pret PlaceString).
+; DEVIATION{class=projection; pret=engine/battle/core.asm:PrintEmptyString; behavior=pret prints a one-character empty string through the shared PrintText/TextCommandProcessor engine over the box the prior DisplayTextBoxID call already drew, the port instead redraws the whole outer box outline via TextBoxBorder against the generated UI_DIALOG_BOX layout constants; evidence=pret PrintEmptyString (engine/battle/core.asm:6720) is ld hl, dot emptyString / jp PrintText with no box-border call of its own, and this file is the declared sanctioned draw-layer divergence point per its header, projecting pret box coordinates through assets/ui_layout_battle.inc for the port's widened canvas; lifetime=permanent, retires only if the battle front end moves onto the shared PrintText/TextBoxBorder pipeline core.asm already uses for the rest of the screen}
 DrawEmptyDialogBox:
     and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
     mov dword [menu_item_step], 2 * FW
@@ -143,6 +150,7 @@ DrawEmptyDialogBox:
 
 ; DrawBattleMenuBox — pret DisplayTextBoxID(BATTLE_MENU_TEMPLATE): the smaller menu box
 ; (divider) + the FIGHT/PKMN/ITEM/RUN labels. In: EBP = GB base.
+; DEVIATION{class=projection; pret=engine/battle/core.asm:DisplayBattleMenu; behavior=pret sets wTextBoxID to BATTLE_MENU_TEMPLATE and dispatches through the generic menu-template DisplayTextBoxID system, the port draws the box and labels directly via TextBoxBorder plus PlaceString against the generated UI_ACTION_MENU_BOX/UI_ACTION_TEXT layout constants; evidence=pret DisplayBattleMenu (engine/battle/core.asm around line 2087) does ld a, BATTLE_MENU_TEMPLATE / ld [wTextBoxID], a / call DisplayTextBoxID rather than a direct box-border call, and this file is the declared sanctioned draw-layer divergence point per its header; lifetime=permanent, tracked with the rest of this file's draw primitives}
 DrawBattleMenuBox:
     mov dword [menu_item_step], 2 * FW
     mov esi, W_TILEMAP + BOX_OFF
@@ -157,12 +165,14 @@ DrawBattleMenuBox:
 
 ; DrawBattleMenu — outer dialog box + menu box + labels (static; used by the DEBUG_BATTLE
 ; non-interactive dump harness). Equivalent to DrawEmptyDialogBox + DrawBattleMenuBox.
+; DEVIATION{class=temporary; pret=engine/battle/core.asm:DisplayBattleMenu; behavior=a convenience wrapper composing the two real draw primitives (DrawEmptyDialogBox then DrawBattleMenuBox) under one call, not itself part of the live battle draw path; evidence=label_status reports both its callers as anim_show_label in src/debug/debug_dump.asm (lines 4311 and 4317) and this file's own header note of what core.asm calls does not list DrawBattleMenu, only DrawEmptyDialogBox and DrawBattleMenuBox individually; lifetime=stays here since it composes two labels this file already exports, retire or move to the debug subsystem only if the DEBUG_BATTLE harness stops needing the combined call}
 DrawBattleMenu:
     call DrawEmptyDialogBox
     jmp DrawBattleMenuBox
 
 ; EndBattleScreen — clean battle terminal: blank the canvas, present it, restore the
 ; overworld text stride. (Placeholder exit; real exit returns to the overworld.)
+; DEVIATION{class=projection; pret=engine/battle/end_of_battle.asm:EndOfBattle; behavior=port-only canvas-blanking exit used by init_battle.asm and the debug harness, there is no single pret label for it because pret's EndOfBattle returns control to the overworld map draw rather than blanking a shared canvas the port reuses for both screens; evidence=label_status reports its callers as anim_show_label in src/debug/debug_dump.asm and init_battle.asm citing it as clean terminal, and this file header documents the port compositing model (single W_TILEMAP canvas reused across screens) that makes an explicit blank-and-restore step necessary where pret simply draws the next screen over VRAM; lifetime=permanent while the port keeps one shared canvas for battle and overworld}
 EndBattleScreen:
     mov dword [text_row_stride], 20       ; restore the overworld/GB text stride
     lea edi, [ebp + W_TILEMAP]
@@ -241,6 +251,8 @@ ShowSimulatedInputBagBox:
 ; ===========================================================================
 
 ; print_num3 — EAX (0..999) → 3-digit right-aligned, space-padded, at [ebp+EDI..EDI+2].
+;
+; DEVIATION{class=temporary; pret=home/print_num.asm:PrintNumber; behavior=reimplements PrintNumber's div-based big-endian decimal conversion (space-padded, no leading zeroes, no left-align) under an invented name and a different calling convention, value pre-loaded in EAX and dest offset in EDI instead of a source pointer in EDX and dest cursor in ESI; evidence=pret PrintStatsBox.PrintStat (engine/pokemon/status_screen.asm) calls the real PrintNumber with BH=2 (byte count) and BL=3 (digit count) and no flag bits for exactly this ATTACK/DEFENSE/SPEED/SPECIAL stat field, and the port's own already-ported PrintNumber (src/home/print_num.asm) implements that identical contract and is called that way elsewhere in status_screen.asm; lifetime=retires when the four call sites in engine/pokemon/status_screen.asm PrintStatsBox.LevelUpStatsBox (status_screen.asm:575,581,587,593) are converted to call PrintNumber directly with ESI=dest cursor, EDX=stat field address, BH=2, BL=3, matching pret, a change outside this slice's edit scope and reported in this slice's report for the exact conversion}
 print_num3:
     push ebx
     mov ebx, 10
@@ -272,63 +284,47 @@ print_num3:
     ret
 
 ; ===========================================================================
-; Move list helpers (called by core.asm's MoveSelectionMenu).
+; Move list helpers — EMPTY as of 2026-08-15 (this slice's remediation pass).
+; This section used to hold FindMoveName, called by core.asm's
+; MoveSelectionMenu-adjacent move-name printing; that call graph never
+; actually reached core.asm (label_status showed zero core.asm callers, only
+; the extern), so the banner's claim was already stale before the retirement.
 ; ===========================================================================
 
-; FindMoveName — AL = move id (1-based). Out: EAX = flat ptr to that move's name in
-; MoveNames ('@'=0x50-terminated, move-id order). Clobbers ECX, EDX.
-FindMoveName:
-    movzx ecx, al
-    mov eax, MoveNames
-    dec ecx
-.skip:
-    jecxz .done
-.scan:
-    mov dl, [eax]
-    inc eax
-    cmp dl, 0x50
-    jne .scan
-    dec ecx
-    jmp .skip
-.done:
-    ret
+; FindMoveName — RETIRED 2026-08-15 (fork retirement, this slice). It was a
+; port-invented duplicate of pret's GetMoveName (home/names.asm:129): the same
+; "scan MoveNames for the Nth 0x50-terminated entry" walk that GetName
+; (src/home/names2.asm, the mirror of pret home/names2.asm:GetName) already
+; performs faithfully, reimplemented under an invented name that returned a
+; flat pointer instead of going through wNameBuffer. Its only caller,
+; DisplayUsedMoveText (src/engine/battle/used_move_text.asm), now calls the
+; real GetMoveName (src/home/names.asm) directly, copying the WRAM
+; wNameBuffer result instead of a flat MoveNames pointer. `MoveNames` is no
+; longer referenced by this file (extern removed below).
 
 ; (The TYPE/PP box used to be drawn here by a port-invented PrintMoveInfoBox, with a
 ; hand-rolled 2-digit printer and a direct Moves-table type lookup. Menu-fidelity row 22
 ; replaced it with pret's own PrintMenuItem — core.asm:3010 — which reads the max PP from
 ; GetMaxPP (so PP Ups count, which PrintMoveInfoBox got wrong) and prints the type through
-; PrintMoveType. Both it and its print_2d helper are deleted; FindMoveName above stays,
-; it has other callers.)
+; PrintMoveType. Both it and its print_2d helper are deleted; FindMoveName, which used to
+; be described here as staying because it had other callers, is also retired above — its
+; only caller now goes straight to the real pret GetMoveName.)
 
 ; ===========================================================================
-; DEBUG_BATTLE_ENEMYHIT ground-truth scaffold (NOT the live battle path).
+; DEBUG_BATTLE_ENEMYHIT ground-truth scaffold — RELOCATED 2026-08-15 (this
+; slice's remediation pass). DoEnemyAttackDamage and wBattleOver (former .bss
+; global above) had exactly one referrer tree-wide: src/debug/debug_dump.asm
+; (label_status --callers DoEnemyAttackDamage: 1 port caller, anim_show_label
+; at debug_dump.asm:4286, plus the extern at :186; wBattleOver: 0 port
+; callers, extern only at debug_dump.asm:182, written at :4267). Neither is
+; reachable from the live battle path (core.asm resolves moves through its
+; own EnemyCalcMoveDamage and tracks wBattleResult, not this pair), so they
+; are debug-harness-only and belong in the debug subsystem, not this pret
+; draw-layer mirror. Both bodies moved verbatim into
+; src/debug/debug_dump.asm (owned by another slice in this remediation
+; fan-out) — see that slice's edit for the relocated DEVIATION annotation and
+; code. Nothing here still references GetCurrentMove /
+; GetDamageVarsForEnemyAttack / CalculateDamage / AdjustDamageForMoveType /
+; RandomizeDamage / hWhoseTurn / wCriticalHitOrOHKO / wBattleMonHP / wDamage;
+; their externs were removed from this file's header.
 ; ===========================================================================
-; DoEnemyAttackDamage — run the faithful Gen-1 damage pipeline for the enemy's selected
-; move and subtract wDamage from the player mon's HP (floored). Used only by the static
-; DEBUG_BATTLE_ENEMYHIT WRAM-dump harness; the live battle resolves moves via core.asm.
-;
-; DEVIATION{class=temporary; pret=engine/battle/core.asm:EnemyCalcMoveDamage; behavior=a harness-only entry point drives the same damage pipeline pret runs inside EnemyCalcMoveDamage and applies the result, so a dump can be taken at a known point without stepping the whole turn loop; evidence=label_status reports its only caller as RunBattleTest in src/debug/debug_dump.asm and the port already translates EnemyCalcMoveDamage faithfully in the core.asm mirror at line 2090, so this duplicates a pret routine under a port name and exists only for the harness, it is not a second implementation of the live path; lifetime=retire by pointing the DEBUG_BATTLE_ENEMYHIT harness at EnemyCalcMoveDamage, tracked as a battle-completion cleanup}
-DoEnemyAttackDamage:
-    mov byte [ebp + hWhoseTurn], 1
-    call GetCurrentMove
-    mov byte [ebp + wCriticalHitOrOHKO], 0
-    call GetDamageVarsForEnemyAttack
-    call CalculateDamage
-    jz .apply
-    call AdjustDamageForMoveType
-    call RandomizeDamage
-.apply:
-    movzx eax, byte [ebp + wBattleMonHP]
-    shl eax, 8
-    mov al, [ebp + wBattleMonHP + 1]
-    movzx ecx, byte [ebp + wDamage]
-    shl ecx, 8
-    mov cl, [ebp + wDamage + 1]
-    sub eax, ecx
-    jns .store
-    xor eax, eax
-.store:
-    mov [ebp + wBattleMonHP + 1], al
-    shr eax, 8
-    mov [ebp + wBattleMonHP], al
-    ret
