@@ -24,6 +24,11 @@ global LinedUpText
 global NotThisTimeText
 global YeahText
 
+global SlotMachineMap
+global SlotMachineMapEnd
+global SlotMachineTiles1
+global SlotMachineTiles1End
+
 extern Random
 
 %define BIT_SLOTS_CAN_WIN 6
@@ -167,3 +172,15 @@ YeahText:
     text_far _YeahText
     text_pause
     text_end
+
+; -----------------------------------------------------------------------------
+; GFX and Tilemap Data (INCBIN)
+; -----------------------------------------------------------------------------
+SlotMachineMap:
+    incbin "../gfx/slots/slots.tilemap"
+SlotMachineMapEnd:
+
+SlotMachineTiles1:
+    incbin "../gfx/slots/slots_1.2bpp"
+SlotMachineTiles1End:
+
