@@ -613,6 +613,7 @@ wSquishMonCurrentDirection equ 0xD09E   ; golden 00:d09e — 0 = left, 1 = right
 wSlideMonUpBottomRowLeftTile equ 0xD09E ; golden 00:d09e — tile id seeding _AnimationSlideMonUp's refilled bottom row. UNION with wWhichBattleAnimTileset / wOutwardSpiralCurrentDirection at 0xD09E, as in pret; the slide never calls LoadMoveAnimationTiles, so the lifetimes are disjoint.
 wUnusedWaterDropletsByte   equ 0xD089   ; golden 00:d089 — written by AnimationWaterDropletsEverywhere, never read (pret name says so). Same $D089 union lane as the aliases above.
 %ifndef wCoordAdjustmentAmount
+wNewSlotMachineBallTile    equ 0xD089   ; SlotMachine_UpdateBallTiles (same $D089 union lane)
 wCoordAdjustmentAmount     equ 0xD089   ; AdjustOAMBlock* signed delta (was locally %ifndef-defined in animations.asm/dust_smoke.asm)
 %endif
 wEnemyMon1HP           equ 0xD8A4
@@ -2342,5 +2343,6 @@ wTrainerScreenY               equ 0xCD40   ; golden 00:cd40
 wTrainerScreenX               equ 0xCD41   ; golden 00:cd41
 wEmotionBubbleSpriteIndex     equ 0xCD4F   ; golden 00:cd4f
 wWhichEmotionBubble           equ 0xCD50   ; golden 00:cd50
+wSlotMachineBet               equ 0xCD50   ; golden 00:cd50 — same union lane as the above
 
 %endif ; GB_MEMMAP_INC

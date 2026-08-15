@@ -3,6 +3,7 @@
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 %include "gb_text.inc"
+%include "coords.inc"
 
 ; Tier-1 DATA: message streams and string constants from data/text/text_2.asm
 ; and engine/slots/slot_machine.asm.
@@ -21,6 +22,12 @@ global SlotMachine_AnimWheel1
 global SlotMachine_AnimWheel2
 global SlotMachine_AnimWheel3
 global SlotMachine_AnimWheel
+global SlotMachine_PutOutLitBalls
+global SlotMachine_LightBalls
+global SlotMachine_UpdateThreeCoinBallTiles
+global SlotMachine_UpdateTwoCoinBallTiles
+global SlotMachine_UpdateOneCoinBallTiles
+global SlotMachine_UpdateBallTiles
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -44,6 +51,7 @@ extern SlotMachineWheel3
 
 %define BIT_SLOTS_CAN_WIN 6
 %define BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR 7
+
 
 ; -----------------------------------------------------------------------------
 ; SlotMachine_SetFlags
@@ -316,5 +324,61 @@ SlotMachine_AnimWheel:
     mov byte [ebp + edx], al
     ret
 
+; -----------------------------------------------------------------------------
+; SlotMachine_PutOutLitBalls
+; -----------------------------------------------------------------------------
+SlotMachine_PutOutLitBalls:
+    mov al, 0x23
+    mov byte [ebp + wNewSlotMachineBallTile], al
+    jmp SlotMachine_UpdateThreeCoinBallTiles
 
+; -----------------------------------------------------------------------------
+; SlotMachine_LightBalls
+; -----------------------------------------------------------------------------
+SlotMachine_LightBalls:
+    mov al, 0x14
+    mov byte [ebp + wNewSlotMachineBallTile], al
+    mov al, byte [ebp + wSlotMachineBet]
+    dec al
+    jz SlotMachine_UpdateOneCoinBallTiles
+    dec al
+    jz SlotMachine_UpdateTwoCoinBallTiles
 
+; -----------------------------------------------------------------------------
+; SlotMachine_UpdateThreeCoinBallTiles
+; -----------------------------------------------------------------------------
+SlotMachine_UpdateThreeCoinBallTiles:
+    hlcoord 3, 2
+    call SlotMachine_UpdateBallTiles
+    hlcoord 3, 10
+    call SlotMachine_UpdateBallTiles
+
+; -----------------------------------------------------------------------------
+; SlotMachine_UpdateTwoCoinBallTiles
+; -----------------------------------------------------------------------------
+SlotMachine_UpdateTwoCoinBallTiles:
+    hlcoord 3, 4
+    call SlotMachine_UpdateBallTiles
+    hlcoord 3, 8
+    call SlotMachine_UpdateBallTiles
+
+; -----------------------------------------------------------------------------
+; SlotMachine_UpdateOneCoinBallTiles
+; -----------------------------------------------------------------------------
+SlotMachine_UpdateOneCoinBallTiles:
+    hlcoord 3, 6
+
+; -----------------------------------------------------------------------------
+; SlotMachine_UpdateBallTiles
+; -----------------------------------------------------------------------------
+SlotMachine_UpdateBallTiles:
+    mov al, byte [ebp + wNewSlotMachineBallTile]
+    mov byte [ebp + esi], al
+    add esi, 13
+    mov byte [ebp + esi], al
+    add esi, 7
+    inc al
+    mov byte [ebp + esi], al
+    add esi, 13
+    mov byte [ebp + esi], al
+    ret
