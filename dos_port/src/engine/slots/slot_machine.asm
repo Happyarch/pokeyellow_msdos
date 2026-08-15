@@ -34,6 +34,11 @@ global SlotMachine_SubtractBetFromPlayerCoins
 global SlotMachine_PrintCreditCoins
 global SlotMachine_PrintPayoutCoins
 global SlotMachine_PayCoinsToPlayer
+global SlotMachine_StopOrAnimWheel1
+global SlotMachine_StopOrAnimWheel2
+global SlotMachine_StopOrAnimWheel3
+global SlotMachine_StopWheel1Early
+global SlotMachine_StopWheel2Early
 
 global PlaySlotMachineText
 global OutOfCoinsSlotMachineText
@@ -79,7 +84,19 @@ wPayoutCoins                    equ 0xCD4A
 wTempCoins1                     equ 0xCD46
 wTempCoins2                     equ 0xCD4A
 wSlotMachineWinningSymbol       equ 0xCD41
+SLOTS7                          equ 0x0200
 SLOTSBAR                        equ 0x0604
+SLOTSCHERRY                     equ 0x0A08
+wStoppingWhichSlotMachineWheel  equ 0xCD3D
+wSlotMachineWheel1Offset        equ 0xCD3E
+wSlotMachineWheel2Offset        equ 0xCD3F
+wSlotMachineWheel3Offset        equ 0xCD40
+wSlotMachineWheel1BottomTile    equ 0xCD41
+wSlotMachineWheel2BottomTile    equ 0xCD44
+wSlotMachineWheel3BottomTile    equ 0xCD47
+wSlotMachineFlags               equ 0xCD4C
+wSlotMachineWheel1SlipCounter   equ 0xCD4D
+wSlotMachineWheel2SlipCounter   equ 0xCD4E
 
 
 ; -----------------------------------------------------------------------------
@@ -628,4 +645,131 @@ SlotRewardPointers:
     dd SlotReward15Text
     dd SlotReward15Func
     dd SlotReward15Text
+
+; -----------------------------------------------------------------------------
+; SlotMachine_StopOrAnimWheel1
+; -----------------------------------------------------------------------------
+SlotMachine_StopOrAnimWheel1:
+    mov al, byte [ebp + wStoppingWhichSlotMachineWheel]
+    cmp al, 1
+    jc .animWheel
+    mov al, byte [ebp + wSlotMachineWheel1Offset]
+    shr al, 1
+    jnc .animWheel ; check that a symbol is centred in the wheel
+    mov esi, wSlotMachineWheel1SlipCounter
+    mov al, byte [ebp + esi]
+    test al, al
+    jz .exit
+    dec byte [ebp + esi]
+    call SlotMachine_StopWheel1Early
+    jnz .exit
+.animWheel:
+    jmp SlotMachine_AnimWheel1
+.exit:
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotMachine_StopOrAnimWheel2
+; -----------------------------------------------------------------------------
+SlotMachine_StopOrAnimWheel2:
+    mov al, byte [ebp + wStoppingWhichSlotMachineWheel]
+    cmp al, 2
+    jc .animWheel
+    mov al, byte [ebp + wSlotMachineWheel2Offset]
+    shr al, 1
+    jnc .animWheel ; check that a symbol is centred in the wheel
+    mov esi, wSlotMachineWheel2SlipCounter
+    mov al, byte [ebp + esi]
+    test al, al
+    jz .exit
+    dec byte [ebp + esi]
+    call SlotMachine_StopWheel2Early
+    jz .exit
+.animWheel:
+    jmp SlotMachine_AnimWheel2
+.exit:
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotMachine_StopOrAnimWheel3
+; -----------------------------------------------------------------------------
+SlotMachine_StopOrAnimWheel3:
+    mov al, byte [ebp + wStoppingWhichSlotMachineWheel]
+    cmp al, 3
+    jc .animWheel
+    mov al, byte [ebp + wSlotMachineWheel3Offset]
+    shr al, 1
+    jnc .animWheel ; check that a symbol is centred in the wheel
+; wheel 3 stops as soon as possible
+    stc
+    ret
+.animWheel:
+    call SlotMachine_AnimWheel3
+    and al, al
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotMachine_StopWheel1Early
+; -----------------------------------------------------------------------------
+SlotMachine_StopWheel1Early:
+    call SlotMachine_GetWheel1Tiles
+    mov esi, wSlotMachineWheel1BottomTile
+    mov al, byte [ebp + wSlotMachineFlags]
+    and al, (1 << BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR)
+    jnz .sevenAndBarMode
+; Stop early if the middle symbol is not a cherry.
+    inc esi
+    mov al, byte [ebp + esi]
+    cmp al, (SLOTSCHERRY >> 8)
+    jnz .stopWheel
+    ret
+; BUG{class=data-model; pret=engine/slots/slot_machine.asm:SlotMachine_StopWheel1Early; behavior=in seven-and-bar mode the wheel was likely intended to stop when a 7 symbol is visible but cp HIGH(SLOTS7) followed by jr c never branches because all symbol tile IDs are at least HIGH(SLOTS7); evidence=pret comment and cp HIGH(SLOTS7) comparison where SLOTS7 high byte is 0x02 and no symbol high byte is smaller; lifetime=permanent Gen-1 behavior unless BUG_FIX_LEVEL >= 2}
+.sevenAndBarMode:
+    mov cl, 3
+.loop:
+    mov al, byte [ebp + esi]
+    inc esi
+%if BUG_FIX_LEVEL >= 2
+    cmp al, (SLOTS7 >> 8)
+    jz .stopWheel
+%else
+    cmp al, (SLOTS7 >> 8)
+    jc .stopWheel ; condition never true
+%endif
+    dec cl
+    jnz .loop
+    ret
+.stopWheel:
+    inc al
+    mov esi, wSlotMachineWheel1SlipCounter
+    mov byte [ebp + esi], 0
+    ret
+
+; -----------------------------------------------------------------------------
+; SlotMachine_StopWheel2Early
+; -----------------------------------------------------------------------------
+SlotMachine_StopWheel2Early:
+    call SlotMachine_GetWheel2Tiles
+    mov al, byte [ebp + wSlotMachineFlags]
+    and al, (1 << BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR)
+    jnz .sevenAndBarMode
+; Stop early if any symbols are lined up in the first two wheels.
+    call SlotMachine_FindWheel1Wheel2Matches
+    jnz .exit
+    jmp .stopWheel
+; Stop early if two 7 symbols or two bar symbols are lined up in the first two
+; wheels OR if no symbols are lined up and the bottom symbol in wheel 2 is a
+; 7 symbol or bar symbol.
+.sevenAndBarMode:
+    call SlotMachine_FindWheel1Wheel2Matches
+    mov al, byte [ebp + edi]
+    cmp al, (SLOTSBAR >> 8) + 1
+    jnc .exit
+.stopWheel:
+    xor al, al
+    mov byte [ebp + wSlotMachineWheel2SlipCounter], al
+    ret
+.exit:
+    ret
+
 
