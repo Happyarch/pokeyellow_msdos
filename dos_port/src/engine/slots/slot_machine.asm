@@ -2,12 +2,27 @@
 
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
+%include "gb_text.inc"
+
+; Tier-1 DATA: message streams and string constants from data/text/text_2.asm
+; and engine/slots/slot_machine.asm.
+%include "assets/slots_text.inc"
 
 section .text
 
 global SlotMachine_SetFlags
 global SlotMachine_FindWheel1Wheel2Matches
 global SlotMachine_CheckForMatch
+
+global PlaySlotMachineText
+global OutOfCoinsSlotMachineText
+global BetHowManySlotMachineText
+global StartSlotMachineText
+global NotEnoughCoinsSlotMachineText
+global OneMoreGoSlotMachineText
+global LinedUpText
+global NotThisTimeText
+global YeahText
 
 extern Random
 
@@ -112,3 +127,43 @@ SlotMachine_CheckForMatch:
     cmp al, byte [ebp + esi]
 .no_match:
     ret
+
+; -----------------------------------------------------------------------------
+; Slot machine text wrappers (pret engine/slots/slot_machine.asm)
+; -----------------------------------------------------------------------------
+PlaySlotMachineText:
+    text_far _PlaySlotMachineText
+    text_end
+
+OutOfCoinsSlotMachineText:
+    text_far _OutOfCoinsSlotMachineText
+    text_end
+
+BetHowManySlotMachineText:
+    text_far _BetHowManySlotMachineText
+    text_end
+
+StartSlotMachineText:
+    text_far _StartSlotMachineText
+    text_end
+
+NotEnoughCoinsSlotMachineText:
+    text_far _NotEnoughCoinsSlotMachineText
+    text_end
+
+OneMoreGoSlotMachineText:
+    text_far _OneMoreGoSlotMachineText
+    text_end
+
+LinedUpText:
+    text_far _LinedUpText
+    text_end
+
+NotThisTimeText:
+    text_far _NotThisTimeText
+    text_end
+
+YeahText:
+    text_far _YeahText
+    text_pause
+    text_end
