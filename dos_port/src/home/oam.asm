@@ -21,9 +21,14 @@
 ; exactly how the trainer-sight emotion bubble regressed (diagnosed
 ; 2026-08-15) — EmotionBubble wrote a faithful 2x2 block via this routine, but
 ; nothing published its canvas position, so render_sprites' `cmp ecx,
-; [spr_oam_valid] / jae .nextSprite` skipped it every frame. WriteOAMBlock now
-; publishes spr_dos_sx/sy (and grows spr_oam_valid) for the slots it writes —
-; see the DEVIATION below and GBScreenToCanvasXY's header
+; [spr_oam_valid] / jae .nextSprite` skipped it every frame. And the position
+; publish alone is still not enough: tile/attr are read from GB_OAM ($FE00),
+; which the shadow write only reaches via update_oam's DMA — gated OFF by the
+; wUpdateSpritesEnabled=$ff state these callers run under, so the first fix
+; drew the STALE $FE00 tiles at the right position (maintainer-observed:
+; the trainer's own sprite where the '!' belonged). WriteOAMBlock therefore
+; publishes spr_dos_sx/sy (growing spr_oam_valid) AND mirrors each entry into
+; GB_OAM itself — see the DEVIATION below and GBScreenToCanvasXY's header
 ; (src/engine/gfx/sprite_oam.asm).
 ;
 ; INPUT (pret contract, mapped to the port register map):
@@ -61,7 +66,7 @@ section .text
 ; ---------------------------------------------------------------------------
 ; WriteOAMBlock — write a 2x2 sprite block into shadow OAM (wShadowOAM).
 ;
-; DEVIATION{class=projection; pret=home/oam.asm:WriteOAMBlock; behavior=in addition to the faithful (Y, X, tile, attr) writes into wShadowOAM, each entry also publishes its render_sprites canvas position into spr_dos_sy and spr_dos_sx and grows spr_oam_valid to at least cover its own index, without lowering an index some other publisher already raised the count past; evidence=render_sprites in src/ppu/ppu.asm positions every OAM entry exclusively from spr_dos_sy and spr_dos_sx gated by spr_oam_valid, never from the shadow-OAM Y and X bytes this routine writes, so a caller like EmotionBubble or the Cut animation that only calls WriteOAMBlock draws a faithful shadow-OAM block that the compositor then silently skips, diagnosed 2026-08-15 as the trainer-sight emotion-bubble-never-renders regression and independently corroborated; lifetime=permanent, part of the software OBJ HAL that publishing to real hardware OAM would not need}
+; DEVIATION{class=projection; pret=home/oam.asm:WriteOAMBlock; behavior=in addition to the faithful (Y, X, tile, attr) writes into wShadowOAM, each entry also publishes its render_sprites canvas position into spr_dos_sy and spr_dos_sx, grows spr_oam_valid to at least cover its own index without lowering an index some other publisher already raised the count past, and mirrors its four bytes into GB_OAM at fe00 directly; evidence=render_sprites in src/ppu/ppu.asm positions every OAM entry exclusively from spr_dos_sy and spr_dos_sx gated by spr_oam_valid and reads tile and attr from GB_OAM, never from the shadow bytes this routine writes, and its callers run under wUpdateSpritesEnabled ff which keeps update_oam from DMA-copying shadow to GB_OAM - the missing position publish was the emotion-bubble-never-renders regression and the missing GB_OAM mirror then drew the STALE fe00 tiles at the bubble position, both measured 2026-08-15 with maintainer visual confirmation of the second; lifetime=permanent, part of the software OBJ HAL - on hardware the unconditional VBlank DMA does the mirroring}
 ; ---------------------------------------------------------------------------
 WriteOAMBlock:
     push eax
@@ -126,6 +131,13 @@ WriteOAMBlock:
     sub ecx, ebp
     sub ecx, W_SHADOW_OAM
     shr ecx, 2                       ; ECX = OAM entry index 0..39
+    ; Mirror the entry into GB_OAM ($FE00) — render_sprites takes tile/attr
+    ; from THERE, not from the shadow, and the wUpdateSpritesEnabled=$ff state
+    ; these callers run under keeps update_oam's shadow->GB_OAM DMA from doing
+    ; it (measured 2026-08-15: without this, the bubble drew the stale $FE00
+    ; tiles — the trainer's own sprite — at the bubble's canvas position).
+    mov eax, [edi]                   ; the 4 bytes just written (Y,X,tile,attr)
+    mov [ebp + GB_OAM + ecx*4], eax
     call GBScreenToCanvasXY          ; in: BH/BL -> out: EAX=canvas Y, EDX=canvas X
     mov [spr_dos_sy + ecx*4], eax
     mov [spr_dos_sx + ecx*4], edx
