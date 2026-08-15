@@ -59,13 +59,20 @@ section .text
 ; software renderer instead of re-deriving the constant. See the annotation on
 ; WriteOAMBlock for why that publish is required.
 ;
-; In:  BH = signed OAM-byte-convention Y, BL = signed OAM-byte-convention X.
+; In:  BH = OAM-byte-convention Y, BL = OAM-byte-convention X — UNSIGNED, as on
+;      hardware, where the OAM bytes span 0-255 with no sign. This was `movsx`
+;      until 2026-08-15, which sent every sprite in the right half / lower rows
+;      of the GB window (OAM X >= 128, i.e. GB column >= 120, or OAM Y >= 128)
+;      to a NEGATIVE canvas position: measured as the trainer-sight '!' bubble
+;      appearing over a left-side trainer but never over the Route 3 lass
+;      standing right of center. The player slot never exposed it (pinned near
+;      screen center, coords always < 128).
 ; Out: EAX = canvas Y, EDX = canvas X. Clobbers EAX, EDX only.
 ; ---------------------------------------------------------------------------
 GBScreenToCanvasXY:
-    movsx eax, bh
+    movzx eax, bh
     add eax, 20
-    movsx edx, bl
+    movzx edx, bl
     add edx, 88
     ret
 
