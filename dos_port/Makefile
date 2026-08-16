@@ -2233,7 +2233,7 @@ NASMFLAGS += -D BOOT_CINEMATIC
 NASMFLAGS += -D DEBUG_YELLOW_S01
 endif
 # Yellow scroll-evidence gate (menu-intro B3): dump FRAME.BIN/GBSTATE at a chosen scene +
-# scene-timer, to photograph a SCROLLING scene at a specific H_SCX. Two builds at two
+# scene-timer, to photograph a SCROLLING scene at a specific hSCX. Two builds at two
 # timers give the two-offset scroll pixel evidence.  make image YELLOW_DUMP_SCENE=7 YELLOW_DUMP_TIMER=38
 ifdef YELLOW_DUMP_SCENE
 NEED_DEBUG_DUMP := 1

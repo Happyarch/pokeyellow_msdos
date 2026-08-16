@@ -310,7 +310,7 @@ boundaries. Emit a `; TODO-HW:` comment describing what the original code does:
     TODO-HW owed — that is exactly how the whole flash/palette family
     (`AnimationFlashScreen`, `SetAnimationBGPalette`, …) is translated.
     `UpdateCGBPal_BGP/OBP0/OBP1` all collapse to `mov byte [g_pal_dirty], 1`.
-  * **`rSCX`/`rSCY` are live via their SHADOWS.** Write `H_SCX`/`H_SCY`, not
+  * **`rSCX`/`rSCY` are live via their SHADOWS.** Write `hSCX`/`hSCY`, not
     `IO_SCX`/`IO_SCY` — `commit_shadow_regs` copies shadow → register every
     `DelayFrame`, so a direct register write is erased next frame. `render_bg`
     takes its blit offset from them, which is how the whole-canvas screen shake

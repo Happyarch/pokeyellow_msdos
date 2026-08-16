@@ -501,7 +501,7 @@ dos_port/tools/project_state --plans
   * **On GB the battle screen IS the window layer** (`core.asm` sets `rWY = 0` on
     entry). That is why pret shakes via `rWX`/`rWY` and why `AnimationWavyScreen`
     turns the window off before wobbling `rSCX`. The port draws battle on the BG
-    layer, so the equivalent whole-screen displacement is `H_SCX`/`H_SCY` — the
+    layer, so the equivalent whole-screen displacement is `hSCX`/`hSCY` — the
     SHADOWS, because `commit_shadow_regs` overwrites the registers each
     `DelayFrame`.
   * **`rLY`/`rSTAT` are inert in the port**, so a literal per-scanline effect

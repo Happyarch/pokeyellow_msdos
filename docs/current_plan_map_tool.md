@@ -80,7 +80,7 @@ checkboxes updated → commit.
   value and has NOT been re-derived at 7; do not trust it without redoing the
   math.** At border 6 the worst-case-map footprint was computed as
   (10+12)×(72+12) = 1848 bytes against a 2048-byte buffer, with
-  `W_TILEMAP_BACKUP2` "immediately after at $F000" and the buffer said to be
+  `wTileMapBackup2` "immediately after at $F000" and the buffer said to be
   unable to "grow in place". At border 7 that footprint recomputes to
   (10+14)×(72+14) = 2064 bytes, which *already* overflowed the old 2048-byte
   buffer — and `gb_memmap.inc` shows the buffer **did** grow in place, to 2304 B,

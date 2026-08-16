@@ -301,7 +301,7 @@ live, and `ReadTrainer` prize money missing when `AddBCD` awards it in
 tile IDs into a 48×36-tile (384×288 px) surface using the existing `tile_cache`
 (2bpp→8bpp decoded tiles), re-decoding only the cells whose tile id changed since
 last frame. It then blits a 320×200 window at a signed pixel offset `(Xoff, Yoff)`
-derived from the coarse block alignment and the fine `H_SCX`/`H_SCY` values,
+derived from the coarse block alignment and the fine `hSCX`/`hSCY` values,
 providing smooth per-pixel scrolling without wrap artifacts. The old 256×256 VRAM
 torus emulation and related `RedrawRowOrColumn` rings are gone. The compositor is
 at full speed as of 2026-07-12 — see `docs/plans/compositor_perf.md` (archived)

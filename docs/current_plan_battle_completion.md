@@ -1018,7 +1018,7 @@ their current bodies auto-answer and auto-select.
       * **The probe discriminates.** A control run pressing B instead of A at
         the SWITCH box leaves `wBattleMon` at `$84` / SNORLAX, so it would have
         reported the broken input.
-      * `W_TILEMAP` at the dump holds the battle screen with PERSIAN L80 210/210
+      * `wTileMap` at the dump holds the battle screen with PERSIAN L80 210/210
         in the HUD **and the dialog "SNORLAX good. / Come back"** — which is
         `PlayerMon2Text`'s outcome selector picking GoodText → ComeBackText.
         That is execution evidence for the 2a switch-out TEXT chain too, not
@@ -2934,7 +2934,7 @@ provider shapes below, not their runtime behavior.
                  return.** A frozen menu at frame 900 was consistent with both
                  "A never consumed" and "A consumed, gate hung with the menu
                  still drawn", so a marker byte was written after the call:
-                 `W_TILEMAP[0]` reads `$EE`, so the call returned. The earlier
+                 `wTileMap[0]` reads `$EE`, so the call returned. The earlier
                  timeout was therefore NOT a press failure.
               3. **RECONCILED — the gate body is DEAD CODE for this battle
                  type.** An entry marker written at the top of the
@@ -3184,7 +3184,7 @@ provider shapes below, not their runtime behavior.
         separate call sites in `_InitBattleCommon` — `DrawBattleIntroBox` on
         the wild and special arms and `DrawEmptyDialogBox` on the trainer arm.
         * `DrawBattleIntroBox` is not a thin wrapper: it HAND-DRAWS the bottom
-          dialog box into `W_TILEMAP` at stride 40 (corners, walls, interior
+          dialog box into `wTileMap` at stride 40 (corners, walls, interior
           fill) and then prints. pret's path draws its box through `PrintText`
           and the msgbox projection. Substituting one for the other is a
           mechanism change on the battle intro, so it WILL move
@@ -3690,7 +3690,7 @@ enemy-gauge clone tile ids and VRAM slots.
         instant is distinguished from `ball_catch`'s by the party still being 5.
         * **THE BUG: `TX_LOW` printed the second dialogue line OUTSIDE the text
           box.** `dos_port/src/home/text.asm` `.cmd_low` hardcoded
-          `W_TILEMAP + 16 * SCREEN_W_TILES + 1` — pret's GB offset
+          `wTileMap + 16 * SCREEN_W_TILES + 1` — pret's GB offset
           (`hlcoord 1,16`) used as a **raw flat index into the port's 40-wide
           tilemap** — so the line landed at canvas (row 8, col 1), eleven rows
           above the box, while line 1 was placed correctly. Fix is one operand:
@@ -3716,7 +3716,7 @@ enemy-gauge clone tile ids and VRAM slots.
         * **SIBLING SWEEP (the raw-coord class says to do one): `TX_SCROLL` has
           the SAME defect and is NOT yet fixed.** `dos_port/src/home/text.asm`
           `.cmd_scroll` ($07) ends with the identical
-          `mov ebx, W_TILEMAP + 16 * SCREEN_W_TILES + 1`, for the identical
+          `mov ebx, wTileMap + 16 * SCREEN_W_TILES + 1`, for the identical
           purpose — repositioning the cursor to the box's second line after
           scrolling. Decomposed rather than asserted: `PrintText`
           (`src/home/window.asm:143`) publishes the active projection record's
@@ -3937,7 +3937,7 @@ enemy-gauge clone tile ids and VRAM slots.
         and `rLY` is INERT in the port — a literal translation never
         terminates. `SlidePlayerHeadLeft` exists ONLY because that raster trick
         forces the player's head to be an OBJ while his body is BG; the port
-        composites both pics into `W_TILEMAP` per frame, so there is no
+        composites both pics into `wTileMap` per frame, so there is no
         head/body split for it to drive. The port's `SlideBattlePicsIn`
         (`src/home/pics.asm`) is a different mechanism, not a renamed copy.
       * **(b) NOT THIS FAMILY AT ALL — 5 labels, and they are permanently out
@@ -4163,7 +4163,7 @@ enemy-gauge clone tile ids and VRAM slots.
         `DrawEnemyHUDAndHPBar`:1960). It shifts a nickname right by 2 columns
         at 1-2 characters, 1 column at 3-4, and not at all at 5+; the port
         placed every name flush-left. The column step needed no projection —
-        `W_TILEMAP` is row-major, so pret's `inc hl`/`dec hl` are +/-1 byte on
+        `wTileMap` is row-major, so pret's `inc hl`/`dec hl` are +/-1 byte on
         both sides. Counter kept 8-bit (`dec bh`) per the counter-width rule.
       * **NO EXISTING SCENARIO CAN WITNESS IT, and the core tier passing is
         therefore VACUOUS for this change.** Every battle scenario's mons are

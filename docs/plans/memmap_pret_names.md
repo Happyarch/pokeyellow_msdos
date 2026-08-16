@@ -37,29 +37,92 @@ makes the oracle below work.
 
 ## Stages
 
-- [ ] Establish build determinism: build twice unchanged, confirm `pkmn.sym` is
-      byte-identical both times
-- [ ] Capture the baseline: `make -C dos_port && cp dos_port/pkmn.sym /tmp/sym.B.before`
+- [x] Establish build determinism: build twice unchanged, confirm `pkmn.sym` is
+      byte-identical both times. **PASSED** — second build forced by touching
+      `gb_memmap.inc` so 290 objects recompiled; `pkmn.sym` byte-identical.
+- [x] Capture the baseline: taken at `51a2b22cc` (after A and C merged), 14158
+      lines. **TRAP FOUND:** `pixellock`/`goldencheck`/`fidelity` build with
+      `-D DEBUG_*`, and the NASMFLAGS stamp guard forces a full rebuild on a flag
+      change — so a `pkmn.sym` left on disk after any golden run is a DEBUG
+      symfile and diffs against a plain baseline by ~28k lines. Always re-run a
+      plain `make -C dos_port` immediately before capturing or comparing.
 - [x] **Mapping built (prework, 2026-08-16).**
       `dos_port/tools/sm83xlat/build_symbols.py` → `tables/symbols.json`, the same
       artifact the transpiler consumes. **214 rename candidates, 0 ambiguous, 0
       address conflicts.** Method and its two rejected alternatives are recorded
       in `dos_port/tools/sm83xlat/README.md`
-- [ ] Review the 214 candidates by hand before renaming anything (the tool
-      reports; it does not decide)
-- [ ] Fold the 10 duplicate definitions (all value-identical): `W_CUR_MAP`
-      (84, 1421), `W_Y_COORD` (85, 1436), `W_X_COORD` (86, 1437), `H_MONEY`
-      (995, 1004), `hAutoBGTransferEnabled` (657, 2279), `MAX_OBJECT_EVENTS`
-      (747, 1637), `wEnemyMon1Moves` (621, 2302), `BIT_SPINNING` (1357, 1800),
-      `BIT_LEDGE_OR_FISHING` (1356, 1801), `wLoadedMonStatus` (2178, 2285)
-- [ ] Batch 1 — HRAM block: rename definitions, `make check`, rewrite the reported
-      sites, `diff pkmn.sym` empty, `make assets`, commit
-- [ ] Batch 2 — player/map state (same cycle)
-- [ ] Batch 3 — flags/bits (same cycle)
-- [ ] Batch 4 — struct offsets (same cycle)
-- [ ] Batch 5 — the long tail (same cycle)
-- [ ] Final `diff /tmp/sym.B.before dos_port/pkmn.sym`: **empty**
-- [ ] Archive: `git mv docs/current_plan_memmap_pret_names.md docs/plans/memmap_pret_names.md`
+- [x] Review the 214 candidates by hand before renaming anything (the tool
+      reports; it does not decide). **This changed the work.** All 76
+      `confirmed` already had the pret name DEFINED in `gb_memmap.inc`, so they
+      are alias MERGES (delete the legacy definition), not renames; all 138
+      `name_only` are true renames. Eleven aliases were defined BY REFERENCE
+      (`wPlayerMoney equ W_PLAYER_MONEY`) and had to be inlined to their literal
+      before the legacy definition was deleted. Recorded in
+      `memmap-rename-confirmed-76-are-alias-merges`.
+- [x] Fold the duplicate definitions. **The plan said ten, "all value-identical";
+      nine are.** `hAutoBGTransferEnabled` was defined once as the literal
+      `0xFFBA` and once BY REFERENCE to `H_AUTO_BG_TRANSFER_EN`, which is itself
+      `0xFFBA` — so they agree only transitively. Four of the ten (`W_CUR_MAP`,
+      `W_Y_COORD`, `W_X_COORD`, `H_MONEY`) are inside the 214 and were folded by
+      the rename itself; the other six were folded in `e7f8730e7`.
+- [x] Batch 1 — HRAM block, 65 names (`a7990fba7`)
+- [x] Batch 2 — player/map/overworld state, 47 names (`5ebfa994f`)
+- [x] Batch 3 — flags/status bits, 21 names
+- [x] Batch 4 — party/box/mon structs, 23 names
+- [x] Batch 5 — the long tail, 58 names
+- [x] Final `diff` against the baseline `pkmn.sym`: **EMPTY** after every batch
+      and at the end.
+- [x] Archive: `git mv docs/current_plan_memmap_pret_names.md docs/plans/memmap_pret_names.md`
+
+## Outcome (2026-08-16)
+
+214 of 214 renamed. `build_symbols.py --report`, re-derived against the realigned
+file, now reports **0 rename candidates and 0 duplicate names** (from 214 and 10).
+`gb_memmap.inc` went 1426 → 1340 `equ` lines. The 398 SCREAMING_SNAKE names that
+remain are the `unmatched` set this plan scoped out: constants and port-only HAL
+names with no pret RAM counterpart.
+
+### Five oracles, not two
+
+The plan's two were necessary and not sufficient:
+
+1. **`make check`** — exit 0 after every batch. **Blind to
+   `dos_port/src/scripts/`**: those 223 transpiler-emitted files are in no
+   `_SRCS` list and `check:` iterates `ALL_SRCS`, yet 266 of the swept sites live
+   there. Closed by assembling all 225 explicitly after every batch (0 failures).
+2. **`pkmn.sym` diff** — empty after every batch. **Blind to `equ` VALUES**,
+   because `gen_symfile.py` filters absolutes out. An alias merge that kept a
+   pret definition with a DIFFERENT value would have silently moved every use
+   site and this oracle would still read empty.
+3. **Resolved-address equivalence** — added to cover exactly that gap. Both
+   versions of `gb_memmap.inc` parsed and every symbol resolved through its
+   expression chain: **all 214 resolve to the identical address, 0 skipped,
+   0 changed.**
+4. **Section bytes** — `objdump -s -j .text -j .data` on a rebuild of the pre-B
+   commit vs the post-B build: **byte-identical**. The rename provably changed
+   nothing executable, which is why no behavioural tier was needed to justify it
+   (core `fidelity` was run anyway: 16/16, no gaps).
+5. **Independent regeneration** — re-running `transpile.py`, which reads
+   `gb_memmap.inc` live, reproduced all 223 emitted script files **byte-identically
+   to the mechanical sweep**. Two mechanisms, arrived at differently, agreeing.
+
+### Deliberately left out of scope
+
+Ten legacy `equ`s outside the 214 share an address with an already-defined
+pret-style name, because name-normalization cannot match a TRUNCATED legacy
+spelling (`H_AUTO_BG_TRANSFER_EN` vs `hAutoBGTransferEnabled`) or a pret label
+that rgbasm generates from a struct macro rather than writing literally
+(`W_PARTY_MON1_MOVES` vs `wPartyMon1Moves`). **Do not merge these mechanically on
+the address join** — at least two are union collisions, not aliases:
+`H_SERIAL_CONN_STATUS` and `hSwapItemQuantity` merely share `0xFFAA`, and
+`W_SPRITE_PLAYER_PICTURE_ID` shares `0xC100` with the block marker
+`wSpriteDataStart`. That is the same false-pair trap that killed the pure address
+join during the prework. Each needs its own reading.
+
+`regression-memmap-wplayercoins-off-by-one` is NOT fixed here and must not ride
+inside a rename batch: it changes an `equ` VALUE, which oracle 2 cannot see at
+all, so a batch carrying it would go green on a false pass. It needs its own
+commit and a registered slots scenario.
 
 ## The mapping (built as prework — do not re-derive it)
 
