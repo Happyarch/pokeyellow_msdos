@@ -1,0 +1,262 @@
+; RocketHideoutB1F.asm — translated from pret scripts/RocketHideoutB1F.asm by dos_port/tools/sm83xlat.
+;
+; ONE-SHOT OUTPUT, NOW HAND-MAINTAINED. The transpiler ran once at the SHA
+; recorded in dos_port/tools/sm83xlat/README.md and is not re-run; this file is
+; ordinary Tier-2 source and editing it is the normal way it changes. There is
+; deliberately no DO NOT EDIT header.
+;
+; Every pret label is preserved verbatim so the file stays line-for-line
+; cross-referenceable against the disassembly.
+;
+; Regions the tool could not lower WITH CERTAINTY are reproduced below as
+; commented pret source under a `; BAIL[reason]` banner, and define NO symbol —
+; so a reference to one is a link error rather than a plausible wrong lowering.
+
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+%include "gb_text.inc"
+%include "events.inc"
+%include "assets/event_constants.inc"
+
+%include "assets/audio_constants.inc"
+
+global RocketHideoutB1FRocket1Text
+global RocketHideoutB1FRocket2Text
+global RocketHideoutB1FRocket3Text
+global RocketHideoutB1FRocket4Text
+global RocketHideoutB1FRocket5Text
+global RocketHideoutB1F_Script
+
+extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
+extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
+extern PlaySound   ; NOT YET DEFINED IN THE PORT
+extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern RocketHideout1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
+extern RocketHideout1TrainerHeader1   ; NOT YET DEFINED IN THE PORT
+extern RocketHideout1TrainerHeader2   ; NOT YET DEFINED IN THE PORT
+extern RocketHideout1TrainerHeader3   ; NOT YET DEFINED IN THE PORT
+extern RocketHideout1TrainerHeader4   ; NOT YET DEFINED IN THE PORT
+extern RocketHideout1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FDoorCallbackScript   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket1AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket1EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket3AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket3BattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket3EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket4AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket4BattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket4EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket5AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket5BattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1FRocket5EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1F_TextPointers   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+
+; Script constants — pret defines these via dw_const in this file.
+SCRIPT_ROCKETHIDEOUTB1F_DEFAULT                equ 0
+SCRIPT_ROCKETHIDEOUTB1F_START_BATTLE           equ 1
+SCRIPT_ROCKETHIDEOUTB1F_END_BATTLE             equ 2
+TEXT_ROCKETHIDEOUTB1F_ROCKET1                  equ 1
+TEXT_ROCKETHIDEOUTB1F_ROCKET2                  equ 2
+TEXT_ROCKETHIDEOUTB1F_ROCKET3                  equ 3
+TEXT_ROCKETHIDEOUTB1F_ROCKET4                  equ 4
+TEXT_ROCKETHIDEOUTB1F_ROCKET5                  equ 5
+TEXT_ROCKETHIDEOUTB1F_ESCAPE_ROPE              equ 6
+TEXT_ROCKETHIDEOUTB1F_HYPER_POTION             equ 7
+
+; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
+; read from pokeyellow.sym — not inferred.
+wRocketHideoutB1FCurScript                     equ 0xD630
+
+; Code and data are emitted in pret's SOURCE ORDER, in one section.
+; That is not cosmetic: a NASM local label binds to the last
+; non-local label above it, so hoisting the text streams into a
+; separate section rebound every `.Text` to the wrong parent.
+section .text
+
+RocketHideoutB1F_Script:
+    call RocketHideoutB1FDoorCallbackScript
+    call EnableAutoTextBoxDrawing
+    mov esi, RocketHideout1TrainerHeaders
+    mov edi, RocketHideoutB1F_ScriptPointers   ; pret: ld de, RocketHideoutB1F_ScriptPointers — ExecuteCurMapScriptInTable takes it in EDI
+    mov al, [ebp + wRocketHideoutB1FCurScript]
+    call ExecuteCurMapScriptInTable
+    mov [ebp + wRocketHideoutB1FCurScript], al
+    ret
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] RocketHideoutB1FDoorCallbackScript (scripts/RocketHideoutB1F.asm:12-21) — at scripts/RocketHideoutB1F.asm:17: .door_open is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld hl, wCurrentMapScriptFlags
+; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
+; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
+; PRET| 	ret z
+; PRET| 	CheckEvent EVENT_ENTERED_ROCKET_HIDEOUT
+; PRET| 	jr nz, .door_open
+; PRET| 	CheckEventReuseA EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4
+; PRET| 	jr nz, .play_sound_door_open
+; PRET| 	ld a, $54 ; Door Block
+; PRET| 	jr .set_door_block
+
+; ---------------------------------------------------------------------------
+; BAIL[predef-leaves-id-in-a] RocketHideoutB1FDoorCallbackScript.play_sound_door_open (scripts/RocketHideoutB1F.asm:23-32) — at scripts/RocketHideoutB1F.asm:32: predef_jump ReplaceTileBlock
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld a, SFX_GO_INSIDE
+; PRET| 	call PlaySound
+; PRET| 	; [pret] BUG: should be SetEvent to avoid the SFX playing every time you enter the map
+; PRET| 	CheckEventHL EVENT_ENTERED_ROCKET_HIDEOUT
+; PRET| .door_open
+; PRET| 	ld a, $e ; Floor Block
+; PRET| .set_door_block
+; PRET| 	ld [wNewTileBlockID], a
+; PRET| 	lb bc, 8, 12
+; PRET| 	predef_jump ReplaceTileBlock
+
+; ---------------------------------------------------------------------------
+; BAIL[owned-by-generated-assets] RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — a generated asset already defines RocketHideout1TrainerHeaders
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	def_script_pointers
+; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROCKETHIDEOUTB1F_DEFAULT
+; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROCKETHIDEOUTB1F_START_BATTLE
+; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROCKETHIDEOUTB1F_END_BATTLE
+; PRET| 
+; PRET| RocketHideoutB1F_TextPointers:
+; PRET| 	def_text_pointers
+; PRET| 	dw_const RocketHideoutB1FRocket1Text, TEXT_ROCKETHIDEOUTB1F_ROCKET1
+; PRET| 	dw_const RocketHideoutB1FRocket2Text, TEXT_ROCKETHIDEOUTB1F_ROCKET2
+; PRET| 	dw_const RocketHideoutB1FRocket3Text, TEXT_ROCKETHIDEOUTB1F_ROCKET3
+; PRET| 	dw_const RocketHideoutB1FRocket4Text, TEXT_ROCKETHIDEOUTB1F_ROCKET4
+; PRET| 	dw_const RocketHideoutB1FRocket5Text, TEXT_ROCKETHIDEOUTB1F_ROCKET5
+; PRET| 	dw_const PickUpItemText,              TEXT_ROCKETHIDEOUTB1F_ESCAPE_ROPE
+; PRET| 	dw_const PickUpItemText,              TEXT_ROCKETHIDEOUTB1F_HYPER_POTION
+; PRET| 
+; PRET| RocketHideout1TrainerHeaders:
+; PRET| 	def_trainers
+; PRET| RocketHideout1TrainerHeader0:
+; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_0, 3, RocketHideoutB1FRocket1BattleText, RocketHideoutB1FRocket1EndBattleText, RocketHideoutB1FRocket1AfterBattleText
+; PRET| RocketHideout1TrainerHeader1:
+; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_1, 2, RocketHideoutB1FRocket2BattleText, RocketHideoutB1FRocket2EndBattleText, RocketHideoutB1FRocket2AfterBattleText
+; PRET| RocketHideout1TrainerHeader2:
+; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_2, 2, RocketHideoutB1FRocket3BattleText, RocketHideoutB1FRocket3EndBattleText, RocketHideoutB1FRocket3AfterBattleText
+; PRET| RocketHideout1TrainerHeader3:
+; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_3, 3, RocketHideoutB1FRocket4BattleText, RocketHideoutB1FRocket4EndBattleText, RocketHideoutB1FRocket4AfterBattleText
+; PRET| RocketHideout1TrainerHeader4:
+; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4, 3, RocketHideoutB1FRocket5BattleText, RocketHideoutB1FRocket5EndBattleText, RocketHideoutB1FRocket5AfterBattleText
+; PRET| 	db -1 ; end
+
+RocketHideoutB1FRocket1Text:
+    mov esi, RocketHideout1TrainerHeader0
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+RocketHideoutB1FRocket2Text:
+    mov esi, RocketHideout1TrainerHeader1
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+RocketHideoutB1FRocket3Text:
+    mov esi, RocketHideout1TrainerHeader2
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+RocketHideoutB1FRocket4Text:
+    mov esi, RocketHideout1TrainerHeader3
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+RocketHideoutB1FRocket5Text:
+    mov esi, RocketHideout1TrainerHeader4
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+; ---------------------------------------------------------------------------
+; BAIL[owned-by-generated-assets] RocketHideoutB1FRocket5EndBattleText (scripts/RocketHideoutB1F.asm:95-95) — a generated asset already defines RocketHideoutB1FRocket5EndBattleText
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	text_far _RocketHideoutB1FRocket5EndBattleText
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] scripts/RocketHideoutB1F.asm:anon (scripts/RocketHideoutB1F.asm:97-99) — at scripts/RocketHideoutB1F.asm:98: .prompt_end is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	SetEvent EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4
+; PRET| 	ld hl, .prompt_end
+; PRET| 	ret
+
+; ---------------------------------------------------------------------------
+; BAIL[owned-by-generated-assets] RocketHideoutB1FRocket5EndBattleText.prompt_end (scripts/RocketHideoutB1F.asm:102-159) — a generated asset already defines RocketHideoutB1FRocket1BattleText
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	text_promptbutton
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket1BattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket1BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket1EndBattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket1EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket1AfterBattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket1AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket2BattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket2BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket2EndBattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket2EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket2AfterBattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket2AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket3BattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket3BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket3EndBattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket3EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket3AfterBattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket3AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket4BattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket4BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket4EndBattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket4EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket4AfterBattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket4AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket5BattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket5BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| RocketHideoutB1FRocket5AfterBattleText:
+; PRET| 	text_far _RocketHideoutB1FRocket5AfterBattleText
+; PRET| 	text_end

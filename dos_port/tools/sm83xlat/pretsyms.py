@@ -85,7 +85,11 @@ _NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 #: pret directories scanned for column-0 code/data labels. `scripts/` is scanned
 #: by the parser itself, so it is not repeated here.
-LABEL_DIRS = ("home", "engine", "audio", "data", "gfx")
+#:
+#: `text/` is in the list because `text_far _PewterMartYoungsterText` names a
+#: label defined there. Leaving it out reported ~2,900 phantom unresolved
+#: references — every text pointer in the corpus.
+LABEL_DIRS = ("home", "engine", "audio", "data", "gfx", "text")
 
 
 @dataclass
@@ -133,7 +137,12 @@ def _eval(expr: str, values: Dict[str, int]) -> Optional[int]:
             return None
         subst = re.sub(rf"\b{re.escape(name)}\b", str(values[name]), subst)
     subst = re.sub(r"\$([0-9A-Fa-f]+)", lambda m: str(int(m.group(1), 16)), subst)
-    if not re.fullmatch(r"[0-9+\-*/() ]+", subst):
+    subst = re.sub(r"%([01_]+)",
+                   lambda m: str(int(m.group(1).replace("_", ""), 2)), subst)
+    # Shifts and masks are needed for the flag-constant idiom
+    # `DEF MONEY_SIGN EQU 1 << BIT_MONEY_SIGN`, which is how every BIT_*/mask
+    # pair in constants/ is written.
+    if not re.fullmatch(r"[0-9+\-*/()<>|&~^ ]+", subst):
         return None
     try:
         return int(eval(subst, {"__builtins__": {}}, {}))  # noqa: S307 — bounded charset above
@@ -155,13 +164,18 @@ def _scan_constants(paths, uni: Universe) -> None:
             continue
         value = 0
         inc = 1
+        rs = 0
         for raw in text.splitlines():
             line = raw.split(";")[0].strip()
             if not line:
                 continue
-            m = re.match(r"^const_def\b\s*(.*)$", line, re.I)
+            m = re.match(r"^(const_def|object_const_def)\b\s*(.*)$", line, re.I)
             if m:
-                args = [a.strip() for a in m.group(1).split(",") if a.strip()]
+                if m.group(1).lower() == "object_const_def":
+                    # macros/scripts/maps.asm: object_const_def == const_def 1
+                    value, inc = 1, 1
+                    continue
+                args = [a.strip() for a in m.group(2).split(",") if a.strip()]
                 value = _eval(args[0], uni.values) if args else 0
                 value = 0 if value is None else value
                 inc = 1
@@ -193,16 +207,39 @@ def _scan_constants(paths, uni: Universe) -> None:
                          line, re.I)
             if m:
                 uni.constants.add(m.group(1))
-                got = _eval(m.group(2), uni.values)
+                # `DEF NUM_POKEMON EQU const_value - 1` reads the enumerator's
+                # running value. It is not a symbol, so it is substituted here
+                # rather than looked up — without this, NUM_POKEMON, NUM_BADGES
+                # and friends have a name but no value.
+                expr = re.sub(r"\bconst_value\b", str(value), m.group(2))
+                got = _eval(expr, uni.values)
                 if got is not None:
                     uni.values.setdefault(m.group(1), got)
                 continue
-            # `DEF MON_MAXHP rw` — an rsset-style struct offset. No value is
-            # recovered (nothing here needs one), but the NAME must exist or
-            # every `ld a, [wPartyMon1 + MON_MAXHP]` reads as unresolved.
-            m = re.match(r"^def\s+([A-Za-z_][A-Za-z0-9_]*)\s+r[bwl]\b", line, re.I)
+            # rsset-style struct offsets: `DEF MON_MAXHP rw`, `def OBJ_SIZE rb 0`.
+            # The value is the running _RS counter, so it has to be tracked, not
+            # just the name: scripts do arithmetic on these
+            # (`ld bc, MON_MAXHP - MON_HP` in Daycare) and `OBJ_SIZE` is a plain
+            # size the emitter has to write as a number.
+            m = re.match(r"^rsreset\b", line, re.I)
             if m:
-                uni.constants.add(m.group(1))
+                rs = 0
+                continue
+            m = re.match(r"^rsset\s+(.+)$", line, re.I)
+            if m:
+                got = _eval(m.group(1), uni.values)
+                if got is not None:
+                    rs = got
+                continue
+            m = re.match(r"^(?:def\s+)?([A-Za-z_][A-Za-z0-9_]*)\s+r([bwl])\b\s*(.*)$",
+                         line, re.I)
+            if m:
+                name, kind, count = m.group(1), m.group(2).lower(), m.group(3).strip()
+                uni.constants.add(name)
+                uni.values.setdefault(name, rs)
+                n = _eval(count, uni.values) if count else 1
+                width = {"b": 1, "w": 2, "l": 4}[kind]
+                rs += width * (1 if n is None else n)
                 continue
             # Enumerator macros defined inside constants/ itself. Each consumes
             # a `const` slot and defines derived names alongside it; the derived
@@ -222,6 +259,7 @@ def _scan_constants(paths, uni: Universe) -> None:
                 elif what in ("add_tm", "add_hm"):
                     prefix = "TM_" if what == "add_tm" else "HM_"
                     uni.constants.update({prefix + name, name + "_TMNUM"})
+                    uni.values.setdefault(prefix + name, value)
                     value += inc
                 elif what == "music_const":
                     # DEF \1 EQUS "((\2 - SFX_Headers_1) / 3)" — the constant
@@ -304,7 +342,17 @@ def _ram_names(raw: str, uni: Universe) -> list:
     return out
 
 
-def _scan_data_const_export(root: Path, uni: Universe) -> None:
+def _scan_map_object_ids(root: Path, uni: Universe) -> None:
+    """Per-map object ids (`OAKSLAB_RIVAL`, `BILLSHOUSE_BILL1`).
+
+    These are `const_export`s under an `object_const_def` in
+    `data/maps/objects/*.asm`, one enumeration per file starting at 1 — map
+    DATA, not `constants/`. They need VALUES, not just names: scripts pass them
+    to HideObject/ShowObject, and the port has no symbol of that name, so the
+    emitter has to write the number.
+    """
+    _scan_constants(sorted((root / "data" / "maps" / "objects").glob("*.asm")), uni)
+    # Any other const_export in data/ — names only; none is referenced by value.
     for p in sorted((root / "data").rglob("*.asm")):
         try:
             text = p.read_text(encoding="utf-8")
@@ -343,6 +391,6 @@ def build(root: Path) -> Universe:
     const_paths = sorted(p for p in (root / "constants").iterdir() if p.is_file())
     _scan_constants(const_paths, uni)
     _scan_ram(root, uni)
-    _scan_data_const_export(root, uni)
+    _scan_map_object_ids(root, uni)
     _scan_labels(root, uni)
     return uni

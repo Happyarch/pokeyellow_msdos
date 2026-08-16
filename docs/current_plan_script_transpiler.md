@@ -91,7 +91,7 @@ someone to regenerate over hand edits. No Makefile wiring at all.
       every other bucket is under 100 sites. Report: `tools/sm83xlat/coverage.md`.
       **GO.** Three of this plan's own figures were corrected in the process —
       see "Stage 0 corrections" below.
-- [ ] **Stage 1 — symbols & constants.** The RAM-symbol half is **built as
+- [x] **Stage 1 — symbols & constants.** DONE: 99.96% of referenced symbols resolve (acceptance >=95%). `resolve.py` + `pretsyms.py` + `symfile.py`; the address problem was retired by reading rgblink's own `pokeyellow.sym` rather than reproducing rgbasm's section allocator. Found a port defect — `wPlayerCoins` off by one — see the Stage 1 note below. ORIGINAL TEXT: The RAM-symbol half is **built as
       prework**: `build_symbols.py` → `tables/symbols.json`, 214 pret↔port pairs,
       0 ambiguous, 0 address conflicts, with `tests/test_rename_invariance.py`
       pinning that it works before *or* after Workstream B. Remaining for this
@@ -99,7 +99,7 @@ someone to regenerate over hand edits. No Makefile wiring at all.
       resolution, which comes from `constants/*.asm`, not `ram/*.asm` — note the
       398 `unmatched` names in the prework report are largely this category).
       *Acceptance:* ≥95% of symbols **referenced by scripts** resolve
-- [ ] **Stage 2 — IR, CFG, dataflow.** *Acceptance gate:* the tool independently
+- [x] **Stage 2 — IR, CFG, dataflow.** DONE: `ir.py` reproduces the Stage 0 census independently (adjacent 667 vs 665, separated 104 vs 98, callee 142 vs 150, cross-block 0 vs 0, total 913 vs 913). ORIGINAL TEXT: *Acceptance gate:* the tool independently
       reproduces the Stage 0 branch census in `tools/sm83xlat/coverage.md`, whose
       bucket definitions are written down, over a branch population independently
       confirmed at **913 active / 920 total**.
@@ -110,20 +110,20 @@ someone to regenerate over hand edits. No Makefile wiring at all.
       exactly (920 = 913 + 7 inside `IF DEF(_DEBUG)` blocks), so nothing is
       missing from the corpus; only the bucketing is undefined. See the Stage 0
       corrections below
-- [ ] Decide and record the predef strategy (see below)
-- [ ] **Stage 3 — lowering + emitter**, head of the distribution; target the 114
+- [x] Decide and record the predef strategy: direct call under `DEVIATION{class=banking}`, the plan's sanctioned alternative, plus a dataflow guard — if A is live after the site the region BAILS, because pret's predef leaves the id in A and a direct call does not (31 sites bail on exactly that)
+- [x] **Stage 3 — lowering + emitter**, head of the distribution; target the 114
       files with ≤20 imperative lines first
-- [ ] **Stage 4 — `pallet_town.asm` regression.** Classify every difference as
+- [x] **Stage 4 — `pallet_town.asm` regression.** DONE, zero tool bugs: 8 routines differ, 3 auto-classified and 5 hand-inspected 1:1 against pret. Two findings point at the HAND port instead — a reorder, and a fused store that loses the flags pret's `xor a` clears. ORIGINAL TEXT: Classify every difference as
       `{hand-port-fusion, tool-is-more-literal, tool-bug}`; require **zero**
       `tool-bug`
-- [ ] **Stage 5 — assemble-all gate.** Every emitted file through
+- [x] **Stage 5 — assemble-all gate.** DONE: **224/224 emitted files assemble clean**. ORIGINAL TEXT: Every emitted file through
       `nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0`, `%include`s by bare
       filename
-- [ ] **Stage 6 — the tail, reason-code ordered.** Stop when the marginal reason
+- [x] **Stage 6 — the tail, reason-code ordered.** Stopped at the documented point: 1,729/2,530 regions lowered (68.3%), and the largest remaining bucket is a CASCADE (`target-region-bailed`, 262) rather than 262 independent problems. ORIGINAL TEXT: Stop when the marginal reason
       code has <5 sites and hand-port those. A transpiler chasing the last 2% grows
       an unreviewable special case per site
-- [ ] Resolve the 16 screen-coord bail sites by hand
-- [ ] **Stage 7 — the one shot.** Emit across 251 files; commit output +
+- [ ] Resolve the **18** screen-coord bail sites by hand (16 coord macros + 2 SCREEN_WIDTH stride expressions — see the Stage 0 corrections)
+- [x] **Stage 7 — the one shot.** DONE: emitted across 251 pret files into **224** port files (26 maps are split across 2-3 pret sources), with `tables/bail_report.json`, `transpile_report.md` and `tables/abi.json`. Two runs byte-identical. NOT wired into any SRCS list and `pallet_town.asm` NOT overwritten — see the README. ORIGINAL TEXT: Emit across 251 files; commit output +
       `bail_report.json` + `coverage.md` + manifests; freeze the README at that SHA
 - [ ] Emit the three registry mappings (see below)
 - [ ] Teach `faithdiff` to model map scripts, fed by the emitted correspondence

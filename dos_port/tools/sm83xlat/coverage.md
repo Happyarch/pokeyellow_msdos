@@ -41,7 +41,7 @@ dataflow property and is Stage 2's gate, reported below as a census.
 
 | reason | sites | share | distinct |
 |---|---:|---:|---:|
-| `ok` | 9361 | 74.9% |  |
+| `ok` | 9359 | 74.9% |  |
 | `unknown-callee-abi` | 2997 | 24.0% | 233 |
 | `event-byte-assembly-state` | 90 | 0.7% |  |
 | `bank-expression` | 22 | 0.2% |  |
@@ -49,9 +49,10 @@ dataflow property and is Stage 2's gate, reported below as a census.
 | `event-range-macro` | 9 | 0.1% |  |
 | `checkevent-carry-form` | 3 | 0.0% |  |
 | `screen-stride-projection` | 2 | 0.0% |  |
+| `event-macro-reuse-a-hint` | 2 | 0.0% |  |
 | **total** | **12500** | | |
 
-**Mechanically lowerable today: 9361 / 12500 (74.9%).**
+**Mechanically lowerable today: 9359 / 12500 (74.9%).**
 
 ## `unknown-callee-abi` — the largest bucket, as predicted
 
@@ -63,8 +64,8 @@ shrinks as the table is populated, and the shrink rate is the tool's
 progress metric through Stages 1–3.
 
 - distinct callees: **233**
-- of those, already defined somewhere under `dos_port/src`: **128** (54.9%)
-- not yet defined in the port: **105**
+- of those, already defined somewhere under `dos_port/src`: **185** (79.4%)
+- not yet defined in the port: **48**
 
 Top 25 by call-site count (`defined` = the port already has a symbol of
 that name; it does **not** mean the contract has been checked):
@@ -228,7 +229,7 @@ Tier-1 violation several hundred times in one commit.
 |---|---:|---:|---:|
 | `scripts/OaksLab.asm` | 716 | 559 | 157 |
 | `scripts/CinnabarGym.asm` | 316 | 243 | 73 |
-| `scripts/MtMoonB2F.asm` | 364 | 293 | 71 |
+| `scripts/MtMoonB2F.asm` | 364 | 292 | 72 |
 | `scripts/GameCorner.asm` | 295 | 229 | 66 |
 | `scripts/SilphCo11F.asm` | 366 | 306 | 60 |
 | `scripts/SilphCo7F.asm` | 244 | 188 | 56 |

@@ -1,6 +1,8 @@
 # sm83xlat — one-shot SM83 → x86 transpiler for pret `scripts/`
 
-**STATUS: Stage 0 (parse & probe) complete. No IR, no lowering, no emitted x86.**
+**STATUS: Stages 0-7 complete. Output emitted, committed, and hand-maintained
+from here.** The fine-comb fan-out (Gemini via `agy`) has NOT been started —
+another session sequences it.
 
 Plan: `docs/current_plan_script_transpiler.md`.
 
@@ -14,12 +16,99 @@ Plan: `docs/current_plan_script_transpiler.md`.
 | `parser.py` | 0 | conditional assembly, label scope, item classification |
 | `probe.py` | 0 | coverage counter, branch census, callee inventory |
 | `stage0.py` | 0 | CLI → `coverage.md`, `tables/probe.json`, `tables/callees.json` |
+| `pretsyms.py` / `symfile.py` / `resolve.py` | 1 | the pret name universe, rgblink's `pokeyellow.sym`, and the one answer to "what does the port call this?" |
+| `ir.py` | 2 | regions, CFG, flag liveness, pointer-domain propagation |
+| `emit.py` | 3 | the lowering table and the structural invariants |
+| `transpile.py` | 3-7 | the one shot → `dos_port/src/scripts/*.asm`, `tables/bail_report.json`, `transpile_report.md` |
+| `stage4_pallet_town.py` | 4 | the hand-port regression fixture |
 
 ```sh
-python3 dos_port/tools/sm83xlat/stage0.py            # write coverage.md + tables/
-python3 dos_port/tools/sm83xlat/stage0.py --report   # print, write nothing
+python3 dos_port/tools/sm83xlat/stage0.py             # coverage.md + tables/
+python3 dos_port/tools/sm83xlat/transpile.py --assemble   # THE ONE SHOT + nasm gate
+python3 dos_port/tools/sm83xlat/stage4_pallet_town.py     # the regression fixture
 python3 -m pytest dos_port/tools/sm83xlat/tests/ -q
 ```
+
+**The root build must run first.** `resolve.py` reads `pokeyellow.sym`, which
+`make` in the repository root produces; without it Stage 1 has no addresses.
+
+---
+
+## Stages 1-7 result (2026-08-16)
+
+**1,729 of 2,530 regions lowered (68.3%), and all 224 emitted files assemble
+clean** under the Makefile's own flags. Two runs are byte-identical. Full report
+in `transpile_report.md`; the bail inventory is `tables/bail_report.json`.
+
+251 pret files merge into **224** port files: 26 maps are split across two or
+three pret sources (`BillsHouse.asm` + `BillsHouse_2.asm`), and emitting them one
+at a time made the second overwrite the first — which is why constants defined in
+one half read as undefined in the other.
+
+### Nothing is wired into the build, deliberately
+
+The emitted files are in no `SRCS` list. Most reference callees the port does not
+define, which is the designed witness — an `extern` the linker enumerates — but a
+witness is only useful when someone is looking at it, not when it breaks
+everyone's build. `pallet_town.asm` was **not** overwritten; its tool output went
+to `emitted_shadow/` and is the Stage 4 fixture.
+
+**Two whole classes of region are deliberately NOT emitted, and the static gate
+is what found them.** A first run reported 914 `dup_def` violations: the emitted
+battle-text streams duplicated `assets/trainer_headers.inc`, which already owns
+every one of them. A second reported four more — `Mansion1Script_Switches` and
+siblings exist as ret-stubs in `hidden_object_stubs.asm`. Emitting a body for a
+stub is a duplicate definition, not a retirement: retiring a stub means DELETING
+it and repointing every extern comment, which is a deliberate act and not
+something a transpiler gets to do as a side effect. Both classes now bail
+(`owned-by-generated-assets`, 268 regions) and the labels are externed.
+
+The gate also caught a subtler one: a bailed region copies its pret source
+verbatim as a comment, and one of those comments carried a `; BUG(...)` that
+`lint_pret_labels` read — correctly, by its own rules — as a free-form BUG claim
+this port was making. Copied annotation keywords are moved out of annotation
+position now.
+
+### Stage 1 found a port defect, and the emitter fails closed on it
+
+Cross-checking `gb_memmap.inc` against the linker's own table (684 same-spelled
+symbols) decomposes as **684 agree, 25 SRAM flat-bank rebases, 21 documented
+relocations, 9 unexplained**. One of the nine is referenced by scripts:
+**`wPlayerCoins` is at `0xD5A4` in the port and `0xD5A3` in the linker's table**,
+between `wUnusedMapVariable` (0xD5A2, matching) and `wToggleableObjectFlags`
+(0xD5A5). Five script sites touch it. The emitter refuses to name any symbol whose
+port address contradicts the linker's without a documented reason, so those sites
+bail instead of quietly reading the wrong byte. Recorded as
+`regression-memmap-wplayercoins-off-by-one`.
+
+### Stage 2 gate: the CFG reproduces the Stage 0 census independently
+
+| bucket | Stage 0 (local walk) | Stage 2 (CFG + liveness) |
+|---|---:|---:|
+| adjacent | 665 | 667 |
+| separated | 98 | 104 |
+| callee-flag-contract | 150 | 142 |
+| cross-block | 0 | 0 |
+| **total** | **913** | **913** |
+
+Same population, same shape, and the small movements are exactly where a CFG
+should differ from source order — it follows real predecessors. The two share no
+machinery, which is what makes the agreement worth anything.
+
+### Stage 4: zero tool bugs
+
+Eight routines differ from the hand-written `pallet_town.asm`. Three classify
+automatically (`hand-port-reorder`, `hand-port-fusion-loses-flags`,
+`text-model-divergence`); the other five were inspected by hand and the tool is
+1:1 with pret in every one — pret imperative lines vs emitted x86 read 17/17,
+26/27, 24/25, 13/13, with the `+1`s being `ret cc` expanding to skip/ret/label.
+
+Two findings point the other way, at the HAND port:
+* `PalletTown_Script` — the hand port **reordered** `ld hl, ScriptPointers` and
+  `ld a, [wPalletTownCurScript]`; pret has them the other way round.
+* `PalletTownPikachuBattleScript` — pret's `xor a` clears the flags, and the hand
+  port's fused `mov byte [X], 0` does not. Equivalent for the stored value, not
+  for a downstream flag reader. Latent, since nothing reads a flag there today.
 
 ## Stage 0 result (2026-08-16)
 

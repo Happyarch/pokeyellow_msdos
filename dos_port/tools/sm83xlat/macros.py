@@ -197,8 +197,20 @@ _m("CheckAndResetEventA", CODE_EVENT, z="*", n="0", h="1", clobbers=("a",))
 # Counter-intuitive on purpose, and pret says so in a comment: these set Z when
 # the events ARE set, the opposite polarity to every other Check*.
 _m("CheckBothEventsSet", CODE_EVENT, z="*", n="1", h="*", c="*", clobbers=("a",),
+   argc=(2,),
    note="and + cp: Z SET when both events are set — inverse of CheckEvent")
-_m("CheckEitherEventSet", CODE_EVENT, z="*", n="0", h="1", c="0", clobbers=("a",))
+_m("CheckEitherEventSet", CODE_EVENT, z="*", n="0", h="1", c="0", clobbers=("a",),
+   argc=(2,))
+# THIS TABLE DESCRIBES PRET, NOT THE PORT. The 3-arg forms are valid rgbasm —
+# the third argument is a "try to reuse a" hint that changes whether the macro
+# re-loads wEventFlags — so they get a row and PARSE cleanly. What they do not
+# have is a port counterpart: events.inc defines the 2-arg macros only, and
+# silently truncating to those would re-load A where pret deliberately did not.
+# So the row exists and carries an always_bail: recognised, and refused.
+_m("CheckBothEventsSet", CODE_EVENT, z="*", n="1", h="*", c="*", clobbers=("a",),
+   argc=(3,), always_bail="event-macro-reuse-a-hint")
+_m("CheckEitherEventSet", CODE_EVENT, z="*", n="0", h="1", c="0", clobbers=("a",),
+   argc=(3,), always_bail="event-macro-reuse-a-hint")
 _m("CheckEitherEventSetReuseA", CODE_EVENT, z="*", n="0", h="1", c="0",
    clobbers=("a",), state_dependent=True)
 

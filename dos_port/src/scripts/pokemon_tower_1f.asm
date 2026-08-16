@@ -1,0 +1,69 @@
+; PokemonTower1F.asm — translated from pret scripts/PokemonTower1F.asm by dos_port/tools/sm83xlat.
+;
+; ONE-SHOT OUTPUT, NOW HAND-MAINTAINED. The transpiler ran once at the SHA
+; recorded in dos_port/tools/sm83xlat/README.md and is not re-run; this file is
+; ordinary Tier-2 source and editing it is the normal way it changes. There is
+; deliberately no DO NOT EDIT header.
+;
+; Every pret label is preserved verbatim so the file stays line-for-line
+; cross-referenceable against the disassembly.
+;
+; Regions the tool could not lower WITH CERTAINTY are reproduced below as
+; commented pret source under a `; BAIL[reason]` banner, and define NO symbol —
+; so a reference to one is a link error rather than a plausible wrong lowering.
+
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+%include "gb_text.inc"
+%include "events.inc"
+%include "assets/event_constants.inc"
+
+
+global PokemonTower1FBaldingGuyText
+global PokemonTower1FChannelerText
+global PokemonTower1FGirlText
+global PokemonTower1FMiddleAgedWomanText
+global PokemonTower1FReceptionistText
+global PokemonTower1F_Script
+global PokemonTower1F_TextPointers
+
+extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern _PokemonTower1FBaldingGuyText   ; NOT YET DEFINED IN THE PORT
+extern _PokemonTower1FChannelerText   ; NOT YET DEFINED IN THE PORT
+extern _PokemonTower1FGirlText   ; NOT YET DEFINED IN THE PORT
+extern _PokemonTower1FMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
+extern _PokemonTower1FReceptionistText   ; NOT YET DEFINED IN THE PORT
+
+; Code and data are emitted in pret's SOURCE ORDER, in one section.
+; That is not cosmetic: a NASM local label binds to the last
+; non-local label above it, so hoisting the text streams into a
+; separate section rebound every `.Text` to the wrong parent.
+section .text
+
+PokemonTower1F_Script:
+    call EnableAutoTextBoxDrawing
+    ret
+
+PokemonTower1F_TextPointers:
+    dd PokemonTower1FReceptionistText
+    dd PokemonTower1FMiddleAgedWomanText
+    dd PokemonTower1FBaldingGuyText
+    dd PokemonTower1FGirlText
+    dd PokemonTower1FChannelerText
+PokemonTower1FReceptionistText:
+    text_far _PokemonTower1FReceptionistText
+    text_end
+PokemonTower1FMiddleAgedWomanText:
+    text_far _PokemonTower1FMiddleAgedWomanText
+    text_end
+PokemonTower1FBaldingGuyText:
+    text_far _PokemonTower1FBaldingGuyText
+    text_end
+PokemonTower1FGirlText:
+    text_far _PokemonTower1FGirlText
+    text_end
+PokemonTower1FChannelerText:
+    text_far _PokemonTower1FChannelerText
+    text_end

@@ -10,13 +10,14 @@
  "inactive_items": 26,
  "text_asm_bodies": 617,
  "histogram": {
-  "ok": 9361,
+  "ok": 9359,
   "unknown-callee-abi": 2997,
   "screen-coord-projection": 16,
   "event-range-macro": 9,
   "event-byte-assembly-state": 90,
   "screen-stride-projection": 2,
   "bank-expression": 22,
+  "event-macro-reuse-a-hint": 2,
   "checkevent-carry-form": 3
  },
  "branch_census": {
@@ -9598,9 +9599,10 @@
   },
   "scripts/MtMoonB2F.asm": {
    "unknown-callee-abi": 68,
-   "ok": 293,
+   "ok": 292,
    "bank-expression": 2,
-   "event-byte-assembly-state": 1
+   "event-byte-assembly-state": 1,
+   "event-macro-reuse-a-hint": 1
   },
   "scripts/MtMoonB2F_2.asm": {
    "ok": 22,
@@ -9641,10 +9643,11 @@
    "unknown-callee-abi": 2
   },
   "scripts/PalletTown.asm": {
-   "ok": 167,
+   "ok": 166,
    "unknown-callee-abi": 20,
    "event-byte-assembly-state": 1,
-   "bank-expression": 1
+   "bank-expression": 1,
+   "event-macro-reuse-a-hint": 1
   },
   "scripts/PewterCity.asm": {
    "unknown-callee-abi": 35,
@@ -15745,6 +15748,12 @@
    "detail": "callee TextScriptEnd"
   },
   {
+   "where": "scripts/MtMoonB2F.asm:481",
+   "reason": "event-macro-reuse-a-hint",
+   "text": "CheckEitherEventSet EVENT_GOT_DOME_FOSSIL, EVENT_GOT_HELIX_FOSSIL, 1",
+   "detail": ""
+  },
+  {
    "where": "scripts/MtMoonB2F.asm:484",
    "reason": "unknown-callee-abi",
    "text": "call PrintText",
@@ -17381,6 +17390,12 @@
    "reason": "unknown-callee-abi",
    "text": "call DisplayTextID",
    "detail": "callee DisplayTextID"
+  },
+  {
+   "where": "scripts/PalletTown.asm:206",
+   "reason": "event-macro-reuse-a-hint",
+   "text": "CheckBothEventsSet EVENT_GOT_TOWN_MAP, EVENT_ENTERED_BLUES_HOUSE, 1",
+   "detail": ""
   },
   {
    "where": "scripts/PalletTown.asm:211",

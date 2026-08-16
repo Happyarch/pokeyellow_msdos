@@ -1,0 +1,49 @@
+{
+ "_comment": [
+  "Callee ABI facts the transpiler cannot derive from pret. FAIL-CLOSED: a callee",
+  "with no entry here is not assumed to match pret, it makes the site BAIL.",
+  "",
+  "Only ONE question is recorded so far, and it is the one that actually bites:",
+  "pret passes a pointer in DE, and DE maps to the 16-bit DX. A GB address fits in",
+  "16 bits so pret never had to care; a port HOST address is 32 bits and does not,",
+  "and COFF rejects the relocation outright rather than truncating it. So every",
+  "port routine that takes such a pointer had to put it somewhere else, and where",
+  "it put it is a per-routine decision recorded at the routine.",
+  "",
+  "Each entry cites the file:line of the port's own signature comment. That is",
+  "repository evidence at the definition, not inference from call sites."
+ ],
+ "callees": {
+  "ExecuteCurMapScriptInTable": {
+   "de": "edi",
+   "evidence": "dos_port/src/home/trainers.asm:190 — 'EDI = flat function-pointer jumptable (pret's de)'",
+   "sites": 67
+  },
+  "MoveSprite": {
+   "de": "edi",
+   "evidence": "dos_port/src/home/pathfinding.asm:72 — 'EDI = flat pointer to $ff-terminated movement-direction bytes'",
+   "sites": 36
+  },
+  "SaveEndBattleTextPointers": {
+   "de": "edx",
+   "evidence": "dos_port/src/home/trainers.asm:616 — 'In: ESI = win text (flat), EDX = lose text (flat)'",
+   "sites": 34
+  }
+ },
+ "_deliberately_absent": {
+  "_comment": [
+   "These take a DE pointer too, and are LEFT OUT on purpose. Their port",
+   "signature comments do not settle where the pointer goes, and a plausible",
+   "guess here would be invisible in review — the emitted code would assemble,",
+   "link and run while reading the wrong memory. They bail instead; ~24 sites."
+  ],
+  "DecodeRLEList": "the port appears to SWAP pret's hl/de roles (ESI = GB output, EDI = source); a swap is exactly the kind of thing to confirm at the routine, not infer",
+  "PlaceString": "the port's comment documents ESI and the OUT registers but not where the string pointer arrives",
+  "LoadGymLeaderAndCityName": "comment describes a push edx/pop esi dance against CopyData reading dst from DX; unsettled",
+  "WriteOAMBlock": "no signature comment found",
+  "CheckPikachuFollowingPlayer": "no signature comment found",
+  "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript": "a script routine, not yet ported",
+  "PokemonTower2FPikachuMovementScript": "a script routine, not yet ported",
+  "ViridianCityMovePikachu": "a script routine, not yet ported"
+ }
+}

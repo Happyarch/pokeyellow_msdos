@@ -240,7 +240,7 @@
   },
   "Mansion2ReplaceBlock": {
    "sites": 12,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "call": 12
    }
@@ -417,14 +417,14 @@
   },
   "CinnabarGymScript_753f3": {
    "sites": 6,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "call": 6
    }
   },
   "CinnabarGymScript_753de": {
    "sites": 6,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "jp": 6
    }
@@ -717,7 +717,7 @@
   },
   "CinnabarGymScript_753e9": {
    "sites": 2,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "call": 2
    }
@@ -752,7 +752,7 @@
   },
   "MtMoonB2FScript_ApplyPikachuMovementData": {
    "sites": 2,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "call": 2
    }
@@ -794,7 +794,7 @@
   },
   "Route16Gate1FIsBicycleInBagScript": {
    "sites": 2,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "call": 2
    }
@@ -836,14 +836,14 @@
   },
   "BillsHousePikachuWatchPlayer": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "callfar": 1
    }
   },
   "BillsHousePrintBillPokemonText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -857,14 +857,14 @@
   },
   "BillsHousePrintBillCheckOutMyRarePokemonText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "CeladonCityPrintTrainerTips1Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -878,7 +878,7 @@
   },
   "CeladonMansion1FPrintGrannyText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -906,28 +906,28 @@
   },
   "CeladonMansion3FPrintGameProgramPCText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "CeladonMansion3FPrintPlayingGamePCText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "CeladonMansion3FPrintGameScriptPCText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "CeladonMansion3FPrintDevRoomSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -969,7 +969,7 @@
   },
   "CinnabarGymPrintGymGuideText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "callfar": 1
    }
@@ -997,7 +997,7 @@
   },
   "TradeCenter_Script": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "jp": 1
    }
@@ -1046,7 +1046,7 @@
   },
   "GameCornerPikachuMovementScript": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "callfar": 1
    }
@@ -1109,7 +1109,7 @@
   },
   "Museum1FPrintGamblerText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -1123,14 +1123,14 @@
   },
   "Museum1FPrintScientist3Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "Museum1FPrintOldAmberText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -1172,7 +1172,7 @@
   },
   "OaksLabPikachuMovementScript": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "callfar": 1
    }
@@ -1214,7 +1214,7 @@
   },
   "PewterPokecenterPrintCooltrainerFText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -1235,21 +1235,21 @@
   },
   "PokemonTower2FPikachuMovementScript": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "callfar": 1
    }
   },
   "RedsHouse1FPrintMomText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "callfar": 1
    }
   },
   "RedsHouse1FPrintTVText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "callfar": 1
    }
@@ -1270,14 +1270,14 @@
   },
   "Route1PrintYoungster2Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "Route1PrintSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -1298,21 +1298,21 @@
   },
   "Route22PrintRival1Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "Route22PrintRival2Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "Route22PrintPokemonLeagueSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -1333,28 +1333,28 @@
   },
   "SSAnne2FRoomsPrintGentleman5Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "SSAnne2FRoomsPrintLittleBoyText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "SSAnne2FRoomsPrintBrunetteGirlText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "SSAnne2FRoomsPrintBeautyText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -1368,7 +1368,7 @@
   },
   "SafariZoneGatePrintSafariZoneWorker2Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "callfar": 1
    }
@@ -1403,7 +1403,7 @@
   },
   "Func_f23d0": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "jp": 1
    }
@@ -1431,42 +1431,42 @@
   },
   "VermilionCityPrintSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "VermilionCityPrintNoticeSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "VermilionCityPrintPokemonFanClubSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "VermilionCityPrintGymSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "VermilionCityPrintHarborSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "VermilionCityPrintOfficerJennyText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -1543,42 +1543,42 @@
   },
   "ViridianCityMovePikachu": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "callfar": 1
    }
   },
   "ViridianCityPrintYoungster1Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianCityPrintGambler1Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianCityPrintYoungster2Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianCityPrintGirlText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianCityPrintOldManSleepyText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -1592,42 +1592,42 @@
   },
   "ViridianCityPrintOldManText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianCityPrintSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianCityPrintTrainerTips1Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianCityPrintTrainerTips2Text": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianCityPrintGymSignText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianCityPrintGymLockedText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
@@ -1641,14 +1641,14 @@
   },
   "ViridianSchoolHousePrintCooltrainerFText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
   },
   "ViridianSchoolHousePrintLittleGirlText": {
    "sites": 1,
-   "defined_in_port": false,
+   "defined_in_port": true,
    "by_form": {
     "farcall": 1
    }
