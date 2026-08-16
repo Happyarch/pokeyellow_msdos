@@ -478,7 +478,6 @@ GAME_SRCS := \
     src/engine/gfx/mon_icons.asm \
     src/engine/gfx/palettes.asm \
     src/engine/gfx/bg_map_attributes.asm \
-    src/engine/gfx/gfx_stubs.asm \
     src/engine/gfx/load_pokedex_tiles.asm \
     src/home/load_font.asm \
     src/home/text.asm \

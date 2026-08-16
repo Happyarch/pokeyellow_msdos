@@ -22,6 +22,7 @@
 
 bits 32
 %include "gb_memmap.inc"
+%include "gb_constants.inc"     ; PARTY_LENGTH (HandlePartyHPBarAttributes)
 
 global LoadBGMapAttributes
 global BGMapAttributesPointers
@@ -30,8 +31,12 @@ global g_bg_attr_table
 
 extern tile_pal, g_tilecache_dirty
 extern SetBGCellAttrWin             ; ppu.asm — window per-cell BG attribute plane
-extern HandlePartyHPBarAttributes   ; gfx_stubs.asm (HandleBadgeFaceAttributes is implemented below)
 extern text_row_stride              ; home/text.asm — the live tilemap row stride
+
+; Both per-cell runtime handlers are implemented in this file (below); neither is
+; a stub any more. HandleBadgeFaceAttributes landed 979bbdae7, and
+; HandlePartyHPBarAttributes 2026-08-16 with its producer UpdatePartyMenuBlkPacket.
+global HandlePartyHPBarAttributes
 
 ; Mirrors ppu.asm's file-local constant of the same name (rLCDC bit 4: tile data
 ; addressing mode). Kept in step with it deliberately — this routine must resolve
@@ -331,6 +336,62 @@ ApplyBGMapAttributes:
 .unchanged:
     popad
 .nothing:
+    ret
+
+; ---------------------------------------------------------------------------
+; HandlePartyHPBarAttributes — pret engine/gfx/bg_map_attributes.asm.
+; Reached from LoadBGMapAttributes (and ApplyBGMapAttributes' per-frame
+; re-resolve) when the packet index is 5, the party menu.
+;
+; pret's own comment: "hp bars require 3 (green, orange, red) colours, when there
+; are only 2 free colours per palette, therefore we must transfer individual bg
+; attributes where the locations of the hp bars are in vram." That is the same
+; problem the port's per-cell plane exists to solve, so this translates directly.
+;
+; ADDRESSING. pret's geometry is FIXED — vBGMap1 + $25 (row 1, col 5), 7 cells
+; per bar, +$40 (two GB rows) to the next party slot — and PartyMenuMirror maps
+; this screen 1:1 onto GB_TILEMAP1 (cell (r,c) at r*GBSCR_W + c becomes
+; GB_TILEMAP1 + r*32 + c), so pret's literal offsets transfer verbatim. Same
+; property that lets tc_mirror carry the trainer card's; see
+; HandleBadgeFaceAttributes below. The rows this walks — 1,3,5,7,9,11 — are the
+; ones an independent derivation from DrawHPBar's live coordinate also produced.
+;
+; THE INPUT IS THE SGB PACKET, BY DESIGN. wPartyHPBarAttributes aliases
+; wPartyMenuBlkPacket + 9 and both walk by 6, so the bytes read here are exactly
+; the ones UpdatePartyMenuBlkPacket (engine/gfx/palettes.asm) wrote, and `and $3`
+; recovers the CGB palette index from the SGB colour encoding. See the
+; wPartyMenuBlkPacket block in gb_memmap.inc.
+;
+; In: EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+HandlePartyHPBarAttributes:
+    pushad
+    mov esi, GB_TILEMAP1 + 0x25             ; ld hl, vBGMap1 + $25
+    mov edi, wPartyHPBarAttributes          ; ld de, wPartyHPBarAttributes
+    mov cl, PARTY_LENGTH                    ; ld c, PARTY_LENGTH — 8-bit, as pret
+.loop:
+    movzx ebx, byte [ebp + edi]             ; ld a, [de]
+    and bl, 3                               ; and $3 — 4 possible palettes
+    ; The port's plane reads 0 as "no override, inherit tile_pal", which is NOT
+    ; the same as "palette 0" — so name the palette explicitly. Same convention
+    ; ZeroOutCurrentBadgeAttributes documents below.
+    or  bl, BG_ATTR_PRESENT
+    mov eax, esi                            ; walk from this bar's first cell,
+    mov ch, 7                               ;   REPT 7 — hp bar length in tiles
+.cell:
+    mov dl, bl
+    call SetBGCellAttrWin                   ; EAX = GB tilemap addr, DL = attribute
+    inc eax                                 ; ld [hli], a
+    dec ch
+    jnz .cell
+    ; pret adds to the SAVED hl, not to the post-REPT one — hence the push/pop
+    ; pair around the unrolled stores, reproduced here by keeping the bar's start
+    ; in ESI and walking a copy in EAX.
+    add esi, 0x40                           ; ld bc, $40 / add hl, bc
+    add edi, 6                              ; ld bc, $6 / add hl, bc — next palette
+    dec cl                                  ; dec c
+    jnz .loop
+    popad
     ret
 
 ; ---------------------------------------------------------------------------

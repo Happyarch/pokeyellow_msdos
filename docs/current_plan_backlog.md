@@ -531,7 +531,18 @@ From `docs/plans/battle_ui.md`. The battle scene is still GB-centred on the
 
 ## Menus / screens
 
-### 10b. Party-menu HP-bar colours need palette-able tile ids (palette HAL)
+### 10b. Party-menu HP-bar colours need palette-able tile ids (palette HAL) — **DONE 2026-08-14 (3975ae039)**
+
+**CLOSED.** The palette-able tile ids this item asked for turned out not to be
+the resolution: the window per-cell BG attribute plane (`74bc38a09`) makes a
+per-ROW colour expressible without touching tile ids at all, and
+`SetPartyMenuHPBarColor` now publishes its bar's six gauge cells through
+`SetBGCellAttrWin`. Measured on `pixelcheck partymenu`: 2304 px moved — 6 bars ×
+6 tiles × 64 px exactly — with the witness established *before* the fix, and the
+values moving slot 0 (`PAL_MEWMON`, the wrong palette entirely) → slot 1
+(`PAL_GREENBAR`). Per-row behaviour, which a uniform-health party cannot show,
+was proven separately by forcing the colour from the bar index. The historical
+analysis below is kept because its chain-of-custody trace is still accurate.
 
 **FILED 2026-08-12 at the maintainer's direction, back-burnered.** Found while
 box 2a of `docs/current_plan_battle_completion.md` made the party menu reachable
@@ -593,7 +604,21 @@ Full detail, symptom list and the eliminated hypotheses:
 stigmergy `regression-battle-party-menu-graphics-not-set-up`.
 
 
-### 10c. SWITCH/STATS/CANCEL box is drawn where nothing composites it
+### 10c. SWITCH/STATS/CANCEL box is drawn where nothing composites it — **DONE 2026-08-15 (7471492d9)**
+
+**CLOSED.** `DisplaySwitchStatsCancelPartyBox` (port-only,
+`engine/menus/text_box.asm`) draws pret's geometry verbatim — `data/text_boxes.asm`
+row (11,11)-(19,17), text (13,12), interior 7×5 — into the stride-20 party
+scratch, and `core.asm` hooks `PartyMenuMirror` as `menu_redraw_cb` around
+`HandleMenuInput`. That is the same resolution `msgbox_party` had already reached
+for this screen's message box. The same commit fixed `.partyMonDeselected`'s
+erase, which was doubly wrong: pret's `ld bc, 6 * SCREEN_WIDTH + 9` means 6 GB
+rows + 9 cells = 129 bytes, but the port's `SCREEN_WIDTH` is the 40-wide canvas,
+so it cleared 249 bytes at a canvas address — cells the box never occupied,
+leaving the real ones standing. Verified by rendered frames both open
+(`AUTOKEY_DUMP_FRAME=850`) and erased (`BATTLE_SWITCH_DESELECT=1
+AUTOKEY_DUMP_FRAME=1000`); `BATTLE_SWITCH_DESELECT` is new and is the only thing
+that exercises that path, so use it whenever it is touched.
 
 **FILED 2026-08-12 at the maintainer's direction.** Sibling of 10b above, same
 class: a port UI-architecture gap exposed by battle plan 2a, not a translation

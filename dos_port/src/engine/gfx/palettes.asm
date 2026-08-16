@@ -18,6 +18,9 @@ bits 32
 %define SET_PAL_TRAINER_CARD             13
 %define SET_PAL_SURFING_PIKACHU_TITLE    14
 %define SET_PAL_SURFING_PIKACHU_MINIGAME 15
+; Not a palette: pret's _RunPaletteCommand intercepts this id before the dispatch
+; table and sends it to UpdatePartyMenuBlkPacket. constants/palette_constants.asm.
+%define SET_PAL_PARTY_MENU_HP_BARS       0xfc
 %define SET_PAL_DEFAULT                  0xff
 
 ; pret constants not otherwise needed by the DOS map loader.
@@ -97,27 +100,66 @@ _RunPaletteCommand:
     ; (2026-08-05), which stopped hardcoding SET_PAL_DEFAULT -> SetPal_Generic and
     ; started honouring wDefaultPaletteCommand. Before that the missing publish was
     ; masked because the hardcoded answer happened to be the right one here.
-    ; SET_PAL_PARTY_MENU_HP_BARS ($fc) is still not DISPATCHED here — but as of
-    ; 2026-08-14 its EFFECT does reach the screen. pret handles this id before its
-    ; dispatch table (`cp SET_PAL_PARTY_MENU_HP_BARS / jp z,
-    ; UpdatePartyMenuBlkPacket`), editing an SGB BLK packet that InitCGBPalettes
-    ; consumes on colour hardware. The port produces the same result from
-    ; SetPartyMenuHPBarColor (src/engine/menus/party_menu.asm), which publishes
-    ; the bar's six cells into the WINDOW per-cell attribute plane.
     ;
-    ; The split is forced by addressing, not preference: pret's packet is indexed
-    ; by ROW INDEX (wPartyMenuBlkPacket + 8 + 1 + 6*index), so it needs nothing
-    ; but wWhichPartyMenuHPBar and can live here. The port's plane is indexed by
-    ; SCREEN CELL, and the only code holding the bar's live coordinate is the
-    ; caller. Moving it here would mean re-deriving that coordinate from the row
-    ; index — a second source of truth for the party menu's layout.
-    ; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:_RunPaletteCommand; behavior=the SET_PAL_PARTY_MENU_HP_BARS command id falls through this dispatch instead of being handled here so this routine performs no HP-bar recolour, though the recolour itself does happen in the caller; evidence=pret dispatches this id to UpdatePartyMenuBlkPacket which edits an SGB BLK packet indexed by row while the port publishes the same colours into a per-cell attribute plane indexed by screen cell and only SetPartyMenuHPBarColor holds the live bar coordinate; lifetime=permanent unless the port grows a row-indexed party-menu layout table that would let the handler live here as pret has it}
+    ; SET_PAL_PARTY_MENU_HP_BARS ($fc) is handled BEFORE the dispatch table, as
+    ; pret does it (`cp SET_PAL_PARTY_MENU_HP_BARS / jp z,
+    ; UpdatePartyMenuBlkPacket`) — it is not a palette of its own and never
+    ; reaches SetPalFunctions. Until 2026-08-16 the port fell through here and
+    ; SetPartyMenuHPBarColor published the cells itself; that carried a DEVIATION
+    ; claiming the split was forced by addressing, because pret's packet is
+    ; indexed by ROW INDEX and the port's plane by SCREEN CELL. The claim was
+    ; FALSE: pret's own CGB consumer (HandlePartyHPBarAttributes) uses FIXED
+    ; geometry (vBGMap1 + $25, stride $40 per slot), and PartyMenuMirror maps this
+    ; screen 1:1 onto GB_TILEMAP1, so pret's literal offsets transfer verbatim —
+    ; the same property that lets tc_mirror carry the trainer card's. Both pret
+    ; routines are now real, and the port reaches the screen the way pret does.
+    cmp al, SET_PAL_PARTY_MENU_HP_BARS
+    je UpdatePartyMenuBlkPacket             ; jp z, UpdatePartyMenuBlkPacket
     cmp al, SET_PAL_SURFING_PIKACHU_MINIGAME
-    ja .done                                ; incl. SET_PAL_PARTY_MENU_HP_BARS ($fc) —
-                                            ; see the banner immediately above
+    ja .done                                ; $fc is already gone by here
     movzx eax, al
     jmp [SetPalFunctions + eax*4]
 .done:
+    ret
+
+; ---------------------------------------------------------------------------
+; UpdatePartyMenuBlkPacket — pret engine/gfx/palettes.asm:UpdatePartyMenuBlkPacket.
+; Update the BLK packet with the palette of the HP bar that is specified in
+; [wWhichPartyMenuHPBar].
+;
+; Reached only as _RunPaletteCommand's pre-dispatch intercept for
+; SET_PAL_PARTY_MENU_HP_BARS, which is a tail jump in pret and here.
+;
+; In:  EBP = GB memory base. Out: all registers preserved.
+;
+; THIS ROUTINE PRODUCES DATA, NOT PIXELS, and that is the whole point. The byte
+; it writes is read back by HandlePartyHPBarAttributes
+; (engine/gfx/bg_map_attributes.asm) through the WRAM union alias
+; wPartyHPBarAttributes = wPartyMenuBlkPacket + 9, same stride 6 — see the
+; wPartyMenuBlkPacket block in gb_memmap.inc. The SGB colour encoding is chosen
+; so the low two bits ARE the CGB palette index the reader recovers with `and $3`:
+;   green (1<<2)|1 = 5 -> 1     yellow (2<<2)|2 = 10 -> 2     red (3<<2)|3 = 15 -> 3
+; So one producer feeds both machines, and the port needs no third mechanism.
+; ---------------------------------------------------------------------------
+global UpdatePartyMenuBlkPacket
+UpdatePartyMenuBlkPacket:
+    pushad
+    movzx eax, byte [ebp + wWhichPartyMenuHPBar]    ; ld a, [wWhichPartyMenuHPBar]
+    mov al, [ebp + eax + wPartyMenuHPBarColors]     ; ld hl,… / add hl,de / ld a,[de]
+    test al, al                                     ; and a
+    mov dl, (1 << 2) | 1                            ; ld e, green — mov sets no flags,
+    jz .next                                        ;   so pret's ld-between-test-and-
+    dec al                                          ;   branch transfers verbatim
+    mov dl, (2 << 2) | 2                            ; ld e, yellow
+    jz .next
+    mov dl, (3 << 2) | 3                            ; ld e, red
+.next:
+    mov esi, wPartyMenuBlkPacket + 8 + 1            ; ld hl, wPartyMenuBlkPacket + 8 + 1
+    mov bx, 6                                       ; ld bc, 6
+    mov al, [ebp + wWhichPartyMenuHPBar]            ; ld a, [wWhichPartyMenuHPBar]
+    call AddNTimes                                  ; ESI += 6 * index
+    mov [ebp + esi], dl                             ; ld [hl], e
+    popad
     ret
 
 SetPal_BattleBlack:

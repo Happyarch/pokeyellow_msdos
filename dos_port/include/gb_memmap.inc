@@ -2154,6 +2154,24 @@ hFieldMoveMonMenuTopMenuItemX equ 0xFFFB ; GB X of the field-move menu cursor co
 wSwitchPartyMonTempBuffer     equ 0xCC97 ; 44 bytes — party-mon swap staging (union lane)
 wPartyMenuHPBarColors         equ 0xCF1E ; PARTY_LENGTH bytes — 0 green / 1 yellow / 2 red
 wWhichPartyMenuHPBar          equ 0xCF2C ; running index while RedrawPartyMenu_ colors bars
+; The SGB BLK packet, and the CGB attribute buffer that IS the same bytes.
+;
+; ram/wram.asm:1256-1266 puts wCopyingSGBTileData / wWhichPartyMenuHPBar /
+; wPalPacket on ONE `db` at 0xCF2C, so the 49-byte UNION opens at 0xCF2D, and
+; wPartyHPBarAttributes heads that union's `ds 9` lane at +9.
+;
+; THIS ALIAS IS LOAD-BEARING, NOT AN ACCIDENT. UpdatePartyMenuBlkPacket writes
+; `wPartyMenuBlkPacket + 8 + 1` with stride 6 (AddNTimes, indexed by
+; wWhichPartyMenuHPBar); HandlePartyHPBarAttributes reads wPartyHPBarAttributes
+; with stride 6. Same address, same stride — the SGB producer's writes ARE the
+; CGB consumer's input, and the encodings interlock so that the low two bits of
+; the SGB colour ((1<<2)|1, (2<<2)|2, (3<<2)|3) are the CGB palette index the
+; reader recovers with `and $3`. The port models GB memory flat, so the union
+; reproduces itself for free — exactly as it does for wTrainerCardBadgeAttributes.
+; Cross-check: the union's `ds 29` lane gives wStringBuffer = 0xCF2D + 29 =
+; 0xCF4A, which is the address already recorded for it below.
+wPartyMenuBlkPacket           equ 0xCF2D ; $30 bytes — SGB BLK packet (union base)
+wPartyHPBarAttributes         equ 0xCF36 ; = wPartyMenuBlkPacket + 9; PARTY_LENGTH entries, stride 6
 wPartyMenuTypeOrMessageID     equ 0xD07C ; NORMAL/USE_ITEM/BATTLE/TMHM/SWAP/EVO_STONE_PARTY_MENU
 wPartyMenuAnimMonEnabled      equ 0xD09A ; nonzero ($40) while the selected mon's icon animates
 wSwappedMenuItem              equ 0xCD3D ; = wChargeMoveNum union byte; SwitchPartyMon result
