@@ -389,11 +389,15 @@ file. Full detail → skill **`build-and-debug`**.
 
 **`make -C dos_port fidelity` (core) and `fidelity-full` both run in parallel via
 `tools/pgate.sh`, as of 2026-08-12 (`8742e04c8`).** Measured on the 96-thread
-host: **core 16 scenarios ≈ 30 s; full 66 scenarios 378 s** (the full tier was
-~1750 s serial — a ~4.6× cut). Do not quote the old "core ~2m50s / full ~4m45s"
-or "fidelity-full is ~15 min" figures: they date from a 17-scenario battery, the
-registry is 66, and repeating them causes agents to skip the full tier or idle
-waiting for it. Re-measure rather than trusting this line.
+host: **core 16 scenarios ≈ 30 s; full 85 scenarios 370 s** (356 s of scenarios
+after a 14 s staging copy; the full tier was ~1750 s serial). Do not quote the
+old "core ~2m50s / full ~4m45s" or "fidelity-full is ~15 min" figures: they date
+from a 17-scenario battery, and repeating them causes agents to skip the full
+tier or idle waiting for it. Re-measure rather than trusting this line — the
+SCENARIO COUNT is what drifts, and it drifts upward as scenarios are added. This
+said "66 scenarios / 378 s" until 2026-08-16, when a full run measured 85 / 370 s;
+`validate_scenarios.py` (run by `static_gate`) reports the current count, so it
+is the cheapest way to check this line without a full run.
 
 - `fidelity-serial` / `fidelity-full-serial` keep the old one-at-a-time loops.
   **DO NOT USE THEM UNLESS THE MAINTAINER EXPLICITLY ASKS** (maintainer
