@@ -88,4 +88,18 @@ mcopy -n -i "$SCRATCH/pkmn.img@@1048576" ::FRAME.BIN "$OUT" 2>/dev/null || {
     echo "$SCENARIO: no FRAME.BIN — the harness crashed or never dumped" >&2
     exit 1
 }
-echo "$SCENARIO -> $OUT ($(stat -c%s "$OUT") bytes)"
+# PAL.BIN too, as "$OUT".pal — render_frame.py takes it as its third argument and
+# then uses the EXACT live VGA DAC state. Without it that tool falls back to a
+# pre-colorization DMG-green ramp that only defines indices 0-11 and paints
+# everything above them magenta, so a perfectly ordinary palette-3 cell reads as
+# corruption. The port has dumped PAL.BIN since DumpPalette landed ("PAL.BIN
+# keeps host frame rendering lockstep"); only this extraction was missing, which
+# made every human-facing render from a pixel capture wrong in colour and
+# actively misleading above index 11. Non-fatal: byte comparison never needed it,
+# and old captures have no .pal beside them.
+mcopy -n -i "$SCRATCH/pkmn.img@@1048576" ::PAL.BIN "$OUT.pal" 2>/dev/null || true
+# GBSTATE.BIN as "$OUT".gbstate when the scenario dumps one. Lets a pixel
+# investigation ask "did the CONTENT move, or only the blit offset?" without a
+# second run, which is the question a frame diff alone cannot answer.
+mcopy -n -i "$SCRATCH/pkmn.img@@1048576" ::GBSTATE.BIN "$OUT.gbstate" 2>/dev/null || true
+echo "$SCENARIO -> $OUT ($(stat -c%s "$OUT") bytes)$([ -f "$OUT.pal" ] && echo " + $OUT.pal")"
