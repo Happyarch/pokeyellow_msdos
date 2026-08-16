@@ -276,11 +276,11 @@ PalletTownOakNotSafeComeWithMeScript:
     mov al, 1
     mov [ebp + wSpriteIndex], al
     xor al, al
-    mov [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], al
+    mov [ebp + wNPCMovementScriptFunctionNum], al
     mov al, 1
     mov [ebp + wNPCMovementScriptPointerTableNum], al
     mov al, [ebp + hLoadedROMBank]
-    mov [ebp + W_NPC_MOVEMENT_SCRIPT_BANK], al
+    mov [ebp + wNPCMovementScriptBank], al
     mov al, SCRIPT_PALLETTOWN_PLAYER_FOLLOWS_OAK
     mov [ebp + wPalletTownCurScript], al
     ret
@@ -357,7 +357,7 @@ PalletTownOakText:
     mov bl, 10
     call DelayFrames
     mov al, PLAYER_DIR_DOWN
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, 0
     mov [ebp + wEmotionBubbleSpriteIndex], al
     mov al, 0
