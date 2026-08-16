@@ -1,0 +1,1657 @@
+{
+ "_comment": "Distinct control-transfer targets in pret scripts/. `defined_in_port` means a symbol of that name exists under dos_port/src \u2014 NOT that its ABI has been checked. This file is the work list for abi.json, which is fail-closed.",
+ "distinct": 233,
+ "callees": {
+  "TextScriptEnd": {
+   "sites": 564,
+   "defined_in_port": true,
+   "by_form": {
+    "jp": 564
+   }
+  },
+  "PrintText": {
+   "sites": 468,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 464,
+    "jp": 4
+   }
+  },
+  "TalkToTrainer": {
+   "sites": 265,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 265
+   }
+  },
+  "EnableAutoTextBoxDrawing": {
+   "sites": 211,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 145,
+    "jp": 66
+   }
+  },
+  "DisplayTextID": {
+   "sites": 138,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 124,
+    "jp": 14
+   }
+  },
+  "Delay3": {
+   "sites": 69,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 69
+   }
+  },
+  "ExecuteCurMapScriptInTable": {
+   "sites": 67,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 67
+   }
+  },
+  "HideObject": {
+   "sites": 57,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 54,
+    "predef_jump": 3
+   }
+  },
+  "GiveItem": {
+   "sites": 41,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 41
+   }
+  },
+  "StartSimulatingJoypadStates": {
+   "sites": 40,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 35,
+    "jp": 5
+   }
+  },
+  "MoveSprite": {
+   "sites": 36,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 34,
+    "jp": 2
+   }
+  },
+  "ShowObject": {
+   "sites": 36,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 29,
+    "predef_jump": 7
+   }
+  },
+  "YesNoChoice": {
+   "sites": 36,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 36
+   }
+  },
+  "UpdateSprites": {
+   "sites": 35,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 35
+   }
+  },
+  "ArePlayerCoordsInArray": {
+   "sites": 34,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 34
+   }
+  },
+  "SaveEndBattleTextPointers": {
+   "sites": 34,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 34
+   }
+  },
+  "ReplaceTileBlock": {
+   "sites": 33,
+   "defined_in_port": true,
+   "by_form": {
+    "predef_jump": 19,
+    "predef": 14
+   }
+  },
+  "CallFunctionInTable": {
+   "sites": 33,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 17,
+    "jp": 16
+   }
+  },
+  "CheckFightingMapTrainers": {
+   "sites": 30,
+   "defined_in_port": true,
+   "by_form": {
+    "jp": 28,
+    "call": 2
+   }
+  },
+  "SetSpriteFacingDirectionAndDelay": {
+   "sites": 30,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 27,
+    "jp": 3
+   }
+  },
+  "PlayCry": {
+   "sites": 29,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 29
+   }
+  },
+  "DelayFrames": {
+   "sites": 27,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 27
+   }
+  },
+  "StopAllMusic": {
+   "sites": 27,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 27
+   }
+  },
+  "WaitForSoundToFinish": {
+   "sites": 22,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 22
+   }
+  },
+  "PlayDefaultMusic": {
+   "sites": 18,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 18
+   }
+  },
+  "PlayMusic": {
+   "sites": 17,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 17
+   }
+  },
+  "EngageMapTrainer": {
+   "sites": 15,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 15
+   }
+  },
+  "InitBattleEnemyParameters": {
+   "sites": 15,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 15
+   }
+  },
+  "PlaySound": {
+   "sites": 15,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 15
+   }
+  },
+  "IsItemInBag": {
+   "sites": 12,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 11,
+    "jp": 1
+   }
+  },
+  "Serial_TryEstablishingExternallyClockedConnection": {
+   "sites": 12,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 12
+   }
+  },
+  "PokecenterChanseyText": {
+   "sites": 12,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 12
+   }
+  },
+  "Mansion2ReplaceBlock": {
+   "sites": 12,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 12
+   }
+  },
+  "EmotionBubble": {
+   "sites": 11,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 11
+   }
+  },
+  "DecodeRLEList": {
+   "sites": 11,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 11
+   }
+  },
+  "SetSpriteMovementBytesToFF": {
+   "sites": 11,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 11
+   }
+  },
+  "GivePokemon": {
+   "sites": 9,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 9
+   }
+  },
+  "CopyData": {
+   "sites": 9,
+   "defined_in_port": true,
+   "by_form": {
+    "jp": 1,
+    "call": 8
+   }
+  },
+  "DisplayTextBoxID": {
+   "sites": 9,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 9
+   }
+  },
+  "DisplayPokedex": {
+   "sites": 9,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 9
+   }
+  },
+  "FillMemory": {
+   "sites": 9,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 9
+   }
+  },
+  "LoadGymLeaderAndCityName": {
+   "sites": 8,
+   "defined_in_port": true,
+   "by_form": {
+    "jp": 5,
+    "call": 3
+   }
+  },
+  "DisableWaitingAfterTextDisplay": {
+   "sites": 8,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 8
+   }
+  },
+  "GBPalWhiteOutWithDelay3": {
+   "sites": 8,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 8
+   }
+  },
+  "Music_RivalAlternateStart": {
+   "sites": 8,
+   "defined_in_port": true,
+   "by_form": {
+    "farcall": 8
+   }
+  },
+  "GBFadeOutToBlack": {
+   "sites": 8,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 8
+   }
+  },
+  "GBFadeInFromBlack": {
+   "sites": 8,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 8
+   }
+  },
+  "PlaceString": {
+   "sites": 7,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 7
+   }
+  },
+  "TryApplyPikachuMovementData": {
+   "sites": 7,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 7
+   }
+  },
+  "RestoreScreenTilesAndReloadTilePatterns": {
+   "sites": 7,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 7
+   }
+  },
+  "AddNTimes": {
+   "sites": 7,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 7
+   }
+  },
+  "GateUpstairsScript_PrintIfFacingUp": {
+   "sites": 7,
+   "defined_in_port": false,
+   "by_form": {
+    "jp": 7
+   }
+  },
+  "CheckBoulderCoords": {
+   "sites": 7,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 7
+   }
+  },
+  "ApplyPikachuMovementData": {
+   "sites": 6,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 6
+   }
+  },
+  "SaveScreenTilesToBuffer2": {
+   "sites": 6,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 6
+   }
+  },
+  "GetMonName": {
+   "sites": 6,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 6
+   }
+  },
+  "WaitForTextScrollButtonPress": {
+   "sites": 6,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 6
+   }
+  },
+  "CinnabarGymScript_753f3": {
+   "sites": 6,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 6
+   }
+  },
+  "CinnabarGymScript_753de": {
+   "sites": 6,
+   "defined_in_port": false,
+   "by_form": {
+    "jp": 6
+   }
+  },
+  "DoInGameTradeDialogue": {
+   "sites": 6,
+   "defined_in_port": false,
+   "by_form": {
+    "predef": 6
+   }
+  },
+  "PlaySoundWaitForCurrent": {
+   "sites": 6,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 6
+   }
+  },
+  "DisableAutoTextBoxDrawing": {
+   "sites": 6,
+   "defined_in_port": true,
+   "by_form": {
+    "jp": 5,
+    "call": 1
+   }
+  },
+  "EndTrainerBattle": {
+   "sites": 5,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 5
+   }
+  },
+  "SetSpritePosition1": {
+   "sites": 5,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 5
+   }
+  },
+  "GetQuantityOfItemInBag": {
+   "sites": 5,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 5
+   }
+  },
+  "AddBCDPredef": {
+   "sites": 5,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 5
+   }
+  },
+  "HasEnoughMoney": {
+   "sites": 5,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 5
+   }
+  },
+  "SubBCDPredef": {
+   "sites": 5,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 5
+   }
+  },
+  "RemoveGuardDrink": {
+   "sites": 5,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 5
+   }
+  },
+  "IsPlayerOnDungeonWarp": {
+   "sites": 5,
+   "defined_in_port": true,
+   "by_form": {
+    "jp": 3,
+    "call": 2
+   }
+  },
+  "RemoveItemByID": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "farcall": 4
+   }
+  },
+  "CheckPikachuFollowingPlayer": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 4
+   }
+  },
+  "InitializePikachuTextID": {
+   "sites": 4,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 4
+   }
+  },
+  "PlayPikachuSoundClip": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "callfar": 4
+   }
+  },
+  "ReloadTilesetTilePatterns": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 4
+   }
+  },
+  "LoadScreenTilesFromBuffer2": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 4
+   }
+  },
+  "GBPalNormal": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 4
+   }
+  },
+  "LoadItemList": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 4
+   }
+  },
+  "GetItemName": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 4
+   }
+  },
+  "FlagActionPredef": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "predef_jump": 1,
+    "predef": 3
+   }
+  },
+  "HealParty": {
+   "sites": 4,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 4
+   }
+  },
+  "TextBoxBorder": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "CheckPikachuStatusCondition": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "callfar": 3
+   }
+  },
+  "DisablePikachuFollowingPlayer": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "CountSetBits": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "ShakeElevator": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "farjp": 1,
+    "farcall": 2
+   }
+  },
+  "DisplayElevatorFloorMenu": {
+   "sites": 3,
+   "defined_in_port": false,
+   "by_form": {
+    "predef": 3
+   }
+  },
+  "DisplayPartyMenu": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "LoadGBPal": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "Random": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "DelayFrame": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "GBFadeOutToWhite": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "GBFadeInFromWhite": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "DecodeArrowMovementRLE": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 3
+   }
+  },
+  "LoadSpinnerArrowTiles": {
+   "sites": 3,
+   "defined_in_port": true,
+   "by_form": {
+    "jr": 1,
+    "jp": 1,
+    "farjp": 1
+   }
+  },
+  "OaksAideScript": {
+   "sites": 3,
+   "defined_in_port": false,
+   "by_form": {
+    "predef": 3
+   }
+  },
+  "HandleMenuInput": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "UpdateCinnabarGymGateTileBlocks": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "GetPikachuFacingDirectionAndReturnToE": {
+   "sites": 2,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 2
+   }
+  },
+  "CinnabarGymScript_753e9": {
+   "sites": 2,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "GetPartyMonName": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "MoveMon": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "IsThisPartyMonStarterPikachu": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "callfar": 2
+   }
+  },
+  "PrintBCDNumber": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "MtMoonB2FScript_ApplyPikachuMovementData": {
+   "sites": 2,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "CalcPositionOfPlayerRelativeToNPC": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 2
+   }
+  },
+  "FindPathToPlayer": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 2
+   }
+  },
+  "SpriteFunc_34a1": {
+   "sites": 2,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "SetSpritePosition2": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "GetSpritePosition2": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "Route16Gate1FIsBicycleInBagScript": {
+   "sites": 2,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "PrintText_NoCreatingTextBox": {
+   "sites": 2,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "SilphCo2F_SetCardKeyDoorYScript": {
+   "sites": 2,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript": {
+   "sites": 2,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "SilphCo4F_SetCardKeyDoorYScript": {
+   "sites": 2,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 2
+   }
+  },
+  "BillsHousePikachuConfused": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "BillsHousePikachuWatchPlayer": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "BillsHousePrintBillPokemonText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "BillsHousePrintBillSSTicketText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "BillsHousePrintBillCheckOutMyRarePokemonText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "CeladonCityPrintTrainerTips1Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "CeladonDinerPrintGymGuideText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "CeladonMansion1FPrintGrannyText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "IsStarterPikachuAliveInOurParty": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "PrintDiploma": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "DisplayDiploma": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "CeladonMansion3FPrintGameProgramPCText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "CeladonMansion3FPrintPlayingGamePCText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "CeladonMansion3FPrintGameScriptPCText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "CeladonMansion3FPrintDevRoomSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "CeladonMart3FPrintClerkText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "DisplayListMenuID": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "GetPointerWithinSpriteStateData2": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "CeruleanHideRocket": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Music_Cities1AlternateTempo": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "CinnabarGymPrintGymGuideText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "Func_f2150": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "GiveFossilToCinnabarLab": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "LoadFossilItemAndMonName": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farjp": 1
+   }
+  },
+  "TradeCenter_Script": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "jp": 1
+   }
+  },
+  "KnowsHMMove": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "RemovePokemon": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "LoadMonData": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "CalcLevelFromExperience": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "CalcExperience": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "WriteMonMoves": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 1
+   }
+  },
+  "GameCornerPikachuMovementScript": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "ClearScreenArea": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "HasEnoughCoins": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "jp": 1
+   }
+  },
+  "HallOfFamePC": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "predef": 1
+   }
+  },
+  "SaveGameData": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Init": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "jp": 1
+   }
+  },
+  "LoadPikachuShadowIntoVRAM": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "MagikarpSalesman": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "Museum1FPrintScientist1Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Museum1FPrintGamblerText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Museum1FPrintScientist2Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Museum1FPrintScientist3Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Museum1FPrintOldAmberText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "GetPartyMonName2": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "DisplayNameRaterScreen": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "GetSpritePosition1": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "SchedulePikachuSpawnForAfterText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "EnablePikachuOverworldSpriteDrawing": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "OaksLabPikachuMovementScript": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "RemoveItemFromInventory": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "DisplayDexRating": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 1
+   }
+  },
+  "AddPartyMon": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "DisablePikachuOverworldSpriteDrawing": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "PewterJigglypuff": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "PewterPokecenterPrintCooltrainerFText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "LoadCurrentMapView": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "PrintFanClubPortrait": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "PokemonTower2FPikachuMovementScript": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "RedsHouse1FPrintMomText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "RedsHouse1FPrintTVText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "ReloadMapData": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "Route1PrintYoungster1Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Route1PrintYoungster2Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Route1PrintSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Music_RivalAlternateTempo": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Music_RivalAlternateStartAndTempo": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Route22PrintRival1Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Route22PrintRival2Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Route22PrintPokemonLeagueSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "SaveScreenTilesToBuffer1": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "LoadScreenTilesFromBuffer1": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "SSAnne2FRoomsPrintGentleman5Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "SSAnne2FRoomsPrintLittleBoyText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "SSAnne2FRoomsPrintBrunetteGirlText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "SSAnne2FRoomsPrintBeautyText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "SafariZoneGatePrintSafariZoneWorker2Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "DivideBCDPredef3": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "predef": 1
+   }
+  },
+  "ForceBikeOrSurf": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "jp": 1
+   }
+  },
+  "SilphCo11FTeamRocketLeavesScript": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "SurfingPikachuMinigame": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Func_f23d0": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "jp": 1
+   }
+  },
+  "Printer_PrepareSurfingMinigameHighScoreTileMap": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "PrintSurfingMinigameHighScore": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "SetSpriteFacingDirection": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "VermilionCityPrintSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "VermilionCityPrintNoticeSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "VermilionCityPrintPokemonFanClubSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "VermilionCityPrintGymSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "VermilionCityPrintHarborSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "VermilionCityPrintOfficerJennyText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "LoadSmokeTileFourTimes": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "CopyScreenTileBufferToVRAM": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "UpdateCGBPal_OBP1": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "ScheduleEastColumnRedraw": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "LoadPlayerSpriteGraphics": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "WriteOAMBlock": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "CopyVideoData": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "ViridianCityOldManStartCatchTrainingScript.SetupSprite": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "ViridianCityOldManStartCatchTrainingScript.SetupBattle": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "ViridianCityOldManEndCatchTrainingScript.SetupSprite": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "ViridianCityMovePikachu": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "callfar": 1
+   }
+  },
+  "ViridianCityPrintYoungster1Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintGambler1Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintYoungster2Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintGirlText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintOldManSleepyText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintFisherText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintOldManText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintTrainerTips1Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintTrainerTips2Text": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintGymSignText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianCityPrintGymLockedText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "Bankswitch": {
+   "sites": 1,
+   "defined_in_port": true,
+   "by_form": {
+    "call": 1
+   }
+  },
+  "ViridianSchoolHousePrintCooltrainerFText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  },
+  "ViridianSchoolHousePrintLittleGirlText": {
+   "sites": 1,
+   "defined_in_port": false,
+   "by_form": {
+    "farcall": 1
+   }
+  }
+ }
+}

@@ -1,10 +1,58 @@
 # sm83xlat — one-shot SM83 → x86 transpiler for pret `scripts/`
 
-**STATUS: prework only. The transpiler itself is NOT built yet.**
-What exists today is `build_symbols.py`, the shared symbol mapping, staged ahead
-of the fork so both consuming workstreams read one artifact.
+**STATUS: Stage 0 (parse & probe) complete. No IR, no lowering, no emitted x86.**
 
 Plan: `docs/current_plan_script_transpiler.md`.
+
+| module | stage | what it is |
+|---|---|---|
+| `build_symbols.py` | prework | the shared pret↔port RAM symbol mapping (below) |
+| `lexer.py` | 0 | line lexer — every line categorised, operands split |
+| `isa.py` | 0 | the SM83 instruction + flag table. The tool's axioms |
+| `macros.py` | 0 | classification and declared effects for every rgbasm macro `scripts/` uses |
+| `pretsyms.py` | 0 | the pret-side symbol universe (RAM, constants, labels) |
+| `parser.py` | 0 | conditional assembly, label scope, item classification |
+| `probe.py` | 0 | coverage counter, branch census, callee inventory |
+| `stage0.py` | 0 | CLI → `coverage.md`, `tables/probe.json`, `tables/callees.json` |
+
+```sh
+python3 dos_port/tools/sm83xlat/stage0.py            # write coverage.md + tables/
+python3 dos_port/tools/sm83xlat/stage0.py --report   # print, write nothing
+python3 -m pytest dos_port/tools/sm83xlat/tests/ -q
+```
+
+## Stage 0 result (2026-08-16)
+
+251/251 files parse, **zero parse errors** — the stage's acceptance. Full report
+in `coverage.md`; the headline is **9,361 of 12,500 imperative sites (74.9%)
+mechanically lowerable**, with `unknown-callee-abi` the only large bail bucket
+(2,997 sites over **233 distinct callees**, 128 of which the port already
+defines). Everything else is under 100 sites.
+
+Three measurements in the plan did not survive contact with the corpus, and each
+is pinned by a test in `tests/test_stage0.py` so it cannot quietly revert:
+
+* **The projection surface is 18 lines, not 16.** `ld bc, SCREEN_WIDTH * 2`
+  (CeladonMartRoof) and `ld bc, SCREEN_WIDTH * 6` (VermilionDock) are row-stride
+  advances written as arithmetic instead of through a coord macro, each one line
+  after an `hlcoord` in a file already on the bail list. The port's stride is not
+  pret's, so they are exactly as unlowerable as the 16 macro sites — counting the
+  macro rather than the geometry is what hid them. Same 5 files.
+* **Inline glyph runs are 29 sites in 11 files, not the two CeruleanGym lines the
+  plan names.** 8 gyms × (city + leader), Route23's 7 badge names, GameCorner's 4
+  currency labels, BikeShop's 2.
+* **The branch census does not reproduce, and the branch COUNT does.**
+  920 = 913 active + 7 inside `IF DEF(_DEBUG)` blocks. The quoted proportions
+  (48.4 / 20.5 / 31.1) cannot be reproduced because the definition behind them
+  was never recorded; a deliberately cruder re-bucketing lands in the same family
+  (47.2 / 26.5 / 26.3) but is not a match, and identifying it is not claimed.
+  See `coverage.md` for why this matters to Stage 2's acceptance gate.
+
+The census work also surfaced a fourth bucket the quoted figures have no slot
+for: **150 branches read a flag written by a CALLEE** (`call GiveItem` / `jr nc`).
+Treating `call` as flag-transparent — which is what makes the crude census
+possible — reads straight through those and credits an earlier `cp` with a CF it
+never wrote. They are `abi.json` rows, not distances.
 
 ---
 

@@ -80,10 +80,17 @@ someone to regenerate over hand edits. No Makefile wiring at all.
 
 ## Stages
 
-- [ ] **Stage 0 — parse & probe.** Lexer, parser, macro classifier, coverage
+- [x] **Stage 0 — parse & probe.** Lexer, parser, macro classifier, coverage
       counter. *Acceptance:* all 29,673 lines parse with **zero** parse errors (a
       parse failure is a tool bug, never a bail); `coverage.md` reports the
       reason-code histogram. **This is the work queue and the go/no-go.**
+      **DONE 2026-08-16.** 251/251 files, 0 parse errors, 0 unclassified items.
+      **9,361 of 12,500 imperative sites (74.9%) mechanically lowerable.** The
+      only large bail bucket is `unknown-callee-abi` — 2,997 sites over **233
+      distinct callees** (128 already defined in the port), exactly as budgeted;
+      every other bucket is under 100 sites. Report: `tools/sm83xlat/coverage.md`.
+      **GO.** Three of this plan's own figures were corrected in the process —
+      see "Stage 0 corrections" below.
 - [ ] **Stage 1 — symbols & constants.** The RAM-symbol half is **built as
       prework**: `build_symbols.py` → `tables/symbols.json`, 214 pret↔port pairs,
       0 ambiguous, 0 address conflicts, with `tests/test_rename_invariance.py`
@@ -93,9 +100,16 @@ someone to regenerate over hand edits. No Makefile wiring at all.
       398 `unmatched` names in the prework report are largely this category).
       *Acceptance:* ≥95% of symbols **referenced by scripts** resolve
 - [ ] **Stage 2 — IR, CFG, dataflow.** *Acceptance gate:* the tool independently
-      reproduces the measured branch census (48.4 / 20.5 / 31.1 over 920 branches).
-      A mismatch means the CFG or flag table is wrong — found before any output
-      exists
+      reproduces the Stage 0 branch census in `tools/sm83xlat/coverage.md`, whose
+      bucket definitions are written down, over a branch population independently
+      confirmed at **913 active / 920 total**.
+      **The old gate — "reproduces 48.4 / 20.5 / 31.1" — is RETIRED and must not
+      be reinstated.** Those proportions cannot be reproduced because the
+      definition behind them was never recorded, and a gate against an
+      unreproducible number gates nothing. The branch COUNT does reproduce
+      exactly (920 = 913 + 7 inside `IF DEF(_DEBUG)` blocks), so nothing is
+      missing from the corpus; only the bucketing is undefined. See the Stage 0
+      corrections below
 - [ ] Decide and record the predef strategy (see below)
 - [ ] **Stage 3 — lowering + emitter**, head of the distribution; target the 114
       files with ≤20 imperative lines first
@@ -121,6 +135,44 @@ someone to regenerate over hand edits. No Makefile wiring at all.
 - [ ] Integrate comb findings centrally; regenerate the shared dispatch and tables
 - [ ] `lint_pret_labels` 0 in both modes; `make fidelity-full`; `make pixellock`
 - [ ] Archive: `git mv docs/current_plan_script_transpiler.md docs/plans/script_transpiler.md`
+
+## Stage 0 corrections to this plan's own figures (measured 2026-08-16)
+
+Each is pinned by a test in `tools/sm83xlat/tests/test_stage0.py`, so a later
+change that silently restores the old number fails there rather than being
+rediscovered by hand.
+
+1. **The projection surface is 18 lines, not 16** — same 5 files. The two extra
+   are `ld bc, SCREEN_WIDTH * 2` (`CeladonMartRoof.asm:204`) and
+   `ld bc, SCREEN_WIDTH * 6` (`VermilionDock.asm:55`): row-stride advances
+   written as arithmetic rather than through a coord macro, each one line after
+   an `hlcoord` in a file already on the bail list. The port's stride is not
+   pret's, so they are exactly as unlowerable by rule as the 16 macro sites —
+   **counting the macro rather than the geometry is what hid them**, which is
+   the same mistake in miniature that rule 7 warns about.
+2. **Inline glyph runs are 29 sites in 11 files**, not the two `CeruleanGym`
+   lines named above: 8 gyms × (city name + leader name), `Route23`'s 7 badge
+   names, `GameCorner`'s 4 currency labels, `BikeShop`'s 2. All must be routed
+   into a generator.
+3. **The branch census does not reproduce; the branch COUNT does.** See the
+   Stage 2 entry. A fourth bucket exists that the quoted three have no slot for:
+   **150 branches read a flag written by a CALLEE** (`call GiveItem` / `jr nc`).
+   Those are `abi.json` rows, not distances — and treating `call` as
+   flag-transparent, which is what makes the cruder census possible at all, reads
+   straight through them and credits an earlier `cp` with a CF it never wrote.
+
+Two smaller findings, both now their own reason codes rather than silent `ok`s:
+
+* **`bank-expression`, 22 sites.** `BANK(x)` needs a port-side bank constant per
+  target (the hand port renders `ld a, BANK(x)` / `ld c, a` as `mov bl, X_BANK`),
+  and `SSAnneCaptainsRoom.asm:49` does `cp BANK("Audio Engine 3")` — the bank of
+  a SECTION NAME, compared. Banking being a no-op in the flat model does not make
+  either mechanical.
+* **`event-byte-assembly-state`, 90 sites.** The `*ReuseHL` / `*ReuseA` event
+  macros emit their `ld` only `IF event_byte != ((\1) / 8)`, where `event_byte`
+  is a DEF carried in source order across the whole file. One line's expansion
+  depends on a line above it, so the IR stage must resolve that state rather than
+  assume a fixed expansion.
 
 ## Correctness rules the tool must encode
 
