@@ -1,6 +1,11 @@
 # current_plan_script_transpiler — one-shot SM83→x86 transpiler for pret `scripts/`
 
-**Owner:** one Opus agent, stages 0–7, in `worktree-C`. All tooling is Opus-owned:
+**Worktree:** `../pokeyellow_msdos-transpiler`, branch `script-transpiler`, already
+created and built clean from prework commit `c1ea70331`. Build order in a worktree
+is load-bearing: `make -j$(nproc)` in the **repo root** first, then
+`make -C dos_port -j$(nproc)` — see [[agent-fanout-worktree-setup]].
+
+**Owner:** one Opus agent, stages 0–7. All tooling is Opus-owned:
 a tooling error is *systematic* (one wrong flag-table row is wrong across all 251
 files), while a missed detail in the comb pass is *local to one map*.
 **Parallelism:** runs concurrently with `current_plan_data_path_mirror`, and is

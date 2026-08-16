@@ -1,6 +1,6 @@
 # current_plan_memmap_pret_names — realign `gb_memmap.inc` symbol names with pret
 
-**Owner:** one Opus agent, end to end, on **master**.
+**Owner:** one Opus agent, end to end, on **master** — deliberately no worktree.
 **Runs ALONE.** Not because of its file set but because of its oracle: the
 verification is `diff pkmn.sym` against a baseline, and any concurrent merge voids
 that baseline. Re-baseline after `current_plan_data_path_mirror` lands.

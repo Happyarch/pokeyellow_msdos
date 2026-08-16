@@ -1,6 +1,12 @@
 # current_plan_data_path_mirror — mirror pret `data/` paths, retire the `aux_misplaced` exception
 
-**Owner:** one Opus agent, end to end, in `worktree-A`.
+**Owner:** one Opus agent, end to end.
+**Worktree:** `../pokeyellow_msdos-data-paths`, branch `data-path-mirror`, already
+created and built clean from prework commit `c1ea70331`.
+**Build order in a worktree is load-bearing:** `make -j$(nproc)` in the **repo
+root** first (pret side), then `make -C dos_port -j$(nproc)`. Doing it the other
+way fails twice with errors that name neither cause — see
+[[agent-fanout-worktree-setup]].
 **Parallelism:** runs concurrently with `current_plan_script_transpiler`.
 **Must NOT run concurrently with** `current_plan_memmap_pret_names` — that
 workstream rewrites symbol references inside the very files this one splits, and
