@@ -6921,7 +6921,16 @@ autokey_script:
     dd  360,  370, PAD_A        ; select PKMN -> PartyMenuOrRockOrRun
     dd  540,  550, PAD_DOWN     ; party list slot 0 -> slot 1 (not the active mon)
     dd  720,  730, PAD_A        ; choose slot 1 -> SWITCH/STATS/CANCEL box
+%ifdef BATTLE_SWITCH_DESELECT
+    ; Deselect probe: B instead of A, so .partyMonDeselected runs and the
+    ; SWITCH/STATS/CANCEL box is ERASED back to the party list. Nothing else
+    ; exercises that path, and it is stride-bearing (the box lives in the party
+    ; screen's stride-20 scratch, not the canvas), so it needs its own witness.
+    ; Photograph after the erase, e.g. AUTOKEY_DUMP_FRAME=1000.
+    dd  900,  910, PAD_B        ; cancel the box -> back to the party list
+%else
     dd  900,  910, PAD_A        ; SWITCH (item 0) -> SwitchPlayerMon
+%endif
     dd 1260, 1270, PAD_A        ; spare: answers anything the send-out prompts
     dd   -1,   -1, 0
 %elifdef AUTOKEY_BATTLE_ITEM

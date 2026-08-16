@@ -54,6 +54,7 @@ global DoBuySellQuitMenu
 global DisplayFieldMoveMonMenu
 global GetMonFieldMoves
 global DisplayTwoOptionMenu             ; the ONE two-option impl (pret mirror)
+global DisplaySwitchStatsCancelPartyBox ; port-only: the battle party menu's box
 
 extern DisplayTextBoxID                 ; home/textbox.asm — pret home wrapper
 extern TextBoxBorder                    ; text.asm — ESI=top-left, BL=int_w, BH=int_h
@@ -246,6 +247,77 @@ DisplayTextBoxID_:
     mov [ebp + W_STATUS_FLAGS_5], cl    ; pop af / ld [wStatusFlags5],a
     call UpdateSprites
     jmp .done                           ; pret: ret (via .done)
+
+; ---------------------------------------------------------------------------
+; DisplaySwitchStatsCancelPartyBox — port-only. Draw the battle party menu's
+; SWITCH/STATS/CANCEL box into the PARTY SCREEN'S STRIDE-20 SCRATCH instead of
+; the 40-wide canvas.
+;
+; WHY THIS EXISTS (backlog item 10c). PartyMenuOrRockOrRun reaches this box the
+; way pret does, `wTextBoxID = SWITCH_STATS_CANCEL_MENU_TEMPLATE` +
+; DisplayTextBoxID -- and in this port that draws it where it can never be seen.
+; DisplayTextBoxID_ forces text_row_stride = SCREEN_TILES_W and works in canvas
+; coordinates (measured: canvas rows 18-24, cols 31-39), but the party menu is a
+; FULL-SCREEN TAKEOVER: party_menu.asm sets g_bg_whiteout, so render_bg fills
+; with BG colour 0 and skips the tilemap entirely, and the screen the player is
+; actually looking at is pret's 20x18 scratch at W_TILEMAP mirrored into
+; GB_TILEMAP1 by PartyMenuMirror, which the window descriptors read. A canvas
+; draw cannot reach this screen at all. The menu still WORKED -- HandleMenuInput
+; ran on the scratch and A selected SWITCH -- so the defect was purely that
+; nothing composited the box.
+;
+; This is the same resolution msgbox_party (party_menu.asm) already reached for
+; this screen's message box: stride-20, drawn in the screen's own scratch, no
+; window of its own, and let PartyMenuMirror carry it to the window layer.
+;
+; Geometry is pret's verbatim -- data/text_boxes.asm row:
+;     SWITCH_STATS_CANCEL_MENU_TEMPLATE, 11, 11, 19, 17, SwitchStatsCancelText, 13, 12
+; so the border is (11,11)-(19,17), i.e. interior 7x5, and the text sits at
+; (13,12), one column right of the cursor column pret puts at wTopMenuItemX = $c.
+;
+; In: EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+; The party screen's scratch stride. Deliberately NOT the bare literal 20:
+; SCREEN_TILES_W is the canvas stride (40) and is the wrong one here, and this
+; is the same quantity party_menu.asm calls GBSCR_W (its file-local equ).
+PARTY_SCRATCH_W  equ 20
+SSC_BOX_X        equ 11                 ; pret text_box_text row, verbatim
+SSC_BOX_Y        equ 11
+SSC_BOX_X2       equ 19
+SSC_BOX_Y2       equ 17
+SSC_TEXT_X       equ 13
+SSC_TEXT_Y       equ 12
+
+DisplaySwitchStatsCancelPartyBox:
+    push eax
+    push ebx
+    push ecx
+    push esi
+    push dword [text_row_stride]
+    mov dword [text_row_stride], PARTY_SCRATCH_W
+
+    ; border: TextBoxBorder takes the INTERIOR size, so (x2-x1-1) x (y2-y1-1)
+    mov esi, W_TILEMAP + SSC_BOX_Y * PARTY_SCRATCH_W + SSC_BOX_X
+    mov bl, SSC_BOX_X2 - SSC_BOX_X - 1
+    mov bh, SSC_BOX_Y2 - SSC_BOX_Y - 1
+    call TextBoxBorder
+
+    ; text — same BIT_NO_TEXT_DELAY scoping DisplayTextBoxID_ uses for a template
+    mov esi, W_TILEMAP + SSC_TEXT_Y * PARTY_SCRATCH_W + SSC_TEXT_X
+    mov eax, SwitchStatsCancelText
+    mov cl, [ebp + W_STATUS_FLAGS_5]
+    push ecx
+    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY)
+    call PlaceString
+    pop ecx
+    mov [ebp + W_STATUS_FLAGS_5], cl
+
+    pop dword [text_row_stride]
+    pop esi
+    pop ecx
+    pop ebx
+    pop eax
+    ret
 
 ; ---------------------------------------------------------------------------
 ; SearchTextBoxTable — scan a $FF-terminated table for the byte in C (BL),

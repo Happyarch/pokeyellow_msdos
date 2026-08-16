@@ -1239,6 +1239,13 @@ NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 ifdef BATTLE_SWITCH_WINDOW_PROBE
 NASMFLAGS += -D BATTLE_SWITCH_WINDOW_PROBE
 endif
+# BATTLE_SWITCH_DESELECT=1 presses B instead of A on the SWITCH/STATS/CANCEL box,
+# so .partyMonDeselected's erase runs. NEVER for a scenario run: the golden takes
+# the switch. Photograph after the erase, e.g.
+#   run_headless.sh "DEBUG_BATTLE_SWITCH=1 BATTLE_SWITCH_DESELECT=1 AUTOKEY_DUMP_FRAME=1000"
+ifdef BATTLE_SWITCH_DESELECT
+NASMFLAGS += -D BATTLE_SWITCH_DESELECT
+endif
 endif
 # In-battle ITEM gate (battle_item_potion golden, battle plan 2c): the
 # DEBUG_BATTLE_GOLDEN scene with the active mon knocked to POTION_SEED_HP, then

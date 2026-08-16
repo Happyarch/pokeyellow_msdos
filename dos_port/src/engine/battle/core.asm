@@ -102,6 +102,10 @@ global RunBattleTextStream            ; DisplayUsedMoveText, now engine/battle/u
 global battle_hud_tiles1_2bpp
 global battle_hud_tiles23_2bpp
 
+; The party screen's scratch stride (party_menu.asm calls it GBSCR_W). NOT
+; SCREEN_WIDTH, which is this port's 40-wide CANVAS stride.
+PARTY_SCRATCH_STRIDE equ 20
+
 section .text
 
 global MainInBattleLoop
@@ -235,6 +239,9 @@ extern DrawBattleMenuBox               ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE) 
 extern HandleMenuInput                 ; home/window.asm
 extern PlaceMenuCursor                 ; home/window.asm
 extern menu_item_step                  ; home/window.asm — cursor vertical spacing
+extern menu_redraw_cb                  ; home/window.asm — per-frame cursor redraw hook
+extern PartyMenuMirror                 ; engine/menus/party_menu.asm — scratch → window blit
+extern DisplaySwitchStatsCancelPartyBox ; engine/menus/text_box.asm — port-only scratch draw
 extern EraseMenuCursor                 ; home/window.asm
 
 ; --- text engine + move-list helpers ---
@@ -3441,30 +3448,27 @@ PartyMenuOrRockOrRun:
     call GBPalNormal
     jmp DisplayBattleMenu               ; jp
 .partyMonDeselected:
-    ; wipe the SWITCH/STATS/CANCEL box before going back to the list
-    mov esi, BCOORD(11, 11)             ; PROJ — pret hlcoord 11, 11
-    mov bx, 6 * SCREEN_WIDTH + 9        ; ld bc, ... (FillMemory count in BX)
+    ; Wipe the SWITCH/STATS/CANCEL box before going back to the list. This has to
+    ; erase it where DisplaySwitchStatsCancelPartyBox DREW it — the party screen's
+    ; stride-20 scratch — not the canvas. Both the address and the count are
+    ; stride-bearing: pret's `ld bc, 6 * SCREEN_WIDTH + 9` is 6 GB rows plus 9
+    ; cells (129), and taking the port's SCREEN_WIDTH (40, the canvas) made it 249
+    ; bytes at a canvas address, which cleared cells this box never occupied and
+    ; left the real ones standing.
+    mov esi, W_TILEMAP + 11 * PARTY_SCRATCH_STRIDE + 11   ; pret hlcoord 11, 11
+    mov bx, 6 * PARTY_SCRATCH_STRIDE + 9  ; ld bc, ... (FillMemory count in BX)
     mov al, 0x7f                        ; ld a, " " — the blank tile
     call FillMemory
+    call PartyMenuMirror                ; port: push the erase to the window too
     mov byte [ebp + wPartyMenuTypeOrMessageID], NORMAL_PARTY_MENU  ; xor a
     call GoBackToPartyMenu
     jmp .checkIfPartyMonWasSelected     ; jr
 .partyMonWasSelected:
-    ; ⚠ THIS BOX IS DRAWN BUT NEVER SEEN — COME BACK HERE. DisplayTextBoxID puts
-    ; it on the 40-wide CANVAS (measured: canvas rows 18-24, cols 31-39), and the
-    ; party menu is a full-screen takeover with g_bg_whiteout=1, so render_bg
-    ; skips the tilemap and nothing composites it. The screen itself is a
-    ; stride-20 scratch mirrored into GB_TILEMAP1 by PartyMenuMirror, and windows
-    ; read GB_TILEMAP0/1 rather than the canvas, so a canvas draw cannot reach
-    ; this screen at all. The menu still WORKS — A selects SWITCH — only the draw
-    ; is missing. Fix shape (follow msgbox_party, which solved exactly this for
-    ; this screen's message box): draw into the stride-20 scratch at the GB
-    ; coords the layout already carries, UI_SWITCH_STATS_CANCEL_MENU_TEMPLATE_GBX
-    ; /_GBY = 11,11 = pret's hlcoord 11,11, and let PartyMenuMirror carry it.
-    ; Owner: docs/current_plan_backlog.md item 10c.
-    ; DEVIATION{class=projection; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=the SWITCH STATS CANCEL box is drawn onto the 40-wide canvas where this screen never composites it so it is invisible although it still responds to input; evidence=the party menu is a full-screen takeover that sets g_bg_whiteout and render_bg then skips the tilemap while the screen itself is a stride-20 scratch mirrored into GB_TILEMAP1 and window descriptors read the GB tilemaps rather than the canvas so a canvas draw cannot reach this screen; lifetime=until backlog item 10c draws this box into the party scratch as msgbox_party already does}
-    mov byte [ebp + wTextBoxID], SWITCH_STATS_CANCEL_MENU_TEMPLATE
-    call DisplayTextBoxID
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=the SWITCH STATS CANCEL box is drawn by a port-only routine into the party screen stride-20 scratch instead of through DisplayTextBoxID, and PartyMenuMirror is hooked as the cursor redraw callback; evidence=DisplayTextBoxID_ forces text_row_stride to the canvas width and works in canvas coordinates while this screen is a full-screen takeover that sets g_bg_whiteout so render_bg skips the tilemap entirely and the visible surface is the stride-20 scratch that PartyMenuMirror carries into GB_TILEMAP1 for the window descriptors, so a canvas draw is never composited - the geometry drawn is pret's own text_box_text row 11 11 19 17 with text at 13 12; lifetime=permanent window-compositor boundary, the same one msgbox_party already crossed for this screen's message box}
+    ; Backlog item 10c — RESOLVED. Was: drawn to the canvas, invisible (the menu
+    ; still worked; only the draw was missing).
+    call DisplaySwitchStatsCancelPartyBox
+    call PartyMenuMirror                ; port: carry the finished box to the window
     ; pret walks hl from wTopMenuItemY; the port writes each field directly.
     mov byte [ebp + wTopMenuItemY], 0x0c
     mov byte [ebp + wTopMenuItemX], 0x0c
@@ -3472,7 +3476,13 @@ PartyMenuOrRockOrRun:
     mov byte [ebp + wMaxMenuItem], 2
     mov byte [ebp + wMenuWatchedKeys], PAD_B | PAD_A
     mov byte [ebp + wLastMenuItem], 0
+    ; port: the cursor the generic driver draws lands in the same scratch, so it
+    ; needs the same mirror hook HandlePartyMenuInput uses (home/pokemon.asm).
+    ; text_row_stride and menu_item_step are already the party screen's (20 and
+    ; 2*20, set by home/pokemon.asm) — this box shares that geometry by design.
+    mov dword [menu_redraw_cb], PartyMenuMirror
     call HandleMenuInput
+    mov dword [menu_redraw_cb], 0
     test al, PAD_B                      ; bit B_PAD_B, a
     jnz .partyMonDeselected             ; jr nz — B cancels
 ; A was pressed
