@@ -17,6 +17,27 @@ Deep reference for translating pret/pokeyellow SM83 routines into the DOS port's
 x86 NASM. The always-loaded hard rules (preserve pret labels, GB data is
 big-endian) live in `CLAUDE.md`; this skill holds the detail.
 
+## The translation target: what pret does, sequence for sequence
+
+**pret's behaviour is the specification.** Translate it faithfully, instruction by
+instruction — the output matches pret including the parts that look surprising,
+because looking surprising is not evidence of being wrong. A sequence that reads
+like an oversight is usually load-bearing: the odd-looking `wYCoord = 0` force and
+`dec hNPCPlayerYDistance` fudge in the Pallet Town cutscene are the ingredients of
+observable game behaviour, and "tidying" them changes the game.
+
+This matters most where the port has no model of the layer you are working in. A
+translation whose behaviour drifts can pass `faithdiff`, `lint_pret_labels`,
+`static_gate` and the golden suite together, because every one of those checks
+structure or a recorded expectation rather than "does this still do what the
+cartridge did."
+
+Behaviour changes have their own home: the post-completion sweep behind
+`make BUG_FIX_LEVEL=1|2`, where each one is a deliberate, annotated, opt-in
+divergence (`docs/glitch_safety.md`). There are no runtime fix flags — `/FIXALL`
+and `/FIXCRIT` were removed 2026-08-16. So while translating, the whole job is
+fidelity; improvements are a separate pass with its own gate.
+
 ## Register Mapping (SM83 → x86)
 
 | SM83 | x86 | Notes |
@@ -318,9 +339,39 @@ boundaries. Emit a `; TODO-HW:` comment describing what the original code does:
 `RST $00`–`$38` become regular labeled `CALL` targets, not interrupt-style dispatch.
 
 ## 386+ Instructions
-Prefer: `movzx`/`movsx` for zero/sign extension, `imul reg, reg, imm` for
-tile/map index math, `lea` for flags-preserving address computation, `rep stos/movs`
-for block fills/copies.
+
+Each entry names **one** instruction and the condition that selects it. Read the
+condition, not the instruction name — an entry is a rule about when, not a menu.
+
+- **`movzx`** — widens a value by filling the new upper bits with **zero**, so the
+  result equals the original byte, 0-255. Correct for GB values, which are
+  unsigned 8-bit: every `ld a, [wFoo]` feeding index math, every counter, every
+  id, every flag byte.
+- **`movsx`** — widens a value by **replicating its top bit** through the new upper
+  bits, so `$80`-`$FF` become negative (-128 to -1). Correct only where the GB
+  quantity is itself signed: `jr` and `jr cc` displacements, `add sp, e8`,
+  `ld hl, sp+e8`, sprite and screen deltas, and signed distances
+  (`hNPCPlayerYDistance`-style). State in a comment which signed quantity it is.
+- **`imul reg, reg, imm`** — tile/map index math.
+- **`lea`** — flags-preserving address computation. Use it in place of `inc`/`dec`
+  on a pointer when a ZF/CF must survive (see "Preserve Flags").
+- **`rep stosb`** or **`rep stosd`** — block fills.
+- **`rep movsb`** or **`rep movsd`** — block copies.
+
+### Signedness is looked up, never inferred
+
+The two widening entries above are selected by a fact about the *quantity*, not by
+anything in the surrounding code. Outside the enumerated signed set the value is
+unsigned, and replicating its top bit corrupts it silently: a byte ≥ `$80` becomes
+a negative 32-bit number, so index math reads out of bounds or wraps with no fault
+at the defect site. Go and check what the quantity is; do not read the sign off the
+instructions around it.
+
+**Width and compare signedness are one decision.** SM83 `cp` is unsigned, so
+`jr c` and `jr nc` map to `jb` and `jae` (see the flag section). A value widened
+with `movzx` belongs with an unsigned compare; a value widened with `movsx`
+belongs with a signed compare. Crossing them inverts the branch for exactly the
+high-byte inputs — the ones a quick test never reaches.
 
 ## Translation Workflow
 
