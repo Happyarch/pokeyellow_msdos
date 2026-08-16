@@ -2,7 +2,8 @@
 ;
 ; battle_animations Stage 2 (docs/plans/battle_animations.md): the
 ; interpreter core. This mirror now carries the command-stream interpreter that
-; walks the Tier-1 data in src/data/battle_anims.asm and paints frame blocks into
+; walks the Tier-1 data in src/data/moves/{animations,sfx}.asm +
+; src/data/battle_anims/ and paints frame blocks into
 ; wShadowOAM:
 ;   DrawFrameBlock, PlayAnimation, LoadSubanimation, GetSubanimationTransform1/2,
 ;   LoadMoveAnimationTiles, MoveAnimation, ShareMoveAnimations, PlaySubanimation,
@@ -20,7 +21,7 @@
 ; until the projection-publication wiring lands and is visually signed off.
 ;
 ; FLAT-POINTER MODEL (read this before touching pointer math). The Tier-1 tables
-; in src/data/battle_anims.asm are emitted `dd` (32-bit flat program-image
+; in the src/data/battle_anims/ + src/data/moves/ carriers are emitted `dd` (32-bit flat program-image
 ; addresses), NOT pret's `dw` (16-bit GB ROM). So:
 ;   * command streams / subanim bodies / frame blocks / base-coord pairs /
 ;     MoveSoundTable / the dispatch tables are read FLAT ([esi]/[label+idx*N]),
@@ -56,7 +57,7 @@ wCoordAdjustmentAmount   equ 0xD089 ; golden 00:d089
 ; wOnSGB now comes from gb_memmap.inc (0xCF1A); it is 1 in the port — colour
 ; hardware, set at init like pret LoadSGB on CGB (memory battle-anim-cgb-obj-palette-model).
 
-; --- Tier-1 data tables (src/data/battle_anims.asm; flat dd) ---
+; --- Tier-1 data tables (src/data/moves/, src/data/battle_anims/; flat dd) ---
 extern AttackAnimationPointers
 extern SubanimationPointers
 extern FrameBlockPointers
@@ -65,8 +66,8 @@ extern MoveSoundTable
 extern TileIDListPointerTable         ; src/data/tilemaps.asm (hand-written dd table, 5-byte rows)
 extern DownscaledMonTiles_5x5         ; src/data/tilemaps.asm
 extern DownscaledMonTiles_3x3         ; src/data/tilemaps.asm
-extern SpecialEffectPointers          ; src/data/battle_anim_dispatch.asm (hand-written dd table)
-extern AnimationIdSpecialEffects      ; src/data/battle_anim_dispatch.asm (hand-written dd table)
+extern SpecialEffectPointers          ; src/data/battle_anims/special_effect_pointers.asm (hand-written dd table)
+extern AnimationIdSpecialEffects      ; src/data/battle_anims/special_effects.asm (hand-written dd table)
 
 ; --- home/engine backend ---
 extern WaitForSoundToFinish          ; src/home/delay.asm
@@ -3247,7 +3248,7 @@ CopyTileIDsFromList:
 ; engine/battle/animations.asm inline table, so it stays in this mirror). The
 ; SpecialEffectPointers / AnimationIdSpecialEffects dispatch tables are pret
 ; data/battle_anims/*.asm data tables and live in the data layer
-; (src/data/battle_anim_dispatch.asm) to satisfy the aux_misplaced rule, exactly
+; (src/data/battle_anims/, one file per pret table) to satisfy the aux_misplaced rule, exactly
 ; as MoveEffectPointerTable does.
 ; ===========================================================================
 section .data
@@ -3336,7 +3337,8 @@ SlotMachineTiles2End:
 
 ; The generated battle-animation DATA (AttackAnimationPointers, subanimations,
 ; frame blocks, base coords, MoveSoundTable) lives in the data layer:
-; src/data/battle_anims.asm <- assets/battle_anim_data.inc (Tier-1,
+; src/data/moves/{animations,sfx}.asm + src/data/battle_anims/{subanimations,
+; frame_blocks,base_coords}.asm, one carrier per pret data file (Tier-1,
 ; gen_battle_anim_data.py). Externed above.
 
 section .bss

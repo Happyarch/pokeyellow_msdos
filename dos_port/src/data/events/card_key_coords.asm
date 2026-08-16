@@ -1,4 +1,7 @@
-; card_key_data.asm — Silph Co. card-key door coordinate tables.
+; card_key_coords.asm — Silph Co. card-key door coordinate tables.
+;
+; Mirrors pret data/events/card_key_coords.asm exactly (renamed from
+; src/data/card_key_data.asm 2026-08-16 by current_plan_data_path_mirror.md).
 ;
 ; pret ref: data/events/card_key_coords.asm
 ;           (CardKeyTable1 / CardKeyTable2 / CardKeyTable3)
@@ -17,7 +20,7 @@
 ;
 ; Embedded data goes in .data per the linker rule in docs/assembly.md.
 ;
-; Build: nasm -f coff -I include/ -I . -o card_key_data.o card_key_data.asm
+; Build: nasm -f coff -I include/ -I . -o card_key_coords.o card_key_coords.asm
 ; ---------------------------------------------------------------------------
 bits 32
 

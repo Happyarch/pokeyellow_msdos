@@ -58,7 +58,7 @@ extern GetPartyMonName              ; src/home/pokemon.asm
 extern CopyData                     ; src/home/copy.asm
 extern AddNTimes                    ; src/home/array.asm
 extern PrintText                    ; src/home/window.asm
-extern Moves                        ; src/data/pokemon_data.asm — flat move-record table
+extern Moves                        ; src/data/moves/moves.asm — flat move-record table
 
 extern GetMoveName                  ; src/home/names.asm — [wNamedObjectIndex] -> wNameBuffer
 extern IsMoveHM                     ; src/home/names.asm — AL=move id -> CF

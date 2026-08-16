@@ -100,7 +100,7 @@ extern DidntAffectText
 extern ParalyzedMayNotAttackText
 
 ; --- data (pret data/battle/stat_mod_names.asm, generated asset) ---
-extern StatModTextStrings               ; src/data/battle_data.asm
+extern StatModTextStrings               ; src/data/battle/stat_mod_names.asm
 
 ; --- substitute show/hide: ret-stubs in core_stubs.asm ---
 extern HideSubstituteShowMonAnim     ; src/engine/battle/animations.asm
@@ -1991,7 +1991,8 @@ UnportedMoveEffect:
 ; Exits: BH = 1 (B = 1 in SM83 → faithful to pret "ld b, $1" after the jpfar)
 ; ---------------------------------------------------------------------------
 global JumpMoveEffect
-; MoveEffectPointerTable moved 2026-08-02 to src/data/move_effect_pointers.asm.
+; MoveEffectPointerTable moved 2026-08-02 to the data layer, and 2026-08-16 to
+; its mirrored path src/data/moves/effects_pointers.asm.
 ; It is a pret data/moves/effects_pointers.asm table and lint_pret_labels reported
 ; it [aux_misplaced]. pret files this dispatch table under data/ too, even though
 ; its rows are code pointers, so following pret's own placement cleared the finding
@@ -1999,4 +2000,4 @@ global JumpMoveEffect
 ; layer placement) — no generator can derive port function names from pret.
 ; The 86-entry arity assertion travelled with it; it is a label difference and
 ; must stay in the same translation unit as the table.
-extern MoveEffectPointerTable          ; src/data/move_effect_pointers.asm
+extern MoveEffectPointerTable          ; src/data/moves/effects_pointers.asm

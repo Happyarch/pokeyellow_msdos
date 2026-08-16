@@ -76,7 +76,7 @@ extern PrintStatusAilment               ; src/engine/pokemon/status_ailments.asm
 extern IsThisPartyMonStarterPikachu     ; src/engine/pikachu/pikachu_status.asm
 extern CheckPikachuFollowingPlayer      ; src/home/pikachu.asm
 extern PartyMenuText_12cc               ; assets/item_text.inc (_SleepingPikachuText1)
-extern CryData                          ; assets/cry_data.inc via src/data/audio_data.asm
+extern CryData                          ; assets/cry_data.inc via src/data/pokemon/cries.asm
 extern PlaySound                        ; src/home/audio.asm — AL = sound id
 extern WaitForSoundToFinish             ; src/home/delay.asm — block until channels drain
 %ifdef DEBUG_PARTYMENU
@@ -578,7 +578,7 @@ LoadFrontSpriteByMonIndex:
 ; src/audio/engine_1.asm already understands cries (Audio1_IsCry,
 ; CRY_SFX_START/END, and it reads the two modifier vars GetCryData sets), and
 ; CryData is generated and exported (assets/cry_data.inc, %included by
-; src/data/audio_data.asm). Nothing blocked it but the instructions.
+; src/data/pokemon/cries.asm). Nothing blocked it but the instructions.
 ;
 ; THE CONTRACT IS THE DURATION, NOT A REGISTER. pret ends in
 ; WaitForSoundToFinish, so PlayCry BLOCKS for the length of the cry, and callers

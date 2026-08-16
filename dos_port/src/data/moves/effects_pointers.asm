@@ -1,4 +1,7 @@
-; move_effect_pointers.asm — the move-effect dispatch table.
+; effects_pointers.asm — the move-effect dispatch table.
+;
+; Mirrors pret data/moves/effects_pointers.asm exactly (renamed from
+; src/data/move_effect_pointers.asm 2026-08-16 by current_plan_data_path_mirror.md).
 ;
 ; pret ref: data/moves/effects_pointers.asm:MoveEffectPointerTable
 ;
@@ -31,7 +34,7 @@
 ; difference evaluated at assembly time, so both labels must stay in one
 ; translation unit. Splitting them would have silently disabled the check.
 ;
-; Build: nasm -f coff -I include/ -I . -o move_effect_pointers.o move_effect_pointers.asm
+; Build: nasm -f coff -I include/ -I . -o effects_pointers.o effects_pointers.asm
 ; ---------------------------------------------------------------------------
 bits 32
 

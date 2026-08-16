@@ -1,4 +1,7 @@
-; map_songs.asm — per-map music id + ROM bank, indexed by map id.
+; songs.asm — per-map music id + ROM bank, indexed by map id.
+;
+; Mirrors pret data/maps/songs.asm exactly (renamed from src/data/maps/map_songs.asm
+; 2026-08-16 by current_plan_data_path_mirror.md).
 ;
 ; pret ref: data/maps/songs.asm (MapSongBanks).
 ;
@@ -20,7 +23,7 @@
 ;
 ; Embedded data goes in .data per the linker rule in docs/assembly.md.
 ;
-; Build: nasm -f coff -I include/ -I . -o map_songs.o map_songs.asm
+; Build: nasm -f coff -I include/ -I . -o songs.o songs.asm
 ; ---------------------------------------------------------------------------
 bits 32
 

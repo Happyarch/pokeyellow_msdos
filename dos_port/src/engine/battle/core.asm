@@ -280,7 +280,7 @@ extern GainExperience                  ; experience.asm — EXP award + level-up
 ; --- faint / switch lifecycle (battle-swarm-C) ---
 
 ; --- pulled in with the session-8 consolidated bodies ---
-extern Moves                           ; src/data/pokemon_data.asm — flat move-record table
+extern Moves                           ; src/data/moves/moves.asm — flat move-record table
 extern GetMonHeader                    ; home/pokemon.asm — loads wMonHeader from wCurSpecies
 extern LoadFrontSpriteByMonIndex       ; home/pokemon.asm — decode front pic + place 7x7 at ESI
 extern TrainerSentOutText              ; assets/battle_text.inc (battle_menu.asm carries the blob)
@@ -1393,7 +1393,7 @@ extern str_oldman_name                 ; battle_menu.asm (assets/battle_menu_run
 extern str_profoak_name                ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern MultiHitText                    ; battle_text.inc
 extern _ScrollTrainerPicAfterBattle    ; scroll_draw_trainer_pic.asm — pret jpfar target
-extern StatModifierRatios               ; src/data/battle_data.asm (flat Tier-1 table)
+extern StatModifierRatios               ; src/data/battle/stat_modifiers.asm (flat Tier-1 table)
 extern DoubleSelectedStats              ; engine/battle/unused_stats_functions.asm
 extern HalveSelectedStats               ; engine/battle/unused_stats_functions.asm
 extern PrintEndBattleText              ; src/home/trainers.asm — class-specific end text
@@ -5753,7 +5753,7 @@ ReplaceFaintedEnemyMon:
 ;
 ; PORTED 2026-08-12 (battle plan 3d). It was a ret-only STUB in
 ; battle_exp_stubs.asm because CalculateModifiedStat read `missing`. Everything
-; it needs already existed: StatModifierRatios (src/data/battle_data.asm),
+; it needs already existed: StatModifierRatios (src/data/battle/stat_modifiers.asm),
 ; Multiply and Divide (src/home/math.asm), and every WRAM/HRAM symbol.
 ;
 ; UNLIKE DoubleSelectedStats/HalveSelectedStats BELOW, THIS IS NOT A NO-OP. Those
@@ -5791,7 +5791,7 @@ CalculateModifiedStats:
 ; sequence write-hMultiplier / Multiply / write-hDivisor / Divide is load-bearing
 ; and must not be reordered or hoisted.
 ;
-; DEVIATION{class=projection; pret=engine/battle/core.asm:CalculateModifiedStat; behavior=StatModifierRatios is walked as a flat program pointer with [esi] while the stat and unmodified-stat pointers stay GB-relative with [ebp+esi] and [ebp+edx]; evidence=the ratio table is Tier-1 data emitted into the port image by src/data/battle_data.asm rather than into emulated GB memory, the same split every other flat table read in this port uses, and the arithmetic including the pointer walk is unchanged; lifetime=permanent while the port keeps generated tables in the program image}
+; DEVIATION{class=projection; pret=engine/battle/core.asm:CalculateModifiedStat; behavior=StatModifierRatios is walked as a flat program pointer with [esi] while the stat and unmodified-stat pointers stay GB-relative with [ebp+esi] and [ebp+edx]; evidence=the ratio table is Tier-1 data emitted into the port image by src/data/battle/stat_modifiers.asm rather than into emulated GB memory, the same split every other flat table read in this port uses, and the arithmetic including the pointer walk is unchanged; lifetime=permanent while the port keeps generated tables in the program image}
 ; ===========================================================================
 CalculateModifiedStat:
     push ebx                                ; push bc — caller's stat index

@@ -1,5 +1,8 @@
-; predef_text_data.asm — the generated TextPredefs message streams AND the
+; text_predef_pointers.asm — the generated TextPredefs message streams AND the
 ; hand-written TextPredefs dispatch table.
+;
+; Mirrors pret data/text_predef_pointers.asm exactly (renamed from
+; src/data/predef_text_data.asm 2026-08-16 by current_plan_data_path_mirror.md).
 ;
 ; pret's TextPredefs table (data/text_predef_pointers.asm) has 68 entries, ids
 ; $01..$44. 51 are pure printable streams and ARE generated here; the other 17 are
@@ -31,7 +34,7 @@
 ; labels named by data/text_predef_pointers.asm, text_far flattened. DO NOT
 ; hand-edit the .inc.
 ;
-; Build: nasm -f coff -I include/ -I . -o predef_text_data.o predef_text_data.asm
+; Build: nasm -f coff -I include/ -I . -o text_predef_pointers.o text_predef_pointers.asm
 
 bits 32
 

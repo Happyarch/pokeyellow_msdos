@@ -59,7 +59,7 @@ extern DisplayTextID                    ; home/text_script.asm (this member)
 
 ; TextPredefs — the 68-row predef text table, pret data/text_predef_pointers.asm.
 ; It is hand-written (17 of its rows name PORT routines, so no generator can derive
-; it) but lives in the DATA layer at src/data/predef_text_data.asm, exactly as
+; it) but lives in the DATA layer at src/data/text_predef_pointers.asm, exactly as
 ; MoveEffectPointerTable does — see that file's header for why both are true at once.
 extern TextPredefs
 
@@ -116,4 +116,4 @@ SetMapTextPointer:
 
 ; ── pret: INCLUDE "data/text_predef_pointers.asm" (the TextPredefs table) ──
 ;   The port's TextPredefs lives in the DATA layer instead — see the extern above
-;   and src/data/predef_text_data.asm for why that is both hand-written and correct.
+;   and src/data/text_predef_pointers.asm for why that is both hand-written and correct.

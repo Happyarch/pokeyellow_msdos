@@ -481,14 +481,15 @@ ReadMove:
 
 ; TrainerClassMoveChoiceModifications — the per-trainer-class AI move-bias table
 ; (pret data/trainers/move_choices.asm, built there with the `move_choices`
-; macro) — used to be embedded HERE. Moved 2026-08-02 to src/data/trainer_data.asm
+; macro) — used to be embedded HERE. Moved 2026-08-02 to the data layer, and 2026-08-16 to its mirrored path
+; src/data/trainers/move_choices.asm
 ; to clear its [aux_misplaced] finding: a pret data/ label belongs in the data
 ; layer, not in the AI engine that reads it. Bytes unchanged.
 ; FOLLOW-UP: unlike the tileset and card-key tables moved in the same sweep, this
 ; one is still HAND-WRITTEN rather than generated — pret builds it through a
 ; variadic RGBDS macro, so a generator has to expand `move_choices` rather than
 ; copy rows. Worth doing; it is the last hand-transcribed table of the group.
-extern TrainerClassMoveChoiceModifications   ; src/data/trainer_data.asm
+extern TrainerClassMoveChoiceModifications   ; src/data/trainers/move_choices.asm
 
 ; ===========================================================================
 ; TrainerAI — top-level AI dispatcher
