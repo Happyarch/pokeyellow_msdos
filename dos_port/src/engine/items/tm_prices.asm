@@ -23,7 +23,7 @@ extern TechnicalMachinePrices
 ; Output: TM price stored at hItemPrice (3-byte BCD, thousands in high nybble)
 ; ---------------------------------------------------------------------------
 GetMachinePrice:
-    mov al, [ebp + W_CUR_ITEM]
+    mov al, [ebp + wCurItem]
     sub al, TM01                     ; underflows (CF) for HM items (below TM items)
     jc .done                         ; ret c — HMs are priceless
 

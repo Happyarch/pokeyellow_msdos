@@ -34,7 +34,7 @@
 ; map 1:1.  This driver REUSES the *existing* overworld-ui bag-list projection
 ; and window mechanism already established (and confirmed) by
 ; src/engine/menus/bag_menu.asm — it is NOT a new/parallel projection:
-;   - Boxes/entries are drawn box-relative into the W_TILEMAP scratch (stride 20,
+;   - Boxes/entries are drawn box-relative into the wTileMap scratch (stride 20,
 ;     exactly like bag_menu), then a window descriptor (add_window) places them at
 ;     the projected screen position (wx/wy/clip/max_y).  See ; PROJ tags below.
 ;   - The list box uses the SAME anchor as bag_menu's LIST_* (top-right, X+20 Y+0
@@ -84,7 +84,7 @@ extern add_window               ; ppu.asm        EAX=wx EBX=wy ECX=clip EDX=max_
 extern hide_window              ; ppu.asm        clear window list (count=0)
 extern HandleMenuInput          ; home/window.asm  Out: AL=watched keys pressed
 extern PlaceMenuCursor          ; home/window.asm
-extern text_row_stride          ; text.asm       (resd) active W_TILEMAP row stride
+extern text_row_stride          ; text.asm       (resd) active wTileMap row stride
 extern menu_item_step           ; home/window.asm(resd) per-item cursor row step
 extern menu_redraw_cb           ; home/window.asm(resd) per-frame redraw cb (0=none)
 extern menu_arrow_pos           ; home/window.asm(resd) the blinking ▼'s tile offset (0=none)
@@ -134,7 +134,7 @@ hDivideBCDDivisor           equ hDivideBCDDivisor
 hDivideBCDQuotient          equ hDivideBCDQuotient
 
 ; ── list-box geometry: REUSED from bag_menu.asm LIST_* (confirmed projection) ─
-LIST_STRIDE     equ 20          ; W_TILEMAP box-relative stride (NOT port SCREEN_WIDTH=40)
+LIST_STRIDE     equ 20          ; wTileMap box-relative stride (NOT port SCREEN_WIDTH=40)
 LIST_INT_W      equ 14          ; TextBoxBorder interior width  (total 16)
 LIST_INT_H      equ 9           ; TextBoxBorder interior height (total 11)
 LIST_TOTAL_W    equ LIST_INT_W + 2
@@ -162,7 +162,7 @@ QTY_WY          equ 72
 QTY_CLIP        equ 40
 QTY_MAXY        equ 96
 QTY_SROW        equ 12          ; GB_TILEMAP0 start row (below the 11-row list box)
-QTY_SCRATCH     equ W_TILEMAP + QTY_SROW * LIST_STRIDE  ; scratch row == tilemap row
+QTY_SCRATCH     equ wTileMap + QTY_SROW * LIST_STRIDE  ; scratch row == tilemap row
 QTY_TOTAL_W     equ 13          ; widest (priced) box; small box clipped by window
 QTY_TOTAL_H     equ 3
 
@@ -241,7 +241,7 @@ DisplayListMenuID:
     ; pret draws the box with `call DisplayTextBoxID`
     ; (LIST_MENU_BOX), which renders straight into the live GB tilemap at absolute
     ; GB(4,2). This driver instead renders the SAME border into the stride-20
-    ; W_TILEMAP scratch and registers a window descriptor for it, because the port's
+    ; wTileMap scratch and registers a window descriptor for it, because the port's
     ; box is a compositor window, not tilemap cells: the 40x25 canvas puts the list
     ; at a projected screen position, and the entries below are all drawn box-relative
     ; into that same scratch. wTextBoxID is still set (above) so the pret-visible
@@ -269,7 +269,7 @@ DisplayListMenuID:
     mov [ebp + wMaxMenuItem], al
     ; cursor coords — PROJECTED: pret writes absolute GB (Y=4,X=5); the port's
     ; PlaceMenuCursor treats wTopMenuItem{X,Y} as box-relative offsets into the
-    ; W_TILEMAP scratch (stride text_row_stride), so we store the box-relative
+    ; wTileMap scratch (stride text_row_stride), so we store the box-relative
     ; cursor (col 1, row 2) = GB(5,4) − box-origin GB(4,2). Deviation is the
     ; window projection, not a behaviour change. ; PROJ overworld-ui (cursor)
     mov al, LIST_NAME_ROW0                     ; = 2  (pret Y=4 → box-rel 2)
@@ -308,14 +308,14 @@ DisplayListMenuIDLoop:
     ; ── Old Man battle: force-select entry 0 (pret:69-80) ────────────────────
     ; place ▶ at box-rel cursor and auto-advance. ; PROJ overworld-ui reused;
     ; TODO(proj): Old-Man battle really wants the battle anchor (+10col/+3row).
-    mov byte [ebp + W_TILEMAP + LIST_NAME_ROW0 * LIST_STRIDE + LIST_CURSOR_COL], CHAR_CURSOR
+    mov byte [ebp + wTileMap + LIST_NAME_ROW0 * LIST_STRIDE + LIST_CURSOR_COL], CHAR_CURSOR
     call list_mirror
     mov bl, 20
     call DelayFrames
     xor al, al
     mov [ebp + wCurrentMenuItem], al
-    ; wMenuCursorLocation = W_TILEMAP box-rel cursor address (low/high byte)
-    mov ax, W_TILEMAP + LIST_NAME_ROW0 * LIST_STRIDE + LIST_CURSOR_COL
+    ; wMenuCursorLocation = wTileMap box-rel cursor address (low/high byte)
+    mov ax, wTileMap + LIST_NAME_ROW0 * LIST_STRIDE + LIST_CURSOR_COL
     mov [ebp + wMenuCursorLocation], ax
     jmp .buttonAPressed
 .notOldManBattle:
@@ -332,10 +332,10 @@ DisplayListMenuIDLoop:
     ; Tell HandleMenuInput where this menu's "more below" ▼ actually is. pret names
     ; it as the absolute screen cell (18,11) because the list box sits at GB(4,2)
     ; and its arrow at box-relative (14,9); the port's box lives box-relative in the
-    ; W_TILEMAP scratch, so it publishes the cell PrintListMenuEntries wrote. Without
+    ; wTileMap scratch, so it publishes the cell PrintListMenuEntries wrote. Without
     ; this the blink targeted scratch (18,11) — a cell outside the box — and was
     ; inert (menu-fidelity M-2 corrected / row 24).
-    mov dword [menu_arrow_pos], W_TILEMAP + LIST_DOWN_ROW * LIST_STRIDE + LIST_DOWN_COL
+    mov dword [menu_arrow_pos], wTileMap + LIST_DOWN_ROW * LIST_STRIDE + LIST_DOWN_COL
     call HandleMenuInput                       ; Out: AL = watched keys pressed
     mov dword [menu_arrow_pos], 0
     mov dword [menu_redraw_cb], 0
@@ -669,7 +669,7 @@ PrintListMenuEntries:
     add edx, ecx                               ; de += (scroll * entrysize)
 
     ; hl = first entry name dest — box-rel (col 2, row 2)   (pret hlcoord 6,4)
-    mov esi, W_TILEMAP + LIST_NAME_ROW0 * LIST_STRIDE + LIST_NAME_COL
+    mov esi, wTileMap + LIST_NAME_ROW0 * LIST_STRIDE + LIST_NAME_COL
     ; c = the SAME scroll value the address math above consumed (sla'd for item
     ; lists) — pret never re-loads it: `ld c,a` / `sla c` leaves it in BC, and the
     ; loop then walks it as the 1-based ▷ swap-position counter. The port does the
@@ -842,7 +842,7 @@ PrintListMenuEntries:
     ; walked to the name column of the row after the last entry (row 10, col 2 in
     ; box-rel terms), and -8 on a stride-20 line lands on row 9, col 14. Folded to
     ; the constant here; identical cell.
-    mov byte [ebp + W_TILEMAP + LIST_DOWN_ROW * LIST_STRIDE + LIST_DOWN_COL], CHAR_DOWN
+    mov byte [ebp + wTileMap + LIST_DOWN_ROW * LIST_STRIDE + LIST_DOWN_COL], CHAR_DOWN
     ret
 
 .printCancelMenuItem:
@@ -862,7 +862,7 @@ PrintListMenuEntries:
 ; Mirrors bag_menu.asm .add_list_window (SAME projection).
 ; ----------------------------------------------------------------------------
 list_draw_box_border:
-    mov esi, W_TILEMAP                          ; box top-left in scratch
+    mov esi, wTileMap                          ; box top-left in scratch
     mov bl, LIST_INT_W
     mov bh, LIST_INT_H
     call TextBoxBorder
@@ -891,7 +891,7 @@ list_add_qty_window:
 ; list_mirror / qty_mirror have no pret counterpart
 ; and are the reason faithdiff reports them as ADDED calls in DisplayListMenuIDLoop
 ; and DisplayChooseQuantityMenu.
-; Mirror helpers — copy the staged boxes from the W_TILEMAP scratch (stride 20)
+; Mirror helpers — copy the staged boxes from the wTileMap scratch (stride 20)
 ; into their GB_TILEMAP0 regions (stride 32) so the window compositor sees them.
 ; On the GB there is nothing to mirror: pret's boxes ARE tilemap cells, drawn in
 ; place, and the hardware BG transfer publishes them. The port stages every menu
@@ -912,7 +912,7 @@ list_clear_interior:
     push ecx
     push edx
     push edi
-    lea edi, [ebp + W_TILEMAP + 1 * LIST_STRIDE + 1]
+    lea edi, [ebp + wTileMap + 1 * LIST_STRIDE + 1]
     mov dl, LIST_INT_H                          ; 9 rows
     mov al, TILE_BLANK
 .row:
@@ -933,7 +933,7 @@ list_mirror:
 .row:
     mov esi, ebx
     imul esi, esi, LIST_STRIDE
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                                  ; row*32
     lea edi, [ebp + edi + GB_TILEMAP0 + LIST_SROW * 32]

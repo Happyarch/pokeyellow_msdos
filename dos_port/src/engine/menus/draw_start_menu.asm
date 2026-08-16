@@ -4,7 +4,7 @@
 ;
 ; CANVAS MODEL + WINDOW BRIDGE (docs/ui_projection.md):
 ; The box and item labels are drawn at UI_*-projected coordinates into the
-; 40-wide W_TILEMAP canvas (stride 40, same model as DisplayTextBoxID_), then
+; 40-wide wTileMap canvas (stride 40, same model as DisplayTextBoxID_), then
 ; StartMenuShowWindow blits the box rect → GB_TILEMAP1 rows 0..H-1 and defines
 ; the window descriptor from the UI_START_MENU_* equates, so the box composites
 ; over the live overworld map. sm_canvas_mirror re-blits each HandleMenuInput
@@ -37,7 +37,7 @@ global sm_canvas_mirror                 ; %ifdef DEBUG_STARTMENU harness (home/s
 extern TextBoxBorder                    ; text.asm — ESI=top-left, BL=int_w, BH=int_h
 extern PlaceString                      ; text.asm — ESI=dest, EAX=flat src
 extern set_single_window                ; ppu.asm — g_windows[] = one descriptor
-extern text_row_stride                  ; text.asm — active W_TILEMAP row stride
+extern text_row_stride                  ; text.asm — active wTileMap row stride
 extern menu_item_step                   ; home/window.asm — cursor per-item row step
 extern menu_redraw_cb                   ; home/window.asm — per-frame redraw callback
 
@@ -84,7 +84,7 @@ DrawStartMenu:
     ; CheckEvent EVENT_GOT_POKEDEX / hlcoord 10,0 / lb bc,14,8 (else 12,8)
     ; PROJ menus: box top-left = UI_START_MENU_(COL,ROW), canvas stride 40
     CheckEvent EVENT_GOT_POKEDEX        ; ZF=0 → have the Pokédex
-    mov esi, W_TILEMAP + UI_START_MENU_ROW * SCREEN_TILES_W + UI_START_MENU_COL
+    mov esi, wTileMap + UI_START_MENU_ROW * SCREEN_TILES_W + UI_START_MENU_COL
     mov bx, (14 << 8) | 8               ; b = 14 interior rows, c = 8 interior cols
     mov dword [sm_box_rows], 16
     jnz .drawTextBoxBorder
@@ -109,7 +109,7 @@ DrawStartMenu:
     or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY)
 
     ; hlcoord 12,2 → canvas (COL+2, ROW+2); items every 2 rows
-    mov esi, W_TILEMAP + (UI_START_MENU_ROW + 2) * SCREEN_TILES_W + UI_START_MENU_COL + 2
+    mov esi, wTileMap + (UI_START_MENU_ROW + 2) * SCREEN_TILES_W + UI_START_MENU_COL + 2
     CheckEvent EVENT_GOT_POKEDEX
     mov al, 0x06                        ; menu item count without the Pokédex
     jz .storeMenuItemCount
@@ -188,7 +188,7 @@ sm_canvas_mirror:
 .row:
     mov esi, ebx
     imul esi, esi, SCREEN_TILES_W
-    lea esi, [ebp + esi + W_TILEMAP + UI_START_MENU_ROW * SCREEN_TILES_W + UI_START_MENU_COL]
+    lea esi, [ebp + esi + wTileMap + UI_START_MENU_ROW * SCREEN_TILES_W + UI_START_MENU_COL]
     mov edi, ebx
     shl edi, 5                          ; row * 32
     lea edi, [ebp + edi + GB_TILEMAP1 + SM_SROW * 32]

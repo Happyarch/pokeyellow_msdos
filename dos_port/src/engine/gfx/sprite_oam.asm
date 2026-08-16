@@ -216,13 +216,13 @@ PrepareOAMData:
     mov [ebp + hSpriteOffset2], al
 
     ; picture ID == 0 → slot unused
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_PICTUREID]
     test al, al
     jz .nextSprite
 
     ; image index; $ff → off-screen (still update adjusted coords, then skip)
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX]
-    mov [ebp + W_SAVED_SPRITE_IMAGE_INDEX], al
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX]
+    mov [ebp + wSavedSpriteImageIndex], al
     cmp al, 0xFF
     jne .visible
     call GetSpriteScreenXY
@@ -240,7 +240,7 @@ PrepareOAMData:
     mov edx, [SpriteFacingAndAnimationTable + eax*4]   ; EDX → facing data block (count byte first)
 
     ; sprite BG priority = data2 grass-priority bit 7
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_GRASSPRIORITY]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_GRASSPRIORITY]
     and al, 0x80
     mov [ebp + hSpritePriority], al
 
@@ -254,7 +254,7 @@ PrepareOAMData:
 
     ; --- draw the sprite's OAM entries ---
     call Func_4a7b                       ; AL = VRAM base tile from image index
-    mov [ebp + W_SAVED_SPRITE_IMAGE_INDEX], al
+    mov [ebp + wSavedSpriteImageIndex], al
 
     ; Compute 32-bit DOS base position for extended 320×200 viewport.
     ; Slot 0 (player): YPIXELS-based (always ≤127, no 8-bit overflow).
@@ -279,13 +279,13 @@ PrepareOAMData:
     pop edx
     jmp .dos_base_done
 .dos_base_npc:
-    movsx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    movsx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     movsx ecx, byte [ebp + wYCoord]
     sub eax, ecx
     imul eax, 16
     add eax, 32
     mov [dos_base_y_tmp], eax
-    movsx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    movsx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     movsx ecx, byte [ebp + wXCoord]
     sub eax, ecx
     imul eax, 16
@@ -294,13 +294,13 @@ PrepareOAMData:
     ; NPC walk interpolation: if MOVEMENTSTATUS=3 (walking), Func_5349 already advanced
     ; MAPY/MAPX to the destination at walk start. Subtract YSTEP*WALKANIMCOUNTER
     ; to interpolate between source and destination over the 16-frame animation.
-    cmp byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
+    cmp byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
     jne .dos_base_done
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER]
-    movsx ecx, byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER]
+    movsx ecx, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR]
     imul ecx, eax
     sub [dos_base_y_tmp], ecx
-    movsx ecx, byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR]
+    movsx ecx, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XSTEPVECTOR]
     imul ecx, eax
     sub [dos_base_x_tmp], ecx
 .dos_base_done:
@@ -324,15 +324,15 @@ PrepareOAMData:
 .no_walk_offset:
 
     movzx edi, byte [ebp + hOAMBufferOffset]
-    add edi, W_SHADOW_OAM                ; EDI = GB offset of shadow-OAM write cursor
+    add edi, wShadowOAM                ; EDI = GB offset of shadow-OAM write cursor
     mov ebx, edx                         ; EBX walks the facing data block
     movzx ecx, byte [ebx]                ; entry count
     inc ebx
 
 .tileLoop:
-    ; OAM entry index from write cursor: EDI = W_SHADOW_OAM + N*4 at loop top
+    ; OAM entry index from write cursor: EDI = wShadowOAM + N*4 at loop top
     mov edx, edi
-    sub edx, W_SHADOW_OAM
+    sub edx, wShadowOAM
     shr edx, 2                              ; EDX = OAM entry index 0..39
 
     ; spr_dos_sy[N] = dos_base_y + signed(tableY)
@@ -361,7 +361,7 @@ PrepareOAMData:
     inc ebx
     inc edi
     ; tile = savedImageIndex + tableTile; tiles >= $80 get Pikachu VRAM offset
-    mov al, [ebp + W_SAVED_SPRITE_IMAGE_INDEX]
+    mov al, [ebp + wSavedSpriteImageIndex]
     add al, [ebx]
     cmp al, 0x80
     jb .tileResolved
@@ -389,7 +389,7 @@ PrepareOAMData:
 
     ; commit write cursor
     mov eax, edi
-    sub eax, W_SHADOW_OAM
+    sub eax, wShadowOAM
     mov [ebp + hOAMBufferOffset], al
 
 .nextSprite:
@@ -410,14 +410,14 @@ PrepareOAMData:
     cmp al, cl
     jae .ret                             ; ret nc (nothing to clear)
     movzx edi, al
-    add edi, W_SHADOW_OAM
+    add edi, wShadowOAM
 ; DEVIATION{class=projection; pret=engine/gfx/sprite_oam.asm:PrepareOAMData; behavior=the port additionally parks spr_dos_sy and spr_dos_sx off-canvas for every shadow-OAM index this loop clears, in addition to pret clearing only the OAM Y byte; evidence=this loop is the only place that marks an index unused, it never wrote spr_dos_sy/sx (only render_sprites in src/ppu/ppu.asm reads them, keyed on spr_oam_valid as a count from index 0), and WriteOAMBlock in src/home/oam.asm now grows spr_oam_valid past whatever index it publishes, so without this an index between the active count and WriteOAMBlock's target that this loop clears would still hold a stale or zero canvas position from a previous, larger sprite count and render garbage; lifetime=permanent, part of the software OBJ HAL WriteOAMBlock relies on}
 .clearLoop:
     mov byte [ebp + edi], 0xA0
     push eax
     push ecx
     mov ecx, edi
-    sub ecx, W_SHADOW_OAM
+    sub ecx, wShadowOAM
     shr ecx, 2                            ; ECX = OAM entry index 0..39
     mov dword [spr_dos_sy + ecx*4], -1000 ; comfortably off both canvas edges
     mov dword [spr_dos_sx + ecx*4], -1000
@@ -425,7 +425,7 @@ PrepareOAMData:
     pop eax
     add edi, 4
     mov eax, edi
-    sub eax, W_SHADOW_OAM                 ; back to 0-based offset
+    sub eax, wShadowOAM                 ; back to 0-based offset
     cmp al, cl                            ; compare low byte (GB: cp l)
     jne .clearLoop
 
@@ -451,19 +451,19 @@ PrepareOAMData:
 ; In: ESI = slot byte offset. Clobbers AL.
 ; ---------------------------------------------------------------------------
 GetSpriteScreenXY:
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
     mov [ebp + hSpriteScreenY], al
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
     mov [ebp + hSpriteScreenX], al
     ; adjusted Y = (Y + 4) & $f0 → data1+$a
     mov al, [ebp + hSpriteScreenY]
     add al, 4
     and al, 0xF0
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + 0x0A], al
+    mov [ebp + esi + wSpriteStateData1 + 0x0A], al
     ; adjusted X = X & $f0 → data1+$b
     mov al, [ebp + hSpriteScreenX]
     and al, 0xF0
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + 0x0B], al
+    mov [ebp + esi + wSpriteStateData1 + 0x0B], al
     ret
 
 ; ---------------------------------------------------------------------------
@@ -473,7 +473,7 @@ GetSpriteScreenXY:
 ; In: wSavedSpriteImageIndex. Out: AL = VRAM base tile. Clobbers EAX, ECX.
 ; ---------------------------------------------------------------------------
 Func_4a7b:
-    mov al, [ebp + W_SAVED_SPRITE_IMAGE_INDEX]
+    mov al, [ebp + wSavedSpriteImageIndex]
     ror al, 4                            ; swap a — high nibble = sprite number
     and al, 0x0F
     cmp al, 0x0B
@@ -517,7 +517,7 @@ Func_4a7b:
 global _IsTilePassable
 _IsTilePassable:
     ; ESI = *wTilesetCollisionPtr (the flat GB address of the passable-tile list)
-    movzx esi, word [ebp + W_TILESET_COLLISION_PTR]
+    movzx esi, word [ebp + wTilesetCollisionPtr]
 .loop:
     mov al, byte [ebp + esi]
     inc esi

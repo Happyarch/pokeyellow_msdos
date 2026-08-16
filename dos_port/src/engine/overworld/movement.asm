@@ -91,7 +91,7 @@ npc_dbg_record:
     jae .done
     ; recompute "true" tile from wSurroundingTiles using CURRENT sub-block coords
     mov eax, ebx
-    sub eax, W_TILEMAP                       ; EAX = wTileMap offset (0..999)
+    sub eax, wTileMap                       ; EAX = wTileMap offset (0..999)
     xor edx, edx
     mov ecx, SCREEN_WIDTH                    ; 40
     div ecx                                  ; EAX=row, EDX=col
@@ -128,9 +128,9 @@ npc_dbg_record:
     mov [npc_log + edi + 8], al
     mov al, [ebp + hSCY]
     mov [npc_log + edi + 9], al
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     mov [npc_log + edi + 10], al
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     mov [npc_log + edi + 11], al
     add edi, 12
     mov [npc_log_n], edi
@@ -160,7 +160,7 @@ npc_dbg_record:
 ; the dispatcher; caller pushad/popad, so all other registers are free.
 ; ---------------------------------------------------------------------------
 UpdateNPCSprite:
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS]
     test al, al
     jz .initStatus                       ; status 0 → first-frame init
 
@@ -168,7 +168,7 @@ UpdateNPCSprite:
     jc .ret                              ; CF=1 → invisible
 
     ; Re-read status after availability check
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS]
     test al, 0x80                        ; BIT_FACE_PLAYER (bit 7): NPC must face player
     jnz .facePlayer                      ; stub: fall through to NotYetMoving
 
@@ -190,7 +190,7 @@ UpdateNPCSprite:
     call InitializeSpriteScreenPosition  ; snap screen position to map coords
 
     ; Check movement type
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     inc al
     jz .randomMovement                   ; STAY (0xFF+1=0) → random (always blocked)
     inc al
@@ -201,7 +201,7 @@ UpdateNPCSprite:
     ; Used by cutscenes: Oak's Lab rival exit, SilphCo11F, Bill's House, etc.
     ; AL = MOVEMENTBYTE1 + 2 here (the two `inc al` above), exactly pret's A.
     dec al                               ; pret: dec a
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al ; increment movement byte 1 (data index)
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al ; increment movement byte 1 (data index)
     dec al                               ; AL = original index
     dec byte [ebp + wNPCNumScriptedSteps] ; pret: push hl / dec [wNPCNumScriptedSteps] / pop hl
     mov dx, wNPCMovementDirections    ; pret: ld de, wNPCMovementDirections
@@ -211,7 +211,7 @@ UpdateNPCSprite:
     cmp al, STAY
     jne .scriptedNext
     ; reached end of wNPCMovementDirections list (pret verbatim)
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al ; store $ff, disabling scripted movement
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al ; store $ff, disabling scripted movement
     and byte [ebp + wStatusFlags5], ~(1 << BIT_SCRIPTED_NPC_MOVEMENT) & 0xFF ; res BIT_SCRIPTED_NPC_MOVEMENT,[hl]
     xor al, al
     mov [ebp + wSimulatedJoypadStatesIndex], al
@@ -224,7 +224,7 @@ UpdateNPCSprite:
     ; sets the index to 1 and re-reads [wNPCMovementDirections + $fe], an
     ; out-of-bounds read landing on wTradedEnemyMonOTID (0xCD59) garbage.
     ; Replicated verbatim (no shipped movement list contains WALK mid-list).
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 1 ; ld [hl],$1
+    mov byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 1 ; ld [hl],$1
     mov al, WALK
     mov dx, wNPCMovementDirections
     call LoadDEPlusA                     ; a = [wNPCMovementDirections + $fe] (?)
@@ -239,7 +239,7 @@ UpdateNPCSprite:
     ; in pret; harmless because CanWalkOntoTile's scripted-movement early-allow
     ; never consults the tile. CL := direction constraint, same source as the
     ; random path (wMapSpriteData[(slot-1)*2] — the port's wCurSpriteMovement2).
-    lea ebx, [esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    lea ebx, [esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     mov edx, esi
     shr edx, 4                           ; slot number (1-15)
     dec edx
@@ -281,7 +281,7 @@ UpdateNPCSprite:
     cmp al, 3
     ja .noForcedFacing                   ; not $D0-$D3 -> leave facing alone
     shl al, 2
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION], al
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION], al
 .noForcedFacing:
     jmp .notYetMoving
 
@@ -302,7 +302,7 @@ UpdateNPCSprite:
     ; .moveDown: EBX+2*40 → needs row+2 ≤ 24 → MAPY ≤ wYCoord+6.
     ; .moveUp:   EBX-2*40 → needs row-2 ≥ 0  → MAPY ≥ wYCoord-3.
     ; .moveRight/Left: EBX±2 → col ∈ [2,37]  → MAPX ∈ [wXCoord-7, wXCoord+10].
-    movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    movzx edx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     movzx eax, byte [ebp + wYCoord]
     lea ecx, [eax - 3]
     cmp ecx, edx
@@ -310,7 +310,7 @@ UpdateNPCSprite:
     lea ecx, [eax + 6]
     cmp ecx, edx
     jl .clampedOutOfWindow               ; MAPY > wYCoord+6 → too far south to move
-    movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    movzx edx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     movzx eax, byte [ebp + wXCoord]
     lea ecx, [eax - 7]
     cmp ecx, edx
@@ -430,9 +430,9 @@ Movement_Random:
 ; In: CH = facing direction, DH = Y step (-1/0/+1 as 0xFF/0x00/0x01), DL = X step.
 ; ---------------------------------------------------------------------------
 Func_5337:
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION], ch
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR], dh
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR], dl
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION], ch
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR], dh
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XSTEPVECTOR], dl
     ret
 
 ; ---------------------------------------------------------------------------
@@ -445,9 +445,9 @@ Func_5337:
 ; ---------------------------------------------------------------------------
 Func_5349:
     mov al, dh
-    add [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY], al
+    add [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY], al
     mov al, dl
-    add [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX], al
+    add [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX], al
     ret
 
 ; ---------------------------------------------------------------------------
@@ -482,8 +482,8 @@ TryWalking:
     call CanWalkOntoTile                ; CF=1 → blocked
     jc .ret
     call Func_5349                      ; update MAPY/MAPX to destination (walk start)
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 16
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
+    mov byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 16
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
     call UpdateSpriteImage
     clc
 .ret:
@@ -503,7 +503,7 @@ CanWalkOntoTile:
     mov [dbg_destTile], cl              ; save destination tile before IsTilePassable clobbers CL
 %endif
     ; If scripted movement (MOVEMENTBYTE1 < WALK=0xFE), always allow
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     cmp al, WALK
     jnc .checkTile
     clc
@@ -516,7 +516,7 @@ CanWalkOntoTile:
     jc .impassable
 
     ; STAY sentinel (MOVEMENTBYTE1 == 0xFF): never actually walk
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     inc al                              ; 0xFF+1=0 (ZF)
     jz .impassable
 
@@ -526,12 +526,12 @@ CanWalkOntoTile:
     ; Destination pixel must stay on-screen: YPIXELS+4+Ydelta <= $80, XPIXELS+Xdelta <= $90
     ; (>$80/$90 also catches $FF underflow when stepping past the top/left edge).
     ; DH = Y step delta, DL = X step delta (EDX preserved; only AL touched here).
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
     add al, 4                           ; pret: add $4 (Y pos is always 4px block-offset)
     add al, dh                          ; + Y delta
     cmp al, 0x80
     jae .impassable                     ; pret: cp $80 / jr nc — off screen
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
     add al, dl                          ; + X delta
     cmp al, 0x90
     jae .impassable                     ; pret: cp $90 / jr nc — off screen
@@ -540,32 +540,32 @@ CanWalkOntoTile:
     ; YDISPLACEMENT starts at 8 (set in InitializeSpriteStatus).
     ; Moving north (DH=0xFF): must have YDISPLACEMENT > 0.
     ; Moving south (DH=0x01): always allowed (Yellow bug-fix: no upper bound).
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_YDISPLACEMENT]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_YDISPLACEMENT]
     test dh, dh
     jz .checkXDisp                      ; DH=0: not moving vertically
     js .moveNorth                       ; DH=0xFF (bit 7 set): moving north
     ; moving south: increment displacement, no upper bound (Yellow fix)
     add al, 1
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_YDISPLACEMENT], al
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_YDISPLACEMENT], al
     jmp .checkXDisp
 .moveNorth:
     sub al, 1                           ; YDISPLACEMENT - 1; CF=1 if was 0 → blocked
     jc .impassable
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_YDISPLACEMENT], al
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_YDISPLACEMENT], al
 
 .checkXDisp:
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_XDISPLACEMENT]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_XDISPLACEMENT]
     test dl, dl
     jz .detectCollision
     js .moveWest
     ; moving east: always allowed
     add al, 1
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_XDISPLACEMENT], al
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_XDISPLACEMENT], al
     jmp .detectCollision
 .moveWest:
     sub al, 1
     jc .impassable
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_XDISPLACEMENT], al
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_XDISPLACEMENT], al
 
 .detectCollision:
     ; Run collision detection to populate COLLISIONDATA for direction check.
@@ -577,7 +577,7 @@ CanWalkOntoTile:
     pop eax
     mov [ebp + wUpdateSpritesEnabled], al
     ; BL = direction bit (preserved through DetectCollisionBetweenSprites)
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_COLLISIONDATA]
     test al, bl
     jnz .impassable
 
@@ -594,12 +594,12 @@ CanWalkOntoTile:
     call npc_dbg_record
 %endif
     ; Set status=2 (delayed), zero step vectors, assign random delay.
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR], 0
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR], 0
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR], 0
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XSTEPVECTOR], 0
     call Movement_Random                ; AL = hRandomAdd (clobbers AL, BL)
     and al, 0x7F                        ; random 0–127 frames
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
     stc
     ret
 
@@ -610,21 +610,21 @@ CanWalkOntoTile:
 ; Falls through to NotYetMoving when ready.
 ; ---------------------------------------------------------------------------
 UpdateSpriteMovementDelay:
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     cmp al, WALK
     jnc .tickCounter                    ; WALK or STAY: decrement counter
     ; Scripted: clear delay immediately → ready to move
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], 0
+    mov byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTDELAY], 0
     jmp .moving
 
 .tickCounter:
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTDELAY]
     dec al
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
     jnz NotYetMoving                    ; still waiting: freeze animation
 
 .moving:
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
     ; fall through to NotYetMoving
 
 ; ---------------------------------------------------------------------------
@@ -634,7 +634,7 @@ UpdateSpriteMovementDelay:
 ; In: ESI = slot byte offset. Clobbers AL.
 ; ---------------------------------------------------------------------------
 NotYetMoving:
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER], 0
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER], 0
     call UpdateSpriteImage
     ret
 
@@ -663,8 +663,8 @@ MakeNPCFacePlayer:
     ; being spoken to (the only caller path), so the result matches pret here.
     movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]
     xor al, 0x04                ; invert facing direction
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION], al
-    and byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], ~(1 << BIT_FACE_PLAYER)
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION], al
+    and byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], ~(1 << BIT_FACE_PLAYER)
 .noFace:
     call NotYetMoving           ; pret: jr NotYetMoving (both paths converge) — refresh image
     pop eax
@@ -686,35 +686,35 @@ UpdateSpriteInWalkingAnimation:
     call Func_5274                      ; advance intra-anim and anim-frame counters
 
     ; YPIXELS += YSTEPVECTOR
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR]
-    add [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS], al
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR]
+    add [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS], al
 
     ; XPIXELS += XSTEPVECTOR
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR]
-    add [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS], al
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XSTEPVECTOR]
+    add [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS], al
 
     ; Decrement walk animation counter; if still > 0, animation continues
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER]
     dec al
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER], al
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER], al
     jnz .animRunning
 
     ; Walk finished: check if random (WALK/STAY) or scripted
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     cmp al, WALK
     jnc .initNextCounter                ; WALK or STAY → random inter-walk delay
 
     ; Scripted: immediately ready for next scripted step
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
     ret
 
 .initNextCounter:
     call Movement_Random                ; AL = hRandomAdd
     and al, 0x7F                        ; random 0–127 frames
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR], 0
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR], 0
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR], 0
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XSTEPVECTOR], 0
     ret
 
 .animRunning:
@@ -728,10 +728,10 @@ UpdateSpriteInWalkingAnimation:
 ; In: ESI = slot byte offset. Clobbers AL.
 ; ---------------------------------------------------------------------------
 InitializeSpriteStatus:
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_YDISPLACEMENT], 8
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_XDISPLACEMENT], 8
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF
+    mov byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_YDISPLACEMENT], 8
+    mov byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_XDISPLACEMENT], 8
     call InitializeSpriteScreenPosition
     ret
 
@@ -746,15 +746,15 @@ InitializeSpriteStatus:
 ; In: ESI = slot byte offset. Clobbers AL.
 ; ---------------------------------------------------------------------------
 InitializeSpriteScreenPosition:
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     sub al, [ebp + wYCoord]           ; CF = 1 if MAPY < wYCoord (NPC above player)
     call Func_5033                       ; AL = signed (MAPY-wYCoord)*16
     sub al, 4
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS], al
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS], al
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     sub al, [ebp + wXCoord]           ; CF = 1 if MAPX < wXCoord
     call Func_5033                       ; AL = signed (MAPX-wXCoord)*16
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS], al
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS], al
     ret
 
 ; ---------------------------------------------------------------------------
@@ -808,7 +808,7 @@ CheckSpriteAvailability:
     dec eax                             ; local object id (0-based) = slot-1
     call IsToggleableHidden             ; CF=1 → hidden toggleable
     jc .spriteInvisible
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     cmp al, WALK
     jb .skipXYVisibility                 ; scripted movement: always show, skip range test
     ; --- OUTER: screen-visibility bounds ---
@@ -818,7 +818,7 @@ CheckSpriteAvailability:
     ; North: upper body bottom at (Δ)*16+32+7 < 0 → Δ < -2 → invisible when MAPY < wYCoord-2.
     ; Similarly for X with dos_base_x = (MAPX-wXCoord)*16 + 96, tile X offsets 0 and 8.
     ; East: MAPX > wXCoord+13 → invisible; West: MAPX < wXCoord-6 → invisible.
-    movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    movzx edx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     movzx eax, byte [ebp + wYCoord]
     lea ecx, [eax - 2]
     cmp ecx, edx
@@ -826,7 +826,7 @@ CheckSpriteAvailability:
     lea ecx, [eax + 9]
     cmp ecx, edx
     jl  .spriteInvisible                 ; MAPY > wYCoord+9 → below screen
-    movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    movzx edx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     movzx eax, byte [ebp + wXCoord]
     lea ecx, [eax - 6]
     cmp ecx, edx
@@ -840,12 +840,12 @@ CheckSpriteAvailability:
     ; North/west inner bounds are already stricter than the outer check above, so
     ; only south and east need to be tested here.  If outside inner but inside outer
     ; (MAPY ∈ {+8,+9} or MAPX ∈ {+12,+13}), show the sprite without the tile check.
-    movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    movzx edx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     movzx eax, byte [ebp + wYCoord]
     lea ecx, [eax + 7]
     cmp ecx, edx
     jl  .spriteVisibleEdge               ; MAPY ∈ {+8,+9} → on-screen but S of safe zone
-    movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    movzx edx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     movzx eax, byte [ebp + wXCoord]
     lea ecx, [eax + 11]
     cmp ecx, edx
@@ -867,7 +867,7 @@ CheckSpriteAvailability:
     cmp al, MAP_TILESET_SIZE
     jb  .spriteVisible                   ; TR tile is a map tile → sprite visible
 .spriteInvisible:
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF
     stc
     ret
 .spriteVisibleEdge:
@@ -876,20 +876,20 @@ CheckSpriteAvailability:
     cmp byte [ebp + wWalkCounter], 0
     jne .done
     call UpdateSpriteImage
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_GRASSPRIORITY], 0
+    mov byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_GRASSPRIORITY], 0
     jmp .done
 .spriteVisible:
     mov cl, al                           ; CL = TR tile (grass comparison below)
     cmp byte [ebp + wWalkCounter], 0
     jne .done                            ; player mid-walk: don't update image/grass yet
     call UpdateSpriteImage               ; set IMAGEINDEX = animFrame + facing + tileGroup
-    mov al, [ebp + W_GRASS_TILE]
+    mov al, [ebp + wGrassTile]
     cmp al, cl
     mov al, 0
     jne .notInGrass
     mov al, OAM_PRIO                     ; $80 = draw NPC under grass overlay
 .notInGrass:
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_GRASSPRIORITY], al
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_GRASSPRIORITY], al
 .done:
     clc
     ret
@@ -905,18 +905,18 @@ CheckSpriteAvailability:
 ; Formula (derived from MAPY/MAPX with +4 offset vs wYCoord/wXCoord):
 ;   row = (MAPY - wYCoord)*2 + 9    (player foot row=17; MAPY has +4 bias)
 ;   col = (MAPX - wXCoord)*2 + 16   (player foot col=24; MAPX has +4 bias)
-;   EBX = W_TILEMAP + row*SCREEN_WIDTH + col
+;   EBX = wTileMap + row*SCREEN_WIDTH + col
 ;
 ; In: ESI = slot byte offset. Out: EBX = wTileMap offset. Clobbers AL, ECX, EBX.
 ; ---------------------------------------------------------------------------
 GetTileSpriteStandsOn:
-    movsx ecx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    movsx ecx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     movsx eax, byte [ebp + wYCoord]
     sub ecx, eax                         ; ECX = MAPY - wYCoord (= delta_blocks + 4)
     add ecx, ecx                         ; ECX = (MAPY - wYCoord) * 2
     add ecx, 9                           ; ECX = wTileMap row
 
-    movsx ebx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    movsx ebx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     movsx eax, byte [ebp + wXCoord]
     sub ebx, eax                         ; EBX = MAPX - wXCoord (= delta_blocks + 4)
     add ebx, ebx                         ; EBX = (MAPX - wXCoord) * 2
@@ -924,7 +924,7 @@ GetTileSpriteStandsOn:
 
     imul ecx, ecx, SCREEN_WIDTH          ; row * 40
     add ebx, ecx
-    add ebx, W_TILEMAP
+    add ebx, wTileMap
     ret
 
 ; ---------------------------------------------------------------------------
@@ -936,10 +936,10 @@ GetTileSpriteStandsOn:
 ; Clobbers AL.
 ; ---------------------------------------------------------------------------
 UpdateSpriteImage:
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
-    add al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
+    add al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION]
     add al, [ebp + hTilePlayerStandingOn]
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], al
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], al
     ret
 
 ; ---------------------------------------------------------------------------
@@ -964,7 +964,7 @@ UpdatePlayerSprite:
 
 .checkTextBox:
     ; lower-left BG tile the sprite stands on; >= $60 → text box
-    mov al, [ebp + W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL]
+    mov al, [ebp + wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL]
     mov [ebp + hTilePlayerStandingOn], al
     cmp al, MAP_TILESET_SIZE
     jb .lowerLeftIsMapTile
@@ -1023,7 +1023,7 @@ UpdatePlayerSprite:
     ; under-grass BG priority if the standing tile is the tileset's grass tile
     mov al, [ebp + hTilePlayerStandingOn]
     mov cl, al
-    mov al, [ebp + W_GRASS_TILE]
+    mov al, [ebp + wGrassTile]
     cmp al, cl
     mov al, 0
     jne .storeGrass
@@ -1100,7 +1100,7 @@ DoScriptedNPCMovement:
     mov bh, al                           ; pret: ld b, a (step delta)
     add [ebp + edi], bh                  ; pixel += delta (pret: a=[hl]; add b; [hl]=a)
     movzx esi, byte [ebp + hCurrentSpriteOffset]
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION], bl
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION], bl
     call AnimScriptedNPCMovement
     dec byte [ebp + wScriptedNPCWalkCounter]
     jnz .ret                             ; pret: ret nz (mid-step)
@@ -1124,17 +1124,17 @@ GetSpriteScreenXPointer:
 GetSpriteScreenXYPointerCommon:
     movzx edi, byte [ebp + hCurrentSpriteOffset]
     movzx eax, bh
-    lea edi, [edi + eax + W_SPRITE_STATE_DATA_1]
+    lea edi, [edi + eax + wSpriteStateData1]
     ret
 
 ; AnimScriptedNPCMovement — set IMAGEINDEX from VRAM slot + facing + anim frame.
 AnimScriptedNPCMovement:
     movzx esi, byte [ebp + hCurrentSpriteOffset]
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     dec al
     ror al, 4                            ; (slot-1) << 4 (pret: dec a; swap a)
     mov bh, al                           ; b = base
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION]
     cmp al, SPRITE_FACING_DOWN
     je .anim
     cmp al, SPRITE_FACING_UP
@@ -1151,14 +1151,14 @@ AnimScriptedNPCMovement:
     movzx esi, byte [ebp + hCurrentSpriteOffset]
     mov al, [ebp + hSpriteAnimFrameCounter]
     add al, [ebp + hSpriteVRAMSlotAndFacing]
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], al
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], al
     ret
 
 ; AdvanceScriptedNPCAnimFrameCounter — tick the anim counters, publish frame index.
 AdvanceScriptedNPCAnimFrameCounter:
     call Func_5274                       ; advance intra-anim + anim-frame counters
     movzx esi, byte [ebp + hCurrentSpriteOffset]
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
     and al, 0x03
     mov [ebp + hSpriteAnimFrameCounter], al
     ret
@@ -1173,15 +1173,15 @@ AdvanceScriptedNPCAnimFrameCounter:
 ; ---------------------------------------------------------------------------
 Func_5274:
     movzx eax, byte [ebp + hCurrentSpriteOffset]
-    mov dl, [ebp + eax + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_INTRAANIMFRAMECOUNTER]
+    mov dl, [ebp + eax + wSpriteStateData1 + SPRITESTATEDATA1_INTRAANIMFRAMECOUNTER]
     inc dl
     and dl, 0x03
-    mov [ebp + eax + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_INTRAANIMFRAMECOUNTER], dl
+    mov [ebp + eax + wSpriteStateData1 + SPRITESTATEDATA1_INTRAANIMFRAMECOUNTER], dl
     jnz .done                            ; ret nz — only roll the frame every 4th tick
-    mov dl, [ebp + eax + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
+    mov dl, [ebp + eax + wSpriteStateData1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
     inc dl
     and dl, 0x03
-    mov [ebp + eax + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER], dl
+    mov [ebp + eax + wSpriteStateData1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER], dl
 .done:
     ret
 
@@ -1285,8 +1285,8 @@ Func_5288:
     ; pret: ldh a,[hCurrentSpriteOffset] / ld l,a / ld [hl],$8 / dec h / inc l /
     ; ld [hl],$4 — H is $C2 (data2) after Func_5349, so this writes
     ; data2[off] = WALKANIMCOUNTER = 8, then data1[off+1] = MOVEMENTSTATUS = 4.
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 8
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 4
+    mov byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 8
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 4
     call UpdateSpriteImage
     stc
     ret
@@ -1309,10 +1309,10 @@ Func_5288:
     ; Fixed form: the writes set 1/set 3 perform (walk-anim counter + status),
     ; without set 1's MAPY/MAPX teleport — i.e. what the sequence writes when H
     ; is on the data2 page as everywhere else in this routine.
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 8
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
+    mov byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 8
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
 %else
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID], 8
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_PICTUREID], 8
     mov byte [ebp + esi + 0xC001], 3    ; $C000 + off + 1 — audio WRAM clobber (see BUG note)
 %endif
     call UpdateSpriteImage
@@ -1323,8 +1323,8 @@ Func_5288:
     call Func_5337
     call Func_5349
     ; Same data2/data1 pair as .asm_52e6 (H=$C2 after Func_5349), status 3.
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 8
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
+    mov byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER], 8
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
     call UpdateSpriteImage
     stc
     ret
@@ -1379,33 +1379,33 @@ Func_5357:
     call Func_5274                       ; advance intra-anim + anim-frame counters
     movzx esi, byte [ebp + hCurrentSpriteOffset]
     ; YPIXELS += 2 * YSTEPVECTOR  (pret: a=[+3]; add a; b=a; a=[+4]; add b; [+4]=a)
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR]
     add al, al
-    add al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS], al
+    add al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS], al
     ; XPIXELS += 2 * XSTEPVECTOR
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XSTEPVECTOR]
     add al, al
-    add al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
-    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS], al
+    add al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
+    mov [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS], al
     ; dec WALKANIMCOUNTER (data2+0); still animating → return
-    dec byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_WALKANIMCOUNTER]
+    dec byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER]
     jnz .ret                             ; pret: ret nz
     ; step finished — decide next status from MOVEMENTBYTE1
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     cmp al, 0xFE
     jae .random                          ; pret: cp $fe / jr nc (>= $FE → WALK/STAY random)
     ; scripted: ready to move again
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
 .ret:
     ret
 .random:
     call Movement_Random                 ; AL = hRandomAdd (clobbers AL, BL)
     mov al, [ebp + hRandomAdd]         ; pret: ldh a, [hRandomAdd]
     and al, 0x7F
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
     ; clear step vectors (pret reads them into b/c then discards)
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR], 0
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR], 0
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR], 0
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XSTEPVECTOR], 0
     ret

@@ -24,9 +24,9 @@
 ; ── SCREEN MODEL (overworld stride-20 scratch) ──────────────────────────────
 ; DisplayTextID runs in OVERWORLD context: text_row_stride is the default 20
 ; and dialog text is composited through the window layer (set_single_window /
-; sync_dialog_window mirror W_TILEMAP rows 12-17, stride 20 — see text.asm).
+; sync_dialog_window mirror wTileMap rows 12-17, stride 20 — see text.asm).
 ; Both borders below therefore draw at pret's GB coords into the stride-20
-; W_TILEMAP scratch (NOT the 40-wide canvas the DisplayTextBoxID_ tables use):
+; wTileMap scratch (NOT the 40-wide canvas the DisplayTextBoxID_ tables use):
 ;   * dialog border at (0,12) = MSG_BOX_ESI — the same cell PrintText
 ;     redraws; an idempotent double-draw, exactly as pret (TextBoxBorder here,
 ;     again inside PrintText).
@@ -82,19 +82,19 @@ DisplayTextIDInit:
 ; below this, so this seems unnecessary. (pret comment; see SCREEN MODEL note.)
     CheckEvent EVENT_GOT_POKEDEX        ; ZF=0 → have pokédex (clobbers AL)
 ; start menu with pokedex: hlcoord 10,0 / lb bc,14,8
-    mov esi, W_TILEMAP + 0 * GB_SCREEN_W + 10
+    mov esi, wTileMap + 0 * GB_SCREEN_W + 10
     mov bh, 14                          ; b = interior height
     mov bl, 8                           ; c = interior width
     jnz .drawTextBoxBorder
 ; start menu without pokedex: hlcoord 10,0 / lb bc,12,8
-    mov esi, W_TILEMAP + 0 * GB_SCREEN_W + 10
+    mov esi, wTileMap + 0 * GB_SCREEN_W + 10
     mov bh, 12
     mov bl, 8
     jmp .drawTextBoxBorder
 ; if text ID is not 0 (i.e. not the start menu) then do a standard dialogue text box
 .notStartMenu:
     ; hlcoord 0,12 / lb bc,4,18 — the (0,12) dialog cell = text.asm MSG_BOX_ESI
-    mov esi, W_TILEMAP + 12 * GB_SCREEN_W
+    mov esi, wTileMap + 12 * GB_SCREEN_W
     mov bh, 4
     mov bl, 18
 .drawTextBoxBorder:
@@ -119,7 +119,7 @@ DisplayTextIDInit:
 ; is over (CloseTextDisplay's restore loop is the exact inverse)
     ; ld hl,wSprite01StateData1FacingDirection ($C119, slot 1) /
     ; ld c,NUM_SPRITESTATEDATA_STRUCTS-1 / ld de,SPRITESTATEDATA1_LENGTH
-    mov esi, W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_LENGTH + SPRITESTATEDATA1_FACINGDIRECTION
+    mov esi, wSpriteStateData1 + SPRITESTATEDATA1_LENGTH + SPRITESTATEDATA1_FACINGDIRECTION
     mov cl, NUM_SPRITESTATEDATA_STRUCTS - 1
 .spriteFacingDirectionCopyLoop:
     ; ld a,[hl] / inc h / ld [hl],a / dec h / add hl,de
@@ -149,7 +149,7 @@ DisplayTextIDInit:
     jnz .spriteStandStillLoop
     ; ld b,HIGH(vBGMap1) / call CopyScreenTileBufferToVRAM
     mov bh, 0x9C                        ; HIGH(vBGMap1) — ignored by the port
-                                        ; routine (native renderer owns W_TILEMAP);
+                                        ; routine (native renderer owns wTileMap);
                                         ; kept for register-contract parity
     call CopyScreenTileBufferToVRAM     ; = 3-frame pacing (see copy2.asm)
     ; xor a / ldh [hWY],a — pret: put the window on the screen

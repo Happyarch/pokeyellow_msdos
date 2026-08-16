@@ -112,7 +112,7 @@ extern DelayFrame                    ; src/home/vblank.asm
 extern hide_window                   ; ppu/ppu.asm
 extern add_window                    ; ppu/ppu.asm — EAX=wx EBX=wy ECX=clip EDX=max_y ESI=tm EDI=row
 extern g_window_count                ; ppu/ppu.asm
-extern text_row_stride               ; text/text.asm — active W_TILEMAP row stride
+extern text_row_stride               ; text/text.asm — active wTileMap row stride
 extern menu_item_step                ; home/window.asm — per-item cursor row step
 extern menu_redraw_cb                ; home/window.asm — per-frame redraw cb (0=none)
 
@@ -152,12 +152,12 @@ align 4
 ; NOT collapse the window list (see the header's DEVIATION(window-compositor)).
 msgbox_players_pc:
     dd PPC_STRIDE                                ; MB_STRIDE
-    dd W_TILEMAP + MSG_SROW * PPC_STRIDE         ; MB_BOX_OFS      — (0,12)
+    dd wTileMap + MSG_SROW * PPC_STRIDE         ; MB_BOX_OFS      — (0,12)
     dd 18                                        ; MB_BOX_W        — 18 interior columns
     dd 4                                         ; MB_BOX_H        — 4 interior rows
-    dd W_TILEMAP + 14 * PPC_STRIDE + 1           ; MB_LINE1        — pret bccoord 1,14
-    dd W_TILEMAP + 16 * PPC_STRIDE + 1           ; MB_LINE2        — <LINE> at (1,16)
-    dd W_TILEMAP + 16 * PPC_STRIDE + 18          ; MB_ARROW        — ▼ at (18,16)
+    dd wTileMap + 14 * PPC_STRIDE + 1           ; MB_LINE1        — pret bccoord 1,14
+    dd wTileMap + 16 * PPC_STRIDE + 1           ; MB_LINE2        — <LINE> at (1,16)
+    dd wTileMap + 16 * PPC_STRIDE + 18          ; MB_ARROW        — ▼ at (18,16)
     dd PlayerPCPromptWait                        ; MB_PROMPT       — our own wait
     dd 0                                         ; MB_WIN_WX       ] no window: this
     dd 0                                         ; MB_WIN_WY       ] file mirrors the
@@ -215,7 +215,7 @@ PlayerPCMenu:
     ; Rebuild the wTileMap map mirror — see the file header.
     call RefreshCollisionTileMap
     ; hlcoord 0,0 / lb bc,8,14 / TextBoxBorder — box-relative into the scratch
-    mov esi, W_TILEMAP
+    mov esi, wTileMap
     mov bl, PPC_INT_W
     mov bh, PPC_INT_H
     call TextBoxBorder
@@ -226,7 +226,7 @@ PlayerPCMenu:
     ; pret relies on the ambient overworld default; the port's canvas screens set
     ; the bit, and a menu that inherits it draws all four entries on one row.
     and byte [ebp + hUILayoutFlags], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
-    mov esi, W_TILEMAP + 2 * PPC_STRIDE + 2
+    mov esi, wTileMap + 2 * PPC_STRIDE + 2
     mov eax, PlayersPCMenuEntries
     call PlaceString
     ; menu vars: wTopMenuItemY=2, wTopMenuItemX=1, wMaxMenuItem=3,
@@ -630,7 +630,7 @@ PlayerPCMirror:
     xor ebx, ebx
 .menuRow:
     imul esi, ebx, PPC_STRIDE
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                                ; row * 32
     lea edi, [ebp + edi + GB_TILEMAP0 + PPC_SROW * 32]
@@ -640,7 +640,7 @@ PlayerPCMirror:
     cmp ebx, PPC_TOTAL_H
     jb .menuRow
     mov ecx, 6                                ; 6 message rows (scratch rows 12-17)
-    lea esi, [ebp + W_TILEMAP + MSG_SROW * PPC_STRIDE]
+    lea esi, [ebp + wTileMap + MSG_SROW * PPC_STRIDE]
     lea edi, [ebp + GB_TILEMAP1]
 .msgRow:
     push ecx

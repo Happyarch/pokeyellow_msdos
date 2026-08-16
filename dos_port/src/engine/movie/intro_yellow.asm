@@ -76,10 +76,10 @@ extern RunObjectAnimations, UpdateMusicCTimes
 
 ; --- Cinematic BG surface model (the port's own; documented here once) ----------
 ; pret writes the GB BG map vBGMap0 ($9800, 32-wide). The port has no such map for
-; the cinematic; it composites the BG from the widescreen W_TILEMAP canvas, of which
-; MovieMirrorSurface shows the 18x20 window at W_TILEMAP + UI_YELLOW_INTRO_ROW*
+; the cinematic; it composites the BG from the widescreen wTileMap canvas, of which
+; MovieMirrorSurface shows the 18x20 window at wTileMap + UI_YELLOW_INTRO_ROW*
 ; SCREEN_TILES_W + UI_YELLOW_INTRO_COL (row 3, col 10) — cf. title.asm TITLE_ORIGIN.
-; So the scenes below mirror pret's vBGMap0 writes as W_TILEMAP writes at this
+; So the scenes below mirror pret's vBGMap0 writes as wTileMap writes at this
 ; origin: a GB coord(col,row) is authored at (col+INTRO_BG_COL, row+INTRO_BG_ROW).
 ; Row-range (contiguous full-width) fills add only the row part (INTRO_BG_ROW_OFF);
 ; column-specific writes add the full origin (INTRO_BG_ORIGIN). This is a uniform
@@ -92,7 +92,7 @@ INTRO_BG_ROW_OFF  equ INTRO_BG_ROW * SCREEN_TILES_W      ; = 120 (row-only origi
 INTRO_BG_ORIGIN   equ INTRO_BG_ROW_OFF + INTRO_BG_COL    ; = 130 (full origin)
 
 ; wShadowOAM per-sprite attribute bytes (wShadowOAM + N*4 + 3). Pret names kept.
-%define wShadowOAMSpriteAttr(n) (W_SHADOW_OAM + (n)*4 + 3)
+%define wShadowOAMSpriteAttr(n) (wShadowOAM + (n)*4 + 3)
 %define wShadowOAMSprite08Attributes wShadowOAMSpriteAttr(8)
 %define wShadowOAMSprite14Attributes wShadowOAMSpriteAttr(14)
 %define wShadowOAMSprite16Attributes wShadowOAMSpriteAttr(16)
@@ -332,7 +332,7 @@ YellowIntroScene5:
 ; channel. The two Request7TileTransfer* DEVIATIONs below describe the transfers
 ; that FEED this mechanism, but the mechanism itself had only a prose "inert" note,
 ; so nothing machine-parsed recorded that the wave does not render at all.
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene6; behavior=the per-scanline LY scroll override is not emulated, so the rSCY value written through hLCDCPointer never displaces any scanline and the surfing scene's water renders flat instead of waving, the port stores hLCDCPointer and wLYOverridesBuffer faithfully but nothing consumes them; evidence=hLCDCPointer is written at 9 sites in this file and W_LY_OVERRIDES_BUFFER only here, and neither is read anywhere under src/ or boot/ -- the compositor exposes no per-scanline scroll channel, only the whole-plane hSCX/hSCY and the per-row g_row_xoff HAL that battle animations use; lifetime=retire when the compositor gains a per-scanline scroll layer, at which point these bytes drive it directly}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene6; behavior=the per-scanline LY scroll override is not emulated, so the rSCY value written through hLCDCPointer never displaces any scanline and the surfing scene's water renders flat instead of waving, the port stores hLCDCPointer and wLYOverridesBuffer faithfully but nothing consumes them; evidence=hLCDCPointer is written at 9 sites in this file and wLYOverridesBuffer only here, and neither is read anywhere under src/ or boot/ -- the compositor exposes no per-scanline scroll channel, only the whole-plane hSCX/hSCY and the per-row g_row_xoff HAL that battle animations use; lifetime=retire when the compositor gains a per-scanline scroll layer, at which point these bytes drive it directly}
 YellowIntroScene6:
     call YellowIntro_BlankPalsDelay2AndDisableLCD
     mov bl, 0x5                                    ; ld c, $5
@@ -340,11 +340,11 @@ YellowIntroScene6:
     mov al, 0x42                                   ; ld a, LOW(rSCY)  ($FF42)
     mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a  (inert)
     call YellowIntro_Copy8BitSineWave
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-2 (at the BG row origin)
+    mov esi, wTileMap + INTRO_BG_ROW_OFF          ; GB rows 0-2 (at the BG row origin)
     mov bx, 3 * SCREEN_TILES_W                     ; ld bc, $60  (rows 0-2)
     xor al, al
     call FillMemory                                ; call Bank3E_FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 3 * SCREEN_TILES_W  ; GB row 3 (col 0 start: the 32-col stripe covers the visible cols 10-29 with matching parity)
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 3 * SCREEN_TILES_W  ; GB row 3 (col 0 start: the 32-col stripe covers the visible cols 10-29 with matching parity)
     ; pret writes 16 pairs = the GB map's full 32 columns. The port's canvas is
     ; SCREEN_WIDTH (40) wide and MovieMirrorSurface reads all of it (cols 10-39
     ; plus the wrapped 0-1), so painting only 32 left canvas cols 32-39 unpainted
@@ -366,7 +366,7 @@ YellowIntroScene6:
     dec al                                         ; dec a
     dec cl                                         ; dec c
     jnz .stripe
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-to-end
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-to-end
     mov bx, SCREEN_AREA - INTRO_BG_ROW_OFF - 4 * SCREEN_TILES_W ; capped at the surface bottom (origin-shifted)
     mov al, 0x10
     call FillMemory
@@ -390,10 +390,10 @@ YellowIntroScene7:
     call YellowIntro_CheckFrameTimerDecrement
     jc .expired                                    ; jr c, .expired
     add byte [ebp + hSCX], 2                       ; ld hl,hSCX / inc [hl] / inc [hl]
-    mov al, [ebp + W_LY_OVERRIDES_BUFFER]           ; ld a, [hl]  (save buffer[0])
+    mov al, [ebp + wLYOverridesBuffer]           ; ld a, [hl]  (save buffer[0])
     push eax                                        ; push af
-    lea esi, [ebp + W_LY_OVERRIDES_BUFFER]          ; ld hl, wLYOverridesBuffer   (dest)
-    lea edi, [ebp + W_LY_OVERRIDES_BUFFER + 1]      ; ld de, wLYOverridesBuffer+1 (src)
+    lea esi, [ebp + wLYOverridesBuffer]          ; ld hl, wLYOverridesBuffer   (dest)
+    lea edi, [ebp + wLYOverridesBuffer + 1]      ; ld de, wLYOverridesBuffer+1 (src)
     mov cl, 0xff                                    ; ld c, $ff
 .shift_loop:
     mov al, [edi]                                   ; ld a, [de]
@@ -419,11 +419,11 @@ YellowIntroScene7:
 Request7TileTransferFromC810ToC710:
     mov al, 0x10
     mov [ebp + hVBlankCopySource], al               ; ldh [hVBlankCopySource], a
-    mov al, (W_LY_OVERRIDES_BUFFER >> 8)            ; ld a, HIGH(wLYOverridesBuffer)
+    mov al, (wLYOverridesBuffer >> 8)            ; ld a, HIGH(wLYOverridesBuffer)
     mov [ebp + hVBlankCopySource + 1], al           ; ldh [hVBlankCopySource+1], a
     mov al, 0x10
     mov [ebp + hVBlankCopyDest], al                 ; ldh [hVBlankCopyDest], a
-    mov al, (W_LY_OVERRIDES >> 8)                   ; ld a, HIGH(wLYOverrides)
+    mov al, (wLYOverrides >> 8)                   ; ld a, HIGH(wLYOverrides)
     mov [ebp + hVBlankCopyDest + 1], al             ; ldh [hVBlankCopyDest+1], a
     mov al, 0x7
     mov [ebp + hVBlankCopySize], al                 ; ldh [hVBlankCopySize], a
@@ -460,7 +460,7 @@ YellowIntroScene9:
 ; Scene 10 — "gengar battle scene": clear the BG map, paint rows 0-7 with tile $2,
 ; then paste three tilemap boxes (the gengar/battle graphics) and spawn object $6.
 ; The .FillBGMapBox local (kept as in pret) copies a BH x BL tile box from a flat
-; tilemap into W_TILEMAP, advancing one canvas row per source row. BG writes use the
+; tilemap into wTileMap, advancing one canvas row per source row. BG writes use the
 ; cinematic origin (documented once at the top); all three boxes fall inside the
 ; visible 20-col region.
 YellowIntroScene10:
@@ -469,25 +469,25 @@ YellowIntroScene10:
     call UpdateMusicCTimes
     xor al, al
     mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
-    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov esi, wTileMap                             ; ld hl, vBGMap0
     mov bx, SCREEN_AREA                            ; ld bc, $400  (clear whole map)
     xor al, al
     call FillMemory                                ; call Bank3E_FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-7 (at the BG row origin)
+    mov esi, wTileMap + INTRO_BG_ROW_OFF          ; GB rows 0-7 (at the BG row origin)
     mov bx, 8 * SCREEN_TILES_W                     ; ld bc, $100  (rows 0-7)
     mov al, 0x2
     call FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 8 * SCREEN_TILES_W       ; ld hl, $9900  (GB row 8, col 0)
+    mov esi, wTileMap + INTRO_BG_ORIGIN + 8 * SCREEN_TILES_W       ; ld hl, $9900  (GB row 8, col 0)
     mov edi, Unkn_f9b6e                            ; ld de, Unkn_f9b6e  (flat)
     mov bh, 6                                      ; lb bc, 6, 20
     mov bl, 20
     call .FillBGMapBox
-    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 4 * SCREEN_TILES_W + 12  ; ld hl, $988c  (GB row 4, col 12)
+    mov esi, wTileMap + INTRO_BG_ORIGIN + 4 * SCREEN_TILES_W + 12  ; ld hl, $988c  (GB row 4, col 12)
     mov edi, Unkn_f9be6
     mov bh, 3                                      ; lb bc, 3, 4
     mov bl, 4
     call .FillBGMapBox
-    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 7 * SCREEN_TILES_W + 3   ; ld hl, $98e3  (GB row 7, col 3)
+    mov esi, wTileMap + INTRO_BG_ORIGIN + 7 * SCREEN_TILES_W + 3   ; ld hl, $98e3  (GB row 7, col 3)
     mov edi, Unkn_f9bf2
     mov bh, 2                                      ; lb bc, 2, 2
     mov bl, 2
@@ -502,7 +502,7 @@ YellowIntroScene10:
     call YellowIntro_NextScene
     ret
 
-; In: ESI = W_TILEMAP dest offset, EDI = flat src, BH = rows, BL = cols.
+; In: ESI = wTileMap dest offset, EDI = flat src, BH = rows, BL = cols.
 .FillBGMapBox:
 .fill_row:
     movzx ecx, bl                                  ; c = cols (fresh each row)
@@ -566,20 +566,20 @@ YellowIntroScene12:
     call UpdateMusicCTimes
     xor al, al
     mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-3 (at the BG row origin)
+    mov esi, wTileMap + INTRO_BG_ROW_OFF          ; GB rows 0-3 (at the BG row origin)
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, $80   (rows 0-3)
     mov al, 0x1
     call FillMemory                                ; call Bank3E_FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13
     mov bx, 10 * SCREEN_TILES_W                    ; ld bc, $140
     xor al, al
     call FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W ; GB rows 14-17
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W ; GB rows 14-17
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, $80
     mov al, 0x1
     call FillMemory
     ; paste 8x12 graphic at GB (col 5, row 6), tile ids 4.., skipping 4 vtiles per row
-    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 5  ; ld hl, $98c5
+    mov esi, wTileMap + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 5  ; ld hl, $98c5
     mov al, 0x4                                    ; ld a, $4  (start tile)
     mov bh, 8                                      ; ld b, 8   (rows)
 .paste_row:
@@ -596,9 +596,9 @@ YellowIntroScene12:
     add al, 0x4                                    ; add $4
     dec bh                                         ; dec b
     jnz .paste_row
-    mov byte [ebp + W_TILEMAP + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 4], 0x3   ; ld hl,$98c4 / ld [hl],$3
-    mov byte [ebp + W_TILEMAP + INTRO_BG_ORIGIN + 7 * SCREEN_TILES_W + 4], 0x74  ; ld hl,$98e4 / ld [hl],$74
-    mov byte [ebp + W_TILEMAP + INTRO_BG_ORIGIN + 13 * SCREEN_TILES_W + 5], 0x0  ; ld hl,$99a5 / ld [hl],$0
+    mov byte [ebp + wTileMap + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 4], 0x3   ; ld hl,$98c4 / ld [hl],$3
+    mov byte [ebp + wTileMap + INTRO_BG_ORIGIN + 7 * SCREEN_TILES_W + 4], 0x74  ; ld hl,$98e4 / ld [hl],$74
+    mov byte [ebp + wTileMap + INTRO_BG_ORIGIN + 13 * SCREEN_TILES_W + 5], 0x0  ; ld hl,$99a5 / ld [hl],$0
     mov dh, 0x60                                   ; lb de, $60, $58
     mov dl, 0x58
     mov al, 0x9
@@ -645,15 +645,15 @@ YellowIntroScene14:
 .expired:
     call MaskAllAnimatedObjectStructs
     call YellowIntro_BlankOAMBuffer
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-3 (at the BG row origin)
+    mov esi, wTileMap + INTRO_BG_ROW_OFF          ; GB rows 0-3 (at the BG row origin)
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, SCREEN_WIDTH * 4
     mov al, 0x1
     call FillMemory                                ; call Bank3E_FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13
     mov bx, 10 * SCREEN_TILES_W                    ; ld bc, SCREEN_WIDTH * 10
     xor al, al
     call FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W ; GB rows 14-17
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W ; GB rows 14-17
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, SCREEN_WIDTH * 4
     mov al, 0x1
     call FillMemory
@@ -718,7 +718,7 @@ YellowIntroScene2:
     call UpdateMusicCTimes
     xor al, al
     mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
-    mov esi, W_TILEMAP                             ; ld hl, vBGMap0
+    mov esi, wTileMap                             ; ld hl, vBGMap0
     mov bx, SCREEN_AREA                            ; ld bc, $400  (clear whole map)
     xor al, al
     call FillMemory                                ; call Bank3E_FillMemory
@@ -739,7 +739,7 @@ YellowIntroScene2:
 ;
 ; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene2_PlaceGraphic; behavior=the hOnCGB rVBK bank-1 attribute box is published as a per-TILE-ID band in tile_pal instead of per-cell attribute bytes in VRAM bank 1; evidence=the graphic owns tile ids 0x90-0xE5 exclusively because the routine's caller has just filled the whole of vBGMap0 with tile 0, so the per-tile-id resolution is exact here rather than approximate, and the port's compositor bakes palette into tile_cache per tile id; lifetime=permanent, this is the same HAL boundary LoadBGMapAttributes already resolves this way}
 YellowIntroScene2_PlaceGraphic:
-    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 20  ; ld hl, $98d4  (GB col 20, row 6 — off-screen right, revealed by scene 3's scroll)
+    mov esi, wTileMap + INTRO_BG_ORIGIN + 6 * SCREEN_TILES_W + 20  ; ld hl, $98d4  (GB col 20, row 6 — off-screen right, revealed by scene 3's scroll)
     mov bh, 0x6                                    ; ld b, $6  (rows)
     mov al, 0x90                                   ; ld a, $90
 .row:
@@ -820,7 +820,7 @@ Func_f98fc:
 ; BENIGN inertness -- the port reaches the same visible result by another route --
 ; but it was carried in prose only, so nothing machine-parsed distinguished it from
 ; a real missing feature. That is the distinction this annotation records.
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:InitYellowIntroGFXAndMusic; behavior=the hAutoBGTransferEnabled/hAutoBGTransferDest request bytes are written faithfully but no port code reads them, because the GB's VBlank BG-map auto-transfer has no counterpart, the compositor composes every frame directly from W_TILEMAP so the tilemap the transfer would have published is already on screen; evidence=H_AUTO_BG_TRANSFER_EN and hAutoBGTransferDest are written in this file and in intro.asm and read nowhere under src/ or boot/, and the do_bg_transfer consumer was retired with the surface-mirror compositor -- so unlike the LY-override case no visible behaviour is lost; lifetime=permanent, the surface-mirror compositor replaces the transfer rather than deferring it}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:InitYellowIntroGFXAndMusic; behavior=the hAutoBGTransferEnabled/hAutoBGTransferDest request bytes are written faithfully but no port code reads them, because the GB's VBlank BG-map auto-transfer has no counterpart, the compositor composes every frame directly from wTileMap so the tilemap the transfer would have published is already on screen; evidence=H_AUTO_BG_TRANSFER_EN and hAutoBGTransferDest are written in this file and in intro.asm and read nowhere under src/ or boot/, and the do_bg_transfer consumer was retired with the surface-mirror compositor -- so unlike the LY-override case no visible behaviour is lost; lifetime=permanent, the surface-mirror compositor replaces the transfer rather than deferring it}
 ; ---------------------------------------------------------------------------
 ; ---------------------------------------------------------------------------
 ; CopyYellowIntroAnimatedObjectData — port-only: stage the three immutable
@@ -859,11 +859,11 @@ InitYellowIntroGFXAndMusic:
     mov [ebp + hAutoBGTransferDest], al        ; ldh [hAutoBGTransferDest], a (lo=0)
     mov byte [ebp + hAutoBGTransferDest + 1], 0x98 ; ld a,$98 / ldh [hAutoBGTransferDest+1],a (vBGMap0 $9800)
     call YellowIntro_BlankTileMap
-    mov esi, W_TILEMAP                             ; ld hl, wTileMap
+    mov esi, wTileMap                             ; ld hl, wTileMap
     mov bx, SCREEN_AREA                            ; ld bc, SCREEN_AREA
     mov al, 0x1                                    ; ld a, $1
     call FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13 (clear middle at the BG row origin)
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13 (clear middle at the BG row origin)
     mov bx, SCREEN_TILES_W * 10                    ; ld bc, SCREEN_WIDTH * 10
     xor al, al
     call FillMemory
@@ -944,7 +944,7 @@ PlayIntroScene:
     ; PORT: publish the animated-object shadow OAM, projected onto the surface
     movzx ecx, byte [ebp + wCurrentAnimatedObjectOAMBufferOffset]
     shr ecx, 2                                        ; OBJ count = shadow-OAM cursor / 4
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
     mov eax, 80                                       ; UI_YELLOW_INTRO_COL * 8
     mov ebx, 24                                       ; UI_YELLOW_INTRO_ROW * 8
     call PublishProjectedOAM
@@ -998,7 +998,7 @@ PlayIntroScene:
     call DelayFrame
     mov byte [ebp + hWY], 0x90                       ; ld a,$90 / ldh [hWY], a
     call ClearObjectAnimationBuffers
-    mov esi, W_TILEMAP                                ; ld hl, wTileMap
+    mov esi, wTileMap                                ; ld hl, wTileMap
     mov bx, SCREEN_AREA                               ; ld bc, SCREEN_AREA
     xor al, al
     call FillMemory
@@ -1112,15 +1112,15 @@ YellowIntro_BlankPalsDelay2AndDisableLCD:
 ; at the top of this file) like every scene here — no per-scene projection note.
 ; ---------------------------------------------------------------------------
 Func_f9e5f:
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-3 -> surface rows 0-3
+    mov esi, wTileMap + INTRO_BG_ROW_OFF          ; GB rows 0-3 -> surface rows 0-3
     mov bx, 4 * SCREEN_TILES_W                      ; 4 rows x 40 (full-width covers visible cols 10-29)
     mov al, 0x1
     call FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W  ; GB rows 4-13
     mov bx, 10 * SCREEN_TILES_W                     ; 10 rows x 40
     xor al, al
     call FillMemory
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W ; GB rows 14-17
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W ; GB rows 14-17
     mov bx, 4 * SCREEN_TILES_W                      ; 4 rows x 40
     mov al, 0x1
     call FillMemory
@@ -1152,11 +1152,11 @@ Func_f9e9a:
     ret
 
 ; ---------------------------------------------------------------------------
-; YellowIntro_BlankTileMap — fill W_TILEMAP with the blank tile ($7f). Writes the
+; YellowIntro_BlankTileMap — fill wTileMap with the blank tile ($7f). Writes the
 ; port's canonical tilemap (the surface mirror carries it to GB_TILEMAP0).
 ; ---------------------------------------------------------------------------
 YellowIntro_BlankTileMap:
-    mov esi, W_TILEMAP                              ; ld hl, wTileMap
+    mov esi, wTileMap                              ; ld hl, wTileMap
     mov bx, SCREEN_AREA                             ; ld bc, SCREEN_AREA
     mov al, 0x7f                                    ; ld a, $7f
     call FillMemory
@@ -1166,7 +1166,7 @@ YellowIntro_BlankTileMap:
 ; YellowIntro_BlankOAMBuffer — zero the shadow OAM.
 ; ---------------------------------------------------------------------------
 YellowIntro_BlankOAMBuffer:
-    mov esi, W_SHADOW_OAM                           ; ld hl, wShadowOAM
+    mov esi, wShadowOAM                           ; ld hl, wShadowOAM
     mov bx, W_SHADOW_OAM_SIZE                       ; ld bc, wShadowOAMEnd - wShadowOAM
     xor al, al
     call FillMemory
@@ -1194,7 +1194,7 @@ YellowIntro_BlankPalettes:
 ; written faithfully but never consumed (the wobble is inert).
 ; ---------------------------------------------------------------------------
 YellowIntro_Copy8BitSineWave:
-    lea edi, [ebp + W_LY_OVERRIDES_BUFFER]          ; ld de, wLYOverridesBuffer (dest)
+    lea edi, [ebp + wLYOverridesBuffer]          ; ld de, wLYOverridesBuffer (dest)
     mov dl, 8                                       ; ld a, $8  (repeat count)
 .loop:
     mov esi, YellowIntroSineWave8                   ; ld hl, .SineWave (flat source)
@@ -1559,7 +1559,7 @@ RunAnimObjectTest:
     call RunObjectAnimations
     movzx ecx, byte [ebp + wCurrentAnimatedObjectOAMBufferOffset]
     shr ecx, 2                                      ; OBJ count = shadow-OAM cursor / 4
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
     mov eax, 80                                     ; projection X offset (surface at col 10)
     mov ebx, 24                                     ; projection Y offset (surface at row 3)
     call PublishProjectedOAM

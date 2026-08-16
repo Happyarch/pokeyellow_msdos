@@ -112,7 +112,7 @@ CheckPikachuFollowingPlayer:
 ; ===========================================================================
 SpawnPikachu:
     movzx esi, byte [ebp + hCurrentSpriteOffset]   ; esi = $f0 (slot 15 base offset)
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET] ; ld a,[hl]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET] ; ld a,[hl]
     dec al                                             ; dec a
     ror al, 4                                          ; swap a (nibble swap)
     mov [ebp + hTilePlayerStandingOn], al          ; ldh [hTilePlayerStandingOn], a

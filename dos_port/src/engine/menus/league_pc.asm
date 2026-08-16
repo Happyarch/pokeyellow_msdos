@@ -28,7 +28,7 @@
 ; exit path. Same reason, same shape as pc.asm:ActivatePC / oaks_pc.asm.
 ; DEVIATION{class=projection; pret=engine/menus/league_pc.asm:LeaguePCShowMon; behavior=build the Hall of Fame mon screen only in stride-20 scratch without publishing a visible window; evidence=port LeaguePCShowMon writers and project_state linked provider with Func_7033f still seam-stubbed; lifetime=until the Hall of Fame screen projection is implemented and runtime-verified}
 ; LeaguePCShowMon lays its full screen out in the stride-20
-; W_TILEMAP scratch (hlcoord X,Y = W_TILEMAP + Y*20 + X) and publishes no window —
+; wTileMap scratch (hlcoord X,Y = wTileMap + Y*20 + X) and publishes no window —
 ; UNVERIFIED, and stated as such in the ledger: reaching it needs a save with a
 ; recorded Hall of Fame plus the HoF movie routine Func_7033f (still a stub).
 ;
@@ -196,18 +196,18 @@ LeaguePCShowMon:
     mov bh, SET_PAL_POKEMON_WHOLE_SCREEN    ; ld b,SET_PAL_POKEMON_WHOLE_SCREEN
     mov bl, 0                               ; ld c,0
     call RunPaletteCommand
-    mov esi, W_TILEMAP + 5 * 20 + 12        ; hlcoord 12,5
+    mov esi, wTileMap + 5 * 20 + 12        ; hlcoord 12,5
     call GetMonHeader
     call LoadFrontSpriteByMonIndex
     call GBPalNormal
-    mov esi, W_TILEMAP + 13 * 20 + 0        ; hlcoord 0,13
+    mov esi, wTileMap + 13 * 20 + 0        ; hlcoord 0,13
     mov bh, 2                               ; lb bc,2,18
     mov bl, 18
     call TextBoxBorder
-    mov esi, W_TILEMAP + 15 * 20 + 1        ; hlcoord 1,15
+    mov esi, wTileMap + 15 * 20 + 1        ; hlcoord 1,15
     mov eax, HallOfFameNoText               ; ld de,HallOfFameNoText
     call PlaceString
-    mov esi, W_TILEMAP + 15 * 20 + 16       ; hlcoord 16,15
+    mov esi, wTileMap + 15 * 20 + 16       ; hlcoord 16,15
     mov edx, wHoFTeamNo                     ; ld de,wHoFTeamNo
     mov bh, 1                               ; lb bc,1,3 -> 1 byte
     mov bl, 3                               ; 3 digits

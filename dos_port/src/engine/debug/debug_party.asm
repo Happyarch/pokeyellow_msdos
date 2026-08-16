@@ -175,14 +175,14 @@ PrepareNewGameDebug:
     cmp al, 0xFF
     jz .items_end
     
-    mov byte [ebp + W_CUR_ITEM], al
+    mov byte [ebp + wCurItem], al
     inc esi
     mov al, byte [esi]
     inc esi
-    mov byte [ebp + W_ITEM_QUANTITY], al
+    mov byte [ebp + wItemQuantity], al
     
     push esi
-    mov esi, W_NUM_BAG_ITEMS
+    mov esi, wNumBagItems
     call AddItemToInventory ; Note: AddItemToInventory takes ESI=inventory ptr
     pop esi
     

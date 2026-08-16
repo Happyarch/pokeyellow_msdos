@@ -6,10 +6,10 @@
 ; case-by-case basis. There is NO centered 20×18 window any more.
 ;
 ; Render path: the battle screen is the BG plane. render_bg already has a
-; non-overworld branch that decodes the whole 40×25 W_TILEMAP straight to the
+; non-overworld branch that decodes the whole 40×25 wTileMap straight to the
 ; 320×200 back buffer (the path the title/menu screens use) — it only renders the
 ; overworld when wCurrentTileBlockMapViewPointer is nonzero. So InitBattle zeroes
-; that pointer (+ SCX/SCY) and builds the layout directly in the 40-wide W_TILEMAP;
+; that pointer (+ SCX/SCY) and builds the layout directly in the 40-wide wTileMap;
 ; vblank.asm then renders it via render_bg. No window descriptor (hide_window).
 ;
 ; NOTE on the text helpers: TextBoxBorder / PlaceString hardcode a 20-wide stride
@@ -290,13 +290,13 @@ InitWildBattle:
     ; that placement into LoadFrontSpriteByMonIndex, which the ghost cannot use
     ; (MON_GHOST has no dex number, so it would take the Rhydon trap), so the
     ; ghost arm does the placement itself with the same projected anchor.
-    lea edi, [ebp + W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL]
+    lea edi, [ebp + wTileMap + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL]
     xor al, al                               ; hStartTileID = 0
     mov edx, [text_row_stride]
     call CopyUncompressedPicToHL
     jmp .spriteLoaded
 .isNoGhost:
-    mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
+    mov esi, wTileMap + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     call LoadFrontSpriteByMonIndex
 .spriteLoaded:
     mov byte [ebp + wTrainerClass], 0
@@ -308,7 +308,7 @@ InitWildBattle:
 ; through _InitBattleCommon after the pret-facing dispatch above.
 ; ---------------------------------------------------------------------------
 InitBattleCanvas:
-    ; The battle projects the GB viewport into the full 40-wide W_TILEMAP canvas, so
+    ; The battle projects the GB viewport into the full 40-wide wTileMap canvas, so
     ; the ONE text engine renders at stride 40 here (the overworld leaves it at 20).
     ; TODO: a clean overworld exit must restore text_row_stride to 20 (Stage 3).
     mov dword [text_row_stride], SCREEN_TILES_W   ; 40
@@ -347,7 +347,7 @@ InitBattleCanvas:
     ; overworld player sprite after ClearSprites; battle manages its own sprites.
     mov byte [ebp + wUpdateSpritesEnabled], 0
     ; Switch render_bg to its flat-canvas (non-overworld) path: zero the overworld
-    ; view pointer so it decodes W_TILEMAP directly, and zero scroll so the 40×25
+    ; view pointer so it decodes wTileMap directly, and zero scroll so the 40×25
     ; canvas blits at screen (0,0).
     ; NOTE: zero the SCX/SCY SHADOWS too — DelayFrame's commit_shadow_regs copies
     ; hSCX/hSCY → IO_SCX/IO_SCY every frame, so without this the stale overworld
@@ -363,8 +363,8 @@ InitBattleCanvas:
     ; re-derives this pointer: LoadMapData explicitly does NOT (overworld.asm:2278 — the
     ; derivation lives in LoadDestinationMapData, which the post-battle EnterMap skips because
     ; EndOfBattle set wDestinationWarpID=$FF "don't reposition"). So render_bg would stay on
-    ; its flat-canvas path (ppu.asm:188 — zero ptr ⇒ decode W_TILEMAP directly) and paint
-    ; stale W_TILEMAP = solid grass. Restored at the _InitBattleCommon tail (same map + same
+    ; its flat-canvas path (ppu.asm:188 — zero ptr ⇒ decode wTileMap directly) and paint
+    ; stale wTileMap = solid grass. Restored at the _InitBattleCommon tail (same map + same
     ; coords ⇒ the pre-battle value is still correct), mirroring status_screen.asm's view-ptr
     ; save/restore. The debug harnesses that call InitBattle standalone never return to the
     ; field, so the unrestored save is harmless there.
@@ -401,7 +401,7 @@ InitBattleCanvas:
 
     ; --- full-screen blank: clear the whole 40×25 canvas to the space tile ---
     ; (per pret init order — blank the entire screen before drawing the layout).
-    lea edi, [ebp + W_TILEMAP]
+    lea edi, [ebp + wTileMap]
     mov al, T_SP
     mov ecx, SCREEN_TILES_W * SCREEN_TILES_H  ; 40 × 25 = 1000
     rep stosb
@@ -820,7 +820,7 @@ _LoadTrainerPic:
 DrawBattleIntroBox:
     ; --- hand-draw the bottom dialog box (stride 40) at UI_DIALOG_BOX_OFS ---
     ; top border: ┌ + ─×18 + ┐
-    lea edi, [ebp + W_TILEMAP + BOX_OFS]
+    lea edi, [ebp + wTileMap + BOX_OFS]
     mov byte [edi], T_TL
     lea edx, [edi + 1]                        ; save interior-fill start for reuse
     inc edi
@@ -855,7 +855,7 @@ DrawBattleIntroBox:
     ; line 1: "Wild " + enemy mon nick (faithful _WildMonAppearedText; nick is the
     ; $50-terminated string in wEnemyMonNick).
     mov esi, intro_line1                       ; flat .data source
-    lea edi, [ebp + W_TILEMAP + UI_DIALOG_LINE1_OFS]
+    lea edi, [ebp + wTileMap + UI_DIALOG_LINE1_OFS]
     mov ecx, INTRO_LINE1_LEN
     rep movsb                                  ; "Wild "
     lea esi, [ebp + wEnemyMonNick]             ; GB WRAM nick
@@ -869,7 +869,7 @@ DrawBattleIntroBox:
     jmp .introNick
 .introNickDone:
     mov esi, intro_line2
-    lea edi, [ebp + W_TILEMAP + UI_DIALOG_LINE2_OFS]
+    lea edi, [ebp + wTileMap + UI_DIALOG_LINE2_OFS]
     mov ecx, INTRO_LINE2_LEN
     rep movsb
 

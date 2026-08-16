@@ -17,7 +17,7 @@
 ;
 ; NATIVE-RENDERER SAFETY: these copies are LINEAR tile-byte streams. They make
 ; NO assumption about the GB 32×32 background-tilemap geometry (that path is the
-; native 40×25 W_TILEMAP surface; see memory `renderer-native-viewport-invariant`).
+; native 40×25 wTileMap surface; see memory `renderer-native-viewport-invariant`).
 ; They only touch the vChars pattern area, never a $9800 tilemap.
 ;
 ; POINTER CONVENTION (matches load_font/player_gfx + town_map.asm call sites):
@@ -216,17 +216,17 @@ GetFarByte:
     ret
 
 ; ---------------------------------------------------------------------------
-; ClearScreenArea — clear a BL×BH (width×height) tile region of W_TILEMAP.
+; ClearScreenArea — clear a BL×BH (width×height) tile region of wTileMap.
 ; pret home/copy2.asm:ClearScreenArea ("clear tilemap area cxb at hl").
 ;
 ; NATIVE GEOMETRY: the row-advance stride is SCREEN_WIDTH, which the port
 ; redefines to SCREEN_TILES_W = 40 (NOT the GB 20). The software PPU scans
-; W_TILEMAP at stride 40 for the menu/battle path, so 40 is the correct stride
+; wTileMap at stride 40 for the menu/battle path, so 40 is the correct stride
 ; and matches town_map.asm's TM_COORD addressing. pret's literal `ld de,
 ; SCREEN_WIDTH` therefore translates faithfully — the constant carries the
 ; port's 40. (Blank tile = 0x7F, charmap " ".)
 ;
-; In:  ESI = top-left destination GB offset into W_TILEMAP (EBP-relative)
+; In:  ESI = top-left destination GB offset into wTileMap (EBP-relative)
 ;      BH  = height in rows (B)
 ;      BL  = width in cols (C)
 ; Out: region filled with 0x7F. ESI preserved; caller registers preserved.
@@ -265,11 +265,11 @@ ClearScreenArea:
     ret
 
 ; ---------------------------------------------------------------------------
-; CopyScreenTileBufferToVRAM — make W_TILEMAP visible.
+; CopyScreenTileBufferToVRAM — make wTileMap visible.
 ; pret home/copy2.asm:CopyScreenTileBufferToVRAM ("copy wTileMap to the BG Map
 ; ... in thirds of 6 rows ... 3 frames").
 ;
-; PORT MODEL: the software PPU renders W_TILEMAP DIRECTLY every frame (render_bg,
+; PORT MODEL: the software PPU renders wTileMap DIRECTLY every frame (render_bg,
 ; view-pointer = 0 path). There is no separate physical $9800 tilemap that the
 ; renderer scans in the menu/battle path — do_bg_transfer (vblank.asm) is inert
 ; whenever H_AUTO_BG_TRANSFER_EN is 0, which is the case here. So the buffer is
@@ -278,7 +278,7 @@ ClearScreenArea:
 ; three DelayFrame calls. Copies tilemap INDICES, not pattern data → does NOT
 ; arm g_tilecache_dirty.
 ;
-; In:  BH (b) = target BG map high byte — IGNORED (native renderer owns W_TILEMAP).
+; In:  BH (b) = target BG map high byte — IGNORED (native renderer owns wTileMap).
 ; Out: waits 3 frames. Caller registers preserved.
 ; ---------------------------------------------------------------------------
 CopyScreenTileBufferToVRAM:
@@ -296,7 +296,7 @@ ClearScreen:
     push esi
     push ebx
     push eax
-    mov esi, W_TILEMAP
+    mov esi, wTileMap
     mov bx,  SCREEN_AREA & 0xFFFF
     mov al,  0x7F
     call FillMemory

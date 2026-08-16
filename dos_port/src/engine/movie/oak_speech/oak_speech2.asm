@@ -35,9 +35,9 @@ extern TextBoxBorder                 ; home/text.asm — box at ESI, BL wide x B
 extern PlaceString                   ; home/text.asm — EAX flat src, ESI GB dest
 extern UpdateSprites                 ; src/home/update_sprites.asm
 extern HandleMenuInput               ; home/window.asm — menu loop; returns choice in wCurrentMenuItem
-extern text_row_stride               ; home/text.asm — W_TILEMAP row stride for the box/string helpers
+extern text_row_stride               ; home/text.asm — wTileMap row stride for the box/string helpers
 extern menu_item_step                ; home/window.asm — menu cursor vertical spacing
-extern ClearScreenArea               ; home/copy2.asm — clear BL x BH tiles of W_TILEMAP at ESI
+extern ClearScreenArea               ; home/copy2.asm — clear BL x BH tiles of wTileMap at ESI
 extern CopyData                      ; home/copy.asm — ESI/EDX EBP-relative, BX count
 extern Delay3                        ; src/home/palettes.asm — wait 3 frames
 extern DelayFrames                   ; src/home/delay.asm — wait BL frames
@@ -63,9 +63,9 @@ SLIDE_STEPS      equ 6                ; pret hSlideAmount — columns to slide
 
 ; Projected slide-band origins (pret hlcoord + UI_OAK_SPEECH). Right slide starts at
 ; hlcoord(5,4); left at hlcoord(12,4); the name-box clear at hlcoord(0,0).
-SLIDE_RIGHT_ORIGIN equ (W_TILEMAP + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (5 + UI_OAK_SPEECH_COL))
-SLIDE_LEFT_ORIGIN  equ (W_TILEMAP + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (12 + UI_OAK_SPEECH_COL))
-SLIDE_CLEAR_ORIGIN equ (W_TILEMAP + (0 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (0 + UI_OAK_SPEECH_COL))
+SLIDE_RIGHT_ORIGIN equ (wTileMap + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (5 + UI_OAK_SPEECH_COL))
+SLIDE_LEFT_ORIGIN  equ (wTileMap + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (12 + UI_OAK_SPEECH_COL))
+SLIDE_CLEAR_ORIGIN equ (wTileMap + (0 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (0 + UI_OAK_SPEECH_COL))
 
 section .bss
 slide_dir:    resb 1                  ; 0 = right, 0xFF = left (pret hSlideDirection)
@@ -74,9 +74,9 @@ slide_region: resb 1                  ; linear tiles per column-shift (pret hSli
 
 ; Projected tilemap corners for the name menu (pret hlcoord + UI_OAK_SPEECH origin,
 ; 40-wide canvas). Box hlcoord(0,0); "NAME" title hlcoord(3,0); list hlcoord(2,2).
-INTRO_NAME_BOX   equ (W_TILEMAP + (0 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (0 + UI_OAK_SPEECH_COL))
-INTRO_NAME_TITLE equ (W_TILEMAP + (0 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (3 + UI_OAK_SPEECH_COL))
-INTRO_NAME_LIST  equ (W_TILEMAP + (2 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (2 + UI_OAK_SPEECH_COL))
+INTRO_NAME_BOX   equ (wTileMap + (0 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (0 + UI_OAK_SPEECH_COL))
+INTRO_NAME_TITLE equ (wTileMap + (0 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (3 + UI_OAK_SPEECH_COL))
+INTRO_NAME_LIST  equ (wTileMap + (2 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (2 + UI_OAK_SPEECH_COL))
 
 section .text
 
@@ -123,7 +123,7 @@ GetDefaultName:
 ; pret draws a c=9 x b=10 box at hlcoord(0,0), embeds "NAME" in the top border at
 ; (3,0), places the DE menu string ("NEW NAME<NEXT>n1<NEXT>...") at (2,2), then
 ; runs HandleMenuInput. Under the cinematic all coords are projected by
-; UI_OAK_SPEECH; the box/string helpers walk W_TILEMAP at text_row_stride and the
+; UI_OAK_SPEECH; the box/string helpers walk wTileMap at text_row_stride and the
 ; menu cursor is placed scratch-relative (PlaceMenuCursor), so text_row_stride and
 ; the projected wTopMenuItem{X,Y} are what put both on the surface. The per-frame
 ; g_surface_redraw_cb (MovieBeginSurface) mirrors the canvas so the menu is visible.
@@ -253,7 +253,7 @@ ChooseRivalName:
 ; shifted column to the surface; pret's hAutoBGTransferEnabled/Portion toggles are
 ; dropped (the port retired the VBlank auto-BG-transfer they gate).
 ;
-; DEVIATION{class=projection; pret=engine/movie/oak_speech/oak_speech2.asm:OakSpeechSlidePicCommon; behavior=the slide band starts at a UI_OAK_SPEECH-projected origin and its linear span is restrided to SLIDE_ROWS*SCREEN_TILES_W+5 for the 40-wide canvas, the hAutoBGTransferEnabled/Portion toggles are dropped, and pret's hSlideDirection/hSlideAmount/hSlidingRegionSize HRAM scratch becomes file-local .bss (slide_dir/steps/region); evidence=the picture is a boot cinematic centred on the 320x200 canvas, the port has no VBlank auto-BG-transfer (do_bg_transfer retired -- g_surface_redraw_cb mirrors W_TILEMAP every frame instead), and those pret HRAM slide temps are not in the port memmap; lifetime=permanent widescreen projection}
+; DEVIATION{class=projection; pret=engine/movie/oak_speech/oak_speech2.asm:OakSpeechSlidePicCommon; behavior=the slide band starts at a UI_OAK_SPEECH-projected origin and its linear span is restrided to SLIDE_ROWS*SCREEN_TILES_W+5 for the 40-wide canvas, the hAutoBGTransferEnabled/Portion toggles are dropped, and pret's hSlideDirection/hSlideAmount/hSlidingRegionSize HRAM scratch becomes file-local .bss (slide_dir/steps/region); evidence=the picture is a boot cinematic centred on the 320x200 canvas, the port has no VBlank auto-BG-transfer (do_bg_transfer retired -- g_surface_redraw_cb mirrors wTileMap every frame instead), and those pret HRAM slide temps are not in the port memmap; lifetime=permanent widescreen projection}
 ;
 ; Left In: EDX = GB dest for the chosen name (pret de). EBP = GB base.
 ; ---------------------------------------------------------------------------

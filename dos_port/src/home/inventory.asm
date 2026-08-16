@@ -77,7 +77,7 @@ RemoveItemFromInventory:
 ; AddItemToInventory — home wrapper around AddItemToInventory_ (pret
 ; home/inventory.asm: push bc / homecall_sf / pop bc). Flat model: no banking,
 ; just preserve EBX(bc) around the call. Caller sets ESI = inventory count addr
-; (W_NUM_BAG_ITEMS for the bag), [wCurItem], [wItemQuantity].
+; (wNumBagItems for the bag), [wCurItem], [wItemQuantity].
 ; ---------------------------------------------------------------------------
 AddItemToInventory:
     push ebx

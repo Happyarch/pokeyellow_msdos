@@ -27,13 +27,13 @@ bits 32
 ; where the list menu's "more below" ▼ lands, because the list box sits at
 ; GB(4,2) and draws its arrow box-relative at (14,9): (4,2)+(14,9) = (18,11).
 ; The port has no single absolute tilemap to name it in — a menu draws its box
-; into the W_TILEMAP scratch at a runtime stride and the compositor projects it —
+; into the wTileMap scratch at a runtime stride and the compositor projects it —
 ; so the arrow cell is PUBLISHED by the menu that owns it (menu_arrow_pos below).
 ; See menu-fidelity finding M-2 (corrected) / row 24.
 
 extern DelayFrame
 extern AnimatePartyMon                 ; src/engine/gfx/mon_icons.asm — icon bob (ends in DelayFrame)
-extern text_row_stride                 ; text.asm — current W_TILEMAP row stride
+extern text_row_stride                 ; text.asm — current wTileMap row stride
 extern PlaySound                       ; src/home/audio.asm — sound id in AL
 
 ; --- PrintText's collaborators (all in text.asm — the text engine) ---
@@ -76,7 +76,7 @@ menu_redraw_cb: resd 1
 ; no down arrow" (the default). pret names that cell as the absolute screen
 ; coordinate `hlcoord 18, 11` and calls HandleDownArrowBlinkTiming on it
 ; unconditionally — inert on menus whose (18,11) is not a ▼. The port cannot name
-; it absolutely: each menu draws its box box-relative into the W_TILEMAP scratch
+; it absolutely: each menu draws its box box-relative into the wTileMap scratch
 ; at a runtime stride and the compositor projects the result, so (18,11) in scratch
 ; space is not the arrow cell of any box. The menu that DRAWS the arrow therefore
 ; publishes where it drew it (list_menu.asm), and 0 reproduces pret's inert case.
@@ -211,12 +211,12 @@ PrintText_NoCreatingTextBox:
 ; can address it (pret stores hl there). In: EBP = GB base.
 ; ---------------------------------------------------------------------------
 PlaceMenuCursor:
-    ; base = W_TILEMAP + Y*stride + X
+    ; base = wTileMap + Y*stride + X
     movzx eax, byte [ebp + wTopMenuItemY]
     imul eax, [text_row_stride]
     movzx ecx, byte [ebp + wTopMenuItemX]
     add eax, ecx
-    add eax, W_TILEMAP
+    add eax, wTileMap
     mov ebx, [menu_item_step]           ; per-item row step
     ; erase the cursor at the previous item (if still there)
     movzx ecx, byte [ebp + wLastMenuItem]
@@ -240,7 +240,7 @@ PlaceMenuCursor:
     mov byte [ebp + eax], CHAR_CURSOR
     ; pret: ld [wMenuCursorLocation], hl — save the cursor's tile address so
     ; EraseMenuCursor can restore/blank it. The port's EBP-relative tile offset
-    ; is < 0x10000 (W_TILEMAP-based), so a 16-bit store is exact and leaves the
+    ; is < 0x10000 (wTileMap-based), so a 16-bit store is exact and leaves the
     ; reserved bytes (0xCC32-33) untouched, matching the pret dw.
     mov [ebp + wMenuCursorLocation], ax
     mov cl, [ebp + wCurrentMenuItem]
@@ -357,7 +357,7 @@ HandleMenuInput_:
     jz .noArrow                         ; no ▼ on this menu — pret's call is inert too
     call HandleDownArrowBlinkTiming
     ; The blink writes a scratch tile. A menu box only reaches the screen through
-    ; its mirror callback (the compositor reads the window source, not W_TILEMAP),
+    ; its mirror callback (the compositor reads the window source, not wTileMap),
     ; and that callback otherwise runs once per cursor move — so without this the
     ; ▼ would toggle invisibly. pret needs no equivalent: its (18,11) IS the live
     ; tilemap cell. Only menus that published an arrow pay for the extra mirror.

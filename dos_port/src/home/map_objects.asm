@@ -164,7 +164,7 @@ BankswitchAndContinue:
 StartSimulatingJoypadStates:
     mov byte [ebp + wOverrideSimulatedJoypadStatesMask], 0
     ; wSpritePlayerStateData2MovementByte1 = slot 0 movement byte 1
-    mov byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0
+    mov byte [ebp + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0
     or byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     ret
 
@@ -237,9 +237,9 @@ CheckCoords:
 CheckBoulderCoords:
     movzx eax, byte [ebp + hSpriteIndex]
     shl eax, 4                          ; slot * 16 (SPRITESTATEDATA2 stride)
-    mov bh, [ebp + eax + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    mov bh, [ebp + eax + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     sub bh, 4                           ; sprite coords are offset by 4
-    mov bl, [ebp + eax + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    mov bl, [ebp + eax + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     sub bl, 4
     jmp CheckCoords                     ; ESI already = array
 
@@ -258,7 +258,7 @@ CheckBoulderCoords:
 ; pret — where FillMemory advances hl — we bump ESI by the run length manually.
 ; ---------------------------------------------------------------------------
 DecodeRLEList:
-    mov byte [ebp + W_RLE_BYTE_COUNT], 0      ; count written bytes here
+    mov byte [ebp + wRLEByteCount], 0      ; count written bytes here
 .listLoop:
     mov al, [edi]
     cmp al, 0xFF
@@ -266,7 +266,7 @@ DecodeRLEList:
     mov [ebp + hRLEByteValue], al          ; byte value to be written
     inc edi
     movzx ebx, byte [edi]                     ; BX = run length (C), BH=0
-    add [ebp + W_RLE_BYTE_COUNT], bl          ; update total written bytes
+    add [ebp + wRLEByteCount], bl          ; update total written bytes
     mov al, [ebp + hRLEByteValue]
     call FillMemory                           ; write AL, BX times, at [ebp+ESI]
     add esi, ebx                              ; advance dest (port FillMemory keeps ESI)
@@ -274,7 +274,7 @@ DecodeRLEList:
     jmp .listLoop
 .endOfList:
     mov byte [ebp + esi], 0xFF                ; write final $ff
-    mov al, [ebp + W_RLE_BYTE_COUNT]
+    mov al, [ebp + wRLEByteCount]
     inc al                                    ; include sentinel in the count
     ret
 
@@ -299,7 +299,7 @@ SetSpriteMovementBytesToFF:
 ; ---------------------------------------------------------------------------
 GetSpriteMovementByte1Pointer:
     movzx esi, byte [ebp + hCurrentSpriteOffset]
-    add esi, W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1
+    add esi, wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1
     ret
 
 ; ---------------------------------------------------------------------------

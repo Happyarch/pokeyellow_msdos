@@ -92,10 +92,10 @@ SCREEN_W_TILES  equ 20     ; SCREEN_WIDTH in tile units
 ; Message box geometry (data/text_boxes.asm: MESSAGE_BOX entry = 0,12,19,17)
 ; Top-left coord(0,12), lower-right coord(19,17): width=20, height=6,
 ; interior width=18, interior height=4 (B=4, C=18 for TextBoxBorder).
-MSG_BOX_ESI     equ W_TILEMAP + 12 * SCREEN_W_TILES   ; tile buf at (0,12)
+MSG_BOX_ESI     equ wTileMap + 12 * SCREEN_W_TILES   ; tile buf at (0,12)
 MSG_BOX_HEIGHT  equ 4      ; interior rows (B)
 MSG_BOX_WIDTH   equ 18     ; interior columns (C)
-MSG_TEXT_EBX    equ W_TILEMAP + 14 * SCREEN_W_TILES + 1  ; cursor at (1,14)
+MSG_TEXT_EBX    equ wTileMap + 14 * SCREEN_W_TILES + 1  ; cursor at (1,14)
 
 ; Box-drawing tile codes (constants/charmap.asm $79-$7F)
 BOX_TL   equ 0x79
@@ -178,7 +178,7 @@ align 4
 ; One-byte sentinel used by CHAR_DONE to signal TX_END to TextCommandProcessor
 done_sentinel: db TX_END
 
-; Runtime row stride (tiles per W_TILEMAP row) for the ONE text engine. Default 20
+; Runtime row stride (tiles per wTileMap row) for the ONE text engine. Default 20
 ; (the GB/overworld screen). The battle layout projects the GB viewport into the
 ; 40-wide full-screen canvas, so it sets this to 40 — there is no separate
 ; "wide" engine (see docs/current_plan_battle_pret_alignment.md Stage 0.5).
@@ -186,9 +186,9 @@ align 4
 text_row_stride: dd 20
 ; <LINE> ($4F) target tile-buffer offset (the box's 2nd text line). Default = the
 ; overworld message box (1,16); the battle box sets its own (PrintBattleText).
-text_line2:      dd (W_TILEMAP + 16 * SCREEN_W_TILES + 1)
+text_line2:      dd (wTileMap + 16 * SCREEN_W_TILES + 1)
 ; <PROMPT> ($58) display hook (0 = overworld window scroll via manual_text_scroll).
-; The battle path installs a routine that draws the ▼ at text_arrow_pos in W_TILEMAP,
+; The battle path installs a routine that draws the ▼ at text_arrow_pos in wTileMap,
 ; waits for A/B, and erases it. text_arrow_pos = that ▼ tile-buffer offset.
 text_prompt_hook: dd 0
 text_arrow_pos:   dd 0
@@ -209,12 +209,12 @@ global g_dex_flavor_active
 g_dex_flavor_active: db 0
 ; ▼ advance arrow position for the full-page pokédex window: pret ldcoord_a 18,16
 POKEDEX_ARROW_TILEMAP_OFFSET equ 16 * TILEMAP_W + 18
-; …and the same (18,16) in the stride-20 W_TILEMAP scratch — where pret's
+; …and the same (18,16) in the stride-20 wTileMap scratch — where pret's
 ; PageChar actually writes it (`ld a,'▼' / ldcoord_a 18,16` into wTileMap) and
 ; WaitForTextScrollButtonPress blinks it. The port used to place the arrow ONLY
 ; in the GB_TILEMAP1 window copy, so the compared scratch byte read ' ' while
 ; the screen showed a ▼ — caught by the pokedex_entry golden (F-14 class).
-POKEDEX_ARROW_SCRATCH_OFFSET equ W_TILEMAP + 16 * SCREEN_W_TILES + 18
+POKEDEX_ARROW_SCRATCH_OFFSET equ wTileMap + 16 * SCREEN_W_TILES + 18
 
 ; ---------------------------------------------------------------------------
 ; .text
@@ -370,7 +370,7 @@ TextBoxBorder:
 ; Same dispatch <PROMPT> already uses (.handle_prompt): [text_prompt_hook] = 0 is
 ; the overworld display (manual_text_scroll hijacks the window layer to show the
 ; dialog rows); non-zero is the owning screen's own wait (battle: BattlePromptWait,
-; which blinks the ▼ at [text_arrow_pos] in W_TILEMAP). Calling manual_text_scroll
+; which blinks the ▼ at [text_arrow_pos] in wTileMap). Calling manual_text_scroll
 ; unconditionally opened the overworld dialog window on top of the battle screen.
 ; All registers preserved.
 ; ---------------------------------------------------------------------------
@@ -400,7 +400,7 @@ manual_text_scroll:
     ; wTileMap rows: 20 tiles wide (SCREEN_W_TILES).
     ; GB_TILEMAP1 rows: 32 tiles wide (TILEMAP_W) — pad cols 20-31 with TILE_SPC.
     mov ecx, 6
-    lea esi, [ebp + W_TILEMAP + 12 * SCREEN_W_TILES]
+    lea esi, [ebp + wTileMap + 12 * SCREEN_W_TILES]
     lea edi, [ebp + GB_TILEMAP1]
 .copy_row:
     push ecx
@@ -461,7 +461,7 @@ manual_text_scroll:
 
 ; --- pokédex flavor page-break (<PAGE>): full-page window, no dialog hijack ---
 .dex_flavor_page:
-    ; The ▼ is already in the W_TILEMAP scratch at (18,16) — .handle_page wrote
+    ; The ▼ is already in the wTileMap scratch at (18,16) — .handle_page wrote
     ; it there as pret's PageChar does — so the full-page mirror carries it into
     ; the window. The wait then BLINKS the scratch cell (pret: ManualTextScroll →
     ; WaitForTextScrollButtonPress blinking hlcoord 18,16 of wTileMap) and
@@ -495,7 +495,7 @@ manual_text_scroll:
 ; ---------------------------------------------------------------------------
 ; scroll_text_up — scroll tile rows 14-16 up one row and clear row 16 interior.
 ;
-; Copies W_TILEMAP rows 14,15,16 → rows 13,14,15 (60 bytes), then clears
+; Copies wTileMap rows 14,15,16 → rows 13,14,15 (60 bytes), then clears
 ; the 18-column interior of row 16 with TILE_SPC.
 ; Called TWICE in succession (by handle_cont and handle_scroll_cont) to move
 ; the bottom text line from row 16 to the top text position row 14:
@@ -503,7 +503,7 @@ manual_text_scroll:
 ;   call 2: row16(blank)→row15, row15(old16)→row14, row14(old15)→row13; clear row16
 ;   net result: old row16 is now at row14, rows 15-16 are blank.
 ; Pret ref: home/text.asm:ScrollTextUpOneLine (called twice per _ContText).
-; Syncs W_TILEMAP to GB_TILEMAP1 and delays 2 frames per call so the
+; Syncs wTileMap to GB_TILEMAP1 and delays 2 frames per call so the
 ; scroll is visible in the window layer.
 ; All registers preserved.
 ; ---------------------------------------------------------------------------
@@ -551,9 +551,9 @@ scroll_text_up:
     ret
 
 ; ---------------------------------------------------------------------------
-; sync_dialog_window — mirror W_TILEMAP dialog rows to the window tilemap.
+; sync_dialog_window — mirror wTileMap dialog rows to the window tilemap.
 ;
-; Copies W_TILEMAP rows 12-17 (6 × 20 tiles) into GB_TILEMAP1 rows 0-5
+; Copies wTileMap rows 12-17 (6 × 20 tiles) into GB_TILEMAP1 rows 0-5
 ; (32-tile stride), padding cols 20-31 with TILE_SPC.
 ; Called from PrintText (after TextBoxBorder, before first character) and from
 ; PrintLetterDelay (before the delay frames) so each character becomes visible
@@ -570,7 +570,7 @@ sync_dialog_window:
     jne .full_page                       ; pokédex flavor: mirror the whole page
     ; A full-takeover menu (g_bg_whiteout=1) owns GB_TILEMAP1 rows 0-5 for its own
     ; windows (e.g. the party-menu panel). The overworld dialog's char-reveal mirror
-    ; must NOT paint the dialog rows (W_TILEMAP 12-17) over that panel. Only the
+    ; must NOT paint the dialog rows (wTileMap 12-17) over that panel. Only the
     ; map-overlay dialog (g_bg_whiteout=0) wants this copy. Without the gate, a stray
     ; PrintText/PrintLetterDelay during such a menu (hWY left != RENDER_H by the
     ; menu's own set_single_window) duplicates the menu's message box into rows 0-5.
@@ -580,7 +580,7 @@ sync_dialog_window:
     push esi
     push edi
     mov ecx, 6                            ; 6 dialog rows (rows 12-17)
-    lea esi, [ebp + MSG_BOX_ESI]          ; W_TILEMAP + 12*SCREEN_W_TILES
+    lea esi, [ebp + MSG_BOX_ESI]          ; wTileMap + 12*SCREEN_W_TILES
     lea edi, [ebp + GB_TILEMAP1]
 .sdw_row:
     push ecx
@@ -622,7 +622,7 @@ dex_flavor_full_mirror:
 .dffm_row:
     mov esi, ebx
     imul esi, esi, SCREEN_W_TILES
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                           ; ×32
     lea edi, [ebp + edi + GB_TILEMAP1]
@@ -793,7 +793,7 @@ PlaceNextChar:
     push edx
     push edi
     mov edx, 7                       ; 7 rows
-    lea edi, [ebp + W_TILEMAP + 10 * SCREEN_W_TILES + 1]
+    lea edi, [ebp + wTileMap + 10 * SCREEN_W_TILES + 1]
 .page_clear_row:
     push edi
     mov al, TILE_SPC
@@ -818,7 +818,7 @@ PlaceNextChar:
     pop ecx
     ; re-home cursor at coord(1,11) (pret: pop hl / hlcoord 1,11 / push hl)
     pop esi
-    mov esi, W_TILEMAP + 11 * SCREEN_W_TILES + 1
+    mov esi, wTileMap + 11 * SCREEN_W_TILES + 1
     push esi
     jmp .advance
 
@@ -996,7 +996,7 @@ PlaceNextChar:
     ; <PROMPT> ($58): pret PromptText — draw ▼, wait for A/B, erase, then TERMINATE
     ; the text box (PromptText falls through to DoneText). The display context is
     ; [text_prompt_hook]: 0 = overworld window scroll; non-zero = battle routine that
-    ; draws the ▼ at text_arrow_pos in W_TILEMAP, waits, and erases it.
+    ; draws the ▼ at text_arrow_pos in wTileMap, waits, and erases it.
     mov eax, [text_prompt_hook]
     test eax, eax
     jz .prompt_overworld
@@ -1244,7 +1244,7 @@ TextCommandProcessor:
 ;     home/text.asm:TextCommand_LOW, `bccoord 1, 16`.
 ;
 ;     [text_line2] IS THAT COORDINATE, and this was the one site in this file
-;     that did not read it. It hardcoded `W_TILEMAP + 16 * SCREEN_W_TILES + 1`
+;     that did not read it. It hardcoded `wTileMap + 16 * SCREEN_W_TILES + 1`
 ;     — pret's GB offset used as a raw flat index into the port's 40-wide
 ;     tilemap — so a text_low stream printed its second line 11 rows above the
 ;     box, at canvas (row 8, col 1), while its first line was placed correctly.
@@ -1267,7 +1267,7 @@ TextCommandProcessor:
     ; [text_prompt_hook] dispatch so it lands on the ACTIVE msgbox projection.
     ; manual_text_scroll is the overworld display specifically — it writes the
     ; arrow into GB_TILEMAP1 and hijacks the dialog WINDOW — so on the battle
-    ; canvas (msgbox_centered, no window, box drawn straight into W_TILEMAP) it
+    ; canvas (msgbox_centered, no window, box drawn straight into wTileMap) it
     ; put the arrow in a buffer nothing on screen reads and opened the overworld
     ; dialog window over the battle. That is the same defect text_pause's own
     ; header records; it was fixed for <PROMPT>/<CONT>/<PARA> and this command
@@ -1324,7 +1324,7 @@ TextCommandProcessor:
 ;     2nd text line. Pret ref: home/text.asm:TextCommand_SCROLL.
 ;
 ;     Same one-operand correction as .cmd_low above, and for the same reason:
-;     the hardcoded `W_TILEMAP + 16 * SCREEN_W_TILES + 1` is pret's GB offset
+;     the hardcoded `wTileMap + 16 * SCREEN_W_TILES + 1` is pret's GB offset
 ;     used as a raw flat index into the port's 40-wide tilemap. [text_line2] is
 ;     that coordinate, republished per projection by PrintText.
 ;
@@ -1502,7 +1502,7 @@ msgbox_dialog:
     dd MSG_BOX_WIDTH            ; MB_BOX_W        — 18 interior columns
     dd MSG_BOX_HEIGHT           ; MB_BOX_H        — 4 interior rows
     dd MSG_TEXT_EBX             ; MB_LINE1        — (1,14)
-    dd W_TILEMAP + 16 * SCREEN_W_TILES + 1  ; MB_LINE2 — <LINE> at (1,16)
+    dd wTileMap + 16 * SCREEN_W_TILES + 1  ; MB_LINE2 — <LINE> at (1,16)
     dd 0                        ; MB_ARROW        — no ▼ of its own
     dd 0                        ; MB_PROMPT       — caller waits (manual_text_scroll)
     dd 87                       ; MB_WIN_WX

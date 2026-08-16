@@ -49,7 +49,7 @@ section .text
 ; ---------------------------------------------------------------------------
 publish_splash_oam:
     pushad
-    mov esi, W_SHADOW_OAM                 ; canonical Y,X,tile,attr records
+    mov esi, wShadowOAM                 ; canonical Y,X,tile,attr records
     mov ecx, 40                           ; all 40 OBJ slots
     mov eax, UI_SPLASH_COL * 8            ; projection X offset (80)
     mov ebx, UI_SPLASH_ROW * 8            ; projection Y offset (24)
@@ -94,11 +94,11 @@ LoadShootingStarGraphics:
     call CopyVideoData
     ; prime the logo OAM (24..) and the shooting-star OAM (0..) — flat -> GB shadow OAM
     mov esi, GameFreakLogoOAMData
-    lea edi, [ebp + W_SHADOW_OAM + 24 * 4] ; wShadowOAMSprite24
+    lea edi, [ebp + wShadowOAM + 24 * 4] ; wShadowOAMSprite24
     mov ecx, GameFreakLogoOAMDataEnd - GameFreakLogoOAMData
     rep movsb
     mov esi, GameFreakShootingStarOAMData
-    lea edi, [ebp + W_SHADOW_OAM]
+    lea edi, [ebp + wShadowOAM]
     mov ecx, GameFreakShootingStarOAMDataEnd - GameFreakShootingStarOAMData
     rep movsb
     ret
@@ -118,7 +118,7 @@ AnimateShootingStar:
     mov al, SFX_SHOOTING_STAR
     call PlaySound
     ; --- big star: move down (+4 Y) and left (-4 X) until Y wraps to $a0 ---
-    mov esi, W_SHADOW_OAM                  ; ld hl, wShadowOAM
+    mov esi, wShadowOAM                  ; ld hl, wShadowOAM
     mov bh, 0xA0                           ; b = target Y ($a0)
     mov bl, 4                              ; c = 4 OBJ entries
 .bigStarLoop:
@@ -147,7 +147,7 @@ AnimateShootingStar:
     cmp al, bh                             ; cp b ($a0)
     jne .bigStarLoop                       ; Y != $a0 → keep going
     ; --- clear the 4 big-star OBJ (park off the bottom) ---
-    mov esi, W_SHADOW_OAM                  ; wShadowOAMSprite00YCoord
+    mov esi, wShadowOAM                  ; wShadowOAMSprite00YCoord
     mov bl, 4
 .clearLoop:
     mov byte [ebp + esi], SCREEN_H + OAM_Y_OFS  ; 144 + 16 = 160
@@ -167,7 +167,7 @@ AnimateShootingStar:
     dec bh
     jnz .flashLoop
     ; --- prime 24 small-star OBJ (off-screen), from the SmallStarsOAM template ---
-    mov edx, W_SHADOW_OAM                  ; ld de, wShadowOAM (GB dest, advances)
+    mov edx, wShadowOAM                  ; ld de, wShadowOAM (GB dest, advances)
     mov eax, 24                            ; ld a, 24 (rep movsb leaves EAX untouched)
 .initSmall:
     mov esi, SmallStarsOAM                 ; flat template
@@ -186,7 +186,7 @@ AnimateShootingStar:
     add esi, 4
     push ebx                               ; push bc (wave count)
     push esi                               ; push hl (table ptr)
-    mov esi, W_SHADOW_OAM + 20 * 4         ; ld hl, wShadowOAMSprite20
+    mov esi, wShadowOAM + 20 * 4         ; ld hl, wShadowOAMSprite20
     mov bl, 4                              ; ld c, 4 (4 stars per wave)
 .waveInner:
     mov al, [edx]                          ; a = [de] (Y coord, flat)
@@ -218,8 +218,8 @@ AnimateShootingStar:
     call MoveDownSmallStars                ; steps them down; CF = skip
     pushfd                                 ; push af (save the skip flag)
     ; shift the on-screen entries down one slot (GB->GB, real CopyData)
-    mov esi, W_SHADOW_OAM + 4 * 4          ; ld hl, wShadowOAMSprite04
-    mov edx, W_SHADOW_OAM                  ; ld de, wShadowOAM
+    mov esi, wShadowOAM + 4 * 4          ; ld hl, wShadowOAMSprite04
+    mov edx, wShadowOAM                  ; ld de, wShadowOAM
     mov bx, OAM_ENTRY_SIZE * 20                  ; ld bc, OBJ_SIZE * 20
     call CopyData
     popfd                                  ; pop af
@@ -244,7 +244,7 @@ global MoveDownSmallStars
 MoveDownSmallStars:
     mov bh, 8                             ; ld b, 8
 .loop:
-    mov esi, W_SHADOW_OAM + 23 * 4        ; ld hl, wShadowOAMSprite23
+    mov esi, wShadowOAM + 23 * 4        ; ld hl, wShadowOAMSprite23
     movzx eax, byte [ebp + wMoveDownSmallStarsOAMCount]
     mov bl, al                            ; ld c, a (entries to step; always >= 6 at call sites)
 .innerLoop:

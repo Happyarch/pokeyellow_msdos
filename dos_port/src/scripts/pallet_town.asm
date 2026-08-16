@@ -75,10 +75,10 @@ EXCLAMATION_BUBBLE                     equ 0
 
 wSavedCoordIndex                       equ 0xCF0D
 wOakWalkedToPlayer                     equ 0xCF0E
-wSprite01StateData1MovementStatus      equ W_SPRITE_STATE_DATA_1 + 0x10 + SPRITESTATEDATA1_MOVEMENTSTATUS
-wSprite01StateData1FacingDirection     equ W_SPRITE_STATE_DATA_1 + 0x10 + SPRITESTATEDATA1_FACINGDIRECTION
-wSprite01StateData2MapY                equ W_SPRITE_STATE_DATA_2 + 0x10 + SPRITESTATEDATA2_MAPY
-wSprite01StateData2MapX                equ W_SPRITE_STATE_DATA_2 + 0x10 + SPRITESTATEDATA2_MAPX
+wSprite01StateData1MovementStatus      equ wSpriteStateData1 + 0x10 + SPRITESTATEDATA1_MOVEMENTSTATUS
+wSprite01StateData1FacingDirection     equ wSpriteStateData1 + 0x10 + SPRITESTATEDATA1_FACINGDIRECTION
+wSprite01StateData2MapY                equ wSpriteStateData2 + 0x10 + SPRITESTATEDATA2_MAPY
+wSprite01StateData2MapX                equ wSpriteStateData2 + 0x10 + SPRITESTATEDATA2_MAPX
 
 ; ---------------------------------------------------------------------------
 section .data

@@ -7,7 +7,7 @@
 ; RE-TRANSLATION — prior draft (dos_port/src/engine/battle/move_effects/recoil.asm)
 ; failed audit:
 ;   1. hand-computed HP-bar tile coords via a nonexistent `wTileMap` symbol with a
-;      20-wide stride (port tilemap is `W_TILEMAP`, 40 wide) — wrong address, wrong math.
+;      20-wide stride (port tilemap is `wTileMap`, 40 wide) — wrong address, wrong math.
 ;   2. externed `predef_UpdateHPBar2`, which is not linked anywhere (link-time undefined
 ;      reference).
 ; Fix: per docs/move_translation_divergence.md §4, the HP-bar redraw is the shared

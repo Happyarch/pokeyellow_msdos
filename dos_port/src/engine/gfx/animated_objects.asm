@@ -54,7 +54,7 @@ section .text
 ; ClearObjectAnimationBuffers — zero the whole animated-object WRAM block.
 ; ---------------------------------------------------------------------------
 ClearObjectAnimationBuffers:
-    mov esi, W_ANIMATED_OBJECTS_DATA          ; ld hl, wAnimatedObjectsData
+    mov esi, wAnimatedObjectsData          ; ld hl, wAnimatedObjectsData
     mov bx, W_ANIMATED_OBJECTS_DATA_SIZE      ; ld bc, End - Data
     xor al, al                                ; xor a → fill value 0
     call FillMemory                           ; FillMemory: ESI=dst, BX=count, AL=val
@@ -85,9 +85,9 @@ RunObjectAnimations:
     jnz .loop                                 ; jr nz, .loop
     ; zero the shadow-OAM tail from the last object's cursor to the end
     movzx esi, byte [ebp + wCurrentAnimatedObjectOAMBufferOffset] ; ld a,[..]/ld l,a
-    add esi, W_SHADOW_OAM                     ; ld h, HIGH(wShadowOAM)
+    add esi, wShadowOAM                     ; ld h, HIGH(wShadowOAM)
 .deinit_unused_oam_loop:
-    cmp esi, W_SHADOW_OAM_END                 ; cp LOW(wShadowOAMEnd)
+    cmp esi, wShadowOAMEnd                 ; cp LOW(wShadowOAMEnd)
     jae .quit                                 ; jr nc, .quit
     mov byte [ebp + esi], 0                   ; xor a / ld [hli], a
     inc esi
@@ -228,7 +228,7 @@ UpdateCurrentAnimatedObjectFrame:
     movzx esi, word [ebp + esi]               ; ld a,[hli]/ld h,[hl]/ld l,a → OAM template ptr
     push ebx                                  ; push bc  (save struct base)
     movzx edx, byte [ebp + wCurrentAnimatedObjectOAMBufferOffset] ; ld a,[..]/ld e,a
-    add edx, W_SHADOW_OAM                     ; ld d, HIGH(wShadowOAM)  → shadow-OAM cursor
+    add edx, wShadowOAM                     ; ld d, HIGH(wShadowOAM)  → shadow-OAM cursor
     movzx ecx, byte [ebp + esi]               ; ld a,[hli]/ld c,a  (template OBJ count)
     inc esi
 .loop:
@@ -267,7 +267,7 @@ UpdateCurrentAnimatedObjectFrame:
     inc edx                                   ; inc de
     mov al, dl                                ; ld a, e
     mov [ebp + wCurrentAnimatedObjectOAMBufferOffset], al ; ld [..], a  (save cursor low byte)
-    cmp al, W_SHADOW_OAM_END & 0xff           ; cp LOW(wShadowOAMEnd)
+    cmp al, wShadowOAMEnd & 0xff           ; cp LOW(wShadowOAMEnd)
     jae .oam_is_full                          ; jr nc, .oam_is_full
     dec ecx                                   ; dec c
     jnz .loop                                 ; jr nz, .loop

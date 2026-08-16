@@ -42,7 +42,7 @@
 ;
 ; USE/TOSS sub-menu rendering: pret draws it with DisplayTextBoxID
 ; (USE_TOSS_MENU_TEMPLATE) — the S2 canvas dispatcher, which lands the box at
-; the UI_*-projected 40-wide W_TILEMAP coords. In the overworld the canvas is
+; the UI_*-projected 40-wide wTileMap coords. In the overworld the canvas is
 ; not the screen, so ut_show_window bridges the box rect to a window
 ; descriptor over the live map (same mechanism as every other overworld box).
 ;
@@ -193,7 +193,7 @@ wTrainerInfoTextBoxWidthPlus1     equ 0xCD3D
 wTrainerInfoTextBoxWidth          equ 0xCD3E
 wTrainerInfoTextBoxNextRowOffset  equ 0xCD3F
 TCSCR_W  equ 20                      ; stride-20 scratch (pret SCREEN_WIDTH)
-%define TC_HL(X,Y)  (W_TILEMAP + (Y) * TCSCR_W + (X))
+%define TC_HL(X,Y)  (wTileMap + (Y) * TCSCR_W + (X))
 ; number-print flag bytes (constants/gfx_constants.asm bit positions)
 NUM_MONEY_SIGN     equ 1 << BIT_MONEY_SIGN
 NUM_LEFT_ALIGN     equ 1 << BIT_LEFT_ALIGN
@@ -762,8 +762,8 @@ StartMenu_TrainerInfo:
 ;   (assets/badge_tiles.inc, package B).
 ;
 ; PORT MODEL (CLAUDE.md + options.asm/pokedex_entry.asm precedent):
-;   * Full-takeover screen: drawn at pret GB coords into the stride-20 W_TILEMAP
-;     scratch (text_row_stride = 20; TC_HL(X,Y)=W_TILEMAP+Y*20+X), then composited
+;   * Full-takeover screen: drawn at pret GB coords into the stride-20 wTileMap
+;     scratch (text_row_stride = 20; TC_HL(X,Y)=wTileMap+Y*20+X), then composited
 ;     as one full-screen window over a whited-out overworld (options.asm model).
 ;   * DisableLCD/EnableLCD bracket the VRAM tile loads (faithful); the port also
 ;     sets g_tilecache_dirty so the decoded-tile cache refreshes.
@@ -1101,7 +1101,7 @@ trainer_card_teardown:
 tc_mirror:
     pushad
     mov ecx, 18
-    lea esi, [ebp + W_TILEMAP]
+    lea esi, [ebp + wTileMap]
     lea edi, [ebp + GB_TILEMAP1]
 .row:
     push ecx
@@ -1237,10 +1237,10 @@ StartMenu_Item:
     ; erase the list-menu cursor: pret blanks coords (5,4)/(5,6)/(5,8)/(5,10)
     ; = list-box-relative (1,2)/(1,4)/(1,6)/(1,8) in the stride-20 scratch
     mov al, TILE_SPC
-    mov [ebp + W_TILEMAP + 2 * 20 + 1], al
-    mov [ebp + W_TILEMAP + 4 * 20 + 1], al
-    mov [ebp + W_TILEMAP + 6 * 20 + 1], al
-    mov [ebp + W_TILEMAP + 8 * 20 + 1], al
+    mov [ebp + wTileMap + 2 * 20 + 1], al
+    mov [ebp + wTileMap + 4 * 20 + 1], al
+    mov [ebp + wTileMap + 6 * 20 + 1], al
+    mov [ebp + wTileMap + 8 * 20 + 1], al
     call PlaceUnfilledArrowMenuCursor
     call list_mirror                    ; port: push the edits to the list window
     xor al, al
@@ -1385,7 +1385,7 @@ ut_mirror:
 .row:
     mov esi, ebx
     imul esi, esi, SCREEN_TILES_W
-    lea esi, [ebp + esi + W_TILEMAP + UT_ROW * SCREEN_TILES_W + UT_COL]
+    lea esi, [ebp + esi + wTileMap + UT_ROW * SCREEN_TILES_W + UT_COL]
     mov edi, ebx
     shl edi, 5
     lea edi, [ebp + edi + GB_TILEMAP0 + UT_SROW * 32]
@@ -1497,7 +1497,7 @@ fm_mirror:
     mov esi, ebx
     imul esi, esi, SCREEN_TILES_W
     add esi, edx
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5
     lea edi, [ebp + edi + GB_TILEMAP0]
@@ -1521,7 +1521,7 @@ fm_drop_window:
 ; (stride-20 scratch; positions are (0,1) + 2 rows apart). Clobbers ESI/ECX/AL.
 ; ---------------------------------------------------------------------------
 ErasePartyMenuCursors:
-    mov esi, W_TILEMAP + 1 * 20         ; hlcoord 0,1
+    mov esi, wTileMap + 1 * 20         ; hlcoord 0,1
     mov ecx, 6                          ; ld a,6 — 6 menu cursor positions
 .loop:
     mov byte [ebp + esi], TILE_SPC      ; ld [hl],' '
@@ -1566,14 +1566,14 @@ SwitchPartyMon_ClearGfx:
     movzx eax, al                       ; AL = party slot
     push eax
     imul edi, eax, 2 * 20               ; hlcoord 0,0 + AddNTimes(2*SCREEN_WIDTH)
-    lea edi, [ebp + edi + W_TILEMAP]
+    lea edi, [ebp + edi + wTileMap]
     mov ecx, 2 * 20                     ; ld c,SCREEN_WIDTH*2
     mov al, TILE_SPC                    ; ld a,' '
     rep stosb                           ; .clearMonBGLoop
     pop eax                             ; pop af — the slot again
     ; ld hl, wShadowOAMSprite00YCoord / ld bc, OBJ_SIZE*4 / call AddNTimes
     imul edi, eax, OBJ_SIZE * 4         ; 4 OAM entries per mon icon
-    add edi, W_SHADOW_OAM               ; wShadowOAMSprite00YCoord
+    add edi, wShadowOAM               ; wShadowOAMSprite00YCoord
     mov ecx, 4                          ; ld de,OBJ_SIZE / ld c,e
 .clearMonOAMLoop:
     mov byte [ebp + edi], OBJ_PARK_Y    ; ld [hl], SCREEN_HEIGHT_PX + OAM_Y_OFS
@@ -1756,7 +1756,7 @@ RunTrainerCardTest:
     call ClearSprites
     mov byte [ebp + wUpdateSpritesEnabled], 0
     ; blank the stride-20 scratch (18 rows × 20)
-    mov esi, W_TILEMAP
+    mov esi, wTileMap
     mov bx, 18 * TCSCR_W
     mov al, 0x7F
     call FillMemory

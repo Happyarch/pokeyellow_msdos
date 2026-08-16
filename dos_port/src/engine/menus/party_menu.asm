@@ -11,7 +11,7 @@
 ; message in the bottom box.
 ;
 ; Port model (window compositor):
-; - The screen is pret's 20×18 stride-20 W_TILEMAP scratch, mirrored to
+; - The screen is pret's 20×18 stride-20 wTileMap scratch, mirrored to
 ;   GB_TILEMAP1 rows 0-17 by PartyMenuMirror — the hAutoBGTransferEnabled
 ;   analog (vblank.asm's do_bg_transfer is canvas-scoped, stride 40, so it
 ;   can't serve this scratch; same explicit-mirror pattern as S3's
@@ -170,12 +170,12 @@ PartyMenuMessagePointers:
 global msgbox_party
 msgbox_party:
     dd GBSCR_W                              ; MB_STRIDE       — the stride-20 scratch
-    dd W_TILEMAP + 12 * GBSCR_W             ; MB_BOX_OFS      — (0,12), as pret
+    dd wTileMap + 12 * GBSCR_W             ; MB_BOX_OFS      — (0,12), as pret
     dd 18                                   ; MB_BOX_W        — 18 interior columns
     dd 4                                    ; MB_BOX_H        — 4 interior rows
-    dd W_TILEMAP + 14 * GBSCR_W + 1         ; MB_LINE1        — pret bccoord 1,14
-    dd W_TILEMAP + 16 * GBSCR_W + 1         ; MB_LINE2        — <LINE> at (1,16)
-    dd W_TILEMAP + 16 * GBSCR_W + 18        ; MB_ARROW        — ▼ at (18,16)
+    dd wTileMap + 14 * GBSCR_W + 1         ; MB_LINE1        — pret bccoord 1,14
+    dd wTileMap + 16 * GBSCR_W + 1         ; MB_LINE2        — <LINE> at (1,16)
+    dd wTileMap + 16 * GBSCR_W + 18        ; MB_ARROW        — ▼ at (18,16)
     dd PartyMenuPromptWait                  ; MB_PROMPT       — our own wait
     dd 0                                    ; MB_WIN_WX       ] no window: the box is
     dd 0                                    ; MB_WIN_WY       ] drawn in the scratch
@@ -202,8 +202,8 @@ DrawPartyMenu_:
     ; call ClearScreen — port: title.asm's ClearScreen is canvas-scoped (and
     ; re-arms the canvas auto-transfer mid-draw); the party screen is the
     ; stride-20 scratch, whose 20×18 rows are the contiguous 360 bytes at
-    ; W_TILEMAP — blanked directly.
-    mov esi, W_TILEMAP
+    ; wTileMap — blanked directly.
+    mov esi, wTileMap
     mov bx, 18 * GBSCR_W
     mov al, TILE_SPC
     call FillMemory
@@ -227,7 +227,7 @@ RedrawPartyMenu_:
     jz .printMessage                        ; jp z,.printMessage
     call ErasePartyMenuCursors
     ; farcall InitPartyMenuBlkPacket — TODO-HW: SGB palette BLK packet (Phase 5)
-    mov esi, W_TILEMAP + 0 * GBSCR_W + 3 ; hlcoord 3,0
+    mov esi, wTileMap + 0 * GBSCR_W + 3 ; hlcoord 3,0
     mov edx, wPartySpecies                  ; ld de,wPartySpecies
     xor al, al
     mov bl, al                              ; ld c,a
@@ -554,7 +554,7 @@ PartyMenuMirror:
     xor ebx, ebx
 .row:
     imul esi, ebx, GBSCR_W
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                              ; ×32 tilemap stride
     lea edi, [ebp + edi + GB_TILEMAP1]

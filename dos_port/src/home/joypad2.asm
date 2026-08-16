@@ -152,7 +152,7 @@ WaitForAPress:
     mov byte [ebp + H_DOWN_ARROW_COUNT1], 0      ; pret: xor a  / ldh [hDownArrowBlinkCount1]
     mov byte [ebp + H_DOWN_ARROW_COUNT2], 6      ; pret: ld a,6 / ldh [hDownArrowBlinkCount2]
 .wait:
-    mov esi, W_TILEMAP + ARROW_OFF               ; pret: hlcoord 18,16
+    mov esi, wTileMap + ARROW_OFF               ; pret: hlcoord 18,16
     call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
     call DelayFrame
     test byte [ebp + hJoyPressed], PAD_A | PAD_B

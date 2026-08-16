@@ -158,7 +158,7 @@ SlotMachine_SetFlags:
     test al, (1 << BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR)
     jnz .exit
     
-    mov al, byte [ebp + W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER]
+    mov al, byte [ebp + wSlotMachineAllowMatchesCounter]
     test al, al
     jnz .allowMatches
     
@@ -167,7 +167,7 @@ SlotMachine_SetFlags:
     jz .setAllowMatchesCounter
     
     mov bl, al
-    mov al, byte [ebp + W_SLOT_MACHINE_SEVEN_AND_BAR_MODE_CHANCE]
+    mov al, byte [ebp + wSlotMachineSevenAndBarModeChance]
     cmp bl, al
     jc .allowSevenAndBarMatches
     
@@ -184,7 +184,7 @@ SlotMachine_SetFlags:
     ret
 
 .setAllowMatchesCounter:
-    mov byte [ebp + W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER], 60
+    mov byte [ebp + wSlotMachineAllowMatchesCounter], 60
     ret
 
 .allowSevenAndBarMatches:
@@ -196,8 +196,8 @@ SlotMachine_SetFlags:
 ; Return whether wheel 1 and wheel 2's current positions allow a match in Z flag.
 ; -----------------------------------------------------------------------------
 SlotMachine_FindWheel1Wheel2Matches:
-    mov esi, W_SLOT_MACHINE_WHEEL1_BOTTOM_TILE
-    mov edi, W_SLOT_MACHINE_WHEEL2_BOTTOM_TILE
+    mov esi, wSlotMachineWheel1BottomTile
+    mov edi, wSlotMachineWheel2BottomTile
     
     ; bottom-bottom
     mov al, byte [ebp + edi]
@@ -304,27 +304,27 @@ SlotMachineTiles1End:
 ; SlotMachine_GetWheel3Tiles
 ; -----------------------------------------------------------------------------
 SlotMachine_GetWheel3Tiles:
-    mov edx, W_SLOT_MACHINE_WHEEL3_BOTTOM_TILE
+    mov edx, wSlotMachineWheel3BottomTile
     mov esi, SlotMachineWheel3
-    mov al, [ebp + W_SLOT_MACHINE_WHEEL3_OFFSET]
+    mov al, [ebp + wSlotMachineWheel3Offset]
     call SlotMachine_GetWheelTiles
 
 ; -----------------------------------------------------------------------------
 ; SlotMachine_GetWheel2Tiles
 ; -----------------------------------------------------------------------------
 SlotMachine_GetWheel2Tiles:
-    mov edx, W_SLOT_MACHINE_WHEEL2_BOTTOM_TILE
+    mov edx, wSlotMachineWheel2BottomTile
     mov esi, SlotMachineWheel2
-    mov al, [ebp + W_SLOT_MACHINE_WHEEL2_OFFSET]
+    mov al, [ebp + wSlotMachineWheel2Offset]
     call SlotMachine_GetWheelTiles
 
 ; -----------------------------------------------------------------------------
 ; SlotMachine_GetWheel1Tiles
 ; -----------------------------------------------------------------------------
 SlotMachine_GetWheel1Tiles:
-    mov edx, W_SLOT_MACHINE_WHEEL1_BOTTOM_TILE
+    mov edx, wSlotMachineWheel1BottomTile
     mov esi, SlotMachineWheel1
-    mov al, [ebp + W_SLOT_MACHINE_WHEEL1_OFFSET]
+    mov al, [ebp + wSlotMachineWheel1Offset]
 
 ; -----------------------------------------------------------------------------
 ; SlotMachine_GetWheelTiles
@@ -348,8 +348,8 @@ SlotMachine_GetWheelTiles:
 ; -----------------------------------------------------------------------------
 SlotMachine_AnimWheel1:
     mov ebx, SlotMachineWheel1
-    mov edx, W_SLOT_MACHINE_WHEEL1_OFFSET
-    mov esi, W_SHADOW_OAM
+    mov edx, wSlotMachineWheel1Offset
+    mov esi, wShadowOAM
     mov byte [ebp + wBaseCoordX], 0x30
     jmp SlotMachine_AnimWheel
 
@@ -358,8 +358,8 @@ SlotMachine_AnimWheel1:
 ; -----------------------------------------------------------------------------
 SlotMachine_AnimWheel2:
     mov ebx, SlotMachineWheel2
-    mov edx, W_SLOT_MACHINE_WHEEL2_OFFSET
-    mov esi, W_SHADOW_OAM + 12 * 4
+    mov edx, wSlotMachineWheel2Offset
+    mov esi, wShadowOAM + 12 * 4
     mov byte [ebp + wBaseCoordX], 0x50
     jmp SlotMachine_AnimWheel
 
@@ -368,8 +368,8 @@ SlotMachine_AnimWheel2:
 ; -----------------------------------------------------------------------------
 SlotMachine_AnimWheel3:
     mov ebx, SlotMachineWheel3
-    mov edx, W_SLOT_MACHINE_WHEEL3_OFFSET
-    mov esi, W_SHADOW_OAM + 24 * 4
+    mov edx, wSlotMachineWheel3Offset
+    mov esi, wShadowOAM + 24 * 4
     mov byte [ebp + wBaseCoordX], 0x70
 
 ; -----------------------------------------------------------------------------
@@ -471,7 +471,7 @@ SlotMachine_UpdateOneCoinBallTiles:
     ; than manufacture a fall-through edge. Expanding the one instruction here
     ; keeps the fall-through and lets the scanner see it; every other hlcoord in
     ; this file is mid-routine and unaffected.
-    mov esi, (6) * SCREEN_WIDTH + (3) + W_TILEMAP
+    mov esi, (6) * SCREEN_WIDTH + (3) + wTileMap
 
 ; -----------------------------------------------------------------------------
 ; SlotMachine_UpdateBallTiles
@@ -633,7 +633,7 @@ SymbolLinedUpSlotMachineText:
 ; SlotReward8Func
 ; -----------------------------------------------------------------------------
 SlotReward8Func:
-    mov esi, W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER
+    mov esi, wSlotMachineAllowMatchesCounter
     mov al, byte [ebp + esi]
     test al, al
     jz .skip
@@ -647,7 +647,7 @@ SlotReward8Func:
 ; SlotReward15Func
 ; -----------------------------------------------------------------------------
 SlotReward15Func:
-    mov esi, W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER
+    mov esi, wSlotMachineAllowMatchesCounter
     mov al, byte [ebp + esi]
     test al, al
     jz .skip
@@ -683,7 +683,7 @@ SlotReward300Func:
     jc .skip
     mov byte [ebp + wSlotMachineFlags], al
 .skip:
-    mov byte [ebp + W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER], al
+    mov byte [ebp + wSlotMachineAllowMatchesCounter], al
     mov bh, 0x14
     mov dx, 300
     ret
@@ -1193,7 +1193,7 @@ PromptUserToPlaySlots:
     mov esi, wStatusFlags5
     or byte [ebp + esi], (1 << BIT_NO_TEXT_DELAY)
     xor al, al
-    mov byte [ebp + W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER], al
+    mov byte [ebp + wSlotMachineAllowMatchesCounter], al
     mov esi, wStoppingWhichSlotMachineWheel
     mov bx, 0x14
     call FillMemory
@@ -1201,7 +1201,7 @@ PromptUserToPlaySlots:
     mov esi, wStatusFlags5
     and byte [ebp + esi], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF
     xor al, al
-    mov byte [ebp + W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER], al
+    mov byte [ebp + wSlotMachineAllowMatchesCounter], al
     call GBPalWhiteOutWithDelay3
     mov byte [ebp + wUpdateSpritesEnabled], 1
     call RunDefaultPaletteCommand

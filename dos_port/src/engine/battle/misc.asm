@@ -123,7 +123,7 @@ InitList:
     mov ebx, INIT_BAG_ITEM_LIST
     cmp al, bl
     jne .notBag
-    mov esi, W_NUM_BAG_ITEMS
+    mov esi, wNumBagItems
     mov edx, ItemNames
     mov ebx, ITEM_NAME
     mov al, bl

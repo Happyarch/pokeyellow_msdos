@@ -16,8 +16,8 @@
 ; DisplayNameRaterScreen has no caller yet (the Name Rater script is unported).
 ;
 ; PORT MODEL (full-screen takeover, same shape as options.asm / party_menu.asm):
-; - DisplayNamingScreen draws into the 20-wide stride-20 W_TILEMAP scratch
-;   (hlcoord X,Y = W_TILEMAP + Y*20 + X via the local HL(x,y) macro; GBSCR_W=20)
+; - DisplayNamingScreen draws into the 20-wide stride-20 wTileMap scratch
+;   (hlcoord X,Y = wTileMap + Y*20 + X via the local HL(x,y) macro; GBSCR_W=20)
 ;   — this is pret's OWN coordinate space (pret's hlcoord is always stride-20;
 ;   the port's 40-wide battle canvas doesn't apply here). One full-screen window
 ;   (naming_show_window) shows it, sourced from GB_TILEMAP1 rows 0-17 at the
@@ -100,7 +100,7 @@ extern Delay3                          ; src/home/palettes.asm — 3x DelayFrame
 extern PlaceMenuCursor                 ; home/window.asm
 extern EraseMenuCursor                 ; home/window.asm
 extern menu_item_step                  ; home/window.asm — cursor per-item row step
-extern text_row_stride                 ; text/text.asm — active W_TILEMAP row stride
+extern text_row_stride                 ; text/text.asm — active wTileMap row stride
 extern PlaySound                       ; home/audio.asm — a REAL body (the audio engine is
                                        ; live); the sound id it is handed is load-bearing
 extern set_single_window               ; ppu/ppu.asm
@@ -141,7 +141,7 @@ TILE_UNDERSCORE_RAISED equ 0x77
 GBSCR_W equ 20   ; pret SCREEN_WIDTH — stride of the naming screen's own stride-20 scratch
 
 ; hlcoord X,Y helper (stride-20 scratch)
-%define HL(X,Y)  (W_TILEMAP + (Y) * GBSCR_W + (X))
+%define HL(X,Y)  (wTileMap + (Y) * GBSCR_W + (X))
 
 ; assets/alphabets.inc — Tier-1 generated letter-grid blobs (gen_alphabets.py).
 ; %include-in-.data, same pattern as gfx/load_font.asm's font asset includes.
@@ -600,7 +600,7 @@ naming_mirror:
     xor ebx, ebx
 .row:
     imul esi, ebx, GBSCR_W
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                            ; x32 tilemap stride
     lea edi, [ebp + edi + GB_TILEMAP1]

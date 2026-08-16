@@ -16,7 +16,7 @@ extern GetPredefRegisters
 ; -----------------------------------------------------------------------------
 GetQuantityOfItemInBag:
     call GetPredefRegisters
-    mov esi, W_NUM_BAG_ITEMS
+    mov esi, wNumBagItems
 .loop:
     inc esi
     mov al, byte [ebp + esi]

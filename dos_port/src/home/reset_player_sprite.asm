@@ -44,9 +44,9 @@ ResetPlayerSpriteData:
     push ebx
     push esi
 
-    mov esi, W_SPRITE_STATE_DATA_1              ; ld hl, wSpriteStateData1
+    mov esi, wSpriteStateData1              ; ld hl, wSpriteStateData1
     call ResetPlayerSpriteData_ClearSpriteData
-    mov esi, W_SPRITE_STATE_DATA_2              ; ld hl, wSpriteStateData2
+    mov esi, wSpriteStateData2              ; ld hl, wSpriteStateData2
     call ResetPlayerSpriteData_ClearSpriteData
 
     mov byte [ebp + W_SPRITE_PLAYER_PICTURE_ID], 1        ; ld a,1; ld [..PictureID],a

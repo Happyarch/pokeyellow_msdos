@@ -373,7 +373,7 @@ DrawFrameBlock:
     cmp al, FRAMEBLOCKMODE_02
     jz .advanceFrameBlockDestAddr            ; skip delay and don't clean OAM buffer
 ; DEVIATION{class=projection; pret=engine/battle/animations.asm:DrawFrameBlock; behavior=before the per-frame-block delay the port publishes wShadowOAM to the renderer at the battle-frame origin (80,24) via PublishProjectedOAM, standing in for the GB's per-vblank OAM DMA of wShadowOAM to $FE00; evidence=the port has no hardware OAM DMA so the frame-block OAM the interpreter just wrote would never reach render_sprites otherwise, and (80,24) is the battle-frame projection origin per docs-ui_projection.md with offscreen entries hidden by g_obj_clip set at the MoveAnimation entry; lifetime=permanent, part of the battle-animation projection boundary}
-    mov esi, W_SHADOW_OAM                     ; ESI = canonical OAM (GB offset)
+    mov esi, wShadowOAM                     ; ESI = canonical OAM (GB offset)
     mov ecx, OAM_COUNT                        ; publish all 40 (cleared/offscreen hidden by g_obj_clip)
     mov eax, 80                               ; battle-frame origin X
     mov ebx, 24                               ; battle-frame origin Y
@@ -411,8 +411,8 @@ DrawFrameBlock:
     jz .resetFrameBlockDestAddr
     call AnimationCleanOAM
 .resetFrameBlockDestAddr:
-    mov byte [ebp + wFBDestAddr + 1], (W_SHADOW_OAM & 0xFF)    ; ld a,l / ld [wFBDestAddr+1],a
-    mov byte [ebp + wFBDestAddr], (W_SHADOW_OAM >> 8)          ; ld a,h / ld [wFBDestAddr],a
+    mov byte [ebp + wFBDestAddr + 1], (wShadowOAM & 0xFF)    ; ld a,l / ld [wFBDestAddr+1],a
+    mov byte [ebp + wFBDestAddr], (wShadowOAM >> 8)          ; ld a,h / ld [wFBDestAddr],a
     ret
 .advanceFrameBlockDestAddr:
     mov [ebp + wFBDestAddr + 1], dl          ; ld a,e / ld [wFBDestAddr+1],a
@@ -901,8 +901,8 @@ PlaySubanimation:
     call GetMoveSound
     call PlaySound
 .skipPlayingSound:
-    mov byte [ebp + wFBDestAddr + 1], (W_SHADOW_OAM & 0xFF)   ; wFBDestAddr = wShadowOAM (big-endian)
-    mov byte [ebp + wFBDestAddr], (W_SHADOW_OAM >> 8)
+    mov byte [ebp + wFBDestAddr + 1], (wShadowOAM & 0xFF)   ; wFBDestAddr = wShadowOAM (big-endian)
+    mov byte [ebp + wFBDestAddr], (wShadowOAM >> 8)
     mov esi, [wSubAnimSubEntryAddr32]        ; hl = subentry addr (flat)
 .loop:
     movzx ebx, byte [esi]                    ; ld c,[hl] — frame block ID; ld b,0
@@ -958,7 +958,7 @@ AnimationCleanOAM:
     call ClearSprites
     ; publish the now-zeroed shadow as the canonical OAM (the GB's next DMA).
     ; ECX = 0: no drawn entries, matching the spr_oam_valid ClearSprites just set.
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
     xor ecx, ecx
     mov eax, 80                              ; battle-frame projection origin
     mov ebx, 24
@@ -1406,7 +1406,7 @@ SetAnimationBGPalette:
 ;
 ; hAutoBGTransferEnabled is written verbatim. It is INERT in this port —
 ; do_bg_transfer was deleted from the DelayFrame pipeline (see the retirement
-; note in src/home/vblank.asm) and render_bg reads W_TILEMAP directly — so the
+; note in src/home/vblank.asm) and render_bg reads wTileMap directly — so the
 ; writes cost nothing and keep the routines byte-comparable against pret.
 ; ===========================================================================
 
@@ -1469,7 +1469,7 @@ InitMultipleObjectsOAM:
     xor al, al
     mov dl, al                               ; ld e, a
     mov [ebp + wBaseCoordX], al
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
 .loop:
     call BattleAnimWriteOAMEntry
     dec bl                                   ; 8-bit, as pret
@@ -1502,7 +1502,7 @@ AnimationSpiralBallsInward:
 .loop:
     push esi
     mov bl, 3
-    mov edx, W_SHADOW_OAM                    ; GB-space OAM cursor
+    mov edx, wShadowOAM                    ; GB-space OAM cursor
 .innerLoop:
     mov al, [esi]                            ; flat
     cmp al, 0xFF
@@ -1603,7 +1603,7 @@ _AnimationShootBallsUpward:
     call LoadMoveAnimationTiles
     pop ebx
     mov dh, 0x7A                             ; ball tile
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
     push ebx
     mov al, [ebp + wBaseCoordY]
     mov dl, al                               ; ld e, a
@@ -1618,7 +1618,7 @@ _AnimationShootBallsUpward:
     mov [ebp + wNumShootingBalls], al
 .loop:
     push ebx
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
 .innerLoop:
     mov al, [ebp + wBaseCoordY]
     add al, 8
@@ -1716,7 +1716,7 @@ AnimationWaterDropletsEverywhere:
 ; DEVIATION{class=projection; pret=engine/battle/animations.asm:_AnimationWaterDroplets; behavior=the port publishes wShadowOAM to the renderer at the battle-frame origin (80,24) via PublishProjectedOAM before the closing DelayFrame; evidence=the port has no hardware OAM DMA so the droplet OAM this routine writes would never reach render_sprites otherwise, exactly as DrawFrameBlock already documents, and offscreen entries stay hidden by the g_obj_clip rectangle MoveAnimation set on entry; lifetime=permanent, part of the battle-animation projection boundary}
 global _AnimationWaterDroplets
 _AnimationWaterDroplets:
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
 .loop:
     mov al, 1
     mov [ebp + wdef4], al
@@ -1789,7 +1789,7 @@ AnimationFallingObjects:
     call InitMultipleObjectsOAM
     call FallingObjects_InitXCoords
     call FallingObjects_InitMovementData
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
     mov byte [ebp + esi], 0
 .loop:
     mov esi, wFallingObjectsMovementData
@@ -1815,7 +1815,7 @@ AnimationFallingObjects:
     jnz .innerLoop
     call PublishBattleAnimOAM
     call Delay3
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
     mov al, [ebp + esi]                      ; Y of the top falling object
     cmp al, 104                              ; has it reached 104 yet?
     jnz .loop                                ; keep falling until it does
@@ -1824,7 +1824,7 @@ AnimationFallingObjects:
 ; Increases Y by 2 pixels and adjusts X and X-flip from the movement byte.
 ; In: EDX = byte offset of this object's OAM entry.
 FallingObjects_UpdateOAMEntry:
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
     add esi, edx
     mov al, 1
     mov [ebp + wdef4], al
@@ -1909,7 +1909,7 @@ FallingObjects_UpdateMovementByte:
     ret
 
 FallingObjects_InitXCoords:
-    mov esi, W_SHADOW_OAM + 1                ; wShadowOAMSprite00XCoord
+    mov esi, wShadowOAM + 1                ; wShadowOAMSprite00XCoord
     mov edx, FallingObjects_InitialXCoords   ; flat table
     mov al, [ebp + wNumFallingObjects]
     mov bl, al
@@ -2347,8 +2347,8 @@ DoPoofSpecialEffects:
 
 global DoGrowlSpecialEffects
 DoGrowlSpecialEffects:
-    mov esi, W_SHADOW_OAM
-    mov edx, W_SHADOW_OAM + OBJ_SIZE * 4     ; wShadowOAMSprite04
+    mov esi, wShadowOAM
+    mov edx, wShadowOAM + OBJ_SIZE * 4     ; wShadowOAMSprite04
     mov ebx, OBJ_SIZE * 4
     call CopyData                            ; copy the musical note graphic
     mov al, [ebp + wSubAnimCounter]
@@ -2550,7 +2550,7 @@ ShakeEnemyHUD_WritePlayerMonPicOAM:
     mov [ebp + wBaseCoordX], al
     mov al, 0x30
     mov [ebp + wBaseCoordY], al
-    mov esi, W_SHADOW_OAM
+    mov esi, wShadowOAM
     mov dh, 0                                ; ld d, 0 — tile
     mov bl, 7                                ; ld c, 7 — columns
 .loop:
@@ -2579,7 +2579,7 @@ ShakeEnemyHUD_WritePlayerMonPicOAM:
 ; pret label; preserves every register.
 PublishBattleAnimOAM:
     pushad
-    mov esi, W_SHADOW_OAM                    ; canonical OAM (GB offset)
+    mov esi, wShadowOAM                    ; canonical OAM (GB offset)
     mov ecx, OAM_COUNT                       ; publish all 40; offscreen hidden by g_obj_clip
     mov eax, 80                              ; battle-frame origin X
     mov ebx, 24                              ; battle-frame origin Y
@@ -3066,7 +3066,7 @@ AnimationHideEnemyMonPic:
 
 ; ---------------------------------------------------------------------------
 ; AnimationHideMonPic / ClearMonPicFromTileMap — pret animations.asm.
-; DEVIATION{class=projection; pret=engine/battle/animations.asm:ClearMonPicFromTileMap; behavior=the destination is passed as a full tilemap address in ESI instead of pret's 8-bit A offset from hlcoord 0 0; evidence=under the battle projection the player-pic origin BCOORD(1,5) is W_TILEMAP+331 and every other call site (AnimationResetMonPosition BCOORD(2,5) and BCOORD(11,0), TradeHidePokemon BCOORD(7,2)) is likewise past 255, so pret's single-byte parameter cannot represent them; lifetime=permanent, a consequence of the 40x25 canvas}
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:ClearMonPicFromTileMap; behavior=the destination is passed as a full tilemap address in ESI instead of pret's 8-bit A offset from hlcoord 0 0; evidence=under the battle projection the player-pic origin BCOORD(1,5) is wTileMap+331 and every other call site (AnimationResetMonPosition BCOORD(2,5) and BCOORD(11,0), TradeHidePokemon BCOORD(7,2)) is likewise past 255, so pret's single-byte parameter cannot represent them; lifetime=permanent, a consequence of the 40x25 canvas}
 ; ---------------------------------------------------------------------------
 global AnimationHideMonPic
 AnimationHideMonPic:
@@ -3145,7 +3145,7 @@ GetTileIDList:
 
 ; ---------------------------------------------------------------------------
 ; AnimCopyRowLeft / AnimCopyRowRight — pret animations.asm. Shift a row of BL
-; tiles one tile left/right. ESI = row cursor (GB-space offset into W_TILEMAP).
+; tiles one tile left/right. ESI = row cursor (GB-space offset into wTileMap).
 ; ---------------------------------------------------------------------------
 global AnimCopyRowLeft
 AnimCopyRowLeft:

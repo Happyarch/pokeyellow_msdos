@@ -40,7 +40,7 @@ global SaveBattleScreen
 global RestoreBattleScreen
 
 ; ---------------------------------------------------------------------------
-; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 — snapshot W_TILEMAP
+; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 — snapshot wTileMap
 ; and restore it. Load1 brackets the copy with pret's hAutoBGTransferEnabled
 ; off/on writes (the byte is inert in the port — kept for faithfulness).
 ;
@@ -49,7 +49,7 @@ global RestoreBattleScreen
 SaveScreenTilesToBuffer1:
 SaveBattleScreen:
     pushad
-    lea esi, [ebp + W_TILEMAP]            ; hlcoord 0, 0
+    lea esi, [ebp + wTileMap]            ; hlcoord 0, 0
     mov edi, screen_save                  ; ld de, wTileMapBackup
     mov ecx, SCREEN_AREA                  ; ld bc, SCREEN_AREA
     rep movsb                             ; jp CopyData
@@ -61,7 +61,7 @@ RestoreBattleScreen:
     pushad
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0   ; xor a / ldh [hAutoBGTransferEnabled], a
     mov esi, screen_save                  ; ld hl, wTileMapBackup
-    lea edi, [ebp + W_TILEMAP]            ; decoord 0, 0
+    lea edi, [ebp + wTileMap]            ; decoord 0, 0
     mov ecx, SCREEN_AREA                  ; ld bc, SCREEN_AREA
     rep movsb                             ; call CopyData
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1   ; ld a, 1 / ldh [hAutoBGTransferEnabled], a
@@ -70,13 +70,13 @@ RestoreBattleScreen:
 
 ; ---------------------------------------------------------------------------
 ; SaveScreenTilesToBuffer2 / LoadScreenTilesFromBuffer2 — the second snapshot
-; buffer, at its dedicated GB region W_TILEMAP_BACKUP2 ($F100). Load2 goes
+; buffer, at its dedicated GB region wTileMapBackup2 ($F100). Load2 goes
 ; through the DisableBGTransfer entry then re-enables, exactly as pret.
 ; ---------------------------------------------------------------------------
 SaveScreenTilesToBuffer2:
     pushad
-    lea esi, [ebp + W_TILEMAP]            ; hlcoord 0, 0
-    lea edi, [ebp + W_TILEMAP_BACKUP2]    ; ld de, wTileMapBackup2
+    lea esi, [ebp + wTileMap]            ; hlcoord 0, 0
+    lea edi, [ebp + wTileMapBackup2]    ; ld de, wTileMapBackup2
     mov ecx, SCREEN_AREA                  ; ld bc, SCREEN_AREA
     rep movsb                             ; jp CopyData
     popad
@@ -91,8 +91,8 @@ LoadScreenTilesFromBuffer2:
 LoadScreenTilesFromBuffer2DisableBGTransfer:
     pushad
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0   ; xor a / ldh [hAutoBGTransferEnabled], a
-    lea esi, [ebp + W_TILEMAP_BACKUP2]    ; ld hl, wTileMapBackup2
-    lea edi, [ebp + W_TILEMAP]            ; decoord 0, 0
+    lea esi, [ebp + wTileMapBackup2]    ; ld hl, wTileMapBackup2
+    lea edi, [ebp + wTileMap]            ; decoord 0, 0
     mov ecx, SCREEN_AREA                  ; ld bc, SCREEN_AREA
     rep movsb                             ; jp CopyData
     popad

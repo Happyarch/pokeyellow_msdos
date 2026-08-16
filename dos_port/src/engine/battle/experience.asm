@@ -98,7 +98,7 @@ extern FlagAction               ; src/engine/flag_action.asm (not the predef var
 ; in-battle text site in the port already uses (core.asm: PrintEmptyString,
 ; DrawPlayerHUDAndHPBar's fainted line, SendOutMon, …): it sets ESI from EAX,
 ; publishes [text_msgbox] = msgbox_centered so <LINE>/<PROMPT> land in the
-; battle dialog box and the ▼ lands on W_TILEMAP, then falls into the one
+; battle dialog box and the ▼ lands on wTileMap, then falls into the one
 ; PrintText printer. Retired 2026-08-15 fork: this used to call the bespoke
 ; front-ends ShowGainedExpText / ShowGrewLevelText (battle_menu.asm), which
 ; painted the box and the number by hand instead of driving the text engine;

@@ -60,7 +60,7 @@ section .text
 ; MovieBeginSurface — take over the screen as a centred GB cinematic surface.
 ;
 ; Establishes, in the order the compositor expects:
-;   1. a cleared 40x25 W_TILEMAP (the matte field),
+;   1. a cleared 40x25 wTileMap (the matte field),
 ;   2. one window descriptor at the projected rectangle, sourcing GB_TILEMAP0,
 ;   3. g_bg_whiteout so the matte is the cinematic's colour-zero field,
 ;   4. the cinematic OBJ clip rectangle,
@@ -77,7 +77,7 @@ MovieBeginSurface:
 
     ; 1. Clear the canvas tilemap. The matte is whatever colour zero maps to;
     ;    leaving overworld tiles here is what would leak scene content.
-    lea edi, [ebp + W_TILEMAP]
+    lea edi, [ebp + wTileMap]
     mov ecx, W_TILEMAP_SIZE
     xor al, al
     rep stosb
@@ -117,7 +117,7 @@ MovieBeginSurface:
     ; 3-5. Cinematic compositor state.
     mov dword [g_bg_whiteout], 1
     mov dword [g_obj_over_window], 1
-    ; Per-frame surface commit: repack W_TILEMAP -> GB_TILEMAP0 (MovieMirrorSurface)
+    ; Per-frame surface commit: repack wTileMap -> GB_TILEMAP0 (MovieMirrorSurface)
     ; every DelayFrame, so pic/text drawn into the canvas becomes visible through the
     ; surface window without every caller mirroring by hand. MovieEndSurface clears it.
     mov dword [g_surface_redraw_cb], MovieMirrorSurface
@@ -155,7 +155,7 @@ MovieEndSurface:
 ; ---------------------------------------------------------------------------
 ; MovieMirrorSurface — copy the drawn rectangle into the GB tilemap.
 ;
-; Cinematic code draws into W_TILEMAP at the projected position (stride 40) like
+; Cinematic code draws into wTileMap at the projected position (stride 40) like
 ; every other screen; the window compositor samples a 32-stride GB tilemap. This
 ; is that transfer, and it must run after every tilemap mutation and before the
 ; next frame — menu_redraw_cb is driven by generic menu-input loops, not by
@@ -197,7 +197,7 @@ MOVIE_MIRROR_WRAP equ (TILEMAP_WIDTH - MOVIE_MIRROR_RUN)     ; 2
 
 MovieMirrorSurface:
     pushad
-    lea esi, [ebp + W_TILEMAP + UI_TITLE_ROW * SCREEN_WIDTH + UI_TITLE_COL]
+    lea esi, [ebp + wTileMap + UI_TITLE_ROW * SCREEN_WIDTH + UI_TITLE_COL]
     lea edi, [ebp + GB_TILEMAP0]
     mov edx, UI_TITLE_GBH               ; 18 rows
 .row:

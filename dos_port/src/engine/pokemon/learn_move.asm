@@ -34,7 +34,7 @@
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=EBX), D=DH, E=DL (DE=EDX), HL=ESI, EBP=GB base.
 ; GB memory at [EBP+addr]; flat program-image tables (Moves) read via [label+off].
-; hlcoord X,Y (macros/coords.asm) = W_TILEMAP + Y*SCREEN_WIDTH + X, matching the
+; hlcoord X,Y (macros/coords.asm) = wTileMap + Y*SCREEN_WIDTH + X, matching the
 ; established idiom in this port (bag_menu.asm/party_menu.asm use the same formula).
 ;
 ; Build: nasm -f coff -I include/ -I . -o learn_move.o learn_move.asm
@@ -66,7 +66,7 @@ extern TextBoxBorder                ; src/home/text.asm — ESI=top-left, BL=wid
 extern PlaceString                  ; src/home/text.asm — EAX=flat src, ESI=dest
 extern FormatMovesString            ; src/engine/battle/misc.asm — wMoves -> wMovesString
 extern HandleMenuInput              ; src/home/window.asm — AL = watched key(s) that ended input
-extern text_row_stride              ; src/home/text.asm — current W_TILEMAP row stride
+extern text_row_stride              ; src/home/text.asm — current wTileMap row stride
 extern menu_item_step               ; src/home/window.asm — HandleMenuInput cursor row step
 extern DisplayTextBoxID             ; pret home/textbox.asm (linked, menus-port)
 extern yn_box_col                   ; home/yes_no.asm — two-option box top-left, GB X
@@ -184,7 +184,7 @@ AbandonLearning:
     mov esi, AbandonLearningText
     mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
-    mov esi, W_TILEMAP + 7 * SCREEN_WIDTH + 14      ; hlcoord 14, 7
+    mov esi, wTileMap + 7 * SCREEN_WIDTH + 14      ; hlcoord 14, 7
     mov bh, 8
     mov bl, 15                                       ; lb bc, 8, 15 (b,c = y,x cursor)
     ; The port places this box from yn_box_col/row/proj_mode (the window
@@ -233,7 +233,7 @@ TryingToLearn:
     mov esi, TryingToLearnText
     mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
-    mov esi, W_TILEMAP + 7 * SCREEN_WIDTH + 14      ; hlcoord 14, 7
+    mov esi, wTileMap + 7 * SCREEN_WIDTH + 14      ; hlcoord 14, 7
     mov bh, 8
     mov bl, 15                                       ; lb bc, 8, 15
     ; The port places this box from yn_box_col/row/proj_mode (the window
@@ -263,11 +263,11 @@ TryingToLearn:
     mov esi, WhichMoveToForgetText
     mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
-    mov esi, W_TILEMAP + 7 * SCREEN_WIDTH + 4        ; hlcoord 4, 7
+    mov esi, wTileMap + 7 * SCREEN_WIDTH + 4        ; hlcoord 4, 7
     mov bl, 14
     mov bh, 4                                         ; lb bc, 4, 14 (TextBoxBorder: BH=height,BL=width)
     call TextBoxBorder
-    mov esi, W_TILEMAP + 8 * SCREEN_WIDTH + 6        ; hlcoord 6, 8
+    mov esi, wTileMap + 8 * SCREEN_WIDTH + 6        ; hlcoord 6, 8
     lea eax, [ebp + wMovesString]
     or byte [ebp + hUILayoutFlags], 1 << BIT_SINGLE_SPACED_LINES
     call PlaceString

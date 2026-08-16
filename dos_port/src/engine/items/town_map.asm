@@ -13,7 +13,7 @@
 ;
 ; -- CENTERING (port adaptation, per project note) --------------------------
 ; The GB town map is a 20x18 screen; the port's canvas is a 40x25 tile buffer
-; (W_TILEMAP, read at stride SCREEN_TILES_W by the non-overworld renderer). So
+; (wTileMap, read at stride SCREEN_TILES_W by the non-overworld renderer). So
 ; the whole screen is drawn CENTERED: tilemap coords are offset by
 ; TOWNMAP_COL_OFFSET(10) cols / TOWNMAP_ROW_OFFSET(3) rows, the text engine's
 ; row stride is set to 40 (text_row_stride), the RLE decoder wraps at width 20,
@@ -39,7 +39,7 @@ global WriteSymmetricMonPartySpriteOAM
 ; ---- ported helpers -------------------------------------------------------
 extern PlaceString, TextBoxBorder, CopyData, FarCopyData
 extern ClearScreen, ClearSprites, UpdateSprites
-extern RefreshCollisionTileMap         ; engine/overworld/overworld.asm — rebuild W_TILEMAP
+extern RefreshCollisionTileMap         ; engine/overworld/overworld.asm — rebuild wTileMap
 extern DisableLCD, EnableLCD, Delay3, DelayFrame, DelayFrames
 extern GetMonName                    ; src/home/names.asm
 extern PlaySound                     ; src/home/audio.asm
@@ -110,15 +110,15 @@ hJoy7             equ 0xFFB7
 ; is a modal screen, so nothing else is live in it while this runs.
 TOWNMAP_OAM_SINK   equ wTownMapCoords + 8
 
-; centering of the 20x18 GB screen inside the 40x25 W_TILEMAP
+; centering of the 20x18 GB screen inside the 40x25 wTileMap
 TOWNMAP_COL_OFFSET equ 10
 TOWNMAP_ROW_OFFSET equ 3
 TOWNMAP_WIDTH      equ 20
 TOWNMAP_X_PX       equ TOWNMAP_COL_OFFSET * 8      ; 80
 TOWNMAP_Y_PX       equ TOWNMAP_ROW_OFFSET * 8      ; 24
 
-; hlcoord/decoord: centered tile offset into the 40-wide W_TILEMAP (EBP-relative)
-%define TM_COORD(x,y) (W_TILEMAP + ((y) + TOWNMAP_ROW_OFFSET) * SCREEN_TILES_W + ((x) + TOWNMAP_COL_OFFSET))
+; hlcoord/decoord: centered tile offset into the 40-wide wTileMap (EBP-relative)
+%define TM_COORD(x,y) (wTileMap + ((y) + TOWNMAP_ROW_OFFSET) * SCREEN_TILES_W + ((x) + TOWNMAP_COL_OFFSET))
 
 ; VRAM tile-data destinations (TILE_SIZE = 16 bytes/tile)
 %define vSpritesTile(n)  (GB_VCHARS0 + (n) * TILE_SIZE)
@@ -126,13 +126,13 @@ TOWNMAP_Y_PX       equ TOWNMAP_ROW_OFFSET * 8      ; 24
 %define vChars2Tile(n)   (GB_VCHARS2 + (n) * TILE_SIZE)
 TILE_1BPP               equ 8      ; TILE_1BPP_SIZE
 
-; named shadow-OAM slots (W_SHADOW_OAM = wShadowOAM)
-%define wShadowOAM                 W_SHADOW_OAM
-%define wShadowOAMSprite00         (W_SHADOW_OAM + 0  * OBJ_SIZE)
-%define wShadowOAMSprite04         (W_SHADOW_OAM + 4  * OBJ_SIZE)
-%define wShadowOAMSprite32         (W_SHADOW_OAM + 32 * OBJ_SIZE)
-%define wShadowOAMSprite36         (W_SHADOW_OAM + 36 * OBJ_SIZE)
-%define wShadowOAMSprite00YCoord   (W_SHADOW_OAM)
+; named shadow-OAM slots (wShadowOAM = wShadowOAM)
+%define wShadowOAM                 wShadowOAM
+%define wShadowOAMSprite00         (wShadowOAM + 0  * OBJ_SIZE)
+%define wShadowOAMSprite04         (wShadowOAM + 4  * OBJ_SIZE)
+%define wShadowOAMSprite32         (wShadowOAM + 32 * OBJ_SIZE)
+%define wShadowOAMSprite36         (wShadowOAM + 36 * OBJ_SIZE)
+%define wShadowOAMSprite00YCoord   (wShadowOAM)
 ; backup-OAM named slots (wShadowOAMBackup is extern; offsets via addend)
 %define wShadowOAMBackupSprite00   wShadowOAMBackup
 %define wShadowOAMBackupSprite04   (wShadowOAMBackup + 4 * OBJ_SIZE)
@@ -376,7 +376,7 @@ LoadTownMap_Fly:
     call GBPalWhiteOutWithDelay3
     ; DEVIATION{class=projection; pret=engine/items/town_map.asm:LoadTownMap_Fly; behavior=call the port-only ExitTownMap on exit to restore the caller overworld canvas (W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR, hSCX/IO_SCX, hSCY/IO_SCY, g_bg_whiteout, text_row_stride) and reload the player sprite tiles the bird graphic overwrote, instead of restoring only wUpdateSpritesEnabled; evidence=LoadTownMap saves exactly this state on entry and the sibling LoadTownMap_Nest already calls ExitTownMap on its identical exit, and pret has no equivalent because its caller CloseTextDisplay does a full LoadCurrentMapView that the port replaces with the lighter CloseStartMenu fold; lifetime=permanent, the port split render-state and collision-buffer model requires this on every LoadTownMap exit path}
     call ExitTownMap
-    ; DEVIATION{class=timing; pret=engine/items/town_map.asm:LoadTownMap_Fly; behavior=rebuild W_TILEMAP via the port-only RefreshCollisionTileMap before returning; evidence=ExitTownMap ClearScreen blanks W_TILEMAP to 0x7F which is at or above MAP_TILESET_SIZE 0x60, and the caller StartMenu_Pokemon.canFly .goBackToMap runs RestoreScreenTilesAndReloadTilePatterns whose ReloadMapSpriteTilePatterns tail-jumps UpdateSprites BEFORE CloseStartMenu reaches its own RefreshCollisionTileMap, so without this the first UpdateSprites reads a text-box tile under the player and UpdatePlayerSprite.disable sets wSpritePlayerStateData1ImageIndex 0xFF which InitFacingDirectionList then searches for unbounded in wFacingDirectionList and walks off GB memory into a page fault; lifetime=permanent, the port lighter CloseStartMenu fold does not rebuild the collision buffer early enough on this path}
+    ; DEVIATION{class=timing; pret=engine/items/town_map.asm:LoadTownMap_Fly; behavior=rebuild wTileMap via the port-only RefreshCollisionTileMap before returning; evidence=ExitTownMap ClearScreen blanks wTileMap to 0x7F which is at or above MAP_TILESET_SIZE 0x60, and the caller StartMenu_Pokemon.canFly .goBackToMap runs RestoreScreenTilesAndReloadTilePatterns whose ReloadMapSpriteTilePatterns tail-jumps UpdateSprites BEFORE CloseStartMenu reaches its own RefreshCollisionTileMap, so without this the first UpdateSprites reads a text-box tile under the player and UpdatePlayerSprite.disable sets wSpritePlayerStateData1ImageIndex 0xFF which InitFacingDirectionList then searches for unbounded in wFacingDirectionList and walks off GB memory into a page fault; lifetime=permanent, the port lighter CloseStartMenu fold does not rebuild the collision buffer early enough on this path}
     call RefreshCollisionTileMap
     pop esi                             ; pop hl (wUpdateSpritesEnabled)
     pop eax                             ; pop af
@@ -464,7 +464,7 @@ LoadTownMap:
 
     ; --- PORT: flat-canvas render setup (the status_screen / init_battle template).
     ; Without this render_bg keeps compositing the OVERWORLD from the block view
-    ; pointer and the scroll registers, and the freshly-drawn W_TILEMAP is never
+    ; pointer and the scroll registers, and the freshly-drawn wTileMap is never
     ; shown — the first attempt at this screen rendered Pallet Town.
     ; The SHADOWS matter as much as the registers: commit_shadow_regs copies hSCX/SCY
     ; over IO_SCX/SCY every DelayFrame, so a stale overworld scroll would drag the flat
@@ -903,7 +903,7 @@ TownMapSpriteBlinkingAnimation:
 ; ---------------------------------------------------------------------------
 tm_publish_oam:
     pushad
-    lea esi, [ebp + W_SHADOW_OAM]
+    lea esi, [ebp + wShadowOAM]
     lea edi, [ebp + GB_OAM]
     mov ecx, W_SHADOW_OAM_SIZE
     rep movsb                           ; the DMA pret gets for free

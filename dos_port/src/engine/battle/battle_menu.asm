@@ -49,7 +49,7 @@
 
 bits 32
 
-%define FW   SCREEN_TILES_W            ; 40 — W_TILEMAP stride
+%define FW   SCREEN_TILES_W            ; 40 — wTileMap stride
 %define T_SP 0x7F
 
 ; PROJ battle: action menu box/labels = UI_ACTION_MENU_BOX / UI_ACTION_TEXT
@@ -114,7 +114,7 @@ global ShowSimulatedInputBagBox
 extern TextBoxBorder                 ; unified text engine (text.asm), stride-aware
 extern PlaceString                   ; unified text engine; src=EAX, returns end in EBX
 extern menu_item_step                ; src/home/window.asm — menu cursor item spacing
-extern text_row_stride               ; text.asm — W_TILEMAP row stride (battle sets 40)
+extern text_row_stride               ; text.asm — wTileMap row stride (battle sets 40)
 extern DelayFrame
 
 ; ===========================================================================
@@ -142,7 +142,7 @@ extern DelayFrames                   ; src/home/delay.asm — In: BL = frame cou
 DrawEmptyDialogBox:
     and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
     mov dword [menu_item_step], 2 * FW
-    mov esi, W_TILEMAP + OUTER_OFF
+    mov esi, wTileMap + OUTER_OFF
     mov bh, OUTER_H
     mov bl, OUTER_W
     call TextBoxBorder
@@ -153,11 +153,11 @@ DrawEmptyDialogBox:
 ; DEVIATION{class=projection; pret=engine/battle/core.asm:DisplayBattleMenu; behavior=pret sets wTextBoxID to BATTLE_MENU_TEMPLATE and dispatches through the generic menu-template DisplayTextBoxID system, the port draws the box and labels directly via TextBoxBorder plus PlaceString against the generated UI_ACTION_MENU_BOX/UI_ACTION_TEXT layout constants; evidence=pret DisplayBattleMenu (engine/battle/core.asm around line 2087) does ld a, BATTLE_MENU_TEMPLATE / ld [wTextBoxID], a / call DisplayTextBoxID rather than a direct box-border call, and this file is the declared sanctioned draw-layer divergence point per its header; lifetime=permanent, tracked with the rest of this file's draw primitives}
 DrawBattleMenuBox:
     mov dword [menu_item_step], 2 * FW
-    mov esi, W_TILEMAP + BOX_OFF
+    mov esi, wTileMap + BOX_OFF
     mov bh, BOX_H
     mov bl, BOX_W
     call TextBoxBorder
-    mov esi, W_TILEMAP + TEXT_OFF
+    mov esi, wTileMap + TEXT_OFF
     mov eax, BattleMenuText
     call PlaceString
     mov esi, ebx
@@ -172,10 +172,10 @@ DrawBattleMenu:
 
 ; EndBattleScreen — clean battle terminal: blank the canvas, present it, restore the
 ; overworld text stride. (Placeholder exit; real exit returns to the overworld.)
-; DEVIATION{class=projection; pret=engine/battle/end_of_battle.asm:EndOfBattle; behavior=port-only canvas-blanking exit used by init_battle.asm and the debug harness, there is no single pret label for it because pret's EndOfBattle returns control to the overworld map draw rather than blanking a shared canvas the port reuses for both screens; evidence=label_status reports its callers as anim_show_label in src/debug/debug_dump.asm and init_battle.asm citing it as clean terminal, and this file header documents the port compositing model (single W_TILEMAP canvas reused across screens) that makes an explicit blank-and-restore step necessary where pret simply draws the next screen over VRAM; lifetime=permanent while the port keeps one shared canvas for battle and overworld}
+; DEVIATION{class=projection; pret=engine/battle/end_of_battle.asm:EndOfBattle; behavior=port-only canvas-blanking exit used by init_battle.asm and the debug harness, there is no single pret label for it because pret's EndOfBattle returns control to the overworld map draw rather than blanking a shared canvas the port reuses for both screens; evidence=label_status reports its callers as anim_show_label in src/debug/debug_dump.asm and init_battle.asm citing it as clean terminal, and this file header documents the port compositing model (single wTileMap canvas reused across screens) that makes an explicit blank-and-restore step necessary where pret simply draws the next screen over VRAM; lifetime=permanent while the port keeps one shared canvas for battle and overworld}
 EndBattleScreen:
     mov dword [text_row_stride], 20       ; restore the overworld/GB text stride
-    lea edi, [ebp + W_TILEMAP]
+    lea edi, [ebp + wTileMap]
     mov ecx, SCREEN_AREA
     mov al, T_SP
     rep stosb
@@ -200,14 +200,14 @@ EndBattleScreen:
 ; Retires when battle_completion 4b stages that list into GB memory.
 ShowSimulatedInputBagBox:
     mov dword [menu_item_step], 2 * FW
-    mov esi, W_TILEMAP + OUTER_OFF
+    mov esi, wTileMap + OUTER_OFF
     mov bh, OUTER_H
     mov bl, OUTER_W
     call TextBoxBorder
-    mov esi, W_TILEMAP + MSG_LINE1
+    mov esi, wTileMap + MSG_LINE1
     mov eax, str_pokeball
     call PlaceString
-    mov esi, W_TILEMAP + MSG_LINE2
+    mov esi, wTileMap + MSG_LINE2
     mov eax, str_x1
     call PlaceString
     mov bl, 30

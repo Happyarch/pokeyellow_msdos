@@ -277,7 +277,7 @@ EvolutionAfterBattle:
     ; Clear the message area + sprites for the animation.
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al
-    mov esi, W_TILEMAP
+    mov esi, wTileMap
     mov bh, 12                      ; pret lb bc, 12, 20 (B = rows, C = width)
     mov bl, 20
     call ClearScreenArea

@@ -8,7 +8,7 @@
 ;   StatusScreen2 (page 2) is TODO (next session).
 ;
 ; PROJECTION (PROJ status-screen): the port renders the 20×18 GB screen centered
-; in the 40×25 widescreen BG canvas (W_TILEMAP), exactly as the battle screen does
+; in the 40×25 widescreen BG canvas (wTileMap), exactly as the battle screen does
 ; (init_battle flat-canvas path, PrintStatsBox.LevelUpStatsBox in battle_menu.asm).
 ; GB(x,y) → canvas offset (y+3)*40 + (x+10). scoord() below is that map; the +10/+3
 ; centers 20 cols in 40 and 18 rows in 25. Row-stride math inside routines uses FW
@@ -26,8 +26,8 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 
-%define FW SCREEN_WIDTH                               ; 40 — W_TILEMAP row stride
-%define scoord(x,y) (W_TILEMAP + ((y)+3)*FW + ((x)+10))
+%define FW SCREEN_WIDTH                               ; 40 — wTileMap row stride
+%define scoord(x,y) (wTileMap + ((y)+3)*FW + ((x)+10))
 
 ; --- tile ids (charmap.asm + HpBarAndStatus/BattleHud tile sets) --------------
 T_SPACE     equ 0x7F
@@ -171,7 +171,7 @@ StatusScreen:
     mov dword [spr_oam_valid], 0
 
     ; --- PORT: flat-canvas render setup (mirror init_battle) so render_bg shows
-    ; W_TILEMAP directly and PlaceString steps rows by FW (40) --------------------
+    ; wTileMap directly and PlaceString steps rows by FW (40) --------------------
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
     mov byte [ebp + hSCX], 0                         ; zero the SHADOWS too — commit_shadow_regs
     mov byte [ebp + hSCY], 0                         ; copies them over IO_SCX/SCY each DelayFrame,
@@ -519,7 +519,7 @@ section .text
 global PrintStatsBox
 
 ; PrintStatsBox needs the battle UI level-up box coordinates. They are `equ`s used
-; in address arithmetic (W_TILEMAP + LVLBOX_OFF), and an extern cannot be used in
+; in address arithmetic (wTileMap + LVLBOX_OFF), and an extern cannot be used in
 ; assembly-time arithmetic — so the equates-only layout include comes along, exactly
 ; as ARROW_OFF forced it into joypad2.asm in chunk 16.
 %define UI_LAYOUT_EQUATES_ONLY 1
@@ -543,7 +543,7 @@ extern str_special                   ; assets/battle_menu_runtime_strings.inc
 PrintStatsBox:
     and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
     mov dword [menu_item_step], FW
-    mov esi, W_TILEMAP + LVLBOX_OFF
+    mov esi, wTileMap + LVLBOX_OFF
     mov bh, LVLBOX_H
     mov bl, LVLBOX_W
     call TextBoxBorder
@@ -551,42 +551,42 @@ PrintStatsBox:
     imul eax, eax, PARTYMON_STRUCT_LENGTH
     add eax, wPartyMon1
     mov [lvl_mon_ptr], eax
-    mov esi, W_TILEMAP + LVL_LBL_OFF
+    mov esi, wTileMap + LVL_LBL_OFF
     mov eax, str_attack
     call PlaceString
     mov esi, ebx
-    mov esi, W_TILEMAP + LVL_LBL_OFF + 2 * FW
+    mov esi, wTileMap + LVL_LBL_OFF + 2 * FW
     mov eax, str_defense
     call PlaceString
     mov esi, ebx
-    mov esi, W_TILEMAP + LVL_LBL_OFF + 4 * FW
+    mov esi, wTileMap + LVL_LBL_OFF + 4 * FW
     mov eax, str_speed
     call PlaceString
     mov esi, ebx
-    mov esi, W_TILEMAP + LVL_LBL_OFF + 6 * FW
+    mov esi, wTileMap + LVL_LBL_OFF + 6 * FW
     mov eax, str_special
     call PlaceString
     mov esi, ebx
     mov ebx, [lvl_mon_ptr]
-    mov edi, W_TILEMAP + LVL_VAL_OFF
+    mov edi, wTileMap + LVL_VAL_OFF
     movzx eax, byte [ebp + ebx + MON_ATK]
     shl eax, 8
     mov al, [ebp + ebx + MON_ATK + 1]
     call print_num3
     mov ebx, [lvl_mon_ptr]
-    mov edi, W_TILEMAP + LVL_VAL_OFF + 2 * FW
+    mov edi, wTileMap + LVL_VAL_OFF + 2 * FW
     movzx eax, byte [ebp + ebx + MON_DEF]
     shl eax, 8
     mov al, [ebp + ebx + MON_DEF + 1]
     call print_num3
     mov ebx, [lvl_mon_ptr]
-    mov edi, W_TILEMAP + LVL_VAL_OFF + 4 * FW
+    mov edi, wTileMap + LVL_VAL_OFF + 4 * FW
     movzx eax, byte [ebp + ebx + MON_SPD]
     shl eax, 8
     mov al, [ebp + ebx + MON_SPD + 1]
     call print_num3
     mov ebx, [lvl_mon_ptr]
-    mov edi, W_TILEMAP + LVL_VAL_OFF + 6 * FW
+    mov edi, wTileMap + LVL_VAL_OFF + 6 * FW
     movzx eax, byte [ebp + ebx + MON_SPC]
     shl eax, 8
     mov al, [ebp + ebx + MON_SPC + 1]
@@ -602,7 +602,7 @@ StatusScreen2:
     ; Disable BG tile animations (pret StatusScreen2: ldh a,[hTileAnimations]/push af/
     ; xor a/ldh [hTileAnimations],a). Page 1 restored them on exit, so re-disable here
     ; or the mon pic's tiles ($03/$14 at $9000+) animate on page 2 too. Restored after
-    ; the button-wait below. hAutoBGTransferEnabled: render_bg shows W_TILEMAP directly
+    ; the button-wait below. hAutoBGTransferEnabled: render_bg shows wTileMap directly
     ; — no torus BG transfer to gate.
     mov al, [ebp + hTileAnimations]
     mov [ss_saved_tileanim], al

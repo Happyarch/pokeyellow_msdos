@@ -129,7 +129,7 @@ CalcPositionOfPlayerRelativeToNPC:
     mov dh, [ebp + W_SPRITE_PLAYER_Y_PIXELS]   ; d = player Y pixels
     mov dl, [ebp + W_SPRITE_PLAYER_X_PIXELS]   ; e = player X pixels
     movzx esi, byte [ebp + hNPCSpriteOffset]
-    add esi, W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS  ; hl -> NPC YPIXELS
+    add esi, wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS  ; hl -> NPC YPIXELS
 ; --- Y axis ---
     mov bh, dh                                 ; b = player Y
     mov al, [ebp + esi]                        ; a = NPC screen Y

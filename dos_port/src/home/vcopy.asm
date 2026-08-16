@@ -20,7 +20,7 @@
 ; -- Renderer-integrity notes (this port diverges hard from GB geometry) ------
 ; The DOS port's native renderer (src/ppu/ppu.asm:render_bg) does NOT scan the
 ; GB's 32x32 BG tilemap at $9800; it decodes the 44x32 `wSurroundingTiles`
-; surface / the 40x25 W_TILEMAP via `tile_cache`. Consequences honoured here:
+; surface / the 40x25 wTileMap via `tile_cache`. Consequences honoured here:
 ;
 ;  * UpdateMovingBgTiles mutates tile PATTERN bytes in vChars/vTileset ($9000
 ;    region). That path DOES feed the renderer through `tile_cache`, so after

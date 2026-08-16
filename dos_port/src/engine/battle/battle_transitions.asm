@@ -7,9 +7,9 @@
 ; collisions (see docs/plans/battle_transitions.md, all parameters
 ; simulation-verified there).
 ;
-; The wipe operates directly on W_TILEMAP (stride 40): the caller
+; The wipe operates directly on wTileMap (stride 40): the caller
 ; (DoBattleTransitionAndInitBattleVariables, core.asm) has already switched
-; render_bg to its flat-canvas path, and W_TILEMAP holds the current overworld
+; render_bg to its flat-canvas path, and wTileMap holds the current overworld
 ; view (maintained by LoadCurrentMapView). hAutoBGTransferEnabled is inert in
 ; the port (the vblank auto-transfer was retired); its writes are kept as
 ; vestigial bookkeeping, and pacing comes entirely from DelayFrame — render_bg
@@ -149,8 +149,8 @@ BattleTransition:
 
 ; Clear OAM except for the blocks used by the player and enemy trainer sprites.
 ; pret's `swap a / cp l` low-address-byte trick still works here: the low byte
-; of the GB offset (W_SHADOW_OAM = $C300 is 256-aligned) equals block*16.
-    mov esi, W_SHADOW_OAM + 4 * 4                 ; wShadowOAMSprite04
+; of the GB offset (wShadowOAM = $C300 is 256-aligned) equals block*16.
+    mov esi, wShadowOAM + 4 * 4                 ; wShadowOAMSprite04
     mov cl, 9
 .loop2:
     mov al, bh
@@ -165,7 +165,7 @@ BattleTransition:
     call FillMemory
     ; DEVIATION{class=HAL; pret=engine/battle/battle_transitions.asm:BattleTransition; behavior=additionally forces spr_dos_sy off-canvas for the cleared block's four OAM entries; evidence=wUpdateSpritesEnabled=$ff freezes PrepareOAMData AND the shadow-to-OAM DMA in this port (vblank.asm update_oam gate) so a cleared shadow OAM never reaches the compositor, unlike the GB where OAM DMA always runs; lifetime=permanent, OAM-publish HAL}
     mov ebx, esi
-    sub ebx, W_SHADOW_OAM
+    sub ebx, wShadowOAM
     shr ebx, 2                                    ; first OAM entry index of this block
     mov dword [spr_dos_sy + ebx * 4 + 0], RENDER_H
     mov dword [spr_dos_sy + ebx * 4 + 4], RENDER_H
@@ -369,7 +369,7 @@ BattleTransition_InwardSpiral_:
 .done:
     ret
 
-; DEVIATION{class=projection; pret=engine/battle/battle_transitions.asm:BattleTransition_OutwardSpiral_; behavior=the FSM's neighbor reads and cell writes are bounds-guarded against [W_TILEMAP, W_TILEMAP+1000) - an OOB read reports not-$ff (forcing a turn) and an OOB write is dropped; evidence=pret's FSM is unsound at screen edges even on the GB (measured: 19 OOB writes, 341/360 cells at its 360-step cutoff, hidden by BlackScreen) and raw on 40x25 degrades to 800/1000 with 200 OOB writes that would land in W_SHADOW_OAM, which ends exactly at W_TILEMAP; lifetime=permanent, 40x25 geometry + OAM safety}
+; DEVIATION{class=projection; pret=engine/battle/battle_transitions.asm:BattleTransition_OutwardSpiral_; behavior=the FSM's neighbor reads and cell writes are bounds-guarded against [wTileMap, wTileMap+1000) - an OOB read reports not-$ff (forcing a turn) and an OOB write is dropped; evidence=pret's FSM is unsound at screen edges even on the GB (measured: 19 OOB writes, 341/360 cells at its 360-step cutoff, hidden by BlackScreen) and raw on 40x25 degrades to 800/1000 with 200 OOB writes that would land in wShadowOAM, which ends exactly at wTileMap; lifetime=permanent, 40x25 geometry + OAM safety}
 BattleTransition_OutwardSpiral_:
     movzx esi, word [ebp + wOutwardSpiralTileMapPointer]
     mov al, [ebp + wOutwardSpiralCurrentDirection]
@@ -429,17 +429,17 @@ BattleTransition_OutwardSpiral_:
     mov [ebp + wOutwardSpiralCurrentDirection], al
     jmp .done
 .write:                                           ; bounds-guarded [hl] = $ff
-    cmp esi, W_TILEMAP
+    cmp esi, wTileMap
     jb .wdrop
-    cmp esi, W_TILEMAP + W_TILEMAP_SIZE
+    cmp esi, wTileMap + W_TILEMAP_SIZE
     jae .wdrop
     mov byte [ebp + esi], 0xFF
 .wdrop:
     ret
 .read:                                            ; bounds-guarded a = [hl]
-    cmp esi, W_TILEMAP
+    cmp esi, wTileMap
     jb .rout
-    cmp esi, W_TILEMAP + W_TILEMAP_SIZE
+    cmp esi, wTileMap + W_TILEMAP_SIZE
     jae .rout
     mov al, [ebp + esi]
     ret

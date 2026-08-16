@@ -50,7 +50,7 @@ ClearSprites:
     push edi
     mov dword [spr_oam_valid], 0    ; PORT: no live OBJ until someone republishes
     mov dword [g_obj_over_window], 0 ; …and the OBJ-over-window order dies with them
-    lea edi, [ebp + W_SHADOW_OAM]
+    lea edi, [ebp + wShadowOAM]
     mov ecx, W_SHADOW_OAM_SIZE
     xor eax, eax
     rep stosb
@@ -69,7 +69,7 @@ HideSprites:
     push edi
     mov dword [spr_oam_valid], 0    ; PORT: parked off-screen == not drawn (see header)
     mov dword [g_obj_over_window], 0 ; …and the OBJ-over-window order dies with them
-    lea edi, [ebp + W_SHADOW_OAM]
+    lea edi, [ebp + wShadowOAM]
     mov al, SCREEN_HEIGHT_PX + OAM_Y_OFS
     mov ecx, OAM_COUNT
 .loop:

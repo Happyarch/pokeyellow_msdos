@@ -45,7 +45,7 @@ ReloadMapSpriteTilePatterns:
     push eax                                            ; push af (save font state)
     and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED) & 0xFF ; res BIT_FONT_LOADED,[hl]
 
-    mov byte [ebp + W_SPRITE_SET_ID], 0                 ; xor a; ld [wSpriteSetID],a
+    mov byte [ebp + wSpriteSetID], 0                 ; xor a; ld [wSpriteSetID],a
 
     call DisableLCD
     call InitMapSprites

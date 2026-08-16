@@ -166,7 +166,7 @@ PalletMovementScript_WalkToLab:
     mov al, [ebp + wSpriteIndex]
     shl al, 4                                  ; swap a
     mov [ebp + wNPCMovementScriptSpriteOffset], al
-    mov byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0 ; wSpritePlayerStateData2MovementByte1
+    mov byte [ebp + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0 ; wSpritePlayerStateData2MovementByte1
     mov esi, wSimulatedJoypadStatesEnd
     mov edi, RLEList_PlayerWalkToLab
     call DecodeRLEList
@@ -232,7 +232,7 @@ PewterMovementScript_WalkToGym:
     mov al, [ebp + wSpriteIndex]
     shl al, 4                                  ; swap a
     mov [ebp + wNPCMovementScriptSpriteOffset], al
-    mov byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0 ; wSpritePlayerStateData2MovementByte1
+    mov byte [ebp + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0 ; wSpritePlayerStateData2MovementByte1
     mov esi, wSimulatedJoypadStatesEnd
     mov edi, RLEList_PewterGymPlayer
     call DecodeRLEList

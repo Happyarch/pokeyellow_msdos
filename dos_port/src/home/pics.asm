@@ -27,7 +27,7 @@
 ;   2. zeroes buffer1 and copies+centers chunk2 (buffer2) into it,
 ;   3. interlaces buffer0(MSB) + buffer1(LSB) into the 7x7 2bpp sprite in
 ;      buffer1+2, then copies the 49 tiles to VRAM and marks the tile cache dirty.
-; PlacePicTilemap then writes the 49 tile IDs into W_TILEMAP in the column-major
+; PlacePicTilemap then writes the 49 tile IDs into wTileMap in the column-major
 ; order the merged buffer produces (faithful to CopyUncompressedPicToTilemap).
 ;
 ; Render path: the battle BG uses SIGNED tile addressing, so tile ID $00-$7F maps
@@ -43,7 +43,7 @@
 
 bits 32
 
-%define FW         SCREEN_TILES_W       ; 40 — W_TILEMAP stride
+%define FW         SCREEN_TILES_W       ; 40 — wTileMap stride
 %define T_SP       0x7F                 ; blank/space tile (canvas clear)
 %define PIC_SIZE   (7 * 7)              ; 49 tiles in the centered 7x7 sprite buffer
                                         ; (free SRAM just past sSpriteBuffer2 $A498)
@@ -254,9 +254,9 @@ LoadMonBackPicToVRAM:
     ret
 
 ; ---------------------------------------------------------------------------
-; PlacePicTilemap — write a 7x7 block of tile IDs into W_TILEMAP, column-major
+; PlacePicTilemap — write a 7x7 block of tile IDs into wTileMap, column-major
 ; (ID = base + col*7 + row), matching the merged buffer's tile order.
-; In: EDI = [ebp + W_TILEMAP + topleft] dest, AL = base tile ID.
+; In: EDI = [ebp + wTileMap + topleft] dest, AL = base tile ID.
 ; ---------------------------------------------------------------------------
 PlacePicTilemap:
     mov bl, al                         ; running tile ID
@@ -613,7 +613,7 @@ SlideBattlePicsIn:
     mov byte [ebp + IO_BGP], BGP_SILHOUETTE
     mov dword [slide_step], SLIDE_STEPS
 .loop:
-    lea edi, [ebp + W_TILEMAP]              ; clear the canvas each frame
+    lea edi, [ebp + wTileMap]              ; clear the canvas each frame
     mov al, T_SP
     mov ecx, SCREEN_TILES_W * SCREEN_TILES_H
     rep stosb
@@ -651,13 +651,13 @@ PlacePicSlide:
     push ecx
     mov edi, ebx
     imul edi, edi, SCREEN_TILES_W
-    add edi, eax                            ; W_TILEMAP offset = row*40 + col
+    add edi, eax                            ; wTileMap offset = row*40 + col
     mov eax, ecx
     imul eax, eax, 7
     add eax, esi                            ; tile id = base + colindex*7
     mov ecx, 7                              ; 7 rows
 .row:
-    mov [ebp + edi + W_TILEMAP], al
+    mov [ebp + edi + wTileMap], al
     add edi, SCREEN_TILES_W
     inc eax
     dec ecx

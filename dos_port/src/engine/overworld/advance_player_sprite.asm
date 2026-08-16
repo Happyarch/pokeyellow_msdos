@@ -133,7 +133,7 @@ _AdvancePlayerSprite:
     add bl, bl                                          ; BL = 2 * Ystep (+2/-2/0)
     mov cl, [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR]
     add cl, cl                                          ; CL = 2 * Xstep
-    mov esi, W_SPRITE_STATE_DATA_1 + 0x10 + SPRITESTATEDATA1_YPIXELS  ; slot 1 YPixels
+    mov esi, wSpriteStateData1 + 0x10 + SPRITESTATEDATA1_YPIXELS  ; slot 1 YPixels
     mov edx, 15                                         ; 15 NPC/Pikachu slots
 .spriteShift:
     mov al, [ebp + esi]

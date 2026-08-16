@@ -84,7 +84,7 @@ H_PLAYER_Y_COORD             equ 0xFFDC ; hPlayerYCoord (golden 00:ffdc; boulder
 H_PLAYER_X_COORD             equ 0xFFDD ; hPlayerXCoord (golden 00:ffdd)
 %endif
 ; wSprite01StateData2MapY (golden 00:c214) = sprite slot 1's data2 MapY.
-wSprite01StateData2MapY      equ W_SPRITE_STATE_DATA_2 + 0x10 + SPRITESTATEDATA2_MAPY
+wSprite01StateData2MapY      equ wSpriteStateData2 + 0x10 + SPRITESTATEDATA2_MAPY
 
 ; --- Map constants (constants/map_constants.asm) ---------------------------
 %ifndef ROUTE_16
@@ -139,8 +139,8 @@ extern TextBoxBorder        ; src/home/text.asm — linked (GAME_SRCS)
 extern PlaceString          ; src/home/text.asm — linked (GAME_SRCS)
 extern PrintNumber          ; src/home/print_num.asm — linked (GAME_SRCS)
 extern text_row_stride      ; src/home/text.asm — linked (GAME_SRCS); active
-                             ; W_TILEMAP row stride (20 overworld default / 40
-                             ; when a caller writes W_TILEMAP directly)
+                             ; wTileMap row stride (20 overworld default / 40
+                             ; when a caller writes wTileMap directly)
 
 ; CLOSURE: ForceBikeOrSurf lives in src/engine/overworld/player_gfx.asm, which
 ; is `global`-exported there but the FILE sits in HOME_CHECK_SRCS (check-only,
@@ -389,7 +389,7 @@ IsSSAnneBowWarpTileInFrontOfPlayer:
 ; PROJ: pret's `lda_coord 8, 9` reads the tile the player is STANDING on (its
 ; own standing tile, not a "tile in front" projection) — same address as the
 ; the deleted GetTileInFrontOfPlayer fork's precedent for the player's feet:
-; W_TILEMAP + PLAYER_STANDING_ROW*40 + PLAYER_STANDING_COL (row17,col24).
+; wTileMap + PLAYER_STANDING_ROW*40 + PLAYER_STANDING_COL (row17,col24).
 ; ---------------------------------------------------------------------------
 IsPlayerStandingOnDoorTileOrWarpTile:
     push eax
@@ -402,7 +402,7 @@ IsPlayerStandingOnDoorTileOrWarpTile:
     movzx ebx, byte [ebp + wCurMapTileset]
     mov esi, [WarpTileIDPointers + ebx * 4] ; flat host ptr, table_width 2 in
                                              ; pret -> dd (4-byte) flat pointers here
-    mov al, [ebp + W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL]
+    mov al, [ebp + wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL]
     mov edx, 1
     call IsInArray                          ; sets CF
     jnc .done
@@ -422,7 +422,7 @@ IsPlayerStandingOnDoorTileOrWarpTile:
 ; PROJECTION (docs/ui_projection.md anchor rule): pret's box top-left is
 ; GB(0,0) — the doc's own worked example for a TOP-LEFT element ("translates
 ; neither axis"), so this uses the IDENTITY anchor (X+0/Y+0): our_row=gb_row,
-; our_col=gb_col, written directly into W_TILEMAP at SCREEN_TILES_W(40) stride
+; our_col=gb_col, written directly into wTileMap at SCREEN_TILES_W(40) stride
 ; (`text_row_stride` is saved/restored around the writes, mirroring the
 ; save/restore pattern used throughout src/engine/menus/*.asm and battle_menu.asm
 ; for the same "direct 40-wide write" case), rather than through the
@@ -457,31 +457,31 @@ PrintSafariZoneSteps:
     push eax
     mov dword [text_row_stride], SCREEN_TILES_W
 
-    mov esi, W_TILEMAP + 0 * SCREEN_TILES_W + 0
+    mov esi, wTileMap + 0 * SCREEN_TILES_W + 0
     mov bl, 7                               ; interior width  (pret lb bc, 3, 7 -> C)
     mov bh, 3                               ; interior height (pret lb bc, 3, 7 -> B)
     call TextBoxBorder
 
-    mov esi, W_TILEMAP + 1 * SCREEN_TILES_W + 1
+    mov esi, wTileMap + 1 * SCREEN_TILES_W + 1
     mov edx, wSafariSteps
     mov bh, 2                               ; byte count  (pret lb bc, 2, 3 -> B)
     mov bl, 3                               ; digit count (pret lb bc, 2, 3 -> C)
     call PrintNumber
 
-    mov esi, W_TILEMAP + 1 * SCREEN_TILES_W + 4
+    mov esi, wTileMap + 1 * SCREEN_TILES_W + 4
     mov eax, SafariSteps
     call PlaceString
 
-    mov esi, W_TILEMAP + 3 * SCREEN_TILES_W + 1
+    mov esi, wTileMap + 3 * SCREEN_TILES_W + 1
     mov eax, SafariBallText
     call PlaceString
 
     mov al, [ebp + wNumSafariBalls]
     cmp al, 10
     jae .tenOrMore
-    mov byte [ebp + W_TILEMAP + 3 * SCREEN_TILES_W + 5], TILE_SPC
+    mov byte [ebp + wTileMap + 3 * SCREEN_TILES_W + 5], TILE_SPC
 .tenOrMore:
-    mov esi, W_TILEMAP + 3 * SCREEN_TILES_W + 6
+    mov esi, wTileMap + 3 * SCREEN_TILES_W + 6
     mov edx, wNumSafariBalls
     mov bh, 1                               ; byte count  (pret lb bc, 1, 2 -> B)
     mov bl, 2                               ; digit count (pret lb bc, 1, 2 -> C)
@@ -500,10 +500,10 @@ PrintSafariZoneSteps:
 ; ══════ COORDINATE PROJECTION (read the ticket header twice) ══════
 ; The tile-read addresses below are IDENTICAL to the existing
 ; the deleted GetTileInFrontOfPlayer fork (formerly src/engine/overworld/overworld.asm):
-;   Down  -> W_TILEMAP + (PLAYER_STANDING_ROW+2)*40 + PLAYER_STANDING_COL  (row19,col24)
-;   Up    -> W_TILEMAP + (PLAYER_STANDING_ROW-2)*40 + PLAYER_STANDING_COL  (row15,col24)
-;   Left  -> W_TILEMAP + PLAYER_STANDING_ROW*40 + (PLAYER_STANDING_COL-2)  (row17,col22)
-;   Right -> W_TILEMAP + PLAYER_STANDING_ROW*40 + (PLAYER_STANDING_COL+2)  (row17,col26)
+;   Down  -> wTileMap + (PLAYER_STANDING_ROW+2)*40 + PLAYER_STANDING_COL  (row19,col24)
+;   Up    -> wTileMap + (PLAYER_STANDING_ROW-2)*40 + PLAYER_STANDING_COL  (row15,col24)
+;   Left  -> wTileMap + PLAYER_STANDING_ROW*40 + (PLAYER_STANDING_COL-2)  (row17,col22)
+;   Right -> wTileMap + PLAYER_STANDING_ROW*40 + (PLAYER_STANDING_COL+2)  (row17,col26)
 ; This routine ADDS the D/E (DH/DL) map-coordinate output pret's version also
 ; produces (±1 to wYCoord/wXCoord per facing) — the deleted fork did not
 ; compute this half, hence this new routine rather than modifying it.
@@ -530,24 +530,24 @@ _GetTileAndCoordsInFrontOfPlayer:
     mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
     cmp al, SPRITE_FACING_DOWN
     jne .notFacingDown
-    mov esi, W_TILEMAP + (PLAYER_STANDING_ROW + 2) * SCREEN_TILES_W + PLAYER_STANDING_COL
+    mov esi, wTileMap + (PLAYER_STANDING_ROW + 2) * SCREEN_TILES_W + PLAYER_STANDING_COL
     inc dh
     jmp .storeTile
 .notFacingDown:
     cmp al, SPRITE_FACING_UP
     jne .notFacingUp
-    mov esi, W_TILEMAP + (PLAYER_STANDING_ROW - 2) * SCREEN_TILES_W + PLAYER_STANDING_COL
+    mov esi, wTileMap + (PLAYER_STANDING_ROW - 2) * SCREEN_TILES_W + PLAYER_STANDING_COL
     dec dh
     jmp .storeTile
 .notFacingUp:
     cmp al, SPRITE_FACING_LEFT
     jne .notFacingLeft
-    mov esi, W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL - 2)
+    mov esi, wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL - 2)
     dec dl
     jmp .storeTile
 .notFacingLeft:
     ; SPRITE_FACING_RIGHT — unconditional fallthrough, matches pret
-    mov esi, W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL + 2)
+    mov esi, wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL + 2)
     inc dl
 .storeTile:
     movzx ecx, byte [ebp + esi]
@@ -586,27 +586,27 @@ GetTileTwoStepsInFrontOfPlayer:
     cmp al, SPRITE_FACING_DOWN
     jne .notFacingDown
     or byte [ebp + H_PLAYER_FACING], (1 << BIT_FACING_DOWN)
-    mov esi, W_TILEMAP + (PLAYER_STANDING_ROW + 4) * SCREEN_TILES_W + PLAYER_STANDING_COL
+    mov esi, wTileMap + (PLAYER_STANDING_ROW + 4) * SCREEN_TILES_W + PLAYER_STANDING_COL
     inc dh
     jmp .storeTile
 .notFacingDown:
     cmp al, SPRITE_FACING_UP
     jne .notFacingUp
     or byte [ebp + H_PLAYER_FACING], (1 << BIT_FACING_UP)
-    mov esi, W_TILEMAP + (PLAYER_STANDING_ROW - 4) * SCREEN_TILES_W + PLAYER_STANDING_COL
+    mov esi, wTileMap + (PLAYER_STANDING_ROW - 4) * SCREEN_TILES_W + PLAYER_STANDING_COL
     dec dh
     jmp .storeTile
 .notFacingUp:
     cmp al, SPRITE_FACING_LEFT
     jne .notFacingLeft
     or byte [ebp + H_PLAYER_FACING], (1 << BIT_FACING_LEFT)
-    mov esi, W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL - 4)
+    mov esi, wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL - 4)
     dec dl
     jmp .storeTile
 .notFacingLeft:
     ; SPRITE_FACING_RIGHT — unconditional fallthrough, matches pret
     or byte [ebp + H_PLAYER_FACING], (1 << BIT_FACING_RIGHT)
-    mov esi, W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL + 4)
+    mov esi, wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + (PLAYER_STANDING_COL + 4)
     inc dl
 .storeTile:
     movzx ecx, byte [ebp + esi]

@@ -263,18 +263,18 @@ InitOutsideMapSprites:
     mov bl, al                          ; B = spriteSetID
     test byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     jnz .loadSet                        ; reloading upper half after text → force reload
-    mov al, [ebp + W_SPRITE_SET_ID]
+    mov al, [ebp + wSpriteSetID]
     cmp al, bl
     je .skipLoad                        ; sprite set unchanged → don't reload it
 .loadSet:
-    mov [ebp + W_SPRITE_SET_ID], bl
+    mov [ebp + wSpriteSetID], bl
     ; wSpriteSet = SpriteSets[spriteSetID - 1] (SPRITE_SET_LENGTH bytes).
     ; pret: AddNTimes + CopyData; flat port equivalent is imul + rep movsb.
     movzx eax, bl
     dec eax
     imul eax, eax, SPRITE_SET_LENGTH
     lea esi, [SpriteSets + eax]
-    lea edi, [ebp + W_SPRITE_SET]
+    lea edi, [ebp + wSpriteSet]
     mov ecx, SPRITE_SET_LENGTH
     rep movsb
     call LoadMapSpriteTilePatterns
@@ -352,26 +352,26 @@ GetSplitMapSpriteSetID:
 ; slot's VRAM tile-pattern slot is its picture ID's index within wSpriteSet.
 ; ---------------------------------------------------------------------------
 LoadSpriteSetFromMapHeader:
-    lea edi, [ebp + W_SPRITE_SET]
+    lea edi, [ebp + wSpriteSet]
     xor al, al
     mov ecx, SPRITE_SET_LENGTH
     rep stosb                           ; zero wSpriteSet
-    mov byte [ebp + W_SPRITE_SET], SPRITE_PIKACHU   ; Pikachu loaded separately (slot 0)
+    mov byte [ebp + wSpriteSet], SPRITE_PIKACHU   ; Pikachu loaded separately (slot 0)
     mov esi, 0x10                       ; slot 1
     mov ebx, 14
 .loop:
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID]
+    movzx eax, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_PICTUREID]
     test al, al
     jz .continue                        ; slot not used
     mov cl, al                          ; C = picture id
     call CheckForFourTileSprite         ; CF=1 if four-tile sprite; preserves CL/ESI/EBX
     jnc .notFourTile
-    mov edi, W_SPRITE_SET + 9            ; four-tile picture IDs live in the last 2 entries
+    mov edi, wSpriteSet + 9            ; four-tile picture IDs live in the last 2 entries
     mov edx, 2
     call CheckIfPictureIDAlreadyLoaded
     jmp .continue
 .notFourTile:
-    mov edi, W_SPRITE_SET               ; regular picture IDs use the first 9 entries
+    mov edi, wSpriteSet               ; regular picture IDs use the first 9 entries
     mov edx, 9
     call CheckIfPictureIDAlreadyLoaded
 .continue:
@@ -523,7 +523,7 @@ GetSpriteVRAMAddress:
 ; ---------------------------------------------------------------------------
 ReadSpriteSheetData:
     movzx eax, byte [h_vram_slot]
-    movzx eax, byte [ebp + W_SPRITE_SET + eax]   ; picture id in this VRAM slot
+    movzx eax, byte [ebp + wSpriteSet + eax]   ; picture id in this VRAM slot
     test al, al
     jz .none
     dec eax                             ; (picture id - 1)
@@ -543,16 +543,16 @@ ReadSpriteSheetData:
 ; within wSpriteSet + 2 (via GetSpriteImageBaseOffset).
 ; ---------------------------------------------------------------------------
 LoadMapSpritesImageBaseOffset:
-    mov byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 1        ; player (slot 0)
-    mov byte [ebp + 0xF0 + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 2 ; Pikachu (slot 15)
+    mov byte [ebp + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 1        ; player (slot 0)
+    mov byte [ebp + 0xF0 + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 2 ; Pikachu (slot 15)
     mov esi, 0x10                       ; slot 1
     mov ecx, 14
 .loop:
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID]
+    movzx eax, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_PICTUREID]
     test al, al
     jz .skip                            ; unused slot
     call GetSpriteImageBaseOffset       ; AL = imageBaseOffset; preserves ESI/ECX
-    mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], al
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], al
 .skip:
     add esi, 0x10
     dec ecx
@@ -569,7 +569,7 @@ GetSpriteImageBaseOffset:
     push edi
     mov cl, al                          ; C = picture id
     mov ebx, 11                         ; B = number of wSpriteSet entries
-    mov edi, W_SPRITE_SET
+    mov edi, wSpriteSet
 .find:
     mov al, [ebp + edi]
     cmp al, cl
@@ -732,7 +732,7 @@ IsNPCAtTargetBlock:
 .slot_loop:
     cmp esi, 0x100
     jge .not_found
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     test al, al
     jz .next_slot                           ; inactive slot
     ; Hidden toggleables are INERT (pret: a hidden object's UpdateNPCSprite
@@ -745,10 +745,10 @@ IsNPCAtTargetBlock:
     dec eax                                 ; local object id (0-based)
     call IsToggleableHidden                 ; CF=1 → hidden: skip (clobbers AL only)
     jc .next_slot
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     cmp al, bl
     jne .next_slot
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     cmp al, cl
     je .found
 .next_slot:
@@ -838,7 +838,7 @@ CheckNPCInteraction:
     jge .not_found
 
     ; Skip inactive slots (IMAGEBASEOFFSET == 0 means slot is unused).
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     test al, al
     jz .next_slot
 
@@ -852,10 +852,10 @@ CheckNPCInteraction:
     jc .next_slot
 
     ; Compare MAPY and MAPX.
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
     cmp al, bl
     jne .next_slot
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
     cmp al, cl
     je .found_npc
 .next_slot:
@@ -866,7 +866,7 @@ CheckNPCInteraction:
     ; ── Found: NPC at target block ──────────────────────────────────────────
 
     ; Beaten-trainer gate: if this is a trainer whose beaten bit is set, return 0.
-    cmp byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_ISTRAINER], 0
+    cmp byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_ISTRAINER], 0
     je .not_beaten_trainer
     mov edx, esi
     shr dl, 4                           ; slot number (1-15)
@@ -878,7 +878,7 @@ CheckNPCInteraction:
     ; Set hTilePlayerStandingOn so UpdateSpriteImage picks this NPC's VRAM slot.
     ; UpdateSprites leaves hTilePlayerStandingOn = last-slot value after the loop;
     ; that would cause the wrong sprite tiles (e.g. Fisher's) for any earlier NPC.
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     dec al
     ror al, 4                           ; (imageBaseOffset-1)*16 → high nibble for UpdateSpriteImage
     mov [ebp + hTilePlayerStandingOn], al
@@ -887,7 +887,7 @@ CheckNPCInteraction:
     call MakeNPCFacePlayer
 
     ; Freeze NPC movement during dialog.
-    or byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], (1 << BIT_FACE_PLAYER)
+    or byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], (1 << BIT_FACE_PLAYER)
 
     ; Look up text_id → table entry: flat ptr + (byte count | SCRIPT sentinel).
     ; text id lives in wMapSpriteData[(slot-1)*2 + 1] (OW-A.2 P2 relocation).
@@ -1003,7 +1003,7 @@ npc_dialog_wait_impl:
     push esi
     push edi
     mov ecx, DIALOG_TILEMAP_ROWS
-    lea esi, [ebp + W_TILEMAP + DIALOG_TILEMAP_ROW * 20]
+    lea esi, [ebp + wTileMap + DIALOG_TILEMAP_ROW * 20]
     lea edi, [ebp + GB_TILEMAP1]
 .sdw_row:
     push ecx
@@ -1076,8 +1076,8 @@ CheckTrainerSight:
     pushad
 
     ; Player block coords: SPRITESTATEDATA2 slot 0 MAPY/MAPX
-    movzx ebx, byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]   ; BL = player_mapy
-    movzx ecx, byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]   ; CL = player_mapx
+    movzx ebx, byte [ebp + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]   ; BL = player_mapy
+    movzx ecx, byte [ebp + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]   ; CL = player_mapx
 
     mov esi, 0x10                          ; start at NPC slot 1
 .cts_loop:
@@ -1085,11 +1085,11 @@ CheckTrainerSight:
     jge .cts_none
 
     ; Skip inactive slot
-    cmp byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 0
+    cmp byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 0
     je .cts_next
 
     ; Skip non-trainer
-    cmp byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_ISTRAINER], 0
+    cmp byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_ISTRAINER], 0
     je .cts_next
 
     ; Skip if already beaten (bit_index = slot/0x10 - 1, i.e. 0-14)
@@ -1100,11 +1100,11 @@ CheckTrainerSight:
     jc .cts_next
 
     ; Load trainer position
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]  ; AL = trainer_mapy
-    movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]  ; DL = trainer_mapx
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]  ; AL = trainer_mapy
+    movzx edx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]  ; DL = trainer_mapx
 
     ; Check facing direction → sight line (BL=player_mapy, CL=player_mapx)
-    movzx edi, byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION]
+    movzx edi, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION]
 
     cmp edi, SPRITE_FACING_DOWN
     jne .cts_try_up
@@ -1209,12 +1209,12 @@ TrainerEncounterFlow:
 
     ; --- Make trainer face player and freeze NPC movement during text ---
     movzx esi, byte [w_trainer_enc_slot]   ; ESI = slot byte offset (0x10-0xF0)
-    movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     dec al
     ror al, 4
     mov [ebp + hTilePlayerStandingOn], al
     call MakeNPCFacePlayer
-    or byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], (1 << BIT_FACE_PLAYER)
+    or byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], (1 << BIT_FACE_PLAYER)
 
     ; --- Look up and show pre-battle text ---
     ; text id lives in wMapSpriteData[(slot-1)*2 + 1] (OW-A.2 P2 relocation).

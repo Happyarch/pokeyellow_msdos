@@ -202,7 +202,7 @@ LoadBGMapAttributes:
     ret
 
 ; ---------------------------------------------------------------------------
-; .apply_canvas_plane — walk the projected 20x18 GB window inside W_TILEMAP.
+; .apply_canvas_plane — walk the projected 20x18 GB window inside wTileMap.
 ;
 ; The attribute payload stays 32 bytes per row (its own GB BG-map stride) while
 ; the canvas row stride is SCREEN_WIDTH, so the two cursors advance differently:
@@ -223,17 +223,17 @@ BG_ATTR_STRIDE   equ 32                 ; the attribute plane's own row stride
 .rows_ok:
     ; The canvas has TWO layouts and the port already tracks which one is live.
     ; A full-screen takeover screen (trainer card, pokédex, options) draws
-    ; W_TILEMAP as a GB-SHAPED stride-20 scratch at origin (0,0); everything else
+    ; wTileMap as a GB-SHAPED stride-20 scratch at origin (0,0); everything else
     ; keeps the 40-wide canvas with the GB screen centered at (10,3). Reading
     ; text_row_stride picks the right one instead of guessing per screen.
     mov eax, [text_row_stride]
     cmp eax, GB_SCREEN_COLS
     je .stride20
-    mov esi, W_TILEMAP + 3 * SCREEN_WIDTH + 10   ; centered on the 40-wide canvas
+    mov esi, wTileMap + 3 * SCREEN_WIDTH + 10   ; centered on the 40-wide canvas
     mov eax, SCREEN_WIDTH
     jmp .have_layout
 .stride20:
-    mov esi, W_TILEMAP                           ; GB-shaped scratch, 1:1
+    mov esi, wTileMap                           ; GB-shaped scratch, 1:1
     mov eax, GB_SCREEN_COLS
 .have_layout:
     ; EAX (stride) and ESI (origin) cannot stay live: the column loop below uses
@@ -406,7 +406,7 @@ HandlePartyHPBarAttributes:
 ;
 ; ADDRESSING. The trainer card is presented as ONE WINDOW over GB_TILEMAP1
 ; (StartMenu_TrainerInfo -> trainer_card_present -> tc_mirror), and tc_mirror is
-; 1:1 -- W_TILEMAP row r at stride TCSCR_W becomes GB_TILEMAP1 + r*32, columns
+; 1:1 -- wTileMap row r at stride TCSCR_W becomes GB_TILEMAP1 + r*32, columns
 ; 0-19. So a GB coordinate IS a GB_TILEMAP1 offset and pret's literal vBGMap1
 ; offsets transfer verbatim. (BadgesTestMirror re-origins the rect, but that
 ; serves the TEST gate RunDrawBadgesTest and is NOT this path.)

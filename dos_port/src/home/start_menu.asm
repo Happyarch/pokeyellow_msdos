@@ -119,7 +119,7 @@ DisplayStartMenu:
 ; RedisplayStartMenu — pret ref: home/start_menu.asm:RedisplayStartMenu.
 ; ---------------------------------------------------------------------------
 RedisplayStartMenu:
-    ; Port model: W_TILEMAP doubles as the collision/"tile in front of sprite"
+    ; Port model: wTileMap doubles as the collision/"tile in front of sprite"
     ; mirror (RefreshCollisionTileMap) and as the menu staging canvas. Restore
     ; the map mirror before redrawing the box so UpdateSprites' text-box tile
     ; check (CheckSpriteAvailability) sees map + START box only — the analog of

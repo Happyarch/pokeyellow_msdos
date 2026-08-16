@@ -41,7 +41,7 @@ extern PlaceString                     ; text.asm — EAX = flat src, ESI = dest
 extern WideTypeNames                   ; data/type_names.asm — type id → flat name ptr
 extern GetMonHeader                    ; home/pokemon.asm — [wCurSpecies] → wMonHeader
 extern FillMemory                      ; home/copy2.asm — ESI=dest, BX=count, AL=fill
-extern text_row_stride                 ; home/text.asm — active W_TILEMAP row stride
+extern text_row_stride                 ; home/text.asm — active wTileMap row stride
 
 T_SPACE     equ 0x7F                   ; pret ' ' (charmap $7F blank tile)
 

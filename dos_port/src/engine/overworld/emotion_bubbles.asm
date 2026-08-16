@@ -59,12 +59,12 @@ EmotionBubble:
     test byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
     jnz .reserved
     ; wShadowOAMSprite35Attributes -> wShadowOAMSprite39Attributes
-    mov esi, W_SHADOW_OAM + 35*4 + 3
-    mov edi, W_SHADOW_OAM + 39*4 + 3
+    mov esi, wShadowOAM + 35*4 + 3
+    mov edi, wShadowOAM + 39*4 + 3
     jmp .shift
 .reserved:
-    mov esi, W_SHADOW_OAM + 31*4 + 3
-    mov edi, W_SHADOW_OAM + 35*4 + 3
+    mov esi, wShadowOAM + 31*4 + 3
+    mov edi, wShadowOAM + 35*4 + 3
 .shift:
     mov ecx, 0x90
 .shiftLoop:
@@ -77,8 +77,8 @@ EmotionBubble:
     ; screen coords of the target sprite (YPIXELS -> b, XPIXELS+8 -> c)
     movzx esi, byte [ebp + wEmotionBubbleSpriteIndex]
     shl esi, 4                      ; slot*0x10
-    mov bh, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
+    mov bh, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
     add al, 8
     mov bl, al                      ; c = x+8
     ; WriteOAMBlock takes the tile/attr source as a FLAT pointer in EDX

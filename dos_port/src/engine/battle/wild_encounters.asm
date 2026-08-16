@@ -34,11 +34,11 @@ bits 32
 ; ; TODO-OVERWORLD: see header. GB hlcoord(8,9) → +188 on a 20-wide map; here the
 ; 40-wide port map. OW-A.6: fixed from the stride-20-formula-on-a-40-wide-map
 ; placeholder to the real projection.
-; PROJ overworld-field: GB(8,9) player feet 1x1 --(+16col,+8row -> W_TILEMAP)-->
+; PROJ overworld-field: GB(8,9) player feet 1x1 --(+16col,+8row -> wTileMap)-->
 ; (PLAYER_STANDING_COL=24, PLAYER_STANDING_ROW=17) — the registry row in
 ; docs/ui_projection.md ("overworld-field (tile reads)"); matches the
 ; standing-tile reads in overworld.asm / player_state.asm.
-PLAYER_STANDING_TILE    equ W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
+PLAYER_STANDING_TILE    equ wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 WATER_TILE_ID           equ 0x14        ; water tile in every tileset that has one
 
 extern WildMonEncounterSlotChances

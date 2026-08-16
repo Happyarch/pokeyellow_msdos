@@ -422,7 +422,7 @@ TossItem_:
 
 ; ---------------------------------------------------------------------------
 ; Dialog plumbing (port; see DEVIATION note above). Each ti_dialog_* draws the
-; message box into the stride-20 W_TILEMAP scratch rows 12-17, mirrors it to
+; message box into the stride-20 wTileMap scratch rows 12-17, mirrors it to
 ; GB_TILEMAP1 rows 0-5, appends the dialog window (saving the count for
 ; ti_dialog_drop), and waits out the text's terminal `prompt` (▼ + A/B).
 ; ; PROJ menus: GB(0,12) 20x6 --(anchor=center/bottom, X+10, Y+7)--> wx=87
@@ -430,11 +430,11 @@ TossItem_:
 ; ---------------------------------------------------------------------------
 ti_dialog_isok:
     call ti_dialog_box
-    mov esi, W_TILEMAP + 14 * 20 + 1
+    mov esi, wTileMap + 14 * 20 + 1
     mov eax, ti_msg_isok
     call place_flat_str
     lea eax, [ebp + wStringBuffer]      ; text_ram wStringBuffer
-    mov esi, W_TILEMAP + 16 * 20 + 1
+    mov esi, wTileMap + 16 * 20 + 1
     call place_flat_str                 ; ESI advances past the name
     mov byte [ebp + esi], TI_CHAR_QUEST
     call ti_dialog_show
@@ -442,11 +442,11 @@ ti_dialog_isok:
 
 ti_dialog_threw:
     call ti_dialog_box
-    mov esi, W_TILEMAP + 14 * 20 + 1
+    mov esi, wTileMap + 14 * 20 + 1
     mov eax, ti_msg_threw
     call place_flat_str
     lea eax, [ebp + wNameBuffer]        ; text_ram wNameBuffer
-    mov esi, W_TILEMAP + 16 * 20 + 1
+    mov esi, wTileMap + 16 * 20 + 1
     call place_flat_str
     mov byte [ebp + esi], TI_CHAR_DOT
     call ti_dialog_show
@@ -454,10 +454,10 @@ ti_dialog_threw:
 
 ti_dialog_important:
     call ti_dialog_box
-    mov esi, W_TILEMAP + 14 * 20 + 1
+    mov esi, wTileMap + 14 * 20 + 1
     mov eax, ti_msg_imp1
     call place_flat_str
-    mov esi, W_TILEMAP + 16 * 20 + 1
+    mov esi, wTileMap + 16 * 20 + 1
     mov eax, ti_msg_imp2
     call place_flat_str
     call ti_dialog_show
@@ -465,7 +465,7 @@ ti_dialog_important:
 
 ; draw the empty message-box border into scratch rows 12-17 (stride 20)
 ti_dialog_box:
-    mov esi, W_TILEMAP + 12 * 20
+    mov esi, wTileMap + 12 * 20
     mov bl, 18                          ; interior width  (total 20)
     mov bh, 4                           ; interior height (total 6)
     call TextBoxBorder
@@ -476,7 +476,7 @@ ti_dialog_box:
 ti_dialog_show:
     pushad
     mov ecx, 6
-    lea esi, [ebp + W_TILEMAP + 12 * 20]
+    lea esi, [ebp + wTileMap + 12 * 20]
     lea edi, [ebp + GB_TILEMAP1]
 .row:
     push ecx
@@ -1289,7 +1289,7 @@ ItemUseMedicine:
     mov byte [ebp + wBattleMonStatus], 0
     ; fall through to .calculateHPBarCoords
 
-; PARTY_SCR_W — the party menu is pret's 20x18 stride-20 W_TILEMAP scratch (the
+; PARTY_SCR_W — the party menu is pret's 20x18 stride-20 wTileMap scratch (the
 ; same value party_menu.asm calls GBSCR_W, which is file-local there). pret's
 ; SCREEN_WIDTH in .calculateHPBarCoords is that stride, NOT the port's 40-wide
 ; canvas, so the coordinate arithmetic below is pret's verbatim.
@@ -1299,11 +1299,11 @@ ItemUseMedicine:
 
 ; pret .calculateHPBarCoords: hlcoord 4,-1 then (d+1) steps of 2*SCREEN_WIDTH,
 ; i.e. column 4, row 2d+1 — the party-menu HP-bar row for party slot d. The party
-; menu IS pret's 20x18 stride-20 W_TILEMAP scratch here (GBSCR_W), NOT the battle
+; menu IS pret's 20x18 stride-20 wTileMap scratch here (GBSCR_W), NOT the battle
 ; frame, so these are pret's coordinates verbatim with GBSCR_W for SCREEN_WIDTH —
 ; no BCOORD projection applies.
 .calculateHPBarCoords:
-    mov esi, W_TILEMAP + 4 - PARTY_SCR_W        ; hlcoord 4, -1
+    mov esi, wTileMap + 4 - PARTY_SCR_W        ; hlcoord 4, -1
     mov dh, [ebp + wUsedItemOnWhichPokemon] ; d = party index
     inc dh                                  ; inc d
 .calculateHPBarCoordsLoop:

@@ -49,7 +49,7 @@ EQU_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s+equ\s+0x([0-9A-Fa-f]+)\s*(?
 # ---------------------------------------------------------------------------
 CURATED_SIZES = {
     "wSurroundingTiles": 48 * 36,   # 1728 B; DrawTileBlock's decode surface
-    "W_TILEMAP_BACKUP2":   1000,      # wTileMap copy (40x25)
+    "wTileMapBackup2":   1000,      # wTileMap copy (40x25)
     "NPC_DIALOG_BUF":      256,       # ShowTextStream bounds copies to <256 B
     "GB_VRAM0":            0x2000,    # $8000-$9FFF hardware VRAM
     "GB_OAM":              160,
@@ -61,12 +61,12 @@ EXTENDED_SRAM_END = 0x28000
 
 # Symbols that legally share/alias an extent (why matters — keep the comments).
 ALIASES = {
-    "W_TILEMAP_BACKUP",        # == wSurroundingTiles by design (pret union)
+    "wTileMapBackup",        # == wSurroundingTiles by design (pret union)
     "GB_ECHO",                 # region marker for $E000, not a buffer
     "GB_VCHARS0", "GB_VFONT", "GB_VCHARS2",      # VRAM sub-regions
     "GB_TILEMAP0", "GB_TILEMAP1",                # VRAM sub-regions
     "OW_MAP_GBADDR",           # legacy alias of OW_PALLET_BLK_GBADDR
-    # Members of the W_ANIMATED_OBJECTS_DATA block (menu-intro B1): they legally
+    # Members of the wAnimatedObjectsData block (menu-intro B1): they legally
     # live inside its extent — it is one relocated pret union branch, not a
     # foreign buffer landing in the middle of another.
     "wAnimatedObjectStartTileOffsets", "wAnimatedObjectDataStructs",

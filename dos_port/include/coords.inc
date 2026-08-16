@@ -6,7 +6,7 @@
 ; Translates GB x,y tile coordinates into port memory addresses.
 ;
 ; NOTE: The DOS port renders the overworld at a native 40x25 tile viewport
-; (W_TILEMAP), unlike the GB's 20x18. 'coord' targets W_TILEMAP with stride 40.
+; (wTileMap), unlike the GB's 20x18. 'coord' targets wTileMap with stride 40.
 ; 'bgcoord' targets GB_TILEMAP0 with stride 32.
 ;
 ; hlcoord uses ESI (HL's pointer register); decoord uses EDI (DE's secondary
@@ -41,7 +41,7 @@
     %if %0 >= 4
         mov %1, (%3) * SCREEN_WIDTH + (%2) + %4
     %else
-        mov %1, (%3) * SCREEN_WIDTH + (%2) + W_TILEMAP
+        mov %1, (%3) * SCREEN_WIDTH + (%2) + wTileMap
     %endif
 %endmacro
 
@@ -74,7 +74,7 @@
     %if %0 >= 3
         dd (%2) * SCREEN_WIDTH + (%1) + %3
     %else
-        dd (%2) * SCREEN_WIDTH + (%1) + W_TILEMAP
+        dd (%2) * SCREEN_WIDTH + (%1) + wTileMap
     %endif
 %endmacro
 
@@ -83,7 +83,7 @@
     %if %0 >= 3
         mov byte [ebp + (%2) * SCREEN_WIDTH + (%1) + %3], al
     %else
-        mov byte [ebp + (%2) * SCREEN_WIDTH + (%1) + W_TILEMAP], al
+        mov byte [ebp + (%2) * SCREEN_WIDTH + (%1) + wTileMap], al
     %endif
 %endmacro
 
@@ -92,7 +92,7 @@
     %if %0 >= 3
         mov al, byte [ebp + (%2) * SCREEN_WIDTH + (%1) + %3]
     %else
-        mov al, byte [ebp + (%2) * SCREEN_WIDTH + (%1) + W_TILEMAP]
+        mov al, byte [ebp + (%2) * SCREEN_WIDTH + (%1) + wTileMap]
     %endif
 %endmacro
 
@@ -152,7 +152,7 @@
 ; the coordinate VALUES move; every write through it is pret's. SCREEN_WIDTH is the
 ; 40-wide canvas stride (== FW in core.asm), so this is core.asm's original formula
 ; verbatim. Shared here so core.asm and animations.asm use one definition.
-%define BCOORD(X, Y) (W_TILEMAP + ((Y) + 3) * SCREEN_WIDTH + ((X) + 10))
+%define BCOORD(X, Y) (wTileMap + ((Y) + 3) * SCREEN_WIDTH + ((X) + 10))
 
 %macro hlowcoord 3
     owcoord esi, %1, %2, %3

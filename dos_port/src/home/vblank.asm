@@ -154,7 +154,7 @@ DelayFrame:
     call VBlankCopyBgMap
     call UpdateMovingBgTiles
     ; Cinematic surface per-frame BG commit (0 = none). A movie surface draws into
-    ; W_TILEMAP but is shown through a window over GB_TILEMAP0, so its canvas must
+    ; wTileMap but is shown through a window over GB_TILEMAP0, so its canvas must
     ; be repacked every frame for typed text / animated pics to appear. Armed by
     ; MovieBeginSurface (= MovieMirrorSurface), cleared by MovieEndSurface. Preserves
     ; all registers. Inert (skipped) whenever no cinematic owns the screen.
@@ -201,9 +201,9 @@ DelayFrame:
     call audio_tick
     PERF_MARK PERF_AUDIO
     ; BG: render_bg picks its own path from wCurrentTileBlockMapViewPointer —
-    ; nonzero = overworld surface, zero = flat 40×25 W_TILEMAP (title / menus /
+    ; nonzero = overworld surface, zero = flat 40×25 wTileMap (title / menus /
     ; battle). InitBattle zeroes that pointer (+ SCX/SCY), so the battle screen is
-    ; just the full-canvas W_TILEMAP rendered here. (Wave-2 Stage 1a: replaced the
+    ; just the full-canvas wTileMap rendered here. (Wave-2 Stage 1a: replaced the
     ; Stage-0.5 clear_backbuffer_battle + centered-window approach.)
     ; Re-resolve the active CGB attribute plane before the compositor consumes
     ; tile_cache. pret's screens set their palette BEFORE drawing, relying on the
@@ -312,7 +312,7 @@ update_oam:
 .run:
     call PrepareOAMData
     pushad
-    lea esi, [ebp + W_SHADOW_OAM]
+    lea esi, [ebp + wShadowOAM]
     lea edi, [ebp + GB_OAM]
     mov ecx, W_SHADOW_OAM_SIZE
     rep movsb
@@ -347,5 +347,5 @@ commit_shadow_regs:
 ; compositor's explicit per-screen mirrors are the port's only WRAM→tilemap
 ; path; resurrect from git history only if a screen ever genuinely needs a
 ; generic transfer, and then per-descriptor (source stride + dest band owned by
-; the descriptor), never as a global W_TILEMAP-wide copy.
+; the descriptor), never as a global wTileMap-wide copy.
 ; ---------------------------------------------------------------------------

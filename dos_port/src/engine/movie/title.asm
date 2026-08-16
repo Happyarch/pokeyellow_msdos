@@ -296,8 +296,8 @@ PrepareTitleScreen:
     ; to blob slot 3 (bank $20): the title screen streamed Music_TitleScreen's
     ; channel data out of the wrong 16 KB image and played as noise.
     mov al, MUSIC_TITLE_SCREEN_BANK
-    mov byte [ebp + W_AUDIO_ROM_BANK],        al
-    mov byte [ebp + W_AUDIO_SAVED_ROM_BANK],  al
+    mov byte [ebp + wAudioROMBank],        al
+    mov byte [ebp + wAudioSavedROMBank],  al
     ; AL is left holding the bank, as pret leaves A — it is dead into
     ; DisplayTitleScreen, whose first write to A is its own.
 
@@ -541,11 +541,11 @@ DisplayTitleScreen:
     ; Reset per-loop title screen state
     xor al, al
     mov byte [ebp + wUnusedFlag],            al
-    mov byte [ebp + W_TITLE_SCREEN_SCENE],     al
-    mov byte [ebp + W_TITLE_SCREEN_TIMER],     al
-    mov byte [ebp + W_TITLE_SCREEN_SCENE + 2], al  ; reset counter low
-    mov byte [ebp + W_TITLE_SCREEN_SCENE + 3], al  ; reset counter high
-    mov byte [ebp + W_TITLE_SCREEN_SCENE + 4], 0x0F
+    mov byte [ebp + wTitleScreenScene],     al
+    mov byte [ebp + wTitleScreenTimer],     al
+    mov byte [ebp + wTitleScreenScene + 2], al  ; reset counter low
+    mov byte [ebp + wTitleScreenScene + 3], al  ; reset counter high
+    mov byte [ebp + wTitleScreenScene + 4], 0x0F
 
 .titleScreenLoop:
     call IncrementResetCounter
@@ -614,7 +614,7 @@ DisplayTitleScreen:
     ; state machine has reached a chosen wTitleScreenScene, so the half and
     ; closed frames are observable instead of only the open state the stable
     ; checkpoint holds. Scene numbering: 1/7 half, 4 closed, 10 open.
-    cmp byte [ebp + W_TITLE_SCREEN_SCENE], TITLE_DUMP_SCENE
+    cmp byte [ebp + wTitleScreenScene], TITLE_DUMP_SCENE
     jne .no_scene_dump
     call DelayFrame                   ; let the republished OAM reach the buffer
     call DumpBackbuffer               ; never returns
@@ -703,7 +703,7 @@ DisplayTitleScreen:
 ; ---------------------------------------------------------------------------
 TitleBlankSurface:
     pushad
-    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN]
+    lea edi, [ebp + wTileMap + TITLE_ORIGIN]
     mov edx, UI_TITLE_GBH                 ; 18 rows
     mov al, 0x7F
 .row:
@@ -727,7 +727,7 @@ WriteCopyrightTiles:
     push edi
     lea esi, [CopyrightRowTiles]
     ; projected coord(2, 17) in wTileMap (canvas stride 40, not the GB's 20)
-    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN + 17 * SCREEN_TILES_W + 2]
+    lea edi, [ebp + wTileMap + TITLE_ORIGIN + 17 * SCREEN_TILES_W + 2]
 .copy:
     mov al, [esi]
     inc esi
@@ -770,7 +770,7 @@ TitleScreenCopyTileMapToVRAM:
     movzx edx, byte [ebp + hAutoBGTransferDest]
     add edi, edx                          ; dest = hi:lo, as pret assembles it
     add edi, ebp
-    lea esi, [ebp + W_TILEMAP + TITLE_ORIGIN]
+    lea esi, [ebp + wTileMap + TITLE_ORIGIN]
     mov edx, UI_TITLE_GBH                 ; 18 rows
 .row:
     mov ecx, UI_TITLE_GBW                 ; 20 columns
@@ -837,7 +837,7 @@ LoadCopyrightTiles:
     ; equivalent of pret's compile-time SCREEN_WIDTH; set it to the 40-wide cinematic
     ; canvas so a row step is one surface row.
     mov dword [text_row_stride], SCREEN_TILES_W
-    mov esi, W_TILEMAP + INTRO_BG_ORIGIN + 7 * SCREEN_TILES_W + 2  ; ld hl, projected coord(2,7) — GB offset
+    mov esi, wTileMap + INTRO_BG_ORIGIN + 7 * SCREEN_TILES_W + 2  ; ld hl, projected coord(2,7) — GB offset
     mov eax, CopyrightTextString                                   ; ld de, CopyrightTextString (flat src)
     jmp PlaceString                                                ; jp PlaceString
 
@@ -851,7 +851,7 @@ LoadCopyrightTiles:
 ; ---------------------------------------------------------------------------
 DoTitleScreenFunction:
     call .CheckTimer
-    movzx eax, byte [ebp + W_TITLE_SCREEN_SCENE]
+    movzx eax, byte [ebp + wTitleScreenScene]
     cmp al, 11
     ja .Nop           ; clamp out-of-range scenes
     lea edi, [.Jumptable]
@@ -866,7 +866,7 @@ section .data
 section .text
 
 .GoBackToStart:
-    mov byte [ebp + W_TITLE_SCREEN_SCENE], 0
+    mov byte [ebp + wTitleScreenScene], 0
 .Nop:
     ret
 
@@ -881,7 +881,7 @@ section .text
 .LoadBlinkFrame:
     ; Modify TileID byte of 8 OAM sprites: clear bits 2-3, OR with DL (blink state).
     ; A2.4 republishes after this mutation so the change reaches the next frame.
-    lea esi, [ebp + W_SHADOW_OAM + 2]    ; TileID of sprite 0
+    lea esi, [ebp + wShadowOAM + 2]    ; TileID of sprite 0
     mov ecx, 8
 .blink_loop:
     mov al, [esi]
@@ -894,12 +894,12 @@ section .text
     ; The tile IDs changed; republish so the new blink frame is what gets drawn.
     call TitleScreenPublishEyes
 .BlinkWait:
-    inc byte [ebp + W_TITLE_SCREEN_SCENE]
+    inc byte [ebp + wTitleScreenScene]
     ret
 
 .CheckTimer:
     push eax
-    lea esi, [ebp + W_TITLE_SCREEN_TIMER]
+    lea esi, [ebp + wTitleScreenTimer]
     mov al, [esi]
     inc byte [esi]
     test al, al
@@ -909,7 +909,7 @@ section .text
     cmp al, 0x90
     jne .timer_done
 .restart:
-    mov byte [ebp + W_TITLE_SCREEN_SCENE], 1
+    mov byte [ebp + wTitleScreenScene], 1
 .timer_done:
     pop eax
     ret
@@ -933,7 +933,7 @@ CopyDebugName:
 ; ---------------------------------------------------------------------------
 IncrementResetCounter:
     pushad
-    lea esi, [ebp + W_TITLE_SCREEN_SCENE + 2]
+    lea esi, [ebp + wTitleScreenScene + 2]
     movzx eax, byte [esi]       ; lo byte of counter
     movzx edx, byte [esi + 1]   ; hi byte of counter
     inc eax

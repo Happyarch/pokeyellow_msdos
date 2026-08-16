@@ -255,7 +255,7 @@ g_bg_whiteout: dd 0
 ; Per-frame surface-redraw callback (0 = none). DelayFrame invokes it once per
 ; frame during the BG-transfer phase, before render. It is the cinematic's
 ; legitimate analog of the GB VBlank auto-BG-transfer the port retired for menus:
-; a cinematic draws its pic/text into W_TILEMAP (stride 40) like every screen, but
+; a cinematic draws its pic/text into wTileMap (stride 40) like every screen, but
 ; the surface is presented through a WINDOW sampling GB_TILEMAP0 (stride 32), so
 ; the canvas must be repacked into GB_TILEMAP0 every frame or nothing typed after
 ; the last explicit MovieMirrorSurface is visible (the text engine's own per-char
@@ -738,11 +738,11 @@ render_bg:
     ret
 
 ; ---------------------------------------------------------------------------
-; SnapshotRenderedTileMap — port-only. Re-crop W_TILEMAP out of wSurroundingTiles
+; SnapshotRenderedTileMap — port-only. Re-crop wTileMap out of wSurroundingTiles
 ; at the origin render_bg ACTUALLY BLITTED last frame, so that switching the
 ; renderer from the overworld path to the flat path leaves the picture unchanged.
 ;
-; WHY THIS EXISTS. W_TILEMAP is not a mirror of the screen — it is the
+; WHY THIS EXISTS. wTileMap is not a mirror of the screen — it is the
 ; player-anchored COLLISION crop. RefreshCollisionTileMap
 ; (src/engine/overworld/overworld.asm) copies 40x25 tiles starting at
 ; wSurroundingTiles tile (2*wXBlockCoord, 2*wYBlockCoord), which pins the player's
@@ -791,7 +791,7 @@ SnapshotRenderedTileMap:
     shr ecx, 3
     add eax, ecx
     lea esi, [eax + wSurroundingTiles]           ; GB-relative source cursor
-    mov edi, W_TILEMAP                             ; GB-relative dest cursor
+    mov edi, wTileMap                             ; GB-relative dest cursor
     mov edx, SCREEN_TILES_H                        ; rows remaining
 .row:
     mov ecx, SCREEN_TILES_W
@@ -921,14 +921,14 @@ decode_tile:
 
 ; ---------------------------------------------------------------------------
 ; SetBGCellAttrFlat — publish ONE per-cell BG attribute override, addressed the
-; way a screen on the flat 40x25 canvas already thinks: by W_TILEMAP cell offset.
+; way a screen on the flat 40x25 canvas already thinks: by wTileMap cell offset.
 ;
 ; This is the publisher API for the per-cell layer. It lives here, not in the
 ; screens, because the canvas-offset -> surface-cell mapping is the flat
 ; decoder's own geometry (row r of the 40-wide canvas is surface cell r*48) and
 ; a screen that open-coded it would silently rot if the surface ever resized.
 ;
-; In:  EAX = cell offset into W_TILEMAP (0 .. SCREEN_TILES_W*SCREEN_TILES_H-1)
+; In:  EAX = cell offset into wTileMap (0 .. SCREEN_TILES_W*SCREEN_TILES_H-1)
 ;      DL  = the CGB attribute byte, INCLUDING BG_ATTR_PRESENT; DL = 0 clears
 ;            the override and returns the cell to its tile_pal binding
 ; Out: all registers preserved.
@@ -1161,7 +1161,7 @@ decode_surface_flat:
     jne .force
 
     ; --- steady state: scan the live 40 cells of each of the 25 live rows ---
-    lea esi, [ebp + W_TILEMAP]
+    lea esi, [ebp + wTileMap]
     mov edi, surf_shadow
     mov dword [surf_row_base], bg_surface
     xor edx, edx                           ; row
@@ -1192,7 +1192,7 @@ decode_surface_flat:
 
     ; --- force: every cell, live or padding, linear cursors ---
 .force:
-    lea ebx, [ebp + W_TILEMAP]             ; live-row src (EBX: decode_tile owns ESI)
+    lea ebx, [ebp + wTileMap]             ; live-row src (EBX: decode_tile owns ESI)
     mov edx, surf_shadow
     mov edi, bg_surface
     mov dword [surf_row_ctr], 0            ; row

@@ -23,7 +23,7 @@
 
 bits 32
 
-extern text_row_stride          ; text.asm — active W_TILEMAP row stride
+extern text_row_stride          ; text.asm — active wTileMap row stride
 
 global CableClub_TextBoxBorder
 global CableClub_DrawHorizontalLine

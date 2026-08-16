@@ -62,7 +62,7 @@ _UpdateSprites:
 .loop:
     mov eax, esi
     mov [ebp + hCurrentSpriteOffset], al
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     test al, al
     jz .skip                             ; inactive slot
     test esi, esi
@@ -115,7 +115,7 @@ UpdateNonPlayerSprite:
     movzx esi, byte [ebp + hCurrentSpriteOffset]
     ; hTilePlayerStandingOn = (imageBaseOffset - 1) << 4 (VRAM tile-group high nibble).
     ; Func_4a7b reads this to find the sprite's tile base: group * 12.
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
+    mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     dec al
     ror al, 4                            ; nibble swap: (N-1) → (N-1)*16
     mov [ebp + hTilePlayerStandingOn], al
@@ -153,7 +153,7 @@ DetectCollisionBetweenSprites:
 
     ; ESI = base of sprite i's data1
     movzx esi, byte [ebp + hCurrentSpriteOffset]
-    add   esi, W_SPRITE_STATE_DATA_1
+    add   esi, wSpriteStateData1
 
     ; Return early if slot i is unused
     mov   al, byte [ebp + esi + SPRITESTATEDATA1_PICTUREID]
@@ -191,10 +191,10 @@ DetectCollisionBetweenSprites:
 .loop_j:
     xor  dh, dh
 
-    ; EDI = base of sprite j's data1  (j * 0x10 + W_SPRITE_STATE_DATA_1)
+    ; EDI = base of sprite j's data1  (j * 0x10 + wSpriteStateData1)
     movzx edi, dl
     shl   edi, 4
-    add   edi, W_SPRITE_STATE_DATA_1
+    add   edi, wSpriteStateData1
 
     ; Skip if j == i
     cmp   edi, esi
@@ -316,7 +316,7 @@ DetectCollisionBetweenSprites:
     ; would add an unfaithful call seam rather than mirror pret. The .pika_* block below IS
     ; Func_4d0a's body.
     ; --- Pikachu special case: i==player (slot 0) AND j==pikachu (slot 15) ---
-    cmp   esi, W_SPRITE_STATE_DATA_1
+    cmp   esi, wSpriteStateData1
     jne   .standard_col
     mov   byte [ebp + W_D433], 0
     cmp   dl, 15

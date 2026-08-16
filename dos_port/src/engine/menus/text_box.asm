@@ -18,11 +18,11 @@
 ; ── UI PROJECTION (docs/ui_projection.md) — canvas model ────────────────────
 ; ; PROJ menus: all table geometry comes from assets/ui_layout_menus.inc
 ; (UI_* equates, generated from the frozen sidecar — never bare literals).
-; The tables hold coordinates PRE-PROJECTED onto the port's 40×25 W_TILEMAP
+; The tables hold coordinates PRE-PROJECTED onto the port's 40×25 wTileMap
 ; canvas (pret's 20×18 wTileMap screen coords mapped by the per-element anchor
 ; rules recorded in the .inc). DisplayTextBoxID_ therefore runs in the port's
 ; full-canvas contexts (render_bg view-ptr = 0: battle, mart, full-screen
-; menus) where W_TILEMAP at stride 40 IS the screen — the same model the
+; menus) where wTileMap at stride 40 IS the screen — the same model the
 ; battle front-end uses (battle_menu.asm). It forces text_row_stride = 40 for
 ; the duration of the dispatch (saved/restored) so TextBoxBorder / PlaceString
 ; row-advance matches the canvas.
@@ -59,7 +59,7 @@ global DisplaySwitchStatsCancelPartyBox ; port-only: the battle party menu's box
 extern DisplayTextBoxID                 ; home/textbox.asm — pret home wrapper
 extern TextBoxBorder                    ; text.asm — ESI=top-left, BL=int_w, BH=int_h
 extern PlaceString                      ; text.asm — EAX=flat src, ESI=dest
-extern text_row_stride                  ; text.asm — active W_TILEMAP row stride
+extern text_row_stride                  ; text.asm — active wTileMap row stride
 extern UpdateSprites                    ; src/home/update_sprites.asm (gated on wUpdateSpritesEnabled)
 extern ClearScreenArea                  ; home/copy2.asm — ESI=top-left, BH=rows, BL=cols (stride 40)
 extern PrintBCDNumber                   ; home/print_bcd.asm — ESI=dest, EDX=src, BL=flags|len
@@ -173,7 +173,7 @@ section .text
 ;      parameters (yn_box_col/row via its entry points) — DEVIATION: the port's
 ;      DisplayTwoOptionMenu takes its box position from yes_no.asm state, not
 ;      pret's b/c/hl register triple (window-projected model, see yes_no.asm).
-; Out: table paths draw into W_TILEMAP (canvas); function handlers as pret
+; Out: table paths draw into wTileMap (canvas); function handlers as pret
 ;      (DoBuySellQuitMenu returns CF + wChosenMenuItem/wMenuExitMethod).
 ; ---------------------------------------------------------------------------
 DisplayTextBoxID_:
@@ -260,7 +260,7 @@ DisplayTextBoxID_:
 ; coordinates (measured: canvas rows 18-24, cols 31-39), but the party menu is a
 ; FULL-SCREEN TAKEOVER: party_menu.asm sets g_bg_whiteout, so render_bg fills
 ; with BG color 0 and skips the tilemap entirely, and the screen the player is
-; actually looking at is pret's 20x18 scratch at W_TILEMAP mirrored into
+; actually looking at is pret's 20x18 scratch at wTileMap mirrored into
 ; GB_TILEMAP1 by PartyMenuMirror, which the window descriptors read. A canvas
 ; draw cannot reach this screen at all. The menu still WORKED -- HandleMenuInput
 ; ran on the scratch and A selected SWITCH -- so the defect was purely that
@@ -297,13 +297,13 @@ DisplaySwitchStatsCancelPartyBox:
     mov dword [text_row_stride], PARTY_SCRATCH_W
 
     ; border: TextBoxBorder takes the INTERIOR size, so (x2-x1-1) x (y2-y1-1)
-    mov esi, W_TILEMAP + SSC_BOX_Y * PARTY_SCRATCH_W + SSC_BOX_X
+    mov esi, wTileMap + SSC_BOX_Y * PARTY_SCRATCH_W + SSC_BOX_X
     mov bl, SSC_BOX_X2 - SSC_BOX_X - 1
     mov bh, SSC_BOX_Y2 - SSC_BOX_Y - 1
     call TextBoxBorder
 
     ; text — same BIT_NO_TEXT_DELAY scoping DisplayTextBoxID_ uses for a template
-    mov esi, W_TILEMAP + SSC_TEXT_Y * PARTY_SCRATCH_W + SSC_TEXT_X
+    mov esi, wTileMap + SSC_TEXT_Y * PARTY_SCRATCH_W + SSC_TEXT_X
     mov eax, SwitchStatsCancelText
     mov cl, [ebp + wStatusFlags5]
     push ecx
@@ -389,9 +389,9 @@ GetTextBoxIDText:
 ; ---------------------------------------------------------------------------
 ; GetAddressOfScreenCoords — point ESI (HL) at canvas cell (D=row, E=col).
 ; pret ref: text_box.asm:GetAddressOfScreenCoords (row loop × screen width).
-; PROJ menus: canvas stride SCREEN_TILES_W (40), base W_TILEMAP — coords come
+; PROJ menus: canvas stride SCREEN_TILES_W (40), base wTileMap — coords come
 ; pre-projected from the UI_* tables. 386: O(1) imul replaces the row loop.
-; In:  DH = row, DL = column. Out: ESI = W_TILEMAP + row*40 + col (EBP-rel).
+; In:  DH = row, DL = column. Out: ESI = wTileMap + row*40 + col (EBP-rel).
 ;      DH = 0 on return (the pret loop leaves d = 0). Clobbers ECX.
 ; ---------------------------------------------------------------------------
 GetAddressOfScreenCoords:
@@ -399,7 +399,7 @@ GetAddressOfScreenCoords:
     imul esi, esi, SCREEN_TILES_W
     movzx ecx, dl
     add esi, ecx
-    add esi, W_TILEMAP
+    add esi, wTileMap
     xor dh, dh                          ; pret loop decrements d to 0
     ret
 
@@ -414,13 +414,13 @@ DisplayMoneyBox:
     call DisplayTextBoxID               ; home wrapper → box + "MONEY" via the tables
     ; hlcoord 13,1 / lb bc,1,6 / ClearScreenArea
     ; PROJ menus: GB(13,1) = box-rel (2,1) → UI_MONEY_BOX_TEMPLATE_(COL+2,ROW+1)
-    mov esi, W_TILEMAP + (UI_MONEY_BOX_TEMPLATE_ROW + 1) * SCREEN_TILES_W + UI_MONEY_BOX_TEMPLATE_COL + 2
+    mov esi, wTileMap + (UI_MONEY_BOX_TEMPLATE_ROW + 1) * SCREEN_TILES_W + UI_MONEY_BOX_TEMPLATE_COL + 2
     mov bh, 1                           ; b = 1 row
     mov bl, 6                           ; c = 6 columns
     call ClearScreenArea
     ; hlcoord 12,1 / de=wPlayerMoney / c=3|LEADING_ZEROES|MONEY_SIGN / PrintBCDNumber
     ; PROJ menus: GB(12,1) = box-rel (1,1) → UI_MONEY_BOX_TEMPLATE_(COL+1,ROW+1)
-    mov esi, W_TILEMAP + (UI_MONEY_BOX_TEMPLATE_ROW + 1) * SCREEN_TILES_W + UI_MONEY_BOX_TEMPLATE_COL + 1
+    mov esi, wTileMap + (UI_MONEY_BOX_TEMPLATE_ROW + 1) * SCREEN_TILES_W + UI_MONEY_BOX_TEMPLATE_COL + 1
     mov edx, wPlayerMoney
     mov bl, 3 | (1 << BIT_LEADING_ZEROES) | (1 << BIT_MONEY_SIGN)
     call PrintBCDNumber
@@ -492,7 +492,7 @@ DoBuySellQuitMenu:
 ;
 ; UI PROJECTION (docs/ui_projection.md) — HARD REQUIREMENT. The two-option box
 ; is NEVER emitted at raw GB tile coords. It is rendered into the 20-stride
-; W_TILEMAP scratch (TextBoxBorder/place_flat_str), mirrored to GB_TILEMAP0,
+; wTileMap scratch (TextBoxBorder/place_flat_str), mirrored to GB_TILEMAP0,
 ; and shown as a projected WINDOW DESCRIPTOR (add_window). The projected
 ; wx/wy/clip_w/max_y come straight from the anchor rule — the SAME mechanism
 ; the bag YES/NO box uses (bag_menu.asm .show_yesno_window). Two contexts
@@ -556,21 +556,21 @@ DisplayTwoOptionMenu:
     mov [yn_frow], ecx                             ; first-option box-relative row
 
     ; --- PROJECTION ROUTING ---
-    ; Battle mode (yn_proj_mode == 1): draw directly into W_TILEMAP at stride 40 (same
+    ; Battle mode (yn_proj_mode == 1): draw directly into wTileMap at stride 40 (same
     ; architecture as msgbox_centered / DrawBattleMenuBox), saving and restoring the
     ; underlying tiles (TwoOptionMenu_SaveScreenTiles / TwoOptionMenu_RestoreScreenTiles).
-    ; Overworld mode (yn_proj_mode == 0): stage into W_TILEMAP and present as a projected window.
+    ; Overworld mode (yn_proj_mode == 0): stage into wTileMap and present as a projected window.
     cmp dword [yn_proj_mode], 1
     je .battle_mode
 
-    ; --- OVERWORLD MODE: stride-20 W_TILEMAP staging -> window descriptor ---
+    ; --- OVERWORLD MODE: stride-20 wTileMap staging -> window descriptor ---
     mov dword [text_row_stride], 20
 
-    ; Save the 160-byte W_TILEMAP scratch area (8 rows x 20 stride)
+    ; Save the 160-byte wTileMap scratch area (8 rows x 20 stride)
     push esi
     push edi
     push ecx
-    lea esi, [ebp + W_TILEMAP]
+    lea esi, [ebp + wTileMap]
     mov edi, yn_scratch_backup
     mov ecx, 40                                  ; 40 dwords = 160 bytes
     rep movsd
@@ -578,10 +578,10 @@ DisplayTwoOptionMenu:
     pop edi
     pop esi
 
-    ; --- render the border into the W_TILEMAP scratch at origin (row0,col0) -
+    ; --- render the border into the wTileMap scratch at origin (row0,col0) -
     ; NB: load the geometry via AX first — writing BH/BL directly from [ebx+..]
     ; would corrupt EBX (the descriptor pointer) between the two reads (S3 fix).
-    mov esi, W_TILEMAP
+    mov esi, wTileMap
     mov ah, [ebx + TOMD_INT_H]                     ; interior height
     mov al, [ebx + TOMD_INT_W]                     ; interior width
     push ebx
@@ -620,13 +620,13 @@ DisplayTwoOptionMenu:
     ; option sits a doubled cursor step below it.
     mov eax, [yn_frow]
     imul eax, eax, 20
-    lea esi, [eax + W_TILEMAP + 2]                 ; ESI = rel(frow,2)
+    lea esi, [eax + wTileMap + 2]                 ; ESI = rel(frow,2)
     mov eax, [ebx + TOMD_OPT_A]
     call place_flat_str
     mov eax, [yn_frow]
     add eax, 2                                     ; pret's <NEXT> = 2 rows
     imul eax, eax, 20
-    lea esi, [eax + W_TILEMAP + 2]                 ; ESI = rel(frow+2,2)
+    lea esi, [eax + wTileMap + 2]                 ; ESI = rel(frow+2,2)
     mov eax, [ebx + TOMD_OPT_B]
     call place_flat_str
 
@@ -699,7 +699,7 @@ DisplayTwoOptionMenu:
 ; ---------------------------------------------------------------------------
 ; .battle_mode — Direct canvas battle presentation (msgbox_centered shape).
 ; Saves the covered 40-stride canvas area, draws TextBoxBorder + option strings
-; directly at (box_col + 10, box_row + 3), drives HandleMenuInput on W_TILEMAP,
+; directly at (box_col + 10, box_row + 3), drives HandleMenuInput on wTileMap,
 ; and restores the covered canvas area on exit.
 ; ---------------------------------------------------------------------------
 .battle_mode:
@@ -711,10 +711,10 @@ DisplayTwoOptionMenu:
     add ecx, 3
     mov [yn_cur_row], ecx                       ; canvas row
 
-    ; Calculate box offset: W_TILEMAP + row * 40 + col
+    ; Calculate box offset: wTileMap + row * 40 + col
     imul ecx, ecx, 40
     add ecx, eax
-    add ecx, W_TILEMAP
+    add ecx, wTileMap
     mov [yn_box_ofs], ecx                       ; EBP-relative tilemap offset
 
     ; Save screen tiles under the box (tot_w x tot_h with stride 40)
@@ -744,7 +744,7 @@ DisplayTwoOptionMenu:
     ; Set text_row_stride to 40 for TextBoxBorder and PlaceString
     mov dword [text_row_stride], 40
 
-    ; Draw TextBoxBorder directly into W_TILEMAP at yn_box_ofs
+    ; Draw TextBoxBorder directly into wTileMap at yn_box_ofs
     mov esi, [yn_box_ofs]
     mov ah, [ebx + TOMD_INT_H]
     mov al, [ebx + TOMD_INT_W]
@@ -759,25 +759,25 @@ DisplayTwoOptionMenu:
 .afterBorder_b:
     pop ebx
 
-    ; Option A at W_TILEMAP + (row + frow) * 40 + col + 2
+    ; Option A at wTileMap + (row + frow) * 40 + col + 2
     mov eax, [yn_cur_row]
     add eax, [yn_frow]
     imul eax, eax, 40
     add eax, [yn_cur_col]
     add eax, 2
-    add eax, W_TILEMAP
+    add eax, wTileMap
     mov esi, eax
     mov eax, [ebx + TOMD_OPT_A]
     call place_flat_str
 
-    ; Option B at W_TILEMAP + (row + frow + 2) * 40 + col + 2
+    ; Option B at wTileMap + (row + frow + 2) * 40 + col + 2
     mov eax, [yn_cur_row]
     add eax, [yn_frow]
     add eax, 2
     imul eax, eax, 40
     add eax, [yn_cur_col]
     add eax, 2
-    add eax, W_TILEMAP
+    add eax, wTileMap
     mov esi, eax
     mov eax, [ebx + TOMD_OPT_B]
     call place_flat_str
@@ -892,12 +892,12 @@ yn_battle_teardown:
 ; ---------------------------------------------------------------------------
 yn_teardown:
     push eax
-    ; restore the 160-byte W_TILEMAP scratch area
+    ; restore the 160-byte wTileMap scratch area
     push esi
     push edi
     push ecx
     mov esi, yn_scratch_backup
-    lea edi, [ebp + W_TILEMAP]
+    lea edi, [ebp + wTileMap]
     mov ecx, 40                                  ; 40 dwords = 160 bytes
     rep movsd
     pop ecx
@@ -931,7 +931,7 @@ yn_show_window:
     mov eax, [g_window_count]
     mov [yn_saved_wc], eax                          ; remember caller's window list
 
-    call yn_mirror                                  ; W_TILEMAP box -> GB_TILEMAP0
+    call yn_mirror                                  ; wTileMap box -> GB_TILEMAP0
 
     ; horizontal/vertical shifts by projection mode
     mov ecx, 20                                     ; H_SHIFT (overworld)
@@ -965,7 +965,7 @@ yn_show_window:
     ret
 
 ; ---------------------------------------------------------------------------
-; yn_mirror — copy the tot_w x tot_h box from W_TILEMAP (stride 20, col 0) to
+; yn_mirror — copy the tot_w x tot_h box from wTileMap (stride 20, col 0) to
 ; GB_TILEMAP0 (stride 32) at row YN_SROW, col 0. Used both for the initial draw
 ; and as menu_redraw_cb so HandleMenuInput's live cursor reaches the compositor.
 ; All registers preserved (safe to call from the menu loop).
@@ -976,7 +976,7 @@ yn_mirror:
 .yn_row:
     mov esi, ebx
     imul esi, esi, 20
-    lea esi, [ebp + esi + W_TILEMAP]                ; src = W_TILEMAP + row*20
+    lea esi, [ebp + esi + wTileMap]                ; src = wTileMap + row*20
     mov edi, ebx
     shl edi, 5                                      ; row*32
     lea edi, [ebp + edi + GB_TILEMAP0 + YN_SROW * 32]
@@ -1015,14 +1015,14 @@ DisplayFieldMoveMonMenu:
 
     ; no field moves: hlcoord 11,11 / lb bc,5,7 / TextBoxBorder
     ; PROJ menus: GB(11,11) 9x7 → UI_FIELD_MOVE_MON_MENU_(COL,ROW) = (31,18)
-    mov esi, W_TILEMAP + UI_FIELD_MOVE_MON_MENU_ROW * SCREEN_TILES_W + UI_FIELD_MOVE_MON_MENU_COL
+    mov esi, wTileMap + UI_FIELD_MOVE_MON_MENU_ROW * SCREEN_TILES_W + UI_FIELD_MOVE_MON_MENU_COL
     mov bh, 5                           ; b = interior height
     mov bl, 7                           ; c = interior width
     call TextBoxBorder
     call UpdateSprites
     mov byte [ebp + hFieldMoveMonMenuTopMenuItemX], 12  ; GB-space cursor X
     ; hlcoord 13,12 → box-rel (2,1); PROJ: UI_FIELD_MOVE_MON_MENU_(COL+2,ROW+1)
-    mov esi, W_TILEMAP + (UI_FIELD_MOVE_MON_MENU_ROW + 1) * SCREEN_TILES_W + UI_FIELD_MOVE_MON_MENU_COL + 2
+    mov esi, wTileMap + (UI_FIELD_MOVE_MON_MENU_ROW + 1) * SCREEN_TILES_W + UI_FIELD_MOVE_MON_MENU_COL + 2
     mov eax, PokemonMenuEntries
     jmp PlaceString                     ; jp PlaceString
 
@@ -1033,7 +1033,7 @@ DisplayFieldMoveMonMenu:
     ; move-count adjustment): hlcoord 0,11 + (leftmostX - 1); c = 18 - e; b = 5
     movzx ecx, byte [ebp + wFieldMovesLeftmostXCoord]
     dec ecx                             ; e = leftmostX - 1 (GB columns)
-    mov esi, W_TILEMAP + (11 + FM_ROW_SHIFT) * SCREEN_TILES_W + FM_COL_SHIFT
+    mov esi, wTileMap + (11 + FM_ROW_SHIFT) * SCREEN_TILES_W + FM_COL_SHIFT
     add esi, ecx                        ; add hl,de (projected)
     mov bh, 5                           ; ld b,5
     mov al, 18
@@ -1059,7 +1059,7 @@ DisplayFieldMoveMonMenu:
     ; 2 rows per move
     movzx ecx, byte [ebp + wFieldMovesLeftmostXCoord]
     inc ecx                             ; e = leftmostX + 1
-    mov esi, W_TILEMAP + (12 + FM_ROW_SHIFT) * SCREEN_TILES_W + FM_COL_SHIFT
+    mov esi, wTileMap + (12 + FM_ROW_SHIFT) * SCREEN_TILES_W + FM_COL_SHIFT
     add esi, ecx
     mov edx, -(SCREEN_TILES_W * 2)
     movzx eax, byte [ebp + wNumFieldMoves]
@@ -1104,7 +1104,7 @@ DisplayFieldMoveMonMenu:
     ; hlcoord 0,12 + (leftmostX + 1): the STATS/SWITCH/CANCEL tail
     movzx ecx, byte [ebp + wFieldMovesLeftmostXCoord]
     inc ecx
-    mov esi, W_TILEMAP + (12 + FM_ROW_SHIFT) * SCREEN_TILES_W + FM_COL_SHIFT
+    mov esi, wTileMap + (12 + FM_ROW_SHIFT) * SCREEN_TILES_W + FM_COL_SHIFT
     add esi, ecx
     mov eax, PokemonMenuEntries
     jmp PlaceString                     ; jp PlaceString
@@ -1182,7 +1182,7 @@ yn_saved_wc:    resd 1          ; g_window_count on entry (restored on exit)
 yn_saved_stride:resd 1          ; text_row_stride on entry (restored on exit)
 yn_pressed:     resd 1          ; HandleMenuInput result (keys), kept across feedback
 yn_frow:        resd 1          ; first option's box-relative row (blank ? 2 : 1)
-yn_scratch_backup: resb 160     ; saves W_TILEMAP[0..159] during overworld staging
+yn_scratch_backup: resb 160     ; saves wTileMap[0..159] during overworld staging
 yn_cur_col:     resd 1          ; battle canvas col
 yn_cur_row:     resd 1          ; battle canvas row
 yn_box_ofs:     resd 1          ; battle canvas offset

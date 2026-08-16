@@ -24,7 +24,7 @@
 ;    at [EBP+sym] (gb_memmap.inc).  FLAGS ARE NOT THE GB'S — every ZF/CF branch is
 ;    re-derived on the flag set by the SAME op pret used.
 ;  * WINDOW/CANVAS model (S4-S7): menus are drawn into the 20-wide stride-20
-;    W_TILEMAP scratch (hlcoord X,Y = W_TILEMAP + Y*20 + X), mirrored to a GB
+;    wTileMap scratch (hlcoord X,Y = wTileMap + Y*20 + X), mirrored to a GB
 ;    tilemap canvas (GB_TILEMAP0 menu / GB_TILEMAP1 messages), and shown as a
 ;    ppu window (add_window / set_single_window).  HandleMenuInput draws the ▶
 ;    cursor into the scratch (text_row_stride row multiply, menu_item_step per
@@ -91,7 +91,7 @@ extern PlaceString              ; text/text.asm — EAX=flat src, ESI=dest (<NEX
 extern PrintText                ; home/window.asm — In: ESI = text stream
 extern text_msgbox              ; home/text.asm — the active msgbox projection
 extern msgbox_dialog            ; home/text.asm — the dialog projection record
-extern text_row_stride          ; text/text.asm — active W_TILEMAP row stride
+extern text_row_stride          ; text/text.asm — active wTileMap row stride
 extern add_window               ; ppu/ppu.asm — EAX=wx EBX=wy ECX=clip EDX=maxy ESI=tm EDI=row
 extern set_single_window        ; ppu/ppu.asm — count:=1 then add (full takeover)
 extern g_window_count           ; ppu/ppu.asm — active window count (window stack top)
@@ -214,8 +214,8 @@ CHAR_RARROW equ 0xEC            ; '▷'  unfilled right arrow
 
 ; --- stride-20 scratch geometry --------------------------------------------
 LM_STRIDE   equ 20
-%define CUP(X,Y)  (W_TILEMAP + (Y) * LM_STRIDE + (X))   ; cup screen GB-absolute
-%define LMB(X,Y)  (W_TILEMAP + (Y) * LM_STRIDE + (X))   ; LinkMenu box-relative
+%define CUP(X,Y)  (wTileMap + (Y) * LM_STRIDE + (X))   ; cup screen GB-absolute
+%define LMB(X,Y)  (wTileMap + (Y) * LM_STRIDE + (X))   ; LinkMenu box-relative
 
 ; ===========================================================================
 section .bss
@@ -337,7 +337,7 @@ cup_mirror:
     xor ebx, ebx
 .row:
     imul esi, ebx, LM_STRIDE
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                      ; ×32 tilemap stride
     lea edi, [ebp + edi + GB_TILEMAP0]
@@ -1008,7 +1008,7 @@ lm_link_mirror:
     xor ebx, ebx
 .row:
     imul esi, ebx, LM_STRIDE
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5
     lea edi, [ebp + edi + GB_TILEMAP0]
@@ -1053,7 +1053,7 @@ LinkMenu:
     mov esi, TextTerminator_f5a16
     call PrintText
     ; call SaveScreenTilesToBuffer1 — the real routine (battle_menu.asm holds the
-    ; port's body under pret's name); it snapshots W_TILEMAP, which is where this
+    ; port's body under pret's name); it snapshots wTileMap, which is where this
     ; menu's stride-20 scratch lives, so the save is meaningful here.
     call SaveScreenTilesToBuffer1
     ; DEVIATION{class=projection; pret=engine/menus/link_menu.asm:LinkMenu; behavior=restore the caller by dropping the projected window stack rather than relying only on Buffer1 tilemap restore; evidence=pret SaveScreenTilesToBuffer1 and LoadScreenTilesFromBuffer1 pairing plus port lm_link_wc ownership; lifetime=permanent window-compositor boundary}
@@ -1185,7 +1185,7 @@ LinkMenu:
     mov bl, bh                      ; ld c,b
 .updateCursorPosition:
     call Func_f59ec
-    ; call LoadScreenTilesFromBuffer1 — restores the W_TILEMAP snapshot taken at
+    ; call LoadScreenTilesFromBuffer1 — restores the wTileMap snapshot taken at
     ; entry (the real routine, battle_menu.asm). The structured window-compositor
     ; on the GB this is also what un-draws the menu; here the menu is a WINDOW, so
     ; the visible restore is the window-stack drop at .choseCancel.

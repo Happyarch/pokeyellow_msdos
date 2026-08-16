@@ -88,7 +88,7 @@ hSpriteMapXCoord    equ 0xFF85
 ; PROJ: this replaces pret's two-instruction "ld de,const / add hl,de" with a
 ; single "add esi,const" (flags-neutral either way; nothing here branches on
 ; the result) — a 386+ simplification, not a behavior change.
-SPRITE_XPIXELS_TO_MAPY_DELTA equ (W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY) - (W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS)
+SPRITE_XPIXELS_TO_MAPY_DELTA equ (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - (wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS)
 
 section .text
 
@@ -100,7 +100,7 @@ section .text
 _GetSpritePosition1:
     mov al, [ebp + wSpriteIndex]
     mov [ebp + hSpriteIndex], al
-    mov esi, W_SPRITE_STATE_DATA_1
+    mov esi, wSpriteStateData1
     mov edx, SPRITESTATEDATA1_YPIXELS
     call GetSpriteDataPointer         ; ESI -> array1[slot].YPIXELS
     mov al, [ebp + esi]               ; SPRITESTATEDATA1_YPIXELS
@@ -123,7 +123,7 @@ _GetSpritePosition1:
 _GetSpritePosition2:
     mov al, [ebp + wSpriteIndex]
     mov [ebp + hSpriteIndex], al
-    mov esi, W_SPRITE_STATE_DATA_1
+    mov esi, wSpriteStateData1
     mov edx, SPRITESTATEDATA1_YPIXELS
     call GetSpriteDataPointer
     mov al, [ebp + esi]               ; SPRITESTATEDATA1_YPIXELS
@@ -145,7 +145,7 @@ _GetSpritePosition2:
 _SetSpritePosition1:
     mov al, [ebp + wSpriteIndex]
     mov [ebp + hSpriteIndex], al
-    mov esi, W_SPRITE_STATE_DATA_1
+    mov esi, wSpriteStateData1
     mov edx, SPRITESTATEDATA1_YPIXELS
     call GetSpriteDataPointer
     mov al, [ebp + hSpriteScreenYCoord]
@@ -167,7 +167,7 @@ _SetSpritePosition1:
 _SetSpritePosition2:
     mov al, [ebp + wSpriteIndex]
     mov [ebp + hSpriteIndex], al
-    mov esi, W_SPRITE_STATE_DATA_1
+    mov esi, wSpriteStateData1
     mov edx, SPRITESTATEDATA1_YPIXELS
     call GetSpriteDataPointer
     mov al, [ebp + wSavedSpriteScreenY]
@@ -280,7 +280,7 @@ TrainerWalkUpToPlayer:
 ; entry from a caller-supplied member offset + [hSpriteIndex] (raw slot 0-15,
 ; set by the caller just before this call — NOT pre-shifted).
 ; pret: engine/overworld/trainer_sight.asm:GetSpriteDataPointer
-; In:  ESI = base (e.g. W_SPRITE_STATE_DATA_1), EDX = member offset within entry
+; In:  ESI = base (e.g. wSpriteStateData1), EDX = member offset within entry
 ;      [ebp+hSpriteIndex] = raw slot (0-15)
 ; Out: ESI = base + member + slot*0x10
 ; ----------------------------------------------------------------------------
@@ -303,11 +303,11 @@ GetSpriteDataPointer:
 TrainerEngage:
     ; sprite on screen? (IMAGEINDEX != $ff)
     movzx esi, byte [ebp + wTrainerSpriteOffset]
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX]
     cmp al, 0xff
     je .noEngage                    ; sprite off screen
     ; facing dir
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION]
     mov [ebp + wTrainerFacingDirection], al
     call ReadTrainerScreenPosition
     ; lined up on Y? (screenY == $3c)
@@ -356,9 +356,9 @@ TrainerEngage:
 ; ----------------------------------------------------------------------------
 ReadTrainerScreenPosition:
     movzx esi, byte [ebp + wTrainerSpriteOffset]
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
     mov [ebp + wTrainerScreenY], al
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
     mov [ebp + wTrainerScreenX], al
     ret
 
@@ -410,13 +410,13 @@ CheckPlayerIsInFrontOfSprite:
     cmp al, POWER_PLANT
     je .engage                      ; Power Plant bypass (fake-item Voltorbs)
     movzx esi, byte [ebp + wTrainerSpriteOffset]
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
     cmp al, 0xfc                    ; topmost tile special-case
     jne .notOnTopmostTile
     mov al, 0x0c
 .notOnTopmostTile:
     mov [ebp + wTrainerScreenY], al
-    mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
     mov [ebp + wTrainerScreenX], al
     mov al, [ebp + wTrainerFacingDirection]
     cmp al, SPRITE_FACING_DOWN

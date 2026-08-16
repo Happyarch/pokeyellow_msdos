@@ -138,7 +138,7 @@ PlacePlayerHUDTiles:
     ; PROJ battle: pret `hlcoord 18, 10`. The raw GB column would land in the
     ; middle of the 40-wide canvas — see regression-battle-second-battle-hud-tile-band,
     ; where exactly that mistake left a ghost tile band at cols 12-18.
-    mov esi, W_TILEMAP + P_FRAME_CONN + SCREEN_WIDTH
+    mov esi, wTileMap + P_FRAME_CONN + SCREEN_WIDTH
     mov edx, -1                                   ; ld de, -1 — underline marches left
     jmp PlaceHUDTiles                             ; jr
 
@@ -147,7 +147,7 @@ PlaceEnemyHUDTiles:
     lea edi, [ebp + wHUDGraphicsTiles]
     mov ecx, wHUDGraphicsTilesEnd - wHUDGraphicsTiles
     rep movsb
-    mov esi, W_TILEMAP + UI_ENEMY_HUD_FRAME_OFS   ; PROJ — pret `hlcoord 1, 2`
+    mov esi, wTileMap + UI_ENEMY_HUD_FRAME_OFS   ; PROJ — pret `hlcoord 1, 2`
     mov edx, 1                                    ; ld de, $1 — marches right
     ; pret writes `jr PlaceHUDTiles` here because EnemyBattleHUDGraphicsTiles
     ; sits BETWEEN the two routines in its file. The port keeps that data in

@@ -21,11 +21,11 @@
 ; battle box (e.g. making it stride-40-native) is an edit to msgbox_centered — it
 ; must never become a second PrintText.
 ;
-; All fields are dwords. Offsets are EBP-relative GB-memory offsets (W_TILEMAP-
+; All fields are dwords. Offsets are EBP-relative GB-memory offsets (wTileMap-
 ; based), except MB_PROMPT (a flat code pointer) and the MB_WIN_* block.
 
 MB_STRIDE       equ 0    ; tilemap row stride for this canvas (20 or 40)
-MB_BOX_OFS      equ 4    ; W_TILEMAP offset of the box's top-left corner
+MB_BOX_OFS      equ 4    ; wTileMap offset of the box's top-left corner
 MB_BOX_W        equ 8    ; TextBoxBorder interior width  (C)
 MB_BOX_H        equ 12   ; TextBoxBorder interior height (B)
 MB_LINE1        equ 16   ; cursor: 1st text line   (pret bccoord 1,14)

@@ -246,7 +246,7 @@ extern LoadTilesetTilePatternData         ; src/home/overworld.asm
 global ApplyMapBorderOverrides
 global h_load_sprite_temp1
 global h_load_sprite_temp2
-                                           ; the W_TILEMAP mirror around the menu
+                                           ; the wTileMap mirror around the menu
 
 ; ---------------------------------------------------------------------------
 ; Map and tileset constants
@@ -616,7 +616,7 @@ SetupPlayerSprite:
     mov byte [ebp + W_SPRITE_PLAYER_WALK_ANIM_COUNTER], 0
     mov byte [ebp + W_SPRITE_PLAYER_GRASS_PRIORITY],  0
 
-    mov byte [ebp + W_GRASS_TILE],    0xFF
+    mov byte [ebp + wGrassTile],    0xFF
     mov byte [ebp + wFontLoaded],   0
     mov byte [ebp + wMovementFlags], 0
 
@@ -695,7 +695,7 @@ RefreshCollisionTileMap:
     je  .copy_to_tilemap
     add esi, BLOCK_WIDTH / 2                       ; skip 2 tiles (right half of block)
 .copy_to_tilemap:
-    mov edx, W_TILEMAP                             ; dest
+    mov edx, wTileMap                             ; dest
     mov bh, SCREEN_HEIGHT                          ; 25 rows
 .copy_row_loop:
     mov bl, SCREEN_WIDTH                           ; 40 cols
@@ -906,7 +906,7 @@ DoSignInteraction:
 ; GetTileInFrontOfPlayer (port-only fork) was DELETED 2026-07-27.
 ;
 ; It duplicated pret's _GetTileAndCoordsInFrontOfPlayer byte-for-byte in its tile
-; read -- same four W_TILEMAP offset expressions, same wTileInFrontOfPlayer
+; read -- same four wTileMap offset expressions, same wTileInFrontOfPlayer
 ; store -- differing only by omitting the DH/DL front-coord outputs. That faithful
 ; routine is translated and linked at src/engine/overworld/player_state.asm, so two
 ; copies of one facing->offset table were live and could silently diverge.

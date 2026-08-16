@@ -41,7 +41,7 @@ MAP_SS_ANNE_3F          equ 0x61
 PLAYER_HALF_BYTES equ PLAYER_HALF_TILES * TILE_SIZE   ; 192 bytes ($C0)
 PLAYER_HALF_TILES equ 12                       ; 12 tiles per VRAM half
 ROUTE_23                   equ 0x22
-STANDING_TILE_OFF   equ W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
+STANDING_TILE_OFF   equ wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 TILESET_PLATEAU     equ 23          ; Route 23 / Indigo Plateau
 TILESET_SHIP        equ 13          ; S.S. Anne interior
 TILESET_SHIP_PORT   equ 14          ; Vermilion Port
@@ -1935,7 +1935,7 @@ PlayMapChangeSound:
     ; ; PROJ: this door-tile row projection + the pre-EnterMap tilemap timing are
     ; unverified (no golden warp scenario) — the go-inside/go-outside SFX selection
     ; needs MCP live-warp verification. Wrong projection only mis-picks the jingle.
-    movzx eax, byte [ebp + W_TILEMAP + (PLAYER_STANDING_ROW - 1) * SCREEN_TILES_W + PLAYER_STANDING_COL]
+    movzx eax, byte [ebp + wTileMap + (PLAYER_STANDING_ROW - 1) * SCREEN_TILES_W + PLAYER_STANDING_COL]
     cmp al, OVERWORLD_DOOR_TILE                  ; pret: cp $0b (door tile in tileset 0)
     jne .didNotGoThroughDoor
     mov al, SFX_GO_INSIDE
@@ -2218,10 +2218,10 @@ IsBikeRidingAllowed:
 LoadTilesetTilePatternData:
     mov byte [g_tilecache_dirty], 1     ; VRAM tile data changes → rebuild decode cache
     ; ESI = wTilesetGfxPtr (16-bit GB address, LE word)
-    movzx esi, word [ebp + W_TILESET_GFX_PTR]    ; ESI = HL = 0x4000
+    movzx esi, word [ebp + wTilesetGfxPtr]    ; ESI = HL = 0x4000
     mov edx, GB_VCHARS2                            ; EDX = DE = 0x9000 (vTileset)
     mov bx,  0x0600                                ; BX = BC = $600 bytes
-    movzx eax, byte [ebp + W_TILESET_BANK]         ; AL = bank (ignored)
+    movzx eax, byte [ebp + wTilesetBank]         ; AL = bank (ignored)
     jmp FarCopyData                                ; tail call
 
 
@@ -2436,7 +2436,7 @@ IsSpriteOrSignInFrontOfPlayer:
 .extendRangeOverCounter:
 ; counter tile in front? then extend the range at which the player can talk
     call GetTileAndCoordsInFrontOfPlayer ; predef — front tile id in CL
-    mov esi, W_TILESET_TALKING_OVER_TILES ; ld hl, wTilesetTalkingOverTiles
+    mov esi, wTilesetTalkingOverTiles ; ld hl, wTilesetTalkingOverTiles
     mov bh, 3                        ; ld b, 3 — the list is 3 bytes
     mov dh, 0x20                     ; ld d, $20 — long talking range, in pixels
 .counterTilesLoop:
@@ -2607,7 +2607,7 @@ CollisionCheckOnLand:
     ; res BIT_FACE_PLAYER / hTextID / Pikachu-collision-counter tail are folded into the
     ; bespoke IsNPCAtTargetBlock replacement below.
     mov dl, [ebp + wPlayerDirection]
-    mov al, [ebp + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
+    mov al, [ebp + wSpriteStateData1 + SPRITESTATEDATA1_COLLISIONDATA]
     and al, dl
     jnz .blocked                                   ; sprite already flagged in travel dir
     ; wTileMap is a sub-block viewport into wSurroundingTiles, offset by wYBlockCoord /
@@ -2897,7 +2897,7 @@ DrawTileBlock:
     push edx
 
     ; Compute tile data source: [EBP + wTilesetBlocksPtr + blockID*16]
-    movzx edx, word [ebp + W_TILESET_BLOCKS_PTR]  ; EDX = OW_BLOCKS_GBADDR (DE in SM83)
+    movzx edx, word [ebp + wTilesetBlocksPtr]  ; EDX = OW_BLOCKS_GBADDR (DE in SM83)
     movzx eax, bl                                  ; EAX = blockID (C in SM83)
     shl eax, 4                                     ; EAX = blockID * 16
     add edx, eax                                   ; EDX = pointer into blockset
@@ -3065,7 +3065,7 @@ CollisionCheckOnWater:
     ; pret :1669-1672 — quick sprite reject in the travel direction (same
     ; collision-direction bit layout as CollisionCheckOnLand's reject).
     mov dl, [ebp + wPlayerDirection]
-    mov al, [ebp + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
+    mov al, [ebp + wSpriteStateData1 + SPRITESTATEDATA1_COLLISIONDATA]
     and al, dl
     jnz .collision
     ; regression-overworld-watercollision-stale-tile: the port's
@@ -3518,8 +3518,8 @@ ResetMapVariables:
     mov byte [ebp + hSCY],                       al
     mov byte [ebp + hSCX],                       al
     mov byte [ebp + wWalkCounter],              al
-    mov byte [ebp + W_UNUSED_CUR_MAP_TILESET_COPY], al
-    mov byte [ebp + W_SPRITE_SET_ID],             al
+    mov byte [ebp + wUnusedCurMapTilesetCopy], al
+    mov byte [ebp + wSpriteSetID],             al
     mov byte [ebp + wWalkBikeSurfStateCopy], al
     ; Empty the window list on map entry: visibility is count-driven now, so this
     ; guarantees no stale box leaks over the overworld (e.g. the title's
@@ -3683,19 +3683,19 @@ InitSprites:
     ; picture id -> x#SPRITESTATEDATA1_PICTUREID
     movzx eax, byte [ebp + esi]
     inc esi
-    mov [ebp + edx + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID], al
+    mov [ebp + edx + wSpriteStateData1 + SPRITESTATEDATA1_PICTUREID], al
     ; mapy -> x#SPRITESTATEDATA2_MAPY
     movzx eax, byte [ebp + esi]
     inc esi
-    mov [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY], al
+    mov [ebp + edx + wSpriteStateData2 + SPRITESTATEDATA2_MAPY], al
     ; mapx -> x#SPRITESTATEDATA2_MAPX
     movzx eax, byte [ebp + esi]
     inc esi
-    mov [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX], al
+    mov [ebp + edx + wSpriteStateData2 + SPRITESTATEDATA2_MAPX], al
     ; movement byte 1 -> x#SPRITESTATEDATA2_MOVEMENTBYTE1
     movzx eax, byte [ebp + esi]
     inc esi
-    mov [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al
+    mov [ebp + edx + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al
     ; movement byte 2 -> temp1
     movzx eax, byte [ebp + esi]
     inc esi
@@ -3714,7 +3714,7 @@ InitSprites:
     ; (the slot populator) carries it. ZeroSpriteStateData already cleared the slot.
     test al, TRAINER_FLAG
     jz .not_trainer_slot
-    mov byte [ebp + edx + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_ISTRAINER], 1
+    mov byte [ebp + edx + wSpriteStateData2 + SPRITESTATEDATA2_ISTRAINER], 1
 .not_trainer_slot:
     ; LoadSprite: ECX = wMapSpriteData index; ESI = read ptr (advanced past any
     ; trainer/item extra bytes on return). It preserves EBX/EDX/EDI and clobbers EAX.
@@ -3736,10 +3736,10 @@ ZeroSpriteStateData:
     push ecx
     push edi
     xor al, al
-    lea edi, [ebp + W_SPRITE_STATE_DATA_1 + 0x10]      ; slot 1
+    lea edi, [ebp + wSpriteStateData1 + 0x10]      ; slot 1
     mov ecx, 14 * 0x10
     rep stosb
-    lea edi, [ebp + W_SPRITE_STATE_DATA_2 + 0x10]
+    lea edi, [ebp + wSpriteStateData2 + 0x10]
     mov ecx, 14 * 0x10
     rep stosb
     pop edi
@@ -3769,7 +3769,7 @@ DisableRegularSprites:
     mov esi, 0x10                                       ; slot 1
     mov ecx, 14
 .loop:
-    mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], 0
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0
     add esi, 0x10
     dec ecx
     jnz .loop

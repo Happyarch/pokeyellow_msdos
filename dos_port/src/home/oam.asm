@@ -7,7 +7,7 @@
 ; trade animations). In pret it targets wShadowOAM ($C300), the 40-entry shadow
 ; buffer that the DMA routine copies to real OAM ($FE00) each VBlank. THIS PORT
 ; USES THE SAME SHADOW-OAM MODEL: PrepareOAMData (src/engine/gfx/sprite_oam.asm)
-; builds wShadowOAM (= W_SHADOW_OAM, $C300) and vblank.asm:update_oam DMA-copies
+; builds wShadowOAM (= wShadowOAM, $C300) and vblank.asm:update_oam DMA-copies
 ; it to GB_OAM ($FE00) each frame. Writing the (Y, X, tile, attr) layout into
 ; wShadowOAM is the right target and is byte-faithful to pret — but it is NOT
 ; sufficient on its own, and an earlier version of this comment claimed it was.
@@ -74,10 +74,10 @@ WriteOAMBlock:
     push esi
     push edi
 
-    ; destination = ebp + W_SHADOW_OAM + (block_index << 4)   (pret: swap a; ld l,a)
+    ; destination = ebp + wShadowOAM + (block_index << 4)   (pret: swap a; ld l,a)
     movzx edi, al
     shl   edi, 4
-    lea   edi, [ebp + edi + W_SHADOW_OAM]
+    lea   edi, [ebp + edi + wShadowOAM]
 
     ; source = flat pointer in EDX. pret's `de` is the ROM base address of the
     ; tile/attr pairs; in the flat port those OAM-block tables are flat image
@@ -129,7 +129,7 @@ WriteOAMBlock:
     push edx
     mov ecx, edi
     sub ecx, ebp
-    sub ecx, W_SHADOW_OAM
+    sub ecx, wShadowOAM
     shr ecx, 2                       ; ECX = OAM entry index 0..39
     ; Mirror the entry into GB_OAM ($FE00) — render_sprites takes tile/attr
     ; from THERE, not from the shadow, and the wUpdateSpritesEnabled=$ff state

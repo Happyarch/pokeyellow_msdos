@@ -95,7 +95,7 @@ extern TextBoxBorder            ; home/text.asm — ESI=top-left, BL=int_w, BH=i
 extern PlaceString              ; home/text.asm — EAX=flat src, ESI=dest (pret de/hl)
 extern add_window               ; ppu/ppu.asm — EAX=wx EBX=wy ECX=clip EDX=max_y ESI=tm EDI=row
 extern g_window_count           ; ppu/ppu.asm
-extern text_row_stride          ; text/text.asm — active W_TILEMAP row stride
+extern text_row_stride          ; text/text.asm — active wTileMap row stride
 extern menu_item_step           ; home/window.asm — per-item cursor row step
 extern menu_redraw_cb           ; home/window.asm — per-frame redraw cb (0=none)
 extern HandleMenuInput          ; home/window.asm — Out: AL = watched keys pressed
@@ -929,7 +929,7 @@ DisplayChangeBoxMenu:
     ; had not provided the equate yet and left the box undrawn — stale (M-102).
     ; Staged box-relative into the scratch band at CBOXI_SROW, mirrored to
     ; GB_TILEMAP0 row CBOXI_MROW, shown as its own window by cboxi_show_window.
-    mov esi, W_TILEMAP + CBOXI_SROW * CBOX_STRIDE
+    mov esi, wTileMap + CBOXI_SROW * CBOX_STRIDE
     mov bl, CBOXI_INT_W                           ; lb bc, 2, 9 -> c = int_w = 9
     mov bh, CBOXI_INT_H                           ;                b = int_h = 2
     call TextBoxBorder
@@ -943,7 +943,7 @@ DisplayChangeBoxMenu:
 
     ; --- box-name list box (pret hlcoord 11,0 / lb bc,12,7) -------------------
     ; TextBoxBorder into the scratch at box origin (col 0, row 0).
-    mov esi, W_TILEMAP
+    mov esi, wTileMap
     mov bl, CBOX_INT_W                            ; interior width 7
     mov bh, CBOX_INT_H                            ; interior height 12
     call TextBoxBorder
@@ -956,7 +956,7 @@ DisplayChangeBoxMenu:
     ; DEVIATION{class=projection; pret=engine/menus/save.asm:DisplayChangeBoxMenu; behavior=place BoxNames at projected list-box-relative column 2 instead of GB-absolute column 13; evidence=pret hlcoord 13 placement plus port UI_CHANGE_BOX scratch origin; lifetime=permanent widescreen projection}
     ; GB col 13 is list-box col 2 (list box at GB col 11).
     or byte [ebp + hUILayoutFlags], 1 << BIT_SINGLE_SPACED_LINES
-    mov esi, W_TILEMAP + 1 * CBOX_STRIDE + 2
+    mov esi, wTileMap + 1 * CBOX_STRIDE + 2
     mov eax, BoxNames
     call PlaceString
     and byte [ebp + hUILayoutFlags], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
@@ -970,16 +970,16 @@ DisplayChangeBoxMenu:
     jc .singleDigitBoxNum
     sub al, 9                                     ; sub 9
     ; hlcoord 8, 2 / ld [hl], '1'
-    mov byte [ebp + W_TILEMAP + CBOXI_SROW * CBOX_STRIDE + 2 * CBOX_STRIDE + 8], CHAR_1
+    mov byte [ebp + wTileMap + CBOXI_SROW * CBOX_STRIDE + 2 * CBOX_STRIDE + 8], CHAR_1
     add al, CHAR_0                                ; add '0'
     jmp .next
 .singleDigitBoxNum:
     add al, CHAR_1                                ; add '1'
 .next:
     ; ldcoord_a 9, 2
-    mov [ebp + W_TILEMAP + CBOXI_SROW * CBOX_STRIDE + 2 * CBOX_STRIDE + 9], al
+    mov [ebp + wTileMap + CBOXI_SROW * CBOX_STRIDE + 2 * CBOX_STRIDE + 9], al
     ; hlcoord 1,2 / ld de,BoxNoText / call PlaceString
-    mov esi, W_TILEMAP + CBOXI_SROW * CBOX_STRIDE + 2 * CBOX_STRIDE + 1
+    mov esi, wTileMap + CBOXI_SROW * CBOX_STRIDE + 2 * CBOX_STRIDE + 1
     mov eax, BoxNoText
     call PlaceString
 
@@ -993,7 +993,7 @@ DisplayChangeBoxMenu:
     ; place pokéball tile at scratch (row 1+ebx, box-rel col 7)
     lea eax, [ebx + 1]
     imul eax, eax, CBOX_STRIDE
-    mov byte [ebp + eax + W_TILEMAP + 7], TILE_BALL
+    mov byte [ebp + eax + wTileMap + 7], TILE_BALL
 .noball:
     inc ebx
     cmp ebx, NUM_BOXES
@@ -1031,7 +1031,7 @@ cbox_mirror:
 .row:
     mov esi, ebx
     imul esi, esi, CBOX_STRIDE
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                                    ; row*32
     lea edi, [ebp + edi + GB_TILEMAP0 + CBOX_SROW * 32]
@@ -1065,7 +1065,7 @@ cboxi_mirror:
 .row:
     mov esi, ebx
     imul esi, esi, CBOX_STRIDE
-    lea esi, [ebp + esi + W_TILEMAP + CBOXI_SROW * CBOX_STRIDE]
+    lea esi, [ebp + esi + wTileMap + CBOXI_SROW * CBOX_STRIDE]
     mov edi, ebx
     shl edi, 5
     lea edi, [ebp + edi + GB_TILEMAP0 + CBOXI_MROW * 32]

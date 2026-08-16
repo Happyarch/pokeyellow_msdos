@@ -20,7 +20,7 @@
 ;
 ; PORT MODEL (window compositor; same as draw_start_menu.asm / options.asm):
 ; - The CONTINUE/NEW GAME box and the PLAYER/BADGES/#DEX/TIME info panel are drawn
-;   at UI_*-projected coordinates into the 40-wide stride-40 W_TILEMAP canvas
+;   at UI_*-projected coordinates into the 40-wide stride-40 wTileMap canvas
 ;   (the DisplayTextBoxID_ canvas model). MainMenuShowWindow / the info panel's
 ;   DisplayContinueGameInfoShowWindow then blit the box rects → GB_TILEMAP1 and
 ;   define window descriptors from the UI_MAIN_MENU_* / UI_CONTINUE_INFO_* equates,
@@ -114,8 +114,8 @@ CHAR_TERMINATOR         equ 0x50        ; '@' — string terminator
 ; canvas_y = gby + (ROW-GBY)); CI's ROW-GBY == 0 lets PrintSaveScreenText's top
 ; panel (GB row 0) reuse the same basis.
 ; ---------------------------------------------------------------------------
-%define MM(x,y) (W_TILEMAP + ((y) - UI_MAIN_MENU_GBY + UI_MAIN_MENU_ROW) * SCREEN_TILES_W + ((x) - UI_MAIN_MENU_GBX + UI_MAIN_MENU_COL))
-%define CI(x,y) (W_TILEMAP + ((y) - UI_CONTINUE_INFO_GBY + UI_CONTINUE_INFO_ROW) * SCREEN_TILES_W + ((x) - UI_CONTINUE_INFO_GBX + UI_CONTINUE_INFO_COL))
+%define MM(x,y) (wTileMap + ((y) - UI_MAIN_MENU_GBY + UI_MAIN_MENU_ROW) * SCREEN_TILES_W + ((x) - UI_MAIN_MENU_GBX + UI_MAIN_MENU_COL))
+%define CI(x,y) (wTileMap + ((y) - UI_CONTINUE_INFO_GBY + UI_CONTINUE_INFO_ROW) * SCREEN_TILES_W + ((x) - UI_CONTINUE_INFO_GBX + UI_CONTINUE_INFO_COL))
 
 MM_TOTAL_W  equ UI_MAIN_MENU_X2 - UI_MAIN_MENU_COL + 1        ; 15 tiles wide
 CI_TOTAL_W  equ UI_CONTINUE_INFO_X2 - UI_CONTINUE_INFO_COL + 1 ; 16 tiles wide
@@ -141,7 +141,7 @@ global NotEnoughMemoryText
 ; --- ported infra (text / numbers / menu driver / compositor / frame / boot) ---
 extern TextBoxBorder            ; text.asm — ESI=top-left, BL=int_w, BH=int_h
 extern PlaceString              ; text.asm — ESI=dest, EAX=flat src
-extern text_row_stride          ; text.asm — active W_TILEMAP row stride
+extern text_row_stride          ; text.asm — active wTileMap row stride
 extern PrintNumber              ; print_num.asm — EDX=src, BH=flags|bytes, BL=digits, ESI=dest
 extern CountSetBits             ; count_set_bits.asm — ESI=base, BH=len → [wNumSetBits]
 extern HandleMenuInput          ; window.asm — vertical menu loop; AL=key that ended it
@@ -614,7 +614,7 @@ mainmenu_mirror:
 .row:
     mov esi, ebx
     imul esi, esi, SCREEN_TILES_W
-    lea esi, [ebp + esi + W_TILEMAP + UI_MAIN_MENU_ROW * SCREEN_TILES_W + UI_MAIN_MENU_COL]
+    lea esi, [ebp + esi + wTileMap + UI_MAIN_MENU_ROW * SCREEN_TILES_W + UI_MAIN_MENU_COL]
     mov edi, ebx
     shl edi, 5                                  ; row * 32 tilemap stride
     lea edi, [ebp + edi + GB_TILEMAP1]
@@ -649,7 +649,7 @@ dcgi_mirror:
     mov esi, ebx
     add esi, UI_CONTINUE_INFO_ROW
     imul esi, esi, SCREEN_TILES_W
-    lea esi, [ebp + esi + W_TILEMAP + UI_CONTINUE_INFO_COL]
+    lea esi, [ebp + esi + wTileMap + UI_CONTINUE_INFO_COL]
     mov edi, ebx
     add edi, CI_SROW
     shl edi, 5

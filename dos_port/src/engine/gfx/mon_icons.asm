@@ -168,13 +168,13 @@ CommitMonPartySpriteOAM:
     pushad
     xor edx, edx                            ; OAM entry index
 .loop:
-    mov eax, [ebp + W_SHADOW_OAM + edx*4]   ; Y, X, tile, attr
+    mov eax, [ebp + wShadowOAM + edx*4]   ; Y, X, tile, attr
     mov [ebp + GB_OAM + edx*4], eax
-    movzx eax, byte [ebp + W_SHADOW_OAM + edx*4]      ; OAM Y
+    movzx eax, byte [ebp + wShadowOAM + edx*4]      ; OAM Y
     sub eax, OAM_Y_OFS
     add eax, [mps_org_y]
     mov [spr_dos_sy + edx*4], eax
-    movzx eax, byte [ebp + W_SHADOW_OAM + edx*4 + 1]  ; OAM X
+    movzx eax, byte [ebp + wShadowOAM + edx*4 + 1]  ; OAM X
     sub eax, OAM_X_OFS
     add eax, [mps_org_x]
     mov [spr_dos_sx + edx*4], eax
@@ -244,7 +244,7 @@ GetAnimationSpeed:
 .resetSprites:
     push ebx                                ; push bc
     mov esi, wMonPartySpritesSavedOAM       ; ld hl,wMonPartySpritesSavedOAM
-    mov edx, W_SHADOW_OAM                   ; ld de,wShadowOAM
+    mov edx, wShadowOAM                   ; ld de,wShadowOAM
     mov bx, MON_OAM_BYTES                   ; ld bc,OBJ_SIZE*4*PARTY_LENGTH
     call CopyData
     pop ebx                                 ; pop bc
@@ -255,7 +255,7 @@ GetAnimationSpeed:
     ; hl = wShadowOAMSprite00TileID + OBJ_SIZE*4 * wCurrentMenuItem (call AddNTimes)
     movzx esi, byte [ebp + wCurrentMenuItem]
     imul esi, esi, OBJ_SIZE * 4
-    add esi, W_SHADOW_OAM + 2               ; +2 = the entry's tile-id byte
+    add esi, wShadowOAM + 2               ; +2 = the entry's tile-id byte
     mov bl, ICONOFFSET                      ; ld c,ICONOFFSET — swap to the other frame
     mov al, [ebp + esi]                     ; ld a,[hl] — this mon's frame-1 base tile
     cmp al, ICON_BALL << 2
@@ -347,7 +347,7 @@ WriteMonPartySpriteOAMByPartyIndex:
     popad
     ret
 .saveOAM:
-    mov esi, W_SHADOW_OAM                   ; ld hl,wShadowOAM
+    mov esi, wShadowOAM                   ; ld hl,wShadowOAM
     mov edx, wMonPartySpritesSavedOAM       ; ld de,wMonPartySpritesSavedOAM
     mov bx, MON_OAM_BYTES                   ; ld bc,$60
     call CopyData
@@ -386,7 +386,7 @@ WriteMonPartySpriteOAM:
     mov eax, esi
     add eax, 0x10                           ; add $10
     mov bh, al                              ; ld b,a — OAM Y (2 tile rows per mon)
-    add esi, W_SHADOW_OAM                   ; ld h,HIGH(wShadowOAM)
+    add esi, wShadowOAM                   ; ld h,HIGH(wShadowOAM)
     pop eax                                 ; pop af
     cmp al, ICON_HELIX << 2
     jz .helix
@@ -395,7 +395,7 @@ WriteMonPartySpriteOAM:
 .helix:
     call WriteAsymmetricMonPartySpriteOAM
 .makeCopy:
-    mov esi, W_SHADOW_OAM                   ; ld hl,wShadowOAM
+    mov esi, wShadowOAM                   ; ld hl,wShadowOAM
     mov edx, wMonPartySpritesSavedOAM       ; ld de,wMonPartySpritesSavedOAM
     mov bx, MON_OAM_BYTES                   ; ld bc,OBJ_SIZE*4*PARTY_LENGTH
     call CopyData

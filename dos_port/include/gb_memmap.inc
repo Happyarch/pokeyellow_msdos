@@ -62,18 +62,7 @@ MAX_WINDOWS     equ 6      ; bag needs <=4 simultaneously (list + sub-menu/qty +
 ; WRAM bank 0 — $C000–$CFFF (4 KB)
 ; Always available. General-purpose work RAM.
 GB_WRAM0        equ 0xC000
-W_NUM_BAG_ITEMS        equ 0xD31C
-W_NUM_BOX_ITEMS        equ 0xD539
-W_CURRENT_MENU_ITEM      equ 0xCC26
-W_MAX_MENU_ITEM          equ 0xCC28
-W_BAG_SAVED_MENU_ITEM    equ 0xCC2C
-W_LIST_SCROLL_OFFSET     equ 0xCC36
-W_CUR_ITEM               equ 0xCF90
-W_WHICH_POKEMON          equ 0xCF91
-W_ITEM_QUANTITY          equ 0xCF95
-W_MAX_ITEM_QUANTITY      equ 0xCF96
 W_LOADED_MON_SPECIES     equ 0xCF97
-W_TEXT_BOX_ID          equ 0xD124
 W_PARTY_MON1_MOVES       equ 0xD172
 W_PARTY_MON4_MOVES       equ 0xD1F6
 wPlayerMoney                  equ 0xD346   ; 3-byte BCD (trainer-card money display)
@@ -87,28 +76,27 @@ wObtainedBadges               equ 0xD355
 wTrainerCardBadgeAttributes equ 0xCC5D
 wObtainedHiddenItemsFlags     equ 0xD6EF
 wRivalStarter                 equ 0xD714
-W_SURFING_MINIGAME_PIKACHU_HP  equ 0xC5D6
+wSurfingMinigamePikachuHP     equ 0xC5D6
 W_SURFING_MINIGAME_RADNESS_MTR equ 0xC5D9
 W_SURFING_MINIGAME_RADNESS_SCR equ 0xC5DA
-W_SURFING_MINIGAME_TOTAL_SCORE equ 0xC5DC
-W_SURFING_MINIGAME_TRICK_FLAGS equ 0xC62F
-W_SLOT_MACHINE_SEVEN_AND_BAR_MODE_CHANCE equ 0xCC5B
-W_SLOT_MACHINE_WHEEL1_OFFSET equ 0xCD3E
-W_SLOT_MACHINE_WHEEL2_OFFSET equ 0xCD3F
-W_SLOT_MACHINE_WHEEL3_OFFSET equ 0xCD40
-W_SLOT_MACHINE_WHEEL1_BOTTOM_TILE equ 0xCD41
-W_SLOT_MACHINE_WHEEL1_MIDDLE_TILE equ 0xCD42
-W_SLOT_MACHINE_WHEEL1_TOP_TILE equ 0xCD43
-W_SLOT_MACHINE_WHEEL2_BOTTOM_TILE equ 0xCD44
-W_SLOT_MACHINE_WHEEL2_MIDDLE_TILE equ 0xCD45
-W_SLOT_MACHINE_WHEEL2_TOP_TILE equ 0xCD46
-W_SLOT_MACHINE_WHEEL3_BOTTOM_TILE equ 0xCD47
-W_SLOT_MACHINE_WHEEL3_MIDDLE_TILE equ 0xCD48
-W_SLOT_MACHINE_WHEEL3_TOP_TILE equ 0xCD49
+wSurfingMinigameTotalScore    equ 0xC5DC
+wSurfingMinigameTrickFlags    equ 0xC62F
+wSlotMachineWheel1Offset      equ 0xCD3E
+wSlotMachineWheel2Offset      equ 0xCD3F
+wSlotMachineWheel3Offset      equ 0xCD40
+wSlotMachineWheel1BottomTile  equ 0xCD41
+wSlotMachineWheel1MiddleTile  equ 0xCD42
+wSlotMachineWheel1TopTile     equ 0xCD43
+wSlotMachineWheel2BottomTile  equ 0xCD44
+wSlotMachineWheel2MiddleTile  equ 0xCD45
+wSlotMachineWheel2TopTile     equ 0xCD46
+wSlotMachineWheel3BottomTile  equ 0xCD47
+wSlotMachineWheel3MiddleTile  equ 0xCD48
+wSlotMachineWheel3TopTile     equ 0xCD49
 wSlotMachineFlags             equ 0xCD4C
-W_SLOT_MACHINE_WHEEL1_SLIP_COUNTER equ 0xCD4D
-W_SLOT_MACHINE_WHEEL2_SLIP_COUNTER equ 0xCD4E
-W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER equ 0xD095
+wSlotMachineWheel1SlipCounter equ 0xCD4D
+wSlotMachineWheel2SlipCounter equ 0xCD4E
+wSlotMachineAllowMatchesCounter equ 0xD095
 
 ; --- pret-named aliases for the slots / hidden-event bytes above -------------
 ; The W_SLOT_MACHINE_* names are the port's legacy convention and stay as the
@@ -116,10 +104,10 @@ W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER equ 0xD095
 ; for the SAME addresses, so engine/slots/ can be a literal pret mirror. Adding
 ; alongside, never renaming (CLAUDE.md "Preserve pret Labels").
 ; Addresses verified against pokeyellow.sym, not inferred.
-wSlotMachineSevenAndBarModeChance equ 0xCC5B  ; == W_SLOT_MACHINE_SEVEN_AND_BAR_MODE_CHANCE
+wSlotMachineSevenAndBarModeChance equ 0xCC5B  ; == wSlotMachineSevenAndBarModeChance
 wSlotMachineSavedROMBank          equ 0xCC5E
 wLuckySlotHiddenEventIndex        equ 0xCD05
-wHiddenEventIndex                 equ 0xCD3F  ; == W_SLOT_MACHINE_WHEEL2_OFFSET (union)
+wHiddenEventIndex                 equ 0xCD3F  ; == wSlotMachineWheel2Offset (union)
 wSpritePlayerStateData1ImageIndex equ 0xC102  ; player sprite slot, +2 = ImageIndex
 
 ; *** wHiddenEventFunctionArgument and wCanPlaySlots ARE THE SAME BYTE ($CD3D),
@@ -134,8 +122,6 @@ wHiddenEventFunctionArgument      equ 0xCD3D
 wCanPlaySlots                     equ 0xCD3D
 W_LOADED_MON_EXP         equ 0xCFA5
 W_BOX_MON1_MOVES         equ 0xDA9D
-W_SAVED_LIST_SCROLL_OFFSET equ 0xD07D
-W_LIST_COUNT             equ 0xD129
 
 ; ---------------------------------------------------------------------------
 ; Pokémon data engine — lowercase pret-name aliases (Pokémon data/stats plan).
@@ -246,8 +232,8 @@ wTopMenuItemX          equ 0xCC25   ; cursor X of menu item id 0
 wCurrentMenuItem       equ 0xCC26
 wTileBehindCursor      equ 0xCC27   ; tile the cursor overwrote (for erase)
 wBagSavedMenuItem      equ 0xCC2C
-wSavedListScrollOffset equ 0xD07D   ; = W_SAVED_LIST_SCROLL_OFFSET
-wListCount             equ 0xD129   ; = W_LIST_COUNT
+wSavedListScrollOffset equ 0xD07D   ; = wSavedListScrollOffset
+wListCount             equ 0xD129   ; = wListCount
 wMaxMenuItem           equ 0xCC28
 wMenuWatchedKeys       equ 0xCC29   ; bit mask of keys the menu responds to
 wLastMenuItem          equ 0xCC2A   ; previously selected menu item
@@ -652,8 +638,8 @@ hSavedMapTextPtr       equ 0xFFEC   ; golden 00:ffec (dw)
 ; wSpriteStateData1 ($C100) and wSpriteStateData2 ($C200) — sym-verified.
 ; The high byte of a pointer in one array +1 reaches the other (the engine
 ; relies on this; in the flat model we use the explicit base constants).
-W_SPRITE_STATE_DATA_1         equ 0xC100 ; wSpriteStateData1 (slot 0 = player)
-W_SPRITE_STATE_DATA_2         equ 0xC200 ; wSpriteStateData2
+wSpriteStateData1             equ 0xC100 ; wSpriteStateData1 (slot 0 = player)
+wSpriteStateData2             equ 0xC200 ; wSpriteStateData2
 SPRITESTATEDATA_STRUCT_SIZE   equ 0x10
 NUM_SPRITE_SLOTS              equ 16
 wSprite01StateData1           equ 0xC110 ; golden 00:c110 — slot 1 (first non-player sprite)
@@ -793,13 +779,13 @@ NPC_MOVEMENT_RIGHT   equ 0xC0   ; hRandomAdd in [0xC0,0xFF] → go right
 
 ; Named WRAM symbols (subset needed by translated routines).
 ; Offsets from pokeyellow.sym (bank 00).
-W_SHADOW_OAM        equ 0xC300     ; wShadowOAM — 40 sprites × 4 bytes
+wShadowOAM                    equ 0xC300     ; wShadowOAM — 40 sprites × 4 bytes
 ; Town map (engine/items/town_map.asm) — pret-real addresses, replacing the
 ; PLACEHOLDER block that file carried while it was dangling (its 0xDE00 base
 ; collided with wBoxMonNicks 0xDE05).
 ; RELOCATED (port-only): pret puts wShadowOAMBackup at 0xC508. It cannot live there
 ; here — the port's wTileMap is 40x25 = 1000 bytes (the GB's is 20x18 = 360), so
-; W_TILEMAP spans 0xC3A0-0xC787 and SWALLOWS 0xC508. At pret's address the town map's
+; wTileMap spans 0xC3A0-0xC787 and SWALLOWS 0xC508. At pret's address the town map's
 ; OAM backup wrote raw sprite bytes straight into tilemap rows 9-12 (visible as a band
 ; of garbage glyphs across the map). It goes in the Echo region instead, with the other
 ; buffers that outgrew their pret slots (wSurroundingTiles, wOverworldMap,
@@ -830,9 +816,9 @@ wHUDUnusedTopTile      equ 0xCD3F   ; [0] unused — $73 is hardcoded in PlaceHU
 wHUDCornerTile         equ 0xCD40   ; [1] corner tile of the HUD underline
 wHUDTriangleTile       equ 0xCD41   ; [2] triangle tile at the far end
 wHUDGraphicsTilesEnd   equ 0xCD42
-W_SHADOW_OAM_END    equ 0xC3A0
+wShadowOAMEnd                 equ 0xC3A0
 W_SHADOW_OAM_SIZE   equ 0xA0       ; 160 bytes
-W_TILEMAP           equ 0xC3A0     ; wTileMap — 40×25 screen tile buffer
+wTileMap                      equ 0xC3A0     ; wTileMap — 40×25 screen tile buffer
 W_TILEMAP_SIZE      equ 1000       ; SCREEN_TILES_W * SCREEN_TILES_H
 
 ; WRAM bank 1 — $D000–$DFFF (4 KB)
@@ -1018,11 +1004,8 @@ wSfxWaveInstrument           equ 0xC0E7
 wMusicTempo                  equ 0xC0E8 ; dw, stored hi-then-lo (big-endian!)
 wSfxTempo                    equ 0xC0EA ; dw, stored hi-then-lo (big-endian!)
 wSfxHeaderPointer            equ 0xC0EC ; dw, stored hi-then-lo (big-endian!)
-W_NEW_SOUND_ID               equ 0xC0EE ; wNewSoundID
 wNewSoundID                  equ 0xC0EE ; pret alias
-W_AUDIO_ROM_BANK             equ 0xC0EF ; wAudioROMBank
 wAudioROMBank                equ 0xC0EF ; pret alias
-W_AUDIO_SAVED_ROM_BANK       equ 0xC0F0 ; wAudioSavedROMBank
 wAudioSavedROMBank           equ 0xC0F0 ; pret alias
 wFrequencyModifier           equ 0xC0F1 ; cry pitch modifier
 wTempoModifier               equ 0xC0F2 ; cry tempo modifier
@@ -1117,8 +1100,8 @@ MAP_ID_VICTORY_ROAD_3F       equ 0xC6
 wUnusedFlag                   equ 0xCC5B ; wUnusedFlag
 
 ; Title-screen state ($CD3D)
-W_TITLE_SCREEN_SCENE         equ 0xCD3D ; wTitleScreenScene (byte; +1 = timer)
-W_TITLE_SCREEN_TIMER         equ 0xCD3E ; wTitleScreenTimer
+wTitleScreenScene             equ 0xCD3D ; wTitleScreenScene (byte; +1 = timer)
+wTitleScreenTimer             equ 0xCD3E ; wTitleScreenTimer
 
 ; Name buffers (WRAM1) — sym-verified
 wRivalName                    equ 0xD349 ; wRivalName  — 11 bytes, '@'-terminated
@@ -1185,8 +1168,8 @@ wChangeBoxSavedMapTextPointer equ 0xCD3D ; ChangeBox saves/restores wCurMapTextP
 ; must not overlap the next buffer. Growing MAP_BORDER 6→7 pushed wOverworldMapEnd
 ; from $F000 to $F100 and silently clobbered wTileMapBackup2's first 256 bytes
 ; until it was moved here.
-W_TILEMAP_BACKUP             equ 0xE000 ; wTileMapBackup (= wSurroundingTiles, see below)
-W_TILEMAP_BACKUP2            equ 0xF100 ; wTileMapBackup2 (1000 B)
+wTileMapBackup                equ 0xE000 ; wTileMapBackup (= wSurroundingTiles, see below)
+wTileMapBackup2               equ 0xF100 ; wTileMapBackup2 (1000 B)
 
 ; Overworld surrounding-tiles buffer (alias for wTileMapBackup)
 ; 48×36 = 1728 bytes; DrawTileBlock writes here before crop to wTileMap.
@@ -1195,7 +1178,7 @@ wSurroundingTiles             equ 0xE000 ; wSurroundingTiles = wTileMapBackup
 ; --- Animated-object engine (menu-intro B1: engine/gfx/animated_objects.asm) ---
 ; RELOCATED (port-only): pret places this WRAM0 union branch at 0xC508 (the
 ; "OAM Buffer"/"Tilemap" union, 4th NEXTU: wAnimatedObjectsData). The port's
-; wTileMap is 40x25 = 1000 bytes and SWALLOWS 0xC508 (W_TILEMAP spans
+; wTileMap is 40x25 = 1000 bytes and SWALLOWS 0xC508 (wTileMap spans
 ; 0xC3A0-0xC787), so — exactly as wShadowOAMBackup did — the block goes to free
 ; echo RAM instead. It is intro-cinematic-only and never live at the same time
 ; as the overworld buffers below it. 200 bytes: 0xF600-0xF6C7.
@@ -1205,7 +1188,7 @@ wSurroundingTiles             equ 0xE000 ; wSurroundingTiles = wTileMapBackup
 ;   9 DurationOffset, a FrameIndex, b..f FieldB..FieldF.
 ; The engine indexes wShadowOAM (0xC300, kept at the pret address) by a LOW-byte
 ; offset in wCurrentAnimatedObjectOAMBufferOffset — page-aligned, so the offset
-; adds directly to W_SHADOW_OAM in x86.
+; adds directly to wShadowOAM in x86.
 ; Pointer model (menu-intro B1/B3): the Spawn/Frames/OAMData tables are pure
 ; DATA (2-/3-byte GB-pointer structures). B3 generates them into a GB-space blob
 ; so the engine's pointer arithmetic (add hl,de x2/x3, 16-bit pointer reads)
@@ -1218,7 +1201,7 @@ wSurroundingTiles             equ 0xE000 ; wSurroundingTiles = wTileMapBackup
 ; slot 2->4 bytes grows the block 200->202 B; safe — this is engine-internal
 ; runtime scratch, not Gen-1 save/party data (the byte-identical rule is scoped
 ; to mon structs).
-W_ANIMATED_OBJECTS_DATA         equ 0xF600 ; wAnimatedObjectsData (block base)
+wAnimatedObjectsData          equ 0xF600 ; wAnimatedObjectsData (block base)
 W_ANIMATED_OBJECTS_DATA_SIZE    equ 0xCA   ; 202 B, ends 0xF6CA (wAnimatedObjectsDataEnd)
 wAnimatedObjectStartTileOffsets equ 0xF600 ; ds 10*2 (20 B)
 wAnimatedObjectDataStructs      equ 0xF614 ; wAnimatedObject0 (10 x 16 = 160 B)
@@ -1272,12 +1255,12 @@ W_INTRO_SPAWN_DATA_SIZE         equ 0x21   ; staged image ends 0xF991, inside th
 ; wLYOverridesBuffer — the intro's LY-override staging buffer (surfing wobble).
 ; Free echo RAM after the anim-data blob. The port does NOT emulate per-scanline
 ; LY overrides, so this buffer is written faithfully but never consumed (inert).
-W_LY_OVERRIDES_BUFFER           equ 0xFA00 ; wLYOverridesBuffer (ds 0x100)
+wLYOverridesBuffer            equ 0xFA00 ; wLYOverridesBuffer (ds 0x100)
 W_LY_OVERRIDES_BUFFER_SIZE      equ 0x100  ; 256 B, ends 0xFB00 (< GB_OAM 0xFE00)
 ; wLYOverrides — pret's consumed per-scanline buffer, 0x100 before the source
 ; buffer. The port does not emulate per-scanline LY, so only its HIGH byte is
 ; referenced (by Request7TileTransferFromC810ToC710, into inert HRAM), never read.
-W_LY_OVERRIDES                  equ W_LY_OVERRIDES_BUFFER - 0x100 ; 0xF900 (inert)
+wLYOverrides                  equ wLYOverridesBuffer - 0x100 ; 0xF900 (inert)
 
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
 ; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old
@@ -1299,8 +1282,7 @@ wTileInFrontOfPlayer          equ 0xCFC5 ; wTileInFrontOfPlayer (collision check
 W_AUDIO_FADE_OUT             equ 0xCFC6 ; wAudioFadeOutControl
 
 ; Sprite-engine scratch WRAM — sym-verified.
-W_GRASS_TILE                 equ 0xD534 ; wGrassTile (tile ID treated as tall grass; $ff = none)
-W_SAVED_SPRITE_IMAGE_INDEX   equ 0xD5CC ; wSavedSpriteImageIndex (PrepareOAMData scratch / VRAM base tile)
+wSavedSpriteImageIndex        equ 0xD5CC ; wSavedSpriteImageIndex (PrepareOAMData scratch / VRAM base tile)
 ; Bit indices for wMovementFlags (pret: constants/ram_constants.asm)
 BIT_STANDING_ON_DOOR         equ 0     ; set by warp arrival; triggers auto-walk-off
 BIT_EXITING_DOOR             equ 1     ; set by PlayerStepOutFromDoor (door tile); player is auto-walking off door
@@ -1313,7 +1295,7 @@ BIT_DISABLE_JOYPAD           equ 5     ; input suppressed; CountDownIgnoreInputB
 BIT_SCRIPTED_MOVEMENT_STATE  equ 7     ; simulated joypad active (door exit / scripted walk)
 
 ; Map-tileset copies
-W_UNUSED_CUR_MAP_TILESET_COPY equ 0xD118 ; wUnusedCurMapTilesetCopy
+wUnusedCurMapTilesetCopy      equ 0xD118 ; wUnusedCurMapTilesetCopy
 wWalkBikeSurfStateCopy       equ 0xD119 ; = wWalkBikeSurfStateCopy (pret name)
 
 ; Joypad/input control
@@ -1433,7 +1415,7 @@ wMovesString                 equ 0xD0E0   ; NUM_MOVES*MOVE_NAME_LENGTH (56), <NE
 wNPCMovementScriptPointerTableNum equ 0xCC57
 wMovementFlags               equ 0xD735
 wStringBuffer                equ 0xCF4A   ; PrintStatText destination (Stage 5)
-wGrassTile                   equ 0xD534   ; = W_GRASS_TILE (tall-grass tile id)
+wGrassTile                   equ 0xD534   ; = wGrassTile (tall-grass tile id)
 wPartyMon1Level              equ 0xD18B   ; lead party mon level (repel check)
 wNameListIndex               equ 0xD0B4   ; selected name id (GetName input; sym)
 ; --- name lookup (GetName / NamePointers; sym-pinned) ---
@@ -1560,8 +1542,8 @@ W_WEST_CONNECTED_MAP         equ 0xD386 ; wWestConnectedMap
 W_EAST_CONNECTED_MAP         equ 0xD391 ; wEastConnectedMap
 
 ; Sprite/object data
-W_SPRITE_SET                 equ 0xD39C ; wSpriteSet (SPRITE_SET_LENGTH = 11 bytes, precedes wSpriteSetID)
-W_SPRITE_SET_ID              equ 0xD3A7 ; wSpriteSetID
+wSpriteSet                    equ 0xD39C ; wSpriteSet (SPRITE_SET_LENGTH = 11 bytes, precedes wSpriteSetID)
+wSpriteSetID                  equ 0xD3A7 ; wSpriteSetID
 W_OBJECT_DATA_PTR_TEMP       equ 0xD3A8 ; wObjectDataPointerTemp (2 bytes)
 
 ; Map object header (follows connections in object data)
@@ -1596,11 +1578,11 @@ wPlayerDirection              equ 0xD529 ; wPlayerDirection (PLAYER_DIR_*)
 ; Active tileset WRAM (set from tileset header by LoadTilesetHeader)
 ; LoadTilesetHeader copies 11 bytes here from the tileset header table,
 ; then reads the 12th byte (animations) to hTileAnimations.
-W_TILESET_BANK               equ 0xD52A ; wTilesetBank (1 byte)
-W_TILESET_BLOCKS_PTR         equ 0xD52B ; wTilesetBlocksPtr (2 bytes, LE)
-W_TILESET_GFX_PTR            equ 0xD52D ; wTilesetGfxPtr   (2 bytes, LE)
-W_TILESET_COLLISION_PTR      equ 0xD52F ; wTilesetCollisionPtr (2 bytes, LE; passable-tile list)
-W_TILESET_TALKING_OVER_TILES equ 0xD531 ; wTilesetTalkingOverTiles (3 bytes: counter tiles)
+wTilesetBank                  equ 0xD52A ; wTilesetBank (1 byte)
+wTilesetBlocksPtr             equ 0xD52B ; wTilesetBlocksPtr (2 bytes, LE)
+wTilesetGfxPtr                equ 0xD52D ; wTilesetGfxPtr   (2 bytes, LE)
+wTilesetCollisionPtr          equ 0xD52F ; wTilesetCollisionPtr (2 bytes, LE; passable-tile list)
+wTilesetTalkingOverTiles      equ 0xD531 ; wTilesetTalkingOverTiles (3 bytes: counter tiles)
 W_TILESET_GRASS_TILE         equ 0xD534 ; (overlaps wGrassTile — handled by LoadTilesetHeader)
 ; NOTE: wTilesetGrassTile ($D534) is the same address as wGrassTile.
 ; LoadTilesetHeader copies it as part of the 11-byte block.
@@ -1804,7 +1786,7 @@ vBackPic        equ 0x9310     ; PIC_SIZE tiles, ends 0x9620
 
 ; RELOCATED (port-only): pret puts wTempPic at $C6E8. It cannot live there here —
 ; the port's wTileMap is 40x25 = 1000 bytes (the GB's is 20x18 = 360), so
-; W_TILEMAP spans 0xC3A0-0xC787 and SWALLOWS 0xC6E8, exactly as it swallows
+; wTileMap spans 0xC3A0-0xC787 and SWALLOWS 0xC6E8, exactly as it swallows
 ; 0xC508 (wShadowOAMBackup / wAnimatedObjectsData above). Unlike those two it does
 ; NOT fit in echo RAM: 784 bytes are needed and the largest remaining echo gap is
 ; 768 (0xFB00-0xFDFF, after wLYOverridesBuffer). It goes in the unused 1536-byte
@@ -1948,7 +1930,7 @@ hQuotient2                    equ 0xFFE7 ; hQuotient2
 wNPCMovementDirections        equ 0xCC5B ; wNPCMovementDirections (union base; sim-joypad end/dirs2 overlay it)
 wUnusedOverrideSimulatedJoypadStatesIndex equ 0xCD3A ; wUnusedOverrideSimulatedJoypadStatesIndex (golden 00:cd3a; was 0xCC86)
 wOverrideSimulatedJoypadStatesMask equ 0xCD3B ; wOverrideSimulatedJoypadStatesMask (golden 00:cd3b; was 0xCC87)
-W_RLE_BYTE_COUNT                                 equ 0xCCD2 ; wRLEByteCount
+wRLEByteCount                 equ 0xCCD2 ; wRLEByteCount
 wNPCNumScriptedSteps          equ 0xCF0F ; wNPCNumScriptedSteps
 wNPCMovementScriptFunctionNum equ 0xCF10 ; wNPCMovementScriptFunctionNum
 wNPCMovementScriptBank        equ 0xCC58 ; wNPCMovementScriptBank (scripted-dispatch, macro-gated)
@@ -2079,7 +2061,7 @@ hFieldMoveMonMenuTopMenuItemX equ 0xFFFB ; GB X of the field-move menu cursor co
 ;     +PARTY_LENGTH +1 (wStatusScreenHPBarColor) + ds 7 (wram.asm:1230-1237).
 ;   wPartyMenuTypeOrMessageID = wAnimationID 0xD07B + 1 (same db as
 ;     wNamingScreenType/wTempTilesetNumTiles); cross-checked forward to
-;     W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER 0xD095 = +25 (wram.asm:1530-1615).
+;     wSlotMachineAllowMatchesCounter 0xD095 = +25 (wram.asm:1530-1615).
 ;   wPartyMenuAnimMonEnabled = 0xD095-union ENDU +2 (dw lane) + ds 2 +
 ;     wOutwardSpiralTileMapPointer db (wram.asm:1618-1629).
 ;   wSwappedMenuItem aliases the wChargeMoveNum 0xCD3D union byte (wram.asm:1016).
@@ -2270,7 +2252,7 @@ wEnemyMonOrTrainerClass       equ 0xD712   ; golden 00:d712 — pret keeps this 
 ; The end-battle text slots are flat-adapted (dd, 4 bytes each), so only the win
 ; pointer keeps its golden base; lose/bank shift by the +2/+4 widening. All three
 ; land in the golden gap d08b..d094 (wOptionsInitialized 0xD089,
-; W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER 0xD095 — no overlap).
+; wSlotMachineAllowMatchesCounter 0xD095 — no overlap).
 wEndBattleWinTextPointer      equ 0xD08B   ; golden 00:d08b (dw)   ** flat-adapted: 4 bytes **
 wEndBattleLoseTextPointer     equ 0xD08F   ; golden 00:d08d +2     ** flat-adapted: 4 bytes **
 wEndBattleTextRomBank         equ 0xD093   ; golden 00:d091 +2

@@ -83,16 +83,16 @@ LoadTilesetHeader:
     ; byte, but never consumed as a real bank switch. Pret ref: engine/overworld/
     ; tilesets.asm (ld a,[hl] / ldh [hTileAnimations],a is the real 12th byte;
     ; the bank byte itself is CopyData'd from Tilesets[0]).
-    mov byte [ebp + W_TILESET_BANK], 0x01  ; TODO-HW: banking no-op under flat memory
-    mov word [ebp + W_TILESET_BLOCKS_PTR], OW_BLOCKS_GBADDR
-    mov word [ebp + W_TILESET_GFX_PTR],   OW_GFX_GBADDR
-    mov word [ebp + W_TILESET_COLLISION_PTR],  OW_COLL_GBADDR
+    mov byte [ebp + wTilesetBank], 0x01  ; TODO-HW: banking no-op under flat memory
+    mov word [ebp + wTilesetBlocksPtr], OW_BLOCKS_GBADDR
+    mov word [ebp + wTilesetGfxPtr],   OW_GFX_GBADDR
+    mov word [ebp + wTilesetCollisionPtr],  OW_COLL_GBADDR
     ; Per-tileset grass tile + tile-animation kind — pret ref: data/tilesets/
     ; tileset_headers.asm (`tileset` macro \5/\6 fields), inlined below as
     ; TilesetGrassTiles/TilesetAnimations (small pret data tables, EAX still
     ; holds the 0-24 tileset index from the movzx above).
     mov bl, [TilesetGrassTiles + eax]
-    mov [ebp + W_GRASS_TILE], bl
+    mov [ebp + wGrassTile], bl
     mov bl, [TilesetAnimations + eax]
     mov [ebp + hTileAnimations], bl
 
@@ -105,11 +105,11 @@ LoadTilesetHeader:
     ; EAX still holds the 0-24 tileset index (preserved through here for IsInArray).
     lea edi, [eax + eax*2]                       ; EDI = tileset * 3 (row into the table)
     mov bl, [TilesetCounterTiles + edi + 0]
-    mov [ebp + W_TILESET_TALKING_OVER_TILES + 0], bl
+    mov [ebp + wTilesetTalkingOverTiles + 0], bl
     mov bl, [TilesetCounterTiles + edi + 1]
-    mov [ebp + W_TILESET_TALKING_OVER_TILES + 1], bl
+    mov [ebp + wTilesetTalkingOverTiles + 1], bl
     mov bl, [TilesetCounterTiles + edi + 2]
-    mov [ebp + W_TILESET_TALKING_OVER_TILES + 2], bl
+    mov [ebp + wTilesetTalkingOverTiles + 2], bl
 
     ; -----------------------------------------------------------------------
     ; Pret tail — engine/overworld/tilesets.asm lines 21-47 (previously

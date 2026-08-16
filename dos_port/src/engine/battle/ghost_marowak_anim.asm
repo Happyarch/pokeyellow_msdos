@@ -79,7 +79,7 @@ MarowakAnim:
     ; Using pret's RAW column here is a SHIPPED BUG in this exact 7x7 block —
     ; see regression-battle-second-battle-hud-tile-band, where two sites left a
     ; ghost band at cols 12-18.
-    mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
+    mov esi, wTileMap + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     mov bh, 7                               ; lb bc, 7, 7
     mov bl, 7
     call ClearScreenArea
@@ -158,7 +158,7 @@ CopyMonPicFromBGToSpriteVRAM:
     call CopyVideoData                      ; arms g_tilecache_dirty itself
     mov byte [ebp + wBaseCoordY], 0x10      ; ld a, $10 / ld [wBaseCoordY], a
     mov byte [ebp + wBaseCoordX], 0x70      ; ld a, $70 / ld [wBaseCoordX], a
-    mov esi, W_SHADOW_OAM                   ; ld hl, wShadowOAM
+    mov esi, wShadowOAM                   ; ld hl, wShadowOAM
     mov bh, 6                               ; lb bc, 6, 6 — b = columns
     mov bl, 6                               ;              c = rows
     mov dh, 8                               ; ld d, $8 — first tile id

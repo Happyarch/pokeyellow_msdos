@@ -28,7 +28,7 @@
 ;
 ; PORT MODEL (full-screen takeover, same shape as options.asm / naming_screen.asm):
 ; - The whole screen is drawn at pret GB coords into the 20-wide stride-20
-;   W_TILEMAP scratch (hlcoord X,Y = W_TILEMAP + Y*20 + X via the local HL(x,y)
+;   wTileMap scratch (hlcoord X,Y = wTileMap + Y*20 + X via the local HL(x,y)
 ;   macro; GBSCR_W = 20 = pret SCREEN_WIDTH). pret's SCREEN_WIDTH is 20 EVERYWHERE
 ;   in this file (constants/hardware.inc) — do NOT use the port's SCREEN_WIDTH=40.
 ; - One full-screen window (pdex_show_window) shows the scratch, sourced from
@@ -109,7 +109,7 @@ extern HandleMenuInput               ; home/window.asm — vertical menu input d
 extern PlaceUnfilledArrowMenuCursor  ; home/window.asm
 extern menu_item_step                ; home/window.asm — cursor per-item row step
 extern menu_redraw_cb                ; home/window.asm — per-cursor redraw callback
-extern text_row_stride               ; text/text.asm — active W_TILEMAP row stride
+extern text_row_stride               ; text/text.asm — active wTileMap row stride
 extern PlaceString                   ; text/text.asm — ESI=dest, EAX=flat src
 extern PrintNumber                   ; home/print_num.asm — EDX=src, BH=flags|bytes, BL=digits, ESI=dest
 extern TextBoxBorder                 ; text/text.asm (unused here, kept out)
@@ -160,10 +160,10 @@ BIT_PAGE_CHAR_IS_NEXT equ 3
 wPrinterPokedexEntryTextPointer equ 0xCAF5
 ; wDexFlavorBuf — PORT-ONLY staging buffer (DEVIATION, see Pokedex_PrintFlavorTextAtBC).
 ; TextCommandProcessor reads its stream EBP-relative but the flavor lives in flat .data,
-; so the bytes are copied into GB space first. Reuses wTileMapBackup2 (W_TILEMAP_BACKUP2
+; so the bytes are copied into GB space first. Reuses wTileMapBackup2 (wTileMapBackup2
 ; = $F100, 1000 B) — a screen-backup scratch the per-frame BG/window renderer never reads
 ; (render_bg sources wSurroundingTiles at $E000).
-wDexFlavorBuf     equ W_TILEMAP_BACKUP2
+wDexFlavorBuf     equ wTileMapBackup2
 DEX_FLAVOR_MAX    equ 300           ; copy bound (the longest entry is well under 140 B)
 
 ; charmap glyphs used by the entry page (constants/charmap.asm)
@@ -185,7 +185,7 @@ TILE_BLANK        equ 0x7F         ; ' '
 ; wDexMaxSeenMon (0xCD3D) is defined in gb_memmap.inc (sym-verified, S8).
 
 ; hlcoord X,Y helper (stride-20 scratch)
-%define HL(X,Y)  (W_TILEMAP + (Y) * GBSCR_W + (X))
+%define HL(X,Y)  (wTileMap + (Y) * GBSCR_W + (X))
 
 ; ===========================================================================
 section .data
@@ -850,7 +850,7 @@ ShowPokedexDataInternal:
 ; pointer. Out: CF set = owned (print the flavor); CF clear = unowned.
 ; ---------------------------------------------------------------------------
 DrawDexEntryOnScreen:
-    call ClearScreen                     ; blanks W_TILEMAP
+    call ClearScreen                     ; blanks wTileMap
     ; port: the entry page owns the stride-20 scratch (PlaceString's <NEXT> and the
     ; flavor advance both step by text_row_stride). Same reset ShowPokedexMenu does.
     mov dword [text_row_stride], GBSCR_W
@@ -1133,7 +1133,7 @@ dex_mirror:
     xor ebx, ebx
 .row:
     imul esi, ebx, GBSCR_W
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                           ; ×32 tilemap stride
     lea edi, [ebp + edi + GB_TILEMAP1]
@@ -1194,7 +1194,7 @@ pdex_mirror:
     xor ebx, ebx
 .row:
     imul esi, ebx, GBSCR_W
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                                           ; ×32 tilemap stride
     lea edi, [ebp + edi + GB_TILEMAP1]

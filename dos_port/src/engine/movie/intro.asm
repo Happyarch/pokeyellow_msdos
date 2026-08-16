@@ -19,7 +19,7 @@ bits 32
 hAutoBGTransferEnabled equ H_AUTO_BG_TRANSFER_EN   ; pret name (inert byte; consumer do_bg_transfer retired)
 
 ; --- Cinematic BG surface model (the port's own; documented in intro_yellow.asm) --
-; MovieMirrorSurface shows the visible 18x20 window from W_TILEMAP +
+; MovieMirrorSurface shows the visible 18x20 window from wTileMap +
 ; UI_SPLASH_ROW*SCREEN_TILES_W + UI_SPLASH_COL (row 3, col 10). Row-range (full-width)
 ; fills add only the row part (INTRO_BG_ROW_OFF); a GB coord(col,row) is authored at
 ; (col+UI_SPLASH_COL, row+UI_SPLASH_ROW). Not a per-routine deviation.
@@ -47,37 +47,37 @@ section .text
 ; which is white under the splash palette) on GB rows 0-3 and 14-17, clearing the
 ; surface first. (+ IntroClearScreen / IntroClearMiddleOfScreen / IntroClearCommon /
 ; IntroPlaceBlackTiles.) BG writes use the cinematic origin (above); pret's vBGMap0
-; and vBGMap1 bar writes both land on the single W_TILEMAP canvas (there is no second
+; and vBGMap1 bar writes both land on the single wTileMap canvas (there is no second
 ; BG map) — the port's surface model, not a per-routine deviation.
 ; ---------------------------------------------------------------------------
 global IntroDrawBlackBars
 IntroDrawBlackBars:
     call IntroClearScreen
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF                 ; GB rows 0-3 -> surface rows 0-3
+    mov esi, wTileMap + INTRO_BG_ROW_OFF                 ; GB rows 0-3 -> surface rows 0-3
     mov ecx, 4 * SCREEN_TILES_W                            ; ld c, SCREEN_WIDTH * 4
     call IntroPlaceBlackTiles
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W  ; GB rows 14-17
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W  ; GB rows 14-17
     mov ecx, 4 * SCREEN_TILES_W
     call IntroPlaceBlackTiles
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF                 ; ld hl, vBGMap1  (-> same surface)
+    mov esi, wTileMap + INTRO_BG_ROW_OFF                 ; ld hl, vBGMap1  (-> same surface)
     mov ecx, 4 * SCREEN_TILES_W                            ; ld c, TILEMAP_WIDTH * 4
     call IntroPlaceBlackTiles
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W  ; hlbgcoord 0,14,vBGMap1
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 14 * SCREEN_TILES_W  ; hlbgcoord 0,14,vBGMap1
     mov ecx, 4 * SCREEN_TILES_W
     jmp IntroPlaceBlackTiles                               ; jp IntroPlaceBlackTiles
 
 ; IntroClearScreen — clear the whole surface (pret clears vBGMap1 32x18; the port
-; clears all of W_TILEMAP, which covers the visible window). Falls into common.
+; clears all of wTileMap, which covers the visible window). Falls into common.
 global IntroClearScreen
 IntroClearScreen:
-    mov esi, W_TILEMAP                                     ; ld hl, vBGMap1 (whole surface)
+    mov esi, wTileMap                                     ; ld hl, vBGMap1 (whole surface)
     mov ecx, SCREEN_AREA                                   ; ld bc, TILEMAP_WIDTH * SCREEN_HEIGHT
     jmp IntroClearCommon
 
 ; IntroClearMiddleOfScreen — clear GB rows 4-13 (between the bars) at the origin.
 global IntroClearMiddleOfScreen
 IntroClearMiddleOfScreen:
-    mov esi, W_TILEMAP + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W   ; hlcoord 0, 4
+    mov esi, wTileMap + INTRO_BG_ROW_OFF + 4 * SCREEN_TILES_W   ; hlcoord 0, 4
     mov ecx, 10 * SCREEN_TILES_W                           ; ld bc, SCREEN_WIDTH * 10
     ; fall through
 global IntroClearCommon
@@ -88,7 +88,7 @@ IntroClearCommon:
     jnz IntroClearCommon
     ret
 
-; IntroPlaceBlackTiles — fill ECX W_TILEMAP cells (from ESI) with bar tile 1.
+; IntroPlaceBlackTiles — fill ECX wTileMap cells (from ESI) with bar tile 1.
 global IntroPlaceBlackTiles
 IntroPlaceBlackTiles:
     mov al, 1                                              ; ld a, 1

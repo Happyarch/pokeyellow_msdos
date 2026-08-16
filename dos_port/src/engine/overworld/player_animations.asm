@@ -634,7 +634,7 @@ GetPlayerTeleportAnimFrameDelay:
 ; ---------------------------------------------------------------------------
 ; IsPlayerStandingOnWarpPadOrHole — Out: BH (=b) and wStandingOnWarpPadOrHole.
 ; ; PROJ: pret `lda_coord 8, 9` reads the player's own STANDING tile; the port
-; addresses it at W_TILEMAP + PLAYER_STANDING_ROW*SCREEN_TILES_W +
+; addresses it at wTileMap + PLAYER_STANDING_ROW*SCREEN_TILES_W +
 ; PLAYER_STANDING_COL (same anchor as player_state.asm's standing-tile reads).
 ; WarpPadAndHoleData is a flat ROM table (ESI read flat, not [ebp+ESI]).
 ; ---------------------------------------------------------------------------
@@ -650,7 +650,7 @@ IsPlayerStandingOnWarpPadOrHole:
     cmp al, bl                                 ; cp c
     jne .nextEntry
     ; standing tile (PROJ, see header)
-    mov ah, [ebp + W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL]
+    mov ah, [ebp + wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL]
     cmp ah, [esi]                              ; cp [hl] (entry tile id)
     je .foundMatch
 .nextEntry:

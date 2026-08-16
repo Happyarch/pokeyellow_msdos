@@ -4,7 +4,7 @@
 ; structure-for-structure translation of pret's battle loop. Per the governing
 ; principle (docs/current_plan_battle_pret_alignment.md): the BACKEND is byte-
 ; faithful, and the FRONT END diverges from pret ONLY at the screen-draw primitive
-; (the tile write into our centered 40-wide W_TILEMAP). Move animation is a marked
+; (the tile write into our centered 40-wide wTileMap). Move animation is a marked
 ; placeholder (HP-bar drain); audio is a no-op stub.
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=BX), D=DH, E=DL (DE=EDX), HL=ESI, SP=ESP,
@@ -253,7 +253,7 @@ extern text_arrow_pos                  ; text.asm — ▼ tile (read by BattlePr
                                        ; published by PrintText from the record)
 extern FormatMovesString               ; misc.asm — wMoves → wMovesString (+ '-' slots)
 extern DelayFrame                      ; src/home/vblank.asm
-extern text_row_stride                 ; text.asm — W_TILEMAP row stride
+extern text_row_stride                 ; text.asm — wTileMap row stride
 
 ; --- PrintMenuItem's helpers (pret core.asm:3010) ---
 extern CopyData                        ; home/copy.asm — ESI→EDX, BX bytes
@@ -307,7 +307,7 @@ extern CheckTargetSubstitute           ; substitute.asm
 ; --- pulled in with the unit-C faint/send-out cluster ---
 extern AddBCD                          ; engine/math/bcd.asm
 extern ClearScreen                     ; home/copy2.asm
-extern ClearScreenArea                 ; src/home/copy2.asm — ESI=W_TILEMAP dest, BH=rows, BL=width
+extern ClearScreenArea                 ; src/home/copy2.asm — ESI=wTileMap dest, BH=rows, BL=width
                                        ; (hoisted here 2026-08-11: HandlePlayerBlackOut
                                        ; uses it ~1000 lines before the old declaration)
 extern ClearSprites                    ; home/clear_sprites.asm
@@ -586,17 +586,17 @@ DisplayBattleMenu:
     mov al, T_SPACE                     ; ld a, ' ' — flag-neutral
     je .safariLeftColumn
     ; clear the right-column cursor cells, top item X = the left column
-    mov [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_R], al
-    mov [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_R], al
+    mov [ebp + wTileMap + MENU_ROW * FW + CUR_COL_R], al
+    mov [ebp + wTileMap + (MENU_ROW + 2) * FW + CUR_COL_R], al
     mov bh, CUR_COL_L                   ; ld b, $9
     jmp .leftColumn_WaitForInput
 .safariLeftColumn:
-    mov [ebp + W_TILEMAP + SAF_ROW * FW + SAF_COL_R], al
-    mov [ebp + W_TILEMAP + (SAF_ROW + 2) * FW + SAF_COL_R], al
+    mov [ebp + wTileMap + SAF_ROW * FW + SAF_COL_R], al
+    mov [ebp + wTileMap + (SAF_ROW + 2) * FW + SAF_COL_R], al
     ; The Safari menu shows how many balls are left. BH/BL are PrintNumber's
     ; arguments and it clobbers them, which is why pret sets `ld b, $1` AFTER
     ; the call and not before — keep that order.
-    mov esi, W_TILEMAP + SAF_ROW * FW + SAF_BALLS
+    mov esi, wTileMap + SAF_ROW * FW + SAF_BALLS
     mov edx, wNumSafariBalls
     mov bh, 1                           ; lb bc, 1, 2 — 1 source byte
     mov bl, 2                           ;               2 digits
@@ -617,14 +617,14 @@ DisplayBattleMenu:
     mov al, T_SPACE                     ; ld a, ' ' — flag-neutral
     je .safariRightColumn
     ; clear the left-column cursor cells, top item X = the right column
-    mov [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_L], al
-    mov [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_L], al
+    mov [ebp + wTileMap + MENU_ROW * FW + CUR_COL_L], al
+    mov [ebp + wTileMap + (MENU_ROW + 2) * FW + CUR_COL_L], al
     mov bh, CUR_COL_R                   ; ld b, $f
     jmp .rightColumn_WaitForInput
 .safariRightColumn:
-    mov [ebp + W_TILEMAP + SAF_ROW * FW + SAF_COL_L], al
-    mov [ebp + W_TILEMAP + (SAF_ROW + 2) * FW + SAF_COL_L], al
-    mov esi, W_TILEMAP + SAF_ROW * FW + SAF_BALLS
+    mov [ebp + wTileMap + SAF_ROW * FW + SAF_COL_L], al
+    mov [ebp + wTileMap + (SAF_ROW + 2) * FW + SAF_COL_L], al
+    mov esi, wTileMap + SAF_ROW * FW + SAF_BALLS
     mov edx, wNumSafariBalls
     mov bh, 1
     mov bl, 2
@@ -749,14 +749,14 @@ DisplayBattleMenu:
     rep movsb                           ; pret: CopyData -> wPlayerName
     ; the simulated keystrokes (pret hlcoord 9,14 / 9,16 = the left-column
     ; cursor cells this menu's .leftColumn manages: FIGHT above, ITEM below)
-    mov byte [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_L], 0xED          ; '▶' on FIGHT
+    mov byte [ebp + wTileMap + MENU_ROW * FW + CUR_COL_L], 0xED          ; '▶' on FIGHT
     mov bl, 20
     call DelayFrames
-    mov byte [ebp + W_TILEMAP + MENU_ROW * FW + CUR_COL_L], T_SPACE
-    mov byte [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_L], 0xED    ; '▶' on ITEM
+    mov byte [ebp + wTileMap + MENU_ROW * FW + CUR_COL_L], T_SPACE
+    mov byte [ebp + wTileMap + (MENU_ROW + 2) * FW + CUR_COL_L], 0xED    ; '▶' on ITEM
     mov bl, 20
     call DelayFrames
-    mov byte [ebp + W_TILEMAP + (MENU_ROW + 2) * FW + CUR_COL_L], 0xEC    ; '▷' (pret leaves the hollow cursor)
+    mov byte [ebp + wTileMap + (MENU_ROW + 2) * FW + CUR_COL_L], 0xEC    ; '▷' (pret leaves the hollow cursor)
     mov al, 2                           ; pret: ld a, $2 — select the ITEM entry
     jmp .upperLeftMenuItemWasNotSelected
 
@@ -1253,7 +1253,7 @@ AnyMoveToSelect:
 ; ---------------------------------------------------------------------------
 ; PrintBattleText — pret PrintText, battle variant. In: EAX = flat-linear ptr to a
 ; battle_text.inc command stream. Selects the battle box geometry (so <LINE>/<PROMPT>
-; land in the battle dialog box, ▼ in W_TILEMAP) and runs the one printer, which
+; land in the battle dialog box, ▼ in wTileMap) and runs the one printer, which
 ; draws the box and walks the stream in place, revealing it char-by-char and
 ; self-terminating on prompt/done/text_end.
 ; ---------------------------------------------------------------------------
@@ -1302,7 +1302,7 @@ RunBattleTextStream:
     mov dword [text_msgbox], msgbox_centered
     jmp PrintTextStaged                 ; tail
 
-; BattlePromptWait — the battle <PROMPT> hook (pret PromptText, W_TILEMAP variant):
+; BattlePromptWait — the battle <PROMPT> hook (pret PromptText, wTileMap variant):
 ; blink the ▼ at [text_arrow_pos], wait for A/B, erase. Installed in text_prompt_hook
 ; by PrintBattleText. Clobbers EAX/ECX.
 BattlePromptWait:
@@ -1348,12 +1348,12 @@ align 4
 global msgbox_centered
 msgbox_centered:
     dd FW                       ; MB_STRIDE       — the full canvas
-    dd W_TILEMAP + OUTER_OFF    ; MB_BOX_OFS      — UI_DIALOG_BOX_OFS
+    dd wTileMap + OUTER_OFF    ; MB_BOX_OFS      — UI_DIALOG_BOX_OFS
     dd OUTER_W                  ; MB_BOX_W
     dd OUTER_H                  ; MB_BOX_H
-    dd W_TILEMAP + BTXT_LINE1   ; MB_LINE1        — UI_DIALOG_LINE1_OFS
-    dd W_TILEMAP + BTXT_LINE2   ; MB_LINE2        — UI_DIALOG_LINE2_OFS
-    dd W_TILEMAP + BTXT_ARROW   ; MB_ARROW        — UI_DIALOG_ARROW_OFS
+    dd wTileMap + BTXT_LINE1   ; MB_LINE1        — UI_DIALOG_LINE1_OFS
+    dd wTileMap + BTXT_LINE2   ; MB_LINE2        — UI_DIALOG_LINE2_OFS
+    dd wTileMap + BTXT_ARROW   ; MB_ARROW        — UI_DIALOG_ARROW_OFS
     dd BattlePromptWait         ; MB_PROMPT       — blinks the ▼, waits A/B
     dd 0                        ; MB_WIN_WX       ] no window: drawn directly into
     dd 0                        ; MB_WIN_WY       ] the canvas, so the caller's
@@ -1759,7 +1759,7 @@ ApplyDamageToEnemyPokemon:
     ; Calls pret's real animated engine (engine/gfx/hp_bar.asm) directly since the
     ; AnimateEnemyHPBar fork retirement; the wHPBar{Old,New,Max}HP staging above is
     ; exactly the state UpdateHPBar2 consumes.
-    mov esi, W_TILEMAP + E_HPBAR             ; hlcoord 2,2 (BCOORD battle projection)
+    mov esi, wTileMap + E_HPBAR             ; hlcoord 2,2 (BCOORD battle projection)
     xor al, al                               ; xor a
     mov [ebp + wHPBarType], al               ; ld [wHPBarType], a — enemy: no HP number
     call UpdateHPBar2                        ; predef UpdateHPBar2
@@ -2130,11 +2130,11 @@ PrintMoveIsDisabledText:
 ; ---------------------------------------------------------------------------
 extern BattleTransition                ; src/engine/battle/battle_transitions.asm
 extern saved_ow_view_ptr               ; init_battle.asm — overworld view-ptr save slot
-extern SnapshotRenderedTileMap         ; src/ppu/ppu.asm — re-crop W_TILEMAP to the blitted origin
+extern SnapshotRenderedTileMap         ; src/ppu/ppu.asm — re-crop wTileMap to the blitted origin
 global DoBattleTransitionAndInitBattleVariables
 DoBattleTransitionAndInitBattleVariables:
-    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:DoBattleTransitionAndInitBattleVariables; behavior=performs the port's flat-canvas switch before the transition - re-crops W_TILEMAP to the rendered camera origin, then saves and zeroes the overworld view pointer, zeroes the fine-scroll shadows and hardware mirrors, and disables tile animations; evidence=pret's BG is already a tilemap the wipe mutates in place, while the port's render_bg takes the overworld path whenever wCurrentTileBlockMapViewPointer is nonzero and would never show W_TILEMAP writes; lifetime=permanent, render HAL}
-    ; W_TILEMAP is the player-anchored COLLISION crop, not a mirror of the screen,
+    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:DoBattleTransitionAndInitBattleVariables; behavior=performs the port's flat-canvas switch before the transition - re-crops wTileMap to the rendered camera origin, then saves and zeroes the overworld view pointer, zeroes the fine-scroll shadows and hardware mirrors, and disables tile animations; evidence=pret's BG is already a tilemap the wipe mutates in place, while the port's render_bg takes the overworld path whenever wCurrentTileBlockMapViewPointer is nonzero and would never show wTileMap writes; lifetime=permanent, render HAL}
+    ; wTileMap is the player-anchored COLLISION crop, not a mirror of the screen,
     ; so the flat path would otherwise draw the same world from a different origin
     ; and the whole background would jump on the switch frame while the OBJ layer
     ; stayed put (measured +32,+32 px). Re-crop to what render_bg actually blitted.
@@ -2722,7 +2722,7 @@ ApplyDamageToPlayerPokemon:
     ; number print places the cur digits at bar + [text_row_stride] + 1, and the
     ; last dialog print may have left the stride at 20.
     mov dword [text_row_stride], FW
-    mov esi, W_TILEMAP + P_HPBAR             ; hlcoord 10,9 (BCOORD battle projection)
+    mov esi, wTileMap + P_HPBAR             ; hlcoord 10,9 (BCOORD battle projection)
     mov al, 1                                ; ld a, $1
     mov [ebp + wHPBarType], al               ; ld [wHPBarType], a — player: tick the number
     call UpdateHPBar2                        ; predef UpdateHPBar2
@@ -3455,7 +3455,7 @@ PartyMenuOrRockOrRun:
     ; cells (129), and taking the port's SCREEN_WIDTH (40, the canvas) made it 249
     ; bytes at a canvas address, which cleared cells this box never occupied and
     ; left the real ones standing.
-    mov esi, W_TILEMAP + 11 * PARTY_SCRATCH_STRIDE + 11   ; pret hlcoord 11, 11
+    mov esi, wTileMap + 11 * PARTY_SCRATCH_STRIDE + 11   ; pret hlcoord 11, 11
     mov bx, 6 * PARTY_SCRATCH_STRIDE + 9  ; ld bc, ... (FillMemory count in BX)
     mov al, 0x7f                        ; ld a, " " — the blank tile
     call FillMemory
@@ -5654,7 +5654,7 @@ EnemySendOutFirstMon:
     ; at frame 2000: wTileMap row 4 = `04 0B 6E F7 F6 27 2E` — pic tile ids $04/$0B/
     ; $27/$2E flanking the ":L10" text — with the VRAM tiles byte-perfect at the
     ; same instant, so the defect was never in the tile data.
-    mov esi, W_TILEMAP + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
+    mov esi, wTileMap + UI_ENEMY_PIC_ROW * SCREEN_TILES_W + UI_ENEMY_PIC_COL
     call LoadFrontSpriteByMonIndex
     ; pret core.asm:1465-1473 — GetMonHeader/LoadMonFrontSprite are already folded
     ; into LoadFrontSpriteByMonIndex above (see its comment); this stage is the
@@ -6789,7 +6789,7 @@ global HandleExplodingAnimation
 ; DrawPlayerHUDAndHPBar — faithful player-ONLY HUD+HP-bar redraw (pret
 ; engine/battle/core.asm:DrawPlayerHUDAndHPBar). Retires the former bare-ret stub in
 ; battle_exp_stubs.asm: the player-side
-; name+level+HP-bar+frame redraw into W_TILEMAP, so this is the pret-named alias
+; name+level+HP-bar+frame redraw into wTileMap, so this is the pret-named alias
 ; (same shape as DrawEnemyHUDAndHPBar above). Same Phase-5 palette / hAutoBGTransfer
 ; divergences as the enemy-side alias apply.
 ; ---------------------------------------------------------------------------
@@ -6834,7 +6834,7 @@ GetBattleHealthBarColor:
 ; never entered at 0, so the width is not load-bearing here — but keeping it
 ; 8-bit keeps the translation exact and costs nothing.
 ;
-; The column step is +/-1 BYTE in the port as it is on the GB: W_TILEMAP is
+; The column step is +/-1 BYTE in the port as it is on the GB: wTileMap is
 ; row-major with stride FW, so pret's `inc hl` / `dec hl` need no projection.
 ; ---------------------------------------------------------------------------
 CHAR_TERMINATOR equ 0x50               ; '@' — end of a charmap string
@@ -6938,7 +6938,7 @@ DrawPlayerHUDAndHPBar:
     ; port used to draw the frame/connector last, leaving $73 where the golden
     ; shows $6D (F-18). Frame first, bar last, like pret.
     call PlacePlayerHUDTiles
-    mov byte [ebp + W_TILEMAP + P_FRAME_CONN], T_HUD_73
+    mov byte [ebp + wTileMap + P_FRAME_CONN], T_HUD_73
     ; pret stages the battle mon in wLoadedMon — species..DVs then level..PP
     ; (core.asm:1903-1910); PrintLevel/DrawHP read it there, and it is
     ; battle-visible WRAM the goldens compare. The enemy HUD (drawn after,
@@ -6954,7 +6954,7 @@ DrawPlayerHUDAndHPBar:
     ; pret DrawPlayerHUDAndHPBar:1901 runs CenterMonName between the coord load
     ; and PlaceString: a 1-2 letter nick shifts 2 columns right, 3-4 shifts 1,
     ; 5+ is unshifted. The port placed every name flush-left.
-    mov esi, W_TILEMAP + P_NAME
+    mov esi, wTileMap + P_NAME
     mov edx, wBattleMonNick              ; CenterMonName reads the nick via [ebp+EDX]
     call CenterMonName                   ; adjusts ESI; restores EDX
     lea eax, [ebp + wBattleMonNick]      ; PlaceString src = flat-linear
@@ -6969,7 +6969,7 @@ DrawPlayerHUDAndHPBar:
     ; tilemap offset). `pop`/`mov` are flag-neutral, so the flag survives to here
     ; exactly as pret's `pop hl` lets it survive.
     mov edx, wLoadedMonStatus
-    mov esi, W_TILEMAP + P_LV + 1        ; pret: hlcoord 14,8 / push hl / inc hl
+    mov esi, wTileMap + P_LV + 1        ; pret: hlcoord 14,8 / push hl / inc hl
     call PrintStatusConditionNotFainted
     jnz .doNotPrintLevel                 ; jr nz — status shown, no level
     ; pret :1919 `call PrintLevel`, reading the wLoadedMonLevel the CopyData
@@ -6978,7 +6978,7 @@ DrawPlayerHUDAndHPBar:
     ; writes nothing for a leading zero and does not advance — it relies on the
     ; ClearScreenArea above having blanked the cell. Those two belong together,
     ; which is why this follows the clear rather than preceding it.
-    mov esi, W_TILEMAP + P_LV
+    mov esi, wTileMap + P_LV
     call PrintLevel
 .doNotPrintLevel:
     ; pret :1922-1926 — `ld a,[wLoadedMonSpecies] / ld [wCurPartySpecies],a /
@@ -7004,7 +7004,7 @@ DrawPlayerHUDAndHPBar:
     ; was plainly on the port's widescreen screen. The HUD's own cells were
     ; left blank by the ClearScreenArea above.
     mov dword [text_row_stride], FW
-    mov esi, W_TILEMAP + P_HPBAR
+    mov esi, wTileMap + P_HPBAR
     call DrawHP
     ; pret :1928 — GetBattleHealthBarColor, not the bare GetHealthBarColor: it
     ; republishes the battle palette ONLY on a colour transition. The joint
@@ -7050,7 +7050,7 @@ DrawEnemyHUDAndHPBar:
     mov bh, 4                            ; b = rows
     mov bl, 12                           ; c = width
     call ClearScreenArea
-    mov esi, W_TILEMAP + E_NAME          ; PlaceString: ESI=dest(GB offset), EAX=src(flat)
+    mov esi, wTileMap + E_NAME          ; PlaceString: ESI=dest(GB offset), EAX=src(flat)
     mov edx, wEnemyMonNick               ; pret DrawEnemyHUDAndHPBar:1960 — same centering
     call CenterMonName
     lea eax, [ebp + wEnemyMonNick]
@@ -7058,14 +7058,14 @@ DrawEnemyHUDAndHPBar:
     ; pret DrawEnemyHUDAndHPBar:1963-1972 — same status-vs-level rule as the
     ; player half above, reading wEnemyMonStatus directly.
     mov edx, wEnemyMonStatus
-    mov esi, W_TILEMAP + E_LV + 1        ; pret: hlcoord 4,1 / push hl / inc hl
+    mov esi, wTileMap + E_LV + 1        ; pret: hlcoord 4,1 / push hl / inc hl
     call PrintStatusConditionNotFainted
     jnz .skipPrintLevel                  ; jr nz
     ; pret DrawEnemyHUDAndHPBar stages the level in wLoadedMonLevel before
     ; PrintLevel (core.asm:1969-1971) — battle-visible WRAM the goldens compare.
     mov al, [ebp + wEnemyMonLevel]
     mov [ebp + wLoadedMonLevel], al
-    mov esi, W_TILEMAP + E_LV
+    mov esi, wTileMap + E_LV
     call PrintLevel
 .skipPrintLevel:
     ; pret DrawEnemyHUDAndHPBar:1973-2036 — the bar length is computed INLINE
@@ -7115,7 +7115,7 @@ DrawEnemyHUDAndHPBar:
 .drawHPBar:
     xor al, al                           ; xor a
     mov [ebp + wHPBarType], al           ; ld [wHPBarType], a — enemy: cap $6C
-    mov esi, W_TILEMAP + E_HPBAR         ; hlcoord 2,2 (BCOORD battle projection)
+    mov esi, wTileMap + E_HPBAR         ; hlcoord 2,2 (BCOORD battle projection)
     call DrawHPBar                       ; DL survives (DrawHPBar preserves EDX)
     ; DEVIATION{class=projection; pret=engine/battle/core.asm:DrawEnemyHUDAndHPBar; behavior=the six gauge segment cells additionally publish a per-cell BG attribute binding them to the enemy HP palette slot; evidence=the port composites from tile_cache whose palette band is baked per tile id, and both bars keep the canonical gauge tile ids 63-6B since the F-19 clone retirement, so only the per-cell attribute layer can give the enemy gauge its own colour - SetPal_Battle publishes wEnemyHPBarColor into bg_slot_pal slot 1; lifetime=permanent while the compositor bakes palette per tile id}
     ; (Publish moved here verbatim from the retired draw_enemy_hp_bar; same six
@@ -7201,7 +7201,7 @@ LoadPlayerBackPic:
 ; is inert in the port, so a literal translation never terminates;
 ; SlidePlayerHeadLeft exists only because that raster trick forces the player's
 ; head to be an OBJ while his body is BG, and the port composites both pics into
-; W_TILEMAP with no such split.
+; wTileMap with no such split.
 ;
 ; DEVIATION{class=HAL; pret=engine/battle/core.asm:SlidePlayerAndEnemySilhouettesOnScreen; behavior=the per-scanline SCX raster slide plus its OBJ-head helper are replaced by a whole-canvas tilemap recomposition per step in SlideBattlePicsIn, and this entry point omits pret's DisableLCD or EnableLCD bracket, the vBGMap0 clear and work-RAM-to-VRAM tilemap copy, the hWY and hAutoBGTransferEnabled and hTileAnimations register staging, the trailing CopyUncompressedPicToTilemap plus HideSprites, and the closing jpfar PrintBeginningBattleText; evidence=SetScrollXForSlidingPlayerBodyLeft polls rLY in a self-loop and rLY is never written by the port so a literal translation cannot terminate, the port has no torus tilemap or auto-BG-transfer for the VRAM copy and register staging to drive, and the intro text plus final pic placement are already owned by the caller in _InitBattleCommon which calls DrawBattleIntroBox or DrawEmptyDialogBox after this returns; lifetime=permanent, the software compositor is by design}
 ; ---------------------------------------------------------------------------
@@ -7396,12 +7396,12 @@ PrintDoesntAffectText:
 ; ===========================================================================
 global UpdateCurMonHPBar
 UpdateCurMonHPBar:
-    mov esi, W_TILEMAP + P_HPBAR        ; hlcoord 10,9 — player HP bar (BCOORD)
+    mov esi, wTileMap + P_HPBAR        ; hlcoord 10,9 — player HP bar (BCOORD)
     mov al, [ebp + hWhoseTurn]
     and al, al
     mov al, 1                           ; ld a, $1 (mov is flag-neutral, as pret's ld)
     jz .playersTurn
-    mov esi, W_TILEMAP + E_HPBAR        ; hlcoord 2,2 — enemy HP bar (BCOORD)
+    mov esi, wTileMap + E_HPBAR        ; hlcoord 2,2 — enemy HP bar (BCOORD)
     xor al, al                          ; xor a
 .playersTurn:
     push ebx                            ; push bc
@@ -7523,7 +7523,7 @@ FaintEnemyPokemon:
     ; ClearScreenArea IS real: pret `hlcoord 0,0 / lb bc,4,11` — wipe the enemy
     ; HUD corner after the faint. FOURTH instance of the raw-GB-anchor class
     ; (see regression-battle-second-battle-hud-tile-band): this was the bare
-    ; `W_TILEMAP + 0`, so the wipe landed in the blank canvas margin at (0,0)
+    ; `wTileMap + 0`, so the wipe landed in the blank canvas margin at (0,0)
     ; and the fainted mon's HUD survived on screen through the victory text
     ; (maintainer screenshot, 2026-08-15). The sibling clear in EnemySendOut
     ; .next4 already used the projected anchor.

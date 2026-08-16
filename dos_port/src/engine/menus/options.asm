@@ -18,8 +18,8 @@
 ; addresses, which no data generator can emit.
 ;
 ; PORT MODEL (window compositor, same as party_menu.asm's full-screen takeover):
-; - The menu is drawn at pret GB coords into the 20-wide stride-20 W_TILEMAP
-;   scratch (hlcoord X,Y = W_TILEMAP + Y*20 + X; GBSCR_W = 20). One full-screen
+; - The menu is drawn at pret GB coords into the 20-wide stride-20 wTileMap
+;   scratch (hlcoord X,Y = wTileMap + Y*20 + X; GBSCR_W = 20). One full-screen
 ;   window shows it: options_mirror blits the 20×18 scratch → GB_TILEMAP1 rows
 ;   0-17 and OptionsShowWindow defines the single descriptor at UI_OPTIONS_*.
 ;   g_bg_whiteout blanks the overworld behind it (pret's OPTION screen is a
@@ -65,7 +65,7 @@ extern PlaceString                   ; text/text.asm — ESI=dest, EAX=flat src
 extern AddNTimes                     ; home/array.asm — AL=n, BX=step, ESI=base → ESI+=n*step
 extern set_single_window             ; ppu/ppu.asm
 extern g_bg_whiteout                 ; ppu/ppu.asm
-extern text_row_stride               ; text/text.asm — active W_TILEMAP row stride
+extern text_row_stride               ; text/text.asm — active wTileMap row stride
 
 ; SOUND_MASK, wOptionsCursorLocation, wPrinterSettings now live in gb_memmap.inc
 ; (root-promoted at integration; wOptionsCursorLocation corrected to the sym
@@ -104,7 +104,7 @@ TILE_SPC       equ 0x7F      ; ' ' blank tile
 TILE_CURSOR    equ 0xED      ; '▶'
 
 ; hlcoord X,Y helper (stride-20 scratch)
-%define HL(X,Y)  (W_TILEMAP + (Y) * GBSCR_W + (X))
+%define HL(X,Y)  (wTileMap + (Y) * GBSCR_W + (X))
 
 section .text
 
@@ -577,7 +577,7 @@ options_mirror:
     xor ebx, ebx
 .row:
     imul esi, ebx, GBSCR_W
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                                ; ×32 tilemap stride
     lea edi, [ebp + edi + GB_TILEMAP1]

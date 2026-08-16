@@ -27,7 +27,7 @@ extern ItemPrices       ; flat 3-byte-BCD-per-item table (item_data.asm)
 extern GetMachinePrice  ; TM/HM price (tm_prices.asm)
 
 GetItemPrice:
-    mov al, [ebp + W_CUR_ITEM]
+    mov al, [ebp + wCurItem]
     cmp al, HM01
     jnc .machine                     ; TMs/HMs handled separately
 

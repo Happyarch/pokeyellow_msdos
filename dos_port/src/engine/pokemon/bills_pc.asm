@@ -17,7 +17,7 @@
 ;    EBP = GB base; GB memory at [EBP+addr]; flat program-image tables read via
 ;    [label] or [esi] (never [ebp+label]).
 ;  * DEVIATION(window-compositor), same shape as players_pc.asm: on the GB the
-;    tilemap IS the screen; the port draws into the stride-20 W_TILEMAP scratch
+;    tilemap IS the screen; the port draws into the stride-20 wTileMap scratch
 ;    and shows it through window descriptors.
 ;      - DisplayPCMainMenu publishes a 16-wide window clipped to the drawn
 ;        (event-gated) box height, over the live overworld (UI_PC_MAIN_MENU).
@@ -71,7 +71,7 @@ extern TextBoxBorder            ; home/text.asm — ESI=top-left, BL=int_w, BH=i
 extern PlaceString              ; home/text.asm — ESI=dest, EAX=flat src; EBX=end
 extern UpdateSprites            ; src/home/update_sprites.asm
 extern add_window               ; ppu/ppu.asm — EAX=wx EBX=wy ECX=clip EDX=max_y ESI=tm EDI=row
-extern text_row_stride          ; home/text.asm — active W_TILEMAP row stride
+extern text_row_stride          ; home/text.asm — active wTileMap row stride
 extern menu_item_step           ; home/window.asm — per-item cursor row step
 extern menu_redraw_cb           ; home/window.asm — per-frame redraw cb (0=none)
 extern hide_window              ; ppu/ppu.asm
@@ -167,17 +167,17 @@ DisplayPCMainMenu:
     mov al, [ebp + wNumHoFTeams]             ; pret re-reads it; kept
     test al, al
     jnz .leaguePCAvailable
-    mov esi, W_TILEMAP                       ; hlcoord 0, 0
+    mov esi, wTileMap                       ; hlcoord 0, 0
     mov bh, 8                                ; lb bc, 8, 14
     mov bl, 14
     jmp .next
 .noOaksPC:
-    mov esi, W_TILEMAP                       ; hlcoord 0, 0
+    mov esi, wTileMap                       ; hlcoord 0, 0
     mov bh, 6                                ; lb bc, 6, 14
     mov bl, 14
     jmp .next
 .leaguePCAvailable:
-    mov esi, W_TILEMAP                       ; hlcoord 0, 0
+    mov esi, wTileMap                       ; hlcoord 0, 0
     mov bh, 10                               ; lb bc, 10, 14
     mov bl, 14
 .next:
@@ -192,15 +192,15 @@ DisplayPCMainMenu:
     mov byte [ebp + wMaxMenuItem], 3         ; ld a, 3 / ld [wMaxMenuItem], a
     CheckEvent EVENT_MET_BILL                ; ZF=0 → met Bill
     jnz .metBill                             ; jr nz
-    mov esi, W_TILEMAP + 2 * BPC_STRIDE + 2  ; hlcoord 2, 2
+    mov esi, wTileMap + 2 * BPC_STRIDE + 2  ; hlcoord 2, 2
     mov eax, SomeonesPCText
     jmp .next2                               ; jr .next2
 .metBill:
-    mov esi, W_TILEMAP + 2 * BPC_STRIDE + 2  ; hlcoord 2, 2
+    mov esi, wTileMap + 2 * BPC_STRIDE + 2  ; hlcoord 2, 2
     mov eax, BillsPCText
 .next2:
     call PlaceString
-    mov esi, W_TILEMAP + 4 * BPC_STRIDE + 2  ; hlcoord 2, 4
+    mov esi, wTileMap + 4 * BPC_STRIDE + 2  ; hlcoord 2, 4
     lea eax, [ebp + wPlayerName]             ; ld de, wPlayerName (GB string → flat)
     call PlaceString
     mov esi, ebx                             ; ld l, c / ld h, b — continue at end
@@ -208,26 +208,26 @@ DisplayPCMainMenu:
     call PlaceString
     CheckEvent EVENT_GOT_POKEDEX
     jz .noOaksPC2                            ; jr z
-    mov esi, W_TILEMAP + 6 * BPC_STRIDE + 2  ; hlcoord 2, 6
+    mov esi, wTileMap + 6 * BPC_STRIDE + 2  ; hlcoord 2, 6
     mov eax, OaksPCText
     call PlaceString
     mov al, [ebp + wNumHoFTeams]
     test al, al                              ; and a
     jz .noLeaguePC                           ; jr z
     mov byte [ebp + wMaxMenuItem], 4         ; ld a, 4 / ld [wMaxMenuItem], a
-    mov esi, W_TILEMAP + 8 * BPC_STRIDE + 2  ; hlcoord 2, 8
+    mov esi, wTileMap + 8 * BPC_STRIDE + 2  ; hlcoord 2, 8
     mov eax, PKMNLeaguePCText
     call PlaceString
-    mov esi, W_TILEMAP + 10 * BPC_STRIDE + 2 ; hlcoord 2, 10
+    mov esi, wTileMap + 10 * BPC_STRIDE + 2 ; hlcoord 2, 10
     mov eax, LogOffPCText
     jmp .next3                               ; jr .next3
 .noLeaguePC:
-    mov esi, W_TILEMAP + 8 * BPC_STRIDE + 2  ; hlcoord 2, 8
+    mov esi, wTileMap + 8 * BPC_STRIDE + 2  ; hlcoord 2, 8
     mov eax, LogOffPCText
     jmp .next3                               ; jr .next3
 .noOaksPC2:
     mov byte [ebp + wMaxMenuItem], 2         ; ld a, $2 / ld [wMaxMenuItem], a
-    mov esi, W_TILEMAP + 6 * BPC_STRIDE + 2  ; hlcoord 2, 6
+    mov esi, wTileMap + 6 * BPC_STRIDE + 2  ; hlcoord 2, 6
     mov eax, LogOffPCText
 .next3:
     call PlaceString
@@ -274,7 +274,7 @@ BPCMainMenuMirror:
     xor ebx, ebx
 .row:
     imul esi, ebx, BPC_STRIDE
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                               ; row * 32
     lea edi, [ebp + edi + GB_TILEMAP0]
@@ -337,16 +337,16 @@ BillsPCMenu:
     ; clear BIT_SINGLE_SPACED_LINES so BillsPCMenuText's <NEXT>s advance 2 rows
     ; (pret relies on the ambient default; the players_pc.asm data-model note)
     and byte [ebp + hUILayoutFlags], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
-    mov esi, W_TILEMAP + 12 * BPC_STRIDE     ; hlcoord 0, 12
+    mov esi, wTileMap + 12 * BPC_STRIDE     ; hlcoord 0, 12
     mov bh, 4                                ; lb bc, 4, 18
     mov bl, 18
     call TextBoxBorder
-    mov esi, W_TILEMAP                       ; hlcoord 0, 0
+    mov esi, wTileMap                       ; hlcoord 0, 0
     mov bh, 12                               ; lb bc, 12, 12
     mov bl, 12
     call TextBoxBorder
     call UpdateSprites
-    mov esi, W_TILEMAP + 2 * BPC_STRIDE + 2  ; hlcoord 2, 2
+    mov esi, wTileMap + 2 * BPC_STRIDE + 2  ; hlcoord 2, 2
     mov eax, BillsPCMenuText
     call PlaceString
     ; the pret wTopMenuItemY..wMenuWatchMovingOutOfBounds hli-walk, named:
@@ -360,7 +360,7 @@ BillsPCMenu:
     mov [ebp + wListScrollOffset], al
     mov [ebp + wMenuWatchMovingOutOfBounds], al
     mov [ebp + wPlayerMonNumber], al
-    mov esi, W_TILEMAP + 14 * BPC_STRIDE + 9 ; hlcoord 9, 14
+    mov esi, wTileMap + 14 * BPC_STRIDE + 9 ; hlcoord 9, 14
     mov bh, 2                                ; lb bc, 2, 9
     mov bl, 9
     call TextBoxBorder
@@ -370,14 +370,14 @@ BillsPCMenu:
     jc .singleDigitBoxNum                    ; jr c
     ; two digit box num
     sub al, 9
-    mov byte [ebp + W_TILEMAP + 16 * BPC_STRIDE + 17], CHAR_1 ; hlcoord 17,16 / ld [hl], '1'
+    mov byte [ebp + wTileMap + 16 * BPC_STRIDE + 17], CHAR_1 ; hlcoord 17,16 / ld [hl], '1'
     add al, CHAR_0                           ; add '0'
     jmp .next                                ; jr .next
 .singleDigitBoxNum:
     add al, CHAR_1                           ; add '1'
 .next:
-    mov [ebp + W_TILEMAP + 16 * BPC_STRIDE + 18], al          ; ldcoord_a 18, 16
-    mov esi, W_TILEMAP + 16 * BPC_STRIDE + 10                 ; hlcoord 10, 16
+    mov [ebp + wTileMap + 16 * BPC_STRIDE + 18], al          ; ldcoord_a 18, 16
+    mov esi, wTileMap + 16 * BPC_STRIDE + 10                 ; hlcoord 10, 16
     mov eax, BoxNoPCText
     call PlaceString
     mov byte [ebp + hAutoBGTransferEnabled], 1
@@ -692,7 +692,7 @@ section .text
 ; Out: CF set = chose deposit/withdraw; CF clear = cancelled (B or CANCEL).
 ; ---------------------------------------------------------------------------
 DisplayDepositWithdrawMenu:
-    mov esi, W_TILEMAP + 10 * BPC_STRIDE + 9 ; hlcoord 9, 10
+    mov esi, wTileMap + 10 * BPC_STRIDE + 9 ; hlcoord 9, 10
     mov bh, 6                                ; lb bc, 6, 9
     mov bl, 9
     call TextBoxBorder
@@ -702,9 +702,9 @@ DisplayDepositWithdrawMenu:
     jnz .next                                ; jr nz
     mov eax, WithdrawPCText                  ; ld de, WithdrawPCText
 .next:
-    mov esi, W_TILEMAP + 12 * BPC_STRIDE + 11 ; hlcoord 11, 12
+    mov esi, wTileMap + 12 * BPC_STRIDE + 11 ; hlcoord 11, 12
     call PlaceString
-    mov esi, W_TILEMAP + 14 * BPC_STRIDE + 11 ; hlcoord 11, 14
+    mov esi, wTileMap + 14 * BPC_STRIDE + 11 ; hlcoord 11, 14
     mov eax, StatsCancelPCText
     call PlaceString
     ; the pret wTopMenuItemY..wMenuWatchMovingOutOfBounds hli-walk, named:
@@ -861,12 +861,12 @@ align 4
 ; window list (see the file header).
 msgbox_bills_pc:
     dd BPC_STRIDE                            ; MB_STRIDE
-    dd W_TILEMAP + 12 * BPC_STRIDE           ; MB_BOX_OFS      — (0,12)
+    dd wTileMap + 12 * BPC_STRIDE           ; MB_BOX_OFS      — (0,12)
     dd 18                                    ; MB_BOX_W        — 18 interior columns
     dd 4                                     ; MB_BOX_H        — 4 interior rows
-    dd W_TILEMAP + 14 * BPC_STRIDE + 1       ; MB_LINE1        — pret bccoord 1,14
-    dd W_TILEMAP + 16 * BPC_STRIDE + 1       ; MB_LINE2        — <LINE> at (1,16)
-    dd W_TILEMAP + 16 * BPC_STRIDE + 18      ; MB_ARROW        — ▼ at (18,16)
+    dd wTileMap + 14 * BPC_STRIDE + 1       ; MB_LINE1        — pret bccoord 1,14
+    dd wTileMap + 16 * BPC_STRIDE + 1       ; MB_LINE2        — <LINE> at (1,16)
+    dd wTileMap + 16 * BPC_STRIDE + 18      ; MB_ARROW        — ▼ at (18,16)
     dd BillsPCPromptWait                     ; MB_PROMPT       — our own wait
     dd 0                                     ; MB_WIN_WX       ] no window: this
     dd 0                                     ; MB_WIN_WY       ] file mirrors the
@@ -965,7 +965,7 @@ BillsPCMirror:
     xor ebx, ebx
 .row:
     imul esi, ebx, BPC_STRIDE
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                               ; row * 32
     lea edi, [ebp + edi + GB_TILEMAP0]

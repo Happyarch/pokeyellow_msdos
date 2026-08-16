@@ -5,7 +5,7 @@
 ; DrawBadges draws EIGHT cells in two rows of four. Each cell shows a gym
 ; leader's face; if the matching badge is owned the face is replaced by the
 ; badge graphic (the face's tile id + 4). The routine only writes tile ids into
-; the stride-20 W_TILEMAP scratch — exactly as pret does; the surrounding
+; the stride-20 wTileMap scratch — exactly as pret does; the surrounding
 ; trainer card (StartMenu_TrainerInfo, S9) owns the screen's window/mirror. The
 ; harness below stands in for that consumer this session.
 ;
@@ -117,7 +117,7 @@ LoadBadgeTiles:
 
 ; ---------------------------------------------------------------------------
 ; DrawBadges — pret ref: engine/menus/draw_badges.asm:DrawBadges.
-; Writes the 4×2 badge grid into the stride-20 W_TILEMAP scratch at pret coords
+; Writes the 4×2 badge grid into the stride-20 wTileMap scratch at pret coords
 ; (2,11) and (2,14). In: EBP = GB base. Clobbers AL/BX/ECX/EDX/ESI/EDI.
 ; ---------------------------------------------------------------------------
 DrawBadges:
@@ -164,12 +164,12 @@ DrawBadges:
     mov byte [ebp + wBadgeNameTile], 0x60   ; ld [hl],$60 — first name
 
     ; hlcoord 2,11
-    mov esi, W_TILEMAP + 11 * GBSCR_W + 2
+    mov esi, wTileMap + 11 * GBSCR_W + 2
     mov edx, wTempObtainedBadgesBooleans    ; ld de,wTempObtainedBadgesBooleans
     call .DrawBadgeRow
 
     ; hlcoord 2,14
-    mov esi, W_TILEMAP + 14 * GBSCR_W + 2
+    mov esi, wTileMap + 14 * GBSCR_W + 2
     mov edx, wTempObtainedBadgesBooleans + 4 ; ld de,wTempObtainedBadgesBooleans+4
     ; fallthrough
 
@@ -256,7 +256,7 @@ RunDrawBadgesTest:
     call ClearSprites
     mov byte [ebp + wUpdateSpritesEnabled], 0
     ; blank the stride-20 scratch (18 rows × 20)
-    mov esi, W_TILEMAP
+    mov esi, wTileMap
     mov bx, 18 * GBSCR_W
     mov al, 0x7F
     call FillMemory
@@ -290,7 +290,7 @@ BadgesTestMirror:
     add esi, 11                             ; scratch row = 11 + i
     imul esi, esi, GBSCR_W
     add esi, 2                              ; cols 2..17
-    lea esi, [ebp + esi + W_TILEMAP]
+    lea esi, [ebp + esi + wTileMap]
     mov edi, ebx
     shl edi, 5                              ; row * 32 tilemap stride
     lea edi, [ebp + edi + GB_TILEMAP1]

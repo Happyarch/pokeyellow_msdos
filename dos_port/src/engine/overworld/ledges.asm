@@ -61,7 +61,7 @@ PAD_ALL             equ 0xFF
 ; Standing tile (pret lda_coord 8,9). In the 40-wide port tilemap the player's feet
 ; are at (PLAYER_STANDING_ROW, PLAYER_STANDING_COL); same tile
 ; _GetTileAndCoordsInFrontOfPlayer uses as its base (player_state.asm).
-STANDING_TILE_OFF   equ W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
+STANDING_TILE_OFF   equ wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 
 global HandleLedges
 extern StartSimulatingJoypadStates    ; src/home/map_objects.asm (linked)

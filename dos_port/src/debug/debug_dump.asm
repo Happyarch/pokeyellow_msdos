@@ -730,7 +730,7 @@ RunTransitionDemo:
     mov [ebp + wCurMap], al
     mov ax, [demo_saved_view]
     mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
-    call RefreshCollisionTileMap        ; rebuild the W_TILEMAP snapshot the wipe consumed
+    call RefreshCollisionTileMap        ; rebuild the wTileMap snapshot the wipe consumed
     mov byte [ebp + wUpdateSpritesEnabled], 1
     mov byte [ebp + wCurOpponent], 0
     mov bl, 90                          ; ~1.5 s of restored overworld
@@ -871,7 +871,7 @@ anim_show_list:
 align 4
 gbstate_regions:
     ; --- video state (the v1 regions; wTileMap is the port's 40x25 canvas) ---
-    gbregion "wTileMap",      W_TILEMAP,     W_TILEMAP_SIZE
+    gbregion "wTileMap",      wTileMap,     W_TILEMAP_SIZE
     gbregion "vram_tiles",    GB_VRAM0,      GBSTATE_VRAM_SIZE
     gbregion "oam",           GB_OAM,        GB_OAM_SIZE
     ; The Game Boy's CGB palette RAM, composed from the port's slot tables and
@@ -946,7 +946,7 @@ gbstate_regions:
     gbregion "npcMoveScript", wNPCMovementScriptPointerTableNum, 2  ; CC57 tablenum, CC58 bank
     gbregion "npcMoveFunc",   wNPCMovementScriptFunctionNum, 1 ; CF10
     gbregion "statusFlags5",   wStatusFlags5,      1              ; D72F (BIT_SCRIPTED_NPC_MOVEMENT=0)
-    gbregion "oakSlot1d2",    W_SPRITE_STATE_DATA_2 + 16, 16        ; Oak slot-1 data2 (MAPY/MAPX/facing/...)
+    gbregion "oakSlot1d2",    wSpriteStateData2 + 16, 16        ; Oak slot-1 data2 (MAPY/MAPX/facing/...)
     ; view pointer, to check the coord<->view projection is self-consistent
     ; (stride = mapwidth + 2*MAP_BORDER; view_col = (x>>1)+MAP_BORDER-SCREEN_BLOCK_WIDTH/2).
     gbregion "viewPtr",       W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR, 2
@@ -1086,17 +1086,17 @@ gbstate_regions:
     ; declaration recomputes and ASSERTS both addresses from the GB (col,row)
     ; below — it does not skip the check. Mirrored in
     ; tools/mgba_harness/scenarios/battle_wrap.lua.
-    gbregion "eHudName", W_TILEMAP + (0 + 3) * SCREEN_TILES_W + (1 + 10), 10  ; GB (1,0)
-    gbregion "eHudLv",   W_TILEMAP + (1 + 3) * SCREEN_TILES_W + (0 + 10), 12  ; GB (0,1)
+    gbregion "eHudName", wTileMap + (0 + 3) * SCREEN_TILES_W + (1 + 10), 10  ; GB (1,0)
+    gbregion "eHudLv",   wTileMap + (1 + 3) * SCREEN_TILES_W + (0 + 10), 12  ; GB (0,1)
     ; Player-HUD spans, same projected mechanism. These gate the HUD work that
     ; had no witness at all: DrawHP (8b9e53060 — pBar + pFrac are its whole
     ; output) and PrintLevel (3beebbb9c — pLv). All four were confirmed
     ; byte-identical to hardware before being added, and the player HUD is
     ; static at this dump point for the same reason the enemy HUD is.
-    gbregion "pHudName", W_TILEMAP + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11  ; GB (10,7)
-    gbregion "pHudLv",   W_TILEMAP + (8 + 3) * SCREEN_TILES_W + (14 + 10), 6   ; GB (14,8)
-    gbregion "pHudBar",  W_TILEMAP + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9   ; GB (10,9)
-    gbregion "pHudFrac", W_TILEMAP + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8  ; GB (11,10)
+    gbregion "pHudName", wTileMap + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11  ; GB (10,7)
+    gbregion "pHudLv",   wTileMap + (8 + 3) * SCREEN_TILES_W + (14 + 10), 6   ; GB (14,8)
+    gbregion "pHudBar",  wTileMap + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9   ; GB (10,9)
+    gbregion "pHudFrac", wTileMap + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8  ; GB (11,10)
 %endif
 %ifdef DEBUG_BATTLE_ITEM
     ; --- HUD spans for the POTION path (battle plan, 2026-08-13) ---
@@ -1105,18 +1105,18 @@ gbstate_regions:
     ; only witness for the HP bar's partial-segment path (DrawHPBar, since the
     ; draw_hp_bar fork retirement) and for the cur/max fraction, and adding it
     ; is what exposed the text_row_stride leak fixed in DrawPlayerHUDAndHPBar.
-    gbregion "eHudName", W_TILEMAP + (0 + 3) * SCREEN_TILES_W + (1 + 10), 10  ; GB (1,0)
-    gbregion "eHudLv",   W_TILEMAP + (1 + 3) * SCREEN_TILES_W + (0 + 10), 12  ; GB (0,1)
-    gbregion "pHudName", W_TILEMAP + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11 ; GB (10,7)
-    gbregion "pHudLv",   W_TILEMAP + (8 + 3) * SCREEN_TILES_W + (14 + 10), 6  ; GB (14,8)
-    gbregion "pHudBar",  W_TILEMAP + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9  ; GB (10,9)
-    gbregion "pHudFrac", W_TILEMAP + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8 ; GB (11,10)
+    gbregion "eHudName", wTileMap + (0 + 3) * SCREEN_TILES_W + (1 + 10), 10  ; GB (1,0)
+    gbregion "eHudLv",   wTileMap + (1 + 3) * SCREEN_TILES_W + (0 + 10), 12  ; GB (0,1)
+    gbregion "pHudName", wTileMap + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11 ; GB (10,7)
+    gbregion "pHudLv",   wTileMap + (8 + 3) * SCREEN_TILES_W + (14 + 10), 6  ; GB (14,8)
+    gbregion "pHudBar",  wTileMap + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9  ; GB (10,9)
+    gbregion "pHudFrac", wTileMap + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8 ; GB (11,10)
 %endif
 %ifdef DEBUG_BATTLE_SHORTNICK
     ; The player HUD's nickname row IS the comparison: CenterMonName shifts a
     ; 3-4 letter name one column right of pret's hlcoord 10,7, so an unshifted
     ; draw and a shifted one differ in this span and nowhere else.
-    gbregion "pHudName", W_TILEMAP + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11 ; GB (10,7)
+    gbregion "pHudName", wTileMap + (7 + 3) * SCREEN_TILES_W + (10 + 10), 11 ; GB (10,7)
 %endif
 %ifdef DEBUG_BATTLE_LOWHP
     ; The alarm byte itself — the thing this scenario exists to pin. Bit 7 is
@@ -1125,8 +1125,8 @@ gbstate_regions:
     gbregion "wLowHPAlarm", wLowHealthAlarm, 1        ; $D082
     ; The HUD spans too: a red bar is a different draw from every other
     ; scenario's (full or partial-but-yellow), so these pin the red rendering.
-    gbregion "pHudBar",  W_TILEMAP + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9  ; GB (10,9)
-    gbregion "pHudFrac", W_TILEMAP + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8 ; GB (11,10)
+    gbregion "pHudBar",  wTileMap + (9 + 3) * SCREEN_TILES_W + (10 + 10), 9  ; GB (10,9)
+    gbregion "pHudFrac", wTileMap + (10 + 3) * SCREEN_TILES_W + (11 + 10), 8 ; GB (11,10)
 %endif
 %ifdef BATTLE_NEXTMON_MENU_PROBE
     ; --- ChooseNextMon party-menu stall probe (battle plan 2b) ---
@@ -1146,7 +1146,7 @@ gbstate_regions:
     ; must never enable it, because the differ joins regions by NAME and the
     ; golden side has no counterpart for port-only memory.
     ; regression-battle-switch-screen-stuck-on-party-menu narrowed the
-    ; symptom to the composite alone — WRAM and W_TILEMAP are both correct after
+    ; symptom to the composite alone — WRAM and wTileMap are both correct after
     ; the switch, yet the frame shows a stale PARTIAL party panel — and the next
     ; question is what the window layer actually holds. hide_window (count=0,
     ; hWY=RENDER_H) changed nothing, so the descriptor LIST was not the whole
@@ -1480,8 +1480,8 @@ windows:
                  ; $D240 pika PCM, $D246 shim device, $D248 tandy, $D250 spk, $D258 enh
 %elifdef DEBUG_BATTLE
 windows:
-    dd 0xC468    ; W_TILEMAP row 5 (enemy HP-bar tile IDs, cols 12-20)
-    dd 0xC5A8    ; W_TILEMAP row 13 (player HP-bar tile IDs, for comparison)
+    dd 0xC468    ; wTileMap row 5 (enemy HP-bar tile IDs, cols 12-20)
+    dd 0xC5A8    ; wTileMap row 13 (player HP-bar tile IDs, for comparison)
     dd 0xCFE4    ; wEnemyMon: species, HP hi(+1), HP lo(+2)
     dd 0xD0D6    ; wDamage
     dd 0xCFD1    ; wPlayerMove* (num,effect,power,type)
@@ -1497,9 +1497,9 @@ windows:
     dd GB_VCHARS2                   ; vTileset gfx in VRAM
     dd wOverworldMap              ; wOverworldMap start
     dd wSurroundingTiles          ; wSurroundingTiles
-    dd W_TILEMAP                    ; wTileMap
+    dd wTileMap                    ; wTileMap
     dd wCurMap - 5                ; map header vars around wCurMap ($D358)
-    dd W_TILESET_BLOCKS_PTR - 0xB   ; tileset header copy block ($D520)
+    dd wTilesetBlocksPtr - 0xB   ; tileset header copy block ($D520)
 %endif
 
 ; ---------------------------------------------------------------------------
@@ -2112,7 +2112,7 @@ RunTextBoxIDTest:
     ; font glyphs + box-border tiles into vFont
     or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
-    ; flat-canvas render mode (mirrors InitBattle): render_bg decodes W_TILEMAP
+    ; flat-canvas render mode (mirrors InitBattle): render_bg decodes wTileMap
     ; directly at screen (0,0), no window overlay, no per-frame OAM rebuild
     call ClearSprites
     mov byte [ebp + wUpdateSpritesEnabled], 0
@@ -2123,7 +2123,7 @@ RunTextBoxIDTest:
     mov byte [ebp + IO_SCY], 0
     call hide_window
     ; blank the whole canvas to the space tile so only the box under test shows
-    lea edi, [ebp + W_TILEMAP]
+    lea edi, [ebp + wTileMap]
     mov al, 0x7F                    ; TILE_SPC
     mov ecx, SCREEN_TILES_W * SCREEN_TILES_H
     rep stosb
@@ -2502,7 +2502,7 @@ RunBattleTest:
     call DebugDumpMemory
 
 .trainerResultFail:
-    mov byte [ebp + W_TILEMAP], 0xee
+    mov byte [ebp + wTileMap], 0xee
     call DelayFrame
     call DumpBackbuffer
     jmp .trainerResultFail
@@ -2606,7 +2606,7 @@ RunBattleTest:
     ; what left battle_oldman 32 fields adrift from hardware (199192742).
     mov byte [ebp + wBattleType], BATTLE_TYPE_OLD_MAN
 %endif
-    mov esi, W_TILEMAP + 12         ; hlcoord 12,0 (stride 40)
+    mov esi, wTileMap + 12         ; hlcoord 12,0 (stride 40)
     call LoadFrontSpriteByMonIndex  ; real enemy front pic (not the stub)
     ; STEP 1 of retiring this staging's duplication of production (2026-08-13).
     ; These two calls WERE `call LoadPlayerBackPic / call SlideBattlePicsIn`,
@@ -2796,7 +2796,7 @@ RunBattleTest:
 .switchNotTaken:
     ; Distinctive marker so a mis-timed autokey script is diagnosable from
     ; FRAME.BIN instead of looking like a hang (same shape as .faintAlive).
-    mov byte [ebp + W_TILEMAP], 0xEE
+    mov byte [ebp + wTileMap], 0xEE
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_ITEM
@@ -2838,7 +2838,7 @@ RunBattleTest:
     jne .potionNotUsed
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 .potionNotUsed:
-    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    mov byte [ebp + wTileMap], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_ITEM_FAIL
@@ -2958,7 +2958,7 @@ RunBattleTest:
     call EndOfBattle
     call DebugDumpMemory                ; GBSTATE.BIN (id 20) + DUMP.BIN + exit
 .ballNotThrown:
-    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    mov byte [ebp + wTileMap], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_DAMAGE
@@ -3079,7 +3079,7 @@ RunBattleTest:
     call DebugDumpMemory
 
 .damageOracleFail:
-    mov byte [ebp + W_TILEMAP], 0xEE
+    mov byte [ebp + wTileMap], 0xEE
     call DelayFrame
     call DumpBackbuffer
     jmp .damageOracleFail
@@ -3209,7 +3209,7 @@ RunBattleTest:
 .faintAlive:
     ; Park with a distinctive marker so a failed run is diagnosable from
     ; FRAME.BIN rather than looking like a hang.
-    mov byte [ebp + W_TILEMAP], 0xEE
+    mov byte [ebp + wTileMap], 0xEE
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 .faintKO:
@@ -3285,7 +3285,7 @@ RunBattleTest:
     call EndOfBattle                    ; wild win teardown; wIsInBattle -> 0
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 .expAllAlive:
-    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    mov byte [ebp + wTileMap], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_SELFDESTRUCT
@@ -3338,7 +3338,7 @@ RunBattleTest:
     call DelayFrame
     jmp .selfDestructHang
 .selfDestructAlive:
-    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    mov byte [ebp + wTileMap], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_SAFARI
@@ -3462,7 +3462,7 @@ RunBattleTest:
     call DebugDumpMemory                        ; GBSTATE.BIN + DUMP.BIN + exit
 .pikaResultNotTwo:
 %endif
-    mov byte [ebp + W_TILEMAP], 0xEE            ; diagnosable marker, not a silent hang
+    mov byte [ebp + wTileMap], 0xEE            ; diagnosable marker, not a silent hang
     call DelayFrame
     call DumpBackbuffer
 %elifdef DEBUG_BATTLE_OLDMAN
@@ -3555,7 +3555,7 @@ RunBattleTest:
 .oldManResultNotTwo:
     ; Loud, diagnosable marker rather than a silent hang if the capture tail did
     ; not run (this path has never been taken).
-    mov byte [ebp + W_TILEMAP], 0xEE
+    mov byte [ebp + wTileMap], 0xEE
     call DelayFrame
     call DumpBackbuffer
 %endif
@@ -3563,7 +3563,7 @@ RunBattleTest:
     ; is INSIDE DisplayBattleMenu's cursor walk, so control normally never gets
     ; here. Reaching it means the menu completed without the rename ever
     ; landing — a diagnosable marker rather than a silent hang.
-    mov byte [ebp + W_TILEMAP], 0xEE
+    mov byte [ebp + wTileMap], 0xEE
     call DelayFrame
     call DumpBackbuffer                         ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_THRASH
@@ -3719,7 +3719,7 @@ RunBattleTest:
     call EndOfBattle                    ; the payout: AddBCD into wPlayerMoney
     call DebugDumpMemory                ; GBSTATE.BIN + DUMP.BIN + exit
 .payDayAlive:
-    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    mov byte [ebp + wTileMap], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_BATTLE_BLACKOUT
@@ -3805,7 +3805,7 @@ RunBattleTest:
     or al, [ebp + wBattleMonHP + 1]     ; big-endian word, either byte set = alive
     jz .blackoutKO
 .blackoutAlive:
-    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    mov byte [ebp + wTileMap], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 .blackoutKO:
@@ -3888,7 +3888,7 @@ RunBattleTest:
     ; ever, and was written up as a port stall — it was the harness.
     call HandlePlayerMonFainted
 .nextMonAlive:
-    mov byte [ebp + W_TILEMAP], 0xEE    ; distinctive marker for FRAME.BIN
+    mov byte [ebp + wTileMap], 0xEE    ; distinctive marker for FRAME.BIN
     call DelayFrame
     call DumpBackbuffer                 ; writes FRAME.BIN, then exits
 %elifdef DEBUG_ANIM_SHOW
@@ -4311,7 +4311,7 @@ anim_show_label:
 %elifdef DEBUG_BATTLE_INTRO
     ; Dump the battle INTRO screen (scene + "Wild <nick> appeared!" + the ▼ advance
     ; arrow + the party-status pokéball row), no menu.
-    mov byte [ebp + W_TILEMAP + (19 * 40 + 28)], 0xEE   ; ▼ (verify glyph renders)
+    mov byte [ebp + wTileMap + (19 * 40 + 28)], 0xEE   ; ▼ (verify glyph renders)
     call DrawBattlePokeballs        ; player party-status balls (OAM sprites)
     call DelayFrame
     call DumpBackbuffer
@@ -4522,7 +4522,7 @@ DebugDumpMemory:
     int 0x21
 
 ; ---------------------------------------------------------------------------
-; DumpGBState — write GBSTATE.BIN (header + W_TILEMAP + VRAM + OAM; layout at
+; DumpGBState — write GBSTATE.BIN (header + wTileMap + VRAM + OAM; layout at
 ; the GBSTATE_* equates above) so every DEBUG_* scenario emits the GB-state
 ; twin of the mGBA golden (fidelity harness Stage 1.3). Unlike the other dump
 ; routines this RETURNS — DumpBackbuffer calls it first, then writes FRAME.BIN
@@ -5352,7 +5352,7 @@ AutoKeyDrive:
     ; is unreachable and the force has to happen at the photograph. It pins
     ; PHASE only — arrow, cell and erase are the port's own, and 359 of 360
     ; cells are compared unforced.
-    mov byte [ebp + W_TILEMAP + (19 * 40 + 28)], 0xEE
+    mov byte [ebp + wTileMap + (19 * 40 + 28)], 0xEE
 %endif
     call DumpBackbuffer                 ; FRAME.BIN, then exits
 .noDump:
@@ -7254,12 +7254,12 @@ RunCinematicMarkersTest:
     rep stosb
 
     ; ── take over the screen as a centred cinematic surface ────────────────
-    call MovieBeginSurface                 ; clears W_TILEMAP, publishes matte+clip
+    call MovieBeginSurface                 ; clears wTileMap, publishes matte+clip
 
     ; ── draw the BG marker scene into the projected 20x18 rectangle ────────
     ; Corner markers are the projection assertions: GB (0,0) must land at canvas
     ; (10,3) = pixel (80,24), and GB (19,17) at canvas (29,20).
-    lea esi, [ebp + W_TILEMAP + UI_TITLE_ROW * SCREEN_WIDTH + UI_TITLE_COL]
+    lea esi, [ebp + wTileMap + UI_TITLE_ROW * SCREEN_WIDTH + UI_TITLE_COL]
     mov byte [esi], MARK_SOLID                                     ; GB (0,0)
     mov byte [esi + (UI_TITLE_GBH - 1) * SCREEN_WIDTH + UI_TITLE_GBW - 1], MARK_SOLID  ; GB (19,17)
     ; Distinct wrap-target content along GB row 0 and GB column 0, skipping

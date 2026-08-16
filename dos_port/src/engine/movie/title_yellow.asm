@@ -124,7 +124,7 @@ TitleScreen_PlacePokemonLogo:
     pushad
     lea esi, [pokemon_logo_tilemap]        ; ld de, TitleScreenPokemonLogoTilemap
     ; dest = wTileMap + projected coord(2, 1)
-    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN + 1 * SCREEN_TILES_W + 2]
+    lea edi, [ebp + wTileMap + TITLE_ORIGIN + 1 * SCREEN_TILES_W + 2]
     mov bh, POKEMON_LOGO_TILEMAP_HEIGHT    ; lb bc, 7, 16
     mov bl, POKEMON_LOGO_TILEMAP_WIDTH
     call Bank3D_CopyBox
@@ -142,15 +142,15 @@ TitleScreen_PlacePikaSpeechBubble:
 
     ; 7×4 bubble tilemap at coord (col=6, row=4)
     lea esi, [pika_bubble_tilemap]        ; ld de, TitleScreenPikaBubbleTilemap
-    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN + 4 * SCREEN_TILES_W + 6]
+    lea edi, [ebp + wTileMap + TITLE_ORIGIN + 4 * SCREEN_TILES_W + 6]
     mov bh, PIKA_BUBBLE_TILEMAP_HEIGHT    ; lb bc, 4, 7
     mov bl, PIKA_BUBBLE_TILEMAP_WIDTH
     call Bank3D_CopyBox
 
     ; Two logo-area tiles placed at (9,8) and (10,8)
     ; $64 = logo tile 100 (signed + → vChars2), $65 = logo tile 101
-    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 8 * SCREEN_TILES_W + 9],  0x64
-    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 8 * SCREEN_TILES_W + 10], 0x65
+    mov byte [ebp + wTileMap + TITLE_ORIGIN + 8 * SCREEN_TILES_W + 9],  0x64
+    mov byte [ebp + wTileMap + TITLE_ORIGIN + 8 * SCREEN_TILES_W + 10], 0x65
 
     popad
     ret
@@ -166,22 +166,22 @@ TitleScreen_PlacePikachu:
 
     ; Place 12×9 pikachu tilemap at coord (col=4, row=8)
     lea esi, [pikachu_tilemap]            ; ld de, TitleScreenPikachuTilemap
-    lea edi, [ebp + W_TILEMAP + TITLE_ORIGIN + 8 * SCREEN_TILES_W + 4]
+    lea edi, [ebp + wTileMap + TITLE_ORIGIN + 8 * SCREEN_TILES_W + 4]
     mov bh, PIKACHU_TILEMAP_HEIGHT        ; lb bc, 9, 12
     mov bl, PIKACHU_TILEMAP_WIDTH
     call Bank3D_CopyBox
 
     ; Place extra tail/overlap tiles at column 16, rows 10-13
-    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 10 * SCREEN_TILES_W + 16], 0x96
-    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 11 * SCREEN_TILES_W + 16], 0x9D
-    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 12 * SCREEN_TILES_W + 16], 0xA7
-    mov byte [ebp + W_TILEMAP + TITLE_ORIGIN + 13 * SCREEN_TILES_W + 16], 0xB1
+    mov byte [ebp + wTileMap + TITLE_ORIGIN + 10 * SCREEN_TILES_W + 16], 0x96
+    mov byte [ebp + wTileMap + TITLE_ORIGIN + 11 * SCREEN_TILES_W + 16], 0x9D
+    mov byte [ebp + wTileMap + TITLE_ORIGIN + 12 * SCREEN_TILES_W + 16], 0xA7
+    mov byte [ebp + wTileMap + TITLE_ORIGIN + 13 * SCREEN_TILES_W + 16], 0xB1
 
     ; Copy eye OAM data to wShadowOAM (32 bytes = 8 sprites × 4 bytes). The
     ; records stay canonical GB OAM — byte-comparable against a golden — and the
     ; projection lives only in the published DOS coordinates.
     lea esi, [TitleScreenPikachuEyesOAMData]
-    lea edi, [ebp + W_SHADOW_OAM]
+    lea edi, [ebp + wShadowOAM]
     mov ecx, 32
     rep movsb
 
@@ -203,7 +203,7 @@ TitleScreen_PlacePikachu:
 global TitleScreenPublishEyes
 TitleScreenPublishEyes:
     pushad
-    mov esi, W_SHADOW_OAM               ; GB-relative source
+    mov esi, wShadowOAM               ; GB-relative source
     mov ecx, 8                          ; 8 eye records
     mov eax, UI_TITLE_COL * 8           ; projection X = 80
     mov ebx, UI_TITLE_WY                ; projection Y = 24

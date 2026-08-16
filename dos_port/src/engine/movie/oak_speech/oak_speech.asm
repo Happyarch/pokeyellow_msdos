@@ -37,7 +37,7 @@ extern InitOptions                   ; engine/menus/main_menu.asm
 extern StopAllMusic                  ; home/audio.asm
 extern PlayMusic                     ; home/audio.asm — AL = music id, BL = bank
 extern PlaySound                     ; home/audio.asm — AL = sound id
-extern ClearScreen                   ; home/copy2.asm — blank W_TILEMAP (surface state survives)
+extern ClearScreen                   ; home/copy2.asm — blank wTileMap (surface state survives)
 extern LoadTextBoxTilePatterns       ; home/load_font.asm
 extern InitPlayerData2               ; oak_speech/init_player_data.asm (pret predef)
 extern AddItemToInventory            ; src/home/inventory.asm — ESI = count addr, [wCurItem]/[wItemQuantity]
@@ -93,8 +93,8 @@ global MovePicLeft
 
 ; Projected 7×7 placement corners (pret coord + UI_OAK_SPEECH origin), as flat
 ; GB tilemap addresses. Centred = hlcoord(6,4); upper-right = hlcoord(15,1).
-OAKPIC_CENTER  equ (W_TILEMAP + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
-OAKPIC_UPRIGHT equ (W_TILEMAP + (1 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (15 + UI_OAK_SPEECH_COL))
+OAKPIC_CENTER  equ (wTileMap + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
+OAKPIC_UPRIGHT equ (wTileMap + (1 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (15 + UI_OAK_SPEECH_COL))
 
 ; Oak-speech intro text streams (Tier-1 generated: OakSpeechText1/2/3,
 ; IntroducePlayerText, IntroduceRivalText + their _ref pairs). The A4.3 control
@@ -105,7 +105,7 @@ section .data
 align 4
 ; msgbox_oak_speech — the intro dialog projection. Modelled on the battle's
 ; msgbox_centered: draw the box + text DIRECTLY into the surface canvas
-; (W_TILEMAP, stride 40) at the UI_OAK_SPEECH-projected dialog location, with NO
+; (wTileMap, stride 40) at the UI_OAK_SPEECH-projected dialog location, with NO
 ; window of its own (MB_WIN_TILEMAP = 0). MovieMirrorSurface then commits the
 ; whole surface — pic AND text — to GB_TILEMAP0, and the ONE surface window
 ; MovieBeginSurface published shows both. This is why the intro must NOT use
@@ -120,12 +120,12 @@ align 4
 global msgbox_oak_speech
 msgbox_oak_speech:
     dd SCREEN_TILES_W                                                   ; MB_STRIDE (40, canvas)
-    dd (W_TILEMAP + (12 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (0 + UI_OAK_SPEECH_COL))  ; MB_BOX_OFS
+    dd (wTileMap + (12 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (0 + UI_OAK_SPEECH_COL))  ; MB_BOX_OFS
     dd 18                                                               ; MB_BOX_W (interior cols)
     dd 4                                                                ; MB_BOX_H (interior rows)
-    dd (W_TILEMAP + (14 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (1 + UI_OAK_SPEECH_COL))  ; MB_LINE1
-    dd (W_TILEMAP + (16 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (1 + UI_OAK_SPEECH_COL))  ; MB_LINE2
-    dd (W_TILEMAP + (16 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (18 + UI_OAK_SPEECH_COL)) ; MB_ARROW
+    dd (wTileMap + (14 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (1 + UI_OAK_SPEECH_COL))  ; MB_LINE1
+    dd (wTileMap + (16 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (1 + UI_OAK_SPEECH_COL))  ; MB_LINE2
+    dd (wTileMap + (16 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (18 + UI_OAK_SPEECH_COL)) ; MB_ARROW
     dd IntroTextWait                                                    ; MB_PROMPT — <PARA>/<PROMPT> hold
     dd 0                                                                ; MB_WIN_WX  ] no window:
     dd 0                                                                ; MB_WIN_WY  ] drawn into the
@@ -281,8 +281,8 @@ PrepareOakSpeech:
     ret
 
 ; Projected tilemap dests for the OakSpeech body (pret hlcoord + UI_OAK_SPEECH).
-OAK_FLIP_SPRITE_DEST equ (W_TILEMAP + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
-OAK_CLEAR_AREA_DEST  equ (W_TILEMAP + (5 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
+OAK_FLIP_SPRITE_DEST equ (wTileMap + (4 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
+OAK_CLEAR_AREA_DEST  equ (wTileMap + (5 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W + (6 + UI_OAK_SPEECH_COL))
 
 ; ---------------------------------------------------------------------------
 ; OakSpeech — the new-game intro cutscene. Source: engine/movie/oak_speech/
@@ -290,7 +290,7 @@ OAK_CLEAR_AREA_DEST  equ (W_TILEMAP + (5 + UI_OAK_SPEECH_ROW) * SCREEN_TILES_W +
 ; the player/rival naming flow, then the shrink-into-overworld hand-off.
 ;
 ; PROJECTION: the whole cutscene runs on the centred UI_OAK_SPEECH surface. pret's
-; ClearScreen calls blank W_TILEMAP but the port surface state (window, whiteout,
+; ClearScreen calls blank wTileMap but the port surface state (window, whiteout,
 ; per-frame mirror) survives them, so the surface is established ONCE with
 ; MovieBeginSurface and torn down with MovieEndSurface at the hand-off. All hlcoord
 ; are projected; text_row_stride / text_msgbox are published for the projected
@@ -507,8 +507,8 @@ RunOakPicTest:
     call MovieBeginSurface            ; centred surface + matte, window over GB_TILEMAP0
 
     ; Blank the projected 20x18 rect to $7F so the matte is space, not the pic's
-    ; tile id 0 (MovieBeginSurface zeroes W_TILEMAP; id 0 == the pic's first tile).
-    lea edi, [ebp + W_TILEMAP + UI_OAK_SPEECH_ROW * SCREEN_TILES_W + UI_OAK_SPEECH_COL]
+    ; tile id 0 (MovieBeginSurface zeroes wTileMap; id 0 == the pic's first tile).
+    lea edi, [ebp + wTileMap + UI_OAK_SPEECH_ROW * SCREEN_TILES_W + UI_OAK_SPEECH_COL]
     mov edx, 18
 .blank:
     mov ecx, 20
@@ -550,10 +550,10 @@ RunOakPicTest:
 ; simply HUNG, and the blank FRAME.BIN read back was a stale leftover, not a real
 ; render. Two mechanism facts drove the fix:
 ;   1. The surface is shown through a WINDOW sampling GB_TILEMAP0 (stride 32), but
-;      PrintText types into W_TILEMAP (stride 40), and the text engine's own
+;      PrintText types into wTileMap (stride 40), and the text engine's own
 ;      per-char mirror (sync_dialog_window) is gated off under g_bg_whiteout and
 ;      targets GB_TILEMAP1. So canvas text was invisible. FIX: g_surface_redraw_cb
-;      (ppu.asm) — DelayFrame repacks W_TILEMAP -> GB_TILEMAP0 every frame while a
+;      (ppu.asm) — DelayFrame repacks wTileMap -> GB_TILEMAP0 every frame while a
 ;      cinematic owns the screen (armed by MovieBeginSurface = MovieMirrorSurface).
 ;   2. <PARA>/<PROMPT> dispatch through text_prompt_hook, and PrintText's box setup
 ;      copies the descriptor's MB_PROMPT into it — so the hold is installed via
