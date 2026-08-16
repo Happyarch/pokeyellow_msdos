@@ -633,8 +633,8 @@ GameCornerRocketText:
     call InitBattleEnemyParameters
     xor al, al
     mov [ebp + hJoyHeld], al
-    mov [ebp + H_JOY_PRESSED], al
-    mov [ebp + H_JOY_RELEASED], al
+    mov [ebp + hJoyPressed], al
+    mov [ebp + hJoyReleased], al
     mov al, SCRIPT_GAMECORNER_ROCKET_BATTLE
     mov [ebp + wGameCornerCurScript], al
     jmp TextScriptEnd

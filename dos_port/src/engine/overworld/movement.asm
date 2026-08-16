@@ -124,9 +124,9 @@ npc_dbg_record:
     mov [npc_log + edi + 6], al
     mov al, [ebp + W_Y_BLOCK_COORD]
     mov [npc_log + edi + 7], al
-    mov al, [ebp + H_SCX]
+    mov al, [ebp + hSCX]
     mov [npc_log + edi + 8], al
-    mov al, [ebp + H_SCY]
+    mov al, [ebp + hSCY]
     mov [npc_log + edi + 9], al
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
     mov [npc_log + edi + 10], al
@@ -322,7 +322,7 @@ UpdateNPCSprite:
     ; Random_ clobbers AL, BL. Push EBX around Random call.
     call GetTileSpriteStandsOn          ; EBX = wTileMap offset of lower-left tile under NPC
     push ebx                            ; save tile ptr (BL clobbered by Random_)
-    call Movement_Random                ; H_RANDOM_ADD updated; AL = random byte
+    call Movement_Random                ; hRandomAdd updated; AL = random byte
     pop ebx                             ; restore tile ptr
     ; AL = random value; CL = direction constraint from wMapSpriteData[(slot-1)*2]
     ; (OW-A.2 P2 relocation, pret LoadSprite). EDX is free after the pop ebx above.
@@ -412,13 +412,13 @@ UpdateNPCSprite:
     ret
 
 ; ---------------------------------------------------------------------------
-; Random — update H_RANDOM_ADD/H_RANDOM_SUB, return result in AL.
+; Random — update hRandomAdd/hRandomSub, return result in AL.
 ; Pret ref: home/random.asm (calls Random_ from engine/math/random.asm).
-; AL = H_RANDOM_ADD after update. Clobbers AL, BL.
+; AL = hRandomAdd after update. Clobbers AL, BL.
 ; ---------------------------------------------------------------------------
 Movement_Random:
     call Random_
-    mov al, [ebp + H_RANDOM_ADD]
+    mov al, [ebp + hRandomAdd]
     ret
 
 ; ---------------------------------------------------------------------------
@@ -597,7 +597,7 @@ CanWalkOntoTile:
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR], 0
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XSTEPVECTOR], 0
-    call Movement_Random                ; AL = H_RANDOM_ADD (clobbers AL, BL)
+    call Movement_Random                ; AL = hRandomAdd (clobbers AL, BL)
     and al, 0x7F                        ; random 0–127 frames
     mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
     stc
@@ -679,7 +679,7 @@ MakeNPCFacePlayer:
 ;   WALK/STAY → random delay (0–127) + status=2; clear step vectors.
 ;   scripted  → status=1 (ready for next scripted step).
 ;
-; In: ESI = slot byte offset (H_CURRENT_SPRITE_OFFSET set by outer loop).
+; In: ESI = slot byte offset (hCurrentSpriteOffset set by outer loop).
 ; Clobbers AL, DL (from Func_5274).
 ; ---------------------------------------------------------------------------
 UpdateSpriteInWalkingAnimation:
@@ -709,7 +709,7 @@ UpdateSpriteInWalkingAnimation:
     ret
 
 .initNextCounter:
-    call Movement_Random                ; AL = H_RANDOM_ADD
+    call Movement_Random                ; AL = hRandomAdd
     and al, 0x7F                        ; random 0–127 frames
     mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2
@@ -938,7 +938,7 @@ GetTileSpriteStandsOn:
 UpdateSpriteImage:
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
     add al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION]
-    add al, [ebp + H_TILE_PLAYER_STANDING_ON]
+    add al, [ebp + hTilePlayerStandingOn]
     mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], al
     ret
 
@@ -965,7 +965,7 @@ UpdatePlayerSprite:
 .checkTextBox:
     ; lower-left BG tile the sprite stands on; >= $60 → text box
     mov al, [ebp + W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL]
-    mov [ebp + H_TILE_PLAYER_STANDING_ON], al
+    mov [ebp + hTilePlayerStandingOn], al
     cmp al, MAP_TILESET_SIZE
     jb .lowerLeftIsMapTile
 .disable:
@@ -1021,7 +1021,7 @@ UpdatePlayerSprite:
 
 .grassPriority:
     ; under-grass BG priority if the standing tile is the tileset's grass tile
-    mov al, [ebp + H_TILE_PLAYER_STANDING_ON]
+    mov al, [ebp + hTilePlayerStandingOn]
     mov cl, al
     mov al, [ebp + W_GRASS_TILE]
     cmp al, cl
@@ -1099,7 +1099,7 @@ DoScriptedNPCMovement:
 .move:
     mov bh, al                           ; pret: ld b, a (step delta)
     add [ebp + edi], bh                  ; pixel += delta (pret: a=[hl]; add b; [hl]=a)
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
     mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION], bl
     call AnimScriptedNPCMovement
     dec byte [ebp + wScriptedNPCWalkCounter]
@@ -1122,14 +1122,14 @@ GetSpriteScreenYPointer:
 GetSpriteScreenXPointer:
     mov bh, SPRITESTATEDATA1_XPIXELS
 GetSpriteScreenXYPointerCommon:
-    movzx edi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx edi, byte [ebp + hCurrentSpriteOffset]
     movzx eax, bh
     lea edi, [edi + eax + W_SPRITE_STATE_DATA_1]
     ret
 
 ; AnimScriptedNPCMovement — set IMAGEINDEX from VRAM slot + facing + anim frame.
 AnimScriptedNPCMovement:
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     dec al
     ror al, 4                            ; (slot-1) << 4 (pret: dec a; swap a)
@@ -1146,21 +1146,21 @@ AnimScriptedNPCMovement:
     ret                                  ; non-cardinal facing → no anim
 .anim:
     add al, bh                           ; facing + (slot-1)<<4
-    mov [ebp + H_SPRITE_VRAM_SLOT_AND_FACING], al
+    mov [ebp + hSpriteVRAMSlotAndFacing], al
     call AdvanceScriptedNPCAnimFrameCounter
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
-    mov al, [ebp + H_SPRITE_ANIM_FRAME_COUNTER]
-    add al, [ebp + H_SPRITE_VRAM_SLOT_AND_FACING]
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
+    mov al, [ebp + hSpriteAnimFrameCounter]
+    add al, [ebp + hSpriteVRAMSlotAndFacing]
     mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_IMAGEINDEX], al
     ret
 
 ; AdvanceScriptedNPCAnimFrameCounter — tick the anim counters, publish frame index.
 AdvanceScriptedNPCAnimFrameCounter:
     call Func_5274                       ; advance intra-anim + anim-frame counters
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
     and al, 0x03
-    mov [ebp + H_SPRITE_ANIM_FRAME_COUNTER], al
+    mov [ebp + hSpriteAnimFrameCounter], al
     ret
 
 ; ---------------------------------------------------------------------------
@@ -1172,7 +1172,7 @@ AdvanceScriptedNPCAnimFrameCounter:
 ; In: hCurrentSpriteOffset = slot byte offset.
 ; ---------------------------------------------------------------------------
 Func_5274:
-    movzx eax, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx eax, byte [ebp + hCurrentSpriteOffset]
     mov dl, [ebp + eax + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_INTRAANIMFRAMECOUNTER]
     inc dl
     and dl, 0x03
@@ -1377,7 +1377,7 @@ Func_5331:
 ; ---------------------------------------------------------------------------
 Func_5357:
     call Func_5274                       ; advance intra-anim + anim-frame counters
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
     ; YPIXELS += 2 * YSTEPVECTOR  (pret: a=[+3]; add a; b=a; a=[+4]; add b; [+4]=a)
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YSTEPVECTOR]
     add al, al
@@ -1401,7 +1401,7 @@ Func_5357:
     ret
 .random:
     call Movement_Random                 ; AL = hRandomAdd (clobbers AL, BL)
-    mov al, [ebp + H_RANDOM_ADD]         ; pret: ldh a, [hRandomAdd]
+    mov al, [ebp + hRandomAdd]         ; pret: ldh a, [hRandomAdd]
     and al, 0x7F
     mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTDELAY], al
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 2

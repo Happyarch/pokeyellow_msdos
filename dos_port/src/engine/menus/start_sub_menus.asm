@@ -663,12 +663,12 @@ StartMenu_Pokemon:
     mov [choseStats_saved_scx], al
     mov al, [ebp + IO_SCY]
     mov [choseStats_saved_scy], al
-    ; StatusScreen zeroes the SHADOW scroll (H_SCX/H_SCY) so the flat canvas isn't
-    ; dragged by the overworld scroll; commit_shadow_regs copies H_SCX/SCY → IO_SCX/SCY
+    ; StatusScreen zeroes the SHADOW scroll (hSCX/hSCY) so the flat canvas isn't
+    ; dragged by the overworld scroll; commit_shadow_regs copies hSCX/SCY → IO_SCX/SCY
     ; every frame, so save/restore the shadows too or the overworld scroll is lost.
-    mov al, [ebp + H_SCX]
+    mov al, [ebp + hSCX]
     mov [choseStats_saved_hscx], al
-    mov al, [ebp + H_SCY]
+    mov al, [ebp + hSCY]
     mov [choseStats_saved_hscy], al
     xor al, al                              ; xor a ; PLAYER_PARTY_DATA
     mov [ebp + wMonDataLocation], al
@@ -682,9 +682,9 @@ StartMenu_Pokemon:
     mov al, [choseStats_saved_scy]
     mov [ebp + IO_SCY], al
     mov al, [choseStats_saved_hscx]         ; restore the shadow scroll (see save note above)
-    mov [ebp + H_SCX], al
+    mov [ebp + hSCX], al
     mov al, [choseStats_saved_hscy]
-    mov [ebp + H_SCY], al
+    mov [ebp + hSCY], al
     call ReloadMapData                      ; call ReloadMapData
     jmp StartMenu_Pokemon                   ; jp StartMenu_Pokemon
 
@@ -1421,8 +1421,8 @@ fm_saved_wc:  resd 1               ; g_window_count before the pop-up appended
 choseStats_saved_view: resw 1      ; W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR (2 bytes)
 choseStats_saved_scx:  resb 1
 choseStats_saved_scy:  resb 1
-choseStats_saved_hscx: resb 1      ; H_SCX shadow (StatusScreen zeroes it; see save note)
-choseStats_saved_hscy: resb 1      ; H_SCY shadow
+choseStats_saved_hscx: resb 1      ; hSCX shadow (StatusScreen zeroes it; see save note)
+choseStats_saved_hscy: resb 1      ; hSCY shadow
 
 section .text
 

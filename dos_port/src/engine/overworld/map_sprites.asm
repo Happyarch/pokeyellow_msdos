@@ -789,7 +789,7 @@ IsNPCAtTargetBlock:
 ; from a plain stream — nothing needs the length to print.
 ;
 ; After PrintText (or on CHAR_DONE within PrintText), the window is already shown
-; at H_WY=152 by manual_text_scroll. This function hides the window (H_WY=200),
+; at hWY=152 by manual_text_scroll. This function hides the window (hWY=200),
 ; restores the BG, and returns AL=1 (NPC found) or AL=0 (nothing found).
 ;
 ; All registers preserved (pushad/popad). Returns AL in EAX after popad.
@@ -875,13 +875,13 @@ CheckNPCInteraction:
     jc .not_found                       ; beaten → no re-talk
 .not_beaten_trainer:
 
-    ; Set H_TILE_PLAYER_STANDING_ON so UpdateSpriteImage picks this NPC's VRAM slot.
-    ; UpdateSprites leaves H_TILE_PLAYER_STANDING_ON = last-slot value after the loop;
+    ; Set hTilePlayerStandingOn so UpdateSpriteImage picks this NPC's VRAM slot.
+    ; UpdateSprites leaves hTilePlayerStandingOn = last-slot value after the loop;
     ; that would cause the wrong sprite tiles (e.g. Fisher's) for any earlier NPC.
     movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     dec al
     ror al, 4                           ; (imageBaseOffset-1)*16 → high nibble for UpdateSpriteImage
-    mov [ebp + H_TILE_PLAYER_STANDING_ON], al
+    mov [ebp + hTilePlayerStandingOn], al
 
     ; Make NPC face player (sets facing, clears BIT_FACE_PLAYER, refreshes image).
     call MakeNPCFacePlayer
@@ -959,7 +959,7 @@ CheckNPCInteraction:
 
 .dialog_done:
     ; Hide window and clear font-loaded flag.
-    call hide_window                    ; count=0 (nothing drawn); parks H_WY off-screen
+    call hide_window                    ; count=0 (nothing drawn); parks hWY off-screen
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
 
     ; Reload NPC and player walk tiles into GB_VFONT (font was loaded for dialog).
@@ -1026,7 +1026,7 @@ npc_dialog_wait_impl:
     mov edx, RENDER_H                      ; max_y = 200
     mov esi, GB_TILEMAP1                   ; dialog box source tilemap
     xor edi, edi                           ; start_row = 0
-    call set_single_window                 ; count=1; mirrors wy→H_WY, wx→IO_WX
+    call set_single_window                 ; count=1; mirrors wy→hWY, wx→IO_WX
     ; Place ▼ arrow and init blink counters; save existing state to restore after.
     movzx ecx, byte [ebp + H_DOWN_ARROW_COUNT1]
     push ecx
@@ -1045,13 +1045,13 @@ npc_dialog_wait_impl:
     ; Release: wait until A/B not held.
 .sdw_release:
     call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    test byte [ebp + hJoyHeld], PAD_A | PAD_B
     jnz .sdw_release
     ; Press: wait for A or B; blink ▼ each frame.
 .sdw_press:
     call DelayFrame
     call HandleDownArrowBlinkTiming
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    test byte [ebp + hJoyHeld], PAD_A | PAD_B
     jz .sdw_press
     ; Clear arrow, restore blink state.
     mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TILE_SPC
@@ -1212,7 +1212,7 @@ TrainerEncounterFlow:
     movzx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     dec al
     ror al, 4
-    mov [ebp + H_TILE_PLAYER_STANDING_ON], al
+    mov [ebp + hTilePlayerStandingOn], al
     call MakeNPCFacePlayer
     or byte [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_MOVEMENTSTATUS], (1 << BIT_FACE_PLAYER)
 
@@ -1283,7 +1283,7 @@ TrainerEncounterFlow:
     call StartTrainerBattle
     ; DEVIATION{class=temporary; pret=home/trainers.asm:EndTrainerBattle; behavior=a battle entered through this bespoke flow never runs EndTrainerBattle, so BIT_PRINT_END_BATTLE_TEXT and wCurMapScript stay set after it and the trainer is not flagged beaten by the pret path; evidence=the Stage 1b gate in OverworldLoopLessDelay reaches this routine only when MapScriptPointers[wCurMap] is not TrainerMapScript, and on those maps the generated assets/map_scripts.inc dispatches DefaultMapScript or a non-trainer script, so the wCurMapScript increment StartTrainerBattle makes indexes a script-pointer table RunMapScript never dispatches; lifetime=deleted together with CheckTrainerSight, TrainerEncounterFlow and the gate itself when Stage 5a wiring completes and all standard trainer maps are wired, owned by docs/current_plan_overworld_events.md}
     ; -------------------------------------------------------------------------
-    call hide_window                    ; count=0 (nothing drawn); parks H_WY off-screen
+    call hide_window                    ; count=0 (nothing drawn); parks hWY off-screen
     and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
     call ReloadWalkingTilePatterns      ; OW-A.2 P3c: faithful post-dialog walk-tile reload
     call LoadPlayerSpriteGraphics

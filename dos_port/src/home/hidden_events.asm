@@ -49,8 +49,8 @@ extern GetTileAndCoordsInFrontOfPlayer  ; src/engine/overworld/player_state.asm 
 extern UpdateCinnabarGymGateTileBlocks_ ; src/engine/overworld/hidden_object_stubs.asm (stub)
 
 ; --- Deep-tier memmap symbols — golden sym-verified (were PLACEHOLDER) ---
-%ifndef H_SPRITE_INDEX
-H_SPRITE_INDEX              equ 0xFF8C   ; hSpriteIndex (golden 00:ff8c)
+%ifndef hSpriteIndex
+hSpriteIndex              equ 0xFF8C   ; hSpriteIndex (golden 00:ff8c)
 %endif
 %ifndef H_ITEM_ALREADY_FOUND
 H_ITEM_ALREADY_FOUND       equ 0xFFEB   ; hItemAlreadyFound (golden 00:ffeb)
@@ -82,9 +82,9 @@ global UpdateCinnabarGymGateTileBlocks
 ; Out: AL / [hItemAlreadyFound] per pret.
 ; ---------------------------------------------------------------------------
 CheckForHiddenEventOrBookshelfOrCardKeyDoor:
-    mov al, [ebp + H_LOADED_ROM_BANK]
+    mov al, [ebp + hLoadedROMBank]
     push eax                            ; ldh a,[hLoadedROMBank] / push af
-    mov al, [ebp + H_JOY_HELD]
+    mov al, [ebp + hJoyHeld]
     test al, PAD_A
     jz .nothingFound
     ; A button is pressed

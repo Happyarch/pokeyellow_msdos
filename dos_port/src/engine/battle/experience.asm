@@ -5,7 +5,7 @@
 ;
 ; AUDIT (2026-06-27): Full native-validation audit. The swarm draft had six bugs
 ; beyond the already-noted sbc→sbb and CX→BX stride fixes:
-;   1. `hExperience` used but undefined (→ H_EXPERIENCE, the correct alias).
+;   1. `hExperience` used but undefined (→ hExperience, the correct alias).
 ;   2. `wPlayerID` used but not in gb_memmap.inc (→ local define, 0xD358;
 ;      orchestrator must add to gb_memmap.inc).
 ;   3. `wCalculateWhoseStats` used but not in gb_memmap.inc (→ local alias for
@@ -312,11 +312,11 @@ GainExperience:
     call CalcExperience             ; hExperience = max EXP for level 100
 
     ; Load max EXP bytes into BH:CL:DH (high:mid:low).
-    mov al, [ebp + H_EXPERIENCE]
+    mov al, [ebp + hExperience]
     mov bh, al
-    mov al, [ebp + H_EXPERIENCE + 1]
+    mov al, [ebp + hExperience + 1]
     mov cl, al
-    mov al, [ebp + H_EXPERIENCE + 2]
+    mov al, [ebp + hExperience + 2]
     mov dh, al
 
     pop esi                         ; POP A: ESI = party_mon + 0x10 (EXP low)
@@ -626,7 +626,7 @@ DivideExpDataByNumMonsGainingExp:
     ; relies on Divide preserving BC — pret's home/math.asm Divide does
     ; `push bc ... pop bc`, and the port's wrapper mirrors that with
     ; `push bx / pop bx`. It does NOT preserve ECX, and it cannot: _Divide
-    ; loads the divisor into ECX (`movzx ecx, byte [ebp + H_DIVISOR]`) and
+    ; loads the divisor into ECX (`movzx ecx, byte [ebp + hDivisor]`) and
     ; `div ecx` leaves it there. So a counter parked in CL is reloaded with the
     ; DIVISOR on every call. MEASURED 2026-08-12 with a BPLM watchpoint on
     ; wIsInBattle: with CL the loop never terminated — ECX came back 2 (the

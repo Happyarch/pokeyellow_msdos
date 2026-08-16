@@ -10,7 +10,7 @@
 ; We still faithfully record the *requested* bank in hLoadedROMBank so any code
 ; that reads it back (audio, FarCopyData, etc.) sees the value pret would see.
 ;
-; Register map: A -> AL (requested bank). H_LOADED_ROM_BANK is the port's
+; Register map: A -> AL (requested bank). hLoadedROMBank is the port's
 ; memmap alias for pret hLoadedROMBank (gb_memmap.inc: equ 0xFFB8).
 ;
 ; Build: nasm -f coff -I include/ -o bankswitch.o bankswitch.asm
@@ -38,7 +38,7 @@ section .text
 ; ---------------------------------------------------------------------------
 BankswitchHome:
     push eax
-    mov al, [ebp + H_LOADED_ROM_BANK]           ; ldh a, [hLoadedROMBank]
+    mov al, [ebp + hLoadedROMBank]           ; ldh a, [hLoadedROMBank]
     mov [bankswitchHomeSavedROMBank], al        ; ld [wBankswitchHomeSavedROMBank], a
     pop eax
     call BankswitchCommon                        ; switch to requested bank (AL)

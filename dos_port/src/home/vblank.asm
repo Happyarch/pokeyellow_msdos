@@ -190,9 +190,9 @@ DelayFrame:
 %endif
     ; hFrameCounter guarded decrement — pret VBlank: `and a / jr z / dec [hl]`.
     ; Unblocks callers using pret's set-hFrameCounter-and-spin idiom (M2.1).
-    cmp byte [ebp + H_FRAME_COUNTER], 0
+    cmp byte [ebp + hFrameCounter], 0
     je .noFrameDec
-    dec byte [ebp + H_FRAME_COUNTER]
+    dec byte [ebp + hFrameCounter]
 .noFrameDec:
     PERF_MARK PERF_MISC
     ; pret VBlank audio block (home/vblank.asm, right after the hFrameCounter
@@ -321,22 +321,22 @@ update_oam:
     ret
 
 ; ---------------------------------------------------------------------------
-; commit_shadow_regs — copy H_SCX/H_SCY/H_WY → IO_SCX/IO_SCY/IO_WY.
+; commit_shadow_regs — copy hSCX/hSCY/hWY → IO_SCX/IO_SCY/IO_WY.
 ; Mirrors the GB VBlank ISR shadow-register commit.
 ; In: EBP = GB memory base. All registers preserved.
 ; ---------------------------------------------------------------------------
 commit_shadow_regs:
     push eax
     inc byte [ebp + IO_DIV]     ; advance emulated DIV counter (~16384 Hz on GB; 1/frame is enough for RNG entropy)
-    mov al, [ebp + H_SCX]
+    mov al, [ebp + hSCX]
     mov [ebp + IO_SCX], al
-    mov al, [ebp + H_SCY]
+    mov al, [ebp + hSCY]
     mov [ebp + IO_SCY], al
     ; WY commit gated on wDisableVBlankWYUpdate (pret VBlank: skip rWY update when
     ; nonzero). Default/unset (0) → commit exactly as before — byte-identical.
     cmp byte [ebp + W_DISABLE_VBLANK_WY_UPDATE], 0
     jne .skipWY
-    mov al, [ebp + H_WY]
+    mov al, [ebp + hWY]
     mov [ebp + IO_WY], al
 .skipWY:
     pop eax

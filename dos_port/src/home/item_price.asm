@@ -10,7 +10,7 @@
 ; flat index (no [ebp+...] bias); the result still lands in emulated HRAM.
 ;
 ; In:  [wCurItem] = item id
-; Out: hItemPrice (H_ITEM_PRICE..+2) = price, big-endian BCD.
+; Out: hItemPrice (hItemPrice..+2) = price, big-endian BCD.
 ;
 ; Build: nasm -f coff -I include/ -I . -o item_price.o item_price.asm
 
@@ -38,11 +38,11 @@ GetItemPrice:
     add esi, ecx                     ; -> entry's MSB
 
     mov al, [esi]                    ; big-endian: MSB first
-    mov [ebp + H_ITEM_PRICE], al
+    mov [ebp + hItemPrice], al
     mov al, [esi + 1]
-    mov [ebp + H_ITEM_PRICE + 1], al
+    mov [ebp + hItemPrice + 1], al
     mov al, [esi + 2]
-    mov [ebp + H_ITEM_PRICE + 2], al
+    mov [ebp + hItemPrice + 2], al
     ret
 
 .machine:

@@ -316,7 +316,7 @@ CloseTextDisplay:
     ; PORT PROJECTION of that pret store: the port's dialog box is a WINDOW
     ; DESCRIPTOR (PrintText's dialog projection registers it via
     ; set_single_window), so "move the window off screen" means dismissing the
-    ; descriptor — hide_window empties the list and parks H_WY at RENDER_H.
+    ; descriptor — hide_window empties the list and parks hWY at RENDER_H.
     ; WITHOUT this, a text closed on the direct-DisplayTextID path (map scripts,
     ; trainer engage) left its window registered forever: the walk-tile reload
     ; below swaps the font out of vFont, and the stale window kept compositing

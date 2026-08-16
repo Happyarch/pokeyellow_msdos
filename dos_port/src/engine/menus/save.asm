@@ -809,7 +809,7 @@ ChangeBox:
     call DisplayChangeBoxMenu
     call UpdateSprites
     ; ld hl,hUILayoutFlags / set BIT_DOUBLE_SPACED_MENU,[hl]
-    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << 1     ; BIT_DOUBLE_SPACED_MENU = 1
+    or byte [ebp + hUILayoutFlags], 1 << 1     ; BIT_DOUBLE_SPACED_MENU = 1
     call HandleMenuInput                          ; AL = watched keys pressed
     mov dword [menu_redraw_cb], 0
     ; port cleanup: drop the change-box list window (pret's caller reloads the
@@ -819,7 +819,7 @@ ChangeBox:
     mov [g_window_count], eax
     pop eax
     ; ld hl,hUILayoutFlags / res BIT_DOUBLE_SPACED_MENU,[hl]
-    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << 1)) & 0xFF
+    and byte [ebp + hUILayoutFlags], (~(1 << 1)) & 0xFF
     ; bit B_PAD_B,a / ret nz
     test al, PAD_B
     jnz .cancel
@@ -955,11 +955,11 @@ DisplayChangeBoxMenu:
     ; forced only by its hand-split data (M-101).
     ; DEVIATION{class=projection; pret=engine/menus/save.asm:DisplayChangeBoxMenu; behavior=place BoxNames at projected list-box-relative column 2 instead of GB-absolute column 13; evidence=pret hlcoord 13 placement plus port UI_CHANGE_BOX scratch origin; lifetime=permanent widescreen projection}
     ; GB col 13 is list-box col 2 (list box at GB col 11).
-    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_SINGLE_SPACED_LINES
+    or byte [ebp + hUILayoutFlags], 1 << BIT_SINGLE_SPACED_LINES
     mov esi, W_TILEMAP + 1 * CBOX_STRIDE + 2
     mov eax, BoxNames
     call PlaceString
-    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
+    and byte [ebp + hUILayoutFlags], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
 
     ; --- the box-number digits in the info box (pret hlcoord 8,2 / ldcoord_a 9,2)
     ; The port never drew these at all — the indicator box read "BOX No." with no
@@ -1410,7 +1410,7 @@ RunSaveTest:
     ; up. (ChangeBox's own two-page text + YES/NO were observed with the ChangeBox
     ; call in its place; see the ledger's row-19 part-2 verification note.)
     call DisplayChangeBoxMenu
-    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << 1       ; BIT_DOUBLE_SPACED_MENU, as ChangeBox does
+    or byte [ebp + hUILayoutFlags], 1 << 1       ; BIT_DOUBLE_SPACED_MENU, as ChangeBox does
     call HandleMenuInput                            ; the real menu loop (cursor + blink)
 .hang:
     call DelayFrame                                 ; keep frames flowing so AUTOKEY can dump

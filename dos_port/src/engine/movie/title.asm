@@ -280,7 +280,7 @@ PrepareTitleScreen:
     call CopyDebugName
 
     ; Zero hWY (window on-screen at y=0 initially, DisableLCD will move it)
-    mov byte [ebp + H_WY], 0
+    mov byte [ebp + hWY], 0
 
     ; Clear letter-printing / status / Elite4 flags
     xor al, al
@@ -312,10 +312,10 @@ DisplayTitleScreen:
 
     ; Initialise HRAM display state
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
-    mov byte [ebp + H_TILE_ANIMATIONS],     0
-    mov byte [ebp + H_SCX],                 0
-    mov byte [ebp + H_SCY],                 0x40   ; start with SCY=64
-    mov byte [ebp + H_WY],                  SCREEN_HEIGHT_PX ; pret's $90 — window off
+    mov byte [ebp + hTileAnimations],     0
+    mov byte [ebp + hSCX],                 0
+    mov byte [ebp + hSCY],                 0x40   ; start with SCY=64
+    mov byte [ebp + hWY],                  SCREEN_HEIGHT_PX ; pret's $90 — window off
 
     call ClearScreen
 
@@ -405,7 +405,7 @@ DisplayTitleScreen:
     ; $9C00, so the window at y=64 paints exactly those rows at exactly the
     ; screen position they belong to — the top 64 px bounce with hSCY while the
     ; bottom 80 px stay nailed down. Without it the copyright bounces too.
-    mov byte [ebp + H_WY], 0x40
+    mov byte [ebp + hWY], 0x40
     call MovieSyncWindow
 
     ; Restore logo-only tilemap and copy to row 0 ($9800)
@@ -452,9 +452,9 @@ DisplayTitleScreen:
 .scrollStep:
     call DelayFrame
     ; hSCY += delta
-    mov dl, [ebp + H_SCY]
+    mov dl, [ebp + hSCY]
     add dl, al
-    mov [ebp + H_SCY], dl
+    mov [ebp + hSCY], dl
     call MovieSyncScroll              ; hSCY -> WIN_SRC_Y, GB wrap semantics
 %ifdef DEBUG_TITLE
 %if TITLE_DUMP_FRAME > 0
@@ -491,7 +491,7 @@ DisplayTitleScreen:
     call MovieMirrorSurface
     ; Bounce is over — park the window off-screen again. Everything from here on
     ; composes on BG alone, which is why the stable checkpoint is BG-only.
-    mov byte [ebp + H_WY], SCREEN_HEIGHT_PX
+    mov byte [ebp + hWY], SCREEN_HEIGHT_PX
     call MovieSyncWindow
     call Delay3
 
@@ -568,7 +568,7 @@ DisplayTitleScreen:
     inc dword [title_dbg_frame]
     cmp dword [title_dbg_frame], 2
     jne .no_forced_start
-    mov byte [ebp + H_JOY_HELD], PAD_START
+    mov byte [ebp + hJoyHeld], PAD_START
 .no_forced_start:
 %endif
 %ifdef DEBUG_TITLE_REENTRY
@@ -577,7 +577,7 @@ DisplayTitleScreen:
     inc dword [title_dbg_frame]
     cmp dword [title_dbg_frame], 2
     jne .reentry_no_start
-    mov byte [ebp + H_JOY_HELD], PAD_START
+    mov byte [ebp + hJoyHeld], PAD_START
 .reentry_no_start:
 %endif
 %ifdef DEBUG_SOFT_RESET
@@ -588,10 +588,10 @@ DisplayTitleScreen:
     inc dword [title_dbg_frame]
     cmp dword [title_dbg_frame], 2
     jne .no_soft_reset
-    mov byte [ebp + H_JOY_HELD], PAD_UP | PAD_SELECT | PAD_B
+    mov byte [ebp + hJoyHeld], PAD_UP | PAD_SELECT | PAD_B
 .no_soft_reset:
 %endif
-    mov al, [ebp + H_JOY_HELD]
+    mov al, [ebp + hJoyHeld]
     cmp al, PAD_UP | PAD_SELECT | PAD_B       ; secret reset-save combo
     je  .go_to_main_menu
     and al, PAD_A | PAD_START
@@ -631,7 +631,7 @@ DisplayTitleScreen:
     call GBPalWhiteOutWithDelay3
     call ClearSprites
     xor al, al
-    mov byte [ebp + H_WY], al
+    mov byte [ebp + hWY], al
     call MovieSyncWindow            ; hWY=0 — pret's full-screen window over the blanked maps
     inc al
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN], al
@@ -651,10 +651,10 @@ DisplayTitleScreen:
     ; hardware the player HOLDS UP+SELECT+B continuously through the exit, so the re-check
     ; still sees it; re-assert it here to model that continuous hold (the mGBA scenario holds
     ; the combo for 60 frames for exactly this reason).
-    mov byte [ebp + H_JOY_HELD], PAD_UP | PAD_SELECT | PAD_B
+    mov byte [ebp + hJoyHeld], PAD_UP | PAD_SELECT | PAD_B
 %endif
     ; Check if the reset-save combo was pressed (PAD_UP|PAD_SELECT|PAD_B)
-    mov al, [ebp + H_JOY_HELD]
+    mov al, [ebp + hJoyHeld]
     and al, PAD_UP | PAD_SELECT | PAD_B
     cmp al, PAD_UP | PAD_SELECT | PAD_B
     je  .doClearSaveDialogue
@@ -763,11 +763,11 @@ WriteCopyrightTiles:
 ; row 0 content once hSCY scrolls past row 31.
 ; ---------------------------------------------------------------------------
 TitleScreenCopyTileMapToVRAM:
-    mov byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1], al
+    mov byte [ebp + hAutoBGTransferDest + 1], al
     pushad
-    movzx edi, byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1]
+    movzx edi, byte [ebp + hAutoBGTransferDest + 1]
     shl edi, 8
-    movzx edx, byte [ebp + H_AUTO_BG_TRANSFER_DEST]
+    movzx edx, byte [ebp + hAutoBGTransferDest]
     add edi, edx                          ; dest = hi:lo, as pret assembles it
     add edi, ebp
     lea esi, [ebp + W_TILEMAP + TITLE_ORIGIN]
@@ -805,7 +805,7 @@ TitleScreenCopyTileMapToVRAM:
 ; ---------------------------------------------------------------------------
 global LoadCopyrightAndTextBoxTiles
 LoadCopyrightAndTextBoxTiles:
-    mov byte [ebp + H_WY], 0              ; ldh [hWY], a
+    mov byte [ebp + hWY], 0              ; ldh [hWY], a
     call ClearScreen                      ; clear the surface tilemap
     call LoadTextBoxTilePatterns          ; font_extra -> vChars2 $60-$7F
     ; fall through into LoadCopyrightTiles (a separate pret entry point)

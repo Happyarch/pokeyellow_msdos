@@ -294,9 +294,9 @@ RedrawPartyMenu_:
     pop esi                                 ; pop hl
     push esi                                ; push hl
     add esi, GBSCR_W + 1               ; down 1 row, right 1 col
-    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PARTY_MENU_HP_BAR
+    or byte [ebp + hUILayoutFlags], 1 << BIT_PARTY_MENU_HP_BAR
     call DrawHP2                            ; predef DrawHP2
-    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_PARTY_MENU_HP_BAR)) & 0xFF
+    and byte [ebp + hUILayoutFlags], (~(1 << BIT_PARTY_MENU_HP_BAR)) & 0xFF
     call SetPartyMenuHPBarColor             ; color the HP bar (on SGB)
     pop esi                                 ; pop hl
     jmp .printLevel
@@ -454,7 +454,7 @@ PartyMenuPromptWait:
 .wait:
     call PartyMenuMirror                    ; the ▼ lives in the scratch; show it
     call DelayFrame
-    test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
+    test byte [ebp + hJoyPressed], PAD_A | PAD_B
     jnz .done
     dec ecx
     jnz .wait

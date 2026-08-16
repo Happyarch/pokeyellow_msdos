@@ -61,7 +61,7 @@ _UpdateSprites:
     xor esi, esi                         ; ESI = slot byte offset
 .loop:
     mov eax, esi
-    mov [ebp + H_CURRENT_SPRITE_OFFSET], al
+    mov [ebp + hCurrentSpriteOffset], al
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     test al, al
     jz .skip                             ; inactive slot
@@ -91,7 +91,7 @@ _UpdateSprites:
 .skip:
     ; Re-derive ESI from hCurrentSpriteOffset: UpdateNonPlayerSprite reloads ESI
     ; from this field, so we must re-derive rather than trusting the pre-call value.
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
     add esi, 0x10
     cmp esi, 0x100
     jne .loop
@@ -112,13 +112,13 @@ _UpdateSprites:
 ; All other registers: caller pushad/popad, so free.
 ; ---------------------------------------------------------------------------
 UpdateNonPlayerSprite:
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
     ; hTilePlayerStandingOn = (imageBaseOffset - 1) << 4 (VRAM tile-group high nibble).
     ; Func_4a7b reads this to find the sprite's tile base: group * 12.
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
     dec al
     ror al, 4                            ; nibble swap: (N-1) → (N-1)*16
-    mov [ebp + H_TILE_PLAYER_STANDING_ON], al
+    mov [ebp + hTilePlayerStandingOn], al
 
     ; pret: engine/overworld/sprite_collisions.asm:UpdateNonPlayerSprite (:38-45) —
     ; route the slot whose offset == wNPCMovementScriptSpriteOffset to the scripted
@@ -129,7 +129,7 @@ UpdateNonPlayerSprite:
     ; wNPCMovementScriptSpriteOffset is 0 (the player slot) so it never matches an NPC
     ; slot (>= $10) until a script (pret MoveSprite, OW-2.2) sets it.
     mov al, [ebp + wNPCMovementScriptSpriteOffset]
-    cmp al, byte [ebp + H_CURRENT_SPRITE_OFFSET]    ; == hCurrentSpriteOffset?
+    cmp al, byte [ebp + hCurrentSpriteOffset]    ; == hCurrentSpriteOffset?
     jne UpdateNPCSprite                  ; unequal → free-roam machine (pret: jp UpdateNPCSprite)
     jmp DoScriptedNPCMovement            ; pret: jp DoScriptedNPCMovement (tail call)
     ; --- end of UpdateNonPlayerSprite dispatcher ---
@@ -137,7 +137,7 @@ UpdateNonPlayerSprite:
 ; ---------------------------------------------------------------------------
 ; DetectCollisionBetweenSprites
 ; Pret ref: engine/overworld/sprite_collisions.asm:DetectCollisionBetweenSprites
-; Reads H_CURRENT_SPRITE_OFFSET to identify sprite i (current slot). Loops all
+; Reads hCurrentSpriteOffset to identify sprite i (current slot). Loops all
 ; 16 slots j, writing YADJUSTED/XADJUSTED/COLLISIONDATA/COLLISIONBITMAP into
 ; sprite i's SPRITESTATEDATA1. No-op when all NPC PictureIDs are 0 (every j
 ; exits at the "slot unused" check), so this is safe to call before NPCs exist.
@@ -152,7 +152,7 @@ DetectCollisionBetweenSprites:
     sub  esp, 12        ; [esp+0]=adj_dist, [esp+4]=thr_i_y, [esp+8]=thr_i_x
 
     ; ESI = base of sprite i's data1
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
     add   esi, W_SPRITE_STATE_DATA_1
 
     ; Return early if slot i is unused

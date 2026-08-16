@@ -666,7 +666,7 @@ hToggleableObjectIndex equ 0xFFDB   ; PickUpItem scratch (pret hram union; == hI
 ; *** THIS REPLACES A PLACEHOLDER THAT COLLIDED. *** m1_3_pending_symbols.inc
 ; carried `hSavedMapTextPtr equ 0xFF8E ; PLACEHOLDER`, with a comment asking the
 ; root to allocate a real pair, and nobody did. As a 2-byte slot it ran to 0xFF8F
-; = H_SPRITE_OFFSET2, which PrepareOAMData writes once per sprite EVERY FRAME from
+; = hSpriteOffset2, which PrepareOAMData writes once per sprite EVERY FRAME from
 ; the vblank pipeline. So the saved pointer's high byte was overwritten with a
 ; sprite slot offset between any save and its restore, and RestoreMapTextPointer
 ; handed ChangeBox a corrupt wCurMapTextPtr across SaveGameData. Both routines are
@@ -896,14 +896,14 @@ GB_HRAM_SIZE    equ 127
 ; All offsets verified from pokeyellow.sym (bank 00).
 H_DOWN_ARROW_COUNT1      equ 0xFF86     ; hDownArrowBlinkCount1 — frame countdown (ON→OFF phase)
 H_DOWN_ARROW_COUNT2      equ 0xFF87     ; hDownArrowBlinkCount2 — compat; 1 in 60 Hz blink mode
-H_SOFT_RESET             equ 0xFF8A     ; hSoftReset
+hSoftReset                    equ 0xFF8A     ; hSoftReset
 ; 0xFF8B is a UNION of hMapStride / hNorthSouthConnectionStripWidth / hPreviousTileset
-H_MAP_STRIDE             equ 0xFF8B     ; hMapStride (= map block row stride = width + 2*MAP_BORDER)
-H_PREVIOUS_TILESET       equ 0xFF8B     ; hPreviousTileset (HRAM union with hMapStride)
+hMapStride                    equ 0xFF8B     ; hMapStride (= map block row stride = width + 2*MAP_BORDER)
+hPreviousTileset              equ 0xFF8B     ; hPreviousTileset (HRAM union with hMapStride)
 hROMBankTemp             equ 0xFF8B     ; golden 00:ff8b — PlayAnimation writes 0, unread ("nothing reads this"); no ROM banking in the flat model. UNION with hMapStride/hItemPrice at 0xFF8B; disjoint lifetimes (battle anim entry vs map load / item price).
 hBaseTileID              equ 0xFF8B     ; golden 00:ff8b — base tile ID added by CopyTileIDs (ram/hram.asm). Same $FF8B union as above, and pret intends it: PlayAnimation zeroes hROMBankTemp at entry, CopyPicTiles then writes hBaseTileID and CopyTileIDs reads it back — one byte, ordered, exactly as on hardware.
 ; 0xFF8C is a UNION of hMapWidth / hNorthSouthConnectedMapWidth
-H_MAP_WIDTH              equ 0xFF8C     ; hMapWidth (= wCurMapWidth, stored for row-copy inner loop)
+hMapWidth                     equ 0xFF8C     ; hMapWidth (= wCurMapWidth, stored for row-copy inner loop)
 H_SERIAL_CONN_STATUS     equ 0xFFAA     ; hSerialConnectionStatus
 ; Link-menu / serial exchange scratch (menus S8 package I — link_menu.asm).
 ; Sym-verified vs origin/symbols:pokeyellow.sym; the 0xCC3D/0xCC42 pairs are
@@ -918,21 +918,20 @@ wEnteringCableClub                       equ 0xCC47 ; wram.asm:430 (db; sym 00:c
 wUnusedLinkMenuByte                      equ 0xCD37 ; wram.asm:754 (db; was worker 0xCC83)
 hSerialSendData                          equ 0xFFAC ; hram.asm:193 (db)
 hSerialReceiveData                       equ 0xFFAD ; hram.asm:194 (db)
-H_SCX                    equ 0xFFAE     ; hSCX — shadow of rSCX
-H_SCY                    equ 0xFFAF     ; hSCY — shadow of rSCY
-H_WY                     equ 0xFFB0     ; hWY  — shadow of rWY
+hSCX                          equ 0xFFAE     ; hSCX — shadow of rSCX
+hSCY                          equ 0xFFAF     ; hSCY — shadow of rSCY
 ; Scripted-NPC-anim scratch (pret hSpriteVRAMSlotAndFacing / hSpriteAnimFrameCounter).
 ; Port-assigned to free hram; transient scratch within the DoScriptedNPCMovement anim
 ; chain only (write+read same call), never persisted/cross-referenced — exact pret
 ; hram address not load-bearing.
-H_SPRITE_VRAM_SLOT_AND_FACING equ 0xFFC0 ; hSpriteVRAMSlotAndFacing
-H_SPRITE_ANIM_FRAME_COUNTER   equ 0xFFC1 ; hSpriteAnimFrameCounter
+hSpriteVRAMSlotAndFacing      equ 0xFFC0 ; hSpriteVRAMSlotAndFacing
+hSpriteAnimFrameCounter       equ 0xFFC1 ; hSpriteAnimFrameCounter
 ; hLCDCPointer — pret's per-scanline LCDC pointer (STAT-ISR driven). The port
 ; does not emulate per-scanline LCDC, so this is an inert HRAM byte; the intro
 ; writes 0 (disabled) at scene starts. Port-assigned to free HRAM (exact pret
 ; address not load-bearing here). If per-scanline effects are ever emulated
 ; (surfing-wobble scenes 6/7), this needs the real STAT mechanism, not this byte.
-H_LCDC_POINTER                equ 0xFFC2 ; hLCDCPointer (inert in the port)
+hLCDCPointer                  equ 0xFFC2 ; hLCDCPointer (inert in the port)
 ; Generic VBlank tile-transfer request (yellow-intro scenes 7/11 +
 ; Request7TileTransferFromC810ToC710). INERT: the port has no generic VBlank tile
 ; copy (only VBlankCopyBgMap handles BG-map rows), so these request bytes are
@@ -941,13 +940,10 @@ H_LCDC_POINTER                equ 0xFFC2 ; hLCDCPointer (inert in the port)
 hVBlankCopySize               equ 0xFFC6 ; db
 hVBlankCopySource             equ 0xFFC7 ; dw
 hVBlankCopyDest               equ 0xFFC9 ; dw
-H_LOADED_ROM_BANK        equ 0xFFB8     ; hLoadedROMBank
 H_AUTO_BG_TRANSFER_EN    equ 0xFFBA     ; hAutoBGTransferEnabled
-H_AUTO_BG_TRANSFER_DEST  equ 0xFFBC     ; hAutoBGTransferDest (2 bytes, lo/hi)
-H_REDRAW_MAP_VIEW_ROW_OFFSET equ 0xFFBE ; hRedrawMapViewRowOffset
-H_FRAME_COUNTER          equ 0xFFD5     ; hFrameCounter
-H_VBLANK_OCCURRED        equ 0xFFD6     ; hVBlankOccurred
-H_TILE_ANIMATIONS        equ 0xFFD7     ; hTileAnimations
+hAutoBGTransferDest           equ 0xFFBC     ; hAutoBGTransferDest (2 bytes, lo/hi)
+hRedrawMapViewRowOffset       equ 0xFFBE ; hRedrawMapViewRowOffset
+hVBlankOccurred               equ 0xFFD6     ; hVBlankOccurred
 hTileAnimations          equ 0xFFD7     ; lowercase pret-name alias
 
 ; The two vTileset (GB_VCHARS2) tiles UpdateMovingBgTiles rewrites in place while
@@ -962,59 +958,45 @@ ANIM_FLOWER_TILE_ID      equ 0x03
 ANIM_WATER_TILE_ID       equ 0x14
 H_REDRAW_ROW_COL_MODE    equ 0xFFD0     ; hRedrawRowOrColumnMode
 H_REDRAW_ROW_COL_DEST    equ 0xFFD1     ; hRedrawRowOrColumnDest
-H_UI_LAYOUT_FLAGS        equ 0xFFFA     ; hUILayoutFlags
+hUILayoutFlags                equ 0xFFFA     ; hUILayoutFlags
 hItemToRemoveID          equ 0xFFDB     ; RemoveItemByID: item id to remove
 hItemToRemoveIndex       equ 0xFFDC     ; RemoveItemByID: running bag index
 
 BIT_SINGLE_SPACED_LINES  equ 2          ; hUILayoutFlags bit (gfx_constants.asm)
 
-; Joypad HRAM ($FFB1-$FFB7) — order confirmed by hram.asm + H_SCX=$FFAE anchor
-H_JOY_PRESSED            equ 0xFFB3     ; hJoyPressed — buttons just pressed this frame
-H_JOY_HELD               equ 0xFFB4     ; hJoyHeld    — buttons currently held
-H_JOY5                   equ 0xFFB5     ; hJoy5 — JoypadLowSensitivity output (Wave 3/M3.2)
-H_JOY6                   equ 0xFFB6     ; hJoy6 — low-sens flag: 0 = suppress repeat while A/B held
-H_JOY7                   equ 0xFFB7     ; hJoy7 — low-sens flag: 0 = newly-pressed only, 1 = held+delay
+; Joypad HRAM ($FFB1-$FFB7) — order confirmed by hram.asm + hSCX=$FFAE anchor
+hJoyPressed                   equ 0xFFB3     ; hJoyPressed — buttons just pressed this frame
+hJoy5                         equ 0xFFB5     ; hJoy5 — JoypadLowSensitivity output (Wave 3/M3.2)
+hJoy6                         equ 0xFFB6     ; hJoy6 — low-sens flag: 0 = suppress repeat while A/B held
+hJoy7                         equ 0xFFB7     ; hJoy7 — low-sens flag: 0 = newly-pressed only, 1 = held+delay
 
 ; The two joypad bytes that live OUTSIDE that run, up with hWhoseTurn ($FFF3).
 ; Addresses read straight out of pokeyellow.sym (00:fff5, 00:fff8) — the port's
 ; HRAM map is uniformly +$0A from a naive walk of ram/hram.asm, so these are NOT
 ; derived by counting. Added in chunk 18, when src/engine/joypad.asm was repaired
 ; into live source: pret's ReadJoypad_ and _Joypad are the only readers.
-H_JOY_INPUT              equ 0xFFF5     ; hJoyInput — raw poll result (ReadJoypad_ output)
-H_DISABLE_JOYPAD_POLLING equ 0xFFF8     ; hDisableJoypadPolling — nonzero: ReadJoypad_ returns early
+hJoyInput                     equ 0xFFF5     ; hJoyInput — raw poll result (ReadJoypad_ output)
+hDisableJoypadPolling         equ 0xFFF8     ; hDisableJoypadPolling — nonzero: ReadJoypad_ returns early
 
 ; Sprite-engine HRAM temporaries (PrepareOAMData / _UpdateSprites) — sym-verified.
-H_SPRITE_OFFSET2             equ 0xFF8F ; hSpriteOffset2 (current slot offset in PrepareOAMData loop)
-H_OAM_BUFFER_OFFSET          equ 0xFF90 ; hOAMBufferOffset (write cursor into wShadowOAM)
-H_SPRITE_SCREEN_X            equ 0xFF91 ; hSpriteScreenX
-H_SPRITE_SCREEN_Y            equ 0xFF92 ; hSpriteScreenY
-H_TILE_PLAYER_STANDING_ON    equ 0xFF93 ; hTilePlayerStandingOn
-H_SPRITE_PRIORITY            equ 0xFF94 ; hSpritePriority (BG-priority bit for current sprite)
-H_PRODUCT                equ 0xFF95 ; hProduct (4 bytes)
-H_ITEM_PRICE           equ 0xFF8B
-H_MONEY                equ 0xFF9F
-H_EXPERIENCE             equ 0xFF96 ; (3 bytes, overlaps hProduct+1)
-H_MULTIPLICAND           equ 0xFF96 ; hMultiplicand (3 bytes, overlaps hProduct+1)
-H_MULTIPLIER             equ 0xFF99 ; hMultiplier (1 byte)
-H_DIVIDEND               equ 0xFF95 ; hDividend (4 bytes, overlaps hProduct)
-H_DIVISOR                equ 0xFF99 ; hDivisor (1 byte, overlaps hMultiplier)
-H_QUOTIENT               equ 0xFF95 ; hQuotient (4 bytes, overlaps hProduct)
-H_REMAINDER              equ 0xFF99 ; hRemainder (1 byte, overlaps hMultiplier)
-H_DIVIDE_BUFFER          equ 0xFF9A
-H_MONEY                  equ 0xFF9F
-H_DIVIDE_BCD_DIVISOR     equ 0xFFA2
-H_DIVIDE_BCD_QUOTIENT    equ 0xFFA2
-H_DIVIDE_BCD_BUFFER      equ 0xFFA5
-H_RANDOM_ADD             equ 0xFFD3
-H_RANDOM_SUB             equ 0xFFD4
+hSpriteOffset2                equ 0xFF8F ; hSpriteOffset2 (current slot offset in PrepareOAMData loop)
+hOAMBufferOffset              equ 0xFF90 ; hOAMBufferOffset (write cursor into wShadowOAM)
+hSpriteScreenX                equ 0xFF91 ; hSpriteScreenX
+hSpriteScreenY                equ 0xFF92 ; hSpriteScreenY
+hTilePlayerStandingOn         equ 0xFF93 ; hTilePlayerStandingOn
+hSpritePriority               equ 0xFF94 ; hSpritePriority (BG-priority bit for current sprite)
+hMoney                        equ 0xFF9F
+hDivideBuffer                 equ 0xFF9A
+hDivideBCDDivisor             equ 0xFFA2
+hDivideBCDQuotient            equ 0xFFA2
+hDivideBCDBuffer              equ 0xFFA5
 ; hSpriteIndex is a sprite SLOT number (1-based); hCurrentSpriteOffset is slot<<4.
 ; The port's sprite helpers (GetSpriteMovementByte2Pointer / MoveSprite) select on
 ; the latter, while pret threads the former — see push_boulder.asm's header note.
 ; Canonical here as of overworld-events Stage 4; the hidden_events.asm /
 ; push_boulder.asm copies are %ifndef-guarded so both include orders stay safe.
-H_SPRITE_INDEX               equ 0xFF8C ; hSpriteIndex (golden 00:ff8c)
-H_CURRENT_SPRITE_OFFSET      equ 0xFFDA ; hCurrentSpriteOffset (_UpdateSprites loop index)
-H_PIKACHU_SPRITE_VRAM_OFFSET equ 0xFFFC ; hPikachuSpriteVRAMOffset (added to tile id $80+; 0 for now)
+hCurrentSpriteOffset          equ 0xFFDA ; hCurrentSpriteOffset (_UpdateSprites loop index)
+hPikachuSpriteVRAMOffset      equ 0xFFFC ; hPikachuSpriteVRAMOffset (added to tile id $80+; 0 for now)
 
 ; Named WRAM symbols — all addresses verified from pokeyellow.sym.
 
@@ -1999,13 +1981,13 @@ VGA_FRAMEBUF    equ 0xA0000    ; linear address of VGA framebuffer (flat DS)
 ; (0xCCD3) and wNPCMovementDirections2 (0xCC97) overlay it at fixed pret offsets
 ; (used at disjoint times). No collisions with existing symbols (checked at integration).
 ; ---------------------------------------------------------------------------
-H_JOY_LAST                                       equ 0xFFB1 ; hJoyLast (also mapped locally in joypad.asm)
-H_JOY_RELEASED                                   equ 0xFFB2 ; hJoyReleased (shared: joypad.asm + simulate_joypad.asm)
-H_RLE_BYTE_VALUE                                 equ 0xFF81 ; hRLEByteValue (union base)
+hJoyLast                      equ 0xFFB1 ; hJoyLast (also mapped locally in joypad.asm)
+hJoyReleased                  equ 0xFFB2 ; hJoyReleased (shared: joypad.asm + simulate_joypad.asm)
+hRLEByteValue                 equ 0xFF81 ; hRLEByteValue (union base)
 hStartTileID                                     equ 0xFFE1 ; hStartTileID — first tile id CopyUncompressedPicToTilemap places
-H_DIVIDEND2                                      equ 0xFFE5 ; hDividend2
-H_DIVISOR2                                       equ 0xFFE6 ; hDivisor2
-H_QUOTIENT2                                      equ 0xFFE7 ; hQuotient2
+hDividend2                    equ 0xFFE5 ; hDividend2
+hDivisor2                     equ 0xFFE6 ; hDivisor2
+hQuotient2                    equ 0xFFE7 ; hQuotient2
 W_NPC_MOVEMENT_DIRECTIONS                        equ 0xCC5B ; wNPCMovementDirections (union base; sim-joypad end/dirs2 overlay it)
 W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX  equ 0xCD3A ; wUnusedOverrideSimulatedJoypadStatesIndex (golden 00:cd3a; was 0xCC86)
 W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK          equ 0xCD3B ; wOverrideSimulatedJoypadStatesMask (golden 00:cd3b; was 0xCC87)
@@ -2042,16 +2024,16 @@ wOnSGB                       equ 0xCF1A
 ; FindPathToPlayer / CalcPositionOfPlayerRelativeToNPC (OW-2.2, pret engine/overworld/
 ; pathfinding.asm). HRAM addresses from golden sym (pret ram/hram.asm union at 0xFF95).
 ; hNPCMovementDirections2Index / hNPCSpriteOffset / hNPCPlayerYDistance overlay 0xFF95.
-H_NPC_MOVEMENT_DIRECTIONS2_INDEX     equ 0xFF95 ; hNPCMovementDirections2Index (union @ FF95)
-H_NPC_SPRITE_OFFSET                  equ 0xFF95 ; hNPCSpriteOffset (union @ FF95)
-H_NPC_PLAYER_Y_DISTANCE              equ 0xFF95 ; hNPCPlayerYDistance (union @ FF95)
-H_NPC_PLAYER_X_DISTANCE              equ 0xFF96 ; hNPCPlayerXDistance
-H_FIND_PATH_NUM_STEPS                equ 0xFF97 ; hFindPathNumSteps
-H_FIND_PATH_FLAGS                    equ 0xFF98 ; hFindPathFlags (BIT_PATH_FOUND_Y/X)
-H_FIND_PATH_Y_PROGRESS               equ 0xFF99 ; hFindPathYProgress
-H_FIND_PATH_X_PROGRESS               equ 0xFF9A ; hFindPathXProgress
-H_NPC_PLAYER_RELATIVE_POS_PERSPECTIVE equ 0xFF9B ; hNPCPlayerRelativePosPerspective (0=player→NPC,1=NPC→player)
-H_NPC_PLAYER_RELATIVE_POS_FLAGS      equ 0xFF9D ; hNPCPlayerRelativePosFlags (BIT_PLAYER_LOWER_Y/X)
+hNPCMovementDirections2Index  equ 0xFF95 ; hNPCMovementDirections2Index (union @ FF95)
+hNPCSpriteOffset              equ 0xFF95 ; hNPCSpriteOffset (union @ FF95)
+hNPCPlayerYDistance           equ 0xFF95 ; hNPCPlayerYDistance (union @ FF95)
+hNPCPlayerXDistance           equ 0xFF96 ; hNPCPlayerXDistance
+hFindPathNumSteps             equ 0xFF97 ; hFindPathNumSteps
+hFindPathFlags                equ 0xFF98 ; hFindPathFlags (BIT_PATH_FOUND_Y/X)
+hFindPathYProgress            equ 0xFF99 ; hFindPathYProgress
+hFindPathXProgress            equ 0xFF9A ; hFindPathXProgress
+hNPCPlayerRelativePosPerspective equ 0xFF9B ; hNPCPlayerRelativePosPerspective (0=player→NPC,1=NPC→player)
+hNPCPlayerRelativePosFlags    equ 0xFF9D ; hNPCPlayerRelativePosFlags (BIT_PLAYER_LOWER_Y/X)
 BIT_PATH_FOUND_Y             equ 0        ; hFindPathFlags bit 0
 BIT_PATH_FOUND_X             equ 1        ; hFindPathFlags bit 1
 BIT_PLAYER_LOWER_Y           equ 0        ; hNPCPlayerRelativePosFlags bit 0 (target north)
@@ -2100,7 +2082,7 @@ wTextBoxID                    equ 0xD124 ; DisplayTextBoxID dispatcher selector
 wTwoOptionMenuID              equ 0xD12B ; YES_NO_MENU / WIDE_YES_NO / HEAL_CANCEL / ...
 wChosenMenuItem               equ 0xD12C ; menu result: chosen item index
 wMenuExitMethod               equ 0xD12D ; CHOSE_MENU_ITEM / CANCELLED_MENU
-; HRAM — swap-items scratch (root-allocated free bytes after H_DIVIDE_BCD_BUFFER 0xFFA5-A7)
+; HRAM — swap-items scratch (root-allocated free bytes after hDivideBCDBuffer 0xFFA5-A7)
 hHalveItemPrices              equ 0xFFA8 ; list_menu priced path
 hSwapItemID                   equ 0xFFA9 ; item-list SELECT swap scratch
 hSwapItemQuantity             equ 0xFFAA ; item-list SELECT swap scratch
@@ -2111,8 +2093,8 @@ hSwapItemQuantity             equ 0xFFAA ; item-list SELECT swap scratch
 ; earlier chain off W_SIMULATED_JOYPAD_STATES_INDEX put it at 0xCC89, inside the
 ; wNPCMovementDirections buffer (wrong). wMiscFlags counted back from
 ; wActionResultOrTookBattleTurn 0xCD6A (db ×5 + ds 9 between them);
-; hFieldMoveMonMenuTopMenuItemX sits between H_UI_LAYOUT_FLAGS 0xFFFA and
-; H_PIKACHU_SPRITE_VRAM_OFFSET 0xFFFC.
+; hFieldMoveMonMenuTopMenuItemX sits between hUILayoutFlags 0xFFFA and
+; hPikachuSpriteVRAMOffset 0xFFFC.
 ; ---------------------------------------------------------------------------
 wFieldMoves                   equ 0xCD3D ; 4 bytes — current mon's field-move name indices (golden 00:cd3d)
 wNumFieldMoves                equ 0xCD41 ; count of entries in wFieldMoves (golden 00:cd41)
@@ -2268,7 +2250,7 @@ hCoins                        equ 0xFFA0 ; hCoins (dw; union w/ hMoney area)
 
 ; Lowercase pret-name aliases onto pre-existing UPPERCASE defs (CLAUDE.md: keep
 ; pret labels for cross-referenceability). engine/pokemon label-rename pass.
-hExperience                   equ H_EXPERIENCE            ; 0xFF96 (alias of hProduct+1)
+hExperience                   equ 0xFF96            ; 0xFF96 (alias of hProduct+1)
 wLoadedMonSpecies             equ W_LOADED_MON_SPECIES    ; 0xCF97
 wLoadedMonExp                 equ W_LOADED_MON_EXP        ; 0xCFA5
 wUpdateSpritesEnabled         equ W_UPDATE_SPRITES_ENABLED ; 0xCFCA

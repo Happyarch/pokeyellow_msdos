@@ -15,8 +15,8 @@
   "Bankswitch": "GB ROM banking does not exist in the flat 32-bit port"
  },
  "stores": {
-  "H_SCX": "renderer scroll plumbing — pret writes rSCX via HRAM+ISR (TODO-HW boundary)",
-  "H_SCY": "renderer scroll plumbing — pret writes rSCY via HRAM+ISR (TODO-HW boundary)",
+  "hSCX": "renderer scroll plumbing — pret writes rSCX via HRAM+ISR (TODO-HW boundary)",
+  "hSCY": "renderer scroll plumbing — pret writes rSCY via HRAM+ISR (TODO-HW boundary)",
   "IO_SCX": "software-PPU scroll register mirror (TODO-HW boundary)",
   "IO_SCY": "software-PPU scroll register mirror (TODO-HW boundary)",
   "hLoadedROMBank": "GB ROM banking does not exist in the port"

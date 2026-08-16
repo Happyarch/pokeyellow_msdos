@@ -146,7 +146,7 @@ SET_PAL_POKEDEX   equ 0x04
 
 ; hDexWeight — pret ram/hram.asm: a UNION member at the HRAM top (with hBaseTileID,
 ; hWarpDestinationMap, hOAMTile, hROMBankTemp …). The port's 0xFF8B is the same union
-; slot (H_MAP_STRIDE / H_PREVIOUS_TILESET / hItemPrice / hWarpDestinationMap). That
+; slot (hMapStride / hPreviousTileset / hItemPrice / hWarpDestinationMap). That
 ; sharing is exactly why pret save/restores the two bytes around the weight print, and
 ; why the port now does too — see DrawDexEntryOnScreen.owned (M-76).
 hDexWeight        equ 0xFF8B
@@ -248,7 +248,7 @@ ShowPokedexMenu:
     mov [ebp + wLastMenuItem], al
     inc al
     mov [ebp + wPokedexNum], al
-    mov [ebp + H_JOY7], al                   ; ldh [hJoy7], a
+    mov [ebp + hJoy7], al                   ; ldh [hJoy7], a
 .setUpGraphics:
     call LoadPokedexTilePatterns             ; pret: callfar LoadPokedexTilePatterns
 .loop:
@@ -271,7 +271,7 @@ ShowPokedexMenu:
     mov [ebp + wMenuWatchMovingOutOfBounds], al
     mov [ebp + wCurrentMenuItem], al
     mov [ebp + wLastMenuItem], al
-    mov [ebp + H_JOY7], al
+    mov [ebp + hJoy7], al
     mov [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], al
     mov [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK], al
     pop eax                                   ; restore saved wListScrollOffset
@@ -326,7 +326,7 @@ HandlePokedexSideMenu:
     mov byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
     mov byte [ebp + wLastMenuItem], 0
     mov byte [ebp + wMenuWatchMovingOutOfBounds], 0
-    mov byte [ebp + H_JOY7], 0
+    mov byte [ebp + hJoy7], 0
     ; port: side menu is a sub-rect of the main window; double-spaced rows.
     mov dword [menu_item_step], 2 * GBSCR_W
     mov dword [menu_redraw_cb], pdex_mirror
@@ -360,7 +360,7 @@ HandlePokedexSideMenu:
     mov [ebp + wLastMenuItem], al
     pop eax                                      ; [P1]
     mov [ebp + wCurrentMenuItem], al
-    mov byte [ebp + H_JOY7], 1                   ; ld a,$1 / ldh [hJoy7],a
+    mov byte [ebp + hJoy7], 1                   ; ld a,$1 / ldh [hJoy7],a
     push ebx                                      ; push bc — save exit code (BH)
     mov esi, HL(0, 3)                             ; hlcoord 0,3
     mov edx, GBSCR_W                              ; ld de, 20 (vertical stride)
@@ -521,10 +521,10 @@ HandlePokedexListMenu:
 ; ---------------------------------------------------------------------------
 Pokedex_DrawInterface:
     mov byte [ebp + hAutoBGTransferEnabled], 0        ; xor a / ldh [hAutoBGTransferEnabled],a
-    ; DEVIATION{class=data-model; pret=engine/menus/pokedex.asm:Pokedex_DrawInterface; behavior=clear inherited single-spacing state so side-menu NEXT advances two rows; evidence=pret ambient layout default plus port canvas screens mutating H_UI_LAYOUT_FLAGS; lifetime=until text layout state is scoped per screen}
+    ; DEVIATION{class=data-model; pret=engine/menus/pokedex.asm:Pokedex_DrawInterface; behavior=clear inherited single-spacing state so side-menu NEXT advances two rows; evidence=pret ambient layout default plus port canvas screens mutating hUILayoutFlags; lifetime=until text layout state is scoped per screen}
     ; Clear BIT_SINGLE_SPACED_LINES so the side-menu <NEXT> advances 2
     ; rows (matches pret's default; defensive, per players_pc.asm precedent).
-    and byte [ebp + H_UI_LAYOUT_FLAGS], ~(1 << BIT_SINGLE_SPACED_LINES) & 0xFF
+    and byte [ebp + hUILayoutFlags], ~(1 << BIT_SINGLE_SPACED_LINES) & 0xFF
     ; horizontal line under the counts: 5×'─' at (15,6)
     mov esi, HL(15, 6)
     mov al, TILE_HLINE
@@ -818,13 +818,13 @@ ShowPokedexDataInternal:
     ; DEVIATION{class=HAL; pret=engine/menus/pokedex.asm:ShowPokedexDataInternal; behavior=advance a frame before JoypadLowSensitivity so the keyboard-backed joypad state and software PPU progress; evidence=pret direct Joypad polling loop plus port joypad_update DelayFrame ownership; lifetime=permanent input and software-video HAL boundary}
     ; pret's JoypadLowSensitivity opens with `call Joypad` — a fresh
     ; hardware read per iteration — so pret's spin needs no DelayFrame. The port
-    ; refreshes H_JOY_HELD/H_JOY_PRESSED only in joypad_update, which runs once per
+    ; refreshes hJoyHeld/hJoyPressed only in joypad_update, which runs once per
     ; DelayFrame, so a DelayFrame-less spin here would never see the button (no way out)
     ; AND would freeze the software PPU mid-reveal. Same shape as the options/town-map
     ; input loops.
     call DelayFrame
     call JoypadLowSensitivity
-    mov al, [ebp + H_JOY5]               ; ldh a, [hJoy5]
+    mov al, [ebp + hJoy5]               ; ldh a, [hJoy5]
     and al, PAD_A | PAD_B
     jz .waitForButtonPress
     pop eax                              ; pop af (hTileAnimations)
@@ -1095,9 +1095,9 @@ Pokedex_PrepareDexEntryForPrinting:
     ; screen — so this routine prints the same stream pret would, and the pret WRAM word
     ; stays unpopulated until the printer itself is ported.
     mov ebx, HL(1, 1)                    ; bccoord 1,1
-    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PAGE_CHAR_IS_NEXT
+    or byte [ebp + hUILayoutFlags], 1 << BIT_PAGE_CHAR_IS_NEXT
     call Pokedex_PrintFlavorTextAtBC
-    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_PAGE_CHAR_IS_NEXT)) & 0xFF
+    and byte [ebp + hUILayoutFlags], (~(1 << BIT_PAGE_CHAR_IS_NEXT)) & 0xFF
     ret
 
 ; ---------------------------------------------------------------------------

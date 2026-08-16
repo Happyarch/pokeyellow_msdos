@@ -41,7 +41,7 @@ extern StringCmp                     ; EDX=de MSB, ESI=hl MSB, BL=len; CF from l
 ; ---------------------------------------------------------------------------
 HasEnoughMoney:
     mov edx, W_PLAYER_MONEY          ; ld de, wPlayerMoney (MSB)
-    mov esi, H_MONEY                 ; ld hl, hMoney (MSB)
+    mov esi, hMoney                 ; ld hl, hMoney (MSB)
     mov bl, 3                        ; ld c, 3
     jmp StringCmp                    ; jp StringCmp (tail)
 

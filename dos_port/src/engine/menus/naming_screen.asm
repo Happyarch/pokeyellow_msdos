@@ -94,7 +94,7 @@ extern g_obj_over_window               ; ppu/ppu.asm — OBJ over the window lay
 extern TextBoxBorder                   ; text/text.asm — ESI=dest, BL=int_w, BH=int_h
 extern PlaceString                     ; text/text.asm — ESI=dest, EAX=flat src
 extern AddNTimes                       ; home/array.asm — AL=n, BX=step, ESI+=n*step
-extern JoypadLowSensitivity            ; src/home/joypad2.asm -> H_JOY5
+extern JoypadLowSensitivity            ; src/home/joypad2.asm -> hJoy5
 extern DelayFrame                      ; src/home/vblank.asm
 extern Delay3                          ; src/home/palettes.asm — 3x DelayFrame
 extern PlaceMenuCursor                 ; home/window.asm
@@ -381,12 +381,12 @@ DisplayNamingScreen:
     pop eax                               ; pop af
     mov [ebp + wCurrentMenuItem], al      ; ld [wCurrentMenuItem],a
     call JoypadLowSensitivity
-    ; DEVIATION{class=HAL; pret=engine/menus/naming_screen.asm:NamingScreen; behavior=read debounced H_JOY5 after JoypadLowSensitivity instead of hJoyPressed; evidence=pret input loop reads hJoyPressed while port JoypadLowSensitivity publishes H_JOY5; lifetime=permanent input HAL boundary}
+    ; DEVIATION{class=HAL; pret=engine/menus/naming_screen.asm:NamingScreen; behavior=read debounced hJoy5 after JoypadLowSensitivity instead of hJoyPressed; evidence=pret input loop reads hJoyPressed while port JoypadLowSensitivity publishes hJoy5; lifetime=permanent input HAL boundary}
     ; pret reads hJoyPressed directly here; the port convention
-    ; (options.asm et al.) reads the debounced H_JOY5 post-JoypadLowSensitivity
+    ; (options.asm et al.) reads the debounced hJoy5 post-JoypadLowSensitivity
     ; — behaviorally identical under the assumed default (mode 1: newly-pressed
     ; passthrough), which is what every other menu in this port already assumes.
-    mov al, [ebp + H_JOY5]
+    mov al, [ebp + hJoy5]
     test al, al
     jz .inputLoop
     lea esi, [.namingScreenButtonFunctions]

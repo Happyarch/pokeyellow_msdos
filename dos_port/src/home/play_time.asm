@@ -167,8 +167,8 @@ CountDownIgnoreInputBitReset:
     test ah, 1 << BIT_DISABLE_JOYPAD       ; pret: `bit` tested it BEFORE the res
     jz .done                               ; bit was not set → nothing to wipe
 
-    mov byte [ebp + H_JOY_PRESSED], 0
-    mov byte [ebp + H_JOY_HELD], 0
+    mov byte [ebp + hJoyPressed], 0
+    mov byte [ebp + hJoyHeld], 0
 .done:
     pop eax
     ret

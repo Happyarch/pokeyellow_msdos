@@ -50,7 +50,7 @@ section .text
 ; src/engine/gfx/screen_effects.asm (battle_animations Stage 3b), which also
 ; adds the previously-missing PredefShakeScreenVertically. Its TODO-HW ("real
 ; horizontal screen shake, rWX/rSCX manipulation") is discharged: the shake is
-; a whole-canvas H_SCX/H_SCY displacement. PrintMoveFailureText's Jump Kick /
+; a whole-canvas hSCX/hSCY displacement. PrintMoveFailureText's Jump Kick /
 ; Hi Jump Kick crash path now gets a real shake.
 
 ; ===========================================================================

@@ -49,32 +49,32 @@ section .text
 ; ---------------------------------------------------------------------------
 FindPathToPlayer:
     xor al, al
-    mov [ebp + H_FIND_PATH_NUM_STEPS], al
-    mov [ebp + H_FIND_PATH_FLAGS], al
-    mov [ebp + H_FIND_PATH_Y_PROGRESS], al
-    mov [ebp + H_FIND_PATH_X_PROGRESS], al
+    mov [ebp + hFindPathNumSteps], al
+    mov [ebp + hFindPathFlags], al
+    mov [ebp + hFindPathYProgress], al
+    mov [ebp + hFindPathXProgress], al
     mov esi, wNPCMovementDirections2          ; hl = output list (GB offset)
     xor edx, edx                              ; de = 0 (d=Y diff, e=X diff scratch)
 .loop:
-    mov al, [ebp + H_FIND_PATH_Y_PROGRESS]
+    mov al, [ebp + hFindPathYProgress]
     mov bh, al
-    mov al, [ebp + H_NPC_PLAYER_Y_DISTANCE]
+    mov al, [ebp + hNPCPlayerYDistance]
     call CalcDifference                        ; al = |Yprogress - Ydist|
     mov dh, al                                 ; d = remaining Y distance
     test al, al
     jnz .stillHasYProgress
-    or byte [ebp + H_FIND_PATH_FLAGS], (1 << BIT_PATH_FOUND_Y)
+    or byte [ebp + hFindPathFlags], (1 << BIT_PATH_FOUND_Y)
 .stillHasYProgress:
-    mov al, [ebp + H_FIND_PATH_X_PROGRESS]
+    mov al, [ebp + hFindPathXProgress]
     mov bh, al
-    mov al, [ebp + H_NPC_PLAYER_X_DISTANCE]
+    mov al, [ebp + hNPCPlayerXDistance]
     call CalcDifference                        ; al = |Xprogress - Xdist|
     mov dl, al                                 ; e = remaining X distance
     test al, al
     jnz .stillHasXProgress
-    or byte [ebp + H_FIND_PATH_FLAGS], (1 << BIT_PATH_FOUND_X)
+    or byte [ebp + hFindPathFlags], (1 << BIT_PATH_FOUND_X)
 .stillHasXProgress:
-    mov al, [ebp + H_FIND_PATH_FLAGS]
+    mov al, [ebp + hFindPathFlags]
     cmp al, (1 << BIT_PATH_FOUND_X) | (1 << BIT_PATH_FOUND_Y)
     je .done
 ; Reduce whichever distance is greater. e < d -> Y is greater.
@@ -82,35 +82,35 @@ FindPathToPlayer:
     cmp al, dh                                 ; cp d (Y remaining)
     jc .yDistanceGreater
 ; X distance greater
-    test byte [ebp + H_NPC_PLAYER_RELATIVE_POS_FLAGS], (1 << BIT_PLAYER_LOWER_X)
+    test byte [ebp + hNPCPlayerRelativePosFlags], (1 << BIT_PLAYER_LOWER_X)
     jnz .playerIsLeftOfNPC
     mov dh, NPC_MOVEMENT_RIGHT
     jmp .next1
 .playerIsLeftOfNPC:
     mov dh, NPC_MOVEMENT_LEFT
 .next1:
-    mov al, [ebp + H_FIND_PATH_X_PROGRESS]
+    mov al, [ebp + hFindPathXProgress]
     add al, 1
-    mov [ebp + H_FIND_PATH_X_PROGRESS], al
+    mov [ebp + hFindPathXProgress], al
     jmp .storeDirection
 .yDistanceGreater:
-    test byte [ebp + H_NPC_PLAYER_RELATIVE_POS_FLAGS], (1 << BIT_PLAYER_LOWER_Y)
+    test byte [ebp + hNPCPlayerRelativePosFlags], (1 << BIT_PLAYER_LOWER_Y)
     jnz .playerIsAboveNPC
     mov dh, NPC_MOVEMENT_DOWN
     jmp .next2
 .playerIsAboveNPC:
     mov dh, NPC_MOVEMENT_UP
 .next2:
-    mov al, [ebp + H_FIND_PATH_Y_PROGRESS]
+    mov al, [ebp + hFindPathYProgress]
     add al, 1
-    mov [ebp + H_FIND_PATH_Y_PROGRESS], al
+    mov [ebp + hFindPathYProgress], al
 .storeDirection:
     mov al, dh                                 ; a = d (chosen direction)
     mov [ebp + esi], al
     inc esi
-    mov al, [ebp + H_FIND_PATH_NUM_STEPS]
+    mov al, [ebp + hFindPathNumSteps]
     inc al
-    mov [ebp + H_FIND_PATH_NUM_STEPS], al
+    mov [ebp + hFindPathNumSteps], al
     jmp .loop
 .done:
     mov byte [ebp + esi], 0xff
@@ -125,48 +125,48 @@ FindPathToPlayer:
 ; Clobbers: AL, BH, DX, ESI, flags (DivideBytes/CalcDifference leave ESI intact)
 ; ---------------------------------------------------------------------------
 CalcPositionOfPlayerRelativeToNPC:
-    mov byte [ebp + H_NPC_PLAYER_RELATIVE_POS_FLAGS], 0
+    mov byte [ebp + hNPCPlayerRelativePosFlags], 0
     mov dh, [ebp + W_SPRITE_PLAYER_Y_PIXELS]   ; d = player Y pixels
     mov dl, [ebp + W_SPRITE_PLAYER_X_PIXELS]   ; e = player X pixels
-    movzx esi, byte [ebp + H_NPC_SPRITE_OFFSET]
+    movzx esi, byte [ebp + hNPCSpriteOffset]
     add esi, W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS  ; hl -> NPC YPIXELS
 ; --- Y axis ---
     mov bh, dh                                 ; b = player Y
     mov al, [ebp + esi]                        ; a = NPC screen Y
     call CalcDifference                        ; |NPC-player|, CF set = NPC north of player
     jc .NPCNorthOfPlayer
-    and byte [ebp + H_NPC_PLAYER_RELATIVE_POS_FLAGS], (~(1 << BIT_PLAYER_LOWER_Y)) & 0xFF
+    and byte [ebp + hNPCPlayerRelativePosFlags], (~(1 << BIT_PLAYER_LOWER_Y)) & 0xFF
     jmp .divideYDistance
 .NPCNorthOfPlayer:
-    or byte [ebp + H_NPC_PLAYER_RELATIVE_POS_FLAGS], (1 << BIT_PLAYER_LOWER_Y)
+    or byte [ebp + hNPCPlayerRelativePosFlags], (1 << BIT_PLAYER_LOWER_Y)
 .divideYDistance:
-    mov [ebp + H_DIVIDEND2], al
-    mov byte [ebp + H_DIVISOR2], 16
+    mov [ebp + hDividend2], al
+    mov byte [ebp + hDivisor2], 16
     call DivideBytes                           ; |dY| / 16
-    mov al, [ebp + H_QUOTIENT2]
-    mov [ebp + H_NPC_PLAYER_Y_DISTANCE], al
+    mov al, [ebp + hQuotient2]
+    mov [ebp + hNPCPlayerYDistance], al
 ; --- X axis (pret: inc hl to reach XPIXELS = YPIXELS+2) ---
     mov bh, dl                                 ; b = player X
     mov al, [ebp + esi + (SPRITESTATEDATA1_XPIXELS - SPRITESTATEDATA1_YPIXELS)] ; NPC screen X
     call CalcDifference                        ; CF set = NPC west of player
     jc .NPCWestOfPlayer
-    and byte [ebp + H_NPC_PLAYER_RELATIVE_POS_FLAGS], (~(1 << BIT_PLAYER_LOWER_X)) & 0xFF
+    and byte [ebp + hNPCPlayerRelativePosFlags], (~(1 << BIT_PLAYER_LOWER_X)) & 0xFF
     jmp .divideXDistance
 .NPCWestOfPlayer:
-    or byte [ebp + H_NPC_PLAYER_RELATIVE_POS_FLAGS], (1 << BIT_PLAYER_LOWER_X)
+    or byte [ebp + hNPCPlayerRelativePosFlags], (1 << BIT_PLAYER_LOWER_X)
 .divideXDistance:
-    mov [ebp + H_DIVIDEND2], al
-    mov byte [ebp + H_DIVISOR2], 16
+    mov [ebp + hDividend2], al
+    mov byte [ebp + hDivisor2], 16
     call DivideBytes                           ; |dX| / 16
-    mov al, [ebp + H_QUOTIENT2]
-    mov [ebp + H_NPC_PLAYER_X_DISTANCE], al
-    mov al, [ebp + H_NPC_PLAYER_RELATIVE_POS_PERSPECTIVE]
+    mov al, [ebp + hQuotient2]
+    mov [ebp + hNPCPlayerXDistance], al
+    mov al, [ebp + hNPCPlayerRelativePosPerspective]
     test al, al
     jz .retDone                                ; perspective 0 (player->NPC): keep flags
-    mov al, [ebp + H_NPC_PLAYER_RELATIVE_POS_FLAGS]  ; perspective 1 (NPC->player): invert
+    mov al, [ebp + hNPCPlayerRelativePosFlags]  ; perspective 1 (NPC->player): invert
     not al                                     ; cpl
     and al, 0x3
-    mov [ebp + H_NPC_PLAYER_RELATIVE_POS_FLAGS], al
+    mov [ebp + hNPCPlayerRelativePosFlags], al
 .retDone:
     ret
 
@@ -180,7 +180,7 @@ CalcPositionOfPlayerRelativeToNPC:
 ; Clobbers: AL, BH, ECX, ESI, EDI, flags
 ; ---------------------------------------------------------------------------
 ConvertNPCMovementDirectionsToJoypadMasks:
-    mov al, [ebp + H_NPC_MOVEMENT_DIRECTIONS2_INDEX]
+    mov al, [ebp + hNPCMovementDirections2Index]
     mov [ebp + wNPCMovementDirections2Index], al
     movzx esi, al
     dec esi                                    ; index - 1
@@ -192,9 +192,9 @@ ConvertNPCMovementDirectionsToJoypadMasks:
     call ConvertNPCMovementDirectionToJoypadMask
     mov [ebp + edi], al                        ; ld [de], a
     inc edi
-    mov al, [ebp + H_NPC_MOVEMENT_DIRECTIONS2_INDEX]
+    mov al, [ebp + hNPCMovementDirections2Index]
     dec al
-    mov [ebp + H_NPC_MOVEMENT_DIRECTIONS2_INDEX], al
+    mov [ebp + hNPCMovementDirections2Index], al
     jnz .loop
     ret
 

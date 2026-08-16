@@ -168,7 +168,7 @@ PrintText:
     mov edx, [edi + MB_WIN_MAXY]
     push edi
     mov edi, [edi + MB_WIN_STARTROW]
-    call set_single_window              ; count=1; mirrors wy→H_WY (dialog-open flag)
+    call set_single_window              ; count=1; mirrors wy→hWY (dialog-open flag)
     pop edi
     call sync_dialog_window             ; show the empty box before the first char
     call DelayFrame
@@ -289,7 +289,7 @@ PlaceUnfilledArrowMenuCursor:
 ; DEVIATION{class=timing; pret=home/menu.asm:HandleMenuInput; behavior=pace each input-loop iteration by one frame and omit pret's extra Delay3 after cursor movement; evidence=pret busy polling and Delay3 plus port frame-driven joypad and prior menu-lethargy measurements; lifetime=permanent input timing adaptation}
 ; pret spins .loop2 free-running (JoypadLowSensitivity polls
 ; the hardware; .loop1 ends in Delay3). The port has no busy-poll — the joypad is
-; an ISR and H_JOY_PRESSED is edge-triggered per frame — so the loop is paced by
+; an ISR and hJoyPressed is edge-triggered per frame — so the loop is paced by
 ; one DelayFrame per iteration (AnimatePartyMon ends in DelayFrame, hence the
 ; either/or) and pret's Delay3 is dropped: it would add 3 dead frames per cursor
 ; move on top of the frame the port already spends, which is the menu lethargy
@@ -342,7 +342,7 @@ HandleMenuInput_:
 .noPartyMonAnim:
     call DelayFrame
 .getJoypadState:
-    movzx eax, byte [ebp + H_JOY_PRESSED]
+    movzx eax, byte [ebp + hJoyPressed]
     test al, al
     jnz .keyPressed
     ; no key this frame — blink the down arrow (pret: hlcoord 18,11 /

@@ -101,7 +101,7 @@ MovieBeginSurface:
     ; wx in rWX is the subtle one — MovieSyncWindow would then project an already
     ; projected value and place the window a full 80 px right of the surface.
     mov [ebp + IO_WX], al               ; restore the GB rWX (Init leaves it 7)
-    mov byte [ebp + H_WY], SCREEN_HEIGHT_PX  ; GB "window hidden", pret's start state
+    mov byte [ebp + hWY], SCREEN_HEIGHT_PX  ; GB "window hidden", pret's start state
 
     ; Park the overworld OAM rebuild. $FF is "already hidden/frozen, do nothing";
     ; 0 would make PrepareOAMData run HideSprites and republish spr_oam_valid = 0,
@@ -256,7 +256,7 @@ MovieSyncWindow:
 
     test byte [ebp + IO_LCDC], (1 << 5) ; window layer disabled?
     jz .done
-    movzx eax, byte [ebp + H_WY]
+    movzx eax, byte [ebp + hWY]
     cmp eax, SCREEN_HEIGHT_PX           ; parked at/past the bottom scanline?
     jae .done
 
@@ -292,9 +292,9 @@ MovieSyncWindow:
 ; ---------------------------------------------------------------------------
 MovieSyncScroll:
     pushad
-    movzx eax, byte [ebp + H_SCX]
+    movzx eax, byte [ebp + hSCX]
     mov [g_windows + WIN_SRC_X], eax
-    movzx eax, byte [ebp + H_SCY]
+    movzx eax, byte [ebp + hSCY]
     mov [g_windows + WIN_SRC_Y], eax
     popad
     ret

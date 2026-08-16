@@ -6,9 +6,9 @@
 ;
 ; Source: engine/math/multiply_divide.asm (pret/pokeyellow).
 ;
-; HRAM map (gb_memmap.inc): H_PRODUCT=FF95(4) ; H_MULTIPLICAND=FF96(3) ;
-; H_MULTIPLIER=FF99 ; H_DIVIDEND=FF95(4) ; H_DIVISOR=FF99 ; H_QUOTIENT=FF95(4) ;
-; H_REMAINDER=FF99. (Quotient overlaps dividend; remainder overlaps divisor.)
+; HRAM map (gb_memmap.inc): hProduct=FF95(4) ; hMultiplicand=FF96(3) ;
+; hMultiplier=FF99 ; hDividend=FF95(4) ; hDivisor=FF99 ; hQuotient=FF95(4) ;
+; hRemainder=FF99. (Quotient overlaps dividend; remainder overlaps divisor.)
 
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
@@ -19,36 +19,36 @@ global _Multiply
 global _Divide
 
 ; -----------------------------------------------------------------------------
-; _Multiply — 24-bit multiplicand (H_MULTIPLICAND, big-endian) × 8-bit multiplier
-; (H_MULTIPLIER) -> 32-bit product (H_PRODUCT, big-endian). Zeros H_MULTIPLIER,
+; _Multiply — 24-bit multiplicand (hMultiplicand, big-endian) × 8-bit multiplier
+; (hMultiplier) -> 32-bit product (hProduct, big-endian). Zeros hMultiplier,
 ; matching the GB loop's end state. Caller (wrapper) preserves esi/edx/bx.
 ; -----------------------------------------------------------------------------
 _Multiply:
-    movzx ecx, byte [ebp + H_MULTIPLIER]
+    movzx ecx, byte [ebp + hMultiplier]
 
-    movzx eax, byte [ebp + H_MULTIPLICAND + 0]
+    movzx eax, byte [ebp + hMultiplicand + 0]
     shl eax, 8
-    mov al, byte [ebp + H_MULTIPLICAND + 1]
+    mov al, byte [ebp + hMultiplicand + 1]
     shl eax, 8
-    mov al, byte [ebp + H_MULTIPLICAND + 2]
+    mov al, byte [ebp + hMultiplicand + 2]
 
     mul ecx                                  ; EDX:EAX = eax * ecx (fits in EAX)
 
-    mov byte [ebp + H_PRODUCT + 3], al
+    mov byte [ebp + hProduct + 3], al
     shr eax, 8
-    mov byte [ebp + H_PRODUCT + 2], al
+    mov byte [ebp + hProduct + 2], al
     shr eax, 8
-    mov byte [ebp + H_PRODUCT + 1], al
+    mov byte [ebp + hProduct + 1], al
     shr eax, 8
-    mov byte [ebp + H_PRODUCT + 0], al
+    mov byte [ebp + hProduct + 0], al
 
-    mov byte [ebp + H_MULTIPLIER], 0
+    mov byte [ebp + hMultiplier], 0
     ret
 
 ; -----------------------------------------------------------------------------
-; _Divide — divide the BH-byte big-endian dividend at H_DIVIDEND by the 8-bit
-; divisor at H_DIVISOR. Writes the 32-bit quotient big-endian to H_QUOTIENT and
-; the remainder to H_REMAINDER. BH = dividend length in bytes (1..4).
+; _Divide — divide the BH-byte big-endian dividend at hDividend by the 8-bit
+; divisor at hDivisor. Writes the 32-bit quotient big-endian to hQuotient and
+; the remainder to hRemainder. BH = dividend length in bytes (1..4).
 ;
 ; Rewritten from the original (broken) draft, which used the SM83 mnemonic `sbc`
 ; (invalid x86; the file never assembled) and an unverified byte-level emulation.
@@ -59,7 +59,7 @@ _Divide:
     push edx
     push edi
 
-    movzx ecx, byte [ebp + H_DIVISOR]        ; divisor
+    movzx ecx, byte [ebp + hDivisor]        ; divisor
     test ecx, ecx
     jz .done                                 ; guard divide-by-zero (GB would loop forever)
 
@@ -67,13 +67,13 @@ _Divide:
     test ebx, ebx
     jz .done
 
-    ; Assemble the big-endian dividend (first BH bytes of H_DIVIDEND) into EAX
-    ; before any quotient store, since H_QUOTIENT overlaps H_DIVIDEND.
+    ; Assemble the big-endian dividend (first BH bytes of hDividend) into EAX
+    ; before any quotient store, since hQuotient overlaps hDividend.
     xor eax, eax
     xor edi, edi
 .assemble:
     shl eax, 8
-    mov al, byte [ebp + H_DIVIDEND + edi]
+    mov al, byte [ebp + hDividend + edi]
     inc edi
     cmp edi, ebx
     jb .assemble
@@ -81,15 +81,15 @@ _Divide:
     xor edx, edx
     div ecx                                  ; EAX = quotient, EDX = remainder
 
-    mov byte [ebp + H_QUOTIENT + 3], al
+    mov byte [ebp + hQuotient + 3], al
     shr eax, 8
-    mov byte [ebp + H_QUOTIENT + 2], al
+    mov byte [ebp + hQuotient + 2], al
     shr eax, 8
-    mov byte [ebp + H_QUOTIENT + 1], al
+    mov byte [ebp + hQuotient + 1], al
     shr eax, 8
-    mov byte [ebp + H_QUOTIENT + 0], al
+    mov byte [ebp + hQuotient + 0], al
 
-    mov byte [ebp + H_REMAINDER], dl
+    mov byte [ebp + hRemainder], dl
 .done:
     pop edi
     pop edx

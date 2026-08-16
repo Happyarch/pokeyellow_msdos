@@ -53,7 +53,7 @@ extern SoftReset                 ; src/home/init.asm
 extern Joypad                    ; src/home/joypad.asm
 
 ReadJoypad_:
-	mov al, [ebp + H_DISABLE_JOYPAD_POLLING]
+	mov al, [ebp + hDisableJoypadPolling]
 	test al, al
 	jnz .done
 
@@ -77,7 +77,7 @@ ReadJoypad_:
 	not al
 	and al, 0x0F
 	or al, bh
-	mov [ebp + H_JOY_INPUT], al
+	mov [ebp + hJoyInput], al
 
 	mov al, (1 << 4) | (1 << 5)
 	mov [ebp + IO_JOYP], al
@@ -85,30 +85,30 @@ ReadJoypad_:
 	ret
 
 _Joypad:
-	mov al, [ebp + H_JOY_INPUT]
+	mov al, [ebp + hJoyInput]
 	mov bh, al
 	and al, PAD_BUTTONS | PAD_UP
 	cmp al, PAD_BUTTONS
 	je TrySoftReset
 
-	mov al, [ebp + H_JOY_LAST]
+	mov al, [ebp + hJoyLast]
 	mov dl, al
 	xor al, bh
 	mov dh, al
 	and al, dl
-	mov [ebp + H_JOY_RELEASED], al
+	mov [ebp + hJoyReleased], al
 	mov al, dh
 	and al, bh
-	mov [ebp + H_JOY_PRESSED], al
+	mov [ebp + hJoyPressed], al
 	mov al, bh
-	mov [ebp + H_JOY_LAST], al
+	mov [ebp + hJoyLast], al
 
 	mov al, [ebp + W_STATUS_FLAGS_5]
 	test al, 1 << BIT_DISABLE_JOYPAD
 	jnz DiscardButtonPresses
 
-	mov al, [ebp + H_JOY_LAST]
-	mov [ebp + H_JOY_HELD], al
+	mov al, [ebp + hJoyLast]
+	mov [ebp + hJoyHeld], al
 
 	mov al, [ebp + W_JOY_IGNORE]
 	test al, al
@@ -116,20 +116,20 @@ _Joypad:
 
 	not al
 	mov bh, al
-	mov al, [ebp + H_JOY_HELD]
+	mov al, [ebp + hJoyHeld]
 	and al, bh
-	mov [ebp + H_JOY_HELD], al
-	mov al, [ebp + H_JOY_PRESSED]
+	mov [ebp + hJoyHeld], al
+	mov al, [ebp + hJoyPressed]
 	and al, bh
-	mov [ebp + H_JOY_PRESSED], al
+	mov [ebp + hJoyPressed], al
 .done_ignore:
 	ret
 
 DiscardButtonPresses:
 	xor al, al
-	mov [ebp + H_JOY_HELD], al
-	mov [ebp + H_JOY_PRESSED], al
-	mov [ebp + H_JOY_RELEASED], al
+	mov [ebp + hJoyHeld], al
+	mov [ebp + hJoyPressed], al
+	mov [ebp + hJoyReleased], al
 	ret
 
 TrySoftReset:
@@ -138,7 +138,7 @@ TrySoftReset:
 	mov al, 0x30
 	mov [ebp + IO_JOYP], al
 
-	dec byte [ebp + H_SOFT_RESET]
+	dec byte [ebp + hSoftReset]
 	jz SoftReset
 
 	jmp Joypad

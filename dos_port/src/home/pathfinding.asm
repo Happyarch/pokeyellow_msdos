@@ -23,7 +23,7 @@
 ; RAM is EBP-relative; the movement-data source is a FLAT 32-bit host pointer (EDI).
 ;
 ; Sprite selector: the port addresses a sprite slot by its byte offset (slot*0x10)
-; held in hCurrentSpriteOffset (H_CURRENT_SPRITE_OFFSET) — the analog of pret's
+; held in hCurrentSpriteOffset (hCurrentSpriteOffset) — the analog of pret's
 ; `hSpriteIndex` after `swap a`. Callers set it before MoveSprite, matching the
 ; _UpdateSprites loop convention (see sprite_collisions.asm).
 ;
@@ -70,7 +70,7 @@ CalcDifference:
 ;
 ; pret: home/pathfinding.asm:MoveSprite / MoveSprite_
 ; In:  EDI = flat pointer to $ff-terminated movement-direction bytes
-;      H_CURRENT_SPRITE_OFFSET = sprite slot*0x10
+;      hCurrentSpriteOffset = sprite slot*0x10
 ; Out: wNPCMovementDirections filled; wNPCNumScriptedSteps = step count;
 ;      BIT_SCRIPTED_NPC_MOVEMENT set; sim-joypad override state reset.
 ; Clobbers: AL, ECX, ESI, EDI, flags
@@ -106,14 +106,14 @@ MoveSprite_:
 ; Clobbers: AL, flags (hl preserved as in pret)
 ; ---------------------------------------------------------------------------
 DivideBytes:
-    mov byte [ebp + H_QUOTIENT2], 0
-    cmp byte [ebp + H_DIVISOR2], 0
+    mov byte [ebp + hQuotient2], 0
+    cmp byte [ebp + hDivisor2], 0
     je .done                                  ; divisor 0 -> quotient stays 0
-    mov al, [ebp + H_DIVIDEND2]
+    mov al, [ebp + hDividend2]
 .loop:
-    sub al, [ebp + H_DIVISOR2]
+    sub al, [ebp + hDivisor2]
     jc .done
-    inc byte [ebp + H_QUOTIENT2]
+    inc byte [ebp + hQuotient2]
     jmp .loop
 .done:
     ret

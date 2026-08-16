@@ -235,7 +235,7 @@ CheckCoords:
 ; Out: as CheckCoords (CF + wCoordIndex).
 ; ---------------------------------------------------------------------------
 CheckBoulderCoords:
-    movzx eax, byte [ebp + H_SPRITE_INDEX]
+    movzx eax, byte [ebp + hSpriteIndex]
     shl eax, 4                          ; slot * 16 (SPRITESTATEDATA2 stride)
     mov bh, [ebp + eax + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
     sub bh, 4                           ; sprite coords are offset by 4
@@ -263,11 +263,11 @@ DecodeRLEList:
     mov al, [edi]
     cmp al, 0xFF
     je .endOfList
-    mov [ebp + H_RLE_BYTE_VALUE], al          ; byte value to be written
+    mov [ebp + hRLEByteValue], al          ; byte value to be written
     inc edi
     movzx ebx, byte [edi]                     ; BX = run length (C), BH=0
     add [ebp + W_RLE_BYTE_COUNT], bl          ; update total written bytes
-    mov al, [ebp + H_RLE_BYTE_VALUE]
+    mov al, [ebp + hRLEByteValue]
     call FillMemory                           ; write AL, BX times, at [ebp+ESI]
     add esi, ebx                              ; advance dest (port FillMemory keeps ESI)
     inc edi
@@ -298,7 +298,7 @@ SetSpriteMovementBytesToFF:
 ; Out: ESI = offset   Clobbers: ESI
 ; ---------------------------------------------------------------------------
 GetSpriteMovementByte1Pointer:
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
     add esi, W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1
     ret
 
@@ -314,7 +314,7 @@ GetSpriteMovementByte1Pointer:
 ; Out: ESI = flat wMapSpriteData ptr   Clobbers: ESI, flags
 ; ---------------------------------------------------------------------------
 GetSpriteMovementByte2Pointer:
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]  ; slot byte offset (slot*0x10)
+    movzx esi, byte [ebp + hCurrentSpriteOffset]  ; slot byte offset (slot*0x10)
     shr esi, 4                                        ; slot number (1-15)
     dec esi
     add esi, esi                                      ; (slot-1)*2 -> wMapSpriteData index

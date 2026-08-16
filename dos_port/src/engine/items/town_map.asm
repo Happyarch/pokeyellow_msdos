@@ -86,16 +86,16 @@ BIT_USED_FLY       equ 7          ; constants/ram_constants.asm (wStatusFlags7)
 SFX_TINK           equ 0x00
 SFX_HEAL_AILMENT   equ 0x00
 ; HRAM joypad (port layout: FFB3 pressed, FFB4 held, FFB5 hJoy5, FFB6, FFB7 hJoy7)
-; %ifndef-guarded so these coexist once root promotes H_JOY5/6/7 into
+; %ifndef-guarded so these coexist once root promotes hJoy5/6/7 into
 ; gb_memmap.inc (shared with src/home/joypad2.asm).
-%ifndef H_JOY5
-H_JOY5             equ 0xFFB5
+%ifndef hJoy5
+hJoy5             equ 0xFFB5
 %endif
-%ifndef H_JOY6
-H_JOY6             equ 0xFFB6
+%ifndef hJoy6
+hJoy6             equ 0xFFB6
 %endif
-%ifndef H_JOY7
-H_JOY7             equ 0xFFB7
+%ifndef hJoy7
+hJoy7             equ 0xFFB7
 %endif
 
 ; TownMapCoordsToOAMCoords does `ld [hli], a` twice. At its DisplayWildLocations
@@ -148,7 +148,7 @@ DisplayTownMap:
     mov byte [ebp + esi], 0xFF
     push esi                            ; push hl
     mov al, 1
-    mov [ebp + H_JOY7], al              ; ldh [hJoy7], a
+    mov [ebp + hJoy7], al              ; ldh [hJoy7], a
     mov al, [ebp + W_CUR_MAP]
     push eax                            ; push af (wCurMap)
     mov bh, 0                           ; ld b, 0
@@ -211,7 +211,7 @@ DisplayTownMap:
 .inputLoop:
     call TownMapSpriteBlinkingAnimation
     call JoypadLowSensitivity          ; call JoypadLowSensitivity
-    mov al, [ebp + H_JOY5]              ; ldh a, [hJoy5]
+    mov al, [ebp + hJoy5]              ; ldh a, [hJoy5]
     mov bh, al                          ; ld b, a
     and al, PAD_A | PAD_B | PAD_UP | PAD_DOWN
     jz .inputLoop
@@ -223,7 +223,7 @@ DisplayTownMap:
     jc .pressedDown
     xor al, al
     mov [ebp + wTownMapSpriteBlinkingEnabled], al
-    mov [ebp + H_JOY7], al             ; ldh [hJoy7], a
+    mov [ebp + hJoy7], al             ; ldh [hJoy7], a
     mov [ebp + wAnimCounter], al
     call ExitTownMap
     pop esi                            ; pop hl (wUpdateSpritesEnabled)
@@ -290,7 +290,7 @@ LoadTownMap_Fly:
     call ClearSprites
     call LoadTownMap
     mov al, 1
-    mov [ebp + H_JOY7], al              ; ldh [hJoy7], a
+    mov [ebp + hJoy7], al              ; ldh [hJoy7], a
     call LoadPlayerSpriteGraphics
     call LoadFontTilePatterns
     lea edx, [BirdSprite]               ; ld de, BirdSprite
@@ -344,7 +344,7 @@ LoadTownMap_Fly:
     push esi                            ; push hl
     call DelayFrame
     call JoypadLowSensitivity          ; call JoypadLowSensitivity
-    mov al, [ebp + H_JOY5]              ; ldh a, [hJoy5]
+    mov al, [ebp + hJoy5]              ; ldh a, [hJoy5]
     mov bh, al                          ; ld b, a
     pop esi                             ; pop hl
     and al, PAD_A | PAD_B | PAD_UP | PAD_DOWN
@@ -372,9 +372,9 @@ LoadTownMap_Fly:
 .pressedB:
     xor al, al
     mov [ebp + wTownMapSpriteBlinkingEnabled], al
-    mov [ebp + H_JOY7], al              ; ldh [hJoy7], a
+    mov [ebp + hJoy7], al              ; ldh [hJoy7], a
     call GBPalWhiteOutWithDelay3
-    ; DEVIATION{class=projection; pret=engine/items/town_map.asm:LoadTownMap_Fly; behavior=call the port-only ExitTownMap on exit to restore the caller overworld canvas (W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR, H_SCX/IO_SCX, H_SCY/IO_SCY, g_bg_whiteout, text_row_stride) and reload the player sprite tiles the bird graphic overwrote, instead of restoring only wUpdateSpritesEnabled; evidence=LoadTownMap saves exactly this state on entry and the sibling LoadTownMap_Nest already calls ExitTownMap on its identical exit, and pret has no equivalent because its caller CloseTextDisplay does a full LoadCurrentMapView that the port replaces with the lighter CloseStartMenu fold; lifetime=permanent, the port split render-state and collision-buffer model requires this on every LoadTownMap exit path}
+    ; DEVIATION{class=projection; pret=engine/items/town_map.asm:LoadTownMap_Fly; behavior=call the port-only ExitTownMap on exit to restore the caller overworld canvas (W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR, hSCX/IO_SCX, hSCY/IO_SCY, g_bg_whiteout, text_row_stride) and reload the player sprite tiles the bird graphic overwrote, instead of restoring only wUpdateSpritesEnabled; evidence=LoadTownMap saves exactly this state on entry and the sibling LoadTownMap_Nest already calls ExitTownMap on its identical exit, and pret has no equivalent because its caller CloseTextDisplay does a full LoadCurrentMapView that the port replaces with the lighter CloseStartMenu fold; lifetime=permanent, the port split render-state and collision-buffer model requires this on every LoadTownMap exit path}
     call ExitTownMap
     ; DEVIATION{class=timing; pret=engine/items/town_map.asm:LoadTownMap_Fly; behavior=rebuild W_TILEMAP via the port-only RefreshCollisionTileMap before returning; evidence=ExitTownMap ClearScreen blanks W_TILEMAP to 0x7F which is at or above MAP_TILESET_SIZE 0x60, and the caller StartMenu_Pokemon.canFly .goBackToMap runs RestoreScreenTilesAndReloadTilePatterns whose ReloadMapSpriteTilePatterns tail-jumps UpdateSprites BEFORE CloseStartMenu reaches its own RefreshCollisionTileMap, so without this the first UpdateSprites reads a text-box tile under the player and UpdatePlayerSprite.disable sets wSpritePlayerStateData1ImageIndex 0xFF which InitFacingDirectionList then searches for unbounded in wFacingDirectionList and walks off GB memory into a page fault; lifetime=permanent, the port lighter CloseStartMenu fold does not rebuild the collision buffer early enough on this path}
     call RefreshCollisionTileMap
@@ -447,9 +447,9 @@ LoadTownMap:
     ; over block 0 at scroll 0 when we return. Same class as the battle-exit fix (W-1).
     mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
     mov [tm_saved_view_ptr], ax
-    mov al, [ebp + H_SCX]
+    mov al, [ebp + hSCX]
     mov [tm_saved_scx], al
-    mov al, [ebp + H_SCY]
+    mov al, [ebp + hSCY]
     mov [tm_saved_scy], al
     mov eax, [text_row_stride]
     mov [tm_saved_stride], eax
@@ -466,12 +466,12 @@ LoadTownMap:
     ; Without this render_bg keeps compositing the OVERWORLD from the block view
     ; pointer and the scroll registers, and the freshly-drawn W_TILEMAP is never
     ; shown — the first attempt at this screen rendered Pallet Town.
-    ; The SHADOWS matter as much as the registers: commit_shadow_regs copies H_SCX/SCY
+    ; The SHADOWS matter as much as the registers: commit_shadow_regs copies hSCX/SCY
     ; over IO_SCX/SCY every DelayFrame, so a stale overworld scroll would drag the flat
     ; canvas off-screen a frame later.
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
-    mov byte [ebp + H_SCX], 0
-    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + hSCX], 0
+    mov byte [ebp + hSCY], 0
     mov byte [ebp + IO_SCX], 0
     mov byte [ebp + IO_SCY], 0
     mov dword [g_bg_whiteout], 0        ; the bag menu may have set it
@@ -581,10 +581,10 @@ ExitTownMap:
     mov ax, [tm_saved_view_ptr]
     mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
     mov al, [tm_saved_scx]
-    mov [ebp + H_SCX], al
+    mov [ebp + hSCX], al
     mov [ebp + IO_SCX], al
     mov al, [tm_saved_scy]
-    mov [ebp + H_SCY], al
+    mov [ebp + hSCY], al
     mov [ebp + IO_SCY], al
     mov eax, [tm_saved_whiteout]
     mov [g_bg_whiteout], eax

@@ -161,7 +161,7 @@ HandleLedges:
     inc esi
     jmp .loop
 .foundMatch:
-    mov al, [ebp + H_JOY_HELD]
+    mov al, [ebp + hJoyHeld]
     and al, dh
     jz  .ret                                       ; player isn't pressing into the ledge
     ; --- arm the hop -------------------------------------------------------

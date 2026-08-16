@@ -350,15 +350,15 @@ InitBattleCanvas:
     ; view pointer so it decodes W_TILEMAP directly, and zero scroll so the 40×25
     ; canvas blits at screen (0,0).
     ; NOTE: zero the SCX/SCY SHADOWS too — DelayFrame's commit_shadow_regs copies
-    ; H_SCX/H_SCY → IO_SCX/IO_SCY every frame, so without this the stale overworld
+    ; hSCX/hSCY → IO_SCX/IO_SCY every frame, so without this the stale overworld
     ; fine-scroll is restored next frame and the whole battle canvas blits offset by
     ; however far the player had scrolled (the "battle lands in different places"
     ; bug). Same fix the status screen carries (status_screen.asm:174-175). The
-    ; overworld recomputes H_SCX/H_SCY from player position on return, so zeroing
+    ; overworld recomputes hSCX/hSCY from player position on return, so zeroing
     ; here is safe. pret zeroes rSCX/rSCY analogues via the transition/ClearScreen.
     ;
     ; W-1 FIX: SAVE the overworld view pointer before zeroing it. Unlike hTileAnimations
-    ; (re-armed from the tileset by LoadTilesetHeader on map re-entry) and H_SCX/H_SCY
+    ; (re-armed from the tileset by LoadTilesetHeader on map re-entry) and hSCX/hSCY
     ; (recomputed from player position), NOTHING on the same-map post-battle return
     ; re-derives this pointer: LoadMapData explicitly does NOT (overworld.asm:2278 — the
     ; derivation lives in LoadDestinationMapData, which the post-battle EnterMap skips because
@@ -378,8 +378,8 @@ InitBattleCanvas:
     mov [saved_ow_view_ptr], ax
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
 .viewPtrAlreadySaved:
-    mov byte [ebp + H_SCX], 0
-    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + hSCX], 0
+    mov byte [ebp + hSCY], 0
     mov byte [ebp + IO_SCX], 0
     mov byte [ebp + IO_SCY], 0
     ; Disable BG tile animations for the battle. pret: DoBattleTransitionAndInit-

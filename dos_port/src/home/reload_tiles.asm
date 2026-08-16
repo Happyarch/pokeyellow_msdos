@@ -41,7 +41,7 @@ section .text
 ;   No inputs. Registers clobbered (faithful to pret).
 ; ---------------------------------------------------------------------------
 ReloadMapData:
-    mov al, [ebp + H_LOADED_ROM_BANK]   ; ldh a,[hLoadedROMBank]
+    mov al, [ebp + hLoadedROMBank]   ; ldh a,[hLoadedROMBank]
     push eax                            ; push af
     mov al, [ebp + W_CUR_MAP]           ; ld a,[wCurMap]
     call SwitchToMapRomBank             ; select map bank (flat: bookkeeping)
@@ -74,7 +74,7 @@ ChooseFlyDestination:
 ;   No inputs. Registers clobbered (faithful to pret).
 ; ---------------------------------------------------------------------------
 ReloadTilesetTilePatterns:
-    mov al, [ebp + H_LOADED_ROM_BANK]   ; ldh a,[hLoadedROMBank]
+    mov al, [ebp + hLoadedROMBank]   ; ldh a,[hLoadedROMBank]
     push eax                            ; push af
     mov al, [ebp + W_CUR_MAP]           ; ld a,[wCurMap]
     call SwitchToMapRomBank             ; select map bank (flat: bookkeeping)

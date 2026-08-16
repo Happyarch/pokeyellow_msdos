@@ -18,14 +18,14 @@
 ;
 ; Sprite-selector convention: pret threads the sprite SLOT number through
 ; hSpriteIndex; the port's GetSpriteMovementByte2Pointer / MoveSprite instead
-; read H_CURRENT_SPRITE_OFFSET = slot<<4. This file keeps H_SPRITE_INDEX (=pret
+; read hCurrentSpriteOffset = slot<<4. This file keeps hSpriteIndex (=pret
 ; hSpriteIndex, a slot number) purely as the interface to IsSpriteInFrontOfPlayer
-; (unported — see extern) and derives H_CURRENT_SPRITE_OFFSET from it once for
-; the downstream port sprite calls. H_CURRENT_SPRITE_OFFSET is set before the
+; (unported — see extern) and derives hCurrentSpriteOffset from it once for
+; the downstream port sprite calls. hCurrentSpriteOffset is set before the
 ; CheckForCollisionWhenPushingBoulder predef and reused by MoveSprite: none of
 ; that predef's callees (GetTileTwoStepsInFrontOfPlayer / IsTilePassable /
 ; CheckForTilePairCollisions2 / CheckForBoulderCollisionWithSprites) writes
-; H_CURRENT_SPRITE_OFFSET, mirroring pret's reliance on hSpriteIndex surviving
+; hCurrentSpriteOffset, mirroring pret's reliance on hSpriteIndex surviving
 ; the predef.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
@@ -55,8 +55,8 @@ BIT_PUSHED_BOULDER      equ 7     ; wMiscFlags bit (constants/ram_constants.asm)
 %ifndef BOULDER_MOVEMENT_BYTE_2
 BOULDER_MOVEMENT_BYTE_2 equ 0x10  ; constants/map_object_constants.asm
 %endif
-%ifndef H_SPRITE_INDEX
-H_SPRITE_INDEX          equ 0xFF8C ; hSpriteIndex — sprite SLOT number; golden 00:ff8c
+%ifndef hSpriteIndex
+hSpriteIndex          equ 0xFF8C ; hSpriteIndex — sprite SLOT number; golden 00:ff8c
 %endif
 %ifndef wSpritePlayerStateData1MovementStatus
 wSpritePlayerStateData1MovementStatus equ 0xC101 ; wSpriteStateData1+1; golden 00:c101
@@ -76,13 +76,13 @@ global PushBoulderDownMovementData
 global PushBoulderLeftMovementData
 global PushBoulderRightMovementData
 
-extern IsSpriteInFrontOfPlayer      ; src/home/overworld.asm — sets H_SPRITE_INDEX to
+extern IsSpriteInFrontOfPlayer      ; src/home/overworld.asm — sets hSpriteIndex to
                                     ; the slot in front of the player (ported, overworld-events
                                     ; Stage 4). NOTE the port's bespoke IsNPCAtTargetBlock is a
                                     ; SEPARATE realization of pret's sprite scan for collision and
                                     ; is NOT a drop-in here (different ABI) — see the STRUCTURAL
                                     ; SPLIT note on IsSpriteInFrontOfPlayer.
-extern GetSpriteMovementByte2Pointer ; src/home/map_objects.asm (reads H_CURRENT_SPRITE_OFFSET; ret flat ESI)
+extern GetSpriteMovementByte2Pointer ; src/home/map_objects.asm (reads hCurrentSpriteOffset; ret flat ESI)
 extern MoveSprite                   ; pathfinding.asm (In: EDI = flat movement-data ptr)
 extern CheckForCollisionWhenPushingBoulder ; player_state.asm (pret predef; banking elided)
 extern PlaySound                    ; home/audio.asm
@@ -102,14 +102,14 @@ TryPushingBoulder:
     test al, (1 << BIT_BOULDER_DUST)
     jnz .ret                                   ; ret nz: dust animation already running
     xor al, al
-    mov [ebp + H_SPRITE_INDEX], al             ; xor a; ldh [hSpriteIndex],a
-    call IsSpriteInFrontOfPlayer               ; sets H_SPRITE_INDEX = sprite slot in front
-    mov al, [ebp + H_SPRITE_INDEX]
+    mov [ebp + hSpriteIndex], al             ; xor a; ldh [hSpriteIndex],a
+    call IsSpriteInFrontOfPlayer               ; sets hSpriteIndex = sprite slot in front
+    mov al, [ebp + hSpriteIndex]
     mov [ebp + wBoulderSpriteIndex], al
     and al, al
     jz ResetBoulderPushFlags                   ; jp z: no sprite in front
     shl al, 4                                  ; slot<<4 (pret: swap a)
-    mov [ebp + H_CURRENT_SPRITE_OFFSET], al    ; port sprite-selector for the calls below
+    mov [ebp + hCurrentSpriteOffset], al    ; port sprite-selector for the calls below
     movzx esi, al                              ; e = slot<<4 (d = 0)
     add esi, wSpritePlayerStateData1MovementStatus
     and byte [ebp + esi], ~(1 << BIT_FACE_PLAYER)  ; res BIT_FACE_PLAYER, [hl]
@@ -195,7 +195,7 @@ DoBoulderDustAnimation:
     or byte [ebp + esi], (1 << BIT_PUSHED_BOULDER)  ; set BIT_PUSHED_BOULDER, [hl]
     mov al, [ebp + wBoulderSpriteIndex]
     shl al, 4                                  ; slot<<4 (pret: ldh [hSpriteIndex] → GetSprite… swap)
-    mov [ebp + H_CURRENT_SPRITE_OFFSET], al
+    mov [ebp + hCurrentSpriteOffset], al
     call GetSpriteMovementByte2Pointer         ; ESI = flat ptr to movement byte 2
     mov byte [esi], 0x10                        ; ld [hl], $10
     mov al, SFX_CUT

@@ -690,7 +690,7 @@ PlayApplyingAttackAnimation:
 ;
 ; The shake bodies live in the mirror src/engine/gfx/screen_effects.asm (pret
 ; engine/gfx/screen_effects.asm) and displace the whole canvas through
-; H_SCX/H_SCY; read the projection note at the top of that file before touching
+; hSCX/hSCY; read the projection note at the top of that file before touching
 ; anything here. pret reaches them with `predef_jump`; the port jumps directly
 ; (it has no predef dispatcher), the same convention ReadTrainer uses for AddBCD.
 ; ===========================================================================
@@ -728,9 +728,9 @@ ShakeScreenHorizontallySlow2:
 ; AnimationShakeScreenHorizontallySlow — BH (b) = pixels per sweep, BL (c) =
 ; sweeps. Walks the canvas one pixel right per step and back again, c times.
 ; This one drives the displacement itself rather than going through the predef,
-; so it carries the same projection: pret's rWX becomes the port's H_SCX.
+; so it carries the same projection: pret's rWX becomes the port's hSCX.
 ;
-; DEVIATION{class=projection; pret=engine/battle/animations.asm:AnimationShakeScreenHorizontallySlow; behavior=steps the BG scroll shadow H_SCX instead of the window register rWX, so the displacement is whole-canvas and its sense is inverted; evidence=the port draws the battle screen on the BG layer rather than the GB's full-screen window (rWY=0 in core.asm), and commit_shadow_regs rewrites IO_SCX from H_SCX every DelayFrame so the shadow is the only channel that survives a multi-frame effect; lifetime=permanent, part of the port's BG-layer battle-screen model}
+; DEVIATION{class=projection; pret=engine/battle/animations.asm:AnimationShakeScreenHorizontallySlow; behavior=steps the BG scroll shadow hSCX instead of the window register rWX, so the displacement is whole-canvas and its sense is inverted; evidence=the port draws the battle screen on the BG layer rather than the GB's full-screen window (rWY=0 in core.asm), and commit_shadow_regs rewrites IO_SCX from hSCX every DelayFrame so the shadow is the only channel that survives a multi-frame effect; lifetime=permanent, part of the port's BG-layer battle-screen model}
 ;
 ; The `dec bh` counters stay 8-bit deliberately (pret's `dec b`): entry values
 ; are 6, 3, 8 and 2, never 0, and an 8-bit decrement reproduces the GB's bound
@@ -740,18 +740,18 @@ AnimationShakeScreenHorizontallySlow:
     push ebx                                 ; push bc
     push ebx                                 ; push bc
 .loop1:
-    mov al, [ebp + H_SCX]                    ; ldh a,[rWX]
+    mov al, [ebp + hSCX]                    ; ldh a,[rWX]
     inc al
-    mov [ebp + H_SCX], al
+    mov [ebp + hSCX], al
     mov bl, 2                                ; ld c,2
     call DelayFrames
     dec bh                                   ; dec b
     jnz .loop1
     pop ebx                                  ; pop bc
 .loop2:
-    mov al, [ebp + H_SCX]
+    mov al, [ebp + hSCX]
     dec al
-    mov [ebp + H_SCX], al
+    mov [ebp + hSCX], al
     mov bl, 2
     call DelayFrames
     dec bh
@@ -811,7 +811,7 @@ AnimationWavyScreen:
     call BattleAnimCopyTileMapToVRAM
     call Delay3
     mov byte [ebp + hAutoBGTransferEnabled], 0
-    mov byte [ebp + H_WY], SCREEN_HEIGHT_PX  ; ldh [hWY],a — window off
+    mov byte [ebp + hWY], SCREEN_HEIGHT_PX  ; ldh [hWY],a — window off
     mov byte [wavy_phase], 0
     mov byte [g_row_xoff_on], 1              ; arm the per-row HAL
     ; BL is pret's c. DelayFrame opens with pushad and WavyScreen_SetSCX touches
@@ -825,7 +825,7 @@ AnimationWavyScreen:
     dec bl                                   ; dec c
     jnz .frameLoop
     mov byte [g_row_xoff_on], 0              ; disarm — restore the identity fast path
-    mov byte [ebp + H_WY], 0                 ; xor a / ldh [hWY],a
+    mov byte [ebp + hWY], 0                 ; xor a / ldh [hWY],a
     call SaveScreenTilesToBuffer2
     call ClearScreen
     mov byte [ebp + hAutoBGTransferEnabled], 1
@@ -884,8 +884,8 @@ WriteLowerByteOfBGMapAndEnableBGTransfer:
 
 ; In: BX = hl (BH=high, BL=low) of the BG map dest.
 BattleAnimCopyTileMapToVRAM:
-    mov [ebp + H_AUTO_BG_TRANSFER_DEST + 1], bh   ; ld a,h / ldh [hAutoBGTransferDest+1],a
-    mov [ebp + H_AUTO_BG_TRANSFER_DEST], bl       ; ld a,l / ldh [hAutoBGTransferDest],a
+    mov [ebp + hAutoBGTransferDest + 1], bh   ; ld a,h / ldh [hAutoBGTransferDest+1],a
+    mov [ebp + hAutoBGTransferDest], bl       ; ld a,l / ldh [hAutoBGTransferDest],a
     jmp Delay3
 
 ; ===========================================================================
@@ -2430,9 +2430,9 @@ GetIntroMoveSound:
 ; rSCX. Only the top 7 rows — the enemy HUD — visibly move.
 ;
 ; NONE of that transfers. In this port the battle screen is on the BG layer and
-; the window is descriptor-driven (g_windows[], src/ppu/ppu.asm); H_WY is not a
+; the window is descriptor-driven (g_windows[], src/ppu/ppu.asm); hWY is not a
 ; window position at all any more but a legacy dialog-open flag whose gate reads
-; H_WY == RENDER_H (200), so pret's hWY writes of 144 / 56 / 0 would be
+; hWY == RENDER_H (200), so pret's hWY writes of 144 / 56 / 0 would be
 ; meaningless at best and would confuse sync_dialog_window at worst. The window
 ; therefore cannot be made to cover the lower screen, and pret's whole
 ; cover-and-scroll trick has no counterpart.
@@ -2443,7 +2443,7 @@ GetIntroMoveSound:
 ; kept as pret wrote it, so the pic still does not shake with the HUD.
 ; ===========================================================================
 
-; DEVIATION{class=HAL; pret=engine/battle/animations.asm:AnimationShakeEnemyHUD; behavior=the four hWY writes and the two hOnCGB LoadBGMapAttributes branches are omitted, so the window is never slid over the lower screen, and ShakeEnemyHUD_ShakeBG displaces only the enemy-HUD rows through the per-row HAL instead of scrolling the whole BG with rSCX; evidence=the port draws the battle screen on the BG layer while the window is descriptor-driven (g_windows in src/ppu/ppu.asm) so it cannot cover the lower screen, H_WY is a legacy dialog-open flag whose gate compares against RENDER_H rather than a window row, and the port has no CGB tile-attribute plane which is the same boundary intro_yellow.asm already documents, so restricting the displacement to the HUD rows reproduces pret's visible result that the window trick existed to produce; lifetime=permanent, a consequence of the descriptor-driven window model}
+; DEVIATION{class=HAL; pret=engine/battle/animations.asm:AnimationShakeEnemyHUD; behavior=the four hWY writes and the two hOnCGB LoadBGMapAttributes branches are omitted, so the window is never slid over the lower screen, and ShakeEnemyHUD_ShakeBG displaces only the enemy-HUD rows through the per-row HAL instead of scrolling the whole BG with rSCX; evidence=the port draws the battle screen on the BG layer while the window is descriptor-driven (g_windows in src/ppu/ppu.asm) so it cannot cover the lower screen, hWY is a legacy dialog-open flag whose gate compares against RENDER_H rather than a window row, and the port has no CGB tile-attribute plane which is the same boundary intro_yellow.asm already documents, so restricting the displacement to the HUD rows reproduces pret's visible result that the window trick existed to produce; lifetime=permanent, a consequence of the descriptor-driven window model}
 global AnimationShakeEnemyHUD
 AnimationShakeEnemyHUD:
 ; Shakes the enemy HUD.
@@ -2455,7 +2455,7 @@ AnimationShakeEnemyHUD:
     call CopyVideoData                       ; arms g_tilecache_dirty itself
 
     xor al, al
-    mov [ebp + H_SCX], al                    ; shadow, not IO_SCX (commit_shadow_regs)
+    mov [ebp + hSCX], al                    ; shadow, not IO_SCX (commit_shadow_regs)
 
 ; Copy wTileMap to BG map 0.
     mov bx, GB_TILEMAP0                      ; ld hl, vBGMap0 (BH/BL = high/low byte)
@@ -2489,11 +2489,11 @@ AnimationShakeEnemyHUD:
     mov bx, GB_TILEMAP1
     jmp BattleAnimCopyTileMapToVRAM
 
-; DEVIATION{class=HAL; pret=engine/battle/animations.asm:ShakeEnemyHUD_ShakeBG; behavior=the jolt is applied as a signed per-row X displacement over the canvas rows the enemy HUD occupies via the g_row_xoff HAL, instead of writing rSCX and relying on the window to hold the rest of the screen still; evidence=the port cannot cover the lower screen with the window so an H_SCX write would jolt the whole canvas rather than the HUD, and the per-row HAL added in Stage 3c for AnimationWavyScreen already provides exactly this with a default-off identity fast path, so the HUD band is displaced and every other row keeps the identity; lifetime=permanent, a consequence of the descriptor-driven window model}
+; DEVIATION{class=HAL; pret=engine/battle/animations.asm:ShakeEnemyHUD_ShakeBG; behavior=the jolt is applied as a signed per-row X displacement over the canvas rows the enemy HUD occupies via the g_row_xoff HAL, instead of writing rSCX and relying on the window to hold the rest of the screen still; evidence=the port cannot cover the lower screen with the window so an hSCX write would jolt the whole canvas rather than the HUD, and the per-row HAL added in Stage 3c for AnimationWavyScreen already provides exactly this with a default-off identity fast path, so the HUD band is displaced and every other row keeps the identity; lifetime=permanent, a consequence of the descriptor-driven window model}
 ; In: DH = displacement amplitude (pret d), DL = number of shakes (pret e)
 global ShakeEnemyHUD_ShakeBG
 ShakeEnemyHUD_ShakeBG:
-    mov al, [ebp + H_SCX]
+    mov al, [ebp + hSCX]
     mov [ebp + wTempSCX], al
 .loop:
     mov al, dh
@@ -2510,7 +2510,7 @@ ShakeEnemyHUD_ShakeBG:
     xor al, al
     call ShakeEnemyHUD_SetHUDRows            ; back to the identity
     mov al, [ebp + wTempSCX]
-    mov [ebp + H_SCX], al
+    mov [ebp + hSCX], al
     ret
 
 ; ShakeEnemyHUD_SetHUDRows — port-only. Writes signed AL into g_row_xoff for the

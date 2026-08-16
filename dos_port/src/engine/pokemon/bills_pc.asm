@@ -336,7 +336,7 @@ BillsPCMenu:
     mov dword [text_row_stride], BPC_STRIDE
     ; clear BIT_SINGLE_SPACED_LINES so BillsPCMenuText's <NEXT>s advance 2 rows
     ; (pret relies on the ambient default; the players_pc.asm data-model note)
-    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
+    and byte [ebp + hUILayoutFlags], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
     mov esi, W_TILEMAP + 12 * BPC_STRIDE     ; hlcoord 0, 12
     mov bh, 4                                ; lb bc, 4, 18
     mov bl, 18
@@ -762,9 +762,9 @@ DisplayDepositWithdrawMenu:
     mov [bpc_saved_scx], al
     mov al, [ebp + IO_SCY]
     mov [bpc_saved_scy], al
-    mov al, [ebp + H_SCX]
+    mov al, [ebp + hSCX]
     mov [bpc_saved_hscx], al
-    mov al, [ebp + H_SCY]
+    mov al, [ebp + hSCY]
     mov [bpc_saved_hscy], al
     call StatusScreen                        ; predef StatusScreen
     call StatusScreen2                       ; predef StatusScreen2
@@ -776,9 +776,9 @@ DisplayDepositWithdrawMenu:
     mov al, [bpc_saved_scy]
     mov [ebp + IO_SCY], al
     mov al, [bpc_saved_hscx]
-    mov [ebp + H_SCX], al
+    mov [ebp + hSCX], al
     mov al, [bpc_saved_hscy]
-    mov [ebp + H_SCY], al
+    mov [ebp + hSCY], al
     call LoadScreenTilesFromBuffer1
     call ReloadTilesetTilePatterns
     call RunDefaultPaletteCommand
@@ -910,7 +910,7 @@ BillsPCPromptWait:
 .wait:
     call BillsPCMirror
     call DelayFrame
-    test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
+    test byte [ebp + hJoyPressed], PAD_A | PAD_B
     jnz .done
     dec ecx
     jnz .wait

@@ -1801,16 +1801,16 @@ render_window:
 ; set_single_window — define g_windows[] as exactly one descriptor (count=1).
 ;
 ; The migration target for single-box screens (dialog / START / party): replaces
-; the old "write IO_WX/H_WY/g_win_clip_w/g_win_max_y then present" pattern with one
+; the old "write IO_WX/hWY/g_win_clip_w/g_win_max_y then present" pattern with one
 ; call that fully (re)defines the window list. Pass count=0 directly (via
 ;   mov dword [g_window_count], 0) to hide instead.
 ;
 ; In:  EAX = wx (WX units), EBX = wy (screen-Y px), ECX = clip_w (px),
 ;      EDX = max_y (px, exclusive), ESI = tilemap_base (EBP-rel: GB_TILEMAP0/1),
 ;      EDI = start_row (tilemap row mapped to WLY=0), EBP = GB memory base.
-; Out: g_window_count = 1, g_windows[0] populated. Also mirrors wy→H_WY and
+; Out: g_window_count = 1, g_windows[0] populated. Also mirrors wy→hWY and
 ;      wx→IO_WX so the legacy "is the dialog open?" flag (sync_dialog_window reads
-;      H_WY) and rWX/rWY faithfulness stay in sync. All registers preserved.
+;      hWY) and rWX/rWY faithfulness stay in sync. All registers preserved.
 ; ---------------------------------------------------------------------------
 global set_single_window
 set_single_window:
@@ -1825,22 +1825,22 @@ set_single_window:
     mov dword [g_windows + WIN_SRC_X], 0
     mov dword [g_windows + WIN_SRC_Y], 0
     mov dword [g_window_count], 1
-    mov [ebp + H_WY], bl                ; mirror wy → rWY (legacy dialog-open flag)
+    mov [ebp + hWY], bl                ; mirror wy → rWY (legacy dialog-open flag)
     mov [ebp + IO_WX], al               ; mirror wx → rWX (faithfulness)
     ret
 
 ; ---------------------------------------------------------------------------
 ; hide_window — empty the window list (count=0 ⇒ nothing drawn).
 ;
-; The migration target for the old "hide" paths (H_WY=RENDER_H + restore the
+; The migration target for the old "hide" paths (hWY=RENDER_H + restore the
 ; g_win_* defaults). Also parks rWY off-screen (RENDER_H) so the legacy
-; sync_dialog_window gate (H_WY == RENDER_H) still reads "closed".
+; sync_dialog_window gate (hWY == RENDER_H) still reads "closed".
 ; In:  EBP = GB memory base. All registers preserved.
 ; ---------------------------------------------------------------------------
 global hide_window
 hide_window:
     mov dword [g_window_count], 0
-    mov byte [ebp + H_WY], RENDER_H
+    mov byte [ebp + hWY], RENDER_H
     ret
 
 ; ---------------------------------------------------------------------------
@@ -1849,7 +1849,7 @@ hide_window:
 ; For multi-box screens (the bag: list + USE/TOSS + quantity + YES/NO). The owner
 ; first resets the list (hide_window, or directly g_window_count=0), then appends
 ; each box in painter's order (later descriptors draw on top). Unlike
-; set_single_window this does NOT mirror wy→H_WY / wx→IO_WX — those exist only for
+; set_single_window this does NOT mirror wy→hWY / wx→IO_WX — those exist only for
 ; the dialog-open gate (sync_dialog_window), which sub-boxes must not disturb.
 ; Caller must keep the resulting count <= MAX_WINDOWS.
 ; In:  EAX=wx, EBX=wy, ECX=clip_w, EDX=max_y, ESI=tilemap_base (EBP-rel), EDI=start_row.

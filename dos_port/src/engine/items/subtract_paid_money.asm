@@ -33,13 +33,13 @@ extern DisplayTextBoxID     ; home/text_script.asm (Wave 1/M1.3) — redraw mone
 ; ---------------------------------------------------------------------------
 SubtractAmountPaidFromMoney_:
     mov edx, W_PLAYER_MONEY          ; ld de, wPlayerMoney (MSB — total price compare)
-    mov esi, H_MONEY                 ; ld hl, hMoney
+    mov esi, hMoney                 ; ld hl, hMoney
     mov bl, 3                        ; ld c, 3 (length of money in bytes)
     call StringCmp
     jc .cannotAfford                 ; ret c
 
     mov edx, W_PLAYER_MONEY + 2      ; ld de, wPlayerMoney + 2 (LSB — subtract)
-    mov esi, H_MONEY + 2             ; ld hl, hMoney + 2
+    mov esi, hMoney + 2             ; ld hl, hMoney + 2
     mov cl, 3                        ; ld c, 3
     call SubBCD                      ; predef SubBCDPredef — subtract price from money
 

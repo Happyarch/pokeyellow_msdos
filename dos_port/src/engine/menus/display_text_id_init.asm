@@ -153,15 +153,15 @@ DisplayTextIDInit:
                                         ; kept for register-contract parity
     call CopyScreenTileBufferToVRAM     ; = 3-frame pacing (see copy2.asm)
     ; xor a / ldh [hWY],a — pret: put the window on the screen
-    ; DEVIATION{class=projection; pret=engine/menus/display_text_id_init.asm:DisplayTextIDInit; behavior=omit pret's hWY zero store because PrintText publishes the dialog descriptor and mirrors its WY; evidence=pret final hWY store plus port set_single_window ownership of H_WY; lifetime=permanent window-compositor boundary}
+    ; DEVIATION{class=projection; pret=engine/menus/display_text_id_init.asm:DisplayTextIDInit; behavior=omit pret's hWY zero store because PrintText publishes the dialog descriptor and mirrors its WY; evidence=pret final hWY store plus port set_single_window ownership of hWY; lifetime=permanent window-compositor boundary}
     ; pret's store is DROPPED, and permanently — this
     ; is not a deferral, so it is not a TODO-HW (it carried that tag until row 13,
-    ; which was wrong twice over: H_WY exists and is written elsewhere, and no future
+    ; which was wrong twice over: hWY exists and is written elsewhere, and no future
     ; hardware work will make this store correct). On the GB, rWY=0 is what makes the
     ; text window visible, because the window's CONTENT is already in the tilemap.
     ; In the port the dialog is a window DESCRIPTOR: PrintText's dialog projection
-    ; calls set_single_window, which mirrors wy→H_WY, so H_WY doubles as the
-    ; "a dialog window is open" gate. Writing H_WY=0 here would open that gate with
+    ; calls set_single_window, which mirrors wy→hWY, so hWY doubles as the
+    ; "a dialog window is open" gate. Writing hWY=0 here would open that gate with
     ; no descriptor behind it. The pret store is therefore intentionally not made,
     ; and PrintText performs the equivalent when it registers the real window.
     ; call LoadFontTilePatterns

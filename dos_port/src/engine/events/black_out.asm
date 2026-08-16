@@ -36,39 +36,39 @@ ResetStatusAndHalveMoneyOnBlackout:
     mov [ebp + wIsInBattle], al
     mov [ebp + wMapPalOffset], al
     mov [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], al
-    mov [ebp + H_JOY_HELD], al               ; ldh [hJoyHeld], a
+    mov [ebp + hJoyHeld], al               ; ldh [hJoyHeld], a
     mov [ebp + wNPCMovementScriptPointerTableNum], al
     mov [ebp + wMiscFlags], al
 
     ; hMoney = 0, then "do we have at least 0 money?" — always yes.
-    mov [ebp + H_MONEY], al
-    mov [ebp + H_MONEY + 1], al
-    mov [ebp + H_MONEY + 2], al
+    mov [ebp + hMoney], al
+    mov [ebp + hMoney + 1], al
+    mov [ebp + hMoney + 2], al
     call HasEnoughMoney
     jc .lostmoney                            ; jr c — never happens (pret's own comment)
 
     ; Halve the player's money: hMoney = wPlayerMoney; hDivideBCDDivisor = 2.
     ; 3-byte BCD, stored high byte first — copy verbatim, never byte-swap.
     mov al, [ebp + wPlayerMoney]
-    mov [ebp + H_MONEY], al
+    mov [ebp + hMoney], al
     mov al, [ebp + wPlayerMoney + 1]
-    mov [ebp + H_MONEY + 1], al
+    mov [ebp + hMoney + 1], al
     mov al, [ebp + wPlayerMoney + 2]
-    mov [ebp + H_MONEY + 2], al
+    mov [ebp + hMoney + 2], al
 
     xor al, al
-    mov [ebp + H_DIVIDE_BCD_DIVISOR], al
-    mov [ebp + H_DIVIDE_BCD_DIVISOR + 1], al
-    mov byte [ebp + H_DIVIDE_BCD_DIVISOR + 2], 2
+    mov [ebp + hDivideBCDDivisor], al
+    mov [ebp + hDivideBCDDivisor + 1], al
+    mov byte [ebp + hDivideBCDDivisor + 2], 2
     call DivideBCDPredef3                    ; predef DivideBCDPredef3
 
     ; hDivideBCDQuotient unions hDivideBCDDivisor at $FFA2 (golden sym), so the
     ; quotient is read back from the same three bytes the divisor occupied.
-    mov al, [ebp + H_DIVIDE_BCD_QUOTIENT]
+    mov al, [ebp + hDivideBCDQuotient]
     mov [ebp + wPlayerMoney], al
-    mov al, [ebp + H_DIVIDE_BCD_QUOTIENT + 1]
+    mov al, [ebp + hDivideBCDQuotient + 1]
     mov [ebp + wPlayerMoney + 1], al
-    mov al, [ebp + H_DIVIDE_BCD_QUOTIENT + 2]
+    mov al, [ebp + hDivideBCDQuotient + 2]
     mov [ebp + wPlayerMoney + 2], al
 
 .lostmoney:

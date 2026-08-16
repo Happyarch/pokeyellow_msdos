@@ -50,8 +50,8 @@ section .text
 ;
 ; This factors out the fixed camera-centering constant PrepareOAMData (below)
 ; applies to the player sprite (slot 0, see .dos_base_done):
-;   dos_base_y = H_SPRITE_SCREEN_Y + 36     ; H_SPRITE_SCREEN_Y is the sprite's
-;   dos_base_x = H_SPRITE_SCREEN_X + 96     ; PHYSICAL on-screen Y/X (no +16/+8)
+;   dos_base_y = hSpriteScreenY + 36     ; hSpriteScreenY is the sprite's
+;   dos_base_x = hSpriteScreenX + 96     ; PHYSICAL on-screen Y/X (no +16/+8)
 ; An OAM-byte-convention Y/X is physical+16 / physical+8, so the same constant
 ; collapses to input+20 (Y) / input+88 (X). WriteOAMBlock (src/home/oam.asm)
 ; writes raw (Y, X, tile, attr) OAM-byte-convention entries directly into
@@ -208,12 +208,12 @@ PrepareOAMData:
     jmp .ret
 
 .updateEnabled:
-    mov byte [ebp + H_OAM_BUFFER_OFFSET], 0
+    mov byte [ebp + hOAMBufferOffset], 0
     xor esi, esi                         ; ESI = current slot byte offset (0,$10,..,$f0)
 
 .spriteLoop:
     mov eax, esi
-    mov [ebp + H_SPRITE_OFFSET2], al
+    mov [ebp + hSpriteOffset2], al
 
     ; picture ID == 0 → slot unused
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_PICTUREID]
@@ -242,12 +242,12 @@ PrepareOAMData:
     ; sprite BG priority = data2 grass-priority bit 7
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_GRASSPRIORITY]
     and al, 0x80
-    mov [ebp + H_SPRITE_PRIORITY], al
+    mov [ebp + hSpritePriority], al
 
     call GetSpriteScreenXY
 
     ; OAM overflow guard: hOAMBufferOffset + count > $a0 → stop (clear rest)
-    movzx eax, byte [ebp + H_OAM_BUFFER_OFFSET]
+    movzx eax, byte [ebp + hOAMBufferOffset]
     add al, [edx]
     cmp al, 0xA0
     ja .clearUnused
@@ -263,15 +263,15 @@ PrepareOAMData:
     jnz .dos_base_npc
     ; Shared with WriteOAMBlock (src/home/oam.asm) via GBScreenToCanvasXY, which
     ; takes OAM-byte-convention (+16/+8) input; add that back on before calling
-    ; so this stays byte-identical to the direct H_SPRITE_SCREEN_Y+36 it replaced
+    ; so this stays byte-identical to the direct hSpriteScreenY+36 it replaced
     ; (8-bit wraparound cancels: see GBScreenToCanvasXY's header).
     ; EDX currently holds the facing-data-block pointer (set above, consumed
     ; below by `mov ebx, edx` before .tileLoop) — the helper clobbers EDX, so
     ; save/restore around the call.
     push edx
-    mov bh, [ebp + H_SPRITE_SCREEN_Y]
+    mov bh, [ebp + hSpriteScreenY]
     add bh, 0x10
-    mov bl, [ebp + H_SPRITE_SCREEN_X]
+    mov bl, [ebp + hSpriteScreenX]
     add bl, 0x08
     call GBScreenToCanvasXY
     mov [dos_base_y_tmp], eax
@@ -323,7 +323,7 @@ PrepareOAMData:
     sub [dos_base_x_tmp], ecx             ; NPC tracks BG horizontal scroll
 .no_walk_offset:
 
-    movzx edi, byte [ebp + H_OAM_BUFFER_OFFSET]
+    movzx edi, byte [ebp + hOAMBufferOffset]
     add edi, W_SHADOW_OAM                ; EDI = GB offset of shadow-OAM write cursor
     mov ebx, edx                         ; EBX walks the facing data block
     movzx ecx, byte [ebx]                ; entry count
@@ -340,8 +340,8 @@ PrepareOAMData:
     add eax, [dos_base_y_tmp]
     mov [spr_dos_sy + edx*4], eax
 
-    ; OAM Y = H_SPRITE_SCREEN_Y + 16 + tableY
-    mov al, [ebp + H_SPRITE_SCREEN_Y]
+    ; OAM Y = hSpriteScreenY + 16 + tableY
+    mov al, [ebp + hSpriteScreenY]
     add al, 0x10
     add al, byte [ebx]
     mov [ebp + edi], al
@@ -353,8 +353,8 @@ PrepareOAMData:
     add eax, [dos_base_x_tmp]
     mov [spr_dos_sx + edx*4], eax
 
-    ; OAM X = H_SPRITE_SCREEN_X + 8 + tableX
-    mov al, [ebp + H_SPRITE_SCREEN_X]
+    ; OAM X = hSpriteScreenX + 8 + tableX
+    mov al, [ebp + hSpriteScreenX]
     add al, 0x08
     add al, byte [ebx]
     mov [ebp + edi], al
@@ -365,7 +365,7 @@ PrepareOAMData:
     add al, [ebx]
     cmp al, 0x80
     jb .tileResolved
-    add al, [ebp + H_PIKACHU_SPRITE_VRAM_OFFSET]
+    add al, [ebp + hPikachuSpriteVRAMOffset]
 .tileResolved:
     mov [ebp + edi], al
     inc ebx
@@ -374,7 +374,7 @@ PrepareOAMData:
     mov al, [ebx]                        ; table attr byte
     test al, UNDER_GRASS
     jz .skipPriority
-    or al, [ebp + H_SPRITE_PRIORITY]     ; OR in the BG-priority bit when under grass
+    or al, [ebp + hSpritePriority]     ; OR in the BG-priority bit when under grass
 .skipPriority:
     and al, 0xF0                         ; drop engine-internal low bits (UNDER_GRASS/FACING_END)
     test al, OAM_PAL1                    ; bit B_OAM_PAL1 set → CGB high palettes
@@ -390,7 +390,7 @@ PrepareOAMData:
     ; commit write cursor
     mov eax, edi
     sub eax, W_SHADOW_OAM
-    mov [ebp + H_OAM_BUFFER_OFFSET], al
+    mov [ebp + hOAMBufferOffset], al
 
 .nextSprite:
     add esi, 0x10
@@ -406,7 +406,7 @@ PrepareOAMData:
     jz .clear
     mov cl, 0x90                         ; LOW(wShadowOAMSprite36) — keep 4 entries
 .clear:
-    movzx eax, byte [ebp + H_OAM_BUFFER_OFFSET]
+    movzx eax, byte [ebp + hOAMBufferOffset]
     cmp al, cl
     jae .ret                             ; ret nc (nothing to clear)
     movzx edi, al
@@ -433,7 +433,7 @@ PrepareOAMData:
     ; Publish the count of valid OAM entries written this frame.
     ; render_sprites uses this instead of the OAM Y byte to detect active entries
     ; (OAM Y can exceed $A0 due to 8-bit YPIXELS overflow for far NPCs).
-    movzx eax, byte [ebp + H_OAM_BUFFER_OFFSET]
+    movzx eax, byte [ebp + hOAMBufferOffset]
     shr eax, 2                          ; byte count / 4 = entry count
     mov [spr_oam_valid], eax
     pop edi
@@ -452,16 +452,16 @@ PrepareOAMData:
 ; ---------------------------------------------------------------------------
 GetSpriteScreenXY:
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS]
-    mov [ebp + H_SPRITE_SCREEN_Y], al
+    mov [ebp + hSpriteScreenY], al
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS]
-    mov [ebp + H_SPRITE_SCREEN_X], al
+    mov [ebp + hSpriteScreenX], al
     ; adjusted Y = (Y + 4) & $f0 → data1+$a
-    mov al, [ebp + H_SPRITE_SCREEN_Y]
+    mov al, [ebp + hSpriteScreenY]
     add al, 4
     and al, 0xF0
     mov [ebp + esi + W_SPRITE_STATE_DATA_1 + 0x0A], al
     ; adjusted X = X & $f0 → data1+$b
-    mov al, [ebp + H_SPRITE_SCREEN_X]
+    mov al, [ebp + hSpriteScreenX]
     and al, 0xF0
     mov [ebp + esi + W_SPRITE_STATE_DATA_1 + 0x0B], al
     ret

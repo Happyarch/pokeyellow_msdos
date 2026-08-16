@@ -344,7 +344,7 @@ PewterCitySuperNerd1Text:
     mov esi, .YouHaveToGoText
     call PrintText
     xor al, al
-    mov [ebp + H_JOY_PRESSED], al
+    mov [ebp + hJoyPressed], al
     mov [ebp + hJoyHeld], al
     mov [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], al
     mov al, 0x2

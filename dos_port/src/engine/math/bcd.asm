@@ -25,37 +25,37 @@ DivideBCDPredef4:
 
 DivideBCD:
     ; Emulate DivideBCD
-    mov byte [ebp + H_DIVIDE_BCD_BUFFER], 0
-    mov byte [ebp + H_DIVIDE_BCD_BUFFER + 1], 0
-    mov byte [ebp + H_DIVIDE_BCD_BUFFER + 2], 0
+    mov byte [ebp + hDivideBCDBuffer], 0
+    mov byte [ebp + hDivideBCDBuffer + 1], 0
+    mov byte [ebp + hDivideBCDBuffer + 2], 0
     mov dh, 1
 
 .mulBy10Loop:
-    mov al, byte [ebp + H_DIVIDE_BCD_DIVISOR]
+    mov al, byte [ebp + hDivideBCDDivisor]
     test al, 0xF0
     jnz .next
     inc dh
 
     ; Shift divisor left by 1 nibble (multiply by 10 in BCD)
-    mov al, byte [ebp + H_DIVIDE_BCD_DIVISOR]
+    mov al, byte [ebp + hDivideBCDDivisor]
     shl al, 4
     mov bl, al
-    mov al, byte [ebp + H_DIVIDE_BCD_DIVISOR + 1]
+    mov al, byte [ebp + hDivideBCDDivisor + 1]
     mov ch, al
     shr ch, 4
     or bl, ch
-    mov byte [ebp + H_DIVIDE_BCD_DIVISOR], bl
+    mov byte [ebp + hDivideBCDDivisor], bl
 
     mov bl, al
     shl bl, 4
-    mov al, byte [ebp + H_DIVIDE_BCD_DIVISOR + 2]
+    mov al, byte [ebp + hDivideBCDDivisor + 2]
     mov ch, al
     shr ch, 4
     or bl, ch
-    mov byte [ebp + H_DIVIDE_BCD_DIVISOR + 1], bl
+    mov byte [ebp + hDivideBCDDivisor + 1], bl
 
     shl al, 4
-    mov byte [ebp + H_DIVIDE_BCD_DIVISOR + 2], al
+    mov byte [ebp + hDivideBCDDivisor + 2], al
     jmp .mulBy10Loop
 
 .next:
@@ -66,7 +66,7 @@ DivideBCD:
     
     mov al, bh
     shl al, 4
-    mov byte [ebp + H_DIVIDE_BCD_BUFFER], al
+    mov byte [ebp + hDivideBCDBuffer], al
     
     dec dh
     jz .next2
@@ -76,9 +76,9 @@ DivideBCD:
     call DivideBCD_getNextDigit
     pop dx
 
-    mov al, byte [ebp + H_DIVIDE_BCD_BUFFER]
+    mov al, byte [ebp + hDivideBCDBuffer]
     or al, bh
-    mov byte [ebp + H_DIVIDE_BCD_BUFFER], al
+    mov byte [ebp + hDivideBCDBuffer], al
 
     dec dh
     jz .next2
@@ -90,7 +90,7 @@ DivideBCD:
 
     mov al, bh
     shl al, 4
-    mov byte [ebp + H_DIVIDE_BCD_BUFFER + 1], al
+    mov byte [ebp + hDivideBCDBuffer + 1], al
 
     dec dh
     jz .next2
@@ -100,9 +100,9 @@ DivideBCD:
     call DivideBCD_getNextDigit
     pop dx
 
-    mov al, byte [ebp + H_DIVIDE_BCD_BUFFER + 1]
+    mov al, byte [ebp + hDivideBCDBuffer + 1]
     or al, bh
-    mov byte [ebp + H_DIVIDE_BCD_BUFFER + 1], al
+    mov byte [ebp + hDivideBCDBuffer + 1], al
 
     dec dh
     jz .next2
@@ -114,7 +114,7 @@ DivideBCD:
 
     mov al, bh
     shl al, 4
-    mov byte [ebp + H_DIVIDE_BCD_BUFFER + 2], al
+    mov byte [ebp + hDivideBCDBuffer + 2], al
 
     dec dh
     jz .next2
@@ -124,17 +124,17 @@ DivideBCD:
     call DivideBCD_getNextDigit
     pop dx
 
-    mov al, byte [ebp + H_DIVIDE_BCD_BUFFER + 2]
+    mov al, byte [ebp + hDivideBCDBuffer + 2]
     or al, bh
-    mov byte [ebp + H_DIVIDE_BCD_BUFFER + 2], al
+    mov byte [ebp + hDivideBCDBuffer + 2], al
 
 .next2:
-    mov al, byte [ebp + H_DIVIDE_BCD_BUFFER]
-    mov byte [ebp + H_DIVIDE_BCD_QUOTIENT], al
-    mov al, byte [ebp + H_DIVIDE_BCD_BUFFER + 1]
-    mov byte [ebp + H_DIVIDE_BCD_QUOTIENT + 1], al
-    mov al, byte [ebp + H_DIVIDE_BCD_BUFFER + 2]
-    mov byte [ebp + H_DIVIDE_BCD_QUOTIENT + 2], al
+    mov al, byte [ebp + hDivideBCDBuffer]
+    mov byte [ebp + hDivideBCDQuotient], al
+    mov al, byte [ebp + hDivideBCDBuffer + 1]
+    mov byte [ebp + hDivideBCDQuotient + 1], al
+    mov al, byte [ebp + hDivideBCDBuffer + 2]
+    mov byte [ebp + hDivideBCDQuotient + 2], al
 
     pop dx
     mov al, 6
@@ -153,27 +153,27 @@ DivideBCD:
     ret
 
 DivideBCD_divDivisorBy10:
-    mov al, byte [ebp + H_DIVIDE_BCD_DIVISOR + 2]
+    mov al, byte [ebp + hDivideBCDDivisor + 2]
     mov bl, al
     shr bl, 4
     
-    mov al, byte [ebp + H_DIVIDE_BCD_DIVISOR + 1]
+    mov al, byte [ebp + hDivideBCDDivisor + 1]
     mov ch, al
     shl ch, 4
     or bl, ch
-    mov byte [ebp + H_DIVIDE_BCD_DIVISOR + 2], bl
+    mov byte [ebp + hDivideBCDDivisor + 2], bl
 
     mov bl, al
     shr bl, 4
     
-    mov al, byte [ebp + H_DIVIDE_BCD_DIVISOR]
+    mov al, byte [ebp + hDivideBCDDivisor]
     mov ch, al
     shl ch, 4
     or bl, ch
-    mov byte [ebp + H_DIVIDE_BCD_DIVISOR + 1], bl
+    mov byte [ebp + hDivideBCDDivisor + 1], bl
 
     shr al, 4
-    mov byte [ebp + H_DIVIDE_BCD_DIVISOR], al
+    mov byte [ebp + hDivideBCDDivisor], al
     ret
 
 DivideBCD_getNextDigit:
@@ -184,8 +184,8 @@ DivideBCD_getNextDigit:
     ; we will just do a manual compare since we don't want to call external StringCmp if not needed,
     ; but let's call it to be safe, StringCmp is probably elsewhere.
     ; Wait, StringCmp is in predefs or util. We can just call it!
-    mov edx, H_MONEY
-    mov esi, H_DIVIDE_BCD_DIVISOR
+    mov edx, hMoney
+    mov esi, hDivideBCDDivisor
     push cx
     extern StringCmp
     call StringCmp
@@ -193,8 +193,8 @@ DivideBCD_getNextDigit:
     jc .done_getnext ; ret c
 
     inc bh
-    mov edx, H_MONEY + 2
-    mov esi, H_DIVIDE_BCD_DIVISOR + 2
+    mov edx, hMoney + 2
+    mov esi, hDivideBCDDivisor + 2
     push cx
     call SubBCD
     pop cx

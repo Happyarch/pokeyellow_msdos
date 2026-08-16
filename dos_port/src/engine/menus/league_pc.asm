@@ -93,10 +93,10 @@ PKMNLeaguePC:
     or byte [ebp + W_STATUS_FLAGS_5], 1 << BIT_NO_TEXT_DELAY
     movzx eax, byte [ebp + W_UPDATE_SPRITES_ENABLED]  ; push af
     push eax
-    movzx eax, byte [ebp + H_TILE_ANIMATIONS]         ; push af
+    movzx eax, byte [ebp + hTileAnimations]         ; push af
     push eax
     xor al, al
-    mov [ebp + H_TILE_ANIMATIONS], al       ; ldh [hTileAnimations],a
+    mov [ebp + hTileAnimations], al       ; ldh [hTileAnimations],a
     mov [ebp + wSpriteFlipped], al
     mov [ebp + W_UPDATE_SPRITES_ENABLED], al
     mov [ebp + wHoFTeamIndex2], al
@@ -124,7 +124,7 @@ PKMNLeaguePC:
     jnz .loop                               ; jr nz
 .doneShowingTeams:
     pop eax                                 ; pop af (hTileAnimations)
-    mov [ebp + H_TILE_ANIMATIONS], al
+    mov [ebp + hTileAnimations], al
     pop eax                                 ; pop af (wUpdateSpritesEnabled)
     mov [ebp + W_UPDATE_SPRITES_ENABLED], al
     ; pop hl / res BIT_NO_TEXT_DELAY,[hl]
@@ -147,7 +147,7 @@ LeaguePCShowTeam:
     push ebx                                ; push bc
     call LeaguePCShowMon
     call WaitForTextScrollButtonPress
-    test byte [ebp + H_JOY_HELD], PAD_B     ; ldh a,[hJoyHeld] / bit B_PAD_B,a
+    test byte [ebp + hJoyHeld], PAD_B     ; ldh a,[hJoyHeld] / bit B_PAD_B,a
     jnz .exit                               ; jr nz
     ; shift the remaining mons down one slot (HOF_MON bytes)
     mov esi, wHallOfFame + HOF_MON          ; ld hl,wHallOfFame+HOF_MON

@@ -45,7 +45,7 @@ PrintLetterDelay:
     test al, (1 << BIT_TEXT_DELAY)             ; delay enabled by TextCommandProcessor?
     jz .done
     call sync_dialog_window                    ; mirror latest char to window before first frame
-    movzx ecx, byte [ebp + H_JOY_HELD]
+    movzx ecx, byte [ebp + hJoyHeld]
     test cl, PAD_A | PAD_B
     jnz .one_frame                             ; button held: skip to one-frame exit
     test al, (1 << BIT_FAST_TEXT_DELAY)        ; use wOptions speed or fixed 1-frame?
@@ -57,8 +57,8 @@ PrintLetterDelay:
 .one_frame:
     mov cl, 1
 .count_down:
-    call DelayFrame                            ; renders frame + updates H_JOY_HELD
-    movzx eax, byte [ebp + H_JOY_HELD]
+    call DelayFrame                            ; renders frame + updates hJoyHeld
+    movzx eax, byte [ebp + hJoyHeld]
     test al, PAD_A | PAD_B
     jnz .done                                  ; button held: abort remaining delay
     dec cl

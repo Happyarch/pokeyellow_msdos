@@ -269,9 +269,9 @@ TryingToLearn:
     call TextBoxBorder
     mov esi, W_TILEMAP + 8 * SCREEN_WIDTH + 6        ; hlcoord 6, 8
     lea eax, [ebp + wMovesString]
-    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_SINGLE_SPACED_LINES
+    or byte [ebp + hUILayoutFlags], 1 << BIT_SINGLE_SPACED_LINES
     call PlaceString
-    and byte [ebp + H_UI_LAYOUT_FLAGS], ~(1 << BIT_SINGLE_SPACED_LINES)
+    and byte [ebp + hUILayoutFlags], ~(1 << BIT_SINGLE_SPACED_LINES)
     mov byte [ebp + wTopMenuItemY], 8
     mov byte [ebp + wTopMenuItemX], 5
     mov byte [ebp + wCurrentMenuItem], 0

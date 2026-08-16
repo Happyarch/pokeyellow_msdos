@@ -486,17 +486,17 @@ SafariZoneEntranceAutoWalk2:
 
 SafariZoneEntranceCalculateLowCostAdmission:
     mov esi, wPlayerMoney
-    mov dx, H_MONEY
+    mov dx, hMoney
     mov bx, 0x3
     call CopyData
     xor al, al
-    mov [ebp + H_DIVIDE_BCD_DIVISOR], al
-    mov [ebp + H_DIVIDE_BCD_DIVISOR + 1], al
+    mov [ebp + hDivideBCDDivisor], al
+    mov [ebp + hDivideBCDDivisor + 1], al
     mov al, 23
-    mov [ebp + H_DIVIDE_BCD_DIVISOR + 2], al
+    mov [ebp + hDivideBCDDivisor + 2], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call DivideBCDPredef3
-    mov al, [ebp + H_DIVIDE_BCD_QUOTIENT + 2]
+    mov al, [ebp + hDivideBCDQuotient + 2]
     call SafariZoneEntranceConvertBCDtoNumber
     pushfd
     push eax

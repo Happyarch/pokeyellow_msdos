@@ -111,13 +111,13 @@ CheckPikachuFollowingPlayer:
 ;     ret
 ; ===========================================================================
 SpawnPikachu:
-    movzx esi, byte [ebp + H_CURRENT_SPRITE_OFFSET]   ; esi = $f0 (slot 15 base offset)
+    movzx esi, byte [ebp + hCurrentSpriteOffset]   ; esi = $f0 (slot 15 base offset)
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_IMAGEBASEOFFSET] ; ld a,[hl]
     dec al                                             ; dec a
     ror al, 4                                          ; swap a (nibble swap)
-    mov [ebp + H_TILE_PLAYER_STANDING_ON], al          ; ldh [hTilePlayerStandingOn], a
+    mov [ebp + hTilePlayerStandingOn], al          ; ldh [hTilePlayerStandingOn], a
     ; --- homecall SpawnPikachu_  (macros/farcall.asm) ---
-    mov al, [ebp + H_LOADED_ROM_BANK]                  ; ldh a,[hLoadedROMBank]
+    mov al, [ebp + hLoadedROMBank]                  ; ldh a,[hLoadedROMBank]
     push eax                                           ; push af
     mov al, BANK_PikachuOverworld                      ; ld a, BANK(SpawnPikachu_)
     call BankswitchCommon
@@ -174,7 +174,7 @@ Pikachu_IsInArray:
 GetPikachuMovementScriptByte:
     push esi                                             ; push hl
     push ebx                                             ; push bc
-    mov al, [ebp + H_LOADED_ROM_BANK]                    ; ldh a,[hLoadedROMBank]
+    mov al, [ebp + hLoadedROMBank]                    ; ldh a,[hLoadedROMBank]
     push eax                                             ; push af (save current bank)
     mov al, [ebp + wPikachuMovementScriptBank]           ; ld a,[wPikachuMovementScriptBank]
     call BankswitchCommon
@@ -204,7 +204,7 @@ GetPikachuMovementScriptByte:
 ;     pop af / call BankswitchCommon / ret
 ; ===========================================================================
 ApplyPikachuMovementData:
-    mov al, [ebp + H_LOADED_ROM_BANK]                    ; ldh a,[hLoadedROMBank]
+    mov al, [ebp + hLoadedROMBank]                    ; ldh a,[hLoadedROMBank]
     mov bh, al                                           ; ld b, a (pret sets B; unused after)
     push eax                                             ; push af (save current bank)
     mov al, BANK_PikachuOverworld                        ; ld a, BANK(ApplyPikachuMovementData_)

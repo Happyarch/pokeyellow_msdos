@@ -145,7 +145,7 @@ LoreleisRoomDefaultScript:
     call ArePlayerCoordsInArray
     jae CheckFightingMapTrainers
     xor al, al
-    mov [ebp + H_JOY_PRESSED], al
+    mov [ebp + hJoyPressed], al
     mov [ebp + hJoyHeld], al
     mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
     mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al

@@ -80,11 +80,11 @@ SOFT_RESET_FRAMES equ 16    ; pret Init sets hSoftReset = 16 (frames of combo)
 ; assembles standalone. Addresses from ram/hram.asm (consecutive with the
 ; already-mapped hJoyPressed=0xFFB3 / hJoyHeld=0xFFB4). Root should promote
 ; these to gb_memmap.inc canonically (see SUMMARY.md).
-%ifndef H_JOY_LAST
-H_JOY_LAST      equ 0xFFB1  ; hJoyLast     — previous frame's polled input
+%ifndef hJoyLast
+hJoyLast      equ 0xFFB1  ; hJoyLast     — previous frame's polled input
 %endif
-%ifndef H_JOY_RELEASED
-H_JOY_RELEASED  equ 0xFFB2  ; hJoyReleased — buttons released this frame
+%ifndef hJoyReleased
+hJoyReleased  equ 0xFFB2  ; hJoyReleased — buttons released this frame
 %endif
 
 ; ---------------------------------------------------------------------------
@@ -380,16 +380,16 @@ joypad_update:
 
     ; hJoyReleased = (hJoyLast ^ b) & hJoyLast
     ; hJoyPressed  = (hJoyLast ^ b) & b
-    mov cl, [ebp + H_JOY_LAST]   ; e = old input
+    mov cl, [ebp + hJoyLast]   ; e = old input
     mov ch, cl
     xor ch, al                   ; d = old ^ new  (changed bits)
     mov bl, ch
     and bl, cl                   ; released = changed & old
-    mov [ebp + H_JOY_RELEASED], bl
+    mov [ebp + hJoyReleased], bl
     mov bl, ch
     and bl, al                   ; pressed  = changed & new
-    mov [ebp + H_JOY_PRESSED], bl
-    mov [ebp + H_JOY_LAST], al   ; hJoyLast = b
+    mov [ebp + hJoyPressed], bl
+    mov [ebp + hJoyLast], al   ; hJoyLast = b
 
     ; Global input disable (pret: wStatusFlags5 bit BIT_DISABLE_JOYPAD →
     ; DiscardButtonPresses, which zeroes held/pressed/released).
@@ -398,8 +398,8 @@ joypad_update:
     jnz .discard
 
     ; hJoyHeld = hJoyLast
-    mov al, [ebp + H_JOY_LAST]
-    mov [ebp + H_JOY_HELD], al
+    mov al, [ebp + hJoyLast]
+    mov [ebp + hJoyHeld], al
 
     ; wJoyIgnore mask: clear ignored buttons from held & pressed (pret leaves
     ; hJoyReleased unmasked). ret early when the mask is empty.
@@ -407,8 +407,8 @@ joypad_update:
     test bl, bl
     jz  .done
     not bl                       ; b = ~wJoyIgnore
-    and [ebp + H_JOY_HELD], bl
-    and [ebp + H_JOY_PRESSED], bl
+    and [ebp + hJoyHeld], bl
+    and [ebp + hJoyPressed], bl
     jmp .done
 
 .discard:

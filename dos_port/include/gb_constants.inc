@@ -698,7 +698,7 @@ FULL_HEAL_MSG           equ 0xF6
 REVIVE_MSG              equ 0xF7
 RARE_CANDY_MSG          equ 0xF8
 ; hUILayoutFlags bit (pret constants/gfx_constants.asm; BIT_SINGLE_SPACED_LINES
-; already lives in gb_memmap.inc's H_UI_LAYOUT_FLAGS block)
+; already lives in gb_memmap.inc's hUILayoutFlags block)
 BIT_PARTY_MENU_HP_BAR   equ 0      ; DrawHP_: HP fraction right of the bar, not below
 ; wTwoOptionMenuID variants
 YES_NO_MENU             equ 0x00

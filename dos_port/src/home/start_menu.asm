@@ -29,15 +29,15 @@
 ;    Joypad exists since chunk 18 (src/home/joypad.asm) but has NO caller: an
 ;    INT 9h ISR latches H_JOY_* and joypad_update runs inside DelayFrame, so
 ;    DelayFrame *is* the poll and there is nothing synchronous to call. The release-spin is also widened from pret's hJoyPressed/A to
-;    H_JOY_HELD/A|B|START because OverworldLoop reads H_JOY_HELD, not the edge
-;    (overworld.asm:904 — H_JOY_PRESSED is always cleared by the time it looks):
+;    hJoyHeld/A|B|START because OverworldLoop reads hJoyHeld, not the edge
+;    (overworld.asm:904 — hJoyPressed is always cleared by the time it looks):
 ;    a still-held START would reopen the menu on the very next iteration.
 ;  * DEVIATION(port-input-model): pret's `jp CloseTextDisplay` teardown is folded
 ;    into CloseStartMenu. CloseTextDisplay is linked now, but the port opens the
 ;    START menu straight from OverworldLoop rather than from inside DisplayTextID,
 ;    whose saved-bank stack slot CloseTextDisplay pops.
 ;
-; Input: H_JOY_PRESSED is reliable here (HandleMenuInput runs one DelayFrame →
+; Input: hJoyPressed is reliable here (HandleMenuInput runs one DelayFrame →
 ; one joypad_update per iteration).
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB base.
@@ -214,12 +214,12 @@ CloseStartMenu:
     ; pret spins `call Joypad / bit B_PAD_A,
     ; [hJoyPressed]` until the closing press clears. The port never calls Joypad
     ; — DelayFrame runs joypad_update, so it IS the poll — and OverworldLoop
-    ; reads H_JOY_HELD rather than the edge (overworld.asm:904), so B/START must
+    ; reads hJoyHeld rather than the edge (overworld.asm:904), so B/START must
     ; be waited out too or a still-held START reopens the menu immediately. See
     ; the header.
 .closeReleaseLoop:
     call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B | PAD_START
+    test byte [ebp + hJoyHeld], PAD_A | PAD_B | PAD_START
     jnz .closeReleaseLoop
     call LoadTextBoxTilePatterns
     ; DEVIATION{class=temporary; pret=home/start_menu.asm:CloseStartMenu; behavior=inline the linked window/tile restoration instead of jumping to check-only CloseTextDisplay; evidence=project_state reports CloseTextDisplay check-only and port cleanup restores menu-owned resources; lifetime=until text_script.asm closure links}

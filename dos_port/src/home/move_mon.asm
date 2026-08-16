@@ -14,8 +14,8 @@
 ;   then + Level + 10 for HP, or + 5 for the others; capped at MAX_STAT_VALUE (999).
 ;
 ; Register map: a=AL, b=BH, c=BL, d=DH, e=DL, hl=ESI, de=EDX, bc=EBX.
-; GB memory at [EBP+addr]; HRAM math scratch via H_MULTIPLICAND/H_PRODUCT/etc.
-; The big-endian 2-byte result is left in H_MULTIPLICAND+1 (high) / +2 (low),
+; GB memory at [EBP+addr]; HRAM math scratch via hMultiplicand/hProduct/etc.
+; The big-endian 2-byte result is left in hMultiplicand+1 (high) / +2 (low),
 ; exactly as the original, so CalcStats can copy it straight to [de].
 ;
 ; Build: nasm -f coff -I include/ -I . -o move_mon.o move_mon.asm
@@ -94,10 +94,10 @@ CalcStats:
 .statsLoop:
     inc bl                          ; inc c
     call CalcStat
-    mov al, [ebp + H_MULTIPLICAND + 1]   ; stat high byte
+    mov al, [ebp + hMultiplicand + 1]   ; stat high byte
     mov [ebp + edx], al
     inc edx
-    mov al, [ebp + H_MULTIPLICAND + 2]   ; stat low byte
+    mov al, [ebp + hMultiplicand + 2]   ; stat low byte
     mov [ebp + edx], al
     inc edx
     cmp bl, NUM_STATS
@@ -107,7 +107,7 @@ CalcStats:
 ; calculates stat c of the current mon
 ; In: BL (c) = stat (HP=1,Atk=2,Def=3,Spd=4,Spc=5); BH (b) = consider stat exp?;
 ;     ESI (hl) = base ptr to stat exp ([hl+2c-1] and [hl+2c]).
-; Out: result in H_MULTIPLICAND+1/+2 (big-endian). ESI/EDX/EBX preserved.
+; Out: result in hMultiplicand+1/+2 (big-endian). ESI/EDX/EBX preserved.
 CalcStat:
     push esi
     push edx
@@ -131,24 +131,24 @@ CalcStat:
     add esi, ecx
 .statExpLoop:                       ; ceil(sqrt(statExp)) in b
     xor al, al
-    mov [ebp + H_MULTIPLICAND], al
-    mov [ebp + H_MULTIPLICAND + 1], al
+    mov [ebp + hMultiplicand], al
+    mov [ebp + hMultiplicand + 1], al
     inc bh                          ; inc b
     mov al, bh
     cmp al, 0xFF
     je .statExpDone
-    mov [ebp + H_MULTIPLICAND + 2], al   ; b
-    mov [ebp + H_MULTIPLIER], al         ; b
+    mov [ebp + hMultiplicand + 2], al   ; b
+    mov [ebp + hMultiplier], al         ; b
     call Multiply                   ; b*b -> product
     mov al, [ebp + esi]             ; ld a, [hld]  (stat exp low byte)
     dec esi
     mov dh, al                      ; ld d, a
-    mov al, [ebp + H_PRODUCT + 3]
+    mov al, [ebp + hProduct + 3]
     sub al, dh                      ; sub d        (sets borrow)
     mov al, [ebp + esi]             ; ld a, [hli]  (stat exp high byte; mov/inc keep CF)
     inc esi
     mov dh, al                      ; ld d, a
-    mov al, [ebp + H_PRODUCT + 2]
+    mov al, [ebp + hProduct + 2]
     sbb al, dh                      ; sbc d        (test b^2 < statExp)
     jc .statExpLoop
 .statExpDone:
@@ -230,22 +230,22 @@ CalcStat:
     jnc .noCarry2
     inc dh
 .noCarry2:
-    mov [ebp + H_MULTIPLICAND + 2], al
+    mov [ebp + hMultiplicand + 2], al
     mov al, dh
-    mov [ebp + H_MULTIPLICAND + 1], al
+    mov [ebp + hMultiplicand + 1], al
     xor al, al
-    mov [ebp + H_MULTIPLICAND], al
+    mov [ebp + hMultiplicand], al
     mov al, [ebp + wCurEnemyLevel]
-    mov [ebp + H_MULTIPLIER], al
+    mov [ebp + hMultiplier], al
     call Multiply                   ; * Level
-    mov al, [ebp + H_MULTIPLICAND]
-    mov [ebp + H_DIVIDEND], al
-    mov al, [ebp + H_MULTIPLICAND + 1]
-    mov [ebp + H_DIVIDEND + 1], al
-    mov al, [ebp + H_MULTIPLICAND + 2]
-    mov [ebp + H_DIVIDEND + 2], al
+    mov al, [ebp + hMultiplicand]
+    mov [ebp + hDividend], al
+    mov al, [ebp + hMultiplicand + 1]
+    mov [ebp + hDividend + 1], al
+    mov al, [ebp + hMultiplicand + 2]
+    mov [ebp + hDividend + 2], al
     mov al, 0x64
-    mov [ebp + H_DIVISOR], al
+    mov [ebp + hDivisor], al
     mov bh, 3                       ; b = 3-byte dividend
     call Divide                     ; / 100
     mov al, bl                      ; ld a, c
@@ -254,38 +254,38 @@ CalcStat:
     jne .notHPStat
     mov al, [ebp + wCurEnemyLevel]  ; HP: + Level first
     mov bh, al
-    mov al, [ebp + H_MULTIPLICAND + 2]
+    mov al, [ebp + hMultiplicand + 2]
     add al, bh
-    mov [ebp + H_MULTIPLICAND + 2], al
+    mov [ebp + hMultiplicand + 2], al
     jnc .noCarry3
-    mov al, [ebp + H_MULTIPLICAND + 1]
+    mov al, [ebp + hMultiplicand + 1]
     inc al
-    mov [ebp + H_MULTIPLICAND + 1], al
+    mov [ebp + hMultiplicand + 1], al
 .noCarry3:
     mov al, 10                      ; +10 for HP
 .notHPStat:
     mov bh, al
-    mov al, [ebp + H_MULTIPLICAND + 2]
+    mov al, [ebp + hMultiplicand + 2]
     add al, bh
-    mov [ebp + H_MULTIPLICAND + 2], al
+    mov [ebp + hMultiplicand + 2], al
     jnc .noCarry4
-    mov al, [ebp + H_MULTIPLICAND + 1]
+    mov al, [ebp + hMultiplicand + 1]
     inc al
-    mov [ebp + H_MULTIPLICAND + 1], al
+    mov [ebp + hMultiplicand + 1], al
 .noCarry4:
-    mov al, [ebp + H_MULTIPLICAND + 1]   ; overflow check (>999)
+    mov al, [ebp + hMultiplicand + 1]   ; overflow check (>999)
     cmp al, MAX_STAT_HIGH + 1
     jnc .overflow
     cmp al, MAX_STAT_HIGH
     jc .noOverflow
-    mov al, [ebp + H_MULTIPLICAND + 2]
+    mov al, [ebp + hMultiplicand + 2]
     cmp al, MAX_STAT_LOW + 1
     jc .noOverflow
 .overflow:
     mov al, MAX_STAT_HIGH
-    mov [ebp + H_MULTIPLICAND + 1], al
+    mov [ebp + hMultiplicand + 1], al
     mov al, MAX_STAT_LOW
-    mov [ebp + H_MULTIPLICAND + 2], al
+    mov [ebp + hMultiplicand + 2], al
 .noOverflow:
     pop ebx
     pop edx

@@ -120,10 +120,10 @@ Init:
     ; The software PPU reads shadow OAM directly; no HRAM stub needed.
 
     xor al, al
-    mov byte [ebp + H_TILE_ANIMATIONS],   al
+    mov byte [ebp + hTileAnimations],   al
     mov byte [ebp + IO_STAT],             al
-    mov byte [ebp + H_SCX],              al
-    mov byte [ebp + H_SCY],              al
+    mov byte [ebp + hSCX],              al
+    mov byte [ebp + hSCY],              al
     ; wUnusedAudioCounter / +1 (pret's old wc0f3) — zeroed by the WRAM0 clear above
 
     mov byte [ebp + GB_IE], IE_DEFAULT_VAL
@@ -133,7 +133,7 @@ Init:
     ; rWY/rWX shadows are kept for faithfulness + the sync_dialog_window flag.
     ; DEVIATION{class=projection; pret=home/init.asm:Init; behavior=hWY/rWY are parked at 200 instead of pret's 144 (SCREEN_HEIGHT_PX); evidence=the port viewport is 320x200, so 144 is still on-screen and would leave a live window row visible; lifetime=permanent widescreen projection}
     mov dword [g_window_count], 0
-    mov byte [ebp + H_WY],   200
+    mov byte [ebp + hWY],   200
     mov byte [ebp + IO_WY],  200
     mov byte [ebp + IO_WX],  7
 
@@ -146,7 +146,7 @@ Init:
     call ClearBgMap
 
     mov byte [ebp + IO_LCDC],       LCDC_DEFAULT_VAL
-    mov byte [ebp + H_SOFT_RESET],  16
+    mov byte [ebp + hSoftReset],  16
     call StopAllSounds
 
     ; ei — no GB interrupt controller
@@ -172,8 +172,8 @@ Init:
     mov [ebp + wAudioSavedROMBank], al
 
     ; hAutoBGTransferDest = vBGMap1 ($9C00)
-    mov byte [ebp + H_AUTO_BG_TRANSFER_DEST + 1], (GB_TILEMAP1 >> 8) & 0xFF
-    mov byte [ebp + H_AUTO_BG_TRANSFER_DEST],      GB_TILEMAP1 & 0xFF
+    mov byte [ebp + hAutoBGTransferDest + 1], (GB_TILEMAP1 >> 8) & 0xFF
+    mov byte [ebp + hAutoBGTransferDest],      GB_TILEMAP1 & 0xFF
     mov byte [ebp + wUpdateSpritesEnabled], 0xFF   ; dec a / ld [wUpdateSpritesEnabled], a
 
     ; pret runs `predef PlayIntro` here — the Game Freak splash + Yellow intro — on

@@ -221,11 +221,11 @@ PlayerPCMenu:
     call TextBoxBorder
     call UpdateSprites
     ; hlcoord 2,2 / PlaceString PlayersPCMenuEntries (double-spaced <NEXT>)
-    ; DEVIATION{class=data-model; pret=engine/menus/players_pc.asm:PlayerPCMenu; behavior=clear inherited single-spacing state so NEXT advances two rows as pret assumes; evidence=pret ambient text-layout default plus port canvas screens mutating H_UI_LAYOUT_FLAGS; lifetime=until text layout state is scoped per screen}
+    ; DEVIATION{class=data-model; pret=engine/menus/players_pc.asm:PlayerPCMenu; behavior=clear inherited single-spacing state so NEXT advances two rows as pret assumes; evidence=pret ambient text-layout default plus port canvas screens mutating hUILayoutFlags; lifetime=until text layout state is scoped per screen}
     ; Clear BIT_SINGLE_SPACED_LINES so <NEXT> advances 2 rows.
     ; pret relies on the ambient overworld default; the port's canvas screens set
     ; the bit, and a menu that inherits it draws all four entries on one row.
-    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
+    and byte [ebp + hUILayoutFlags], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
     mov esi, W_TILEMAP + 2 * PPC_STRIDE + 2
     mov eax, PlayersPCMenuEntries
     call PlaceString
@@ -551,7 +551,7 @@ PlayerPCPromptWait:
 .wait:
     call PlayerPCMirror                     ; the ▼ lives in the scratch; show it
     call DelayFrame
-    test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
+    test byte [ebp + hJoyPressed], PAD_A | PAD_B
     jnz .done
     dec ecx
     jnz .wait

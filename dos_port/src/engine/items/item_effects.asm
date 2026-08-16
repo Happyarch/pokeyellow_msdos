@@ -44,7 +44,7 @@ global ApplyVitamin
 global RareCandyLevelUp
 
 extern CalcStats        ; home/move_mon.asm (BH=consider-exp, ESI=stat-exp ptr, EDX=dest)
-extern CalcExperience   ; engine/pokemon/experience.asm (DH=level -> H_EXPERIENCE)
+extern CalcExperience   ; engine/pokemon/experience.asm (DH=level -> hExperience)
 extern AddNTimes        ; home/array.asm (ESI += AL*BX)
 extern LoadMovePPs      ; engine/pokemon/add_mon.asm (predef; reads wPredefHL/DE)
 
@@ -253,15 +253,15 @@ RareCandyLevelUp:
 
     mov dh, al                       ; CalcExperience: DH = new level
     push esi
-    call CalcExperience              ; -> H_EXPERIENCE (3 bytes, big-endian)
+    call CalcExperience              ; -> hExperience (3 bytes, big-endian)
     pop esi
-    ; copy H_EXPERIENCE to the mon's experience BEFORE any Multiply/CalcStats —
-    ; H_EXPERIENCE aliases H_MULTIPLICAND, which CalcStats clobbers.
-    mov al, [ebp + H_EXPERIENCE]
+    ; copy hExperience to the mon's experience BEFORE any Multiply/CalcStats —
+    ; hExperience aliases hMultiplicand, which CalcStats clobbers.
+    mov al, [ebp + hExperience]
     mov [ebp + esi + MON_EXP], al
-    mov al, [ebp + H_EXPERIENCE + 1]
+    mov al, [ebp + hExperience + 1]
     mov [ebp + esi + MON_EXP + 1], al
-    mov al, [ebp + H_EXPERIENCE + 2]
+    mov al, [ebp + hExperience + 2]
     mov [ebp + esi + MON_EXP + 2], al
 
     ; remember old max HP (big-endian) so we can add the gain to current HP
@@ -294,7 +294,7 @@ RareCandyLevelUp:
 
 ; RecalcMonStats — pret .recalculateStats: CalcStats over the mon at ESI (base),
 ; considering stat exp. In: ESI = struct base. Tail-calls CalcStats (clobbers
-; ESI/EDX/EBX and the H_MULTIPLICAND scratch); callers save the base if needed.
+; ESI/EDX/EBX and the hMultiplicand scratch); callers save the base if needed.
 RecalcMonStats:
     mov edx, esi
     add edx, MON_STATS               ; de -> stats destination
@@ -508,11 +508,11 @@ ti_dialog_prompt:
     mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TI_CHAR_DOWN
 .release:
     call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    test byte [ebp + hJoyHeld], PAD_A | PAD_B
     jnz .release
 .press:
     call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    test byte [ebp + hJoyHeld], PAD_A | PAD_B
     jz .press
     mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TI_TILE_SPC
     ret
@@ -647,14 +647,14 @@ ItemUseSurfboard:
     jmp iu_print_text                   ; jp PrintText
 
 .tryToStopSurfing:
-    mov byte [ebp + H_SPRITE_INDEX], 0  ; xor a / ldh [hSpriteIndex], a
+    mov byte [ebp + hSpriteIndex], 0  ; xor a / ldh [hSpriteIndex], a
     mov dh, 16                          ; ld d, 16 — talking range in pixels
     call IsSpriteInFrontOfPlayer2
     ; res BIT_FACE_PLAYER, [hl] — unconditional in pret, on both exits (see the
     ; block header). ESI is whatever IsSpriteInFrontOfPlayer2 left, which now
     ; matches pret's hl on each path.
     and byte [ebp + esi], (~(1 << BIT_FACE_PLAYER)) & 0xFF
-    mov al, [ebp + H_SPRITE_INDEX]
+    mov al, [ebp + hSpriteIndex]
     test al, al                         ; is there a sprite in the way?
     jnz .cannotStopSurfing
     mov esi, TilePairCollisionsWater
@@ -1331,11 +1331,11 @@ ItemUseMedicine:
     mov al, SFX_HEAL_HP
     call PlaySoundWaitForCurrent
 ; DEVIATION{class=HAL; pret=engine/items/item_effects.asm:ItemUseMedicine; behavior=pret reaches UpdateHPBar2 through predef which carries the bar coordinate in hl, the port calls it directly and reloads that coordinate from the port-local slot iu_hpbar_coord stashed at .calculateHPBarCoords; evidence=the port has no predef dispatcher so nothing stages or restores hl, and the intervening RemoveUsedItem and PlaySoundWaitForCurrent calls clobber ESI, so the coordinate must be carried in memory instead of the register; lifetime=permanent, the port calls predef targets directly}
-    or byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PARTY_MENU_HP_BAR
+    or byte [ebp + hUILayoutFlags], 1 << BIT_PARTY_MENU_HP_BAR
     mov byte [ebp + wHPBarType], 0x02
     mov esi, [iu_hpbar_coord]
     call UpdateHPBar2                   ; animate the HP bar lengthening
-    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_PARTY_MENU_HP_BAR)) & 0xFF
+    and byte [ebp + hUILayoutFlags], (~(1 << BIT_PARTY_MENU_HP_BAR)) & 0xFF
     mov byte [ebp + wPartyMenuTypeOrMessageID], REVIVE_MSG
     mov al, [ebp + wCurItem]
     cmp al, REVIVE
@@ -1516,11 +1516,11 @@ ItemUseMedicine:
     call AddNTimes
     mov al, [ebp + esi]                 ; max HP high
     mov [ebp + wHPBarMaxHP + 1], al
-    mov [ebp + H_DIVIDEND], al
+    mov [ebp + hDividend], al
     mov al, [ebp + esi + 1]             ; max HP low
     mov [ebp + wHPBarMaxHP], al
-    mov [ebp + H_DIVIDEND + 1], al
-    mov byte [ebp + H_DIVISOR], 5
+    mov [ebp + hDividend + 1], al
+    mov byte [ebp + hDivisor], 5
     mov bh, 2                           ; ld b, 2 — dividend byte count
     push esi
     call Divide                         ; 1/5 of the user's max HP
@@ -1528,14 +1528,14 @@ ItemUseMedicine:
 
     ; hl → the user's current HP (LSB); subtract the quotient
     add esi, (MON_HP + 1) - (MON_MAXHP + 1)  ; ESI = current-HP LOW byte
-    mov al, [ebp + H_QUOTIENT + 3]
+    mov al, [ebp + hQuotient + 3]
     mov [iu_softboiled_heal], al        ; pret: push af (the heal amount)
     mov bl, al
     mov al, [ebp + esi]
     sub al, bl
     mov [ebp + esi], al
     dec esi                             ; -> current-HP HIGH byte (dec preserves CF)
-    mov al, [ebp + H_QUOTIENT + 2]
+    mov al, [ebp + hQuotient + 2]
     mov bl, al
     mov al, [ebp + esi]
     sbb al, bl
@@ -1861,13 +1861,13 @@ ItemUseBall:
     push ebx                            ; push bc — save (Rand1 - Status) in BH
 
 ; MaxHP * 255
-    mov byte [ebp + H_MULTIPLICAND], 0
+    mov byte [ebp + hMultiplicand], 0
     mov esi, wEnemyMonMaxHP
     mov al, [ebp + esi]                 ; big-endian: high byte first
-    mov [ebp + H_MULTIPLICAND + 1], al
+    mov [ebp + hMultiplicand + 1], al
     mov al, [ebp + esi + 1]
-    mov [ebp + H_MULTIPLICAND + 2], al
-    mov byte [ebp + H_MULTIPLIER], 255
+    mov [ebp + hMultiplicand + 2], al
+    mov byte [ebp + hMultiplier], 255
     call Multiply
 
 ; BallFactor: 8 for a Great Ball, 12 for everything else.
@@ -1878,7 +1878,7 @@ ItemUseBall:
     mov al, 8
 .skip1:
 ; (MaxHP * 255) / BallFactor — every division below floors.
-    mov [ebp + H_DIVISOR], al
+    mov [ebp + hDivisor], al
     mov bh, 4                           ; b = bytes in the dividend
     call Divide
 
@@ -1896,15 +1896,15 @@ ItemUseBall:
 .skip2:
 
 ; W = ((MaxHP * 255) / BallFactor) / max(HP / 4, 1)
-    mov [ebp + H_DIVISOR], al
+    mov [ebp + hDivisor], al
     mov bh, 4
     call Divide
 
 ; X = min(W, 255), kept in hQuotient+3.
-    mov al, [ebp + H_QUOTIENT + 2]
+    mov al, [ebp + hQuotient + 2]
     test al, al
     jz .skip3
-    mov byte [ebp + H_QUOTIENT + 3], 255
+    mov byte [ebp + hQuotient + 3], 255
 
 .skip3:
     pop ebx                             ; pop bc — BH = Rand1 - Status
@@ -1915,7 +1915,7 @@ ItemUseBall:
     jb .failedToCapture                 ; jr c
 
 ; W > 255 → caught.
-    mov al, [ebp + H_QUOTIENT + 2]
+    mov al, [ebp + hQuotient + 2]
     test al, al
     jnz .captured
 
@@ -1923,7 +1923,7 @@ ItemUseBall:
 
 ; Rand2 > X → the ball fails.
     mov bh, al
-    mov al, [ebp + H_QUOTIENT + 3]
+    mov al, [ebp + hQuotient + 3]
     cmp al, bh
     jb .failedToCapture                 ; jr c
 
@@ -1931,15 +1931,15 @@ ItemUseBall:
     jmp .skipShakeCalculations          ; jr
 
 .failedToCapture:
-    mov al, [ebp + H_QUOTIENT + 3]
+    mov al, [ebp + hQuotient + 3]
     mov [ebp + wPokeBallCaptureCalcTemp], al   ; save X
 
 ; CatchRate * 100
-    mov byte [ebp + H_MULTIPLICAND], 0
-    mov byte [ebp + H_MULTIPLICAND + 1], 0
+    mov byte [ebp + hMultiplicand], 0
+    mov byte [ebp + hMultiplicand + 1], 0
     mov al, [ebp + wEnemyMonActualCatchRate]
-    mov [ebp + H_MULTIPLICAND + 2], al
-    mov byte [ebp + H_MULTIPLIER], 100
+    mov [ebp + hMultiplicand + 2], al
+    mov byte [ebp + hMultiplier], 100
     call Multiply
 
 ; BallFactor2: Poké 255, Great 200, Ultra/Safari 150.
@@ -1957,21 +1957,21 @@ ItemUseBall:
 .skip4:
 ; Y = (CatchRate * 100) / BallFactor2
     mov al, bh
-    mov [ebp + H_DIVISOR], al
+    mov [ebp + hDivisor], al
     mov bh, 4
     call Divide
 
 ; Y > 255 → 3 shakes. (Unreachable in practice: max Y = (255*100)/150 = 170.)
-    mov al, [ebp + H_QUOTIENT + 2]
+    mov al, [ebp + hQuotient + 2]
     test al, al
     mov bh, 0x63                        ; 3 shakes (mov: keeps ZF)
     jnz .setAnimData
 
 ; (X * Y) / 255
     mov al, [ebp + wPokeBallCaptureCalcTemp]
-    mov [ebp + H_MULTIPLIER], al
+    mov [ebp + hMultiplier], al
     call Multiply
-    mov byte [ebp + H_DIVISOR], 255
+    mov byte [ebp + hDivisor], 255
     mov bh, 4
     call Divide
 
@@ -1985,14 +1985,14 @@ ItemUseBall:
     mov bh, 10
 
 .addAilmentValue:
-    mov al, [ebp + H_QUOTIENT + 3]
+    mov al, [ebp + hQuotient + 3]
     add al, bh
-    mov [ebp + H_QUOTIENT + 3], al
+    mov [ebp + hQuotient + 3], al
 
 .skip5:
 ; Z = ((X * Y) / 255) + Status2 decides the shake count:
 ;   Z < 10 → 0 shakes (miss), < 30 → 1, < 70 → 2, else 3.
-    mov al, [ebp + H_QUOTIENT + 3]
+    mov al, [ebp + hQuotient + 3]
     cmp al, 10
     mov bh, 0x20
     jb .setAnimData
@@ -2373,13 +2373,13 @@ SendNewMonToBox:
     mov dh, [ebp + wCurEnemyLevel]      ; d = level
     call CalcExperience                 ; callfar — → hExperience (3 bytes)
     pop edx
-    mov al, [ebp + H_EXPERIENCE]
+    mov al, [ebp + hExperience]
     mov [ebp + edx], al
     inc edx
-    mov al, [ebp + H_EXPERIENCE + 1]
+    mov al, [ebp + hExperience + 1]
     mov [ebp + edx], al
     inc edx
-    mov al, [ebp + H_EXPERIENCE + 2]
+    mov al, [ebp + hExperience + 2]
     mov [ebp + edx], al
     inc edx
 
@@ -3157,7 +3157,7 @@ ItemUseBicycle:
     call IsBikeRidingAllowed
     jnc NoCyclingAllowedHere            ; pret: jp nc
     call ItemUseReloadOverworldData
-    mov byte [ebp + H_JOY_HELD], 0      ; hJoyHeld — no keys pressed
+    mov byte [ebp + hJoyHeld], 0      ; hJoyHeld — no keys pressed
     mov byte [ebp + wWalkBikeSurfState], 1   ; bicycling
     call PlayDefaultMusic               ; bike music
     ; pret drops the state back to 0 across PrintText and restores it after — the

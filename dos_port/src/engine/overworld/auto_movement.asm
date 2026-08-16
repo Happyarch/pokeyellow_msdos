@@ -14,7 +14,7 @@
 ; pret's embedded `dw <label>` pointer tables become `dd` (flat host pointers),
 ; matching CallFunctionInTable's [esi+ecx*4] and RunNPCMovementScript's *4 index.
 ; The port's MoveSprite/scripted primitives take the sprite selector pre-swapped
-; in H_CURRENT_SPRITE_OFFSET / wNPCMovementScriptSpriteOffset (= wSpriteIndex<<4,
+; in hCurrentSpriteOffset / wNPCMovementScriptSpriteOffset (= wSpriteIndex<<4,
 ; pret's `swap a` / hSpriteIndex).
 ;
 ; LINKED (GAME_SRCS, since OW-7.2). The per-map movement-script pointer tables here
@@ -128,7 +128,7 @@ PalletMovementScript_OakMoveLeft:
     mov byte [ebp + esi], 0xff                 ; ld [hl],$ff
     mov al, [ebp + wSpriteIndex]
     shl al, 4                                  ; pret: ldh [hSpriteIndex] + MoveSprite swap
-    mov [ebp + H_CURRENT_SPRITE_OFFSET], al
+    mov [ebp + hCurrentSpriteOffset], al
     lea edi, [ebp + wNPCMovementDirections2]   ; de = movement stream (flat = ebp + WRAM offset)
     call MoveSprite
     mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 1
@@ -149,7 +149,7 @@ PalletMovementScript_PlayerMoveLeft:
     jnz .ret                                   ; return if Oak is still moving
     mov al, [ebp + wNumStepsToTake]
     mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov [ebp + H_NPC_MOVEMENT_DIRECTIONS2_INDEX], al
+    mov [ebp + hNPCMovementDirections2Index], al
     call ConvertNPCMovementDirectionsToJoypadMasks ; pret: predef (banking elided)
     call StartSimulatingJoypadStates
     mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 2

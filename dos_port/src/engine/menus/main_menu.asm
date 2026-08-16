@@ -330,11 +330,11 @@ MainMenu:
     ; The three clears are kept verbatim. (The faithful engine/joypad.asm
     ; translation is linked as of chunk 18, but nothing calls its _Joypad — it is
     ; a cross-reference, not the port's poll.)
-    mov byte [ebp + H_JOY_PRESSED], 0
-    mov byte [ebp + H_JOY_RELEASED], 0
-    mov byte [ebp + H_JOY_HELD], 0
+    mov byte [ebp + hJoyPressed], 0
+    mov byte [ebp + hJoyReleased], 0
+    mov byte [ebp + hJoyHeld], 0
     call DelayFrame
-    mov al, [ebp + H_JOY_HELD]                  ; ldh a, [hJoyHeld]
+    mov al, [ebp + hJoyHeld]                  ; ldh a, [hJoyHeld]
     test al, PAD_A                              ; bit B_PAD_A, a
     jnz .pressedA
     test al, PAD_B                              ; bit B_PAD_B, a
@@ -429,9 +429,9 @@ SpecialEnterMap:
     ; DEVIATION{class=projection; pret=main_menu.asm:SpecialEnterMap; behavior=drop the menu compositor whiteout before entering the overworld; evidence=pret SpecialEnterMap transitions directly from hardware BG state while port menus set g_bg_whiteout; lifetime=permanent window-compositor boundary}
     ; Drop the menu whiteout before entering the overworld.
     mov dword [g_bg_whiteout], 0
-    mov byte [ebp + H_JOY_PRESSED], 0           ; xor a / ldh [hJoyPressed],a
-    mov byte [ebp + H_JOY_HELD], 0              ; ldh [hJoyHeld],a
-    mov byte [ebp + H_JOY5], 0                  ; ldh [hJoy5],a
+    mov byte [ebp + hJoyPressed], 0           ; xor a / ldh [hJoyPressed],a
+    mov byte [ebp + hJoyHeld], 0              ; ldh [hJoyHeld],a
+    mov byte [ebp + hJoy5], 0                  ; ldh [hJoy5],a
     mov byte [ebp + wCableClubDestinationMap], 0
     ; ld hl, wStatusFlags6 / set BIT_GAME_TIMER_COUNTING, [hl]
     or byte [ebp + wStatusFlags6], (1 << BIT_GAME_TIMER_COUNTING)

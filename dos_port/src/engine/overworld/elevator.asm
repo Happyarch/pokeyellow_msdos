@@ -7,7 +7,7 @@
 ; register, then plays the "PA announcement" jingle and restores the map music.
 ;
 ; Register map (SM83 -> x86): A->AL, B->BH, C->BL, D->DH, E->DL. GB memory is
-; [ebp+offset]. hSCY -> [ebp+H_SCY], the native renderer's fine-scroll shadow
+; [ebp+offset]. hSCY -> [ebp+hSCY], the native renderer's fine-scroll shadow
 ; (honored directly — the shake is visible). PlayMusic: AL=sound id, BL=audio ROM
 ; bank (vestigial under the single flat engine — passed as 0).
 ;
@@ -63,7 +63,7 @@ ShakeElevator:
     call ShakeElevatorRedrawRow
     call Delay3
     call StopAllMusic
-    mov al, [ebp + H_SCY]                       ; ldh a,[hSCY]
+    mov al, [ebp + hSCY]                       ; ldh a,[hSCY]
     mov dh, al                                  ; ld d, a
     mov dl, 1                                   ; ld e, $1
     mov bh, 100                                 ; ld b, 100
@@ -72,7 +72,7 @@ ShakeElevator:
     xor al, 0xfe                                ; xor $fe
     mov dl, al                                  ; ld e, a
     add al, dh                                  ; add d
-    mov [ebp + H_SCY], al                       ; ldh [hSCY], a
+    mov [ebp + hSCY], al                       ; ldh [hSCY], a
     push ebx                                    ; push bc
     xor bl, bl                                  ; ld c, BANK(SFX_Collision_1) — flat: irrelevant
     mov al, SFX_COLLISION
@@ -83,7 +83,7 @@ ShakeElevator:
     dec bh
     jnz .shakeLoop
     mov al, dh                                  ; ld a, d
-    mov [ebp + H_SCY], al                       ; ldh [hSCY], a
+    mov [ebp + hSCY], al                       ; ldh [hSCY], a
     call StopAllMusic
     xor bl, bl                                  ; ld c, BANK(SFX_Safari_Zone_PA) — flat: irrelevant
     mov al, SFX_SAFARI_ZONE_PA

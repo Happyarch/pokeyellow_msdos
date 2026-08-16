@@ -123,7 +123,7 @@ BattleTransition:
     mov byte [ebp + hAutoBGTransferEnabled], 1   ; vestigial (inert in the port)
     call Delay3
     xor al, al
-    mov [ebp + H_WY], al
+    mov [ebp + hWY], al
     ; DEVIATION{class=HAL; pret=engine/battle/battle_transitions.asm:BattleTransition; behavior=calls hide_window in addition to the hWY=0 write; evidence=the port has no GB window double-tilemap trick - the battle screen is the BG plane and a stale overworld dialog window descriptor would float above the wipe; lifetime=permanent, window-compositor HAL}
     call hide_window
     dec al                                        ; a = $ff

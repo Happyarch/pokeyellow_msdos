@@ -93,7 +93,7 @@ extern DelayFrame               ; src/home/vblank.asm  the port's frame pump —
                                 ;                + compositor present both live here
                                 ;                (see .waitForKeyPressLoop)
 extern Delay3                   ; src/home/palettes.asm
-extern JoypadLowSensitivity     ; src/home/joypad2.asm      → H_JOY_PRESSED
+extern JoypadLowSensitivity     ; src/home/joypad2.asm      → hJoyPressed
 extern BankswitchHome           ; home/bankswitch.asm  AL=bank (flat no-op bookkeeping)
 extern BankswitchBack           ; home/bankswitch.asm
 extern GetItemName              ; home/names.asm  [wNamedObjectIndex] → wNameBuffer
@@ -126,12 +126,12 @@ extern HandleItemListSwapping
 ; Local lowercase aliases onto existing port H_*/W_* symbols the code below uses:
 wStatusFlags5               equ W_STATUS_FLAGS_5
 hAutoBGTransferEnabled      equ H_AUTO_BG_TRANSFER_EN
-hJoyPressed                 equ H_JOY_PRESSED
-hJoy7                       equ H_JOY7
-hItemPrice                  equ H_ITEM_PRICE
-hMoney                      equ H_MONEY
-hDivideBCDDivisor           equ H_DIVIDE_BCD_DIVISOR
-hDivideBCDQuotient          equ H_DIVIDE_BCD_QUOTIENT
+hJoyPressed                 equ hJoyPressed
+hJoy7                       equ hJoy7
+hItemPrice                  equ hItemPrice
+hMoney                      equ hMoney
+hDivideBCDDivisor           equ hDivideBCDDivisor
+hDivideBCDQuotient          equ hDivideBCDQuotient
 
 ; ── list-box geometry: REUSED from bag_menu.asm LIST_* (confirmed projection) ─
 LIST_STRIDE     equ 20          ; W_TILEMAP box-relative stride (NOT port SCREEN_WIDTH=40)

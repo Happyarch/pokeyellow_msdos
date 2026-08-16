@@ -845,9 +845,9 @@ _HandleMidJump:
     jne .ret                                        ; wait until the current step finishes
     call UpdateSprites
     call Delay3
-    mov byte [ebp + H_JOY_HELD], 0
-    mov byte [ebp + H_JOY_PRESSED], 0
-    mov byte [ebp + H_JOY_RELEASED], 0
+    mov byte [ebp + hJoyHeld], 0
+    mov byte [ebp + hJoyPressed], 0
+    mov byte [ebp + hJoyReleased], 0
     mov byte [w_player_jumping_y_index], 0
     and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_LEDGE_OR_FISHING)
     and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)

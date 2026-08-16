@@ -48,7 +48,7 @@ global EvolveMon
 ; Text/display/input helpers (Stage 2 — evolution now shows text + allows B-cancel):
 extern DelayFrames              ; (BL = frame count)
 extern DelayFrame               ; wait one frame
-extern JoypadLowSensitivity     ; refresh hJoy5 (H_JOY5) low-sensitivity input
+extern JoypadLowSensitivity     ; refresh hJoy5 (hJoy5) low-sensitivity input
 
 ; Audio (live since the Phase-3 engine landed — see the EvolveMon header):
 extern StopAllMusic             ; src/home/audio.asm
@@ -175,7 +175,7 @@ Evolution_CheckForCancel:
     call DelayFrame
     push ebx
     call JoypadLowSensitivity
-    mov al, [ebp + H_JOY5]
+    mov al, [ebp + hJoy5]
     pop ebx
     and al, PAD_B
     jnz .pressedB

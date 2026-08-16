@@ -32,7 +32,7 @@ bits 32
 ; pret HRAM names for the auto-BG-transfer registers — used so the faithful (inert)
 ; writes below cross-reference against pret by name (faithdiff matches stores by name).
 hAutoBGTransferEnabled equ H_AUTO_BG_TRANSFER_EN
-hAutoBGTransferDest    equ H_AUTO_BG_TRANSFER_DEST
+hAutoBGTransferDest    equ hAutoBGTransferDest
 
 global YellowIntro_AnimatedObjectJumptable
 global Func_fa007, Func_fa008, Func_fa014, Func_fa02b, Func_fa062
@@ -71,7 +71,7 @@ extern YellowIntroPaletteAction      ; engine/gfx/palettes.asm
 extern YellowIntro_AnimatedObjectFramesData       ; data/sprite_anims/intro_frames.asm
 extern YellowIntro_AnimatedObjectOAMData          ; data/sprite_anims/intro_oam.asm
 extern MovieBeginSurface, MovieEndSurface, PublishProjectedOAM, JoypadLowSensitivity
-extern MovieSyncScroll                            ; movie_projection.asm — H_SCX/H_SCY -> WIN_SRC_X/Y
+extern MovieSyncScroll                            ; movie_projection.asm — hSCX/hSCY -> WIN_SRC_X/Y
 extern RunObjectAnimations, UpdateMusicCTimes
 
 ; --- Cinematic BG surface model (the port's own; documented here once) ----------
@@ -300,7 +300,7 @@ YellowIntroScene4:
     xor al, al
     call YellowIntro_PublishGraphicAttr
     xor al, al
-    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
     call Func_f9e5f
     mov dh, 0x58                                    ; lb de, $58, $58
     mov dl, 0x58
@@ -332,13 +332,13 @@ YellowIntroScene5:
 ; channel. The two Request7TileTransfer* DEVIATIONs below describe the transfers
 ; that FEED this mechanism, but the mechanism itself had only a prose "inert" note,
 ; so nothing machine-parsed recorded that the wave does not render at all.
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene6; behavior=the per-scanline LY scroll override is not emulated, so the rSCY value written through hLCDCPointer never displaces any scanline and the surfing scene's water renders flat instead of waving, the port stores hLCDCPointer and wLYOverridesBuffer faithfully but nothing consumes them; evidence=H_LCDC_POINTER is written at 9 sites in this file and W_LY_OVERRIDES_BUFFER only here, and neither is read anywhere under src/ or boot/ -- the compositor exposes no per-scanline scroll channel, only the whole-plane H_SCX/H_SCY and the per-row g_row_xoff HAL that battle animations use; lifetime=retire when the compositor gains a per-scanline scroll layer, at which point these bytes drive it directly}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene6; behavior=the per-scanline LY scroll override is not emulated, so the rSCY value written through hLCDCPointer never displaces any scanline and the surfing scene's water renders flat instead of waving, the port stores hLCDCPointer and wLYOverridesBuffer faithfully but nothing consumes them; evidence=hLCDCPointer is written at 9 sites in this file and W_LY_OVERRIDES_BUFFER only here, and neither is read anywhere under src/ or boot/ -- the compositor exposes no per-scanline scroll channel, only the whole-plane hSCX/hSCY and the per-row g_row_xoff HAL that battle animations use; lifetime=retire when the compositor gains a per-scanline scroll layer, at which point these bytes drive it directly}
 YellowIntroScene6:
     call YellowIntro_BlankPalsDelay2AndDisableLCD
     mov bl, 0x5                                    ; ld c, $5
     call UpdateMusicCTimes
     mov al, 0x42                                   ; ld a, LOW(rSCY)  ($FF42)
-    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a  (inert)
+    mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a  (inert)
     call YellowIntro_Copy8BitSineWave
     mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-2 (at the BG row origin)
     mov bx, 3 * SCREEN_TILES_W                     ; ld bc, $60  (rows 0-2)
@@ -389,7 +389,7 @@ YellowIntroScene6:
 YellowIntroScene7:
     call YellowIntro_CheckFrameTimerDecrement
     jc .expired                                    ; jr c, .expired
-    add byte [ebp + H_SCX], 2                       ; ld hl,hSCX / inc [hl] / inc [hl]
+    add byte [ebp + hSCX], 2                       ; ld hl,hSCX / inc [hl] / inc [hl]
     mov al, [ebp + W_LY_OVERRIDES_BUFFER]           ; ld a, [hl]  (save buffer[0])
     push eax                                        ; push af
     lea esi, [ebp + W_LY_OVERRIDES_BUFFER]          ; ld hl, wLYOverridesBuffer   (dest)
@@ -436,7 +436,7 @@ YellowIntroScene8:
     mov bl, 0x5                                     ; ld c, $5
     call UpdateMusicCTimes
     xor al, al
-    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
     call Func_f9e5f
     mov dh, 0x58                                    ; lb de, $58, $58
     mov dl, 0x58
@@ -468,7 +468,7 @@ YellowIntroScene10:
     mov bl, 0x5                                    ; ld c, $5
     call UpdateMusicCTimes
     xor al, al
-    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
     mov esi, W_TILEMAP                             ; ld hl, vBGMap0
     mov bx, SCREEN_AREA                            ; ld bc, $400  (clear whole map)
     xor al, al
@@ -565,7 +565,7 @@ YellowIntroScene12:
     mov bl, 0x5                                    ; ld c, $5
     call UpdateMusicCTimes
     xor al, al
-    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
     mov esi, W_TILEMAP + INTRO_BG_ROW_OFF          ; GB rows 0-3 (at the BG row origin)
     mov bx, 4 * SCREEN_TILES_W                     ; ld bc, $80   (rows 0-3)
     mov al, 0x1
@@ -686,16 +686,16 @@ YellowIntroScene17:
 ; the per-scanline LCDC effect, inert in the port.)
 YellowIntroScene0:
     xor al, al
-    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
     mov dh, 0x58                                    ; lb de, $58, $58
     mov dl, 0x58
     mov al, 0x1
     call YellowIntro_SpawnAnimatedObjectAndSavePointer
     xor al, al
-    mov [ebp + H_SCX], al                           ; ldh [hSCX], a
-    mov [ebp + H_SCY], al                           ; ldh [hSCY], a
+    mov [ebp + hSCX], al                           ; ldh [hSCX], a
+    mov [ebp + hSCY], al                           ; ldh [hSCY], a
     mov al, 0x90
-    mov [ebp + H_WY], al                            ; ldh [hWY], a
+    mov [ebp + hWY], al                            ; ldh [hWY], a
     mov al, 0xe4
     mov [ebp + IO_BGP], al                          ; ldh [rBGP], a
     mov [ebp + IO_OBP0], al                         ; ldh [rOBP0], a
@@ -717,7 +717,7 @@ YellowIntroScene2:
     mov bl, 0x8                                    ; ld c, $8
     call UpdateMusicCTimes
     xor al, al
-    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
     mov esi, W_TILEMAP                             ; ld hl, vBGMap0
     mov bx, SCREEN_AREA                            ; ld bc, $400  (clear whole map)
     xor al, al
@@ -770,15 +770,15 @@ YellowIntroScene2_PlaceGraphic:
 
 ; Scene 3 — hold the "running Pikachu 1" pose while scrolling the BG right to
 ; hSCX = 0x68, then mask the objects and advance. hSCX is the port's own scroll
-; shadow (H_SCX), reconciled to the projected surface by PlayIntroScene.
+; shadow (hSCX), reconciled to the projected surface by PlayIntroScene.
 YellowIntroScene3:
     call YellowIntro_CheckFrameTimerDecrement
     jc .expired                                    ; jr c, .expired
-    mov al, [ebp + H_SCX]                          ; ldh a, [hSCX]
+    mov al, [ebp + hSCX]                          ; ldh a, [hSCX]
     cmp al, 0x68                                   ; cp $68
     je .done                                       ; ret z
     add al, 0x4                                    ; add $4
-    mov [ebp + H_SCX], al                          ; ldh [hSCX], a
+    mov [ebp + hSCX], al                          ; ldh [hSCX], a
 .done:
     ret
 .expired:
@@ -820,7 +820,7 @@ Func_f98fc:
 ; BENIGN inertness -- the port reaches the same visible result by another route --
 ; but it was carried in prose only, so nothing machine-parsed distinguished it from
 ; a real missing feature. That is the distinction this annotation records.
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:InitYellowIntroGFXAndMusic; behavior=the hAutoBGTransferEnabled/hAutoBGTransferDest request bytes are written faithfully but no port code reads them, because the GB's VBlank BG-map auto-transfer has no counterpart, the compositor composes every frame directly from W_TILEMAP so the tilemap the transfer would have published is already on screen; evidence=H_AUTO_BG_TRANSFER_EN and H_AUTO_BG_TRANSFER_DEST are written in this file and in intro.asm and read nowhere under src/ or boot/, and the do_bg_transfer consumer was retired with the surface-mirror compositor -- so unlike the LY-override case no visible behaviour is lost; lifetime=permanent, the surface-mirror compositor replaces the transfer rather than deferring it}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:InitYellowIntroGFXAndMusic; behavior=the hAutoBGTransferEnabled/hAutoBGTransferDest request bytes are written faithfully but no port code reads them, because the GB's VBlank BG-map auto-transfer has no counterpart, the compositor composes every frame directly from W_TILEMAP so the tilemap the transfer would have published is already on screen; evidence=H_AUTO_BG_TRANSFER_EN and hAutoBGTransferDest are written in this file and in intro.asm and read nowhere under src/ or boot/, and the do_bg_transfer consumer was retired with the surface-mirror compositor -- so unlike the LY-override case no visible behaviour is lost; lifetime=permanent, the surface-mirror compositor replaces the transfer rather than deferring it}
 ; ---------------------------------------------------------------------------
 ; ---------------------------------------------------------------------------
 ; CopyYellowIntroAnimatedObjectData — port-only: stage the three immutable
@@ -854,8 +854,8 @@ CopyYellowIntroAnimatedObjectData:
 InitYellowIntroGFXAndMusic:
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al          ; ldh [hAutoBGTransferEnabled], a (=0, inert)
-    mov [ebp + H_SCX], al                          ; ldh [hSCX], a
-    mov [ebp + H_SCY], al                          ; ldh [hSCY], a
+    mov [ebp + hSCX], al                          ; ldh [hSCX], a
+    mov [ebp + hSCY], al                          ; ldh [hSCY], a
     mov [ebp + hAutoBGTransferDest], al        ; ldh [hAutoBGTransferDest], a (lo=0)
     mov byte [ebp + hAutoBGTransferDest + 1], 0x98 ; ld a,$98 / ldh [hAutoBGTransferDest+1],a (vBGMap0 $9800)
     call YellowIntro_BlankTileMap
@@ -926,7 +926,7 @@ PlayIntroScene:
     test al, 0x80                                    ; bit 7, a
     jnz .exit                                        ; jr nz, .go_to_title_screen
     call JoypadLowSensitivity
-    mov al, [ebp + H_JOY_PRESSED]                    ; ldh a, [hJoyPressed]
+    mov al, [ebp + hJoyPressed]                    ; ldh a, [hJoyPressed]
     test al, PAD_A | PAD_B | PAD_START               ; and PAD_A | PAD_B | PAD_START
     jnz .exit                                        ; jr nz, .go_to_title_screen
     call Func_f98fc
@@ -949,15 +949,15 @@ PlayIntroScene:
     mov ebx, 24                                       ; UI_YELLOW_INTRO_ROW * 8
     call PublishProjectedOAM
     ; PORT: present this frame's GB fine scroll on the cinematic window. Scenes
-    ; 3/7/11/15 walk H_SCX (e.g. scene 7's `add H_SCX,2` — a pure hSCX water scroll
+    ; 3/7/11/15 walk hSCX (e.g. scene 7's `add hSCX,2` — a pure hSCX water scroll
     ; with no tilemap roll), which on the GB the LCD reads automatically each frame.
-    ; The port has no hardware scroll, so H_SCX must be transferred to the compositor
+    ; The port has no hardware scroll, so hSCX must be transferred to the compositor
     ; window's fine source offset (WIN_SRC_X) explicitly — exactly as the title bounce
     ; does (title.asm:.scrollStep). Without this the water only scrolled inside a
     ; GBSTATE/FRAME dump (the dump path in debug_dump.asm calls MovieSyncScroll), never
-    ; during live play — implements the B3 "present all H_SCX/H_SCY scrolling through
+    ; during live play — implements the B3 "present all hSCX/hSCY scrolling through
     ; the A1 WIN_SRC_X/WIN_SRC_Y helper" item.
-    call MovieSyncScroll                              ; H_SCX/H_SCY -> WIN_SRC_X/Y (GB mod-256 wrap)
+    call MovieSyncScroll                              ; hSCX/hSCY -> WIN_SRC_X/Y (GB mod-256 wrap)
     call DelayFrame
 %ifdef DEBUG_YELLOW_S01
     ; yellow_intro_s01 golden (menu-intro B4): state-triggered GBSTATE dump at the
@@ -974,13 +974,13 @@ PlayIntroScene:
 %ifdef YELLOW_DUMP_SCENE
     ; scroll-evidence dump (menu-intro B3): capture FRAME.BIN/GBSTATE at a chosen scene
     ; AND scene-timer value, so a SCROLLING scene (3/7/11/15) can be photographed at a
-    ; specific H_SCX. The scene timer counts DOWN from its per-scene init, and scene 7
-    ; walks `H_SCX += 2` once per surviving decrement, so a HIGHER YELLOW_DUMP_TIMER =
-    ; earlier in the scene = smaller H_SCX, a LOWER one = later = larger H_SCX. Two builds
+    ; specific hSCX. The scene timer counts DOWN from its per-scene init, and scene 7
+    ; walks `hSCX += 2` once per surviving decrement, so a HIGHER YELLOW_DUMP_TIMER =
+    ; earlier in the scene = smaller hSCX, a LOWER one = later = larger hSCX. Two builds
     ; at two timer values give the plan's "two distinct scroll offsets" evidence: the
     ; captured FRAME.BIN reflects the real WIN_SRC_X the loop's MovieSyncScroll set (the
     ; general DumpBackbuffer does NOT sync scroll — only the render did), so the water
-    ; band is displaced by the H_SCX delta iff the scroll is actually presented.
+    ; band is displaced by the hSCX delta iff the scroll is actually presented.
     extern DumpBackbuffer                             ; debug/debug_dump.asm
     mov al, [ebp + wYellowIntroCurrentScene]
     cmp al, YELLOW_DUMP_SCENE
@@ -994,9 +994,9 @@ PlayIntroScene:
     jmp .loop
 .exit:
     call YellowIntro_BlankPalettes
-    mov byte [ebp + H_LCDC_POINTER], 0               ; ldh [hLCDCPointer], a
+    mov byte [ebp + hLCDCPointer], 0               ; ldh [hLCDCPointer], a
     call DelayFrame
-    mov byte [ebp + H_WY], 0x90                       ; ld a,$90 / ldh [hWY], a
+    mov byte [ebp + hWY], 0x90                       ; ld a,$90 / ldh [hWY], a
     call ClearObjectAnimationBuffers
     mov esi, W_TILEMAP                                ; ld hl, wTileMap
     mov bx, SCREEN_AREA                               ; ld bc, SCREEN_AREA
@@ -1064,7 +1064,7 @@ YellowIntroScene15:
     ret
 .expired:
     xor al, al
-    mov [ebp + H_LCDC_POINTER], al                 ; ldh [hLCDCPointer], a
+    mov [ebp + hLCDCPointer], al                 ; ldh [hLCDCPointer], a
     mov al, 0xe4
     mov [ebp + IO_BGP], al                         ; ldh [rBGP], a
     mov [ebp + IO_OBP0], al                        ; ldh [rOBP0], a
@@ -1135,10 +1135,10 @@ Func_f9e9a:
     mov dl, al                                      ; ld e, a — palette variant
     call YellowIntroPaletteAction                   ; callfar YellowIntroPaletteAction
     xor al, al
-    mov [ebp + H_SCX], al                          ; ldh [hSCX], a
-    mov [ebp + H_SCY], al                           ; ldh [hSCY], a
+    mov [ebp + hSCX], al                          ; ldh [hSCX], a
+    mov [ebp + hSCY], al                           ; ldh [hSCY], a
     mov al, 0x90
-    mov [ebp + H_WY], al                            ; ldh [hWY], a
+    mov [ebp + hWY], al                            ; ldh [hWY], a
     mov al, 0xe3
     mov [ebp + IO_LCDC], al                         ; ldh [rLCDC], a
     mov al, 0xe4

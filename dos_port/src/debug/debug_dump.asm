@@ -698,8 +698,8 @@ RunTransitionDemo:
 %endif
     call SnapshotRenderedTileMap        ; keep the switch pixel-neutral (see core.asm)
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
-    mov byte [ebp + H_SCX], 0
-    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + hSCX], 0
+    mov byte [ebp + hSCY], 0
     mov byte [ebp + IO_SCX], 0
     mov byte [ebp + IO_SCY], 0
     mov byte [ebp + hTileAnimations], 0
@@ -958,8 +958,8 @@ gbstate_regions:
     gbregion "playerStepVec", W_SPRITE_PLAYER_Y_STEP_VECTOR,   3  ; C103 Yvec, C104, C105 Xvec
     gbregion "curMapWH",      W_CUR_MAP_HEIGHT,      2            ; height then width (blocks)
     ; input source at the writing frame: what direction is driving the walk?
-    gbregion "joyHeld",       H_JOY_HELD,            1
-    gbregion "joyPressed",    H_JOY_PRESSED,         1
+    gbregion "joyHeld",       hJoyHeld,            1
+    gbregion "joyPressed",    hJoyPressed,         1
     gbregion "joyIgnore",     W_JOY_IGNORE,          1
     gbregion "playerMoveDir", W_PLAYER_MOVING_DIRECTION, 1
     gbregion "walkCounter",   W_WALK_COUNTER,        1
@@ -1149,7 +1149,7 @@ gbstate_regions:
     ; symptom to the composite alone — WRAM and W_TILEMAP are both correct after
     ; the switch, yet the frame shows a stale PARTIAL party panel — and the next
     ; question is what the window layer actually holds. hide_window (count=0,
-    ; H_WY=RENDER_H) changed nothing, so the descriptor LIST was not the whole
+    ; hWY=RENDER_H) changed nothing, so the descriptor LIST was not the whole
     ; story; dump it and see. Both live in port memory, hence gbregion_flat.
     gbregion_flat "g_window_count", g_window_count, 4
     gbregion_flat "g_windows",      g_windows, MAX_WINDOWS * WIN_DESC_SIZE
@@ -1169,7 +1169,7 @@ gbstate_regions:
     ; to see what a stuck menu is actually watching. Build with
     ; BILLSPC_MENU_PROBE=1; never enabled for a scenario run.
     gbregion "wMenuState",    wTopMenuItemY, 0x14
-    gbregion "hJoyProbe",     H_JOY_PRESSED, 5   ; FFB3 pressed/held/joy5/joy6/joy7
+    gbregion "hJoyProbe",     hJoyPressed, 5   ; FFB3 pressed/held/joy5/joy6/joy7
 %endif
 %endif
 %ifdef DEBUG_BILLSPC_CHANGEBOX
@@ -2117,8 +2117,8 @@ RunTextBoxIDTest:
     call ClearSprites
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
-    mov byte [ebp + H_SCX], 0       ; zero the shadows too — commit_shadow_regs
-    mov byte [ebp + H_SCY], 0       ; copies them over IO_SCX/SCY each DelayFrame
+    mov byte [ebp + hSCX], 0       ; zero the shadows too — commit_shadow_regs
+    mov byte [ebp + hSCY], 0       ; copies them over IO_SCX/SCY each DelayFrame
     mov byte [ebp + IO_SCX], 0
     mov byte [ebp + IO_SCY], 0
     call hide_window
@@ -5069,9 +5069,9 @@ SeamLogRecord:
     mov [edi + 6], al
     mov al, [ebp + W_CUR_MAP_HEIGHT]                   ; 7
     mov [edi + 7], al
-    mov al, [ebp + H_SCX]                              ; 8
+    mov al, [ebp + hSCX]                              ; 8
     mov [edi + 8], al
-    mov al, [ebp + H_SCY]                              ; 9
+    mov al, [ebp + hSCY]                              ; 9
     mov [edi + 9], al
     mov al, [ebp + GB_OAM + 0]                         ; 10 player OAM Y
     mov [edi + 10], al
@@ -5089,7 +5089,7 @@ SeamLogRecord:
 
 %ifdef DEBUG_SEAMLOG
     ; Live mode: the player drives. Pressing A dumps the trace + the screen and quits.
-    mov al, [ebp + H_JOY_PRESSED]
+    mov al, [ebp + hJoyPressed]
     test al, PAD_A
     jz .done
     pop edi
@@ -6072,8 +6072,8 @@ AutoKeyDrive:
     mov al, [autokey_prev]
     not al
     and al, dl                          ; pressed = held & ~prev
-    mov [ebp + H_JOY_PRESSED], al
-    mov [ebp + H_JOY_HELD], dl
+    mov [ebp + hJoyPressed], al
+    mov [ebp + hJoyHeld], dl
     mov [autokey_prev], dl
     popad
     ret
@@ -7279,8 +7279,8 @@ RunCinematicMarkersTest:
     call MovieMirrorSurface                ; stride 40 -> stride 32 into GB_TILEMAP0
 
     ; ── fine source scroll, through the shared helper ──────────────────────
-    mov byte [ebp + H_SCX], MARKER_SX
-    mov byte [ebp + H_SCY], MARKER_SY
+    mov byte [ebp + hSCX], MARKER_SX
+    mov byte [ebp + hSCY], MARKER_SY
     call MovieSyncScroll
 
     ; ── OBJ markers ────────────────────────────────────────────────────────

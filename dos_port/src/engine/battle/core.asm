@@ -814,10 +814,10 @@ MoveSelectionMenu:
 
 ; .writemoves — In: ESI = dest tile offset. Prints wMovesString single-spaced.
 .writemoves:
-    or  byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_SINGLE_SPACED_LINES
+    or  byte [ebp + hUILayoutFlags], 1 << BIT_SINGLE_SPACED_LINES
     lea eax, [ebp + wMovesString]       ; ld de, wMovesString (PlaceString takes a flat src)
     call PlaceString
-    and byte [ebp + H_UI_LAYOUT_FLAGS], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
+    and byte [ebp + hUILayoutFlags], (~(1 << BIT_SINGLE_SPACED_LINES)) & 0xFF
     ret
 
 .regularmenu:
@@ -1312,7 +1312,7 @@ BattlePromptWait:
     mov ecx, ARROW_BLINK
 .wait:
     call DelayFrame
-    test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
+    test byte [ebp + hJoyPressed], PAD_A | PAD_B
     jnz .done
     dec ecx
     jnz .wait
@@ -2142,8 +2142,8 @@ DoBattleTransitionAndInitBattleVariables:
     mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
     mov [saved_ow_view_ptr], ax
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
-    mov byte [ebp + H_SCX], 0
-    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + hSCX], 0
+    mov byte [ebp + hSCY], 0
     mov byte [ebp + IO_SCX], 0
     mov byte [ebp + IO_SCY], 0
     mov byte [ebp + hTileAnimations], 0
@@ -2167,7 +2167,7 @@ DoBattleTransitionAndInitBattleVariables:
     call ClearScreen
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al
-    mov [ebp + H_WY], al
+    mov [ebp + hWY], al
     mov [ebp + IO_WY], al
     mov [ebp + hTileAnimations], al
     mov [ebp + wPlayerStatsToDouble + 0], al     ; pret: 5 x ld [hli], a

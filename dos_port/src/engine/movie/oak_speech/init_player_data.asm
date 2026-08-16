@@ -42,11 +42,11 @@ section .text
 InitPlayerData:
 InitPlayerData2:
     call Random
-    mov al, [ebp + H_RANDOM_SUB]
+    mov al, [ebp + hRandomSub]
     mov [ebp + wPlayerID], al               ; ld [wPlayerID], a
 
     call Random
-    mov al, [ebp + H_RANDOM_ADD]
+    mov al, [ebp + hRandomAdd]
     mov [ebp + wPlayerID + 1], al           ; ld [wPlayerID + 1], a
 
     mov byte [ebp + wUnusedPlayerDataByte], 0xff

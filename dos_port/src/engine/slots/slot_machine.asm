@@ -837,7 +837,7 @@ SlotMachine_StopWheel2Early:
 SlotMachine_HandleInputWhileWheelsSpin:
     call DelayFrame
     call JoypadLowSensitivity
-    mov al, byte [ebp + H_JOY5]
+    mov al, byte [ebp + hJoy5]
     and al, PAD_A
     jz .exit
     mov esi, wStoppingWhichSlotMachineWheel

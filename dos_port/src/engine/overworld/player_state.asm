@@ -74,7 +74,7 @@ wNumSafariBalls              equ 0xDA46 ; ram/wram.asm (db); sym-verified
 ; --- HRAM (ram/hram.asm) — same EBP-relative space, just the $FF80-$FFFE
 ; window; sym-verified via `git show origin/symbols:pokeyellow.sym`.
 %ifndef H_WARP_DESTINATION_MAP
-H_WARP_DESTINATION_MAP       equ 0xFF8B ; hWarpDestinationMap (UNION w/ H_PREVIOUS_TILESET, same addr)
+H_WARP_DESTINATION_MAP       equ 0xFF8B ; hWarpDestinationMap (UNION w/ hPreviousTileset, same addr)
 %endif
 %ifndef H_PLAYER_FACING
 H_PLAYER_FACING              equ 0xFFDB ; hPlayerFacing (UNION w/ hPlayerYCoord/hPlayerXCoord that follow)

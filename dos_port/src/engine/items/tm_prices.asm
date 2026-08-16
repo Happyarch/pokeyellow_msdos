@@ -43,8 +43,8 @@ GetMachinePrice:
     or al, cl
 .highNybbleIsPrice:
     and al, 0xF0
-    mov [ebp + H_ITEM_PRICE + 1], al
-    mov byte [ebp + H_ITEM_PRICE], 0
-    mov byte [ebp + H_ITEM_PRICE + 2], 0
+    mov [ebp + hItemPrice + 1], al
+    mov byte [ebp + hItemPrice], 0
+    mov byte [ebp + hItemPrice + 2], 0
 .done:
     ret

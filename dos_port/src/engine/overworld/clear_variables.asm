@@ -14,7 +14,7 @@
 ;     BX = byte count, AL = fill value. Preserves ESI/EBX/EAX/ECX.
 ;   extern hide_window  ; src/ppu/ppu.asm
 ;     Contract (per that file's header): empties the window list
-;     (g_window_count = 0) and sets H_WY = RENDER_H. No inputs; all registers
+;     (g_window_count = 0) and sets hWY = RENDER_H. No inputs; all registers
 ;     preserved. This is the port's existing idiom for pret's
 ;     "ldh [hWY],a (SCREEN_HEIGHT_PX) / ldh [rWY],a" hide-the-window pattern —
 ;     see ResetMapVariables (src/engine/overworld/overworld.asm) which performs
@@ -33,7 +33,7 @@ bits 32
 ; WRAM symbols consumed here (wWhichTrade 0xCD3D, wStandingOnWarpPadOrHole
 ; 0xCD5B, wStepCounter 0xD13A, wUnusedMapVariable 0xD5A2, wCardKeyDoorY 0xD73E,
 ; wCardKeyDoorX 0xD73F) are defined in gb_memmap.inc (root-promoted, sym-verified
-; against origin/symbols:pokeyellow.sym). H_WY/IO_WY/H_AUTO_BG_TRANSFER_EN/
+; against origin/symbols:pokeyellow.sym). hWY/IO_WY/H_AUTO_BG_TRANSFER_EN/
 ; H_JOY_*/RENDER_H and wActionResultOrTookBattleTurn/wLoneAttackNo pre-existing.
 
 section .text
@@ -57,7 +57,7 @@ ClearVariablesOnEnterMap:
     ; renderer does not scan out a window via hardware WY. The port's
     ; established idiom for this exact "hide the window" pattern (see
     ; ResetMapVariables, same file area, and hide_window's own header) is:
-    ;   call hide_window          -> g_window_count = 0, H_WY = RENDER_H
+    ;   call hide_window          -> g_window_count = 0, hWY = RENDER_H
     ;   mov byte [ebp+IO_WY], RENDER_H  -> mirror the real-register shadow
     ; RENDER_H (200, the port's back-buffer height) stands in for pret's
     ; SCREEN_HEIGHT_PX (144, the GB's LCD height) — same "off the bottom of
@@ -84,13 +84,13 @@ ClearVariablesOnEnterMap:
 
     ; ldh [hJoyPressed], a / ldh [hJoyReleased], a / ldh [hJoyHeld], a
     ; The port's joypad ISR (src/input/joypad.asm) owns and actively
-    ; maintains H_JOY_PRESSED/H_JOY_RELEASED/H_JOY_HELD each frame; these are
+    ; maintains hJoyPressed/hJoyReleased/hJoyHeld each frame; these are
     ; plain WRAM/HRAM shadow bytes (not hardware registers), so a faithful
     ; direct zero is correct here (clears stale input state on map entry,
     ; same as pret).
-    mov byte [ebp + H_JOY_PRESSED], al
-    mov byte [ebp + H_JOY_RELEASED], al
-    mov byte [ebp + H_JOY_HELD], al
+    mov byte [ebp + hJoyPressed], al
+    mov byte [ebp + hJoyReleased], al
+    mov byte [ebp + hJoyHeld], al
 
     ; ld [wActionResultOrTookBattleTurn], a
     mov byte [ebp + wActionResultOrTookBattleTurn], al

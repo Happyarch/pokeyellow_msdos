@@ -173,8 +173,8 @@ StatusScreen:
     ; --- PORT: flat-canvas render setup (mirror init_battle) so render_bg shows
     ; W_TILEMAP directly and PlaceString steps rows by FW (40) --------------------
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
-    mov byte [ebp + H_SCX], 0                         ; zero the SHADOWS too — commit_shadow_regs
-    mov byte [ebp + H_SCY], 0                         ; copies them over IO_SCX/SCY each DelayFrame,
+    mov byte [ebp + hSCX], 0                         ; zero the SHADOWS too — commit_shadow_regs
+    mov byte [ebp + hSCY], 0                         ; copies them over IO_SCX/SCY each DelayFrame,
     mov byte [ebp + IO_SCX], 0                        ; so the overworld scroll would otherwise be
     mov byte [ebp + IO_SCY], 0                        ; restored and drag the flat canvas off-screen
     ; (W_UPDATE_SPRITES_ENABLED already zeroed above, before the whiteout frames)
@@ -378,7 +378,7 @@ DrawLineBox:
 ; in their mirror at last (moved back from party_menu.asm, which hosted them
 ; until this file's StatusScreen landed). DrawHP → wHPBarType 1 (status/battle
 ; cap $6d), DrawHP2 → 2 (party cap $6c). The fraction goes right of the bar
-; (+9) when H_UI_LAYOUT_FLAGS bit BIT_PARTY_MENU_HP_BAR is set (party menu),
+; (+9) when hUILayoutFlags bit BIT_PARTY_MENU_HP_BAR is set (party menu),
 ; else one row below the bar — pret's SCREEN_WIDTH+1, taken from the runtime
 ; [text_row_stride] (20 menu scratch / 40 flat canvas), the port's one
 ; divergence from pret's constant.
@@ -418,7 +418,7 @@ DrawHP_:
     push esi                                ; push hl
     call DrawHPBar
     pop esi                                 ; pop hl
-    test byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PARTY_MENU_HP_BAR
+    test byte [ebp + hUILayoutFlags], 1 << BIT_PARTY_MENU_HP_BAR
     jz .printFractionBelowBar
     add esi, 9                              ; ld bc,$9 — right of bar
     jmp .printFraction

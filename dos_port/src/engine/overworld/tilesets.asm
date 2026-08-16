@@ -94,7 +94,7 @@ LoadTilesetHeader:
     mov bl, [TilesetGrassTiles + eax]
     mov [ebp + W_GRASS_TILE], bl
     mov bl, [TilesetAnimations + eax]
-    mov [ebp + H_TILE_ANIMATIONS], bl
+    mov [ebp + hTileAnimations], bl
 
     ; Per-tileset counter ("talking-over") tiles. pret copies these as bytes 7-9 of the
     ; 12-byte tileset header (wTilesetTalkingOverTiles, 3 bytes; part of its $b-byte
@@ -125,7 +125,7 @@ LoadTilesetHeader:
 
     ; pret: ld a,[wCurMapTileset] / ld b,a / ldh a,[hPreviousTileset] / cp b / jr z,.done
     mov bl, al                           ; BL = current tileset (AL untouched by IsInArray)
-    mov al, [ebp + H_PREVIOUS_TILESET]   ; HRAM union w/ hMapStride/hNSConnectionStripWidth — read-only here
+    mov al, [ebp + hPreviousTileset]   ; HRAM union w/ hMapStride/hNSConnectionStripWidth — read-only here
     cmp al, bl
     je .done                            ; tileset unchanged and not a dungeon tileset — skip realignment
 

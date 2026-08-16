@@ -286,7 +286,7 @@ UpdateHPBar_PrintHPNumber:
 ; party-menu case is a pure horizontal offset and carries verbatim.
     mov ecx, [text_row_stride]
     inc ecx
-    test byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PARTY_MENU_HP_BAR
+    test byte [ebp + hUILayoutFlags], 1 << BIT_PARTY_MENU_HP_BAR
     jz .hpBelowBar
     mov ecx, 9                               ; ld de, $9 — right of the bar
 .hpBelowBar:

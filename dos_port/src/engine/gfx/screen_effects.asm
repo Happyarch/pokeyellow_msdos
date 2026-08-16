@@ -7,7 +7,7 @@
 ; it yet, and it belongs to the overworld poison flash, not this stage.
 ;
 ; ---------------------------------------------------------------------------
-; THE PROJECTION (why these write H_SCX/H_SCY and not rWX/rWY)
+; THE PROJECTION (why these write hSCX/hSCY and not rWX/rWY)
 ;
 ; On the Game Boy the whole battle screen IS the window layer: engine/battle/
 ; core.asm sets rWY = 0 on battle entry, so the window covers the screen from
@@ -21,9 +21,9 @@
 ; window layer is only the descriptor-driven dialog/menu boxes. So the port's
 ; equivalent of "displace the entire visible screen" is the BG blit offset,
 ; which render_bg reads from IO_SCX/IO_SCY — and those are overwritten from
-; H_SCX/H_SCY by commit_shadow_regs every DelayFrame, so the SHADOWS are what a
+; hSCX/hSCY by commit_shadow_regs every DelayFrame, so the SHADOWS are what a
 ; multi-frame effect must write. Maintainer directive, 2026-08-07: screen shake
-; is whole-canvas displacement through the existing H_SCX/H_SCY path, with the
+; is whole-canvas displacement through the existing hSCX/hSCY path, with the
 ; matte moving with the scene; no frame-only shake HAL.
 ;
 ; The unsigned range is sufficient, which is not obvious and was measured rather
@@ -33,8 +33,8 @@
 ; never needs a negative offset — which matters because render_bg reads the
 ; scroll shadows with `movzx` (unsigned 0..255).
 ;
-; Mapping: port H_SCX = pret rWX - 7 (both neutral at their own zero point),
-; port H_SCY = pret rWY. The axis SENSE is inverted — a larger bg_scx/bg_scy
+; Mapping: port hSCX = pret rWX - 7 (both neutral at their own zero point),
+; port hSCY = pret rWY. The axis SENSE is inverted — a larger bg_scx/bg_scy
 ; samples further into bg_surface, moving content the opposite way from a window
 ; move — which is cosmetically irrelevant for a symmetric jolt but is recorded
 ; in the DEVIATIONs below rather than left for a reader to rediscover.
@@ -66,7 +66,7 @@ section .text
 ; sequence of progressively smaller numbers of pixels, starting at b.
 ; In: BH = pret b (magnitude). Clobbers AL, BH, BL.
 ;
-; DEVIATION{class=projection; pret=engine/gfx/screen_effects.asm:PredefShakeScreenVertically; behavior=displaces the whole canvas by writing the BG scroll shadow H_SCY instead of the window register rWY, and the displacement sense is inverted; evidence=on GB the battle screen is the window layer (core.asm sets rWY=0 on battle entry) so moving the window moves the visible screen, but the port draws battle on the BG layer and reserves the window for dialog boxes, and render_bg takes its blit offset from IO_SCY which commit_shadow_regs rewrites from H_SCY every DelayFrame, so the shadow is the only channel a multi-frame effect can use; lifetime=permanent, part of the port's BG-layer battle-screen model}
+; DEVIATION{class=projection; pret=engine/gfx/screen_effects.asm:PredefShakeScreenVertically; behavior=displaces the whole canvas by writing the BG scroll shadow hSCY instead of the window register rWY, and the displacement sense is inverted; evidence=on GB the battle screen is the window layer (core.asm sets rWY=0 on battle entry) so moving the window moves the visible screen, but the port draws battle on the BG layer and reserves the window for dialog boxes, and render_bg takes its blit offset from IO_SCY which commit_shadow_regs rewrites from hSCY every DelayFrame, so the shadow is the only channel a multi-frame effect can use; lifetime=permanent, part of the port's BG-layer battle-screen model}
 ; ---------------------------------------------------------------------------
 PredefShakeScreenVertically:
     ; pret: call GetPredefRegisters — omitted, see the DIRECT CALL note above.
@@ -91,18 +91,18 @@ PredefShakeScreenVertically:
     ; VBlank's WY commit, which rewrites rWY from hWY on the very next frame —
     ; the window register has a backing shadow that restores it for free.
     ;
-    ; H_SCY has no such backer: in the port it IS the source of truth that
+    ; hSCY has no such backer: in the port it IS the source of truth that
     ; commit_shadow_regs copies into IO_SCY. Leaving it at 1 would offset the
     ; whole battle canvas by one pixel permanently, so the neutral must be
     ; written explicitly here.
-    mov [ebp + H_SCY], al
+    mov [ebp + hSCY], al
     ret
 
 .MutateWY:
     mov al, [ebp + hMutateWY]
     xor al, bh                               ; xor b
     mov [ebp + hMutateWY], al
-    mov [ebp + H_SCY], al                    ; ldh [rWY],a  → canvas Y displacement
+    mov [ebp + hSCY], al                    ; ldh [rWY],a  → canvas Y displacement
     mov bl, 3                                ; ld c,3
     jmp DelayFrames                          ; jp DelayFrames
 
@@ -111,7 +111,7 @@ PredefShakeScreenVertically:
 ; sequence of progressively smaller numbers of pixels, starting at b.
 ; In: BH = pret b (magnitude). Clobbers AL, BH, BL.
 ;
-; DEVIATION{class=projection; pret=engine/gfx/screen_effects.asm:PredefShakeScreenHorizontally; behavior=displaces the whole canvas by writing the BG scroll shadow H_SCX instead of the window register rWX, drops pret's +7 WX bias so neutral is 0 rather than 7, and the displacement sense is inverted; evidence=on GB the battle screen is the window layer and WX=7 is its neutral left edge, so pret adds 7 to every displacement, whereas the port draws battle on the BG layer whose neutral blit offset is 0 and whose only multi-frame-safe channel is H_SCX because commit_shadow_regs rewrites IO_SCX from it each DelayFrame; lifetime=permanent, part of the port's BG-layer battle-screen model}
+; DEVIATION{class=projection; pret=engine/gfx/screen_effects.asm:PredefShakeScreenHorizontally; behavior=displaces the whole canvas by writing the BG scroll shadow hSCX instead of the window register rWX, drops pret's +7 WX bias so neutral is 0 rather than 7, and the displacement sense is inverted; evidence=on GB the battle screen is the window layer and WX=7 is its neutral left edge, so pret adds 7 to every displacement, whereas the port draws battle on the BG layer whose neutral blit offset is 0 and whose only multi-frame-safe channel is hSCX because commit_shadow_regs rewrites IO_SCX from it each DelayFrame; lifetime=permanent, part of the port's BG-layer battle-screen model}
 ; ---------------------------------------------------------------------------
 PredefShakeScreenHorizontally:
     ; pret: call GetPredefRegisters — omitted, see the DIRECT CALL note above.
@@ -128,7 +128,7 @@ PredefShakeScreenHorizontally:
 
 ; restore the neutral position (pret: ld a,7 / ldh [rWX],a — WX 7 is its neutral;
 ; the port's neutral canvas offset is 0)
-    mov byte [ebp + H_SCX], 0
+    mov byte [ebp + hSCX], 0
     ret
 
 .MutateWX:
@@ -141,6 +141,6 @@ PredefShakeScreenHorizontally:
 .skipZeroing:
     ; pret: add 7 / ldh [rWX],a — the +7 is the GB window's neutral left edge and
     ; is dropped here (see the DEVIATION); the clamped magnitude IS the offset.
-    mov [ebp + H_SCX], al
+    mov [ebp + hSCX], al
     mov bl, 4                                ; ld c,4
     jmp DelayFrames                          ; jp DelayFrames

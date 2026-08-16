@@ -53,7 +53,7 @@ section .text
 ; ---------------------------------------------------------------------------
 AddAmountSoldToMoney:
     mov edx, W_PLAYER_MONEY + 2      ; ld de, wPlayerMoney + 2 (LSB)
-    mov esi, H_MONEY + 2             ; ld hl, hMoney + 2 (LSB, total price)
+    mov esi, hMoney + 2             ; ld hl, hMoney + 2 (LSB, total price)
     mov cl, 3                        ; ld c, 3
     call AddBCD                      ; predef AddBCDPredef — add price to money
 

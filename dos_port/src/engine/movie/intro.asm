@@ -110,8 +110,8 @@ global PlayShootingStar
 PlayShootingStar:
     call MovieBeginSurface                ; PORT: black-matte cinematic surface
     mov byte [ebp + IO_LCDC], 0xE3        ; signed BG tile addressing (bit4=0) — © / bar / logo tiles in vChars2
-    mov byte [ebp + H_SCX], 0             ; splash does not scroll — pin the surface origin
-    mov byte [ebp + H_SCY], 0
+    mov byte [ebp + hSCX], 0             ; splash does not scroll — pin the surface origin
+    mov byte [ebp + hSCY], 0
     mov bh, 0x0C                          ; ld b, SET_PAL_GAME_FREAK_INTRO
     call RunPaletteCommand
     call LoadCopyrightAndTextBoxTiles     ; the ©1995-1999 Nintendo/Creatures/GAME FREAK screen
@@ -196,11 +196,11 @@ PlayShootingStar:
 ; ---------------------------------------------------------------------------
 global PlayIntro
 PlayIntro:
-    mov byte [ebp + H_JOY_HELD], 0             ; xor a / ldh [hJoyHeld], a
+    mov byte [ebp + hJoyHeld], 0             ; xor a / ldh [hJoyHeld], a
     mov byte [ebp + hAutoBGTransferEnabled], 1 ; inc a / ldh [hAutoBGTransferEnabled], a
     call PlayShootingStar                       ; the Game Freak splash (B2)
     call PlayIntroScene                         ; callfar in pret — the Yellow intro scenes (B3)
-    mov byte [ebp + H_SCX], 0                   ; xor a / ldh [hSCX], a
+    mov byte [ebp + hSCX], 0                   ; xor a / ldh [hSCX], a
     mov byte [ebp + hAutoBGTransferEnabled], 0 ; ldh [hAutoBGTransferEnabled], a
     call ClearSprites
     call DelayFrame

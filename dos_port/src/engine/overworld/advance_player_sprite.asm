@@ -149,10 +149,10 @@ _AdvancePlayerSprite:
     ; hSCY += 2*Yvec ; hSCX += 2*Xvec
     mov al, [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR]
     add al, al
-    add [ebp + H_SCY], al
+    add [ebp + hSCY], al
     mov al, [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR]
     add al, al
-    add [ebp + H_SCX], al
+    add [ebp + hSCX], al
 
     pop edx
     pop ecx

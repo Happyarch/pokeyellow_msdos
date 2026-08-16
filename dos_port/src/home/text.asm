@@ -358,7 +358,7 @@ TextBoxBorder:
 ; manual_text_scroll — copy current dialog box to window layer and wait for A/B.
 ;
 ; Copies wTileMap rows 12-17 (6 rows × 20 tiles) to GB_TILEMAP1 rows 0-5, pads
-; cols 20-31 with TILE_SPC, sets H_WY=152 / IO_WX=87 so the window renders centered,
+; cols 20-31 with TILE_SPC, sets hWY=152 / IO_WX=87 so the window renders centered,
 ; places the ▼ advance arrow (tile CHAR_DOWN_ARROW at row 4, col 18 of GB_TILEMAP1),
 ; and polls until A or B is pressed (release-then-press cycle to avoid sticky input).
 ; Called at CHAR_PARA, CHAR_CONT, CHAR_DONE control codes inside PlaceString.
@@ -423,7 +423,7 @@ manual_text_scroll:
     mov edx, RENDER_H            ; max_y = 200 (draws to bottom)
     mov esi, GB_TILEMAP1         ; dialog box source tilemap
     xor edi, edi                 ; start_row = 0
-    call set_single_window       ; also mirrors wy→H_WY (sync_dialog_window flag), wx→IO_WX
+    call set_single_window       ; also mirrors wy→hWY (sync_dialog_window flag), wx→IO_WX
     ; Place ▼ arrow and init blink counters.
     ; Pret ref: home/joypad2.asm:WaitForTextScrollButtonPress places coord(18,16).
     ; M1.2: TX_WAIT_BUTTON / in-battle TX_PROMPT_BUTTON suppress the ▼ (mts_hide_arrow).
@@ -437,7 +437,7 @@ manual_text_scroll:
     ; Release cycle: wait until A/B is no longer held (avoids re-triggering on held button).
 .mts_release:
     call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    test byte [ebp + hJoyHeld], PAD_A | PAD_B
     jnz .mts_release
     ; Press cycle: wait for A or B; blink ▼ each frame.
 .mts_press:
@@ -446,7 +446,7 @@ manual_text_scroll:
     jne .mts_no_blink
     call HandleDownArrowBlinkTiming
 .mts_no_blink:
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    test byte [ebp + hJoyHeld], PAD_A | PAD_B
     jz .mts_press
     ; Clear arrow from window tilemap.
     mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TILE_SPC
@@ -471,7 +471,7 @@ manual_text_scroll:
     mov byte [ebp + H_DOWN_ARROW_COUNT2], 1
 .dfp_release:                            ; wait for A/B release (avoid sticky input)
     call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    test byte [ebp + hJoyHeld], PAD_A | PAD_B
     jnz .dfp_release
 .dfp_press:                              ; wait for a fresh A/B press
     call DelayFrame
@@ -479,7 +479,7 @@ manual_text_scroll:
     call HandleDownArrowBlinkTiming      ; blink the compared scratch byte…
     mov al, [ebp + POKEDEX_ARROW_SCRATCH_OFFSET]
     mov [ebp + GB_TILEMAP1 + POKEDEX_ARROW_TILEMAP_OFFSET], al  ; …and show it
-    test byte [ebp + H_JOY_HELD], PAD_A | PAD_B
+    test byte [ebp + hJoyHeld], PAD_A | PAD_B
     jz .dfp_press
     ; the scratch cell is cleared by .handle_page's 7×18 page clear right after
     ; this returns (pret: PageChar's ClearScreenArea does the same)
@@ -558,12 +558,12 @@ scroll_text_up:
 ; Called from PrintText (after TextBoxBorder, before first character) and from
 ; PrintLetterDelay (before the delay frames) so each character becomes visible
 ; as it is typed rather than all at once at the end.
-; No-op when the dialog window is not open (H_WY == RENDER_H).
+; No-op when the dialog window is not open (hWY == RENDER_H).
 ; All registers preserved.
 ; ---------------------------------------------------------------------------
 sync_dialog_window:
     push eax
-    movzx eax, byte [ebp + H_WY]
+    movzx eax, byte [ebp + hWY]
     cmp al, RENDER_H
     je .skip
     cmp byte [g_dex_flavor_active], 0
@@ -572,7 +572,7 @@ sync_dialog_window:
     ; windows (e.g. the party-menu panel). The overworld dialog's char-reveal mirror
     ; must NOT paint the dialog rows (W_TILEMAP 12-17) over that panel. Only the
     ; map-overlay dialog (g_bg_whiteout=0) wants this copy. Without the gate, a stray
-    ; PrintText/PrintLetterDelay during such a menu (H_WY left != RENDER_H by the
+    ; PrintText/PrintLetterDelay during such a menu (hWY left != RENDER_H by the
     ; menu's own set_single_window) duplicates the menu's message box into rows 0-5.
     cmp byte [g_bg_whiteout], 0
     jne .skip
@@ -688,7 +688,7 @@ PlaceNextChar:
     jne .not_next
     pop esi                    ; restore line start
     add esi, [text_row_stride] ; +1 row (stride-aware: 20 overworld / 40 battle)
-    test byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_SINGLE_SPACED_LINES
+    test byte [ebp + hUILayoutFlags], 1 << BIT_SINGLE_SPACED_LINES
     jnz .next_push
     add esi, [text_row_stride]  ; double-spaced: +2 rows total
 .next_push:
@@ -776,7 +776,7 @@ PlaceNextChar:
     ; behave exactly like <NEXT>; otherwise (Pokedex full-page break) wait for input,
     ; clear the 7×18 text area at coord(1,10), pause ~20 frames, and re-home the
     ; cursor at coord(1,11).  Pret ref: home/text.asm:PageChar.
-    test byte [ebp + H_UI_LAYOUT_FLAGS], 1 << BIT_PAGE_CHAR_IS_NEXT
+    test byte [ebp + hUILayoutFlags], 1 << BIT_PAGE_CHAR_IS_NEXT
     jz .page_full
     mov al, CHAR_NEXT
     jmp .not_term                    ; process as <NEXT> (pret: jp PlaceNextChar.NotTerminator)
@@ -1286,7 +1286,7 @@ TextCommandProcessor:
 ; --- TX_PAUSE ($0A): if A or B is already held, continue immediately; otherwise
 ;     pause ~30 frames. Pret ref: home/text.asm:TextCommand_PAUSE. No operand. ---
 .cmd_pause:
-    movzx eax, byte [ebp + H_JOY_HELD]
+    movzx eax, byte [ebp + hJoyHeld]
     test al, PAD_A | PAD_B
     jnz .next_cmd
     ; DelayFrames c=30. Bounded DelayFrame loop (the set-hFrameCounter-and-spin idiom
@@ -1307,7 +1307,7 @@ TextCommandProcessor:
 .dots_loop:
     mov byte [ebp + ebx], CHAR_DOTS_GLYPH   ; write '…' at the cursor
     inc ebx
-    movzx eax, byte [ebp + H_JOY_HELD]
+    movzx eax, byte [ebp + hJoyHeld]
     test al, PAD_A | PAD_B
     jnz .dots_next                      ; button held: skip this glyph's delay
     mov ecx, 10                         ; DelayFrames c=10 (bounded loop; see M2.1 note above)

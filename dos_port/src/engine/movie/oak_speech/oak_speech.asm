@@ -211,7 +211,7 @@ MovePicLeft:
 global IntroTextWait
 IntroTextWait:
     call DelayFrame
-    movzx eax, byte [ebp + H_JOY_PRESSED]
+    movzx eax, byte [ebp + hJoyPressed]
     test al, (PAD_A | PAD_B)
     jz IntroTextWait
     ret

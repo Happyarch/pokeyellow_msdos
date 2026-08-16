@@ -501,8 +501,8 @@ ResetButtonPressedAndMapScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
     mov [ebp + hJoyHeld], al
-    mov [ebp + H_JOY_PRESSED], al           ; pret: ldh [hJoyPressed], a
-    mov [ebp + H_JOY_RELEASED], al          ; pret: ldh [hJoyReleased], a
+    mov [ebp + hJoyPressed], al           ; pret: ldh [hJoyPressed], a
+    mov [ebp + hJoyReleased], al          ; pret: ldh [hJoyReleased], a
     mov [ebp + wCurMapScript], al           ; reset battle status
     ret
 EndTrainerBattle.bitWasSet:                 ; pret's ret nz exit

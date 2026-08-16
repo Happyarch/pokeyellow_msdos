@@ -27,21 +27,21 @@ bits 32
 %define ARROW_OFF          UI_DIALOG_ARROW_OFS
 
 ; ---------------------------------------------------------------------------
-; HRAM low-sensitivity joypad slots (pret hram.asm order, anchored at H_SCX):
+; HRAM low-sensitivity joypad slots (pret hram.asm order, anchored at hSCX):
 ;   hJoyLast FFB1, hJoyReleased FFB2, hJoyPressed FFB3, hJoyHeld FFB4,
 ;   hJoy5 FFB5, hJoy6 FFB6, hJoy7 FFB7.
-; H_JOY_PRESSED/H_JOY_HELD already live in gb_memmap.inc; H_JOY5/6/7 do not yet.
+; hJoyPressed/hJoyHeld already live in gb_memmap.inc; hJoy5/6/7 do not yet.
 ; %ifndef-guarded so this file self-assembles AND coexists once root promotes
 ; them into gb_memmap.inc (see SUMMARY.md "missing memmap symbols").
 ; ---------------------------------------------------------------------------
-%ifndef H_JOY5
-H_JOY5  equ 0xFFB5      ; hJoy5 — OUTPUT: pressed buttons (usual format)
+%ifndef hJoy5
+hJoy5  equ 0xFFB5      ; hJoy5 — OUTPUT: pressed buttons (usual format)
 %endif
-%ifndef H_JOY6
-H_JOY6  equ 0xFFB6      ; hJoy6 — flag: 0 = suppress repeat while A/B held
+%ifndef hJoy6
+hJoy6  equ 0xFFB6      ; hJoy6 — flag: 0 = suppress repeat while A/B held
 %endif
-%ifndef H_JOY7
-H_JOY7  equ 0xFFB7      ; hJoy7 — flag: 0 = newly-pressed only, 1 = held+delay
+%ifndef hJoy7
+hJoy7  equ 0xFFB7      ; hJoy7 — flag: 0 = newly-pressed only, 1 = held+delay
 %endif
 
 ; ---------------------------------------------------------------------------
@@ -73,55 +73,55 @@ JoypadLowSensitivity:
     ; even advance one", laggy / inconsistent taps. Fix (port equivalent of pret's
     ; `call Joypad`): recompute the edge HERE against a JoypadLowSensitivity-private
     ; snapshot updated ONLY on JoypadLowSensitivity calls — so it survives the
-    ; caller's DelayFrames. H_JOY_HELD is refreshed every frame by joypad_update and
+    ; caller's DelayFrames. hJoyHeld is refreshed every frame by joypad_update and
     ; is authoritative for the current held state.
     push ebx
-    mov al, [ebp + H_JOY_HELD]      ; current held buttons (fresh each DelayFrame)
+    mov al, [ebp + hJoyHeld]      ; current held buttons (fresh each DelayFrame)
     mov bl, [jls_prev]              ; JLS's own previous snapshot
     mov [jls_prev], al              ; snapshot updated only here (pret: hJoyLast)
     xor bl, al
     and bl, al                      ; pressed = (prev ^ held) & held
-    mov [ebp + H_JOY_PRESSED], bl   ; edge that survives the caller's DelayFrames
+    mov [ebp + hJoyPressed], bl   ; edge that survives the caller's DelayFrames
     pop ebx
 
-    mov al, [ebp + H_JOY7]          ; ldh a, [hJoy7]   ; flag
+    mov al, [ebp + hJoy7]          ; ldh a, [hJoy7]   ; flag
     and al, al                      ; and a  — newly-pressed only, or held?
-    mov al, [ebp + H_JOY_PRESSED]   ; ldh a, [hJoyPressed]  (mov keeps flags)
+    mov al, [ebp + hJoyPressed]   ; ldh a, [hJoyPressed]  (mov keeps flags)
     jz  .storeButtonState           ; jr z (ZF set by hJoy7 test above)
-    mov al, [ebp + H_JOY_HELD]      ; ldh a, [hJoyHeld]     ; all held buttons
+    mov al, [ebp + hJoyHeld]      ; ldh a, [hJoyHeld]     ; all held buttons
 .storeButtonState:
-    mov [ebp + H_JOY5], al          ; ldh [hJoy5], a
-    mov al, [ebp + H_JOY_PRESSED]   ; ldh a, [hJoyPressed]
+    mov [ebp + hJoy5], al          ; ldh [hJoy5], a
+    mov al, [ebp + hJoyPressed]   ; ldh a, [hJoyPressed]
     and al, al                      ; and a  — any buttons newly pressed?
     jz  .noNewlyPressedButtons      ; jr z
 
     ; newly pressed buttons: arm the ~1/2 second initial delay
-    mov byte [ebp + H_FRAME_COUNTER], 30    ; ld a, 30 / ldh [hFrameCounter], a
+    mov byte [ebp + hFrameCounter], 30    ; ld a, 30 / ldh [hFrameCounter], a
     ret
 
 .noNewlyPressedButtons:
-    mov al, [ebp + H_FRAME_COUNTER] ; ldh a, [hFrameCounter]
+    mov al, [ebp + hFrameCounter] ; ldh a, [hFrameCounter]
     and al, al                      ; and a  — is the delay over?
     jz  .delayOver                  ; jr z
 
     ; delay not over: report no buttons as pressed
     xor al, al
-    mov [ebp + H_JOY5], al          ; ldh [hJoy5], a
+    mov [ebp + hJoy5], al          ; ldh [hJoy5], a
     ret
 
 .delayOver:
     ; if [hJoy6] == 0 and A or B is held, report no buttons as pressed
-    mov al, [ebp + H_JOY_HELD]      ; ldh a, [hJoyHeld]
+    mov al, [ebp + hJoyHeld]      ; ldh a, [hJoyHeld]
     and al, PAD_A | PAD_B           ; and PAD_A | PAD_B
     jz  .setShortDelay              ; jr z (neither A nor B held)
-    mov al, [ebp + H_JOY6]          ; ldh a, [hJoy6]   ; flag
+    mov al, [ebp + hJoy6]          ; ldh a, [hJoy6]   ; flag
     and al, al                      ; and a
     jnz .setShortDelay              ; jr nz (hJoy6 != 0 → keep buttons)
     xor al, al
-    mov [ebp + H_JOY5], al          ; ldh [hJoy5], a   ; A/B held → suppress
+    mov [ebp + hJoy5], al          ; ldh [hJoy5], a   ; A/B held → suppress
 .setShortDelay:
     ; arm the ~1/12 second auto-repeat cadence
-    mov byte [ebp + H_FRAME_COUNTER], 5     ; ld a, 5 / ldh [hFrameCounter], a
+    mov byte [ebp + hFrameCounter], 5     ; ld a, 5 / ldh [hFrameCounter], a
     ret
 
 ; ---------------------------------------------------------------------------
@@ -155,7 +155,7 @@ WaitForAPress:
     mov esi, W_TILEMAP + ARROW_OFF               ; pret: hlcoord 18,16
     call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
     call DelayFrame
-    test byte [ebp + H_JOY_PRESSED], PAD_A | PAD_B
+    test byte [ebp + hJoyPressed], PAD_A | PAD_B
     jz .wait
     mov al, [wtsbp_saved_c1]                      ; pret: pop af / ldh [hDownArrowBlinkCount1]
     mov [ebp + H_DOWN_ARROW_COUNT1], al

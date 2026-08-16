@@ -186,7 +186,7 @@ _SetSpritePosition2:
 ; TrainerWalkUpToPlayer — make the engaging trainer walk up to the player.
 ; pret: engine/overworld/trainer_sight.asm:TrainerWalkUpToPlayer
 ; Uses the port scripted-movement primitive MoveSprite_ (EDI=flat stream,
-; H_CURRENT_SPRITE_OFFSET=slot*0x10).
+; hCurrentSpriteOffset=slot*0x10).
 ; ----------------------------------------------------------------------------
 TrainerWalkUpToPlayer:
     mov al, [ebp + wSpriteIndex]
@@ -268,7 +268,7 @@ TrainerWalkUpToPlayer:
     mov byte [ebp + ebx + wNPCMovementDirections2], 0xff
     mov al, [ebp + wSpriteIndex]
     shl al, 4
-    mov [ebp + H_CURRENT_SPRITE_OFFSET], al  ; port MoveSprite_ selector (pret hSpriteIndex)
+    mov [ebp + hCurrentSpriteOffset], al  ; port MoveSprite_ selector (pret hSpriteIndex)
     lea edi, [ebp + wNPCMovementDirections2] ; flat stream ptr for MoveSprite_
     ; TODO(M8.2 follow-up): confirm MoveSprite_ EDI/hCurrentSpriteOffset contract at wiring.
     jmp MoveSprite_

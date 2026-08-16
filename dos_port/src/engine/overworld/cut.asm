@@ -186,13 +186,13 @@ UsedCut:
     mov dword [g_bg_whiteout], 0
     mov dword [g_obj_over_window], 0           ; back to the port's window-last order
     call LoadTilesetTilePatternData
-    mov byte [ebp + H_WY], SCREEN_HEIGHT_PX    ; TODO-HW: hWY shadow (commit_shadow_regs -> rWY)
+    mov byte [ebp + hWY], SCREEN_HEIGHT_PX    ; TODO-HW: hWY shadow (commit_shadow_regs -> rWY)
     call Delay3
     call LoadGBPal
     call LoadCurrentMapView
     call SaveScreenTilesToBuffer2
     call Delay3
-    mov byte [ebp + H_WY], 0                    ; TODO-HW: hWY
+    mov byte [ebp + hWY], 0                    ; TODO-HW: hWY
     mov esi, UsedCutText
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
@@ -207,7 +207,7 @@ UsedCut:
     mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
     mov al, SFX_CUT
     call PlaySound
-    mov byte [ebp + H_WY], 0x90                 ; TODO-HW: hWY
+    mov byte [ebp + hWY], 0x90                 ; TODO-HW: hWY
     call UpdateSprites
     jmp RedrawMapView                          ; jp RedrawMapView (tail)
 

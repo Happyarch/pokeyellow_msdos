@@ -140,7 +140,7 @@ PalletTownDefaultScript:
     je .playerOnLeftExit
     SetEvent EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
 .playerOnLeftExit:
-    mov byte [ebp + H_JOY_HELD], 0
+    mov byte [ebp + hJoyHeld], 0
     mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
     mov byte [ebp + W_PLAYER_MOVING_DIRECTION], PLAYER_DIR_UP
     call StopAllMusic
@@ -170,12 +170,12 @@ PalletTownOakHeyWaitScript:
 PalletTownOakWalksToPlayerScript:
     call Delay3
     mov byte [ebp + W_Y_COORD], 0
-    mov byte [ebp + H_NPC_PLAYER_RELATIVE_POS_PERSPECTIVE], 1
-    mov byte [ebp + H_NPC_SPRITE_OFFSET], 0x10 ; PALLETTOWN_OAK slot offset
+    mov byte [ebp + hNPCPlayerRelativePosPerspective], 1
+    mov byte [ebp + hNPCSpriteOffset], 0x10 ; PALLETTOWN_OAK slot offset
     call CalcPositionOfPlayerRelativeToNPC
-    dec byte [ebp + H_NPC_PLAYER_Y_DISTANCE]
+    dec byte [ebp + hNPCPlayerYDistance]
     call FindPathToPlayer
-    mov byte [ebp + H_CURRENT_SPRITE_OFFSET], 0x10
+    mov byte [ebp + hCurrentSpriteOffset], 0x10
     lea edi, [ebp + wNPCMovementDirections2]
     call MoveSprite
     mov byte [ebp + wPalletTownCurScript], SCRIPT_PALLETTOWN_OAK_GREETS_PLAYER

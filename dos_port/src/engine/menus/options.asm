@@ -133,7 +133,7 @@ DisplayOptionMenu_:
     call InitOptionsMenu
 .optionMenuLoop:
     call JoypadLowSensitivity
-    mov al, [ebp + H_JOY5]                  ; ldh a, [hJoy5]
+    mov al, [ebp + hJoy5]                  ; ldh a, [hJoy5]
     and al, PAD_START | PAD_B
     jnz .exitOptionMenu                      ; jr nz
     call OptionsControl
@@ -166,7 +166,7 @@ GetOptionPointer:
 ; ---------------------------------------------------------------------------
 OptionsMenu_TextSpeed:
     call GetTextSpeed                        ; BL=sel, DH=left delay, DL=right delay
-    mov al, [ebp + H_JOY5]
+    mov al, [ebp + hJoy5]
     test al, PAD_RIGHT                       ; bit B_PAD_RIGHT
     jnz .pressedRight
     test al, PAD_LEFT                        ; bit B_PAD_LEFT
@@ -235,7 +235,7 @@ GetTextSpeed:
 ; Toggle wOptions bit BIT_BATTLE_ANIMATION on left/right; redraw ON/OFF.
 ; ---------------------------------------------------------------------------
 OptionsMenu_BattleAnimations:
-    mov al, [ebp + H_JOY5]
+    mov al, [ebp + hJoy5]
     and al, PAD_LEFT | PAD_RIGHT
     jnz .buttonPressed
     mov al, [ebp + wOptions]
@@ -263,7 +263,7 @@ OptionsMenu_BattleAnimations:
 ; Toggle wOptions bit BIT_BATTLE_SHIFT on left/right; redraw SHIFT/SET.
 ; ---------------------------------------------------------------------------
 OptionsMenu_BattleStyle:
-    mov al, [ebp + H_JOY5]
+    mov al, [ebp + hJoy5]
     and al, PAD_LEFT | PAD_RIGHT
     jnz .buttonPressed
     mov al, [ebp + wOptions]
@@ -296,7 +296,7 @@ OptionsMenu_SpeakerSettings:
     and al, SOUND_MASK
     rol al, 4                                ; swap a — bits 4-5 → 0-1
     mov bl, al                               ; ld c,a
-    mov al, [ebp + H_JOY5]
+    mov al, [ebp + hJoy5]
     test al, PAD_RIGHT
     jnz .pressedRight
     test al, PAD_LEFT
@@ -348,7 +348,7 @@ OptionsMenu_GBPrinterBrightness:
     ; TODO-HW: printer (no serial) — the row renders and the brightness value is
     ; stored in wPrinterSettings, but there is no GB Printer HAL to drive.
     call GetGBPrinterBrightness              ; BL=sel, DH=left, DL=right
-    mov al, [ebp + H_JOY5]
+    mov al, [ebp + hJoy5]
     test al, PAD_RIGHT
     jnz .pressedRight
     test al, PAD_LEFT
@@ -434,7 +434,7 @@ OptionsMenu_Dummy:
 ; A press → carry set (leave the menu); otherwise carry clear.
 ; ---------------------------------------------------------------------------
 OptionsMenu_Cancel:
-    mov al, [ebp + H_JOY5]
+    mov al, [ebp + hJoy5]
     and al, PAD_A
     jnz .pressedCancel
     and al, al                               ; clear carry flag
@@ -449,7 +449,7 @@ OptionsMenu_Cancel:
 ; rows and top/bottom wrap). Out: CF set iff the cursor moved.
 ; ---------------------------------------------------------------------------
 OptionsControl:
-    mov al, [ebp + H_JOY5]
+    mov al, [ebp + hJoy5]
     cmp al, PAD_DOWN
     jz .pressedDown
     cmp al, PAD_UP

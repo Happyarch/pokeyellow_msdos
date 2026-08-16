@@ -709,8 +709,8 @@ EnterMap:
     mov byte [ebp + W_WALK_COUNTER], 0
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
-    mov byte [ebp + H_SCY], 0
-    mov byte [ebp + H_SCX], 0
+    mov byte [ebp + hSCY], 0
+    mov byte [ebp + hSCX], 0
     mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
     call LoadMapHeader
     ; OW-A.2 P3b: LoadMapHeader now runs the faithful InitSprites (pret :1892), which
@@ -1279,14 +1279,14 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; BIT_SCRIPTED_MOVEMENT_STATE is armed by StartSimulatingJoypadStates
     ; (PlayerStepOutFromDoor's single step, HandleLedges' two hop steps, …).
     ; AreInputsSimulated (this file) pops the next queued PAD_* byte into
-    ; H_JOY_HELD while scripted movement is active and leaves real input
+    ; hJoyHeld while scripted movement is active and leaves real input
     ; untouched otherwise; the flag drains in its .doneSimulating when the
-    ; queue empties (pret semantics — never consumed per-step). H_JOY_HELD is used for A (not
-    ; H_JOY_PRESSED): joypad_update runs twice per OverworldLoop idle iteration (one
-    ; per DelayFrame), so H_JOY_PRESSED is always cleared before we read it.
+    ; queue empties (pret semantics — never consumed per-step). hJoyHeld is used for A (not
+    ; hJoyPressed): joypad_update runs twice per OverworldLoop idle iteration (one
+    ; per DelayFrame), so hJoyPressed is always cleared before we read it.
     ; Re-trigger after dialog dismiss is prevented by .waitAReleased below.
     call AreInputsSimulated
-    movzx eax, byte [ebp + H_JOY_HELD]
+    movzx eax, byte [ebp + hJoyHeld]
     test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jnz .checkPADDown                               ; scripted step: skip START/A, go to D-pad
 .checkJoyDisable:
@@ -1294,7 +1294,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jnz .noDirection                            ; input suppressed during warp-arrival window
 
     ; START-press: open the start menu (pret: OverworldLoopLessDelay TEXT_START_MENU).
-    ; Read from H_JOY_HELD like the A-press below; DisplayStartMenu's close path waits
+    ; Read from hJoyHeld like the A-press below; DisplayStartMenu's close path waits
     ; for START release before returning, so a held START can't re-open it next frame.
     test al, PAD_START
     jz .checkAPress
@@ -1302,7 +1302,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp OverworldLoop
 .checkAPress:
 
-    ; A-press: check for NPC or sign. EAX = H_JOY_HELD (level-triggered, reliable).
+    ; A-press: check for NPC or sign. EAX = hJoyHeld (level-triggered, reliable).
     test al, PAD_A
     jz .checkPADDown
     ; pret order: on A-press CheckForHiddenEventOrBookshelfOrCardKeyDoor runs FIRST
@@ -1339,11 +1339,11 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; the next OverworldLoop iteration from re-triggering while A is still held.
 .waitAReleased:
     call DelayFrame
-    test byte [ebp + H_JOY_HELD], PAD_A
+    test byte [ebp + hJoyHeld], PAD_A
     jnz .waitAReleased
     jmp OverworldLoop
 
-.checkPADDown:                                  ; EAX = H_JOY_HELD from above
+.checkPADDown:                                  ; EAX = hJoyHeld from above
     test al, PAD_DOWN
     jz .checkUp
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 1
@@ -1486,7 +1486,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     and byte [ebp + W_STATUS_FLAGS_3], ~(1 << BIT_TALKED_TO_TRAINER) & 0xFF
     and byte [ebp + W_STATUS_FLAGS_7], ~(1 << BIT_TRAINER_BATTLE) & 0xFF
     or  byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
-    mov byte [ebp + H_JOY_HELD], 0            ; xor a / ldh [hJoyHeld], a
+    mov byte [ebp + hJoyHeld], 0            ; xor a / ldh [hJoyHeld], a
     mov al, [ebp + W_CUR_MAP]
     cmp al, CINNABAR_GYM
     jne .notCinnabarGym
@@ -1544,8 +1544,8 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov byte [ebp + W_WALK_COUNTER], 0
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
-    mov byte [ebp + H_SCY], 0
-    mov byte [ebp + H_SCX], 0
+    mov byte [ebp + hSCY], 0
+    mov byte [ebp + hSCX], 0
     mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
     ; pret WarpFound2 plays the map-change jingle here (:477/498/510), BEFORE the
     ; destination is loaded, so it reads the SOURCE map's tileset + door tile. Must
@@ -1581,13 +1581,13 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
 
-    ; Reset scroll and VRAM pointer. During the walk, H_SCY/H_SCX accumulated
+    ; Reset scroll and VRAM pointer. During the walk, hSCY/hSCX accumulated
     ; 2 px/frame (e.g. −144 px over 9 north steps). CopyMapViewToVRAM always
     ; writes to GB_TILEMAP0 ($9800), so the PPU must start reading from row 0
     ; (SCY=0). W_MAP_VIEW_VRAM_POINTER must also reset so RedrawRowOrColumn
     ; uses the correct base address on subsequent frames.
-    mov byte [ebp + H_SCY], 0
-    mov byte [ebp + H_SCX], 0
+    mov byte [ebp + hSCY], 0
+    mov byte [ebp + hSCX], 0
     mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
 
     call LoadMapHeader
@@ -1728,7 +1728,7 @@ DoBikeSpeedup:
     mov al, [ebp + W_CUR_MAP]
     cmp al, ROUTE_17                               ; Cycling Road
     jne .goFaster
-    test byte [ebp + H_JOY_HELD], PAD_UP | PAD_LEFT | PAD_RIGHT
+    test byte [ebp + hJoyHeld], PAD_UP | PAD_LEFT | PAD_RIGHT
     jnz .done                                      ; ret nz — braking on Cycling Road
 .goFaster:
     call AdvancePlayerSprite                       ; second advance → double speed
@@ -2160,7 +2160,7 @@ LoadPlayerSpriteGraphics:
     jz .ridingBike                          ; state == 1
 
     ; standing (or surfing): honor hTileAnimations gate as pret does
-    mov al, [ebp + H_TILE_ANIMATIONS]
+    mov al, [ebp + hTileAnimations]
     test al, al
     jnz .determineGraphics
     jmp .startWalking
@@ -2251,9 +2251,9 @@ LoadTileBlockMap:
 
     ; hMapWidth = wCurMapWidth; hMapStride = width + MAP_BORDER*2
     movzx ecx, byte [ebp + W_CUR_MAP_WIDTH]       ; ECX = width (= 10)
-    mov byte [ebp + H_MAP_WIDTH], cl
+    mov byte [ebp + hMapWidth], cl
     add cl, MAP_BORDER * 2                         ; CL = stride (= 16)
-    mov byte [ebp + H_MAP_STRIDE], cl
+    mov byte [ebp + hMapStride], cl
 
     ; Skip MAP_BORDER rows: ESI += stride * MAP_BORDER
     movzx eax, cl                                  ; EAX = stride
@@ -2272,7 +2272,7 @@ LoadTileBlockMap:
 
 .row_loop:
     push esi                                       ; save row-start write ptr
-    movzx ecx, byte [ebp + H_MAP_WIDTH]            ; CL = map width (without border)
+    movzx ecx, byte [ebp + hMapWidth]            ; CL = map width (without border)
 .row_inner_loop:
     mov al, byte [ebp + edx]                       ; read block ID from .blk
     inc edx
@@ -2281,7 +2281,7 @@ LoadTileBlockMap:
     dec cl
     jnz .row_inner_loop
     pop esi                                        ; restore row-start ptr
-    movzx eax, byte [ebp + H_MAP_STRIDE]           ; EAX = stride
+    movzx eax, byte [ebp + hMapStride]           ; EAX = stride
     add esi, eax                                   ; advance ESI to next row
     dec bh
     jnz .row_loop
@@ -2297,7 +2297,7 @@ LoadTileBlockMap:
     ;     border. SwitchToMapRomBank is a no-op in the flat model. The strip src
     ;     pointers (CONN_STRIP_SRC) index into the connected maps' block data
     ;     loaded at OW_ROUTE*_BLK_GBADDR. hNorthSouthConnectionStripWidth and the
-    ;     connected-map width reuse H_MAP_STRIDE/H_MAP_WIDTH (they are HRAM unions).
+    ;     connected-map width reuse hMapStride/hMapWidth (they are HRAM unions).
 
 .north_connection:
     cmp byte [ebp + W_NORTH_CONNECTED_MAP], MAP_NO_CONNECTION
@@ -2305,9 +2305,9 @@ LoadTileBlockMap:
     movzx esi, word [ebp + W_NORTH_CONNECTED_MAP + CONN_STRIP_SRC]   ; HL = strip src
     movzx edx, word [ebp + W_NORTH_CONNECTED_MAP + CONN_STRIP_DEST]  ; DE = strip dest
     mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_STRIP_LENGTH]
-    mov [ebp + H_MAP_STRIDE], al                                     ; hNSConnectionStripWidth
+    mov [ebp + hMapStride], al                                     ; hNSConnectionStripWidth
     mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + H_MAP_WIDTH], al                                      ; hNSConnectedMapWidth
+    mov [ebp + hMapWidth], al                                      ; hNSConnectedMapWidth
     call LoadNorthSouthConnectionsTileMap
 
 .south_connection:
@@ -2316,9 +2316,9 @@ LoadTileBlockMap:
     movzx esi, word [ebp + W_SOUTH_CONNECTED_MAP + CONN_STRIP_SRC]
     movzx edx, word [ebp + W_SOUTH_CONNECTED_MAP + CONN_STRIP_DEST]
     mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_STRIP_LENGTH]
-    mov [ebp + H_MAP_STRIDE], al
+    mov [ebp + hMapStride], al
     mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + H_MAP_WIDTH], al
+    mov [ebp + hMapWidth], al
     call LoadNorthSouthConnectionsTileMap
 
 .west_connection:
@@ -2328,7 +2328,7 @@ LoadTileBlockMap:
     movzx edx, word [ebp + W_WEST_CONNECTED_MAP + CONN_STRIP_DEST]
     movzx ebx, byte [ebp + W_WEST_CONNECTED_MAP + CONN_STRIP_LENGTH] ; B = row count
     mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + H_MAP_WIDTH], al                                      ; hEWConnectedMapWidth
+    mov [ebp + hMapWidth], al                                      ; hEWConnectedMapWidth
     call LoadEastWestConnectionsTileMap
 
 .east_connection:
@@ -2338,7 +2338,7 @@ LoadTileBlockMap:
     movzx edx, word [ebp + W_EAST_CONNECTED_MAP + CONN_STRIP_DEST]
     movzx ebx, byte [ebp + W_EAST_CONNECTED_MAP + CONN_STRIP_LENGTH]
     mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + H_MAP_WIDTH], al
+    mov [ebp + hMapWidth], al
     call LoadEastWestConnectionsTileMap
 
 .done:
@@ -2354,12 +2354,12 @@ LoadTileBlockMap:
 ; Pret ref: home/overworld.asm:LoadNorthSouthConnectionsTileMap
 ;
 ; Copies MAP_BORDER (3) rows of the connected map's edge into the wOverworldMap
-; border. Each row copies hNorthSouthConnectionStripWidth (=H_MAP_STRIDE) bytes;
-; src advances by hNorthSouthConnectedMapWidth (=H_MAP_WIDTH), dest by the
+; border. Each row copies hNorthSouthConnectionStripWidth (=hMapStride) bytes;
+; src advances by hNorthSouthConnectedMapWidth (=hMapWidth), dest by the
 ; wOverworldMap stride (wCurMapWidth + 2*MAP_BORDER).
 ;
-; In:  ESI = HL = strip src, EDX = DE = strip dest, [H_MAP_STRIDE] = strip width,
-;      [H_MAP_WIDTH] = connected-map width. EBP = GB base.
+; In:  ESI = HL = strip src, EDX = DE = strip dest, [hMapStride] = strip width,
+;      [hMapWidth] = connected-map width. EBP = GB base.
 ; Clobbers: EAX, EBX, ECX, ESI, EDX.
 ; ---------------------------------------------------------------------------
 LoadNorthSouthConnectionsTileMap:
@@ -2367,7 +2367,7 @@ LoadNorthSouthConnectionsTileMap:
 .row:
     push esi
     push edx
-    movzx ebx, byte [ebp + H_MAP_STRIDE] ; B = strip width
+    movzx ebx, byte [ebp + hMapStride] ; B = strip width
 .inner:
     mov al, [ebp + esi]
     mov [ebp + edx], al
@@ -2377,7 +2377,7 @@ LoadNorthSouthConnectionsTileMap:
     jnz .inner
     pop edx
     pop esi
-    movzx eax, byte [ebp + H_MAP_WIDTH]  ; src += connected-map width
+    movzx eax, byte [ebp + hMapWidth]  ; src += connected-map width
     add esi, eax
     movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
     add eax, MAP_BORDER * 2
@@ -2393,11 +2393,11 @@ LoadNorthSouthConnectionsTileMap:
 ;
 ; Copies MAP_BORDER (3) columns of the connected map's edge into the
 ; wOverworldMap border, for B (strip length) rows. Each row copies 3 bytes; src
-; advances by hEastWestConnectedMapWidth (=H_MAP_WIDTH), dest by the wOverworldMap
+; advances by hEastWestConnectedMapWidth (=hMapWidth), dest by the wOverworldMap
 ; stride. (Pallet Town has no E/W connection, but kept faithful for completeness.)
 ;
 ; In:  ESI = HL = strip src, EDX = DE = strip dest, BL = row count,
-;      [H_MAP_WIDTH] = connected-map width. EBP = GB base.
+;      [hMapWidth] = connected-map width. EBP = GB base.
 ; Clobbers: EAX, EBX(bl=counter), ECX, ESI, EDX.
 ; ---------------------------------------------------------------------------
 LoadEastWestConnectionsTileMap:
@@ -2414,7 +2414,7 @@ LoadEastWestConnectionsTileMap:
     jnz .inner
     pop edx
     pop esi
-    movzx eax, byte [ebp + H_MAP_WIDTH]  ; src += connected-map width
+    movzx eax, byte [ebp + hMapWidth]  ; src += connected-map width
     add esi, eax
     movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
     add eax, MAP_BORDER * 2
@@ -2528,7 +2528,7 @@ IsSpriteInFrontOfPlayer2:
     add esi, SPRITESTATEDATA1_MOVEMENTSTATUS
     or byte [ebp + esi], (1 << BIT_FACE_PLAYER)  ; set BIT_FACE_PLAYER, [hl]
     mov al, dl
-    mov [ebp + H_SPRITE_INDEX], al
+    mov [ebp + hSpriteIndex], al
     ; pret re-reads hSpriteIndex here ("possible useless read because a already has
     ; the value") — elided; AL already holds it.
     cmp al, PIKACHU_SPRITE_INDEX
@@ -2971,9 +2971,9 @@ ForceBikeDown:
     ; Any D-pad direction or A/B held means the player is steering — leave input
     ; alone. SELECT and START are deliberately NOT in the mask, so they do not
     ; suppress the auto-scroll; that is pret's behaviour, not an oversight.
-    test byte [ebp + H_JOY_HELD], (PAD_CTRL_PAD | PAD_B | PAD_A)
+    test byte [ebp + hJoyHeld], (PAD_CTRL_PAD | PAD_B | PAD_A)
     jnz .ret
-    mov byte [ebp + H_JOY_HELD], PAD_DOWN     ; ld a,PAD_DOWN / ldh [hJoyHeld],a
+    mov byte [ebp + hJoyHeld], PAD_DOWN     ; ld a,PAD_DOWN / ldh [hJoyHeld],a
 .ret:
     ret
 
@@ -2992,7 +2992,7 @@ AreInputsSimulated:
     jz .ret                                   ; pret: bit .../ ret z — not simulating
 
     ; if simulating: real presses in the override mask cancel the simulation this frame
-    mov bl, [ebp + H_JOY_HELD]                ; b = hJoyHeld
+    mov bl, [ebp + hJoyHeld]                ; b = hJoyHeld
     mov al, [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK]
     and al, bl
     jnz .ret                                  ; overridden -> keep real input
@@ -3000,12 +3000,12 @@ AreInputsSimulated:
     call GetSimulatedInput                    ; CF=1 -> AL = next simulated state
     jnc .doneSimulating                       ; CF=0 -> buffer drained
 
-    mov [ebp + H_JOY_HELD], al                ; inject simulated press
+    mov [ebp + hJoyHeld], al                ; inject simulated press
     test al, al
     jnz .ret                                  ; nonzero press: leave pressed/released alone
     ; a == 0 (a queued "no buttons" frame): also clear pressed/released
-    mov byte [ebp + H_JOY_PRESSED], 0
-    mov byte [ebp + H_JOY_RELEASED], 0
+    mov byte [ebp + hJoyPressed], 0
+    mov byte [ebp + hJoyReleased], 0
 .ret:
     ret
 
@@ -3015,7 +3015,7 @@ AreInputsSimulated:
     mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0
     mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], 0
     mov byte [ebp + W_JOY_IGNORE], 0
-    mov byte [ebp + H_JOY_HELD], 0
+    mov byte [ebp + hJoyHeld], 0
     ; preserve only movement-flag bits 7,6,5,4,3 (SPINNING|LEDGE_OR_FISHING|5|4|3),
     ; clearing STANDING_ON_DOOR|EXITING_DOOR|STANDING_ON_WARP (bits 2,1,0). pret mask 0xF8.
     and byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_SPINNING) | (1 << BIT_LEDGE_OR_FISHING) | (1 << 5) | (1 << 4) | (1 << 3)
@@ -3237,7 +3237,7 @@ LoadMapHeader:
     mov bl, al                              ; b = full tileset (incl. BIT_NO_PREVIOUS_MAP)
     and al, ~(1 << BIT_NO_PREVIOUS_MAP)     ; res BIT_NO_PREVIOUS_MAP
     mov [ebp + W_CUR_MAP_TILESET], al
-    mov [ebp + H_PREVIOUS_TILESET], al
+    mov [ebp + hPreviousTileset], al
     ; pret: bit BIT_NO_PREVIOUS_MAP,b / ret nz — if the map is already loaded (bit was
     ; set), skip the whole header reload.
     ; TODO(OW-A.5/verify): the early return is DEFERRED. All 3 FRAME.BIN baselines exercise
@@ -3515,8 +3515,8 @@ ResetMapVariables:
     ; pointer is never left stale, matching pret's byte-for-byte reset here.
     mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
     xor al, al
-    mov byte [ebp + H_SCY],                       al
-    mov byte [ebp + H_SCX],                       al
+    mov byte [ebp + hSCY],                       al
+    mov byte [ebp + hSCX],                       al
     mov byte [ebp + W_WALK_COUNTER],              al
     mov byte [ebp + W_UNUSED_CUR_MAP_TILESET_COPY], al
     mov byte [ebp + W_SPRITE_SET_ID],             al
@@ -3525,7 +3525,7 @@ ResetMapVariables:
     ; guarantees no stale box leaks over the overworld (e.g. the title's
     ; go_to_main_menu path). Dialog/menu code re-populates the list when it opens a
     ; box. The rWY/rWX shadows are parked off-screen for faithfulness.
-    call hide_window                    ; count=0; sets H_WY = RENDER_H
+    call hide_window                    ; count=0; sets hWY = RENDER_H
     mov byte [ebp + IO_WY], RENDER_H
     mov byte [ebp + IO_WX], 7
     ret
@@ -3639,7 +3639,7 @@ HandleMidJump:
     mov [ebp + esi + 4], al
     mov al, [ebp + W_STATUS_FLAGS_5]
     mov [ebp + esi + 5], al
-    mov al, [ebp + H_JOY_HELD]
+    mov al, [ebp + hJoyHeld]
     mov [ebp + esi + 6], al
     mov byte [ebp + esi + 7], 0
 .trace_done:
@@ -3833,10 +3833,10 @@ CheckForUserInterruption:
     push ebx                          ; pret push bc — preserve the frame counter
     call JoypadLowSensitivity
     pop ebx
-    mov al, [ebp + H_JOY_HELD]        ; ldh a, [hJoyHeld]
+    mov al, [ebp + hJoyHeld]        ; ldh a, [hJoyHeld]
     cmp al, PAD_UP + PAD_SELECT + PAD_B   ; exactly Up+Select+B (the skip combo)
     je .input
-    mov al, [ebp + H_JOY5]            ; ldh a, [hJoy5]
+    mov al, [ebp + hJoy5]            ; ldh a, [hJoy5]
     and al, PAD_START | PAD_A         ; release build (pret _DEBUG also allows Select)
     jnz .input
     dec bl                            ; dec c
