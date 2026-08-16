@@ -45,6 +45,7 @@ LCDC_WIN_MAP_BIT  equ 6        ; rLCDC bit 6: window tilemap select (0=$9800, 1=
 global render_bg
 global render_window
 global render_sprites
+global SnapshotRenderedTileMap
 global draw_player_marker
 global g_player_marker_on
 global g_tilecache_dirty
@@ -733,6 +734,77 @@ render_bg:
     cmp edx, RENDER_H
     jb .blit_row
 
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; SnapshotRenderedTileMap — port-only. Re-crop W_TILEMAP out of wSurroundingTiles
+; at the origin render_bg ACTUALLY BLITTED last frame, so that switching the
+; renderer from the overworld path to the flat path leaves the picture unchanged.
+;
+; WHY THIS EXISTS. W_TILEMAP is not a mirror of the screen — it is the
+; player-anchored COLLISION crop. RefreshCollisionTileMap
+; (src/engine/overworld/overworld.asm) copies 40x25 tiles starting at
+; wSurroundingTiles tile (2*wXBlockCoord, 2*wYBlockCoord), which pins the player's
+; feet to the fixed cell (PLAYER_STANDING_COL, PLAYER_STANDING_ROW) = (24, 17) that
+; UpdatePlayerSprite, wild_encounters.asm and ledges.asm all index. render_bg's
+; overworld path uses a different origin entirely — (bg_scx, bg_scy), which puts
+; the player at canvas cell (20, 13). The two crops differ by a constant that is
+; only zero by accident.
+;
+; The battle-transition wrapper switches render_bg from the first origin to the
+; second by zeroing wCurrentTileBlockMapViewPointer. MEASURED 2026-08-15 in the
+; DEBUG_TRANSITION_DEMO repro: bg_scx = bg_scy = 32, wXBlockCoord = wYBlockCoord
+; = 0, and the background jumped exactly (+32, +32) px on the switch frame while
+; the OBJ layer — positioned by the fixed GBScreenToCanvasXY constant — did not
+; move at all, so the player and the engaged trainer appeared to slide four tiles
+; against the world. Cross-correlating the two captured frames gives dx=dy=+32 with
+; the residual accounted for entirely by the seven unmoved sprite clusters.
+;
+; Cropping here at the CLAMPED origin (bg_scx/bg_scy, not the unclamped Xoff/Yoff)
+; is what makes this exact: those are the pixels that were on screen, and the
+; clamps [0,64]/[0,88] are precisely what keeps the 40x25 crop inside the 48x36
+; surface (8+40 = 48, 11+25 = 36).
+;
+; SUB-TILE RESIDUAL: the crop is tile-granular, so it carries (bg_scx & 7,
+; bg_scy & 7). That is always 0 at a battle entry — every term of Xoff/Yoff is a
+; multiple of 16 while wWalkCounter is 0, and a battle never starts mid-step
+; (NewBattle runs after the step completes, and a sight engagement freezes the
+; player) — but a future caller that switches paths mid-walk would inherit up to
+; 7 px of slip.
+;
+; sprite_shift_x/y are deliberately NOT touched: the flat path zeroes them, and
+; cropping at the clamped origin is exactly the case where they are zero too
+; (they are the clamp residual). A camera clamped against the surface edge would
+; want them carried across; that cannot happen while the view stays centred on
+; the player, and the sub-tile note above owns the same corner.
+;
+; In: EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+SnapshotRenderedTileMap:
+    pushad
+    ; source = wSurroundingTiles + (bg_scy >> 3) rows + (bg_scx >> 3) cols
+    mov eax, [bg_scy]
+    shr eax, 3
+    imul eax, eax, SURF_W_TILES
+    mov ecx, [bg_scx]
+    shr ecx, 3
+    add eax, ecx
+    lea esi, [eax + W_SURROUNDING_TILES]           ; GB-relative source cursor
+    mov edi, W_TILEMAP                             ; GB-relative dest cursor
+    mov edx, SCREEN_TILES_H                        ; rows remaining
+.row:
+    mov ecx, SCREEN_TILES_W
+.col:
+    mov al, [ebp + esi]
+    mov [ebp + edi], al
+    inc esi
+    inc edi
+    dec ecx
+    jnz .col
+    add esi, SURF_W_TILES - SCREEN_TILES_W         ; next surface row
+    dec edx
+    jnz .row
     popad
     ret
 

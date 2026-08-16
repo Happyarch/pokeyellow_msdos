@@ -462,6 +462,19 @@ DisplayTwoOptionMenu:
     mov [yn_saved_stride], eax
     mov dword [text_row_stride], 20
 
+    ; Save the 160-byte W_TILEMAP scratch area (8 rows x 20 stride) so non-overworld
+    ; callers (e.g. battle switch prompt) do not leave the staging box baked into the canvas.
+    push esi
+    push edi
+    push ecx
+    lea esi, [ebp + W_TILEMAP]
+    mov edi, yn_scratch_backup
+    mov ecx, 40                                  ; 40 dwords = 160 bytes
+    rep movsd
+    pop ecx
+    pop edi
+    pop esi
+
     ; --- descriptor table lookup: EBX = &TwoOptionMenuDesc[id] -------------
     ;     each entry = 12 bytes: int_w,int_h,blank,pad, opt_a(dd), opt_b(dd)
     movzx eax, byte [ebp + wTwoOptionMenuID]
@@ -631,6 +644,18 @@ DisplayTwoOptionMenu:
 ; ---------------------------------------------------------------------------
 yn_teardown:
     push eax
+    ; restore the 160-byte W_TILEMAP scratch area
+    push esi
+    push edi
+    push ecx
+    mov esi, yn_scratch_backup
+    lea edi, [ebp + W_TILEMAP]
+    mov ecx, 40                                  ; 40 dwords = 160 bytes
+    rep movsd
+    pop ecx
+    pop edi
+    pop esi
+
     mov eax, [yn_saved_wc]
     mov [g_window_count], eax                       ; drop our appended box
     mov eax, [yn_saved_stride]
@@ -909,6 +934,7 @@ yn_saved_wc:    resd 1          ; g_window_count on entry (restored on exit)
 yn_saved_stride:resd 1          ; text_row_stride on entry (restored on exit)
 yn_pressed:     resd 1          ; HandleMenuInput result (keys), kept across feedback
 yn_frow:        resd 1          ; first option's box-relative row (blank ? 2 : 1)
+yn_scratch_backup: resb 160     ; saves W_TILEMAP[0..159] during staging
 
 section .data
 align 4

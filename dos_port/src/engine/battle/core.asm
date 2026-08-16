@@ -2123,9 +2123,15 @@ PrintMoveIsDisabledText:
 ; ---------------------------------------------------------------------------
 extern BattleTransition                ; src/engine/battle/battle_transitions.asm
 extern saved_ow_view_ptr               ; init_battle.asm — overworld view-ptr save slot
+extern SnapshotRenderedTileMap         ; src/ppu/ppu.asm — re-crop W_TILEMAP to the blitted origin
 global DoBattleTransitionAndInitBattleVariables
 DoBattleTransitionAndInitBattleVariables:
-    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:DoBattleTransitionAndInitBattleVariables; behavior=performs the port's flat-canvas switch before the transition - saves and zeroes the overworld view pointer, zeroes the fine-scroll shadows and hardware mirrors, and disables tile animations; evidence=pret's BG is already a tilemap the wipe mutates in place, while the port's render_bg takes the overworld path whenever wCurrentTileBlockMapViewPointer is nonzero and would never show W_TILEMAP writes - W_TILEMAP already holds the current view via LoadCurrentMapView; lifetime=permanent, render HAL}
+    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:DoBattleTransitionAndInitBattleVariables; behavior=performs the port's flat-canvas switch before the transition - re-crops W_TILEMAP to the rendered camera origin, then saves and zeroes the overworld view pointer, zeroes the fine-scroll shadows and hardware mirrors, and disables tile animations; evidence=pret's BG is already a tilemap the wipe mutates in place, while the port's render_bg takes the overworld path whenever wCurrentTileBlockMapViewPointer is nonzero and would never show W_TILEMAP writes; lifetime=permanent, render HAL}
+    ; W_TILEMAP is the player-anchored COLLISION crop, not a mirror of the screen,
+    ; so the flat path would otherwise draw the same world from a different origin
+    ; and the whole background would jump on the switch frame while the OBJ layer
+    ; stayed put (measured +32,+32 px). Re-crop to what render_bg actually blitted.
+    call SnapshotRenderedTileMap
     mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
     mov [saved_ow_view_ptr], ax
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
