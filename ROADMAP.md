@@ -99,10 +99,10 @@ Acceptance criteria:
 **Goal:** Main game is playable through overworld and battles.
 
 Acceptance criteria:
-- [~] Title screen — bespoke early implementation; boots and reaches the menu but
-      does **not** render fully correctly (a known low-priority defect; "works
-      enough"). Faithful reimpl deferred — likely folds in with the overworld
-      tile-management rewrite. See `docs/current_plan_backlog.md`.
+- [x] Title screen — renders and reaches the menu. The long-standing "graphics
+      are wrong" entry was retired 2026-08-16: it described a defect the
+      menu-intro work already fixed (see `docs/plans/menu_intro.md` A2.3, the
+      missing auto-BG-transfer that made the title's VRAM copy a no-op).
 - [x] Overworld renders and scrolls; player walks around Pallet Town
 - [x] Wild encounters trigger (`src/engine/battle/wild_encounters.asm`; the
       `AnyPartyAlive` gate moved to `src/engine/battle/core.asm` and the old

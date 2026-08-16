@@ -2029,6 +2029,12 @@ Implementing the projection surfaced a defect the plan did not anticipate, and i
 is very likely a cause of the long-standing "title screen graphics are wrong"
 entry in CLAUDE.md.
 
+> **Closed 2026-08-16.** That entry outlived this fix by about four weeks. It was
+> never a stigmergy memory — it was hardcoded prose in CLAUDE.md, and had been
+> copied into AGENTS.md, ROADMAP.md and docs/bug_categorization.md, so every
+> session re-read it as current and repeated it. All four are now retired. This
+> paragraph is kept as the record of what actually fixed the screen.
+
 `TitleScreenCopyTileMapToVRAM` was storing `hAutoBGTransferDest+1` and calling
 `Delay3` — and **nothing in this tree reads `hAutoBGTransferDest`**. There is no
 auto-BG-transfer implementation. The physical copy pret's title depends on has
