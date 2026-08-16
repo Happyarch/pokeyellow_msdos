@@ -1,0 +1,189 @@
+; VictoryRoad1F.asm — translated from pret scripts/VictoryRoad1F.asm by dos_port/tools/sm83xlat.
+;
+; ONE-SHOT OUTPUT, NOW HAND-MAINTAINED. The transpiler ran once at the SHA
+; recorded in dos_port/tools/sm83xlat/README.md and is not re-run; this file is
+; ordinary Tier-2 source and editing it is the normal way it changes. There is
+; deliberately no DO NOT EDIT header.
+;
+; Every pret label is preserved verbatim so the file stays line-for-line
+; cross-referenceable against the disassembly.
+;
+; Regions the tool could not lower WITH CERTAINTY are reproduced below as
+; commented pret source under a `; BAIL[reason]` banner, and define NO symbol —
+; so a reference to one is a link error rather than a plausible wrong lowering.
+
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+%include "gb_text.inc"
+%include "events.inc"
+%include "assets/event_constants.inc"
+
+
+global VictoryRoad1FCooltrainerFText
+global VictoryRoad1FCooltrainerMText
+global VictoryRoad1F_Script
+global VictoryRoad1F_ScriptPointers
+
+extern CheckBoulderCoords   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
+extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
+extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1FCooltrainerFAfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1FCooltrainerFBattleText   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1FCooltrainerFEndBattleText   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1FCooltrainerMAfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1FCooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1FCooltrainerMEndBattleText   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1FDefaultScript   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1F_TextPointers   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1TrainerHeader1   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+
+; Script constants — pret defines these via dw_const in this file.
+TEXT_VICTORYROAD1F_COOLTRAINER_F               equ 1
+TEXT_VICTORYROAD1F_COOLTRAINER_M               equ 2
+TEXT_VICTORYROAD1F_TM_SKY_ATTACK               equ 3
+TEXT_VICTORYROAD1F_RARE_CANDY                  equ 4
+TEXT_VICTORYROAD1F_BOULDER1                    equ 5
+TEXT_VICTORYROAD1F_BOULDER2                    equ 6
+TEXT_VICTORYROAD1F_BOULDER3                    equ 7
+
+; pret RAM names the port still spells in SCREAMING_SNAKE. Guarded, so
+; this file assembles both before and after the memmap rename lands.
+%ifndef wCurrentMapScriptFlags
+wCurrentMapScriptFlags                         equ W_CURRENT_MAP_SCRIPT_FLAGS
+%endif
+%ifndef wNewTileBlockID
+wNewTileBlockID                                equ W_NEW_TILE_BLOCK_ID
+%endif
+
+; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
+; read from pokeyellow.sym — not inferred.
+wVictoryRoad1FCurScript                        equ 0xD650
+
+; Code and data are emitted in pret's SOURCE ORDER, in one section.
+; That is not cosmetic: a NASM local label binds to the last
+; non-local label above it, so hoisting the text streams into a
+; separate section rebound every `.Text` to the wrong parent.
+section .text
+
+VictoryRoad1F_Script:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    jz .sk_5
+        call .next
+.sk_5:
+    call EnableAutoTextBoxDrawing
+    mov esi, VictoryRoad1TrainerHeaders
+    mov edi, VictoryRoad1F_ScriptPointers   ; pret: ld de, VictoryRoad1F_ScriptPointers — ExecuteCurMapScriptInTable takes it in EDI
+    mov al, [ebp + wVictoryRoad1FCurScript]
+    call ExecuteCurMapScriptInTable
+    mov [ebp + wVictoryRoad1FCurScript], al
+    ret
+
+.next:
+    CheckEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
+    jnz .nr_15
+        ret
+.nr_15:
+    mov al, 0x1d
+    mov [ebp + wNewTileBlockID], al
+    mov bx, ((6) << 8) | (4)
+; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    jmp ReplaceTileBlock
+
+VictoryRoad1F_ScriptPointers:
+    dd VictoryRoad1FDefaultScript
+    dd DisplayEnemyTrainerTextAndStartBattle
+    dd EndTrainerBattle
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] VictoryRoad1FDefaultScript (scripts/VictoryRoad1F.asm:28-39) — at scripts/VictoryRoad1F.asm:30: .SwitchCoords is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	CheckEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
+; PRET| 	jp nz, CheckFightingMapTrainers
+; PRET| 	ld hl, .SwitchCoords
+; PRET| 	call CheckBoulderCoords
+; PRET| 	jp nc, CheckFightingMapTrainers
+; PRET| 	ldh a, [hSpriteIndex]
+; PRET| 	cp PIKACHU_SPRITE_INDEX
+; PRET| 	jp z, CheckFightingMapTrainers
+; PRET| 	ld hl, wCurrentMapScriptFlags
+; PRET| 	set BIT_CUR_MAP_LOADED_1, [hl]
+; PRET| 	SetEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
+; PRET| 	ret
+
+; ---------------------------------------------------------------------------
+; BAIL[owned-by-generated-assets] VictoryRoad1FDefaultScript.SwitchCoords (scripts/VictoryRoad1F.asm:42-61) — a generated asset already defines VictoryRoad1TrainerHeaders
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	dbmapcoord 17, 13
+; PRET| 	db -1 ; end
+; PRET| 
+; PRET| VictoryRoad1F_TextPointers:
+; PRET| 	def_text_pointers
+; PRET| 	dw_const VictoryRoad1FCooltrainerFText, TEXT_VICTORYROAD1F_COOLTRAINER_F
+; PRET| 	dw_const VictoryRoad1FCooltrainerMText, TEXT_VICTORYROAD1F_COOLTRAINER_M
+; PRET| 	dw_const PickUpItemText,                TEXT_VICTORYROAD1F_TM_SKY_ATTACK
+; PRET| 	dw_const PickUpItemText,                TEXT_VICTORYROAD1F_RARE_CANDY
+; PRET| 	dw_const BoulderText,                   TEXT_VICTORYROAD1F_BOULDER1
+; PRET| 	dw_const BoulderText,                   TEXT_VICTORYROAD1F_BOULDER2
+; PRET| 	dw_const BoulderText,                   TEXT_VICTORYROAD1F_BOULDER3
+; PRET| 
+; PRET| VictoryRoad1TrainerHeaders:
+; PRET| 	def_trainers
+; PRET| VictoryRoad1TrainerHeader0:
+; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_1_TRAINER_0, 2, VictoryRoad1FCooltrainerFBattleText, VictoryRoad1FCooltrainerFEndBattleText, VictoryRoad1FCooltrainerFAfterBattleText
+; PRET| VictoryRoad1TrainerHeader1:
+; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_1_TRAINER_1, 2, VictoryRoad1FCooltrainerMBattleText, VictoryRoad1FCooltrainerMEndBattleText, VictoryRoad1FCooltrainerMAfterBattleText
+; PRET| 	db -1 ; end
+
+VictoryRoad1FCooltrainerFText:
+    mov esi, VictoryRoad1TrainerHeader0
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+VictoryRoad1FCooltrainerMText:
+    mov esi, VictoryRoad1TrainerHeader1
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+; ---------------------------------------------------------------------------
+; BAIL[owned-by-generated-assets] VictoryRoad1FCooltrainerFBattleText (scripts/VictoryRoad1F.asm:76-97) — a generated asset already defines VictoryRoad1FCooltrainerFBattleText
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	text_far _VictoryRoad1FCooltrainerFBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| VictoryRoad1FCooltrainerFEndBattleText:
+; PRET| 	text_far _VictoryRoad1FCooltrainerFEndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| VictoryRoad1FCooltrainerFAfterBattleText:
+; PRET| 	text_far _VictoryRoad1FCooltrainerFAfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| VictoryRoad1FCooltrainerMBattleText:
+; PRET| 	text_far _VictoryRoad1FCooltrainerMBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| VictoryRoad1FCooltrainerMEndBattleText:
+; PRET| 	text_far _VictoryRoad1FCooltrainerMEndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| VictoryRoad1FCooltrainerMAfterBattleText:
+; PRET| 	text_far _VictoryRoad1FCooltrainerMAfterBattleText
+; PRET| 	text_end

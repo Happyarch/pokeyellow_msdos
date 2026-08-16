@@ -1,0 +1,470 @@
+; SaffronGym.asm — translated from pret scripts/SaffronGym.asm by dos_port/tools/sm83xlat.
+;
+; ONE-SHOT OUTPUT, NOW HAND-MAINTAINED. The transpiler ran once at the SHA
+; recorded in dos_port/tools/sm83xlat/README.md and is not re-run; this file is
+; ordinary Tier-2 source and editing it is the normal way it changes. There is
+; deliberately no DO NOT EDIT header.
+;
+; Every pret label is preserved verbatim so the file stays line-for-line
+; cross-referenceable against the disassembly.
+;
+; Regions the tool could not lower WITH CERTAINTY are reproduced below as
+; commented pret source under a `; BAIL[reason]` banner, and define NO symbol —
+; so a reference to one is a link error rather than a plausible wrong lowering.
+
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+%include "gb_text.inc"
+%include "events.inc"
+%include "assets/event_constants.inc"
+
+%include "assets/audio_constants.inc"
+
+global SaffronGymChanneler1Text
+global SaffronGymChanneler2Text
+global SaffronGymChanneler3Text
+global SaffronGymResetScripts
+global SaffronGymYoungster1Text
+global SaffronGymYoungster2Text
+global SaffronGymYoungster3Text
+global SaffronGymYoungster4Text
+global SaffronGym_ScriptPointers
+
+extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
+extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
+extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
+extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern GiveItem   ; NOT YET DEFINED IN THE PORT
+extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
+extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
+extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler1AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler1EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler2AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler2BattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler2EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler3AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler3BattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler3EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymGymGuideText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymSabrinaMarshBadgeInfoText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymSabrinaPostBattle   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymSabrinaReceiveTM46Script   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymSabrinaReceivedTM46Text   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymSabrinaTM46NoRoomText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymSabrinaText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymTrainerHeader3   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymTrainerHeader4   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymTrainerHeader5   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymTrainerHeader6   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster1AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster1BattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster1EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster2AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster2BattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster2EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster3AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster3BattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster3EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster4AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster4BattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymYoungster4EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGym_Script   ; NOT YET DEFINED IN THE PORT
+extern SaffronGym_TextPointers   ; NOT YET DEFINED IN THE PORT
+extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern _SaffronGymSabrinaReceivedMarshBadgeText   ; NOT YET DEFINED IN THE PORT
+extern _SaffronGymSabrinaText   ; NOT YET DEFINED IN THE PORT
+
+; Script constants — pret defines these via dw_const in this file.
+SCRIPT_SAFFRONGYM_SABRINA_POST_BATTLE          equ 3
+TEXT_SAFFRONGYM_SABRINA                        equ 1
+TEXT_SAFFRONGYM_CHANNELER1                     equ 2
+TEXT_SAFFRONGYM_YOUNGSTER1                     equ 3
+TEXT_SAFFRONGYM_CHANNELER2                     equ 4
+TEXT_SAFFRONGYM_YOUNGSTER2                     equ 5
+TEXT_SAFFRONGYM_CHANNELER3                     equ 6
+TEXT_SAFFRONGYM_YOUNGSTER3                     equ 7
+TEXT_SAFFRONGYM_YOUNGSTER4                     equ 8
+TEXT_SAFFRONGYM_GYM_GUIDE                      equ 9
+TEXT_SAFFRONGYM_SABRINA_MARSH_BADGE_INFO       equ 10
+TEXT_SAFFRONGYM_SABRINA_RECEIVED_TM46          equ 11
+TEXT_SAFFRONGYM_SABRINA_TM46_NO_ROOM           equ 12
+
+; pret RAM names the port still spells in SCREAMING_SNAKE. Guarded, so
+; this file assembles both before and after the memmap rename lands.
+%ifndef wCurrentMapScriptFlags
+wCurrentMapScriptFlags                         equ W_CURRENT_MAP_SCRIPT_FLAGS
+%endif
+%ifndef wObtainedBadges
+wObtainedBadges                                equ W_OBTAINED_BADGES
+%endif
+
+; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
+; read from pokeyellow.sym — not inferred.
+wBeatGymFlags                                  equ 0xD729
+wSaffronGymCurScript                           equ 0xD65B
+
+; Code and data are emitted in pret's SOURCE ORDER, in one section.
+; That is not cosmetic: a NASM local label binds to the last
+; non-local label above it, so hoisting the text streams into a
+; separate section rebound every `.Text` to the wrong parent.
+section .text
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SaffronGym_Script (scripts/SaffronGym.asm:2-12) — at scripts/SaffronGym.asm:5: .LoadNames is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld hl, wCurrentMapScriptFlags
+; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
+; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
+; PRET| 	call nz, .LoadNames
+; PRET| 	call EnableAutoTextBoxDrawing
+; PRET| 	ld hl, SaffronGymTrainerHeaders
+; PRET| 	ld de, SaffronGym_ScriptPointers
+; PRET| 	ld a, [wSaffronGymCurScript]
+; PRET| 	call ExecuteCurMapScriptInTable
+; PRET| 	ld [wSaffronGymCurScript], a
+; PRET| 	ret
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SaffronGym_Script.LoadNames (scripts/SaffronGym.asm:15-17) — at scripts/SaffronGym.asm:15: .CityName is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld hl, .CityName
+; PRET| 	ld de, .LeaderName
+; PRET| 	jp LoadGymLeaderAndCityName
+
+; ---------------------------------------------------------------------------
+; BAIL[inline-text-db] SaffronGym_Script.CityName (scripts/SaffronGym.asm:20-23) — at scripts/SaffronGym.asm:20: db "SAFFRON CITY@"
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	db "SAFFRON CITY@"
+; PRET| 
+; PRET| .LeaderName:
+; PRET| 	db "SABRINA@"
+
+SaffronGymResetScripts:
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    mov [ebp + wSaffronGymCurScript], al
+    mov [ebp + wCurMapScript], al
+    ret
+
+SaffronGym_ScriptPointers:
+    dd CheckFightingMapTrainers
+    dd DisplayEnemyTrainerTextAndStartBattle
+    dd EndTrainerBattle
+    dd SaffronGymSabrinaPostBattle
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SaffronGymSabrinaPostBattle (scripts/SaffronGym.asm:40-58) — at scripts/SaffronGym.asm:53: .BagFull is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld a, [wIsInBattle]
+; PRET| 	cp $ff
+; PRET| 	jp z, SaffronGymResetScripts
+; PRET| 	ld a, PAD_CTRL_PAD
+; PRET| 	ld [wJoyIgnore], a
+; PRET| 
+; PRET| SaffronGymSabrinaReceiveTM46Script:
+; PRET| 	ld a, TEXT_SAFFRONGYM_SABRINA_MARSH_BADGE_INFO
+; PRET| 	ldh [hTextID], a
+; PRET| 	call DisplayTextID
+; PRET| 	SetEvent EVENT_BEAT_SABRINA
+; PRET| 	lb bc, TM_PSYWAVE, 1
+; PRET| 	call GiveItem
+; PRET| 	jr nc, .BagFull
+; PRET| 	ld a, TEXT_SAFFRONGYM_SABRINA_RECEIVED_TM46
+; PRET| 	ldh [hTextID], a
+; PRET| 	call DisplayTextID
+; PRET| 	SetEvent EVENT_GOT_TM46
+; PRET| 	jr .gymVictory
+
+; ---------------------------------------------------------------------------
+; BAIL[event-range-macro] SaffronGymSabrinaReceiveTM46Script.BagFull (scripts/SaffronGym.asm:60-72) — at scripts/SaffronGym.asm:70: SetEventRange EVENT_BEAT_SAFFRON_GYM_TRAINER_0, EVENT_BEAT_SAFFRON_GYM_TRAINER_6
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld a, TEXT_SAFFRONGYM_SABRINA_TM46_NO_ROOM
+; PRET| 	ldh [hTextID], a
+; PRET| 	call DisplayTextID
+; PRET| .gymVictory
+; PRET| 	ld hl, wObtainedBadges
+; PRET| 	set BIT_MARSHBADGE, [hl]
+; PRET| 	ld hl, wBeatGymFlags
+; PRET| 	set BIT_MARSHBADGE, [hl]
+; PRET| 
+; PRET| 	; deactivate gym trainers
+; PRET| 	SetEventRange EVENT_BEAT_SAFFRON_GYM_TRAINER_0, EVENT_BEAT_SAFFRON_GYM_TRAINER_6
+; PRET| 
+; PRET| 	jp SaffronGymResetScripts
+
+; ---------------------------------------------------------------------------
+; BAIL[owned-by-generated-assets] SaffronGym_TextPointers (scripts/SaffronGym.asm:75-105) — a generated asset already defines SaffronGymTrainerHeaders
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	def_text_pointers
+; PRET| 	dw_const SaffronGymSabrinaText,               TEXT_SAFFRONGYM_SABRINA
+; PRET| 	dw_const SaffronGymChanneler1Text,            TEXT_SAFFRONGYM_CHANNELER1
+; PRET| 	dw_const SaffronGymYoungster1Text,            TEXT_SAFFRONGYM_YOUNGSTER1
+; PRET| 	dw_const SaffronGymChanneler2Text,            TEXT_SAFFRONGYM_CHANNELER2
+; PRET| 	dw_const SaffronGymYoungster2Text,            TEXT_SAFFRONGYM_YOUNGSTER2
+; PRET| 	dw_const SaffronGymChanneler3Text,            TEXT_SAFFRONGYM_CHANNELER3
+; PRET| 	dw_const SaffronGymYoungster3Text,            TEXT_SAFFRONGYM_YOUNGSTER3
+; PRET| 	dw_const SaffronGymYoungster4Text,            TEXT_SAFFRONGYM_YOUNGSTER4
+; PRET| 	dw_const SaffronGymGymGuideText,              TEXT_SAFFRONGYM_GYM_GUIDE
+; PRET| 	dw_const SaffronGymSabrinaMarshBadgeInfoText, TEXT_SAFFRONGYM_SABRINA_MARSH_BADGE_INFO
+; PRET| 	dw_const SaffronGymSabrinaReceivedTM46Text,   TEXT_SAFFRONGYM_SABRINA_RECEIVED_TM46
+; PRET| 	dw_const SaffronGymSabrinaTM46NoRoomText,     TEXT_SAFFRONGYM_SABRINA_TM46_NO_ROOM
+; PRET| 
+; PRET| SaffronGymTrainerHeaders:
+; PRET| 	def_trainers 2
+; PRET| SaffronGymTrainerHeader0:
+; PRET| 	trainer EVENT_BEAT_SAFFRON_GYM_TRAINER_0, 3, SaffronGymChanneler1BattleText, SaffronGymChanneler1EndBattleText, SaffronGymChanneler1AfterBattleText
+; PRET| SaffronGymTrainerHeader1:
+; PRET| 	trainer EVENT_BEAT_SAFFRON_GYM_TRAINER_1, 3, SaffronGymYoungster1BattleText, SaffronGymYoungster1EndBattleText, SaffronGymYoungster1AfterBattleText
+; PRET| SaffronGymTrainerHeader2:
+; PRET| 	trainer EVENT_BEAT_SAFFRON_GYM_TRAINER_2, 3, SaffronGymChanneler2BattleText, SaffronGymChanneler2EndBattleText, SaffronGymChanneler2AfterBattleText
+; PRET| SaffronGymTrainerHeader3:
+; PRET| 	trainer EVENT_BEAT_SAFFRON_GYM_TRAINER_3, 3, SaffronGymYoungster2BattleText, SaffronGymYoungster2EndBattleText, SaffronGymYoungster2AfterBattleText
+; PRET| SaffronGymTrainerHeader4:
+; PRET| 	trainer EVENT_BEAT_SAFFRON_GYM_TRAINER_4, 3, SaffronGymChanneler3BattleText, SaffronGymChanneler3EndBattleText, SaffronGymChanneler3AfterBattleText
+; PRET| SaffronGymTrainerHeader5:
+; PRET| 	trainer EVENT_BEAT_SAFFRON_GYM_TRAINER_5, 3, SaffronGymYoungster3BattleText, SaffronGymYoungster3EndBattleText, SaffronGymYoungster3AfterBattleText
+; PRET| SaffronGymTrainerHeader6:
+; PRET| 	trainer EVENT_BEAT_SAFFRON_GYM_TRAINER_6, 3, SaffronGymYoungster4BattleText, SaffronGymYoungster4EndBattleText, SaffronGymYoungster4AfterBattleText
+; PRET| 	db -1 ; end
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SaffronGymSabrinaText (scripts/SaffronGym.asm:109-115) — at scripts/SaffronGym.asm:110: .beforeBeat is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	CheckEvent EVENT_BEAT_SABRINA
+; PRET| 	jr z, .beforeBeat
+; PRET| 	CheckEventReuseA EVENT_GOT_TM46
+; PRET| 	jr nz, .afterBeat
+; PRET| 	call z, SaffronGymSabrinaReceiveTM46Script
+; PRET| 	call DisableWaitingAfterTextDisplay
+; PRET| 	jr .done
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SaffronGymSabrinaText.afterBeat (scripts/SaffronGym.asm:117-119) — at scripts/SaffronGym.asm:117: .PostBattleAdviceText is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld hl, .PostBattleAdviceText
+; PRET| 	call PrintText
+; PRET| 	jr .done
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SaffronGymSabrinaText.beforeBeat (scripts/SaffronGym.asm:121-138) — at scripts/SaffronGym.asm:121: .Text is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld hl, .Text
+; PRET| 	call PrintText
+; PRET| 	ld hl, wStatusFlags3
+; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
+; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
+; PRET| 	ld hl, .ReceivedMarshBadgeText
+; PRET| 	ld de, .ReceivedMarshBadgeText
+; PRET| 	call SaveEndBattleTextPointers
+; PRET| 	ldh a, [hSpriteIndex]
+; PRET| 	ld [wSpriteIndex], a
+; PRET| 	call EngageMapTrainer
+; PRET| 	call InitBattleEnemyParameters
+; PRET| 	ld a, $6
+; PRET| 	ld [wGymLeaderNo], a
+; PRET| 	ld a, SCRIPT_SAFFRONGYM_SABRINA_POST_BATTLE
+; PRET| 	ld [wSaffronGymCurScript], a
+; PRET| .done
+; PRET| 	jp TextScriptEnd
+
+; ---------------------------------------------------------------------------
+; BAIL[text-sound-command-unported] SaffronGymSabrinaText.Text (scripts/SaffronGym.asm:141-166) — at scripts/SaffronGym.asm:146: sound_get_key_item ; actually plays the second channel of SFX_BALL_POOF due to the wrong music bank being loaded
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	text_far _SaffronGymSabrinaText
+; PRET| 	text_end
+; PRET| 
+; PRET| .ReceivedMarshBadgeText:
+; PRET| 	text_far _SaffronGymSabrinaReceivedMarshBadgeText
+; PRET| 	sound_get_key_item ; actually plays the second channel of SFX_BALL_POOF due to the wrong music bank being loaded
+; PRET| 	text_promptbutton
+; PRET| 	text_end
+; PRET| 
+; PRET| .PostBattleAdviceText:
+; PRET| 	text_far _SaffronGymSabrinaPostBattleAdviceText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymSabrinaMarshBadgeInfoText:
+; PRET| 	text_far _SaffronGymSabrinaMarshBadgeInfoText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymSabrinaReceivedTM46Text:
+; PRET| 	text_far _SaffronGymSabrinaReceivedTM46Text
+; PRET| 	sound_get_item_1
+; PRET| 	text_far _TM46ExplanationText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymSabrinaTM46NoRoomText:
+; PRET| 	text_far _SaffronGymSabrinaTM46NoRoomText
+; PRET| 	text_end
+
+SaffronGymChanneler1Text:
+    mov esi, SaffronGymTrainerHeader0
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+SaffronGymYoungster1Text:
+    mov esi, SaffronGymTrainerHeader1
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+SaffronGymChanneler2Text:
+    mov esi, SaffronGymTrainerHeader2
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+SaffronGymYoungster2Text:
+    mov esi, SaffronGymTrainerHeader3
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+SaffronGymChanneler3Text:
+    mov esi, SaffronGymTrainerHeader4
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+SaffronGymYoungster3Text:
+    mov esi, SaffronGymTrainerHeader5
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+SaffronGymYoungster4Text:
+    mov esi, SaffronGymTrainerHeader6
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SaffronGymGymGuideText (scripts/SaffronGym.asm:212-216) — at scripts/SaffronGym.asm:213: .afterBeat is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	CheckEvent EVENT_BEAT_SABRINA
+; PRET| 	jr nz, .afterBeat
+; PRET| 	ld hl, .ChampInMakingText
+; PRET| 	call PrintText
+; PRET| 	jr .done
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SaffronGymGymGuideText.afterBeat (scripts/SaffronGym.asm:218-221) — at scripts/SaffronGym.asm:218: .BeatSabrinaText is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld hl, .BeatSabrinaText
+; PRET| 	call PrintText
+; PRET| .done
+; PRET| 	jp TextScriptEnd
+
+; ---------------------------------------------------------------------------
+; BAIL[owned-by-generated-assets] SaffronGymGymGuideText.ChampInMakingText (scripts/SaffronGym.asm:224-313) — a generated asset already defines SaffronGymChanneler1BattleText
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	text_far _SaffronGymGuideChampInMakingText
+; PRET| 	text_end
+; PRET| 
+; PRET| .BeatSabrinaText:
+; PRET| 	text_far _SaffronGymGuideBeatSabrinaText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymChanneler1BattleText:
+; PRET| 	text_far _SaffronGymChanneler1BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymChanneler1EndBattleText:
+; PRET| 	text_far _SaffronGymChanneler1EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymChanneler1AfterBattleText:
+; PRET| 	text_far _SaffronGymChanneler1AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster1BattleText:
+; PRET| 	text_far _SaffronGymYoungster1BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster1EndBattleText:
+; PRET| 	text_far _SaffronGymYoungster1EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster1AfterBattleText:
+; PRET| 	text_far _SaffronGymYoungster1AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymChanneler2BattleText:
+; PRET| 	text_far _SaffronGymChanneler2BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymChanneler2EndBattleText:
+; PRET| 	text_far _SaffronGymChanneler2EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymChanneler2AfterBattleText:
+; PRET| 	text_far _SaffronGymChanneler2AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster2BattleText:
+; PRET| 	text_far _SaffronGymYoungster2BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster2EndBattleText:
+; PRET| 	text_far _SaffronGymYoungster2EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster2AfterBattleText:
+; PRET| 	text_far _SaffronGymYoungster2AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymChanneler3BattleText:
+; PRET| 	text_far _SaffronGymChanneler3BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymChanneler3EndBattleText:
+; PRET| 	text_far _SaffronGymChanneler3EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymChanneler3AfterBattleText:
+; PRET| 	text_far _SaffronGymChanneler3AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster3BattleText:
+; PRET| 	text_far _SaffronGymYoungster3BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster3EndBattleText:
+; PRET| 	text_far _SaffronGymYoungster3EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster3AfterBattleText:
+; PRET| 	text_far _SaffronGymYoungster3AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster4BattleText:
+; PRET| 	text_far _SaffronGymYoungster4BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster4EndBattleText:
+; PRET| 	text_far _SaffronGymYoungster4EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SaffronGymYoungster4AfterBattleText:
+; PRET| 	text_far _SaffronGymYoungster4AfterBattleText
+; PRET| 	text_end

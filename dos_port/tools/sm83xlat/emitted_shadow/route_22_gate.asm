@@ -1,0 +1,191 @@
+; Route22Gate.asm — translated from pret scripts/Route22Gate.asm by dos_port/tools/sm83xlat.
+;
+; ONE-SHOT OUTPUT, NOW HAND-MAINTAINED. The transpiler ran once at the SHA
+; recorded in dos_port/tools/sm83xlat/README.md and is not re-run; this file is
+; ordinary Tier-2 source and editing it is the normal way it changes. There is
+; deliberately no DO NOT EDIT header.
+;
+; Every pret label is preserved verbatim so the file stays line-for-line
+; cross-referenceable against the disassembly.
+;
+; Regions the tool could not lower WITH CERTAINTY are reproduced below as
+; commented pret source under a `; BAIL[reason]` banner, and define NO symbol —
+; so a reference to one is a link error rather than a plausible wrong lowering.
+
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+%include "gb_text.inc"
+%include "events.inc"
+%include "assets/event_constants.inc"
+
+%include "assets/audio_constants.inc"
+%include "assets/map_dims.inc"
+
+global Route22GateDefaultScript
+global Route22GateGuardNoBoulderbadgeText
+global Route22GateGuardText
+global Route22GateMovePlayerDownScript
+global Route22GateNoopScript
+global Route22GatePlayerMovingScript
+global Route22GateScriptCoords
+global Route22Gate_Script
+global Route22Gate_ScriptPointers
+global Route22Gate_TextPointers
+
+extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
+extern Delay3   ; NOT YET DEFINED IN THE PORT
+extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
+extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern Route22GateGuardGoRightAheadText   ; NOT YET DEFINED IN THE PORT
+extern Route22GateGuardICantLetYouPassText   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern _Route22GateGuardGoRightAheadText   ; NOT YET DEFINED IN THE PORT
+extern _Route22GateGuardICantLetYouPassText   ; NOT YET DEFINED IN THE PORT
+extern _Route22GateGuardNoBoulderbadgeText   ; NOT YET DEFINED IN THE PORT
+
+; Script constants — pret defines these via dw_const in this file.
+SCRIPT_ROUTE22GATE_DEFAULT                     equ 0
+SCRIPT_ROUTE22GATE_PLAYER_MOVING               equ 1
+SCRIPT_ROUTE22GATE_NOOP                        equ 2
+TEXT_ROUTE22GATE_GUARD                         equ 1
+
+; pret RAM names the port still spells in SCREAMING_SNAKE. Guarded, so
+; this file assembles both before and after the memmap rename lands.
+%ifndef wLastMap
+wLastMap                                       equ W_LAST_MAP
+%endif
+%ifndef wObtainedBadges
+wObtainedBadges                                equ W_OBTAINED_BADGES
+%endif
+%ifndef wSimulatedJoypadStatesEnd
+wSimulatedJoypadStatesEnd                      equ W_SIMULATED_JOYPAD_STATES_END
+%endif
+%ifndef wSimulatedJoypadStatesIndex
+wSimulatedJoypadStatesIndex                    equ W_SIMULATED_JOYPAD_STATES_INDEX
+%endif
+%ifndef wYCoord
+wYCoord                                        equ W_Y_COORD
+%endif
+
+; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
+; read from pokeyellow.sym — not inferred.
+wRoute22GateCurScript                          equ 0xD60D
+wSprite01StateData1FacingDirection             equ 0xC119
+wSpritePlayerStateData1FacingDirection         equ 0xC109
+
+; Code and data are emitted in pret's SOURCE ORDER, in one section.
+; That is not cosmetic: a NASM local label binds to the last
+; non-local label above it, so hoisting the text streams into a
+; separate section rebound every `.Text` to the wrong parent.
+section .text
+
+Route22Gate_Script:
+    call EnableAutoTextBoxDrawing
+    mov esi, Route22Gate_ScriptPointers
+    mov al, [ebp + wRoute22GateCurScript]
+    call CallFunctionInTable
+    mov al, [ebp + wYCoord]
+    cmp al, 4
+    mov al, ROUTE_23
+    jb .set_last_map
+    mov al, ROUTE_22
+.set_last_map:
+    mov [ebp + wLastMap], al
+    ret
+
+Route22Gate_ScriptPointers:
+    dd Route22GateDefaultScript
+    dd Route22GatePlayerMovingScript
+    dd Route22GateNoopScript
+
+Route22GateDefaultScript:
+    mov esi, Route22GateScriptCoords
+    call ArePlayerCoordsInArray
+    jb .nr_24
+        ret
+.nr_24:
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, SPRITE_FACING_LEFT
+    mov [ebp + wSprite01StateData1FacingDirection], al
+    mov al, TEXT_ROUTE22GATE_GUARD
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    ret
+
+Route22GateScriptCoords:
+    db 2, 4
+    db 2, 5
+    db -1
+
+Route22GateMovePlayerDownScript:
+    mov al, 0x1
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    mov al, PAD_DOWN
+    mov [ebp + wSimulatedJoypadStatesEnd], al
+    mov [ebp + wSpritePlayerStateData1FacingDirection], al
+    mov [ebp + wJoyIgnore], al
+    jmp StartSimulatingJoypadStates
+
+Route22GatePlayerMovingScript:
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
+    test al, al
+    jz .nr_51
+        ret
+.nr_51:
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    call Delay3
+    mov al, SCRIPT_ROUTE22GATE_DEFAULT
+    mov [ebp + wRoute22GateCurScript], al
+Route22GateNoopScript:
+    ret
+
+Route22Gate_TextPointers:
+    dd Route22GateGuardText
+
+Route22GateGuardText:
+    mov al, [ebp + wObtainedBadges]
+    test al, (1 << (0))
+    jnz .has_boulderbadge
+    mov esi, Route22GateGuardNoBoulderbadgeText
+    call PrintText
+    call Route22GateMovePlayerDownScript
+    mov al, SCRIPT_ROUTE22GATE_PLAYER_MOVING
+    jmp .set_current_script
+
+.has_boulderbadge:
+    mov esi, Route22GateGuardGoRightAheadText
+    call PrintText
+    mov al, SCRIPT_ROUTE22GATE_NOOP
+.set_current_script:
+    mov [ebp + wRoute22GateCurScript], al
+    jmp TextScriptEnd
+
+Route22GateGuardNoBoulderbadgeText:
+    text_far _Route22GateGuardNoBoulderbadgeText
+
+    mov al, SFX_DENIED
+    call PlaySoundWaitForCurrent
+    call WaitForSoundToFinish
+    mov esi, Route22GateGuardICantLetYouPassText
+    ret
+
+; ---------------------------------------------------------------------------
+; BAIL[text-sound-command-unported] Route22GateGuardICantLetYouPassText (scripts/Route22Gate.asm:92-98) — at scripts/Route22Gate.asm:97: sound_get_item_1
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	text_far _Route22GateGuardICantLetYouPassText
+; PRET| 	text_end
+; PRET| 
+; PRET| Route22GateGuardGoRightAheadText:
+; PRET| 	text_far _Route22GateGuardGoRightAheadText
+; PRET| 	sound_get_item_1
+; PRET| 	text_end

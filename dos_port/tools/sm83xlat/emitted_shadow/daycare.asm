@@ -1,0 +1,390 @@
+; Daycare.asm — translated from pret scripts/Daycare.asm by dos_port/tools/sm83xlat.
+;
+; ONE-SHOT OUTPUT, NOW HAND-MAINTAINED. The transpiler ran once at the SHA
+; recorded in dos_port/tools/sm83xlat/README.md and is not re-run; this file is
+; ordinary Tier-2 source and editing it is the normal way it changes. There is
+; deliberately no DO NOT EDIT header.
+;
+; Every pret label is preserved verbatim so the file stays line-for-line
+; cross-referenceable against the disassembly.
+;
+; Regions the tool could not lower WITH CERTAINTY are reproduced below as
+; commented pret source under a `; BAIL[reason]` banner, and define NO symbol —
+; so a reference to one is a link error rather than a plausible wrong lowering.
+
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+%include "gb_text.inc"
+%include "events.inc"
+%include "assets/event_constants.inc"
+
+%include "assets/audio_constants.inc"
+%include "assets/pika_pcm.inc"
+
+global Daycare_Script
+global Daycare_TextPointers
+
+extern AddBCDPredef   ; NOT YET DEFINED IN THE PORT
+extern AddNTimes   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch   ; NOT YET DEFINED IN THE PORT
+extern CalcExperience   ; NOT YET DEFINED IN THE PORT
+extern CalcLevelFromExperience   ; NOT YET DEFINED IN THE PORT
+extern DaycareGentlemanText   ; NOT YET DEFINED IN THE PORT
+extern DisplayPartyMenu   ; NOT YET DEFINED IN THE PORT
+extern DisplayTextBoxID   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern GBPalWhiteOutWithDelay3   ; NOT YET DEFINED IN THE PORT
+extern GetPartyMonName   ; NOT YET DEFINED IN THE PORT
+extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
+extern IsThisPartyMonStarterPikachu   ; NOT YET DEFINED IN THE PORT
+extern KnowsHMMove   ; NOT YET DEFINED IN THE PORT
+extern LoadGBPal   ; NOT YET DEFINED IN THE PORT
+extern LoadMonData   ; NOT YET DEFINED IN THE PORT
+extern MoveMon   ; NOT YET DEFINED IN THE PORT
+extern PlayCry   ; NOT YET DEFINED IN THE PORT
+extern PlayPikachuSoundClip   ; NOT YET DEFINED IN THE PORT
+extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
+extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern RemovePokemon   ; NOT YET DEFINED IN THE PORT
+extern RestoreScreenTilesAndReloadTilePatterns   ; NOT YET DEFINED IN THE PORT
+extern SaveScreenTilesToBuffer2   ; NOT YET DEFINED IN THE PORT
+extern SchedulePikachuSpawnForAfterText   ; NOT YET DEFINED IN THE PORT
+extern SubBCDPredef   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern WriteMonMoves   ; NOT YET DEFINED IN THE PORT
+extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanAllRightThenText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanCantAcceptMonWithHMText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanComeAgainText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanComeSeeMeInAWhileText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanGotMonBackText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanHeresYourMonText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanIntroText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanMonHasGrownText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanMonNeedsMoreTimeText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanNoRoomForMonText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanNotEnoughMoneyText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanOnlyHaveOneMonText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanOweMoneyText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanWhichMonText   ; NOT YET DEFINED IN THE PORT
+extern _DaycareGentlemanWillLookAfterMonText   ; NOT YET DEFINED IN THE PORT
+
+; pret RAM names the port still spells in SCREAMING_SNAKE. Guarded, so
+; this file assembles both before and after the memmap rename lands.
+%ifndef hMoney
+hMoney                                         equ H_MONEY
+%endif
+
+; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
+; read from pokeyellow.sym — not inferred.
+wDayCareMonBoxLevel                            equ 0xDA61
+wDayCareNumLevelsGrown                         equ 0xCD3E
+wDayCarePerLevelCost                           equ 0xCD41
+wDayCareTotalCost                              equ 0xCD3F
+
+; Code and data are emitted in pret's SOURCE ORDER, in one section.
+; That is not cosmetic: a NASM local label binds to the last
+; non-local label above it, so hoisting the text streams into a
+; separate section rebound every `.Text` to the wrong parent.
+section .text
+
+Daycare_Script:
+    jmp EnableAutoTextBoxDrawing
+
+Daycare_TextPointers:
+    dd DaycareGentlemanText
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] DaycareGentlemanText (scripts/Daycare.asm:10-63) — at scripts/Daycare.asm:13: .daycareInUse is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	call SaveScreenTilesToBuffer2
+; PRET| 	ld a, [wDayCareInUse]
+; PRET| 	and a
+; PRET| 	jp nz, .daycareInUse
+; PRET| 	ld hl, .IntroText
+; PRET| 	call PrintText
+; PRET| 	call YesNoChoice
+; PRET| 	ld a, [wCurrentMenuItem]
+; PRET| 	and a
+; PRET| 	ld hl, .ComeAgainText
+; PRET| 	jp nz, .done
+; PRET| 	ld a, [wPartyCount]
+; PRET| 	dec a
+; PRET| 	ld hl, .OnlyHaveOneMonText
+; PRET| 	jp z, .done
+; PRET| 	ld hl, .WhichMonText
+; PRET| 	call PrintText
+; PRET| 	xor a
+; PRET| 	ld [wUpdateSpritesEnabled], a
+; PRET| 	ld [wPartyMenuTypeOrMessageID], a
+; PRET| 	ld [wMenuItemToSwap], a
+; PRET| 	call DisplayPartyMenu
+; PRET| 	push af
+; PRET| 	call GBPalWhiteOutWithDelay3
+; PRET| 	call RestoreScreenTilesAndReloadTilePatterns
+; PRET| 	call LoadGBPal
+; PRET| 	pop af
+; PRET| 	ld hl, .AllRightThenText
+; PRET| 	jp c, .done
+; PRET| 	callfar KnowsHMMove
+; PRET| 	ld hl, .CantAcceptMonWithHMText
+; PRET| 	jp c, .done
+; PRET| 	xor a
+; PRET| 	ld [wPartyAndBillsPCSavedMenuItem], a
+; PRET| 	ld a, [wWhichPokemon]
+; PRET| 	ld hl, wPartyMonNicks
+; PRET| 	call GetPartyMonName
+; PRET| 	ld hl, .WillLookAfterMonText
+; PRET| 	call PrintText
+; PRET| 	ld a, 1
+; PRET| 	ld [wDayCareInUse], a
+; PRET| 	ld a, PARTY_TO_DAYCARE
+; PRET| 	ld [wMoveMonType], a
+; PRET| 	call MoveMon
+; PRET| 	callfar IsThisPartyMonStarterPikachu
+; PRET| 	push af
+; PRET| 	xor a
+; PRET| 	ld [wRemoveMonFromBox], a
+; PRET| 	call RemovePokemon
+; PRET| 	pop af
+; PRET| 	jr c, .depositedPikachuIntoDayCare
+; PRET| 	ld a, [wCurPartySpecies]
+; PRET| 	call PlayCry
+; PRET| 	jr .asm_562e3
+
+; ---------------------------------------------------------------------------
+; BAIL[pikachu-table-index] DaycareGentlemanText.depositedPikachuIntoDayCare (scripts/Daycare.asm:66-70) — at scripts/Daycare.asm:66: ldpikacry needs (X_id - Table) / N across object files
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ldpikacry e, PikachuCry28
+; PRET| 	callfar PlayPikachuSoundClip
+; PRET| .asm_562e3
+; PRET| 	ld hl, .ComeSeeMeInAWhileText
+; PRET| 	jp .done
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] DaycareGentlemanText.daycareInUse (scripts/Daycare.asm:73-160) — at scripts/Daycare.asm:82: .skipCalcExp is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	xor a
+; PRET| 	ld hl, wDayCareMonName
+; PRET| 	call GetPartyMonName
+; PRET| 	ld a, DAYCARE_DATA
+; PRET| 	ld [wMonDataLocation], a
+; PRET| 	call LoadMonData
+; PRET| 	callfar CalcLevelFromExperience
+; PRET| 	ld a, d
+; PRET| 	cp MAX_LEVEL
+; PRET| 	jr c, .skipCalcExp
+; PRET| 
+; PRET| 	ld d, MAX_LEVEL
+; PRET| 	callfar CalcExperience
+; PRET| 	ld hl, wDayCareMonExp
+; PRET| 	ldh a, [hExperience]
+; PRET| 	ld [hli], a
+; PRET| 	ldh a, [hExperience + 1]
+; PRET| 	ld [hli], a
+; PRET| 	ldh a, [hExperience + 2]
+; PRET| 	ld [hl], a
+; PRET| 	ld d, MAX_LEVEL
+; PRET| 
+; PRET| .skipCalcExp
+; PRET| 	xor a
+; PRET| 	ld [wDayCareNumLevelsGrown], a
+; PRET| 	ld hl, wDayCareMonBoxLevel
+; PRET| 	ld a, [hl]
+; PRET| 	ld [wDayCareStartLevel], a
+; PRET| 	cp d
+; PRET| 	ld [hl], d
+; PRET| 	ld hl, .MonNeedsMoreTimeText
+; PRET| 	jr z, .next
+; PRET| 	ld a, [wDayCareStartLevel]
+; PRET| 	ld b, a
+; PRET| 	ld a, d
+; PRET| 	sub b
+; PRET| 	ld [wDayCareNumLevelsGrown], a
+; PRET| 	ld hl, .MonHasGrownText
+; PRET| 
+; PRET| .next
+; PRET| 	call PrintText
+; PRET| 	ld a, [wPartyCount]
+; PRET| 	cp PARTY_LENGTH
+; PRET| 	ld hl, .NoRoomForMonText
+; PRET| 	jp z, .leaveMonInDayCare
+; PRET| 	ld de, wDayCareTotalCost
+; PRET| 	xor a
+; PRET| 	ld [de], a
+; PRET| 	inc de
+; PRET| 	ld [de], a
+; PRET| 	ld hl, wDayCarePerLevelCost
+; PRET| 	ld a, $1
+; PRET| 	ld [hli], a
+; PRET| 	ld [hl], $0
+; PRET| 	ld a, [wDayCareNumLevelsGrown]
+; PRET| 	inc a
+; PRET| 	ld b, a
+; PRET| 	ld c, 2
+; PRET| .calcPriceLoop
+; PRET| 	push hl
+; PRET| 	push de
+; PRET| 	push bc
+; PRET| 	predef AddBCDPredef
+; PRET| 	pop bc
+; PRET| 	pop de
+; PRET| 	pop hl
+; PRET| 	dec b
+; PRET| 	jr nz, .calcPriceLoop
+; PRET| 	ld hl, .OweMoneyText
+; PRET| 	call PrintText
+; PRET| 	ld a, MONEY_BOX
+; PRET| 	ld [wTextBoxID], a
+; PRET| 	call DisplayTextBoxID
+; PRET| 	call YesNoChoice
+; PRET| 	ld hl, .AllRightThenText
+; PRET| 	ld a, [wCurrentMenuItem]
+; PRET| 	and a
+; PRET| 	jp nz, .leaveMonInDayCare
+; PRET| 	ld hl, wDayCareTotalCost
+; PRET| 	ldh [hMoney], a
+; PRET| 	ld a, [hli]
+; PRET| 	ldh [hMoney + 1], a
+; PRET| 	ld a, [hl]
+; PRET| 	ldh [hMoney + 2], a
+; PRET| 	call HasEnoughMoney
+; PRET| 	jr nc, .enoughMoney
+; PRET| 	ld hl, .NotEnoughMoneyText
+; PRET| 	jp .leaveMonInDayCare
+
+; ---------------------------------------------------------------------------
+; BAIL[hl-half-register-access] DaycareGentlemanText.enoughMoney (scripts/Daycare.asm:163-218) — at scripts/Daycare.asm:190: `h` is a half of ESI and has no flag-safe 8-bit x86 form
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	xor a
+; PRET| 	ld [wDayCareInUse], a
+; PRET| 	ld hl, wDayCareNumLevelsGrown
+; PRET| 	ld [hli], a
+; PRET| 	inc hl
+; PRET| 	ld de, wPlayerMoney + 2
+; PRET| 	ld c, $3
+; PRET| 	predef SubBCDPredef
+; PRET| 	ld a, SFX_PURCHASE
+; PRET| 	call PlaySoundWaitForCurrent
+; PRET| 	ld a, MONEY_BOX
+; PRET| 	ld [wTextBoxID], a
+; PRET| 	call DisplayTextBoxID
+; PRET| 	ld hl, .HeresYourMonText
+; PRET| 	call PrintText
+; PRET| 	ld a, DAYCARE_TO_PARTY
+; PRET| 	ld [wMoveMonType], a
+; PRET| 	call MoveMon
+; PRET| 	ld a, [wDayCareMonSpecies]
+; PRET| 	ld [wCurPartySpecies], a
+; PRET| 	ld a, [wPartyCount]
+; PRET| 	dec a
+; PRET| 	push af
+; PRET| 	ld bc, PARTYMON_STRUCT_LENGTH
+; PRET| 	push bc
+; PRET| 	ld hl, wPartyMon1Moves
+; PRET| 	call AddNTimes
+; PRET| 	ld d, h
+; PRET| 	ld e, l
+; PRET| 	ld a, 1
+; PRET| 	ld [wLearningMovesFromDayCare], a
+; PRET| 	predef WriteMonMoves
+; PRET| 	pop bc
+; PRET| 	pop af
+; PRET| 
+; PRET| ; set mon's HP to max
+; PRET| 	ld hl, wPartyMon1HP
+; PRET| 	call AddNTimes
+; PRET| 	ld d, h
+; PRET| 	ld e, l
+; PRET| 	ld bc, MON_MAXHP - MON_HP
+; PRET| 	add hl, bc
+; PRET| 	ld a, [hli]
+; PRET| 	ld [de], a
+; PRET| 	inc de
+; PRET| 	ld a, [hl]
+; PRET| 	ld [de], a
+; PRET| 
+; PRET| 	ld a, [wPartyCount]
+; PRET| 	dec a
+; PRET| 	ld [wWhichPokemon], a
+; PRET| 	callfar IsThisPartyMonStarterPikachu
+; PRET| 	jr c, .withdrewPikachuFromDayCare
+; PRET| 	ld a, [wCurPartySpecies]
+; PRET| 	call PlayCry
+; PRET| 	jr .asm_56430
+
+; ---------------------------------------------------------------------------
+; BAIL[bank-expression] DaycareGentlemanText.withdrewPikachuFromDayCare (scripts/Daycare.asm:221-233) — at scripts/Daycare.asm:226: BANK(SchedulePikachuSpawnForAfterText)
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld a, $6
+; PRET| 	ld [wPikachuSpawnState], a
+; PRET| 
+; PRET| 	; GameFreak... TriHard
+; PRET| 	ld hl, SchedulePikachuSpawnForAfterText
+; PRET| 	ld b, BANK(SchedulePikachuSpawnForAfterText)
+; PRET| 	ld hl, Bankswitch
+; PRET| 
+; PRET| 	ldpikacry e, PikachuCry35
+; PRET| 	callfar PlayPikachuSoundClip
+; PRET| .asm_56430
+; PRET| 	ld hl, .GotMonBackText
+; PRET| 	jr .done
+
+.leaveMonInDayCare:
+    mov al, [ebp + wDayCareStartLevel]
+    mov [ebp + wDayCareMonBoxLevel], al
+.done:
+    call PrintText
+    jmp TextScriptEnd
+
+.IntroText:
+    text_far _DaycareGentlemanIntroText
+    text_end
+.WhichMonText:
+    text_far _DaycareGentlemanWhichMonText
+    text_end
+.WillLookAfterMonText:
+    text_far _DaycareGentlemanWillLookAfterMonText
+    text_end
+.ComeSeeMeInAWhileText:
+    text_far _DaycareGentlemanComeSeeMeInAWhileText
+    text_end
+.MonHasGrownText:
+    text_far _DaycareGentlemanMonHasGrownText
+    text_end
+.OweMoneyText:
+    text_far _DaycareGentlemanOweMoneyText
+    text_end
+.GotMonBackText:
+    text_far _DaycareGentlemanGotMonBackText
+    text_end
+.MonNeedsMoreTimeText:
+    text_far _DaycareGentlemanMonNeedsMoreTimeText
+    text_end
+.AllRightThenText:
+    text_far _DaycareGentlemanAllRightThenText
+.ComeAgainText:
+    text_far _DaycareGentlemanComeAgainText
+    text_end
+.NoRoomForMonText:
+    text_far _DaycareGentlemanNoRoomForMonText
+    text_end
+.OnlyHaveOneMonText:
+    text_far _DaycareGentlemanOnlyHaveOneMonText
+    text_end
+.CantAcceptMonWithHMText:
+    text_far _DaycareGentlemanCantAcceptMonWithHMText
+    text_end
+.HeresYourMonText:
+    text_far _DaycareGentlemanHeresYourMonText
+    text_end
+.NotEnoughMoneyText:
+    text_far _DaycareGentlemanNotEnoughMoneyText
+    text_end

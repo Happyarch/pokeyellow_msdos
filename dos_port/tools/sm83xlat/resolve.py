@@ -49,6 +49,10 @@ import symfile
 
 HERE = Path(__file__).resolve().parent
 
+#: Header line every emitted file carries. Used to tell the tool's own output
+#: apart from hand-written port source when scanning for already-defined labels.
+TOOL_OUTPUT_MARKER = "by dos_port/tools/sm83xlat"
+
 # Namespaces, as returned in Resolution.kind.
 NS_RAM = "ram"
 NS_CONST = "constant"
@@ -93,6 +97,13 @@ class Resolver:
     #: from the linker's addresses (see `missing_ram`).
     missing_ram: Dict[str, int] = field(default_factory=dict)
 
+    def legacy_alias(self, name: str) -> Optional[str]:
+        """The port's legacy SCREAMING_SNAKE name for a pret RAM symbol, if the
+        port does not yet define the pret spelling itself."""
+        if name in self.port_symbols:
+            return None
+        return self.ram_pret_to_port.get(name)
+
     def resolve(self, name: str) -> Optional[Resolution]:
         if name.startswith("."):
             return Resolution(name, NS_LOCAL, name)
@@ -114,6 +125,24 @@ class Resolver:
                                        "confirmed against pokeyellow.sym")
             port = self.ram_pret_to_port.get(name)
             if port:
+                # The port's own current spelling, deliberately.
+                #
+                # THIS OUTPUT IS NOT RENAME-INVARIANT, and it cannot be made so.
+                # 268 sites across 61 emitted files name a SCREAMING_SNAKE equ
+                # that Workstream B deletes. Emitting the pret spelling with a
+                # guarded alias was tried and DOES NOT WORK: `%ifndef` tests
+                # preprocessor %defines, and gb_memmap.inc uses `equ`, which is
+                # an assembly-time label the preprocessor cannot see. The guard
+                # never fires, so the alias becomes a redefinition the moment the
+                # rename lands. NASM has no guard for an `equ`.
+                #
+                # Measured by simulating the rename over the whole memmap and
+                # re-assembling: it also breaks `events.inc`, which references
+                # W_EVENT_FLAGS itself. So the rename ALREADY has to sweep its
+                # consumers, and these files are simply more consumers. The
+                # plan's "safe alongside the rename" claim is true of the symbol
+                # MAPPING (which joins on the normalized name) and was never true
+                # of emitted output. See README.md, "Merge order".
                 return Resolution(name, NS_RAM, port, note="gb_memmap.inc equ")
             if name in self.missing_ram:
                 return Resolution(name, NS_RAM, name,
@@ -218,6 +247,16 @@ def build(root: Path, port: Path, script_labels: Set[str] = frozenset(),
         try:
             text = p_.read_text(encoding="utf-8", errors="replace")
         except OSError:
+            continue
+        # SKIP THE TOOL'S OWN OUTPUT. Once emitted, those files sit in
+        # dos_port/src/scripts/ and a re-run would read them back as proof that
+        # every label is "already owned by the port" — self-poisoning. Measured:
+        # it took coverage from 68.3% to 11.5% and 268 owned-by-generated-assets
+        # bails to 1,608, on the second run only, which is exactly the shape of
+        # bug that hides behind a clean first run. The marker is the emitted
+        # header; hand-written files under src/scripts/ (pallet_town.asm,
+        # trainer_map_script.asm) do not carry it and are still respected.
+        if TOOL_OUTPUT_MARKER in text[:1024]:
             continue
         r.asset_labels |= set(re.findall(r"^\s*global\s+([A-Za-z_]\w*)", text, re.M))
         r.asset_labels |= set(re.findall(r"^([A-Za-z_]\w*):", text, re.M))

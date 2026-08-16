@@ -462,7 +462,13 @@ def main(argv=None) -> int:
                             "reasons": sorted({b["reason"] for b in out.bails})}
 
         dest = root / rel
-        if dest.exists():
+        # Protect HAND-WRITTEN port files, not the tool's own previous output.
+        # Once the one shot has been committed every destination exists, so a
+        # bare `dest.exists()` redirected everything to the shadow directory and
+        # silently stopped updating the real files — the run reported success
+        # while writing nothing where it mattered. The marker distinguishes them.
+        if dest.exists() and resolve.TOOL_OUTPUT_MARKER not in \
+                dest.read_text(encoding="utf-8", errors="replace")[:1024]:
             dest = HERE / SHADOW / dest.name
             shadowed.append(rel)
         if not args.dry_run:

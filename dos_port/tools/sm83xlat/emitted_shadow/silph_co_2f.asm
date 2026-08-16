@@ -1,0 +1,345 @@
+; SilphCo2F.asm — translated from pret scripts/SilphCo2F.asm by dos_port/tools/sm83xlat.
+;
+; ONE-SHOT OUTPUT, NOW HAND-MAINTAINED. The transpiler ran once at the SHA
+; recorded in dos_port/tools/sm83xlat/README.md and is not re-run; this file is
+; ordinary Tier-2 source and editing it is the normal way it changes. There is
+; deliberately no DO NOT EDIT header.
+;
+; Every pret label is preserved verbatim so the file stays line-for-line
+; cross-referenceable against the disassembly.
+;
+; Regions the tool could not lower WITH CERTAINTY are reproduced below as
+; commented pret source under a `; BAIL[reason]` banner, and define NO symbol —
+; so a reference to one is a link error rather than a plausible wrong lowering.
+
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+%include "gb_text.inc"
+%include "events.inc"
+%include "assets/event_constants.inc"
+
+
+global SilphCo2FRocket1Text
+global SilphCo2FRocket2Text
+global SilphCo2FScientist1Text
+global SilphCo2FScientist2Text
+global SilphCo2F_Script
+
+extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
+extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern GiveItem   ; NOT YET DEFINED IN THE PORT
+extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FGateCallbackScript   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FRocket1AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FRocket1EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FScientist1AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FScientist1BattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FScientist1EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FScientist2AfterBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FScientist2BattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FScientist2EndBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FSilphWorkerFPleaseTakeThisText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FSilphWorkerFText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2F_TextPointers   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2F_UnlockedDoorEventScript   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2TrainerHeader1   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2TrainerHeader2   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2TrainerHeader3   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo2FSilphWorkerFReceivedTM36Text   ; NOT YET DEFINED IN THE PORT
+
+; Script constants — pret defines these via dw_const in this file.
+SCRIPT_SILPHCO2F_DEFAULT                       equ 0
+SCRIPT_SILPHCO2F_START_BATTLE                  equ 1
+SCRIPT_SILPHCO2F_END_BATTLE                    equ 2
+TEXT_SILPHCO2F_SILPH_WORKER_F                  equ 1
+TEXT_SILPHCO2F_SCIENTIST1                      equ 2
+TEXT_SILPHCO2F_SCIENTIST2                      equ 3
+TEXT_SILPHCO2F_ROCKET1                         equ 4
+TEXT_SILPHCO2F_ROCKET2                         equ 5
+
+; pret RAM names the port still spells in SCREAMING_SNAKE. Guarded, so
+; this file assembles both before and after the memmap rename lands.
+%ifndef wCurrentMapScriptFlags
+wCurrentMapScriptFlags                         equ W_CURRENT_MAP_SCRIPT_FLAGS
+%endif
+%ifndef wNewTileBlockID
+wNewTileBlockID                                equ W_NEW_TILE_BLOCK_ID
+%endif
+
+; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
+; read from pokeyellow.sym — not inferred.
+hUnlockedSilphCoDoors                          equ 0xFFE0
+wSilphCo2FCurScript                            equ 0xD642
+
+; Code and data are emitted in pret's SOURCE ORDER, in one section.
+; That is not cosmetic: a NASM local label binds to the last
+; non-local label above it, so hoisting the text streams into a
+; separate section rebound every `.Text` to the wrong parent.
+section .text
+
+SilphCo2F_Script:
+    call SilphCo2FGateCallbackScript
+    call EnableAutoTextBoxDrawing
+    mov esi, SilphCo2TrainerHeaders
+    mov edi, SilphCo2F_ScriptPointers   ; pret: ld de, SilphCo2F_ScriptPointers — ExecuteCurMapScriptInTable takes it in EDI
+    mov al, [ebp + wSilphCo2FCurScript]
+    call ExecuteCurMapScriptInTable
+    mov [ebp + wSilphCo2FCurScript], al
+    ret
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SilphCo2FGateCallbackScript (scripts/SilphCo2F.asm:12-33) — at scripts/SilphCo2F.asm:20: .unlock_door1 is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld hl, wCurrentMapScriptFlags
+; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
+; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
+; PRET| 	ret z
+; PRET| 	ld hl, .GateCoordinates
+; PRET| 	call SilphCo2F_SetCardKeyDoorYScript
+; PRET| 	call SilphCo2F_UnlockedDoorEventScript
+; PRET| 	CheckEvent EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+; PRET| 	jr nz, .unlock_door1
+; PRET| 	push af
+; PRET| 	ld a, $54
+; PRET| 	ld [wNewTileBlockID], a
+; PRET| 	lb bc, 2, 2
+; PRET| 	predef ReplaceTileBlock
+; PRET| 	pop af
+; PRET| .unlock_door1
+; PRET| 	CheckEventAfterBranchReuseA EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+; PRET| 	ret nz
+; PRET| 	ld a, $54
+; PRET| 	ld [wNewTileBlockID], a
+; PRET| 	lb bc, 5, 2
+; PRET| 	predef_jump ReplaceTileBlock
+
+.GateCoordinates:
+    db 2, 2
+    db 5, 2
+    db -1
+
+; ---------------------------------------------------------------------------
+; BAIL[pointer-domain-unknown] SilphCo2F_SetCardKeyDoorYScript (scripts/SilphCo2F.asm:41-61) — at scripts/SilphCo2F.asm:51: HL domain is top at a dereference
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	push hl
+; PRET| 	ld hl, wCardKeyDoorY
+; PRET| 	ld a, [hli]
+; PRET| 	ld b, a
+; PRET| 	ld a, [hl]
+; PRET| 	ld c, a
+; PRET| 	xor a
+; PRET| 	ldh [hUnlockedSilphCoDoors], a
+; PRET| 	pop hl
+; PRET| .loop_check_doors
+; PRET| 	ld a, [hli]
+; PRET| 	cp $ff
+; PRET| 	jr z, .exit_loop
+; PRET| 	push hl
+; PRET| 	ld hl, hUnlockedSilphCoDoors
+; PRET| 	inc [hl]
+; PRET| 	pop hl
+; PRET| 	cp b
+; PRET| 	jr z, .check_y_coord
+; PRET| 	inc hl
+; PRET| 	jr .loop_check_doors
+
+; ---------------------------------------------------------------------------
+; BAIL[pointer-domain-unknown] SilphCo2F_SetCardKeyDoorYScript.check_y_coord (scripts/SilphCo2F.asm:63-70) — at scripts/SilphCo2F.asm:63: HL domain is top at a dereference
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld a, [hli]
+; PRET| 	cp c
+; PRET| 	jr nz, .loop_check_doors
+; PRET| 	ld hl, wCardKeyDoorY
+; PRET| 	xor a
+; PRET| 	ld [hli], a
+; PRET| 	ld [hl], a
+; PRET| 	ret
+
+.exit_loop:
+    xor al, al
+    mov [ebp + hUnlockedSilphCoDoors], al
+    ret
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SilphCo2F_UnlockedDoorEventScript (scripts/SilphCo2F.asm:77-84) — at scripts/SilphCo2F.asm:82: .unlock_door1 is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	EventFlagAddress hl, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+; PRET| 	ldh a, [hUnlockedSilphCoDoors]
+; PRET| 	and a
+; PRET| 	ret z
+; PRET| 	cp $1
+; PRET| 	jr nz, .unlock_door1
+; PRET| 	SetEventReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+; PRET| 	ret
+
+; ---------------------------------------------------------------------------
+; BAIL[event-byte-assembly-state] SilphCo2F_UnlockedDoorEventScript.unlock_door1 (scripts/SilphCo2F.asm:86-87) — at scripts/SilphCo2F.asm:86: SetEventAfterBranchReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+; PRET| 	ret
+
+; ---------------------------------------------------------------------------
+; BAIL[owned-by-generated-assets] SilphCo2F_ScriptPointers (scripts/SilphCo2F.asm:90-113) — a generated asset already defines SilphCo2TrainerHeaders
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	def_script_pointers
+; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_SILPHCO2F_DEFAULT
+; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_SILPHCO2F_START_BATTLE
+; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_SILPHCO2F_END_BATTLE
+; PRET| 
+; PRET| SilphCo2F_TextPointers:
+; PRET| 	def_text_pointers
+; PRET| 	dw_const SilphCo2FSilphWorkerFText, TEXT_SILPHCO2F_SILPH_WORKER_F
+; PRET| 	dw_const SilphCo2FScientist1Text,   TEXT_SILPHCO2F_SCIENTIST1
+; PRET| 	dw_const SilphCo2FScientist2Text,   TEXT_SILPHCO2F_SCIENTIST2
+; PRET| 	dw_const SilphCo2FRocket1Text,      TEXT_SILPHCO2F_ROCKET1
+; PRET| 	dw_const SilphCo2FRocket2Text,      TEXT_SILPHCO2F_ROCKET2
+; PRET| 
+; PRET| SilphCo2TrainerHeaders:
+; PRET| 	def_trainers 2
+; PRET| SilphCo2TrainerHeader0:
+; PRET| 	trainer EVENT_BEAT_SILPH_CO_2F_TRAINER_0, 3, SilphCo2FScientist1BattleText, SilphCo2FScientist1EndBattleText, SilphCo2FScientist1AfterBattleText
+; PRET| SilphCo2TrainerHeader1:
+; PRET| 	trainer EVENT_BEAT_SILPH_CO_2F_TRAINER_1, 4, SilphCo2FScientist2BattleText, SilphCo2FScientist2EndBattleText, SilphCo2FScientist2AfterBattleText
+; PRET| SilphCo2TrainerHeader2:
+; PRET| 	trainer EVENT_BEAT_SILPH_CO_2F_TRAINER_2, 3, SilphCo2FRocket1BattleText, SilphCo2FRocket1EndBattleText, SilphCo2FRocket1AfterBattleText
+; PRET| SilphCo2TrainerHeader3:
+; PRET| 	trainer EVENT_BEAT_SILPH_CO_2F_TRAINER_3, 3, SilphCo2FRocket2BattleText, SilphCo2FRocket2EndBattleText, SilphCo2FRocket2AfterBattleText
+; PRET| 	db -1 ; end
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SilphCo2FSilphWorkerFText (scripts/SilphCo2F.asm:117-127) — at scripts/SilphCo2F.asm:118: .already_have_tm is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	CheckEvent EVENT_GOT_TM36
+; PRET| 	jr nz, .already_have_tm
+; PRET| 	ld hl, .PleaseTakeThisText
+; PRET| 	call PrintText
+; PRET| 	lb bc, TM_SELFDESTRUCT, 1
+; PRET| 	call GiveItem
+; PRET| 	ld hl, .TM36NoRoomText
+; PRET| 	jr nc, .print_text
+; PRET| 	SetEvent EVENT_GOT_TM36
+; PRET| 	ld hl, .ReceivedTM36Text
+; PRET| 	jr .print_text
+
+; ---------------------------------------------------------------------------
+; BAIL[target-region-bailed] SilphCo2FSilphWorkerFText.already_have_tm (scripts/SilphCo2F.asm:129-132) — at scripts/SilphCo2F.asm:129: .TM36ExplanationText is defined in a region that bailed
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	ld hl, .TM36ExplanationText
+; PRET| .print_text
+; PRET| 	call PrintText
+; PRET| 	jp TextScriptEnd
+
+; ---------------------------------------------------------------------------
+; BAIL[text-sound-command-unported] SilphCo2FSilphWorkerFText.PleaseTakeThisText (scripts/SilphCo2F.asm:135-149) — at scripts/SilphCo2F.asm:140: sound_get_item_1
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	text_far SilphCo2FSilphWorkerFPleaseTakeThisText
+; PRET| 	text_end
+; PRET| 
+; PRET| .ReceivedTM36Text:
+; PRET| 	text_far _SilphCo2FSilphWorkerFReceivedTM36Text
+; PRET| 	sound_get_item_1
+; PRET| 	text_end
+; PRET| 
+; PRET| .TM36ExplanationText:
+; PRET| 	text_far _SilphCo2FSilphWorkerFTM36ExplanationText
+; PRET| 	text_end
+; PRET| 
+; PRET| .TM36NoRoomText:
+; PRET| 	text_far _SilphCo2FSilphWorkerFTM36NoRoomText
+; PRET| 	text_end
+
+SilphCo2FScientist1Text:
+    mov esi, SilphCo2TrainerHeader0
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+SilphCo2FScientist2Text:
+    mov esi, SilphCo2TrainerHeader1
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+SilphCo2FRocket1Text:
+    mov esi, SilphCo2TrainerHeader2
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+SilphCo2FRocket2Text:
+    mov esi, SilphCo2TrainerHeader3
+    call TalkToTrainer
+    jmp TextScriptEnd
+
+; ---------------------------------------------------------------------------
+; BAIL[owned-by-generated-assets] SilphCo2FScientist1BattleText (scripts/SilphCo2F.asm:176-221) — a generated asset already defines SilphCo2FScientist1BattleText
+; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; ---------------------------------------------------------------------------
+; PRET| 	text_far _SilphCo2FScientist1BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FScientist1EndBattleText:
+; PRET| 	text_far _SilphCo2FScientist1EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FScientist1AfterBattleText:
+; PRET| 	text_far _SilphCo2FScientist1AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FScientist2BattleText:
+; PRET| 	text_far _SilphCo2FScientist2BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FScientist2EndBattleText:
+; PRET| 	text_far _SilphCo2FScientist2EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FScientist2AfterBattleText:
+; PRET| 	text_far _SilphCo2FScientist2AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FRocket1BattleText:
+; PRET| 	text_far _SilphCo2FRocket1BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FRocket1EndBattleText:
+; PRET| 	text_far _SilphCo2FRocket1EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FRocket1AfterBattleText:
+; PRET| 	text_far _SilphCo2FRocket1AfterBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FRocket2BattleText:
+; PRET| 	text_far _SilphCo2FRocket2BattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FRocket2EndBattleText:
+; PRET| 	text_far _SilphCo2FRocket2EndBattleText
+; PRET| 	text_end
+; PRET| 
+; PRET| SilphCo2FRocket2AfterBattleText:
+; PRET| 	text_far _SilphCo2FRocket2AfterBattleText
+; PRET| 	text_end

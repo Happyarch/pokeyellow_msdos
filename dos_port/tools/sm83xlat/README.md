@@ -45,6 +45,32 @@ three pret sources (`BillsHouse.asm` + `BillsHouse_2.asm`), and emitting them on
 at a time made the second overwrite the first — which is why constants defined in
 one half read as undefined in the other.
 
+### Merge order — READ THIS BEFORE MERGING AFTER WORKSTREAM B
+
+**This output is NOT rename-invariant, and it cannot be made so.** 268 sites
+across 61 emitted files name a `SCREAMING_SNAKE` equ (`W_Y_COORD`,
+`W_SIMULATED_JOYPAD_STATES_INDEX`, …) that the memmap rename deletes. The plan's
+"safe alongside `current_plan_memmap_pret_names`" is true of the symbol
+**mapping** — which joins on the normalized name — and was never true of emitted
+**output**, which bakes in whichever spelling was current when it ran.
+
+Emitting the pret spelling with an `%ifndef` alias was tried and **does not
+work**: `%ifndef` tests preprocessor `%define`s, and `gb_memmap.inc` uses `equ`,
+an assembly-time label the preprocessor cannot see. The guard never fires, so the
+alias becomes a redefinition the moment the rename lands. NASM has no guard for
+an `equ`.
+
+Measured by simulating the whole rename over `gb_memmap.inc` and re-assembling:
+**126/224 files survive**, failing as `inconsistently redefined` and
+`W_EVENT_FLAGS not defined`. That second one is the point — **`events.inc`
+references `W_EVENT_FLAGS` itself**, so the rename already has to sweep its
+consumers, and these 61 files are simply more consumers.
+
+**So: include `dos_port/src/scripts/` in Workstream B's rename sweep.** Or merge
+C first. Either works; doing neither leaves 98 files failing to assemble.
+Re-running `transpile.py` after B lands also fixes it, since the resolver reads
+the memmap live.
+
 ### Nothing is wired into the build, deliberately
 
 The emitted files are in no `SRCS` list. Most reference callees the port does not
