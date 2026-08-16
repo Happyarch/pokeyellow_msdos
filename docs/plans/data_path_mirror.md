@@ -82,7 +82,7 @@ src/data/audio_data.asm      → src/data/pokemon/cries.asm
 - [x] **Commit 2** — the rule change, plus the two SKILLs that stated the retired
       form of it (`faithfulness-review`, `project-conventions`)
 - [x] `make -C dos_port static_gate` green at the `{}` baseline
-- [ ] Archive: `git mv docs/current_plan_data_path_mirror.md docs/plans/data_path_mirror.md`
+- [x] Archive: `git mv docs/current_plan_data_path_mirror.md docs/plans/data_path_mirror.md`
 
 ## Traps
 
@@ -240,3 +240,33 @@ end marker with no pret counterpart, so it is not in the unit's pret-label set,
 but it is defined in the same generated `.inc` as `WildDataPointers` and moved with
 it (`assets/wild_data.inc` → `assets/wild_grass_water.inc`). The tool cannot
 attribute a port-only label; this is that limitation, not a stray edit.
+
+---
+
+## Outcome (2026-08-16)
+
+COMPLETE, in two commits on `data-path-mirror`:
+
+- `7e4e5db5e` — the 44 moves, 14 source files to 40 destinations.
+- `b681541a1` — the `aux_misplaced` tightening + the two SKILLs that stated the
+  retired rule.
+
+Gates: `lint_pret_labels` and `--strict-claims` 0 each; `static_gate` PASS at the
+`{}` baseline (hook-run on both commits); `make -C dos_port` EXIT=0;
+`make fidelity-full` **reported=85/85, nonzero=0**, all 85 scenarios exited 0 in
+348 s.
+
+Two things the plan got wrong, both recorded above rather than quietly fixed:
+
+1. **"~15 files become ~30" understated the generated half.** Six generated
+   `.inc` files each spanned more than one pret data file, so the generators had
+   to be split too (Appendix B). The plan's stage list had no box for it.
+2. **"Expect ZERO VMA changes" was not achievable and did not need to be.** No
+   `t`→`T` flip appeared either, because every moved label was already `global`.
+   What the check actually proves is stronger and is in Appendix C: 0 symbols
+   added or removed, 0 kind changes, **0 `.text` symbols moved**, and every one of
+   the 16 address-order hunks accounted for.
+
+Note for whoever maintains `CLAUDE.md`: its "core 16 scenarios / full 66
+scenarios 378 s" figures are stale — the registry is **85** and the full tier ran
+in **348 s** here. Not changed by this workstream; `CLAUDE.md` is out of its scope.
