@@ -457,23 +457,9 @@ DisplayTwoOptionMenu:
     ; --- cutscene text-delay suppression (pret set BIT_NO_TEXT_DELAY) ------
     or byte [ebp + W_STATUS_FLAGS_5], 1 << BIT_NO_TEXT_DELAY
 
-    ; --- force stride-20 W_TILEMAP staging (battle enters at stride 40) ----
+    ; Save caller's text_row_stride
     mov eax, [text_row_stride]
     mov [yn_saved_stride], eax
-    mov dword [text_row_stride], 20
-
-    ; Save the 160-byte W_TILEMAP scratch area (8 rows x 20 stride) so non-overworld
-    ; callers (e.g. battle switch prompt) do not leave the staging box baked into the canvas.
-    push esi
-    push edi
-    push ecx
-    lea esi, [ebp + W_TILEMAP]
-    mov edi, yn_scratch_backup
-    mov ecx, 40                                  ; 40 dwords = 160 bytes
-    rep movsd
-    pop ecx
-    pop edi
-    pop esi
 
     ; --- descriptor table lookup: EBX = &TwoOptionMenuDesc[id] -------------
     ;     each entry = 12 bytes: int_w,int_h,blank,pad, opt_a(dd), opt_b(dd)
@@ -489,11 +475,6 @@ DisplayTwoOptionMenu:
     mov [yn_tot_h], eax                          ; total height = int_h + 2
 
     ; first-option box-relative row: blank ? 2 : 1 (pret bc = 2*20+2 / 20+2)
-    ; Kept in a named slot, NOT juggled on the stack. The push/pop dance this
-    ; replaced ended up popping the LAST value pushed (the second option's row)
-    ; into the cursor-row register, while its comment claimed it was `frow` — so
-    ; wTopMenuItemY was set one row below the first option and the ▶ sat next to
-    ; the wrong line. One slot, read three times, cannot drift like that.
     xor ecx, ecx
     mov cl, 1
     cmp byte [ebx + TOMD_BLANK], 0
@@ -501,6 +482,29 @@ DisplayTwoOptionMenu:
     mov cl, 2
 .have_frow:
     mov [yn_frow], ecx                             ; first-option box-relative row
+
+    ; --- PROJECTION ROUTING ---
+    ; Battle mode (yn_proj_mode == 1): draw directly into W_TILEMAP at stride 40 (same
+    ; architecture as msgbox_centered / DrawBattleMenuBox), saving and restoring the
+    ; underlying tiles (TwoOptionMenu_SaveScreenTiles / TwoOptionMenu_RestoreScreenTiles).
+    ; Overworld mode (yn_proj_mode == 0): stage into W_TILEMAP and present as a projected window.
+    cmp dword [yn_proj_mode], 1
+    je .battle_mode
+
+    ; --- OVERWORLD MODE: stride-20 W_TILEMAP staging -> window descriptor ---
+    mov dword [text_row_stride], 20
+
+    ; Save the 160-byte W_TILEMAP scratch area (8 rows x 20 stride)
+    push esi
+    push edi
+    push ecx
+    lea esi, [ebp + W_TILEMAP]
+    mov edi, yn_scratch_backup
+    mov ecx, 40                                  ; 40 dwords = 160 bytes
+    rep movsd
+    pop ecx
+    pop edi
+    pop esi
 
     ; --- render the border into the W_TILEMAP scratch at origin (row0,col0) -
     ; NB: load the geometry via AX first — writing BH/BL directly from [ebx+..]
@@ -618,6 +622,178 @@ DisplayTwoOptionMenu:
     call yn_teardown
     popad
     stc                                             ; CF=1 -> second option (NO)
+    ret
+
+; ---------------------------------------------------------------------------
+; .battle_mode — Direct canvas battle presentation (msgbox_centered shape).
+; Saves the covered 40-stride canvas area, draws TextBoxBorder + option strings
+; directly at (box_col + 10, box_row + 3), drives HandleMenuInput on W_TILEMAP,
+; and restores the covered canvas area on exit.
+; ---------------------------------------------------------------------------
+.battle_mode:
+    ; Canvas origin: col = yn_box_col + 10, row = yn_box_row + 3
+    mov eax, [yn_box_col]
+    add eax, 10
+    mov [yn_cur_col], eax                       ; canvas col
+    mov ecx, [yn_box_row]
+    add ecx, 3
+    mov [yn_cur_row], ecx                       ; canvas row
+
+    ; Calculate box offset: W_TILEMAP + row * 40 + col
+    imul ecx, ecx, 40
+    add ecx, eax
+    add ecx, W_TILEMAP
+    mov [yn_box_ofs], ecx                       ; EBP-relative tilemap offset
+
+    ; Save screen tiles under the box (tot_w x tot_h with stride 40)
+    ; (Mirrors pret TwoOptionMenu_SaveScreenTiles)
+    push esi
+    push edi
+    push ecx
+    push ebx
+    mov esi, ebp
+    add esi, [yn_box_ofs]                       ; ESI = src ([EBP + yn_box_ofs])
+    mov edi, yn_battle_saved_tiles
+    xor edx, edx                                ; row = 0
+.save_row_loop:
+    mov ecx, [yn_tot_w]
+    push esi
+    rep movsb
+    pop esi
+    add esi, 40                                 ; next canvas row
+    inc edx
+    cmp edx, [yn_tot_h]
+    jb .save_row_loop
+    pop ebx
+    pop ecx
+    pop edi
+    pop esi
+
+    ; Set text_row_stride to 40 for TextBoxBorder and PlaceString
+    mov dword [text_row_stride], 40
+
+    ; Draw TextBoxBorder directly into W_TILEMAP at yn_box_ofs
+    mov esi, [yn_box_ofs]
+    mov ah, [ebx + TOMD_INT_H]
+    mov al, [ebx + TOMD_INT_W]
+    push ebx
+    mov bx, ax
+    cmp byte [ebp + wTwoOptionMenuID], TRADE_CANCEL_MENU
+    jne .notTradeCancel_b
+    call CableClub_TextBoxBorder
+    jmp .afterBorder_b
+.notTradeCancel_b:
+    call TextBoxBorder
+.afterBorder_b:
+    pop ebx
+
+    ; Option A at W_TILEMAP + (row + frow) * 40 + col + 2
+    mov eax, [yn_cur_row]
+    add eax, [yn_frow]
+    imul eax, eax, 40
+    add eax, [yn_cur_col]
+    add eax, 2
+    add eax, W_TILEMAP
+    mov esi, eax
+    mov eax, [ebx + TOMD_OPT_A]
+    call place_flat_str
+
+    ; Option B at W_TILEMAP + (row + frow + 2) * 40 + col + 2
+    mov eax, [yn_cur_row]
+    add eax, [yn_frow]
+    add eax, 2
+    imul eax, eax, 40
+    add eax, [yn_cur_col]
+    add eax, 2
+    add eax, W_TILEMAP
+    mov esi, eax
+    mov eax, [ebx + TOMD_OPT_B]
+    call place_flat_str
+
+    ; Set cursor parameters for HandleMenuInput on canvas
+    mov eax, [yn_cur_row]
+    add eax, [yn_frow]
+    mov [ebp + wTopMenuItemY], al                ; canvas row
+    mov eax, [yn_cur_col]
+    inc eax
+    mov [ebp + wTopMenuItemX], al                ; canvas col + 1
+    mov byte [ebp + wMaxMenuItem], 1
+    mov byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
+    mov byte [ebp + wLastMenuItem], 0
+    mov byte [ebp + wMenuWatchMovingOutOfBounds], 0
+    mov dword [menu_item_step], 2 * 40           ; 2 rows at stride 40 = 80
+    mov dword [menu_redraw_cb], 0                ; direct canvas: no redraw cb needed
+
+    ; pret clears menu ID + text delay
+    mov byte [ebp + wTwoOptionMenuID], 0
+    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY)
+
+    ; Run HandleMenuInput
+    call HandleMenuInput
+    movzx eax, al
+    mov [yn_pressed], eax
+
+    ; Delay 15 frames
+    mov ecx, 15
+.fb_loop_b:
+    call DelayFrame
+    dec ecx
+    jnz .fb_loop_b
+
+    ; Decide chosen option
+    mov al, [yn_pressed]
+    test al, PAD_B
+    jnz .chose_second_b
+    movzx eax, byte [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .chose_second_b
+.chose_first_b:
+    mov byte [ebp + wCurrentMenuItem], 0
+    mov byte [ebp + wChosenMenuItem], 0
+    mov byte [ebp + wMenuExitMethod], CHOSE_FIRST_ITEM
+    call yn_battle_teardown
+    popad
+    clc
+    ret
+.chose_second_b:
+    mov byte [ebp + wCurrentMenuItem], 1
+    mov byte [ebp + wChosenMenuItem], 1
+    mov byte [ebp + wMenuExitMethod], CHOSE_SECOND_ITEM
+    call yn_battle_teardown
+    popad
+    stc
+    ret
+
+; ---------------------------------------------------------------------------
+; yn_battle_teardown — restore state for battle two-option menu: restore saved
+; canvas tiles, restore caller's text_row_stride, clear BIT_NO_TEXT_DELAY.
+; ---------------------------------------------------------------------------
+yn_battle_teardown:
+    push eax
+    push esi
+    push edi
+    push ecx
+    mov esi, yn_battle_saved_tiles
+    mov edi, ebp
+    add edi, [yn_box_ofs]                       ; EDI = dest ([EBP + yn_box_ofs])
+    xor edx, edx                                ; row = 0
+.restore_row_loop:
+    mov ecx, [yn_tot_w]
+    push edi
+    rep movsb
+    pop edi
+    add edi, 40                                 ; next canvas row
+    inc edx
+    cmp edx, [yn_tot_h]
+    jb .restore_row_loop
+    pop ecx
+    pop edi
+    pop esi
+
+    mov eax, [yn_saved_stride]
+    mov [text_row_stride], eax
+    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY)
+    pop eax
     ret
 
 ; ---------------------------------------------------------------------------
@@ -934,7 +1110,11 @@ yn_saved_wc:    resd 1          ; g_window_count on entry (restored on exit)
 yn_saved_stride:resd 1          ; text_row_stride on entry (restored on exit)
 yn_pressed:     resd 1          ; HandleMenuInput result (keys), kept across feedback
 yn_frow:        resd 1          ; first option's box-relative row (blank ? 2 : 1)
-yn_scratch_backup: resb 160     ; saves W_TILEMAP[0..159] during staging
+yn_scratch_backup: resb 160     ; saves W_TILEMAP[0..159] during overworld staging
+yn_cur_col:     resd 1          ; battle canvas col
+yn_cur_row:     resd 1          ; battle canvas row
+yn_box_ofs:     resd 1          ; battle canvas offset
+yn_battle_saved_tiles: resb 100 ; saves covered battle canvas tiles
 
 section .data
 align 4
