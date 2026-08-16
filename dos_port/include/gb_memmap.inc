@@ -1353,8 +1353,6 @@ BIT_STANDING_ON_DOOR         equ 0     ; set by warp arrival; triggers auto-walk
 BIT_EXITING_DOOR             equ 1     ; set by PlayerStepOutFromDoor (door tile); player is auto-walking off door
 BIT_STANDING_ON_WARP         equ 2     ; edge-detect: 1 = player was on a warp tile last step
 ; bits 3–5 unused in Yellow
-BIT_LEDGE_OR_FISHING         equ 6
-BIT_SPINNING                 equ 7
 
 ; Bit indices for W_STATUS_FLAGS_5 (pret: constants/ram_constants.asm)
 BIT_UNKNOWN_5_1              equ 1     ; cleared on entry to PlayerStepOutFromDoor (pret)
@@ -1634,7 +1632,6 @@ W_SIGN_TEXT_IDS              equ 0xD4D0 ; wSignTextIDs (MAX_BG_EVENTS bytes)
 
 MAX_WARP_EVENTS              equ 32
 MAX_BG_EVENTS                equ 16
-MAX_OBJECT_EVENTS            equ 16
 
 ; Special-warp step offsets (incremented as the block-map pointer crosses
 ; block boundaries; faithful bookkeeping, not yet consumed by warp logic).
@@ -2175,7 +2172,6 @@ wPartyHPBarAttributes         equ 0xCF36 ; = wPartyMenuBlkPacket + 9; PARTY_LENG
 wPartyMenuTypeOrMessageID     equ 0xD07C ; NORMAL/USE_ITEM/BATTLE/TMHM/SWAP/EVO_STONE_PARTY_MENU
 wPartyMenuAnimMonEnabled      equ 0xD09A ; nonzero ($40) while the selected mon's icon animates
 wSwappedMenuItem              equ 0xCD3D ; = wChargeMoveNum union byte; SwitchPartyMon result
-wLoadedMonStatus              equ 0xCF9B ; wLoadedMon + MON_STATUS
 hPartyMonIndex                equ 0xFF8C ; = hTextID (ram/hram.asm union)
 hSwapTemp                     equ 0xFF95 ; byte-swap scratch (overlaps hDividend lane)
 
@@ -2276,7 +2272,6 @@ hExperience                   equ H_EXPERIENCE            ; 0xFF96 (alias of hPr
 wLoadedMonSpecies             equ W_LOADED_MON_SPECIES    ; 0xCF97
 wLoadedMonExp                 equ W_LOADED_MON_EXP        ; 0xCFA5
 wUpdateSpritesEnabled         equ W_UPDATE_SPRITES_ENABLED ; 0xCFCA
-hAutoBGTransferEnabled        equ H_AUTO_BG_TRANSFER_EN   ; 0xFFBA
 
 ; engine/pokemon behavior layer (evolution/learn-move/status-screen). All
 ; sym-verified via origin/symbols:pokeyellow.sym; promoted from evolution.asm's
@@ -2299,7 +2294,6 @@ wStatusScreenCurrentPP        equ 0xCD71 ; scratch: current move PP for StatusSc
 wPPUpCountAndMaxPP            equ 0xCD73 ; = wMoveData + MOVE_PP + 1 (AddBonusPP work byte)
 wUsingPPUp                    equ 0xD11D ; (union wMaxPP/wPokedexNum scratch — see GetMaxPP order)
 wPartyMon1Moves              equ 0xD172 ; party mon 0 move-id list (GetSelectedMoveOffset base)
-wEnemyMon1Moves              equ 0xD8AB
 wBoxMon1Moves                equ 0xDA9D
 wDayCareMonMoves             equ 0xDA66
 wEvolutionOccurred            equ 0xD120 ; set when a mon evolved this EvolutionAfterBattle
