@@ -94,6 +94,7 @@ extern GBPalNormal                        ; src/home/palettes.asm
 extern InitMapSprites                     ; src/home/palettes.asm
 extern LoadTextBoxTilePatterns            ; src/home/load_font.asm
 extern LoadTilesetHeader                  ; src/engine/overworld/tilesets.asm
+extern StageIndoorMapBlk                  ; src/engine/overworld/overworld.asm
 extern LoadWildData                       ; src/engine/overworld/wild_mons.asm
 extern MapTextTablePointers               ; assets/npc_dialogs/all_dialogs.inc
 extern PlayDefaultMusicFadeOutCurrent     ; src/home/audio.asm
@@ -297,6 +298,12 @@ EnterMap:
     ; re-derives the coords from the stale wDestinationWarpID on any dungeon-
     ; tileset map (e.g. a seeded Viridian Forest spawned at warp 0's (1,0)).
     mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+    ; An INDOOR spawn needs its .blk staged into the shared window, exactly as a
+    ; warp arrival does. Only LoadDestinationMapData did that, and this path does
+    ; not go through it — so a debug-spawned interior loaded its header and its
+    ; tileset correctly and then drew a blank room off an empty block window. The
+    ; symptom reads as missing map data or a missing tileset and is neither.
+    call StageIndoorMapBlk
     mov byte [seam_reseat], 1             ; hand-seeded coords need the view ptr derived
 .seam_no_seed:
 %endif

@@ -1014,6 +1014,37 @@ CheckWarpTile:
 ; The wCurMap/wLastMap update + BIT_STANDING_ON_DOOR + IgnoreInputForHalfSecond +
 ; jp EnterMap half of WarpFound2 lives in OverworldLoop.warpTransition (OW-A.4(b)).
 ; ---------------------------------------------------------------------------
+; StageIndoorMapBlk — port-only. Copy W_CUR_MAP's .blk into the shared indoor
+; window, or do nothing for an outdoor map.
+;
+; No pret counterpart: pret's indoor maps live at distinct bank addresses and are
+; reached by banking, so there is nothing to stage. The port models memory flat
+; and gives every indoor map ONE window (INDOOR_BLK_GBADDR), so whoever changes
+; W_CUR_MAP to an indoor id owns putting that map's blocks there before anything
+; reads them. LoadMapHeader takes blk_ptr straight from the header, which for an
+; indoor map IS INDOOR_BLK_GBADDR — so an unstaged window silently yields the
+; PREVIOUS map's blocks, or zeros on the first entry, and the map renders blank
+; with a correct-sized room. That failure looks like missing map data or a
+; missing tileset; it is neither.
+;
+; In: EBP = GB memory base, W_CUR_MAP set. All registers preserved.
+; ---------------------------------------------------------------------------
+global StageIndoorMapBlk
+StageIndoorMapBlk:
+    pushad
+    movzx eax, byte [ebp + W_CUR_MAP]
+    cmp eax, FIRST_INDOOR_MAP_ID
+    jb .outdoor                               ; outdoor maps have their own windows
+    sub eax, FIRST_INDOOR_MAP_ID              ; 0-based table index
+    mov esi, [IndoorMapBlkPtrs + eax*4]       ; flat DS label for this map's .blk
+    lea edi, [ebp + INDOOR_BLK_GBADDR]
+    mov ecx, [IndoorMapBlkSizes + eax*4]      ; byte count
+    rep movsb
+.outdoor:
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
 LoadDestinationMapData:
     push eax
     push ebx
@@ -1021,19 +1052,11 @@ LoadDestinationMapData:
     push esi
     push edi
 
-    ; Indoor maps use a shared EBP slot (INDOOR_BLK_GBADDR).  Copy this map's
-    ; .blk bytes there before calling LoadMapHeader, which reads blk_ptr=INDOOR_BLK_GBADDR
-    ; from the header and stores it in W_CUR_MAP_DATA_PTR → LoadTileBlockMap
-    ; then reads the block layout from that address.
-    movzx eax, byte [ebp + W_CUR_MAP]
-    cmp eax, FIRST_INDOOR_MAP_ID
-    jb .outdoor
-    sub eax, FIRST_INDOOR_MAP_ID              ; 0-based table index
-    mov esi, [IndoorMapBlkPtrs + eax*4]       ; flat DS label for this map's .blk
-    lea edi, [ebp + INDOOR_BLK_GBADDR]
-    mov ecx, [IndoorMapBlkSizes + eax*4]      ; byte count
-    rep movsb
-.outdoor:
+    ; Indoor maps use a shared EBP slot (INDOOR_BLK_GBADDR); stage this map's
+    ; .blk there before LoadMapHeader reads blk_ptr=INDOOR_BLK_GBADDR from the
+    ; header. Factored out so the debug-spawn path can stage too — see
+    ; StageIndoorMapBlk below.
+    call StageIndoorMapBlk
     ; Load map header: copies fixed header to WRAM, copies warp entries to
     ; W_WARP_ENTRIES, and calls LoadTilesetHeader (which swaps tileset data
     ; into the fixed EBP ROM-window slots and sets g_tilecache_dirty).
