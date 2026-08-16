@@ -5138,6 +5138,12 @@ DoUseNextMonDialogue:
     mov esi, BCOORD(13, 9)               ; PROJ — pret hlcoord 13, 9
     mov bh, 10                           ; lb bc, 10, 14
     mov bl, 14
+    ; The port places this box from yn_box_col/row/proj_mode (the window
+    ; compositor), not from esi/bh/bl above — those stay for pret cross-
+    ; reference only. Battle anchor, matching EnemySendOutFirstMon.
+    mov dword [yn_box_col], 13
+    mov dword [yn_box_row], 9
+    mov dword [yn_proj_mode], 1          ; battle anchor
     mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
     call DisplayTextBoxID
     mov al, [ebp + wMenuExitMethod]

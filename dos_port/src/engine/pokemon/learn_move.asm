@@ -69,6 +69,9 @@ extern HandleMenuInput              ; src/home/window.asm — AL = watched key(s
 extern text_row_stride              ; src/home/text.asm — current W_TILEMAP row stride
 extern menu_item_step               ; src/home/window.asm — HandleMenuInput cursor row step
 extern DisplayTextBoxID             ; pret home/textbox.asm (linked, menus-port)
+extern yn_box_col                   ; home/yes_no.asm — two-option box top-left, GB X
+extern yn_box_row                   ; home/yes_no.asm — two-option box top-left, GB Y
+extern yn_proj_mode                 ; home/yes_no.asm — 0 = overworld anchor, 1 = battle
 
 extern DidNotLearnText               ; assets/battle_text.inc (gen_battle_text.py)
 extern LearnedMove1Text
@@ -184,6 +187,12 @@ AbandonLearning:
     mov esi, W_TILEMAP + 7 * SCREEN_WIDTH + 14      ; hlcoord 14, 7
     mov bh, 8
     mov bl, 15                                       ; lb bc, 8, 15 (b,c = y,x cursor)
+    ; The port places this box from yn_box_col/row/proj_mode (the window
+    ; compositor), not from esi/bh/bl above — those stay for pret cross-
+    ; reference only. Overworld/menu anchor.
+    mov dword [yn_box_col], 14
+    mov dword [yn_box_row], 7
+    mov dword [yn_proj_mode], 0                      ; overworld/menu anchor
     mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
     call DisplayTextBoxID                            ; yes/no menu
     mov al, [ebp + wCurrentMenuItem]
@@ -227,6 +236,12 @@ TryingToLearn:
     mov esi, W_TILEMAP + 7 * SCREEN_WIDTH + 14      ; hlcoord 14, 7
     mov bh, 8
     mov bl, 15                                       ; lb bc, 8, 15
+    ; The port places this box from yn_box_col/row/proj_mode (the window
+    ; compositor), not from esi/bh/bl above — those stay for pret cross-
+    ; reference only. Overworld/menu anchor.
+    mov dword [yn_box_col], 14
+    mov dword [yn_box_row], 7
+    mov dword [yn_proj_mode], 0                      ; overworld/menu anchor
     mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
     call DisplayTextBoxID                            ; yes/no menu
     pop esi                                          ; restore caller's hl

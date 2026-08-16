@@ -98,6 +98,9 @@ extern TextBoxBorder                ; src/home/text.asm
 extern PlaceString                  ; src/home/text.asm
 extern HandleMenuInput              ; src/home/window.asm
 extern DisplayTextBoxID             ; src/home/textbox.asm
+extern yn_box_col                   ; home/yes_no.asm — two-option box top-left, GB X
+extern yn_box_row                   ; home/yes_no.asm — two-option box top-left, GB Y
+extern yn_proj_mode                 ; home/yes_no.asm — 0 = overworld anchor, 1 = battle
 extern SaveScreenTilesToBuffer2     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2   ; src/home/tilemap.asm
 extern DisplayTextIDInit            ; src/engine/menus/display_text_id_init.asm
@@ -1137,6 +1140,12 @@ MainSlotMachineLoop:
     mov bl, 15
     xor al, al
     mov byte [ebp + wTwoOptionMenuID], al
+    ; The port places this box from yn_box_col/row/proj_mode (the window
+    ; compositor), not from esi/bh/bl above — those stay for pret cross-
+    ; reference only. Overworld/menu anchor.
+    mov dword [yn_box_col], 14
+    mov dword [yn_box_row], 12
+    mov dword [yn_proj_mode], 0          ; overworld/menu anchor
     mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
     call DisplayTextBoxID
     mov al, byte [ebp + wCurrentMenuItem]
