@@ -1843,11 +1843,7 @@ endif
 # PLAYABLE trainer battle: the DEBUG_TRAINER_ROUTE spawn + seed (Route 3, in
 # ROUTE3_YOUNGSTER1's sight, party seeded by RunTrainerRouteTestSeed) with NO
 # autokey and NO frame dump, so the keyboard drives it. Use this to pilot a
-# trainer battle by hand -- NOT DEBUG_START_MAP+DEBUG_SEED_PARTY, which leaves
-# the per-EnterMap re-seed active that DEBUG_TRAINER_ROUTE excludes on purpose:
-# measured 2026-08-05, that combination wedges NewBattle (wCurOpponent stays set,
-# wIsInBattle never leaves 0) after it has already overwritten the 120 vFont
-# tiles with battle graphics, so the trainer's textbox renders as mon sprites.
+# trainer battle by hand.
 #   dos_port/run TRAINER_ROUTE_PILOT=1
 #
 # THIS BLOCK MUST STAY OUTSIDE `ifdef DEBUG_AUTOKEY` (which closes just above).
