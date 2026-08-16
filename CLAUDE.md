@@ -322,6 +322,10 @@ clean border blocks) and it would cost the maintainer a large amount of hand
 authoring. The border-block rendering IS the intended behaviour now, not a
 placeholder for it.
 
+This is a RENDERING decision for cells pret never shows. It is not licence to
+diverge from pret's map behaviour: maps stay faithful and non-bespoke, and the
+functional core must match pret even where the port shuffles how it is built.
+
 The map-editing tools (`dos_port/tools/map_editor/`) are kept regardless — not
 because the clamps need retiring, but because they are genuinely useful to
 modders authoring new maps.

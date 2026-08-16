@@ -292,10 +292,10 @@ at full speed as of 2026-07-12 — see `docs/plans/compositor_perf.md` (archived
 before changing any of these hot loops; it also ships the `DEBUG_PERF` profiler
 (`tools/perf_capture.sh`) and `tools/pixelcheck.sh`.
 
-**Temporary scaffold — two out-of-map clamps (`src/home/overworld.asm`):**
+**Two out-of-map clamps (`src/home/overworld.asm`) — PERMANENT, see below:**
 the extended 40×25-tile viewport draws a larger area than the original 20×18 and
 the player is pinned at screen-center, so a player-centered camera near a map
-edge reaches past the populated `wOverworldMap` data. Two complementary stopgaps
+edge reaches past the populated `wOverworldMap` data. Two complementary clamps
 keep that from painting garbage:
 1. **Block-ID clamp** in `DrawTileBlock`: a block ID past the embedded blockset
    is clamped to block 0.
@@ -314,13 +314,22 @@ previous block-row. Every border-derived quantity must be written in terms of
 `MAP_BORDER` / `SCREEN_BLOCK_*`, never as the literal that happens to equal it —
 pret's own source is full of such collisions (`MAP_BORDER*2 == SCREEN_BLOCK_WIDTH`).
 
-Both are stopgaps: the real fix is to **extend the map data** so those regions
-hold real blocks (no blank area), after which both clamps are dead code and
-should be deleted. The address clamp removes the garbage *now* (verified via
-`FRAME.BIN` for baseline / north-transition / walk-to-edge); it does **not** yet
-give editable map cells for that extended area — that still needs the map-data
-extension (enlarged border / bigger block grid). Until that lands, both clamps
-stay — this section is the record of that work, which no other file tracks.
+**Both clamps are PERMANENT — maintainer decision, 2026-08-16. Do not remove
+them, and do not propose extending the map data to retire them.** The clamps were
+originally written as stopgaps pending hand-authored map extensions; that
+extension buys nothing the clamps do not already deliver (verified via `FRAME.BIN`
+for baseline / north-transition / walk-to-edge: the out-of-map area renders as
+clean border blocks) and it would cost the maintainer a large amount of hand
+authoring. The border-block rendering IS the intended behaviour now, not a
+placeholder for it.
+
+This is a RENDERING decision for cells pret never shows. It is not licence to
+diverge from pret's map behaviour: maps stay faithful and non-bespoke, and the
+functional core must match pret even where the port shuffles how it is built.
+
+The map-editing tools (`dos_port/tools/map_editor/`) are kept regardless — not
+because the clamps need retiring, but because they are genuinely useful to
+modders authoring new maps.
 
 ---
 
