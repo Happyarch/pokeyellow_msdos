@@ -124,7 +124,7 @@ extern HandleItemListSwapping
 ; CANCELLED_MENU) now live canonically in gb_memmap.inc / gb_constants.inc (Wave 4).
 ;
 ; Local lowercase aliases onto existing port H_*/W_* symbols the code below uses:
-wStatusFlags5               equ W_STATUS_FLAGS_5
+wStatusFlags5               equ wStatusFlags5
 hAutoBGTransferEnabled      equ H_AUTO_BG_TRANSFER_EN
 hJoyPressed                 equ hJoyPressed
 hJoy7                       equ hJoy7

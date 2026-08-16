@@ -141,7 +141,7 @@ PalletTownDefaultScript:
     SetEvent EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
 .playerOnLeftExit:
     mov byte [ebp + hJoyHeld], 0
-    mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
+    mov byte [ebp + wJoyIgnore], PAD_BUTTONS | PAD_CTRL_PAD
     mov byte [ebp + wPlayerMovingDirection], PLAYER_DIR_UP
     call StopAllMusic
     mov bl, MUSIC_MEET_PROF_OAK_BANK
@@ -153,11 +153,11 @@ PalletTownDefaultScript:
     ret
 
 PalletTownOakHeyWaitScript:
-    mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov byte [ebp + wJoyIgnore], PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov byte [ebp + wOakWalkedToPlayer], 0
     mov byte [ebp + hTextID], TEXT_PALLETTOWN_OAK
     call DisplayTextID
-    mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
+    mov byte [ebp + wJoyIgnore], PAD_BUTTONS | PAD_CTRL_PAD
     mov byte [ebp + wSprite01StateData2MapY], 8
     mov byte [ebp + wSprite01StateData2MapX], 14
     mov byte [ebp + wToggleableObjectIndex], TOGGLE_PALLET_TOWN_OAK
@@ -182,15 +182,15 @@ PalletTownOakWalksToPlayerScript:
     ret
 
 PalletTownOakGreetsPlayerScript:
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
     jnz .ret
-    mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov byte [ebp + wJoyIgnore], PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov byte [ebp + wOakWalkedToPlayer], 1
     mov byte [ebp + wSprite01StateData1MovementStatus], 2
     mov byte [ebp + wSprite01StateData1FacingDirection], SPRITE_FACING_UP
     mov byte [ebp + hTextID], TEXT_PALLETTOWN_OAK
     call DisplayTextID
-    mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
+    mov byte [ebp + wJoyIgnore], PAD_BUTTONS | PAD_CTRL_PAD
     mov byte [ebp + wSprite01StateData1MovementStatus], 2
     CheckEvent EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
     mov al, SPRITE_FACING_RIGHT
@@ -203,7 +203,7 @@ PalletTownOakGreetsPlayerScript:
     ret
 
 PalletTownPikachuBattleScript:
-    mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov byte [ebp + wJoyIgnore], PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov byte [ebp + wListScrollOffset], 0
     mov byte [ebp + wBattleType], BATTLE_TYPE_PIKACHU
     mov byte [ebp + wCurOpponent], STARTER_PIKACHU
@@ -219,7 +219,7 @@ PalletTownAfterPikachuBattleScript:
     mov byte [ebp + wSprite01StateData1FacingDirection], SPRITE_FACING_UP
     mov byte [ebp + hTextID], TEXT_PALLETTOWN_OAK_COME_WITH_ME
     call DisplayTextID
-    mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
+    mov byte [ebp + wJoyIgnore], PAD_BUTTONS | PAD_CTRL_PAD
     mov byte [ebp + wPalletTownCurScript], SCRIPT_PALLETTOWN_OAK_NOT_SAFE
     ret
 

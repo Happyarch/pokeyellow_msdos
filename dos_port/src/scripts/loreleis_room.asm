@@ -88,7 +88,7 @@ LoreleiShowOrHideExitBlock:
     jnz .nr_16
         ret
 .nr_16:
-    mov esi, W_ELITE4_FLAGS
+    mov esi, wElite4Flags
     or byte [ebp + esi], (1 << (1))
     CheckEvent EVENT_BEAT_LORELEIS_ROOM_TRAINER_0
     jz .blockExitToNextRoom

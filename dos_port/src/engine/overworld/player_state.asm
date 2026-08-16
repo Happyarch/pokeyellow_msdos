@@ -200,7 +200,7 @@ IsPlayerStandingOnWarp:
     mov [ebp + wDestinationWarpID], al
     mov al, [ebp + esi]                     ; target map
     mov [ebp + H_WARP_DESTINATION_MAP], al
-    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
+    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_WARP)
     ret
 .nextWarp1:
     inc esi
@@ -224,7 +224,7 @@ IsPlayerStandingOnWarp:
 ; No push/pop here: pret's original doesn't save BC/DE/HL either.
 ; ---------------------------------------------------------------------------
 CheckForceBikeOrSurf:
-    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_ALWAYS_ON_BIKE)
+    test byte [ebp + wStatusFlags6], (1 << BIT_ALWAYS_ON_BIKE)
     jnz .ret                                ; ret nz
     mov esi, ForcedBikeOrSurfMaps
     mov bh, [ebp + wYCoord]
@@ -253,9 +253,9 @@ CheckForceBikeOrSurf:
     cmp al, SEAFOAM_ISLANDS_B4F
     mov byte [ebp + wSeafoamIslandsB4FCurScript], SCRIPT_SEAFOAMISLANDSB4F_MOVE_OBJECT
     je .forceSurfing
-    or byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_ALWAYS_ON_BIKE)
-    mov byte [ebp + W_WALK_BIKE_SURF_STATE], 1
-    mov byte [ebp + W_WALK_BIKE_SURF_STATE_COPY], 1
+    or byte [ebp + wStatusFlags6], (1 << BIT_ALWAYS_ON_BIKE)
+    mov byte [ebp + wWalkBikeSurfState], 1
+    mov byte [ebp + wWalkBikeSurfStateCopy], 1
     call ForceBikeOrSurf
     ret
 .incorrectMap:
@@ -264,8 +264,8 @@ CheckForceBikeOrSurf:
     inc esi
     jmp .loop
 .forceSurfing:
-    mov byte [ebp + W_WALK_BIKE_SURF_STATE], 2
-    mov byte [ebp + W_WALK_BIKE_SURF_STATE_COPY], 2
+    mov byte [ebp + wWalkBikeSurfState], 2
+    mov byte [ebp + wWalkBikeSurfStateCopy], 2
     call ForceBikeOrSurf
 .ret:
     ret
@@ -406,7 +406,7 @@ IsPlayerStandingOnDoorTileOrWarpTile:
     mov edx, 1
     call IsInArray                          ; sets CF
     jnc .done
-    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_WARP) & 0xFF
+    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP) & 0xFF
 .done:
     ; POP does not affect CF (matches home/overworld.asm:ExtraWarpCheck's note).
     pop esi

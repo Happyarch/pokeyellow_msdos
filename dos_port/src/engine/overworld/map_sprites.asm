@@ -261,7 +261,7 @@ InitOutsideMapSprites:
     jae .inside                        ; indoor map → not handled here (CF=0)
     call GetSplitMapSpriteSetID         ; AL = spriteSetID (input AL = wCurMap)
     mov bl, al                          ; B = spriteSetID
-    test byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    test byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     jnz .loadSet                        ; reloading upper half after text → force reload
     mov al, [ebp + W_SPRITE_SET_ID]
     cmp al, bl
@@ -464,7 +464,7 @@ ReloadWalkingTilePatterns:
 ; the upper/walk half, so the lower/still half must not be reloaded over live text).
 ; ---------------------------------------------------------------------------
 LoadStillTilePattern:
-    test byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    test byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     jnz .skip                          ; font loaded → don't reload the lower half
     call ReadSpriteSheetData            ; EDX = flat src, ECX = tile count, CF=1 if used
     jnc .skip
@@ -615,7 +615,7 @@ InitToggleableObjectFlags:
     rep movsb
 
     ; Clear the general event-flag region (wEventFlags, NUM_EVENTS bits ≈ 0x140 B).
-    lea edi, [ebp + W_EVENT_FLAGS]
+    lea edi, [ebp + wEventFlags]
     xor al, al
     mov ecx, 0x140
     rep stosb
@@ -925,8 +925,8 @@ CheckNPCInteraction:
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
 
-    ; Set W_FONT_LOADED to freeze UpdateSprites NPC movement during dialog.
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    ; Set wFontLoaded to freeze UpdateSprites NPC movement during dialog.
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
 
     ; Restore font glyphs to GB_VFONT before text rendering (walk tiles share it).
     call LoadFontTilePatterns
@@ -960,7 +960,7 @@ CheckNPCInteraction:
 .dialog_done:
     ; Hide window and clear font-loaded flag.
     call hide_window                    ; count=0 (nothing drawn); parks hWY off-screen
-    and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
+    and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED)
 
     ; Reload NPC and player walk tiles into GB_VFONT (font was loaded for dialog).
     call ReloadWalkingTilePatterns      ; OW-A.2 P3c: faithful post-dialog walk-tile reload
@@ -1246,7 +1246,7 @@ TrainerEncounterFlow:
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
 
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     pop esi                                 ; the flat stream saved above
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
@@ -1284,7 +1284,7 @@ TrainerEncounterFlow:
     ; DEVIATION{class=temporary; pret=home/trainers.asm:EndTrainerBattle; behavior=a battle entered through this bespoke flow never runs EndTrainerBattle, so BIT_PRINT_END_BATTLE_TEXT and wCurMapScript stay set after it and the trainer is not flagged beaten by the pret path; evidence=the Stage 1b gate in OverworldLoopLessDelay reaches this routine only when MapScriptPointers[wCurMap] is not TrainerMapScript, and on those maps the generated assets/map_scripts.inc dispatches DefaultMapScript or a non-trainer script, so the wCurMapScript increment StartTrainerBattle makes indexes a script-pointer table RunMapScript never dispatches; lifetime=deleted together with CheckTrainerSight, TrainerEncounterFlow and the gate itself when Stage 5a wiring completes and all standard trainer maps are wired, owned by docs/current_plan_overworld_events.md}
     ; -------------------------------------------------------------------------
     call hide_window                    ; count=0 (nothing drawn); parks hWY off-screen
-    and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
+    and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED)
     call ReloadWalkingTilePatterns      ; OW-A.2 P3c: faithful post-dialog walk-tile reload
     call LoadPlayerSpriteGraphics
     call LoadCurrentMapView

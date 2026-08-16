@@ -233,7 +233,7 @@ PrepareOakSpeech:
     push eax
     movzx eax, byte [ebp + wOptions]
     push eax
-    movzx eax, byte [ebp + W_STATUS_FLAGS_6]      ; carries BIT_DEBUG_MODE (pret note)
+    movzx eax, byte [ebp + wStatusFlags6]      ; carries BIT_DEBUG_MODE (pret note)
     push eax
     movzx eax, byte [ebp + wPrinterSettings]
     push eax
@@ -257,7 +257,7 @@ PrepareOakSpeech:
     pop eax
     mov [ebp + wPrinterSettings], al
     pop eax
-    mov [ebp + W_STATUS_FLAGS_6], al
+    mov [ebp + wStatusFlags6], al
     pop eax
     mov [ebp + wOptions], al
     pop eax
@@ -376,7 +376,7 @@ OakSpeech:
     xor bl, bl
     call IntroDisplayPicCenteredOrUpperRight
     call GBFadeInFromWhite
-    mov al, [ebp + W_STATUS_FLAGS_3]        ; and a / jr nz, .next
+    mov al, [ebp + wStatusFlags3]        ; and a / jr nz, .next
     test al, al
     jnz .next
     mov dword [text_msgbox], msgbox_oak_speech

@@ -141,7 +141,7 @@ StatusScreen:
     mov bl, 1
     call CalcStats
 .DontRecalculate:
-    or byte [ebp + W_STATUS_FLAGS_2], (1 << BIT_NO_AUDIO_FADE_OUT)   ; set BIT_NO_AUDIO_FADE_OUT
+    or byte [ebp + wStatusFlags2], (1 << BIT_NO_AUDIO_FADE_OUT)   ; set BIT_NO_AUDIO_FADE_OUT
     ; The "TODO-HW: audio HAL (Phase 3)" here was STALE — retired 2026-08-14.
     ; The APU is NOT a translation boundary in this port: its registers live in
     ; emulated GB memory under pret's own names and the per-device shim reads
@@ -149,13 +149,13 @@ StatusScreen:
     mov byte [ebp + rAUDVOL], 0x33                ; ld a,$33 / ldh [rAUDVOL],a — reduce volume
     ; Disable sprite updates BEFORE the whiteout/clear DelayFrames. On the GB,
     ; DelayFrame only DMAs the existing shadow OAM; the port's update_oam instead
-    ; rebuilds it via PrepareOAMData whenever W_UPDATE_SPRITES_ENABLED==1, so the
+    ; rebuilds it via PrepareOAMData whenever wUpdateSpritesEnabled==1, so the
     ; frames inside GBPalWhiteOutWithDelay3/ClearScreen would re-populate the
     ; overworld player+NPC sprites into OAM (the caller's ClearSprites having just
     ; emptied it) and render_sprites would composite them over the status screen.
     ; Zeroing it here (not after the frames, as before) keeps OAM clear. pret is
     ; immune because its DelayFrame never calls PrepareOAMData.
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
     call GBPalWhiteOutWithDelay3
     call ClearScreen
     call UpdateSprites
@@ -177,7 +177,7 @@ StatusScreen:
     mov byte [ebp + hSCY], 0                         ; copies them over IO_SCX/SCY each DelayFrame,
     mov byte [ebp + IO_SCX], 0                        ; so the overworld scroll would otherwise be
     mov byte [ebp + IO_SCY], 0                        ; restored and drag the flat canvas off-screen
-    ; (W_UPDATE_SPRITES_ENABLED already zeroed above, before the whiteout frames)
+    ; (wUpdateSpritesEnabled already zeroed above, before the whiteout frames)
     mov dword [text_row_stride], FW                  ; 40 (restored to 20 by caller / battle_menu)
     ; The party menu (our caller) sets g_bg_whiteout=1 to blank the BG behind its
     ; window; clear it so render_bg draws the flat status canvas instead of a full
@@ -741,7 +741,7 @@ StatusScreen2:
     ; Stale TODO-HW retired 2026-08-14, same reason as the reduce-volume write
     ; on the way in: the APU registers are emulated GB memory, not a boundary.
     mov byte [ebp + rAUDVOL], 0x77                ; ld a,$77 / ldh [rAUDVOL],a — restore volume
-    and byte [ebp + W_STATUS_FLAGS_2], ~(1 << BIT_NO_AUDIO_FADE_OUT) & 0xFF
+    and byte [ebp + wStatusFlags2], ~(1 << BIT_NO_AUDIO_FADE_OUT) & 0xFF
     call GBPalWhiteOut
     jmp ClearScreen                                   ; tail (pret jp ClearScreen)
 

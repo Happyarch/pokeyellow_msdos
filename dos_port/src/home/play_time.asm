@@ -80,7 +80,7 @@ TrackPlayTime:
     test byte [ebp + W_D479], 1 << 0        ; bit 0 → force in-game timer to max
     jnz .maxIGT
 
-    mov al, [ebp + W_STATUS_FLAGS_6]
+    mov al, [ebp + wStatusFlags6]
     test al, 1 << BIT_GAME_TIMER_COUNTING
     jz .done                                ; timer not running
 
@@ -159,11 +159,11 @@ CountDownIgnoreInputBitReset:
     jnz .done                              ; still counting down
 
     ; counter hit 0: clear the input-suppression bits
-    mov al, [ebp + W_STATUS_FLAGS_5]
+    mov al, [ebp + wStatusFlags5]
     and al, ~((1 << BIT_UNKNOWN_5_1) | (1 << BIT_UNKNOWN_5_2))
     mov ah, al                             ; ah = value with DISABLE_JOYPAD bit still intact
     and al, ~(1 << BIT_DISABLE_JOYPAD)     ; clear it in the stored value
-    mov [ebp + W_STATUS_FLAGS_5], al
+    mov [ebp + wStatusFlags5], al
     test ah, 1 << BIT_DISABLE_JOYPAD       ; pret: `bit` tested it BEFORE the res
     jz .done                               ; bit was not set → nothing to wipe
 

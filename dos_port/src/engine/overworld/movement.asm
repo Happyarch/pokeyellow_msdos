@@ -173,7 +173,7 @@ UpdateNPCSprite:
     jnz .facePlayer                      ; stub: fall through to NotYetMoving
 
     ; Freeze NPC if text/font is loaded (dialog open)
-    mov bl, [ebp + W_FONT_LOADED]
+    mov bl, [ebp + wFontLoaded]
     test bl, 1 << BIT_FONT_LOADED
     jnz .notYetMoving
 
@@ -212,7 +212,7 @@ UpdateNPCSprite:
     jne .scriptedNext
     ; reached end of wNPCMovementDirections list (pret verbatim)
     mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al ; store $ff, disabling scripted movement
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_NPC_MOVEMENT) & 0xFF ; res BIT_SCRIPTED_NPC_MOVEMENT,[hl]
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_SCRIPTED_NPC_MOVEMENT) & 0xFF ; res BIT_SCRIPTED_NPC_MOVEMENT,[hl]
     xor al, al
     mov [ebp + wSimulatedJoypadStatesIndex], al
     mov [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], al
@@ -570,12 +570,12 @@ CanWalkOntoTile:
 .detectCollision:
     ; Run collision detection to populate COLLISIONDATA for direction check.
     ; Must save/restore wUpdateSpritesEnabled (pret pattern).
-    movzx eax, byte [ebp + W_UPDATE_SPRITES_ENABLED]
+    movzx eax, byte [ebp + wUpdateSpritesEnabled]
     push eax
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF
     call DetectCollisionBetweenSprites  ; preserves EBX, ECX, EDX, ESI, EDI
     pop eax
-    mov [ebp + W_UPDATE_SPRITES_ENABLED], al
+    mov [ebp + wUpdateSpritesEnabled], al
     ; BL = direction bit (preserved through DetectCollisionBetweenSprites)
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
     test al, bl
@@ -653,7 +653,7 @@ MakeNPCFacePlayer:
     ; movement.asm:365-367). Only set while rubbing the S.S. Anne captain's back;
     ; was silently dropped. Like pret's `jr nz, NotYetMoving`, the guarded path also
     ; skips the res BIT_FACE_PLAYER below (bit stays set), just refreshing the image.
-    test byte [ebp + W_STATUS_FLAGS_3], (1 << BIT_NO_NPC_FACE_PLAYER)
+    test byte [ebp + wStatusFlags3], (1 << BIT_NO_NPC_FACE_PLAYER)
     jnz .noFace
     ; DIVERGENCE: pret reads wPlayerDirection (movement-dir bits) and maps via a
     ; PLAYER_DIR_BIT_* test-chain to the inverted SPRITE_FACING_*. The port instead
@@ -1002,7 +1002,7 @@ UpdatePlayerSprite:
 .setFacing:
     mov [ebp + W_SPRITE_PLAYER_FACING_DIR], dl
     ; if the text font is loaded, treat as standing (reload pose only)
-    mov al, [ebp + W_FONT_LOADED]
+    mov al, [ebp + wFontLoaded]
     test al, 1 << BIT_FONT_LOADED
     jz .moving
 
@@ -1013,7 +1013,7 @@ UpdatePlayerSprite:
     jmp .grassPriority
 
 .moving:
-    mov al, [ebp + W_MOVEMENT_FLAGS]
+    mov al, [ebp + wMovementFlags]
     test al, 1 << BIT_SPINNING
     jnz .grassPriority
     call Func_5274
@@ -1053,13 +1053,13 @@ Func_4e32:
 
 ; DoScriptedNPCMovement — per-frame scripted stepper. In: hCurrentSpriteOffset.
 DoScriptedNPCMovement:
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jz .ret                              ; pret: ret z (not in scripted movement)
     ; init once: pret bit-tests BIT_INIT_SCRIPTED_MOVEMENT then sets it, jp z init.
     ; Split so the set doesn't clobber the tested ZF (or would).
-    test byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_INIT_SCRIPTED_MOVEMENT)
+    test byte [ebp + wStatusFlags4], (1 << BIT_INIT_SCRIPTED_MOVEMENT)
     jnz .running                         ; already initialised
-    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_INIT_SCRIPTED_MOVEMENT)
+    or byte [ebp + wStatusFlags4], (1 << BIT_INIT_SCRIPTED_MOVEMENT)
     jmp InitScriptedNPCMovement          ; pret: jp z, InitScriptedNPCMovement (tail)
 .running:
     ; a = wNPCMovementDirections2[wNPCMovementDirections2Index]

@@ -200,7 +200,7 @@ PlayerPC:
 ; The 4-entry parent menu. Sub-flows `jp PlayerPCMenu` back here for a full redraw.
 ; ---------------------------------------------------------------------------
 PlayerPCMenu:
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY)  ; set BIT_NO_TEXT_DELAY
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY)  ; set BIT_NO_TEXT_DELAY
     mov al, [ebp + wParentMenuItem]
     mov [ebp + wCurrentMenuItem], al
     or byte [ebp + wMiscFlags], (1 << BIT_NO_MENU_BUTTON_SOUND)
@@ -294,7 +294,7 @@ ExitPlayerPC:
     xor al, al
     mov [ebp + wListScrollOffset], al
     mov [ebp + wBagSavedMenuItem], al
-    and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
+    and byte [ebp + wStatusFlags5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
     xor al, al
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     ret
@@ -681,7 +681,7 @@ RunPlayersPCTest:
     mov byte [ebp + wBoxItems + 3], 2
     mov byte [ebp + wBoxItems + 4], 0xFF
     ; swap the font into vFont so the box glyphs render (caller contract)
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     ; skip the turn-on SFX/prompt (would block headless): host as a generic PC
     or byte [ebp + wMiscFlags], (1 << BIT_USING_GENERIC_PC)

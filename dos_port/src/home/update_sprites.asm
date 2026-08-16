@@ -33,12 +33,12 @@ section .text
 ; All registers preserved.
 ; ---------------------------------------------------------------------------
 UpdateSprites:
-    cmp byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    cmp byte [ebp + wUpdateSpritesEnabled], 1
     jne .done
     pushad
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF
     call _UpdateSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     popad
 .done:
     ret

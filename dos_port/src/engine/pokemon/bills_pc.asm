@@ -297,7 +297,7 @@ section .text
 ; all jp (the stack never moves between the push and the pop).
 ; ---------------------------------------------------------------------------
 BillsPC_:
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY) ; set BIT_NO_TEXT_DELAY, [hl]
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY) ; set BIT_NO_TEXT_DELAY, [hl]
     xor al, al
     mov [ebp + wParentMenuItem], al
     inc al                                   ; MONSTER_NAME
@@ -428,7 +428,7 @@ ExitBillsPC:
     call RefreshCollisionTileMap
     pop eax                                  ; pop af
     mov [ebp + wListScrollOffset], al        ; ld [wListScrollOffset], a
-    and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF ; res BIT_NO_TEXT_DELAY, [hl]
+    and byte [ebp + wStatusFlags5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF ; res BIT_NO_TEXT_DELAY, [hl]
     ret
 
 ; ---------------------------------------------------------------------------
@@ -1012,7 +1012,7 @@ RunBillsPCTest:
     jnz .attach
 %endif
     call SeedDeterministicPlayerIdentity
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     ; Mimic the FULL PCMainMenu handoff state: BIT_USING_GENERIC_PC (skip the
     ; turn-on SFX/dialog) AND BIT_NO_MENU_BUTTON_SOUND (pc.asm sets it before

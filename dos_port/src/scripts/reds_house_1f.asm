@@ -76,7 +76,7 @@ RedsHouse1FTVText:
     jmp TextScriptEnd
 
 RedsHouse1FPrintMomText:
-    mov al, [ebp + W_STATUS_FLAGS_4]
+    mov al, [ebp + wStatusFlags4]
     test al, (1 << (3))
     jnz RedsHouse1FMomHealScript
     mov esi, .WakeUpText

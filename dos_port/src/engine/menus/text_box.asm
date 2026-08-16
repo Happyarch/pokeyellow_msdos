@@ -239,12 +239,12 @@ DisplayTextBoxID_:
     pop esi                             ; pop hl
     call GetTextBoxIDText               ; EAX = flat text ptr, ESI = text dest
     ; ld a,[wStatusFlags5] / push af / set BIT_NO_TEXT_DELAY / ld [..],a
-    mov cl, [ebp + W_STATUS_FLAGS_5]
+    mov cl, [ebp + wStatusFlags5]
     push ecx
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY)
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY)
     call PlaceString
     pop ecx
-    mov [ebp + W_STATUS_FLAGS_5], cl    ; pop af / ld [wStatusFlags5],a
+    mov [ebp + wStatusFlags5], cl    ; pop af / ld [wStatusFlags5],a
     call UpdateSprites
     jmp .done                           ; pret: ret (via .done)
 
@@ -305,12 +305,12 @@ DisplaySwitchStatsCancelPartyBox:
     ; text — same BIT_NO_TEXT_DELAY scoping DisplayTextBoxID_ uses for a template
     mov esi, W_TILEMAP + SSC_TEXT_Y * PARTY_SCRATCH_W + SSC_TEXT_X
     mov eax, SwitchStatsCancelText
-    mov cl, [ebp + W_STATUS_FLAGS_5]
+    mov cl, [ebp + wStatusFlags5]
     push ecx
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY)
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY)
     call PlaceString
     pop ecx
-    mov [ebp + W_STATUS_FLAGS_5], cl
+    mov [ebp + wStatusFlags5], cl
 
     pop dword [text_row_stride]
     pop esi
@@ -409,7 +409,7 @@ GetAddressOfScreenCoords:
 ; ---------------------------------------------------------------------------
 DisplayMoneyBox:
     ; ld hl,wStatusFlags5 / set BIT_NO_TEXT_DELAY,[hl]
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY)
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY)
     mov byte [ebp + wTextBoxID], MONEY_BOX_TEMPLATE
     call DisplayTextBoxID               ; home wrapper → box + "MONEY" via the tables
     ; hlcoord 13,1 / lb bc,1,6 / ClearScreenArea
@@ -425,7 +425,7 @@ DisplayMoneyBox:
     mov bl, 3 | (1 << BIT_LEADING_ZEROES) | (1 << BIT_MONEY_SIGN)
     call PrintBCDNumber
     ; ld hl,wStatusFlags5 / res BIT_NO_TEXT_DELAY,[hl]
-    and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
+    and byte [ebp + wStatusFlags5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
     ret
 
 ; ---------------------------------------------------------------------------
@@ -435,7 +435,7 @@ DisplayMoneyBox:
 ; ---------------------------------------------------------------------------
 DoBuySellQuitMenu:
     ; ld a,[wStatusFlags5] / set BIT_NO_TEXT_DELAY,a / ld [wStatusFlags5],a
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY)
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY)
     xor al, al
     mov [ebp + wChosenMenuItem], al
     mov byte [ebp + wTextBoxID], BUY_SELL_QUIT_MENU_TEMPLATE
@@ -456,7 +456,7 @@ DoBuySellQuitMenu:
     ; spacing; the port's carries it in menu_item_step (stride is the canvas 40).
     mov dword [menu_item_step], 2 * SCREEN_TILES_W
     ; ld a,[wStatusFlags5] / res BIT_NO_TEXT_DELAY,a / ld [wStatusFlags5],a
-    and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
+    and byte [ebp + wStatusFlags5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
     call HandleMenuInput                ; AL = watched keys pressed
     call PlaceUnfilledArrowMenuCursor
     test al, PAD_A                      ; bit B_PAD_A,a / jr nz,.pressedA
@@ -527,7 +527,7 @@ DisplayTwoOptionMenu:
     mov [ebp + wCurrentMenuItem], al
 
     ; --- cutscene text-delay suppression (pret set BIT_NO_TEXT_DELAY) ------
-    or byte [ebp + W_STATUS_FLAGS_5], 1 << BIT_NO_TEXT_DELAY
+    or byte [ebp + wStatusFlags5], 1 << BIT_NO_TEXT_DELAY
 
     ; Save caller's text_row_stride
     mov eax, [text_row_stride]
@@ -656,7 +656,7 @@ DisplayTwoOptionMenu:
     ; (text_box.asm:278-281: xor a / ld [wTwoOptionMenuID], a / res
     ; BIT_NO_TEXT_DELAY). yn_teardown's clear stays as a no-op backstop.
     mov byte [ebp + wTwoOptionMenuID], 0
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY)
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY)
 
     ; --- run HandleMenuInput; per-frame mirror keeps the cursor projected ---
     mov dword [menu_redraw_cb], yn_mirror          ; re-mirror box each loop
@@ -798,7 +798,7 @@ DisplayTwoOptionMenu:
 
     ; pret clears menu ID + text delay
     mov byte [ebp + wTwoOptionMenuID], 0
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY)
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY)
 
     ; Run HandleMenuInput
     call HandleMenuInput
@@ -864,7 +864,7 @@ yn_battle_teardown:
 
     mov eax, [yn_saved_stride]
     mov [text_row_stride], eax
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY)
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY)
     pop eax
     ret
 
@@ -908,7 +908,7 @@ yn_teardown:
     mov [g_window_count], eax                       ; drop our appended box
     mov eax, [yn_saved_stride]
     mov [text_row_stride], eax
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY)
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY)
     pop eax
     ret
 

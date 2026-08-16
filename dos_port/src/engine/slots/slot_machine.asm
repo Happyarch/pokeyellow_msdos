@@ -154,7 +154,7 @@ wSlotMachineRerollCounter       equ 0xCD4F
 ; SlotMachine_SetFlags
 ; -----------------------------------------------------------------------------
 SlotMachine_SetFlags:
-    mov al, byte [ebp + W_SLOT_MACHINE_FLAGS]
+    mov al, byte [ebp + wSlotMachineFlags]
     test al, (1 << BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR)
     jnz .exit
     
@@ -175,12 +175,12 @@ SlotMachine_SetFlags:
     cmp bl, al
     jc .allowMatches
     
-    mov byte [ebp + W_SLOT_MACHINE_FLAGS], 0
+    mov byte [ebp + wSlotMachineFlags], 0
 .exit:
     ret
 
 .allowMatches:
-    or byte [ebp + W_SLOT_MACHINE_FLAGS], (1 << BIT_SLOTS_CAN_WIN)
+    or byte [ebp + wSlotMachineFlags], (1 << BIT_SLOTS_CAN_WIN)
     ret
 
 .setAllowMatchesCounter:
@@ -188,7 +188,7 @@ SlotMachine_SetFlags:
     ret
 
 .allowSevenAndBarMatches:
-    or byte [ebp + W_SLOT_MACHINE_FLAGS], (1 << BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR)
+    or byte [ebp + wSlotMachineFlags], (1 << BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR)
     ret
 
 ; -----------------------------------------------------------------------------
@@ -664,7 +664,7 @@ SlotReward100Func:
     mov al, SFX_GET_KEY_ITEM
     call PlaySound
     xor al, al
-    mov byte [ebp + W_SLOT_MACHINE_FLAGS], al
+    mov byte [ebp + wSlotMachineFlags], al
     mov bh, 0x08
     mov dx, 100
     ret
@@ -681,7 +681,7 @@ SlotReward300Func:
     cmp al, 0x80
     mov al, 0
     jc .skip
-    mov byte [ebp + W_SLOT_MACHINE_FLAGS], al
+    mov byte [ebp + wSlotMachineFlags], al
 .skip:
     mov byte [ebp + W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER], al
     mov bh, 0x14

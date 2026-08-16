@@ -285,9 +285,9 @@ PrepareTitleScreen:
     ; Clear letter-printing / status / Elite4 flags
     xor al, al
     mov byte [ebp + W_LETTER_PRINTING_DELAY], al
-    mov byte [ebp + W_STATUS_FLAGS_6],        al
-    mov byte [ebp + W_STATUS_FLAGS_7],        al
-    mov byte [ebp + W_ELITE4_FLAGS],          al
+    mov byte [ebp + wStatusFlags6],        al
+    mov byte [ebp + wStatusFlags7],        al
+    mov byte [ebp + wElite4Flags],          al
 
     ; pret: ld a, BANK(Music_TitleScreen) / ld [wAudioROMBank], a /
     ; ld [wAudioSavedROMBank], a — note pret RELOADS a here; it is not the
@@ -540,7 +540,7 @@ DisplayTitleScreen:
 %endif
     ; Reset per-loop title screen state
     xor al, al
-    mov byte [ebp + W_UNUSED_FLAG],            al
+    mov byte [ebp + wUnusedFlag],            al
     mov byte [ebp + W_TITLE_SCREEN_SCENE],     al
     mov byte [ebp + W_TITLE_SCREEN_TIMER],     al
     mov byte [ebp + W_TITLE_SCREEN_SCENE + 2], al  ; reset counter low

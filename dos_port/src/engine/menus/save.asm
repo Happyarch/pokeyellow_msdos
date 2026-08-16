@@ -1399,7 +1399,7 @@ DisableSRAM:
 ; YES and photographs the list at AUTOKEY_DUMP_FRAME.
 ; ---------------------------------------------------------------------------
 RunSaveTest:
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call PrepareNewGameDebug
@@ -1444,7 +1444,7 @@ RunSaveTest:
 ; In: EBP = GB base. Called from EnterMap after the overworld is set up.
 ; ---------------------------------------------------------------------------
 RunSaveTest:
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call PrepareNewGameDebug                        ; seed party+bag+badges

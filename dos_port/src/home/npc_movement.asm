@@ -31,10 +31,10 @@ IsPlayerCharacterBeingControlledByGame:
     mov al, [ebp + wNPCMovementScriptPointerTableNum]
     test al, al
     jnz .done                                   ; ret nz — movement script active
-    mov al, [ebp + W_MOVEMENT_FLAGS]
+    mov al, [ebp + wMovementFlags]
     test al, (1 << BIT_EXITING_DOOR)            ; bit BIT_EXITING_DOOR, a
     jnz .done                                   ; ret nz — auto-walking off a door
-    mov al, [ebp + W_STATUS_FLAGS_5]
+    mov al, [ebp + wStatusFlags5]
     and al, (1 << BIT_SCRIPTED_MOVEMENT_STATE)  ; and 1 << BIT_SCRIPTED_MOVEMENT_STATE
 .done:
     ret
@@ -48,9 +48,9 @@ IsPlayerCharacterBeingControlledByGame:
 ; ---------------------------------------------------------------------------
 RunNPCMovementScript:
     ; pret: home/npc_movement.asm:RunNPCMovementScript
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_DOOR)
+    test byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_DOOR)
     jz .notDoor
-    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_DOOR)
+    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_DOOR)
     call PlayerStepOutFromDoor
     ret
 .notDoor:

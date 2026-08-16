@@ -66,7 +66,7 @@ ReloadMapData:
 ; ---------------------------------------------------------------------------
 ChooseFlyDestination:
     ; ld hl, wStatusFlags4 / res BIT_NO_BATTLES, [hl]
-    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_NO_BATTLES) & 0xFF
+    and byte [ebp + wStatusFlags4], ~(1 << BIT_NO_BATTLES) & 0xFF
     jmp LoadTownMap_Fly                 ; farjp LoadTownMap_Fly (tail — its ret → caller)
 
 ; ---------------------------------------------------------------------------

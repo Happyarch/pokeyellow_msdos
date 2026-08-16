@@ -305,9 +305,9 @@ update_oam:
     ; PrepareOAMData's protocol note). $FF still skips the DMA: shadow already
     ; mirrors OAM there, and the port's direct-OAM screens (title, party-menu
     ; icons, ball rows) rely on not being re-copied over.
-    cmp byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    cmp byte [ebp + wUpdateSpritesEnabled], 1
     je .run
-    cmp byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    cmp byte [ebp + wUpdateSpritesEnabled], 0
     jne .done
 .run:
     call PrepareOAMData

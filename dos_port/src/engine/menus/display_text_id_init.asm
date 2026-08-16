@@ -101,7 +101,7 @@ DisplayTextIDInit:
     call TextBoxBorder                  ; stride = text_row_stride (20, overworld)
 .skipDrawingTextBoxBorder:
     ; ld hl,wFontLoaded / set BIT_FONT_LOADED,[hl]
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     ; ld hl,wMiscFlags / bit BIT_NO_SPRITE_UPDATES,[hl] / res .. ,[hl] / jr nz
     ; (pret tests, then clears, then branches on the ORIGINAL bit — keep AH copy)
     mov al, [ebp + wMiscFlags]

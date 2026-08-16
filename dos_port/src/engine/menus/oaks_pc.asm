@@ -113,7 +113,7 @@ ClosedOaksPCText:
 ; In: EBP = GB base. Called from EnterMap after the overworld is set up.
 ; ---------------------------------------------------------------------------
 RunOaksPCTest:
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call OpenOaksPC
 .hang:

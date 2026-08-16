@@ -64,12 +64,12 @@ section .text
 PlayerStepOutFromDoor:
     ; pret auto_movement.asm:PlayerStepOutFromDoor entry — clear BIT_UNKNOWN_5_1 in
     ; wStatusFlags5 unconditionally (both door and non-door paths run through here).
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_UNKNOWN_5_1)
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_UNKNOWN_5_1)
     call IsPlayerStandingOnDoorTile
     jnc .notStandingOnDoor
     ; Door tile — set up one forced south step to walk off the arrival warp tile.
-    mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
-    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_EXITING_DOOR)
+    mov byte [ebp + wJoyIgnore], PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    or byte [ebp + wMovementFlags], (1 << BIT_EXITING_DOOR)
     mov byte [ebp + wSimulatedJoypadStatesIndex], 1
     mov byte [ebp + wSimulatedJoypadStatesEnd], PAD_DOWN
     xor al, al
@@ -90,8 +90,8 @@ PlayerStepOutFromDoor:
     mov byte [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], al
     mov byte [ebp + wSimulatedJoypadStatesIndex], al
     mov byte [ebp + wSimulatedJoypadStatesEnd],   al
-    and byte [ebp + W_MOVEMENT_FLAGS], ~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    and byte [ebp + wMovementFlags], ~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
     ret
 
 ; ---------------------------------------------------------------------------
@@ -99,9 +99,9 @@ PlayerStepOutFromDoor:
 ; pret: engine/overworld/auto_movement.asm:_EndNPCMovementScript
 ; ---------------------------------------------------------------------------
 _EndNPCMovementScript:
-    and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
-    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
-    and byte [ebp + W_MOVEMENT_FLAGS], (~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))) & 0xFF
+    and byte [ebp + wStatusFlags5], (~(1 << BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
+    and byte [ebp + wStatusFlags4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
+    and byte [ebp + wMovementFlags], (~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))) & 0xFF
     xor al, al
     mov [ebp + wNPCMovementScriptSpriteOffset], al
     mov [ebp + wNPCMovementScriptFunctionNum], al
@@ -140,12 +140,12 @@ PalletMovementScript_OakMoveLeft:
     mov bl, MUSIC_MUSEUM_GUY_BANK              ; c = audio ROM bank
     mov al, MUSIC_MUSEUM_GUY
     call PlayMusic
-    or byte [ebp + W_STATUS_FLAGS_7], (1 << BIT_NO_MAP_MUSIC)
-    mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    or byte [ebp + wStatusFlags7], (1 << BIT_NO_MAP_MUSIC)
+    mov byte [ebp + wJoyIgnore], PAD_SELECT | PAD_START | PAD_CTRL_PAD
     ret
 
 PalletMovementScript_PlayerMoveLeft:
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
     jnz .ret                                   ; return if Oak is still moving
     mov al, [ebp + wNumStepsToTake]
     mov [ebp + wSimulatedJoypadStatesIndex], al
@@ -175,8 +175,8 @@ PalletMovementScript_WalkToLab:
     mov esi, wNPCMovementDirections2
     mov edi, RLEList_ProfOakWalkToLab
     call DecodeRLEList
-    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
-    or  byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    and byte [ebp + wStatusFlags4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
+    or  byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     mov byte [ebp + wNPCMovementScriptFunctionNum], 4
     ret
 
@@ -185,8 +185,8 @@ PalletMovementScript_Done:
     jnz .ret
     mov byte [ebp + wToggleableObjectIndex], TOGGLE_PALLET_TOWN_OAK
     call HideObject                            ; pret: predef (banking elided; HideObject unported)
-    and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
-    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
+    and byte [ebp + wStatusFlags5], (~(1 << BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
+    and byte [ebp + wStatusFlags4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
     jmp EndNPCMovementScript
 .ret:
     ret
@@ -212,15 +212,15 @@ PewterMovementScript_WalkToMuseum:
     mov esi, wNPCMovementDirections2
     mov edi, RLEList_PewterMuseumGuy
     call DecodeRLEList
-    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
+    and byte [ebp + wStatusFlags4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
     mov byte [ebp + wNPCMovementScriptFunctionNum], 1
     ret
 
 PewterMovementScript_Done:
     cmp byte [ebp + wSimulatedJoypadStatesIndex], 0
     jnz .ret
-    and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
-    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
+    and byte [ebp + wStatusFlags5], (~(1 << BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
+    and byte [ebp + wStatusFlags4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
     jmp EndNPCMovementScript
 .ret:
     ret
@@ -243,8 +243,8 @@ PewterMovementScript_WalkToGym:
     mov esi, wNPCMovementDirections2
     mov edi, RLEList_PewterGymGuy
     call DecodeRLEList
-    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
-    or  byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    and byte [ebp + wStatusFlags4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
+    or  byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     mov byte [ebp + wNPCMovementScriptFunctionNum], 1
     ret
 

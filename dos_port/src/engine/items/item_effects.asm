@@ -35,7 +35,7 @@ bits 32
 %include "gb_constants.inc"
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (ItemUseBall's catch flags)
 %include "assets/map_dims.inc"           ; map ids (ItemUsePokeFlute / ItemUseCardKey)
-%include "events.inc"                   ; CheckEvent over W_EVENT_FLAGS
+%include "events.inc"                   ; CheckEvent over wEventFlags
 
 global WakeUpEntireParty
 global ApplyHealingItem
@@ -3346,10 +3346,10 @@ ItemUseEscapeRope:
     cmp al, bh                          ; cp b
     jne .loop
     ; ld hl, wStatusFlags6 / set BIT_FLY_WARP, [hl] / set BIT_ESCAPE_WARP, [hl]
-    or  byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_ESCAPE_WARP)
+    or  byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP) | (1 << BIT_ESCAPE_WARP)
     call Func_1510                      ; Pikachu: force a sprite-state refresh
     ; ld hl, wStatusFlags4 / res BIT_NO_BATTLES, [hl]
-    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_NO_BATTLES)) & 0xFF
+    and byte [ebp + wStatusFlags4], (~(1 << BIT_NO_BATTLES)) & 0xFF
     ResetEvent EVENT_IN_SAFARI_ZONE     ; pret's compile-time ResetEvent macro
     xor al, al
     mov [ebp + wNumSafariBalls], al

@@ -183,7 +183,7 @@ ViridianCityCheckGymOpenScript:
     jz .nr_35
         ret
 .nr_35:
-    mov al, [ebp + W_OBTAINED_BADGES]
+    mov al, [ebp + wObtainedBadges]
     cmp al, ~(1 << 7)
     jnz .gym_closed
     SetEvent EVENT_VIRIDIAN_GYM_OPEN
@@ -547,7 +547,7 @@ ViridianCityPrintYoungster1Text:
 
 ViridianCityPrintGambler1Text:
     mov esi, .GymLeaderReturnedText
-    mov al, [ebp + W_OBTAINED_BADGES]
+    mov al, [ebp + wObtainedBadges]
     cmp al, ~(1 << 7)
     jz .print_text
     CheckEvent EVENT_BEAT_VIRIDIAN_GYM_GIOVANNI

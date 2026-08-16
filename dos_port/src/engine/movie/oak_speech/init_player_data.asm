@@ -71,7 +71,7 @@ InitPlayerData2:
     xor al, al                              ; the tail below all stores 0
     mov [ebp + wMonDataLocation], al
 
-    mov [ebp + W_OBTAINED_BADGES], al       ; wObtainedBadges = 0
+    mov [ebp + wObtainedBadges], al       ; wObtainedBadges = 0
     mov [ebp + wUnusedObtainedBadges], al   ; ASSERT wObtainedBadges + 1 == wUnusedObtainedBadges
 
     ; wPlayerCoins (2-byte BCD) = 0. NOTE: gb_memmap.inc aliases wPlayerCoins at

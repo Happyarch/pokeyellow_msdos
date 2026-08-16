@@ -373,9 +373,9 @@ RedrawPartyMenu_:
     mov bh, SET_PAL_PARTY_MENU              ; ld b, SET_PAL_PARTY_MENU
     call RunPaletteCommand
 .printMessage:
-    mov al, [ebp + W_STATUS_FLAGS_5]        ; ld hl,wStatusFlags5 / ld a,[hl]
+    mov al, [ebp + wStatusFlags5]        ; ld hl,wStatusFlags5 / ld a,[hl]
     push eax                                ; push af
-    or byte [ebp + W_STATUS_FLAGS_5], 1 << BIT_NO_TEXT_DELAY ; set [hl]
+    or byte [ebp + wStatusFlags5], 1 << BIT_NO_TEXT_DELAY ; set [hl]
     mov al, [ebp + wPartyMenuTypeOrMessageID] ; message ID
     cmp al, FIRST_PARTY_MENU_TEXT_ID
     jae .printItemUseMessage
@@ -384,7 +384,7 @@ RedrawPartyMenu_:
     call PartyMenuPrintText                 ; call PrintText (through our projection)
 .done:
     pop eax                                 ; pop af
-    mov [ebp + W_STATUS_FLAGS_5], al        ; ld [hl],a
+    mov [ebp + wStatusFlags5], al        ; ld [hl],a
     mov byte [ebp + hAutoBGTransferEnabled], 1  ; ld a,1 / ldh [hAutoBGTransferEnabled],a
     ; …and do what that flag means here: mirror the finished scratch to GB_TILEMAP1
     ; (the two windows' source) in one shot. See DrawPartyMenu_ on the dead flag.

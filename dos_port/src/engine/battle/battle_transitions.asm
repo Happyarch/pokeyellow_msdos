@@ -127,7 +127,7 @@ BattleTransition:
     ; DEVIATION{class=HAL; pret=engine/battle/battle_transitions.asm:BattleTransition; behavior=calls hide_window in addition to the hWY=0 write; evidence=the port has no GB window double-tilemap trick - the battle screen is the BG plane and a stale overworld dialog window descriptor would float above the wipe; lifetime=permanent, window-compositor HAL}
     call hide_window
     dec al                                        ; a = $ff
-    mov [ebp + W_UPDATE_SPRITES_ENABLED], al
+    mov [ebp + wUpdateSpritesEnabled], al
     call DelayFrame
 
 ; Determine which OAM block is being used by the enemy trainer sprite (if there

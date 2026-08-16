@@ -83,7 +83,7 @@ W_POKEDEX_OWNED          equ 0xD2F6
 W_POKEDEX_SEEN           equ 0xD309
 W_PLAYER_MONEY           equ 0xD346
 wPlayerMoney             equ W_PLAYER_MONEY   ; 3-byte BCD (trainer-card money display)
-W_OBTAINED_BADGES        equ 0xD355
+wObtainedBadges               equ 0xD355
 ; wTrainerCardBadgeAttributes — pret ram/wram.asm. READ ONLY by
 ; HandleBadgeFaceAttributes, and pret never writes it under this name: it is a
 ; UNION member sharing these bytes with the misc battle-data block
@@ -91,10 +91,8 @@ W_OBTAINED_BADGES        equ 0xD355
 ; wPikaPicUsedGFX. The port models GB memory FLAT, so that aliasing reproduces
 ; itself here for free — same byte, same address, exactly as on hardware.
 wTrainerCardBadgeAttributes equ 0xCC5D
-W_OBTAINED_HIDDEN_ITEMS_FLAGS equ 0xD6EF
-W_TOWN_VISITED_FLAG      equ 0xD70A
+wObtainedHiddenItemsFlags     equ 0xD6EF
 W_RIVAL_STARTER          equ 0xD714
-W_EVENT_FLAGS            equ 0xD746
 W_SURFING_MINIGAME_PIKACHU_HP  equ 0xC5D6
 W_SURFING_MINIGAME_RADNESS_MTR equ 0xC5D9
 W_SURFING_MINIGAME_RADNESS_SCR equ 0xC5DA
@@ -113,7 +111,7 @@ W_SLOT_MACHINE_WHEEL2_TOP_TILE equ 0xCD46
 W_SLOT_MACHINE_WHEEL3_BOTTOM_TILE equ 0xCD47
 W_SLOT_MACHINE_WHEEL3_MIDDLE_TILE equ 0xCD48
 W_SLOT_MACHINE_WHEEL3_TOP_TILE equ 0xCD49
-W_SLOT_MACHINE_FLAGS equ 0xCD4C
+wSlotMachineFlags             equ 0xCD4C
 W_SLOT_MACHINE_WHEEL1_SLIP_COUNTER equ 0xCD4D
 W_SLOT_MACHINE_WHEEL2_SLIP_COUNTER equ 0xCD4E
 W_SLOT_MACHINE_ALLOW_MATCHES_COUNTER equ 0xD095
@@ -511,7 +509,7 @@ wPartyGainExpFlags     equ 0xD057   ; bitfield: which party mons gain exp this b
 
 ; --- Wave-1 backend aliases (sym-pinned, origin/symbols:pokeyellow.sym) ---
 ; exp/level-up flow (GainExperience, src/engine/battle/experience.asm)
-wBoostExpByExpAll      equ 0xCC5B   ; (union W_UNUSED_FLAG / slot-machine scratch)
+wBoostExpByExpAll      equ 0xCC5B   ; (union wUnusedFlag / slot-machine scratch)
 wExpAmountGained       equ 0xCF4A   ; word (union wStringBuffer region)
 wGainBoostedExp        equ 0xCF4C
 wTempByteValue         equ 0xD11D
@@ -537,7 +535,7 @@ wEvoStoneItemID        equ 0xD155
 ; Bill's PC (src/engine/pokemon/bills_pc.asm)
 wMoveMonType           equ 0xCF94   ; = W_MOVE_MON_TYPE (union wRemoveMonFromBox)
 ; residual damage (src/engine/battle/residual_damage.asm)
-wAnimationType         equ 0xCC5B   ; (union W_UNUSED_FLAG)
+wAnimationType         equ 0xCC5B   ; (union wUnusedFlag)
 wPlayerToxicCounter    equ 0xD06B
 wEnemyToxicCounter     equ 0xD070
 ; GainExperience (src/engine/battle/experience.asm)
@@ -828,7 +826,7 @@ W_SHADOW_OAM        equ 0xC300     ; wShadowOAM — 40 sprites × 4 bytes
 ; wTileMapBackup2 — which ends at 0xF4E8).
 wShadowOAMBackup    equ 0xF500     ; 160 B (OAM_COUNT * 4), ends 0xF59F
 wTownMapSpriteBlinkingEnabled equ 0xD09A
-wTownVisitedFlag    equ 0xD70A     ; = W_TOWN_VISITED_FLAG (2 bytes)
+wTownVisitedFlag    equ 0xD70A     ; = wTownVisitedFlag (2 bytes)
 ; The three below are aliased-scratch lanes, like every other 0xCD3D/0xCEE9 user
 ; above — the town map is a modal screen, so nothing else is live while it runs.
 wWhichTownMapLocation  equ 0xCD3D
@@ -1136,7 +1134,7 @@ MAP_ID_VICTORY_ROAD_2F       equ 0xC2
 MAP_ID_VICTORY_ROAD_3F       equ 0xC6
 
 ; Misc WRAM ($CC–$CFC range)
-W_UNUSED_FLAG                equ 0xCC5B ; wUnusedFlag
+wUnusedFlag                   equ 0xCC5B ; wUnusedFlag
 
 ; Title-screen state ($CD3D)
 W_TITLE_SCREEN_SCENE         equ 0xCD3D ; wTitleScreenScene (byte; +1 = timer)
@@ -1178,7 +1176,7 @@ wStatusFlags5                equ 0xD72F ; BIT_NO_TEXT_DELAY lives here
 wStatusFlags6                equ 0xD731 ; BIT_GAME_TIMER_COUNTING, special-warp bits
 ; new-game player-data init (engine/movie/oak_speech/init_player_data.asm) —
 ; addresses sym-verified against origin/symbols:pokeyellow.sym (2026-07-03).
-wUnusedObtainedBadges        equ 0xD356 ; wObtainedBadges+1 (W_OBTAINED_BADGES = 0xD355)
+wUnusedObtainedBadges        equ 0xD356 ; wObtainedBadges+1 (wObtainedBadges = 0xD355)
 wGameProgressFlags           equ 0xD5EF ; event-flag bit array
 wGameProgressFlagsEnd        equ 0xD6B7 ; one past the last event flag byte
 wUnusedPlayerDataByte        equ 0xD71A ; set to $ff by InitPlayerData2
@@ -1316,35 +1314,30 @@ W_CHECK_FOR_TURN             equ 0xCADD ; wCheckFor180DegreeTurn (1=check next p
 wPlayerLastStopDirection      equ 0xCFAE ; wPlayerLastStopDirection (dir held when player last stopped)
 
 ; Walk/sprite state
-W_FONT_LOADED                equ 0xCFC3 ; wFontLoaded (bit BIT_FONT_LOADED set while text font is in VRAM)
-wFontLoaded                  equ W_FONT_LOADED
+wFontLoaded                   equ 0xCFC3
 wWalkCounter                  equ 0xCFC4 ; wWalkCounter
 wTileInFrontOfPlayer          equ 0xCFC5 ; wTileInFrontOfPlayer (collision check result)
 W_AUDIO_FADE_OUT             equ 0xCFC6 ; wAudioFadeOutControl
-W_UPDATE_SPRITES_ENABLED     equ 0xCFCA ; wUpdateSpritesEnabled
 
 ; Sprite-engine scratch WRAM — sym-verified.
 W_GRASS_TILE                 equ 0xD534 ; wGrassTile (tile ID treated as tall grass; $ff = none)
 W_SAVED_SPRITE_IMAGE_INDEX   equ 0xD5CC ; wSavedSpriteImageIndex (PrepareOAMData scratch / VRAM base tile)
-W_MOVEMENT_FLAGS             equ 0xD735 ; wMovementFlags
-; Bit indices for W_MOVEMENT_FLAGS (pret: constants/ram_constants.asm)
+; Bit indices for wMovementFlags (pret: constants/ram_constants.asm)
 BIT_STANDING_ON_DOOR         equ 0     ; set by warp arrival; triggers auto-walk-off
 BIT_EXITING_DOOR             equ 1     ; set by PlayerStepOutFromDoor (door tile); player is auto-walking off door
 BIT_STANDING_ON_WARP         equ 2     ; edge-detect: 1 = player was on a warp tile last step
 ; bits 3–5 unused in Yellow
 
-; Bit indices for W_STATUS_FLAGS_5 (pret: constants/ram_constants.asm)
+; Bit indices for wStatusFlags5 (pret: constants/ram_constants.asm)
 BIT_UNKNOWN_5_1              equ 1     ; cleared on entry to PlayerStepOutFromDoor (pret)
 BIT_DISABLE_JOYPAD           equ 5     ; input suppressed; CountDownIgnoreInputBitReset clears it
 BIT_SCRIPTED_MOVEMENT_STATE  equ 7     ; simulated joypad active (door exit / scripted walk)
 
 ; Map-tileset copies
 W_UNUSED_CUR_MAP_TILESET_COPY equ 0xD118 ; wUnusedCurMapTilesetCopy
-W_WALK_BIKE_SURF_STATE_COPY  equ 0xD119 ; wWalkBikeSurfStateCopy
-wWalkBikeSurfStateCopy       equ 0xD119 ; = W_WALK_BIKE_SURF_STATE_COPY (pret name)
+wWalkBikeSurfStateCopy       equ 0xD119 ; = wWalkBikeSurfStateCopy (pret name)
 
 ; Joypad/input control
-W_JOY_IGNORE                 equ 0xCD6B ; wJoyIgnore — button mask; bits set suppress those inputs
                                           ; (golden 00:cd6b; was wrongly 0xCCB7 — inside the 180-byte
                                           ;  wNPCMovementDirections buffer, clobbered by scripted moves)
 wSimulatedJoypadStatesEnd     equ 0xCCD3 ; wSimulatedJoypadStatesEnd — PAD_* byte queued by scripts
@@ -1364,10 +1357,9 @@ wCurrentMapScriptFlags        equ 0xD125 ; wCurrentMapScriptFlags
 
 ; Letter-printing delay and text speed options (text engine)
 ; Pret ref: constants/ram_constants.asm, engine/menus/main_menu.asm:InitOptions
-W_OPTIONS                    equ 0xD354 ; wOptions — bits 3-0 = text speed
 wInitListType                equ 0xD11A ; pret sym d11a; InitList's selector (engine/battle/misc.asm)
 wItemPrices                  equ 0xCF8E ; pret sym cf8e; InitList stashes the ItemPrices pointer here
-wOptions                     equ W_OPTIONS ; pret-name alias (bit 6 = battle style, 7 = battle anim)
+wOptions                      equ 0xD354 ; pret-name alias (bit 6 = battle style, 7 = battle anim)
 W_LETTER_PRINTING_DELAY      equ 0xD357 ; wLetterPrintingDelayFlags
 
 ; wOptions high-bit indices (pret ref: constants/ram_constants.asm BIT_BATTLE_*)
@@ -1474,7 +1466,7 @@ wUnusedNamePointer           equ 0xCF8C   ; faithful: GetName stores last name p
 wPalletTownCurScript         equ 0xD5F0   ; Pallet Town _Script state index (sym)
 wAutoTextBoxDrawingControl   equ 0xCF0C   ; bit BIT_NO_AUTO_TEXT_BOX: 0=auto-draw boxes
 wDoNotWaitForButtonPressAfterDisplayingText equ 0xCC3C
-wStatusFlags7                equ 0xD732   ; = W_STATUS_FLAGS_7 (BIT_TEST_BATTLE)
+wStatusFlags7                equ 0xD732   ; = wStatusFlags7 (BIT_TEST_BATTLE)
 wTestBattlePlayerSelectedMove equ 0xCCD9  ; debug TestBattle forced move
 
 ; --- Sprite (mon-pic) decompressor scratch (home/uncompress.asm) ---
@@ -1637,22 +1629,15 @@ W_TILESET_HEADER_COPY_SIZE   equ 11     ; bytes copied from tileset header to wT
 W_TILESET_HEADER_FULL_SIZE   equ 12     ; full tileset header entry size (11 + animations)
 
 ; Walk/bike/surf state
-W_WALK_BIKE_SURF_STATE       equ 0xD6FF ; wWalkBikeSurfState
-wWalkBikeSurfState           equ 0xD6FF ; = W_WALK_BIKE_SURF_STATE (pret name)
+wWalkBikeSurfState           equ 0xD6FF ; = wWalkBikeSurfState (pret name)
 
 wUnusedCardKeyGateID         equ 0xD71E ; ItemUseCardKey's gate id (pret: "never checked")
 
 ; Status flags (game-state bitfields)
-W_STATUS_FLAGS_1             equ 0xD727 ; wStatusFlags1
-wStatusFlags1                equ 0xD727 ; = W_STATUS_FLAGS_1 (pret name)
-W_STATUS_FLAGS_2             equ 0xD72B ; wStatusFlags2
-wStatusFlags2                equ 0xD72B ; pret alias of W_STATUS_FLAGS_2
-W_STATUS_FLAGS_3             equ 0xD72C ; wStatusFlags3
-W_STATUS_FLAGS_4             equ 0xD72D ; wStatusFlags4
-W_STATUS_FLAGS_5             equ 0xD72F ; wStatusFlags5
-W_STATUS_FLAGS_6             equ 0xD731 ; wStatusFlags6
-W_STATUS_FLAGS_7             equ 0xD732 ; wStatusFlags7
-W_ELITE4_FLAGS               equ 0xD733 ; wElite4Flags
+wStatusFlags1                equ 0xD727 ; = wStatusFlags1 (pret name)
+wStatusFlags2                equ 0xD72B ; pret alias of wStatusFlags2
+wStatusFlags4                 equ 0xD72D ; wStatusFlags4
+wElite4Flags                  equ 0xD733 ; wElite4Flags
 
 ; wStatusFlags bit indices (constants/ram_constants.asm) — consumed by EnterMap (OW-A.4).
 ; Some of these are ALSO defined (same value) in gb_constants.inc or under a local
@@ -2170,7 +2155,7 @@ wDisableVBlankWYUpdate        equ 0xD09F
 ; taken verbatim from the authoritative origin/symbols:pokeyellow.sym bank 00
 ; (wBadgeNumberTile cd3d, wBadgeNameTile cd3e, wBadgeOrFaceTiles cd3f,
 ; wTempObtainedBadgesBooleans cd49); wObtainedBadges already present as
-; W_OBTAINED_BADGES 0xD355 (sym-confirmed). DrawBadges writes every scratch byte
+; wObtainedBadges 0xD355 (sym-confirmed). DrawBadges writes every scratch byte
 ; before reading it, so the union overlap is safe.
 ; ---------------------------------------------------------------------------
 wBadgeNumberTile              equ 0xCD3D ; tile id of the badge number being drawn
@@ -2245,7 +2230,7 @@ hCoins                        equ 0xFFA0 ; hCoins (dw; union w/ hMoney area)
 hExperience                   equ 0xFF96            ; 0xFF96 (alias of hProduct+1)
 wLoadedMonSpecies             equ W_LOADED_MON_SPECIES    ; 0xCF97
 wLoadedMonExp                 equ W_LOADED_MON_EXP        ; 0xCFA5
-wUpdateSpritesEnabled         equ W_UPDATE_SPRITES_ENABLED ; 0xCFCA
+wUpdateSpritesEnabled         equ 0xCFCA ; 0xCFCA
 
 ; engine/pokemon behavior layer (evolution/learn-move/status-screen). All
 ; sym-verified via origin/symbols:pokeyellow.sym; promoted from evolution.asm's
@@ -2286,7 +2271,7 @@ wPikachuEmotionModifier       equ 0xD49B
 ;
 ; Two of the scaffold's symbols were dropped rather than folded in — both had
 ; zero users:
-;   * wEventFlags — superseded by W_EVENT_FLAGS + its alias below.
+;   * wEventFlags — superseded by wEventFlags + its alias below.
 ;   * wMapSpriteExtraData equ 0xD503 — a TRAP, deliberately not reinstated. The
 ;     port's array is flat .bss (src/engine/overworld/map_sprites.asm), and that
 ;     equ shadowed the real label's pret name with an emulated-WRAM address the
@@ -2294,9 +2279,9 @@ wPikachuEmotionModifier       equ 0xD49B
 ;     the route3_sight golden caught the first). With the scaffold gone, the pret
 ;     name reaches the real array again — do not redefine it here.
 ; ---------------------------------------------------------------------------
-wJoyIgnore                    equ W_JOY_IGNORE     ; golden 00:cd6b (pret alias)
-wStatusFlags3                 equ W_STATUS_FLAGS_3 ; golden 00:d72c (pret alias)
-wEventFlags                   equ W_EVENT_FLAGS    ; golden 00:d746 (pret alias)
+wJoyIgnore                    equ 0xCD6B     ; golden 00:cd6b (pret alias)
+wStatusFlags3                 equ 0xD72C ; golden 00:d72c (pret alias)
+wEventFlags                   equ 0xD746    ; golden 00:d746 (pret alias)
 wCurMapScript                 equ 0xDA38   ; golden 00:da38
 wTrainerHeaderFlagBit         equ 0xCC55   ; golden 00:cc55
 wEnemyMonOrTrainerClass       equ 0xD712   ; golden 00:d712 — pret keeps this as a copy

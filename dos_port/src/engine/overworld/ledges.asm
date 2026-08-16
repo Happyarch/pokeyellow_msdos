@@ -128,7 +128,7 @@ section .text
 ; Clobbers: AL, BX, DX, ESI, flags.
 ; ---------------------------------------------------------------------------
 HandleLedges:
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    test byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
     jnz .ret                                       ; already hopping / fishing
     cmp byte [ebp + wCurMapTileset], OVERWORLD
     jne .ret                                       ; ledges exist only in the OVERWORLD tileset
@@ -165,8 +165,8 @@ HandleLedges:
     and al, dh
     jz  .ret                                       ; player isn't pressing into the ledge
     ; --- arm the hop -------------------------------------------------------
-    mov byte [ebp + W_JOY_IGNORE], PAD_ALL         ; ignore real input during the hop
-    or  byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    mov byte [ebp + wJoyIgnore], PAD_ALL         ; ignore real input during the hop
+    or  byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
     call StartSimulatingJoypadStates               ; arm scripted-movement input (preserves DX)
     mov al, dh
     mov [ebp + wSimulatedJoypadStatesEnd], al      ; queue the ledge direction...

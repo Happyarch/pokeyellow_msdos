@@ -647,11 +647,11 @@ RunOptionsTest:
     mov byte [ebp + wOptions], TEXT_DELAY_MEDIUM
     mov byte [ebp + wPrinterSettings], PRINTER_BRIGHTNESS_NORMAL
     ; font glyphs + box-border tiles into vFont
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     ; no stray OAM over the full-screen menu
     call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
     call InitOptionsMenu                      ; draw + window + settle
     call OptionsMenu_UpdateCursorPosition     ; draw the ▶ on TEXT SPEED
     call options_mirror

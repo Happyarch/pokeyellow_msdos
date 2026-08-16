@@ -66,7 +66,7 @@ section .text
 ; PrintStrengthText — pret engine/overworld/field_move_messages.asm:PrintStrengthText
 ; ---------------------------------------------------------------------------
 PrintStrengthText:
-    or byte [ebp + W_STATUS_FLAGS_1], (1 << BIT_STRENGTH_ACTIVE) ; set BIT_STRENGTH_ACTIVE,[hl]
+    or byte [ebp + wStatusFlags1], (1 << BIT_STRENGTH_ACTIVE) ; set BIT_STRENGTH_ACTIVE,[hl]
     mov esi, UsedStrengthText
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
@@ -95,8 +95,8 @@ CanMoveBouldersText:
 ; Cycling Road and in Seafoam Islands B4F before the current has been slowed.
 ; ---------------------------------------------------------------------------
 IsSurfingAllowed:
-    or byte [ebp + W_STATUS_FLAGS_1], (1 << BIT_SURF_ALLOWED)   ; set BIT_SURF_ALLOWED,[hl]
-    mov al, [ebp + W_STATUS_FLAGS_6]
+    or byte [ebp + wStatusFlags1], (1 << BIT_SURF_ALLOWED)   ; set BIT_SURF_ALLOWED,[hl]
+    mov al, [ebp + wStatusFlags6]
     test al, (1 << BIT_ALWAYS_ON_BIKE)
     jnz .forcedToRideBike
     mov al, [ebp + wCurMap]
@@ -107,12 +107,12 @@ IsSurfingAllowed:
     mov esi, SeafoamIslandsB4FStairsCoords
     call ArePlayerCoordsInArray
     jnc .ret                                    ; ret nc (not on the stairs tiles → surf allowed)
-    and byte [ebp + W_STATUS_FLAGS_1], ~(1 << BIT_SURF_ALLOWED) ; res BIT_SURF_ALLOWED,[hl]
+    and byte [ebp + wStatusFlags1], ~(1 << BIT_SURF_ALLOWED) ; res BIT_SURF_ALLOWED,[hl]
     mov esi, CurrentTooFastText
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     jmp PrintText
 .forcedToRideBike:
-    and byte [ebp + W_STATUS_FLAGS_1], ~(1 << BIT_SURF_ALLOWED)
+    and byte [ebp + wStatusFlags1], ~(1 << BIT_SURF_ALLOWED)
     mov esi, CyclingIsFunText
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     jmp PrintText

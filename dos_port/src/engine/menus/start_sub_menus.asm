@@ -269,7 +269,7 @@ StartMenu_Pokemon:
     xor al, al
     mov [ebp + wMenuItemToSwap], al
     mov [ebp + wPartyMenuTypeOrMessageID], al
-    mov [ebp + W_UPDATE_SPRITES_ENABLED], al
+    mov [ebp + wUpdateSpritesEnabled], al
     call DisplayPartyMenu
     jmp .checkIfPokemonChosen           ; jr
 .loop:
@@ -376,7 +376,7 @@ StartMenu_Pokemon:
     ; so the scale is 4, not pret's 2; everything else is the same indexed indirect jump.
     movzx ecx, byte [ebp + esi]         ; the field-move id (1-based)
     dec ecx
-    mov al, [ebp + W_OBTAINED_BADGES]   ; ld a,[wObtainedBadges] — every leaf reads AL
+    mov al, [ebp + wObtainedBadges]   ; ld a,[wObtainedBadges] — every leaf reads AL
     jmp [.outOfBattleMovePointers + ecx * 4]   ; jp hl
 
 .outOfBattleMovePointers:
@@ -409,13 +409,13 @@ StartMenu_Pokemon:
     ; (src/engine/items/town_map.asm); OverworldLoop's idle branch consumes
     ; BIT_FLY_WARP via HandleFlyWarpOrDungeonWarp on the next iteration.
     call ChooseFlyDestination           ; call ChooseFlyDestination
-    mov al, [ebp + W_STATUS_FLAGS_6]    ; ld a, [wStatusFlags6]
+    mov al, [ebp + wStatusFlags6]    ; ld a, [wStatusFlags6]
     test al, (1 << BIT_FLY_WARP)        ; bit BIT_FLY_WARP, a
     jnz .flyChosen                      ; jr nz, .asm_5d4c
     ; B-cancel: no destination chosen. Reload the font tiles the Town Map clobbered
     ; (vChars1 shares them) and re-open the party menu.
     call LoadFontTilePatterns           ; call LoadFontTilePatterns
-    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_UNKNOWN_4_1)  ; set BIT_UNKNOWN_4_1,[wStatusFlags4]
+    or byte [ebp + wStatusFlags4], (1 << BIT_UNKNOWN_4_1)  ; set BIT_UNKNOWN_4_1,[wStatusFlags4]
     jmp StartMenu_Pokemon               ; jp StartMenu_Pokemon
 .flyChosen:                             ; pret .asm_5d4c — destination armed
     call Func_1510                      ; call Func_1510
@@ -446,8 +446,8 @@ StartMenu_Pokemon:
     call IsSurfingAllowed               ; farcall IsSurfingAllowed
     ; pret: bit BIT_SURF_ALLOWED,[hl] / res BIT_SURF_ALLOWED,[hl] / jp z,.loop —
     ; read the bit, then clear it unconditionally, then branch on the value READ.
-    mov al, [ebp + W_STATUS_FLAGS_1]
-    and byte [ebp + W_STATUS_FLAGS_1], ~(1 << BIT_SURF_ALLOWED) & 0xFF  ; res
+    mov al, [ebp + wStatusFlags1]
+    and byte [ebp + wStatusFlags1], ~(1 << BIT_SURF_ALLOWED) & 0xFF  ; res
     test al, (1 << BIT_SURF_ALLOWED)    ; bit (on the pre-res copy)
     jz .loop
     mov al, [ebp + wCurPartySpecies]
@@ -521,11 +521,11 @@ StartMenu_Pokemon:
     mov dword [text_msgbox], msgbox_dialog
     call PrintText
     ; set BIT_FLY_WARP / set BIT_ESCAPE_WARP, [wStatusFlags6]
-    or byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_ESCAPE_WARP)
+    or byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP) | (1 << BIT_ESCAPE_WARP)
     call Func_1510
     ; set BIT_UNKNOWN_4_1 / res BIT_NO_BATTLES, [wStatusFlags4]
-    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_UNKNOWN_4_1)
-    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_NO_BATTLES) & 0xFF
+    or byte [ebp + wStatusFlags4], (1 << BIT_UNKNOWN_4_1)
+    and byte [ebp + wStatusFlags4], ~(1 << BIT_NO_BATTLES) & 0xFF
     mov bl, 60                          ; ld c, 60
     call DelayFrames
     call GBPalWhiteOutWithDelay3
@@ -1129,7 +1129,7 @@ StartMenu_SaveReset:                    ; pret ref: start_sub_menus.asm:StartMen
     ; So the port would draw "RESET" and then SAVE — the two halves of one feature,
     ; split. Init is translated and linked; the branch costs three instructions and
     ; makes the pair correct by construction whenever link state does arrive.
-    mov al, [ebp + W_STATUS_FLAGS_4]
+    mov al, [ebp + wStatusFlags4]
     test al, (1 << BIT_LINK_CONNECTED)
     jnz Init                            ; jp nz, Init — soft reset during a link
     call SaveMenu                       ; predef SaveMenu
@@ -1284,7 +1284,7 @@ StartMenu_Item:
     mov al, [ebp + wCurItem]
     cmp al, BICYCLE
     jne .notBicycle
-    mov al, [ebp + W_STATUS_FLAGS_6]
+    mov al, [ebp + wStatusFlags6]
     test al, (1 << BIT_ALWAYS_ON_BIKE)
     jz .useItem_closeMenu
     mov esi, CannotGetOffHereText       ; ld hl, CannotGetOffHereText
@@ -1749,12 +1749,12 @@ RunTrainerCardTest:
     mov byte [ebp + wPlayTimeHours], 5
     mov byte [ebp + wPlayTimeMinutes], 30
     ; badges 1,3,6,8 owned = %10100101
-    mov byte [ebp + W_OBTAINED_BADGES], 0xA5
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    mov byte [ebp + wObtainedBadges], 0xA5
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
     ; blank the stride-20 scratch (18 rows × 20)
     mov esi, W_TILEMAP
     mov bx, 18 * TCSCR_W

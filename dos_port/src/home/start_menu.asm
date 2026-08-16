@@ -97,8 +97,8 @@ DisplayStartMenu:
     pushad
     ; ld a, BANK(StartMenu_Pokedex) / call BankswitchCommon — flat: no-op
     ; ld a,[wWalkBikeSurfState] / ld [wWalkBikeSurfStateCopy],a
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
-    mov [ebp + W_WALK_BIKE_SURF_STATE_COPY], al
+    mov al, [ebp + wWalkBikeSurfState]
+    mov [ebp + wWalkBikeSurfStateCopy], al
     mov al, SFX_START_MENU
     call PlaySound                      ; pret: ld a, SFX_START_MENU / call PlaySound
 
@@ -111,7 +111,7 @@ DisplayStartMenu:
     mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     ; fall through
 
@@ -229,7 +229,7 @@ CloseStartMenu:
     call hide_window
     call RefreshCollisionTileMap        ; scrub the box tiles out of the mirror
                                         ; (pret: LoadScreenTilesFromBuffer2 analog)
-    and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED) & 0xFF
+    and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED) & 0xFF
     call ReloadWalkingTilePatterns      ; reload NPC walk tiles the menu font overwrote (vFont)
     call LoadPlayerSpriteGraphics
     mov dword [text_row_stride], 20     ; restore the overworld dialog stride

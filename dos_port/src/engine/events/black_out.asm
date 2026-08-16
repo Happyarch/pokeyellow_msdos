@@ -32,7 +32,7 @@ ResetStatusAndHalveMoneyOnBlackout:
     mov [ebp + wPikachuCollisionCounter], al
     xor al, al                               ; pret: "gamefreak copypasting functions (double xor a)"
     mov [ebp + wBattleResult], al
-    mov [ebp + W_WALK_BIKE_SURF_STATE], al
+    mov [ebp + wWalkBikeSurfState], al
     mov [ebp + wIsInBattle], al
     mov [ebp + wMapPalOffset], al
     mov [ebp + wNPCMovementScriptFunctionNum], al
@@ -73,9 +73,9 @@ ResetStatusAndHalveMoneyOnBlackout:
 
 .lostmoney:
     ; Arm the special-warp flags PrepareForSpecialWarp reads.
-    or  byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_OR_DUNGEON_WARP)
-    and byte [ebp + W_STATUS_FLAGS_6], (~(1 << BIT_FLY_WARP)) & 0xFF
-    or  byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_ESCAPE_WARP)
+    or  byte [ebp + wStatusFlags6], (1 << BIT_FLY_OR_DUNGEON_WARP)
+    and byte [ebp + wStatusFlags6], (~(1 << BIT_FLY_WARP)) & 0xFF
+    or  byte [ebp + wStatusFlags6], (1 << BIT_ESCAPE_WARP)
 
-    mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
+    mov byte [ebp + wJoyIgnore], PAD_BUTTONS | PAD_CTRL_PAD
     jmp HealParty                            ; predef_jump HealParty

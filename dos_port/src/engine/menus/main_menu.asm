@@ -201,13 +201,13 @@ MainMenu:
     mov byte [ebp + wPartyAndBillsPCSavedMenuItem + 3], 0
     mov byte [ebp + wDefaultMap], 0
     ; ld hl, wStatusFlags4 / res BIT_LINK_CONNECTED, [hl]
-    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_LINK_CONNECTED) & 0xFF
+    and byte [ebp + wStatusFlags4], ~(1 << BIT_LINK_CONNECTED) & 0xFF
     call ClearScreen
     call RunDefaultPaletteCommand               ; pret: call RunDefaultPaletteCommand
     call LoadTextBoxTilePatterns
     call LoadFontTilePatterns
     ; ld hl, wStatusFlags5 / set BIT_NO_TEXT_DELAY, [hl]
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY)
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY)
 
     ; DEVIATION{class=projection; pret=main_menu.asm:MainMenu; behavior=draw the menu box and double-spaced entries on the stride-40 canvas; evidence=pret MainMenu hlcoord layout plus port text_row_stride and menu_item_step values; lifetime=permanent widescreen projection}
     ; The box + items run on the 40-wide canvas (stride 40; items are
@@ -241,7 +241,7 @@ MainMenu:
     call PlaceString
 .next2:
     ; ld hl, wStatusFlags5 / res BIT_NO_TEXT_DELAY, [hl]
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF
     call UpdateSprites
     mov byte [ebp + wCurrentMenuItem], 0        ; xor a / ld [wCurrentMenuItem],a
     mov byte [ebp + wLastMenuItem], 0           ; ld [wLastMenuItem],a
@@ -521,7 +521,7 @@ PrintSaveScreenText:
 ; ===========================================================================
 PrintNumBadges:
     push esi                                    ; push hl
-    mov esi, W_OBTAINED_BADGES                  ; ld hl, wObtainedBadges
+    mov esi, wObtainedBadges                  ; ld hl, wObtainedBadges
     mov bh, 1                                   ; ld b, $1
     call CountSetBits
     pop esi                                     ; pop hl
@@ -704,7 +704,7 @@ RunMainMenuTest:
     mov byte [ebp + wPlayerName + 1], 0x84      ; E
     mov byte [ebp + wPlayerName + 2], 0x83      ; D
     mov byte [ebp + wPlayerName + 3], CHAR_TERMINATOR
-    mov byte [ebp + W_OBTAINED_BADGES], 0x1F    ; 5 badges
+    mov byte [ebp + wObtainedBadges], 0x1F    ; 5 badges
     mov byte [ebp + wPokedexOwned + 0], 0xFF    ; a few owned mons
     mov byte [ebp + wPokedexOwned + 1], 0x0F
     mov byte [ebp + wPlayTimeHours], 5
@@ -712,11 +712,11 @@ RunMainMenuTest:
     call SaveGameData                           ; DEBUG harness seed (real save path)
 
     ; font + text-box tiles into vFont
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
 
     mov byte [ebp + wSaveFileStatus], 2         ; force the save-present menu
     ; --- draw the CONTINUE/NEW GAME/OPTION box (MainMenu save-present branch) ---

@@ -67,7 +67,7 @@ PlayDefaultMusicFadeOutCurrent:
 ; Fade out the current music and then play the default music.
     mov bl, 10
     mov dh, 0
-    mov al, [ebp + W_STATUS_FLAGS_4]
+    mov al, [ebp + wStatusFlags4]
     test al, 1 << BIT_BATTLE_OVER_OR_BLACKOUT
     jz PlayDefaultMusicCommon
     xor al, al
@@ -77,7 +77,7 @@ PlayDefaultMusicFadeOutCurrent:
     ; fall through
 
 PlayDefaultMusicCommon:
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
+    mov al, [ebp + wWalkBikeSurfState]
     test al, al
     jz .walking
     cmp al, 2

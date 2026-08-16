@@ -41,7 +41,7 @@ HiddenItemNear:
     ;     ESI/EDX/EBX from the stale wPredefHL/DE/BC slots. The port has no predef
     ;     dispatcher: call FlagAction directly. (Same trap as experience.asm and
     ;     evolution.asm.)
-    mov esi, W_OBTAINED_HIDDEN_ITEMS_FLAGS
+    mov esi, wObtainedHiddenItemsFlags
     mov cl, bh
     mov bh, FLAG_TEST
     call FlagAction

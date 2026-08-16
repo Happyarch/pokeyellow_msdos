@@ -187,12 +187,12 @@ MtMoonB2F_Script:
     mov esi, MtMoonB2FFossilAreaCoords
     call ArePlayerCoordsInArray
     jae .enable_battles
-    mov esi, W_STATUS_FLAGS_4
+    mov esi, wStatusFlags4
     or byte [ebp + esi], (1 << (BIT_NO_BATTLES))
     ret
 
 .enable_battles:
-    mov esi, W_STATUS_FLAGS_4
+    mov esi, wStatusFlags4
     and byte [ebp + esi], ~(1 << (BIT_NO_BATTLES)) & 0xFF
     ret
 

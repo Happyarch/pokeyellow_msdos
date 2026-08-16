@@ -67,9 +67,9 @@ section .text
 ; ---------------------------------------------------------------------------
 AnimateBoulderDust:
     mov byte [ebp + wWhichAnimationOffsets], 1  ; select the boulder dust offsets
-    mov al, [ebp + W_UPDATE_SPRITES_ENABLED]
+    mov al, [ebp + wUpdateSpritesEnabled]
     push eax                                    ; push af (save wUpdateSpritesEnabled)
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xff
+    mov byte [ebp + wUpdateSpritesEnabled], 0xff
     mov byte [ebp + IO_OBP1], 0xE4              ; %11100100 ; TODO-HW: rOBP1 (virtual OBP1)
     call UpdateCGBPal_OBP1
     call LoadSmokeTileFourTimes
@@ -92,7 +92,7 @@ AnimateBoulderDust:
     dec cl
     jnz .loop
     pop eax                                     ; pop af
-    mov [ebp + W_UPDATE_SPRITES_ENABLED], al    ; restore wUpdateSpritesEnabled
+    mov [ebp + wUpdateSpritesEnabled], al    ; restore wUpdateSpritesEnabled
     jmp LoadPlayerSpriteGraphics                ; jp (tail)
 
 ; ---------------------------------------------------------------------------

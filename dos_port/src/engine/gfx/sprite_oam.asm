@@ -191,7 +191,7 @@ PrepareOAMData:
     push esi
     push edi
 
-    mov al, [ebp + W_UPDATE_SPRITES_ENABLED]
+    mov al, [ebp + wUpdateSpritesEnabled]
     cmp al, 1
     je .updateEnabled
     ; pret: `dec a / jr z,.updateEnabled / cp -1 / ret nz / ld [wUpdateSpritesEnabled],a
@@ -203,7 +203,7 @@ PrepareOAMData:
     ; GB-side OAM is all Y=160).
     test al, al
     jnz .ret                             ; $FF (or anything but 0/1): frozen, no-op
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF
     call HideSprites
     jmp .ret
 
@@ -401,7 +401,7 @@ PrepareOAMData:
     ; Clear unused shadow-OAM entries' Y to $a0 (off-screen). Keep the last 4
     ; entries when a ledge-jump / fishing animation owns them.
     mov cl, 0xA0                         ; LOW(wShadowOAMEnd)
-    mov al, [ebp + W_MOVEMENT_FLAGS]
+    mov al, [ebp + wMovementFlags]
     test al, 1 << BIT_LEDGE_OR_FISHING
     jz .clear
     mov cl, 0x90                         ; LOW(wShadowOAMSprite36) — keep 4 entries

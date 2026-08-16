@@ -786,7 +786,7 @@ ShowPokedexData:
 ; ---------------------------------------------------------------------------
 ShowPokedexDataInternal:
     ; ld hl, wStatusFlags2 / set BIT_NO_AUDIO_FADE_OUT, [hl]
-    or byte [ebp + W_STATUS_FLAGS_2], 1 << BIT_NO_AUDIO_FADE_OUT
+    or byte [ebp + wStatusFlags2], 1 << BIT_NO_AUDIO_FADE_OUT
     ; pret: ld a,$33 / ldh [rAUDVOL],a — duck to 3/7 volume for the cry. This was
     ; dropped behind "TODO-HW: audio HAL (Phase 3). No APU; skipped." — FALSE, and the
     ; same false claim row 14 killed for rAUDTERM (M-53): rAUDVOL is a live GB byte
@@ -839,7 +839,7 @@ ShowPokedexDataInternal:
     call LoadTextBoxTilePatterns
     call GBPalNormal
     ; ld hl, wStatusFlags2 / res BIT_NO_AUDIO_FADE_OUT, [hl]
-    and byte [ebp + W_STATUS_FLAGS_2], (~(1 << BIT_NO_AUDIO_FADE_OUT)) & 0xFF
+    and byte [ebp + wStatusFlags2], (~(1 << BIT_NO_AUDIO_FADE_OUT)) & 0xFF
     mov byte [ebp + rAUDVOL], 0x77       ; ld a, $77 (max volume) / ldh [rAUDVOL], a — M-73
     ret
 
@@ -1265,7 +1265,7 @@ RunPokedexTest:
     ; Input contract as pret's side menu leaves it: wPokedexNum holds the INTERNAL
     ; index (PokedexToIndex ran), which is also wNamedObjectIndex (same union, 0xD11D)
     ; and is what GetMonName + DisplayWildLocations read.
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call ClearSprites
     mov byte [ebp + wPokedexNum], 16                      ; dex #16 = PIDGEY (has nests)
@@ -1284,14 +1284,14 @@ RunPokedexTest:
     call SeedDeterministicPlayerIdentity
     mov dword [text_row_stride], GBSCR_W
     mov dword [menu_item_step], 2 * GBSCR_W
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call ClearScreen                ; blank the scratch (as ShowPokedexMenu does —
                                     ; without it the boot-leftover map bytes show
                                     ; in the dex margins, a harness-only artifact)
     call LoadPokedexTilePatterns    ; real dex tileset (as ShowPokedexMenu.setUpGraphics)
     call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
     ; zero the owned+seen bitfields (contiguous 0xD2F6..0xD31C), then seed bits
     xor eax, eax
     lea edi, [ebp + wPokedexOwned]
@@ -1344,11 +1344,11 @@ RunPokedexEntryTest:
     ; owned only — the golden is what caught the lie).
     or byte [ebp + wPokedexSeen  + 13], 1 << 7
     or byte [ebp + wPokedexOwned + 13], 1 << 7
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadPokedexTilePatterns          ; the dex tileset, as .setUpGraphics loads it
     call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
     call ShowPokedexDataInternal
 .hangEntry:
     ; DelayFrame (not a bare spin) so AutoKeyDrive keeps ticking even if

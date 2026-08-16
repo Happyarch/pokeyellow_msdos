@@ -302,7 +302,7 @@ CinnabarGymOpenGateScript:
     sub al, 0x2
     mov bl, al
     mov bh, FLAG_TEST
-    mov esi, W_EVENT_FLAGS + EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
     call CinnabarGymFlagAction
     mov al, bl
     test al, al
@@ -337,7 +337,7 @@ CinnabarGymScript_75023:
     mov [ebp + hGymGateIndex], al
     mov bl, al
     mov bh, FLAG_SET
-    mov esi, W_EVENT_FLAGS + EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
     call CinnabarGymFlagAction
     ret
 
@@ -346,7 +346,7 @@ CinnabarGymScript_75032:
     mov [ebp + hGymGateIndex], al
     mov bl, al
     mov bh, FLAG_TEST
-    mov esi, W_EVENT_FLAGS + EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
     call CinnabarGymFlagAction
     ret
 
@@ -355,7 +355,7 @@ CinnabarGymScript_75041:
     sub al, 2
     mov bl, al
     mov bh, FLAG_SET
-    mov esi, W_EVENT_FLAGS + EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
     call CinnabarGymFlagAction
     call UpdateCinnabarGymGateTileBlocks
     ret

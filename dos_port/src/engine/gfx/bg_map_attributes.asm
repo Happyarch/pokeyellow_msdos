@@ -426,7 +426,7 @@ HandleBadgeFaceAttributes:
     ; FIXED: ask whether the badge is actually owned. Badge N is bit N of
     ; wObtainedBadges, and the table's entry order IS badge order, so EBX is the
     ; bit number -- no need for the aliased buffer at all.
-    mov al, [ebp + W_OBTAINED_BADGES]
+    mov al, [ebp + wObtainedBadges]
     mov ecx, ebx
     shr eax, cl
     test al, 1

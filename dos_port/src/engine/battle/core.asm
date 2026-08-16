@@ -2155,14 +2155,14 @@ DoBattleTransitionAndInitBattleVariables:
     mov byte [ebp + wMenuJoypadPollCount], 0
     ; TODO-HW: network HAL — DisplayLinkBattleVersusTextBox unported (Phase 4;
     ; this branch is unreachable until link battles exist)
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     call ClearScreen
 .next:
     call DelayFrame
     call BattleTransition                        ; pret: predef BattleTransition
     call LoadHudAndHpBarAndStatusTilePatterns
     mov byte [ebp + hAutoBGTransferEnabled], 1   ; vestigial (inert in the port)
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF
     call ClearSprites
     call ClearScreen
     xor al, al
@@ -5361,7 +5361,7 @@ HandlePlayerBlackOut:
     call PrintBattleText
 %endif
     ; ld a,[wStatusFlags6] / res BIT_ALWAYS_ON_BIKE, a / ld [wStatusFlags6], a
-    and byte [ebp + W_STATUS_FLAGS_6], (~(1 << BIT_ALWAYS_ON_BIKE)) & 0xFF
+    and byte [ebp + wStatusFlags6], (~(1 << BIT_ALWAYS_ON_BIKE)) & 0xFF
     call ClearScreen
     stc                                  ; CF=1 → player blacked out
     ret
@@ -5932,7 +5932,7 @@ TrainerBattleVictory:
     jnz .notrival
     mov bh, MUSIC_DEFEATED_GYM_LEADER
     ; ld hl, wStatusFlags7 / set BIT_NO_MAP_MUSIC, [hl]
-    or byte [ebp + W_STATUS_FLAGS_7], 1 << BIT_NO_MAP_MUSIC
+    or byte [ebp + wStatusFlags7], 1 << BIT_NO_MAP_MUSIC
 .notrival:
     ; ld a,[wLinkState] / cp LINK_STATE_BATTLING / ld a,b / call nz, ...
     ; `mov al, bh` sets no flags, exactly as pret's `ld a, b` — the ZF the

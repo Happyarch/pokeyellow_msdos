@@ -838,7 +838,7 @@ RunNamingScreenTest:
     mov dword [text_row_stride], GBSCR_W
 
     ; font glyphs into vFont/vChars2
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
 
     ; mirror the real DisplayNamingScreen's draw sequence (this gate used to
@@ -857,7 +857,7 @@ RunNamingScreenTest:
 
     ; no stray OAM over the full-screen menu
     call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
 
     ; seed a representative PLAYER-naming state (pret DisplayNamingScreen init)
     mov byte [ebp + wNamingScreenType], NAME_PLAYER_SCREEN

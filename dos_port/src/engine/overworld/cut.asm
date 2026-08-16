@@ -159,7 +159,7 @@ UsedCut:
     mov al, [ebp + wWhichPokemon]
     mov esi, wPartyMonNicks
     call GetPartyMonName
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY) ; set BIT_NO_TEXT_DELAY,[hl]
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY) ; set BIT_NO_TEXT_DELAY,[hl]
     call GBPalWhiteOutWithDelay3
     call ClearSprites
     call RestoreScreenTilesAndReloadTilePatterns
@@ -197,14 +197,14 @@ UsedCut:
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
     call LoadScreenTilesFromBuffer2
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY) ; res BIT_NO_TEXT_DELAY,[hl]
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xff
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY) ; res BIT_NO_TEXT_DELAY,[hl]
+    mov byte [ebp + wUpdateSpritesEnabled], 0xff
     call InitCutAnimOAM
     mov edx, CutTreeBlockSwaps                  ; ld de, CutTreeBlockSwaps (flat)
     call ReplaceTreeTileBlock
     call RedrawMapView
     call AnimCut                                ; pret: farcall (banking elided; ret-stub OW-6.1)
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     mov al, SFX_CUT
     call PlaySound
     mov byte [ebp + hWY], 0x90                 ; TODO-HW: hWY

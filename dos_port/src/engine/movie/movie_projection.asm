@@ -107,7 +107,7 @@ MovieBeginSurface:
     ; 0 would make PrepareOAMData run HideSprites and republish spr_oam_valid = 0,
     ; erasing the screen's own OAM on the very next DelayFrame. The cinematic owns
     ; OAM from here via PublishProjectedOAM.
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF
     ; Clear any OAM the previous screen left (e.g. the overworld player sprite, or an
     ; init-path publish before a cutscene). The cinematic starts with no sprites and
     ; publishes its own via PublishProjectedOAM; screens that DO show OBJ (the title's
@@ -144,7 +144,7 @@ MovieEndSurface:
     mov dword [g_obj_over_window], 0
     mov dword [g_surface_redraw_cb], 0  ; stop mirroring the canvas once the surface ends
     mov dword [spr_oam_valid], 0        ; cinematic OBJ die with the screen
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1  ; hand the rebuild back on
+    mov byte [ebp + wUpdateSpritesEnabled], 1  ; hand the rebuild back on
     mov dword [g_obj_clip + 0], 0       ; back to the full canvas
     mov dword [g_obj_clip + 4], 0
     mov dword [g_obj_clip + 8], RENDER_W

@@ -86,7 +86,7 @@ extern ArePlayerCoordsInArray            ; src/home/map_objects.asm
 ;            ArePlayerCoordsInArray's `stc` survives untouched all the way to
 ;            this ret on SM83, because every instruction pret places after it
 ;            -- ld/set -- is flag-neutral there); [wWhichDungeonWarp]
-;            holds the matched 1-based index and W_STATUS_FLAGS_3/6 have the
+;            holds the matched 1-based index and wStatusFlags3/6 have the
 ;            ON_DUNGEON_WARP/DUNGEON_WARP bits freshly set.
 ;      CF=0  otherwise -- either the player was ALREADY flagged on a dungeon
 ;            warp (pret's `bit BIT_ON_DUNGEON_WARP,a` / `ret nz` early exit;
@@ -99,7 +99,7 @@ extern ArePlayerCoordsInArray            ; src/home/map_objects.asm
 ; ---------------------------------------------------------------------------
 IsPlayerOnDungeonWarp:
     mov byte [ebp + wWhichDungeonWarp], 0     ; xor a / ld [wWhichDungeonWarp],a
-    mov al, [ebp + W_STATUS_FLAGS_3]             ; ld a,[wStatusFlags3]
+    mov al, [ebp + wStatusFlags3]             ; ld a,[wStatusFlags3]
     test al, (1 << BIT_ON_DUNGEON_WARP)          ; bit BIT_ON_DUNGEON_WARP,a (ZF set <-> bit==0, like GB)
     jnz .alreadyOnWarp                           ; ret nz (Z clear == bit WAS set == already on warp)
 
@@ -109,8 +109,8 @@ IsPlayerOnDungeonWarp:
     ; Match found: ArePlayerCoordsInArray left CF=1 and [W_COORD_INDEX] set.
     mov al, [ebp + W_COORD_INDEX]                ; ld a,[wCoordIndex]
     mov [ebp + wWhichDungeonWarp], al         ; ld [wWhichDungeonWarp],a
-    or byte [ebp + W_STATUS_FLAGS_3], (1 << BIT_ON_DUNGEON_WARP) ; set BIT_ON_DUNGEON_WARP,[hl]
-    or byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_DUNGEON_WARP)    ; set BIT_DUNGEON_WARP,[hl]
+    or byte [ebp + wStatusFlags3], (1 << BIT_ON_DUNGEON_WARP) ; set BIT_ON_DUNGEON_WARP,[hl]
+    or byte [ebp + wStatusFlags6], (1 << BIT_DUNGEON_WARP)    ; set BIT_DUNGEON_WARP,[hl]
     ; PROJ: x86 `or` clobbers CF (clears it to 0) as a side effect GB's `set`
     ; does not have -- pret: engine/overworld/dungeon_warps.asm:12-14. Rather
     ; than rely on CF surviving the two `or`s above, re-establish CF=1

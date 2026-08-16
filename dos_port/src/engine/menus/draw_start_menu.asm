@@ -106,7 +106,7 @@ DrawStartMenu:
     xor al, al
     mov [ebp + wMenuWatchMovingOutOfBounds], al
     ; set BIT_NO_TEXT_DELAY, [wStatusFlags5]
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_NO_TEXT_DELAY)
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY)
 
     ; hlcoord 12,2 → canvas (COL+2, ROW+2); items every 2 rows
     mov esi, W_TILEMAP + (UI_START_MENU_ROW + 2) * SCREEN_TILES_W + UI_START_MENU_COL + 2
@@ -127,7 +127,7 @@ DrawStartMenu:
     lea eax, [ebp + W_PLAYER_NAME]      ; ld de, wPlayerName (flat for PlaceString)
     call PrintStartMenuItem
     ; SAVE, or RESET while a link session is active
-    mov al, [ebp + W_STATUS_FLAGS_4]
+    mov al, [ebp + wStatusFlags4]
     test al, (1 << BIT_LINK_CONNECTED)
     mov eax, StartMenuSaveText
     jz .printSaveOrResetText
@@ -139,7 +139,7 @@ DrawStartMenu:
     mov eax, StartMenuExitText
     call PlaceString                    ; last item: no row advance (pret PlaceString)
     ; res BIT_NO_TEXT_DELAY, [wStatusFlags5]
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF
 
     ; port: expose the canvas rect as the single window over the map
     jmp StartMenuShowWindow             ; tail — returns to DrawStartMenu's caller

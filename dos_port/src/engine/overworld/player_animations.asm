@@ -849,9 +849,9 @@ _HandleMidJump:
     mov byte [ebp + hJoyPressed], 0
     mov byte [ebp + hJoyReleased], 0
     mov byte [w_player_jumping_y_index], 0
-    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_LEDGE_OR_FISHING)
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    mov byte [ebp + W_JOY_IGNORE], 0
+    and byte [ebp + wMovementFlags], ~(1 << BIT_LEDGE_OR_FISHING)
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    mov byte [ebp + wJoyIgnore], 0
 .ret:
     ret
 

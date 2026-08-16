@@ -89,16 +89,16 @@ PKMNLeaguePC:
     mov esi, AccessedHoFPCText              ; ld hl, AccessedHoFPCText
     call PrintText
     ; ld hl, wStatusFlags5 / set BIT_NO_TEXT_DELAY,[hl] (+ pret's push hl of the
-    ; pointer — the port addresses W_STATUS_FLAGS_5 directly, so no pointer save).
-    or byte [ebp + W_STATUS_FLAGS_5], 1 << BIT_NO_TEXT_DELAY
-    movzx eax, byte [ebp + W_UPDATE_SPRITES_ENABLED]  ; push af
+    ; pointer — the port addresses wStatusFlags5 directly, so no pointer save).
+    or byte [ebp + wStatusFlags5], 1 << BIT_NO_TEXT_DELAY
+    movzx eax, byte [ebp + wUpdateSpritesEnabled]  ; push af
     push eax
     movzx eax, byte [ebp + hTileAnimations]         ; push af
     push eax
     xor al, al
     mov [ebp + hTileAnimations], al       ; ldh [hTileAnimations],a
     mov [ebp + wSpriteFlipped], al
-    mov [ebp + W_UPDATE_SPRITES_ENABLED], al
+    mov [ebp + wUpdateSpritesEnabled], al
     mov [ebp + wHoFTeamIndex2], al
     mov [ebp + wHoFTeamNo], al
     mov al, [ebp + wNumHoFTeams]
@@ -126,9 +126,9 @@ PKMNLeaguePC:
     pop eax                                 ; pop af (hTileAnimations)
     mov [ebp + hTileAnimations], al
     pop eax                                 ; pop af (wUpdateSpritesEnabled)
-    mov [ebp + W_UPDATE_SPRITES_ENABLED], al
+    mov [ebp + wUpdateSpritesEnabled], al
     ; pop hl / res BIT_NO_TEXT_DELAY,[hl]
-    and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
+    and byte [ebp + wStatusFlags5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
     call GBPalWhiteOutWithDelay3
     call ClearScreen
     call hide_window                        ; structured projection deviation above: ClearScreen
@@ -233,7 +233,7 @@ AccessedHoFPCText:
 ; In: EBP = GB base. Called from EnterMap after the overworld is set up.
 ; ---------------------------------------------------------------------------
 RunLeaguePCTest:
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call PKMNLeaguePC
 .hang:

@@ -112,11 +112,11 @@ PrepareNewGameDebug:
     mov byte [ebp + W_MON_DATA_LOCATION], 0
 
     ; Fly anywhere
-    mov byte [ebp + W_TOWN_VISITED_FLAG], 0xFF
-    mov byte [ebp + W_TOWN_VISITED_FLAG + 1], 0xFF
+    mov byte [ebp + wTownVisitedFlag], 0xFF
+    mov byte [ebp + wTownVisitedFlag + 1], 0xFF
 
     ; Get all badges except Earth Badge
-    mov byte [ebp + W_OBTAINED_BADGES], ~(1 << BIT_EARTHBADGE)
+    mov byte [ebp + wObtainedBadges], ~(1 << BIT_EARTHBADGE)
 
     call SetDebugNewGameParty
 
@@ -208,7 +208,7 @@ PrepareNewGameDebug:
     
     ; SetEvent EVENT_GOT_POKEDEX
     ; Event 37 is byte 4, bit 5
-    or byte [ebp + W_EVENT_FLAGS + (EVENT_GOT_POKEDEX / 8)], (1 << (EVENT_GOT_POKEDEX % 8))
+    or byte [ebp + wEventFlags + (EVENT_GOT_POKEDEX / 8)], (1 << (EVENT_GOT_POKEDEX % 8))
 
     ; Rival chose Jolteon
     mov byte [ebp + W_RIVAL_STARTER], RIVAL_STARTER_JOLTEON

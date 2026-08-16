@@ -38,7 +38,7 @@ section .text
 PrintLetterDelay:
     push eax
     push ecx
-    movzx eax, byte [ebp + W_STATUS_FLAGS_5]
+    movzx eax, byte [ebp + wStatusFlags5]
     test al, (1 << BIT_NO_TEXT_DELAY)          ; cutscene/auto-scroll: skip delay
     jnz .done
     movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
@@ -50,7 +50,7 @@ PrintLetterDelay:
     jnz .one_frame                             ; button held: skip to one-frame exit
     test al, (1 << BIT_FAST_TEXT_DELAY)        ; use wOptions speed or fixed 1-frame?
     jz .one_frame
-    movzx ecx, byte [ebp + W_OPTIONS]
+    movzx ecx, byte [ebp + wOptions]
     and cl, TEXT_DELAY_MASK                    ; isolate speed bits (1, 3, or 5)
     jz .done                                   ; speed 0: instant (not used in practice)
     jmp .count_down

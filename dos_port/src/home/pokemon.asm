@@ -278,7 +278,7 @@ RedrawPartyMenu:
 PartyMenuInit:
     ; ld a,1 / call BankswitchHome — flat memory: no bank to switch
     call LoadHpBarAndStatusTilePatterns
-    or byte [ebp + W_STATUS_FLAGS_5], 1 << BIT_NO_TEXT_DELAY ; set BIT_NO_TEXT_DELAY,[hl]
+    or byte [ebp + wStatusFlags5], 1 << BIT_NO_TEXT_DELAY ; set BIT_NO_TEXT_DELAY,[hl]
     xor al, al                              ; xor a ; PLAYER_PARTY_DATA
     mov [ebp + wMonDataLocation], al
     mov [ebp + wMenuWatchMovingOutOfBounds], al
@@ -335,7 +335,7 @@ HandlePartyMenuInput:
     call PlaceUnfilledArrowMenuCursor
     call PartyMenuMirror                        ; port: push the ▷ to the panel window
     mov bl, al                                  ; ld b,a
-    and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF ; res BIT_NO_TEXT_DELAY,[hl]
+    and byte [ebp + wStatusFlags5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF ; res BIT_NO_TEXT_DELAY,[hl]
     mov al, [ebp + wMenuItemToSwap]
     test al, al                                 ; and a
     jnz .swappingPokemon

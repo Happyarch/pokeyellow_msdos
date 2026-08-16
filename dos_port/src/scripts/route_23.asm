@@ -146,7 +146,7 @@ Route23DefaultScript:
     mov al, bl
     mov [ebp + wWhichBadge], al
     mov bh, FLAG_TEST
-    mov esi, W_EVENT_FLAGS + EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call FlagActionPredef
     mov al, bl
@@ -298,7 +298,7 @@ Route23CheckForBadgeScript:
     inc al
     mov bl, al
     mov bh, FLAG_TEST
-    mov esi, W_OBTAINED_BADGES
+    mov esi, wObtainedBadges
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call FlagActionPredef
     mov al, bl
@@ -317,7 +317,7 @@ Route23CheckForBadgeScript:
     mov al, [ebp + wWhichBadge]
     mov bl, al
     mov bh, FLAG_SET
-    mov esi, W_EVENT_FLAGS + EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call FlagActionPredef
     mov al, SCRIPT_ROUTE23_RESET_TO_DEFAULT

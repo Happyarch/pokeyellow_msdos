@@ -41,9 +41,9 @@ section .text
 ;   Tail-jumps to UpdateSprites.
 ; ---------------------------------------------------------------------------
 ReloadMapSpriteTilePatterns:
-    mov al, [ebp + W_FONT_LOADED]                       ; ld hl,wFontLoaded; ld a,[hl]
+    mov al, [ebp + wFontLoaded]                       ; ld hl,wFontLoaded; ld a,[hl]
     push eax                                            ; push af (save font state)
-    and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED) & 0xFF ; res BIT_FONT_LOADED,[hl]
+    and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED) & 0xFF ; res BIT_FONT_LOADED,[hl]
 
     mov byte [ebp + W_SPRITE_SET_ID], 0                 ; xor a; ld [wSpriteSetID],a
 
@@ -52,7 +52,7 @@ ReloadMapSpriteTilePatterns:
     call EnableLCD
 
     pop eax                                             ; pop af
-    mov [ebp + W_FONT_LOADED], al                       ; ld [hl],a (restore font state)
+    mov [ebp + wFontLoaded], al                       ; ld [hl],a (restore font state)
 
     call LoadPlayerSpriteGraphics
     call LoadFontTilePatterns

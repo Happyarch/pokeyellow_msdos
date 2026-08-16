@@ -146,7 +146,7 @@ DrawBadges:
 ; Alter these based on owned badges.
     mov edx, wTempObtainedBadgesBooleans   ; ld de,wTempObtainedBadgesBooleans
     mov esi, wBadgeOrFaceTiles              ; ld hl,wBadgeOrFaceTiles
-    mov bh, [ebp + W_OBTAINED_BADGES]       ; ld a,[wObtainedBadges] / ld b,a
+    mov bh, [ebp + wObtainedBadges]       ; ld a,[wObtainedBadges] / ld b,a
     mov bl, NUM_BADGES                      ; ld c,NUM_BADGES
 .CheckBadge:
     shr bh, 1                               ; srl b — low bit → CF
@@ -246,15 +246,15 @@ DrawBadges:
 global RunDrawBadgesTest
 RunDrawBadgesTest:
     ; seed: badges 1,3,6,8 owned (bit i = badge i+1) = %10100101
-    mov byte [ebp + W_OBTAINED_BADGES], 0xA5
+    mov byte [ebp + wObtainedBadges], 0xA5
     ; defined glyphs for the (unloaded-in-harness) number/name cells + box tiles
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call LoadBadgeTiles
     ; clean, single-window render (mirrors RunTextBoxIDTest): no player OAM
     call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
     ; blank the stride-20 scratch (18 rows × 20)
     mov esi, W_TILEMAP
     mov bx, 18 * GBSCR_W

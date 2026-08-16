@@ -24,7 +24,7 @@ bits 32
 %include "assets/audio_constants.inc"   ; SFX_COLLISION / MUSIC_* (audio engine is live)
 %include "assets/map_dims.inc"          ; map-id + tileset-id constants (OAKS_LAB/CINNABAR_GYM/SHIP_PORT, OW-A.6)
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (EVENT_2A7, OW-A.6)
-%include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over W_EVENT_FLAGS
+%include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over wEventFlags
 
 ; file-local constants carried in with the routines that read them
 BIT_DUNGEON_WARP           equ 4
@@ -233,7 +233,7 @@ extern set_single_window                  ; src/ppu/ppu.asm
 ; ---------------------------------------------------------------------------
 EnterMap:
     ; ld a, PAD_BUTTONS | PAD_CTRL_PAD / ld [wJoyIgnore], a
-    mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
+    mov byte [ebp + wJoyIgnore], PAD_BUTTONS | PAD_CTRL_PAD
 %ifdef DEBUG_SPAWN
     ; DEBUG SPAWN: start the game on an arbitrary map at arbitrary coordinates.
     ; Must seed wCurMap/coords BEFORE LoadMapData reads them.
@@ -289,7 +289,7 @@ EnterMap:
     ; wedging) simply must not use DEBUG_SEAMWALK. Measured 2026-08-06: a
     ; DEBUG_START_MAP Oak-intro run "completed" with the catch battle silently
     ; suppressed by this very bit — a false witness for battle behavior.
-    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
+    or byte [ebp + wStatusFlags4], (1 << BIT_NO_BATTLES)
 %endif
     mov byte [ebp + wCurMap],  DEBUG_SPAWN_MAP
     mov byte [ebp + wXCoord],  DEBUG_SPAWN_X
@@ -340,7 +340,7 @@ EnterMap:
     ; it; with the battle suppressed the stale text box stays on the tilemap and
     ; its $80+ glyph ids now index walk tiles. Fix the suppressed battle and the
     ; textbox is fine -- there is nothing to repair in the tile loading.
-    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
+    or byte [ebp + wStatusFlags4], (1 << BIT_NO_BATTLES)
 %endif
 %ifdef DEBUG_SIGNTEXT
     ; Streamed-text gate (fidelity plan Stage 1b): stand next to the Pallet Town town
@@ -989,7 +989,7 @@ EnterMap:
 
     ; ld hl, wStatusFlags2 / bit BIT_WILD_ENCOUNTER_COOLDOWN, [hl]
     ; jr z, .skip / ld a, 3 / ld [wNumberOfNoRandomBattleStepsLeft], a
-    test byte [ebp + W_STATUS_FLAGS_2], (1 << BIT_WILD_ENCOUNTER_COOLDOWN)
+    test byte [ebp + wStatusFlags2], (1 << BIT_WILD_ENCOUNTER_COOLDOWN)
     jz .skipGivingThreeStepsOfNoRandomBattles
     mov byte [ebp + wNumberOfNoRandomBattleStepsLeft], 3   ; minimum steps between battles
 .skipGivingThreeStepsOfNoRandomBattles:
@@ -1000,9 +1000,9 @@ EnterMap:
     ; pret tests the bit, then `res`es it before the two conditional calls; in x86 the
     ; `res` (and [mem]) would clobber the ZF the calls read, so capture the tested bit
     ; into CL first, then res, then branch on CL.
-    test byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    test byte [ebp + wStatusFlags4], (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
     setnz cl                                               ; cl=1 if returning from a battle
-    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    and byte [ebp + wStatusFlags4], ~(1 << BIT_BATTLE_OVER_OR_BLACKOUT)
     test cl, cl
     jnz .mapEntryAfterBattle
     call ResetUsingStrengthOutOfBattleBit                  ; z: normal (non-battle) entry
@@ -1014,12 +1014,12 @@ EnterMap:
     ; ld hl, wStatusFlags6 / ld a, [hl] / and (1<<FLY_WARP)|(1<<DUNGEON_WARP)
     ; jr z, .didNot... / farcall EnterMapAnim / call UpdateSprites
     ; res FLY_WARP,[wStatusFlags6] / res NO_BATTLES,[wStatusFlags4]
-    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
+    test byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
     jz .didNotEnterUsingFlyWarpOrDungeonWarp
     call EnterMapAnim
     call UpdateSprites
-    and byte [ebp + W_STATUS_FLAGS_6], ~(1 << BIT_FLY_WARP)
-    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_NO_BATTLES)
+    and byte [ebp + wStatusFlags6], ~(1 << BIT_FLY_WARP)
+    and byte [ebp + wStatusFlags4], ~(1 << BIT_NO_BATTLES)
 .didNotEnterUsingFlyWarpOrDungeonWarp:
 
     ; call IsSurfingPikachuInParty
@@ -1030,9 +1030,9 @@ EnterMap:
 
     ; ld hl, wStatusFlags6 / bit BIT_DUNGEON_WARP,[hl] / res BIT_DUNGEON_WARP,[hl]
     ; (pret's bit test result is unused here — just clear the bit)
-    and byte [ebp + W_STATUS_FLAGS_6], ~(1 << BIT_DUNGEON_WARP)
+    and byte [ebp + wStatusFlags6], ~(1 << BIT_DUNGEON_WARP)
     ; ld hl, wStatusFlags3 / res BIT_NO_NPC_FACE_PLAYER, [hl]
-    and byte [ebp + W_STATUS_FLAGS_3], ~(1 << BIT_NO_NPC_FACE_PLAYER)
+    and byte [ebp + wStatusFlags3], ~(1 << BIT_NO_NPC_FACE_PLAYER)
 
     ; call UpdateSprites
     call UpdateSprites
@@ -1041,7 +1041,7 @@ EnterMap:
     or byte [ebp + wCurrentMapScriptFlags], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
 
     ; xor a / ld [wJoyIgnore], a
-    mov byte [ebp + W_JOY_IGNORE], 0
+    mov byte [ebp + wJoyIgnore], 0
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; Map-script sight gate. Placed HERE, at the very end of EnterMap, not beside the
     ; other gates further up: everything above is part of entering a map, and the
@@ -1237,7 +1237,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; idle branch instead. Equivalent: the bits are set by an item/script on a PREVIOUS
     ; iteration, never by this iteration's input, and we leave the map either way — so
     ; nothing between the two positions can observe the difference.
-    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
+    test byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
     jnz HandleFlyWarpOrDungeonWarp           ; jp nz (tail — SpecialEnterMap re-enters the loop)
 
     ; --- Stage 1b: the bespoke sight path is now GATED OFF where the faithful
@@ -1287,10 +1287,10 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; Re-trigger after dialog dismiss is prevented by .waitAReleased below.
     call AreInputsSimulated
     movzx eax, byte [ebp + hJoyHeld]
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jnz .checkPADDown                               ; scripted step: skip START/A, go to D-pad
 .checkJoyDisable:
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_DISABLE_JOYPAD)
+    test byte [ebp + wStatusFlags5], (1 << BIT_DISABLE_JOYPAD)
     jnz .noDirection                            ; input suppressed during warp-arrival window
 
     ; START-press: open the start menu (pret: OverworldLoopLessDelay TEXT_START_MENU).
@@ -1387,7 +1387,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; measured by the DEBUG_LEDGE_TRACE ring; the ledge_hop golden catches it).
     ; The door's single step still drains naturally: its pop leaves index 0 and
     ; the next AreInputsSimulated call takes .doneSimulating.
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jnz .walkStart
 
     ; Turn delay (pret: wCheckFor180DegreeTurn / wPlayerLastStopDirection).
@@ -1414,7 +1414,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; (wWalkBikeSurfState == 2) collision routes through CollisionCheckOnWater;
     ; on land through CollisionCheckOnLand. Inert in today's live build — nothing
     ; sets state 2 until Surf item-use / ForceBikeOrSurf links (player_gfx.asm).
-    cmp byte [ebp + W_WALK_BIKE_SURF_STATE], 2 ; surfing?
+    cmp byte [ebp + wWalkBikeSurfState], 2 ; surfing?
     jne .collisionOnLand
     call CollisionCheckOnWater                ; CF=1 → blocked on water
     jc OverworldLoop                          ; pret .surfing: jp c, OverworldLoop
@@ -1427,7 +1427,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; Only attempt exit if player IS on a warp tile (set at spawn by LoadDestinationMapData
     ; or after a step by .moveAhead). BIT_EXITING_DOOR is NOT checked here — pret does
     ; not suppress collision-exit during the auto-walk window.
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
+    test byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_WARP)
     jz OverworldLoop
     ; M7.4: faithful ExtraWarpCheck (pret home/overworld.asm:ExtraWarpCheck +
     ; jp c, CheckWarpsCollision). Replaces the hardcoded "facing DOWN" test with
@@ -1483,8 +1483,8 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 .battleOccurred:
     ; pret .battleOccurred (home/overworld.asm:269-296) — reached from the
     ; post-step NewBattle above and the on-turn NewBattle in .handleDirection.
-    and byte [ebp + W_STATUS_FLAGS_3], ~(1 << BIT_TALKED_TO_TRAINER) & 0xFF
-    and byte [ebp + W_STATUS_FLAGS_7], ~(1 << BIT_TRAINER_BATTLE) & 0xFF
+    and byte [ebp + wStatusFlags3], ~(1 << BIT_TALKED_TO_TRAINER) & 0xFF
+    and byte [ebp + wStatusFlags7], ~(1 << BIT_TRAINER_BATTLE) & 0xFF
     or  byte [ebp + wCurrentMapScriptFlags], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
     mov byte [ebp + hJoyHeld], 0            ; xor a / ldh [hJoyHeld], a
     mov al, [ebp + wCurMap]
@@ -1492,7 +1492,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jne .notCinnabarGym
     SetEvent EVENT_2A7
 .notCinnabarGym:
-    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    or byte [ebp + wStatusFlags4], (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
     mov al, [ebp + wCurMap]
     cmp al, OAKS_LAB
     je .noFaintCheck                          ; no blackout after losing to the rival in Oak's lab
@@ -1511,10 +1511,10 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; pret sets BIT_STANDING_ON_WARP, then fires on
     ; IsPlayerStandingOnDoorTileOrWarpTile (CF=1 → WarpFound1) and otherwise on
     ; ExtraWarpCheck. The `res` precedes the scan (pret does it at :267).
-    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_WARP)
+    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP)
     call CheckWarpTile
     jnc OverworldLoop                         ; no coord match → bit stays cleared
-    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
+    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_WARP)
     call IsPlayerStandingOnDoorTileOrWarpTile ; may `res` the bit for a warp carpet
     jc .warpTransition                        ; pret: jr c, WarpFound1
     call ExtraWarpCheck
@@ -1559,8 +1559,8 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; then set BIT_STANDING_ON_DOOR to trigger RunNPCMovementScript→PlayerStepOutFromDoor
     ; on the next idle frame. PlayerStepOutFromDoor re-sets BIT_EXITING_DOOR only if the
     ; arrival tile is a door tile; stair arrivals leave it clear.
-    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_EXITING_DOOR)
-    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_DOOR)
+    and byte [ebp + wMovementFlags], ~(1 << BIT_EXITING_DOOR)
+    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_DOOR)
     call IgnoreInputForHalfSecond
     ; OW-A.4(b): re-enter EnterMap on every warp, faithful to pret WarpFound2.done
     ; (home/overworld.asm:517, `jp EnterMap`). The pre-work above (wCurMap/wLastMap,
@@ -1671,14 +1671,14 @@ global ResetMapVariables
 ; Touches WRAM only; safe to call unconditionally.
 ; --------------------------------------------------------------------------
 StepCountCheck:
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jnz .doneStepCounting                     ; jr nz — inputs simulated, don't count
     dec byte [ebp + wStepCounter]             ; dec [hl] (wStepCounter)
-    test byte [ebp + W_STATUS_FLAGS_2], (1 << BIT_WILD_ENCOUNTER_COOLDOWN)
+    test byte [ebp + wStatusFlags2], (1 << BIT_WILD_ENCOUNTER_COOLDOWN)
     jz .doneStepCounting                      ; cooldown not armed
     dec byte [ebp + wNumberOfNoRandomBattleStepsLeft]
     jnz .doneStepCounting                     ; still counting down
-    and byte [ebp + W_STATUS_FLAGS_2], (~(1 << BIT_WILD_ENCOUNTER_COOLDOWN)) & 0xFF
+    and byte [ebp + wStatusFlags2], (~(1 << BIT_WILD_ENCOUNTER_COOLDOWN)) & 0xFF
 .doneStepCounting:
     ret
 AllPokemonFainted:
@@ -1686,11 +1686,11 @@ AllPokemonFainted:
     call RunMapScript
     jmp HandleBlackOut
 NewBattle:
-    test byte [ebp + W_STATUS_FLAGS_3], (1 << BIT_ON_DUNGEON_WARP)
+    test byte [ebp + wStatusFlags3], (1 << BIT_ON_DUNGEON_WARP)
     jnz .noBattle                             ; on a dungeon warp — no battle
     call IsPlayerCharacterBeingControlledByGame
     jnz .noBattle                             ; player under game control — no battle
-    test byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
+    test byte [ebp + wStatusFlags4], (1 << BIT_NO_BATTLES)
     jnz .noBattle                             ; battles suppressed — no battle
     call InitBattle                            ; returns CF=1 only when a battle ran
     ; _InitBattleCommon's tail returns CF=1. The post-battle
@@ -1718,10 +1718,10 @@ NewBattle:
 ; crossing-mid-speedup case when biking goes live.
 ; ---------------------------------------------------------------------------
 DoBikeSpeedup:
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
+    mov al, [ebp + wWalkBikeSurfState]
     dec al                                         ; riding a bike? (state == 1)
     jnz .done                                      ; ret nz
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    test byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
     jnz .done                                      ; ret nz — mid ledge-hop/fishing
     cmp byte [ebp + wNPCMovementScriptPointerTableNum], 0
     jne .done                                      ; ret nz — movement script active
@@ -2038,7 +2038,7 @@ HandleBlackOut:
     mov al, 0x08                        ; ld a, $08 — fade-out control value
     call StopMusic
     ; ld hl, wStatusFlags4 / res BIT_BATTLE_OVER_OR_BLACKOUT, [hl]
-    and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_BATTLE_OVER_OR_BLACKOUT)) & 0xFF
+    and byte [ebp + wStatusFlags4], (~(1 << BIT_BATTLE_OVER_OR_BLACKOUT)) & 0xFF
     mov al, 0x01                        ; ld a, BANK(PrepareForSpecialWarp) — golden 01:6042
     call BankswitchCommon               ; flat: records hLoadedROMBank (no MBC write)
     call ResetStatusAndHalveMoneyOnBlackout   ; callfar (flat: direct call)
@@ -2116,8 +2116,8 @@ HandleFlyWarpOrDungeonWarp:
     mov [ebp + wIsInBattle], al
     mov [ebp + wMapPalOffset], al
     ; ld hl, wStatusFlags6 / set BIT_FLY_OR_DUNGEON_WARP, [hl] / res BIT_ALWAYS_ON_BIKE, [hl]
-    or  byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_FLY_OR_DUNGEON_WARP)
-    and byte [ebp + W_STATUS_FLAGS_6], (~(1 << BIT_ALWAYS_ON_BIKE)) & 0xFF
+    or  byte [ebp + wStatusFlags6], (1 << BIT_FLY_OR_DUNGEON_WARP)
+    and byte [ebp + wStatusFlags6], (~(1 << BIT_ALWAYS_ON_BIKE)) & 0xFF
     call LeaveMapAnim
     call StopBikeSurf
     mov al, 0x01                        ; ld a, BANK(PrepareForSpecialWarp)
@@ -2137,11 +2137,11 @@ LeaveMapAnim:
     jmp _LeaveMapAnim                   ; engine/overworld/player_animations.asm
 
 StopBikeSurf:
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
+    mov al, [ebp + wWalkBikeSurfState]
     test al, al
     jz .done                                ; ret z (already walking)
-    mov byte [ebp + W_WALK_BIKE_SURF_STATE], 0
-    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_DUNGEON_WARP)
+    mov byte [ebp + wWalkBikeSurfState], 0
+    test byte [ebp + wStatusFlags6], (1 << BIT_DUNGEON_WARP)
     jz .done                                ; ret z
     call PlayDefaultMusic                    ; pret: call PlayDefaultMusic
 .done:
@@ -2155,7 +2155,7 @@ StopBikeSurf:
 ; state is reset to standing first.
 ; ---------------------------------------------------------------------------
 LoadPlayerSpriteGraphics:
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
+    mov al, [ebp + wWalkBikeSurfState]
     dec al
     jz .ridingBike                          ; state == 1
 
@@ -2172,12 +2172,12 @@ LoadPlayerSpriteGraphics:
 
 .startWalking:
     xor al, al
-    mov [ebp + W_WALK_BIKE_SURF_STATE],      al
-    mov [ebp + W_WALK_BIKE_SURF_STATE_COPY], al
+    mov [ebp + wWalkBikeSurfState],      al
+    mov [ebp + wWalkBikeSurfStateCopy], al
     jmp LoadWalkingPlayerSpriteGraphics
 
 .determineGraphics:
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]
+    mov al, [ebp + wWalkBikeSurfState]
     test al, al
     jz LoadWalkingPlayerSpriteGraphics       ; 0 → walking
     dec al
@@ -2590,7 +2590,7 @@ CollisionCheckOnLand:
     ; tile through this allow; it is NOT reached on the press that arms the hop
     ; (the flag is set mid-check, below, and that press is then blocked by
     ; IsTilePassable — see the note at the tile-pair scan).
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    test byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
     jnz .noCollision                               ; jumping a ledge → always passable
     ; pret home/overworld.asm:1223-1225 — no collisions while the game is scripting the
     ; player's movement (wSimulatedJoypadStatesIndex != 0). Live since the ledge hop's
@@ -2710,7 +2710,7 @@ CheckForJumpingAndTilePairCollisions:
     push esi                                       ; preserve the table ptr across HandleLedges
     call HandleLedges                              ; may arm a ledge hop
     pop esi
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    test byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
     jz  CheckForTilePairCollisions2               ; not jumping a ledge → run the tile-pair scan
     clc                                            ; jumping a ledge → no tile-pair collision
     ret
@@ -2871,12 +2871,12 @@ LoadCurrentMapView:
 ; ---------------------------------------------------------------------------
 AdvancePlayerSprite:
     push eax                                          ; keep caller EAX (wrapper clobbers AL)
-    mov al, [ebp + W_UPDATE_SPRITES_ENABLED]          ; pret: ld a,[wUpdateSpritesEnabled] / push af
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0xFF   ; pret: ld a,$FF / ld [wUpdateSpritesEnabled],a
+    mov al, [ebp + wUpdateSpritesEnabled]          ; pret: ld a,[wUpdateSpritesEnabled] / push af
+    mov byte [ebp + wUpdateSpritesEnabled], 0xFF   ; pret: ld a,$FF / ld [wUpdateSpritesEnabled],a
     push eax
     call _AdvancePlayerSprite                         ; pret: callfar _AdvancePlayerSprite
     pop eax
-    mov [ebp + W_UPDATE_SPRITES_ENABLED], al          ; pret: pop af / ld [wUpdateSpritesEnabled],a
+    mov [ebp + wUpdateSpritesEnabled], al          ; pret: pop af / ld [wUpdateSpritesEnabled],a
     pop eax
     ret
 
@@ -2963,7 +2963,7 @@ DrawTileBlock:
 ; Clobbers: AL, flags
 ; ---------------------------------------------------------------------------
 ForceBikeDown:
-    test byte [ebp + W_STATUS_FLAGS_7], (1 << BIT_TRAINER_BATTLE)
+    test byte [ebp + wStatusFlags7], (1 << BIT_TRAINER_BATTLE)
     jnz .ret                                  ; ld a,[wStatusFlags7] / bit BIT_TRAINER_BATTLE,a / ret nz
     cmp byte [ebp + wCurMap], ROUTE_17        ; ld a,[wCurMap] / cp ROUTE_17
     jne .ret                                  ; ret nz
@@ -2988,7 +2988,7 @@ ForceBikeDown:
 ; Clobbers: AL, BL, ESI, flags
 ; ---------------------------------------------------------------------------
 AreInputsSimulated:
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jz .ret                                   ; pret: bit .../ ret z — not simulating
 
     ; if simulating: real presses in the override mask cancel the simulation this frame
@@ -3014,12 +3014,12 @@ AreInputsSimulated:
     mov byte [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], 0
     mov byte [ebp + wSimulatedJoypadStatesIndex], 0
     mov byte [ebp + wSimulatedJoypadStatesEnd], 0
-    mov byte [ebp + W_JOY_IGNORE], 0
+    mov byte [ebp + wJoyIgnore], 0
     mov byte [ebp + hJoyHeld], 0
     ; preserve only movement-flag bits 7,6,5,4,3 (SPINNING|LEDGE_OR_FISHING|5|4|3),
     ; clearing STANDING_ON_DOOR|EXITING_DOOR|STANDING_ON_WARP (bits 2,1,0). pret mask 0xF8.
-    and byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_SPINNING) | (1 << BIT_LEDGE_OR_FISHING) | (1 << 5) | (1 << 4) | (1 << 3)
-    and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    and byte [ebp + wMovementFlags], (1 << BIT_SPINNING) | (1 << BIT_LEDGE_OR_FISHING) | (1 << 5) | (1 << 4) | (1 << 3)
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
     ret
 GetSimulatedInput:
     dec byte [ebp + wSimulatedJoypadStatesIndex]
@@ -3060,7 +3060,7 @@ CollisionCheckOnWater:
     push ecx
     push esi
     ; pret: bit BIT_SCRIPTED_MOVEMENT_STATE → never collide under simulated input
-    test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jnz .noCollision
     ; pret :1669-1672 — quick sprite reject in the travel direction (same
     ; collision-direction bit layout as CollisionCheckOnLand's reject).
@@ -3127,7 +3127,7 @@ CollisionCheckOnWater:
     ; pret :1699-1708 ("based game freak") — disembark onto the passable tile.
     mov byte [ebp + wPikachuSpawnState], 3
     or byte [ebp + wPikachuOverworldStateFlags], (1 << 5) ; set 5, [hl] (hide)
-    mov byte [ebp + W_WALK_BIKE_SURF_STATE], 0
+    mov byte [ebp + wWalkBikeSurfState], 0
     call LoadPlayerSpriteGraphics
     call PlayDefaultMusic
     ; fall through — pret: jr .noCollision
@@ -3344,7 +3344,7 @@ LoadMapHeader:
     ; OW-A.2 P3b: this is the faithful home object-loader; the bespoke InitMapSprites
     ; (still the driver until P3c) clears+repopulates the same slots afterward in
     ; LoadMapData, so this is currently redundant-but-harmless (byte-identical).
-    mov al, [ebp + W_STATUS_FLAGS_4]
+    mov al, [ebp + wStatusFlags4]
     test al, (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
     jnz .skipInitSprites
     call InitSprites
@@ -3461,7 +3461,7 @@ LoadMapData:
     ; CopyMapViewToVRAM, so one call covers both. (Removed a redundant second call.)
     call LoadScreenRelatedData
 
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     call EnableLCD
     call GBPalNormal
     mov bh, SET_PAL_OVERWORLD
@@ -3470,9 +3470,9 @@ LoadMapData:
     ; pret tail (:1975-1985): play this map's default music unless we entered via a
     ; dungeon/fly warp (DUNGEON_WARP|FLY_WARP) or the map suppresses it (NO_MAP_MUSIC).
     ; Bank save/restore around it is a no-op in the flat model. Real now (OW-A.14).
-    test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_DUNGEON_WARP) | (1 << BIT_FLY_WARP)
+    test byte [ebp + wStatusFlags6], (1 << BIT_DUNGEON_WARP) | (1 << BIT_FLY_WARP)
     jnz .noMapMusic
-    test byte [ebp + W_STATUS_FLAGS_7], (1 << BIT_NO_MAP_MUSIC)
+    test byte [ebp + wStatusFlags7], (1 << BIT_NO_MAP_MUSIC)
     jnz .noMapMusic
     call UpdateMusic6Times
     call PlayDefaultMusicFadeOutCurrent
@@ -3520,7 +3520,7 @@ ResetMapVariables:
     mov byte [ebp + wWalkCounter],              al
     mov byte [ebp + W_UNUSED_CUR_MAP_TILESET_COPY], al
     mov byte [ebp + W_SPRITE_SET_ID],             al
-    mov byte [ebp + W_WALK_BIKE_SURF_STATE_COPY], al
+    mov byte [ebp + wWalkBikeSurfStateCopy], al
     ; Empty the window list on map entry: visibility is count-driven now, so this
     ; guarantees no stale box leaks over the overworld (e.g. the title's
     ; go_to_main_menu path). Dialog/menu code re-populates the list when it opens a
@@ -3544,7 +3544,7 @@ SwitchToMapRomBank:
 ; ---------------------------------------------------------------------------
 IgnoreInputForHalfSecond:
     mov byte [ebp + wIgnoreInputCounter], 30
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_DISABLE_JOYPAD) | (1 << 2) | (1 << 1)
+    or byte [ebp + wStatusFlags5], (1 << BIT_DISABLE_JOYPAD) | (1 << 2) | (1 << 1)
     ret
 
 global IsSpriteOrSignInFrontOfPlayer         ; A-press dispatch head (overworld.asm)
@@ -3631,13 +3631,13 @@ HandleMidJump:
     mov [ebp + esi + 0], al
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     mov [ebp + esi + 1], al
-    mov al, [ebp + W_MOVEMENT_FLAGS]
+    mov al, [ebp + wMovementFlags]
     mov [ebp + esi + 2], al
     mov al, [ebp + wYCoord]
     mov [ebp + esi + 3], al
-    mov al, [ebp + W_JOY_IGNORE]
+    mov al, [ebp + wJoyIgnore]
     mov [ebp + esi + 4], al
-    mov al, [ebp + W_STATUS_FLAGS_5]
+    mov al, [ebp + wStatusFlags5]
     mov [ebp + esi + 5], al
     mov al, [ebp + hJoyHeld]
     mov [ebp + esi + 6], al
@@ -3646,7 +3646,7 @@ HandleMidJump:
     pop esi
     pop eax
 %endif
-    test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
+    test byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
     jz  .ret
     call _HandleMidJump
 .ret:

@@ -40,7 +40,7 @@ bits 32
 %include "assets/audio_constants.inc"   ; SFX_COLLISION / MUSIC_* (audio engine is live)
 %include "assets/map_dims.inc"          ; map-id + tileset-id constants (OAKS_LAB/CINNABAR_GYM/SHIP_PORT, OW-A.6)
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (EVENT_2A7, OW-A.6)
-%include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over W_EVENT_FLAGS
+%include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over wEventFlags
 
 extern CopyData                           ; src/home/copy.asm
 extern DelayFrame                         ; src/home/vblank.asm
@@ -617,8 +617,8 @@ SetupPlayerSprite:
     mov byte [ebp + W_SPRITE_PLAYER_GRASS_PRIORITY],  0
 
     mov byte [ebp + W_GRASS_TILE],    0xFF
-    mov byte [ebp + W_FONT_LOADED],   0
-    mov byte [ebp + W_MOVEMENT_FLAGS], 0
+    mov byte [ebp + wFontLoaded],   0
+    mov byte [ebp + wMovementFlags], 0
 
     mov byte [ebp + H_AUTO_BG_TRANSFER_EN],        0
     mov byte [g_player_marker_on], 0
@@ -845,10 +845,10 @@ SeamReseatView:
     ; that lands on a warp tile (every map-edge gate spawn does) can never take
     ; the collision-exit path — an artifact that would make the harness disagree
     ; with the live game.
-    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_WARP)
+    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP)
     call CheckWarpTile
     jnc .noSpawnWarp
-    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
+    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_WARP)
 .noSpawnWarp:
     pop ecx
     pop ebx
@@ -889,12 +889,12 @@ DoSignInteraction:
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
 
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)  ; freezes NPC movement too
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)  ; freezes NPC movement too
     call LoadFontTilePatterns
     call DisplaySignText                 ; reads [hTextID]; runs ShowTextStream
 
     call hide_window
-    and byte [ebp + W_FONT_LOADED], ~(1 << BIT_FONT_LOADED)
+    and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED)
     call ReloadWalkingTilePatterns       ; font clobbered the walk tiles — restore
     call LoadPlayerSpriteGraphics
     call LoadCurrentMapView              ; rebuild the BG the text box covered
@@ -1133,10 +1133,10 @@ LoadDestinationMapData:
     ; Preserve the id so the second pass re-derives the SAME coords (idempotent).
     ; Retire this save/restore when the front-loaded LoadMapHeader goes away.
     mov cl, [ebp + wDestinationWarpID]
-    and byte [ebp + W_MOVEMENT_FLAGS], ~(1 << BIT_STANDING_ON_WARP)
+    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP)
     call CheckWarpTile
     jnc .no_spawn_warp
-    or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
+    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_WARP)
 .no_spawn_warp:
     mov [ebp + wDestinationWarpID], cl
 

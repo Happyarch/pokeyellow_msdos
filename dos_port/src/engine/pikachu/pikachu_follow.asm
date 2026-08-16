@@ -89,7 +89,7 @@ ShouldPikachuSpawn:
     jnz .hide
     call IsStarterPikachuAliveInOurParty                  ; carry => alive
     jnc .hide
-    mov al, [ebp + W_WALK_BIKE_SURF_STATE]                ; ld a,[wWalkBikeSurfState]
+    mov al, [ebp + wWalkBikeSurfState]                ; ld a,[wWalkBikeSurfState]
     and al, al
     jnz .hide
     stc                                                   ; scf

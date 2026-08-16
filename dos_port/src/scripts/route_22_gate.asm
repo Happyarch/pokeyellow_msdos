@@ -134,7 +134,7 @@ Route22Gate_TextPointers:
     dd Route22GateGuardText
 
 Route22GateGuardText:
-    mov al, [ebp + W_OBTAINED_BADGES]
+    mov al, [ebp + wObtainedBadges]
     test al, (1 << (0))
     jnz .has_boulderbadge
     mov esi, Route22GateGuardNoBoulderbadgeText

@@ -480,7 +480,7 @@ SilphCo7FRivalStartBattleScript:
     call EnableAutoTextBoxDrawing
     mov esi, .LaprasDescriptionText
     call PrintText
-    mov esi, W_STATUS_FLAGS_4
+    mov esi, wStatusFlags4
     or byte [ebp + esi], (1 << (0))
     jmp .done
 

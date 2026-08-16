@@ -1044,7 +1044,7 @@ LinkMenu:
     ; xor a / ld [wLetterPrintingDelayFlags],a
     mov byte [ebp + wLetterPrintingDelayFlags], 0
     ; ld hl,wStatusFlags4 / set BIT_LINK_CONNECTED,[hl]
-    or byte [ebp + W_STATUS_FLAGS_4], 1 << BIT_LINK_CONNECTED
+    or byte [ebp + wStatusFlags4], 1 << BIT_LINK_CONNECTED
     mov dword [text_row_stride], LM_STRIDE
     ; ld hl,TextTerminator_f5a16 / call PrintText — an EMPTY stream: it draws the
     ; message box and types nothing, so the dialog is open (and the screen saved
@@ -1198,7 +1198,7 @@ LinkMenu:
     je .choseCancel
     ; --- selected TRADE CENTER (0) or COLOSSEUM (1): warp to the cable club -----
     xor al, al
-    mov [ebp + W_WALK_BIKE_SURF_STATE], al   ; start walking
+    mov [ebp + wWalkBikeSurfState], al   ; start walking
     mov al, [ebp + wCurrentMenuItem]
     test al, al
     mov al, COLOSSEUM
@@ -1213,7 +1213,7 @@ LinkMenu:
     mov bl, 50
     call DelayFrames
     ; ld hl,wStatusFlags6 / res BIT_DEBUG_MODE,[hl]
-    and byte [ebp + W_STATUS_FLAGS_6], ~(1 << BIT_DEBUG_MODE) & 0xFF
+    and byte [ebp + wStatusFlags6], ~(1 << BIT_DEBUG_MODE) & 0xFF
     mov al, [ebp + wDefaultMap]
     mov [ebp + wDestinationMap], al
     ; callfar PrepareForSpecialWarp — ROOT-WIRED (Session 9 spine).
@@ -1247,7 +1247,7 @@ LinkMenu:
     mov esi, ColosseumCanceledText
     call PrintText
     ; ld hl,wStatusFlags4 / res BIT_LINK_CONNECTED,[hl]
-    and byte [ebp + W_STATUS_FLAGS_4], ~(1 << BIT_LINK_CONNECTED) & 0xFF
+    and byte [ebp + wStatusFlags4], ~(1 << BIT_LINK_CONNECTED) & 0xFF
     ret
 
 ; --- .asm_f5963 — COLOSSEUM2 branch (A on item 2): drive the nybble exchange,
@@ -1404,11 +1404,11 @@ extern LoadTextBoxTilePatterns      ; gfx/load_font.asm
 extern ClearSprites                 ; gfx/sprites.asm
 
 RunLinkMenuTest:
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
 %ifdef DEBUG_I1_LINK
     call LinkMenu                   ; spins in .waitForInputLoop; AUTOKEY dumps
 %else

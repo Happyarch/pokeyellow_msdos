@@ -160,7 +160,7 @@ CeruleanGymReceiveTM11:
     mov [ebp + hTextID], al
     call DisplayTextID
 .gymVictory:
-    mov esi, W_OBTAINED_BADGES
+    mov esi, wObtainedBadges
     or byte [ebp + esi], (1 << (1))
     mov esi, wBeatGymFlags
     or byte [ebp + esi], (1 << (1))

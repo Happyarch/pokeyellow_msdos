@@ -147,7 +147,7 @@ BillsHouse_CheckMetBill:
     jz .nr_26
         ret
 .nr_26:
-    mov esi, W_EVENT_FLAGS + EVENT_BYTE(EVENT_MET_BILL_2)
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_MET_BILL_2)
     test byte [ebp + esi], EVENT_MASK(EVENT_MET_BILL_2)
     jz .notMetBill
     jmp .metBill

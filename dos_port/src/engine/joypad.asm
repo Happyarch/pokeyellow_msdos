@@ -103,14 +103,14 @@ _Joypad:
 	mov al, bh
 	mov [ebp + hJoyLast], al
 
-	mov al, [ebp + W_STATUS_FLAGS_5]
+	mov al, [ebp + wStatusFlags5]
 	test al, 1 << BIT_DISABLE_JOYPAD
 	jnz DiscardButtonPresses
 
 	mov al, [ebp + hJoyLast]
 	mov [ebp + hJoyHeld], al
 
-	mov al, [ebp + W_JOY_IGNORE]
+	mov al, [ebp + wJoyIgnore]
 	test al, al
 	jz .done_ignore
 

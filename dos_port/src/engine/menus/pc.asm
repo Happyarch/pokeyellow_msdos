@@ -250,7 +250,7 @@ AccessedMyPCText:
 ; open dialog at AUTOKEY_DUMP_FRAME and exits.
 ; ---------------------------------------------------------------------------
 RunPCTest:
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call ActivatePC
 .hang:

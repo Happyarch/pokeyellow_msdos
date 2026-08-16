@@ -431,7 +431,7 @@ class Emitter:
 
         if name == "CheckEventHL":
             ev = self.expr(args[0], out)
-            return [f"mov esi, W_EVENT_FLAGS + EVENT_BYTE({ev})",
+            return [f"mov esi, wEventFlags + EVENT_BYTE({ev})",
                     f"test byte [ebp + esi], EVENT_MASK({ev})"]
 
         if name == "EventFlagAddress":
@@ -440,7 +440,7 @@ class Emitter:
             if reg is None:
                 raise Bail("unknown-operand-shape", it.line.raw.strip())
             dst = "esi" if args[0] == "hl" else reg
-            return [f"mov {dst}, W_EVENT_FLAGS + EVENT_BYTE({ev})"]
+            return [f"mov {dst}, wEventFlags + EVENT_BYTE({ev})"]
 
         if name == "EventFlagBit":
             ev = self.expr(args[1], out)

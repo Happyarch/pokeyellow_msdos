@@ -287,7 +287,7 @@ OaksLabDefaultScript:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
-    mov esi, W_STATUS_FLAGS_4
+    mov esi, wStatusFlags4
     and byte [ebp + esi], ~(1 << (BIT_NO_BATTLES)) & 0xFF
     mov al, SCRIPT_OAKSLAB_OAK_ENTERS_LAB
     mov [ebp + wOaksLabCurScript], al
@@ -1399,7 +1399,7 @@ OaksLabPlayerReceivedMonText:
     mov [ebp + wPartyMon1CatchRate], al
     call DisablePikachuOverworldSpriteDrawing
     SetEvent EVENT_GOT_STARTER
-    mov esi, W_STATUS_FLAGS_4
+    mov esi, wStatusFlags4
     or byte [ebp + esi], (1 << (3))
     jmp TextScriptEnd
 

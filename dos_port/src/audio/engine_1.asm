@@ -1306,7 +1306,7 @@ AudioCommon_PlaySound:
 ; earphone 1-3). Preserves a and the other engine registers, like pret.
 Audio1_ApplyMonoStereo:
     push eax
-    mov al, [ebp + W_OPTIONS]
+    mov al, [ebp + wOptions]
     and al, SOUND_MASK
     shr al, 1                           ; $00/$10/$20/$30 -> 0/8/16/24
     movzx esi, al

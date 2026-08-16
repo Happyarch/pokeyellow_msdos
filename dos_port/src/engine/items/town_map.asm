@@ -142,7 +142,7 @@ TILE_1BPP               equ 8      ; TILE_1BPP_SIZE
 ; --------------------------------------------------------------------------- #
 DisplayTownMap:
     call LoadTownMap
-    mov esi, W_UPDATE_SPRITES_ENABLED   ; ld hl, wUpdateSpritesEnabled
+    mov esi, wUpdateSpritesEnabled   ; ld hl, wUpdateSpritesEnabled
     mov al, [ebp + esi]
     push eax                            ; push af (old value)
     mov byte [ebp + esi], 0xFF
@@ -256,7 +256,7 @@ DisplayTownMap:
 ; --------------------------------------------------------------------------- #
 LoadTownMap_Nest:
     call LoadTownMap
-    mov esi, W_UPDATE_SPRITES_ENABLED
+    mov esi, wUpdateSpritesEnabled
     mov al, [ebp + esi]
     push eax                            ; push af
     mov byte [ebp + esi], 0xFF
@@ -304,7 +304,7 @@ LoadTownMap_Fly:
     mov bl, (TownMapUpArrowEnd - TownMapUpArrow) / TILE_1BPP
     call CopyVideoDataDouble
     call BuildFlyLocationsList
-    mov esi, W_UPDATE_SPRITES_ENABLED
+    mov esi, wUpdateSpritesEnabled
     mov al, [ebp + esi]
     push eax                            ; push af
     mov byte [ebp + esi], 0xFF
@@ -363,9 +363,9 @@ LoadTownMap_Fly:
     call PlaySound
     mov al, [ebp + esi]                 ; ld a, [hl]
     mov [ebp + wDestinationMap], al     ; ld [wDestinationMap], a
-    mov al, [ebp + W_STATUS_FLAGS_6]
+    mov al, [ebp + wStatusFlags6]
     or al, 1 << BIT_FLY_WARP            ; set BIT_FLY_WARP, [hl]
-    mov [ebp + W_STATUS_FLAGS_6], al
+    mov [ebp + wStatusFlags6], al
     mov al, [ebp + wStatusFlags7]       ; wStatusFlags6 + 1 == wStatusFlags7
     or al, 1 << BIT_USED_FLY            ; set BIT_USED_FLY, [hl]
     mov [ebp + wStatusFlags7], al

@@ -393,7 +393,7 @@ joypad_update:
 
     ; Global input disable (pret: wStatusFlags5 bit BIT_DISABLE_JOYPAD →
     ; DiscardButtonPresses, which zeroes held/pressed/released).
-    mov bl, [ebp + W_STATUS_FLAGS_5]
+    mov bl, [ebp + wStatusFlags5]
     test bl, 1 << BIT_DISABLE_JOYPAD
     jnz .discard
 
@@ -403,7 +403,7 @@ joypad_update:
 
     ; wJoyIgnore mask: clear ignored buttons from held & pressed (pret leaves
     ; hJoyReleased unmasked). ret early when the mask is empty.
-    mov bl, [ebp + W_JOY_IGNORE]
+    mov bl, [ebp + wJoyIgnore]
     test bl, bl
     jz  .done
     not bl                       ; b = ~wJoyIgnore

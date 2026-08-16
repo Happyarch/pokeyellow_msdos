@@ -95,7 +95,7 @@ section .text
 ; TryPushingBoulder — pret engine/overworld/push_boulder.asm:TryPushingBoulder
 ; ---------------------------------------------------------------------------
 TryPushingBoulder:
-    mov al, [ebp + W_STATUS_FLAGS_1]
+    mov al, [ebp + wStatusFlags1]
     test al, (1 << BIT_STRENGTH_ACTIVE)
     jz .ret                                    ; ret z: Strength not active
     mov al, [ebp + wMiscFlags]
@@ -185,12 +185,12 @@ PushBoulderRightMovementData:
 ; DoBoulderDustAnimation — pret engine/overworld/push_boulder.asm:DoBoulderDustAnimation
 ; ---------------------------------------------------------------------------
 DoBoulderDustAnimation:
-    mov al, [ebp + W_STATUS_FLAGS_5]
+    mov al, [ebp + wStatusFlags5]
     test al, (1 << BIT_SCRIPTED_NPC_MOVEMENT)
     jnz .ret                                   ; ret nz: scripted NPC movement in progress
     call AnimateBoulderDust                    ; pret: callfar (banking elided; OW-4.3 unported)
     call DiscardButtonPresses                  ; returns AL = 0
-    mov [ebp + W_JOY_IGNORE], al               ; ld [wJoyIgnore], a  (a = 0)
+    mov [ebp + wJoyIgnore], al               ; ld [wJoyIgnore], a  (a = 0)
     call ResetBoulderPushFlags                 ; leaves ESI = wMiscFlags (pret leaves hl)
     or byte [ebp + esi], (1 << BIT_PUSHED_BOULDER)  ; set BIT_PUSHED_BOULDER, [hl]
     mov al, [ebp + wBoulderSpriteIndex]

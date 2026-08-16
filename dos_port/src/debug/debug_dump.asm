@@ -731,7 +731,7 @@ RunTransitionDemo:
     mov ax, [demo_saved_view]
     mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
     call RefreshCollisionTileMap        ; rebuild the W_TILEMAP snapshot the wipe consumed
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 1
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     mov byte [ebp + wCurOpponent], 0
     mov bl, 90                          ; ~1.5 s of restored overworld
     call DelayFrames
@@ -945,13 +945,13 @@ gbstate_regions:
     ; status bit and Oak's slot-1 sprite data.
     gbregion "npcMoveScript", wNPCMovementScriptPointerTableNum, 2  ; CC57 tablenum, CC58 bank
     gbregion "npcMoveFunc",   wNPCMovementScriptFunctionNum, 1 ; CF10
-    gbregion "statusFlags5",   W_STATUS_FLAGS_5,      1              ; D72F (BIT_SCRIPTED_NPC_MOVEMENT=0)
+    gbregion "statusFlags5",   wStatusFlags5,      1              ; D72F (BIT_SCRIPTED_NPC_MOVEMENT=0)
     gbregion "oakSlot1d2",    W_SPRITE_STATE_DATA_2 + 16, 16        ; Oak slot-1 data2 (MAPY/MAPX/facing/...)
     ; view pointer, to check the coord<->view projection is self-consistent
     ; (stride = mapwidth + 2*MAP_BORDER; view_col = (x>>1)+MAP_BORDER-SCREEN_BLOCK_WIDTH/2).
     gbregion "viewPtr",       W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR, 2
     ; who moved the player: door/warp + simulated-joypad state at the writing frame.
-    gbregion "moveFlags",     W_MOVEMENT_FLAGS,      1     ; BIT_STANDING_ON_DOOR/BIT_EXITING_DOOR
+    gbregion "moveFlags",     wMovementFlags,      1     ; BIT_STANDING_ON_DOOR/BIT_EXITING_DOOR
     gbregion "destWarpId",    wDestinationWarpID, 1
     gbregion "simJoyIdx",     wSimulatedJoypadStatesIndex, 1
     gbregion "simJoyEnd",     wSimulatedJoypadStatesEnd,   1
@@ -960,10 +960,10 @@ gbstate_regions:
     ; input source at the writing frame: what direction is driving the walk?
     gbregion "joyHeld",       hJoyHeld,            1
     gbregion "joyPressed",    hJoyPressed,         1
-    gbregion "joyIgnore",     W_JOY_IGNORE,          1
+    gbregion "joyIgnore",     wJoyIgnore,          1
     gbregion "playerMoveDir", wPlayerMovingDirection, 1
     gbregion "walkCounter",   wWalkCounter,        1
-    gbregion "statusFlags6",  W_STATUS_FLAGS_6,      1     ; BIT_FLY_WARP(3)/BIT_DUNGEON_WARP(4)
+    gbregion "statusFlags6",  wStatusFlags6,      1     ; BIT_FLY_WARP(3)/BIT_DUNGEON_WARP(4)
     gbregion "oakMoveIdx",    wNPCMovementDirections2Index, 1  ; Oak's scripted-step cursor
     gbregion "oakWalkCtr",    wScriptedNPCWalkCounter,      1
     gbregion "spriteIdx",     wSpriteIndex,                 1
@@ -1227,7 +1227,7 @@ gbstate_regions:
     ; DOWN step is what moves wYCoord to 11 — if the teardown never runs, the
     ; step is eaten (wJoyIgnore stays $FF) and every one of these mismatches.
     gbregion "wPlayerMapPos",    wCurMap, 5                ; wCurMap .. wXCoord
-    gbregion "wMovementFlags",   W_MOVEMENT_FLAGS, 1       ; BIT_LEDGE_OR_FISHING clear
+    gbregion "wMovementFlags",   wMovementFlags, 1       ; BIT_LEDGE_OR_FISHING clear
     gbregion "wStatusFlags5to7", wStatusFlags5, 4          ; BIT_SCRIPTED_MOVEMENT_STATE clear
     gbregion "wSimJoypad",       wSimulatedJoypadStatesIndex, 2 ; index + unused mask
     gbregion "wSimJoypadEnd",    wSimulatedJoypadStatesEnd, 2   ; both queued hop bytes
@@ -1252,7 +1252,7 @@ gbstate_regions:
     gbregion "wWalkBikeSurf",    wWalkBikeSurfState, 1     ; restored 0 after anim
     gbregion "wWalkBikeSurfCopy", wWalkBikeSurfStateCopy, 1
     gbregion "wTileInFront",     wTileInFrontOfPlayer, 1 ; $14 after the bump
-    gbregion "wMovementFlags",   W_MOVEMENT_FLAGS, 1       ; BIT_LEDGE_OR_FISHING cleared
+    gbregion "wMovementFlags",   wMovementFlags, 1       ; BIT_LEDGE_OR_FISHING cleared
     gbregion "wStatusFlags5to7", wStatusFlags5, 4
 %endif
 %ifdef DEBUG_TRAINER_ROUTE
@@ -1282,9 +1282,9 @@ gbstate_regions:
     gbregion "wRoute3Script",    0xD5F7, 1
     gbregion "wRoute3Event",     0xD7C2, 1
     ; .battleOccurred's own flag work — the tail that only the real loop runs.
-    gbregion "wStatusFlags3",    W_STATUS_FLAGS_3, 1       ; BIT_TALKED_TO_TRAINER cleared
-    gbregion "wStatusFlags4",    W_STATUS_FLAGS_4, 1       ; BIT_BATTLE_OVER_OR_BLACKOUT set
-    gbregion "wStatusFlags7",    W_STATUS_FLAGS_7, 1       ; BIT_TRAINER_BATTLE cleared
+    gbregion "wStatusFlags3",    wStatusFlags3, 1       ; BIT_TALKED_TO_TRAINER cleared
+    gbregion "wStatusFlags4",    wStatusFlags4, 1       ; BIT_BATTLE_OVER_OR_BLACKOUT set
+    gbregion "wStatusFlags7",    wStatusFlags7, 1       ; BIT_TRAINER_BATTLE cleared
     ; Where the player ended up: the return re-enters the map, so map and coords
     ; must be the Route 3 spawn again, not a warp or a reload artifact.
     gbregion "wPlayerMapPos",    wCurMap, 5                ; wCurMap .. wXCoord
@@ -1321,9 +1321,9 @@ gbstate_regions:
     gbregion "wCurMapScript",    wCurMapScript, 1
     gbregion "wRoute17Script",   0xD61B, 1
     gbregion "wRoute17Event",    0xD7E1, 1
-    gbregion "wStatusFlags3",    W_STATUS_FLAGS_3, 1       ; BIT_TALKED_TO_TRAINER
-    gbregion "wStatusFlags4",    W_STATUS_FLAGS_4, 1
-    gbregion "wStatusFlags7",    W_STATUS_FLAGS_7, 1       ; BIT_TRAINER_BATTLE
+    gbregion "wStatusFlags3",    wStatusFlags3, 1       ; BIT_TALKED_TO_TRAINER
+    gbregion "wStatusFlags4",    wStatusFlags4, 1
+    gbregion "wStatusFlags7",    wStatusFlags7, 1       ; BIT_TRAINER_BATTLE
 %endif
 gbstate_regions_end:
 
@@ -1674,7 +1674,7 @@ RunBagMenuTest:
     mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
 %endif
     ; Swap the font into vFont so the list glyphs render (caller contract).
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     mov byte [ebp + wLinkState], 0  ; not in the Cable Club
     mov byte [ebp + wBagSavedMenuItem], 0
@@ -1700,7 +1700,7 @@ RunPartyMenuTest:
     mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
     mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call StartMenu_Pokemon          ; production entry: the S5 dispatcher runs
                                     ; DisplayPartyMenu, whose hook dumps + exits
@@ -1731,7 +1731,7 @@ RunTMHMTest:
     mov byte [ebp + wNumBagItems], 0
     mov byte [ebp + wBagItems], 0xFF
     call PrepareNewGameDebug
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     ; Bag slot 0 becomes the machine under test (qty 1), so RemoveUsedItem's
@@ -1789,7 +1789,7 @@ RunPPRestoreTest:
     mov byte [ebp + wNumBagItems], 0
     mov byte [ebp + wBagItems], 0xFF
     call PrepareNewGameDebug
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     ; Bag slot 0 becomes the PP item under test (qty 1), so RemoveUsedItem's
@@ -1970,7 +1970,7 @@ section .text
 ;   EVENT_BEAT_ROUTE_17_TRAINER_9 is event index 1242 (assets/event_constants.inc,
 ;     generated by tools/generators/gen_event_constants.py from pret's
 ;     constants/event_constants.asm const/const_skip stream) -> byte
-;     W_EVENT_FLAGS + 1242/8 = 0xD746 + 155 = 0xD7E1, bit 1242%8 = 2 — the same
+;     wEventFlags + 1242/8 = 0xD746 + 155 = 0xD7E1, bit 1242%8 = 2 — the same
 ;     macros/scripts/events.asm CheckEvent formula that gives Route 3 trainer 0
 ;     0xD7C2 bit 2 (verified against RunTrainerRouteTestSeed's own hardcoded
 ;     value above).
@@ -2110,12 +2110,12 @@ RunTextBoxIDTest:
     mov byte [ebp + wPartyMon1 + MON_MOVES + 1], 0x0F   ; move slot 2 = CUT
     mov byte [ebp + wWhichPokemon], 0
     ; font glyphs + box-border tiles into vFont
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     ; flat-canvas render mode (mirrors InitBattle): render_bg decodes W_TILEMAP
     ; directly at screen (0,0), no window overlay, no per-frame OAM rebuild
     call ClearSprites
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
     mov byte [ebp + hSCX], 0       ; zero the shadows too — commit_shadow_regs
     mov byte [ebp + hSCY], 0       ; copies them over IO_SCX/SCY each DelayFrame
@@ -2172,7 +2172,7 @@ RunTextTest:
     mov byte [ebp + wStringBuffer + 21], 0x92
 
     ; font glyphs + the message-box border tiles
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
 
@@ -2214,7 +2214,7 @@ RunTextTest:
 ; Never returns. In: EBP = GB base.
 ; ---------------------------------------------------------------------------
 RunYesNoTest:
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
 %if DEBUG_YESNO = 2
@@ -2250,7 +2250,7 @@ RunListMenuTest:
     mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
     mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; party + bag + money
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     ; input-free drive: Old Man battle type → auto-select entry 0
     mov byte [ebp + wBattleType], 1
@@ -2535,7 +2535,7 @@ RunBattleTest:
     mov byte [ebp + wEnemyMonSpecies2], 0x24    ; PIDGEY (internal index)
     mov byte [ebp + wCurEnemyLevel], 13
 %endif
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call InitBattleVariables        ; was inside InitBattleCanvas pre-transition-splice
@@ -4190,7 +4190,7 @@ anim_show_label:
     ; generate the wild enemy's moveset the real way (base moves + level-up learnset
     ; for PIDGEY $24 at its level) — replaces the old hardcoded move seed.
     call DebugLoadWildMonMoves
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call InitBattleVariables        ; was inside InitBattleCanvas pre-transition-splice
@@ -4380,7 +4380,7 @@ RunLearnMoveTest:
     mov byte [ebp + wEnemyMonLevel], 13
     mov byte [ebp + wEnemyMonSpecies], 0x24   ; PIDGEY (internal index)
 
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     mov byte [ebp + wIsInBattle], 1
@@ -4418,7 +4418,7 @@ RunStatusScreenTest:
     mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; seeds party incl. slot3 = STARTER_PIKACHU L5
 
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns       ; font glyphs ($80+) — StatusScreen loads HP/HUD/box tiles itself
     mov byte [ebp + wWhichPokemon], 3
     mov byte [ebp + wMonDataLocation], 0    ; PLAYER_PARTY_DATA
@@ -5205,7 +5205,7 @@ RunStoneTest:
     mov byte [ebp + wNumBagItems], 0
     mov byte [ebp + wBagItems], 0xFF
     call PrepareNewGameDebug
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     ; party slot 0 becomes the mon under test (both the species list and the struct)
@@ -5502,7 +5502,7 @@ AutoKeyDrive:
     ; Catch the frame the fly/dungeon-warp bit arms (BIT_FLY_WARP=3, BIT_DUNGEON_WARP=4),
     ; which routes OverworldLoop -> HandleFlyWarpOrDungeonWarp -> SpecialEnterMap ->
     ; EnterMapBoot -> SetupPlayerSprite (the hardcoded (8,8) stomp).
-    test byte [ebp + W_STATUS_FLAGS_6], (1 << 3) | (1 << 4)
+    test byte [ebp + wStatusFlags6], (1 << 3) | (1 << 4)
     jnz .doFollowDump
     jmp .noFollowDump
 %else
@@ -7243,7 +7243,7 @@ RunCinematicMarkersTest:
     or byte [ebp + IO_LCDC], (1 << 4)
 
     call ClearSprites
-    ; W_UPDATE_SPRITES_ENABLED is parked by MovieBeginSurface (to $FF, not 0 —
+    ; wUpdateSpritesEnabled is parked by MovieBeginSurface (to $FF, not 0 —
     ; 0 means "hide once", which erases the published cinematic OAM).
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
 

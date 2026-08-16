@@ -195,7 +195,7 @@ InitBattleCommon:
     ; --- post-transition teardown (pret loads the font inside the slide-in,
     ;     core.asm:18-19; the port folds it here with the canvas setup) ---
     ; DEVIATION{class=projection; pret=engine/battle/init_battle.asm:InitBattleCommon; behavior=sets wFontLoaded BIT_FONT_LOADED on battle entry, which pret only ever does in DisplayTextIDInit; evidence=the port's 40x25 battle canvas loads the text font into the vFont region it time-shares with walking/NPC tiles, and the bit is the engine-wide marker for that state; lifetime=paired with the port-only clear in EndOfBattle.resetVariables (end_of_battle.asm) - the clear MUST outlive this set or every battle exits with UpdateNPCSprite's font freeze stuck on (measured 2026-08-06, regression-battle-second-trainer-wont-engage)}
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call InitBattleCanvas
@@ -228,7 +228,7 @@ InitWildBattle:
     call DoBattleTransitionAndInitBattleVariables   ; pret init_battle.asm:64
     ; --- post-transition teardown (see InitBattleCommon above) ---
     ; DEVIATION{class=projection; pret=engine/battle/init_battle.asm:InitWildBattle; behavior=sets wFontLoaded BIT_FONT_LOADED on battle entry, which pret only ever does in DisplayTextIDInit; evidence=same battle-canvas font load as InitBattleCommon above; lifetime=paired with the port-only clear in EndOfBattle.resetVariables (end_of_battle.asm), see the annotation there}
-    or byte [ebp + W_FONT_LOADED], (1 << BIT_FONT_LOADED)
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
     call LoadTextBoxTilePatterns
     call InitBattleCanvas
@@ -345,7 +345,7 @@ InitBattleCanvas:
     call ClearSprites                        ; drop the overworld OAM (player etc.)
     ; Stop the per-frame OAM rebuild (update_oam → PrepareOAMData) re-showing the
     ; overworld player sprite after ClearSprites; battle manages its own sprites.
-    mov byte [ebp + W_UPDATE_SPRITES_ENABLED], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 0
     ; Switch render_bg to its flat-canvas (non-overworld) path: zero the overworld
     ; view pointer so it decodes W_TILEMAP directly, and zero scroll so the 40×25
     ; canvas blits at screen (0,0).

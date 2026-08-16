@@ -165,7 +165,7 @@ StartSimulatingJoypadStates:
     mov byte [ebp + wOverrideSimulatedJoypadStatesMask], 0
     ; wSpritePlayerStateData2MovementByte1 = slot 0 movement byte 1
     mov byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    or byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     ret
 
 ; ---------------------------------------------------------------------------

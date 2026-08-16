@@ -399,12 +399,12 @@ DisplayEnemyTrainerTextAndStartBattle:
 ; it does not itself run the battle.  See the BATTLE ENTRY note in the header.
 ; ---------------------------------------------------------------------------
 StartTrainerBattle:
-    mov byte [ebp + W_JOY_IGNORE], 0        ; xor a; ld [wJoyIgnore], a
+    mov byte [ebp + wJoyIgnore], 0        ; xor a; ld [wJoyIgnore], a
     call InitBattleEnemyParameters          ; seeds wCurOpponent (the battle-entry trigger)
     ; ld hl, wStatusFlags3 / set BIT_TALKED_TO_TRAINER / set BIT_PRINT_END_BATTLE_TEXT
-    or byte [ebp + W_STATUS_FLAGS_3], (1 << BIT_TALKED_TO_TRAINER) | (1 << BIT_PRINT_END_BATTLE_TEXT)
+    or byte [ebp + wStatusFlags3], (1 << BIT_TALKED_TO_TRAINER) | (1 << BIT_PRINT_END_BATTLE_TEXT)
     ; ld hl, wStatusFlags4 / set BIT_UNKNOWN_4_1
-    or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_UNKNOWN_4_1)
+    or byte [ebp + wStatusFlags4], (1 << BIT_UNKNOWN_4_1)
     ; pret: ld hl, wCurMapScript / inc [hl] — next script fn is usually EndTrainerBattle,
     ; dispatched by a LATER RunMapScript once the battle has returned.
     inc byte [ebp + wCurMapScript]
@@ -446,7 +446,7 @@ EndTrainerBattle:
     ; ld hl, wCurrentMapScriptFlags / set BIT_CUR_MAP_LOADED_1 / set BIT_CUR_MAP_LOADED_2
     or byte [ebp + wCurrentMapScriptFlags], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
     ; ld hl, wStatusFlags3 / res BIT_PRINT_END_BATTLE_TEXT
-    and byte [ebp + W_STATUS_FLAGS_3], (~(1 << BIT_PRINT_END_BATTLE_TEXT)) & 0xFF
+    and byte [ebp + wStatusFlags3], (~(1 << BIT_PRINT_END_BATTLE_TEXT)) & 0xFF
     ; ld hl, wMiscFlags / res BIT_SEEN_BY_TRAINER — player is no longer engaged
     and byte [ebp + wMiscFlags], (~(1 << BIT_SEEN_BY_TRAINER)) & 0xFF
     ; battle lost (wIsInBattle == $ff): skip the beaten-flag/sprite work entirely

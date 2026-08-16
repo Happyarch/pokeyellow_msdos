@@ -92,11 +92,11 @@ MoveSprite_:
     jne .loop
 
     mov [ebp + wNPCNumScriptedSteps], cl  ; number of steps taken
-    or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
+    or byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
     ; reset simulated-joypad override bookkeeping (pret tail of MoveSprite_)
     mov byte [ebp + wOverrideSimulatedJoypadStatesMask], 0
     mov byte [ebp + wSimulatedJoypadStatesEnd], 0
-    mov byte [ebp + W_JOY_IGNORE], 0xFF                          ; pret: dec a (0 -> $ff)
+    mov byte [ebp + wJoyIgnore], 0xFF                          ; pret: dec a (0 -> $ff)
     mov byte [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], 0xFF
     ret
 
