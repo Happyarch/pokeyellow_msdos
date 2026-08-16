@@ -1,6 +1,14 @@
 ---
 name: faithfulness-review
-description: Pret-fidelity review gate for the Pokémon Yellow DOS port. Invoke BEFORE committing any change that touches a pret-labeled routine (any routine whose name comes from the pret disassembly), when reviewing such a change, or when asked to check a translation's faithfulness. Provides the faithdiff / lint_pret_labels / label_status / golden-differ workflow and the justification rules for added or dropped calls. Triggers: "review this translation", "is this faithful to pret", "faithdiff", "lint labels", "pre-commit fidelity check", "goldencheck".
+description: >
+  Pret-fidelity review gate for the Pokémon Yellow DOS port. Invoke BEFORE
+  committing any change that touches a pret-labeled routine (any routine whose
+  name comes from the pret disassembly), when reviewing such a change, or when
+  asked to check a translation's faithfulness. Provides the faithdiff /
+  lint_pret_labels / label_status / golden-differ workflow and the justification
+  rules for added or dropped calls. Triggers: "review this translation",
+  "is this faithful to pret", "faithdiff", "lint labels",
+  "pre-commit fidelity check", "goldencheck".
 ---
 
 # Faithfulness Review Gate

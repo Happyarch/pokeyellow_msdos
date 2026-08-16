@@ -1,6 +1,29 @@
 ---
 name: build-and-debug
-description: Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when building or running the port, regenerating assets, configuring/launching DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps, or the live dosbox-mcp screenshot / dump_frame tools), running the golden fidelity harness (mGBA ground truth vs DOSBox-X port), auditioning music (host-side audition.py vs in-DOS DEBUG_AUDIO TRACK= loop), or using a dos_port/tools/ dev tool (colorize.py + colors/editor.py, map_editor/editor.py, ui_layout/editor.py, read_perf.py, read_seamlog.py, audit_memmap.py, unnamed.py, saveconv.py). Also holds the repo layout map and the key reference URLs. Triggers: "build the port", "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets", "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py", "DOSBox-X config", "linker section / .rodata / orphan section", "goldencheck / make fidelity / make goldens", "GBSTATE.BIN", "golden scenario / scenario_manifest.json / mGBA harness / mgba-mcp", "run_headless.sh / headless run / PKMN.IMG / mcopy", "static_gate / pre-commit hook / CI", "audition / listen to / play <track> music", "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo", "Pan Docs / DPMI spec / RBIL", "colorize.py / palette editor / repaint PNG", "map_editor / overworld map tool", "ui_layout editor / layout sidecar", "PERF.BIN / read_perf.py", "SEAMLOG.BIN / read_seamlog.py", "audit_memmap.py", "unnamed.py / unnamed symbols", "saveconv.py / .sav .dsv", "screenshot / take a picture of the screen", "page fault / DPMI register dump / what is on screen", "raw screenshot".
+description: >
+  Build, run, and debug reference for the Pokémon Yellow DOS port. Invoke when
+  building or running the port, regenerating assets, configuring/launching
+  DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps, or the
+  live dosbox-mcp screenshot / dump_frame tools), running the golden fidelity
+  harness (mGBA ground truth vs DOSBox-X port), auditioning music (host-side
+  audition.py vs in-DOS DEBUG_AUDIO TRACK= loop), or using a dos_port/tools/
+  dev tool (colorize.py + colors/editor.py, map_editor/editor.py, ui_layout/editor.py,
+  read_perf.py, read_seamlog.py, audit_memmap.py, unnamed.py, saveconv.py).
+  Also holds the repo layout map and the key reference URLs. Triggers: "build the port",
+  "make -C dos_port", "SKIP_TITLE", "make assets", "regenerate assets",
+  "DEBUG_DUMP / DEBUG_TRANSITION / DEBUG_WALK_NORTH", "FRAME.BIN", "render_frame.py",
+  "DOSBox-X config", "linker section / .rodata / orphan section",
+  "goldencheck / make fidelity / make goldens", "GBSTATE.BIN",
+  "golden scenario / scenario_manifest.json / mGBA harness / mgba-mcp",
+  "run_headless.sh / headless run / PKMN.IMG / mcopy",
+  "static_gate / pre-commit hook / CI", "audition / listen to / play <track> music",
+  "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo",
+  "Pan Docs / DPMI spec / RBIL", "colorize.py / palette editor / repaint PNG",
+  "map_editor / overworld map tool", "ui_layout editor / layout sidecar",
+  "PERF.BIN / read_perf.py", "SEAMLOG.BIN / read_seamlog.py", "audit_memmap.py",
+  "unnamed.py / unnamed symbols", "saveconv.py / .sav .dsv",
+  "screenshot / take a picture of the screen",
+  "page fault / DPMI register dump / what is on screen", "raw screenshot".
 ---
 
 # Build & Debug Reference

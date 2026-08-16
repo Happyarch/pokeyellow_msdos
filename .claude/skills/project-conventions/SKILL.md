@@ -1,6 +1,15 @@
 ---
 name: project-conventions
-description: Detailed project conventions for the Pokémon Yellow DOS port. Invoke when adding a link-time stub, deciding whether something is generated data vs. hand-written code (the two-tier rule, incl. the "text strings are DATA, never hand-encode charmap bytes" rule), writing a BUG_FIX_LEVEL / GLITCH guard, or creating/archiving an active-plan file; also holds the save-file format notes. Triggers: "add a stub / *_stubs.asm", "BUG_FIX_LEVEL", "GLITCH tag", "should this be a generator or code", "gen_*.py / assets/*.inc", "hand-encode a string / charmap db", "current_plan_*.md", "archive a plan", ".sav / .dsv save format".
+description: >
+  Detailed project conventions for the Pokémon Yellow DOS port. Invoke when
+  adding a link-time stub, deciding whether something is generated data vs.
+  hand-written code (the two-tier rule, incl. the "text strings are DATA, never
+  hand-encode charmap bytes" rule), writing a BUG_FIX_LEVEL / GLITCH guard, or
+  creating/archiving an active-plan file; also holds the save-file format notes.
+  Triggers: "add a stub / *_stubs.asm", "BUG_FIX_LEVEL", "GLITCH tag",
+  "should this be a generator or code", "gen_*.py / assets/*.inc",
+  "hand-encode a string / charmap db", "current_plan_*.md", "archive a plan",
+  ".sav / .dsv save format".
 ---
 
 # Project Conventions (detailed)

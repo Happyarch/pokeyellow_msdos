@@ -1,6 +1,14 @@
 ---
 name: asm-translation
-description: SM83→x86 NASM translation reference for the Pokémon Yellow DOS port. Invoke BEFORE translating any pret/home/engine routine to x86 assembly, or when unsure about the register mapping, ZF/CF flag preservation, big-endian GB data layout, the EBP-relative memory model / DJGPP addressing gotchas, the software-video/timing/hardware-I/O/RST translation boundaries, 386+ instruction choices, or the per-routine translation workflow. Triggers: "translate <routine>", "port this SM83 code", "which x86 register maps to HL/BC/DE", "jr z / jr c", "big-endian", "EBP offset", "TODO-HW", "ds_base / vga_base".
+description: >
+  SM83→x86 NASM translation reference for the Pokémon Yellow DOS port. Invoke
+  BEFORE translating any pret/home/engine routine to x86 assembly, or when
+  unsure about the register mapping, ZF/CF flag preservation, big-endian GB
+  data layout, the EBP-relative memory model / DJGPP addressing gotchas, the
+  software-video/timing/hardware-I/O/RST translation boundaries, 386+ instruction
+  choices, or the per-routine translation workflow. Triggers: "translate <routine>",
+  "port this SM83 code", "which x86 register maps to HL/BC/DE", "jr z / jr c",
+  "big-endian", "EBP offset", "TODO-HW", "ds_base / vga_base".
 ---
 
 # SM83 → x86 Translation Reference
