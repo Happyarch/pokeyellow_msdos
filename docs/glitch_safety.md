@@ -12,13 +12,31 @@ quirks to arbitrary code execution (ACE) routes that can write to any memory add
 the Game Boy can reach. On the original hardware this is bounded to the GB's 64 KB
 address space; under DPMI on a DOS machine the implications are different.
 
-The DOS port preserves all original behavior by default. Two flags restrict behavior:
+The DOS port preserves all original behavior by default. Fixes are selected at
+**BUILD** time, with a make flag — not at runtime:
 
-| Flag | Behavior |
+| Build | Behavior |
 |------|----------|
-| (none) | All glitches active. Original game behavior. |
-| `/FIXCRIT` | Critical bugs fixed: buffer overflows, OOB writes, save corruption, ACE paths. Harmless glitches preserved. |
-| `/FIXALL` | All documented bugs fixed. Closest to a "clean" experience. |
+| `make` (default, `BUG_FIX_LEVEL=0`) | All glitches active. Original game behavior. |
+| `make BUG_FIX_LEVEL=1` | Critical bugs fixed: buffer overflows, OOB writes, save corruption, ACE paths. Harmless glitches preserved. |
+| `make BUG_FIX_LEVEL=2` | All documented bugs fixed. Closest to a "clean" experience. |
+
+The Makefile passes this through as `-D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)`, and every
+fix in the tree is gated by `%if BUG_FIX_LEVEL >= N` — an ASSEMBLY-time
+conditional. Choosing a level therefore means choosing a binary; one build cannot
+switch levels while running.
+
+> **`/FIXCRIT` and `/FIXALL` do nothing. Do not document or recommend them.**
+> `boot/entry.asm` really does parse both and store 1 or 2 into a `bug_fix_level`
+> byte, and this document used to present them as the user-facing control. But
+> nothing consumes that byte: it is `global` in `entry.asm` and no file externs
+> it (verified tree-wide 2026-08-16). `include/gb_macros.inc` still describes the
+> intended two-tier design — compile-time gating for size/alignment-sensitive
+> paths, a runtime byte for everything else — and the runtime half was never
+> built. It cannot retrofit onto the existing fixes either, because `%if` is
+> resolved before the binary exists.
+> Either wire the byte up and convert fixes to runtime conditionals, or delete
+> the two arguments; until then they are a trap that reads as a working feature.
 
 ---
 

@@ -10,11 +10,19 @@
 ; 1 = fix critical bugs only (buffer overflows, OOB writes, save corruption, ACE)
 ; 2 = fix all documented bugs (cosmetic, behavioral, critical)
 ;
-; Set at build time via Makefile: nasm -D BUG_FIX_LEVEL=1 ...
-; Set at runtime: entry.asm parses /FIXCRIT (level 1) and /FIXALL (level 2)
-; and writes the value to [bug_fix_level] in BSS, which runtime-conditional
-; code reads. The compile-time define gates code that cannot be conditional at
-; runtime (e.g. code size / alignment-sensitive paths).
+; Set at BUILD time, and only at build time: make BUG_FIX_LEVEL=1, which the
+; Makefile passes through as -D BUG_FIX_LEVEL=1. Every fix in the tree is gated
+; by `%if BUG_FIX_LEVEL >= N`, an assembly-time conditional, so the level is
+; baked into the binary.
+;
+; *** THE RUNTIME HALF DESCRIBED HERE WAS NEVER BUILT. *** This comment used to
+; say entry.asm parses /FIXCRIT and /FIXALL into [bug_fix_level] "which
+; runtime-conditional code reads". It does parse them and it does write the byte
+; — but NOTHING READS IT: bug_fix_level is `global` in boot/entry.asm and no file
+; externs it (verified tree-wide 2026-08-16). The two arguments are inert. They
+; also cannot be retrofitted onto the existing fixes, because `%if` is resolved
+; before the binary exists. Either wire the byte up and convert fixes to runtime
+; conditionals, or delete the arguments; do not document them as working.
 ; ---------------------------------------------------------------------------
 %ifndef BUG_FIX_LEVEL
   %define BUG_FIX_LEVEL 0

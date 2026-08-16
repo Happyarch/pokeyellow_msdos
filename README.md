@@ -299,12 +299,17 @@ Any access to `$FF00–$FFFF` I/O registers (LCDC, APU, serial, timer) is a
 translation boundary — not a 1:1 instruction mapping. These are emitted as
 `; TODO-HW:` comments until the relevant subsystem is implemented.
 
-### Bug Fix Flags
-| Flag | Effect |
+### Bug Fix Level (a BUILD option, not a runtime flag)
+| Build | Effect |
 |------|--------|
-| `/FIXALL` | Fix all documented bugs (cosmetic, behavioral, critical) |
-| `/FIXCRIT` | Fix only critical bugs: buffer overflows, OOB writes, save corruption |
-| (none) | Original game behavior including all known glitches |
+| `make` (default) | Original game behavior including all known glitches |
+| `make BUG_FIX_LEVEL=1` | Fix only critical bugs: buffer overflows, OOB writes, save corruption |
+| `make BUG_FIX_LEVEL=2` | Fix all documented bugs (cosmetic, behavioral, critical) |
+
+Fixes are gated by `%if BUG_FIX_LEVEL >= N`, an assembly-time conditional, so the
+level is baked into the binary. `PKMN.EXE` accepts `/FIXALL` and `/FIXCRIT`
+arguments and they **do nothing** — they set a byte no code reads. See
+[docs/glitch_safety.md](docs/glitch_safety.md).
 
 See [docs/glitch_safety.md](docs/glitch_safety.md) before running with glitches
 enabled on bare hardware.

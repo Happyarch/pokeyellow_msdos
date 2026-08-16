@@ -272,9 +272,13 @@ Acceptance criteria:
       `GLITCH{`, 192 `DEVIATION{` and 21 `STUB{` annotations (grep counts,
       2026-08-02 — re-measure rather than quoting these). Progress and the
       remaining sweep live in `docs/current_plan_bug_tagging.md`.
-- [x] `/FIXCRIT` (level 1) and `/FIXALL` (level 2) parsed at runtime and gating
-      `BUG_FIX_LEVEL` blocks (`dos_port/include/gb_macros.inc`,
-      `dos_port/boot/entry.asm` `parse_cmdline`)
+- [~] `/FIXCRIT` (level 1) and `/FIXALL` (level 2) are PARSED at runtime
+      (`dos_port/boot/entry.asm` `parse_cmdline`) but gate NOTHING. Corrected
+      2026-08-16: `bug_fix_level` is `global` in entry.asm and no file externs
+      it, so the byte is never read; every fix in the tree is `%if
+      BUG_FIX_LEVEL >= N`, resolved at assembly time from
+      `make BUG_FIX_LEVEL=`. The build option works; the runtime flags are inert.
+      Either wire the byte to runtime conditionals or delete the two arguments.
 - [ ] Startup warning emitted when running with critical glitches enabled on bare
       hardware (detect via DPMI host ID string, INT 31h fn 0400h)
 - [~] `docs/glitch_safety.md` exists; finalize with per-glitch safety notes
