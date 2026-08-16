@@ -921,7 +921,7 @@ CheckNPCInteraction:
     ; live at $8000 and are untouched by the font. Image index == facing dir (0/4/8/C)
     ; selects the matching Standing* OAM block (anim frame 0).
     mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al
+    mov [ebp + wSpritePlayerStateData1ImageIndex], al
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
 
@@ -1242,7 +1242,7 @@ TrainerEncounterFlow:
     ; at $8800 — see the matching note in CheckNPCInteraction (avoids the player
     ; rendering font glyphs while the dialog freezes the overworld loop).
     mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al
+    mov [ebp + wSpritePlayerStateData1ImageIndex], al
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
 

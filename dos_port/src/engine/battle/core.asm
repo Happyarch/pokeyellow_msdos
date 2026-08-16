@@ -6906,7 +6906,7 @@ DrawHUDsAndHPBars:
     ; HUD names are drawn with PlaceString, which (like pret's PlaceNextChar) calls
     ; PrintLetterDelay — so make sure the per-letter delay is OFF here (BIT_TEXT_DELAY is
     ; set only while a dialog MESSAGE prints). Otherwise the mon names would type out.
-    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    and byte [ebp + wLetterPrintingDelayFlags], (~(1 << BIT_TEXT_DELAY)) & 0xFF
     ; pret DrawHUDsAndHPBars order: PLAYER first, then ENEMY (core.asm:1886).
     ; Load-bearing since the wLoadedMon staging landed: both HUDs write
     ; wLoadedMonLevel, and the surviving value must be the ENEMY's (measured in

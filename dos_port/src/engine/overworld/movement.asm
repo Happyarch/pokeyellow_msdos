@@ -953,13 +953,13 @@ UpdateSpriteImage:
 ; ---------------------------------------------------------------------------
 UpdatePlayerSprite:
     ; walk-animation counter (data2+0): nonzero locks the sprite hidden
-    mov al, [ebp + W_SPRITE_PLAYER_WALK_ANIM_COUNTER]
+    mov al, [ebp + wSpritePlayerStateData2WalkAnimationCounter]
     test al, al
     jz .checkTextBox
     cmp al, 0xFF
     je .disable
     dec al
-    mov [ebp + W_SPRITE_PLAYER_WALK_ANIM_COUNTER], al
+    mov [ebp + wSpritePlayerStateData2WalkAnimationCounter], al
     jmp .disable
 
 .checkTextBox:
@@ -969,7 +969,7 @@ UpdatePlayerSprite:
     cmp al, MAP_TILESET_SIZE
     jb .lowerLeftIsMapTile
 .disable:
-    mov byte [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], 0xFF
+    mov byte [ebp + wSpritePlayerStateData1ImageIndex], 0xFF
     ret
 
 .lowerLeftIsMapTile:
@@ -1039,7 +1039,7 @@ UpdatePlayerSprite:
 Func_4e32:
     mov al, [ebp + W_SPRITE_PLAYER_ANIM_FRAME]
     add al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al
+    mov [ebp + wSpritePlayerStateData1ImageIndex], al
     ret
 
 ; ===========================================================================

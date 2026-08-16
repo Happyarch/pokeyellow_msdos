@@ -464,7 +464,7 @@ Func_f531b:
     and al, 0x0C
     jz .asm_f53d1                   ; player didn't press -> use enemy's selection
     ; both pressed: the gameboy clocking the connection wins.
-    mov al, [ebp + H_SERIAL_CONN_STATUS]  ; TODO-HW: network HAL
+    mov al, [ebp + hSerialConnectionStatus]  ; TODO-HW: network HAL
     cmp al, USING_INTERNAL_CLOCK
     je .asm_f53df
 .asm_f53d1:
@@ -1040,7 +1040,7 @@ LinkMenu:
     ; TODO-HW: network HAL — no serial handshake precedes this menu in the port;
     ; pin the connection status to "not established" so every not-internal-clock
     ; branch is deterministic (see the serial_stubs.asm contract).
-    mov byte [ebp + H_SERIAL_CONN_STATUS], CONNECTION_NOT_ESTABLISHED
+    mov byte [ebp + hSerialConnectionStatus], CONNECTION_NOT_ESTABLISHED
     ; xor a / ld [wLetterPrintingDelayFlags],a
     mov byte [ebp + wLetterPrintingDelayFlags], 0
     ; ld hl,wStatusFlags4 / set BIT_LINK_CONNECTED,[hl]
@@ -1141,7 +1141,7 @@ LinkMenu:
     and al, 0x0C
     jz .useEnemyMenuSelection       ; only enemy pressed -> use enemy's selection
     ; both pressed: the gameboy clocking the connection wins.
-    mov al, [ebp + H_SERIAL_CONN_STATUS]        ; TODO-HW: network HAL
+    mov al, [ebp + hSerialConnectionStatus]        ; TODO-HW: network HAL
     cmp al, USING_INTERNAL_CLOCK
     je .doneChoosingMenuSelection
 .useEnemyMenuSelection:
@@ -1152,7 +1152,7 @@ LinkMenu:
     mov [ebp + wCurrentMenuItem], al
 .doneChoosingMenuSelection:
     ; ldh a,[hSerialConnectionStatus] / cp USING_INTERNAL_CLOCK / jr nz skip
-    mov al, [ebp + H_SERIAL_CONN_STATUS]        ; TODO-HW: network HAL
+    mov al, [ebp + hSerialConnectionStatus]        ; TODO-HW: network HAL
     cmp al, USING_INTERNAL_CLOCK
     jne .skipStartingTransfer
     call DelayFrame
@@ -1272,7 +1272,7 @@ LinkMenu:
     mov byte [ebp + wLinkMenuSelectionSendBuffer], 0x0B
     mov bh, 0x78                    ; ld b,$78 — 120-frame timeout
 .loop2:                             ; pret .loop
-    mov al, [ebp + H_SERIAL_CONN_STATUS]        ; TODO-HW: network HAL
+    mov al, [ebp + hSerialConnectionStatus]        ; TODO-HW: network HAL
     cmp al, USING_INTERNAL_CLOCK
     jne .noDelay
     call DelayFrame                 ; call z,DelayFrame
@@ -1412,7 +1412,7 @@ RunLinkMenuTest:
 %ifdef DEBUG_I1_LINK
     call LinkMenu                   ; spins in .waitForInputLoop; AUTOKEY dumps
 %else
-    mov byte [ebp + H_SERIAL_CONN_STATUS], CONNECTION_NOT_ESTABLISHED
+    mov byte [ebp + hSerialConnectionStatus], CONNECTION_NOT_ESTABLISHED
     call Func_f531b                 ; spins in .asm_f5377;      AUTOKEY dumps
 %endif
 .hang:

@@ -49,7 +49,7 @@ ResetPlayerSpriteData:
     mov esi, wSpriteStateData2              ; ld hl, wSpriteStateData2
     call ResetPlayerSpriteData_ClearSpriteData
 
-    mov byte [ebp + W_SPRITE_PLAYER_PICTURE_ID], 1        ; ld a,1; ld [..PictureID],a
+    mov byte [ebp + wSpritePlayerStateData1PictureID], 1        ; ld a,1; ld [..PictureID],a
     mov byte [ebp + W_SPRITE_PLAYER_IMAGE_BASE_OFFSET], 1 ; ld [..ImageBaseOffset],a
     mov byte [ebp + W_SPRITE_PLAYER_Y_PIXELS], 0x3c       ; ld [hl],$3c (Y screen pos)
     mov byte [ebp + W_SPRITE_PLAYER_X_PIXELS], 0x40       ; inc hl; inc hl; ld [hl],$40

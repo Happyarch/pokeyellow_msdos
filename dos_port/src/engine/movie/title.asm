@@ -284,7 +284,7 @@ PrepareTitleScreen:
 
     ; Clear letter-printing / status / Elite4 flags
     xor al, al
-    mov byte [ebp + W_LETTER_PRINTING_DELAY], al
+    mov byte [ebp + wLetterPrintingDelayFlags], al
     mov byte [ebp + wStatusFlags6],        al
     mov byte [ebp + wStatusFlags7],        al
     mov byte [ebp + wElite4Flags],          al
@@ -311,7 +311,7 @@ DisplayTitleScreen:
     call GBPalWhiteOut               ; the real home/fade.asm routine (BGP+OBP0/1 + CGB commits)
 
     ; Initialise HRAM display state
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    mov byte [ebp + hAutoBGTransferEnabled], 1
     mov byte [ebp + hTileAnimations],     0
     mov byte [ebp + hSCX],                 0
     mov byte [ebp + hSCY],                 0x40   ; start with SCY=64
@@ -634,7 +634,7 @@ DisplayTitleScreen:
     mov byte [ebp + hWY], al
     call MovieSyncWindow            ; hWY=0 — pret's full-screen window over the blanked maps
     inc al
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], al
+    mov byte [ebp + hAutoBGTransferEnabled], al
     call ClearScreen
     mov al, TILEMAP_DEST_HI_ROW0
     call TitleScreenCopyTileMapToVRAM
@@ -673,12 +673,12 @@ DisplayTitleScreen:
     ; pret: ld [wAudioFadeOutControl], a / call StopAllMusic. `a` is $0C here —
     ; IncrementResetCounter leaves a = d = $0C on its reset path — and that value
     ; is the fade length, so it must be carried, not invented.
-    mov [ebp + W_AUDIO_FADE_OUT], al
+    mov [ebp + wAudioFadeOutControl], al
     call StopAllMusic
 ; DEVIATION{class=HAL; pret=engine/movie/title.asm:DisplayTitleScreen.audioFadeLoop; behavior=the fade-out wait calls DelayFrame each iteration instead of spinning on wAudioFadeOutControl alone; evidence=on the GB the audio engine runs from the VBlank interrupt so a bare spin still advances the fade, while this port ticks audio inside DelayFrame (src/home/vblank.asm calls audio_tick which calls FadeOutAudio) so a bare spin would never decrement it and would hang forever; lifetime=permanent, audio is frame-driven in this port}
 .audioFadeLoop:
     call DelayFrame
-    cmp byte [ebp + W_AUDIO_FADE_OUT], 0
+    cmp byte [ebp + wAudioFadeOutControl], 0
     jnz .audioFadeLoop
     ; The timeout path re-enters Init, which does not itself restore the
     ; compositor, so the surface has to be released here too or a narrow OBJ clip

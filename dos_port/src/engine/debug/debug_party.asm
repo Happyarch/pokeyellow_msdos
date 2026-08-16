@@ -124,10 +124,10 @@ PrepareNewGameDebug:
     mov byte [ebp + W_PARTY_MON4_MOVES + 2], SURF
 
     ; Snorlax gets four HM moves
-    mov byte [ebp + W_PARTY_MON1_MOVES + 0], FLY
-    mov byte [ebp + W_PARTY_MON1_MOVES + 1], CUT
-    mov byte [ebp + W_PARTY_MON1_MOVES + 2], SURF
-    mov byte [ebp + W_PARTY_MON1_MOVES + 3], STRENGTH
+    mov byte [ebp + wPartyMon1Moves + 0], FLY
+    mov byte [ebp + wPartyMon1Moves + 1], CUT
+    mov byte [ebp + wPartyMon1Moves + 2], SURF
+    mov byte [ebp + wPartyMon1Moves + 3], STRENGTH
 
     ; --- Deterministic DVs + stat recompute (fidelity harness; converge to
     ; seed.lua, the byte-level spec). _AddPartyMon rolled random DVs via

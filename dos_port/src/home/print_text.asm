@@ -41,7 +41,7 @@ PrintLetterDelay:
     movzx eax, byte [ebp + wStatusFlags5]
     test al, (1 << BIT_NO_TEXT_DELAY)          ; cutscene/auto-scroll: skip delay
     jnz .done
-    movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
+    movzx eax, byte [ebp + wLetterPrintingDelayFlags]
     test al, (1 << BIT_TEXT_DELAY)             ; delay enabled by TextCommandProcessor?
     jz .done
     call sync_dialog_window                    ; mirror latest char to window before first frame

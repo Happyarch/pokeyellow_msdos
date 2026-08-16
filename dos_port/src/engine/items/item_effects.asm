@@ -1350,11 +1350,11 @@ ItemUseMedicine:
     call PlaySoundWaitForCurrent
 
 .showHealingItemMessage:
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0
+    mov byte [ebp + hAutoBGTransferEnabled], 0
     call ClearScreen
     mov byte [ebp + wUpdateSpritesEnabled], 0xFF   ; dec a → $ff
     call RedrawPartyMenu                ; redraws the menu and prints the message
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    mov byte [ebp + hAutoBGTransferEnabled], 1
     mov bl, 50                          ; ld c, 50
     call DelayFrames
     call WaitForTextScrollButtonPress

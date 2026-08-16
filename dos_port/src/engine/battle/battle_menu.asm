@@ -140,7 +140,7 @@ extern DelayFrames                   ; src/home/delay.asm — In: BL = frame cou
 ; interior (clears any prior message). Labels/box are instant (pret PlaceString).
 ; DEVIATION{class=projection; pret=engine/battle/core.asm:PrintEmptyString; behavior=pret prints a one-character empty string through the shared PrintText/TextCommandProcessor engine over the box the prior DisplayTextBoxID call already drew, the port instead redraws the whole outer box outline via TextBoxBorder against the generated UI_DIALOG_BOX layout constants; evidence=pret PrintEmptyString (engine/battle/core.asm:6720) is ld hl, dot emptyString / jp PrintText with no box-border call of its own, and this file is the declared sanctioned draw-layer divergence point per its header, projecting pret box coordinates through assets/ui_layout_battle.inc for the port's widened canvas; lifetime=permanent, retires only if the battle front end moves onto the shared PrintText/TextBoxBorder pipeline core.asm already uses for the rest of the screen}
 DrawEmptyDialogBox:
-    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    and byte [ebp + wLetterPrintingDelayFlags], (~(1 << BIT_TEXT_DELAY)) & 0xFF
     mov dword [menu_item_step], 2 * FW
     mov esi, wTileMap + OUTER_OFF
     mov bh, OUTER_H
@@ -230,7 +230,7 @@ ShowSimulatedInputBagBox:
 ; — `ld hl, GainedText / call PrintText`; pret has no battle_menu.asm at all).
 ; They hand-painted the box and the EXP/level number with PlaceString/print_dec
 ; instead of driving the text engine, which is also why they needed their own
-; W_LETTER_PRINTING_DELAY save/restore bracket (d9d97f186, interim) — pret's
+; wLetterPrintingDelayFlags save/restore bracket (d9d97f186, interim) — pret's
 ; PrintText/TextCommandProcessor already brackets that flag per session.
 ;
 ; Both call sites (experience.asm's GainExperience, per pret's own two

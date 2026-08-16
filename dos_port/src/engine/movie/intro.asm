@@ -16,7 +16,7 @@ bits 32
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_intro.inc"   ; UI_SPLASH_ROW / UI_SPLASH_COL
 
-hAutoBGTransferEnabled equ H_AUTO_BG_TRANSFER_EN   ; pret name (inert byte; consumer do_bg_transfer retired)
+hAutoBGTransferEnabled equ hAutoBGTransferEnabled   ; pret name (inert byte; consumer do_bg_transfer retired)
 
 ; --- Cinematic BG surface model (the port's own; documented in intro_yellow.asm) --
 ; MovieMirrorSurface shows the visible 18x20 window from wTileMap +

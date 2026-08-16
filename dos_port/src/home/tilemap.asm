@@ -59,12 +59,12 @@ SaveBattleScreen:
 LoadScreenTilesFromBuffer1:
 RestoreBattleScreen:
     pushad
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0   ; xor a / ldh [hAutoBGTransferEnabled], a
+    mov byte [ebp + hAutoBGTransferEnabled], 0   ; xor a / ldh [hAutoBGTransferEnabled], a
     mov esi, screen_save                  ; ld hl, wTileMapBackup
     lea edi, [ebp + wTileMap]            ; decoord 0, 0
     mov ecx, SCREEN_AREA                  ; ld bc, SCREEN_AREA
     rep movsb                             ; call CopyData
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1   ; ld a, 1 / ldh [hAutoBGTransferEnabled], a
+    mov byte [ebp + hAutoBGTransferEnabled], 1   ; ld a, 1 / ldh [hAutoBGTransferEnabled], a
     popad
     ret
 
@@ -84,13 +84,13 @@ SaveScreenTilesToBuffer2:
 
 LoadScreenTilesFromBuffer2:
     call LoadScreenTilesFromBuffer2DisableBGTransfer
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1   ; ld a, 1 / ldh [hAutoBGTransferEnabled], a
+    mov byte [ebp + hAutoBGTransferEnabled], 1   ; ld a, 1 / ldh [hAutoBGTransferEnabled], a
     ret
 
 ; loads screen tiles stored in wTileMapBackup2 but leaves hAutoBGTransferEnabled disabled
 LoadScreenTilesFromBuffer2DisableBGTransfer:
     pushad
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 0   ; xor a / ldh [hAutoBGTransferEnabled], a
+    mov byte [ebp + hAutoBGTransferEnabled], 0   ; xor a / ldh [hAutoBGTransferEnabled], a
     lea esi, [ebp + wTileMapBackup2]    ; ld hl, wTileMapBackup2
     lea edi, [ebp + wTileMap]            ; decoord 0, 0
     mov ecx, SCREEN_AREA                  ; ld bc, SCREEN_AREA

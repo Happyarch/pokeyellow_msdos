@@ -1860,23 +1860,23 @@ CheckMapConnections:
     mov al, [ebp + wYCoord]
     cmp al, 255
     jne .done
-    mov al, [ebp + W_NORTH_CONNECTED_MAP]
+    mov al, [ebp + wNorthConnectedMap]
     cmp al, MAP_NO_CONNECTION
     je .done
-    mov ebx, W_NORTH_CONNECTED_MAP
+    mov ebx, wNorthConnectedMap
     
     mov [ebp + wCurMap], al
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_Y_ALIGN]
+    mov al, [ebp + wNorthConnectedMap + CONN_Y_ALIGN]
     mov [ebp + wYCoord], al
     mov al, [ebp + wXCoord]
     mov cl, al
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_X_ALIGN]
+    mov al, [ebp + wNorthConnectedMap + CONN_X_ALIGN]
     add cl, al
     mov [ebp + wXCoord], cl
     
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_VIEW_PTR]
+    mov al, [ebp + wNorthConnectedMap + CONN_VIEW_PTR]
     mov dl, al
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_VIEW_PTR + 1]
+    mov al, [ebp + wNorthConnectedMap + CONN_VIEW_PTR + 1]
     mov dh, al
     
     shr cl, 1
@@ -2300,13 +2300,13 @@ LoadTileBlockMap:
     ;     connected-map width reuse hMapStride/hMapWidth (they are HRAM unions).
 
 .north_connection:
-    cmp byte [ebp + W_NORTH_CONNECTED_MAP], MAP_NO_CONNECTION
+    cmp byte [ebp + wNorthConnectedMap], MAP_NO_CONNECTION
     je  .south_connection
-    movzx esi, word [ebp + W_NORTH_CONNECTED_MAP + CONN_STRIP_SRC]   ; HL = strip src
-    movzx edx, word [ebp + W_NORTH_CONNECTED_MAP + CONN_STRIP_DEST]  ; DE = strip dest
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_STRIP_LENGTH]
+    movzx esi, word [ebp + wNorthConnectedMap + CONN_STRIP_SRC]   ; HL = strip src
+    movzx edx, word [ebp + wNorthConnectedMap + CONN_STRIP_DEST]  ; DE = strip dest
+    mov al, [ebp + wNorthConnectedMap + CONN_STRIP_LENGTH]
     mov [ebp + hMapStride], al                                     ; hNSConnectionStripWidth
-    mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_MAP_WIDTH]
+    mov al, [ebp + wNorthConnectedMap + CONN_MAP_WIDTH]
     mov [ebp + hMapWidth], al                                      ; hNSConnectedMapWidth
     call LoadNorthSouthConnectionsTileMap
 
@@ -3265,7 +3265,7 @@ LoadMapHeader:
     ; Initialize all 4 connected maps to $FF (disabled) before loading actual values.
     ; Faithful to pret: home/overworld.asm line 1820-1825.
     ; Without this, stale connection data from the previous map persists.
-    mov byte [ebp + W_NORTH_CONNECTED_MAP], MAP_NO_CONNECTION
+    mov byte [ebp + wNorthConnectedMap], MAP_NO_CONNECTION
     mov byte [ebp + W_SOUTH_CONNECTED_MAP], MAP_NO_CONNECTION
     mov byte [ebp + W_WEST_CONNECTED_MAP],  MAP_NO_CONNECTION
     mov byte [ebp + W_EAST_CONNECTED_MAP],  MAP_NO_CONNECTION
@@ -3274,7 +3274,7 @@ LoadMapHeader:
     mov al, [ebp + wCurMapConnections]
     test al, CONNECTION_NORTH
     jz .noNorth
-    mov edi, W_NORTH_CONNECTED_MAP
+    mov edi, wNorthConnectedMap
     call CopyMapConnectionHeader
 .noNorth:
     mov al, [ebp + wCurMapConnections]

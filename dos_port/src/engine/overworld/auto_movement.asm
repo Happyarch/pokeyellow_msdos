@@ -73,7 +73,7 @@ PlayerStepOutFromDoor:
     mov byte [ebp + wSimulatedJoypadStatesIndex], 1
     mov byte [ebp + wSimulatedJoypadStatesEnd], PAD_DOWN
     xor al, al
-    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al       ; pret: wSpritePlayerStateData1ImageIndex = 0
+    mov [ebp + wSpritePlayerStateData1ImageIndex], al       ; pret: wSpritePlayerStateData1ImageIndex = 0
     ; StartSimulatingJoypadStates zeroes the override mask + slot-0 movement byte 1 and
     ; sets BIT_SCRIPTED_MOVEMENT_STATE so AreInputsSimulated feeds this one PAD_DOWN.
     ; wJoyIgnore now matches pret and is cleared by AreInputsSimulated.doneSimulating

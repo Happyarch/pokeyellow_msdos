@@ -137,7 +137,7 @@ Init:
     mov byte [ebp + IO_WY],  200
     mov byte [ebp + IO_WX],  7
 
-    mov byte [ebp + H_SERIAL_CONN_STATUS], CONNECTION_NONE
+    mov byte [ebp + hSerialConnectionStatus], CONNECTION_NONE
 
     ; Clear both BG tilemaps to blank space ($7F)
     mov esi, GB_TILEMAP0

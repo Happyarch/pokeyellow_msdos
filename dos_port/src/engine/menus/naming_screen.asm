@@ -645,7 +645,7 @@ LoadEDTile:
 ; verbatim, not re-derived from a separate label).
 ; ---------------------------------------------------------------------------
 PrintAlphabet:
-    ; pret's own name for this byte (== H_AUTO_BG_TRANSFER_EN, same address) — the
+    ; pret's own name for this byte (== hAutoBGTransferEnabled, same address) — the
     ; alias hid the store from faithdiff's by-name matcher (row 13 precedent).
     mov byte [ebp + hAutoBGTransferEnabled], 0
     mov edx, LowerCaseAlphabet

@@ -159,7 +159,7 @@ LoadSpecialWarpData:
     cmp al, TRADE_CENTER                       ; cp TRADE_CENTER
     jnz .notTradeCenter
     mov esi, TradeCenterPlayerWarp             ; ld hl,TradeCenterPlayerWarp
-    mov al, [ebp + H_SERIAL_CONN_STATUS]       ; ldh a,[hSerialConnectionStatus]
+    mov al, [ebp + hSerialConnectionStatus]       ; ldh a,[hSerialConnectionStatus]
     cmp al, USING_INTERNAL_CLOCK               ; cp USING_INTERNAL_CLOCK
     jz .copyWarpData
     mov esi, TradeCenterFriendWarp             ; ld hl,TradeCenterFriendWarp
@@ -168,7 +168,7 @@ LoadSpecialWarpData:
     cmp al, COLOSSEUM                          ; cp COLOSSEUM
     jnz .notColosseum
     mov esi, ColosseumPlayerWarp               ; ld hl,ColosseumPlayerWarp
-    mov al, [ebp + H_SERIAL_CONN_STATUS]       ; ldh a,[hSerialConnectionStatus]
+    mov al, [ebp + hSerialConnectionStatus]       ; ldh a,[hSerialConnectionStatus]
     cmp al, USING_INTERNAL_CLOCK               ; cp USING_INTERNAL_CLOCK
     jz .copyWarpData
     mov esi, ColosseumFriendWarp               ; ld hl,ColosseumFriendWarp

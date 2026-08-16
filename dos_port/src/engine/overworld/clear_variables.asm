@@ -33,7 +33,7 @@ bits 32
 ; WRAM symbols consumed here (wWhichTrade 0xCD3D, wStandingOnWarpPadOrHole
 ; 0xCD5B, wStepCounter 0xD13A, wUnusedMapVariable 0xD5A2, wCardKeyDoorY 0xD73E,
 ; wCardKeyDoorX 0xD73F) are defined in gb_memmap.inc (root-promoted, sym-verified
-; against origin/symbols:pokeyellow.sym). hWY/IO_WY/H_AUTO_BG_TRANSFER_EN/
+; against origin/symbols:pokeyellow.sym). hWY/IO_WY/hAutoBGTransferEnabled/
 ; H_JOY_*/RENDER_H and wActionResultOrTookBattleTurn/wLoneAttackNo pre-existing.
 
 section .text
@@ -74,7 +74,7 @@ ClearVariablesOnEnterMap:
     ; Not hardware I/O — hAutoBGTransferEnabled is a plain HRAM shadow byte
     ; the port's own VBlank-transfer gate reads (src/home/vblank.asm,
     ; src/home/copy2.asm). Faithful direct write.
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], al
+    mov byte [ebp + hAutoBGTransferEnabled], al
 
     ; ld [wStepCounter], a
     mov byte [ebp + wStepCounter], al

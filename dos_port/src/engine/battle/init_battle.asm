@@ -333,11 +333,11 @@ InitBattleCanvas:
     ; fish_old_rod, whose dump reads wLetterPrintingDelayFlags $03 against
     ; hardware's $01 — the extra bit is exactly this routine's port-only
     ; BIT_FAST_TEXT_DELAY, still set long after the battle ended.
-    mov al, [ebp + W_LETTER_PRINTING_DELAY]
+    mov al, [ebp + wLetterPrintingDelayFlags]
     mov [saved_letter_printing_delay], al
     or  al, (1 << BIT_FAST_TEXT_DELAY)
     and al, (~(1 << BIT_TEXT_DELAY)) & 0xFF
-    mov [ebp + W_LETTER_PRINTING_DELAY], al
+    mov [ebp + wLetterPrintingDelayFlags], al
     mov al, [ebp + wOptions]
     and al, 0xF0                              ; keep battle-style/anim bits, reset speed nibble (TEXT_DELAY_MASK)
     or al, TEXT_DELAY_MEDIUM                  ; default 3 frames/char
@@ -691,7 +691,7 @@ _InitBattleCommon:
     ; pret _InitBattleCommon:133 — `pop af / ld [wLetterPrintingDelayFlags], a`.
     ; Paired with the save in InitBattleCanvas; see the note there.
     mov al, [saved_letter_printing_delay]
-    mov [ebp + W_LETTER_PRINTING_DELAY], al
+    mov [ebp + wLetterPrintingDelayFlags], al
     stc                                          ; pret _InitBattleCommon: scf
     ret
 

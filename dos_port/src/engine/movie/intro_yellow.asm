@@ -31,7 +31,7 @@ bits 32
 
 ; pret HRAM names for the auto-BG-transfer registers — used so the faithful (inert)
 ; writes below cross-reference against pret by name (faithdiff matches stores by name).
-hAutoBGTransferEnabled equ H_AUTO_BG_TRANSFER_EN
+hAutoBGTransferEnabled equ hAutoBGTransferEnabled
 hAutoBGTransferDest    equ hAutoBGTransferDest
 
 global YellowIntro_AnimatedObjectJumptable
@@ -820,7 +820,7 @@ Func_f98fc:
 ; BENIGN inertness -- the port reaches the same visible result by another route --
 ; but it was carried in prose only, so nothing machine-parsed distinguished it from
 ; a real missing feature. That is the distinction this annotation records.
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:InitYellowIntroGFXAndMusic; behavior=the hAutoBGTransferEnabled/hAutoBGTransferDest request bytes are written faithfully but no port code reads them, because the GB's VBlank BG-map auto-transfer has no counterpart, the compositor composes every frame directly from wTileMap so the tilemap the transfer would have published is already on screen; evidence=H_AUTO_BG_TRANSFER_EN and hAutoBGTransferDest are written in this file and in intro.asm and read nowhere under src/ or boot/, and the do_bg_transfer consumer was retired with the surface-mirror compositor -- so unlike the LY-override case no visible behaviour is lost; lifetime=permanent, the surface-mirror compositor replaces the transfer rather than deferring it}
+; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:InitYellowIntroGFXAndMusic; behavior=the hAutoBGTransferEnabled/hAutoBGTransferDest request bytes are written faithfully but no port code reads them, because the GB's VBlank BG-map auto-transfer has no counterpart, the compositor composes every frame directly from wTileMap so the tilemap the transfer would have published is already on screen; evidence=hAutoBGTransferEnabled and hAutoBGTransferDest are written in this file and in intro.asm and read nowhere under src/ or boot/, and the do_bg_transfer consumer was retired with the surface-mirror compositor -- so unlike the LY-override case no visible behaviour is lost; lifetime=permanent, the surface-mirror compositor replaces the transfer rather than deferring it}
 ; ---------------------------------------------------------------------------
 ; ---------------------------------------------------------------------------
 ; CopyYellowIntroAnimatedObjectData — port-only: stage the three immutable

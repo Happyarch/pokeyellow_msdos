@@ -633,11 +633,11 @@ DisplayMonListMenu:
 ; Clobbers: EAX, ECX, EDX, ESI, EBX.
 ; ---------------------------------------------------------------------------
 KnowsHMMove:
-    mov esi, W_PARTY_MON1_MOVES     ; ld hl, wPartyMon1Moves ($D172)
+    mov esi, wPartyMon1Moves     ; ld hl, wPartyMon1Moves ($D172)
     mov ecx, PARTYMON_STRUCT_LENGTH  ; ld bc, PARTYMON_STRUCT_LENGTH (44)
     jmp .next
     ; --- unreachable — pret-faithful dead code (mirrors the original binary) ---
-    mov esi, W_BOX_MON1_MOVES       ; ld hl, wBoxMon1Moves ($DA9D)
+    mov esi, wBoxMon1Moves       ; ld hl, wBoxMon1Moves ($DA9D)
     mov ecx, BOXMON_STRUCT_LENGTH   ; ld bc, BOXMON_STRUCT_LENGTH (33)
 .next:
     ; AddNTimes equivalent: esi += wWhichPokemon * ecx (stride)

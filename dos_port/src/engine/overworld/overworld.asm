@@ -606,21 +606,21 @@ SetupPlayerSprite:
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
     mov byte [ebp + wWalkCounter],               0
 
-    mov byte [ebp + W_SPRITE_PLAYER_PICTURE_ID],      1   ; non-zero → slot in use
+    mov byte [ebp + wSpritePlayerStateData1PictureID],      1   ; non-zero → slot in use
     mov byte [ebp + W_SPRITE_PLAYER_IMAGE_BASE_OFFSET], 1 ; player VRAM slot
     mov byte [ebp + W_SPRITE_PLAYER_Y_PIXELS],        0x3C ; fixed screen Y ($3C = GB center 72 - 12)
     mov byte [ebp + W_SPRITE_PLAYER_X_PIXELS],        0x40 ; fixed screen X ($40 = GB center 80 - 16)
-    mov byte [ebp + W_SPRITE_PLAYER_IMAGE_INDEX],     SPRITE_FACING_DOWN
+    mov byte [ebp + wSpritePlayerStateData1ImageIndex],     SPRITE_FACING_DOWN
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM],      0
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME],      0
-    mov byte [ebp + W_SPRITE_PLAYER_WALK_ANIM_COUNTER], 0
+    mov byte [ebp + wSpritePlayerStateData2WalkAnimationCounter], 0
     mov byte [ebp + W_SPRITE_PLAYER_GRASS_PRIORITY],  0
 
     mov byte [ebp + wGrassTile],    0xFF
     mov byte [ebp + wFontLoaded],   0
     mov byte [ebp + wMovementFlags], 0
 
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN],        0
+    mov byte [ebp + hAutoBGTransferEnabled],        0
     mov byte [g_player_marker_on], 0
     ret
 
@@ -885,7 +885,7 @@ DoSignInteraction:
     ; walk-tile index renders font glyphs as the player — the same trap, and the same
     ; fix, as CheckNPCInteraction (map_sprites.asm).
     mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al
+    mov [ebp + wSpritePlayerStateData1ImageIndex], al
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
 

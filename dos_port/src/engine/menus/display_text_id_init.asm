@@ -133,7 +133,7 @@ DisplayTextIDInit:
 ; (so that they don't look like they're frozen mid-step during the dialogue)
     ; ld hl,wSpritePlayerStateData1ImageIndex / ld de,SPRITESTATEDATA1_LENGTH /
     ; ld c,e   (pret ASSERT NUM_SPRITESTATEDATA_STRUCTS == SPRITESTATEDATA1_LENGTH)
-    mov esi, W_SPRITE_PLAYER_IMAGE_INDEX
+    mov esi, wSpritePlayerStateData1ImageIndex
     mov cl, NUM_SPRITESTATEDATA_STRUCTS
 .spriteStandStillLoop:
     ; ld a,[hl] / cp $ff / jr z,.nextSprite — is the sprite visible?
@@ -168,5 +168,5 @@ DisplayTextIDInit:
     call LoadFontTilePatterns
     ; ld a,$01 / ldh [hAutoBGTransferEnabled],a — continuous WRAM→VRAM per VBlank
     mov al, 0x01
-    mov [ebp + hAutoBGTransferEnabled], al   ; == H_AUTO_BG_TRANSFER_EN; pret's name
+    mov [ebp + hAutoBGTransferEnabled], al   ; == hAutoBGTransferEnabled; pret's name
     ret

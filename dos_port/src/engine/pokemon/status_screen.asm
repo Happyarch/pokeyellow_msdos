@@ -541,7 +541,7 @@ extern str_special                   ; assets/battle_menu_runtime_strings.inc
 ; PrintStatsBox — pret PrintStatsBox.LevelUpStatsBox: box + ATTACK/DEFENSE/SPEED/SPECIAL
 ; with right-aligned values from the leveled party mon (CalcStats wrote the new stats).
 PrintStatsBox:
-    and byte [ebp + W_LETTER_PRINTING_DELAY], (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    and byte [ebp + wLetterPrintingDelayFlags], (~(1 << BIT_TEXT_DELAY)) & 0xFF
     mov dword [menu_item_step], FW
     mov esi, wTileMap + LVLBOX_OFF
     mov bh, LVLBOX_H

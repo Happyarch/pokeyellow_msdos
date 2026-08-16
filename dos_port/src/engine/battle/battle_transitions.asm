@@ -134,7 +134,7 @@ BattleTransition:
 ; is one). NOTE (faithful): with hSpriteIndex = 0 (wild battle) the 8-bit
 ; counter wraps and this loop runs 256 iterations reading up through ~$D0F2 —
 ; exactly pret's behavior (bounded, read-only).
-    mov esi, W_SPRITE_PLAYER_IMAGE_INDEX
+    mov esi, wSpritePlayerStateData1ImageIndex
     mov cl, [ebp + hSpriteIndex]                  ; enemy trainer sprite index (0 if wild)
     xor bh, bh                                    ; b = 0
 .loop1:

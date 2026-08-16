@@ -366,7 +366,7 @@ GainExperience:
     call LoadMonData                ; REAL (src/home/pokemon.asm wrapper) — populates wLoadedMon
 
     pop esi                         ; POP B: ESI = party_mon + 0x0E (EXP high)
-    ; CalcLevelFromExperience reads the loaded-mon scratch (W_LOADED_MON_SPECIES/EXP),
+    ; CalcLevelFromExperience reads the loaded-mon scratch (wLoadedMonSpecies/EXP),
     ; which the `call LoadMonData` above populated from this party mon (wWhichPokemon,
     ; wMonDataLocation=0) — faithful to pret, which loads the mon before the level calc.
     add esi, MON_LEVEL - MON_EXP   ; 0x21 - 0x0E = 0x13 → party_mon + MON_LEVEL

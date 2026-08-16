@@ -229,7 +229,7 @@ IntroTextWait:
 ; ---------------------------------------------------------------------------
 PrepareOakSpeech:
     ; Preserve the option/status bytes across the wholesale save-block clear.
-    movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
+    movzx eax, byte [ebp + wLetterPrintingDelayFlags]
     push eax
     movzx eax, byte [ebp + wOptions]
     push eax
@@ -261,7 +261,7 @@ PrepareOakSpeech:
     pop eax
     mov [ebp + wOptions], al
     pop eax
-    mov [ebp + W_LETTER_PRINTING_DELAY], al
+    mov [ebp + wLetterPrintingDelayFlags], al
 
     ; InitOptions only if it has not run yet (pret: call z, InitOptions).
     cmp byte [ebp + wOptionsInitialized], 0

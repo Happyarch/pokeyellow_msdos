@@ -272,7 +272,7 @@ ClearScreenArea:
 ; PORT MODEL: the software PPU renders wTileMap DIRECTLY every frame (render_bg,
 ; view-pointer = 0 path). There is no separate physical $9800 tilemap that the
 ; renderer scans in the menu/battle path — do_bg_transfer (vblank.asm) is inert
-; whenever H_AUTO_BG_TRANSFER_EN is 0, which is the case here. So the buffer is
+; whenever hAutoBGTransferEnabled is 0, which is the case here. So the buffer is
 ; ALREADY on screen; there is nothing to copy. The routine's only observable
 ; contract is its 3-frame cost, which callers use for pacing — reproduced with
 ; three DelayFrame calls. Copies tilemap INDICES, not pattern data → does NOT
@@ -300,7 +300,7 @@ ClearScreen:
     mov bx,  SCREEN_AREA & 0xFFFF
     mov al,  0x7F
     call FillMemory
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    mov byte [ebp + hAutoBGTransferEnabled], 1
     pop eax
     pop ebx
     pop esi

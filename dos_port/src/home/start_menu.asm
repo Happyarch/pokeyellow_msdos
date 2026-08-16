@@ -108,7 +108,7 @@ DisplayStartMenu:
     ; BIT_FONT_LOADED (freezes NPC movement), then load the font. Mirrors the
     ; dialog path (map_sprites.asm:CheckNPCInteraction). Restored at close.
     mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al
+    mov [ebp + wSpritePlayerStateData1ImageIndex], al
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
     or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
@@ -135,7 +135,7 @@ RedisplayStartMenu_DoNotDrawStartMenu:
     ; legacy do_bg_transfer is retired (nothing reads the byte); on the old
     ; code the next DelayFrame repainted GB_TILEMAP1 — this menu's window
     ; source — with skewed canvas/map bytes, rendering the box as grass.
-    mov byte [ebp + H_AUTO_BG_TRANSFER_EN], 1
+    mov byte [ebp + hAutoBGTransferEnabled], 1
     call PlaceMenuCursor                ; show ▶ at the remembered selection
     call sm_canvas_mirror
     call DelayFrame                     ; render one frame with the menu shown

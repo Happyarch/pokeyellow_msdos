@@ -125,7 +125,7 @@ extern HandleItemListSwapping
 ;
 ; Local lowercase aliases onto existing port H_*/W_* symbols the code below uses:
 wStatusFlags5               equ wStatusFlags5
-hAutoBGTransferEnabled      equ H_AUTO_BG_TRANSFER_EN
+hAutoBGTransferEnabled      equ hAutoBGTransferEnabled
 hJoyPressed                 equ hJoyPressed
 hJoy7                       equ hJoy7
 hItemPrice                  equ hItemPrice

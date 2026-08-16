@@ -1101,14 +1101,14 @@ TextCommandProcessor:
     ; Pret ref: home/text.asm:TextCommandProcessor — save delay flags, enable delay.
     ; PrintLetterDelay gates on BIT_TEXT_DELAY; TextCommandProcessor sets it for the
     ; duration of this text session and restores the original value at TX_END.
-    movzx eax, byte [ebp + W_LETTER_PRINTING_DELAY]
+    movzx eax, byte [ebp + wLetterPrintingDelayFlags]
     push eax                                    ; save original wLetterPrintingDelayFlags
     or al, (1 << BIT_TEXT_DELAY)                ; set BIT_TEXT_DELAY for this session
     ; Pret ref: home/text.asm:TextCommandProcessor — XOR in hClearLetterPrintingDelayFlags
     ; so a caller can force-clear delay bits for the duration of the text stream.
     movzx ecx, byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS]
     xor al, cl
-    mov [ebp + W_LETTER_PRINTING_DELAY], al
+    mov [ebp + wLetterPrintingDelayFlags], al
 
 .next_cmd:
     movzx eax, byte [esi]           ; stream is FLAT (see header)
@@ -1155,7 +1155,7 @@ TextCommandProcessor:
 
 .done:
     pop eax
-    mov [ebp + W_LETTER_PRINTING_DELAY], al    ; restore saved wLetterPrintingDelayFlags
+    mov [ebp + wLetterPrintingDelayFlags], al    ; restore saved wLetterPrintingDelayFlags
     pop edx
     pop ecx
     pop eax

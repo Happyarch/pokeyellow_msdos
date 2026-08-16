@@ -62,8 +62,6 @@ MAX_WINDOWS     equ 6      ; bag needs <=4 simultaneously (list + sub-menu/qty +
 ; WRAM bank 0 — $C000–$CFFF (4 KB)
 ; Always available. General-purpose work RAM.
 GB_WRAM0        equ 0xC000
-W_LOADED_MON_SPECIES     equ 0xCF97
-W_PARTY_MON1_MOVES       equ 0xD172
 W_PARTY_MON4_MOVES       equ 0xD1F6
 wPlayerMoney                  equ 0xD346   ; 3-byte BCD (trainer-card money display)
 wObtainedBadges               equ 0xD355
@@ -121,7 +119,6 @@ wSpritePlayerStateData1ImageIndex equ 0xC102  ; player sprite slot, +2 = ImageIn
 wHiddenEventFunctionArgument      equ 0xCD3D
 wCanPlaySlots                     equ 0xCD3D
 W_LOADED_MON_EXP         equ 0xCFA5
-W_BOX_MON1_MOVES         equ 0xDA9D
 
 ; ---------------------------------------------------------------------------
 ; Pokémon data engine — lowercase pret-name aliases (Pokémon data/stats plan).
@@ -653,8 +650,7 @@ SPRITESTATEDATA1_LENGTH       equ SPRITESTATEDATA_STRUCT_SIZE
 
 ; Player slot (slot 0) field aliases — data1 ($C10x).
 ; Step vectors are signed bytes (+1/-1/0) read each frame by AdvancePlayerSprite.
-W_SPRITE_PLAYER_PICTURE_ID    equ 0xC100 ; wSpritePlayerStateData1PictureID (0 = slot unused)
-W_SPRITE_PLAYER_IMAGE_INDEX   equ 0xC102 ; wSpritePlayerStateData1ImageIndex (facing+anim, $ff=hidden)
+wSpritePlayerStateData1PictureID equ 0xC100 ; wSpritePlayerStateData1PictureID (0 = slot unused)
 W_SPRITE_PLAYER_Y_STEP_VECTOR equ 0xC103 ; wSpritePlayerStateData1YStepVector
 W_SPRITE_PLAYER_Y_PIXELS      equ 0xC104 ; wSpritePlayerStateData1YPixels (fixed screen Y, $3c)
 W_SPRITE_PLAYER_X_STEP_VECTOR equ 0xC105 ; wSpritePlayerStateData1XStepVector
@@ -663,7 +659,7 @@ W_SPRITE_PLAYER_INTRA_ANIM    equ 0xC107 ; wSpritePlayerStateData1IntraAnimFrame
 W_SPRITE_PLAYER_ANIM_FRAME    equ 0xC108 ; wSpritePlayerStateData1AnimFrameCounter
 W_SPRITE_PLAYER_FACING_DIR    equ 0xC109 ; wSpritePlayerStateData1FacingDirection (SPRITE_FACING_*)
 ; Player slot fields — data2 ($C20x).
-W_SPRITE_PLAYER_WALK_ANIM_COUNTER equ 0xC200 ; wSpritePlayerStateData2WalkAnimationCounter
+wSpritePlayerStateData2WalkAnimationCounter equ 0xC200 ; wSpritePlayerStateData2WalkAnimationCounter
 W_SPRITE_PLAYER_GRASS_PRIORITY    equ 0xC207 ; wSpritePlayerStateData2GrassPriority ($80 = under grass)
 W_SPRITE_PLAYER_IMAGE_BASE_OFFSET equ 0xC20E ; wSpritePlayerStateData2ImageBaseOffset (player = 1)
 
@@ -865,7 +861,7 @@ hROMBankTemp             equ 0xFF8B     ; golden 00:ff8b — PlayAnimation write
 hBaseTileID              equ 0xFF8B     ; golden 00:ff8b — base tile ID added by CopyTileIDs (ram/hram.asm). Same $FF8B union as above, and pret intends it: PlayAnimation zeroes hROMBankTemp at entry, CopyPicTiles then writes hBaseTileID and CopyTileIDs reads it back — one byte, ordered, exactly as on hardware.
 ; 0xFF8C is a UNION of hMapWidth / hNorthSouthConnectedMapWidth
 hMapWidth                     equ 0xFF8C     ; hMapWidth (= wCurMapWidth, stored for row-copy inner loop)
-H_SERIAL_CONN_STATUS     equ 0xFFAA     ; hSerialConnectionStatus
+hSerialConnectionStatus       equ 0xFFAA     ; hSerialConnectionStatus
 ; Link-menu / serial exchange scratch (menus S8 package I — link_menu.asm).
 ; Sym-verified vs origin/symbols:pokeyellow.sym; the 0xCC3D/0xCC42 pairs are
 ; union-aliased (send/receive buffer overlaps the nybble-exchange lanes).
@@ -901,7 +897,6 @@ hLCDCPointer                  equ 0xFFC2 ; hLCDCPointer (inert in the port)
 hVBlankCopySize               equ 0xFFC6 ; db
 hVBlankCopySource             equ 0xFFC7 ; dw
 hVBlankCopyDest               equ 0xFFC9 ; dw
-H_AUTO_BG_TRANSFER_EN    equ 0xFFBA     ; hAutoBGTransferEnabled
 hAutoBGTransferDest           equ 0xFFBC     ; hAutoBGTransferDest (2 bytes, lo/hi)
 hRedrawMapViewRowOffset       equ 0xFFBE ; hRedrawMapViewRowOffset
 hVBlankOccurred               equ 0xFFD6     ; hVBlankOccurred
@@ -1011,7 +1006,7 @@ wFrequencyModifier           equ 0xC0F1 ; cry pitch modifier
 wTempoModifier               equ 0xC0F2 ; cry tempo modifier
 
 ; Audio fade-out block ($CFC6) + map-music vars ($D35A)
-wAudioFadeOutControl         equ 0xCFC6 ; = W_AUDIO_FADE_OUT below
+wAudioFadeOutControl         equ 0xCFC6 ; = wAudioFadeOutControl below
 wAudioFadeOutCounterReloadValue equ 0xCFC7
 wAudioFadeOutCounter         equ 0xCFC8
 wLastMusicSoundID            equ 0xCFC9
@@ -1279,7 +1274,6 @@ wPlayerLastStopDirection      equ 0xCFAE ; wPlayerLastStopDirection (dir held wh
 wFontLoaded                   equ 0xCFC3
 wWalkCounter                  equ 0xCFC4 ; wWalkCounter
 wTileInFrontOfPlayer          equ 0xCFC5 ; wTileInFrontOfPlayer (collision check result)
-W_AUDIO_FADE_OUT             equ 0xCFC6 ; wAudioFadeOutControl
 
 ; Sprite-engine scratch WRAM — sym-verified.
 wSavedSpriteImageIndex        equ 0xD5CC ; wSavedSpriteImageIndex (PrepareOAMData scratch / VRAM base tile)
@@ -1321,7 +1315,6 @@ wCurrentMapScriptFlags        equ 0xD125 ; wCurrentMapScriptFlags
 wInitListType                equ 0xD11A ; pret sym d11a; InitList's selector (engine/battle/misc.asm)
 wItemPrices                  equ 0xCF8E ; pret sym cf8e; InitList stashes the ItemPrices pointer here
 wOptions                      equ 0xD354 ; pret-name alias (bit 6 = battle style, 7 = battle anim)
-W_LETTER_PRINTING_DELAY      equ 0xD357 ; wLetterPrintingDelayFlags
 
 ; wOptions high-bit indices (pret ref: constants/ram_constants.asm BIT_BATTLE_*)
 BIT_BATTLE_SHIFT             equ 6      ; 0=SHIFT, 1=SET battle style
@@ -1536,7 +1529,7 @@ sBank3IndividualBoxChecksums equ 0x27A4D
 sBank3IndividualBoxChecksums_SIZE equ 0x0006
 
 ; Connection-strip headers (each 11 bytes: map, strip-src, strip-dst, length, map-width, Y-align, X-align, view-ptr)
-W_NORTH_CONNECTED_MAP        equ 0xD370 ; wNorthConnectedMap ($FF = none)
+wNorthConnectedMap            equ 0xD370 ; wNorthConnectedMap ($FF = none)
 W_SOUTH_CONNECTED_MAP        equ 0xD37B ; wSouthConnectedMap
 W_WEST_CONNECTED_MAP         equ 0xD386 ; wWestConnectedMap
 W_EAST_CONNECTED_MAP         equ 0xD391 ; wEastConnectedMap
@@ -1583,7 +1576,6 @@ wTilesetBlocksPtr             equ 0xD52B ; wTilesetBlocksPtr (2 bytes, LE)
 wTilesetGfxPtr                equ 0xD52D ; wTilesetGfxPtr   (2 bytes, LE)
 wTilesetCollisionPtr          equ 0xD52F ; wTilesetCollisionPtr (2 bytes, LE; passable-tile list)
 wTilesetTalkingOverTiles      equ 0xD531 ; wTilesetTalkingOverTiles (3 bytes: counter tiles)
-W_TILESET_GRASS_TILE         equ 0xD534 ; (overlaps wGrassTile — handled by LoadTilesetHeader)
 ; NOTE: wTilesetGrassTile ($D534) is the same address as wGrassTile.
 ; LoadTilesetHeader copies it as part of the 11-byte block.
 W_TILESET_HEADER_COPY_SIZE   equ 11     ; bytes copied from tileset header to wTilesetBank
@@ -2189,7 +2181,7 @@ hCoins                        equ 0xFFA0 ; hCoins (dw; union w/ hMoney area)
 ; Lowercase pret-name aliases onto pre-existing UPPERCASE defs (CLAUDE.md: keep
 ; pret labels for cross-referenceability). engine/pokemon label-rename pass.
 hExperience                   equ 0xFF96            ; 0xFF96 (alias of hProduct+1)
-wLoadedMonSpecies             equ W_LOADED_MON_SPECIES    ; 0xCF97
+wLoadedMonSpecies             equ 0xCF97    ; 0xCF97
 wLoadedMonExp                 equ W_LOADED_MON_EXP        ; 0xCFA5
 wUpdateSpritesEnabled         equ 0xCFCA ; 0xCFCA
 
