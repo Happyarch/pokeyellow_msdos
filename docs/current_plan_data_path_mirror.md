@@ -73,10 +73,15 @@ src/data/audio_data.asm      → src/data/pokemon/cries.asm
       VMAs shifted by object-boundary padding
 - [x] Manual contiguity review against pret's file boundaries (see Traps)
 - [x] **Commit 1** — the moves alone (still passes the current weak rule)
-- [ ] Tighten `aux_misplaced` in `lint_pret_labels` to require exact path mirroring
+- [x] Tighten `aux_misplaced` in `lint_pret_labels` to require exact path mirroring
       for `data/`, and delete the "a path mirror would be wrong" exemption comment
-- [ ] **Commit 2** — the rule change
-- [ ] `make -C dos_port static_gate` green at the `{}` baseline
+      — the `audio`/`data` branches collapse into one. Proven NON-VACUOUS: with
+      `moves.asm` put back at a non-mirrored path (file **and** its `_SRCS` entry,
+      which is what makes the scanner see it) the rule fires with exactly that
+      finding; restored, it is 0 again
+- [x] **Commit 2** — the rule change, plus the two SKILLs that stated the retired
+      form of it (`faithfulness-review`, `project-conventions`)
+- [x] `make -C dos_port static_gate` green at the `{}` baseline
 - [ ] Archive: `git mv docs/current_plan_data_path_mirror.md docs/plans/data_path_mirror.md`
 
 ## Traps
