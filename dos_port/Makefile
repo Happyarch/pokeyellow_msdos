@@ -331,6 +331,14 @@ ifdef DEBUG_TRANSITION_DEMO
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_TRANSITION_DEMO -D DEBUG_SEED_PARTY -D SKIP_TITLE
 endif
+# Flat-canvas-switch regression probe (regression-battle-transition-player-teleport).
+# Rides DEBUG_TRANSITION_DEMO; dumps FRAME.BIN either side of the switch and exits,
+# so two headless runs cross-correlate to the switch's pixel shift (must be 0,0).
+#   dos_port/tools/run_headless.sh "DEBUG_TRANSITION_DEMO=1 DEMO_SWITCH_PROBE=0" /tmp/a
+#   dos_port/tools/run_headless.sh "DEBUG_TRANSITION_DEMO=1 DEMO_SWITCH_PROBE=1" /tmp/b
+ifdef DEMO_SWITCH_PROBE
+NASMFLAGS += -D DEMO_SWITCH_PROBE=$(DEMO_SWITCH_PROBE)
+endif
 
 # AUTOKEY_DUMP_ON_FOLLOW=1: state-gated Oak follow-stall probe. Dumps GBSTATE.BIN
 # (+FRAME.BIN) and exits the FIRST frame the Pallet cutscene reaches
@@ -1741,6 +1749,16 @@ endif
 ifdef AUTOKEY_TRAINERCARD
 NASMFLAGS += -D AUTOKEY_TRAINERCARD
 AUTOKEY_DUMP_FRAME ?= 400
+endif
+# START -> <n DOWNs> -> A -> B -> B, photographing the OVERWORLD it returns to.
+# The generic exit-path probe AUTOKEY_TRAINERCARD is the special case of: a
+# submenu that runs a SET_PAL_* command and does not restore it leaves the map
+# in the submenu's palette. n=1 POKéMON (party menu), n=5 OPTION.
+# ⚠ render with PAL.BIN or the defect is invisible.
+# make DEBUG_AUTOKEY=1 AUTOKEY_SUBMENU_EXIT=1 [AUTOKEY_DUMP_FRAME=n]
+ifdef AUTOKEY_SUBMENU_EXIT
+NASMFLAGS += -D AUTOKEY_SUBMENU_EXIT=$(AUTOKEY_SUBMENU_EXIT)
+AUTOKEY_DUMP_FRAME ?= 500
 endif
 # Press NOTHING, ever — only AutoKeyDrive's AUTOKEY_DUMP_FRAME timer runs, so a
 # screen that drives itself (or parks in its own key-wait) can be photographed

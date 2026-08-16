@@ -118,11 +118,21 @@ RestoreScreenTilesAndReloadTilePatterns:
     ;   (now a linkable global in src/home/tilemap.asm — wire when this path is
     ;   next audited; the call is still dropped here)
     call LoadTextBoxTilePatterns
-    ; TODO(unimplemented): call RunDefaultPaletteCommand
-    ;   (SGB/CGB palette command dispatch — the dispatcher itself is LIVE now
-    ;   (_RunPaletteCommand, engine/gfx/palettes.asm); town_map.asm stubs it too.
-    ;   NOTE: since the mirror move this call's target is defined LOWER IN THIS
-    ;   FILE, so the only thing still missing is the audit, not a symbol.)
+    ; Restored 2026-08-15. This call was pret's and had been dropped as
+    ; TODO(unimplemented) long after the dispatcher it needs went live, so every
+    ; caller returned to the map still wearing the palette its screen had set.
+    ; MEASURED via AUTOKEY_SUBMENU_EXIT=1 (START -> POKeMON -> B -> B): exiting
+    ; the party menu left 100 of PAL.BIN's 608 DAC bytes differing from an
+    ; untouched overworld, rendering Pallet Town orange instead of blue --
+    ; DisplayPartyMenu runs SET_PAL_PARTY_MENU and .exitMenu's LoadGBPal only
+    ; reloads the DMG BGP/OBP registers, never the palette SET. Same defect class
+    ; and same exit path as the trainer card's
+    ; regression-palettes-default-palette-command-unmodelled, whose fix taught
+    ; SET_PAL_DEFAULT to resolve through wDefaultPaletteCommand -- which is
+    ; exactly what makes restoring this call correct rather than "generic".
+    ; AUTOKEY_SUBMENU_EXIT=5 (OPTION) is the control: 0 bytes differ before and
+    ; after, because neither pret nor the port runs a palette command there.
+    call RunDefaultPaletteCommand
     jmp Delay3                            ; jr Delay3 (tail-call)
 
 GBPalWhiteOutWithDelay3:

@@ -642,7 +642,18 @@ extern UpdateCGBPal_OBP1
 extern DelayFrames
 extern DelayFrame
 extern RefreshCollisionTileMap
+extern SnapshotRenderedTileMap     ; src/ppu/ppu.asm
 %define BT_DEMO_DUNGEON_MAP 0x33   ; VIRIDIAN_FOREST (assets/map_dims.inc; not %included here)
+
+; DEMO_SWITCH_PROBE — the flat-canvas-switch regression probe (see the two %if
+; blocks below). -1 (default) = plain interactive demo, loops forever. 0 = dump
+; the last overworld-path frame and exit. 1 = dump the first flat-path frame and
+; exit. Two headless runs, cross-correlated, measure the switch's pixel shift;
+; regression-battle-transition-player-teleport was (+32,+32) and must stay (0,0).
+;   make DEBUG_TRANSITION_DEMO=1 DEMO_SWITCH_PROBE=0   (then =1)
+%ifndef DEMO_SWITCH_PROBE
+%define DEMO_SWITCH_PROBE -1
+%endif
 
 global RunTransitionDemo
 RunTransitionDemo:
@@ -681,6 +692,11 @@ RunTransitionDemo:
     mov [demo_saved_obp1], al
     mov ax, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
     mov [demo_saved_view], ax
+%if DEMO_SWITCH_PROBE == 0
+    ; Probe 0: photograph the LAST overworld-path frame, before the switch.
+    call DumpBackbuffer                 ; FRAME.BIN + exit (never returns)
+%endif
+    call SnapshotRenderedTileMap        ; keep the switch pixel-neutral (see core.asm)
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
     mov byte [ebp + H_SCX], 0
     mov byte [ebp + H_SCY], 0
@@ -688,6 +704,13 @@ RunTransitionDemo:
     mov byte [ebp + IO_SCY], 0
     mov byte [ebp + hTileAnimations], 0
     call DelayFrame
+%if DEMO_SWITCH_PROBE == 1
+    ; Probe 1: photograph the FIRST flat-path frame, after the switch and after
+    ; the DelayFrame that rendered it, but before BattleTransition's wipe starts.
+    ; Cross-correlating probe 0 against probe 1 measures the switch's shift: it
+    ; must be (0,0). It was (+32,+32) before SnapshotRenderedTileMap existed.
+    call DumpBackbuffer                 ; FRAME.BIN + exit (never returns)
+%endif
 
     call BattleTransition               ; prologue + selectors + animation
 
@@ -7039,6 +7062,29 @@ autokey_script:
     dd 150, 156, PAD_DOWN
     dd 180, 186, PAD_A          ; open the trainer card
     dd 290, 296, PAD_A          ; WaitForTextScrollButtonPress -> back to START
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_SUBMENU_EXIT
+    ; Submenu ENTER **and EXIT**, photographing the OVERWORLD it returns to —
+    ; the generic form of AUTOKEY_TRAINERCARD's exit-path probe. A submenu that
+    ; runs a SET_PAL_* command and whose exit fails to re-run the default one
+    ; leaves the map painted in the submenu's palette, and that is only visible
+    ; AFTER the START menu is closed. AUTOKEY_SUBMENU_EXIT is the DOWN count:
+    ; with DEBUG_SEED_PARTY (EVENT_GOT_POKEDEX set) the menu is
+    ; POKéDEX / POKéMON / ITEM / <NAME> / SAVE / OPTION / EXIT, so
+    ;   1 = POKéMON (party menu, runs SET_PAL_PARTY_MENU)
+    ;   5 = OPTION  (runs no palette command on either side — the control)
+    ; ⚠ PAL.BIN is required when rendering: without it render_frame.py uses the
+    ; debug palette and a palette defect is INVISIBLE.
+    dd  60,  66, PAD_START
+%assign AK_I 0
+%rep AUTOKEY_SUBMENU_EXIT
+    dd  90 + AK_I * 30,  96 + AK_I * 30, PAD_DOWN
+%assign AK_I AK_I + 1
+%endrep
+%assign AK_T 90 + AUTOKEY_SUBMENU_EXIT * 30
+    dd  AK_T,        AK_T + 6,   PAD_A    ; open the submenu
+    dd  AK_T + 110,  AK_T + 116, PAD_B    ; leave it -> back to the START menu
+    dd  AK_T + 170,  AK_T + 176, PAD_B    ; close START -> back to the map
     dd  -1,  -1, 0
 %else
     dd  60,  66, PAD_START
