@@ -2,13 +2,16 @@
 """gen_static_tables.py — generate the small pret static tables that were
 hand-transcribed into port CODE files.
 
-Emits two assets from the read-only pret tree:
+Emits ONE ASSET PER PRET SOURCE FILE from the read-only pret tree, so each
+carrier `.asm` can sit at the mirrored path dos_port/src/<pret path>
+(docs/current_plan_data_path_mirror.md). The three tileset tables used to share a
+single assets/tileset_tables.inc, which no one mirrored carrier could host.
 
-  assets/tileset_tables.inc   TilePairCollisionsLand / TilePairCollisionsWater
+  assets/pair_collision_tile_ids.inc  TilePairCollisionsLand / ...Water
                               (data/tilesets/pair_collision_tile_ids.asm)
-                              LedgeTiles
+  assets/ledge_tiles.inc      LedgeTiles
                               (data/tilesets/ledge_tiles.asm)
-                              BikeRidingTilesets
+  assets/bike_riding_tilesets.inc  BikeRidingTilesets
                               (data/tilesets/bike_riding_tilesets.asm)
 
   assets/card_key_coords.inc  CardKeyTable1 / CardKeyTable2 / CardKeyTable3
@@ -43,18 +46,33 @@ ASSETS = ROOT / "dos_port" / "assets"
 
 # (pret source, [labels to extract], output asset, blurb)
 JOBS = [
+    # ONE OUTPUT PER PRET SOURCE FILE. These three used to share a single
+    # assets/tileset_tables.inc, which no mirrored carrier .asm could host —
+    # see docs/current_plan_data_path_mirror.md.
     (
-        "assets/tileset_tables.inc",
-        "Tileset static tables (pret data/tilesets/*.asm).",
+        "assets/pair_collision_tile_ids.inc",
+        "Tile-pair collisions (pret data/tilesets/pair_collision_tile_ids.asm).",
         [
             ("data/tilesets/pair_collision_tile_ids.asm",
              ["TilePairCollisionsLand", "TilePairCollisionsWater"],
              "FORMAT: tileset id, tile 1, tile 2. $FF-terminated. The player may\n"
              "; not cross between tile 1 and tile 2 (simulates elevation)."),
+        ],
+    ),
+    (
+        "assets/ledge_tiles.inc",
+        "Ledge-hop table (pret data/tilesets/ledge_tiles.asm).",
+        [
             ("data/tilesets/ledge_tiles.asm",
              ["LedgeTiles"],
              "FORMAT: player facing, tile stood on, ledge tile, input required.\n"
              "; $FF-terminated."),
+        ],
+    ),
+    (
+        "assets/bike_riding_tilesets.inc",
+        "Bike-rideable tilesets (pret data/tilesets/bike_riding_tilesets.asm).",
+        [
             ("data/tilesets/bike_riding_tilesets.asm",
              ["BikeRidingTilesets"],
              "Tilesets the bike may be ridden on. $FF-terminated."),

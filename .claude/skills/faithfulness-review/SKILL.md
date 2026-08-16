@@ -230,30 +230,35 @@ It is now closed the same way:
 
 - **`aux_labels`** — names-only side table for those four dirs (5.7k names, no
   status, no headline-count impact), built by `update_label_db.scan_pret_aux`.
-- **`aux_misplaced`** — the placement rule, and it is deliberately per-dir
-  because the port's conventions differ:
-  - `audio/` mirrors pret's path exactly (`dos_port/src/audio/<file>.asm`) —
-    measured 22/22 conformant (2026-07-28, after upstream moved
-    `PlayPikachuSoundClip` from `engine/pikachu/` into `audio/`), so this
-    ratchets a convention that already holds.
-  - `data/` is grouped by SUBSYSTEM in the port (`battle_data.asm`,
-    `item_data.asm`, `pokemon_data.asm`), not by pret path, so a path mirror
-    would be wrong. The checkable invariant is that the label lives in the data
-    layer at all — under `dos_port/src/data/` or a generated `assets/*.inc`. A
-    pret data table buried in `engine/` or `home/` code is hand-copied Tier-1
-    data that `make assets` cannot protect. **Baseline 0** as of 2026-08-04
-    (`tools/static_gate_baseline.json` is empty, both sections) — commit
-    `a3804828` cleared 13 of the original 14 (`LedgeTiles`,
-    `TilePairCollisions{Land,Water}`, `CardKeyTable1-3`, `BikeRidingTilesets`,
-    `MapSongBanks`, …) into `dos_port/src/data/`, and the last one
-    (`MapHeaderPointers`) followed 2026-08-04 when the whole map-header region
-    relocated to `dos_port/src/data/maps/map_headers.asm`. Its recorded blocker
-    — "a NASM `equ` cannot cross an object file" — was measured FALSE: linear
-    uses of a `global`'d `equ` relocate via `dir32`; only non-linear
-    assembly-time arithmetic on an external (division, `%if`, `times`) is
-    impossible, which is what still welds the pokedex tile blob
-    (`POKEDEX_TILE_GFX_SIZE / 4`) to its routine. Re-measure with
-    `dos_port/tools/lint_pret_labels --no-scan`; the class stays at zero.
+- **`aux_misplaced`** — the placement rule. **`audio/` and `data/` both require
+  an EXACT path mirror**, `dos_port/src/<pret path>`, which is the same rule the
+  `mirror` class applies to `home/`+`engine/`. The tree has ONE placement rule;
+  there is no per-dir dialect of it any more.
+  - `audio/` measured 22/22 conformant (2026-07-28, after upstream moved
+    `PlayPikachuSoundClip` from `engine/pikachu/` into `audio/`).
+  - `data/` **was** the exception and it is RETIRED (2026-08-16,
+    `docs/plans/data_path_mirror.md`). This page used to say the port "is grouped
+    by SUBSYSTEM (`battle_data.asm`, `item_data.asm`, `pokemon_data.asm`), not by
+    pret path, so a path mirror would be wrong", and the rule asked only that the
+    label live *somewhere* under `dos_port/src/data/`. **Do not restate that.**
+    The 44 labels that relied on the weaker form were moved to their mirrored
+    paths, so the strict rule ratchets a convention that now holds rather than
+    importing debt. The earlier clearances still stand as history: `a3804828`
+    took 13 of the original 14 findings into the data layer and `719d997d` took
+    the last (`MapHeaderPointers`) to
+    `dos_port/src/data/maps/map_headers.asm` — whose recorded blocker, "a NASM
+    `equ` cannot cross an object file", was measured FALSE (linear uses of a
+    `global`'d `equ` relocate via `dir32`; only non-linear assembly-time
+    arithmetic on an external — division, `%if`, `times` — is impossible, which
+    is what still welds the pokedex tile blob `POKEDEX_TILE_GFX_SIZE / 4` to its
+    routine).
+  - **A Tier-1 table's placement is its CARRIER's placement.** Labels defined
+    inside a generated `assets/*.inc` stay exempt, so what the rule actually pins
+    is the `.asm` that `%include`s the data and declares its `global`. That is
+    why a generated `.inc` may not span two pret data files: each pret file needs
+    its own carrier at its own mirrored path.
+  - Re-measure with `dos_port/tools/lint_pret_labels --no-scan`; the class stays
+    at zero, and the baseline (`tools/static_gate_baseline.json`) is empty.
   - `gfx/` and `ram/` are exempt: `gfx/` is generated assets and `ram/` names are
     WRAM addresses owned by `gb_memmap.inc`, so neither has a port mirror.
 

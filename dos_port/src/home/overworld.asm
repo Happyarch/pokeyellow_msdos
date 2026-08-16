@@ -65,7 +65,7 @@ extern LoadGBPal                     ; src/home/fade.asm — reload rBGP/rOBP0/r
 extern JoypadLowSensitivity          ; src/home/joypad2.asm — writes hJoy5
 extern BankswitchCommon              ; home/bankswitch2.asm — AL = bank (flat no-op)
 extern GetTileAndCoordsInFrontOfPlayer ; engine/overworld/player_state.asm (predef
-extern BikeRidingTilesets                    ; src/data/tileset_data.asm
+extern BikeRidingTilesets                    ; src/data/tilesets/bike_riding_tilesets.asm
 extern DoBoulderDustAnimation       ; src/engine/overworld/push_boulder.asm
 extern HandleLedges                    ; src/engine/overworld/ledges.asm
 extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real, linked — OW-A.6)
@@ -109,7 +109,7 @@ extern wMapSpriteData                     ; src/engine/overworld/map_sprites.asm
 extern wMapSpriteExtraData                ; src/engine/overworld/map_sprites.asm
 extern w_map_text_table_ptr               ; src/engine/overworld/map_sprites.asm
 extern MapHeaderPointers            ; assets/map_headers.inc (map_headers.asm TU)
-extern MapSongBanks                 ; src/data/maps/map_songs.asm (assets/map_songs.inc)
+extern MapSongBanks                 ; src/data/maps/songs.asm (assets/map_songs.inc)
 extern OVERWORLD_BLOCKS_SIZE        ; assets/overworld_blocks.inc (overworld.asm TU)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6b) ---
@@ -197,7 +197,7 @@ extern SeedDeterministicPlayerIdentity    ; src/engine/debug/debug_party.asm
 extern SpecialEnterMap                    ; src/engine/menus/main_menu.asm
 extern StopAllMusic                       ; src/home/audio.asm
 extern StopAllSounds                      ; src/home/init.asm
-extern TilePairCollisionsWater            ; src/data/tileset_data.asm
+extern TilePairCollisionsWater            ; src/data/tilesets/pair_collision_tile_ids.asm
 extern TrainerEncounterFlow               ; src/engine/overworld/map_sprites.asm
 extern UpdateSprites                      ; src/home/update_sprites.asm
 extern WalkSpeedSample                    ; src/engine/overworld/overworld.asm
@@ -2577,7 +2577,7 @@ SignLoop:
 ; NPC occupies that block (IsNPCAtTargetBlock).  CF=1 if movement is blocked.
 ; ---------------------------------------------------------------------------
 CollisionCheckOnLand:
-    extern TilePairCollisionsLand          ; src/data/tileset_data.asm
+    extern TilePairCollisionsLand          ; src/data/tilesets/pair_collision_tile_ids.asm
 %ifdef DEBUG_NOCLIP
     cmp byte [pad_noclip], 0
     jne .passable                 ; noclip active: always passable
@@ -3085,7 +3085,7 @@ CollisionCheckOnWater:
     ; same save set as CollisionCheckOnLand's land hook.
     push ebx
     push edx
-    mov esi, TilePairCollisionsWater               ; flat host ptr (src/data/tileset_data.asm)
+    mov esi, TilePairCollisionsWater               ; flat host ptr (src/data/tilesets/pair_collision_tile_ids.asm)
     call CheckForJumpingAndTilePairCollisions
     pop edx
     pop ebx

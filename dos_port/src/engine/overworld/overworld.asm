@@ -1156,11 +1156,11 @@ LoadDestinationMapData:
 section .rodata
 
 ; MapSongBanks (pret data/maps/songs.asm) used to be %included HERE. Moved
-; 2026-08-02 to src/data/maps/map_songs.asm to clear its [aux_misplaced]
+; 2026-08-02 to the data layer, and 2026-08-16 to src/data/maps/songs.asm, to clear its [aux_misplaced]
 ; finding — a pret data/ label belongs in the data layer. It was separable
 ; because map_songs.inc defines only that table, carries no `equ`, and
 ; references nothing else. Bytes unchanged.
-extern MapSongBanks                       ; src/data/maps/map_songs.asm
+extern MapSongBanks                       ; src/data/maps/songs.asm
 
 ; authored border-ring blocks (map-tool C3; see ApplyMapBorderOverrides)
 %include "assets/map_border_overrides.inc"

@@ -4,23 +4,22 @@
 ; can `extern` them. Per the linker rule in docs/assembly.md, embedded data lives
 ; in .data (not .rodata).
 ;
-; ItemNames       : tools/generators/gen_items.py ('@'-terminated, GB-charmap encoded).
-; ItemPrices      : tools/generators/gen_items.py (3-byte BCD per item id).
-; KeyItemFlags    : tools/generators/gen_items.py (1-bit-per-item untossable flags).
 ; MartInventories : tools/generators/gen_items.py (db count, item ids, $FF per mart);
 ;                   MartPointers indexes them in source order.
+;
+; ItemNames, ItemPrices, KeyItemFlags, TechnicalMachinePrices and
+; TechnicalMachines each moved to their own mirrored carrier under
+; src/data/items/ and src/data/moves/ on 2026-08-16
+; (docs/current_plan_data_path_mirror.md). What is left has no single pret data/
+; file of its own: marts, VitaminStats and the two UsableItems_* routing arrays
+; (the last three declare their own globals inside assets/items.inc).
 ;
 ; Build: nasm -f coff -I include/ -I . -o item_data.o item_data.asm
 
 bits 32
 
-global ItemNames
-global ItemPrices
-global KeyItemFlags
 global MartInventories
 global MartPointers
-global TechnicalMachinePrices
-global TechnicalMachines
 
 section .data
 align 4

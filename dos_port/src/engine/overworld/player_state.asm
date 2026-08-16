@@ -156,7 +156,7 @@ extern IsPlayerStandingOnDoorTile ; src/engine/overworld/doors.asm
 ; OW-4.1 CheckForCollisionWhenPushingBoulder deps:
 extern IsTilePassable                    ; home/copy2.asm — LINKED (returns CF)
 extern CheckForTilePairCollisions2       ; src/home/overworld.asm — ESI=flat table, returns CF
-extern TilePairCollisionsLand            ; src/data/tileset_data.asm (flat tile-pair table)
+extern TilePairCollisionsLand            ; src/data/tilesets/pair_collision_tile_ids.asm (flat tile-pair table)
 ; CheckForBoulderCollisionWithSprites is defined below (pret player_state.asm — same file).
 
 global IsPlayerStandingOnWarp

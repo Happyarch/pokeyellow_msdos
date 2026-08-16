@@ -327,7 +327,7 @@ extern TextBoxBorder                 ; text/text.asm — ESI=top-left, BL=int_w,
 extern place_flat_str                ; text/text.asm — ESI=dest, EAX=flat src
 extern DelayFrame                    ; src/home/vblank.asm
 extern IsItemHM                      ; home/names.asm — AL → CF
-extern KeyItemFlags                  ; src/data/item_data.asm — flat LSB-first bit array
+extern KeyItemFlags                  ; src/data/items/key_items.asm — flat LSB-first bit array
 extern Moves                                         ; flat move-data table
 extern IsKeyItem                     ; home/item.asm — [wCurItem] → [wIsKeyItem]
 extern GetItemName                   ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
@@ -620,7 +620,7 @@ extern CheckForTilePairCollisions   ; home/overworld.asm — CF = collision
 extern IsTilePassable               ; home/copy2.asm — CF clear = passable
 extern LoadWalkingPlayerSpriteGraphics ; home/overworld.asm
 extern PlayDefaultMusic             ; home/audio.asm
-extern TilePairCollisionsWater      ; src/data/tileset_data.asm
+extern TilePairCollisionsWater      ; src/data/tilesets/pair_collision_tile_ids.asm
 extern IsSpriteInFrontOfPlayer2     ; home/overworld.asm — CF = sprite found, ESI = its byte
 extern SurfingGotOnText_ref             ; assets/item_text.inc
 extern SurfingNoPlaceToGetOffText_ref   ; assets/item_text.inc
@@ -2844,7 +2844,7 @@ ItemUseTMHM:
 ; GetPartyMonName, RefusingText, the emotion/mood writes, the "item not used"
 ; tail — is faithful.
 
-extern EvosMovesPointerTable        ; src/data/pokemon_data.asm — flat dd TABLE (never call it)
+extern EvosMovesPointerTable        ; src/data/pokemon/evos_moves.asm — flat dd TABLE (never call it)
 extern WaitForSoundToFinish         ; src/home/delay.asm
 extern RefusingText_ref             ; assets/item_text.inc
 
@@ -3719,16 +3719,16 @@ Route16SnorlaxFluteCoords:
 
 ; pret: data/events/card_key_coords.asm. The three tables used to be hand-typed
 ; `db` rows HERE, beside their only reader. Moved 2026-08-02 to
-; src/data/card_key_data.asm and generated into assets/card_key_coords.inc by
+; src/data/events/card_key_coords.asm and generated into assets/card_key_coords.inc by
 ; tools/generators/gen_static_tables.py — lint_pret_labels reported all three as
 ; [aux_misplaced] (a pret data/ label belongs in the data layer), and they were a
 ; hand transcription rather than a derived copy. Bytes unchanged.
 ; pret's own header: "probably supposed to be door locations in Silph Co., but they
 ; are unused. The reason there are 3 tables is unknown." They are unreachable in the
 ; real game too — see the BUG note in ItemUseCardKey.
-extern CardKeyTable1                    ; src/data/card_key_data.asm
-extern CardKeyTable2                    ; src/data/card_key_data.asm
-extern CardKeyTable3                    ; src/data/card_key_data.asm
+extern CardKeyTable1                    ; src/data/events/card_key_coords.asm
+extern CardKeyTable2                    ; src/data/events/card_key_coords.asm
+extern CardKeyTable3                    ; src/data/events/card_key_coords.asm
 
 section .text
 

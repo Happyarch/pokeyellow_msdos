@@ -224,9 +224,13 @@ some entries need bespoke, hand-authored logic. Keep that logic safe from
    function names (unported handlers point at the `UnportedMoveEffect` ret-stub
    beside the dispatcher in `src/engine/battle/effects.asm`) — but pret files the
    same table under `data/moves/effects_pointers.asm`, and the linter's
-   `aux_misplaced` rule asks only that a pret `data/` label live under
-   `dos_port/src/data/` **or** a generated `assets/*.inc`. A hand-written
-   dispatch table in the data layer satisfies both. It moved there in `a3804828`;
+   `aux_misplaced` rule wants a pret `data/` label at exactly that mirrored path
+   (or inside a generated `assets/*.inc`, whose placement is its carrier's). A
+   hand-written table at the mirrored data-layer path satisfies both — being
+   hand-written says nothing about where it lives. It moved into the data layer
+   in `a3804828` and to its mirrored path in the 2026-08-16 pass
+   (`docs/plans/data_path_mirror.md`); the older wording here, that the rule
+   "asks only that the label live under `dos_port/src/data/`", is retired;
    pret's `dw` (bank-relative) becomes `dd` (flat DPMI linear), and it sits in
    `section .data` since it is only ever `lea`'d, never executed.
 4. **If a data value must deviate from the pret source** (a fix, or a value pret

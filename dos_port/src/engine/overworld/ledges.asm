@@ -41,9 +41,9 @@ bits 32
 %include "assets/audio_constants.inc"   ; SFX_LEDGE (real id; audio engine is live)
 
 ; Tileset tables moved to the data layer 2026-08-02 (see the note at EOF).
-extern TilePairCollisionsLand           ; src/data/tileset_data.asm
-extern TilePairCollisionsWater          ; src/data/tileset_data.asm
-extern LedgeTiles                       ; src/data/tileset_data.asm
+extern TilePairCollisionsLand           ; src/data/tilesets/pair_collision_tile_ids.asm
+extern TilePairCollisionsWater          ; src/data/tilesets/pair_collision_tile_ids.asm
+extern LedgeTiles                       ; src/data/tilesets/ledge_tiles.asm
 
 ; --- Tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) -----
 OVERWORLD           equ 0
@@ -187,7 +187,8 @@ HandleLedges:
 ; Embedded data (pret data/tilesets/*.asm) USED TO LIVE HERE.
 ;
 ; TilePairCollisionsLand / TilePairCollisionsWater / LedgeTiles moved 2026-08-02
-; to src/data/tileset_data.asm and are now GENERATED into assets/tileset_tables.inc
+; to the data layer (2026-08-16: to their mirrored paths under src/data/tilesets/)
+; and are now GENERATED into one assets/*.inc per pret file
 ; by tools/generators/gen_static_tables.py. They were reported [aux_misplaced]
 ; (a pret data/ label must live in the data layer), and they had additionally
 ; been hand-transcribed from pret rather than generated. The header that stood

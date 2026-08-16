@@ -14,7 +14,7 @@
 ;   1. TextPredefs rows are 8 bytes here ({dd stream, dd size}, the same flat row
 ;      the ordinary map text table uses), not pret's 2-byte `dw`, so `/ 2` is wrong.
 ;   2. More fundamentally, the subtraction cannot be done at all: TextPredefs lives
-;      in another object file (src/data/predef_text_data.asm) and NASM/COFF carries
+;      in another object file (src/data/text_predef_pointers.asm) and NASM/COFF carries
 ;      no cross-object `equ`. This is the same limitation that blocks the
 ;      MapHeaderPointers relocation.
 ; So the ids are generated as assembly-time constants instead — assets/predef_text_ids.inc,
