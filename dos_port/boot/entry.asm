@@ -56,7 +56,6 @@ extern RunPartySeedTest  ; src/debug/debug_dump.asm — party/bag runtime-seed g
 ; ---------------------------------------------------------------------------
 global start
 global ds_base           ; linear base address of our DS selector
-global bug_fix_level     ; runtime BUG_FIX_LEVEL (0/1/2), set from command line
 global cleanup           ; called by src/home/vblank.asm when pad_quit is set
 
 ; ---------------------------------------------------------------------------
@@ -67,7 +66,6 @@ align 4
 ds_base:        resd 1       ; linear base of DS (for linear→offset bias)
 gb_mem_base:    resd 1       ; DS-relative base of the GB allocation (= EBP)
 dpmi_handle:    resd 1       ; DPMI memory block handle (SI:DI), for fn 0502h
-bug_fix_level:  resb 1       ; runtime bug fix level (0=none, 1=critical, 2=all)
 
 ; ---------------------------------------------------------------------------
 ; Data
@@ -76,8 +74,6 @@ section .data
 align 4
 
 ; Command-line argument tokens (matched case-sensitively as typed)
-arg_fixall:   db '/FIXALL',  0
-arg_fixcrit:  db '/FIXCRIT', 0
 arg_nosound:  db '/NOSOUND', 0
 arg_mt32:     db '/MT32',    0
 arg_gm:       db '/GM',      0
@@ -96,7 +92,7 @@ section .text
 ; ---------------------------------------------------------------------------
 start:
     call setup_flat_access   ; get DS base, raise DS/SS limit to 4 GB
-    call parse_cmdline       ; set bug_fix_level from /FIXALL or /FIXCRIT
+    call parse_cmdline       ; audio/debug options; bug-fix level is a BUILD option
     call alloc_gb_memory     ; EBP = DS-relative base of GB address space
 
     ; Zero-initialise the entire GB allocation (mimics GB power-up state)
@@ -248,7 +244,8 @@ alloc_gb_memory:
     int 0x21
 
 ; ---------------------------------------------------------------------------
-; parse_cmdline — scan DOS command line for /FIXALL or /FIXCRIT
+; parse_cmdline — scan the DOS command line for the audio and debug options:
+; /NOSOUND, /MT32, /GM, /TANDY, /SPK, /NOENH, /LOOP.
 ; ---------------------------------------------------------------------------
 parse_cmdline:
     push eax
@@ -256,8 +253,6 @@ parse_cmdline:
     push ecx
     push esi
     push edi
-
-    mov byte [bug_fix_level], BUG_FIX_LEVEL
 
     mov ah, 0x62
     int 0x21
@@ -317,18 +312,6 @@ parse_cmdline:
     jnz .no_loop
     mov byte [g_cfg_musicloop], 1 ; DEBUG_AUDIO: music-only, loop forever
 .no_loop:
-
-    mov edi, arg_fixall
-    call find_token
-    jnz .try_fixcrit
-    mov byte [bug_fix_level], 2
-    jmp .done
-
-.try_fixcrit:
-    mov edi, arg_fixcrit
-    call find_token
-    jnz .done
-    mov byte [bug_fix_level], 1
 
 .done:
     pop edi

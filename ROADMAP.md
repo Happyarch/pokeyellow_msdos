@@ -53,7 +53,7 @@ Acceptance criteria:
 - `dos_port/include/gb_memmap.inc` defined with all offsets from `constants/hardware.inc`
 - First routine translated (`FillMemory`) with translation log entry
 - `CLAUDE.md`, `docs/register_map.md`, `docs/references/` populated
-- Bug-fix flag architecture (`BUG_FIX_LEVEL`, `/FIXALL`, `/FIXCRIT`) defined in `gb_macros.inc`
+- Bug-fix level architecture (`BUG_FIX_LEVEL`) defined in `gb_macros.inc`
 
 ---
 
@@ -63,7 +63,7 @@ Acceptance criteria:
 
 **Status:** GB memory model, software PPU (BG + native-width renderer + OAM sprites +
 window compositor), and joypad all live.
-`BUG_FIX_LEVEL`/`/FIXCRIT`/`/FIXALL` in effect (e.g. the inventory-terminator guard,
+`BUG_FIX_LEVEL` in effect (e.g. the inventory-terminator guard,
 2026-07-04).
 
 **Save is complete and SRAM-compatible — this is no longer a Phase 5 item.**
@@ -90,7 +90,7 @@ Acceptance criteria:
 - Joypad: DOS keyboard/INT 9h → emulated JOYP register
 - Save/load: DOS file I/O (INT 21h) behind resident emulated SRAM; `.dsv` v2
   format defined and shipping
-- All critical bugs categorized (`/FIXCRIT` flag has meaningful effect)
+- All critical bugs categorized (`BUG_FIX_LEVEL=1` has meaningful effect)
 
 ---
 
@@ -272,13 +272,8 @@ Acceptance criteria:
       `GLITCH{`, 192 `DEVIATION{` and 21 `STUB{` annotations (grep counts,
       2026-08-02 — re-measure rather than quoting these). Progress and the
       remaining sweep live in `docs/current_plan_bug_tagging.md`.
-- [~] `/FIXCRIT` (level 1) and `/FIXALL` (level 2) are PARSED at runtime
-      (`dos_port/boot/entry.asm` `parse_cmdline`) but gate NOTHING. Corrected
-      2026-08-16: `bug_fix_level` is `global` in entry.asm and no file externs
-      it, so the byte is never read; every fix in the tree is `%if
-      BUG_FIX_LEVEL >= N`, resolved at assembly time from
-      `make BUG_FIX_LEVEL=`. The build option works; the runtime flags are inert.
-      Either wire the byte to runtime conditionals or delete the two arguments.
+- [x] Bug-fix level selected at build time: `make BUG_FIX_LEVEL=N` gating
+      `%if BUG_FIX_LEVEL >= N` blocks (`dos_port/include/gb_macros.inc`)
 - [ ] Startup warning emitted when running with critical glitches enabled on bare
       hardware (detect via DPMI host ID string, INT 31h fn 0400h)
 - [~] `docs/glitch_safety.md` exists; finalize with per-glitch safety notes

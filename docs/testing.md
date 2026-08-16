@@ -105,7 +105,7 @@ dos_port/run DEBUG_AUDIO=1 /LOOP   # make vars vs EXE flags, split by the leadin
 `dos_port/run` mounts **only** `PKMN.IMG` as `C:` — the host filesystem is never
 exposed, so an OOB disk write from the game (at any `BUG_FIX_LEVEL`) can only
 corrupt the image. Arguments starting with `/` are passed to `PKMN.EXE`
-(`/NOSOUND /MT32 /GM /TANDY /SPK /NOENH /LOOP /FIXALL /FIXCRIT`, parsed in
+(`/NOSOUND /MT32 /GM /TANDY /SPK /NOENH /LOOP`, parsed in
 `dos_port/boot/entry.asm`); everything else is passed to `make`.
 
 `SKIP_TITLE=1` is the normal way in: the title screen is a known-imperfect

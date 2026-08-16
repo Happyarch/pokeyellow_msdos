@@ -22,21 +22,10 @@ The DOS port preserves all original behavior by default. Fixes are selected at
 | `make BUG_FIX_LEVEL=2` | All documented bugs fixed. Closest to a "clean" experience. |
 
 The Makefile passes this through as `-D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)`, and every
-fix in the tree is gated by `%if BUG_FIX_LEVEL >= N` — an ASSEMBLY-time
-conditional. Choosing a level therefore means choosing a binary; one build cannot
-switch levels while running.
-
-> **`/FIXCRIT` and `/FIXALL` do nothing. Do not document or recommend them.**
-> `boot/entry.asm` really does parse both and store 1 or 2 into a `bug_fix_level`
-> byte, and this document used to present them as the user-facing control. But
-> nothing consumes that byte: it is `global` in `entry.asm` and no file externs
-> it (verified tree-wide 2026-08-16). `include/gb_macros.inc` still describes the
-> intended two-tier design — compile-time gating for size/alignment-sensitive
-> paths, a runtime byte for everything else — and the runtime half was never
-> built. It cannot retrofit onto the existing fixes either, because `%if` is
-> resolved before the binary exists.
-> Either wire the byte up and convert fixes to runtime conditionals, or delete
-> the two arguments; until then they are a trap that reads as a working feature.
+fix in the tree is gated by `%if BUG_FIX_LEVEL >= N` — a NASM **preprocessor**
+conditional. The assembler emits one arm and discards the other, so the level is
+not a variable the program can read: it never reaches the binary at all. Each
+level is a different build.
 
 ---
 
@@ -62,13 +51,13 @@ the DPMI-allocated block:
 - **Walk-through-walls**: Writes to player/map coordinates; bounded.
 - **Species stat glitches**: Reads/writes Pokémon data structures in WRAM; bounded.
 
-### Cosmetic Bugs (fixed by `/FIXALL` only)
+### Cosmetic Bugs (fixed by `BUG_FIX_LEVEL=2` only)
 
 - Wrong text strings (misspellings, overflow into next string)
 - Minor visual glitches (OAM ordering artifacts, palette flicker)
 - Incorrect battle stat calculations in edge cases
 
-### Critical Bugs (fixed by `/FIXCRIT` and `/FIXALL`)
+### Critical Bugs (fixed by `BUG_FIX_LEVEL=1` and `2`)
 
 These involve unguarded writes that may exceed the intended WRAM region:
 
@@ -94,7 +83,7 @@ These involve unguarded writes that may exceed the intended WRAM region:
     (`src/engine/movie/oak_speech/init_player_data.asm`) and now runs on the boot
     path via the `OakSpeech` prologue (`main_menu_stubs.asm`), so the default
     bag/box/party state always carries a `$FF` terminator.
-  - **Defensive fix (`/FIXCRIT`, `BUG_FIX_LEVEL >= 1`):** `SanitizeInventory`
+  - **Defensive fix (`BUG_FIX_LEVEL >= 1`):** `SanitizeInventory`
     (`inventory.asm`) clamps a list's `count` to its hardcoded capacity
     (`BAG_ITEM_CAPACITY` = 20 / `PC_ITEM_CAPACITY` = 50) and forces a `$FF`
     terminator at that count before any scan; `DisplayListMenuID` clamps the
@@ -123,7 +112,7 @@ is bounded to GB ROM/RAM. In the DOS port:
 |----------|---------------------|
 | Normal play (no glitches) | Any — real hardware, DOSBox, 86Box |
 | Harmless intentional glitches | Any |
-| Critical bug testing (`/FIXCRIT` off) | DOSBox or 86Box preferred |
+| Critical bug testing (`BUG_FIX_LEVEL=0`) | DOSBox or 86Box preferred |
 | ACE glitch exploration | **86Box** (isolated VM) or **DOSBox** (OS-sandboxed process) |
 | ACE on bare real hardware | **Not supported / at your own risk** |
 

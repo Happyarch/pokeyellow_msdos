@@ -306,10 +306,10 @@ translation boundary — not a 1:1 instruction mapping. These are emitted as
 | `make BUG_FIX_LEVEL=1` | Fix only critical bugs: buffer overflows, OOB writes, save corruption |
 | `make BUG_FIX_LEVEL=2` | Fix all documented bugs (cosmetic, behavioral, critical) |
 
-Fixes are gated by `%if BUG_FIX_LEVEL >= N`, an assembly-time conditional, so the
-level is baked into the binary. `PKMN.EXE` accepts `/FIXALL` and `/FIXCRIT`
-arguments and they **do nothing** — they set a byte no code reads. See
-[docs/glitch_safety.md](docs/glitch_safety.md).
+Fixes are gated by `%if BUG_FIX_LEVEL >= N`. That is a NASM preprocessor
+conditional: the assembler emits one arm and discards the other, so the level
+itself never reaches the binary — a build simply contains the code it selected.
+See [docs/glitch_safety.md](docs/glitch_safety.md).
 
 See [docs/glitch_safety.md](docs/glitch_safety.md) before running with glitches
 enabled on bare hardware.

@@ -7,7 +7,7 @@
 #   dos_port/run SKIP_TITLE=1                 # make arg
 #   dos_port/run DEBUG_AUDIO=1 /LOOP /NOENH   # make arg + two EXE flags
 # EXE flags currently understood: /NOSOUND /MT32 /GM /TANDY /SPK /NOENH /LOOP
-# /FIXALL /FIXCRIT (see boot/entry.asm parse_cmdline).
+# (see boot/entry.asm parse_cmdline).
 set -e
 DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

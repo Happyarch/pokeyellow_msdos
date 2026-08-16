@@ -11,18 +11,10 @@
 ; 2 = fix all documented bugs (cosmetic, behavioral, critical)
 ;
 ; Set at BUILD time, and only at build time: make BUG_FIX_LEVEL=1, which the
-; Makefile passes through as -D BUG_FIX_LEVEL=1. Every fix in the tree is gated
-; by `%if BUG_FIX_LEVEL >= N`, an assembly-time conditional, so the level is
-; baked into the binary.
-;
-; *** THE RUNTIME HALF DESCRIBED HERE WAS NEVER BUILT. *** This comment used to
-; say entry.asm parses /FIXCRIT and /FIXALL into [bug_fix_level] "which
-; runtime-conditional code reads". It does parse them and it does write the byte
-; — but NOTHING READS IT: bug_fix_level is `global` in boot/entry.asm and no file
-; externs it (verified tree-wide 2026-08-16). The two arguments are inert. They
-; also cannot be retrofitted onto the existing fixes, because `%if` is resolved
-; before the binary exists. Either wire the byte up and convert fixes to runtime
-; conditionals, or delete the arguments; do not document them as working.
+; Makefile passes through as -D BUG_FIX_LEVEL=1. Every fix is gated by
+; `%if BUG_FIX_LEVEL >= N` — a preprocessor conditional, so NASM assembles one
+; arm and discards the other. The value is not stored anywhere and no code can
+; read it; the binary simply contains whichever arm was selected.
 ; ---------------------------------------------------------------------------
 %ifndef BUG_FIX_LEVEL
   %define BUG_FIX_LEVEL 0
@@ -33,7 +25,7 @@
 ;
 ; BUG(critical): <description>
 ;   A bug that can cause buffer overflows, OOB writes, save corruption, or
-;   arbitrary code execution. Fixed when BUG_FIX_LEVEL >= 1 (/FIXCRIT).
+;   arbitrary code execution. Fixed when BUG_FIX_LEVEL >= 1.
 ;   Template:
 ;     ; BUG(critical): <what goes wrong>
 ;     ; pret ref: <source file>:<label>, docs/bugs_and_glitches.md#L<line>
@@ -45,7 +37,7 @@
 ;
 ; BUG(cosmetic): <description>
 ;   A minor behavioral or visual bug that does not threaten save data or
-;   system stability. Fixed when BUG_FIX_LEVEL >= 2 (/FIXALL).
+;   system stability. Fixed when BUG_FIX_LEVEL >= 2.
 ;   Same template as above but %if BUG_FIX_LEVEL >= 2.
 ;
 ; GLITCH: <name> — <description>
