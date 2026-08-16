@@ -189,6 +189,14 @@ PrepareNewGameDebug:
     jmp .items_loop
 
 .items_end:
+%ifdef DEBUG_SLOTS
+    ; The third gate in AbleToPlaySlotsCheck: it ORs the two wPlayerCoins bytes
+    ; and refuses when both are zero. BCD and BIG-ENDIAN like every other
+    ; multi-byte GB value, so 50 coins is 00 50 and NOT 50 00 — the low byte
+    ; second. Enough to play but not enough to mask a payout bug.
+    mov byte [ebp + wPlayerCoins],     0x00
+    mov byte [ebp + wPlayerCoins + 1], 0x50
+%endif
     ; Pokédex: the dex flags are two per-mon bitfields (binary DIP switches).
     ; Seed all 151 SEEN and a scattered ~half OWNED (deterministic pattern) so
     ; the CONTENTS list shows both pokéball-marked and unmarked entries, every
@@ -310,6 +318,10 @@ DebugNewGameParty:
 %define S_S_TICKET 63     ; $3F (was 69)
 %define LIFT_KEY 74       ; $4A (was 76)
 %define PP_UP 79          ; $4F (was 49)
+; Declared locally like every other item id here, NOT taken from gb_constants.inc
+; (which defines it as 0x45) — see this file's header: including that file would
+; collide with the local CUT/FLY/SURF/STRENGTH move %defines.
+%define COIN_CASE 0x45    ; $45, constants/item_constants.asm:81
 
 DebugNewGameItemsList:
     db POTION, 1            ; qty-1 tossable: toss skips straight to YES/NO confirm
@@ -328,4 +340,11 @@ DebugNewGameItemsList:
     db S_S_TICKET, 1
     db LIFT_KEY, 1
     db PP_UP, 99
+%ifdef DEBUG_SLOTS
+    ; AbleToPlaySlotsCheck (engine/slots/game_corner_slots2.asm) refuses unless
+    ; GetQuantityOfItemInBag returns nonzero for COIN_CASE. Gated, not
+    ; unconditional: wBagItems is a compared GBSTATE region, so adding an item to
+    ; every debug build would move every datastruct scenario's bag.
+    db COIN_CASE, 1
+%endif
     db 0xFF ; end (-1)

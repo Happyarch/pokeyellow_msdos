@@ -6229,6 +6229,25 @@ autokey_script:
     dd 610 + AK_SHIFT, 616 + AK_SHIFT, PAD_A
     dd 670 + AK_SHIFT, 676 + AK_SHIFT, PAD_A
     dd  -1,  -1, 0
+%elifdef AUTOKEY_SLOTS
+    ; DEBUG_SLOTS companion: reach a Game Corner slot machine headlessly.
+    ;
+    ; THE TURN IS A PRECONDITION, NOT A CONVENIENCE. The DEBUG_SLOTS spawn puts
+    ; the player at (17,15) facing DOWN, and AbleToPlaySlotsCheck opens with
+    ; `ld a,[wSpritePlayerStateData1ImageIndex] / and $8 / jr z,.done` -- bit 3 is
+    ; set for LEFT ($08) and RIGHT ($0C) only, so a machine cannot be played
+    ; facing UP or DOWN. Facing DOWN, StartSlotMachine returns having drawn and
+    ; printed NOTHING, which reads as "the gate did nothing" rather than as a
+    ; refusal. Turn RIGHT first; the machine is the tile at (18,15).
+    ;
+    ; The RIGHT press is deliberately long enough to TURN but the player is
+    ; already against the machine tile, so it turns in place rather than walking.
+    dd  60,  72, PAD_RIGHT
+    dd 140, 146, PAD_A          ; interact -> hidden event -> StartSlotMachine
+    dd 200, 206, PAD_A          ; page the prompt / answer it
+    dd 260, 266, PAD_A
+    dd 320, 326, PAD_A
+    dd  -1,  -1, 0
 %elifdef AUTOKEY_TALK
     ; NPC-dialog crash repro: with a DEBUG_START_MAP spawn placed a couple of
     ; tiles below an NPC, walk up into it (collision stops the player adjacent,

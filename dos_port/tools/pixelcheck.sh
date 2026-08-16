@@ -39,6 +39,10 @@ case "$SCENARIO" in
     battle)     FLAGS="DEBUG_BATTLE=1" ;;                       # flat path + sprites
     battlehud)  FLAGS="DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_MENU=1 AUTOKEY_DUMP_FRAME=${AUTOKEY_DUMP_FRAME:-300}" ;;
     status)     FLAGS="DEBUG_STATUS=1" ;;                       # flat path + pics
+    # Game Corner slot machine, reached through the REAL hidden-event path:
+    # spawn beside a machine, turn RIGHT (a precondition — AbleToPlaySlotsCheck
+    # tests ImageIndex bit 3, set for LEFT/RIGHT only), press A.
+    slots)      FLAGS="DEBUG_SLOTS=1 AUTOKEY_SLOTS=1 AUTOKEY_DUMP_FRAME=${AUTOKEY_DUMP_FRAME:-420}" ;;
     # trainer card through the REAL palette command, so HandleBadgeFaceAttributes
     # actually runs. (An older gate drew the card but skipped RunPaletteCommand and
     # therefore never entered the code under test; it issues it now.)

@@ -234,6 +234,14 @@ and DEBUG_AUTOKEY means "a script drives it". Drop one. For a scripted trainer \
 battle use DEBUG_TRAINER_ROUTE=1 with the autokey flags instead)
 endif
 endif
+ifdef DEBUG_SLOTS
+ifdef DEBUG_START_MAP
+$(error conflicting flags: DEBUG_SLOTS pins the spawn to the GAME CORNER slot \
+machine at (17,15) and DEBUG_START_MAP sets its own, so DEBUG_SPAWN_MAP would be \
+defined twice. Use ONE: DEBUG_SLOTS for the machine, or DEBUG_START_MAP plus \
+DEBUG_SEED_PARTY to walk there yourself)
+endif
+endif
 ifdef DEBUG_NO_WILD
 ifdef DEBUG_SEAMWALK
 $(error conflicting flags: DEBUG_NO_WILD and DEBUG_SEAMWALK both set wStatusFlags4 \
@@ -272,9 +280,62 @@ ifdef DEBUG_START_Y
 NASMFLAGS += -D DEBUG_SPAWN_Y=$(DEBUG_START_Y)
 endif
 endif
+# PLAYABLE slot machine: spawn in the GAME CORNER beside a working machine, with
+# the coin case and coins the feature refuses to run without.
+#   dos_port/run DEBUG_SLOTS=1        then face RIGHT and press A
+#
+# *** THE SCREEN IS NOT REACHABLE YET, AND NOT BECAUSE OF SLOTS. *** Measured
+# 2026-08-16: this gate seeds correctly (COIN_CASE verified present in wBagItems
+# via GBSTATE, coins set, spawn issued) but GAME_CORNER renders as a blank room,
+# so there is no machine tile to face. GAME_CORNER's header is
+# `map_header GameCorner, GAME_CORNER, LOBBY, 0` -- it needs the LOBBY tileset,
+# and gen_overworld_assets.py embeds exactly ONE of pret's 20 tilesets
+# (gfx/tilesets/overworld.2bpp). The .blk data IS resident; the TILESET is not,
+# so every block falls out of range and draws flat. That is backlog item 31's
+# blocker verbatim, and it gates every interior, not just this one.
+# The gate is kept because it is correct and will work unchanged the moment
+# multi-tileset residency lands -- but do NOT read a blank room here as a slots
+# defect. engine/slots is linked and assets/hidden_events.inc already carries 36
+# `dd StartSlotMachine` rows for this map.
+#
+# engine/slots/ has been linked since the slots-port merge and the generated
+# hidden-event table already carries 36 `dd StartSlotMachine` rows for this map,
+# so nothing was missing except a way to STAND in front of one. (The dependency
+# graph cannot see those rows: a `dd Label` dispatch table emits no call edge,
+# which is why the routine reads as unreached.)
+#
+# THREE THINGS GATE AbleToPlaySlotsCheck, and all three are seeded here:
+#   1. FACING. It tests wSpritePlayerStateData1ImageIndex bit 3, which is set for
+#      LEFT ($08) and RIGHT ($0C) only -- a machine CANNOT be played facing UP or
+#      DOWN. The spawn faces you DOWN, so press RIGHT before A.
+#   2. COIN_CASE in the bag, and 3. wPlayerCoins nonzero -- both seeded by
+#      DEBUG_SEED_PARTY under this flag (src/engine/debug/debug_party.asm).
+#
+# The spawn is (17,15) so the machine in front is (18,15). Hidden events store
+# the OBJECT's tile, not the player's, and CheckForHiddenEvent matches the tile
+# in FRONT of the player -- so the player tile is one west of the row in
+# assets/hidden_events.inc. Machines at x=18 are reached from x=17, and the
+# aisles are x = 2, 5, 8, 11, 14, 17.
+# Avoid x=18 y=10 (SLOTS_SOMEONESKEYS), 13,12 (SLOTS_OUTTOLUNCH) and 6,12
+# (SLOTS_OUTOFORDER): those machines refuse by design, not by defect.
+ifdef DEBUG_SLOTS
+NEED_DEBUG_DUMP := 1
+# -D DEBUG_SLOTS itself is emitted by the flag_gate call below, not here.
+NASMFLAGS += -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SPAWN -D DEBUG_SPAWN_MAP=GAME_CORNER
+NASMFLAGS += -D DEBUG_SPAWN_X=17 -D DEBUG_SPAWN_Y=15
+# Headless witness: turn RIGHT, then interact. Without it this is a hand-piloted
+# build and the keyboard drives it.
+#   dos_port/run DEBUG_SLOTS=1                      (play it yourself)
+#   make DEBUG_SLOTS=1 AUTOKEY_SLOTS=1 AUTOKEY_DUMP_FRAME=420 image
+ifdef AUTOKEY_SLOTS
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_SLOTS
+endif
+endif
 $(eval $(call value_gate,DEBUG_SPAWN_MAP))
 $(eval $(call value_gate,DEBUG_SPAWN_X))
 $(eval $(call value_gate,DEBUG_SPAWN_Y))
+$(eval $(call flag_gate,DEBUG_SLOTS))
 $(eval $(call value_gate,DEBUG_SEAM_STEPS))
 $(eval $(call value_gate,DEBUG_SEAM_DIR))
 
