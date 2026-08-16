@@ -36,7 +36,7 @@ python3 -m pytest dos_port/tools/sm83xlat/tests/ -q
 
 ## Stages 1-7 result (2026-08-16)
 
-**1,729 of 2,530 regions lowered (68.3%), and all 224 emitted files assemble
+**1,739 of 2,530 regions lowered (68.7%), and all 224 emitted files assemble
 clean** under the Makefile's own flags. Two runs are byte-identical. Full report
 in `transpile_report.md`; the bail inventory is `tables/bail_report.json`.
 

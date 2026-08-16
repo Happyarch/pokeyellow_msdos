@@ -79,6 +79,10 @@ class Resolver:
     #: symbol -> the %include that defines it, so an emitted file can pull in
     #: exactly the headers it needs instead of a fixed guess.
     symbol_include: Dict[str, str] = field(default_factory=dict)
+    #: labels to treat as NOT-already-defined for the file currently being
+    #: emitted. Set only when shadowing a hand-written port file, where the
+    #: output is a comparison artifact rather than something that will link.
+    shadow_exempt: Set[str] = field(default_factory=set)
     #: labels the port's GENERATED assets already define. Emitting one here would
     #: put the same data under two owners; the region bails and the label is
     #: EXTERNED — never %included, because a label links and a constant does not.

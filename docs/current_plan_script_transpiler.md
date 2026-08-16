@@ -119,7 +119,7 @@ someone to regenerate over hand edits. No Makefile wiring at all.
 - [x] **Stage 5 — assemble-all gate.** DONE: **224/224 emitted files assemble clean**. ORIGINAL TEXT: Every emitted file through
       `nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0`, `%include`s by bare
       filename
-- [x] **Stage 6 — the tail, reason-code ordered.** Stopped at the documented point: 1,729/2,530 regions lowered (68.3%), and the largest remaining bucket is a CASCADE (`target-region-bailed`, 262) rather than 262 independent problems. ORIGINAL TEXT: Stop when the marginal reason
+- [x] **Stage 6 — the tail, reason-code ordered.** Stopped at the documented point: 1,739/2,530 regions lowered (68.7%), and the largest remaining bucket is a CASCADE (`target-region-bailed`, 262) rather than 262 independent problems. ORIGINAL TEXT: Stop when the marginal reason
       code has <5 sites and hand-port those. A transpiler chasing the last 2% grows
       an unreviewable special case per site
 - [ ] Resolve the **18** screen-coord bail sites by hand (16 coord macros + 2 SCREEN_WIDTH stride expressions — see the Stage 0 corrections)

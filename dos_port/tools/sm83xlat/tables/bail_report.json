@@ -1,15 +1,15 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 1729,
- "regions_bailed": 801,
+ "regions_lowered": 1739,
+ "regions_bailed": 791,
  "by_reason": {
-  "owned-by-generated-assets": 268,
-  "target-region-bailed": 264,
+  "owned-by-generated-assets": 255,
+  "target-region-bailed": 265,
   "screen-coord-projection": 4,
   "inline-text-db": 11,
   "bit-clobbers-live-carry": 14,
   "host-pointer-in-16bit-reg": 37,
-  "predef-leaves-id-in-a": 26,
+  "predef-leaves-id-in-a": 27,
   "text-sound-command-unported": 49,
   "pikachu-table-index": 3,
   "event-range-macro": 7,
@@ -23,6 +23,7 @@
   "bank-expression": 12,
   "unresolved-symbol": 1,
   "checkevent-carry-form": 3,
+  "event-macro-reuse-a-hint": 1,
   "owned-by-gen_map_script_tables": 1,
   "unknown-macro": 1
  },
@@ -592,10 +593,12 @@
    ]
   },
   "scripts/PalletTown.asm": {
-   "ok_regions": 6,
-   "bailed_regions": 13,
+   "ok_regions": 16,
+   "bailed_regions": 3,
    "reasons": [
-    "owned-by-generated-assets"
+    "event-macro-reuse-a-hint",
+    "predef-leaves-id-in-a",
+    "target-region-bailed"
    ]
   },
   "scripts/PewterCity.asm": {
@@ -5978,60 +5981,17 @@
   },
   {
    "file": "scripts/PalletTown.asm",
-   "region": "PalletTown_Script",
-   "labels": [
-    "PalletTown_Script",
-    "PalletTown_Script.next"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTown_Script is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:2",
-   "lines": [
-    2,
-    9
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTown_ScriptPointers",
-   "labels": [
-    "PalletTown_ScriptPointers"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTown_ScriptPointers is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:12",
-   "lines": [
-    12,
-    22
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
    "region": "PalletTownDefaultScript",
    "labels": [
     "PalletTownDefaultScript",
     "PalletTownDefaultScript.asm_18e40"
    ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownDefaultScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:25",
+   "reason": "target-region-bailed",
+   "detail": ".asm_18e40 is defined in a region that bailed",
+   "at": "scripts/PalletTown.asm:33",
    "lines": [
     25,
     52
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTownOakHeyWaitScript",
-   "labels": [
-    "PalletTownOakHeyWaitScript"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownOakHeyWaitScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:55",
-   "lines": [
-    55,
-    80
    ]
   },
   {
@@ -6040,83 +6000,12 @@
    "labels": [
     "PalletTownOakWalksToPlayerScript"
    ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownOakWalksToPlayerScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:83",
+   "reason": "predef-leaves-id-in-a",
+   "detail": "predef CalcPositionOfPlayerRelativeToNPC",
+   "at": "scripts/PalletTown.asm:91",
    "lines": [
     83,
     103
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTownOakGreetsPlayerScript",
-   "labels": [
-    "PalletTownOakGreetsPlayerScript",
-    "PalletTownOakGreetsPlayerScript.asm_18f01"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownOakGreetsPlayerScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:106",
-   "lines": [
-    106,
-    135
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTownPikachuBattleScript",
-   "labels": [
-    "PalletTownPikachuBattleScript"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownPikachuBattleScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:139",
-   "lines": [
-    139,
-    153
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTownAfterPikachuBattleScript",
-   "labels": [
-    "PalletTownAfterPikachuBattleScript"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownAfterPikachuBattleScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:156",
-   "lines": [
-    156,
-    174
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTownOakNotSafeComeWithMeScript",
-   "labels": [
-    "PalletTownOakNotSafeComeWithMeScript"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownOakNotSafeComeWithMeScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:177",
-   "lines": [
-    177,
-    191
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTownPlayerFollowsOakScript",
-   "labels": [
-    "PalletTownPlayerFollowsOakScript"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownPlayerFollowsOakScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:194",
-   "lines": [
-    194,
-    201
    ]
   },
   {
@@ -6125,41 +6014,12 @@
    "labels": [
     "PalletTownDaisyScript"
    ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownDaisyScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:204",
+   "reason": "event-macro-reuse-a-hint",
+   "detail": "CheckBothEventsSet EVENT_GOT_TOWN_MAP, EVENT_ENTERED_BLUES_HOUSE, 1",
+   "at": "scripts/PalletTown.asm:206",
    "lines": [
     204,
     214
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTownDaisyScript.next",
-   "labels": [
-    "PalletTownDaisyScript.next",
-    "PalletTownNoopScript"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownNoopScript is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:216",
-   "lines": [
-    216,
-    220
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTownOakText",
-   "labels": [
-    "PalletTownOakText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "PalletTownOakText is already defined in a generated asset",
-   "at": "scripts/PalletTown.asm:235",
-   "lines": [
-    235,
-    241
    ]
   },
   {

@@ -136,7 +136,8 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
         # ours to emit: assets/trainer_headers.inc owns every battle-text stream.
         # Emitting it too is a duplicate definition of the same data, which the
         # static gate reports as dup_def -- correctly.
-        owned = [l for l in region.labels if l in R.asset_labels]
+        owned = [l for l in region.labels
+                 if l in R.asset_labels and l not in R.shadow_exempt]
         if owned:
             out.bailed_regions += 1
             lo = region.items[0].line.lineno
@@ -436,6 +437,21 @@ def main(argv=None) -> int:
         by_dest[port_path(db, f.path)].append(f)
 
     for rel, group in sorted(by_dest.items()):
+        # If the destination is a HAND-WRITTEN port file we are not going to
+        # overwrite, we are producing a COMPARISON artifact, not a linkable one.
+        # The "this label is already defined in the port" rule must not apply to
+        # that file's own labels — it is the whole point of the comparison. Left
+        # in place, it silently emptied the Stage 4 fixture: 17 emitted routines
+        # became 7, and 0 of them overlapped the hand port.
+        dest_probe = root / rel
+        shadow_exempt = set()
+        if dest_probe.exists() and resolve.TOOL_OUTPUT_MARKER not in \
+                dest_probe.read_text(encoding="utf-8", errors="replace")[:1024]:
+            shadow_exempt = set(re.findall(
+                r"^([A-Za-z_]\w*):", dest_probe.read_text(encoding="utf-8",
+                                                          errors="replace"), re.M))
+        R.shadow_exempt = shadow_exempt
+
         merged = emit.Emitted()
         sources = []
         for f in group:
