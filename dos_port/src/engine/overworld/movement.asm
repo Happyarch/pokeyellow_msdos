@@ -267,14 +267,35 @@ UpdateNPCSprite:
     call NotYetMoving
     jmp .ret
 
+.clampedOutOfWindow:
+    ; On clamp-fail, still apply forced facing ($D0-$D3) so visible NPCs in the clamp
+    ; window don't stay stuck facing down. For unconstrained NPCs (ANY / UP_DOWN /
+    ; LEFT_RIGHT), write no facing: facing comes from random walk which is suppressed.
+    mov edx, esi
+    shr edx, 4                           ; slot number (1-15)
+    dec edx
+    add edx, edx                         ; (slot-1)*2 -> wMapSpriteData index
+    movzx ecx, byte [wMapSpriteData + edx]
+    mov al, cl
+    sub al, NPC_DIR_DOWN
+    cmp al, 3
+    ja .noForcedFacing                   ; not $D0-$D3 -> leave facing alone
+    shl al, 2
+    mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_FACINGDIRECTION], al
+.noForcedFacing:
+    jmp .notYetMoving
+
 .randomMovement:
     ; DIVERGENCE (OW-A.7, port-only scaffold): pret has NO MAPY/MAPX clamp here — it
     ; relies on CanWalkOntoTile + CheckSpriteAvailability to reject bad destinations.
     ; This clamp guards GetTileSpriteStandsOn below from reading OOB wTileMap tiles when
     ; an NPC is near a map edge (same root cause as the enlarged-viewport OOB scaffold in
-    ; CLAUDE.md). KNOWN TENSION: these bounds ([wYCoord-3,+6], [wXCoord-7,+10]) are
-    ; NARROWER than CheckSpriteAvailability's edge-visible zone, so an NPC that IS visible
-    ; at the screen edge can be blocked from random-walking (mild: it just idles a beat).
+    ; CLAUDE.md). On clamp-fail, forced $D0-$D3 facing is still applied via
+    ; .clampedOutOfWindow (only the tile read / walk attempt is guarded; stigmergy key:
+    ; regression-overworld-facing-clamp-band). KNOWN TENSION: these bounds
+    ; ([wYCoord-3,+6], [wXCoord-7,+10]) are NARROWER than CheckSpriteAvailability's
+    ; edge-visible zone, so an NPC that IS visible at the screen edge can be blocked from
+    ; random-walking (mild: it just idles a beat).
     ; Reconcile with CheckSpriteAvailability's bounds — or delete this clamp entirely — once
     ; the map-data extension removes the OOB region (then GetTileSpriteStandsOn is always safe).
     ; Movement-safe bounds: destination accesses ±2 tile rows/cols from current EBX.
@@ -285,18 +306,18 @@ UpdateNPCSprite:
     movzx eax, byte [ebp + W_Y_COORD]
     lea ecx, [eax - 3]
     cmp ecx, edx
-    jg .notYetMoving                     ; MAPY < wYCoord-3 → too far north to move
+    jg .clampedOutOfWindow               ; MAPY < wYCoord-3 → too far north to move
     lea ecx, [eax + 6]
     cmp ecx, edx
-    jl .notYetMoving                     ; MAPY > wYCoord+6 → too far south to move
+    jl .clampedOutOfWindow               ; MAPY > wYCoord+6 → too far south to move
     movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
     movzx eax, byte [ebp + W_X_COORD]
     lea ecx, [eax - 7]
     cmp ecx, edx
-    jg .notYetMoving                     ; MAPX < wXCoord-7 → too far west to move
+    jg .clampedOutOfWindow               ; MAPX < wXCoord-7 → too far west to move
     lea ecx, [eax + 10]
     cmp ecx, edx
-    jl .notYetMoving                     ; MAPX > wXCoord+10 → too far east to move
+    jl .clampedOutOfWindow               ; MAPX > wXCoord+10 → too far east to move
     ; GetTileSpriteStandsOn clobbers EBX, ECX, AL.
     ; Random_ clobbers AL, BL. Push EBX around Random call.
     call GetTileSpriteStandsOn          ; EBX = wTileMap offset of lower-left tile under NPC
