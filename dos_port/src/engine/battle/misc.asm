@@ -106,7 +106,7 @@ InitList:
     cmp al, bl
     jne .notPlayer
     mov esi, wPartyCount
-    mov edx, W_PARTY_MON_OT
+    mov edx, wPartyMonOT
     mov ebx, PLAYEROT_NAME
     mov al, bl
     jmp .done

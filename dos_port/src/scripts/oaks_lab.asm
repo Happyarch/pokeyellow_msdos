@@ -477,7 +477,7 @@ OaksLabRivalTakesPokeballScript:
     mov [ebp + hSpriteFacingDirection], al
     call SetSpriteFacingDirectionAndDelay
     mov al, 1
-    mov [ebp + W_RIVAL_STARTER], al
+    mov [ebp + wRivalStarter], al
     mov al, 102
     mov [ebp + wNamedObjectIndex], al
     call GetMonName
@@ -636,7 +636,7 @@ OaksLabRivalEndBattleScript:
     mov bh, 2
 .got_rival_starter:
     mov al, bh
-    mov [ebp + W_RIVAL_STARTER], al
+    mov [ebp + wRivalStarter], al
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     mov al, PLAYER_DIR_UP

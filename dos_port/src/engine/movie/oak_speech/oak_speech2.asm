@@ -191,11 +191,11 @@ ChoosePlayerName:
     jz .customNamePlayer                   ; item 0 = "NEW NAME" -> custom
     mov esi, DefaultNamesPlayerList        ; ld hl, DefaultNamesPlayerList
     call GetDefaultName                    ; AL = menu item = list index
-    mov edx, W_PLAYER_NAME                  ; ld de, wPlayerName
+    mov edx, wPlayerName                  ; ld de, wPlayerName
     call OakSpeechSlidePicLeft             ; slide the chosen name/pic back in
     jmp .donePlayer
 .customNamePlayer:
-    mov esi, W_PLAYER_NAME                  ; ld hl, wPlayerName (naming dest, pret HL)
+    mov esi, wPlayerName                  ; ld hl, wPlayerName (naming dest, pret HL)
     mov byte [ebp + wNamingScreenType], NAME_PLAYER_SCREEN
     call DisplayNamingScreen
     cmp byte [ebp + wStringBuffer], 0x50   ; charmap '@' = 0x50 (NOT NASM ASCII 0x40)     ; empty name -> retry
@@ -221,11 +221,11 @@ ChooseRivalName:
     jz .customNameRival
     mov esi, DefaultNamesRivalList         ; ld hl, DefaultNamesRivalList
     call GetDefaultName
-    mov edx, W_RIVAL_NAME                    ; ld de, wRivalName
+    mov edx, wRivalName                    ; ld de, wRivalName
     call OakSpeechSlidePicLeft
     jmp .doneRival
 .customNameRival:
-    mov esi, W_RIVAL_NAME                    ; ld hl, wRivalName
+    mov esi, wRivalName                    ; ld hl, wRivalName
     mov byte [ebp + wNamingScreenType], NAME_RIVAL_SCREEN
     call DisplayNamingScreen
     cmp byte [ebp + wStringBuffer], 0x50   ; charmap '@' = 0x50 (NOT NASM ASCII 0x40)

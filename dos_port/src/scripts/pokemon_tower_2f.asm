@@ -226,7 +226,7 @@ PokemonTower2FRivalText:
     call SaveEndBattleTextPointers
     mov al, OPP_RIVAL2
     mov [ebp + wCurOpponent], al
-    mov al, [ebp + W_RIVAL_STARTER]
+    mov al, [ebp + wRivalStarter]
     add al, 0x1
     mov [ebp + wTrainerNo], al
     mov al, SCRIPT_POKEMONTOWER2F_DEFEATED_RIVAL

@@ -124,7 +124,7 @@ DrawStartMenu:
     call PrintStartMenuItem
     mov eax, StartMenuItemText
     call PrintStartMenuItem
-    lea eax, [ebp + W_PLAYER_NAME]      ; ld de, wPlayerName (flat for PlaceString)
+    lea eax, [ebp + wPlayerName]      ; ld de, wPlayerName (flat for PlaceString)
     call PrintStartMenuItem
     ; SAVE, or RESET while a link session is active
     mov al, [ebp + wStatusFlags4]

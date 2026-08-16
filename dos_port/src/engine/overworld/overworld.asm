@@ -346,11 +346,11 @@ EnterMapBoot:
     ; Title screen (which normally seeds wPlayerName / wRivalName) was skipped —
     ; seed the build-time defaults so <PLAYER>/<RIVAL> don't print garbage.
     lea esi, [DefaultPlayerName]
-    lea edi, [ebp + W_PLAYER_NAME]
+    lea edi, [ebp + wPlayerName]
     mov ecx, PLAYER_NAME_FIELD
     rep movsb
     lea esi, [DefaultRivalName]
-    lea edi, [ebp + W_RIVAL_NAME]
+    lea edi, [ebp + wRivalName]
     mov ecx, PLAYER_NAME_FIELD
     rep movsb
 %endif

@@ -61,7 +61,7 @@ SetDebugNewGameParty:
     ; the nicknames it seeds and has no interactive naming input, so publish a
     ; nonzero player-path marker while constructing the party, then restore the
     ; shipping value before returning.
-    mov byte [ebp + W_MON_DATA_LOCATION], 0x10
+    mov byte [ebp + wMonDataLocation], 0x10
     lea esi, [DebugNewGameParty]
 
 .loop:
@@ -69,11 +69,11 @@ SetDebugNewGameParty:
     cmp al, 0xFF
     jz .done
     
-    mov byte [ebp + W_CUR_PARTY_SPECIES], al
+    mov byte [ebp + wCurPartySpecies], al
     inc esi
     
     mov al, byte [esi]
-    mov byte [ebp + W_CUR_ENEMY_LEVEL], al
+    mov byte [ebp + wCurEnemyLevel], al
     inc esi
     
     push esi ; Save ESI across AddPartyMon + deterministic nickname copy
@@ -82,7 +82,7 @@ SetDebugNewGameParty:
     ; The interactive AskName path normally copies the species default when the
     ; player declines.  This non-interactive harness performs that deterministic
     ; final step directly so its party bytes still match the golden seed.
-    mov al, [ebp + W_CUR_PARTY_SPECIES]
+    mov al, [ebp + wCurPartySpecies]
     mov [ebp + wNamedObjectIndex], al
     call GetMonName
     movzx eax, byte [ebp + wPartyCount]
@@ -96,7 +96,7 @@ SetDebugNewGameParty:
     
     jmp .loop
 .done:
-    mov byte [ebp + W_MON_DATA_LOCATION], 0
+    mov byte [ebp + wMonDataLocation], 0
     ret
 
 ; -----------------------------------------------------------------------------
@@ -108,8 +108,8 @@ PrepareNewGameDebug:
     ; OT source = wPlayerName).
     call SeedDeterministicPlayerIdentity
 
-    ; W_MON_DATA_LOCATION = 0
-    mov byte [ebp + W_MON_DATA_LOCATION], 0
+    ; wMonDataLocation = 0
+    mov byte [ebp + wMonDataLocation], 0
 
     ; Fly anywhere
     mov byte [ebp + wTownVisitedFlag], 0xFF
@@ -201,9 +201,9 @@ PrepareNewGameDebug:
     ; Seed all 151 SEEN and a scattered ~half OWNED (deterministic pattern) so
     ; the CONTENTS list shows both pokéball-marked and unmarked entries, every
     ; DATA page is reachable, and IsPokemonBitSet gets exercised on both values.
-    mov edi, W_POKEDEX_SEEN
+    mov edi, wPokedexSeen
     call DebugSetPokedexEntries
-    mov edi, W_POKEDEX_OWNED
+    mov edi, wPokedexOwned
     call DebugSetPokedexOwnedScatter
     
     ; SetEvent EVENT_GOT_POKEDEX
@@ -211,14 +211,14 @@ PrepareNewGameDebug:
     or byte [ebp + wEventFlags + (EVENT_GOT_POKEDEX / 8)], (1 << (EVENT_GOT_POKEDEX % 8))
 
     ; Rival chose Jolteon
-    mov byte [ebp + W_RIVAL_STARTER], RIVAL_STARTER_JOLTEON
-    mov byte [ebp + W_RIVAL_STARTER + 1], NUM_POKEMON
-    mov byte [ebp + W_RIVAL_STARTER + 2], STARTER_PIKACHU
+    mov byte [ebp + wRivalStarter], RIVAL_STARTER_JOLTEON
+    mov byte [ebp + wRivalStarter + 1], NUM_POKEMON
+    mov byte [ebp + wRivalStarter + 2], STARTER_PIKACHU
 
     ; Give max money
-    mov byte [ebp + W_PLAYER_MONEY], 0x99
-    mov byte [ebp + W_PLAYER_MONEY + 1], 0x99
-    mov byte [ebp + W_PLAYER_MONEY + 2], 0x99
+    mov byte [ebp + wPlayerMoney], 0x99
+    mov byte [ebp + wPlayerMoney + 1], 0x99
+    mov byte [ebp + wPlayerMoney + 2], 0x99
     
     ret
 

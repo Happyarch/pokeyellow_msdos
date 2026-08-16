@@ -40,7 +40,7 @@ extern StringCmp                     ; EDX=de MSB, ESI=hl MSB, BL=len; CF from l
 ; OUTPUT: carry set => not enough money. pret home/money.asm:HasEnoughMoney.
 ; ---------------------------------------------------------------------------
 HasEnoughMoney:
-    mov edx, W_PLAYER_MONEY          ; ld de, wPlayerMoney (MSB)
+    mov edx, wPlayerMoney          ; ld de, wPlayerMoney (MSB)
     mov esi, hMoney                 ; ld hl, hMoney (MSB)
     mov bl, 3                        ; ld c, 3
     jmp StringCmp                    ; jp StringCmp (tail)

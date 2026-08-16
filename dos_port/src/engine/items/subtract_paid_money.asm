@@ -32,13 +32,13 @@ extern DisplayTextBoxID     ; home/text_script.asm (Wave 1/M1.3) — redraw mone
 ; OUTPUT: carry = 0 (success) or 1 (fail because there is not enough money)
 ; ---------------------------------------------------------------------------
 SubtractAmountPaidFromMoney_:
-    mov edx, W_PLAYER_MONEY          ; ld de, wPlayerMoney (MSB — total price compare)
+    mov edx, wPlayerMoney          ; ld de, wPlayerMoney (MSB — total price compare)
     mov esi, hMoney                 ; ld hl, hMoney
     mov bl, 3                        ; ld c, 3 (length of money in bytes)
     call StringCmp
     jc .cannotAfford                 ; ret c
 
-    mov edx, W_PLAYER_MONEY + 2      ; ld de, wPlayerMoney + 2 (LSB — subtract)
+    mov edx, wPlayerMoney + 2      ; ld de, wPlayerMoney + 2 (LSB — subtract)
     mov esi, hMoney + 2             ; ld hl, hMoney + 2
     mov cl, 3                        ; ld c, 3
     call SubBCD                      ; predef SubBCDPredef — subtract price from money

@@ -5965,7 +5965,7 @@ TrainerBattleVictory:
     ;   ld de, wPlayerMoney+2 / ld hl, wAmountMoneyWon+2 / ld c,3 / predef AddBCDPredef.
     ; Flat call to AddBCD (predef bank drop, §2 item 4): ESI=src LSB, EDX=dst LSB, CL=count.
     mov esi, wAmountMoneyWon + 2
-    mov edx, W_PLAYER_MONEY + 2
+    mov edx, wPlayerMoney + 2
     mov cl, 3
     call AddBCD
     mov byte [ebp + wBattleResult], 0              ; player won

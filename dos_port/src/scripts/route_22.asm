@@ -148,7 +148,7 @@ Route22Script_50ed6:
 Route22Script_50ee1:
     mov al, OPP_RIVAL2
     mov [ebp + wCurOpponent], al
-    mov al, [ebp + W_RIVAL_STARTER]
+    mov al, [ebp + wRivalStarter]
     add al, 7
     mov [ebp + wTrainerNo], al
     ret

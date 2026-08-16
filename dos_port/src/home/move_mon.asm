@@ -76,8 +76,8 @@ RemovePokemon:
 ; ---------------------------------------------------------------------------
 ; AddPartyMon — home wrapper around _AddPartyMon (pret home/move_mon.asm).
 ; In pret this push/pops hl/de/bc around a farcall; in our flat model there is
-; no banking, so it is just a guarded call. _AddPartyMon reads W_CUR_PARTY_SPECIES
-; / W_CUR_ENEMY_LEVEL / W_MON_DATA_LOCATION and appends to the party arrays.
+; no banking, so it is just a guarded call. _AddPartyMon reads wCurPartySpecies
+; / wCurEnemyLevel / wMonDataLocation and appends to the party arrays.
 ; All registers preserved (matches pret's push/pop hl/de/bc contract).
 ; ---------------------------------------------------------------------------
 AddPartyMon:

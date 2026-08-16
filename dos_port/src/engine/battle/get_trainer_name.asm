@@ -21,7 +21,7 @@ GetTrainerName_:
     mov al, byte [ebp + wLinkState]
     and al, al
     jnz .foundName
-    mov esi, W_RIVAL_NAME
+    mov esi, wRivalName
     mov al, byte [ebp + wTrainerClass]
     cmp al, RIVAL1
     jz .foundName

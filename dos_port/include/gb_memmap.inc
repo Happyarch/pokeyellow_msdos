@@ -73,16 +73,10 @@ W_WHICH_POKEMON          equ 0xCF91
 W_ITEM_QUANTITY          equ 0xCF95
 W_MAX_ITEM_QUANTITY      equ 0xCF96
 W_LOADED_MON_SPECIES     equ 0xCF97
-W_MON_DATA_LOCATION      equ 0xCC49
-W_CUR_PARTY_SPECIES      equ 0xCF90
-W_CUR_ENEMY_LEVEL        equ 0xD126
 W_TEXT_BOX_ID          equ 0xD124
 W_PARTY_MON1_MOVES       equ 0xD172
 W_PARTY_MON4_MOVES       equ 0xD1F6
-W_POKEDEX_OWNED          equ 0xD2F6
-W_POKEDEX_SEEN           equ 0xD309
-W_PLAYER_MONEY           equ 0xD346
-wPlayerMoney             equ W_PLAYER_MONEY   ; 3-byte BCD (trainer-card money display)
+wPlayerMoney                  equ 0xD346   ; 3-byte BCD (trainer-card money display)
 wObtainedBadges               equ 0xD355
 ; wTrainerCardBadgeAttributes — pret ram/wram.asm. READ ONLY by
 ; HandleBadgeFaceAttributes, and pret never writes it under this name: it is a
@@ -92,7 +86,7 @@ wObtainedBadges               equ 0xD355
 ; itself here for free — same byte, same address, exactly as on hardware.
 wTrainerCardBadgeAttributes equ 0xCC5D
 wObtainedHiddenItemsFlags     equ 0xD6EF
-W_RIVAL_STARTER          equ 0xD714
+wRivalStarter                 equ 0xD714
 W_SURFING_MINIGAME_PIKACHU_HP  equ 0xC5D6
 W_SURFING_MINIGAME_RADNESS_MTR equ 0xC5D9
 W_SURFING_MINIGAME_RADNESS_SCR equ 0xC5DA
@@ -139,21 +133,7 @@ wSpritePlayerStateData1ImageIndex equ 0xC102  ; player sprite slot, +2 = ImageIn
 wHiddenEventFunctionArgument      equ 0xCD3D
 wCanPlaySlots                     equ 0xCD3D
 W_LOADED_MON_EXP         equ 0xCFA5
-W_CUR_SPECIES            equ 0xD0B4
-W_MON_H_GROWTH_RATE      equ 0xD0CA   ; sym-verified (wMonHeader $D0B7 + BASE_GROWTH_RATE $13). A prior pass wrongly "corrected" this to $D0CB on the false premise that wMonHeader was $D0B8; the symbols-branch pokeyellow.sym puts wMonHGrowthRate at $D0CA. experience.asm (CalcExperience) consumes it; was masked by the self-contained native harness.
-W_REMOVE_MON_FROM_BOX  equ 0xCF94
-W_MOVE_MON_TYPE          equ 0xCF94
-W_PARTY_COUNT            equ 0xD162
-W_PARTY_MONS             equ 0xD16A
-W_PARTY_MON_OT           equ 0xD272
-W_PARTY_MON_NICKS        equ 0xD2B4
-W_PARTY_MON_NICKS_END    equ 0xD2F6
-W_BOX_COUNT              equ 0xDA7F
-W_BOX_MONS               equ 0xDA95
 W_BOX_MON1_MOVES         equ 0xDA9D
-W_BOX_MON_OT             equ 0xDD29
-W_BOX_MON_NICKS          equ 0xDE05
-W_BOX_MON_NICKS_END      equ 0xDEE1
 W_SAVED_LIST_SCROLL_OFFSET equ 0xD07D
 W_LIST_COUNT             equ 0xD129
 
@@ -192,13 +172,13 @@ wMonHSpriteDim     equ 0xD0C1
 wMonHFrontSprite   equ 0xD0C2
 wMonHBackSprite    equ 0xD0C4
 wMonHMoves         equ 0xD0C6
-wMonHGrowthRate    equ 0xD0CA   ; sym-verified; NOT $D0CB (see W_MON_H_GROWTH_RATE note above)
+wMonHGrowthRate    equ 0xD0CA   ; sym-verified; NOT $D0CB (see wMonHGrowthRate note above)
 wMonHLearnset      equ 0xD0CB
 wCurEnemyLevel     equ 0xD126   ; CalcStat level input
 wCurPartySpecies   equ 0xCF90
 wWhichPokemon      equ 0xCF91
 wMonDataLocation   equ 0xCC49
-wRemoveMonFromBox  equ 0xCF94   ; = W_REMOVE_MON_FROM_BOX (0=party, !=0=box)
+wRemoveMonFromBox  equ 0xCF94   ; = wRemoveMonFromBox (0=party, !=0=box)
 wLearningMovesFromDayCare equ 0xCEE9 ; WriteMonMoves daycare gate (0 = normal)
 wDayCareStartLevel equ 0xCD3D   ; WriteMonMoves daycare min-level check
 wPokedexNum        equ 0xD11D   ; SetPartyMonTypes input (sym)
@@ -209,7 +189,7 @@ wPartyMonOT        equ 0xD272
 wEnemyMonOT        equ 0xD9AB   ; enemy OT-name list (NamePointers ENEMYOT; sym)
 wPartyMonNicks     equ 0xD2B4
 wPartyMonNicksEnd  equ 0xD2F6
-wPlayerName        equ 0xD157   ; = W_PLAYER_NAME (OT name source)
+wPlayerName        equ 0xD157   ; = wPlayerName (OT name source)
 
 ; Predef register save slots (home/predef.asm:GetPredefRegisters). Big-endian:
 ; [addr] = high byte, [addr+1] = low byte.
@@ -533,7 +513,7 @@ wEvoMonTileOffset      equ 0xCEEB   ; [2b] palette-flash morph scratch (deferred
 wEvoCancelled          equ 0xCEEC   ; EvolveMon sets 1 on B-cancel → CF
 wEvoStoneItemID        equ 0xD155
 ; Bill's PC (src/engine/pokemon/bills_pc.asm)
-wMoveMonType           equ 0xCF94   ; = W_MOVE_MON_TYPE (union wRemoveMonFromBox)
+wMoveMonType           equ 0xCF94   ; = wMoveMonType (union wRemoveMonFromBox)
 ; residual damage (src/engine/battle/residual_damage.asm)
 wAnimationType         equ 0xCC5B   ; (union wUnusedFlag)
 wPlayerToxicCounter    equ 0xD06B
@@ -1141,8 +1121,7 @@ W_TITLE_SCREEN_SCENE         equ 0xCD3D ; wTitleScreenScene (byte; +1 = timer)
 W_TITLE_SCREEN_TIMER         equ 0xCD3E ; wTitleScreenTimer
 
 ; Name buffers (WRAM1) — sym-verified
-W_PLAYER_NAME                equ 0xD157 ; wPlayerName — 11 bytes, '@'-terminated
-W_RIVAL_NAME                 equ 0xD349 ; wRivalName  — 11 bytes, '@'-terminated
+wRivalName                    equ 0xD349 ; wRivalName  — 11 bytes, '@'-terminated
 
 ; ---------------------------------------------------------------------------
 ; Save / options / naming WRAM (menus S7) — all sym-pinned
@@ -2206,8 +2185,8 @@ wNumHoFTeams                  equ 0xD5A1 ; total recorded HoF teams (0 until S7)
 ; pokemon / give / money). Lowercase Dex aliases onto existing W_POKEDEX_*;
 ; new WRAM from pret ram/wram.asm chained off verified anchors.
 ; ---------------------------------------------------------------------------
-wPokedexOwned                 equ W_POKEDEX_OWNED     ; 0xD2F6 (lowercase alias)
-wPokedexSeen                  equ W_POKEDEX_SEEN      ; 0xD309 (lowercase alias)
+wPokedexOwned                 equ 0xD2F6     ; 0xD2F6 (lowercase alias)
+wPokedexSeen                  equ 0xD309      ; 0xD309 (lowercase alias)
 wUnusedAlreadyOwnedFlag       equ 0xD152 ; pret dead store (write-only)
 wEnemyMonNicks                equ 0xD9ED ; enemy party nicknames
 ; ClearVariablesOnEnterMap map-entry scratch (OW-1.1; sym-verified vs origin/symbols:pokeyellow.sym)

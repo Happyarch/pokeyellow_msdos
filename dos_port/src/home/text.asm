@@ -879,9 +879,9 @@ PlaceNextChar:
     jmp .advance
 
 .handle_player:
-    ; <PLAYER> ($52): insert player name from wPlayerName (EBP+W_PLAYER_NAME)
+    ; <PLAYER> ($52): insert player name from wPlayerName (EBP+wPlayerName)
     push edx
-    mov edx, W_PLAYER_NAME
+    mov edx, wPlayerName
 .player_loop:
     movzx eax, byte [ebp + edx]
     cmp al, CHAR_TERMINATOR
@@ -898,9 +898,9 @@ PlaceNextChar:
     jmp .advance
 
 .handle_rival:
-    ; <RIVAL> ($53): insert rival name from wRivalName (EBP+W_RIVAL_NAME)
+    ; <RIVAL> ($53): insert rival name from wRivalName (EBP+wRivalName)
     push edx
-    mov edx, W_RIVAL_NAME
+    mov edx, wRivalName
 .rival_loop:
     movzx eax, byte [ebp + edx]
     cmp al, CHAR_TERMINATOR

@@ -240,8 +240,8 @@ PrepareOakSpeech:
 
     ; Zero wPlayerName..wBoxDataEnd (the whole main+box save block) and the
     ; sprite state block.
-    mov esi, W_PLAYER_NAME
-    mov bx, (wBoxDataEnd - W_PLAYER_NAME) & 0xFFFF
+    mov esi, wPlayerName
+    mov bx, (wBoxDataEnd - wPlayerName) & 0xFFFF
     xor al, al
     call FillMemory
     mov esi, wSpriteDataStart
@@ -271,11 +271,11 @@ PrepareOakSpeech:
 
     ; Seed the debug names.
     lea esi, [DebugNewGamePlayerName]
-    lea edi, [ebp + W_PLAYER_NAME]
+    lea edi, [ebp + wPlayerName]
     mov ecx, NAME_LENGTH
     rep movsb
     lea esi, [DebugNewGameRivalName]
-    lea edi, [ebp + W_RIVAL_NAME]
+    lea edi, [ebp + wRivalName]
     mov ecx, NAME_LENGTH
     rep movsb
     ret

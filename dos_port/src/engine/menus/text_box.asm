@@ -421,7 +421,7 @@ DisplayMoneyBox:
     ; hlcoord 12,1 / de=wPlayerMoney / c=3|LEADING_ZEROES|MONEY_SIGN / PrintBCDNumber
     ; PROJ menus: GB(12,1) = box-rel (1,1) → UI_MONEY_BOX_TEMPLATE_(COL+1,ROW+1)
     mov esi, W_TILEMAP + (UI_MONEY_BOX_TEMPLATE_ROW + 1) * SCREEN_TILES_W + UI_MONEY_BOX_TEMPLATE_COL + 1
-    mov edx, W_PLAYER_MONEY
+    mov edx, wPlayerMoney
     mov bl, 3 | (1 << BIT_LEADING_ZEROES) | (1 << BIT_MONEY_SIGN)
     call PrintBCDNumber
     ; ld hl,wStatusFlags5 / res BIT_NO_TEXT_DELAY,[hl]

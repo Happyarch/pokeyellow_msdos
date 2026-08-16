@@ -180,7 +180,7 @@ ChampionsRoomRivalReadyToBattleScript:
     call SaveEndBattleTextPointers
     mov al, OPP_RIVAL3
     mov [ebp + wCurOpponent], al
-    mov al, [ebp + W_RIVAL_STARTER]
+    mov al, [ebp + wRivalStarter]
     add al, 0x0
     mov [ebp + wTrainerNo], al
     xor al, al

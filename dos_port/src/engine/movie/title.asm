@@ -222,7 +222,7 @@ DisplayTitleScreen.TitleScreenPokemonLogoYScrolls:
 
 ; Debug player/rival names (pret charmap encoding), Tier-1 generated data at its
 ; pret mirror (pret engine/movie/title.asm holds DebugNewGamePlayerName/RivalName).
-; Copied to W_PLAYER_NAME / W_RIVAL_NAME by PrepareTitleScreen (this file)
+; Copied to wPlayerName / wRivalName by PrepareTitleScreen (this file)
 ; and PrepareOakSpeech (oak_speech.asm). The three labels MUST stay contiguous at
 ; pret's exact lengths: the NAME_LENGTH(11) copies deliberately overrun, so
 ; wPlayerName really holds "NINTEN@SONY" on hardware — the golden caught the
@@ -273,10 +273,10 @@ section .text
 PrepareTitleScreen:
     ; Copy debug player/rival names to WRAM (matches original; overwritten later)
     lea esi, [DebugNewGamePlayerName]  ; ld hl, DebugNewGamePlayerName
-    lea edi, [ebp + W_PLAYER_NAME]     ; ld de, wPlayerName
+    lea edi, [ebp + wPlayerName]     ; ld de, wPlayerName
     call CopyDebugName
     lea esi, [DebugNewGameRivalName]   ; ld hl, DebugNewGameRivalName
-    lea edi, [ebp + W_RIVAL_NAME]      ; ld de, wRivalName
+    lea edi, [ebp + wRivalName]      ; ld de, wRivalName
     call CopyDebugName
 
     ; Zero hWY (window on-screen at y=0 initially, DisableLCD will move it)
