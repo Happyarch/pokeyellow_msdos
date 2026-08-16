@@ -2683,10 +2683,12 @@ CollisionCheckOnLand:
 ;
 ; In:  ESI = flat host ptr to the directional tile-pair table (TilePairCollisionsLand
 ;            or ...Water); W_TILE_IN_FRONT_OF_PLAYER already set by the caller.
-;            (pret re-runs GetTileAndCoordsInFrontOfPlayer here; the port's caller,
-;            CollisionCheckOnLand, sets it via _GetTileAndCoordsInFrontOfPlayer
-;            immediately before — so this port keeps the value rather than
-;            re-deriving it.)
+;            (pret re-runs GetTileAndCoordsInFrontOfPlayer here; both of the
+;            port's callers, CollisionCheckOnLand and CollisionCheckOnWater, set
+;            it via _GetTileAndCoordsInFrontOfPlayer immediately before — so
+;            this port keeps the value rather than re-deriving it. See
+;            regression-overworld-watercollision-stale-tile for why
+;            CollisionCheckOnWater's call order had to move to match.)
 ; Out: CF = 1 if an illegal tile-pair boundary is crossed (movement blocked).
 ;      May arm a ledge hop (HandleLedges sets BIT_LEDGE_OR_FISHING + simulated joypad);
 ;      in that case CF = 0 (no tile-pair collision) and the caller allows the move.
@@ -3034,8 +3036,10 @@ GetSimulatedInput:
 ; CF=1 → blocked on water; CF=0 → move allowed. The "passable land tile ahead"
 ; case disembarks (.stopSurfing): clears wWalkBikeSurfState, reloads the walking
 ; sprite, restores the map music, and returns CF=0 so the step onto land runs.
-; Unreachable in today's live build — nothing sets wWalkBikeSurfState=2 until
-; Surf item-use / ForceBikeOrSurf (player_gfx.asm) links.
+; Reachable in today's live build: ItemUseSurfboard sets wWalkBikeSurfState = 2
+; at src/engine/items/item_effects.asm:644, wired live through UseItem's
+; ItemUsePtrTable dispatch, called from the Start-menu SURF handler at
+; src/engine/menus/start_sub_menus.asm:465.
 ;
 ; PORT (established divergence, same as CollisionCheckOnLand): pret's
 ; `predef GetTileAndCoordsInFrontOfPlayer` is realized as LoadCurrentMapView +
@@ -3057,6 +3061,19 @@ CollisionCheckOnWater:
     mov al, [ebp + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
     and al, dl
     jnz .collision
+    ; regression-overworld-watercollision-stale-tile: the port's
+    ; CheckForJumpingAndTilePairCollisions requires W_TILE_IN_FRONT_OF_PLAYER
+    ; preset by the caller -- unlike pret, which re-derives the front tile
+    ; itself via an internal `predef GetTileAndCoordsInFrontOfPlayer` (root
+    ; home/overworld.asm:1284), so pret's own call ordering (tile-pair check
+    ; first, tile fetch after) doesn't matter there. The port deleted that
+    ; internal re-derivation, so the fetch must run BEFORE the tile-pair call
+    ; here too, matching CollisionCheckOnLand -- rebuild the viewport (stale
+    ; within a block) and read the front tile first.
+    call LoadCurrentMapView
+    ; Non-predef entry on purpose (predef wrapper would clobber ESI/EBX via
+    ; GetPredefRegisters).
+    call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile → W_TILE_IN_FRONT_OF_PLAYER
     ; pret :1673-1675 — water-seam tile pairs block (and may arm a ledge state);
     ; same save set as CollisionCheckOnLand's land hook.
     push ebx
@@ -3066,13 +3083,13 @@ CollisionCheckOnWater:
     pop edx
     pop ebx
     jc .collision
-    ; pret :1676 predef GetTileAndCoordsInFrontOfPlayer → port idiom (see header):
-    ; rebuild the viewport (stale within a block), then read the front tile.
-    call LoadCurrentMapView
-    ; Non-predef entry on purpose (predef wrapper would clobber ESI/EBX via
-    ; GetPredefRegisters). EDX is dead from here to the end of the routine, so the
-    ; faithful routine's DH/DL front-coord writes are harmless -- and match pret,
-    ; whose predef call clobbers DE here too.
+    ; pret :1676 predef GetTileAndCoordsInFrontOfPlayer — pret's own SECOND,
+    ; explicit call (the first ran inside CheckForJumpingAndTilePairCollisions
+    ; above). Not redundant: CheckForJumpingAndTilePairCollisions clobbers CL
+    ; (documented in its header), and IsNextTileShoreOrWater below needs a
+    ; freshly derived W_TILE_IN_FRONT_OF_PLAYER. EDX is dead from here to the
+    ; end of the routine, so the faithful routine's DH/DL front-coord writes
+    ; are harmless -- and match pret, whose predef call clobbers DE here too.
     call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile → W_TILE_IN_FRONT_OF_PLAYER
     call IsNextTileShoreOrWater                    ; CF=1 → shore/water ahead
     jc .noCollision                                ; keep surfing
