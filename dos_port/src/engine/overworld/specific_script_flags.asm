@@ -127,7 +127,7 @@ section .text
 ; SetMapSpecificScriptFlagsOnMapReload
 ; pret: engine/overworld/specific_script_flags.asm
 ;
-;   ld a, [wCurMap]                 -> mov al, [ebp + W_CUR_MAP]
+;   ld a, [wCurMap]                 -> mov al, [ebp + wCurMap]
 ;   cp VERMILION_GYM                -> cmp al, VERMILION_GYM
 ;   jr z, .vermilion_gym            -> je .vermilion_gym
 ;   ld c, a                         -> (folded away: AL already holds the
@@ -146,11 +146,11 @@ section .text
 ;                                       than re-implemented here)
 ;   .vermilion_gym:
 ;     ld hl, wCurrentMapScriptFlags
-;     set BIT_CUR_MAP_LOADED_2, [hl]  -> or byte [ebp+W_CURRENT_MAP_SCRIPT_FLAGS], (1<<BIT_CUR_MAP_LOADED_2)
+;     set BIT_CUR_MAP_LOADED_2, [hl]  -> or byte [ebp+wCurrentMapScriptFlags], (1<<BIT_CUR_MAP_LOADED_2)
 ;     ret
 ;   .in_list:
 ;     ld hl, wCurrentMapScriptFlags
-;     set BIT_CUR_MAP_LOADED_1, [hl]  -> or byte [ebp+W_CURRENT_MAP_SCRIPT_FLAGS], (1<<BIT_CUR_MAP_LOADED_1)
+;     set BIT_CUR_MAP_LOADED_1, [hl]  -> or byte [ebp+wCurrentMapScriptFlags], (1<<BIT_CUR_MAP_LOADED_1)
 ;     ret
 ;
 ; Flags: AL is only ever compared, never arithmetically modified, between the
@@ -165,7 +165,7 @@ section .text
 ;      of map-reload processing).
 ; ---------------------------------------------------------------------------
 SetMapSpecificScriptFlagsOnMapReload:
-    mov al, [ebp + W_CUR_MAP]        ; ld a, [wCurMap]
+    mov al, [ebp + wCurMap]        ; ld a, [wCurMap]
     cmp al, VERMILION_GYM            ; cp VERMILION_GYM
     je .vermilion_gym                ; jr z, .vermilion_gym
 
@@ -176,11 +176,11 @@ SetMapSpecificScriptFlagsOnMapReload:
     ret
 
 .vermilion_gym:
-    or byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_2)
+    or byte [ebp + wCurrentMapScriptFlags], (1 << BIT_CUR_MAP_LOADED_2)
     ret
 
 .in_list:
-    or byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1)
+    or byte [ebp + wCurrentMapScriptFlags], (1 << BIT_CUR_MAP_LOADED_1)
     ret
 
 ; ---------------------------------------------------------------------------

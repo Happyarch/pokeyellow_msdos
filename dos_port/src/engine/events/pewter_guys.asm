@@ -34,16 +34,16 @@ section .text
 PewterGuys:
     ; dest = wSimulatedJoypadStatesEnd + (index-1); the pre-decrement makes the
     ; first copied byte overwrite the $ff terminator of the existing queue.
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     dec al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     movzx edi, al                              ; de = index-1 (d=0)
-    add edi, W_SIMULATED_JOYPAD_STATES_END     ; edi = dest EBP-offset
+    add edi, wSimulatedJoypadStatesEnd     ; edi = dest EBP-offset
 
     movzx eax, byte [ebp + wWhichPewterGuy]
     mov esi, [PewterGuysCoordsTable + eax*4]   ; hl = flat ptr to Pewter*GuyCoords
-    mov bh, [ebp + W_Y_COORD]                  ; b = player Y
-    mov bl, [ebp + W_X_COORD]                  ; c = player X
+    mov bh, [ebp + wYCoord]                  ; b = player Y
+    mov bl, [ebp + wXCoord]                  ; c = player X
 .findMatchingCoordsLoop:
     mov al, [esi]                              ; entry Y
     inc esi
@@ -61,9 +61,9 @@ PewterGuys:
     je .done                                   ; ret z
     mov [ebp + edi], al                        ; ld [de], a
     inc edi
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     inc al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     jmp .copyMovementDataLoop
 .nextEntry1:
     inc esi                                    ; skip entry X

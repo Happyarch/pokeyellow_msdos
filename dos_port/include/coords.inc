@@ -142,7 +142,7 @@
     ; FIX(2026-07-04): was hardcoded to 3 (border=3); MAP_BORDER is larger — the old
     ; form landed inside the border ring, not on the target block. Unused at fix
     ; time (coords.inc not yet %included), so zero call-site impact.
-    mov %1, W_OVERWORLD_MAP + ((%2) + MAP_BORDER) + (((%3) + MAP_BORDER) * ((%4) + (MAP_BORDER * 2)))
+    mov %1, wOverworldMap + ((%2) + MAP_BORDER) + (((%3) + MAP_BORDER) * ((%4) + (MAP_BORDER * 2)))
 %endmacro
 
 ; BCOORD — battle-frame tile-address macro. pret hlcoords for in-battle screens
@@ -175,7 +175,7 @@
 ;   stride   = width + 2*MAP_BORDER
 ;   view_row = (y>>1) + MAP_BORDER - SCREEN_BLOCK_HEIGHT/2
 ;   view_col = (x>>1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2
-;   ptr      = W_OVERWORLD_MAP + view_row * stride + view_col
+;   ptr      = wOverworldMap + view_row * stride + view_col
 ; The two MUST stay in lockstep: a special warp loads this table value into
 ; W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR exactly where a normal warp would have
 ; computed the runtime form. Both are pure functions of MAP_BORDER /
@@ -187,7 +187,7 @@
 ; until re-derived". Unused before the fix; first consumer is special_warps.asm (OW-5.2).
 %macro event_displacement 3
     ; map width, x coord, y coord (tile units, as pret passes them)
-    dw (W_OVERWORLD_MAP + (((%3) >> 1) + MAP_BORDER - SCREEN_BLOCK_HEIGHT/2) * ((%1) + MAP_BORDER * 2) + (((%2) >> 1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2))
+    dw (wOverworldMap + (((%3) >> 1) + MAP_BORDER - SCREEN_BLOCK_HEIGHT/2) * ((%1) + MAP_BORDER * 2) + (((%2) >> 1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2))
     db %3, %2
 %endmacro
 

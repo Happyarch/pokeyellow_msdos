@@ -152,13 +152,13 @@ HallOfFameEntryMovement:
     db -1
 
 HallOfFameOakCongratulationsScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_80
         ret
 .nr_80:
     mov al, PLAYER_DIR_RIGHT
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, 1
     mov [ebp + hSpriteIndex], al
     call SetSpriteMovementBytesToFF
@@ -169,7 +169,7 @@ HallOfFameOakCongratulationsScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
     inc al
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, TEXT_HALLOFFAME_OAK
     mov [ebp + hTextID], al
     call DisplayTextID

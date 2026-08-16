@@ -45,8 +45,8 @@ section .text
 ; ---------------------------------------------------------------------------
 ReplaceTileBlock:
     call GetPredefRegisters                    ; BH=Y, BL=X
-    mov esi, W_OVERWORLD_MAP                    ; hl = wOverworldMap
-    mov al, [ebp + W_CUR_MAP_WIDTH]
+    mov esi, wOverworldMap                    ; hl = wOverworldMap
+    mov al, [ebp + wCurMapWidth]
     add al, MAP_BORDER * 2                      ; a = width + border*2 (row stride)
     movzx edx, al                              ; de = stride (d=0)
     mov ecx, edx                               ; save stride (pret: push af)
@@ -68,7 +68,7 @@ ReplaceTileBlock:
 .addX:
     movzx eax, bl                              ; add hl, bc  (bc = X; b is 0 here)
     add esi, eax
-    mov al, [ebp + W_NEW_TILE_BLOCK_ID]
+    mov al, [ebp + wNewTileBlockID]
     mov [ebp + esi], al                        ; ld [hl], a
 ; if the block is below the map view in memory, return.
     mov bl, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]      ; c = low byte

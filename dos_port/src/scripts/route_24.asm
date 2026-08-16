@@ -158,9 +158,9 @@ Route24DefaultScript:
         ret
 .nr_37:
     mov al, PAD_DOWN
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     call StartSimulatingJoypadStates
     mov al, SCRIPT_ROUTE24_PLAYER_MOVING
     mov [ebp + wRoute24CurScript], al
@@ -172,7 +172,7 @@ Route24DefaultScript:
     db -1
 
 Route24PlayerMovingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_55
         ret

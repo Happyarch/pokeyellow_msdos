@@ -272,8 +272,8 @@ ShowPokedexMenu:
     mov [ebp + wCurrentMenuItem], al
     mov [ebp + wLastMenuItem], al
     mov [ebp + hJoy7], al
-    mov [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK], al
+    mov [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], al
+    mov [ebp + wOverrideSimulatedJoypadStatesMask], al
     pop eax                                   ; restore saved wListScrollOffset
     mov [ebp + wListScrollOffset], al
     mov dword [menu_redraw_cb], 0             ; port: unhook our per-frame mirror

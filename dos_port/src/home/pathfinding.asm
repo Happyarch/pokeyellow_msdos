@@ -80,7 +80,7 @@ MoveSprite:
 MoveSprite_:
     call GetSpriteMovementByte1Pointer        ; ESI = EBP-rel offset of movement byte 1
     mov byte [ebp + esi], 0                   ; clear movement byte 1
-    mov esi, W_NPC_MOVEMENT_DIRECTIONS        ; ESI = GB offset of the output list
+    mov esi, wNPCMovementDirections        ; ESI = GB offset of the output list
     xor ecx, ecx                              ; c = 0 (step counter)
 .loop:
     mov al, [edi]
@@ -91,13 +91,13 @@ MoveSprite_:
     cmp al, 0xFF                              ; reached end of movement data?
     jne .loop
 
-    mov [ebp + W_NPC_NUM_SCRIPTED_STEPS], cl  ; number of steps taken
+    mov [ebp + wNPCNumScriptedSteps], cl  ; number of steps taken
     or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
     ; reset simulated-joypad override bookkeeping (pret tail of MoveSprite_)
-    mov byte [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK], 0
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], 0
+    mov byte [ebp + wOverrideSimulatedJoypadStatesMask], 0
+    mov byte [ebp + wSimulatedJoypadStatesEnd], 0
     mov byte [ebp + W_JOY_IGNORE], 0xFF                          ; pret: dec a (0 -> $ff)
-    mov byte [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], 0xFF
+    mov byte [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], 0xFF
     ret
 
 ; ---------------------------------------------------------------------------

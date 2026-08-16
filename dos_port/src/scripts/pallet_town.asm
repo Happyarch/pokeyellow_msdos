@@ -97,7 +97,7 @@ PalletTownOakText:
     call ShowTextStream
     mov bl, 10
     call DelayFrames
-    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], PLAYER_DIR_DOWN
+    mov byte [ebp + wPlayerMovingDirection], PLAYER_DIR_DOWN
     mov byte [ebp + wEmotionBubbleSpriteIndex], 0
     mov byte [ebp + wWhichEmotionBubble], EXCLAMATION_BUBBLE
     call EmotionBubble
@@ -133,16 +133,16 @@ PalletTown_Script:
 PalletTownDefaultScript:
     CheckEvent EVENT_FOLLOWED_OAK_INTO_LAB
     jnz .ret
-    cmp byte [ebp + W_Y_COORD], 0
+    cmp byte [ebp + wYCoord], 0
     jne .ret
     ResetEvent EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
-    cmp byte [ebp + W_X_COORD], 10
+    cmp byte [ebp + wXCoord], 10
     je .playerOnLeftExit
     SetEvent EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
 .playerOnLeftExit:
     mov byte [ebp + hJoyHeld], 0
     mov byte [ebp + W_JOY_IGNORE], PAD_BUTTONS | PAD_CTRL_PAD
-    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], PLAYER_DIR_UP
+    mov byte [ebp + wPlayerMovingDirection], PLAYER_DIR_UP
     call StopAllMusic
     mov bl, MUSIC_MEET_PROF_OAK_BANK
     mov al, MUSIC_MEET_PROF_OAK
@@ -169,7 +169,7 @@ PalletTownOakHeyWaitScript:
 
 PalletTownOakWalksToPlayerScript:
     call Delay3
-    mov byte [ebp + W_Y_COORD], 0
+    mov byte [ebp + wYCoord], 0
     mov byte [ebp + hNPCPlayerRelativePosPerspective], 1
     mov byte [ebp + hNPCSpriteOffset], 0x10 ; PALLETTOWN_OAK slot offset
     call CalcPositionOfPlayerRelativeToNPC
@@ -226,9 +226,9 @@ PalletTownAfterPikachuBattleScript:
 PalletTownOakNotSafeComeWithMeScript:
     mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], 0
     mov byte [ebp + wSpriteIndex], PALLETTOWN_OAK
-    mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 0
+    mov byte [ebp + wNPCMovementScriptFunctionNum], 0
     mov byte [ebp + wNPCMovementScriptPointerTableNum], 1
-    mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_BANK], 0
+    mov byte [ebp + wNPCMovementScriptBank], 0
     mov byte [ebp + wPalletTownCurScript], SCRIPT_PALLETTOWN_PLAYER_FOLLOWS_OAK
     ret
 

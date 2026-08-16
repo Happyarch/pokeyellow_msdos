@@ -25,7 +25,7 @@ section .text
 ; ---------------------------------------------------------------------------
 ; IsPlayerStandingOnDoorTile — check if the player's current tile is a door tile.
 ; Returns CF=1 if yes, CF=0 otherwise (stair, ladder, or unknown tileset).
-; Reads W_CUR_MAP_TILESET, looks up DoorTileTable, then checks W_TILEMAP at
+; Reads wCurMapTileset, looks up DoorTileTable, then checks W_TILEMAP at
 ; PLAYER_STANDING_ROW/COL (the tile directly under the player sprite).
 ; All registers preserved.
 ; Pret ref: engine/overworld/doors.asm:IsPlayerStandingOnDoorTile
@@ -34,7 +34,7 @@ IsPlayerStandingOnDoorTile:
     push eax
     push esi
 
-    movzx eax, byte [ebp + W_CUR_MAP_TILESET]
+    movzx eax, byte [ebp + wCurMapTileset]
     mov esi, DoorTileTable
 
 .search_tileset:

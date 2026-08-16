@@ -68,7 +68,7 @@ RunNPCMovementScript:
     dec al                                          ; table num is 1-based
     movzx eax, al
     mov esi, [NPCMovementScriptPointerTables + eax*4] ; ESI = flat per-map jumptable
-    mov al, [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM]
+    mov al, [ebp + wNPCMovementScriptFunctionNum]
     call CallFunctionInTable                        ; call function AL within ESI
 .done:
     ret

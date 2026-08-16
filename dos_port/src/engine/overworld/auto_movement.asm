@@ -70,8 +70,8 @@ PlayerStepOutFromDoor:
     ; Door tile — set up one forced south step to walk off the arrival warp tile.
     mov byte [ebp + W_JOY_IGNORE], PAD_SELECT | PAD_START | PAD_CTRL_PAD
     or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_EXITING_DOOR)
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 1
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], PAD_DOWN
+    mov byte [ebp + wSimulatedJoypadStatesIndex], 1
+    mov byte [ebp + wSimulatedJoypadStatesEnd], PAD_DOWN
     xor al, al
     mov [ebp + W_SPRITE_PLAYER_IMAGE_INDEX], al       ; pret: wSpritePlayerStateData1ImageIndex = 0
     ; StartSimulatingJoypadStates zeroes the override mask + slot-0 movement byte 1 and
@@ -87,9 +87,9 @@ PlayerStepOutFromDoor:
     ; Zero the simulated-joypad fields first: otherwise a stale index/queued PAD_* byte
     ; leaks into AreInputsSimulated and would replay a phantom step on the next frame.
     xor al, al
-    mov byte [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END],   al
+    mov byte [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], al
+    mov byte [ebp + wSimulatedJoypadStatesIndex], al
+    mov byte [ebp + wSimulatedJoypadStatesEnd],   al
     and byte [ebp + W_MOVEMENT_FLAGS], ~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))
     and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
     ret
@@ -104,18 +104,18 @@ _EndNPCMovementScript:
     and byte [ebp + W_MOVEMENT_FLAGS], (~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))) & 0xFF
     xor al, al
     mov [ebp + wNPCMovementScriptSpriteOffset], al
-    mov [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], al
+    mov [ebp + wNPCMovementScriptFunctionNum], al
     mov [ebp + wNPCMovementScriptPointerTableNum], al
-    mov [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     ret
 
 ; ===========================================================================
 ; Pallet Town — Prof. Oak walks the player to his lab.
 ; ===========================================================================
 PalletMovementScript_OakMoveLeft:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     sub al, 0x0a
     mov [ebp + wNumStepsToTake], al            ; ld doesn't disturb ZF from sub
     jz .playerOnLeftTile
@@ -131,11 +131,11 @@ PalletMovementScript_OakMoveLeft:
     mov [ebp + hCurrentSpriteOffset], al
     lea edi, [ebp + wNPCMovementDirections2]   ; de = movement stream (flat = ebp + WRAM offset)
     call MoveSprite
-    mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 1
+    mov byte [ebp + wNPCMovementScriptFunctionNum], 1
     jmp .setMusic
 ; Player on the left tile; Oak is already positioned.
 .playerOnLeftTile:
-    mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 3
+    mov byte [ebp + wNPCMovementScriptFunctionNum], 3
 .setMusic:
     mov bl, MUSIC_MUSEUM_GUY_BANK              ; c = audio ROM bank
     mov al, MUSIC_MUSEUM_GUY
@@ -148,40 +148,40 @@ PalletMovementScript_PlayerMoveLeft:
     test byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_NPC_MOVEMENT)
     jnz .ret                                   ; return if Oak is still moving
     mov al, [ebp + wNumStepsToTake]
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov [ebp + hNPCMovementDirections2Index], al
     call ConvertNPCMovementDirectionsToJoypadMasks ; pret: predef (banking elided)
     call StartSimulatingJoypadStates
-    mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 2
+    mov byte [ebp + wNPCMovementScriptFunctionNum], 2
 .ret:
     ret
 
 PalletMovementScript_WaitAndWalkToLab:
-    cmp byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0 ; is the player done moving left?
+    cmp byte [ebp + wSimulatedJoypadStatesIndex], 0 ; is the player done moving left?
     jz PalletMovementScript_WalkToLab          ; done -> walk to lab (pret: fall through)
     ret
 
 PalletMovementScript_WalkToLab:
-    mov byte [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK], 0
+    mov byte [ebp + wOverrideSimulatedJoypadStatesMask], 0
     mov al, [ebp + wSpriteIndex]
     shl al, 4                                  ; swap a
     mov [ebp + wNPCMovementScriptSpriteOffset], al
     mov byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0 ; wSpritePlayerStateData2MovementByte1
-    mov esi, W_SIMULATED_JOYPAD_STATES_END
+    mov esi, wSimulatedJoypadStatesEnd
     mov edi, RLEList_PlayerWalkToLab
     call DecodeRLEList
     dec al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov esi, wNPCMovementDirections2
     mov edi, RLEList_ProfOakWalkToLab
     call DecodeRLEList
     and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
     or  byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 4
+    mov byte [ebp + wNPCMovementScriptFunctionNum], 4
     ret
 
 PalletMovementScript_Done:
-    cmp byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0
+    cmp byte [ebp + wSimulatedJoypadStatesIndex], 0
     jnz .ret
     mov byte [ebp + wToggleableObjectIndex], TOGGLE_PALLET_TOWN_OAK
     call HideObject                            ; pret: predef (banking elided; HideObject unported)
@@ -202,22 +202,22 @@ PewterMovementScript_WalkToMuseum:
     shl al, 4                                  ; swap a
     mov [ebp + wNPCMovementScriptSpriteOffset], al
     call StartSimulatingJoypadStates
-    mov esi, W_SIMULATED_JOYPAD_STATES_END
+    mov esi, wSimulatedJoypadStatesEnd
     mov edi, RLEList_PewterMuseumPlayer
     call DecodeRLEList
     dec al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov byte [ebp + wWhichPewterGuy], 0
     call PewterGuys
     mov esi, wNPCMovementDirections2
     mov edi, RLEList_PewterMuseumGuy
     call DecodeRLEList
     and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
-    mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 1
+    mov byte [ebp + wNPCMovementScriptFunctionNum], 1
     ret
 
 PewterMovementScript_Done:
-    cmp byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0
+    cmp byte [ebp + wSimulatedJoypadStatesIndex], 0
     jnz .ret
     and byte [ebp + W_STATUS_FLAGS_5], (~(1 << BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
     and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
@@ -233,11 +233,11 @@ PewterMovementScript_WalkToGym:
     shl al, 4                                  ; swap a
     mov [ebp + wNPCMovementScriptSpriteOffset], al
     mov byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0 ; wSpritePlayerStateData2MovementByte1
-    mov esi, W_SIMULATED_JOYPAD_STATES_END
+    mov esi, wSimulatedJoypadStatesEnd
     mov edi, RLEList_PewterGymPlayer
     call DecodeRLEList
     dec al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov byte [ebp + wWhichPewterGuy], 1
     call PewterGuys
     mov esi, wNPCMovementDirections2
@@ -245,7 +245,7 @@ PewterMovementScript_WalkToGym:
     call DecodeRLEList
     and byte [ebp + W_STATUS_FLAGS_4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
     or  byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    mov byte [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], 1
+    mov byte [ebp + wNPCMovementScriptFunctionNum], 1
     ret
 
 section .rodata

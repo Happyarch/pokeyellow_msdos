@@ -101,10 +101,10 @@ DecodeArrowMovementRLE:
     cmp al, bl
     jne .next
     mov edi, [esi + 2]                        ; EDI = flat pointer to RLE movement data
-    mov esi, W_SIMULATED_JOYPAD_STATES_END    ; output buffer offset
+    mov esi, wSimulatedJoypadStatesEnd    ; output buffer offset
     call DecodeRLEList                        ; AL = bytes written incl. sentinel
     dec al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     ret
 .next:
     add esi, 6                                ; skip Y, X, dd pointer
@@ -162,7 +162,7 @@ BankswitchAndContinue:
 ; Clobbers: nothing meaningful (writes RAM only)
 ; ---------------------------------------------------------------------------
 StartSimulatingJoypadStates:
-    mov byte [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK], 0
+    mov byte [ebp + wOverrideSimulatedJoypadStatesMask], 0
     ; wSpritePlayerStateData2MovementByte1 = slot 0 movement byte 1
     mov byte [ebp + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0
     or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
@@ -199,8 +199,8 @@ IsItemInBag:
 ; Clobbers EAX, ESI.  Preserves BX/DX.
 ; ---------------------------------------------------------------------------
 ArePlayerCoordsInArray:
-    mov bh, [ebp + W_Y_COORD]           ; b = wYCoord
-    mov bl, [ebp + W_X_COORD]           ; c = wXCoord
+    mov bh, [ebp + wYCoord]           ; b = wYCoord
+    mov bl, [ebp + wXCoord]           ; c = wXCoord
     ; fallthrough
 CheckCoords:
     mov byte [ebp + W_COORD_INDEX], 0

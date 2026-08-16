@@ -146,7 +146,7 @@ TrackPlayTime:
 ; ---------------------------------------------------------------------------
 CountDownIgnoreInputBitReset:
     push eax
-    mov al, [ebp + W_IGNORE_INPUT_COUNTER]
+    mov al, [ebp + wIgnoreInputCounter]
     test al, al
     jnz .decrement
     mov al, 0xFF                            ; was 0 → re-arm to $ff
@@ -154,7 +154,7 @@ CountDownIgnoreInputBitReset:
 .decrement:
     dec al
 .continue:
-    mov [ebp + W_IGNORE_INPUT_COUNTER], al
+    mov [ebp + wIgnoreInputCounter], al
     test al, al
     jnz .done                              ; still counting down
 

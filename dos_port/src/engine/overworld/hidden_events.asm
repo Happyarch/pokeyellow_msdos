@@ -81,7 +81,7 @@ CheckForHiddenEvent:
     ; pret stride is 3 (db map + dw same-bank ptr); the flat port has no banks, so
     ; the per-map pointer is a dd (see gen_hidden_events.py) → stride 5.
     mov edx, 5                          ; ld de, 5 (entry stride: db map + dd ptr)
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     call IsInArray                      ; CF=1 if wCurMap is in the array (ESI→match)
     jnc .noMatch                        ; jr nc
     ; ESI points at the matched map-id byte; the dw pointer follows.
@@ -144,30 +144,30 @@ CheckIfCoordsInFrontOfPlayerMatch:
     cmp al, SPRITE_FACING_RIGHT
     je .facingRight
 ; facing down
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     inc al
     jmp .upDownCommon
 .facingUp:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     dec al
 .upDownCommon:
     cmp al, bh                          ; cp b
     jne .didNotMatch
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, bl                          ; cp c
     jne .didNotMatch
     jmp .matched
 .facingLeft:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     dec al
     jmp .leftRightCommon
 .facingRight:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     inc al
 .leftRightCommon:
     cmp al, bl                          ; cp c
     jne .didNotMatch
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, bh                          ; cp b
     jne .didNotMatch
 .matched:

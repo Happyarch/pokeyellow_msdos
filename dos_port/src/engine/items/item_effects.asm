@@ -569,13 +569,13 @@ WaterTile:
 section .text
 
 IsNextTileShoreOrWater:
-    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov al, [ebp + wCurMapTileset]
     mov esi, WaterTilesets           ; ld hl, WaterTilesets (flat table)
     mov edx, 1                       ; ld de, 1
     call IsInArray                   ; does the current map allow surfing?
     jnc .done                        ; ret nc — no water in this tileset (CF=0)
     mov esi, WaterTile               ; ld hl, WaterTile
-    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov al, [ebp + wCurMapTileset]
     cmp al, SHIP_PORT                ; Vermilion Dock: water tile only
     je .skipShoreTiles
     cmp al, GYM                      ; Cerulean Gym pool: water tile only
@@ -584,7 +584,7 @@ IsNextTileShoreOrWater:
     je .skipShoreTiles
     mov esi, ShoreTiles              ; ld hl, ShoreTiles
 .skipShoreTiles:
-    mov al, [ebp + W_TILE_IN_FRONT_OF_PLAYER]
+    mov al, [ebp + wTileInFrontOfPlayer]
     mov edx, 1                       ; ld de, 1
     call IsInArray                   ; CF=1 → tile is shore/water
 .done:
@@ -660,7 +660,7 @@ ItemUseSurfboard:
     mov esi, TilePairCollisionsWater
     call CheckForTilePairCollisions
     jc .cannotStopSurfing
-    mov al, [ebp + W_TILE_IN_FRONT_OF_PLAYER]
+    mov al, [ebp + wTileInFrontOfPlayer]
     mov bl, al                          ; ld c, a
     call IsTilePassable
     jnc .stopSurfing                    ; jr nc
@@ -681,7 +681,7 @@ ItemUseSurfboard:
 
 ; uses a simulated button press to make the player move forward
 .makePlayerMoveForward:
-    mov al, [ebp + W_PLAYER_DIRECTION]  ; direction the player is going
+    mov al, [ebp + wPlayerDirection]  ; direction the player is going
     mov bh, PAD_UP                      ; ld b, PAD_UP
     test al, 1 << PLAYER_DIR_BIT_UP
     jnz .storeSimulatedButtonPress
@@ -694,9 +694,9 @@ ItemUseSurfboard:
     mov bh, PAD_RIGHT
 .storeSimulatedButtonPress:
     mov al, bh                          ; ld a, b
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
-    mov byte [ebp + W_UNUSED_SIMULATED_JOYPAD_STATES_MASK], 0   ; xor a / ld [..], a
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 1         ; inc a / ld [..], a
+    mov [ebp + wSimulatedJoypadStatesEnd], al
+    mov byte [ebp + wUnusedSimulatedJoypadStatesMask], 0   ; xor a / ld [..], a
+    mov byte [ebp + wSimulatedJoypadStatesIndex], 1         ; inc a / ld [..], a
     ret
 
 ; ---------------------------------------------------------------------------
@@ -3646,7 +3646,7 @@ ItemUseCardKey:
     ; meant to read; even then the only effect is a different message plus two writes
     ; nothing ever reads, so this fix is cosmetic by construction.
 %if BUG_FIX_LEVEL >= 2
-    mov al, [ebp + W_TILE_IN_FRONT_OF_PLAYER]
+    mov al, [ebp + wTileInFrontOfPlayer]
 %else
     mov al, 0xCD
 %endif

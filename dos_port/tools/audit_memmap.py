@@ -48,7 +48,7 @@ EQU_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s+equ\s+0x([0-9A-Fa-f]+)\s*(?
 # name -> size in bytes. KEEP THIS SHORT; prefer teaching the inc a _SIZE equ.
 # ---------------------------------------------------------------------------
 CURATED_SIZES = {
-    "W_SURROUNDING_TILES": 48 * 36,   # 1728 B; DrawTileBlock's decode surface
+    "wSurroundingTiles": 48 * 36,   # 1728 B; DrawTileBlock's decode surface
     "W_TILEMAP_BACKUP2":   1000,      # wTileMap copy (40x25)
     "NPC_DIALOG_BUF":      256,       # ShowTextStream bounds copies to <256 B
     "GB_VRAM0":            0x2000,    # $8000-$9FFF hardware VRAM
@@ -61,7 +61,7 @@ EXTENDED_SRAM_END = 0x28000
 
 # Symbols that legally share/alias an extent (why matters — keep the comments).
 ALIASES = {
-    "W_TILEMAP_BACKUP",        # == W_SURROUNDING_TILES by design (pret union)
+    "W_TILEMAP_BACKUP",        # == wSurroundingTiles by design (pret union)
     "GB_ECHO",                 # region marker for $E000, not a buffer
     "GB_VCHARS0", "GB_VFONT", "GB_VCHARS2",      # VRAM sub-regions
     "GB_TILEMAP0", "GB_TILEMAP1",                # VRAM sub-regions

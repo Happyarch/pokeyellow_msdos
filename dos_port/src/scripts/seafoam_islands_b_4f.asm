@@ -118,16 +118,16 @@ SeafoamIslandsB4FDefaultScript:
     cmp al, 0x3
     jae .only1UpInputNeeded
     mov al, PAD_UP
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END + 1], al
+    mov [ebp + wSimulatedJoypadStatesEnd + 1], al
     mov al, 2
     jmp .forcePlayerUpFromSurfExit
 
 .only1UpInputNeeded:
     mov al, 1
 .forcePlayerUpFromSurfExit:
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_UP
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     call StartSimulatingJoypadStates
     mov esi, wStatusFlags7
     and byte [ebp + esi], ~(1 << (2)) & 0xFF
@@ -143,7 +143,7 @@ SeafoamIslandsB4FDefaultScript:
     db -1
 
 SeafoamIslandsB4FObjectMoving1Script:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_68
         ret
@@ -203,7 +203,7 @@ SeafoamIslandsB4FObjectMoving1Script:
     db -1
 
 SeafoamIslandsB4FObjectMoving2Script:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     mov bh, al
     cmp al, 0x1
     jnz .sk_122

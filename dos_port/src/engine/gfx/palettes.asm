@@ -408,12 +408,12 @@ YellowIntroPaletteAction:
 ; its 2bpp cache remains unchanged except for the normal dirty rebuild.
 SetPal_Overworld:
     pushad
-    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov al, [ebp + wCurMapTileset]
     cmp al, CEMETERY
     je .gray
     cmp al, CAVERN
     je .cave
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, FIRST_INDOOR_MAP
     jb .townOrRoute
     cmp al, CERULEAN_CAVE_2F
@@ -429,7 +429,7 @@ SetPal_Overworld:
     cmp al, COLOSSEUM
     je .gray
 .lastMap:
-    mov al, [ebp + W_LAST_MAP]
+    mov al, [ebp + wLastMap]
 .townOrRoute:
     cmp al, NUM_CITY_MAPS
     jae .route

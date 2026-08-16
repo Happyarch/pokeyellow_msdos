@@ -81,9 +81,6 @@ W_PARTY_MON1_MOVES       equ 0xD172
 W_PARTY_MON4_MOVES       equ 0xD1F6
 W_POKEDEX_OWNED          equ 0xD2F6
 W_POKEDEX_SEEN           equ 0xD309
-W_CUR_MAP              equ 0xD35D
-W_Y_COORD              equ 0xD360
-W_X_COORD              equ 0xD361
 W_PLAYER_MONEY           equ 0xD346
 wPlayerMoney             equ W_PLAYER_MONEY   ; 3-byte BCD (trainer-card money display)
 W_OBTAINED_BADGES        equ 0xD355
@@ -1216,7 +1213,7 @@ W_TILEMAP_BACKUP2            equ 0xF100 ; wTileMapBackup2 (1000 B)
 
 ; Overworld surrounding-tiles buffer (alias for wTileMapBackup)
 ; 48×36 = 1728 bytes; DrawTileBlock writes here before crop to wTileMap.
-W_SURROUNDING_TILES          equ 0xE000 ; wSurroundingTiles = wTileMapBackup
+wSurroundingTiles             equ 0xE000 ; wSurroundingTiles = wTileMapBackup
 
 ; --- Animated-object engine (menu-intro B1: engine/gfx/animated_objects.asm) ---
 ; RELOCATED (port-only): pret places this WRAM0 union branch at 0xC508 (the
@@ -1308,7 +1305,7 @@ W_LY_OVERRIDES                  equ W_LY_OVERRIDES_BUFFER - 0x100 ; 0xF900 (iner
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
 ; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old
 ; 2048. Grown to 0x900; end = 0xF100, and nothing is used until GB_OAM at 0xFE00.
-W_OVERWORLD_MAP              equ 0xE800 ; wOverworldMap
+wOverworldMap                 equ 0xE800 ; wOverworldMap
 W_OVERWORLD_MAP_SIZE         equ 0x900  ; wOverworldMapEnd − wOverworldMap (2304 bytes)
 
 ; Turn-delay state (pret: wCheckFor180DegreeTurn / wPlayerLastStopDirection)
@@ -1316,13 +1313,13 @@ W_OVERWORLD_MAP_SIZE         equ 0x900  ; wOverworldMapEnd − wOverworldMap (23
 ; Reset to 0 on the first press (so subsequent frames in same direction walk).
 ; Restored to 1 when no direction is held (.noDirection path).
 W_CHECK_FOR_TURN             equ 0xCADD ; wCheckFor180DegreeTurn (1=check next press)
-W_PLAYER_LAST_STOP_DIRECTION equ 0xCFAE ; wPlayerLastStopDirection (dir held when player last stopped)
+wPlayerLastStopDirection      equ 0xCFAE ; wPlayerLastStopDirection (dir held when player last stopped)
 
 ; Walk/sprite state
 W_FONT_LOADED                equ 0xCFC3 ; wFontLoaded (bit BIT_FONT_LOADED set while text font is in VRAM)
 wFontLoaded                  equ W_FONT_LOADED
-W_WALK_COUNTER               equ 0xCFC4 ; wWalkCounter
-W_TILE_IN_FRONT_OF_PLAYER    equ 0xCFC5 ; wTileInFrontOfPlayer (collision check result)
+wWalkCounter                  equ 0xCFC4 ; wWalkCounter
+wTileInFrontOfPlayer          equ 0xCFC5 ; wTileInFrontOfPlayer (collision check result)
 W_AUDIO_FADE_OUT             equ 0xCFC6 ; wAudioFadeOutControl
 W_UPDATE_SPRITES_ENABLED     equ 0xCFCA ; wUpdateSpritesEnabled
 
@@ -1350,20 +1347,20 @@ wWalkBikeSurfStateCopy       equ 0xD119 ; = W_WALK_BIKE_SURF_STATE_COPY (pret na
 W_JOY_IGNORE                 equ 0xCD6B ; wJoyIgnore — button mask; bits set suppress those inputs
                                           ; (golden 00:cd6b; was wrongly 0xCCB7 — inside the 180-byte
                                           ;  wNPCMovementDirections buffer, clobbered by scripted moves)
-W_SIMULATED_JOYPAD_STATES_END equ 0xCCD3 ; wSimulatedJoypadStatesEnd — PAD_* byte queued by scripts
+wSimulatedJoypadStatesEnd     equ 0xCCD3 ; wSimulatedJoypadStatesEnd — PAD_* byte queued by scripts
                                           ; (golden sym 00:ccd3; was wrongly 0xCC5B, colliding with
                                           ;  wNPCMovementDirections so MoveSprite zeroed step[0] — OW-2.2 fix)
-W_SIMULATED_JOYPAD_STATES_INDEX equ 0xCD38 ; wSimulatedJoypadStatesIndex — steps remaining (0=done)
+wSimulatedJoypadStatesIndex   equ 0xCD38 ; wSimulatedJoypadStatesIndex — steps remaining (0=done)
                                           ; (golden 00:cd38; was wrongly 0xCC84 — inside wNPCMovementDirections)
-W_UNUSED_SIMULATED_JOYPAD_STATES_MASK equ 0xCD39 ; wUnusedSimulatedJoypadStatesMask (golden 00:cd39)
+wUnusedSimulatedJoypadStatesMask equ 0xCD39 ; wUnusedSimulatedJoypadStatesMask (golden 00:cd39)
                                           ; Written (zeroed) by ItemUseSurfboard's .makePlayerMoveForward and
                                           ; never read — "Unused" is pret's own name for it, not a port note.
                                           ; Kept because the write is part of the routine's WRAM footprint and
                                           ; the golden compares it.
-W_IGNORE_INPUT_COUNTER       equ 0xD139 ; wIgnoreInputCounter — counts down 30→0; clears BIT_DISABLE_JOYPAD
+wIgnoreInputCounter           equ 0xD139 ; wIgnoreInputCounter — counts down 30→0; clears BIT_DISABLE_JOYPAD
 
 ; Current-map script flags
-W_CURRENT_MAP_SCRIPT_FLAGS   equ 0xD125 ; wCurrentMapScriptFlags
+wCurrentMapScriptFlags        equ 0xD125 ; wCurrentMapScriptFlags
 
 ; Letter-printing delay and text speed options (text engine)
 ; Pret ref: constants/ram_constants.asm, engine/menus/main_menu.asm:InitOptions
@@ -1398,10 +1395,9 @@ TEXT_DELAY_SLOW              equ 5      ; 5 frames per character
 TEXT_DELAY_MASK              equ 0x0F   ; bits 3-0 of wOptions hold text speed
 
 ; Current map identity
-W_CUR_MAP                    equ 0xD35D ; wCurMap (1 byte)
 W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR equ 0xD35E ; wCurrentTileBlockMapViewPointer (2 bytes)
-%ifndef W_NEW_TILE_BLOCK_ID
-W_NEW_TILE_BLOCK_ID          equ 0xD09E ; wNewTileBlockID (golden 00:d09e; ReplaceTileBlock)
+%ifndef wNewTileBlockID
+wNewTileBlockID               equ 0xD09E ; wNewTileBlockID (golden 00:d09e; ReplaceTileBlock)
 %endif
 %ifndef wBoulderSpriteIndex
 wBoulderSpriteIndex          equ 0xD717 ; golden 00:d717 (boulder push subsystem)
@@ -1413,10 +1409,10 @@ wTextPredefFlag              equ 0xCF11 ; BIT_TEXT_PREDEF gates PrintPredefTextI
 wSpriteIndex                 equ 0xCF13 ; DisplayTextID stores hTextID/hSpriteIndex here
 wItemList                    equ 0xCF7A ; mart item-list scratch
 wItemListPointer             equ 0xD127 ; big-endian pointer to current mart item list
-W_Y_COORD                    equ 0xD360 ; wYCoord (player map Y, in tiles)
-W_X_COORD                    equ 0xD361 ; wXCoord (player map X, in tiles)
-W_Y_BLOCK_COORD              equ 0xD362 ; wYBlockCoord
-W_X_BLOCK_COORD              equ 0xD363 ; wXBlockCoord
+wYCoord                       equ 0xD360 ; wYCoord (player map Y, in tiles)
+wXCoord                       equ 0xD361 ; wXCoord (player map X, in tiles)
+wYBlockCoord                  equ 0xD362 ; wYBlockCoord
+wXBlockCoord                  equ 0xD363 ; wXBlockCoord
 W_D433                       equ 0xD433 ; wd433 — Pikachu collision direction (set by sprite collision engine)
 ; --- Overworld-Pikachu WRAM block (OW-A.11: promoted from pikachu.asm file-local placeholders).
 ; pokeyellow-real addresses, consistent with the existing Pikachu symbols here (W_D433,
@@ -1433,27 +1429,25 @@ wPikachuMovementScriptBank   equ 0xD449 ; ROM bank of the active Pikachu movemen
 wPikachuMovementScriptAddress equ 0xD44A ; dw: cursor into the movement script
 wSpritePikachuStateData1MovementStatus equ 0xC1F1 ; slot-15 data1+1 (wSpriteStateData1 $C100 + 15*$10 +1)
 wSpritePikachuStateData1ImageIndex     equ 0xC1F2 ; slot-15 data1+2 ($ff = off screen/hidden)
-W_LAST_MAP                   equ 0xD364 ; wLastMap
+wLastMap                      equ 0xD364 ; wLastMap
 
 ; Fixed map header (wCurMapHeader = wCurMapTileset at $D366)
 ; This is a contiguous 10-byte region that LoadMapHeader copies into from the ROM header.
 ; Layout: tileset(1) + height(1) + width(1) + dataptr(2) + textptr(2) + scriptptr(2) + connections(1)
-W_CUR_MAP_HEADER             equ 0xD366 ; wCurMapHeader (start of fixed header copy target)
-W_CUR_MAP_TILESET            equ 0xD366 ; wCurMapTileset (= wCurMapHeader first byte)
+wCurMapHeader                 equ 0xD366 ; wCurMapHeader (start of fixed header copy target)
 BIT_NO_PREVIOUS_MAP          equ 7      ; wCurMapTileset bit 7 (constants/ram_constants.asm) — set by save-load, LoadMapHeader res's it
-W_CUR_MAP_HEIGHT             equ 0xD367 ; wCurMapHeight
-W_CUR_MAP_WIDTH              equ 0xD368 ; wCurMapWidth
-W_CUR_MAP_DATA_PTR           equ 0xD369 ; wCurMapDataPtr (2 bytes, LE)
-W_CUR_MAP_TEXT_PTR           equ 0xD36B ; wCurMapTextPtr (2 bytes, LE)
-wCurMapTextPtr               equ W_CUR_MAP_TEXT_PTR
-W_CUR_MAP_SCRIPT_PTR         equ 0xD36D ; wCurMapScriptPtr (2 bytes, LE)
-W_CUR_MAP_CONNECTIONS        equ 0xD36F ; wCurMapConnections (NORTH|SOUTH|WEST|EAST bits)
-W_CUR_MAP_HEADER_END         equ 0xD370 ; wCurMapHeaderEnd (byte after connections)
-W_CUR_MAP_HEADER_SIZE        equ W_CUR_MAP_HEADER_END - W_CUR_MAP_HEADER  ; = 10 bytes
+wCurMapHeight                 equ 0xD367 ; wCurMapHeight
+wCurMapWidth                  equ 0xD368 ; wCurMapWidth
+wCurMapDataPtr                equ 0xD369 ; wCurMapDataPtr (2 bytes, LE)
+wCurMapTextPtr                equ 0xD36B
+wCurMapScriptPtr              equ 0xD36D ; wCurMapScriptPtr (2 bytes, LE)
+wCurMapConnections            equ 0xD36F ; wCurMapConnections (NORTH|SOUTH|WEST|EAST bits)
+wCurMapHeaderEnd              equ 0xD370 ; wCurMapHeaderEnd (byte after connections)
+W_CUR_MAP_HEADER_SIZE        equ wCurMapHeaderEnd - wCurMapHeader  ; = 10 bytes
 
 ; lowercase aliases (pret-faithful wild-encounter / battle drafts)
-wCurMap                      equ 0xD35D ; = W_CUR_MAP
-wCurMapTileset               equ 0xD366 ; = W_CUR_MAP_TILESET
+wCurMap                      equ 0xD35D ; = wCurMap
+wCurMapTileset               equ 0xD366 ; = wCurMapTileset
 
 ; --- wild encounter WRAM (sym-pinned, origin/symbols:pokeyellow.sym) ---
 ; wGrassMons/wWaterMons each hold WILDDATA_LENGTH-1 (=20) bytes: 10×(level,species).
@@ -1600,34 +1594,33 @@ W_SPRITE_SET_ID              equ 0xD3A7 ; wSpriteSetID
 W_OBJECT_DATA_PTR_TEMP       equ 0xD3A8 ; wObjectDataPointerTemp (2 bytes)
 
 ; Map object header (follows connections in object data)
-W_MAP_BACKGROUND_TILE        equ 0xD3AC ; wMapBackgroundTile (border block ID for wOverworldMap)
-W_NUMBER_OF_WARPS            equ 0xD3AD ; wNumberOfWarps
-W_WARP_ENTRIES               equ 0xD3AE ; wWarpEntries (MAX_WARP_EVENTS * 4 bytes max)
-W_DESTINATION_WARP_ID        equ 0xD42E ; wDestinationWarpID ($FF = don't update coords)
-wDestinationWarpID           equ 0xD42E ; pret alias of W_DESTINATION_WARP_ID
+wMapBackgroundTile            equ 0xD3AC ; wMapBackgroundTile (border block ID for wOverworldMap)
+wNumberOfWarps                equ 0xD3AD ; wNumberOfWarps
+wWarpEntries                  equ 0xD3AE ; wWarpEntries (MAX_WARP_EVENTS * 4 bytes max)
+wDestinationWarpID           equ 0xD42E ; pret alias of wDestinationWarpID
 wUnknownSerialFlag_d499      equ 0xD499 ; GB-Stadium-link flag; restricts Sleep counter reroll range when set (0 on real HW/this port)
 
 ; Sign/BG event data
-W_NUM_SIGNS                  equ 0xD4AF ; wNumSigns
-W_SIGN_COORDS                equ 0xD4B0 ; wSignCoords (MAX_BG_EVENTS * 2 bytes: Y, X pairs)
-W_SIGN_TEXT_IDS              equ 0xD4D0 ; wSignTextIDs (MAX_BG_EVENTS bytes)
+wNumSigns                     equ 0xD4AF ; wNumSigns
+wSignCoords                   equ 0xD4B0 ; wSignCoords (MAX_BG_EVENTS * 2 bytes: Y, X pairs)
+wSignTextIDs                  equ 0xD4D0 ; wSignTextIDs (MAX_BG_EVENTS bytes)
 
 MAX_WARP_EVENTS              equ 32
 MAX_BG_EVENTS                equ 16
 
 ; Special-warp step offsets (incremented as the block-map pointer crosses
 ; block boundaries; faithful bookkeeping, not yet consumed by warp logic).
-W_Y_OFFSET_SINCE_LAST_SPECIAL_WARP equ 0xD4E1 ; wYOffsetSinceLastSpecialWarp
-W_X_OFFSET_SINCE_LAST_SPECIAL_WARP equ 0xD4E2 ; wXOffsetSinceLastSpecialWarp
+wYOffsetSinceLastSpecialWarp  equ 0xD4E1 ; wYOffsetSinceLastSpecialWarp
+wXOffsetSinceLastSpecialWarp  equ 0xD4E2 ; wXOffsetSinceLastSpecialWarp
 
 ; Edge detection thresholds (height*2 / width*2) — used by CheckMapConnections
-W_CURRENT_MAP_HEIGHT_2       equ 0xD523 ; wCurrentMapHeight2 = wCurMapHeight * 2
-W_CURRENT_MAP_WIDTH_2        equ 0xD524 ; wCurrentMapWidth2 = wCurMapWidth * 2
+wCurrentMapHeight2            equ 0xD523 ; wCurrentMapHeight2 = wCurMapHeight * 2
+wCurrentMapWidth2             equ 0xD524 ; wCurrentMapWidth2 = wCurMapWidth * 2
 
 ; Map-view VRAM pointer and player facing
-W_MAP_VIEW_VRAM_POINTER      equ 0xD525 ; wMapViewVRAMPointer (Stage A Note: dropped/unused after native renderer)
-W_PLAYER_MOVING_DIRECTION    equ 0xD527 ; wPlayerMovingDirection (PLAYER_DIR_*)
-W_PLAYER_DIRECTION           equ 0xD529 ; wPlayerDirection (PLAYER_DIR_*)
+wMapViewVRAMPointer           equ 0xD525 ; wMapViewVRAMPointer (Stage A Note: dropped/unused after native renderer)
+wPlayerMovingDirection        equ 0xD527 ; wPlayerMovingDirection (PLAYER_DIR_*)
+wPlayerDirection              equ 0xD529 ; wPlayerDirection (PLAYER_DIR_*)
 
 ; Active tileset WRAM (set from tileset header by LoadTilesetHeader)
 ; LoadTilesetHeader copies 11 bytes here from the tileset header table,
@@ -1988,13 +1981,13 @@ hStartTileID                                     equ 0xFFE1 ; hStartTileID — f
 hDividend2                    equ 0xFFE5 ; hDividend2
 hDivisor2                     equ 0xFFE6 ; hDivisor2
 hQuotient2                    equ 0xFFE7 ; hQuotient2
-W_NPC_MOVEMENT_DIRECTIONS                        equ 0xCC5B ; wNPCMovementDirections (union base; sim-joypad end/dirs2 overlay it)
-W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX  equ 0xCD3A ; wUnusedOverrideSimulatedJoypadStatesIndex (golden 00:cd3a; was 0xCC86)
-W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK          equ 0xCD3B ; wOverrideSimulatedJoypadStatesMask (golden 00:cd3b; was 0xCC87)
+wNPCMovementDirections        equ 0xCC5B ; wNPCMovementDirections (union base; sim-joypad end/dirs2 overlay it)
+wUnusedOverrideSimulatedJoypadStatesIndex equ 0xCD3A ; wUnusedOverrideSimulatedJoypadStatesIndex (golden 00:cd3a; was 0xCC86)
+wOverrideSimulatedJoypadStatesMask equ 0xCD3B ; wOverrideSimulatedJoypadStatesMask (golden 00:cd3b; was 0xCC87)
 W_RLE_BYTE_COUNT                                 equ 0xCCD2 ; wRLEByteCount
-W_NPC_NUM_SCRIPTED_STEPS                         equ 0xCF0F ; wNPCNumScriptedSteps
-W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM               equ 0xCF10 ; wNPCMovementScriptFunctionNum
-W_NPC_MOVEMENT_SCRIPT_BANK                       equ 0xCC58 ; wNPCMovementScriptBank (scripted-dispatch, macro-gated)
+wNPCNumScriptedSteps          equ 0xCF0F ; wNPCNumScriptedSteps
+wNPCMovementScriptFunctionNum equ 0xCF10 ; wNPCMovementScriptFunctionNum
+wNPCMovementScriptBank        equ 0xCC58 ; wNPCMovementScriptBank (scripted-dispatch, macro-gated)
 BIT_SCRIPTED_NPC_MOVEMENT                        equ 0      ; wStatusFlags5 bit — MoveSprite scripted NPC walk
 ; DoScriptedNPCMovement chain (OW-2.1) — pret engine/overworld/movement.asm
 %ifndef wNPCMovementDirections2
@@ -2090,7 +2083,7 @@ hSwapItemQuantity             equ 0xFFAA ; item-list SELECT swap scratch
 ; Menus S2 (text_box / display_text_id_init) — pret ram/wram.asm + ram/hram.asm.
 ; wFieldMoves is golden-sym verified (00:cd3d): it shares the 0xCD3D+ scratch
 ; union (wTrainerSpriteOffset / slot-machine / HoF lanes — disjoint use). The
-; earlier chain off W_SIMULATED_JOYPAD_STATES_INDEX put it at 0xCC89, inside the
+; earlier chain off wSimulatedJoypadStatesIndex put it at 0xCC89, inside the
 ; wNPCMovementDirections buffer (wrong). wMiscFlags counted back from
 ; wActionResultOrTookBattleTurn 0xCD6A (db ×5 + ds 9 between them);
 ; hFieldMoveMonMenuTopMenuItemX sits between hUILayoutFlags 0xFFFA and
@@ -2116,7 +2109,7 @@ hFieldMoveMonMenuTopMenuItemX equ 0xFFFB ; GB X of the field-move menu cursor co
 ; ---------------------------------------------------------------------------
 ; Menus S5 (party menu realign) — pret ram/wram.asm + ram/hram.asm.
 ; Chained off verified anchors:
-;   wSwitchPartyMonTempBuffer = union base 0xCC5B (= W_NPC_MOVEMENT_DIRECTIONS /
+;   wSwitchPartyMonTempBuffer = union base 0xCC5B (= wNPCMovementDirections /
 ;     wAnimationType branch heads) + `ds 60` NEXTU lane (wram.asm:546).
 ;   wPartyMenuHPBarColors = wEnemyHPBarColor 0xCF1D + 1; wWhichPartyMenuHPBar =
 ;     +PARTY_LENGTH +1 (wStatusScreenHPBarColor) + ds 7 (wram.asm:1230-1237).
@@ -2241,7 +2234,6 @@ wUnusedMapVariable            equ 0xD5A2
 wCardKeyDoorY                 equ 0xD73E
 wCardKeyDoorX                 equ 0xD73F ; = wCardKeyDoorY + 1
 wWhichDungeonWarp             equ 0xD71D ; which dungeon warp in the source map was used
-W_WHICH_DUNGEON_WARP          equ 0xD71D ; uppercase alias (IsPlayerOnDungeonWarp)
 wDayCareInUse                 equ 0xDA47 ; 1 = a mon is in the day-care (IncrementDayCareMonExp gate)
 wDayCareMonName               equ 0xDA48 ; day-care mon nickname
 wDayCareMonOT                 equ 0xDA53 ; day-care mon OT name

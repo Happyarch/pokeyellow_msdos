@@ -841,7 +841,7 @@ _HandleMidJump:
     mov [ebp + W_SPRITE_PLAYER_Y_PIXELS], al
     ret
 .finishedJump:
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne .ret                                        ; wait until the current step finishes
     call UpdateSprites
     call Delay3

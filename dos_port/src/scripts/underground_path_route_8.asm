@@ -37,7 +37,7 @@ section .text
 
 UndergroundPathRoute8_Script:
     mov al, ROUTE_8
-    mov [ebp + W_LAST_MAP], al
+    mov [ebp + wLastMap], al
     jmp EnableAutoTextBoxDrawing
 
 UndergroundPathRoute8_TextPointers:

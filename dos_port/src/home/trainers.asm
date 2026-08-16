@@ -444,7 +444,7 @@ FinalizeTrainerBattleOutcome:
 ; ---------------------------------------------------------------------------
 EndTrainerBattle:
     ; ld hl, wCurrentMapScriptFlags / set BIT_CUR_MAP_LOADED_1 / set BIT_CUR_MAP_LOADED_2
-    or byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
+    or byte [ebp + wCurrentMapScriptFlags], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
     ; ld hl, wStatusFlags3 / res BIT_PRINT_END_BATTLE_TEXT
     and byte [ebp + W_STATUS_FLAGS_3], (~(1 << BIT_PRINT_END_BATTLE_TEXT)) & 0xFF
     ; ld hl, wMiscFlags / res BIT_SEEN_BY_TRAINER — player is no longer engaged

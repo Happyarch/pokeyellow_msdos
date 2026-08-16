@@ -256,7 +256,7 @@ _InitMapSprites:
 ; load it. Out: CF=1 if the map is a city/route (handled here), CF=0 if indoor.
 ; ---------------------------------------------------------------------------
 InitOutsideMapSprites:
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, FIRST_INDOOR_MAP
     jae .inside                        ; indoor map → not handled here (CF=0)
     call GetSplitMapSpriteSetID         ; AL = spriteSetID (input AL = wCurMap)
@@ -309,10 +309,10 @@ GetSplitMapSpriteSetID:
     cmp al, EAST_WEST
     je .eastWest
 .northSouth:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     jmp .compare
 .eastWest:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
 .compare:
     cmp al, ah                          ; coord < divide → west/north side
     jb .westNorth
@@ -322,7 +322,7 @@ GetSplitMapSpriteSetID:
     mov al, [edx + 2]                   ; #3 west/north side sprite set
     ret
 .route20:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 43
     jb .r20_pv                          ; X < 43 → PALLET_VIRIDIAN
     cmp al, 62
@@ -334,7 +334,7 @@ GetSplitMapSpriteSetID:
 .r20_y8:
     mov ah, 8
 .r20_ycmp:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, ah
     jb .r20_fu                          ; Y < split → FUCHSIA
 .r20_pv:
@@ -637,7 +637,7 @@ InitToggleableObjectFlags:
 ; Pret ref: engine/overworld/toggleable_objects.asm:IsObjectHidden.
 ;
 ; In:  AL = local object id (0-based slot index, = text_id).
-;      [EBP + W_CUR_MAP] = current map id.
+;      [EBP + wCurMap] = current map id.
 ; Out: CF = 1 if the object is a toggleable that is currently flagged hidden.
 ; Clobbers: AL only (EBX/ECX/EDX/ESI preserved for the InitMapSprites caller).
 ; ---------------------------------------------------------------------------
@@ -648,7 +648,7 @@ IsToggleableHidden:
     push esi
 
     movzx ebx, al                       ; BL = local object id to find
-    movzx eax, byte [ebp + W_CUR_MAP]
+    movzx eax, byte [ebp + wCurMap]
     mov esi, [ToggleableMapPointers + eax*4]  ; flat ptr to this map's list (0 = none)
     test esi, esi
     jz .not_hidden
@@ -694,7 +694,7 @@ IsToggleableHidden:
 ; Same MAPY/MAPX scan as CheckNPCInteraction.  Used by CollisionCheckOnLand to
 ; block the player from walking into an NPC's tile.
 ;
-; In:  EBP = GB memory base; reads W_Y_COORD, W_X_COORD, W_SPRITE_PLAYER_FACING_DIR.
+; In:  EBP = GB memory base; reads wYCoord, wXCoord, W_SPRITE_PLAYER_FACING_DIR.
 ; Out: CF=1 if an NPC was found in the facing tile; CF=0 if the tile is clear.
 ; Preserves: all registers (push/pops EAX, EBX, ECX, ESI internally).
 ; ---------------------------------------------------------------------------
@@ -704,9 +704,9 @@ IsNPCAtTargetBlock:
     push ecx
     push esi
 
-    movzx ebx, byte [ebp + W_Y_COORD]
+    movzx ebx, byte [ebp + wYCoord]
     add bl, 4                               ; BL = target MAPY (player block + MAPY bias)
-    movzx ecx, byte [ebp + W_X_COORD]
+    movzx ecx, byte [ebp + wXCoord]
     add cl, 4                               ; CL = target MAPX
 
     movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]
@@ -779,8 +779,8 @@ IsNPCAtTargetBlock:
 ; Called from OverworldLoop when A is pressed and the head routine reported a
 ; sprite slot in [hTextID].
 ;
-; Detection: NPC in front iff (MAPY - 4) == W_Y_COORD + dy
-;                         AND (MAPX - 4) == W_X_COORD + dx
+; Detection: NPC in front iff (MAPY - 4) == wYCoord + dy
+;                         AND (MAPX - 4) == wXCoord + dx
 ; where (dy,dx) = (-1,0) SPRITE_FACING_UP, (+1,0) DOWN, (0,-1) LEFT, (0,+1) RIGHT.
 ;
 ; Text data from PalletTownTextTable (flat .data ptr + size) is walked IN PLACE:
@@ -802,11 +802,11 @@ CheckNPCInteraction:
     pushad
 
     ; Compute target block coordinates from player facing direction.
-    ; W_Y_COORD and W_X_COORD are raw block coords; MAPY/MAPX are raw+4.
-    ; Target MAPY = W_Y_COORD + 4 + dy; target MAPX = W_X_COORD + 4 + dx.
-    movzx ebx, byte [ebp + W_Y_COORD]
+    ; wYCoord and wXCoord are raw block coords; MAPY/MAPX are raw+4.
+    ; Target MAPY = wYCoord + 4 + dy; target MAPX = wXCoord + 4 + dx.
+    movzx ebx, byte [ebp + wYCoord]
     add bl, 4                               ; adjust for MAPY offset (+4)
-    movzx ecx, byte [ebp + W_X_COORD]
+    movzx ecx, byte [ebp + wXCoord]
     add cl, 4                               ; adjust for MAPX offset (+4)
 
     movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]

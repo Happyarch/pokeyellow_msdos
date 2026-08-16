@@ -209,9 +209,9 @@ VermilionCityDefaultScript:
 .nr_75:
 .ship_departed:
     mov al, PAD_UP
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     call StartSimulatingJoypadStates
     mov al, SCRIPT_VERMILIONCITY_PLAYER_MOVING_UP1
     mov [ebp + wVermilionCityCurScript], al
@@ -238,17 +238,17 @@ VermilionCityPlayerExitShipScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     mov al, PAD_UP
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END + 1], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
+    mov [ebp + wSimulatedJoypadStatesEnd + 1], al
     mov al, 2
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     call StartSimulatingJoypadStates
     mov al, SCRIPT_VERMILIONCITY_PLAYER_MOVING_UP2
     mov [ebp + wVermilionCityCurScript], al
     ret
 
 VermilionCityPlayerMovingUp2Script:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_117
         ret
@@ -261,7 +261,7 @@ VermilionCityPlayerMovingUp2Script:
     ret
 
 VermilionCityPlayerMovingUp1Script:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_128
         ret

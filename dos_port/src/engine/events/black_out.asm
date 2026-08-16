@@ -35,7 +35,7 @@ ResetStatusAndHalveMoneyOnBlackout:
     mov [ebp + W_WALK_BIKE_SURF_STATE], al
     mov [ebp + wIsInBattle], al
     mov [ebp + wMapPalOffset], al
-    mov [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], al
+    mov [ebp + wNPCMovementScriptFunctionNum], al
     mov [ebp + hJoyHeld], al               ; ldh [hJoyHeld], a
     mov [ebp + wNPCMovementScriptPointerTableNum], al
     mov [ebp + wMiscFlags], al

@@ -182,22 +182,22 @@ section .text
 ; Clobbers AL, BL (warp counter, pret's C), ESI (pret's HL). No flag contract.
 ; ---------------------------------------------------------------------------
 IsPlayerStandingOnWarp:
-    mov bl, [ebp + W_NUMBER_OF_WARPS]
+    mov bl, [ebp + wNumberOfWarps]
     test bl, bl
     jz .ret
-    mov esi, W_WARP_ENTRIES
+    mov esi, wWarpEntries
 .loop:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, [ebp + esi]
     jne .nextWarp1
     inc esi
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, [ebp + esi]
     jne .nextWarp2
     inc esi
     mov al, [ebp + esi]                     ; target warp id
     inc esi
-    mov [ebp + W_DESTINATION_WARP_ID], al
+    mov [ebp + wDestinationWarpID], al
     mov al, [ebp + esi]                     ; target map
     mov [ebp + H_WARP_DESTINATION_MAP], al
     or byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_STANDING_ON_WARP)
@@ -227,9 +227,9 @@ CheckForceBikeOrSurf:
     test byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_ALWAYS_ON_BIKE)
     jnz .ret                                ; ret nz
     mov esi, ForcedBikeOrSurfMaps
-    mov bh, [ebp + W_Y_COORD]
-    mov bl, [ebp + W_X_COORD]
-    mov dh, [ebp + W_CUR_MAP]
+    mov bh, [ebp + wYCoord]
+    mov bl, [ebp + wXCoord]
+    mov dh, [ebp + wCurMap]
 .loop:
     mov al, [esi]
     inc esi
@@ -245,11 +245,11 @@ CheckForceBikeOrSurf:
     inc esi
     cmp al, bl                              ; compare x-coord
     jne .loop                               ; incorrect x-coord, check next item
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, SEAFOAM_ISLANDS_B3F
     mov byte [ebp + wSeafoamIslandsB3FCurScript], SCRIPT_SEAFOAMISLANDSB3F_MOVE_OBJECT
     je .forceSurfing
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, SEAFOAM_ISLANDS_B4F
     mov byte [ebp + wSeafoamIslandsB4FCurScript], SCRIPT_SEAFOAMISLANDSB4F_MOVE_OBJECT
     je .forceSurfing
@@ -287,25 +287,25 @@ IsPlayerFacingEdgeOfMap:
     cmp al, SPRITE_FACING_LEFT
     je .facingLeft
 .facingRight:
-    movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
+    movzx eax, byte [ebp + wCurMapWidth]
     add al, al                      ; width*2
     dec al                          ; width*2 - 1
-    cmp al, [ebp + W_X_COORD]
+    cmp al, [ebp + wXCoord]
     je .setCarry
     jmp .resetCarry
 .facingDown:
-    movzx eax, byte [ebp + W_CUR_MAP_HEIGHT]
+    movzx eax, byte [ebp + wCurMapHeight]
     add al, al                      ; height*2
     dec al                          ; height*2 - 1
-    cmp al, [ebp + W_Y_COORD]
+    cmp al, [ebp + wYCoord]
     je .setCarry
     jmp .resetCarry
 .facingUp:
-    cmp byte [ebp + W_Y_COORD], 0
+    cmp byte [ebp + wYCoord], 0
     je .setCarry
     jmp .resetCarry
 .facingLeft:
-    cmp byte [ebp + W_X_COORD], 0
+    cmp byte [ebp + wXCoord], 0
     je .setCarry
     ; fall through
 .resetCarry:
@@ -345,7 +345,7 @@ IsWarpTileInFrontOfPlayer:
     movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]  ; 0,4,8,12
     shr eax, 2                                          ; → 0,1,2,3 (down/up/left/right)
     mov esi, [WarpTileListPointers + eax*4]             ; flat list pointer
-    mov al, [ebp + W_TILE_IN_FRONT_OF_PLAYER]
+    mov al, [ebp + wTileInFrontOfPlayer]
     mov edx, 1                                          ; entry stride
     jmp IsInArray                                       ; tail call; returns CF (and this routine's ret)
 
@@ -367,7 +367,7 @@ IsWarpTileInFrontOfPlayer:
 ; into this file's IsWarpTileInFrontOfPlayer when SS Anne is implemented.
 ; ---------------------------------------------------------------------------
 IsSSAnneBowWarpTileInFrontOfPlayer:
-    cmp byte [ebp + W_TILE_IN_FRONT_OF_PLAYER], 0x15
+    cmp byte [ebp + wTileInFrontOfPlayer], 0x15
     jne .notSSAnne5Warp
     stc
     ret
@@ -399,7 +399,7 @@ IsPlayerStandingOnDoorTileOrWarpTile:
     push esi
     call IsPlayerStandingOnDoorTile         ; sets CF
     jc .done
-    movzx ebx, byte [ebp + W_CUR_MAP_TILESET]
+    movzx ebx, byte [ebp + wCurMapTileset]
     mov esi, [WarpTileIDPointers + ebx * 4] ; flat host ptr, table_width 2 in
                                              ; pret -> dd (4-byte) flat pointers here
     mov al, [ebp + W_TILEMAP + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL]
@@ -447,7 +447,7 @@ IsPlayerStandingOnDoorTileOrWarpTile:
 ; observable behaviour), a necessary consequence of this port's stride model.
 ; ---------------------------------------------------------------------------
 PrintSafariZoneSteps:
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, SAFARI_ZONE_EAST
     jb .ret                                 ; ret c
     cmp al, CERULEAN_CAVE_2F
@@ -517,7 +517,7 @@ PrintSafariZoneSteps:
 ;
 ; In:  W_SPRITE_PLAYER_FACING_DIR (wSpritePlayerStateData1FacingDirection).
 ; Out: DH = map Y coord in front of player (wYCoord ±1), DL = map X coord
-;      (wXCoord ±1), CL = tile ID (also stored to W_TILE_IN_FRONT_OF_PLAYER).
+;      (wXCoord ±1), CL = tile ID (also stored to wTileInFrontOfPlayer).
 ; Clobbers: AL, ESI, DH/DL, ECX.
 ; ---------------------------------------------------------------------------
 GetTileAndCoordsInFrontOfPlayer:
@@ -525,8 +525,8 @@ GetTileAndCoordsInFrontOfPlayer:
     ; fall through — pret has no explicit jump either
 
 _GetTileAndCoordsInFrontOfPlayer:
-    mov dh, [ebp + W_Y_COORD]
-    mov dl, [ebp + W_X_COORD]
+    mov dh, [ebp + wYCoord]
+    mov dl, [ebp + wXCoord]
     mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
     cmp al, SPRITE_FACING_DOWN
     jne .notFacingDown
@@ -551,7 +551,7 @@ _GetTileAndCoordsInFrontOfPlayer:
     inc dl
 .storeTile:
     movzx ecx, byte [ebp + esi]
-    mov [ebp + W_TILE_IN_FRONT_OF_PLAYER], cl
+    mov [ebp + wTileInFrontOfPlayer], cl
     ret
 
 ; ---------------------------------------------------------------------------
@@ -568,7 +568,7 @@ _GetTileAndCoordsInFrontOfPlayer:
 ;
 ; Also sets hPlayerFacing (H_PLAYER_FACING) bits BIT_FACING_DOWN/UP/LEFT/RIGHT
 ; and writes the tile to BOTH wTileInFrontOfBoulderAndBoulderCollisionResult
-; and W_TILE_IN_FRONT_OF_PLAYER, exactly as pret does. Only this getter half is
+; and wTileInFrontOfPlayer, exactly as pret does. Only this getter half is
 ; ported — CheckForCollisionWhenPushingBoulder / CheckForBoulderCollisionWithSprites
 ; (pret's only two callers of this routine) are deferred to OW-4.1, so this
 ; routine is presently unreachable from the port; it's included here per ticket
@@ -580,8 +580,8 @@ _GetTileAndCoordsInFrontOfPlayer:
 ; ---------------------------------------------------------------------------
 GetTileTwoStepsInFrontOfPlayer:
     mov byte [ebp + H_PLAYER_FACING], 0
-    mov dh, [ebp + W_Y_COORD]
-    mov dl, [ebp + W_X_COORD]
+    mov dh, [ebp + wYCoord]
+    mov dl, [ebp + wXCoord]
     mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
     cmp al, SPRITE_FACING_DOWN
     jne .notFacingDown
@@ -611,7 +611,7 @@ GetTileTwoStepsInFrontOfPlayer:
 .storeTile:
     movzx ecx, byte [ebp + esi]
     mov [ebp + wTileInFrontOfBoulderAndBoulderCollisionResult], cl
-    mov [ebp + W_TILE_IN_FRONT_OF_PLAYER], cl
+    mov [ebp + wTileInFrontOfPlayer], cl
     ret
 
 ; ---------------------------------------------------------------------------

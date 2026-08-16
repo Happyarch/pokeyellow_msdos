@@ -346,11 +346,11 @@ PewterCitySuperNerd1Text:
     xor al, al
     mov [ebp + hJoyPressed], al
     mov [ebp + hJoyHeld], al
-    mov [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], al
+    mov [ebp + wNPCMovementScriptFunctionNum], al
     mov al, 0x2
     mov [ebp + wNPCMovementScriptPointerTableNum], al
     mov al, [ebp + hLoadedROMBank]
-    mov [ebp + W_NPC_MOVEMENT_SCRIPT_BANK], al
+    mov [ebp + wNPCMovementScriptBank], al
     mov al, 3
     mov [ebp + wSpriteIndex], al
     call GetSpritePosition2
@@ -404,11 +404,11 @@ PewterCityYoungsterText:
     call PrintText
     xor al, al
     mov [ebp + hJoyHeld], al
-    mov [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM], al
+    mov [ebp + wNPCMovementScriptFunctionNum], al
     mov al, 0x3
     mov [ebp + wNPCMovementScriptPointerTableNum], al
     mov al, [ebp + hLoadedROMBank]
-    mov [ebp + W_NPC_MOVEMENT_SCRIPT_BANK], al
+    mov [ebp + wNPCMovementScriptBank], al
     mov al, 5
     mov [ebp + wSpriteIndex], al
     call GetSpritePosition2

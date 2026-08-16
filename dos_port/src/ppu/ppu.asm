@@ -581,9 +581,9 @@ render_bg:
     ; The view pointer (wCurrentTileBlockMapViewPointer) identifies the top-left
     ; block of wSurroundingTiles. We subtract it from the map origin (MAP_BORDER)
     ; to find the world block coordinate of bg_surface.
-    movzx ecx, byte [ebp + W_CUR_MAP_WIDTH]
+    movzx ecx, byte [ebp + wCurMapWidth]
     add ecx, MAP_BORDER * 2
-    sub eax, W_OVERWORLD_MAP
+    sub eax, wOverworldMap
     xor edx, edx
     div ecx
     ; EAX = view_block_y, EDX = view_block_x
@@ -593,13 +593,13 @@ render_bg:
     mov eax, MAP_BORDER
     sub eax, edx             ; eax = MAP_BORDER - view_block_x
     shl eax, 5               ; * 32
-    movzx ecx, byte [ebp + W_X_COORD]
+    movzx ecx, byte [ebp + wXCoord]
     shl ecx, 4               ; * 16
     add eax, ecx
     sub eax, 160
     
     ; walk_offset_x = X_STEP_VECTOR * (8 - wWalkCounter) * 2 (only if walking)
-    movzx ecx, byte [ebp + W_WALK_COUNTER]
+    movzx ecx, byte [ebp + wWalkCounter]
     test ecx, ecx
     jz .no_walk_x
     push ebx
@@ -635,13 +635,13 @@ render_bg:
     mov eax, MAP_BORDER
     sub eax, ebx             ; eax = MAP_BORDER - view_block_y
     shl eax, 5               ; * 32
-    movzx ecx, byte [ebp + W_Y_COORD]
+    movzx ecx, byte [ebp + wYCoord]
     shl ecx, 4               ; * 16
     add eax, ecx
     sub eax, 96
     
     ; walk_offset_y = Y_STEP_VECTOR * (8 - wWalkCounter) * 2 (only if walking)
-    movzx ecx, byte [ebp + W_WALK_COUNTER]
+    movzx ecx, byte [ebp + wWalkCounter]
     test ecx, ecx
     jz .no_walk_y
     push ebx
@@ -790,7 +790,7 @@ SnapshotRenderedTileMap:
     mov ecx, [bg_scx]
     shr ecx, 3
     add eax, ecx
-    lea esi, [eax + W_SURROUNDING_TILES]           ; GB-relative source cursor
+    lea esi, [eax + wSurroundingTiles]           ; GB-relative source cursor
     mov edi, W_TILEMAP                             ; GB-relative dest cursor
     mov edx, SCREEN_TILES_H                        ; rows remaining
 .row:
@@ -1083,7 +1083,7 @@ decode_surface_overworld:
     jne .force
 
     ; --- steady state: cmpsb-scan each row, decode only the cells that changed ---
-    lea esi, [ebp + W_SURROUNDING_TILES]   ; src cursor (flat)
+    lea esi, [ebp + wSurroundingTiles]   ; src cursor (flat)
     mov edi, surf_shadow                   ; id-shadow cursor
     mov dword [surf_row_base], bg_surface
     mov edx, SURF_H_TILES                  ; rows remaining
@@ -1114,7 +1114,7 @@ decode_surface_overworld:
 
     ; --- force: every cell, linear cursors, no compare ---
 .force:
-    lea ebx, [ebp + W_SURROUNDING_TILES]   ; src cursor  (EBX: decode_tile owns ESI)
+    lea ebx, [ebp + wSurroundingTiles]   ; src cursor  (EBX: decode_tile owns ESI)
     mov edx, surf_shadow                   ; id-shadow cursor
     mov edi, bg_surface                    ; dest cursor
     mov dword [surf_row_ctr], SURF_H_TILES

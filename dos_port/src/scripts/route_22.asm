@@ -424,7 +424,7 @@ Route22Rival1ExitMovementData2:
 
 .set_player_direction_left:
     mov al, PLAYER_DIR_LEFT
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, SPRITE_FACING_RIGHT
 .set_rival_facing_direction:
     mov [ebp + hSpriteFacingDirection], al

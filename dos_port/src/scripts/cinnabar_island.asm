@@ -66,7 +66,7 @@ section .text
 
 CinnabarIsland_Script:
     call EnableAutoTextBoxDrawing
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     ResetEvent EVENT_MANSION_SWITCH_ON
     ResetEvent EVENT_LAB_STILL_REVIVING_FOSSIL
@@ -84,27 +84,27 @@ CinnabarIslandDefaultScript:
     jz .nr_19
         ret
 .nr_19:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 4
     jz .nr_22
         ret
 .nr_22:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 18
     jz .nr_25
         ret
 .nr_25:
     mov al, PLAYER_DIR_UP
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, TEXT_CINNABARISLAND_DOOR_IS_LOCKED
     mov [ebp + hTextID], al
     call DisplayTextID
     xor al, al
     mov [ebp + hJoyHeld], al
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_DOWN
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     call StartSimulatingJoypadStates
     xor al, al
     mov [ebp + wSpritePlayerStateData1FacingDirection], al
@@ -114,7 +114,7 @@ CinnabarIslandDefaultScript:
     ret
 
 CinnabarIslandPlayerMovingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_48
         ret

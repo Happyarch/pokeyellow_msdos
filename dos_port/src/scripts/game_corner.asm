@@ -136,7 +136,7 @@ GameCorner_Script:
     jmp CallFunctionInTable
 
 GameCornerSelectLuckySlotMachine:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
     pushfd    ; SM83 form writes no flags
         and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
@@ -157,7 +157,7 @@ GameCornerSelectLuckySlotMachine:
     ret
 
 GameCornerSetRocketHideoutDoorTile:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     pushfd    ; SM83 form writes no flags
         and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
@@ -170,7 +170,7 @@ GameCornerSetRocketHideoutDoorTile:
         ret
 .nr_32:
     mov al, 0x2a
-    mov [ebp + W_NEW_TILE_BLOCK_ID], al
+    mov [ebp + wNewTileBlockID], al
     mov bx, ((2) << 8) | (8)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp ReplaceTileBlock
@@ -264,7 +264,7 @@ GameCornerRocketExitScript:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
     mov al, SCRIPT_GAMECORNER_DEFAULT
@@ -660,7 +660,7 @@ GameCornerPosterText:
     call WaitForSoundToFinish
     SetEvent EVENT_FOUND_ROCKET_HIDEOUT
     mov al, 0x43
-    mov [ebp + W_NEW_TILE_BLOCK_ID], al
+    mov [ebp + wNewTileBlockID], al
     mov bx, ((2) << 8) | (8)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call ReplaceTileBlock

@@ -97,11 +97,11 @@ Route18Gate1FDefaultScript:
     jz .next_to_counter
     mov al, [ebp + wCoordIndex]
     dec al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov bh, 0
     mov bl, al
     mov al, PAD_UP
-    mov esi, W_SIMULATED_JOYPAD_STATES_END
+    mov esi, wSimulatedJoypadStatesEnd
     call FillMemory
     call StartSimulatingJoypadStates
     mov al, SCRIPT_ROUTE18GATE1F_PLAYER_MOVING_UP
@@ -121,7 +121,7 @@ Route18Gate1FDefaultScript:
     db -1
 
 Route18Gate1FPlayerMovingUpScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_57
         ret
@@ -133,16 +133,16 @@ Route18Gate1FGuardScript:
     mov [ebp + hTextID], al
     call DisplayTextID
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_RIGHT
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     call StartSimulatingJoypadStates
     mov al, SCRIPT_ROUTE18GATE1F_PLAYER_MOVING_RIGHT
     mov [ebp + wRoute18Gate1FCurScript], al
     ret
 
 Route18Gate1FPlayerMovingRightScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_77
         ret

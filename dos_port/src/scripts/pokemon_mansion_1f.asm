@@ -86,7 +86,7 @@ PokemonMansion1F_Script:
     ret
 
 Mansion1CheckReplaceSwitchDoorBlocks:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     pushfd    ; SM83 form writes no flags
         and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
@@ -117,12 +117,12 @@ Mansion1CheckReplaceSwitchDoorBlocks:
 
 Mansion1LoadHorizontalGateBlock:
     mov al, 0x2d
-    mov [ebp + W_NEW_TILE_BLOCK_ID], al
+    mov [ebp + wNewTileBlockID], al
     jmp Mansion1ReplaceBlock
 
 Mansion1LoadEmptyFloorTileBlock:
     mov al, 0xe
-    mov [ebp + W_NEW_TILE_BLOCK_ID], al
+    mov [ebp + wNewTileBlockID], al
 Mansion1ReplaceBlock:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call ReplaceTileBlock

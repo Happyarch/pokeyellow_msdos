@@ -127,7 +127,7 @@ ViridianMart_ScriptPointers:
     db -1
 
 ViridianMartOaksParcelScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_52
         ret

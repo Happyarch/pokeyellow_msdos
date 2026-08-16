@@ -167,12 +167,12 @@ PokemonTower6FMarowakBattleScript:
 
 .did_not_defeat:
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_RIGHT
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     xor al, al
     mov [ebp + wSpritePlayerStateData2MovementByte1], al
-    mov [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK], al
+    mov [ebp + wOverrideSimulatedJoypadStatesMask], al
     mov esi, wStatusFlags5
     or byte [ebp + esi], (1 << (BIT_SCRIPTED_MOVEMENT_STATE))
     mov al, SCRIPT_POKEMONTOWER6F_PLAYER_MOVING
@@ -181,7 +181,7 @@ PokemonTower6FMarowakBattleScript:
     ret
 
 PokemonTower6FPlayerMovingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_92
         ret

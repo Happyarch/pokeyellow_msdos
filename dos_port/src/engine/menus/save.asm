@@ -844,9 +844,9 @@ ChangeBox:
     call CopyBoxToOrFromSRAM                        ; copy new box SRAM -> WRAM
     ; save + restore the map text pointer around SaveGameData
     ; ld hl,wCurMapTextPtr / ld de,wChangeBoxSavedMapTextPointer / copy 2 bytes
-    mov al, [ebp + W_CUR_MAP_TEXT_PTR]
+    mov al, [ebp + wCurMapTextPtr]
     mov [ebp + wChangeBoxSavedMapTextPointer], al
-    mov al, [ebp + W_CUR_MAP_TEXT_PTR + 1]
+    mov al, [ebp + wCurMapTextPtr + 1]
     mov [ebp + wChangeBoxSavedMapTextPointer + 1], al
     call RestoreMapTextPointer
     call SaveGameData

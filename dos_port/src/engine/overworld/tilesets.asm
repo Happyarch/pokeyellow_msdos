@@ -42,7 +42,7 @@ extern TilesetCollPtrs                    ; assets/map_headers.inc (map_headers.
 section .text
 
 ; ---------------------------------------------------------------------------
-; LoadTilesetHeader — dynamic dispatch via W_CUR_MAP_TILESET.
+; LoadTilesetHeader — dynamic dispatch via wCurMapTileset.
 ; Pret ref: home/overworld.asm:LoadTilesetHeader
 ; Copies current tileset gfx/blocks/coll from .data section → fixed EBP slots,
 ; then sets g_tilecache_dirty so render_bg rebuilds the decoded-tile cache.
@@ -54,7 +54,7 @@ LoadTilesetHeader:
     push edi
     push ecx
 
-    movzx eax, byte [ebp + W_CUR_MAP_TILESET]   ; tileset index 0-24
+    movzx eax, byte [ebp + wCurMapTileset]   ; tileset index 0-24
 
     ; Copy tileset GFX to fixed EBP slot
     mov esi, [TilesetGfxPtrs + eax*4]
@@ -130,16 +130,16 @@ LoadTilesetHeader:
     je .done                            ; tileset unchanged and not a dungeon tileset — skip realignment
 
 .dungeon:
-    cmp byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+    cmp byte [ebp + wDestinationWarpID], 0xFF
     je .done                            ; pret: ld a,[wDestinationWarpID] / cp $ff / jr z,.done
 
     call LoadDestinationWarpPosition     ; pret: call LoadDestinationWarpPosition
-    mov al, [ebp + W_Y_COORD]            ; pret: ld a,[wYCoord] / and $1 / ld [wYBlockCoord],a
+    mov al, [ebp + wYCoord]            ; pret: ld a,[wYCoord] / and $1 / ld [wYBlockCoord],a
     and al, 1
-    mov [ebp + W_Y_BLOCK_COORD], al
-    mov al, [ebp + W_X_COORD]            ; pret: ld a,[wXCoord] / and $1 / ld [wXBlockCoord],a
+    mov [ebp + wYBlockCoord], al
+    mov al, [ebp + wXCoord]            ; pret: ld a,[wXCoord] / and $1 / ld [wXBlockCoord],a
     and al, 1
-    mov [ebp + W_X_BLOCK_COORD], al
+    mov [ebp + wXBlockCoord], al
 
 .done:
     pop ecx
@@ -173,7 +173,7 @@ DungeonTilesets:
 
 ; Per-tileset grass tile + tile-animation kind — pret ref: data/tilesets/
 ; tileset_headers.asm (the `tileset` macro's \5 grass-tile / \6 TILEANIM_*
-; fields). Indexed by W_CUR_MAP_TILESET (0-24, constants/tileset_constants.asm
+; fields). Indexed by wCurMapTileset (0-24, constants/tileset_constants.asm
 ; order); read by LoadTilesetHeader. TILEANIM_NONE=0, TILEANIM_WATER=1,
 ; TILEANIM_WATER_FLOWER=2 (constants/map_data_constants.asm).
 TilesetGrassTiles:
@@ -232,7 +232,7 @@ TilesetAnimations:
 
 ; Per-tileset counter ("talking-over") tiles — pret ref: data/tilesets/
 ; tileset_headers.asm (the `tileset` macro's \2 \3 \4 fields, "3 counter tiles").
-; 3 bytes per tileset ($FF = unused slot), indexed by W_CUR_MAP_TILESET * 3; copied
+; 3 bytes per tileset ($FF = unused slot), indexed by wCurMapTileset * 3; copied
 ; into wTilesetTalkingOverTiles by LoadTilesetHeader. These extend NPC talking range
 ; over Pokemart/Pokecenter/etc. counter tiles (IsSpriteOrSignInFrontOfPlayer).
 TilesetCounterTiles:

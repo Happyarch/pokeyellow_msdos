@@ -228,7 +228,7 @@ CinnabarGym_ScriptPointers:
 
 .not_super_nerd3:
     mov al, PLAYER_DIR_RIGHT
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov esi, PikachuMovementData_74f9e
     mov bh, SPRITE_FACING_RIGHT
     call CinnabarGymScript_74fa3

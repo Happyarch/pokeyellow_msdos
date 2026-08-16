@@ -256,15 +256,15 @@ SafariZoneEntranceAutoWalk:
     push eax
     mov bh, 0
     mov al, bl
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov esi, W_SIMULATED_JOYPAD_STATES_END
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    mov esi, wSimulatedJoypadStatesEnd
     pop eax
     popfd
     call FillMemory
     jmp StartSimulatingJoypadStates
 
 SafariZoneGateReturnSimulatedJoypadStateScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     ret
 
@@ -477,8 +477,8 @@ SafariZoneEntranceAutoWalk2:
     push eax
     mov bh, 0
     mov al, bl
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov esi, W_SIMULATED_JOYPAD_STATES_END
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    mov esi, wSimulatedJoypadStatesEnd
     pop eax
     popfd
     call FillMemory

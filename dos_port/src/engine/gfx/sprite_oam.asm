@@ -280,13 +280,13 @@ PrepareOAMData:
     jmp .dos_base_done
 .dos_base_npc:
     movsx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
-    movsx ecx, byte [ebp + W_Y_COORD]
+    movsx ecx, byte [ebp + wYCoord]
     sub eax, ecx
     imul eax, 16
     add eax, 32
     mov [dos_base_y_tmp], eax
     movsx eax, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
-    movsx ecx, byte [ebp + W_X_COORD]
+    movsx ecx, byte [ebp + wXCoord]
     sub eax, ecx
     imul eax, 16
     add eax, 96
@@ -309,7 +309,7 @@ PrepareOAMData:
     ; Slot 0 (player) tracks sub-block position via YPIXELS — skip.
     test esi, esi
     jz .no_walk_offset                      ; slot 0 = player
-    movzx ecx, byte [ebp + W_WALK_COUNTER]
+    movzx ecx, byte [ebp + wWalkCounter]
     test ecx, ecx
     jz .no_walk_offset                      ; not walking
     mov eax, 8

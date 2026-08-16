@@ -62,7 +62,7 @@ section .text
 ; pret engine/overworld/toggleable_objects.asm:MarkTownVisitedAndLoadToggleableObjects
 ; ---------------------------------------------------------------------------
 MarkTownVisitedAndLoadToggleableObjects:
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, FIRST_ROUTE_MAP
     jae .notInTown                          ; jr nc (map id >= first route → not a town)
     movzx ecx, al                           ; c = curMap (flag index)

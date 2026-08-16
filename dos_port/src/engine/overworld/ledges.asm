@@ -77,7 +77,7 @@ section .text
 ; CheckForJumpingAndTilePairCollisions — pret home/overworld.asm.
 ;
 ; In:  ESI = flat host ptr to the directional tile-pair table (TilePairCollisionsLand
-;            or ...Water); W_TILE_IN_FRONT_OF_PLAYER already set by the caller.
+;            or ...Water); wTileInFrontOfPlayer already set by the caller.
 ;            (pret re-runs GetTileAndCoordsInFrontOfPlayer here; the port's caller,
 ;            CollisionCheckOnLand, sets it via _GetTileAndCoordsInFrontOfPlayer
 ;            immediately before — so this port keeps the value rather than
@@ -104,7 +104,7 @@ section .text
 ; (tileset, standingTile, frontTile) triple that forbids the crossing.
 ;
 ; In:  ESI = flat host ptr to table; DH = standing tile.
-;      Front tile is read from W_TILE_IN_FRONT_OF_PLAYER.
+;      Front tile is read from wTileInFrontOfPlayer.
 ; Out: CF = 1 if the crossing is forbidden, CF = 0 otherwise.
 ; Clobbers: AL, BL, CL, ESI, flags. (DH preserved.)
 ;
@@ -124,17 +124,17 @@ section .text
 ; of the ledge direction so the normal movement loop walks the player forward while
 ; the hop plays out. OVERWORLD tileset only.
 ;
-; In:  W_TILE_IN_FRONT_OF_PLAYER set by caller; W_SPRITE_PLAYER_FACING_DIR; tilemap.
+; In:  wTileInFrontOfPlayer set by caller; W_SPRITE_PLAYER_FACING_DIR; tilemap.
 ; Clobbers: AL, BX, DX, ESI, flags.
 ; ---------------------------------------------------------------------------
 HandleLedges:
     test byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
     jnz .ret                                       ; already hopping / fishing
-    cmp byte [ebp + W_CUR_MAP_TILESET], OVERWORLD
+    cmp byte [ebp + wCurMapTileset], OVERWORLD
     jne .ret                                       ; ledges exist only in the OVERWORLD tileset
     mov bh, [ebp + W_SPRITE_PLAYER_FACING_DIR]     ; b = facing direction
     mov bl, [ebp + STANDING_TILE_OFF]              ; c = tile player stands on
-    mov dl, [ebp + W_TILE_IN_FRONT_OF_PLAYER]      ; d = ledge tile candidate (in front)
+    mov dl, [ebp + wTileInFrontOfPlayer]      ; d = ledge tile candidate (in front)
     mov esi, LedgeTiles                            ; flat host ptr
 .loop:
     mov al, [esi]                                  ; facing (or $ff terminator)
@@ -169,9 +169,9 @@ HandleLedges:
     or  byte [ebp + W_MOVEMENT_FLAGS], (1 << BIT_LEDGE_OR_FISHING)
     call StartSimulatingJoypadStates               ; arm scripted-movement input (preserves DX)
     mov al, dh
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al      ; queue the ledge direction...
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END + 1], al  ; ...into both queue bytes (pret)
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 2 ; two simulated steps
+    mov [ebp + wSimulatedJoypadStatesEnd], al      ; queue the ledge direction...
+    mov [ebp + wSimulatedJoypadStatesEnd + 1], al  ; ...into both queue bytes (pret)
+    mov byte [ebp + wSimulatedJoypadStatesIndex], 2 ; two simulated steps
     call LoadHoppingShadowOAM
     mov al, SFX_LEDGE
     call PlaySound                                  ; pret: ld a,SFX_LEDGE / call PlaySound

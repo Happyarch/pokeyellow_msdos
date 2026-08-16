@@ -119,9 +119,9 @@ RocketHideoutB2F_ScriptPointers:
     dd RocketHideoutB2FPlayerSpinningScript
 
 RocketHideoutB2FDefaultScript:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     mov bh, al
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     mov bl, al
     mov esi, RocketHideout2ArrowTilePlayerMovement
     call DecodeArrowMovementRLE
@@ -366,7 +366,7 @@ RocketHideout2ArrowMovement36:
     db -1
 
 RocketHideoutB2FPlayerSpinningScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jnz LoadSpinnerArrowTiles
     xor al, al

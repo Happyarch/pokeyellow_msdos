@@ -37,7 +37,7 @@ section .text
 
 UndergroundPathRoute5_Script:
     mov al, ROUTE_5
-    mov [ebp + W_LAST_MAP], al
+    mov [ebp + wLastMap], al
     ret
 
 UndergroundPathEntranceRoute5_TextScriptEndingText:

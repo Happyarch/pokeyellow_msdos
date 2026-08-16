@@ -291,13 +291,13 @@ EnterMap:
     ; suppressed by this very bit — a false witness for battle behavior.
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_NO_BATTLES)
 %endif
-    mov byte [ebp + W_CUR_MAP],  DEBUG_SPAWN_MAP
-    mov byte [ebp + W_X_COORD],  DEBUG_SPAWN_X
-    mov byte [ebp + W_Y_COORD],  DEBUG_SPAWN_Y
+    mov byte [ebp + wCurMap],  DEBUG_SPAWN_MAP
+    mov byte [ebp + wXCoord],  DEBUG_SPAWN_X
+    mov byte [ebp + wYCoord],  DEBUG_SPAWN_Y
     ; $FF = "not a warp arrival": LoadTilesetHeader's faithful tail otherwise
     ; re-derives the coords from the stale wDestinationWarpID on any dungeon-
     ; tileset map (e.g. a seeded Viridian Forest spawned at warp 0's (1,0)).
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+    mov byte [ebp + wDestinationWarpID], 0xFF
     ; An INDOOR spawn needs its .blk staged into the shared window, exactly as a
     ; warp arrival does. Only LoadDestinationMapData did that, and this path does
     ; not go through it — so a debug-spawned interior loaded its header and its
@@ -356,10 +356,10 @@ EnterMap:
     ; Overridable (SIGNTEXT_MAP/Y/X/DIR) so any map's sign can be driven headlessly —
     ; used to prove F-10 on Route 5, whose sign was one of the 7 that id 0 swallowed.
     ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
-    mov byte [ebp + W_CUR_MAP], SIGNTEXT_MAP   ; default PALLET_TOWN
-    mov byte [ebp + W_Y_COORD], SIGNTEXT_Y
-    mov byte [ebp + W_X_COORD], SIGNTEXT_X
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    mov byte [ebp + wCurMap], SIGNTEXT_MAP   ; default PALLET_TOWN
+    mov byte [ebp + wYCoord], SIGNTEXT_Y
+    mov byte [ebp + wXCoord], SIGNTEXT_X
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_PREDEFTEXT
     ; Predef-text gate (predef-text plan Stage 2 acceptance). Stand ON the SNES tile
@@ -368,10 +368,10 @@ EnterMap:
     ; `db 5, 3` = y 5, x 3 (assets/hidden_events.inc, HiddenEventsFor_REDS_HOUSE_2F).
     ; ANY_FACING, so no facing is seeded.
     ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
-    mov byte [ebp + W_CUR_MAP], REDS_HOUSE_2F
-    mov byte [ebp + W_Y_COORD], 5
-    mov byte [ebp + W_X_COORD], 3
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    mov byte [ebp + wCurMap], REDS_HOUSE_2F
+    mov byte [ebp + wYCoord], 5
+    mov byte [ebp + wXCoord], 3
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; Map-script sight gate (map-script fidelity plan, Stage 3): spawn inside a
@@ -381,10 +381,10 @@ EnterMap:
     ; Route3TrainerHeader0), so the player is the second tile in its line of sight
     ; — far enough that TrainerWalkUpToPlayer has a step to take.
     ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
-    mov byte [ebp + W_CUR_MAP], MAPSCRIPT_MAP
-    mov byte [ebp + W_Y_COORD], MAPSCRIPT_Y
-    mov byte [ebp + W_X_COORD], MAPSCRIPT_X
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    mov byte [ebp + wCurMap], MAPSCRIPT_MAP
+    mov byte [ebp + wYCoord], MAPSCRIPT_Y
+    mov byte [ebp + wXCoord], MAPSCRIPT_X
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_TRAINER_ROUTE
     ; Continuous trainer-route gate (battle plan Stage 1b): the scenario that drives
@@ -414,7 +414,7 @@ EnterMap:
     cmp byte [trroute_seeded], 0
     jne .trroute_no_seed
     mov byte [trroute_seeded], 1
-    mov byte [ebp + W_CUR_MAP], ROUTE_3
+    mov byte [ebp + wCurMap], ROUTE_3
 %ifdef PILOT_NEUTRAL
     ; Spawn OUT of every Route 3 sight line, so a hand-piloted session engages
     ; nobody until the player walks. Verified against ALL EIGHT Route 3 trainers
@@ -435,13 +435,13 @@ EnterMap:
     ; were both wrong in different ways ((12,8): ledge in the walk path; (13,6):
     ; wrong spot live), so this tile is the measured one — do not "correct" it
     ; back from the pret data without a live run.
-    mov byte [ebp + W_Y_COORD], 8
-    mov byte [ebp + W_X_COORD], 13
+    mov byte [ebp + wYCoord], 8
+    mov byte [ebp + wXCoord], 13
 %else
-    mov byte [ebp + W_Y_COORD], 6
-    mov byte [ebp + W_X_COORD], 12
+    mov byte [ebp + wYCoord], 6
+    mov byte [ebp + wXCoord], 12
 %endif
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 .trroute_no_seed:
 %endif
 %ifdef DEBUG_TRAINER_ROUTE17
@@ -470,10 +470,10 @@ EnterMap:
     ; comparison the mechanical "does this now match" check the map-script-tables
     ; note promised, not a fresh derivation.
     ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SEAM).
-    mov byte [ebp + W_CUR_MAP], ROUTE_17
-    mov byte [ebp + W_Y_COORD], 120
-    mov byte [ebp + W_X_COORD], 10
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
+    mov byte [ebp + wCurMap], ROUTE_17
+    mov byte [ebp + wYCoord], 120
+    mov byte [ebp + wXCoord], 10
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SEAM)
 %endif
 %ifdef DEBUG_SURF
     ; Surfboard gate (items-plan Stage 11): spawn on the Pallet Town shore tile that
@@ -490,10 +490,10 @@ EnterMap:
     ; standing on a shore tile — IsNextTileShoreOrWater keeps the surf state on the
     ; way in. Seeded BEFORE LoadMapData, which reads the coords (same rule as
     ; DEBUG_SPAWN / DEBUG_MAPSCRIPT_SIGHT).
-    mov byte [ebp + W_CUR_MAP], PALLET_TOWN
-    mov byte [ebp + W_Y_COORD], 14
-    mov byte [ebp + W_X_COORD], 5
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    mov byte [ebp + wCurMap], PALLET_TOWN
+    mov byte [ebp + wYCoord], 14
+    mov byte [ebp + wXCoord], 5
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_FISH
     ; Fishing gate (items-plan Stage 11): the DEBUG_SURF spawn — Pallet (14,5),
@@ -502,10 +502,10 @@ EnterMap:
     ; wTileInFrontOfPlayer: the first USE runs against its boot value 0 (the
     ; FishingInit-failure branch), the bump before the second USE populates it
     ; with the water tile through the real collision check.
-    mov byte [ebp + W_CUR_MAP], PALLET_TOWN
-    mov byte [ebp + W_Y_COORD], 14
-    mov byte [ebp + W_X_COORD], 5
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    mov byte [ebp + wCurMap], PALLET_TOWN
+    mov byte [ebp + wYCoord], 14
+    mov byte [ebp + wXCoord], 5
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_LEDGE
     ; Ledge-hop gate (regression-overworld-ledge-hop-never-advanced): spawn on
@@ -519,10 +519,10 @@ EnterMap:
     ; YOUNGSTER2 LEFT_RIGHT on row 13) and the path has no grass tile, so no RNG
     ; can diverge the two sides. Seeded BEFORE LoadMapData (same rule as
     ; DEBUG_SPAWN / DEBUG_SURF).
-    mov byte [ebp + W_CUR_MAP], ROUTE_1
-    mov byte [ebp + W_Y_COORD], 8
-    mov byte [ebp + W_X_COORD], 7
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    mov byte [ebp + wCurMap], ROUTE_1
+    mov byte [ebp + wYCoord], 8
+    mov byte [ebp + wXCoord], 7
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_BATTLE_GHOST
     ; Ghost-battle gate (battle plan 4c's witness). Spawn on Route 1 column 7 —
@@ -537,18 +537,18 @@ EnterMap:
     ; NOTE this deliberately does NOT reuse DEBUG_START_MAP: that pulls in
     ; DEBUG_SEAMWALK, which sets BIT_NO_BATTLES — the exact flag NewBattle tests
     ; before jumping to InitBattle, so it would suppress the battle under test.
-    mov byte [ebp + W_CUR_MAP], ROUTE_1
-    mov byte [ebp + W_Y_COORD], 10
-    mov byte [ebp + W_X_COORD], 7
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    mov byte [ebp + wCurMap], ROUTE_1
+    mov byte [ebp + wYCoord], 10
+    mov byte [ebp + wXCoord], 7
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
 %ifdef DEBUG_PALLET_OAK
     ; Oak-intro state gate: start on the Pallet north-exit tile that triggers
     ; PalletTownDefaultScript, then let RunOakIntroTest drive the stage boundary.
-    mov byte [ebp + W_CUR_MAP], 0x00          ; PALLET_TOWN
-    mov byte [ebp + W_Y_COORD], 0
-    mov byte [ebp + W_X_COORD], 10
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+    mov byte [ebp + wCurMap], 0x00          ; PALLET_TOWN
+    mov byte [ebp + wYCoord], 0
+    mov byte [ebp + wXCoord], 10
+    mov byte [ebp + wDestinationWarpID], 0xFF
 %endif
     call LoadMapData
 %ifdef DEBUG_SPAWN
@@ -569,10 +569,10 @@ EnterMap:
     push ecx
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], SEAM_XVEC
-    mov byte [ebp + W_PLAYER_DIRECTION],        SEAM_PDIR
-    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], SEAM_PDIR
+    mov byte [ebp + wPlayerDirection],        SEAM_PDIR
+    mov byte [ebp + wPlayerMovingDirection], SEAM_PDIR
     mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SEAM_FACE
-    mov byte [ebp + W_WALK_COUNTER], 8
+    mov byte [ebp + wWalkCounter], 8
 .seam_frames:
     call UpdateSprites
     call AdvancePlayerSprite
@@ -581,7 +581,7 @@ EnterMap:
     call SeamLogRecord                    ; one sample per rendered frame
     popf
     jc .seam_crossed
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne .seam_frames
     pop ecx
     dec ecx
@@ -599,16 +599,16 @@ EnterMap:
     push ecx
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], SEAM_XVEC
-    mov byte [ebp + W_PLAYER_DIRECTION],        SEAM_PDIR
-    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], SEAM_PDIR
+    mov byte [ebp + wPlayerDirection],        SEAM_PDIR
+    mov byte [ebp + wPlayerMovingDirection], SEAM_PDIR
     mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SEAM_FACE
-    mov byte [ebp + W_WALK_COUNTER], 8
+    mov byte [ebp + wWalkCounter], 8
 .seam_after_frames:
     call UpdateSprites
     call AdvancePlayerSprite
     call DelayFrame
     call SeamLogRecord
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne .seam_after_frames
     pop ecx
     dec ecx
@@ -652,15 +652,15 @@ EnterMap:
     push ecx
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 1     ; +1 (east)
-    mov byte [ebp + W_PLAYER_DIRECTION],        PLAYER_DIR_RIGHT
-    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], PLAYER_DIR_RIGHT
+    mov byte [ebp + wPlayerDirection],        PLAYER_DIR_RIGHT
+    mov byte [ebp + wPlayerMovingDirection], PLAYER_DIR_RIGHT
     mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SPRITE_FACING_RIGHT
-    mov byte [ebp + W_WALK_COUNTER], 8
+    mov byte [ebp + wWalkCounter], 8
 .we_frames:
     call UpdateSprites
     call AdvancePlayerSprite
     call DelayFrame
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne .we_frames
     pop ecx
     dec ecx
@@ -671,16 +671,16 @@ EnterMap:
     push ecx
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0xFF   ; -1 (north)
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
-    mov byte [ebp + W_PLAYER_DIRECTION],        PLAYER_DIR_UP
-    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], PLAYER_DIR_UP
+    mov byte [ebp + wPlayerDirection],        PLAYER_DIR_UP
+    mov byte [ebp + wPlayerMovingDirection], PLAYER_DIR_UP
     mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SPRITE_FACING_UP
-    mov byte [ebp + W_WALK_COUNTER], 8
+    mov byte [ebp + wWalkCounter], 8
 .wn_frames:
     call UpdateSprites
     call AdvancePlayerSprite
     jc .wn_crossed                ; CF=1 → CheckMapConnections fired this step
     call DelayFrame
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne .wn_frames
     pop ecx
     dec ecx
@@ -696,9 +696,9 @@ EnterMap:
     ; the same reload .mapTransition does. Lets us screenshot the post-crossing
     ; render of Route 1's bottom without keyboard input.
 %ifndef DEBUG_BASELINE
-    mov byte [ebp + W_X_COORD], 8
-    mov byte [ebp + W_Y_COORD], 255
-    call CheckMapConnections                  ; sets W_CUR_MAP + view ptr for Route 1
+    mov byte [ebp + wXCoord], 8
+    mov byte [ebp + wYCoord], 255
+    call CheckMapConnections                  ; sets wCurMap + view ptr for Route 1
 %endif
     ; Player identity = the golden spec ("RED" / id 0), as the DEBUG_STARTMENU gate
     ; below already does. Without this the overworld_pallet golden compares the build
@@ -706,12 +706,12 @@ EnterMap:
     ; wPlayerID is whatever InitPlayerData rolled from the RNG, so it is not even
     ; reproducible run to run. Only visible since the WRAM regions are compared (F-5).
     call SeedDeterministicPlayerIdentity
-    mov byte [ebp + W_WALK_COUNTER], 0
+    mov byte [ebp + wWalkCounter], 0
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
     mov byte [ebp + hSCY], 0
     mov byte [ebp + hSCX], 0
-    mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
+    mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
     call LoadMapHeader
     ; OW-A.2 P3b: LoadMapHeader now runs the faithful InitSprites (pret :1892), which
     ; repopulates the NPC slots from the destination map's object binary but leaves
@@ -1038,7 +1038,7 @@ EnterMap:
     call UpdateSprites
 
     ; ld hl, wCurrentMapScriptFlags / set CUR_MAP_LOADED_1,[hl] / set CUR_MAP_LOADED_2,[hl]
-    or byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
+    or byte [ebp + wCurrentMapScriptFlags], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
 
     ; xor a / ld [wJoyIgnore], a
     mov byte [ebp + W_JOY_IGNORE], 0
@@ -1220,7 +1220,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call LoadGBPal
     call HandleMidJump
 
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne .moveAhead                           ; still mid-step → keep walking
 
     ; --- idle: clear step vectors, then sample the held D-pad ---
@@ -1255,7 +1255,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; trainer script, and a "any non-default script" test would silently strip
     ; sight handling from any such map that did have trainers.
     ; DEVIATION{class=temporary; pret=home/overworld.asm:OverworldLoopLessDelay; behavior=on maps not yet wired to TrainerMapScript the port still runs the port-only CheckTrainerSight and TrainerEncounterFlow pair after the fly/dungeon-warp test, which pret has no counterpart for; evidence=MapScriptPointers in the generated assets/map_scripts.inc dispatches only a SUBSET of maps to TrainerMapScript, and that subset GROWS with the overworld-events rollout, so it is deliberately not enumerated here — measure it with grep -c 'dd TrainerMapScript' dos_port/assets/map_scripts.inc. On every map outside that subset MapScriptPointers[wCurMap] is DefaultMapScript or a non-trainer script, the faithful CheckFightingMapTrainers flow is unreachable, and deleting the hook outright would remove trainer engagement there entirely; lifetime=deleted when Stage 5a wiring completes and all standard trainer maps are wired, owned by docs/current_plan_overworld_events.md}
-    movzx ecx, byte [ebp + W_CUR_MAP]
+    movzx ecx, byte [ebp + wCurMap]
     cmp dword [MapScriptPointers + ecx*4], TrainerMapScript
     je .noTrainerSight                       ; faithful map-script path owns this map
     ; Flags: the cmp above is consumed by the je; CheckTrainerSight sets its own
@@ -1373,8 +1373,8 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 
 .handleDirection:
     ; Always commit the new direction/facing — this happens even on turn-only presses.
-    mov [ebp + W_PLAYER_DIRECTION],         dl
-    mov [ebp + W_PLAYER_MOVING_DIRECTION],  dl
+    mov [ebp + wPlayerDirection],         dl
+    mov [ebp + wPlayerMovingDirection],  dl
     mov [ebp + W_SPRITE_PLAYER_FACING_DIR], dh
 
     ; pret: bit BIT_SCRIPTED_MOVEMENT_STATE, a / jr nz, .noDirectionChange
@@ -1396,7 +1396,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     cmp byte [ebp + W_CHECK_FOR_TURN], 0
     je .walkStart                             ; already committed to walking direction
     mov byte [ebp + W_CHECK_FOR_TURN], 0     ; consume the turn-check token
-    cmp dl, [ebp + W_PLAYER_LAST_STOP_DIRECTION]
+    cmp dl, [ebp + wPlayerLastStopDirection]
     je .walkStart                             ; same direction → walk normally
     ; Turn-only press (pret home/overworld.asm:186-199): facing was updated above;
     ; don't walk. OW-A.6 faithful turn tail: arm the Pikachu-collision grace
@@ -1434,7 +1434,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; pret's per-map function-1 (IsPlayerFacingEdgeOfMap) / function-2
     ; (IsWarpTileInFrontOfPlayer) dispatch. Register-safe (returns only CF); DL
     ; is no longer consulted here. CheckWarpTile below is the port's
-    ; CheckWarpsCollision (scans W_WARP_ENTRIES by the player's current coords).
+    ; CheckWarpsCollision (scans wWarpEntries by the player's current coords).
     call ExtraWarpCheck
     jnc OverworldLoop
     call CheckWarpTile
@@ -1442,16 +1442,16 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp .warpTransition
 
 .startWalk:
-    mov byte [ebp + W_WALK_COUNTER], 8        ; begin an 8-frame step
+    mov byte [ebp + wWalkCounter], 8        ; begin an 8-frame step
     jmp .moveAhead                             ; pret: jr .moveAhead2 — advance immediately, no extra delay
 
 .noDirection:
     ; Save the last-used moving direction so the next press can check for a turn.
     ; (Pret: .noDirectionButtonsPressed — saves wPlayerMovingDirection to
     ; wPlayerLastStopDirection, zeroes moving dir, sets wCheckFor180DegreeTurn=1.)
-    mov al, [ebp + W_PLAYER_MOVING_DIRECTION]
-    mov [ebp + W_PLAYER_LAST_STOP_DIRECTION], al
-    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], 0
+    mov al, [ebp + wPlayerMovingDirection]
+    mov [ebp + wPlayerLastStopDirection], al
+    mov byte [ebp + wPlayerMovingDirection], 0
     mov byte [ebp + W_CHECK_FOR_TURN], 1
     jmp OverworldLoop
 
@@ -1465,7 +1465,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call DoBikeSpeedup
     call AdvancePlayerSprite
     jc .mapTransition
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne OverworldLoop
 %ifdef DEBUG_WALKSPEED
     call WalkSpeedSample                       ; tile just completed → record ticks/tile
@@ -1485,15 +1485,15 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; post-step NewBattle above and the on-turn NewBattle in .handleDirection.
     and byte [ebp + W_STATUS_FLAGS_3], ~(1 << BIT_TALKED_TO_TRAINER) & 0xFF
     and byte [ebp + W_STATUS_FLAGS_7], ~(1 << BIT_TRAINER_BATTLE) & 0xFF
-    or  byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
+    or  byte [ebp + wCurrentMapScriptFlags], (1 << BIT_CUR_MAP_LOADED_1) | (1 << BIT_CUR_MAP_LOADED_2)
     mov byte [ebp + hJoyHeld], 0            ; xor a / ldh [hJoyHeld], a
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, CINNABAR_GYM
     jne .notCinnabarGym
     SetEvent EVENT_2A7
 .notCinnabarGym:
     or byte [ebp + W_STATUS_FLAGS_4], (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, OAKS_LAB
     je .noFaintCheck                          ; no blackout after losing to the rival in Oak's lab
     call AnyPartyAlive                        ; DH = OR of every party mon's HP bytes
@@ -1520,33 +1520,33 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call ExtraWarpCheck
     jnc OverworldLoop                         ; pret: jr nc, ...Retry2 (no other match)
 .warpTransition:
-    ; BL = resolved destination map; W_DESTINATION_WARP_ID = 0-based spawn warp index
-    ; Only update W_LAST_MAP when leaving an outdoor map (mirrors pret CheckIfInOutsideMap).
-    ; Indoor→indoor and indoor→outdoor transitions must NOT overwrite W_LAST_MAP or the
+    ; BL = resolved destination map; wDestinationWarpID = 0-based spawn warp index
+    ; Only update wLastMap when leaving an outdoor map (mirrors pret CheckIfInOutsideMap).
+    ; Indoor→indoor and indoor→outdoor transitions must NOT overwrite wLastMap or the
     ; 0xFF warp-destination resolver will return an indoor map instead of Pallet Town.
-    ; ; DIVERGENCE: this is the `W_CUR_MAP < FIRST_INDOOR_MAP_ID` heuristic, NOT pret's
+    ; ; DIVERGENCE: this is the `wCurMap < FIRST_INDOOR_MAP_ID` heuristic, NOT pret's
     ; tileset-based CheckIfInOutsideMap (OVERWORLD/PLATEAU → outside). The two disagree
     ; for edge maps (e.g. Route 23 / Indigo Plateau use the PLATEAU tileset but sit above
     ; FIRST_INDOOR_MAP_ID), so those would be misclassified here.
     ; ; TODO(edge-maps): switch this test to `call CheckIfInOutsideMap` (this file,
     ; already global + faithful) when Route 23 / Plateau warping is exercised.
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, FIRST_INDOOR_MAP_ID
     jae .skipLastMapUpdate
-    mov [ebp + W_LAST_MAP], al
+    mov [ebp + wLastMap], al
 .skipLastMapUpdate:
-    mov [ebp + W_CUR_MAP], bl
+    mov [ebp + wCurMap], bl
     ; Update text table dispatch for the new map.
-    movzx eax, byte [ebp + W_CUR_MAP]
+    movzx eax, byte [ebp + wCurMap]
     lea esi, [MapTextTablePointers]
     mov esi, [esi + eax*4]
     mov [w_map_text_table_ptr], esi
-    mov byte [ebp + W_WALK_COUNTER], 0
+    mov byte [ebp + wWalkCounter], 0
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
     mov byte [ebp + hSCY], 0
     mov byte [ebp + hSCX], 0
-    mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
+    mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
     ; pret WarpFound2 plays the map-change jingle here (:477/498/510), BEFORE the
     ; destination is loaded, so it reads the SOURCE map's tileset + door tile. Must
     ; precede LoadDestinationMapData (which calls LoadMapHeader → destination tileset/
@@ -1577,18 +1577,18 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 
 .mapTransition:
     ; A connection was crossed — reload everything for the new map.
-    mov byte [ebp + W_WALK_COUNTER], 0
+    mov byte [ebp + wWalkCounter], 0
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
 
     ; Reset scroll and VRAM pointer. During the walk, hSCY/hSCX accumulated
     ; 2 px/frame (e.g. −144 px over 9 north steps). CopyMapViewToVRAM always
     ; writes to GB_TILEMAP0 ($9800), so the PPU must start reading from row 0
-    ; (SCY=0). W_MAP_VIEW_VRAM_POINTER must also reset so RedrawRowOrColumn
+    ; (SCY=0). wMapViewVRAMPointer must also reset so RedrawRowOrColumn
     ; uses the correct base address on subsequent frames.
     mov byte [ebp + hSCY], 0
     mov byte [ebp + hSCX], 0
-    mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
+    mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
 
     call LoadMapHeader
     ; pret home/overworld.asm:.loadNewMap (:652-654): LoadMapHeader (loads the new map's
@@ -1601,7 +1601,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ;   wPikachuSpawnState = 2) at .loadNewMap — deferred with the Pikachu-follow engine.
     call InitMapSprites                        ; populate NPC slots for the new map
     ; Update text table dispatch for the new map.
-    movzx eax, byte [ebp + W_CUR_MAP]
+    movzx eax, byte [ebp + wCurMap]
     lea esi, [MapTextTablePointers]
     mov esi, [esi + eax*4]
     mov [w_map_text_table_ptr], esi
@@ -1725,7 +1725,7 @@ DoBikeSpeedup:
     jnz .done                                      ; ret nz — mid ledge-hop/fishing
     cmp byte [ebp + wNPCMovementScriptPointerTableNum], 0
     jne .done                                      ; ret nz — movement script active
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, ROUTE_17                               ; Cycling Road
     jne .goFaster
     test byte [ebp + hJoyHeld], PAD_UP | PAD_LEFT | PAD_RIGHT
@@ -1744,30 +1744,30 @@ CheckMapConnections:
     push edx
 
     ; Edge thresholds
-    mov al, [ebp + W_CUR_MAP_HEIGHT]
+    mov al, [ebp + wCurMapHeight]
     add al, al
-    mov [ebp + W_CURRENT_MAP_HEIGHT_2], al
-    mov al, [ebp + W_CUR_MAP_WIDTH]
+    mov [ebp + wCurrentMapHeight2], al
+    mov al, [ebp + wCurMapWidth]
     add al, al
-    mov [ebp + W_CURRENT_MAP_WIDTH_2], al
+    mov [ebp + wCurrentMapWidth2], al
 
     ; East connection check
-    mov al, [ebp + W_X_COORD]
-    cmp al, [ebp + W_CURRENT_MAP_WIDTH_2]
+    mov al, [ebp + wXCoord]
+    cmp al, [ebp + wCurrentMapWidth2]
     jne .checkWest
     mov al, [ebp + W_EAST_CONNECTED_MAP]
     cmp al, MAP_NO_CONNECTION
     je .checkWest
     mov ebx, W_EAST_CONNECTED_MAP
     
-    mov [ebp + W_CUR_MAP], al
+    mov [ebp + wCurMap], al
     mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_X_ALIGN]
-    mov [ebp + W_X_COORD], al
-    mov al, [ebp + W_Y_COORD]
+    mov [ebp + wXCoord], al
+    mov al, [ebp + wYCoord]
     mov cl, al
     mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_Y_ALIGN]
     add cl, al
-    mov [ebp + W_Y_COORD], cl
+    mov [ebp + wYCoord], cl
     
     mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_VIEW_PTR]
     mov dl, al
@@ -1789,7 +1789,7 @@ CheckMapConnections:
     jmp .loadNewMap
 
 .checkWest:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 255
     jne .checkSouth
     mov al, [ebp + W_WEST_CONNECTED_MAP]
@@ -1797,14 +1797,14 @@ CheckMapConnections:
     je .checkSouth
     mov ebx, W_WEST_CONNECTED_MAP
     
-    mov [ebp + W_CUR_MAP], al
+    mov [ebp + wCurMap], al
     mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_X_ALIGN]
-    mov [ebp + W_X_COORD], al
-    mov al, [ebp + W_Y_COORD]
+    mov [ebp + wXCoord], al
+    mov al, [ebp + wYCoord]
     mov cl, al
     mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_Y_ALIGN]
     add cl, al
-    mov [ebp + W_Y_COORD], cl
+    mov [ebp + wYCoord], cl
     
     mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_VIEW_PTR]
     mov dl, al
@@ -1826,22 +1826,22 @@ CheckMapConnections:
     jmp .loadNewMap
 
 .checkSouth:
-    mov al, [ebp + W_Y_COORD]
-    cmp al, [ebp + W_CURRENT_MAP_HEIGHT_2]
+    mov al, [ebp + wYCoord]
+    cmp al, [ebp + wCurrentMapHeight2]
     jne .checkNorth
     mov al, [ebp + W_SOUTH_CONNECTED_MAP]
     cmp al, MAP_NO_CONNECTION
     je .checkNorth
     mov ebx, W_SOUTH_CONNECTED_MAP
     
-    mov [ebp + W_CUR_MAP], al
+    mov [ebp + wCurMap], al
     mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_Y_ALIGN]
-    mov [ebp + W_Y_COORD], al
-    mov al, [ebp + W_X_COORD]
+    mov [ebp + wYCoord], al
+    mov al, [ebp + wXCoord]
     mov cl, al
     mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_X_ALIGN]
     add cl, al
-    mov [ebp + W_X_COORD], cl
+    mov [ebp + wXCoord], cl
     
     mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_VIEW_PTR]
     mov dl, al
@@ -1857,7 +1857,7 @@ CheckMapConnections:
     jmp .loadNewMap
 
 .checkNorth:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 255
     jne .done
     mov al, [ebp + W_NORTH_CONNECTED_MAP]
@@ -1865,14 +1865,14 @@ CheckMapConnections:
     je .done
     mov ebx, W_NORTH_CONNECTED_MAP
     
-    mov [ebp + W_CUR_MAP], al
+    mov [ebp + wCurMap], al
     mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_Y_ALIGN]
-    mov [ebp + W_Y_COORD], al
-    mov al, [ebp + W_X_COORD]
+    mov [ebp + wYCoord], al
+    mov al, [ebp + wXCoord]
     mov cl, al
     mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_X_ALIGN]
     add cl, al
-    mov [ebp + W_X_COORD], cl
+    mov [ebp + wXCoord], cl
     
     mov al, [ebp + W_NORTH_CONNECTED_MAP + CONN_VIEW_PTR]
     mov dl, al
@@ -1902,12 +1902,12 @@ CheckMapConnections:
     ; PlayDefaultMusicFadeOutCurrent (OW-A.14, real); palette reload still deferred.
     ; Only the coordinate/block sync stays inline here.
     ; First, synchronize block coordinates with the new tile coordinates.
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     and al, 1
-    mov [ebp + W_X_BLOCK_COORD], al
-    mov al, [ebp + W_Y_COORD]
+    mov [ebp + wXBlockCoord], al
+    mov al, [ebp + wYCoord]
     and al, 1
-    mov [ebp + W_Y_BLOCK_COORD], al
+    mov [ebp + wYBlockCoord], al
 
     pop edx
     pop ebx
@@ -1924,7 +1924,7 @@ CheckMapConnections:
 ; Preserves nothing pret doesn't (AL used); the caller has no live regs here.
 ; ---------------------------------------------------------------------------
 PlayMapChangeSound:
-    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov al, [ebp + wCurMapTileset]
     cmp al, FACILITY
     je .didNotGoThroughDoor
     cmp al, CEMETERY
@@ -1949,7 +1949,7 @@ PlayMapChangeSound:
     ret
 
 CheckIfInOutsideMap:
-    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov al, [ebp + wCurMapTileset]
     test al, al                     ; OVERWORLD → ZF=1
     jz .ret
     cmp al, TILESET_PLATEAU         ; PLATEAU  → ZF=1
@@ -1989,7 +1989,7 @@ ExtraWarpCheck:
     push edx
     push esi
 
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, MAP_SS_ANNE_3F
     je .useFunction1
     cmp al, MAP_ROCKET_HIDEOUT_B1F
@@ -2001,7 +2001,7 @@ ExtraWarpCheck:
     cmp al, MAP_ROCK_TUNNEL_1F
     je .useFunction2
 
-    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov al, [ebp + wCurMapTileset]
     test al, al                     ; OVERWORLD (0) → function 2
     jz .useFunction2
     cmp al, TILESET_SHIP
@@ -2186,13 +2186,13 @@ LoadPlayerSpriteGraphics:
     jz LoadSurfingPlayerSpriteGraphics2      ; 2 → surfing
     jmp LoadWalkingPlayerSpriteGraphics      ; fallback
 IsBikeRidingAllowed:
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, ROUTE_23
     je .allowed
     cmp al, INDIGO_PLATEAU
     je .allowed
 
-    mov bh, [ebp + W_CUR_MAP_TILESET]       ; B = BH
+    mov bh, [ebp + wCurMapTileset]       ; B = BH
     mov esi, BikeRidingTilesets             ; HL → table
 .loop:
     mov al, [esi]                           ; ld a,[hli]
@@ -2241,16 +2241,16 @@ LoadTileBlockMap:
     push ecx
 
     ; Fill wOverworldMap..wOverworldMapEnd with wMapBackgroundTile
-    mov esi, W_OVERWORLD_MAP
+    mov esi, wOverworldMap
     mov bx,  W_OVERWORLD_MAP_SIZE & 0xFFFF
-    movzx eax, byte [ebp + W_MAP_BACKGROUND_TILE]
+    movzx eax, byte [ebp + wMapBackgroundTile]
     call FillMemory
 
     ; HL = ESI = wOverworldMap
-    mov esi, W_OVERWORLD_MAP
+    mov esi, wOverworldMap
 
     ; hMapWidth = wCurMapWidth; hMapStride = width + MAP_BORDER*2
-    movzx ecx, byte [ebp + W_CUR_MAP_WIDTH]       ; ECX = width (= 10)
+    movzx ecx, byte [ebp + wCurMapWidth]       ; ECX = width (= 10)
     mov byte [ebp + hMapWidth], cl
     add cl, MAP_BORDER * 2                         ; CL = stride (= 16)
     mov byte [ebp + hMapStride], cl
@@ -2264,10 +2264,10 @@ LoadTileBlockMap:
     add esi, MAP_BORDER                            ; ESI = first cell of map data
 
     ; DE = wCurMapDataPtr (source: .blk data in ROM window)
-    movzx edx, word [ebp + W_CUR_MAP_DATA_PTR]    ; EDX = map .blk GB addr (rom_window.inc)
+    movzx edx, word [ebp + wCurMapDataPtr]    ; EDX = map .blk GB addr (rom_window.inc)
 
     ; B (BH) = wCurMapHeight (row count)
-    movzx eax, byte [ebp + W_CUR_MAP_HEIGHT]
+    movzx eax, byte [ebp + wCurMapHeight]
     mov bh, al
 
 .row_loop:
@@ -2379,7 +2379,7 @@ LoadNorthSouthConnectionsTileMap:
     pop esi
     movzx eax, byte [ebp + hMapWidth]  ; src += connected-map width
     add esi, eax
-    movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
+    movzx eax, byte [ebp + wCurMapWidth]
     add eax, MAP_BORDER * 2
     add edx, eax                         ; dest += wOverworldMap stride
     dec ecx
@@ -2416,7 +2416,7 @@ LoadEastWestConnectionsTileMap:
     pop esi
     movzx eax, byte [ebp + hMapWidth]  ; src += connected-map width
     add esi, eax
-    movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
+    movzx eax, byte [ebp + wCurMapWidth]
     add eax, MAP_BORDER * 2
     add edx, eax                         ; dest += wOverworldMap stride
     dec bl
@@ -2425,7 +2425,7 @@ LoadEastWestConnectionsTileMap:
 
 IsSpriteOrSignInFrontOfPlayer:
     mov byte [ebp + hTextID], 0      ; xor a / ldh [hTextID], a
-    mov al, [ebp + W_NUM_SIGNS]      ; ld a, [wNumSigns]
+    mov al, [ebp + wNumSigns]      ; ld a, [wNumSigns]
     test al, al                      ; and a
     jz .extendRangeOverCounter       ; jr z, .extendRangeOverCounter
 ; if there are signs
@@ -2476,7 +2476,7 @@ IsSpriteInFrontOfPlayer2:
     sub bl, dh
     mov al, PLAYER_DIR_LEFT
 .doneCheckingDirection:
-    mov [ebp + W_PLAYER_DIRECTION], al
+    mov [ebp + wPlayerDirection], al
     mov esi, wSprite01StateData1     ; slot 1 (slot 0 is the player)
     mov dl, 0x01                     ; e = slot index, 1-based
     mov dh, 0x0f                     ; d = 15 slots to scan (range is dead from here)
@@ -2539,8 +2539,8 @@ IsSpriteInFrontOfPlayer2:
     ret
 
 SignLoop:
-    lea esi, [ebp + W_SIGN_COORDS]      ; hl = wSignCoords
-    mov cl, [ebp + W_NUM_SIGNS]         ; CL = remaining count (b)
+    lea esi, [ebp + wSignCoords]      ; hl = wSignCoords
+    mov cl, [ebp + wNumSigns]         ; CL = remaining count (b)
     xor ch, ch                          ; CH = 1-based index (c)
 .signLoop:
     inc ch                              ; c++
@@ -2558,7 +2558,7 @@ SignLoop:
     ; matched: text ID at wSignTextIDs[c-1]
     movzx eax, ch
     dec eax
-    mov al, [ebp + eax + W_SIGN_TEXT_IDS]
+    mov al, [ebp + eax + wSignTextIDs]
     mov [ebp + hTextID], al
     stc
     ret
@@ -2595,7 +2595,7 @@ CollisionCheckOnLand:
     ; pret home/overworld.asm:1223-1225 — no collisions while the game is scripting the
     ; player's movement (wSimulatedJoypadStatesIndex != 0). Live since the ledge hop's
     ; simulated steps (and door step-out) run through here.
-    cmp byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0
+    cmp byte [ebp + wSimulatedJoypadStatesIndex], 0
     jne .noCollision                               ; scripted movement → always passable
     ; pret :1226-1231 — quick sprite reject. The accumulated collision-direction bits in
     ; wSpritePlayerStateData1CollisionData (player = slot 0) use the same bit layout as
@@ -2606,12 +2606,12 @@ CollisionCheckOnLand:
     ; (pret itself questions why the deeper check ever misses). pret's `nop`, the
     ; res BIT_FACE_PLAYER / hTextID / Pikachu-collision-counter tail are folded into the
     ; bespoke IsNPCAtTargetBlock replacement below.
-    mov dl, [ebp + W_PLAYER_DIRECTION]
+    mov dl, [ebp + wPlayerDirection]
     mov al, [ebp + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
     and al, dl
     jnz .blocked                                   ; sprite already flagged in travel dir
-    ; wTileMap is a sub-block viewport into wSurroundingTiles, offset by W_Y_BLOCK_COORD /
-    ; W_X_BLOCK_COORD. AdvancePlayerSprite only calls LoadCurrentMapView on block-boundary
+    ; wTileMap is a sub-block viewport into wSurroundingTiles, offset by wYBlockCoord /
+    ; wXBlockCoord. AdvancePlayerSprite only calls LoadCurrentMapView on block-boundary
     ; crossings, so the viewport can be stale within a block (YBC/XBC changed but wTileMap
     ; not rebuilt). Rebuild here to apply the current sub-block offset before the tile read.
     call LoadCurrentMapView
@@ -2648,7 +2648,7 @@ CollisionCheckOnLand:
     pop edx
     pop ebx
     jc .blocked                                    ; illegal tile-pair boundary → blocked
-    movzx ecx, byte [ebp + W_TILE_IN_FRONT_OF_PLAYER] ; restore CL (HandleLedges clobbered ECX)
+    movzx ecx, byte [ebp + wTileInFrontOfPlayer] ; restore CL (HandleLedges clobbered ECX)
     call IsTilePassable                            ; CF = 1 if not passable
     jc .blocked                                    ; tile impassable → blocked
     ; IsNPCAtTargetBlock is the port's BESPOKE replacement for pret's IsSpriteInFrontOfPlayer
@@ -2689,7 +2689,7 @@ CollisionCheckOnLand:
 ; CheckForJumpingAndTilePairCollisions — pret home/overworld.asm.
 ;
 ; In:  ESI = flat host ptr to the directional tile-pair table (TilePairCollisionsLand
-;            or ...Water); W_TILE_IN_FRONT_OF_PLAYER already set by the caller.
+;            or ...Water); wTileInFrontOfPlayer already set by the caller.
 ;            (pret re-runs GetTileAndCoordsInFrontOfPlayer here; both of the
 ;            port's callers, CollisionCheckOnLand and CollisionCheckOnWater, set
 ;            it via _GetTileAndCoordsInFrontOfPlayer immediately before — so
@@ -2717,9 +2717,9 @@ CheckForJumpingAndTilePairCollisions:
 CheckForTilePairCollisions2:
     mov dh, [ebp + STANDING_TILE_OFF]              ; DH = tile the player stands on (pret wTilePlayerStandingOn)
 CheckForTilePairCollisions:
-    mov cl, [ebp + W_TILE_IN_FRONT_OF_PLAYER]      ; c = tile in front
+    mov cl, [ebp + wTileInFrontOfPlayer]      ; c = tile in front
 .loop:
-    mov bl, [ebp + W_CUR_MAP_TILESET]              ; b = current tileset (pret re-reads each iter)
+    mov bl, [ebp + wCurMapTileset]              ; b = current tileset (pret re-reads each iter)
     mov al, [esi]                                  ; entry tileset (hl→tile1)
     inc esi
     cmp al, 0xFF
@@ -2784,7 +2784,7 @@ LoadCurrentMapView:
     movzx edx, word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
 
     ; HL = ESI = wSurroundingTiles (tile write destination)
-    mov esi, W_SURROUNDING_TILES
+    mov esi, wSurroundingTiles
 
     ; B (BH) = SCREEN_BLOCK_HEIGHT outer loop count
     mov bh, SCREEN_BLOCK_HEIGHT
@@ -2810,14 +2810,14 @@ LoadCurrentMapView:
     ; (matching the in-bounds border) rather than garbage. See CLAUDE.md and
     ; docs/current_plan_backlog.md:
     ; the real fix is to extend map data to fill the larger viewport.
-    cmp edx, W_OVERWORLD_MAP
+    cmp edx, wOverworldMap
     jb  .oobBlock
-    cmp edx, W_OVERWORLD_MAP + W_OVERWORLD_MAP_SIZE
+    cmp edx, wOverworldMap + W_OVERWORLD_MAP_SIZE
     jae .oobBlock
     movzx eax, byte [ebp + edx]                   ; A = block ID from wOverworldMap
     jmp .haveBlock
 .oobBlock:
-    movzx eax, byte [ebp + W_MAP_BACKGROUND_TILE] ; dummy = map border block
+    movzx eax, byte [ebp + wMapBackgroundTile] ; dummy = map border block
 .haveBlock:
     mov bl, al                                     ; BL = block ID arg to DrawTileBlock (C)
     call DrawTileBlock                             ; writes 4×4 tiles to [EBP+ESI..]
@@ -2834,7 +2834,7 @@ LoadCurrentMapView:
 
     ; Advance block-map pointer to next row
     pop edx                                        ; restore row-start of block map
-    movzx eax, byte [ebp + W_CUR_MAP_WIDTH]
+    movzx eax, byte [ebp + wCurMapWidth]
     add al, MAP_BORDER * 2                         ; stride = width + 6
     add edx, eax                                   ; EDX += stride (next block-map row)
 
@@ -2993,7 +2993,7 @@ AreInputsSimulated:
 
     ; if simulating: real presses in the override mask cancel the simulation this frame
     mov bl, [ebp + hJoyHeld]                ; b = hJoyHeld
-    mov al, [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK]
+    mov al, [ebp + wOverrideSimulatedJoypadStatesMask]
     and al, bl
     jnz .ret                                  ; overridden -> keep real input
 
@@ -3011,9 +3011,9 @@ AreInputsSimulated:
 
 ; if done simulating button presses (pret: .doneSimulating)
 .doneSimulating:
-    mov byte [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], 0
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], 0
-    mov byte [ebp + W_SIMULATED_JOYPAD_STATES_END], 0
+    mov byte [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], 0
+    mov byte [ebp + wSimulatedJoypadStatesIndex], 0
+    mov byte [ebp + wSimulatedJoypadStatesEnd], 0
     mov byte [ebp + W_JOY_IGNORE], 0
     mov byte [ebp + hJoyHeld], 0
     ; preserve only movement-flag bits 7,6,5,4,3 (SPINNING|LEDGE_OR_FISHING|5|4|3),
@@ -3022,12 +3022,12 @@ AreInputsSimulated:
     and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_MOVEMENT_STATE)
     ret
 GetSimulatedInput:
-    dec byte [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    dec byte [ebp + wSimulatedJoypadStatesIndex]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     cmp al, 0xFF                              ; wrapped past 0 -> end of simulated input
     je .endofsimulatedinputs
     movzx esi, al                             ; e = index (d = 0)
-    add esi, W_SIMULATED_JOYPAD_STATES_END
+    add esi, wSimulatedJoypadStatesEnd
     mov al, [ebp + esi]                       ; a = [wSimulatedJoypadStatesEnd + index]
     stc
     ret
@@ -3053,7 +3053,7 @@ GetSimulatedInput:
 ; a direct call to the non-predef entry _GetTileAndCoordsInFrontOfPlayer (the
 ; predef wrapper would clobber ESI/EBX via GetPredefRegisters).
 ; Register safety mirrors CollisionCheckOnLand: EAX/ECX/ESI saved; DL is
-; (re)written with W_PLAYER_DIRECTION, the same value callers already hold.
+; (re)written with wPlayerDirection, the same value callers already hold.
 ; ---------------------------------------------------------------------------
 CollisionCheckOnWater:
     push eax
@@ -3064,12 +3064,12 @@ CollisionCheckOnWater:
     jnz .noCollision
     ; pret :1669-1672 — quick sprite reject in the travel direction (same
     ; collision-direction bit layout as CollisionCheckOnLand's reject).
-    mov dl, [ebp + W_PLAYER_DIRECTION]
+    mov dl, [ebp + wPlayerDirection]
     mov al, [ebp + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_COLLISIONDATA]
     and al, dl
     jnz .collision
     ; regression-overworld-watercollision-stale-tile: the port's
-    ; CheckForJumpingAndTilePairCollisions requires W_TILE_IN_FRONT_OF_PLAYER
+    ; CheckForJumpingAndTilePairCollisions requires wTileInFrontOfPlayer
     ; preset by the caller -- unlike pret, which re-derives the front tile
     ; itself via an internal `predef GetTileAndCoordsInFrontOfPlayer` (root
     ; home/overworld.asm:1284), so pret's own call ordering (tile-pair check
@@ -3080,7 +3080,7 @@ CollisionCheckOnWater:
     call LoadCurrentMapView
     ; Non-predef entry on purpose (predef wrapper would clobber ESI/EBX via
     ; GetPredefRegisters).
-    call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile → W_TILE_IN_FRONT_OF_PLAYER
+    call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile → wTileInFrontOfPlayer
     ; pret :1673-1675 — water-seam tile pairs block (and may arm a ledge state);
     ; same save set as CollisionCheckOnLand's land hook.
     push ebx
@@ -3094,13 +3094,13 @@ CollisionCheckOnWater:
     ; explicit call (the first ran inside CheckForJumpingAndTilePairCollisions
     ; above). Not redundant: CheckForJumpingAndTilePairCollisions clobbers CL
     ; (documented in its header), and IsNextTileShoreOrWater below needs a
-    ; freshly derived W_TILE_IN_FRONT_OF_PLAYER. EDX is dead from here to the
+    ; freshly derived wTileInFrontOfPlayer. EDX is dead from here to the
     ; end of the routine, so the faithful routine's DH/DL front-coord writes
     ; are harmless -- and match pret, whose predef call clobbers DE here too.
-    call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile → W_TILE_IN_FRONT_OF_PLAYER
+    call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile → wTileInFrontOfPlayer
     call IsNextTileShoreOrWater                    ; CF=1 → shore/water ahead
     jc .noCollision                                ; keep surfing
-    movzx ecx, byte [ebp + W_TILE_IN_FRONT_OF_PLAYER] ; ld a,[wTileInFrontOfPlayer] / ld c,a
+    movzx ecx, byte [ebp + wTileInFrontOfPlayer] ; ld a,[wTileInFrontOfPlayer] / ld c,a
     call IsTilePassable                            ; CF=1 → not passable
     jnc .stopSurfing                               ; passable land ahead → disembark
 .collision:
@@ -3119,7 +3119,7 @@ CollisionCheckOnWater:
 .checkIfVermilionDockTileset:
     ; UNREFERENCED in pret Yellow (no jump targets this label — Red-era remnant
     ; kept for label fidelity, like Func_5288 set 3).
-    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov al, [ebp + wCurMapTileset]
     cmp al, SHIP_PORT                              ; Vermilion Dock tileset?
     jne .noCollision                               ; keep surfing if not
     jmp .stopSurfing
@@ -3233,10 +3233,10 @@ LoadMapHeader:
     ; hPreviousTileset. The 0xFF8B HRAM byte is a union with hMapStride/
     ; hNSConnectionStripWidth, written only later during LoadCurrentMapView / connection-
     ; strip drawing — never between here and the LoadTilesetHeader read — so it is safe.
-    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov al, [ebp + wCurMapTileset]
     mov bl, al                              ; b = full tileset (incl. BIT_NO_PREVIOUS_MAP)
     and al, ~(1 << BIT_NO_PREVIOUS_MAP)     ; res BIT_NO_PREVIOUS_MAP
-    mov [ebp + W_CUR_MAP_TILESET], al
+    mov [ebp + wCurMapTileset], al
     mov [ebp + hPreviousTileset], al
     ; pret: bit BIT_NO_PREVIOUS_MAP,b / ret nz — if the map is already loaded (bit was
     ; set), skip the whole header reload.
@@ -3249,16 +3249,16 @@ LoadMapHeader:
     ;     test bl, (1 << BIT_NO_PREVIOUS_MAP)
     ;     jnz .noPreviousMapReturn   ; pop edi/esi/ecx/ebx/eax ; ret
 
-    ; W_CUR_MAP_HEADER is a 10-byte buffer: tileset(1), h(1), w(1), blkptr(2), txtptr(2), scrptr(2), conn(1)
-    movzx eax, byte [ebp + W_CUR_MAP]
+    ; wCurMapHeader is a 10-byte buffer: tileset(1), h(1), w(1), blkptr(2), txtptr(2), scrptr(2), conn(1)
+    movzx eax, byte [ebp + wCurMap]
     add eax, eax ; * 2 (MapHeaderPointers table is 2 bytes per entry)
     mov esi, MapHeaderPointers
     movzx ebx, word [esi + eax]
     add ebx, ebp ; EBX = address of map header in flat space (rom window)
     
-    ; Copy 10 bytes to W_CUR_MAP_HEADER
+    ; Copy 10 bytes to wCurMapHeader
     mov esi, ebx
-    lea edi, [ebp + W_CUR_MAP_HEADER]
+    lea edi, [ebp + wCurMapHeader]
     mov ecx, W_CUR_MAP_HEADER_SIZE
     rep movsb
     
@@ -3271,25 +3271,25 @@ LoadMapHeader:
     mov byte [ebp + W_EAST_CONNECTED_MAP],  MAP_NO_CONNECTION
     
     ; ESI now points past the 10-byte header. Check connections bitmask.
-    mov al, [ebp + W_CUR_MAP_CONNECTIONS]
+    mov al, [ebp + wCurMapConnections]
     test al, CONNECTION_NORTH
     jz .noNorth
     mov edi, W_NORTH_CONNECTED_MAP
     call CopyMapConnectionHeader
 .noNorth:
-    mov al, [ebp + W_CUR_MAP_CONNECTIONS]
+    mov al, [ebp + wCurMapConnections]
     test al, CONNECTION_SOUTH
     jz .noSouth
     mov edi, W_SOUTH_CONNECTED_MAP
     call CopyMapConnectionHeader
 .noSouth:
-    mov al, [ebp + W_CUR_MAP_CONNECTIONS]
+    mov al, [ebp + wCurMapConnections]
     test al, CONNECTION_WEST
     jz .noWest
     mov edi, W_WEST_CONNECTED_MAP
     call CopyMapConnectionHeader
 .noWest:
-    mov al, [ebp + W_CUR_MAP_CONNECTIONS]
+    mov al, [ebp + wCurMapConnections]
     test al, CONNECTION_EAST
     jz .noEast
     mov edi, W_EAST_CONNECTED_MAP
@@ -3302,17 +3302,17 @@ LoadMapHeader:
     
     ; Read border block
     mov bl, [eax]
-    mov [ebp + W_MAP_BACKGROUND_TILE], bl
+    mov [ebp + wMapBackgroundTile], bl
     inc eax
     
-    ; Copy warps to W_WARP_ENTRIES
+    ; Copy warps to wWarpEntries
     mov bl, [eax]
-    mov [ebp + W_NUMBER_OF_WARPS], bl
+    mov [ebp + wNumberOfWarps], bl
     inc eax
     movzx ecx, bl
     shl ecx, 2                          ; * 4 bytes per warp entry
     mov esi, eax
-    lea edi, [ebp + W_WARP_ENTRIES]
+    lea edi, [ebp + wWarpEntries]
     rep movsb                           ; copy all warp entries to WRAM
     mov eax, esi                        ; advance EAX past copied warp bytes
     
@@ -3322,14 +3322,14 @@ LoadMapHeader:
     ; textID -> wSignTextIDs.  When wNumSigns == 0 the copy is skipped and the
     ; cursor advance adds 0, so a sign-less map is byte-identical to before.
     mov bl, [eax]
-    mov [ebp + W_NUM_SIGNS], bl
+    mov [ebp + wNumSigns], bl
     inc eax                             ; EAX -> first sign entry (flat address)
     test bl, bl
     jz .noSigns
     mov esi, eax                        ; ESI = flat src of the sign block
     call CopySignData                   ; copies wNumSigns*3 bytes; preserves EAX
 .noSigns:
-    movzx ebx, byte [ebp + W_NUM_SIGNS]
+    movzx ebx, byte [ebp + wNumSigns]
     lea ebx, [ebx + ebx * 2]           ; * 3 bytes per sign
     add eax, ebx                        ; advance cursor past the sign block
     
@@ -3367,13 +3367,13 @@ LoadMapHeader:
     ; pret next doubles wCurMapHeight/Width -> wCurrentMapHeight2/Width2 (:1902-1907).
     ; DIVERGENCE (verified safe): the port derives those in CheckMapConnections (its ONLY
     ; consumer), at the top of that routine (set-before-use) — every read of
-    ; W_CURRENT_MAP_HEIGHT_2/WIDTH_2 is inside CheckMapConnections, after the set — so
+    ; wCurrentMapHeight2/WIDTH_2 is inside CheckMapConnections, after the set — so
     ; LoadMapHeader does not need to compute them here.
     ; pret LoadMapHeader:1908-1923: load this map's default music (id, ROM bank) from
     ; MapSongBanks[wCurMap] into wMapMusicSoundID/wMapMusicROMBank. PlayDefaultMusic (the
     ; LoadMapData tail + connection crossing) plays it. Real now (OW-A.14); the pops below
     ; restore eax/esi. Flat model: MapSongBanks is a host-address label, stride 2.
-    movzx eax, byte [ebp + W_CUR_MAP]
+    movzx eax, byte [ebp + wCurMap]
     lea esi, [MapSongBanks + eax*2]
     mov al, [esi]
     mov [ebp + wMapMusicSoundID], al            ; music 1
@@ -3404,7 +3404,7 @@ CopyMapConnectionHeader:
 ;
 ; In:  ESI = flat (ebp-relative absolute) pointer to the sign block; each sign is
 ;            3 bytes: Y, X, textID.
-;      [W_NUM_SIGNS] = number of signs (caller guarantees >= 1).
+;      [wNumSigns] = number of signs (caller guarantees >= 1).
 ; Out: wSignCoords   <- interleaved (Y, X) pairs.
 ;      wSignTextIDs  <- one textID per sign.
 ;      ESI advanced past the block.
@@ -3415,9 +3415,9 @@ CopySignData:
     push ebx
     push ecx
     push edi
-    lea edi, [ebp + W_SIGN_COORDS]      ; de = wSignCoords
-    lea ebx, [ebp + W_SIGN_TEXT_IDS]    ; bc = wSignTextIDs
-    movzx ecx, byte [ebp + W_NUM_SIGNS]
+    lea edi, [ebp + wSignCoords]      ; de = wSignCoords
+    lea ebx, [ebp + wSignTextIDs]    ; bc = wSignTextIDs
+    movzx ecx, byte [ebp + wNumSigns]
 .loop:
     mov al, [esi]                       ; sign Y
     inc esi
@@ -3448,8 +3448,8 @@ LoadMapData:
     call ResetMapVariables
     call LoadTextBoxTilePatterns
     call LoadMapHeader
-    ; Dispatch per-map text table: MapTextTablePointers[W_CUR_MAP] → w_map_text_table_ptr.
-    movzx eax, byte [ebp + W_CUR_MAP]
+    ; Dispatch per-map text table: MapTextTablePointers[wCurMap] → w_map_text_table_ptr.
+    movzx eax, byte [ebp + wCurMap]
     lea esi, [MapTextTablePointers]
     mov esi, [esi + eax*4]
     mov [w_map_text_table_ptr], esi
@@ -3513,11 +3513,11 @@ ResetMapVariables:
     ; the native-width renderer (dropped/unused; the torus rings are gone), but kept in
     ; lockstep with the other reset sites (EnterMapBoot etc. write GB_TILEMAP0) so the
     ; pointer is never left stale, matching pret's byte-for-byte reset here.
-    mov word [ebp + W_MAP_VIEW_VRAM_POINTER], GB_TILEMAP0
+    mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
     xor al, al
     mov byte [ebp + hSCY],                       al
     mov byte [ebp + hSCX],                       al
-    mov byte [ebp + W_WALK_COUNTER],              al
+    mov byte [ebp + wWalkCounter],              al
     mov byte [ebp + W_UNUSED_CUR_MAP_TILESET_COPY], al
     mov byte [ebp + W_SPRITE_SET_ID],             al
     mov byte [ebp + W_WALK_BIKE_SURF_STATE_COPY], al
@@ -3543,7 +3543,7 @@ SwitchToMapRomBank:
 ; Pret ref: home/overworld.asm:IgnoreInputForHalfSecond
 ; ---------------------------------------------------------------------------
 IgnoreInputForHalfSecond:
-    mov byte [ebp + W_IGNORE_INPUT_COUNTER], 30
+    mov byte [ebp + wIgnoreInputCounter], 30
     or byte [ebp + W_STATUS_FLAGS_5], (1 << BIT_DISABLE_JOYPAD) | (1 << 2) | (1 << 1)
     ret
 
@@ -3627,13 +3627,13 @@ HandleMidJump:
     inc word [ebp + 0x26000]
     shl esi, 3
     add esi, 0x26010
-    mov al, [ebp + W_WALK_COUNTER]
+    mov al, [ebp + wWalkCounter]
     mov [ebp + esi + 0], al
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     mov [ebp + esi + 1], al
     mov al, [ebp + W_MOVEMENT_FLAGS]
     mov [ebp + esi + 2], al
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     mov [ebp + esi + 3], al
     mov al, [ebp + W_JOY_IGNORE]
     mov [ebp + esi + 4], al
@@ -3867,31 +3867,31 @@ global OverworldLoopLessDelay
 
 ; ---------------------------------------------------------------------------
 ; LoadDestinationWarpPosition — load spawn Y/X from the destination map's warp
-; table entry selected by W_DESTINATION_WARP_ID.
+; table entry selected by wDestinationWarpID.
 ; Pret ref: home/overworld.asm:LoadDestinationWarpPosition
 ; PROJ divergence: pret's predef version copies a 4-byte (block-view-pointer,
 ; Y, X) struct from an hl-indexed ROM table straight into
 ; wCurrentTileBlockMapViewPointer/wYCoord/wXCoord. The port has no parallel
 ; per-map view-pointer table; it reads Y/X directly out of the already-loaded
-; W_WARP_ENTRIES (Y, X, dest_warp_id, dest_map_id per entry — see the
+; wWarpEntries (Y, X, dest_warp_id, dest_map_id per entry — see the
 ; `warp_event` macro / CheckWarpTile), and leaves wCurrentTileBlockMapViewPointer
 ; to LoadDestinationMapData's explicit stride-math recompute, which replaces
 ; pret's ROM view-pointer lookup with an equivalent runtime computation.
-; In:  W_DESTINATION_WARP_ID = 0-based warp index (destination map's table)
-; Out: W_Y_COORD, W_X_COORD set. Preserves all other registers/flags.
+; In:  wDestinationWarpID = 0-based warp index (destination map's table)
+; Out: wYCoord, wXCoord set. Preserves all other registers/flags.
 ; ---------------------------------------------------------------------------
 LoadDestinationWarpPosition:
     push eax
     push esi
 
-    movzx eax, byte [ebp + W_DESTINATION_WARP_ID]
+    movzx eax, byte [ebp + wDestinationWarpID]
     shl eax, 2                          ; * 4 bytes per warp entry
-    lea esi, [ebp + W_WARP_ENTRIES]
+    lea esi, [ebp + wWarpEntries]
     add esi, eax
     mov al, [esi]                       ; spawn Y tile
-    mov [ebp + W_Y_COORD], al
+    mov [ebp + wYCoord], al
     mov al, [esi+1]                     ; spawn X tile
-    mov [ebp + W_X_COORD], al
+    mov [ebp + wXCoord], al
 
     pop esi
     pop eax

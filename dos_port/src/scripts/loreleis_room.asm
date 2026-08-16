@@ -80,7 +80,7 @@ LoreleisRoom_Script:
     ret
 
 LoreleiShowOrHideExitBlock:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     pushfd    ; SM83 form writes no flags
         and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
@@ -98,7 +98,7 @@ LoreleiShowOrHideExitBlock:
 .blockExitToNextRoom:
     mov al, 0x24
 .setExitBlock:
-    mov [ebp + W_NEW_TILE_BLOCK_ID], al
+    mov [ebp + wNewTileBlockID], al
     mov bx, ((0) << 8) | (2)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp ReplaceTileBlock
@@ -119,7 +119,7 @@ LoreleisRoomNoopScript:
     ret
 
 LoreleiScriptWalkIntoRoom:
-    mov esi, W_SIMULATED_JOYPAD_STATES_END
+    mov esi, wSimulatedJoypadStatesEnd
     mov al, PAD_UP
     mov [ebp + esi], al
     lea esi, [esi+1]
@@ -133,7 +133,7 @@ LoreleiScriptWalkIntoRoom:
     lea esi, [esi+1]
     mov [ebp + esi], al
     mov al, 0x6
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     call StartSimulatingJoypadStates
     mov al, SCRIPT_LORELEISROOM_PLAYER_IS_MOVING
     mov [ebp + wLoreleisRoomCurScript], al
@@ -147,8 +147,8 @@ LoreleisRoomDefaultScript:
     xor al, al
     mov [ebp + hJoyPressed], al
     mov [ebp + hJoyHeld], al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, [ebp + wCoordIndex]
     cmp al, 0x3
     jb .stopPlayerFromLeaving
@@ -159,9 +159,9 @@ LoreleisRoomDefaultScript:
     mov [ebp + hTextID], al
     call DisplayTextID
     mov al, PAD_UP
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     call StartSimulatingJoypadStates
     mov al, SCRIPT_LORELEISROOM_PLAYER_IS_MOVING
     mov [ebp + wLoreleisRoomCurScript], al
@@ -176,7 +176,7 @@ LoreleiEntranceCoords:
     db -1
 
 LoreleisRoomPlayerIsMovingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_102
         ret

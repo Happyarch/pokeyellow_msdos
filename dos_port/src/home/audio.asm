@@ -130,7 +130,7 @@ PlayDefaultMusicCommon:
 
 CheckForNoBikingMusicMap:
 ; probably used to not change music upon getting on bike
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, MAP_ID_ROUTE_23
     jz .found
     cmp al, MAP_ID_VICTORY_ROAD_1F

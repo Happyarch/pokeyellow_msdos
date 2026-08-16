@@ -74,14 +74,14 @@ section .text
 ; Clobbers: AL, BH (BL/BX/EBX otherwise preserved), flags.
 ; ---------------------------------------------------------------------------
 IsPlayerJustOutsideMap:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     mov bh, al
-    mov al, [ebp + W_CUR_MAP_HEIGHT]
+    mov al, [ebp + wCurMapHeight]
     call .compareCoordWithMapDimension
     jz  .ret                            ; ret z (ZF still holds the sub's result)
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     mov bh, al
-    mov al, [ebp + W_CUR_MAP_WIDTH]
+    mov al, [ebp + wCurMapWidth]
     ; fall through into .compareCoordWithMapDimension (no call — mirrors pret's
     ; fallthrough second use, so its ret/ret z below return straight to our caller)
 .compareCoordWithMapDimension:

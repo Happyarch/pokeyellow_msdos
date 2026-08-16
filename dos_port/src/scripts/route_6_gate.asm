@@ -103,7 +103,7 @@ Route6Gate_ScriptPointers:
     db -1
 
 Route6GatePlayerMovingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_50
         ret
@@ -118,12 +118,12 @@ Route6GateMovePlayerDownScript:
     mov esi, wStatusFlags5
     or byte [ebp + esi], (1 << (BIT_SCRIPTED_MOVEMENT_STATE))
     mov al, PAD_DOWN
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     xor al, al
     mov [ebp + wSpritePlayerStateData2MovementByte1], al
-    mov [ebp + W_OVERRIDE_SIMULATED_JOYPAD_STATES_MASK], al
+    mov [ebp + wOverrideSimulatedJoypadStatesMask], al
     ret
 
 Route6Gate_TextPointers:

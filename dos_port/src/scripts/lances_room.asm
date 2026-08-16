@@ -82,7 +82,7 @@ LancesRoom_Script:
     ret
 
 LanceShowOrHideEntranceBlocks:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     pushfd    ; SM83 form writes no flags
         and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
@@ -101,12 +101,12 @@ LanceShowOrHideEntranceBlocks:
     mov bh, 0x73
 .setEntranceBlocks:
     push ebx
-    mov [ebp + W_NEW_TILE_BLOCK_ID], al
+    mov [ebp + wNewTileBlockID], al
     mov bx, ((6) << 8) | (2)
     call .SetEntranceBlock
     pop ebx
     mov al, bh
-    mov [ebp + W_NEW_TILE_BLOCK_ID], al
+    mov [ebp + wNewTileBlockID], al
     mov bx, ((6) << 8) | (3)
 .SetEntranceBlock:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
@@ -151,7 +151,7 @@ LancesRoomDefaultScript:
     jz .nr_72
         ret
 .nr_72:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     mov al, SFX_GO_INSIDE
     call PlaySound
@@ -199,7 +199,7 @@ WalkToLance_RLEList:
     db -1
 
 LancesRoomPlayerIsMovingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_121
         ret

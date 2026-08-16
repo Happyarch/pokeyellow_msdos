@@ -369,13 +369,13 @@ RLE_1e219:
     db 0xFF
 
 BillsHouseScript8:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_235
         ret
 .nr_235:
     xor al, al
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, SPRITE_FACING_UP
     mov [ebp + wSpritePlayerStateData1FacingDirection], al
     mov al, 2

@@ -149,7 +149,7 @@ DisplayTownMap:
     push esi                            ; push hl
     mov al, 1
     mov [ebp + hJoy7], al              ; ldh [hJoy7], a
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     push eax                            ; push af (wCurMap)
     mov bh, 0                           ; ld b, 0
     call DrawPlayerOrBirdSprite
@@ -312,7 +312,7 @@ LoadTownMap_Fly:
     mov esi, TM_COORD(0, 0)             ; hlcoord 0, 0
     lea eax, [ToText]                   ; ld de, ToText
     call PlaceString
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     mov bh, 0                           ; ld b, 0
     call DrawPlayerOrBirdSprite
     mov esi, wFlyLocationsList          ; ld hl, wFlyLocationsList
@@ -664,7 +664,7 @@ DisplayWildLocations:
     call PlaceString
     jmp .done
 .drawPlayerSprite:
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     mov bh, 0                           ; ld b, 0
     call DrawPlayerOrBirdSprite
 .done:

@@ -271,8 +271,8 @@ LoadSpecialWarpData:
     xor al, al                                 ; xor a ; OVERWORLD
     mov [ebp + wCurMapTileset], al             ; ld [wCurMapTileset],a
 .done:
-    mov [ebp + W_Y_OFFSET_SINCE_LAST_SPECIAL_WARP], al ; ld [wYOffsetSinceLastSpecialWarp],a
-    mov [ebp + W_X_OFFSET_SINCE_LAST_SPECIAL_WARP], al ; ld [wXOffsetSinceLastSpecialWarp],a
+    mov [ebp + wYOffsetSinceLastSpecialWarp], al ; ld [wYOffsetSinceLastSpecialWarp],a
+    mov [ebp + wXOffsetSinceLastSpecialWarp], al ; ld [wXOffsetSinceLastSpecialWarp],a
     mov al, 0xFF                               ; ld a,-1 ; exclude normal warps
     mov [ebp + wDestinationWarpID], al         ; ld [wDestinationWarpID],a
 

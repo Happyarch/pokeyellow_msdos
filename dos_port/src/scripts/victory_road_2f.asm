@@ -98,7 +98,7 @@ wVictoryRoad2FCurScript                        equ 0xD63E
 section .text
 
 VictoryRoad2F_Script:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
     pushfd    ; SM83 form writes no flags
         and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
@@ -106,7 +106,7 @@ VictoryRoad2F_Script:
     jz .sk_5
         call VictoryRoad2FResetBoulderEventScript
 .sk_5:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     pushfd    ; SM83 form writes no flags
         and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF

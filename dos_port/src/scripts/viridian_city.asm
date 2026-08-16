@@ -190,12 +190,12 @@ ViridianCityCheckGymOpenScript:
     ret
 
 .gym_closed:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 8
     jz .nr_44
         ret
 .nr_44:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 32
     jz .nr_47
         ret
@@ -205,9 +205,9 @@ ViridianCityCheckGymOpenScript:
     call DisplayTextID
     call StartSimulatingJoypadStates
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_DOWN
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     xor al, al
     mov [ebp + wSpritePlayerStateData1FacingDirection], al
     mov [ebp + wJoyIgnore], al
@@ -217,7 +217,7 @@ ViridianCityCheckGymOpenScript:
     ret
 
 ViridianCityPlayerMovingDownPostTrainingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_67
         ret
@@ -228,12 +228,12 @@ ViridianCityPlayerMovingDownPostTrainingScript:
     ret
 
 ViridianCityCheckSleepingOldMan:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 9
     jz .nr_76
         ret
 .nr_76:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 19
     jz .nr_79
         ret
@@ -307,7 +307,7 @@ ViridianCityOldManEndCatchTrainingScript:
     ret
 
 ViridianCityPlayerMovingDownScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_151
         ret
@@ -320,9 +320,9 @@ ViridianCityPlayerMovingDownScript:
 ViridianCityMovePlayerDownScript:
     call StartSimulatingJoypadStates
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_DOWN
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     xor al, al
     mov [ebp + wSpritePlayerStateData1FacingDirection], al
     mov [ebp + wJoyIgnore], al
@@ -333,12 +333,12 @@ ViridianCityCheckWaitingOldMan:
     jz .nr_170
         ret
 .nr_170:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 9
     jz .nr_173
         ret
 .nr_173:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 19
     jz .nr_176
         ret
@@ -608,9 +608,9 @@ ViridianCityPrintOldManSleepyText:
     call PrintText
     call StartSimulatingJoypadStates
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_DOWN
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     mov al, SCRIPT_VIRIDIANCITY_PLAYER_MOVING_DOWN
     mov [ebp + wViridianCityCurScript], al
     ret

@@ -22,7 +22,7 @@
 ;   extern ArePlayerCoordsInArray  ; src/home/map_objects.asm
 ; Contract (per that file's own header comment):
 ;   In:  ESI = flat ptr to a $ff-terminated array of (Y,X) pairs.
-;        Reads [W_Y_COORD]/[W_X_COORD] (player coords) internally -- caller
+;        Reads [wYCoord]/[wXCoord] (player coords) internally -- caller
 ;        does NOT need to load BH/BL itself.
 ;   Out: CF=1 and [W_COORD_INDEX] = matching 1-based index if found;
 ;        CF=0 (and [W_COORD_INDEX] = examined-entry count) otherwise.
@@ -45,7 +45,7 @@ bits 32
 ; combined future include of both definitions in ONE file would redefine-
 ; error, which is exactly the case root's promotion step needs to resolve).
 ; ---------------------------------------------------------------------------
-; W_WHICH_DUNGEON_WARP (0xD71D) is defined in gb_memmap.inc (root-verified vs
+; wWhichDungeonWarp (0xD71D) is defined in gb_memmap.inc (root-verified vs
 ; ram/wram.asm: wStatusFlags3 0xD72C − 15 bytes = 0xD71D).
 %ifndef W_COORD_INDEX
 ; wCoordIndex -- ram/wram.asm:1015, inside a UNION/NEXTU scratch-byte group
@@ -85,20 +85,20 @@ extern ArePlayerCoordsInArray            ; src/home/map_objects.asm
 ; Out: CF=1  if THIS call newly detected a warp-array match (mirrors pret:
 ;            ArePlayerCoordsInArray's `stc` survives untouched all the way to
 ;            this ret on SM83, because every instruction pret places after it
-;            -- ld/set -- is flag-neutral there); [W_WHICH_DUNGEON_WARP]
+;            -- ld/set -- is flag-neutral there); [wWhichDungeonWarp]
 ;            holds the matched 1-based index and W_STATUS_FLAGS_3/6 have the
 ;            ON_DUNGEON_WARP/DUNGEON_WARP bits freshly set.
 ;      CF=0  otherwise -- either the player was ALREADY flagged on a dungeon
 ;            warp (pret's `bit BIT_ON_DUNGEON_WARP,a` / `ret nz` early exit;
 ;            CF=0 because pret's opening `xor a` cleared C and `bit` never
 ;            touches C), or the coords array had no match (propagates
-;            ArePlayerCoordsInArray's own `clc`). [W_WHICH_DUNGEON_WARP] is
+;            ArePlayerCoordsInArray's own `clc`). [wWhichDungeonWarp] is
 ;            always zeroed first regardless of path (pret's unconditional
 ;            `xor a` / `ld [wWhichDungeonWarp],a`).
 ; Clobbers EAX, ESI (via the ArePlayerCoordsInArray call). Preserves EBX/EDX.
 ; ---------------------------------------------------------------------------
 IsPlayerOnDungeonWarp:
-    mov byte [ebp + W_WHICH_DUNGEON_WARP], 0     ; xor a / ld [wWhichDungeonWarp],a
+    mov byte [ebp + wWhichDungeonWarp], 0     ; xor a / ld [wWhichDungeonWarp],a
     mov al, [ebp + W_STATUS_FLAGS_3]             ; ld a,[wStatusFlags3]
     test al, (1 << BIT_ON_DUNGEON_WARP)          ; bit BIT_ON_DUNGEON_WARP,a (ZF set <-> bit==0, like GB)
     jnz .alreadyOnWarp                           ; ret nz (Z clear == bit WAS set == already on warp)
@@ -108,7 +108,7 @@ IsPlayerOnDungeonWarp:
 
     ; Match found: ArePlayerCoordsInArray left CF=1 and [W_COORD_INDEX] set.
     mov al, [ebp + W_COORD_INDEX]                ; ld a,[wCoordIndex]
-    mov [ebp + W_WHICH_DUNGEON_WARP], al         ; ld [wWhichDungeonWarp],a
+    mov [ebp + wWhichDungeonWarp], al         ; ld [wWhichDungeonWarp],a
     or byte [ebp + W_STATUS_FLAGS_3], (1 << BIT_ON_DUNGEON_WARP) ; set BIT_ON_DUNGEON_WARP,[hl]
     or byte [ebp + W_STATUS_FLAGS_6], (1 << BIT_DUNGEON_WARP)    ; set BIT_DUNGEON_WARP,[hl]
     ; PROJ: x86 `or` clobbers CF (clears it to 0) as a side effect GB's `set`

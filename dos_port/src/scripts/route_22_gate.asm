@@ -73,13 +73,13 @@ Route22Gate_Script:
     mov esi, Route22Gate_ScriptPointers
     mov al, [ebp + wRoute22GateCurScript]
     call CallFunctionInTable
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 4
     mov al, ROUTE_23
     jb .set_last_map
     mov al, ROUTE_22
 .set_last_map:
-    mov [ebp + W_LAST_MAP], al
+    mov [ebp + wLastMap], al
     ret
 
 Route22Gate_ScriptPointers:
@@ -109,15 +109,15 @@ Route22GateScriptCoords:
 
 Route22GateMovePlayerDownScript:
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_DOWN
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     mov [ebp + wSpritePlayerStateData1FacingDirection], al
     mov [ebp + wJoyIgnore], al
     jmp StartSimulatingJoypadStates
 
 Route22GatePlayerMovingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_51
         ret

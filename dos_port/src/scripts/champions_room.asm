@@ -158,7 +158,7 @@ RivalEntrance_RLEMovement:
     db -1
 
 ChampionsRoomRivalReadyToBattleScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_53
         ret
@@ -243,7 +243,7 @@ ChampionsRoomOakCongratulatesPlayerScript:
         ret
 .nr_131:
     mov al, PLAYER_DIR_LEFT
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, 1
     mov [ebp + hSpriteIndex], al
     mov al, SPRITE_FACING_LEFT
@@ -332,7 +332,7 @@ WalkToHallOfFame_RLEMovement:
     db -1
 
 ChampionsRoomCleanupScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_218
         ret

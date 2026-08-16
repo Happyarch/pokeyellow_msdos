@@ -125,7 +125,7 @@ section .text
 ; ---------------------------------------------------------------------------
 UsedCut:
     mov byte [ebp + wActionResultOrTookBattleTurn], 0 ; init to failure
-    mov al, [ebp + W_CUR_MAP_TILESET]
+    mov al, [ebp + wCurMapTileset]
     and al, al                                 ; OVERWORLD (0)?
     jz .overworld
     cmp al, GYM
@@ -343,7 +343,7 @@ BoulderDustAnimationOffsets:
 
 ReplaceTreeTileBlock:
     push edx                                    ; push de (block-swap table ptr)
-    movzx ebx, byte [ebp + W_CUR_MAP_WIDTH]
+    movzx ebx, byte [ebp + wCurMapWidth]
     add ebx, MAP_BORDER * 2                     ; bc = row stride (pret: `add 6` @ border 3)
     movzx esi, word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR] ; hl = [ptr] (GB block addr)
     ; pret pre-adds ONE stride here (its centre row is 2, so pre = centre - 1 = 1).

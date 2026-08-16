@@ -58,61 +58,61 @@ _AdvancePlayerSprite:
     mov bl, [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR]    ; BL = b (Y step)
     mov cl, [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR]    ; CL = c (X step)
 
-    dec byte [ebp + W_WALK_COUNTER]
+    dec byte [ebp + wWalkCounter]
     jnz .afterUpdateMapCoords
     ; end of animation → commit the player's map coordinates
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     add al, bl
-    mov [ebp + W_Y_COORD], al
-    mov al, [ebp + W_X_COORD]
+    mov [ebp + wYCoord], al
+    mov al, [ebp + wXCoord]
     add al, cl
-    mov [ebp + W_X_COORD], al
+    mov [ebp + wXCoord], al
     call CheckMapConnections
     jc .transitionExit                         ; CF=1 → map changed, abort frame
 .afterUpdateMapCoords:
-    cmp byte [ebp + W_WALK_COUNTER], 7
+    cmp byte [ebp + wWalkCounter], 7
     jne .scroll                                       ; only the first frame slides the view
 
     jmp .adjustXCoordWithinBlock
 
 .adjustXCoordWithinBlock:
-    mov al, [ebp + W_X_BLOCK_COORD]
+    mov al, [ebp + wXBlockCoord]
     add al, cl
-    mov [ebp + W_X_BLOCK_COORD], al
+    mov [ebp + wXBlockCoord], al
     cmp al, 0x02
     jne .checkForMoveToWestBlock
     ; crossed into the block to the east
-    mov byte [ebp + W_X_BLOCK_COORD], 0
-    inc byte [ebp + W_X_OFFSET_SINCE_LAST_SPECIAL_WARP]
+    mov byte [ebp + wXBlockCoord], 0
+    inc byte [ebp + wXOffsetSinceLastSpecialWarp]
     call MoveTileBlockMapPointerEast
     jmp .updateMapView
 .checkForMoveToWestBlock:
     cmp al, 0xFF
     jne .adjustYCoordWithinBlock
     ; crossed into the block to the west
-    mov byte [ebp + W_X_BLOCK_COORD], 1
-    dec byte [ebp + W_X_OFFSET_SINCE_LAST_SPECIAL_WARP]
+    mov byte [ebp + wXBlockCoord], 1
+    dec byte [ebp + wXOffsetSinceLastSpecialWarp]
     call MoveTileBlockMapPointerWest
     jmp .updateMapView
 .adjustYCoordWithinBlock:
-    mov al, [ebp + W_Y_BLOCK_COORD]
+    mov al, [ebp + wYBlockCoord]
     add al, bl
-    mov [ebp + W_Y_BLOCK_COORD], al
+    mov [ebp + wYBlockCoord], al
     cmp al, 0x02
     jne .checkForMoveToNorthBlock
     ; crossed into the block to the south
-    mov byte [ebp + W_Y_BLOCK_COORD], 0
-    inc byte [ebp + W_Y_OFFSET_SINCE_LAST_SPECIAL_WARP]
-    mov al, [ebp + W_CUR_MAP_WIDTH]
+    mov byte [ebp + wYBlockCoord], 0
+    inc byte [ebp + wYOffsetSinceLastSpecialWarp]
+    mov al, [ebp + wCurMapWidth]
     call MoveTileBlockMapPointerSouth
     jmp .updateMapView
 .checkForMoveToNorthBlock:
     cmp al, 0xFF
     jne .refreshTileMap                  ; no block crossing → only resync collision grid
     ; crossed into the block to the north
-    mov byte [ebp + W_Y_BLOCK_COORD], 1
-    dec byte [ebp + W_Y_OFFSET_SINCE_LAST_SPECIAL_WARP]
-    mov al, [ebp + W_CUR_MAP_WIDTH]
+    mov byte [ebp + wYBlockCoord], 1
+    dec byte [ebp + wYOffsetSinceLastSpecialWarp]
+    mov al, [ebp + wCurMapWidth]
     call MoveTileBlockMapPointerNorth
 
 .updateMapView:

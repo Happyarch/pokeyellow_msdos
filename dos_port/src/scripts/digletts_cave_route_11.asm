@@ -38,7 +38,7 @@ section .text
 DiglettsCaveRoute11_Script:
     call EnableAutoTextBoxDrawing
     mov al, ROUTE_11
-    mov [ebp + W_LAST_MAP], al
+    mov [ebp + wLastMap], al
     ret
 
 DiglettsCaveRoute11_TextPointers:

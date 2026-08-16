@@ -37,7 +37,7 @@ section .text
 
 DiglettsCaveRoute2_Script:
     mov al, ROUTE_2
-    mov [ebp + W_LAST_MAP], al
+    mov [ebp + wLastMap], al
     jmp EnableAutoTextBoxDrawing
 
 DiglettsCaveRoute2_TextPointers:

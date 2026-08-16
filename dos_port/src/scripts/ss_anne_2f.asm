@@ -156,11 +156,11 @@ SSAnne2FNoopScript:
     db -1
 
 SSAnne2FSetFacingDirectionScript:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 37
     jnz .player_standing_left
     mov al, PLAYER_DIR_LEFT
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, SPRITE_FACING_RIGHT
     jmp .set_facing_direction
 

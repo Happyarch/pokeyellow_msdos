@@ -278,7 +278,7 @@ OaksLabDefaultScript:
     jnz .nr_41
         ret
 .nr_41:
-    mov al, [ebp + W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM]
+    mov al, [ebp + wNPCMovementScriptFunctionNum]
     test al, al
     jz .nr_44
         ret
@@ -357,7 +357,7 @@ PlayerEntryMovementRLE:
     db -1
 
 OaksLabFollowedOakScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_116
         ret
@@ -406,7 +406,7 @@ OaksLabOakChooseMonSpeechScript:
     ret
 
 OaksLabPlayerDontGoAwayScript:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 6
     jz .nr_165
         ret
@@ -426,18 +426,18 @@ OaksLabPlayerDontGoAwayScript:
     mov [ebp + hTextID], al
     call DisplayTextID
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_UP
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     call StartSimulatingJoypadStates
     mov al, PLAYER_DIR_UP
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, SCRIPT_OAKSLAB_PLAYER_FORCED_TO_WALK_BACK_SCRIPT
     mov [ebp + wOaksLabCurScript], al
     ret
 
 OaksLabPlayerForcedToWalkBackScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_195
         ret
@@ -491,23 +491,23 @@ OaksLabRivalTakesPokeballScript:
     ret
 
 .asm_1c564:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 4
     jz .nr_248
         ret
 .nr_248:
-    mov al, [ebp + W_NPC_NUM_SCRIPTED_STEPS]
+    mov al, [ebp + wNPCNumScriptedSteps]
     cmp al, 1
     jz .nr_251
         ret
 .nr_251:
     mov al, PLAYER_DIR_LEFT
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, 0x2
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_RIGHT
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END + 1], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
+    mov [ebp + wSimulatedJoypadStatesEnd + 1], al
     call StartSimulatingJoypadStates
     ret
 
@@ -547,7 +547,7 @@ OaksLabRLE_PlayerWalksToOak:
     db 0xFF
 
 OaksLabPlayerReceivesPikachuScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_294
         ret
@@ -621,7 +621,7 @@ OaksLabRivalStartBattleScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
     mov al, PLAYER_DIR_UP
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, SCRIPT_OAKSLAB_RIVAL_END_BATTLE
     mov [ebp + wOaksLabCurScript], al
     ret
@@ -640,7 +640,7 @@ OaksLabRivalEndBattleScript:
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     mov al, PLAYER_DIR_UP
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     call UpdateSprites
     mov al, 1
     mov [ebp + wSpriteIndex], al
@@ -668,7 +668,7 @@ OaksLabRivalStartsExitScript:
     mov [ebp + hSpriteIndex], al
     mov edi, .RivalExitMovement   ; pret: ld de, .RivalExitMovement — MoveSprite takes it in EDI
     call MoveSprite
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 4
     jnz .moveLeft
     mov al, NPC_MOVEMENT_RIGHT
@@ -677,7 +677,7 @@ OaksLabRivalStartsExitScript:
 .moveLeft:
     mov al, NPC_MOVEMENT_LEFT
 .next:
-    mov [ebp + W_NPC_MOVEMENT_DIRECTIONS], al
+    mov [ebp + wNPCMovementDirections], al
     mov al, SCRIPT_OAKSLAB_PLAYER_WATCH_RIVAL_EXIT
     mov [ebp + wOaksLabCurScript], al
     ret
@@ -1542,7 +1542,7 @@ OaksLabPlayerReceivedMonText:
 ; PRET| 	text_end
 
 OaksLabPikachuMovementScript:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 3
     jz .movement2
     mov bh, SPRITE_FACING_DOWN

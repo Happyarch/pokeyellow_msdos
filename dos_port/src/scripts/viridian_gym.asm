@@ -193,9 +193,9 @@ ViridianGym_ScriptPointers:
     dd ViridianGymPlayerSpinningScript
 
 ViridianGymDefaultScript:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     mov bh, al
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     mov bl, al
     mov esi, ViridianGymArrowTilePlayerMovement
     call DecodeArrowMovementRLE
@@ -276,7 +276,7 @@ ViridianGymArrowMovement12:
     db -1
 
 ViridianGymPlayerSpinningScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jnz .ViridianGymLoadSpinnerArrow
     xor al, al

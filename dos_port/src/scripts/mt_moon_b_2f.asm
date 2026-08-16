@@ -265,10 +265,10 @@ MtMoonB2F_ScriptPointers:
 MtMoonB2FScript_49d28:
     CheckEvent EVENT_BEAT_MT_MOON_EXIT_SUPER_NERD
     jnz .asm_49d4b
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 8
     jnz .asm_49d4b
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 13
     jnz .asm_49d4b
     xor al, al
@@ -457,7 +457,7 @@ MovementData_f9e66:
 MtMoonB2FScript6:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_277
         ret

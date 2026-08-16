@@ -43,7 +43,7 @@ section .text
 ReloadMapData:
     mov al, [ebp + hLoadedROMBank]   ; ldh a,[hLoadedROMBank]
     push eax                            ; push af
-    mov al, [ebp + W_CUR_MAP]           ; ld a,[wCurMap]
+    mov al, [ebp + wCurMap]           ; ld a,[wCurMap]
     call SwitchToMapRomBank             ; select map bank (flat: bookkeeping)
 
     call DisableLCD
@@ -76,7 +76,7 @@ ChooseFlyDestination:
 ReloadTilesetTilePatterns:
     mov al, [ebp + hLoadedROMBank]   ; ldh a,[hLoadedROMBank]
     push eax                            ; push af
-    mov al, [ebp + W_CUR_MAP]           ; ld a,[wCurMap]
+    mov al, [ebp + wCurMap]           ; ld a,[wCurMap]
     call SwitchToMapRomBank             ; select map bank (flat: bookkeeping)
 
     call DisableLCD

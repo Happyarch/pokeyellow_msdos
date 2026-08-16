@@ -158,7 +158,7 @@ SilphCo11F_Script:
     ret
 
 SilphCo11FGateCallbackScript:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     pushfd    ; SM83 form writes no flags
         and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
@@ -174,7 +174,7 @@ SilphCo11FGateCallbackScript:
         ret
 .nr_20:
     mov al, 0x20
-    mov [ebp + W_NEW_TILE_BLOCK_ID], al
+    mov [ebp + wNewTileBlockID], al
     mov bx, ((6) << 8) | (3)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call ReplaceTileBlock
@@ -309,7 +309,7 @@ SilphCo11FScript_621c5:
     db -1
 
 SilphCo11FScript_621ff:
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, bh
     mov [ebp + wSprite03StateData1FacingDirection], al
     mov al, 0x2

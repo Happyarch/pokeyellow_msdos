@@ -96,17 +96,17 @@ npc_dbg_record:
     mov ecx, SCREEN_WIDTH                    ; 40
     div ecx                                  ; EAX=row, EDX=col
     mov ecx, eax                             ; ECX = row
-    cmp byte [ebp + W_Y_BLOCK_COORD], 0
+    cmp byte [ebp + wYBlockCoord], 0
     je .y0
     add ecx, 2                               ; yoff: skip 2 rows when in bottom half-block
 .y0:
     imul ecx, ecx, SURROUNDING_WIDTH         ; (yoff+row)*48
     add ecx, edx                             ; + col
-    cmp byte [ebp + W_X_BLOCK_COORD], 0
+    cmp byte [ebp + wXBlockCoord], 0
     je .x0
     add ecx, 2                               ; xoff: skip 2 cols when in right half-block
 .x0:
-    movzx eax, byte [ebp + ecx + W_SURROUNDING_TILES]  ; AL = trueTile
+    movzx eax, byte [ebp + ecx + wSurroundingTiles]  ; AL = trueTile
     mov bh, al                               ; BH = trueTile (BL still = dir bit)
     ; emit record ------------------------------------------------------------
     mov eax, esi
@@ -118,11 +118,11 @@ npc_dbg_record:
     mov [npc_log + edi + 3], bh              ; trueTile (render source, from wSurroundingTiles)
     mov eax, [esp]                           ; passable (saved)
     mov [npc_log + edi + 4], al
-    mov al, [ebp + W_WALK_COUNTER]
+    mov al, [ebp + wWalkCounter]
     mov [npc_log + edi + 5], al
-    mov al, [ebp + W_X_BLOCK_COORD]
+    mov al, [ebp + wXBlockCoord]
     mov [npc_log + edi + 6], al
-    mov al, [ebp + W_Y_BLOCK_COORD]
+    mov al, [ebp + wYBlockCoord]
     mov [npc_log + edi + 7], al
     mov al, [ebp + hSCX]
     mov [npc_log + edi + 8], al
@@ -184,7 +184,7 @@ UpdateNPCSprite:
     cmp al, 4
     je .status4                          ; status 4 → Func_5357 (OW-A.7: was silently dropped)
     ; status 1: ready to move
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne .ret                             ; player is walking: don't start new NPC step
 
     call InitializeSpriteScreenPosition  ; snap screen position to map coords
@@ -203,8 +203,8 @@ UpdateNPCSprite:
     dec al                               ; pret: dec a
     mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al ; increment movement byte 1 (data index)
     dec al                               ; AL = original index
-    dec byte [ebp + W_NPC_NUM_SCRIPTED_STEPS] ; pret: push hl / dec [wNPCNumScriptedSteps] / pop hl
-    mov dx, W_NPC_MOVEMENT_DIRECTIONS    ; pret: ld de, wNPCMovementDirections
+    dec byte [ebp + wNPCNumScriptedSteps] ; pret: push hl / dec [wNPCNumScriptedSteps] / pop hl
+    mov dx, wNPCMovementDirections    ; pret: ld de, wNPCMovementDirections
     call LoadDEPlusA                     ; AL = [wNPCMovementDirections + index]
     cmp al, NPC_CHANGE_FACING
     je ChangeFacingDirection             ; pret: jp z (tail — ChangeFacingDirection rets to our caller)
@@ -214,8 +214,8 @@ UpdateNPCSprite:
     mov [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], al ; store $ff, disabling scripted movement
     and byte [ebp + W_STATUS_FLAGS_5], ~(1 << BIT_SCRIPTED_NPC_MOVEMENT) & 0xFF ; res BIT_SCRIPTED_NPC_MOVEMENT,[hl]
     xor al, al
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
-    mov [ebp + W_UNUSED_OVERRIDE_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    mov [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], al
     jmp .ret
 .scriptedNext:                           ; pret .next
     cmp al, WALK
@@ -226,7 +226,7 @@ UpdateNPCSprite:
     ; Replicated verbatim (no shipped movement list contains WALK mid-list).
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 1 ; ld [hl],$1
     mov al, WALK
-    mov dx, W_NPC_MOVEMENT_DIRECTIONS
+    mov dx, wNPCMovementDirections
     call LoadDEPlusA                     ; a = [wNPCMovementDirections + $fe] (?)
 .asm_4ecb:                               ; pret .asm_4ecb
     push eax                             ; pret: push af
@@ -303,7 +303,7 @@ UpdateNPCSprite:
     ; .moveUp:   EBX-2*40 → needs row-2 ≥ 0  → MAPY ≥ wYCoord-3.
     ; .moveRight/Left: EBX±2 → col ∈ [2,37]  → MAPX ∈ [wXCoord-7, wXCoord+10].
     movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
-    movzx eax, byte [ebp + W_Y_COORD]
+    movzx eax, byte [ebp + wYCoord]
     lea ecx, [eax - 3]
     cmp ecx, edx
     jg .clampedOutOfWindow               ; MAPY < wYCoord-3 → too far north to move
@@ -311,7 +311,7 @@ UpdateNPCSprite:
     cmp ecx, edx
     jl .clampedOutOfWindow               ; MAPY > wYCoord+6 → too far south to move
     movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
-    movzx eax, byte [ebp + W_X_COORD]
+    movzx eax, byte [ebp + wXCoord]
     lea ecx, [eax - 7]
     cmp ecx, edx
     jg .clampedOutOfWindow               ; MAPX < wXCoord-7 → too far west to move
@@ -747,12 +747,12 @@ InitializeSpriteStatus:
 ; ---------------------------------------------------------------------------
 InitializeSpriteScreenPosition:
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
-    sub al, [ebp + W_Y_COORD]           ; CF = 1 if MAPY < wYCoord (NPC above player)
+    sub al, [ebp + wYCoord]           ; CF = 1 if MAPY < wYCoord (NPC above player)
     call Func_5033                       ; AL = signed (MAPY-wYCoord)*16
     sub al, 4
     mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_YPIXELS], al
     mov al, [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
-    sub al, [ebp + W_X_COORD]           ; CF = 1 if MAPX < wXCoord
+    sub al, [ebp + wXCoord]           ; CF = 1 if MAPX < wXCoord
     call Func_5033                       ; AL = signed (MAPX-wXCoord)*16
     mov [ebp + esi + W_SPRITE_STATE_DATA_1 + SPRITESTATEDATA1_XPIXELS], al
     ret
@@ -819,7 +819,7 @@ CheckSpriteAvailability:
     ; Similarly for X with dos_base_x = (MAPX-wXCoord)*16 + 96, tile X offsets 0 and 8.
     ; East: MAPX > wXCoord+13 → invisible; West: MAPX < wXCoord-6 → invisible.
     movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
-    movzx eax, byte [ebp + W_Y_COORD]
+    movzx eax, byte [ebp + wYCoord]
     lea ecx, [eax - 2]
     cmp ecx, edx
     jg  .spriteInvisible                 ; MAPY < wYCoord-2 → above screen
@@ -827,7 +827,7 @@ CheckSpriteAvailability:
     cmp ecx, edx
     jl  .spriteInvisible                 ; MAPY > wYCoord+9 → below screen
     movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
-    movzx eax, byte [ebp + W_X_COORD]
+    movzx eax, byte [ebp + wXCoord]
     lea ecx, [eax - 6]
     cmp ecx, edx
     jg  .spriteInvisible                 ; MAPX < wXCoord-6 → left of screen
@@ -841,12 +841,12 @@ CheckSpriteAvailability:
     ; only south and east need to be tested here.  If outside inner but inside outer
     ; (MAPY ∈ {+8,+9} or MAPX ∈ {+12,+13}), show the sprite without the tile check.
     movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
-    movzx eax, byte [ebp + W_Y_COORD]
+    movzx eax, byte [ebp + wYCoord]
     lea ecx, [eax + 7]
     cmp ecx, edx
     jl  .spriteVisibleEdge               ; MAPY ∈ {+8,+9} → on-screen but S of safe zone
     movzx edx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
-    movzx eax, byte [ebp + W_X_COORD]
+    movzx eax, byte [ebp + wXCoord]
     lea ecx, [eax + 11]
     cmp ecx, edx
     jl  .spriteVisibleEdge               ; MAPX ∈ {+12,+13} → on-screen but E of safe zone
@@ -873,14 +873,14 @@ CheckSpriteAvailability:
 .spriteVisibleEdge:
     ; On-screen but outside GetTileSpriteStandsOn safe zone: no tile ID available.
     ; Update the image index and clear grass priority (edge sprites are never in grass).
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne .done
     call UpdateSpriteImage
     mov byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_GRASSPRIORITY], 0
     jmp .done
 .spriteVisible:
     mov cl, al                           ; CL = TR tile (grass comparison below)
-    cmp byte [ebp + W_WALK_COUNTER], 0
+    cmp byte [ebp + wWalkCounter], 0
     jne .done                            ; player mid-walk: don't update image/grass yet
     call UpdateSpriteImage               ; set IMAGEINDEX = animFrame + facing + tileGroup
     mov al, [ebp + W_GRASS_TILE]
@@ -902,24 +902,24 @@ CheckSpriteAvailability:
 ; Uses MAPY/MAPX (block coordinates) instead of YPIXELS/XPIXELS so the result
 ; is always correct regardless of when InitializeSpriteScreenPosition last ran.
 ;
-; Formula (derived from MAPY/MAPX with +4 offset vs W_Y_COORD/W_X_COORD):
-;   row = (MAPY - W_Y_COORD)*2 + 9    (player foot row=17; MAPY has +4 bias)
-;   col = (MAPX - W_X_COORD)*2 + 16   (player foot col=24; MAPX has +4 bias)
+; Formula (derived from MAPY/MAPX with +4 offset vs wYCoord/wXCoord):
+;   row = (MAPY - wYCoord)*2 + 9    (player foot row=17; MAPY has +4 bias)
+;   col = (MAPX - wXCoord)*2 + 16   (player foot col=24; MAPX has +4 bias)
 ;   EBX = W_TILEMAP + row*SCREEN_WIDTH + col
 ;
 ; In: ESI = slot byte offset. Out: EBX = wTileMap offset. Clobbers AL, ECX, EBX.
 ; ---------------------------------------------------------------------------
 GetTileSpriteStandsOn:
     movsx ecx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPY]
-    movsx eax, byte [ebp + W_Y_COORD]
-    sub ecx, eax                         ; ECX = MAPY - W_Y_COORD (= delta_blocks + 4)
-    add ecx, ecx                         ; ECX = (MAPY - W_Y_COORD) * 2
+    movsx eax, byte [ebp + wYCoord]
+    sub ecx, eax                         ; ECX = MAPY - wYCoord (= delta_blocks + 4)
+    add ecx, ecx                         ; ECX = (MAPY - wYCoord) * 2
     add ecx, 9                           ; ECX = wTileMap row
 
     movsx ebx, byte [ebp + esi + W_SPRITE_STATE_DATA_2 + SPRITESTATEDATA2_MAPX]
-    movsx eax, byte [ebp + W_X_COORD]
-    sub ebx, eax                         ; EBX = MAPX - W_X_COORD (= delta_blocks + 4)
-    add ebx, ebx                         ; EBX = (MAPX - W_X_COORD) * 2
+    movsx eax, byte [ebp + wXCoord]
+    sub ebx, eax                         ; EBX = MAPX - wXCoord (= delta_blocks + 4)
+    add ebx, ebx                         ; EBX = (MAPX - wXCoord) * 2
     add ebx, 16                          ; EBX = wTileMap col
 
     imul ecx, ecx, SCREEN_WIDTH          ; row * 40
@@ -975,12 +975,12 @@ UpdatePlayerSprite:
 .lowerLeftIsMapTile:
     call DetectCollisionBetweenSprites
 
-    mov al, [ebp + W_WALK_COUNTER]
+    mov al, [ebp + wWalkCounter]
     test al, al
     jnz .moving
 
     ; standing: derive facing from wPlayerMovingDirection
-    mov al, [ebp + W_PLAYER_MOVING_DIRECTION]
+    mov al, [ebp + wPlayerMovingDirection]
     test al, PLAYER_DIR_DOWN
     jz .checkUp
     mov dl, SPRITE_FACING_DOWN

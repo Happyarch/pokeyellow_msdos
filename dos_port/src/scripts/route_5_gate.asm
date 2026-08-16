@@ -72,9 +72,9 @@ Route5Gate_ScriptPointers:
 
 Route5GateMovePlayerUpScript:
     mov al, PAD_UP
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     jmp StartSimulatingJoypadStates
 
 ; ---------------------------------------------------------------------------
@@ -117,7 +117,7 @@ Route5GateMovePlayerUpScript:
     db -1
 
 Route5GatePlayerMovingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_57
         ret

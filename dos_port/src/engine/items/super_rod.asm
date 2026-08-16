@@ -25,7 +25,7 @@ extern Random               ; -> AL
 ; ReadSuperRodData
 ; ---------------------------------------------------------------------------
 ReadSuperRodData:
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     mov bl, al                       ; ld c, a (map to match)
     lea esi, [SuperRodFishingSlots]
 .loop:

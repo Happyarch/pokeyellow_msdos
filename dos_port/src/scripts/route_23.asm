@@ -92,7 +92,7 @@ Route23_Script:
     jmp CallFunctionInTable
 
 Route23SetVictoryRoadBoulders:
-    mov esi, W_CURRENT_MAP_SCRIPT_FLAGS
+    mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
     pushfd    ; SM83 form writes no flags
         and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
@@ -118,7 +118,7 @@ Route23_ScriptPointers:
 
 Route23DefaultScript:
     mov esi, Route23GuardsYCoords
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     mov bh, al
     mov dl, 0x0
     mov bl, ((EVENT_PASSED_CASCADEBADGE_CHECK) - ((EVENT_PASSED_CASCADEBADGE_CHECK) / 8) * 8) + ((EVENT_PASSED_EARTHBADGE_CHECK + 1) - (EVENT_PASSED_CASCADEBADGE_CHECK))
@@ -135,7 +135,7 @@ Route23DefaultScript:
     jnz .loop
     cmp al, 35
     jnz .not_past_victory_road
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 14
     jb .nr_46
         ret
@@ -227,16 +227,16 @@ Route23GuardsYCoords:
 
 Route23MovePlayerDownScript:
     mov al, 0x1
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_DOWN
-    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    mov [ebp + wSimulatedJoypadStatesEnd], al
     xor al, al
     mov [ebp + wSpritePlayerStateData1FacingDirection], al
     mov [ebp + wJoyIgnore], al
     jmp StartSimulatingJoypadStates
 
 Route23PlayerMovingScript:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_136
         ret

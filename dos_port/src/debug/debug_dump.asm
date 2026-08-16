@@ -594,9 +594,9 @@ section .text
 ; is still a linked stand-in; Stage 2 owns that service closure.
 ; ---------------------------------------------------------------------------
 RunOakIntroTest:
-    mov byte [ebp + W_Y_COORD], 0
-    mov byte [ebp + W_X_COORD], 10
-    mov byte [ebp + W_DESTINATION_WARP_ID], 0xFF
+    mov byte [ebp + wYCoord], 0
+    mov byte [ebp + wXCoord], 10
+    mov byte [ebp + wDestinationWarpID], 0xFF
 
     ; Let the default state observe the north exit and arm Oak's first state.
     call PalletTownDefaultScript
@@ -938,13 +938,13 @@ gbstate_regions:
 %ifdef AUTOKEY_STALL_PROBE
     ; Cutscene-stall probe (Oak intro debugging, 2026-08-06): the Pallet script
     ; step index + player map/coords, to localize where the intro wedges.
-    gbregion "curMapCoord",   W_CUR_MAP,             5   ; wCurMap,-,-,wYCoord,wXCoord
+    gbregion "curMapCoord",   wCurMap,             5   ; wCurMap,-,-,wYCoord,wXCoord
     gbregion "palletScript",  wPalletTownCurScript,  1
     ; follow-stall probe: the NPC-movement-script engine state PLAYER_FOLLOWS_OAK
     ; waits on (wNPCMovementScriptPointerTableNum==0), plus the scripted-movement
     ; status bit and Oak's slot-1 sprite data.
     gbregion "npcMoveScript", wNPCMovementScriptPointerTableNum, 2  ; CC57 tablenum, CC58 bank
-    gbregion "npcMoveFunc",   W_NPC_MOVEMENT_SCRIPT_FUNCTION_NUM, 1 ; CF10
+    gbregion "npcMoveFunc",   wNPCMovementScriptFunctionNum, 1 ; CF10
     gbregion "statusFlags5",   W_STATUS_FLAGS_5,      1              ; D72F (BIT_SCRIPTED_NPC_MOVEMENT=0)
     gbregion "oakSlot1d2",    W_SPRITE_STATE_DATA_2 + 16, 16        ; Oak slot-1 data2 (MAPY/MAPX/facing/...)
     ; view pointer, to check the coord<->view projection is self-consistent
@@ -952,17 +952,17 @@ gbstate_regions:
     gbregion "viewPtr",       W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR, 2
     ; who moved the player: door/warp + simulated-joypad state at the writing frame.
     gbregion "moveFlags",     W_MOVEMENT_FLAGS,      1     ; BIT_STANDING_ON_DOOR/BIT_EXITING_DOOR
-    gbregion "destWarpId",    W_DESTINATION_WARP_ID, 1
-    gbregion "simJoyIdx",     W_SIMULATED_JOYPAD_STATES_INDEX, 1
-    gbregion "simJoyEnd",     W_SIMULATED_JOYPAD_STATES_END,   1
+    gbregion "destWarpId",    wDestinationWarpID, 1
+    gbregion "simJoyIdx",     wSimulatedJoypadStatesIndex, 1
+    gbregion "simJoyEnd",     wSimulatedJoypadStatesEnd,   1
     gbregion "playerStepVec", W_SPRITE_PLAYER_Y_STEP_VECTOR,   3  ; C103 Yvec, C104, C105 Xvec
-    gbregion "curMapWH",      W_CUR_MAP_HEIGHT,      2            ; height then width (blocks)
+    gbregion "curMapWH",      wCurMapHeight,      2            ; height then width (blocks)
     ; input source at the writing frame: what direction is driving the walk?
     gbregion "joyHeld",       hJoyHeld,            1
     gbregion "joyPressed",    hJoyPressed,         1
     gbregion "joyIgnore",     W_JOY_IGNORE,          1
-    gbregion "playerMoveDir", W_PLAYER_MOVING_DIRECTION, 1
-    gbregion "walkCounter",   W_WALK_COUNTER,        1
+    gbregion "playerMoveDir", wPlayerMovingDirection, 1
+    gbregion "walkCounter",   wWalkCounter,        1
     gbregion "statusFlags6",  W_STATUS_FLAGS_6,      1     ; BIT_FLY_WARP(3)/BIT_DUNGEON_WARP(4)
     gbregion "oakMoveIdx",    wNPCMovementDirections2Index, 1  ; Oak's scripted-step cursor
     gbregion "oakWalkCtr",    wScriptedNPCWalkCounter,      1
@@ -1212,10 +1212,10 @@ gbstate_regions:
     gbregion "wWalkBikeSurf",    wWalkBikeSurfState, 1     ; 0 walk, 1 bike, 2 surf
     gbregion "wWalkBikeSurfCopy", wWalkBikeSurfStateCopy, 1
     gbregion "wStatusFlags5to7", wStatusFlags5, 4          ; BIT_SCRIPTED_MOVEMENT_STATE
-    gbregion "wTileInFront",     W_TILE_IN_FRONT_OF_PLAYER, 1
-    gbregion "wPlayerDir",       W_PLAYER_DIRECTION, 1
-    gbregion "wSimJoypad",       W_SIMULATED_JOYPAD_STATES_INDEX, 2 ; index + unused mask
-    gbregion "wSimJoypadEnd",    W_SIMULATED_JOYPAD_STATES_END, 1
+    gbregion "wTileInFront",     wTileInFrontOfPlayer, 1
+    gbregion "wPlayerDir",       wPlayerDirection, 1
+    gbregion "wSimJoypad",       wSimulatedJoypadStatesIndex, 2 ; index + unused mask
+    gbregion "wSimJoypadEnd",    wSimulatedJoypadStatesEnd, 1
     gbregion "wJoyIgnore",       wJoyIgnore, 1
     gbregion "wPikachuSurf",     wPikachuOverworldStateFlags, 2 ; flags + spawn state
 %endif
@@ -1229,11 +1229,11 @@ gbstate_regions:
     gbregion "wPlayerMapPos",    wCurMap, 5                ; wCurMap .. wXCoord
     gbregion "wMovementFlags",   W_MOVEMENT_FLAGS, 1       ; BIT_LEDGE_OR_FISHING clear
     gbregion "wStatusFlags5to7", wStatusFlags5, 4          ; BIT_SCRIPTED_MOVEMENT_STATE clear
-    gbregion "wSimJoypad",       W_SIMULATED_JOYPAD_STATES_INDEX, 2 ; index + unused mask
-    gbregion "wSimJoypadEnd",    W_SIMULATED_JOYPAD_STATES_END, 2   ; both queued hop bytes
+    gbregion "wSimJoypad",       wSimulatedJoypadStatesIndex, 2 ; index + unused mask
+    gbregion "wSimJoypadEnd",    wSimulatedJoypadStatesEnd, 2   ; both queued hop bytes
     gbregion "wJoyIgnore",       wJoyIgnore, 1             ; cleared by the teardown
-    gbregion "wPlayerDir",       W_PLAYER_DIRECTION, 1
-    gbregion "wWalkCounter",     W_WALK_COUNTER, 1         ; 0 = all motion finished
+    gbregion "wPlayerDir",       wPlayerDirection, 1
+    gbregion "wWalkCounter",     wWalkCounter, 1         ; 0 = all motion finished
 %ifdef DEBUG_LEDGE_TRACE
     gbregion "ledgeTrace",       0x26000, 0x1000           ; HandleMidJump call ring (debug aid)
 %endif
@@ -1251,7 +1251,7 @@ gbstate_regions:
     gbregion "wMoveMissed",      wMoveMissed, 1            ; 1 (bite path)
     gbregion "wWalkBikeSurf",    wWalkBikeSurfState, 1     ; restored 0 after anim
     gbregion "wWalkBikeSurfCopy", wWalkBikeSurfStateCopy, 1
-    gbregion "wTileInFront",     W_TILE_IN_FRONT_OF_PLAYER, 1 ; $14 after the bump
+    gbregion "wTileInFront",     wTileInFrontOfPlayer, 1 ; $14 after the bump
     gbregion "wMovementFlags",   W_MOVEMENT_FLAGS, 1       ; BIT_LEDGE_OR_FISHING cleared
     gbregion "wStatusFlags5to7", wStatusFlags5, 4
 %endif
@@ -1495,10 +1495,10 @@ windows:
     dd OW_BLOCKS_GBADDR + 0x52*16   ; blockset entry for block 0x52
     dd OW_PALLET_BLK_GBADDR         ; PalletTown.blk
     dd GB_VCHARS2                   ; vTileset gfx in VRAM
-    dd W_OVERWORLD_MAP              ; wOverworldMap start
-    dd W_SURROUNDING_TILES          ; wSurroundingTiles
+    dd wOverworldMap              ; wOverworldMap start
+    dd wSurroundingTiles          ; wSurroundingTiles
     dd W_TILEMAP                    ; wTileMap
-    dd W_CUR_MAP - 5                ; map header vars around wCurMap ($D358)
+    dd wCurMap - 5                ; map header vars around wCurMap ($D358)
     dd W_TILESET_BLOCKS_PTR - 0xB   ; tileset header copy block ($D520)
 %endif
 
@@ -5053,21 +5053,21 @@ SeamLogRecord:
     mov edi, [seam_log_i]               ; ring cursor — never "fills", oldest is overwritten
     add edi, seam_log
 
-    mov al, [ebp + W_CUR_MAP]                          ; 0
+    mov al, [ebp + wCurMap]                          ; 0
     mov [edi + 0], al
-    mov al, [ebp + W_X_COORD]                          ; 1
+    mov al, [ebp + wXCoord]                          ; 1
     mov [edi + 1], al
-    mov al, [ebp + W_Y_COORD]                          ; 2
+    mov al, [ebp + wYCoord]                          ; 2
     mov [edi + 2], al
-    mov al, [ebp + W_WALK_COUNTER]                     ; 3
+    mov al, [ebp + wWalkCounter]                     ; 3
     mov [edi + 3], al
     mov al, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]  ; 4
     mov [edi + 4], al
     mov al, [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR + 1] ; 5
     mov [edi + 5], al
-    mov al, [ebp + W_CUR_MAP_WIDTH]                    ; 6
+    mov al, [ebp + wCurMapWidth]                    ; 6
     mov [edi + 6], al
-    mov al, [ebp + W_CUR_MAP_HEIGHT]                   ; 7
+    mov al, [ebp + wCurMapHeight]                   ; 7
     mov [edi + 7], al
     mov al, [ebp + hSCX]                              ; 8
     mov [edi + 8], al
@@ -5478,7 +5478,7 @@ AutoKeyDrive:
 %ifdef AUTOKEY_FOLLOW_ON_YMOVE
     ; Pinpoint the exact frame the player's map Y first leaves the north-exit row 0
     ; (the mystery (10,0)->(8,8) teleport), capturing the full engine state.
-    cmp byte [ebp + W_Y_COORD], 0
+    cmp byte [ebp + wYCoord], 0
     jne .doFollowDump
     jmp .noFollowDump
 %elifdef AUTOKEY_FOLLOW_ON_STEP
@@ -5493,7 +5493,7 @@ AutoKeyDrive:
     ; Binary test: does Oak's scripted-movement cursor ever advance during the
     ; follow? If this dump never fires (run to timeout, no GBSTATE), Oak never
     ; walked. wCurMap==PALLET(0) so it's the Pallet-side follow walk, not the lab.
-    cmp byte [ebp + W_CUR_MAP], 0
+    cmp byte [ebp + wCurMap], 0
     jne .noFollowDump
     cmp byte [ebp + wNPCMovementDirections2Index], 0
     jne .doFollowDump

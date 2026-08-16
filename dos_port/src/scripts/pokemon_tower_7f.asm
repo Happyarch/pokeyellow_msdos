@@ -369,7 +369,7 @@ PokemonTower7FWarpToMrFujiHouseScript:
     mov al, 0x1
     mov [ebp + wDestinationWarpID], al
     mov al, LAVENDER_TOWN
-    mov [ebp + W_LAST_MAP], al
+    mov [ebp + wLastMap], al
     mov esi, wStatusFlags3
     or byte [ebp + esi], (1 << (3))
     mov al, SCRIPT_POKEMONTOWER7F_SCRIPT0

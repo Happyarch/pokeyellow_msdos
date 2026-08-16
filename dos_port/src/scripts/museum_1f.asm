@@ -98,15 +98,15 @@ Museum1F_ScriptPointers:
     dd Museum1FNoopScript
 
 Museum1FDefaultScript:
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 4
     jz .nr_19
         ret
 .nr_19:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 9
     jz .continue
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 10
     jz .nr_25
         ret

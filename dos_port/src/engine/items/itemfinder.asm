@@ -23,7 +23,7 @@ HiddenItemNear:
     mov bh, 0
 .loop:
     mov dx, 3
-    mov al, byte [ebp + W_CUR_MAP]
+    mov al, byte [ebp + wCurMap]
     call IsInRestOfArray
     jnc .done ; return if current map has no hidden items
     
@@ -67,22 +67,22 @@ HiddenItemNear:
     jnz .loop ; if item has already been obtained
     
     ; check if the item is within 4-5 tiles
-    mov al, byte [ebp + W_Y_COORD]
+    mov al, byte [ebp + wYCoord]
     call Sub5ClampTo0
     cmp al, dh
     jnc .loop
     
-    mov al, byte [ebp + W_Y_COORD]
+    mov al, byte [ebp + wYCoord]
     add al, 4
     cmp al, dh
     jc .loop
     
-    mov al, byte [ebp + W_X_COORD]
+    mov al, byte [ebp + wXCoord]
     call Sub5ClampTo0
     cmp al, dl
     jnc .loop
     
-    mov al, byte [ebp + W_X_COORD]
+    mov al, byte [ebp + wXCoord]
     add al, 5
     cmp al, dl
     jc .loop

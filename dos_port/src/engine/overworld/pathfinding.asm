@@ -185,7 +185,7 @@ ConvertNPCMovementDirectionsToJoypadMasks:
     movzx esi, al
     dec esi                                    ; index - 1
     add esi, wNPCMovementDirections2           ; hl = &wNPCMovementDirections2[index-1]
-    mov edi, W_SIMULATED_JOYPAD_STATES_END     ; de = output offset
+    mov edi, wSimulatedJoypadStatesEnd     ; de = output offset
 .loop:
     mov al, [ebp + esi]                        ; ld a, [hld]
     dec esi

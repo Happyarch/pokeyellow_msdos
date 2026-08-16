@@ -315,7 +315,7 @@ MainMenu:
 .choseContinue:
     call DisplayContinueGameInfo
     ; ld hl, wCurrentMapScriptFlags / set BIT_CUR_MAP_LOADED_1, [hl]
-    or byte [ebp + W_CURRENT_MAP_SCRIPT_FLAGS], (1 << BIT_CUR_MAP_LOADED_1)
+    or byte [ebp + wCurrentMapScriptFlags], (1 << BIT_CUR_MAP_LOADED_1)
 .inputLoop:
     ; xor a / ldh [hJoyPressed],a / ldh [hJoyReleased],a / ldh [hJoyHeld],a / call Joypad
     ; DEVIATION{class=HAL; pret=main_menu.asm:MainMenu; behavior=use DelayFrame's keyboard joypad update instead of directly polling rJOYP through Joypad; evidence=pret .inputLoop Joypad call plus port INT 9h and joypad_update frame pipeline; lifetime=permanent input HAL boundary}
@@ -345,7 +345,7 @@ MainMenu:
 .pressedA:
     call GBPalWhiteOutWithDelay3
     call ClearScreen
-    mov byte [ebp + W_PLAYER_DIRECTION], PLAYER_DIR_DOWN
+    mov byte [ebp + wPlayerDirection], PLAYER_DIR_DOWN
     mov bl, 10
     call DelayFrames
     mov al, [ebp + wNumHoFTeams]
@@ -415,7 +415,7 @@ StartNewGameDebug:
     ; overworld render on a clean BG (pret has no compositor concept).
     mov dword [g_bg_whiteout], 0
     call OakSpeech                              ; includes the naming screen (pkg C)
-    mov byte [ebp + W_PLAYER_MOVING_DIRECTION], 0x8   ; ld a,$8 / ld [wPlayerMovingDirection],a
+    mov byte [ebp + wPlayerMovingDirection], 0x8   ; ld a,$8 / ld [wPlayerMovingDirection],a
     mov bl, 20
     call DelayFrames
     ; fallthrough to SpecialEnterMap

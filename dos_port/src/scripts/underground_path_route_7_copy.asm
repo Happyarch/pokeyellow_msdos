@@ -42,7 +42,7 @@ section .text
 
 UndergroundPathRoute7Copy_Script:
     mov al, ROUTE_7
-    mov [ebp + W_LAST_MAP], al
+    mov [ebp + wLastMap], al
     ret
 
 UndergroundPathRoute7Copy_TextPointers:

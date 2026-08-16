@@ -99,7 +99,7 @@ IsSurfingAllowed:
     mov al, [ebp + W_STATUS_FLAGS_6]
     test al, (1 << BIT_ALWAYS_ON_BIKE)
     jnz .forcedToRideBike
-    mov al, [ebp + W_CUR_MAP]
+    mov al, [ebp + wCurMap]
     cmp al, SEAFOAM_ISLANDS_B4F
     jne .ret                                    ; ret nz (not Seafoam B4F → surf allowed)
     CheckBothEventsSet EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE

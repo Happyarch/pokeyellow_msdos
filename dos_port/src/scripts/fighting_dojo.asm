@@ -142,12 +142,12 @@ FightingDojoDefaultScript:
     xor al, al
     mov [ebp + hJoyHeld], al
     mov [ebp + wSavedCoordIndex], al
-    mov al, [ebp + W_Y_COORD]
+    mov al, [ebp + wYCoord]
     cmp al, 3
     jz .nr_38
         ret
 .nr_38:
-    mov al, [ebp + W_X_COORD]
+    mov al, [ebp + wXCoord]
     cmp al, 4
     jz .nr_41
         ret
@@ -155,7 +155,7 @@ FightingDojoDefaultScript:
     mov al, 1
     mov [ebp + wSavedCoordIndex], al
     mov al, PLAYER_DIR_RIGHT
-    mov [ebp + W_PLAYER_MOVING_DIRECTION], al
+    mov [ebp + wPlayerMovingDirection], al
     mov al, 1
     mov [ebp + hSpriteIndex], al
     mov al, SPRITE_FACING_LEFT

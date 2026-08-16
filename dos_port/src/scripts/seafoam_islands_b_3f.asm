@@ -159,7 +159,7 @@ RLEList_ForcedSurfingStrongCurrentNearSteps:
     db -1
 
 SeafoamIslandsB3FObjectMoving1Script:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_90
         ret
@@ -217,7 +217,7 @@ SeafoamIslandsB3FObjectMoving1Script:
     db -1
 
 SeafoamIslandsB3FObjectMoving2Script:
-    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     jz .nr_140
         ret
