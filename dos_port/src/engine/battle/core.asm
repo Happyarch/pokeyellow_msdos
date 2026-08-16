@@ -3514,6 +3514,37 @@ PartyMenuOrRockOrRun:
     mov [ebp + wCurPartySpecies], al
     mov [ebp + wCurSpecies], al
     call GetMonHeader
+    ; DEVIATION{class=data-model; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=converts the enemy species to a national dex number through IndexToPokedex and passes dex-1 in EAX before LoadMonFrontSprite, and skips the reload entirely when the species has no dex number; evidence=this port resolves front pics through the dex-keyed MonFrontPics table because the mon header's front-pic pointer is a GB ROM address with no meaning in a flat image, so LoadMonFrontSprite takes dex-1 in EAX where pret's reads the header and takes no such argument, and the two other call sites already supply it - home/pokemon.asm with dec eax after IndexToPokedex and init_battle.asm with xor eax eax on the special-pic handle path; lifetime=permanent, the port's dex-keyed pic-resolution boundary}
+    ; PORT-ONLY, LOAD-BEARING: this port's LoadMonFrontSprite is DEX-KEYED —
+    ; `In: EAX = dex-1`, and UncompressMonSprite does `lea esi, [MonFrontPics +
+    ; eax*8]` — because the mon header's front-pic pointer is a GB ROM address
+    ; with no meaning in a flat image (home/pics.asm's header says so). pret's
+    ; is header-keyed and needs no such argument, so translating its
+    ; `ld de, vFrontPic / call LoadMonFrontSprite` literally left EAX holding
+    ; whatever GetMonHeader happened to leave, and this call decoded an
+    ; ARBITRARY species over the enemy. MEASURED 2026-08-15: view STATS on a
+    ; party mon in battle and the enemy came back wearing that mon's sprite
+    ; (PIDGEY rendered as PERSIAN, the mon whose stats were shown) — because
+    ; StatusScreen's own dex-keyed load is what left EAX set.
+    ; The other two call sites already honour the contract: home/pokemon.asm's
+    ; `dec eax` after IndexToPokedex, and init_battle.asm's documented
+    ; `xor eax, eax` on the special-pic handle path.
+    push ebx
+    movzx ebx, byte [ebp + wPokedexNum]     ; save the caller's wPokedexNum
+    mov al, [ebp + wEnemyMonSpecies]
+    mov [ebp + wPokedexNum], al
+    call IndexToPokedex                     ; species index -> national dex no.
+    movzx eax, byte [ebp + wPokedexNum]
+    mov [ebp + wPokedexNum], bl             ; restore it, as pokemon.asm does
+    pop ebx
+    test al, al
+    jz .enemyMonPicReloaded                 ; dex 0 = no dex number: MonFrontPics
+                                            ; has no row, and dec would index
+                                            ; [-1]. Ghosts/fossils never reach
+                                            ; here — UncompressMonSprite takes
+                                            ; the header's special-pic handle
+                                            ; first and ignores EAX entirely.
+    dec eax                                 ; dex-1 = index into MonFrontPics
     mov edx, vFrontPic                      ; ld de, vFrontPic
     call LoadMonFrontSprite
     jmp .enemyMonPicReloaded                ; jr

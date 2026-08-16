@@ -1246,6 +1246,13 @@ endif
 ifdef BATTLE_SWITCH_DESELECT
 NASMFLAGS += -D BATTLE_SWITCH_DESELECT
 endif
+# BATTLE_SWITCH_STATS=1 takes STATS instead of SWITCH and returns to the battle
+# screen, so the post-StatusScreen enemy-pic reload is observable. NEVER for a
+# scenario run: the golden takes the switch. e.g.
+#   run_headless.sh "DEBUG_BATTLE_SWITCH=1 BATTLE_SWITCH_STATS=1 AUTOKEY_DUMP_FRAME=1900"
+ifdef BATTLE_SWITCH_STATS
+NASMFLAGS += -D BATTLE_SWITCH_STATS
+endif
 endif
 # In-battle ITEM gate (battle_item_potion golden, battle plan 2c): the
 # DEBUG_BATTLE_GOLDEN scene with the active mon knocked to POTION_SEED_HP, then

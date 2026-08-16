@@ -6921,7 +6921,22 @@ autokey_script:
     dd  360,  370, PAD_A        ; select PKMN -> PartyMenuOrRockOrRun
     dd  540,  550, PAD_DOWN     ; party list slot 0 -> slot 1 (not the active mon)
     dd  720,  730, PAD_A        ; choose slot 1 -> SWITCH/STATS/CANCEL box
-%ifdef BATTLE_SWITCH_DESELECT
+%ifdef BATTLE_SWITCH_STATS
+    ; STATS probe: take STATS instead of SWITCH, page through StatusScreen /
+    ; StatusScreen2, return to the party list, then B out to the battle screen.
+    ; The point is the ENEMY PIC: StatusScreen loads the PARTY mon's front pic
+    ; into vFrontPic, and pret reloads the enemy's afterwards ("now we need to
+    ; reload the enemy mon pic", core.asm .enemyMonPicReloaded). If that reload
+    ; is wrong the enemy wears the party mon's sprite. Photograph the battle
+    ; screen, e.g. AUTOKEY_DUMP_FRAME=1900.
+    dd  900,  910, PAD_DOWN     ; SWITCH -> STATS
+    dd  960,  970, PAD_A        ; open StatusScreen
+    dd 1200, 1210, PAD_A        ; StatusScreen -> StatusScreen2
+    dd 1440, 1450, PAD_A        ; leave StatusScreen2 -> back to the party list
+    dd 1500, 1512, PAD_B        ; leave the party menu -> the battle screen
+    dd 1650, 1662, PAD_B        ; (repeated: the list re-inits after StatusScreen,
+    dd 1800, 1812, PAD_B        ;  and a single B has been measured to miss)
+%elifdef BATTLE_SWITCH_DESELECT
     ; Deselect probe: B instead of A, so .partyMonDeselected runs and the
     ; SWITCH/STATS/CANCEL box is ERASED back to the party list. Nothing else
     ; exercises that path, and it is stride-bearing (the box lives in the party
