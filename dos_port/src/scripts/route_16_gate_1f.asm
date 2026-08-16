@@ -1,0 +1,194 @@
+; Route16Gate1F.asm — translated from pret scripts/Route16Gate1F.asm by dos_port/tools/sm83xlat.
+;
+; ONE-SHOT OUTPUT, NOW HAND-MAINTAINED. The transpiler ran once at the SHA
+; recorded in dos_port/tools/sm83xlat/README.md and is not re-run; this file is
+; ordinary Tier-2 source and editing it is the normal way it changes. There is
+; deliberately no DO NOT EDIT header.
+;
+; Every pret label is preserved verbatim so the file stays line-for-line
+; cross-referenceable against the disassembly.
+;
+; Regions the tool could not lower WITH CERTAINTY are reproduced below as
+; commented pret source under a `; BAIL[reason]` banner, and define NO symbol —
+; so a reference to one is a link error rather than a plausible wrong lowering.
+
+bits 32
+
+%include "gb_memmap.inc"
+%include "gb_constants.inc"
+%include "gb_text.inc"
+%include "events.inc"
+%include "assets/event_constants.inc"
+
+
+global Route16Gate1FDefaultScript
+global Route16Gate1FGamblerText
+global Route16Gate1FGuardScript
+global Route16Gate1FGuardText
+global Route16Gate1FGuardWaitUpText
+global Route16Gate1FIsBicycleInBagScript
+global Route16Gate1FPlayerMovingRightScript
+global Route16Gate1FPlayerMovingUpScript
+global Route16Gate1F_Script
+global Route16Gate1F_ScriptPointers
+global Route16Gate1F_TextPointers
+
+extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
+extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern FillMemory   ; NOT YET DEFINED IN THE PORT
+extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
+extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern _Route16Gate1FGamblerText   ; NOT YET DEFINED IN THE PORT
+extern _Route16Gate1FGuardCyclingRoadExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _Route16Gate1FGuardNoPedestriansAllowedText   ; NOT YET DEFINED IN THE PORT
+extern _Route16Gate1FGuardWaitUpText   ; NOT YET DEFINED IN THE PORT
+
+; Script constants — pret defines these via dw_const in this file.
+SCRIPT_ROUTE16GATE1F_DEFAULT                   equ 0
+SCRIPT_ROUTE16GATE1F_PLAYER_MOVING_UP          equ 1
+SCRIPT_ROUTE16GATE1F_GUARD                     equ 2
+SCRIPT_ROUTE16GATE1F_PLAYER_MOVING_RIGHT       equ 3
+TEXT_ROUTE16GATE1F_GUARD                       equ 1
+TEXT_ROUTE16GATE1F_GUARD_WAIT_UP               equ 3
+
+; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
+; read from pokeyellow.sym — not inferred.
+wCoordIndex                                    equ 0xCD3D
+wRoute16Gate1FCurScript                        equ 0xD65F
+
+; Code and data are emitted in pret's SOURCE ORDER, in one section.
+; That is not cosmetic: a NASM local label binds to the last
+; non-local label above it, so hoisting the text streams into a
+; separate section rebound every `.Text` to the wrong parent.
+section .text
+
+Route16Gate1F_Script:
+    mov esi, wStatusFlags6
+    and byte [ebp + esi], ~(1 << (BIT_ALWAYS_ON_BIKE)) & 0xFF
+    call EnableAutoTextBoxDrawing
+    mov al, [ebp + wRoute16Gate1FCurScript]
+    mov esi, Route16Gate1F_ScriptPointers
+    jmp CallFunctionInTable
+
+Route16Gate1F_ScriptPointers:
+    dd Route16Gate1FDefaultScript
+    dd Route16Gate1FPlayerMovingUpScript
+    dd Route16Gate1FGuardScript
+    dd Route16Gate1FPlayerMovingRightScript
+
+Route16Gate1FDefaultScript:
+    call Route16Gate1FIsBicycleInBagScript
+    jz .nr_18
+        ret
+.nr_18:
+    mov esi, .StopsPlayerCoords
+    call ArePlayerCoordsInArray
+    jb .nr_21
+        ret
+.nr_21:
+    mov al, TEXT_ROUTE16GATE1F_GUARD_WAIT_UP
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, [ebp + wCoordIndex]
+    cmp al, 0x1
+    jz .next_to_counter
+    mov al, [ebp + wCoordIndex]
+    dec al
+    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov bh, 0x0
+    mov bl, al
+    mov al, PAD_UP
+    mov esi, W_SIMULATED_JOYPAD_STATES_END
+    call FillMemory
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_ROUTE16GATE1F_PLAYER_MOVING_UP
+    mov [ebp + wRoute16Gate1FCurScript], al
+    ret
+
+.next_to_counter:
+    mov al, SCRIPT_ROUTE16GATE1F_GUARD
+    mov [ebp + wRoute16Gate1FCurScript], al
+    ret
+
+.StopsPlayerCoords:
+    db 7, 4
+    db 8, 4
+    db 9, 4
+    db 10, 4
+    db -1
+
+Route16Gate1FPlayerMovingUpScript:
+    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    test al, al
+    jz .nr_57
+        ret
+.nr_57:
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+Route16Gate1FGuardScript:
+    mov al, TEXT_ROUTE16GATE1F_GUARD
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov al, 0x1
+    mov [ebp + W_SIMULATED_JOYPAD_STATES_INDEX], al
+    mov al, PAD_RIGHT
+    mov [ebp + W_SIMULATED_JOYPAD_STATES_END], al
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_ROUTE16GATE1F_PLAYER_MOVING_RIGHT
+    mov [ebp + wRoute16Gate1FCurScript], al
+    ret
+
+Route16Gate1FPlayerMovingRightScript:
+    mov al, [ebp + W_SIMULATED_JOYPAD_STATES_INDEX]
+    test al, al
+    jz .nr_77
+        ret
+.nr_77:
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    mov esi, wStatusFlags5
+    and byte [ebp + esi], ~(1 << (BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
+    mov al, SCRIPT_ROUTE16GATE1F_DEFAULT
+    mov [ebp + wRoute16Gate1FCurScript], al
+    ret
+
+Route16Gate1FIsBicycleInBagScript:
+    mov bh, BICYCLE
+    jmp IsItemInBag
+
+Route16Gate1F_TextPointers:
+    dd Route16Gate1FGuardText
+    dd Route16Gate1FGamblerText
+    dd Route16Gate1FGuardWaitUpText
+
+Route16Gate1FGuardText:
+    call Route16Gate1FIsBicycleInBagScript
+    jz .no_bike
+    mov esi, .CyclingRoadExplanationText
+    call PrintText
+    jmp .text_script_end
+
+.no_bike:
+    mov esi, .NoPedestriansAllowedText
+    call PrintText
+.text_script_end:
+    jmp TextScriptEnd
+
+.NoPedestriansAllowedText:
+    text_far _Route16Gate1FGuardNoPedestriansAllowedText
+    text_end
+.CyclingRoadExplanationText:
+    text_far _Route16Gate1FGuardCyclingRoadExplanationText
+    text_end
+Route16Gate1FGuardWaitUpText:
+    text_far _Route16Gate1FGuardWaitUpText
+    text_end
+Route16Gate1FGamblerText:
+    text_far _Route16Gate1FGamblerText
+    text_end

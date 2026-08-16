@@ -1,10 +1,173 @@
 # sm83xlat — one-shot SM83 → x86 transpiler for pret `scripts/`
 
-**STATUS: prework only. The transpiler itself is NOT built yet.**
-What exists today is `build_symbols.py`, the shared symbol mapping, staged ahead
-of the fork so both consuming workstreams read one artifact.
+**STATUS: Stages 0-7 complete. Output emitted, committed, and hand-maintained
+from here.** The fine-comb fan-out (Gemini via `agy`) has NOT been started —
+another session sequences it.
 
 Plan: `docs/current_plan_script_transpiler.md`.
+
+| module | stage | what it is |
+|---|---|---|
+| `build_symbols.py` | prework | the shared pret↔port RAM symbol mapping (below) |
+| `lexer.py` | 0 | line lexer — every line categorised, operands split |
+| `isa.py` | 0 | the SM83 instruction + flag table. The tool's axioms |
+| `macros.py` | 0 | classification and declared effects for every rgbasm macro `scripts/` uses |
+| `pretsyms.py` | 0 | the pret-side symbol universe (RAM, constants, labels) |
+| `parser.py` | 0 | conditional assembly, label scope, item classification |
+| `probe.py` | 0 | coverage counter, branch census, callee inventory |
+| `stage0.py` | 0 | CLI → `coverage.md`, `tables/probe.json`, `tables/callees.json` |
+| `pretsyms.py` / `symfile.py` / `resolve.py` | 1 | the pret name universe, rgblink's `pokeyellow.sym`, and the one answer to "what does the port call this?" |
+| `ir.py` | 2 | regions, CFG, flag liveness, pointer-domain propagation |
+| `emit.py` | 3 | the lowering table and the structural invariants |
+| `transpile.py` | 3-7 | the one shot → `dos_port/src/scripts/*.asm`, `tables/bail_report.json`, `transpile_report.md` |
+| `stage4_pallet_town.py` | 4 | the hand-port regression fixture |
+
+```sh
+python3 dos_port/tools/sm83xlat/stage0.py             # coverage.md + tables/
+python3 dos_port/tools/sm83xlat/transpile.py --assemble   # THE ONE SHOT + nasm gate
+python3 dos_port/tools/sm83xlat/stage4_pallet_town.py     # the regression fixture
+python3 -m pytest dos_port/tools/sm83xlat/tests/ -q
+```
+
+**The root build must run first.** `resolve.py` reads `pokeyellow.sym`, which
+`make` in the repository root produces; without it Stage 1 has no addresses.
+
+---
+
+## Stages 1-7 result (2026-08-16)
+
+**1,739 of 2,530 regions lowered (68.7%), and all 224 emitted files assemble
+clean** under the Makefile's own flags. Two runs are byte-identical. Full report
+in `transpile_report.md`; the bail inventory is `tables/bail_report.json`.
+
+251 pret files merge into **224** port files: 26 maps are split across two or
+three pret sources (`BillsHouse.asm` + `BillsHouse_2.asm`), and emitting them one
+at a time made the second overwrite the first — which is why constants defined in
+one half read as undefined in the other.
+
+### Merge order — READ THIS BEFORE MERGING AFTER WORKSTREAM B
+
+**This output is NOT rename-invariant, and it cannot be made so.** 268 sites
+across 61 emitted files name a `SCREAMING_SNAKE` equ (`W_Y_COORD`,
+`W_SIMULATED_JOYPAD_STATES_INDEX`, …) that the memmap rename deletes. The plan's
+"safe alongside `current_plan_memmap_pret_names`" is true of the symbol
+**mapping** — which joins on the normalized name — and was never true of emitted
+**output**, which bakes in whichever spelling was current when it ran.
+
+Emitting the pret spelling with an `%ifndef` alias was tried and **does not
+work**: `%ifndef` tests preprocessor `%define`s, and `gb_memmap.inc` uses `equ`,
+an assembly-time label the preprocessor cannot see. The guard never fires, so the
+alias becomes a redefinition the moment the rename lands. NASM has no guard for
+an `equ`.
+
+Measured by simulating the whole rename over `gb_memmap.inc` and re-assembling:
+**126/224 files survive**, failing as `inconsistently redefined` and
+`W_EVENT_FLAGS not defined`. That second one is the point — **`events.inc`
+references `W_EVENT_FLAGS` itself**, so the rename already has to sweep its
+consumers, and these 61 files are simply more consumers.
+
+**So: include `dos_port/src/scripts/` in Workstream B's rename sweep.** Or merge
+C first. Either works; doing neither leaves 98 files failing to assemble.
+Re-running `transpile.py` after B lands also fixes it, since the resolver reads
+the memmap live.
+
+### Nothing is wired into the build, deliberately
+
+The emitted files are in no `SRCS` list. Most reference callees the port does not
+define, which is the designed witness — an `extern` the linker enumerates — but a
+witness is only useful when someone is looking at it, not when it breaks
+everyone's build. `pallet_town.asm` was **not** overwritten; its tool output went
+to `emitted_shadow/` and is the Stage 4 fixture.
+
+**Two whole classes of region are deliberately NOT emitted, and the static gate
+is what found them.** A first run reported 914 `dup_def` violations: the emitted
+battle-text streams duplicated `assets/trainer_headers.inc`, which already owns
+every one of them. A second reported four more — `Mansion1Script_Switches` and
+siblings exist as ret-stubs in `hidden_object_stubs.asm`. Emitting a body for a
+stub is a duplicate definition, not a retirement: retiring a stub means DELETING
+it and repointing every extern comment, which is a deliberate act and not
+something a transpiler gets to do as a side effect. Both classes now bail
+(`owned-by-generated-assets`, 268 regions) and the labels are externed.
+
+The gate also caught a subtler one: a bailed region copies its pret source
+verbatim as a comment, and one of those comments carried a `; BUG(...)` that
+`lint_pret_labels` read — correctly, by its own rules — as a free-form BUG claim
+this port was making. Copied annotation keywords are moved out of annotation
+position now.
+
+### Stage 1 found a port defect, and the emitter fails closed on it
+
+Cross-checking `gb_memmap.inc` against the linker's own table (684 same-spelled
+symbols) decomposes as **684 agree, 25 SRAM flat-bank rebases, 21 documented
+relocations, 9 unexplained**. One of the nine is referenced by scripts:
+**`wPlayerCoins` is at `0xD5A4` in the port and `0xD5A3` in the linker's table**,
+between `wUnusedMapVariable` (0xD5A2, matching) and `wToggleableObjectFlags`
+(0xD5A5). Five script sites touch it. The emitter refuses to name any symbol whose
+port address contradicts the linker's without a documented reason, so those sites
+bail instead of quietly reading the wrong byte. Recorded as
+`regression-memmap-wplayercoins-off-by-one`.
+
+### Stage 2 gate: the CFG reproduces the Stage 0 census independently
+
+| bucket | Stage 0 (local walk) | Stage 2 (CFG + liveness) |
+|---|---:|---:|
+| adjacent | 665 | 667 |
+| separated | 98 | 104 |
+| callee-flag-contract | 150 | 142 |
+| cross-block | 0 | 0 |
+| **total** | **913** | **913** |
+
+Same population, same shape, and the small movements are exactly where a CFG
+should differ from source order — it follows real predecessors. The two share no
+machinery, which is what makes the agreement worth anything.
+
+### Stage 4: zero tool bugs
+
+Eight routines differ from the hand-written `pallet_town.asm`. Three classify
+automatically (`hand-port-reorder`, `hand-port-fusion-loses-flags`,
+`text-model-divergence`); the other five were inspected by hand and the tool is
+1:1 with pret in every one — pret imperative lines vs emitted x86 read 17/17,
+26/27, 24/25, 13/13, with the `+1`s being `ret cc` expanding to skip/ret/label.
+
+Two findings point the other way, at the HAND port:
+* `PalletTown_Script` — the hand port **reordered** `ld hl, ScriptPointers` and
+  `ld a, [wPalletTownCurScript]`; pret has them the other way round.
+* `PalletTownPikachuBattleScript` — pret's `xor a` clears the flags, and the hand
+  port's fused `mov byte [X], 0` does not. Equivalent for the stored value, not
+  for a downstream flag reader. Latent, since nothing reads a flag there today.
+
+## Stage 0 result (2026-08-16)
+
+251/251 files parse, **zero parse errors** — the stage's acceptance. Full report
+in `coverage.md`; the headline is **9,361 of 12,500 imperative sites (74.9%)
+mechanically lowerable**, with `unknown-callee-abi` the only large bail bucket
+(2,997 sites over **233 distinct callees**, 128 of which the port already
+defines). Everything else is under 100 sites.
+
+Three measurements in the plan did not survive contact with the corpus, and each
+is pinned by a test in `tests/test_stage0.py` so it cannot quietly revert:
+
+* **The projection surface is 18 lines, not 16.** `ld bc, SCREEN_WIDTH * 2`
+  (CeladonMartRoof) and `ld bc, SCREEN_WIDTH * 6` (VermilionDock) are row-stride
+  advances written as arithmetic instead of through a coord macro, each one line
+  after an `hlcoord` in a file already on the bail list. The port's stride is not
+  pret's, so they are exactly as unlowerable as the 16 macro sites — counting the
+  macro rather than the geometry is what hid them. Same 5 files.
+* **Inline glyph runs are 29 sites in 11 files, not the two CeruleanGym lines the
+  plan names.** 8 gyms × (city + leader), Route23's 7 badge names, GameCorner's 4
+  currency labels, BikeShop's 2.
+* **The branch census does not reproduce, and the branch COUNT does.**
+  920 = 913 active + 7 inside `IF DEF(_DEBUG)` blocks. The quoted proportions
+  (48.4 / 20.5 / 31.1) cannot be reproduced because the definition behind them
+  was never recorded; a deliberately cruder re-bucketing lands in the same family
+  (47.2 / 26.5 / 26.3) but is not a match, and identifying it is not claimed.
+  See `coverage.md` for why this matters to Stage 2's acceptance gate.
+
+The census work also surfaced a fourth bucket the quoted figures have no slot
+for: **150 branches read a flag written by a CALLEE** (`call GiveItem` / `jr nc`).
+Treating `call` as flag-transparent — which is what makes the crude census
+possible — reads straight through those and credits an earlier `cp` with a CF it
+never wrote. They are `abi.json` rows, not distances.
 
 ---
 

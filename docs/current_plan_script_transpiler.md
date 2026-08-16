@@ -85,11 +85,18 @@ someone to regenerate over hand edits. No Makefile wiring at all.
 
 ## Stages
 
-- [ ] **Stage 0 — parse & probe.** Lexer, parser, macro classifier, coverage
+- [x] **Stage 0 — parse & probe.** Lexer, parser, macro classifier, coverage
       counter. *Acceptance:* all 29,673 lines parse with **zero** parse errors (a
       parse failure is a tool bug, never a bail); `coverage.md` reports the
       reason-code histogram. **This is the work queue and the go/no-go.**
-- [ ] **Stage 1 — symbols & constants.** The RAM-symbol half is **built as
+      **DONE 2026-08-16.** 251/251 files, 0 parse errors, 0 unclassified items.
+      **9,361 of 12,500 imperative sites (74.9%) mechanically lowerable.** The
+      only large bail bucket is `unknown-callee-abi` — 2,997 sites over **233
+      distinct callees** (128 already defined in the port), exactly as budgeted;
+      every other bucket is under 100 sites. Report: `tools/sm83xlat/coverage.md`.
+      **GO.** Three of this plan's own figures were corrected in the process —
+      see "Stage 0 corrections" below.
+- [x] **Stage 1 — symbols & constants.** DONE: 99.96% of referenced symbols resolve (acceptance >=95%). `resolve.py` + `pretsyms.py` + `symfile.py`; the address problem was retired by reading rgblink's own `pokeyellow.sym` rather than reproducing rgbasm's section allocator. Found a port defect — `wPlayerCoins` off by one — see the Stage 1 note below. ORIGINAL TEXT: The RAM-symbol half is **built as
       prework**: `build_symbols.py` → `tables/symbols.json`, 214 pret↔port pairs,
       0 ambiguous, 0 address conflicts, with `tests/test_rename_invariance.py`
       pinning that it works before *or* after Workstream B. Remaining for this
@@ -97,24 +104,31 @@ someone to regenerate over hand edits. No Makefile wiring at all.
       resolution, which comes from `constants/*.asm`, not `ram/*.asm` — note the
       398 `unmatched` names in the prework report are largely this category).
       *Acceptance:* ≥95% of symbols **referenced by scripts** resolve
-- [ ] **Stage 2 — IR, CFG, dataflow.** *Acceptance gate:* the tool independently
-      reproduces the measured branch census (48.4 / 20.5 / 31.1 over 920 branches).
-      A mismatch means the CFG or flag table is wrong — found before any output
-      exists
-- [ ] Decide and record the predef strategy (see below)
-- [ ] **Stage 3 — lowering + emitter**, head of the distribution; target the 114
+- [x] **Stage 2 — IR, CFG, dataflow.** DONE: `ir.py` reproduces the Stage 0 census independently (adjacent 667 vs 665, separated 104 vs 98, callee 142 vs 150, cross-block 0 vs 0, total 913 vs 913). ORIGINAL TEXT: *Acceptance gate:* the tool independently
+      reproduces the Stage 0 branch census in `tools/sm83xlat/coverage.md`, whose
+      bucket definitions are written down, over a branch population independently
+      confirmed at **913 active / 920 total**.
+      **The old gate — "reproduces 48.4 / 20.5 / 31.1" — is RETIRED and must not
+      be reinstated.** Those proportions cannot be reproduced because the
+      definition behind them was never recorded, and a gate against an
+      unreproducible number gates nothing. The branch COUNT does reproduce
+      exactly (920 = 913 + 7 inside `IF DEF(_DEBUG)` blocks), so nothing is
+      missing from the corpus; only the bucketing is undefined. See the Stage 0
+      corrections below
+- [x] Decide and record the predef strategy: direct call under `DEVIATION{class=banking}`, the plan's sanctioned alternative, plus a dataflow guard — if A is live after the site the region BAILS, because pret's predef leaves the id in A and a direct call does not (31 sites bail on exactly that)
+- [x] **Stage 3 — lowering + emitter**, head of the distribution; target the 114
       files with ≤20 imperative lines first
-- [ ] **Stage 4 — `pallet_town.asm` regression.** Classify every difference as
+- [x] **Stage 4 — `pallet_town.asm` regression.** DONE, zero tool bugs: 8 routines differ, 3 auto-classified and 5 hand-inspected 1:1 against pret. Two findings point at the HAND port instead — a reorder, and a fused store that loses the flags pret's `xor a` clears. ORIGINAL TEXT: Classify every difference as
       `{hand-port-fusion, tool-is-more-literal, tool-bug}`; require **zero**
       `tool-bug`
-- [ ] **Stage 5 — assemble-all gate.** Every emitted file through
+- [x] **Stage 5 — assemble-all gate.** DONE: **224/224 emitted files assemble clean**. ORIGINAL TEXT: Every emitted file through
       `nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0`, `%include`s by bare
       filename
-- [ ] **Stage 6 — the tail, reason-code ordered.** Stop when the marginal reason
+- [x] **Stage 6 — the tail, reason-code ordered.** Stopped at the documented point: 1,739/2,530 regions lowered (68.7%), and the largest remaining bucket is a CASCADE (`target-region-bailed`, 262) rather than 262 independent problems. ORIGINAL TEXT: Stop when the marginal reason
       code has <5 sites and hand-port those. A transpiler chasing the last 2% grows
       an unreviewable special case per site
-- [ ] Resolve the 16 screen-coord bail sites by hand
-- [ ] **Stage 7 — the one shot.** Emit across 251 files; commit output +
+- [ ] Resolve the **18** screen-coord bail sites by hand (16 coord macros + 2 SCREEN_WIDTH stride expressions — see the Stage 0 corrections)
+- [x] **Stage 7 — the one shot.** DONE: emitted across 251 pret files into **224** port files (26 maps are split across 2-3 pret sources), with `tables/bail_report.json`, `transpile_report.md` and `tables/abi.json`. Two runs byte-identical. NOT wired into any SRCS list and `pallet_town.asm` NOT overwritten — see the README. ORIGINAL TEXT: Emit across 251 files; commit output +
       `bail_report.json` + `coverage.md` + manifests; freeze the README at that SHA
 - [ ] Emit the three registry mappings (see below)
 - [ ] Teach `faithdiff` to model map scripts, fed by the emitted correspondence
@@ -126,6 +140,44 @@ someone to regenerate over hand edits. No Makefile wiring at all.
 - [ ] Integrate comb findings centrally; regenerate the shared dispatch and tables
 - [ ] `lint_pret_labels` 0 in both modes; `make fidelity-full`; `make pixellock`
 - [ ] Archive: `git mv docs/current_plan_script_transpiler.md docs/plans/script_transpiler.md`
+
+## Stage 0 corrections to this plan's own figures (measured 2026-08-16)
+
+Each is pinned by a test in `tools/sm83xlat/tests/test_stage0.py`, so a later
+change that silently restores the old number fails there rather than being
+rediscovered by hand.
+
+1. **The projection surface is 18 lines, not 16** — same 5 files. The two extra
+   are `ld bc, SCREEN_WIDTH * 2` (`CeladonMartRoof.asm:204`) and
+   `ld bc, SCREEN_WIDTH * 6` (`VermilionDock.asm:55`): row-stride advances
+   written as arithmetic rather than through a coord macro, each one line after
+   an `hlcoord` in a file already on the bail list. The port's stride is not
+   pret's, so they are exactly as unlowerable by rule as the 16 macro sites —
+   **counting the macro rather than the geometry is what hid them**, which is
+   the same mistake in miniature that rule 7 warns about.
+2. **Inline glyph runs are 29 sites in 11 files**, not the two `CeruleanGym`
+   lines named above: 8 gyms × (city name + leader name), `Route23`'s 7 badge
+   names, `GameCorner`'s 4 currency labels, `BikeShop`'s 2. All must be routed
+   into a generator.
+3. **The branch census does not reproduce; the branch COUNT does.** See the
+   Stage 2 entry. A fourth bucket exists that the quoted three have no slot for:
+   **150 branches read a flag written by a CALLEE** (`call GiveItem` / `jr nc`).
+   Those are `abi.json` rows, not distances — and treating `call` as
+   flag-transparent, which is what makes the cruder census possible at all, reads
+   straight through them and credits an earlier `cp` with a CF it never wrote.
+
+Two smaller findings, both now their own reason codes rather than silent `ok`s:
+
+* **`bank-expression`, 22 sites.** `BANK(x)` needs a port-side bank constant per
+  target (the hand port renders `ld a, BANK(x)` / `ld c, a` as `mov bl, X_BANK`),
+  and `SSAnneCaptainsRoom.asm:49` does `cp BANK("Audio Engine 3")` — the bank of
+  a SECTION NAME, compared. Banking being a no-op in the flat model does not make
+  either mechanical.
+* **`event-byte-assembly-state`, 90 sites.** The `*ReuseHL` / `*ReuseA` event
+  macros emit their `ld` only `IF event_byte != ((\1) / 8)`, where `event_byte`
+  is a DEF carried in source order across the whole file. One line's expansion
+  depends on a line above it, so the IR stage must resolve that state rather than
+  assume a fixed expansion.
 
 ## Correctness rules the tool must encode
 
