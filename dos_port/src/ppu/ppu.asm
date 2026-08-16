@@ -776,7 +776,7 @@ render_bg:
 ; sprite_shift_x/y are deliberately NOT touched: the flat path zeroes them, and
 ; cropping at the clamped origin is exactly the case where they are zero too
 ; (they are the clamp residual). A camera clamped against the surface edge would
-; want them carried across; that cannot happen while the view stays centred on
+; want them carried across; that cannot happen while the view stays centered on
 ; the player, and the sub-tile note above owns the same corner.
 ;
 ; In: EBP = GB memory base. All registers preserved.

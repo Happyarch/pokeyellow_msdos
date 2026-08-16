@@ -3526,7 +3526,7 @@ PartyMenuOrRockOrRun:
     ; party mon in battle and the enemy came back wearing that mon's sprite
     ; (PIDGEY rendered as PERSIAN, the mon whose stats were shown) — because
     ; StatusScreen's own dex-keyed load is what left EAX set.
-    ; The other two call sites already honour the contract: home/pokemon.asm's
+    ; The other two call sites already honor the contract: home/pokemon.asm's
     ; `dec eax` after IndexToPokedex, and init_battle.asm's documented
     ; `xor eax, eax` on the special-pic handle path.
     push ebx

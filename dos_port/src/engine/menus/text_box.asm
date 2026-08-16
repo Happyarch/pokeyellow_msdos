@@ -259,7 +259,7 @@ DisplayTextBoxID_:
 ; DisplayTextBoxID_ forces text_row_stride = SCREEN_TILES_W and works in canvas
 ; coordinates (measured: canvas rows 18-24, cols 31-39), but the party menu is a
 ; FULL-SCREEN TAKEOVER: party_menu.asm sets g_bg_whiteout, so render_bg fills
-; with BG colour 0 and skips the tilemap entirely, and the screen the player is
+; with BG color 0 and skips the tilemap entirely, and the screen the player is
 ; actually looking at is pret's 20x18 scratch at W_TILEMAP mirrored into
 ; GB_TILEMAP1 by PartyMenuMirror, which the window descriptors read. A canvas
 ; draw cannot reach this screen at all. The menu still WORKED -- HandleMenuInput
