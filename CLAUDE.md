@@ -181,6 +181,23 @@ substantive session with `episode_record`, grounding the memories it produced
 of rewriting history. Keep memories as claims; the narrative belongs in the
 episode.
 
+**Memories are deletable, and stale ones should be DELETED — not struck through.**
+`memory_write` to the same key overwrites; `memory_delete` removes. Do not keep a
+corrected claim alongside its correction ("v1 said X, that was wrong"), and never
+mark a superseded line with strikethrough — that is how a memory turns into a
+corpse pile nobody trusts. Rewrite the entry to state the CURRENT truth, or
+delete it and remeasure. Deletion is audited and IRREVERSIBLE, so confirm the
+claim is dead through and through first; when in doubt, overwrite instead.
+(Maintainer, 2026-08-16.)
+
+**PURGE HANDOFF MEMORIES ONCE CONSUMED.** A `handoff-*` / `*-handoff` entry
+exists to carry state between sessions. The moment the work it hands off has
+landed it is dead weight, and it goes stale in the most damaging way possible: it
+keeps asserting "no open items remain" about an area that has moved on. Before
+deleting one, lift out anything durable it happens to carry — setup facts,
+measured traps, open items — into a properly-keyed memory of its own, because a
+handoff often smuggles knowledge that outlives the job. Then delete it.
+
 ---
 
 ## Current Phase
