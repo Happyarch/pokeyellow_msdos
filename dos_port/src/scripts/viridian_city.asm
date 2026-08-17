@@ -108,7 +108,6 @@ TEXT_VIRIDIANCITY_OLD_MAN_YOU_NEED_TO_WEAKEN_THE_TARGET equ 16
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteFacingDirection                         equ 0xFF8D
 hSpriteMapXCoord                               equ 0xFFEE
 hSpriteMapYCoord                               equ 0xFFED
 hSpriteScreenXCoord                            equ 0xFFEC

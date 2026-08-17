@@ -31,7 +31,6 @@ extern SetSpriteFacingDirection   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteFacingDirection                         equ 0xFF8D
 wSprite01StateData1FacingDirection             equ 0xC119
 wSprite01StateData2MapX                        equ 0xC215
 wSprite01StateData2MapY                        equ 0xC214

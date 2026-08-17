@@ -631,6 +631,20 @@ hSpriteDataOffset      equ 0xFF8B
 hSpriteImageIndex      equ 0xFF8D
 hSpriteFacingDirection equ hSpriteImageIndex
 hSpriteMovementByte2   equ hSpriteImageIndex
+; Oak's Aide HRAM (ram/hram.asm:303-307). Result and Requirement are pret aliases
+; of ONE byte — the caller writes the requirement, the routine writes its result
+; back over it. Sym-verified; these had been file-local equs in the emitted map
+; scripts, which also kept _OaksAideHiText ungeneratable: its `text_decimal
+; hOaksAideRequirement` needs the address resolvable from gb_memmap.inc.
+wElevatorWarpMaps       equ 0xCC5B  ; ram/wram.asm:503 `ds 11*2` — NEXTU union with
+                                    ; wOaksAideRewardItemName below, hence the shared address
+wOaksAideRewardItemName equ 0xCC5B  ; ram/wram.asm:500 (ds ITEM_NAME_LENGTH) — the
+                                    ; item name _OaksAideHiText text_rams into its line
+hOaksAideResult        equ 0xFFDB
+hOaksAideRequirement   equ 0xFFDB   ; same byte as hOaksAideResult (written literal:
+                                    ; the asset generators' memmap reader takes only literals)
+hOaksAideRewardItem    equ 0xFFDC
+hOaksAideNumMonsOwned  equ 0xFFDD
 hItemPrice             equ 0xFF8B
 hLoadedROMBank         equ 0xFFB8
 hFrameCounter          equ 0xFFD5
@@ -1638,6 +1652,7 @@ BIT_NO_MAP_MUSIC             equ 1 ; wStatusFlags7 bit 1 — suppress this map's
 %endif
 BIT_CUR_MAP_LOADED_1         equ 5 ; wCurrentMapScriptFlags bit 5 (dup: main_menu.asm, specific_script_flags.asm)
 BIT_CUR_MAP_LOADED_2         equ 6 ; wCurrentMapScriptFlags bit 6 (dup: specific_script_flags.asm)
+BIT_CUR_MAP_USED_ELEVATOR     equ 0x7    ; constants/ram_constants.asm:30 (const_def 5, third)
 ; Folded in from m8_2_pending_symbols.inc 2026-07-27 (constants/ram_constants.asm).
 BIT_SEEN_BY_TRAINER          equ 0 ; wMiscFlags bit 0 — ram_constants.asm:8
 BIT_PRINT_END_BATTLE_TEXT    equ 7 ; wStatusFlags3 bit 7

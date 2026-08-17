@@ -57,7 +57,6 @@ TEXT_HALLOFFAME_OAK                            equ 1
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteFacingDirection                         equ 0xFF8D
 wHallOfFameCurScript                           equ 0xD64A
 wLancesRoomCurScript                           equ 0xD652
 wLastBlackoutMap                               equ 0xD718

@@ -95,7 +95,6 @@ TEXT_ROUTE22_RIVAL2                            equ 2
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteFacingDirection                         equ 0xFF8D
 wCoordIndex                                    equ 0xCD3D
 wRoute22CurScript                              equ 0xD609
 wSavedCoordIndex                               equ 0xCF0D

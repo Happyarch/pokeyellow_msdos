@@ -72,7 +72,6 @@ TEXT_FIGHTINGDOJO_KARATE_MASTER_I_WILL_GIVE_YOU_A_POKEMON equ 8
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteFacingDirection                         equ 0xFF8D
 wFightingDojoCurScript                         equ 0xD641
 wSavedCoordIndex                               equ 0xCF0D
 

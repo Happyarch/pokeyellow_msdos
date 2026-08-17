@@ -17,9 +17,48 @@ bits 32
 section .text
 
 global IsPlayerPikachuAsleepInParty
+global InitializePikachuTextID
 
 extern IsThisPartyMonStarterPikachu   ; pikachu_status.asm — CF=1 when the slot is the starter
 extern AddNTimes                      ; home/array.asm — ESI += EBX * AL
+extern DisplayTextID                  ; home/text_script.asm
+
+; ---------------------------------------------------------------------------
+; InitializePikachuTextID — pret engine/pikachu/pikachu_emotions.asm:14.
+;
+; Runs the Pikachu emotion/animation "text" (TEXT_PIKACHU_ANIM) through the
+; normal text engine with auto-textbox-drawing forced ON for the duration, then
+; restores it. Called by the map scripts that make Pikachu react.
+;
+;   pret:
+;     ld a, TEXT_PIKACHU_ANIM
+;     ldh [hTextID], a
+;     xor a
+;     ld [wPlayerMovingDirection], a
+;     ld a, $1
+;     ld [wAutoTextBoxDrawingControl], a
+;     call DisplayTextID
+;     xor a
+;     ld [wAutoTextBoxDrawingControl], a
+;     ret
+;
+; Every dereference here is [ebp + SYM]: all four are emulated GB memory
+; (hTextID is HRAM $FF8C, the other two are WRAM). Nothing reads a flag across
+; a store, so no flag-preservation care is needed. The A-register moves are kept
+; literal rather than folded into `mov byte [..], imm` so the value DisplayTextID
+; sees in A on entry matches pret ($01).
+; ---------------------------------------------------------------------------
+InitializePikachuTextID:
+    mov al, TEXT_PIKACHU_ANIM
+    mov [ebp + hTextID], al                   ; ldh [hTextID], a
+    xor al, al
+    mov [ebp + wPlayerMovingDirection], al    ; xor a / ld [wPlayerMovingDirection], a
+    mov al, 1
+    mov [ebp + wAutoTextBoxDrawingControl], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wAutoTextBoxDrawingControl], al
+    ret
 
 ; ---------------------------------------------------------------------------
 ; IsPlayerPikachuAsleepInParty — pret engine/pikachu/pikachu_emotions.asm:372.

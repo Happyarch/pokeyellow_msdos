@@ -35,10 +35,6 @@ extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hOaksAideRequirement                           equ 0xFFDB
-hOaksAideResult                                equ 0xFFDB
-hOaksAideRewardItem                            equ 0xFFDC
-wOaksAideRewardItemName                        equ 0xCC5B
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

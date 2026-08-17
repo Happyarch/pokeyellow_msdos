@@ -97,7 +97,6 @@ TEXT_BILLSHOUSE_BILL_SS_TICKET                 equ 2
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteFacingDirection                         equ 0xFF8D
 hSpriteMapXCoord                               equ 0xFFEE
 hSpriteMapYCoord                               equ 0xFFED
 hSpriteScreenXCoord                            equ 0xFFEC

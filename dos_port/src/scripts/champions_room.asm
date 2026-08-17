@@ -89,7 +89,6 @@ TEXT_CHAMPIONSROOM_OAK_COME_WITH_ME            equ 5
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteFacingDirection                         equ 0xFF8D
 wChampionsRoomCurScript                        equ 0xD64B
 wPlayerStarter                                 equ 0xD716
 

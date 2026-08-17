@@ -55,7 +55,6 @@ extern YesNoChoice
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hOaksAideResult                                equ 0xFFDB
 wPikachuMapScriptFlags                         equ 0xD492
 wPikachuSpawnStateFlags                        equ 0xD471
 

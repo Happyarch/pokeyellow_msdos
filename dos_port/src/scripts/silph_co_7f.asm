@@ -94,7 +94,6 @@ TEXT_SILPHCO7F_RIVAL_GOOD_LUCK_TO_YOU          equ 15
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteFacingDirection                         equ 0xFF8D
 hUnlockedSilphCoDoors                          equ 0xFFE0
 wAddedToParty                                  equ 0xCCD3
 wCoordIndex                                    equ 0xCD3D

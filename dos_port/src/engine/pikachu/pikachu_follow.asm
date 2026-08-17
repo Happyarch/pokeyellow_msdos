@@ -3,15 +3,15 @@
 ; Was src/engine/overworld/pikachu.asm until the mirror repair. Holds four of that
 ; pret file's eighteen labels, in pret order:
 ;   ShouldPikachuSpawn (:1), ResetPikachuOverworldStateFlag2 (:344),
-;   SpawnPikachu_ (:351, see the naming note below), TrySpawnPikachu (:403)
+;   SpawnPikachu_ (:351, see the naming note below), TrySpawnPikachu (:403),
+;   GetPikachuFacingDirectionAndReturnToE (:1110), GetPikachuFacingDirection (:1115)
 ;
-; The other fourteen are unported, and all belong to the deferred follower FSM:
+; The other twelve are unported, and all belong to the deferred follower FSM:
 ; SchedulePikachuSpawnForAfterText, ClearPikachuSpriteStateData,
 ; CalculatePikachuSpawnCoordsAndFacing, CalculatePikachuPlacementCoords,
 ; CalculatePikachuFacingDirection, SetPikachuSpawnOutside, Pointer_fc64b,
 ; Pointer_fc653, SetPikachuSpawnWarpPad, Pointer_fc68e, SetPikachuSpawnBackOutside,
-; SetPikachuOverworldStateFlag2, GetPikachuFacingDirectionAndReturnToE,
-; Func_fcc08, ComputePikachuFacingDirection.
+; SetPikachuOverworldStateFlag2, Func_fcc08, ComputePikachuFacingDirection.
 ;
 ; *** NAMING DEBT, PRE-EXISTING AND NOT INTRODUCED HERE: pret's label is
 ; `SpawnPikachu_` and the port calls it `_SpawnPikachu` — a forked name, which
@@ -151,4 +151,88 @@ TrySpawnPikachu:
     mov byte [ebp + wSpritePikachuStateData1ImageIndex], 0xFF
     mov byte [ebp + wSpritePikachuStateData1MovementStatus], 0 ; the byte before ImageIndex
     xor al, al                                                 ; xor a (carry clear)
+    ret
+
+; ===========================================================================
+; GetPikachuFacingDirectionAndReturnToE — pret pikachu_follow.asm:1110
+; GetPikachuFacingDirection             — pret pikachu_follow.asm:1115
+;
+; Answers "which way is Pikachu from the player?" as a SPRITE_FACING_* value
+; ($ff when Pikachu is standing on the player's own square). Y is tested first:
+; a Y mismatch decides the answer outright and X is never consulted, exactly as
+; pret does it.
+;
+; Out: AL = SPRITE_FACING_UP/DOWN/LEFT/RIGHT, or $ff (standing).
+;      GetPikachuFacingDirectionAndReturnToE additionally copies it to E (DL),
+;      which is what its one caller (TryApplyPikachuMovementData) compares
+;      against B.
+; Clobbers: BX (pret loads BC), DX (pret loads D/E), ESI (pret's HL).
+;
+; SYMBOLS: pret names two WRAM symbols this port's gb_memmap.inc does not carry
+; yet — wSpritePikachuStateData1PictureID and the
+; wSpritePlayerStateData2Map{Y,X} - wSpritePlayerStateData1 deltas. Rather than
+; invent a symbol or hard-code $C1F0/$104, both are written as arithmetic over
+; the constants gb_memmap.inc already defines, so they track the struct
+; definitions:
+;   wSpritePikachuStateData1PictureID
+;     = wSpriteStateData1 + PIKACHU_SPRITE_INDEX*SPRITESTATEDATA_STRUCT_SIZE
+;       + SPRITESTATEDATA1_PICTUREID                                  (= $C1F0)
+;   wSpritePlayerStateData2MapY - wSpritePlayerStateData1
+;     = (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1 (= $104)
+;
+; DEREFERENCES: every load is [ebp + ...] — wXCoord/wYCoord and the sprite state
+; arrays are all emulated GB memory. There is no flat program-image pointer in
+; this routine.
+;
+; FLAGS: pret's `cp e` / `jr z` / `jr nc` pair reads ZF then CF from the SAME
+; compare; `je` does not write flags, so the following `jae` still sees the
+; compare's CF. `cp` is unsigned on SM83, hence `jae` for `jr nc`.
+; ===========================================================================
+global GetPikachuFacingDirectionAndReturnToE
+
+GetPikachuFacingDirectionAndReturnToE:
+    call GetPikachuFacingDirection
+    mov dl, al                          ; ld e, a
+    ret
+
+GetPikachuFacingDirection:
+    ; ld bc, wSpritePikachuStateData1PictureID
+    mov ebx, wSpriteStateData1 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE + SPRITESTATEDATA1_PICTUREID
+    mov al, [ebp + wXCoord]
+    add al, 4
+    mov dh, al                          ; ld d, a
+    mov al, [ebp + wYCoord]
+    add al, 4
+    mov dl, al                          ; ld e, a
+    ; ld hl, wSpritePlayerStateData2MapY - wSpritePlayerStateData1 / add hl, bc
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + esi]                 ; ld a, [hl] — Pikachu's map Y
+    cmp al, dl                          ; cp e
+    je .asm_fcb71
+    jae .asm_fcb6e                      ; jr nc
+    mov al, SPRITE_FACING_UP
+    ret
+
+.asm_fcb6e:
+    mov al, SPRITE_FACING_DOWN
+    ret
+
+.asm_fcb71:
+    ; ld hl, wSpritePlayerStateData2MapX - wSpritePlayerStateData1 / add hl, bc
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPX) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + esi]                 ; ld a, [hl] — Pikachu's map X
+    cmp al, dh                          ; cp d
+    je .asm_fcb81
+    jae .asm_fcb7e                      ; jr nc
+    mov al, SPRITE_FACING_LEFT
+    ret
+
+.asm_fcb7e:
+    mov al, SPRITE_FACING_RIGHT
+    ret
+
+.asm_fcb81:
+    mov al, 0xFF                        ; ld a, $ff ; standing
     ret

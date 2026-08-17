@@ -81,6 +81,21 @@ TEXT_SCRIPT_FAR = [
     "_RepelWoreOffText",
 ]
 
+# engine/events/elevator.asm's floor prompt.
+ELEVATOR_FAR = [
+    "_WhichFloorText",
+]
+
+# engine/events/oaks_aide.asm's six messages.
+OAKS_AIDE_FAR = [
+    "_OaksAideHiText",
+    "_OaksAideUhOhText",
+    "_OaksAideComeBackText",
+    "_OaksAideHereYouGoText",
+    "_OaksAideGotItemText",
+    "_OaksAideNoRoomText",
+]
+
 # engine/events/pokecenter_chansey.asm's one message (data/text/text_1.asm).
 POKECENTER_CHANSEY_FAR = [
     "_NurseChanseyText",
@@ -145,6 +160,10 @@ def main() -> int:
          "Sign / boulder / ledge FAR text streams for home/overworld_text.asm"),
         ("pokecenter_chansey_text", POKECENTER_CHANSEY_FAR,
          "Nurse's Chansey message for engine/events/pokecenter_chansey.asm"),
+        ("elevator_text", ELEVATOR_FAR,
+         "Elevator floor-prompt FAR text stream for engine/overworld/elevator.asm"),
+        ("oaks_aide_text", OAKS_AIDE_FAR,
+         "Oak's Aide FAR text streams for engine/events/oaks_aide.asm"),
     ]
     for base, labels, desc in far_files:
         fout = [

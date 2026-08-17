@@ -69,7 +69,6 @@ TEXT_SSANNE2F_RIVAL_CUT_MASTER                 equ 3
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
 hSavedCoordIndex                               equ 0xFFDB
-hSpriteFacingDirection                         equ 0xFF8D
 wCoordIndex                                    equ 0xCD3D
 wSSAnne2FCurScript                             equ 0xD664
 

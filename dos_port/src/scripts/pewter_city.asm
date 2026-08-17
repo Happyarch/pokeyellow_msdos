@@ -82,8 +82,6 @@ TEXT_PEWTERCITY_YOUNGSTER_GO_TAKE_ON_BROCK     equ 14
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteFacingDirection                         equ 0xFF8D
-hSpriteImageIndex                              equ 0xFF8D
 hSpriteMapXCoord                               equ 0xFFEE
 hSpriteMapYCoord                               equ 0xFFED
 hSpriteScreenXCoord                            equ 0xFFEC

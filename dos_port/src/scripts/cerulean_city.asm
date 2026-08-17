@@ -97,8 +97,6 @@ TOGGLE_CERULEAN_RIVAL                          equ 6
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hSpriteDataOffset                              equ 0xFF8B
-hSpriteFacingDirection                         equ 0xFF8D
 wCeruleanCityCurScript                         equ 0xD60E
 wCoordIndex                                    equ 0xCD3D
 wSprite02StateData1FacingDirection             equ 0xC129

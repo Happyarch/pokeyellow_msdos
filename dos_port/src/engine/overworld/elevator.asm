@@ -32,6 +32,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
+%include "gb_text.inc"
 %include "assets/audio_constants.inc"         ; SFX_COLLISION / SFX_SAFARI_ZONE_PA
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
@@ -50,6 +51,8 @@ extern StopAllMusic                ; home/audio.asm (LIVE)
 extern PlayMusic                   ; home/audio.asm (LIVE; AL=id, BL=bank)
 extern PlayDefaultMusic            ; home/audio.asm (LIVE)
 extern UpdateSprites               ; src/home/update_sprites.asm
+extern PrintText                   ; src/home/window.asm — ESI = flat TX stream ptr
+extern DisplayListMenuID           ; src/home/list_menu.asm — in: [wListMenuID]/[wListPointer]; out: CF=1 cancelled
 
 section .text
 

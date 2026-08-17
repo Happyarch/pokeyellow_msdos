@@ -632,6 +632,10 @@ GAME_SRCS := \
     src/engine/pikachu/pikachu_follow.asm \
     src/engine/events/pewter_guys.asm \
     src/engine/events/pokecenter_chansey.asm \
+    src/engine/events/oaks_aide.asm \
+    src/engine/events/saffron_guards.asm \
+    src/data/items/guard_drink_items.asm \
+    src/engine/events/elevator.asm \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/update_map.asm \
     src/engine/overworld/elevator.asm \
@@ -3200,7 +3204,7 @@ assets/script_strings.inc: assets/gb_charmap.txt tools/generators/gen_script_str
 assets/text_oracle.inc: assets/gb_charmap.txt tools/generators/gen_text_oracle.py tools/generators/gb_text.py
 	python3 tools/generators/gen_text_oracle.py
 
-assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc &: \
+assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc assets/elevator_text.inc assets/oaks_aide_text.inc &: \
                             assets/gb_charmap.txt tools/generators/gen_overworld_strings.py tools/generators/gb_text.py \
                             tools/generators/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_8.asm ../data/text/text_9.asm \
                             ../constants/charmap.asm
@@ -3462,6 +3466,8 @@ assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
 # DrawStartMenu %includes the generated menu_strings.inc labels and the
 # UI_START_MENU_* equates; start_sub_menus needs the UI_USE_TOSS_* equates.
 src/home/overworld_text.o: assets/overworld_sign_text.inc
+src/engine/events/oaks_aide.o: assets/oaks_aide_text.inc assets/script_constants.inc
+src/engine/events/elevator.o: assets/elevator_text.inc
 src/engine/events/pokecenter_chansey.o: assets/pokecenter_chansey_text.inc \
                                         assets/script_constants.inc
 src/home/start_menu.o: assets/event_constants.inc assets/audio_constants.inc
@@ -3709,6 +3715,7 @@ assets: assets/scenario_registry.inc \
         assets/script_strings.inc \
         assets/text_oracle.inc \
         assets/overworld_strings.inc assets/field_move_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc \
+        assets/elevator_text.inc assets/oaks_aide_text.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/field_move_names.inc \
