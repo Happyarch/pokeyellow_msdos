@@ -1,14 +1,14 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 1753,
- "regions_bailed": 777,
+ "regions_lowered": 1766,
+ "regions_bailed": 764,
  "by_reason": {
   "owned-by-generated-assets": 255,
-  "target-region-bailed": 258,
+  "target-region-bailed": 255,
   "screen-coord-projection": 4,
   "inline-text-db": 11,
   "bit-clobbers-live-carry": 14,
-  "host-pointer-in-16bit-reg": 37,
+  "host-pointer-in-16bit-reg": 27,
   "predef-leaves-id-in-a": 27,
   "text-sound-command-unported": 49,
   "pikachu-table-index": 3,
@@ -44,8 +44,8 @@
    ]
   },
   "scripts/BillsHouse.asm": {
-   "ok_regions": 27,
-   "bailed_regions": 10,
+   "ok_regions": 28,
+   "bailed_regions": 9,
    "reasons": [
     "bit-clobbers-live-carry",
     "host-pointer-in-16bit-reg",
@@ -262,11 +262,9 @@
    ]
   },
   "scripts/ChampionsRoom.asm": {
-   "ok_regions": 22,
-   "bailed_regions": 2,
-   "reasons": [
-    "host-pointer-in-16bit-reg"
-   ]
+   "ok_regions": 24,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/CinnabarGym.asm": {
    "ok_regions": 54,
@@ -443,10 +441,9 @@
    ]
   },
   "scripts/HallOfFame.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 2,
+   "ok_regions": 8,
+   "bailed_regions": 1,
    "reasons": [
-    "host-pointer-in-16bit-reg",
     "predef-leaves-id-in-a"
    ]
   },
@@ -463,10 +460,9 @@
    ]
   },
   "scripts/LancesRoom.asm": {
-   "ok_regions": 14,
-   "bailed_regions": 3,
+   "ok_regions": 15,
+   "bailed_regions": 2,
    "reasons": [
-    "host-pointer-in-16bit-reg",
     "owned-by-generated-assets"
    ]
   },
@@ -571,13 +567,12 @@
    ]
   },
   "scripts/OaksLab.asm": {
-   "ok_regions": 43,
-   "bailed_regions": 49,
+   "ok_regions": 46,
+   "bailed_regions": 46,
    "reasons": [
     "bank-expression",
     "event-byte-assembly-state",
     "hl-half-register-access",
-    "host-pointer-in-16bit-reg",
     "local-label-scope-collision",
     "pikachu-table-index",
     "pointer-domain-unknown",
@@ -1227,22 +1222,20 @@
    ]
   },
   "scripts/SeafoamIslandsB3F.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 5,
+   "ok_regions": 9,
+   "bailed_regions": 3,
    "reasons": [
     "bit-clobbers-live-carry",
     "event-byte-assembly-state",
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/SeafoamIslandsB4F.asm": {
-   "ok_regions": 15,
-   "bailed_regions": 3,
+   "ok_regions": 16,
+   "bailed_regions": 2,
    "reasons": [
     "host-pointer-in-16bit-reg",
-    "owned-by-gen_map_script_tables",
-    "target-region-bailed"
+    "owned-by-gen_map_script_tables"
    ]
   },
   "scripts/SilphCo10F.asm": {
@@ -1485,13 +1478,12 @@
    ]
   },
   "scripts/VermilionDock.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 7,
+   "ok_regions": 3,
+   "bailed_regions": 6,
    "reasons": [
     "add-hl-r16",
     "event-byte-assembly-state",
     "hl-half-register-access",
-    "host-pointer-in-16bit-reg",
     "screen-coord-projection",
     "target-region-bailed",
     "unknown-macro"
@@ -1600,12 +1592,11 @@
    ]
   },
   "scripts/ViridianMart.asm": {
-   "ok_regions": 4,
-   "bailed_regions": 5,
+   "ok_regions": 5,
+   "bailed_regions": 4,
    "reasons": [
     "event-byte-assembly-state",
     "hl-half-register-access",
-    "host-pointer-in-16bit-reg",
     "target-region-bailed",
     "text-sound-command-unported"
    ]
@@ -1811,20 +1802,6 @@
    "lines": [
     145,
     186
-   ]
-  },
-  {
-   "file": "scripts/BillsHouse.asm",
-   "region": "BillsHouseScript7",
-   "labels": [
-    "BillsHouseScript7"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of RLE_1e219; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/BillsHouse.asm:218",
-   "lines": [
-    212,
-    226
    ]
   },
   {
@@ -3063,34 +3040,6 @@
    ]
   },
   {
-   "file": "scripts/ChampionsRoom.asm",
-   "region": "ChampionsRoomPlayerEntersScript",
-   "labels": [
-    "ChampionsRoomPlayerEntersScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of RivalEntrance_RLEMovement; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/ChampionsRoom.asm:35",
-   "lines": [
-    32,
-    42
-   ]
-  },
-  {
-   "file": "scripts/ChampionsRoom.asm",
-   "region": "ChampionsRoomPlayerFollowsOakScript",
-   "labels": [
-    "ChampionsRoomPlayerFollowsOakScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of WalkToHallOfFame_RLEMovement; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/ChampionsRoom.asm:201",
-   "lines": [
-    198,
-    208
-   ]
-  },
-  {
    "file": "scripts/CinnabarGym.asm",
    "region": "CinnabarGymSetMapAndTiles",
    "labels": [
@@ -4297,20 +4246,6 @@
    ]
   },
   {
-   "file": "scripts/HallOfFame.asm",
-   "region": "HallOfFameDefaultScript",
-   "labels": [
-    "HallOfFameDefaultScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of HallOfFameEntryMovement; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/HallOfFame.asm:64",
-   "lines": [
-    61,
-    71
-   ]
-  },
-  {
    "file": "scripts/IndigoPlateauLobby.asm",
    "region": "IndigoPlateauLobby_TextPointers",
    "labels": [
@@ -4326,20 +4261,6 @@
    "lines": [
     18,
     38
-   ]
-  },
-  {
-   "file": "scripts/LancesRoom.asm",
-   "region": "WalkToLance",
-   "labels": [
-    "WalkToLance"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of WalkToLance_RLEList; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/LancesRoom.asm:101",
-   "lines": [
-    98,
-    109
    ]
   },
   {
@@ -5139,49 +5060,6 @@
    "lines": [
     13,
     36
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabPlayerEntersLabScript",
-   "labels": [
-    "OaksLabPlayerEntersLabScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of PlayerEntryMovementRLE; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/OaksLab.asm:89",
-   "lines": [
-    87,
-    107
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabPlayerWalksToOakScript",
-   "labels": [
-    "OaksLabPlayerWalksToOakScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_1c599 is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:265",
-   "lines": [
-    263,
-    270
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabPlayerWalksToOakScript.asm_1c599",
-   "labels": [
-    "OaksLabPlayerWalksToOakScript.asm_1c599",
-    "OaksLabPlayerWalksToOakScript.asm_1c5a6"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of OaksLabRLE_PlayerWalksToOak; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/OaksLab.asm:274",
-   "lines": [
-    273,
-    282
    ]
   },
   {
@@ -11049,46 +10927,16 @@
   },
   {
    "file": "scripts/SeafoamIslandsB3F.asm",
-   "region": "SeafoamIslandsB3FDefaultScript",
-   "labels": [
-    "SeafoamIslandsB3FDefaultScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of RLEList_ForcedSurfingStrongCurrentNearSteps; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/SeafoamIslandsB3F.asm:70",
-   "lines": [
-    61,
-    79
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB3F.asm",
    "region": "SeafoamIslandsB3FMoveObjectScript",
    "labels": [
     "SeafoamIslandsB3FMoveObjectScript"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".playerFellThroughHoleLeft is defined in a region that bailed",
-   "at": "scripts/SeafoamIslandsB3F.asm:100",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearRightBoulder; callee <none in range> has no abi.json entry",
+   "at": "scripts/SeafoamIslandsB3F.asm:104",
    "lines": [
     96,
     105
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB3F.asm",
-   "region": "SeafoamIslandsB3FMoveObjectScript.playerFellThroughHoleLeft",
-   "labels": [
-    "SeafoamIslandsB3FMoveObjectScript.playerFellThroughHoleLeft",
-    "SeafoamIslandsB3FMoveObjectScript.forceSurfMovement",
-    "SeafoamIslandsB3FMoveObjectScript.playerNotInStrongCurrent"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearLeftBoulder; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/SeafoamIslandsB3F.asm:107",
-   "lines": [
-    107,
-    122
    ]
   },
   {
@@ -11097,28 +10945,12 @@
    "labels": [
     "SeafoamIslandsB4FMoveObjectScript"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".playerNotInStrongCurrent is defined in a region that bailed",
-   "at": "scripts/SeafoamIslandsB4F.asm:78",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearLeftBoulder; callee <none in range> has no abi.json entry",
+   "at": "scripts/SeafoamIslandsB4F.asm:86",
    "lines": [
     76,
     87
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB4F.asm",
-   "region": "SeafoamIslandsB4FMoveObjectScript.nearRightBoulder",
-   "labels": [
-    "SeafoamIslandsB4FMoveObjectScript.nearRightBoulder",
-    "SeafoamIslandsB4FMoveObjectScript.forceSurfMovement",
-    "SeafoamIslandsB4FMoveObjectScript.playerNotInStrongCurrent"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearRightBoulder; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/SeafoamIslandsB4F.asm:89",
-   "lines": [
-    89,
-    99
    ]
   },
   {
@@ -13107,20 +12939,6 @@
   },
   {
    "file": "scripts/VermilionDock.asm",
-   "region": "VermilionDock_EmitSmokePuff",
-   "labels": [
-    "VermilionDock_EmitSmokePuff"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of VermilionDockOAMBlock; callee WriteOAMBlock has no abi.json entry",
-   "at": "scripts/VermilionDock.asm:153",
-   "lines": [
-    144,
-    155
-   ]
-  },
-  {
-   "file": "scripts/VermilionDock.asm",
    "region": "VermilionDock_SyncScrollWithLY",
    "labels": [
     "VermilionDock_SyncScrollWithLY",
@@ -14084,20 +13902,6 @@
    "lines": [
     15,
     21
-   ]
-  },
-  {
-   "file": "scripts/ViridianMart.asm",
-   "region": "ViridianMartDefaultScript",
-   "labels": [
-    "ViridianMartDefaultScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .PlayerMovement; callee DecodeRLEList has no abi.json entry",
-   "at": "scripts/ViridianMart.asm:35",
-   "lines": [
-    30,
-    42
    ]
   },
   {

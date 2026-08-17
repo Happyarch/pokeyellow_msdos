@@ -25,6 +25,7 @@ bits 32
 
 global VermilionDockOAMBlock
 global VermilionDockUnusedText
+global VermilionDock_EmitSmokePuff
 global VermilionDock_TextPointers
 
 extern CopyScreenTileBufferToVRAM   ; NOT YET DEFINED IN THE PORT
@@ -42,7 +43,6 @@ extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
 extern UpdateCGBPal_OBP1   ; NOT YET DEFINED IN THE PORT
 extern VermilionDockSSAnneLeavesScript   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_AnimSmokePuffDriftRight   ; NOT YET DEFINED IN THE PORT
-extern VermilionDock_EmitSmokePuff   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_EraseSSAnne   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_Script   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_SyncScrollWithLY   ; NOT YET DEFINED IN THE PORT
@@ -218,22 +218,19 @@ section .text
 ; PRET| 	pop bc
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] VermilionDock_EmitSmokePuff (scripts/VermilionDock.asm:144-155) — at scripts/VermilionDock.asm:153: de cannot hold the 32-bit address of VermilionDockOAMBlock; callee WriteOAMBlock has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wSSAnneSmokeX]
-; PRET| 	sub 16
-; PRET| 	ld [wSSAnneSmokeX], a
-; PRET| 	ld c, a
-; PRET| 	ld b, 100 ; Y
-; PRET| 	ld a, [wSSAnneSmokeDriftAmount]
-; PRET| 	inc a
-; PRET| 	ld [wSSAnneSmokeDriftAmount], a
-; PRET| 	ld a, $1
-; PRET| 	ld de, VermilionDockOAMBlock
-; PRET| 	call WriteOAMBlock
-; PRET| 	ret
+VermilionDock_EmitSmokePuff:
+    mov al, [ebp + wSSAnneSmokeX]
+    sub al, 16
+    mov [ebp + wSSAnneSmokeX], al
+    mov bl, al
+    mov bh, 100
+    mov al, [ebp + wSSAnneSmokeDriftAmount]
+    inc al
+    mov [ebp + wSSAnneSmokeDriftAmount], al
+    mov al, 0x1
+    mov edx, VermilionDockOAMBlock   ; pret: ld de, VermilionDockOAMBlock — WriteOAMBlock takes it in EDX
+    call WriteOAMBlock
+    ret
 
 VermilionDockOAMBlock:
     db 0xfc, OAM_PAL1

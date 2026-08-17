@@ -24,6 +24,7 @@ bits 32
 
 global RLEList_ForcedSurfingStrongCurrentNearSteps
 global Seafoam4HolesCoords
+global SeafoamIslandsB3FDefaultScript
 global SeafoamIslandsB3FObjectMoving1Script
 global SeafoamIslandsB3FObjectMoving2Script
 global SeafoamIslandsB3F_ScriptPointers
@@ -36,7 +37,6 @@ extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern IsPlayerOnDungeonWarp   ; NOT YET DEFINED IN THE PORT
-extern SeafoamIslandsB3FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SeafoamIslandsB3FMoveObjectScript   ; NOT YET DEFINED IN THE PORT
 extern SeafoamIslandsB3F_Script   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
@@ -128,29 +128,32 @@ SeafoamIslandsB3F_ScriptPointers:
     dd SeafoamIslandsB3FMoveObjectScript
     dd SeafoamIslandsB3FObjectMoving2Script
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SeafoamIslandsB3FDefaultScript (scripts/SeafoamIslandsB3F.asm:61-79) — at scripts/SeafoamIslandsB3F.asm:70: de cannot hold the 32-bit address of RLEList_ForcedSurfingStrongCurrentNearSteps; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
-; PRET| 	ret z
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp 8
-; PRET| 	ret nz
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 15
-; PRET| 	ret nz
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	ld de, RLEList_ForcedSurfingStrongCurrentNearSteps
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld hl, wStatusFlags7
-; PRET| 	set BIT_FORCED_WARP, [hl]
-; PRET| 	ld a, SCRIPT_SEAFOAMISLANDSB3F_OBJECT_MOVING1
-; PRET| 	ld [wSeafoamIslandsB3FCurScript], a
-; PRET| 	ret
+SeafoamIslandsB3FDefaultScript:
+    CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
+    jnz .nr_62
+        ret
+.nr_62:
+    mov al, [ebp + wYCoord]
+    cmp al, 8
+    jz .nr_65
+        ret
+.nr_65:
+    mov al, [ebp + wXCoord]
+    cmp al, 15
+    jz .nr_68
+        ret
+.nr_68:
+    mov esi, wSimulatedJoypadStatesEnd
+    mov edi, RLEList_ForcedSurfingStrongCurrentNearSteps   ; pret: ld de, RLEList_ForcedSurfingStrongCurrentNearSteps — DecodeRLEList takes it in EDI
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    call StartSimulatingJoypadStates
+    mov esi, wStatusFlags7
+    or byte [ebp + esi], (1 << (2))
+    mov al, SCRIPT_SEAFOAMISLANDSB3F_OBJECT_MOVING1
+    mov [ebp + wSeafoamIslandsB3FCurScript], al
+    ret
 
 RLEList_ForcedSurfingStrongCurrentNearSteps:
     db PAD_DOWN, 6
@@ -169,7 +172,7 @@ SeafoamIslandsB3FObjectMoving1Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SeafoamIslandsB3FMoveObjectScript (scripts/SeafoamIslandsB3F.asm:96-105) — at scripts/SeafoamIslandsB3F.asm:100: .playerFellThroughHoleLeft is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] SeafoamIslandsB3FMoveObjectScript (scripts/SeafoamIslandsB3F.asm:96-105) — at scripts/SeafoamIslandsB3F.asm:104: de cannot hold the 32-bit address of .RLEList_StrongCurrentNearRightBoulder; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
@@ -183,26 +186,23 @@ SeafoamIslandsB3FObjectMoving1Script:
 ; PRET| 	ld de, .RLEList_StrongCurrentNearRightBoulder
 ; PRET| 	jr .forceSurfMovement
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SeafoamIslandsB3FMoveObjectScript.playerFellThroughHoleLeft (scripts/SeafoamIslandsB3F.asm:107-122) — at scripts/SeafoamIslandsB3F.asm:107: de cannot hold the 32-bit address of .RLEList_StrongCurrentNearLeftBoulder; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld de, .RLEList_StrongCurrentNearLeftBoulder
-; PRET| .forceSurfMovement
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	xor a
-; PRET| 	ld [wSpritePlayerStateData2MovementByte1], a
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	set BIT_SCRIPTED_MOVEMENT_STATE, [hl]
-; PRET| 	ld hl, wStatusFlags7
-; PRET| 	set BIT_FORCED_WARP, [hl]
-; PRET| 	ld a, SCRIPT_SEAFOAMISLANDSB3F_OBJECT_MOVING2
-; PRET| .playerNotInStrongCurrent
-; PRET| 	ld [wSeafoamIslandsB3FCurScript], a
-; PRET| 	ret
+.playerFellThroughHoleLeft:
+    mov edi, .RLEList_StrongCurrentNearLeftBoulder   ; pret: ld de, .RLEList_StrongCurrentNearLeftBoulder — DecodeRLEList takes it in EDI
+.forceSurfMovement:
+    mov esi, wSimulatedJoypadStatesEnd
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    xor al, al
+    mov [ebp + wSpritePlayerStateData2MovementByte1], al
+    mov esi, wStatusFlags5
+    or byte [ebp + esi], (1 << (BIT_SCRIPTED_MOVEMENT_STATE))
+    mov esi, wStatusFlags7
+    or byte [ebp + esi], (1 << (2))
+    mov al, SCRIPT_SEAFOAMISLANDSB3F_OBJECT_MOVING2
+.playerNotInStrongCurrent:
+    mov [ebp + wSeafoamIslandsB3FCurScript], al
+    ret
 
 .RLEList_StrongCurrentNearRightBoulder:
     db PAD_DOWN, 6

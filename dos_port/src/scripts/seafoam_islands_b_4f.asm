@@ -155,7 +155,7 @@ SeafoamIslandsB4FObjectMoving1Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SeafoamIslandsB4FMoveObjectScript (scripts/SeafoamIslandsB4F.asm:76-87) — at scripts/SeafoamIslandsB4F.asm:78: .playerNotInStrongCurrent is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] SeafoamIslandsB4FMoveObjectScript (scripts/SeafoamIslandsB4F.asm:76-87) — at scripts/SeafoamIslandsB4F.asm:86: de cannot hold the 32-bit address of .RLEList_StrongCurrentNearLeftBoulder; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckBothEventsSet EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE
@@ -171,21 +171,18 @@ SeafoamIslandsB4FObjectMoving1Script:
 ; PRET| 	ld de, .RLEList_StrongCurrentNearLeftBoulder
 ; PRET| 	jr .forceSurfMovement
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SeafoamIslandsB4FMoveObjectScript.nearRightBoulder (scripts/SeafoamIslandsB4F.asm:89-99) — at scripts/SeafoamIslandsB4F.asm:89: de cannot hold the 32-bit address of .RLEList_StrongCurrentNearRightBoulder; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld de, .RLEList_StrongCurrentNearRightBoulder
-; PRET| .forceSurfMovement
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, SCRIPT_SEAFOAMISLANDSB4F_OBJECT_MOVING2
-; PRET| .playerNotInStrongCurrent
-; PRET| 	ld [wSeafoamIslandsB4FCurScript], a
-; PRET| 	ret
+.nearRightBoulder:
+    mov edi, .RLEList_StrongCurrentNearRightBoulder   ; pret: ld de, .RLEList_StrongCurrentNearRightBoulder — DecodeRLEList takes it in EDI
+.forceSurfMovement:
+    mov esi, wSimulatedJoypadStatesEnd
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_SEAFOAMISLANDSB4F_OBJECT_MOVING2
+.playerNotInStrongCurrent:
+    mov [ebp + wSeafoamIslandsB4FCurScript], al
+    ret
 
 .Coords:
     db 14, 4

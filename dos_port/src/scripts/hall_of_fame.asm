@@ -22,6 +22,7 @@ bits 32
 
 %include "assets/map_dims.inc"
 
+global HallOfFameDefaultScript
 global HallOfFameEntryMovement
 global HallOfFameNoopScript
 global HallOfFameOakCongratulationsScript
@@ -37,7 +38,6 @@ extern Delay3   ; NOT YET DEFINED IN THE PORT
 extern DelayFrames   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern HallOfFameDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern HallOfFamePC   ; NOT YET DEFINED IN THE PORT
 extern HallOfFameResetEventsAndSaveScript   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
@@ -131,21 +131,18 @@ HallOfFameNoopScript:
 ; PRET| 	call WaitForTextScrollButtonPress
 ; PRET| 	jp Init
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] HallOfFameDefaultScript (scripts/HallOfFame.asm:61-71) — at scripts/HallOfFame.asm:64: de cannot hold the 32-bit address of HallOfFameEntryMovement; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	ld de, HallOfFameEntryMovement
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, SCRIPT_HALLOFFAME_OAK_CONGRATULATIONS
-; PRET| 	ld [wHallOfFameCurScript], a
-; PRET| 	ret
+HallOfFameDefaultScript:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov esi, wSimulatedJoypadStatesEnd
+    mov edi, HallOfFameEntryMovement   ; pret: ld de, HallOfFameEntryMovement — DecodeRLEList takes it in EDI
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_HALLOFFAME_OAK_CONGRATULATIONS
+    mov [ebp + wHallOfFameCurScript], al
+    ret
 
 HallOfFameEntryMovement:
     db PAD_UP, 5

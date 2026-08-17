@@ -33,6 +33,7 @@ global LancesRoomPlayerIsMovingScript
 global LancesRoom_Script
 global LancesRoom_ScriptPointers
 global ResetLanceScript
+global WalkToLance
 global WalkToLance_RLEList
 
 extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
@@ -53,7 +54,6 @@ extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WalkToLance   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_LANCESROOM_PLAYER_IS_MOVING             equ 3
@@ -173,22 +173,19 @@ LancesRoomLanceEndBattleScript:
     mov [ebp + hTextID], al
     jmp DisplayTextID
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] WalkToLance (scripts/LancesRoom.asm:98-109) — at scripts/LancesRoom.asm:101: de cannot hold the 32-bit address of WalkToLance_RLEList; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	ld de, WalkToLance_RLEList
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, SCRIPT_LANCESROOM_PLAYER_IS_MOVING
-; PRET| 	ld [wLancesRoomCurScript], a
-; PRET| 	ld [wCurMapScript], a
-; PRET| 	ret
+WalkToLance:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov esi, wSimulatedJoypadStatesEnd
+    mov edi, WalkToLance_RLEList   ; pret: ld de, WalkToLance_RLEList — DecodeRLEList takes it in EDI
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_LANCESROOM_PLAYER_IS_MOVING
+    mov [ebp + wLancesRoomCurScript], al
+    mov [ebp + wCurMapScript], al
+    ret
 
 WalkToLance_RLEList:
     db PAD_UP, 13

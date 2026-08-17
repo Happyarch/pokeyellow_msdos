@@ -37,9 +37,11 @@ global OaksLabPikachuMovementData1
 global OaksLabPikachuMovementData2
 global OaksLabPikachuMovementScript
 global OaksLabPlayerDontGoAwayScript
+global OaksLabPlayerEntersLabScript
 global OaksLabPlayerForcedToWalkBackScript
 global OaksLabPlayerReceivedMonText
 global OaksLabPlayerReceivesPikachuScript
+global OaksLabPlayerWalksToOakScript
 global OaksLabRLE_PlayerWalksToOak
 global OaksLabRivalEndBattleScript
 global OaksLabRivalExclamationScript
@@ -97,8 +99,6 @@ extern OaksLabOakMyInventionPokedexText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabOakThatWasMyDreamText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabPikachuDislikesPokeballsText1   ; NOT YET DEFINED IN THE PORT
 extern OaksLabPikachuDislikesPokeballsText2   ; NOT YET DEFINED IN THE PORT
-extern OaksLabPlayerEntersLabScript   ; NOT YET DEFINED IN THE PORT
-extern OaksLabPlayerWalksToOakScript   ; NOT YET DEFINED IN THE PORT
 extern OaksLabPlayerWatchRivalExitScript   ; NOT YET DEFINED IN THE PORT
 extern OaksLabPokedexText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabReceivedText   ; NOT YET DEFINED IN THE PORT
@@ -326,31 +326,27 @@ OaksLabToggleOaksScript:
     mov [ebp + wOaksLabCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] OaksLabPlayerEntersLabScript (scripts/OaksLab.asm:87-107) — at scripts/OaksLab.asm:89: de cannot hold the 32-bit address of PlayerEntryMovementRLE; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call Delay3
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	ld de, PlayerEntryMovementRLE
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, OAKSLAB_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	xor a
-; PRET| 	ldh [hSpriteFacingDirection], a
-; PRET| 	call SetSpriteFacingDirectionAndDelay
-; PRET| 	ld a, OAKSLAB_OAK1
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	xor a
-; PRET| 	ldh [hSpriteFacingDirection], a
-; PRET| 	call SetSpriteFacingDirectionAndDelay
-; PRET| 
-; PRET| 	ld a, SCRIPT_OAKSLAB_FOLLOWED_OAK
-; PRET| 	ld [wOaksLabCurScript], a
-; PRET| 	ret
+OaksLabPlayerEntersLabScript:
+    call Delay3
+    mov esi, wSimulatedJoypadStatesEnd
+    mov edi, PlayerEntryMovementRLE   ; pret: ld de, PlayerEntryMovementRLE — DecodeRLEList takes it in EDI
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    call StartSimulatingJoypadStates
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    xor al, al
+    mov [ebp + hSpriteFacingDirection], al
+    call SetSpriteFacingDirectionAndDelay
+    mov al, 3
+    mov [ebp + hSpriteIndex], al
+    xor al, al
+    mov [ebp + hSpriteFacingDirection], al
+    call SetSpriteFacingDirectionAndDelay
+    mov al, SCRIPT_OAKSLAB_FOLLOWED_OAK
+    mov [ebp + wOaksLabCurScript], al
+    ret
 
 PlayerEntryMovementRLE:
     db PAD_UP, 8
@@ -511,33 +507,27 @@ OaksLabRivalTakesPokeballScript:
     call StartSimulatingJoypadStates
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabPlayerWalksToOakScript (scripts/OaksLab.asm:263-270) — at scripts/OaksLab.asm:265: .asm_1c599 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp 4
-; PRET| 	jr z, .asm_1c599
-; PRET| 	ld a, $1
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	ld a, PAD_LEFT
-; PRET| 	ld [wSimulatedJoypadStatesEnd], a
-; PRET| 	jr .asm_1c5a6
+OaksLabPlayerWalksToOakScript:
+    mov al, [ebp + wYCoord]
+    cmp al, 4
+    jz .asm_1c599
+    mov al, 0x1
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    mov al, PAD_LEFT
+    mov [ebp + wSimulatedJoypadStatesEnd], al
+    jmp .asm_1c5a6
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] OaksLabPlayerWalksToOakScript.asm_1c599 (scripts/OaksLab.asm:273-282) — at scripts/OaksLab.asm:274: de cannot hold the 32-bit address of OaksLabRLE_PlayerWalksToOak; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	ld de, OaksLabRLE_PlayerWalksToOak
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| .asm_1c5a6
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, SCRIPT_OAKSLAB_PLAYER_RECEIVES_PIKACHU
-; PRET| 	ld [wOaksLabCurScript], a
-; PRET| 	ret
+.asm_1c599:
+    mov esi, wSimulatedJoypadStatesEnd
+    mov edi, OaksLabRLE_PlayerWalksToOak   ; pret: ld de, OaksLabRLE_PlayerWalksToOak — DecodeRLEList takes it in EDI
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+.asm_1c5a6:
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_OAKSLAB_PLAYER_RECEIVES_PIKACHU
+    mov [ebp + wOaksLabCurScript], al
+    ret
 
 OaksLabRLE_PlayerWalksToOak:
     db PAD_UP, 2

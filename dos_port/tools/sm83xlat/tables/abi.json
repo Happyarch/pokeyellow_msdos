@@ -28,6 +28,16 @@
    "de": "edx",
    "evidence": "dos_port/src/home/trainers.asm:616 — 'In: ESI = win text (flat), EDX = lose text (flat)'",
    "sites": 34
+  },
+  "DecodeRLEList": {
+   "de": "edi",
+   "evidence": "dos_port/src/home/map_objects.asm:251 — 'In: EDI = flat pointer to the RLE source list' with ':252 ESI = GB output offset (EBP-relative)'. This was _deliberately_absent on the grounds that the port 'appears to SWAP pret's hl/de roles' and a swap must be confirmed at the routine rather than inferred. The routine's own signature comment confirms exactly that swap, which is the confirmation that note asked for.",
+   "sites": 11
+  },
+  "WriteOAMBlock": {
+   "de": "edx",
+   "evidence": "dos_port/src/home/oam.asm:82-87 — 'source = flat pointer in EDX ... those OAM-block tables are flat image labels (.data), NOT GB WRAM offsets — so take EDX as a full flat pointer rather than biasing a 16-bit offset by ebp. Callers: pass the block label in EDX.' This was _deliberately_absent for 'no signature comment found'; the comment exists and is explicit.",
+   "sites": 1
   }
  },
  "_deliberately_absent": {
@@ -35,12 +45,15 @@
    "These take a DE pointer too, and are LEFT OUT on purpose. Their port",
    "signature comments do not settle where the pointer goes, and a plausible",
    "guess here would be invisible in review — the emitted code would assemble,",
-   "link and run while reading the wrong memory. They bail instead; ~24 sites."
+   "link and run while reading the wrong memory. They bail instead.",
+   "",
+   "DecodeRLEList and WriteOAMBlock were promoted OUT of this list on 2026-08-17,",
+   "each because its signature comment was read at the routine and found to settle",
+   "the question the absence note had asked. Promotion needs that, not a plausible",
+   "reading of the call sites."
   ],
-  "DecodeRLEList": "the port appears to SWAP pret's hl/de roles (ESI = GB output, EDI = source); a swap is exactly the kind of thing to confirm at the routine, not infer",
   "PlaceString": "the port's comment documents ESI and the OUT registers but not where the string pointer arrives",
   "LoadGymLeaderAndCityName": "comment describes a push edx/pop esi dance against CopyData reading dst from DX; unsettled",
-  "WriteOAMBlock": "no signature comment found",
   "CheckPikachuFollowingPlayer": "no signature comment found",
   "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript": "a script routine, not yet ported",
   "PokemonTower2FPikachuMovementScript": "a script routine, not yet ported",

@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global ViridianMartDefaultScript
 global ViridianMartOaksParcelScript
 global ViridianMart_Script
 global ViridianMart_ScriptPointers
@@ -41,7 +42,6 @@ extern ViridianMartClerkSayHiToOakText   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartClerkText   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartClerkYouCameFromPalletTownText   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartCooltrainerMText   ; NOT YET DEFINED IN THE PORT
-extern ViridianMartDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartScript2   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartYoungsterText   ; NOT YET DEFINED IN THE PORT
 extern ViridianMart_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -103,23 +103,20 @@ ViridianMart_ScriptPointers:
     dd ViridianMartOaksParcelScript
     dd ViridianMartScript2
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] ViridianMartDefaultScript (scripts/ViridianMart.asm:30-42) — at scripts/ViridianMart.asm:35: de cannot hold the 32-bit address of .PlayerMovement; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call UpdateSprites
-; PRET| 	ld a, TEXT_VIRIDIANMART_CLERK_YOU_CAME_FROM_PALLET_TOWN
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	ld de, .PlayerMovement
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, SCRIPT_VIRIDIANMART_OAKS_PARCEL
-; PRET| 	ld [wViridianMartCurScript], a
-; PRET| 	ret
+ViridianMartDefaultScript:
+    call UpdateSprites
+    mov al, TEXT_VIRIDIANMART_CLERK_YOU_CAME_FROM_PALLET_TOWN
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov esi, wSimulatedJoypadStatesEnd
+    mov edi, .PlayerMovement   ; pret: ld de, .PlayerMovement — DecodeRLEList takes it in EDI
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_VIRIDIANMART_OAKS_PARCEL
+    mov [ebp + wViridianMartCurScript], al
+    ret
 
 .PlayerMovement:
     db PAD_LEFT, 1

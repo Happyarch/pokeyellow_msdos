@@ -32,6 +32,8 @@ global ChampionsRoomOakDisappointedWithRivalScript
 global ChampionsRoomOakDisappointedWithRivalText
 global ChampionsRoomOakExitsScript
 global ChampionsRoomOakText
+global ChampionsRoomPlayerEntersScript
+global ChampionsRoomPlayerFollowsOakScript
 global ChampionsRoomRivalAfterBattleText
 global ChampionsRoomRivalDefeatedScript
 global ChampionsRoomRivalReadyToBattleScript
@@ -50,8 +52,6 @@ global WalkToHallOfFame_RLEMovement
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern ChampionsRoomPlayerEntersScript   ; NOT YET DEFINED IN THE PORT
-extern ChampionsRoomPlayerFollowsOakScript   ; NOT YET DEFINED IN THE PORT
 extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
 extern Delay3   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
@@ -135,21 +135,18 @@ ChampionsRoom_ScriptPointers:
 ChampionsRoomDefaultScript:
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] ChampionsRoomPlayerEntersScript (scripts/ChampionsRoom.asm:32-42) — at scripts/ChampionsRoom.asm:35: de cannot hold the 32-bit address of RivalEntrance_RLEMovement; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	ld de, RivalEntrance_RLEMovement
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, SCRIPT_CHAMPIONSROOM_RIVAL_READY_TO_BATTLE
-; PRET| 	ld [wChampionsRoomCurScript], a
-; PRET| 	ret
+ChampionsRoomPlayerEntersScript:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov esi, wSimulatedJoypadStatesEnd
+    mov edi, RivalEntrance_RLEMovement   ; pret: ld de, RivalEntrance_RLEMovement — DecodeRLEList takes it in EDI
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_CHAMPIONSROOM_RIVAL_READY_TO_BATTLE
+    mov [ebp + wChampionsRoomCurScript], al
+    ret
 
 RivalEntrance_RLEMovement:
     db PAD_UP, 1
@@ -310,21 +307,18 @@ ChampionsRoomOakExitsScript:
     mov [ebp + wChampionsRoomCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] ChampionsRoomPlayerFollowsOakScript (scripts/ChampionsRoom.asm:198-208) — at scripts/ChampionsRoom.asm:201: de cannot hold the 32-bit address of WalkToHallOfFame_RLEMovement; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	ld de, WalkToHallOfFame_RLEMovement
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, SCRIPT_CHAMPIONSROOM_CLEANUP_SCRIPT
-; PRET| 	ld [wChampionsRoomCurScript], a
-; PRET| 	ret
+ChampionsRoomPlayerFollowsOakScript:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov esi, wSimulatedJoypadStatesEnd
+    mov edi, WalkToHallOfFame_RLEMovement   ; pret: ld de, WalkToHallOfFame_RLEMovement — DecodeRLEList takes it in EDI
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_CHAMPIONSROOM_CLEANUP_SCRIPT
+    mov [ebp + wChampionsRoomCurScript], al
+    ret
 
 WalkToHallOfFame_RLEMovement:
     db PAD_UP, 4

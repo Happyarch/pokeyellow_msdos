@@ -34,6 +34,7 @@ global BillsHousePrintBillPokemonText
 global BillsHouseScript1
 global BillsHouseScript4
 global BillsHouseScript6
+global BillsHouseScript7
 global BillsHouseScript8
 global BillsHouseScript9
 global BillsHouse_CheckMetBill
@@ -56,7 +57,6 @@ extern BillsHouseScript0   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript2   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript3   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript5   ; NOT YET DEFINED IN THE PORT
-extern BillsHouseScript7   ; NOT YET DEFINED IN THE PORT
 extern BillsHouse_CheckPikachuEmotion   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
 extern CheckPikachuFollowingPlayer   ; NOT YET DEFINED IN THE PORT
@@ -344,25 +344,22 @@ BillsHouseScript6:
     mov [ebp + wBillsHouseCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] BillsHouseScript7 (scripts/BillsHouse.asm:212-226) — at scripts/BillsHouse.asm:218: de cannot hold the 32-bit address of RLE_1e219; callee DecodeRLEList has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, SPRITE_FACING_UP
-; PRET| 	ld [wSpritePlayerStateData1FacingDirection], a
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld de, RLE_1e219
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	call DecodeRLEList
-; PRET| 	dec a
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, SCRIPT_BILLSHOUSE_SCRIPT8
-; PRET| 	ld [wBillsHouseCurScript], a
-; PRET| 	ret
+BillsHouseScript7:
+    xor al, al
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, SPRITE_FACING_UP
+    mov [ebp + wSpritePlayerStateData1FacingDirection], al
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov edi, RLE_1e219   ; pret: ld de, RLE_1e219 — DecodeRLEList takes it in EDI
+    mov esi, wSimulatedJoypadStatesEnd
+    call DecodeRLEList
+    dec al
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    call StartSimulatingJoypadStates
+    mov al, SCRIPT_BILLSHOUSE_SCRIPT8
+    mov [ebp + wBillsHouseCurScript], al
+    ret
 
 RLE_1e219:
     db PAD_RIGHT, 0x3
