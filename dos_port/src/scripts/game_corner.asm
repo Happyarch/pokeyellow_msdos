@@ -210,7 +210,7 @@ GameCornerDefaultScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] GameCornerRocketBattleScript (scripts/GameCorner.asm:55-71) — at scripts/GameCorner.asm:66: de cannot hold the 32-bit address of GameCornerMovement_Rocket_WalkAroundPlayer; callee <none in range> has no abi.json entry
+; BAIL[host-pointer-in-16bit-reg] GameCornerRocketBattleScript (scripts/GameCorner.asm:55-71) — at scripts/GameCorner.asm:66: de cannot hold the 32-bit address of GameCornerMovement_Rocket_WalkAroundPlayer; callee GameCornerPikachuMovementScript has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, [wIsInBattle]
@@ -231,15 +231,14 @@ GameCornerDefaultScript:
 ; PRET| 	ld de, GameCornerMovement_Rocket_WalkDirect
 ; PRET| 	jr .got_rocket_movement
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] GameCornerRocketBattleScript.not_direct_movement (scripts/GameCorner.asm:73-77) — at scripts/GameCorner.asm:76: de cannot hold the 32-bit address of GameCornerMovement_Rocket_WalkDirect; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 8
-; PRET| 	jr nz, .pikachu
-; PRET| 	ld de, GameCornerMovement_Rocket_WalkDirect
-; PRET| 	jr .got_rocket_movement
+%assign event_byte -1
+%assign event_byte_a -1
+.not_direct_movement:
+    mov al, [ebp + wXCoord]
+    cmp al, 8
+    jnz .pikachu
+    mov edi, GameCornerMovement_Rocket_WalkDirect   ; pret: ld de, GameCornerMovement_Rocket_WalkDirect — MoveSprite takes it in EDI
+    jmp .got_rocket_movement
 
 %assign event_byte -1
 %assign event_byte_a -1

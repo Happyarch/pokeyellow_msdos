@@ -43,6 +43,10 @@ global SilphCo11FScript11
 global SilphCo11FScript12
 global SilphCo11FScript13
 global SilphCo11FScript14
+global SilphCo11FScript5
+global SilphCo11FScript6
+global SilphCo11FScript7
+global SilphCo11FScript8
 global SilphCo11FScript9
 global SilphCo11FScript_621c5
 global SilphCo11FScript_621ff
@@ -87,10 +91,6 @@ extern SetSpriteMovementBytesToFF
 extern ShowObject
 extern SilphCo11FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FScript5   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FScript6   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FScript7   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FScript8   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11TrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -504,68 +504,68 @@ SilphCo11FMovementData_62311:
     db 0x5
     db 0xff
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo11FScript5 (scripts/SilphCo11F.asm:307-323) — at scripts/SilphCo11F.asm:307: de cannot hold the 32-bit address of SilphCo11FMovementData_622f5; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld de, SilphCo11FMovementData_622f5
-; PRET| 	CheckEitherEventSet EVENT_780, EVENT_781
-; PRET| 	and a
-; PRET| 	jr z, .asm_6232d
-; PRET| 	ld de, SilphCo11FMovementData_62300
-; PRET| 	cp $1
-; PRET| 	jr z, .asm_6232d
-; PRET| 	ld de, SilphCo11FMovementData_6230b
-; PRET| .asm_6232d
-; PRET| 	ld a, SILPHCO11F_JAMES
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_SILPHCO11F_SCRIPT6
-; PRET| 	call SilphCo11FSetCurScript
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo11FScript5:
+    mov edi, SilphCo11FMovementData_622f5   ; pret: ld de, SilphCo11FMovementData_622f5 — MoveSprite takes it in EDI
+    CheckEitherEventSet EVENT_780, EVENT_781
+    test al, al
+    jz .asm_6232d
+    mov edi, SilphCo11FMovementData_62300   ; pret: ld de, SilphCo11FMovementData_62300 — MoveSprite takes it in EDI
+    cmp al, 0x1
+    jz .asm_6232d
+    mov edi, SilphCo11FMovementData_6230b   ; pret: ld de, SilphCo11FMovementData_6230b — MoveSprite takes it in EDI
+.asm_6232d:
+    mov al, 4
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_SILPHCO11F_SCRIPT6
+    call SilphCo11FSetCurScript
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo11FScript6 (scripts/SilphCo11F.asm:326-361) — at scripts/SilphCo11F.asm:345: de cannot hold the 32-bit address of SilphCo11FMovementData_622fb; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| SilphCo11FScript7:
-; PRET| 	ld a, $2
-; PRET| 	ld [wSprite04StateData1MovementStatus], a
-; PRET| 	ld hl, wSprite04StateData1FacingDirection
-; PRET| 	ld [hl], SPRITE_FACING_RIGHT
-; PRET| 	CheckEitherEventSet EVENT_780, EVENT_781
-; PRET| 	and a
-; PRET| 	jr z, .asm_6235e
-; PRET| 	ld [hl], SPRITE_FACING_UP
-; PRET| .asm_6235e
-; PRET| 	call Delay3
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| SilphCo11FScript8:
-; PRET| 	ld de, SilphCo11FMovementData_622fb
-; PRET| 	CheckEitherEventSet EVENT_780, EVENT_781
-; PRET| 	and a
-; PRET| 	jr z, .asm_6237b
-; PRET| 	ld de, SilphCo11FMovementData_62305
-; PRET| 	cp $1
-; PRET| 	jr z, .asm_6237b
-; PRET| 	ld de, SilphCo11FMovementData_62311
-; PRET| .asm_6237b
-; PRET| 	ld a, SILPHCO11F_JESSIE
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_SILPHCO11F_SCRIPT9
-; PRET| 	call SilphCo11FSetCurScript
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo11FScript6:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_330
+        ret
+.nr_330:
+SilphCo11FScript7:
+    mov al, 0x2
+    mov [ebp + wSprite04StateData1MovementStatus], al
+    mov esi, wSprite04StateData1FacingDirection
+    mov byte [ebp + esi], SPRITE_FACING_RIGHT
+    CheckEitherEventSet EVENT_780, EVENT_781
+    test al, al
+    jz .asm_6235e
+    mov byte [ebp + esi], SPRITE_FACING_UP
+.asm_6235e:
+    call Delay3
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+SilphCo11FScript8:
+    mov edi, SilphCo11FMovementData_622fb   ; pret: ld de, SilphCo11FMovementData_622fb — MoveSprite takes it in EDI
+    CheckEitherEventSet EVENT_780, EVENT_781
+    test al, al
+    jz .asm_6237b
+    mov edi, SilphCo11FMovementData_62305   ; pret: ld de, SilphCo11FMovementData_62305 — MoveSprite takes it in EDI
+    cmp al, 0x1
+    jz .asm_6237b
+    mov edi, SilphCo11FMovementData_62311   ; pret: ld de, SilphCo11FMovementData_62311 — MoveSprite takes it in EDI
+.asm_6237b:
+    mov al, 6
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_SILPHCO11F_SCRIPT9
+    call SilphCo11FSetCurScript
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -33,6 +33,7 @@ import subprocess
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+from typing import Optional
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -146,6 +147,17 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
     # inflated target-region-bailed and IS the local-label-scope-collision class.
     E.dead_locals = set(dead_locals)
 
+    # File-wide item index and label map, for the control-flow-following callee
+    # lookahead. Built once per pass rather than per item.
+    flat = f.items
+    flat_pos = {id(x): n for n, x in enumerate(flat)}
+    labmap: dict = {}
+    for n, x in enumerate(flat):
+        for lab in getattr(x, "labels", ()):    # full "Parent.local" and bare
+            labmap.setdefault(lab, n)
+            if "." in lab:
+                labmap.setdefault("." + lab.split(".")[-1], n)
+
     scope = None
     for region in regions:
         # The global label a bare `.local` inside this region is scoped to —
@@ -200,7 +212,11 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
             if skip:
                 skip -= 1          # consumed by a fused idiom on an earlier item
                 continue
-            E.pending_callee = None if region.is_data else _next_callee(region.items, idx)
+            # FILE-wide position, not region-local: a convergence point sits in a
+            # LATER region (regions split after every unconditional transfer), so
+            # a region-local walk could never reach the call the load is for.
+            E.pending_callee = (None if region.is_data else
+                                _next_callee(flat, flat_pos[id(it)], labmap))
             try:
                 lines = None
                 if not region.is_data:
@@ -296,43 +312,109 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
     return out
 
 
-def _next_callee(items, i: int, window: int = 8):
-    """The callee a register load is setting up for, if one is within reach.
-
-    pret writes the argument loads immediately before the call, so a short
-    forward window finds the right one. The window is deliberately short: a
-    "callee" ten instructions and a branch away is not the one this load is for,
-    and pretending otherwise would apply the wrong ABI entry.
-    """
-    for j in range(i + 1, min(i + 1 + window, len(items))):
-        it = items[j]
-        d = it.decoded
-        if d is not None and d.effect.kind == "call" and d.classes \
-                and d.classes[-1] == isa.CLS_IMM:
-            return d.operands[-1]
-        if d is not None and d.effect.kind == "branch":
-            # An UNCONDITIONAL `jp Routine` is a TAIL CALL: pret writes it where
-            # `call Routine / ret` would go, and the loads above it are its
-            # arguments. Recognising it is NOT the unsafe lookahead-widening the
-            # docstring warns about — that would skip PAST an intervening call to
-            # a later one (BillsHouse.asm:63). This still stops at the FIRST
-            # control transfer and simply reads it correctly.
-            #
-            # Conditional forms and jumps to a `.local` are excluded: a condition
-            # means control may not leave at all, and a local target is
-            # intra-routine flow rather than a call. `jp hl` is excluded by the
-            # CLS_IMM test.
-            if (not d.condition and d.classes
-                    and d.classes[-1] == isa.CLS_IMM
-                    and not d.operands[-1].strip().startswith(".")):
-                return d.operands[-1]
-            return None            # control leaves; the call is not ours
-        if d is not None and d.effect.kind == "ret":
-            return None
-        if it.kind == sparser.KIND_MACRO and it.macro is not None \
-                and it.macro.cls == macros.CODE_CALL and it.line.operands:
-            return it.line.operands[0].strip()
+def _call_of(it) -> Optional[str]:
+    """The routine this item calls, if it is a call."""
+    d = it.decoded
+    if d is not None and d.effect.kind == "call" and d.classes \
+            and d.classes[-1] == isa.CLS_IMM:
+        return d.operands[-1].strip()
+    if it.kind == sparser.KIND_MACRO and it.macro is not None \
+            and it.macro.cls == macros.CODE_CALL and it.line.operands:
+        return it.line.operands[0].strip()
     return None
+
+
+def _redefines_de(it) -> bool:
+    d = it.decoded
+    return (d is not None and d.mnemonic == "ld" and d.classes
+            and d.classes[0] == isa.CLS_R16 and d.operands
+            and d.operands[0] == "de")
+
+
+def _next_callee(items, i: int, labmap: dict, budget: int = 64):
+    """The callee a register load is setting up for — FOLLOWING CONTROL FLOW.
+
+    pret overwhelmingly writes this as a load, a branch, and a CONVERGENCE point
+    where the call actually happens:
+
+        ld de, MovementNpcToLeftAndUp
+        jr .MoveSprite
+    .not_super_nerd3
+        ...
+        ld de, MovementNpcToLeft
+    .MoveSprite
+        call MoveSprite
+
+    A linear forward window cannot see that: the consumer is at the branch
+    TARGET. So this walks every path control can actually take and binds the
+    callee ONLY IF THEY ALL AGREE. Disagreement, a `ret`, an unresolvable target
+    or an exhausted budget all yield None, which BAILS — fail-closed, as the ABI
+    table itself is.
+
+    THIS IS NOT THE UNSAFE LOOKAHEAD-WIDENING the old docstring warned about, and
+    the case it warned about is the proof. `BillsHouse.asm:63` loads DE, then
+    `jr nz, .notDown`; the target path reaches `call MoveSprite`, the
+    fall-through reaches `call CheckPikachuFollowingPlayer` first. The two paths
+    DISAGREE, so nothing is bound and the site still bails — which is exactly the
+    outcome that hazard demands. Widening a window would have bound the wrong
+    routine; following the flow refuses.
+
+    A path that RELOADS DE before reaching any call is dropped rather than
+    counted as disagreement: the value under consideration provably cannot reach
+    a consumer along it. A call reached BEFORE such a reload still counts, since
+    this analysis does not know whether that callee reads DE.
+    """
+    results = set()
+    seen = set()
+    stack = [i + 1]
+    steps = 0
+    while stack:
+        j = stack.pop()
+        while True:
+            steps += 1
+            if steps > budget or j is None or j < 0 or j >= len(items):
+                return None                     # out of rope: fail closed
+            if j in seen:
+                break                           # already explored from here
+            seen.add(j)
+            it = items[j]
+
+            callee = _call_of(it)
+            if callee is not None:
+                results.add(callee)
+                break
+
+            if _redefines_de(it):
+                break                           # dead path, contributes nothing
+
+            d = it.decoded
+            if d is None:
+                j += 1
+                continue
+            if d.effect.kind == "ret":
+                return None                     # returns without consuming it
+            if d.effect.kind == "branch":
+                tgt = (d.operands[-1].strip()
+                       if d.classes and d.classes[-1] == isa.CLS_IMM else None)
+                if tgt is None:
+                    return None                 # `jp hl` and friends
+                if tgt in labmap:
+                    if d.condition:
+                        stack.append(labmap[tgt])   # explore the taken path too
+                        j += 1
+                        continue
+                    j = labmap[tgt]
+                    continue
+                # Target is not a label in this file: an UNCONDITIONAL jump to
+                # one is a TAIL CALL (pret writes `jp X` where `call X / ret`
+                # would go). A conditional one leaves control undetermined.
+                if d.condition or tgt.startswith("."):
+                    return None
+                results.add(tgt)
+                break
+            j += 1
+
+    return results.pop() if len(results) == 1 else None
 
 
 #: An annotation keyword sitting in annotation position inside COPIED pret source

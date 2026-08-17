@@ -38,6 +38,7 @@ global CeruleanCityMovement3
 global CeruleanCityMovement4
 global CeruleanCityRivalBattleScript
 global CeruleanCityRivalCleanupScript
+global CeruleanCityRivalDefeatedScript
 global CeruleanCityRivalDefeatedText
 global CeruleanCityRivalIWentToBillsText
 global CeruleanCityRivalText
@@ -58,7 +59,6 @@ extern ArePlayerCoordsInArray
 extern Bankswitch
 extern CallFunctionInTable
 extern CeruleanCityDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern CeruleanCityRivalDefeatedScript   ; NOT YET DEFINED IN THE PORT
 extern Delay3
 extern DisplayTextID
 extern EnableAutoTextBoxDrawing
@@ -299,30 +299,30 @@ CeruleanCityRivalBattleScript:
     mov [ebp + wCeruleanCityCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] CeruleanCityRivalDefeatedScript (scripts/CeruleanCity.asm:152-171) — at scripts/CeruleanCity.asm:170: de cannot hold the 32-bit address of CeruleanCityMovement4; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, CeruleanCityClearScripts
-; PRET| 	call CeruleanCityFaceRivalScript
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	SetEvent EVENT_BEAT_CERULEAN_RIVAL
-; PRET| 	ld a, TEXT_CERULEANCITY_RIVAL
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	call StopAllMusic
-; PRET| 	farcall Music_RivalAlternateStart
-; PRET| 	ld a, CERULEANCITY_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call SetSpriteMovementBytesToFF
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 20 ; is the player standing on the right side of the bridge?
-; PRET| 	jr nz, .playerOnRightSideOfBridge
-; PRET| 	ld de, CeruleanCityMovement4
-; PRET| 	jr .skip
+%assign event_byte -1
+%assign event_byte_a -1
+CeruleanCityRivalDefeatedScript:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz CeruleanCityClearScripts
+    call CeruleanCityFaceRivalScript
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    SetEvent EVENT_BEAT_CERULEAN_RIVAL
+    mov al, TEXT_CERULEANCITY_RIVAL
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    call StopAllMusic
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call Music_RivalAlternateStart
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    call SetSpriteMovementBytesToFF
+    mov al, [ebp + wXCoord]
+    cmp al, 20
+    jnz .playerOnRightSideOfBridge
+    mov edi, CeruleanCityMovement4   ; pret: ld de, CeruleanCityMovement4 — MoveSprite takes it in EDI
+    jmp .skip
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -22,8 +22,10 @@ bits 32
 
 %include "assets/audio_constants.inc"
 
+global SSAnne2FDefaultScript
 global SSAnne2FNoopScript
 global SSAnne2FResetScripts
+global SSAnne2FRivalAfterBattleScript
 global SSAnne2FRivalCutMasterText
 global SSAnne2FRivalDefeatedText
 global SSAnne2FRivalExitScript
@@ -48,8 +50,6 @@ extern Music_RivalAlternateStart
 extern PlayDefaultMusic
 extern PlayMusic
 extern PrintText
-extern SSAnne2FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRivalAfterBattleScript   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteMovementBytesToFF
@@ -113,35 +113,37 @@ SSAnne2F_ScriptPointers:
 SSAnne2FNoopScript:
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SSAnne2FDefaultScript (scripts/SSAnne2F.asm:25-49) — at scripts/SSAnne2F.asm:48: de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PlayerCoordinatesArray
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	ret nc
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetRival)
-; PRET| 	ld a, MUSIC_MEET_RIVAL
-; PRET| 	call PlayMusic
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	ldh [hSavedCoordIndex], a
-; PRET| 	ld a, TOGGLE_SS_ANNE_2F_RIVAL
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	call Delay3
-; PRET| 	ld a, SSANNE2F_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call SetSpriteMovementBytesToFF
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ldh a, [hSavedCoordIndex]
-; PRET| 	cp $2
-; PRET| 	jr nz, .player_standing_right
-; PRET| 	ld de, .RivalDownFourMovement
-; PRET| 	jr .move_sprite
+%assign event_byte -1
+%assign event_byte_a -1
+SSAnne2FDefaultScript:
+    mov esi, .PlayerCoordinatesArray
+    call ArePlayerCoordsInArray
+    jb .nr_27
+        ret
+.nr_27:
+    call StopAllMusic
+    mov bl, 2
+    mov al, MUSIC_MEET_RIVAL
+    call PlayMusic
+    mov al, [ebp + wCoordIndex]
+    mov [ebp + hSavedCoordIndex], al
+    mov al, 115
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    call Delay3
+    mov al, 2
+    mov [ebp + hSpriteIndex], al
+    call SetSpriteMovementBytesToFF
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + hSavedCoordIndex]
+    cmp al, 0x2
+    jnz .player_standing_right
+    mov edi, .RivalDownFourMovement   ; pret: ld de, .RivalDownFourMovement — MoveSprite takes it in EDI
+    jmp .move_sprite
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -212,27 +214,26 @@ SSAnne2FRivalStartBattleScript:
     mov [ebp + wSSAnne2FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SSAnne2FRivalAfterBattleScript (scripts/SSAnne2F.asm:108-124) — at scripts/SSAnne2F.asm:123: de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, SSAnne2FResetScripts
-; PRET| 	call SSAnne2FSetFacingDirectionScript
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, TEXT_SSANNE2F_RIVAL_CUT_MASTER
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	ld a, SSANNE2F_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call SetSpriteMovementBytesToFF
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 37
-; PRET| 	jr nz, .player_standing_left
-; PRET| 	ld de, .RivalDownFourMovement
-; PRET| 	jr .move_sprite
+%assign event_byte -1
+%assign event_byte_a -1
+SSAnne2FRivalAfterBattleScript:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz SSAnne2FResetScripts
+    call SSAnne2FSetFacingDirectionScript
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, TEXT_SSANNE2F_RIVAL_CUT_MASTER
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov al, 2
+    mov [ebp + hSpriteIndex], al
+    call SetSpriteMovementBytesToFF
+    mov al, [ebp + wXCoord]
+    cmp al, 37
+    jnz .player_standing_left
+    mov edi, .RivalDownFourMovement   ; pret: ld de, .RivalDownFourMovement — MoveSprite takes it in EDI
+    jmp .move_sprite
 
 %assign event_byte -1
 %assign event_byte_a -1

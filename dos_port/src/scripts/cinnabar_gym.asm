@@ -28,6 +28,7 @@ global CinnabarGymBlaineReceivedTM38Text
 global CinnabarGymBlaineTM38NoRoomText
 global CinnabarGymBlaineText
 global CinnabarGymBlaineVolcanoBadgeInfoText
+global CinnabarGymDefaultScript
 global CinnabarGymFlagAction
 global CinnabarGymGetOpponentTextScript
 global CinnabarGymGymGuideText
@@ -71,7 +72,6 @@ global TextPointers_f215d
 extern ApplyPikachuMovementData
 extern Bankswitch
 extern CallFunctionInTable
-extern CinnabarGymDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern DelayFrames
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID
@@ -229,23 +229,24 @@ CinnabarGym_ScriptPointers:
     dd CinnabarGymOpenGateScript
     dd CinnabarGymBlainePostBattleScript
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] CinnabarGymDefaultScript (scripts/CinnabarGym.asm:56-68) — at scripts/CinnabarGym.asm:67: de cannot hold the 32-bit address of MovementNpcToLeftAndUp; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wOpponentAfterWrongAnswer]
-; PRET| 	and a
-; PRET| 	ret z
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	cp CINNABARGYM_SUPER_NERD3
-; PRET| 	jr nz, .not_super_nerd3
-; PRET| 	ld a, PLAYER_DIR_DOWN
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld hl, PikachuMovementData_74f97
-; PRET| 	ld b, SPRITE_FACING_DOWN
-; PRET| 	call CinnabarGymScript_74fa3
-; PRET| 	ld de, MovementNpcToLeftAndUp
-; PRET| 	jr .MoveSprite
+%assign event_byte -1
+%assign event_byte_a -1
+CinnabarGymDefaultScript:
+    mov al, [ebp + wOpponentAfterWrongAnswer]
+    test al, al
+    jnz .nr_58
+        ret
+.nr_58:
+    mov [ebp + hSpriteIndex], al
+    cmp al, 4
+    jnz .not_super_nerd3
+    mov al, PLAYER_DIR_DOWN
+    mov [ebp + wPlayerMovingDirection], al
+    mov esi, PikachuMovementData_74f97
+    mov bh, SPRITE_FACING_DOWN
+    call CinnabarGymScript_74fa3
+    mov edi, MovementNpcToLeftAndUp   ; pret: ld de, MovementNpcToLeftAndUp — MoveSprite takes it in EDI
+    jmp .MoveSprite
 
 %assign event_byte -1
 %assign event_byte_a -1

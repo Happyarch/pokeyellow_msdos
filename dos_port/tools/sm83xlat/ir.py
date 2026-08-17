@@ -504,13 +504,22 @@ def _state_out(item: sparser.Item, state, resolver):
 
 
 def _domain_of_immediate(text: str, resolver) -> str:
-    if text.startswith("."):
-        return HOST
     # `ld bc, EndLabel - StartLabel` is a SIZE, not a pointer: label arithmetic
     # yields a count. Classifying it as HOST made four `CopyData` byte-counts
     # look like 32-bit pointers being stuffed into BX.
-    if any(op in text for op in ("-", "+", "*", "/")) and len(_ident_list(text)) > 1:
+    #
+    # This MUST come before the leading-dot test below. `.FacingDirectionsEnd -
+    # .FacingDirections` (PewterPokecenter_2.asm:22) is the same size expression
+    # written with LOCAL labels, and it was short-circuiting to HOST on its first
+    # character — reported as "bc cannot hold the 32-bit address of
+    # .FacingDirectionsEnd - .FacingDirections", which is a byte count for
+    # CopyData. `_ident_list` cannot see those names either: its lookbehind
+    # excludes an identifier preceded by '.', so local refs are counted here.
+    if any(op in text for op in ("-", "+", "*", "/")) and \
+            len(_LOCAL_REF_RE.findall(text)) + len(_ident_list(text)) > 1:
         return TOP
+    if text.startswith("."):
+        return HOST
     if resolver is None:
         return TOP
     names = [t for t in _ident_list(text)]
@@ -534,6 +543,8 @@ def _domain_of_immediate(text: str, resolver) -> str:
 
 import re as _re
 _IDENT_RE = _re.compile(r"(?<![\w.$%])[A-Za-z_][A-Za-z0-9_]*")
+#: a LOCAL label reference (`.Foo`), which _IDENT_RE deliberately does not match
+_LOCAL_REF_RE = _re.compile(r"\.[A-Za-z_][A-Za-z0-9_]*")
 
 
 def _ident_list(text: str):

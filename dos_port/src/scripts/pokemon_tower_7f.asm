@@ -28,7 +28,11 @@ global PokemonTower7FJessieJamesText
 global PokemonTower7FMovementData_60d7a
 global PokemonTower7FMovementData_60d7b
 global PokemonTower7FMrFujiText
+global PokemonTower7FScript1
 global PokemonTower7FScript10
+global PokemonTower7FScript2
+global PokemonTower7FScript3
+global PokemonTower7FScript4
 global PokemonTower7FScript5
 global PokemonTower7FScript6
 global PokemonTower7FScript7
@@ -60,10 +64,6 @@ extern MoveSprite
 extern PlayDefaultMusic
 extern PlayMusic
 extern PokemonTower7FScript0   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower7FScript1   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower7FScript2   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower7FScript3   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower7FScript4   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern SaveEndBattleTextPointers
 extern ShowObject
@@ -199,57 +199,57 @@ PokemonTower7FMovementData_60d7b:
     db 0x4
     db 0xFF
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] PokemonTower7FScript1 (scripts/PokemonTower7F.asm:84-96) — at scripts/PokemonTower7F.asm:84: de cannot hold the 32-bit address of PokemonTower7FMovementData_60d7b; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld de, PokemonTower7FMovementData_60d7b
-; PRET| 	CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
-; PRET| 	jr z, .asm_60d8c
-; PRET| 	ld de, PokemonTower7FMovementData_60d7a
-; PRET| .asm_60d8c
-; PRET| 	ld a, POKEMONTOWER7F_JESSIE
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_POKEMONTOWER7F_SCRIPT2
-; PRET| 	call PokemonTower7FSetScript
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+PokemonTower7FScript1:
+    mov edi, PokemonTower7FMovementData_60d7b   ; pret: ld de, PokemonTower7FMovementData_60d7b — MoveSprite takes it in EDI
+    CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
+    jz .asm_60d8c
+    mov edi, PokemonTower7FMovementData_60d7a   ; pret: ld de, PokemonTower7FMovementData_60d7a — MoveSprite takes it in EDI
+.asm_60d8c:
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_POKEMONTOWER7F_SCRIPT2
+    call PokemonTower7FSetScript
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] PokemonTower7FScript2 (scripts/PokemonTower7F.asm:99-127) — at scripts/PokemonTower7F.asm:115: de cannot hold the 32-bit address of PokemonTower7FMovementData_60d7a; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| PokemonTower7FScript3:
-; PRET| 	ld a, SPRITE_FACING_DOWN
-; PRET| 	ld [wSprite01StateData1FacingDirection], a
-; PRET| 	CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
-; PRET| 	jr z, .asm_60dba
-; PRET| 	ld a, SPRITE_FACING_RIGHT
-; PRET| 	ld [wSprite01StateData1FacingDirection], a
-; PRET| .asm_60dba
-; PRET| 	ld a, $2
-; PRET| 	ld [wSprite01StateData1MovementStatus], a
-; PRET| PokemonTower7FScript4:
-; PRET| 	ld de, PokemonTower7FMovementData_60d7a
-; PRET| 	CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
-; PRET| 	jr z, .asm_60dcc
-; PRET| 	ld de, PokemonTower7FMovementData_60d7b
-; PRET| .asm_60dcc
-; PRET| 	ld a, POKEMONTOWER7F_JAMES
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_POKEMONTOWER7F_SCRIPT5
-; PRET| 	call PokemonTower7FSetScript
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+PokemonTower7FScript2:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_103
+        ret
+.nr_103:
+PokemonTower7FScript3:
+    mov al, SPRITE_FACING_DOWN
+    mov [ebp + wSprite01StateData1FacingDirection], al
+    CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
+    jz .asm_60dba
+    mov al, SPRITE_FACING_RIGHT
+    mov [ebp + wSprite01StateData1FacingDirection], al
+.asm_60dba:
+    mov al, 0x2
+    mov [ebp + wSprite01StateData1MovementStatus], al
+PokemonTower7FScript4:
+    mov edi, PokemonTower7FMovementData_60d7a   ; pret: ld de, PokemonTower7FMovementData_60d7a — MoveSprite takes it in EDI
+    CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
+    jz .asm_60dcc
+    mov edi, PokemonTower7FMovementData_60d7b   ; pret: ld de, PokemonTower7FMovementData_60d7b — MoveSprite takes it in EDI
+.asm_60dcc:
+    mov al, 2
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_POKEMONTOWER7F_SCRIPT5
+    call PokemonTower7FSetScript
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

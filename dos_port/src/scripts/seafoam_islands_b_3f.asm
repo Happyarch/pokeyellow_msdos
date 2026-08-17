@@ -25,6 +25,7 @@ bits 32
 global RLEList_ForcedSurfingStrongCurrentNearSteps
 global Seafoam4HolesCoords
 global SeafoamIslandsB3FDefaultScript
+global SeafoamIslandsB3FMoveObjectScript
 global SeafoamIslandsB3FObjectMoving1Script
 global SeafoamIslandsB3FObjectMoving2Script
 global SeafoamIslandsB3F_Script
@@ -38,7 +39,6 @@ extern DecodeRLEList
 extern EnableAutoTextBoxDrawing
 extern HideObject
 extern IsPlayerOnDungeonWarp
-extern SeafoamIslandsB3FMoveObjectScript   ; NOT YET DEFINED IN THE PORT
 extern ShowObject
 extern StartSimulatingJoypadStates
 
@@ -188,20 +188,21 @@ SeafoamIslandsB3FObjectMoving1Script:
     mov [ebp + wSeafoamIslandsB3FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SeafoamIslandsB3FMoveObjectScript (scripts/SeafoamIslandsB3F.asm:96-105) — at scripts/SeafoamIslandsB3F.asm:104: de cannot hold the 32-bit address of .RLEList_StrongCurrentNearRightBoulder; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
-; PRET| 	ret z
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 18
-; PRET| 	jr z, .playerFellThroughHoleLeft
-; PRET| 	cp 19
-; PRET| 	ld a, SCRIPT_SEAFOAMISLANDSB3F_DEFAULT
-; PRET| 	jr nz, .playerNotInStrongCurrent
-; PRET| 	ld de, .RLEList_StrongCurrentNearRightBoulder
-; PRET| 	jr .forceSurfMovement
+%assign event_byte -1
+%assign event_byte_a -1
+SeafoamIslandsB3FMoveObjectScript:
+    CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
+    jnz .nr_97
+        ret
+.nr_97:
+    mov al, [ebp + wXCoord]
+    cmp al, 18
+    jz .playerFellThroughHoleLeft
+    cmp al, 19
+    mov al, SCRIPT_SEAFOAMISLANDSB3F_DEFAULT
+    jnz .playerNotInStrongCurrent
+    mov edi, .RLEList_StrongCurrentNearRightBoulder   ; pret: ld de, .RLEList_StrongCurrentNearRightBoulder — DecodeRLEList takes it in EDI
+    jmp .forceSurfMovement
 
 %assign event_byte -1
 %assign event_byte_a -1

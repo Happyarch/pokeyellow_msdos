@@ -26,6 +26,7 @@ global SeafoamIslandsB4FArticunoText
 global SeafoamIslandsB4FBouldersSignText
 global SeafoamIslandsB4FDangerSignText
 global SeafoamIslandsB4FDefaultScript
+global SeafoamIslandsB4FMoveObjectScript
 global SeafoamIslandsB4FObjectMoving1Script
 global SeafoamIslandsB4FObjectMoving2Script
 global SeafoamIslandsB4FObjectMoving3Script
@@ -43,7 +44,6 @@ extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
 extern ForceBikeOrSurf
 extern PlayCry
-extern SeafoamIslandsB4FMoveObjectScript   ; NOT YET DEFINED IN THE PORT
 extern SeafoamIslandsB4F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates
 extern TalkToTrainer
@@ -170,22 +170,21 @@ SeafoamIslandsB4FObjectMoving1Script:
     mov [ebp + wSeafoamIslandsB4FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SeafoamIslandsB4FMoveObjectScript (scripts/SeafoamIslandsB4F.asm:76-87) — at scripts/SeafoamIslandsB4F.asm:86: de cannot hold the 32-bit address of .RLEList_StrongCurrentNearLeftBoulder; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckBothEventsSet EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE
-; PRET| 	ld a, SCRIPT_SEAFOAMISLANDSB4F_DEFAULT
-; PRET| 	jr z, .playerNotInStrongCurrent
-; PRET| 	ld hl, .Coords
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	ld a, SCRIPT_SEAFOAMISLANDSB4F_DEFAULT
-; PRET| 	jr nc, .playerNotInStrongCurrent
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	cp $1
-; PRET| 	jr nz, .nearRightBoulder
-; PRET| 	ld de, .RLEList_StrongCurrentNearLeftBoulder
-; PRET| 	jr .forceSurfMovement
+%assign event_byte -1
+%assign event_byte_a -1
+SeafoamIslandsB4FMoveObjectScript:
+    CheckBothEventsSet EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE
+    mov al, SCRIPT_SEAFOAMISLANDSB4F_DEFAULT
+    jz .playerNotInStrongCurrent
+    mov esi, .Coords
+    call ArePlayerCoordsInArray
+    mov al, SCRIPT_SEAFOAMISLANDSB4F_DEFAULT
+    jae .playerNotInStrongCurrent
+    mov al, [ebp + wCoordIndex]
+    cmp al, 0x1
+    jnz .nearRightBoulder
+    mov edi, .RLEList_StrongCurrentNearLeftBoulder   ; pret: ld de, .RLEList_StrongCurrentNearLeftBoulder — DecodeRLEList takes it in EDI
+    jmp .forceSurfMovement
 
 %assign event_byte -1
 %assign event_byte_a -1

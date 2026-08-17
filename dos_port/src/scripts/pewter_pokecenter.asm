@@ -127,7 +127,7 @@ PewterPokecenterPrintCooltrainerFText:
     text_end
 
 ; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] PewterJigglypuff (scripts/PewterPokecenter_2.asm:11-68) — at scripts/PewterPokecenter_2.asm:22: bc cannot hold the 32-bit address of .FacingDirectionsEnd - .FacingDirections; callee CopyData has no abi.json entry
+; BAIL[target-region-bailed] PewterJigglypuff (scripts/PewterPokecenter_2.asm:11-68) — at scripts/PewterPokecenter_2.asm:30: PewterJigglypuff.findMatchingFacingDirectionLoop is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, TRUE

@@ -35,6 +35,7 @@ global MtMoonB2FDefeatedSuperNerdScript
 global MtMoonB2FDomeFossilText
 global MtMoonB2FFossilAreaCoords
 global MtMoonB2FJessieJamesEndBattleText
+global MtMoonB2FMoveSuperNerdScript
 global MtMoonB2FReceivedFossilText
 global MtMoonB2FResetScripts
 global MtMoonB2FRocket1Text
@@ -93,7 +94,6 @@ extern MtMoon3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern MtMoon3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FHelixFossilText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FMoveSuperNerdScript   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdOkIllShareText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdText   ; NOT YET DEFINED IN THE PORT
@@ -296,37 +296,35 @@ MtMoonB2FDefeatedSuperNerdScript:
     call MtMoonB2FSetScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MtMoonB2FMoveSuperNerdScript (scripts/MtMoonB2F.asm:122-137) — at scripts/MtMoonB2F.asm:133: MtMoonB2FMoveSuperNerdScript.asm_49d9b is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, MTMOONB2F_SUPER_NERD
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call SetSpriteMovementBytesToFF
-; PRET| 	ld hl, CoordsData_49dc7
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	jr c, .asm_49da8
-; PRET| 	ld hl, CoordsData_49dc0
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	jr c, .asm_49db0
-; PRET| 	ld hl, CoordsData_49dd5
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	jr c, .asm_49d9b
-; PRET| 	ld hl, CoordsData_49dce
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	jr c, .asm_49da3
-; PRET| 	jp CheckFightingMapTrainers
+%assign event_byte -1
+%assign event_byte_a -1
+MtMoonB2FMoveSuperNerdScript:
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    call SetSpriteMovementBytesToFF
+    mov esi, CoordsData_49dc7
+    call ArePlayerCoordsInArray
+    jb .asm_49da8
+    mov esi, CoordsData_49dc0
+    call ArePlayerCoordsInArray
+    jb .asm_49db0
+    mov esi, CoordsData_49dd5
+    call ArePlayerCoordsInArray
+    jb .asm_49d9b
+    mov esi, CoordsData_49dce
+    call ArePlayerCoordsInArray
+    jb .asm_49da3
+    jmp CheckFightingMapTrainers
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] MtMoonB2FMoveSuperNerdScript.asm_49d9b (scripts/MtMoonB2F.asm:140-145) — at scripts/MtMoonB2F.asm:144: de cannot hold the 32-bit address of MovementData_49ddd; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld b, SPRITE_FACING_LEFT
-; PRET| 	ld hl, PikachuMovementData_49dd8
-; PRET| 	call MtMoonB2FScript_ApplyPikachuMovementData
-; PRET| .asm_49da3
-; PRET| 	ld de, MovementData_49ddd
-; PRET| 	jr .asm_49db3
+%assign event_byte -1
+%assign event_byte_a -1
+.asm_49d9b:
+    mov bh, SPRITE_FACING_LEFT
+    mov esi, PikachuMovementData_49dd8
+    call MtMoonB2FScript_ApplyPikachuMovementData
+.asm_49da3:
+    mov edi, MovementData_49ddd   ; pret: ld de, MovementData_49ddd — MoveSprite takes it in EDI
+    jmp .asm_49db3
 
 %assign event_byte -1
 %assign event_byte_a -1

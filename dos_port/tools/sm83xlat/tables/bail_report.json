@@ -1,14 +1,14 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
  "_owned_comment": "`owned` is NOT a bail list. Those regions are Tier-1 data the port's generators already define, so the tool must not emit them at all \u2014 emitting one would be a duplicate definition. They describe no outstanding work and are excluded from the coverage denominator; they are listed here so the exclusion stays auditable.",
- "regions_lowered": 2153,
- "regions_bailed": 122,
+ "regions_lowered": 2177,
+ "regions_bailed": 98,
  "regions_owned": 255,
  "by_reason": {
-  "target-region-bailed": 40,
+  "target-region-bailed": 36,
   "screen-coord-projection": 5,
   "inline-text-db": 4,
-  "host-pointer-in-16bit-reg": 31,
+  "host-pointer-in-16bit-reg": 11,
   "pikachu-table-index": 4,
   "hl-half-register-access": 9,
   "local-label-scope-collision": 3,
@@ -205,11 +205,10 @@
    "reasons": []
   },
   "scripts/CeruleanCity.asm": {
-   "ok_regions": 28,
-   "bailed_regions": 3,
+   "ok_regions": 29,
+   "bailed_regions": 2,
    "owned_regions": 0,
    "reasons": [
-    "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
   },
@@ -252,12 +251,11 @@
    "reasons": []
   },
   "scripts/CinnabarGym.asm": {
-   "ok_regions": 61,
-   "bailed_regions": 2,
+   "ok_regions": 62,
+   "bailed_regions": 1,
    "owned_regions": 0,
    "reasons": [
-    "add-hl-r16",
-    "host-pointer-in-16bit-reg"
+    "add-hl-r16"
    ]
   },
   "scripts/CinnabarIsland.asm": {
@@ -403,8 +401,8 @@
    "reasons": []
   },
   "scripts/GameCorner.asm": {
-   "ok_regions": 42,
-   "bailed_regions": 4,
+   "ok_regions": 43,
+   "bailed_regions": 3,
    "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
@@ -497,12 +495,11 @@
    "reasons": []
   },
   "scripts/MtMoonB2F.asm": {
-   "ok_regions": 37,
-   "bailed_regions": 6,
+   "ok_regions": 39,
+   "bailed_regions": 4,
    "owned_regions": 2,
    "reasons": [
     "event-macro-reuse-a-hint",
-    "host-pointer-in-16bit-reg",
     "local-label-scope-collision",
     "target-region-bailed"
    ]
@@ -582,7 +579,7 @@
    "bailed_regions": 1,
    "owned_regions": 0,
    "reasons": [
-    "host-pointer-in-16bit-reg"
+    "target-region-bailed"
    ]
   },
   "scripts/PewterSpeechHouse.asm": {
@@ -660,12 +657,10 @@
    "reasons": []
   },
   "scripts/PokemonTower7F.asm": {
-   "ok_regions": 19,
-   "bailed_regions": 2,
+   "ok_regions": 21,
+   "bailed_regions": 0,
    "owned_regions": 0,
-   "reasons": [
-    "host-pointer-in-16bit-reg"
-   ]
+   "reasons": []
   },
   "scripts/PowerPlant.asm": {
    "ok_regions": 12,
@@ -724,12 +719,10 @@
    "reasons": []
   },
   "scripts/RocketHideoutB4F.asm": {
-   "ok_regions": 23,
-   "bailed_regions": 2,
+   "ok_regions": 25,
+   "bailed_regions": 0,
    "owned_regions": 3,
-   "reasons": [
-    "host-pointer-in-16bit-reg"
-   ]
+   "reasons": []
   },
   "scripts/RocketHideoutElevator.asm": {
    "ok_regions": 8,
@@ -898,13 +891,10 @@
    "reasons": []
   },
   "scripts/Route22.asm": {
-   "ok_regions": 36,
-   "bailed_regions": 7,
+   "ok_regions": 43,
+   "bailed_regions": 0,
    "owned_regions": 0,
-   "reasons": [
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
-   ]
+   "reasons": []
   },
   "scripts/Route22Gate.asm": {
    "ok_regions": 12,
@@ -1126,19 +1116,16 @@
    "reasons": []
   },
   "scripts/SeafoamIslandsB3F.asm": {
-   "ok_regions": 11,
+   "ok_regions": 12,
+   "bailed_regions": 0,
+   "owned_regions": 0,
+   "reasons": []
+  },
+  "scripts/SeafoamIslandsB4F.asm": {
+   "ok_regions": 17,
    "bailed_regions": 1,
    "owned_regions": 0,
    "reasons": [
-    "host-pointer-in-16bit-reg"
-   ]
-  },
-  "scripts/SeafoamIslandsB4F.asm": {
-   "ok_regions": 16,
-   "bailed_regions": 2,
-   "owned_regions": 0,
-   "reasons": [
-    "host-pointer-in-16bit-reg",
     "owned-by-gen_map_script_tables"
    ]
   },
@@ -1151,11 +1138,10 @@
    ]
   },
   "scripts/SilphCo11F.asm": {
-   "ok_regions": 34,
-   "bailed_regions": 4,
+   "ok_regions": 36,
+   "bailed_regions": 2,
    "owned_regions": 2,
    "reasons": [
-    "host-pointer-in-16bit-reg",
     "pointer-domain-unknown"
    ]
   },
@@ -1207,11 +1193,10 @@
    ]
   },
   "scripts/SilphCo7F.asm": {
-   "ok_regions": 32,
-   "bailed_regions": 4,
+   "ok_regions": 34,
+   "bailed_regions": 2,
    "owned_regions": 5,
    "reasons": [
-    "host-pointer-in-16bit-reg",
     "pointer-domain-unknown"
    ]
   },
@@ -1252,12 +1237,10 @@
    "reasons": []
   },
   "scripts/SSAnne2F.asm": {
-   "ok_regions": 15,
-   "bailed_regions": 2,
+   "ok_regions": 17,
+   "bailed_regions": 0,
    "owned_regions": 0,
-   "reasons": [
-    "host-pointer-in-16bit-reg"
-   ]
+   "reasons": []
   },
   "scripts/SSAnne2FRooms.asm": {
    "ok_regions": 23,
@@ -1802,20 +1785,6 @@
    ]
   },
   {
-   "file": "scripts/CeruleanCity.asm",
-   "region": "CeruleanCityRivalDefeatedScript",
-   "labels": [
-    "CeruleanCityRivalDefeatedScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of CeruleanCityMovement4; callee <none in range> has no abi.json entry",
-   "at": "scripts/CeruleanCity.asm:170",
-   "lines": [
-    152,
-    171
-   ]
-  },
-  {
    "file": "scripts/CeruleanTrashedHouse.asm",
    "region": "CeruleanTrashedHouseFishingGuruText",
    "labels": [
@@ -1827,20 +1796,6 @@
    "lines": [
     13,
     19
-   ]
-  },
-  {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymDefaultScript",
-   "labels": [
-    "CinnabarGymDefaultScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of MovementNpcToLeftAndUp; callee <none in range> has no abi.json entry",
-   "at": "scripts/CinnabarGym.asm:67",
-   "lines": [
-    56,
-    68
    ]
   },
   {
@@ -2044,25 +1999,11 @@
     "GameCornerRocketBattleScript"
    ],
    "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of GameCornerMovement_Rocket_WalkAroundPlayer; callee <none in range> has no abi.json entry",
+   "detail": "de cannot hold the 32-bit address of GameCornerMovement_Rocket_WalkAroundPlayer; callee GameCornerPikachuMovementScript has no abi.json entry",
    "at": "scripts/GameCorner.asm:66",
    "lines": [
     55,
     71
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerRocketBattleScript.not_direct_movement",
-   "labels": [
-    "GameCornerRocketBattleScript.not_direct_movement"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of GameCornerMovement_Rocket_WalkDirect; callee <none in range> has no abi.json entry",
-   "at": "scripts/GameCorner.asm:76",
-   "lines": [
-    73,
-    77
    ]
   },
   {
@@ -2094,35 +2035,6 @@
    "lines": [
     523,
     532
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FMoveSuperNerdScript",
-   "labels": [
-    "MtMoonB2FMoveSuperNerdScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "MtMoonB2FMoveSuperNerdScript.asm_49d9b is defined in a region that bailed",
-   "at": "scripts/MtMoonB2F.asm:133",
-   "lines": [
-    122,
-    137
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FMoveSuperNerdScript.asm_49d9b",
-   "labels": [
-    "MtMoonB2FMoveSuperNerdScript.asm_49d9b",
-    "MtMoonB2FMoveSuperNerdScript.asm_49da3"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of MovementData_49ddd; callee <none in range> has no abi.json entry",
-   "at": "scripts/MtMoonB2F.asm:144",
-   "lines": [
-    140,
-    145
    ]
   },
   {
@@ -2304,9 +2216,9 @@
     "PewterJigglypuff.findMatchingFacingDirectionLoop",
     "PewterJigglypuff.spinMovementLoop"
    ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "bc cannot hold the 32-bit address of .FacingDirectionsEnd - .FacingDirections; callee CopyData has no abi.json entry",
-   "at": "scripts/PewterPokecenter_2.asm:22",
+   "reason": "target-region-bailed",
+   "detail": "PewterJigglypuff.findMatchingFacingDirectionLoop is defined in a region that bailed",
+   "at": "scripts/PewterPokecenter_2.asm:30",
    "lines": [
     11,
     68
@@ -2328,39 +2240,6 @@
    ]
   },
   {
-   "file": "scripts/PokemonTower7F.asm",
-   "region": "PokemonTower7FScript1",
-   "labels": [
-    "PokemonTower7FScript1",
-    "PokemonTower7FScript1.asm_60d8c"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of PokemonTower7FMovementData_60d7b; callee <none in range> has no abi.json entry",
-   "at": "scripts/PokemonTower7F.asm:84",
-   "lines": [
-    84,
-    96
-   ]
-  },
-  {
-   "file": "scripts/PokemonTower7F.asm",
-   "region": "PokemonTower7FScript2",
-   "labels": [
-    "PokemonTower7FScript2",
-    "PokemonTower7FScript3",
-    "PokemonTower7FScript3.asm_60dba",
-    "PokemonTower7FScript4",
-    "PokemonTower7FScript4.asm_60dcc"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of PokemonTower7FMovementData_60d7a; callee <none in range> has no abi.json entry",
-   "at": "scripts/PokemonTower7F.asm:115",
-   "lines": [
-    99,
-    127
-   ]
-  },
-  {
    "file": "scripts/RocketHideoutB1F.asm",
    "region": "scripts/RocketHideoutB1F.asm:anon",
    "labels": [],
@@ -2370,39 +2249,6 @@
    "lines": [
     97,
     99
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB4F.asm",
-   "region": "RocketHideoutB4FScript4",
-   "labels": [
-    "RocketHideoutB4FScript4",
-    "RocketHideoutB4FScript4.asm_45617"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of RocketHideoutB4FJessieJamesMovementData_45605; callee <none in range> has no abi.json entry",
-   "at": "scripts/RocketHideoutB4F.asm:134",
-   "lines": [
-    134,
-    146
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB4F.asm",
-   "region": "RocketHideoutB4FScript5",
-   "labels": [
-    "RocketHideoutB4FScript5",
-    "RocketHideoutB4FScript6",
-    "RocketHideoutB4FScript6.asm_4564a",
-    "RocketHideoutB4FScript7",
-    "RocketHideoutB4FScript7.asm_4565f"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of RocketHideoutB4FJessieJamesMovementData_45606; callee <none in range> has no abi.json entry",
-   "at": "scripts/RocketHideoutB4F.asm:168",
-   "lines": [
-    149,
-    180
    ]
   },
   {
@@ -2434,108 +2280,6 @@
    "lines": [
     21,
     43
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22MoveRivalRightScript",
-   "labels": [
-    "Route22MoveRivalRightScript",
-    "Route22MoveRivalRightScript.skip_first_right"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22RivalMovementData; callee <none in range> has no abi.json entry",
-   "at": "scripts/Route22.asm:41",
-   "lines": [
-    41,
-    50
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript",
-   "labels": [
-    "Route22Rival1AfterBattleScript",
-    "Route22Rival1AfterBattleScript.keep_rival_starter"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "Route22Rival1AfterBattleScript.keep_rival_starter is defined in a region that bailed",
-   "at": "scripts/Route22.asm:153",
-   "lines": [
-    148,
-    161
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript.not_facing_down",
-   "labels": [
-    "Route22Rival1AfterBattleScript.not_facing_down",
-    "Route22Rival1AfterBattleScript.set_rival_facing"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "Route22Rival1AfterBattleScript.RivalExit1Script is defined in a region that bailed",
-   "at": "scripts/Route22.asm:180",
-   "lines": [
-    163,
-    181
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript.RivalExit1Script",
-   "labels": [
-    "Route22Rival1AfterBattleScript.RivalExit1Script"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival1ExitMovementData1; callee Route22MoveRival1 has no abi.json entry",
-   "at": "scripts/Route22.asm:190",
-   "lines": [
-    190,
-    191
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript",
-   "labels": [
-    "Route22Rival2AfterBattleScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "Route22Rival2AfterBattleScript.set_player_direction_left is defined in a region that bailed",
-   "at": "scripts/Route22.asm:310",
-   "lines": [
-    303,
-    314
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript.set_player_direction_left",
-   "labels": [
-    "Route22Rival2AfterBattleScript.set_player_direction_left",
-    "Route22Rival2AfterBattleScript.set_rival_facing_direction"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "Route22Rival2AfterBattleScript.RivalExit1Script is defined in a region that bailed",
-   "at": "scripts/Route22.asm:333",
-   "lines": [
-    316,
-    334
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript.RivalExit1Script",
-   "labels": [
-    "Route22Rival2AfterBattleScript.RivalExit1Script"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival2ExitMovementData1; callee Route22MoveRival2 has no abi.json entry",
-   "at": "scripts/Route22.asm:343",
-   "lines": [
-    343,
-    344
    ]
   },
   {
@@ -2675,34 +2419,6 @@
    ]
   },
   {
-   "file": "scripts/SeafoamIslandsB3F.asm",
-   "region": "SeafoamIslandsB3FMoveObjectScript",
-   "labels": [
-    "SeafoamIslandsB3FMoveObjectScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearRightBoulder; callee <none in range> has no abi.json entry",
-   "at": "scripts/SeafoamIslandsB3F.asm:104",
-   "lines": [
-    96,
-    105
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB4F.asm",
-   "region": "SeafoamIslandsB4FMoveObjectScript",
-   "labels": [
-    "SeafoamIslandsB4FMoveObjectScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearLeftBoulder; callee <none in range> has no abi.json entry",
-   "at": "scripts/SeafoamIslandsB4F.asm:86",
-   "lines": [
-    76,
-    87
-   ]
-  },
-  {
    "file": "scripts/SeafoamIslandsB4F.asm",
    "region": "SeafoamIslandsB4F_TextPointers",
    "labels": [
@@ -2759,39 +2475,6 @@
    "lines": [
     54,
     61
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FScript5",
-   "labels": [
-    "SilphCo11FScript5",
-    "SilphCo11FScript5.asm_6232d"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of SilphCo11FMovementData_622f5; callee <none in range> has no abi.json entry",
-   "at": "scripts/SilphCo11F.asm:307",
-   "lines": [
-    307,
-    323
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FScript6",
-   "labels": [
-    "SilphCo11FScript6",
-    "SilphCo11FScript7",
-    "SilphCo11FScript7.asm_6235e",
-    "SilphCo11FScript8",
-    "SilphCo11FScript8.asm_6237b"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of SilphCo11FMovementData_622fb; callee <none in range> has no abi.json entry",
-   "at": "scripts/SilphCo11F.asm:345",
-   "lines": [
-    326,
-    361
    ]
   },
   {
@@ -3009,36 +2692,6 @@
    ]
   },
   {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7FDefaultScript",
-   "labels": [
-    "SilphCo7FDefaultScript",
-    "SilphCo7FDefaultScript.full_rival_movement"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RivalMovementUp; callee <none in range> has no abi.json entry",
-   "at": "scripts/SilphCo7F.asm:144",
-   "lines": [
-    123,
-    155
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7FRivalAfterBattleScript",
-   "labels": [
-    "SilphCo7FRivalAfterBattleScript",
-    "SilphCo7FRivalAfterBattleScript.walk_around_player"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RivalWalkAroundPlayerMovement; callee <none in range> has no abi.json entry",
-   "at": "scripts/SilphCo7F.asm:213",
-   "lines": [
-    195,
-    223
-   ]
-  },
-  {
    "file": "scripts/SilphCo8F.asm",
    "region": "SilphCo8F_SetCardKeyDoorYScript",
    "labels": [
@@ -3109,34 +2762,6 @@
    "lines": [
     18,
     32
-   ]
-  },
-  {
-   "file": "scripts/SSAnne2F.asm",
-   "region": "SSAnne2FDefaultScript",
-   "labels": [
-    "SSAnne2FDefaultScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry",
-   "at": "scripts/SSAnne2F.asm:48",
-   "lines": [
-    25,
-    49
-   ]
-  },
-  {
-   "file": "scripts/SSAnne2F.asm",
-   "region": "SSAnne2FRivalAfterBattleScript",
-   "labels": [
-    "SSAnne2FRivalAfterBattleScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry",
-   "at": "scripts/SSAnne2F.asm:123",
-   "lines": [
-    108,
-    124
    ]
   },
   {

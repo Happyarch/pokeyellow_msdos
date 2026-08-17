@@ -23,6 +23,8 @@ bits 32
 %include "assets/audio_constants.inc"
 %include "assets/trainer_headers.inc"
 
+global SilphCo7FDefaultScript
+global SilphCo7FRivalAfterBattleScript
 global SilphCo7FRivalDefeatedText
 global SilphCo7FRivalExitScript
 global SilphCo7FRivalGoodLuckToYouText
@@ -46,6 +48,7 @@ global SilphCo7F_ScriptPointers
 global SilphCo7F_UnlockedDoorEventScript
 
 extern ArePlayerCoordsInArray
+extern Bankswitch
 extern CheckFightingMapTrainers
 extern Delay3
 extern DisplayEnemyTrainerTextAndStartBattle
@@ -64,8 +67,6 @@ extern ReplaceTileBlock
 extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteMovementBytesToFF
-extern SilphCo7FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FRivalAfterBattleScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRocket3BattleText   ; NOT YET DEFINED IN THE PORT
@@ -283,43 +284,42 @@ SilphCo7F_ScriptPointers:
     dd SilphCo7FRivalAfterBattleScript
     dd SilphCo7FRivalExitScript
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo7FDefaultScript (scripts/SilphCo7F.asm:123-155) — at scripts/SilphCo7F.asm:144: de cannot hold the 32-bit address of .RivalMovementUp; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_SILPH_CO_RIVAL
-; PRET| 	jp nz, CheckFightingMapTrainers
-; PRET| 	ld hl, .RivalEncounterCoordinates
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	jp nc, CheckFightingMapTrainers
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, PLAYER_DIR_DOWN
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetRival)
-; PRET| 	ld a, MUSIC_MEET_RIVAL
-; PRET| 	call PlayMusic
-; PRET| 	ld a, TEXT_SILPHCO7F_RIVAL
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	ld a, SILPHCO7F_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call SetSpriteMovementBytesToFF
-; PRET| 	ld de, .RivalMovementUp
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	ld [wSavedCoordIndex], a
-; PRET| 	cp 1 ; index of second, lower entry in .RivalEncounterCoordinates
-; PRET| 	jr z, .full_rival_movement
-; PRET| 	inc de
-; PRET| .full_rival_movement
-; PRET| 	ld a, SILPHCO7F_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, SCRIPT_SILPHCO7F_RIVAL_START_BATTLE
-; PRET| 	jp SilphCo7FSetCurScript
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo7FDefaultScript:
+    CheckEvent EVENT_BEAT_SILPH_CO_RIVAL
+    jnz CheckFightingMapTrainers
+    mov esi, .RivalEncounterCoordinates
+    call ArePlayerCoordsInArray
+    jae CheckFightingMapTrainers
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, PLAYER_DIR_DOWN
+    mov [ebp + wPlayerMovingDirection], al
+    call StopAllMusic
+    mov bl, 2
+    mov al, MUSIC_MEET_RIVAL
+    call PlayMusic
+    mov al, TEXT_SILPHCO7F_RIVAL
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov al, 9
+    mov [ebp + hSpriteIndex], al
+    call SetSpriteMovementBytesToFF
+    mov edi, .RivalMovementUp   ; pret: ld de, .RivalMovementUp — MoveSprite takes it in EDI
+    mov al, [ebp + wCoordIndex]
+    mov [ebp + wSavedCoordIndex], al
+    cmp al, 1
+    jz .full_rival_movement
+    inc dx
+.full_rival_movement:
+    mov al, 9
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, SCRIPT_SILPHCO7F_RIVAL_START_BATTLE
+    jmp SilphCo7FSetCurScript
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -363,39 +363,39 @@ SilphCo7FRivalStartBattleScript:
     call SilphCo7FSetCurScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo7FRivalAfterBattleScript (scripts/SilphCo7F.asm:195-223) — at scripts/SilphCo7F.asm:213: de cannot hold the 32-bit address of .RivalWalkAroundPlayerMovement; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, SilphCo7FSetDefaultScript
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	SetEvent EVENT_BEAT_SILPH_CO_RIVAL
-; PRET| 	ld a, PLAYER_DIR_DOWN
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, SILPHCO7F_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld a, SPRITE_FACING_UP
-; PRET| 	ldh [hSpriteFacingDirection], a
-; PRET| 	call SetSpriteFacingDirectionAndDelay
-; PRET| 	ld a, TEXT_SILPHCO7F_RIVAL_GOOD_LUCK_TO_YOU
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	call StopAllMusic
-; PRET| 	farcall Music_RivalAlternateStart
-; PRET| 	ld de, .RivalWalkAroundPlayerMovement
-; PRET| 	ld a, [wSavedCoordIndex]
-; PRET| 	cp 1 ; index of second, lower entry in SilphCo7FDefaultScript.RivalEncounterCoordinates
-; PRET| 	jr nz, .walk_around_player
-; PRET| 	ld de, .RivalExitRightMovement
-; PRET| .walk_around_player
-; PRET| 	ld a, SILPHCO7F_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, SCRIPT_SILPHCO7F_RIVAL_EXIT
-; PRET| 	jp SilphCo7FSetCurScript
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo7FRivalAfterBattleScript:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz SilphCo7FSetDefaultScript
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    SetEvent EVENT_BEAT_SILPH_CO_RIVAL
+    mov al, PLAYER_DIR_DOWN
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, 9
+    mov [ebp + hSpriteIndex], al
+    mov al, SPRITE_FACING_UP
+    mov [ebp + hSpriteFacingDirection], al
+    call SetSpriteFacingDirectionAndDelay
+    mov al, TEXT_SILPHCO7F_RIVAL_GOOD_LUCK_TO_YOU
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    call StopAllMusic
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call Music_RivalAlternateStart
+    mov edi, .RivalWalkAroundPlayerMovement   ; pret: ld de, .RivalWalkAroundPlayerMovement — MoveSprite takes it in EDI
+    mov al, [ebp + wSavedCoordIndex]
+    cmp al, 1
+    jnz .walk_around_player
+    mov edi, .RivalExitRightMovement   ; pret: ld de, .RivalExitRightMovement — MoveSprite takes it in EDI
+.walk_around_player:
+    mov al, 9
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, SCRIPT_SILPHCO7F_RIVAL_EXIT
+    jmp SilphCo7FSetCurScript
 
 %assign event_byte -1
 %assign event_byte_a -1

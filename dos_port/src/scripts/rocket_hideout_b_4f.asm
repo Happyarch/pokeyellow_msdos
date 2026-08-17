@@ -35,6 +35,10 @@ global RocketHideoutB4FScript10
 global RocketHideoutB4FScript11
 global RocketHideoutB4FScript12
 global RocketHideoutB4FScript13
+global RocketHideoutB4FScript4
+global RocketHideoutB4FScript5
+global RocketHideoutB4FScript6
+global RocketHideoutB4FScript7
 global RocketHideoutB4FScript8
 global RocketHideoutB4FScript9
 global RocketHideoutB4FScript_455a5
@@ -70,10 +74,6 @@ extern RocketHideout4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FScript4   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FScript5   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FScript6   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FScript7   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers
 extern ShowObject
@@ -271,60 +271,60 @@ RocketHideoutB4FJessieJamesMovementData_45606:
     db 0x4
     db 0xff
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] RocketHideoutB4FScript4 (scripts/RocketHideoutB4F.asm:134-146) — at scripts/RocketHideoutB4F.asm:134: de cannot hold the 32-bit address of RocketHideoutB4FJessieJamesMovementData_45605; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld de, RocketHideoutB4FJessieJamesMovementData_45605
-; PRET| 	CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
-; PRET| 	jr z, .asm_45617
-; PRET| 	ld de, RocketHideoutB4FJessieJamesMovementData_45606
-; PRET| .asm_45617
-; PRET| 	ld a, ROCKETHIDEOUTB4F_JAMES
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_ROCKETHIDEOUTB4F_SCRIPT5
-; PRET| 	call RocketHideoutB4FSetScript
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+RocketHideoutB4FScript4:
+    mov edi, RocketHideoutB4FJessieJamesMovementData_45605   ; pret: ld de, RocketHideoutB4FJessieJamesMovementData_45605 — MoveSprite takes it in EDI
+    CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
+    jz .asm_45617
+    mov edi, RocketHideoutB4FJessieJamesMovementData_45606   ; pret: ld de, RocketHideoutB4FJessieJamesMovementData_45606 — MoveSprite takes it in EDI
+.asm_45617:
+    mov al, 2
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_ROCKETHIDEOUTB4F_SCRIPT5
+    call RocketHideoutB4FSetScript
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] RocketHideoutB4FScript5 (scripts/RocketHideoutB4F.asm:149-180) — at scripts/RocketHideoutB4F.asm:168: de cannot hold the 32-bit address of RocketHideoutB4FJessieJamesMovementData_45606; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| RocketHideoutB4FScript6:
-; PRET| 	ld a, $2
-; PRET| 	ld [wSprite02StateData1MovementStatus], a
-; PRET| 	ld a, SPRITE_FACING_LEFT
-; PRET| 	ld [wSprite02StateData1FacingDirection], a
-; PRET| 	CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
-; PRET| 	jr z, .asm_4564a
-; PRET| 	ld a, SPRITE_FACING_DOWN
-; PRET| 	ld [wSprite02StateData1FacingDirection], a
-; PRET| .asm_4564a
-; PRET| 	call Delay3
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| RocketHideoutB4FScript7:
-; PRET| 	ld de, RocketHideoutB4FJessieJamesMovementData_45606
-; PRET| 	CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
-; PRET| 	jr z, .asm_4565f
-; PRET| 	ld de, RocketHideoutB4FJessieJamesMovementData_45605
-; PRET| .asm_4565f
-; PRET| 	ld a, ROCKETHIDEOUTB4F_JESSIE
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_ROCKETHIDEOUTB4F_SCRIPT8
-; PRET| 	call RocketHideoutB4FSetScript
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+RocketHideoutB4FScript5:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_153
+        ret
+.nr_153:
+RocketHideoutB4FScript6:
+    mov al, 0x2
+    mov [ebp + wSprite02StateData1MovementStatus], al
+    mov al, SPRITE_FACING_LEFT
+    mov [ebp + wSprite02StateData1FacingDirection], al
+    CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
+    jz .asm_4564a
+    mov al, SPRITE_FACING_DOWN
+    mov [ebp + wSprite02StateData1FacingDirection], al
+.asm_4564a:
+    call Delay3
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+RocketHideoutB4FScript7:
+    mov edi, RocketHideoutB4FJessieJamesMovementData_45606   ; pret: ld de, RocketHideoutB4FJessieJamesMovementData_45606 — MoveSprite takes it in EDI
+    CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
+    jz .asm_4565f
+    mov edi, RocketHideoutB4FJessieJamesMovementData_45605   ; pret: ld de, RocketHideoutB4FJessieJamesMovementData_45605 — MoveSprite takes it in EDI
+.asm_4565f:
+    mov al, 3
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_ROCKETHIDEOUTB4F_SCRIPT8
+    call RocketHideoutB4FSetScript
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
