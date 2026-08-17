@@ -32,15 +32,15 @@ global RedsHouse1FTVText
 global RedsHouse1F_Script
 global RedsHouse1F_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GBFadeInFromWhite   ; NOT YET DEFINED IN THE PORT
-extern GBFadeOutToWhite   ; NOT YET DEFINED IN THE PORT
-extern HealParty   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReloadMapData   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
+extern GBFadeInFromWhite
+extern GBFadeOutToWhite
+extern HealParty
+extern PlaySound
+extern PrintText
+extern ReloadMapData
+extern TextScriptEnd
 extern _RedsHouse1FMomLookingGreatText   ; NOT YET DEFINED IN THE PORT
 extern _RedsHouse1FMomWakeUpText   ; NOT YET DEFINED IN THE PORT
 extern _RedsHouse1FMomYouShouldRestText   ; NOT YET DEFINED IN THE PORT

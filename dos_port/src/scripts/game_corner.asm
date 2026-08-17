@@ -52,40 +52,40 @@ global GameCorner_ScriptPointers
 global GameCorner_TextPointers
 global Has9990Coins
 
-extern AddBCDPredef   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern ClearScreenArea   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
+extern AddBCDPredef
+extern Bankswitch
+extern CallFunctionInTable
+extern ClearScreenArea
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EngageMapTrainer
 extern GameCornerBlankText1   ; NOT YET DEFINED IN THE PORT
 extern GameCornerBlankText2   ; NOT YET DEFINED IN THE PORT
 extern GameCornerCoinText   ; NOT YET DEFINED IN THE PORT
 extern GameCornerDrawCoinBox   ; NOT YET DEFINED IN THE PORT
 extern GameCornerMoneyText   ; NOT YET DEFINED IN THE PORT
 extern GameCornerRocketBattleScript   ; NOT YET DEFINED IN THE PORT
-extern HasEnoughCoins   ; NOT YET DEFINED IN THE PORT
-extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern PlaceString   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern PrintBCDNumber   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Random   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern SetSpriteMovementBytesToFF   ; NOT YET DEFINED IN THE PORT
-extern SubBCDPredef   ; NOT YET DEFINED IN THE PORT
-extern TextBoxBorder   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern HasEnoughCoins
+extern HasEnoughMoney
+extern HideObject
+extern InitBattleEnemyParameters
+extern IsItemInBag
+extern MoveSprite
+extern PlaceString
+extern PlaySound
+extern PrintBCDNumber
+extern PrintText
+extern Random
+extern ReplaceTileBlock
+extern SaveEndBattleTextPointers
+extern SetSpriteMovementBytesToFF
+extern SubBCDPredef
+extern TextBoxBorder
+extern TextScriptEnd
 extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern UpdateSprites
+extern WaitForSoundToFinish
+extern YesNoChoice
 extern _GameCornerBeauty1Text   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerBeauty2Text   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerClerkCantAffordTheCoinsText   ; NOT YET DEFINED IN THE PORT

@@ -29,7 +29,7 @@ global CeladonMart5F_TextPointers
 
 extern CeladonMart5FClerk1Text   ; NOT YET DEFINED IN THE PORT
 extern CeladonMart5FClerk2Text   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CeladonMart5FCurrentFloorSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart5FGentlemanText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart5FSailorText   ; NOT YET DEFINED IN THE PORT

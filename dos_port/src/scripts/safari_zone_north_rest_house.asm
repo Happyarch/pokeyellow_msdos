@@ -27,7 +27,7 @@ global SafariZoneNorthRestHouseScientistText
 global SafariZoneNorthRestHouse_Script
 global SafariZoneNorthRestHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _SafariZoneNorthRestHouseGentlemanText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneNorthRestHouseSafariZoneWorkerText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneNorthRestHouseScientistText   ; NOT YET DEFINED IN THE PORT

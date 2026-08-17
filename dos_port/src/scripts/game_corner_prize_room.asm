@@ -27,7 +27,7 @@ global GameCornerPrizeRoomGamblerText
 global GameCornerPrizeRoom_Script
 global GameCornerPrizeRoom_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _GameCornerPrizeRoomBaldingGuyText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerPrizeRoomGamblerText   ; NOT YET DEFINED IN THE PORT
 

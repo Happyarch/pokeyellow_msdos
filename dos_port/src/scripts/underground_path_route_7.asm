@@ -26,7 +26,7 @@ global UndergroundPathRoute7MiddleAgedManText
 global UndergroundPathRoute7_Script
 global UndergroundPathRoute7_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _UndergroundPathRoute7MiddleAgedManText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

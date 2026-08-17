@@ -39,23 +39,23 @@ global CeladonMartRoof_Script
 global CeladonMartRoof_TextPointers
 global RemoveItemByIDBank12
 
-extern AddNTimes   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
+extern AddNTimes
+extern Bankswitch
 extern CeladonMartRoofScript_GetDrinksInBag   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartRoofScript_GiveDrinkToGirl   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartRoofScript_PrintDrinksInBag   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GetItemName   ; NOT YET DEFINED IN THE PORT
-extern GetQuantityOfItemInBag   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HandleMenuInput   ; NOT YET DEFINED IN THE PORT
-extern PlaceString   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern RemoveItemByID   ; NOT YET DEFINED IN THE PORT
-extern TextBoxBorder   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GetItemName
+extern GetQuantityOfItemInBag
+extern GiveItem
+extern HandleMenuInput
+extern PlaceString
+extern PrintText
+extern RemoveItemByID
+extern TextBoxBorder
+extern TextScriptEnd
+extern UpdateSprites
+extern YesNoChoice
 extern _CeladonMartRoofCurrentFloorSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofLittleGirlGiveHerADrinkText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofLittleGirlGiveHerWhichDrinkText   ; NOT YET DEFINED IN THE PORT

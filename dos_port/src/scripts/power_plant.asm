@@ -35,14 +35,14 @@ global PowerPlantVoltorb6Text
 global PowerPlantZapdosText
 global PowerPlant_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern PlayCry
 extern PowerPlantTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern PowerPlantVoltorbBattleText   ; NOT YET DEFINED IN THE PORT
 extern PowerPlant_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 extern Voltorb0TrainerHeader   ; NOT YET DEFINED IN THE PORT
 extern Voltorb1TrainerHeader   ; NOT YET DEFINED IN THE PORT
 extern Voltorb2TrainerHeader   ; NOT YET DEFINED IN THE PORT
@@ -51,7 +51,7 @@ extern Voltorb4TrainerHeader   ; NOT YET DEFINED IN THE PORT
 extern Voltorb5TrainerHeader   ; NOT YET DEFINED IN THE PORT
 extern Voltorb6TrainerHeader   ; NOT YET DEFINED IN THE PORT
 extern Voltorb7TrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern WaitForSoundToFinish
 extern ZapdosTrainerHeader   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,

@@ -29,9 +29,9 @@ global SSAnne1FRoomsWigglytuffText
 global SSAnne1FRoomsYoungsterText
 global SSAnne1FRooms_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern PlayCry
 extern SSAnne1FRoomsGentleman1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SSAnne1FRooms_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SSAnne8TrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -39,8 +39,8 @@ extern SSAnne8TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SSAnne8TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SSAnne8TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern SSAnne8TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 extern _SSAnne1FRoomsWigglytuffText   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,

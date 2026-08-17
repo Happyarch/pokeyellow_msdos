@@ -31,26 +31,26 @@ global SummerBeachHouse_TextPointers
 global Text_f240c
 global Text_f2412
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GBPalNormal   ; NOT YET DEFINED IN THE PORT
-extern GBPalWhiteOutWithDelay3   ; NOT YET DEFINED IN THE PORT
-extern LoadScreenTilesFromBuffer2   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern Delay3
+extern EnableAutoTextBoxDrawing
+extern GBPalNormal
+extern GBPalWhiteOutWithDelay3
+extern LoadScreenTilesFromBuffer2
+extern PlayCry
 extern PrintSurfingMinigameHighScore   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern PrintText
 extern Printer_PrepareSurfingMinigameHighScoreTileMap   ; NOT YET DEFINED IN THE PORT
-extern ReloadTilesetTilePatterns   ; NOT YET DEFINED IN THE PORT
-extern RestoreScreenTilesAndReloadTilePatterns   ; NOT YET DEFINED IN THE PORT
-extern SaveScreenTilesToBuffer2   ; NOT YET DEFINED IN THE PORT
+extern ReloadTilesetTilePatterns
+extern RestoreScreenTilesAndReloadTilePatterns
+extern SaveScreenTilesToBuffer2
 extern SummerBeachHousePoster2Text   ; NOT YET DEFINED IN THE PORT
 extern SummerBeachHousePoster3Text   ; NOT YET DEFINED IN THE PORT
 extern SurfingPikachuMinigame   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
-extern WaitForTextScrollButtonPress   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd
+extern WaitForSoundToFinish
+extern WaitForTextScrollButtonPress
+extern YesNoChoice
 extern _SummerBeachHousePikachuText   ; NOT YET DEFINED IN THE PORT
 extern _SummerBeachHousePoster1Text1   ; NOT YET DEFINED IN THE PORT
 extern _SummerBeachHousePoster1Text2   ; NOT YET DEFINED IN THE PORT

@@ -29,11 +29,11 @@ global SaffronPokecenterNurseText
 global SaffronPokecenter_Script
 global SaffronPokecenter_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd
 extern _SaffronPokecenterBeautyText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 

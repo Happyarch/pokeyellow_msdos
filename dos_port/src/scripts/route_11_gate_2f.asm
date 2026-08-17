@@ -28,14 +28,14 @@ global Route11Gate2FYoungsterText
 global Route11Gate2F_Script
 global Route11Gate2F_TextPointers
 
-extern CopyData   ; NOT YET DEFINED IN THE PORT
-extern DisableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern CopyData
+extern DisableAutoTextBoxDrawing
 extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
 extern GateUpstairsScript_PrintIfFacingUp   ; NOT YET DEFINED IN THE PORT
-extern GetItemName   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern GetItemName
+extern PrintText
 extern Route11Gate2FOaksAideText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd
 extern _Route11Gate2FLeftBinocularsNoSnorlaxText   ; NOT YET DEFINED IN THE PORT
 extern _Route11Gate2FLeftBinocularsSnorlaxText   ; NOT YET DEFINED IN THE PORT
 extern _Route11Gate2FOaksAideItemfinderDescriptionText   ; NOT YET DEFINED IN THE PORT

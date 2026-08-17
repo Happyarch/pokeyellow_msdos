@@ -34,16 +34,16 @@ global ViridianMart_ScriptPointers
 global ViridianMart_TextPointers
 global ViridianMart_TextPointers2
 
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable
+extern DecodeRLEList
+extern Delay3
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern HideObject
+extern ShowObject
+extern StartSimulatingJoypadStates
+extern UpdateSprites
 extern ViridianMartCheckParcelDeliveredScript   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartClerkText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianMartClerkParcelQuestText   ; NOT YET DEFINED IN THE PORT

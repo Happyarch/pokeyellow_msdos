@@ -26,7 +26,7 @@ global ViridianForestNorthGateSuperNerdText
 global ViridianForestNorthGate_Script
 global ViridianForestNorthGate_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _ViridianForestNorthGateGrampsText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianForestNorthGateSuperNerdText   ; NOT YET DEFINED IN THE PORT
 

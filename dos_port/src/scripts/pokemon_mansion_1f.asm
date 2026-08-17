@@ -31,19 +31,19 @@ global PokemonMansion1FScientistText
 global PokemonMansion1FSwitchText
 global PokemonMansion1F_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern Mansion1Script_Switches   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern Mansion1Script_Switches
 extern Mansion1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
+extern PlaySound
 extern PokemonMansion1FScientistBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern ReplaceTileBlock
+extern TalkToTrainer
+extern TextScriptEnd
+extern YesNoChoice
 extern _PokemonMansion1FSwitchNotPressedText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonMansion1FSwitchPressedText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonMansion1FSwitchText   ; NOT YET DEFINED IN THE PORT

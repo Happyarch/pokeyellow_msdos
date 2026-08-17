@@ -25,7 +25,7 @@ global MtMoonB1FUnusedText
 global MtMoonB1F_Script
 global MtMoonB1F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _MtMoonB1FUnusedText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

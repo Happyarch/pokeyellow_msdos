@@ -26,10 +26,10 @@ global LavenderCuboneHouseCuboneText
 global LavenderCuboneHouse_Script
 global LavenderCuboneHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PlayCry
+extern PrintText
+extern TextScriptEnd
 extern _LavenderCuboneHouseBrunetteGirlGhostIsGoneText   ; NOT YET DEFINED IN THE PORT
 extern _LavenderCuboneHouseBrunetteGirlPoorCubonesMotherText   ; NOT YET DEFINED IN THE PORT
 extern _LavenderCuboneHouseCuboneText   ; NOT YET DEFINED IN THE PORT

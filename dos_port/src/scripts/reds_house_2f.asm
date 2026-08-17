@@ -26,8 +26,8 @@ global RedsHouse2F_Script
 global RedsHouse2F_ScriptPointers
 global RedsHouse2F_TextPointers
 
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable
+extern EnableAutoTextBoxDrawing
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

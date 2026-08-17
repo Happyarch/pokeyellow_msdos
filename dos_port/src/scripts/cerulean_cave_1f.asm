@@ -24,8 +24,8 @@ bits 32
 global CeruleanCave1F_Script
 global CeruleanCave1F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PickUpItemText
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

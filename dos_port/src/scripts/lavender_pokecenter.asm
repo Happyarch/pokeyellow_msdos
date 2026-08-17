@@ -29,11 +29,11 @@ global LavenderPokecenterNurseText
 global LavenderPokecenter_Script
 global LavenderPokecenter_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd
 extern _LavenderPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 extern _LavenderPokecenterLittleGirlText   ; NOT YET DEFINED IN THE PORT
 

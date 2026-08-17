@@ -51,30 +51,30 @@ global SafariZoneGate_Script
 global SafariZoneGate_ScriptPointers
 global SafariZoneGate_TextPointers
 
-extern AddNTimes   ; NOT YET DEFINED IN THE PORT
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern CopyData   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextBoxID   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern DivideBCDPredef3   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern FillMemory   ; NOT YET DEFINED IN THE PORT
-extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
-extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern PrintText_NoCreatingTextBox   ; NOT YET DEFINED IN THE PORT
+extern AddNTimes
+extern ArePlayerCoordsInArray
+extern Bankswitch
+extern CallFunctionInTable
+extern CopyData
+extern Delay3
+extern DisplayTextBoxID
+extern DisplayTextID
+extern DivideBCDPredef3
+extern EnableAutoTextBoxDrawing
+extern FillMemory
+extern HasEnoughMoney
+extern PlaySoundWaitForCurrent
+extern PrintText
+extern PrintText_NoCreatingTextBox
 extern SafariZoneEntranceConvertBCDtoNumber   ; NOT YET DEFINED IN THE PORT
 extern SafariZoneEntranceGetLowCostAdmissionText   ; NOT YET DEFINED IN THE PORT
 extern SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern SubBCDPredef   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates
+extern SubBCDPredef
+extern TextScriptEnd
+extern UpdateSprites
+extern WaitForSoundToFinish
+extern YesNoChoice
 extern _SafariZoneGateSafariZoneWorker1CallYouOnThePAText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneGateSafariZoneWorker1GoodHaulComeAgainText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneGateSafariZoneWorker1GoodLuckText   ; NOT YET DEFINED IN THE PORT

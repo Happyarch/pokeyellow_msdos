@@ -35,8 +35,8 @@ global Route14CooltrainerM5Text
 global Route14CooltrainerM6Text
 global Route14_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
 extern Route14Biker1BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route14Biker2BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route14Biker3BattleText   ; NOT YET DEFINED IN THE PORT
@@ -59,8 +59,8 @@ extern Route14TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route14TrainerHeader9   ; NOT YET DEFINED IN THE PORT
 extern Route14TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route14_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

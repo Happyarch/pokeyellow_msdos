@@ -66,21 +66,21 @@ global RocketHideoutB2FRocketText
 global RocketHideoutB2F_Script
 global RocketHideoutB2F_ScriptPointers
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DecodeArrowMovementRLE   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern LoadSpinnerArrowTiles   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers
+extern DecodeArrowMovementRLE
+extern DisplayEnemyTrainerTextAndStartBattle
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern LoadSpinnerArrowTiles
+extern PlaySound
 extern RocketHideout2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB2FRocketBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB2F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROCKETHIDEOUTB2F_DEFAULT                equ 0

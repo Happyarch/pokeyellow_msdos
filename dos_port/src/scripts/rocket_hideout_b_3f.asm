@@ -43,23 +43,23 @@ global RocketHideoutB3FRocket2Text
 global RocketHideoutB3F_Script
 global RocketHideoutB3F_ScriptPointers
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DecodeArrowMovementRLE   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern LoadSpinnerArrowTiles   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers
+extern DecodeArrowMovementRLE
+extern DisplayEnemyTrainerTextAndStartBattle
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern LoadSpinnerArrowTiles
+extern PlaySound
 extern RocketHideout3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB3FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB3FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB3F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROCKETHIDEOUTB3F_DEFAULT                equ 0

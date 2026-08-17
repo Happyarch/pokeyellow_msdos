@@ -26,16 +26,16 @@ global SSAnneBowSailor2Text
 global SSAnneBowSailor3Text
 global SSAnneBow_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
 extern SSAnne5TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SSAnne5TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SSAnne5TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern SSAnneBowSailor2BattleText   ; NOT YET DEFINED IN THE PORT
 extern SSAnneBowSailor3BattleText   ; NOT YET DEFINED IN THE PORT
 extern SSAnneBow_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

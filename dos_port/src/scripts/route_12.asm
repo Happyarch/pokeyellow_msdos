@@ -35,14 +35,14 @@ global Route12SuperNerdText
 global Route12_Script
 global Route12_ScriptPointers
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers
+extern Delay3
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern HideObject
 extern Route12CooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12Fisher1BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12Fisher2BattleText   ; NOT YET DEFINED IN THE PORT
@@ -59,9 +59,9 @@ extern Route12TrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern Route12TrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern Route12TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route12_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
+extern UpdateSprites
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROUTE12_DEFAULT                         equ 0

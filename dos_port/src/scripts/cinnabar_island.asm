@@ -33,14 +33,14 @@ global CinnabarIsland_Script
 global CinnabarIsland_ScriptPointers
 global CinnabarIsland_TextPointers
 
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable
+extern Delay3
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern IsItemInBag
 extern MartSignText   ; NOT YET DEFINED IN THE PORT
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates
 extern _CinnabarIslandDoorIsLockedText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarIslandGamblerText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarIslandGirlText   ; NOT YET DEFINED IN THE PORT

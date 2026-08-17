@@ -41,20 +41,20 @@ global Route24Youngster2Text
 global Route24_Script
 global Route24_ScriptPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GetMonName   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern GivePokemon   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CheckFightingMapTrainers
+extern Delay3
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern EngageMapTrainer
+extern ExecuteCurMapScriptInTable
+extern GetMonName
+extern GiveItem
+extern GivePokemon
+extern InitBattleEnemyParameters
+extern PrintText
 extern Route24CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -64,13 +64,13 @@ extern Route24TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route24_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern WaitForTextScrollButtonPress   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern SaveEndBattleTextPointers
+extern StartSimulatingJoypadStates
+extern TalkToTrainer
+extern TextScriptEnd
+extern UpdateSprites
+extern WaitForTextScrollButtonPress
+extern YesNoChoice
 extern _Route24CooltrainerM1DefeatedText   ; NOT YET DEFINED IN THE PORT
 extern _Route24CooltrainerM1JoinTeamRocketText   ; NOT YET DEFINED IN THE PORT
 extern _Route24CooltrainerM1NoRoomText   ; NOT YET DEFINED IN THE PORT

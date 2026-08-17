@@ -25,7 +25,7 @@ global SSAnne3FSailorText
 global SSAnne3F_Script
 global SSAnne3F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _SSAnne3FSailorText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

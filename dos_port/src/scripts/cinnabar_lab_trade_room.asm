@@ -29,8 +29,8 @@ global CinnabarLabTradeRoom_Script
 global CinnabarLabTradeRoom_TextPointers
 
 extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern TextScriptEnd
 extern _CinnabarLabTradeRoomSuperNerdText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

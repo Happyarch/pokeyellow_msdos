@@ -26,10 +26,10 @@ global LavenderMartCooltrainerMText
 global LavenderMart_Script
 global LavenderMart_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern LavenderMartClerkText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TextScriptEnd
 extern _LavenderMartBaldingGuyText   ; NOT YET DEFINED IN THE PORT
 extern _LavenderMartCooltrainerMNuggetText   ; NOT YET DEFINED IN THE PORT
 extern _LavenderMartCooltrainerMReviveText   ; NOT YET DEFINED IN THE PORT

@@ -27,17 +27,17 @@ global PokemonMansionB1FBurglarText
 global PokemonMansionB1FScientistText
 global PokemonMansionB1F_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
 extern Mansion2ReplaceBlock   ; NOT YET DEFINED IN THE PORT
-extern Mansion4Script_Switches   ; NOT YET DEFINED IN THE PORT
+extern Mansion4Script_Switches
 extern Mansion4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion4TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Mansion4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansionB1FBurglarBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansionB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

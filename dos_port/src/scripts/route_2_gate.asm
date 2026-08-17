@@ -26,12 +26,12 @@ global Route2GateYoungsterText
 global Route2Gate_Script
 global Route2Gate_TextPointers
 
-extern CopyData   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GetItemName   ; NOT YET DEFINED IN THE PORT
+extern CopyData
+extern EnableAutoTextBoxDrawing
+extern GetItemName
 extern OaksAideScript   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TextScriptEnd
 extern _Route2GateOaksAideFlashExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _Route2GateYoungsterText   ; NOT YET DEFINED IN THE PORT
 

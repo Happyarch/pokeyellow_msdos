@@ -76,6 +76,14 @@ class Resolution:
 class Resolver:
     ram_pret_to_port: Dict[str, str] = field(default_factory=dict)
     port_symbols: Set[str] = field(default_factory=set)
+    #: Names the port's own SOURCES define and export (`global X` in src/**.asm).
+    #: Deliberately SEPARATE from `port_symbols`, which drives resolution: these
+    #: are link-time definitions, not textually-includable constants, so folding
+    #: them in would change what `resolve()` does. This set answers exactly one
+    #: question — "does the port already define this?" — for the extern comment,
+    #: which without it called 124 translated-and-linked routines
+    #: "NOT YET DEFINED IN THE PORT".
+    port_defined: Set[str] = field(default_factory=set)
     #: symbol -> the %include that defines it, so an emitted file can pull in
     #: exactly the headers it needs instead of a fixed guess.
     symbol_include: Dict[str, str] = field(default_factory=dict)
@@ -220,11 +228,42 @@ def _port_symbols_with_source(port: Path):
     return out, src, asset_labels
 
 
+def _port_globals(port: Path) -> Set[str]:
+    """Names the port's own sources EXPORT, from `global X` in src/**/*.asm.
+
+    `_port_symbols_with_source` scans only `include/` and `assets/` .inc files,
+    so every routine defined in port SOURCE was invisible to it — which is why
+    the emitted `extern` lines called 124 translated, linked routines
+    "NOT YET DEFINED IN THE PORT". The extern itself was always right; only the
+    comment was wrong, and a false negative claim repeated 124 times across the
+    files the fine-comb reads is worse than no comment at all.
+
+    The transpiled scripts under src/scripts/ are EXCLUDED: they are this tool's
+    own output, so counting them would let the tool cite itself as evidence that
+    a symbol exists.
+    """
+    out: Set[str] = set()
+    src = port / "src"
+    if not src.is_dir():
+        return out
+    pat = re.compile(r"^\s*global\s+([A-Za-z_][\w.]*)", re.M)
+    for p in sorted(src.rglob("*.asm")):
+        if p.parent.name == "scripts" and p.parent.parent.name == "src":
+            continue
+        try:
+            out |= set(pat.findall(p.read_text(encoding="utf-8", errors="replace")))
+        except OSError:
+            continue
+    return out
+
+
 def build(root: Path, port: Path, script_labels: Set[str] = frozenset(),
           script_constants: Set[str] = frozenset()) -> Resolver:
     uni = pretsyms.build(root)
     syms, sym_src, asset_labels = _port_symbols_with_source(port)
+    port_defined = _port_globals(port)
     r = Resolver(uni=uni, port_symbols=syms, symbol_include=sym_src,
+                 port_defined=port_defined,
                  asset_labels=asset_labels,
                  script_labels=set(script_labels),
                  script_constants=set(script_constants))

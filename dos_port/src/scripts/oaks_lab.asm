@@ -91,51 +91,51 @@ global OaksLab_TextPointers
 global OaksLab_TextPointers2
 global PlayerEntryMovementRLE
 
-extern AddPartyMon   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CalcPositionOfPlayerRelativeToNPC   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern CountSetBits   ; NOT YET DEFINED IN THE PORT
-extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DelayFrame   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisablePikachuOverworldSpriteDrawing   ; NOT YET DEFINED IN THE PORT
-extern DisplayDexRating   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EnablePikachuOverworldSpriteDrawing   ; NOT YET DEFINED IN THE PORT
-extern FillMemory   ; NOT YET DEFINED IN THE PORT
-extern FindPathToPlayer   ; NOT YET DEFINED IN THE PORT
-extern GetMonName   ; NOT YET DEFINED IN THE PORT
-extern GetSpritePosition1   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HealParty   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern Music_RivalAlternateStart   ; NOT YET DEFINED IN THE PORT
+extern AddPartyMon
+extern Bankswitch
+extern CalcPositionOfPlayerRelativeToNPC
+extern CallFunctionInTable
+extern CountSetBits
+extern DecodeRLEList
+extern Delay3
+extern DelayFrame
+extern DelayFrames
+extern DisablePikachuOverworldSpriteDrawing
+extern DisplayDexRating
+extern DisplayTextID
+extern EmotionBubble
+extern EnableAutoTextBoxDrawing
+extern EnablePikachuOverworldSpriteDrawing
+extern FillMemory
+extern FindPathToPlayer
+extern GetMonName
+extern GetSpritePosition1
+extern GiveItem
+extern HealParty
+extern HideObject
+extern IsItemInBag
+extern MoveSprite
+extern Music_RivalAlternateStart
 extern OaksLabLoadTextPointers2Script   ; NOT YET DEFINED IN THE PORT
 extern OaksLabOak1Text   ; NOT YET DEFINED IN THE PORT
 extern OaksLabOakGivesPokedexScript   ; NOT YET DEFINED IN THE PORT
 extern OaksLabPikachuDislikesPokeballsText1   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalArrivesAtOaksRequestScript   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayPikachuSoundClip   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern RemoveItemFromInventory   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
+extern PlayDefaultMusic
+extern PlayMusic
+extern PlayPikachuSoundClip
+extern PrintText
+extern RemoveItemFromInventory
+extern SaveEndBattleTextPointers
 extern SchedulePikachuSpawnForAfterText   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern SetSpritePosition1   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern SetSpritePosition1
+extern ShowObject
+extern StartSimulatingJoypadStates
+extern StopAllMusic
+extern TextScriptEnd
 extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern UpdateSprites
 extern _OaksLabGirlText   ; NOT YET DEFINED IN THE PORT
 extern _OaksLabGivePokeballsExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _OaksLabOak1ComeSeeMeSometimesText   ; NOT YET DEFINED IN THE PORT

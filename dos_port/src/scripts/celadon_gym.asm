@@ -56,21 +56,21 @@ extern CeladonGymTrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern CeladonGym_Script   ; NOT YET DEFINED IN THE PORT
 extern CeladonGym_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern EngageMapTrainer
+extern ExecuteCurMapScriptInTable
+extern GiveItem
+extern InitBattleEnemyParameters
+extern LoadGymLeaderAndCityName
+extern PrintText
+extern SaveEndBattleTextPointers
+extern TalkToTrainer
+extern TextScriptEnd
 extern _CeladonGymErikaPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonGymErikaPreBattleText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonGymErikaReceivedRainbowBadgeText   ; NOT YET DEFINED IN THE PORT

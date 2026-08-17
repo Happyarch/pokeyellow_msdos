@@ -29,8 +29,8 @@ global SafariZoneNorthTrainerTips3Text
 global SafariZoneNorth_Script
 global SafariZoneNorth_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PickUpItemText
 extern _SafariZoneNorthRestHouseSignText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneNorthSignText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneNorthTrainerTips1Text   ; NOT YET DEFINED IN THE PORT

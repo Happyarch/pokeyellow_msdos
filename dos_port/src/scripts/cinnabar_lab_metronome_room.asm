@@ -28,10 +28,10 @@ global CinnabarLabMetronomeRoomScientist2Text
 global CinnabarLabMetronomeRoom_Script
 global CinnabarLabMetronomeRoom_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PrintText
+extern TextScriptEnd
 extern _CinnabarLabMetronomeRoomAmberPipeText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarLabMetronomeRoomPCText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarLabMetronomeRoomScientist1ReceivedTM35Text   ; NOT YET DEFINED IN THE PORT

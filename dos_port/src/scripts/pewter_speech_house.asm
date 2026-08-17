@@ -26,7 +26,7 @@ global PewterSpeechHouseYoungsterText
 global PewterSpeechHouse_Script
 global PewterSpeechHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _PewterSpeechHouseGamblerText   ; NOT YET DEFINED IN THE PORT
 extern _PewterSpeechHouseYoungsterText   ; NOT YET DEFINED IN THE PORT
 

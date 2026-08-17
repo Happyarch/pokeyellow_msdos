@@ -33,22 +33,22 @@ global SeafoamIslandsB4FResetScript
 global SeafoamIslandsB4F_Script
 global SeafoamIslandsB4F_ScriptPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
 extern ArticunoTrainerHeader   ; NOT YET DEFINED IN THE PORT
 extern BoulderText   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern ForceBikeOrSurf   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable
+extern DecodeRLEList
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern ForceBikeOrSurf
+extern PlayCry
 extern SeafoamIslandsB4FMoveObjectScript   ; NOT YET DEFINED IN THE PORT
 extern SeafoamIslandsB4F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates
+extern TalkToTrainer
+extern TextScriptEnd
+extern WaitForSoundToFinish
 extern _SeafoamIslandsB4FArticunoBattleText   ; NOT YET DEFINED IN THE PORT
 extern _SeafoamIslandsB4FBouldersSignText   ; NOT YET DEFINED IN THE PORT
 extern _SeafoamIslandsB4FDangerSignText   ; NOT YET DEFINED IN THE PORT

@@ -50,24 +50,24 @@ global RivalEntrance_RLEMovement
 global RivalVictoryText
 global WalkToHallOfFame_RLEMovement
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GetMonName   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern Music_Cities1AlternateTempo   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern CallFunctionInTable
+extern DecodeRLEList
+extern Delay3
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern GetMonName
+extern HideObject
+extern MoveSprite
+extern Music_Cities1AlternateTempo
+extern PrintText
+extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern SetSpriteMovementBytesToFF   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern SetSpriteMovementBytesToFF
+extern ShowObject
+extern StartSimulatingJoypadStates
+extern TextScriptEnd
+extern UpdateSprites
 extern _ChampionsRoomOakComeWithMeText   ; NOT YET DEFINED IN THE PORT
 extern _ChampionsRoomOakCongratulatesPlayerText   ; NOT YET DEFINED IN THE PORT
 extern _ChampionsRoomOakDisappointedWithRivalText   ; NOT YET DEFINED IN THE PORT

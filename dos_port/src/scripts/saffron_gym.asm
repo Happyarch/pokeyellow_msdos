@@ -39,18 +39,18 @@ global SaffronGymYoungster3Text
 global SaffronGymYoungster4Text
 global SaffronGym_ScriptPointers
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern EngageMapTrainer
+extern ExecuteCurMapScriptInTable
+extern GiveItem
+extern InitBattleEnemyParameters
+extern LoadGymLeaderAndCityName
+extern PrintText
 extern SaffronGymChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymGymGuideText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -63,9 +63,9 @@ extern SaffronGymTrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern SaffronGym_Script   ; NOT YET DEFINED IN THE PORT
 extern SaffronGym_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern SaveEndBattleTextPointers
+extern TalkToTrainer
+extern TextScriptEnd
 extern _SaffronGymSabrinaMarshBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGymSabrinaPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGymSabrinaReceivedMarshBadgeText   ; NOT YET DEFINED IN THE PORT

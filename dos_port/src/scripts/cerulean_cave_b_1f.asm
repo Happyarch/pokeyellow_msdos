@@ -28,14 +28,14 @@ global CeruleanCaveB1F_Script
 
 extern CeruleanCaveB1FTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern CeruleanCaveB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
 extern MewtwoBattleText   ; NOT YET DEFINED IN THE PORT
 extern MewtwoTrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern PlayCry
+extern TalkToTrainer
+extern TextScriptEnd
+extern WaitForSoundToFinish
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

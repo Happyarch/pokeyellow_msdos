@@ -29,9 +29,9 @@ global SilphCo4FScientistText
 global SilphCo4FUnlockedDoorEventScript
 global SilphCo4F_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern ReplaceTileBlock
 extern SilphCo4FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4FScientistBattleText   ; NOT YET DEFINED IN THE PORT
@@ -43,8 +43,8 @@ extern SilphCo4TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 extern _SilphCo4FSilphWorkerMImHidingText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo4FSilphWorkerMTeamRocketIsGoneText   ; NOT YET DEFINED IN THE PORT
 

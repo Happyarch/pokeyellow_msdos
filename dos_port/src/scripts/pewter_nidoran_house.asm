@@ -27,10 +27,10 @@ global PewterNidoranHouseNidoranText
 global PewterNidoranHouse_Script
 global PewterNidoranHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PlayCry
+extern TextScriptEnd
+extern WaitForSoundToFinish
 extern _PewterNidoranHouseLittleBoyText   ; NOT YET DEFINED IN THE PORT
 extern _PewterNidoranHouseMiddleAgedManText   ; NOT YET DEFINED IN THE PORT
 extern _PewterNidoranHouseNidoranText   ; NOT YET DEFINED IN THE PORT

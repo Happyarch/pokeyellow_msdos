@@ -26,7 +26,7 @@ global DiglettsCaveRoute11GamblerText
 global DiglettsCaveRoute11_Script
 global DiglettsCaveRoute11_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _DiglettsCaveRoute11GamblerText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

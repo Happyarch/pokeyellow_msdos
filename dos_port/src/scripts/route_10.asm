@@ -31,8 +31,8 @@ global Route10SuperNerd1Text
 global Route10SuperNerd2Text
 global Route10_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
 extern Route10CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route10CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route10Hiker1BattleText   ; NOT YET DEFINED IN THE PORT
@@ -47,8 +47,8 @@ extern Route10TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern Route10TrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern Route10TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route10_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

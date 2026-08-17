@@ -31,12 +31,12 @@ global LavenderTownSuperNerdText
 global LavenderTown_Script
 global LavenderTown_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern MartSignText   ; NOT YET DEFINED IN THE PORT
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TextScriptEnd
+extern YesNoChoice
 extern _LavenderTownCooltrainerMText   ; NOT YET DEFINED IN THE PORT
 extern _LavenderTownLittleGirlDoYouBelieveInGhostsText   ; NOT YET DEFINED IN THE PORT
 extern _LavenderTownLittleGirlHaHaGuessNotText   ; NOT YET DEFINED IN THE PORT

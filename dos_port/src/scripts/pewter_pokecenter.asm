@@ -32,20 +32,20 @@ global PewterPokecenterPrintCooltrainerFText
 global PewterPokecenter_Script
 global PewterPokecenter_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CheckPikachuStatusCondition   ; NOT YET DEFINED IN THE PORT
-extern CopyData   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisablePikachuFollowingPlayer   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern CheckPikachuStatusCondition
+extern CopyData
+extern DelayFrames
+extern DisablePikachuFollowingPlayer
+extern EnableAutoTextBoxDrawing
 extern PewterJigglypuff   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
+extern PlayDefaultMusic
+extern PlayMusic
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern PrintText
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern StopAllMusic
+extern TextScriptEnd
 extern _PewterPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 extern _PewterPokecenterJigglypuffText   ; NOT YET DEFINED IN THE PORT
 extern _PewterPokecenterText3   ; NOT YET DEFINED IN THE PORT

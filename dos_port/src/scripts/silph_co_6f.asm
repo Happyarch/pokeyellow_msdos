@@ -29,10 +29,10 @@ global SilphCo6F_GateCallbackScript
 global SilphCo6F_Script
 global SilphCo6F_UnlockedDoorEventScript
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern PrintText
+extern ReplaceTileBlock
 extern SilphCo4F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
@@ -48,8 +48,8 @@ extern SilphCo6TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 extern _SilphCo6FSilphWorkerF1HaveToMarryHimText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo6FSilphWorkerF1SuchACowardText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo6FSilphWorkerF2TeamRocketConquerWorldText   ; NOT YET DEFINED IN THE PORT

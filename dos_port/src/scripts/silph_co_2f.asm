@@ -31,11 +31,11 @@ global SilphCo2FSilphWorkerFText
 global SilphCo2F_Script
 global SilphCo2F_UnlockedDoorEventScript
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern GiveItem
+extern PrintText
+extern ReplaceTileBlock
 extern SilphCo2FScientist1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2FSilphWorkerFPleaseTakeThisText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
@@ -45,8 +45,8 @@ extern SilphCo2TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 extern _SilphCo2FSilphWorkerFReceivedTM36Text   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo2FSilphWorkerFTM36ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo2FSilphWorkerFTM36NoRoomText   ; NOT YET DEFINED IN THE PORT

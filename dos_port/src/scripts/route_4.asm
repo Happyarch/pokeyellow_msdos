@@ -26,14 +26,14 @@ bits 32
 global Route4CooltrainerF2Text
 global Route4_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
 extern Route4CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route4_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

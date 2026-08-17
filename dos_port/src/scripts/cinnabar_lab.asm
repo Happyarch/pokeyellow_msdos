@@ -29,7 +29,7 @@ global CinnabarLabTestingRoomSignText
 global CinnabarLab_Script
 global CinnabarLab_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CinnabarLabFishingGuruText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarLabMeetingRoomSignText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarLabPhotoText   ; NOT YET DEFINED IN THE PORT

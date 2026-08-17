@@ -26,13 +26,13 @@ global Route15Gate2FOaksAideText
 global Route15Gate2F_Script
 global Route15Gate2F_TextPointers
 
-extern CopyData   ; NOT YET DEFINED IN THE PORT
-extern DisableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern CopyData
+extern DisableAutoTextBoxDrawing
 extern GateUpstairsScript_PrintIfFacingUp   ; NOT YET DEFINED IN THE PORT
-extern GetItemName   ; NOT YET DEFINED IN THE PORT
+extern GetItemName
 extern OaksAideScript   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TextScriptEnd
 extern _Route15Gate2FBinocularsText   ; NOT YET DEFINED IN THE PORT
 extern _Route15Gate2FOaksAideExpAllText   ; NOT YET DEFINED IN THE PORT
 

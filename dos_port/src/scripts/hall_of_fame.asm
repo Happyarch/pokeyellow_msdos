@@ -33,21 +33,21 @@ global HallOfFame_ScriptPointers
 global HallOfFame_TextPointers
 global HallofFameRoomClearScripts
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern CallFunctionInTable
+extern DecodeRLEList
+extern Delay3
+extern DelayFrames
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
 extern HallOfFamePC   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern Init   ; NOT YET DEFINED IN THE PORT
-extern SaveGameData   ; NOT YET DEFINED IN THE PORT
+extern HideObject
+extern Init
+extern SaveGameData
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern SetSpriteMovementBytesToFF   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern WaitForTextScrollButtonPress   ; NOT YET DEFINED IN THE PORT
+extern SetSpriteMovementBytesToFF
+extern StartSimulatingJoypadStates
+extern WaitForTextScrollButtonPress
 extern _HallOfFameOakText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.

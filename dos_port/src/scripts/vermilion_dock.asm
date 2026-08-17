@@ -29,24 +29,24 @@ global VermilionDock_EmitSmokePuff
 global VermilionDock_Script
 global VermilionDock_TextPointers
 
-extern CopyScreenTileBufferToVRAM   ; NOT YET DEFINED IN THE PORT
-extern CopyVideoData   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern FillMemory   ; NOT YET DEFINED IN THE PORT
-extern LoadPlayerSpriteGraphics   ; NOT YET DEFINED IN THE PORT
-extern LoadSmokeTileFourTimes   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
+extern CopyScreenTileBufferToVRAM
+extern CopyVideoData
+extern Delay3
+extern DelayFrames
+extern EnableAutoTextBoxDrawing
+extern FillMemory
+extern LoadPlayerSpriteGraphics
+extern LoadSmokeTileFourTimes
+extern PlayMusic
+extern PlaySound
+extern PlaySoundWaitForCurrent
+extern StopAllMusic
 extern UpdateCGBPal_OBP1   ; NOT YET DEFINED IN THE PORT
 extern VermilionDockSSAnneLeavesScript   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_AnimSmokePuffDriftRight   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_EraseSSAnne   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_SyncScrollWithLY   ; NOT YET DEFINED IN THE PORT
-extern WriteOAMBlock   ; NOT YET DEFINED IN THE PORT
+extern WriteOAMBlock
 extern _VermilionDockUnusedText   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,

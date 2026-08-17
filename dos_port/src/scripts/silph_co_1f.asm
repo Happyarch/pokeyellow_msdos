@@ -25,8 +25,8 @@ global SilphCo1FLinkReceptionistText
 global SilphCo1F_Script
 global SilphCo1F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ShowObject
 extern _SilphCo1FLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

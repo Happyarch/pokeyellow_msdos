@@ -26,10 +26,10 @@ global PewterMartYoungsterText
 global PewterMart_Script
 global PewterMart_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern PewterMartClerkText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TextScriptEnd
 extern _PewterMartSuperNerdText   ; NOT YET DEFINED IN THE PORT
 extern _PewterMartYoungsterText   ; NOT YET DEFINED IN THE PORT
 

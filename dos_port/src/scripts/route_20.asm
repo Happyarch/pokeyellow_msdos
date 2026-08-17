@@ -37,9 +37,9 @@ global Route20Swimmer8Text
 global Route20Swimmer9Text
 global Route20_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern HideObject
 extern Route20Swimmer1BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -53,9 +53,9 @@ extern Route20TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeader9   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route20_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern ShowObject
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

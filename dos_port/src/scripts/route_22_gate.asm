@@ -36,16 +36,16 @@ global Route22Gate_Script
 global Route22Gate_ScriptPointers
 global Route22Gate_TextPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CallFunctionInTable
+extern Delay3
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern PlaySoundWaitForCurrent
+extern PrintText
+extern StartSimulatingJoypadStates
+extern TextScriptEnd
+extern WaitForSoundToFinish
 extern _Route22GateGuardGoRightAheadText   ; NOT YET DEFINED IN THE PORT
 extern _Route22GateGuardICantLetYouPassText   ; NOT YET DEFINED IN THE PORT
 extern _Route22GateGuardNoBoulderbadgeText   ; NOT YET DEFINED IN THE PORT

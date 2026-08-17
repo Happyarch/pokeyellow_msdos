@@ -44,12 +44,12 @@ global ViridianForestYoungster4Text
 global ViridianForestYoungster5Text
 global ViridianForest_Script
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern PrintText
+extern TalkToTrainer
+extern TextScriptEnd
 extern ViridianForestTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern ViridianForestTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern ViridianForestTrainerHeader2   ; NOT YET DEFINED IN THE PORT

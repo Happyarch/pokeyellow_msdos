@@ -26,7 +26,7 @@ global UndergroundPathRoute8GirlText
 global UndergroundPathRoute8_Script
 global UndergroundPathRoute8_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _UndergroundPathRoute8GirlText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

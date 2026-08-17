@@ -36,26 +36,26 @@ global SSAnne2F_Script
 global SSAnne2F_ScriptPointers
 global SSAnne2F_TextPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern Music_RivalAlternateStart   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern Bankswitch
+extern CallFunctionInTable
+extern Delay3
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern HideObject
+extern MoveSprite
+extern Music_RivalAlternateStart
+extern PlayDefaultMusic
+extern PlayMusic
+extern PrintText
 extern SSAnne2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SSAnne2FRivalAfterBattleScript   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
+extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern SetSpriteMovementBytesToFF   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern SetSpriteMovementBytesToFF
+extern ShowObject
+extern StopAllMusic
+extern TextScriptEnd
 extern _SSAnne2FRivalCutMasterText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnne2FRivalDefeatedText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnne2FRivalText   ; NOT YET DEFINED IN THE PORT

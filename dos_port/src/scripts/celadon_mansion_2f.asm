@@ -25,7 +25,7 @@ global CeladonMansion2FMeetingRoomSignText
 global CeladonMansion2F_Script
 global CeladonMansion2F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CeladonMansion2FMeetingRoomSignText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

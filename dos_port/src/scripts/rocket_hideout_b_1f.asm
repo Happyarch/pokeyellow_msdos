@@ -31,10 +31,10 @@ global RocketHideoutB1FRocket4Text
 global RocketHideoutB1FRocket5Text
 global RocketHideoutB1F_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern PlaySound
+extern ReplaceTileBlock
 extern RocketHideout1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout1TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout1TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -44,8 +44,8 @@ extern RocketHideout1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1FRocket5EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

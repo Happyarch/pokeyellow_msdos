@@ -54,32 +54,32 @@ global PikachuMovement_WatchPlayer1
 global PikachuMovement_WatchPlayer2
 global RLE_1e219
 
-extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
+extern ApplyPikachuMovementData
+extern Bankswitch
 extern BillsHouseScript2   ; NOT YET DEFINED IN THE PORT
 extern BillsHouse_CheckPikachuEmotion   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern CheckPikachuFollowingPlayer   ; NOT YET DEFINED IN THE PORT
-extern CheckPikachuStatusCondition   ; NOT YET DEFINED IN THE PORT
-extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisablePikachuFollowingPlayer   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable
+extern CheckPikachuFollowingPlayer
+extern CheckPikachuStatusCondition
+extern DecodeRLEList
+extern DelayFrames
+extern DisablePikachuFollowingPlayer
+extern DisplayTextID
+extern EmotionBubble
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern HideObject
 extern InitializePikachuTextID   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern MoveSprite
+extern PrintText
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern SetSpritePosition1   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern SetSpritePosition1
+extern ShowObject
+extern StartSimulatingJoypadStates
+extern TextScriptEnd
 extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern UpdateSprites
+extern YesNoChoice
 extern _BillsHouseBillCheckOutMyRarePokemonText   ; NOT YET DEFINED IN THE PORT
 extern _BillsHouseBillDontLeaveText   ; NOT YET DEFINED IN THE PORT
 extern _BillsHouseBillImNotAPokemonText   ; NOT YET DEFINED IN THE PORT

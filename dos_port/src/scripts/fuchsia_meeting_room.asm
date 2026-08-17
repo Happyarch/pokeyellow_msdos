@@ -27,7 +27,7 @@ global FuchsiaMeetingRoomSafariZoneWorker3
 global FuchsiaMeetingRoom_Script
 global FuchsiaMeetingRoom_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _FuchsiaMeetingRoomSafariZoneWorker1   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaMeetingRoomSafariZoneWorker2   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaMeetingRoomSafariZoneWorker3   ; NOT YET DEFINED IN THE PORT

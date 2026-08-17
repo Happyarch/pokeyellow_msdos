@@ -30,11 +30,11 @@ global CeladonDinerPrintGymGuideText
 global CeladonDiner_Script
 global CeladonDiner_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PrintText
+extern TextScriptEnd
 extern _CeladonDinerCookText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonDinerFisherText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonDinerGymGuideCoinCaseNoRoomText   ; NOT YET DEFINED IN THE PORT

@@ -26,7 +26,7 @@ global SSAnne1FWaiterText
 global SSAnne1F_Script
 global SSAnne1F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _SSAnne1FSailorText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnne1FWaiterText   ; NOT YET DEFINED IN THE PORT
 

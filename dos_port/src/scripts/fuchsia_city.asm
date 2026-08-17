@@ -41,11 +41,11 @@ global FuchsiaCity_Script
 global FuchsiaCity_TextPointers
 
 extern DisplayPokedex   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern MartSignText   ; NOT YET DEFINED IN THE PORT
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TextScriptEnd
 extern _FuchsiaCityChanseySignText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaCityErikText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaCityFossilSignKabutoText   ; NOT YET DEFINED IN THE PORT

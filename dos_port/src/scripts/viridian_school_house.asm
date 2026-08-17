@@ -29,10 +29,10 @@ global ViridianSchoolHousePrintLittleGirlText
 global ViridianSchoolHouse_Script
 global ViridianSchoolHouse_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
+extern PrintText
+extern TextScriptEnd
 extern _ViridianSchoolHouseBrunetteGirlText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianSchoolHouseCooltrainerFText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianSchoolHouseLittleGirlText   ; NOT YET DEFINED IN THE PORT

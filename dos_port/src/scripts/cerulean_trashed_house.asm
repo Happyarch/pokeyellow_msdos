@@ -27,10 +27,10 @@ global CeruleanTrashedHouse_Script
 global CeruleanTrashedHouse_TextPointers
 
 extern CeruleanTrashedHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GetQuantityOfItemInBag   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GetQuantityOfItemInBag
+extern PrintText
+extern TextScriptEnd
 extern _CeruleanTrashedHouseFishingGuruTheyStoleATMText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanTrashedHouseFishingGuruWhatsLostIsLostText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanTrashedHouseGirlText   ; NOT YET DEFINED IN THE PORT

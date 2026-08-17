@@ -28,9 +28,9 @@ global SaffronPidgeyHouseYoungsterText
 global SaffronPidgeyHouse_Script
 global SaffronPidgeyHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PlayCry
+extern TextScriptEnd
 extern _SaffronPidgeyHouseBrunetteGirlText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronPidgeyHousePaperText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronPidgeyHousePidgeyText   ; NOT YET DEFINED IN THE PORT

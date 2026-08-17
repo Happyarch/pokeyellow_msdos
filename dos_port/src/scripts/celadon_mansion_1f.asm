@@ -39,16 +39,16 @@ global CeladonMansion1Text_f1eee
 global CeladonMansionText_f1e9c
 global PikachuHappinessThresholds_f1eb9
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
 extern CeladonMansion1FGrannyText   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern DelayFrames
+extern EnableAutoTextBoxDrawing
 extern Func_f1ea2   ; NOT YET DEFINED IN THE PORT
-extern IsStarterPikachuAliveInOurParty   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern PlayPikachuSoundClip   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern IsStarterPikachuAliveInOurParty
+extern PlayCry
+extern PlayPikachuSoundClip
+extern PrintText
+extern TextScriptEnd
 extern _CeladonMansion1FClefairyText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMansion1FManagersSuiteSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMansion1FMeowthText   ; NOT YET DEFINED IN THE PORT

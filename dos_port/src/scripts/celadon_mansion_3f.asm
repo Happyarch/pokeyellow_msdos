@@ -38,22 +38,22 @@ global CeladonMansion3Text_486f0
 global CeladonMansion3Text_486f5
 global CeladonMansion3_PokedexCount
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
 extern CeladonMansion3FWriterText   ; NOT YET DEFINED IN THE PORT
-extern CountSetBits   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
+extern CountSetBits
+extern Delay3
 extern DisplayDiploma   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GBPalNormal   ; NOT YET DEFINED IN THE PORT
-extern GBPalWhiteOutWithDelay3   ; NOT YET DEFINED IN THE PORT
-extern LoadScreenTilesFromBuffer2   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GBPalNormal
+extern GBPalWhiteOutWithDelay3
+extern LoadScreenTilesFromBuffer2
 extern PrintDiploma   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReloadTilesetTilePatterns   ; NOT YET DEFINED IN THE PORT
-extern RestoreScreenTilesAndReloadTilePatterns   ; NOT YET DEFINED IN THE PORT
-extern SaveScreenTilesToBuffer2   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern ReloadTilesetTilePatterns
+extern RestoreScreenTilesAndReloadTilePatterns
+extern SaveScreenTilesToBuffer2
+extern TextScriptEnd
+extern YesNoChoice
 extern _CeladonMansion3FDevRoomSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMansion3FGameDesignerCompletedDexText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMansion3FGameDesignerCompletedDexText2   ; NOT YET DEFINED IN THE PORT

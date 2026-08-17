@@ -25,7 +25,7 @@ global VermilionTradeHouseGentlemanText
 global VermilionTradeHouse_Script
 global VermilionTradeHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern TeachingHMsText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

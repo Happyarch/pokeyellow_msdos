@@ -26,12 +26,12 @@ global Route16FlyHouseFearowText
 global Route16FlyHouse_Script
 global Route16FlyHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PlayCry
+extern PrintText
+extern TextScriptEnd
+extern WaitForSoundToFinish
 extern _Route16FlyHouseBrunetteGirlHM02ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _Route16FlyHouseBrunetteGirlHM02NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _Route16FlyHouseBrunetteGirlReceivedHM02Text   ; NOT YET DEFINED IN THE PORT

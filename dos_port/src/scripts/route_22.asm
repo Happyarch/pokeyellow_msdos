@@ -56,29 +56,29 @@ global Route22_Script
 global Route22_ScriptPointers
 global Route22_TextPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern Music_RivalAlternateStart   ; NOT YET DEFINED IN THE PORT
-extern Music_RivalAlternateStartAndTempo   ; NOT YET DEFINED IN THE PORT
-extern Music_RivalAlternateTempo   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern Bankswitch
+extern CallFunctionInTable
+extern DisplayTextID
+extern EmotionBubble
+extern EnableAutoTextBoxDrawing
+extern HideObject
+extern MoveSprite
+extern Music_RivalAlternateStart
+extern Music_RivalAlternateStartAndTempo
+extern Music_RivalAlternateTempo
+extern PlayDefaultMusic
+extern PlayMusic
+extern PrintText
 extern Route22MoveRival1   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRival2   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRivalRightScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival1AfterBattleScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival2AfterBattleScript   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
+extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern StopAllMusic
+extern TextScriptEnd
 extern _Route22PokemonLeagueSignText   ; NOT YET DEFINED IN THE PORT
 extern _Route22Rival1DefeatedText   ; NOT YET DEFINED IN THE PORT
 extern _Route22Rival1VictoryText   ; NOT YET DEFINED IN THE PORT

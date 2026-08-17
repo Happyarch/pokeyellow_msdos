@@ -26,8 +26,8 @@ global Route2SignText
 global Route2_Script
 global Route2_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PickUpItemText
 extern _Route2DiglettsCaveSignText   ; NOT YET DEFINED IN THE PORT
 extern _Route2SignText   ; NOT YET DEFINED IN THE PORT
 

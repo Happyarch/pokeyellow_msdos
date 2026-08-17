@@ -28,10 +28,10 @@ global SilphCo10FScientistText
 global SilphCo10F_Script
 global SilphCo10F_SetUnlockedSilphCoDoorsScript
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern PrintText
+extern ReplaceTileBlock
 extern SilphCo10FRocketBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10FSilphWorkerFText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
@@ -39,8 +39,8 @@ extern SilphCo10TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

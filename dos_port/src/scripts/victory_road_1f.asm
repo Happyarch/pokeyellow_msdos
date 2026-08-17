@@ -27,15 +27,15 @@ global VictoryRoad1FCooltrainerMText
 global VictoryRoad1F_Script
 global VictoryRoad1F_ScriptPointers
 
-extern CheckBoulderCoords   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern CheckBoulderCoords
+extern CheckFightingMapTrainers
+extern DisplayEnemyTrainerTextAndStartBattle
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern ReplaceTileBlock
+extern TalkToTrainer
+extern TextScriptEnd
 extern VictoryRoad1FCooltrainerFBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1TrainerHeader0   ; NOT YET DEFINED IN THE PORT

@@ -30,17 +30,17 @@ global PokemonTower5FDefaultScript
 global PokemonTower5F_Script
 global PokemonTower5F_ScriptPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GBFadeInFromWhite   ; NOT YET DEFINED IN THE PORT
-extern GBFadeOutToWhite   ; NOT YET DEFINED IN THE PORT
-extern HealParty   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CheckFightingMapTrainers
+extern Delay3
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern GBFadeInFromWhite
+extern GBFadeOutToWhite
+extern HealParty
 extern PokemonTower5FChanneler2BattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FChanneler3BattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FChanneler4BattleText   ; NOT YET DEFINED IN THE PORT
@@ -51,8 +51,8 @@ extern PokemonTower5TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; Script constants — pret defines these via dw_const in this file.
 TEXT_POKEMONTOWER5F_PURIFIEDZONE               equ 7

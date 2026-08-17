@@ -25,10 +25,10 @@ global MrPsychicsHouseMrPsychicText
 global MrPsychicsHouse_Script
 global MrPsychicsHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PrintText
+extern TextScriptEnd
 extern _MrPsychicsHouseMrPsychicReceivedTM29Text   ; NOT YET DEFINED IN THE PORT
 extern _MrPsychicsHouseMrPsychicTM29ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _MrPsychicsHouseMrPsychicTM29NoRoomText   ; NOT YET DEFINED IN THE PORT

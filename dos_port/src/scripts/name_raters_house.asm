@@ -26,20 +26,20 @@ global NameRatersHouseYesNoScript
 global NameRatersHouse_Script
 global NameRatersHouse_TextPointers
 
-extern AddNTimes   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern DisplayNameRaterScreen   ; NOT YET DEFINED IN THE PORT
-extern DisplayPartyMenu   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GBPalWhiteOutWithDelay3   ; NOT YET DEFINED IN THE PORT
-extern GetPartyMonName2   ; NOT YET DEFINED IN THE PORT
-extern LoadGBPal   ; NOT YET DEFINED IN THE PORT
+extern AddNTimes
+extern Bankswitch
+extern DisplayNameRaterScreen
+extern DisplayPartyMenu
+extern EnableAutoTextBoxDrawing
+extern GBPalWhiteOutWithDelay3
+extern GetPartyMonName2
+extern LoadGBPal
 extern NameRatersHouseCheckMonOTScript   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern RestoreScreenTilesAndReloadTilePatterns   ; NOT YET DEFINED IN THE PORT
-extern SaveScreenTilesToBuffer2   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern RestoreScreenTilesAndReloadTilePatterns
+extern SaveScreenTilesToBuffer2
+extern TextScriptEnd
+extern YesNoChoice
 extern _NameRatersHouseNameRaterATrulyImpeccableNameText   ; NOT YET DEFINED IN THE PORT
 extern _NameRatersHouseNameRaterComeAnyTimeYouLikeText   ; NOT YET DEFINED IN THE PORT
 extern _NameRatersHouseNameRaterGiveItANiceNameText   ; NOT YET DEFINED IN THE PORT

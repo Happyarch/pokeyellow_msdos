@@ -69,28 +69,28 @@ global ViridianCity_Script
 global ViridianCity_ScriptPointers
 global ViridianCity_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern CallFunctionInTable
+extern Delay3
+extern DelayFrames
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern HideObject
 extern MartSignText   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
+extern MoveSprite
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern PrintText
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates
+extern TextScriptEnd
 extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern UpdateSprites
 extern ViridianCityFisherYouCanHaveThisText   ; NOT YET DEFINED IN THE PORT
 extern ViridianCityPostInitialCatchTraining   ; NOT YET DEFINED IN THE PORT
 extern ViridianCityYoungster2CaterpieAndWeedleDescriptionText   ; NOT YET DEFINED IN THE PORT
 extern ViridianCityYoungster2OkThenText   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern YesNoChoice
 extern _ViridianCityFisherReceivedTM42Text   ; NOT YET DEFINED IN THE PORT
 extern _ViridianCityFisherTM42ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianCityFisherTM42NoRoomText   ; NOT YET DEFINED IN THE PORT

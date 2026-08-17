@@ -26,8 +26,8 @@ global SafariZoneCenterTrainerTipsSignText
 global SafariZoneCenter_Script
 global SafariZoneCenter_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PickUpItemText
 extern _SafariZoneCenterRestHouseSignText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneCenterTrainerTipsSignText   ; NOT YET DEFINED IN THE PORT
 

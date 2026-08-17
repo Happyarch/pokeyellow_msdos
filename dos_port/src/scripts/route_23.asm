@@ -45,25 +45,25 @@ global Route23_ScriptPointers
 global Route23_TextPointers
 
 extern BadgeTextPointers   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable
 extern CascadeBadgeText   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
+extern DisplayTextID
 extern EarthBadgeText   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern FlagActionPredef   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern FlagActionPredef
+extern HideObject
 extern MarshBadgeText   ; NOT YET DEFINED IN THE PORT
-extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern PlaySoundWaitForCurrent
+extern PrintText
 extern RainbowBadgeText   ; NOT YET DEFINED IN THE PORT
 extern Route23CopyBadgeTextScript   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
+extern ShowObject
 extern SoulBadgeText   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates
+extern TextScriptEnd
 extern ThunderBadgeText   ; NOT YET DEFINED IN THE PORT
 extern VolcanoBadgeText   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern WaitForSoundToFinish
 extern _Route23GoRightAheadText   ; NOT YET DEFINED IN THE PORT
 extern _Route23OhThatIsTheBadgeText   ; NOT YET DEFINED IN THE PORT
 extern _Route23VictoryRoadGateSignText   ; NOT YET DEFINED IN THE PORT

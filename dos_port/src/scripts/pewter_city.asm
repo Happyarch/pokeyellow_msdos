@@ -48,24 +48,24 @@ global PewterCity_Script
 global PewterCity_ScriptPointers
 global PewterCity_TextPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GetSpritePosition2   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CallFunctionInTable
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern GetSpritePosition2
+extern HideObject
 extern MartSignText   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
+extern MoveSprite
+extern PlayDefaultMusic
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern PrintText
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern SetSpritePosition1   ; NOT YET DEFINED IN THE PORT
-extern SetSpritePosition2   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
+extern SetSpritePosition1
+extern SetSpritePosition2
+extern ShowObject
 extern SpriteFunc_34a1   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd
+extern YesNoChoice
 extern _PewterCityCooltrainerFText   ; NOT YET DEFINED IN THE PORT
 extern _PewterCityCooltrainerMText   ; NOT YET DEFINED IN THE PORT
 extern _PewterCityGymSignText   ; NOT YET DEFINED IN THE PORT

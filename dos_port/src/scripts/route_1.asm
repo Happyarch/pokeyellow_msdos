@@ -30,11 +30,11 @@ global Route1Youngster2Text
 global Route1_Script
 global Route1_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PrintText
+extern TextScriptEnd
 extern _Route1SignText   ; NOT YET DEFINED IN THE PORT
 extern _Route1Youngster1AlsoGotPokeballsText   ; NOT YET DEFINED IN THE PORT
 extern _Route1Youngster1GotPotionText   ; NOT YET DEFINED IN THE PORT

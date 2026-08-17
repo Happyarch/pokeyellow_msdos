@@ -28,10 +28,10 @@ global Route12Gate2FRightBinocularsText
 global Route12Gate2F_Script
 global Route12Gate2F_TextPointers
 
-extern DisableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern DisableAutoTextBoxDrawing
+extern GiveItem
+extern PrintText
+extern TextScriptEnd
 extern _Route12Gate2FBrunetteGirlReceivedTM39Text   ; NOT YET DEFINED IN THE PORT
 extern _Route12Gate2FBrunetteGirlTM39ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _Route12Gate2FBrunetteGirlTM39NoRoomText   ; NOT YET DEFINED IN THE PORT

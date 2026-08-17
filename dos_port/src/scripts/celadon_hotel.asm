@@ -27,7 +27,7 @@ global CeladonHotelSuperNerdText
 global CeladonHotel_Script
 global CeladonHotel_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CeladonHotelBeautyText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonHotelGrannyText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonHotelSuperNerdText   ; NOT YET DEFINED IN THE PORT

@@ -44,14 +44,14 @@ global CeladonCity_Script
 global CeladonCity_ScriptPointers
 global CeladonCity_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern CallFunctionInTable
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PlayCry
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TextScriptEnd
 extern _CeladonCityDeptStoreSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityFisherText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityGameCornerSignText   ; NOT YET DEFINED IN THE PORT

@@ -47,7 +47,7 @@ global SaffronCityTrainerTips2Text
 global SaffronCity_Script
 global SaffronCity_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern MartSignText   ; NOT YET DEFINED IN THE PORT
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronCityFightingDojoSignText   ; NOT YET DEFINED IN THE PORT

@@ -34,16 +34,16 @@ global PokemonTower6FSetDefaultScript
 global PokemonTower6F_Script
 global PokemonTower6F_ScriptPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CheckFightingMapTrainers
+extern Delay3
+extern DelayFrames
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern PlayCry
 extern PokemonTower6FChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6FGhostWasCubonesMotherText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6FSoulWasCalmedText   ; NOT YET DEFINED IN THE PORT
@@ -52,11 +52,11 @@ extern PokemonTower6TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TalkToTrainer
+extern TextScriptEnd
+extern UpdateSprites
+extern WaitForSoundToFinish
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_POKEMONTOWER6F_DEFAULT                  equ 0

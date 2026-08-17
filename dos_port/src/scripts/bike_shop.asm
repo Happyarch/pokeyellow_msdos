@@ -37,16 +37,16 @@ extern BikeShopComeAgainText   ; NOT YET DEFINED IN THE PORT
 extern BikeShopExchangedVoucherText   ; NOT YET DEFINED IN THE PORT
 extern BikeShopMenuPrice   ; NOT YET DEFINED IN THE PORT
 extern BikeShopMenuText   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HandleMenuInput   ; NOT YET DEFINED IN THE PORT
-extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
-extern PlaceString   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern RemoveItemByID   ; NOT YET DEFINED IN THE PORT
-extern TextBoxBorder   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern HandleMenuInput
+extern IsItemInBag
+extern PlaceString
+extern PrintText
+extern RemoveItemByID
+extern TextBoxBorder
+extern TextScriptEnd
+extern UpdateSprites
 extern _BikeShopMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
 extern _BikeShopYoungsterCoolBikeText   ; NOT YET DEFINED IN THE PORT
 extern _BikeShopYoungsterTheseBikesAreExpensiveText   ; NOT YET DEFINED IN THE PORT

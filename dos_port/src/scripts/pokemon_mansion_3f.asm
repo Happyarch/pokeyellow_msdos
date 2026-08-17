@@ -30,21 +30,21 @@ global PokemonMansion3FSuperNerdText
 global PokemonMansion3F_Script
 global PokemonMansion3F_ScriptPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CheckFightingMapTrainers
+extern DisplayEnemyTrainerTextAndStartBattle
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
 extern Mansion2ReplaceBlock   ; NOT YET DEFINED IN THE PORT
-extern Mansion3Script_Switches   ; NOT YET DEFINED IN THE PORT
+extern Mansion3Script_Switches
 extern Mansion3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Mansion3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion3FSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion3F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

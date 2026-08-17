@@ -25,7 +25,7 @@ global CeladonMansionRoofHouseSignText
 global CeladonMansionRoof_Script
 global CeladonMansionRoof_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CeladonMansionRoofHouseSignText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

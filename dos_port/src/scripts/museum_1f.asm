@@ -38,21 +38,21 @@ global Museum1F_Script
 global Museum1F_ScriptPointers
 global Museum1F_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextBoxID   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern SubBCDPredef   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern CallFunctionInTable
+extern DisplayTextBoxID
+extern DisplayTextID
+extern GiveItem
+extern HasEnoughMoney
+extern HideObject
+extern PlaySoundWaitForCurrent
+extern PrintText
+extern StartSimulatingJoypadStates
+extern SubBCDPredef
+extern TextScriptEnd
+extern UpdateSprites
+extern WaitForSoundToFinish
+extern YesNoChoice
 extern _Museum1FGamblerText   ; NOT YET DEFINED IN THE PORT
 extern _Museum1FOldAmberText   ; NOT YET DEFINED IN THE PORT
 extern _Museum1FScientist1AmberIsFossilizedTreeSapText   ; NOT YET DEFINED IN THE PORT

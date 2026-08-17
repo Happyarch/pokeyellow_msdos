@@ -28,10 +28,10 @@ global Route16Gate2FRightBinocularsText
 global Route16Gate2F_Script
 global Route16Gate2F_TextPointers
 
-extern DisableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern DisableAutoTextBoxDrawing
 extern GateUpstairsScript_PrintIfFacingUp   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TextScriptEnd
 extern _Route16Gate2FLeftBinocularsText   ; NOT YET DEFINED IN THE PORT
 extern _Route16Gate2FLittleBoyText   ; NOT YET DEFINED IN THE PORT
 extern _Route16Gate2FLittleGirlText   ; NOT YET DEFINED IN THE PORT

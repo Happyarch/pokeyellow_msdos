@@ -30,16 +30,16 @@ global RocketHideoutElevatorWarpMaps
 global RocketHideoutElevator_Script
 global RocketHideoutElevator_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CopyData   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern CopyData
+extern Delay3
 extern DisplayElevatorFloorMenu   ; NOT YET DEFINED IN THE PORT
-extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
-extern LoadItemList   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern IsItemInBag
+extern LoadItemList
+extern PrintText
 extern RocketHideoutElevatorStoreWarpEntriesScript   ; NOT YET DEFINED IN THE PORT
-extern ShakeElevator   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern ShakeElevator
+extern TextScriptEnd
 extern _RocketHideoutElevatorAppearsToNeedKeyText   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,

@@ -28,7 +28,7 @@ global CeladonMart4F_Script
 global CeladonMart4F_TextPointers
 
 extern CeladonMart4FClerkText   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CeladonMart4FCurrentFloorSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart4FSuperNerdText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart4FYoungsterText   ; NOT YET DEFINED IN THE PORT

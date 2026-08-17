@@ -27,10 +27,10 @@ global VermilionPidgeyHouseYoungsterText
 global VermilionPidgeyHouse_Script
 global VermilionPidgeyHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PlayCry
+extern TextScriptEnd
+extern WaitForSoundToFinish
 extern _VermilionPidgeyHouseLetterText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionPidgeyHousePidgeyText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionPidgeyHouseYoungsterText   ; NOT YET DEFINED IN THE PORT

@@ -27,7 +27,7 @@ global CinnabarMart_Script
 global CinnabarMart_TextPointers
 
 extern CinnabarMartClerkText   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CinnabarMartScientistText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarMartSilphWorkerFText   ; NOT YET DEFINED IN THE PORT
 

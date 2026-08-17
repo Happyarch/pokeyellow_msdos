@@ -25,7 +25,7 @@ global Route11Gate1FGuardText
 global Route11Gate1F_Script
 global Route11Gate1F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _Route11Gate1FGuardText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

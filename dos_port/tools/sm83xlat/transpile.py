@@ -381,7 +381,11 @@ def render(f: sparser.ScriptFile, out: emit.Emitted, R: resolve.Resolver,
         for e in sorted(out.externs):
             if e in defined:
                 continue
-            note = "" if e in R.port_symbols else "   ; NOT YET DEFINED IN THE PORT"
+            # A symbol counts as defined if a header/asset supplies it OR the
+            # port's own sources export it (`global X`). Checking only the former
+            # labelled 124 translated, linked routines "NOT YET DEFINED".
+            known = e in R.port_symbols or e in R.port_defined
+            note = "" if known else "   ; NOT YET DEFINED IN THE PORT"
             parts.append(f"extern {e}{note}")
 
     # File-local equs: the script's own dw_const constants, and any pret RAM

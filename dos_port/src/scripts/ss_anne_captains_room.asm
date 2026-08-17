@@ -34,13 +34,13 @@ global SSAnneCaptainsRoomTrashText
 global SSAnneCaptainsRoom_Script
 global SSAnneCaptainsRoom_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PlayDefaultMusic
+extern PlaySound
+extern PrintText
+extern StopAllMusic
+extern TextScriptEnd
 extern _SSAnneCaptainsRoomCaptainHM01NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnneCaptainsRoomCaptainIFeelMuchBetterText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnneCaptainsRoomCaptainNotSickAnymoreText   ; NOT YET DEFINED IN THE PORT

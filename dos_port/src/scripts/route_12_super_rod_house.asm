@@ -25,11 +25,11 @@ global Route12SuperRodHouseFishingGuruText
 global Route12SuperRodHouse_Script
 global Route12SuperRodHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PrintText
+extern TextScriptEnd
+extern YesNoChoice
 extern _Route12SuperRodHouseFishingGuruDoYouLikeToFishText   ; NOT YET DEFINED IN THE PORT
 extern _Route12SuperRodHouseFishingGuruFishingWayOfLifeText   ; NOT YET DEFINED IN THE PORT
 extern _Route12SuperRodHouseFishingGuruNoRoomText   ; NOT YET DEFINED IN THE PORT

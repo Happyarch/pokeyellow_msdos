@@ -29,11 +29,11 @@ global FuchsiaPokecenterRockerText
 global FuchsiaPokecenter_Script
 global FuchsiaPokecenter_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd
 extern _FuchsiaPokecenterCooltrainerFText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaPokecenterRockerText   ; NOT YET DEFINED IN THE PORT
 

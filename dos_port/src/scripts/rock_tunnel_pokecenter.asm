@@ -29,11 +29,11 @@ global RockTunnelPokecenterNurseText
 global RockTunnelPokecenter_Script
 global RockTunnelPokecenter_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd
 extern _RockTunnelPokecenterFisherText   ; NOT YET DEFINED IN THE PORT
 extern _RockTunnelPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 

@@ -27,7 +27,7 @@ global SafariZoneWestRestHouseSilphWorkerFText
 global SafariZoneWestRestHouse_Script
 global SafariZoneWestRestHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _SafariZoneWestRestHouseCooltrainerMText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneWestRestHouseScientistText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneWestRestHouseSilphWorkerFText   ; NOT YET DEFINED IN THE PORT

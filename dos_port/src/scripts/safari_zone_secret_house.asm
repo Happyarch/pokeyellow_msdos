@@ -25,10 +25,10 @@ global SafariZoneSecretHouseFishingGuruText
 global SafariZoneSecretHouse_Script
 global SafariZoneSecretHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PrintText
+extern TextScriptEnd
 extern _SafariZoneSecretHouseFishingGuruHM03ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneSecretHouseFishingGuruHM03NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneSecretHouseFishingGuruReceivedHM03Text   ; NOT YET DEFINED IN THE PORT

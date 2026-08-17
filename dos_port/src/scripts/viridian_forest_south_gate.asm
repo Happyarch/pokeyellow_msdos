@@ -26,7 +26,7 @@ global ViridianForestSouthGateLittleGirlText
 global ViridianForestSouthGate_Script
 global ViridianForestSouthGate_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _ViridianForestSouthGateGirlText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianForestSouthGateLittleGirlText   ; NOT YET DEFINED IN THE PORT
 

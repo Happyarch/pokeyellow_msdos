@@ -25,7 +25,7 @@ global Route7UndergroundPathSignText
 global Route7_Script
 global Route7_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _Route7UndergroundPathSignText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

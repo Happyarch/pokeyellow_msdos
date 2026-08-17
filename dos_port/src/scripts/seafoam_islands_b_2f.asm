@@ -27,11 +27,11 @@ global SeafoamIslandsB2F_Script
 global SeafoamIslandsB2F_TextPointers
 
 extern BoulderText   ; NOT YET DEFINED IN THE PORT
-extern CheckBoulderCoords   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern IsPlayerOnDungeonWarp   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
+extern CheckBoulderCoords
+extern EnableAutoTextBoxDrawing
+extern HideObject
+extern IsPlayerOnDungeonWarp
+extern ShowObject
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

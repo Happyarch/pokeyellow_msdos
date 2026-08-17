@@ -67,29 +67,29 @@ global PikachuMovementData_74f97
 global PikachuMovementData_74f9e
 global TextPointers_f215d
 
-extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
+extern ApplyPikachuMovementData
+extern Bankswitch
+extern CallFunctionInTable
 extern CinnabarGymDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymSetMapAndTiles   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
+extern DelayFrames
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
-extern FlagActionPredef   ; NOT YET DEFINED IN THE PORT
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EngageMapTrainer
+extern FlagActionPredef
 extern Func_f2150   ; NOT YET DEFINED IN THE PORT
 extern GetPikachuFacingDirectionAndReturnToE   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateCinnabarGymGateTileBlocks   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern GiveItem
+extern InitBattleEnemyParameters
+extern LoadGymLeaderAndCityName
+extern MoveSprite
+extern PlaySound
+extern PrintText
+extern SaveEndBattleTextPointers
+extern TextScriptEnd
+extern UpdateCinnabarGymGateTileBlocks
+extern WaitForSoundToFinish
 extern _CinnabarGymBlainePostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarGymBlainePreBattleText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarGymBlaineReceivedTM38Text   ; NOT YET DEFINED IN THE PORT

@@ -33,15 +33,15 @@ global Route16Gate1F_Script
 global Route16Gate1F_ScriptPointers
 global Route16Gate1F_TextPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern FillMemory   ; NOT YET DEFINED IN THE PORT
-extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CallFunctionInTable
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern FillMemory
+extern IsItemInBag
+extern PrintText
+extern StartSimulatingJoypadStates
+extern TextScriptEnd
 extern _Route16Gate1FGamblerText   ; NOT YET DEFINED IN THE PORT
 extern _Route16Gate1FGuardCyclingRoadExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _Route16Gate1FGuardNoPedestriansAllowedText   ; NOT YET DEFINED IN THE PORT

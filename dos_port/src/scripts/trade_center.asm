@@ -25,7 +25,7 @@ global TradeCenterOpponentText
 global TradeCenter_Script
 global TradeCenter_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern SetSpriteFacingDirection   ; NOT YET DEFINED IN THE PORT
 extern _TradeCenterOpponentText   ; NOT YET DEFINED IN THE PORT
 

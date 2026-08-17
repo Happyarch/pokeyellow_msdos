@@ -25,11 +25,11 @@ global VermilionOldRodHouseFishingGuruText
 global VermilionOldRodHouse_Script
 global VermilionOldRodHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern PrintText
+extern TextScriptEnd
+extern YesNoChoice
 extern _VermilionOldRodHouseFishingGuruDoYouLikeToFishText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionOldRodHouseFishingGuruFishingIsAWayOfLifeText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionOldRodHouseFishingGuruHowAreTheFishBitingText   ; NOT YET DEFINED IN THE PORT

@@ -27,7 +27,7 @@ global CeladonChiefHouseSailorText
 global CeladonChiefHouse_Script
 global CeladonChiefHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CeladonChiefHouseChiefText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonChiefHouseRocketText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonChiefHouseSailorText   ; NOT YET DEFINED IN THE PORT

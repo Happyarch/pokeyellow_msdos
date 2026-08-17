@@ -32,8 +32,8 @@ global RockTunnel1FSuperNerdText
 global RockTunnel1FTalkToTrainer
 global RockTunnel1F_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
 extern RockTunnel1FHiker1BattleText   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -44,8 +44,8 @@ extern RockTunnel1TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1TrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1TrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

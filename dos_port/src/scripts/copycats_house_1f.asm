@@ -27,9 +27,9 @@ global CopycatsHouse1FMiddleAgedWomanText
 global CopycatsHouse1F_Script
 global CopycatsHouse1F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PlayCry
+extern TextScriptEnd
 extern _CopycatsHouse1FChanseyText   ; NOT YET DEFINED IN THE PORT
 extern _CopycatsHouse1FMiddleAgedManText   ; NOT YET DEFINED IN THE PORT
 extern _CopycatsHouse1FMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT

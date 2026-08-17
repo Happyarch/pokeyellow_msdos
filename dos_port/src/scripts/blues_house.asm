@@ -35,12 +35,12 @@ global BluesHouse_ScriptPointers
 global BluesHouse_TextPointers
 global GotMapText
 
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern HideObject
+extern PrintText
+extern TextScriptEnd
 extern _BluesHouseDaisyBagFullText   ; NOT YET DEFINED IN THE PORT
 extern _BluesHouseDaisyOfferMapText   ; NOT YET DEFINED IN THE PORT
 extern _BluesHouseDaisyRivalAtLabText   ; NOT YET DEFINED IN THE PORT

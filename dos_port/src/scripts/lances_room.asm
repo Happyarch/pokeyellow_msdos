@@ -36,24 +36,24 @@ global ResetLanceScript
 global WalkToLance
 global WalkToLance_RLEList
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CheckFightingMapTrainers
+extern DecodeRLEList
+extern Delay3
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
 extern LancesRoomLanceBeforeBattleText   ; NOT YET DEFINED IN THE PORT
 extern LancesRoomTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern LancesRoomTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern LancesRoom_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PlaySound
+extern ReplaceTileBlock
+extern StartSimulatingJoypadStates
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_LANCESROOM_PLAYER_IS_MOVING             equ 3

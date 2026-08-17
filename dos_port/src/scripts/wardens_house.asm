@@ -26,16 +26,16 @@ global WardensHouseWardenText
 global WardensHouse_Script
 global WardensHouse_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
 extern BoulderText   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern RemoveItemByID   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern IsItemInBag
+extern PickUpItemText
+extern PrintText
+extern RemoveItemByID
+extern TextScriptEnd
+extern YesNoChoice
 extern _WardensHouseDisplayMerchandiseText   ; NOT YET DEFINED IN THE PORT
 extern _WardensHouseDisplayPhotosAndFossilsText   ; NOT YET DEFINED IN THE PORT
 extern _WardensHouseWardenGaveTheGoldTeethText   ; NOT YET DEFINED IN THE PORT

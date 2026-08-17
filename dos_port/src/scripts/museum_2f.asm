@@ -34,9 +34,9 @@ global Museum2FYoungsterText
 global Museum2F_Script
 global Museum2F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PrintText
+extern TextScriptEnd
 extern _Museum2FBrunetteGirlText   ; NOT YET DEFINED IN THE PORT
 extern _Museum2FGrampsText   ; NOT YET DEFINED IN THE PORT
 extern _Museum2FHikerText   ; NOT YET DEFINED IN THE PORT

@@ -27,8 +27,8 @@ global Route2TradeHouse_Script
 global Route2TradeHouse_TextPointers
 
 extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern TextScriptEnd
 extern _Route2TradeHouseScientistText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

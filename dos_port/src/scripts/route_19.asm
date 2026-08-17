@@ -36,8 +36,8 @@ global Route19Swimmer8Text
 global Route19_Script
 global Route19_TalkToTrainer
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
 extern Route19CooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route19TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route19TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -51,8 +51,8 @@ extern Route19TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route19TrainerHeader9   ; NOT YET DEFINED IN THE PORT
 extern Route19TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route19_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

@@ -45,25 +45,25 @@ global SilphCo7F_Script
 global SilphCo7F_ScriptPointers
 global SilphCo7F_UnlockedDoorEventScript
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GivePokemon   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern Music_RivalAlternateStart   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CheckFightingMapTrainers
+extern Delay3
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern GivePokemon
+extern HideObject
+extern MoveSprite
+extern Music_RivalAlternateStart
+extern PlayDefaultMusic
+extern PlayMusic
+extern PrintText
+extern ReplaceTileBlock
+extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern SetSpriteMovementBytesToFF   ; NOT YET DEFINED IN THE PORT
+extern SetSpriteMovementBytesToFF
 extern SilphCo7FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRivalAfterBattleScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
@@ -77,10 +77,10 @@ extern SilphCo7TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForTextScrollButtonPress   ; NOT YET DEFINED IN THE PORT
+extern StopAllMusic
+extern TalkToTrainer
+extern TextScriptEnd
+extern WaitForTextScrollButtonPress
 extern _SilphCo7FRivalDefeatedText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo7FRivalGoodLuckToYouText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo7FRivalText   ; NOT YET DEFINED IN THE PORT

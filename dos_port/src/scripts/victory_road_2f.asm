@@ -34,17 +34,17 @@ global VictoryRoad2FSuperNerd3Text
 global VictoryRoad2F_Script
 global VictoryRoad2F_ScriptPointers
 
-extern CheckBoulderCoords   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern CheckBoulderCoords
+extern CheckFightingMapTrainers
+extern DisplayEnemyTrainerTextAndStartBattle
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
 extern MoltresTrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PlayCry
+extern ReplaceTileBlock
+extern TalkToTrainer
+extern TextScriptEnd
 extern VictoryRoad2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FHikerBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FMoltresBattleText   ; NOT YET DEFINED IN THE PORT
@@ -54,7 +54,7 @@ extern VictoryRoad2TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern WaitForSoundToFinish
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

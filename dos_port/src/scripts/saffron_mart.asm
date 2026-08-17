@@ -26,7 +26,7 @@ global SaffronMartSuperNerdText
 global SaffronMart_Script
 global SaffronMart_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern SaffronMartClerkText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronMartCooltrainerFText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronMartSuperNerdText   ; NOT YET DEFINED IN THE PORT

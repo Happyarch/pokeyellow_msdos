@@ -33,10 +33,10 @@ global CeruleanMelanieHouseSandshrewText
 global CeruleanMelaniesHouse_Script
 global CeruleanMelaniesHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GetMonName   ; NOT YET DEFINED IN THE PORT
-extern GivePokemon   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GetMonName
+extern GivePokemon
+extern HideObject
 extern MelanieBulbasaurText   ; NOT YET DEFINED IN THE PORT
 extern MelanieOddishText   ; NOT YET DEFINED IN THE PORT
 extern MelanieSandshrewText   ; NOT YET DEFINED IN THE PORT
@@ -45,11 +45,11 @@ extern MelanieText2   ; NOT YET DEFINED IN THE PORT
 extern MelanieText3   ; NOT YET DEFINED IN THE PORT
 extern MelanieText4   ; NOT YET DEFINED IN THE PORT
 extern MelanieText5   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForTextScrollButtonPress   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PlayCry
+extern PrintText
+extern TextScriptEnd
+extern WaitForTextScrollButtonPress
+extern YesNoChoice
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

@@ -47,24 +47,24 @@ global RocketHideoutB4FText13
 global RocketHideoutB4F_Script
 global RocketHideoutB4F_ScriptPointers
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GBFadeInFromBlack   ; NOT YET DEFINED IN THE PORT
-extern GBFadeOutToBlack   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers
+extern Delay3
+extern DelayFrames
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EmotionBubble
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern EngageMapTrainer
+extern ExecuteCurMapScriptInTable
+extern GBFadeInFromBlack
+extern GBFadeOutToBlack
+extern HideObject
+extern InitBattleEnemyParameters
+extern MoveSprite
+extern PlayDefaultMusic
+extern PlayMusic
+extern PrintText
 extern RocketHideout4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FDefaultScript   ; NOT YET DEFINED IN THE PORT
@@ -75,12 +75,12 @@ extern RocketHideoutB4FScript5   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript6   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript7   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern SaveEndBattleTextPointers
+extern ShowObject
+extern StopAllMusic
+extern TalkToTrainer
+extern TextScriptEnd
+extern UpdateSprites
 extern _RocketHideoutB4FGiovanniHopeWeMeetAgainText   ; NOT YET DEFINED IN THE PORT
 extern _RocketHideoutB4FGiovanniImpressedYouGotHereText   ; NOT YET DEFINED IN THE PORT
 extern _RocketHideoutB4FGiovanniWhatCannotBeText   ; NOT YET DEFINED IN THE PORT

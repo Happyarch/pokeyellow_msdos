@@ -47,29 +47,29 @@ global PokemonTower7F_Script
 global PokemonTower7F_ScriptPointers
 global PokemonTower7F_TextPointers
 
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GBFadeInFromBlack   ; NOT YET DEFINED IN THE PORT
-extern GBFadeOutToBlack   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable
+extern Delay3
+extern DelayFrames
+extern DisplayTextID
+extern EmotionBubble
+extern EnableAutoTextBoxDrawing
+extern GBFadeInFromBlack
+extern GBFadeOutToBlack
+extern HideObject
+extern MoveSprite
+extern PlayDefaultMusic
+extern PlayMusic
 extern PokemonTower7FScript0   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript1   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript2   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript3   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript4   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern SaveEndBattleTextPointers
+extern ShowObject
+extern StopAllMusic
+extern TextScriptEnd
+extern UpdateSprites
 extern _PokemonTower7FMrFujiRescueText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonTowerJessieJamesText1   ; NOT YET DEFINED IN THE PORT
 extern _PokemonTowerJessieJamesText2   ; NOT YET DEFINED IN THE PORT

@@ -28,8 +28,8 @@ global SafariZoneWestTrainerTipsText
 global SafariZoneWest_Script
 global SafariZoneWest_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PickUpItemText
 extern _SafariZoneWestFindWardensTeethSignText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneWestRestHouseSignText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneWestSignText   ; NOT YET DEFINED IN THE PORT

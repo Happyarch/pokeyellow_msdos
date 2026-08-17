@@ -26,35 +26,35 @@ bits 32
 global Daycare_Script
 global Daycare_TextPointers
 
-extern AddBCDPredef   ; NOT YET DEFINED IN THE PORT
-extern AddNTimes   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CalcExperience   ; NOT YET DEFINED IN THE PORT
-extern CalcLevelFromExperience   ; NOT YET DEFINED IN THE PORT
+extern AddBCDPredef
+extern AddNTimes
+extern Bankswitch
+extern CalcExperience
+extern CalcLevelFromExperience
 extern DaycareGentlemanText   ; NOT YET DEFINED IN THE PORT
-extern DisplayPartyMenu   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextBoxID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GBPalWhiteOutWithDelay3   ; NOT YET DEFINED IN THE PORT
-extern GetPartyMonName   ; NOT YET DEFINED IN THE PORT
-extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
-extern IsThisPartyMonStarterPikachu   ; NOT YET DEFINED IN THE PORT
-extern KnowsHMMove   ; NOT YET DEFINED IN THE PORT
-extern LoadGBPal   ; NOT YET DEFINED IN THE PORT
-extern LoadMonData   ; NOT YET DEFINED IN THE PORT
-extern MoveMon   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern PlayPikachuSoundClip   ; NOT YET DEFINED IN THE PORT
-extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern RemovePokemon   ; NOT YET DEFINED IN THE PORT
-extern RestoreScreenTilesAndReloadTilePatterns   ; NOT YET DEFINED IN THE PORT
-extern SaveScreenTilesToBuffer2   ; NOT YET DEFINED IN THE PORT
+extern DisplayPartyMenu
+extern DisplayTextBoxID
+extern EnableAutoTextBoxDrawing
+extern GBPalWhiteOutWithDelay3
+extern GetPartyMonName
+extern HasEnoughMoney
+extern IsThisPartyMonStarterPikachu
+extern KnowsHMMove
+extern LoadGBPal
+extern LoadMonData
+extern MoveMon
+extern PlayCry
+extern PlayPikachuSoundClip
+extern PlaySoundWaitForCurrent
+extern PrintText
+extern RemovePokemon
+extern RestoreScreenTilesAndReloadTilePatterns
+extern SaveScreenTilesToBuffer2
 extern SchedulePikachuSpawnForAfterText   ; NOT YET DEFINED IN THE PORT
-extern SubBCDPredef   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WriteMonMoves   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern SubBCDPredef
+extern TextScriptEnd
+extern WriteMonMoves
+extern YesNoChoice
 extern _DaycareGentlemanAllRightThenText   ; NOT YET DEFINED IN THE PORT
 extern _DaycareGentlemanCantAcceptMonWithHMText   ; NOT YET DEFINED IN THE PORT
 extern _DaycareGentlemanComeAgainText   ; NOT YET DEFINED IN THE PORT

@@ -29,13 +29,13 @@ global CopycatsHouse2FSNESText
 global CopycatsHouse2F_Script
 global CopycatsHouse2F_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern RemoveItemByID   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
+extern GiveItem
+extern IsItemInBag
+extern PrintText
+extern RemoveItemByID
+extern TextScriptEnd
 extern _CopycatsHouse2FCopycatDoYouLikePokemonText   ; NOT YET DEFINED IN THE PORT
 extern _CopycatsHouse2FCopycatReceivedTM31Text   ; NOT YET DEFINED IN THE PORT
 extern _CopycatsHouse2FCopycatTM31Explanation1Text   ; NOT YET DEFINED IN THE PORT

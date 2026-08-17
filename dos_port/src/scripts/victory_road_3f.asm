@@ -32,18 +32,18 @@ global VictoryRoad3FDefaultScript
 global VictoryRoad3F_Script
 global VictoryRoad3F_ScriptPointers
 
-extern CheckBoulderCoords   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern IsPlayerOnDungeonWarp   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern CheckBoulderCoords
+extern CheckFightingMapTrainers
+extern DisplayEnemyTrainerTextAndStartBattle
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern HideObject
+extern IsPlayerOnDungeonWarp
+extern ReplaceTileBlock
+extern ShowObject
+extern TalkToTrainer
+extern TextScriptEnd
 extern VictoryRoad3FCooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3TrainerHeader0   ; NOT YET DEFINED IN THE PORT

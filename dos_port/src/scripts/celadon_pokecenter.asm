@@ -29,11 +29,11 @@ global CeladonPokecenterNurseText
 global CeladonPokecenter_Script
 global CeladonPokecenter_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd
 extern _CeladonPokecenterBeautyText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 

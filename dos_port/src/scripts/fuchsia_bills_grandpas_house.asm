@@ -27,7 +27,7 @@ global FuchsiaBillsGrandpasHouseYoungsterText
 global FuchsiaBillsGrandpasHouse_Script
 global FuchsiaBillsGrandpasHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _FuchsiaBillsGrandpasHouseBillsGrandpaText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaBillsGrandpasHouseMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaBillsGrandpasHouseYoungsterText   ; NOT YET DEFINED IN THE PORT

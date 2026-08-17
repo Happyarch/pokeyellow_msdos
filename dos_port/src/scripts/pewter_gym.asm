@@ -41,28 +41,28 @@ global PewterGymTM34NoRoomText
 global PewterGymText_5c41c
 global PewterGym_ScriptPointers
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern EngageMapTrainer
+extern ExecuteCurMapScriptInTable
+extern GiveItem
+extern HideObject
+extern InitBattleEnemyParameters
+extern LoadGymLeaderAndCityName
 extern PewterGymCooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern PewterGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern PewterGym_Script   ; NOT YET DEFINED IN THE PORT
 extern PewterGym_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern SaveEndBattleTextPointers
+extern TalkToTrainer
+extern TextScriptEnd
+extern YesNoChoice
 extern _PewterGymBrockBoulderBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymBrockPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymBrockPreBattleText   ; NOT YET DEFINED IN THE PORT

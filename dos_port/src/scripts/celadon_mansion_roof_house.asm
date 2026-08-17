@@ -26,10 +26,10 @@ global CeladonMansionRoofHouseHikerText
 global CeladonMansionRoofHouse_Script
 global CeladonMansionRoofHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GivePokemon   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GivePokemon
+extern HideObject
+extern TextScriptEnd
 extern _CeladonMansionRoofHouseHikerText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

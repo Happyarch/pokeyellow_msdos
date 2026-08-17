@@ -27,7 +27,7 @@ global CeladonMart1FReceptionistText
 global CeladonMart1F_Script
 global CeladonMart1F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CeladonMart1FCurrentFloorSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart1FDirectorySignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart1FReceptionistText   ; NOT YET DEFINED IN THE PORT

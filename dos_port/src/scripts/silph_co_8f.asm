@@ -30,10 +30,10 @@ global SilphCo8FSilphWorkerMText
 global SilphCo8F_Script
 global SilphCo8F_UnlockedDoorEventScript
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern PrintText
+extern ReplaceTileBlock
 extern SilphCo8FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
@@ -41,8 +41,8 @@ extern SilphCo8TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 extern _SilphCo8FSilphWorkerMSilphIsFinishedText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo8FSilphWorkerMThanksForSavingUsText   ; NOT YET DEFINED IN THE PORT
 

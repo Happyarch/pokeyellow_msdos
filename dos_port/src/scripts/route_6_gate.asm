@@ -28,12 +28,12 @@ global Route6Gate_Script
 global Route6Gate_ScriptPointers
 global Route6Gate_TextPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern Bankswitch
+extern CallFunctionInTable
+extern Delay3
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
 extern RemoveGuardDrink   ; NOT YET DEFINED IN THE PORT
 extern SaffronGateGuardGeeImThirstyText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGateGuardGiveDrinkText   ; NOT YET DEFINED IN THE PORT

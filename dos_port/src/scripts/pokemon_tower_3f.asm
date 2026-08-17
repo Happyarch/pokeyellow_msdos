@@ -27,16 +27,16 @@ global PokemonTower3FChanneler2Text
 global PokemonTower3FChanneler3Text
 global PokemonTower3F_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
 extern PokemonTower3FChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

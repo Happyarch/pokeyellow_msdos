@@ -32,16 +32,16 @@ global SaffronGateGuardGiveDrinkText
 global SaffronGateGuardText
 global SaffronGateGuardThanksForTheDrinkText
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern Bankswitch
+extern CallFunctionInTable
+extern Delay3
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern PrintText
 extern RemoveGuardDrink   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern StartSimulatingJoypadStates
+extern TextScriptEnd
 extern _SaffronGateGuardGeeImThirstyText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGateGuardImParchedText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGateGuardThanksForTheDrinkText   ; NOT YET DEFINED IN THE PORT

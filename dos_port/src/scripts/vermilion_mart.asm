@@ -26,7 +26,7 @@ global VermilionMartCooltrainerMText
 global VermilionMart_Script
 global VermilionMart_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern VermilionMartClerkText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionMartCooltrainerFText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionMartCooltrainerMText   ; NOT YET DEFINED IN THE PORT

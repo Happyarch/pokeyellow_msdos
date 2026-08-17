@@ -29,7 +29,7 @@ global PokemonTower1FReceptionistText
 global PokemonTower1F_Script
 global PokemonTower1F_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _PokemonTower1FBaldingGuyText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonTower1FChannelerText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonTower1FGirlText   ; NOT YET DEFINED IN THE PORT

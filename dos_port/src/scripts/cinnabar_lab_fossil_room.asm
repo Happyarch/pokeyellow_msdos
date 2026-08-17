@@ -28,16 +28,16 @@ global CinnabarLabFossilRoom_TextPointers
 global FossilsList
 global LoadFossilItemAndMonNameBank1D
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
 extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GetQuantityOfItemInBag   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern GetQuantityOfItemInBag
 extern GiveFossilToCinnabarLab   ; NOT YET DEFINED IN THE PORT
-extern GivePokemon   ; NOT YET DEFINED IN THE PORT
+extern GivePokemon
 extern Lab4Script_GetFossilsInBag   ; NOT YET DEFINED IN THE PORT
 extern LoadFossilItemAndMonName   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern TextScriptEnd
 extern _CinnabarLabFossilRoomScientist1FossilIsBackToLifeText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarLabFossilRoomScientist1GoForAWalkText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarLabFossilRoomScientist1NoFossilsText   ; NOT YET DEFINED IN THE PORT

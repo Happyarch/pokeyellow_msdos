@@ -29,19 +29,19 @@ global PokemonMansion2FSuperNerdText
 global PokemonMansion2FSwitchText
 global PokemonMansion2F_Script
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern Mansion2Script_Switches   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern Mansion2Script_Switches
 extern Mansion2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
+extern PlaySound
 extern PokemonMansion2FSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion2F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern ReplaceTileBlock
+extern TalkToTrainer
+extern TextScriptEnd
+extern YesNoChoice
 extern _PokemonMansion2FSwitchNotPressedText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonMansion2FSwitchPressedText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonMansion2FSwitchText   ; NOT YET DEFINED IN THE PORT

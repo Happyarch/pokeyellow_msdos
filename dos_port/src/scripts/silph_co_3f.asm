@@ -29,10 +29,10 @@ global SilphCo3FSilphWorkerMText
 global SilphCo3F_Script
 global SilphCo3F_UnlockedDoorEventScript
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern ExecuteCurMapScriptInTable
+extern PrintText
+extern ReplaceTileBlock
 extern SilphCo2F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3FRocketBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3FScientistBattleText   ; NOT YET DEFINED IN THE PORT
@@ -40,8 +40,8 @@ extern SilphCo3F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
 extern _SilphCo3FSilphWorkerMWhatShouldIDoText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo3FSilphWorkerMYouSavedUsText   ; NOT YET DEFINED IN THE PORT
 

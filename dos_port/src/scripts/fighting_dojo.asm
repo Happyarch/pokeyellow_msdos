@@ -36,14 +36,14 @@ global FightingDojoResetScripts
 global FightingDojo_Script
 global FightingDojo_ScriptPointers
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers
+extern DisplayEnemyTrainerTextAndStartBattle
 extern DisplayPokedex   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern EngageMapTrainer
+extern ExecuteCurMapScriptInTable
 extern FightingDojoBlackbelt1BattleText   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoBlackbelt2BattleText   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoBlackbelt3BattleText   ; NOT YET DEFINED IN THE PORT
@@ -54,15 +54,15 @@ extern FightingDojoTrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoTrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern FightingDojo_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern GivePokemon   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
+extern GivePokemon
+extern HideObject
+extern InitBattleEnemyParameters
+extern PrintText
+extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
+extern YesNoChoice
 extern _FightingDojoBetterNotGetGreedyText   ; NOT YET DEFINED IN THE PORT
 extern _FightingDojoHitmonchanPokeBallText   ; NOT YET DEFINED IN THE PORT
 extern _FightingDojoHitmonleePokeBallText   ; NOT YET DEFINED IN THE PORT

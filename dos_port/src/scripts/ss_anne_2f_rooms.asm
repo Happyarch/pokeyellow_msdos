@@ -39,12 +39,12 @@ global SSAnne2FRoomsPrintGentleman5Text
 global SSAnne2FRoomsPrintLittleBoyText
 global SSAnne2FRooms_Script
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern DisableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern DisableAutoTextBoxDrawing
 extern DisplayPokedex   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern LoadScreenTilesFromBuffer1   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern ExecuteCurMapScriptInTable
+extern LoadScreenTilesFromBuffer1
+extern PrintText
 extern SSAnne2FRoomsGentleman1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SSAnne2FRooms_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SSAnne9TrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -52,9 +52,9 @@ extern SSAnne9TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SSAnne9TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SSAnne9TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern SSAnne9TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern SaveScreenTilesToBuffer1   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern SaveScreenTilesToBuffer1
+extern TalkToTrainer
+extern TextScriptEnd
 extern _SSAnne2FRoomsBeautyText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnne2FRoomsBrunetteGirlText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnne2FRoomsGentleman3Text   ; NOT YET DEFINED IN THE PORT

@@ -40,37 +40,37 @@ global Text_59c24
 global Text_59c29
 global Text_59c2e
 
-extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern CheckPikachuStatusCondition   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisablePikachuFollowingPlayer   ; NOT YET DEFINED IN THE PORT
-extern DisplayPartyMenu   ; NOT YET DEFINED IN THE PORT
-extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern ApplyPikachuMovementData
+extern Bankswitch
+extern CallFunctionInTable
+extern CheckPikachuStatusCondition
+extern Delay3
+extern DisablePikachuFollowingPlayer
+extern DisplayPartyMenu
+extern EmotionBubble
+extern EnableAutoTextBoxDrawing
 extern FanClubChairPrintText1   ; NOT YET DEFINED IN THE PORT
 extern FanClubChairPrintText2   ; NOT YET DEFINED IN THE PORT
 extern FanClubChairPrintText3   ; NOT YET DEFINED IN THE PORT
 extern FanClubChairPrintText4   ; NOT YET DEFINED IN THE PORT
-extern GBPalNormal   ; NOT YET DEFINED IN THE PORT
-extern GBPalWhiteOutWithDelay3   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
+extern GBPalNormal
+extern GBPalWhiteOutWithDelay3
+extern GiveItem
 extern InitializePikachuTextID   ; NOT YET DEFINED IN THE PORT
-extern LoadCurrentMapView   ; NOT YET DEFINED IN THE PORT
-extern LoadGBPal   ; NOT YET DEFINED IN THE PORT
-extern LoadScreenTilesFromBuffer2   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
+extern LoadCurrentMapView
+extern LoadGBPal
+extern LoadScreenTilesFromBuffer2
+extern PlayCry
 extern PrintFanClubPortrait   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Random   ; NOT YET DEFINED IN THE PORT
-extern ReloadTilesetTilePatterns   ; NOT YET DEFINED IN THE PORT
-extern RestoreScreenTilesAndReloadTilePatterns   ; NOT YET DEFINED IN THE PORT
-extern SaveScreenTilesToBuffer2   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern Random
+extern ReloadTilesetTilePatterns
+extern RestoreScreenTilesAndReloadTilePatterns
+extern SaveScreenTilesToBuffer2
+extern TextScriptEnd
+extern UpdateSprites
+extern WaitForSoundToFinish
+extern YesNoChoice
 extern _PokemonFanClubBagFullText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubChairFinalText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubChairmanIntroText   ; NOT YET DEFINED IN THE PORT

@@ -66,27 +66,27 @@ global MtMoonB2F_ScriptPointers
 global PikachuMovementData_49dca
 global PikachuMovementData_49dd8
 
-extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GBFadeInFromBlack   ; NOT YET DEFINED IN THE PORT
-extern GBFadeOutToBlack   ; NOT YET DEFINED IN THE PORT
+extern ApplyPikachuMovementData
+extern ArePlayerCoordsInArray
+extern Bankswitch
+extern CheckFightingMapTrainers
+extern Delay3
+extern DelayFrames
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EmotionBubble
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern EngageMapTrainer
+extern ExecuteCurMapScriptInTable
+extern GBFadeInFromBlack
+extern GBFadeOutToBlack
 extern GetPikachuFacingDirectionAndReturnToE   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
+extern GiveItem
+extern HideObject
+extern InitBattleEnemyParameters
 extern LoadPikachuShadowIntoVRAM   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
+extern MoveSprite
 extern MtMoon3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern MtMoon3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern MtMoon3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -102,18 +102,18 @@ extern MtMoonB2FSuperNerdTheyreBothMineText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FYouHaveNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2fSuperNerdEachTakeOneText   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern SetSpriteMovementBytesToFF   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PlayDefaultMusic
+extern PlayMusic
+extern PrintText
+extern SaveEndBattleTextPointers
+extern SetSpriteMovementBytesToFF
+extern ShowObject
+extern StartSimulatingJoypadStates
+extern StopAllMusic
+extern TalkToTrainer
+extern TextScriptEnd
+extern UpdateSprites
+extern YesNoChoice
 extern _MtMoonB2FDomeFossilYouWantText   ; NOT YET DEFINED IN THE PORT
 extern _MtMoonB2FHelixFossilYouWantText   ; NOT YET DEFINED IN THE PORT
 extern _MtMoonB2FReceivedFossilText   ; NOT YET DEFINED IN THE PORT

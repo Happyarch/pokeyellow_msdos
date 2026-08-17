@@ -28,11 +28,11 @@ global ViridianNicknameHouseSpearySignText
 global ViridianNicknameHouse_Script
 global ViridianNicknameHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
+extern PlayCry
+extern PrintText
+extern TextScriptEnd
+extern WaitForSoundToFinish
 extern _ViridianNicknameHouseBaldingGuyText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianNicknameHouseLittleGirlText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianNicknameHouseSpearowText   ; NOT YET DEFINED IN THE PORT

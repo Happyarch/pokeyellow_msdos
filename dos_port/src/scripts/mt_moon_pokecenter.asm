@@ -32,17 +32,17 @@ global MtMoonPokecenterYoungsterText
 global MtMoonPokecenter_Script
 global MtMoonPokecenter_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextBoxID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GivePokemon   ; NOT YET DEFINED IN THE PORT
-extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern DisplayTextBoxID
+extern EnableAutoTextBoxDrawing
+extern GivePokemon
+extern HasEnoughMoney
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
+extern PrintText
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
-extern SubBCDPredef   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern SubBCDPredef
+extern TextScriptEnd
+extern YesNoChoice
 extern _MtMoonPokecenterClipboardText   ; NOT YET DEFINED IN THE PORT
 extern _MtMoonPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 extern _MtMoonPokecenterMagikarpSalesmanIGotADealText   ; NOT YET DEFINED IN THE PORT

@@ -30,13 +30,13 @@ global CeladonMartElevatorWarpMaps
 global CeladonMartElevator_Script
 global CeladonMartElevator_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
 extern CeladonMartElevatorStoreWarpEntriesScript   ; NOT YET DEFINED IN THE PORT
-extern CopyData   ; NOT YET DEFINED IN THE PORT
+extern CopyData
 extern DisplayElevatorFloorMenu   ; NOT YET DEFINED IN THE PORT
-extern LoadItemList   ; NOT YET DEFINED IN THE PORT
-extern ShakeElevator   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern LoadItemList
+extern ShakeElevator
+extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

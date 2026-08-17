@@ -26,7 +26,7 @@ global FuchsiaMartMiddleAgedManText
 global FuchsiaMart_Script
 global FuchsiaMart_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern FuchsiaMartClerkText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaMartCooltrainerFText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaMartMiddleAgedManText   ; NOT YET DEFINED IN THE PORT

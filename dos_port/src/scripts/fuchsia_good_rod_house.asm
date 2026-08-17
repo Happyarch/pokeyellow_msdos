@@ -24,12 +24,12 @@ bits 32
 global FuchsiaGoodRodHouse_Script
 global FuchsiaGoodRodHouse_TextPointers
 
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern FuchsiaGoodRodHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern GiveItem
+extern PrintText
+extern TextScriptEnd
+extern YesNoChoice
 extern _FuchsiaGoodRodHouseFishingGuruReceivedGoodRodText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaGoodRodHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
 

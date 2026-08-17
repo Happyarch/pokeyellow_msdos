@@ -29,12 +29,12 @@ global IndigoPlateauLobbyNurseText
 global IndigoPlateauLobby_Script
 global IndigoPlateauLobby_TextPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern EnableAutoTextBoxDrawing
 extern IndigoPlateauLobbyClerkText   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern TextScriptEnd
 extern _IndigoPlateauLobbyCooltrainerFText   ; NOT YET DEFINED IN THE PORT
 extern _IndigoPlateauLobbyGymGuideText   ; NOT YET DEFINED IN THE PORT
 

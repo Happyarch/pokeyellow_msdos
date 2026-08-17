@@ -35,22 +35,22 @@ global PokemonTower2F_Script
 global PokemonTower2F_ScriptPointers
 global PokemonTower2F_TextPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern Music_RivalAlternateStart   ; NOT YET DEFINED IN THE PORT
-extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern CallFunctionInTable
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern HideObject
+extern MoveSprite
+extern Music_RivalAlternateStart
+extern PlayDefaultMusic
+extern PlayMusic
 extern PokemonTower2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower2FDefeatedRivalScript   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern StopAllMusic
+extern TextScriptEnd
 extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern _PokemonTower2FChannelerText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonTower2FRivalDefeatedText   ; NOT YET DEFINED IN THE PORT

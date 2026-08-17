@@ -34,10 +34,10 @@ global CeruleanBadgeHouse_TextPointers
 
 extern CeruleanBadgeHouseBadgeTextPointers   ; NOT YET DEFINED IN THE PORT
 extern CeruleanBadgeHouseMiddleAgedManText   ; NOT YET DEFINED IN THE PORT
-extern DisplayListMenuID   ; NOT YET DEFINED IN THE PORT
-extern LoadItemList   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern DisplayListMenuID
+extern LoadItemList
+extern PrintText
+extern TextScriptEnd
 extern _CeruleanBadgeHouseBoulderBadgeText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanBadgeHouseCascadeBadgeText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanBadgeHouseEarthBadgeText   ; NOT YET DEFINED IN THE PORT

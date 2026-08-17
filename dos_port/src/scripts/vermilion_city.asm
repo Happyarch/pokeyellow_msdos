@@ -55,25 +55,25 @@ global VermilionCity_Script
 global VermilionCity_ScriptPointers
 global VermilionCity_TextPointers
 
-extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GetMonName   ; NOT YET DEFINED IN THE PORT
-extern GetQuantityOfItemInBag   ; NOT YET DEFINED IN THE PORT
-extern GivePokemon   ; NOT YET DEFINED IN THE PORT
+extern ArePlayerCoordsInArray
+extern Bankswitch
+extern CallFunctionInTable
+extern DelayFrames
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern GetMonName
+extern GetQuantityOfItemInBag
+extern GivePokemon
 extern MartSignText   ; NOT YET DEFINED IN THE PORT
-extern PlayCry   ; NOT YET DEFINED IN THE PORT
+extern PlayCry
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Random   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
-extern WaitForTextScrollButtonPress   ; NOT YET DEFINED IN THE PORT
-extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern PrintText
+extern Random
+extern StartSimulatingJoypadStates
+extern TextScriptEnd
+extern WaitForSoundToFinish
+extern WaitForTextScrollButtonPress
+extern YesNoChoice
 extern _OfficerJennyText1   ; NOT YET DEFINED IN THE PORT
 extern _OfficerJennyText2   ; NOT YET DEFINED IN THE PORT
 extern _OfficerJennyText3   ; NOT YET DEFINED IN THE PORT

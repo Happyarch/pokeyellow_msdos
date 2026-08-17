@@ -60,32 +60,32 @@ global ViridianGymRocker1Text
 global ViridianGymRocker2Text
 global ViridianGym_ScriptPointers
 
-extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DecodeArrowMovementRLE   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch
+extern CheckFightingMapTrainers
+extern DecodeArrowMovementRLE
+extern Delay3
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern GBFadeInFromBlack   ; NOT YET DEFINED IN THE PORT
-extern GBFadeOutToBlack   ; NOT YET DEFINED IN THE PORT
-extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
-extern LoadSpinnerArrowTiles   ; NOT YET DEFINED IN THE PORT
-extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern EngageMapTrainer
+extern ExecuteCurMapScriptInTable
+extern GBFadeInFromBlack
+extern GBFadeOutToBlack
+extern GiveItem
+extern HideObject
+extern InitBattleEnemyParameters
+extern LoadGymLeaderAndCityName
+extern LoadSpinnerArrowTiles
+extern PlaySound
+extern PrintText
+extern SaveEndBattleTextPointers
+extern ShowObject
+extern StartSimulatingJoypadStates
+extern TalkToTrainer
+extern TextScriptEnd
+extern UpdateSprites
 extern ViridianGymCooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymCooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymCooltrainerM3BattleText   ; NOT YET DEFINED IN THE PORT

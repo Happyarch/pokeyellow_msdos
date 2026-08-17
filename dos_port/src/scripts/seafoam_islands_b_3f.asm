@@ -32,15 +32,15 @@ global SeafoamIslandsB3F_ScriptPointers
 global SeafoamIslandsB3F_TextPointers
 
 extern BoulderText   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern CheckBoulderCoords   ; NOT YET DEFINED IN THE PORT
-extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern IsPlayerOnDungeonWarp   ; NOT YET DEFINED IN THE PORT
+extern CallFunctionInTable
+extern CheckBoulderCoords
+extern DecodeRLEList
+extern EnableAutoTextBoxDrawing
+extern HideObject
+extern IsPlayerOnDungeonWarp
 extern SeafoamIslandsB3FMoveObjectScript   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
+extern ShowObject
+extern StartSimulatingJoypadStates
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_SEAFOAMISLANDSB3F_DEFAULT               equ 0

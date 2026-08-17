@@ -42,23 +42,23 @@ global PalletTown_Script
 global PalletTown_ScriptPointers
 global PalletTown_TextPointers
 
-extern CalcPositionOfPlayerRelativeToNPC   ; NOT YET DEFINED IN THE PORT
-extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DelayFrames   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern FindPathToPlayer   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern MoveSprite   ; NOT YET DEFINED IN THE PORT
+extern CalcPositionOfPlayerRelativeToNPC
+extern CallFunctionInTable
+extern Delay3
+extern DelayFrames
+extern DisplayTextID
+extern EmotionBubble
+extern EnableAutoTextBoxDrawing
+extern FindPathToPlayer
+extern HideObject
+extern MoveSprite
 extern PalletTownDaisyScript   ; NOT YET DEFINED IN THE PORT
 extern PalletTownSignText   ; NOT YET DEFINED IN THE PORT
-extern PlayMusic   ; NOT YET DEFINED IN THE PORT
-extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern PlayMusic
+extern PrintText
+extern ShowObject
+extern StopAllMusic
+extern TextScriptEnd
 extern _PalletTownFisherText   ; NOT YET DEFINED IN THE PORT
 extern _PalletTownGirlText   ; NOT YET DEFINED IN THE PORT
 extern _PalletTownOakComeWithMe   ; NOT YET DEFINED IN THE PORT

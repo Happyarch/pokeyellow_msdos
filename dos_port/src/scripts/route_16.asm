@@ -34,14 +34,14 @@ global Route16SnorlaxPostBattleScript
 global Route16_Script
 global Route16_ScriptPointers
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
-extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern HideObject   ; NOT YET DEFINED IN THE PORT
+extern CheckFightingMapTrainers
+extern Delay3
+extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
+extern EnableAutoTextBoxDrawing
+extern EndTrainerBattle
+extern ExecuteCurMapScriptInTable
+extern HideObject
 extern Route16Biker1BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker2BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker3BattleText   ; NOT YET DEFINED IN THE PORT
@@ -56,9 +56,9 @@ extern Route16TrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern Route16TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route16_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern Route16biker4BattleText   ; NOT YET DEFINED IN THE PORT
-extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
-extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern TalkToTrainer
+extern TextScriptEnd
+extern UpdateSprites
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROUTE16_DEFAULT                         equ 0

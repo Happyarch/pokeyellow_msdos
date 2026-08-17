@@ -27,7 +27,7 @@ global CeruleanMart_Script
 global CeruleanMart_TextPointers
 
 extern CeruleanMartClerkText   ; NOT YET DEFINED IN THE PORT
-extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern EnableAutoTextBoxDrawing
 extern _CeruleanMartCooltrainerFText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanMartCooltrainerMText   ; NOT YET DEFINED IN THE PORT
 
