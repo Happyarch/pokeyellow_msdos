@@ -124,7 +124,12 @@ someone to regenerate over hand edits. No Makefile wiring at all.
 - [x] **Stage 5 — assemble-all gate.** DONE: **224/224 emitted files assemble clean**. ORIGINAL TEXT: Every emitted file through
       `nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0`, `%include`s by bare
       filename
-- [x] **Stage 6 — the tail, reason-code ordered.** Stopped at the documented point: 1,739/2,530 regions lowered (68.7%), and the largest remaining bucket is a CASCADE (`target-region-bailed`, 262) rather than 262 independent problems. ORIGINAL TEXT: Stop when the marginal reason
+- [x] **Stage 6 — the tail, reason-code ordered.** Stopped at 1,739/2,530 (68.7%);
+      a later tool-strengthening pass took it to **1,861/2,530 (73.6%)** — see
+      "Tool-strengthening pass" below for what moved and what is deliberately
+      left. The largest remaining bucket is still a CASCADE
+      (`target-region-bailed`, 245) rather than 245 independent problems.
+      ORIGINAL TEXT: Stop when the marginal reason
       code has <5 sites and hand-port those. A transpiler chasing the last 2% grows
       an unreviewable special case per site
 - [ ] Resolve the **18** screen-coord bail sites by hand (16 coord macros + 2 SCREEN_WIDTH stride expressions — see the Stage 0 corrections)
@@ -140,6 +145,101 @@ someone to regenerate over hand edits. No Makefile wiring at all.
 - [ ] Integrate comb findings centrally; regenerate the shared dispatch and tables
 - [ ] `lint_pret_labels` 0 in both modes; `make fidelity-full`; `make pixellock`
 - [ ] Archive: `git mv docs/current_plan_script_transpiler.md docs/plans/script_transpiler.md`
+
+---
+
+## Tool-strengthening pass (2026-08-17) — 68.7% → 73.6%
+
+Done BEFORE the fine-comb fan-out, deliberately: while the emitted files are
+still machine-generated and un-hand-edited, regeneration is free, so a class-level
+fix re-lowers every one of its sites and deletes its own bail banners. That stops
+being true the moment the comb starts hand-editing, so the leverage was spent
+first. **Method: fix the tool, retranspile, measure — never hand-edit the output.**
+(Learned by breaking it: `cde1a4642` collapsed 255 banners by editing the emitted
+files and the next re-run erased all of it; the collapse now lives in
+`transpile.py`.)
+
+`git log --oneline b7a0aba2d..a8c6a0350` is the pass. Regions lowered
+1,739 → 1,861; bails 791 → 669. Every step: transpiled TWICE (the tool's own
+second-run rule), byte-identical, 224/224 assembling, build green, `pkmn.sym`
+unchanged, core fidelity 16/16.
+
+| class | before | after | how |
+|---|---:|---:|---|
+| `owned-by-generated-assets` banner | 255 | 255 (collapsed) | one line naming the owning asset instead of the verbatim pret dump: −5,975 lines across 67 files |
+| `event-range-macro` | 7 | 0 | the port's `events.inc` already had the macros; the table's "hand-work by design" note was false |
+| `event-byte-assembly-state` | 34 | 0 | mirrored pret's `*ReuseHL` family in NASM so the ASSEMBLER carries `event_byte` |
+| `predef-leaves-id-in-a` | 24 | 1 | direct call + banking DEVIATION; bail now fires on a DIRECT read of A, not on liveness |
+| `bank-expression` | 13 | 0 | `BANK(x)` resolved from `pokeyellow.sym` / `pokeyellow.map` |
+| `bit-clobbers-live-carry` | 13 | 0 | `setc ah` / `test` / `bt eax,8` — flags MEASURED on the host CPU |
+| `host-pointer-in-16bit-reg` | 37 | 29 | `DecodeRLEList`, `WriteOAMBlock` promoted out of `_deliberately_absent` |
+| `pointer-domain-unknown` | 22 | 15 | modelled the STACK so `pop hl` recovers a domain |
+
+### Maintainer decisions recorded in this pass
+
+* **The bank left in A after a `predef` is irrelevant to the port** — pret's
+  `Predef` restores the parent ROM bank into A, and a flat model has no
+  counterpart. Direct call, banking DEVIATION. (The bail's old claim that pret
+  "leaves the predef id in A" was simply wrong.)
+* **That ruling does NOT extend to `BANK(x)`.** The port's audio engine models the
+  audio ROM bank as a VALUE: `PlayMusic` stores C into `wAudioROMBank` and the
+  fade path branches on it. So `BANK(x)` is resolved to rgblink's real bank, not
+  a placeholder.
+
+### Correctly refusing — do not "fix" these
+
+* `inline-text-db` (11) — the emitter refusing to hand-encode charmap bytes. That
+  is the project's Tier-1 rule working; the fix is a generator, not a lowering.
+* `pikachu-table-index` (3) — non-linear assembly-time arithmetic across object
+  files, which a NASM `equ` genuinely cannot express.
+* `hl-half-register-access` (9) — H/L are halves of ESI with no flag-safe 8-bit
+  x86 form in 32-bit mode.
+* `local-label-scope-collision` (12) — an artifact of other bails; shrinks as
+  roots clear, and "fixing" it means deviating from pret label naming.
+* `predef-leaves-parent-bank-in-a` (1) — `CeruleanTrashedHouse.asm:14` does
+  `predef GetQuantityOfItemInBag` / `and b`, a genuine read of the bank number.
+
+### Two hazards found, both fixed — read before touching this area
+
+* **`AfterBranch`/`Force` event macros must NOT elide the pointer reload.** pret's
+  versions assert that earlier code left HL pointing at the flag byte. That
+  assertion is about PRET's emitted code; in the port the region that establishes
+  the pointer may have BAILED and never been emitted (measured on `SilphCo2F`).
+  Honouring it wrote through whatever ESI happened to hold.
+* **A `%define` SHADOWS a `%macro` of the same name.** `events.inc` had aliased
+  the whole `*ReuseHL` family onto the plain forms; those aliases silently
+  disabled the mirrors, clobbered AL where pret preserves it, and — being 1-arg —
+  could never have assembled for the 2-arg `AfterBranch` forms at all.
+
+### Four analysis defects fixed along the way
+
+Each had been quietly widening every analysis in the tool, not just its own class:
+
+1. the pointer-domain dataflow was seeded with `(BOT, ())`, and `()` is a REAL
+   lattice value (the provably-empty stack), so the first join destroyed the stack
+   at every region's first push — the stack needed its own bottom;
+2. `_successors` gave a fall-through edge to control-transfer MACROS
+   (`predef_jump`/`farjp`/`jpfar`/`tx_pre_jump`), so analyses propagated into the
+   next routine;
+3. `pop af` did not count as writing A, so A looked live across the
+   `push af` … `pop af` bracket scripts use to save it around a predef;
+4. the self-test invariant's regex was end-anchored and could not match a line
+   with a trailing comment, while the `swap` lowering always emits one — it
+   undercounted by exactly the number of swaps.
+
+### What the remaining bails need (none is a lowering rule)
+
+* `text-sound-command-unported` 49 / `text-script-command-unported` 16 — ENGINE
+  work. 44 of the 49 are two commands: `sound_get_item_1` (27) and
+  `sound_get_key_item` (17). **The maintainer is handling the sound commands.**
+* `host-pointer-in-16bit-reg` 29 — needs a per-SITE callee table with per-site
+  evidence. 17 of them report `callee <none in range>`, and widening the lookahead
+  is UNSAFE: `BillsHouse.asm:63` has an intervening `call
+  CheckPikachuFollowingPlayer`, so "first call in the window" binds the load to
+  the wrong routine.
+* `pointer-domain-unknown` 15 — loop headers whose back-edges join at a different
+  stack depth, plus one (`OaksLab.asm:518`) where HL is returned by a callee.
+* `target-region-bailed` 245 — cascade. Not work; it falls with its roots.
 
 ## Stage 0 corrections to this plan's own figures (measured 2026-08-16)
 
