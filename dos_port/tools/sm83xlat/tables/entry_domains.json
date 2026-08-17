@@ -1,0 +1,47 @@
+{
+ "_comment": [
+  "The pointer domain of HL on ENTRY to a routine, where the analysis cannot",
+  "see it. A region with no fall-through predecessor starts at TOP because the",
+  "CALLER decided what is in HL — correct and fail-closed, but it means a routine",
+  "that takes HL as a PARAMETER can never dereference it.",
+  "",
+  "FAIL-CLOSED, exactly like abi.json: no row means TOP means bail. A row is only",
+  "admissible when EVERY call site in pret's scripts/ agrees, and the evidence",
+  "field must name them. One disagreeing caller means no row.",
+  "",
+  "Values are the ir.py lattice names: GB (an address in the emulated GB space,",
+  "dereferenced [ebp+esi]) or HOST (a flat program-image address, [esi])."
+ ],
+ "hl_in": {
+  "SilphCo2F_SetCardKeyDoorYScript": {
+   "domain": "HOST",
+   "evidence": "All 3 call sites load a script-local coordinate table immediately before the call: SilphCo2F.asm:16, SilphCo3F.asm:16 and SilphCo10F.asm:16 each do `ld hl, .GateCoordinates` / `call SilphCo2F_SetCardKeyDoorYScript`. A script `dbmapcoord` table is program-image data, so the pointer is flat.",
+   "sites": 3
+  },
+  "SilphCo4F_SetCardKeyDoorYScript": {
+   "domain": "HOST",
+   "evidence": "Both call sites: SilphCo4F.asm:16 and SilphCo5F.asm:16, each `ld hl, .GateCoordinates` immediately before the call.",
+   "sites": 2
+  },
+  "SilphCo7F_SetCardKeyDoorYScript": {
+   "domain": "HOST",
+   "evidence": "SilphCo7F.asm:16 — `ld hl, .GateCoordinates` immediately before the call. Sole caller.",
+   "sites": 1
+  },
+  "SilphCo8F_SetCardKeyDoorYScript": {
+   "domain": "HOST",
+   "evidence": "SilphCo8F.asm:16 — `ld hl, .GateCoordinates` immediately before the call. Sole caller.",
+   "sites": 1
+  },
+  "SilphCo9F_SetCardKeyDoorYScript": {
+   "domain": "HOST",
+   "evidence": "SilphCo9F.asm:16 — `ld hl, .GateCoordinates` immediately before the call. Sole caller.",
+   "sites": 1
+  },
+  "SilphCo11F_SetCardKeyDoorYScript": {
+   "domain": "HOST",
+   "evidence": "SilphCo11F.asm:16 — `ld hl, SilphCo11GateCoords` immediately before the call. Sole caller; the label is a `dbmapcoord` table at SilphCo11F.asm:27.",
+   "sites": 1
+  }
+ }
+}

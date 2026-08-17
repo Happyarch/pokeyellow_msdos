@@ -1,8 +1,8 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
  "_owned_comment": "`owned` is NOT a bail list. Those regions are Tier-1 data the port's generators already define, so the tool must not emit them at all \u2014 emitting one would be a duplicate definition. They describe no outstanding work and are excluded from the coverage denominator; they are listed here so the exclusion stays auditable.",
- "regions_lowered": 2177,
- "regions_bailed": 98,
+ "regions_lowered": 2189,
+ "regions_bailed": 86,
  "regions_owned": 255,
  "by_reason": {
   "target-region-bailed": 36,
@@ -12,7 +12,7 @@
   "pikachu-table-index": 4,
   "hl-half-register-access": 9,
   "local-label-scope-collision": 3,
-  "pointer-domain-unknown": 15,
+  "pointer-domain-unknown": 3,
   "ld-via-bc-de": 2,
   "add-hl-r16": 5,
   "predef-leaves-parent-bank-in-a": 1,
@@ -1138,12 +1138,10 @@
    ]
   },
   "scripts/SilphCo11F.asm": {
-   "ok_regions": 36,
-   "bailed_regions": 2,
+   "ok_regions": 38,
+   "bailed_regions": 0,
    "owned_regions": 2,
-   "reasons": [
-    "pointer-domain-unknown"
-   ]
+   "reasons": []
   },
   "scripts/SilphCo1F.asm": {
    "ok_regions": 2,
@@ -1152,12 +1150,10 @@
    "reasons": []
   },
   "scripts/SilphCo2F.asm": {
-   "ok_regions": 13,
-   "bailed_regions": 2,
+   "ok_regions": 15,
+   "bailed_regions": 0,
    "owned_regions": 2,
-   "reasons": [
-    "pointer-domain-unknown"
-   ]
+   "reasons": []
   },
   "scripts/SilphCo3F.asm": {
    "ok_regions": 9,
@@ -1166,12 +1162,11 @@
    "reasons": []
   },
   "scripts/SilphCo4F.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 3,
+   "ok_regions": 12,
+   "bailed_regions": 1,
    "owned_regions": 4,
    "reasons": [
-    "host-pointer-in-16bit-reg",
-    "pointer-domain-unknown"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/SilphCo5F.asm": {
@@ -1193,28 +1188,22 @@
    ]
   },
   "scripts/SilphCo7F.asm": {
-   "ok_regions": 34,
-   "bailed_regions": 2,
+   "ok_regions": 36,
+   "bailed_regions": 0,
    "owned_regions": 5,
-   "reasons": [
-    "pointer-domain-unknown"
-   ]
+   "reasons": []
   },
   "scripts/SilphCo8F.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 2,
+   "ok_regions": 12,
+   "bailed_regions": 0,
    "owned_regions": 2,
-   "reasons": [
-    "pointer-domain-unknown"
-   ]
+   "reasons": []
   },
   "scripts/SilphCo9F.asm": {
-   "ok_regions": 14,
-   "bailed_regions": 2,
+   "ok_regions": 16,
+   "bailed_regions": 0,
    "owned_regions": 2,
-   "reasons": [
-    "pointer-domain-unknown"
-   ]
+   "reasons": []
   },
   "scripts/SilphCoElevator.asm": {
    "ok_regions": 6,
@@ -2449,93 +2438,6 @@
    ]
   },
   {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo11F_SetCardKeyDoorYScript",
-    "SilphCo11F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo11F.asm:42",
-   "lines": [
-    32,
-    52
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo11F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo11F.asm:54",
-   "lines": [
-    54,
-    61
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo2F_SetCardKeyDoorYScript",
-    "SilphCo2F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo2F.asm:51",
-   "lines": [
-    41,
-    61
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo2F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo2F.asm:63",
-   "lines": [
-    63,
-    70
-   ]
-  },
-  {
-   "file": "scripts/SilphCo4F.asm",
-   "region": "SilphCo4F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo4F_SetCardKeyDoorYScript",
-    "SilphCo4F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo4F.asm:51",
-   "lines": [
-    41,
-    61
-   ]
-  },
-  {
-   "file": "scripts/SilphCo4F.asm",
-   "region": "SilphCo4F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo4F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo4F.asm:63",
-   "lines": [
-    63,
-    70
-   ]
-  },
-  {
    "file": "scripts/SilphCo4F.asm",
    "region": "SilphCo4FSilphWorkerMText",
    "labels": [
@@ -2660,93 +2562,6 @@
    "lines": [
     138,
     141
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo7F_SetCardKeyDoorYScript",
-    "SilphCo7F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo7F.asm:61",
-   "lines": [
-    51,
-    71
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo7F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo7F.asm:73",
-   "lines": [
-    73,
-    80
-   ]
-  },
-  {
-   "file": "scripts/SilphCo8F.asm",
-   "region": "SilphCo8F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo8F_SetCardKeyDoorYScript",
-    "SilphCo8F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo8F.asm:41",
-   "lines": [
-    31,
-    51
-   ]
-  },
-  {
-   "file": "scripts/SilphCo8F.asm",
-   "region": "SilphCo8F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo8F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo8F.asm:53",
-   "lines": [
-    53,
-    60
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo9F_SetCardKeyDoorYScript",
-    "SilphCo9F_SetCardKeyDoorYScript.loop_card_key_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo9F.asm:71",
-   "lines": [
-    61,
-    81
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9F_SetCardKeyDoorYScript.check_door",
-   "labels": [
-    "SilphCo9F_SetCardKeyDoorYScript.check_door"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo9F.asm:83",
-   "lines": [
-    83,
-    90
    ]
   },
   {

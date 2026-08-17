@@ -78,6 +78,12 @@ BASE_INCLUDES = ("gb_memmap.inc", "gb_constants.inc", "gb_text.inc",
 # bytes, plus the include that defines those macros. Written by the generator
 # that owns the strings (tools/generators/gen_gym_names.py), so the map and the
 # bytes cannot drift apart.
+# tables/entry_domains.json — the pointer domain of HL on ENTRY to a routine,
+# where every call site agrees. Fail-closed: no row means TOP means bail.
+_ENTRY_PATH = HERE / "tables" / "entry_domains.json"
+ENTRY_HL = (json.loads(_ENTRY_PATH.read_text()).get("hl_in", {})
+            if _ENTRY_PATH.exists() else {})
+
 _TEXT_ASSETS_PATH = HERE / "tables" / "text_assets.json"
 if _TEXT_ASSETS_PATH.exists():
     _TA = json.loads(_TEXT_ASSETS_PATH.read_text())
@@ -119,7 +125,7 @@ def transpile_file(f: sparser.ScriptFile, R: resolve.Resolver, abi: dict,
     bails those regions too, and reports them under their own reason so the
     cascade is visible rather than looking like 40 independent problems.
     """
-    an = ir.analyse(f, R)
+    an = ir.analyse(f, R, ENTRY_HL)
     regions = ir.build_regions(f)
 
     dead_locals = set()

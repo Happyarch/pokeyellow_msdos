@@ -28,6 +28,7 @@ global SilphCo8FRocket2Text
 global SilphCo8FScientistText
 global SilphCo8FSilphWorkerMText
 global SilphCo8F_Script
+global SilphCo8F_SetCardKeyDoorYScript
 global SilphCo8F_UnlockedDoorEventScript
 
 extern EnableAutoTextBoxDrawing
@@ -36,7 +37,6 @@ extern PrintText
 extern ReplaceTileBlock
 extern SilphCo8FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -99,44 +99,46 @@ SilphCo8FGateCallbackScript:
     db 4, 3
     db -1
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] SilphCo8F_SetCardKeyDoorYScript (scripts/SilphCo8F.asm:31-51) — at scripts/SilphCo8F.asm:41: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	push hl
-; PRET| 	ld hl, wCardKeyDoorY
-; PRET| 	ld a, [hli]
-; PRET| 	ld b, a
-; PRET| 	ld a, [hl]
-; PRET| 	ld c, a
-; PRET| 	xor a
-; PRET| 	ldh [hUnlockedSilphCoDoors], a
-; PRET| 	pop hl
-; PRET| .loop_check_doors
-; PRET| 	ld a, [hli]
-; PRET| 	cp $ff
-; PRET| 	jr z, .exit_loop
-; PRET| 	push hl
-; PRET| 	ld hl, hUnlockedSilphCoDoors
-; PRET| 	inc [hl]
-; PRET| 	pop hl
-; PRET| 	cp b
-; PRET| 	jr z, .check_y_coord
-; PRET| 	inc hl
-; PRET| 	jr .loop_check_doors
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo8F_SetCardKeyDoorYScript:
+    push esi
+    mov esi, wCardKeyDoorY
+    mov al, [ebp + esi]
+    lea esi, [esi+1]
+    mov bh, al
+    mov al, [ebp + esi]
+    mov bl, al
+    xor al, al
+    mov [ebp + hUnlockedSilphCoDoors], al
+    pop esi
+.loop_check_doors:
+    mov al, [esi]
+    lea esi, [esi+1]
+    cmp al, 0xff
+    jz .exit_loop
+    push esi
+    mov esi, hUnlockedSilphCoDoors
+    inc byte [ebp + esi]
+    pop esi
+    cmp al, bh
+    jz .check_y_coord
+    lea esi, [esi+1]
+    jmp .loop_check_doors
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] SilphCo8F_SetCardKeyDoorYScript.check_y_coord (scripts/SilphCo8F.asm:53-60) — at scripts/SilphCo8F.asm:53: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [hli]
-; PRET| 	cp c
-; PRET| 	jr nz, .loop_check_doors
-; PRET| 	ld hl, wCardKeyDoorY
-; PRET| 	xor a
-; PRET| 	ld [hli], a
-; PRET| 	ld [hl], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+.check_y_coord:
+    mov al, [esi]
+    lea esi, [esi+1]
+    cmp al, bl
+    jnz .loop_check_doors
+    mov esi, wCardKeyDoorY
+    xor al, al
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

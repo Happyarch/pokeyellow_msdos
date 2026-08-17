@@ -221,7 +221,7 @@ def _successors(items: Sequence[sparser.Item], i: int,
     return [fall] if fall is not None else []
 
 
-def analyse(f: sparser.ScriptFile, resolver=None) -> Analysis:
+def analyse(f: sparser.ScriptFile, resolver=None, entry_hl=None) -> Analysis:
     items = [it for it in f.items
              if it.active and it.kind != sparser.KIND_CONTROL
              and not (it.kind == sparser.KIND_MACRO and it.macro is not None
@@ -266,9 +266,23 @@ def analyse(f: sparser.ScriptFile, resolver=None) -> Analysis:
     # caller decided what is in HL and we cannot see the caller. The stack starts
     # EMPTY rather than unknown — anything the caller pushed is not ours to pop,
     # and popping an empty stack already yields TOP.
+    #
+    # ...UNLESS the caller is known. A routine that takes HL as a PARAMETER can
+    # otherwise never dereference it: `push hl / ld hl, <other> / pop hl` restores
+    # the caller's value faithfully, and the caller's value is TOP. That is what
+    # blocked the SilphCo card-key door loop on six floors. tables/entry_domains
+    # .json records the entry domain where EVERY call site agrees, with the sites
+    # named; no row still means TOP, so this stays fail-closed.
+    entry_hl = entry_hl or {}
     for i in range(n):
         if not pred[i]:
-            state_in[i] = (TOP, ())
+            dom = TOP
+            for lab in getattr(items[i], "labels", ()):
+                row = entry_hl.get(lab)
+                if row:
+                    dom = row["domain"] if isinstance(row, dict) else row
+                    break
+            state_in[i] = (dom, ())
     changed = True
     guard = 0
     while changed and guard < 10000:
