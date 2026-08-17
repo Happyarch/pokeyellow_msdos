@@ -396,6 +396,61 @@ byte-identical across the split (`f933e5cc…`): if the cascade had narrowed, ba
 would have fallen further and regions would have been emitted that reference
 undefined locals.
 
+## Small-class pass (2026-08-17) — and what it teaches about the histogram
+
+2,086 → **2,088** lowered; bails 189 → **187**. Two classes cleared —
+`checkevent-carry-form` (3) and `bank-expression` (1) — for a net of **−2**, not
+−4.
+
+**That gap is the lesson, and it changes how the histogram should be read.** A
+bail is recorded per REGION, at its FIRST blocker. Clearing a class therefore
+reveals whatever sat behind it in the same region rather than banking the whole
+count. Both survivors did exactly that: `Route11Gate2FOaksAideText` went
+`checkevent-carry-form` → `target-region-bailed`, and
+`VermilionDockSSAnneLeavesScript` went `bank-expression` →
+`screen-coord-projection`. **A class count is an upper bound on its yield, never
+a promise** — the earlier passes' large wins came from clearing ROOTS, which is a
+different thing from clearing a class.
+
+What landed:
+
+* **`CheckEvent EVENT_X, 1`** — pret's 2-arg carry form. `events.inc` gained a
+  matching arity overload: `ror al, EVENT_BIT+1` (x86 `ror` leaves CF equal to
+  the last bit rotated out, which is exactly pret's `rrca` ×(bit+1)), with
+  `add al, al` for the bit-7 arm matching pret's `add a`. Verified from a
+  listing at all three real sites plus a synthetic bit-0 case: bit 7 emits
+  `00C0`, bit 0 emits `D0C8` (`ror al,1`). It INVALIDATES `event_byte_a` — the
+  rotate leaves AL holding a rotated byte, not the flag byte.
+* **`HIGH(x)` / `LOW(x)`** — lowered as plain arithmetic, but **only in the GB
+  domain**. On a port HOST address the operator is meaningless rather than merely
+  imprecise: a 32-bit link-time address has no "high byte" in pret's 16-bit
+  sense, and `>> 8` on one yields a plausible-looking wrong number. The HOST case
+  still bails.
+* **pret VRAM names** — lowering `HIGH(vBGMap1)` immediately exposed that the
+  port spells the entire VRAM region in port-only names (`GB_TILEMAP1`,
+  `GB_VCHARS0`, …) with pret's names only in comments, so `vBGMap1` resolved to
+  nothing. Fixed the way the "Preserve pret Labels" rule prescribes — pret
+  spellings added as ALIASES **alongside** the `GB_*` names, never in place of
+  them, since the `GB_*` names are load-bearing across the port and its tools:
+  `vChars0/1/2`, `vSprites`, `vFont`, `vBGMap0/1`.
+
+### `PKMN.EXE` changed here, and the reason is worth recording
+
+Unlike the previous two passes this one moved the binary — it GREW by 29,862
+bytes — and the cause is **not code**. Measured, after the section-level check
+turned out to be worthless (`objdump` cannot parse the DJGPP executable at all
+and reports "file format not recognized", so a section diff over it is noise):
+
+* `.text` of `src/home/text.o` is **byte-identical** across both builds
+  (`672ebeee…`, 2162 bytes);
+* its symbol count goes **1915 → 1922 — exactly +7**, the seven new `equ`s;
+* `pkmn.sym` is unchanged, so no symbol moved.
+
+Seven more symbol-table entries in each of 318 objects ≈ the observed growth. So
+**the EXE md5 is a stricter oracle than "did the code change"**: it also moves
+when the symbol table does. A pure comment-only edit to the same header leaves it
+identical (checked), so it is not line-number noise either.
+
 **Correction:** the `*ReuseA` section above originally read 2,088 lowered. The
 tool reported **2,086**; 2,088 was derived from a delta instead of read from the
 output, and commit `b0fcab897`'s message carries the same wrong figure. The bail

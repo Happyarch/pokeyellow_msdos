@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global MagikarpSalesman
 global MtMoonPokecenterChanseyText
 global MtMoonPokecenterClipboardText
 global MtMoonPokecenterGentlemanText
@@ -36,7 +37,6 @@ extern DisplayTextBoxID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GivePokemon   ; NOT YET DEFINED IN THE PORT
 extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
-extern MagikarpSalesman   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
@@ -108,30 +108,29 @@ MtMoonPokecenterChanseyText:
     call PokecenterChanseyText
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[checkevent-carry-form] MagikarpSalesman (scripts/MtMoonPokecenter_2.asm:2-21) — at scripts/MtMoonPokecenter_2.asm:2: CheckEvent EVENT_BOUGHT_MAGIKARP, 1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BOUGHT_MAGIKARP, 1
-; PRET| 	jp c, .alreadyBoughtMagikarp
-; PRET| 	ld hl, .IGotADealText
-; PRET| 	call PrintText
-; PRET| 	ld a, MONEY_BOX
-; PRET| 	ld [wTextBoxID], a
-; PRET| 	call DisplayTextBoxID
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jp nz, .choseNo
-; PRET| 	xor a
-; PRET| 	ldh [hMoney], a
-; PRET| 	ldh [hMoney + 2], a
-; PRET| 	ld a, $5
-; PRET| 	ldh [hMoney + 1], a
-; PRET| 	call HasEnoughMoney
-; PRET| 	jr nc, .enoughMoney
-; PRET| 	ld hl, .NoMoneyText
-; PRET| 	jr .printText
+%assign event_byte -1
+%assign event_byte_a -1
+MagikarpSalesman:
+    CheckEvent EVENT_BOUGHT_MAGIKARP, 1
+    jb .alreadyBoughtMagikarp
+    mov esi, .IGotADealText
+    call PrintText
+    mov al, MONEY_BOX
+    mov [ebp + wTextBoxID], al
+    call DisplayTextBoxID
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .choseNo
+    xor al, al
+    mov [ebp + hMoney], al
+    mov [ebp + hMoney + 2], al
+    mov al, 0x5
+    mov [ebp + hMoney + 1], al
+    call HasEnoughMoney
+    jae .enoughMoney
+    mov esi, .NoMoneyText
+    jmp .printText
 
 %assign event_byte -1
 %assign event_byte_a -1

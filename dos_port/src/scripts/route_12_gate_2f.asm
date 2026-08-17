@@ -22,6 +22,7 @@ bits 32
 
 
 global GateUpstairsScript_PrintIfFacingUp
+global Route12Gate2FBrunetteGirlText
 global Route12Gate2FLeftBinocularsText
 global Route12Gate2FRightBinocularsText
 global Route12Gate2F_Script
@@ -30,7 +31,6 @@ global Route12Gate2F_TextPointers
 extern DisableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Route12Gate2FBrunetteGirlText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _Route12Gate2FBrunetteGirlReceivedTM39Text   ; NOT YET DEFINED IN THE PORT
 extern _Route12Gate2FBrunetteGirlTM39ExplanationText   ; NOT YET DEFINED IN THE PORT
@@ -61,21 +61,20 @@ Route12Gate2F_TextPointers:
     dd Route12Gate2FLeftBinocularsText
     dd Route12Gate2FRightBinocularsText
 
-; ---------------------------------------------------------------------------
-; BAIL[checkevent-carry-form] Route12Gate2FBrunetteGirlText (scripts/Route12Gate2F.asm:12-22) — at scripts/Route12Gate2F.asm:12: CheckEvent EVENT_GOT_TM39, 1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_TM39, 1
-; PRET| 	jr c, .got_item
-; PRET| 	ld hl, .YouCanHaveThisText
-; PRET| 	call PrintText
-; PRET| 	lb bc, TM_SWIFT, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .ReceivedTM39Text
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_TM39
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+Route12Gate2FBrunetteGirlText:
+    CheckEvent EVENT_GOT_TM39, 1
+    jb .got_item
+    mov esi, .YouCanHaveThisText
+    call PrintText
+    mov bx, ((241) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .ReceivedTM39Text
+    call PrintText
+    SetEvent EVENT_GOT_TM39
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1

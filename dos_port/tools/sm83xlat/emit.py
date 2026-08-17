@@ -148,6 +148,7 @@ class Emitter:
         text = _HEX.sub(lambda m: "0x" + m.group(1), text)
         text = _BIN.sub(lambda m: "0b" + m.group(1).replace("_", ""), text)
         text = self._banks(text)
+        text = self._hilo(text)
 
         def sub(m):
             name = m.group(0)
@@ -198,6 +199,31 @@ class Emitter:
                            f"no bank recorded for {arg} in pokeyellow.sym/.map")
             return str(b)
         return self._BANK_CALL.sub(rep, text)
+
+    #: `HIGH(x)` / `LOW(x)` — rgbasm's byte-of-a-16-bit-value operators.
+    _HILO_CALL = re.compile(r'\b(HIGH|LOW)\(\s*([^()]+?)\s*\)')
+
+    def _hilo(self, text: str) -> str:
+        """Resolve HIGH(x)/LOW(x), but ONLY where x is a 16-bit GB quantity.
+
+        These mean "the high/low byte of a 16-bit value", which is plain
+        arithmetic and translates directly... as long as the value really is 16
+        bits. Applied to a port HOST address it is not merely imprecise, it is
+        meaningless: a link-time 32-bit address has no "high byte" in pret's
+        sense, and `>> 8` on one silently yields a number that looks plausible.
+        So the HOST case keeps bailing, and only the GB/constant case lowers.
+        """
+        def rep(m):
+            op, arg = m.group(1), m.group(2)
+            if _domain_of(arg, self.R) == ir.HOST:
+                raise Bail("bank-expression",
+                           f"{op}({arg}) — {arg} is a 32-bit HOST address, so "
+                           f"pret's 16-bit byte-of operator has no meaning here")
+            # The inner name is left in pret spelling on purpose: the identifier
+            # pass below rewrites it, exactly as it would anywhere else.
+            return (f"(({arg}) >> 8 & 0xFF)" if op == "HIGH"
+                    else f"(({arg}) & 0xFF)")
+        return self._HILO_CALL.sub(rep, text)
 
     def mem(self, text: str, out: Emitted) -> str:
         return f"[ebp + {self.expr(text, out)}]"

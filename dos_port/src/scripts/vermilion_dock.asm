@@ -119,7 +119,7 @@ VermilionDock_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[bank-expression] VermilionDockSSAnneLeavesScript (scripts/VermilionDock.asm:40-122) — at scripts/VermilionDock.asm:52: HIGH(vBGMap1)
+; BAIL[screen-coord-projection] VermilionDockSSAnneLeavesScript (scripts/VermilionDock.asm:40-122) — at scripts/VermilionDock.asm:54: hlcoord 0, 10
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	SetEventForceReuseHL EVENT_SS_ANNE_LEFT

@@ -1,12 +1,12 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
  "_owned_comment": "`owned` is NOT a bail list. Those regions are Tier-1 data the port's generators already define, so the tool must not emit them at all \u2014 emitting one would be a duplicate definition. They describe no outstanding work and are excluded from the coverage denominator; they are listed here so the exclusion stays auditable.",
- "regions_lowered": 2086,
- "regions_bailed": 189,
+ "regions_lowered": 2088,
+ "regions_bailed": 187,
  "regions_owned": 255,
  "by_reason": {
-  "target-region-bailed": 91,
-  "screen-coord-projection": 4,
+  "target-region-bailed": 92,
+  "screen-coord-projection": 5,
   "inline-text-db": 12,
   "host-pointer-in-16bit-reg": 29,
   "pikachu-table-index": 4,
@@ -16,10 +16,8 @@
   "ld-via-bc-de": 2,
   "predef-leaves-parent-bank-in-a": 1,
   "add-hl-r16": 4,
-  "checkevent-carry-form": 3,
   "event-macro-reuse-a-hint": 1,
-  "owned-by-gen_map_script_tables": 1,
-  "bank-expression": 1
+  "owned-by-gen_map_script_tables": 1
  },
  "per_file": {
   "scripts/AgathasRoom.asm": {
@@ -521,12 +519,10 @@
    ]
   },
   "scripts/MtMoonPokecenter.asm": {
-   "ok_regions": 9,
-   "bailed_regions": 1,
+   "ok_regions": 10,
+   "bailed_regions": 0,
    "owned_regions": 0,
-   "reasons": [
-    "checkevent-carry-form"
-   ]
+   "reasons": []
   },
   "scripts/Museum1F.asm": {
    "ok_regions": 30,
@@ -788,7 +784,7 @@
    "bailed_regions": 1,
    "owned_regions": 0,
    "reasons": [
-    "checkevent-carry-form"
+    "target-region-bailed"
    ]
   },
   "scripts/Route12.asm": {
@@ -804,12 +800,10 @@
    "reasons": []
   },
   "scripts/Route12Gate2F.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 1,
+   "ok_regions": 12,
+   "bailed_regions": 0,
    "owned_regions": 0,
-   "reasons": [
-    "checkevent-carry-form"
-   ]
+   "reasons": []
   },
   "scripts/Route12SuperRodHouse.asm": {
    "ok_regions": 7,
@@ -1393,7 +1387,6 @@
    "owned_regions": 0,
    "reasons": [
     "add-hl-r16",
-    "bank-expression",
     "hl-half-register-access",
     "screen-coord-projection"
    ]
@@ -2559,20 +2552,6 @@
    ]
   },
   {
-   "file": "scripts/MtMoonPokecenter_2.asm",
-   "region": "MagikarpSalesman",
-   "labels": [
-    "MagikarpSalesman"
-   ],
-   "reason": "checkevent-carry-form",
-   "detail": "CheckEvent EVENT_BOUGHT_MAGIKARP, 1",
-   "at": "scripts/MtMoonPokecenter_2.asm:2",
-   "lines": [
-    2,
-    21
-   ]
-  },
-  {
    "file": "scripts/NameRatersHouse.asm",
    "region": "NameRatersHouseCheckMonOTScript",
    "labels": [
@@ -3150,26 +3129,12 @@
     "Route11Gate2FOaksAideText.got_item",
     "Route11Gate2FOaksAideText.no_item"
    ],
-   "reason": "checkevent-carry-form",
-   "detail": "CheckEvent EVENT_GOT_ITEMFINDER, 1",
-   "at": "scripts/Route11Gate2F.asm:21",
+   "reason": "target-region-bailed",
+   "detail": ".got_item is defined in a region that bailed",
+   "at": "scripts/Route11Gate2F.asm:22",
    "lines": [
     21,
     43
-   ]
-  },
-  {
-   "file": "scripts/Route12Gate2F.asm",
-   "region": "Route12Gate2FBrunetteGirlText",
-   "labels": [
-    "Route12Gate2FBrunetteGirlText"
-   ],
-   "reason": "checkevent-carry-form",
-   "detail": "CheckEvent EVENT_GOT_TM39, 1",
-   "at": "scripts/Route12Gate2F.asm:12",
-   "lines": [
-    12,
-    22
    ]
   },
   {
@@ -4102,9 +4067,9 @@
     "VermilionDockSSAnneLeavesScript.smoke_puff_drift_loop",
     "VermilionDockSSAnneLeavesScript.delay_between_drifts"
    ],
-   "reason": "bank-expression",
-   "detail": "HIGH(vBGMap1)",
-   "at": "scripts/VermilionDock.asm:52",
+   "reason": "screen-coord-projection",
+   "detail": "hlcoord 0, 10",
+   "at": "scripts/VermilionDock.asm:54",
    "lines": [
     40,
     122

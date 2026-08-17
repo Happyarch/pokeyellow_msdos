@@ -32,6 +32,20 @@ GB_TILEMAP0     equ 0x9800
 ; Matches TILEMAP1 (0x9C00) in constants/hardware.inc.
 GB_TILEMAP1     equ 0x9C00
 
+; pret's own spellings for the VRAM region (ram/vram.asm), as ALIASES alongside
+; the GB_* names above rather than in place of them — the "Preserve pret Labels"
+; rule's prescribed form. The GB_* names are load-bearing across the port and its
+; tools; these exist so pret source that names a VRAM label translates without
+; the reader having to know the port renamed it. vSprites/vFont are pret UNION
+; overlays of vChars0/vChars1, which is why they share addresses.
+vChars0         equ 0x8000
+vChars1         equ 0x8800
+vChars2         equ 0x9000
+vSprites        equ 0x8000     ; NEXTU battle/menu — overlays vChars0
+vFont           equ 0x8800     ; NEXTU battle/menu — overlays vChars1
+vBGMap0         equ 0x9800
+vBGMap1         equ 0x9C00
+
 ; --- Unified window-compositor descriptor (see docs/current_plan_window_compositor.md) ---
 ; An ordered painter's-order list of window-layer boxes. render_window draws ONE
 ; descriptor per call; src/home/vblank.asm loops g_window_count of them (later

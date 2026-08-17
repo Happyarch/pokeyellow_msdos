@@ -173,9 +173,9 @@ _m("lb", CODE_MISC, clobbers=("bc",),
 _m("CheckEvent", CODE_EVENT, z="*", n="0", h="1", clobbers=("a",), argc=(1,),
    note="ld a,[wEventFlags+n] / bit b,a — preserves C")
 _m("CheckEvent", CODE_EVENT, z="*", n="*", h="*", c="*", clobbers=("a",), argc=(2,),
-   always_bail="checkevent-carry-form",
-   note="2-arg form returns the bit in CARRY via rrca/add a. 3 sites; the "
-        "port's events.inc CheckEvent is 1-arg only, so this cannot pass through")
+   note="2-arg form returns the bit in CARRY via rrca/add a. events.inc now "
+        "carries a matching 2-arg overload (ror al, bit+1 / add al, al), so this "
+        "passes through like the 1-arg form")
 # These two are NO LONGER state_dependent: events.inc now carries the A-family
 # elision in the ASSEMBLER (`event_byte_a`), exactly as it does the HL family's
 # `event_byte`, so they pass through like every other event macro rather than

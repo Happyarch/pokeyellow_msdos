@@ -20,7 +20,8 @@
 ; idx → byte offset within wEventFlags, and the single-bit mask. Modulo is written
 ; as idx-(idx/8)*8 to avoid NASM's '%' (preprocessor) in expressions.
 %define EVENT_BYTE(i)  ((i) / 8)
-%define EVENT_MASK(i)  (1 << ((i) - ((i) / 8) * 8))
+%define EVENT_BIT(i)   ((i) - ((i) / 8) * 8)
+%define EVENT_MASK(i)  (1 << EVENT_BIT(i))
 
 ; `event_byte_a` — the byte of wEventFlags that AL currently HOLDS, or -1 for
 ; "unknown". It is what the *ReuseA family elides against, and it is deliberately
@@ -42,6 +43,31 @@
     %assign event_byte_a EVENT_BYTE(%1)
     mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
     test al, EVENT_MASK(%1)
+%endmacro
+
+; CheckEvent EVENT_X, 1 — pret's TWO-argument form: return the bit in CARRY
+; instead of Z. pret rotates A right (bit + 1) times so the wanted bit falls out
+; into carry, or uses `add a` when the bit is 7:
+;
+;     IF ((\1) % 8) == 7 : add a
+;     ELSE               : REPT ((\1) % 8) + 1 / rrca / ENDR
+;
+; x86 `ror r8, n` leaves CF equal to the last bit rotated out — bit n-1 of the
+; original — so `ror al, EVENT_BIT+1` puts exactly pret's bit in CF, and
+; `add al, al` matches the bit-7 arm. The second argument is pret's "return in
+; carry" marker; its VALUE is never read, only its presence, which is why this is
+; an arity overload rather than a parameter.
+;
+; INVALIDATES event_byte_a: the rotate leaves AL holding a ROTATED byte, not the
+; flag byte, so nothing may elide a load against it afterwards.
+%macro CheckEvent 2
+    %assign event_byte_a -1
+    mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
+%if EVENT_BIT(%1) == 7
+    add al, al                      ; pret: add a — CF = bit 7
+%else
+    ror al, EVENT_BIT(%1) + 1       ; pret: rrca x (bit+1) — CF = bit EVENT_BIT
+%endif
 %endmacro
 
 ; SetEvent EVENT_X — set the flag. Clobbers AL.
