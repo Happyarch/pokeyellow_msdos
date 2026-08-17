@@ -24,6 +24,7 @@ bits 32
 %include "gb_constants.inc"
 %include "assets/audio_constants.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 %include "events.inc"
 
 global PalletTownOakText
@@ -175,7 +176,7 @@ PalletTownOakWalksToPlayerScript:
     call CalcPositionOfPlayerRelativeToNPC
     dec byte [ebp + hNPCPlayerYDistance]
     call FindPathToPlayer
-    mov byte [ebp + hCurrentSpriteOffset], 0x10
+    mov byte [ebp + hSpriteIndex], PALLETTOWN_OAK  ; ld a, PALLETTOWN_OAK / ldh [hSpriteIndex], a
     lea edi, [ebp + wNPCMovementDirections2]
     call MoveSprite
     mov byte [ebp + wPalletTownCurScript], SCRIPT_PALLETTOWN_OAK_GREETS_PLAYER

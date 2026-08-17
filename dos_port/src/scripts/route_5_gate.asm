@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global Route5GateDefaultScript
@@ -90,7 +91,7 @@ Route5GateMovePlayerUpScript:
 Route5GateDefaultScript:
     mov al, [ebp + wStatusFlags1]
     setc ah                     ; SM83 `bit` preserves C — stash it
-    test al, (1 << (6))
+    test al, (1 << (BIT_GAVE_SAFFRON_GUARDS_DRINK))
     bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
     jz .nr_22
         ret
@@ -124,7 +125,7 @@ Route5GateDefaultScript:
     mov [ebp + hTextID], al
     call DisplayTextID
     mov esi, wStatusFlags1
-    or byte [ebp + esi], (1 << (6))
+    or byte [ebp + esi], (1 << (BIT_GAVE_SAFFRON_GUARDS_DRINK))
     ret
 
 %assign event_byte -1
@@ -159,7 +160,7 @@ Route5Gate_TextPointers:
 %assign event_byte_a -1
 SaffronGateGuardText:
     mov al, [ebp + wStatusFlags1]
-    test al, (1 << (6))
+    test al, (1 << (BIT_GAVE_SAFFRON_GUARDS_DRINK))
     jnz .thanks_for_drink
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call RemoveGuardDrink
@@ -179,7 +180,7 @@ SaffronGateGuardText:
     mov esi, SaffronGateGuardGiveDrinkText
     call PrintText
     mov esi, wStatusFlags1
-    or byte [ebp + esi], (1 << (6))
+    or byte [ebp + esi], (1 << (BIT_GAVE_SAFFRON_GUARDS_DRINK))
     jmp TextScriptEnd
 
 %assign event_byte -1

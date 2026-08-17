@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 %include "assets/trainer_headers.inc"
@@ -182,11 +183,11 @@ RocketHideoutB4FBeatGiovanniScript:
     mov [ebp + hTextID], al
     call DisplayTextID
     call GBFadeOutToBlack
-    mov al, 133
+    mov al, TOGGLE_ROCKET_HIDEOUT_B4F_GIOVANNI
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov al, 139
+    mov al, TOGGLE_ROCKET_HIDEOUT_B4F_ITEM_4
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
@@ -461,7 +462,7 @@ RocketHideoutB4FScript_HideObject:
     mov [ebp + wPlayerMovingDirection], al
     mov al, 0x0
     mov [ebp + wEmotionBubbleSpriteIndex], al
-    mov al, 0
+    mov al, EXCLAMATION_BUBBLE
     mov [ebp + wWhichEmotionBubble], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call EmotionBubble
@@ -542,7 +543,7 @@ RocketHideoutB4FRocketText:
 %assign event_byte -1
 %assign event_byte_a -1
     SetEvent EVENT_ROCKET_DROPPED_LIFT_KEY
-    mov al, 140
+    mov al, TOGGLE_ROCKET_HIDEOUT_B4F_ITEM_5
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject

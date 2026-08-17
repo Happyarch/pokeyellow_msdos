@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
 
@@ -149,9 +150,9 @@ BillsHouse_ScriptPointers:
 %assign event_byte_a -1
 BillsHouse_CheckMetBill:
     mov esi, wPikachuMapScriptFlags
-    test byte [ebp + esi], (1 << (7))
+    test byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
     pushfd    ; SM83 form writes no flags
-        or byte [ebp + esi], (1 << (7))
+        or byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
     popfd
     jz .nr_26
         ret
@@ -180,7 +181,7 @@ BillsHouse_CheckMetBill:
 BillsHouseScript0:
     mov al, [ebp + wPikachuSpawnStateFlags]
     setc ah                     ; SM83 `bit` preserves C — stash it
-    test al, (1 << (7))
+    test al, (1 << (BIT_PIKACHU_SPAWN_STARTER))
     bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
     jz .done
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
@@ -245,7 +246,7 @@ BillsHouseScript3:
     jz .nr_96
         ret
 .nr_96:
-    mov al, 97
+    mov al, TOGGLE_BILL_POKEMON
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -313,14 +314,14 @@ BillsHouseScript5:
     mov al, 5
     mov [ebp + hSpriteMapXCoord], al
     call SetSpritePosition1
-    mov al, 98
+    mov al, TOGGLE_BILL_1
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
     mov bl, 8
     call DelayFrames
     mov esi, wPikachuSpawnStateFlags
-    test byte [ebp + esi], (1 << (7))
+    test byte [ebp + esi], (1 << (BIT_PIKACHU_SPAWN_STARTER))
     jz .pikachuNotFollowing
     call CheckPikachuFollowingPlayer
     jz .pikachuNotFollowing
@@ -333,7 +334,7 @@ BillsHouseScript5:
     call ApplyPikachuMovementData
     mov al, 0xf
     mov [ebp + wEmotionBubbleSpriteIndex], al
-    mov al, 0
+    mov al, EXCLAMATION_BUBBLE
     mov [ebp + wWhichEmotionBubble], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call EmotionBubble
@@ -506,17 +507,17 @@ BillsHousePrintBillSSTicketText:
     jnz .got_ss_ticket
     mov esi, .ThankYouText
     call PrintText
-    mov bx, ((63) << 8) | (1)
+    mov bx, (S_S_TICKET << 8) | (1)   ; pret: lb bc, S_S_TICKET, 1 (BillsHouse_2.asm:36)
     call GiveItem
     jae .bag_full
     mov esi, .SSTicketReceivedText
     call PrintText
     SetEvent EVENT_GOT_SS_TICKET
-    mov al, 8
+    mov al, TOGGLE_CERULEAN_GUARD_1
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
-    mov al, 10
+    mov al, TOGGLE_CERULEAN_GUARD_2
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -603,7 +604,7 @@ BillsHousePikachuConfused:
     call ApplyPikachuMovementData
     mov al, 0xf
     mov [ebp + wEmotionBubbleSpriteIndex], al
-    mov al, 1
+    mov al, QUESTION_BUBBLE
     mov [ebp + wWhichEmotionBubble], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call EmotionBubble

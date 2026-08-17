@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global ViridianCityAfterPokedexScript
@@ -285,7 +286,7 @@ ViridianCityOldManStartCatchTrainingScript:
     mov [ebp + wBattleType], al
     mov al, 5
     mov [ebp + wCurEnemyLevel], al
-    mov al, 165
+    mov al, RATTATA
     mov [ebp + wCurOpponent], al
     ret
 
@@ -461,7 +462,7 @@ ViridianCityOldManMovingDownScript:
     jz .nr_248
         ret
 .nr_248:
-    mov al, 3
+    mov al, TOGGLE_OLD_MAN_2
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -721,7 +722,7 @@ ViridianCityPrintFisherText:
     jnz .got_item
     mov esi, .YouCanHaveThisText
     call PrintText
-    mov bx, ((244) << 8) | (1)
+    mov bx, (TM_DREAM_EATER << 8) | (1)   ; pret: lb bc, TM_DREAM_EATER, 1  (TM42 = $F2)
     call GiveItem
     jae .bag_full
     mov esi, .ReceivedTM42Text

@@ -2986,6 +2986,12 @@ assets/toggleable_objects.inc:
 assets/event_constants.inc:
 	python3 tools/generators/gen_event_constants.py
 
+# pret constant NAMES for the translated map scripts (TOGGLE_*, species, items,
+# FLOOR_*, TRADE_FOR_*, BIT_*) so a script line can be checked against the
+# disassembly without resolving numbers by hand (gen_script_constants.py).
+assets/script_constants.inc: tools/generators/gen_script_constants.py
+	python3 tools/generators/gen_script_constants.py
+
 # Fixed outside-map sprite sets (pret data/maps/sprite_sets.asm) — OW-A.2 sprite-set
 # machinery in map_sprites.asm. Pure data (no gfx dep); consumed from Phase 3 onward.
 assets/sprite_sets.inc: tools/generators/gen_sprite_sets.py
@@ -3675,6 +3681,7 @@ assets: assets/scenario_registry.inc \
         assets/red_bike_sprite.inc assets/seel_sprite.inc \
         assets/surfing_pikachu_sprite.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
+        assets/script_constants.inc \
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/item_names.inc assets/item_prices.inc \

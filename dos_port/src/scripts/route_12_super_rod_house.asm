@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global Route12SuperRodHouseFishingGuruText
@@ -57,7 +58,7 @@ Route12SuperRodHouse_TextPointers:
 %assign event_byte_a -1
 Route12SuperRodHouseFishingGuruText:
     mov al, [ebp + wStatusFlags1]
-    test al, (1 << (5))
+    test al, (1 << (BIT_GOT_SUPER_ROD))
     jnz .got_item
     mov esi, .DoYouLikeToFishText
     call PrintText
@@ -69,7 +70,7 @@ Route12SuperRodHouseFishingGuruText:
     call GiveItem
     jae .bag_full
     mov esi, wStatusFlags1
-    or byte [ebp + esi], (1 << (5))
+    or byte [ebp + esi], (1 << (BIT_GOT_SUPER_ROD))
     mov esi, .ReceivedSuperRodText
     jmp .done
 

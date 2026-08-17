@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/script_strings.inc"
 %include "assets/trainer_headers.inc"
@@ -149,7 +150,7 @@ CeruleanGymReceiveTM11:
     pushfd    ; SM83 form writes no flags
         SetEvent EVENT_BEAT_MISTY
     popfd
-    mov bx, ((213) << 8) | (1)
+    mov bx, (TM_BUBBLEBEAM << 8) | (1)   ; pret: lb bc, TM_BUBBLEBEAM, 1  (TM11 = $D3)
     call GiveItem
     jae .BagFull
     mov al, TEXT_CERULEANGYM_MISTY_RECEIVED_TM11
@@ -166,9 +167,9 @@ CeruleanGymReceiveTM11:
     call DisplayTextID
 .gymVictory:
     mov esi, wObtainedBadges
-    or byte [ebp + esi], (1 << (1))
+    or byte [ebp + esi], (1 << (BIT_CASCADEBADGE))
     mov esi, wBeatGymFlags
-    or byte [ebp + esi], (1 << (1))
+    or byte [ebp + esi], (1 << (BIT_CASCADEBADGE))
     SetEvents EVENT_BEAT_CERULEAN_GYM_TRAINER_0, EVENT_BEAT_CERULEAN_GYM_TRAINER_1
     jmp CeruleanGymResetScripts
 

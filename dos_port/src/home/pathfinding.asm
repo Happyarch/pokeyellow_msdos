@@ -22,10 +22,11 @@
 ; Register map (SM83 -> x86): A->AL, HL->ESI, B->BH, C->BL (see CLAUDE.md).
 ; RAM is EBP-relative; the movement-data source is a FLAT 32-bit host pointer (EDI).
 ;
-; Sprite selector: the port addresses a sprite slot by its byte offset (slot*0x10)
-; held in hCurrentSpriteOffset (hCurrentSpriteOffset) — the analog of pret's
-; `hSpriteIndex` after `swap a`. Callers set it before MoveSprite, matching the
-; _UpdateSprites loop convention (see sprite_collisions.asm).
+; Sprite selector: [hSpriteIndex], a RAW slot number, exactly as pret. The port
+; briefly used hCurrentSpriteOffset (slot*0x10) here instead; that was wrong —
+; hCurrentSpriteOffset is the _UpdateSprites loop cursor and a separate live HRAM
+; byte, and hSpriteIndex aliases hTextID so it cannot carry a shifted value.
+; See the SELECTOR note on GetSpriteMovementByte1Pointer (src/home/map_objects.asm).
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o pathfinding.o \
 ;                     src/engine/overworld/pathfinding.asm
@@ -63,14 +64,14 @@ CalcDifference:
     ret
 
 ; ---------------------------------------------------------------------------
-; MoveSprite — move sprite [hCurrentSpriteOffset] with the movement stream at EDI.
+; MoveSprite — move sprite [hSpriteIndex] with the movement stream at EDI.
 ; Copies the (RLE-free) $ff-terminated direction bytes to wNPCMovementDirections and
 ; arms scripted-NPC movement. Entry MoveSprite first resets the sprite's movement
 ; bytes; MoveSprite_ skips that (caller already did it).
 ;
 ; pret: home/pathfinding.asm:MoveSprite / MoveSprite_
 ; In:  EDI = flat pointer to $ff-terminated movement-direction bytes
-;      hCurrentSpriteOffset = sprite slot*0x10
+;      hSpriteIndex = sprite slot number (raw, as pret — NOT slot*0x10)
 ; Out: wNPCMovementDirections filled; wNPCNumScriptedSteps = step count;
 ;      BIT_SCRIPTED_NPC_MOVEMENT set; sim-joypad override state reset.
 ; Clobbers: AL, ECX, ESI, EDI, flags

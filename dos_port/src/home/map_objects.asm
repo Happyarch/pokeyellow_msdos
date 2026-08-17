@@ -280,9 +280,9 @@ DecodeRLEList:
 
 ; ---------------------------------------------------------------------------
 ; SetSpriteMovementBytesToFF — movement byte 1 = STAY ($ff), byte 2 = NONE ($00),
-; for sprite [hCurrentSpriteOffset].
+; for sprite [hSpriteIndex].
 ; pret: home/map_objects.asm:SetSpriteMovementBytesToFF
-; Clobbers: ESI, flags
+; Clobbers: AL, ESI, flags
 ; ---------------------------------------------------------------------------
 SetSpriteMovementBytesToFF:
     call GetSpriteMovementByte1Pointer
@@ -292,14 +292,26 @@ SetSpriteMovementBytesToFF:
     ret
 
 ; ---------------------------------------------------------------------------
-; GetSpriteMovementByte1Pointer — ESI = EBP-rel offset of sprite [hCurrentSpriteOffset]
+; GetSpriteMovementByte1Pointer — ESI = EBP-rel offset of sprite [hSpriteIndex]
 ; movement byte 1 (wSpriteStateData2 + slot*0x10 + 6).
 ; pret: home/map_objects.asm:GetSpriteMovementByte1Pointer (swap a / add 6)
-; Out: ESI = offset   Clobbers: ESI
+;
+; SELECTOR (2026-08-17): this family reads hSpriteIndex — a raw SLOT number — not
+; hCurrentSpriteOffset. The two are distinct, simultaneously-live HRAM bytes in
+; pret (ram/hram.asm:65 vs :290): hCurrentSpriteOffset is the _UpdateSprites loop
+; cursor, rewritten every iteration of the per-frame sprite walk, while
+; hSpriteIndex is the caller-set selector every user of this family supplies.
+; The offset cannot simply be baked into hSpriteIndex, because that byte IS
+; hTextID (pret ASSERTs it at home/text_script.asm:8; gb_memmap.inc:625 encodes
+; it) and must keep holding a small raw id for DisplayTextID.
+; Out: ESI = offset   Clobbers: AL, ESI, flags
 ; ---------------------------------------------------------------------------
 GetSpriteMovementByte1Pointer:
-    movzx esi, byte [ebp + hCurrentSpriteOffset]
-    add esi, wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1
+    mov al, [ebp + hSpriteIndex]              ; ldh a, [hSpriteIndex] — raw slot
+    rol al, 4                                 ; swap a (rol-by-4 IS SM83 swap, wrap included)
+    add al, SPRITESTATEDATA2_MOVEMENTBYTE1    ; add 6
+    movzx esi, al                             ; ld l, a
+    add esi, wSpriteStateData2                ; ld h, HIGH(wSpriteStateData2) (low byte is 0)
     ret
 
 ; ---------------------------------------------------------------------------
@@ -311,12 +323,16 @@ GetSpriteMovementByte1Pointer:
 ; there too (it had been stashed in SPRITESTATEDATA2 offset 0x1). Since wMapSpriteData is
 ; a flat .bss array, this returns ESI = flat address (NOT an EBP-relative offset like
 ; GetSpriteMovementByte1Pointer); callers write [esi], not [ebp+esi].
-; Out: ESI = flat wMapSpriteData ptr   Clobbers: ESI, flags
+; Selector: [hSpriteIndex], as GetSpriteMovementByte1Pointer above — see the note
+; there. This routine is the clearest evidence the offset encoding was wrong: it
+; wants pret's RAW slot, so under the old hCurrentSpriteOffset selector it had to
+; `shr esi, 4` to undo the port's own encoding before doing pret's arithmetic.
+; Out: ESI = flat wMapSpriteData ptr   Clobbers: AL, ESI, flags
 ; ---------------------------------------------------------------------------
 GetSpriteMovementByte2Pointer:
-    movzx esi, byte [ebp + hCurrentSpriteOffset]  ; slot byte offset (slot*0x10)
-    shr esi, 4                                        ; slot number (1-15)
-    dec esi
-    add esi, esi                                      ; (slot-1)*2 -> wMapSpriteData index
+    mov al, [ebp + hSpriteIndex]                      ; ldh a, [hSpriteIndex] — raw slot
+    dec al                                            ; dec a  (8-bit: slot 0 wraps to $ff, as pret)
+    add al, al                                        ; add a  -> (slot-1)*2
+    movzx esi, al                                     ; ld e, a / ld d, 0
     add esi, wMapSpriteData                           ; flat address; flags dead (ret follows)
     ret

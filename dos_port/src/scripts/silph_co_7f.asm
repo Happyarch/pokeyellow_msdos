@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 %include "assets/trainer_headers.inc"
@@ -423,7 +424,7 @@ SilphCo7FRivalExitScript:
     jz .nr_243
         ret
 .nr_243:
-    mov al, 171
+    mov al, TOGGLE_SILPH_CO_7F_RIVAL
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -439,7 +440,7 @@ SilphCo7FRivalExitScript:
 SilphCo7FSilphWorkerM1Text:
     mov al, [ebp + wStatusFlags4]
     setc ah                     ; SM83 `bit` preserves C — stash it
-    test al, (1 << (0))
+    test al, (1 << (BIT_GOT_LAPRAS))
     bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
     jz .give_lapras
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
@@ -465,7 +466,7 @@ SilphCo7FSilphWorkerM1Text:
     mov esi, .LaprasDescriptionText
     call PrintText
     mov esi, wStatusFlags4
-    or byte [ebp + esi], (1 << (0))
+    or byte [ebp + esi], (1 << (BIT_GOT_LAPRAS))
     jmp .done
 
 %assign event_byte -1

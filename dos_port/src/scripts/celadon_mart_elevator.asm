@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
 
@@ -63,9 +64,9 @@ CeladonMartElevator_Script:
         call CeladonMartElevatorStoreWarpEntriesScript
 .sk_6:
     pop esi
-    test byte [ebp + esi], (1 << (7))
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_USED_ELEVATOR))
     pushfd    ; SM83 form writes no flags
-        and byte [ebp + esi], ~(1 << (7)) & 0xFF
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_USED_ELEVATOR)) & 0xFF
     popfd
     jz .sk_10
         call CeladonMartElevatorShakeScript
@@ -111,11 +112,11 @@ CeladonMartElevatorCopyWarpMapsScript:
 %assign event_byte_a -1
 CeladonMartElevatorFloors:
     db 5
-    db 86
-    db 87
-    db 88
-    db 89
-    db 90
+    db FLOOR_1F
+    db FLOOR_2F
+    db FLOOR_3F
+    db FLOOR_4F
+    db FLOOR_5F
     db -1
 CeladonMartElevatorWarpMaps:
     db 5, CELADON_MART_1F

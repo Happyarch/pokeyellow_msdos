@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global LavenderCuboneHouseBrunetteGirlText
@@ -56,7 +57,7 @@ LavenderCuboneHouseCuboneText:
 
 %assign event_byte -1
 %assign event_byte_a -1
-    mov al, 17
+    mov al, CUBONE
     call PlayCry
     jmp TextScriptEnd
 

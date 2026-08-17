@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
 
@@ -69,9 +70,9 @@ SeafoamIslandsB2F_Script:
     cmp al, 0x1
     jnz .boulder2FellDownHole
     SetEventReuseHL EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE
-    mov al, 227
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B2F_BOULDER_1
     mov [ebp + wObjectToHide], al
-    mov al, 231
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B3F_BOULDER_3
     mov [ebp + wObjectToShow], al
     jmp .hideAndShowBoulderObjects
 
@@ -79,9 +80,9 @@ SeafoamIslandsB2F_Script:
 %assign event_byte_a -1
 .boulder2FellDownHole:
     SetEventAfterBranchReuseHL EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE
-    mov al, 228
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B2F_BOULDER_2
     mov [ebp + wObjectToHide], al
-    mov al, 232
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B3F_BOULDER_4
     mov [ebp + wObjectToShow], al
 .hideAndShowBoulderObjects:
     mov al, [ebp + wObjectToHide]

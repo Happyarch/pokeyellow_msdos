@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 %include "assets/pika_pcm.inc"
@@ -300,7 +301,7 @@ OaksLabDefaultScript:
     jz .nr_44
         ret
 .nr_44:
-    mov al, 48
+    mov al, TOGGLE_OAKS_LAB_OAK_2
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
@@ -337,11 +338,11 @@ OaksLabToggleOaksScript:
     jz .nr_74
         ret
 .nr_74:
-    mov al, 48
+    mov al, TOGGLE_OAKS_LAB_OAK_2
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov al, 45
+    mov al, TOGGLE_OAKS_LAB_OAK_1
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
@@ -504,7 +505,7 @@ OaksLabRivalTakesPokeballScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
     jnz .asm_1c564
-    mov al, 44
+    mov al, TOGGLE_STARTER_BALL_1
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -515,7 +516,7 @@ OaksLabRivalTakesPokeballScript:
     call SetSpriteFacingDirectionAndDelay
     mov al, 1
     mov [ebp + wRivalStarter], al
-    mov al, 102
+    mov al, EEVEE
     mov [ebp + wNamedObjectIndex], al
     call GetMonName
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
@@ -755,7 +756,7 @@ OaksLabPlayerWatchRivalExitScript:
     jnz .checkRivalPosition
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
-    mov al, 43
+    mov al, TOGGLE_OAKS_LAB_RIVAL
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -842,7 +843,7 @@ OaksLabRivalArrivesAtOaksRequestScript:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call OaksLabPikachuMovementScript
     call OaksLabCalcRivalMovementScript
-    mov al, 43                               ; TOGGLE_OAKS_LAB_RIVAL ($2B)
+    mov al, TOGGLE_OAKS_LAB_RIVAL                               ; TOGGLE_OAKS_LAB_RIVAL ($2B)
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
@@ -920,11 +921,11 @@ OaksLabOakGivesPokedexScript:
     mov [ebp + hTextID], al
     call DisplayTextID
     call Delay3
-    mov al, 46                               ; TOGGLE_POKEDEX_1 ($2E)
+    mov al, TOGGLE_POKEDEX_1                               ; TOGGLE_POKEDEX_1 ($2E)
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov al, 47                               ; TOGGLE_POKEDEX_2 ($2F)
+    mov al, TOGGLE_POKEDEX_2                               ; TOGGLE_POKEDEX_2 ($2F)
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -945,11 +946,11 @@ OaksLabOakGivesPokedexScript:
     mov al, SCRIPT_VIRIDIANCITY_AFTER_POKEDEX
     mov [ebp + wViridianCityCurScript], al
     SetEvent EVENT_OAK_GOT_PARCEL
-    mov al, 1                                ; TOGGLE_LYING_OLD_MAN ($01)
+    mov al, TOGGLE_LYING_OLD_MAN                                ; TOGGLE_LYING_OLD_MAN ($01)
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov al, 3                                ; TOGGLE_OLD_MAN_2 ($03)
+    mov al, TOGGLE_OLD_MAN_2                                ; TOGGLE_OLD_MAN_2 ($03)
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
@@ -987,14 +988,14 @@ OaksLabRivalLeavesWithPokedexScript:
         ret
 .nr_618:
     call PlayDefaultMusic
-    mov al, 43
+    mov al, TOGGLE_OAKS_LAB_RIVAL
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     SetEvent EVENT_1ST_ROUTE22_RIVAL_BATTLE
     ResetEventReuseHL EVENT_2ND_ROUTE22_RIVAL_BATTLE
     SetEventReuseHL EVENT_ROUTE22_RIVAL_WANTS_BATTLE
-    mov al, 35
+    mov al, TOGGLE_ROUTE_22_RIVAL_1
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
@@ -1255,7 +1256,7 @@ OaksLabOak1Text:
     CheckEventReuseA EVENT_BATTLED_RIVAL_IN_OAKS_LAB
     jnz .check_got_parcel
     mov al, [ebp + wStatusFlags4]
-    test al, (1 << (3))
+    test al, (1 << (BIT_GOT_STARTER))
     jnz .already_got_pokemon
     mov esi, .GoAheadItsYours
     call PrintText
@@ -1486,7 +1487,7 @@ OaksLabPlayerReceivedMonText:
     call DisablePikachuOverworldSpriteDrawing
     SetEvent EVENT_GOT_STARTER
     mov esi, wStatusFlags4
-    or byte [ebp + esi], (1 << (3))
+    or byte [ebp + esi], (1 << (BIT_GOT_STARTER))
     jmp TextScriptEnd
 
 %assign event_byte -1

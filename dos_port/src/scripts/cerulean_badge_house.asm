@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global CeruleanBadgeHouseBadgeTextPointers
@@ -114,14 +115,14 @@ CeruleanBadgeHouseMiddleAgedManText:
 %assign event_byte_a -1
 .BadgeItemList:
     db 8
-    db 21
-    db 22
-    db 23
-    db 24
-    db 25
-    db 26
-    db 27
-    db 28
+    db BOULDERBADGE
+    db CASCADEBADGE
+    db THUNDERBADGE
+    db RAINBOWBADGE
+    db SOULBADGE
+    db MARSHBADGE
+    db VOLCANOBADGE
+    db EARTHBADGE
     db -1
 .Text:
     text_far _CeruleanBadgeHouseMiddleAgedManText

@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global FuchsiaCityChanseySignText
@@ -139,7 +140,7 @@ FuchsiaCityGymSignText:
 FuchsiaCityChanseySignText:
     mov esi, .Text
     call PrintText
-    mov al, 40
+    mov al, CHANSEY
     call DisplayPokedex
     jmp TextScriptEnd
 
@@ -154,7 +155,7 @@ FuchsiaCityChanseySignText:
 FuchsiaCityVoltorbSignText:
     mov esi, .Text
     call PrintText
-    mov al, 6
+    mov al, VOLTORB
     call DisplayPokedex
     jmp TextScriptEnd
 
@@ -169,7 +170,7 @@ FuchsiaCityVoltorbSignText:
 FuchsiaCityKangaskhanSignText:
     mov esi, .Text
     call PrintText
-    mov al, 2
+    mov al, KANGASKHAN
     call DisplayPokedex
     jmp TextScriptEnd
 
@@ -184,7 +185,7 @@ FuchsiaCityKangaskhanSignText:
 FuchsiaCitySlowpokeSignText:
     mov esi, .Text
     call PrintText
-    mov al, 37
+    mov al, SLOWPOKE
     call DisplayPokedex
     jmp TextScriptEnd
 
@@ -199,7 +200,7 @@ FuchsiaCitySlowpokeSignText:
 FuchsiaCityLaprasSignText:
     mov esi, .Text
     call PrintText
-    mov al, 19
+    mov al, LAPRAS
     call DisplayPokedex
     jmp TextScriptEnd
 
@@ -225,7 +226,7 @@ FuchsiaCityFossilSignText:
 .got_dome_fossil:
     mov esi, .OmanyteText
     call PrintText
-    mov al, 98
+    mov al, OMANYTE
     jmp .display
 
 %assign event_byte -1
@@ -233,7 +234,7 @@ FuchsiaCityFossilSignText:
 .got_helix_fossil:
     mov esi, .KabutoText
     call PrintText
-    mov al, 90
+    mov al, KABUTO
 .display:
     call DisplayPokedex
 .done:

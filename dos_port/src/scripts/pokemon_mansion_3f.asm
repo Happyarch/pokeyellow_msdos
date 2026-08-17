@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
 %include "assets/trainer_headers.inc"
@@ -140,7 +141,7 @@ PokemonMansion3FDefaultScript:
     mov [ebp + wWhichDungeonWarp], al
     mov al, [ebp + wStatusFlags3]
     setc ah                     ; SM83 `bit` preserves C — stash it
-    test al, (1 << (4))
+    test al, (1 << (BIT_ON_DUNGEON_WARP))
     bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
     jz .nr_65
         ret
@@ -152,7 +153,7 @@ PokemonMansion3FDefaultScript:
     mov al, [ebp + wCoordIndex]
     mov [ebp + wWhichDungeonWarp], al
     mov esi, wStatusFlags3
-    or byte [ebp + esi], (1 << (4))
+    or byte [ebp + esi], (1 << (BIT_ON_DUNGEON_WARP))
     mov esi, wStatusFlags6
     or byte [ebp + esi], (1 << (BIT_DUNGEON_WARP))
     ret

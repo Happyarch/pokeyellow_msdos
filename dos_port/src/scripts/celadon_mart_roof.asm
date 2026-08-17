@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global CeladonMartRoofCurrentFloorSignText
@@ -204,11 +205,7 @@ CeladonMartRoofScript_GiveDrinkToGirl:
     mov esi, CeladonMartRoofLittleGirlYayLemonadeText
     call PrintText
     call RemoveItemByIDBank12
-    ; lb bc, TM_TRI_ATTACK, 1. TM_TRI_ATTACK is TM49 = $F9 = 249: item_constants.asm
-    ; sets `const_next $C4` (:115) so HM01 = $C4 and TM01 = $C9, matching
-    ; gb_constants.inc:144-145. NOTE the two already-emitted sibling branches below
-    ; carry 250 (TM48) and 215 (TM13) — both one too high; see the report.
-    mov bx, ((TM01 + 48) << 8) | (1)
+    mov bx, (TM_TRI_ATTACK << 8) | (1)   ; pret: lb bc, TM_TRI_ATTACK, 1  (TM49 = $F9)
     call GiveItem
     jae .bagFull
     mov esi, CeladonMartRoofLittleGirlReceivedTM49Text
@@ -224,7 +221,7 @@ CeladonMartRoofScript_GiveDrinkToGirl:
     mov esi, CeladonMartRoofLittleGirlYaySodaPopText
     call PrintText
     call RemoveItemByIDBank12
-    mov bx, ((250) << 8) | (1)
+    mov bx, (TM_ROCK_SLIDE << 8) | (1)   ; pret: lb bc, TM_ROCK_SLIDE, 1  (TM48 = $F8)
     call GiveItem
     jae .bagFull
     mov esi, CeladonMartRoofLittleGirlReceivedTM48Text
@@ -240,7 +237,7 @@ CeladonMartRoofScript_GiveDrinkToGirl:
     mov esi, CeladonMartRoofLittleGirlYayFreshWaterText
     call PrintText
     call RemoveItemByIDBank12
-    mov bx, ((215) << 8) | (1)
+    mov bx, (TM_ICE_BEAM << 8) | (1)   ; pret: lb bc, TM_ICE_BEAM, 1  (TM13 = $D5)
     call GiveItem
     jae .bagFull
     mov esi, CeladonMartRoofLittleGirlReceivedTM13Text

@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 %include "assets/script_strings.inc"
@@ -290,7 +291,7 @@ PikachuMovementData_74f9e:
 %assign event_byte_a -1
 CinnabarGymScript_74fa3:
     mov al, [ebp + wPikachuSpawnStateFlags]
-    test al, (1 << (7))
+    test al, (1 << (BIT_PIKACHU_SPAWN_STARTER))
     jnz .nr_109
         ret
 .nr_109:
@@ -420,7 +421,7 @@ CinnabarGymReceiveTM38:
     pushfd    ; SM83 form writes no flags
         SetEvent EVENT_BEAT_BLAINE
     popfd
-    mov bx, ((240) << 8) | (1)
+    mov bx, (TM_FIRE_BLAST << 8) | (1)   ; pret: lb bc, TM_FIRE_BLAST, 1  (TM38 = $EE)
     call GiveItem
     jae .BagFull
     mov al, TEXT_CINNABARGYM_BLAINE_RECEIVED_TM38
@@ -437,9 +438,9 @@ CinnabarGymReceiveTM38:
     call DisplayTextID
 .gymVictory:
     mov esi, wObtainedBadges
-    or byte [ebp + esi], (1 << (6))
+    or byte [ebp + esi], (1 << (BIT_VOLCANOBADGE))
     mov esi, wBeatGymFlags
-    or byte [ebp + esi], (1 << (6))
+    or byte [ebp + esi], (1 << (BIT_VOLCANOBADGE))
     SetEventRange EVENT_BEAT_CINNABAR_GYM_TRAINER_0, EVENT_BEAT_CINNABAR_GYM_TRAINER_6
     mov esi, wCurrentMapScriptFlags
     or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))

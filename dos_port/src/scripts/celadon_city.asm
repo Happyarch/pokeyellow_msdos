@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global CeladonCityDeptStoreSignText
@@ -145,7 +146,7 @@ CeladonCityGramps3Text:
     jnz .gotTM41
     mov esi, .Text
     call PrintText
-    mov bx, ((243) << 8) | (1)
+    mov bx, (TM_SOFTBOILED << 8) | (1)   ; pret: lb bc, TM_SOFTBOILED, 1  (TM41 = $F1)
     call GiveItem
     jb .Success
     mov esi, .TM41NoRoomText
@@ -191,7 +192,7 @@ CeladonCityPoliwrathText:
 
 %assign event_byte -1
 %assign event_byte_a -1
-    mov al, 111
+    mov al, POLIWRATH
     call PlayCry
     jmp TextScriptEnd
 

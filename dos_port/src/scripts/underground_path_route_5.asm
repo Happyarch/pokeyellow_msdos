@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
 
@@ -52,7 +53,7 @@ UndergroundPathRoute5_TextPointers:
 %assign event_byte -1
 %assign event_byte_a -1
 UndergroundPathRoute5LittleGirlText:
-    mov al, 9
+    mov al, TRADE_FOR_RICKY
     mov [ebp + wWhichTrade], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call DoInGameTradeDialogue

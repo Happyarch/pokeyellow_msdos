@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global CinnabarIslandDefaultScript
@@ -85,7 +86,7 @@ CinnabarIsland_ScriptPointers:
 %assign event_byte -1
 %assign event_byte_a -1
 CinnabarIslandDefaultScript:
-    mov bh, 43
+    mov bh, SECRET_KEY
     call IsItemInBag
     jz .nr_19
         ret

@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global MrFujisHouseLittleGirlText
@@ -126,7 +127,7 @@ MrFujisHousePsyduckText:
 
 %assign event_byte -1
 %assign event_byte_a -1
-    mov al, 47
+    mov al, PSYDUCK
     call PlayCry
     jmp TextScriptEnd
 
@@ -137,7 +138,7 @@ MrFujisHouseNidorinoText:
 
 %assign event_byte -1
 %assign event_byte_a -1
-    mov al, 167
+    mov al, NIDORINO
     call PlayCry
     jmp TextScriptEnd
 
@@ -148,7 +149,7 @@ MrFujisHouseMrFujiText:
     jnz .got_item
     mov esi, .IThinkThisMayHelpYourQuestText
     call PrintText
-    mov bx, ((73) << 8) | (1)
+    mov bx, (POKE_FLUTE << 8) | (1)   ; pret: lb bc, POKE_FLUTE, 1 (MrFujisHouse.asm:76)
     call GiveItem
     jae .bag_full
     mov esi, .ReceivedPokeFluteText

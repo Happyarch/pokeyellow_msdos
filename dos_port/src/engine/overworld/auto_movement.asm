@@ -13,9 +13,10 @@
 ; Register map (SM83 -> x86): A->AL, HL->ESI, B->BH, C->BL. RAM is EBP-relative.
 ; pret's embedded `dw <label>` pointer tables become `dd` (flat host pointers),
 ; matching CallFunctionInTable's [esi+ecx*4] and RunNPCMovementScript's *4 index.
-; The port's MoveSprite/scripted primitives take the sprite selector pre-swapped
-; in hCurrentSpriteOffset / wNPCMovementScriptSpriteOffset (= wSpriteIndex<<4,
-; pret's `swap a` / hSpriteIndex).
+; MoveSprite and the SetSpriteMovementBytes*/GetSpriteMovementByte*Pointer family
+; take the sprite selector as a RAW slot in hSpriteIndex, exactly as pret. Only
+; the per-frame stepper keeps a pre-swapped offset, in
+; wNPCMovementScriptSpriteOffset / hCurrentSpriteOffset (= slot<<4).
 ;
 ; LINKED (GAME_SRCS, since OW-7.2). The per-map movement-script pointer tables here
 ; are dispatched by RunNPCMovementScript, but the machinery stays inert until a map
@@ -127,8 +128,7 @@ PalletMovementScript_OakMoveLeft:
     add esi, ebx                               ; hl -> end of filled region
     mov byte [ebp + esi], 0xff                 ; ld [hl],$ff
     mov al, [ebp + wSpriteIndex]
-    shl al, 4                                  ; pret: ldh [hSpriteIndex] + MoveSprite swap
-    mov [ebp + hCurrentSpriteOffset], al
+    mov [ebp + hSpriteIndex], al               ; ldh [hSpriteIndex], a — raw slot, as pret
     lea edi, [ebp + wNPCMovementDirections2]   ; de = movement stream (flat = ebp + WRAM offset)
     call MoveSprite
     mov byte [ebp + wNPCMovementScriptFunctionNum], 1

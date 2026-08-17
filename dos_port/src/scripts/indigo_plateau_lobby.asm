@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global IndigoPlateauLobbyChanseyText
@@ -59,9 +60,9 @@ IndigoPlateauLobby_Script:
 .nr_7:
     ResetEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
     mov esi, wElite4Flags
-    test byte [ebp + esi], (1 << (1))
+    test byte [ebp + esi], (1 << (BIT_STARTED_ELITE_4))
     pushfd    ; SM83 form writes no flags
-        and byte [ebp + esi], ~(1 << (1)) & 0xFF
+        and byte [ebp + esi], ~(1 << (BIT_STARTED_ELITE_4)) & 0xFF
     popfd
     jnz .nr_13
         ret

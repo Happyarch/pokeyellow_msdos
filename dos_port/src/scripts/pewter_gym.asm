@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/script_strings.inc"
 %include "assets/trainer_headers.inc"
@@ -162,7 +163,7 @@ PewterGymScriptReceiveTM34:
     pushfd    ; SM83 form writes no flags
         SetEvent EVENT_BEAT_BROCK
     popfd
-    mov bx, ((236) << 8) | (1)
+    mov bx, (TM_BIDE << 8) | (1)   ; pret: lb bc, TM_BIDE, 1  (TM34 = $EA)
     call GiveItem
     jae .BagFull
     mov al, TEXT_PEWTERGYM_RECEIVED_TM34
@@ -179,14 +180,14 @@ PewterGymScriptReceiveTM34:
     call DisplayTextID
 .gymVictory:
     mov esi, wObtainedBadges
-    or byte [ebp + esi], (1 << (0))
+    or byte [ebp + esi], (1 << (BIT_BOULDERBADGE))
     mov esi, wBeatGymFlags
-    or byte [ebp + esi], (1 << (0))
-    mov al, 5
+    or byte [ebp + esi], (1 << (BIT_BOULDERBADGE))
+    mov al, TOGGLE_GYM_GUY
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov al, 35
+    mov al, TOGGLE_ROUTE_22_RIVAL_1
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -279,7 +280,7 @@ PewterGymCooltrainerMText:
 %assign event_byte_a -1
 PewterGymGuideText:
     mov al, [ebp + wBeatGymFlags]
-    test al, (1 << (0))
+    test al, (1 << (BIT_BOULDERBADGE))
     jnz .afterBeat
     mov esi, PewterGymGuidePreAdviceText
     call PrintText
@@ -288,7 +289,7 @@ PewterGymGuideText:
     test al, al
     jnz .PewterGymGuideBeginAdviceText
     mov al, [ebp + wPikachuSpawnStateFlags]
-    test al, (1 << (7))
+    test al, (1 << (BIT_PIKACHU_SPAWN_STARTER))
     jnz .asm_5c3fa
     mov esi, PewterGymGuideBeginAdviceText
     call PrintText

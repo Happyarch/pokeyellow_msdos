@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global OfficerJennyText1
@@ -126,7 +127,7 @@ section .text
 VermilionCity_Script:
     call EnableAutoTextBoxDrawing
     mov esi, wPikachuMapScriptFlags
-    and byte [ebp + esi], ~(1 << (7)) & 0xFF
+    and byte [ebp + esi], ~(1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE)) & 0xFF
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
     pushfd    ; SM83 form writes no flags
@@ -494,7 +495,7 @@ VermilionCityPrintOfficerJennyText:
     CheckEvent EVENT_GOT_SQUIRTLE_FROM_OFFICER_JENNY
     jnz .asm_f1a69
     mov al, [ebp + wBeatGymFlags]
-    test al, (1 << (2))
+    test al, (1 << (BIT_THUNDERBADGE))
     jnz .asm_f1a24
     mov esi, OfficerJennyText1
     call PrintText
@@ -509,7 +510,7 @@ VermilionCityPrintOfficerJennyText:
     mov al, [ebp + wCurrentMenuItem]
     test al, al
     jnz .asm_f1a62
-    mov al, 177
+    mov al, SQUIRTLE
     mov [ebp + wNamedObjectIndex], al
     mov [ebp + wCurPartySpecies], al
     call GetMonName

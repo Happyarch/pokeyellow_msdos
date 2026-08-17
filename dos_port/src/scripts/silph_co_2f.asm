@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/trainer_headers.inc"
 
@@ -195,7 +196,7 @@ SilphCo2FSilphWorkerFText:
     jnz .already_have_tm
     mov esi, .PleaseTakeThisText
     call PrintText
-    mov bx, ((238) << 8) | (1)
+    mov bx, (TM_SELFDESTRUCT << 8) | (1)   ; pret: lb bc, TM_SELFDESTRUCT, 1  (TM36 = $EC)
     call GiveItem
     mov esi, .TM36NoRoomText
     jae .print_text

@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 
@@ -88,7 +89,7 @@ SSAnneCaptainsRoomCaptainText:
     call PrintText
     mov esi, SSAnneCaptainsRoomCaptainIFeelMuchBetterText
     call PrintText
-    mov bx, ((197) << 8) | (1)
+    mov bx, (HM_CUT << 8) | (1)   ; pret: lb bc, HM_CUT, 1  (HM01 = $C4)
     call GiveItem
     jae .bag_full
     mov esi, SSAnneCaptainsRoomCaptainReceivedHM01Text

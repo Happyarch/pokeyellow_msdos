@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_script_tables.inc"
 %include "assets/trainer_headers.inc"
@@ -71,7 +72,7 @@ CeruleanCaveB1FMewtwoText:
 
 %assign event_byte -1
 %assign event_byte_a -1
-    mov al, 131
+    mov al, MEWTWO
     call PlayCry
     call WaitForSoundToFinish
     jmp TextScriptEnd

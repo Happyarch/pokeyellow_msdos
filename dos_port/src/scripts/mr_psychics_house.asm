@@ -57,7 +57,7 @@ MrPsychicsHouseMrPsychicText:
     jnz .got_item
     mov esi, .YouWantedThisText
     call PrintText
-    mov bx, ((231) << 8) | (1)
+    mov bx, (TM_PSYCHIC_M << 8) | (1)   ; pret: lb bc, TM_PSYCHIC_M, 1  (TM29 = $E5)
     call GiveItem
     jae .bag_full
     mov esi, .ReceivedTM29Text

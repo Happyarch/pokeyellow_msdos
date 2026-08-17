@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global Museum2FBrunetteGirlText
@@ -90,7 +91,7 @@ Museum2FBrunetteGirlText:
 %assign event_byte_a -1
 Museum2FHikerText:
     mov al, [ebp + wPikachuSpawnStateFlags]
-    test al, (1 << (7))
+    test al, (1 << (BIT_PIKACHU_SPAWN_STARTER))
     jnz .asm_5c1f6
     mov esi, Museum2FText_5c20e
     call PrintText

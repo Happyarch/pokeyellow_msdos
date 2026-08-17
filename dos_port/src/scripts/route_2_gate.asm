@@ -66,7 +66,7 @@ Route2GateOaksAideText:
     jnz .got_item
     mov al, 10
     mov [ebp + hOaksAideRequirement], al
-    mov al, 201
+    mov al, HM_FLASH   ; pret: ld a, HM_FLASH  (HM05 = $C8)
     mov [ebp + hOaksAideRewardItem], al
     mov [ebp + wNamedObjectIndex], al
     call GetItemName

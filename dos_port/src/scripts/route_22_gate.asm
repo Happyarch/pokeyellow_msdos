@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 %include "assets/map_dims.inc"
@@ -151,7 +152,7 @@ Route22Gate_TextPointers:
 %assign event_byte_a -1
 Route22GateGuardText:
     mov al, [ebp + wObtainedBadges]
-    test al, (1 << (0))
+    test al, (1 << (BIT_BOULDERBADGE))
     jnz .has_boulderbadge
     mov esi, Route22GateGuardNoBoulderbadgeText
     call PrintText

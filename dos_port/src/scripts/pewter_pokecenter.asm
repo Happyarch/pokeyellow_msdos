@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 
@@ -67,7 +68,7 @@ section .text
 %assign event_byte_a -1
 PewterPokecenter_Script:
     mov esi, wPikachuMapScriptFlags
-    or byte [ebp + esi], (1 << (7))
+    or byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
     call Serial_TryEstablishingExternallyClockedConnection
     call EnableAutoTextBoxDrawing
     ret
@@ -181,7 +182,7 @@ PewterJigglypuff:
     call DelayFrames
     call PlayDefaultMusic
     mov al, [ebp + wPikachuSpawnStateFlags]
-    test al, (1 << (7))
+    test al, (1 << (BIT_PIKACHU_SPAWN_STARTER))
     jnz .nr_pikachu_spawn
         ret
 .nr_pikachu_spawn:

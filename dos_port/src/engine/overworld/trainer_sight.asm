@@ -267,10 +267,8 @@ TrainerWalkUpToPlayer:
     ; base+index, not base+index+index).
     mov byte [ebp + ebx + wNPCMovementDirections2], 0xff
     mov al, [ebp + wSpriteIndex]
-    shl al, 4
-    mov [ebp + hCurrentSpriteOffset], al  ; port MoveSprite_ selector (pret hSpriteIndex)
+    mov [ebp + hSpriteIndex], al             ; ldh [hSpriteIndex], a — raw slot, as pret
     lea edi, [ebp + wNPCMovementDirections2] ; flat stream ptr for MoveSprite_
-    ; TODO(M8.2 follow-up): confirm MoveSprite_ EDI/hCurrentSpriteOffset contract at wiring.
     jmp MoveSprite_
 .retEarly:
     ret

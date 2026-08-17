@@ -140,7 +140,7 @@ CeladonMart3FPrintClerkText:
     jnz .got_item
     mov esi, .TM18PreReceiveText
     call PrintText
-    mov bx, ((220) << 8) | (1)
+    mov bx, (TM_COUNTER << 8) | (1)   ; pret: lb bc, TM_COUNTER, 1  (TM18 = $DA)
     call GiveItem
     jae .bag_full
     SetEvent EVENT_GOT_TM18

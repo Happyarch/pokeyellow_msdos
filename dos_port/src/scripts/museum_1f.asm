@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 
@@ -351,11 +352,11 @@ Museum1FPrintScientist2Text:
     jnz .got_item
     mov esi, .TakeThisToAPokemonLabText
     call PrintText
-    mov bx, ((31) << 8) | (1)
+    mov bx, (OLD_AMBER << 8) | (1)   ; pret: lb bc, OLD_AMBER, 1 (Museum1F_2.asm:151)
     call GiveItem
     jae .bag_full
     SetEvent EVENT_GOT_OLD_AMBER
-    mov al, 51
+    mov al, TOGGLE_OLD_AMBER
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject

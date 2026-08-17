@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global SeafoamIslandsB4FArticunoBattleText
@@ -142,7 +143,7 @@ SeafoamIslandsB4FDefaultScript:
     mov [ebp + wSimulatedJoypadStatesEnd], al
     call StartSimulatingJoypadStates
     mov esi, wStatusFlags7
-    and byte [ebp + esi], ~(1 << (2)) & 0xFF
+    and byte [ebp + esi], ~(1 << (BIT_FORCED_WARP)) & 0xFF
     mov al, SCRIPT_SEAFOAMISLANDSB4F_OBJECT_MOVING1
     mov [ebp + wSeafoamIslandsB4FCurScript], al
     ret

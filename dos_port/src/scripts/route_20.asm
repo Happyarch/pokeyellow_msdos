@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/trainer_headers.inc"
 
@@ -87,9 +88,9 @@ Route20_Script:
 Route20BoulderScript:
     CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
     jz .next_boulder_check
-    mov al, 223
+    mov al, TOGGLE_SEAFOAM_ISLANDS_1F_BOULDER_1
     call Route20ShowObjectScript
-    mov al, 224
+    mov al, TOGGLE_SEAFOAM_ISLANDS_1F_BOULDER_2
     call Route20ShowObjectScript
     mov esi, .ToggleableObjectIDs
 .hide_toggleable_objects:
@@ -105,12 +106,12 @@ Route20BoulderScript:
 %assign event_byte -1
 %assign event_byte_a -1
 .ToggleableObjectIDs:
-    db 225
-    db 226
-    db 227
-    db 228
-    db 231
-    db 232
+    db TOGGLE_SEAFOAM_ISLANDS_B1F_BOULDER_1
+    db TOGGLE_SEAFOAM_ISLANDS_B1F_BOULDER_2
+    db TOGGLE_SEAFOAM_ISLANDS_B2F_BOULDER_1
+    db TOGGLE_SEAFOAM_ISLANDS_B2F_BOULDER_2
+    db TOGGLE_SEAFOAM_ISLANDS_B3F_BOULDER_3
+    db TOGGLE_SEAFOAM_ISLANDS_B3F_BOULDER_4
     db -1
 
 %assign event_byte -1
@@ -120,13 +121,13 @@ Route20BoulderScript:
     jnz .nr_40
         ret
 .nr_40:
-    mov al, 229
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B3F_BOULDER_1
     call Route20ShowObjectScript
-    mov al, 230
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B3F_BOULDER_2
     call Route20ShowObjectScript
-    mov al, 233
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B4F_BOULDER_1
     call Route20HideObjectScript
-    mov al, 234
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B4F_BOULDER_2
     call Route20HideObjectScript
     ret
 

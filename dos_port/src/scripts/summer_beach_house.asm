@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global Func_f23d0
@@ -165,7 +166,7 @@ SummerBeachHouseSurfinDudeText:
 SummerBeachHousePikachuText:
     mov esi, .SummerBeachHousePikachuText
     call PrintText
-    mov al, 84
+    mov al, PIKACHU
     call PlayCry
     call WaitForSoundToFinish
     jmp TextScriptEnd

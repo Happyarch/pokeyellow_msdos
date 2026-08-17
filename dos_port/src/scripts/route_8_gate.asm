@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global Route8GateDefaultScript
@@ -88,7 +89,7 @@ Route8GateMovePlayerRightScript:
 Route8GateDefaultScript:
     mov al, [ebp + wStatusFlags1]
     setc ah                     ; SM83 `bit` preserves C — stash it
-    test al, (1 << (6))
+    test al, (1 << (BIT_GAVE_SAFFRON_GUARDS_DRINK))
     bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
     jz .nr_27
         ret
@@ -119,7 +120,7 @@ Route8GateDefaultScript:
 %assign event_byte_a -1
 .have_drink:
     mov esi, wStatusFlags1
-    or byte [ebp + esi], (1 << (6))
+    or byte [ebp + esi], (1 << (BIT_GAVE_SAFFRON_GUARDS_DRINK))
     mov al, TEXT_ROUTE8GATE_GUARD_GIVE_DRINK
     mov [ebp + hTextID], al
     jmp DisplayTextID

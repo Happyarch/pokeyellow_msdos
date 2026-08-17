@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/script_strings.inc"
 %include "assets/trainer_headers.inc"
@@ -161,7 +162,7 @@ CeladonGymReceiveTM21:
     pushfd    ; SM83 form writes no flags
         SetEvent EVENT_BEAT_ERIKA
     popfd
-    mov bx, ((223) << 8) | (1)
+    mov bx, (TM_MEGA_DRAIN << 8) | (1)   ; pret: lb bc, TM_MEGA_DRAIN, 1  (TM21 = $DD)
     call GiveItem
     jae .BagFull
     mov al, TEXT_CELADONGYM_RECEIVED_TM21
@@ -178,9 +179,9 @@ CeladonGymReceiveTM21:
     call DisplayTextID
 .gymVictory:
     mov esi, wObtainedBadges
-    or byte [ebp + esi], (1 << (3))
+    or byte [ebp + esi], (1 << (BIT_RAINBOWBADGE))
     mov esi, wBeatGymFlags
-    or byte [ebp + esi], (1 << (3))
+    or byte [ebp + esi], (1 << (BIT_RAINBOWBADGE))
     SetEventRange EVENT_BEAT_CELADON_GYM_TRAINER_0, EVENT_BEAT_CELADON_GYM_TRAINER_6
     jmp CeladonGymResetScripts
 

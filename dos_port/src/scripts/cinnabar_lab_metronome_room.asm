@@ -67,7 +67,7 @@ CinnabarLabMetronomeRoomScientist1Text:
     jnz .got_item
     mov esi, .Text
     call PrintText
-    mov bx, ((237) << 8) | (1)
+    mov bx, (TM_METRONOME << 8) | (1)   ; pret: lb bc, TM_METRONOME, 1  (TM35 = $EB)
     call GiveItem
     jae .bag_full
     mov esi, .ReceivedTM35Text

@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global Route16FlyHouseBrunetteGirlText
@@ -63,7 +64,7 @@ Route16FlyHouseBrunetteGirlText:
     jnz .got_item
     mov esi, .Text
     call PrintText
-    mov bx, ((198) << 8) | (1)
+    mov bx, (HM_FLY << 8) | (1)   ; pret: lb bc, HM_FLY, 1  (HM02 = $C5)
     call GiveItem
     jae .bag_full
     SetEvent EVENT_GOT_HM02
@@ -99,7 +100,7 @@ Route16FlyHouseBrunetteGirlText:
 Route16FlyHouseFearowText:
     mov esi, .Text
     call PrintText
-    mov al, 35
+    mov al, FEAROW
     call PlayCry
     call WaitForSoundToFinish
     jmp TextScriptEnd

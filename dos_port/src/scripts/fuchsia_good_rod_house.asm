@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/script_strings.inc"
 
@@ -57,7 +58,7 @@ FuchsiaGoodRodHouse_TextPointers:
 %assign event_byte_a -1
 FuchsiaGoodRodHouseFishingGuruText:
     mov al, [ebp + wStatusFlags1]
-    test al, (1 << (4))
+    test al, (1 << (BIT_GOT_GOOD_ROD))
     jnz .got_item
     mov esi, .Text
     call PrintText
@@ -69,7 +70,7 @@ FuchsiaGoodRodHouseFishingGuruText:
     call GiveItem
     jae .bag_full
     mov esi, wStatusFlags1
-    or byte [ebp + esi], (1 << (4))
+    or byte [ebp + esi], (1 << (BIT_GOT_GOOD_ROD))
     mov esi, .ReceivedGoodRodText
     jmp .done
 

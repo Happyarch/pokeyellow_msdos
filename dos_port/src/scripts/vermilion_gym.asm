@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 %include "assets/script_strings.inc"
@@ -203,9 +204,9 @@ VermilionGymLTSurgeReceiveTM24Script:
     call DisplayTextID
 .gym_victory:
     mov esi, wObtainedBadges
-    or byte [ebp + esi], (1 << (2))
+    or byte [ebp + esi], (1 << (BIT_THUNDERBADGE))
     mov esi, wBeatGymFlags
-    or byte [ebp + esi], (1 << (2))
+    or byte [ebp + esi], (1 << (BIT_THUNDERBADGE))
     SetEventRange EVENT_BEAT_VERMILION_GYM_TRAINER_0, EVENT_BEAT_VERMILION_GYM_TRAINER_2
     jmp VermilionGymResetScripts
 
@@ -310,7 +311,7 @@ VermilionGymSailorText:
 %assign event_byte_a -1
 VermilionGymGymGuideText:
     mov al, [ebp + wBeatGymFlags]
-    test al, (1 << (2))
+    test al, (1 << (BIT_THUNDERBADGE))
     jnz .got_thunderbadge
     mov esi, .ChampInMakingText
     call PrintText

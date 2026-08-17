@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 %include "assets/script_strings.inc"
@@ -295,7 +296,7 @@ ViridianGymReceiveTM27:
     pushfd    ; SM83 form writes no flags
         SetEvent EVENT_BEAT_VIRIDIAN_GYM_GIOVANNI
     popfd
-    mov bx, ((229) << 8) | (1)
+    mov bx, (TM_FISSURE << 8) | (1)   ; pret: lb bc, TM_FISSURE, 1  (TM27 = $E3)
     call GiveItem
     jae .bag_full
     mov al, TEXT_VIRIDIANGYM_GIOVANNI_RECEIVED_TM27
@@ -312,11 +313,11 @@ ViridianGymReceiveTM27:
     call DisplayTextID
 .gym_victory:
     mov esi, wObtainedBadges
-    or byte [ebp + esi], (1 << (7))
+    or byte [ebp + esi], (1 << (BIT_EARTHBADGE))
     mov esi, wBeatGymFlags
-    or byte [ebp + esi], (1 << (7))
+    or byte [ebp + esi], (1 << (BIT_EARTHBADGE))
     SetEventRange EVENT_BEAT_VIRIDIAN_GYM_TRAINER_0, EVENT_BEAT_VIRIDIAN_GYM_TRAINER_7
-    mov al, 36
+    mov al, TOGGLE_ROUTE_22_RIVAL_2
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
@@ -346,7 +347,7 @@ ViridianGymGiovanniText:
     mov esi, .PostBattleAdviceText
     call PrintText
     call GBFadeOutToBlack
-    mov al, 49
+    mov al, TOGGLE_VIRIDIAN_GYM_GIOVANNI
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject

@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/script_strings.inc"
 %include "assets/trainer_headers.inc"
@@ -163,7 +164,7 @@ FuchsiaGymReceiveTM06:
     pushfd    ; SM83 form writes no flags
         SetEvent EVENT_BEAT_KOGA
     popfd
-    mov bx, ((208) << 8) | (1)
+    mov bx, (TM_TOXIC << 8) | (1)   ; pret: lb bc, TM_TOXIC, 1  (TM06 = $CE)
     call GiveItem
     jae .BagFull
     mov al, TEXT_FUCHSIAGYM_KOGA_RECEIVED_TM06
@@ -180,9 +181,9 @@ FuchsiaGymReceiveTM06:
     call DisplayTextID
 .gymVictory:
     mov esi, wObtainedBadges
-    or byte [ebp + esi], (1 << (4))
+    or byte [ebp + esi], (1 << (BIT_SOULBADGE))
     mov esi, wBeatGymFlags
-    or byte [ebp + esi], (1 << (4))
+    or byte [ebp + esi], (1 << (BIT_SOULBADGE))
     SetEventRange EVENT_BEAT_FUCHSIA_GYM_TRAINER_0, EVENT_BEAT_FUCHSIA_GYM_TRAINER_5
     jmp FuchsiaGymResetScripts
 

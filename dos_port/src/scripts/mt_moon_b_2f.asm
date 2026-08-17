@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 %include "assets/trainer_headers.inc"
@@ -643,7 +644,7 @@ MtMoonB2FScript_HideObject:
     mov [ebp + wPlayerMovingDirection], al
     mov al, 0x0
     mov [ebp + wEmotionBubbleSpriteIndex], al
-    mov al, 0
+    mov al, EXCLAMATION_BUBBLE
     mov [ebp + wWhichEmotionBubble], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call EmotionBubble
@@ -818,7 +819,7 @@ MtMoonB2FReceivedFossilText:
 %assign event_byte_a -1
 MtMoonB2FScript_ApplyPikachuMovementData:
     mov al, [ebp + wPikachuSpawnStateFlags]
-    test al, (1 << (7))
+    test al, (1 << (BIT_PIKACHU_SPAWN_STARTER))
     jnz .nr_4
         ret
 .nr_4:

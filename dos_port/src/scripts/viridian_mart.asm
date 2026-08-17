@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global ViridianMartCheckParcelDeliveredScript
@@ -137,7 +138,7 @@ ViridianMartOaksParcelScript:
     mov al, TEXT_VIRIDIANMART_CLERK_PARCEL_QUEST
     mov [ebp + hTextID], al
     call DisplayTextID
-    mov bx, ((70) << 8) | (1)
+    mov bx, (OAKS_PARCEL << 8) | (1)   ; pret: lb bc, OAKS_PARCEL, 1 (ViridianMart.asm:57)
     call GiveItem
     SetEvent EVENT_GOT_OAKS_PARCEL
     mov al, SCRIPT_VIRIDIANMART_SCRIPT2
@@ -156,11 +157,11 @@ ViridianMartScript2:
     jz .nr_68
         ret
 .nr_68:
-    mov al, 3
+    mov al, TOGGLE_OLD_MAN_2
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov al, 2
+    mov al, TOGGLE_OLD_MAN_1
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject

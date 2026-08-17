@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 
@@ -149,7 +150,7 @@ CeruleanCityClearScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
     mov [ebp + wCeruleanCityCurScript], al
-    mov al, 6
+    mov al, TOGGLE_CERULEAN_RIVAL
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     jmp HideObject
@@ -371,7 +372,7 @@ CeruleanCityRivalCleanupScript:
     jz .nr_205
         ret
 .nr_205:
-    mov al, 6
+    mov al, TOGGLE_CERULEAN_RIVAL
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -461,7 +462,7 @@ CeruleanCityRocketText:
 .beatRocketThief:
     mov esi, .IllReturnTheTMText
     call PrintText
-    mov bx, ((230) << 8) | (1)
+    mov bx, (TM_DIG << 8) | (1)   ; pret: lb bc, TM_DIG, 1  (TM28 = $E4)
     call GiveItem
     jb .Success
     mov esi, .TM28NoRoomText
@@ -625,15 +626,15 @@ CeruleanCityGymSign:
 %assign event_byte_a -1
 CeruleanHideRocket:
     call GBFadeOutToBlack
-    mov al, 8
+    mov al, TOGGLE_CERULEAN_GUARD_1
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
-    mov al, 10
+    mov al, TOGGLE_CERULEAN_GUARD_2
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov al, 7
+    mov al, TOGGLE_CERULEAN_ROCKET
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject

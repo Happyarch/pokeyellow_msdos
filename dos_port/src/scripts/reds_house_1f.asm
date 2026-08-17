@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
 
@@ -87,7 +88,7 @@ RedsHouse1FTVText:
 %assign event_byte_a -1
 RedsHouse1FPrintMomText:
     mov al, [ebp + wStatusFlags4]
-    test al, (1 << (3))
+    test al, (1 << (BIT_GOT_STARTER))
     jnz RedsHouse1FMomHealScript
     mov esi, .WakeUpText
     call PrintText

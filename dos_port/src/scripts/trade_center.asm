@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global TradeCenterOpponentText
@@ -57,9 +58,9 @@ TradeCenter_Script:
     mov [ebp + hSpriteIndex], al
     call SetSpriteFacingDirection
     mov esi, wStatusFlags3
-    test byte [ebp + esi], (1 << (0))
+    test byte [ebp + esi], (1 << (BIT_INIT_TRADE_CENTER_FACING))
     pushfd    ; SM83 form writes no flags
-        or byte [ebp + esi], (1 << (0))
+        or byte [ebp + esi], (1 << (BIT_INIT_TRADE_CENTER_FACING))
     popfd
     jz .nr_16
         ret

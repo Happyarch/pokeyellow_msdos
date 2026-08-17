@@ -57,7 +57,7 @@ SafariZoneSecretHouseFishingGuruText:
     jnz .got_item
     mov esi, .YouHaveWonText
     call PrintText
-    mov bx, ((199) << 8) | (1)
+    mov bx, (HM_SURF << 8) | (1)   ; pret: lb bc, HM_SURF, 1  (HM03 = $C6)
     call GiveItem
     jae .bag_full
     mov esi, .ReceivedHM03Text

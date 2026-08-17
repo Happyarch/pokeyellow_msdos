@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global VermilionOldRodHouseFishingGuruText
@@ -57,7 +58,7 @@ VermilionOldRodHouse_TextPointers:
 %assign event_byte_a -1
 VermilionOldRodHouseFishingGuruText:
     mov al, [ebp + wStatusFlags1]
-    test al, (1 << (3))
+    test al, (1 << (BIT_GOT_OLD_ROD))
     jnz .got_old_rod
     mov esi, .DoYouLikeToFishText
     call PrintText
@@ -69,7 +70,7 @@ VermilionOldRodHouseFishingGuruText:
     call GiveItem
     jae .bag_full
     mov esi, wStatusFlags1
-    or byte [ebp + esi], (1 << (3))
+    or byte [ebp + esi], (1 << (BIT_GOT_OLD_ROD))
     mov esi, .TakeThisText
     jmp .print_text
 

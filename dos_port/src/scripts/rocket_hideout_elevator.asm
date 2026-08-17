@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
 
@@ -67,9 +68,9 @@ RocketHideoutElevator_Script:
         call RocketHideoutElevatorStoreWarpEntriesScript
 .sk_6:
     pop esi
-    test byte [ebp + esi], (1 << (7))
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_USED_ELEVATOR))
     pushfd    ; SM83 form writes no flags
-        and byte [ebp + esi], ~(1 << (7)) & 0xFF
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_USED_ELEVATOR)) & 0xFF
     popfd
     jz .sk_10
         call RocketHideoutElevatorShakeScript
@@ -116,9 +117,9 @@ RocketHideoutElevatorScript:
 %assign event_byte_a -1
 RocketHideoutElevatorFloors:
     db 3
-    db 85
-    db 84
-    db 97
+    db FLOOR_B1F
+    db FLOOR_B2F
+    db FLOOR_B4F
     db -1
 RocketHideoutElevatorWarpMaps:
     db 4, ROCKET_HIDEOUT_B1F

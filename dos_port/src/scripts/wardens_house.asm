@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global WardensHouseDisplayText
@@ -76,7 +77,7 @@ WardensHouse_TextPointers:
 WardensHouseWardenText:
     CheckEvent EVENT_GOT_HM04
     jnz .got_item
-    mov bh, 64
+    mov bh, GOLD_TEETH
     call IsItemInBag
     jnz .have_gold_teeth
     CheckEvent EVENT_GAVE_GOLD_TEETH
@@ -98,7 +99,7 @@ WardensHouseWardenText:
 .have_gold_teeth:
     mov esi, .GaveTheGoldTeethText
     call PrintText
-    mov al, 64
+    mov al, GOLD_TEETH
     mov [ebp + hItemToRemoveID], al
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call RemoveItemByID
@@ -108,7 +109,7 @@ WardensHouseWardenText:
 .gave_gold_teeth:
     mov esi, .ThanksText
     call PrintText
-    mov bx, ((200) << 8) | (1)
+    mov bx, (HM_STRENGTH << 8) | (1)   ; pret: lb bc, HM_STRENGTH, 1  (HM04 = $C7)
     call GiveItem
     jae .bag_full
     mov esi, .ReceivedHM04Text

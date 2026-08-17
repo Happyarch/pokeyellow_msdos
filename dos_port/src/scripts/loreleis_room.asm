@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/trainer_headers.inc"
 
@@ -91,7 +92,7 @@ LoreleiShowOrHideExitBlock:
         ret
 .nr_16:
     mov esi, wElite4Flags
-    or byte [ebp + esi], (1 << (1))
+    or byte [ebp + esi], (1 << (BIT_STARTED_ELITE_4))
     CheckEvent EVENT_BEAT_LORELEIS_ROOM_TRAINER_0
     jz .blockExitToNextRoom
     mov al, 0x5

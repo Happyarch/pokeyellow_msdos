@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/trainer_headers.inc"
 
@@ -328,7 +329,7 @@ Route24CooltrainerM4Text:
     mov al, [ebp + wCurrentMenuItem]
     test al, al
     jnz .asm_515d0
-    mov al, 176
+    mov al, CHARMANDER
     mov [ebp + wNamedObjectIndex], al
     mov [ebp + wCurPartySpecies], al
     call GetMonName

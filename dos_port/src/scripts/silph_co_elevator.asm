@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
 
@@ -64,9 +65,9 @@ SilphCoElevator_Script:
         call SilphCoElevatorStoreWarpEntriesScript
 .sk_6:
     pop esi
-    test byte [ebp + esi], (1 << (7))
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_USED_ELEVATOR))
     pushfd    ; SM83 form writes no flags
-        and byte [ebp + esi], ~(1 << (7)) & 0xFF
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_USED_ELEVATOR)) & 0xFF
     popfd
     jz .sk_10
         call SilphCoElevatorShakeScript
@@ -113,17 +114,17 @@ SilphCoElevatorCopyWarpMapsScript:
 %assign event_byte_a -1
 SilphCoElevatorFloors:
     db 11
-    db 86
-    db 87
-    db 88
-    db 89
-    db 90
-    db 91
-    db 92
-    db 93
-    db 94
-    db 95
-    db 96
+    db FLOOR_1F
+    db FLOOR_2F
+    db FLOOR_3F
+    db FLOOR_4F
+    db FLOOR_5F
+    db FLOOR_6F
+    db FLOOR_7F
+    db FLOOR_8F
+    db FLOOR_9F
+    db FLOOR_10F
+    db FLOOR_11F
     db -1
 SilphCoElevatorWarpMaps:
     db 3, SILPH_CO_1F

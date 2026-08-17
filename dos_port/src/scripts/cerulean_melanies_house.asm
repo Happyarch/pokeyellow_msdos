@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global CeruleanHouse1Text_1cfc8
@@ -95,7 +96,7 @@ CeruleanMelanieHouseMelanieText:
     jnz .asm_1cfb6
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
-    mov al, 153
+    mov al, BULBASAUR
     mov [ebp + wNamedObjectIndex], al
     mov [ebp + wCurPartySpecies], al
     call GetMonName
@@ -113,7 +114,7 @@ CeruleanMelanieHouseMelanieText:
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     mov esi, CeruleanHouse1Text_1cfd3
     call PrintText
-    mov al, 52
+    mov al, TOGGLE_CERULEAN_BULBASAUR
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject

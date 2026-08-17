@@ -68,7 +68,7 @@ Route12Gate2FBrunetteGirlText:
     jb .got_item
     mov esi, .YouCanHaveThisText
     call PrintText
-    mov bx, ((241) << 8) | (1)
+    mov bx, (TM_SWIFT << 8) | (1)   ; pret: lb bc, TM_SWIFT, 1  (TM39 = $EF)
     call GiveItem
     jae .bag_full
     mov esi, .ReceivedTM39Text

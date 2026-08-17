@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
 
@@ -85,9 +86,9 @@ SeafoamIslandsB3F_Script:
     cmp al, 0x1
     jnz .boulder2FellDownHole
     SetEventReuseHL EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE
-    mov al, 229
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B3F_BOULDER_1
     mov [ebp + wObjectToHide], al
-    mov al, 233
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B4F_BOULDER_1
     mov [ebp + wObjectToShow], al
     jmp .hideAndShowBoulderObjects
 
@@ -95,9 +96,9 @@ SeafoamIslandsB3F_Script:
 %assign event_byte_a -1
 .boulder2FellDownHole:
     SetEventAfterBranchReuseHL EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE
-    mov al, 230
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B3F_BOULDER_2
     mov [ebp + wObjectToHide], al
-    mov al, 234
+    mov al, TOGGLE_SEAFOAM_ISLANDS_B4F_BOULDER_2
     mov [ebp + wObjectToShow], al
 .hideAndShowBoulderObjects:
     mov al, [ebp + wObjectToHide]
@@ -163,7 +164,7 @@ SeafoamIslandsB3FDefaultScript:
     mov [ebp + wSimulatedJoypadStatesIndex], al
     call StartSimulatingJoypadStates
     mov esi, wStatusFlags7
-    or byte [ebp + esi], (1 << (2))
+    or byte [ebp + esi], (1 << (BIT_FORCED_WARP))
     mov al, SCRIPT_SEAFOAMISLANDSB3F_OBJECT_MOVING1
     mov [ebp + wSeafoamIslandsB3FCurScript], al
     ret
@@ -218,7 +219,7 @@ SeafoamIslandsB3FMoveObjectScript:
     mov esi, wStatusFlags5
     or byte [ebp + esi], (1 << (BIT_SCRIPTED_MOVEMENT_STATE))
     mov esi, wStatusFlags7
-    or byte [ebp + esi], (1 << (2))
+    or byte [ebp + esi], (1 << (BIT_FORCED_WARP))
     mov al, SCRIPT_SEAFOAMISLANDSB3F_OBJECT_MOVING2
 .playerNotInStrongCurrent:
     mov [ebp + wSeafoamIslandsB3FCurScript], al

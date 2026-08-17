@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global PokemonFanClubChairmanText
@@ -125,24 +126,24 @@ PokemonFanClub_ScriptPointers:
 %assign event_byte_a -1
 PokemonFanClubScript0:
     mov esi, wPikachuMapScriptFlags
-    test byte [ebp + esi], (1 << (7))
+    test byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
     jnz .sk_16
         call PokemonFanClubScript_59a44
 .sk_16:
     mov esi, wPikachuMapScriptFlags
-    or byte [ebp + esi], (1 << (7))
+    or byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
     ret
 
 %assign event_byte -1
 %assign event_byte_a -1
 PokemonFanClubScript1:
     mov esi, wPikachuMapScriptFlags
-    test byte [ebp + esi], (1 << (7))
+    test byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
     jnz .sk_24
         call PokemonFanClubScript_59a39
 .sk_24:
     mov esi, wPikachuMapScriptFlags
-    or byte [ebp + esi], (1 << (7))
+    or byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
     ret
 
 %assign event_byte -1
@@ -161,7 +162,7 @@ PokemonFanClubScript_59a39:
 PokemonFanClubScript_59a44:
     mov al, [ebp + wPikachuSpawnStateFlags]
     setc ah                     ; SM83 `bit` preserves C — stash it
-    test al, (1 << (7))
+    test al, (1 << (BIT_PIKACHU_SPAWN_STARTER))
     bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
     jnz .nr_39
         ret
@@ -177,7 +178,7 @@ PokemonFanClubScript_59a44:
     mov [ebp + wPlayerMovingDirection], al
     call UpdateSprites
     call UpdateSprites
-    mov al, 0
+    mov al, EXCLAMATION_BUBBLE
     mov [ebp + wWhichEmotionBubble], al
     mov al, 0xf
     mov [ebp + wEmotionBubbleSpriteIndex], al
@@ -354,7 +355,7 @@ PokemonFanClubChairmanText:
     jnz .nothanks
     mov esi, .StoryText
     call PrintText
-    mov bx, ((45) << 8) | (1)
+    mov bx, (BIKE_VOUCHER << 8) | (1)   ; pret: lb bc, BIKE_VOUCHER, 1 (PokemonFanClub.asm:201)
     call GiveItem
     jae .bag_full
     mov esi, .BikeVoucherText

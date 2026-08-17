@@ -143,8 +143,71 @@ CALCIUM                 equ 0x27    ; last vitamin before RARE_CANDY
 RARE_CANDY              equ 0x28
 HM01                    equ 0xC4    ; first HM; HMs $C4-$C8, TMs $C9-$FA
 TM01                    equ 0xC9    ; first TM (index into TechnicalMachinePrices)
-TM_THUNDERBOLT          equ 0xE0    ; TM24 — Pikachu's mood bonus (ItemUseTMHM)
-TM_THUNDER              equ 0xE1    ; TM25 — likewise
+
+; --- the TM/HM item ids, under their pret names -----------------------------
+; constants/item_constants.asm `add_hm` (:141-) and `add_tm` (:161-) blocks, in
+; pret's definition order. Scripts must use these NAMES rather than a literal or
+; TM01+n arithmetic: pret writes `lb bc, TM_BUBBLEBEAM, 1`, and the name is the
+; only form a reader can check against the disassembly without doing sums.
+; Each id is expressed off HM01/TM01 so the sequence property stays visible and
+; the base lives in exactly one place. Trailing comment = the TM/HM number the
+; game shows the player, then the raw id.
+HM_CUT                  equ HM01 + 0  ; HM01 = $C4
+HM_FLY                  equ HM01 + 1  ; HM02 = $C5
+HM_SURF                 equ HM01 + 2  ; HM03 = $C6
+HM_STRENGTH             equ HM01 + 3  ; HM04 = $C7
+HM_FLASH                equ HM01 + 4  ; HM05 = $C8
+
+TM_MEGA_PUNCH           equ TM01 + 0  ; TM01 = $C9
+TM_RAZOR_WIND           equ TM01 + 1  ; TM02 = $CA
+TM_SWORDS_DANCE         equ TM01 + 2  ; TM03 = $CB
+TM_WHIRLWIND            equ TM01 + 3  ; TM04 = $CC
+TM_MEGA_KICK            equ TM01 + 4  ; TM05 = $CD
+TM_TOXIC                equ TM01 + 5  ; TM06 = $CE
+TM_HORN_DRILL           equ TM01 + 6  ; TM07 = $CF
+TM_BODY_SLAM            equ TM01 + 7  ; TM08 = $D0
+TM_TAKE_DOWN            equ TM01 + 8  ; TM09 = $D1
+TM_DOUBLE_EDGE          equ TM01 + 9  ; TM10 = $D2
+TM_BUBBLEBEAM           equ TM01 + 10 ; TM11 = $D3
+TM_WATER_GUN            equ TM01 + 11 ; TM12 = $D4
+TM_ICE_BEAM             equ TM01 + 12 ; TM13 = $D5
+TM_BLIZZARD             equ TM01 + 13 ; TM14 = $D6
+TM_HYPER_BEAM           equ TM01 + 14 ; TM15 = $D7
+TM_PAY_DAY              equ TM01 + 15 ; TM16 = $D8
+TM_SUBMISSION           equ TM01 + 16 ; TM17 = $D9
+TM_COUNTER              equ TM01 + 17 ; TM18 = $DA
+TM_SEISMIC_TOSS         equ TM01 + 18 ; TM19 = $DB
+TM_RAGE                 equ TM01 + 19 ; TM20 = $DC
+TM_MEGA_DRAIN           equ TM01 + 20 ; TM21 = $DD
+TM_SOLARBEAM            equ TM01 + 21 ; TM22 = $DE
+TM_DRAGON_RAGE          equ TM01 + 22 ; TM23 = $DF
+TM_THUNDERBOLT          equ TM01 + 23 ; TM24 = $E0 — Pikachu's mood bonus (ItemUseTMHM)
+TM_THUNDER              equ TM01 + 24 ; TM25 = $E1 — likewise
+TM_EARTHQUAKE           equ TM01 + 25 ; TM26 = $E2
+TM_FISSURE              equ TM01 + 26 ; TM27 = $E3
+TM_DIG                  equ TM01 + 27 ; TM28 = $E4
+TM_PSYCHIC_M            equ TM01 + 28 ; TM29 = $E5
+TM_TELEPORT             equ TM01 + 29 ; TM30 = $E6
+TM_MIMIC                equ TM01 + 30 ; TM31 = $E7
+TM_DOUBLE_TEAM          equ TM01 + 31 ; TM32 = $E8
+TM_REFLECT              equ TM01 + 32 ; TM33 = $E9
+TM_BIDE                 equ TM01 + 33 ; TM34 = $EA
+TM_METRONOME            equ TM01 + 34 ; TM35 = $EB
+TM_SELFDESTRUCT         equ TM01 + 35 ; TM36 = $EC
+TM_EGG_BOMB             equ TM01 + 36 ; TM37 = $ED
+TM_FIRE_BLAST           equ TM01 + 37 ; TM38 = $EE
+TM_SWIFT                equ TM01 + 38 ; TM39 = $EF
+TM_SKULL_BASH           equ TM01 + 39 ; TM40 = $F0
+TM_SOFTBOILED           equ TM01 + 40 ; TM41 = $F1
+TM_DREAM_EATER          equ TM01 + 41 ; TM42 = $F2
+TM_SKY_ATTACK           equ TM01 + 42 ; TM43 = $F3
+TM_REST                 equ TM01 + 43 ; TM44 = $F4
+TM_THUNDER_WAVE         equ TM01 + 44 ; TM45 = $F5
+TM_PSYWAVE              equ TM01 + 45 ; TM46 = $F6
+TM_EXPLOSION            equ TM01 + 46 ; TM47 = $F7
+TM_ROCK_SLIDE           equ TM01 + 47 ; TM48 = $F8
+TM_TRI_ATTACK           equ TM01 + 48 ; TM49 = $F9
+TM_SUBSTITUTE           equ TM01 + 49 ; TM50 = $FA
 ANTIDOTE                equ 0x0B
 BURN_HEAL               equ 0x0C
 ICE_HEAL                equ 0x0D
@@ -155,6 +218,14 @@ FULL_HEAL               equ 0x34
 REVIVE                  equ 0x35
 MAX_REVIVE              equ 0x36
 SURFBOARD               equ 0x07    ; ItemUseSurfboard (the SURF field-move item)
+; Key items the map scripts hand out (constants/item_constants.asm), named here
+; for the same reason as the TM/HM block above: pret writes `lb bc, TOWN_MAP, 1`.
+TOWN_MAP                equ 0x05    ; constants/item_constants.asm:14
+OLD_AMBER               equ 0x1F    ; :43
+BIKE_VOUCHER            equ 0x2D    ; :57
+S_S_TICKET              equ 0x3F    ; :75
+OAKS_PARCEL             equ 0x46    ; :82
+POKE_FLUTE              equ 0x49    ; :85
 COIN_CASE               equ 0x45    ; constants/item_constants.asm:81 — AbleToPlaySlotsCheck
 OLD_ROD                 equ 0x4C    ; constants/item_constants.asm — fishing rods
 GOOD_ROD                equ 0x4D

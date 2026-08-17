@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global CopycatsHouse2FCopycatText
@@ -83,17 +84,17 @@ CopycatsHouse2FCopycatText:
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     mov esi, .DoYouLikePokemonText
     call PrintText
-    mov bh, 51
+    mov bh, POKE_DOLL
     call IsItemInBag
     jz .done
     mov esi, .TM31PreReceiveText
     call PrintText
-    mov bx, ((233) << 8) | (1)
+    mov bx, (TM_MIMIC << 8) | (1)   ; pret: lb bc, TM_MIMIC, 1  (TM31 = $E7)
     call GiveItem
     jae .bag_full
     mov esi, .ReceivedTM31Text
     call PrintText
-    mov al, 51
+    mov al, POKE_DOLL
     mov [ebp + hItemToRemoveID], al
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call RemoveItemByID

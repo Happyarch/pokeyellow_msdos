@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
 
@@ -115,7 +116,7 @@ HallOfFameResetEventsAndSaveScript:
     mov esi, wStatusFlags7
     and byte [ebp + esi], ~(1 << (BIT_NO_MAP_MUSIC)) & 0xFF
     lea esi, [esi+1]
-    or byte [ebp + esi], (1 << (0))
+    or byte [ebp + esi], (1 << (BIT_UNUSED_BEAT_ELITE_4))
     xor al, al
     mov esi, wLoreleisRoomCurScript
     mov [ebp + esi], al
@@ -188,7 +189,7 @@ HallOfFameOakCongratulationsScript:
     call DisplayTextID
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
-    mov al, 9
+    mov al, TOGGLE_CERULEAN_CAVE_GUY
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject

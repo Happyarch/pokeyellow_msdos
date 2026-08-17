@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 
 global MovementData_PewterGymGuyExit
@@ -118,7 +119,7 @@ section .text
 PewterCity_Script:
     call EnableAutoTextBoxDrawing
     mov esi, wPikachuMapScriptFlags
-    and byte [ebp + esi], ~(1 << (7)) & 0xFF
+    and byte [ebp + esi], ~(1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE)) & 0xFF
     mov esi, PewterCity_ScriptPointers
     mov al, [ebp + wPewterCityCurScript]
     call CallFunctionInTable
@@ -229,7 +230,7 @@ PewterCityHideSuperNerd1Script:
     jz .nr_97
         ret
 .nr_97:
-    mov al, 4
+    mov al, TOGGLE_MUSEUM_GUY
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -243,7 +244,7 @@ PewterCityResetSuperNerd1Script:
     mov al, 3
     mov [ebp + wSpriteIndex], al
     call SetSpritePosition2
-    mov al, 4
+    mov al, TOGGLE_MUSEUM_GUY
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
@@ -309,7 +310,7 @@ PewterCityHideYoungsterScript:
     jz .nr_163
         ret
 .nr_163:
-    mov al, 5
+    mov al, TOGGLE_GYM_GUY
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
@@ -323,7 +324,7 @@ PewterCityResetYoungsterScript:
     mov al, 5
     mov [ebp + wSpriteIndex], al
     call SetSpritePosition2
-    mov al, 5
+    mov al, TOGGLE_GYM_GUY
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject

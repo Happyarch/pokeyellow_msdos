@@ -16,17 +16,14 @@
 ; pointer. GB memory is [ebp+offset]; GetSpriteMovementByte2Pointer returns a
 ; FLAT esi (write/read [esi], not [ebp+esi]) and MoveSprite takes a FLAT EDI.
 ;
-; Sprite-selector convention: pret threads the sprite SLOT number through
-; hSpriteIndex; the port's GetSpriteMovementByte2Pointer / MoveSprite instead
-; read hCurrentSpriteOffset = slot<<4. This file keeps hSpriteIndex (=pret
-; hSpriteIndex, a slot number) purely as the interface to IsSpriteInFrontOfPlayer
-; (unported — see extern) and derives hCurrentSpriteOffset from it once for
-; the downstream port sprite calls. hCurrentSpriteOffset is set before the
-; CheckForCollisionWhenPushingBoulder predef and reused by MoveSprite: none of
-; that predef's callees (GetTileTwoStepsInFrontOfPlayer / IsTilePassable /
-; CheckForTilePairCollisions2 / CheckForBoulderCollisionWithSprites) writes
-; hCurrentSpriteOffset, mirroring pret's reliance on hSpriteIndex surviving
-; the predef.
+; Sprite-selector convention: the sprite SLOT number is threaded through
+; hSpriteIndex, exactly as pret does — it is both the interface to
+; IsSpriteInFrontOfPlayer and the selector GetSpriteMovementByte2Pointer /
+; MoveSprite read. It is set before the CheckForCollisionWhenPushingBoulder
+; predef and relied on afterwards: none of that predef's callees
+; (GetTileTwoStepsInFrontOfPlayer / IsTilePassable / CheckForTilePairCollisions2 /
+; CheckForBoulderCollisionWithSprites) writes hSpriteIndex, mirroring pret's own
+; reliance on it surviving the predef.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
 ;                     src/engine/overworld/push_boulder.asm
@@ -108,9 +105,8 @@ TryPushingBoulder:
     mov [ebp + wBoulderSpriteIndex], al
     and al, al
     jz ResetBoulderPushFlags                   ; jp z: no sprite in front
-    shl al, 4                                  ; slot<<4 (pret: swap a)
-    mov [ebp + hCurrentSpriteOffset], al    ; port sprite-selector for the calls below
-    movzx esi, al                              ; e = slot<<4 (d = 0)
+    rol al, 4                                  ; swap a  (hSpriteIndex itself keeps the raw slot)
+    movzx esi, al                              ; ld e, a (d = 0)
     add esi, wSpritePlayerStateData1MovementStatus
     and byte [ebp + esi], ~(1 << BIT_FACE_PLAYER)  ; res BIT_FACE_PLAYER, [hl]
     call GetSpriteMovementByte2Pointer         ; ESI = flat ptr to movement byte 2
@@ -194,8 +190,7 @@ DoBoulderDustAnimation:
     call ResetBoulderPushFlags                 ; leaves ESI = wMiscFlags (pret leaves hl)
     or byte [ebp + esi], (1 << BIT_PUSHED_BOULDER)  ; set BIT_PUSHED_BOULDER, [hl]
     mov al, [ebp + wBoulderSpriteIndex]
-    shl al, 4                                  ; slot<<4 (pret: ldh [hSpriteIndex] → GetSprite… swap)
-    mov [ebp + hCurrentSpriteOffset], al
+    mov [ebp + hSpriteIndex], al               ; ldh [hSpriteIndex], a — raw slot, as pret
     call GetSpriteMovementByte2Pointer         ; ESI = flat ptr to movement byte 2
     mov byte [esi], 0x10                        ; ld [hl], $10
     mov al, SFX_CUT

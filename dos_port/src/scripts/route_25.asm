@@ -19,6 +19,7 @@ bits 32
 %include "gb_text.inc"
 %include "events.inc"
 %include "assets/event_constants.inc"
+%include "assets/script_constants.inc"
 
 %include "assets/trainer_headers.inc"
 
@@ -81,10 +82,10 @@ Route25_Script:
 %assign event_byte_a -1
 Route25ToggleBillsScript:
     mov esi, wPikachuMapScriptFlags
-    and byte [ebp + esi], ~(1 << (2)) & 0xFF
-    and byte [ebp + esi], ~(1 << (3)) & 0xFF
-    and byte [ebp + esi], ~(1 << (4)) & 0xFF
-    and byte [ebp + esi], ~(1 << (7)) & 0xFF
+    and byte [ebp + esi], ~(1 << (BIT_PIKACHU_MAP_2)) & 0xFF
+    and byte [ebp + esi], ~(1 << (BIT_PIKACHU_MAP_3)) & 0xFF
+    and byte [ebp + esi], ~(1 << (BIT_PIKACHU_MAP_4)) & 0xFF
+    and byte [ebp + esi], ~(1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE)) & 0xFF
     xor al, al
     mov [ebp + wBillsHouseCurScript], al
     mov esi, wCurrentMapScriptFlags
@@ -103,7 +104,7 @@ Route25ToggleBillsScript:
     CheckEventReuseHL EVENT_MET_BILL_2
     jnz .met_bill
     ResetEventReuseHL EVENT_BILL_SAID_USE_CELL_SEPARATOR
-    mov al, 97
+    mov al, TOGGLE_BILL_POKEMON
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
@@ -115,15 +116,15 @@ Route25ToggleBillsScript:
     CheckEventAfterBranchReuseHL EVENT_GOT_SS_TICKET, EVENT_MET_BILL_2
     jz .done
     SetEventReuseHL EVENT_LEFT_BILLS_HOUSE_AFTER_HELPING
-    mov al, 37
+    mov al, TOGGLE_NUGGET_BRIDGE_GUY
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov al, 98
+    mov al, TOGGLE_BILL_1
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
-    mov al, 99
+    mov al, TOGGLE_BILL_2
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
