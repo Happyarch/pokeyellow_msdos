@@ -37,10 +37,12 @@ extern _ViridianForestNorthGateSuperNerdText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianForestNorthGate_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianForestNorthGate_TextPointers:
     dd ViridianForestNorthGateSuperNerdText
     dd ViridianForestNorthGateGrampsText

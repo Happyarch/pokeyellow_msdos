@@ -68,6 +68,7 @@ wLoreleisRoomCurScript                         equ 0xD64C
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleisRoom_Script:
     call LoreleiShowOrHideExitBlock
     call EnableAutoTextBoxDrawing
@@ -79,6 +80,7 @@ LoreleisRoom_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleiShowOrHideExitBlock:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -96,6 +98,7 @@ LoreleiShowOrHideExitBlock:
     jmp .setExitBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 .blockExitToNextRoom:
     mov al, 0x24
 .setExitBlock:
@@ -105,12 +108,14 @@ LoreleiShowOrHideExitBlock:
     jmp ReplaceTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 ResetLoreleiScript:
     xor al, al
     mov [ebp + wLoreleisRoomCurScript], al
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleisRoom_ScriptPointers:
     dd LoreleisRoomDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -119,10 +124,12 @@ LoreleisRoom_ScriptPointers:
     dd LoreleisRoomNoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleisRoomNoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleiScriptWalkIntoRoom:
     mov esi, wSimulatedJoypadStatesEnd
     mov al, PAD_UP
@@ -146,6 +153,7 @@ LoreleiScriptWalkIntoRoom:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleisRoomDefaultScript:
     mov esi, LoreleiEntranceCoords
     call ArePlayerCoordsInArray
@@ -175,6 +183,7 @@ LoreleisRoomDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleiEntranceCoords:
     db 10, 4
     db 10, 5
@@ -183,6 +192,7 @@ LoreleiEntranceCoords:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleisRoomPlayerIsMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -197,6 +207,7 @@ LoreleisRoomPlayerIsMovingScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleisRoomLoreleiEndBattleScript:
     call EndTrainerBattle
     mov al, [ebp + wIsInBattle]
@@ -209,6 +220,7 @@ LoreleisRoomLoreleiEndBattleScript:
 ; LoreleisRoom_TextPointers (scripts/LoreleisRoom.asm:120-128) — not re-emitted: LoreleisRoomTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoreleisRoomLoreleiText:
     mov esi, LoreleisRoomTrainerHeader0
     call TalkToTrainer

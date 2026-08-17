@@ -63,6 +63,7 @@ wBluesHouseCurScript                           equ 0xD5F2
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 BluesHouse_Script:
     call EnableAutoTextBoxDrawing
     mov esi, BluesHouse_ScriptPointers
@@ -71,11 +72,13 @@ BluesHouse_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 BluesHouse_ScriptPointers:
     dd BluesHouseDefaultScript
     dd BluesHouseNoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 BluesHouseDefaultScript:
     SetEvent EVENT_ENTERED_BLUES_HOUSE
     mov al, SCRIPT_BLUESHOUSE_NOOP
@@ -84,12 +87,14 @@ BluesHouseNoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 BluesHouse_TextPointers:
     dd BluesHouseDaisySittingText
     dd BluesHouseDaisyWalkingText
     dd BluesHouseTownMapText
 
 %assign event_byte -1
+%assign event_byte_a -1
 BluesHouseDaisySittingText:
     CheckEvent EVENT_GOT_TOWN_MAP
     jnz .got_town_map
@@ -100,6 +105,7 @@ BluesHouseDaisySittingText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .give_town_map:
     mov esi, BluesHouseDaisyOfferMapText
     call PrintText
@@ -116,12 +122,14 @@ BluesHouseDaisySittingText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_town_map:
     mov esi, BluesHouseDaisyUseMapText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, BluesHouseDaisyBagFullText
     call PrintText
@@ -129,6 +137,7 @@ BluesHouseDaisySittingText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 BluesHouseDaisyRivalAtLabText:
     text_far _BluesHouseDaisyRivalAtLabText
     text_end

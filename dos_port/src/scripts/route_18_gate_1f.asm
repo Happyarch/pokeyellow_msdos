@@ -64,6 +64,7 @@ wRoute18Gate1FCurScript                        equ 0xD668
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate1F_Script:
     mov esi, wStatusFlags6
     and byte [ebp + esi], ~(1 << (BIT_ALWAYS_ON_BIKE)) & 0xFF
@@ -73,6 +74,7 @@ Route18Gate1F_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate1F_ScriptPointers:
     dd Route18Gate1FDefaultScript
     dd Route18Gate1FPlayerMovingUpScript
@@ -80,6 +82,7 @@ Route18Gate1F_ScriptPointers:
     dd Route18Gate1FPlayerMovingRightScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate1FDefaultScript:
     call Route16Gate1FIsBicycleInBagScript
     jz .nr_18
@@ -112,12 +115,14 @@ Route18Gate1FDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .next_to_counter:
     mov al, SCRIPT_ROUTE18GATE1F_GUARD
     mov [ebp + wRoute18Gate1FCurScript], al
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .StopsPlayerCoords:
     db 3, 4
     db 4, 4
@@ -126,6 +131,7 @@ Route18Gate1FDefaultScript:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate1FPlayerMovingUpScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -148,6 +154,7 @@ Route18Gate1FGuardScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate1FPlayerMovingRightScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -163,11 +170,13 @@ Route18Gate1FPlayerMovingRightScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate1F_TextPointers:
     dd Route18Gate1FGuardText
     dd Route18Gate1FGuardExcuseMeText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate1FGuardText:
     call Route16Gate1FIsBicycleInBagScript
     jz .no_bike
@@ -176,6 +185,7 @@ Route18Gate1FGuardText:
     jmp .text_script_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 .no_bike:
     mov esi, .YouNeedABicycleText
     call PrintText
@@ -183,6 +193,7 @@ Route18Gate1FGuardText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .YouNeedABicycleText:
     text_far _Route18Gate1FGuardYouNeedABicycleText
     text_end

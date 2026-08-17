@@ -39,11 +39,13 @@ extern _CeladonMart1FReceptionistText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMart1F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMart1F_TextPointers:
     dd CeladonMart1FReceptionistText
     dd CeladonMart1FDirectorySignText

@@ -34,10 +34,12 @@ extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeruleanCave1F_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeruleanCave1F_TextPointers:
     dd PickUpItemText
     dd PickUpItemText

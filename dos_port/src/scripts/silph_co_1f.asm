@@ -36,6 +36,7 @@ extern _SilphCo1FLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo1F_Script:
     call EnableAutoTextBoxDrawing
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
@@ -52,6 +53,7 @@ SilphCo1F_Script:
     jmp ShowObject
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo1F_TextPointers:
     dd SilphCo1FLinkReceptionistText
 SilphCo1FLinkReceptionistText:

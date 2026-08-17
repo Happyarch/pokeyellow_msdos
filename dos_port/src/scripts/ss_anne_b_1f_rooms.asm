@@ -58,6 +58,7 @@ wSSAnneB1FRoomsCurScript                       equ 0xD628
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneB1FRooms_Script:
     call EnableAutoTextBoxDrawing
     mov esi, SSAnne10TrainerHeaders
@@ -70,46 +71,54 @@ SSAnneB1FRooms_Script:
 ; SSAnneB1FRooms_ScriptPointers (scripts/SSAnneB1FRooms.asm:11-44) — not re-emitted: SSAnne10TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneB1FRoomsSailor1Text:
     mov esi, SSAnne10TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneB1FRoomsSailor2Text:
     mov esi, SSAnne10TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneB1FRoomsSailor3Text:
     mov esi, SSAnne10TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneB1FRoomsSailor4Text:
     mov esi, SSAnne10TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneB1FRoomsSailor5Text:
     mov esi, SSAnne10TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneB1FRoomsFisherText:
     mov esi, SSAnne10TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneB1FRoomsMachokeText:
     text_far _SSAnneB1FRoomsMachokeText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 41
     call PlayCry
     jmp TextScriptEnd

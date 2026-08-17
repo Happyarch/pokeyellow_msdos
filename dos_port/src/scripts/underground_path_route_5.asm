@@ -36,18 +36,21 @@ extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 UndergroundPathRoute5_Script:
     mov al, ROUTE_5
     mov [ebp + wLastMap], al
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 UndergroundPathEntranceRoute5_TextScriptEndingText:
     text_end
 UndergroundPathRoute5_TextPointers:
     dd UndergroundPathRoute5LittleGirlText
 
 %assign event_byte -1
+%assign event_byte_a -1
 UndergroundPathRoute5LittleGirlText:
     mov al, 9
     mov [ebp + wWhichTrade], al

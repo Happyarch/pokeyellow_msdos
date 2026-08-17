@@ -59,10 +59,12 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CopycatsHouse2F_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 CopycatsHouse2F_TextPointers:
     dd CopycatsHouse2FCopycatText
     dd CopycatsHouse2FDoduoText
@@ -73,6 +75,7 @@ CopycatsHouse2F_TextPointers:
     dd CopycatsHouse2FPCText
 
 %assign event_byte -1
+%assign event_byte_a -1
 CopycatsHouse2FCopycatText:
     CheckEvent EVENT_GOT_TM31
     jnz .got_item
@@ -98,12 +101,14 @@ CopycatsHouse2FCopycatText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .TM31NoRoomText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .TM31Explanation2Text
     call PrintText
@@ -111,6 +116,7 @@ CopycatsHouse2FCopycatText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .DoYouLikePokemonText:
     text_far _CopycatsHouse2FCopycatDoYouLikePokemonText
     text_end
@@ -142,6 +148,7 @@ CopycatsHouse2FSNESText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 CopycatsHouse2FPCText:
     mov al, [ebp + wSpritePlayerStateData1FacingDirection]
     cmp al, SPRITE_FACING_UP
@@ -153,6 +160,7 @@ CopycatsHouse2FPCText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .MySecretsText:
     text_far _CopycatsHouse2FPCMySecretsText
     text_end

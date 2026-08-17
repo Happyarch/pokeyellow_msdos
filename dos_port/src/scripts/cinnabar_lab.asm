@@ -43,11 +43,13 @@ extern _CinnabarLabTestingRoomSignText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLab_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLab_TextPointers:
     dd CinnabarLabFishingGuruText
     dd CinnabarLabPhotoText

@@ -42,10 +42,12 @@ extern _SafariZoneWestTrainerTipsText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneWest_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneWest_TextPointers:
     dd PickUpItemText
     dd PickUpItemText

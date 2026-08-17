@@ -41,12 +41,14 @@ extern _UndergroundPathRoute7CopyUnusedTeamRocketHadAHideoutText   ; NOT YET DEF
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 UndergroundPathRoute7Copy_Script:
     mov al, ROUTE_7
     mov [ebp + wLastMap], al
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 UndergroundPathRoute7Copy_TextPointers:
     dd UndergroundPathRoute7CopyUnusedGirlText
     dd UndergroundPathRoute7CopyUnusedMiddleAgedManText

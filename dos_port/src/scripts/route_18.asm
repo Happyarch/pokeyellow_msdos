@@ -52,6 +52,7 @@ wRoute18CurScript                              equ 0xD626
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route18TrainerHeaders
@@ -64,6 +65,7 @@ Route18_Script:
 ; Route18_ScriptPointers (scripts/Route18.asm:11-32) — not re-emitted: Route18_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18CooltrainerM1Text:
     mov esi, Route18TrainerHeader0
     call TalkToTrainer
@@ -72,6 +74,7 @@ Route18CooltrainerM1Text:
 ; Route18CooltrainerM1BattleText (scripts/Route18.asm:41-50) — not re-emitted: Route18CooltrainerM1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18CooltrainerM2Text:
     mov esi, Route18TrainerHeader1
     call TalkToTrainer
@@ -80,6 +83,7 @@ Route18CooltrainerM2Text:
 ; Route18CooltrainerM2BattleText (scripts/Route18.asm:59-68) — not re-emitted: Route18CooltrainerM2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18CooltrainerM3Text:
     mov esi, Route18TrainerHeader2
     call TalkToTrainer

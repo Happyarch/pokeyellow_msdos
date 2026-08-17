@@ -39,11 +39,13 @@ extern _FuchsiaMeetingRoomSafariZoneWorker3   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaMeetingRoom_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaMeetingRoom_TextPointers:
     dd FuchsiaMeetingRoomSafariZoneWorker1
     dd FuchsiaMeetingRoomSafariZoneWorker2

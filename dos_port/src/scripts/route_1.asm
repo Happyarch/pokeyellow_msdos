@@ -49,35 +49,41 @@ extern _Route1Youngster2Text   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route1_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route1_TextPointers:
     dd Route1Youngster1Text
     dd Route1Youngster2Text
     dd Route1SignText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route1Youngster1Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Route1PrintYoungster1Text
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route1Youngster2Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Route1PrintYoungster2Text
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route1SignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Route1PrintSignText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route1PrintYoungster1Text:
     CheckAndSetEvent EVENT_GOT_POTION_SAMPLE
     jnz .got_item
@@ -90,11 +96,13 @@ Route1PrintYoungster1Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .NoRoomText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .AlsoGotPokeballsText
 .done:
@@ -102,6 +110,7 @@ Route1PrintYoungster1Text:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .MartSampleText:
     text_far _Route1Youngster1MartSampleText
     text_end
@@ -117,23 +126,27 @@ Route1PrintYoungster1Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route1PrintYoungster2Text:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _Route1Youngster2Text
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route1PrintSignText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _Route1SignText
     text_end

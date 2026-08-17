@@ -35,11 +35,13 @@ extern _Route7UndergroundPathSignText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route7_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route7_TextPointers:
     dd Route7UndergroundPathSignText
 Route7UndergroundPathSignText:

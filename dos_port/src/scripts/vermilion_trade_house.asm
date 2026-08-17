@@ -35,10 +35,12 @@ extern TeachingHMsText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionTradeHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionTradeHouse_TextPointers:
     dd VermilionTradeHouseGentlemanText
 VermilionTradeHouseGentlemanText:

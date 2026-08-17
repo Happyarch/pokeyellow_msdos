@@ -56,6 +56,7 @@ wSpritePlayerStateData2MovementByte1           equ 0xC206
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route7Gate_Script:
     call EnableAutoTextBoxDrawing
     mov al, [ebp + wRoute7GateCurScript]
@@ -64,11 +65,13 @@ Route7Gate_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route7Gate_ScriptPointers:
     dd Route7DefaultScript
     dd Route7PlayerMovingScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route7GateMovePlayerLeftScript:
     mov esi, wStatusFlags5
     or byte [ebp + esi], (1 << (BIT_SCRIPTED_MOVEMENT_STATE))
@@ -82,6 +85,7 @@ Route7GateMovePlayerLeftScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route7DefaultScript:
     mov al, [ebp + wStatusFlags1]
     setc ah                     ; SM83 `bit` preserves C — stash it
@@ -113,6 +117,7 @@ Route7DefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .have_drink:
     mov al, TEXT_ROUTE7GATE_GUARD_GIVE_DRINK
     mov [ebp + hTextID], al
@@ -122,12 +127,14 @@ Route7DefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PlayerInCoordsArray:
     db 3, 3
     db 4, 3
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route7PlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -142,6 +149,7 @@ Route7PlayerMovingScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route7Gate_TextPointers:
     dd SaffronGateGuardText
     dd SaffronGateGuardGeeImThirstyText

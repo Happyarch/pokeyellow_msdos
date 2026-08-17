@@ -38,10 +38,12 @@ extern _CeruleanMartCooltrainerMText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeruleanMart_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeruleanMart_TextPointers:
     dd CeruleanMartClerkText
     dd CeruleanMartCooltrainerMText

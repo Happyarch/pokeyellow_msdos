@@ -176,10 +176,13 @@ _m("CheckEvent", CODE_EVENT, z="*", n="*", h="*", c="*", clobbers=("a",), argc=(
    always_bail="checkevent-carry-form",
    note="2-arg form returns the bit in CARRY via rrca/add a. 3 sites; the "
         "port's events.inc CheckEvent is 1-arg only, so this cannot pass through")
-_m("CheckEventReuseA", CODE_EVENT, z="*", n="0", h="1", clobbers=("a",),
-   state_dependent=True)
+# These two are NO LONGER state_dependent: events.inc now carries the A-family
+# elision in the ASSEMBLER (`event_byte_a`), exactly as it does the HL family's
+# `event_byte`, so they pass through like every other event macro rather than
+# needing this tool to reconstruct rgbasm's bookkeeping.
+_m("CheckEventReuseA", CODE_EVENT, z="*", n="0", h="1", clobbers=("a",))
 _m("CheckEventAfterBranchReuseA", CODE_EVENT, z="*", n="0", h="1", clobbers=("a",),
-   state_dependent=True)
+   argc=(2,))
 _m("CheckEventHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",))
 _m("CheckEventReuseHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",))
 _m("CheckEventForceReuseHL", CODE_EVENT, z="*", n="0", h="1")

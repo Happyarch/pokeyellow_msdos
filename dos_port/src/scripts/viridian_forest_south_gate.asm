@@ -37,11 +37,13 @@ extern _ViridianForestSouthGateLittleGirlText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianForestSouthGate_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianForestSouthGate_TextPointers:
     dd ViridianForestSouthGateGirlText
     dd ViridianForestSouthGateLittleGirlText

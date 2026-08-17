@@ -24,6 +24,7 @@ bits 32
 
 global PewterGymBrockPostBattle
 global PewterGymBrockReceivedBoulderBadgeText
+global PewterGymBrockText
 global PewterGymBrockWaitTakeThisText
 global PewterGymCooltrainerMText
 global PewterGymGuideAdviceText
@@ -40,6 +41,7 @@ global PewterGymText_5c41c
 global PewterGym_ScriptPointers
 
 extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
 extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
@@ -50,7 +52,6 @@ extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
 extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
-extern PewterGymBrockText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymCooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern PewterGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
@@ -129,6 +130,7 @@ section .text
 ; PRET| 	db "BROCK@"
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -137,6 +139,7 @@ PewterGymResetScripts:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterGym_ScriptPointers:
     dd CheckFightingMapTrainers
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -144,6 +147,7 @@ PewterGym_ScriptPointers:
     dd PewterGymBrockPostBattle
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterGymBrockPostBattle:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -167,6 +171,7 @@ PewterGymScriptReceiveTM34:
     jmp .gymVictory
 
 %assign event_byte -1
+%assign event_byte_a -1
 .BagFull:
     mov al, TEXT_PEWTERGYM_TM34_NO_ROOM
     mov [ebp + hTextID], al
@@ -190,25 +195,28 @@ PewterGymScriptReceiveTM34:
 
 ; PewterGym_TextPointers (scripts/PewterGym.asm:85-97) — not re-emitted: PewterGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] PewterGymBrockText (scripts/PewterGym.asm:101-107) — at scripts/PewterGym.asm:103: CheckEventReuseA EVENT_GOT_TM34
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_BROCK
-; PRET| 	jr z, .beforeBeat
-; PRET| 	CheckEventReuseA EVENT_GOT_TM34
-; PRET| 	jr nz, .afterBeat
-; PRET| 	call z, PewterGymScriptReceiveTM34
-; PRET| 	call DisableWaitingAfterTextDisplay
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+PewterGymBrockText:
+    CheckEvent EVENT_BEAT_BROCK
+    jz .beforeBeat
+    CheckEventReuseA EVENT_GOT_TM34
+    jnz .afterBeat
+    jnz .sk_105
+        call PewterGymScriptReceiveTM34
+.sk_105:
+    call DisableWaitingAfterTextDisplay
+    jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .afterBeat:
     mov esi, .PostBattleAdviceText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .beforeBeat:
     mov esi, .PreBattleText
     call PrintText
@@ -233,6 +241,7 @@ PewterGymScriptReceiveTM34:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PreBattleText:
     text_far _PewterGymBrockPreBattleText
     text_end
@@ -257,6 +266,7 @@ PewterGymBrockReceivedBoulderBadgeText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterGymCooltrainerMText:
     mov esi, PewterGymTrainerHeader0
     call TalkToTrainer
@@ -265,6 +275,7 @@ PewterGymCooltrainerMText:
 ; PewterGymCooltrainerMBattleText (scripts/PewterGym.asm:170-179) — not re-emitted: PewterGymCooltrainerMBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterGymGuideText:
     mov al, [ebp + wBeatGymFlags]
     test al, (1 << (0))
@@ -283,6 +294,7 @@ PewterGymGuideText:
     jmp .PewterGymGuideAdviceText
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PewterGymGuideBeginAdviceText:
     mov esi, PewterGymGuideFreeServiceText
     call PrintText
@@ -292,6 +304,7 @@ PewterGymGuideText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .afterBeat:
     mov esi, PewterGymGuidePostBattleText
     call PrintText
@@ -299,12 +312,14 @@ PewterGymGuideText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_5c3fa:
     mov esi, PewterGymText_5c41c
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterGymGuidePreAdviceText:
     text_far _PewterGymGuidePreAdviceText
     text_end

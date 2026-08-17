@@ -55,6 +55,7 @@ wWarpedFromWhichWarp                           equ 0xD73A
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutElevator_Script:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -100,6 +101,7 @@ RocketHideoutElevator_Script:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutElevatorScript:
     mov esi, RocketHideoutElevatorFloors
     call LoadItemList
@@ -110,6 +112,7 @@ RocketHideoutElevatorScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutElevatorFloors:
     db 3
     db 85
@@ -122,6 +125,7 @@ RocketHideoutElevatorWarpMaps:
     db 2, ROCKET_HIDEOUT_B4F
 
 %assign event_byte -1
+%assign event_byte_a -1
 .End:
 RocketHideoutElevatorShakeScript:
     call Delay3
@@ -130,10 +134,12 @@ RocketHideoutElevatorShakeScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutElevator_TextPointers:
     dd RocketHideoutElevatorText
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutElevatorText:
     mov bh, 74
     call IsItemInBag
@@ -145,6 +151,7 @@ RocketHideoutElevatorText:
     jmp .text_script_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 .no_key:
     mov esi, .AppearsToNeedKeyText
     call PrintText
@@ -152,6 +159,7 @@ RocketHideoutElevatorText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .AppearsToNeedKeyText:
     text_far _RocketHideoutElevatorAppearsToNeedKeyText
     text_waitbutton

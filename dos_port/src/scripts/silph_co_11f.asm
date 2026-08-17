@@ -147,6 +147,7 @@ wSprite06StateData1MovementStatus              equ 0xC161
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11F_Script:
     call SilphCo11FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -158,6 +159,7 @@ SilphCo11F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FGateCallbackScript:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -182,6 +184,7 @@ SilphCo11FGateCallbackScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11GateCoords:
     db 6, 3
     db -1
@@ -226,12 +229,14 @@ SilphCo11GateCoords:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .exit_loop:
     xor al, al
     mov [ebp + hUnlockedSilphCoDoors], al
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FSetUnlockedDoorEventScript:
     mov al, [ebp + hUnlockedSilphCoDoors]
     test al, al
@@ -242,6 +247,7 @@ SilphCo11FSetUnlockedDoorEventScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FResetCurScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -251,6 +257,7 @@ SilphCo11FSetCurScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11F_ScriptPointers:
     dd SilphCo11FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -269,6 +276,7 @@ SilphCo11F_ScriptPointers:
     dd SilphCo11FScript14
 
 %assign event_byte -1
+%assign event_byte_a -1
     CheckEvent EVENT_BEAT_SILPH_CO_11F_JESSIE_JAMES
     jnz .sk_107
         call SilphCo11FScript_6229c
@@ -284,6 +292,7 @@ SilphCo11F_ScriptPointers:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FScript_621c5:
     mov esi, .PlayerCoordsArray
     call ArePlayerCoordsInArray
@@ -307,6 +316,7 @@ SilphCo11FScript_621c5:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PlayerCoordsArray:
     db 13, 6
     db 12, 7
@@ -318,6 +328,7 @@ SilphCo11FScript_621c5:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FScript_621ff:
     mov [ebp + wPlayerMovingDirection], al
     mov al, bh
@@ -327,6 +338,7 @@ SilphCo11FScript_621ff:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FGiovanniAfterBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -339,6 +351,7 @@ SilphCo11FGiovanniAfterBattleScript:
     jmp .continue
 
 %assign event_byte -1
+%assign event_byte_a -1
 .face_player_up:
     mov al, PLAYER_DIR_UP
     mov bh, SPRITE_FACING_DOWN
@@ -361,6 +374,7 @@ SilphCo11FGiovanniAfterBattleScript:
     jmp SilphCo11FSetCurScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FGiovanniStartBattleScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -378,6 +392,7 @@ SilphCo11FGiovanniStartBattleScript:
     jmp .continue
 
 %assign event_byte -1
+%assign event_byte_a -1
 .face_player_up:
     mov al, PLAYER_DIR_UP
     mov bh, SPRITE_FACING_DOWN
@@ -400,6 +415,7 @@ SilphCo11FGiovanniStartBattleScript:
     jmp SilphCo11FSetCurScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FScript_6229c:
     mov al, [ebp + wYCoord]
     cmp al, 0x3
@@ -445,6 +461,7 @@ SilphCo11FScript_6229c:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FMovementData_622f5:
     db 0x5
     db 0x5
@@ -551,6 +568,7 @@ SilphCo11FMovementData_62311:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FScript9:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -594,6 +612,7 @@ SilphCo11FScript11:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FScript12:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -626,6 +645,7 @@ SilphCo11FScript12:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FScript13:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -642,6 +662,7 @@ SilphCo11FScript13:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FScript14:
     call PlayDefaultMusic
     xor al, al
@@ -654,6 +675,7 @@ SilphCo11FScript14:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FScript_ShowObject:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
@@ -663,6 +685,7 @@ SilphCo11FScript_ShowObject:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FScript_HideObject:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
@@ -672,6 +695,7 @@ SilphCo11FScript_HideObject:
 ; SilphCo11F_TextPointers (scripts/SilphCo11F.asm:473-492) — not re-emitted: SilphCo11TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov bl, 10
     call DelayFrames
     mov al, 0x4
@@ -687,6 +711,7 @@ SilphCo11FScript_HideObject:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FText9:
     text_far _SilphCoJessieJamesText2
     text_end
@@ -697,11 +722,13 @@ SilphCo11FText10:
     text_far _SilphCoJessieJamesText4
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov bl, 64
     call DelayFrames
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FSilphPresidentText:
     CheckEvent EVENT_GOT_MASTER_BALL
     jnz .got_item
@@ -716,12 +743,14 @@ SilphCo11FSilphPresidentText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .NoRoomText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .MasterBallDescriptionText
     call PrintText
@@ -729,6 +758,7 @@ SilphCo11FSilphPresidentText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _SilphCo11FSilphPresidentText
     text_end
@@ -756,6 +786,7 @@ SilphCo11FGiovanniYouRuinedOurPlansText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FRocketText:
     mov esi, SilphCo11TrainerHeader0
     call TalkToTrainer
@@ -764,6 +795,7 @@ SilphCo11FRocketText:
 ; SilphCo11FRocketBattleText (scripts/SilphCo11F.asm:585-594) — not re-emitted: SilphCo11FRocketBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo11FTeamRocketLeavesScript:
     mov esi, .HideToggleableObjectIDs
 .hide_loop:
@@ -779,6 +811,7 @@ SilphCo11FTeamRocketLeavesScript:
     jmp .hide_loop
 
 %assign event_byte -1
+%assign event_byte_a -1
 .done_hiding:
     mov esi, .ShowToggleableObjectIDs
 .show_loop:
@@ -796,6 +829,7 @@ SilphCo11FTeamRocketLeavesScript:
     jmp .show_loop
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ShowToggleableObjectIDs:
     db 18
     db 19

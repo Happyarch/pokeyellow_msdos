@@ -244,6 +244,10 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
         # next event macro to reload the pointer: at worst one redundant load,
         # where the alternative is reading the wrong flag.
         out.lines.append("%assign event_byte -1")
+        # Same reset for the *ReuseA family's tracker: `event_byte_a` says which
+        # byte AL holds, and entering a region from anywhere but its emitted
+        # predecessor makes that claim unfounded in exactly the same way.
+        out.lines.append("%assign event_byte_a -1")
         out.lines.extend(body)
 
     return out

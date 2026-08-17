@@ -51,6 +51,7 @@ wWarpedFromWhichWarp                           equ 0xD73A
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMartElevator_Script:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -96,6 +97,7 @@ CeladonMartElevator_Script:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMartElevatorCopyWarpMapsScript:
     mov esi, CeladonMartElevatorFloors
     call LoadItemList
@@ -105,6 +107,7 @@ CeladonMartElevatorCopyWarpMapsScript:
     jmp CopyData
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMartElevatorFloors:
     db 5
     db 86
@@ -121,16 +124,19 @@ CeladonMartElevatorWarpMaps:
     db 2, CELADON_MART_5F
 
 %assign event_byte -1
+%assign event_byte_a -1
 .End:
 CeladonMartElevatorShakeScript:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farjp; behavior=bank switch dropped, jmp goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     jmp ShakeElevator
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMartElevator_TextPointers:
     dd CeladonMartElevatorText
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMartElevatorText:
     call CeladonMartElevatorCopyWarpMapsScript
     mov esi, CeladonMartElevatorWarpMaps

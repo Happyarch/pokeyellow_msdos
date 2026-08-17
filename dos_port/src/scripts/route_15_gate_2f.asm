@@ -50,15 +50,18 @@ wOaksAideRewardItemName                        equ 0xCC5B
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Gate2F_Script:
     jmp DisableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Gate2F_TextPointers:
     dd Route15Gate2FOaksAideText
     dd Route15Gate2FBinocularsText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Gate2FOaksAideText:
     CheckEvent EVENT_GOT_EXP_ALL
     jnz .got_item
@@ -85,16 +88,19 @@ Route15Gate2FOaksAideText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ExpAllText:
     text_far _Route15Gate2FOaksAideExpAllText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Gate2FBinocularsText:
     mov esi, .Text
     jmp GateUpstairsScript_PrintIfFacingUp
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _Route15Gate2FBinocularsText
     text_end

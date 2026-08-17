@@ -69,11 +69,13 @@ extern _CeladonMansion1Text9   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansion1F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansion1F_TextPointers:
     dd CeladonMansion1FMeowthText
     dd CeladonMansion1FGrannyText
@@ -84,6 +86,7 @@ CeladonMansion1FMeowthText:
     text_far _CeladonMansion1FMeowthText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 77
     call PlayCry
     jmp TextScriptEnd
@@ -104,29 +107,35 @@ CeladonMansion1FMeowthText:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansion1FClefairyText:
     text_far _CeladonMansion1FClefairyText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 4
     call PlayCry
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansion1FNidoranFText:
     text_far _CeladonMansion1FNidoranFText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 15
     call PlayCry
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansion1FManagersSuiteSignText:
     text_far _CeladonMansion1FManagersSuiteSignText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansion1FPrintGrannyText:
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
@@ -146,6 +155,7 @@ CeladonMansion1FPrintGrannyText:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansion1Text_f1e96:
     text_far _CeladonMansion1Text2
     text_waitbutton
@@ -183,6 +193,7 @@ CeladonMansionText_f1e9c:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PikachuHappinessThresholds_f1eb9:
     dd 51, CeladonMansion1Text_f1ed5
     dd 101, CeladonMansion1Text_f1eda

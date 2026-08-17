@@ -40,6 +40,7 @@ extern _PewterMartYoungsterText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterMart_Script:
     call EnableAutoTextBoxDrawing
     mov al, 1 << BIT_NO_AUTO_TEXT_BOX
@@ -47,29 +48,34 @@ PewterMart_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterMart_TextPointers:
     dd PewterMartClerkText
     dd PewterMartYoungsterText
     dd PewterMartSuperNerdText
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterMartYoungsterText:
     mov esi, .Text
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _PewterMartYoungsterText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterMartSuperNerdText:
     mov esi, .Text
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _PewterMartSuperNerdText
     text_end

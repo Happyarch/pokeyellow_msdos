@@ -43,11 +43,13 @@ extern _PokemonTower1FReceptionistText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonTower1F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonTower1F_TextPointers:
     dd PokemonTower1FReceptionistText
     dd PokemonTower1FMiddleAgedWomanText

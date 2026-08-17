@@ -47,10 +47,12 @@ extern _CinnabarLabMetronomeRoomScientist2Text   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabMetronomeRoom_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabMetronomeRoom_TextPointers:
     dd CinnabarLabMetronomeRoomScientist1Text
     dd CinnabarLabMetronomeRoomScientist2Text
@@ -59,6 +61,7 @@ CinnabarLabMetronomeRoom_TextPointers:
     dd CinnabarLabMetronomeRoomAmberPipeText
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabMetronomeRoomScientist1Text:
     CheckEvent EVENT_GOT_TM35
     jnz .got_item
@@ -73,12 +76,14 @@ CinnabarLabMetronomeRoomScientist1Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .TM35NoRoomText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .TM35ExplanationText
     call PrintText
@@ -86,6 +91,7 @@ CinnabarLabMetronomeRoomScientist1Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _CinnabarLabMetronomeRoomScientist1Text
     text_end

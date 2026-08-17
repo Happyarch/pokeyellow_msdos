@@ -45,10 +45,12 @@ extern _ViridianNicknameHouseSpearySignText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianNicknameHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianNicknameHouse_TextPointers:
     dd ViridianNicknameHouseBaldingGuyText
     dd ViridianNicknameHouseLittleGirlText
@@ -62,6 +64,7 @@ ViridianNicknameHouseLittleGirlText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianNicknameHouseSpearowText:
     mov esi, .Text
     call PrintText
@@ -71,6 +74,7 @@ ViridianNicknameHouseSpearowText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _ViridianNicknameHouseSpearowText
     text_end

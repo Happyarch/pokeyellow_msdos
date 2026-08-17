@@ -125,6 +125,7 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGate_Script:
     call EnableAutoTextBoxDrawing
     mov esi, SafariZoneGate_ScriptPointers
@@ -133,6 +134,7 @@ SafariZoneGate_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGate_ScriptPointers:
     dd SafariZoneGateDefaultScript
     dd SafariZoneGatePlayerMovingRightScript
@@ -143,6 +145,7 @@ SafariZoneGate_ScriptPointers:
     dd SafariZoneGateSetScriptAfterMoveScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGateDefaultScript:
     mov esi, .PlayerNextToSafariZoneWorker1CoordsArray
     call ArePlayerCoordsInArray
@@ -166,6 +169,7 @@ SafariZoneGateDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .player_not_next_to_worker:
     mov al, PAD_RIGHT
     mov bl, 1
@@ -177,12 +181,14 @@ SafariZoneGateDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PlayerNextToSafariZoneWorker1CoordsArray:
     db 2, 3
     db 2, 4
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGatePlayerMovingRightScript:
     call SafariZoneGateReturnSimulatedJoypadStateScript
     jz .nr_55
@@ -201,6 +207,7 @@ SafariZoneGateWouldYouLikeToJoinScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGatePlayerMovingUpScript:
     call SafariZoneGateReturnSimulatedJoypadStateScript
     jz .nr_70
@@ -213,6 +220,7 @@ SafariZoneGatePlayerMovingUpScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGateLeavingSafariScript:
     mov al, PLAYER_DIR_DOWN
     mov [ebp + wPlayerMovingDirection], al
@@ -237,6 +245,7 @@ SafariZoneGateLeavingSafariScript:
     jmp .return
 
 %assign event_byte -1
+%assign event_byte_a -1
 .leaving_early:
     mov al, TEXT_SAFARIZONEGATE_SAFARI_ZONE_WORKER1_LEAVING_EARLY
     mov [ebp + hTextID], al
@@ -245,6 +254,7 @@ SafariZoneGateLeavingSafariScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGatePlayerMovingDownScript:
     call SafariZoneGateReturnSimulatedJoypadStateScript
     jz .nr_108
@@ -257,6 +267,7 @@ SafariZoneGatePlayerMovingDownScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGateSetScriptAfterMoveScript:
     call SafariZoneGateReturnSimulatedJoypadStateScript
     jz .nr_117
@@ -268,6 +279,7 @@ SafariZoneGateSetScriptAfterMoveScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneEntranceAutoWalk:
     pushfd
     push eax
@@ -281,12 +293,14 @@ SafariZoneEntranceAutoWalk:
     jmp StartSimulatingJoypadStates
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGateReturnSimulatedJoypadStateScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGate_TextPointers:
     dd SafariZoneGateSafariZoneWorker1Text
     dd SafariZoneGateSafariZoneWorker2Text
@@ -299,16 +313,19 @@ SafariZoneGateSafariZoneWorker1Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGateSafariZoneWorker1WouldYouLikeToJoinText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGateSafariZoneWorker1LeavingEarlyText:
     text_far _SafariZoneGateSafariZoneWorker1LeavingEarlyText
 
 %assign event_byte -1
+%assign event_byte_a -1
     call YesNoChoice
     mov al, [ebp + wCurrentMenuItem]
     test al, al
@@ -326,6 +343,7 @@ SafariZoneGateSafariZoneWorker1LeavingEarlyText:
     jmp .set_current_script
 
 %assign event_byte -1
+%assign event_byte_a -1
 .not_ready_to_leave:
     mov esi, .GoodLuckText
     call PrintText
@@ -342,6 +360,7 @@ SafariZoneGateSafariZoneWorker1LeavingEarlyText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ReturnSafariBallsText:
     text_far _SafariZoneGateSafariZoneWorker1ReturnSafariBallsText
     text_end
@@ -353,6 +372,7 @@ SafariZoneGateSafariZoneWorker1GoodHaulComeAgainText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGateSafariZoneWorker2Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call SafariZoneGatePrintSafariZoneWorker2Text
@@ -439,6 +459,7 @@ SafariZoneGateSafariZoneWorker2Text:
 ; PRET| 	jr .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PleaseComeAgain:
     mov esi, .PleaseComeAgainText
     call PrintText
@@ -452,6 +473,7 @@ SafariZoneGateSafariZoneWorker2Text:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .WelcomeText:
     text_far _SafariZoneGateSafariZoneWorker1WouldYouLikeToJoinText
     text_end
@@ -468,6 +490,7 @@ SafariZoneGateSafariZoneWorker2Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneGatePrintSafariZoneWorker2Text:
     mov esi, .FirstTimeHereText
     call PrintText
@@ -482,6 +505,7 @@ SafariZoneGatePrintSafariZoneWorker2Text:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .FirstTimeHereText:
     text_far _SafariZoneGateSafariZoneWorker2FirstTimeHereText
     text_end
@@ -493,6 +517,7 @@ SafariZoneGatePrintSafariZoneWorker2Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneEntranceAutoWalk2:
     pushfd
     push eax
@@ -506,6 +531,7 @@ SafariZoneEntranceAutoWalk2:
     jmp StartSimulatingJoypadStates
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneEntranceCalculateLowCostAdmission:
     mov esi, wPlayerMoney
     mov dx, hMoney
@@ -547,6 +573,7 @@ SafariZoneEntranceCalculateLowCostAdmission:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneEntranceText_f20c4:
     text_far _SafariZoneLowCostText1
     text_end
@@ -578,6 +605,7 @@ SafariZoneEntranceText_f20c9:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .give_one_ball:
     mov esi, SafariZoneEntranceText_f20f6
     call PrintText_NoCreatingTextBox
@@ -587,6 +615,7 @@ SafariZoneEntranceText_f20c9:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneEntranceText_f20f6:
     text_far _SafariZoneLowCostText3
     sound_get_item_1

@@ -22,21 +22,45 @@
 %define EVENT_BYTE(i)  ((i) / 8)
 %define EVENT_MASK(i)  (1 << ((i) - ((i) / 8) * 8))
 
+; `event_byte_a` — the byte of wEventFlags that AL currently HOLDS, or -1 for
+; "unknown". It is what the *ReuseA family elides against, and it is deliberately
+; SEPARATE from the `event_byte` used by the *ReuseHL family below.
+;
+; pret gets away with one shared `event_byte` because its CheckEvent loads A while
+; its SetEvent/ResetEvent load HL, and each Reuse family reads back the register
+; its own predecessor established. The port cannot share it: SetEvent/ResetEvent
+; here are read-modify-write through AL (there is no `set n,[hl]` to mirror), so a
+; single variable would let an HL-family predecessor license an A-family elision
+; against a register it never loaded. Two variables cost nothing and can only ever
+; cause an EXTRA reload, which is the safe direction.
+%assign event_byte_a -1
+
 ; CheckEvent EVENT_X — test the flag; sets ZF (see header). Clobbers AL.
+; Mirrors pret's `DEF event_byte`: this is the load a following CheckEventReuseA
+; reuses, and AL ends up holding exactly the byte pret's A holds.
 %macro CheckEvent 1
+    %assign event_byte_a EVENT_BYTE(%1)
     mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
     test al, EVENT_MASK(%1)
 %endmacro
 
 ; SetEvent EVENT_X — set the flag. Clobbers AL.
+; INVALIDATES event_byte_a: AL is left holding the byte AFTER the OR, not the
+; stored byte, and pret's `set n,[hl]` does not touch A at all. No pret sequence
+; needs an elision here (measured: all 15 CheckEventReuseA sites in scripts/ are
+; preceded directly by CheckEvent), so this only forces a reload that pret's
+; register discipline would have made unnecessary.
 %macro SetEvent 1
+    %assign event_byte_a -1
     mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
     or  al, EVENT_MASK(%1)
     mov [ebp + wEventFlags + EVENT_BYTE(%1)], al
 %endmacro
 
-; ResetEvent EVENT_X — clear the flag. Clobbers AL.
+; ResetEvent EVENT_X — clear the flag. Clobbers AL. Invalidates event_byte_a for
+; the same reason as SetEvent.
 %macro ResetEvent 1
+    %assign event_byte_a -1
     mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
     and al, ~EVENT_MASK(%1) & 0xFF
     mov [ebp + wEventFlags + EVENT_BYTE(%1)], al
@@ -160,7 +184,10 @@
     popfd
 %endmacro
 
+; Both of these leave AL holding the MODIFIED byte, so they invalidate
+; event_byte_a for the same reason SetEvent/ResetEvent do.
 %macro CheckAndSetEvent 1
+    %assign event_byte_a -1
     mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
     test al, EVENT_MASK(%1)
     pushfd
@@ -170,6 +197,7 @@
 %endmacro
 
 %macro CheckAndResetEvent 1
+    %assign event_byte_a -1
     mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
     test al, EVENT_MASK(%1)
     pushfd
@@ -231,6 +259,9 @@
     mov al, 1
     test al, al
 %%done:
+    ; Path-dependent: AL is either a flag byte or the literal 1 depending on the
+    ; branch taken, so nothing may elide a load against it.
+    %assign event_byte_a -1
 %endmacro
 
 %macro CheckEitherEventSet 2
@@ -249,9 +280,45 @@
     mov al, 1
     test al, al
 %%done:
+    ; Path-dependent, as in CheckBothEventsSet.
+    %assign event_byte_a -1
 %endmacro
 
-; Register-reuse variants as no-op `%define` aliases.
+; ---------------------------------------------------------------------------
+; The *ReuseA family — pret macros/scripts/events.asm.
+;
+; The A-register counterpart of *ReuseHL above: pret skips the `ld a,[wEventFlags
+; + n]` when the previous event macro already loaded that same byte into A. These
+; mirror it with `event_byte_a` (declared next to CheckEvent, which maintains it),
+; so the elision happens exactly where pret's does.
+;
+; WHY THIS IS SAFE, MEASURED: every one of the 15 CheckEventReuseA sites in pret
+; scripts/ is immediately preceded by a plain CheckEvent — the family is never
+; mixed with the HL family — and the port's CheckEvent loads AL with the same byte
+; pret's loads into A. So at every real site the register genuinely holds what the
+; elision assumes. Everything that clobbers AL invalidates event_byte_a, and the
+; emitters reset it at each region head (SEAM RULE, as for event_byte), so an
+; unmeasured sequence degrades to the always-reload form rather than to a silent
+; wrong flag.
+%macro CheckEventReuseA 1
+    %if event_byte_a != EVENT_BYTE(%1)
+        %assign event_byte_a EVENT_BYTE(%1)
+        mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
+    %endif
+    test al, EVENT_MASK(%1)
+%endmacro
+
+; %2 is the event used BEFORE the branch. As with CheckEventAfterBranchReuseHL,
+; THE PORT DOES NOT USE IT TO ELIDE and always reloads: pret's assertion is about
+; pret's emitted code, and here the pre-branch region may have BAILED and never
+; been emitted at all.
+%macro CheckEventAfterBranchReuseA 2
+    %assign event_byte_a EVENT_BYTE(%1)
+    mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
+    test al, EVENT_MASK(%1)
+%endmacro
+
+; Register-reuse variants that remain no-op `%define` aliases.
 ;
 ; The *ReuseHL family USED TO BE ALIASED HERE TOO, and is not any more: it has
 ; real macros above that mirror pret's `event_byte` elision. The aliases had two
@@ -261,9 +328,13 @@
 ;   * every alias routes through AL, while pret's `bit`/`set`/`res` on [hl] do
 ;     not touch A — so the alias silently clobbered a register pret preserves.
 ; A `%define` also SHADOWS a `%macro` of the same name, so leaving these in place
-; would quietly disable the mirrors above.
-%define CheckEventReuseA CheckEvent
-%define CheckEventAfterBranchReuseA CheckEvent
+; would quietly disable the mirrors above. CheckEventReuseA and
+; CheckEventAfterBranchReuseA left for the same reason — the latter carried the
+; identical 2-arg-onto-1-arg defect and could never have assembled.
+;
+; CheckEitherEventSetReuseA still aliases: it has ZERO call sites in pret scripts/
+; and none in the port, so there is nothing to measure a real mirror against, and
+; the alias reloads unconditionally (the safe direction).
 %define CheckEventHL CheckEvent
 %define CheckAndSetEventA CheckAndSetEvent
 %define CheckAndResetEventA CheckAndResetEvent

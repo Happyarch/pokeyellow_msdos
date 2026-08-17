@@ -65,6 +65,7 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarIsland_Script:
     call EnableAutoTextBoxDrawing
     mov esi, wCurrentMapScriptFlags
@@ -76,11 +77,13 @@ CinnabarIsland_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarIsland_ScriptPointers:
     dd CinnabarIslandDefaultScript
     dd CinnabarIslandPlayerMovingScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarIslandDefaultScript:
     mov bh, 43
     call IsItemInBag
@@ -117,6 +120,7 @@ CinnabarIslandDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarIslandPlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -129,6 +133,7 @@ CinnabarIslandPlayerMovingScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarIsland_TextPointers:
     dd CinnabarIslandGirlText
     dd CinnabarIslandGamblerText

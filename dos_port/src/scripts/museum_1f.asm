@@ -86,6 +86,7 @@ wPriceTemp                                     equ 0xCD3D
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1F_Script:
     mov al, 1 << BIT_NO_AUTO_TEXT_BOX
     mov [ebp + wAutoTextBoxDrawingControl], al
@@ -97,11 +98,13 @@ Museum1F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1F_ScriptPointers:
     dd Museum1FDefaultScript
     dd Museum1FNoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FDefaultScript:
     mov al, [ebp + wYCoord]
     cmp al, 4
@@ -124,10 +127,12 @@ Museum1FDefaultScript:
     jmp DisplayTextID
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FNoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1F_TextPointers:
     dd Museum1FScientist1Text
     dd Museum1FGamblerText
@@ -136,36 +141,42 @@ Museum1F_TextPointers:
     dd Museum1FOldAmberText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FScientist1Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintScientist1Text
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FGamblerText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintGamblerText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FScientist2Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintScientist2Text
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FScientist3Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintScientist3Text
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FOldAmberText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintOldAmberText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FPrintScientist1Text:
     mov al, [ebp + wYCoord]
     cmp al, 4
@@ -176,6 +187,7 @@ Museum1FPrintScientist1Text:
     jmp .check_ticket
 
 %assign event_byte -1
+%assign event_byte_a -1
 .not_right_of_scientist:
     cmp al, 3
     jnz .not_behind_counter
@@ -190,6 +202,7 @@ Museum1FPrintScientist1Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .check_ticket:
     CheckEvent EVENT_BOUGHT_MUSEUM_TICKET
     jz .no_ticket
@@ -199,6 +212,7 @@ Museum1FPrintScientist1Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .no_ticket:
     mov al, MONEY_BOX
     mov [ebp + wTextBoxID], al
@@ -223,6 +237,7 @@ Museum1FPrintScientist1Text:
     jmp .deny_entry
 
 %assign event_byte -1
+%assign event_byte_a -1
 .buy_ticket:
     mov esi, .ThankYouText
     call PrintText
@@ -246,6 +261,7 @@ Museum1FPrintScientist1Text:
     jmp .allow_entry
 
 %assign event_byte -1
+%assign event_byte_a -1
 .deny_entry:
     mov esi, .ComeAgainText
     call PrintText
@@ -258,12 +274,14 @@ Museum1FPrintScientist1Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .allow_entry:
     mov al, SCRIPT_MUSEUM1F_NOOP
     mov [ebp + wMuseum1FCurScript], al
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .behind_counter:
     mov esi, .DoYouKnowWhatAmberIsText
     call PrintText
@@ -276,6 +294,7 @@ Museum1FPrintScientist1Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .explain_amber:
     mov esi, .AmberIsFossilizedTreeSapText
     call PrintText
@@ -283,6 +302,7 @@ Museum1FPrintScientist1Text:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ComeAgainText:
     text_far _Museum1FScientist1ComeAgainText
     text_end
@@ -312,17 +332,20 @@ Museum1FPrintScientist1Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FPrintGamblerText:
     mov esi, .Text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _Museum1FGamblerText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FPrintScientist2Text:
     CheckEvent EVENT_GOT_OLD_AMBER
     jnz .got_item
@@ -340,11 +363,13 @@ Museum1FPrintScientist2Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .YouDontHaveSpaceText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .GetTheOldAmberCheckText
 .done:
@@ -352,6 +377,7 @@ Museum1FPrintScientist2Text:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .TakeThisToAPokemonLabText:
     text_far _Museum1FScientist2TakeThisToAPokemonLabText
     text_end
@@ -367,23 +393,27 @@ Museum1FPrintScientist2Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FPrintScientist3Text:
     mov esi, .Text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _Museum1FScientist3Text
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum1FPrintOldAmberText:
     mov esi, .Text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _Museum1FOldAmberText
     text_end

@@ -69,6 +69,7 @@ wViridianMartCurScript                         equ 0xD60C
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianMart_Script:
     call ViridianMartCheckParcelDeliveredScript
     call EnableAutoTextBoxDrawing
@@ -99,12 +100,14 @@ ViridianMart_Script:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianMart_ScriptPointers:
     dd ViridianMartDefaultScript
     dd ViridianMartOaksParcelScript
     dd ViridianMartScript2
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianMartDefaultScript:
     call UpdateSprites
     mov al, TEXT_VIRIDIANMART_CLERK_YOU_CAME_FROM_PALLET_TOWN
@@ -121,12 +124,14 @@ ViridianMartDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PlayerMovement:
     db PAD_LEFT, 1
     db PAD_UP, 2
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianMartOaksParcelScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -145,6 +150,7 @@ ViridianMartOaksParcelScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianMartScript2:
     mov esi, wEventFlags + EVENT_BYTE(EVENT_COMPLETED_CATCH_TRAINING)
     test byte [ebp + esi], EVENT_MASK(EVENT_COMPLETED_CATCH_TRAINING)
@@ -166,6 +172,7 @@ ViridianMartScript2:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ViridianMart_TextPointers:
     dd ViridianMartClerkSayHiToOakText
     dd ViridianMartYoungsterText

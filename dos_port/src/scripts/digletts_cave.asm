@@ -33,9 +33,11 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 DiglettsCave_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 DiglettsCave_TextPointers:
     text_end

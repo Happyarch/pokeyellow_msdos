@@ -36,12 +36,14 @@ extern _UndergroundPathRoute6GirlText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 UndergroundPathRoute6_Script:
     mov al, ROUTE_6
     mov [ebp + wLastMap], al
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 UndergroundPathRoute6_TextPointers:
     dd UndergroundPathRoute6GirlText
 UndergroundPathRoute6GirlText:

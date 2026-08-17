@@ -63,6 +63,7 @@ wSpritePlayerStateData2MovementByte1           equ 0xC206
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB3F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, wMiscFlags
@@ -91,6 +92,7 @@ SeafoamIslandsB3F_Script:
     jmp .hideAndShowBoulderObjects
 
 %assign event_byte -1
+%assign event_byte_a -1
 .boulder2FellDownHole:
     SetEventAfterBranchReuseHL EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE
     mov al, 230
@@ -109,6 +111,7 @@ SeafoamIslandsB3F_Script:
     jmp .runCurrentMapScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 .noBoulderWasPushed:
     mov al, SEAFOAM_ISLANDS_B4F
     mov [ebp + wDungeonWarpDestinationMap], al
@@ -125,6 +128,7 @@ SeafoamIslandsB3F_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 Seafoam4HolesCoords:
     db 16, 3
     db 16, 6
@@ -136,6 +140,7 @@ SeafoamIslandsB3F_ScriptPointers:
     dd SeafoamIslandsB3FObjectMoving2Script
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB3FDefaultScript:
     CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
     jnz .nr_62
@@ -164,6 +169,7 @@ SeafoamIslandsB3FDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RLEList_ForcedSurfingStrongCurrentNearSteps:
     db PAD_DOWN, 6
     db PAD_RIGHT, 5
@@ -171,6 +177,7 @@ RLEList_ForcedSurfingStrongCurrentNearSteps:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB3FObjectMoving1Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -197,6 +204,7 @@ SeafoamIslandsB3FObjectMoving1Script:
 ; PRET| 	jr .forceSurfMovement
 
 %assign event_byte -1
+%assign event_byte_a -1
 .playerFellThroughHoleLeft:
     mov edi, .RLEList_StrongCurrentNearLeftBoulder   ; pret: ld de, .RLEList_StrongCurrentNearLeftBoulder — DecodeRLEList takes it in EDI
 .forceSurfMovement:
@@ -216,6 +224,7 @@ SeafoamIslandsB3FObjectMoving1Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .RLEList_StrongCurrentNearRightBoulder:
     db PAD_DOWN, 6
     db PAD_RIGHT, 2
@@ -229,6 +238,7 @@ SeafoamIslandsB3FObjectMoving1Script:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB3FObjectMoving2Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -240,6 +250,7 @@ SeafoamIslandsB3FObjectMoving2Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB3F_TextPointers:
     dd BoulderText
     dd BoulderText

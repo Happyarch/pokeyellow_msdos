@@ -114,6 +114,7 @@ wPikachuMapScriptFlags                         equ 0xD492
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCity_Script:
     call EnableAutoTextBoxDrawing
     mov esi, wPikachuMapScriptFlags
@@ -124,6 +125,7 @@ PewterCity_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCity_ScriptPointers:
     dd PewterCityDefaultScript
     dd PewterCitySuperNerd1ShowsPlayerMuseumScript
@@ -134,6 +136,7 @@ PewterCity_ScriptPointers:
     dd PewterCityResetYoungsterScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCityDefaultScript:
     xor al, al
     mov [ebp + wMuseum1FCurScript], al
@@ -142,6 +145,7 @@ PewterCityDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCityCheckPlayerLeavingEastScript:
     CheckEvent EVENT_BEAT_BROCK
     jz .nr_29
@@ -159,6 +163,7 @@ PewterCityCheckPlayerLeavingEastScript:
     jmp DisplayTextID
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCityPlayerLeavingEastCoords:
     db 17, 35
     db 17, 36
@@ -167,6 +172,7 @@ PewterCityPlayerLeavingEastCoords:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCitySuperNerd1ShowsPlayerMuseumScript:
     mov al, [ebp + wNPCMovementScriptPointerTableNum]
     test al, al
@@ -207,6 +213,7 @@ PewterCitySuperNerd1ShowsPlayerMuseumScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 MovementData_PewterMuseumGuyExit:
     db NPC_MOVEMENT_DOWN
     db NPC_MOVEMENT_DOWN
@@ -215,6 +222,7 @@ MovementData_PewterMuseumGuyExit:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCityHideSuperNerd1Script:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -230,6 +238,7 @@ PewterCityHideSuperNerd1Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCityResetSuperNerd1Script:
     mov al, 3
     mov [ebp + wSpriteIndex], al
@@ -245,6 +254,7 @@ PewterCityResetSuperNerd1Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCityYoungsterShowsPlayerGymScript:
     mov al, [ebp + wNPCMovementScriptPointerTableNum]
     test al, al
@@ -282,6 +292,7 @@ PewterCityYoungsterShowsPlayerGymScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 MovementData_PewterGymGuyExit:
     db NPC_MOVEMENT_RIGHT
     db NPC_MOVEMENT_RIGHT
@@ -291,6 +302,7 @@ MovementData_PewterGymGuyExit:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCityHideYoungsterScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -306,6 +318,7 @@ PewterCityHideYoungsterScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCityResetYoungsterScript:
     mov al, 5
     mov [ebp + wSpriteIndex], al
@@ -321,6 +334,7 @@ PewterCityResetYoungsterScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCity_TextPointers:
     dd PewterCityCooltrainerFText
     dd PewterCityCooltrainerMText
@@ -344,6 +358,7 @@ PewterCityCooltrainerMText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCitySuperNerd1Text:
     mov esi, .DidYouCheckOutMuseumText
     call PrintText
@@ -356,6 +371,7 @@ PewterCitySuperNerd1Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .playerDidNotGoIntoMuseum:
     mov esi, .YouHaveToGoText
     call PrintText
@@ -376,6 +392,7 @@ PewterCitySuperNerd1Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .DidYouCheckOutMuseumText:
     text_far _PewterCitySuperNerd1DidYouCheckOutMuseumText
     text_end
@@ -390,6 +407,7 @@ PewterCitySuperNerd1ItsRightHereText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCitySuperNerd2Text:
     mov esi, .DoYouKnowWhatImDoingText
     call PrintText
@@ -402,6 +420,7 @@ PewterCitySuperNerd2Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .playerDoesNotKnow:
     mov esi, .ImSprayingRepelText
     call PrintText
@@ -409,6 +428,7 @@ PewterCitySuperNerd2Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .DoYouKnowWhatImDoingText:
     text_far _PewterCitySuperNerd2DoYouKnowWhatImDoingText
     text_end
@@ -420,6 +440,7 @@ PewterCitySuperNerd2Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterCityYoungsterText:
     mov esi, .YoureATrainerFollowMeText
     call PrintText
@@ -438,6 +459,7 @@ PewterCityYoungsterText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .YoureATrainerFollowMeText:
     text_far _PewterCityYoungsterYoureATrainerFollowMeText
     text_end

@@ -61,6 +61,7 @@ wRoute6CurScript                               equ 0xD5FF
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route6_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route6TrainerHeaders
@@ -73,6 +74,7 @@ Route6_Script:
 ; Route6_ScriptPointers (scripts/Route6.asm:11-40) — not re-emitted: Route6_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route6CooltrainerM1Text:
     mov esi, Route6TrainerHeader0
     call TalkToTrainer
@@ -81,6 +83,7 @@ Route6CooltrainerM1Text:
 ; Route6CooltrainerM1BattleText (scripts/Route6.asm:49-58) — not re-emitted: Route6CooltrainerM1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route6CooltrainerF1Text:
     mov esi, Route6TrainerHeader1
     call TalkToTrainer
@@ -89,6 +92,7 @@ Route6CooltrainerF1Text:
 ; Route6CooltrainerF1BattleText (scripts/Route6.asm:67-76) — not re-emitted: Route6CooltrainerF1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route6Youngster1Text:
     mov esi, Route6TrainerHeader2
     call TalkToTrainer
@@ -97,6 +101,7 @@ Route6Youngster1Text:
 ; Route6Youngster1BattleText (scripts/Route6.asm:85-94) — not re-emitted: Route6Youngster1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route6CooltrainerM2Text:
     mov esi, Route6TrainerHeader3
     call TalkToTrainer
@@ -105,6 +110,7 @@ Route6CooltrainerM2Text:
 ; Route6CooltrainerM2BattleText (scripts/Route6.asm:103-112) — not re-emitted: Route6CooltrainerM2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route6CooltrainerF2Text:
     mov esi, Route6TrainerHeader4
     call TalkToTrainer
@@ -113,6 +119,7 @@ Route6CooltrainerF2Text:
 ; Route6CooltrainerF2BattleText (scripts/Route6.asm:121-130) — not re-emitted: Route6CooltrainerF2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route6Youngster2Text:
     mov esi, Route6TrainerHeader5
     call TalkToTrainer

@@ -54,10 +54,12 @@ extern _LavenderTownSuperNerdText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 LavenderTown_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 LavenderTown_TextPointers:
     dd LavenderTownLittleGirlText
     dd LavenderTownCooltrainerMText
@@ -70,6 +72,7 @@ LavenderTown_TextPointers:
     dd LavenderTownPokemonTowerSignText
 
 %assign event_byte -1
+%assign event_byte_a -1
 LavenderTownLittleGirlText:
     mov esi, .DoYouBelieveInGhostsText
     call PrintText
@@ -84,6 +87,7 @@ LavenderTownLittleGirlText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .DoYouBelieveInGhostsText:
     text_far _LavenderTownLittleGirlDoYouBelieveInGhostsText
     text_end

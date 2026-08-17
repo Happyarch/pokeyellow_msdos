@@ -58,11 +58,13 @@ wPikachuSpawnStateFlags                        equ 0xD471
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum2F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum2F_TextPointers:
     dd Museum2FYoungsterText
     dd Museum2FGrampsText
@@ -85,6 +87,7 @@ Museum2FBrunetteGirlText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum2FHikerText:
     mov al, [ebp + wPikachuSpawnStateFlags]
     test al, (1 << (7))
@@ -94,6 +97,7 @@ Museum2FHikerText:
     jmp .asm_5c20b
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_5c1f6:
     mov al, [ebp + wPikachuHappiness]
     cmp al, 101
@@ -103,6 +107,7 @@ Museum2FHikerText:
     jmp .asm_5c20b
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_5c205:
     mov esi, Museum2FText_5c213
     call PrintText
@@ -110,6 +115,7 @@ Museum2FHikerText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Museum2FText_5c20e:
     text_far _Museum2FHikerText
     text_end

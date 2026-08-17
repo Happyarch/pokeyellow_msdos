@@ -51,11 +51,13 @@ extern _CeladonDinerMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonDiner_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonDiner_TextPointers:
     dd CeladonDinerCookText
     dd CeladonDinerMiddleAgedWomanText
@@ -76,12 +78,14 @@ CeladonDinerFisherText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonDinerGymGuideText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CeladonDinerPrintGymGuideText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonDinerPrintGymGuideText:
     CheckEvent EVENT_GOT_COIN_CASE
     jnz .got_item
@@ -96,12 +100,14 @@ CeladonDinerPrintGymGuideText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .CoinCaseNoRoomText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .WinItBackText
     call PrintText
@@ -109,6 +115,7 @@ CeladonDinerPrintGymGuideText:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ImFlatOutBustedText:
     text_far _CeladonDinerGymGuideImFlatOutBustedText
     text_end

@@ -49,6 +49,7 @@ wPokemonTower3FCurScript                       equ 0xD62B
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonTower3F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, PokemonTower3TrainerHeaders
@@ -61,18 +62,21 @@ PokemonTower3F_Script:
 ; PokemonTower3F_ScriptPointers (scripts/PokemonTower3F.asm:11-31) — not re-emitted: PokemonTower3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonTower3FChanneler1Text:
     mov esi, PokemonTower3TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonTower3FChanneler2Text:
     mov esi, PokemonTower3TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonTower3FChanneler3Text:
     mov esi, PokemonTower3TrainerHeader2
     call TalkToTrainer

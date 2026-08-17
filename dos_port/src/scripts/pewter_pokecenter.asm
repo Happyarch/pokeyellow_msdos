@@ -64,6 +64,7 @@ wSprite03StateData1ImageIndex                  equ 0xC132
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterPokecenter_Script:
     mov esi, wPikachuMapScriptFlags
     or byte [ebp + esi], (1 << (7))
@@ -72,6 +73,7 @@ PewterPokecenter_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterPokecenter_TextPointers:
     dd PewterPokecenterNurseText
     dd PewterPokecenterGentlemanText
@@ -86,34 +88,40 @@ PewterPokecenterGentlemanText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterPokecenterJigglypuffText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PewterJigglypuff
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterPokecenterLinkReceptionistText:
     script_cable_club_receptionist
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterPokecenterCooltrainerFText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PewterPokecenterPrintCooltrainerFText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterPokecenterChanseyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PokecenterChanseyText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 PewterPokecenterPrintCooltrainerFText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _PewterPokecenterText3
     text_end
@@ -182,6 +190,7 @@ PewterPokecenterPrintCooltrainerFText:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _PewterPokecenterJigglypuffText
     text_end

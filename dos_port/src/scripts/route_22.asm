@@ -22,6 +22,7 @@ bits 32
 
 %include "assets/audio_constants.inc"
 
+global Route22DefaultScript
 global Route22FirstRivalBattleScript
 global Route22NoopScript
 global Route22PokemonLeagueSignText
@@ -67,7 +68,6 @@ extern Music_RivalAlternateTempo   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
 extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Route22DefaultScript   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRival1   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRival2   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRivalRightScript   ; NOT YET DEFINED IN THE PORT
@@ -116,6 +116,7 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route22_ScriptPointers
@@ -123,6 +124,7 @@ Route22_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22_ScriptPointers:
     dd Route22DefaultScript
     dd Route22Rival1StartBattleScript
@@ -134,6 +136,7 @@ Route22_ScriptPointers:
     dd Route22NoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22SetDefaultScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -142,6 +145,7 @@ Route22NoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Script_50ed6:
     mov al, OPP_RIVAL1
     mov [ebp + wCurOpponent], al
@@ -150,6 +154,7 @@ Route22Script_50ed6:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Script_50ee1:
     mov al, OPP_RIVAL2
     mov [ebp + wCurOpponent], al
@@ -174,6 +179,7 @@ Route22Script_50ee1:
 ; PRET| 	jp SetSpriteFacingDirectionAndDelay
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22RivalMovementData:
     db NPC_MOVEMENT_RIGHT
     db NPC_MOVEMENT_RIGHT
@@ -181,36 +187,41 @@ Route22RivalMovementData:
     db NPC_MOVEMENT_RIGHT
     db -1
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] Route22DefaultScript (scripts/Route22.asm:60-77) — at scripts/Route22.asm:75: CheckEventReuseA EVENT_2ND_ROUTE22_RIVAL_BATTLE
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_ROUTE22_RIVAL_WANTS_BATTLE
-; PRET| 	ret z
-; PRET| 	ld hl, .Route22RivalBattleCoords
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	ret nc
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	ld [wSavedCoordIndex], a
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, PLAYER_DIR_LEFT
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	CheckEvent EVENT_1ST_ROUTE22_RIVAL_BATTLE
-; PRET| 	jr nz, Route22FirstRivalBattleScript
-; PRET| 	CheckEventReuseA EVENT_2ND_ROUTE22_RIVAL_BATTLE
-; PRET| 	jp nz, Route22SecondRivalBattleScript
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+Route22DefaultScript:
+    CheckEvent EVENT_ROUTE22_RIVAL_WANTS_BATTLE
+    jnz .nr_61
+        ret
+.nr_61:
+    mov esi, .Route22RivalBattleCoords
+    call ArePlayerCoordsInArray
+    jb .nr_64
+        ret
+.nr_64:
+    mov al, [ebp + wCoordIndex]
+    mov [ebp + wSavedCoordIndex], al
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, PLAYER_DIR_LEFT
+    mov [ebp + wPlayerMovingDirection], al
+    CheckEvent EVENT_1ST_ROUTE22_RIVAL_BATTLE
+    jnz Route22FirstRivalBattleScript
+    CheckEventReuseA EVENT_2ND_ROUTE22_RIVAL_BATTLE
+    jnz Route22SecondRivalBattleScript
+    ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Route22RivalBattleCoords:
     db 4, 29
     db 5, 29
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22FirstRivalBattleScript:
     mov al, 1
     mov [ebp + wEmotionBubbleSpriteIndex], al
@@ -249,6 +260,7 @@ Route22FirstRivalBattleScript:
 ; PRET| 	jr .set_rival_facing_direction
 
 %assign event_byte -1
+%assign event_byte_a -1
 .set_rival_facing_right:
     mov al, SPRITE_FACING_RIGHT
 .set_rival_facing_direction:
@@ -273,6 +285,7 @@ Route22FirstRivalBattleScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Rival1DefeatedText:
     text_far _Route22Rival1DefeatedText
     text_end
@@ -351,6 +364,7 @@ Route22Rival1VictoryText:
 ; PRET| 	jp MoveSprite
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Rival1ExitMovementData1:
     db NPC_MOVEMENT_RIGHT
     db NPC_MOVEMENT_RIGHT
@@ -374,6 +388,7 @@ Route22Rival1ExitMovementData2:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Rival1ExitScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -393,6 +408,7 @@ Route22Rival1ExitScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22SecondRivalBattleScript:
     mov al, 2
     mov [ebp + wEmotionBubbleSpriteIndex], al
@@ -433,6 +449,7 @@ Route22SecondRivalBattleScript:
 ; PRET| 	jr .set_rival_facing_direction
 
 %assign event_byte -1
+%assign event_byte_a -1
 .set_player_direction_left:
     mov al, PLAYER_DIR_LEFT
     mov [ebp + wPlayerMovingDirection], al
@@ -457,6 +474,7 @@ Route22SecondRivalBattleScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Rival2DefeatedText:
     text_far _Route22Rival2DefeatedText
     text_end
@@ -533,6 +551,7 @@ Route22Rival2VictoryText:
 ; PRET| 	jp MoveSprite
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Rival2ExitMovementData1:
     db NPC_MOVEMENT_LEFT
 Route22Rival2ExitMovementData2:
@@ -542,6 +561,7 @@ Route22Rival2ExitMovementData2:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Rival2ExitScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -561,30 +581,35 @@ Route22Rival2ExitScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22_TextPointers:
     dd Route22Rival1Text
     dd Route22Rival2Text
     dd Route22PokemonLeagueSignText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Rival1Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Route22PrintRival1Text
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22Rival2Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Route22PrintRival2Text
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22PokemonLeagueSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Route22PrintPokemonLeagueSignText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22PrintRival1Text:
     CheckEvent EVENT_BEAT_ROUTE22_RIVAL_1ST_BATTLE
     jz .before_battle
@@ -593,6 +618,7 @@ Route22PrintRival1Text:
     jmp .text_script_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 .before_battle:
     mov esi, Route22RivalBeforeBattleText1
     call PrintText
@@ -600,6 +626,7 @@ Route22PrintRival1Text:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22RivalBeforeBattleText1:
     text_far _Route22RivalBeforeBattleText1
     text_end
@@ -608,6 +635,7 @@ Route22RivalAfterBattleText1:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22PrintRival2Text:
     CheckEvent EVENT_BEAT_ROUTE22_RIVAL_2ND_BATTLE
     jz .before_battle
@@ -616,6 +644,7 @@ Route22PrintRival2Text:
     jmp .text_script_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 .before_battle:
     mov esi, Route22RivalBeforeBattleText2
     call PrintText
@@ -623,6 +652,7 @@ Route22PrintRival2Text:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22RivalBeforeBattleText2:
     text_far _Route22RivalBeforeBattleText2
     text_end
@@ -631,12 +661,14 @@ Route22RivalAfterBattleText2:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route22PrintPokemonLeagueSignText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _Route22PokemonLeagueSignText
     text_end

@@ -59,6 +59,7 @@ wRockTunnelB1FCurScript                        equ 0xD61F
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 RockTunnelB1F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, RockTunnel2TrainerHeaders
@@ -71,48 +72,56 @@ RockTunnelB1F_Script:
 ; RockTunnelB1F_ScriptPointers (scripts/RockTunnelB1F.asm:11-45) — not re-emitted: RockTunnel2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 RockTunnelB1FCooltrainerF1Text:
     mov esi, RockTunnel2TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RockTunnelB1FHiker1Text:
     mov esi, RockTunnel2TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RockTunnelB1FSuperNerd1Text:
     mov esi, RockTunnel2TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RockTunnelB1FSuperNerd2Text:
     mov esi, RockTunnel2TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RockTunnelB1FHiker2Text:
     mov esi, RockTunnel2TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RockTunnelB1FCooltrainerF2Text:
     mov esi, RockTunnel2TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RockTunnelB1FHiker3Text:
     mov esi, RockTunnel2TrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RockTunnelB1FSuperNerd3Text:
     mov esi, RockTunnel2TrainerHeader7
     call TalkToTrainer

@@ -41,14 +41,17 @@ extern _SafariZoneSecretHouseFishingGuruYouHaveWonText   ; NOT YET DEFINED IN TH
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneSecretHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneSecretHouse_TextPointers:
     dd SafariZoneSecretHouseFishingGuruText
 
 %assign event_byte -1
+%assign event_byte_a -1
 SafariZoneSecretHouseFishingGuruText:
     CheckEvent EVENT_GOT_HM03
     jnz .got_item
@@ -63,12 +66,14 @@ SafariZoneSecretHouseFishingGuruText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .HM03NoRoomText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .HM03ExplanationText
     call PrintText
@@ -76,6 +81,7 @@ SafariZoneSecretHouseFishingGuruText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .YouHaveWonText:
     text_far _SafariZoneSecretHouseFishingGuruYouHaveWonText
     text_end

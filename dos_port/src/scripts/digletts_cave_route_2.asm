@@ -36,12 +36,14 @@ extern _DiglettsCaveRoute2FishingGuruText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 DiglettsCaveRoute2_Script:
     mov al, ROUTE_2
     mov [ebp + wLastMap], al
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 DiglettsCaveRoute2_TextPointers:
     dd DiglettsCaveRoute2FishingGuruText
 DiglettsCaveRoute2FishingGuruText:

@@ -59,6 +59,7 @@ wPokemonMansion1FCurScript                     equ 0xD639
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion1F_Script:
     call Mansion1CheckReplaceSwitchDoorBlocks
     call EnableAutoTextBoxDrawing
@@ -70,6 +71,7 @@ PokemonMansion1F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Mansion1CheckReplaceSwitchDoorBlocks:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -91,6 +93,7 @@ Mansion1CheckReplaceSwitchDoorBlocks:
     jmp Mansion1LoadHorizontalGateBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 .switchTurnedOn:
     mov bx, ((6) << 8) | (12)
     call Mansion1LoadHorizontalGateBlock
@@ -102,12 +105,14 @@ Mansion1CheckReplaceSwitchDoorBlocks:
     jmp Mansion1LoadEmptyFloorTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 Mansion1LoadHorizontalGateBlock:
     mov al, 0x2d
     mov [ebp + wNewTileBlockID], al
     jmp Mansion1ReplaceBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 Mansion1LoadEmptyFloorTileBlock:
     mov al, 0xe
     mov [ebp + wNewTileBlockID], al
@@ -121,6 +126,7 @@ Mansion1ReplaceBlock:
 ; PokemonMansion1F_ScriptPointers (scripts/PokemonMansion1F.asm:59-75) — not re-emitted: Mansion1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion1FScientistText:
     mov esi, Mansion1TrainerHeader0
     call TalkToTrainer
@@ -129,6 +135,7 @@ PokemonMansion1FScientistText:
 ; PokemonMansion1FScientistBattleText (scripts/PokemonMansion1F.asm:84-93) — not re-emitted: PokemonMansion1FScientistBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion1FSwitchText:
     mov esi, .Text
     call PrintText
@@ -150,6 +157,7 @@ PokemonMansion1FSwitchText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .not_pressed:
     mov esi, .NotPressedText
     call PrintText
@@ -157,6 +165,7 @@ PokemonMansion1FSwitchText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _PokemonMansion1FSwitchText
     text_end

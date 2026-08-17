@@ -57,6 +57,7 @@ extern _CeruleanBadgeHouseVolcanoBadgeText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeruleanBadgeHouse_Script:
     mov al, 1 << BIT_NO_AUTO_TEXT_BOX
     mov [ebp + wAutoTextBoxDrawingControl], al
@@ -65,6 +66,7 @@ CeruleanBadgeHouse_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeruleanBadgeHouse_TextPointers:
     dd CeruleanBadgeHouseMiddleAgedManText
 
@@ -108,6 +110,7 @@ CeruleanBadgeHouse_TextPointers:
 ; PRET| 	jr .loop
 
 %assign event_byte -1
+%assign event_byte_a -1
 .done:
     xor al, al
     mov [ebp + wListScrollOffset], al
@@ -116,6 +119,7 @@ CeruleanBadgeHouse_TextPointers:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .BadgeItemList:
     db 8
     db 21

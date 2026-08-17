@@ -304,6 +304,62 @@ operand (`db _NARG / db \# / db -1`, a variadic item list, Tier-1 data owned by 
 generator; `PASSTHROUGH_DATA` models fixed arity only). Zero sites bail on it
 today, so the reason code `text-script-mart-item-list` is currently unexercised.
 
+## *ReuseA pass (2026-08-17) — 81.2% → 82.5%
+
+Regions lowered 2,055 → **2,088**; bails 475 → **444**. `event-byte-assembly-state`
+15 → **0**. Decomposed: −13 event-byte, −18 cascade, 2 changed reason (both to
+`target-region-bailed`, i.e. still cascade), **0 regions started bailing**.
+
+The `*ReuseA` family is the A-register sibling of the `*ReuseHL` mirrors from the
+first pass, and it gets the same treatment: the elision lives in the ASSEMBLER, so
+the tool passes the macro through instead of reconstructing rgbasm's bookkeeping.
+
+**It needs its OWN tracker, and that is the whole subtlety.** pret shares one
+`event_byte` across both families because pret's `CheckEvent` loads **A** while
+pret's `SetEvent` loads **HL** — each family reads back the register its own
+predecessor established. The port cannot share it: `SetEvent`/`ResetEvent` here
+are read-modify-write through **AL** (there is no `set n,[hl]` to mirror), so a
+single variable would let an HL-family predecessor license an A-family elision
+against a register it never loaded. Hence `event_byte_a`, separate from
+`event_byte`. Splitting can only ever cause an EXTRA reload — the safe direction.
+
+**Measured before trusting it:** all **15** `CheckEventReuseA` sites in pret
+`scripts/` are immediately preceded by a plain `CheckEvent` — the two families are
+never mixed — and the port's `CheckEvent` loads AL with the same byte pret's loads
+into A. So at every real site the register genuinely holds what the elision
+assumes. Everything that clobbers AL (`SetEvent`, `ResetEvent`, `CheckAndSet*`,
+`CheckAndReset*`, and both `Check*EventsSet`, which are path-dependent) sets
+`event_byte_a = -1`, and the emitter resets it at each region head beside
+`event_byte` (same SEAM RULE).
+
+All 15 sites turn out to be same-byte pairs — which is *why* pret uses the macro
+there — so the corpus exercises only the elide path. The reload path was therefore
+proven directly, from a NASM listing, counting the loads the macro itself emits:
+
+| case | expectation | result |
+|---|---|---|
+| same byte | elide (0 loads) | PASS |
+| different byte | reload | PASS |
+| after the seam reset | reload | PASS |
+| after an intervening `SetEvent` | reload | PASS |
+| `AfterBranch` form, matching byte | reload (never elides) | PASS |
+
+Spot-checked against pret at `PewterGym.asm:103`: `CheckEvent EVENT_BEAT_BROCK`
+(byte 14, bit 7) then `CheckEventReuseA EVENT_GOT_TM34` (byte 14, bit 6) emits
+`8A8554D70000 / A880` then **no load** and `A840` — the elision firing exactly
+where pret's does.
+
+Two shadowing aliases died with this: `%define CheckEventReuseA CheckEvent` and
+`%define CheckEventAfterBranchReuseA CheckEvent`. The second carried the same
+2-arg-onto-1-arg defect the `*ReuseHL` aliases had — it could never have
+assembled. `CheckEitherEventSetReuseA` keeps its alias: zero call sites in pret
+`scripts/` and none in the port, so there is nothing to measure a mirror against,
+and the alias reloads unconditionally.
+
+`PKMN.EXE` byte-identical across the change (measured, not assumed —
+`%assign` emits no code), `pkmn.sym` unchanged, 224/224 assemble, static_gate
+PASS, lint 0, core fidelity 16/16.
+
 ## Stage 0 corrections to this plan's own figures (measured 2026-08-16)
 
 Each is pinned by a test in `tools/sm83xlat/tests/test_stage0.py`, so a later

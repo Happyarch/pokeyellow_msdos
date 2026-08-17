@@ -41,16 +41,19 @@ extern _Route18Gate2FRightBinocularsText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate2F_Script:
     jmp DisableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate2F_TextPointers:
     dd Route18Gate2FCookText
     dd Route18Gate2FLeftBinocularsText
     dd Route18Gate2FRightBinocularsText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate2FCookText:
     mov al, 5
     mov [ebp + wWhichTrade], al
@@ -59,21 +62,25 @@ Route18Gate2FCookText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate2FLeftBinocularsText:
     mov esi, .Text
     jmp GateUpstairsScript_PrintIfFacingUp
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _Route18Gate2FLeftBinocularsText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route18Gate2FRightBinocularsText:
     mov esi, .Text
     jmp GateUpstairsScript_PrintIfFacingUp
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _Route18Gate2FRightBinocularsText
     text_end

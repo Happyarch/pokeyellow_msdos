@@ -57,6 +57,7 @@ wPokemonMansion2FCurScript                     equ 0xD63B
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion2F_Script:
     call Mansion2CheckReplaceSwitchDoorBlocks
     call EnableAutoTextBoxDrawing
@@ -68,6 +69,7 @@ PokemonMansion2F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Mansion2CheckReplaceSwitchDoorBlocks:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -91,6 +93,7 @@ Mansion2CheckReplaceSwitchDoorBlocks:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .switchTurnedOn:
     mov al, 0x5f
     mov bx, ((2) << 8) | (4)
@@ -104,6 +107,7 @@ Mansion2CheckReplaceSwitchDoorBlocks:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Mansion2ReplaceBlock:
     mov [ebp + wNewTileBlockID], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
@@ -114,6 +118,7 @@ Mansion2ReplaceBlock:
 ; PokemonMansion2F_ScriptPointers (scripts/PokemonMansion2F.asm:55-72) — not re-emitted: Mansion2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion2FSuperNerdText:
     mov esi, Mansion2TrainerHeader0
     call TalkToTrainer
@@ -122,6 +127,7 @@ PokemonMansion2FSuperNerdText:
 ; PokemonMansion2FSuperNerdBattleText (scripts/PokemonMansion2F.asm:81-98) — not re-emitted: PokemonMansion2FSuperNerdBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion2FSwitchText:
     mov esi, .Text
     call PrintText
@@ -143,6 +149,7 @@ PokemonMansion2FSwitchText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .not_pressed:
     mov esi, .NotPressed
     call PrintText
@@ -150,6 +157,7 @@ PokemonMansion2FSwitchText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _PokemonMansion2FSwitchText
     text_end

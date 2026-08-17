@@ -39,11 +39,13 @@ extern _CeladonMansionRoofHouseHikerText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansionRoofHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansionRoofHouse_TextPointers:
     dd CeladonMansionRoofHouseHikerText
     dd CeladonMansionRoofHouseEeveePokeballText
@@ -52,6 +54,7 @@ CeladonMansionRoofHouseHikerText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansionRoofHouseEeveePokeballText:
     mov bx, ((102) << 8) | (25)
     call GivePokemon

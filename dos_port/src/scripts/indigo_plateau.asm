@@ -31,8 +31,10 @@ global IndigoPlateau_TextPointers
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 IndigoPlateau_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 IndigoPlateau_TextPointers:

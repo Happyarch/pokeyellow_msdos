@@ -58,11 +58,13 @@ extern _BikeShopYoungsterTheseBikesAreExpensiveText   ; NOT YET DEFINED IN THE P
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 BikeShop_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 BikeShop_TextPointers:
     dd BikeShopClerkText
     dd BikeShopMiddleAgedWomanText
@@ -198,17 +200,20 @@ BikeShop_TextPointers:
 ; PRET| 	text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 BikeShopMiddleAgedWomanText:
     mov esi, .Text
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _BikeShopMiddleAgedWomanText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 BikeShopYoungsterText:
     CheckEvent EVENT_GOT_BICYCLE
     mov esi, .CoolBikeText
@@ -219,6 +224,7 @@ BikeShopYoungsterText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .TheseBikesAreExpensiveText:
     text_far _BikeShopYoungsterTheseBikesAreExpensiveText
     text_end

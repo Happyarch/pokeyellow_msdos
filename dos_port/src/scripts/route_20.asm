@@ -68,6 +68,7 @@ wRoute20CurScript                              equ 0xD627
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20_Script:
     CheckAndResetEvent EVENT_IN_SEAFOAM_ISLANDS
     jz .sk_3
@@ -82,6 +83,7 @@ Route20_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20BoulderScript:
     CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
     jz .next_boulder_check
@@ -101,6 +103,7 @@ Route20BoulderScript:
     jmp .hide_toggleable_objects
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ToggleableObjectIDs:
     db 225
     db 226
@@ -111,6 +114,7 @@ Route20BoulderScript:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 .next_boulder_check:
     CheckBothEventsSet EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE
     jnz .nr_40
@@ -127,12 +131,14 @@ Route20BoulderScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20ShowObjectScript:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     jmp ShowObject
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20HideObjectScript:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
@@ -141,60 +147,70 @@ Route20HideObjectScript:
 ; Route20_ScriptPointers (scripts/Route20.asm:60-102) — not re-emitted: Route20TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20Swimmer1Text:
     mov esi, Route20TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20Swimmer2Text:
     mov esi, Route20TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20Swimmer3Text:
     mov esi, Route20TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20Swimmer4Text:
     mov esi, Route20TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20Swimmer5Text:
     mov esi, Route20TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20Swimmer6Text:
     mov esi, Route20TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20CooltrainerMText:
     mov esi, Route20TrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20Swimmer7Text:
     mov esi, Route20TrainerHeader7
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20Swimmer8Text:
     mov esi, Route20TrainerHeader8
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route20Swimmer9Text:
     mov esi, Route20TrainerHeader9
     call TalkToTrainer

@@ -36,6 +36,7 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 RedsHouse2F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, RedsHouse2F_ScriptPointers
@@ -44,6 +45,7 @@ RedsHouse2F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RedsHouse2F_ScriptPointers:
     dd RedsHouse2FDefaultScript
     dd RedsHouse2FDefaultScript
@@ -52,9 +54,11 @@ RedsHouse2F_ScriptPointers:
     dd RedsHouse2FDefaultScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 RedsHouse2FDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RedsHouse2F_TextPointers:
     text_end

@@ -65,6 +65,7 @@ wRoute19CurScript                              equ 0xD61C
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route19TrainerHeaders
@@ -77,51 +78,61 @@ Route19_Script:
 ; Route19_ScriptPointers (scripts/Route19.asm:11-52) — not re-emitted: Route19_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19CooltrainerM1Text:
     mov esi, Route19TrainerHeader0
     jmp Route19_TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19CooltrainerM2Text:
     mov esi, Route19TrainerHeader1
     jmp Route19_TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19Swimmer1Text:
     mov esi, Route19TrainerHeader2
     jmp Route19_TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19Swimmer2Text:
     mov esi, Route19TrainerHeader3
     jmp Route19_TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19Swimmer3Text:
     mov esi, Route19TrainerHeader4
     jmp Route19_TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19Swimmer4Text:
     mov esi, Route19TrainerHeader5
     jmp Route19_TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19Swimmer5Text:
     mov esi, Route19TrainerHeader6
     jmp Route19_TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19Swimmer6Text:
     mov esi, Route19TrainerHeader7
     jmp Route19_TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19Swimmer7Text:
     mov esi, Route19TrainerHeader8
     jmp Route19_TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route19Swimmer8Text:
     mov esi, Route19TrainerHeader9
 Route19_TalkToTrainer:

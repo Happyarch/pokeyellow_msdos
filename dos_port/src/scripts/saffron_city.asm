@@ -81,10 +81,12 @@ extern _SaffronCityTrainerTips2Text   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronCity_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronCity_TextPointers:
     dd SaffronCityRocket1Text
     dd SaffronCityRocket2Text

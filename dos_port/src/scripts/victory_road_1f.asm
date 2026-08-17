@@ -53,6 +53,7 @@ wVictoryRoad1FCurScript                        equ 0xD650
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad1F_Script:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -71,6 +72,7 @@ VictoryRoad1F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .next:
     CheckEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
     jnz .nr_15
@@ -83,6 +85,7 @@ VictoryRoad1F_Script:
     jmp ReplaceTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad1F_ScriptPointers:
     dd VictoryRoad1FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -108,12 +111,14 @@ VictoryRoad1F_ScriptPointers:
 ; VictoryRoad1FDefaultScript.SwitchCoords (scripts/VictoryRoad1F.asm:42-61) — not re-emitted: VictoryRoad1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad1FCooltrainerFText:
     mov esi, VictoryRoad1TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad1FCooltrainerMText:
     mov esi, VictoryRoad1TrainerHeader1
     call TalkToTrainer

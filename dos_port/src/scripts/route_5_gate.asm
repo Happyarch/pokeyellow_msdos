@@ -63,6 +63,7 @@ wRoute5GateCurScript                           equ 0xD661
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route5Gate_Script:
     call EnableAutoTextBoxDrawing
     mov al, [ebp + wRoute5GateCurScript]
@@ -70,11 +71,13 @@ Route5Gate_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route5Gate_ScriptPointers:
     dd Route5GateDefaultScript
     dd Route5GatePlayerMovingScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route5GateMovePlayerUpScript:
     mov al, PAD_UP
     mov [ebp + wSimulatedJoypadStatesEnd], al
@@ -83,6 +86,7 @@ Route5GateMovePlayerUpScript:
     jmp StartSimulatingJoypadStates
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route5GateDefaultScript:
     mov al, [ebp + wStatusFlags1]
     setc ah                     ; SM83 `bit` preserves C — stash it
@@ -114,6 +118,7 @@ Route5GateDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .have_drink:
     mov al, TEXT_ROUTE5GATE_GUARD_GIVE_DRINK
     mov [ebp + hTextID], al
@@ -123,12 +128,14 @@ Route5GateDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PlayerInCoordsArray:
     db 3, 3
     db 3, 4
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route5GatePlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -142,12 +149,14 @@ Route5GatePlayerMovingScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route5Gate_TextPointers:
     dd SaffronGateGuardText
     dd SaffronGateGuardGeeImThirstyText
     dd SaffronGateGuardGiveDrinkText
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGateGuardText:
     mov al, [ebp + wStatusFlags1]
     test al, (1 << (6))
@@ -165,6 +174,7 @@ SaffronGateGuardText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .have_drink:
     mov esi, SaffronGateGuardGiveDrinkText
     call PrintText
@@ -173,12 +183,14 @@ SaffronGateGuardText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .thanks_for_drink:
     mov esi, SaffronGateGuardThanksForTheDrinkText
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGateGuardGeeImThirstyText:
     text_far _SaffronGateGuardGeeImThirstyText
     text_end

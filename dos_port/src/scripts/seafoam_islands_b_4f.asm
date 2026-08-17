@@ -76,6 +76,7 @@ wSeafoamIslandsB4FCurScript                    equ 0xD667
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4F_Script:
     call EnableAutoTextBoxDrawing
     mov al, [ebp + wSeafoamIslandsB4FCurScript]
@@ -83,6 +84,7 @@ SeafoamIslandsB4F_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4FResetScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -91,6 +93,7 @@ SeafoamIslandsB4FResetScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4F_ScriptPointers:
     dd SeafoamIslandsB4FDefaultScript
     dd SeafoamIslandsB4FObjectMoving1Script
@@ -99,6 +102,7 @@ SeafoamIslandsB4F_ScriptPointers:
     dd SeafoamIslandsB4FObjectMoving3Script
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4FObjectMoving3Script:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -109,6 +113,7 @@ SeafoamIslandsB4FObjectMoving3Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4FDefaultScript:
     CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
     jnz .nr_34
@@ -128,6 +133,7 @@ SeafoamIslandsB4FDefaultScript:
     jmp .forcePlayerUpFromSurfExit
 
 %assign event_byte -1
+%assign event_byte_a -1
 .only1UpInputNeeded:
     mov al, 1
 .forcePlayerUpFromSurfExit:
@@ -142,6 +148,7 @@ SeafoamIslandsB4FDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Coords:
     db 17, 20
     db 17, 21
@@ -150,6 +157,7 @@ SeafoamIslandsB4FDefaultScript:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4FObjectMoving1Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -180,6 +188,7 @@ SeafoamIslandsB4FObjectMoving1Script:
 ; PRET| 	jr .forceSurfMovement
 
 %assign event_byte -1
+%assign event_byte_a -1
 .nearRightBoulder:
     mov edi, .RLEList_StrongCurrentNearRightBoulder   ; pret: ld de, .RLEList_StrongCurrentNearRightBoulder — DecodeRLEList takes it in EDI
 .forceSurfMovement:
@@ -194,6 +203,7 @@ SeafoamIslandsB4FObjectMoving1Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Coords:
     db 14, 4
     db 14, 5
@@ -210,6 +220,7 @@ SeafoamIslandsB4FObjectMoving1Script:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4FObjectMoving2Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     mov bh, al
@@ -227,6 +238,7 @@ SeafoamIslandsB4FObjectMoving2Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .doneForcedSurfMovement:
     xor al, al
     mov [ebp + wWalkBikeSurfState], al
@@ -253,6 +265,7 @@ SeafoamIslandsB4FObjectMoving2Script:
 ; PRET| 	db -1 ; end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4FArticunoText:
     mov esi, ArticunoTrainerHeader
     call TalkToTrainer
@@ -261,16 +274,19 @@ SeafoamIslandsB4FArticunoText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4FArticunoBattleText:
     text_far _SeafoamIslandsB4FArticunoBattleText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 74
     call PlayCry
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslandsB4FBouldersSignText:
     text_far _SeafoamIslandsB4FBouldersSignText
     text_end

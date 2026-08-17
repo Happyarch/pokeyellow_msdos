@@ -41,10 +41,12 @@ extern _LavenderMartCooltrainerMReviveText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 LavenderMart_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 LavenderMart_TextPointers:
     dd LavenderMartClerkText
     dd LavenderMartBaldingGuyText
@@ -54,6 +56,7 @@ LavenderMartBaldingGuyText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 LavenderMartCooltrainerMText:
     CheckEvent EVENT_RESCUED_MR_FUJI
     jnz .Nugget
@@ -62,6 +65,7 @@ LavenderMartCooltrainerMText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Nugget:
     mov esi, .NuggetText
     call PrintText
@@ -69,6 +73,7 @@ LavenderMartCooltrainerMText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ReviveText:
     text_far _LavenderMartCooltrainerMReviveText
     text_end

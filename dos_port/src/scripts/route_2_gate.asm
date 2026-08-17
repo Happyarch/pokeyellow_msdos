@@ -49,15 +49,18 @@ wOaksAideRewardItemName                        equ 0xCC5B
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route2Gate_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route2Gate_TextPointers:
     dd Route2GateOaksAideText
     dd Route2GateYoungsterText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route2GateOaksAideText:
     CheckEvent EVENT_GOT_HM05
     jnz .got_item
@@ -84,6 +87,7 @@ Route2GateOaksAideText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .FlashExplanationText:
     text_far _Route2GateOaksAideFlashExplanationText
     text_end

@@ -62,11 +62,13 @@ wPriceTemp                                     equ 0xCD3D
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 MtMoonPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 MtMoonPokecenter_TextPointers:
     dd MtMoonPokecenterNurseText
     dd MtMoonPokecenterYoungsterText
@@ -85,12 +87,14 @@ MtMoonPokecenterGentlemanText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 MtMoonPokecenterMagikarpSalesmanText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call MagikarpSalesman
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 MtMoonPokecenterClipboardText:
     text_far _MtMoonPokecenterClipboardText
     text_end
@@ -98,6 +102,7 @@ MtMoonPokecenterLinkReceptionistText:
     script_cable_club_receptionist
 
 %assign event_byte -1
+%assign event_byte_a -1
 MtMoonPokecenterChanseyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PokecenterChanseyText
@@ -129,6 +134,7 @@ MtMoonPokecenterChanseyText:
 ; PRET| 	jr .printText
 
 %assign event_byte -1
+%assign event_byte_a -1
 .enoughMoney:
     mov bx, ((MAGIKARP) << 8) | (5)
     call GivePokemon
@@ -150,11 +156,13 @@ MtMoonPokecenterChanseyText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .choseNo:
     mov esi, .NoText
     jmp .printText
 
 %assign event_byte -1
+%assign event_byte_a -1
 .alreadyBoughtMagikarp:
     mov esi, .NoRefundsText
 .printText:
@@ -163,6 +171,7 @@ MtMoonPokecenterChanseyText:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .IGotADealText:
     text_far _MtMoonPokecenterMagikarpSalesmanIGotADealText
     text_end

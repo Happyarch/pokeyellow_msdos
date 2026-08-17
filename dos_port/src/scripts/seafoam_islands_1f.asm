@@ -47,6 +47,7 @@ wObjectToShow                                  equ 0xD079
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SeafoamIslands1F_Script:
     call EnableAutoTextBoxDrawing
     pushfd    ; SM83 form writes no flags
@@ -78,6 +79,7 @@ SeafoamIslands1F_Script:
     jmp .hideAndShowBoulderObjects
 
 %assign event_byte -1
+%assign event_byte_a -1
 .boulder2FellDownHole:
     SetEventAfterBranchReuseHL EVENT_SEAFOAM1_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM1_BOULDER1_DOWN_HOLE
     mov al, 224
@@ -95,6 +97,7 @@ SeafoamIslands1F_Script:
     jmp ShowObject
 
 %assign event_byte -1
+%assign event_byte_a -1
 .noBoulderWasPushed:
     mov al, SEAFOAM_ISLANDS_B1F
     mov [ebp + wDungeonWarpDestinationMap], al
@@ -102,6 +105,7 @@ SeafoamIslands1F_Script:
     jmp IsPlayerOnDungeonWarp
 
 %assign event_byte -1
+%assign event_byte_a -1
 Seafoam1HolesCoords:
     db 6, 17
     db 6, 24

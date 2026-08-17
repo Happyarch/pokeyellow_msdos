@@ -38,10 +38,12 @@ extern _GameCornerPrizeRoomGamblerText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerPrizeRoom_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerPrizeRoom_TextPointers:
     dd GameCornerPrizeRoomBaldingGuyText
     dd GameCornerPrizeRoomGamblerText

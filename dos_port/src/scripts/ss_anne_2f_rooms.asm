@@ -74,6 +74,7 @@ wSSAnne2FRoomsCurScript                        equ 0xD608
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRooms_Script:
     call DisableAutoTextBoxDrawing
     mov esi, SSAnne9TrainerHeaders
@@ -86,30 +87,35 @@ SSAnne2FRooms_Script:
 ; SSAnne2FRooms_ScriptPointers (scripts/SSAnne2FRooms.asm:11-42) — not re-emitted: SSAnne9TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsGentleman1Text:
     mov esi, SSAnne9TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsFisherText:
     mov esi, SSAnne9TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsGentleman2Text:
     mov esi, SSAnne9TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsCooltrainerFText:
     mov esi, SSAnne9TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsGentleman3Text:
     call SaveScreenTilesToBuffer1
     mov esi, .Text
@@ -120,51 +126,60 @@ SSAnne2FRoomsGentleman3Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _SSAnne2FRoomsGentleman3Text
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsGentleman4Text:
     mov esi, .Text
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _SSAnne2FRoomsGentleman4Text
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsGrampsText:
     mov esi, .Text
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _SSAnne2FRoomsGrampsText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsGentleman5Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call SSAnne2FRoomsPrintGentleman5Text
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsLittleBoyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call SSAnne2FRoomsPrintLittleBoyText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsBrunetteGirlText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call SSAnne2FRoomsPrintBrunetteGirlText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsBeautyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call SSAnne2FRoomsPrintBeautyText
@@ -173,45 +188,53 @@ SSAnne2FRoomsBeautyText:
 ; SSAnne2FRoomsGentleman1BattleText (scripts/SSAnne2FRooms.asm:123-168) — not re-emitted: SSAnne2FRoomsGentleman1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsPrintGentleman5Text:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _SSAnne2FRoomsGentleman5Text
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsPrintLittleBoyText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _SSAnne2FRoomsLittleBoyText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsPrintBrunetteGirlText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _SSAnne2FRoomsBrunetteGirlText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRoomsPrintBeautyText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _SSAnne2FRoomsBeautyText
     text_end

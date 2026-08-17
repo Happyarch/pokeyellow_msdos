@@ -56,10 +56,12 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route11Gate2F_Script:
     jmp DisableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route11Gate2F_TextPointers:
     dd Route11Gate2FYoungsterText
     dd Route11Gate2FOaksAideText
@@ -67,6 +69,7 @@ Route11Gate2F_TextPointers:
     dd Route11Gate2FRightBinocularsText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route11Gate2FYoungsterText:
     mov al, 0
     mov [ebp + wWhichTrade], al
@@ -104,11 +107,13 @@ Route11Gate2FScriptEnd:
 ; PRET| 	jr Route11Gate2FScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ItemfinderDescriptionText:
     text_far _Route11Gate2FOaksAideItemfinderDescriptionText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route11Gate2FLeftBinocularsText:
     mov al, [ebp + wSpritePlayerStateData1FacingDirection]
     cmp al, SPRITE_FACING_UP
@@ -122,6 +127,7 @@ Route11Gate2FLeftBinocularsText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .SnorlaxText:
     text_far _Route11Gate2FLeftBinocularsSnorlaxText
     text_end
@@ -130,11 +136,13 @@ Route11Gate2FLeftBinocularsText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route11Gate2FRightBinocularsText:
     mov esi, .Text
     jmp GateUpstairsScript_PrintIfFacingUp
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _Route11Gate2FRightBinocularsText
     text_end

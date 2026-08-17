@@ -73,6 +73,7 @@ wSilphCo6FCurScript                            equ 0xD646
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo6F_Script:
     call SilphCo6F_GateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -84,6 +85,7 @@ SilphCo6F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo6F_GateCallbackScript:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -107,11 +109,13 @@ SilphCo6F_GateCallbackScript:
     jmp ReplaceTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 .GateCoordinates:
     db 6, 2
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo6F_UnlockedDoorEventScript:
     mov al, [ebp + hUnlockedSilphCoDoors]
     test al, al
@@ -150,6 +154,7 @@ SilphCo6F_UnlockedDoorEventScript:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .TookOverTheBuildingText:
     text_far _SilphCo6FSilphWorkerM1TookOverTheBuildingText
     text_end
@@ -167,6 +172,7 @@ SilphCo6F_UnlockedDoorEventScript:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .HelpMePleaseText:
     text_far _SilphCo6FSilphWorkerMHelpMePleaseText
     text_end
@@ -184,6 +190,7 @@ SilphCo6F_UnlockedDoorEventScript:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .SuchACowardText:
     text_far _SilphCo6FSilphWorkerF1SuchACowardText
     text_end
@@ -201,6 +208,7 @@ SilphCo6F_UnlockedDoorEventScript:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .TeamRocketConquerWorldText:
     text_far _SilphCo6FSilphWorkerF2TeamRocketConquerWorldText
     text_end
@@ -218,6 +226,7 @@ SilphCo6F_UnlockedDoorEventScript:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .TargetedSilphText:
     text_far _SilphCo6FSilphWorkerM3TargetedSilphText
     text_end
@@ -226,6 +235,7 @@ SilphCo6F_UnlockedDoorEventScript:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo6FRocket1Text:
     mov esi, SilphCo6TrainerHeader0
     call TalkToTrainer
@@ -234,6 +244,7 @@ SilphCo6FRocket1Text:
 ; SilphCo6FRocket1BattleText (scripts/SilphCo6F.asm:158-167) — not re-emitted: SilphCo6FRocket1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo6FScientistText:
     mov esi, SilphCo6TrainerHeader1
     call TalkToTrainer
@@ -242,6 +253,7 @@ SilphCo6FScientistText:
 ; SilphCo6FScientistBattleText (scripts/SilphCo6F.asm:176-185) — not re-emitted: SilphCo6FScientistBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo6FRocket2Text:
     mov esi, SilphCo6TrainerHeader2
     call TalkToTrainer

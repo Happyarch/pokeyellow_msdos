@@ -41,10 +41,12 @@ extern _CeladonMart2FMiddleAgedManText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMart2F_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMart2F_TextPointers:
     dd CeladonMart2FClerk1Text
     dd CeladonMart2FClerk2Text

@@ -52,6 +52,7 @@ wWarpedFromWhichWarp                           equ 0xD73A
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCoElevator_Script:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -97,6 +98,7 @@ SilphCoElevator_Script:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCoElevatorCopyWarpMapsScript:
     mov esi, SilphCoElevatorFloors
     call LoadItemList
@@ -107,6 +109,7 @@ SilphCoElevatorCopyWarpMapsScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCoElevatorFloors:
     db 11
     db 86
@@ -135,6 +138,7 @@ SilphCoElevatorWarpMaps:
     db 1, SILPH_CO_11F
 
 %assign event_byte -1
+%assign event_byte_a -1
 .End:
 SilphCoElevatorShakeScript:
     call Delay3
@@ -143,10 +147,12 @@ SilphCoElevatorShakeScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCoElevator_TextPointers:
     dd SilphCoElevatorElevatorText
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCoElevatorElevatorText:
     call SilphCoElevatorCopyWarpMapsScript
     mov esi, SilphCoElevatorWarpMaps

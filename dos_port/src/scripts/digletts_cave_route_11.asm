@@ -36,6 +36,7 @@ extern _DiglettsCaveRoute11GamblerText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 DiglettsCaveRoute11_Script:
     call EnableAutoTextBoxDrawing
     mov al, ROUTE_11
@@ -43,6 +44,7 @@ DiglettsCaveRoute11_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 DiglettsCaveRoute11_TextPointers:
     dd DiglettsCaveRoute11GamblerText
 DiglettsCaveRoute11GamblerText:

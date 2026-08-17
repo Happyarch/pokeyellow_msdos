@@ -65,6 +65,7 @@ wVictoryRoad3FCurScript                        equ 0xD63F
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad3F_Script:
     call VictoryRoad3FCheckBoulderEventScript
     call EnableAutoTextBoxDrawing
@@ -76,6 +77,7 @@ VictoryRoad3F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad3FCheckBoulderEventScript:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -97,12 +99,14 @@ VictoryRoad3FCheckBoulderEventScript:
     jmp ReplaceTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad3F_ScriptPointers:
     dd VictoryRoad3FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad3FDefaultScript:
     mov esi, wMiscFlags
     setc ah                     ; SM83 `bit` preserves C — stash it
@@ -127,6 +131,7 @@ VictoryRoad3FDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .handle_hole:
     CheckAndSetEvent EVENT_VICTORY_ROAD_3_BOULDER_ON_SWITCH2
     jnz .check_switch_hole
@@ -140,12 +145,14 @@ VictoryRoad3FDefaultScript:
     jmp ShowObject
 
 %assign event_byte -1
+%assign event_byte_a -1
 .SwitchOrHoleCoords:
     db 5, 3
     db 15, 23
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 .check_switch_hole:
     mov al, VICTORY_ROAD_2F
     mov [ebp + wDungeonWarpDestinationMap], al
@@ -161,6 +168,7 @@ VictoryRoad3FDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .hole:
     mov al, [ebp + wStatusFlags3]
     test al, (1 << (4))
@@ -170,24 +178,28 @@ VictoryRoad3FDefaultScript:
 ; VictoryRoad3F_TextPointers (scripts/VictoryRoad3F.asm:82-104) — not re-emitted: VictoryRoad3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad3FCooltrainerM1Text:
     mov esi, VictoryRoad3TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad3FCooltrainerF1Text:
     mov esi, VictoryRoad3TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad3FCooltrainerM2Text:
     mov esi, VictoryRoad3TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad3FCooltrainerF2Text:
     mov esi, VictoryRoad3TrainerHeader3
     call TalkToTrainer

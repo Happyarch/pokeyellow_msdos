@@ -65,6 +65,7 @@ wPowerPlantCurScript                           equ 0xD662
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlant_Script:
     call EnableAutoTextBoxDrawing
     mov esi, PowerPlantTrainerHeaders
@@ -77,6 +78,7 @@ PowerPlant_Script:
 ; PowerPlant_ScriptPointers (scripts/PowerPlant.asm:11-53) — not re-emitted: PowerPlant_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantInitBattleScript:
     call TalkToTrainer
     mov al, [ebp + wCurMapScript]
@@ -84,46 +86,55 @@ PowerPlantInitBattleScript:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantVoltorb1Text:
     mov esi, Voltorb0TrainerHeader
     jmp PowerPlantInitBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantVoltorb2Text:
     mov esi, Voltorb1TrainerHeader
     jmp PowerPlantInitBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantVoltorb3Text:
     mov esi, Voltorb2TrainerHeader
     jmp PowerPlantInitBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantElectrode1Text:
     mov esi, Voltorb3TrainerHeader
     jmp PowerPlantInitBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantVoltorb4Text:
     mov esi, Voltorb4TrainerHeader
     jmp PowerPlantInitBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantVoltorb5Text:
     mov esi, Voltorb5TrainerHeader
     jmp PowerPlantInitBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantElectrode2Text:
     mov esi, Voltorb6TrainerHeader
     jmp PowerPlantInitBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantVoltorb6Text:
     mov esi, Voltorb7TrainerHeader
     jmp PowerPlantInitBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PowerPlantZapdosText:
     mov esi, ZapdosTrainerHeader
     jmp PowerPlantInitBattleScript
@@ -131,6 +142,7 @@ PowerPlantZapdosText:
 ; PowerPlantVoltorbBattleText (scripts/PowerPlant.asm:107-111) — not re-emitted: PowerPlantVoltorbBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 75
     call PlayCry
     call WaitForSoundToFinish

@@ -107,6 +107,7 @@ wSprite03StateData1MovementStatus              equ 0xC131
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClub_Script:
     call EnableAutoTextBoxDrawing
     mov esi, PokemonFanClub_ScriptPointers
@@ -115,11 +116,13 @@ PokemonFanClub_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClub_ScriptPointers:
     dd PokemonFanClubScript0
     dd PokemonFanClubScript1
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubScript0:
     mov esi, wPikachuMapScriptFlags
     test byte [ebp + esi], (1 << (7))
@@ -131,6 +134,7 @@ PokemonFanClubScript0:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubScript1:
     mov esi, wPikachuMapScriptFlags
     test byte [ebp + esi], (1 << (7))
@@ -142,6 +146,7 @@ PokemonFanClubScript1:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubScript_59a39:
     call Random
     mov al, [ebp + hRandomAdd]
@@ -152,6 +157,7 @@ PokemonFanClubScript_59a39:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubScript_59a44:
     mov al, [ebp + wPikachuSpawnStateFlags]
     setc ah                     ; SM83 `bit` preserves C — stash it
@@ -189,6 +195,7 @@ PokemonFanClubScript_59a44:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubPikachuMovementData:
     db 0x00
     db 0x26
@@ -206,6 +213,7 @@ PokemonFanClub_TextPointers:
     dd PokemonFanClubReceptionistText
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubClefairyFanText:
     mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
     test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
@@ -215,6 +223,7 @@ PokemonFanClubClefairyFanText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_59aaf:
     CheckEventReuseHL EVENT_PIKACHU_FAN_BOAST
     jnz .mineisbetter
@@ -224,6 +233,7 @@ PokemonFanClubClefairyFanText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .mineisbetter:
     ResetEventReuseHL EVENT_PIKACHU_FAN_BOAST
     mov esi, .bettertext
@@ -232,6 +242,7 @@ PokemonFanClubClefairyFanText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .normaltext:
     text_far _PokemonFanClubClefairyFanNormalText
     text_end
@@ -243,6 +254,7 @@ PokemonFanClubClefairyFanText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubSeelFanText:
     mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
     test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
@@ -252,6 +264,7 @@ PokemonFanClubSeelFanText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_59ae7:
     CheckEventReuseHL EVENT_SEEL_FAN_BOAST
     jnz .mineisbetter
@@ -261,6 +274,7 @@ PokemonFanClubSeelFanText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .mineisbetter:
     ResetEventReuseHL EVENT_SEEL_FAN_BOAST
     mov esi, .bettertext
@@ -269,6 +283,7 @@ PokemonFanClubSeelFanText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .normaltext:
     text_far _PokemonFanClubSeelFanNormalText
     text_end
@@ -280,6 +295,7 @@ PokemonFanClubSeelFanText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubClefairyText:
     mov esi, .Text
     call PrintText
@@ -289,11 +305,13 @@ PokemonFanClubClefairyText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _PokemonFanClubClefairyText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubSeelText:
     mov esi, .Text
     call PrintText
@@ -303,11 +321,13 @@ PokemonFanClubSeelText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _PokemonFanClubSeelText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonFanClubChairmanText:
     mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
     test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
@@ -322,6 +342,7 @@ PokemonFanClubChairmanText:
     jmp .gbpals_print_text
 
 %assign event_byte -1
+%assign event_byte_a -1
 .check_bike_voucher:
     CheckEvent EVENT_GOT_BIKE_VOUCHER
     jnz .nothingleft
@@ -342,16 +363,19 @@ PokemonFanClubChairmanText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .BagFullText
     jmp .gbpals_print_text
 
 %assign event_byte -1
+%assign event_byte_a -1
 .nothanks:
     mov esi, .NoStoryText
     jmp .gbpals_print_text
 
 %assign event_byte -1
+%assign event_byte_a -1
 .nothingleft:
     mov esi, .FinalText
 .gbpals_print_text:
@@ -362,6 +386,7 @@ PokemonFanClubChairmanText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .select_mon_to_print:
     call GBPalWhiteOutWithDelay3
     call LoadCurrentMapView
@@ -378,6 +403,7 @@ PokemonFanClubChairmanText:
     jmp .gbpals_print_text
 
 %assign event_byte -1
+%assign event_byte_a -1
 .print:
     xor al, al
     mov [ebp + wUpdateSpritesEnabled], al
@@ -401,6 +427,7 @@ PokemonFanClubChairmanText:
     jmp .gbpals_print_text
 
 %assign event_byte -1
+%assign event_byte_a -1
 .IntroText:
     text_far _PokemonFanClubChairmanIntroText
     text_end

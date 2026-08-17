@@ -44,14 +44,17 @@ extern _VermilionOldRodHouseFishingGuruThatsSoDisappointingText   ; NOT YET DEFI
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionOldRodHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionOldRodHouse_TextPointers:
     dd VermilionOldRodHouseFishingGuruText
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionOldRodHouseFishingGuruText:
     mov al, [ebp + wStatusFlags1]
     test al, (1 << (3))
@@ -71,16 +74,19 @@ VermilionOldRodHouseFishingGuruText:
     jmp .print_text
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .NoRoomText
     jmp .print_text
 
 %assign event_byte -1
+%assign event_byte_a -1
 .refused:
     mov esi, .ThatsSoDisappointingText
     jmp .print_text
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_old_rod:
     mov esi, .HowAreTheFishBitingText
 .print_text:
@@ -88,6 +94,7 @@ VermilionOldRodHouseFishingGuruText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .DoYouLikeToFishText:
     text_far _VermilionOldRodHouseFishingGuruDoYouLikeToFishText
     text_end

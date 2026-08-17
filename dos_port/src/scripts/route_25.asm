@@ -66,6 +66,7 @@ wRoute25CurScript                              equ 0xD602
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route25TrainerHeaders
@@ -77,6 +78,7 @@ Route25_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25ToggleBillsScript:
     mov esi, wPikachuMapScriptFlags
     and byte [ebp + esi], ~(1 << (2)) & 0xFF
@@ -108,6 +110,7 @@ Route25ToggleBillsScript:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .met_bill:
     CheckEventAfterBranchReuseHL EVENT_GOT_SS_TICKET, EVENT_MET_BILL_2
     jz .done
@@ -130,54 +133,63 @@ Route25ToggleBillsScript:
 ; Route25_ScriptPointers (scripts/Route25.asm:49-88) — not re-emitted: Route25TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25Youngster1Text:
     mov esi, Route25TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25Youngster2Text:
     mov esi, Route25TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25CooltrainerMText:
     mov esi, Route25TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25CooltrainerF1Text:
     mov esi, Route25TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25Youngster3Text:
     mov esi, Route25TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25CooltrainerF2Text:
     mov esi, Route25TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25Hiker1Text:
     mov esi, Route25TrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25Hiker2Text:
     mov esi, Route25TrainerHeader7
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route25Hiker3Text:
     mov esi, Route25TrainerHeader8
     call TalkToTrainer

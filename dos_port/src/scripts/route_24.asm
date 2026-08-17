@@ -101,6 +101,7 @@ wRoute24CurScript                              equ 0xD601
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route24TrainerHeaders
@@ -111,6 +112,7 @@ Route24_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24SetDefaultScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -119,6 +121,7 @@ Route24SetDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24_ScriptPointers:
     dd Route24DefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -127,6 +130,7 @@ Route24_ScriptPointers:
     dd Route24PlayerMovingScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24DefaultScript:
     CheckEvent EVENT_GOT_NUGGET
     jnz CheckFightingMapTrainers
@@ -153,11 +157,13 @@ Route24DefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PlayerCoordsArray:
     db 15, 10
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24PlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -171,6 +177,7 @@ Route24PlayerMovingScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24AfterRocketBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -192,6 +199,7 @@ Route24AfterRocketBattleScript:
 ; Route24_TextPointers (scripts/Route24.asm:81-106) — not re-emitted: Route24TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24CooltrainerM1Text:
     pushfd    ; SM83 form writes no flags
         ResetEvent EVENT_NUGGET_REWARD_AVAILABLE
@@ -226,12 +234,14 @@ Route24CooltrainerM1Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .YouCouldBecomeATopLeaderText
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .NoRoomText
     call PrintText
@@ -239,6 +249,7 @@ Route24CooltrainerM1Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .YouBeatOurContestText:
     text_far _Route24CooltrainerM1YouBeatOurContestText
     sound_get_item_1
@@ -263,36 +274,42 @@ Route24CooltrainerM1Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24CooltrainerM2Text:
     mov esi, Route24TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24CooltrainerM3Text:
     mov esi, Route24TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24CooltrainerF1Text:
     mov esi, Route24TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24Youngster1Text:
     mov esi, Route24TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24CooltrainerF2Text:
     mov esi, Route24TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24Youngster2Text:
     mov esi, Route24TrainerHeader5
     call TalkToTrainer
@@ -301,6 +318,7 @@ Route24Youngster2Text:
 ; Route24CooltrainerM2BattleText (scripts/Route24.asm:214-283) — not re-emitted: Route24CooltrainerM2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24CooltrainerM4Text:
     CheckEvent EVENT_54F
     jnz .asm_515d5
@@ -332,11 +350,13 @@ Route24CooltrainerM4Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_515d0:
     mov esi, Route24Text_515e9
     jmp .asm_515d8
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_515d5:
     mov esi, Route24Text_515ee
 .asm_515d8:
@@ -344,6 +364,7 @@ Route24CooltrainerM4Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route24Text_515de:
     text_far _Route24DamianText1
     text_end

@@ -107,6 +107,7 @@ wPlayerStarter                                 equ 0xD716
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoom_Script:
     call EnableAutoTextBoxDrawing
     mov esi, ChampionsRoom_ScriptPointers
@@ -115,6 +116,7 @@ ChampionsRoom_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ResetRivalScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -122,6 +124,7 @@ ResetRivalScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoom_ScriptPointers:
     dd ChampionsRoomDefaultScript
     dd ChampionsRoomPlayerEntersScript
@@ -136,10 +139,12 @@ ChampionsRoom_ScriptPointers:
     dd ChampionsRoomCleanupScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomPlayerEntersScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -154,6 +159,7 @@ ChampionsRoomPlayerEntersScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RivalEntrance_RLEMovement:
     db PAD_UP, 1
     db PAD_RIGHT, 1
@@ -161,6 +167,7 @@ RivalEntrance_RLEMovement:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomRivalReadyToBattleScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -194,6 +201,7 @@ ChampionsRoomRivalReadyToBattleScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomRivalDefeatedScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -213,6 +221,7 @@ ChampionsRoomRivalDefeatedScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomOakArrivesScript:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Music_Cities1AlternateTempo
@@ -235,6 +244,7 @@ ChampionsRoomOakArrivesScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OakEntranceAfterVictoryMovement:
     db NPC_MOVEMENT_UP
     db NPC_MOVEMENT_UP
@@ -244,6 +254,7 @@ OakEntranceAfterVictoryMovement:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomOakCongratulatesPlayerScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -270,6 +281,7 @@ ChampionsRoomOakCongratulatesPlayerScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomOakDisappointedWithRivalScript:
     mov al, 2
     mov [ebp + hSpriteIndex], al
@@ -284,6 +296,7 @@ ChampionsRoomOakDisappointedWithRivalScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomOakComeWithMeScript:
     mov al, 2
     mov [ebp + hSpriteIndex], al
@@ -302,12 +315,14 @@ ChampionsRoomOakComeWithMeScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OakExitChampionsRoomMovement:
     db NPC_MOVEMENT_UP
     db NPC_MOVEMENT_UP
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomOakExitsScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -323,6 +338,7 @@ ChampionsRoomOakExitsScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomPlayerFollowsOakScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -337,12 +353,14 @@ ChampionsRoomPlayerFollowsOakScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 WalkToHallOfFame_RLEMovement:
     db PAD_UP, 4
     db PAD_LEFT, 1
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomCleanupScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -356,6 +374,7 @@ ChampionsRoomCleanupScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoom_DisplayTextID_AllowABSelectStart:
     mov al, PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -365,6 +384,7 @@ ChampionsRoom_DisplayTextID_AllowABSelectStart:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoom_TextPointers:
     dd ChampionsRoomRivalText
     dd ChampionsRoomOakText
@@ -373,6 +393,7 @@ ChampionsRoom_TextPointers:
     dd ChampionsRoomOakComeWithMeText
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomRivalText:
     CheckEvent EVENT_BEAT_CHAMPION_RIVAL
     mov esi, .IntroText
@@ -383,6 +404,7 @@ ChampionsRoomRivalText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .IntroText:
     text_far _ChampionsRoomRivalIntroText
     text_end
@@ -400,6 +422,7 @@ ChampionsRoomOakText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 ChampionsRoomOakCongratulatesPlayerText:
     mov al, [ebp + wPlayerStarter]
     mov [ebp + wNamedObjectIndex], al
@@ -409,6 +432,7 @@ ChampionsRoomOakCongratulatesPlayerText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _ChampionsRoomOakCongratulatesPlayerText
     text_end

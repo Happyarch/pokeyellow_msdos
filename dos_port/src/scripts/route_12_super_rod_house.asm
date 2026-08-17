@@ -44,14 +44,17 @@ extern _Route12SuperRodHouseFishingGuruTryFishingText   ; NOT YET DEFINED IN THE
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12SuperRodHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12SuperRodHouse_TextPointers:
     dd Route12SuperRodHouseFishingGuruText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12SuperRodHouseFishingGuruText:
     mov al, [ebp + wStatusFlags1]
     test al, (1 << (5))
@@ -71,16 +74,19 @@ Route12SuperRodHouseFishingGuruText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .NoRoomText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .refused:
     mov esi, .ThatsDisappointingText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .TryFishingText
 .done:
@@ -88,6 +94,7 @@ Route12SuperRodHouseFishingGuruText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .DoYouLikeToFishText:
     text_far _Route12SuperRodHouseFishingGuruDoYouLikeToFishText
     text_end

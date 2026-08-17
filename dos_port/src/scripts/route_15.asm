@@ -65,6 +65,7 @@ wRoute15CurScript                              equ 0xD624
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route15TrainerHeaders
@@ -77,51 +78,61 @@ Route15_Script:
 ; Route15_ScriptPointers (scripts/Route15.asm:11-53) — not re-emitted: Route15_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15CooltrainerF1Text:
     mov esi, Route15TrainerHeader0
     jmp Route15TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15CooltrainerF2Text:
     mov esi, Route15TrainerHeader1
     jmp Route15TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15CooltrainerM1Text:
     mov esi, Route15TrainerHeader2
     jmp Route15TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15CooltrainerM2Text:
     mov esi, Route15TrainerHeader3
     jmp Route15TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Beauty1Text:
     mov esi, Route15TrainerHeader4
     jmp Route15TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Beauty2Text:
     mov esi, Route15TrainerHeader5
     jmp Route15TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Biker1Text:
     mov esi, Route15TrainerHeader6
     jmp Route15TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Biker2Text:
     mov esi, Route15TrainerHeader7
     jmp Route15TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15CooltrainerF3Text:
     mov esi, Route15TrainerHeader8
     jmp Route15TalkToTrainer
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15CooltrainerF4Text:
     mov esi, Route15TrainerHeader9
 Route15TalkToTrainer:

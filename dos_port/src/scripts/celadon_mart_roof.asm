@@ -86,6 +86,7 @@ wFilteredBagItemsCount                         equ 0xCD37
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMartRoof_Script:
     call EnableAutoTextBoxDrawing
     ret
@@ -131,6 +132,7 @@ CeladonMartRoof_Script:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMartRoofDrinkList:
     db FRESH_WATER
     db SODA_POP
@@ -199,6 +201,7 @@ CeladonMartRoofDrinkList:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .gaveSodaPop:
     CheckEvent EVENT_GOT_TM48
     jnz .alreadyGaveDrink
@@ -214,6 +217,7 @@ CeladonMartRoofDrinkList:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .gaveFreshWater:
     CheckEvent EVENT_GOT_TM13
     jnz .alreadyGaveDrink
@@ -229,24 +233,28 @@ CeladonMartRoofDrinkList:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bagFull:
     mov esi, CeladonMartRoofLittleGirlNoRoomText
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .alreadyGaveDrink:
     mov esi, CeladonMartRoofLittleGirlImNotThirstyText
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RemoveItemByIDBank12:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call RemoveItemByID
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMartRoofLittleGirlGiveHerWhichDrinkText:
     text_far _CeladonMartRoofLittleGirlGiveHerWhichDrinkText
     text_end
@@ -315,6 +323,7 @@ CeladonMartRoofLittleGirlImNotThirstyText:
 ; PRET| 	jr .loop
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMartRoof_TextPointers:
     dd CeladonMartRoofSuperNerdText
     dd CeladonMartRoofLittleGirlText
@@ -346,6 +355,7 @@ CeladonMartRoofSuperNerdText:
 ; PRET| 	jr .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .noDrinksInBag:
     mov esi, .ImThirstyText
     call PrintText
@@ -353,6 +363,7 @@ CeladonMartRoofSuperNerdText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ImThirstyText:
     text_far _CeladonMartRoofLittleGirlImThirstyText
     text_end

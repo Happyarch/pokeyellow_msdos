@@ -35,11 +35,13 @@ extern _CeladonMansion2FMeetingRoomSignText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansion2F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMansion2F_TextPointers:
     dd CeladonMansion2FMeetingRoomSignText
 CeladonMansion2FMeetingRoomSignText:

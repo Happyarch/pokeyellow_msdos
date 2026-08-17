@@ -135,6 +135,7 @@ wGameCornerCurScript                           equ 0xD65E
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCorner_Script:
     call GameCornerSelectLuckySlotMachine
     call GameCornerSetRocketHideoutDoorTile
@@ -144,6 +145,7 @@ GameCorner_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerSelectLuckySlotMachine:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
@@ -166,6 +168,7 @@ GameCornerSelectLuckySlotMachine:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerSetRocketHideoutDoorTile:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -186,6 +189,7 @@ GameCornerSetRocketHideoutDoorTile:
     jmp ReplaceTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerReenterMapAfterPlayerLoss:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -194,12 +198,14 @@ GameCornerReenterMapAfterPlayerLoss:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCorner_ScriptPointers:
     dd GameCornerDefaultScript
     dd GameCornerRocketBattleScript
     dd GameCornerRocketExitScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerDefaultScript:
     ret
 
@@ -236,6 +242,7 @@ GameCornerDefaultScript:
 ; PRET| 	jr .got_rocket_movement
 
 %assign event_byte -1
+%assign event_byte_a -1
 .pikachu:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call GameCornerPikachuMovementScript
@@ -249,6 +256,7 @@ GameCornerDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerMovement_Rocket_WalkAroundPlayer:
     db NPC_MOVEMENT_DOWN
     db NPC_MOVEMENT_RIGHT
@@ -268,6 +276,7 @@ GameCornerMovement_Rocket_WalkDirect:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerRocketExitScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -288,6 +297,7 @@ GameCornerRocketExitScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCorner_TextPointers:
     dd GameCornerBeauty1Text
     dd GameCornerClerkText
@@ -307,6 +317,7 @@ GameCornerBeauty1Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerClerkText:
     call GameCornerDrawCoinBox
     mov esi, .DoYouNeedSomeGameCoins
@@ -331,6 +342,7 @@ GameCornerClerkText:
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .buy_coins:
     xor al, al
     mov [ebp + hMoney], al
@@ -357,16 +369,19 @@ GameCornerClerkText:
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .declined:
     mov esi, .PleaseComePlaySometime
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .coin_case_full:
     mov esi, .CoinCaseIsFull
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .no_coin_case:
     mov esi, .DontHaveCoinCase
 .print_ret:
@@ -374,6 +389,7 @@ GameCornerClerkText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .DoYouNeedSomeGameCoins:
     text_far _GameCornerClerkDoYouNeedSomeGameCoinsText
     text_end
@@ -400,6 +416,7 @@ GameCornerBeauty2Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerFishingGuru1Text:
     CheckEvent EVENT_GOT_10_COINS
     jnz .alreadyGotNpcCoins
@@ -427,16 +444,19 @@ GameCornerFishingGuru1Text:
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .alreadyGotNpcCoins:
     mov esi, .WinsComeAndGoText
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .coinCaseFull:
     mov esi, .DontNeedMyCoinsText
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .dontHaveCoinCase:
     mov esi, GameCornerOopsForgotCoinCaseText
 .print_ret:
@@ -444,6 +464,7 @@ GameCornerFishingGuru1Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .WantToPlayText:
     text_far _GameCornerFishingGuru1WantToPlayText
     text_end
@@ -462,6 +483,7 @@ GameCornerMiddleAgedWomanText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerGymGuideText:
     CheckEvent EVENT_BEAT_ERIKA
     mov esi, GameCornerGymGuideChampInMakingText
@@ -472,6 +494,7 @@ GameCornerGymGuideText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerGymGuideChampInMakingText:
     text_far _GameCornerGymGuideChampInMakingText
     text_end
@@ -483,6 +506,7 @@ GameCornerGamblerText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerMiddleAgedMan2Text:
     CheckEvent EVENT_GOT_20_COINS_2
     jnz .alreadyGotNpcCoins
@@ -508,16 +532,19 @@ GameCornerMiddleAgedMan2Text:
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .alreadyGotNpcCoins:
     mov esi, .INeedMoreCoinsText
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .coinCaseFull:
     mov esi, .YouHaveLotsOfCoinsText
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .dontHaveCoinCase:
     mov esi, GameCornerOopsForgotCoinCaseText
 .print_ret:
@@ -525,6 +552,7 @@ GameCornerMiddleAgedMan2Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .WantSomeCoinsText:
     text_far _GameCornerMiddleAgedMan2WantSomeCoinsText
     text_end
@@ -540,6 +568,7 @@ GameCornerMiddleAgedMan2Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerFishingGuru2Text:
     CheckEvent EVENT_GOT_20_COINS
     jnz .alreadyGotNpcCoins
@@ -565,16 +594,19 @@ GameCornerFishingGuru2Text:
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .alreadyGotNpcCoins:
     mov esi, .CloselyWatchTheReelsText
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .coinCaseFull:
     mov esi, .YouGotYourOwnCoinsText
     jmp .print_ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .dontHaveCoinCase:
     mov esi, GameCornerOopsForgotCoinCaseText
 .print_ret:
@@ -582,6 +614,7 @@ GameCornerFishingGuru2Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ThrowingMeOffText:
     text_far _GameCornerFishingGuru2ThrowingMeOffText
     text_end
@@ -597,6 +630,7 @@ GameCornerFishingGuru2Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerRocketText:
     mov esi, .ImGuardingThisPosterText
     call PrintText
@@ -619,6 +653,7 @@ GameCornerRocketText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ImGuardingThisPosterText:
     text_far _GameCornerRocketImGuardingThisPosterText
     text_end
@@ -630,6 +665,7 @@ GameCornerRocketAfterBattleText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerPosterText:
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
@@ -648,16 +684,19 @@ GameCornerPosterText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .SwitchBehindPosterText:
     text_far _GameCornerPosterSwitchBehindPosterText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, SFX_SWITCH
     call PlaySound
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerOopsForgotCoinCaseText:
     text_far _GameCornerOopsForgotCoinCaseText
     text_end
@@ -715,6 +754,7 @@ GameCornerOopsForgotCoinCaseText:
 ; PRET| 	db "       @"
 
 %assign event_byte -1
+%assign event_byte_a -1
 Has9990Coins:
     mov al, 0x99
     mov [ebp + hCoins], al
@@ -723,6 +763,7 @@ Has9990Coins:
     jmp HasEnoughCoins
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerPikachuMovementScript:
     mov esi, GameCornerPikachuMovementData
     mov bh, SPRITE_FACING_DOWN
@@ -730,6 +771,7 @@ GameCornerPikachuMovementScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 GameCornerPikachuMovementData:
     db 0x00
     db 0x20

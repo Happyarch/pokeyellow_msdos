@@ -30,6 +30,7 @@ global CeladonGymCooltrainerF2Text
 global CeladonGymCooltrainerF3Text
 global CeladonGymCooltrainerF4Text
 global CeladonGymErikaPostBattleScript
+global CeladonGymErikaText
 global CeladonGymRainbowBadgeInfoText
 global CeladonGymReceiveTM21
 global CeladonGymReceivedTM21Text
@@ -44,7 +45,6 @@ extern CeladonGymBattleText5   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText6   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText7   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText8   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymErikaText   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -56,6 +56,7 @@ extern CeladonGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern CeladonGym_Script   ; NOT YET DEFINED IN THE PORT
 extern CeladonGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
 extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
@@ -128,6 +129,7 @@ section .text
 ; PRET| 	db "ERIKA@"
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -136,6 +138,7 @@ CeladonGymResetScripts:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGym_ScriptPointers:
     dd CheckFightingMapTrainers
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -143,6 +146,7 @@ CeladonGym_ScriptPointers:
     dd CeladonGymErikaPostBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGymErikaPostBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -166,6 +170,7 @@ CeladonGymReceiveTM21:
     jmp .gymVictory
 
 %assign event_byte -1
+%assign event_byte_a -1
 .BagFull:
     mov al, TEXT_CELADONGYM_TM21_NO_ROOM
     mov [ebp + hTextID], al
@@ -180,25 +185,28 @@ CeladonGymReceiveTM21:
 
 ; CeladonGym_TextPointers (scripts/CeladonGym.asm:75-104) — not re-emitted: CeladonGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] CeladonGymErikaText (scripts/CeladonGym.asm:108-114) — at scripts/CeladonGym.asm:110: CheckEventReuseA EVENT_GOT_TM21
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_ERIKA
-; PRET| 	jr z, .beforeBeat
-; PRET| 	CheckEventReuseA EVENT_GOT_TM21
-; PRET| 	jr nz, .afterBeat
-; PRET| 	call z, CeladonGymReceiveTM21
-; PRET| 	call DisableWaitingAfterTextDisplay
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+CeladonGymErikaText:
+    CheckEvent EVENT_BEAT_ERIKA
+    jz .beforeBeat
+    CheckEventReuseA EVENT_GOT_TM21
+    jnz .afterBeat
+    jnz .sk_112
+        call CeladonGymReceiveTM21
+.sk_112:
+    call DisableWaitingAfterTextDisplay
+    jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .afterBeat:
     mov esi, .PostBattleAdviceText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .beforeBeat:
     mov esi, .PreBattleText
     call PrintText
@@ -221,6 +229,7 @@ CeladonGymReceiveTM21:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PreBattleText:
     text_far _CeladonGymErikaPreBattleText
     text_end
@@ -243,6 +252,7 @@ CeladonGymTM21NoRoomText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGymCooltrainerF1Text:
     mov esi, CeladonGymTrainerHeader0
     call TalkToTrainer
@@ -251,6 +261,7 @@ CeladonGymCooltrainerF1Text:
 ; CeladonGymBattleText2 (scripts/CeladonGym.asm:173-182) — not re-emitted: CeladonGymBattleText2 is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGymBeauty1Text:
     mov esi, CeladonGymTrainerHeader1
     call TalkToTrainer
@@ -259,6 +270,7 @@ CeladonGymBeauty1Text:
 ; CeladonGymBattleText3 (scripts/CeladonGym.asm:191-200) — not re-emitted: CeladonGymBattleText3 is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGymCooltrainerF2Text:
     mov esi, CeladonGymTrainerHeader2
     call TalkToTrainer
@@ -267,6 +279,7 @@ CeladonGymCooltrainerF2Text:
 ; CeladonGymBattleText4 (scripts/CeladonGym.asm:209-218) — not re-emitted: CeladonGymBattleText4 is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGymBeauty2Text:
     mov esi, CeladonGymTrainerHeader3
     call TalkToTrainer
@@ -275,6 +288,7 @@ CeladonGymBeauty2Text:
 ; CeladonGymBattleText5 (scripts/CeladonGym.asm:227-236) — not re-emitted: CeladonGymBattleText5 is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGymCooltrainerF3Text:
     mov esi, CeladonGymTrainerHeader4
     call TalkToTrainer
@@ -283,6 +297,7 @@ CeladonGymCooltrainerF3Text:
 ; CeladonGymBattleText6 (scripts/CeladonGym.asm:245-254) — not re-emitted: CeladonGymBattleText6 is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGymBeauty3Text:
     mov esi, CeladonGymTrainerHeader5
     call TalkToTrainer
@@ -291,6 +306,7 @@ CeladonGymBeauty3Text:
 ; CeladonGymBattleText7 (scripts/CeladonGym.asm:263-272) — not re-emitted: CeladonGymBattleText7 is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonGymCooltrainerF4Text:
     mov esi, CeladonGymTrainerHeader6
     call TalkToTrainer

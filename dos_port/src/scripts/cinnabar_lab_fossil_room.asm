@@ -55,10 +55,12 @@ wFossilMon                                     equ 0xD70F
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabFossilRoom_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabFossilRoom_TextPointers:
     dd CinnabarLabFossilRoomScientist1Text
     dd CinnabarLabFossilRoomScientist2Text
@@ -104,6 +106,7 @@ CinnabarLabFossilRoom_TextPointers:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 FossilsList:
     db 41
     db 42
@@ -126,6 +129,7 @@ FossilsList:
 ; PRET| 	jr .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .no_fossils:
     mov esi, .NoFossilsText
     call PrintText
@@ -133,7 +137,7 @@ FossilsList:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] CinnabarLabFossilRoomScientist1Text.check_done_reviving (scripts/CinnabarLabFossilRoom.asm:67-71) — at scripts/CinnabarLabFossilRoom.asm:67: CheckEventAfterBranchReuseA EVENT_LAB_STILL_REVIVING_FOSSIL, EVENT_GAVE_FOSSIL_TO_LAB
+; BAIL[target-region-bailed] CinnabarLabFossilRoomScientist1Text.check_done_reviving (scripts/CinnabarLabFossilRoom.asm:67-71) — at scripts/CinnabarLabFossilRoom.asm:68: .done_reviving is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEventAfterBranchReuseA EVENT_LAB_STILL_REVIVING_FOSSIL, EVENT_GAVE_FOSSIL_TO_LAB
@@ -159,6 +163,7 @@ FossilsList:
 ; PRET| 	jr .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _CinnabarLabFossilRoomScientist1Text
     text_end
@@ -173,6 +178,7 @@ FossilsList:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabFossilRoomScientist2Text:
     mov al, 3
     mov [ebp + wWhichTrade], al
@@ -181,6 +187,7 @@ CinnabarLabFossilRoomScientist2Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 LoadFossilItemAndMonNameBank1D:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farjp; behavior=bank switch dropped, jmp goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     jmp LoadFossilItemAndMonName

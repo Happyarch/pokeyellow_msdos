@@ -23,6 +23,7 @@ bits 32
 
 global FuchsiaCityChanseySignText
 global FuchsiaCityErikText
+global FuchsiaCityFossilSignText
 global FuchsiaCityGamblerText
 global FuchsiaCityGymSignText
 global FuchsiaCityKangaskhanSignText
@@ -41,7 +42,6 @@ global FuchsiaCity_TextPointers
 
 extern DisplayPokedex   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaCityFossilSignText   ; NOT YET DEFINED IN THE PORT
 extern MartSignText   ; NOT YET DEFINED IN THE PORT
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
@@ -72,10 +72,12 @@ extern _FuchsiaCityYoungster2Text   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaCity_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaCity_TextPointers:
     dd FuchsiaCityYoungster1Text
     dd FuchsiaCityGamblerText
@@ -133,6 +135,7 @@ FuchsiaCityGymSignText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaCityChanseySignText:
     mov esi, .Text
     call PrintText
@@ -141,11 +144,13 @@ FuchsiaCityChanseySignText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _FuchsiaCityChanseySignText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaCityVoltorbSignText:
     mov esi, .Text
     call PrintText
@@ -154,11 +159,13 @@ FuchsiaCityVoltorbSignText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _FuchsiaCityVoltorbSignText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaCityKangaskhanSignText:
     mov esi, .Text
     call PrintText
@@ -167,11 +174,13 @@ FuchsiaCityKangaskhanSignText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _FuchsiaCityKangaskhanSignText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaCitySlowpokeSignText:
     mov esi, .Text
     call PrintText
@@ -180,11 +189,13 @@ FuchsiaCitySlowpokeSignText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _FuchsiaCitySlowpokeSignText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaCityLaprasSignText:
     mov esi, .Text
     call PrintText
@@ -193,23 +204,24 @@ FuchsiaCityLaprasSignText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _FuchsiaCityLaprasSignText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] FuchsiaCityFossilSignText (scripts/FuchsiaCity.asm:133-139) — at scripts/FuchsiaCity.asm:135: CheckEventReuseA EVENT_GOT_HELIX_FOSSIL
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_DOME_FOSSIL
-; PRET| 	jr nz, .got_dome_fossil
-; PRET| 	CheckEventReuseA EVENT_GOT_HELIX_FOSSIL
-; PRET| 	jr nz, .got_helix_fossil
-; PRET| 	ld hl, .UndeterminedText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+FuchsiaCityFossilSignText:
+    CheckEvent EVENT_GOT_DOME_FOSSIL
+    jnz .got_dome_fossil
+    CheckEventReuseA EVENT_GOT_HELIX_FOSSIL
+    jnz .got_helix_fossil
+    mov esi, .UndeterminedText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_dome_fossil:
     mov esi, .OmanyteText
     call PrintText
@@ -217,6 +229,7 @@ FuchsiaCityLaprasSignText:
     jmp .display
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_helix_fossil:
     mov esi, .KabutoText
     call PrintText
@@ -227,6 +240,7 @@ FuchsiaCityLaprasSignText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .OmanyteText:
     text_far _FuchsiaCityFossilSignOmanyteText
     text_end

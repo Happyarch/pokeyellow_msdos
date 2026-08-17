@@ -27,6 +27,7 @@ global FuchsiaGymKogaPostBattleScript
 global FuchsiaGymKogaReceivedTM06Text
 global FuchsiaGymKogaSoulBadgeInfoText
 global FuchsiaGymKogaTM06NoRoomText
+global FuchsiaGymKogaText
 global FuchsiaGymReceiveTM06
 global FuchsiaGymResetScripts
 global FuchsiaGymRocker1Text
@@ -38,13 +39,13 @@ global FuchsiaGymRocker6Text
 global FuchsiaGym_ScriptPointers
 
 extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
 extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymKogaText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker1BattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker2BattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker3BattleText   ; NOT YET DEFINED IN THE PORT
@@ -130,6 +131,7 @@ section .text
 ; PRET| 	db "KOGA@"
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -138,6 +140,7 @@ FuchsiaGymResetScripts:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGym_ScriptPointers:
     dd CheckFightingMapTrainers
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -145,6 +148,7 @@ FuchsiaGym_ScriptPointers:
     dd FuchsiaGymKogaPostBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGymKogaPostBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -168,6 +172,7 @@ FuchsiaGymReceiveTM06:
     jmp .gymVictory
 
 %assign event_byte -1
+%assign event_byte_a -1
 .BagFull:
     mov al, TEXT_FUCHSIAGYM_KOGA_TM06_NO_ROOM
     mov [ebp + hTextID], al
@@ -182,25 +187,28 @@ FuchsiaGymReceiveTM06:
 
 ; FuchsiaGym_TextPointers (scripts/FuchsiaGym.asm:77-104) — not re-emitted: FuchsiaGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] FuchsiaGymKogaText (scripts/FuchsiaGym.asm:108-114) — at scripts/FuchsiaGym.asm:110: CheckEventReuseA EVENT_GOT_TM06
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_KOGA
-; PRET| 	jr z, .beforeBeat
-; PRET| 	CheckEventReuseA EVENT_GOT_TM06
-; PRET| 	jr nz, .afterBeat
-; PRET| 	call z, FuchsiaGymReceiveTM06
-; PRET| 	call DisableWaitingAfterTextDisplay
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+FuchsiaGymKogaText:
+    CheckEvent EVENT_BEAT_KOGA
+    jz .beforeBeat
+    CheckEventReuseA EVENT_GOT_TM06
+    jnz .afterBeat
+    jnz .sk_112
+        call FuchsiaGymReceiveTM06
+.sk_112:
+    call DisableWaitingAfterTextDisplay
+    jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .afterBeat:
     mov esi, .PostBattleAdviceText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .beforeBeat:
     mov esi, .BeforeBattleText
     call PrintText
@@ -224,6 +232,7 @@ FuchsiaGymReceiveTM06:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .BeforeBattleText:
     text_far _FuchsiaGymKogaBeforeBattleText
     text_end
@@ -246,6 +255,7 @@ FuchsiaGymKogaTM06NoRoomText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGymRocker1Text:
     mov esi, FuchsiaGymTrainerHeader0
     call TalkToTrainer
@@ -254,6 +264,7 @@ FuchsiaGymRocker1Text:
 ; FuchsiaGymRocker1BattleText (scripts/FuchsiaGym.asm:174-183) — not re-emitted: FuchsiaGymRocker1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGymRocker2Text:
     mov esi, FuchsiaGymTrainerHeader1
     call TalkToTrainer
@@ -262,6 +273,7 @@ FuchsiaGymRocker2Text:
 ; FuchsiaGymRocker2BattleText (scripts/FuchsiaGym.asm:192-201) — not re-emitted: FuchsiaGymRocker2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGymRocker3Text:
     mov esi, FuchsiaGymTrainerHeader2
     call TalkToTrainer
@@ -270,6 +282,7 @@ FuchsiaGymRocker3Text:
 ; FuchsiaGymRocker3BattleText (scripts/FuchsiaGym.asm:210-219) — not re-emitted: FuchsiaGymRocker3BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGymRocker4Text:
     mov esi, FuchsiaGymTrainerHeader3
     call TalkToTrainer
@@ -278,6 +291,7 @@ FuchsiaGymRocker4Text:
 ; FuchsiaGymRocker4BattleText (scripts/FuchsiaGym.asm:228-237) — not re-emitted: FuchsiaGymRocker4BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGymRocker5Text:
     mov esi, FuchsiaGymTrainerHeader4
     call TalkToTrainer
@@ -286,6 +300,7 @@ FuchsiaGymRocker5Text:
 ; FuchsiaGymRocker5BattleText (scripts/FuchsiaGym.asm:246-255) — not re-emitted: FuchsiaGymRocker5BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGymRocker6Text:
     mov esi, FuchsiaGymTrainerHeader5
     call TalkToTrainer
@@ -294,6 +309,7 @@ FuchsiaGymRocker6Text:
 ; FuchsiaGymRocker6BattleText (scripts/FuchsiaGym.asm:264-273) — not re-emitted: FuchsiaGymRocker6BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaGymGymGuideText:
     CheckEvent EVENT_BEAT_KOGA
     mov esi, .BeatKogaText
@@ -304,6 +320,7 @@ FuchsiaGymGymGuideText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ChampInMakingText:
     text_far _FuchsiaGymGymGuideChampInMakingText
     text_end

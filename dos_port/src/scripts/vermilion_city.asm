@@ -122,6 +122,7 @@ wVermilionCityCurScript                        equ 0xD629
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCity_Script:
     call EnableAutoTextBoxDrawing
     mov esi, wPikachuMapScriptFlags
@@ -150,6 +151,7 @@ VermilionCity_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .vermilionCityScript_19869:
     mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
     test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
@@ -164,6 +166,7 @@ VermilionCity_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .setFirstLockTrashCanIndex:
     call Random
     mov al, [ebp + hRandomAdd]
@@ -175,6 +178,7 @@ VermilionCity_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityLeftSSAnneCallbackScript:
     mov esi, wEventFlags + EVENT_BYTE(EVENT_SS_ANNE_LEFT)
     test byte [ebp + esi], EVENT_MASK(EVENT_SS_ANNE_LEFT)
@@ -193,6 +197,7 @@ VermilionCityLeftSSAnneCallbackScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCity_ScriptPointers:
     dd VermilionCityDefaultScript
     dd VermilionCityPlayerMovingUp1Script
@@ -201,6 +206,7 @@ VermilionCity_ScriptPointers:
     dd VermilionCityPlayerAllowedToPassScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityDefaultScript:
     mov al, [ebp + wSpritePlayerStateData1FacingDirection]
     test al, al
@@ -235,15 +241,18 @@ VermilionCityDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .return:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneTicketCheckCoords:
     db 30, 18
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPlayerAllowedToPassScript:
     mov esi, SSAnneTicketCheckCoords
     call ArePlayerCoordsInArray
@@ -255,6 +264,7 @@ VermilionCityPlayerAllowedToPassScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPlayerExitShipScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -269,6 +279,7 @@ VermilionCityPlayerExitShipScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPlayerMovingUp2Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -283,6 +294,7 @@ VermilionCityPlayerMovingUp2Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPlayerMovingUp1Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -296,6 +308,7 @@ VermilionCityPlayerMovingUp1Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCity_TextPointers:
     dd VermilionCityBeautyText
     dd VermilionCityGambler1Text
@@ -316,6 +329,7 @@ VermilionCityBeautyText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityGambler1Text:
     CheckEvent EVENT_SS_ANNE_LEFT
     jnz .ship_departed
@@ -324,6 +338,7 @@ VermilionCityGambler1Text:
     jmp .text_script_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ship_departed:
     mov esi, .SSAnneDepartedText
     call PrintText
@@ -331,6 +346,7 @@ VermilionCityGambler1Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .DidYouSeeText:
     text_far _VermilionCityGambler1DidYouSeeText
     text_end
@@ -339,6 +355,7 @@ VermilionCityGambler1Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCitySailor1Text:
     CheckEvent EVENT_SS_ANNE_LEFT
     jnz .ship_departed
@@ -354,6 +371,7 @@ VermilionCitySailor1Text:
     jmp .end
 
 %assign event_byte -1
+%assign event_byte_a -1
 .greet_player_and_check_ticket:
     mov esi, .DoYouHaveATicketText
     call PrintText
@@ -368,6 +386,7 @@ VermilionCitySailor1Text:
     jmp .end
 
 %assign event_byte -1
+%assign event_byte_a -1
 .player_has_ticket:
     mov esi, .FlashedTicketText
     call PrintText
@@ -376,6 +395,7 @@ VermilionCitySailor1Text:
     jmp .end
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ship_departed:
     mov esi, .ShipSetSailText
     call PrintText
@@ -383,6 +403,7 @@ VermilionCitySailor1Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .inFrontOfOrBehindGuardCoords:
     db 29, 19
     db 31, 19
@@ -409,6 +430,7 @@ VermilionCityMachopText:
     text_far _VermilionCityMachopText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 106
     call PlayCry
     call WaitForSoundToFinish
@@ -416,6 +438,7 @@ VermilionCityMachopText:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .StompingTheLandFlatText:
     text_far _VermilionCityMachopStompingTheLandFlatText
     text_end
@@ -424,42 +447,49 @@ VermilionCitySailor2Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCitySignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintSignText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityNoticeSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintNoticeSignText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPokemonFanClubSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintPokemonFanClubSignText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityGymSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintGymSignText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityHarborSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintHarborSignText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityOfficerJennyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintOfficerJennyText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPrintOfficerJennyText:
     CheckEvent EVENT_GOT_SQUIRTLE_FROM_OFFICER_JENNY
     jnz .asm_f1a69
@@ -471,6 +501,7 @@ VermilionCityPrintOfficerJennyText:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_f1a24:
     mov esi, OfficerJennyText2
     call PrintText
@@ -502,18 +533,21 @@ VermilionCityPrintOfficerJennyText:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_f1a62:
     mov esi, OfficerJennyText4
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_f1a69:
     mov esi, OfficerJennyText5
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OfficerJennyText1:
     text_far _OfficerJennyText1
     text_end
@@ -532,56 +566,66 @@ OfficerJennyText5:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPrintSignText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _VermilionCitySignText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPrintNoticeSignText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _VermilionCityNoticeSignText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPrintPokemonFanClubSignText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _VermilionCityPokemonFanClubSignText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPrintGymSignText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _VermilionCityGymSignText
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionCityPrintHarborSignText:
     mov esi, .text
     call PrintText
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .text:
     text_far _VermilionCityHarborSignText
     text_end

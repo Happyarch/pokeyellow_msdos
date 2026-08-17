@@ -35,10 +35,12 @@ extern _Route5UndergroundPathSignText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route5_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route5_TextPointers:
     dd Route5UndergroundPathSignText
 Route5UndergroundPathSignText:

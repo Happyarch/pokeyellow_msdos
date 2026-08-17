@@ -54,6 +54,7 @@ wSilphCo10FCurScript                           equ 0xD657
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo10F_Script:
     call SilphCo10FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -65,6 +66,7 @@ SilphCo10F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo10FGateCallbackScript:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -88,11 +90,13 @@ SilphCo10FGateCallbackScript:
     jmp ReplaceTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 .GateCoordinates:
     db 4, 5
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo10F_SetUnlockedSilphCoDoorsScript:
     mov al, [ebp + hUnlockedSilphCoDoors]
     test al, al
@@ -105,12 +109,14 @@ SilphCo10F_SetUnlockedSilphCoDoorsScript:
 ; SilphCo10F_ScriptPointers (scripts/SilphCo10F.asm:38-58) — not re-emitted: SilphCo10TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo10FRocketText:
     mov esi, SilphCo10TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo10FScientistText:
     mov esi, SilphCo10TrainerHeader1
     call TalkToTrainer

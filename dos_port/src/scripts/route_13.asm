@@ -73,6 +73,7 @@ wRoute13CurScript                              equ 0xD619
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route13TrainerHeaders
@@ -85,6 +86,7 @@ Route13_Script:
 ; Route13_ScriptPointers (scripts/Route13.asm:11-54) — not re-emitted: Route13_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13CooltrainerM1Text:
     mov esi, Route13TrainerHeader0
     call TalkToTrainer
@@ -93,6 +95,7 @@ Route13CooltrainerM1Text:
 ; Route13CooltrainerM1BattleText (scripts/Route13.asm:63-72) — not re-emitted: Route13CooltrainerM1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13CooltrainerF1Text:
     mov esi, Route13TrainerHeader1
     call TalkToTrainer
@@ -101,6 +104,7 @@ Route13CooltrainerF1Text:
 ; Route13CooltrainerF1BattleText (scripts/Route13.asm:81-90) — not re-emitted: Route13CooltrainerF1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13CooltrainerF2Text:
     mov esi, Route13TrainerHeader2
     call TalkToTrainer
@@ -109,6 +113,7 @@ Route13CooltrainerF2Text:
 ; Route13CooltrainerF2BattleText (scripts/Route13.asm:99-108) — not re-emitted: Route13CooltrainerF2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13CooltrainerF3Text:
     mov esi, Route13TrainerHeader3
     call TalkToTrainer
@@ -117,6 +122,7 @@ Route13CooltrainerF3Text:
 ; Route13CooltrainerF3BattleText (scripts/Route13.asm:117-126) — not re-emitted: Route13CooltrainerF3BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13CooltrainerF4Text:
     mov esi, Route13TrainerHeader4
     call TalkToTrainer
@@ -125,6 +131,7 @@ Route13CooltrainerF4Text:
 ; Route13CooltrainerF4BattleText (scripts/Route13.asm:135-144) — not re-emitted: Route13CooltrainerF4BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13CooltrainerM2Text:
     mov esi, Route13TrainerHeader5
     call TalkToTrainer
@@ -133,6 +140,7 @@ Route13CooltrainerM2Text:
 ; Route13CooltrainerM2BattleText (scripts/Route13.asm:153-162) — not re-emitted: Route13CooltrainerM2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13Beauty1Text:
     mov esi, Route13TrainerHeader6
     call TalkToTrainer
@@ -141,6 +149,7 @@ Route13Beauty1Text:
 ; Route13Beauty1BattleText (scripts/Route13.asm:171-180) — not re-emitted: Route13Beauty1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13Beauty2Text:
     mov esi, Route13TrainerHeader7
     call TalkToTrainer
@@ -149,6 +158,7 @@ Route13Beauty2Text:
 ; Route13Beauty2BattleText (scripts/Route13.asm:189-198) — not re-emitted: Route13Beauty2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13BikerText:
     mov esi, Route13TrainerHeader8
     call TalkToTrainer
@@ -157,6 +167,7 @@ Route13BikerText:
 ; Route13BikerBattleText (scripts/Route13.asm:207-216) — not re-emitted: Route13BikerBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route13CooltrainerM3Text:
     mov esi, Route13TrainerHeader9
     call TalkToTrainer

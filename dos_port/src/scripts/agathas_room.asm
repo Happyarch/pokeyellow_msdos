@@ -70,6 +70,7 @@ wCoordIndex                                    equ 0xCD3D
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathasRoom_Script:
     call AgathaShowOrHideExitBlock
     call EnableAutoTextBoxDrawing
@@ -81,6 +82,7 @@ AgathasRoom_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathaShowOrHideExitBlock:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -96,6 +98,7 @@ AgathaShowOrHideExitBlock:
     jmp .setExitBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 .blockExitToNextRoom:
     mov al, 0x3b
 .setExitBlock:
@@ -105,12 +108,14 @@ AgathaShowOrHideExitBlock:
     jmp ReplaceTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 ResetAgathaScript:
     xor al, al
     mov [ebp + wAgathasRoomCurScript], al
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathasRoom_ScriptPointers:
     dd AgathasRoomDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -119,10 +124,12 @@ AgathasRoom_ScriptPointers:
     dd AgathasRoomNoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathasRoomNoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathaScriptWalkIntoRoom:
     mov esi, wSimulatedJoypadStatesEnd
     mov al, PAD_UP
@@ -146,6 +153,7 @@ AgathaScriptWalkIntoRoom:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathasRoomDefaultScript:
     mov esi, AgathaEntranceCoords
     call ArePlayerCoordsInArray
@@ -175,6 +183,7 @@ AgathasRoomDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathaEntranceCoords:
     db 10, 4
     db 10, 5
@@ -183,6 +192,7 @@ AgathaEntranceCoords:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathasRoomPlayerIsMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -197,6 +207,7 @@ AgathasRoomPlayerIsMovingScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathasRoomAgathaEndBattleScript:
     call EndTrainerBattle
     mov al, [ebp + wIsInBattle]
@@ -212,6 +223,7 @@ AgathasRoomAgathaEndBattleScript:
 ; AgathasRoom_TextPointers (scripts/AgathasRoom.asm:121-129) — not re-emitted: AgathasRoomTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 AgathasRoomAgathaText:
     mov esi, AgathasRoomTrainerHeader0
     call TalkToTrainer

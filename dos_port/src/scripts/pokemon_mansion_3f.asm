@@ -59,6 +59,7 @@ wPokemonMansion3FCurScript                     equ 0xD63C
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion3F_Script:
     call Mansion3CheckReplaceSwitchDoorBlocks
     call EnableAutoTextBoxDrawing
@@ -70,6 +71,7 @@ PokemonMansion3F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Mansion3CheckReplaceSwitchDoorBlocks:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -90,6 +92,7 @@ Mansion3CheckReplaceSwitchDoorBlocks:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .switchTurnedOn:
     mov al, 0x5f
     mov bx, ((2) << 8) | (7)
@@ -100,12 +103,14 @@ Mansion3CheckReplaceSwitchDoorBlocks:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion3F_ScriptPointers:
     dd PokemonMansion3FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion3FDefaultScript:
     mov esi, .holeCoords
     call .isPlayerFallingDownHole
@@ -121,6 +126,7 @@ PokemonMansion3FDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .holeCoords:
     db 14, 16
     db 14, 17
@@ -128,6 +134,7 @@ PokemonMansion3FDefaultScript:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 .isPlayerFallingDownHole:
     xor al, al
     mov [ebp + wWhichDungeonWarp], al
@@ -155,12 +162,14 @@ PokemonMansion3FDefaultScript:
 ; PokemonMansion3F_TextPointers (scripts/PokemonMansion3F.asm:87-101) — not re-emitted: Mansion3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion3FSuperNerdText:
     mov esi, Mansion3TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 PokemonMansion3FScientistText:
     mov esi, Mansion3TrainerHeader1
     call TalkToTrainer

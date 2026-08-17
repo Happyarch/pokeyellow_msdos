@@ -44,11 +44,13 @@ extern _SaffronPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronPokecenter_TextPointers:
     dd SaffronPokecenterNurseText
     dd SaffronPokecenterBeautyText
@@ -67,6 +69,7 @@ SaffronPokecenterLinkReceptionistText:
     script_cable_club_receptionist
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronPokecenterChanseyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PokecenterChanseyText

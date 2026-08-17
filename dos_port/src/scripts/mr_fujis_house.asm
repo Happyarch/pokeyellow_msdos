@@ -55,11 +55,13 @@ extern _MrFujisHouseSuperNerdMrFujiIsntHereText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 MrFujisHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 MrFujisHouse_TextPointers:
     dd MrFujisHouseSuperNerdText
     dd MrFujisHouseLittleGirlText
@@ -69,6 +71,7 @@ MrFujisHouse_TextPointers:
     dd MrFujisHouseMrFujiPokedexText
 
 %assign event_byte -1
+%assign event_byte_a -1
 MrFujisHouseSuperNerdText:
     CheckEvent EVENT_RESCUED_MR_FUJI
     jnz .rescued_mr_fuji
@@ -77,6 +80,7 @@ MrFujisHouseSuperNerdText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .rescued_mr_fuji:
     mov esi, .MrFujiHadBeenPrayingText
     call PrintText
@@ -84,6 +88,7 @@ MrFujisHouseSuperNerdText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .MrFujiIsntHereText:
     text_far _MrFujisHouseSuperNerdMrFujiIsntHereText
     text_end
@@ -92,6 +97,7 @@ MrFujisHouseSuperNerdText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 MrFujisHouseLittleGirlText:
     CheckEvent EVENT_RESCUED_MR_FUJI
     jnz .rescued_mr_fuji
@@ -100,6 +106,7 @@ MrFujisHouseLittleGirlText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .rescued_mr_fuji:
     mov esi, .PokemonAreNiceToHugText
     call PrintText
@@ -107,6 +114,7 @@ MrFujisHouseLittleGirlText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ThisIsMrFujisHouseText:
     text_far _MrFujisHouseLittleGirlThisIsMrFujisHouseText
     text_end
@@ -117,20 +125,24 @@ MrFujisHousePsyduckText:
     text_far _MrFujisHousePsyduckText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 47
     call PlayCry
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 MrFujisHouseNidorinoText:
     text_far _MrFujisHouseNidorinoText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 167
     call PlayCry
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 MrFujisHouseMrFujiText:
     CheckEvent EVENT_GOT_POKE_FLUTE
     jnz .got_item
@@ -145,12 +157,14 @@ MrFujisHouseMrFujiText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .PokeFluteNoRoomText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .HasMyFluteHelpedYouText
     call PrintText
@@ -158,6 +172,7 @@ MrFujisHouseMrFujiText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .IThinkThisMayHelpYourQuestText:
     text_far _MrFujisHouseMrFujiIThinkThisMayHelpYourQuestText
     text_end

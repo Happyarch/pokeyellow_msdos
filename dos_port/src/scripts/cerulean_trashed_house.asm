@@ -43,11 +43,13 @@ extern _CeruleanTrashedHouseWallHoleText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeruleanTrashedHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeruleanTrashedHouse_TextPointers:
     dd CeruleanTrashedHouseFishingGuruText
     dd CeruleanTrashedHouseGirlText
@@ -66,6 +68,7 @@ CeruleanTrashedHouse_TextPointers:
 ; PRET| 	jr .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .no_dig_tm:
     mov esi, .TheyStoleATMText
     call PrintText
@@ -73,6 +76,7 @@ CeruleanTrashedHouse_TextPointers:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .TheyStoleATMText:
     text_far _CeruleanTrashedHouseFishingGuruTheyStoleATMText
     text_end

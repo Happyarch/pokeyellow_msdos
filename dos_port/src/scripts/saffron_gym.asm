@@ -123,6 +123,7 @@ section .text
 ; PRET| 	db "SABRINA@"
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -131,6 +132,7 @@ SaffronGymResetScripts:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGym_ScriptPointers:
     dd CheckFightingMapTrainers
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -138,6 +140,7 @@ SaffronGym_ScriptPointers:
     dd SaffronGymSabrinaPostBattle
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGymSabrinaPostBattle:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -161,6 +164,7 @@ SaffronGymSabrinaReceiveTM46Script:
     jmp .gymVictory
 
 %assign event_byte -1
+%assign event_byte_a -1
 .BagFull:
     mov al, TEXT_SAFFRONGYM_SABRINA_TM46_NO_ROOM
     mov [ebp + hTextID], al
@@ -176,7 +180,7 @@ SaffronGymSabrinaReceiveTM46Script:
 ; SaffronGym_TextPointers (scripts/SaffronGym.asm:75-105) — not re-emitted: SaffronGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SaffronGymSabrinaText (scripts/SaffronGym.asm:109-115) — at scripts/SaffronGym.asm:111: CheckEventReuseA EVENT_GOT_TM46
+; BAIL[target-region-bailed] SaffronGymSabrinaText (scripts/SaffronGym.asm:109-115) — at scripts/SaffronGym.asm:112: .afterBeat is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_SABRINA
@@ -196,6 +200,7 @@ SaffronGymSabrinaReceiveTM46Script:
 ; PRET| 	jr .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .beforeBeat:
     mov esi, .Text
     call PrintText
@@ -217,6 +222,7 @@ SaffronGymSabrinaReceiveTM46Script:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _SaffronGymSabrinaText
     text_end
@@ -241,42 +247,49 @@ SaffronGymSabrinaTM46NoRoomText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGymChanneler1Text:
     mov esi, SaffronGymTrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGymYoungster1Text:
     mov esi, SaffronGymTrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGymChanneler2Text:
     mov esi, SaffronGymTrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGymYoungster2Text:
     mov esi, SaffronGymTrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGymChanneler3Text:
     mov esi, SaffronGymTrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGymYoungster3Text:
     mov esi, SaffronGymTrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronGymYoungster4Text:
     mov esi, SaffronGymTrainerHeader6
     call TalkToTrainer

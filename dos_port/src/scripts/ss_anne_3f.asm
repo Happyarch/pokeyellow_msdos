@@ -35,10 +35,12 @@ extern _SSAnne3FSailorText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne3F_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne3F_TextPointers:
     dd SSAnne3FSailorText
 SSAnne3FSailorText:

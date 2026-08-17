@@ -43,6 +43,7 @@ wSprite01StateData2MapY                        equ 0xC214
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 TradeCenter_Script:
     call EnableAutoTextBoxDrawing
     mov al, [ebp + hSerialConnectionStatus]
@@ -83,6 +84,7 @@ TradeCenter_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 TradeCenter_TextPointers:
     dd TradeCenterOpponentText
 TradeCenterOpponentText:

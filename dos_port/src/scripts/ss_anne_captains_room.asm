@@ -56,11 +56,13 @@ extern _SSAnneCaptainsRoomTrashText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneCaptainsRoom_Script:
     call SSAnneCaptainsRoomEventScript
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneCaptainsRoomEventScript:
     CheckEvent EVENT_GOT_HM01
     jz .nr_7
@@ -71,12 +73,14 @@ SSAnneCaptainsRoomEventScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneCaptainsRoom_TextPointers:
     dd SSAnneCaptainsRoomCaptainText
     dd SSAnneCaptainsRoomTrashText
     dd SSAnneCaptainsRoomSeasickBookText
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneCaptainsRoomCaptainText:
     CheckEvent EVENT_GOT_HM01
     jnz .got_item
@@ -95,12 +99,14 @@ SSAnneCaptainsRoomCaptainText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, SSAnneCaptainsRoomCaptainHM01NoRoomText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, SSAnneCaptainsRoomCaptainNotSickAnymoreText
     call PrintText
@@ -108,10 +114,12 @@ SSAnneCaptainsRoomCaptainText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneCaptainsRoomRubCaptainsBackText:
     text_far _SSAnneCaptainsRoomRubCaptainsBackText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, [ebp + wAudioROMBank]
     cmp al, 31
     mov [ebp + wAudioSavedROMBank], al
@@ -134,6 +142,7 @@ SSAnneCaptainsRoomRubCaptainsBackText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneCaptainsRoomCaptainIFeelMuchBetterText:
     text_far _SSAnneCaptainsRoomCaptainIFeelMuchBetterText
     text_end

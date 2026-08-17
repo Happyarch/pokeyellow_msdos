@@ -58,10 +58,12 @@ TEXT_WARDENSHOUSE_DISPLAY_LEFT                 equ 4
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 WardensHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 WardensHouse_TextPointers:
     dd WardensHouseWardenText
     dd PickUpItemText
@@ -70,6 +72,7 @@ WardensHouse_TextPointers:
     dd WardensHouseDisplayText
 
 %assign event_byte -1
+%assign event_byte_a -1
 WardensHouseWardenText:
     CheckEvent EVENT_GOT_HM04
     jnz .got_item
@@ -91,6 +94,7 @@ WardensHouseWardenText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .have_gold_teeth:
     mov esi, .GaveTheGoldTeethText
     call PrintText
@@ -113,12 +117,14 @@ WardensHouseWardenText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .HM04ExplanationText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .HM04NoRoomText
     call PrintText
@@ -126,6 +132,7 @@ WardensHouseWardenText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Gibberish1Text:
     text_far _WardensHouseWardenGibberish1Text
     text_end
@@ -156,6 +163,7 @@ WardensHouseWardenText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 WardensHouseDisplayText:
     mov al, [ebp + hTextID]
     cmp al, TEXT_WARDENSHOUSE_DISPLAY_LEFT
@@ -167,6 +175,7 @@ WardensHouseDisplayText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PhotosAndFossilsText:
     text_far _WardensHouseDisplayPhotosAndFossilsText
     text_end

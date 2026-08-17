@@ -38,10 +38,12 @@ extern _SaffronMartSuperNerdText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronMart_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 SaffronMart_TextPointers:
     dd SaffronMartClerkText
     dd SaffronMartSuperNerdText

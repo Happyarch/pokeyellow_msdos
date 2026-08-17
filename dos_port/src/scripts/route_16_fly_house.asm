@@ -45,15 +45,18 @@ extern _Route16FlyHouseFearowText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16FlyHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16FlyHouse_TextPointers:
     dd Route16FlyHouseBrunetteGirlText
     dd Route16FlyHouseFearowText
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16FlyHouseBrunetteGirlText:
     CheckEvent EVENT_GOT_HM02
     mov esi, .HM02ExplanationText
@@ -68,6 +71,7 @@ Route16FlyHouseBrunetteGirlText:
     jmp .got_item
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .HM02NoRoomText
 .got_item:
@@ -75,6 +79,7 @@ Route16FlyHouseBrunetteGirlText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _Route16FlyHouseBrunetteGirlText
     text_end
@@ -90,6 +95,7 @@ Route16FlyHouseBrunetteGirlText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16FlyHouseFearowText:
     mov esi, .Text
     call PrintText
@@ -99,6 +105,7 @@ Route16FlyHouseFearowText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _Route16FlyHouseFearowText
     text_end

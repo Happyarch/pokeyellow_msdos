@@ -76,6 +76,7 @@ wRocketHideoutB3FCurScript                     equ 0xD632
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB3F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, RocketHideout3TrainerHeaders
@@ -86,6 +87,7 @@ RocketHideoutB3F_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB3F_ScriptPointers:
     dd RocketHideoutB3FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -93,6 +95,7 @@ RocketHideoutB3F_ScriptPointers:
     dd RocketHideoutB3FPlayerSpinningScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB3FDefaultScript:
     mov al, [ebp + wYCoord]
     mov bh, al
@@ -114,6 +117,7 @@ RocketHideoutB3FDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideout3ArrowTilePlayerMovement:
     db 13, 10
     dd RocketHideout3ArrowMovement6
@@ -196,6 +200,7 @@ RocketHideout3ArrowMovement12:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB3FPlayerSpinningScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -211,6 +216,7 @@ RocketHideoutB3FPlayerSpinningScript:
 ; RocketHideoutB3F_TextPointers (scripts/RocketHideoutB3F.asm:129-141) — not re-emitted: RocketHideout3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB3FRocket1Text:
     mov esi, RocketHideout3TrainerHeader0
     call TalkToTrainer
@@ -219,6 +225,7 @@ RocketHideoutB3FRocket1Text:
 ; RocketHideoutB3FRocket1BattleText (scripts/RocketHideoutB3F.asm:150-159) — not re-emitted: RocketHideoutB3FRocket1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB3FRocket2Text:
     mov esi, RocketHideout3TrainerHeader1
     call TalkToTrainer

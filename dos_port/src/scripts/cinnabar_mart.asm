@@ -38,10 +38,12 @@ extern _CinnabarMartSilphWorkerFText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarMart_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarMart_TextPointers:
     dd CinnabarMartClerkText
     dd CinnabarMartSilphWorkerFText

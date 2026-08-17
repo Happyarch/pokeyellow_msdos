@@ -473,7 +473,14 @@ class Emitter:
                     "CheckEventAfterBranchReuseHL",
                     "SetEventAfterBranchReuseHL",
                     "ResetEventAfterBranchReuseHL",
-                    "CheckAndSetEventReuseHL", "CheckAndResetEventReuseHL"):
+                    "CheckAndSetEventReuseHL", "CheckAndResetEventReuseHL",
+                    # ...and the *ReuseA family, for the same reason: events.inc
+                    # carries `event_byte_a` in the assembler. It is a SEPARATE
+                    # variable from `event_byte` because the port's SetEvent is
+                    # read-modify-write through AL where pret's works on [hl], so
+                    # one shared tracker would let an HL predecessor license an
+                    # A-family elision against a register it never loaded.
+                    "CheckEventReuseA", "CheckEventAfterBranchReuseA"):
             rendered = f"{name} {', '.join(self.expr(a, out) for a in args)}"
             # The port's SetEvent/ResetEvent macros are NOT flag-transparent
             # (they lower to `or`/`and`), while pret's are. Where a flag is live

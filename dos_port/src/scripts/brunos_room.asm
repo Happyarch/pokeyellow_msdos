@@ -68,6 +68,7 @@ wCoordIndex                                    equ 0xCD3D
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunosRoom_Script:
     call BrunoShowOrHideExitBlock
     call EnableAutoTextBoxDrawing
@@ -79,6 +80,7 @@ BrunosRoom_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunoShowOrHideExitBlock:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -94,6 +96,7 @@ BrunoShowOrHideExitBlock:
     jmp .setExitBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 .blockExitToNextRoom:
     mov al, 0x24
 .setExitBlock:
@@ -103,12 +106,14 @@ BrunoShowOrHideExitBlock:
     jmp ReplaceTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 ResetBrunoScript:
     xor al, al
     mov [ebp + wBrunosRoomCurScript], al
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunosRoom_ScriptPointers:
     dd BrunosRoomDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -117,10 +122,12 @@ BrunosRoom_ScriptPointers:
     dd BrunosRoomNoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunosRoomNoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunoScriptWalkIntoRoom:
     mov esi, wSimulatedJoypadStatesEnd
     mov al, PAD_UP
@@ -144,6 +151,7 @@ BrunoScriptWalkIntoRoom:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunosRoomDefaultScript:
     mov esi, BrunoEntranceCoords
     call ArePlayerCoordsInArray
@@ -173,6 +181,7 @@ BrunosRoomDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunoEntranceCoords:
     db 10, 4
     db 10, 5
@@ -181,6 +190,7 @@ BrunoEntranceCoords:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunosRoomPlayerIsMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -195,6 +205,7 @@ BrunosRoomPlayerIsMovingScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunosRoomBrunoEndBattleScript:
     call EndTrainerBattle
     mov al, [ebp + wIsInBattle]
@@ -207,6 +218,7 @@ BrunosRoomBrunoEndBattleScript:
 ; BrunosRoom_TextPointers (scripts/BrunosRoom.asm:118-126) — not re-emitted: BrunosRoomTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 BrunosRoomBrunoText:
     mov esi, BrunosRoomTrainerHeader0
     call TalkToTrainer

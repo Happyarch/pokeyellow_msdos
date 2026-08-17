@@ -65,10 +65,12 @@ extern _CeladonMart3FSportsGameText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMart3F_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMart3F_TextPointers:
     dd CeladonMart3FClerkText
     dd CeladonMart3FGameBoyKid1Text
@@ -89,12 +91,14 @@ CeladonMart3F_TextPointers:
     dd CeladonMart3FPokemonPosterText
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMart3FClerkText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CeladonMart3FPrintClerkText
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMart3FGameBoyKid1Text:
     text_far _CeladonMart3FGameBoyKid1Text
     text_end
@@ -130,6 +134,7 @@ CeladonMart3FPokemonPosterText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 CeladonMart3FPrintClerkText:
     CheckEvent EVENT_GOT_TM18
     jnz .got_item
@@ -143,11 +148,13 @@ CeladonMart3FPrintClerkText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .TM18NoRoomText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .TM18ExplanationText
 .done:
@@ -155,6 +162,7 @@ CeladonMart3FPrintClerkText:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .TM18PreReceiveText:
     text_far _CeladonMart3FClerkTM18PreReceiveText
     text_end

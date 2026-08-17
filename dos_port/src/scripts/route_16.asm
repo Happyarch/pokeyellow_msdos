@@ -77,6 +77,7 @@ wRoute16CurScript                              equ 0xD625
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route16TrainerHeaders
@@ -87,6 +88,7 @@ Route16_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16ResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -95,6 +97,7 @@ Route16ResetScripts:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16_ScriptPointers:
     dd Route16DefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -102,6 +105,7 @@ Route16_ScriptPointers:
     dd Route16SnorlaxPostBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16DefaultScript:
     mov esi, wEventFlags + EVENT_BYTE(EVENT_BEAT_ROUTE16_SNORLAX)
     test byte [ebp + esi], EVENT_MASK(EVENT_BEAT_ROUTE16_SNORLAX)
@@ -129,6 +133,7 @@ Route16DefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16SnorlaxPostBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -151,6 +156,7 @@ Route16SnorlaxPostBattleScript:
 ; Route16_TextPointers (scripts/Route16.asm:66-93) — not re-emitted: Route16TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16Biker1Text:
     mov esi, Route16TrainerHeader0
     call TalkToTrainer
@@ -159,6 +165,7 @@ Route16Biker1Text:
 ; Route16Biker1BattleText (scripts/Route16.asm:102-111) — not re-emitted: Route16Biker1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16Biker2Text:
     mov esi, Route16TrainerHeader1
     call TalkToTrainer
@@ -167,6 +174,7 @@ Route16Biker2Text:
 ; Route16Biker2BattleText (scripts/Route16.asm:120-129) — not re-emitted: Route16Biker2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16Biker3Text:
     mov esi, Route16TrainerHeader2
     call TalkToTrainer
@@ -175,6 +183,7 @@ Route16Biker3Text:
 ; Route16Biker3BattleText (scripts/Route16.asm:138-147) — not re-emitted: Route16Biker3BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16Biker4Text:
     mov esi, Route16TrainerHeader3
     call TalkToTrainer
@@ -183,6 +192,7 @@ Route16Biker4Text:
 ; Route16biker4BattleText (scripts/Route16.asm:156-165) — not re-emitted: Route16biker4BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16Biker5Text:
     mov esi, Route16TrainerHeader4
     call TalkToTrainer
@@ -191,6 +201,7 @@ Route16Biker5Text:
 ; Route16Biker5BattleText (scripts/Route16.asm:174-183) — not re-emitted: Route16Biker5BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route16Biker6Text:
     mov esi, Route16TrainerHeader5
     call TalkToTrainer

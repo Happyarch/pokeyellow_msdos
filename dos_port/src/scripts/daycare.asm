@@ -85,10 +85,12 @@ wDayCareTotalCost                              equ 0xCD3F
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Daycare_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 Daycare_TextPointers:
     dd DaycareGentlemanText
 
@@ -334,6 +336,7 @@ Daycare_TextPointers:
 ; PRET| 	jr .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .leaveMonInDayCare:
     mov al, [ebp + wDayCareStartLevel]
     mov [ebp + wDayCareMonBoxLevel], al
@@ -342,6 +345,7 @@ Daycare_TextPointers:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .IntroText:
     text_far _DaycareGentlemanIntroText
     text_end

@@ -40,10 +40,12 @@ extern _CinnabarLabTradeRoomSuperNerdText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabTradeRoom_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabTradeRoom_TextPointers:
     dd CinnabarLabTradeRoomSuperNerdText
     dd CinnabarLabTradeRoomGrampsText
@@ -53,12 +55,14 @@ CinnabarLabTradeRoomSuperNerdText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabTradeRoomGrampsText:
     mov al, 7
     mov [ebp + wWhichTrade], al
     jmp CinnabarLabTradeRoomDoTrade
 
 %assign event_byte -1
+%assign event_byte_a -1
 CinnabarLabTradeRoomBeautyText:
     mov al, 8
     mov [ebp + wWhichTrade], al

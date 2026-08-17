@@ -35,10 +35,12 @@ extern _Route15Gate1FGuardText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Gate1F_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route15Gate1F_TextPointers:
     dd Route15Gate1FGuardText
 Route15Gate1FGuardText:

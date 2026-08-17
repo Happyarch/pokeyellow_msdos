@@ -41,14 +41,17 @@ extern _MrPsychicsHouseMrPsychicYouWantedThisText   ; NOT YET DEFINED IN THE POR
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 MrPsychicsHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 MrPsychicsHouse_TextPointers:
     dd MrPsychicsHouseMrPsychicText
 
 %assign event_byte -1
+%assign event_byte_a -1
 MrPsychicsHouseMrPsychicText:
     CheckEvent EVENT_GOT_TM29
     jnz .got_item
@@ -63,12 +66,14 @@ MrPsychicsHouseMrPsychicText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .bag_full:
     mov esi, .TM29NoRoomText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_item:
     mov esi, .TM29ExplanationText
     call PrintText
@@ -76,6 +81,7 @@ MrPsychicsHouseMrPsychicText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .YouWantedThisText:
     text_far _MrPsychicsHouseMrPsychicYouWantedThisText
     text_end

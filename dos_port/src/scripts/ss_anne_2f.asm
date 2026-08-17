@@ -84,6 +84,7 @@ wSSAnne2FCurScript                             equ 0xD664
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, SSAnne2F_ScriptPointers
@@ -91,6 +92,7 @@ SSAnne2F_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -98,6 +100,7 @@ SSAnne2FResetScripts:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2F_ScriptPointers:
     dd SSAnne2FDefaultScript
     dd SSAnne2FRivalStartBattleScript
@@ -106,6 +109,7 @@ SSAnne2F_ScriptPointers:
     dd SSAnne2FNoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FNoopScript:
     ret
 
@@ -140,6 +144,7 @@ SSAnne2FNoopScript:
 ; PRET| 	jr .move_sprite
 
 %assign event_byte -1
+%assign event_byte_a -1
 .player_standing_right:
     mov edi, .RivalDownThreeMovement   ; pret: ld de, .RivalDownThreeMovement — MoveSprite takes it in EDI
 .move_sprite:
@@ -149,6 +154,7 @@ SSAnne2FNoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .RivalDownFourMovement:
     db NPC_MOVEMENT_DOWN
 .RivalDownThreeMovement:
@@ -162,6 +168,7 @@ SSAnne2FNoopScript:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FSetFacingDirectionScript:
     mov al, [ebp + wXCoord]
     cmp al, 37
@@ -172,6 +179,7 @@ SSAnne2FSetFacingDirectionScript:
     jmp .set_facing_direction
 
 %assign event_byte -1
+%assign event_byte_a -1
 .player_standing_left:
     xor al, al
 .set_facing_direction:
@@ -181,6 +189,7 @@ SSAnne2FSetFacingDirectionScript:
     jmp SetSpriteFacingDirectionAndDelay
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRivalStartBattleScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -226,6 +235,7 @@ SSAnne2FRivalStartBattleScript:
 ; PRET| 	jr .move_sprite
 
 %assign event_byte -1
+%assign event_byte_a -1
 .player_standing_left:
     mov edi, .RivalWalkAroundPlayerMovement   ; pret: ld de, .RivalWalkAroundPlayerMovement — MoveSprite takes it in EDI
 .move_sprite:
@@ -240,6 +250,7 @@ SSAnne2FRivalStartBattleScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .RivalWalkAroundPlayerMovement:
     db NPC_MOVEMENT_RIGHT
     db NPC_MOVEMENT_DOWN
@@ -251,6 +262,7 @@ SSAnne2FRivalStartBattleScript:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRivalExitScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -269,6 +281,7 @@ SSAnne2FRivalExitScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2F_TextPointers:
     dd SSAnne2FWaiterText
     dd SSAnne2FRivalText
@@ -278,6 +291,7 @@ SSAnne2FWaiterText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnne2FRivalText:
     mov esi, .Text
     call PrintText
@@ -290,6 +304,7 @@ SSAnne2FRivalText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _SSAnne2FRivalText
     text_end

@@ -39,11 +39,13 @@ extern _FuchsiaBillsGrandpasHouseYoungsterText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaBillsGrandpasHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 FuchsiaBillsGrandpasHouse_TextPointers:
     dd FuchsiaBillsGrandpasHouseMiddleAgedWomanText
     dd FuchsiaBillsGrandpasHouseBillsGrandpaText

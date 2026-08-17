@@ -61,6 +61,7 @@ global OaksLabRivalTakesText2
 global OaksLabRivalTakesText3
 global OaksLabRivalTakesText4
 global OaksLabRivalTakesText5
+global OaksLabRivalText
 global OaksLabScript_RemoveParcel
 global OaksLabToggleOaksScript
 global OaksLab_Script
@@ -118,7 +119,6 @@ extern OaksLabRivalIllTakeYouOnText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalLeaveItAllToMeText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalMyPokemonHasGrownStrongerText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalSmellYouLaterText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalWhatAboutMeText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabScientistText   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
@@ -246,6 +246,7 @@ wViridianCityCurScript                         equ 0xD5F3
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLab_Script:
     CheckEvent EVENT_PALLET_AFTER_GETTING_POKEBALLS_2
     jz .sk_3
@@ -261,6 +262,7 @@ OaksLab_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLab_ScriptPointers:
     dd OaksLabDefaultScript
     dd OaksLabOakEntersLabScript
@@ -287,6 +289,7 @@ OaksLab_ScriptPointers:
     dd OaksLabNoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabDefaultScript:
     CheckEvent EVENT_OAK_APPEARED_IN_PALLET
     jnz .nr_41
@@ -308,6 +311,7 @@ OaksLabDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabOakEntersLabScript:
     mov al, 6
     mov [ebp + hSpriteIndex], al
@@ -318,6 +322,7 @@ OaksLabOakEntersLabScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OakEntryMovement:
     db NPC_MOVEMENT_UP
     db NPC_MOVEMENT_UP
@@ -325,6 +330,7 @@ OakEntryMovement:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabToggleOaksScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -344,6 +350,7 @@ OaksLabToggleOaksScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPlayerEntersLabScript:
     call Delay3
     mov esi, wSimulatedJoypadStatesEnd
@@ -367,11 +374,13 @@ OaksLabPlayerEntersLabScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PlayerEntryMovementRLE:
     db PAD_UP, 8
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabFollowedOakScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -393,6 +402,7 @@ OaksLabFollowedOakScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabOakChooseMonSpeechScript:
     SetEvent EVENT_OAK_ASKED_TO_CHOOSE_MON
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
@@ -423,6 +433,7 @@ OaksLabOakChooseMonSpeechScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPlayerDontGoAwayScript:
     mov al, [ebp + wYCoord]
     cmp al, 6
@@ -455,6 +466,7 @@ OaksLabPlayerDontGoAwayScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPlayerForcedToWalkBackScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -467,6 +479,7 @@ OaksLabPlayerForcedToWalkBackScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabChoseStarterScript:
     mov al, 1
     mov [ebp + hSpriteIndex], al
@@ -477,6 +490,7 @@ OaksLabChoseStarterScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .RivalPushesPlayerAwayFromEeveeBall:
     db 0x00
     db 0x07
@@ -485,6 +499,7 @@ OaksLabChoseStarterScript:
     db 0xFF
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalTakesPokeballScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -513,6 +528,7 @@ OaksLabRivalTakesPokeballScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_1c564:
     mov al, [ebp + wYCoord]
     cmp al, 4
@@ -535,6 +551,7 @@ OaksLabRivalTakesPokeballScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPlayerWalksToOakScript:
     mov al, [ebp + wYCoord]
     cmp al, 4
@@ -546,6 +563,7 @@ OaksLabPlayerWalksToOakScript:
     jmp .asm_1c5a6
 
 %assign event_byte -1
+%assign event_byte_a -1
 .asm_1c599:
     mov esi, wSimulatedJoypadStatesEnd
     mov edi, OaksLabRLE_PlayerWalksToOak   ; pret: ld de, OaksLabRLE_PlayerWalksToOak — DecodeRLEList takes it in EDI
@@ -559,6 +577,7 @@ OaksLabPlayerWalksToOakScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRLE_PlayerWalksToOak:
     db PAD_UP, 2
     db PAD_LEFT, 3
@@ -567,6 +586,7 @@ OaksLabRLE_PlayerWalksToOak:
     db 0xFF
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPlayerReceivesPikachuScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -583,6 +603,7 @@ OaksLabPlayerReceivesPikachuScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalChallengesPlayerScript:
     mov al, [ebp + wYCoord]
     cmp al, 6
@@ -624,6 +645,7 @@ OaksLabRivalChallengesPlayerScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalStartBattleScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -652,6 +674,7 @@ OaksLabRivalStartBattleScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalEndBattleScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -683,6 +706,7 @@ OaksLabRivalEndBattleScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalStartsExitScript:
     mov bl, 20
     call DelayFrames
@@ -702,6 +726,7 @@ OaksLabRivalStartsExitScript:
     jmp .next
 
 %assign event_byte -1
+%assign event_byte_a -1
 .moveLeft:
     mov al, NPC_MOVEMENT_LEFT
 .next:
@@ -711,6 +736,7 @@ OaksLabRivalStartsExitScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .RivalExitMovement:
     db NPC_CHANGE_FACING
     db NPC_MOVEMENT_DOWN
@@ -722,6 +748,7 @@ OaksLabRivalStartsExitScript:
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPlayerWatchRivalExitScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -738,6 +765,7 @@ OaksLabPlayerWatchRivalExitScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .checkRivalPosition:
     mov al, [ebp + wNPCNumScriptedSteps]
     cmp al, 0x5
@@ -749,11 +777,13 @@ OaksLabPlayerWatchRivalExitScript:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .turnPlayerLeft:
     mov al, SPRITE_FACING_LEFT
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .turnPlayerDown:
     cmp al, 0x4
     jz .nr_466
@@ -765,6 +795,7 @@ OaksLabPlayerWatchRivalExitScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPikachuEscapesPokeballScript:
     mov al, SPRITE_FACING_UP
     mov [ebp + wSpritePlayerStateData1FacingDirection], al
@@ -781,6 +812,7 @@ OaksLabPikachuEscapesPokeballScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPikachuDislikesPokeballsScript:
     mov al, TEXT_OAKSLAB_PIKACHU_DISLIKES_POKEBALLS2
     mov [ebp + hTextID], al
@@ -826,6 +858,7 @@ OaksLabPikachuDislikesPokeballsScript:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalFaceUpOakFaceDownScript:
     mov al, 1
     mov [ebp + hSpriteIndex], al
@@ -917,6 +950,7 @@ OaksLabRivalFaceUpOakFaceDownScript:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalLeavesWithPokedexScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -942,10 +976,12 @@ OaksLabRivalLeavesWithPokedexScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabNoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabScript_RemoveParcel:
     mov esi, wBagItems
     mov bx, 0
@@ -963,6 +999,7 @@ OaksLabScript_RemoveParcel:
     jmp .loop
 
 %assign event_byte -1
+%assign event_byte_a -1
 .foundParcel:
     mov esi, wNumBagItems
     mov al, bl
@@ -973,6 +1010,7 @@ OaksLabScript_RemoveParcel:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabCalcRivalMovementScript:
     mov al, 0x7c
     mov [ebp + hSpriteScreenYCoord], al
@@ -988,6 +1026,7 @@ OaksLabCalcRivalMovementScript:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .not_below_oak:
     cmp al, 1
     jnz .not_above_oak
@@ -998,6 +1037,7 @@ OaksLabCalcRivalMovementScript:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .not_above_oak:
     mov al, 0x3
     mov [ebp + wNPCMovementDirections2Index], al
@@ -1009,6 +1049,7 @@ OaksLabCalcRivalMovementScript:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .not_left_of_oak:
     mov al, 0x20
 .done:
@@ -1032,6 +1073,7 @@ OaksLabCalcRivalMovementScript:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLab_TextPointers:
     dd OaksLabRivalText
     dd OaksLabEeveePokeBallText
@@ -1071,27 +1113,26 @@ OaksLab_TextPointers2:
     dd OaksLabScientistText
     dd OaksLabScientistText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabRivalText (scripts/OaksLab.asm:752-756) — at scripts/OaksLab.asm:753: .beforeChooseMon is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_FOLLOWED_OAK_INTO_LAB_2
-; PRET| 	jr nz, .beforeChooseMon
-; PRET| 	ld hl, .GrampsIsntAroundText
-; PRET| 	call PrintText
-; PRET| 	jr .done
-
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] OaksLabRivalText.beforeChooseMon (scripts/OaksLab.asm:758-762) — at scripts/OaksLab.asm:758: CheckEventReuseA EVENT_GOT_STARTER
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventReuseA EVENT_GOT_STARTER
-; PRET| 	jr nz, .afterChooseMon
-; PRET| 	ld hl, .IllGetABetterPokemonThanYou
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabRivalText:
+    CheckEvent EVENT_FOLLOWED_OAK_INTO_LAB_2
+    jnz .beforeChooseMon
+    mov esi, .GrampsIsntAroundText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
+.beforeChooseMon:
+    CheckEventReuseA EVENT_GOT_STARTER
+    jnz .afterChooseMon
+    mov esi, .IllGetABetterPokemonThanYou
+    call PrintText
+    jmp .done
+
+%assign event_byte -1
+%assign event_byte_a -1
 .afterChooseMon:
     mov esi, .MyPokemonLooksStrongerText
     call PrintText
@@ -1099,6 +1140,7 @@ OaksLab_TextPointers2:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .GrampsIsntAroundText:
     text_far _OaksLabRivalGrampsIsntAroundText
     text_end
@@ -1124,11 +1166,13 @@ OaksLab_TextPointers2:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _OaksLabThatsAPokeball
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalExclamationScript:
     mov al, 1
     mov [ebp + wEmotionBubbleSpriteIndex], al
@@ -1160,39 +1204,40 @@ OaksLabRivalExclamationScript:
 ; PRET| 	predef DisplayDexRating
 ; PRET| 	jp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] OaksLabOak1Text.check_for_poke_balls (scripts/OaksLab.asm:825-845) — at scripts/OaksLab.asm:838: CheckEventReuseA EVENT_BATTLED_RIVAL_IN_OAKS_LAB
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld b, POKE_BALL
-; PRET| 	call IsItemInBag
-; PRET| 	jr nz, .come_see_me_sometimes
-; PRET| 	ld hl, wPokedexOwned
-; PRET| 	ld b, wPokedexOwnedEnd - wPokedexOwned
-; PRET| 	call CountSetBits
-; PRET| 	ld a, [wNumSetBits]
-; PRET| 	cp 2
-; PRET| 	jr nc, .come_see_me_sometimes
-; PRET| 	CheckEvent EVENT_BEAT_ROUTE22_RIVAL_1ST_BATTLE
-; PRET| 	jr nz, .give_poke_balls
-; PRET| 	CheckEvent EVENT_GOT_POKEDEX
-; PRET| 	jr nz, .mon_around_the_world
-; PRET| 	CheckEventReuseA EVENT_BATTLED_RIVAL_IN_OAKS_LAB
-; PRET| 	jr nz, .check_got_parcel
-; PRET| 	ld a, [wStatusFlags4]
-; PRET| 	bit BIT_GOT_STARTER, a
-; PRET| 	jr nz, .already_got_pokemon
-; PRET| 	ld hl, .GoAheadItsYours
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+.check_for_poke_balls:
+    mov bh, POKE_BALL
+    call IsItemInBag
+    jnz .come_see_me_sometimes
+    mov esi, wPokedexOwned
+    mov bh, wPokedexOwnedEnd - wPokedexOwned
+    call CountSetBits
+    mov al, [ebp + wNumSetBits]
+    cmp al, 2
+    jae .come_see_me_sometimes
+    CheckEvent EVENT_BEAT_ROUTE22_RIVAL_1ST_BATTLE
+    jnz .give_poke_balls
+    CheckEvent EVENT_GOT_POKEDEX
+    jnz .mon_around_the_world
+    CheckEventReuseA EVENT_BATTLED_RIVAL_IN_OAKS_LAB
+    jnz .check_got_parcel
+    mov al, [ebp + wStatusFlags4]
+    test al, (1 << (3))
+    jnz .already_got_pokemon
+    mov esi, .GoAheadItsYours
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .already_got_pokemon:
     mov esi, .YourPokemonCanFightText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .check_got_parcel:
     mov bh, 70
     call IsItemInBag
@@ -1202,6 +1247,7 @@ OaksLabRivalExclamationScript:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .got_parcel:
     mov esi, .DeliverParcelText
     call PrintText
@@ -1211,12 +1257,14 @@ OaksLabRivalExclamationScript:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .mon_around_the_world:
     mov esi, .PokemonAroundTheWorldText
     call PrintText
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .give_poke_balls:
     CheckAndSetEvent EVENT_GOT_POKEBALLS_FROM_OAK
     jnz .come_see_me_sometimes
@@ -1227,6 +1275,7 @@ OaksLabRivalExclamationScript:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .come_see_me_sometimes:
     mov esi, .ComeSeeMeSometimesText
     call PrintText
@@ -1234,6 +1283,7 @@ OaksLabRivalExclamationScript:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .GoAheadItsYours:
     text_far _OaksLabOak1GoAheadItsYours
     text_end
@@ -1272,6 +1322,7 @@ OaksLabRivalExclamationScript:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _OaksLabPokedexText
     text_end
@@ -1288,6 +1339,7 @@ OaksLabOak2Text:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _OaksLabGirlText
     text_end
@@ -1353,6 +1405,7 @@ OaksLabOak2Text:
 ; PRET| 	text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalReceivedMonText:
     mov esi, OaksLabRivalTakesText1
     call PrintText
@@ -1367,6 +1420,7 @@ OaksLabRivalReceivedMonText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabRivalTakesText1:
     text_far _OaksLabRivalTakesText1
     text_end
@@ -1385,6 +1439,7 @@ OaksLabRivalTakesText5:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPlayerReceivedMonText:
     mov al, STARTER_PIKACHU
     mov [ebp + wPlayerStarter], al
@@ -1413,6 +1468,7 @@ OaksLabPlayerReceivedMonText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabOakGivesText:
     text_far _OaksLabOakGivesText
     text_end
@@ -1430,6 +1486,7 @@ OaksLabReceivedText:
 ; PRET| 	jp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .Text:
     text_far _OaksLabOakDontGoAwayYetText
     text_end
@@ -1549,6 +1606,7 @@ OaksLabReceivedText:
 ; PRET| 	text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPikachuMovementScript:
     mov al, [ebp + wYCoord]
     cmp al, 3
@@ -1559,6 +1617,7 @@ OaksLabPikachuMovementScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .movement2:
     mov bh, SPRITE_FACING_LEFT
     mov esi, OaksLabPikachuMovementData2
@@ -1566,6 +1625,7 @@ OaksLabPikachuMovementScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 OaksLabPikachuMovementData1:
     db 0x00
     db 0x1f

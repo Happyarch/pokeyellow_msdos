@@ -34,9 +34,11 @@ extern _ColosseumOpponentText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
     jmp TradeCenter_Script
 
 %assign event_byte -1
+%assign event_byte_a -1
 Colosseum_TextPointers:
     dd ColosseumOpponentText
 ColosseumOpponentText:

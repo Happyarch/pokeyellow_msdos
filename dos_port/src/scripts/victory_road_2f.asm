@@ -22,9 +22,12 @@ bits 32
 
 %include "assets/trainer_headers.inc"
 
+global VictoryRoad2FCheckBoulderEventScript
 global VictoryRoad2FCooltrainerMText
 global VictoryRoad2FHikerText
 global VictoryRoad2FMoltresText
+global VictoryRoad2FReplaceTileBlockScript
+global VictoryRoad2FResetBoulderEventScript
 global VictoryRoad2FSuperNerd1Text
 global VictoryRoad2FSuperNerd2Text
 global VictoryRoad2FSuperNerd3Text
@@ -42,12 +45,9 @@ extern PlayCry   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FCheckBoulderEventScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FHikerBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FMoltresBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FReplaceTileBlockScript   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FResetBoulderEventScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -68,6 +68,7 @@ wVictoryRoad2FCurScript                        equ 0xD63E
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad2F_Script:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
@@ -93,31 +94,35 @@ VictoryRoad2F_Script:
     mov [ebp + wVictoryRoad2FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VictoryRoad2FResetBoulderEventScript (scripts/VictoryRoad2F.asm:19-37) — at scripts/VictoryRoad2F.asm:23: .not_on_switch is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ResetEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
-; PRET| ; fallthrough
-; PRET| VictoryRoad2FCheckBoulderEventScript:
-; PRET| 	CheckEvent EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
-; PRET| 	jr z, .not_on_switch
-; PRET| 	push af
-; PRET| 	ld a, $15
-; PRET| 	lb bc, 4, 3
-; PRET| 	call VictoryRoad2FReplaceTileBlockScript
-; PRET| 	pop af
-; PRET| .not_on_switch
-; PRET| 	CheckEventReuseA EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH2
-; PRET| 	ret z
-; PRET| 	ld a, $1d
-; PRET| 	lb bc, 7, 11
-; PRET| VictoryRoad2FReplaceTileBlockScript:
-; PRET| 	ld [wNewTileBlockID], a
-; PRET| 	predef ReplaceTileBlock
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+VictoryRoad2FResetBoulderEventScript:
+    ResetEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
+VictoryRoad2FCheckBoulderEventScript:
+    CheckEvent EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
+    jz .not_on_switch
+    pushfd
+    push eax
+    mov al, 0x15
+    mov bx, ((4) << 8) | (3)
+    call VictoryRoad2FReplaceTileBlockScript
+    pop eax
+    popfd
+.not_on_switch:
+    CheckEventReuseA EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH2
+    jnz .nr_31
+        ret
+.nr_31:
+    mov al, 0x1d
+    mov bx, ((7) << 8) | (11)
+VictoryRoad2FReplaceTileBlockScript:
+    mov [ebp + wNewTileBlockID], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ReplaceTileBlock
+    ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad2F_ScriptPointers:
     dd VictoryRoad2FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -143,6 +148,7 @@ VictoryRoad2F_ScriptPointers:
 ; PRET| 	jr .set_script_flag
 
 %assign event_byte -1
+%assign event_byte_a -1
 .second_switch:
     CheckEventAfterBranchReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH2, EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
     pushfd    ; SM83 form writes no flags
@@ -159,36 +165,42 @@ VictoryRoad2F_ScriptPointers:
 ; VictoryRoad2FDefaultScript.SwitchCoords (scripts/VictoryRoad2F.asm:70-104) — not re-emitted: VictoryRoad2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad2FHikerText:
     mov esi, VictoryRoad2TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad2FSuperNerd1Text:
     mov esi, VictoryRoad2TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad2FCooltrainerMText:
     mov esi, VictoryRoad2TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad2FSuperNerd2Text:
     mov esi, VictoryRoad2TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad2FSuperNerd3Text:
     mov esi, VictoryRoad2TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 VictoryRoad2FMoltresText:
     mov esi, MoltresTrainerHeader
     call TalkToTrainer
@@ -197,6 +209,7 @@ VictoryRoad2FMoltresText:
 ; VictoryRoad2FMoltresBattleText (scripts/VictoryRoad2F.asm:143-143) — not re-emitted: VictoryRoad2FMoltresBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov al, 73
     call PlayCry
     call WaitForSoundToFinish

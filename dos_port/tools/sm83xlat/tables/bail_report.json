@@ -1,15 +1,14 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 2055,
- "regions_bailed": 475,
+ "regions_lowered": 2086,
+ "regions_bailed": 444,
  "by_reason": {
   "owned-by-generated-assets": 255,
-  "target-region-bailed": 107,
+  "target-region-bailed": 91,
   "screen-coord-projection": 4,
   "inline-text-db": 12,
   "host-pointer-in-16bit-reg": 29,
   "pikachu-table-index": 4,
-  "event-byte-assembly-state": 15,
   "hl-half-register-access": 10,
   "local-label-scope-collision": 11,
   "pointer-domain-unknown": 15,
@@ -75,10 +74,9 @@
    "reasons": []
   },
   "scripts/CeladonGym.asm": {
-   "ok_regions": 14,
-   "bailed_regions": 12,
+   "ok_regions": 15,
+   "bailed_regions": 11,
    "reasons": [
-    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -200,10 +198,9 @@
    ]
   },
   "scripts/CeruleanGym.asm": {
-   "ok_regions": 12,
-   "bailed_regions": 7,
+   "ok_regions": 13,
+   "bailed_regions": 6,
    "reasons": [
-    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -237,11 +234,10 @@
    "reasons": []
   },
   "scripts/CinnabarGym.asm": {
-   "ok_regions": 57,
-   "bailed_regions": 6,
+   "ok_regions": 58,
+   "bailed_regions": 5,
    "reasons": [
     "add-hl-r16",
-    "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
     "inline-text-db",
     "target-region-bailed"
@@ -261,7 +257,6 @@
    "ok_regions": 7,
    "bailed_regions": 5,
    "reasons": [
-    "event-byte-assembly-state",
     "ld-via-bc-de",
     "target-region-bailed"
    ]
@@ -326,10 +321,9 @@
    "reasons": []
   },
   "scripts/FightingDojo.asm": {
-   "ok_regions": 18,
-   "bailed_regions": 6,
+   "ok_regions": 19,
+   "bailed_regions": 5,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets"
    ]
   },
@@ -339,11 +333,9 @@
    "reasons": []
   },
   "scripts/FuchsiaCity.asm": {
-   "ok_regions": 15,
-   "bailed_regions": 1,
-   "reasons": [
-    "event-byte-assembly-state"
-   ]
+   "ok_regions": 16,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/FuchsiaGoodRodHouse.asm": {
    "ok_regions": 2,
@@ -354,10 +346,9 @@
    ]
   },
   "scripts/FuchsiaGym.asm": {
-   "ok_regions": 15,
-   "bailed_regions": 11,
+   "ok_regions": 16,
+   "bailed_regions": 10,
    "reasons": [
-    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -498,10 +489,9 @@
    ]
   },
   "scripts/OaksLab.asm": {
-   "ok_regions": 63,
-   "bailed_regions": 29,
+   "ok_regions": 66,
+   "bailed_regions": 26,
    "reasons": [
-    "event-byte-assembly-state",
     "hl-half-register-access",
     "local-label-scope-collision",
     "pikachu-table-index",
@@ -522,10 +512,9 @@
    "reasons": []
   },
   "scripts/PewterGym.asm": {
-   "ok_regions": 13,
-   "bailed_regions": 6,
+   "ok_regions": 14,
+   "bailed_regions": 5,
    "reasons": [
-    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -671,10 +660,9 @@
    "reasons": []
   },
   "scripts/RocketHideoutB1F.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 5,
+   "ok_regions": 8,
+   "bailed_regions": 4,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets",
     "target-region-bailed"
    ]
@@ -868,10 +856,9 @@
    ]
   },
   "scripts/Route22.asm": {
-   "ok_regions": 29,
-   "bailed_regions": 14,
+   "ok_regions": 30,
+   "bailed_regions": 13,
    "reasons": [
-    "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
@@ -1041,7 +1028,6 @@
    "ok_regions": 13,
    "bailed_regions": 9,
    "reasons": [
-    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -1116,39 +1102,35 @@
    "reasons": []
   },
   "scripts/SilphCo2F.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 6,
+   "ok_regions": 13,
+   "bailed_regions": 4,
    "reasons": [
     "owned-by-generated-assets",
-    "pointer-domain-unknown",
-    "target-region-bailed"
+    "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCo3F.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 5,
+   "ok_regions": 9,
+   "bailed_regions": 3,
    "reasons": [
-    "owned-by-generated-assets",
-    "target-region-bailed"
+    "owned-by-generated-assets"
    ]
   },
   "scripts/SilphCo4F.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 9,
+   "ok_regions": 10,
+   "bailed_regions": 7,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
-    "pointer-domain-unknown",
-    "target-region-bailed"
+    "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCo5F.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 9,
+   "ok_regions": 11,
+   "bailed_regions": 6,
    "reasons": [
     "host-pointer-in-16bit-reg",
-    "owned-by-generated-assets",
-    "target-region-bailed"
+    "owned-by-generated-assets"
    ]
   },
   "scripts/SilphCo6F.asm": {
@@ -1162,13 +1144,12 @@
    ]
   },
   "scripts/SilphCo7F.asm": {
-   "ok_regions": 29,
-   "bailed_regions": 12,
+   "ok_regions": 32,
+   "bailed_regions": 9,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
-    "pointer-domain-unknown",
-    "target-region-bailed"
+    "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCo8F.asm": {
@@ -1180,12 +1161,11 @@
    ]
   },
   "scripts/SilphCo9F.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 8,
+   "ok_regions": 14,
+   "bailed_regions": 4,
    "reasons": [
     "owned-by-generated-assets",
-    "pointer-domain-unknown",
-    "target-region-bailed"
+    "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCoElevator.asm": {
@@ -1318,10 +1298,9 @@
    ]
   },
   "scripts/VermilionGym.asm": {
-   "ok_regions": 15,
-   "bailed_regions": 8,
+   "ok_regions": 16,
+   "bailed_regions": 7,
    "reasons": [
-    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -1361,8 +1340,8 @@
    ]
   },
   "scripts/VictoryRoad2F.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 5,
+   "ok_regions": 11,
+   "bailed_regions": 4,
    "reasons": [
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -1400,10 +1379,9 @@
    "reasons": []
   },
   "scripts/ViridianGym.asm": {
-   "ok_regions": 22,
-   "bailed_regions": 12,
+   "ok_regions": 23,
+   "bailed_regions": 11,
    "reasons": [
-    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -1710,20 +1688,6 @@
    "lines": [
     75,
     104
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymErikaText",
-   "labels": [
-    "CeladonGymErikaText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_TM21",
-   "at": "scripts/CeladonGym.asm:110",
-   "lines": [
-    108,
-    114
    ]
   },
   {
@@ -2194,20 +2158,6 @@
   },
   {
    "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGymMistyText",
-   "labels": [
-    "CeruleanGymMistyText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_TM11",
-   "at": "scripts/CeruleanGym.asm:96",
-   "lines": [
-    94,
-    100
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
    "region": "CeruleanGymBattleText1",
    "labels": [
     "CeruleanGymBattleText1",
@@ -2310,20 +2260,6 @@
    ]
   },
   {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymBlaineText",
-   "labels": [
-    "CinnabarGymBlaineText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_TM38",
-   "at": "scripts/CinnabarGym.asm:276",
-   "lines": [
-    274,
-    280
-   ]
-  },
-  {
    "file": "scripts/CinnabarGym_3.asm",
    "region": "Func_f2150",
    "labels": [
@@ -2386,9 +2322,9 @@
    "labels": [
     "CinnabarLabFossilRoomScientist1Text.check_done_reviving"
    ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventAfterBranchReuseA EVENT_LAB_STILL_REVIVING_FOSSIL, EVENT_GAVE_FOSSIL_TO_LAB",
-   "at": "scripts/CinnabarLabFossilRoom.asm:67",
+   "reason": "target-region-bailed",
+   "detail": ".done_reviving is defined in a region that bailed",
+   "at": "scripts/CinnabarLabFossilRoom.asm:68",
    "lines": [
     67,
     71
@@ -2504,20 +2440,6 @@
   },
   {
    "file": "scripts/FightingDojo.asm",
-   "region": "FightingDojoKarateMasterText",
-   "labels": [
-    "FightingDojoKarateMasterText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_BEAT_KARATE_MASTER",
-   "at": "scripts/FightingDojo.asm:110",
-   "lines": [
-    108,
-    127
-   ]
-  },
-  {
-   "file": "scripts/FightingDojo.asm",
    "region": "FightingDojoBlackbelt1BattleText",
    "labels": [
     "FightingDojoBlackbelt1BattleText",
@@ -2578,20 +2500,6 @@
    "lines": [
     215,
     224
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaCity.asm",
-   "region": "FuchsiaCityFossilSignText",
-   "labels": [
-    "FuchsiaCityFossilSignText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_HELIX_FOSSIL",
-   "at": "scripts/FuchsiaCity.asm:135",
-   "lines": [
-    133,
-    139
    ]
   },
   {
@@ -2732,20 +2640,6 @@
    "lines": [
     77,
     104
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymKogaText",
-   "labels": [
-    "FuchsiaGymKogaText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_TM06",
-   "at": "scripts/FuchsiaGym.asm:110",
-   "lines": [
-    108,
-    114
    ]
   },
   {
@@ -3276,34 +3170,6 @@
   },
   {
    "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalText",
-   "labels": [
-    "OaksLabRivalText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".beforeChooseMon is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:753",
-   "lines": [
-    752,
-    756
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalText.beforeChooseMon",
-   "labels": [
-    "OaksLabRivalText.beforeChooseMon"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_STARTER",
-   "at": "scripts/OaksLab.asm:758",
-   "lines": [
-    758,
-    762
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
    "region": "OaksLabEeveePokeBallText",
    "labels": [
     "OaksLabEeveePokeBallText"
@@ -3329,20 +3195,6 @@
    "lines": [
     809,
     823
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOak1Text.check_for_poke_balls",
-   "labels": [
-    "OaksLabOak1Text.check_for_poke_balls"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_BATTLED_RIVAL_IN_OAKS_LAB",
-   "at": "scripts/OaksLab.asm:838",
-   "lines": [
-    825,
-    845
    ]
   },
   {
@@ -3719,20 +3571,6 @@
    "lines": [
     85,
     97
-   ]
-  },
-  {
-   "file": "scripts/PewterGym.asm",
-   "region": "PewterGymBrockText",
-   "labels": [
-    "PewterGymBrockText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_TM34",
-   "at": "scripts/PewterGym.asm:103",
-   "lines": [
-    101,
-    107
    ]
   },
   {
@@ -4382,20 +4220,6 @@
    "lines": [
     96,
     189
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB1F.asm",
-   "region": "RocketHideoutB1FDoorCallbackScript",
-   "labels": [
-    "RocketHideoutB1FDoorCallbackScript"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4",
-   "at": "scripts/RocketHideoutB1F.asm:18",
-   "lines": [
-    12,
-    21
    ]
   },
   {
@@ -6176,20 +6000,6 @@
   },
   {
    "file": "scripts/Route22.asm",
-   "region": "Route22DefaultScript",
-   "labels": [
-    "Route22DefaultScript"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_2ND_ROUTE22_RIVAL_BATTLE",
-   "at": "scripts/Route22.asm:75",
-   "lines": [
-    60,
-    77
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
    "region": "Route22Rival1StartBattleScript",
    "labels": [
     "Route22Rival1StartBattleScript"
@@ -7204,9 +7014,9 @@
    "labels": [
     "SaffronGymSabrinaText"
    ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_TM46",
-   "at": "scripts/SaffronGym.asm:111",
+   "reason": "target-region-bailed",
+   "detail": ".afterBeat is defined in a region that bailed",
+   "at": "scripts/SaffronGym.asm:112",
    "lines": [
     109,
     115
@@ -7485,21 +7295,6 @@
   },
   {
    "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2FGateCallbackScript",
-   "labels": [
-    "SilphCo2FGateCallbackScript",
-    "SilphCo2FGateCallbackScript.unlock_door1"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo2F.asm:20",
-   "lines": [
-    12,
-    33
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
    "region": "SilphCo2F_SetCardKeyDoorYScript",
    "labels": [
     "SilphCo2F_SetCardKeyDoorYScript",
@@ -7525,20 +7320,6 @@
    "lines": [
     63,
     70
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2F_UnlockedDoorEventScript",
-   "labels": [
-    "SilphCo2F_UnlockedDoorEventScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo2F.asm:82",
-   "lines": [
-    77,
-    84
    ]
   },
   {
@@ -7584,35 +7365,6 @@
    "lines": [
     176,
     221
-   ]
-  },
-  {
-   "file": "scripts/SilphCo3F.asm",
-   "region": "SilphCo3FGateCallbackScript",
-   "labels": [
-    "SilphCo3FGateCallbackScript",
-    "SilphCo3FGateCallbackScript.unlock_door1"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo3F.asm:20",
-   "lines": [
-    12,
-    33
-   ]
-  },
-  {
-   "file": "scripts/SilphCo3F.asm",
-   "region": "SilphCo3F_UnlockedDoorEventScript",
-   "labels": [
-    "SilphCo3F_UnlockedDoorEventScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo3F.asm:46",
-   "lines": [
-    41,
-    48
    ]
   },
   {
@@ -7667,21 +7419,6 @@
   },
   {
    "file": "scripts/SilphCo4F.asm",
-   "region": "SilphCo4FGateCallbackScript",
-   "labels": [
-    "SilphCo4FGateCallbackScript",
-    "SilphCo4FGateCallbackScript.unlock_door1"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo4F.asm:20",
-   "lines": [
-    12,
-    33
-   ]
-  },
-  {
-   "file": "scripts/SilphCo4F.asm",
    "region": "SilphCo4F_SetCardKeyDoorYScript",
    "labels": [
     "SilphCo4F_SetCardKeyDoorYScript",
@@ -7707,20 +7444,6 @@
    "lines": [
     63,
     70
-   ]
-  },
-  {
-   "file": "scripts/SilphCo4F.asm",
-   "region": "SilphCo4FUnlockedDoorEventScript",
-   "labels": [
-    "SilphCo4FUnlockedDoorEventScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo4F.asm:82",
-   "lines": [
-    77,
-    84
    ]
   },
   {
@@ -7802,50 +7525,6 @@
    "lines": [
     173,
     182
-   ]
-  },
-  {
-   "file": "scripts/SilphCo5F.asm",
-   "region": "SilphCo5FGateCallbackScript",
-   "labels": [
-    "SilphCo5FGateCallbackScript",
-    "SilphCo5FGateCallbackScript.unlock_door1",
-    "SilphCo5FGateCallbackScript.unlock_door2"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo5F.asm:20",
-   "lines": [
-    12,
-    42
-   ]
-  },
-  {
-   "file": "scripts/SilphCo5F.asm",
-   "region": "SilphCo5F_SetUnlockedSilphCoDoorsScript",
-   "labels": [
-    "SilphCo5F_SetUnlockedSilphCoDoorsScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo5F.asm:56",
-   "lines": [
-    51,
-    58
-   ]
-  },
-  {
-   "file": "scripts/SilphCo5F.asm",
-   "region": "SilphCo5F_SetUnlockedSilphCoDoorsScript.unlock_door1",
-   "labels": [
-    "SilphCo5F_SetUnlockedSilphCoDoorsScript.unlock_door1"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door2 is defined in a region that bailed",
-   "at": "scripts/SilphCo5F.asm:61",
-   "lines": [
-    60,
-    63
    ]
   },
   {
@@ -8117,22 +7796,6 @@
   },
   {
    "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7F_GateCallbackScript",
-   "labels": [
-    "SilphCo7F_GateCallbackScript",
-    "SilphCo7F_GateCallbackScript.unlock_door1",
-    "SilphCo7F_GateCallbackScript.unlock_door2"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo7F.asm:20",
-   "lines": [
-    12,
-    42
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
    "region": "SilphCo7F_SetCardKeyDoorYScript",
    "labels": [
     "SilphCo7F_SetCardKeyDoorYScript",
@@ -8158,34 +7821,6 @@
    "lines": [
     73,
     80
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7F_UnlockedDoorEventScript",
-   "labels": [
-    "SilphCo7F_UnlockedDoorEventScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo7F.asm:92",
-   "lines": [
-    87,
-    94
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7F_UnlockedDoorEventScript.unlock_door1",
-   "labels": [
-    "SilphCo7F_UnlockedDoorEventScript.unlock_door1"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door2 is defined in a region that bailed",
-   "at": "scripts/SilphCo7F.asm:97",
-   "lines": [
-    96,
-    99
    ]
   },
   {
@@ -8373,23 +8008,6 @@
   },
   {
    "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9FGateCallbackScript",
-   "labels": [
-    "SilphCo9FGateCallbackScript",
-    "SilphCo9FGateCallbackScript.unlock_door1",
-    "SilphCo9FGateCallbackScript.unlock_door2",
-    "SilphCo9FGateCallbackScript.unlock_door3"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo9F.asm:20",
-   "lines": [
-    12,
-    51
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
    "region": "SilphCo9F_SetCardKeyDoorYScript",
    "labels": [
     "SilphCo9F_SetCardKeyDoorYScript",
@@ -8415,48 +8033,6 @@
    "lines": [
     83,
     90
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9F_SetUnlockedSilphCoDoorsScript",
-   "labels": [
-    "SilphCo9F_SetUnlockedSilphCoDoorsScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door1 is defined in a region that bailed",
-   "at": "scripts/SilphCo9F.asm:102",
-   "lines": [
-    97,
-    104
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9F_SetUnlockedSilphCoDoorsScript.unlock_door1",
-   "labels": [
-    "SilphCo9F_SetUnlockedSilphCoDoorsScript.unlock_door1"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door2 is defined in a region that bailed",
-   "at": "scripts/SilphCo9F.asm:107",
-   "lines": [
-    106,
-    109
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9F_SetUnlockedSilphCoDoorsScript.unlock_door2",
-   "labels": [
-    "SilphCo9F_SetUnlockedSilphCoDoorsScript.unlock_door2"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".unlock_door3 is defined in a region that bailed",
-   "at": "scripts/SilphCo9F.asm:112",
-   "lines": [
-    111,
-    114
    ]
   },
   {
@@ -8929,20 +8505,6 @@
   },
   {
    "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGymLTSurgeText",
-   "labels": [
-    "VermilionGymLTSurgeText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_TM24",
-   "at": "scripts/VermilionGym.asm:118",
-   "lines": [
-    116,
-    122
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
    "region": "VermilionGymGentlemanBattleText",
    "labels": [
     "VermilionGymGentlemanBattleText",
@@ -9038,23 +8600,6 @@
    "lines": [
     76,
     97
-   ]
-  },
-  {
-   "file": "scripts/VictoryRoad2F.asm",
-   "region": "VictoryRoad2FResetBoulderEventScript",
-   "labels": [
-    "VictoryRoad2FResetBoulderEventScript",
-    "VictoryRoad2FCheckBoulderEventScript",
-    "VictoryRoad2FCheckBoulderEventScript.not_on_switch",
-    "VictoryRoad2FReplaceTileBlockScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".not_on_switch is defined in a region that bailed",
-   "at": "scripts/VictoryRoad2F.asm:23",
-   "lines": [
-    19,
-    37
    ]
   },
   {
@@ -9295,20 +8840,6 @@
    "lines": [
     171,
     205
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGymGiovanniText",
-   "labels": [
-    "ViridianGymGiovanniText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseA EVENT_GOT_TM27",
-   "at": "scripts/ViridianGym.asm:211",
-   "lines": [
-    209,
-    215
    ]
   },
   {

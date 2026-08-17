@@ -97,6 +97,7 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTown_Script:
     CheckEvent EVENT_GOT_POKEBALLS_FROM_OAK
     jz .next
@@ -108,6 +109,7 @@ PalletTown_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTown_ScriptPointers:
     dd PalletTownDefaultScript
     dd PalletTownOakHeyWaitScript
@@ -121,6 +123,7 @@ PalletTown_ScriptPointers:
     dd PalletTownNoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTownDefaultScript:
     CheckEvent EVENT_FOLLOWED_OAK_INTO_LAB
     jz .nr_26
@@ -154,6 +157,7 @@ PalletTownDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTownOakHeyWaitScript:
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -183,6 +187,7 @@ PalletTownOakHeyWaitScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTownOakWalksToPlayerScript:
     call Delay3
     mov al, 0
@@ -208,6 +213,7 @@ PalletTownOakWalksToPlayerScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTownOakGreetsPlayerScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -240,6 +246,7 @@ PalletTownOakGreetsPlayerScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTownPikachuBattleScript:
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -256,6 +263,7 @@ PalletTownPikachuBattleScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTownAfterPikachuBattleScript:
     mov al, 2
     mov [ebp + wOakWalkedToPlayer], al
@@ -276,6 +284,7 @@ PalletTownAfterPikachuBattleScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTownOakNotSafeComeWithMeScript:
     xor al, al
     mov [ebp + wSpritePlayerStateData1FacingDirection], al
@@ -292,6 +301,7 @@ PalletTownOakNotSafeComeWithMeScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTownPlayerFollowsOakScript:
     mov al, [ebp + wNPCMovementScriptPointerTableNum]
     test al, al
@@ -319,6 +329,7 @@ PalletTownPlayerFollowsOakScript:
 ; PRET| 	predef_jump ShowObject
 
 %assign event_byte -1
+%assign event_byte_a -1
 .next:
     CheckEvent EVENT_GOT_POKEBALLS_FROM_OAK
     jnz .nr_217
@@ -329,6 +340,7 @@ PalletTownNoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTown_TextPointers:
     dd PalletTownOakText
     dd PalletTownGirlText
@@ -340,6 +352,7 @@ PalletTown_TextPointers:
     dd PalletTownOakComeWithMe
 
 %assign event_byte -1
+%assign event_byte_a -1
 PalletTownOakText:
     mov al, [ebp + wOakWalkedToPlayer]
     test al, al
@@ -350,6 +363,7 @@ PalletTownOakText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .next:
     dec al
     jnz .whew
@@ -357,6 +371,7 @@ PalletTownOakText:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .whew:
     mov esi, .WhewText
 .done:
@@ -364,10 +379,12 @@ PalletTownOakText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .HeyWaitDontGoOutText:
     text_far _PalletTownOakHeyWaitDontGoOutText
 
 %assign event_byte -1
+%assign event_byte_a -1
     mov bl, 10
     call DelayFrames
     mov al, PLAYER_DIR_DOWN
@@ -381,6 +398,7 @@ PalletTownOakText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .ThatWasCloseText:
     text_far _PalletTownOakThatWasCloseText
     text_end

@@ -22,24 +22,24 @@ bits 32
 
 %include "assets/trainer_headers.inc"
 
+global SilphCo2FGateCallbackScript
 global SilphCo2FRocket1Text
 global SilphCo2FRocket2Text
 global SilphCo2FScientist1Text
 global SilphCo2FScientist2Text
 global SilphCo2FSilphWorkerFText
 global SilphCo2F_Script
+global SilphCo2F_UnlockedDoorEventScript
 
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern SilphCo2FGateCallbackScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2FScientist1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2FSilphWorkerFPleaseTakeThisText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo2F_UnlockedDoorEventScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -63,6 +63,7 @@ wSilphCo2FCurScript                            equ 0xD642
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo2F_Script:
     call SilphCo2FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -73,34 +74,44 @@ SilphCo2F_Script:
     mov [ebp + wSilphCo2FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo2FGateCallbackScript (scripts/SilphCo2F.asm:12-33) — at scripts/SilphCo2F.asm:20: .unlock_door1 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	ret z
-; PRET| 	ld hl, .GateCoordinates
-; PRET| 	call SilphCo2F_SetCardKeyDoorYScript
-; PRET| 	call SilphCo2F_UnlockedDoorEventScript
-; PRET| 	CheckEvent EVENT_SILPH_CO_2_UNLOCKED_DOOR1
-; PRET| 	jr nz, .unlock_door1
-; PRET| 	push af
-; PRET| 	ld a, $54
-; PRET| 	ld [wNewTileBlockID], a
-; PRET| 	lb bc, 2, 2
-; PRET| 	predef ReplaceTileBlock
-; PRET| 	pop af
-; PRET| .unlock_door1
-; PRET| 	CheckEventAfterBranchReuseA EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
-; PRET| 	ret nz
-; PRET| 	ld a, $54
-; PRET| 	ld [wNewTileBlockID], a
-; PRET| 	lb bc, 5, 2
-; PRET| 	predef_jump ReplaceTileBlock
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo2FGateCallbackScript:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    jnz .nr_15
+        ret
+.nr_15:
+    mov esi, .GateCoordinates
+    call SilphCo2F_SetCardKeyDoorYScript
+    call SilphCo2F_UnlockedDoorEventScript
+    CheckEvent EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+    jnz .unlock_door1
+    pushfd
+    push eax
+    mov al, 0x54
+    mov [ebp + wNewTileBlockID], al
+    mov bx, ((2) << 8) | (2)
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ReplaceTileBlock
+    pop eax
+    popfd
+.unlock_door1:
+    CheckEventAfterBranchReuseA EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+    jz .nr_29
+        ret
+.nr_29:
+    mov al, 0x54
+    mov [ebp + wNewTileBlockID], al
+    mov bx, ((5) << 8) | (2)
+; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    jmp ReplaceTileBlock
 
 %assign event_byte -1
+%assign event_byte_a -1
 .GateCoordinates:
     db 2, 2
     db 5, 2
@@ -146,25 +157,29 @@ SilphCo2F_Script:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .exit_loop:
     xor al, al
     mov [ebp + hUnlockedSilphCoDoors], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo2F_UnlockedDoorEventScript (scripts/SilphCo2F.asm:77-84) — at scripts/SilphCo2F.asm:82: .unlock_door1 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	EventFlagAddress hl, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
-; PRET| 	ldh a, [hUnlockedSilphCoDoors]
-; PRET| 	and a
-; PRET| 	ret z
-; PRET| 	cp $1
-; PRET| 	jr nz, .unlock_door1
-; PRET| 	SetEventReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR1
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo2F_UnlockedDoorEventScript:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_SILPH_CO_2_UNLOCKED_DOOR1)
+    %assign event_byte EVENT_BYTE(EVENT_SILPH_CO_2_UNLOCKED_DOOR1)
+    mov al, [ebp + hUnlockedSilphCoDoors]
+    test al, al
+    jnz .nr_80
+        ret
+.nr_80:
+    cmp al, 0x1
+    jnz .unlock_door1
+    SetEventReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+    ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .unlock_door1:
     SetEventAfterBranchReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
     ret
@@ -172,6 +187,7 @@ SilphCo2F_Script:
 ; SilphCo2F_ScriptPointers (scripts/SilphCo2F.asm:90-113) — not re-emitted: SilphCo2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo2FSilphWorkerFText:
     CheckEvent EVENT_GOT_TM36
     jnz .already_have_tm
@@ -186,6 +202,7 @@ SilphCo2FSilphWorkerFText:
     jmp .print_text
 
 %assign event_byte -1
+%assign event_byte_a -1
 .already_have_tm:
     mov esi, .TM36ExplanationText
 .print_text:
@@ -193,6 +210,7 @@ SilphCo2FSilphWorkerFText:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .PleaseTakeThisText:
     text_far SilphCo2FSilphWorkerFPleaseTakeThisText
     text_end
@@ -208,24 +226,28 @@ SilphCo2FSilphWorkerFText:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo2FScientist1Text:
     mov esi, SilphCo2TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo2FScientist2Text:
     mov esi, SilphCo2TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo2FRocket1Text:
     mov esi, SilphCo2TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 SilphCo2FRocket2Text:
     mov esi, SilphCo2TrainerHeader3
     call TalkToTrainer

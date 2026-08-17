@@ -36,12 +36,14 @@ extern _UndergroundPathRoute7MiddleAgedManText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 UndergroundPathRoute7_Script:
     mov al, ROUTE_7
     mov [ebp + wLastMap], al
     jmp EnableAutoTextBoxDrawing
 
 %assign event_byte -1
+%assign event_byte_a -1
 UndergroundPathRoute7_TextPointers:
     dd UndergroundPathRoute7MiddleAgedManText
 UndergroundPathRoute7MiddleAgedManText:

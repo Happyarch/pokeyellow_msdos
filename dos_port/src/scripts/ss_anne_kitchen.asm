@@ -52,11 +52,13 @@ extern _SSAnneKitchenCook7MainCourseIsText   ; NOT YET DEFINED IN THE PORT
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneKitchen_Script:
     call EnableAutoTextBoxDrawing
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneKitchen_TextPointers:
     dd SSAnneKitchenCook1Text
     dd SSAnneKitchenCook2Text
@@ -85,6 +87,7 @@ SSAnneKitchenCook6Text:
     text_end
 
 %assign event_byte -1
+%assign event_byte_a -1
 SSAnneKitchenCook7Text:
     mov esi, .MainCourseIsText
     call PrintText
@@ -95,6 +98,7 @@ SSAnneKitchenCook7Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .not_dialog_1:
     test al, (1 << (4))
     jz .not_dialog_2
@@ -102,6 +106,7 @@ SSAnneKitchenCook7Text:
     jmp .done
 
 %assign event_byte -1
+%assign event_byte_a -1
 .not_dialog_2:
     mov esi, .PrimeBeefSteakText
 .done:
@@ -109,6 +114,7 @@ SSAnneKitchenCook7Text:
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 .MainCourseIsText:
     text_far _SSAnneKitchenCook7MainCourseIsText
     text_end

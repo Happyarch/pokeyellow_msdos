@@ -65,6 +65,7 @@ wVermilionDockTileMapBufferEnd                 equ 0xCD0F
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionDock_Script:
     call EnableAutoTextBoxDrawing
     mov esi, wEventFlags + EVENT_BYTE(EVENT_STARTED_WALKING_OUT_OF_DOCK)
@@ -102,6 +103,7 @@ VermilionDock_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 .walking_out_of_dock:
     CheckEventAfterBranchReuseHL EVENT_WALKED_OUT_OF_DOCK, EVENT_STARTED_WALKING_OUT_OF_DOCK
     jz .nr_31
@@ -226,6 +228,7 @@ VermilionDock_Script:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionDock_EmitSmokePuff:
     mov al, [ebp + wSSAnneSmokeX]
     sub al, 16
@@ -241,6 +244,7 @@ VermilionDock_EmitSmokePuff:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionDockOAMBlock:
     db 0xfc, OAM_PAL1
     db 0xfd, OAM_PAL1
@@ -300,6 +304,7 @@ VermilionDockOAMBlock:
 ; PRET| 	ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 VermilionDock_TextPointers:
     dd VermilionDockUnusedText
 VermilionDockUnusedText:

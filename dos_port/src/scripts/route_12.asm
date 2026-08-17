@@ -80,6 +80,7 @@ wRoute12CurScript                              equ 0xD623
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route12TrainerHeaders
@@ -90,6 +91,7 @@ Route12_Script:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12ResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -98,6 +100,7 @@ Route12ResetScripts:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12_ScriptPointers:
     dd Route12DefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -105,6 +108,7 @@ Route12_ScriptPointers:
     dd Route12SnorlaxPostBattleScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12DefaultScript:
     mov esi, wEventFlags + EVENT_BYTE(EVENT_BEAT_ROUTE12_SNORLAX)
     test byte [ebp + esi], EVENT_MASK(EVENT_BEAT_ROUTE12_SNORLAX)
@@ -131,6 +135,7 @@ Route12DefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12SnorlaxPostBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -153,6 +158,7 @@ Route12SnorlaxPostBattleScript:
 ; Route12_TextPointers (scripts/Route12.asm:65-109) — not re-emitted: Route12TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12Fisher1Text:
     mov esi, Route12TrainerHeader0
     call TalkToTrainer
@@ -161,6 +167,7 @@ Route12Fisher1Text:
 ; Route12Fisher1BattleText (scripts/Route12.asm:118-127) — not re-emitted: Route12Fisher1BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12Fisher2Text:
     mov esi, Route12TrainerHeader1
     call TalkToTrainer
@@ -169,6 +176,7 @@ Route12Fisher2Text:
 ; Route12Fisher2BattleText (scripts/Route12.asm:136-145) — not re-emitted: Route12Fisher2BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12CooltrainerMText:
     mov esi, Route12TrainerHeader2
     call TalkToTrainer
@@ -177,6 +185,7 @@ Route12CooltrainerMText:
 ; Route12CooltrainerMBattleText (scripts/Route12.asm:154-163) — not re-emitted: Route12CooltrainerMBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12SuperNerdText:
     mov esi, Route12TrainerHeader3
     call TalkToTrainer
@@ -185,6 +194,7 @@ Route12SuperNerdText:
 ; Route12SuperNerdBattleText (scripts/Route12.asm:172-181) — not re-emitted: Route12SuperNerdBattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12Fisher3Text:
     mov esi, Route12TrainerHeader4
     call TalkToTrainer
@@ -193,6 +203,7 @@ Route12Fisher3Text:
 ; Route12Fisher3BattleText (scripts/Route12.asm:190-199) — not re-emitted: Route12Fisher3BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12Fisher4Text:
     mov esi, Route12TrainerHeader5
     call TalkToTrainer
@@ -201,6 +212,7 @@ Route12Fisher4Text:
 ; Route12Fisher4BattleText (scripts/Route12.asm:208-217) — not re-emitted: Route12Fisher4BattleText is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 Route12Fisher5Text:
     mov esi, Route12TrainerHeader6
     call TalkToTrainer

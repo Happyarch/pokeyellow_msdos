@@ -23,6 +23,7 @@ bits 32
 %include "assets/audio_constants.inc"
 %include "assets/trainer_headers.inc"
 
+global RocketHideoutB1FDoorCallbackScript
 global RocketHideoutB1FRocket1Text
 global RocketHideoutB1FRocket2Text
 global RocketHideoutB1FRocket3Text
@@ -40,7 +41,6 @@ extern RocketHideout1TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout1TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout1TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FDoorCallbackScript   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1FRocket5EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
@@ -58,6 +58,7 @@ wRocketHideoutB1FCurScript                     equ 0xD630
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB1F_Script:
     call RocketHideoutB1FDoorCallbackScript
     call EnableAutoTextBoxDrawing
@@ -68,22 +69,26 @@ RocketHideoutB1F_Script:
     mov [ebp + wRocketHideoutB1FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] RocketHideoutB1FDoorCallbackScript (scripts/RocketHideoutB1F.asm:12-21) — at scripts/RocketHideoutB1F.asm:18: CheckEventReuseA EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	ret z
-; PRET| 	CheckEvent EVENT_ENTERED_ROCKET_HIDEOUT
-; PRET| 	jr nz, .door_open
-; PRET| 	CheckEventReuseA EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4
-; PRET| 	jr nz, .play_sound_door_open
-; PRET| 	ld a, $54 ; Door Block
-; PRET| 	jr .set_door_block
+%assign event_byte -1
+%assign event_byte_a -1
+RocketHideoutB1FDoorCallbackScript:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    jnz .nr_15
+        ret
+.nr_15:
+    CheckEvent EVENT_ENTERED_ROCKET_HIDEOUT
+    jnz .door_open
+    CheckEventReuseA EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4
+    jnz .play_sound_door_open
+    mov al, 0x54
+    jmp .set_door_block
 
 %assign event_byte -1
+%assign event_byte_a -1
 .play_sound_door_open:
     mov al, SFX_GO_INSIDE
     call PlaySound
@@ -100,30 +105,35 @@ RocketHideoutB1F_Script:
 ; RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — not re-emitted: RocketHideout1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB1FRocket1Text:
     mov esi, RocketHideout1TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB1FRocket2Text:
     mov esi, RocketHideout1TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB1FRocket3Text:
     mov esi, RocketHideout1TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB1FRocket4Text:
     mov esi, RocketHideout1TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
 %assign event_byte -1
+%assign event_byte_a -1
 RocketHideoutB1FRocket5Text:
     mov esi, RocketHideout1TrainerHeader4
     call TalkToTrainer

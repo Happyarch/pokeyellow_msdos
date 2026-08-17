@@ -70,6 +70,7 @@ wLoreleisRoomCurScript                         equ 0xD64C
 section .text
 
 %assign event_byte -1
+%assign event_byte_a -1
 HallOfFame_Script:
     call EnableAutoTextBoxDrawing
     mov esi, HallOfFame_ScriptPointers
@@ -77,6 +78,7 @@ HallOfFame_Script:
     jmp CallFunctionInTable
 
 %assign event_byte -1
+%assign event_byte_a -1
 HallofFameRoomClearScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -84,6 +86,7 @@ HallofFameRoomClearScripts:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 HallOfFame_ScriptPointers:
     dd HallOfFameDefaultScript
     dd HallOfFameOakCongratulationsScript
@@ -91,10 +94,12 @@ HallOfFame_ScriptPointers:
     dd HallOfFameNoopScript
 
 %assign event_byte -1
+%assign event_byte_a -1
 HallOfFameNoopScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 HallOfFameResetEventsAndSaveScript:
     call Delay3
     mov al, [ebp + wLetterPrintingDelayFlags]
@@ -137,6 +142,7 @@ HallOfFameResetEventsAndSaveScript:
     jmp Init
 
 %assign event_byte -1
+%assign event_byte_a -1
 HallOfFameDefaultScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -151,11 +157,13 @@ HallOfFameDefaultScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 HallOfFameEntryMovement:
     db PAD_UP, 5
     db -1
 
 %assign event_byte -1
+%assign event_byte_a -1
 HallOfFameOakCongratulationsScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -189,6 +197,7 @@ HallOfFameOakCongratulationsScript:
     ret
 
 %assign event_byte -1
+%assign event_byte_a -1
 HallOfFame_TextPointers:
     dd HallOfFameOakText
 HallOfFameOakText:
