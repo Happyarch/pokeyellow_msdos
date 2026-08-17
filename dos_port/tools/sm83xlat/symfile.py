@@ -41,6 +41,15 @@ class SymFile:
     path: Path
     #: name -> (bank, address) exactly as the linker wrote it
     entries: Dict[str, Tuple[int, int]] = field(default_factory=dict)
+    #: SECTION name -> bank, read from pokeyellow.map. pret writes
+    #: `BANK("Audio Engine 3")` — a bank named by its SECTION rather than by a
+    #: symbol, which the .sym file cannot answer because it lists symbols only.
+    sections: Dict[str, int] = field(default_factory=dict)
+
+    def bank(self, name: str) -> Optional[int]:
+        """The ROM bank the linker placed this symbol in."""
+        got = self.entries.get(name)
+        return None if got is None else got[0]
 
     def address(self, name: str) -> Optional[int]:
         """The address the PORT should use for this pret symbol.
@@ -85,7 +94,33 @@ def load(root: Path, name: str = "pokeyellow.sym") -> SymFile:
             # setdefault: rgblink emits aliases at one address (UNION members,
             # `.` locals). First wins, which is the outermost/most-named one.
             sf.entries.setdefault(m.group(3), (int(m.group(1), 16), int(m.group(2), 16)))
+    _load_sections(root, sf)
     return sf
+
+
+_BANK_HDR = re.compile(r"^(ROMX|ROM0) bank #(\d+)", re.I)
+_SECTION = re.compile(r'SECTION: \$[0-9A-Fa-f]+-\$[0-9A-Fa-f]+ \([^)]*\) \["([^"]+)"\]')
+
+
+def _load_sections(root: Path, sf: SymFile, name: str = "pokeyellow.map") -> None:
+    """SECTION name -> bank, from rgblink's map file.
+
+    Optional: the map is a build product like the .sym, but only ONE construct
+    needs it (`BANK("<section>")`), so its absence degrades that single site to a
+    bail rather than failing the run.
+    """
+    path = root / name
+    if not path.exists():
+        return
+    bank = 0
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        h = _BANK_HDR.match(raw.strip())
+        if h:
+            bank = int(h.group(2))
+            continue
+        s = _SECTION.search(raw)
+        if s:
+            sf.sections.setdefault(s.group(1), bank)
 
 
 def audit_memmap(sf: SymFile, memmap: Path) -> dict:

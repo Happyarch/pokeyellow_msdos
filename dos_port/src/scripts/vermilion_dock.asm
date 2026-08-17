@@ -117,7 +117,7 @@ VermilionDock_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[bank-expression] VermilionDockSSAnneLeavesScript (scripts/VermilionDock.asm:40-122) — at scripts/VermilionDock.asm:44: BANK(Music_Surfing)
+; BAIL[bank-expression] VermilionDockSSAnneLeavesScript (scripts/VermilionDock.asm:40-122) — at scripts/VermilionDock.asm:52: HIGH(vBGMap1)
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	SetEventForceReuseHL EVENT_SS_ANNE_LEFT

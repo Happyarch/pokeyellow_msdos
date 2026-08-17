@@ -23,6 +23,7 @@ bits 32
 %include "assets/audio_constants.inc"
 
 global PalletTownAfterPikachuBattleScript
+global PalletTownDefaultScript
 global PalletTownFisherText
 global PalletTownGirlText
 global PalletTownNoopScript
@@ -52,7 +53,6 @@ extern FindPathToPlayer   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern MoveSprite   ; NOT YET DEFINED IN THE PORT
 extern PalletTownDaisyScript   ; NOT YET DEFINED IN THE PORT
-extern PalletTownDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern PalletTownSignText   ; NOT YET DEFINED IN THE PORT
 extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
@@ -120,38 +120,38 @@ PalletTown_ScriptPointers:
     dd PalletTownDaisyScript
     dd PalletTownNoopScript
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PalletTownDefaultScript (scripts/PalletTown.asm:25-52) — at scripts/PalletTown.asm:33: .asm_18e40 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_FOLLOWED_OAK_INTO_LAB
-; PRET| 	ret nz
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp 0 ; is player at north exit?
-; PRET| 	ret nz
-; PRET| 	ResetEvent EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 10
-; PRET| 	jr z, .asm_18e40
-; PRET| 	SetEventReuseHL EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
-; PRET| .asm_18e40
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, PLAYER_DIR_UP
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	call StopAllMusic
-; PRET| 	ld a, BANK(Music_MeetProfOak)
-; PRET| 	ld c, a
-; PRET| 	ld a, MUSIC_MEET_PROF_OAK ; "oak appears" music
-; PRET| 	call PlayMusic
-; PRET| 	SetEvent EVENT_OAK_APPEARED_IN_PALLET
-; PRET| 
-; PRET| 	; trigger the next script
-; PRET| 	ld a, SCRIPT_PALLETTOWN_OAK_HEY_WAIT
-; PRET| 	ld [wPalletTownCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+PalletTownDefaultScript:
+    CheckEvent EVENT_FOLLOWED_OAK_INTO_LAB
+    jz .nr_26
+        ret
+.nr_26:
+    mov al, [ebp + wYCoord]
+    cmp al, 0
+    jz .nr_29
+        ret
+.nr_29:
+    ResetEvent EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
+    mov al, [ebp + wXCoord]
+    cmp al, 10
+    jz .asm_18e40
+    SetEventReuseHL EVENT_PLAYER_AT_RIGHT_EXIT_TO_PALLET_TOWN
+.asm_18e40:
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, PLAYER_DIR_UP
+    mov [ebp + wPlayerMovingDirection], al
+    call StopAllMusic
+    mov al, 2
+    mov bl, al
+    mov al, MUSIC_MEET_PROF_OAK
+    call PlayMusic
+    SetEvent EVENT_OAK_APPEARED_IN_PALLET
+    mov al, SCRIPT_PALLETTOWN_OAK_HEY_WAIT
+    mov [ebp + wPalletTownCurScript], al
+    ret
 
 %assign event_byte -1
 PalletTownOakHeyWaitScript:

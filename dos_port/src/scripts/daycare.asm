@@ -316,7 +316,7 @@ Daycare_TextPointers:
 ; PRET| 	jr .asm_56430
 
 ; ---------------------------------------------------------------------------
-; BAIL[bank-expression] DaycareGentlemanText.withdrewPikachuFromDayCare (scripts/Daycare.asm:221-233) — at scripts/Daycare.asm:226: BANK(SchedulePikachuSpawnForAfterText)
+; BAIL[pikachu-table-index] DaycareGentlemanText.withdrewPikachuFromDayCare (scripts/Daycare.asm:221-233) — at scripts/Daycare.asm:229: ldpikacry needs (X_id - Table) / N across object files
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, $6

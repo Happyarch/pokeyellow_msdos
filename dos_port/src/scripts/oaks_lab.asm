@@ -43,6 +43,7 @@ global OaksLabPlayerReceivedMonText
 global OaksLabPlayerReceivesPikachuScript
 global OaksLabPlayerWalksToOakScript
 global OaksLabRLE_PlayerWalksToOak
+global OaksLabRivalChallengesPlayerScript
 global OaksLabRivalEndBattleScript
 global OaksLabRivalExclamationScript
 global OaksLabRivalFaceUpOakFaceDownScript
@@ -105,7 +106,6 @@ extern OaksLabPokedexText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabReceivedText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalAmIGreatOrWhatText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalArrivesAtOaksRequestScript   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalChallengesPlayerScript   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalFedUpWithWaitingText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalGrampsText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalIPickedTheWrongPokemonText   ; NOT YET DEFINED IN THE PORT
@@ -571,43 +571,46 @@ OaksLabPlayerReceivesPikachuScript:
     mov [ebp + wOaksLabCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bank-expression] OaksLabRivalChallengesPlayerScript (scripts/OaksLab.asm:306-338) — at scripts/OaksLab.asm:316: BANK(Music_MeetRival)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp 6
-; PRET| 	ret nz
-; PRET| 	ld a, PLAYER_DIR_UP
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, OAKSLAB_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	xor a ; SPRITE_FACING_DOWN
-; PRET| 	ldh [hSpriteFacingDirection], a
-; PRET| 	call SetSpriteFacingDirectionAndDelay
-; PRET| 	ld c, BANK(Music_MeetRival)
-; PRET| 	ld a, MUSIC_MEET_RIVAL
-; PRET| 	call PlayMusic
-; PRET| 	ld a, TEXT_OAKSLAB_RIVAL_ILL_TAKE_YOU_ON
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	ld a, $1
-; PRET| 	ldh [hNPCPlayerRelativePosPerspective], a
-; PRET| 	ld a, $1
-; PRET| 	swap a
-; PRET| 	ldh [hNPCPlayerYDistance], a
-; PRET| 	predef CalcPositionOfPlayerRelativeToNPC
-; PRET| 	ldh a, [hNPCPlayerYDistance]
-; PRET| 	dec a
-; PRET| 	ldh [hNPCPlayerYDistance], a
-; PRET| 	predef FindPathToPlayer
-; PRET| 	ld de, wNPCMovementDirections2
-; PRET| 	ld a, OAKSLAB_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, SCRIPT_OAKSLAB_RIVAL_START_BATTLE
-; PRET| 	ld [wOaksLabCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+OaksLabRivalChallengesPlayerScript:
+    mov al, [ebp + wYCoord]
+    cmp al, 6
+    jz .nr_308
+        ret
+.nr_308:
+    mov al, PLAYER_DIR_UP
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    xor al, al
+    mov [ebp + hSpriteFacingDirection], al
+    call SetSpriteFacingDirectionAndDelay
+    mov bl, 2
+    mov al, MUSIC_MEET_RIVAL
+    call PlayMusic
+    mov al, TEXT_OAKSLAB_RIVAL_ILL_TAKE_YOU_ON
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov al, 0x1
+    mov [ebp + hNPCPlayerRelativePosPerspective], al
+    mov al, 0x1
+    rol al, 4
+    test al, al   ; swap sets Z, clears C
+    mov [ebp + hNPCPlayerYDistance], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call CalcPositionOfPlayerRelativeToNPC
+    mov al, [ebp + hNPCPlayerYDistance]
+    dec al
+    mov [ebp + hNPCPlayerYDistance], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call FindPathToPlayer
+    mov dx, wNPCMovementDirections2
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, SCRIPT_OAKSLAB_RIVAL_START_BATTLE
+    mov [ebp + wOaksLabCurScript], al
+    ret
 
 %assign event_byte -1
 OaksLabRivalStartBattleScript:

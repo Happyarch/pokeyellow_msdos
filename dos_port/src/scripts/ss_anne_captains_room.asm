@@ -107,30 +107,27 @@ SSAnneCaptainsRoomCaptainText:
 SSAnneCaptainsRoomRubCaptainsBackText:
     text_far _SSAnneCaptainsRoomRubCaptainsBackText
 
-; ---------------------------------------------------------------------------
-; BAIL[bank-expression] scripts/SSAnneCaptainsRoom.asm:anon (scripts/SSAnneCaptainsRoom.asm:48-67) — at scripts/SSAnneCaptainsRoom.asm:49: BANK("Audio Engine 3")
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wAudioROMBank]
-; PRET| 	cp BANK("Audio Engine 3")
-; PRET| 	ld [wAudioSavedROMBank], a
-; PRET| 	jr nz, .not_audio_engine_3
-; PRET| 	call StopAllMusic
-; PRET| 	ld a, BANK(Music_PkmnHealed)
-; PRET| 	ld [wAudioROMBank], a
-; PRET| .not_audio_engine_3
-; PRET| 	ld a, MUSIC_PKMN_HEALED
-; PRET| 	ld [wNewSoundID], a
-; PRET| 	call PlaySound
-; PRET| .loop
-; PRET| 	ld a, [wChannelSoundIDs]
-; PRET| 	cp MUSIC_PKMN_HEALED
-; PRET| 	jr z, .loop
-; PRET| 	call PlayDefaultMusic
-; PRET| 	SetEvent EVENT_RUBBED_CAPTAINS_BACK
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	res BIT_NO_NPC_FACE_PLAYER, [hl]
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+    mov al, [ebp + wAudioROMBank]
+    cmp al, 31
+    mov [ebp + wAudioSavedROMBank], al
+    jnz .not_audio_engine_3
+    call StopAllMusic
+    mov al, 2
+    mov [ebp + wAudioROMBank], al
+.not_audio_engine_3:
+    mov al, MUSIC_PKMN_HEALED
+    mov [ebp + wNewSoundID], al
+    call PlaySound
+.loop:
+    mov al, [ebp + wChannelSoundIDs]
+    cmp al, MUSIC_PKMN_HEALED
+    jz .loop
+    call PlayDefaultMusic
+    SetEvent EVENT_RUBBED_CAPTAINS_BACK
+    mov esi, wStatusFlags3
+    and byte [ebp + esi], ~(1 << (BIT_NO_NPC_FACE_PLAYER)) & 0xFF
+    jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
 ; BAIL[text-sound-command-unported] SSAnneCaptainsRoomCaptainIFeelMuchBetterText (scripts/SSAnneCaptainsRoom.asm:70-92) — at scripts/SSAnneCaptainsRoom.asm:75: sound_get_key_item

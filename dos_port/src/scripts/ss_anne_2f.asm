@@ -110,7 +110,7 @@ SSAnne2FNoopScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[bank-expression] SSAnne2FDefaultScript (scripts/SSAnne2F.asm:25-49) — at scripts/SSAnne2F.asm:29: BANK(Music_MeetRival)
+; BAIL[host-pointer-in-16bit-reg] SSAnne2FDefaultScript (scripts/SSAnne2F.asm:25-49) — at scripts/SSAnne2F.asm:48: de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .PlayerCoordinatesArray

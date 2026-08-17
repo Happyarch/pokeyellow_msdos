@@ -41,6 +41,7 @@ global MtMoonB2FRocket3Text
 global MtMoonB2FScript10
 global MtMoonB2FScript11
 global MtMoonB2FScript12
+global MtMoonB2FScript13
 global MtMoonB2FScript14
 global MtMoonB2FScript15
 global MtMoonB2FScript6
@@ -48,6 +49,7 @@ global MtMoonB2FScript7
 global MtMoonB2FScript8
 global MtMoonB2FScript9
 global MtMoonB2FScript_49d28
+global MtMoonB2FScript_49e15
 global MtMoonB2FScript_ApplyPikachuMovementData
 global MtMoonB2FScript_HideJessieJames
 global MtMoonB2FScript_HideObject
@@ -93,8 +95,6 @@ extern MtMoonB2FHelixFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FMoveSuperNerdScript   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FReceivedFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FScript13   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FScript_49e15   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdOkIllShareText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdTheresAPokemonLabText   ; NOT YET DEFINED IN THE PORT
@@ -398,45 +398,47 @@ MtMoonB2FSuperNerdTakesOtherFossilScript:
     call MtMoonB2FSetScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bank-expression] MtMoonB2FScript_49e15 (scripts/MtMoonB2F.asm:226-260) — at scripts/MtMoonB2F.asm:233: BANK(Music_MeetJessieJames)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp $3
-; PRET| 	ret nz
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp $5
-; PRET| 	ret nz
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetJessieJames)
-; PRET| 	ld a, MUSIC_MEET_JESSIE_JAMES
-; PRET| 	call PlayMusic
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, TOGGLE_MT_MOON_B2F_JESSIE
-; PRET| 	call MtMoonB2FScript_ShowObject
-; PRET| 	ld a, TOGGLE_MT_MOON_B2F_JAMES
-; PRET| 	call MtMoonB2FScript_ShowObject
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, TEXT_MTMOONB2F_TEXT12
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, $1
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	ld a, PAD_UP
-; PRET| 	ld [wSimulatedJoypadStatesEnd], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_MTMOONB2F_SCRIPT6
-; PRET| 	call MtMoonB2FSetScript
-; PRET| 	ret
+%assign event_byte -1
+MtMoonB2FScript_49e15:
+    mov al, [ebp + wXCoord]
+    cmp al, 0x3
+    jz .nr_228
+        ret
+.nr_228:
+    mov al, [ebp + wYCoord]
+    cmp al, 0x5
+    jz .nr_231
+        ret
+.nr_231:
+    call StopAllMusic
+    mov bl, 32
+    mov al, MUSIC_MEET_JESSIE_JAMES
+    call PlayMusic
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, 109
+    call MtMoonB2FScript_ShowObject
+    mov al, 110
+    call MtMoonB2FScript_ShowObject
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, TEXT_MTMOONB2F_TEXT12
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, 0x1
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    mov al, PAD_UP
+    mov [ebp + wSimulatedJoypadStatesEnd], al
+    call StartSimulatingJoypadStates
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_MTMOONB2F_SCRIPT6
+    call MtMoonB2FSetScript
+    ret
 
 %assign event_byte -1
 MovementData_f9e65:
@@ -533,39 +535,37 @@ MtMoonB2FScript12:
     call MtMoonB2FSetScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bank-expression] MtMoonB2FScript13 (scripts/MtMoonB2F.asm:348-376) — at scripts/MtMoonB2F.asm:369: BANK(Music_MeetJessieJames)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, MtMoonB2FResetScripts
-; PRET| 	ld a, $2
-; PRET| 	ld [wSprite02StateData1MovementStatus], a
-; PRET| 	ld [wSprite06StateData1MovementStatus], a
-; PRET| 	xor a
-; PRET| 	ld [wSprite02StateData1FacingDirection], a
-; PRET| 	ld [wSprite06StateData1FacingDirection], a
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, TEXT_MTMOONB2F_TEXT14
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetJessieJames)
-; PRET| 	ld a, MUSIC_MEET_JESSIE_JAMES
-; PRET| 	call PlayMusic
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_MTMOONB2F_SCRIPT14
-; PRET| 	call MtMoonB2FSetScript
-; PRET| 	ret
+%assign event_byte -1
+MtMoonB2FScript13:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz MtMoonB2FResetScripts
+    mov al, 0x2
+    mov [ebp + wSprite02StateData1MovementStatus], al
+    mov [ebp + wSprite06StateData1MovementStatus], al
+    xor al, al
+    mov [ebp + wSprite02StateData1FacingDirection], al
+    mov [ebp + wSprite06StateData1FacingDirection], al
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, TEXT_MTMOONB2F_TEXT14
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    call StopAllMusic
+    mov bl, 32
+    mov al, MUSIC_MEET_JESSIE_JAMES
+    call PlayMusic
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_MTMOONB2F_SCRIPT14
+    call MtMoonB2FSetScript
+    ret
 
 %assign event_byte -1
 MtMoonB2FScript14:

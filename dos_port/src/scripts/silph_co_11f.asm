@@ -36,11 +36,13 @@ global SilphCo11FResetCurScript
 global SilphCo11FRocketText
 global SilphCo11FScript10
 global SilphCo11FScript11
+global SilphCo11FScript12
 global SilphCo11FScript13
 global SilphCo11FScript14
 global SilphCo11FScript9
 global SilphCo11FScript_621c5
 global SilphCo11FScript_621ff
+global SilphCo11FScript_6229c
 global SilphCo11FScript_HideObject
 global SilphCo11FScript_ShowObject
 global SilphCo11FSetCurScript
@@ -84,12 +86,10 @@ extern SilphCo11FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FGiovanniText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FGiovanniYouRuinedOurPlansText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FScript12   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript5   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript6   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript7   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript8   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FScript_6229c   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FSilphPresidentText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -393,48 +393,50 @@ SilphCo11FGiovanniStartBattleScript:
     mov al, SCRIPT_SILPHCO11F_GIOVANNI_AFTER_BATTLE
     jmp SilphCo11FSetCurScript
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo11FScript_6229c (scripts/SilphCo11F.asm:220-257) — at scripts/SilphCo11F.asm:229: .asm_622c3 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp $3
-; PRET| 	ret nz
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp $4
-; PRET| 	ret nc
-; PRET| 	ResetEvents EVENT_780, EVENT_781
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp $3
-; PRET| 	jr z, .asm_622c3
-; PRET| 	SetEventReuseHL EVENT_780
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp $2
-; PRET| 	jr z, .asm_622c3
-; PRET| 	ResetEventReuseHL EVENT_780
-; PRET| 	SetEventReuseHL EVENT_781
-; PRET| .asm_622c3
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetJessieJames)
-; PRET| 	ld a, MUSIC_MEET_JESSIE_JAMES
-; PRET| 	call PlayMusic
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, TEXT_SILPHCO11F_TEXT8
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	SetEvent EVENT_782
-; PRET| 	ld a, SCRIPT_SILPHCO11F_SCRIPT5
-; PRET| 	call SilphCo11FSetCurScript
-; PRET| 	ret
+%assign event_byte -1
+SilphCo11FScript_6229c:
+    mov al, [ebp + wYCoord]
+    cmp al, 0x3
+    jz .nr_222
+        ret
+.nr_222:
+    mov al, [ebp + wXCoord]
+    cmp al, 0x4
+    jb .nr_225
+        ret
+.nr_225:
+    ResetEvents EVENT_780, EVENT_781
+    mov al, [ebp + wXCoord]
+    cmp al, 0x3
+    jz .asm_622c3
+    SetEventReuseHL EVENT_780
+    mov al, [ebp + wXCoord]
+    cmp al, 0x2
+    jz .asm_622c3
+    ResetEventReuseHL EVENT_780
+    SetEventReuseHL EVENT_781
+.asm_622c3:
+    call StopAllMusic
+    mov bl, 32
+    mov al, MUSIC_MEET_JESSIE_JAMES
+    call PlayMusic
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, TEXT_SILPHCO11F_TEXT8
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    SetEvent EVENT_782
+    mov al, SCRIPT_SILPHCO11F_SCRIPT5
+    call SilphCo11FSetCurScript
+    ret
 
 %assign event_byte -1
 SilphCo11FMovementData_622f5:
@@ -585,39 +587,37 @@ SilphCo11FScript11:
     call SilphCo11FSetCurScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bank-expression] SilphCo11FScript12 (scripts/SilphCo11F.asm:404-432) — at scripts/SilphCo11F.asm:425: BANK(Music_MeetJessieJames)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, SilphCo11FResetCurScript
-; PRET| 	ld a, $2
-; PRET| 	ld [wSprite04StateData1MovementStatus], a
-; PRET| 	ld [wSprite06StateData1MovementStatus], a
-; PRET| 	xor a
-; PRET| 	ld [wSprite04StateData1FacingDirection], a
-; PRET| 	ld [wSprite06StateData1FacingDirection], a
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, TEXT_SILPHCO11F_TEXT10
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetJessieJames)
-; PRET| 	ld a, MUSIC_MEET_JESSIE_JAMES
-; PRET| 	call PlayMusic
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_SILPHCO11F_SCRIPT13
-; PRET| 	call SilphCo11FSetCurScript
-; PRET| 	ret
+%assign event_byte -1
+SilphCo11FScript12:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz SilphCo11FResetCurScript
+    mov al, 0x2
+    mov [ebp + wSprite04StateData1MovementStatus], al
+    mov [ebp + wSprite06StateData1MovementStatus], al
+    xor al, al
+    mov [ebp + wSprite04StateData1FacingDirection], al
+    mov [ebp + wSprite06StateData1FacingDirection], al
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, TEXT_SILPHCO11F_TEXT10
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    call StopAllMusic
+    mov bl, 32
+    mov al, MUSIC_MEET_JESSIE_JAMES
+    call PlayMusic
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_SILPHCO11F_SCRIPT13
+    call SilphCo11FSetCurScript
+    ret
 
 %assign event_byte -1
 SilphCo11FScript13:

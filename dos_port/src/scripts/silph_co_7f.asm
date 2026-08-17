@@ -265,7 +265,7 @@ SilphCo7F_ScriptPointers:
     dd SilphCo7FRivalExitScript
 
 ; ---------------------------------------------------------------------------
-; BAIL[bank-expression] SilphCo7FDefaultScript (scripts/SilphCo7F.asm:123-155) — at scripts/SilphCo7F.asm:135: BANK(Music_MeetRival)
+; BAIL[host-pointer-in-16bit-reg] SilphCo7FDefaultScript (scripts/SilphCo7F.asm:123-155) — at scripts/SilphCo7F.asm:144: de cannot hold the 32-bit address of .RivalMovementUp; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_SILPH_CO_RIVAL

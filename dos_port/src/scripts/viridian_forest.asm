@@ -24,12 +24,14 @@ bits 32
 %include "assets/trainer_headers.inc"
 
 global ViridianForestCooltrainerFText
+global ViridianForestLeavingSignText
 global ViridianForestPrintLeavingSignText
 global ViridianForestPrintTrainerTips1Text
 global ViridianForestPrintTrainerTips2Text
 global ViridianForestPrintTrainerTips3Text
 global ViridianForestPrintTrainerTips4Text
 global ViridianForestPrintUseAntidoteSignText
+global ViridianForestSign_Common
 global ViridianForestTalkToTrainer
 global ViridianForestTrainerTips1Text
 global ViridianForestTrainerTips2Text
@@ -48,8 +50,6 @@ extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern ViridianForestLeavingSignText   ; NOT YET DEFINED IN THE PORT
-extern ViridianForestSign_Common   ; NOT YET DEFINED IN THE PORT
 extern ViridianForestTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern ViridianForestTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern ViridianForestTrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -141,15 +141,13 @@ ViridianForestTrainerTips4Text:
     mov esi, ViridianForestPrintTrainerTips4Text
     jmp ViridianForestSign_Common
 
-; ---------------------------------------------------------------------------
-; BAIL[bank-expression] ViridianForestLeavingSignText (scripts/ViridianForest.asm:171-175) — at scripts/ViridianForest.asm:173: BANK(ViridianForestPrintTrainerTips1Text)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, ViridianForestPrintTrainerTips1Text ; supposed to be ViridianForestPrintLeavingSignText
-; PRET| ViridianForestSign_Common:
-; PRET| 	ld b, BANK(ViridianForestPrintTrainerTips1Text)
-; PRET| 	call Bankswitch
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+ViridianForestLeavingSignText:
+    mov esi, ViridianForestPrintTrainerTips1Text
+ViridianForestSign_Common:
+    mov bh, 60
+    call Bankswitch
+    jmp TextScriptEnd
 
 %assign event_byte -1
 ViridianForestPrintTrainerTips1Text:

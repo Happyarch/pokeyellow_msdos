@@ -1,16 +1,16 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 1832,
- "regions_bailed": 698,
+ "regions_lowered": 1847,
+ "regions_bailed": 683,
  "by_reason": {
   "owned-by-generated-assets": 255,
-  "target-region-bailed": 252,
+  "target-region-bailed": 246,
   "screen-coord-projection": 4,
   "inline-text-db": 11,
   "bit-clobbers-live-carry": 13,
-  "host-pointer-in-16bit-reg": 27,
+  "host-pointer-in-16bit-reg": 29,
   "text-sound-command-unported": 49,
-  "pikachu-table-index": 3,
+  "pikachu-table-index": 4,
   "hl-half-register-access": 9,
   "local-label-scope-collision": 12,
   "pointer-domain-unknown": 15,
@@ -19,11 +19,11 @@
   "predef-leaves-parent-bank-in-a": 1,
   "add-hl-r16": 4,
   "event-byte-assembly-state": 6,
-  "bank-expression": 13,
   "unresolved-symbol": 1,
   "checkevent-carry-form": 3,
   "event-macro-reuse-a-hint": 1,
-  "owned-by-gen_map_script_tables": 1
+  "owned-by-gen_map_script_tables": 1,
+  "bank-expression": 1
  },
  "per_file": {
   "scripts/AgathasRoom.asm": {
@@ -337,7 +337,6 @@
    "ok_regions": 4,
    "bailed_regions": 5,
    "reasons": [
-    "bank-expression",
     "hl-half-register-access",
     "pikachu-table-index",
     "target-region-bailed"
@@ -516,10 +515,9 @@
    "reasons": []
   },
   "scripts/MtMoonB2F.asm": {
-   "ok_regions": 31,
-   "bailed_regions": 14,
+   "ok_regions": 33,
+   "bailed_regions": 12,
    "reasons": [
-    "bank-expression",
     "host-pointer-in-16bit-reg",
     "local-label-scope-collision",
     "owned-by-generated-assets",
@@ -556,10 +554,9 @@
    ]
   },
   "scripts/OaksLab.asm": {
-   "ok_regions": 47,
-   "bailed_regions": 45,
+   "ok_regions": 48,
+   "bailed_regions": 44,
    "reasons": [
-    "bank-expression",
     "event-byte-assembly-state",
     "hl-half-register-access",
     "local-label-scope-collision",
@@ -570,11 +567,10 @@
    ]
   },
   "scripts/PalletTown.asm": {
-   "ok_regions": 17,
-   "bailed_regions": 2,
+   "ok_regions": 18,
+   "bailed_regions": 1,
    "reasons": [
-    "event-macro-reuse-a-hint",
-    "target-region-bailed"
+    "event-macro-reuse-a-hint"
    ]
   },
   "scripts/PewterCity.asm": {
@@ -660,10 +656,9 @@
    "reasons": []
   },
   "scripts/PokemonTower2F.asm": {
-   "ok_regions": 12,
-   "bailed_regions": 2,
+   "ok_regions": 13,
+   "bailed_regions": 1,
    "reasons": [
-    "bank-expression",
     "host-pointer-in-16bit-reg"
    ]
   },
@@ -696,10 +691,9 @@
    ]
   },
   "scripts/PokemonTower7F.asm": {
-   "ok_regions": 17,
-   "bailed_regions": 4,
+   "ok_regions": 19,
+   "bailed_regions": 2,
    "reasons": [
-    "bank-expression",
     "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
@@ -766,10 +760,9 @@
    ]
   },
   "scripts/RocketHideoutB4F.asm": {
-   "ok_regions": 21,
-   "bailed_regions": 7,
+   "ok_regions": 23,
+   "bailed_regions": 5,
    "reasons": [
-    "bank-expression",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -952,8 +945,8 @@
    ]
   },
   "scripts/Route22.asm": {
-   "ok_regions": 27,
-   "bailed_regions": 16,
+   "ok_regions": 29,
+   "bailed_regions": 14,
    "reasons": [
     "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
@@ -1214,10 +1207,9 @@
    ]
   },
   "scripts/SilphCo11F.asm": {
-   "ok_regions": 28,
-   "bailed_regions": 12,
+   "ok_regions": 30,
+   "bailed_regions": 10,
    "reasons": [
-    "bank-expression",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
@@ -1281,7 +1273,6 @@
    "ok_regions": 28,
    "bailed_regions": 13,
    "reasons": [
-    "bank-expression",
     "bit-clobbers-live-carry",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
@@ -1329,7 +1320,6 @@
    "ok_regions": 15,
    "bailed_regions": 2,
    "reasons": [
-    "bank-expression",
     "host-pointer-in-16bit-reg"
    ]
   },
@@ -1365,10 +1355,9 @@
    ]
   },
   "scripts/SSAnneCaptainsRoom.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 2,
+   "ok_regions": 8,
+   "bailed_regions": 1,
    "reasons": [
-    "bank-expression",
     "text-sound-command-unported"
    ]
   },
@@ -1513,10 +1502,9 @@
    ]
   },
   "scripts/ViridianForest.asm": {
-   "ok_regions": 23,
-   "bailed_regions": 3,
+   "ok_regions": 24,
+   "bailed_regions": 2,
    "reasons": [
-    "bank-expression",
     "owned-by-generated-assets"
    ]
   },
@@ -3333,9 +3321,9 @@
     "DaycareGentlemanText.withdrewPikachuFromDayCare",
     "DaycareGentlemanText.asm_56430"
    ],
-   "reason": "bank-expression",
-   "detail": "BANK(SchedulePikachuSpawnForAfterText)",
-   "at": "scripts/Daycare.asm:226",
+   "reason": "pikachu-table-index",
+   "detail": "ldpikacry needs (X_id - Table) / N across object files",
+   "at": "scripts/Daycare.asm:229",
    "lines": [
     221,
     233
@@ -4462,34 +4450,6 @@
   },
   {
    "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FScript_49e15",
-   "labels": [
-    "MtMoonB2FScript_49e15"
-   ],
-   "reason": "bank-expression",
-   "detail": "BANK(Music_MeetJessieJames)",
-   "at": "scripts/MtMoonB2F.asm:233",
-   "lines": [
-    226,
-    260
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FScript13",
-   "labels": [
-    "MtMoonB2FScript13"
-   ],
-   "reason": "bank-expression",
-   "detail": "BANK(Music_MeetJessieJames)",
-   "at": "scripts/MtMoonB2F.asm:369",
-   "lines": [
-    348,
-    376
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
    "region": "MtMoonB2F_TextPointers",
    "labels": [
     "MtMoonB2F_TextPointers",
@@ -4883,20 +4843,6 @@
    "lines": [
     13,
     36
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalChallengesPlayerScript",
-   "labels": [
-    "OaksLabRivalChallengesPlayerScript"
-   ],
-   "reason": "bank-expression",
-   "detail": "BANK(Music_MeetRival)",
-   "at": "scripts/OaksLab.asm:316",
-   "lines": [
-    306,
-    338
    ]
   },
   {
@@ -5540,21 +5486,6 @@
   },
   {
    "file": "scripts/PalletTown.asm",
-   "region": "PalletTownDefaultScript",
-   "labels": [
-    "PalletTownDefaultScript",
-    "PalletTownDefaultScript.asm_18e40"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_18e40 is defined in a region that bailed",
-   "at": "scripts/PalletTown.asm:33",
-   "lines": [
-    25,
-    52
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
    "region": "PalletTownDaisyScript",
    "labels": [
     "PalletTownDaisyScript"
@@ -6146,20 +6077,6 @@
   },
   {
    "file": "scripts/PokemonTower2F.asm",
-   "region": "scripts/PokemonTower2F.asm:anon",
-   "labels": [
-    "PokemonTower2FDefaultScript.player_below_rival"
-   ],
-   "reason": "bank-expression",
-   "detail": "BANK(Music_MeetRival)",
-   "at": "scripts/PokemonTower2F.asm:31",
-   "lines": [
-    25,
-    57
-   ]
-  },
-  {
-   "file": "scripts/PokemonTower2F.asm",
    "region": "PokemonTower2FDefeatedRivalScript",
    "labels": [
     "PokemonTower2FDefeatedRivalScript",
@@ -6386,21 +6303,6 @@
   },
   {
    "file": "scripts/PokemonTower7F.asm",
-   "region": "PokemonTower7FScript_60d2a",
-   "labels": [
-    "PokemonTower7FScript_60d2a",
-    "PokemonTower7FScript_60d2a.asm_60d47"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_60d47 is defined in a region that bailed",
-   "at": "scripts/PokemonTower7F.asm:46",
-   "lines": [
-    40,
-    73
-   ]
-  },
-  {
-   "file": "scripts/PokemonTower7F.asm",
    "region": "PokemonTower7FScript1",
    "labels": [
     "PokemonTower7FScript1",
@@ -6430,20 +6332,6 @@
    "lines": [
     99,
     127
-   ]
-  },
-  {
-   "file": "scripts/PokemonTower7F.asm",
-   "region": "PokemonTower7FScript8",
-   "labels": [
-    "PokemonTower7FScript8"
-   ],
-   "reason": "bank-expression",
-   "detail": "BANK(Music_MeetJessieJames)",
-   "at": "scripts/PokemonTower7F.asm:191",
-   "lines": [
-    170,
-    198
    ]
   },
   {
@@ -6795,21 +6683,6 @@
   },
   {
    "file": "scripts/RocketHideoutB4F.asm",
-   "region": "RocketHideoutB4FScript_455a5",
-   "labels": [
-    "RocketHideoutB4FScript_455a5",
-    "RocketHideoutB4FScript_455a5.asm_455c2"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_455c2 is defined in a region that bailed",
-   "at": "scripts/RocketHideoutB4F.asm:90",
-   "lines": [
-    84,
-    123
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB4F.asm",
    "region": "RocketHideoutB4FScript4",
    "labels": [
     "RocketHideoutB4FScript4",
@@ -6839,20 +6712,6 @@
    "lines": [
     149,
     180
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB4F.asm",
-   "region": "RocketHideoutB4FScript11",
-   "labels": [
-    "RocketHideoutB4FScript11"
-   ],
-   "reason": "bank-expression",
-   "detail": "BANK(Music_MeetJessieJames)",
-   "at": "scripts/RocketHideoutB4F.asm:245",
-   "lines": [
-    224,
-    252
    ]
   },
   {
@@ -8713,21 +8572,6 @@
   },
   {
    "file": "scripts/Route22.asm",
-   "region": "Route22FirstRivalBattleScript",
-   "labels": [
-    "Route22FirstRivalBattleScript",
-    "Route22FirstRivalBattleScript.walking"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".walking is defined in a region that bailed",
-   "at": "scripts/Route22.asm:92",
-   "lines": [
-    85,
-    103
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
    "region": "Route22Rival1StartBattleScript",
    "labels": [
     "Route22Rival1StartBattleScript"
@@ -8812,21 +8656,6 @@
    "lines": [
     194,
     198
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22SecondRivalBattleScript",
-   "labels": [
-    "Route22SecondRivalBattleScript",
-    "Route22SecondRivalBattleScript.walking"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".walking is defined in a region that bailed",
-   "at": "scripts/Route22.asm:246",
-   "lines": [
-    239,
-    256
    ]
   },
   {
@@ -10392,21 +10221,6 @@
   },
   {
    "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FScript_6229c",
-   "labels": [
-    "SilphCo11FScript_6229c",
-    "SilphCo11FScript_6229c.asm_622c3"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_622c3 is defined in a region that bailed",
-   "at": "scripts/SilphCo11F.asm:229",
-   "lines": [
-    220,
-    257
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
    "region": "SilphCo11FScript5",
    "labels": [
     "SilphCo11FScript5",
@@ -10436,20 +10250,6 @@
    "lines": [
     326,
     361
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FScript12",
-   "labels": [
-    "SilphCo11FScript12"
-   ],
-   "reason": "bank-expression",
-   "detail": "BANK(Music_MeetJessieJames)",
-   "at": "scripts/SilphCo11F.asm:425",
-   "lines": [
-    404,
-    432
    ]
   },
   {
@@ -11307,9 +11107,9 @@
     "SilphCo7FDefaultScript",
     "SilphCo7FDefaultScript.full_rival_movement"
    ],
-   "reason": "bank-expression",
-   "detail": "BANK(Music_MeetRival)",
-   "at": "scripts/SilphCo7F.asm:135",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RivalMovementUp; callee <none in range> has no abi.json entry",
+   "at": "scripts/SilphCo7F.asm:144",
    "lines": [
     123,
     155
@@ -11697,9 +11497,9 @@
    "labels": [
     "SSAnne2FDefaultScript"
    ],
-   "reason": "bank-expression",
-   "detail": "BANK(Music_MeetRival)",
-   "at": "scripts/SSAnne2F.asm:29",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry",
+   "at": "scripts/SSAnne2F.asm:48",
    "lines": [
     25,
     49
@@ -11873,21 +11673,6 @@
   },
   {
    "file": "scripts/SSAnneCaptainsRoom.asm",
-   "region": "scripts/SSAnneCaptainsRoom.asm:anon",
-   "labels": [
-    "SSAnneCaptainsRoomRubCaptainsBackText.not_audio_engine_3",
-    "SSAnneCaptainsRoomRubCaptainsBackText.loop"
-   ],
-   "reason": "bank-expression",
-   "detail": "BANK(\"Audio Engine 3\")",
-   "at": "scripts/SSAnneCaptainsRoom.asm:49",
-   "lines": [
-    48,
-    67
-   ]
-  },
-  {
-   "file": "scripts/SSAnneCaptainsRoom.asm",
    "region": "SSAnneCaptainsRoomCaptainIFeelMuchBetterText",
    "labels": [
     "SSAnneCaptainsRoomCaptainIFeelMuchBetterText",
@@ -11974,8 +11759,8 @@
     "VermilionDockSSAnneLeavesScript.delay_between_drifts"
    ],
    "reason": "bank-expression",
-   "detail": "BANK(Music_Surfing)",
-   "at": "scripts/VermilionDock.asm:44",
+   "detail": "HIGH(vBGMap1)",
+   "at": "scripts/VermilionDock.asm:52",
    "lines": [
     40,
     122
@@ -12631,21 +12416,6 @@
    "lines": [
     81,
     142
-   ]
-  },
-  {
-   "file": "scripts/ViridianForest.asm",
-   "region": "ViridianForestLeavingSignText",
-   "labels": [
-    "ViridianForestLeavingSignText",
-    "ViridianForestSign_Common"
-   ],
-   "reason": "bank-expression",
-   "detail": "BANK(ViridianForestPrintTrainerTips1Text)",
-   "at": "scripts/ViridianForest.asm:173",
-   "lines": [
-    171,
-    175
    ]
   },
   {

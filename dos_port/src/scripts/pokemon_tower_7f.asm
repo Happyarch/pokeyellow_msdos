@@ -32,7 +32,9 @@ global PokemonTower7FScript10
 global PokemonTower7FScript5
 global PokemonTower7FScript6
 global PokemonTower7FScript7
+global PokemonTower7FScript8
 global PokemonTower7FScript9
+global PokemonTower7FScript_60d2a
 global PokemonTower7FScript_HideObject
 global PokemonTower7FScript_ShowObject
 global PokemonTower7FSetDefaultScript
@@ -62,8 +64,6 @@ extern PokemonTower7FScript1   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript2   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript3   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript4   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower7FScript8   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower7FScript_60d2a   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
@@ -143,44 +143,46 @@ PokemonTower7F_ScriptPointers:
 .sk_36:
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonTower7FScript_60d2a (scripts/PokemonTower7F.asm:40-73) — at scripts/PokemonTower7F.asm:46: .asm_60d47 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp $c
-; PRET| 	ret nz
-; PRET| 	ResetEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp $a
-; PRET| 	jr z, .asm_60d47
-; PRET| 	ld a, [wXCoord] ; why?
-; PRET| 	cp $b
-; PRET| 	ret nz
-; PRET| 	SetEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
-; PRET| .asm_60d47
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetJessieJames)
-; PRET| 	ld a, MUSIC_MEET_JESSIE_JAMES
-; PRET| 	call PlayMusic
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, TOGGLE_POKEMON_TOWER_7F_JESSIE
-; PRET| 	call PokemonTower7FScript_ShowObject
-; PRET| 	ld a, TOGGLE_POKEMON_TOWER_7F_JAMES
-; PRET| 	call PokemonTower7FScript_ShowObject
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, TEXT_POKEMONTOWER7F_TEXT4
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_POKEMONTOWER7F_SCRIPT1
-; PRET| 	call PokemonTower7FSetScript
-; PRET| 	ret
+%assign event_byte -1
+PokemonTower7FScript_60d2a:
+    mov al, [ebp + wYCoord]
+    cmp al, 0xc
+    jz .nr_42
+        ret
+.nr_42:
+    ResetEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
+    mov al, [ebp + wXCoord]
+    cmp al, 0xa
+    jz .asm_60d47
+    mov al, [ebp + wXCoord]
+    cmp al, 0xb
+    jz .nr_49
+        ret
+.nr_49:
+    SetEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
+.asm_60d47:
+    call StopAllMusic
+    mov bl, 32
+    mov al, MUSIC_MEET_JESSIE_JAMES
+    call PlayMusic
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, 65
+    call PokemonTower7FScript_ShowObject
+    mov al, 66
+    call PokemonTower7FScript_ShowObject
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, TEXT_POKEMONTOWER7F_TEXT4
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_POKEMONTOWER7F_SCRIPT1
+    call PokemonTower7FSetScript
+    ret
 
 %assign event_byte -1
 PokemonTower7FMovementData_60d7a:
@@ -286,39 +288,37 @@ PokemonTower7FScript7:
     call PokemonTower7FSetScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bank-expression] PokemonTower7FScript8 (scripts/PokemonTower7F.asm:170-198) — at scripts/PokemonTower7F.asm:191: BANK(Music_MeetJessieJames)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, PokemonTower7FSetDefaultScript
-; PRET| 	ld a, $2
-; PRET| 	ld [wSprite01StateData1MovementStatus], a
-; PRET| 	ld [wSprite02StateData1MovementStatus], a
-; PRET| 	xor a
-; PRET| 	ld [wSprite01StateData1FacingDirection], a
-; PRET| 	ld [wSprite02StateData1FacingDirection], a
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, TEXT_POKEMONTOWER7F_TEXT6
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetJessieJames)
-; PRET| 	ld a, MUSIC_MEET_JESSIE_JAMES
-; PRET| 	call PlayMusic
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_POKEMONTOWER7F_SCRIPT9
-; PRET| 	call PokemonTower7FSetScript
-; PRET| 	ret
+%assign event_byte -1
+PokemonTower7FScript8:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz PokemonTower7FSetDefaultScript
+    mov al, 0x2
+    mov [ebp + wSprite01StateData1MovementStatus], al
+    mov [ebp + wSprite02StateData1MovementStatus], al
+    xor al, al
+    mov [ebp + wSprite01StateData1FacingDirection], al
+    mov [ebp + wSprite02StateData1FacingDirection], al
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, TEXT_POKEMONTOWER7F_TEXT6
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    call StopAllMusic
+    mov bl, 32
+    mov al, MUSIC_MEET_JESSIE_JAMES
+    call PlayMusic
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_POKEMONTOWER7F_SCRIPT9
+    call PokemonTower7FSetScript
+    ret
 
 %assign event_byte -1
 PokemonTower7FScript9:

@@ -140,6 +140,7 @@ class Emitter:
         """
         text = _HEX.sub(lambda m: "0x" + m.group(1), text)
         text = _BIN.sub(lambda m: "0b" + m.group(1).replace("_", ""), text)
+        text = self._banks(text)
 
         def sub(m):
             name = m.group(0)
@@ -161,6 +162,35 @@ class Emitter:
             guard_local(loc)
         return ir._IDENT_RE.sub(
             lambda m: sub(m) if not _is_reg(m.group(0)) else m.group(0), text)
+
+    #: `BANK(Foo)` / `BANK("Section Name")` — rgbasm's bank-of operator.
+    _BANK_CALL = re.compile(r'\bBANK\(\s*("[^"]*"|[A-Za-z_][\w.]*)\s*\)')
+
+    def _banks(self, text: str) -> str:
+        """Resolve BANK(x) to the bank rgblink actually chose.
+
+        THE NUMBER IS NOT COSMETIC, even though the port has no banking. The
+        audio engine MODELS the audio ROM bank as a value: `PlayMusic` stores C
+        into wAudioROMBank (dos_port/src/home/audio.asm:198-200) and the fade
+        path compares wAudioROMBank against it to decide whether to switch banks
+        mid-fade. A script that passed 0 there instead of pret's real bank would
+        take a different branch. So the value is read from pokeyellow.sym /
+        pokeyellow.map — rgblink's own placement — rather than invented.
+
+        This is the one bank quantity the port reproduces. The dispatch and the
+        switch itself remain dropped as `class=banking` deviations elsewhere.
+        """
+        def rep(m):
+            arg = m.group(1)
+            if arg.startswith('"'):
+                b = self.R.sym.sections.get(arg.strip('"'))
+            else:
+                b = self.R.sym.bank(arg)
+            if b is None:
+                raise Bail("bank-expression",
+                           f"no bank recorded for {arg} in pokeyellow.sym/.map")
+            return str(b)
+        return self._BANK_CALL.sub(rep, text)
 
     def mem(self, text: str, out: Emitted) -> str:
         return f"[ebp + {self.expr(text, out)}]"

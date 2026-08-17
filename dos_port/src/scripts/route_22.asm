@@ -22,6 +22,7 @@ bits 32
 
 %include "assets/audio_constants.inc"
 
+global Route22FirstRivalBattleScript
 global Route22NoopScript
 global Route22PokemonLeagueSignText
 global Route22PrintPokemonLeagueSignText
@@ -46,6 +47,7 @@ global Route22RivalBeforeBattleText2
 global Route22RivalMovementData
 global Route22Script_50ed6
 global Route22Script_50ee1
+global Route22SecondRivalBattleScript
 global Route22SetDefaultScript
 global Route22_Script
 global Route22_ScriptPointers
@@ -66,7 +68,6 @@ extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
 extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern Route22DefaultScript   ; NOT YET DEFINED IN THE PORT
-extern Route22FirstRivalBattleScript   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRival1   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRival2   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRivalRightScript   ; NOT YET DEFINED IN THE PORT
@@ -74,7 +75,6 @@ extern Route22Rival1AfterBattleScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival1StartBattleScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival2AfterBattleScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival2StartBattleScript   ; NOT YET DEFINED IN THE PORT
-extern Route22SecondRivalBattleScript   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
 extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
@@ -210,29 +210,28 @@ Route22RivalMovementData:
     db 5, 29
     db -1
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22FirstRivalBattleScript (scripts/Route22.asm:85-103) — at scripts/Route22.asm:92: .walking is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, ROUTE22_RIVAL1
-; PRET| 	ld [wEmotionBubbleSpriteIndex], a
-; PRET| 	xor a ; EXCLAMATION_BUBBLE
-; PRET| 	ld [wWhichEmotionBubble], a
-; PRET| 	predef EmotionBubble
-; PRET| 	ld a, [wWalkBikeSurfState]
-; PRET| 	and a
-; PRET| 	jr z, .walking
-; PRET| 	call StopAllMusic
-; PRET| .walking
-; PRET| 	ld c, BANK(Music_MeetRival)
-; PRET| 	ld a, MUSIC_MEET_RIVAL
-; PRET| 	call PlayMusic
-; PRET| 	ld a, ROUTE22_RIVAL1
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call Route22MoveRivalRightScript
-; PRET| 	ld a, SCRIPT_ROUTE22_RIVAL1_START_BATTLE
-; PRET| 	ld [wRoute22CurScript], a
-; PRET| 	ret
+%assign event_byte -1
+Route22FirstRivalBattleScript:
+    mov al, 1
+    mov [ebp + wEmotionBubbleSpriteIndex], al
+    xor al, al
+    mov [ebp + wWhichEmotionBubble], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call EmotionBubble
+    mov al, [ebp + wWalkBikeSurfState]
+    test al, al
+    jz .walking
+    call StopAllMusic
+.walking:
+    mov bl, 2
+    mov al, MUSIC_MEET_RIVAL
+    call PlayMusic
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    call Route22MoveRivalRightScript
+    mov al, SCRIPT_ROUTE22_RIVAL1_START_BATTLE
+    mov [ebp + wRoute22CurScript], al
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] Route22Rival1StartBattleScript (scripts/Route22.asm:106-115) — at scripts/Route22.asm:115: .set_rival_facing_direction is defined in a region that bailed
@@ -393,28 +392,28 @@ Route22Rival1ExitScript:
     mov [ebp + wRoute22CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22SecondRivalBattleScript (scripts/Route22.asm:239-256) — at scripts/Route22.asm:246: .walking is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, ROUTE22_RIVAL2
-; PRET| 	ld [wEmotionBubbleSpriteIndex], a
-; PRET| 	xor a ; EXCLAMATION_BUBBLE
-; PRET| 	ld [wWhichEmotionBubble], a
-; PRET| 	predef EmotionBubble
-; PRET| 	ld a, [wWalkBikeSurfState]
-; PRET| 	and a
-; PRET| 	jr z, .walking
-; PRET| 	call StopAllMusic
-; PRET| .walking
-; PRET| 	call StopAllMusic
-; PRET| 	farcall Music_RivalAlternateTempo
-; PRET| 	ld a, ROUTE22_RIVAL2
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call Route22MoveRivalRightScript
-; PRET| 	ld a, SCRIPT_ROUTE22_RIVAL2_START_BATTLE
-; PRET| 	ld [wRoute22CurScript], a
-; PRET| 	ret
+%assign event_byte -1
+Route22SecondRivalBattleScript:
+    mov al, 2
+    mov [ebp + wEmotionBubbleSpriteIndex], al
+    xor al, al
+    mov [ebp + wWhichEmotionBubble], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call EmotionBubble
+    mov al, [ebp + wWalkBikeSurfState]
+    test al, al
+    jz .walking
+    call StopAllMusic
+.walking:
+    call StopAllMusic
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call Music_RivalAlternateTempo
+    mov al, 2
+    mov [ebp + hSpriteIndex], al
+    call Route22MoveRivalRightScript
+    mov al, SCRIPT_ROUTE22_RIVAL2_START_BATTLE
+    mov [ebp + wRoute22CurScript], al
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] Route22Rival2StartBattleScript (scripts/Route22.asm:259-270) — at scripts/Route22.asm:266: .set_player_direction_left is defined in a region that bailed

@@ -48,6 +48,7 @@ extern PokemonTower2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower2FDefeatedRivalScript   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
+extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
 extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
@@ -96,43 +97,43 @@ PokemonTower2F_ScriptPointers:
     dd PokemonTower2FDefeatedRivalScript
     dd PokemonTower2FRivalExitsScript
 
-; ---------------------------------------------------------------------------
-; BAIL[bank-expression] scripts/PokemonTower2F.asm:anon (scripts/PokemonTower2F.asm:25-57) — at scripts/PokemonTower2F.asm:31: BANK(Music_MeetRival)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_POKEMON_TOWER_RIVAL
-; PRET| 	ret nz
-; PRET| 	ld hl, PokemonTower2FRivalEncounterEventCoords
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	ret nc
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetRival)
-; PRET| 	ld a, MUSIC_MEET_RIVAL
-; PRET| 	call PlayMusic
-; PRET| 	ResetEvent EVENT_POKEMON_TOWER_RIVAL_ON_LEFT
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	cp $1
-; PRET| 	ld a, PLAYER_DIR_UP
-; PRET| 	ld b, SPRITE_FACING_DOWN
-; PRET| 	jr nz, .player_below_rival
-; PRET| ; the rival is on the left side and the player is on the right side
-; PRET| 	SetEvent EVENT_POKEMON_TOWER_RIVAL_ON_LEFT
-; PRET| 	ld a, PLAYER_DIR_LEFT
-; PRET| 	ld b, SPRITE_FACING_RIGHT
-; PRET| .player_below_rival
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, POKEMONTOWER2F_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld a, b
-; PRET| 	ldh [hSpriteFacingDirection], a
-; PRET| 	call SetSpriteFacingDirectionAndDelay
-; PRET| 	ld a, TEXT_POKEMONTOWER2F_RIVAL
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ldh [hJoyPressed], a
-; PRET| 	ret
+%assign event_byte -1
+    CheckEvent EVENT_BEAT_POKEMON_TOWER_RIVAL
+    jz .nr_26
+        ret
+.nr_26:
+    mov esi, PokemonTower2FRivalEncounterEventCoords
+    call ArePlayerCoordsInArray
+    jb .nr_29
+        ret
+.nr_29:
+    call StopAllMusic
+    mov bl, 2
+    mov al, MUSIC_MEET_RIVAL
+    call PlayMusic
+    ResetEvent EVENT_POKEMON_TOWER_RIVAL_ON_LEFT
+    mov al, [ebp + wCoordIndex]
+    cmp al, 0x1
+    mov al, PLAYER_DIR_UP
+    mov bh, SPRITE_FACING_DOWN
+    jnz .player_below_rival
+    SetEvent EVENT_POKEMON_TOWER_RIVAL_ON_LEFT
+    mov al, PLAYER_DIR_LEFT
+    mov bh, SPRITE_FACING_RIGHT
+.player_below_rival:
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    mov al, bh
+    mov [ebp + hSpriteFacingDirection], al
+    call SetSpriteFacingDirectionAndDelay
+    mov al, TEXT_POKEMONTOWER2F_RIVAL
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov [ebp + hJoyPressed], al
+    ret
 
 %assign event_byte -1
 PokemonTower2FRivalEncounterEventCoords:

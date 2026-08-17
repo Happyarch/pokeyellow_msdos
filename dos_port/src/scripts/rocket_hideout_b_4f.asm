@@ -32,10 +32,12 @@ global RocketHideoutB4FJessieJamesMovementData_45606
 global RocketHideoutB4FResetScripts
 global RocketHideoutB4FRocketText
 global RocketHideoutB4FScript10
+global RocketHideoutB4FScript11
 global RocketHideoutB4FScript12
 global RocketHideoutB4FScript13
 global RocketHideoutB4FScript8
 global RocketHideoutB4FScript9
+global RocketHideoutB4FScript_455a5
 global RocketHideoutB4FScript_HideJessieJames
 global RocketHideoutB4FScript_HideObject
 global RocketHideoutB4FScript_ShowObject
@@ -68,12 +70,10 @@ extern RocketHideout4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FScript11   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript4   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript5   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript6   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript7   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FScript_455a5   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
@@ -207,50 +207,52 @@ RocketHideoutB4FBeatGiovanniScript:
 .sk_80:
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] RocketHideoutB4FScript_455a5 (scripts/RocketHideoutB4F.asm:84-123) — at scripts/RocketHideoutB4F.asm:90: .asm_455c2 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp $e
-; PRET| 	ret nz
-; PRET| 	ResetEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp $18
-; PRET| 	jr z, .asm_455c2
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp $19
-; PRET| 	ret nz
-; PRET| 	SetEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
-; PRET| .asm_455c2
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetJessieJames)
-; PRET| 	ld a, MUSIC_MEET_JESSIE_JAMES
-; PRET| 	call PlayMusic
-; PRET| 	call UpdateSprites
-; PRET| 	call Delay3
-; PRET| 	call UpdateSprites
-; PRET| 	call Delay3
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, TEXT_ROCKETHIDEOUTB4F_TEXT11
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, TOGGLE_ROCKET_HIDEOUT_B4F_JAMES
-; PRET| 	call RocketHideoutB4FScript_ShowObject
-; PRET| 	ld a, TOGGLE_ROCKET_HIDEOUT_B4F_JESSIE
-; PRET| 	call RocketHideoutB4FScript_ShowObject
-; PRET| 	ld a, SCRIPT_ROCKETHIDEOUTB4F_SCRIPT4
-; PRET| 	call RocketHideoutB4FSetScript
-; PRET| 	ret
+%assign event_byte -1
+RocketHideoutB4FScript_455a5:
+    mov al, [ebp + wYCoord]
+    cmp al, 0xe
+    jz .nr_86
+        ret
+.nr_86:
+    ResetEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
+    mov al, [ebp + wXCoord]
+    cmp al, 0x18
+    jz .asm_455c2
+    mov al, [ebp + wXCoord]
+    cmp al, 0x19
+    jz .nr_93
+        ret
+.nr_93:
+    SetEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
+.asm_455c2:
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    call StopAllMusic
+    mov bl, 32
+    mov al, MUSIC_MEET_JESSIE_JAMES
+    call PlayMusic
+    call UpdateSprites
+    call Delay3
+    call UpdateSprites
+    call Delay3
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, TEXT_ROCKETHIDEOUTB4F_TEXT11
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, 134
+    call RocketHideoutB4FScript_ShowObject
+    mov al, 135
+    call RocketHideoutB4FScript_ShowObject
+    mov al, SCRIPT_ROCKETHIDEOUTB4F_SCRIPT4
+    call RocketHideoutB4FSetScript
+    ret
 
 %assign event_byte -1
 RocketHideoutB4FJessieJamesMovementData_45605:
@@ -360,39 +362,37 @@ RocketHideoutB4FScript10:
     call RocketHideoutB4FSetScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bank-expression] RocketHideoutB4FScript11 (scripts/RocketHideoutB4F.asm:224-252) — at scripts/RocketHideoutB4F.asm:245: BANK(Music_MeetJessieJames)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, RocketHideoutB4FResetScripts
-; PRET| 	ld a, $2
-; PRET| 	ld [wSprite02StateData1MovementStatus], a
-; PRET| 	ld [wSprite03StateData1MovementStatus], a
-; PRET| 	xor a
-; PRET| 	ld [wSprite02StateData1FacingDirection], a
-; PRET| 	ld [wSprite03StateData1FacingDirection], a
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld a, TEXT_ROCKETHIDEOUTB4F_TEXT13
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_MeetJessieJames)
-; PRET| 	ld a, MUSIC_MEET_JESSIE_JAMES
-; PRET| 	call PlayMusic
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_ROCKETHIDEOUTB4F_SCRIPT12
-; PRET| 	call RocketHideoutB4FSetScript
-; PRET| 	ret
+%assign event_byte -1
+RocketHideoutB4FScript11:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz RocketHideoutB4FResetScripts
+    mov al, 0x2
+    mov [ebp + wSprite02StateData1MovementStatus], al
+    mov [ebp + wSprite03StateData1MovementStatus], al
+    xor al, al
+    mov [ebp + wSprite02StateData1FacingDirection], al
+    mov [ebp + wSprite03StateData1FacingDirection], al
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov al, TEXT_ROCKETHIDEOUTB4F_TEXT13
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    call StopAllMusic
+    mov bl, 32
+    mov al, MUSIC_MEET_JESSIE_JAMES
+    call PlayMusic
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_ROCKETHIDEOUTB4F_SCRIPT12
+    call RocketHideoutB4FSetScript
+    ret
 
 %assign event_byte -1
 RocketHideoutB4FScript12:
