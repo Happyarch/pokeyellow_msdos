@@ -71,7 +71,7 @@ BikeShop_TextPointers:
     dd BikeShopYoungsterText
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BikeShopClerkText (scripts/BikeShop.asm:13-17) — at scripts/BikeShop.asm:14: .dontHaveBike is defined in a region that bailed
+; BAIL[target-region-bailed] BikeShopClerkText (scripts/BikeShop.asm:13-17) — at scripts/BikeShop.asm:14: BikeShopClerkText.dontHaveBike is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_GOT_BICYCLE
@@ -81,7 +81,7 @@ BikeShop_TextPointers:
 ; PRET| 	jp .Done
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BikeShopClerkText.dontHaveBike (scripts/BikeShop.asm:19-33) — at scripts/BikeShop.asm:21: .dontHaveVoucher is defined in a region that bailed
+; BAIL[target-region-bailed] BikeShopClerkText.dontHaveBike (scripts/BikeShop.asm:19-33) — at scripts/BikeShop.asm:21: BikeShopClerkText.dontHaveVoucher is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld b, BIKE_VOUCHER
@@ -101,7 +101,7 @@ BikeShop_TextPointers:
 ; PRET| 	jr .Done
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BikeShopClerkText.BagFull (scripts/BikeShop.asm:35-37) — at scripts/BikeShop.asm:37: .Done is defined in a region that bailed
+; BAIL[target-region-bailed] BikeShopClerkText.BagFull (scripts/BikeShop.asm:35-37) — at scripts/BikeShop.asm:37: BikeShopClerkText.Done is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, BikeShopBagFullText

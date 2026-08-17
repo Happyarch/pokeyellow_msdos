@@ -95,7 +95,7 @@ Daycare_TextPointers:
     dd DaycareGentlemanText
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] DaycareGentlemanText (scripts/Daycare.asm:10-63) — at scripts/Daycare.asm:13: .daycareInUse is defined in a region that bailed
+; BAIL[target-region-bailed] DaycareGentlemanText (scripts/Daycare.asm:10-63) — at scripts/Daycare.asm:13: DaycareGentlemanText.daycareInUse is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	call SaveScreenTilesToBuffer2
@@ -164,7 +164,7 @@ Daycare_TextPointers:
 ; PRET| 	jp .done
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] DaycareGentlemanText.daycareInUse (scripts/Daycare.asm:73-160) — at scripts/Daycare.asm:82: .skipCalcExp is defined in a region that bailed
+; BAIL[target-region-bailed] DaycareGentlemanText.daycareInUse (scripts/Daycare.asm:73-160) — at scripts/Daycare.asm:82: DaycareGentlemanText.skipCalcExp is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	xor a

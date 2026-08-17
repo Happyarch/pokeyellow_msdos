@@ -35,7 +35,9 @@ global BillsHousePrintBillPokemonText
 global BillsHousePrintBillSSTicketText
 global BillsHouseScript0
 global BillsHouseScript1
+global BillsHouseScript3
 global BillsHouseScript4
+global BillsHouseScript5
 global BillsHouseScript6
 global BillsHouseScript7
 global BillsHouseScript8
@@ -55,8 +57,6 @@ global RLE_1e219
 extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript2   ; NOT YET DEFINED IN THE PORT
-extern BillsHouseScript3   ; NOT YET DEFINED IN THE PORT
-extern BillsHouseScript5   ; NOT YET DEFINED IN THE PORT
 extern BillsHouse_CheckPikachuEmotion   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
 extern CheckPikachuFollowingPlayer   ; NOT YET DEFINED IN THE PORT
@@ -238,33 +238,36 @@ BillMovement_WalkAroundPlayer:
     db NPC_MOVEMENT_UP
     db -1
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BillsHouseScript3 (scripts/BillsHouse.asm:94-116) — at scripts/BillsHouse.asm:101: .pikachuNotFollowing is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| 	ld a, TOGGLE_BILL_POKEMON
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	call CheckPikachuFollowingPlayer
-; PRET| 	jr z, .pikachuNotFollowing
-; PRET| 	ld hl, PikachuMovement_EnterCellSeparatorDown
-; PRET| 	ld a, [wSpritePlayerStateData1FacingDirection]
-; PRET| 	and a ; cp SPRITE_FACING_DOWN
-; PRET| 	jr nz, .applyPikachuMovement
-; PRET| 	ld hl, PikachuMovement_EnterCellSeparatorNotDown
-; PRET| .applyPikachuMovement
-; PRET| 	call ApplyPikachuMovementData
-; PRET| 	callfar InitializePikachuTextID
-; PRET| .pikachuNotFollowing
-; PRET| 	xor a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	SetEvent EVENT_BILL_SAID_USE_CELL_SEPARATOR
-; PRET| 	ld a, SCRIPT_BILLSHOUSE_SCRIPT4
-; PRET| 	ld [wBillsHouseCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+BillsHouseScript3:
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_96
+        ret
+.nr_96:
+    mov al, 97
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    call CheckPikachuFollowingPlayer
+    jz .pikachuNotFollowing
+    mov esi, PikachuMovement_EnterCellSeparatorDown
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    test al, al
+    jnz .applyPikachuMovement
+    mov esi, PikachuMovement_EnterCellSeparatorNotDown
+.applyPikachuMovement:
+    call ApplyPikachuMovementData
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call InitializePikachuTextID
+.pikachuNotFollowing:
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    SetEvent EVENT_BILL_SAID_USE_CELL_SEPARATOR
+    mov al, SCRIPT_BILLSHOUSE_SCRIPT4
+    mov [ebp + wBillsHouseCurScript], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -297,52 +300,54 @@ BillsHouseScript4:
     mov [ebp + wBillsHouseCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BillsHouseScript5 (scripts/BillsHouse.asm:145-186) — at scripts/BillsHouse.asm:163: .pikachuNotFollowing is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, BILLSHOUSE_BILL1
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	ld a, $c
-; PRET| 	ldh [hSpriteScreenYCoord], a
-; PRET| 	ld a, $40
-; PRET| 	ldh [hSpriteScreenXCoord], a
-; PRET| 	ld a, 6
-; PRET| 	ldh [hSpriteMapYCoord], a
-; PRET| 	ld a, 5
-; PRET| 	ldh [hSpriteMapXCoord], a
-; PRET| 	call SetSpritePosition1
-; PRET| 	ld a, TOGGLE_BILL_1
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	ld c, 8
-; PRET| 	call DelayFrames
-; PRET| 	ld hl, wPikachuSpawnStateFlags
-; PRET| 	bit BIT_PIKACHU_SPAWN_STARTER, [hl]
-; PRET| 	jr z, .pikachuNotFollowing
-; PRET| 	call CheckPikachuFollowingPlayer
-; PRET| 	jr z, .pikachuNotFollowing
-; PRET| 	ld a, BILLSHOUSE_BILL1
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld a, SPRITE_FACING_DOWN
-; PRET| 	ldh [hSpriteFacingDirection], a
-; PRET| 	call SetSpriteFacingDirectionAndDelay
-; PRET| 	ld hl, PikachuMovement_ExitCellSeparator
-; PRET| 	call ApplyPikachuMovementData
-; PRET| 	ld a, $f
-; PRET| 	ld [wEmotionBubbleSpriteIndex], a
-; PRET| 	ld a, EXCLAMATION_BUBBLE
-; PRET| 	ld [wWhichEmotionBubble], a
-; PRET| 	predef EmotionBubble
-; PRET| 	callfar InitializePikachuTextID
-; PRET| .pikachuNotFollowing
-; PRET| 	ld a, BILLSHOUSE_BILL1
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld de, .BillExitMachineMovement
-; PRET| 	call MoveSprite
-; PRET| 	ld a, SCRIPT_BILLSHOUSE_SCRIPT6
-; PRET| 	ld [wBillsHouseCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+BillsHouseScript5:
+    mov al, 2
+    mov [ebp + wSpriteIndex], al
+    mov al, 0xc
+    mov [ebp + hSpriteScreenYCoord], al
+    mov al, 0x40
+    mov [ebp + hSpriteScreenXCoord], al
+    mov al, 6
+    mov [ebp + hSpriteMapYCoord], al
+    mov al, 5
+    mov [ebp + hSpriteMapXCoord], al
+    call SetSpritePosition1
+    mov al, 98
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    mov bl, 8
+    call DelayFrames
+    mov esi, wPikachuSpawnStateFlags
+    test byte [ebp + esi], (1 << (7))
+    jz .pikachuNotFollowing
+    call CheckPikachuFollowingPlayer
+    jz .pikachuNotFollowing
+    mov al, 2
+    mov [ebp + hSpriteIndex], al
+    mov al, SPRITE_FACING_DOWN
+    mov [ebp + hSpriteFacingDirection], al
+    call SetSpriteFacingDirectionAndDelay
+    mov esi, PikachuMovement_ExitCellSeparator
+    call ApplyPikachuMovementData
+    mov al, 0xf
+    mov [ebp + wEmotionBubbleSpriteIndex], al
+    mov al, 0
+    mov [ebp + wWhichEmotionBubble], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call EmotionBubble
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call InitializePikachuTextID
+.pikachuNotFollowing:
+    mov al, 2
+    mov [ebp + hSpriteIndex], al
+    mov edi, .BillExitMachineMovement   ; pret: ld de, .BillExitMachineMovement — MoveSprite takes it in EDI
+    call MoveSprite
+    mov al, SCRIPT_BILLSHOUSE_SCRIPT6
+    mov [ebp + wBillsHouseCurScript], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

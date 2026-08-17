@@ -128,9 +128,23 @@ def transpile_file(f: sparser.ScriptFile, R: resolve.Resolver, abi: dict,
 def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
     out = emit.Emitted()
     E = emit.Emitter(R, abi)
-    E.dead_locals = {"." + l.split(".")[-1] for l in dead_locals}
+    # FULL labels, not bare `.tail`. NASM scopes a local to the preceding GLOBAL
+    # label, so `A.Text2` and `B.Text2` are different symbols; keying on the tail
+    # killed every `.Text2` in a file when any one of them died, which both
+    # inflated target-region-bailed and IS the local-label-scope-collision class.
+    E.dead_locals = set(dead_locals)
 
+    scope = None
     for region in regions:
+        # The global label a bare `.local` inside this region is scoped to —
+        # NASM's "most recent global label", which region labels give directly
+        # since they arrive already qualified and in source order. A region with
+        # no label of its own inherits the previous region's scope, exactly as a
+        # fall-through continuation does in the assembler.
+        for lab in region.labels:
+            scope = lab.split(".")[0] if "." in lab else lab
+        E.local_scope = scope
+
         body: list = []
         failed = None
         # Snapshot the self-test counter: a region that bails contributes no

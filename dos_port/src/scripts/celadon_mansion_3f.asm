@@ -25,11 +25,13 @@ global CeladonMansion3FDevRoomSignText
 global CeladonMansion3FGameDesignerText
 global CeladonMansion3FGameProgramPCText
 global CeladonMansion3FGameScriptPCText
+global CeladonMansion3FGraphicArtistText
 global CeladonMansion3FPlayingGamePCText
 global CeladonMansion3FPrintDevRoomSignText
 global CeladonMansion3FPrintGameProgramPCText
 global CeladonMansion3FPrintGameScriptPCText
 global CeladonMansion3FPrintPlayingGamePCText
+global CeladonMansion3FProgrammerText
 global CeladonMansion3F_Script
 global CeladonMansion3F_TextPointers
 global CeladonMansion3Text_486f0
@@ -37,8 +39,6 @@ global CeladonMansion3Text_486f5
 global CeladonMansion3_PokedexCount
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CeladonMansion3FGraphicArtistText   ; NOT YET DEFINED IN THE PORT
-extern CeladonMansion3FProgrammerText   ; NOT YET DEFINED IN THE PORT
 extern CeladonMansion3FWriterText   ; NOT YET DEFINED IN THE PORT
 extern CountSetBits   ; NOT YET DEFINED IN THE PORT
 extern Delay3   ; NOT YET DEFINED IN THE PORT
@@ -47,6 +47,7 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GBPalNormal   ; NOT YET DEFINED IN THE PORT
 extern GBPalWhiteOutWithDelay3   ; NOT YET DEFINED IN THE PORT
 extern LoadScreenTilesFromBuffer2   ; NOT YET DEFINED IN THE PORT
+extern PrintDiploma   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReloadTilesetTilePatterns   ; NOT YET DEFINED IN THE PORT
 extern RestoreScreenTilesAndReloadTilePatterns   ; NOT YET DEFINED IN THE PORT
@@ -107,18 +108,17 @@ CeladonMansion3F_TextPointers:
     dd CeladonMansion3FGameScriptPCText
     dd CeladonMansion3FDevRoomSignText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMansion3FProgrammerText (scripts/CeladonMansion3F.asm:25-32) — at scripts/CeladonMansion3F.asm:28: .print is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call CeladonMansion3_PokedexCount
-; PRET| 	cp NUM_POKEMON - 1 ; discount Mew
-; PRET| 	ld hl, CeladonMansion3Text_486f5
-; PRET| 	jr nc, .print
-; PRET| 	ld hl, CeladonMansion3Text_486f0
-; PRET| .print
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+CeladonMansion3FProgrammerText:
+    call CeladonMansion3_PokedexCount
+    cmp al, 151 - 1
+    mov esi, CeladonMansion3Text_486f5
+    jae .print
+    mov esi, CeladonMansion3Text_486f0
+.print:
+    call PrintText
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -129,46 +129,45 @@ CeladonMansion3Text_486f5:
     text_far _CeladonMansion3FProgrammerText2
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMansion3FGraphicArtistText (scripts/CeladonMansion3F.asm:44-48) — at scripts/CeladonMansion3F.asm:46: .completed is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call CeladonMansion3_PokedexCount
-; PRET| 	cp NUM_POKEMON - 1 ; discount Mew
-; PRET| 	jr nc, .completed
-; PRET| 	ld hl, .Text1
-; PRET| 	jr .print
+%assign event_byte -1
+%assign event_byte_a -1
+CeladonMansion3FGraphicArtistText:
+    call CeladonMansion3_PokedexCount
+    cmp al, 151 - 1
+    jae .completed
+    mov esi, .Text1
+    jmp .print
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMansion3FGraphicArtistText.completed (scripts/CeladonMansion3F.asm:51-76) — at scripts/CeladonMansion3F.asm:51: .Text2 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text2
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .declined_print
-; PRET| 	call SaveScreenTilesToBuffer2
-; PRET| 	xor a
-; PRET| 	ld [wUpdateSpritesEnabled], a
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	set BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	callfar PrintDiploma
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	res BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	call GBPalWhiteOutWithDelay3
-; PRET| 	call ReloadTilesetTilePatterns
-; PRET| 	call RestoreScreenTilesAndReloadTilePatterns
-; PRET| 	call LoadScreenTilesFromBuffer2
-; PRET| 	call Delay3
-; PRET| 	call GBPalNormal
-; PRET| 	ld hl, .Text5
-; PRET| 	ldh a, [hCanceledPrinting]
-; PRET| 	and a
-; PRET| 	jr nz, .print
-; PRET| 	ld hl, .Text4
-; PRET| 	jr .print
+%assign event_byte -1
+%assign event_byte_a -1
+.completed:
+    mov esi, .Text2
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .declined_print
+    call SaveScreenTilesToBuffer2
+    xor al, al
+    mov [ebp + wUpdateSpritesEnabled], al
+    mov esi, wStatusFlags5
+    or byte [ebp + esi], (1 << (BIT_NO_TEXT_DELAY))
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call PrintDiploma
+    mov esi, wStatusFlags5
+    and byte [ebp + esi], ~(1 << (BIT_NO_TEXT_DELAY)) & 0xFF
+    call GBPalWhiteOutWithDelay3
+    call ReloadTilesetTilePatterns
+    call RestoreScreenTilesAndReloadTilePatterns
+    call LoadScreenTilesFromBuffer2
+    call Delay3
+    call GBPalNormal
+    mov esi, .Text5
+    mov al, [ebp + hCanceledPrinting]
+    test al, al
+    jnz .print
+    mov esi, .Text4
+    jmp .print
 
 %assign event_byte -1
 %assign event_byte_a -1

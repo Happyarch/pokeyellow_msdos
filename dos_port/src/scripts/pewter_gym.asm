@@ -96,7 +96,7 @@ wPikachuSpawnStateFlags                        equ 0xD471
 section .text
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PewterGym_Script (scripts/PewterGym.asm:2-12) — at scripts/PewterGym.asm:5: .LoadNames is defined in a region that bailed
+; BAIL[target-region-bailed] PewterGym_Script (scripts/PewterGym.asm:2-12) — at scripts/PewterGym.asm:5: PewterGym_Script.LoadNames is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wCurrentMapScriptFlags

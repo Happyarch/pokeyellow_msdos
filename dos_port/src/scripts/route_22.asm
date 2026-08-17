@@ -33,12 +33,14 @@ global Route22Rival1DefeatedText
 global Route22Rival1ExitMovementData1
 global Route22Rival1ExitMovementData2
 global Route22Rival1ExitScript
+global Route22Rival1StartBattleScript
 global Route22Rival1Text
 global Route22Rival1VictoryText
 global Route22Rival2DefeatedText
 global Route22Rival2ExitMovementData1
 global Route22Rival2ExitMovementData2
 global Route22Rival2ExitScript
+global Route22Rival2StartBattleScript
 global Route22Rival2Text
 global Route22Rival2VictoryText
 global Route22RivalAfterBattleText1
@@ -72,9 +74,7 @@ extern Route22MoveRival1   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRival2   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRivalRightScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival1AfterBattleScript   ; NOT YET DEFINED IN THE PORT
-extern Route22Rival1StartBattleScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival2AfterBattleScript   ; NOT YET DEFINED IN THE PORT
-extern Route22Rival2StartBattleScript   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
 extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
@@ -244,20 +244,21 @@ Route22FirstRivalBattleScript:
     mov [ebp + wRoute22CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival1StartBattleScript (scripts/Route22.asm:106-115) — at scripts/Route22.asm:115: .set_rival_facing_direction is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| 	ld a, [wSavedCoordIndex]
-; PRET| 	cp 1 ; index of second, lower entry in Route22DefaultScript.Route22RivalBattleCoords
-; PRET| 	jr nz, .set_rival_facing_right
-; PRET| 	ld a, PLAYER_DIR_DOWN
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, SPRITE_FACING_UP
-; PRET| 	jr .set_rival_facing_direction
+%assign event_byte -1
+%assign event_byte_a -1
+Route22Rival1StartBattleScript:
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_108
+        ret
+.nr_108:
+    mov al, [ebp + wSavedCoordIndex]
+    cmp al, 1
+    jnz .set_rival_facing_right
+    mov al, PLAYER_DIR_DOWN
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, SPRITE_FACING_UP
+    jmp .set_rival_facing_direction
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -294,7 +295,7 @@ Route22Rival1VictoryText:
     text_end
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival1AfterBattleScript (scripts/Route22.asm:148-161) — at scripts/Route22.asm:153: .keep_rival_starter is defined in a region that bailed
+; BAIL[target-region-bailed] Route22Rival1AfterBattleScript (scripts/Route22.asm:148-161) — at scripts/Route22.asm:153: Route22Rival1AfterBattleScript.keep_rival_starter is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, [wIsInBattle]
@@ -313,7 +314,7 @@ Route22Rival1VictoryText:
 ; PRET| 	jr .set_rival_facing
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival1AfterBattleScript.not_facing_down (scripts/Route22.asm:163-181) — at scripts/Route22.asm:179: .exit_movement_2 is defined in a region that bailed
+; BAIL[target-region-bailed] Route22Rival1AfterBattleScript.not_facing_down (scripts/Route22.asm:163-181) — at scripts/Route22.asm:179: Route22Rival1AfterBattleScript.exit_movement_2 is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, SPRITE_FACING_RIGHT
@@ -337,7 +338,7 @@ Route22Rival1VictoryText:
 ; PRET| 	jr .next_script
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival1AfterBattleScript.exit_movement_2 (scripts/Route22.asm:183-187) — at scripts/Route22.asm:183: .RivalExit2Script is defined in a region that bailed
+; BAIL[target-region-bailed] Route22Rival1AfterBattleScript.exit_movement_2 (scripts/Route22.asm:183-187) — at scripts/Route22.asm:183: Route22Rival1AfterBattleScript.RivalExit2Script is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	call .RivalExit2Script
@@ -431,22 +432,23 @@ Route22SecondRivalBattleScript:
     mov [ebp + wRoute22CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival2StartBattleScript (scripts/Route22.asm:259-270) — at scripts/Route22.asm:266: .set_player_direction_left is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| 	ld a, ROUTE22_RIVAL2
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld a, [wSavedCoordIndex]
-; PRET| 	cp 1 ; index of second, lower entry in Route22DefaultScript.Route22RivalBattleCoords
-; PRET| 	jr nz, .set_player_direction_left
-; PRET| 	ld a, PLAYER_DIR_DOWN
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, SPRITE_FACING_UP
-; PRET| 	jr .set_rival_facing_direction
+%assign event_byte -1
+%assign event_byte_a -1
+Route22Rival2StartBattleScript:
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_261
+        ret
+.nr_261:
+    mov al, 2
+    mov [ebp + hSpriteIndex], al
+    mov al, [ebp + wSavedCoordIndex]
+    cmp al, 1
+    jnz .set_player_direction_left
+    mov al, PLAYER_DIR_DOWN
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, SPRITE_FACING_UP
+    jmp .set_rival_facing_direction
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -483,7 +485,7 @@ Route22Rival2VictoryText:
     text_end
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival2AfterBattleScript (scripts/Route22.asm:303-314) — at scripts/Route22.asm:310: .set_player_direction_left is defined in a region that bailed
+; BAIL[target-region-bailed] Route22Rival2AfterBattleScript (scripts/Route22.asm:303-314) — at scripts/Route22.asm:310: Route22Rival2AfterBattleScript.set_player_direction_left is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, [wIsInBattle]
@@ -500,7 +502,7 @@ Route22Rival2VictoryText:
 ; PRET| 	jr .set_rival_facing_direction
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival2AfterBattleScript.set_player_direction_left (scripts/Route22.asm:316-334) — at scripts/Route22.asm:332: .exit_movement_2 is defined in a region that bailed
+; BAIL[target-region-bailed] Route22Rival2AfterBattleScript.set_player_direction_left (scripts/Route22.asm:316-334) — at scripts/Route22.asm:332: Route22Rival2AfterBattleScript.exit_movement_2 is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, PLAYER_DIR_LEFT
@@ -524,7 +526,7 @@ Route22Rival2VictoryText:
 ; PRET| 	jr .next_script
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival2AfterBattleScript.exit_movement_2 (scripts/Route22.asm:336-340) — at scripts/Route22.asm:336: .RivalExit2Script is defined in a region that bailed
+; BAIL[target-region-bailed] Route22Rival2AfterBattleScript.exit_movement_2 (scripts/Route22.asm:336-340) — at scripts/Route22.asm:336: Route22Rival2AfterBattleScript.RivalExit2Script is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	call .RivalExit2Script

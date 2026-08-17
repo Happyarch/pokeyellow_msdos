@@ -69,7 +69,7 @@ NameRatersHouseYesNoScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] NameRatersHouseCheckMonOTScript (scripts/NameRatersHouse.asm:13-36) — at scripts/NameRatersHouse.asm:19: .check_match_loop is defined in a region that bailed
+; BAIL[target-region-bailed] NameRatersHouseCheckMonOTScript (scripts/NameRatersHouse.asm:13-36) — at scripts/NameRatersHouse.asm:19: NameRatersHouseCheckMonOTScript.check_match_loop is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wPartyMonOT

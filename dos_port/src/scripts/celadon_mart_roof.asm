@@ -29,6 +29,7 @@ global CeladonMartRoofLittleGirlNoRoomText
 global CeladonMartRoofLittleGirlReceivedTM13Text
 global CeladonMartRoofLittleGirlReceivedTM48Text
 global CeladonMartRoofLittleGirlReceivedTM49Text
+global CeladonMartRoofLittleGirlText
 global CeladonMartRoofLittleGirlYayFreshWaterText
 global CeladonMartRoofLittleGirlYayLemonadeText
 global CeladonMartRoofLittleGirlYaySodaPopText
@@ -40,7 +41,6 @@ global RemoveItemByIDBank12
 
 extern AddNTimes   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlText   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartRoofScript_GetDrinksInBag   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartRoofScript_GiveDrinkToGirl   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartRoofScript_PrintDrinksInBag   ; NOT YET DEFINED IN THE PORT
@@ -335,24 +335,23 @@ CeladonMartRoofSuperNerdText:
     text_far _CeladonMartRoofSuperNerdText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMartRoofLittleGirlText (scripts/CeladonMartRoof.asm:228-241) — at scripts/CeladonMartRoof.asm:239: .done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call CeladonMartRoofScript_GetDrinksInBag
-; PRET| 	ld a, [wFilteredBagItemsCount]
-; PRET| 	and a
-; PRET| 	jr z, .noDrinksInBag
-; PRET| 	ld a, 1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, .GiveHerADrinkText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .done
-; PRET| 	call CeladonMartRoofScript_GiveDrinkToGirl
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+CeladonMartRoofLittleGirlText:
+    call CeladonMartRoofScript_GetDrinksInBag
+    mov al, [ebp + wFilteredBagItemsCount]
+    test al, al
+    jz .noDrinksInBag
+    mov al, 1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, .GiveHerADrinkText
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .done
+    call CeladonMartRoofScript_GiveDrinkToGirl
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1

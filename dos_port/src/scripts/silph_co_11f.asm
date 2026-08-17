@@ -527,7 +527,7 @@ SilphCo11FMovementData_62311:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo11FScript6 (scripts/SilphCo11F.asm:326-361) — at scripts/SilphCo11F.asm:338: .asm_6235e is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] SilphCo11FScript6 (scripts/SilphCo11F.asm:326-361) — at scripts/SilphCo11F.asm:345: de cannot hold the 32-bit address of SilphCo11FMovementData_622fb; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD

@@ -79,7 +79,7 @@ Route11Gate2FScriptEnd:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route11Gate2FOaksAideText (scripts/Route11Gate2F.asm:21-43) — at scripts/Route11Gate2F.asm:22: .got_item is defined in a region that bailed
+; BAIL[target-region-bailed] Route11Gate2FOaksAideText (scripts/Route11Gate2F.asm:21-43) — at scripts/Route11Gate2F.asm:22: Route11Gate2FOaksAideText.got_item is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_GOT_ITEMFINDER, 1

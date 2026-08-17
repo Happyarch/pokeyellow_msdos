@@ -27,13 +27,23 @@ global OakEntryMovement
 global OaksLabCalcRivalMovementScript
 global OaksLabChoseStarterScript
 global OaksLabDefaultScript
+global OaksLabEeveePokeBallText
 global OaksLabFollowedOakScript
+global OaksLabGirlText
 global OaksLabNoopScript
 global OaksLabOak2Text
+global OaksLabOakBePatientText
 global OaksLabOakChooseMonSpeechScript
+global OaksLabOakChooseMonText
+global OaksLabOakDontGoAwayYetText
 global OaksLabOakEntersLabScript
 global OaksLabOakGivesText
+global OaksLabOakGotPokedexText
+global OaksLabOakIHaveARequestText
+global OaksLabOakMyInventionPokedexText
+global OaksLabOakThatWasMyDreamText
 global OaksLabPikachuDislikesPokeballsScript
+global OaksLabPikachuDislikesPokeballsText2
 global OaksLabPikachuEscapesPokeballScript
 global OaksLabPikachuMovementData1
 global OaksLabPikachuMovementData2
@@ -45,14 +55,23 @@ global OaksLabPlayerReceivedMonText
 global OaksLabPlayerReceivesPikachuScript
 global OaksLabPlayerWalksToOakScript
 global OaksLabPlayerWatchRivalExitScript
+global OaksLabPokedexText
 global OaksLabRLE_PlayerWalksToOak
 global OaksLabReceivedText
+global OaksLabRivalAmIGreatOrWhatText
 global OaksLabRivalChallengesPlayerScript
 global OaksLabRivalEndBattleScript
 global OaksLabRivalExclamationScript
 global OaksLabRivalFaceUpOakFaceDownScript
+global OaksLabRivalFedUpWithWaitingText
+global OaksLabRivalGrampsText
+global OaksLabRivalIPickedTheWrongPokemonText
+global OaksLabRivalIllTakeYouOnText
+global OaksLabRivalLeaveItAllToMeText
 global OaksLabRivalLeavesWithPokedexScript
+global OaksLabRivalMyPokemonHasGrownStrongerText
 global OaksLabRivalReceivedMonText
+global OaksLabRivalSmellYouLaterText
 global OaksLabRivalStartBattleScript
 global OaksLabRivalStartsExitScript
 global OaksLabRivalTakesPokeballScript
@@ -62,6 +81,8 @@ global OaksLabRivalTakesText3
 global OaksLabRivalTakesText4
 global OaksLabRivalTakesText5
 global OaksLabRivalText
+global OaksLabRivalWhatAboutMeText
+global OaksLabScientistText
 global OaksLabScript_RemoveParcel
 global OaksLabToggleOaksScript
 global OaksLab_Script
@@ -95,32 +116,11 @@ extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
 extern MoveSprite   ; NOT YET DEFINED IN THE PORT
 extern Music_RivalAlternateStart   ; NOT YET DEFINED IN THE PORT
-extern OaksLabEeveePokeBallText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabGirlText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabLoadTextPointers2Script   ; NOT YET DEFINED IN THE PORT
 extern OaksLabOak1Text   ; NOT YET DEFINED IN THE PORT
-extern OaksLabOakBePatientText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabOakChooseMonText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabOakDontGoAwayYetText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabOakGivesPokedexScript   ; NOT YET DEFINED IN THE PORT
-extern OaksLabOakGotPokedexText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabOakIHaveARequestText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabOakMyInventionPokedexText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabOakThatWasMyDreamText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabPikachuDislikesPokeballsText1   ; NOT YET DEFINED IN THE PORT
-extern OaksLabPikachuDislikesPokeballsText2   ; NOT YET DEFINED IN THE PORT
-extern OaksLabPokedexText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalAmIGreatOrWhatText   ; NOT YET DEFINED IN THE PORT
 extern OaksLabRivalArrivesAtOaksRequestScript   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalFedUpWithWaitingText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalGrampsText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalIPickedTheWrongPokemonText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalIllTakeYouOnText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalLeaveItAllToMeText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalMyPokemonHasGrownStrongerText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalSmellYouLaterText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalWhatAboutMeText   ; NOT YET DEFINED IN THE PORT
-extern OaksLabScientistText   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
 extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PlayPikachuSoundClip   ; NOT YET DEFINED IN THE PORT
@@ -1151,19 +1151,18 @@ OaksLabRivalText:
     text_far _OaksLabRivalMyPokemonLooksStrongerText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabEeveePokeBallText (scripts/OaksLab.asm:783-791) — at scripts/OaksLab.asm:789: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	CheckEvent EVENT_OAK_ASKED_TO_CHOOSE_MON
-; PRET| 	jr nz, OaksLabRivalExclamationScript
-; PRET| 	ld a, $0
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabEeveePokeBallText:
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    CheckEvent EVENT_OAK_ASKED_TO_CHOOSE_MON
+    jnz OaksLabRivalExclamationScript
+    mov al, 0x0
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -1185,7 +1184,7 @@ OaksLabRivalExclamationScript:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabOak1Text (scripts/OaksLab.asm:809-823) — at scripts/OaksLab.asm:810: .already_got_poke_balls is defined in a region that bailed
+; BAIL[target-region-bailed] OaksLabOak1Text (scripts/OaksLab.asm:809-823) — at scripts/OaksLab.asm:810: OaksLabOak1Text.already_got_poke_balls is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_PALLET_AFTER_GETTING_POKEBALLS
@@ -1313,13 +1312,12 @@ OaksLabRivalExclamationScript:
     text_far _OaksLabOak1HowIsYourPokedexComingText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabPokedexText (scripts/OaksLab.asm:920-922) — at scripts/OaksLab.asm:920: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabPokedexText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -1330,13 +1328,12 @@ OaksLabOak2Text:
     text_far _OaksLabOak2Text
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabGirlText (scripts/OaksLab.asm:934-936) — at scripts/OaksLab.asm:934: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabGirlText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -1344,65 +1341,57 @@ OaksLabOak2Text:
     text_far _OaksLabGirlText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabRivalFedUpWithWaitingText (scripts/OaksLab.asm:944-946) — at scripts/OaksLab.asm:944: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabRivalFedUpWithWaitingText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] OaksLabRivalFedUpWithWaitingText.Text (scripts/OaksLab.asm:949-950)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _OaksLabRivalFedUpWithWaitingText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text:
+    text_far _OaksLabRivalFedUpWithWaitingText
+    text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabOakChooseMonText (scripts/OaksLab.asm:954-956) — at scripts/OaksLab.asm:954: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabOakChooseMonText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] OaksLabOakChooseMonText.Text (scripts/OaksLab.asm:959-960)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _OaksLabOakChooseMonText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text:
+    text_far _OaksLabOakChooseMonText
+    text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabRivalWhatAboutMeText (scripts/OaksLab.asm:964-966) — at scripts/OaksLab.asm:964: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabRivalWhatAboutMeText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] OaksLabRivalWhatAboutMeText.Text (scripts/OaksLab.asm:969-970)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _OaksLabRivalWhatAboutMeText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text:
+    text_far _OaksLabRivalWhatAboutMeText
+    text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabOakBePatientText (scripts/OaksLab.asm:974-976) — at scripts/OaksLab.asm:974: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabOakBePatientText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] OaksLabOakBePatientText.Text (scripts/OaksLab.asm:979-980)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _OaksLabOakBePatientText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text:
+    text_far _OaksLabOakBePatientText
+    text_end
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -1477,13 +1466,12 @@ OaksLabReceivedText:
     sound_get_key_item
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabOakDontGoAwayYetText (scripts/OaksLab.asm:1056-1058) — at scripts/OaksLab.asm:1056: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabOakDontGoAwayYetText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -1491,43 +1479,37 @@ OaksLabReceivedText:
     text_far _OaksLabOakDontGoAwayYetText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabRivalIllTakeYouOnText (scripts/OaksLab.asm:1066-1068) — at scripts/OaksLab.asm:1066: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabRivalIllTakeYouOnText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] OaksLabRivalIllTakeYouOnText.Text (scripts/OaksLab.asm:1071-1080)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _OaksLabRivalIllTakeYouOnText
-; PRET| 	text_end
-; PRET| 
-; PRET| OaksLabRivalIPickedTheWrongPokemonText:
-; PRET| 	text_far _OaksLabRivalIPickedTheWrongPokemonText
-; PRET| 	text_end
-; PRET| 
-; PRET| OaksLabRivalAmIGreatOrWhatText:
-; PRET| 	text_far _OaksLabRivalAmIGreatOrWhatText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text:
+    text_far _OaksLabRivalIllTakeYouOnText
+    text_end
+OaksLabRivalIPickedTheWrongPokemonText:
+    text_far _OaksLabRivalIPickedTheWrongPokemonText
+    text_end
+OaksLabRivalAmIGreatOrWhatText:
+    text_far _OaksLabRivalAmIGreatOrWhatText
+    text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabRivalSmellYouLaterText (scripts/OaksLab.asm:1084-1086) — at scripts/OaksLab.asm:1084: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabRivalSmellYouLaterText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] OaksLabRivalSmellYouLaterText.Text (scripts/OaksLab.asm:1089-1090)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _OaksLabRivalSmellYouLaterText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text:
+    text_far _OaksLabRivalSmellYouLaterText
+    text_end
 
 ; ---------------------------------------------------------------------------
 ; BAIL[pikachu-table-index] OaksLabPikachuDislikesPokeballsText1 (scripts/OaksLab.asm:1094-1098) — at scripts/OaksLab.asm:1094: ldpikacry needs (X_id - Table) / N across object files
@@ -1546,64 +1528,53 @@ OaksLabReceivedText:
 ; PRET| 	text_far _OaksLabPikachuDislikesPokeballsText1
 ; PRET| 	text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabPikachuDislikesPokeballsText2 (scripts/OaksLab.asm:1106-1108) — at scripts/OaksLab.asm:1106: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabPikachuDislikesPokeballsText2:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] OaksLabPikachuDislikesPokeballsText2.Text (scripts/OaksLab.asm:1111-1141)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _OaksLabPikachuDislikesPokeballsText2
-; PRET| 	text_end
-; PRET| 
-; PRET| OaksLabRivalGrampsText:
-; PRET| 	text_far _OaksLabRivalGrampsText
-; PRET| 	text_end
-; PRET| 
-; PRET| OaksLabRivalMyPokemonHasGrownStrongerText:
-; PRET| 	text_far _OaksLabRivalMyPokemonHasGrownStrongerText
-; PRET| 	text_end
-; PRET| 
-; PRET| OaksLabOakIHaveARequestText:
-; PRET| 	text_far _OaksLabOakIHaveARequestText
-; PRET| 	text_end
-; PRET| 
-; PRET| OaksLabOakMyInventionPokedexText:
-; PRET| 	text_far _OaksLabOakMyInventionPokedexText
-; PRET| 	text_end
-; PRET| 
-; PRET| OaksLabOakGotPokedexText:
-; PRET| 	text_far _OaksLabOakGotPokedexText
-; PRET| 	sound_get_key_item
-; PRET| 	text_end
-; PRET| 
-; PRET| OaksLabOakThatWasMyDreamText:
-; PRET| 	text_far _OaksLabOakThatWasMyDreamText
-; PRET| 	text_end
-; PRET| 
-; PRET| OaksLabRivalLeaveItAllToMeText:
-; PRET| 	text_far _OaksLabRivalLeaveItAllToMeText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text:
+    text_far _OaksLabPikachuDislikesPokeballsText2
+    text_end
+OaksLabRivalGrampsText:
+    text_far _OaksLabRivalGrampsText
+    text_end
+OaksLabRivalMyPokemonHasGrownStrongerText:
+    text_far _OaksLabRivalMyPokemonHasGrownStrongerText
+    text_end
+OaksLabOakIHaveARequestText:
+    text_far _OaksLabOakIHaveARequestText
+    text_end
+OaksLabOakMyInventionPokedexText:
+    text_far _OaksLabOakMyInventionPokedexText
+    text_end
+OaksLabOakGotPokedexText:
+    text_far _OaksLabOakGotPokedexText
+    sound_get_key_item
+    text_end
+OaksLabOakThatWasMyDreamText:
+    text_far _OaksLabOakThatWasMyDreamText
+    text_end
+OaksLabRivalLeaveItAllToMeText:
+    text_far _OaksLabRivalLeaveItAllToMeText
+    text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabScientistText (scripts/OaksLab.asm:1145-1147) — at scripts/OaksLab.asm:1145: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabScientistText:
+    mov esi, .Text
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] OaksLabScientistText.Text (scripts/OaksLab.asm:1150-1151)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _OaksLabScientistText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text:
+    text_far _OaksLabScientistText
+    text_end
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -84,7 +84,7 @@ wCeruleanGymCurScript                          equ 0xD5FC
 section .text
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanGym_Script (scripts/CeruleanGym.asm:2-12) — at scripts/CeruleanGym.asm:5: .LoadNames is defined in a region that bailed
+; BAIL[target-region-bailed] CeruleanGym_Script (scripts/CeruleanGym.asm:2-12) — at scripts/CeruleanGym.asm:5: CeruleanGym_Script.LoadNames is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wCurrentMapScriptFlags

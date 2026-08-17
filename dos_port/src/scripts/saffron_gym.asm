@@ -31,6 +31,7 @@ global SaffronGymSabrinaPostBattle
 global SaffronGymSabrinaReceiveTM46Script
 global SaffronGymSabrinaReceivedTM46Text
 global SaffronGymSabrinaTM46NoRoomText
+global SaffronGymSabrinaText
 global SaffronGymYoungster1Text
 global SaffronGymYoungster2Text
 global SaffronGymYoungster3Text
@@ -38,6 +39,7 @@ global SaffronGymYoungster4Text
 global SaffronGym_ScriptPointers
 
 extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
+extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
 extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
@@ -50,7 +52,6 @@ extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymGymGuideText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymSabrinaText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -90,7 +91,7 @@ wSaffronGymCurScript                           equ 0xD65B
 section .text
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGym_Script (scripts/SaffronGym.asm:2-12) — at scripts/SaffronGym.asm:5: .LoadNames is defined in a region that bailed
+; BAIL[target-region-bailed] SaffronGym_Script (scripts/SaffronGym.asm:2-12) — at scripts/SaffronGym.asm:5: SaffronGym_Script.LoadNames is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wCurrentMapScriptFlags
@@ -179,25 +180,25 @@ SaffronGymSabrinaReceiveTM46Script:
 
 ; SaffronGym_TextPointers (scripts/SaffronGym.asm:75-105) — not re-emitted: SaffronGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGymSabrinaText (scripts/SaffronGym.asm:109-115) — at scripts/SaffronGym.asm:112: .afterBeat is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_SABRINA
-; PRET| 	jr z, .beforeBeat
-; PRET| 	CheckEventReuseA EVENT_GOT_TM46
-; PRET| 	jr nz, .afterBeat
-; PRET| 	call z, SaffronGymSabrinaReceiveTM46Script
-; PRET| 	call DisableWaitingAfterTextDisplay
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+SaffronGymSabrinaText:
+    CheckEvent EVENT_BEAT_SABRINA
+    jz .beforeBeat
+    CheckEventReuseA EVENT_GOT_TM46
+    jnz .afterBeat
+    jnz .sk_113
+        call SaffronGymSabrinaReceiveTM46Script
+.sk_113:
+    call DisableWaitingAfterTextDisplay
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGymSabrinaText.afterBeat (scripts/SaffronGym.asm:117-119) — at scripts/SaffronGym.asm:119: .done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PostBattleAdviceText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+.afterBeat:
+    mov esi, .PostBattleAdviceText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -296,7 +297,7 @@ SaffronGymYoungster4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGymGymGuideText (scripts/SaffronGym.asm:212-216) — at scripts/SaffronGym.asm:213: .afterBeat is defined in a region that bailed
+; BAIL[target-region-bailed] SaffronGymGymGuideText (scripts/SaffronGym.asm:212-216) — at scripts/SaffronGym.asm:213: SaffronGymGymGuideText.afterBeat is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_SABRINA

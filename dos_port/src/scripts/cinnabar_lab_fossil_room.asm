@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global CinnabarLabFossilRoomScientist1Text
 global CinnabarLabFossilRoomScientist2Text
 global CinnabarLabFossilRoom_Script
 global CinnabarLabFossilRoom_TextPointers
@@ -28,10 +29,10 @@ global FossilsList
 global LoadFossilItemAndMonNameBank1D
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CinnabarLabFossilRoomScientist1Text   ; NOT YET DEFINED IN THE PORT
 extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GetQuantityOfItemInBag   ; NOT YET DEFINED IN THE PORT
+extern GiveFossilToCinnabarLab   ; NOT YET DEFINED IN THE PORT
 extern GivePokemon   ; NOT YET DEFINED IN THE PORT
 extern Lab4Script_GetFossilsInBag   ; NOT YET DEFINED IN THE PORT
 extern LoadFossilItemAndMonName   ; NOT YET DEFINED IN THE PORT
@@ -66,7 +67,7 @@ CinnabarLabFossilRoom_TextPointers:
     dd CinnabarLabFossilRoomScientist2Text
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Lab4Script_GetFossilsInBag (scripts/CinnabarLabFossilRoom.asm:11-37) — at scripts/CinnabarLabFossilRoom.asm:18: .done is defined in a region that bailed
+; BAIL[target-region-bailed] Lab4Script_GetFossilsInBag (scripts/CinnabarLabFossilRoom.asm:11-37) — at scripts/CinnabarLabFossilRoom.asm:18: Lab4Script_GetFossilsInBag.done is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	xor a
@@ -113,20 +114,20 @@ FossilsList:
     db 31
     db 0
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarLabFossilRoomScientist1Text (scripts/CinnabarLabFossilRoom.asm:51-60) — at scripts/CinnabarLabFossilRoom.asm:52: .check_done_reviving is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GAVE_FOSSIL_TO_LAB
-; PRET| 	jr nz, .check_done_reviving
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	call Lab4Script_GetFossilsInBag
-; PRET| 	ld a, [wFilteredBagItemsCount]
-; PRET| 	and a
-; PRET| 	jr z, .no_fossils
-; PRET| 	farcall GiveFossilToCinnabarLab
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+CinnabarLabFossilRoomScientist1Text:
+    CheckEvent EVENT_GAVE_FOSSIL_TO_LAB
+    jnz .check_done_reviving
+    mov esi, .Text
+    call PrintText
+    call Lab4Script_GetFossilsInBag
+    mov al, [ebp + wFilteredBagItemsCount]
+    test al, al
+    jz .no_fossils
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call GiveFossilToCinnabarLab
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -136,31 +137,31 @@ FossilsList:
 .done:
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarLabFossilRoomScientist1Text.check_done_reviving (scripts/CinnabarLabFossilRoom.asm:67-71) — at scripts/CinnabarLabFossilRoom.asm:68: .done_reviving is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventAfterBranchReuseA EVENT_LAB_STILL_REVIVING_FOSSIL, EVENT_GAVE_FOSSIL_TO_LAB
-; PRET| 	jr z, .done_reviving
-; PRET| 	ld hl, .GoForAWalkText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+.check_done_reviving:
+    CheckEventAfterBranchReuseA EVENT_LAB_STILL_REVIVING_FOSSIL, EVENT_GAVE_FOSSIL_TO_LAB
+    jz .done_reviving
+    mov esi, .GoForAWalkText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarLabFossilRoomScientist1Text.done_reviving (scripts/CinnabarLabFossilRoom.asm:73-83) — at scripts/CinnabarLabFossilRoom.asm:81: .done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call LoadFossilItemAndMonNameBank1D
-; PRET| 	ld hl, .FossilIsBackToLifeText
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_LAB_HANDING_OVER_FOSSIL_MON
-; PRET| 	ld a, [wFossilMon]
-; PRET| 	ld b, a
-; PRET| 	ld c, 30
-; PRET| 	call GivePokemon
-; PRET| 	jr nc, .done
-; PRET| 	ResetEvents EVENT_GAVE_FOSSIL_TO_LAB, EVENT_LAB_STILL_REVIVING_FOSSIL, EVENT_LAB_HANDING_OVER_FOSSIL_MON
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+.done_reviving:
+    call LoadFossilItemAndMonNameBank1D
+    mov esi, .FossilIsBackToLifeText
+    call PrintText
+    pushfd    ; SM83 form writes no flags
+        SetEvent EVENT_LAB_HANDING_OVER_FOSSIL_MON
+    popfd
+    mov al, [ebp + wFossilMon]
+    mov bh, al
+    mov bl, 30
+    call GivePokemon
+    jae .done
+    ResetEvents EVENT_GAVE_FOSSIL_TO_LAB, EVENT_LAB_STILL_REVIVING_FOSSIL, EVENT_LAB_HANDING_OVER_FOSSIL_MON
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -32,8 +32,10 @@ global MovementData_49ddd
 global MovementData_f9e65
 global MovementData_f9e66
 global MtMoonB2FDefeatedSuperNerdScript
+global MtMoonB2FDomeFossilText
 global MtMoonB2FFossilAreaCoords
 global MtMoonB2FJessieJamesEndBattleText
+global MtMoonB2FReceivedFossilText
 global MtMoonB2FResetScripts
 global MtMoonB2FRocket1Text
 global MtMoonB2FRocket2Text
@@ -90,10 +92,8 @@ extern MtMoon3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern MtMoon3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern MtMoon3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FDomeFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FHelixFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FMoveSuperNerdScript   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FReceivedFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdOkIllShareText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdText   ; NOT YET DEFINED IN THE PORT
@@ -297,7 +297,7 @@ MtMoonB2FDefeatedSuperNerdScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MtMoonB2FMoveSuperNerdScript (scripts/MtMoonB2F.asm:122-137) — at scripts/MtMoonB2F.asm:133: .asm_49d9b is defined in a region that bailed
+; BAIL[target-region-bailed] MtMoonB2FMoveSuperNerdScript (scripts/MtMoonB2F.asm:122-137) — at scripts/MtMoonB2F.asm:133: MtMoonB2FMoveSuperNerdScript.asm_49d9b is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, MTMOONB2F_SUPER_NERD
@@ -671,7 +671,7 @@ MtMoonB2FText14:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MtMoonB2FSuperNerdText (scripts/MtMoonB2F.asm:479-485) — at scripts/MtMoonB2F.asm:480: .beat_super_nerd is defined in a region that bailed
+; BAIL[event-macro-reuse-a-hint] MtMoonB2FSuperNerdText (scripts/MtMoonB2F.asm:479-485) — at scripts/MtMoonB2F.asm:481: CheckEitherEventSet EVENT_GOT_DOME_FOSSIL, EVENT_GOT_HELIX_FOSSIL, 1
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_MT_MOON_EXIT_SUPER_NERD
@@ -682,25 +682,24 @@ MtMoonB2FText14:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MtMoonB2FSuperNerdText.beat_super_nerd (scripts/MtMoonB2F.asm:487-501) — at scripts/MtMoonB2F.asm:501: .done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, MtMoonB2FSuperNerdTheyreBothMineText
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, MtMoonB2FSuperNerdOkIllShareText
-; PRET| 	ld de, MtMoonB2FSuperNerdOkIllShareText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	ld a, SCRIPT_MTMOONB2F_DEFEATED_SUPER_NERD
-; PRET| 	call MtMoonB2FSetScript
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+.beat_super_nerd:
+    mov esi, MtMoonB2FSuperNerdTheyreBothMineText
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, MtMoonB2FSuperNerdOkIllShareText
+    mov edx, MtMoonB2FSuperNerdOkIllShareText   ; pret: ld de, MtMoonB2FSuperNerdOkIllShareText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hSpriteIndex]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    mov al, SCRIPT_MTMOONB2F_DEFEATED_SUPER_NERD
+    call MtMoonB2FSetScript
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -730,30 +729,30 @@ MtMoonB2FTalkToTrainer:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MtMoonB2FDomeFossilText (scripts/MtMoonB2F.asm:527-546) — at scripts/MtMoonB2F.asm:529: .YouWantText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, .YouWantText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .done
-; PRET| 	lb bc, DOME_FOSSIL, 1
-; PRET| 	call GiveItem
-; PRET| 	jp nc, MtMoonB2FYouHaveNoRoomText
-; PRET| 	call MtMoonB2FReceivedFossilText
-; PRET| 	ld a, TOGGLE_MT_MOON_B2F_FOSSIL_1
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	SetEvent EVENT_GOT_DOME_FOSSIL
-; PRET| 	ld a, SCRIPT_MTMOONB2F_MOVE_SUPER_NERD
-; PRET| 	call MtMoonB2FSetScript
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+MtMoonB2FDomeFossilText:
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, .YouWantText
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .done
+    mov bx, ((41) << 8) | (1)
+    call GiveItem
+    jae MtMoonB2FYouHaveNoRoomText
+    call MtMoonB2FReceivedFossilText
+    mov al, 111
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    SetEvent EVENT_GOT_DOME_FOSSIL
+    mov al, SCRIPT_MTMOONB2F_MOVE_SUPER_NERD
+    call MtMoonB2FSetScript
+.done:
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -793,12 +792,11 @@ MtMoonB2FTalkToTrainer:
 ; PRET| 	text_far _MtMoonB2FHelixFossilYouWantText
 ; PRET| 	text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MtMoonB2FReceivedFossilText (scripts/MtMoonB2F.asm:580-581) — at scripts/MtMoonB2F.asm:580: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	jp PrintText
+%assign event_byte -1
+%assign event_byte_a -1
+MtMoonB2FReceivedFossilText:
+    mov esi, .Text
+    jmp PrintText
 
 %assign event_byte -1
 %assign event_byte_a -1

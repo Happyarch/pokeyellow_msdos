@@ -290,7 +290,7 @@ RocketHideoutB4FJessieJamesMovementData_45606:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] RocketHideoutB4FScript5 (scripts/RocketHideoutB4F.asm:149-180) — at scripts/RocketHideoutB4F.asm:160: .asm_4564a is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] RocketHideoutB4FScript5 (scripts/RocketHideoutB4F.asm:149-180) — at scripts/RocketHideoutB4F.asm:168: de cannot hold the 32-bit address of RocketHideoutB4FJessieJamesMovementData_45606; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD

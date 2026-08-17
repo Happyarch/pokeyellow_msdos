@@ -92,7 +92,7 @@ wVermilionGymCurScript                         equ 0xD5FD
 section .text
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionGym_Script (scripts/VermilionGym.asm:2-17) — at scripts/VermilionGym.asm:6: .LoadNames is defined in a region that bailed
+; BAIL[target-region-bailed] VermilionGym_Script (scripts/VermilionGym.asm:2-17) — at scripts/VermilionGym.asm:6: VermilionGym_Script.LoadNames is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wCurrentMapScriptFlags

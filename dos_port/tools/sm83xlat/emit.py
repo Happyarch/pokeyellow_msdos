@@ -133,7 +133,14 @@ class Emitter:
         self.pending_callee: str = None
         #: local labels whose defining region bailed. A NASM local label cannot
         #: be `extern`, so referencing one has no honest lowering.
+        #: FULL pret labels ("Parent.local") of locals defined in a region that
+        #: bailed. Full, not bare `.local`: NASM scopes a local label to the
+        #: preceding GLOBAL label, so `A.Text2` and `B.Text2` are DIFFERENT
+        #: symbols. Keying on the bare tail conflated them and killed every
+        #: `.Text2` in a file when one of them died.
         self.dead_locals: Set[str] = set()
+        #: The global label a bare `.local` reference is scoped to right now.
+        self.local_scope: Optional[str] = None
 
     # -- operand rendering -------------------------------------------------
 
@@ -162,7 +169,7 @@ class Emitter:
             return r.text
 
         def guard_local(t: str) -> str:
-            if t in self.dead_locals:
+            if self._dead(t):
                 raise Bail("target-region-bailed",
                            f"{t} is defined in a region that bailed")
             return t
@@ -754,12 +761,23 @@ class Emitter:
 
         raise Bail("unknown-data-macro", it.line.raw.strip())
 
+    def _dead(self, t: str) -> bool:
+        """Is this bare `.local` reference defined in a region that bailed?
+
+        Scoped: `.foo` means `<current global label>.foo`, so an identically
+        spelled local under a DIFFERENT parent is a different symbol and must not
+        be reported dead.
+        """
+        return bool(self.local_scope) and \
+            f"{self.local_scope}.{t.lstrip('.')}" in self.dead_locals
+
     def target(self, text: str, out: Emitted) -> str:
         t = text.strip()
         if t.startswith("."):
-            if t in self.dead_locals:
+            if self._dead(t):
                 raise Bail("target-region-bailed",
-                           f"{t} is defined in a region that bailed")
+                           f"{self.local_scope}{t} is defined in a region "
+                           f"that bailed")
             return t
         r = self.R.resolve(t)
         if r is None:

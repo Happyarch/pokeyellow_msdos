@@ -77,7 +77,7 @@ CeladonMartElevator_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMartElevatorStoreWarpEntriesScript (scripts/CeladonMartElevator.asm:18-32) — at scripts/CeladonMartElevator.asm:23: .StoreWarpEntry is defined in a region that bailed
+; BAIL[target-region-bailed] CeladonMartElevatorStoreWarpEntriesScript (scripts/CeladonMartElevator.asm:18-32) — at scripts/CeladonMartElevator.asm:23: CeladonMartElevatorStoreWarpEntriesScript.StoreWarpEntry is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wWarpEntries

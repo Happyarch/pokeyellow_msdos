@@ -81,7 +81,7 @@ RocketHideoutElevator_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] RocketHideoutElevatorStoreWarpEntriesScript (scripts/RocketHideoutElevator.asm:18-32) — at scripts/RocketHideoutElevator.asm:23: .StoreWarpEntry is defined in a region that bailed
+; BAIL[target-region-bailed] RocketHideoutElevatorStoreWarpEntriesScript (scripts/RocketHideoutElevator.asm:18-32) — at scripts/RocketHideoutElevator.asm:23: RocketHideoutElevatorStoreWarpEntriesScript.StoreWarpEntry is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wWarpEntries

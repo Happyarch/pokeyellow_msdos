@@ -92,7 +92,7 @@ CeladonMansion1FMeowthText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMansion1FGrannyText (scripts/CeladonMansion1F.asm:22-31) — at scripts/CeladonMansion1F.asm:25: .asm_485d9 is defined in a region that bailed
+; BAIL[target-region-bailed] CeladonMansion1FGrannyText (scripts/CeladonMansion1F.asm:22-31) — at scripts/CeladonMansion1F.asm:25: CeladonMansion1FGrannyText.asm_485d9 is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	farcall CeladonMansion1FPrintGrannyText
@@ -166,7 +166,7 @@ CeladonMansionText_f1e9c:
     text_end
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Func_f1ea2 (scripts/CeladonMansion1F_2.asm:27-39) — at scripts/CeladonMansion1F_2.asm:32: .asm_f1eb5 is defined in a region that bailed
+; BAIL[target-region-bailed] Func_f1ea2 (scripts/CeladonMansion1F_2.asm:27-39) — at scripts/CeladonMansion1F_2.asm:32: Func_f1ea2.asm_f1eb5 is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, PikachuHappinessThresholds_f1eb9

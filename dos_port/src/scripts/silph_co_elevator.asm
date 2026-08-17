@@ -78,7 +78,7 @@ SilphCoElevator_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCoElevatorStoreWarpEntriesScript (scripts/SilphCoElevator.asm:18-32) — at scripts/SilphCoElevator.asm:23: .StoreWarpEntry is defined in a region that bailed
+; BAIL[target-region-bailed] SilphCoElevatorStoreWarpEntriesScript (scripts/SilphCoElevator.asm:18-32) — at scripts/SilphCoElevator.asm:23: SilphCoElevatorStoreWarpEntriesScript.StoreWarpEntry is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wWarpEntries

@@ -379,7 +379,7 @@ SafariZoneGateSafariZoneWorker2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText (scripts/SafariZoneGate_2.asm:2-19) — at scripts/SafariZoneGate_2.asm:16: .has_positive_balance is defined in a region that bailed
+; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText (scripts/SafariZoneGate_2.asm:2-19) — at scripts/SafariZoneGate_2.asm:16: SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .WelcomeText
@@ -402,7 +402,7 @@ SafariZoneGateSafariZoneWorker2Text:
 ; PRET| 	jr .poor_mans_discount
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance (scripts/SafariZoneGate_2.asm:22-34) — at scripts/SafariZoneGate_2.asm:29: .success is defined in a region that bailed
+; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance (scripts/SafariZoneGate_2.asm:22-34) — at scripts/SafariZoneGate_2.asm:29: SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	xor a

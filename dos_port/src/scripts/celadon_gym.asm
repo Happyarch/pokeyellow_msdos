@@ -96,7 +96,7 @@ wCeladonGymCurScript                           equ 0xD5FE
 section .text
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonGym_Script (scripts/CeladonGym.asm:2-12) — at scripts/CeladonGym.asm:5: .LoadNames is defined in a region that bailed
+; BAIL[target-region-bailed] CeladonGym_Script (scripts/CeladonGym.asm:2-12) — at scripts/CeladonGym.asm:5: CeladonGym_Script.LoadNames is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wCurrentMapScriptFlags

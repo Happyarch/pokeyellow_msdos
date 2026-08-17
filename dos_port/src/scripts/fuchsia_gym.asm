@@ -96,7 +96,7 @@ wFuchsiaGymCurScript                           equ 0xD65A
 section .text
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGym_Script (scripts/FuchsiaGym.asm:2-9) — at scripts/FuchsiaGym.asm:2: .LoadNames is defined in a region that bailed
+; BAIL[target-region-bailed] FuchsiaGym_Script (scripts/FuchsiaGym.asm:2-9) — at scripts/FuchsiaGym.asm:2: FuchsiaGym_Script.LoadNames is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	call .LoadNames

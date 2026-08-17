@@ -178,7 +178,7 @@ CeruleanCityRocketDefeatedScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] scripts/CeruleanCity.asm:anon (scripts/CeruleanCity.asm:43-62) — at scripts/CeruleanCity.asm:44: .skipRocketThiefEncounter is defined in a region that bailed
+; BAIL[target-region-bailed] scripts/CeruleanCity.asm:anon (scripts/CeruleanCity.asm:43-62) — at scripts/CeruleanCity.asm:44: CeruleanCityDefaultScript.skipRocketThiefEncounter is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_CERULEAN_ROCKET_THIEF
@@ -203,7 +203,7 @@ CeruleanCityRocketDefeatedScript:
 ; PRET| 	jp DisplayTextID
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanCityDefaultScript.skipRocketThiefEncounter (scripts/CeruleanCity.asm:64-100) — at scripts/CeruleanCity.asm:71: .walking is defined in a region that bailed
+; BAIL[target-region-bailed] CeruleanCityDefaultScript.skipRocketThiefEncounter (scripts/CeruleanCity.asm:64-100) — at scripts/CeruleanCity.asm:71: CeruleanCityDefaultScript.walking is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_CERULEAN_RIVAL
@@ -300,7 +300,7 @@ CeruleanCityRivalBattleScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanCityRivalDefeatedScript (scripts/CeruleanCity.asm:152-171) — at scripts/CeruleanCity.asm:169: .playerOnRightSideOfBridge is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] CeruleanCityRivalDefeatedScript (scripts/CeruleanCity.asm:152-171) — at scripts/CeruleanCity.asm:170: de cannot hold the 32-bit address of CeruleanCityMovement4; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, [wIsInBattle]

@@ -218,7 +218,7 @@ PokemonTower7FMovementData_60d7b:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonTower7FScript2 (scripts/PokemonTower7F.asm:99-127) — at scripts/PokemonTower7F.asm:108: .asm_60dba is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] PokemonTower7FScript2 (scripts/PokemonTower7F.asm:99-127) — at scripts/PokemonTower7F.asm:115: de cannot hold the 32-bit address of PokemonTower7FMovementData_60d7a; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD

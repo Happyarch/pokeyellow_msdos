@@ -128,7 +128,7 @@ SilphCo6F_UnlockedDoorEventScript:
 ; SilphCo6F_ScriptPointers (scripts/SilphCo6F.asm:38-64) — not re-emitted: SilphCo6TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo6FBeatGiovanniPrintDEOrPrintHLScript (scripts/SilphCo6F.asm:67-69) — at scripts/SilphCo6F.asm:68: .beat_giovanni is defined in a region that bailed
+; BAIL[target-region-bailed] SilphCo6FBeatGiovanniPrintDEOrPrintHLScript (scripts/SilphCo6F.asm:67-69) — at scripts/SilphCo6F.asm:68: SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.beat_giovanni is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI

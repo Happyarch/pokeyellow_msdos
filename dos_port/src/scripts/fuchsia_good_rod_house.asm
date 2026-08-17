@@ -50,7 +50,7 @@ FuchsiaGoodRodHouse_TextPointers:
     dd FuchsiaGoodRodHouseFishingGuruText
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGoodRodHouseFishingGuruText (scripts/FuchsiaGoodRodHouse.asm:10-25) — at scripts/FuchsiaGoodRodHouse.asm:12: .got_item is defined in a region that bailed
+; BAIL[target-region-bailed] FuchsiaGoodRodHouseFishingGuruText (scripts/FuchsiaGoodRodHouse.asm:10-25) — at scripts/FuchsiaGoodRodHouse.asm:12: FuchsiaGoodRodHouseFishingGuruText.got_item is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, [wStatusFlags1]

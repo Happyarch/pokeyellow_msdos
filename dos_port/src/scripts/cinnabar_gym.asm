@@ -161,7 +161,7 @@ CinnabarGym_Script:
     jmp CallFunctionInTable
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarGymSetMapAndTiles (scripts/CinnabarGym.asm:9-19) — at scripts/CinnabarGym.asm:13: .LoadNames is defined in a region that bailed
+; BAIL[target-region-bailed] CinnabarGymSetMapAndTiles (scripts/CinnabarGym.asm:9-19) — at scripts/CinnabarGym.asm:13: CinnabarGymSetMapAndTiles.LoadNames is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wCurrentMapScriptFlags

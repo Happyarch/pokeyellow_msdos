@@ -1,22 +1,22 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
  "_owned_comment": "`owned` is NOT a bail list. Those regions are Tier-1 data the port's generators already define, so the tool must not emit them at all \u2014 emitting one would be a duplicate definition. They describe no outstanding work and are excluded from the coverage denominator; they are listed here so the exclusion stays auditable.",
- "regions_lowered": 2088,
- "regions_bailed": 187,
+ "regions_lowered": 2126,
+ "regions_bailed": 149,
  "regions_owned": 255,
  "by_reason": {
-  "target-region-bailed": 92,
+  "target-region-bailed": 57,
   "screen-coord-projection": 5,
   "inline-text-db": 12,
-  "host-pointer-in-16bit-reg": 29,
+  "host-pointer-in-16bit-reg": 33,
   "pikachu-table-index": 4,
   "hl-half-register-access": 9,
-  "local-label-scope-collision": 11,
+  "local-label-scope-collision": 3,
   "pointer-domain-unknown": 15,
   "ld-via-bc-de": 2,
   "add-hl-r16": 5,
   "predef-leaves-parent-bank-in-a": 1,
-  "event-macro-reuse-a-hint": 1,
+  "event-macro-reuse-a-hint": 2,
   "owned-by-gen_map_script_tables": 1
  },
  "per_file": {
@@ -37,13 +37,12 @@
    ]
   },
   "scripts/BillsHouse.asm": {
-   "ok_regions": 33,
-   "bailed_regions": 4,
+   "ok_regions": 35,
+   "bailed_regions": 2,
    "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
-    "pikachu-table-index",
-    "target-region-bailed"
+    "pikachu-table-index"
    ]
   },
   "scripts/BluesHouse.asm": {
@@ -107,8 +106,8 @@
    "reasons": []
   },
   "scripts/CeladonMansion3F.asm": {
-   "ok_regions": 23,
-   "bailed_regions": 5,
+   "ok_regions": 26,
+   "bailed_regions": 2,
    "owned_regions": 0,
    "reasons": [
     "local-label-scope-collision",
@@ -166,15 +165,14 @@
    ]
   },
   "scripts/CeladonMartRoof.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 5,
+   "ok_regions": 12,
+   "bailed_regions": 4,
    "owned_regions": 0,
    "reasons": [
     "hl-half-register-access",
     "ld-via-bc-de",
     "pointer-domain-unknown",
-    "screen-coord-projection",
-    "target-region-bailed"
+    "screen-coord-projection"
    ]
   },
   "scripts/CeladonPokecenter.asm": {
@@ -214,6 +212,7 @@
    "bailed_regions": 3,
    "owned_regions": 0,
    "reasons": [
+    "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
   },
@@ -282,8 +281,8 @@
    "reasons": []
   },
   "scripts/CinnabarLabFossilRoom.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 5,
+   "ok_regions": 10,
+   "bailed_regions": 2,
    "owned_regions": 0,
    "reasons": [
     "ld-via-bc-de",
@@ -509,10 +508,11 @@
    "reasons": []
   },
   "scripts/MtMoonB2F.asm": {
-   "ok_regions": 34,
-   "bailed_regions": 9,
+   "ok_regions": 37,
+   "bailed_regions": 6,
    "owned_regions": 2,
    "reasons": [
+    "event-macro-reuse-a-hint",
     "host-pointer-in-16bit-reg",
     "local-label-scope-collision",
     "target-region-bailed"
@@ -545,8 +545,8 @@
    ]
   },
   "scripts/OaksLab.asm": {
-   "ok_regions": 66,
-   "bailed_regions": 26,
+   "ok_regions": 86,
+   "bailed_regions": 6,
    "owned_regions": 0,
    "reasons": [
     "hl-half-register-access",
@@ -678,8 +678,7 @@
    "bailed_regions": 2,
    "owned_regions": 0,
    "reasons": [
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/PowerPlant.asm": {
@@ -743,8 +742,7 @@
    "bailed_regions": 2,
    "owned_regions": 3,
    "reasons": [
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/RocketHideoutElevator.asm": {
@@ -914,8 +912,8 @@
    "reasons": []
   },
   "scripts/Route22.asm": {
-   "ok_regions": 30,
-   "bailed_regions": 13,
+   "ok_regions": 32,
+   "bailed_regions": 11,
    "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
@@ -1098,8 +1096,8 @@
    "reasons": []
   },
   "scripts/SaffronGym.asm": {
-   "ok_regions": 13,
-   "bailed_regions": 7,
+   "ok_regions": 15,
+   "bailed_regions": 5,
    "owned_regions": 2,
    "reasons": [
     "inline-text-db",
@@ -1173,8 +1171,7 @@
    "owned_regions": 2,
    "reasons": [
     "host-pointer-in-16bit-reg",
-    "pointer-domain-unknown",
-    "target-region-bailed"
+    "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCo1F.asm": {
@@ -1320,8 +1317,8 @@
    "reasons": []
   },
   "scripts/SummerBeachHouse.asm": {
-   "ok_regions": 16,
-   "bailed_regions": 4,
+   "ok_regions": 18,
+   "bailed_regions": 2,
    "owned_regions": 0,
    "reasons": [
     "target-region-bailed"
@@ -1529,7 +1526,7 @@
     "BikeShopClerkText"
    ],
    "reason": "target-region-bailed",
-   "detail": ".dontHaveBike is defined in a region that bailed",
+   "detail": "BikeShopClerkText.dontHaveBike is defined in a region that bailed",
    "at": "scripts/BikeShop.asm:14",
    "lines": [
     13,
@@ -1543,7 +1540,7 @@
     "BikeShopClerkText.dontHaveBike"
    ],
    "reason": "target-region-bailed",
-   "detail": ".dontHaveVoucher is defined in a region that bailed",
+   "detail": "BikeShopClerkText.dontHaveVoucher is defined in a region that bailed",
    "at": "scripts/BikeShop.asm:21",
    "lines": [
     19,
@@ -1557,7 +1554,7 @@
     "BikeShopClerkText.BagFull"
    ],
    "reason": "target-region-bailed",
-   "detail": ".Done is defined in a region that bailed",
+   "detail": "BikeShopClerkText.Done is defined in a region that bailed",
    "at": "scripts/BikeShop.asm:37",
    "lines": [
     35,
@@ -1620,37 +1617,6 @@
    ]
   },
   {
-   "file": "scripts/BillsHouse.asm",
-   "region": "BillsHouseScript3",
-   "labels": [
-    "BillsHouseScript3",
-    "BillsHouseScript3.applyPikachuMovement",
-    "BillsHouseScript3.pikachuNotFollowing"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".pikachuNotFollowing is defined in a region that bailed",
-   "at": "scripts/BillsHouse.asm:101",
-   "lines": [
-    94,
-    116
-   ]
-  },
-  {
-   "file": "scripts/BillsHouse.asm",
-   "region": "BillsHouseScript5",
-   "labels": [
-    "BillsHouseScript5",
-    "BillsHouseScript5.pikachuNotFollowing"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".pikachuNotFollowing is defined in a region that bailed",
-   "at": "scripts/BillsHouse.asm:163",
-   "lines": [
-    145,
-    186
-   ]
-  },
-  {
    "file": "scripts/BillsHouse_2.asm",
    "region": "BillsHouse_CheckPikachuEmotion",
    "labels": [
@@ -1671,7 +1637,7 @@
     "CeladonGym_Script"
    ],
    "reason": "target-region-bailed",
-   "detail": ".LoadNames is defined in a region that bailed",
+   "detail": "CeladonGym_Script.LoadNames is defined in a region that bailed",
    "at": "scripts/CeladonGym.asm:5",
    "lines": [
     2,
@@ -1715,7 +1681,7 @@
     "CeladonMansion1FGrannyText.asm_485d9"
    ],
    "reason": "target-region-bailed",
-   "detail": ".asm_485d9 is defined in a region that bailed",
+   "detail": "CeladonMansion1FGrannyText.asm_485d9 is defined in a region that bailed",
    "at": "scripts/CeladonMansion1F.asm:25",
    "lines": [
     22,
@@ -1730,7 +1696,7 @@
     "Func_f1ea2.asm_f1ea5"
    ],
    "reason": "target-region-bailed",
-   "detail": ".asm_f1eb5 is defined in a region that bailed",
+   "detail": "Func_f1ea2.asm_f1eb5 is defined in a region that bailed",
    "at": "scripts/CeladonMansion1F_2.asm:32",
    "lines": [
     27,
@@ -1749,49 +1715,6 @@
    "lines": [
     42,
     45
-   ]
-  },
-  {
-   "file": "scripts/CeladonMansion3F.asm",
-   "region": "CeladonMansion3FProgrammerText",
-   "labels": [
-    "CeladonMansion3FProgrammerText",
-    "CeladonMansion3FProgrammerText.print"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".print is defined in a region that bailed",
-   "at": "scripts/CeladonMansion3F.asm:28",
-   "lines": [
-    25,
-    32
-   ]
-  },
-  {
-   "file": "scripts/CeladonMansion3F.asm",
-   "region": "CeladonMansion3FGraphicArtistText",
-   "labels": [
-    "CeladonMansion3FGraphicArtistText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".completed is defined in a region that bailed",
-   "at": "scripts/CeladonMansion3F.asm:46",
-   "lines": [
-    44,
-    48
-   ]
-  },
-  {
-   "file": "scripts/CeladonMansion3F.asm",
-   "region": "CeladonMansion3FGraphicArtistText.completed",
-   "labels": [
-    "CeladonMansion3FGraphicArtistText.completed"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text2 is defined in a region that bailed",
-   "at": "scripts/CeladonMansion3F.asm:51",
-   "lines": [
-    51,
-    76
    ]
   },
   {
@@ -1832,7 +1755,7 @@
     "CeladonMartElevatorStoreWarpEntriesScript.StoreWarpEntry"
    ],
    "reason": "target-region-bailed",
-   "detail": ".StoreWarpEntry is defined in a region that bailed",
+   "detail": "CeladonMartElevatorStoreWarpEntriesScript.StoreWarpEntry is defined in a region that bailed",
    "at": "scripts/CeladonMartElevator.asm:23",
    "lines": [
     18,
@@ -1898,20 +1821,6 @@
    ]
   },
   {
-   "file": "scripts/CeladonMartRoof.asm",
-   "region": "CeladonMartRoofLittleGirlText",
-   "labels": [
-    "CeladonMartRoofLittleGirlText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/CeladonMartRoof.asm:239",
-   "lines": [
-    228,
-    241
-   ]
-  },
-  {
    "file": "scripts/CeruleanBadgeHouse.asm",
    "region": "CeruleanBadgeHouseMiddleAgedManText",
    "labels": [
@@ -1933,7 +1842,7 @@
     "CeruleanCityDefaultScript.playerBelowRocketThief"
    ],
    "reason": "target-region-bailed",
-   "detail": ".skipRocketThiefEncounter is defined in a region that bailed",
+   "detail": "CeruleanCityDefaultScript.skipRocketThiefEncounter is defined in a region that bailed",
    "at": "scripts/CeruleanCity.asm:44",
    "lines": [
     43,
@@ -1949,7 +1858,7 @@
     "CeruleanCityDefaultScript.playerOnRightSideOfBridge"
    ],
    "reason": "target-region-bailed",
-   "detail": ".walking is defined in a region that bailed",
+   "detail": "CeruleanCityDefaultScript.walking is defined in a region that bailed",
    "at": "scripts/CeruleanCity.asm:71",
    "lines": [
     64,
@@ -1962,9 +1871,9 @@
    "labels": [
     "CeruleanCityRivalDefeatedScript"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".playerOnRightSideOfBridge is defined in a region that bailed",
-   "at": "scripts/CeruleanCity.asm:169",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of CeruleanCityMovement4; callee <none in range> has no abi.json entry",
+   "at": "scripts/CeruleanCity.asm:170",
    "lines": [
     152,
     171
@@ -1977,7 +1886,7 @@
     "CeruleanGym_Script"
    ],
    "reason": "target-region-bailed",
-   "detail": ".LoadNames is defined in a region that bailed",
+   "detail": "CeruleanGym_Script.LoadNames is defined in a region that bailed",
    "at": "scripts/CeruleanGym.asm:5",
    "lines": [
     2,
@@ -2034,7 +1943,7 @@
     "CinnabarGymSetMapAndTiles"
    ],
    "reason": "target-region-bailed",
-   "detail": ".LoadNames is defined in a region that bailed",
+   "detail": "CinnabarGymSetMapAndTiles.LoadNames is defined in a region that bailed",
    "at": "scripts/CinnabarGym.asm:13",
    "lines": [
     9,
@@ -2106,7 +2015,7 @@
     "Lab4Script_GetFossilsInBag.loop"
    ],
    "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
+   "detail": "Lab4Script_GetFossilsInBag.done is defined in a region that bailed",
    "at": "scripts/CinnabarLabFossilRoom.asm:18",
    "lines": [
     11,
@@ -2128,55 +2037,13 @@
    ]
   },
   {
-   "file": "scripts/CinnabarLabFossilRoom.asm",
-   "region": "CinnabarLabFossilRoomScientist1Text",
-   "labels": [
-    "CinnabarLabFossilRoomScientist1Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".check_done_reviving is defined in a region that bailed",
-   "at": "scripts/CinnabarLabFossilRoom.asm:52",
-   "lines": [
-    51,
-    60
-   ]
-  },
-  {
-   "file": "scripts/CinnabarLabFossilRoom.asm",
-   "region": "CinnabarLabFossilRoomScientist1Text.check_done_reviving",
-   "labels": [
-    "CinnabarLabFossilRoomScientist1Text.check_done_reviving"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done_reviving is defined in a region that bailed",
-   "at": "scripts/CinnabarLabFossilRoom.asm:68",
-   "lines": [
-    67,
-    71
-   ]
-  },
-  {
-   "file": "scripts/CinnabarLabFossilRoom.asm",
-   "region": "CinnabarLabFossilRoomScientist1Text.done_reviving",
-   "labels": [
-    "CinnabarLabFossilRoomScientist1Text.done_reviving"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/CinnabarLabFossilRoom.asm:81",
-   "lines": [
-    73,
-    83
-   ]
-  },
-  {
    "file": "scripts/Daycare.asm",
    "region": "DaycareGentlemanText",
    "labels": [
     "DaycareGentlemanText"
    ],
    "reason": "target-region-bailed",
-   "detail": ".daycareInUse is defined in a region that bailed",
+   "detail": "DaycareGentlemanText.daycareInUse is defined in a region that bailed",
    "at": "scripts/Daycare.asm:13",
    "lines": [
     10,
@@ -2208,7 +2075,7 @@
     "DaycareGentlemanText.calcPriceLoop"
    ],
    "reason": "target-region-bailed",
-   "detail": ".skipCalcExp is defined in a region that bailed",
+   "detail": "DaycareGentlemanText.skipCalcExp is defined in a region that bailed",
    "at": "scripts/Daycare.asm:82",
    "lines": [
     73,
@@ -2251,7 +2118,7 @@
     "FuchsiaGoodRodHouseFishingGuruText"
    ],
    "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
+   "detail": "FuchsiaGoodRodHouseFishingGuruText.got_item is defined in a region that bailed",
    "at": "scripts/FuchsiaGoodRodHouse.asm:12",
    "lines": [
     10,
@@ -2327,7 +2194,7 @@
     "FuchsiaGym_Script"
    ],
    "reason": "target-region-bailed",
-   "detail": ".LoadNames is defined in a region that bailed",
+   "detail": "FuchsiaGym_Script.LoadNames is defined in a region that bailed",
    "at": "scripts/FuchsiaGym.asm:2",
    "lines": [
     2,
@@ -2429,7 +2296,7 @@
     "MtMoonB2FMoveSuperNerdScript"
    ],
    "reason": "target-region-bailed",
-   "detail": ".asm_49d9b is defined in a region that bailed",
+   "detail": "MtMoonB2FMoveSuperNerdScript.asm_49d9b is defined in a region that bailed",
    "at": "scripts/MtMoonB2F.asm:133",
    "lines": [
     122,
@@ -2457,41 +2324,12 @@
    "labels": [
     "MtMoonB2FSuperNerdText"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".beat_super_nerd is defined in a region that bailed",
-   "at": "scripts/MtMoonB2F.asm:480",
+   "reason": "event-macro-reuse-a-hint",
+   "detail": "CheckEitherEventSet EVENT_GOT_DOME_FOSSIL, EVENT_GOT_HELIX_FOSSIL, 1",
+   "at": "scripts/MtMoonB2F.asm:481",
    "lines": [
     479,
     485
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FSuperNerdText.beat_super_nerd",
-   "labels": [
-    "MtMoonB2FSuperNerdText.beat_super_nerd"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/MtMoonB2F.asm:501",
-   "lines": [
-    487,
-    501
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FDomeFossilText",
-   "labels": [
-    "MtMoonB2FDomeFossilText",
-    "MtMoonB2FDomeFossilText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".YouWantText is defined in a region that bailed",
-   "at": "scripts/MtMoonB2F.asm:529",
-   "lines": [
-    527,
-    546
    ]
   },
   {
@@ -2525,20 +2363,6 @@
   },
   {
    "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FReceivedFossilText",
-   "labels": [
-    "MtMoonB2FReceivedFossilText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/MtMoonB2F.asm:580",
-   "lines": [
-    580,
-    581
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
    "region": "MtMoonB2FYouHaveNoRoomText",
    "labels": [
     "MtMoonB2FYouHaveNoRoomText"
@@ -2559,7 +2383,7 @@
     "NameRatersHouseCheckMonOTScript.check_match_loop"
    ],
    "reason": "target-region-bailed",
-   "detail": ".check_match_loop is defined in a region that bailed",
+   "detail": "NameRatersHouseCheckMonOTScript.check_match_loop is defined in a region that bailed",
    "at": "scripts/NameRatersHouse.asm:19",
    "lines": [
     13,
@@ -2610,243 +2434,17 @@
   },
   {
    "file": "scripts/OaksLab.asm",
-   "region": "OaksLabEeveePokeBallText",
-   "labels": [
-    "OaksLabEeveePokeBallText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:789",
-   "lines": [
-    783,
-    791
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
    "region": "OaksLabOak1Text",
    "labels": [
     "OaksLabOak1Text",
     "OaksLabOak1Text.already_got_poke_balls"
    ],
    "reason": "target-region-bailed",
-   "detail": ".already_got_poke_balls is defined in a region that bailed",
+   "detail": "OaksLabOak1Text.already_got_poke_balls is defined in a region that bailed",
    "at": "scripts/OaksLab.asm:810",
    "lines": [
     809,
     823
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabPokedexText",
-   "labels": [
-    "OaksLabPokedexText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:920",
-   "lines": [
-    920,
-    922
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabGirlText",
-   "labels": [
-    "OaksLabGirlText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:934",
-   "lines": [
-    934,
-    936
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalFedUpWithWaitingText",
-   "labels": [
-    "OaksLabRivalFedUpWithWaitingText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:944",
-   "lines": [
-    944,
-    946
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalFedUpWithWaitingText.Text",
-   "labels": [
-    "OaksLabRivalFedUpWithWaitingText.Text"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.Text'] would redefine a local label already emitted in this scope",
-   "at": "scripts/OaksLab.asm:949",
-   "lines": [
-    949,
-    950
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOakChooseMonText",
-   "labels": [
-    "OaksLabOakChooseMonText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:954",
-   "lines": [
-    954,
-    956
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOakChooseMonText.Text",
-   "labels": [
-    "OaksLabOakChooseMonText.Text"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.Text'] would redefine a local label already emitted in this scope",
-   "at": "scripts/OaksLab.asm:959",
-   "lines": [
-    959,
-    960
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalWhatAboutMeText",
-   "labels": [
-    "OaksLabRivalWhatAboutMeText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:964",
-   "lines": [
-    964,
-    966
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalWhatAboutMeText.Text",
-   "labels": [
-    "OaksLabRivalWhatAboutMeText.Text"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.Text'] would redefine a local label already emitted in this scope",
-   "at": "scripts/OaksLab.asm:969",
-   "lines": [
-    969,
-    970
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOakBePatientText",
-   "labels": [
-    "OaksLabOakBePatientText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:974",
-   "lines": [
-    974,
-    976
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOakBePatientText.Text",
-   "labels": [
-    "OaksLabOakBePatientText.Text"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.Text'] would redefine a local label already emitted in this scope",
-   "at": "scripts/OaksLab.asm:979",
-   "lines": [
-    979,
-    980
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOakDontGoAwayYetText",
-   "labels": [
-    "OaksLabOakDontGoAwayYetText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:1056",
-   "lines": [
-    1056,
-    1058
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalIllTakeYouOnText",
-   "labels": [
-    "OaksLabRivalIllTakeYouOnText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:1066",
-   "lines": [
-    1066,
-    1068
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalIllTakeYouOnText.Text",
-   "labels": [
-    "OaksLabRivalIllTakeYouOnText.Text",
-    "OaksLabRivalIPickedTheWrongPokemonText",
-    "OaksLabRivalAmIGreatOrWhatText"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.Text'] would redefine a local label already emitted in this scope",
-   "at": "scripts/OaksLab.asm:1071",
-   "lines": [
-    1071,
-    1080
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalSmellYouLaterText",
-   "labels": [
-    "OaksLabRivalSmellYouLaterText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:1084",
-   "lines": [
-    1084,
-    1086
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalSmellYouLaterText.Text",
-   "labels": [
-    "OaksLabRivalSmellYouLaterText.Text"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.Text'] would redefine a local label already emitted in this scope",
-   "at": "scripts/OaksLab.asm:1089",
-   "lines": [
-    1089,
-    1090
    ]
   },
   {
@@ -2878,69 +2476,6 @@
    ]
   },
   {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabPikachuDislikesPokeballsText2",
-   "labels": [
-    "OaksLabPikachuDislikesPokeballsText2"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:1106",
-   "lines": [
-    1106,
-    1108
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabPikachuDislikesPokeballsText2.Text",
-   "labels": [
-    "OaksLabPikachuDislikesPokeballsText2.Text",
-    "OaksLabRivalGrampsText",
-    "OaksLabRivalMyPokemonHasGrownStrongerText",
-    "OaksLabOakIHaveARequestText",
-    "OaksLabOakMyInventionPokedexText",
-    "OaksLabOakGotPokedexText",
-    "OaksLabOakThatWasMyDreamText",
-    "OaksLabRivalLeaveItAllToMeText"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.Text'] would redefine a local label already emitted in this scope",
-   "at": "scripts/OaksLab.asm:1111",
-   "lines": [
-    1111,
-    1141
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabScientistText",
-   "labels": [
-    "OaksLabScientistText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:1145",
-   "lines": [
-    1145,
-    1147
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabScientistText.Text",
-   "labels": [
-    "OaksLabScientistText.Text"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.Text'] would redefine a local label already emitted in this scope",
-   "at": "scripts/OaksLab.asm:1150",
-   "lines": [
-    1150,
-    1151
-   ]
-  },
-  {
    "file": "scripts/PalletTown.asm",
    "region": "PalletTownDaisyScript",
    "labels": [
@@ -2961,7 +2496,7 @@
     "PewterGym_Script"
    ],
    "reason": "target-region-bailed",
-   "detail": ".LoadNames is defined in a region that bailed",
+   "detail": "PewterGym_Script.LoadNames is defined in a region that bailed",
    "at": "scripts/PewterGym.asm:5",
    "lines": [
     2,
@@ -3053,9 +2588,9 @@
     "PokemonTower7FScript4",
     "PokemonTower7FScript4.asm_60dcc"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_60dba is defined in a region that bailed",
-   "at": "scripts/PokemonTower7F.asm:108",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of PokemonTower7FMovementData_60d7a; callee <none in range> has no abi.json entry",
+   "at": "scripts/PokemonTower7F.asm:115",
    "lines": [
     99,
     127
@@ -3098,9 +2633,9 @@
     "RocketHideoutB4FScript7",
     "RocketHideoutB4FScript7.asm_4565f"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_4564a is defined in a region that bailed",
-   "at": "scripts/RocketHideoutB4F.asm:160",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of RocketHideoutB4FJessieJamesMovementData_45606; callee <none in range> has no abi.json entry",
+   "at": "scripts/RocketHideoutB4F.asm:168",
    "lines": [
     149,
     180
@@ -3114,7 +2649,7 @@
     "RocketHideoutElevatorStoreWarpEntriesScript.StoreWarpEntry"
    ],
    "reason": "target-region-bailed",
-   "detail": ".StoreWarpEntry is defined in a region that bailed",
+   "detail": "RocketHideoutElevatorStoreWarpEntriesScript.StoreWarpEntry is defined in a region that bailed",
    "at": "scripts/RocketHideoutElevator.asm:23",
    "lines": [
     18,
@@ -3130,7 +2665,7 @@
     "Route11Gate2FOaksAideText.no_item"
    ],
    "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
+   "detail": "Route11Gate2FOaksAideText.got_item is defined in a region that bailed",
    "at": "scripts/Route11Gate2F.asm:22",
    "lines": [
     21,
@@ -3154,27 +2689,13 @@
   },
   {
    "file": "scripts/Route22.asm",
-   "region": "Route22Rival1StartBattleScript",
-   "labels": [
-    "Route22Rival1StartBattleScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".set_rival_facing_direction is defined in a region that bailed",
-   "at": "scripts/Route22.asm:115",
-   "lines": [
-    106,
-    115
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
    "region": "Route22Rival1AfterBattleScript",
    "labels": [
     "Route22Rival1AfterBattleScript",
     "Route22Rival1AfterBattleScript.keep_rival_starter"
    ],
    "reason": "target-region-bailed",
-   "detail": ".keep_rival_starter is defined in a region that bailed",
+   "detail": "Route22Rival1AfterBattleScript.keep_rival_starter is defined in a region that bailed",
    "at": "scripts/Route22.asm:153",
    "lines": [
     148,
@@ -3189,7 +2710,7 @@
     "Route22Rival1AfterBattleScript.set_rival_facing"
    ],
    "reason": "target-region-bailed",
-   "detail": ".exit_movement_2 is defined in a region that bailed",
+   "detail": "Route22Rival1AfterBattleScript.exit_movement_2 is defined in a region that bailed",
    "at": "scripts/Route22.asm:179",
    "lines": [
     163,
@@ -3204,7 +2725,7 @@
     "Route22Rival1AfterBattleScript.next_script"
    ],
    "reason": "target-region-bailed",
-   "detail": ".RivalExit2Script is defined in a region that bailed",
+   "detail": "Route22Rival1AfterBattleScript.RivalExit2Script is defined in a region that bailed",
    "at": "scripts/Route22.asm:183",
    "lines": [
     183,
@@ -3242,26 +2763,12 @@
   },
   {
    "file": "scripts/Route22.asm",
-   "region": "Route22Rival2StartBattleScript",
-   "labels": [
-    "Route22Rival2StartBattleScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".set_player_direction_left is defined in a region that bailed",
-   "at": "scripts/Route22.asm:266",
-   "lines": [
-    259,
-    270
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
    "region": "Route22Rival2AfterBattleScript",
    "labels": [
     "Route22Rival2AfterBattleScript"
    ],
    "reason": "target-region-bailed",
-   "detail": ".set_player_direction_left is defined in a region that bailed",
+   "detail": "Route22Rival2AfterBattleScript.set_player_direction_left is defined in a region that bailed",
    "at": "scripts/Route22.asm:310",
    "lines": [
     303,
@@ -3276,7 +2783,7 @@
     "Route22Rival2AfterBattleScript.set_rival_facing_direction"
    ],
    "reason": "target-region-bailed",
-   "detail": ".exit_movement_2 is defined in a region that bailed",
+   "detail": "Route22Rival2AfterBattleScript.exit_movement_2 is defined in a region that bailed",
    "at": "scripts/Route22.asm:332",
    "lines": [
     316,
@@ -3291,7 +2798,7 @@
     "Route22Rival2AfterBattleScript.next_script"
    ],
    "reason": "target-region-bailed",
-   "detail": ".RivalExit2Script is defined in a region that bailed",
+   "detail": "Route22Rival2AfterBattleScript.RivalExit2Script is defined in a region that bailed",
    "at": "scripts/Route22.asm:336",
    "lines": [
     336,
@@ -3370,7 +2877,7 @@
     "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText"
    ],
    "reason": "target-region-bailed",
-   "detail": ".has_positive_balance is defined in a region that bailed",
+   "detail": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance is defined in a region that bailed",
    "at": "scripts/SafariZoneGate_2.asm:16",
    "lines": [
     2,
@@ -3384,7 +2891,7 @@
     "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance"
    ],
    "reason": "target-region-bailed",
-   "detail": ".success is defined in a region that bailed",
+   "detail": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success is defined in a region that bailed",
    "at": "scripts/SafariZoneGate_2.asm:29",
    "lines": [
     22,
@@ -3441,7 +2948,7 @@
     "SaffronGym_Script"
    ],
    "reason": "target-region-bailed",
-   "detail": ".LoadNames is defined in a region that bailed",
+   "detail": "SaffronGym_Script.LoadNames is defined in a region that bailed",
    "at": "scripts/SaffronGym.asm:5",
    "lines": [
     2,
@@ -3479,40 +2986,12 @@
   },
   {
    "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymSabrinaText",
-   "labels": [
-    "SaffronGymSabrinaText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".afterBeat is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:112",
-   "lines": [
-    109,
-    115
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymSabrinaText.afterBeat",
-   "labels": [
-    "SaffronGymSabrinaText.afterBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:119",
-   "lines": [
-    117,
-    119
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
    "region": "SaffronGymGymGuideText",
    "labels": [
     "SaffronGymGymGuideText"
    ],
    "reason": "target-region-bailed",
-   "detail": ".afterBeat is defined in a region that bailed",
+   "detail": "SaffronGymGymGuideText.afterBeat is defined in a region that bailed",
    "at": "scripts/SaffronGym.asm:213",
    "lines": [
     212,
@@ -3646,9 +3125,9 @@
     "SilphCo11FScript8",
     "SilphCo11FScript8.asm_6237b"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_6235e is defined in a region that bailed",
-   "at": "scripts/SilphCo11F.asm:338",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of SilphCo11FMovementData_622fb; callee <none in range> has no abi.json entry",
+   "at": "scripts/SilphCo11F.asm:345",
    "lines": [
     326,
     361
@@ -3747,7 +3226,7 @@
     "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript"
    ],
    "reason": "target-region-bailed",
-   "detail": ".beat_giovanni is defined in a region that bailed",
+   "detail": "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.beat_giovanni is defined in a region that bailed",
    "at": "scripts/SilphCo6F.asm:68",
    "lines": [
     67,
@@ -3964,7 +3443,7 @@
     "SilphCoElevatorStoreWarpEntriesScript.StoreWarpEntry"
    ],
    "reason": "target-region-bailed",
-   "detail": ".StoreWarpEntry is defined in a region that bailed",
+   "detail": "SilphCoElevatorStoreWarpEntriesScript.StoreWarpEntry is defined in a region that bailed",
    "at": "scripts/SilphCoElevator.asm:23",
    "lines": [
     18,
@@ -4001,42 +3480,13 @@
   },
   {
    "file": "scripts/SummerBeachHouse.asm",
-   "region": "SummerBeachHouseSurfinDudeText",
-   "labels": [
-    "SummerBeachHouseSurfinDudeText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".next is defined in a region that bailed",
-   "at": "scripts/SummerBeachHouse.asm:24",
-   "lines": [
-    16,
-    27
-   ]
-  },
-  {
-   "file": "scripts/SummerBeachHouse.asm",
-   "region": "SummerBeachHousePoster1Text",
-   "labels": [
-    "SummerBeachHousePoster1Text",
-    "SummerBeachHousePoster1Text.next"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".next is defined in a region that bailed",
-   "at": "scripts/SummerBeachHouse.asm:86",
-   "lines": [
-    83,
-    90
-   ]
-  },
-  {
-   "file": "scripts/SummerBeachHouse.asm",
    "region": "SummerBeachHousePoster2Text",
    "labels": [
     "SummerBeachHousePoster2Text",
     "SummerBeachHousePoster2Text.next"
    ],
    "reason": "target-region-bailed",
-   "detail": ".next is defined in a region that bailed",
+   "detail": "SummerBeachHousePoster2Text.next is defined in a region that bailed",
    "at": "scripts/SummerBeachHouse.asm:104",
    "lines": [
     101,
@@ -4051,7 +3501,7 @@
     "SummerBeachHousePoster3Text.next"
    ],
    "reason": "target-region-bailed",
-   "detail": ".next is defined in a region that bailed",
+   "detail": "SummerBeachHousePoster3Text.next is defined in a region that bailed",
    "at": "scripts/SummerBeachHouse.asm:122",
    "lines": [
     119,
@@ -4127,7 +3577,7 @@
     "VermilionGym_Script"
    ],
    "reason": "target-region-bailed",
-   "detail": ".LoadNames is defined in a region that bailed",
+   "detail": "VermilionGym_Script.LoadNames is defined in a region that bailed",
    "at": "scripts/VermilionGym.asm:6",
    "lines": [
     2,
@@ -4242,7 +3692,7 @@
     "ViridianMartCheckParcelDeliveredScript"
    ],
    "reason": "target-region-bailed",
-   "detail": ".delivered_parcel is defined in a region that bailed",
+   "detail": "ViridianMartCheckParcelDeliveredScript.delivered_parcel is defined in a region that bailed",
    "at": "scripts/ViridianMart.asm:11",
    "lines": [
     10,

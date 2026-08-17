@@ -79,7 +79,7 @@ ViridianMart_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianMartCheckParcelDeliveredScript (scripts/ViridianMart.asm:10-13) — at scripts/ViridianMart.asm:11: .delivered_parcel is defined in a region that bailed
+; BAIL[target-region-bailed] ViridianMartCheckParcelDeliveredScript (scripts/ViridianMart.asm:10-13) — at scripts/ViridianMart.asm:11: ViridianMartCheckParcelDeliveredScript.delivered_parcel is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_OAK_GOT_PARCEL
