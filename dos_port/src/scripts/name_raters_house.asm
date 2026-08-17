@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global NameRatersHouseCheckMonOTScript
 global NameRatersHouseNameRaterText
 global NameRatersHouseYesNoScript
 global NameRatersHouse_Script
@@ -34,7 +35,6 @@ extern EnableAutoTextBoxDrawing
 extern GBPalWhiteOutWithDelay3
 extern GetPartyMonName2
 extern LoadGBPal
-extern NameRatersHouseCheckMonOTScript   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern RestoreScreenTilesAndReloadTilePatterns
 extern SaveScreenTilesToBuffer2
@@ -68,34 +68,33 @@ NameRatersHouseYesNoScript:
     test al, al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] NameRatersHouseCheckMonOTScript (scripts/NameRatersHouse.asm:13-36) — at scripts/NameRatersHouse.asm:19: NameRatersHouseCheckMonOTScript.check_match_loop is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wPartyMonOT
-; PRET| 	ld bc, NAME_LENGTH
-; PRET| 	ld a, [wWhichPokemon]
-; PRET| 	call AddNTimes
-; PRET| 	ld de, wPlayerName
-; PRET| 	ld c, NAME_LENGTH
-; PRET| 	call .check_match_loop
-; PRET| 	jr c, .no_match
-; PRET| 	ld hl, wPartyMon1OTID
-; PRET| 	ld bc, PARTYMON_STRUCT_LENGTH
-; PRET| 	ld a, [wWhichPokemon]
-; PRET| 	call AddNTimes
-; PRET| 	ld de, wPlayerID
-; PRET| 	ld c, $2
-; PRET| .check_match_loop
-; PRET| 	ld a, [de]
-; PRET| 	cp [hl]
-; PRET| 	jr nz, .no_match
-; PRET| 	inc hl
-; PRET| 	inc de
-; PRET| 	dec c
-; PRET| 	jr nz, .check_match_loop
-; PRET| 	and a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+NameRatersHouseCheckMonOTScript:
+    mov esi, wPartyMonOT
+    mov bx, NAME_LENGTH
+    mov al, [ebp + wWhichPokemon]
+    call AddNTimes
+    mov edx, wPlayerName
+    mov bl, NAME_LENGTH
+    call .check_match_loop
+    jb .no_match
+    mov esi, wPartyMon1OTID
+    mov bx, PARTYMON_STRUCT_LENGTH
+    mov al, [ebp + wWhichPokemon]
+    call AddNTimes
+    mov edx, wPlayerID
+    mov bl, 0x2
+.check_match_loop:
+    mov al, [ebp + edx]
+    cmp al, [ebp + esi]
+    jnz .no_match
+    inc esi
+    inc edx
+    dec bl
+    jnz .check_match_loop
+    and al, al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

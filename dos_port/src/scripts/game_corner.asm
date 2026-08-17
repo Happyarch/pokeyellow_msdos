@@ -48,6 +48,7 @@ global GameCornerPikachuMovementScript
 global GameCornerPosterText
 global GameCornerReenterMapAfterPlayerLoss
 global GameCornerRocketAfterBattleText
+global GameCornerRocketBattleScript
 global GameCornerRocketExitScript
 global GameCornerRocketText
 global GameCornerSelectLuckySlotMachine
@@ -65,7 +66,6 @@ extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern EngageMapTrainer
 extern GameCornerDrawCoinBox   ; NOT YET DEFINED IN THE PORT
-extern GameCornerRocketBattleScript   ; NOT YET DEFINED IN THE PORT
 extern HasEnoughCoins
 extern HasEnoughMoney
 extern HideObject
@@ -210,27 +210,26 @@ GameCorner_ScriptPointers:
 GameCornerDefaultScript:
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] GameCornerRocketBattleScript (scripts/GameCorner.asm:55-71) — at scripts/GameCorner.asm:66: de cannot hold the 32-bit address of GameCornerMovement_Rocket_WalkAroundPlayer; callee GameCornerPikachuMovementScript has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, GameCornerReenterMapAfterPlayerLoss
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, TEXT_GAMECORNER_ROCKET_AFTER_BATTLE
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	ld a, GAMECORNER_ROCKET
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call SetSpriteMovementBytesToFF
-; PRET| 	ld de, GameCornerMovement_Rocket_WalkAroundPlayer
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp 6
-; PRET| 	jr nz, .not_direct_movement
-; PRET| 	ld de, GameCornerMovement_Rocket_WalkDirect
-; PRET| 	jr .got_rocket_movement
+%assign event_byte -1
+%assign event_byte_a -1
+GameCornerRocketBattleScript:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xFF
+    jz GameCornerReenterMapAfterPlayerLoss
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, TEXT_GAMECORNER_ROCKET_AFTER_BATTLE
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov al, 11                          ; pret: ld a, GAMECORNER_ROCKET
+    mov [ebp + hSpriteIndex], al
+    call SetSpriteMovementBytesToFF
+    mov edi, GameCornerMovement_Rocket_WalkAroundPlayer   ; pret: ld de, GameCornerMovement_Rocket_WalkAroundPlayer — MoveSprite takes it in EDI
+    mov al, [ebp + wYCoord]
+    cmp al, 6
+    jnz .not_direct_movement
+    mov edi, GameCornerMovement_Rocket_WalkDirect   ; pret: ld de, GameCornerMovement_Rocket_WalkDirect — MoveSprite takes it in EDI
+    jmp .got_rocket_movement
 
 %assign event_byte -1
 %assign event_byte_a -1

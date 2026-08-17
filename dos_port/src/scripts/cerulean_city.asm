@@ -29,6 +29,7 @@ global CeruleanCityCooltrainerF2Text
 global CeruleanCityCooltrainerMText
 global CeruleanCityCoords1
 global CeruleanCityCoords2
+global CeruleanCityDefaultScript
 global CeruleanCityElectrodeText
 global CeruleanCityFaceRivalScript
 global CeruleanCityGuardText
@@ -58,13 +59,13 @@ global CeruleanHideRocket
 extern ArePlayerCoordsInArray
 extern Bankswitch
 extern CallFunctionInTable
-extern CeruleanCityDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern Delay3
 extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern EngageMapTrainer
 extern GBFadeInFromBlack
 extern GBFadeOutToBlack
+extern GetPointerWithinSpriteStateData2   ; NOT YET DEFINED IN THE PORT
 extern GiveItem
 extern HideObject
 extern InitBattleEnemyParameters
@@ -110,6 +111,7 @@ extern _CeruleanCitySuperNerd3Text   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityTrainerTipsText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
+CERULEANCITY_RIVAL                             equ 1
 SCRIPT_CERULEANCITY_DEFAULT                    equ 0
 SCRIPT_CERULEANCITY_RIVAL_BATTLE               equ 1
 SCRIPT_CERULEANCITY_RIVAL_DEFEATED             equ 2
@@ -117,6 +119,7 @@ SCRIPT_CERULEANCITY_RIVAL_CLEANUP              equ 3
 SCRIPT_CERULEANCITY_ROCKET_DEFEATED            equ 4
 TEXT_CERULEANCITY_RIVAL                        equ 1
 TEXT_CERULEANCITY_ROCKET                       equ 2
+TOGGLE_CERULEAN_RIVAL                          equ 6
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -177,72 +180,75 @@ CeruleanCityRocketDefeatedScript:
     mov [ebp + wCeruleanCityCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] scripts/CeruleanCity.asm:anon (scripts/CeruleanCity.asm:43-62) — at scripts/CeruleanCity.asm:44: CeruleanCityDefaultScript.skipRocketThiefEncounter is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_CERULEAN_ROCKET_THIEF
-; PRET| 	jr nz, .skipRocketThiefEncounter
-; PRET| 	ld hl, CeruleanCityCoords1
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	jr nc, .skipRocketThiefEncounter
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	cp $1
-; PRET| 	ld a, PLAYER_DIR_UP
-; PRET| 	ld b, SPRITE_FACING_DOWN
-; PRET| 	jr nz, .playerBelowRocketThief
-; PRET| 	ld a, PLAYER_DIR_DOWN
-; PRET| 	ld b, SPRITE_FACING_UP
-; PRET| .playerBelowRocketThief
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, b
-; PRET| 	ld [wSprite02StateData1FacingDirection], a
-; PRET| 	call Delay3
-; PRET| 	ld a, TEXT_CERULEANCITY_ROCKET
-; PRET| 	ldh [hTextID], a
-; PRET| 	jp DisplayTextID
+%assign event_byte -1
+%assign event_byte_a -1
+CeruleanCityDefaultScript:
+    CheckEvent EVENT_BEAT_CERULEAN_ROCKET_THIEF
+    jnz .skipRocketThiefEncounter
+    mov esi, CeruleanCityCoords1
+    call ArePlayerCoordsInArray
+    jnc .skipRocketThiefEncounter
+    mov al, [ebp + wCoordIndex]
+    cmp al, 0x1
+    mov al, PLAYER_DIR_UP
+    mov bh, SPRITE_FACING_DOWN
+    jnz .playerBelowRocketThief
+    mov al, PLAYER_DIR_DOWN
+    mov bh, SPRITE_FACING_UP
+.playerBelowRocketThief:
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, bh
+    mov [ebp + wSprite02StateData1FacingDirection], al
+    call Delay3
+    mov al, TEXT_CERULEANCITY_ROCKET
+    mov [ebp + hTextID], al
+    jmp DisplayTextID
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanCityDefaultScript.skipRocketThiefEncounter (scripts/CeruleanCity.asm:64-100) — at scripts/CeruleanCity.asm:71: CeruleanCityDefaultScript.walking is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_CERULEAN_RIVAL
-; PRET| 	ret nz
-; PRET| 	ld hl, CeruleanCityCoords2
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	ret nc
-; PRET| 	ld a, [wWalkBikeSurfState]
-; PRET| 	and a
-; PRET| 	jr z, .walking
-; PRET| 	call StopAllMusic
-; PRET| .walking
-; PRET| 	ld c, BANK(Music_MeetRival)
-; PRET| 	ld a, MUSIC_MEET_RIVAL
-; PRET| 	call PlayMusic
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 20 ; is the player standing on the right side of the bridge?
-; PRET| 	jr z, .playerOnRightSideOfBridge
-; PRET| 	ld a, CERULEANCITY_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld a, SPRITESTATEDATA2_MAPX
-; PRET| 	ldh [hSpriteDataOffset], a
-; PRET| 	call GetPointerWithinSpriteStateData2
-; PRET| 	ld [hl], 25
-; PRET| .playerOnRightSideOfBridge
-; PRET| 	ld a, TOGGLE_CERULEAN_RIVAL
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	ld de, CeruleanCityMovement1
-; PRET| 	ld a, CERULEANCITY_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, SCRIPT_CERULEANCITY_RIVAL_BATTLE
-; PRET| 	ld [wCeruleanCityCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+.skipRocketThiefEncounter:
+    CheckEvent EVENT_BEAT_CERULEAN_RIVAL
+    jz .nr_rival_event
+        ret
+.nr_rival_event:
+    mov esi, CeruleanCityCoords2
+    call ArePlayerCoordsInArray
+    jb .nr_rival_coords
+        ret
+.nr_rival_coords:
+    mov al, [ebp + wWalkBikeSurfState]
+    test al, al
+    jz .walking
+    call StopAllMusic
+.walking:
+    mov bl, 2
+    mov al, MUSIC_MEET_RIVAL
+    call PlayMusic
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + wXCoord]
+    cmp al, 20   ; is the player standing on the right side of the bridge?
+    jz .playerOnRightSideOfBridge
+    mov al, CERULEANCITY_RIVAL
+    mov [ebp + hSpriteIndex], al
+    mov al, SPRITESTATEDATA2_MAPX
+    mov [ebp + hSpriteDataOffset], al
+    call GetPointerWithinSpriteStateData2
+    mov byte [ebp + esi], 25
+.playerOnRightSideOfBridge:
+    mov al, TOGGLE_CERULEAN_RIVAL
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    mov edi, CeruleanCityMovement1   ; pret: ld de, CeruleanCityMovement1 — MoveSprite takes it in EDI
+    mov al, CERULEANCITY_RIVAL
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, SCRIPT_CERULEANCITY_RIVAL_BATTLE
+    mov [ebp + wCeruleanCityCurScript], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

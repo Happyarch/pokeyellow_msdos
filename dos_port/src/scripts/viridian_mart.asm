@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global ViridianMartCheckParcelDeliveredScript
 global ViridianMartClerkParcelQuestText
 global ViridianMartClerkSayHiToOakText
 global ViridianMartClerkYouCameFromPalletTownText
@@ -44,7 +45,6 @@ extern HideObject
 extern ShowObject
 extern StartSimulatingJoypadStates
 extern UpdateSprites
-extern ViridianMartCheckParcelDeliveredScript   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartClerkText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianMartClerkParcelQuestText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianMartClerkSayHiToOakText   ; NOT YET DEFINED IN THE PORT
@@ -78,26 +78,21 @@ ViridianMart_Script:
     call CallFunctionInTable
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianMartCheckParcelDeliveredScript (scripts/ViridianMart.asm:10-13) — at scripts/ViridianMart.asm:11: ViridianMartCheckParcelDeliveredScript.delivered_parcel is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_OAK_GOT_PARCEL
-; PRET| 	jr nz, .delivered_parcel
-; PRET| 	ld hl, ViridianMart_TextPointers
-; PRET| 	jr .done
-
-; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] ViridianMartCheckParcelDeliveredScript.delivered_parcel (scripts/ViridianMart.asm:15-21) — at scripts/ViridianMart.asm:17: `l` is a half of ESI and has no flag-safe 8-bit x86 form
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, ViridianMart_TextPointers2
-; PRET| .done
-; PRET| 	ld a, l
-; PRET| 	ld [wCurMapTextPtr], a
-; PRET| 	ld a, h
-; PRET| 	ld [wCurMapTextPtr+1], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+ViridianMartCheckParcelDeliveredScript:
+    CheckEvent EVENT_OAK_GOT_PARCEL
+    jnz .delivered_parcel
+    mov esi, ViridianMart_TextPointers
+    jmp .done
+.delivered_parcel:
+    mov esi, ViridianMart_TextPointers2
+.done:
+    mov eax, esi   ; pret: ld a, l / ld a, h — ESI holds HL
+    mov [ebp + wCurMapTextPtr], al
+    mov [ebp + wCurMapTextPtr + 1], ah
+    mov al, ah     ; pret: at ret, a holds h
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

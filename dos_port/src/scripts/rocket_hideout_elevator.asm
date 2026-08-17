@@ -25,6 +25,7 @@ bits 32
 global RocketHideoutElevatorFloors
 global RocketHideoutElevatorScript
 global RocketHideoutElevatorShakeScript
+global RocketHideoutElevatorStoreWarpEntriesScript
 global RocketHideoutElevatorText
 global RocketHideoutElevatorWarpMaps
 global RocketHideoutElevator_Script
@@ -37,7 +38,6 @@ extern DisplayElevatorFloorMenu   ; NOT YET DEFINED IN THE PORT
 extern IsItemInBag
 extern LoadItemList
 extern PrintText
-extern RocketHideoutElevatorStoreWarpEntriesScript   ; NOT YET DEFINED IN THE PORT
 extern ShakeElevator
 extern TextScriptEnd
 extern _RocketHideoutElevatorAppearsToNeedKeyText   ; NOT YET DEFINED IN THE PORT
@@ -80,25 +80,26 @@ RocketHideoutElevator_Script:
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] RocketHideoutElevatorStoreWarpEntriesScript (scripts/RocketHideoutElevator.asm:18-32) — at scripts/RocketHideoutElevator.asm:23: RocketHideoutElevatorStoreWarpEntriesScript.StoreWarpEntry is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wWarpEntries
-; PRET| 	ld a, [wWarpedFromWhichWarp]
-; PRET| 	ld b, a
-; PRET| 	ld a, [wWarpedFromWhichMap]
-; PRET| 	ld c, a
-; PRET| 	call .StoreWarpEntry
-; PRET| 	; fallthrough
-; PRET| .StoreWarpEntry:
-; PRET| 	inc hl
-; PRET| 	inc hl
-; PRET| 	ld a, b
-; PRET| 	ld [hli], a
-; PRET| 	ld a, c
-; PRET| 	ld [hli], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+RocketHideoutElevatorStoreWarpEntriesScript:
+    mov esi, wWarpEntries
+    mov al, [ebp + wWarpedFromWhichWarp]
+    mov bh, al
+    mov al, [ebp + wWarpedFromWhichMap]
+    mov bl, al
+    call .StoreWarpEntry
+    ; fallthrough
+.StoreWarpEntry:
+    inc esi
+    inc esi
+    mov al, bh
+    mov [ebp + esi], al
+    inc esi
+    mov al, bl
+    mov [ebp + esi], al
+    inc esi
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -23,6 +23,7 @@ bits 32
 %include "assets/pika_pcm.inc"
 
 global CeladonMansion1FClefairyText
+global CeladonMansion1FGrannyText
 global CeladonMansion1FManagersSuiteSignText
 global CeladonMansion1FMeowthText
 global CeladonMansion1FNidoranFText
@@ -37,13 +38,12 @@ global CeladonMansion1Text_f1ee4
 global CeladonMansion1Text_f1ee9
 global CeladonMansion1Text_f1eee
 global CeladonMansionText_f1e9c
+global Func_f1ea2
 global PikachuHappinessThresholds_f1eb9
 
 extern Bankswitch
-extern CeladonMansion1FGrannyText   ; NOT YET DEFINED IN THE PORT
 extern DelayFrames
 extern EnableAutoTextBoxDrawing
-extern Func_f1ea2   ; NOT YET DEFINED IN THE PORT
 extern IsStarterPikachuAliveInOurParty
 extern PlayCry
 extern PlayPikachuSoundClip
@@ -91,20 +91,21 @@ CeladonMansion1FMeowthText:
     call PlayCry
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMansion1FGrannyText (scripts/CeladonMansion1F.asm:22-31) — at scripts/CeladonMansion1F.asm:25: CeladonMansion1FGrannyText.asm_485d9 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	farcall CeladonMansion1FPrintGrannyText
-; PRET| 	ld a, [wPikachuHappiness]
-; PRET| 	cp 251
-; PRET| 	jr c, .asm_485d9
-; PRET| 	ld c, 50
-; PRET| 	call DelayFrames
-; PRET| 	ldpikacry e, PikachuCry23
-; PRET| 	callfar PlayPikachuSoundClip
-; PRET| .asm_485d9
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+CeladonMansion1FGrannyText:
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call CeladonMansion1FPrintGrannyText
+    mov al, [ebp + wPikachuHappiness]
+    cmp al, 251
+    jb .asm_485d9
+    mov bl, 50   ; pret: ld c, 50
+    call DelayFrames
+    mov dl, 22   ; pret: ldpikacry e, PikachuCry23 (0-based clip index)
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call PlayPikachuSoundClip
+.asm_485d9:
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -165,32 +166,25 @@ CeladonMansionText_f1e9c:
     text_promptbutton
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Func_f1ea2 (scripts/CeladonMansion1F_2.asm:27-39) — at scripts/CeladonMansion1F_2.asm:32: Func_f1ea2.asm_f1eb5 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, PikachuHappinessThresholds_f1eb9
-; PRET| .asm_f1ea5
-; PRET| 	ld a, [hli]
-; PRET| 	inc hl
-; PRET| 	and a
-; PRET| 	jr z, .asm_f1eb5
-; PRET| 	ld b, a
-; PRET| 	ld a, [wPikachuHappiness]
-; PRET| 	cp b
-; PRET| 	jr c, .asm_f1eb5
-; PRET| 	inc hl
-; PRET| 	inc hl
-; PRET| 	jr .asm_f1ea5
+%assign event_byte -1
+%assign event_byte_a -1
+Func_f1ea2:
+    mov esi, PikachuHappinessThresholds_f1eb9
+.asm_f1ea5:
+    mov eax, [esi]
+    add esi, 4   ; pret: ld a, [hli] / inc hl — advance ESI to point to text pointer (+4)
+    test al, al  ; pret: and a — check for terminator sentinel (-256 has low byte 0)
+    jz .asm_f1eb5
+    mov bh, al   ; pret: ld b, a — threshold value (B = BH)
+    mov al, [ebp + wPikachuHappiness]
+    cmp al, bh   ; pret: cp b
+    jb .asm_f1eb5
+    add esi, 4   ; pret: inc hl / inc hl — advance past 4-byte text pointer to next entry
+    jmp .asm_f1ea5
 
-; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] Func_f1ea2.asm_f1eb5 (scripts/CeladonMansion1F_2.asm:42-45) — at scripts/CeladonMansion1F_2.asm:43: `h` is a half of ESI and has no flag-safe 8-bit x86 form
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [hli]
-; PRET| 	ld h, [hl]
-; PRET| 	ld l, a
-; PRET| 	ret
+.asm_f1eb5:
+    mov esi, [esi]   ; pret: ld a, [hli] / ld h, [hl] / ld l, a (dw->dd stride: dereference 32-bit pointer)
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

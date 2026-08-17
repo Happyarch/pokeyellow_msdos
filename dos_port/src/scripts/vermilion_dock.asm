@@ -22,10 +22,13 @@ bits 32
 
 %include "assets/audio_constants.inc"
 %include "assets/map_dims.inc"
+%include "coords.inc"
 
 global VermilionDockOAMBlock
 global VermilionDockUnusedText
+global VermilionDock_AnimSmokePuffDriftRight
 global VermilionDock_EmitSmokePuff
+global VermilionDock_EraseSSAnne
 global VermilionDock_Script
 global VermilionDock_TextPointers
 
@@ -43,8 +46,6 @@ extern PlaySoundWaitForCurrent
 extern StopAllMusic
 extern UpdateCGBPal_OBP1   ; NOT YET DEFINED IN THE PORT
 extern VermilionDockSSAnneLeavesScript   ; NOT YET DEFINED IN THE PORT
-extern VermilionDock_AnimSmokePuffDriftRight   ; NOT YET DEFINED IN THE PORT
-extern VermilionDock_EraseSSAnne   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_SyncScrollWithLY   ; NOT YET DEFINED IN THE PORT
 extern WriteOAMBlock
 extern _VermilionDockUnusedText   ; NOT YET DEFINED IN THE PORT
@@ -206,26 +207,34 @@ VermilionDock_Script:
 ; PRET| 	dec [hl]
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[add-hl-r16] VermilionDock_AnimSmokePuffDriftRight (scripts/VermilionDock.asm:125-140) — at scripts/VermilionDock.asm:135: hl de
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	push bc
-; PRET| 	push de
-; PRET| 	ld hl, wShadowOAMSprite04XCoord
-; PRET| 	ld a, [wSSAnneSmokeDriftAmount]
-; PRET| 	swap a
-; PRET| 	ld c, a
-; PRET| 	ld de, OBJ_SIZE
-; PRET| .drift_loop
-; PRET| 	inc [hl]
-; PRET| 	inc [hl]
-; PRET| 	add hl, de
-; PRET| 	dec c
-; PRET| 	jr nz, .drift_loop
-; PRET| 	pop de
-; PRET| 	pop bc
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+; NOT a dw->dd pointer table. `ld de, OBJ_SIZE` is the GB OAM entry stride, and
+; the port's shadow OAM is the real 4-byte GB layout (gb_memmap.inc:1910
+; OAM_ENTRY_SIZE equ 4, wShadowOAM equ 0xC300 "40 sprites x 4 bytes"), so the
+; stride carries verbatim — nothing here is doubled.
+VermilionDock_AnimSmokePuffDriftRight:
+    push ebx                                 ; push bc
+    push edx                                 ; push de
+    mov esi, wShadowOAMSprite04XCoord
+    mov al, [ebp + wSSAnneSmokeDriftAmount]
+    ror al, 4                                ; swap a — nibble swap
+    mov bl, al                               ; ld c, a
+    mov edx, OAM_ENTRY_SIZE                  ; ld de, OBJ_SIZE
+.drift_loop:
+    inc byte [ebp + esi]
+    inc byte [ebp + esi]
+    ; add hl, de. EDX's upper 16 bits are zero (the `mov` above), so this is
+    ; exactly SM83's 16-bit add; no wrap is reachable — ESI runs from 0xC311 and
+    ; the largest count below is 0x80 entries, i.e. up to 0xC511.
+    add esi, edx
+    ; 8-BIT counter, deliberately: pret is `dec c / jr nz` on the 8-bit C, so a
+    ; count of 0 runs 256 times and stops. See the "Preserve Counter WIDTH" rule.
+    dec bl
+    jnz .drift_loop
+    pop edx
+    pop ebx
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -272,36 +281,47 @@ VermilionDockOAMBlock:
 ; PRET| 	jr z, .wait_for_ly_match
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[screen-coord-projection] VermilionDock_EraseSSAnne (scripts/VermilionDock.asm:184-209) — at scripts/VermilionDock.asm:188: hlbgcoord 0, 10
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wVermilionDockTileMapBuffer
-; PRET| 	ld bc, wVermilionDockTileMapBufferEnd - wVermilionDockTileMapBuffer
-; PRET| 	ld a, $14 ; water tile
-; PRET| 	call FillMemory
-; PRET| 	hlbgcoord 0, 10
-; PRET| 	ld de, wVermilionDockTileMapBuffer
-; PRET| 	lb bc, BANK(wVermilionDockTileMapBuffer), 12
-; PRET| 	call CopyVideoData
-; PRET| 
-; PRET| ; Replace the blocks of the lower half of the ship with water blocks. This
-; PRET| ; leaves the upper half alone, but that doesn't matter because replacing any of
-; PRET| ; the blocks is unnecessary because the blocks the ship occupies are south of
-; PRET| ; the player and won't be redrawn when the player automatically walks north and
-; PRET| ; exits the map. This code could be removed without affecting anything.
-; PRET| 	hlowcoord 5, 2, VERMILION_DOCK_WIDTH
-; PRET| 	ld a, $d ; water block
-; PRET| 	ld [hli], a
-; PRET| 	ld [hli], a
-; PRET| 	ld [hli], a
-; PRET| 	ld [hl], a
-; PRET| 
-; PRET| 	ld a, SFX_SS_ANNE_HORN
-; PRET| 	call PlaySound
-; PRET| 	ld c, 120
-; PRET| 	call DelayFrames
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+; NO PROJECTION IS OWED HERE — the bail's `screen-coord-projection` premise is
+; false for `hlbgcoord`. pret's macro (macros/coords.asm) is
+; `vBGMap0 + y * TILEMAP_WIDTH + x` and the port's (include/coords.inc:103-118)
+; is `GB_TILEMAP0 + y * TILEMAP_WIDTH + x` with TILEMAP_WIDTH = 32 on both sides
+; (gb_memmap.inc:1903, :29): this addresses the HARDWARE 32x32 BG map, not the
+; 20x18-vs-40x25 screen buffer, so the two expressions are byte-identical.
+; `hlowcoord` likewise addresses wOverworldMap, and the port's owcoord is the
+; MAP_BORDER-generic form of pret's border-3 literal (coords.inc:136-146).
+VermilionDock_EraseSSAnne:
+; Fill the area the S.S. Anne occupies in BG map 0 with water tiles.
+    mov esi, wVermilionDockTileMapBuffer
+    mov bx, wVermilionDockTileMapBufferEnd - wVermilionDockTileMapBuffer
+    mov al, 0x14                             ; water tile
+    call FillMemory
+    hlbgcoord 0, 10
+    mov edx, wVermilionDockTileMapBuffer     ; ld de — CopyVideoData takes the source in EDX
+    mov bx, ((0) << 8) | (12)                ; lb bc, BANK(wVermilionDockTileMapBuffer), 12 — bank is a flat no-op
+    call CopyVideoData
+
+; Replace the blocks of the lower half of the ship with water blocks. This
+; leaves the upper half alone, but that doesn't matter because replacing any of
+; the blocks is unnecessary because the blocks the ship occupies are south of
+; the player and won't be redrawn when the player automatically walks north and
+; exits the map. This code could be removed without affecting anything.
+    hlowcoord 5, 2, VERMILION_DOCK_WIDTH
+    mov al, 0xd                              ; water block
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+
+    mov al, SFX_SS_ANNE_HORN
+    call PlaySound
+    mov bl, 120                              ; ld c, 120
+    call DelayFrames
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

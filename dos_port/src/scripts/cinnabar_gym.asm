@@ -63,6 +63,7 @@ global CinnabarGymText_f2187
 global CinnabarGym_Script
 global CinnabarGym_ScriptPointers
 global CinnabarGym_TextPointers
+global Func_f2150
 global MovementNpcToLeft
 global MovementNpcToLeftAndUp
 global PikachuMovementData_74f97
@@ -78,7 +79,6 @@ extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern EngageMapTrainer
 extern FlagActionPredef
-extern Func_f2150   ; NOT YET DEFINED IN THE PORT
 extern GetPikachuFacingDirectionAndReturnToE   ; NOT YET DEFINED IN THE PORT
 extern GiveItem
 extern InitBattleEnemyParameters
@@ -885,18 +885,12 @@ CinnabarGymPrintGymGuideText:
     text_far _CinnabarGymGymGuideBeatBlaineText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[add-hl-r16] Func_f2150 (scripts/CinnabarGym_3.asm:21-28) — at scripts/CinnabarGym_3.asm:23: hl de
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, TextPointers_f215d
-; PRET| 	ld d, 0
-; PRET| 	add hl, de
-; PRET| 	add hl, de
-; PRET| 	ld a, [hli]
-; PRET| 	ld h, [hl]
-; PRET| 	ld l, a
-; PRET| 	jp PrintText
+%assign event_byte -1
+%assign event_byte_a -1
+Func_f2150:
+    movzx edx, dl   ; pret: ld d, 0 — zero-extend E to DE
+    mov esi, [TextPointers_f215d + edx * 4]   ; pret: add hl, de / add hl, de (dw->dd stride: 4 bytes per pointer)
+    jmp PrintText
 
 %assign event_byte -1
 %assign event_byte_a -1

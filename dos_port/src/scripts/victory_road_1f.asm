@@ -24,6 +24,7 @@ bits 32
 
 global VictoryRoad1FCooltrainerFText
 global VictoryRoad1FCooltrainerMText
+global VictoryRoad1FDefaultScript
 global VictoryRoad1F_Script
 global VictoryRoad1F_ScriptPointers
 
@@ -37,7 +38,6 @@ extern ReplaceTileBlock
 extern TalkToTrainer
 extern TextScriptEnd
 extern VictoryRoad1FCooltrainerFBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
@@ -91,24 +91,29 @@ VictoryRoad1F_ScriptPointers:
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VictoryRoad1FDefaultScript (scripts/VictoryRoad1F.asm:28-39) — at scripts/VictoryRoad1F.asm:30: .SwitchCoords is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
-; PRET| 	jp nz, CheckFightingMapTrainers
-; PRET| 	ld hl, .SwitchCoords
-; PRET| 	call CheckBoulderCoords
-; PRET| 	jp nc, CheckFightingMapTrainers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	cp PIKACHU_SPRITE_INDEX
-; PRET| 	jp z, CheckFightingMapTrainers
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	set BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	SetEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+VictoryRoad1FDefaultScript:
+    CheckEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
+    jnz CheckFightingMapTrainers
+    mov esi, .SwitchCoords
+    call CheckBoulderCoords
+    jae CheckFightingMapTrainers
+    mov al, [ebp + hSpriteIndex]
+    cmp al, PIKACHU_SPRITE_INDEX
+    jz CheckFightingMapTrainers
+    mov esi, wCurrentMapScriptFlags
+    or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    SetEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
+    ret
 
-; VictoryRoad1FDefaultScript.SwitchCoords (scripts/VictoryRoad1F.asm:42-61) — not re-emitted: VictoryRoad1TrainerHeaders is already defined in assets/trainer_headers.inc.
+%assign event_byte -1
+%assign event_byte_a -1
+.SwitchCoords:
+    db 13, 17
+    db -1 ; end
+
+; VictoryRoad1FDefaultScript.SwitchCoords (scripts/VictoryRoad1F.asm:42-61) — not re-emitted: VictoryRoad1TrainerHeaders is already defined in assets/trainer_headers.inc. Restored .SwitchCoords sibling.
 
 %assign event_byte -1
 %assign event_byte_a -1

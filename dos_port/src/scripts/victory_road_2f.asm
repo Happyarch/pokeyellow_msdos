@@ -24,6 +24,7 @@ bits 32
 
 global VictoryRoad2FCheckBoulderEventScript
 global VictoryRoad2FCooltrainerMText
+global VictoryRoad2FDefaultScript
 global VictoryRoad2FHikerText
 global VictoryRoad2FMoltresText
 global VictoryRoad2FReplaceTileBlockScript
@@ -45,7 +46,6 @@ extern PlayCry
 extern ReplaceTileBlock
 extern TalkToTrainer
 extern TextScriptEnd
-extern VictoryRoad2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FHikerBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FMoltresBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -128,24 +128,26 @@ VictoryRoad2F_ScriptPointers:
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VictoryRoad2FDefaultScript (scripts/VictoryRoad2F.asm:46-59) — at scripts/VictoryRoad2F.asm:46: .SwitchCoords is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .SwitchCoords
-; PRET| 	call CheckBoulderCoords
-; PRET| 	jp nc, CheckFightingMapTrainers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	cp PIKACHU_SPRITE_INDEX
-; PRET| 	jp z, CheckFightingMapTrainers
-; PRET| 	EventFlagAddress hl, EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	cp $2
-; PRET| 	jr z, .second_switch
-; PRET| 	CheckEventReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
-; PRET| 	SetEventReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
-; PRET| 	ret nz
-; PRET| 	jr .set_script_flag
+%assign event_byte -1
+%assign event_byte_a -1
+VictoryRoad2FDefaultScript:
+    mov esi, .SwitchCoords
+    call CheckBoulderCoords
+    jae CheckFightingMapTrainers
+    mov al, [ebp + hSpriteIndex]
+    cmp al, PIKACHU_SPRITE_INDEX
+    jz CheckFightingMapTrainers
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1)
+    %assign event_byte EVENT_BYTE(EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1)
+    mov al, [ebp + wCoordIndex]
+    cmp al, 0x2
+    jz .second_switch
+    CheckEventReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
+    pushfd    ; SM83 form writes no flags
+        SetEventReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
+    popfd
+    jz .set_script_flag
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -162,7 +164,14 @@ VictoryRoad2F_ScriptPointers:
     or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     ret
 
-; VictoryRoad2FDefaultScript.SwitchCoords (scripts/VictoryRoad2F.asm:70-104) — not re-emitted: VictoryRoad2TrainerHeaders is already defined in assets/trainer_headers.inc.
+%assign event_byte -1
+%assign event_byte_a -1
+.SwitchCoords:
+    db 16, 1
+    db 16, 9
+    db -1 ; end
+
+; VictoryRoad2FDefaultScript.SwitchCoords (scripts/VictoryRoad2F.asm:70-104) — not re-emitted: VictoryRoad2TrainerHeaders is already defined in assets/trainer_headers.inc. Restored .SwitchCoords sibling.
 
 %assign event_byte -1
 %assign event_byte_a -1

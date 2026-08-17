@@ -22,6 +22,7 @@ bits 32
 
 
 global Route11Gate2FLeftBinocularsText
+global Route11Gate2FOaksAideText
 global Route11Gate2FRightBinocularsText
 global Route11Gate2FScriptEnd
 global Route11Gate2FYoungsterText
@@ -33,8 +34,8 @@ extern DisableAutoTextBoxDrawing
 extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
 extern GateUpstairsScript_PrintIfFacingUp   ; NOT YET DEFINED IN THE PORT
 extern GetItemName
+extern OaksAideScript   ; NOT YET DEFINED IN THE PORT
 extern PrintText
-extern Route11Gate2FOaksAideText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd
 extern _Route11Gate2FLeftBinocularsNoSnorlaxText   ; NOT YET DEFINED IN THE PORT
 extern _Route11Gate2FLeftBinocularsSnorlaxText   ; NOT YET DEFINED IN THE PORT
@@ -78,33 +79,32 @@ Route11Gate2FYoungsterText:
 Route11Gate2FScriptEnd:
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route11Gate2FOaksAideText (scripts/Route11Gate2F.asm:21-43) — at scripts/Route11Gate2F.asm:22: Route11Gate2FOaksAideText.got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_ITEMFINDER, 1
-; PRET| 	jr c, .got_item
-; PRET| 	ld a, 30
-; PRET| 	ldh [hOaksAideRequirement], a
-; PRET| 	ld a, ITEMFINDER
-; PRET| 	ldh [hOaksAideRewardItem], a
-; PRET| 	ld [wNamedObjectIndex], a
-; PRET| 	call GetItemName
-; PRET| 	ld h, d
-; PRET| 	ld l, e
-; PRET| 	ld de, wOaksAideRewardItemName
-; PRET| 	ld bc, ITEM_NAME_LENGTH
-; PRET| 	call CopyData
-; PRET| 	predef OaksAideScript
-; PRET| 	ldh a, [hOaksAideResult]
-; PRET| 	dec a ; OAKS_AIDE_GOT_ITEM?
-; PRET| 	jr nz, .no_item
-; PRET| 	SetEvent EVENT_GOT_ITEMFINDER
-; PRET| .got_item
-; PRET| 	ld hl, .ItemfinderDescriptionText
-; PRET| 	call PrintText
-; PRET| .no_item
-; PRET| 	jr Route11Gate2FScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+Route11Gate2FOaksAideText:
+    CheckEvent EVENT_GOT_ITEMFINDER, 1   ; pret's 2-arg CARRY form (scripts/Route11Gate2F.asm:21)
+    jb .got_item                         ; pret: jr c, .got_item
+    mov al, 30
+    mov [ebp + hOaksAideRequirement], al
+    mov al, ITEMFINDER
+    mov [ebp + hOaksAideRewardItem], al
+    mov [ebp + wNamedObjectIndex], al
+    call GetItemName
+    mov esi, wNameBuffer
+    mov dx, wOaksAideRewardItemName
+    mov bx, 13
+    call CopyData
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call OaksAideScript
+    mov al, [ebp + hOaksAideResult]
+    dec al   ; OAKS_AIDE_GOT_ITEM?
+    jnz .no_item
+    SetEvent EVENT_GOT_ITEMFINDER
+.got_item:
+    mov esi, .ItemfinderDescriptionText
+    call PrintText
+.no_item:
+    jmp Route11Gate2FScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -21,10 +21,12 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global CeruleanBadgeHouseBadgeTextPointers
 global CeruleanBadgeHouseBoulderBadgeText
 global CeruleanBadgeHouseCascadeBadgeText
 global CeruleanBadgeHouseEarthBadgeText
 global CeruleanBadgeHouseMarshBadgeText
+global CeruleanBadgeHouseMiddleAgedManText
 global CeruleanBadgeHouseRainbowBadgeText
 global CeruleanBadgeHouseSoulBadgeText
 global CeruleanBadgeHouseThunderBadgeText
@@ -32,8 +34,6 @@ global CeruleanBadgeHouseVolcanoBadgeText
 global CeruleanBadgeHouse_Script
 global CeruleanBadgeHouse_TextPointers
 
-extern CeruleanBadgeHouseBadgeTextPointers   ; NOT YET DEFINED IN THE PORT
-extern CeruleanBadgeHouseMiddleAgedManText   ; NOT YET DEFINED IN THE PORT
 extern DisplayListMenuID
 extern LoadItemList
 extern PrintText
@@ -70,44 +70,36 @@ CeruleanBadgeHouse_Script:
 CeruleanBadgeHouse_TextPointers:
     dd CeruleanBadgeHouseMiddleAgedManText
 
-; ---------------------------------------------------------------------------
-; BAIL[add-hl-r16] CeruleanBadgeHouseMiddleAgedManText (scripts/CeruleanBadgeHouse.asm:14-47) — at scripts/CeruleanBadgeHouse.asm:42: hl de
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	xor a
-; PRET| 	ld [wCurrentMenuItem], a
-; PRET| 	ld [wListScrollOffset], a
-; PRET| .loop
-; PRET| 	ld hl, .WhichBadgeText
-; PRET| 	call PrintText
-; PRET| 	ld hl, .BadgeItemList
-; PRET| 	call LoadItemList
-; PRET| 	ld hl, wItemList
-; PRET| 	ld a, l
-; PRET| 	ld [wListPointer], a
-; PRET| 	ld a, h
-; PRET| 	ld [wListPointer + 1], a
-; PRET| 	xor a
-; PRET| 	ld [wPrintItemPrices], a
-; PRET| 	ld [wMenuItemToSwap], a
-; PRET| 	ld a, SPECIALLISTMENU
-; PRET| 	ld [wListMenuID], a
-; PRET| 	call DisplayListMenuID
-; PRET| 	jr c, .done
-; PRET| 	ld hl, CeruleanBadgeHouseBadgeTextPointers
-; PRET| 	ld a, [wCurItem]
-; PRET| 	sub BOULDERBADGE
-; PRET| 	add a
-; PRET| 	ld d, $0
-; PRET| 	ld e, a
-; PRET| 	add hl, de
-; PRET| 	ld a, [hli]
-; PRET| 	ld h, [hl]
-; PRET| 	ld l, a
-; PRET| 	call PrintText
-; PRET| 	jr .loop
+%assign event_byte -1
+%assign event_byte_a -1
+CeruleanBadgeHouseMiddleAgedManText:
+    mov esi, .Text
+    call PrintText
+    xor al, al
+    mov [ebp + wCurrentMenuItem], al
+    mov [ebp + wListScrollOffset], al
+.loop:
+    mov esi, .WhichBadgeText
+    call PrintText
+    mov esi, .BadgeItemList
+    call LoadItemList
+    mov esi, wItemList
+    mov [ebp + wListPointer], si   ; pret: ld a, l / ld [wListPointer], a / ld a, h / ld [wListPointer + 1], a
+    xor al, al
+    mov [ebp + wPrintItemPrices], al
+    mov [ebp + wMenuItemToSwap], al
+    mov al, SPECIALLISTMENU
+    mov [ebp + wListMenuID], al
+    call DisplayListMenuID
+    jb .done
+    mov al, [ebp + wCurItem]
+    sub al, 0x15    ; pret: sub BOULDERBADGE ($15) — kept 8-bit so it wraps as pret's does.
+                    ; No port symbol spells BOULDERBADGE: gb_constants.inc:133 records that
+                    ; pret overloads the id as SAFARI_BAIT, which would read wrong here.
+    movzx eax, al
+    mov esi, [CeruleanBadgeHouseBadgeTextPointers + eax * 4]   ; pret: add hl, de (dw->dd stride: 4 bytes per pointer)
+    call PrintText
+    jmp .loop
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -140,6 +132,10 @@ CeruleanBadgeHouse_TextPointers:
 .VisitAnyTimeText:
     text_far _CeruleanBadgeHouseMiddleAgedManVisitAnyTimeText
     text_end
+
+%assign event_byte -1
+%assign event_byte_a -1
+CeruleanBadgeHouseBadgeTextPointers:
     dd CeruleanBadgeHouseBoulderBadgeText
     dd CeruleanBadgeHouseCascadeBadgeText
     dd CeruleanBadgeHouseThunderBadgeText

@@ -311,6 +311,7 @@ X_ATTACK               equ 0x41
 X_DEFEND               equ 0x42
 X_SPEED                equ 0x43
 X_SPECIAL              equ 0x44
+ITEMFINDER             equ 0x47
 BICYCLE                equ 0x06   ; StartMenu_Item special-cases it (skips the USE/TOSS box)
 
 ; --- wStatusFlags4/6 bits used by the START menu / bag (constants/ram_constants.asm) ---
@@ -659,6 +660,7 @@ PCPOKEMONLISTMENU       equ 0x00
 MOVESLISTMENU           equ 0x01
 PRICEDITEMLISTMENU      equ 0x02
 ITEMLISTMENU            equ 0x03
+SPECIALLISTMENU         equ 0x04   ; special "items": elevator floor list, badge list
 ; wTextBoxID (pret constants/menu_constants.asm text box IDs; JP_* templates
 ; omitted — the port ships the EN tables only, matching the S1 layout seeder)
 MESSAGE_BOX                       equ 0x01

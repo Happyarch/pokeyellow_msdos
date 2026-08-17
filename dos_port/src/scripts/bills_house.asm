@@ -35,6 +35,7 @@ global BillsHousePrintBillPokemonText
 global BillsHousePrintBillSSTicketText
 global BillsHouseScript0
 global BillsHouseScript1
+global BillsHouseScript2
 global BillsHouseScript3
 global BillsHouseScript4
 global BillsHouseScript5
@@ -56,7 +57,6 @@ global RLE_1e219
 
 extern ApplyPikachuMovementData
 extern Bankswitch
-extern BillsHouseScript2   ; NOT YET DEFINED IN THE PORT
 extern BillsHouse_CheckPikachuEmotion   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable
 extern CheckPikachuFollowingPlayer
@@ -200,28 +200,27 @@ BillsHouseScript0:
 BillsHouseScript1:
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] BillsHouseScript2 (scripts/BillsHouse.asm:59-76) — at scripts/BillsHouse.asm:63: de cannot hold the 32-bit address of BillMovement_WalkToCellSeparator; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, [wSpritePlayerStateData1FacingDirection]
-; PRET| 	and a ; cp SPRITE_FACING_DOWN
-; PRET| 	ld de, BillMovement_WalkToCellSeparator
-; PRET| 	jr nz, .notDown
-; PRET| 	call CheckPikachuFollowingPlayer
-; PRET| 	jr nz, .pikachuNotFollowing
-; PRET| 	callfar BillsHousePikachuWatchPlayer
-; PRET| .pikachuNotFollowing
-; PRET| 	ld de, BillMovement_WalkAroundPlayer
-; PRET| .notDown
-; PRET| 	ld a, BILLSHOUSE_BILL_POKEMON
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, SCRIPT_BILLSHOUSE_SCRIPT3
-; PRET| 	ld [wBillsHouseCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+BillsHouseScript2:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    test al, al   ; pret: and a ; cp SPRITE_FACING_DOWN
+    mov edi, BillMovement_WalkToCellSeparator   ; pret: ld de, BillMovement_WalkToCellSeparator — MoveSprite takes EDI
+    jnz .notDown
+    call CheckPikachuFollowingPlayer
+    jnz .pikachuNotFollowing
+    call BillsHousePikachuWatchPlayer   ; pret: callfar BillsHousePikachuWatchPlayer
+.pikachuNotFollowing:
+    mov edi, BillMovement_WalkAroundPlayer   ; pret: ld de, BillMovement_WalkAroundPlayer — MoveSprite takes EDI
+.notDown:
+    mov al, 1   ; pret: ld a, BILLSHOUSE_BILL_POKEMON
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, SCRIPT_BILLSHOUSE_SCRIPT3
+    mov [ebp + wBillsHouseCurScript], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

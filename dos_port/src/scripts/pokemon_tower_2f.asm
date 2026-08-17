@@ -23,6 +23,7 @@ bits 32
 %include "assets/audio_constants.inc"
 
 global PokemonTower2FChannelerText
+global PokemonTower2FDefeatedRivalScript
 global PokemonTower2FPikachuMovement
 global PokemonTower2FPikachuMovementScript
 global PokemonTower2FResetRivalEncounter
@@ -45,7 +46,6 @@ extern Music_RivalAlternateStart
 extern PlayDefaultMusic
 extern PlayMusic
 extern PokemonTower2FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower2FDefeatedRivalScript   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
@@ -146,34 +146,33 @@ PokemonTower2FRivalEncounterEventCoords:
     db 6, 14
     db 0x0F
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] PokemonTower2FDefeatedRivalScript (scripts/PokemonTower2F.asm:65-88) — at scripts/PokemonTower2F.asm:74: de cannot hold the 32-bit address of PokemonTower2FRivalDownThenRightMovement; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, PokemonTower2FResetRivalEncounter
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	SetEvent EVENT_BEAT_POKEMON_TOWER_RIVAL
-; PRET| 	ld a, TEXT_POKEMONTOWER2F_RIVAL
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	ld de, PokemonTower2FRivalDownThenRightMovement
-; PRET| 	CheckEvent EVENT_POKEMON_TOWER_RIVAL_ON_LEFT
-; PRET| 	jr nz, .got_movement
-; PRET| 	callfar PokemonTower2FPikachuMovementScript
-; PRET| 	ld de, PokemonTower2FRivalRightThenDownMovement
-; PRET| .got_movement
-; PRET| 	ld a, POKEMONTOWER2F_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	call StopAllMusic
-; PRET| 	farcall Music_RivalAlternateStart
-; PRET| 	ld a, SCRIPT_POKEMONTOWER2F_RIVAL_EXITS
-; PRET| 	ld [wPokemonTower2FCurScript], a
-; PRET| 	ld [wCurMapScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+PokemonTower2FDefeatedRivalScript:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz PokemonTower2FResetRivalEncounter
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    SetEvent EVENT_BEAT_POKEMON_TOWER_RIVAL
+    mov al, TEXT_POKEMONTOWER2F_RIVAL
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov edi, PokemonTower2FRivalDownThenRightMovement   ; pret: ld de, PokemonTower2FRivalDownThenRightMovement — MoveSprite takes EDI
+    CheckEvent EVENT_POKEMON_TOWER_RIVAL_ON_LEFT
+    jnz .got_movement
+    call PokemonTower2FPikachuMovementScript   ; pret: callfar PokemonTower2FPikachuMovementScript
+    mov edi, PokemonTower2FRivalRightThenDownMovement   ; pret: ld de, PokemonTower2FRivalRightThenDownMovement — MoveSprite takes EDI
+.got_movement:
+    mov al, 1   ; pret: ld a, POKEMONTOWER2F_RIVAL
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    call StopAllMusic
+    call Music_RivalAlternateStart   ; pret: farcall Music_RivalAlternateStart
+    mov al, SCRIPT_POKEMONTOWER2F_RIVAL_EXITS
+    mov [ebp + wPokemonTower2FCurScript], al
+    mov [ebp + wCurMapScript], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

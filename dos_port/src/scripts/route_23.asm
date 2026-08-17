@@ -29,6 +29,7 @@ global EarthBadgeText
 global MarshBadgeText
 global RainbowBadgeText
 global Route23CheckForBadgeScript
+global Route23CopyBadgeTextScript
 global Route23DefaultScript
 global Route23Guard1Text
 global Route23Guard2Text
@@ -60,7 +61,6 @@ extern FlagActionPredef
 extern HideObject
 extern PlaySoundWaitForCurrent
 extern PrintText
-extern Route23CopyBadgeTextScript   ; NOT YET DEFINED IN THE PORT
 extern ShowObject
 extern StartSimulatingJoypadStates
 extern TextScriptEnd
@@ -184,27 +184,21 @@ Route23GuardsYCoords:
     db 136
     db -1
 
-; ---------------------------------------------------------------------------
-; BAIL[add-hl-r16] Route23CopyBadgeTextScript (scripts/Route23.asm:75-91) — at scripts/Route23.asm:79: hl bc
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, BadgeTextPointers
-; PRET| 	ld a, [wWhichBadge]
-; PRET| 	ld c, a
-; PRET| 	ld b, 0
-; PRET| 	add hl, bc
-; PRET| 	add hl, bc
-; PRET| 	ld a, [hli]
-; PRET| 	ld h, [hl]
-; PRET| 	ld l, a
-; PRET| 	ld de, wNameBuffer
-; PRET| .copyTextLoop
-; PRET| 	ld a, [hli]
-; PRET| 	ld [de], a
-; PRET| 	inc de
-; PRET| 	cp '@'
-; PRET| 	jr nz, .copyTextLoop
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+Route23CopyBadgeTextScript:
+    movzx eax, byte [ebp + wWhichBadge]
+    mov esi, [BadgeTextPointers + eax * 4]   ; pret: add hl, bc / add hl, bc (dw->dd stride: 4 bytes per pointer)
+    mov edx, wNameBuffer                     ; pret: ld de, wNameBuffer
+.copyTextLoop:
+    mov al, [esi]
+    inc esi
+    and edx, 0xFFFF                          ; enforce DE 16-bit invariant
+    mov [ebp + edx], al
+    inc edx
+    cmp al, 0x50                             ; pret: cp '@' (charmap terminator 0x50)
+    jnz .copyTextLoop
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

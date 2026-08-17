@@ -22,6 +22,7 @@ bits 32
 
 %include "assets/audio_constants.inc"
 
+global PewterJigglypuff
 global PewterPokecenterChanseyText
 global PewterPokecenterCooltrainerFText
 global PewterPokecenterGentlemanText
@@ -38,7 +39,6 @@ extern CopyData
 extern DelayFrames
 extern DisablePikachuFollowingPlayer
 extern EnableAutoTextBoxDrawing
-extern PewterJigglypuff   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic
 extern PlayMusic
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
@@ -126,68 +126,72 @@ PewterPokecenterPrintCooltrainerFText:
     text_far _PewterPokecenterText3
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PewterJigglypuff (scripts/PewterPokecenter_2.asm:11-68) — at scripts/PewterPokecenter_2.asm:30: PewterJigglypuff.findMatchingFacingDirectionLoop is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, TRUE
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, 32
-; PRET| 	call DelayFrames
-; PRET| 
-; PRET| 	ld hl, .FacingDirections
-; PRET| 	ld de, wJigglypuffFacingDirections
-; PRET| 	ld bc, .FacingDirectionsEnd - .FacingDirections
-; PRET| 	call CopyData
-; PRET| 
-; PRET| 	ld a, [wSprite03StateData1ImageIndex]
-; PRET| 	ld hl, wJigglypuffFacingDirections
-; PRET| .findMatchingFacingDirectionLoop
-; PRET| 	cp [hl]
-; PRET| 	inc hl
-; PRET| 	jr nz, .findMatchingFacingDirectionLoop
-; PRET| 	dec hl
-; PRET| 
-; PRET| 	push hl
-; PRET| 	ld c, BANK(Music_JigglypuffSong)
-; PRET| 	ld a, MUSIC_JIGGLYPUFF_SONG
-; PRET| 	call PlayMusic
-; PRET| 	pop hl
-; PRET| 
-; PRET| .spinMovementLoop
-; PRET| 	ld a, [hl]
-; PRET| 	ld [wSprite03StateData1ImageIndex], a
-; PRET| ; rotate the array
-; PRET| 	push hl
-; PRET| 	ld hl, wJigglypuffFacingDirections
-; PRET| 	ld de, wJigglypuffFacingDirections - 1
-; PRET| 	ld bc, .FacingDirectionsEnd - .FacingDirections
-; PRET| 	call CopyData
-; PRET| 	ld a, [wJigglypuffFacingDirections - 1]
-; PRET| 	ld [wJigglypuffFacingDirections + 3], a
-; PRET| 	pop hl
-; PRET| 	ld c, 24
-; PRET| 	call DelayFrames
-; PRET| 	ld a, [wChannelSoundIDs]
-; PRET| 	ld b, a
-; PRET| 	ld a, [wChannelSoundIDs + CHAN2]
-; PRET| 	or b
-; PRET| 	jr nz, .spinMovementLoop
-; PRET| 
-; PRET| 	ld c, 48
-; PRET| 	call DelayFrames
-; PRET| 	call PlayDefaultMusic
-; PRET| 	ld a, [wPikachuSpawnStateFlags]
-; PRET| 	bit BIT_PIKACHU_SPAWN_STARTER, a
-; PRET| 	ret z
-; PRET| 	callfar CheckPikachuStatusCondition
-; PRET| 	ret c
-; PRET| 	call DisablePikachuFollowingPlayer
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+PewterJigglypuff:
+    mov al, 1   ; TRUE
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, .Text
+    call PrintText
+
+    call StopAllMusic
+    mov bl, 32
+    call DelayFrames
+
+    mov esi, .FacingDirections
+    mov dx, wJigglypuffFacingDirections
+    mov bx, .FacingDirectionsEnd - .FacingDirections
+    call CopyData
+
+    mov al, [ebp + wSprite03StateData1ImageIndex]
+    mov esi, wJigglypuffFacingDirections
+.findMatchingFacingDirectionLoop:
+    cmp al, [ebp + esi]
+    lea esi, [esi+1]
+    jnz .findMatchingFacingDirectionLoop
+    dec esi
+
+    push esi
+    mov bl, MUSIC_JIGGLYPUFF_SONG_BANK
+    mov al, MUSIC_JIGGLYPUFF_SONG
+    call PlayMusic
+    pop esi
+
+.spinMovementLoop:
+    mov al, [ebp + esi]
+    mov [ebp + wSprite03StateData1ImageIndex], al
+; rotate the array
+    push esi
+    mov esi, wJigglypuffFacingDirections
+    mov dx, wJigglypuffFacingDirections - 1
+    mov bx, .FacingDirectionsEnd - .FacingDirections
+    call CopyData
+    mov al, [ebp + wJigglypuffFacingDirections - 1]
+    mov [ebp + wJigglypuffFacingDirections + 3], al
+    pop esi
+    mov bl, 24
+    call DelayFrames
+    mov al, [ebp + wChannelSoundIDs]
+    mov bh, al
+    mov al, [ebp + wChannelSoundIDs + CHAN2]
+    or al, bh
+    jnz .spinMovementLoop
+
+    mov bl, 48
+    call DelayFrames
+    call PlayDefaultMusic
+    mov al, [ebp + wPikachuSpawnStateFlags]
+    test al, (1 << (7))
+    jnz .nr_pikachu_spawn
+        ret
+.nr_pikachu_spawn:
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call CheckPikachuStatusCondition
+    jnc .nr_pikachu_status
+        ret
+.nr_pikachu_status:
+    call DisablePikachuFollowingPlayer
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -199,3 +203,4 @@ PewterPokecenterPrintCooltrainerFText:
     db 0x40 | SPRITE_FACING_LEFT
     db 0x40 | SPRITE_FACING_UP
     db 0x40 | SPRITE_FACING_RIGHT
+.FacingDirectionsEnd:

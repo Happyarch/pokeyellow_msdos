@@ -30,13 +30,16 @@ global OaksLabDefaultScript
 global OaksLabEeveePokeBallText
 global OaksLabFollowedOakScript
 global OaksLabGirlText
+global OaksLabLoadTextPointers2Script
 global OaksLabNoopScript
+global OaksLabOak1Text
 global OaksLabOak2Text
 global OaksLabOakBePatientText
 global OaksLabOakChooseMonSpeechScript
 global OaksLabOakChooseMonText
 global OaksLabOakDontGoAwayYetText
 global OaksLabOakEntersLabScript
+global OaksLabOakGivesPokedexScript
 global OaksLabOakGivesText
 global OaksLabOakGotPokedexText
 global OaksLabOakIHaveARequestText
@@ -59,6 +62,7 @@ global OaksLabPokedexText
 global OaksLabRLE_PlayerWalksToOak
 global OaksLabReceivedText
 global OaksLabRivalAmIGreatOrWhatText
+global OaksLabRivalArrivesAtOaksRequestScript
 global OaksLabRivalChallengesPlayerScript
 global OaksLabRivalEndBattleScript
 global OaksLabRivalExclamationScript
@@ -116,11 +120,7 @@ extern HideObject
 extern IsItemInBag
 extern MoveSprite
 extern Music_RivalAlternateStart
-extern OaksLabLoadTextPointers2Script   ; NOT YET DEFINED IN THE PORT
-extern OaksLabOak1Text   ; NOT YET DEFINED IN THE PORT
-extern OaksLabOakGivesPokedexScript   ; NOT YET DEFINED IN THE PORT
 extern OaksLabPikachuDislikesPokeballsText1   ; NOT YET DEFINED IN THE PORT
-extern OaksLabRivalArrivesAtOaksRequestScript   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic
 extern PlayMusic
 extern PlayPikachuSoundClip
@@ -823,39 +823,51 @@ OaksLabPikachuDislikesPokeballsScript:
     mov [ebp + wOaksLabCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] OaksLabRivalArrivesAtOaksRequestScript (scripts/OaksLab.asm:498-526) — at scripts/OaksLab.asm:518: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	call StopAllMusic
-; PRET| 	farcall Music_RivalAlternateStart
-; PRET| 	ld a, TEXT_OAKSLAB_RIVAL_GRAMPS
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	callfar OaksLabPikachuMovementScript
-; PRET| 	call OaksLabCalcRivalMovementScript
-; PRET| 	ld a, TOGGLE_OAKS_LAB_RIVAL
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	ld a, [wNPCMovementDirections2Index]
-; PRET| 	ld [wSavedNPCMovementDirections2Index], a
-; PRET| 	ld b, 0
-; PRET| 	ld c, a
-; PRET| 	ld hl, wNPCMovementDirections2
-; PRET| 	ld a, NPC_MOVEMENT_UP
-; PRET| 	call FillMemory
-; PRET| 	ld [hl], $ff
-; PRET| 	ld a, OAKSLAB_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld de, wNPCMovementDirections2
-; PRET| 	call MoveSprite
-; PRET| 
-; PRET| 	ld a, SCRIPT_OAKSLAB_OAK_GIVES_POKEDEX
-; PRET| 	ld [wOaksLabCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+; HL domain: GB. The only value loaded into HL in this region is
+; `ld hl, wNPCMovementDirections2` (pret :516), a WRAM address, and the
+; dereference the bail flagged (pret :518 `ld [hl], $ff`) is the next use of it
+; after FillMemory. There is no other path into this label.
+OaksLabRivalArrivesAtOaksRequestScript:
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    call EnableAutoTextBoxDrawing
+    call StopAllMusic
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call Music_RivalAlternateStart
+    mov al, TEXT_OAKSLAB_RIVAL_GRAMPS
+    mov [ebp + hTextID], al
+    call DisplayTextID
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call OaksLabPikachuMovementScript
+    call OaksLabCalcRivalMovementScript
+    mov al, 43                               ; TOGGLE_OAKS_LAB_RIVAL ($2B)
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    mov al, [ebp + wNPCMovementDirections2Index]
+    mov [ebp + wSavedNPCMovementDirections2Index], al
+    mov bh, 0                                ; ld b, 0
+    mov bl, al                               ; ld c, a
+    mov esi, wNPCMovementDirections2
+    mov al, NPC_MOVEMENT_UP
+    call FillMemory
+    ; pret's FillMemory leaves HL at start+count (`ld [hli], a`, home/copy2.asm:150);
+    ; the PORT's PRESERVES ESI by design (src/home/copy2.asm:184 "Out: ESI/EBX/EAX
+    ; unchanged"), so the terminator address is re-formed here. Without this the
+    ; `ld [hl], $ff` would overwrite the FIRST direction byte instead of appending.
+    movzx ecx, bx
+    add esi, ecx
+    mov byte [ebp + esi], 0xff
+    mov al, 1                                ; OAKSLAB_RIVAL
+    mov [ebp + hSpriteIndex], al
+    lea edi, [ebp + wNPCMovementDirections2] ; pret: ld de — MoveSprite takes a FLAT pointer in EDI
+    call MoveSprite
+
+    mov al, SCRIPT_OAKSLAB_OAK_GIVES_POKEDEX
+    mov [ebp + wOaksLabCurScript], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -872,82 +884,99 @@ OaksLabRivalFaceUpOakFaceDownScript:
     call SetSpriteFacingDirectionAndDelay
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] OaksLabOakGivesPokedexScript (scripts/OaksLab.asm:542-613) — at scripts/OaksLab.asm:603: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	call PlayDefaultMusic
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	call OaksLabRivalFaceUpOakFaceDownScript
-; PRET| 	ld a, TEXT_OAKSLAB_RIVAL_MY_POKEMON_HAS_GROWN_STRONGER
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	call DelayFrame
-; PRET| 	call OaksLabRivalFaceUpOakFaceDownScript
-; PRET| 	ld a, TEXT_OAKSLAB_OAK_I_HAVE_A_REQUEST
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	call DelayFrame
-; PRET| 	call OaksLabRivalFaceUpOakFaceDownScript
-; PRET| 	ld a, TEXT_OAKSLAB_OAK_MY_INVENTION_POKEDEX
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	call DelayFrame
-; PRET| 	ld a, TEXT_OAKSLAB_OAK_GOT_POKEDEX
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	call Delay3
-; PRET| 	ld a, TOGGLE_POKEDEX_1
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld a, TOGGLE_POKEDEX_2
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	call OaksLabRivalFaceUpOakFaceDownScript
-; PRET| 	ld a, TEXT_OAKSLAB_OAK_THAT_WAS_MY_DREAM
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	ld a, OAKSLAB_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld a, SPRITE_FACING_RIGHT
-; PRET| 	ldh [hSpriteFacingDirection], a
-; PRET| 	call SetSpriteFacingDirectionAndDelay
-; PRET| 	call Delay3
-; PRET| 	ld a, TEXT_OAKSLAB_RIVAL_LEAVE_IT_ALL_TO_ME
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_GOT_POKEDEX
-; PRET| 	ld a, SCRIPT_VIRIDIANCITY_AFTER_POKEDEX
-; PRET| 	ld [wViridianCityCurScript], a
-; PRET| 	SetEvent EVENT_OAK_GOT_PARCEL
-; PRET| 	ld a, TOGGLE_LYING_OLD_MAN
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld a, TOGGLE_OLD_MAN_2
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	ld a, [wSavedNPCMovementDirections2Index]
-; PRET| 	ld b, 0
-; PRET| 	ld c, a
-; PRET| 	ld hl, wNPCMovementDirections2
-; PRET| 	xor a ; NPC_MOVEMENT_DOWN
-; PRET| 	call FillMemory
-; PRET| 	ld [hl], $ff
-; PRET| 	call StopAllMusic
-; PRET| 	farcall Music_RivalAlternateStart
-; PRET| 	ld a, OAKSLAB_RIVAL
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld de, wNPCMovementDirections2
-; PRET| 	call MoveSprite
-; PRET| 
-; PRET| 	ld a, SCRIPT_OAKSLAB_RIVAL_LEAVES_WITH_POKEDEX
-; PRET| 	ld [wOaksLabCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+; HL domain: GB. The only value loaded into HL in this region is
+; `ld hl, wNPCMovementDirections2` (pret :601), a WRAM address, and the
+; dereference the bail flagged (pret :603 `ld [hl], $ff`) is the next use of it
+; after FillMemory. There is no other path into this label. (The SetEvent macros
+; own their own HL; they do not leave it live across this point.)
+OaksLabOakGivesPokedexScript:
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_544
+        ret
+.nr_544:
+    call EnableAutoTextBoxDrawing
+    call PlayDefaultMusic
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    call OaksLabRivalFaceUpOakFaceDownScript
+    mov al, TEXT_OAKSLAB_RIVAL_MY_POKEMON_HAS_GROWN_STRONGER
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    call DelayFrame
+    call OaksLabRivalFaceUpOakFaceDownScript
+    mov al, TEXT_OAKSLAB_OAK_I_HAVE_A_REQUEST
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    call DelayFrame
+    call OaksLabRivalFaceUpOakFaceDownScript
+    mov al, TEXT_OAKSLAB_OAK_MY_INVENTION_POKEDEX
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    call DelayFrame
+    mov al, TEXT_OAKSLAB_OAK_GOT_POKEDEX
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    call Delay3
+    mov al, 46                               ; TOGGLE_POKEDEX_1 ($2E)
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov al, 47                               ; TOGGLE_POKEDEX_2 ($2F)
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    call OaksLabRivalFaceUpOakFaceDownScript
+    mov al, TEXT_OAKSLAB_OAK_THAT_WAS_MY_DREAM
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov al, 1                                ; OAKSLAB_RIVAL
+    mov [ebp + hSpriteIndex], al
+    mov al, SPRITE_FACING_RIGHT
+    mov [ebp + hSpriteFacingDirection], al
+    call SetSpriteFacingDirectionAndDelay
+    call Delay3
+    mov al, TEXT_OAKSLAB_RIVAL_LEAVE_IT_ALL_TO_ME
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    SetEvent EVENT_GOT_POKEDEX
+    mov al, SCRIPT_VIRIDIANCITY_AFTER_POKEDEX
+    mov [ebp + wViridianCityCurScript], al
+    SetEvent EVENT_OAK_GOT_PARCEL
+    mov al, 1                                ; TOGGLE_LYING_OLD_MAN ($01)
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov al, 3                                ; TOGGLE_OLD_MAN_2 ($03)
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    mov al, [ebp + wSavedNPCMovementDirections2Index]
+    mov bh, 0                                ; ld b, 0
+    mov bl, al                               ; ld c, a
+    mov esi, wNPCMovementDirections2
+    xor al, al                               ; NPC_MOVEMENT_DOWN
+    call FillMemory
+    ; pret's FillMemory leaves HL at start+count (`ld [hli], a`, home/copy2.asm:150);
+    ; the PORT's PRESERVES ESI by design (src/home/copy2.asm:184 "Out: ESI/EBX/EAX
+    ; unchanged"), so the terminator address is re-formed here. Without this the
+    ; `ld [hl], $ff` would overwrite the FIRST direction byte instead of appending.
+    movzx ecx, bx
+    add esi, ecx
+    mov byte [ebp + esi], 0xff
+    call StopAllMusic
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call Music_RivalAlternateStart
+    mov al, 1                                ; OAKSLAB_RIVAL
+    mov [ebp + hSpriteIndex], al
+    lea edi, [ebp + wNPCMovementDirections2] ; pret: ld de — MoveSprite takes a FLAT pointer in EDI
+    call MoveSprite
+
+    mov al, SCRIPT_OAKSLAB_RIVAL_LEAVES_WITH_POKEDEX
+    mov [ebp + wOaksLabCurScript], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -1061,16 +1090,20 @@ OaksLabCalcRivalMovementScript:
     call SetSpritePosition1
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] OaksLabLoadTextPointers2Script (scripts/OaksLab.asm:702-707) — at scripts/OaksLab.asm:703: `l` is a half of ESI and has no flag-safe 8-bit x86 form
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, OaksLab_TextPointers2
-; PRET| 	ld a, l
-; PRET| 	ld [wCurMapTextPtr], a
-; PRET| 	ld a, h
-; PRET| 	ld [wCurMapTextPtr + 1], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+; `ld a, l` / `ld a, h` on a flat program pointer: same idiom, same callee
+; contract, as the already-emitted ViridianMartCheckParcelDeliveredScript
+; (src/scripts/viridian_mart.asm:90-94). wCurMapTextPtr stays pret's 2-byte GB
+; field and receives the low 16 bits; the port does not dereference it as a GB
+; pointer (src/home/text_script.asm:126-138, home/predef_text.asm:8).
+OaksLabLoadTextPointers2Script:
+    mov esi, OaksLab_TextPointers2
+    mov eax, esi   ; pret: ld a, l / ld a, h — ESI holds HL
+    mov [ebp + wCurMapTextPtr], al
+    mov [ebp + wCurMapTextPtr + 1], ah
+    mov al, ah     ; pret: at ret, a holds h
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -1183,25 +1216,25 @@ OaksLabRivalExclamationScript:
     mov [ebp + wOaksLabCurScript], al
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] OaksLabOak1Text (scripts/OaksLab.asm:809-823) — at scripts/OaksLab.asm:810: OaksLabOak1Text.already_got_poke_balls is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_PALLET_AFTER_GETTING_POKEBALLS
-; PRET| 	jr nz, .already_got_poke_balls
-; PRET| 	ld hl, wPokedexOwned
-; PRET| 	ld b, wPokedexOwnedEnd - wPokedexOwned
-; PRET| 	call CountSetBits
-; PRET| 	ld a, [wNumSetBits]
-; PRET| 	cp 2
-; PRET| 	jr c, .check_for_poke_balls
-; PRET| .already_got_poke_balls
-; PRET| 	ld hl, .HowIsYourPokedexComingText
-; PRET| 	call PrintText
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	predef DisplayDexRating
-; PRET| 	jp .done
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabOak1Text:
+    CheckEvent EVENT_PALLET_AFTER_GETTING_POKEBALLS
+    jnz .already_got_poke_balls
+    mov esi, wPokedexOwned
+    mov bh, wPokedexOwnedEnd - wPokedexOwned
+    call CountSetBits
+    mov al, [ebp + wNumSetBits]
+    cmp al, 2
+    jb .check_for_poke_balls
+.already_got_poke_balls:
+    mov esi, .HowIsYourPokedexComingText
+    call PrintText
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call DisplayDexRating
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -1521,12 +1554,18 @@ OaksLabRivalSmellYouLaterText:
 ; PRET| 	call PrintText
 ; PRET| 	jp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] OaksLabPikachuDislikesPokeballsText1.Text (scripts/OaksLab.asm:1101-1102)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _OaksLabPikachuDislikesPokeballsText1
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+; The pret name is kept EXACTLY — `OaksLabPikachuDislikesPokeballsText1.Text` —
+; but written out in full rather than as a bare `.Text:`. NASM binds a bare local
+; to the last non-local label above it, which here is OaksLabRivalSmellYouLaterText
+; (OaksLabPikachuDislikesPokeballsText1 itself is a deliberate pikachu-table-index
+; refusal a few lines up and defines no symbol), and
+; OaksLabRivalSmellYouLaterText.Text already exists — that is the collision. The
+; explicit qualification names the pret symbol unambiguously without renaming it.
+OaksLabPikachuDislikesPokeballsText1.Text:
+    text_far _OaksLabPikachuDislikesPokeballsText1
+    text_end
 
 %assign event_byte -1
 %assign event_byte_a -1

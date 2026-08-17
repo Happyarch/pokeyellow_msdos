@@ -26,6 +26,7 @@ global SilphCoElevatorCopyWarpMapsScript
 global SilphCoElevatorElevatorText
 global SilphCoElevatorFloors
 global SilphCoElevatorShakeScript
+global SilphCoElevatorStoreWarpEntriesScript
 global SilphCoElevatorWarpMaps
 global SilphCoElevator_Script
 global SilphCoElevator_TextPointers
@@ -36,7 +37,6 @@ extern Delay3
 extern DisplayElevatorFloorMenu   ; NOT YET DEFINED IN THE PORT
 extern LoadItemList
 extern ShakeElevator
-extern SilphCoElevatorStoreWarpEntriesScript   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
@@ -77,25 +77,26 @@ SilphCoElevator_Script:
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCoElevatorStoreWarpEntriesScript (scripts/SilphCoElevator.asm:18-32) — at scripts/SilphCoElevator.asm:23: SilphCoElevatorStoreWarpEntriesScript.StoreWarpEntry is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wWarpEntries
-; PRET| 	ld a, [wWarpedFromWhichWarp]
-; PRET| 	ld b, a
-; PRET| 	ld a, [wWarpedFromWhichMap]
-; PRET| 	ld c, a
-; PRET| 	call .StoreWarpEntry
-; PRET| 	; fallthrough
-; PRET| .StoreWarpEntry:
-; PRET| 	inc hl
-; PRET| 	inc hl
-; PRET| 	ld a, b
-; PRET| 	ld [hli], a
-; PRET| 	ld a, c
-; PRET| 	ld [hli], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCoElevatorStoreWarpEntriesScript:
+    mov esi, wWarpEntries
+    mov al, [ebp + wWarpedFromWhichWarp]
+    mov bh, al
+    mov al, [ebp + wWarpedFromWhichMap]
+    mov bl, al
+    call .StoreWarpEntry
+    ; fallthrough
+.StoreWarpEntry:
+    inc esi
+    inc esi
+    mov al, bh
+    mov [ebp + esi], al
+    inc esi
+    mov al, bl
+    mov [ebp + esi], al
+    inc esi
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

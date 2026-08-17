@@ -26,6 +26,7 @@ bits 32
 global SaffronGymChanneler1Text
 global SaffronGymChanneler2Text
 global SaffronGymChanneler3Text
+global SaffronGymGymGuideText
 global SaffronGymResetScripts
 global SaffronGymSabrinaMarshBadgeInfoText
 global SaffronGymSabrinaPostBattle
@@ -53,7 +54,6 @@ extern InitBattleEnemyParameters
 extern LoadGymLeaderAndCityName
 extern PrintText
 extern SaffronGymChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymGymGuideText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -66,6 +66,8 @@ extern SaffronGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers
 extern TalkToTrainer
 extern TextScriptEnd
+extern _SaffronGymGuideBeatSabrinaText   ; NOT YET DEFINED IN THE PORT
+extern _SaffronGymGuideChampInMakingText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGymSabrinaMarshBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGymSabrinaPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGymSabrinaReceivedMarshBadgeText   ; NOT YET DEFINED IN THE PORT
@@ -297,23 +299,33 @@ SaffronGymYoungster4Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGymGymGuideText (scripts/SaffronGym.asm:212-216) — at scripts/SaffronGym.asm:213: SaffronGymGymGuideText.afterBeat is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_SABRINA
-; PRET| 	jr nz, .afterBeat
-; PRET| 	ld hl, .ChampInMakingText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+SaffronGymGymGuideText:
+    CheckEvent EVENT_BEAT_SABRINA
+    jnz .afterBeat
+    mov esi, .ChampInMakingText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGymGymGuideText.afterBeat (scripts/SaffronGym.asm:218-221) — at scripts/SaffronGym.asm:218: .BeatSabrinaText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .BeatSabrinaText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+.afterBeat:
+    mov esi, .BeatSabrinaText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; SaffronGymGymGuideText.ChampInMakingText (scripts/SaffronGym.asm:224-313) — not re-emitted: SaffronGymChanneler1BattleText is already defined in assets/trainer_headers.inc.
+%assign event_byte -1
+%assign event_byte_a -1
+.ChampInMakingText:
+    text_far _SaffronGymGuideChampInMakingText
+    text_end
+
+%assign event_byte -1
+%assign event_byte_a -1
+.BeatSabrinaText:
+    text_far _SaffronGymGuideBeatSabrinaText
+    text_end
+
+; SaffronGymGymGuideText.ChampInMakingText (scripts/SaffronGym.asm:224-313) — not re-emitted: SaffronGymChanneler1BattleText is already defined in assets/trainer_headers.inc. Restored .ChampInMakingText and .BeatSabrinaText siblings.

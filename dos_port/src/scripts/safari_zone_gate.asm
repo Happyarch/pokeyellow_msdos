@@ -26,6 +26,8 @@ global Pointers_f2100
 global SafariZoneEntranceAutoWalk
 global SafariZoneEntranceAutoWalk2
 global SafariZoneEntranceCalculateLowCostAdmission
+global SafariZoneEntranceConvertBCDtoNumber
+global SafariZoneEntranceGetLowCostAdmissionText
 global SafariZoneEntranceText_f20c4
 global SafariZoneEntranceText_f20c9
 global SafariZoneEntranceText_f20f6
@@ -38,6 +40,7 @@ global SafariZoneGateLeavingSafariScript
 global SafariZoneGatePlayerMovingDownScript
 global SafariZoneGatePlayerMovingRightScript
 global SafariZoneGatePlayerMovingUpScript
+global SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText
 global SafariZoneGatePrintSafariZoneWorker2Text
 global SafariZoneGateReturnSimulatedJoypadStateScript
 global SafariZoneGateSafariZoneWorker1GoodHaulComeAgainText
@@ -66,9 +69,6 @@ extern HasEnoughMoney
 extern PlaySoundWaitForCurrent
 extern PrintText
 extern PrintText_NoCreatingTextBox
-extern SafariZoneEntranceConvertBCDtoNumber   ; NOT YET DEFINED IN THE PORT
-extern SafariZoneEntranceGetLowCostAdmissionText   ; NOT YET DEFINED IN THE PORT
-extern SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates
 extern SubBCDPredef
 extern TextScriptEnd
@@ -378,85 +378,83 @@ SafariZoneGateSafariZoneWorker2Text:
     call SafariZoneGatePrintSafariZoneWorker2Text
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText (scripts/SafariZoneGate_2.asm:2-19) — at scripts/SafariZoneGate_2.asm:16: SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .WelcomeText
-; PRET| 	call PrintText
-; PRET| 	ld a, MONEY_BOX
-; PRET| 	ld [wTextBoxID], a
-; PRET| 	call DisplayTextBoxID
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jp nz, .PleaseComeAgain
-; PRET| 	ld hl, wPlayerMoney
-; PRET| 	ld a, [hli]
-; PRET| 	or [hl]
-; PRET| 	inc hl
-; PRET| 	or [hl]
-; PRET| 	jr nz, .has_positive_balance
-; PRET| 	call SafariZoneEntranceGetLowCostAdmissionText
-; PRET| 	jr c, .CantPayWalkDown
-; PRET| 	jr .poor_mans_discount
+%assign event_byte -1
+%assign event_byte_a -1
+SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText:
+    mov esi, .WelcomeText
+    call PrintText
+    mov al, MONEY_BOX
+    mov [ebp + wTextBoxID], al
+    call DisplayTextBoxID
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .PleaseComeAgain
+    mov esi, wPlayerMoney
+    mov al, [ebp + esi]
+    inc esi
+    or al, [ebp + esi]
+    inc esi
+    or al, [ebp + esi]
+    jnz .has_positive_balance
+    call SafariZoneEntranceGetLowCostAdmissionText
+    jb .CantPayWalkDown
+    jmp .poor_mans_discount
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance (scripts/SafariZoneGate_2.asm:22-34) — at scripts/SafariZoneGate_2.asm:29: SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ldh [hMoney], a
-; PRET| 	ld a, $05
-; PRET| 	ldh [hMoney + 1], a
-; PRET| 	ld a, $00
-; PRET| 	ldh [hMoney + 2], a
-; PRET| 	call HasEnoughMoney
-; PRET| 	jr nc, .success
-; PRET| 	ld hl, .NotEnoughMoneyText
-; PRET| 	call PrintText
-; PRET| 	call SafariZoneEntranceCalculateLowCostAdmission
-; PRET| 	jr c, .CantPayWalkDown
-; PRET| 	jr .poor_mans_discount
+%assign event_byte -1
+%assign event_byte_a -1
+.has_positive_balance:
+    xor al, al
+    mov [ebp + hMoney], al
+    mov al, 0x05
+    mov [ebp + hMoney + 1], al
+    xor al, al
+    mov [ebp + hMoney + 2], al
+    call HasEnoughMoney
+    jae .success
+    mov esi, .NotEnoughMoneyText
+    call PrintText
+    call SafariZoneEntranceCalculateLowCostAdmission
+    jb .CantPayWalkDown
+    jmp .poor_mans_discount
 
-; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success (scripts/SafariZoneGate_2.asm:37-70) — at scripts/SafariZoneGate_2.asm:59: `h` is a half of ESI and has no flag-safe 8-bit x86 form
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ld [wPriceTemp], a
-; PRET| 	ld a, $05
-; PRET| 	ld [wPriceTemp + 1], a
-; PRET| 	ld a, $00
-; PRET| 	ld [wPriceTemp + 2], a
-; PRET| 	ld hl, wPriceTemp + 2
-; PRET| 	ld de, wPlayerMoney + 2
-; PRET| 	ld c, 3
-; PRET| 	predef SubBCDPredef
-; PRET| 	ld a, SFX_PURCHASE
-; PRET| 	call PlaySoundWaitForCurrent
-; PRET| 	call WaitForSoundToFinish
-; PRET| 	ld a, MONEY_BOX
-; PRET| 	ld [wTextBoxID], a
-; PRET| 	call DisplayTextBoxID
-; PRET| 	ld hl, .MakePaymentText
-; PRET| 	call PrintText
-; PRET| 	ld a, 30
-; PRET| 	ld hl, 502
-; PRET| .poor_mans_discount
-; PRET| 	ld [wNumSafariBalls], a
-; PRET| 	ld a, h
-; PRET| 	ld [wSafariSteps], a
-; PRET| 	ld a, l
-; PRET| 	ld [wSafariSteps + 1], a
-; PRET| 	ld a, PAD_UP
-; PRET| 	ld c, 3
-; PRET| 	call SafariZoneEntranceAutoWalk2
-; PRET| 	SetEvent EVENT_IN_SAFARI_ZONE
-; PRET| 	ResetEventReuseHL EVENT_SAFARI_GAME_OVER
-; PRET| 	ld a, SCRIPT_SAFARIZONEGATE_PLAYER_MOVING
-; PRET| 	ld [wSafariZoneGateCurScript], a
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+.success:
+    xor al, al
+    mov [ebp + wPriceTemp], al
+    mov al, 0x05
+    mov [ebp + wPriceTemp + 1], al
+    xor al, al
+    mov [ebp + wPriceTemp + 2], al
+    mov esi, wPriceTemp + 2
+    mov dx, wPlayerMoney + 2
+    mov bl, 3
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call SubBCDPredef
+    mov al, SFX_PURCHASE
+    call PlaySoundWaitForCurrent
+    call WaitForSoundToFinish
+    mov al, MONEY_BOX
+    mov [ebp + wTextBoxID], al
+    call DisplayTextBoxID
+    mov esi, .MakePaymentText
+    call PrintText
+    mov al, 30
+    mov esi, 502
+.poor_mans_discount:
+    mov [ebp + wNumSafariBalls], al
+    mov ecx, esi
+    mov [ebp + wSafariSteps], ch
+    mov [ebp + wSafariSteps + 1], cl
+    mov al, PAD_UP
+    mov bl, 3
+    call SafariZoneEntranceAutoWalk2
+    SetEvent EVENT_IN_SAFARI_ZONE
+    ResetEventReuseHL EVENT_SAFARI_GAME_OVER
+    mov al, SCRIPT_SAFARIZONEGATE_PLAYER_MOVING
+    mov [ebp + wSafariZoneGateCurScript], al
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -581,28 +579,21 @@ SafariZoneEntranceText_f20c9:
     text_far _SafariZoneLowCostText2
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[add-hl-r16] SafariZoneEntranceGetLowCostAdmissionText (scripts/SafariZoneGate_2.asm:183-200) — at scripts/SafariZoneGate_2.asm:190: hl de
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wSafariSteps
-; PRET| 	ld a, [hl]
-; PRET| 	push af
-; PRET| 	inc [hl]
-; PRET| 	ld e, a
-; PRET| 	ld d, $0
-; PRET| 	ld hl, Pointers_f2100
-; PRET| 	add hl, de
-; PRET| 	add hl, de
-; PRET| 	ld a, [hli]
-; PRET| 	ld h, [hl]
-; PRET| 	ld l, a
-; PRET| 	call PrintText
-; PRET| 	pop af
-; PRET| 	cp $3
-; PRET| 	jr z, .give_one_ball
-; PRET| 	scf
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+SafariZoneEntranceGetLowCostAdmissionText:
+    mov esi, wSafariSteps
+    mov al, [ebp + esi]
+    push eax
+    inc byte [ebp + esi]
+    movzx edx, al
+    mov esi, [Pointers_f2100 + edx * 4]   ; stride 4 into dd table
+    call PrintText
+    pop eax
+    cmp al, 3
+    jz .give_one_ball
+    stc
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -640,20 +631,19 @@ SafariZoneEntranceText_f2119:
     text_far _SafariZoneLowCostText8
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] SafariZoneEntranceConvertBCDtoNumber (scripts/SafariZoneGate_2.asm:240-252) — at scripts/SafariZoneGate_2.asm:243: `l` is a half of ESI and has no flag-safe 8-bit x86 form
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	push hl
-; PRET| 	ld c, a
-; PRET| 	and $f
-; PRET| 	ld l, a
-; PRET| 	ld h, $0
-; PRET| 	ld a, c
-; PRET| 	and $f0
-; PRET| 	swap a
-; PRET| 	ld bc, 10
-; PRET| 	call AddNTimes
-; PRET| 	ld a, l
-; PRET| 	pop hl
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+SafariZoneEntranceConvertBCDtoNumber:
+    push esi
+    mov bl, al                  ; pret: ld c, a
+    and al, 0x0F
+    movzx esi, al               ; pret: ld l, a / ld h, $0
+    mov al, bl                  ; pret: ld a, c
+    and al, 0xF0
+    shr al, 4                   ; pret: swap a
+    mov bx, 10                  ; pret: ld bc, 10
+    call AddNTimes
+    mov ecx, esi                ; pret: ld a, l
+    mov al, cl
+    pop esi
+    ret

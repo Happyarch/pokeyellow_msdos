@@ -141,12 +141,16 @@ RocketHideoutB1FRocket5Text:
 
 ; RocketHideoutB1FRocket5EndBattleText (scripts/RocketHideoutB1F.asm:95-95) — not re-emitted: RocketHideoutB1FRocket5EndBattleText is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] scripts/RocketHideoutB1F.asm:anon (scripts/RocketHideoutB1F.asm:97-99) — at scripts/RocketHideoutB1F.asm:98: .prompt_end is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	SetEvent EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4
-; PRET| 	ld hl, .prompt_end
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+    SetEvent EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4
+    mov esi, .prompt_end
+    ret
 
-; RocketHideoutB1FRocket5EndBattleText.prompt_end (scripts/RocketHideoutB1F.asm:102-159) — not re-emitted: RocketHideoutB1FRocket1BattleText is already defined in assets/trainer_headers.inc.
+%assign event_byte -1
+%assign event_byte_a -1
+.prompt_end:
+    text_promptbutton
+    text_end
+
+; RocketHideoutB1FRocket5EndBattleText.prompt_end (scripts/RocketHideoutB1F.asm:102-159) — not re-emitted: RocketHideoutB1FRocket1BattleText is already defined in assets/trainer_headers.inc. Restored .prompt_end sibling.

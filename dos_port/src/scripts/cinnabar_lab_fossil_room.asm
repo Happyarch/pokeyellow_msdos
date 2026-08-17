@@ -26,6 +26,7 @@ global CinnabarLabFossilRoomScientist2Text
 global CinnabarLabFossilRoom_Script
 global CinnabarLabFossilRoom_TextPointers
 global FossilsList
+global Lab4Script_GetFossilsInBag
 global LoadFossilItemAndMonNameBank1D
 
 extern Bankswitch
@@ -34,7 +35,6 @@ extern EnableAutoTextBoxDrawing
 extern GetQuantityOfItemInBag
 extern GiveFossilToCinnabarLab   ; NOT YET DEFINED IN THE PORT
 extern GivePokemon
-extern Lab4Script_GetFossilsInBag   ; NOT YET DEFINED IN THE PORT
 extern LoadFossilItemAndMonName   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern TextScriptEnd
@@ -66,45 +66,40 @@ CinnabarLabFossilRoom_TextPointers:
     dd CinnabarLabFossilRoomScientist1Text
     dd CinnabarLabFossilRoomScientist2Text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Lab4Script_GetFossilsInBag (scripts/CinnabarLabFossilRoom.asm:11-37) — at scripts/CinnabarLabFossilRoom.asm:18: Lab4Script_GetFossilsInBag.done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ld [wFilteredBagItemsCount], a
-; PRET| 	ld de, wFilteredBagItems
-; PRET| 	ld hl, FossilsList
-; PRET| .loop
-; PRET| 	ld a, [hli]
-; PRET| 	and a
-; PRET| 	jr z, .done
-; PRET| 	push hl
-; PRET| 	push de
-; PRET| 	ld [wTempByteValue], a
-; PRET| 	ld b, a
-; PRET| 	predef GetQuantityOfItemInBag
-; PRET| 	pop de
-; PRET| 	pop hl
-; PRET| 	ld a, b
-; PRET| 	and a
-; PRET| 	jr z, .loop
-; PRET| 	; A fossil is in the bag
-; PRET| 	ld a, [wTempByteValue]
-; PRET| 	ld [de], a
-; PRET| 	inc de
-; PRET| 	push hl
-; PRET| 	ld hl, wFilteredBagItemsCount
-; PRET| 	inc [hl]
-; PRET| 	pop hl
-; PRET| 	jr .loop
-
-; ---------------------------------------------------------------------------
-; BAIL[ld-via-bc-de] Lab4Script_GetFossilsInBag.done (scripts/CinnabarLabFossilRoom.asm:39-41) — at scripts/CinnabarLabFossilRoom.asm:40: [dx] needs a 16-bit GB pointer
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, $ff
-; PRET| 	ld [de], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+Lab4Script_GetFossilsInBag:
+    xor al, al
+    mov [ebp + wFilteredBagItemsCount], al
+    mov edx, wFilteredBagItems
+    mov esi, FossilsList
+.loop:
+    mov al, [esi]
+    lea esi, [esi+1]
+    test al, al
+    jz .done
+    push esi
+    push edx
+    mov [ebp + wTempByteValue], al
+    mov bh, al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call GetQuantityOfItemInBag
+    pop edx
+    pop esi
+    mov al, bh
+    test al, al
+    jz .loop
+    mov al, [ebp + wTempByteValue]
+    and edx, 0xFFFF   ; pret: ld [de], a — enforce 16-bit GB pointer before accessing ebp + edx
+    mov [ebp + edx], al
+    inc edx
+    inc byte [ebp + wFilteredBagItemsCount]
+    jmp .loop
+.done:
+    mov al, 0xff
+    and edx, 0xFFFF   ; pret: ld [de], a — enforce 16-bit GB pointer before accessing ebp + edx
+    mov [ebp + edx], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

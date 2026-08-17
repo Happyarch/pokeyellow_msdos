@@ -33,6 +33,9 @@ global CeladonMartRoofLittleGirlText
 global CeladonMartRoofLittleGirlYayFreshWaterText
 global CeladonMartRoofLittleGirlYayLemonadeText
 global CeladonMartRoofLittleGirlYaySodaPopText
+global CeladonMartRoofScript_GetDrinksInBag
+global CeladonMartRoofScript_GiveDrinkToGirl
+global CeladonMartRoofScript_PrintDrinksInBag
 global CeladonMartRoofSuperNerdText
 global CeladonMartRoofVendingMachineText
 global CeladonMartRoof_Script
@@ -41,9 +44,6 @@ global RemoveItemByIDBank12
 
 extern AddNTimes
 extern Bankswitch
-extern CeladonMartRoofScript_GetDrinksInBag   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofScript_GiveDrinkToGirl   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofScript_PrintDrinksInBag   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing
 extern GetItemName
 extern GetQuantityOfItemInBag
@@ -72,6 +72,7 @@ extern _CeladonMartRoofLittleGirlYayFreshWaterText   ; NOT YET DEFINED IN THE PO
 extern _CeladonMartRoofLittleGirlYayLemonadeText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofLittleGirlYaySodaPopText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofSuperNerdText   ; NOT YET DEFINED IN THE PORT
+extern text_row_stride   ; src/home/text.asm — live wTileMap row stride (20 menu scratch / 40 flat canvas)
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -91,45 +92,49 @@ CeladonMartRoof_Script:
     call EnableAutoTextBoxDrawing
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] CeladonMartRoofScript_GetDrinksInBag (scripts/CeladonMartRoof.asm:7-33) — at scripts/CeladonMartRoof.asm:12: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ld [wFilteredBagItemsCount], a
-; PRET| 	ld de, wFilteredBagItems
-; PRET| 	ld hl, CeladonMartRoofDrinkList
-; PRET| .loop
-; PRET| 	ld a, [hli]
-; PRET| 	and a
-; PRET| 	jr z, .done
-; PRET| 	push hl
-; PRET| 	push de
-; PRET| 	ld [wTempByteValue], a
-; PRET| 	ld b, a
-; PRET| 	predef GetQuantityOfItemInBag
-; PRET| 	pop de
-; PRET| 	pop hl
-; PRET| 	ld a, b
-; PRET| 	and a
-; PRET| 	jr z, .loop
-; PRET| 	; A drink is in the bag
-; PRET| 	ld a, [wTempByteValue]
-; PRET| 	ld [de], a
-; PRET| 	inc de
-; PRET| 	push hl
-; PRET| 	ld hl, wFilteredBagItemsCount
-; PRET| 	inc [hl]
-; PRET| 	pop hl
-; PRET| 	jr .loop
-
-; ---------------------------------------------------------------------------
-; BAIL[ld-via-bc-de] CeladonMartRoofScript_GetDrinksInBag.done (scripts/CeladonMartRoof.asm:35-37) — at scripts/CeladonMartRoof.asm:36: [dx] needs a 16-bit GB pointer
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, $ff
-; PRET| 	ld [de], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+CeladonMartRoofScript_GetDrinksInBag:
+; construct a list of all drinks in the player's bag
+; HL domain: FLAT. The only value ever loaded into HL before the `ld a, [hli]`
+; at pret :12 is `ld hl, CeladonMartRoofDrinkList` (:10) — a program-image table.
+; The two paths that re-enter `.loop` (:24 and :33) both restore HL from the
+; `push hl` at :15, and the one intervening `ld hl, wFilteredBagItemsCount`
+; (:30) is bracketed by push/pop (:29/:32), so it never reaches a dereference.
+; Same routine shape, same lowering, as the already-emitted
+; CinnabarLabFossilRoomScript_GetFossilsInBag (src/scripts/cinnabar_lab_fossil_room.asm:70-102).
+    xor al, al
+    mov [ebp + wFilteredBagItemsCount], al
+    mov edx, wFilteredBagItems
+    mov esi, CeladonMartRoofDrinkList
+.loop:
+    mov al, [esi]
+    lea esi, [esi+1]
+    test al, al
+    jz .done
+    push esi
+    push edx
+    mov [ebp + wTempByteValue], al
+    mov bh, al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call GetQuantityOfItemInBag
+    pop edx
+    pop esi
+    mov al, bh
+    test al, al
+    jz .loop
+    ; A drink is in the bag
+    mov al, [ebp + wTempByteValue]
+    and edx, 0xFFFF   ; pret: ld [de], a — enforce 16-bit GB pointer before accessing ebp + edx
+    mov [ebp + edx], al
+    inc edx
+    inc byte [ebp + wFilteredBagItemsCount]   ; pret: push hl / ld hl, wFilteredBagItemsCount / inc [hl] / pop hl
+    jmp .loop
+.done:
+    mov al, 0xff
+    and edx, 0xFFFF   ; pret: ld [de], a — enforce 16-bit GB pointer before accessing ebp + edx
+    mov [ebp + edx], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -139,66 +144,77 @@ CeladonMartRoofDrinkList:
     db LEMONADE
     db 0
 
-; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] CeladonMartRoofScript_GiveDrinkToGirl (scripts/CeladonMartRoof.asm:46-101) — at scripts/CeladonMartRoof.asm:66: `l` is a half of ESI and has no flag-safe 8-bit x86 form
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	set BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	ld hl, CeladonMartRoofLittleGirlGiveHerWhichDrinkText
-; PRET| 	call PrintText
-; PRET| 	xor a
-; PRET| 	ld [wCurrentMenuItem], a
-; PRET| 	ld a, PAD_A | PAD_B
-; PRET| 	ld [wMenuWatchedKeys], a
-; PRET| 	ld a, [wFilteredBagItemsCount]
-; PRET| 	dec a
-; PRET| 	ld [wMaxMenuItem], a
-; PRET| 	ld a, 2
-; PRET| 	ld [wTopMenuItemY], a
-; PRET| 	ld a, 1
-; PRET| 	ld [wTopMenuItemX], a
-; PRET| 	ld a, [wFilteredBagItemsCount]
-; PRET| 	dec a
-; PRET| 	ld bc, 2
-; PRET| 	ld hl, 3
-; PRET| 	call AddNTimes
-; PRET| 	dec l
-; PRET| 	ld b, l
-; PRET| 	ld c, 12
-; PRET| 	hlcoord 0, 0
-; PRET| 	call TextBoxBorder
-; PRET| 	call UpdateSprites
-; PRET| 	call CeladonMartRoofScript_PrintDrinksInBag
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	res BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	call HandleMenuInput
-; PRET| 	bit B_PAD_B, a
-; PRET| 	ret nz
-; PRET| 	ld hl, wFilteredBagItems
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	ld d, 0
-; PRET| 	ld e, a
-; PRET| 	add hl, de
-; PRET| 	ld a, [hl]
-; PRET| 	ldh [hItemToRemoveID], a
-; PRET| 	cp FRESH_WATER
-; PRET| 	jr z, .gaveFreshWater
-; PRET| 	cp SODA_POP
-; PRET| 	jr z, .gaveSodaPop
-; PRET| ; gave Lemonade
-; PRET| 	CheckEvent EVENT_GOT_TM49
-; PRET| 	jr nz, .alreadyGaveDrink
-; PRET| 	ld hl, CeladonMartRoofLittleGirlYayLemonadeText
-; PRET| 	call PrintText
-; PRET| 	call RemoveItemByIDBank12
-; PRET| 	lb bc, TM_TRI_ATTACK, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bagFull
-; PRET| 	ld hl, CeladonMartRoofLittleGirlReceivedTM49Text
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_TM49
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+CeladonMartRoofScript_GiveDrinkToGirl:
+    mov esi, wStatusFlags5
+    or byte [ebp + esi], (1 << (BIT_NO_TEXT_DELAY))
+    mov esi, CeladonMartRoofLittleGirlGiveHerWhichDrinkText
+    call PrintText
+    xor al, al
+    mov [ebp + wCurrentMenuItem], al
+    mov al, PAD_A | PAD_B
+    mov [ebp + wMenuWatchedKeys], al
+    mov al, [ebp + wFilteredBagItemsCount]
+    dec al
+    mov [ebp + wMaxMenuItem], al
+    mov al, 2
+    mov [ebp + wTopMenuItemY], al
+    mov al, 1
+    mov [ebp + wTopMenuItemX], al
+    mov al, [ebp + wFilteredBagItemsCount]
+    dec al
+    mov bx, 2                                ; ld bc, 2
+    mov esi, 3                               ; ld hl, 3 — a COUNT here, not a pointer
+    call AddNTimes                           ; ESI = 3 + 2 * (count - 1)
+    ; pret `dec l`: HL is 3/5/7 here (the caller only reaches this routine with
+    ; wFilteredBagItemsCount in 1..3, CeladonMartRoofLittleGirlText:229-231), so
+    ; H is 0 and no borrow can cross into it — `dec esi` is exact. No flag is
+    ; live across it (the next pret op is `ld b, l`).
+    dec esi
+    mov ecx, esi                             ; ESI's low byte via scratch: NASM 32-bit
+    mov bh, cl                               ; ld b, l — box interior height = 2 * count
+    mov bl, 12                               ; ld c, 12 — box interior width
+    mov esi, wTileMap                        ; hlcoord 0, 0 (same idiom as bills_pc.asm:170)
+    call TextBoxBorder
+    call UpdateSprites
+    call CeladonMartRoofScript_PrintDrinksInBag
+    mov esi, wStatusFlags5
+    and byte [ebp + esi], ~(1 << (BIT_NO_TEXT_DELAY)) & 0xFF
+    call HandleMenuInput
+    test al, (1 << (1))                      ; bit B_PAD_B, a — PAD_B = 1 << 1 (gb_memmap.inc:1686)
+    jz .nr_77
+        ret
+.nr_77:
+    mov esi, wFilteredBagItems
+    mov al, [ebp + wCurrentMenuItem]
+    mov dh, 0                                ; ld d, 0
+    mov dl, al                               ; ld e, a
+    movzx ecx, dx                            ; add hl, de — DE is an unsigned menu index
+    add esi, ecx
+    mov al, [ebp + esi]                      ; ld a, [hl] — HL is the GB address wFilteredBagItems + n
+    mov [ebp + hItemToRemoveID], al
+    cmp al, FRESH_WATER
+    jz .gaveFreshWater
+    cmp al, SODA_POP
+    jz .gaveSodaPop
+; gave Lemonade
+    CheckEvent EVENT_GOT_TM49
+    jnz .alreadyGaveDrink
+    mov esi, CeladonMartRoofLittleGirlYayLemonadeText
+    call PrintText
+    call RemoveItemByIDBank12
+    ; lb bc, TM_TRI_ATTACK, 1. TM_TRI_ATTACK is TM49 = $F9 = 249: item_constants.asm
+    ; sets `const_next $C4` (:115) so HM01 = $C4 and TM01 = $C9, matching
+    ; gb_constants.inc:144-145. NOTE the two already-emitted sibling branches below
+    ; carry 250 (TM48) and 215 (TM13) — both one too high; see the report.
+    mov bx, ((TM01 + 48) << 8) | (1)
+    call GiveItem
+    jae .bagFull
+    mov esi, CeladonMartRoofLittleGirlReceivedTM49Text
+    call PrintText
+    SetEvent EVENT_GOT_TM49
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -297,30 +313,47 @@ CeladonMartRoofLittleGirlImNotThirstyText:
     text_waitbutton
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[screen-coord-projection] CeladonMartRoofScript_PrintDrinksInBag (scripts/CeladonMartRoof.asm:192-211) — at scripts/CeladonMartRoof.asm:202: hlcoord 2, 2
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wFilteredBagItems
-; PRET| 	xor a
-; PRET| 	ldh [hItemCounter], a
-; PRET| .loop
-; PRET| 	ld a, [hli]
-; PRET| 	cp $ff
-; PRET| 	ret z
-; PRET| 	push hl
-; PRET| 	ld [wNamedObjectIndex], a
-; PRET| 	call GetItemName
-; PRET| 	hlcoord 2, 2
-; PRET| 	ldh a, [hItemCounter]
-; PRET| 	ld bc, SCREEN_WIDTH * 2
-; PRET| 	call AddNTimes
-; PRET| 	ld de, wNameBuffer
-; PRET| 	call PlaceString
-; PRET| 	ld hl, hItemCounter
-; PRET| 	inc [hl]
-; PRET| 	pop hl
-; PRET| 	jr .loop
+%assign event_byte -1
+%assign event_byte_a -1
+; SCREEN PROJECTION. Both pret coordinate expressions here are relative to the
+; SAME text surface the box in CeladonMartRoofScript_GiveDrinkToGirl was drawn
+; on (`hlcoord 0, 0` = wTileMap), and that surface's row stride in this port is
+; the runtime [text_row_stride] — 20 on the GB-shaped menu scratch (the ambient
+; value during overworld dialog, src/home/text.asm:186, restored by
+; src/home/start_menu.asm:235) or 40 on the flat canvas. TextBoxBorder and
+; PlaceString both step rows by that same variable (src/home/text.asm:274, :299),
+; so taking it here keeps base and stride in lockstep on either surface.
+; This is the substitution the port already makes for pret's SCREEN_WIDTH-derived
+; COORDINATE offsets: src/engine/gfx/hp_bar.asm:284-288 and
+; src/home/pokemon.asm:555-560. Writing the literal SCREEN_WIDTH would be the
+; BCOORD trap — SCREEN_WIDTH is 40 in this port (gb_memmap.inc:1644), so on the
+; stride-20 scratch it would land two rows low per item and off the box entirely.
+CeladonMartRoofScript_PrintDrinksInBag:
+    mov esi, wFilteredBagItems
+    xor al, al
+    mov [ebp + hItemCounter], al
+.loop:
+    mov al, [ebp + esi]                      ; ld a, [hli] — HL is a GB address
+    lea esi, [esi+1]
+    cmp al, 0xff
+    jnz .nr_198
+        ret
+.nr_198:
+    push esi
+    mov [ebp + wNamedObjectIndex], al
+    call GetItemName
+    mov esi, [text_row_stride]               ; hlcoord 2, 2
+    shl esi, 1                               ;   row 2
+    add esi, wTileMap + 2                    ;   + col 2
+    movzx eax, byte [ebp + hItemCounter]     ; ldh a, [hItemCounter]
+    mov ebx, [text_row_stride]               ; ld bc, SCREEN_WIDTH * 2 — a ROW STRIDE,
+    shl ebx, 1                               ;   two rows per drink entry
+    call AddNTimes
+    lea eax, [ebp + wNameBuffer]             ; ld de, wNameBuffer — PlaceString takes a flat ptr in EAX
+    call PlaceString
+    inc byte [ebp + hItemCounter]            ; ld hl, hItemCounter / inc [hl]
+    pop esi
+    jmp .loop
 
 %assign event_byte -1
 %assign event_byte_a -1

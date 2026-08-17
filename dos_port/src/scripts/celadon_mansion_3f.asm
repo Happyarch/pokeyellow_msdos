@@ -32,6 +32,7 @@ global CeladonMansion3FPrintGameProgramPCText
 global CeladonMansion3FPrintGameScriptPCText
 global CeladonMansion3FPrintPlayingGamePCText
 global CeladonMansion3FProgrammerText
+global CeladonMansion3FWriterText
 global CeladonMansion3F_Script
 global CeladonMansion3F_TextPointers
 global CeladonMansion3Text_486f0
@@ -39,7 +40,6 @@ global CeladonMansion3Text_486f5
 global CeladonMansion3_PokedexCount
 
 extern Bankswitch
-extern CeladonMansion3FWriterText   ; NOT YET DEFINED IN THE PORT
 extern CountSetBits
 extern Delay3
 extern DisplayDiploma   ; NOT YET DEFINED IN THE PORT
@@ -195,29 +195,27 @@ CeladonMansion3FGraphicArtistText:
     text_far _CeladonMansion3FGraphicArtistText5
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMansion3FWriterText (scripts/CeladonMansion3F.asm:106-113) — at scripts/CeladonMansion3F.asm:108: .Text2 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call CeladonMansion3_PokedexCount
-; PRET| 	cp NUM_POKEMON - 1 ; discount Mew
-; PRET| 	ld hl, .Text2
-; PRET| 	jr nc, .print
-; PRET| 	ld hl, .Text1
-; PRET| .print
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+CeladonMansion3FWriterText:
+    call CeladonMansion3_PokedexCount
+    cmp al, 151 - 1
+    mov esi, .Text2
+    jae .print
+    mov esi, .Text1
+.print:
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] CeladonMansion3FWriterText.Text1 (scripts/CeladonMansion3F.asm:116-121)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonMansion3FWriterText
-; PRET| 	text_end
-; PRET| 
-; PRET| .Text2:
-; PRET| 	text_far _CeladonMansion3FWriterText2
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text1:
+    text_far _CeladonMansion3FWriterText
+    text_end
+
+.Text2:
+    text_far _CeladonMansion3FWriterText2
+    text_end
 
 %assign event_byte -1
 %assign event_byte_a -1

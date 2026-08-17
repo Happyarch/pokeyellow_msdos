@@ -24,6 +24,8 @@ bits 32
 global Func_f23d0
 global SummerBeachHousePikachuText
 global SummerBeachHousePoster1Text
+global SummerBeachHousePoster2Text
+global SummerBeachHousePoster3Text
 global SummerBeachHousePrinterText
 global SummerBeachHouseSurfinDudeText
 global SummerBeachHouse_Script
@@ -44,8 +46,6 @@ extern Printer_PrepareSurfingMinigameHighScoreTileMap   ; NOT YET DEFINED IN THE
 extern ReloadTilesetTilePatterns
 extern RestoreScreenTilesAndReloadTilePatterns
 extern SaveScreenTilesToBuffer2
-extern SummerBeachHousePoster2Text   ; NOT YET DEFINED IN THE PORT
-extern SummerBeachHousePoster3Text   ; NOT YET DEFINED IN THE PORT
 extern SurfingPikachuMinigame   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd
 extern WaitForSoundToFinish
@@ -197,18 +197,17 @@ SummerBeachHousePoster1Text:
     text_far _SummerBeachHousePoster1Text2
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SummerBeachHousePoster2Text (scripts/SummerBeachHouse.asm:101-108) — at scripts/SummerBeachHouse.asm:104: SummerBeachHousePoster2Text.next is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .SummerBeachHousePoster2Text2
-; PRET| 	ld a, [wPikachuSpawnStateFlags]
-; PRET| 	bit BIT_PIKACHU_SPAWN_SURFING, a
-; PRET| 	jr z, .next
-; PRET| 	ld hl, .SummerBeachHousePoster2Text1
-; PRET| .next
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SummerBeachHousePoster2Text:
+    mov esi, .SummerBeachHousePoster2Text2
+    mov al, [ebp + wPikachuSpawnStateFlags]
+    test al, (1 << (6))
+    jz .next
+    mov esi, .SummerBeachHousePoster2Text1
+.next:
+    call PrintText
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -219,18 +218,17 @@ SummerBeachHousePoster1Text:
     text_far _SummerBeachHousePoster2Text2
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SummerBeachHousePoster3Text (scripts/SummerBeachHouse.asm:119-126) — at scripts/SummerBeachHouse.asm:122: SummerBeachHousePoster3Text.next is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .SummerBeachHousePoster3Text2
-; PRET| 	ld a, [wPikachuSpawnStateFlags]
-; PRET| 	bit BIT_PIKACHU_SPAWN_SURFING, a
-; PRET| 	jr z, .next
-; PRET| 	ld hl, .SummerBeachHousePoster3Text1
-; PRET| .next
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SummerBeachHousePoster3Text:
+    mov esi, .SummerBeachHousePoster3Text2
+    mov al, [ebp + wPikachuSpawnStateFlags]
+    test al, (1 << (6))
+    jz .next
+    mov esi, .SummerBeachHousePoster3Text1
+.next:
+    call PrintText
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1

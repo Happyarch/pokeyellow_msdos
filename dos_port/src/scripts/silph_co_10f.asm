@@ -25,6 +25,7 @@ bits 32
 global SilphCo10FGateCallbackScript
 global SilphCo10FRocketText
 global SilphCo10FScientistText
+global SilphCo10FSilphWorkerFText
 global SilphCo10F_Script
 global SilphCo10F_SetUnlockedSilphCoDoorsScript
 
@@ -33,7 +34,6 @@ extern ExecuteCurMapScriptInTable
 extern PrintText
 extern ReplaceTileBlock
 extern SilphCo10FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10FSilphWorkerFText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -41,6 +41,8 @@ extern SilphCo10TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer
 extern TextScriptEnd
+extern _SilphCo10FSilphWorkerFImScaredText   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo10FSilphWorkerFQuietAboutMyCryingText   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -122,16 +124,27 @@ SilphCo10FScientistText:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo10FSilphWorkerFText (scripts/SilphCo10F.asm:74-80) — at scripts/SilphCo10F.asm:75: .QuietAboutMyCryingText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
-; PRET| 	ld hl, .QuietAboutMyCryingText
-; PRET| 	jr nz, .beat_giovanni
-; PRET| 	ld hl, .ImScaredText
-; PRET| .beat_giovanni
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo10FSilphWorkerFText:
+    CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
+    mov esi, .QuietAboutMyCryingText
+    jnz .beat_giovanni
+    mov esi, .ImScaredText
+.beat_giovanni:
+    call PrintText
+    jmp TextScriptEnd
 
-; SilphCo10FSilphWorkerFText.ImScaredText (scripts/SilphCo10F.asm:83-112) — not re-emitted: SilphCo10FRocketBattleText is already defined in assets/trainer_headers.inc.
+%assign event_byte -1
+%assign event_byte_a -1
+.ImScaredText:
+    text_far _SilphCo10FSilphWorkerFImScaredText
+    text_end
+
+%assign event_byte -1
+%assign event_byte_a -1
+.QuietAboutMyCryingText:
+    text_far _SilphCo10FSilphWorkerFQuietAboutMyCryingText
+    text_end
+
+; SilphCo10FSilphWorkerFText.ImScaredText (scripts/SilphCo10F.asm:83-112) — not re-emitted: SilphCo10FRocketBattleText is already defined in assets/trainer_headers.inc. Restored .ImScaredText and .QuietAboutMyCryingText siblings.

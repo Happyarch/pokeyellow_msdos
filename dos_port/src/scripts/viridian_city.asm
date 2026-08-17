@@ -48,6 +48,7 @@ global ViridianCityPikachuMovementData
 global ViridianCityPlayerMovingDownPostTrainingScript
 global ViridianCityPlayerMovingDownScript
 global ViridianCityPostCatchTraining
+global ViridianCityPostInitialCatchTraining
 global ViridianCityPrintFisherText
 global ViridianCityPrintGambler1Text
 global ViridianCityPrintGirlText
@@ -87,7 +88,6 @@ extern TextScriptEnd
 extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites
 extern ViridianCityFisherYouCanHaveThisText   ; NOT YET DEFINED IN THE PORT
-extern ViridianCityPostInitialCatchTraining   ; NOT YET DEFINED IN THE PORT
 extern ViridianCityYoungster2CaterpieAndWeedleDescriptionText   ; NOT YET DEFINED IN THE PORT
 extern ViridianCityYoungster2OkThenText   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice
@@ -423,23 +423,22 @@ ViridianCityOldManEndInitialCatchTrainingScript:
     mov [ebp + wViridianCityCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] ViridianCityPostInitialCatchTraining (scripts/ViridianCity.asm:220-232) — at scripts/ViridianCity.asm:220: de cannot hold the 32-bit address of ViridianCityOldManMovementData2; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld de, ViridianCityOldManMovementData2
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 19
-; PRET| 	jr z, .move_old_man
-; PRET| 	callfar ViridianCityMovePikachu
-; PRET| 	ld de, ViridianCityOldManMovementData1
-; PRET| .move_old_man
-; PRET| 	ld a, VIRIDIANCITY_OLD_MAN2
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 	ld a, SCRIPT_VIRIDIANCITY_OLD_MAN_MOVING_DOWN
-; PRET| 	ld [wViridianCityCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+ViridianCityPostInitialCatchTraining:
+    mov edi, ViridianCityOldManMovementData2   ; pret: ld de, ViridianCityOldManMovementData2 — MoveSprite takes EDI
+    mov al, [ebp + wXCoord]
+    cmp al, 19
+    jz .move_old_man
+    call ViridianCityMovePikachu   ; pret: callfar ViridianCityMovePikachu
+    mov edi, ViridianCityOldManMovementData1   ; pret: ld de, ViridianCityOldManMovementData1 — MoveSprite takes EDI
+.move_old_man:
+    mov al, 8   ; pret: ld a, VIRIDIANCITY_OLD_MAN2
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, SCRIPT_VIRIDIANCITY_OLD_MAN_MOVING_DOWN
+    mov [ebp + wViridianCityCurScript], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1
