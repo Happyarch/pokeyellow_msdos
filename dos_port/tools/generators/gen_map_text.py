@@ -41,11 +41,45 @@ gbt.TEXT_SRC = (sorted((ROOT / "text").glob("*.asm"))
                 + sorted((ROOT / "data" / "text").glob("text_*.asm")))
 
 
-def wanted():
-    """port script stem -> [labels it externs that start with '_'], in file order."""
+def port_defined():
+    """Every symbol already defined in the port, EXCLUDING what we generate here.
+
+    Without this a label that some other file already defines would be emitted a
+    second time and collide at link. Most far streams are `_Foo`, but pret does not
+    use that prefix consistently -- MelanieText1, FanClubChairPrintText1 and 21
+    others are plain names -- so the filter cannot be "starts with an underscore".
+    """
+    seen = set()
+    for root in (DOS / "src", DOS / "assets"):
+        for dp, _, fs in os.walk(root):
+            if Path(dp) == OUTDIR:
+                continue
+            for f in fs:
+                if not f.endswith((".asm", ".inc")):
+                    continue
+                txt = (Path(dp) / f).read_text(encoding="utf-8", errors="ignore")
+                seen |= set(re.findall(r"^([A-Za-z_]\w*):", txt, re.M))
+                seen |= set(re.findall(r"^global +([A-Za-z_]\w*)", txt, re.M))
+    return seen
+
+
+def wanted(defined, far):
+    """port script stem -> [far labels it REFERENCES], in first-use order.
+
+    Keyed on references, not on `extern` lines, so the generator is IDEMPOTENT: once
+    a stream is emitted the script no longer externs it, and an extern-keyed scan
+    would drop it on the next run and silently empty the .inc. Comment lines are
+    stripped first so a label named in prose (or inside a BAIL banner, which quotes
+    pret verbatim) is not mistaken for a use.
+    """
     out = {}
     for p in sorted(SCRIPTS.glob("*.asm")):
-        labels = re.findall(r"^extern +(_\w+)", p.read_text(encoding="utf-8"), re.M)
+        code = "\n".join(l.split(";", 1)[0] for l in p.read_text(encoding="utf-8").splitlines())
+        seen, labels = set(), []
+        for tok in re.findall(r"\b[A-Za-z_]\w*\b", code):
+            if tok in far and tok not in defined and tok not in seen:
+                seen.add(tok)
+                labels.append(tok)
         if labels:
             out[p.stem] = labels
     return out
@@ -54,9 +88,10 @@ def wanted():
 def main() -> int:
     far = gbt.collect_far(gbt.load_charmap(), gbt.load_memmap())
     OUTDIR.mkdir(parents=True, exist_ok=True)
+    defined = port_defined()
     files = labels = skipped = 0
     missing = []
-    for stem, want in sorted(wanted().items()):
+    for stem, want in sorted(wanted(defined, far).items()):
         have = [l for l in want if l in far]
         skipped += len(want) - len(have)
         missing += [l for l in want if l not in far]

@@ -88,9 +88,6 @@ extern StartSimulatingJoypadStates
 extern TextScriptEnd
 extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites
-extern ViridianCityFisherYouCanHaveThisText   ; NOT YET DEFINED IN THE PORT
-extern ViridianCityYoungster2CaterpieAndWeedleDescriptionText   ; NOT YET DEFINED IN THE PORT
-extern ViridianCityYoungster2OkThenText   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice
 
 ; Script constants — pret defines these via dw_const in this file.

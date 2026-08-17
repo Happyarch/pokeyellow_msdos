@@ -81,6 +81,11 @@ TEXT_SCRIPT_FAR = [
     "_RepelWoreOffText",
 ]
 
+# engine/events/pokecenter_chansey.asm's one message (data/text/text_1.asm).
+POKECENTER_CHANSEY_FAR = [
+    "_NurseChanseyText",
+]
+
 # The five `text_far _XxxText / text_end` wrappers in pret home/overworld_text.asm
 # (sign, boulder and ledge messages the map scripts extern). The port deferred all
 # five for want of exactly this: their strings are Tier-1 DATA and had no generator.
@@ -138,6 +143,8 @@ def main() -> int:
          "DisplayTextID FAR text streams (data/text/text_7.asm)"),
         ("overworld_sign_text", OVERWORLD_SIGN_FAR,
          "Sign / boulder / ledge FAR text streams for home/overworld_text.asm"),
+        ("pokecenter_chansey_text", POKECENTER_CHANSEY_FAR,
+         "Nurse's Chansey message for engine/events/pokecenter_chansey.asm"),
     ]
     for base, labels, desc in far_files:
         fout = [

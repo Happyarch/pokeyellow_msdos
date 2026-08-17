@@ -71,6 +71,7 @@ global Serial_ExchangeNybble
 global Serial_SyncAndExchangeNybble
 global Serial_SendZeroByte
 global CloseLinkConnection
+global Serial_TryEstablishingExternallyClockedConnection
 
 ; pret ref: home/serial.asm:Serial_ExchangeByte
 Serial_ExchangeByte:
@@ -99,4 +100,17 @@ Serial_SendZeroByte:
 
 ; pret ref: home/serial.asm:CloseLinkConnection
 CloseLinkConnection:
+    ret
+
+; pret ref: home/serial.asm:Serial_TryEstablishingExternallyClockedConnection
+; pret writes rSB = ESTABLISH_CONNECTION_WITH_EXTERNAL_CLOCK, clears
+; hSerialReceiveData, then arms rSC = SC_START | SC_EXTERNAL to start the transfer.
+; rSB/rSC are TODO-HW here (no serial hardware, no transport), but the
+; hSerialReceiveData clear is REAL state the callers read back, so it is kept:
+; the cable-club receptionists poll that byte after calling this, and leaving it
+; holding the previous screen's value is exactly the undefined-path failure this
+; file's contract note warns about. Cleared to 0 = "nothing received", which is
+; the truth with no partner attached.
+Serial_TryEstablishingExternallyClockedConnection:
+    mov byte [ebp + hSerialReceiveData], 0   ; xor a / ldh [hSerialReceiveData], a
     ret

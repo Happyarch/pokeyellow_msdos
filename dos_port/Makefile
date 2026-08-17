@@ -593,6 +593,7 @@ GAME_SRCS := \
     src/engine/menus/save.asm \
     src/engine/menus/naming_screen.asm \
     src/engine/menus/pokedex.asm \
+    src/home/printer.asm \
     src/engine/printer/printer_stubs.asm \
     src/engine/menus/link_menu.asm \
     src/home/reload_sprites.asm \
@@ -630,6 +631,7 @@ GAME_SRCS := \
     src/home/overworld_text.asm \
     src/engine/pikachu/pikachu_follow.asm \
     src/engine/events/pewter_guys.asm \
+    src/engine/events/pokecenter_chansey.asm \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/update_map.asm \
     src/engine/overworld/elevator.asm \
@@ -3198,7 +3200,7 @@ assets/script_strings.inc: assets/gb_charmap.txt tools/generators/gen_script_str
 assets/text_oracle.inc: assets/gb_charmap.txt tools/generators/gen_text_oracle.py tools/generators/gb_text.py
 	python3 tools/generators/gen_text_oracle.py
 
-assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/overworld_sign_text.inc &: \
+assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc &: \
                             assets/gb_charmap.txt tools/generators/gen_overworld_strings.py tools/generators/gb_text.py \
                             tools/generators/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_8.asm ../data/text/text_9.asm \
                             ../constants/charmap.asm
@@ -3460,6 +3462,8 @@ assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
 # DrawStartMenu %includes the generated menu_strings.inc labels and the
 # UI_START_MENU_* equates; start_sub_menus needs the UI_USE_TOSS_* equates.
 src/home/overworld_text.o: assets/overworld_sign_text.inc
+src/engine/events/pokecenter_chansey.o: assets/pokecenter_chansey_text.inc \
+                                        assets/script_constants.inc
 src/home/start_menu.o: assets/event_constants.inc assets/audio_constants.inc
 src/engine/menus/draw_start_menu.o: assets/event_constants.inc \
         assets/menu_strings.inc assets/ui_layout_menus.inc
@@ -3704,7 +3708,7 @@ assets: assets/scenario_registry.inc \
         assets/list_menu_strings.inc assets/yes_no_strings.inc \
         assets/script_strings.inc \
         assets/text_oracle.inc \
-        assets/overworld_strings.inc assets/field_move_text.inc assets/overworld_sign_text.inc \
+        assets/overworld_strings.inc assets/field_move_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/field_move_names.inc \

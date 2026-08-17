@@ -50,10 +50,6 @@ extern DisablePikachuFollowingPlayer
 extern DisplayPartyMenu
 extern EmotionBubble
 extern EnableAutoTextBoxDrawing
-extern FanClubChairPrintText1   ; NOT YET DEFINED IN THE PORT
-extern FanClubChairPrintText2   ; NOT YET DEFINED IN THE PORT
-extern FanClubChairPrintText3   ; NOT YET DEFINED IN THE PORT
-extern FanClubChairPrintText4   ; NOT YET DEFINED IN THE PORT
 extern GBPalNormal
 extern GBPalWhiteOutWithDelay3
 extern GiveItem

@@ -33,9 +33,6 @@ global SSAnneKitchen_TextPointers
 
 extern EnableAutoTextBoxDrawing
 extern PrintText
-extern SSAnneKitchenCook7EelsAuBarbecueText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneKitchenCook7PrimeBeefSteakText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneKitchenCook7SalmonDuSaladText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
