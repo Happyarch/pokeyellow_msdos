@@ -1,8 +1,32 @@
 # sm83xlat — one-shot SM83 → x86 transpiler for pret `scripts/`
 
-**STATUS: Stages 0-7 complete. Output emitted, committed, and hand-maintained
-from here.** The fine-comb fan-out (Gemini via `agy`) has NOT been started —
-another session sequences it.
+**STATUS: RETIRED. The tool will not run.** Stages 0-7 are complete, the one shot
+has been taken, and `dos_port/src/scripts/` is ordinary hand-maintained source
+that the fine comb edits directly.
+
+`transpile.py` exits 2 on every generating mode with an explanation. The one mode
+that still works is `--verify-only`, which assembles the already-emitted files
+through nasm and writes nothing — that is how a hand edit gets checked.
+
+There is deliberately **no override flag**: the reader most likely to trip over
+the guard is an autonomous agent working a queue, and an override is exactly what
+one would reach for. Regenerating means reverting the guard commit, deliberately,
+having accepted that hand edits are destroyed. The generator code below the guard
+is unreachable and kept on purpose — reverting restores a working tool, and it is
+the only readable record of how the output was produced.
+
+**Baseline tag: `sm83xlat-baseline`.** It marks the last purely machine-generated
+state of `dos_port/src/scripts/`. Everything after it is human or agent work, so
+
+```sh
+git diff sm83xlat-baseline..HEAD -- dos_port/src/scripts/
+```
+
+is exactly the comb's contribution, with the tool's output subtracted.
+
+Final coverage at retirement: **2,197 regions lowered / 78 bailed (96.6%)**, plus
+255 regions owned by generators and excluded from the denominator. 43 of the 78
+are real work across 24 files; the other 35 are cascade that falls with them.
 
 Plan: `docs/current_plan_script_transpiler.md`.
 

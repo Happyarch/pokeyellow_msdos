@@ -18,10 +18,14 @@ WHAT IT WILL NOT DO
   designed witness — an `extern` the linker enumerates — but a witness is only
   useful when someone is looking at it, not when it breaks everyone's build.
 
+RETIRED as of the commit that added the `RETIRED` guard in main(). The one shot
+has been taken; `dos_port/src/scripts/` is hand-maintained source now, and
+re-running this would overwrite the comb's edits in 224 files with no diff to
+warn anyone. Every generating mode exits 2 with an explanation.
+
 Usage:
-    python3 dos_port/tools/sm83xlat/transpile.py            # write output
-    python3 dos_port/tools/sm83xlat/transpile.py --dry-run  # report only
-    python3 dos_port/tools/sm83xlat/transpile.py --assemble # + nasm each file
+    python3 dos_port/tools/sm83xlat/transpile.py --verify-only  # the only mode
+        # assembles the already-emitted files through nasm; writes NOTHING.
 """
 from __future__ import annotations
 
@@ -592,15 +596,70 @@ def _file_equs(group, out: emit.Emitted, R: resolve.Resolver):
     return consts, rams
 
 
+RETIRED = """\
+sm83xlat is RETIRED. It will not run.
+
+The one shot has been taken. dos_port/src/scripts/ is now ORDINARY HAND-MAINTAINED
+SOURCE, and the fine comb edits it directly. Re-running this tool would OVERWRITE
+every one of those edits with freshly generated output — silently, in 224 files,
+with no diff to warn you. That has already happened once in this project's
+history: a pass that hand-collapsed 255 bail banners was erased whole by the next
+regeneration.
+
+Final state at retirement (commit 5a9a1666f):
+    2,197 regions lowered / 78 bailed  (96.6%)
+    255 regions owned by generators, excluded from the denominator
+    43 of the 78 are real work; the other 35 are cascade.
+
+WHAT TO DO INSTEAD
+  * Editing a script      -> edit dos_port/src/scripts/<map>.asm directly.
+  * Checking your edit    -> transpile.py --verify-only
+                             (assembles every emitted file, writes NOTHING)
+  * Reading what bailed   -> tools/sm83xlat/tables/bail_report.json
+  * Why a class bails     -> tools/sm83xlat/transpile_report.md
+
+There is deliberately NO override flag. The reader most likely to trip over this
+guard is an autonomous agent working a queue, and an override flag is exactly
+what one would reach for. Regenerating requires reverting the commit that added
+this guard — a deliberate act by a human who has read this paragraph and accepted
+that hand edits will be destroyed.
+"""
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", type=Path, default=HERE.parents[2])
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--assemble", action="store_true",
                     help="run nasm over every emitted file (Stage 5)")
+    ap.add_argument("--verify-only", action="store_true",
+                    help="assemble the ALREADY-EMITTED files and exit; writes "
+                         "nothing. The one mode that still runs after retirement.")
     args = ap.parse_args(argv)
 
     root = args.root.resolve()
+
+    if args.verify_only:
+        # Read-only: no parse, no resolve, no emit. Just nasm over what is on
+        # disk, which is what the comb needs to check a hand edit.
+        port_ = root / "dos_port"
+        emitted = sorted((port_ / "src" / "scripts").glob("*.asm"))
+        if not emitted:
+            print("no emitted scripts found under dos_port/src/scripts/")
+            return 1
+        return _assemble(root, port_, emitted)
+
+    print(RETIRED, file=sys.stderr)
+    return 2
+
+    # ------------------------------------------------------------------------
+    # EVERYTHING BELOW IS UNREACHABLE, AND IS KEPT DELIBERATELY. Do not delete it
+    # as dead code: it is the generator, preserved so that reverting the single
+    # commit that added the guard above restores a working tool. It is also the
+    # only readable record of HOW the emitted output was produced, which the comb
+    # needs when deciding whether a construct in a script is a translation
+    # artifact or pret's own shape.
+    # ------------------------------------------------------------------------
     port = root / "dos_port"
     db = port / "tools" / "translation.db"
 
