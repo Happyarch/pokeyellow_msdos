@@ -28,6 +28,7 @@ global VictoryRoad3FCooltrainerF1Text
 global VictoryRoad3FCooltrainerF2Text
 global VictoryRoad3FCooltrainerM1Text
 global VictoryRoad3FCooltrainerM2Text
+global VictoryRoad3FDefaultScript
 global VictoryRoad3F_Script
 global VictoryRoad3F_ScriptPointers
 
@@ -44,7 +45,6 @@ extern ShowObject   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3FCooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -102,27 +102,29 @@ VictoryRoad3F_ScriptPointers:
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
 
-; ---------------------------------------------------------------------------
-; BAIL[bit-clobbers-live-carry] VictoryRoad3FDefaultScript (scripts/VictoryRoad3F.asm:30-46) — at scripts/VictoryRoad3F.asm:31: bit BIT_PUSHED_BOULDER, [hl]
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wMiscFlags
-; PRET| 	bit BIT_PUSHED_BOULDER, [hl]
-; PRET| 	res BIT_PUSHED_BOULDER, [hl]
-; PRET| 	jp z, .check_switch_hole
-; PRET| 	ld hl, .SwitchOrHoleCoords
-; PRET| 	call CheckBoulderCoords
-; PRET| 	jp nc, .check_switch_hole
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	cp $1
-; PRET| 	jr nz, .handle_hole
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	cp PIKACHU_SPRITE_INDEX
-; PRET| 	jp z, .check_switch_hole
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	set BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	SetEvent EVENT_VICTORY_ROAD_3_BOULDER_ON_SWITCH1
-; PRET| 	ret
+%assign event_byte -1
+VictoryRoad3FDefaultScript:
+    mov esi, wMiscFlags
+    setc ah                     ; SM83 `bit` preserves C — stash it
+    test byte [ebp + esi], (1 << (BIT_PUSHED_BOULDER))
+    bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_PUSHED_BOULDER)) & 0xFF
+    popfd
+    jz .check_switch_hole
+    mov esi, .SwitchOrHoleCoords
+    call CheckBoulderCoords
+    jae .check_switch_hole
+    mov al, [ebp + wCoordIndex]
+    cmp al, 0x1
+    jnz .handle_hole
+    mov al, [ebp + hSpriteIndex]
+    cmp al, PIKACHU_SPRITE_INDEX
+    jz .check_switch_hole
+    mov esi, wCurrentMapScriptFlags
+    or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    SetEvent EVENT_VICTORY_ROAD_3_BOULDER_ON_SWITCH1
+    ret
 
 %assign event_byte -1
 .handle_hole:

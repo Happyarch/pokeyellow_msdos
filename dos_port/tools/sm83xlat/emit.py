@@ -270,13 +270,25 @@ class Emitter:
                 f"byte {self.hl_mem(dom)}"
             line = f"test {target}, (1 << ({n}))"
             # SM83 `bit` writes Z but PRESERVES C; x86 `test` writes Z and
-            # CLEARS C. There is no short x86 sequence that produces the new Z
-            # and the old C without a scratch register, and every 8-bit scratch
-            # is already a mapped GB register. So: bail, rather than invent a
-            # spill. Preserving BOTH flags with pushfd/popfd would be worse than
-            # wrong — it would discard the Z the `bit` is being executed for.
+            # CLEARS C. This used to bail, on the grounds that no short sequence
+            # yields the new Z with the old C "without a scratch register, and
+            # every 8-bit scratch is already a mapped GB register". AH is not:
+            # the register map is A->AL, BC->BX, DE->DX, HL->ESI, so AH is unused
+            # by translated code, and port routines already borrow it the same
+            # way (src/home/text_script.asm:106 `mov ah, al ; save original for
+            # the bit test`).
+            #
+            # SETcc writes no flags, and BT is the one x86 instruction that
+            # writes CF while leaving ZF UNAFFECTED — which is exactly the pair
+            # needed, in the exactly inverted arrangement that makes it work.
+            # pushfd/popfd remains wrong here, as the original note says: it
+            # would restore the OLD Z and discard the result of the test.
             if "c" in live:
-                raise Bail("bit-clobbers-live-carry", it.line.raw.strip())
+                return [
+                    "setc ah                     ; SM83 `bit` preserves C — stash it",
+                    line,
+                    "bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched",
+                ]
             return [line]
 
         if m in ("set", "res"):

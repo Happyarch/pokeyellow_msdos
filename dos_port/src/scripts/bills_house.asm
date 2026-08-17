@@ -32,6 +32,7 @@ global BillsHousePikachuConfused
 global BillsHousePikachuWatchPlayer
 global BillsHousePrintBillCheckOutMyRarePokemonText
 global BillsHousePrintBillPokemonText
+global BillsHouseScript0
 global BillsHouseScript1
 global BillsHouseScript4
 global BillsHouseScript6
@@ -53,7 +54,6 @@ global RLE_1e219
 extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern BillsHousePrintBillSSTicketText   ; NOT YET DEFINED IN THE PORT
-extern BillsHouseScript0   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript2   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript3   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript5   ; NOT YET DEFINED IN THE PORT
@@ -168,22 +168,24 @@ BillsHouse_CheckMetBill:
     mov [ebp + wBillsHouseCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bit-clobbers-live-carry] BillsHouseScript0 (scripts/BillsHouse.asm:42-53) — at scripts/BillsHouse.asm:43: bit BIT_PIKACHU_SPAWN_STARTER, a
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wPikachuSpawnStateFlags]
-; PRET| 	bit BIT_PIKACHU_SPAWN_STARTER, a
-; PRET| 	jr z, .done
-; PRET| 	callfar CheckPikachuStatusCondition
-; PRET| 	jr c, .done
-; PRET| 	callfar BillsHousePikachuConfused
-; PRET| .done
-; PRET| 	xor a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, SCRIPT_BILLSHOUSE_SCRIPT1
-; PRET| 	ld [wBillsHouseCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+BillsHouseScript0:
+    mov al, [ebp + wPikachuSpawnStateFlags]
+    setc ah                     ; SM83 `bit` preserves C — stash it
+    test al, (1 << (7))
+    bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
+    jz .done
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call CheckPikachuStatusCondition
+    jb .done
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call BillsHousePikachuConfused
+.done:
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    mov al, SCRIPT_BILLSHOUSE_SCRIPT1
+    mov [ebp + wBillsHouseCurScript], al
+    ret
 
 %assign event_byte -1
 BillsHouseScript1:

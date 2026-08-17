@@ -1,13 +1,12 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 1847,
- "regions_bailed": 683,
+ "regions_lowered": 1861,
+ "regions_bailed": 669,
  "by_reason": {
   "owned-by-generated-assets": 255,
-  "target-region-bailed": 246,
+  "target-region-bailed": 245,
   "screen-coord-projection": 4,
   "inline-text-db": 11,
-  "bit-clobbers-live-carry": 13,
   "host-pointer-in-16bit-reg": 29,
   "text-sound-command-unported": 49,
   "pikachu-table-index": 4,
@@ -43,10 +42,9 @@
    ]
   },
   "scripts/BillsHouse.asm": {
-   "ok_regions": 29,
-   "bailed_regions": 8,
+   "ok_regions": 30,
+   "bailed_regions": 7,
    "reasons": [
-    "bit-clobbers-live-carry",
     "host-pointer-in-16bit-reg",
     "pikachu-table-index",
     "target-region-bailed",
@@ -612,10 +610,9 @@
    "reasons": []
   },
   "scripts/PokemonFanClub.asm": {
-   "ok_regions": 18,
-   "bailed_regions": 9,
+   "ok_regions": 19,
+   "bailed_regions": 8,
    "reasons": [
-    "bit-clobbers-live-carry",
     "target-region-bailed",
     "text-sound-command-unported"
    ]
@@ -635,12 +632,10 @@
    ]
   },
   "scripts/PokemonMansion3F.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 5,
+   "ok_regions": 9,
+   "bailed_regions": 3,
    "reasons": [
-    "bit-clobbers-live-carry",
-    "owned-by-generated-assets",
-    "target-region-bailed"
+    "owned-by-generated-assets"
    ]
   },
   "scripts/PokemonMansionB1F.asm": {
@@ -1015,10 +1010,9 @@
    "reasons": []
   },
   "scripts/Route5Gate.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 2,
+   "ok_regions": 11,
+   "bailed_regions": 1,
    "reasons": [
-    "bit-clobbers-live-carry",
     "text-sound-command-unported"
    ]
   },
@@ -1030,11 +1024,9 @@
    ]
   },
   "scripts/Route6Gate.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 1,
-   "reasons": [
-    "bit-clobbers-live-carry"
-   ]
+   "ok_regions": 8,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Route7.asm": {
    "ok_regions": 2,
@@ -1042,11 +1034,9 @@
    "reasons": []
   },
   "scripts/Route7Gate.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 1,
-   "reasons": [
-    "bit-clobbers-live-carry"
-   ]
+   "ok_regions": 8,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Route8.asm": {
    "ok_regions": 10,
@@ -1056,11 +1046,9 @@
    ]
   },
   "scripts/Route8Gate.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 1,
-   "reasons": [
-    "bit-clobbers-live-carry"
-   ]
+   "ok_regions": 8,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Route9.asm": {
    "ok_regions": 10,
@@ -1162,31 +1150,24 @@
    ]
   },
   "scripts/SeafoamIslands1F.asm": {
-   "ok_regions": 3,
-   "bailed_regions": 1,
-   "reasons": [
-    "bit-clobbers-live-carry"
-   ]
+   "ok_regions": 4,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/SeafoamIslandsB1F.asm": {
-   "ok_regions": 3,
-   "bailed_regions": 1,
-   "reasons": [
-    "bit-clobbers-live-carry"
-   ]
+   "ok_regions": 4,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/SeafoamIslandsB2F.asm": {
-   "ok_regions": 3,
-   "bailed_regions": 1,
-   "reasons": [
-    "bit-clobbers-live-carry"
-   ]
+   "ok_regions": 4,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/SeafoamIslandsB3F.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 2,
+   "ok_regions": 11,
+   "bailed_regions": 1,
    "reasons": [
-    "bit-clobbers-live-carry",
     "host-pointer-in-16bit-reg"
    ]
   },
@@ -1270,10 +1251,9 @@
    ]
   },
   "scripts/SilphCo7F.asm": {
-   "ok_regions": 28,
-   "bailed_regions": 13,
+   "ok_regions": 29,
+   "bailed_regions": 12,
    "reasons": [
-    "bit-clobbers-live-carry",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
@@ -1485,10 +1465,9 @@
    ]
   },
   "scripts/VictoryRoad3F.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 3,
+   "ok_regions": 12,
+   "bailed_regions": 2,
    "reasons": [
-    "bit-clobbers-live-carry",
     "owned-by-generated-assets"
    ]
   },
@@ -1676,21 +1655,6 @@
    "lines": [
     84,
     121
-   ]
-  },
-  {
-   "file": "scripts/BillsHouse.asm",
-   "region": "BillsHouseScript0",
-   "labels": [
-    "BillsHouseScript0",
-    "BillsHouseScript0.done"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_PIKACHU_SPAWN_STARTER, a",
-   "at": "scripts/BillsHouse.asm:43",
-   "lines": [
-    42,
-    53
    ]
   },
   {
@@ -5712,20 +5676,6 @@
   },
   {
    "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubScript_59a44",
-   "labels": [
-    "PokemonFanClubScript_59a44"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_PIKACHU_SPAWN_STARTER, a",
-   "at": "scripts/PokemonFanClub.asm:38",
-   "lines": [
-    37,
-    61
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
    "region": "PokemonFanClubChairmanText",
    "labels": [
     "PokemonFanClubChairmanText"
@@ -5941,35 +5891,6 @@
    "lines": [
     81,
     98
-   ]
-  },
-  {
-   "file": "scripts/PokemonMansion3F.asm",
-   "region": "PokemonMansion3FDefaultScript",
-   "labels": [
-    "PokemonMansion3FDefaultScript",
-    "PokemonMansion3FDefaultScript.fellDownHoleTo1F"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".isPlayerFallingDownHole is defined in a region that bailed",
-   "at": "scripts/PokemonMansion3F.asm:42",
-   "lines": [
-    41,
-    52
-   ]
-  },
-  {
-   "file": "scripts/PokemonMansion3F.asm",
-   "region": "PokemonMansion3FDefaultScript.isPlayerFallingDownHole",
-   "labels": [
-    "PokemonMansion3FDefaultScript.isPlayerFallingDownHole"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_ON_DUNGEON_WARP, a",
-   "at": "scripts/PokemonMansion3F.asm:64",
-   "lines": [
-    61,
-    74
    ]
   },
   {
@@ -9182,20 +9103,6 @@
   },
   {
    "file": "scripts/Route5Gate.asm",
-   "region": "Route5GateDefaultScript",
-   "labels": [
-    "Route5GateDefaultScript"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_GAVE_SAFFRON_GUARDS_DRINK, a",
-   "at": "scripts/Route5Gate.asm:21",
-   "lines": [
-    20,
-    40
-   ]
-  },
-  {
-   "file": "scripts/Route5Gate.asm",
    "region": "SaffronGateGuardGeeImThirstyText",
    "labels": [
     "SaffronGateGuardGeeImThirstyText",
@@ -9327,34 +9234,6 @@
    "lines": [
     139,
     152
-   ]
-  },
-  {
-   "file": "scripts/Route6Gate.asm",
-   "region": "Route6GateDefaultScript",
-   "labels": [
-    "Route6GateDefaultScript"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_GAVE_SAFFRON_GUARDS_DRINK, a",
-   "at": "scripts/Route6Gate.asm:15",
-   "lines": [
-    14,
-    34
-   ]
-  },
-  {
-   "file": "scripts/Route7Gate.asm",
-   "region": "Route7DefaultScript",
-   "labels": [
-    "Route7DefaultScript"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_GAVE_SAFFRON_GUARDS_DRINK, a",
-   "at": "scripts/Route7Gate.asm:27",
-   "lines": [
-    26,
-    46
    ]
   },
   {
@@ -9525,20 +9404,6 @@
    "lines": [
     202,
     215
-   ]
-  },
-  {
-   "file": "scripts/Route8Gate.asm",
-   "region": "Route8GateDefaultScript",
-   "labels": [
-    "Route8GateDefaultScript"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_GAVE_SAFFRON_GUARDS_DRINK, a",
-   "at": "scripts/Route8Gate.asm:26",
-   "lines": [
-    25,
-    45
    ]
   },
   {
@@ -10035,62 +9900,6 @@
    "lines": [
     6,
     25
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslands1F.asm",
-   "region": "SeafoamIslands1F_Script",
-   "labels": [
-    "SeafoamIslands1F_Script"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_PUSHED_BOULDER, [hl]",
-   "at": "scripts/SeafoamIslands1F.asm:5",
-   "lines": [
-    2,
-    20
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB1F.asm",
-   "region": "SeafoamIslandsB1F_Script",
-   "labels": [
-    "SeafoamIslandsB1F_Script"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_PUSHED_BOULDER, [hl]",
-   "at": "scripts/SeafoamIslandsB1F.asm:4",
-   "lines": [
-    2,
-    19
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB2F.asm",
-   "region": "SeafoamIslandsB2F_Script",
-   "labels": [
-    "SeafoamIslandsB2F_Script"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_PUSHED_BOULDER, [hl]",
-   "at": "scripts/SeafoamIslandsB2F.asm:4",
-   "lines": [
-    2,
-    19
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB3F.asm",
-   "region": "SeafoamIslandsB3F_Script",
-   "labels": [
-    "SeafoamIslandsB3F_Script"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_PUSHED_BOULDER, [hl]",
-   "at": "scripts/SeafoamIslandsB3F.asm:4",
-   "lines": [
-    2,
-    19
    ]
   },
   {
@@ -11147,20 +10956,6 @@
    "lines": [
     253,
     280
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7FSilphWorkerM1Text",
-   "labels": [
-    "SilphCo7FSilphWorkerM1Text"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_GOT_LAPRAS, a",
-   "at": "scripts/SilphCo7F.asm:286",
-   "lines": [
-    285,
-    292
    ]
   },
   {
@@ -12233,20 +12028,6 @@
    "lines": [
     151,
     208
-   ]
-  },
-  {
-   "file": "scripts/VictoryRoad3F.asm",
-   "region": "VictoryRoad3FDefaultScript",
-   "labels": [
-    "VictoryRoad3FDefaultScript"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_PUSHED_BOULDER, [hl]",
-   "at": "scripts/VictoryRoad3F.asm:31",
-   "lines": [
-    30,
-    46
    ]
   },
   {

@@ -36,6 +36,7 @@ global SilphCo7FRocket3Text
 global SilphCo7FScientistText
 global SilphCo7FSetCurScript
 global SilphCo7FSetDefaultScript
+global SilphCo7FSilphWorkerM1Text
 global SilphCo7FSilphWorkerM2Text
 global SilphCo7FSilphWorkerM3Text
 global SilphCo7FSilphWorkerM4Text
@@ -67,7 +68,6 @@ extern SilphCo7FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRocket3BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FSilphWorkerM1Text   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7F_GateCallbackScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7F_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -409,18 +409,18 @@ SilphCo7FRivalExitScript:
 
 ; SilphCo7F_TextPointers (scripts/SilphCo7F.asm:253-280) — not re-emitted: SilphCo7TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[bit-clobbers-live-carry] SilphCo7FSilphWorkerM1Text (scripts/SilphCo7F.asm:285-292) — at scripts/SilphCo7F.asm:286: bit BIT_GOT_LAPRAS, a
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags4]
-; PRET| 	bit BIT_GOT_LAPRAS, a
-; PRET| 	jr z, .give_lapras
-; PRET| 	CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
-; PRET| 	jr nz, .saved_silph
-; PRET| 	ld hl, .IsOurPresidentOkText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+SilphCo7FSilphWorkerM1Text:
+    mov al, [ebp + wStatusFlags4]
+    setc ah                     ; SM83 `bit` preserves C — stash it
+    test al, (1 << (0))
+    bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
+    jz .give_lapras
+    CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
+    jnz .saved_silph
+    mov esi, .IsOurPresidentOkText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
 .give_lapras:

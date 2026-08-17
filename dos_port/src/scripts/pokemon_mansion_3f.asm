@@ -24,6 +24,7 @@ bits 32
 %include "assets/trainer_headers.inc"
 
 global Mansion3CheckReplaceSwitchDoorBlocks
+global PokemonMansion3FDefaultScript
 global PokemonMansion3FScientistText
 global PokemonMansion3FSuperNerdText
 global PokemonMansion3F_Script
@@ -40,7 +41,6 @@ extern Mansion3Script_Switches   ; NOT YET DEFINED IN THE PORT
 extern Mansion3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Mansion3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion3FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion3FSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
@@ -105,22 +105,20 @@ PokemonMansion3F_ScriptPointers:
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonMansion3FDefaultScript (scripts/PokemonMansion3F.asm:41-52) — at scripts/PokemonMansion3F.asm:42: .isPlayerFallingDownHole is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .holeCoords
-; PRET| 	call .isPlayerFallingDownHole
-; PRET| 	ld a, [wWhichDungeonWarp]
-; PRET| 	and a
-; PRET| 	jp z, CheckFightingMapTrainers
-; PRET| 	cp $3
-; PRET| 	ld a, POKEMON_MANSION_1F
-; PRET| 	jr nz, .fellDownHoleTo1F
-; PRET| 	ld a, POKEMON_MANSION_2F
-; PRET| .fellDownHoleTo1F
-; PRET| 	ld [wDungeonWarpDestinationMap], a
-; PRET| 	ret
+%assign event_byte -1
+PokemonMansion3FDefaultScript:
+    mov esi, .holeCoords
+    call .isPlayerFallingDownHole
+    mov al, [ebp + wWhichDungeonWarp]
+    test al, al
+    jz CheckFightingMapTrainers
+    cmp al, 0x3
+    mov al, POKEMON_MANSION_1F
+    jnz .fellDownHoleTo1F
+    mov al, POKEMON_MANSION_2F
+.fellDownHoleTo1F:
+    mov [ebp + wDungeonWarpDestinationMap], al
+    ret
 
 %assign event_byte -1
 .holeCoords:
@@ -129,24 +127,28 @@ PokemonMansion3F_ScriptPointers:
     db 14, 19
     db -1
 
-; ---------------------------------------------------------------------------
-; BAIL[bit-clobbers-live-carry] PokemonMansion3FDefaultScript.isPlayerFallingDownHole (scripts/PokemonMansion3F.asm:61-74) — at scripts/PokemonMansion3F.asm:64: bit BIT_ON_DUNGEON_WARP, a
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ld [wWhichDungeonWarp], a
-; PRET| 	ld a, [wStatusFlags3]
-; PRET| 	bit BIT_ON_DUNGEON_WARP, a
-; PRET| 	ret nz
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	ret nc
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	ld [wWhichDungeonWarp], a
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_ON_DUNGEON_WARP, [hl]
-; PRET| 	ld hl, wStatusFlags6
-; PRET| 	set BIT_DUNGEON_WARP, [hl]
-; PRET| 	ret
+%assign event_byte -1
+.isPlayerFallingDownHole:
+    xor al, al
+    mov [ebp + wWhichDungeonWarp], al
+    mov al, [ebp + wStatusFlags3]
+    setc ah                     ; SM83 `bit` preserves C — stash it
+    test al, (1 << (4))
+    bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
+    jz .nr_65
+        ret
+.nr_65:
+    call ArePlayerCoordsInArray
+    jb .nr_67
+        ret
+.nr_67:
+    mov al, [ebp + wCoordIndex]
+    mov [ebp + wWhichDungeonWarp], al
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (4))
+    mov esi, wStatusFlags6
+    or byte [ebp + esi], (1 << (BIT_DUNGEON_WARP))
+    ret
 
 ; Mansion3Script_Switches (scripts/PokemonMansion3F.asm:77-84) — not re-emitted: Mansion3Script_Switches is already defined elsewhere in the port.
 

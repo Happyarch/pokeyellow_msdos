@@ -27,6 +27,7 @@ global PokemonFanClubPikachuMovementData
 global PokemonFanClubScript0
 global PokemonFanClubScript1
 global PokemonFanClubScript_59a39
+global PokemonFanClubScript_59a44
 global PokemonFanClubSeelFanText
 global PokemonFanClubSeelText
 global PokemonFanClub_Script
@@ -34,6 +35,7 @@ global PokemonFanClub_ScriptPointers
 global PokemonFanClub_TextPointers
 
 extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
 extern CheckPikachuStatusCondition   ; NOT YET DEFINED IN THE PORT
 extern Delay3   ; NOT YET DEFINED IN THE PORT
@@ -44,13 +46,13 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GBPalNormal   ; NOT YET DEFINED IN THE PORT
 extern GBPalWhiteOutWithDelay3   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
+extern InitializePikachuTextID   ; NOT YET DEFINED IN THE PORT
 extern LoadCurrentMapView   ; NOT YET DEFINED IN THE PORT
 extern LoadGBPal   ; NOT YET DEFINED IN THE PORT
 extern LoadScreenTilesFromBuffer2   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
 extern PokemonFanClubChairmanText   ; NOT YET DEFINED IN THE PORT
 extern PokemonFanClubReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern PokemonFanClubScript_59a44   ; NOT YET DEFINED IN THE PORT
 extern PrintFanClubPortrait   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern Random   ; NOT YET DEFINED IN THE PORT
@@ -140,35 +142,42 @@ PokemonFanClubScript_59a39:
 .sk_33:
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bit-clobbers-live-carry] PokemonFanClubScript_59a44 (scripts/PokemonFanClub.asm:37-61) — at scripts/PokemonFanClub.asm:38: bit BIT_PIKACHU_SPAWN_STARTER, a
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wPikachuSpawnStateFlags]
-; PRET| 	bit BIT_PIKACHU_SPAWN_STARTER, a
-; PRET| 	ret z
-; PRET| 	callfar CheckPikachuStatusCondition
-; PRET| 	ret c
-; PRET| 	ld a, SCRIPT_POKEMONFANCLUB_SCRIPT1
-; PRET| 	ld [wPokemonFanClubCurScript], a
-; PRET| 	xor a
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	call UpdateSprites
-; PRET| 	call UpdateSprites
-; PRET| 	ld a, EXCLAMATION_BUBBLE
-; PRET| 	ld [wWhichEmotionBubble], a
-; PRET| 	ld a, $f ; Pikachu
-; PRET| 	ld [wEmotionBubbleSpriteIndex], a
-; PRET| 	predef EmotionBubble
-; PRET| 	ld hl, PokemonFanClubPikachuMovementData
-; PRET| 	call ApplyPikachuMovementData
-; PRET| 	ld a, $2 ; Seel
-; PRET| 	ld [wSprite03StateData1MovementStatus], a
-; PRET| 	xor a ; SPRITE_FACING_DOWN
-; PRET| 	ld [wSprite03StateData1FacingDirection], a
-; PRET| 	callfar InitializePikachuTextID
-; PRET| 	call DisablePikachuFollowingPlayer
-; PRET| 	ret
+%assign event_byte -1
+PokemonFanClubScript_59a44:
+    mov al, [ebp + wPikachuSpawnStateFlags]
+    setc ah                     ; SM83 `bit` preserves C — stash it
+    test al, (1 << (7))
+    bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
+    jnz .nr_39
+        ret
+.nr_39:
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call CheckPikachuStatusCondition
+    jae .nr_41
+        ret
+.nr_41:
+    mov al, SCRIPT_POKEMONFANCLUB_SCRIPT1
+    mov [ebp + wPokemonFanClubCurScript], al
+    xor al, al
+    mov [ebp + wPlayerMovingDirection], al
+    call UpdateSprites
+    call UpdateSprites
+    mov al, 0
+    mov [ebp + wWhichEmotionBubble], al
+    mov al, 0xf
+    mov [ebp + wEmotionBubbleSpriteIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call EmotionBubble
+    mov esi, PokemonFanClubPikachuMovementData
+    call ApplyPikachuMovementData
+    mov al, 0x2
+    mov [ebp + wSprite03StateData1MovementStatus], al
+    xor al, al
+    mov [ebp + wSprite03StateData1FacingDirection], al
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call InitializePikachuTextID
+    call DisablePikachuFollowingPlayer
+    ret
 
 %assign event_byte -1
 PokemonFanClubPikachuMovementData:

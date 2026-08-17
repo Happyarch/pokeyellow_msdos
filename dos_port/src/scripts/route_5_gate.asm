@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global Route5GateDefaultScript
 global Route5GateMovePlayerUpScript
 global Route5GatePlayerMovingScript
 global Route5Gate_Script
@@ -36,7 +37,6 @@ extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern RemoveGuardDrink   ; NOT YET DEFINED IN THE PORT
-extern Route5GateDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SaffronGateGuardGeeImThirstyText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGateGuardGiveDrinkText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGateGuardThanksForTheDrinkText   ; NOT YET DEFINED IN THE PORT
@@ -80,31 +80,36 @@ Route5GateMovePlayerUpScript:
     mov [ebp + wSimulatedJoypadStatesIndex], al
     jmp StartSimulatingJoypadStates
 
-; ---------------------------------------------------------------------------
-; BAIL[bit-clobbers-live-carry] Route5GateDefaultScript (scripts/Route5Gate.asm:20-40) — at scripts/Route5Gate.asm:21: bit BIT_GAVE_SAFFRON_GUARDS_DRINK, a
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags1]
-; PRET| 	bit BIT_GAVE_SAFFRON_GUARDS_DRINK, a
-; PRET| 	ret nz
-; PRET| 	ld hl, .PlayerInCoordsArray
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	ret nc
-; PRET| 	ld a, PLAYER_DIR_LEFT
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	farcall RemoveGuardDrink
-; PRET| 	ldh a, [hItemToRemoveID]
-; PRET| 	and a
-; PRET| 	jr nz, .have_drink
-; PRET| 	ld a, TEXT_ROUTE5GATE_GUARD_GEE_IM_THIRSTY
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	call Route5GateMovePlayerUpScript
-; PRET| 	ld a, SCRIPT_ROUTE5GATE_PLAYER_MOVING
-; PRET| 	ld [wRoute5GateCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+Route5GateDefaultScript:
+    mov al, [ebp + wStatusFlags1]
+    setc ah                     ; SM83 `bit` preserves C — stash it
+    test al, (1 << (6))
+    bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
+    jz .nr_22
+        ret
+.nr_22:
+    mov esi, .PlayerInCoordsArray
+    call ArePlayerCoordsInArray
+    jb .nr_25
+        ret
+.nr_25:
+    mov al, PLAYER_DIR_LEFT
+    mov [ebp + wPlayerMovingDirection], al
+    xor al, al
+    mov [ebp + hJoyHeld], al
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call RemoveGuardDrink
+    mov al, [ebp + hItemToRemoveID]
+    test al, al
+    jnz .have_drink
+    mov al, TEXT_ROUTE5GATE_GUARD_GEE_IM_THIRSTY
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    call Route5GateMovePlayerUpScript
+    mov al, SCRIPT_ROUTE5GATE_PLAYER_MOVING
+    mov [ebp + wRoute5GateCurScript], al
+    ret
 
 %assign event_byte -1
 .have_drink:

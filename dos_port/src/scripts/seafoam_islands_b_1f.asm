@@ -23,6 +23,7 @@ bits 32
 %include "assets/map_dims.inc"
 
 global Seafoam2HolesCoords
+global SeafoamIslandsB1F_Script
 global SeafoamIslandsB1F_TextPointers
 
 extern BoulderText   ; NOT YET DEFINED IN THE PORT
@@ -30,7 +31,6 @@ extern CheckBoulderCoords   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern IsPlayerOnDungeonWarp   ; NOT YET DEFINED IN THE PORT
-extern SeafoamIslandsB1F_Script   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
@@ -46,28 +46,33 @@ wObjectToShow                                  equ 0xD079
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[bit-clobbers-live-carry] SeafoamIslandsB1F_Script (scripts/SeafoamIslandsB1F.asm:2-19) — at scripts/SeafoamIslandsB1F.asm:4: bit BIT_PUSHED_BOULDER, [hl]
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	ld hl, wMiscFlags
-; PRET| 	bit BIT_PUSHED_BOULDER, [hl]
-; PRET| 	res BIT_PUSHED_BOULDER, [hl]
-; PRET| 	jr z, .noBoulderWasPushed
-; PRET| 	ld hl, Seafoam2HolesCoords
-; PRET| 	call CheckBoulderCoords
-; PRET| 	ret nc
-; PRET| 	EventFlagAddress hl, EVENT_SEAFOAM2_BOULDER1_DOWN_HOLE
-; PRET| 	ld a, [wCoordIndex]
-; PRET| 	cp $1
-; PRET| 	jr nz, .boulder2FellDownHole
-; PRET| 	SetEventReuseHL EVENT_SEAFOAM2_BOULDER1_DOWN_HOLE
-; PRET| 	ld a, TOGGLE_SEAFOAM_ISLANDS_B1F_BOULDER_1
-; PRET| 	ld [wObjectToHide], a
-; PRET| 	ld a, TOGGLE_SEAFOAM_ISLANDS_B2F_BOULDER_1
-; PRET| 	ld [wObjectToShow], a
-; PRET| 	jr .hideAndShowBoulderObjects
+%assign event_byte -1
+SeafoamIslandsB1F_Script:
+    call EnableAutoTextBoxDrawing
+    mov esi, wMiscFlags
+    setc ah                     ; SM83 `bit` preserves C — stash it
+    test byte [ebp + esi], (1 << (BIT_PUSHED_BOULDER))
+    bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_PUSHED_BOULDER)) & 0xFF
+    popfd
+    jz .noBoulderWasPushed
+    mov esi, Seafoam2HolesCoords
+    call CheckBoulderCoords
+    jb .nr_9
+        ret
+.nr_9:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_SEAFOAM2_BOULDER1_DOWN_HOLE)
+    %assign event_byte EVENT_BYTE(EVENT_SEAFOAM2_BOULDER1_DOWN_HOLE)
+    mov al, [ebp + wCoordIndex]
+    cmp al, 0x1
+    jnz .boulder2FellDownHole
+    SetEventReuseHL EVENT_SEAFOAM2_BOULDER1_DOWN_HOLE
+    mov al, 225
+    mov [ebp + wObjectToHide], al
+    mov al, 227
+    mov [ebp + wObjectToShow], al
+    jmp .hideAndShowBoulderObjects
 
 %assign event_byte -1
 .boulder2FellDownHole:

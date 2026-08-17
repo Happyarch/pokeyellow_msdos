@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global Route7DefaultScript
 global Route7GateMovePlayerLeftScript
 global Route7Gate_Script
 global Route7Gate_ScriptPointers
@@ -28,11 +29,12 @@ global Route7Gate_TextPointers
 global Route7PlayerMovingScript
 
 extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
 extern Delay3   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern Route7DefaultScript   ; NOT YET DEFINED IN THE PORT
+extern RemoveGuardDrink   ; NOT YET DEFINED IN THE PORT
 extern SaffronGateGuardGeeImThirstyText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGateGuardGiveDrinkText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGateGuardText   ; NOT YET DEFINED IN THE PORT
@@ -79,31 +81,36 @@ Route7GateMovePlayerLeftScript:
     mov [ebp + wOverrideSimulatedJoypadStatesMask], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bit-clobbers-live-carry] Route7DefaultScript (scripts/Route7Gate.asm:26-46) — at scripts/Route7Gate.asm:27: bit BIT_GAVE_SAFFRON_GUARDS_DRINK, a
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags1]
-; PRET| 	bit BIT_GAVE_SAFFRON_GUARDS_DRINK, a
-; PRET| 	ret nz
-; PRET| 	ld hl, .PlayerInCoordsArray
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	ret nc
-; PRET| 	ld a, PLAYER_DIR_UP
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	farcall RemoveGuardDrink
-; PRET| 	ldh a, [hItemToRemoveID]
-; PRET| 	and a
-; PRET| 	jr nz, .have_drink
-; PRET| 	ld a, TEXT_ROUTE7GATE_GUARD_GEE_IM_THIRSTY
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	call Route7GateMovePlayerLeftScript
-; PRET| 	ld a, SCRIPT_ROUTE7GATE_PLAYER_MOVING
-; PRET| 	ld [wRoute7GateCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+Route7DefaultScript:
+    mov al, [ebp + wStatusFlags1]
+    setc ah                     ; SM83 `bit` preserves C — stash it
+    test al, (1 << (6))
+    bt   eax, 8                 ; CF = AH bit 0 = saved C; ZF untouched
+    jz .nr_28
+        ret
+.nr_28:
+    mov esi, .PlayerInCoordsArray
+    call ArePlayerCoordsInArray
+    jb .nr_31
+        ret
+.nr_31:
+    mov al, PLAYER_DIR_UP
+    mov [ebp + wPlayerMovingDirection], al
+    xor al, al
+    mov [ebp + hJoyHeld], al
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call RemoveGuardDrink
+    mov al, [ebp + hItemToRemoveID]
+    test al, al
+    jnz .have_drink
+    mov al, TEXT_ROUTE7GATE_GUARD_GEE_IM_THIRSTY
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    call Route7GateMovePlayerLeftScript
+    mov al, SCRIPT_ROUTE7GATE_PLAYER_MOVING
+    mov [ebp + wRoute7GateCurScript], al
+    ret
 
 %assign event_byte -1
 .have_drink:
