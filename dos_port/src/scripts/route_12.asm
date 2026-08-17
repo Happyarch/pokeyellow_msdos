@@ -176,54 +176,7 @@ Route12SnorlaxPostBattleScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route12_TextPointers (scripts/Route12.asm:65-109) — a generated asset already defines Route12TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route12SnorlaxText,           TEXT_ROUTE12_SNORLAX
-; PRET| 	dw_const Route12Fisher1Text,           TEXT_ROUTE12_FISHER1
-; PRET| 	dw_const Route12Fisher2Text,           TEXT_ROUTE12_FISHER2
-; PRET| 	dw_const Route12CooltrainerMText,      TEXT_ROUTE12_COOLTRAINER_M
-; PRET| 	dw_const Route12SuperNerdText,         TEXT_ROUTE12_SUPER_NERD
-; PRET| 	dw_const Route12Fisher3Text,           TEXT_ROUTE12_FISHER3
-; PRET| 	dw_const Route12Fisher4Text,           TEXT_ROUTE12_FISHER4
-; PRET| 	dw_const Route12Fisher5Text,           TEXT_ROUTE12_FISHER5
-; PRET| 	dw_const PickUpItemText,               TEXT_ROUTE12_TM_PAY_DAY
-; PRET| 	dw_const PickUpItemText,               TEXT_ROUTE12_IRON
-; PRET| 	dw_const Route12SignText,              TEXT_ROUTE12_SIGN
-; PRET| 	dw_const Route12SportFishingSignText,  TEXT_ROUTE12_SPORT_FISHING_SIGN
-; PRET| 	dw_const Route12SnorlaxWokeUpText,     TEXT_ROUTE12_SNORLAX_WOKE_UP
-; PRET| 	dw_const Route12SnorlaxCalmedDownText, TEXT_ROUTE12_SNORLAX_CALMED_DOWN
-; PRET| 
-; PRET| Route12TrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| Route12TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_12_TRAINER_0, 4, Route12Fisher1BattleText, Route12Fisher1EndBattleText, Route12Fisher1AfterBattleText
-; PRET| Route12TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_12_TRAINER_1, 4, Route12Fisher2BattleText, Route12Fisher2EndBattleText, Route12Fisher2AfterBattleText
-; PRET| Route12TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_12_TRAINER_2, 4, Route12CooltrainerMBattleText, Route12CooltrainerMEndBattleText, Route12CooltrainerMAfterBattleText
-; PRET| Route12TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROUTE_12_TRAINER_3, 4, Route12SuperNerdBattleText, Route12SuperNerdEndBattleText, Route12SuperNerdAfterBattleText
-; PRET| Route12TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROUTE_12_TRAINER_4, 4, Route12Fisher3BattleText, Route12Fisher3EndBattleText, Route12Fisher3AfterBattleText
-; PRET| Route12TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_ROUTE_12_TRAINER_5, 4, Route12Fisher4BattleText, Route12Fisher4EndBattleText, Route12Fisher4AfterBattleText
-; PRET| Route12TrainerHeader6:
-; PRET| 	trainer EVENT_BEAT_ROUTE_12_TRAINER_6, 1, Route12Fisher5BattleText, Route12Fisher5EndBattleText, Route12Fisher5AfterBattleText
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| Route12SnorlaxText:
-; PRET| 	text_far _Route12SnorlaxText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12SnorlaxWokeUpText:
-; PRET| 	text_far _Route12SnorlaxWokeUpText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12SnorlaxCalmedDownText:
-; PRET| 	text_far _Route12SnorlaxCalmedDownText
-; PRET| 	text_end
+; Route12_TextPointers (scripts/Route12.asm:65-109) — Tier-1 data: Route12TrainerHeaders is generated into assets/trainer_headers.inc.
 
 Route12Fisher1Text:
     mov esi, Route12TrainerHeader0
@@ -231,19 +184,7 @@ Route12Fisher1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route12Fisher1BattleText (scripts/Route12.asm:118-127) — a generated asset already defines Route12Fisher1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route12Fisher1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher1EndBattleText:
-; PRET| 	text_far _Route12Fisher1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher1AfterBattleText:
-; PRET| 	text_far _Route12Fisher1AfterBattleText
-; PRET| 	text_end
+; Route12Fisher1BattleText (scripts/Route12.asm:118-127) — Tier-1 data: Route12Fisher1BattleText is generated into assets/trainer_headers.inc.
 
 Route12Fisher2Text:
     mov esi, Route12TrainerHeader1
@@ -251,19 +192,7 @@ Route12Fisher2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route12Fisher2BattleText (scripts/Route12.asm:136-145) — a generated asset already defines Route12Fisher2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route12Fisher2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher2EndBattleText:
-; PRET| 	text_far _Route12Fisher2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher2AfterBattleText:
-; PRET| 	text_far _Route12Fisher2AfterBattleText
-; PRET| 	text_end
+; Route12Fisher2BattleText (scripts/Route12.asm:136-145) — Tier-1 data: Route12Fisher2BattleText is generated into assets/trainer_headers.inc.
 
 Route12CooltrainerMText:
     mov esi, Route12TrainerHeader2
@@ -271,19 +200,7 @@ Route12CooltrainerMText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route12CooltrainerMBattleText (scripts/Route12.asm:154-163) — a generated asset already defines Route12CooltrainerMBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route12CooltrainerMBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12CooltrainerMEndBattleText:
-; PRET| 	text_far _Route12CooltrainerMEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12CooltrainerMAfterBattleText:
-; PRET| 	text_far _Route12CooltrainerMAfterBattleText
-; PRET| 	text_end
+; Route12CooltrainerMBattleText (scripts/Route12.asm:154-163) — Tier-1 data: Route12CooltrainerMBattleText is generated into assets/trainer_headers.inc.
 
 Route12SuperNerdText:
     mov esi, Route12TrainerHeader3
@@ -291,19 +208,7 @@ Route12SuperNerdText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route12SuperNerdBattleText (scripts/Route12.asm:172-181) — a generated asset already defines Route12SuperNerdBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route12SuperNerdBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12SuperNerdEndBattleText:
-; PRET| 	text_far _Route12SuperNerdEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12SuperNerdAfterBattleText:
-; PRET| 	text_far _Route12SuperNerdAfterBattleText
-; PRET| 	text_end
+; Route12SuperNerdBattleText (scripts/Route12.asm:172-181) — Tier-1 data: Route12SuperNerdBattleText is generated into assets/trainer_headers.inc.
 
 Route12Fisher3Text:
     mov esi, Route12TrainerHeader4
@@ -311,19 +216,7 @@ Route12Fisher3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route12Fisher3BattleText (scripts/Route12.asm:190-199) — a generated asset already defines Route12Fisher3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route12Fisher3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher3EndBattleText:
-; PRET| 	text_far _Route12Fisher3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher3AfterBattleText:
-; PRET| 	text_far _Route12Fisher3AfterBattleText
-; PRET| 	text_end
+; Route12Fisher3BattleText (scripts/Route12.asm:190-199) — Tier-1 data: Route12Fisher3BattleText is generated into assets/trainer_headers.inc.
 
 Route12Fisher4Text:
     mov esi, Route12TrainerHeader5
@@ -331,19 +224,7 @@ Route12Fisher4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route12Fisher4BattleText (scripts/Route12.asm:208-217) — a generated asset already defines Route12Fisher4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route12Fisher4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher4EndBattleText:
-; PRET| 	text_far _Route12Fisher4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher4AfterBattleText:
-; PRET| 	text_far _Route12Fisher4AfterBattleText
-; PRET| 	text_end
+; Route12Fisher4BattleText (scripts/Route12.asm:208-217) — Tier-1 data: Route12Fisher4BattleText is generated into assets/trainer_headers.inc.
 
 Route12Fisher5Text:
     mov esi, Route12TrainerHeader6
@@ -351,24 +232,4 @@ Route12Fisher5Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route12Fisher5BattleText (scripts/Route12.asm:226-243) — a generated asset already defines Route12Fisher5BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route12Fisher5BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher5EndBattleText:
-; PRET| 	text_far _Route12Fisher5EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12Fisher5AfterBattleText:
-; PRET| 	text_far _Route12Fisher5AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12SignText:
-; PRET| 	text_far _Route12SignText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route12SportFishingSignText:
-; PRET| 	text_far _Route12SportFishingSignText
-; PRET| 	text_end
+; Route12Fisher5BattleText (scripts/Route12.asm:226-243) — Tier-1 data: Route12Fisher5BattleText is generated into assets/trainer_headers.inc.

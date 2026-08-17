@@ -197,30 +197,7 @@ FightingDojoDefaultScript:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FightingDojo_TextPointers (scripts/FightingDojo.asm:84-104) — a generated asset already defines FightingDojoTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const FightingDojoKarateMasterText,                          TEXT_FIGHTINGDOJO_KARATE_MASTER
-; PRET| 	dw_const FightingDojoBlackbelt1Text,                            TEXT_FIGHTINGDOJO_BLACKBELT1
-; PRET| 	dw_const FightingDojoBlackbelt2Text,                            TEXT_FIGHTINGDOJO_BLACKBELT2
-; PRET| 	dw_const FightingDojoBlackbelt3Text,                            TEXT_FIGHTINGDOJO_BLACKBELT3
-; PRET| 	dw_const FightingDojoBlackbelt4Text,                            TEXT_FIGHTINGDOJO_BLACKBELT4
-; PRET| 	dw_const FightingDojoHitmonleePokeBallText,                     TEXT_FIGHTINGDOJO_HITMONLEE_POKE_BALL
-; PRET| 	dw_const FightingDojoHitmonchanPokeBallText,                    TEXT_FIGHTINGDOJO_HITMONCHAN_POKE_BALL
-; PRET| 	dw_const FightingDojoKarateMasterText.IWillGiveYouAPokemonText, TEXT_FIGHTINGDOJO_KARATE_MASTER_I_WILL_GIVE_YOU_A_POKEMON
-; PRET| 
-; PRET| FightingDojoTrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| FightingDojoTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_FIGHTING_DOJO_TRAINER_0, 4, FightingDojoBlackbelt1BattleText, FightingDojoBlackbelt1EndBattleText, FightingDojoBlackbelt1AfterBattleText
-; PRET| FightingDojoTrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_FIGHTING_DOJO_TRAINER_1, 4, FightingDojoBlackbelt2BattleText, FightingDojoBlackbelt2EndBattleText, FightingDojoBlackbelt2AfterBattleText
-; PRET| FightingDojoTrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_FIGHTING_DOJO_TRAINER_2, 3, FightingDojoBlackbelt3BattleText, FightingDojoBlackbelt3EndBattleText, FightingDojoBlackbelt3AfterBattleText
-; PRET| FightingDojoTrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_FIGHTING_DOJO_TRAINER_3, 3, FightingDojoBlackbelt4BattleText, FightingDojoBlackbelt4EndBattleText, FightingDojoBlackbelt4AfterBattleText
-; PRET| 	db -1 ; end
+; FightingDojo_TextPointers (scripts/FightingDojo.asm:84-104) — Tier-1 data: FightingDojoTrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[event-byte-assembly-state] FightingDojoKarateMasterText (scripts/FightingDojo.asm:108-127) — at scripts/FightingDojo.asm:110: CheckEventReuseA EVENT_BEAT_KARATE_MASTER
@@ -277,19 +254,7 @@ FightingDojoBlackbelt1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FightingDojoBlackbelt1BattleText (scripts/FightingDojo.asm:161-170) — a generated asset already defines FightingDojoBlackbelt1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FightingDojoBlackbelt1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FightingDojoBlackbelt1EndBattleText:
-; PRET| 	text_far _FightingDojoBlackbelt1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FightingDojoBlackbelt1AfterBattleText:
-; PRET| 	text_far _FightingDojoBlackbelt1AfterBattleText
-; PRET| 	text_end
+; FightingDojoBlackbelt1BattleText (scripts/FightingDojo.asm:161-170) — Tier-1 data: FightingDojoBlackbelt1BattleText is generated into assets/trainer_headers.inc.
 
 FightingDojoBlackbelt2Text:
     mov esi, FightingDojoTrainerHeader1
@@ -297,19 +262,7 @@ FightingDojoBlackbelt2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FightingDojoBlackbelt2BattleText (scripts/FightingDojo.asm:179-188) — a generated asset already defines FightingDojoBlackbelt2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FightingDojoBlackbelt2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FightingDojoBlackbelt2EndBattleText:
-; PRET| 	text_far _FightingDojoBlackbelt2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FightingDojoBlackbelt2AfterBattleText:
-; PRET| 	text_far _FightingDojoBlackbelt2AfterBattleText
-; PRET| 	text_end
+; FightingDojoBlackbelt2BattleText (scripts/FightingDojo.asm:179-188) — Tier-1 data: FightingDojoBlackbelt2BattleText is generated into assets/trainer_headers.inc.
 
 FightingDojoBlackbelt3Text:
     mov esi, FightingDojoTrainerHeader2
@@ -317,19 +270,7 @@ FightingDojoBlackbelt3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FightingDojoBlackbelt3BattleText (scripts/FightingDojo.asm:197-206) — a generated asset already defines FightingDojoBlackbelt3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FightingDojoBlackbelt3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FightingDojoBlackbelt3EndBattleText:
-; PRET| 	text_far _FightingDojoBlackbelt3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FightingDojoBlackbelt3AfterBattleText:
-; PRET| 	text_far _FightingDojoBlackbelt3AfterBattleText
-; PRET| 	text_end
+; FightingDojoBlackbelt3BattleText (scripts/FightingDojo.asm:197-206) — Tier-1 data: FightingDojoBlackbelt3BattleText is generated into assets/trainer_headers.inc.
 
 FightingDojoBlackbelt4Text:
     mov esi, FightingDojoTrainerHeader3
@@ -337,19 +278,7 @@ FightingDojoBlackbelt4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FightingDojoBlackbelt4BattleText (scripts/FightingDojo.asm:215-224) — a generated asset already defines FightingDojoBlackbelt4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FightingDojoBlackbelt4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FightingDojoBlackbelt4EndBattleText:
-; PRET| 	text_far _FightingDojoBlackbelt4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FightingDojoBlackbelt4AfterBattleText:
-; PRET| 	text_far _FightingDojoBlackbelt4AfterBattleText
-; PRET| 	text_end
+; FightingDojoBlackbelt4BattleText (scripts/FightingDojo.asm:215-224) — Tier-1 data: FightingDojoBlackbelt4BattleText is generated into assets/trainer_headers.inc.
 
 FightingDojoHitmonleePokeBallText:
     CheckEitherEventSet EVENT_GOT_HITMONLEE, EVENT_GOT_HITMONCHAN

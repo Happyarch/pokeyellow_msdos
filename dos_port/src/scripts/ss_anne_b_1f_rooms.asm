@@ -105,43 +105,7 @@ SSAnneB1FRooms_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SSAnneB1FRooms_ScriptPointers (scripts/SSAnneB1FRooms.asm:11-44) — a generated asset already defines SSAnne10TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_SSANNEB1FROOMS_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_SSANNEB1FROOMS_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_SSANNEB1FROOMS_END_BATTLE
-; PRET| 
-; PRET| SSAnneB1FRooms_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const SSAnneB1FRoomsSailor1Text,   TEXT_SSANNEB1FROOMS_SAILOR1
-; PRET| 	dw_const SSAnneB1FRoomsSailor2Text,   TEXT_SSANNEB1FROOMS_SAILOR2
-; PRET| 	dw_const SSAnneB1FRoomsSailor3Text,   TEXT_SSANNEB1FROOMS_SAILOR3
-; PRET| 	dw_const SSAnneB1FRoomsSailor4Text,   TEXT_SSANNEB1FROOMS_SAILOR4
-; PRET| 	dw_const SSAnneB1FRoomsSailor5Text,   TEXT_SSANNEB1FROOMS_SAILOR5
-; PRET| 	dw_const SSAnneB1FRoomsFisherText,    TEXT_SSANNEB1FROOMS_FISHER
-; PRET| 	dw_const SSAnneB1FRoomsSuperNerdText, TEXT_SSANNEB1FROOMS_SUPER_NERD
-; PRET| 	dw_const SSAnneB1FRoomsMachokeText,   TEXT_SSANNEB1FROOMS_MACHOKE
-; PRET| 	dw_const PickUpItemText,              TEXT_SSANNEB1FROOMS_ETHER
-; PRET| 	dw_const PickUpItemText,              TEXT_SSANNEB1FROOMS_TM_REST
-; PRET| 	dw_const PickUpItemText,              TEXT_SSANNEB1FROOMS_MAX_POTION
-; PRET| 
-; PRET| SSAnne10TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| SSAnne10TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_10_TRAINER_0, 2, SSAnneB1FRoomsSailor1BattleText, SSAnneB1FRoomsSailor1EndBattleText, SSAnneB1FRoomsSailor1AfterBattleText
-; PRET| SSAnne10TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_10_TRAINER_1, 3, SSAnneB1FRoomsSailor2BattleText, SSAnneB1FRoomsSailor2EndBattleText, SSAnneB1FRoomsSailor2AfterBattleText
-; PRET| SSAnne10TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_10_TRAINER_2, 2, SSAnneB1FRoomsSailor3BattleText, SSAnneB1FRoomsSailor3EndBattleText, SSAnneB1FRoomsSailor3AfterBattleText
-; PRET| SSAnne10TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_10_TRAINER_3, 2, SSAnneB1FRoomsSailor4BattleText, SSAnneB1FRoomsSailor4EndBattleText, SSAnneB1FRoomsSailor4AfterBattleText
-; PRET| SSAnne10TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_10_TRAINER_4, 2, SSAnneB1FRoomsSailor5BattleText, SSAnneB1FRoomsSailor5EndBattleText, SSAnneB1FRoomsSailor5AfterBattleText
-; PRET| SSAnne10TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_10_TRAINER_5, 3, SSAnneB1FRoomsFisherBattleText, SSAnneB1FRoomsFisherEndBattleText, SSAnneB1FRoomsFisherAfterBattleText
-; PRET| 	db -1 ; end
+; SSAnneB1FRooms_ScriptPointers (scripts/SSAnneB1FRooms.asm:11-44) — Tier-1 data: SSAnne10TrainerHeaders is generated into assets/trainer_headers.inc.
 
 SSAnneB1FRoomsSailor1Text:
     mov esi, SSAnne10TrainerHeader0
@@ -181,80 +145,4 @@ SSAnneB1FRoomsMachokeText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SSAnneB1FRoomsSailor1BattleText (scripts/SSAnneB1FRooms.asm:90-163) — a generated asset already defines SSAnneB1FRoomsSailor1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SSAnneB1FRoomsSailor1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor1EndBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor1AfterBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor2BattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor2EndBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor2AfterBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor3BattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor3EndBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor3AfterBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor3AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor4BattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor4EndBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor4AfterBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor4AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor5BattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor5BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor5EndBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor5EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSailor5AfterBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsSailor5AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsFisherBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsFisherBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsFisherEndBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsFisherEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsFisherAfterBattleText:
-; PRET| 	text_far _SSAnneB1FRoomsFisherAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneB1FRoomsSuperNerdText:
-; PRET| 	text_far _SSAnneB1FRoomsSuperNerdText
-; PRET| 	text_end
+; SSAnneB1FRoomsSailor1BattleText (scripts/SSAnneB1FRooms.asm:90-163) — Tier-1 data: SSAnneB1FRoomsSailor1BattleText is generated into assets/trainer_headers.inc.

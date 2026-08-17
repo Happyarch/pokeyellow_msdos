@@ -207,28 +207,7 @@ VermilionGym_ScriptPointers:
 ; PRET| 	jp VermilionGymResetScripts
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] VermilionGym_TextPointers (scripts/VermilionGym.asm:94-112) — a generated asset already defines VermilionGymTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const VermilionGymLTSurgeText,                 TEXT_VERMILIONGYM_LT_SURGE
-; PRET| 	dw_const VermilionGymGentlemanText,               TEXT_VERMILIONGYM_GENTLEMAN
-; PRET| 	dw_const VermilionGymSuperNerdText,               TEXT_VERMILIONGYM_SUPER_NERD
-; PRET| 	dw_const VermilionGymSailorText,                  TEXT_VERMILIONGYM_SAILOR
-; PRET| 	dw_const VermilionGymGymGuideText,                TEXT_VERMILIONGYM_GYM_GUIDE
-; PRET| 	dw_const VermilionGymLTSurgeThunderBadgeInfoText, TEXT_VERMILIONGYM_LT_SURGE_THUNDER_BADGE_INFO
-; PRET| 	dw_const VermilionGymLTSurgeReceivedTM24Text,     TEXT_VERMILIONGYM_LT_SURGE_RECEIVED_TM24
-; PRET| 	dw_const VermilionGymLTSurgeTM24NoRoomText,       TEXT_VERMILIONGYM_LT_SURGE_TM24_NO_ROOM
-; PRET| 
-; PRET| VermilionGymTrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| VermilionGymTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_VERMILION_GYM_TRAINER_0, 3, VermilionGymGentlemanBattleText, VermilionGymGentlemanEndBattleText, VermilionGymGentlemanAfterBattleText
-; PRET| VermilionGymTrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_VERMILION_GYM_TRAINER_1, 2, VermilionGymSuperNerdBattleText, VermilionGymSuperNerdEndBattleText, VermilionGymSuperNerdAfterBattleText
-; PRET| VermilionGymTrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_VERMILION_GYM_TRAINER_2, 3, VermilionGymSailorBattleText, VermilionGymSailorEndBattleText, VermilionGymSailorAfterBattleText
-; PRET| 	db -1 ; end
+; VermilionGym_TextPointers (scripts/VermilionGym.asm:94-112) — Tier-1 data: VermilionGymTrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] VermilionGymLTSurgeText (scripts/VermilionGym.asm:116-122) — at scripts/VermilionGym.asm:117: .before_beat is defined in a region that bailed
@@ -311,19 +290,7 @@ VermilionGymGentlemanText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] VermilionGymGentlemanBattleText (scripts/VermilionGym.asm:183-192) — a generated asset already defines VermilionGymGentlemanBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _VermilionGymGentlemanBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymGentlemanEndBattleText:
-; PRET| 	text_far _VermilionGymGentlemanEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymGentlemanAfterBattleText:
-; PRET| 	text_far _VermilionGymGentlemanAfterBattleText
-; PRET| 	text_end
+; VermilionGymGentlemanBattleText (scripts/VermilionGym.asm:183-192) — Tier-1 data: VermilionGymGentlemanBattleText is generated into assets/trainer_headers.inc.
 
 VermilionGymSuperNerdText:
     mov esi, VermilionGymTrainerHeader1
@@ -331,19 +298,7 @@ VermilionGymSuperNerdText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] VermilionGymSuperNerdBattleText (scripts/VermilionGym.asm:201-210) — a generated asset already defines VermilionGymSuperNerdBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _VermilionGymSuperNerdBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymSuperNerdEndBattleText:
-; PRET| 	text_far _VermilionGymSuperNerdEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymSuperNerdAfterBattleText:
-; PRET| 	text_far _VermilionGymSuperNerdAfterBattleText
-; PRET| 	text_end
+; VermilionGymSuperNerdBattleText (scripts/VermilionGym.asm:201-210) — Tier-1 data: VermilionGymSuperNerdBattleText is generated into assets/trainer_headers.inc.
 
 VermilionGymSailorText:
     mov esi, VermilionGymTrainerHeader2
@@ -351,19 +306,7 @@ VermilionGymSailorText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] VermilionGymSailorBattleText (scripts/VermilionGym.asm:219-228) — a generated asset already defines VermilionGymSailorBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _VermilionGymSailorBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymSailorEndBattleText:
-; PRET| 	text_far _VermilionGymSailorEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymSailorAfterBattleText:
-; PRET| 	text_far _VermilionGymSailorAfterBattleText
-; PRET| 	text_end
+; VermilionGymSailorBattleText (scripts/VermilionGym.asm:219-228) — Tier-1 data: VermilionGymSailorBattleText is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] VermilionGymGymGuideText (scripts/VermilionGym.asm:232-237) — at scripts/VermilionGym.asm:237: .text_script_end is defined in a region that bailed

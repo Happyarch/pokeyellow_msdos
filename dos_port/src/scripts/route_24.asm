@@ -202,35 +202,7 @@ Route24AfterRocketBattleScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route24_TextPointers (scripts/Route24.asm:81-106) — a generated asset already defines Route24TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route24CooltrainerM1Text, TEXT_ROUTE24_COOLTRAINER_M1
-; PRET| 	dw_const Route24CooltrainerM2Text, TEXT_ROUTE24_COOLTRAINER_M2
-; PRET| 	dw_const Route24CooltrainerM3Text, TEXT_ROUTE24_COOLTRAINER_M3
-; PRET| 	dw_const Route24CooltrainerF1Text, TEXT_ROUTE24_COOLTRAINER_F1
-; PRET| 	dw_const Route24Youngster1Text,    TEXT_ROUTE24_YOUNGSTER1
-; PRET| 	dw_const Route24CooltrainerF2Text, TEXT_ROUTE24_COOLTRAINER_F2
-; PRET| 	dw_const Route24Youngster2Text,    TEXT_ROUTE24_YOUNGSTER2
-; PRET| 	dw_const PickUpItemText,           TEXT_ROUTE24_TM_THUNDER_WAVE
-; PRET| 	dw_const Route24CooltrainerM4Text, TEXT_ROUTE24_COOLTRAINER_M4
-; PRET| 
-; PRET| Route24TrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| Route24TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_24_TRAINER_0, 4, Route24CooltrainerM2BattleText, Route24CooltrainerM2EndBattleText, Route24CooltrainerM2AfterBattleText
-; PRET| Route24TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_24_TRAINER_1, 1, Route24CooltrainerM3BattleText, Route24CooltrainerM3EndBattleText, Route24CooltrainerM3AfterBattleText
-; PRET| Route24TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_24_TRAINER_2, 1, Route24CooltrainerF1BattleText, Route24CooltrainerF1EndBattleText, Route24CooltrainerF1AfterBattleText
-; PRET| Route24TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROUTE_24_TRAINER_3, 1, Route24Youngster1BattleText, Route24Youngster1EndBattleText, Route24Youngster1AfterBattleText
-; PRET| Route24TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROUTE_24_TRAINER_4, 1, Route24CooltrainerF2BattleText, Route24CooltrainerF2EndBattleText, Route24CooltrainerF2AfterBattleText
-; PRET| Route24TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_ROUTE_24_TRAINER_5, 1, Route24Youngster2BattleText, Route24Youngster2EndBattleText, Route24Youngster2AfterBattleText
-; PRET| 	db -1 ; end
+; Route24_TextPointers (scripts/Route24.asm:81-106) — Tier-1 data: Route24TrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] Route24CooltrainerM1Text (scripts/Route24.asm:110-138) — at scripts/Route24.asm:112: .got_item is defined in a region that bailed
@@ -345,79 +317,7 @@ Route24Youngster2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route24CooltrainerM2BattleText (scripts/Route24.asm:214-283) — a generated asset already defines Route24CooltrainerM2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route24CooltrainerM2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerM2EndBattleText:
-; PRET| 	text_far _Route24CooltrainerM2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerM2AfterBattleText:
-; PRET| 	text_far _Route24CooltrainerM2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerM3BattleText:
-; PRET| 	text_far _Route24CooltrainerM3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerM3EndBattleText:
-; PRET| 	text_far _Route24CooltrainerM3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerM3AfterBattleText:
-; PRET| 	text_far _Route24CooltrainerM3AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerF1BattleText:
-; PRET| 	text_far _Route24CooltrainerF1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerF1EndBattleText:
-; PRET| 	text_far _Route24CooltrainerF1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerF1AfterBattleText:
-; PRET| 	text_far _Route24CooltrainerF1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24Youngster1BattleText:
-; PRET| 	text_far _Route24Youngster1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24Youngster1EndBattleText:
-; PRET| 	text_far _Route24Youngster1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24Youngster1AfterBattleText:
-; PRET| 	text_far _Route24Youngster1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerF2BattleText:
-; PRET| 	text_far _Route24CooltrainerF2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerF2EndBattleText:
-; PRET| 	text_far _Route24CooltrainerF2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24CooltrainerF2AfterBattleText:
-; PRET| 	text_far _Route24CooltrainerF2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24Youngster2BattleText:
-; PRET| 	text_far _Route24Youngster2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24Youngster2EndBattleText:
-; PRET| 	text_far _Route24Youngster2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route24Youngster2AfterBattleText:
-; PRET| 	text_far _Route24Youngster2AfterBattleText
-; PRET| 	text_end
+; Route24CooltrainerM2BattleText (scripts/Route24.asm:214-283) — Tier-1 data: Route24CooltrainerM2BattleText is generated into assets/trainer_headers.inc.
 
 Route24CooltrainerM4Text:
     CheckEvent EVENT_54F

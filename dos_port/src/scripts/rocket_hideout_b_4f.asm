@@ -441,35 +441,7 @@ RocketHideoutB4FScript_HideObject:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB4F_TextPointers (scripts/RocketHideoutB4F.asm:292-317) — a generated asset already defines RocketHideout4TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const RocketHideoutB4FGiovanniText,                TEXT_ROCKETHIDEOUTB4F_GIOVANNI
-; PRET| 	dw_const RocketHideoutB4FJessieJamesText,             TEXT_ROCKETHIDEOUTB4F_JAMES
-; PRET| 	dw_const RocketHideoutB4FJessieJamesText,             TEXT_ROCKETHIDEOUTB4F_JESSIE
-; PRET| 	dw_const RocketHideoutB4FRocketText,                  TEXT_ROCKETHIDEOUTB4F_ROCKET
-; PRET| 	dw_const PickUpItemText,                              TEXT_ROCKETHIDEOUTB4F_HP_UP
-; PRET| 	dw_const PickUpItemText,                              TEXT_ROCKETHIDEOUTB4F_TM_RAZOR_WIND
-; PRET| 	dw_const PickUpItemText,                              TEXT_ROCKETHIDEOUTB4F_IRON
-; PRET| 	dw_const PickUpItemText,                              TEXT_ROCKETHIDEOUTB4F_SILPH_SCOPE
-; PRET| 	dw_const PickUpItemText,                              TEXT_ROCKETHIDEOUTB4F_LIFT_KEY
-; PRET| 	dw_const RocketHideoutB4FGiovanniHopeWeMeetAgainText, TEXT_ROCKETHIDEOUTB4F_GIOVANNI_HOPE_WE_MEET_AGAIN
-; PRET| 	dw_const RocketHideoutB4FText11,                      TEXT_ROCKETHIDEOUTB4F_TEXT11
-; PRET| 	dw_const RocketHideoutB4FText12,                      TEXT_ROCKETHIDEOUTB4F_TEXT12
-; PRET| 	dw_const RocketHideoutB4FText13,                      TEXT_ROCKETHIDEOUTB4F_TEXT13
-; PRET| 
-; PRET| RocketHideout4TrainerHeaders:
-; PRET| 	def_trainers 4
-; PRET| RocketHideout4TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_4_TRAINER_2, 1, RocketHideoutB4FRocketBattleText, RocketHideoutB4FRocketEndBattleText, RocketHideoutB4FRocketAfterBattleText
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| RocketHideoutB4FJessieJamesText:
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB4FText11:
-; PRET| 	text_far _RocketHideoutJessieJamesText1
+; RocketHideoutB4F_TextPointers (scripts/RocketHideoutB4F.asm:292-317) — Tier-1 data: RocketHideout4TrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[predef-leaves-id-in-a] scripts/RocketHideoutB4F.asm:anon (scripts/RocketHideoutB4F.asm:319-330) — at scripts/RocketHideoutB4F.asm:327: predef EmotionBubble
@@ -545,15 +517,7 @@ RocketHideoutB4FRocketText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB4FRocketBattleText (scripts/RocketHideoutB4F.asm:394-399) — a generated asset already defines RocketHideoutB4FRocketBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _RocketHideoutB4FRocketBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB4FRocketEndBattleText:
-; PRET| 	text_far _RocketHideoutB4FRocketEndBattleText
-; PRET| 	text_promptbutton
+; RocketHideoutB4FRocketBattleText (scripts/RocketHideoutB4F.asm:394-399) — Tier-1 data: RocketHideoutB4FRocketBattleText is generated into assets/trainer_headers.inc.
 
     SetEvent EVENT_ROCKET_DROPPED_LIFT_KEY
     mov al, 140
@@ -563,12 +527,7 @@ RocketHideoutB4FRocketText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB4FRocketAfterBattleText (scripts/RocketHideoutB4F.asm:409-411) — a generated asset already defines RocketHideoutB4FRocketAfterBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+; RocketHideoutB4FRocketAfterBattleText (scripts/RocketHideoutB4F.asm:409-411) — Tier-1 data: RocketHideoutB4FRocketAfterBattleText is generated into assets/trainer_headers.inc.
 
 .Text:
     text_far _RocketHideoutB4FRocketAfterBattleText

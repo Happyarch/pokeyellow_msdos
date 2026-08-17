@@ -655,29 +655,7 @@ SilphCo11FScript_HideObject:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SilphCo11F_TextPointers (scripts/SilphCo11F.asm:473-492) — a generated asset already defines SilphCo11TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const SilphCo11FSilphPresidentText,            TEXT_SILPHCO11F_SILPH_PRESIDENT
-; PRET| 	dw_const SilphCo11FBeautyText,                    TEXT_SILPHCO11F_BEAUTY
-; PRET| 	dw_const SilphCo11FGiovanniText,                  TEXT_SILPHCO11F_GIOVANNI
-; PRET| 	dw_const SilphCo11FJessieJamesText,               TEXT_SILPHCO11F_JAMES
-; PRET| 	dw_const SilphCo11FRocketText,                    TEXT_SILPHCO11F_ROCKET
-; PRET| 	dw_const SilphCo11FJessieJamesText,               TEXT_SILPHCO11F_JESSIE
-; PRET| 	dw_const SilphCo11FGiovanniYouRuinedOurPlansText, TEXT_SILPHCO11F_GIOVANNI_YOU_RUINED_OUR_PLANS
-; PRET| 	dw_const SilphCo11FJessieJamesText,               TEXT_SILPHCO11F_TEXT8
-; PRET| 	dw_const SilphCo11FText9,                         TEXT_SILPHCO11F_TEXT9
-; PRET| 	dw_const SilphCo11FText10,                        TEXT_SILPHCO11F_TEXT10
-; PRET| 
-; PRET| SilphCo11TrainerHeaders:
-; PRET| 	def_trainers 5
-; PRET| SilphCo11TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_SILPH_CO_11F_TRAINER_0, 3, SilphCo11FRocketBattleText, SilphCo11FRocketEndBattleText, SilphCo11FRocketAfterBattleText
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| SilphCo11FJessieJamesText:
-; PRET| 	text_far _SilphCoJessieJamesText1
+; SilphCo11F_TextPointers (scripts/SilphCo11F.asm:473-492) — Tier-1 data: SilphCo11TrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[predef-leaves-id-in-a] scripts/SilphCo11F.asm:anon (scripts/SilphCo11F.asm:494-505) — at scripts/SilphCo11F.asm:502: predef EmotionBubble
@@ -784,19 +762,7 @@ SilphCo11FRocketText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SilphCo11FRocketBattleText (scripts/SilphCo11F.asm:585-594) — a generated asset already defines SilphCo11FRocketBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SilphCo11FRocket2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo11FRocketEndBattleText:
-; PRET| 	text_far _SilphCo11FRocket2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo11FRocketAfterBattleText:
-; PRET| 	text_far _SilphCo11FRocket2AfterBattleText
-; PRET| 	text_end
+; SilphCo11FRocketBattleText (scripts/SilphCo11F.asm:585-594) — Tier-1 data: SilphCo11FRocketBattleText is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[pointer-domain-unknown] SilphCo11FTeamRocketLeavesScript (scripts/SilphCo11F_2.asm:2-11) — at scripts/SilphCo11F_2.asm:4: HL domain is top at a dereference

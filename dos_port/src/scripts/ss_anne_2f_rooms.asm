@@ -116,41 +116,7 @@ SSAnne2FRooms_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SSAnne2FRooms_ScriptPointers (scripts/SSAnne2FRooms.asm:11-42) — a generated asset already defines SSAnne9TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_SSANNE2FROOMS_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_SSANNE2FROOMS_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_SSANNE2FROOMS_END_BATTLE
-; PRET| 
-; PRET| SSAnne2FRooms_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const SSAnne2FRoomsGentleman1Text,   TEXT_SSANNE2FROOMS_GENTLEMAN1
-; PRET| 	dw_const SSAnne2FRoomsFisherText,       TEXT_SSANNE2FROOMS_FISHER
-; PRET| 	dw_const SSAnne2FRoomsGentleman2Text,   TEXT_SSANNE2FROOMS_GENTLEMAN2
-; PRET| 	dw_const SSAnne2FRoomsCooltrainerFText, TEXT_SSANNE2FROOMS_COOLTRAINER_F
-; PRET| 	dw_const SSAnne2FRoomsGentleman3Text,   TEXT_SSANNE2FROOMS_GENTLEMAN3
-; PRET| 	dw_const PickUpItemText,                TEXT_SSANNE2FROOMS_MAX_ETHER
-; PRET| 	dw_const SSAnne2FRoomsGentleman4Text,   TEXT_SSANNE2FROOMS_GENTLEMAN4
-; PRET| 	dw_const SSAnne2FRoomsGrampsText,       TEXT_SSANNE2FROOMS_GRAMPS
-; PRET| 	dw_const PickUpItemText,                TEXT_SSANNE2FROOMS_RARE_CANDY
-; PRET| 	dw_const SSAnne2FRoomsGentleman5Text,   TEXT_SSANNE2FROOMS_GENTLEMAN5
-; PRET| 	dw_const SSAnne2FRoomsLittleBoyText,    TEXT_SSANNE2FROOMS_LITTLE_BOY
-; PRET| 	dw_const SSAnne2FRoomsBrunetteGirlText, TEXT_SSANNE2FROOMS_BRUNETTE_GIRL
-; PRET| 	dw_const SSAnne2FRoomsBeautyText,       TEXT_SSANNE2FROOMS_BEAUTY
-; PRET| 
-; PRET| SSAnne9TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| SSAnne9TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_9_TRAINER_0, 2, SSAnne2FRoomsGentleman1BattleText, SSAnne2FRoomsGentleman1EndBattleText, SSAnne2FRoomsGentleman1AfterBattleText
-; PRET| SSAnne9TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_9_TRAINER_1, 3, SSAnne2FRoomsFisherBattleText, SSAnne2FRoomsFisherEndBattleText, SSAnne2FRoomsFisherAfterBattleText
-; PRET| SSAnne9TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_9_TRAINER_2, 3, SSAnne2FRoomsGentleman2BattleText, SSAnne2FRoomsGentleman2EndBattleText, SSAnne2FRoomsGentleman2AfterBattleText
-; PRET| SSAnne9TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_9_TRAINER_3, 2, SSAnne2FRoomsCooltrainerFBattleText, SSAnne2FRoomsCooltrainerFEndBattleText, SSAnne2FRoomsCooltrainerFAfterBattleText
-; PRET| 	db -1 ; end
+; SSAnne2FRooms_ScriptPointers (scripts/SSAnne2FRooms.asm:11-42) — Tier-1 data: SSAnne9TrainerHeaders is generated into assets/trainer_headers.inc.
 
 SSAnne2FRoomsGentleman1Text:
     mov esi, SSAnne9TrainerHeader0
@@ -224,55 +190,7 @@ SSAnne2FRoomsBeautyText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SSAnne2FRoomsGentleman1BattleText (scripts/SSAnne2FRooms.asm:123-168) — a generated asset already defines SSAnne2FRoomsGentleman1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SSAnne2FRoomsGentleman1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsGentleman1EndBattleText:
-; PRET| 	text_far _SSAnne2FRoomsGentleman1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsGentleman1AfterBattleText:
-; PRET| 	text_far _SSAnne2FRoomsGentleman1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsFisherBattleText:
-; PRET| 	text_far _SSAnne2FRoomsFisherBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsFisherEndBattleText:
-; PRET| 	text_far _SSAnne2FRoomsFisherEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsFisherAfterBattleText:
-; PRET| 	text_far _SSAnne2FRoomsFisherAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsGentleman2BattleText:
-; PRET| 	text_far _SSAnne2FRoomsGentleman2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsGentleman2EndBattleText:
-; PRET| 	text_far _SSAnne2FRoomsGentleman2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsGentleman2AfterBattleText:
-; PRET| 	text_far _SSAnne2FRoomsGentleman2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsCooltrainerFBattleText:
-; PRET| 	text_far _SSAnne2FRoomsCooltrainerFBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsCooltrainerFEndBattleText:
-; PRET| 	text_far _SSAnne2FRoomsCooltrainerFEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnne2FRoomsCooltrainerFAfterBattleText:
-; PRET| 	text_far _SSAnne2FRoomsCooltrainerFAfterBattleText
-; PRET| 	text_end
+; SSAnne2FRoomsGentleman1BattleText (scripts/SSAnne2FRooms.asm:123-168) — Tier-1 data: SSAnne2FRoomsGentleman1BattleText is generated into assets/trainer_headers.inc.
 
 SSAnne2FRoomsPrintGentleman5Text:
     mov esi, .text

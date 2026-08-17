@@ -615,40 +615,7 @@ MtMoonB2FScript_HideObject:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] MtMoonB2F_TextPointers (scripts/MtMoonB2F.asm:417-447) — a generated asset already defines MtMoon3TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const MtMoonB2FSuperNerdText,                TEXT_MTMOONB2F_SUPER_NERD
-; PRET| 	dw_const MtMoonB2FJessieJamesText,              TEXT_MTMOONB2F_JESSIE
-; PRET| 	dw_const MtMoonB2FRocket1Text,                  TEXT_MTMOONB2F_ROCKET1
-; PRET| 	dw_const MtMoonB2FRocket2Text,                  TEXT_MTMOONB2F_ROCKET2
-; PRET| 	dw_const MtMoonB2FRocket3Text,                  TEXT_MTMOONB2F_ROCKET3
-; PRET| 	dw_const MtMoonB2FJessieJamesText,              TEXT_MTMOONB2F_JAMES
-; PRET| 	dw_const MtMoonB2FDomeFossilText,               TEXT_MTMOONB2F_DOME_FOSSIL
-; PRET| 	dw_const MtMoonB2FHelixFossilText,              TEXT_MTMOONB2F_HELIX_FOSSIL
-; PRET| 	dw_const PickUpItemText,                        TEXT_MTMOONB2F_HP_UP
-; PRET| 	dw_const PickUpItemText,                        TEXT_MTMOONB2F_TM_MEGA_PUNCH
-; PRET| 	dw_const MtMoonB2FSuperNerdThenThisIsMineText,  TEXT_MTMOONB2F_SUPER_NERD_THEN_THIS_IS_MINE
-; PRET| 	dw_const MtMoonB2FText12,                       TEXT_MTMOONB2F_TEXT12
-; PRET| 	dw_const MtMoonB2FText13,                       TEXT_MTMOONB2F_TEXT13
-; PRET| 	dw_const MtMoonB2FText14,                       TEXT_MTMOONB2F_TEXT14
-; PRET| 
-; PRET| MtMoon3TrainerHeaders:
-; PRET| 	def_trainers 3
-; PRET| MtMoon3TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_MT_MOON_3_TRAINER_0, 4, MtMoonB2FRocket2BattleText, MtMoonB2FRocket2EndBattleText, MtMoonB2FRocket2AfterBattleText
-; PRET| MtMoon3TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_MT_MOON_3_TRAINER_1, 4, MtMoonB2FRocket3BattleText, MtMoonB2FRocket3EndBattleText, MtMoonB2FRocket3AfterBattleText
-; PRET| MtMoon3TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_MT_MOON_3_TRAINER_2, 4, MtMoonB2FRocket4BattleText, MtMoonB2FRocket4EndBattleText, MtMoonB2FRocket4AfterBattleText
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| MtMoonB2FJessieJamesText:
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FText12:
-; PRET| 	text_far _MtMoonJessieJamesText1
+; MtMoonB2F_TextPointers (scripts/MtMoonB2F.asm:417-447) — Tier-1 data: MtMoon3TrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[predef-leaves-id-in-a] scripts/MtMoonB2F.asm:anon (scripts/MtMoonB2F.asm:449-460) — at scripts/MtMoonB2F.asm:457: predef EmotionBubble
@@ -818,69 +785,7 @@ MtMoonB2FTalkToTrainer:
 ; PRET| 	jp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] MtMoonB2FYouHaveNoRoomText.Text (scripts/MtMoonB2F.asm:595-654) — a generated asset already defines MtMoonB2FRocket2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _MtMoonB2FYouHaveNoRoomText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FSuperNerdTheyreBothMineText:
-; PRET| 	text_far _MtMoonB2FSuperNerdTheyreBothMineText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FSuperNerdOkIllShareText:
-; PRET| 	text_far _MtMoonB2FSuperNerdOkIllShareText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2fSuperNerdEachTakeOneText:
-; PRET| 	text_far _MtMoonB2fSuperNerdEachTakeOneText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FSuperNerdTheresAPokemonLabText:
-; PRET| 	text_far _MtMoonB2FSuperNerdTheresAPokemonLabText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FSuperNerdThenThisIsMineText:
-; PRET| 	text_far _MtMoonB2FSuperNerdThenThisIsMineText
-; PRET| 	sound_get_key_item
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FRocket2BattleText:
-; PRET| 	text_far _MtMoonB2FRocket2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FRocket2EndBattleText:
-; PRET| 	text_far _MtMoonB2FRocket2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FRocket2AfterBattleText:
-; PRET| 	text_far _MtMoonB2FRocket2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FRocket3BattleText:
-; PRET| 	text_far _MtMoonB2FRocket3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FRocket3EndBattleText:
-; PRET| 	text_far _MtMoonB2FRocket3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FRocket3AfterBattleText:
-; PRET| 	text_far _MtMoonB2FRocket3AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FRocket4BattleText:
-; PRET| 	text_far _MtMoonB2FRocket4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FRocket4EndBattleText:
-; PRET| 	text_far _MtMoonB2FRocket4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonB2FRocket4AfterBattleText:
-; PRET| 	text_far _MtMoonB2FRocket4AfterBattleText
-; PRET| 	text_end
+; MtMoonB2FYouHaveNoRoomText.Text (scripts/MtMoonB2F.asm:595-654) — Tier-1 data: MtMoonB2FRocket2BattleText is generated into assets/trainer_headers.inc.
 
 MtMoonB2FScript_ApplyPikachuMovementData:
     mov al, [ebp + wPikachuSpawnStateFlags]

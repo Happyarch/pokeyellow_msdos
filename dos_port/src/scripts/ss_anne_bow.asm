@@ -77,41 +77,7 @@ SSAnneBow_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SSAnneBow_ScriptPointers (scripts/SSAnneBow.asm:11-42) — a generated asset already defines SSAnne5TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_SSANNEBOW_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_SSANNEBOW_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_SSANNEBOW_END_BATTLE
-; PRET| 
-; PRET| SSAnneBow_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const SSAnneBowSuperNerdText,    TEXT_SSANNEBOW_SUPER_NERD
-; PRET| 	dw_const SSAnneBowSailor1Text,      TEXT_SSANNEBOW_SAILOR1
-; PRET| 	dw_const SSAnneBowCooltrainerMText, TEXT_SSANNEBOW_COOLTRAINER_M
-; PRET| 	dw_const SSAnneBowSailor2Text,      TEXT_SSANNEBOW_SAILOR2
-; PRET| 	dw_const SSAnneBowSailor3Text,      TEXT_SSANNEBOW_SAILOR3
-; PRET| 
-; PRET| SSAnne5TrainerHeaders:
-; PRET| 	def_trainers 4
-; PRET| SSAnne5TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_5_TRAINER_0, 3, SSAnneBowSailor2BattleText, SSAnneBowSailor2EndBattleText, SSAnneBowSailor2AfterBattleText
-; PRET| SSAnne5TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_SS_ANNE_5_TRAINER_1, 3, SSAnneBowSailor3BattleText, SSAnneBowSailor3EndBattleText, SSAnneBowSailor3AfterBattleText
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| SSAnneBowSuperNerdText:
-; PRET| 	text_far _SSAnneBowSuperNerdText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneBowSailor1Text:
-; PRET| 	text_far _SSAnneBowSailor1Text
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneBowCooltrainerMText:
-; PRET| 	text_far _SSAnneBowCooltrainerMText
-; PRET| 	text_end
+; SSAnneBow_ScriptPointers (scripts/SSAnneBow.asm:11-42) — Tier-1 data: SSAnne5TrainerHeaders is generated into assets/trainer_headers.inc.
 
 SSAnneBowSailor2Text:
     mov esi, SSAnne5TrainerHeader0
@@ -119,19 +85,7 @@ SSAnneBowSailor2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SSAnneBowSailor2BattleText (scripts/SSAnneBow.asm:51-60) — a generated asset already defines SSAnneBowSailor2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SSAnneBowSailor2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneBowSailor2EndBattleText:
-; PRET| 	text_far _SSAnneBowSailor2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneBowSailor2AfterBattleText:
-; PRET| 	text_far _SSAnneBowSailor2AfterBattleText
-; PRET| 	text_end
+; SSAnneBowSailor2BattleText (scripts/SSAnneBow.asm:51-60) — Tier-1 data: SSAnneBowSailor2BattleText is generated into assets/trainer_headers.inc.
 
 SSAnneBowSailor3Text:
     mov esi, SSAnne5TrainerHeader1
@@ -139,16 +93,4 @@ SSAnneBowSailor3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SSAnneBowSailor3BattleText (scripts/SSAnneBow.asm:69-78) — a generated asset already defines SSAnneBowSailor3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SSAnneBowSailor3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneBowSailor3EndBattleText:
-; PRET| 	text_far _SSAnneBowSailor3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneBowSailor3AfterBattleText:
-; PRET| 	text_far _SSAnneBowSailor3AfterBattleText
-; PRET| 	text_end
+; SSAnneBowSailor3BattleText (scripts/SSAnneBow.asm:69-78) — Tier-1 data: SSAnneBowSailor3BattleText is generated into assets/trainer_headers.inc.

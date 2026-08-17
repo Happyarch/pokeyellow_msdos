@@ -127,46 +127,10 @@ MansionB1FCheckReplaceSwitchDoorBlocks:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Mansion4Script_Switches (scripts/PokemonMansionB1F.asm:47-54) — a generated asset already defines Mansion4Script_Switches
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wSpritePlayerStateData1FacingDirection]
-; PRET| 	cp SPRITE_FACING_UP
-; PRET| 	ret nz
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, TEXT_POKEMONMANSIONB1F_SWITCH
-; PRET| 	ldh [hTextID], a
-; PRET| 	jp DisplayTextID
+; Mansion4Script_Switches (scripts/PokemonMansionB1F.asm:47-54) — Tier-1 data: Mansion4Script_Switches is generated into assets/hidden_events.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonMansionB1F_ScriptPointers (scripts/PokemonMansionB1F.asm:57-80) — a generated asset already defines Mansion4TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_POKEMONMANSIONB1F_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_POKEMONMANSIONB1F_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_POKEMONMANSIONB1F_END_BATTLE
-; PRET| 
-; PRET| PokemonMansionB1F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PokemonMansionB1FBurglarText,   TEXT_POKEMONMANSIONB1F_BURGLAR
-; PRET| 	dw_const PokemonMansionB1FScientistText, TEXT_POKEMONMANSIONB1F_SCIENTIST
-; PRET| 	dw_const PickUpItemText,                 TEXT_POKEMONMANSIONB1F_RARE_CANDY
-; PRET| 	dw_const PickUpItemText,                 TEXT_POKEMONMANSIONB1F_FULL_RESTORE
-; PRET| 	dw_const PickUpItemText,                 TEXT_POKEMONMANSIONB1F_TM_BLIZZARD
-; PRET| 	dw_const PickUpItemText,                 TEXT_POKEMONMANSIONB1F_TM_SOLARBEAM
-; PRET| 	dw_const PokemonMansionB1FDiaryText,     TEXT_POKEMONMANSIONB1F_DIARY
-; PRET| 	dw_const PickUpItemText,                 TEXT_POKEMONMANSIONB1F_SECRET_KEY
-; PRET| 	dw_const PokemonMansion2FSwitchText,     TEXT_POKEMONMANSIONB1F_SWITCH ; This switch uses the text script from the 2F.
-; PRET| 
-; PRET| Mansion4TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Mansion4TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_MANSION_4_TRAINER_0, 0, PokemonMansionB1FBurglarBattleText, PokemonMansionB1FBurglarEndBattleText, PokemonMansionB1FBurglarAfterBattleText
-; PRET| Mansion4TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_MANSION_4_TRAINER_1, 3, PokemonMansionB1FScientistBattleText, PokemonMansionB1FScientistEndBattleText, PokemonMansionB1FScientistAfterBattleText
-; PRET| 	db -1 ; end
+; PokemonMansionB1F_ScriptPointers (scripts/PokemonMansionB1F.asm:57-80) — Tier-1 data: Mansion4TrainerHeaders is generated into assets/trainer_headers.inc.
 
 PokemonMansionB1FBurglarText:
     mov esi, Mansion4TrainerHeader0
@@ -179,32 +143,4 @@ PokemonMansionB1FScientistText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonMansionB1FBurglarBattleText (scripts/PokemonMansionB1F.asm:95-120) — a generated asset already defines PokemonMansionB1FBurglarBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonMansionB1FBurglarBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansionB1FBurglarEndBattleText:
-; PRET| 	text_far _PokemonMansionB1FBurglarEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansionB1FBurglarAfterBattleText:
-; PRET| 	text_far _PokemonMansionB1FBurglarAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansionB1FScientistBattleText:
-; PRET| 	text_far _PokemonMansionB1FScientistBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansionB1FScientistEndBattleText:
-; PRET| 	text_far _PokemonMansionB1FScientistEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansionB1FScientistAfterBattleText:
-; PRET| 	text_far _PokemonMansionB1FScientistAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansionB1FDiaryText:
-; PRET| 	text_far _PokemonMansionB1FDiaryText
-; PRET| 	text_end
+; PokemonMansionB1FBurglarBattleText (scripts/PokemonMansionB1F.asm:95-120) — Tier-1 data: PokemonMansionB1FBurglarBattleText is generated into assets/trainer_headers.inc.

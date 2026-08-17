@@ -136,28 +136,7 @@ SilphCo3F_Script:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SilphCo3F_ScriptPointers (scripts/SilphCo3F.asm:54-72) — a generated asset already defines SilphCo3TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_SILPHCO3F_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_SILPHCO3F_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_SILPHCO3F_END_BATTLE
-; PRET| 
-; PRET| SilphCo3F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const SilphCo3FSilphWorkerMText, TEXT_SILPHCO3F_SILPH_WORKER_M
-; PRET| 	dw_const SilphCo3FRocketText,       TEXT_SILPHCO3F_ROCKET
-; PRET| 	dw_const SilphCo3FScientistText,    TEXT_SILPHCO3F_SCIENTIST
-; PRET| 	dw_const PickUpItemText,            TEXT_SILPHCO3F_HYPER_POTION
-; PRET| 
-; PRET| SilphCo3TrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| SilphCo3TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_SILPH_CO_3F_TRAINER_0, 2, SilphCo3FRocketBattleText, SilphCo3FRocketEndBattleText, SilphCo3FRocketAfterBattleText
-; PRET| SilphCo3TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_SILPH_CO_3F_TRAINER_1, 3, SilphCo3FScientistBattleText, SilphCo3FScientistEndBattleText, SilphCo3FScientistAfterBattleText
-; PRET| 	db -1 ; end
+; SilphCo3F_ScriptPointers (scripts/SilphCo3F.asm:54-72) — Tier-1 data: SilphCo3TrainerHeaders is generated into assets/trainer_headers.inc.
 
 SilphCo3FSilphWorkerMText:
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
@@ -181,19 +160,7 @@ SilphCo3FRocketText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SilphCo3FRocketBattleText (scripts/SilphCo3F.asm:99-108) — a generated asset already defines SilphCo3FRocketBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SilphCo3FRocketBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo3FRocketEndBattleText:
-; PRET| 	text_far _SilphCo3FRocketEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo3FRocketAfterBattleText:
-; PRET| 	text_far _SilphCo3FRocketAfterBattleText
-; PRET| 	text_end
+; SilphCo3FRocketBattleText (scripts/SilphCo3F.asm:99-108) — Tier-1 data: SilphCo3FRocketBattleText is generated into assets/trainer_headers.inc.
 
 SilphCo3FScientistText:
     mov esi, SilphCo3TrainerHeader1
@@ -201,16 +168,4 @@ SilphCo3FScientistText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SilphCo3FScientistBattleText (scripts/SilphCo3F.asm:117-126) — a generated asset already defines SilphCo3FScientistBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SilphCo3FScientistBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo3FScientistEndBattleText:
-; PRET| 	text_far _SilphCo3FScientistEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo3FScientistAfterBattleText:
-; PRET| 	text_far _SilphCo3FScientistAfterBattleText
-; PRET| 	text_end
+; SilphCo3FScientistBattleText (scripts/SilphCo3F.asm:117-126) — Tier-1 data: SilphCo3FScientistBattleText is generated into assets/trainer_headers.inc.

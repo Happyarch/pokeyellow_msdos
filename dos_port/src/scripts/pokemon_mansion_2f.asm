@@ -126,40 +126,10 @@ Mansion2ReplaceBlock:
     jmp ReplaceTileBlock
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Mansion2Script_Switches (scripts/PokemonMansion2F.asm:45-52) — a generated asset already defines Mansion2Script_Switches
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wSpritePlayerStateData1FacingDirection]
-; PRET| 	cp SPRITE_FACING_UP
-; PRET| 	ret nz
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, TEXT_POKEMONMANSION2F_SWITCH
-; PRET| 	ldh [hTextID], a
-; PRET| 	jp DisplayTextID
+; Mansion2Script_Switches (scripts/PokemonMansion2F.asm:45-52) — Tier-1 data: Mansion2Script_Switches is generated into assets/hidden_events.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonMansion2F_ScriptPointers (scripts/PokemonMansion2F.asm:55-72) — a generated asset already defines Mansion2TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_POKEMONMANSION2F_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_POKEMONMANSION2F_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_POKEMONMANSION2F_END_BATTLE
-; PRET| 
-; PRET| PokemonMansion2F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PokemonMansion2FSuperNerdText, TEXT_POKEMONMANSION2F_SUPER_NERD
-; PRET| 	dw_const PickUpItemText,                TEXT_POKEMONMANSION2F_CALCIUM
-; PRET| 	dw_const PokemonMansion2FDiary1Text,    TEXT_POKEMONMANSION2F_DIARY1
-; PRET| 	dw_const PokemonMansion2FDiary2Text,    TEXT_POKEMONMANSION2F_DIARY2
-; PRET| 	dw_const PokemonMansion2FSwitchText,    TEXT_POKEMONMANSION2F_SWITCH
-; PRET| 
-; PRET| Mansion2TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Mansion2TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_MANSION_2_TRAINER_0, 0, PokemonMansion2FSuperNerdBattleText, PokemonMansion2FSuperNerdEndBattleText, PokemonMansion2FSuperNerdAfterBattleText
-; PRET| 	db -1 ; end
+; PokemonMansion2F_ScriptPointers (scripts/PokemonMansion2F.asm:55-72) — Tier-1 data: Mansion2TrainerHeaders is generated into assets/trainer_headers.inc.
 
 PokemonMansion2FSuperNerdText:
     mov esi, Mansion2TrainerHeader0
@@ -167,27 +137,7 @@ PokemonMansion2FSuperNerdText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonMansion2FSuperNerdBattleText (scripts/PokemonMansion2F.asm:81-98) — a generated asset already defines PokemonMansion2FSuperNerdBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonMansion2FSuperNerdBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion2FSuperNerdEndBattleText:
-; PRET| 	text_far _PokemonMansion2FSuperNerdEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion2FSuperNerdAfterBattleText:
-; PRET| 	text_far _PokemonMansion2FSuperNerdAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion2FDiary1Text:
-; PRET| 	text_far _PokemonMansion2FDiary1Text
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion2FDiary2Text:
-; PRET| 	text_far _PokemonMansion2FDiary2Text
-; PRET| 	text_end
+; PokemonMansion2FSuperNerdBattleText (scripts/PokemonMansion2F.asm:81-98) — Tier-1 data: PokemonMansion2FSuperNerdBattleText is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[event-byte-assembly-state] PokemonMansion2FSwitchText (scripts/PokemonMansion2F.asm:102-119) — at scripts/PokemonMansion2F.asm:118: ResetEventReuseHL EVENT_MANSION_SWITCH_ON

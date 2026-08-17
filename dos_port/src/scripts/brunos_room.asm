@@ -196,18 +196,7 @@ BrunosRoomBrunoEndBattleScript:
     jmp DisplayTextID
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] BrunosRoom_TextPointers (scripts/BrunosRoom.asm:118-126) — a generated asset already defines BrunosRoomTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const BrunosRoomBrunoText,            TEXT_BRUNOSROOM_BRUNO
-; PRET| 	dw_const BrunosRoomBrunoDontRunAwayText, TEXT_BRUNOSROOM_BRUNO_DONT_RUN_AWAY
-; PRET| 
-; PRET| BrunosRoomTrainerHeaders:
-; PRET| 	def_trainers
-; PRET| BrunosRoomTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_BRUNOS_ROOM_TRAINER_0, 0, BrunoBeforeBattleText, BrunoEndBattleText, BrunoAfterBattleText
-; PRET| 	db -1 ; end
+; BrunosRoom_TextPointers (scripts/BrunosRoom.asm:118-126) — Tier-1 data: BrunosRoomTrainerHeaders is generated into assets/trainer_headers.inc.
 
 BrunosRoomBrunoText:
     mov esi, BrunosRoomTrainerHeader0
@@ -215,20 +204,4 @@ BrunosRoomBrunoText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] BrunoBeforeBattleText (scripts/BrunosRoom.asm:135-148) — a generated asset already defines BrunoBeforeBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _BrunoBeforeBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| BrunoEndBattleText:
-; PRET| 	text_far _BrunoEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| BrunoAfterBattleText:
-; PRET| 	text_far _BrunoAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| BrunosRoomBrunoDontRunAwayText:
-; PRET| 	text_far _BrunosRoomBrunoDontRunAwayText
-; PRET| 	text_end
+; BrunoBeforeBattleText (scripts/BrunosRoom.asm:135-148) — Tier-1 data: BrunoBeforeBattleText is generated into assets/trainer_headers.inc.

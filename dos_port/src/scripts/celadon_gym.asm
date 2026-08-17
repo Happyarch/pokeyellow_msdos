@@ -202,39 +202,7 @@ CeladonGym_ScriptPointers:
 ; PRET| 	jp CeladonGymResetScripts
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeladonGym_TextPointers (scripts/CeladonGym.asm:75-104) — a generated asset already defines CeladonGymTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const CeladonGymErikaText,            TEXT_CELADONGYM_ERIKA
-; PRET| 	dw_const CeladonGymCooltrainerF1Text,    TEXT_CELADONGYM_COOLTRAINER_F1
-; PRET| 	dw_const CeladonGymBeauty1Text,          TEXT_CELADONGYM_BEAUTY1
-; PRET| 	dw_const CeladonGymCooltrainerF2Text,    TEXT_CELADONGYM_COOLTRAINER_F2
-; PRET| 	dw_const CeladonGymBeauty2Text,          TEXT_CELADONGYM_BEAUTY2
-; PRET| 	dw_const CeladonGymCooltrainerF3Text,    TEXT_CELADONGYM_COOLTRAINER_F3
-; PRET| 	dw_const CeladonGymBeauty3Text,          TEXT_CELADONGYM_BEAUTY3
-; PRET| 	dw_const CeladonGymCooltrainerF4Text,    TEXT_CELADONGYM_COOLTRAINER_F4
-; PRET| 	dw_const CeladonGymRainbowBadgeInfoText, TEXT_CELADONGYM_RAINBOWBADGE_INFO
-; PRET| 	dw_const CeladonGymReceivedTM21Text,     TEXT_CELADONGYM_RECEIVED_TM21
-; PRET| 	dw_const CeladonGymTM21NoRoomText,       TEXT_CELADONGYM_TM21_NO_ROOM
-; PRET| 
-; PRET| CeladonGymTrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| CeladonGymTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_CELADON_GYM_TRAINER_0, 2, CeladonGymBattleText2, CeladonGymEndBattleText2, CeladonGymAfterBattleText2
-; PRET| CeladonGymTrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_CELADON_GYM_TRAINER_1, 2, CeladonGymBattleText3, CeladonGymEndBattleText3, CeladonGymAfterBattleText3
-; PRET| CeladonGymTrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_CELADON_GYM_TRAINER_2, 4, CeladonGymBattleText4, CeladonGymEndBattleText4, CeladonGymAfterBattleText4
-; PRET| CeladonGymTrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_CELADON_GYM_TRAINER_3, 4, CeladonGymBattleText5, CeladonGymEndBattleText5, CeladonGymAfterBattleText5
-; PRET| CeladonGymTrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_CELADON_GYM_TRAINER_4, 2, CeladonGymBattleText6, CeladonGymEndBattleText6, CeladonGymAfterBattleText6
-; PRET| CeladonGymTrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_CELADON_GYM_TRAINER_5, 2, CeladonGymBattleText7, CeladonGymEndBattleText7, CeladonGymAfterBattleText7
-; PRET| CeladonGymTrainerHeader6:
-; PRET| 	trainer EVENT_BEAT_CELADON_GYM_TRAINER_6, 3, CeladonGymBattleText8, CeladonGymEndBattleText8, CeladonGymAfterBattleText8
-; PRET| 	db -1 ; end
+; CeladonGym_TextPointers (scripts/CeladonGym.asm:75-104) — Tier-1 data: CeladonGymTrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] CeladonGymErikaText (scripts/CeladonGym.asm:108-114) — at scripts/CeladonGym.asm:109: .beforeBeat is defined in a region that bailed
@@ -315,19 +283,7 @@ CeladonGymCooltrainerF1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeladonGymBattleText2 (scripts/CeladonGym.asm:173-182) — a generated asset already defines CeladonGymBattleText2
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonGymBattleText2
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymEndBattleText2:
-; PRET| 	text_far _CeladonGymEndBattleText2
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymAfterBattleText2:
-; PRET| 	text_far _CeladonGymAfterBattleText2
-; PRET| 	text_end
+; CeladonGymBattleText2 (scripts/CeladonGym.asm:173-182) — Tier-1 data: CeladonGymBattleText2 is generated into assets/trainer_headers.inc.
 
 CeladonGymBeauty1Text:
     mov esi, CeladonGymTrainerHeader1
@@ -335,19 +291,7 @@ CeladonGymBeauty1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeladonGymBattleText3 (scripts/CeladonGym.asm:191-200) — a generated asset already defines CeladonGymBattleText3
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonGymBattleText3
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymEndBattleText3:
-; PRET| 	text_far _CeladonGymEndBattleText3
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymAfterBattleText3:
-; PRET| 	text_far _CeladonGymAfterBattleText3
-; PRET| 	text_end
+; CeladonGymBattleText3 (scripts/CeladonGym.asm:191-200) — Tier-1 data: CeladonGymBattleText3 is generated into assets/trainer_headers.inc.
 
 CeladonGymCooltrainerF2Text:
     mov esi, CeladonGymTrainerHeader2
@@ -355,19 +299,7 @@ CeladonGymCooltrainerF2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeladonGymBattleText4 (scripts/CeladonGym.asm:209-218) — a generated asset already defines CeladonGymBattleText4
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonGymBattleText4
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymEndBattleText4:
-; PRET| 	text_far _CeladonGymEndBattleText4
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymAfterBattleText4:
-; PRET| 	text_far _CeladonGymAfterBattleText4
-; PRET| 	text_end
+; CeladonGymBattleText4 (scripts/CeladonGym.asm:209-218) — Tier-1 data: CeladonGymBattleText4 is generated into assets/trainer_headers.inc.
 
 CeladonGymBeauty2Text:
     mov esi, CeladonGymTrainerHeader3
@@ -375,19 +307,7 @@ CeladonGymBeauty2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeladonGymBattleText5 (scripts/CeladonGym.asm:227-236) — a generated asset already defines CeladonGymBattleText5
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonGymBattleText5
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymEndBattleText5:
-; PRET| 	text_far _CeladonGymEndBattleText5
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymAfterBattleText5:
-; PRET| 	text_far _CeladonGymAfterBattleText5
-; PRET| 	text_end
+; CeladonGymBattleText5 (scripts/CeladonGym.asm:227-236) — Tier-1 data: CeladonGymBattleText5 is generated into assets/trainer_headers.inc.
 
 CeladonGymCooltrainerF3Text:
     mov esi, CeladonGymTrainerHeader4
@@ -395,19 +315,7 @@ CeladonGymCooltrainerF3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeladonGymBattleText6 (scripts/CeladonGym.asm:245-254) — a generated asset already defines CeladonGymBattleText6
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonGymBattleText6
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymEndBattleText6:
-; PRET| 	text_far _CeladonGymEndBattleText6
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymAfterBattleText6:
-; PRET| 	text_far _CeladonGymAfterBattleText6
-; PRET| 	text_end
+; CeladonGymBattleText6 (scripts/CeladonGym.asm:245-254) — Tier-1 data: CeladonGymBattleText6 is generated into assets/trainer_headers.inc.
 
 CeladonGymBeauty3Text:
     mov esi, CeladonGymTrainerHeader5
@@ -415,19 +323,7 @@ CeladonGymBeauty3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeladonGymBattleText7 (scripts/CeladonGym.asm:263-272) — a generated asset already defines CeladonGymBattleText7
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonGymBattleText7
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymEndBattleText7:
-; PRET| 	text_far _CeladonGymEndBattleText7
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymAfterBattleText7:
-; PRET| 	text_far _CeladonGymAfterBattleText7
-; PRET| 	text_end
+; CeladonGymBattleText7 (scripts/CeladonGym.asm:263-272) — Tier-1 data: CeladonGymBattleText7 is generated into assets/trainer_headers.inc.
 
 CeladonGymCooltrainerF4Text:
     mov esi, CeladonGymTrainerHeader6
@@ -435,16 +331,4 @@ CeladonGymCooltrainerF4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeladonGymBattleText8 (scripts/CeladonGym.asm:281-290) — a generated asset already defines CeladonGymBattleText8
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonGymBattleText8
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymEndBattleText8:
-; PRET| 	text_far _CeladonGymEndBattleText8
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymAfterBattleText8:
-; PRET| 	text_far _CeladonGymAfterBattleText8
-; PRET| 	text_end
+; CeladonGymBattleText8 (scripts/CeladonGym.asm:281-290) — Tier-1 data: CeladonGymBattleText8 is generated into assets/trainer_headers.inc.

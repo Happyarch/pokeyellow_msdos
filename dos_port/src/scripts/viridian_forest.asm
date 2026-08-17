@@ -125,50 +125,7 @@ ViridianForest_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianForest_ScriptPointers (scripts/ViridianForest.asm:11-51) — a generated asset already defines ViridianForest_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_VIRIDIANFOREST_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_VIRIDIANFOREST_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_VIRIDIANFOREST_END_BATTLE
-; PRET| 
-; PRET| ViridianForest_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const ViridianForestYoungster1Text,      TEXT_VIRIDIANFOREST_YOUNGSTER1
-; PRET| 	dw_const ViridianForestYoungster2Text,      TEXT_VIRIDIANFOREST_YOUNGSTER2
-; PRET| 	dw_const ViridianForestYoungster3Text,      TEXT_VIRIDIANFOREST_YOUNGSTER3
-; PRET| 	dw_const ViridianForestYoungster4Text,      TEXT_VIRIDIANFOREST_YOUNGSTER4
-; PRET| 	dw_const ViridianForestCooltrainerFText,    TEXT_VIRIDIANFOREST_COOLTRAINER_F
-; PRET| 	dw_const ViridianForestYoungster5Text,      TEXT_VIRIDIANFOREST_YOUNGSTER5
-; PRET| 	dw_const PickUpItemText,                    TEXT_VIRIDIANFOREST_POTION1
-; PRET| 	dw_const PickUpItemText,                    TEXT_VIRIDIANFOREST_POTION2
-; PRET| 	dw_const PickUpItemText,                    TEXT_VIRIDIANFOREST_POKE_BALL
-; PRET| 	dw_const ViridianForestYoungster6Text,      TEXT_VIRIDIANFOREST_YOUNGSTER6
-; PRET| 	dw_const ViridianForestTrainerTips1Text,    TEXT_VIRIDIANFOREST_TRAINER_TIPS1
-; PRET| 	dw_const ViridianForestUseAntidoteSignText, TEXT_VIRIDIANFOREST_USE_ANTIDOTE_SIGN
-; PRET| 	dw_const ViridianForestTrainerTips2Text,    TEXT_VIRIDIANFOREST_TRAINER_TIPS2
-; PRET| 	dw_const ViridianForestTrainerTips3Text,    TEXT_VIRIDIANFOREST_TRAINER_TIPS3
-; PRET| 	dw_const ViridianForestTrainerTips4Text,    TEXT_VIRIDIANFOREST_TRAINER_TIPS4
-; PRET| 	dw_const ViridianForestLeavingSignText,     TEXT_VIRIDIANFOREST_LEAVING_SIGN
-; PRET| 
-; PRET| ViridianForestTrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| ViridianForestTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_FOREST_TRAINER_0, 4, ViridianForestYoungster2BattleText, ViridianForestYoungster2EndBattleText, ViridianForestYoungster2AfterBattleText
-; PRET| ViridianForestTrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_FOREST_TRAINER_1, 4, ViridianForestYoungster3BattleText, ViridianForestYoungster3EndBattleText, ViridianForestYoungster3AfterBattleText
-; PRET| ViridianForestTrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_FOREST_TRAINER_2, 1, ViridianForestYoungster4BattleText, ViridianForestYoungster4EndBattleText, ViridianForestYoungster4AfterBattleText
-; PRET| ViridianForestTrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_FOREST_TRAINER_3, 0, ViridianForestCooltrainerFBattleText, ViridianForestCooltrainerFEndBattleText, ViridianForestCooltrainerFAfterBattleText
-; PRET| ViridianForestTrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_FOREST_TRAINER_4, 4, ViridianForestYoungster5BattleText, ViridianForestYoungster5EndBattleText, ViridianForestYoungster5AfterBattleText
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| ViridianForestYoungster1Text:
-; PRET| 	text_far _ViridianForestYoungster1Text
-; PRET| 	text_end
+; ViridianForest_ScriptPointers (scripts/ViridianForest.asm:11-51) — Tier-1 data: ViridianForest_ScriptPointers is generated into assets/map_script_tables.inc.
 
 ViridianForestYoungster2Text:
     mov esi, ViridianForestTrainerHeader0
@@ -193,71 +150,7 @@ ViridianForestTalkToTrainer:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianForestYoungster2BattleText (scripts/ViridianForest.asm:81-142) — a generated asset already defines ViridianForestYoungster2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianForestYoungster2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster2EndBattleText:
-; PRET| 	text_far _ViridianForestYoungster2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster2AfterBattleText:
-; PRET| 	text_far _ViridianForestYoungster2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster3BattleText:
-; PRET| 	text_far _ViridianForestYoungster3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster3EndBattleText:
-; PRET| 	text_far _ViridianForestYoungster3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster3AfterBattleText:
-; PRET| 	text_far _ViridianForestYoungster3AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster4BattleText:
-; PRET| 	text_far _ViridianForestYoungster4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster4EndBattleText:
-; PRET| 	text_far _ViridianForestYoungster4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster4AfterBattleText:
-; PRET| 	text_far _ViridianForestYoungster4AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestCooltrainerFBattleText:
-; PRET| 	text_far _ViridianForestCooltrainerFBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestCooltrainerFEndBattleText:
-; PRET| 	text_far _ViridianForestCooltrainerFEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestCooltrainerFAfterBattleText:
-; PRET| 	text_far _ViridianForestCooltrainerFAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster5BattleText:
-; PRET| 	text_far _ViridianForestYoungster5BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster5EndBattleText:
-; PRET| 	text_far _ViridianForestYoungster5EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster5AfterBattleText:
-; PRET| 	text_far _ViridianForestYoungster5AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianForestYoungster6Text:
-; PRET| 	text_far _ViridianForestYoungster6Text
-; PRET| 	text_end
+; ViridianForestYoungster2BattleText (scripts/ViridianForest.asm:81-142) — Tier-1 data: ViridianForestYoungster2BattleText is generated into assets/trainer_headers.inc.
 
 ViridianForestTrainerTips1Text:
     mov esi, ViridianForestPrintTrainerTips1Text

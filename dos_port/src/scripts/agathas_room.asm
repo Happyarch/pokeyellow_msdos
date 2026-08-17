@@ -201,18 +201,7 @@ AgathasRoomAgathaEndBattleScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] AgathasRoom_TextPointers (scripts/AgathasRoom.asm:121-129) — a generated asset already defines AgathasRoomTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const AgathasRoomAgathaText,            TEXT_AGATHASROOM_AGATHA
-; PRET| 	dw_const AgathasRoomAgathaDontRunAwayText, TEXT_AGATHASROOM_AGATHA_DONT_RUN_AWAY
-; PRET| 
-; PRET| AgathasRoomTrainerHeaders:
-; PRET| 	def_trainers
-; PRET| AgathasRoomTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_AGATHAS_ROOM_TRAINER_0, 0, AgathaBeforeBattleText, AgathaEndBattleText, AgathaAfterBattleText
-; PRET| 	db -1 ; end
+; AgathasRoom_TextPointers (scripts/AgathasRoom.asm:121-129) — Tier-1 data: AgathasRoomTrainerHeaders is generated into assets/trainer_headers.inc.
 
 AgathasRoomAgathaText:
     mov esi, AgathasRoomTrainerHeader0
@@ -220,20 +209,4 @@ AgathasRoomAgathaText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] AgathaBeforeBattleText (scripts/AgathasRoom.asm:138-151) — a generated asset already defines AgathaBeforeBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _AgathaBeforeBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| AgathaEndBattleText:
-; PRET| 	text_far _AgathaEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| AgathaAfterBattleText:
-; PRET| 	text_far _AgathaAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| AgathasRoomAgathaDontRunAwayText:
-; PRET| 	text_far _AgathasRoomAgathaDontRunAwayText
-; PRET| 	text_end
+; AgathaBeforeBattleText (scripts/AgathasRoom.asm:138-151) — Tier-1 data: AgathaBeforeBattleText is generated into assets/trainer_headers.inc.

@@ -70,27 +70,7 @@ CeruleanCaveB1F_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeruleanCaveB1F_ScriptPointers (scripts/CeruleanCaveB1F.asm:11-28) — a generated asset already defines CeruleanCaveB1F_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_CERULEANCAVEB1F_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_CERULEANCAVEB1F_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_CERULEANCAVEB1F_END_BATTLE
-; PRET| 
-; PRET| CeruleanCaveB1F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const CeruleanCaveB1FMewtwoText, TEXT_CERULEANCAVEB1F_MEWTWO
-; PRET| 	dw_const PickUpItemText,            TEXT_CERULEANCAVEB1F_ULTRA_BALL1
-; PRET| 	dw_const PickUpItemText,            TEXT_CERULEANCAVEB1F_ULTRA_BALL2
-; PRET| 	dw_const PickUpItemText,            TEXT_CERULEANCAVEB1F_MAX_REVIVE
-; PRET| 	dw_const PickUpItemText,            TEXT_CERULEANCAVEB1F_MAX_ELIXER
-; PRET| 
-; PRET| CeruleanCaveB1FTrainerHeaders:
-; PRET| 	def_trainers
-; PRET| MewtwoTrainerHeader:
-; PRET| 	trainer EVENT_BEAT_MEWTWO, 0, MewtwoBattleText, MewtwoBattleText, MewtwoBattleText
-; PRET| 	db -1 ; end
+; CeruleanCaveB1F_ScriptPointers (scripts/CeruleanCaveB1F.asm:11-28) — Tier-1 data: CeruleanCaveB1F_ScriptPointers is generated into assets/map_script_tables.inc.
 
 CeruleanCaveB1FMewtwoText:
     mov esi, MewtwoTrainerHeader
@@ -98,10 +78,7 @@ CeruleanCaveB1FMewtwoText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] MewtwoBattleText (scripts/CeruleanCaveB1F.asm:37-37) — a generated asset already defines MewtwoBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _MewtwoBattleText
+; MewtwoBattleText (scripts/CeruleanCaveB1F.asm:37-37) — Tier-1 data: MewtwoBattleText is generated into assets/trainer_headers.inc.
 
     mov al, 131
     call PlayCry

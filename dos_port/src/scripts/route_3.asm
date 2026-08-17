@@ -111,50 +111,7 @@ Route3_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route3_ScriptPointers (scripts/Route3.asm:11-51) — a generated asset already defines Route3_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROUTE3_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROUTE3_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROUTE3_END_BATTLE
-; PRET| 
-; PRET| Route3_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route3SuperNerdText,     TEXT_ROUTE3_SUPER_NERD
-; PRET| 	dw_const Route3Youngster1Text,    TEXT_ROUTE3_YOUNGSTER1
-; PRET| 	dw_const Route3Youngster2Text,    TEXT_ROUTE3_YOUNGSTER2
-; PRET| 	dw_const Route3CooltrainerF1Text, TEXT_ROUTE3_COOLTRAINER_F1
-; PRET| 	dw_const Route3Youngster3Text,    TEXT_ROUTE3_YOUNGSTER3
-; PRET| 	dw_const Route3CooltrainerF2Text, TEXT_ROUTE3_COOLTRAINER_F2
-; PRET| 	dw_const Route3Youngster4Text,    TEXT_ROUTE3_YOUNGSTER4
-; PRET| 	dw_const Route3Youngster5Text,    TEXT_ROUTE3_YOUNGSTER5
-; PRET| 	dw_const Route3CooltrainerF3Text, TEXT_ROUTE3_COOLTRAINER_F3
-; PRET| 	dw_const Route3SignText,          TEXT_ROUTE3_SIGN
-; PRET| 
-; PRET| Route3TrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| Route3TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_3_TRAINER_0, 2, Route3Youngster1BattleText, Route3Youngster1EndBattleText, Route3Youngster1AfterBattleText
-; PRET| Route3TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_3_TRAINER_1, 3, Route3Youngster2BattleText, Route3Youngster2EndBattleText, Route3Youngster2AfterBattleText
-; PRET| Route3TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_3_TRAINER_2, 2, Route3CooltrainerF1BattleText, Route3CooltrainerF1EndBattleText, Route3CooltrainerF1AfterBattleText
-; PRET| Route3TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROUTE_3_TRAINER_3, 1, Route3Youngster3BattleText, Route3Youngster3EndBattleText, Route3Youngster3AfterBattleText
-; PRET| Route3TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROUTE_3_TRAINER_4, 4, Route3CooltrainerF2BattleText, Route3CooltrainerF2EndBattleText, Route3CooltrainerF2AfterBattleText
-; PRET| Route3TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_ROUTE_3_TRAINER_5, 3, Route3Youngster4BattleText, Route3Youngster4EndBattleText, Route3Youngster4AfterBattleText
-; PRET| Route3TrainerHeader6:
-; PRET| 	trainer EVENT_BEAT_ROUTE_3_TRAINER_6, 3, Route3Youngster5BattleText, Route3Youngster5EndBattleText, Route3Youngster5AfterBattleText
-; PRET| Route3TrainerHeader7:
-; PRET| 	trainer EVENT_BEAT_ROUTE_3_TRAINER_7, 2, Route3CooltrainerF3BattleText, Route3CooltrainerF3EndBattleText, Route3CooltrainerF3AfterBattleText
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| Route3SuperNerdText:
-; PRET| 	text_far _Route3Text1
-; PRET| 	text_end
+; Route3_ScriptPointers (scripts/Route3.asm:11-51) — Tier-1 data: Route3_ScriptPointers is generated into assets/map_script_tables.inc.
 
 Route3Youngster1Text:
     mov esi, Route3TrainerHeader0
@@ -162,19 +119,7 @@ Route3Youngster1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route3Youngster1BattleText (scripts/Route3.asm:60-69) — a generated asset already defines Route3Youngster1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route3Youngster1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster1EndBattleText:
-; PRET| 	text_far _Route3Youngster1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster1AfterBattleText:
-; PRET| 	text_far _Route3Youngster1AfterBattleText
-; PRET| 	text_end
+; Route3Youngster1BattleText (scripts/Route3.asm:60-69) — Tier-1 data: Route3Youngster1BattleText is generated into assets/trainer_headers.inc.
 
 Route3Youngster2Text:
     mov esi, Route3TrainerHeader1
@@ -182,19 +127,7 @@ Route3Youngster2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route3Youngster2BattleText (scripts/Route3.asm:78-87) — a generated asset already defines Route3Youngster2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route3Youngster2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster2EndBattleText:
-; PRET| 	text_far _Route3Youngster2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster2AfterBattleText:
-; PRET| 	text_far _Route3Youngster2AfterBattleText
-; PRET| 	text_end
+; Route3Youngster2BattleText (scripts/Route3.asm:78-87) — Tier-1 data: Route3Youngster2BattleText is generated into assets/trainer_headers.inc.
 
 Route3CooltrainerF1Text:
     mov esi, Route3TrainerHeader2
@@ -202,19 +135,7 @@ Route3CooltrainerF1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route3CooltrainerF1BattleText (scripts/Route3.asm:96-105) — a generated asset already defines Route3CooltrainerF1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route3CooltrainerF1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3CooltrainerF1EndBattleText:
-; PRET| 	text_far _Route3CooltrainerF1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3CooltrainerF1AfterBattleText:
-; PRET| 	text_far _Route3CooltrainerF1AfterBattleText
-; PRET| 	text_end
+; Route3CooltrainerF1BattleText (scripts/Route3.asm:96-105) — Tier-1 data: Route3CooltrainerF1BattleText is generated into assets/trainer_headers.inc.
 
 Route3Youngster3Text:
     mov esi, Route3TrainerHeader3
@@ -222,19 +143,7 @@ Route3Youngster3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route3Youngster3BattleText (scripts/Route3.asm:114-123) — a generated asset already defines Route3Youngster3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route3Youngster3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster3EndBattleText:
-; PRET| 	text_far _Route3Youngster3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster3AfterBattleText:
-; PRET| 	text_far _Route3Youngster3AfterBattleText
-; PRET| 	text_end
+; Route3Youngster3BattleText (scripts/Route3.asm:114-123) — Tier-1 data: Route3Youngster3BattleText is generated into assets/trainer_headers.inc.
 
 Route3CooltrainerF2Text:
     mov esi, Route3TrainerHeader4
@@ -242,19 +151,7 @@ Route3CooltrainerF2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route3CooltrainerF2BattleText (scripts/Route3.asm:132-141) — a generated asset already defines Route3CooltrainerF2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route3CooltrainerF2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3CooltrainerF2EndBattleText:
-; PRET| 	text_far _Route3CooltrainerF2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3CooltrainerF2AfterBattleText:
-; PRET| 	text_far _Route3CooltrainerF2AfterBattleText
-; PRET| 	text_end
+; Route3CooltrainerF2BattleText (scripts/Route3.asm:132-141) — Tier-1 data: Route3CooltrainerF2BattleText is generated into assets/trainer_headers.inc.
 
 Route3Youngster4Text:
     mov esi, Route3TrainerHeader5
@@ -262,19 +159,7 @@ Route3Youngster4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route3Youngster4BattleText (scripts/Route3.asm:150-159) — a generated asset already defines Route3Youngster4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route3Youngster4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster4EndBattleText:
-; PRET| 	text_far _Route3Youngster4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster4AfterBattleText:
-; PRET| 	text_far _Route3Youngster4AfterBattleText
-; PRET| 	text_end
+; Route3Youngster4BattleText (scripts/Route3.asm:150-159) — Tier-1 data: Route3Youngster4BattleText is generated into assets/trainer_headers.inc.
 
 Route3Youngster5Text:
     mov esi, Route3TrainerHeader6
@@ -282,19 +167,7 @@ Route3Youngster5Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route3Youngster5BattleText (scripts/Route3.asm:168-177) — a generated asset already defines Route3Youngster5BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route3Youngster5BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster5EndBattleText:
-; PRET| 	text_far _Route3Youngster5EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3Youngster5AfterBattleText:
-; PRET| 	text_far _Route3Youngster5AfterBattleText
-; PRET| 	text_end
+; Route3Youngster5BattleText (scripts/Route3.asm:168-177) — Tier-1 data: Route3Youngster5BattleText is generated into assets/trainer_headers.inc.
 
 Route3CooltrainerF3Text:
     mov esi, Route3TrainerHeader7
@@ -302,20 +175,4 @@ Route3CooltrainerF3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route3CooltrainerF3BattleText (scripts/Route3.asm:186-199) — a generated asset already defines Route3CooltrainerF3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route3CooltrainerF3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3CooltrainerF3EndBattleText:
-; PRET| 	text_far _Route3CooltrainerF3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3CooltrainerF3AfterBattleText:
-; PRET| 	text_far _Route3CooltrainerF3AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route3SignText:
-; PRET| 	text_far _Route3SignText
-; PRET| 	text_end
+; Route3CooltrainerF3BattleText (scripts/Route3.asm:186-199) — Tier-1 data: Route3CooltrainerF3BattleText is generated into assets/trainer_headers.inc.

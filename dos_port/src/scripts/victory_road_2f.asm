@@ -183,44 +183,7 @@ VictoryRoad2F_ScriptPointers:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] VictoryRoad2FDefaultScript.SwitchCoords (scripts/VictoryRoad2F.asm:70-104) — a generated asset already defines VictoryRoad2TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	dbmapcoord  1, 16
-; PRET| 	dbmapcoord  9, 16
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| VictoryRoad2F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const VictoryRoad2FHikerText,        TEXT_VICTORYROAD2F_HIKER
-; PRET| 	dw_const VictoryRoad2FSuperNerd1Text,   TEXT_VICTORYROAD2F_SUPER_NERD1
-; PRET| 	dw_const VictoryRoad2FCooltrainerMText, TEXT_VICTORYROAD2F_COOLTRAINER_M
-; PRET| 	dw_const VictoryRoad2FSuperNerd2Text,   TEXT_VICTORYROAD2F_SUPER_NERD2
-; PRET| 	dw_const VictoryRoad2FSuperNerd3Text,   TEXT_VICTORYROAD2F_SUPER_NERD3
-; PRET| 	dw_const VictoryRoad2FMoltresText,      TEXT_VICTORYROAD2F_MOLTRES
-; PRET| 	dw_const PickUpItemText,                TEXT_VICTORYROAD2F_TM_SUBMISSION
-; PRET| 	dw_const PickUpItemText,                TEXT_VICTORYROAD2F_FULL_HEAL
-; PRET| 	dw_const PickUpItemText,                TEXT_VICTORYROAD2F_TM_MEGA_KICK
-; PRET| 	dw_const PickUpItemText,                TEXT_VICTORYROAD2F_GUARD_SPEC
-; PRET| 	dw_const BoulderText,                   TEXT_VICTORYROAD2F_BOULDER1
-; PRET| 	dw_const BoulderText,                   TEXT_VICTORYROAD2F_BOULDER2
-; PRET| 	dw_const BoulderText,                   TEXT_VICTORYROAD2F_BOULDER3
-; PRET| 
-; PRET| VictoryRoad2TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| VictoryRoad2TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_2_TRAINER_0, 4, VictoryRoad2FHikerBattleText, VictoryRoad2FHikerEndBattleText, VictoryRoad2FHikerAfterBattleText
-; PRET| VictoryRoad2TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_2_TRAINER_1, 3, VictoryRoad2FSuperNerd1BattleText, VictoryRoad2FSuperNerd1EndBattleText, VictoryRoad2FSuperNerd1AfterBattleText
-; PRET| VictoryRoad2TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_2_TRAINER_2, 3, VictoryRoad2FCooltrainerMBattleText, VictoryRoad2FCooltrainerMEndBattleText, VictoryRoad2FCooltrainerMAfterBattleText
-; PRET| VictoryRoad2TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_2_TRAINER_3, 1, VictoryRoad2FSuperNerd2BattleText, VictoryRoad2FSuperNerd2EndBattleText, VictoryRoad2FSuperNerd2AfterBattleText
-; PRET| VictoryRoad2TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_2_TRAINER_4, 3, VictoryRoad2FSuperNerd3BattleText, VictoryRoad2FSuperNerd3EndBattleText, VictoryRoad2FSuperNerd3AfterBattleText
-; PRET| MoltresTrainerHeader:
-; PRET| 	trainer EVENT_BEAT_MOLTRES, 0, VictoryRoad2FMoltresBattleText, VictoryRoad2FMoltresBattleText, VictoryRoad2FMoltresBattleText
-; PRET| 	db -1 ; end
+; VictoryRoad2FDefaultScript.SwitchCoords (scripts/VictoryRoad2F.asm:70-104) — Tier-1 data: VictoryRoad2TrainerHeaders is generated into assets/trainer_headers.inc.
 
 VictoryRoad2FHikerText:
     mov esi, VictoryRoad2TrainerHeader0
@@ -253,10 +216,7 @@ VictoryRoad2FMoltresText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] VictoryRoad2FMoltresBattleText (scripts/VictoryRoad2F.asm:143-143) — a generated asset already defines VictoryRoad2FMoltresBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _VictoryRoad2FMoltresBattleText
+; VictoryRoad2FMoltresBattleText (scripts/VictoryRoad2F.asm:143-143) — Tier-1 data: VictoryRoad2FMoltresBattleText is generated into assets/trainer_headers.inc.
 
     mov al, 73
     call PlayCry
@@ -264,64 +224,4 @@ VictoryRoad2FMoltresText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] VictoryRoad2FHikerBattleText (scripts/VictoryRoad2F.asm:151-208) — a generated asset already defines VictoryRoad2FHikerBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _VictoryRoad2FHikerBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FHikerEndBattleText:
-; PRET| 	text_far _VictoryRoad2FHikerEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FHikerAfterBattleText:
-; PRET| 	text_far _VictoryRoad2FHikerAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FSuperNerd1BattleText:
-; PRET| 	text_far _VictoryRoad2FSuperNerd1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FSuperNerd1EndBattleText:
-; PRET| 	text_far _VictoryRoad2FSuperNerd1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FSuperNerd1AfterBattleText:
-; PRET| 	text_far _VictoryRoad2FSuperNerd1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FCooltrainerMBattleText:
-; PRET| 	text_far _VictoryRoad2FCooltrainerMBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FCooltrainerMEndBattleText:
-; PRET| 	text_far _VictoryRoad2FCooltrainerMEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FCooltrainerMAfterBattleText:
-; PRET| 	text_far _VictoryRoad2FCooltrainerMAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FSuperNerd2BattleText:
-; PRET| 	text_far _VictoryRoad2FSuperNerd2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FSuperNerd2EndBattleText:
-; PRET| 	text_far _VictoryRoad2FSuperNerd2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FSuperNerd2AfterBattleText:
-; PRET| 	text_far _VictoryRoad2FSuperNerd2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FSuperNerd3BattleText:
-; PRET| 	text_far _VictoryRoad2FSuperNerd3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FSuperNerd3EndBattleText:
-; PRET| 	text_far _VictoryRoad2FSuperNerd3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad2FSuperNerd3AfterBattleText:
-; PRET| 	text_far _VictoryRoad2FSuperNerd3AfterBattleText
-; PRET| 	text_end
+; VictoryRoad2FHikerBattleText (scripts/VictoryRoad2F.asm:151-208) — Tier-1 data: VictoryRoad2FHikerBattleText is generated into assets/trainer_headers.inc.

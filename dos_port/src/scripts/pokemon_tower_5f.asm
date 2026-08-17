@@ -135,40 +135,7 @@ PokemonTower5F_ScriptPointers:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonTower5FPurifiedZoneCoords (scripts/PokemonTower5F.asm:46-76) — a generated asset already defines PokemonTower5TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	dbmapcoord 10,  8
-; PRET| 	dbmapcoord 11,  8
-; PRET| 	dbmapcoord 10,  9
-; PRET| 	dbmapcoord 11,  9
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| PokemonTower5F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PokemonTower5FChanneler1Text,   TEXT_POKEMONTOWER5F_CHANNELER1
-; PRET| 	dw_const PokemonTower5FChanneler2Text,   TEXT_POKEMONTOWER5F_CHANNELER2
-; PRET| 	dw_const PokemonTower5FChanneler3Text,   TEXT_POKEMONTOWER5F_CHANNELER3
-; PRET| 	dw_const PokemonTower5FChanneler4Text,   TEXT_POKEMONTOWER5F_CHANNELER4
-; PRET| 	dw_const PokemonTower5FChanneler5Text,   TEXT_POKEMONTOWER5F_CHANNELER5
-; PRET| 	dw_const PickUpItemText,                 TEXT_POKEMONTOWER5F_NUGGET
-; PRET| 	dw_const PokemonTower5FPurifiedZoneText, TEXT_POKEMONTOWER5F_PURIFIEDZONE
-; PRET| 
-; PRET| PokemonTower5TrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| PokemonTower5TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_5_TRAINER_0, 2, PokemonTower5FChanneler2BattleText, PokemonTower5FChanneler2EndBattleText, PokemonTower5FChanneler2AfterBattleText
-; PRET| PokemonTower5TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_5_TRAINER_1, 3, PokemonTower5FChanneler3BattleText, PokemonTower5FChanneler3EndBattleText, PokemonTower5FChanneler3AfterBattleText
-; PRET| PokemonTower5TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_5_TRAINER_2, 2, PokemonTower5FChanneler4BattleText, PokemonTower5FChanneler4EndBattleText, PokemonTower5FChanneler4AfterBattleText
-; PRET| PokemonTower5TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_5_TRAINER_3, 2, PokemonTower5FChanneler5BattleText, PokemonTower5FChanneler5EndBattleText, PokemonTower5FChanneler5AfterBattleText
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| PokemonTower5FChanneler1Text:
-; PRET| 	text_far _PokemonTower5FChanneler1Text
-; PRET| 	text_end
+; PokemonTower5FPurifiedZoneCoords (scripts/PokemonTower5F.asm:46-76) — Tier-1 data: PokemonTower5TrainerHeaders is generated into assets/trainer_headers.inc.
 
 PokemonTower5FChanneler2Text:
     mov esi, PokemonTower5TrainerHeader0
@@ -176,19 +143,7 @@ PokemonTower5FChanneler2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonTower5FChanneler2BattleText (scripts/PokemonTower5F.asm:85-94) — a generated asset already defines PokemonTower5FChanneler2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonTower5FChanneler2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower5FChanneler2EndBattleText:
-; PRET| 	text_far _PokemonTower5FChanneler2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower5FChanneler2AfterBattleText:
-; PRET| 	text_far _PokemonTower5FChanneler2AfterBattleText
-; PRET| 	text_end
+; PokemonTower5FChanneler2BattleText (scripts/PokemonTower5F.asm:85-94) — Tier-1 data: PokemonTower5FChanneler2BattleText is generated into assets/trainer_headers.inc.
 
 PokemonTower5FChanneler3Text:
     mov esi, PokemonTower5TrainerHeader1
@@ -196,19 +151,7 @@ PokemonTower5FChanneler3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonTower5FChanneler3BattleText (scripts/PokemonTower5F.asm:103-112) — a generated asset already defines PokemonTower5FChanneler3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonTower5FChanneler3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower5FChanneler3EndBattleText:
-; PRET| 	text_far _PokemonTower5FChanneler3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower5FChanneler3AfterBattleText:
-; PRET| 	text_far _PokemonTower5FChanneler3AfterBattleText
-; PRET| 	text_end
+; PokemonTower5FChanneler3BattleText (scripts/PokemonTower5F.asm:103-112) — Tier-1 data: PokemonTower5FChanneler3BattleText is generated into assets/trainer_headers.inc.
 
 PokemonTower5FChanneler4Text:
     mov esi, PokemonTower5TrainerHeader2
@@ -216,19 +159,7 @@ PokemonTower5FChanneler4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonTower5FChanneler4BattleText (scripts/PokemonTower5F.asm:121-130) — a generated asset already defines PokemonTower5FChanneler4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonTower5FChanneler4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower5FChanneler4EndBattleText:
-; PRET| 	text_far _PokemonTower5FChanneler4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower5FChanneler4AfterBattleText:
-; PRET| 	text_far _PokemonTower5FChanneler4AfterBattleText
-; PRET| 	text_end
+; PokemonTower5FChanneler4BattleText (scripts/PokemonTower5F.asm:121-130) — Tier-1 data: PokemonTower5FChanneler4BattleText is generated into assets/trainer_headers.inc.
 
 PokemonTower5FChanneler5Text:
     mov esi, PokemonTower5TrainerHeader3
@@ -236,20 +167,4 @@ PokemonTower5FChanneler5Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonTower5FChanneler5BattleText (scripts/PokemonTower5F.asm:139-152) — a generated asset already defines PokemonTower5FChanneler5BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonTower5FChanneler5BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower5FChanneler5EndBattleText:
-; PRET| 	text_far _PokemonTower5FChanneler5EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower5FChanneler5AfterBattleText:
-; PRET| 	text_far _PokemonTower5FChanneler5AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower5FPurifiedZoneText:
-; PRET| 	text_far _PokemonTower5FPurifiedZoneText
-; PRET| 	text_end
+; PokemonTower5FChanneler5BattleText (scripts/PokemonTower5F.asm:139-152) — Tier-1 data: PokemonTower5FChanneler5BattleText is generated into assets/trainer_headers.inc.

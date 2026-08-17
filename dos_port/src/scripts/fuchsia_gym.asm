@@ -202,37 +202,7 @@ FuchsiaGym_ScriptPointers:
 ; PRET| 	jp FuchsiaGymResetScripts
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FuchsiaGym_TextPointers (scripts/FuchsiaGym.asm:77-104) — a generated asset already defines FuchsiaGymTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const FuchsiaGymKogaText,              TEXT_FUCHSIAGYM_KOGA
-; PRET| 	dw_const FuchsiaGymRocker1Text,           TEXT_FUCHSIAGYM_ROCKER1
-; PRET| 	dw_const FuchsiaGymRocker2Text,           TEXT_FUCHSIAGYM_ROCKER2
-; PRET| 	dw_const FuchsiaGymRocker3Text,           TEXT_FUCHSIAGYM_ROCKER3
-; PRET| 	dw_const FuchsiaGymRocker4Text,           TEXT_FUCHSIAGYM_ROCKER4
-; PRET| 	dw_const FuchsiaGymRocker5Text,           TEXT_FUCHSIAGYM_ROCKER5
-; PRET| 	dw_const FuchsiaGymRocker6Text,           TEXT_FUCHSIAGYM_ROCKER6
-; PRET| 	dw_const FuchsiaGymGymGuideText,          TEXT_FUCHSIAGYM_GYM_GUIDE
-; PRET| 	dw_const FuchsiaGymKogaSoulBadgeInfoText, TEXT_FUCHSIAGYM_KOGA_SOUL_BADGE_INFO
-; PRET| 	dw_const FuchsiaGymKogaReceivedTM06Text,  TEXT_FUCHSIAGYM_KOGA_RECEIVED_TM06
-; PRET| 	dw_const FuchsiaGymKogaTM06NoRoomText,    TEXT_FUCHSIAGYM_KOGA_TM06_NO_ROOM
-; PRET| 
-; PRET| FuchsiaGymTrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| FuchsiaGymTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_FUCHSIA_GYM_TRAINER_0, 2, FuchsiaGymRocker1BattleText, FuchsiaGymRocker1EndBattleText, FuchsiaGymRocker1AfterBattleText
-; PRET| FuchsiaGymTrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_FUCHSIA_GYM_TRAINER_1, 2, FuchsiaGymRocker2BattleText, FuchsiaGymRocker2EndBattleText, FuchsiaGymRocker2AfterBattleText
-; PRET| FuchsiaGymTrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_FUCHSIA_GYM_TRAINER_2, 4, FuchsiaGymRocker3BattleText, FuchsiaGymRocker3EndBattleText, FuchsiaGymRocker3AfterBattleText
-; PRET| FuchsiaGymTrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_FUCHSIA_GYM_TRAINER_3, 2, FuchsiaGymRocker4BattleText, FuchsiaGymRocker4EndBattleText, FuchsiaGymRocker4AfterBattleText
-; PRET| FuchsiaGymTrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_FUCHSIA_GYM_TRAINER_4, 2, FuchsiaGymRocker5BattleText, FuchsiaGymRocker5EndBattleText, FuchsiaGymRocker5AfterBattleText
-; PRET| FuchsiaGymTrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_FUCHSIA_GYM_TRAINER_5, 2, FuchsiaGymRocker6BattleText, FuchsiaGymRocker6EndBattleText, FuchsiaGymRocker6AfterBattleText
-; PRET| 	db -1 ; end
+; FuchsiaGym_TextPointers (scripts/FuchsiaGym.asm:77-104) — Tier-1 data: FuchsiaGymTrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] FuchsiaGymKogaText (scripts/FuchsiaGym.asm:108-114) — at scripts/FuchsiaGym.asm:109: .beforeBeat is defined in a region that bailed
@@ -314,19 +284,7 @@ FuchsiaGymRocker1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FuchsiaGymRocker1BattleText (scripts/FuchsiaGym.asm:174-183) — a generated asset already defines FuchsiaGymRocker1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FuchsiaGymRocker1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker1EndBattleText:
-; PRET| 	text_far _FuchsiaGymRocker1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker1AfterBattleText:
-; PRET| 	text_far _FuchsiaGymRocker1AfterBattleText
-; PRET| 	text_end
+; FuchsiaGymRocker1BattleText (scripts/FuchsiaGym.asm:174-183) — Tier-1 data: FuchsiaGymRocker1BattleText is generated into assets/trainer_headers.inc.
 
 FuchsiaGymRocker2Text:
     mov esi, FuchsiaGymTrainerHeader1
@@ -334,19 +292,7 @@ FuchsiaGymRocker2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FuchsiaGymRocker2BattleText (scripts/FuchsiaGym.asm:192-201) — a generated asset already defines FuchsiaGymRocker2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FuchsiaGymRocker2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker2EndBattleText:
-; PRET| 	text_far _FuchsiaGymRocker2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker2AfterBattleText:
-; PRET| 	text_far _FuchsiaGymRocker2AfterBattleText
-; PRET| 	text_end
+; FuchsiaGymRocker2BattleText (scripts/FuchsiaGym.asm:192-201) — Tier-1 data: FuchsiaGymRocker2BattleText is generated into assets/trainer_headers.inc.
 
 FuchsiaGymRocker3Text:
     mov esi, FuchsiaGymTrainerHeader2
@@ -354,19 +300,7 @@ FuchsiaGymRocker3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FuchsiaGymRocker3BattleText (scripts/FuchsiaGym.asm:210-219) — a generated asset already defines FuchsiaGymRocker3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FuchsiaGymRocker3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker3EndBattleText:
-; PRET| 	text_far _FuchsiaGymRocker3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker3AfterBattleText:
-; PRET| 	text_far _FuchsiaGymRocker3AfterBattleText
-; PRET| 	text_end
+; FuchsiaGymRocker3BattleText (scripts/FuchsiaGym.asm:210-219) — Tier-1 data: FuchsiaGymRocker3BattleText is generated into assets/trainer_headers.inc.
 
 FuchsiaGymRocker4Text:
     mov esi, FuchsiaGymTrainerHeader3
@@ -374,19 +308,7 @@ FuchsiaGymRocker4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FuchsiaGymRocker4BattleText (scripts/FuchsiaGym.asm:228-237) — a generated asset already defines FuchsiaGymRocker4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FuchsiaGymRocker4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker4EndBattleText:
-; PRET| 	text_far _FuchsiaGymRocker4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker4AfterBattleText:
-; PRET| 	text_far _FuchsiaGymRocker4AfterBattleText
-; PRET| 	text_end
+; FuchsiaGymRocker4BattleText (scripts/FuchsiaGym.asm:228-237) — Tier-1 data: FuchsiaGymRocker4BattleText is generated into assets/trainer_headers.inc.
 
 FuchsiaGymRocker5Text:
     mov esi, FuchsiaGymTrainerHeader4
@@ -394,19 +316,7 @@ FuchsiaGymRocker5Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FuchsiaGymRocker5BattleText (scripts/FuchsiaGym.asm:246-255) — a generated asset already defines FuchsiaGymRocker5BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FuchsiaGymRocker5BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker5EndBattleText:
-; PRET| 	text_far _FuchsiaGymRocker5EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker5AfterBattleText:
-; PRET| 	text_far _FuchsiaGymRocker5AfterBattleText
-; PRET| 	text_end
+; FuchsiaGymRocker5BattleText (scripts/FuchsiaGym.asm:246-255) — Tier-1 data: FuchsiaGymRocker5BattleText is generated into assets/trainer_headers.inc.
 
 FuchsiaGymRocker6Text:
     mov esi, FuchsiaGymTrainerHeader5
@@ -414,19 +324,7 @@ FuchsiaGymRocker6Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] FuchsiaGymRocker6BattleText (scripts/FuchsiaGym.asm:264-273) — a generated asset already defines FuchsiaGymRocker6BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FuchsiaGymRocker6BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker6EndBattleText:
-; PRET| 	text_far _FuchsiaGymRocker6EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymRocker6AfterBattleText:
-; PRET| 	text_far _FuchsiaGymRocker6AfterBattleText
-; PRET| 	text_end
+; FuchsiaGymRocker6BattleText (scripts/FuchsiaGym.asm:264-273) — Tier-1 data: FuchsiaGymRocker6BattleText is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] FuchsiaGymGymGuideText (scripts/FuchsiaGym.asm:277-283) — at scripts/FuchsiaGym.asm:279: .afterBeat is defined in a region that bailed

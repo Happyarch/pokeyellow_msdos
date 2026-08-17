@@ -101,42 +101,7 @@ Route10_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route10_ScriptPointers (scripts/Route10.asm:11-43) — a generated asset already defines Route10_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROUTE10_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROUTE10_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROUTE10_END_BATTLE
-; PRET| 
-; PRET| Route10_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route10SuperNerd1Text,     TEXT_ROUTE10_SUPER_NERD1
-; PRET| 	dw_const Route10Hiker1Text,         TEXT_ROUTE10_HIKER1
-; PRET| 	dw_const Route10SuperNerd2Text,     TEXT_ROUTE10_SUPER_NERD2
-; PRET| 	dw_const Route10CooltrainerF1Text,  TEXT_ROUTE10_COOLTRAINER_F1
-; PRET| 	dw_const Route10Hiker2Text,         TEXT_ROUTE10_HIKER2
-; PRET| 	dw_const Route10CooltrainerF2Text,  TEXT_ROUTE10_COOLTRAINER_F2
-; PRET| 	dw_const Route10RockTunnelSignText, TEXT_ROUTE10_ROCKTUNNEL_NORTH_SIGN
-; PRET| 	dw_const PokeCenterSignText,        TEXT_ROUTE10_POKECENTER_SIGN
-; PRET| 	dw_const Route10RockTunnelSignText, TEXT_ROUTE10_ROCKTUNNEL_SOUTH_SIGN
-; PRET| 	dw_const Route10PowerPlantSignText, TEXT_ROUTE10_POWERPLANT_SIGN
-; PRET| 
-; PRET| Route10TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Route10TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_10_TRAINER_0, 4, Route10SuperNerd1BattleText, Route10SuperNerd1EndBattleText, Route10SuperNerd1AfterBattleText
-; PRET| Route10TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_10_TRAINER_1, 3, Route10Hiker1BattleText, Route10Hiker1EndBattleText, Route10Hiker1AfterBattleText
-; PRET| Route10TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_10_TRAINER_2, 4, Route10SuperNerd2BattleText, Route10SuperNerd2EndBattleText, Route10SuperNerd2AfterBattleText
-; PRET| Route10TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROUTE_10_TRAINER_3, 3, Route10CooltrainerF1BattleText, Route10CooltrainerF1EndBattleText, Route10CooltrainerF1AfterBattleText
-; PRET| Route10TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROUTE_10_TRAINER_4, 2, Route10Hiker2BattleText, Route10Hiker2EndBattleText, Route10Hiker2AfterBattleText
-; PRET| Route10TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_ROUTE_10_TRAINER_5, 2, Route10CooltrainerF2BattleText, Route10CooltrainerF2EndBattleText, Route10CooltrainerF2AfterBattleText
-; PRET| 	db -1 ; end
+; Route10_ScriptPointers (scripts/Route10.asm:11-43) — Tier-1 data: Route10_ScriptPointers is generated into assets/map_script_tables.inc.
 
 Route10SuperNerd1Text:
     mov esi, Route10TrainerHeader0
@@ -144,19 +109,7 @@ Route10SuperNerd1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route10SuperNerd1BattleText (scripts/Route10.asm:52-61) — a generated asset already defines Route10SuperNerd1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route10SuperNerd1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10SuperNerd1EndBattleText:
-; PRET| 	text_far _Route10SuperNerd1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10SuperNerd1AfterBattleText:
-; PRET| 	text_far _Route10SuperNerd1AfterBattleText
-; PRET| 	text_end
+; Route10SuperNerd1BattleText (scripts/Route10.asm:52-61) — Tier-1 data: Route10SuperNerd1BattleText is generated into assets/trainer_headers.inc.
 
 Route10Hiker1Text:
     mov esi, Route10TrainerHeader1
@@ -164,19 +117,7 @@ Route10Hiker1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route10Hiker1BattleText (scripts/Route10.asm:70-79) — a generated asset already defines Route10Hiker1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route10Hiker1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10Hiker1EndBattleText:
-; PRET| 	text_far _Route10Hiker1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10Hiker1AfterBattleText:
-; PRET| 	text_far _Route10Hiker1AfterBattleText
-; PRET| 	text_end
+; Route10Hiker1BattleText (scripts/Route10.asm:70-79) — Tier-1 data: Route10Hiker1BattleText is generated into assets/trainer_headers.inc.
 
 Route10SuperNerd2Text:
     mov esi, Route10TrainerHeader2
@@ -184,19 +125,7 @@ Route10SuperNerd2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route10SuperNerd2BattleText (scripts/Route10.asm:88-97) — a generated asset already defines Route10SuperNerd2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route10SuperNerd2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10SuperNerd2EndBattleText:
-; PRET| 	text_far _Route10SuperNerd2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10SuperNerd2AfterBattleText:
-; PRET| 	text_far _Route10SuperNerd2AfterBattleText
-; PRET| 	text_end
+; Route10SuperNerd2BattleText (scripts/Route10.asm:88-97) — Tier-1 data: Route10SuperNerd2BattleText is generated into assets/trainer_headers.inc.
 
 Route10CooltrainerF1Text:
     mov esi, Route10TrainerHeader3
@@ -204,19 +133,7 @@ Route10CooltrainerF1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route10CooltrainerF1BattleText (scripts/Route10.asm:106-115) — a generated asset already defines Route10CooltrainerF1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route10CooltrainerF1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10CooltrainerF1EndBattleText:
-; PRET| 	text_far _Route10CooltrainerF1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10CooltrainerF1AfterBattleText:
-; PRET| 	text_far _Route10CooltrainerF1AfterBattleText
-; PRET| 	text_end
+; Route10CooltrainerF1BattleText (scripts/Route10.asm:106-115) — Tier-1 data: Route10CooltrainerF1BattleText is generated into assets/trainer_headers.inc.
 
 Route10Hiker2Text:
     mov esi, Route10TrainerHeader4
@@ -224,19 +141,7 @@ Route10Hiker2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route10Hiker2BattleText (scripts/Route10.asm:124-133) — a generated asset already defines Route10Hiker2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route10Hiker2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10Hiker2EndBattleText:
-; PRET| 	text_far _Route10Hiker2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10Hiker2AfterBattleText:
-; PRET| 	text_far _Route10Hiker2AfterBattleText
-; PRET| 	text_end
+; Route10Hiker2BattleText (scripts/Route10.asm:124-133) — Tier-1 data: Route10Hiker2BattleText is generated into assets/trainer_headers.inc.
 
 Route10CooltrainerF2Text:
     mov esi, Route10TrainerHeader5
@@ -244,24 +149,4 @@ Route10CooltrainerF2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route10CooltrainerF2BattleText (scripts/Route10.asm:142-159) — a generated asset already defines Route10CooltrainerF2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route10CooltrainerF2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10CooltrainerF2EndBattleText:
-; PRET| 	text_far _Route10CooltrainerF2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10CooltrainerF2AfterBattleText:
-; PRET| 	text_far _Route10CooltrainerF2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10RockTunnelSignText:
-; PRET| 	text_far _Route10RockTunnelSignText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route10PowerPlantSignText:
-; PRET| 	text_far _Route10PowerPlantSignText
-; PRET| 	text_end
+; Route10CooltrainerF2BattleText (scripts/Route10.asm:142-159) — Tier-1 data: Route10CooltrainerF2BattleText is generated into assets/trainer_headers.inc.

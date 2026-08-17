@@ -193,27 +193,7 @@ PokemonTower6FPlayerMovingScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonTower6F_TextPointers (scripts/PokemonTower6F.asm:100-117) — a generated asset already defines PokemonTower6TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PokemonTower6FChanneler1Text,      TEXT_POKEMONTOWER6F_CHANNELER1
-; PRET| 	dw_const PokemonTower6FChanneler2Text,      TEXT_POKEMONTOWER6F_CHANNELER2
-; PRET| 	dw_const PokemonTower6FChanneler3Text,      TEXT_POKEMONTOWER6F_CHANNELER3
-; PRET| 	dw_const PickUpItemText,                    TEXT_POKEMONTOWER6F_RARE_CANDY
-; PRET| 	dw_const PickUpItemText,                    TEXT_POKEMONTOWER6F_X_ACCURACY
-; PRET| 	dw_const PokemonTower6FBeGoneText,          TEXT_POKEMONTOWER6F_BEGONE
-; PRET| 	dw_const PokemonTower6FMarowakDepartedText, TEXT_POKEMONTOWER6F_MAROWAK_DEPARTED
-; PRET| 
-; PRET| PokemonTower6TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| PokemonTower6TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_6_TRAINER_0, 3, PokemonTower6FChanneler1BattleText, PokemonTower6FChanneler1EndBattleText, PokemonTower6FChanneler1AfterBattleText
-; PRET| PokemonTower6TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_6_TRAINER_1, 3, PokemonTower6FChanneler2BattleText, PokemonTower6FChanneler2EndBattleText, PokemonTower6FChanneler2AfterBattleText
-; PRET| PokemonTower6TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_6_TRAINER_2, 2, PokemonTower6FChanneler3BattleText, PokemonTower6FChanneler3EndBattleText, PokemonTower6FChanneler3AfterBattleText
-; PRET| 	db -1 ; end
+; PokemonTower6F_TextPointers (scripts/PokemonTower6F.asm:100-117) — Tier-1 data: PokemonTower6TrainerHeaders is generated into assets/trainer_headers.inc.
 
 PokemonTower6FChanneler1Text:
     mov esi, PokemonTower6TrainerHeader0
@@ -243,52 +223,4 @@ PokemonTower6FMarowakDepartedText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonTower6FGhostWasCubonesMotherText (scripts/PokemonTower6F.asm:151-196) — a generated asset already defines PokemonTower6FChanneler1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonTower6FGhostWasCubonesMotherText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FSoulWasCalmedText:
-; PRET| 	text_far _PokemonTower6FSoulWasCalmedText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FChanneler1BattleText:
-; PRET| 	text_far _PokemonTower6FChanneler1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FChanneler1EndBattleText:
-; PRET| 	text_far _PokemonTower6FChanneler1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FChanneler1AfterBattleText:
-; PRET| 	text_far _PokemonTower6FChanneler1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FChanneler2BattleText:
-; PRET| 	text_far _PokemonTower6FChanneler2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FChanneler2EndBattleText:
-; PRET| 	text_far _PokemonTower6FChanneler2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FChanneler2AfterBattleText:
-; PRET| 	text_far _PokemonTower6FChanneler2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FChanneler3BattleText:
-; PRET| 	text_far _PokemonTower6FChanneler3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FChanneler3EndBattleText:
-; PRET| 	text_far _PokemonTower6FChanneler3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FChanneler3AfterBattleText:
-; PRET| 	text_far _PokemonTower6FChanneler3AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower6FBeGoneText:
-; PRET| 	text_far _PokemonTower6FBeGoneText
-; PRET| 	text_end
+; PokemonTower6FGhostWasCubonesMotherText (scripts/PokemonTower6F.asm:151-196) — Tier-1 data: PokemonTower6FChanneler1BattleText is generated into assets/trainer_headers.inc.

@@ -74,32 +74,7 @@ Route4_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route4_ScriptPointers (scripts/Route4.asm:11-33) — a generated asset already defines Route4_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROUTE4_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROUTE4_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROUTE4_END_BATTLE
-; PRET| 
-; PRET| Route4_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route4CooltrainerF1Text, TEXT_ROUTE4_COOLTRAINER_F1
-; PRET| 	dw_const Route4CooltrainerF2Text, TEXT_ROUTE4_COOLTRAINER_F2
-; PRET| 	dw_const PickUpItemText,          TEXT_ROUTE4_TM_WHIRLWIND
-; PRET| 	dw_const PokeCenterSignText,      TEXT_ROUTE4_POKECENTER_SIGN
-; PRET| 	dw_const Route4MtMoonSignText,    TEXT_ROUTE4_MT_MOON_SIGN
-; PRET| 	dw_const Route4SignText,          TEXT_ROUTE4_SIGN
-; PRET| 
-; PRET| Route4TrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| Route4TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_4_TRAINER_0, 3, Route4CooltrainerF2BattleText, Route4CooltrainerF2EndBattleText, Route4CooltrainerF2AfterBattleText
-; PRET| 	db -1 ; end
-; PRET| 
-; PRET| Route4CooltrainerF1Text:
-; PRET| 	text_far _Route4CooltrainerF1Text
-; PRET| 	text_end
+; Route4_ScriptPointers (scripts/Route4.asm:11-33) — Tier-1 data: Route4_ScriptPointers is generated into assets/map_script_tables.inc.
 
 Route4CooltrainerF2Text:
     mov esi, Route4TrainerHeader0
@@ -107,24 +82,4 @@ Route4CooltrainerF2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route4CooltrainerF2BattleText (scripts/Route4.asm:42-59) — a generated asset already defines Route4CooltrainerF2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route4CooltrainerF2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route4CooltrainerF2EndBattleText:
-; PRET| 	text_far _Route4CooltrainerF2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route4CooltrainerF2AfterBattleText:
-; PRET| 	text_far _Route4CooltrainerF2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route4MtMoonSignText:
-; PRET| 	text_far _Route4MtMoonSignText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route4SignText:
-; PRET| 	text_far _Route4SignText
-; PRET| 	text_end
+; Route4CooltrainerF2BattleText (scripts/Route4.asm:42-59) — Tier-1 data: Route4CooltrainerF2BattleText is generated into assets/trainer_headers.inc.

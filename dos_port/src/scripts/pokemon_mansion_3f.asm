@@ -161,37 +161,10 @@ PokemonMansion3F_ScriptPointers:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Mansion3Script_Switches (scripts/PokemonMansion3F.asm:77-84) — a generated asset already defines Mansion3Script_Switches
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wSpritePlayerStateData1FacingDirection]
-; PRET| 	cp SPRITE_FACING_UP
-; PRET| 	ret nz
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, TEXT_POKEMONMANSION3F_SWITCH
-; PRET| 	ldh [hTextID], a
-; PRET| 	jp DisplayTextID
+; Mansion3Script_Switches (scripts/PokemonMansion3F.asm:77-84) — Tier-1 data: Mansion3Script_Switches is generated into assets/hidden_events.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonMansion3F_TextPointers (scripts/PokemonMansion3F.asm:87-101) — a generated asset already defines Mansion3TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PokemonMansion3FSuperNerdText, TEXT_POKEMONMANSION3F_SUPER_NERD
-; PRET| 	dw_const PokemonMansion3FScientistText, TEXT_POKEMONMANSION3F_SCIENTIST
-; PRET| 	dw_const PickUpItemText,                TEXT_POKEMONMANSION3F_MAX_POTION
-; PRET| 	dw_const PickUpItemText,                TEXT_POKEMONMANSION3F_IRON
-; PRET| 	dw_const PokemonMansion3FDiaryText,     TEXT_POKEMONMANSION3F_DIARY
-; PRET| 	dw_const PokemonMansion2FSwitchText,    TEXT_POKEMONMANSION3F_SWITCH ; This switch uses the text script from the 2F.
-; PRET| 
-; PRET| Mansion3TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Mansion3TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_MANSION_3_TRAINER_0, 0, PokemonMansion3FSuperNerdBattleText, PokemonMansion3FSuperNerdEndBattleText, PokemonMansion3FSuperNerdAfterBattleText
-; PRET| Mansion3TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_MANSION_3_TRAINER_1, 2, PokemonMansion3FScientistBattleText, PokemonMansion3FScientistEndBattleText, PokemonMansion3FScientistAfterBattleText
-; PRET| 	db -1 ; end
+; PokemonMansion3F_TextPointers (scripts/PokemonMansion3F.asm:87-101) — Tier-1 data: Mansion3TrainerHeaders is generated into assets/trainer_headers.inc.
 
 PokemonMansion3FSuperNerdText:
     mov esi, Mansion3TrainerHeader0
@@ -204,32 +177,4 @@ PokemonMansion3FScientistText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonMansion3FSuperNerdBattleText (scripts/PokemonMansion3F.asm:116-141) — a generated asset already defines PokemonMansion3FSuperNerdBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonMansion3FSuperNerdBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion3FSuperNerdEndBattleText:
-; PRET| 	text_far _PokemonMansion3FSuperNerdEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion3FSuperNerdAfterBattleText:
-; PRET| 	text_far _PokemonMansion3FSuperNerdAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion3FScientistBattleText:
-; PRET| 	text_far _PokemonMansion3FScientistBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion3FScientistEndBattleText:
-; PRET| 	text_far _PokemonMansion3FScientistEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion3FScientistAfterBattleText:
-; PRET| 	text_far _PokemonMansion3FScientistAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion3FDiaryText:
-; PRET| 	text_far _PokemonMansion3FDiaryText
-; PRET| 	text_end
+; PokemonMansion3FSuperNerdBattleText (scripts/PokemonMansion3F.asm:116-141) — Tier-1 data: PokemonMansion3FSuperNerdBattleText is generated into assets/trainer_headers.inc.

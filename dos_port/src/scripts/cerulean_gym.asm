@@ -168,25 +168,7 @@ CeruleanGymReceiveTM11:
     jmp CeruleanGymResetScripts
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeruleanGym_TextPointers (scripts/CeruleanGym.asm:75-90) — a generated asset already defines CeruleanGymTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const CeruleanGymMistyText,                 TEXT_CERULEANGYM_MISTY
-; PRET| 	dw_const CeruleanGymCooltrainerFText,          TEXT_CERULEANGYM_COOLTRAINER_F
-; PRET| 	dw_const CeruleanGymSwimmerText,               TEXT_CERULEANGYM_SWIMMER
-; PRET| 	dw_const CeruleanGymGymGuideText,              TEXT_CERULEANGYM_GYM_GUIDE
-; PRET| 	dw_const CeruleanGymMistyCascadeBadgeInfoText, TEXT_CERULEANGYM_MISTY_CASCADE_BADGE_INFO
-; PRET| 	dw_const CeruleanGymMistyReceivedTM11Text,     TEXT_CERULEANGYM_MISTY_RECEIVED_TM11
-; PRET| 	dw_const CeruleanGymMistyTM11NoRoomText,       TEXT_CERULEANGYM_MISTY_TM11_NO_ROOM
-; PRET| 
-; PRET| CeruleanGymTrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| CeruleanGymTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_CERULEAN_GYM_TRAINER_0, 3, CeruleanGymBattleText1, CeruleanGymEndBattleText1, CeruleanGymAfterBattleText1
-; PRET| CeruleanGymTrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_CERULEAN_GYM_TRAINER_1, 3, CeruleanGymBattleText2, CeruleanGymEndBattleText2, CeruleanGymAfterBattleText2
-; PRET| 	db -1 ; end
+; CeruleanGym_TextPointers (scripts/CeruleanGym.asm:75-90) — Tier-1 data: CeruleanGymTrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] CeruleanGymMistyText (scripts/CeruleanGym.asm:94-100) — at scripts/CeruleanGym.asm:95: .beforeBeat is defined in a region that bailed
@@ -267,19 +249,7 @@ CeruleanGymCooltrainerFText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeruleanGymBattleText1 (scripts/CeruleanGym.asm:159-168) — a generated asset already defines CeruleanGymBattleText1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeruleanGymBattleText1
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanGymEndBattleText1:
-; PRET| 	text_far _CeruleanGymEndBattleText1
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanGymAfterBattleText1:
-; PRET| 	text_far _CeruleanGymAfterBattleText1
-; PRET| 	text_end
+; CeruleanGymBattleText1 (scripts/CeruleanGym.asm:159-168) — Tier-1 data: CeruleanGymBattleText1 is generated into assets/trainer_headers.inc.
 
 CeruleanGymSwimmerText:
     mov esi, CeruleanGymTrainerHeader1
@@ -287,19 +257,7 @@ CeruleanGymSwimmerText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] CeruleanGymBattleText2 (scripts/CeruleanGym.asm:177-186) — a generated asset already defines CeruleanGymBattleText2
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeruleanGymBattleText2
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanGymEndBattleText2:
-; PRET| 	text_far _CeruleanGymEndBattleText2
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanGymAfterBattleText2:
-; PRET| 	text_far _CeruleanGymAfterBattleText2
-; PRET| 	text_end
+; CeruleanGymBattleText2 (scripts/CeruleanGym.asm:177-186) — Tier-1 data: CeruleanGymBattleText2 is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] CeruleanGymGymGuideText (scripts/CeruleanGym.asm:190-194) — at scripts/CeruleanGym.asm:191: .afterBeat is defined in a region that bailed

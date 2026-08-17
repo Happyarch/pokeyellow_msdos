@@ -97,39 +97,7 @@ Route6_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route6_ScriptPointers (scripts/Route6.asm:11-40) — a generated asset already defines Route6_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROUTE6_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROUTE6_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROUTE6_END_BATTLE
-; PRET| 
-; PRET| Route6_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route6CooltrainerM1Text,       TEXT_ROUTE6_COOLTRAINER_M1
-; PRET| 	dw_const Route6CooltrainerF1Text,       TEXT_ROUTE6_COOLTRAINER_F1
-; PRET| 	dw_const Route6Youngster1Text,          TEXT_ROUTE6_YOUNGSTER1
-; PRET| 	dw_const Route6CooltrainerM2Text,       TEXT_ROUTE6_COOLTRAINER_M2
-; PRET| 	dw_const Route6CooltrainerF2Text,       TEXT_ROUTE6_COOLTRAINER_F2
-; PRET| 	dw_const Route6Youngster2Text,          TEXT_ROUTE6_YOUNGSTER2
-; PRET| 	dw_const Route6UndergroundPathSignText, TEXT_ROUTE6_UNDERGROUND_PATH_SIGN
-; PRET| 
-; PRET| Route6TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Route6TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_6_TRAINER_0, 0, Route6CooltrainerM1BattleText, Route6CooltrainerM1EndBattleText, Route6CooltrainerM1AfterBattleText
-; PRET| Route6TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_6_TRAINER_1, 0, Route6CooltrainerF1BattleText, Route6CooltrainerF1EndBattleText, Route6CooltrainerF1AfterBattleText
-; PRET| Route6TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_6_TRAINER_2, 4, Route6Youngster1BattleText, Route6Youngster1EndBattleText, Route6Youngster1AfterBattleText
-; PRET| Route6TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROUTE_6_TRAINER_3, 3, Route6CooltrainerM2BattleText, Route6CooltrainerM2EndBattleText, Route6CooltrainerM2AfterBattleText
-; PRET| Route6TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROUTE_6_TRAINER_4, 3, Route6CooltrainerF2BattleText, Route6CooltrainerF2EndBattleText, Route6CooltrainerF2AfterBattleText
-; PRET| Route6TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_ROUTE_6_TRAINER_5, 3, Route6Youngster2BattleText, Route6Youngster2EndBattleText, Route6Youngster2AfterBattleText
-; PRET| 	db -1 ; end
+; Route6_ScriptPointers (scripts/Route6.asm:11-40) — Tier-1 data: Route6_ScriptPointers is generated into assets/map_script_tables.inc.
 
 Route6CooltrainerM1Text:
     mov esi, Route6TrainerHeader0
@@ -137,19 +105,7 @@ Route6CooltrainerM1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route6CooltrainerM1BattleText (scripts/Route6.asm:49-58) — a generated asset already defines Route6CooltrainerM1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route6CooltrainerM1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6CooltrainerM1EndBattleText:
-; PRET| 	text_far _Route6CooltrainerM1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6CooltrainerM1AfterBattleText:
-; PRET| 	text_far _Route6CooltrainerM1AfterBattleText
-; PRET| 	text_end
+; Route6CooltrainerM1BattleText (scripts/Route6.asm:49-58) — Tier-1 data: Route6CooltrainerM1BattleText is generated into assets/trainer_headers.inc.
 
 Route6CooltrainerF1Text:
     mov esi, Route6TrainerHeader1
@@ -157,19 +113,7 @@ Route6CooltrainerF1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route6CooltrainerF1BattleText (scripts/Route6.asm:67-76) — a generated asset already defines Route6CooltrainerF1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route6CooltrainerF1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6CooltrainerF1EndBattleText:
-; PRET| 	text_far _Route6CooltrainerF1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6CooltrainerF1AfterBattleText:
-; PRET| 	text_far _Route6CooltrainerF1AfterBattleText
-; PRET| 	text_end
+; Route6CooltrainerF1BattleText (scripts/Route6.asm:67-76) — Tier-1 data: Route6CooltrainerF1BattleText is generated into assets/trainer_headers.inc.
 
 Route6Youngster1Text:
     mov esi, Route6TrainerHeader2
@@ -177,19 +121,7 @@ Route6Youngster1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route6Youngster1BattleText (scripts/Route6.asm:85-94) — a generated asset already defines Route6Youngster1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route6Youngster1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6Youngster1EndBattleText:
-; PRET| 	text_far _Route6Youngster1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6Youngster1AfterBattleText:
-; PRET| 	text_far _Route6Youngster1AfterBattleText
-; PRET| 	text_end
+; Route6Youngster1BattleText (scripts/Route6.asm:85-94) — Tier-1 data: Route6Youngster1BattleText is generated into assets/trainer_headers.inc.
 
 Route6CooltrainerM2Text:
     mov esi, Route6TrainerHeader3
@@ -197,19 +129,7 @@ Route6CooltrainerM2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route6CooltrainerM2BattleText (scripts/Route6.asm:103-112) — a generated asset already defines Route6CooltrainerM2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route6CooltrainerM2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6CooltrainerM2EndBattleText:
-; PRET| 	text_far _Route6CooltrainerM2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6CooltrainerM2AfterBattleText:
-; PRET| 	text_far _Route6CooltrainerM2AfterBattleText
-; PRET| 	text_end
+; Route6CooltrainerM2BattleText (scripts/Route6.asm:103-112) — Tier-1 data: Route6CooltrainerM2BattleText is generated into assets/trainer_headers.inc.
 
 Route6CooltrainerF2Text:
     mov esi, Route6TrainerHeader4
@@ -217,19 +137,7 @@ Route6CooltrainerF2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route6CooltrainerF2BattleText (scripts/Route6.asm:121-130) — a generated asset already defines Route6CooltrainerF2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route6CooltrainerF2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6CooltrainerF2EndBattleText:
-; PRET| 	text_far _Route6CooltrainerF2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6CooltrainerF2AfterBattleText:
-; PRET| 	text_far _Route6CooltrainerF2AfterBattleText
-; PRET| 	text_end
+; Route6CooltrainerF2BattleText (scripts/Route6.asm:121-130) — Tier-1 data: Route6CooltrainerF2BattleText is generated into assets/trainer_headers.inc.
 
 Route6Youngster2Text:
     mov esi, Route6TrainerHeader5
@@ -237,20 +145,4 @@ Route6Youngster2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route6Youngster2BattleText (scripts/Route6.asm:139-152) — a generated asset already defines Route6Youngster2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route6Youngster2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6Youngster2EndBattleText:
-; PRET| 	text_far _Route6Youngster2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6Youngster2AfterBattleText:
-; PRET| 	text_far _Route6Youngster2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route6UndergroundPathSignText:
-; PRET| 	text_far _Route6UndergroundPathSignText
-; PRET| 	text_end
+; Route6Youngster2BattleText (scripts/Route6.asm:139-152) — Tier-1 data: Route6Youngster2BattleText is generated into assets/trainer_headers.inc.

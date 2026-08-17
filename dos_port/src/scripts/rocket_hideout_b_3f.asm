@@ -212,22 +212,7 @@ RocketHideoutB3FPlayerSpinningScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB3F_TextPointers (scripts/RocketHideoutB3F.asm:129-141) — a generated asset already defines RocketHideout3TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const RocketHideoutB3FRocket1Text, TEXT_ROCKETHIDEOUTB3F_ROCKET1
-; PRET| 	dw_const RocketHideoutB3FRocket2Text, TEXT_ROCKETHIDEOUTB3F_ROCKET2
-; PRET| 	dw_const PickUpItemText,              TEXT_ROCKETHIDEOUTB3F_TM_DOUBLE_EDGE
-; PRET| 	dw_const PickUpItemText,              TEXT_ROCKETHIDEOUTB3F_RARE_CANDY
-; PRET| 
-; PRET| RocketHideout3TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| RocketHideout3TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_3_TRAINER_0, 2, RocketHideoutB3FRocket1BattleText, RocketHideoutB3FRocket1EndBattleText, RocketHideoutB3FRocket1AfterBattleText
-; PRET| RocketHideout3TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_3_TRAINER_1, 4, RocketHideoutB3FRocket2BattleText, RocketHideoutB3FRocket2EndBattleText, RocketHideoutB3FRocket2AfterBattleText
-; PRET| 	db -1 ; end
+; RocketHideoutB3F_TextPointers (scripts/RocketHideoutB3F.asm:129-141) — Tier-1 data: RocketHideout3TrainerHeaders is generated into assets/trainer_headers.inc.
 
 RocketHideoutB3FRocket1Text:
     mov esi, RocketHideout3TrainerHeader0
@@ -235,19 +220,7 @@ RocketHideoutB3FRocket1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB3FRocket1BattleText (scripts/RocketHideoutB3F.asm:150-159) — a generated asset already defines RocketHideoutB3FRocket1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _RocketHideoutB3FRocket1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB3FRocket1EndBattleText:
-; PRET| 	text_far _RocketHideoutB3FRocket1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB3FRocket1AfterBattleText:
-; PRET| 	text_far _RocketHideoutB3FRocket1AfterBattleText
-; PRET| 	text_end
+; RocketHideoutB3FRocket1BattleText (scripts/RocketHideoutB3F.asm:150-159) — Tier-1 data: RocketHideoutB3FRocket1BattleText is generated into assets/trainer_headers.inc.
 
 RocketHideoutB3FRocket2Text:
     mov esi, RocketHideout3TrainerHeader1
@@ -255,16 +228,4 @@ RocketHideoutB3FRocket2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB3FRocket2BattleText (scripts/RocketHideoutB3F.asm:168-177) — a generated asset already defines RocketHideoutB3FRocket2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _RocketHideout3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB3FRocket2EndBattleText:
-; PRET| 	text_far _RocketHideout3EndBattleText3
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB3FRocket2AfterBattleText:
-; PRET| 	text_far _RocketHide3AfterBattleText3
-; PRET| 	text_end
+; RocketHideoutB3FRocket2BattleText (scripts/RocketHideoutB3F.asm:168-177) — Tier-1 data: RocketHideoutB3FRocket2BattleText is generated into assets/trainer_headers.inc.

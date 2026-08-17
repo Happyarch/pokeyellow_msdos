@@ -378,21 +378,7 @@ RocketHideoutB2FPlayerSpinningScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB2F_TextPointers (scripts/RocketHideoutB2F.asm:274-285) — a generated asset already defines RocketHideout2TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const RocketHideoutB2FRocketText, TEXT_ROCKETHIDEOUTB2F_ROCKET
-; PRET| 	dw_const PickUpItemText,             TEXT_ROCKETHIDEOUTB2F_MOON_STONE
-; PRET| 	dw_const PickUpItemText,             TEXT_ROCKETHIDEOUTB2F_NUGGET
-; PRET| 	dw_const PickUpItemText,             TEXT_ROCKETHIDEOUTB2F_TM_HORN_DRILL
-; PRET| 	dw_const PickUpItemText,             TEXT_ROCKETHIDEOUTB2F_SUPER_POTION
-; PRET| 
-; PRET| RocketHideout2TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| RocketHideout2TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_2_TRAINER_0, 4, RocketHideoutB2FRocketBattleText, RocketHideoutB2FRocketEndBattleText, RocketHideoutB2FRocketAfterBattleText
-; PRET| 	db -1 ; end
+; RocketHideoutB2F_TextPointers (scripts/RocketHideoutB2F.asm:274-285) — Tier-1 data: RocketHideout2TrainerHeaders is generated into assets/trainer_headers.inc.
 
 RocketHideoutB2FRocketText:
     mov esi, RocketHideout2TrainerHeader0
@@ -400,16 +386,4 @@ RocketHideoutB2FRocketText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB2FRocketBattleText (scripts/RocketHideoutB2F.asm:294-303) — a generated asset already defines RocketHideoutB2FRocketBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _RocketHideoutB2FRocketBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB2FRocketEndBattleText:
-; PRET| 	text_far _RocketHideoutB2FRocketEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB2FRocketAfterBattleText:
-; PRET| 	text_far _RocketHideoutB2FRocketAfterBattleText
-; PRET| 	text_end
+; RocketHideoutB2FRocketBattleText (scripts/RocketHideoutB2F.asm:294-303) — Tier-1 data: RocketHideoutB2FRocketBattleText is generated into assets/trainer_headers.inc.

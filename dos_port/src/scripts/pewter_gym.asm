@@ -185,22 +185,7 @@ PewterGymScriptReceiveTM34:
     jmp PewterGymResetScripts
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PewterGym_TextPointers (scripts/PewterGym.asm:85-97) — a generated asset already defines PewterGymTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PewterGymBrockText,             TEXT_PEWTERGYM_BROCK
-; PRET| 	dw_const PewterGymCooltrainerMText,      TEXT_PEWTERGYM_COOLTRAINER_M
-; PRET| 	dw_const PewterGymGuideText,             TEXT_PEWTERGYM_GYM_GUIDE
-; PRET| 	dw_const PewterGymBrockWaitTakeThisText, TEXT_PEWTERGYM_BROCK_WAIT_TAKE_THIS
-; PRET| 	dw_const PewterGymReceivedTM34Text,      TEXT_PEWTERGYM_RECEIVED_TM34
-; PRET| 	dw_const PewterGymTM34NoRoomText,        TEXT_PEWTERGYM_TM34_NO_ROOM
-; PRET| 
-; PRET| PewterGymTrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| PewterGymTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_PEWTER_GYM_TRAINER_0, 5, PewterGymCooltrainerMBattleText, PewterGymCooltrainerMEndBattleText, PewterGymCooltrainerMAfterBattleText
-; PRET| 	db -1 ; end
+; PewterGym_TextPointers (scripts/PewterGym.asm:85-97) — Tier-1 data: PewterGymTrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] PewterGymBrockText (scripts/PewterGym.asm:101-107) — at scripts/PewterGym.asm:102: .beforeBeat is defined in a region that bailed
@@ -285,19 +270,7 @@ PewterGymCooltrainerMText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PewterGymCooltrainerMBattleText (scripts/PewterGym.asm:170-179) — a generated asset already defines PewterGymCooltrainerMBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PewterGymCooltrainerMBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PewterGymCooltrainerMEndBattleText:
-; PRET| 	text_far _PewterGymCooltrainerMEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PewterGymCooltrainerMAfterBattleText:
-; PRET| 	text_far _PewterGymCooltrainerMAfterBattleText
-; PRET| 	text_end
+; PewterGymCooltrainerMBattleText (scripts/PewterGym.asm:170-179) — Tier-1 data: PewterGymCooltrainerMBattleText is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] PewterGymGuideText (scripts/PewterGym.asm:183-197) — at scripts/PewterGym.asm:185: .afterBeat is defined in a region that bailed

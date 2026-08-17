@@ -191,33 +191,7 @@ SilphCo2F_Script:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SilphCo2F_ScriptPointers (scripts/SilphCo2F.asm:90-113) — a generated asset already defines SilphCo2TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_SILPHCO2F_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_SILPHCO2F_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_SILPHCO2F_END_BATTLE
-; PRET| 
-; PRET| SilphCo2F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const SilphCo2FSilphWorkerFText, TEXT_SILPHCO2F_SILPH_WORKER_F
-; PRET| 	dw_const SilphCo2FScientist1Text,   TEXT_SILPHCO2F_SCIENTIST1
-; PRET| 	dw_const SilphCo2FScientist2Text,   TEXT_SILPHCO2F_SCIENTIST2
-; PRET| 	dw_const SilphCo2FRocket1Text,      TEXT_SILPHCO2F_ROCKET1
-; PRET| 	dw_const SilphCo2FRocket2Text,      TEXT_SILPHCO2F_ROCKET2
-; PRET| 
-; PRET| SilphCo2TrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| SilphCo2TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_SILPH_CO_2F_TRAINER_0, 3, SilphCo2FScientist1BattleText, SilphCo2FScientist1EndBattleText, SilphCo2FScientist1AfterBattleText
-; PRET| SilphCo2TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_SILPH_CO_2F_TRAINER_1, 4, SilphCo2FScientist2BattleText, SilphCo2FScientist2EndBattleText, SilphCo2FScientist2AfterBattleText
-; PRET| SilphCo2TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_SILPH_CO_2F_TRAINER_2, 3, SilphCo2FRocket1BattleText, SilphCo2FRocket1EndBattleText, SilphCo2FRocket1AfterBattleText
-; PRET| SilphCo2TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_SILPH_CO_2F_TRAINER_3, 3, SilphCo2FRocket2BattleText, SilphCo2FRocket2EndBattleText, SilphCo2FRocket2AfterBattleText
-; PRET| 	db -1 ; end
+; SilphCo2F_ScriptPointers (scripts/SilphCo2F.asm:90-113) — Tier-1 data: SilphCo2TrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] SilphCo2FSilphWorkerFText (scripts/SilphCo2F.asm:117-127) — at scripts/SilphCo2F.asm:118: .already_have_tm is defined in a region that bailed
@@ -285,52 +259,4 @@ SilphCo2FRocket2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] SilphCo2FScientist1BattleText (scripts/SilphCo2F.asm:176-221) — a generated asset already defines SilphCo2FScientist1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SilphCo2FScientist1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FScientist1EndBattleText:
-; PRET| 	text_far _SilphCo2FScientist1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FScientist1AfterBattleText:
-; PRET| 	text_far _SilphCo2FScientist1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FScientist2BattleText:
-; PRET| 	text_far _SilphCo2FScientist2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FScientist2EndBattleText:
-; PRET| 	text_far _SilphCo2FScientist2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FScientist2AfterBattleText:
-; PRET| 	text_far _SilphCo2FScientist2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FRocket1BattleText:
-; PRET| 	text_far _SilphCo2FRocket1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FRocket1EndBattleText:
-; PRET| 	text_far _SilphCo2FRocket1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FRocket1AfterBattleText:
-; PRET| 	text_far _SilphCo2FRocket1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FRocket2BattleText:
-; PRET| 	text_far _SilphCo2FRocket2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FRocket2EndBattleText:
-; PRET| 	text_far _SilphCo2FRocket2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo2FRocket2AfterBattleText:
-; PRET| 	text_far _SilphCo2FRocket2AfterBattleText
-; PRET| 	text_end
+; SilphCo2FScientist1BattleText (scripts/SilphCo2F.asm:176-221) — Tier-1 data: SilphCo2FScientist1BattleText is generated into assets/trainer_headers.inc.

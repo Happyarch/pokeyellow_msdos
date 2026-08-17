@@ -198,18 +198,7 @@ LoreleisRoomLoreleiEndBattleScript:
     jmp DisplayTextID
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] LoreleisRoom_TextPointers (scripts/LoreleisRoom.asm:120-128) — a generated asset already defines LoreleisRoomTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const LoreleisRoomLoreleiText,            TEXT_LORELEISROOM_LORELEI
-; PRET| 	dw_const LoreleisRoomLoreleiDontRunAwayText, TEXT_LORELEISROOM_DONT_RUN_AWAY
-; PRET| 
-; PRET| LoreleisRoomTrainerHeaders:
-; PRET| 	def_trainers
-; PRET| LoreleisRoomTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_LORELEIS_ROOM_TRAINER_0, 0, LoreleisRoomLoreleiBeforeBattleText, LoreleisRoomLoreleiEndBattleText, LoreleisRoomLoreleiAfterBattleText
-; PRET| 	db -1 ; end
+; LoreleisRoom_TextPointers (scripts/LoreleisRoom.asm:120-128) — Tier-1 data: LoreleisRoomTrainerHeaders is generated into assets/trainer_headers.inc.
 
 LoreleisRoomLoreleiText:
     mov esi, LoreleisRoomTrainerHeader0
@@ -217,20 +206,4 @@ LoreleisRoomLoreleiText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] LoreleisRoomLoreleiBeforeBattleText (scripts/LoreleisRoom.asm:137-150) — a generated asset already defines LoreleisRoomLoreleiBeforeBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _LoreleisRoomLoreleiBeforeBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| LoreleisRoomLoreleiEndBattleText:
-; PRET| 	text_far _LoreleisRoomLoreleiEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| LoreleisRoomLoreleiAfterBattleText:
-; PRET| 	text_far _LoreleisRoomLoreleiAfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| LoreleisRoomLoreleiDontRunAwayText:
-; PRET| 	text_far _LoreleisRoomLoreleiDontRunAwayText
-; PRET| 	text_end
+; LoreleisRoomLoreleiBeforeBattleText (scripts/LoreleisRoom.asm:137-150) — Tier-1 data: LoreleisRoomLoreleiBeforeBattleText is generated into assets/trainer_headers.inc.

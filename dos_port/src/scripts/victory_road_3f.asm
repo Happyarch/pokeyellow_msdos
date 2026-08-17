@@ -177,32 +177,7 @@ VictoryRoad3F_ScriptPointers:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] VictoryRoad3F_TextPointers (scripts/VictoryRoad3F.asm:82-104) — a generated asset already defines VictoryRoad3TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const VictoryRoad3FCooltrainerM1Text, TEXT_VICTORYROAD3F_COOLTRAINER_M1
-; PRET| 	dw_const VictoryRoad3FCooltrainerF1Text, TEXT_VICTORYROAD3F_COOLTRAINER_F1
-; PRET| 	dw_const VictoryRoad3FCooltrainerM2Text, TEXT_VICTORYROAD3F_COOLTRAINER_M2
-; PRET| 	dw_const VictoryRoad3FCooltrainerF2Text, TEXT_VICTORYROAD3F_COOLTRAINER_F2
-; PRET| 	dw_const PickUpItemText,                 TEXT_VICTORYROAD3F_MAX_REVIVE
-; PRET| 	dw_const PickUpItemText,                 TEXT_VICTORYROAD3F_TM_EXPLOSION
-; PRET| 	dw_const BoulderText,                    TEXT_VICTORYROAD3F_BOULDER1
-; PRET| 	dw_const BoulderText,                    TEXT_VICTORYROAD3F_BOULDER2
-; PRET| 	dw_const BoulderText,                    TEXT_VICTORYROAD3F_BOULDER3
-; PRET| 	dw_const BoulderText,                    TEXT_VICTORYROAD3F_BOULDER4
-; PRET| 
-; PRET| VictoryRoad3TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| VictoryRoad3TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_3_TRAINER_0, 1, VictoryRoad3FCooltrainerM1BattleText, VictoryRoad3FCooltrainerM1EndBattleText, VictoryRoad3FCooltrainerM1AfterBattleText
-; PRET| VictoryRoad3TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_3_TRAINER_1, 4, VictoryRoad3FCooltrainerF1BattleText, VictoryRoad3FCooltrainerF1EndBattleText, VictoryRoad3FCooltrainerF1AfterBattleText
-; PRET| VictoryRoad3TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_3_TRAINER_2, 4, VictoryRoad3FCooltrainerM2BattleText, VictoryRoad3FCooltrainerM2EndBattleText, VictoryRoad3FCooltrainerM2AfterBattleText
-; PRET| VictoryRoad3TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_VICTORY_ROAD_3_TRAINER_3, 4, VictoryRoad3FCooltrainerF2BattleText, VictoryRoad3FCooltrainerF2EndBattleText, VictoryRoad3FCooltrainerF2AfterBattleText
-; PRET| 	db -1 ; end
+; VictoryRoad3F_TextPointers (scripts/VictoryRoad3F.asm:82-104) — Tier-1 data: VictoryRoad3TrainerHeaders is generated into assets/trainer_headers.inc.
 
 VictoryRoad3FCooltrainerM1Text:
     mov esi, VictoryRoad3TrainerHeader0
@@ -225,52 +200,4 @@ VictoryRoad3FCooltrainerF2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] VictoryRoad3FCooltrainerM1BattleText (scripts/VictoryRoad3F.asm:131-176) — a generated asset already defines VictoryRoad3FCooltrainerM1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _VictoryRoad3FCooltrainerM1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerM1EndBattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerM1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerM1AfterBattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerM1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerF1BattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerF1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerF1EndBattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerF1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerF1AfterBattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerF1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerM2BattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerM2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerM2EndBattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerM2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerM2AfterBattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerM2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerF2BattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerF2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerF2EndBattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerF2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| VictoryRoad3FCooltrainerF2AfterBattleText:
-; PRET| 	text_far _VictoryRoad3FCooltrainerF2AfterBattleText
-; PRET| 	text_end
+; VictoryRoad3FCooltrainerM1BattleText (scripts/VictoryRoad3F.asm:131-176) — Tier-1 data: VictoryRoad3FCooltrainerM1BattleText is generated into assets/trainer_headers.inc.

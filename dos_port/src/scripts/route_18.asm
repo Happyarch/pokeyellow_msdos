@@ -81,31 +81,7 @@ Route18_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route18_ScriptPointers (scripts/Route18.asm:11-32) — a generated asset already defines Route18_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROUTE18_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROUTE18_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROUTE18_END_BATTLE
-; PRET| 
-; PRET| Route18_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route18CooltrainerM1Text,   TEXT_ROUTE18_COOLTRAINER_M1
-; PRET| 	dw_const Route18CooltrainerM2Text,   TEXT_ROUTE18_COOLTRAINER_M2
-; PRET| 	dw_const Route18CooltrainerM3Text,   TEXT_ROUTE18_COOLTRAINER_M3
-; PRET| 	dw_const Route18SignText,            TEXT_ROUTE18_SIGN
-; PRET| 	dw_const Route18CyclingRoadSignText, TEXT_ROUTE18_CYCLING_ROAD_SIGN
-; PRET| 
-; PRET| Route18TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Route18TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_18_TRAINER_0, 3, Route18CooltrainerM1BattleText, Route18CooltrainerM1EndBattleText, Route18CooltrainerM1AfterBattleText
-; PRET| Route18TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_18_TRAINER_1, 3, Route18CooltrainerM2BattleText, Route18CooltrainerM2EndBattleText, Route18CooltrainerM2AfterBattleText
-; PRET| Route18TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_18_TRAINER_2, 4, Route18CooltrainerM3BattleText, Route18CooltrainerM3EndBattleText, Route18CooltrainerM3AfterBattleText
-; PRET| 	db -1 ; end
+; Route18_ScriptPointers (scripts/Route18.asm:11-32) — Tier-1 data: Route18_ScriptPointers is generated into assets/map_script_tables.inc.
 
 Route18CooltrainerM1Text:
     mov esi, Route18TrainerHeader0
@@ -113,19 +89,7 @@ Route18CooltrainerM1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route18CooltrainerM1BattleText (scripts/Route18.asm:41-50) — a generated asset already defines Route18CooltrainerM1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route18CooltrainerM1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route18CooltrainerM1EndBattleText:
-; PRET| 	text_far _Route18CooltrainerM1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route18CooltrainerM1AfterBattleText:
-; PRET| 	text_far _Route18CooltrainerM1AfterBattleText
-; PRET| 	text_end
+; Route18CooltrainerM1BattleText (scripts/Route18.asm:41-50) — Tier-1 data: Route18CooltrainerM1BattleText is generated into assets/trainer_headers.inc.
 
 Route18CooltrainerM2Text:
     mov esi, Route18TrainerHeader1
@@ -133,19 +97,7 @@ Route18CooltrainerM2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route18CooltrainerM2BattleText (scripts/Route18.asm:59-68) — a generated asset already defines Route18CooltrainerM2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route18CooltrainerM2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route18CooltrainerM2EndBattleText:
-; PRET| 	text_far _Route18CooltrainerM2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route18CooltrainerM2AfterBattleText:
-; PRET| 	text_far _Route18CooltrainerM2AfterBattleText
-; PRET| 	text_end
+; Route18CooltrainerM2BattleText (scripts/Route18.asm:59-68) — Tier-1 data: Route18CooltrainerM2BattleText is generated into assets/trainer_headers.inc.
 
 Route18CooltrainerM3Text:
     mov esi, Route18TrainerHeader2
@@ -153,24 +105,4 @@ Route18CooltrainerM3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route18CooltrainerM3BattleText (scripts/Route18.asm:77-94) — a generated asset already defines Route18CooltrainerM3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route18CooltrainerM3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route18CooltrainerM3EndBattleText:
-; PRET| 	text_far _Route18CooltrainerM3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route18CooltrainerM3AfterBattleText:
-; PRET| 	text_far _Route18CooltrainerM3AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route18SignText:
-; PRET| 	text_far _Route18SignText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route18CyclingRoadSignText:
-; PRET| 	text_far _Route18CyclingRoadSignText
-; PRET| 	text_end
+; Route18CooltrainerM3BattleText (scripts/Route18.asm:77-94) — Tier-1 data: Route18CooltrainerM3BattleText is generated into assets/trainer_headers.inc.

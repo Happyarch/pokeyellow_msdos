@@ -115,48 +115,7 @@ Route8_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8_ScriptPointers (scripts/Route8.asm:11-49) — a generated asset already defines Route8_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROUTE8_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROUTE8_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROUTE8_END_BATTLE
-; PRET| 
-; PRET| Route8_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route8SuperNerd1Text,      TEXT_ROUTE8_SUPER_NERD1
-; PRET| 	dw_const Route8Gambler1Text,        TEXT_ROUTE8_GAMBLER1
-; PRET| 	dw_const Route8SuperNerd2Text,      TEXT_ROUTE8_SUPER_NERD2
-; PRET| 	dw_const Route8CooltrainerF1Text,   TEXT_ROUTE8_COOLTRAINER_F1
-; PRET| 	dw_const Route8SuperNerd3Text,      TEXT_ROUTE8_SUPER_NERD3
-; PRET| 	dw_const Route8CooltrainerF2Text,   TEXT_ROUTE8_COOLTRAINER_F2
-; PRET| 	dw_const Route8CooltrainerF3Text,   TEXT_ROUTE8_COOLTRAINER_F3
-; PRET| 	dw_const Route8Gambler2Text,        TEXT_ROUTE8_GAMBLER2
-; PRET| 	dw_const Route8CooltrainerF4Text,   TEXT_ROUTE8_COOLTRAINER_F4
-; PRET| 	dw_const Route8UndergroundSignText, TEXT_ROUTE8_UNDERGROUND_SIGN
-; PRET| 
-; PRET| Route8TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Route8TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_8_TRAINER_0, 4, Route8SuperNerd1BattleText, Route8SuperNerd1EndBattleText, Route8SuperNerd1AfterBattleText
-; PRET| Route8TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_8_TRAINER_1, 4, Route8Gambler1BattleText, Route8Gambler1EndBattleText, Route8Gambler1AfterBattleText
-; PRET| Route8TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_8_TRAINER_2, 4, Route8SuperNerd2BattleText, Route8SuperNerd2EndBattleText, Route8SuperNerd2AfterBattleText
-; PRET| Route8TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROUTE_8_TRAINER_3, 2, Route8CooltrainerF1BattleText, Route8CooltrainerF1EndBattleText, Route8CooltrainerF1AfterBattleText
-; PRET| Route8TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROUTE_8_TRAINER_4, 3, Route8SuperNerd3BattleText, Route8SuperNerd3EndBattleText, Route8SuperNerd3AfterBattleText
-; PRET| Route8TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_ROUTE_8_TRAINER_5, 3, Route8CooltrainerF2BattleText, Route8CooltrainerF2EndBattleText, Route8CooltrainerF2AfterBattleText
-; PRET| Route8TrainerHeader6:
-; PRET| 	trainer EVENT_BEAT_ROUTE_8_TRAINER_6, 2, Route8CooltrainerF3BattleText, Route8CooltrainerF3EndBattleText, Route8CooltrainerF3AfterBattleText
-; PRET| Route8TrainerHeader7:
-; PRET| 	trainer EVENT_BEAT_ROUTE_8_TRAINER_7, 2, Route8Gambler2BattleText, Route8Gambler2EndBattleText, Route8Gambler2AfterBattleText
-; PRET| Route8TrainerHeader8:
-; PRET| 	trainer EVENT_BEAT_ROUTE_8_TRAINER_8, 4, Route8CooltrainerF4BattleText, Route8CooltrainerF4EndBattleText, Route8CooltrainerF4AfterBattleText
-; PRET| 	db -1 ; end
+; Route8_ScriptPointers (scripts/Route8.asm:11-49) — Tier-1 data: Route8_ScriptPointers is generated into assets/map_script_tables.inc.
 
 Route8SuperNerd1Text:
     mov esi, Route8TrainerHeader0
@@ -164,19 +123,7 @@ Route8SuperNerd1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8SuperNerd1BattleText (scripts/Route8.asm:58-67) — a generated asset already defines Route8SuperNerd1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route8SuperNerd1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8SuperNerd1EndBattleText:
-; PRET| 	text_far _Route8SuperNerd1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8SuperNerd1AfterBattleText:
-; PRET| 	text_far _Route8SuperNerd1AfterBattleText
-; PRET| 	text_end
+; Route8SuperNerd1BattleText (scripts/Route8.asm:58-67) — Tier-1 data: Route8SuperNerd1BattleText is generated into assets/trainer_headers.inc.
 
 Route8Gambler1Text:
     mov esi, Route8TrainerHeader1
@@ -184,19 +131,7 @@ Route8Gambler1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8Gambler1BattleText (scripts/Route8.asm:76-85) — a generated asset already defines Route8Gambler1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route8Gambler1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8Gambler1EndBattleText:
-; PRET| 	text_far _Route8Gambler1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8Gambler1AfterBattleText:
-; PRET| 	text_far _Route8Gambler1AfterBattleText
-; PRET| 	text_end
+; Route8Gambler1BattleText (scripts/Route8.asm:76-85) — Tier-1 data: Route8Gambler1BattleText is generated into assets/trainer_headers.inc.
 
 Route8SuperNerd2Text:
     mov esi, Route8TrainerHeader2
@@ -204,19 +139,7 @@ Route8SuperNerd2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8SuperNerd2BattleText (scripts/Route8.asm:94-103) — a generated asset already defines Route8SuperNerd2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route8SuperNerd2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8SuperNerd2EndBattleText:
-; PRET| 	text_far _Route8SuperNerd2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8SuperNerd2AfterBattleText:
-; PRET| 	text_far _Route8SuperNerd2AfterBattleText
-; PRET| 	text_end
+; Route8SuperNerd2BattleText (scripts/Route8.asm:94-103) — Tier-1 data: Route8SuperNerd2BattleText is generated into assets/trainer_headers.inc.
 
 Route8CooltrainerF1Text:
     mov esi, Route8TrainerHeader3
@@ -224,19 +147,7 @@ Route8CooltrainerF1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8CooltrainerF1BattleText (scripts/Route8.asm:112-121) — a generated asset already defines Route8CooltrainerF1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route8CooltrainerF1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8CooltrainerF1EndBattleText:
-; PRET| 	text_far _Route8CooltrainerF1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8CooltrainerF1AfterBattleText:
-; PRET| 	text_far _Route8CooltrainerF1AfterBattleText
-; PRET| 	text_end
+; Route8CooltrainerF1BattleText (scripts/Route8.asm:112-121) — Tier-1 data: Route8CooltrainerF1BattleText is generated into assets/trainer_headers.inc.
 
 Route8SuperNerd3Text:
     mov esi, Route8TrainerHeader4
@@ -244,19 +155,7 @@ Route8SuperNerd3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8SuperNerd3BattleText (scripts/Route8.asm:130-139) — a generated asset already defines Route8SuperNerd3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route8SuperNerd3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8SuperNerd3EndBattleText:
-; PRET| 	text_far _Route8SuperNerd3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8SuperNerd3AfterBattleText:
-; PRET| 	text_far _Route8SuperNerd3AfterBattleText
-; PRET| 	text_end
+; Route8SuperNerd3BattleText (scripts/Route8.asm:130-139) — Tier-1 data: Route8SuperNerd3BattleText is generated into assets/trainer_headers.inc.
 
 Route8CooltrainerF2Text:
     mov esi, Route8TrainerHeader5
@@ -264,19 +163,7 @@ Route8CooltrainerF2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8CooltrainerF2BattleText (scripts/Route8.asm:148-157) — a generated asset already defines Route8CooltrainerF2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route8CooltrainerF2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8CooltrainerF2EndBattleText:
-; PRET| 	text_far _Route8CooltrainerF2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8CooltrainerF2AfterBattleText:
-; PRET| 	text_far _Route8CooltrainerF2AfterBattleText
-; PRET| 	text_end
+; Route8CooltrainerF2BattleText (scripts/Route8.asm:148-157) — Tier-1 data: Route8CooltrainerF2BattleText is generated into assets/trainer_headers.inc.
 
 Route8CooltrainerF3Text:
     mov esi, Route8TrainerHeader6
@@ -284,19 +171,7 @@ Route8CooltrainerF3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8CooltrainerF3BattleText (scripts/Route8.asm:166-175) — a generated asset already defines Route8CooltrainerF3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route8CooltrainerF3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8CooltrainerF3EndBattleText:
-; PRET| 	text_far _Route8CooltrainerF3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8CooltrainerF3AfterBattleText:
-; PRET| 	text_far _Route8CooltrainerF3AfterBattleText
-; PRET| 	text_end
+; Route8CooltrainerF3BattleText (scripts/Route8.asm:166-175) — Tier-1 data: Route8CooltrainerF3BattleText is generated into assets/trainer_headers.inc.
 
 Route8Gambler2Text:
     mov esi, Route8TrainerHeader7
@@ -304,19 +179,7 @@ Route8Gambler2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8Gambler2BattleText (scripts/Route8.asm:184-193) — a generated asset already defines Route8Gambler2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route8Gambler2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8Gambler2EndBattleText:
-; PRET| 	text_far _Route8Gambler2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8Gambler2AfterBattleText:
-; PRET| 	text_far _Route8Gambler2AfterBattleText
-; PRET| 	text_end
+; Route8Gambler2BattleText (scripts/Route8.asm:184-193) — Tier-1 data: Route8Gambler2BattleText is generated into assets/trainer_headers.inc.
 
 Route8CooltrainerF4Text:
     mov esi, Route8TrainerHeader8
@@ -324,20 +187,4 @@ Route8CooltrainerF4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route8CooltrainerF4BattleText (scripts/Route8.asm:202-215) — a generated asset already defines Route8CooltrainerF4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route8CooltrainerF4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8CooltrainerF4EndBattleText:
-; PRET| 	text_far _Route8CooltrainerF4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8CooltrainerF4AfterBattleText:
-; PRET| 	text_far _Route8CooltrainerF4AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route8UndergroundSignText:
-; PRET| 	text_far _Route8UndergroundSignText
-; PRET| 	text_end
+; Route8CooltrainerF4BattleText (scripts/Route8.asm:202-215) — Tier-1 data: Route8CooltrainerF4BattleText is generated into assets/trainer_headers.inc.

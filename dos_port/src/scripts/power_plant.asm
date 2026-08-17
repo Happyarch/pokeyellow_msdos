@@ -97,52 +97,7 @@ PowerPlant_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PowerPlant_ScriptPointers (scripts/PowerPlant.asm:11-53) — a generated asset already defines PowerPlant_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_POWERPLANT_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_POWERPLANT_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_POWERPLANT_END_BATTLE
-; PRET| 
-; PRET| PowerPlant_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PowerPlantVoltorb1Text,   TEXT_POWERPLANT_VOLTORB1
-; PRET| 	dw_const PowerPlantVoltorb2Text,   TEXT_POWERPLANT_VOLTORB2
-; PRET| 	dw_const PowerPlantVoltorb3Text,   TEXT_POWERPLANT_VOLTORB3
-; PRET| 	dw_const PowerPlantElectrode1Text, TEXT_POWERPLANT_ELECTRODE1
-; PRET| 	dw_const PowerPlantVoltorb4Text,   TEXT_POWERPLANT_VOLTORB4
-; PRET| 	dw_const PowerPlantVoltorb5Text,   TEXT_POWERPLANT_VOLTORB5
-; PRET| 	dw_const PowerPlantElectrode2Text, TEXT_POWERPLANT_ELECTRODE2
-; PRET| 	dw_const PowerPlantVoltorb6Text,   TEXT_POWERPLANT_VOLTORB6
-; PRET| 	dw_const PowerPlantZapdosText,     TEXT_POWERPLANT_ZAPDOS
-; PRET| 	dw_const PickUpItemText,           TEXT_POWERPLANT_CARBOS
-; PRET| 	dw_const PickUpItemText,           TEXT_POWERPLANT_HP_UP
-; PRET| 	dw_const PickUpItemText,           TEXT_POWERPLANT_RARE_CANDY
-; PRET| 	dw_const PickUpItemText,           TEXT_POWERPLANT_TM_THUNDER
-; PRET| 	dw_const PickUpItemText,           TEXT_POWERPLANT_TM_REFLECT
-; PRET| 
-; PRET| PowerPlantTrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Voltorb0TrainerHeader:
-; PRET| 	trainer EVENT_BEAT_POWER_PLANT_VOLTORB_0, 0, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText
-; PRET| Voltorb1TrainerHeader:
-; PRET| 	trainer EVENT_BEAT_POWER_PLANT_VOLTORB_1, 0, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText
-; PRET| Voltorb2TrainerHeader:
-; PRET| 	trainer EVENT_BEAT_POWER_PLANT_VOLTORB_2, 0, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText
-; PRET| Voltorb3TrainerHeader:
-; PRET| 	trainer EVENT_BEAT_POWER_PLANT_VOLTORB_3, 0, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText
-; PRET| Voltorb4TrainerHeader:
-; PRET| 	trainer EVENT_BEAT_POWER_PLANT_VOLTORB_4, 0, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText
-; PRET| Voltorb5TrainerHeader:
-; PRET| 	trainer EVENT_BEAT_POWER_PLANT_VOLTORB_5, 0, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText
-; PRET| Voltorb6TrainerHeader:
-; PRET| 	trainer EVENT_BEAT_POWER_PLANT_VOLTORB_6, 0, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText
-; PRET| Voltorb7TrainerHeader:
-; PRET| 	trainer EVENT_BEAT_POWER_PLANT_VOLTORB_7, 0, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText, PowerPlantVoltorbBattleText
-; PRET| ZapdosTrainerHeader:
-; PRET| 	trainer EVENT_BEAT_ZAPDOS, 0, PowerPlantZapdosBattleText, PowerPlantZapdosBattleText, PowerPlantZapdosBattleText
-; PRET| 	db -1 ; end
+; PowerPlant_ScriptPointers (scripts/PowerPlant.asm:11-53) — Tier-1 data: PowerPlant_ScriptPointers is generated into assets/map_script_tables.inc.
 
 PowerPlantInitBattleScript:
     call TalkToTrainer
@@ -187,14 +142,7 @@ PowerPlantZapdosText:
     jmp PowerPlantInitBattleScript
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PowerPlantVoltorbBattleText (scripts/PowerPlant.asm:107-111) — a generated asset already defines PowerPlantVoltorbBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PowerPlantVoltorbBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PowerPlantZapdosBattleText:
-; PRET| 	text_far _PowerPlantZapdosBattleText
+; PowerPlantVoltorbBattleText (scripts/PowerPlant.asm:107-111) — Tier-1 data: PowerPlantVoltorbBattleText is generated into assets/trainer_headers.inc.
 
     mov al, 75
     call PlayCry

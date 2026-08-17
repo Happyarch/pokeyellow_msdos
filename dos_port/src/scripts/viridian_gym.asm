@@ -338,44 +338,7 @@ ViridianGymPlayerSpinningScript:
 ; PRET| 	jp ViridianGymResetScripts
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianGym_TextPointers (scripts/ViridianGym.asm:171-205) — a generated asset already defines ViridianGymTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const ViridianGymGiovanniText,               TEXT_VIRIDIANGYM_GIOVANNI
-; PRET| 	dw_const ViridianGymCooltrainerM1Text,          TEXT_VIRIDIANGYM_COOLTRAINER_M1
-; PRET| 	dw_const ViridianGymHiker1Text,                 TEXT_VIRIDIANGYM_HIKER1
-; PRET| 	dw_const ViridianGymRocker1Text,                TEXT_VIRIDIANGYM_ROCKER1
-; PRET| 	dw_const ViridianGymHiker2Text,                 TEXT_VIRIDIANGYM_HIKER2
-; PRET| 	dw_const ViridianGymCooltrainerM2Text,          TEXT_VIRIDIANGYM_COOLTRAINER_M2
-; PRET| 	dw_const ViridianGymHiker3Text,                 TEXT_VIRIDIANGYM_HIKER3
-; PRET| 	dw_const ViridianGymRocker2Text,                TEXT_VIRIDIANGYM_ROCKER2
-; PRET| 	dw_const ViridianGymCooltrainerM3Text,          TEXT_VIRIDIANGYM_COOLTRAINER_M3
-; PRET| 	dw_const ViridianGymGymGuideText,               TEXT_VIRIDIANGYM_GYM_GUIDE
-; PRET| 	dw_const PickUpItemText,                        TEXT_VIRIDIANGYM_REVIVE
-; PRET| 	dw_const ViridianGymGiovanniEarthBadgeInfoText, TEXT_VIRIDIANGYM_GIOVANNI_EARTH_BADGE_INFO
-; PRET| 	dw_const ViridianGymGiovanniReceivedTM27Text,   TEXT_VIRIDIANGYM_GIOVANNI_RECEIVED_TM27
-; PRET| 	dw_const ViridianGymGiovanniTM27NoRoomText,     TEXT_VIRIDIANGYM_GIOVANNI_TM27_NO_ROOM
-; PRET| 
-; PRET| ViridianGymTrainerHeaders:
-; PRET| 	def_trainers 2
-; PRET| ViridianGymTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_GYM_TRAINER_0, 4, ViridianGymCooltrainerM1BattleText, ViridianGymCooltrainerM1EndBattleText, ViridianGymCooltrainerM1AfterBattleText
-; PRET| ViridianGymTrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_GYM_TRAINER_1, 4, ViridianGymHiker1BattleText, ViridianGymHiker1EndBattleText, ViridianGymHiker1AfterBattleText
-; PRET| ViridianGymTrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_GYM_TRAINER_2, 4, ViridianGymRocker1BattleText, ViridianGymRocker1EndBattleText, ViridianGymRocker1AfterBattleText
-; PRET| ViridianGymTrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_GYM_TRAINER_3, 2, ViridianGymHiker2BattleText, ViridianGymHiker2EndBattleText, ViridianGymHiker2AfterBattleText
-; PRET| ViridianGymTrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_GYM_TRAINER_4, 3, ViridianGymCooltrainerM2BattleText, ViridianGymCooltrainerM2EndBattleText, ViridianGymCooltrainerM2AfterBattleText
-; PRET| ViridianGymTrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_GYM_TRAINER_5, 4, ViridianGymHiker3BattleText, ViridianGymHiker3EndBattleText, ViridianGymHiker3AfterBattleText
-; PRET| ViridianGymTrainerHeader6:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_GYM_TRAINER_6, 3, ViridianGymRocker2BattleText, ViridianGymRocker2EndBattleText, ViridianGymRocker2AfterBattleText
-; PRET| ViridianGymTrainerHeader7:
-; PRET| 	trainer EVENT_BEAT_VIRIDIAN_GYM_TRAINER_7, 4, ViridianGymCooltrainerM3BattleText, ViridianGymCooltrainerM3EndBattleText, ViridianGymCooltrainerM3AfterBattleText
-; PRET| 	db -1 ; end
+; ViridianGym_TextPointers (scripts/ViridianGym.asm:171-205) — Tier-1 data: ViridianGymTrainerHeaders is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] ViridianGymGiovanniText (scripts/ViridianGym.asm:209-215) — at scripts/ViridianGym.asm:210: .beforeBeat is defined in a region that bailed
@@ -468,19 +431,7 @@ ViridianGymCooltrainerM1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianGymCooltrainerM1BattleText (scripts/ViridianGym.asm:286-295) — a generated asset already defines ViridianGymCooltrainerM1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianGymCooltrainerM1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymCooltrainerM1EndBattleText:
-; PRET| 	text_far _ViridianGymCooltrainerM1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymCooltrainerM1AfterBattleText:
-; PRET| 	text_far _ViridianGymCooltrainerM1AfterBattleText
-; PRET| 	text_end
+; ViridianGymCooltrainerM1BattleText (scripts/ViridianGym.asm:286-295) — Tier-1 data: ViridianGymCooltrainerM1BattleText is generated into assets/trainer_headers.inc.
 
 ViridianGymHiker1Text:
     mov esi, ViridianGymTrainerHeader1
@@ -488,19 +439,7 @@ ViridianGymHiker1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianGymHiker1BattleText (scripts/ViridianGym.asm:304-313) — a generated asset already defines ViridianGymHiker1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianGymHiker1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymHiker1EndBattleText:
-; PRET| 	text_far _ViridianGymHiker1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymHiker1AfterBattleText:
-; PRET| 	text_far _ViridianGymHiker1AfterBattleText
-; PRET| 	text_end
+; ViridianGymHiker1BattleText (scripts/ViridianGym.asm:304-313) — Tier-1 data: ViridianGymHiker1BattleText is generated into assets/trainer_headers.inc.
 
 ViridianGymRocker1Text:
     mov esi, ViridianGymTrainerHeader2
@@ -508,19 +447,7 @@ ViridianGymRocker1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianGymRocker1BattleText (scripts/ViridianGym.asm:322-331) — a generated asset already defines ViridianGymRocker1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianGymRocker1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymRocker1EndBattleText:
-; PRET| 	text_far _ViridianGymRocker1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymRocker1AfterBattleText:
-; PRET| 	text_far _ViridianGymRocker1AfterBattleText
-; PRET| 	text_end
+; ViridianGymRocker1BattleText (scripts/ViridianGym.asm:322-331) — Tier-1 data: ViridianGymRocker1BattleText is generated into assets/trainer_headers.inc.
 
 ViridianGymHiker2Text:
     mov esi, ViridianGymTrainerHeader3
@@ -528,19 +455,7 @@ ViridianGymHiker2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianGymHiker2BattleText (scripts/ViridianGym.asm:340-349) — a generated asset already defines ViridianGymHiker2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianGymHiker2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymHiker2EndBattleText:
-; PRET| 	text_far _ViridianGymHiker2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymHiker2AfterBattleText:
-; PRET| 	text_far _ViridianGymHiker2AfterBattleText
-; PRET| 	text_end
+; ViridianGymHiker2BattleText (scripts/ViridianGym.asm:340-349) — Tier-1 data: ViridianGymHiker2BattleText is generated into assets/trainer_headers.inc.
 
 ViridianGymCooltrainerM2Text:
     mov esi, ViridianGymTrainerHeader4
@@ -548,19 +463,7 @@ ViridianGymCooltrainerM2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianGymCooltrainerM2BattleText (scripts/ViridianGym.asm:358-367) — a generated asset already defines ViridianGymCooltrainerM2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianGymCooltrainerM2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymCooltrainerM2EndBattleText:
-; PRET| 	text_far _ViridianGymCooltrainerM2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymCooltrainerM2AfterBattleText:
-; PRET| 	text_far _ViridianGymCooltrainerM2AfterBattleText
-; PRET| 	text_end
+; ViridianGymCooltrainerM2BattleText (scripts/ViridianGym.asm:358-367) — Tier-1 data: ViridianGymCooltrainerM2BattleText is generated into assets/trainer_headers.inc.
 
 ViridianGymHiker3Text:
     mov esi, ViridianGymTrainerHeader5
@@ -568,19 +471,7 @@ ViridianGymHiker3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianGymHiker3BattleText (scripts/ViridianGym.asm:376-385) — a generated asset already defines ViridianGymHiker3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianGymHiker3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymHiker3EndBattleText:
-; PRET| 	text_far _ViridianGymHiker3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymHiker3AfterBattleText:
-; PRET| 	text_far _ViridianGymHiker3AfterBattleText
-; PRET| 	text_end
+; ViridianGymHiker3BattleText (scripts/ViridianGym.asm:376-385) — Tier-1 data: ViridianGymHiker3BattleText is generated into assets/trainer_headers.inc.
 
 ViridianGymRocker2Text:
     mov esi, ViridianGymTrainerHeader6
@@ -588,19 +479,7 @@ ViridianGymRocker2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianGymRocker2BattleText (scripts/ViridianGym.asm:394-403) — a generated asset already defines ViridianGymRocker2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianGymRocker2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymRocker2EndBattleText:
-; PRET| 	text_far _ViridianGymRocker2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymRocker2AfterBattleText:
-; PRET| 	text_far _ViridianGymRocker2AfterBattleText
-; PRET| 	text_end
+; ViridianGymRocker2BattleText (scripts/ViridianGym.asm:394-403) — Tier-1 data: ViridianGymRocker2BattleText is generated into assets/trainer_headers.inc.
 
 ViridianGymCooltrainerM3Text:
     mov esi, ViridianGymTrainerHeader7
@@ -608,19 +487,7 @@ ViridianGymCooltrainerM3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] ViridianGymCooltrainerM3BattleText (scripts/ViridianGym.asm:412-421) — a generated asset already defines ViridianGymCooltrainerM3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianGymCooltrainerM3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymCooltrainerM3EndBattleText:
-; PRET| 	text_far _ViridianGymCooltrainerM3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymCooltrainerM3AfterBattleText:
-; PRET| 	text_far _ViridianGymCooltrainerM3AfterBattleText
-; PRET| 	text_end
+; ViridianGymCooltrainerM3BattleText (scripts/ViridianGym.asm:412-421) — Tier-1 data: ViridianGymCooltrainerM3BattleText is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] ViridianGymGymGuideText (scripts/ViridianGym.asm:425-429) — at scripts/ViridianGym.asm:426: .afterBeat is defined in a region that bailed

@@ -212,17 +212,7 @@ LancesRoomPlayerIsMovingScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] LancesRoom_TextPointers (scripts/LancesRoom.asm:130-137) — a generated asset already defines LancesRoomTrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const LancesRoomLanceText, TEXT_LANCESROOM_LANCE
-; PRET| 
-; PRET| LancesRoomTrainerHeaders:
-; PRET| 	def_trainers
-; PRET| LancesRoomTrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_LANCES_ROOM_TRAINER_0, 0, LancesRoomLanceBeforeBattleText, LancesRoomLanceEndBattleText, LancesRoomLanceAfterBattleText
-; PRET| 	db -1 ; end
+; LancesRoom_TextPointers (scripts/LancesRoom.asm:130-137) — Tier-1 data: LancesRoomTrainerHeaders is generated into assets/trainer_headers.inc.
 
 LancesRoomLanceText:
     mov esi, LancesRoomTrainerHeader0
@@ -230,18 +220,7 @@ LancesRoomLanceText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] LancesRoomLanceBeforeBattleText (scripts/LancesRoom.asm:146-154) — a generated asset already defines LancesRoomLanceBeforeBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _LancesRoomLanceBeforeBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| LancesRoomLanceEndBattleText:
-; PRET| 	text_far _LancesRoomLanceEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| LancesRoomLanceAfterBattleText:
-; PRET| 	text_far _LancesRoomLanceAfterBattleText
+; LancesRoomLanceBeforeBattleText (scripts/LancesRoom.asm:146-154) — Tier-1 data: LancesRoomLanceBeforeBattleText is generated into assets/trainer_headers.inc.
 
     SetEvent EVENT_BEAT_LANCE
     jmp TextScriptEnd

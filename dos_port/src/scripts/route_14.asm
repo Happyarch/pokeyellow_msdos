@@ -121,51 +121,7 @@ Route14_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14_ScriptPointers (scripts/Route14.asm:11-52) — a generated asset already defines Route14_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROUTE14_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROUTE14_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROUTE14_END_BATTLE
-; PRET| 
-; PRET| Route14_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route14CooltrainerM1Text, TEXT_ROUTE14_COOLTRAINER_M1
-; PRET| 	dw_const Route14CooltrainerM2Text, TEXT_ROUTE14_COOLTRAINER_M2
-; PRET| 	dw_const Route14CooltrainerM3Text, TEXT_ROUTE14_COOLTRAINER_M3
-; PRET| 	dw_const Route14CooltrainerM4Text, TEXT_ROUTE14_COOLTRAINER_M4
-; PRET| 	dw_const Route14CooltrainerM5Text, TEXT_ROUTE14_COOLTRAINER_M5
-; PRET| 	dw_const Route14CooltrainerM6Text, TEXT_ROUTE14_COOLTRAINER_M6
-; PRET| 	dw_const Route14Biker1Text,        TEXT_ROUTE14_BIKER1
-; PRET| 	dw_const Route14Biker2Text,        TEXT_ROUTE14_BIKER2
-; PRET| 	dw_const Route14Biker3Text,        TEXT_ROUTE14_BIKER3
-; PRET| 	dw_const Route14Biker4Text,        TEXT_ROUTE14_BIKER4
-; PRET| 	dw_const Route14SignText,          TEXT_ROUTE14_SIGN
-; PRET| 
-; PRET| Route14TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Route14TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_0, 2, Route14CooltrainerM1BattleText, Route14CooltrainerM1EndBattleText, Route14CooltrainerM1AfterBattleText
-; PRET| Route14TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_1, 2, Route14CooltrainerM2BattleText, Route14CooltrainerM2EndBattleText, Route14CooltrainerM2AfterBattleText
-; PRET| Route14TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_2, 4, Route14CooltrainerM3BattleText, Route14CooltrainerM3EndBattleText, Route14CooltrainerM3AfterBattleText
-; PRET| Route14TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_3, 3, Route14CooltrainerM4BattleText, Route14CooltrainerM4EndBattleText, Route14CooltrainerM4AfterBattleText
-; PRET| Route14TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_4, 3, Route14CooltrainerM5BattleText, Route14CooltrainerM5EndBattleText, Route14CooltrainerM5AfterBattleText
-; PRET| Route14TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_5, 4, Route14CooltrainerM6BattleText, Route14CooltrainerM6EndBattleText, Route14CooltrainerM6AfterBattleText
-; PRET| Route14TrainerHeader6:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_6, 4, Route14Biker1BattleText, Route14Biker1EndBattleText, Route14Biker1AfterBattleText
-; PRET| Route14TrainerHeader7:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_7, 4, Route14Biker2BattleText, Route14Biker2EndBattleText, Route14Biker2AfterBattleText
-; PRET| Route14TrainerHeader8:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_8, 3, Route14Biker3BattleText, Route14Biker3EndBattleText, Route14Biker3AfterBattleText
-; PRET| Route14TrainerHeader9:
-; PRET| 	trainer EVENT_BEAT_ROUTE_14_TRAINER_9, 4, Route14Biker4BattleText, Route14Biker4EndBattleText, Route14Biker4AfterBattleText
-; PRET| 	db -1 ; end
+; Route14_ScriptPointers (scripts/Route14.asm:11-52) — Tier-1 data: Route14_ScriptPointers is generated into assets/map_script_tables.inc.
 
 Route14CooltrainerM1Text:
     mov esi, Route14TrainerHeader0
@@ -173,19 +129,7 @@ Route14CooltrainerM1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14CooltrainerM1BattleText (scripts/Route14.asm:61-70) — a generated asset already defines Route14CooltrainerM1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14CooltrainerM1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM1EndBattleText:
-; PRET| 	text_far _Route14CooltrainerM1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM1AfterBattleText:
-; PRET| 	text_far _Route14CooltrainerM1AfterBattleText
-; PRET| 	text_end
+; Route14CooltrainerM1BattleText (scripts/Route14.asm:61-70) — Tier-1 data: Route14CooltrainerM1BattleText is generated into assets/trainer_headers.inc.
 
 Route14CooltrainerM2Text:
     mov esi, Route14TrainerHeader1
@@ -193,19 +137,7 @@ Route14CooltrainerM2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14CooltrainerM2BattleText (scripts/Route14.asm:79-88) — a generated asset already defines Route14CooltrainerM2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14CooltrainerM2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM2EndBattleText:
-; PRET| 	text_far _Route14CooltrainerM2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM2AfterBattleText:
-; PRET| 	text_far _Route14CooltrainerM2AfterBattleText
-; PRET| 	text_end
+; Route14CooltrainerM2BattleText (scripts/Route14.asm:79-88) — Tier-1 data: Route14CooltrainerM2BattleText is generated into assets/trainer_headers.inc.
 
 Route14CooltrainerM3Text:
     mov esi, Route14TrainerHeader2
@@ -213,19 +145,7 @@ Route14CooltrainerM3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14CooltrainerM3BattleText (scripts/Route14.asm:97-106) — a generated asset already defines Route14CooltrainerM3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14CooltrainerM3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM3EndBattleText:
-; PRET| 	text_far _Route14CooltrainerM3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM3AfterBattleText:
-; PRET| 	text_far _Route14CooltrainerM3AfterBattleText
-; PRET| 	text_end
+; Route14CooltrainerM3BattleText (scripts/Route14.asm:97-106) — Tier-1 data: Route14CooltrainerM3BattleText is generated into assets/trainer_headers.inc.
 
 Route14CooltrainerM4Text:
     mov esi, Route14TrainerHeader3
@@ -233,19 +153,7 @@ Route14CooltrainerM4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14CooltrainerM4BattleText (scripts/Route14.asm:115-124) — a generated asset already defines Route14CooltrainerM4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14CooltrainerM4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM4EndBattleText:
-; PRET| 	text_far _Route14CooltrainerM4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM4AfterBattleText:
-; PRET| 	text_far _Route14CooltrainerM4AfterBattleText
-; PRET| 	text_end
+; Route14CooltrainerM4BattleText (scripts/Route14.asm:115-124) — Tier-1 data: Route14CooltrainerM4BattleText is generated into assets/trainer_headers.inc.
 
 Route14CooltrainerM5Text:
     mov esi, Route14TrainerHeader4
@@ -253,19 +161,7 @@ Route14CooltrainerM5Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14CooltrainerM5BattleText (scripts/Route14.asm:133-142) — a generated asset already defines Route14CooltrainerM5BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14CooltrainerM5BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM5EndBattleText:
-; PRET| 	text_far _Route14CooltrainerM5EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM5AfterBattleText:
-; PRET| 	text_far _Route14CooltrainerM5AfterBattleText
-; PRET| 	text_end
+; Route14CooltrainerM5BattleText (scripts/Route14.asm:133-142) — Tier-1 data: Route14CooltrainerM5BattleText is generated into assets/trainer_headers.inc.
 
 Route14CooltrainerM6Text:
     mov esi, Route14TrainerHeader5
@@ -273,19 +169,7 @@ Route14CooltrainerM6Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14CooltrainerM6BattleText (scripts/Route14.asm:151-160) — a generated asset already defines Route14CooltrainerM6BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14CooltrainerM6BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM6EndBattleText:
-; PRET| 	text_far _Route14CooltrainerM6EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14CooltrainerM6AfterBattleText:
-; PRET| 	text_far _Route14CooltrainerM6AfterBattleText
-; PRET| 	text_end
+; Route14CooltrainerM6BattleText (scripts/Route14.asm:151-160) — Tier-1 data: Route14CooltrainerM6BattleText is generated into assets/trainer_headers.inc.
 
 Route14Biker1Text:
     mov esi, Route14TrainerHeader6
@@ -293,19 +177,7 @@ Route14Biker1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14Biker1BattleText (scripts/Route14.asm:169-178) — a generated asset already defines Route14Biker1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14Biker1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14Biker1EndBattleText:
-; PRET| 	text_far _Route14Biker1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14Biker1AfterBattleText:
-; PRET| 	text_far _Route14Biker1AfterBattleText
-; PRET| 	text_end
+; Route14Biker1BattleText (scripts/Route14.asm:169-178) — Tier-1 data: Route14Biker1BattleText is generated into assets/trainer_headers.inc.
 
 Route14Biker2Text:
     mov esi, Route14TrainerHeader7
@@ -313,19 +185,7 @@ Route14Biker2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14Biker2BattleText (scripts/Route14.asm:187-196) — a generated asset already defines Route14Biker2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14Biker2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14Biker2EndBattleText:
-; PRET| 	text_far _Route14Biker2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14Biker2AfterBattleText:
-; PRET| 	text_far _Route14Biker2AfterBattleText
-; PRET| 	text_end
+; Route14Biker2BattleText (scripts/Route14.asm:187-196) — Tier-1 data: Route14Biker2BattleText is generated into assets/trainer_headers.inc.
 
 Route14Biker3Text:
     mov esi, Route14TrainerHeader8
@@ -333,19 +193,7 @@ Route14Biker3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14Biker3BattleText (scripts/Route14.asm:205-214) — a generated asset already defines Route14Biker3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14Biker3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14Biker3EndBattleText:
-; PRET| 	text_far _Route14Biker3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14Biker3AfterBattleText:
-; PRET| 	text_far _Route14Biker3AfterBattleText
-; PRET| 	text_end
+; Route14Biker3BattleText (scripts/Route14.asm:205-214) — Tier-1 data: Route14Biker3BattleText is generated into assets/trainer_headers.inc.
 
 Route14Biker4Text:
     mov esi, Route14TrainerHeader9
@@ -353,20 +201,4 @@ Route14Biker4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route14Biker4BattleText (scripts/Route14.asm:223-236) — a generated asset already defines Route14Biker4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route14Biker4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14Biker4EndBattleText:
-; PRET| 	text_far _Route14Biker4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14Biker4AfterBattleText:
-; PRET| 	text_far _Route14Biker4AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route14SignText:
-; PRET| 	text_far _Route14SignText
-; PRET| 	text_end
+; Route14Biker4BattleText (scripts/Route14.asm:223-236) — Tier-1 data: Route14Biker4BattleText is generated into assets/trainer_headers.inc.

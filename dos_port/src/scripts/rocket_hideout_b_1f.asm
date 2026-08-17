@@ -127,37 +127,7 @@ RocketHideoutB1F_Script:
 ; PRET| 	predef_jump ReplaceTileBlock
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — a generated asset already defines RocketHideout1TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROCKETHIDEOUTB1F_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROCKETHIDEOUTB1F_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROCKETHIDEOUTB1F_END_BATTLE
-; PRET| 
-; PRET| RocketHideoutB1F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const RocketHideoutB1FRocket1Text, TEXT_ROCKETHIDEOUTB1F_ROCKET1
-; PRET| 	dw_const RocketHideoutB1FRocket2Text, TEXT_ROCKETHIDEOUTB1F_ROCKET2
-; PRET| 	dw_const RocketHideoutB1FRocket3Text, TEXT_ROCKETHIDEOUTB1F_ROCKET3
-; PRET| 	dw_const RocketHideoutB1FRocket4Text, TEXT_ROCKETHIDEOUTB1F_ROCKET4
-; PRET| 	dw_const RocketHideoutB1FRocket5Text, TEXT_ROCKETHIDEOUTB1F_ROCKET5
-; PRET| 	dw_const PickUpItemText,              TEXT_ROCKETHIDEOUTB1F_ESCAPE_ROPE
-; PRET| 	dw_const PickUpItemText,              TEXT_ROCKETHIDEOUTB1F_HYPER_POTION
-; PRET| 
-; PRET| RocketHideout1TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| RocketHideout1TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_0, 3, RocketHideoutB1FRocket1BattleText, RocketHideoutB1FRocket1EndBattleText, RocketHideoutB1FRocket1AfterBattleText
-; PRET| RocketHideout1TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_1, 2, RocketHideoutB1FRocket2BattleText, RocketHideoutB1FRocket2EndBattleText, RocketHideoutB1FRocket2AfterBattleText
-; PRET| RocketHideout1TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_2, 2, RocketHideoutB1FRocket3BattleText, RocketHideoutB1FRocket3EndBattleText, RocketHideoutB1FRocket3AfterBattleText
-; PRET| RocketHideout1TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_3, 3, RocketHideoutB1FRocket4BattleText, RocketHideoutB1FRocket4EndBattleText, RocketHideoutB1FRocket4AfterBattleText
-; PRET| RocketHideout1TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4, 3, RocketHideoutB1FRocket5BattleText, RocketHideoutB1FRocket5EndBattleText, RocketHideoutB1FRocket5AfterBattleText
-; PRET| 	db -1 ; end
+; RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — Tier-1 data: RocketHideout1TrainerHeaders is generated into assets/trainer_headers.inc.
 
 RocketHideoutB1FRocket1Text:
     mov esi, RocketHideout1TrainerHeader0
@@ -185,10 +155,7 @@ RocketHideoutB1FRocket5Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB1FRocket5EndBattleText (scripts/RocketHideoutB1F.asm:95-95) — a generated asset already defines RocketHideoutB1FRocket5EndBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _RocketHideoutB1FRocket5EndBattleText
+; RocketHideoutB1FRocket5EndBattleText (scripts/RocketHideoutB1F.asm:95-95) — Tier-1 data: RocketHideoutB1FRocket5EndBattleText is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] scripts/RocketHideoutB1F.asm:anon (scripts/RocketHideoutB1F.asm:97-99) — at scripts/RocketHideoutB1F.asm:98: .prompt_end is defined in a region that bailed
@@ -199,64 +166,4 @@ RocketHideoutB1FRocket5Text:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] RocketHideoutB1FRocket5EndBattleText.prompt_end (scripts/RocketHideoutB1F.asm:102-159) — a generated asset already defines RocketHideoutB1FRocket1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_promptbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket1BattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket1EndBattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket1AfterBattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket2BattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket2EndBattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket2AfterBattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket3BattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket3EndBattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket3AfterBattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket3AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket4BattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket4EndBattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket4AfterBattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket4AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket5BattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket5BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| RocketHideoutB1FRocket5AfterBattleText:
-; PRET| 	text_far _RocketHideoutB1FRocket5AfterBattleText
-; PRET| 	text_end
+; RocketHideoutB1FRocket5EndBattleText.prompt_end (scripts/RocketHideoutB1F.asm:102-159) — Tier-1 data: RocketHideoutB1FRocket1BattleText is generated into assets/trainer_headers.inc.

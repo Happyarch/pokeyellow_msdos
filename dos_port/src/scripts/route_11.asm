@@ -121,51 +121,7 @@ Route11_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11_ScriptPointers (scripts/Route11.asm:11-52) — a generated asset already defines Route11_ScriptPointers
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_ROUTE11_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_ROUTE11_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_ROUTE11_END_BATTLE
-; PRET| 
-; PRET| Route11_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route11Gambler1Text,         TEXT_ROUTE11_GAMBLER1
-; PRET| 	dw_const Route11Gambler2Text,         TEXT_ROUTE11_GAMBLER2
-; PRET| 	dw_const Route11Youngster1Text,       TEXT_ROUTE11_YOUNGSTER1
-; PRET| 	dw_const Route11SuperNerd1Text,       TEXT_ROUTE11_SUPER_NERD1
-; PRET| 	dw_const Route11Youngster2Text,       TEXT_ROUTE11_YOUNGSTER2
-; PRET| 	dw_const Route11Gambler3Text,         TEXT_ROUTE11_GAMBLER3
-; PRET| 	dw_const Route11Gambler4Text,         TEXT_ROUTE11_GAMBLER4
-; PRET| 	dw_const Route11Youngster3Text,       TEXT_ROUTE11_YOUNGSTER3
-; PRET| 	dw_const Route11SuperNerd2Text,       TEXT_ROUTE11_SUPER_NERD2
-; PRET| 	dw_const Route11Youngster4Text,       TEXT_ROUTE11_YOUNGSTER4
-; PRET| 	dw_const Route11DiglettsCaveSignText, TEXT_ROUTE11_DIGLETTSCAVE_SIGN
-; PRET| 
-; PRET| Route11TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Route11TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_0, 3, Route11Gambler1BattleText, Route11Gambler1EndBattleText, Route11Gambler1AfterBattleText
-; PRET| Route11TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_1, 2, Route11Gambler2BattleText, Route11Gambler2EndBattleText, Route11Gambler2AfterBattleText
-; PRET| Route11TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_2, 3, Route11Youngster1BattleText, Route11Youngster1EndBattleText, Route11Youngster1AfterBattleText
-; PRET| Route11TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_3, 3, Route11SuperNerd1BattleText, Route11SuperNerd1EndBattleText, Route11SuperNerd1AfterBattleText
-; PRET| Route11TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_4, 4, Route11Youngster2BattleText, Route11Youngster2EndBattleText, Route11Youngster2AfterBattleText
-; PRET| Route11TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_5, 3, Route11Gambler3BattleText, Route11Gambler3EndBattleText, Route11Gambler3AfterBattleText
-; PRET| Route11TrainerHeader6:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_6, 3, Route11Gambler4BattleText, Route11Gambler4EndBattleText, Route11Gambler4AfterBattleText
-; PRET| Route11TrainerHeader7:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_7, 4, Route11Youngster3BattleText, Route11Youngster3EndBattleText, Route11Youngster3AfterBattleText
-; PRET| Route11TrainerHeader8:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_8, 3, Route11SuperNerd2BattleText, Route11SuperNerd2EndBattleText, Route11SuperNerd2AfterBattleText
-; PRET| Route11TrainerHeader9:
-; PRET| 	trainer EVENT_BEAT_ROUTE_11_TRAINER_9, 4, Route11Youngster4BattleText, Route11Youngster4EndBattleText, Route11Youngster4AfterBattleText
-; PRET| 	db -1 ; end
+; Route11_ScriptPointers (scripts/Route11.asm:11-52) — Tier-1 data: Route11_ScriptPointers is generated into assets/map_script_tables.inc.
 
 Route11Gambler1Text:
     mov esi, Route11TrainerHeader0
@@ -173,19 +129,7 @@ Route11Gambler1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11Gambler1BattleText (scripts/Route11.asm:61-70) — a generated asset already defines Route11Gambler1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11Gambler1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Gambler1EndBattleText:
-; PRET| 	text_far _Route11Gambler1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Gambler1AfterBattleText:
-; PRET| 	text_far _Route11Gambler1AfterBattleText
-; PRET| 	text_end
+; Route11Gambler1BattleText (scripts/Route11.asm:61-70) — Tier-1 data: Route11Gambler1BattleText is generated into assets/trainer_headers.inc.
 
 Route11Gambler2Text:
     mov esi, Route11TrainerHeader1
@@ -193,19 +137,7 @@ Route11Gambler2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11Gambler2BattleText (scripts/Route11.asm:79-88) — a generated asset already defines Route11Gambler2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11Gambler2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Gambler2EndBattleText:
-; PRET| 	text_far _Route11Gambler2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Gambler2AfterBattleText:
-; PRET| 	text_far _Route11Gambler2AfterBattleText
-; PRET| 	text_end
+; Route11Gambler2BattleText (scripts/Route11.asm:79-88) — Tier-1 data: Route11Gambler2BattleText is generated into assets/trainer_headers.inc.
 
 Route11Youngster1Text:
     mov esi, Route11TrainerHeader2
@@ -213,19 +145,7 @@ Route11Youngster1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11Youngster1BattleText (scripts/Route11.asm:97-106) — a generated asset already defines Route11Youngster1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11Youngster1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Youngster1EndBattleText:
-; PRET| 	text_far _Route11Youngster1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Youngster1AfterBattleText:
-; PRET| 	text_far _Route11Youngster1AfterBattleText
-; PRET| 	text_end
+; Route11Youngster1BattleText (scripts/Route11.asm:97-106) — Tier-1 data: Route11Youngster1BattleText is generated into assets/trainer_headers.inc.
 
 Route11SuperNerd1Text:
     mov esi, Route11TrainerHeader3
@@ -233,19 +153,7 @@ Route11SuperNerd1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11SuperNerd1BattleText (scripts/Route11.asm:115-124) — a generated asset already defines Route11SuperNerd1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11SuperNerd1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11SuperNerd1EndBattleText:
-; PRET| 	text_far _Route11SuperNerd1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11SuperNerd1AfterBattleText:
-; PRET| 	text_far _Route11SuperNerd1AfterBattleText
-; PRET| 	text_end
+; Route11SuperNerd1BattleText (scripts/Route11.asm:115-124) — Tier-1 data: Route11SuperNerd1BattleText is generated into assets/trainer_headers.inc.
 
 Route11Youngster2Text:
     mov esi, Route11TrainerHeader4
@@ -253,19 +161,7 @@ Route11Youngster2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11Youngster2BattleText (scripts/Route11.asm:133-142) — a generated asset already defines Route11Youngster2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11Youngster2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Youngster2EndBattleText:
-; PRET| 	text_far _Route11Youngster2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Youngster2AfterBattleText:
-; PRET| 	text_far _Route11Youngster2AfterBattleText5
-; PRET| 	text_end
+; Route11Youngster2BattleText (scripts/Route11.asm:133-142) — Tier-1 data: Route11Youngster2BattleText is generated into assets/trainer_headers.inc.
 
 Route11Gambler3Text:
     mov esi, Route11TrainerHeader5
@@ -273,19 +169,7 @@ Route11Gambler3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11Gambler3BattleText (scripts/Route11.asm:151-160) — a generated asset already defines Route11Gambler3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11Gambler3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Gambler3EndBattleText:
-; PRET| 	text_far _Route11Gambler3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Gambler3AfterBattleText:
-; PRET| 	text_far _Route11Gambler3AfterBattleText
-; PRET| 	text_end
+; Route11Gambler3BattleText (scripts/Route11.asm:151-160) — Tier-1 data: Route11Gambler3BattleText is generated into assets/trainer_headers.inc.
 
 Route11Gambler4Text:
     mov esi, Route11TrainerHeader6
@@ -293,19 +177,7 @@ Route11Gambler4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11Gambler4BattleText (scripts/Route11.asm:169-178) — a generated asset already defines Route11Gambler4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11Gambler4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Gambler4EndBattleText:
-; PRET| 	text_far _Route11Gambler4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Gambler4AfterBattleText:
-; PRET| 	text_far _Route11Gambler4AfterBattleText
-; PRET| 	text_end
+; Route11Gambler4BattleText (scripts/Route11.asm:169-178) — Tier-1 data: Route11Gambler4BattleText is generated into assets/trainer_headers.inc.
 
 Route11Youngster3Text:
     mov esi, Route11TrainerHeader7
@@ -313,19 +185,7 @@ Route11Youngster3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11Youngster3BattleText (scripts/Route11.asm:187-196) — a generated asset already defines Route11Youngster3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11Youngster3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Youngster3EndBattleText:
-; PRET| 	text_far _Route11Youngster3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Youngster3AfterBattleText:
-; PRET| 	text_far _Route11Youngster3AfterBattleText
-; PRET| 	text_end
+; Route11Youngster3BattleText (scripts/Route11.asm:187-196) — Tier-1 data: Route11Youngster3BattleText is generated into assets/trainer_headers.inc.
 
 Route11SuperNerd2Text:
     mov esi, Route11TrainerHeader8
@@ -333,19 +193,7 @@ Route11SuperNerd2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11SuperNerd2BattleText (scripts/Route11.asm:205-214) — a generated asset already defines Route11SuperNerd2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11SuperNerd2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11SuperNerd2EndBattleText:
-; PRET| 	text_far _Route11SuperNerd2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11SuperNerd2AfterBattleText:
-; PRET| 	text_far _Route11SuperNerd2AfterBattleText
-; PRET| 	text_end
+; Route11SuperNerd2BattleText (scripts/Route11.asm:205-214) — Tier-1 data: Route11SuperNerd2BattleText is generated into assets/trainer_headers.inc.
 
 Route11Youngster4Text:
     mov esi, Route11TrainerHeader9
@@ -353,20 +201,4 @@ Route11Youngster4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route11Youngster4BattleText (scripts/Route11.asm:223-236) — a generated asset already defines Route11Youngster4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route11Youngster4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Youngster4EndBattleText:
-; PRET| 	text_far _Route11Youngster4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11Youngster4AfterBattleText:
-; PRET| 	text_far _Route11Youngster4AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route11DiglettsCaveSignText:
-; PRET| 	text_far _Route11DiglettsCaveSignText
-; PRET| 	text_end
+; Route11Youngster4BattleText (scripts/Route11.asm:223-236) — Tier-1 data: Route11Youngster4BattleText is generated into assets/trainer_headers.inc.

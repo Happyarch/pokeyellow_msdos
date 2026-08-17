@@ -81,32 +81,7 @@ PokemonTower4F_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonTower4F_ScriptPointers (scripts/PokemonTower4F.asm:11-33) — a generated asset already defines PokemonTower4TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_POKEMONTOWER4F_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_POKEMONTOWER4F_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_POKEMONTOWER4F_END_BATTLE
-; PRET| 
-; PRET| PokemonTower4F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PokemonTower4FChanneler1Text, TEXT_POKEMONTOWER4F_CHANNELER1
-; PRET| 	dw_const PokemonTower4FChanneler2Text, TEXT_POKEMONTOWER4F_CHANNELER2
-; PRET| 	dw_const PokemonTower4FChanneler3Text, TEXT_POKEMONTOWER4F_CHANNELER3
-; PRET| 	dw_const PickUpItemText,               TEXT_POKEMONTOWER4F_ELIXER
-; PRET| 	dw_const PickUpItemText,               TEXT_POKEMONTOWER4F_AWAKENING
-; PRET| 	dw_const PickUpItemText,               TEXT_POKEMONTOWER4F_HP_UP
-; PRET| 
-; PRET| PokemonTower4TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| PokemonTower4TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_4_TRAINER_0, 2, PokemonTower4FChanneler1BattleText, PokemonTower4FChanneler1EndBattleText, PokemonTower4FChanneler1AfterBattleText
-; PRET| PokemonTower4TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_4_TRAINER_1, 2, PokemonTower4FChanneler2BattleText, PokemonTower4FChanneler2EndBattleText, PokemonTower4FChanneler2AfterBattleText
-; PRET| PokemonTower4TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_POKEMONTOWER_4_TRAINER_2, 2, PokemonTower4FChanneler3BattleText, PokemonTower4FChanneler3EndBattleText, PokemonTower4FChanneler3AfterBattleText
-; PRET| 	db -1 ; end
+; PokemonTower4F_ScriptPointers (scripts/PokemonTower4F.asm:11-33) — Tier-1 data: PokemonTower4TrainerHeaders is generated into assets/trainer_headers.inc.
 
 PokemonTower4FChanneler1Text:
     mov esi, PokemonTower4TrainerHeader0
@@ -124,40 +99,4 @@ PokemonTower4FChanneler3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonTower4FChanneler1BattleText (scripts/PokemonTower4F.asm:54-87) — a generated asset already defines PokemonTower4FChanneler1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonTower4FChanneler1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower4FChanneler1EndBattleText:
-; PRET| 	text_far _PokemonTower4FChanneler1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower4FChanneler1AfterBattleText:
-; PRET| 	text_far _PokemonTower4FChanneler1AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower4FChanneler2BattleText:
-; PRET| 	text_far _PokemonTower4FChanneler2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower4FChanneler2EndBattleText:
-; PRET| 	text_far _PokemonTower4FChanneler2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower4FChanneler2AfterBattleText:
-; PRET| 	text_far _PokemonTower4FChanneler2AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower4FChanneler3BattleText:
-; PRET| 	text_far _PokemonTower4FChanneler3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower4FChanneler3EndBattleText:
-; PRET| 	text_far _PokemonTower4FChanneler3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonTower4FChanneler3AfterBattleText:
-; PRET| 	text_far _PokemonTower4FChanneler3AfterBattleText
-; PRET| 	text_end
+; PokemonTower4FChanneler1BattleText (scripts/PokemonTower4F.asm:54-87) — Tier-1 data: PokemonTower4FChanneler1BattleText is generated into assets/trainer_headers.inc.

@@ -168,37 +168,7 @@ Route16SnorlaxPostBattleScript:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route16_TextPointers (scripts/Route16.asm:66-93) — a generated asset already defines Route16TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const Route16Biker1Text,                     TEXT_ROUTE16_BIKER1
-; PRET| 	dw_const Route16Biker2Text,                     TEXT_ROUTE16_BIKER2
-; PRET| 	dw_const Route16Biker3Text,                     TEXT_ROUTE16_BIKER3
-; PRET| 	dw_const Route16Biker4Text,                     TEXT_ROUTE16_BIKER4
-; PRET| 	dw_const Route16Biker5Text,                     TEXT_ROUTE16_BIKER5
-; PRET| 	dw_const Route16Biker6Text,                     TEXT_ROUTE16_BIKER6
-; PRET| 	dw_const Route16SnorlaxText,                    TEXT_ROUTE16_SNORLAX
-; PRET| 	dw_const Route16CyclingRoadSignText,            TEXT_ROUTE16_CYCLING_ROAD_SIGN
-; PRET| 	dw_const Route16SignText,                       TEXT_ROUTE16_SIGN
-; PRET| 	dw_const Route16SnorlaxWokeUpText,              TEXT_ROUTE16_SNORLAX_WOKE_UP
-; PRET| 	dw_const Route16SnorlaxReturnedToMountainsText, TEXT_ROUTE16_SNORLAX_RETURNED_TO_MOUNTAINS
-; PRET| 
-; PRET| Route16TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Route16TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_ROUTE_16_TRAINER_0, 3, Route16Biker1BattleText, Route16Biker1EndBattleText, Route16Biker1AfterBattleText
-; PRET| Route16TrainerHeader1:
-; PRET| 	trainer EVENT_BEAT_ROUTE_16_TRAINER_1, 2, Route16Biker2BattleText, Route16Biker2EndBattleText, Route16Biker2AfterBattleText
-; PRET| Route16TrainerHeader2:
-; PRET| 	trainer EVENT_BEAT_ROUTE_16_TRAINER_2, 2, Route16Biker3BattleText, Route16Biker3EndBattleText, Route16Biker3AfterBattleText
-; PRET| Route16TrainerHeader3:
-; PRET| 	trainer EVENT_BEAT_ROUTE_16_TRAINER_3, 2, Route16biker4BattleText, Route16Biker4EndBattleText, Route16Biker4AfterBattleText
-; PRET| Route16TrainerHeader4:
-; PRET| 	trainer EVENT_BEAT_ROUTE_16_TRAINER_4, 2, Route16Biker5BattleText, Route16Biker5EndBattleText, Route16Biker5AfterBattleText
-; PRET| Route16TrainerHeader5:
-; PRET| 	trainer EVENT_BEAT_ROUTE_16_TRAINER_5, 4, Route16Biker6BattleText, Route16Biker6EndBattleText, Route16Biker6AfterBattleText
-; PRET| 	db -1 ; end
+; Route16_TextPointers (scripts/Route16.asm:66-93) — Tier-1 data: Route16TrainerHeaders is generated into assets/trainer_headers.inc.
 
 Route16Biker1Text:
     mov esi, Route16TrainerHeader0
@@ -206,19 +176,7 @@ Route16Biker1Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route16Biker1BattleText (scripts/Route16.asm:102-111) — a generated asset already defines Route16Biker1BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route16Biker1BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker1EndBattleText:
-; PRET| 	text_far _Route16Biker1EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker1AfterBattleText:
-; PRET| 	text_far _Route16Biker1AfterBattleText
-; PRET| 	text_end
+; Route16Biker1BattleText (scripts/Route16.asm:102-111) — Tier-1 data: Route16Biker1BattleText is generated into assets/trainer_headers.inc.
 
 Route16Biker2Text:
     mov esi, Route16TrainerHeader1
@@ -226,19 +184,7 @@ Route16Biker2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route16Biker2BattleText (scripts/Route16.asm:120-129) — a generated asset already defines Route16Biker2BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route16Biker2BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker2EndBattleText:
-; PRET| 	text_far _Route16Biker2EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker2AfterBattleText:
-; PRET| 	text_far _Route16Biker2AfterBattleText
-; PRET| 	text_end
+; Route16Biker2BattleText (scripts/Route16.asm:120-129) — Tier-1 data: Route16Biker2BattleText is generated into assets/trainer_headers.inc.
 
 Route16Biker3Text:
     mov esi, Route16TrainerHeader2
@@ -246,19 +192,7 @@ Route16Biker3Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route16Biker3BattleText (scripts/Route16.asm:138-147) — a generated asset already defines Route16Biker3BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route16Biker3BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker3EndBattleText:
-; PRET| 	text_far _Route16Biker3EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker3AfterBattleText:
-; PRET| 	text_far _Route16Biker3AfterBattleText
-; PRET| 	text_end
+; Route16Biker3BattleText (scripts/Route16.asm:138-147) — Tier-1 data: Route16Biker3BattleText is generated into assets/trainer_headers.inc.
 
 Route16Biker4Text:
     mov esi, Route16TrainerHeader3
@@ -266,19 +200,7 @@ Route16Biker4Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route16biker4BattleText (scripts/Route16.asm:156-165) — a generated asset already defines Route16biker4BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route16biker4BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker4EndBattleText:
-; PRET| 	text_far _Route16Biker4EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker4AfterBattleText:
-; PRET| 	text_far _Route16Biker4AfterBattleText
-; PRET| 	text_end
+; Route16biker4BattleText (scripts/Route16.asm:156-165) — Tier-1 data: Route16biker4BattleText is generated into assets/trainer_headers.inc.
 
 Route16Biker5Text:
     mov esi, Route16TrainerHeader4
@@ -286,19 +208,7 @@ Route16Biker5Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route16Biker5BattleText (scripts/Route16.asm:174-183) — a generated asset already defines Route16Biker5BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route16Biker5BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker5EndBattleText:
-; PRET| 	text_far _Route16Biker5EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker5AfterBattleText:
-; PRET| 	text_far _Route16Biker5AfterBattleText
-; PRET| 	text_end
+; Route16Biker5BattleText (scripts/Route16.asm:174-183) — Tier-1 data: Route16Biker5BattleText is generated into assets/trainer_headers.inc.
 
 Route16Biker6Text:
     mov esi, Route16TrainerHeader5
@@ -306,36 +216,4 @@ Route16Biker6Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Route16Biker6BattleText (scripts/Route16.asm:192-221) — a generated asset already defines Route16Biker6BattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route16Biker6BattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker6EndBattleText:
-; PRET| 	text_far _Route16Biker6EndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16Biker6AfterBattleText:
-; PRET| 	text_far _Route16Biker6AfterBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16SnorlaxText:
-; PRET| 	text_far _Route16Text7
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16SnorlaxWokeUpText:
-; PRET| 	text_far _Route16SnorlaxWokeUpText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16SnorlaxReturnedToMountainsText:
-; PRET| 	text_far _Route16SnorlaxReturnedToMountainsText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16CyclingRoadSignText:
-; PRET| 	text_far _Route16CyclingRoadSignText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route16SignText:
-; PRET| 	text_far _Route16SignText
-; PRET| 	text_end
+; Route16Biker6BattleText (scripts/Route16.asm:192-221) — Tier-1 data: Route16Biker6BattleText is generated into assets/trainer_headers.inc.

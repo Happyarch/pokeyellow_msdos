@@ -129,39 +129,10 @@ Mansion1ReplaceBlock:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] Mansion1Script_Switches (scripts/PokemonMansion1F.asm:49-56) — a generated asset already defines Mansion1Script_Switches
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wSpritePlayerStateData1FacingDirection]
-; PRET| 	cp SPRITE_FACING_UP
-; PRET| 	ret nz
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, TEXT_POKEMONMANSION1F_SWITCH
-; PRET| 	ldh [hTextID], a
-; PRET| 	jp DisplayTextID
+; Mansion1Script_Switches (scripts/PokemonMansion1F.asm:49-56) — Tier-1 data: Mansion1Script_Switches is generated into assets/hidden_events.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonMansion1F_ScriptPointers (scripts/PokemonMansion1F.asm:59-75) — a generated asset already defines Mansion1TrainerHeaders
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_script_pointers
-; PRET| 	dw_const CheckFightingMapTrainers,              SCRIPT_POKEMONMANSION1F_DEFAULT
-; PRET| 	dw_const DisplayEnemyTrainerTextAndStartBattle, SCRIPT_POKEMONMANSION1F_START_BATTLE
-; PRET| 	dw_const EndTrainerBattle,                      SCRIPT_POKEMONMANSION1F_END_BATTLE
-; PRET| 
-; PRET| PokemonMansion1F_TextPointers:
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PokemonMansion1FScientistText, TEXT_POKEMONMANSION1F_SCIENTIST
-; PRET| 	dw_const PickUpItemText,                TEXT_POKEMONMANSION1F_ESCAPE_ROPE
-; PRET| 	dw_const PickUpItemText,                TEXT_POKEMONMANSION1F_CARBOS
-; PRET| 	dw_const PokemonMansion1FSwitchText,    TEXT_POKEMONMANSION1F_SWITCH
-; PRET| 
-; PRET| Mansion1TrainerHeaders:
-; PRET| 	def_trainers
-; PRET| Mansion1TrainerHeader0:
-; PRET| 	trainer EVENT_BEAT_MANSION_1_TRAINER_0, 3, PokemonMansion1FScientistBattleText, PokemonMansion1FScientistEndBattleText, PokemonMansion1FScientistAfterBattleText
-; PRET| 	db -1 ; end
+; PokemonMansion1F_ScriptPointers (scripts/PokemonMansion1F.asm:59-75) — Tier-1 data: Mansion1TrainerHeaders is generated into assets/trainer_headers.inc.
 
 PokemonMansion1FScientistText:
     mov esi, Mansion1TrainerHeader0
@@ -169,19 +140,7 @@ PokemonMansion1FScientistText:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-generated-assets] PokemonMansion1FScientistBattleText (scripts/PokemonMansion1F.asm:84-93) — a generated asset already defines PokemonMansion1FScientistBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonMansion1FScientistBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion1FScientistEndBattleText:
-; PRET| 	text_far _PokemonMansion1FScientistEndBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonMansion1FScientistAfterBattleText:
-; PRET| 	text_far _PokemonMansion1FScientistAfterBattleText
-; PRET| 	text_end
+; PokemonMansion1FScientistBattleText (scripts/PokemonMansion1F.asm:84-93) — Tier-1 data: PokemonMansion1FScientistBattleText is generated into assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[event-byte-assembly-state] PokemonMansion1FSwitchText (scripts/PokemonMansion1F.asm:97-114) — at scripts/PokemonMansion1F.asm:113: ResetEventReuseHL EVENT_MANSION_SWITCH_ON
