@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/gym_names.inc"
 %include "assets/trainer_headers.inc"
 
 global SaffronGymChanneler1Text
@@ -107,21 +108,19 @@ section .text
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGym_Script.LoadNames (scripts/SaffronGym.asm:15-17) — at scripts/SaffronGym.asm:15: .CityName is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] SaffronGym_Script.LoadNames (scripts/SaffronGym.asm:15-17) — at scripts/SaffronGym.asm:16: de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .CityName
 ; PRET| 	ld de, .LeaderName
 ; PRET| 	jp LoadGymLeaderAndCityName
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] SaffronGym_Script.CityName (scripts/SaffronGym.asm:20-23) — at scripts/SaffronGym.asm:20: db "SAFFRON CITY@"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	db "SAFFRON CITY@"
-; PRET| 
-; PRET| .LeaderName:
-; PRET| 	db "SABRINA@"
+%assign event_byte -1
+%assign event_byte_a -1
+.CityName:
+    TEXT_SaffronGym_Script_CityName
+.LeaderName:
+    TEXT_SaffronGym_Script_LeaderName
 
 %assign event_byte -1
 %assign event_byte_a -1

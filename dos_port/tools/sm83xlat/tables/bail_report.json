@@ -1,14 +1,14 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
  "_owned_comment": "`owned` is NOT a bail list. Those regions are Tier-1 data the port's generators already define, so the tool must not emit them at all \u2014 emitting one would be a duplicate definition. They describe no outstanding work and are excluded from the coverage denominator; they are listed here so the exclusion stays auditable.",
- "regions_lowered": 2126,
- "regions_bailed": 149,
+ "regions_lowered": 2134,
+ "regions_bailed": 141,
  "regions_owned": 255,
  "by_reason": {
-  "target-region-bailed": 57,
+  "target-region-bailed": 49,
   "screen-coord-projection": 5,
-  "inline-text-db": 12,
-  "host-pointer-in-16bit-reg": 33,
+  "inline-text-db": 4,
+  "host-pointer-in-16bit-reg": 41,
   "pikachu-table-index": 4,
   "hl-half-register-access": 9,
   "local-label-scope-collision": 3,
@@ -76,11 +76,11 @@
    "reasons": []
   },
   "scripts/CeladonGym.asm": {
-   "ok_regions": 15,
-   "bailed_regions": 3,
+   "ok_regions": 16,
+   "bailed_regions": 2,
    "owned_regions": 8,
    "reasons": [
-    "inline-text-db",
+    "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
   },
@@ -217,11 +217,11 @@
    ]
   },
   "scripts/CeruleanGym.asm": {
-   "ok_regions": 13,
-   "bailed_regions": 3,
+   "ok_regions": 14,
+   "bailed_regions": 2,
    "owned_regions": 3,
    "reasons": [
-    "inline-text-db",
+    "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
   },
@@ -258,13 +258,12 @@
    "reasons": []
   },
   "scripts/CinnabarGym.asm": {
-   "ok_regions": 58,
-   "bailed_regions": 5,
+   "ok_regions": 59,
+   "bailed_regions": 4,
    "owned_regions": 0,
    "reasons": [
     "add-hl-r16",
     "host-pointer-in-16bit-reg",
-    "inline-text-db",
     "target-region-bailed"
    ]
   },
@@ -387,11 +386,11 @@
    ]
   },
   "scripts/FuchsiaGym.asm": {
-   "ok_regions": 16,
-   "bailed_regions": 3,
+   "ok_regions": 17,
+   "bailed_regions": 2,
    "owned_regions": 7,
    "reasons": [
-    "inline-text-db",
+    "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
   },
@@ -571,11 +570,11 @@
    "reasons": []
   },
   "scripts/PewterGym.asm": {
-   "ok_regions": 14,
-   "bailed_regions": 3,
+   "ok_regions": 15,
+   "bailed_regions": 2,
    "owned_regions": 2,
    "reasons": [
-    "inline-text-db",
+    "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
   },
@@ -1096,11 +1095,11 @@
    "reasons": []
   },
   "scripts/SaffronGym.asm": {
-   "ok_regions": 15,
-   "bailed_regions": 5,
+   "ok_regions": 16,
+   "bailed_regions": 4,
    "owned_regions": 2,
    "reasons": [
-    "inline-text-db",
+    "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
   },
@@ -1389,11 +1388,11 @@
    ]
   },
   "scripts/VermilionGym.asm": {
-   "ok_regions": 16,
-   "bailed_regions": 3,
+   "ok_regions": 17,
+   "bailed_regions": 2,
    "owned_regions": 4,
    "reasons": [
-    "inline-text-db",
+    "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
   },
@@ -1476,12 +1475,11 @@
    "reasons": []
   },
   "scripts/ViridianGym.asm": {
-   "ok_regions": 23,
-   "bailed_regions": 2,
+   "ok_regions": 24,
+   "bailed_regions": 1,
    "owned_regions": 9,
    "reasons": [
-    "inline-text-db",
-    "target-region-bailed"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/ViridianMart.asm": {
@@ -1650,27 +1648,12 @@
    "labels": [
     "CeladonGym_Script.LoadNames"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/CeladonGym.asm:15",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
+   "at": "scripts/CeladonGym.asm:16",
    "lines": [
     15,
     17
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGym_Script.CityName",
-   "labels": [
-    "CeladonGym_Script.CityName",
-    "CeladonGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"CELADON CITY@\"",
-   "at": "scripts/CeladonGym.asm:20",
-   "lines": [
-    20,
-    23
    ]
   },
   {
@@ -1899,27 +1882,12 @@
    "labels": [
     "CeruleanGym_Script.LoadNames"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/CeruleanGym.asm:15",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
+   "at": "scripts/CeruleanGym.asm:16",
    "lines": [
     15,
     17
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGym_Script.CityName",
-   "labels": [
-    "CeruleanGym_Script.CityName",
-    "CeruleanGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"CERULEAN CITY@\"",
-   "at": "scripts/CeruleanGym.asm:20",
-   "lines": [
-    20,
-    23
    ]
   },
   {
@@ -1956,27 +1924,12 @@
    "labels": [
     "CinnabarGymSetMapAndTiles.LoadNames"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/CinnabarGym.asm:22",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
+   "at": "scripts/CinnabarGym.asm:23",
    "lines": [
     22,
     24
-   ]
-  },
-  {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymSetMapAndTiles.CityName",
-   "labels": [
-    "CinnabarGymSetMapAndTiles.CityName",
-    "CinnabarGymSetMapAndTiles.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"CINNABAR ISLAND@\"",
-   "at": "scripts/CinnabarGym.asm:27",
-   "lines": [
-    27,
-    30
    ]
   },
   {
@@ -2207,27 +2160,12 @@
    "labels": [
     "FuchsiaGym_Script.LoadNames"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/FuchsiaGym.asm:16",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry",
+   "at": "scripts/FuchsiaGym.asm:17",
    "lines": [
     12,
     19
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGym_Script.CityName",
-   "labels": [
-    "FuchsiaGym_Script.CityName",
-    "FuchsiaGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"FUCHSIA CITY@\"",
-   "at": "scripts/FuchsiaGym.asm:22",
-   "lines": [
-    22,
-    25
    ]
   },
   {
@@ -2509,27 +2447,12 @@
    "labels": [
     "PewterGym_Script.LoadNames"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/PewterGym.asm:15",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry",
+   "at": "scripts/PewterGym.asm:16",
    "lines": [
     15,
     18
-   ]
-  },
-  {
-   "file": "scripts/PewterGym.asm",
-   "region": "PewterGym_Script.CityName",
-   "labels": [
-    "PewterGym_Script.CityName",
-    "PewterGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"PEWTER CITY@\"",
-   "at": "scripts/PewterGym.asm:21",
-   "lines": [
-    21,
-    24
    ]
   },
   {
@@ -2961,27 +2884,12 @@
    "labels": [
     "SaffronGym_Script.LoadNames"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:15",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
+   "at": "scripts/SaffronGym.asm:16",
    "lines": [
     15,
     17
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGym_Script.CityName",
-   "labels": [
-    "SaffronGym_Script.CityName",
-    "SaffronGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"SAFFRON CITY@\"",
-   "at": "scripts/SaffronGym.asm:20",
-   "lines": [
-    20,
-    23
    ]
   },
   {
@@ -3590,27 +3498,12 @@
    "labels": [
     "VermilionGym_Script.LoadNames"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/VermilionGym.asm:20",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
+   "at": "scripts/VermilionGym.asm:21",
    "lines": [
     20,
     22
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGym_Script.CityName",
-   "labels": [
-    "VermilionGym_Script.CityName",
-    "VermilionGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"VERMILION CITY@\"",
-   "at": "scripts/VermilionGym.asm:25",
-   "lines": [
-    25,
-    28
    ]
   },
   {
@@ -3662,27 +3555,12 @@
    "labels": [
     "ViridianGym_Script"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/ViridianGym.asm:2",
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry",
+   "at": "scripts/ViridianGym.asm:3",
    "lines": [
     2,
     11
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGym_Script.CityName",
-   "labels": [
-    "ViridianGym_Script.CityName",
-    "ViridianGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"VIRIDIAN CITY@\"",
-   "at": "scripts/ViridianGym.asm:14",
-   "lines": [
-    14,
-    17
    ]
   },
   {

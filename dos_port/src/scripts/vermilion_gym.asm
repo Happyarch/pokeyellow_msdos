@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/gym_names.inc"
 %include "assets/trainer_headers.inc"
 
 global VermilionGymGentlemanText
@@ -113,21 +114,19 @@ section .text
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionGym_Script.LoadNames (scripts/VermilionGym.asm:20-22) — at scripts/VermilionGym.asm:20: .CityName is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] VermilionGym_Script.LoadNames (scripts/VermilionGym.asm:20-22) — at scripts/VermilionGym.asm:21: de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .CityName
 ; PRET| 	ld de, .LeaderName
 ; PRET| 	jp LoadGymLeaderAndCityName
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] VermilionGym_Script.CityName (scripts/VermilionGym.asm:25-28) — at scripts/VermilionGym.asm:25: db "VERMILION CITY@"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	db "VERMILION CITY@"
-; PRET| 
-; PRET| .LeaderName:
-; PRET| 	db "LT.SURGE@"
+%assign event_byte -1
+%assign event_byte_a -1
+.CityName:
+    TEXT_VermilionGym_Script_CityName
+.LeaderName:
+    TEXT_VermilionGym_Script_LeaderName
 
 %assign event_byte -1
 %assign event_byte_a -1

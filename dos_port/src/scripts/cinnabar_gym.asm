@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/gym_names.inc"
 
 global CinnabarGymBlainePostBattleScript
 global CinnabarGymBlaineReceivedTM38Text
@@ -177,21 +178,19 @@ CinnabarGym_Script:
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarGymSetMapAndTiles.LoadNames (scripts/CinnabarGym.asm:22-24) — at scripts/CinnabarGym.asm:22: .CityName is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] CinnabarGymSetMapAndTiles.LoadNames (scripts/CinnabarGym.asm:22-24) — at scripts/CinnabarGym.asm:23: de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .CityName
 ; PRET| 	ld de, .LeaderName
 ; PRET| 	jp LoadGymLeaderAndCityName
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] CinnabarGymSetMapAndTiles.CityName (scripts/CinnabarGym.asm:27-30) — at scripts/CinnabarGym.asm:27: db "CINNABAR ISLAND@"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	db "CINNABAR ISLAND@"
-; PRET| 
-; PRET| .LeaderName:
-; PRET| 	db "BLAINE@"
+%assign event_byte -1
+%assign event_byte_a -1
+.CityName:
+    TEXT_CinnabarGymSetMapAndTiles_CityName
+.LeaderName:
+    TEXT_CinnabarGymSetMapAndTiles_LeaderName
 
 %assign event_byte -1
 %assign event_byte_a -1

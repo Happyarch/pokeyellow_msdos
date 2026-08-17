@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/gym_names.inc"
 %include "assets/trainer_headers.inc"
 
 global PewterGymBrockPostBattle
@@ -112,7 +113,7 @@ section .text
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PewterGym_Script.LoadNames (scripts/PewterGym.asm:15-18) — at scripts/PewterGym.asm:15: .CityName is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] PewterGym_Script.LoadNames (scripts/PewterGym.asm:15-18) — at scripts/PewterGym.asm:16: de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .CityName
@@ -120,14 +121,12 @@ section .text
 ; PRET| 	call LoadGymLeaderAndCityName
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] PewterGym_Script.CityName (scripts/PewterGym.asm:21-24) — at scripts/PewterGym.asm:21: db "PEWTER CITY@"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	db "PEWTER CITY@"
-; PRET| 
-; PRET| .LeaderName:
-; PRET| 	db "BROCK@"
+%assign event_byte -1
+%assign event_byte_a -1
+.CityName:
+    TEXT_PewterGym_Script_CityName
+.LeaderName:
+    TEXT_PewterGym_Script_LeaderName
 
 %assign event_byte -1
 %assign event_byte_a -1

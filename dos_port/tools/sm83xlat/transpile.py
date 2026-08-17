@@ -73,6 +73,18 @@ bits 32
 BASE_INCLUDES = ("gb_memmap.inc", "gb_constants.inc", "gb_text.inc",
                  "events.inc", "assets/event_constants.inc")
 
+# tables/text_assets.json — pret label -> macro emitting its generated charmap
+# bytes, plus the include that defines those macros. Written by the generator
+# that owns the strings (tools/generators/gen_gym_names.py), so the map and the
+# bytes cannot drift apart.
+_TEXT_ASSETS_PATH = HERE / "tables" / "text_assets.json"
+if _TEXT_ASSETS_PATH.exists():
+    _TA = json.loads(_TEXT_ASSETS_PATH.read_text())
+    TEXT_ASSETS = _TA.get("labels", {})
+    TEXT_ASSET_INCLUDE = _TA.get("include")
+else:
+    TEXT_ASSETS, TEXT_ASSET_INCLUDE = {}, None
+
 
 def port_path(db: Path, pret_file: str) -> str:
     """The output path, read from translation.db rather than re-derived.
@@ -127,7 +139,7 @@ def transpile_file(f: sparser.ScriptFile, R: resolve.Resolver, abi: dict,
 
 def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
     out = emit.Emitted()
-    E = emit.Emitter(R, abi)
+    E = emit.Emitter(R, abi, TEXT_ASSETS)
     # FULL labels, not bare `.tail`. NASM scopes a local to the preceding GLOBAL
     # label, so `A.Text2` and `B.Text2` are different symbols; keying on the tail
     # killed every `.Text2` in a file when any one of them died, which both
@@ -340,6 +352,11 @@ def render(f: sparser.ScriptFile, out: emit.Emitted, R: resolve.Resolver,
     # in all of them (slow, and hides what the file really depends on).
     extra = sorted({R.symbol_include[n] for n in used
                     if n in R.symbol_include} - set(BASE_INCLUDES))
+    if out.text_macros and TEXT_ASSET_INCLUDE:
+        # Only where a generated text macro was actually invoked — same rule as
+        # the derived includes above. It is macro-only, so it emits nothing, but
+        # pulling it into all 224 files would hide which ones really use it.
+        extra = sorted(set(extra) | {TEXT_ASSET_INCLUDE})
     for inc in extra:
         parts.append(f'%include "{inc}"')
 
@@ -513,6 +530,7 @@ def main(argv=None) -> int:
             merged.ok_regions += out.ok_regions
             merged.bailed_regions += out.bailed_regions
             merged.owned_regions += out.owned_regions
+            merged.text_macros |= out.text_macros
             merged.self_tests += out.self_tests
         out = merged
         f = group[0]

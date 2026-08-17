@@ -3169,6 +3169,16 @@ assets/list_menu_strings.inc: assets/gb_charmap.txt tools/generators/gen_list_me
 assets/yes_no_strings.inc: assets/gb_charmap.txt tools/generators/gen_yes_no_strings.py tools/generators/gb_text.py
 	python3 tools/generators/gen_yes_no_strings.py
 
+# Gym .CityName / .LeaderName strings, read out of the eight pret gym scripts.
+# Emitted as MACROS so the transpiled script keeps pret's own local label; also
+# writes tools/sm83xlat/tables/text_assets.json, which the transpiler reads.
+GYM_NAME_SRCS := $(wildcard ../scripts/PewterGym.asm ../scripts/CeruleanGym.asm \
+        ../scripts/VermilionGym.asm ../scripts/CeladonGym.asm \
+        ../scripts/FuchsiaGym.asm ../scripts/SaffronGym.asm \
+        ../scripts/CinnabarGym.asm ../scripts/ViridianGym.asm)
+assets/gym_names.inc: assets/gb_charmap.txt tools/generators/gen_gym_names.py tools/generators/gb_text.py $(GYM_NAME_SRCS)
+	python3 tools/generators/gen_gym_names.py
+
 # Text-engine oracle probe streams (DEBUG_TEXT). See docs/plans/text_engine.md.
 assets/text_oracle.inc: assets/gb_charmap.txt tools/generators/gen_text_oracle.py tools/generators/gb_text.py
 	python3 tools/generators/gen_text_oracle.py
@@ -3675,6 +3685,7 @@ assets: assets/scenario_registry.inc \
         assets/status_strings.inc assets/textbox_strings.inc assets/menu_text.inc \
 		$(RUNTIME_STRING_ASSETS) \
         assets/list_menu_strings.inc assets/yes_no_strings.inc \
+        assets/gym_names.inc \
         assets/text_oracle.inc \
         assets/overworld_strings.inc assets/field_move_text.inc \
         assets/cut_text.inc assets/player_anim_text.inc \

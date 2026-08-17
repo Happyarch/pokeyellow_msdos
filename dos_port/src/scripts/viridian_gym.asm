@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/gym_names.inc"
 %include "assets/trainer_headers.inc"
 
 global ViridianGymArrowMovement1
@@ -134,7 +135,7 @@ wViridianGymCurScript                          equ 0xD5FA
 section .text
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianGym_Script (scripts/ViridianGym.asm:2-11) — at scripts/ViridianGym.asm:2: .CityName is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] ViridianGym_Script (scripts/ViridianGym.asm:2-11) — at scripts/ViridianGym.asm:3: de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .CityName
@@ -148,14 +149,12 @@ section .text
 ; PRET| 	ld [wViridianGymCurScript], a
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] ViridianGym_Script.CityName (scripts/ViridianGym.asm:14-17) — at scripts/ViridianGym.asm:14: db "VIRIDIAN CITY@"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	db "VIRIDIAN CITY@"
-; PRET| 
-; PRET| .LeaderName:
-; PRET| 	db "GIOVANNI@"
+%assign event_byte -1
+%assign event_byte_a -1
+.CityName:
+    TEXT_ViridianGym_Script_CityName
+.LeaderName:
+    TEXT_ViridianGym_Script_LeaderName
 
 %assign event_byte -1
 %assign event_byte_a -1

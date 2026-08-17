@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/gym_names.inc"
 %include "assets/trainer_headers.inc"
 
 global CeladonGymBeauty1Text
@@ -112,21 +113,19 @@ section .text
 ; PRET| 	ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonGym_Script.LoadNames (scripts/CeladonGym.asm:15-17) — at scripts/CeladonGym.asm:15: .CityName is defined in a region that bailed
+; BAIL[host-pointer-in-16bit-reg] CeladonGym_Script.LoadNames (scripts/CeladonGym.asm:15-17) — at scripts/CeladonGym.asm:16: de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .CityName
 ; PRET| 	ld de, .LeaderName
 ; PRET| 	jp LoadGymLeaderAndCityName
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] CeladonGym_Script.CityName (scripts/CeladonGym.asm:20-23) — at scripts/CeladonGym.asm:20: db "CELADON CITY@"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	db "CELADON CITY@"
-; PRET| 
-; PRET| .LeaderName:
-; PRET| 	db "ERIKA@"
+%assign event_byte -1
+%assign event_byte_a -1
+.CityName:
+    TEXT_CeladonGym_Script_CityName
+.LeaderName:
+    TEXT_CeladonGym_Script_LeaderName
 
 %assign event_byte -1
 %assign event_byte_a -1

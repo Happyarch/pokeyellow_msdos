@@ -99,6 +99,8 @@ class Emitted:
     ok_regions: int = 0
     bailed_regions: int = 0
     owned_regions: int = 0
+    #: set when a generated text macro was emitted, so render() pulls its include
+    text_macros: bool = False
     emitted_locals: Set[str] = field(default_factory=set)
     emitted_globals: Set[str] = field(default_factory=set)
     #: how many lowered items legitimately produce a `test r, r` — see
@@ -125,9 +127,13 @@ def reg8(name: str) -> str:
 
 
 class Emitter:
-    def __init__(self, resolver: resolve.Resolver, abi: dict):
+    def __init__(self, resolver: resolve.Resolver, abi: dict,
+                 text_assets: dict = None):
         self.R = resolver
         self.abi = abi
+        #: pret label -> NASM macro emitting its (generated) charmap bytes.
+        #: tables/text_assets.json, written by the generator that owns them.
+        self.text_assets = text_assets or {}
         #: the callee this item's register load is FOR, if one is in range.
         #: Set by the driver before each item; see transpile.transpile_file.
         self.pending_callee: str = None
@@ -718,6 +724,16 @@ class Emitter:
 
         if name == "db":
             if '"' in it.line.argtext:
+                # A GENERATOR may already own these bytes. tables/text_assets.json
+                # maps a pret label to the NASM macro that emits them, so the
+                # script keeps pret's own local label and the charmap stays where
+                # the two-tier rule puts it — in a generator. Anything not in the
+                # map still bails: the tool encodes no glyph itself, ever.
+                for lab in it.labels:
+                    mac = self.text_assets.get(lab)
+                    if mac:
+                        out.text_macros = True
+                        return [mac]
                 raise Bail("inline-text-db", it.line.raw.strip())
             return [f"db {', '.join(self.expr(a, out) for a in args)}"]
 
