@@ -81,6 +81,17 @@ TEXT_SCRIPT_FAR = [
     "_RepelWoreOffText",
 ]
 
+# The five `text_far _XxxText / text_end` wrappers in pret home/overworld_text.asm
+# (sign, boulder and ledge messages the map scripts extern). The port deferred all
+# five for want of exactly this: their strings are Tier-1 DATA and had no generator.
+OVERWORLD_SIGN_FAR = [
+    "_ExclamationText",
+    "_GroundRoseText",
+    "_BoulderText",
+    "_MartSignText",
+    "_PokeCenterSignText",
+]
+
 
 def fmt_bytes(label: str, data: list) -> str:
     rows = []
@@ -125,6 +136,8 @@ def main() -> int:
          "Fishing-result FAR text streams (data/text/text_1.asm)"),
         ("text_script_text", TEXT_SCRIPT_FAR,
          "DisplayTextID FAR text streams (data/text/text_7.asm)"),
+        ("overworld_sign_text", OVERWORLD_SIGN_FAR,
+         "Sign / boulder / ledge FAR text streams for home/overworld_text.asm"),
     ]
     for base, labels, desc in far_files:
         fout = [

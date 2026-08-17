@@ -13,8 +13,11 @@
 ;     table; that is a reference, not their definition). NOT home/overworld_text.asm,
 ;     and NOT home/text_script.asm as this header previously claimed. They now live in
 ;     their mirror, src/home/map_objects.asm, and are externed below.
-;   * TextScriptEnd / TextScriptEndingText — pret home/overworld_text.asm (ported here;
-;     the remaining 6 home/overworld_text.asm labels are DEFERRED — see the note below).
+;   * TextScriptEnd / TextScriptEndingText / PickUpItemText / ExclamationText /
+;     GroundRoseText / BoulderText / MartSignText / PokeCenterSignText — pret
+;     home/overworld_text.asm, all ported. (The five text_far wrappers were the last
+;     deferred ones; they landed 2026-08-17 once gen_overworld_strings.py took
+;     ownership of their Tier-1 strings.)
 ;
 ; TWO-TIER RULE (CLAUDE.md):
 ;   * DATA (Tier 1) — sign text streams: NOT authored here.  In Gen 1 a sign's
@@ -36,6 +39,7 @@
 
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
+%include "gb_text.inc"                  ; text_far / text_end wrappers
 
 ; --- pret TX_SCRIPT_* sentinels (macros/scripts/text.asm:185-236). The first byte of
 ; a resolved text stream in $F6-$FF selects a special DisplayTextID handler instead of
@@ -166,14 +170,22 @@ PickUpItemText:
     jmp TextScriptEnd                   ; jp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; DEFERRED — the remaining 5 home/overworld_text.asm labels are NOT ported here:
-;   ExclamationText, GroundRoseText, BoulderText, MartSignText, PokeCenterSignText
-;     — each is `text_far _XxxText / text_end`; the underlying _XxxText strings are
-;       Tier-1 DATA not yet generated for the port. Per the two-tier rule they must come
-;       from a gen_*.py → assets/*.inc, NOT hand-encoded charmap bytes here.
-; No live caller needs them today; port them with the sign-text string generator when a
-; map that uses them lands.
+; ExclamationText / GroundRoseText / BoulderText / MartSignText /
+; PokeCenterSignText — pret home/overworld_text.asm, each `text_far _XxxText /
+; text_end`. Ported 2026-08-17: they were deferred only because their strings are
+; Tier-1 DATA with no generator, and gen_overworld_strings.py now owns them
+; (OVERWORLD_SIGN_FAR -> assets/overworld_sign_text.inc, %included below). Still
+; no hand-encoded charmap bytes here — the wrapper is code, the stream is data.
+;
+; The port's text_far macro (gb_text.inc) already emits the 32-bit flat pointer in
+; place of the GB bank/addr triple, so each wrapper is written exactly as pret has
+; it and needs no port-specific shape.
 ; ---------------------------------------------------------------------------
+global ExclamationText
+global GroundRoseText
+global BoulderText
+global MartSignText
+global PokeCenterSignText
 
 ; ---------------------------------------------------------------------------
 ; TextScript_* special cases — MOVED to src/home/map_objects.asm (mirror rule).
@@ -193,3 +205,27 @@ section .data
 
 TextScriptEndingText:
     db 0x50                             ; $50 = text terminator (pret home/overworld_text.asm: text_end)
+
+; The five far streams these wrap (generated; gen_overworld_strings.py).
+%include "assets/overworld_sign_text.inc"
+
+; pret home/overworld_text.asm — the wrappers themselves, in pret's order.
+ExclamationText:
+    text_far _ExclamationText
+    text_end
+
+GroundRoseText:
+    text_far _GroundRoseText
+    text_end
+
+BoulderText:
+    text_far _BoulderText
+    text_end
+
+MartSignText:
+    text_far _MartSignText
+    text_end
+
+PokeCenterSignText:
+    text_far _PokeCenterSignText
+    text_end

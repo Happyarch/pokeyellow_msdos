@@ -26,11 +26,12 @@
 ;                                  deleted entirely (its remaining labels went to
 ;                                  src/home/names.asm and src/home/item.asm).
 ;
-; Routine order follows pret home/map_objects.asm. The remaining pret labels in
-; that file (IsSurfingPikachuInParty — a stub; DisplayPokedex, SetSpriteFacingDirection
-; and family, SpriteFunc_34a1, SetSpriteMovementBytesToFE, the
-; GetPointerWithinSpriteStateData family) are not translated anywhere in the port
-; and are deliberately NOT invented here.
+; Routine order follows pret home/map_objects.asm. SetSpriteFacingDirection and
+; family and the GetPointerWithinSpriteStateData family landed 2026-08-17. The
+; remaining pret labels in that file (IsSurfingPikachuInParty — a stub;
+; DisplayPokedex, which needs _DisplayPokedex; SetSpriteMovementBytesToFE;
+; SpriteFunc_34a1, whose HRAM-union question is documented at its site below) are
+; not translated anywhere in the port and are deliberately NOT invented here.
 ;
 ; Register map (CLAUDE.md): A->AL, HL->ESI, BC->BX (B=BH,C=BL), DE->DX; SM83
 ; `swap a` = nibble swap. GB memory = [ebp + SYM] (gb_memmap.inc); flat data
@@ -55,6 +56,10 @@ global DecodeRLEList
 global SetSpriteMovementBytesToFF
 global GetSpriteMovementByte1Pointer
 global GetSpriteMovementByte2Pointer
+global GetPointerWithinSpriteStateData1
+global GetPointerWithinSpriteStateData2
+global SetSpriteFacingDirection
+global SetSpriteFacingDirectionAndDelay
 
 extern FillMemory                 ; home/copy2.asm — ESI=dest, BX=count, AL=val (ESI preserved)
 extern SaveScreenTilesToBuffer2         ; src/home/tilemap.asm
@@ -64,6 +69,7 @@ extern BillsPC_                         ; engine/pokemon/bills_pc.asm (real box 
 extern CeladonPrizeMenu                 ; engine/menus/main_menu_stubs.asm
 extern ActivatePC                       ; engine/menus/pc.asm
 extern GetQuantityOfItemInBag   ; src/engine/items/get_bag_item_quantity.asm (predef)
+extern DelayFrames               ; src/home/delay.asm (BL = frame count)
 extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
 
 ; ---------------------------------------------------------------------------
@@ -336,3 +342,61 @@ GetSpriteMovementByte2Pointer:
     movzx esi, al                                     ; ld e, a / ld d, 0
     add esi, wMapSpriteData                           ; flat address; flags dead (ret follows)
     ret
+
+; ---------------------------------------------------------------------------
+; GetPointerWithinSpriteStateData{1,2} — pret home/map_objects.asm.
+; ESI = EBP-relative offset of member [hSpriteDataOffset] of sprite
+; [hSpriteIndex]. pret builds it as H = HIGH(wSpriteStateData\{1,2}) and
+; L = (slot swapped) + member, which works because both tables are page-aligned
+; ($C100/$C200) and slot*$10 + member never leaves the page.
+;
+; Selector is [hSpriteIndex], the RAW slot — same family, and same reasoning, as
+; GetSpriteMovementByte1Pointer above.
+; Out: ESI = offset   Clobbers: AL, ESI, flags
+; ---------------------------------------------------------------------------
+GetPointerWithinSpriteStateData1:
+    mov esi, wSpriteStateData1          ; ld h, HIGH(wSpriteStateData1)
+    jmp _GetPointerWithinSpriteStateData
+
+GetPointerWithinSpriteStateData2:
+    mov esi, wSpriteStateData2          ; ld h, HIGH(wSpriteStateData2)
+    ; fallthrough — pret's own structure
+_GetPointerWithinSpriteStateData:
+    mov al, [ebp + hSpriteIndex]        ; ldh a, [hSpriteIndex]
+    rol al, 4                           ; swap a  (rol-by-4 IS SM83 swap)
+    add al, [ebp + hSpriteDataOffset]   ; add b   (b = member offset)
+    movzx eax, al                       ; ld l, a — 8-bit, so it wraps in-page as pret does
+    add esi, eax
+    ret
+
+; ---------------------------------------------------------------------------
+; SetSpriteFacingDirection / SetSpriteFacingDirectionAndDelay — pret
+; home/map_objects.asm. Write [hSpriteFacingDirection] into sprite
+; [hSpriteIndex]'s facing-direction member; the ...AndDelay form then waits 6
+; frames. Used by the map scripts to turn an NPC before it speaks or moves.
+; ---------------------------------------------------------------------------
+SetSpriteFacingDirectionAndDelay:
+    call SetSpriteFacingDirection
+    mov bl, 6                           ; ld c, 6 — 8-bit, DelayFrames' own counter
+    jmp DelayFrames                     ; jp DelayFrames (tail call)
+
+SetSpriteFacingDirection:
+    mov byte [ebp + hSpriteDataOffset], SPRITESTATEDATA1_FACINGDIRECTION
+    call GetPointerWithinSpriteStateData1
+    mov al, [ebp + hSpriteFacingDirection]
+    mov [ebp + esi], al                 ; ld [hl], a
+    ret
+
+; ---------------------------------------------------------------------------
+; SpriteFunc_34a1 — pret home/map_objects.asm — NOT PORTED, deliberately.
+; pewter_city.asm externs it (its only caller). The body reads [hSpriteOffset] and
+; [hSpriteHeight], which in pret are HRAM bytes UNIONed with the pic decompressor's
+; (ram/hram.asm:44-47, hSpriteInterlaceCounter/hSpriteWidth/hSpriteHeight/
+; hSpriteOffset) — the reuse is deliberate on the GB. The port instead keeps those
+; two as flat .bss locals inside src/home/pics.asm (pics.asm:690-692), addressed
+; natively rather than through EBP, so they are NOT the same storage and are not
+; even visible here. Which storage SpriteFunc_34a1 should read is a real design
+; question about that deviation, not something to guess: a wrong choice assembles
+; clean and corrupts a sprite field. Left undefined so the reference stays a link
+; error rather than a plausible wrong lowering.
+; ---------------------------------------------------------------------------

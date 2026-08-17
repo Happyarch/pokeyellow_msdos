@@ -623,6 +623,14 @@ hRandomAdd             equ 0xFFD3   ; PRNG output byte 1 (wild encounter rate co
 hRandomSub             equ 0xFFD4   ; PRNG output byte 2 (wild encounter slot select)
 hTextID                equ 0xFF8C   ; DisplayTextID input
 hSpriteIndex           equ hTextID  ; ASSERT hSpriteIndex == hTextID (same HRAM slot)
+; The rest of hSpriteIndex's HRAM union (ram/hram.asm:64-68). hSpriteDataOffset is
+; the member offset GetPointerWithinSpriteStateData{1,2} adds to slot*$10; the
+; three at $FF8D are pret aliases of one byte, named for the caller's intent.
+; Sym-verified, matching the local equs the emitted map scripts had been carrying.
+hSpriteDataOffset      equ 0xFF8B
+hSpriteImageIndex      equ 0xFF8D
+hSpriteFacingDirection equ hSpriteImageIndex
+hSpriteMovementByte2   equ hSpriteImageIndex
 hItemPrice             equ 0xFF8B
 hLoadedROMBank         equ 0xFFB8
 hFrameCounter          equ 0xFFD5
