@@ -27,6 +27,7 @@ global SilphCo5FRockerText
 global SilphCo5FRocket1Text
 global SilphCo5FRocket2Text
 global SilphCo5FScientistText
+global SilphCo5FSilphWorkerMText
 global SilphCo5F_Script
 global SilphCo5F_SetUnlockedSilphCoDoorsScript
 
@@ -38,14 +39,13 @@ extern SilphCo5FRockerBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FSilphWorkerMText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript   ; NOT YET DEFINED IN THE PORT
+extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
 extern TalkToTrainer
 extern TextScriptEnd
 extern _SilphCo5FSilphWorkerMThatsYouRightText   ; NOT YET DEFINED IN THE PORT
@@ -161,14 +161,13 @@ SilphCo5F_SetUnlockedSilphCoDoorsScript:
 
 ; SilphCo5F_ScriptPointers (scripts/SilphCo5F.asm:69-98) — not re-emitted: SilphCo5TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo5FSilphWorkerMText (scripts/SilphCo5F.asm:102-105) — at scripts/SilphCo5F.asm:103: de cannot hold the 32-bit address of .YoureOurHeroText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ThatsYouRightText
-; PRET| 	ld de, .YoureOurHeroText
-; PRET| 	call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo5FSilphWorkerMText:
+    mov esi, .ThatsYouRightText
+    mov edi, .YoureOurHeroText   ; pret: ld de — callee takes it in EDI (abi.json)
+    call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1

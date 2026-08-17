@@ -22,9 +22,15 @@ bits 32
 
 %include "assets/trainer_headers.inc"
 
+global SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
 global SilphCo6FRocket1Text
 global SilphCo6FRocket2Text
 global SilphCo6FScientistText
+global SilphCo6FSilphWorkerF1Text
+global SilphCo6FSilphWorkerF2Text
+global SilphCo6FSilphWorkerM1Text
+global SilphCo6FSilphWorkerM2Text
+global SilphCo6FSilphWorkerM3Text
 global SilphCo6F_GateCallbackScript
 global SilphCo6F_Script
 global SilphCo6F_UnlockedDoorEventScript
@@ -34,15 +40,9 @@ extern ExecuteCurMapScriptInTable
 extern PrintText
 extern ReplaceTileBlock
 extern SilphCo4F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FSilphWorkerF1Text   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FSilphWorkerF2Text   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FSilphWorkerM1Text   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FSilphWorkerM2Text   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FSilphWorkerM3Text   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -127,31 +127,29 @@ SilphCo6F_UnlockedDoorEventScript:
 
 ; SilphCo6F_ScriptPointers (scripts/SilphCo6F.asm:38-64) — not re-emitted: SilphCo6TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo6FBeatGiovanniPrintDEOrPrintHLScript (scripts/SilphCo6F.asm:67-69) — at scripts/SilphCo6F.asm:68: SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.beat_giovanni is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
-; PRET| 	jr nz, .beat_giovanni
-; PRET| 	jr .print_text
+%assign event_byte -1
+%assign event_byte_a -1
+; In: ESI (pret hl) = text to print when EVENT_BEAT_SILPH_CO_GIOVANNI is CLEAR.
+;     EDI (pret de) = text to print when EVENT_BEAT_SILPH_CO_GIOVANNI is SET.
+; Both are flat program-image pointers (callers pass their own .SomeText
+; labels). EDI because DE cannot hold a 32-bit address; see abi.json "callees"
+; entry for this label, evidence cites this comment.
+SilphCo6FBeatGiovanniPrintDEOrPrintHLScript:
+    CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
+    jnz .beat_giovanni
+    jmp .print_text
+.beat_giovanni:
+    mov esi, edi   ; pret: ld h, d / ld l, e — HL = DE
+.print_text:
+    jmp PrintText
 
-; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.beat_giovanni (scripts/SilphCo6F.asm:71-74) — at scripts/SilphCo6F.asm:71: `h` is a half of ESI and has no flag-safe 8-bit x86 form
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld h, d
-; PRET| 	ld l, e
-; PRET| .print_text
-; PRET| 	jp PrintText
-
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo6FSilphWorkerM1Text (scripts/SilphCo6F.asm:78-81) — at scripts/SilphCo6F.asm:79: de cannot hold the 32-bit address of .BackToWorkText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TookOverTheBuildingText
-; PRET| 	ld de, .BackToWorkText
-; PRET| 	call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo6FSilphWorkerM1Text:
+    mov esi, .TookOverTheBuildingText
+    mov edi, .BackToWorkText   ; pret: ld de — callee takes it in EDI (abi.json)
+    call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -162,14 +160,13 @@ SilphCo6F_UnlockedDoorEventScript:
     text_far _SilphCo6FSilphWorkerM1BackToWorkText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo6FSilphWorkerM2Text (scripts/SilphCo6F.asm:93-96) — at scripts/SilphCo6F.asm:94: de cannot hold the 32-bit address of .WeGotEngagedText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HelpMePleaseText
-; PRET| 	ld de, .WeGotEngagedText
-; PRET| 	call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo6FSilphWorkerM2Text:
+    mov esi, .HelpMePleaseText
+    mov edi, .WeGotEngagedText   ; pret: ld de — callee takes it in EDI (abi.json)
+    call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -180,14 +177,13 @@ SilphCo6F_UnlockedDoorEventScript:
     text_far _SilphCo6FSilphWorkerMWeGotEngagedText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo6FSilphWorkerF1Text (scripts/SilphCo6F.asm:108-111) — at scripts/SilphCo6F.asm:109: de cannot hold the 32-bit address of .HaveToMarryHimText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .SuchACowardText
-; PRET| 	ld de, .HaveToMarryHimText
-; PRET| 	call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo6FSilphWorkerF1Text:
+    mov esi, .SuchACowardText
+    mov edi, .HaveToMarryHimText   ; pret: ld de — callee takes it in EDI (abi.json)
+    call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -198,14 +194,13 @@ SilphCo6F_UnlockedDoorEventScript:
     text_far _SilphCo6FSilphWorkerF1HaveToMarryHimText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo6FSilphWorkerF2Text (scripts/SilphCo6F.asm:123-126) — at scripts/SilphCo6F.asm:124: de cannot hold the 32-bit address of .TeamRocketRanText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TeamRocketConquerWorldText
-; PRET| 	ld de, .TeamRocketRanText
-; PRET| 	call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo6FSilphWorkerF2Text:
+    mov esi, .TeamRocketConquerWorldText
+    mov edi, .TeamRocketRanText   ; pret: ld de — callee takes it in EDI (abi.json)
+    call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -216,14 +211,13 @@ SilphCo6F_UnlockedDoorEventScript:
     text_far _SilphCo6FSilphWorkerF2TeamRocketRanText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo6FSilphWorkerM3Text (scripts/SilphCo6F.asm:138-141) — at scripts/SilphCo6F.asm:139: de cannot hold the 32-bit address of .WorkForSilphText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TargetedSilphText
-; PRET| 	ld de, .WorkForSilphText
-; PRET| 	call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo6FSilphWorkerM3Text:
+    mov esi, .TargetedSilphText
+    mov edi, .WorkForSilphText   ; pret: ld de — callee takes it in EDI (abi.json)
+    call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1

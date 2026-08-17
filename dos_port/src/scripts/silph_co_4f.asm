@@ -26,6 +26,7 @@ global SilphCo4FGateCallbackScript
 global SilphCo4FRocket1Text
 global SilphCo4FRocket2Text
 global SilphCo4FScientistText
+global SilphCo4FSilphWorkerMText
 global SilphCo4FUnlockedDoorEventScript
 global SilphCo4F_Script
 global SilphCo4F_SetCardKeyDoorYScript
@@ -36,13 +37,12 @@ extern ReplaceTileBlock
 extern SilphCo4FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo4FSilphWorkerMText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript   ; NOT YET DEFINED IN THE PORT
+extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
 extern TalkToTrainer
 extern TextScriptEnd
 extern _SilphCo4FSilphWorkerMImHidingText   ; NOT YET DEFINED IN THE PORT
@@ -185,14 +185,13 @@ SilphCo4FUnlockedDoorEventScript:
 
 ; SilphCo4F_ScriptPointers (scripts/SilphCo4F.asm:90-113) — not re-emitted: SilphCo4TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SilphCo4FSilphWorkerMText (scripts/SilphCo4F.asm:117-120) — at scripts/SilphCo4F.asm:118: de cannot hold the 32-bit address of .TeamRocketIsGoneText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ImHidingText
-; PRET| 	ld de, .TeamRocketIsGoneText
-; PRET| 	call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+SilphCo4FSilphWorkerMText:
+    mov esi, .ImHidingText
+    mov edi, .TeamRocketIsGoneText   ; pret: ld de — callee takes it in EDI (abi.json)
+    call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
+    jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1

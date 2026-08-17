@@ -39,6 +39,11 @@
    "evidence": "dos_port/src/home/trainers.asm:616 \u2014 'In: ESI = win text (flat), EDX = lose text (flat)'",
    "sites": 34
   },
+  "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript": {
+   "de": "edi",
+   "evidence": "dos_port/src/scripts/silph_co_6f.asm:132 \u2014 'In: ESI (pret hl) = text to print when EVENT_BEAT_SILPH_CO_GIOVANNI is CLEAR. EDI (pret de) = text to print when EVENT_BEAT_SILPH_CO_GIOVANNI is SET.'",
+   "sites": 7
+  },
   "WriteOAMBlock": {
    "de": "edx",
    "evidence": "dos_port/src/home/oam.asm:82-87 \u2014 'source = flat pointer in EDX ... those OAM-block tables are flat image labels (.data), NOT GB WRAM offsets \u2014 so take EDX as a full flat pointer rather than biasing a 16-bit offset by ebp. Callers: pass the block label in EDX.' This was _deliberately_absent for 'no signature comment found'; the comment exists and is explicit.",
@@ -55,12 +60,21 @@
    "DecodeRLEList and WriteOAMBlock were promoted OUT of this list on 2026-08-17,",
    "each because its signature comment was read at the routine and found to settle",
    "the question the absence note had asked. Promotion needs that, not a plausible",
-   "reading of the call sites."
+   "reading of the call sites.",
+   "",
+   "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript was promoted OUT of this list on",
+   "2026-08-17 too: it was ported (dos_port/src/scripts/silph_co_6f.asm), and its",
+   "signature comment settles the question the same way.",
+   "",
+   "LoadGymLeaderAndCityName was promoted OUT on 2026-08-17 as well, and its absence",
+   "note ('a push edx/pop esi dance against CopyData reading dst from DX; unsettled')",
+   "was left behind by mistake in df47cc019 \u2014 the row was added to callees without",
+   "clearing it, so the table briefly listed one routine as both settled and unsettled.",
+   "That commit REWROTE the routine to take flat pointers, and its new signature",
+   "comment settles the question outright."
   ],
   "PlaceString": "the port's comment documents ESI and the OUT registers but not where the string pointer arrives",
-  "LoadGymLeaderAndCityName": "comment describes a push edx/pop esi dance against CopyData reading dst from DX; unsettled",
   "CheckPikachuFollowingPlayer": "no signature comment found",
-  "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript": "a script routine, not yet ported",
   "PokemonTower2FPikachuMovementScript": "a script routine, not yet ported",
   "ViridianCityMovePikachu": "a script routine, not yet ported"
  }
