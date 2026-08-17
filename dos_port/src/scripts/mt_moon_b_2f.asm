@@ -768,14 +768,12 @@ MtMoonB2FTalkToTrainer:
 ; PRET| 	ld hl, .Text
 ; PRET| 	jp PrintText
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] MtMoonB2FReceivedFossilText.Text (scripts/MtMoonB2F.asm:584-587) — at scripts/MtMoonB2F.asm:585: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _MtMoonB2FReceivedFossilText
-; PRET| 	sound_get_key_item
-; PRET| 	text_waitbutton
-; PRET| 	text_end
+%assign event_byte -1
+.Text:
+    text_far _MtMoonB2FReceivedFossilText
+    sound_get_key_item
+    text_waitbutton
+    text_end
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] MtMoonB2FYouHaveNoRoomText (scripts/MtMoonB2F.asm:590-592) — at scripts/MtMoonB2F.asm:590: .Text is defined in a region that bailed

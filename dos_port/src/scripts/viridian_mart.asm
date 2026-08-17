@@ -21,11 +21,18 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global ViridianMartClerkParcelQuestText
+global ViridianMartClerkSayHiToOakText
+global ViridianMartClerkYouCameFromPalletTownText
+global ViridianMartCooltrainerMText
 global ViridianMartDefaultScript
 global ViridianMartOaksParcelScript
 global ViridianMartScript2
+global ViridianMartYoungsterText
 global ViridianMart_Script
 global ViridianMart_ScriptPointers
+global ViridianMart_TextPointers
+global ViridianMart_TextPointers2
 
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
 extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
@@ -38,26 +45,18 @@ extern ShowObject   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartCheckParcelDeliveredScript   ; NOT YET DEFINED IN THE PORT
-extern ViridianMartClerkParcelQuestText   ; NOT YET DEFINED IN THE PORT
-extern ViridianMartClerkSayHiToOakText   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartClerkText   ; NOT YET DEFINED IN THE PORT
-extern ViridianMartClerkYouCameFromPalletTownText   ; NOT YET DEFINED IN THE PORT
-extern ViridianMartCooltrainerMText   ; NOT YET DEFINED IN THE PORT
-extern ViridianMartYoungsterText   ; NOT YET DEFINED IN THE PORT
-extern ViridianMart_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern ViridianMart_TextPointers2   ; NOT YET DEFINED IN THE PORT
 extern _ViridianMartClerkParcelQuestText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianMartClerkSayHiToOakText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianMartClerkYouCameFromPalletTownText   ; NOT YET DEFINED IN THE PORT
+extern _ViridianMartCooltrainerMText   ; NOT YET DEFINED IN THE PORT
+extern _ViridianMartYoungsterText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_VIRIDIANMART_OAKS_PARCEL                equ 1
 SCRIPT_VIRIDIANMART_SCRIPT2                    equ 2
 TEXT_VIRIDIANMART_CLERK_YOU_CAME_FROM_PALLET_TOWN equ 3
 TEXT_VIRIDIANMART_CLERK_PARCEL_QUEST           equ 4
-TEXT_VIRIDIANMART_CLERK                        equ 1
-TEXT_VIRIDIANMART_YOUNGSTER                    equ 2
-TEXT_VIRIDIANMART_COOLTRAINER_M                equ 3
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -166,41 +165,30 @@ ViridianMartScript2:
     call ShowObject
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] ViridianMart_TextPointers (scripts/ViridianMart.asm:78-111) — at scripts/ViridianMart.asm:102: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	dw ViridianMartClerkSayHiToOakText
-; PRET| 	dw ViridianMartYoungsterText
-; PRET| 	dw ViridianMartCooltrainerMText
-; PRET| 	const_def 4
-; PRET| 	dw_const ViridianMartClerkYouCameFromPalletTownText, TEXT_VIRIDIANMART_CLERK_YOU_CAME_FROM_PALLET_TOWN
-; PRET| 	dw_const ViridianMartClerkParcelQuestText,           TEXT_VIRIDIANMART_CLERK_PARCEL_QUEST
-; PRET| 
-; PRET| ViridianMart_TextPointers2:
-; PRET| 	; This becomes the primary text pointers table when Oak's parcel has been delivered.
-; PRET| 	def_text_pointers
-; PRET| 	dw_const ViridianMartClerkText,        TEXT_VIRIDIANMART_CLERK
-; PRET| 	dw_const ViridianMartYoungsterText,    TEXT_VIRIDIANMART_YOUNGSTER
-; PRET| 	dw_const ViridianMartCooltrainerMText, TEXT_VIRIDIANMART_COOLTRAINER_M
-; PRET| 
-; PRET| ViridianMartClerkSayHiToOakText:
-; PRET| 	text_far _ViridianMartClerkSayHiToOakText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianMartClerkYouCameFromPalletTownText:
-; PRET| 	text_far _ViridianMartClerkYouCameFromPalletTownText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianMartClerkParcelQuestText:
-; PRET| 	text_far _ViridianMartClerkParcelQuestText
-; PRET| 	sound_get_key_item
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianMartYoungsterText:
-; PRET| 	text_far _ViridianMartYoungsterText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianMartCooltrainerMText:
-; PRET| 	text_far _ViridianMartCooltrainerMText
-; PRET| 	text_end
+%assign event_byte -1
+ViridianMart_TextPointers:
+    dd ViridianMartClerkSayHiToOakText
+    dd ViridianMartYoungsterText
+    dd ViridianMartCooltrainerMText
+    dd ViridianMartClerkYouCameFromPalletTownText
+    dd ViridianMartClerkParcelQuestText
+ViridianMart_TextPointers2:
+    dd ViridianMartClerkText
+    dd ViridianMartYoungsterText
+    dd ViridianMartCooltrainerMText
+ViridianMartClerkSayHiToOakText:
+    text_far _ViridianMartClerkSayHiToOakText
+    text_end
+ViridianMartClerkYouCameFromPalletTownText:
+    text_far _ViridianMartClerkYouCameFromPalletTownText
+    text_end
+ViridianMartClerkParcelQuestText:
+    text_far _ViridianMartClerkParcelQuestText
+    sound_get_key_item
+    text_end
+ViridianMartYoungsterText:
+    text_far _ViridianMartYoungsterText
+    text_end
+ViridianMartCooltrainerMText:
+    text_far _ViridianMartCooltrainerMText
+    text_end

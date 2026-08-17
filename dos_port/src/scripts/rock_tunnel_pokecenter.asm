@@ -22,25 +22,20 @@ bits 32
 
 
 global RockTunnelPokecenterChanseyText
+global RockTunnelPokecenterFisherText
+global RockTunnelPokecenterGentlemanText
+global RockTunnelPokecenterLinkReceptionistText
+global RockTunnelPokecenterNurseText
 global RockTunnelPokecenter_Script
+global RockTunnelPokecenter_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnelPokecenterFisherText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnelPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnelPokecenterLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnelPokecenterNurseText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnelPokecenter_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_ROCKTUNNELPOKECENTER_NURSE                equ 1
-TEXT_ROCKTUNNELPOKECENTER_GENTLEMAN            equ 2
-TEXT_ROCKTUNNELPOKECENTER_FISHER               equ 3
-TEXT_ROCKTUNNELPOKECENTER_LINK_RECEPTIONIST    equ 4
-TEXT_ROCKTUNNELPOKECENTER_CHANSEY              equ 5
+extern _RockTunnelPokecenterFisherText   ; NOT YET DEFINED IN THE PORT
+extern _RockTunnelPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -53,30 +48,23 @@ RockTunnelPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] RockTunnelPokecenter_TextPointers (scripts/RockTunnelPokecenter.asm:6-25) — at scripts/RockTunnelPokecenter.asm:14: script_pokecenter_nurse
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const RockTunnelPokecenterNurseText,            TEXT_ROCKTUNNELPOKECENTER_NURSE
-; PRET| 	dw_const RockTunnelPokecenterGentlemanText,        TEXT_ROCKTUNNELPOKECENTER_GENTLEMAN
-; PRET| 	dw_const RockTunnelPokecenterFisherText,           TEXT_ROCKTUNNELPOKECENTER_FISHER
-; PRET| 	dw_const RockTunnelPokecenterLinkReceptionistText, TEXT_ROCKTUNNELPOKECENTER_LINK_RECEPTIONIST
-; PRET| 	dw_const RockTunnelPokecenterChanseyText,          TEXT_ROCKTUNNELPOKECENTER_CHANSEY
-; PRET| 
-; PRET| RockTunnelPokecenterNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| RockTunnelPokecenterGentlemanText:
-; PRET| 	text_far _RockTunnelPokecenterGentlemanText
-; PRET| 	text_end
-; PRET| 
-; PRET| RockTunnelPokecenterFisherText:
-; PRET| 	text_far _RockTunnelPokecenterFisherText
-; PRET| 	text_end
-; PRET| 
-; PRET| RockTunnelPokecenterLinkReceptionistText:
-; PRET| 	script_cable_club_receptionist
+%assign event_byte -1
+RockTunnelPokecenter_TextPointers:
+    dd RockTunnelPokecenterNurseText
+    dd RockTunnelPokecenterGentlemanText
+    dd RockTunnelPokecenterFisherText
+    dd RockTunnelPokecenterLinkReceptionistText
+    dd RockTunnelPokecenterChanseyText
+RockTunnelPokecenterNurseText:
+    script_pokecenter_nurse
+RockTunnelPokecenterGentlemanText:
+    text_far _RockTunnelPokecenterGentlemanText
+    text_end
+RockTunnelPokecenterFisherText:
+    text_far _RockTunnelPokecenterFisherText
+    text_end
+RockTunnelPokecenterLinkReceptionistText:
+    script_cable_club_receptionist
 
 %assign event_byte -1
 RockTunnelPokecenterChanseyText:

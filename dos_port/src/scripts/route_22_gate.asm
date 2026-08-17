@@ -24,6 +24,8 @@ bits 32
 %include "assets/map_dims.inc"
 
 global Route22GateDefaultScript
+global Route22GateGuardGoRightAheadText
+global Route22GateGuardICantLetYouPassText
 global Route22GateGuardNoBoulderbadgeText
 global Route22GateGuardText
 global Route22GateMovePlayerDownScript
@@ -41,8 +43,6 @@ extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Route22GateGuardGoRightAheadText   ; NOT YET DEFINED IN THE PORT
-extern Route22GateGuardICantLetYouPassText   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
@@ -171,14 +171,11 @@ Route22GateGuardNoBoulderbadgeText:
     mov esi, Route22GateGuardICantLetYouPassText
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] Route22GateGuardICantLetYouPassText (scripts/Route22Gate.asm:92-98) — at scripts/Route22Gate.asm:97: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route22GateGuardICantLetYouPassText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route22GateGuardGoRightAheadText:
-; PRET| 	text_far _Route22GateGuardGoRightAheadText
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
+%assign event_byte -1
+Route22GateGuardICantLetYouPassText:
+    text_far _Route22GateGuardICantLetYouPassText
+    text_end
+Route22GateGuardGoRightAheadText:
+    text_far _Route22GateGuardGoRightAheadText
+    sound_get_item_1
+    text_end

@@ -22,27 +22,21 @@ bits 32
 
 
 global IndigoPlateauLobbyChanseyText
+global IndigoPlateauLobbyCooltrainerFText
+global IndigoPlateauLobbyGymGuideText
+global IndigoPlateauLobbyLinkReceptionistText
+global IndigoPlateauLobbyNurseText
 global IndigoPlateauLobby_Script
+global IndigoPlateauLobby_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern IndigoPlateauLobbyClerkText   ; NOT YET DEFINED IN THE PORT
-extern IndigoPlateauLobbyCooltrainerFText   ; NOT YET DEFINED IN THE PORT
-extern IndigoPlateauLobbyGymGuideText   ; NOT YET DEFINED IN THE PORT
-extern IndigoPlateauLobbyLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern IndigoPlateauLobbyNurseText   ; NOT YET DEFINED IN THE PORT
-extern IndigoPlateauLobby_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_INDIGOPLATEAULOBBY_NURSE                  equ 1
-TEXT_INDIGOPLATEAULOBBY_GYM_GUIDE              equ 2
-TEXT_INDIGOPLATEAULOBBY_COOLTRAINER_F          equ 3
-TEXT_INDIGOPLATEAULOBBY_CLERK                  equ 4
-TEXT_INDIGOPLATEAULOBBY_LINK_RECEPTIONIST      equ 5
-TEXT_INDIGOPLATEAULOBBY_CHANSEY                equ 6
+extern _IndigoPlateauLobbyCooltrainerFText   ; NOT YET DEFINED IN THE PORT
+extern _IndigoPlateauLobbyGymGuideText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -74,31 +68,24 @@ IndigoPlateauLobby_Script:
     ResetEventRange INDIGO_PLATEAU_EVENTS_START, EVENT_LANCES_ROOM_LOCK_DOOR
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] IndigoPlateauLobby_TextPointers (scripts/IndigoPlateauLobby.asm:18-38) — at scripts/IndigoPlateauLobby.asm:27: script_pokecenter_nurse
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const IndigoPlateauLobbyNurseText,            TEXT_INDIGOPLATEAULOBBY_NURSE
-; PRET| 	dw_const IndigoPlateauLobbyGymGuideText,         TEXT_INDIGOPLATEAULOBBY_GYM_GUIDE
-; PRET| 	dw_const IndigoPlateauLobbyCooltrainerFText,     TEXT_INDIGOPLATEAULOBBY_COOLTRAINER_F
-; PRET| 	dw_const IndigoPlateauLobbyClerkText,            TEXT_INDIGOPLATEAULOBBY_CLERK
-; PRET| 	dw_const IndigoPlateauLobbyLinkReceptionistText, TEXT_INDIGOPLATEAULOBBY_LINK_RECEPTIONIST
-; PRET| 	dw_const IndigoPlateauLobbyChanseyText,          TEXT_INDIGOPLATEAULOBBY_CHANSEY
-; PRET| 
-; PRET| IndigoPlateauLobbyNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| IndigoPlateauLobbyGymGuideText:
-; PRET| 	text_far _IndigoPlateauLobbyGymGuideText
-; PRET| 	text_end
-; PRET| 
-; PRET| IndigoPlateauLobbyCooltrainerFText:
-; PRET| 	text_far _IndigoPlateauLobbyCooltrainerFText
-; PRET| 	text_end
-; PRET| 
-; PRET| IndigoPlateauLobbyLinkReceptionistText:
-; PRET| 	script_cable_club_receptionist
+%assign event_byte -1
+IndigoPlateauLobby_TextPointers:
+    dd IndigoPlateauLobbyNurseText
+    dd IndigoPlateauLobbyGymGuideText
+    dd IndigoPlateauLobbyCooltrainerFText
+    dd IndigoPlateauLobbyClerkText
+    dd IndigoPlateauLobbyLinkReceptionistText
+    dd IndigoPlateauLobbyChanseyText
+IndigoPlateauLobbyNurseText:
+    script_pokecenter_nurse
+IndigoPlateauLobbyGymGuideText:
+    text_far _IndigoPlateauLobbyGymGuideText
+    text_end
+IndigoPlateauLobbyCooltrainerFText:
+    text_far _IndigoPlateauLobbyCooltrainerFText
+    text_end
+IndigoPlateauLobbyLinkReceptionistText:
+    script_cable_club_receptionist
 
 %assign event_byte -1
 IndigoPlateauLobbyChanseyText:

@@ -32,6 +32,7 @@ global BillsHousePikachuConfused
 global BillsHousePikachuWatchPlayer
 global BillsHousePrintBillCheckOutMyRarePokemonText
 global BillsHousePrintBillPokemonText
+global BillsHousePrintBillSSTicketText
 global BillsHouseScript0
 global BillsHouseScript1
 global BillsHouseScript4
@@ -53,7 +54,6 @@ global RLE_1e219
 
 extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern BillsHousePrintBillSSTicketText   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript2   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript3   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript5   ; NOT YET DEFINED IN THE PORT
@@ -86,6 +86,8 @@ extern _BillsHouseBillImNotAPokemonText   ; NOT YET DEFINED IN THE PORT
 extern _BillsHouseBillNoYouGottaHelpText   ; NOT YET DEFINED IN THE PORT
 extern _BillsHouseBillThankYouText   ; NOT YET DEFINED IN THE PORT
 extern _BillsHouseBillUseSeparationSystemText   ; NOT YET DEFINED IN THE PORT
+extern _BillsHouseBillWhyDontYouGoInsteadOfMeText   ; NOT YET DEFINED IN THE PORT
+extern _SSTicketNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _SSTicketReceivedText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
@@ -470,59 +472,52 @@ BillsHousePrintBillPokemonText:
     text_far _BillsHouseBillNoYouGottaHelpText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BillsHousePrintBillSSTicketText (scripts/BillsHouse_2.asm:32-51) — at scripts/BillsHouse_2.asm:33: .got_ss_ticket is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_SS_TICKET
-; PRET| 	jr nz, .got_ss_ticket
-; PRET| 	ld hl, .ThankYouText
-; PRET| 	call PrintText
-; PRET| 	lb bc, S_S_TICKET, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .SSTicketReceivedText
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_SS_TICKET
-; PRET| 	ld a, TOGGLE_CERULEAN_GUARD_1
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	ld a, TOGGLE_CERULEAN_GUARD_2
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| .got_ss_ticket
-; PRET| 	ld hl, .WhyDontYouGoInsteadOfMeText
-; PRET| 	call PrintText
-; PRET| 	ret
+%assign event_byte -1
+BillsHousePrintBillSSTicketText:
+    CheckEvent EVENT_GOT_SS_TICKET
+    jnz .got_ss_ticket
+    mov esi, .ThankYouText
+    call PrintText
+    mov bx, ((63) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .SSTicketReceivedText
+    call PrintText
+    SetEvent EVENT_GOT_SS_TICKET
+    mov al, 8
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    mov al, 10
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+.got_ss_ticket:
+    mov esi, .WhyDontYouGoInsteadOfMeText
+    call PrintText
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BillsHousePrintBillSSTicketText.bag_full (scripts/BillsHouse_2.asm:53-55) — at scripts/BillsHouse_2.asm:53: .SSTicketNoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .SSTicketNoRoomText
-; PRET| 	call PrintText
-; PRET| 	ret
+%assign event_byte -1
+.bag_full:
+    mov esi, .SSTicketNoRoomText
+    call PrintText
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] BillsHousePrintBillSSTicketText.ThankYouText (scripts/BillsHouse_2.asm:58-73) — at scripts/BillsHouse_2.asm:63: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _BillsHouseBillThankYouText
-; PRET| 	text_end
-; PRET| 
-; PRET| .SSTicketReceivedText:
-; PRET| 	text_far _SSTicketReceivedText
-; PRET| 	sound_get_key_item
-; PRET| 	text_promptbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| .SSTicketNoRoomText:
-; PRET| 	text_far _SSTicketNoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| .WhyDontYouGoInsteadOfMeText:
-; PRET| 	text_far _BillsHouseBillWhyDontYouGoInsteadOfMeText
-; PRET| 	text_end
+%assign event_byte -1
+.ThankYouText:
+    text_far _BillsHouseBillThankYouText
+    text_end
+.SSTicketReceivedText:
+    text_far _SSTicketReceivedText
+    sound_get_key_item
+    text_promptbutton
+    text_end
+.SSTicketNoRoomText:
+    text_far _SSTicketNoRoomText
+    text_end
+.WhyDontYouGoInsteadOfMeText:
+    text_far _BillsHouseBillWhyDontYouGoInsteadOfMeText
+    text_end
 
 %assign event_byte -1
 BillsHousePrintBillCheckOutMyRarePokemonText:

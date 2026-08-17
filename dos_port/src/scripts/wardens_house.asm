@@ -22,9 +22,11 @@ bits 32
 
 
 global WardensHouseDisplayText
+global WardensHouseWardenText
 global WardensHouse_Script
 global WardensHouse_TextPointers
 
+extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern BoulderText   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
@@ -33,7 +35,6 @@ extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern RemoveItemByID   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern WardensHouseWardenText   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
 extern _WardensHouseDisplayMerchandiseText   ; NOT YET DEFINED IN THE PORT
 extern _WardensHouseDisplayPhotosAndFossilsText   ; NOT YET DEFINED IN THE PORT
@@ -41,6 +42,11 @@ extern _WardensHouseWardenGaveTheGoldTeethText   ; NOT YET DEFINED IN THE PORT
 extern _WardensHouseWardenGibberish1Text   ; NOT YET DEFINED IN THE PORT
 extern _WardensHouseWardenGibberish2Text   ; NOT YET DEFINED IN THE PORT
 extern _WardensHouseWardenGibberish3Text   ; NOT YET DEFINED IN THE PORT
+extern _WardensHouseWardenHM04ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _WardensHouseWardenHM04NoRoomText   ; NOT YET DEFINED IN THE PORT
+extern _WardensHouseWardenReceivedHM04Text   ; NOT YET DEFINED IN THE PORT
+extern _WardensHouseWardenTeethPoppedInHisTeethText   ; NOT YET DEFINED IN THE PORT
+extern _WardensHouseWardenThanksText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 TEXT_WARDENSHOUSE_DISPLAY_LEFT                 equ 4
@@ -63,106 +69,91 @@ WardensHouse_TextPointers:
     dd WardensHouseDisplayText
     dd WardensHouseDisplayText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] WardensHouseWardenText (scripts/WardensHouse.asm:14-31) — at scripts/WardensHouse.asm:15: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_HM04
-; PRET| 	jr nz, .got_item
-; PRET| 	ld b, GOLD_TEETH
-; PRET| 	call IsItemInBag
-; PRET| 	jr nz, .have_gold_teeth
-; PRET| 	CheckEvent EVENT_GAVE_GOLD_TEETH
-; PRET| 	jr nz, .gave_gold_teeth
-; PRET| 	ld hl, .Gibberish1Text
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	ld hl, .Gibberish3Text
-; PRET| 	jr nz, .refused
-; PRET| 	ld hl, .Gibberish2Text
-; PRET| .refused
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+WardensHouseWardenText:
+    CheckEvent EVENT_GOT_HM04
+    jnz .got_item
+    mov bh, 64
+    call IsItemInBag
+    jnz .have_gold_teeth
+    CheckEvent EVENT_GAVE_GOLD_TEETH
+    jnz .gave_gold_teeth
+    mov esi, .Gibberish1Text
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    mov esi, .Gibberish3Text
+    jnz .refused
+    mov esi, .Gibberish2Text
+.refused:
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] WardensHouseWardenText.have_gold_teeth (scripts/WardensHouse.asm:33-48) — at scripts/WardensHouse.asm:33: .GaveTheGoldTeethText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .GaveTheGoldTeethText
-; PRET| 	call PrintText
-; PRET| 	ld a, GOLD_TEETH
-; PRET| 	ldh [hItemToRemoveID], a
-; PRET| 	farcall RemoveItemByID
-; PRET| 	SetEvent EVENT_GAVE_GOLD_TEETH
-; PRET| .gave_gold_teeth
-; PRET| 	ld hl, .ThanksText
-; PRET| 	call PrintText
-; PRET| 	lb bc, HM_STRENGTH, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .ReceivedHM04Text
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_HM04
-; PRET| 	jr .done
+%assign event_byte -1
+.have_gold_teeth:
+    mov esi, .GaveTheGoldTeethText
+    call PrintText
+    mov al, 64
+    mov [ebp + hItemToRemoveID], al
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call RemoveItemByID
+    pushfd    ; SM83 form writes no flags
+        SetEvent EVENT_GAVE_GOLD_TEETH
+    popfd
+.gave_gold_teeth:
+    mov esi, .ThanksText
+    call PrintText
+    mov bx, ((200) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .ReceivedHM04Text
+    call PrintText
+    SetEvent EVENT_GOT_HM04
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] WardensHouseWardenText.got_item (scripts/WardensHouse.asm:50-52) — at scripts/WardensHouse.asm:50: .HM04ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HM04ExplanationText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.got_item:
+    mov esi, .HM04ExplanationText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] WardensHouseWardenText.bag_full (scripts/WardensHouse.asm:54-57) — at scripts/WardensHouse.asm:54: .HM04NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HM04NoRoomText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.bag_full:
+    mov esi, .HM04NoRoomText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] WardensHouseWardenText.Gibberish1Text (scripts/WardensHouse.asm:60-94) — at scripts/WardensHouse.asm:73: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _WardensHouseWardenGibberish1Text
-; PRET| 	text_end
-; PRET| 
-; PRET| .Gibberish2Text:
-; PRET| 	text_far _WardensHouseWardenGibberish2Text
-; PRET| 	text_end
-; PRET| 
-; PRET| .Gibberish3Text:
-; PRET| 	text_far _WardensHouseWardenGibberish3Text
-; PRET| 	text_end
-; PRET| 
-; PRET| .GaveTheGoldTeethText:
-; PRET| 	text_far _WardensHouseWardenGaveTheGoldTeethText
-; PRET| 	sound_get_item_1
-; PRET| 
-; PRET| .PoppedInHisTeethText: ; unreferenced
-; PRET| 	text_far _WardensHouseWardenTeethPoppedInHisTeethText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ThanksText:
-; PRET| 	text_far _WardensHouseWardenThanksText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedHM04Text:
-; PRET| 	text_far _WardensHouseWardenReceivedHM04Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .HM04ExplanationText:
-; PRET| 	text_far _WardensHouseWardenHM04ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .HM04NoRoomText:
-; PRET| 	text_far _WardensHouseWardenHM04NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.Gibberish1Text:
+    text_far _WardensHouseWardenGibberish1Text
+    text_end
+.Gibberish2Text:
+    text_far _WardensHouseWardenGibberish2Text
+    text_end
+.Gibberish3Text:
+    text_far _WardensHouseWardenGibberish3Text
+    text_end
+.GaveTheGoldTeethText:
+    text_far _WardensHouseWardenGaveTheGoldTeethText
+    sound_get_item_1
+.PoppedInHisTeethText:
+    text_far _WardensHouseWardenTeethPoppedInHisTeethText
+    text_end
+.ThanksText:
+    text_far _WardensHouseWardenThanksText
+    text_end
+.ReceivedHM04Text:
+    text_far _WardensHouseWardenReceivedHM04Text
+    sound_get_item_1
+    text_end
+.HM04ExplanationText:
+    text_far _WardensHouseWardenHM04ExplanationText
+    text_end
+.HM04NoRoomText:
+    text_far _WardensHouseWardenHM04NoRoomText
+    text_end
 
 %assign event_byte -1
 WardensHouseDisplayText:

@@ -28,6 +28,8 @@ global Museum1FNoopScript
 global Museum1FOldAmberText
 global Museum1FPrintGamblerText
 global Museum1FPrintOldAmberText
+global Museum1FPrintScientist1Text
+global Museum1FPrintScientist2Text
 global Museum1FPrintScientist3Text
 global Museum1FScientist1Text
 global Museum1FScientist2Text
@@ -43,8 +45,6 @@ extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern Museum1FPrintScientist1Text   ; NOT YET DEFINED IN THE PORT
-extern Museum1FPrintScientist2Text   ; NOT YET DEFINED IN THE PORT
 extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
@@ -64,8 +64,10 @@ extern _Museum1FScientist1TakePlentyOfTimeText   ; NOT YET DEFINED IN THE PORT
 extern _Museum1FScientist1ThankYouText   ; NOT YET DEFINED IN THE PORT
 extern _Museum1FScientist1TheresALabSomewhereText   ; NOT YET DEFINED IN THE PORT
 extern _Museum1FScientist1WouldYouLikeToComeInText   ; NOT YET DEFINED IN THE PORT
+extern _Museum1FScientist2GetTheOldAmberCheckText   ; NOT YET DEFINED IN THE PORT
 extern _Museum1FScientist2ReceivedOldAmberText   ; NOT YET DEFINED IN THE PORT
 extern _Museum1FScientist2TakeThisToAPokemonLabText   ; NOT YET DEFINED IN THE PORT
+extern _Museum1FScientist2YouDontHaveSpaceText   ; NOT YET DEFINED IN THE PORT
 extern _Museum1FScientist3Text   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
@@ -163,130 +165,115 @@ Museum1FOldAmberText:
     call Museum1FPrintOldAmberText
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist1Text (scripts/Museum1F_2.asm:2-8) — at scripts/Museum1F_2.asm:4: .not_right_of_scientist is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wYCoord]
-; PRET| 	cp 4
-; PRET| 	jr nz, .not_right_of_scientist
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 13
-; PRET| 	jp z, .behind_counter
-; PRET| 	jr .check_ticket
+%assign event_byte -1
+Museum1FPrintScientist1Text:
+    mov al, [ebp + wYCoord]
+    cmp al, 4
+    jnz .not_right_of_scientist
+    mov al, [ebp + wXCoord]
+    cmp al, 13
+    jz .behind_counter
+    jmp .check_ticket
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist1Text.not_right_of_scientist (scripts/Museum1F_2.asm:10-20) — at scripts/Museum1F_2.asm:11: .not_behind_counter is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	cp 3
-; PRET| 	jr nz, .not_behind_counter
-; PRET| 	ld a, [wXCoord]
-; PRET| 	cp 12
-; PRET| 	jp z, .behind_counter
-; PRET| .not_behind_counter
-; PRET| 	CheckEvent EVENT_BOUGHT_MUSEUM_TICKET
-; PRET| 	jr nz, .already_bought_ticket
-; PRET| 	ld hl, .GoToOtherSideText
-; PRET| 	call PrintText
-; PRET| 	jp .done
+%assign event_byte -1
+.not_right_of_scientist:
+    cmp al, 3
+    jnz .not_behind_counter
+    mov al, [ebp + wXCoord]
+    cmp al, 12
+    jz .behind_counter
+.not_behind_counter:
+    CheckEvent EVENT_BOUGHT_MUSEUM_TICKET
+    jnz .already_bought_ticket
+    mov esi, .GoToOtherSideText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist1Text.check_ticket (scripts/Museum1F_2.asm:22-27) — at scripts/Museum1F_2.asm:23: .no_ticket is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BOUGHT_MUSEUM_TICKET
-; PRET| 	jr z, .no_ticket
-; PRET| .already_bought_ticket
-; PRET| 	ld hl, .TakePlentyOfTimeText
-; PRET| 	call PrintText
-; PRET| 	jp .done
+%assign event_byte -1
+.check_ticket:
+    CheckEvent EVENT_BOUGHT_MUSEUM_TICKET
+    jz .no_ticket
+.already_bought_ticket:
+    mov esi, .TakePlentyOfTimeText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist1Text.no_ticket (scripts/Museum1F_2.asm:29-49) — at scripts/Museum1F_2.asm:39: .deny_entry is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, MONEY_BOX
-; PRET| 	ld [wTextBoxID], a
-; PRET| 	call DisplayTextBoxID
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld hl, .WouldYouLikeToComeInText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .deny_entry
-; PRET| 	xor a
-; PRET| 	ldh [hMoney], a
-; PRET| 	ldh [hMoney + 1], a
-; PRET| 	ld a, $50
-; PRET| 	ldh [hMoney + 2], a
-; PRET| 	call HasEnoughMoney
-; PRET| 	jr nc, .buy_ticket
-; PRET| 	ld hl, .DontHaveEnoughMoneyText
-; PRET| 	call PrintText
-; PRET| 	jp .deny_entry
+%assign event_byte -1
+.no_ticket:
+    mov al, MONEY_BOX
+    mov [ebp + wTextBoxID], al
+    call DisplayTextBoxID
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov esi, .WouldYouLikeToComeInText
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .deny_entry
+    xor al, al
+    mov [ebp + hMoney], al
+    mov [ebp + hMoney + 1], al
+    mov al, 0x50
+    mov [ebp + hMoney + 2], al
+    call HasEnoughMoney
+    jae .buy_ticket
+    mov esi, .DontHaveEnoughMoneyText
+    call PrintText
+    jmp .deny_entry
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist1Text.buy_ticket (scripts/Museum1F_2.asm:51-69) — at scripts/Museum1F_2.asm:69: .allow_entry is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ThankYouText
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_BOUGHT_MUSEUM_TICKET
-; PRET| 	xor a
-; PRET| 	ld [wPriceTemp], a
-; PRET| 	ld [wPriceTemp + 1], a
-; PRET| 	ld a, $50
-; PRET| 	ld [wPriceTemp + 2], a
-; PRET| 	ld hl, wPriceTemp + 2
-; PRET| 	ld de, wPlayerMoney + 2
-; PRET| 	ld c, $3
-; PRET| 	predef SubBCDPredef
-; PRET| 	ld a, MONEY_BOX
-; PRET| 	ld [wTextBoxID], a
-; PRET| 	call DisplayTextBoxID
-; PRET| 	ld a, SFX_PURCHASE
-; PRET| 	call PlaySoundWaitForCurrent
-; PRET| 	call WaitForSoundToFinish
-; PRET| 	jr .allow_entry
+%assign event_byte -1
+.buy_ticket:
+    mov esi, .ThankYouText
+    call PrintText
+    SetEvent EVENT_BOUGHT_MUSEUM_TICKET
+    xor al, al
+    mov [ebp + wPriceTemp], al
+    mov [ebp + wPriceTemp + 1], al
+    mov al, 0x50
+    mov [ebp + wPriceTemp + 2], al
+    mov esi, wPriceTemp + 2
+    mov dx, wPlayerMoney + 2
+    mov bl, 0x3
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call SubBCDPredef
+    mov al, MONEY_BOX
+    mov [ebp + wTextBoxID], al
+    call DisplayTextBoxID
+    mov al, SFX_PURCHASE
+    call PlaySoundWaitForCurrent
+    call WaitForSoundToFinish
+    jmp .allow_entry
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist1Text.deny_entry (scripts/Museum1F_2.asm:71-79) — at scripts/Museum1F_2.asm:79: .done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ComeAgainText
-; PRET| 	call PrintText
-; PRET| 	ld a, $1
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	ld a, PAD_DOWN
-; PRET| 	ld [wSimulatedJoypadStatesEnd], a
-; PRET| 	call StartSimulatingJoypadStates
-; PRET| 	call UpdateSprites
-; PRET| 	jr .done
+%assign event_byte -1
+.deny_entry:
+    mov esi, .ComeAgainText
+    call PrintText
+    mov al, 0x1
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    mov al, PAD_DOWN
+    mov [ebp + wSimulatedJoypadStatesEnd], al
+    call StartSimulatingJoypadStates
+    call UpdateSprites
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist1Text.allow_entry (scripts/Museum1F_2.asm:81-83) — at scripts/Museum1F_2.asm:83: .done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, SCRIPT_MUSEUM1F_NOOP
-; PRET| 	ld [wMuseum1FCurScript], a
-; PRET| 	jr .done
+%assign event_byte -1
+.allow_entry:
+    mov al, SCRIPT_MUSEUM1F_NOOP
+    mov [ebp + wMuseum1FCurScript], al
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist1Text.behind_counter (scripts/Museum1F_2.asm:86-94) — at scripts/Museum1F_2.asm:94: .done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .DoYouKnowWhatAmberIsText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	cp $0
-; PRET| 	jr nz, .explain_amber
-; PRET| 	ld hl, .TheresALabSomewhereText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.behind_counter:
+    mov esi, .DoYouKnowWhatAmberIsText
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    cmp al, 0x0
+    jnz .explain_amber
+    mov esi, .TheresALabSomewhereText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
 .explain_amber:
@@ -335,59 +322,49 @@ Museum1FPrintGamblerText:
     text_far _Museum1FGamblerText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist2Text (scripts/Museum1F_2.asm:147-159) — at scripts/Museum1F_2.asm:148: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_OLD_AMBER
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .TakeThisToAPokemonLabText
-; PRET| 	call PrintText
-; PRET| 	lb bc, OLD_AMBER, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	SetEvent EVENT_GOT_OLD_AMBER
-; PRET| 	ld a, TOGGLE_OLD_AMBER
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld hl, .ReceivedOldAmberText
-; PRET| 	jr .done
+%assign event_byte -1
+Museum1FPrintScientist2Text:
+    CheckEvent EVENT_GOT_OLD_AMBER
+    jnz .got_item
+    mov esi, .TakeThisToAPokemonLabText
+    call PrintText
+    mov bx, ((31) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    SetEvent EVENT_GOT_OLD_AMBER
+    mov al, 51
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov esi, .ReceivedOldAmberText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist2Text.bag_full (scripts/Museum1F_2.asm:161-162) — at scripts/Museum1F_2.asm:161: .YouDontHaveSpaceText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .YouDontHaveSpaceText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .YouDontHaveSpaceText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Museum1FPrintScientist2Text.got_item (scripts/Museum1F_2.asm:164-167) — at scripts/Museum1F_2.asm:164: .GetTheOldAmberCheckText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .GetTheOldAmberCheckText
-; PRET| .done
-; PRET| 	call PrintText
-; PRET| 	ret
+%assign event_byte -1
+.got_item:
+    mov esi, .GetTheOldAmberCheckText
+.done:
+    call PrintText
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] Museum1FPrintScientist2Text.TakeThisToAPokemonLabText (scripts/Museum1F_2.asm:170-184) — at scripts/Museum1F_2.asm:175: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Museum1FScientist2TakeThisToAPokemonLabText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedOldAmberText:
-; PRET| 	text_far _Museum1FScientist2ReceivedOldAmberText
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .GetTheOldAmberCheckText:
-; PRET| 	text_far _Museum1FScientist2GetTheOldAmberCheckText
-; PRET| 	text_end
-; PRET| 
-; PRET| .YouDontHaveSpaceText:
-; PRET| 	text_far _Museum1FScientist2YouDontHaveSpaceText
-; PRET| 	text_end
+%assign event_byte -1
+.TakeThisToAPokemonLabText:
+    text_far _Museum1FScientist2TakeThisToAPokemonLabText
+    text_end
+.ReceivedOldAmberText:
+    text_far _Museum1FScientist2ReceivedOldAmberText
+    sound_get_item_1
+    text_end
+.GetTheOldAmberCheckText:
+    text_far _Museum1FScientist2GetTheOldAmberCheckText
+    text_end
+.YouDontHaveSpaceText:
+    text_far _Museum1FScientist2YouDontHaveSpaceText
+    text_end
 
 %assign event_byte -1
 Museum1FPrintScientist3Text:

@@ -21,9 +21,11 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global PokemonFanClubChairmanText
 global PokemonFanClubClefairyFanText
 global PokemonFanClubClefairyText
 global PokemonFanClubPikachuMovementData
+global PokemonFanClubReceptionistText
 global PokemonFanClubScript0
 global PokemonFanClubScript1
 global PokemonFanClubScript_59a39
@@ -33,6 +35,10 @@ global PokemonFanClubSeelText
 global PokemonFanClub_Script
 global PokemonFanClub_ScriptPointers
 global PokemonFanClub_TextPointers
+global Text_59c1f
+global Text_59c24
+global Text_59c29
+global Text_59c2e
 
 extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
@@ -43,6 +49,10 @@ extern DisablePikachuFollowingPlayer   ; NOT YET DEFINED IN THE PORT
 extern DisplayPartyMenu   ; NOT YET DEFINED IN THE PORT
 extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
+extern FanClubChairPrintText1   ; NOT YET DEFINED IN THE PORT
+extern FanClubChairPrintText2   ; NOT YET DEFINED IN THE PORT
+extern FanClubChairPrintText3   ; NOT YET DEFINED IN THE PORT
+extern FanClubChairPrintText4   ; NOT YET DEFINED IN THE PORT
 extern GBPalNormal   ; NOT YET DEFINED IN THE PORT
 extern GBPalWhiteOutWithDelay3   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
@@ -51,8 +61,6 @@ extern LoadCurrentMapView   ; NOT YET DEFINED IN THE PORT
 extern LoadGBPal   ; NOT YET DEFINED IN THE PORT
 extern LoadScreenTilesFromBuffer2   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern PokemonFanClubChairmanText   ; NOT YET DEFINED IN THE PORT
-extern PokemonFanClubReceptionistText   ; NOT YET DEFINED IN THE PORT
 extern PrintFanClubPortrait   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern Random   ; NOT YET DEFINED IN THE PORT
@@ -60,20 +68,21 @@ extern ReloadTilesetTilePatterns   ; NOT YET DEFINED IN THE PORT
 extern RestoreScreenTilesAndReloadTilePatterns   ; NOT YET DEFINED IN THE PORT
 extern SaveScreenTilesToBuffer2   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern Text_59c1f   ; NOT YET DEFINED IN THE PORT
-extern Text_59c24   ; NOT YET DEFINED IN THE PORT
-extern Text_59c29   ; NOT YET DEFINED IN THE PORT
-extern Text_59c2e   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern _PokemonFanClubBagFullText   ; NOT YET DEFINED IN THE PORT
+extern _PokemonFanClubChairFinalText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubChairmanIntroText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubChairmanStoryText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubClefairyFanBetterText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubClefairyFanNormalText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubClefairyFanText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubClefairyText   ; NOT YET DEFINED IN THE PORT
+extern _PokemonFanClubExplainBikeVoucherText   ; NOT YET DEFINED IN THE PORT
+extern _PokemonFanClubNoStoryText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubReceivedBikeVoucherText   ; NOT YET DEFINED IN THE PORT
+extern _PokemonFanClubReceptionistText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubSeelFanBetterText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubSeelFanNormalText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonFanClubSeelFanText   ; NOT YET DEFINED IN THE PORT
@@ -298,158 +307,132 @@ PokemonFanClubSeelText:
     text_far _PokemonFanClubSeelText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonFanClubChairmanText (scripts/PokemonFanClub.asm:177-186) — at scripts/PokemonFanClub.asm:178: .check_bike_voucher is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventHL EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER
-; PRET| 	jr z, .check_bike_voucher
-; PRET| 	ld hl, Text_59c1f
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr z, .select_mon_to_print
-; PRET| 	ld hl, Text_59c24
-; PRET| 	jr .gbpals_print_text
+%assign event_byte -1
+PokemonFanClubChairmanText:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
+    test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
+    jz .check_bike_voucher
+    mov esi, Text_59c1f
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jz .select_mon_to_print
+    mov esi, Text_59c24
+    jmp .gbpals_print_text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonFanClubChairmanText.check_bike_voucher (scripts/PokemonFanClub.asm:189-207) — at scripts/PokemonFanClub.asm:190: .nothingleft is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_BIKE_VOUCHER
-; PRET| 	jr nz, .nothingleft
-; PRET| 	ld hl, .IntroText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .nothanks
-; PRET| 
-; PRET| 	; tell the story
-; PRET| 	ld hl, .StoryText
-; PRET| 	call PrintText
-; PRET| 	lb bc, BIKE_VOUCHER, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .BikeVoucherText
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_BIKE_VOUCHER
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.check_bike_voucher:
+    CheckEvent EVENT_GOT_BIKE_VOUCHER
+    jnz .nothingleft
+    mov esi, .IntroText
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .nothanks
+    mov esi, .StoryText
+    call PrintText
+    mov bx, ((45) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .BikeVoucherText
+    call PrintText
+    SetEvent EVENT_GOT_BIKE_VOUCHER
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonFanClubChairmanText.bag_full (scripts/PokemonFanClub.asm:209-210) — at scripts/PokemonFanClub.asm:209: .BagFullText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .BagFullText
-; PRET| 	jr .gbpals_print_text
+%assign event_byte -1
+.bag_full:
+    mov esi, .BagFullText
+    jmp .gbpals_print_text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonFanClubChairmanText.nothanks (scripts/PokemonFanClub.asm:212-213) — at scripts/PokemonFanClub.asm:212: .NoStoryText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .NoStoryText
-; PRET| 	jr .gbpals_print_text
+%assign event_byte -1
+.nothanks:
+    mov esi, .NoStoryText
+    jmp .gbpals_print_text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonFanClubChairmanText.nothingleft (scripts/PokemonFanClub.asm:215-221) — at scripts/PokemonFanClub.asm:215: .FinalText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .FinalText
-; PRET| .gbpals_print_text
-; PRET| 	push hl
-; PRET| 	call LoadGBPal
-; PRET| 	pop hl
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.nothingleft:
+    mov esi, .FinalText
+.gbpals_print_text:
+    push esi
+    call LoadGBPal
+    pop esi
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonFanClubChairmanText.select_mon_to_print (scripts/PokemonFanClub.asm:224-236) — at scripts/PokemonFanClub.asm:232: .print is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call GBPalWhiteOutWithDelay3
-; PRET| 	call LoadCurrentMapView
-; PRET| 	call SaveScreenTilesToBuffer2
-; PRET| 	ld a, $ff
-; PRET| 	ld [wUpdateSpritesEnabled], a
-; PRET| 	ld a, $00
-; PRET| 	ld [wTempTilesetNumTiles], a
-; PRET| 	call DisplayPartyMenu
-; PRET| 	jp nc, .print
-; PRET| 	call GBPalWhiteOutWithDelay3
-; PRET| 	call RestoreScreenTilesAndReloadTilePatterns
-; PRET| 	ld hl, Text_59c24
-; PRET| 	jr .gbpals_print_text
+%assign event_byte -1
+.select_mon_to_print:
+    call GBPalWhiteOutWithDelay3
+    call LoadCurrentMapView
+    call SaveScreenTilesToBuffer2
+    mov al, 0xff
+    mov [ebp + wUpdateSpritesEnabled], al
+    mov al, 0x00
+    mov [ebp + wTempTilesetNumTiles], al
+    call DisplayPartyMenu
+    jae .print
+    call GBPalWhiteOutWithDelay3
+    call RestoreScreenTilesAndReloadTilePatterns
+    mov esi, Text_59c24
+    jmp .gbpals_print_text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonFanClubChairmanText.print (scripts/PokemonFanClub.asm:239-257) — at scripts/PokemonFanClub.asm:255: .gbpals_print_text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ld [wUpdateSpritesEnabled], a
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	set BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	callfar PrintFanClubPortrait
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	res BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	call GBPalWhiteOutWithDelay3
-; PRET| 	call ReloadTilesetTilePatterns
-; PRET| 	call RestoreScreenTilesAndReloadTilePatterns
-; PRET| 	call LoadScreenTilesFromBuffer2
-; PRET| 	call Delay3
-; PRET| 	call GBPalNormal
-; PRET| 	ld hl, Text_59c2e
-; PRET| 	ldh a, [hOaksAideResult]
-; PRET| 	and a
-; PRET| 	jr nz, .gbpals_print_text
-; PRET| 	ld hl, Text_59c29
-; PRET| 	jr .gbpals_print_text
+%assign event_byte -1
+.print:
+    xor al, al
+    mov [ebp + wUpdateSpritesEnabled], al
+    mov esi, wStatusFlags5
+    or byte [ebp + esi], (1 << (BIT_NO_TEXT_DELAY))
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call PrintFanClubPortrait
+    mov esi, wStatusFlags5
+    and byte [ebp + esi], ~(1 << (BIT_NO_TEXT_DELAY)) & 0xFF
+    call GBPalWhiteOutWithDelay3
+    call ReloadTilesetTilePatterns
+    call RestoreScreenTilesAndReloadTilePatterns
+    call LoadScreenTilesFromBuffer2
+    call Delay3
+    call GBPalNormal
+    mov esi, Text_59c2e
+    mov al, [ebp + hOaksAideResult]
+    test al, al
+    jnz .gbpals_print_text
+    mov esi, Text_59c29
+    jmp .gbpals_print_text
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] PokemonFanClubChairmanText.IntroText (scripts/PokemonFanClub.asm:260-303) — at scripts/PokemonFanClub.asm:269: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonFanClubChairmanIntroText
-; PRET| 	text_end
-; PRET| 
-; PRET| .StoryText:
-; PRET| 	text_far _PokemonFanClubChairmanStoryText
-; PRET| 	text_end
-; PRET| 
-; PRET| .BikeVoucherText:
-; PRET| 	text_far _PokemonFanClubReceivedBikeVoucherText
-; PRET| 	sound_get_key_item
-; PRET| 	text_far _PokemonFanClubExplainBikeVoucherText
-; PRET| 	text_end
-; PRET| 
-; PRET| .NoStoryText:
-; PRET| 	text_far _PokemonFanClubNoStoryText
-; PRET| 	text_end
-; PRET| 
-; PRET| .FinalText:
-; PRET| 	text_far _PokemonFanClubChairFinalText
-; PRET| 	text_end
-; PRET| 
-; PRET| .BagFullText:
-; PRET| 	text_far _PokemonFanClubBagFullText
-; PRET| 	text_end
-; PRET| 
-; PRET| Text_59c1f:
-; PRET| 	text_far FanClubChairPrintText1
-; PRET| 	text_end
-; PRET| 
-; PRET| Text_59c24:
-; PRET| 	text_far FanClubChairPrintText2
-; PRET| 	text_end
-; PRET| 
-; PRET| Text_59c29:
-; PRET| 	text_far FanClubChairPrintText3
-; PRET| 	text_end
-; PRET| 
-; PRET| Text_59c2e:
-; PRET| 	text_far FanClubChairPrintText4
-; PRET| 	text_end
-; PRET| 
-; PRET| PokemonFanClubReceptionistText:
-; PRET| 	text_far _PokemonFanClubReceptionistText
-; PRET| 	text_end
+%assign event_byte -1
+.IntroText:
+    text_far _PokemonFanClubChairmanIntroText
+    text_end
+.StoryText:
+    text_far _PokemonFanClubChairmanStoryText
+    text_end
+.BikeVoucherText:
+    text_far _PokemonFanClubReceivedBikeVoucherText
+    sound_get_key_item
+    text_far _PokemonFanClubExplainBikeVoucherText
+    text_end
+.NoStoryText:
+    text_far _PokemonFanClubNoStoryText
+    text_end
+.FinalText:
+    text_far _PokemonFanClubChairFinalText
+    text_end
+.BagFullText:
+    text_far _PokemonFanClubBagFullText
+    text_end
+Text_59c1f:
+    text_far FanClubChairPrintText1
+    text_end
+Text_59c24:
+    text_far FanClubChairPrintText2
+    text_end
+Text_59c29:
+    text_far FanClubChairPrintText3
+    text_end
+Text_59c2e:
+    text_far FanClubChairPrintText4
+    text_end
+PokemonFanClubReceptionistText:
+    text_far _PokemonFanClubReceptionistText
+    text_end

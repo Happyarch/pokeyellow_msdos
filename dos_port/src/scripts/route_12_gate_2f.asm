@@ -21,18 +21,20 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global GateUpstairsScript_PrintIfFacingUp
 global Route12Gate2FLeftBinocularsText
 global Route12Gate2FRightBinocularsText
 global Route12Gate2F_Script
 global Route12Gate2F_TextPointers
 
 extern DisableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern GateUpstairsScript_PrintIfFacingUp   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern Route12Gate2FBrunetteGirlText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _Route12Gate2FBrunetteGirlReceivedTM39Text   ; NOT YET DEFINED IN THE PORT
+extern _Route12Gate2FBrunetteGirlTM39ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _Route12Gate2FBrunetteGirlTM39NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _Route12Gate2FBrunetteGirlYouCanHaveThisText   ; NOT YET DEFINED IN THE PORT
 extern _Route12Gate2FLeftBinocularsText   ; NOT YET DEFINED IN THE PORT
 extern _Route12Gate2FRightBinocularsText   ; NOT YET DEFINED IN THE PORT
@@ -73,42 +75,33 @@ Route12Gate2F_TextPointers:
 ; PRET| 	SetEvent EVENT_GOT_TM39
 ; PRET| 	jr .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route12Gate2FBrunetteGirlText.bag_full (scripts/Route12Gate2F.asm:24-26) — at scripts/Route12Gate2F.asm:24: .TM39NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM39NoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .TM39NoRoomText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route12Gate2FBrunetteGirlText.got_item (scripts/Route12Gate2F.asm:28-31) — at scripts/Route12Gate2F.asm:28: .TM39ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM39ExplanationText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_item:
+    mov esi, .TM39ExplanationText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] Route12Gate2FBrunetteGirlText.YouCanHaveThisText (scripts/Route12Gate2F.asm:34-48) — at scripts/Route12Gate2F.asm:39: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route12Gate2FBrunetteGirlYouCanHaveThisText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedTM39Text:
-; PRET| 	text_far _Route12Gate2FBrunetteGirlReceivedTM39Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM39ExplanationText:
-; PRET| 	text_far _Route12Gate2FBrunetteGirlTM39ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM39NoRoomText:
-; PRET| 	text_far _Route12Gate2FBrunetteGirlTM39NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.YouCanHaveThisText:
+    text_far _Route12Gate2FBrunetteGirlYouCanHaveThisText
+    text_end
+.ReceivedTM39Text:
+    text_far _Route12Gate2FBrunetteGirlReceivedTM39Text
+    sound_get_item_1
+    text_end
+.TM39ExplanationText:
+    text_far _Route12Gate2FBrunetteGirlTM39ExplanationText
+    text_end
+.TM39NoRoomText:
+    text_far _Route12Gate2FBrunetteGirlTM39NoRoomText
+    text_end
 
 %assign event_byte -1
 Route12Gate2FLeftBinocularsText:
@@ -130,15 +123,13 @@ Route12Gate2FRightBinocularsText:
     text_far _Route12Gate2FRightBinocularsText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GateUpstairsScript_PrintIfFacingUp (scripts/Route12Gate2F.asm:69-73) — at scripts/Route12Gate2F.asm:73: .done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wSpritePlayerStateData1FacingDirection]
-; PRET| 	cp SPRITE_FACING_UP
-; PRET| 	jr z, .up
-; PRET| 	ld a, TRUE
-; PRET| 	jr .done
+%assign event_byte -1
+GateUpstairsScript_PrintIfFacingUp:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_UP
+    jz .up
+    mov al, 1
+    jmp .done
 
 %assign event_byte -1
 .up:

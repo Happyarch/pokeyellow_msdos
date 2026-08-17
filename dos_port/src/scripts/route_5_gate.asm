@@ -27,7 +27,10 @@ global Route5GatePlayerMovingScript
 global Route5Gate_Script
 global Route5Gate_ScriptPointers
 global Route5Gate_TextPointers
+global SaffronGateGuardGeeImThirstyText
+global SaffronGateGuardGiveDrinkText
 global SaffronGateGuardText
+global SaffronGateGuardThanksForTheDrinkText
 
 extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
@@ -37,13 +40,12 @@ extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern RemoveGuardDrink   ; NOT YET DEFINED IN THE PORT
-extern SaffronGateGuardGeeImThirstyText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGateGuardGiveDrinkText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGateGuardThanksForTheDrinkText   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGateGuardGeeImThirstyText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGateGuardImParchedText   ; NOT YET DEFINED IN THE PORT
+extern _SaffronGateGuardThanksForTheDrinkText   ; NOT YET DEFINED IN THE PORT
+extern _SaffronGateGuardYouCanGoOnThroughText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROUTE5GATE_PLAYER_MOVING                equ 1
@@ -176,19 +178,15 @@ SaffronGateGuardText:
     call PrintText
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] SaffronGateGuardGeeImThirstyText (scripts/Route5Gate.asm:99-110) — at scripts/Route5Gate.asm:104: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SaffronGateGuardGeeImThirstyText
-; PRET| 	text_end
-; PRET| 
-; PRET| SaffronGateGuardGiveDrinkText:
-; PRET| 	text_far _SaffronGateGuardImParchedText
-; PRET| 	sound_get_key_item
-; PRET| 	text_far _SaffronGateGuardYouCanGoOnThroughText
-; PRET| 	text_end
-; PRET| 
-; PRET| SaffronGateGuardThanksForTheDrinkText:
-; PRET| 	text_far _SaffronGateGuardThanksForTheDrinkText
-; PRET| 	text_end
+%assign event_byte -1
+SaffronGateGuardGeeImThirstyText:
+    text_far _SaffronGateGuardGeeImThirstyText
+    text_end
+SaffronGateGuardGiveDrinkText:
+    text_far _SaffronGateGuardImParchedText
+    sound_get_key_item
+    text_far _SaffronGateGuardYouCanGoOnThroughText
+    text_end
+SaffronGateGuardThanksForTheDrinkText:
+    text_far _SaffronGateGuardThanksForTheDrinkText
+    text_end

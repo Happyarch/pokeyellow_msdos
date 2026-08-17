@@ -26,6 +26,7 @@ global SilphCo2FRocket1Text
 global SilphCo2FRocket2Text
 global SilphCo2FScientist1Text
 global SilphCo2FScientist2Text
+global SilphCo2FSilphWorkerFText
 global SilphCo2F_Script
 
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
@@ -36,7 +37,6 @@ extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2FGateCallbackScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2FScientist1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2FSilphWorkerFPleaseTakeThisText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo2FSilphWorkerFText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_UnlockedDoorEventScript   ; NOT YET DEFINED IN THE PORT
@@ -48,6 +48,8 @@ extern SilphCo2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo2FSilphWorkerFReceivedTM36Text   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo2FSilphWorkerFTM36ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo2FSilphWorkerFTM36NoRoomText   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -169,50 +171,41 @@ SilphCo2F_Script:
 
 ; SilphCo2F_ScriptPointers (scripts/SilphCo2F.asm:90-113) — not re-emitted: SilphCo2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo2FSilphWorkerFText (scripts/SilphCo2F.asm:117-127) — at scripts/SilphCo2F.asm:118: .already_have_tm is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_TM36
-; PRET| 	jr nz, .already_have_tm
-; PRET| 	ld hl, .PleaseTakeThisText
-; PRET| 	call PrintText
-; PRET| 	lb bc, TM_SELFDESTRUCT, 1
-; PRET| 	call GiveItem
-; PRET| 	ld hl, .TM36NoRoomText
-; PRET| 	jr nc, .print_text
-; PRET| 	SetEvent EVENT_GOT_TM36
-; PRET| 	ld hl, .ReceivedTM36Text
-; PRET| 	jr .print_text
+%assign event_byte -1
+SilphCo2FSilphWorkerFText:
+    CheckEvent EVENT_GOT_TM36
+    jnz .already_have_tm
+    mov esi, .PleaseTakeThisText
+    call PrintText
+    mov bx, ((238) << 8) | (1)
+    call GiveItem
+    mov esi, .TM36NoRoomText
+    jae .print_text
+    SetEvent EVENT_GOT_TM36
+    mov esi, .ReceivedTM36Text
+    jmp .print_text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo2FSilphWorkerFText.already_have_tm (scripts/SilphCo2F.asm:129-132) — at scripts/SilphCo2F.asm:129: .TM36ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM36ExplanationText
-; PRET| .print_text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.already_have_tm:
+    mov esi, .TM36ExplanationText
+.print_text:
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] SilphCo2FSilphWorkerFText.PleaseTakeThisText (scripts/SilphCo2F.asm:135-149) — at scripts/SilphCo2F.asm:140: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far SilphCo2FSilphWorkerFPleaseTakeThisText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedTM36Text:
-; PRET| 	text_far _SilphCo2FSilphWorkerFReceivedTM36Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM36ExplanationText:
-; PRET| 	text_far _SilphCo2FSilphWorkerFTM36ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM36NoRoomText:
-; PRET| 	text_far _SilphCo2FSilphWorkerFTM36NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.PleaseTakeThisText:
+    text_far SilphCo2FSilphWorkerFPleaseTakeThisText
+    text_end
+.ReceivedTM36Text:
+    text_far _SilphCo2FSilphWorkerFReceivedTM36Text
+    sound_get_item_1
+    text_end
+.TM36ExplanationText:
+    text_far _SilphCo2FSilphWorkerFTM36ExplanationText
+    text_end
+.TM36NoRoomText:
+    text_far _SilphCo2FSilphWorkerFTM36NoRoomText
+    text_end
 
 %assign event_byte -1
 SilphCo2FScientist1Text:

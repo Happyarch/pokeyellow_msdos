@@ -31,12 +31,14 @@ global Route23Guard4Text
 global Route23Guard5Text
 global Route23GuardsYCoords
 global Route23MovePlayerDownScript
+global Route23OhThatIsTheBadgeText
 global Route23PlayerMovingScript
 global Route23PrintOhThatsTheBadgeTextScript
 global Route23ResetToDefaultScript
 global Route23SetVictoryRoadBoulders
 global Route23Swimmer1Text
 global Route23Swimmer2Text
+global Route23VictoryRoadGateSignText
 global Route23YouDontHaveTheBadgeYetText
 global Route23_Script
 global Route23_ScriptPointers
@@ -55,8 +57,6 @@ extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern RainbowBadgeText   ; NOT YET DEFINED IN THE PORT
 extern Route23CopyBadgeTextScript   ; NOT YET DEFINED IN THE PORT
-extern Route23OhThatIsTheBadgeText   ; NOT YET DEFINED IN THE PORT
-extern Route23VictoryRoadGateSignText   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
 extern SoulBadgeText   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
@@ -64,7 +64,9 @@ extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern ThunderBadgeText   ; NOT YET DEFINED IN THE PORT
 extern VolcanoBadgeText   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern _Route23GoRightAheadText   ; NOT YET DEFINED IN THE PORT
 extern _Route23OhThatIsTheBadgeText   ; NOT YET DEFINED IN THE PORT
+extern _Route23VictoryRoadGateSignText   ; NOT YET DEFINED IN THE PORT
 extern _Route23YouDontHaveTheBadgeYetText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
@@ -358,15 +360,12 @@ Route23YouDontHaveTheBadgeYetText:
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] Route23OhThatIsTheBadgeText (scripts/Route23.asm:238-245) — at scripts/Route23.asm:239: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route23OhThatIsTheBadgeText
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _Route23GoRightAheadText
-; PRET| 	text_end
-; PRET| 
-; PRET| Route23VictoryRoadGateSignText:
-; PRET| 	text_far _Route23VictoryRoadGateSignText
-; PRET| 	text_end
+%assign event_byte -1
+Route23OhThatIsTheBadgeText:
+    text_far _Route23OhThatIsTheBadgeText
+    sound_get_item_1
+    text_far _Route23GoRightAheadText
+    text_end
+Route23VictoryRoadGateSignText:
+    text_far _Route23VictoryRoadGateSignText
+    text_end

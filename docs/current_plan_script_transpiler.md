@@ -229,9 +229,9 @@ Each had been quietly widening every analysis in the tool, not just its own clas
 
 ### What the remaining bails need (none is a lowering rule)
 
-* `text-sound-command-unported` 49 / `text-script-command-unported` 16 — ENGINE
-  work. 44 of the 49 are two commands: `sound_get_item_1` (27) and
-  `sound_get_key_item` (17). **The maintainer is handling the sound commands.**
+*The sound and script classes are gone — closed 2026-08-17, and neither was the
+engine work this section claimed. See "Text-command pass" below. The rest stands.*
+
 * `host-pointer-in-16bit-reg` 29 — needs a per-SITE callee table with per-site
   evidence. 17 of them report `callee <none in range>`, and widening the lookahead
   is UNSAFE: `BillsHouse.asm:63` has an intervening `call
@@ -239,7 +239,70 @@ Each had been quietly widening every analysis in the tool, not just its own clas
   the wrong routine.
 * `pointer-domain-unknown` 15 — loop headers whose back-edges join at a different
   stack depth, plus one (`OaksLab.asm:518`) where HL is returned by a callee.
-* `target-region-bailed` 245 — cascade. Not work; it falls with its roots.
+* `target-region-bailed` 245 → 107 — cascade. Not work; it falls with its roots.
+
+## Text-command pass (2026-08-17) — 73.6% → 81.2%
+
+Regions lowered 1,861 → **2,055**; bails 669 → **475**. Same method as the pass
+above: fix the TOOL, retranspile, measure. Two runs byte-identical, 224/224
+assembling, build green, `pkmn.sym` unchanged, core fidelity 16/16.
+
+**The bail's premise was FALSE, and that is the finding.** `text-sound-command-
+unported` claimed "TX_SOUND_* has no port counterpart — gb_text.inc stops at
+TX_DOTS/TX_WAIT_BUTTON/TX_FAR", and `text-script-command-unported` said the same
+of TX_SCRIPT_*. The port implements **both families, faithfully**:
+
+* `src/home/text.asm` `.cmd_sound` carries pret's whole `TextCommandSounds` table
+  — same ten pairs, same order, `PlaySound` + `WaitForSoundToFinish` for the SFX
+  commands and `PlayCry` for the three cries.
+* `src/home/text_script.asm:250-275` dispatches all eight `TX_SCRIPT_*` ids to the
+  real engine routines, and `gb_constants.inc:352-359` already defined all eight
+  constants at pret's values.
+
+The real gap was one layer down and purely clerical: **`gb_text.inc` defined no
+`sound_*` / `script_*` macro**, and the `TX_SOUND_*` constants were *file-local*
+`equ`s inside `text.asm` where no other translation unit could see them. The
+emitter was right to refuse to invent a byte it could not name; its stated reason
+was simply wrong about why. Fix: share the constants and mirror pret's macros in
+`gb_text.inc`, then move both families into `PASSTHROUGH_DATA`.
+
+The reason code that says a thing is *unported* is a NEGATIVE CLAIM and needs the
+same evidence as any other (Evidence and Knowledge Policy). This one had cost 65
+regions and a line in the handoff reading "ENGINE work — the maintainer is
+handling the sound commands".
+
+**Decomposed, because −194 is not −65:**
+
+| | count |
+|---|---:|
+| `text-sound-command-unported` cleared | −47 (2 more changed reason) |
+| `text-script-command-unported` cleared | −16 |
+| `target-region-bailed` cascade | −128 |
+| `local-label-scope-collision` | −2 |
+| `unresolved-symbol` | −1 |
+| **regions that STARTED bailing** | **0** |
+
+Twelve regions changed reason rather than clearing — every one had its real
+blocker masked behind a removed bail. Nine are `target-region-bailed` →
+`event-byte-assembly-state`, and eight of those nine are **gym-leader texts**
+(Brock, Misty, Surge, Erika, Koga, Sabrina, Blaine, Giovanni) — a coherent next
+chunk, not scattered damage. That class reads 15, up from 6, for this reason
+alone.
+
+Bytes verified, not assumed: the 18 macros were assembled and dumped, and all 18
+match pret's values (`0b 0b 0e 0f 10 11 12 13 14 15 16 f5 f6 f7 f9 fc fd ff`).
+`PKMN.EXE` is **byte-identical** across the change, measured by rebuilding with
+the old header — the new macros are inert until the scripts link.
+
+Also fixed here: a quoted operand on ANY text macro now reports `inline-text-db`,
+not `unknown-data-macro`. `para "つり こそ"` (`FuchsiaGoodRodHouse.asm:48`) was
+surfacing as an unknown macro because the quoted-operand check lived on `db`
+alone; it is the ordinary Tier-1 refusal and now counts in the class that says so.
+
+**Still correctly refusing:** `script_mart` — the one `TX_SCRIPT_*` form with an
+operand (`db _NARG / db \# / db -1`, a variadic item list, Tier-1 data owned by a
+generator; `PASSTHROUGH_DATA` models fixed arity only). Zero sites bail on it
+today, so the reason code `text-script-mart-item-list` is currently unexercised.
 
 ## Stage 0 corrections to this plan's own figures (measured 2026-08-16)
 

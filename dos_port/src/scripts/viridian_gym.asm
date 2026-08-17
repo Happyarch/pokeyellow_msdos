@@ -40,9 +40,14 @@ global ViridianGymCooltrainerM1Text
 global ViridianGymCooltrainerM2Text
 global ViridianGymCooltrainerM3Text
 global ViridianGymDefaultScript
+global ViridianGymGiovanniEarthBadgeInfoText
 global ViridianGymGiovanniPostBattle
+global ViridianGymGiovanniReceivedTM27Text
+global ViridianGymGiovanniTM27ExplanationText
+global ViridianGymGiovanniTM27NoRoomText
 global ViridianGymGuidePostBattleText
 global ViridianGymGuidePreBattleText
+global ViridianGymGymGuideText
 global ViridianGymHiker1Text
 global ViridianGymHiker2Text
 global ViridianGymHiker3Text
@@ -81,12 +86,7 @@ extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymCooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymCooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymCooltrainerM3BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymGiovanniEarthBadgeInfoText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymGiovanniReceivedTM27Text   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymGiovanniTM27ExplanationText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymGiovanniTM27NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymGiovanniText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymGymGuideText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymHiker1BattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymHiker2BattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymHiker3BattleText   ; NOT YET DEFINED IN THE PORT
@@ -103,8 +103,13 @@ extern ViridianGymTrainerHeader7   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern ViridianGym_Script   ; NOT YET DEFINED IN THE PORT
 extern ViridianGym_TextPointers   ; NOT YET DEFINED IN THE PORT
+extern _ViridianGymGiovanniEarthBadgeInfoText   ; NOT YET DEFINED IN THE PORT
+extern _ViridianGymGiovanniPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianGymGiovanniPreBattleText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianGymGiovanniReceivedEarthBadgeText   ; NOT YET DEFINED IN THE PORT
+extern _ViridianGymGiovanniReceivedTM27Text   ; NOT YET DEFINED IN THE PORT
+extern _ViridianGymGiovanniTM27ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _ViridianGymGiovanniTM27NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianGymGuidePostBattleText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianGymGuidePreBattleText   ; NOT YET DEFINED IN THE PORT
 
@@ -314,7 +319,7 @@ ViridianGymReceiveTM27:
 ; ViridianGym_TextPointers (scripts/ViridianGym.asm:171-205) — not re-emitted: ViridianGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianGymGiovanniText (scripts/ViridianGym.asm:209-215) — at scripts/ViridianGym.asm:210: .beforeBeat is defined in a region that bailed
+; BAIL[event-byte-assembly-state] ViridianGymGiovanniText (scripts/ViridianGym.asm:209-215) — at scripts/ViridianGym.asm:211: CheckEventReuseA EVENT_GOT_TM27
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_VIRIDIAN_GYM_GIOVANNI
@@ -325,78 +330,67 @@ ViridianGymReceiveTM27:
 ; PRET| 	call DisableWaitingAfterTextDisplay
 ; PRET| 	jr .text_script_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianGymGiovanniText.afterBeat (scripts/ViridianGym.asm:217-228) — at scripts/ViridianGym.asm:219: .PostBattleAdviceText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, .PostBattleAdviceText
-; PRET| 	call PrintText
-; PRET| 	call GBFadeOutToBlack
-; PRET| 	ld a, TOGGLE_VIRIDIAN_GYM_GIOVANNI
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	call UpdateSprites
-; PRET| 	call Delay3
-; PRET| 	call GBFadeInFromBlack
-; PRET| 	jr .text_script_end
+%assign event_byte -1
+.afterBeat:
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, .PostBattleAdviceText
+    call PrintText
+    call GBFadeOutToBlack
+    mov al, 49
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    call UpdateSprites
+    call Delay3
+    call GBFadeInFromBlack
+    jmp .text_script_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianGymGiovanniText.beforeBeat (scripts/ViridianGym.asm:230-247) — at scripts/ViridianGym.asm:230: .PreBattleText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PreBattleText
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, .ReceivedEarthBadgeText
-; PRET| 	ld de, .ReceivedEarthBadgeText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	ld a, $8
-; PRET| 	ld [wGymLeaderNo], a
-; PRET| 	ld a, SCRIPT_VIRIDIANGYM_GIOVANNI_POST_BATTLE
-; PRET| 	ld [wViridianGymCurScript], a
-; PRET| .text_script_end
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.beforeBeat:
+    mov esi, .PreBattleText
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, .ReceivedEarthBadgeText
+    mov edx, .ReceivedEarthBadgeText   ; pret: ld de, .ReceivedEarthBadgeText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hSpriteIndex]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    mov al, 0x8
+    mov [ebp + wGymLeaderNo], al
+    mov al, SCRIPT_VIRIDIANGYM_GIOVANNI_POST_BATTLE
+    mov [ebp + wViridianGymCurScript], al
+.text_script_end:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] ViridianGymGiovanniText.PreBattleText (scripts/ViridianGym.asm:250-277) — at scripts/ViridianGym.asm:255: sound_level_up ; probably supposed to play SFX_GET_ITEM_1 but the wrong music bank is loaded
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _ViridianGymGiovanniPreBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedEarthBadgeText:
-; PRET| 	text_far _ViridianGymGiovanniReceivedEarthBadgeText
-; PRET| 	sound_level_up ; probably supposed to play SFX_GET_ITEM_1 but the wrong music bank is loaded
-; PRET| 	text_end
-; PRET| 
-; PRET| .PostBattleAdviceText:
-; PRET| 	text_far _ViridianGymGiovanniPostBattleAdviceText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymGiovanniEarthBadgeInfoText:
-; PRET| 	text_far _ViridianGymGiovanniEarthBadgeInfoText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymGiovanniReceivedTM27Text:
-; PRET| 	text_far _ViridianGymGiovanniReceivedTM27Text
-; PRET| 	sound_get_item_1
-; PRET| 
-; PRET| ViridianGymGiovanniTM27ExplanationText:
-; PRET| 	text_far _ViridianGymGiovanniTM27ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianGymGiovanniTM27NoRoomText:
-; PRET| 	text_far _ViridianGymGiovanniTM27NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.PreBattleText:
+    text_far _ViridianGymGiovanniPreBattleText
+    text_end
+.ReceivedEarthBadgeText:
+    text_far _ViridianGymGiovanniReceivedEarthBadgeText
+    sound_level_up
+    text_end
+.PostBattleAdviceText:
+    text_far _ViridianGymGiovanniPostBattleAdviceText
+    text_waitbutton
+    text_end
+ViridianGymGiovanniEarthBadgeInfoText:
+    text_far _ViridianGymGiovanniEarthBadgeInfoText
+    text_end
+ViridianGymGiovanniReceivedTM27Text:
+    text_far _ViridianGymGiovanniReceivedTM27Text
+    sound_get_item_1
+ViridianGymGiovanniTM27ExplanationText:
+    text_far _ViridianGymGiovanniTM27ExplanationText
+    text_end
+ViridianGymGiovanniTM27NoRoomText:
+    text_far _ViridianGymGiovanniTM27NoRoomText
+    text_end
 
 %assign event_byte -1
 ViridianGymCooltrainerM1Text:
@@ -462,15 +456,13 @@ ViridianGymCooltrainerM3Text:
 
 ; ViridianGymCooltrainerM3BattleText (scripts/ViridianGym.asm:412-421) — not re-emitted: ViridianGymCooltrainerM3BattleText is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianGymGymGuideText (scripts/ViridianGym.asm:425-429) — at scripts/ViridianGym.asm:426: .afterBeat is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_VIRIDIAN_GYM_GIOVANNI
-; PRET| 	jr nz, .afterBeat
-; PRET| 	ld hl, ViridianGymGuidePreBattleText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+ViridianGymGymGuideText:
+    CheckEvent EVENT_BEAT_VIRIDIAN_GYM_GIOVANNI
+    jnz .afterBeat
+    mov esi, ViridianGymGuidePreBattleText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
 .afterBeat:

@@ -21,23 +21,27 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global MrFujisHouseLittleGirlText
+global MrFujisHouseMrFujiPokedexText
+global MrFujisHouseMrFujiText
 global MrFujisHouseNidorinoText
 global MrFujisHousePsyduckText
+global MrFujisHouseSuperNerdText
 global MrFujisHouse_Script
 global MrFujisHouse_TextPointers
 
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern MrFujisHouseLittleGirlText   ; NOT YET DEFINED IN THE PORT
-extern MrFujisHouseMrFujiPokedexText   ; NOT YET DEFINED IN THE PORT
-extern MrFujisHouseMrFujiText   ; NOT YET DEFINED IN THE PORT
-extern MrFujisHouseSuperNerdText   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _MrFujisHouseLittleGirlPokemonAreNiceToHugText   ; NOT YET DEFINED IN THE PORT
 extern _MrFujisHouseLittleGirlThisIsMrFujisHouseText   ; NOT YET DEFINED IN THE PORT
+extern _MrFujisHouseMrFujiHasMyFluteHelpedYouText   ; NOT YET DEFINED IN THE PORT
 extern _MrFujisHouseMrFujiIThinkThisMayHelpYourQuestText   ; NOT YET DEFINED IN THE PORT
+extern _MrFujisHouseMrFujiPokeFluteExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _MrFujisHouseMrFujiPokeFluteNoRoomText   ; NOT YET DEFINED IN THE PORT
+extern _MrFujisHouseMrFujiPokedexText   ; NOT YET DEFINED IN THE PORT
 extern _MrFujisHouseMrFujiReceivedPokeFluteText   ; NOT YET DEFINED IN THE PORT
 extern _MrFujisHouseNidorinoText   ; NOT YET DEFINED IN THE PORT
 extern _MrFujisHousePsyduckText   ; NOT YET DEFINED IN THE PORT
@@ -64,15 +68,13 @@ MrFujisHouse_TextPointers:
     dd MrFujisHouseMrFujiText
     dd MrFujisHouseMrFujiPokedexText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MrFujisHouseSuperNerdText (scripts/MrFujisHouse.asm:16-20) — at scripts/MrFujisHouse.asm:17: .rescued_mr_fuji is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_RESCUED_MR_FUJI
-; PRET| 	jr nz, .rescued_mr_fuji
-; PRET| 	ld hl, .MrFujiIsntHereText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+MrFujisHouseSuperNerdText:
+    CheckEvent EVENT_RESCUED_MR_FUJI
+    jnz .rescued_mr_fuji
+    mov esi, .MrFujiIsntHereText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
 .rescued_mr_fuji:
@@ -89,24 +91,20 @@ MrFujisHouse_TextPointers:
     text_far _MrFujisHouseSuperNerdMrFujiHadBeenPrayingText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MrFujisHouseLittleGirlText (scripts/MrFujisHouse.asm:37-41) — at scripts/MrFujisHouse.asm:38: .rescued_mr_fuji is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_RESCUED_MR_FUJI
-; PRET| 	jr nz, .rescued_mr_fuji
-; PRET| 	ld hl, .ThisIsMrFujisHouseText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+MrFujisHouseLittleGirlText:
+    CheckEvent EVENT_RESCUED_MR_FUJI
+    jnz .rescued_mr_fuji
+    mov esi, .ThisIsMrFujisHouseText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] MrFujisHouseLittleGirlText.rescued_mr_fuji (scripts/MrFujisHouse.asm:43-46)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PokemonAreNiceToHugText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.rescued_mr_fuji:
+    mov esi, .PokemonAreNiceToHugText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
 %assign event_byte -1
 .ThisIsMrFujisHouseText:
@@ -132,60 +130,48 @@ MrFujisHouseNidorinoText:
     call PlayCry
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MrFujisHouseMrFujiText (scripts/MrFujisHouse.asm:72-82) — at scripts/MrFujisHouse.asm:73: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_POKE_FLUTE
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .IThinkThisMayHelpYourQuestText
-; PRET| 	call PrintText
-; PRET| 	lb bc, POKE_FLUTE, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .ReceivedPokeFluteText
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_POKE_FLUTE
-; PRET| 	jr .done
+%assign event_byte -1
+MrFujisHouseMrFujiText:
+    CheckEvent EVENT_GOT_POKE_FLUTE
+    jnz .got_item
+    mov esi, .IThinkThisMayHelpYourQuestText
+    call PrintText
+    mov bx, ((73) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .ReceivedPokeFluteText
+    call PrintText
+    SetEvent EVENT_GOT_POKE_FLUTE
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MrFujisHouseMrFujiText.bag_full (scripts/MrFujisHouse.asm:84-86) — at scripts/MrFujisHouse.asm:84: .PokeFluteNoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PokeFluteNoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .PokeFluteNoRoomText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MrFujisHouseMrFujiText.got_item (scripts/MrFujisHouse.asm:88-91) — at scripts/MrFujisHouse.asm:88: .HasMyFluteHelpedYouText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HasMyFluteHelpedYouText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_item:
+    mov esi, .HasMyFluteHelpedYouText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] MrFujisHouseMrFujiText.IThinkThisMayHelpYourQuestText (scripts/MrFujisHouse.asm:94-113) — at scripts/MrFujisHouse.asm:99: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _MrFujisHouseMrFujiIThinkThisMayHelpYourQuestText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedPokeFluteText:
-; PRET| 	text_far _MrFujisHouseMrFujiReceivedPokeFluteText
-; PRET| 	sound_get_key_item
-; PRET| 	text_far _MrFujisHouseMrFujiPokeFluteExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .PokeFluteNoRoomText:
-; PRET| 	text_far _MrFujisHouseMrFujiPokeFluteNoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| .HasMyFluteHelpedYouText:
-; PRET| 	text_far _MrFujisHouseMrFujiHasMyFluteHelpedYouText
-; PRET| 	text_end
-; PRET| 
-; PRET| MrFujisHouseMrFujiPokedexText:
-; PRET| 	text_far _MrFujisHouseMrFujiPokedexText
-; PRET| 	text_end
+%assign event_byte -1
+.IThinkThisMayHelpYourQuestText:
+    text_far _MrFujisHouseMrFujiIThinkThisMayHelpYourQuestText
+    text_end
+.ReceivedPokeFluteText:
+    text_far _MrFujisHouseMrFujiReceivedPokeFluteText
+    sound_get_key_item
+    text_far _MrFujisHouseMrFujiPokeFluteExplanationText
+    text_end
+.PokeFluteNoRoomText:
+    text_far _MrFujisHouseMrFujiPokeFluteNoRoomText
+    text_end
+.HasMyFluteHelpedYouText:
+    text_far _MrFujisHouseMrFujiHasMyFluteHelpedYouText
+    text_end
+MrFujisHouseMrFujiPokedexText:
+    text_far _MrFujisHouseMrFujiPokedexText
+    text_end

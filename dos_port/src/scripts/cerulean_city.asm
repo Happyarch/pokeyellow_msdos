@@ -26,10 +26,12 @@ global CeruleanCityBikeShopSign
 global CeruleanCityClearScripts
 global CeruleanCityCooltrainerF1Text
 global CeruleanCityCooltrainerF2Text
+global CeruleanCityCooltrainerMText
 global CeruleanCityCoords1
 global CeruleanCityCoords2
 global CeruleanCityElectrodeText
 global CeruleanCityFaceRivalScript
+global CeruleanCityGuardText
 global CeruleanCityGymSign
 global CeruleanCityMovement1
 global CeruleanCityMovement3
@@ -41,7 +43,10 @@ global CeruleanCityRivalIWentToBillsText
 global CeruleanCityRivalText
 global CeruleanCityRivalVictoryText
 global CeruleanCityRocketDefeatedScript
+global CeruleanCityRocketText
 global CeruleanCitySignText
+global CeruleanCitySuperNerd1Text
+global CeruleanCitySuperNerd2Text
 global CeruleanCitySuperNerd3Text
 global CeruleanCityTrainerTipsText
 global CeruleanCity_Script
@@ -50,14 +55,10 @@ global CeruleanCity_TextPointers
 global CeruleanHideRocket
 
 extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern CeruleanCityCooltrainerMText   ; NOT YET DEFINED IN THE PORT
 extern CeruleanCityDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern CeruleanCityGuardText   ; NOT YET DEFINED IN THE PORT
 extern CeruleanCityRivalDefeatedScript   ; NOT YET DEFINED IN THE PORT
-extern CeruleanCityRocketText   ; NOT YET DEFINED IN THE PORT
-extern CeruleanCitySuperNerd1Text   ; NOT YET DEFINED IN THE PORT
-extern CeruleanCitySuperNerd2Text   ; NOT YET DEFINED IN THE PORT
 extern Delay3   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
@@ -85,18 +86,26 @@ extern _CeruleanCityCooltrainerF1ElectrodePunchText   ; NOT YET DEFINED IN THE P
 extern _CeruleanCityCooltrainerF1ElectrodeUseSonicboomText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityCooltrainerF1ElectrodeWithdrawText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityCooltrainerF2Text   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanCityCooltrainerMText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityElectrodeIgnoredOrdersText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityElectrodeIsLoafingAroundText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityElectrodeTookASnoozeText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityElectrodeTurnedAwayText   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanCityGuardText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityGymSign   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityRivalDefeatedText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityRivalIWentToBillsText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityRivalPreBattleText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityRivalVictoryText   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanCityRocketIBetterGetMovingText   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanCityRocketIGiveUpText   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanCityRocketIllReturnTheTMText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityRocketReceivedTM28Text   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanCityRocketTM28NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityRocketText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCitySignText   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanCitySuperNerd1Text   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanCitySuperNerd2Text   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCitySuperNerd3Text   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanCityTrainerTipsText   ; NOT YET DEFINED IN THE PORT
 
@@ -406,94 +415,79 @@ CeruleanCityRivalIWentToBillsText:
     text_far _CeruleanCityRivalIWentToBillsText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanCityRocketText (scripts/CeruleanCity.asm:269-285) — at scripts/CeruleanCity.asm:270: .beatRocketThief is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_CERULEAN_ROCKET_THIEF
-; PRET| 	jr nz, .beatRocketThief
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, .IGiveUpText
-; PRET| 	ld de, .IGiveUpText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hTextID]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	ld a, SCRIPT_CERULEANCITY_ROCKET_DEFEATED
-; PRET| 	ld [wCeruleanCityCurScript], a
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+CeruleanCityRocketText:
+    CheckEvent EVENT_BEAT_CERULEAN_ROCKET_THIEF
+    jnz .beatRocketThief
+    mov esi, .Text
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, .IGiveUpText
+    mov edx, .IGiveUpText   ; pret: ld de, .IGiveUpText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hTextID]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    mov al, SCRIPT_CERULEANCITY_ROCKET_DEFEATED
+    mov [ebp + wCeruleanCityCurScript], al
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanCityRocketText.beatRocketThief (scripts/CeruleanCity.asm:287-294) — at scripts/CeruleanCity.asm:287: .IllReturnTheTMText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .IllReturnTheTMText
-; PRET| 	call PrintText
-; PRET| 	lb bc, TM_DIG, 1
-; PRET| 	call GiveItem
-; PRET| 	jr c, .Success
-; PRET| 	ld hl, .TM28NoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .Done
+%assign event_byte -1
+.beatRocketThief:
+    mov esi, .IllReturnTheTMText
+    call PrintText
+    mov bx, ((230) << 8) | (1)
+    call GiveItem
+    jb .Success
+    mov esi, .TM28NoRoomText
+    call PrintText
+    jmp .Done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanCityRocketText.Success (scripts/CeruleanCity.asm:296-302) — at scripts/CeruleanCity.asm:298: .ReceivedTM28Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, .ReceivedTM28Text
-; PRET| 	call PrintText
-; PRET| 	farcall CeruleanHideRocket
-; PRET| .Done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.Success:
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, .ReceivedTM28Text
+    call PrintText
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call CeruleanHideRocket
+.Done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CeruleanCityRocketText.Text (scripts/CeruleanCity.asm:305-341) — at scripts/CeruleanCity.asm:310: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeruleanCityRocketText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedTM28Text:
-; PRET| 	text_far _CeruleanCityRocketReceivedTM28Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _CeruleanCityRocketIBetterGetMovingText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM28NoRoomText:
-; PRET| 	text_far _CeruleanCityRocketTM28NoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| .IGiveUpText:
-; PRET| 	text_far _CeruleanCityRocketIGiveUpText
-; PRET| 	text_end
-; PRET| 
-; PRET| .IllReturnTheTMText:
-; PRET| 	text_far _CeruleanCityRocketIllReturnTheTMText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanCityCooltrainerMText:
-; PRET| 	text_far _CeruleanCityCooltrainerMText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanCitySuperNerd1Text:
-; PRET| 	text_far _CeruleanCitySuperNerd1Text
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanCitySuperNerd2Text:
-; PRET| 	text_far _CeruleanCitySuperNerd2Text
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanCityGuardText:
-; PRET| 	text_far _CeruleanCityGuardText
-; PRET| 	text_end
+%assign event_byte -1
+.Text:
+    text_far _CeruleanCityRocketText
+    text_end
+.ReceivedTM28Text:
+    text_far _CeruleanCityRocketReceivedTM28Text
+    sound_get_item_1
+    text_far _CeruleanCityRocketIBetterGetMovingText
+    text_waitbutton
+    text_end
+.TM28NoRoomText:
+    text_far _CeruleanCityRocketTM28NoRoomText
+    text_end
+.IGiveUpText:
+    text_far _CeruleanCityRocketIGiveUpText
+    text_end
+.IllReturnTheTMText:
+    text_far _CeruleanCityRocketIllReturnTheTMText
+    text_end
+CeruleanCityCooltrainerMText:
+    text_far _CeruleanCityCooltrainerMText
+    text_end
+CeruleanCitySuperNerd1Text:
+    text_far _CeruleanCitySuperNerd1Text
+    text_end
+CeruleanCitySuperNerd2Text:
+    text_far _CeruleanCitySuperNerd2Text
+    text_end
+CeruleanCityGuardText:
+    text_far _CeruleanCityGuardText
+    text_end
 
 %assign event_byte -1
 CeruleanCityCooltrainerF1Text:

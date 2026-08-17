@@ -23,6 +23,9 @@ bits 32
 %include "assets/audio_constants.inc"
 
 global CinnabarGymBlainePostBattleScript
+global CinnabarGymBlaineReceivedTM38Text
+global CinnabarGymBlaineTM38NoRoomText
+global CinnabarGymBlaineVolcanoBadgeInfoText
 global CinnabarGymFlagAction
 global CinnabarGymGetOpponentTextScript
 global CinnabarGymGymGuideText
@@ -65,10 +68,7 @@ global TextPointers_f215d
 extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern CinnabarGymBlaineReceivedTM38Text   ; NOT YET DEFINED IN THE PORT
-extern CinnabarGymBlaineTM38NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymBlaineText   ; NOT YET DEFINED IN THE PORT
-extern CinnabarGymBlaineVolcanoBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymSetMapAndTiles   ; NOT YET DEFINED IN THE PORT
 extern DelayFrames   ; NOT YET DEFINED IN THE PORT
@@ -88,8 +88,13 @@ extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern UpdateCinnabarGymGateTileBlocks   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarGymBlainePostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarGymBlainePreBattleText   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarGymBlaineReceivedTM38Text   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarGymBlaineReceivedVolcanoBadgeText   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarGymBlaineTM38ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarGymBlaineTM38NoRoomText   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarGymBlaineVolcanoBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarGymGymGuideBeatBlaineText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarGymGymGuideChampInMakingText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarGymSuperNerd1AfterBattleText   ; NOT YET DEFINED IN THE PORT
@@ -456,7 +461,7 @@ CinnabarGymStartBattleScript:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarGymBlaineText (scripts/CinnabarGym.asm:274-280) — at scripts/CinnabarGym.asm:275: .beforeBeat is defined in a region that bailed
+; BAIL[event-byte-assembly-state] CinnabarGymBlaineText (scripts/CinnabarGym.asm:274-280) — at scripts/CinnabarGym.asm:276: CheckEventReuseA EVENT_GOT_TM38
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_BLAINE
@@ -467,57 +472,46 @@ CinnabarGymStartBattleScript:
 ; PRET| 	call DisableWaitingAfterTextDisplay
 ; PRET| 	jp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarGymBlaineText.afterBeat (scripts/CinnabarGym.asm:282-284) — at scripts/CinnabarGym.asm:282: .PostBattleAdviceText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PostBattleAdviceText
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.afterBeat:
+    mov esi, .PostBattleAdviceText
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarGymBlaineText.beforeBeat (scripts/CinnabarGym.asm:286-293) — at scripts/CinnabarGym.asm:286: .PreBattleText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PreBattleText
-; PRET| 	call PrintText
-; PRET| 	ld hl, .ReceivedVolcanoBadgeText
-; PRET| 	ld de, .ReceivedVolcanoBadgeText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ld a, $7
-; PRET| 	ld [wGymLeaderNo], a
-; PRET| 	jp CinnabarGymStartBattleScript
+%assign event_byte -1
+.beforeBeat:
+    mov esi, .PreBattleText
+    call PrintText
+    mov esi, .ReceivedVolcanoBadgeText
+    mov edx, .ReceivedVolcanoBadgeText   ; pret: ld de, .ReceivedVolcanoBadgeText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, 0x7
+    mov [ebp + wGymLeaderNo], al
+    jmp CinnabarGymStartBattleScript
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CinnabarGymBlaineText.PreBattleText (scripts/CinnabarGym.asm:296-321) — at scripts/CinnabarGym.asm:301: sound_get_key_item ; actually plays the second channel of SFX_BALL_POOF due to the wrong music bank being loaded
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CinnabarGymBlainePreBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedVolcanoBadgeText:
-; PRET| 	text_far _CinnabarGymBlaineReceivedVolcanoBadgeText
-; PRET| 	sound_get_key_item ; actually plays the second channel of SFX_BALL_POOF due to the wrong music bank being loaded
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| .PostBattleAdviceText:
-; PRET| 	text_far _CinnabarGymBlainePostBattleAdviceText
-; PRET| 	text_end
-; PRET| 
-; PRET| CinnabarGymBlaineVolcanoBadgeInfoText:
-; PRET| 	text_far _CinnabarGymBlaineVolcanoBadgeInfoText
-; PRET| 	text_end
-; PRET| 
-; PRET| CinnabarGymBlaineReceivedTM38Text:
-; PRET| 	text_far _CinnabarGymBlaineReceivedTM38Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _CinnabarGymBlaineTM38ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| CinnabarGymBlaineTM38NoRoomText:
-; PRET| 	text_far _CinnabarGymBlaineTM38NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.PreBattleText:
+    text_far _CinnabarGymBlainePreBattleText
+    text_end
+.ReceivedVolcanoBadgeText:
+    text_far _CinnabarGymBlaineReceivedVolcanoBadgeText
+    sound_get_key_item
+    text_waitbutton
+    text_end
+.PostBattleAdviceText:
+    text_far _CinnabarGymBlainePostBattleAdviceText
+    text_end
+CinnabarGymBlaineVolcanoBadgeInfoText:
+    text_far _CinnabarGymBlaineVolcanoBadgeInfoText
+    text_end
+CinnabarGymBlaineReceivedTM38Text:
+    text_far _CinnabarGymBlaineReceivedTM38Text
+    sound_get_item_1
+    text_far _CinnabarGymBlaineTM38ExplanationText
+    text_end
+CinnabarGymBlaineTM38NoRoomText:
+    text_far _CinnabarGymBlaineTM38NoRoomText
+    text_end
 
 %assign event_byte -1
 CinnabarGymSuperNerd1:

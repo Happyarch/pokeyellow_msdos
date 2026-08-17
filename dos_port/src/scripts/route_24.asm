@@ -25,6 +25,7 @@ bits 32
 global Route24AfterRocketBattleScript
 global Route24CooltrainerF1Text
 global Route24CooltrainerF2Text
+global Route24CooltrainerM1Text
 global Route24CooltrainerM2Text
 global Route24CooltrainerM3Text
 global Route24CooltrainerM4Text
@@ -54,7 +55,6 @@ extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern GivePokemon   ; NOT YET DEFINED IN THE PORT
 extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerM1Text   ; NOT YET DEFINED IN THE PORT
 extern Route24CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -71,7 +71,13 @@ extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
 extern WaitForTextScrollButtonPress   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern _Route24CooltrainerM1DefeatedText   ; NOT YET DEFINED IN THE PORT
+extern _Route24CooltrainerM1JoinTeamRocketText   ; NOT YET DEFINED IN THE PORT
+extern _Route24CooltrainerM1NoRoomText   ; NOT YET DEFINED IN THE PORT
+extern _Route24CooltrainerM1ReceivedNuggetText   ; NOT YET DEFINED IN THE PORT
 extern _Route24CooltrainerM1YouBeatOurContestText   ; NOT YET DEFINED IN THE PORT
+extern _Route24CooltrainerM1YouCouldBecomeATopLeaderText   ; NOT YET DEFINED IN THE PORT
+extern _Route24CooltrainerM1YouJustEarnedAPrizeText   ; NOT YET DEFINED IN THE PORT
 extern _Route24DamianText1   ; NOT YET DEFINED IN THE PORT
 extern _Route24DamianText2   ; NOT YET DEFINED IN THE PORT
 extern _Route24DamianText3   ; NOT YET DEFINED IN THE PORT
@@ -185,87 +191,76 @@ Route24AfterRocketBattleScript:
 
 ; Route24_TextPointers (scripts/Route24.asm:81-106) — not re-emitted: Route24TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route24CooltrainerM1Text (scripts/Route24.asm:110-138) — at scripts/Route24.asm:112: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ResetEvent EVENT_NUGGET_REWARD_AVAILABLE
-; PRET| 	CheckEvent EVENT_GOT_NUGGET
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .YouBeatOurContestText
-; PRET| 	call PrintText
-; PRET| 	lb bc, NUGGET, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	SetEvent EVENT_GOT_NUGGET
-; PRET| 	ld hl, .ReceivedNuggetText
-; PRET| 	call PrintText
-; PRET| 	ld hl, .JoinTeamRocketText
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, .DefeatedText
-; PRET| 	ld de, .DefeatedText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, SCRIPT_ROUTE24_AFTER_ROCKET_BATTLE
-; PRET| 	ld [wRoute24CurScript], a
-; PRET| 	ld [wCurMapScript], a
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+Route24CooltrainerM1Text:
+    pushfd    ; SM83 form writes no flags
+        ResetEvent EVENT_NUGGET_REWARD_AVAILABLE
+    popfd
+    CheckEvent EVENT_GOT_NUGGET
+    jnz .got_item
+    mov esi, .YouBeatOurContestText
+    call PrintText
+    mov bx, ((49) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    SetEvent EVENT_GOT_NUGGET
+    mov esi, .ReceivedNuggetText
+    call PrintText
+    mov esi, .JoinTeamRocketText
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, .DefeatedText
+    mov edx, .DefeatedText   ; pret: ld de, .DefeatedText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hSpriteIndex]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, SCRIPT_ROUTE24_AFTER_ROCKET_BATTLE
+    mov [ebp + wRoute24CurScript], al
+    mov [ebp + wCurMapScript], al
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route24CooltrainerM1Text.got_item (scripts/Route24.asm:140-142) — at scripts/Route24.asm:140: .YouCouldBecomeATopLeaderText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .YouCouldBecomeATopLeaderText
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_item:
+    mov esi, .YouCouldBecomeATopLeaderText
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route24CooltrainerM1Text.bag_full (scripts/Route24.asm:144-147) — at scripts/Route24.asm:144: .NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .NoRoomText
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_NUGGET_REWARD_AVAILABLE
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.bag_full:
+    mov esi, .NoRoomText
+    call PrintText
+    SetEvent EVENT_NUGGET_REWARD_AVAILABLE
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] Route24CooltrainerM1Text.YouBeatOurContestText (scripts/Route24.asm:150-175) — at scripts/Route24.asm:151: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route24CooltrainerM1YouBeatOurContestText
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _Route24CooltrainerM1YouJustEarnedAPrizeText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedNuggetText:
-; PRET| 	text_far _Route24CooltrainerM1ReceivedNuggetText
-; PRET| 	sound_get_key_item
-; PRET| 	text_promptbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| .NoRoomText:
-; PRET| 	text_far _Route24CooltrainerM1NoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| .JoinTeamRocketText:
-; PRET| 	text_far _Route24CooltrainerM1JoinTeamRocketText
-; PRET| 	text_end
-; PRET| 
-; PRET| .DefeatedText:
-; PRET| 	text_far _Route24CooltrainerM1DefeatedText
-; PRET| 	text_end
-; PRET| 
-; PRET| .YouCouldBecomeATopLeaderText:
-; PRET| 	text_far _Route24CooltrainerM1YouCouldBecomeATopLeaderText
-; PRET| 	text_end
+%assign event_byte -1
+.YouBeatOurContestText:
+    text_far _Route24CooltrainerM1YouBeatOurContestText
+    sound_get_item_1
+    text_far _Route24CooltrainerM1YouJustEarnedAPrizeText
+    text_end
+.ReceivedNuggetText:
+    text_far _Route24CooltrainerM1ReceivedNuggetText
+    sound_get_key_item
+    text_promptbutton
+    text_end
+.NoRoomText:
+    text_far _Route24CooltrainerM1NoRoomText
+    text_end
+.JoinTeamRocketText:
+    text_far _Route24CooltrainerM1JoinTeamRocketText
+    text_end
+.DefeatedText:
+    text_far _Route24CooltrainerM1DefeatedText
+    text_end
+.YouCouldBecomeATopLeaderText:
+    text_far _Route24CooltrainerM1YouCouldBecomeATopLeaderText
+    text_end
 
 %assign event_byte -1
 Route24CooltrainerM2Text:

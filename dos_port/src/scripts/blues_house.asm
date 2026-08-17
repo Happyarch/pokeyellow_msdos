@@ -21,28 +21,32 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global BluesHouseDaisyBagFullText
+global BluesHouseDaisyOfferMapText
+global BluesHouseDaisyRivalAtLabText
 global BluesHouseDaisySittingText
+global BluesHouseDaisyUseMapText
+global BluesHouseDaisyWalkingText
 global BluesHouseDefaultScript
 global BluesHouseNoopScript
+global BluesHouseTownMapText
 global BluesHouse_Script
 global BluesHouse_ScriptPointers
 global BluesHouse_TextPointers
+global GotMapText
 
-extern BluesHouseDaisyBagFullText   ; NOT YET DEFINED IN THE PORT
-extern BluesHouseDaisyOfferMapText   ; NOT YET DEFINED IN THE PORT
-extern BluesHouseDaisyRivalAtLabText   ; NOT YET DEFINED IN THE PORT
-extern BluesHouseDaisyUseMapText   ; NOT YET DEFINED IN THE PORT
-extern BluesHouseDaisyWalkingText   ; NOT YET DEFINED IN THE PORT
-extern BluesHouseTownMapText   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern GotMapText   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern _BluesHouseDaisyBagFullText   ; NOT YET DEFINED IN THE PORT
 extern _BluesHouseDaisyOfferMapText   ; NOT YET DEFINED IN THE PORT
 extern _BluesHouseDaisyRivalAtLabText   ; NOT YET DEFINED IN THE PORT
+extern _BluesHouseDaisyUseMapText   ; NOT YET DEFINED IN THE PORT
+extern _BluesHouseDaisyWalkingText   ; NOT YET DEFINED IN THE PORT
+extern _BluesHouseTownMapText   ; NOT YET DEFINED IN THE PORT
 extern _GotMapText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
@@ -124,34 +128,26 @@ BluesHouseDaisySittingText:
 .done:
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] BluesHouseDaisyRivalAtLabText (scripts/BluesHouse.asm:62-88) — at scripts/BluesHouse.asm:71: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _BluesHouseDaisyRivalAtLabText
-; PRET| 	text_end
-; PRET| 
-; PRET| BluesHouseDaisyOfferMapText:
-; PRET| 	text_far _BluesHouseDaisyOfferMapText
-; PRET| 	text_end
-; PRET| 
-; PRET| GotMapText:
-; PRET| 	text_far _GotMapText
-; PRET| 	sound_get_key_item
-; PRET| 	text_end
-; PRET| 
-; PRET| BluesHouseDaisyBagFullText:
-; PRET| 	text_far _BluesHouseDaisyBagFullText
-; PRET| 	text_end
-; PRET| 
-; PRET| BluesHouseDaisyUseMapText:
-; PRET| 	text_far _BluesHouseDaisyUseMapText
-; PRET| 	text_end
-; PRET| 
-; PRET| BluesHouseDaisyWalkingText:
-; PRET| 	text_far _BluesHouseDaisyWalkingText
-; PRET| 	text_end
-; PRET| 
-; PRET| BluesHouseTownMapText:
-; PRET| 	text_far _BluesHouseTownMapText
-; PRET| 	text_end
+%assign event_byte -1
+BluesHouseDaisyRivalAtLabText:
+    text_far _BluesHouseDaisyRivalAtLabText
+    text_end
+BluesHouseDaisyOfferMapText:
+    text_far _BluesHouseDaisyOfferMapText
+    text_end
+GotMapText:
+    text_far _GotMapText
+    sound_get_key_item
+    text_end
+BluesHouseDaisyBagFullText:
+    text_far _BluesHouseDaisyBagFullText
+    text_end
+BluesHouseDaisyUseMapText:
+    text_far _BluesHouseDaisyUseMapText
+    text_end
+BluesHouseDaisyWalkingText:
+    text_far _BluesHouseDaisyWalkingText
+    text_end
+BluesHouseTownMapText:
+    text_far _BluesHouseTownMapText
+    text_end

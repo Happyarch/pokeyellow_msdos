@@ -23,9 +23,13 @@ bits 32
 %include "assets/audio_constants.inc"
 %include "assets/trainer_headers.inc"
 
+global SilphCo10FGiovanniILostAgainText
+global SilphCo11FBeautyText
 global SilphCo11FGateCallbackScript
 global SilphCo11FGiovanniAfterBattleScript
 global SilphCo11FGiovanniStartBattleScript
+global SilphCo11FGiovanniText
+global SilphCo11FGiovanniYouRuinedOurPlansText
 global SilphCo11FMovementData_622f5
 global SilphCo11FMovementData_622fb
 global SilphCo11FMovementData_62300
@@ -47,6 +51,7 @@ global SilphCo11FScript_HideObject
 global SilphCo11FScript_ShowObject
 global SilphCo11FSetCurScript
 global SilphCo11FSetUnlockedDoorEventScript
+global SilphCo11FSilphPresidentText
 global SilphCo11FTeamRocketLeavesScript
 global SilphCo11FText10
 global SilphCo11FText9
@@ -80,17 +85,12 @@ extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteMovementBytesToFF   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10FGiovanniILostAgainText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FBeautyText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FGiovanniText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FGiovanniYouRuinedOurPlansText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FRocketBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript5   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript6   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript7   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript8   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FSilphPresidentText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11TrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -99,6 +99,12 @@ extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo10FGiovanniILostAgainText   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo11FBeautyText   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo11FGiovanniText   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo11FGiovanniYouRuinedOurPlansText   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo11FSilphPresidentMasterBallDescriptionText   ; NOT YET DEFINED IN THE PORT
+extern _SilphCo11FSilphPresidentNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo11FSilphPresidentReceivedMasterBallText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo11FSilphPresidentText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCoJessieJamesText2   ; NOT YET DEFINED IN THE PORT
@@ -695,74 +701,59 @@ SilphCo11FText10:
     call DelayFrames
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo11FSilphPresidentText (scripts/SilphCo11F.asm:524-534) — at scripts/SilphCo11F.asm:525: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_MASTER_BALL
-; PRET| 	jp nz, .got_item
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	lb bc, MASTER_BALL, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .ReceivedMasterBallText
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_MASTER_BALL
-; PRET| 	jr .done
+%assign event_byte -1
+SilphCo11FSilphPresidentText:
+    CheckEvent EVENT_GOT_MASTER_BALL
+    jnz .got_item
+    mov esi, .Text
+    call PrintText
+    mov bx, ((MASTER_BALL) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .ReceivedMasterBallText
+    call PrintText
+    SetEvent EVENT_GOT_MASTER_BALL
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo11FSilphPresidentText.bag_full (scripts/SilphCo11F.asm:536-538) — at scripts/SilphCo11F.asm:536: .NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .NoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .NoRoomText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SilphCo11FSilphPresidentText.got_item (scripts/SilphCo11F.asm:540-543) — at scripts/SilphCo11F.asm:540: .MasterBallDescriptionText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .MasterBallDescriptionText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_item:
+    mov esi, .MasterBallDescriptionText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] SilphCo11FSilphPresidentText.Text (scripts/SilphCo11F.asm:546-576) — at scripts/SilphCo11F.asm:551: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SilphCo11FSilphPresidentText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedMasterBallText:
-; PRET| 	text_far _SilphCo11FSilphPresidentReceivedMasterBallText
-; PRET| 	sound_get_key_item
-; PRET| 	text_end
-; PRET| 
-; PRET| .MasterBallDescriptionText:
-; PRET| 	text_far _SilphCo11FSilphPresidentMasterBallDescriptionText
-; PRET| 	text_end
-; PRET| 
-; PRET| .NoRoomText:
-; PRET| 	text_far _SilphCo11FSilphPresidentNoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo11FBeautyText:
-; PRET| 	text_far _SilphCo11FBeautyText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo11FGiovanniText:
-; PRET| 	text_far _SilphCo11FGiovanniText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo10FGiovanniILostAgainText:
-; PRET| 	text_far _SilphCo10FGiovanniILostAgainText
-; PRET| 	text_end
-; PRET| 
-; PRET| SilphCo11FGiovanniYouRuinedOurPlansText:
-; PRET| 	text_far _SilphCo11FGiovanniYouRuinedOurPlansText
-; PRET| 	text_end
+%assign event_byte -1
+.Text:
+    text_far _SilphCo11FSilphPresidentText
+    text_end
+.ReceivedMasterBallText:
+    text_far _SilphCo11FSilphPresidentReceivedMasterBallText
+    sound_get_key_item
+    text_end
+.MasterBallDescriptionText:
+    text_far _SilphCo11FSilphPresidentMasterBallDescriptionText
+    text_end
+.NoRoomText:
+    text_far _SilphCo11FSilphPresidentNoRoomText
+    text_end
+SilphCo11FBeautyText:
+    text_far _SilphCo11FBeautyText
+    text_end
+SilphCo11FGiovanniText:
+    text_far _SilphCo11FGiovanniText
+    text_end
+SilphCo10FGiovanniILostAgainText:
+    text_far _SilphCo10FGiovanniILostAgainText
+    text_end
+SilphCo11FGiovanniYouRuinedOurPlansText:
+    text_far _SilphCo11FGiovanniYouRuinedOurPlansText
+    text_end
 
 %assign event_byte -1
 SilphCo11FRocketText:

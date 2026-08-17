@@ -92,7 +92,7 @@ FuchsiaGoodRodHouse_TextPointers:
 ; PRET| 	jp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] FuchsiaGoodRodHouseFishingGuruText.Text (scripts/FuchsiaGoodRodHouse.asm:39-67) — at scripts/FuchsiaGoodRodHouse.asm:44: sound_get_item_1
+; BAIL[inline-text-db] FuchsiaGoodRodHouseFishingGuruText.Text (scripts/FuchsiaGoodRodHouse.asm:39-67) — at scripts/FuchsiaGoodRodHouse.asm:48: para "つり　こそ"
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	text_far _FuchsiaGoodRodHouseFishingGuruText

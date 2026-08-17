@@ -592,9 +592,6 @@ class Emitter:
             rendered = ", ".join(self.expr(a, out) for a in args)
             return [f"{name} {rendered}".strip()]
 
-        if name in SOUND_COMMANDS:
-            raise Bail("text-sound-command-unported", it.line.raw.strip())
-
         if name in ("dw_const",):
             # pret emits `dw <label>` here; the port is flat, so a pointer is 32
             # bits. The constant half is emitted as a file-local equ elsewhere.
@@ -623,15 +620,12 @@ class Emitter:
             # the caller instead.
             raise Bail("owned-by-gen_map_script_tables", it.line.raw.strip())
 
-        if name in ("script_pokecenter_nurse", "script_mart", "script_bills_pc",
-                    "script_players_pc", "script_pokecenter_pc",
-                    "script_prize_vendor", "script_cable_club_receptionist",
-                    "script_vending_machine"):
-            # A one-byte TX_SCRIPT_* command handing the whole box to a named
-            # engine routine. The port's gb_text.inc defines no TX_SCRIPT_*
-            # constant, so there is nothing faithful to emit — same subset gap as
-            # the sound commands.
-            raise Bail("text-script-command-unported", it.line.raw.strip())
+        if name == "script_mart":
+            # The one TX_SCRIPT_* command with an operand: `db _NARG / db \# / db -1`,
+            # a variadic item list. That list is Tier-1 data belonging to a
+            # generator, and PASSTHROUGH_DATA models fixed arity only, so this one
+            # stays out while its seven zero-operand siblings pass through.
+            raise Bail("text-script-mart-item-list", it.line.raw.strip())
 
         if name == "dbmapcoord":
             # `db y, x` -- a MAP coordinate, identical on both sides. No
@@ -640,6 +634,14 @@ class Emitter:
 
         if name in ("def_text_pointers", "def_script_pointers", "def_trainers"):
             return []      # const_def only; emits no bytes
+
+        if '"' in it.line.argtext:
+            # A quoted operand on ANY text macro is glyph data, not just on `db` --
+            # pret writes `para "..."`, `line "..."`, `cont "..."` too. Same Tier-1
+            # refusal as the `db` form: the charmap belongs to a generator, and the
+            # tool owns no charmap knowledge. Reported under the same reason code so
+            # the class counts what it says it counts.
+            raise Bail("inline-text-db", it.line.raw.strip())
 
         raise Bail("unknown-data-macro", it.line.raw.strip())
 
@@ -663,24 +665,31 @@ class Emitter:
 # renders as `db TX_FAR / dd <label>` -- a POINTER, not glyph bytes. That is what
 # lets the transpiler emit text streams while owning no charmap knowledge: the
 # glyphs stay in text/, generated, and the stream just points at them.
+#
+# The TX_SOUND_* and zero-operand TX_SCRIPT_* commands are here too. They used to
+# BAIL on the claim that the port's text engine "does not implement TX_SOUND_* at
+# all" -- which was FALSE, and measurably so: src/home/text.asm `.cmd_sound`
+# carries pret's whole TextCommandSounds table (same pairs, same order, cries via
+# PlayCry), and src/home/text_script.asm dispatches all eight TX_SCRIPT_* ids. The
+# real gap was one layer down and purely clerical -- gb_text.inc defined no macro
+# for either family, and the TX_SOUND_* constants were file-local equs inside
+# text.asm where nothing else could see them. Both are shared now, so these lower
+# the same way every other text command does.
 PASSTHROUGH_DATA = {
     "text_far": 1, "text_end": 0, "text_start": 0, "text_asm": 0,
     "text_waitbutton": 0, "text_promptbutton": 0, "text_low": 0,
     "text_pause": 0, "text_scroll": 0, "text_dots": 1, "text_ram": 1,
     "text_move": 1, "text_bcd": 2, "text_box": 3, "text_decimal": 3,
-}
-
-# The text-stream SOUND commands (TX_SOUND_GET_ITEM_1 and friends) have no port
-# counterpart: gb_text.inc stops at TX_DOTS/TX_WAIT_BUTTON/TX_FAR and defines no
-# TX_SOUND_* at all. Emitting the raw byte would be inventing a text command the
-# port's engine does not implement, so these BAIL -- which is the honest report
-# that the port's text command set is a subset of pret's, and the plan's
-# "realign TX_ASM with pret's text commands" item is what closes it.
-SOUND_COMMANDS = {
-    "sound_get_item_1", "sound_get_item_2", "sound_get_key_item",
-    "sound_level_up", "sound_caught_mon", "sound_dex_page_added",
-    "sound_pokedex_rating", "sound_cry_pikachu", "sound_cry_pidgeot",
-    "sound_cry_dewgong", "sound_get_item_1_duplicate",
+    # TX_SOUND_* ($0B, $0E-$16) -- one command byte, no operand.
+    "sound_get_item_1": 0, "sound_get_item_2": 0, "sound_get_key_item": 0,
+    "sound_level_up": 0, "sound_caught_mon": 0, "sound_dex_page_added": 0,
+    "sound_pokedex_rating": 0, "sound_cry_pikachu": 0, "sound_cry_pidgeot": 0,
+    "sound_cry_dewgong": 0, "sound_get_item_1_duplicate": 0,
+    # TX_SCRIPT_* ($F5-$FF) -- one command byte, no operand. `script_mart` is
+    # NOT here: it is the one form that carries a variadic item list.
+    "script_pokecenter_nurse": 0, "script_bills_pc": 0, "script_players_pc": 0,
+    "script_pokecenter_pc": 0, "script_prize_vendor": 0,
+    "script_cable_club_receptionist": 0, "script_vending_machine": 0,
 }
 
 

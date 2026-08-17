@@ -21,6 +21,8 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global Route16FlyHouseBrunetteGirlText
+global Route16FlyHouseFearowText
 global Route16FlyHouse_Script
 global Route16FlyHouse_TextPointers
 
@@ -28,10 +30,10 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Route16FlyHouseBrunetteGirlText   ; NOT YET DEFINED IN THE PORT
-extern Route16FlyHouseFearowText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
+extern _Route16FlyHouseBrunetteGirlHM02ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _Route16FlyHouseBrunetteGirlHM02NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _Route16FlyHouseBrunetteGirlReceivedHM02Text   ; NOT YET DEFINED IN THE PORT
 extern _Route16FlyHouseBrunetteGirlText   ; NOT YET DEFINED IN THE PORT
 extern _Route16FlyHouseFearowText   ; NOT YET DEFINED IN THE PORT
@@ -51,61 +53,50 @@ Route16FlyHouse_TextPointers:
     dd Route16FlyHouseBrunetteGirlText
     dd Route16FlyHouseFearowText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route16FlyHouseBrunetteGirlText (scripts/Route16FlyHouse.asm:11-21) — at scripts/Route16FlyHouse.asm:12: .HM02ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_HM02
-; PRET| 	ld hl, .HM02ExplanationText
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	lb bc, HM_FLY, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	SetEvent EVENT_GOT_HM02
-; PRET| 	ld hl, .ReceivedHM02Text
-; PRET| 	jr .got_item
+%assign event_byte -1
+Route16FlyHouseBrunetteGirlText:
+    CheckEvent EVENT_GOT_HM02
+    mov esi, .HM02ExplanationText
+    jnz .got_item
+    mov esi, .Text
+    call PrintText
+    mov bx, ((198) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    SetEvent EVENT_GOT_HM02
+    mov esi, .ReceivedHM02Text
+    jmp .got_item
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route16FlyHouseBrunetteGirlText.bag_full (scripts/Route16FlyHouse.asm:23-26) — at scripts/Route16FlyHouse.asm:23: .HM02NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HM02NoRoomText
-; PRET| .got_item
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.bag_full:
+    mov esi, .HM02NoRoomText
+.got_item:
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] Route16FlyHouseBrunetteGirlText.Text (scripts/Route16FlyHouse.asm:29-43) — at scripts/Route16FlyHouse.asm:34: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route16FlyHouseBrunetteGirlText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedHM02Text:
-; PRET| 	text_far _Route16FlyHouseBrunetteGirlReceivedHM02Text
-; PRET| 	sound_get_key_item
-; PRET| 	text_end
-; PRET| 
-; PRET| .HM02ExplanationText:
-; PRET| 	text_far _Route16FlyHouseBrunetteGirlHM02ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .HM02NoRoomText:
-; PRET| 	text_far _Route16FlyHouseBrunetteGirlHM02NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.Text:
+    text_far _Route16FlyHouseBrunetteGirlText
+    text_end
+.ReceivedHM02Text:
+    text_far _Route16FlyHouseBrunetteGirlReceivedHM02Text
+    sound_get_key_item
+    text_end
+.HM02ExplanationText:
+    text_far _Route16FlyHouseBrunetteGirlHM02ExplanationText
+    text_end
+.HM02NoRoomText:
+    text_far _Route16FlyHouseBrunetteGirlHM02NoRoomText
+    text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route16FlyHouseFearowText (scripts/Route16FlyHouse.asm:47-52) — at scripts/Route16FlyHouse.asm:47: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	ld a, FEAROW
-; PRET| 	call PlayCry
-; PRET| 	call WaitForSoundToFinish
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+Route16FlyHouseFearowText:
+    mov esi, .Text
+    call PrintText
+    mov al, 35
+    call PlayCry
+    call WaitForSoundToFinish
+    jmp TextScriptEnd
 
 %assign event_byte -1
 .Text:

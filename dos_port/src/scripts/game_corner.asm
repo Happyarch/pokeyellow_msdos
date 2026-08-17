@@ -24,12 +24,17 @@ bits 32
 
 global GameCornerBeauty1Text
 global GameCornerBeauty2Text
+global GameCornerClerkText
 global GameCornerDefaultScript
+global GameCornerFishingGuru1Text
+global GameCornerFishingGuru2Text
 global GameCornerGamblerText
 global GameCornerGymGuideChampInMakingText
 global GameCornerGymGuideText
 global GameCornerGymGuideTheyOfferRarePokemonText
 global GameCornerMiddleAgedMan1Text
+global GameCornerMiddleAgedMan2Text
+global GameCornerMiddleAgedWomanText
 global GameCornerMovement_Rocket_WalkAroundPlayer
 global GameCornerMovement_Rocket_WalkDirect
 global GameCornerOopsForgotCoinCaseText
@@ -56,13 +61,8 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
 extern GameCornerBlankText1   ; NOT YET DEFINED IN THE PORT
 extern GameCornerBlankText2   ; NOT YET DEFINED IN THE PORT
-extern GameCornerClerkText   ; NOT YET DEFINED IN THE PORT
 extern GameCornerCoinText   ; NOT YET DEFINED IN THE PORT
 extern GameCornerDrawCoinBox   ; NOT YET DEFINED IN THE PORT
-extern GameCornerFishingGuru1Text   ; NOT YET DEFINED IN THE PORT
-extern GameCornerFishingGuru2Text   ; NOT YET DEFINED IN THE PORT
-extern GameCornerMiddleAgedMan2Text   ; NOT YET DEFINED IN THE PORT
-extern GameCornerMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
 extern GameCornerMoneyText   ; NOT YET DEFINED IN THE PORT
 extern GameCornerRocketBattleScript   ; NOT YET DEFINED IN THE PORT
 extern HasEnoughCoins   ; NOT YET DEFINED IN THE PORT
@@ -94,16 +94,23 @@ extern _GameCornerClerkDoYouNeedSomeGameCoinsText   ; NOT YET DEFINED IN THE POR
 extern _GameCornerClerkDontHaveCoinCaseText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerClerkPleaseComePlaySometimeText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerClerkThanksHereAre50CoinsText   ; NOT YET DEFINED IN THE PORT
+extern _GameCornerFishingGuru1DontNeedMyCoinsText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerFishingGuru1Received10CoinsText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerFishingGuru1WantToPlayText   ; NOT YET DEFINED IN THE PORT
+extern _GameCornerFishingGuru1WinsComeAndGoText   ; NOT YET DEFINED IN THE PORT
+extern _GameCornerFishingGuru2CloselyWatchTheReelsText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerFishingGuru2Received20CoinsText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerFishingGuru2ThrowingMeOffText   ; NOT YET DEFINED IN THE PORT
+extern _GameCornerFishingGuru2YouGotYourOwnCoinsText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerGamblerText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerGymGuideChampInMakingText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerGymGuideTheyOfferRarePokemonText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerMiddleAgedMan1Text   ; NOT YET DEFINED IN THE PORT
+extern _GameCornerMiddleAgedMan2INeedMoreCoinsText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerMiddleAgedMan2Received20CoinsText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerMiddleAgedMan2WantSomeCoinsText   ; NOT YET DEFINED IN THE PORT
+extern _GameCornerMiddleAgedMan2YouHaveLotsOfCoinsText   ; NOT YET DEFINED IN THE PORT
+extern _GameCornerMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerOopsForgotCoinCaseText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerPosterSwitchBehindPosterText   ; NOT YET DEFINED IN THE PORT
 extern _GameCornerRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
@@ -299,77 +306,65 @@ GameCornerBeauty1Text:
     text_far _GameCornerBeauty1Text
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerClerkText (scripts/GameCorner.asm:147-171) — at scripts/GameCorner.asm:153: .declined is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call GameCornerDrawCoinBox
-; PRET| 	ld hl, .DoYouNeedSomeGameCoins
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .declined
-; PRET| 	; Can only get more coins if you
-; PRET| 	; - have the Coin Case
-; PRET| 	ld b, COIN_CASE
-; PRET| 	call IsItemInBag
-; PRET| 	jr z, .no_coin_case
-; PRET| 	; - have room in the Coin Case for at least 9 coins
-; PRET| 	call Has9990Coins
-; PRET| 	jr nc, .coin_case_full
-; PRET| 	; - have at least 1000 yen
-; PRET| 	xor a
-; PRET| 	ldh [hMoney], a
-; PRET| 	ldh [hMoney + 2], a
-; PRET| 	ld a, $10
-; PRET| 	ldh [hMoney + 1], a
-; PRET| 	call HasEnoughMoney
-; PRET| 	jr nc, .buy_coins
-; PRET| 	ld hl, .CantAffordTheCoins
-; PRET| 	jr .print_ret
+%assign event_byte -1
+GameCornerClerkText:
+    call GameCornerDrawCoinBox
+    mov esi, .DoYouNeedSomeGameCoins
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .declined
+    mov bh, COIN_CASE
+    call IsItemInBag
+    jz .no_coin_case
+    call Has9990Coins
+    jae .coin_case_full
+    xor al, al
+    mov [ebp + hMoney], al
+    mov [ebp + hMoney + 2], al
+    mov al, 0x10
+    mov [ebp + hMoney + 1], al
+    call HasEnoughMoney
+    jae .buy_coins
+    mov esi, .CantAffordTheCoins
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[unresolved-symbol] GameCornerClerkText.buy_coins (scripts/GameCorner.asm:174-196) — at scripts/GameCorner.asm:189: wPlayerCoins
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ldh [hMoney], a
-; PRET| 	ldh [hMoney + 2], a
-; PRET| 	ld a, $10
-; PRET| 	ldh [hMoney + 1], a
-; PRET| 	ld hl, hMoney + 2
-; PRET| 	ld de, wPlayerMoney + 2
-; PRET| 	ld c, $3
-; PRET| 	predef SubBCDPredef
-; PRET| 	; Receive 50 coins
-; PRET| 	xor a
-; PRET| 	ldh [hUnusedCoinsByte], a
-; PRET| 	ldh [hCoins], a
-; PRET| 	ld a, $50
-; PRET| 	ldh [hCoins + 1], a
-; PRET| 	ld de, wPlayerCoins + 1
-; PRET| 	ld hl, hCoins + 1
-; PRET| 	ld c, $2
-; PRET| 	predef AddBCDPredef
-; PRET| 	; Update display
-; PRET| 	call GameCornerDrawCoinBox
-; PRET| 	ld hl, .ThanksHereAre50Coins
-; PRET| 	jr .print_ret
+%assign event_byte -1
+.buy_coins:
+    xor al, al
+    mov [ebp + hMoney], al
+    mov [ebp + hMoney + 2], al
+    mov al, 0x10
+    mov [ebp + hMoney + 1], al
+    mov esi, hMoney + 2
+    mov dx, wPlayerMoney + 2
+    mov bl, 0x3
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call SubBCDPredef
+    xor al, al
+    mov [ebp + hUnusedCoinsByte], al
+    mov [ebp + hCoins], al
+    mov al, 0x50
+    mov [ebp + hCoins + 1], al
+    mov dx, wPlayerCoins + 1
+    mov esi, hCoins + 1
+    mov bl, 0x2
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call AddBCDPredef
+    call GameCornerDrawCoinBox
+    mov esi, .ThanksHereAre50Coins
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerClerkText.declined (scripts/GameCorner.asm:198-199) — at scripts/GameCorner.asm:199: .print_ret is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PleaseComePlaySometime
-; PRET| 	jr .print_ret
+%assign event_byte -1
+.declined:
+    mov esi, .PleaseComePlaySometime
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerClerkText.coin_case_full (scripts/GameCorner.asm:201-202) — at scripts/GameCorner.asm:202: .print_ret is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .CoinCaseIsFull
-; PRET| 	jr .print_ret
+%assign event_byte -1
+.coin_case_full:
+    mov esi, .CoinCaseIsFull
+    jmp .print_ret
 
 %assign event_byte -1
 .no_coin_case:
@@ -404,47 +399,42 @@ GameCornerBeauty2Text:
     text_far _GameCornerBeauty2Text
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerFishingGuru1Text (scripts/GameCorner.asm:243-265) — at scripts/GameCorner.asm:244: .alreadyGotNpcCoins is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_10_COINS
-; PRET| 	jr nz, .alreadyGotNpcCoins
-; PRET| 	ld hl, .WantToPlayText
-; PRET| 	call PrintText
-; PRET| 	ld b, COIN_CASE
-; PRET| 	call IsItemInBag
-; PRET| 	jr z, .dontHaveCoinCase
-; PRET| 	call Has9990Coins
-; PRET| 	jr nc, .coinCaseFull
-; PRET| 	xor a
-; PRET| 	ldh [hUnusedCoinsByte], a
-; PRET| 	ldh [hCoins], a
-; PRET| 	ld a, $10
-; PRET| 	ldh [hCoins + 1], a
-; PRET| 	ld de, wPlayerCoins + 1
-; PRET| 	ld hl, hCoins + 1
-; PRET| 	ld c, $2
-; PRET| 	predef AddBCDPredef
-; PRET| 	SetEvent EVENT_GOT_10_COINS
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, .Received10CoinsText
-; PRET| 	jr .print_ret
+%assign event_byte -1
+GameCornerFishingGuru1Text:
+    CheckEvent EVENT_GOT_10_COINS
+    jnz .alreadyGotNpcCoins
+    mov esi, .WantToPlayText
+    call PrintText
+    mov bh, COIN_CASE
+    call IsItemInBag
+    jz .dontHaveCoinCase
+    call Has9990Coins
+    jae .coinCaseFull
+    xor al, al
+    mov [ebp + hUnusedCoinsByte], al
+    mov [ebp + hCoins], al
+    mov al, 0x10
+    mov [ebp + hCoins + 1], al
+    mov dx, wPlayerCoins + 1
+    mov esi, hCoins + 1
+    mov bl, 0x2
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call AddBCDPredef
+    SetEvent EVENT_GOT_10_COINS
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, .Received10CoinsText
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerFishingGuru1Text.alreadyGotNpcCoins (scripts/GameCorner.asm:267-268) — at scripts/GameCorner.asm:267: .WinsComeAndGoText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .WinsComeAndGoText
-; PRET| 	jr .print_ret
+%assign event_byte -1
+.alreadyGotNpcCoins:
+    mov esi, .WinsComeAndGoText
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerFishingGuru1Text.coinCaseFull (scripts/GameCorner.asm:270-271) — at scripts/GameCorner.asm:270: .DontNeedMyCoinsText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .DontNeedMyCoinsText
-; PRET| 	jr .print_ret
+%assign event_byte -1
+.coinCaseFull:
+    mov esi, .DontNeedMyCoinsText
+    jmp .print_ret
 
 %assign event_byte -1
 .dontHaveCoinCase:
@@ -453,29 +443,23 @@ GameCornerBeauty2Text:
     call PrintText
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] GameCornerFishingGuru1Text.WantToPlayText (scripts/GameCorner.asm:279-297) — at scripts/GameCorner.asm:284: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _GameCornerFishingGuru1WantToPlayText
-; PRET| 	text_end
-; PRET| 
-; PRET| .Received10CoinsText:
-; PRET| 	text_far _GameCornerFishingGuru1Received10CoinsText
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .DontNeedMyCoinsText:
-; PRET| 	text_far _GameCornerFishingGuru1DontNeedMyCoinsText
-; PRET| 	text_end
-; PRET| 
-; PRET| .WinsComeAndGoText:
-; PRET| 	text_far _GameCornerFishingGuru1WinsComeAndGoText
-; PRET| 	text_end
-; PRET| 
-; PRET| GameCornerMiddleAgedWomanText:
-; PRET| 	text_far _GameCornerMiddleAgedWomanText
-; PRET| 	text_end
+%assign event_byte -1
+.WantToPlayText:
+    text_far _GameCornerFishingGuru1WantToPlayText
+    text_end
+.Received10CoinsText:
+    text_far _GameCornerFishingGuru1Received10CoinsText
+    sound_get_item_1
+    text_end
+.DontNeedMyCoinsText:
+    text_far _GameCornerFishingGuru1DontNeedMyCoinsText
+    text_end
+.WinsComeAndGoText:
+    text_far _GameCornerFishingGuru1WinsComeAndGoText
+    text_end
+GameCornerMiddleAgedWomanText:
+    text_far _GameCornerMiddleAgedWomanText
+    text_end
 
 %assign event_byte -1
 GameCornerGymGuideText:
@@ -498,45 +482,40 @@ GameCornerGamblerText:
     text_far _GameCornerGamblerText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerMiddleAgedMan2Text (scripts/GameCorner.asm:323-343) — at scripts/GameCorner.asm:324: .alreadyGotNpcCoins is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_20_COINS_2
-; PRET| 	jr nz, .alreadyGotNpcCoins
-; PRET| 	ld hl, .WantSomeCoinsText
-; PRET| 	call PrintText
-; PRET| 	ld b, COIN_CASE
-; PRET| 	call IsItemInBag
-; PRET| 	jr z, .dontHaveCoinCase
-; PRET| 	call Has9990Coins
-; PRET| 	jr nc, .coinCaseFull
-; PRET| 	xor a
-; PRET| 	ldh [hUnusedCoinsByte], a
-; PRET| 	ldh [hCoins], a
-; PRET| 	ld a, $20
-; PRET| 	ldh [hCoins + 1], a
-; PRET| 	ld de, wPlayerCoins + 1
-; PRET| 	ld hl, hCoins + 1
-; PRET| 	ld c, $2
-; PRET| 	predef AddBCDPredef
-; PRET| 	SetEvent EVENT_GOT_20_COINS_2
-; PRET| 	ld hl, .Received20CoinsText
-; PRET| 	jr .print_ret
+%assign event_byte -1
+GameCornerMiddleAgedMan2Text:
+    CheckEvent EVENT_GOT_20_COINS_2
+    jnz .alreadyGotNpcCoins
+    mov esi, .WantSomeCoinsText
+    call PrintText
+    mov bh, COIN_CASE
+    call IsItemInBag
+    jz .dontHaveCoinCase
+    call Has9990Coins
+    jae .coinCaseFull
+    xor al, al
+    mov [ebp + hUnusedCoinsByte], al
+    mov [ebp + hCoins], al
+    mov al, 0x20
+    mov [ebp + hCoins + 1], al
+    mov dx, wPlayerCoins + 1
+    mov esi, hCoins + 1
+    mov bl, 0x2
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call AddBCDPredef
+    SetEvent EVENT_GOT_20_COINS_2
+    mov esi, .Received20CoinsText
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerMiddleAgedMan2Text.alreadyGotNpcCoins (scripts/GameCorner.asm:345-346) — at scripts/GameCorner.asm:345: .INeedMoreCoinsText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .INeedMoreCoinsText
-; PRET| 	jr .print_ret
+%assign event_byte -1
+.alreadyGotNpcCoins:
+    mov esi, .INeedMoreCoinsText
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerMiddleAgedMan2Text.coinCaseFull (scripts/GameCorner.asm:348-349) — at scripts/GameCorner.asm:348: .YouHaveLotsOfCoinsText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .YouHaveLotsOfCoinsText
-; PRET| 	jr .print_ret
+%assign event_byte -1
+.coinCaseFull:
+    mov esi, .YouHaveLotsOfCoinsText
+    jmp .print_ret
 
 %assign event_byte -1
 .dontHaveCoinCase:
@@ -545,94 +524,77 @@ GameCornerGamblerText:
     call PrintText
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] GameCornerMiddleAgedMan2Text.WantSomeCoinsText (scripts/GameCorner.asm:357-371) — at scripts/GameCorner.asm:362: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _GameCornerMiddleAgedMan2WantSomeCoinsText
-; PRET| 	text_end
-; PRET| 
-; PRET| .Received20CoinsText:
-; PRET| 	text_far _GameCornerMiddleAgedMan2Received20CoinsText
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .YouHaveLotsOfCoinsText:
-; PRET| 	text_far _GameCornerMiddleAgedMan2YouHaveLotsOfCoinsText
-; PRET| 	text_end
-; PRET| 
-; PRET| .INeedMoreCoinsText:
-; PRET| 	text_far _GameCornerMiddleAgedMan2INeedMoreCoinsText
-; PRET| 	text_end
+%assign event_byte -1
+.WantSomeCoinsText:
+    text_far _GameCornerMiddleAgedMan2WantSomeCoinsText
+    text_end
+.Received20CoinsText:
+    text_far _GameCornerMiddleAgedMan2Received20CoinsText
+    sound_get_item_1
+    text_end
+.YouHaveLotsOfCoinsText:
+    text_far _GameCornerMiddleAgedMan2YouHaveLotsOfCoinsText
+    text_end
+.INeedMoreCoinsText:
+    text_far _GameCornerMiddleAgedMan2INeedMoreCoinsText
+    text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerFishingGuru2Text (scripts/GameCorner.asm:375-395) — at scripts/GameCorner.asm:376: .alreadyGotNpcCoins is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_20_COINS
-; PRET| 	jr nz, .alreadyGotNpcCoins
-; PRET| 	ld hl, .ThrowingMeOffText
-; PRET| 	call PrintText
-; PRET| 	ld b, COIN_CASE
-; PRET| 	call IsItemInBag
-; PRET| 	jr z, .dontHaveCoinCase
-; PRET| 	call Has9990Coins
-; PRET| 	jr z, .coinCaseFull
-; PRET| 	xor a
-; PRET| 	ldh [hUnusedCoinsByte], a
-; PRET| 	ldh [hCoins], a
-; PRET| 	ld a, $20
-; PRET| 	ldh [hCoins + 1], a
-; PRET| 	ld de, wPlayerCoins + 1
-; PRET| 	ld hl, hCoins + 1
-; PRET| 	ld c, $2
-; PRET| 	predef AddBCDPredef
-; PRET| 	SetEvent EVENT_GOT_20_COINS
-; PRET| 	ld hl, .Received20CoinsText
-; PRET| 	jr .print_ret
+%assign event_byte -1
+GameCornerFishingGuru2Text:
+    CheckEvent EVENT_GOT_20_COINS
+    jnz .alreadyGotNpcCoins
+    mov esi, .ThrowingMeOffText
+    call PrintText
+    mov bh, COIN_CASE
+    call IsItemInBag
+    jz .dontHaveCoinCase
+    call Has9990Coins
+    jz .coinCaseFull
+    xor al, al
+    mov [ebp + hUnusedCoinsByte], al
+    mov [ebp + hCoins], al
+    mov al, 0x20
+    mov [ebp + hCoins + 1], al
+    mov dx, wPlayerCoins + 1
+    mov esi, hCoins + 1
+    mov bl, 0x2
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call AddBCDPredef
+    SetEvent EVENT_GOT_20_COINS
+    mov esi, .Received20CoinsText
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerFishingGuru2Text.alreadyGotNpcCoins (scripts/GameCorner.asm:397-398) — at scripts/GameCorner.asm:397: .CloselyWatchTheReelsText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .CloselyWatchTheReelsText
-; PRET| 	jr .print_ret
+%assign event_byte -1
+.alreadyGotNpcCoins:
+    mov esi, .CloselyWatchTheReelsText
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] GameCornerFishingGuru2Text.coinCaseFull (scripts/GameCorner.asm:400-401) — at scripts/GameCorner.asm:400: .YouGotYourOwnCoinsText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .YouGotYourOwnCoinsText
-; PRET| 	jr .print_ret
+%assign event_byte -1
+.coinCaseFull:
+    mov esi, .YouGotYourOwnCoinsText
+    jmp .print_ret
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] GameCornerFishingGuru2Text.dontHaveCoinCase (scripts/GameCorner.asm:403-406)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, GameCornerOopsForgotCoinCaseText
-; PRET| .print_ret
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.dontHaveCoinCase:
+    mov esi, GameCornerOopsForgotCoinCaseText
+.print_ret:
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] GameCornerFishingGuru2Text.ThrowingMeOffText (scripts/GameCorner.asm:409-423) — at scripts/GameCorner.asm:414: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _GameCornerFishingGuru2ThrowingMeOffText
-; PRET| 	text_end
-; PRET| 
-; PRET| .Received20CoinsText:
-; PRET| 	text_far _GameCornerFishingGuru2Received20CoinsText
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .YouGotYourOwnCoinsText:
-; PRET| 	text_far _GameCornerFishingGuru2YouGotYourOwnCoinsText
-; PRET| 	text_end
-; PRET| 
-; PRET| .CloselyWatchTheReelsText:
-; PRET| 	text_far _GameCornerFishingGuru2CloselyWatchTheReelsText
-; PRET| 	text_end
+%assign event_byte -1
+.ThrowingMeOffText:
+    text_far _GameCornerFishingGuru2ThrowingMeOffText
+    text_end
+.Received20CoinsText:
+    text_far _GameCornerFishingGuru2Received20CoinsText
+    sound_get_item_1
+    text_end
+.YouGotYourOwnCoinsText:
+    text_far _GameCornerFishingGuru2YouGotYourOwnCoinsText
+    text_end
+.CloselyWatchTheReelsText:
+    text_far _GameCornerFishingGuru2CloselyWatchTheReelsText
+    text_end
 
 %assign event_byte -1
 GameCornerRocketText:

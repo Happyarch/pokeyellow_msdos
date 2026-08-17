@@ -21,14 +21,16 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global SafariZoneSecretHouseFishingGuruText
 global SafariZoneSecretHouse_Script
 global SafariZoneSecretHouse_TextPointers
 
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SafariZoneSecretHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneSecretHouseFishingGuruHM03ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneSecretHouseFishingGuruHM03NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneSecretHouseFishingGuruReceivedHM03Text   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneSecretHouseFishingGuruYouHaveWonText   ; NOT YET DEFINED IN THE PORT
 
@@ -46,55 +48,44 @@ SafariZoneSecretHouse_Script:
 SafariZoneSecretHouse_TextPointers:
     dd SafariZoneSecretHouseFishingGuruText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneSecretHouseFishingGuruText (scripts/SafariZoneSecretHouse.asm:10-20) — at scripts/SafariZoneSecretHouse.asm:11: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_HM03
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .YouHaveWonText
-; PRET| 	call PrintText
-; PRET| 	lb bc, HM_SURF, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .ReceivedHM03Text
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_HM03
-; PRET| 	jr .done
+%assign event_byte -1
+SafariZoneSecretHouseFishingGuruText:
+    CheckEvent EVENT_GOT_HM03
+    jnz .got_item
+    mov esi, .YouHaveWonText
+    call PrintText
+    mov bx, ((199) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .ReceivedHM03Text
+    call PrintText
+    SetEvent EVENT_GOT_HM03
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneSecretHouseFishingGuruText.bag_full (scripts/SafariZoneSecretHouse.asm:22-24) — at scripts/SafariZoneSecretHouse.asm:22: .HM03NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HM03NoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .HM03NoRoomText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneSecretHouseFishingGuruText.got_item (scripts/SafariZoneSecretHouse.asm:26-29) — at scripts/SafariZoneSecretHouse.asm:26: .HM03ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HM03ExplanationText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_item:
+    mov esi, .HM03ExplanationText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] SafariZoneSecretHouseFishingGuruText.YouHaveWonText (scripts/SafariZoneSecretHouse.asm:32-46) — at scripts/SafariZoneSecretHouse.asm:37: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SafariZoneSecretHouseFishingGuruYouHaveWonText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedHM03Text:
-; PRET| 	text_far _SafariZoneSecretHouseFishingGuruReceivedHM03Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .HM03ExplanationText:
-; PRET| 	text_far _SafariZoneSecretHouseFishingGuruHM03ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .HM03NoRoomText:
-; PRET| 	text_far _SafariZoneSecretHouseFishingGuruHM03NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.YouHaveWonText:
+    text_far _SafariZoneSecretHouseFishingGuruYouHaveWonText
+    text_end
+.ReceivedHM03Text:
+    text_far _SafariZoneSecretHouseFishingGuruReceivedHM03Text
+    sound_get_item_1
+    text_end
+.HM03ExplanationText:
+    text_far _SafariZoneSecretHouseFishingGuruHM03ExplanationText
+    text_end
+.HM03NoRoomText:
+    text_far _SafariZoneSecretHouseFishingGuruHM03NoRoomText
+    text_end

@@ -22,13 +22,16 @@ bits 32
 
 
 global CeladonCityDeptStoreSignText
+global CeladonCityFisherText
 global CeladonCityGameCornerSignText
 global CeladonCityGirlText
 global CeladonCityGramps1Text
 global CeladonCityGramps2Text
+global CeladonCityGramps3Text
 global CeladonCityGymSignText
 global CeladonCityLittleGirlText
 global CeladonCityMansionSignText
+global CeladonCityPoliwrathText
 global CeladonCityPrintTrainerTips1Text
 global CeladonCityPrizeExchangeSignText
 global CeladonCityRocket1Text
@@ -43,9 +46,6 @@ global CeladonCity_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern CeladonCityFisherText   ; NOT YET DEFINED IN THE PORT
-extern CeladonCityGramps3Text   ; NOT YET DEFINED IN THE PORT
-extern CeladonCityPoliwrathText   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
@@ -53,15 +53,19 @@ extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityDeptStoreSignText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonCityFisherText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityGameCornerSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityGirlText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityGramps1Text   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityGramps2Text   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityGramps3ReceivedTM41Text   ; NOT YET DEFINED IN THE PORT
+extern _CeladonCityGramps3TM41ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonCityGramps3TM41NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityGramps3Text   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityGymSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityLittleGirlText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityMansionSignText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonCityPoliwrathText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityPrizeExchangeSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityRocket1Text   ; NOT YET DEFINED IN THE PORT
 extern _CeladonCityRocket2Text   ; NOT YET DEFINED IN THE PORT
@@ -130,65 +134,52 @@ CeladonCityGramps2Text:
     text_far _CeladonCityGramps2Text
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonCityGramps3Text (scripts/CeladonCity.asm:55-64) — at scripts/CeladonCity.asm:56: .gotTM41 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_TM41
-; PRET| 	jr nz, .gotTM41
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	lb bc, TM_SOFTBOILED, 1
-; PRET| 	call GiveItem
-; PRET| 	jr c, .Success
-; PRET| 	ld hl, .TM41NoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .Done
+%assign event_byte -1
+CeladonCityGramps3Text:
+    CheckEvent EVENT_GOT_TM41
+    jnz .gotTM41
+    mov esi, .Text
+    call PrintText
+    mov bx, ((243) << 8) | (1)
+    call GiveItem
+    jb .Success
+    mov esi, .TM41NoRoomText
+    call PrintText
+    jmp .Done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonCityGramps3Text.Success (scripts/CeladonCity.asm:66-69) — at scripts/CeladonCity.asm:66: .ReceivedTM41Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ReceivedTM41Text
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_TM41
-; PRET| 	jr .Done
+%assign event_byte -1
+.Success:
+    mov esi, .ReceivedTM41Text
+    call PrintText
+    SetEvent EVENT_GOT_TM41
+    jmp .Done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonCityGramps3Text.gotTM41 (scripts/CeladonCity.asm:71-74) — at scripts/CeladonCity.asm:71: .TM41ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM41ExplanationText
-; PRET| 	call PrintText
-; PRET| .Done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.gotTM41:
+    mov esi, .TM41ExplanationText
+    call PrintText
+.Done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CeladonCityGramps3Text.Text (scripts/CeladonCity.asm:77-98) — at scripts/CeladonCity.asm:82: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonCityGramps3Text
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedTM41Text:
-; PRET| 	text_far _CeladonCityGramps3ReceivedTM41Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM41ExplanationText:
-; PRET| 	text_far _CeladonCityGramps3TM41ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM41NoRoomText:
-; PRET| 	text_far _CeladonCityGramps3TM41NoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonCityFisherText:
-; PRET| 	text_far _CeladonCityFisherText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonCityPoliwrathText:
-; PRET| 	text_far _CeladonCityPoliwrathText
+%assign event_byte -1
+.Text:
+    text_far _CeladonCityGramps3Text
+    text_end
+.ReceivedTM41Text:
+    text_far _CeladonCityGramps3ReceivedTM41Text
+    sound_get_item_1
+    text_end
+.TM41ExplanationText:
+    text_far _CeladonCityGramps3TM41ExplanationText
+    text_end
+.TM41NoRoomText:
+    text_far _CeladonCityGramps3TM41NoRoomText
+    text_end
+CeladonCityFisherText:
+    text_far _CeladonCityFisherText
+    text_end
+CeladonCityPoliwrathText:
+    text_far _CeladonCityPoliwrathText
 
 %assign event_byte -1
     mov al, 111

@@ -566,8 +566,9 @@ def _report(total_ok, total_bail, reasons, per_file, shadowed, written) -> str:
         "owned-by-gen_map_script_tables": "the trainer-header tables are already "
             "generated into assets/map_script_tables.inc; emitting them here would "
             "put the same data under two owners",
-        "text-sound-command-unported": "TX_SOUND_* has no port counterpart — "
-            "gb_text.inc stops at TX_DOTS/TX_WAIT_BUTTON/TX_FAR",
+        "text-script-mart-item-list": "script_mart carries a variadic item list "
+            "(db _NARG / db \\# / db -1), which is Tier-1 data owned by a generator; "
+            "its seven zero-operand TX_SCRIPT_* siblings lower normally",
         "host-pointer-in-16bit-reg": "pret puts a pointer in DE (16-bit DX here); a "
             "port HOST address is 32 bits and the callee has no abi.json entry",
         "event-byte-assembly-state": "a *Reuse* event macro whose expansion depends "
@@ -576,7 +577,6 @@ def _report(total_ok, total_bail, reasons, per_file, shadowed, written) -> str:
             "does not, and dataflow shows a live reader of A",
         "pointer-domain-unknown": "HL is dereferenced where the GB/HOST domain is not "
             "proven on every path",
-        "text-script-command-unported": "TX_SCRIPT_* has no port counterpart",
         "bit-clobbers-live-carry": "SM83 `bit` preserves C, x86 `test` clears it, and "
             "C is live — no short x86 form gives the new Z and the old C",
         "bank-expression": "BANK(x) needs a port-side bank constant per target",

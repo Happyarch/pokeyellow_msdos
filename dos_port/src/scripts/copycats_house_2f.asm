@@ -21,14 +21,15 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global CopycatsHouse2FCopycatText
+global CopycatsHouse2FDoduoText
 global CopycatsHouse2FPCText
+global CopycatsHouse2FRareDollText
+global CopycatsHouse2FSNESText
 global CopycatsHouse2F_Script
 global CopycatsHouse2F_TextPointers
 
-extern CopycatsHouse2FCopycatText   ; NOT YET DEFINED IN THE PORT
-extern CopycatsHouse2FDoduoText   ; NOT YET DEFINED IN THE PORT
-extern CopycatsHouse2FRareDollText   ; NOT YET DEFINED IN THE PORT
-extern CopycatsHouse2FSNESText   ; NOT YET DEFINED IN THE PORT
+extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
@@ -37,9 +38,15 @@ extern RemoveItemByID   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _CopycatsHouse2FCopycatDoYouLikePokemonText   ; NOT YET DEFINED IN THE PORT
 extern _CopycatsHouse2FCopycatReceivedTM31Text   ; NOT YET DEFINED IN THE PORT
+extern _CopycatsHouse2FCopycatTM31Explanation1Text   ; NOT YET DEFINED IN THE PORT
+extern _CopycatsHouse2FCopycatTM31Explanation2Text   ; NOT YET DEFINED IN THE PORT
+extern _CopycatsHouse2FCopycatTM31NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _CopycatsHouse2FCopycatTM31PreReceiveText   ; NOT YET DEFINED IN THE PORT
+extern _CopycatsHouse2FDoduoText   ; NOT YET DEFINED IN THE PORT
 extern _CopycatsHouse2FPCCantSeeText   ; NOT YET DEFINED IN THE PORT
 extern _CopycatsHouse2FPCMySecretsText   ; NOT YET DEFINED IN THE PORT
+extern _CopycatsHouse2FRareDollText   ; NOT YET DEFINED IN THE PORT
+extern _CopycatsHouse2FSNESText   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -65,88 +72,74 @@ CopycatsHouse2F_TextPointers:
     dd CopycatsHouse2FSNESText
     dd CopycatsHouse2FPCText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CopycatsHouse2FCopycatText (scripts/CopycatsHouse2F.asm:16-36) — at scripts/CopycatsHouse2F.asm:17: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_TM31
-; PRET| 	jr nz, .got_item
-; PRET| 	ld a, TRUE
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, .DoYouLikePokemonText
-; PRET| 	call PrintText
-; PRET| 	ld b, POKE_DOLL
-; PRET| 	call IsItemInBag
-; PRET| 	jr z, .done
-; PRET| 	ld hl, .TM31PreReceiveText
-; PRET| 	call PrintText
-; PRET| 	lb bc, TM_MIMIC, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .ReceivedTM31Text
-; PRET| 	call PrintText
-; PRET| 	ld a, POKE_DOLL
-; PRET| 	ldh [hItemToRemoveID], a
-; PRET| 	farcall RemoveItemByID
-; PRET| 	SetEvent EVENT_GOT_TM31
-; PRET| 	jr .done
+%assign event_byte -1
+CopycatsHouse2FCopycatText:
+    CheckEvent EVENT_GOT_TM31
+    jnz .got_item
+    mov al, 1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, .DoYouLikePokemonText
+    call PrintText
+    mov bh, 51
+    call IsItemInBag
+    jz .done
+    mov esi, .TM31PreReceiveText
+    call PrintText
+    mov bx, ((233) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .ReceivedTM31Text
+    call PrintText
+    mov al, 51
+    mov [ebp + hItemToRemoveID], al
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call RemoveItemByID
+    SetEvent EVENT_GOT_TM31
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CopycatsHouse2FCopycatText.bag_full (scripts/CopycatsHouse2F.asm:38-40) — at scripts/CopycatsHouse2F.asm:38: .TM31NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM31NoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .TM31NoRoomText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CopycatsHouse2FCopycatText.got_item (scripts/CopycatsHouse2F.asm:42-45) — at scripts/CopycatsHouse2F.asm:42: .TM31Explanation2Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM31Explanation2Text
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_item:
+    mov esi, .TM31Explanation2Text
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CopycatsHouse2FCopycatText.DoYouLikePokemonText (scripts/CopycatsHouse2F.asm:48-82) — at scripts/CopycatsHouse2F.asm:57: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CopycatsHouse2FCopycatDoYouLikePokemonText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM31PreReceiveText:
-; PRET| 	text_far _CopycatsHouse2FCopycatTM31PreReceiveText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedTM31Text:
-; PRET| 	text_far _CopycatsHouse2FCopycatReceivedTM31Text
-; PRET| 	sound_get_item_1
-; PRET| .TM31Explanation1Text:
-; PRET| 	text_far _CopycatsHouse2FCopycatTM31Explanation1Text
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM31Explanation2Text:
-; PRET| 	text_far _CopycatsHouse2FCopycatTM31Explanation2Text
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM31NoRoomText:
-; PRET| 	text_far _CopycatsHouse2FCopycatTM31NoRoomText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| CopycatsHouse2FDoduoText:
-; PRET| 	text_far _CopycatsHouse2FDoduoText
-; PRET| 	text_end
-; PRET| 
-; PRET| CopycatsHouse2FRareDollText:
-; PRET| 	text_far _CopycatsHouse2FRareDollText
-; PRET| 	text_end
-; PRET| 
-; PRET| CopycatsHouse2FSNESText:
-; PRET| 	text_far _CopycatsHouse2FSNESText
-; PRET| 	text_end
+%assign event_byte -1
+.DoYouLikePokemonText:
+    text_far _CopycatsHouse2FCopycatDoYouLikePokemonText
+    text_end
+.TM31PreReceiveText:
+    text_far _CopycatsHouse2FCopycatTM31PreReceiveText
+    text_end
+.ReceivedTM31Text:
+    text_far _CopycatsHouse2FCopycatReceivedTM31Text
+    sound_get_item_1
+.TM31Explanation1Text:
+    text_far _CopycatsHouse2FCopycatTM31Explanation1Text
+    text_waitbutton
+    text_end
+.TM31Explanation2Text:
+    text_far _CopycatsHouse2FCopycatTM31Explanation2Text
+    text_end
+.TM31NoRoomText:
+    text_far _CopycatsHouse2FCopycatTM31NoRoomText
+    text_waitbutton
+    text_end
+CopycatsHouse2FDoduoText:
+    text_far _CopycatsHouse2FDoduoText
+    text_end
+CopycatsHouse2FRareDollText:
+    text_far _CopycatsHouse2FRareDollText
+    text_end
+CopycatsHouse2FSNESText:
+    text_far _CopycatsHouse2FSNESText
+    text_end
 
 %assign event_byte -1
 CopycatsHouse2FPCText:

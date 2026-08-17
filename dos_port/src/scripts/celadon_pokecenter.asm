@@ -21,26 +21,21 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global CeladonPokecenterBeautyText
 global CeladonPokecenterChanseyText
+global CeladonPokecenterGentlemanText
+global CeladonPokecenterLinkReceptionistText
+global CeladonPokecenterNurseText
 global CeladonPokecenter_Script
+global CeladonPokecenter_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CeladonPokecenterBeautyText   ; NOT YET DEFINED IN THE PORT
-extern CeladonPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
-extern CeladonPokecenterLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern CeladonPokecenterNurseText   ; NOT YET DEFINED IN THE PORT
-extern CeladonPokecenter_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_CELADONPOKECENTER_NURSE                   equ 1
-TEXT_CELADONPOKECENTER_GENTLEMAN               equ 2
-TEXT_CELADONPOKECENTER_BEAUTY                  equ 3
-TEXT_CELADONPOKECENTER_LINK_RECEPTIONIST       equ 4
-TEXT_CELADONPOKECENTER_CHANSEY                 equ 5
+extern _CeladonPokecenterBeautyText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -53,30 +48,23 @@ CeladonPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] CeladonPokecenter_TextPointers (scripts/CeladonPokecenter.asm:6-25) — at scripts/CeladonPokecenter.asm:14: script_cable_club_receptionist
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const CeladonPokecenterNurseText,            TEXT_CELADONPOKECENTER_NURSE
-; PRET| 	dw_const CeladonPokecenterGentlemanText,        TEXT_CELADONPOKECENTER_GENTLEMAN
-; PRET| 	dw_const CeladonPokecenterBeautyText,           TEXT_CELADONPOKECENTER_BEAUTY
-; PRET| 	dw_const CeladonPokecenterLinkReceptionistText, TEXT_CELADONPOKECENTER_LINK_RECEPTIONIST
-; PRET| 	dw_const CeladonPokecenterChanseyText,          TEXT_CELADONPOKECENTER_CHANSEY
-; PRET| 
-; PRET| CeladonPokecenterLinkReceptionistText:
-; PRET| 	script_cable_club_receptionist
-; PRET| 
-; PRET| CeladonPokecenterNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| CeladonPokecenterGentlemanText:
-; PRET| 	text_far _CeladonPokecenterGentlemanText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonPokecenterBeautyText:
-; PRET| 	text_far _CeladonPokecenterBeautyText
-; PRET| 	text_end
+%assign event_byte -1
+CeladonPokecenter_TextPointers:
+    dd CeladonPokecenterNurseText
+    dd CeladonPokecenterGentlemanText
+    dd CeladonPokecenterBeautyText
+    dd CeladonPokecenterLinkReceptionistText
+    dd CeladonPokecenterChanseyText
+CeladonPokecenterLinkReceptionistText:
+    script_cable_club_receptionist
+CeladonPokecenterNurseText:
+    script_pokecenter_nurse
+CeladonPokecenterGentlemanText:
+    text_far _CeladonPokecenterGentlemanText
+    text_end
+CeladonPokecenterBeautyText:
+    text_far _CeladonPokecenterBeautyText
+    text_end
 
 %assign event_byte -1
 CeladonPokecenterChanseyText:

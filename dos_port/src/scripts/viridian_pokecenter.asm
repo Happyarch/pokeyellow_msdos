@@ -22,25 +22,20 @@ bits 32
 
 
 global ViridianPokeCenterChanseyText
+global ViridianPokecenterCooltrainerMText
+global ViridianPokecenterGentlemanText
+global ViridianPokecenterLinkReceptionistText
+global ViridianPokecenterNurseText
 global ViridianPokecenter_Script
+global ViridianPokecenter_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern ViridianPokecenterCooltrainerMText   ; NOT YET DEFINED IN THE PORT
-extern ViridianPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
-extern ViridianPokecenterLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern ViridianPokecenterNurseText   ; NOT YET DEFINED IN THE PORT
-extern ViridianPokecenter_TextPointers   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_VIRIDIANPOKECENTER_NURSE                  equ 1
-TEXT_VIRIDIANPOKECENTER_GENTLEMAN              equ 2
-TEXT_VIRIDIANPOKECENTER_COOLTRAINER_M          equ 3
-TEXT_VIRIDIANPOKECENTER_LINK_RECEPTIONIST      equ 4
-TEXT_VIRIDIANPOKECENTER_CHANSEY                equ 5
+extern _ViridianPokecenterCooltrainerMText   ; NOT YET DEFINED IN THE PORT
+extern _ViridianPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -53,30 +48,23 @@ ViridianPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] ViridianPokecenter_TextPointers (scripts/ViridianPokecenter.asm:6-25) — at scripts/ViridianPokecenter.asm:14: script_pokecenter_nurse
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const ViridianPokecenterNurseText,            TEXT_VIRIDIANPOKECENTER_NURSE
-; PRET| 	dw_const ViridianPokecenterGentlemanText,        TEXT_VIRIDIANPOKECENTER_GENTLEMAN
-; PRET| 	dw_const ViridianPokecenterCooltrainerMText,     TEXT_VIRIDIANPOKECENTER_COOLTRAINER_M
-; PRET| 	dw_const ViridianPokecenterLinkReceptionistText, TEXT_VIRIDIANPOKECENTER_LINK_RECEPTIONIST
-; PRET| 	dw_const ViridianPokeCenterChanseyText,          TEXT_VIRIDIANPOKECENTER_CHANSEY
-; PRET| 
-; PRET| ViridianPokecenterNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| ViridianPokecenterGentlemanText:
-; PRET| 	text_far _ViridianPokecenterGentlemanText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianPokecenterCooltrainerMText:
-; PRET| 	text_far _ViridianPokecenterCooltrainerMText
-; PRET| 	text_end
-; PRET| 
-; PRET| ViridianPokecenterLinkReceptionistText:
-; PRET| 	script_cable_club_receptionist
+%assign event_byte -1
+ViridianPokecenter_TextPointers:
+    dd ViridianPokecenterNurseText
+    dd ViridianPokecenterGentlemanText
+    dd ViridianPokecenterCooltrainerMText
+    dd ViridianPokecenterLinkReceptionistText
+    dd ViridianPokeCenterChanseyText
+ViridianPokecenterNurseText:
+    script_pokecenter_nurse
+ViridianPokecenterGentlemanText:
+    text_far _ViridianPokecenterGentlemanText
+    text_end
+ViridianPokecenterCooltrainerMText:
+    text_far _ViridianPokecenterCooltrainerMText
+    text_end
+ViridianPokecenterLinkReceptionistText:
+    script_cable_club_receptionist
 
 %assign event_byte -1
 ViridianPokeCenterChanseyText:

@@ -22,8 +22,14 @@ bits 32
 
 
 global MtMoonPokecenterChanseyText
+global MtMoonPokecenterClipboardText
+global MtMoonPokecenterGentlemanText
+global MtMoonPokecenterLinkReceptionistText
 global MtMoonPokecenterMagikarpSalesmanText
+global MtMoonPokecenterNurseText
+global MtMoonPokecenterYoungsterText
 global MtMoonPokecenter_Script
+global MtMoonPokecenter_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextBoxID   ; NOT YET DEFINED IN THE PORT
@@ -31,12 +37,6 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GivePokemon   ; NOT YET DEFINED IN THE PORT
 extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
 extern MagikarpSalesman   ; NOT YET DEFINED IN THE PORT
-extern MtMoonPokecenterClipboardText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonPokecenterLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonPokecenterNurseText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonPokecenterYoungsterText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonPokecenter_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
@@ -44,19 +44,12 @@ extern SubBCDPredef   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
 extern _MtMoonPokecenterClipboardText   ; NOT YET DEFINED IN THE PORT
+extern _MtMoonPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 extern _MtMoonPokecenterMagikarpSalesmanIGotADealText   ; NOT YET DEFINED IN THE PORT
 extern _MtMoonPokecenterMagikarpSalesmanNoMoneyText   ; NOT YET DEFINED IN THE PORT
 extern _MtMoonPokecenterMagikarpSalesmanNoRefundsText   ; NOT YET DEFINED IN THE PORT
 extern _MtMoonPokecenterMagikarpSalesmanNoText   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_MTMOONPOKECENTER_NURSE                    equ 1
-TEXT_MTMOONPOKECENTER_YOUNGSTER                equ 2
-TEXT_MTMOONPOKECENTER_GENTLEMAN                equ 3
-TEXT_MTMOONPOKECENTER_MAGIKARP_SALESMAN        equ 4
-TEXT_MTMOONPOKECENTER_CLIPBOARD                equ 5
-TEXT_MTMOONPOKECENTER_LINK_RECEPTIONIST        equ 6
-TEXT_MTMOONPOKECENTER_CHANSEY                  equ 7
+extern _MtMoonPokecenterYoungsterText   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -73,29 +66,23 @@ MtMoonPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] MtMoonPokecenter_TextPointers (scripts/MtMoonPokecenter.asm:6-24) — at scripts/MtMoonPokecenter.asm:16: script_pokecenter_nurse
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const MtMoonPokecenterNurseText,            TEXT_MTMOONPOKECENTER_NURSE
-; PRET| 	dw_const MtMoonPokecenterYoungsterText,        TEXT_MTMOONPOKECENTER_YOUNGSTER
-; PRET| 	dw_const MtMoonPokecenterGentlemanText,        TEXT_MTMOONPOKECENTER_GENTLEMAN
-; PRET| 	dw_const MtMoonPokecenterMagikarpSalesmanText, TEXT_MTMOONPOKECENTER_MAGIKARP_SALESMAN
-; PRET| 	dw_const MtMoonPokecenterClipboardText,        TEXT_MTMOONPOKECENTER_CLIPBOARD
-; PRET| 	dw_const MtMoonPokecenterLinkReceptionistText, TEXT_MTMOONPOKECENTER_LINK_RECEPTIONIST
-; PRET| 	dw_const MtMoonPokecenterChanseyText,          TEXT_MTMOONPOKECENTER_CHANSEY
-; PRET| 
-; PRET| MtMoonPokecenterNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| MtMoonPokecenterYoungsterText:
-; PRET| 	text_far _MtMoonPokecenterYoungsterText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonPokecenterGentlemanText:
-; PRET| 	text_far _MtMoonPokecenterGentlemanText
-; PRET| 	text_end
+%assign event_byte -1
+MtMoonPokecenter_TextPointers:
+    dd MtMoonPokecenterNurseText
+    dd MtMoonPokecenterYoungsterText
+    dd MtMoonPokecenterGentlemanText
+    dd MtMoonPokecenterMagikarpSalesmanText
+    dd MtMoonPokecenterClipboardText
+    dd MtMoonPokecenterLinkReceptionistText
+    dd MtMoonPokecenterChanseyText
+MtMoonPokecenterNurseText:
+    script_pokecenter_nurse
+MtMoonPokecenterYoungsterText:
+    text_far _MtMoonPokecenterYoungsterText
+    text_end
+MtMoonPokecenterGentlemanText:
+    text_far _MtMoonPokecenterGentlemanText
+    text_end
 
 %assign event_byte -1
 MtMoonPokecenterMagikarpSalesmanText:
@@ -103,15 +90,12 @@ MtMoonPokecenterMagikarpSalesmanText:
     call MagikarpSalesman
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] MtMoonPokecenterClipboardText (scripts/MtMoonPokecenter.asm:32-36) — at scripts/MtMoonPokecenter.asm:36: script_cable_club_receptionist
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _MtMoonPokecenterClipboardText
-; PRET| 	text_end
-; PRET| 
-; PRET| MtMoonPokecenterLinkReceptionistText:
-; PRET| 	script_cable_club_receptionist
+%assign event_byte -1
+MtMoonPokecenterClipboardText:
+    text_far _MtMoonPokecenterClipboardText
+    text_end
+MtMoonPokecenterLinkReceptionistText:
+    script_cable_club_receptionist
 
 %assign event_byte -1
 MtMoonPokecenterChanseyText:

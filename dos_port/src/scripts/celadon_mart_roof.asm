@@ -21,29 +21,29 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global CeladonMartRoofCurrentFloorSignText
 global CeladonMartRoofDrinkList
+global CeladonMartRoofLittleGirlGiveHerWhichDrinkText
+global CeladonMartRoofLittleGirlImNotThirstyText
+global CeladonMartRoofLittleGirlNoRoomText
+global CeladonMartRoofLittleGirlReceivedTM13Text
+global CeladonMartRoofLittleGirlReceivedTM48Text
+global CeladonMartRoofLittleGirlReceivedTM49Text
+global CeladonMartRoofLittleGirlYayFreshWaterText
+global CeladonMartRoofLittleGirlYayLemonadeText
+global CeladonMartRoofLittleGirlYaySodaPopText
 global CeladonMartRoofSuperNerdText
+global CeladonMartRoofVendingMachineText
 global CeladonMartRoof_Script
 global CeladonMartRoof_TextPointers
 global RemoveItemByIDBank12
 
 extern AddNTimes   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofCurrentFloorSignText   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlGiveHerWhichDrinkText   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlImNotThirstyText   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlNoRoomText   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlReceivedTM13Text   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlReceivedTM48Text   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlReceivedTM49Text   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartRoofLittleGirlText   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlYayFreshWaterText   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlYayLemonadeText   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofLittleGirlYaySodaPopText   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartRoofScript_GetDrinksInBag   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartRoofScript_GiveDrinkToGirl   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartRoofScript_PrintDrinksInBag   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartRoofVendingMachineText   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GetItemName   ; NOT YET DEFINED IN THE PORT
 extern GetQuantityOfItemInBag   ; NOT YET DEFINED IN THE PORT
@@ -56,11 +56,21 @@ extern TextBoxBorder   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofCurrentFloorSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofLittleGirlGiveHerADrinkText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofLittleGirlGiveHerWhichDrinkText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofLittleGirlImNotThirstyText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofLittleGirlImThirstyText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofLittleGirlNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofLittleGirlReceivedTM13Text   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofLittleGirlReceivedTM48Text   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofLittleGirlReceivedTM49Text   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofLittleGirlTM13ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofLittleGirlTM48ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofLittleGirlTM49ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofLittleGirlYayFreshWaterText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofLittleGirlYayLemonadeText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMartRoofLittleGirlYaySodaPopText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMartRoofSuperNerdText   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
@@ -236,58 +246,48 @@ RemoveItemByIDBank12:
     call RemoveItemByID
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CeladonMartRoofLittleGirlGiveHerWhichDrinkText (scripts/CeladonMartRoof.asm:142-189) — at scripts/CeladonMartRoof.asm:152: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonMartRoofLittleGirlGiveHerWhichDrinkText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonMartRoofLittleGirlYayFreshWaterText:
-; PRET| 	text_far _CeladonMartRoofLittleGirlYayFreshWaterText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonMartRoofLittleGirlReceivedTM13Text:
-; PRET| 	text_far _CeladonMartRoofLittleGirlReceivedTM13Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _CeladonMartRoofLittleGirlTM13ExplanationText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonMartRoofLittleGirlYaySodaPopText:
-; PRET| 	text_far _CeladonMartRoofLittleGirlYaySodaPopText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonMartRoofLittleGirlReceivedTM48Text:
-; PRET| 	text_far _CeladonMartRoofLittleGirlReceivedTM48Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _CeladonMartRoofLittleGirlTM48ExplanationText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonMartRoofLittleGirlYayLemonadeText:
-; PRET| 	text_far _CeladonMartRoofLittleGirlYayLemonadeText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonMartRoofLittleGirlReceivedTM49Text:
-; PRET| 	text_far _CeladonMartRoofLittleGirlReceivedTM49Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _CeladonMartRoofLittleGirlTM49ExplanationText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonMartRoofLittleGirlNoRoomText:
-; PRET| 	text_far _CeladonMartRoofLittleGirlNoRoomText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonMartRoofLittleGirlImNotThirstyText:
-; PRET| 	text_far _CeladonMartRoofLittleGirlImNotThirstyText
-; PRET| 	text_waitbutton
-; PRET| 	text_end
+%assign event_byte -1
+CeladonMartRoofLittleGirlGiveHerWhichDrinkText:
+    text_far _CeladonMartRoofLittleGirlGiveHerWhichDrinkText
+    text_end
+CeladonMartRoofLittleGirlYayFreshWaterText:
+    text_far _CeladonMartRoofLittleGirlYayFreshWaterText
+    text_waitbutton
+    text_end
+CeladonMartRoofLittleGirlReceivedTM13Text:
+    text_far _CeladonMartRoofLittleGirlReceivedTM13Text
+    sound_get_item_1
+    text_far _CeladonMartRoofLittleGirlTM13ExplanationText
+    text_waitbutton
+    text_end
+CeladonMartRoofLittleGirlYaySodaPopText:
+    text_far _CeladonMartRoofLittleGirlYaySodaPopText
+    text_waitbutton
+    text_end
+CeladonMartRoofLittleGirlReceivedTM48Text:
+    text_far _CeladonMartRoofLittleGirlReceivedTM48Text
+    sound_get_item_1
+    text_far _CeladonMartRoofLittleGirlTM48ExplanationText
+    text_waitbutton
+    text_end
+CeladonMartRoofLittleGirlYayLemonadeText:
+    text_far _CeladonMartRoofLittleGirlYayLemonadeText
+    text_waitbutton
+    text_end
+CeladonMartRoofLittleGirlReceivedTM49Text:
+    text_far _CeladonMartRoofLittleGirlReceivedTM49Text
+    sound_get_item_1
+    text_far _CeladonMartRoofLittleGirlTM49ExplanationText
+    text_waitbutton
+    text_end
+CeladonMartRoofLittleGirlNoRoomText:
+    text_far _CeladonMartRoofLittleGirlNoRoomText
+    text_waitbutton
+    text_end
+CeladonMartRoofLittleGirlImNotThirstyText:
+    text_far _CeladonMartRoofLittleGirlImNotThirstyText
+    text_waitbutton
+    text_end
 
 ; ---------------------------------------------------------------------------
 ; BAIL[screen-coord-projection] CeladonMartRoofScript_PrintDrinksInBag (scripts/CeladonMartRoof.asm:192-211) — at scripts/CeladonMartRoof.asm:202: hlcoord 2, 2
@@ -327,7 +327,7 @@ CeladonMartRoofSuperNerdText:
     text_end
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMartRoofLittleGirlText (scripts/CeladonMartRoof.asm:228-241) — at scripts/CeladonMartRoof.asm:231: .noDrinksInBag is defined in a region that bailed
+; BAIL[target-region-bailed] CeladonMartRoofLittleGirlText (scripts/CeladonMartRoof.asm:228-241) — at scripts/CeladonMartRoof.asm:239: .done is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	call CeladonMartRoofScript_GetDrinksInBag
@@ -345,29 +345,22 @@ CeladonMartRoofSuperNerdText:
 ; PRET| 	call CeladonMartRoofScript_GiveDrinkToGirl
 ; PRET| 	jr .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMartRoofLittleGirlText.noDrinksInBag (scripts/CeladonMartRoof.asm:243-246) — at scripts/CeladonMartRoof.asm:243: .ImThirstyText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ImThirstyText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.noDrinksInBag:
+    mov esi, .ImThirstyText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] CeladonMartRoofLittleGirlText.ImThirstyText (scripts/CeladonMartRoof.asm:249-261) — at scripts/CeladonMartRoof.asm:257: script_vending_machine
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonMartRoofLittleGirlImThirstyText
-; PRET| 	text_end
-; PRET| 
-; PRET| .GiveHerADrinkText:
-; PRET| 	text_far _CeladonMartRoofLittleGirlGiveHerADrinkText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonMartRoofVendingMachineText:
-; PRET| 	script_vending_machine
-; PRET| 
-; PRET| CeladonMartRoofCurrentFloorSignText:
-; PRET| 	text_far _CeladonMartRoofCurrentFloorSignText
-; PRET| 	text_end
+%assign event_byte -1
+.ImThirstyText:
+    text_far _CeladonMartRoofLittleGirlImThirstyText
+    text_end
+.GiveHerADrinkText:
+    text_far _CeladonMartRoofLittleGirlGiveHerADrinkText
+    text_end
+CeladonMartRoofVendingMachineText:
+    script_vending_machine
+CeladonMartRoofCurrentFloorSignText:
+    text_far _CeladonMartRoofCurrentFloorSignText
+    text_end

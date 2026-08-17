@@ -22,25 +22,20 @@ bits 32
 
 
 global VermilionPokecenterChanseyText
+global VermilionPokecenterFishingGuruText
+global VermilionPokecenterLinkReceptionistText
+global VermilionPokecenterNurseText
+global VermilionPokecenterSailorText
 global VermilionPokecenter_Script
+global VermilionPokecenter_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern VermilionPokecenterFishingGuruText   ; NOT YET DEFINED IN THE PORT
-extern VermilionPokecenterLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern VermilionPokecenterNurseText   ; NOT YET DEFINED IN THE PORT
-extern VermilionPokecenterSailorText   ; NOT YET DEFINED IN THE PORT
-extern VermilionPokecenter_TextPointers   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_VERMILIONPOKECENTER_NURSE                 equ 1
-TEXT_VERMILIONPOKECENTER_FISHING_GURU          equ 2
-TEXT_VERMILIONPOKECENTER_SAILOR                equ 3
-TEXT_VERMILIONPOKECENTER_LINK_RECEPTIONIST     equ 4
-TEXT_VERMILIONPOKECENTER_CHANSEY               equ 5
+extern _VermilionPokecenterFishingGuruText   ; NOT YET DEFINED IN THE PORT
+extern _VermilionPokecenterSailorText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -53,30 +48,23 @@ VermilionPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] VermilionPokecenter_TextPointers (scripts/VermilionPokecenter.asm:6-25) — at scripts/VermilionPokecenter.asm:14: script_pokecenter_nurse
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const VermilionPokecenterNurseText,            TEXT_VERMILIONPOKECENTER_NURSE
-; PRET| 	dw_const VermilionPokecenterFishingGuruText,      TEXT_VERMILIONPOKECENTER_FISHING_GURU
-; PRET| 	dw_const VermilionPokecenterSailorText,           TEXT_VERMILIONPOKECENTER_SAILOR
-; PRET| 	dw_const VermilionPokecenterLinkReceptionistText, TEXT_VERMILIONPOKECENTER_LINK_RECEPTIONIST
-; PRET| 	dw_const VermilionPokecenterChanseyText,          TEXT_VERMILIONPOKECENTER_CHANSEY
-; PRET| 
-; PRET| VermilionPokecenterNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| VermilionPokecenterFishingGuruText:
-; PRET| 	text_far _VermilionPokecenterFishingGuruText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionPokecenterSailorText:
-; PRET| 	text_far _VermilionPokecenterSailorText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionPokecenterLinkReceptionistText:
-; PRET| 	script_cable_club_receptionist
+%assign event_byte -1
+VermilionPokecenter_TextPointers:
+    dd VermilionPokecenterNurseText
+    dd VermilionPokecenterFishingGuruText
+    dd VermilionPokecenterSailorText
+    dd VermilionPokecenterLinkReceptionistText
+    dd VermilionPokecenterChanseyText
+VermilionPokecenterNurseText:
+    script_pokecenter_nurse
+VermilionPokecenterFishingGuruText:
+    text_far _VermilionPokecenterFishingGuruText
+    text_end
+VermilionPokecenterSailorText:
+    text_far _VermilionPokecenterSailorText
+    text_end
+VermilionPokecenterLinkReceptionistText:
+    script_cable_club_receptionist
 
 %assign event_byte -1
 VermilionPokecenterChanseyText:

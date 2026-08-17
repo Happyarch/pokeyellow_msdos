@@ -21,15 +21,17 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global MrPsychicsHouseMrPsychicText
 global MrPsychicsHouse_Script
 global MrPsychicsHouse_TextPointers
 
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
-extern MrPsychicsHouseMrPsychicText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _MrPsychicsHouseMrPsychicReceivedTM29Text   ; NOT YET DEFINED IN THE PORT
+extern _MrPsychicsHouseMrPsychicTM29ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _MrPsychicsHouseMrPsychicTM29NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _MrPsychicsHouseMrPsychicYouWantedThisText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
@@ -46,55 +48,44 @@ MrPsychicsHouse_Script:
 MrPsychicsHouse_TextPointers:
     dd MrPsychicsHouseMrPsychicText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MrPsychicsHouseMrPsychicText (scripts/MrPsychicsHouse.asm:10-20) — at scripts/MrPsychicsHouse.asm:11: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_TM29
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .YouWantedThisText
-; PRET| 	call PrintText
-; PRET| 	lb bc, TM_PSYCHIC_M, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .ReceivedTM29Text
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_TM29
-; PRET| 	jr .done
+%assign event_byte -1
+MrPsychicsHouseMrPsychicText:
+    CheckEvent EVENT_GOT_TM29
+    jnz .got_item
+    mov esi, .YouWantedThisText
+    call PrintText
+    mov bx, ((231) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .ReceivedTM29Text
+    call PrintText
+    SetEvent EVENT_GOT_TM29
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MrPsychicsHouseMrPsychicText.bag_full (scripts/MrPsychicsHouse.asm:22-24) — at scripts/MrPsychicsHouse.asm:22: .TM29NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM29NoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .TM29NoRoomText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MrPsychicsHouseMrPsychicText.got_item (scripts/MrPsychicsHouse.asm:26-29) — at scripts/MrPsychicsHouse.asm:26: .TM29ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM29ExplanationText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_item:
+    mov esi, .TM29ExplanationText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] MrPsychicsHouseMrPsychicText.YouWantedThisText (scripts/MrPsychicsHouse.asm:32-46) — at scripts/MrPsychicsHouse.asm:37: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _MrPsychicsHouseMrPsychicYouWantedThisText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedTM29Text:
-; PRET| 	text_far _MrPsychicsHouseMrPsychicReceivedTM29Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM29ExplanationText:
-; PRET| 	text_far _MrPsychicsHouseMrPsychicTM29ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM29NoRoomText:
-; PRET| 	text_far _MrPsychicsHouseMrPsychicTM29NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.YouWantedThisText:
+    text_far _MrPsychicsHouseMrPsychicYouWantedThisText
+    text_end
+.ReceivedTM29Text:
+    text_far _MrPsychicsHouseMrPsychicReceivedTM29Text
+    sound_get_item_1
+    text_end
+.TM29ExplanationText:
+    text_far _MrPsychicsHouseMrPsychicTM29ExplanationText
+    text_end
+.TM29NoRoomText:
+    text_far _MrPsychicsHouseMrPsychicTM29NoRoomText
+    text_end

@@ -22,25 +22,20 @@ bits 32
 
 
 global FuchsiaPokecenterChanseyText
+global FuchsiaPokecenterCooltrainerFText
+global FuchsiaPokecenterLinkReceptionistText
+global FuchsiaPokecenterNurseText
+global FuchsiaPokecenterRockerText
 global FuchsiaPokecenter_Script
+global FuchsiaPokecenter_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaPokecenterCooltrainerFText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaPokecenterLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaPokecenterNurseText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaPokecenterRockerText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaPokecenter_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_FUCHSIAPOKECENTER_NURSE                   equ 1
-TEXT_FUCHSIAPOKECENTER_ROCKER                  equ 2
-TEXT_FUCHSIAPOKECENTER_COOLTRAINER_F           equ 3
-TEXT_FUCHSIAPOKECENTER_LINK_RECEPTIONIST       equ 4
-TEXT_FUCHSIAPOKECENTER_CHANSEY                 equ 5
+extern _FuchsiaPokecenterCooltrainerFText   ; NOT YET DEFINED IN THE PORT
+extern _FuchsiaPokecenterRockerText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -53,30 +48,23 @@ FuchsiaPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] FuchsiaPokecenter_TextPointers (scripts/FuchsiaPokecenter.asm:6-25) — at scripts/FuchsiaPokecenter.asm:14: script_pokecenter_nurse
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const FuchsiaPokecenterNurseText,            TEXT_FUCHSIAPOKECENTER_NURSE
-; PRET| 	dw_const FuchsiaPokecenterRockerText,           TEXT_FUCHSIAPOKECENTER_ROCKER
-; PRET| 	dw_const FuchsiaPokecenterCooltrainerFText,     TEXT_FUCHSIAPOKECENTER_COOLTRAINER_F
-; PRET| 	dw_const FuchsiaPokecenterLinkReceptionistText, TEXT_FUCHSIAPOKECENTER_LINK_RECEPTIONIST
-; PRET| 	dw_const FuchsiaPokecenterChanseyText,          TEXT_FUCHSIAPOKECENTER_CHANSEY
-; PRET| 
-; PRET| FuchsiaPokecenterNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| FuchsiaPokecenterRockerText:
-; PRET| 	text_far _FuchsiaPokecenterRockerText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaPokecenterCooltrainerFText:
-; PRET| 	text_far _FuchsiaPokecenterCooltrainerFText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaPokecenterLinkReceptionistText:
-; PRET| 	script_cable_club_receptionist
+%assign event_byte -1
+FuchsiaPokecenter_TextPointers:
+    dd FuchsiaPokecenterNurseText
+    dd FuchsiaPokecenterRockerText
+    dd FuchsiaPokecenterCooltrainerFText
+    dd FuchsiaPokecenterLinkReceptionistText
+    dd FuchsiaPokecenterChanseyText
+FuchsiaPokecenterNurseText:
+    script_pokecenter_nurse
+FuchsiaPokecenterRockerText:
+    text_far _FuchsiaPokecenterRockerText
+    text_end
+FuchsiaPokecenterCooltrainerFText:
+    text_far _FuchsiaPokecenterCooltrainerFText
+    text_end
+FuchsiaPokecenterLinkReceptionistText:
+    script_cable_club_receptionist
 
 %assign event_byte -1
 FuchsiaPokecenterChanseyText:

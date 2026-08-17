@@ -48,6 +48,7 @@ global ViridianCityPikachuMovementData
 global ViridianCityPlayerMovingDownPostTrainingScript
 global ViridianCityPlayerMovingDownScript
 global ViridianCityPostCatchTraining
+global ViridianCityPrintFisherText
 global ViridianCityPrintGambler1Text
 global ViridianCityPrintGirlText
 global ViridianCityPrintGymLockedText
@@ -87,11 +88,12 @@ extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
 extern ViridianCityFisherYouCanHaveThisText   ; NOT YET DEFINED IN THE PORT
 extern ViridianCityPostInitialCatchTraining   ; NOT YET DEFINED IN THE PORT
-extern ViridianCityPrintFisherText   ; NOT YET DEFINED IN THE PORT
 extern ViridianCityYoungster2CaterpieAndWeedleDescriptionText   ; NOT YET DEFINED IN THE PORT
 extern ViridianCityYoungster2OkThenText   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
 extern _ViridianCityFisherReceivedTM42Text   ; NOT YET DEFINED IN THE PORT
+extern _ViridianCityFisherTM42ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _ViridianCityFisherTM42NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianCityGambler1GymAlwaysClosedText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianCityGambler1GymLeaderReturnedText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianCityGirlHasntHadHisCoffeeYetText   ; NOT YET DEFINED IN THE PORT
@@ -666,57 +668,46 @@ ViridianCityPrintOldManSleepyText:
     text_far _ViridianCityOldManSleepyPrivatePropertyText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianCityPrintFisherText (scripts/ViridianCity_2.asm:89-99) — at scripts/ViridianCity_2.asm:90: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_TM42
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .YouCanHaveThisText
-; PRET| 	call PrintText
-; PRET| 	lb bc, TM_DREAM_EATER, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .ReceivedTM42Text
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_TM42
-; PRET| 	ret
+%assign event_byte -1
+ViridianCityPrintFisherText:
+    CheckEvent EVENT_GOT_TM42
+    jnz .got_item
+    mov esi, .YouCanHaveThisText
+    call PrintText
+    mov bx, ((244) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .ReceivedTM42Text
+    call PrintText
+    SetEvent EVENT_GOT_TM42
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianCityPrintFisherText.bag_full (scripts/ViridianCity_2.asm:101-103) — at scripts/ViridianCity_2.asm:101: .TM42NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM42NoRoomText
-; PRET| 	call PrintText
-; PRET| 	ret
+%assign event_byte -1
+.bag_full:
+    mov esi, .TM42NoRoomText
+    call PrintText
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianCityPrintFisherText.got_item (scripts/ViridianCity_2.asm:105-107) — at scripts/ViridianCity_2.asm:105: .TM42ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM42ExplanationText
-; PRET| 	call PrintText
-; PRET| 	ret
+%assign event_byte -1
+.got_item:
+    mov esi, .TM42ExplanationText
+    call PrintText
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] ViridianCityPrintFisherText.YouCanHaveThisText (scripts/ViridianCity_2.asm:110-124) — at scripts/ViridianCity_2.asm:115: sound_get_item_2
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far ViridianCityFisherYouCanHaveThisText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedTM42Text:
-; PRET| 	text_far _ViridianCityFisherReceivedTM42Text
-; PRET| 	sound_get_item_2
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM42ExplanationText:
-; PRET| 	text_far _ViridianCityFisherTM42ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM42NoRoomText:
-; PRET| 	text_far _ViridianCityFisherTM42NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.YouCanHaveThisText:
+    text_far ViridianCityFisherYouCanHaveThisText
+    text_end
+.ReceivedTM42Text:
+    text_far _ViridianCityFisherReceivedTM42Text
+    sound_get_item_2
+    text_end
+.TM42ExplanationText:
+    text_far _ViridianCityFisherTM42ExplanationText
+    text_end
+.TM42NoRoomText:
+    text_far _ViridianCityFisherTM42NoRoomText
+    text_end
 
 %assign event_byte -1
 ViridianCityPrintOldManText:

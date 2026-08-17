@@ -21,19 +21,24 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global CinnabarLabMetronomeRoomAmberPipeText
+global CinnabarLabMetronomeRoomPCText
+global CinnabarLabMetronomeRoomScientist1Text
+global CinnabarLabMetronomeRoomScientist2Text
 global CinnabarLabMetronomeRoom_Script
 global CinnabarLabMetronomeRoom_TextPointers
 
-extern CinnabarLabMetronomeRoomAmberPipeText   ; NOT YET DEFINED IN THE PORT
-extern CinnabarLabMetronomeRoomPCText   ; NOT YET DEFINED IN THE PORT
-extern CinnabarLabMetronomeRoomScientist1Text   ; NOT YET DEFINED IN THE PORT
-extern CinnabarLabMetronomeRoomScientist2Text   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarLabMetronomeRoomAmberPipeText   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarLabMetronomeRoomPCText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarLabMetronomeRoomScientist1ReceivedTM35Text   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarLabMetronomeRoomScientist1TM35ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarLabMetronomeRoomScientist1TM35NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _CinnabarLabMetronomeRoomScientist1Text   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarLabMetronomeRoomScientist2Text   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -53,67 +58,53 @@ CinnabarLabMetronomeRoom_TextPointers:
     dd CinnabarLabMetronomeRoomPCText
     dd CinnabarLabMetronomeRoomAmberPipeText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarLabMetronomeRoomScientist1Text (scripts/CinnabarLabMetronomeRoom.asm:14-24) — at scripts/CinnabarLabMetronomeRoom.asm:15: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_TM35
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	lb bc, TM_METRONOME, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .ReceivedTM35Text
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_TM35
-; PRET| 	jr .done
+%assign event_byte -1
+CinnabarLabMetronomeRoomScientist1Text:
+    CheckEvent EVENT_GOT_TM35
+    jnz .got_item
+    mov esi, .Text
+    call PrintText
+    mov bx, ((237) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .ReceivedTM35Text
+    call PrintText
+    SetEvent EVENT_GOT_TM35
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarLabMetronomeRoomScientist1Text.bag_full (scripts/CinnabarLabMetronomeRoom.asm:26-28) — at scripts/CinnabarLabMetronomeRoom.asm:26: .TM35NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM35NoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .TM35NoRoomText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarLabMetronomeRoomScientist1Text.got_item (scripts/CinnabarLabMetronomeRoom.asm:30-33) — at scripts/CinnabarLabMetronomeRoom.asm:30: .TM35ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM35ExplanationText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_item:
+    mov esi, .TM35ExplanationText
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CinnabarLabMetronomeRoomScientist1Text.Text (scripts/CinnabarLabMetronomeRoom.asm:36-62) — at scripts/CinnabarLabMetronomeRoom.asm:41: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CinnabarLabMetronomeRoomScientist1Text
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedTM35Text:
-; PRET| 	text_far _CinnabarLabMetronomeRoomScientist1ReceivedTM35Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM35ExplanationText:
-; PRET| 	text_far _CinnabarLabMetronomeRoomScientist1TM35ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM35NoRoomText:
-; PRET| 	text_far _CinnabarLabMetronomeRoomScientist1TM35NoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| CinnabarLabMetronomeRoomScientist2Text:
-; PRET| 	text_far _CinnabarLabMetronomeRoomScientist2Text
-; PRET| 	text_end
-; PRET| 
-; PRET| CinnabarLabMetronomeRoomPCText:
-; PRET| 	text_far _CinnabarLabMetronomeRoomPCText
-; PRET| 	text_end
-; PRET| 
-; PRET| CinnabarLabMetronomeRoomAmberPipeText:
-; PRET| 	text_far _CinnabarLabMetronomeRoomAmberPipeText
-; PRET| 	text_end
+%assign event_byte -1
+.Text:
+    text_far _CinnabarLabMetronomeRoomScientist1Text
+    text_end
+.ReceivedTM35Text:
+    text_far _CinnabarLabMetronomeRoomScientist1ReceivedTM35Text
+    sound_get_item_1
+    text_end
+.TM35ExplanationText:
+    text_far _CinnabarLabMetronomeRoomScientist1TM35ExplanationText
+    text_end
+.TM35NoRoomText:
+    text_far _CinnabarLabMetronomeRoomScientist1TM35NoRoomText
+    text_end
+CinnabarLabMetronomeRoomScientist2Text:
+    text_far _CinnabarLabMetronomeRoomScientist2Text
+    text_end
+CinnabarLabMetronomeRoomPCText:
+    text_far _CinnabarLabMetronomeRoomPCText
+    text_end
+CinnabarLabMetronomeRoomAmberPipeText:
+    text_far _CinnabarLabMetronomeRoomAmberPipeText
+    text_end

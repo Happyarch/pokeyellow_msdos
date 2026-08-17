@@ -30,8 +30,11 @@ global CeladonGymCooltrainerF2Text
 global CeladonGymCooltrainerF3Text
 global CeladonGymCooltrainerF4Text
 global CeladonGymErikaPostBattleScript
+global CeladonGymRainbowBadgeInfoText
 global CeladonGymReceiveTM21
+global CeladonGymReceivedTM21Text
 global CeladonGymResetScripts
+global CeladonGymTM21NoRoomText
 global CeladonGym_ScriptPointers
 
 extern CeladonGymBattleText2   ; NOT YET DEFINED IN THE PORT
@@ -42,9 +45,6 @@ extern CeladonGymBattleText6   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText7   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText8   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymErikaText   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymRainbowBadgeInfoText   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymReceivedTM21Text   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymTM21NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -74,6 +74,8 @@ extern _CeladonGymErikaPreBattleText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonGymErikaReceivedRainbowBadgeText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonGymRainbowBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonGymReceivedTM21Text   ; NOT YET DEFINED IN THE PORT
+extern _CeladonGymTM21NoRoomText   ; NOT YET DEFINED IN THE PORT
+extern _TM21ExplanationText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_CELADONGYM_ERIKA_POST_BATTLE            equ 3
@@ -179,7 +181,7 @@ CeladonGymReceiveTM21:
 ; CeladonGym_TextPointers (scripts/CeladonGym.asm:75-104) — not re-emitted: CeladonGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonGymErikaText (scripts/CeladonGym.asm:108-114) — at scripts/CeladonGym.asm:109: .beforeBeat is defined in a region that bailed
+; BAIL[event-byte-assembly-state] CeladonGymErikaText (scripts/CeladonGym.asm:108-114) — at scripts/CeladonGym.asm:110: CheckEventReuseA EVENT_GOT_TM21
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_ERIKA
@@ -190,66 +192,55 @@ CeladonGymReceiveTM21:
 ; PRET| 	call DisableWaitingAfterTextDisplay
 ; PRET| 	jr .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonGymErikaText.afterBeat (scripts/CeladonGym.asm:116-118) — at scripts/CeladonGym.asm:116: .PostBattleAdviceText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PostBattleAdviceText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.afterBeat:
+    mov esi, .PostBattleAdviceText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonGymErikaText.beforeBeat (scripts/CeladonGym.asm:120-138) — at scripts/CeladonGym.asm:120: .PreBattleText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PreBattleText
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, .ReceivedRainbowBadgeText
-; PRET| 	ld de, .ReceivedRainbowBadgeText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	ld a, $4
-; PRET| 	ld [wGymLeaderNo], a
-; PRET| 	ld a, SCRIPT_CELADONGYM_ERIKA_POST_BATTLE
-; PRET| 	ld [wCeladonGymCurScript], a
-; PRET| 	ld [wCurMapScript], a
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.beforeBeat:
+    mov esi, .PreBattleText
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, .ReceivedRainbowBadgeText
+    mov edx, .ReceivedRainbowBadgeText   ; pret: ld de, .ReceivedRainbowBadgeText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hSpriteIndex]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    mov al, 0x4
+    mov [ebp + wGymLeaderNo], al
+    mov al, SCRIPT_CELADONGYM_ERIKA_POST_BATTLE
+    mov [ebp + wCeladonGymCurScript], al
+    mov [ebp + wCurMapScript], al
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CeladonGymErikaText.PreBattleText (scripts/CeladonGym.asm:141-164) — at scripts/CeladonGym.asm:158: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonGymErikaPreBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedRainbowBadgeText:
-; PRET| 	text_far _CeladonGymErikaReceivedRainbowBadgeText
-; PRET| 	text_end
-; PRET| 
-; PRET| .PostBattleAdviceText:
-; PRET| 	text_far _CeladonGymErikaPostBattleAdviceText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymRainbowBadgeInfoText:
-; PRET| 	text_far _CeladonGymRainbowBadgeInfoText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymReceivedTM21Text:
-; PRET| 	text_far _CeladonGymReceivedTM21Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _TM21ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeladonGymTM21NoRoomText:
-; PRET| 	text_far _CeladonGymTM21NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.PreBattleText:
+    text_far _CeladonGymErikaPreBattleText
+    text_end
+.ReceivedRainbowBadgeText:
+    text_far _CeladonGymErikaReceivedRainbowBadgeText
+    text_end
+.PostBattleAdviceText:
+    text_far _CeladonGymErikaPostBattleAdviceText
+    text_end
+CeladonGymRainbowBadgeInfoText:
+    text_far _CeladonGymRainbowBadgeInfoText
+    text_end
+CeladonGymReceivedTM21Text:
+    text_far _CeladonGymReceivedTM21Text
+    sound_get_item_1
+    text_far _TM21ExplanationText
+    text_end
+CeladonGymTM21NoRoomText:
+    text_far _CeladonGymTM21NoRoomText
+    text_end
 
 %assign event_byte -1
 CeladonGymCooltrainerF1Text:

@@ -24,9 +24,13 @@ bits 32
 
 global PewterPokecenterChanseyText
 global PewterPokecenterCooltrainerFText
+global PewterPokecenterGentlemanText
 global PewterPokecenterJigglypuffText
+global PewterPokecenterLinkReceptionistText
+global PewterPokecenterNurseText
 global PewterPokecenterPrintCooltrainerFText
 global PewterPokecenter_Script
+global PewterPokecenter_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CheckPikachuStatusCondition   ; NOT YET DEFINED IN THE PORT
@@ -35,10 +39,6 @@ extern DelayFrames   ; NOT YET DEFINED IN THE PORT
 extern DisablePikachuFollowingPlayer   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern PewterJigglypuff   ; NOT YET DEFINED IN THE PORT
-extern PewterPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
-extern PewterPokecenterLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern PewterPokecenterNurseText   ; NOT YET DEFINED IN THE PORT
-extern PewterPokecenter_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
 extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
@@ -46,16 +46,9 @@ extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
 extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern _PewterPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 extern _PewterPokecenterJigglypuffText   ; NOT YET DEFINED IN THE PORT
 extern _PewterPokecenterText3   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_PEWTERPOKECENTER_NURSE                    equ 1
-TEXT_PEWTERPOKECENTER_GENTLEMAN                equ 2
-TEXT_PEWTERPOKECENTER_JIGGLYPUFF               equ 3
-TEXT_PEWTERPOKECENTER_LINK_RECEPTIONIST        equ 4
-TEXT_PEWTERPOKECENTER_COOLTRAINER_F            equ 5
-TEXT_PEWTERPOKECENTER_CHANSEY                  equ 6
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -78,24 +71,19 @@ PewterPokecenter_Script:
     call EnableAutoTextBoxDrawing
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] PewterPokecenter_TextPointers (scripts/PewterPokecenter.asm:9-22) — at scripts/PewterPokecenter.asm:18: script_pokecenter_nurse
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const PewterPokecenterNurseText,            TEXT_PEWTERPOKECENTER_NURSE
-; PRET| 	dw_const PewterPokecenterGentlemanText,        TEXT_PEWTERPOKECENTER_GENTLEMAN
-; PRET| 	dw_const PewterPokecenterJigglypuffText,       TEXT_PEWTERPOKECENTER_JIGGLYPUFF
-; PRET| 	dw_const PewterPokecenterLinkReceptionistText, TEXT_PEWTERPOKECENTER_LINK_RECEPTIONIST
-; PRET| 	dw_const PewterPokecenterCooltrainerFText,     TEXT_PEWTERPOKECENTER_COOLTRAINER_F
-; PRET| 	dw_const PewterPokecenterChanseyText,          TEXT_PEWTERPOKECENTER_CHANSEY
-; PRET| 
-; PRET| PewterPokecenterNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| PewterPokecenterGentlemanText:
-; PRET| 	text_far _PewterPokecenterGentlemanText
-; PRET| 	text_end
+%assign event_byte -1
+PewterPokecenter_TextPointers:
+    dd PewterPokecenterNurseText
+    dd PewterPokecenterGentlemanText
+    dd PewterPokecenterJigglypuffText
+    dd PewterPokecenterLinkReceptionistText
+    dd PewterPokecenterCooltrainerFText
+    dd PewterPokecenterChanseyText
+PewterPokecenterNurseText:
+    script_pokecenter_nurse
+PewterPokecenterGentlemanText:
+    text_far _PewterPokecenterGentlemanText
+    text_end
 
 %assign event_byte -1
 PewterPokecenterJigglypuffText:
@@ -103,11 +91,9 @@ PewterPokecenterJigglypuffText:
     call PewterJigglypuff
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] PewterPokecenterLinkReceptionistText (scripts/PewterPokecenter.asm:30-30) — at scripts/PewterPokecenter.asm:30: script_cable_club_receptionist
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	script_cable_club_receptionist
+%assign event_byte -1
+PewterPokecenterLinkReceptionistText:
+    script_cable_club_receptionist
 
 %assign event_byte -1
 PewterPokecenterCooltrainerFText:

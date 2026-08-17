@@ -22,9 +22,15 @@ bits 32
 
 %include "assets/audio_constants.inc"
 
+global SSAnneCaptainsRoomCaptainHM01NoRoomText
+global SSAnneCaptainsRoomCaptainIFeelMuchBetterText
+global SSAnneCaptainsRoomCaptainNotSickAnymoreText
+global SSAnneCaptainsRoomCaptainReceivedHM01Text
 global SSAnneCaptainsRoomCaptainText
 global SSAnneCaptainsRoomEventScript
 global SSAnneCaptainsRoomRubCaptainsBackText
+global SSAnneCaptainsRoomSeasickBookText
+global SSAnneCaptainsRoomTrashText
 global SSAnneCaptainsRoom_Script
 global SSAnneCaptainsRoom_TextPointers
 
@@ -33,17 +39,15 @@ extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
 extern PlaySound   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneCaptainsRoomCaptainHM01NoRoomText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneCaptainsRoomCaptainIFeelMuchBetterText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneCaptainsRoomCaptainNotSickAnymoreText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneCaptainsRoomCaptainReceivedHM01Text   ; NOT YET DEFINED IN THE PORT
-extern SSAnneCaptainsRoomSeasickBookText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneCaptainsRoomTrashText   ; NOT YET DEFINED IN THE PORT
 extern StopAllMusic   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern _SSAnneCaptainsRoomCaptainHM01NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnneCaptainsRoomCaptainIFeelMuchBetterText   ; NOT YET DEFINED IN THE PORT
+extern _SSAnneCaptainsRoomCaptainNotSickAnymoreText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnneCaptainsRoomCaptainReceivedHM01Text   ; NOT YET DEFINED IN THE PORT
 extern _SSAnneCaptainsRoomRubCaptainsBackText   ; NOT YET DEFINED IN THE PORT
+extern _SSAnneCaptainsRoomSeasickBookText   ; NOT YET DEFINED IN THE PORT
+extern _SSAnneCaptainsRoomTrashText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -129,30 +133,23 @@ SSAnneCaptainsRoomRubCaptainsBackText:
     and byte [ebp + esi], ~(1 << (BIT_NO_NPC_FACE_PLAYER)) & 0xFF
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] SSAnneCaptainsRoomCaptainIFeelMuchBetterText (scripts/SSAnneCaptainsRoom.asm:70-92) — at scripts/SSAnneCaptainsRoom.asm:75: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SSAnneCaptainsRoomCaptainIFeelMuchBetterText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneCaptainsRoomCaptainReceivedHM01Text:
-; PRET| 	text_far _SSAnneCaptainsRoomCaptainReceivedHM01Text
-; PRET| 	sound_get_key_item
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneCaptainsRoomCaptainNotSickAnymoreText:
-; PRET| 	text_far _SSAnneCaptainsRoomCaptainNotSickAnymoreText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneCaptainsRoomCaptainHM01NoRoomText:
-; PRET| 	text_far _SSAnneCaptainsRoomCaptainHM01NoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneCaptainsRoomTrashText:
-; PRET| 	text_far _SSAnneCaptainsRoomTrashText
-; PRET| 	text_end
-; PRET| 
-; PRET| SSAnneCaptainsRoomSeasickBookText:
-; PRET| 	text_far _SSAnneCaptainsRoomSeasickBookText
-; PRET| 	text_end
+%assign event_byte -1
+SSAnneCaptainsRoomCaptainIFeelMuchBetterText:
+    text_far _SSAnneCaptainsRoomCaptainIFeelMuchBetterText
+    text_end
+SSAnneCaptainsRoomCaptainReceivedHM01Text:
+    text_far _SSAnneCaptainsRoomCaptainReceivedHM01Text
+    sound_get_key_item
+    text_end
+SSAnneCaptainsRoomCaptainNotSickAnymoreText:
+    text_far _SSAnneCaptainsRoomCaptainNotSickAnymoreText
+    text_end
+SSAnneCaptainsRoomCaptainHM01NoRoomText:
+    text_far _SSAnneCaptainsRoomCaptainHM01NoRoomText
+    text_end
+SSAnneCaptainsRoomTrashText:
+    text_far _SSAnneCaptainsRoomTrashText
+    text_end
+SSAnneCaptainsRoomSeasickBookText:
+    text_far _SSAnneCaptainsRoomSeasickBookText
+    text_end

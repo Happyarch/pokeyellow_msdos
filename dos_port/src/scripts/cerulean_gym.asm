@@ -23,7 +23,12 @@ bits 32
 %include "assets/trainer_headers.inc"
 
 global CeruleanGymCooltrainerFText
+global CeruleanGymGymGuideText
+global CeruleanGymMistyCascadeBadgeInfoText
 global CeruleanGymMistyPostBattleScript
+global CeruleanGymMistyReceivedCascadeBadgeText
+global CeruleanGymMistyReceivedTM11Text
+global CeruleanGymMistyTM11NoRoomText
 global CeruleanGymReceiveTM11
 global CeruleanGymResetScripts
 global CeruleanGymSwimmerText
@@ -31,11 +36,6 @@ global CeruleanGym_ScriptPointers
 
 extern CeruleanGymBattleText1   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymBattleText2   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymGymGuideText   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymMistyCascadeBadgeInfoText   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymMistyReceivedCascadeBadgeText   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymMistyReceivedTM11Text   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymMistyTM11NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymMistyText   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -60,8 +60,10 @@ extern _CeruleanGymGymGuideBeatMistyText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanGymGymGuideChampInMakingText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanGymMistyCascadeBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanGymMistyPreBattleText   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanGymMistyReceivedCascadeBadgeText   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanGymMistyReceivedTM11Text   ; NOT YET DEFINED IN THE PORT
 extern _CeruleanGymMistyTM11ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _CeruleanGymMistyTM11NoRoomText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_CERULEANGYM_MISTY_POST_BATTLE           equ 3
@@ -167,7 +169,7 @@ CeruleanGymReceiveTM11:
 ; CeruleanGym_TextPointers (scripts/CeruleanGym.asm:75-90) — not re-emitted: CeruleanGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanGymMistyText (scripts/CeruleanGym.asm:94-100) — at scripts/CeruleanGym.asm:95: .beforeBeat is defined in a region that bailed
+; BAIL[event-byte-assembly-state] CeruleanGymMistyText (scripts/CeruleanGym.asm:94-100) — at scripts/CeruleanGym.asm:96: CheckEventReuseA EVENT_GOT_TM11
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_MISTY
@@ -178,66 +180,55 @@ CeruleanGymReceiveTM11:
 ; PRET| 	call DisableWaitingAfterTextDisplay
 ; PRET| 	jr .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanGymMistyText.afterBeat (scripts/CeruleanGym.asm:102-104) — at scripts/CeruleanGym.asm:102: .TM11ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM11ExplanationText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.afterBeat:
+    mov esi, .TM11ExplanationText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanGymMistyText.beforeBeat (scripts/CeruleanGym.asm:106-125) — at scripts/CeruleanGym.asm:106: .PreBattleText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PreBattleText
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, CeruleanGymMistyReceivedCascadeBadgeText
-; PRET| 	ld de, CeruleanGymMistyReceivedCascadeBadgeText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	ld a, $2
-; PRET| 	ld [wGymLeaderNo], a
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, SCRIPT_CERULEANGYM_MISTY_POST_BATTLE
-; PRET| 	ld [wCeruleanGymCurScript], a
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.beforeBeat:
+    mov esi, .PreBattleText
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, CeruleanGymMistyReceivedCascadeBadgeText
+    mov edx, CeruleanGymMistyReceivedCascadeBadgeText   ; pret: ld de, CeruleanGymMistyReceivedCascadeBadgeText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hSpriteIndex]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    mov al, 0x2
+    mov [ebp + wGymLeaderNo], al
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, SCRIPT_CERULEANGYM_MISTY_POST_BATTLE
+    mov [ebp + wCeruleanGymCurScript], al
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CeruleanGymMistyText.PreBattleText (scripts/CeruleanGym.asm:128-150) — at scripts/CeruleanGym.asm:141: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeruleanGymMistyPreBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM11ExplanationText:
-; PRET| 	text_far _CeruleanGymMistyTM11ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanGymMistyCascadeBadgeInfoText:
-; PRET| 	text_far _CeruleanGymMistyCascadeBadgeInfoText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanGymMistyReceivedTM11Text:
-; PRET| 	text_far _CeruleanGymMistyReceivedTM11Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanGymMistyTM11NoRoomText:
-; PRET| 	text_far _CeruleanGymMistyTM11NoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| CeruleanGymMistyReceivedCascadeBadgeText:
-; PRET| 	text_far _CeruleanGymMistyReceivedCascadeBadgeText
-; PRET| 	text_end
+%assign event_byte -1
+.PreBattleText:
+    text_far _CeruleanGymMistyPreBattleText
+    text_end
+.TM11ExplanationText:
+    text_far _CeruleanGymMistyTM11ExplanationText
+    text_end
+CeruleanGymMistyCascadeBadgeInfoText:
+    text_far _CeruleanGymMistyCascadeBadgeInfoText
+    text_end
+CeruleanGymMistyReceivedTM11Text:
+    text_far _CeruleanGymMistyReceivedTM11Text
+    sound_get_item_1
+    text_end
+CeruleanGymMistyTM11NoRoomText:
+    text_far _CeruleanGymMistyTM11NoRoomText
+    text_end
+CeruleanGymMistyReceivedCascadeBadgeText:
+    text_far _CeruleanGymMistyReceivedCascadeBadgeText
+    text_end
 
 %assign event_byte -1
 CeruleanGymCooltrainerFText:
@@ -255,15 +246,13 @@ CeruleanGymSwimmerText:
 
 ; CeruleanGymBattleText2 (scripts/CeruleanGym.asm:177-186) — not re-emitted: CeruleanGymBattleText2 is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanGymGymGuideText (scripts/CeruleanGym.asm:190-194) — at scripts/CeruleanGym.asm:191: .afterBeat is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_MISTY
-; PRET| 	jr nz, .afterBeat
-; PRET| 	ld hl, .ChampInMakingText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+CeruleanGymGymGuideText:
+    CheckEvent EVENT_BEAT_MISTY
+    jnz .afterBeat
+    mov esi, .ChampInMakingText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
 .afterBeat:

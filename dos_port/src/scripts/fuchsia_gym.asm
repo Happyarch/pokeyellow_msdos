@@ -22,7 +22,11 @@ bits 32
 
 %include "assets/trainer_headers.inc"
 
+global FuchsiaGymGymGuideText
 global FuchsiaGymKogaPostBattleScript
+global FuchsiaGymKogaReceivedTM06Text
+global FuchsiaGymKogaSoulBadgeInfoText
+global FuchsiaGymKogaTM06NoRoomText
 global FuchsiaGymReceiveTM06
 global FuchsiaGymResetScripts
 global FuchsiaGymRocker1Text
@@ -40,10 +44,6 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymGymGuideText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymKogaReceivedTM06Text   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymKogaSoulBadgeInfoText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymKogaTM06NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymKogaText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker1BattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker2BattleText   ; NOT YET DEFINED IN THE PORT
@@ -74,6 +74,8 @@ extern _FuchsiaGymKogaPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaGymKogaReceivedSoulBadgeText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaGymKogaReceivedTM06Text   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaGymKogaSoulBadgeInfoText   ; NOT YET DEFINED IN THE PORT
+extern _FuchsiaGymKogaTM06ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _FuchsiaGymKogaTM06NoRoomText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_FUCHSIAGYM_KOGA_POST_BATTLE             equ 3
@@ -181,7 +183,7 @@ FuchsiaGymReceiveTM06:
 ; FuchsiaGym_TextPointers (scripts/FuchsiaGym.asm:77-104) — not re-emitted: FuchsiaGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGymKogaText (scripts/FuchsiaGym.asm:108-114) — at scripts/FuchsiaGym.asm:109: .beforeBeat is defined in a region that bailed
+; BAIL[event-byte-assembly-state] FuchsiaGymKogaText (scripts/FuchsiaGym.asm:108-114) — at scripts/FuchsiaGym.asm:110: CheckEventReuseA EVENT_GOT_TM06
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_KOGA
@@ -192,67 +194,56 @@ FuchsiaGymReceiveTM06:
 ; PRET| 	call DisableWaitingAfterTextDisplay
 ; PRET| 	jr .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGymKogaText.afterBeat (scripts/FuchsiaGym.asm:116-118) — at scripts/FuchsiaGym.asm:116: .PostBattleAdviceText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PostBattleAdviceText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.afterBeat:
+    mov esi, .PostBattleAdviceText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGymKogaText.beforeBeat (scripts/FuchsiaGym.asm:120-139) — at scripts/FuchsiaGym.asm:120: .BeforeBattleText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .BeforeBattleText
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, .ReceivedSoulBadgeText
-; PRET| 	ld de, .ReceivedSoulBadgeText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	ld a, $5
-; PRET| 	ld [wGymLeaderNo], a
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, SCRIPT_FUCHSIAGYM_KOGA_POST_BATTLE
-; PRET| 	ld [wFuchsiaGymCurScript], a
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.beforeBeat:
+    mov esi, .BeforeBattleText
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, .ReceivedSoulBadgeText
+    mov edx, .ReceivedSoulBadgeText   ; pret: ld de, .ReceivedSoulBadgeText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hSpriteIndex]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    mov al, 0x5
+    mov [ebp + wGymLeaderNo], al
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, SCRIPT_FUCHSIAGYM_KOGA_POST_BATTLE
+    mov [ebp + wFuchsiaGymCurScript], al
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] FuchsiaGymKogaText.BeforeBattleText (scripts/FuchsiaGym.asm:142-165) — at scripts/FuchsiaGym.asm:159: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FuchsiaGymKogaBeforeBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedSoulBadgeText:
-; PRET| 	text_far _FuchsiaGymKogaReceivedSoulBadgeText
-; PRET| 	text_end
-; PRET| 
-; PRET| .PostBattleAdviceText:
-; PRET| 	text_far _FuchsiaGymKogaPostBattleAdviceText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymKogaSoulBadgeInfoText:
-; PRET| 	text_far _FuchsiaGymKogaSoulBadgeInfoText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymKogaReceivedTM06Text:
-; PRET| 	text_far _FuchsiaGymKogaReceivedTM06Text
-; PRET| 	sound_get_key_item
-; PRET| 	text_far _FuchsiaGymKogaTM06ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| FuchsiaGymKogaTM06NoRoomText:
-; PRET| 	text_far _FuchsiaGymKogaTM06NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.BeforeBattleText:
+    text_far _FuchsiaGymKogaBeforeBattleText
+    text_end
+.ReceivedSoulBadgeText:
+    text_far _FuchsiaGymKogaReceivedSoulBadgeText
+    text_end
+.PostBattleAdviceText:
+    text_far _FuchsiaGymKogaPostBattleAdviceText
+    text_end
+FuchsiaGymKogaSoulBadgeInfoText:
+    text_far _FuchsiaGymKogaSoulBadgeInfoText
+    text_end
+FuchsiaGymKogaReceivedTM06Text:
+    text_far _FuchsiaGymKogaReceivedTM06Text
+    sound_get_key_item
+    text_far _FuchsiaGymKogaTM06ExplanationText
+    text_end
+FuchsiaGymKogaTM06NoRoomText:
+    text_far _FuchsiaGymKogaTM06NoRoomText
+    text_end
 
 %assign event_byte -1
 FuchsiaGymRocker1Text:
@@ -302,17 +293,15 @@ FuchsiaGymRocker6Text:
 
 ; FuchsiaGymRocker6BattleText (scripts/FuchsiaGym.asm:264-273) — not re-emitted: FuchsiaGymRocker6BattleText is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGymGymGuideText (scripts/FuchsiaGym.asm:277-283) — at scripts/FuchsiaGym.asm:279: .afterBeat is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_KOGA
-; PRET| 	ld hl, .BeatKogaText
-; PRET| 	jr nz, .afterBeat
-; PRET| 	ld hl, .ChampInMakingText
-; PRET| .afterBeat
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+FuchsiaGymGymGuideText:
+    CheckEvent EVENT_BEAT_KOGA
+    mov esi, .BeatKogaText
+    jnz .afterBeat
+    mov esi, .ChampInMakingText
+.afterBeat:
+    call PrintText
+    jmp TextScriptEnd
 
 %assign event_byte -1
 .ChampInMakingText:

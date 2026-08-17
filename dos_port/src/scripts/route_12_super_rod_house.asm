@@ -21,17 +21,21 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global Route12SuperRodHouseFishingGuruText
 global Route12SuperRodHouse_Script
 global Route12SuperRodHouse_TextPointers
 
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Route12SuperRodHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
 extern _Route12SuperRodHouseFishingGuruDoYouLikeToFishText   ; NOT YET DEFINED IN THE PORT
+extern _Route12SuperRodHouseFishingGuruFishingWayOfLifeText   ; NOT YET DEFINED IN THE PORT
+extern _Route12SuperRodHouseFishingGuruNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _Route12SuperRodHouseFishingGuruReceivedSuperRodText   ; NOT YET DEFINED IN THE PORT
+extern _Route12SuperRodHouseFishingGuruThatsDisappointingText   ; NOT YET DEFINED IN THE PORT
+extern _Route12SuperRodHouseFishingGuruTryFishingText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -47,71 +51,57 @@ Route12SuperRodHouse_Script:
 Route12SuperRodHouse_TextPointers:
     dd Route12SuperRodHouseFishingGuruText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route12SuperRodHouseFishingGuruText (scripts/Route12SuperRodHouse.asm:10-25) — at scripts/Route12SuperRodHouse.asm:12: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags1]
-; PRET| 	bit BIT_GOT_SUPER_ROD, a
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .DoYouLikeToFishText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .refused
-; PRET| 	lb bc, SUPER_ROD, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, wStatusFlags1
-; PRET| 	set BIT_GOT_SUPER_ROD, [hl]
-; PRET| 	ld hl, .ReceivedSuperRodText
-; PRET| 	jr .done
+%assign event_byte -1
+Route12SuperRodHouseFishingGuruText:
+    mov al, [ebp + wStatusFlags1]
+    test al, (1 << (5))
+    jnz .got_item
+    mov esi, .DoYouLikeToFishText
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .refused
+    mov bx, ((SUPER_ROD) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, wStatusFlags1
+    or byte [ebp + esi], (1 << (5))
+    mov esi, .ReceivedSuperRodText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route12SuperRodHouseFishingGuruText.bag_full (scripts/Route12SuperRodHouse.asm:27-28) — at scripts/Route12SuperRodHouse.asm:27: .NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .NoRoomText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .NoRoomText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route12SuperRodHouseFishingGuruText.refused (scripts/Route12SuperRodHouse.asm:30-31) — at scripts/Route12SuperRodHouse.asm:30: .ThatsDisappointingText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ThatsDisappointingText
-; PRET| 	jr .done
+%assign event_byte -1
+.refused:
+    mov esi, .ThatsDisappointingText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route12SuperRodHouseFishingGuruText.got_item (scripts/Route12SuperRodHouse.asm:33-36) — at scripts/Route12SuperRodHouse.asm:33: .TryFishingText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TryFishingText
-; PRET| .done
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_item:
+    mov esi, .TryFishingText
+.done:
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] Route12SuperRodHouseFishingGuruText.DoYouLikeToFishText (scripts/Route12SuperRodHouse.asm:39-58) — at scripts/Route12SuperRodHouse.asm:44: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route12SuperRodHouseFishingGuruDoYouLikeToFishText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedSuperRodText:
-; PRET| 	text_far _Route12SuperRodHouseFishingGuruReceivedSuperRodText
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _Route12SuperRodHouseFishingGuruFishingWayOfLifeText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ThatsDisappointingText:
-; PRET| 	text_far _Route12SuperRodHouseFishingGuruThatsDisappointingText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TryFishingText:
-; PRET| 	text_far _Route12SuperRodHouseFishingGuruTryFishingText
-; PRET| 	text_end
-; PRET| 
-; PRET| .NoRoomText:
-; PRET| 	text_far _Route12SuperRodHouseFishingGuruNoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.DoYouLikeToFishText:
+    text_far _Route12SuperRodHouseFishingGuruDoYouLikeToFishText
+    text_end
+.ReceivedSuperRodText:
+    text_far _Route12SuperRodHouseFishingGuruReceivedSuperRodText
+    sound_get_item_1
+    text_far _Route12SuperRodHouseFishingGuruFishingWayOfLifeText
+    text_end
+.ThatsDisappointingText:
+    text_far _Route12SuperRodHouseFishingGuruThatsDisappointingText
+    text_end
+.TryFishingText:
+    text_far _Route12SuperRodHouseFishingGuruTryFishingText
+    text_end
+.NoRoomText:
+    text_far _Route12SuperRodHouseFishingGuruNoRoomText
+    text_end

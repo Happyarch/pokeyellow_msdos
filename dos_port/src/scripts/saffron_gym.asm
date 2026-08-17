@@ -20,15 +20,17 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-%include "assets/audio_constants.inc"
 %include "assets/trainer_headers.inc"
 
 global SaffronGymChanneler1Text
 global SaffronGymChanneler2Text
 global SaffronGymChanneler3Text
 global SaffronGymResetScripts
+global SaffronGymSabrinaMarshBadgeInfoText
 global SaffronGymSabrinaPostBattle
 global SaffronGymSabrinaReceiveTM46Script
+global SaffronGymSabrinaReceivedTM46Text
+global SaffronGymSabrinaTM46NoRoomText
 global SaffronGymYoungster1Text
 global SaffronGymYoungster2Text
 global SaffronGymYoungster3Text
@@ -48,9 +50,6 @@ extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymGymGuideText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymSabrinaMarshBadgeInfoText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymSabrinaReceivedTM46Text   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymSabrinaTM46NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymSabrinaText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -65,8 +64,13 @@ extern SaffronGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
+extern _SaffronGymSabrinaMarshBadgeInfoText   ; NOT YET DEFINED IN THE PORT
+extern _SaffronGymSabrinaPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGymSabrinaReceivedMarshBadgeText   ; NOT YET DEFINED IN THE PORT
+extern _SaffronGymSabrinaReceivedTM46Text   ; NOT YET DEFINED IN THE PORT
+extern _SaffronGymSabrinaTM46NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _SaffronGymSabrinaText   ; NOT YET DEFINED IN THE PORT
+extern _TM46ExplanationText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_SAFFRONGYM_SABRINA_POST_BATTLE          equ 3
@@ -172,7 +176,7 @@ SaffronGymSabrinaReceiveTM46Script:
 ; SaffronGym_TextPointers (scripts/SaffronGym.asm:75-105) — not re-emitted: SaffronGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGymSabrinaText (scripts/SaffronGym.asm:109-115) — at scripts/SaffronGym.asm:110: .beforeBeat is defined in a region that bailed
+; BAIL[event-byte-assembly-state] SaffronGymSabrinaText (scripts/SaffronGym.asm:109-115) — at scripts/SaffronGym.asm:111: CheckEventReuseA EVENT_GOT_TM46
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_SABRINA
@@ -184,66 +188,57 @@ SaffronGymSabrinaReceiveTM46Script:
 ; PRET| 	jr .done
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGymSabrinaText.afterBeat (scripts/SaffronGym.asm:117-119) — at scripts/SaffronGym.asm:117: .PostBattleAdviceText is defined in a region that bailed
+; BAIL[target-region-bailed] SaffronGymSabrinaText.afterBeat (scripts/SaffronGym.asm:117-119) — at scripts/SaffronGym.asm:119: .done is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .PostBattleAdviceText
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGymSabrinaText.beforeBeat (scripts/SaffronGym.asm:121-138) — at scripts/SaffronGym.asm:121: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, .ReceivedMarshBadgeText
-; PRET| 	ld de, .ReceivedMarshBadgeText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	ld a, $6
-; PRET| 	ld [wGymLeaderNo], a
-; PRET| 	ld a, SCRIPT_SAFFRONGYM_SABRINA_POST_BATTLE
-; PRET| 	ld [wSaffronGymCurScript], a
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.beforeBeat:
+    mov esi, .Text
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, .ReceivedMarshBadgeText
+    mov edx, .ReceivedMarshBadgeText   ; pret: ld de, .ReceivedMarshBadgeText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hSpriteIndex]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    mov al, 0x6
+    mov [ebp + wGymLeaderNo], al
+    mov al, SCRIPT_SAFFRONGYM_SABRINA_POST_BATTLE
+    mov [ebp + wSaffronGymCurScript], al
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] SaffronGymSabrinaText.Text (scripts/SaffronGym.asm:141-166) — at scripts/SaffronGym.asm:146: sound_get_key_item ; actually plays the second channel of SFX_BALL_POOF due to the wrong music bank being loaded
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SaffronGymSabrinaText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedMarshBadgeText:
-; PRET| 	text_far _SaffronGymSabrinaReceivedMarshBadgeText
-; PRET| 	sound_get_key_item ; actually plays the second channel of SFX_BALL_POOF due to the wrong music bank being loaded
-; PRET| 	text_promptbutton
-; PRET| 	text_end
-; PRET| 
-; PRET| .PostBattleAdviceText:
-; PRET| 	text_far _SaffronGymSabrinaPostBattleAdviceText
-; PRET| 	text_end
-; PRET| 
-; PRET| SaffronGymSabrinaMarshBadgeInfoText:
-; PRET| 	text_far _SaffronGymSabrinaMarshBadgeInfoText
-; PRET| 	text_end
-; PRET| 
-; PRET| SaffronGymSabrinaReceivedTM46Text:
-; PRET| 	text_far _SaffronGymSabrinaReceivedTM46Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _TM46ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| SaffronGymSabrinaTM46NoRoomText:
-; PRET| 	text_far _SaffronGymSabrinaTM46NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.Text:
+    text_far _SaffronGymSabrinaText
+    text_end
+.ReceivedMarshBadgeText:
+    text_far _SaffronGymSabrinaReceivedMarshBadgeText
+    sound_get_key_item
+    text_promptbutton
+    text_end
+.PostBattleAdviceText:
+    text_far _SaffronGymSabrinaPostBattleAdviceText
+    text_end
+SaffronGymSabrinaMarshBadgeInfoText:
+    text_far _SaffronGymSabrinaMarshBadgeInfoText
+    text_end
+SaffronGymSabrinaReceivedTM46Text:
+    text_far _SaffronGymSabrinaReceivedTM46Text
+    sound_get_item_1
+    text_far _TM46ExplanationText
+    text_end
+SaffronGymSabrinaTM46NoRoomText:
+    text_far _SaffronGymSabrinaTM46NoRoomText
+    text_end
 
 %assign event_byte -1
 SaffronGymChanneler1Text:

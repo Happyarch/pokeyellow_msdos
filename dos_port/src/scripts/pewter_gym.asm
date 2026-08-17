@@ -23,14 +23,19 @@ bits 32
 %include "assets/trainer_headers.inc"
 
 global PewterGymBrockPostBattle
+global PewterGymBrockReceivedBoulderBadgeText
+global PewterGymBrockWaitTakeThisText
 global PewterGymCooltrainerMText
 global PewterGymGuideAdviceText
 global PewterGymGuideBeginAdviceText
 global PewterGymGuideFreeServiceText
 global PewterGymGuidePostBattleText
 global PewterGymGuidePreAdviceText
+global PewterGymGuideText
+global PewterGymReceivedTM34Text
 global PewterGymResetScripts
 global PewterGymScriptReceiveTM34
+global PewterGymTM34NoRoomText
 global PewterGymText_5c41c
 global PewterGym_ScriptPointers
 
@@ -45,13 +50,8 @@ extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
 extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
-extern PewterGymBrockReceivedBoulderBadgeText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymBrockText   ; NOT YET DEFINED IN THE PORT
-extern PewterGymBrockWaitTakeThisText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymCooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
-extern PewterGymGuideText   ; NOT YET DEFINED IN THE PORT
-extern PewterGymReceivedTM34Text   ; NOT YET DEFINED IN THE PORT
-extern PewterGymTM34NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern PewterGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern PewterGym_Script   ; NOT YET DEFINED IN THE PORT
@@ -61,8 +61,10 @@ extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern _PewterGymBrockBoulderBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymBrockPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymBrockPreBattleText   ; NOT YET DEFINED IN THE PORT
+extern _PewterGymBrockReceivedBoulderBadgeText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymBrockWaitTakeThisText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymGuideAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymGuideBeginAdviceText   ; NOT YET DEFINED IN THE PORT
@@ -71,6 +73,8 @@ extern _PewterGymGuidePostBattleText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymGuidePreAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymGuyText   ; NOT YET DEFINED IN THE PORT
 extern _PewterGymReceivedTM34Text   ; NOT YET DEFINED IN THE PORT
+extern _PewterGymTM34NoRoomText   ; NOT YET DEFINED IN THE PORT
+extern _TM34ExplanationText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_PEWTERGYM_BROCK_POST_BATTLE             equ 3
@@ -187,7 +191,7 @@ PewterGymScriptReceiveTM34:
 ; PewterGym_TextPointers (scripts/PewterGym.asm:85-97) — not re-emitted: PewterGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PewterGymBrockText (scripts/PewterGym.asm:101-107) — at scripts/PewterGym.asm:102: .beforeBeat is defined in a region that bailed
+; BAIL[event-byte-assembly-state] PewterGymBrockText (scripts/PewterGym.asm:101-107) — at scripts/PewterGym.asm:103: CheckEventReuseA EVENT_GOT_TM34
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_BROCK
@@ -198,70 +202,59 @@ PewterGymScriptReceiveTM34:
 ; PRET| 	call DisableWaitingAfterTextDisplay
 ; PRET| 	jr .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PewterGymBrockText.afterBeat (scripts/PewterGym.asm:109-111) — at scripts/PewterGym.asm:109: .PostBattleAdviceText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PostBattleAdviceText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.afterBeat:
+    mov esi, .PostBattleAdviceText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PewterGymBrockText.beforeBeat (scripts/PewterGym.asm:113-133) — at scripts/PewterGym.asm:113: .PreBattleText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PreBattleText
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, PewterGymBrockReceivedBoulderBadgeText
-; PRET| 	ld de, PewterGymBrockReceivedBoulderBadgeText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	ld a, $1
-; PRET| 	ld [wGymLeaderNo], a
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, SCRIPT_PEWTERGYM_BROCK_POST_BATTLE
-; PRET| 	ld [wPewterGymCurScript], a
-; PRET| 	ld [wCurMapScript], a
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.beforeBeat:
+    mov esi, .PreBattleText
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, PewterGymBrockReceivedBoulderBadgeText
+    mov edx, PewterGymBrockReceivedBoulderBadgeText   ; pret: ld de, PewterGymBrockReceivedBoulderBadgeText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hSpriteIndex]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    mov al, 0x1
+    mov [ebp + wGymLeaderNo], al
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, SCRIPT_PEWTERGYM_BROCK_POST_BATTLE
+    mov [ebp + wPewterGymCurScript], al
+    mov [ebp + wCurMapScript], al
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] PewterGymBrockText.PreBattleText (scripts/PewterGym.asm:136-161) — at scripts/PewterGym.asm:149: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PewterGymBrockPreBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| .PostBattleAdviceText:
-; PRET| 	text_far _PewterGymBrockPostBattleAdviceText
-; PRET| 	text_end
-; PRET| 
-; PRET| PewterGymBrockWaitTakeThisText:
-; PRET| 	text_far _PewterGymBrockWaitTakeThisText
-; PRET| 	text_end
-; PRET| 
-; PRET| PewterGymReceivedTM34Text:
-; PRET| 	text_far _PewterGymReceivedTM34Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _TM34ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| PewterGymTM34NoRoomText:
-; PRET| 	text_far _PewterGymTM34NoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| PewterGymBrockReceivedBoulderBadgeText:
-; PRET| 	text_far _PewterGymBrockReceivedBoulderBadgeText
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _PewterGymBrockBoulderBadgeInfoText ; Text to tell that the flash technique can be used
-; PRET| 	text_end
+%assign event_byte -1
+.PreBattleText:
+    text_far _PewterGymBrockPreBattleText
+    text_end
+.PostBattleAdviceText:
+    text_far _PewterGymBrockPostBattleAdviceText
+    text_end
+PewterGymBrockWaitTakeThisText:
+    text_far _PewterGymBrockWaitTakeThisText
+    text_end
+PewterGymReceivedTM34Text:
+    text_far _PewterGymReceivedTM34Text
+    sound_get_item_1
+    text_far _TM34ExplanationText
+    text_end
+PewterGymTM34NoRoomText:
+    text_far _PewterGymTM34NoRoomText
+    text_end
+PewterGymBrockReceivedBoulderBadgeText:
+    text_far _PewterGymBrockReceivedBoulderBadgeText
+    sound_get_item_1
+    text_far _PewterGymBrockBoulderBadgeInfoText
+    text_end
 
 %assign event_byte -1
 PewterGymCooltrainerMText:
@@ -271,36 +264,32 @@ PewterGymCooltrainerMText:
 
 ; PewterGymCooltrainerMBattleText (scripts/PewterGym.asm:170-179) — not re-emitted: PewterGymCooltrainerMBattleText is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PewterGymGuideText (scripts/PewterGym.asm:183-197) — at scripts/PewterGym.asm:185: .afterBeat is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wBeatGymFlags]
-; PRET| 	bit BIT_BOULDERBADGE, a
-; PRET| 	jr nz, .afterBeat
-; PRET| 	ld hl, PewterGymGuidePreAdviceText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .PewterGymGuideBeginAdviceText
-; PRET| 	ld a, [wPikachuSpawnStateFlags]
-; PRET| 	bit BIT_PIKACHU_SPAWN_STARTER, a
-; PRET| 	jp nz, .asm_5c3fa
-; PRET| 	ld hl, PewterGymGuideBeginAdviceText
-; PRET| 	call PrintText
-; PRET| 	jr .PewterGymGuideAdviceText
+%assign event_byte -1
+PewterGymGuideText:
+    mov al, [ebp + wBeatGymFlags]
+    test al, (1 << (0))
+    jnz .afterBeat
+    mov esi, PewterGymGuidePreAdviceText
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .PewterGymGuideBeginAdviceText
+    mov al, [ebp + wPikachuSpawnStateFlags]
+    test al, (1 << (7))
+    jnz .asm_5c3fa
+    mov esi, PewterGymGuideBeginAdviceText
+    call PrintText
+    jmp .PewterGymGuideAdviceText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PewterGymGuideText.PewterGymGuideBeginAdviceText (scripts/PewterGym.asm:199-204) — at scripts/PewterGym.asm:204: .done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, PewterGymGuideFreeServiceText
-; PRET| 	call PrintText
-; PRET| .PewterGymGuideAdviceText
-; PRET| 	ld hl, PewterGymGuideAdviceText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.PewterGymGuideBeginAdviceText:
+    mov esi, PewterGymGuideFreeServiceText
+    call PrintText
+.PewterGymGuideAdviceText:
+    mov esi, PewterGymGuideAdviceText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
 .afterBeat:

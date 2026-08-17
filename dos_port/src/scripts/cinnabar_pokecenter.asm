@@ -22,25 +22,20 @@ bits 32
 
 
 global CinnabarPokecenterChanseyText
+global CinnabarPokecenterCooltrainerFText
+global CinnabarPokecenterGentlemanText
+global CinnabarPokecenterLinkReceptionistText
+global CinnabarPokecenterNurseText
 global CinnabarPokecenter_Script
+global CinnabarPokecenter_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CinnabarPokecenterCooltrainerFText   ; NOT YET DEFINED IN THE PORT
-extern CinnabarPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
-extern CinnabarPokecenterLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern CinnabarPokecenterNurseText   ; NOT YET DEFINED IN THE PORT
-extern CinnabarPokecenter_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_CINNABARPOKECENTER_NURSE                  equ 1
-TEXT_CINNABARPOKECENTER_COOLTRAINER_F          equ 2
-TEXT_CINNABARPOKECENTER_GENTLEMAN              equ 3
-TEXT_CINNABARPOKECENTER_LINK_RECEPTIONIST      equ 4
-TEXT_CINNABARPOKECENTER_CHANSEY                equ 5
+extern _CinnabarPokecenterCooltrainerFText   ; NOT YET DEFINED IN THE PORT
+extern _CinnabarPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -53,30 +48,23 @@ CinnabarPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] CinnabarPokecenter_TextPointers (scripts/CinnabarPokecenter.asm:6-25) — at scripts/CinnabarPokecenter.asm:14: script_pokecenter_nurse
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const CinnabarPokecenterNurseText,            TEXT_CINNABARPOKECENTER_NURSE
-; PRET| 	dw_const CinnabarPokecenterCooltrainerFText,     TEXT_CINNABARPOKECENTER_COOLTRAINER_F
-; PRET| 	dw_const CinnabarPokecenterGentlemanText,        TEXT_CINNABARPOKECENTER_GENTLEMAN
-; PRET| 	dw_const CinnabarPokecenterLinkReceptionistText, TEXT_CINNABARPOKECENTER_LINK_RECEPTIONIST
-; PRET| 	dw_const CinnabarPokecenterChanseyText,          TEXT_CINNABARPOKECENTER_CHANSEY
-; PRET| 
-; PRET| CinnabarPokecenterNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| CinnabarPokecenterCooltrainerFText:
-; PRET| 	text_far _CinnabarPokecenterCooltrainerFText
-; PRET| 	text_end
-; PRET| 
-; PRET| CinnabarPokecenterGentlemanText:
-; PRET| 	text_far _CinnabarPokecenterGentlemanText
-; PRET| 	text_end
-; PRET| 
-; PRET| CinnabarPokecenterLinkReceptionistText:
-; PRET| 	script_cable_club_receptionist
+%assign event_byte -1
+CinnabarPokecenter_TextPointers:
+    dd CinnabarPokecenterNurseText
+    dd CinnabarPokecenterCooltrainerFText
+    dd CinnabarPokecenterGentlemanText
+    dd CinnabarPokecenterLinkReceptionistText
+    dd CinnabarPokecenterChanseyText
+CinnabarPokecenterNurseText:
+    script_pokecenter_nurse
+CinnabarPokecenterCooltrainerFText:
+    text_far _CinnabarPokecenterCooltrainerFText
+    text_end
+CinnabarPokecenterGentlemanText:
+    text_far _CinnabarPokecenterGentlemanText
+    text_end
+CinnabarPokecenterLinkReceptionistText:
+    script_cable_club_receptionist
 
 %assign event_byte -1
 CinnabarPokecenterChanseyText:

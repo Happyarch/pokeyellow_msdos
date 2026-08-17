@@ -29,6 +29,7 @@ global CeladonMart3FGameBoyKid2Text
 global CeladonMart3FGameBoyKid3Text
 global CeladonMart3FLittleBoyText
 global CeladonMart3FPokemonPosterText
+global CeladonMart3FPrintClerkText
 global CeladonMart3FPuzzleGameText
 global CeladonMart3FRPGText
 global CeladonMart3FSNESText
@@ -37,12 +38,13 @@ global CeladonMart3F_Script
 global CeladonMart3F_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CeladonMart3FPrintClerkText   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart3FClerkReceivedTM18Text   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMart3FClerkTM18ExplanationText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonMart3FClerkTM18NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart3FClerkTM18PreReceiveText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart3FCurrentFloorSignText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonMart3FFightingGameText   ; NOT YET DEFINED IN THE PORT
@@ -127,53 +129,42 @@ CeladonMart3FPokemonPosterText:
     text_far _CeladonMart3FPokemonPosterText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMart3FPrintClerkText (scripts/CeladonMart3F_2.asm:2-11) — at scripts/CeladonMart3F_2.asm:3: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_TM18
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .TM18PreReceiveText
-; PRET| 	call PrintText
-; PRET| 	lb bc, TM_COUNTER, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	SetEvent EVENT_GOT_TM18
-; PRET| 	ld hl, .ReceivedTM18Text
-; PRET| 	jr .done
+%assign event_byte -1
+CeladonMart3FPrintClerkText:
+    CheckEvent EVENT_GOT_TM18
+    jnz .got_item
+    mov esi, .TM18PreReceiveText
+    call PrintText
+    mov bx, ((220) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    SetEvent EVENT_GOT_TM18
+    mov esi, .ReceivedTM18Text
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMart3FPrintClerkText.bag_full (scripts/CeladonMart3F_2.asm:13-14) — at scripts/CeladonMart3F_2.asm:13: .TM18NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM18NoRoomText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .TM18NoRoomText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonMart3FPrintClerkText.got_item (scripts/CeladonMart3F_2.asm:16-19) — at scripts/CeladonMart3F_2.asm:16: .TM18ExplanationText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .TM18ExplanationText
-; PRET| .done
-; PRET| 	call PrintText
-; PRET| 	ret
+%assign event_byte -1
+.got_item:
+    mov esi, .TM18ExplanationText
+.done:
+    call PrintText
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CeladonMart3FPrintClerkText.TM18PreReceiveText (scripts/CeladonMart3F_2.asm:22-36) — at scripts/CeladonMart3F_2.asm:27: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonMart3FClerkTM18PreReceiveText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedTM18Text:
-; PRET| 	text_far _CeladonMart3FClerkReceivedTM18Text
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM18ExplanationText:
-; PRET| 	text_far _CeladonMart3FClerkTM18ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TM18NoRoomText:
-; PRET| 	text_far _CeladonMart3FClerkTM18NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.TM18PreReceiveText:
+    text_far _CeladonMart3FClerkTM18PreReceiveText
+    text_end
+.ReceivedTM18Text:
+    text_far _CeladonMart3FClerkReceivedTM18Text
+    sound_get_item_1
+    text_end
+.TM18ExplanationText:
+    text_far _CeladonMart3FClerkTM18ExplanationText
+    text_end
+.TM18NoRoomText:
+    text_far _CeladonMart3FClerkTM18NoRoomText
+    text_end

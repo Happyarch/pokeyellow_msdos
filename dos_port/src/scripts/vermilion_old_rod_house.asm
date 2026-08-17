@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global VermilionOldRodHouseFishingGuruText
 global VermilionOldRodHouse_Script
 global VermilionOldRodHouse_TextPointers
 
@@ -28,10 +29,13 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern VermilionOldRodHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
 extern _VermilionOldRodHouseFishingGuruDoYouLikeToFishText   ; NOT YET DEFINED IN THE PORT
+extern _VermilionOldRodHouseFishingGuruFishingIsAWayOfLifeText   ; NOT YET DEFINED IN THE PORT
+extern _VermilionOldRodHouseFishingGuruHowAreTheFishBitingText   ; NOT YET DEFINED IN THE PORT
+extern _VermilionOldRodHouseFishingGuruNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionOldRodHouseFishingGuruTakeThisText   ; NOT YET DEFINED IN THE PORT
+extern _VermilionOldRodHouseFishingGuruThatsSoDisappointingText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -47,71 +51,57 @@ VermilionOldRodHouse_Script:
 VermilionOldRodHouse_TextPointers:
     dd VermilionOldRodHouseFishingGuruText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionOldRodHouseFishingGuruText (scripts/VermilionOldRodHouse.asm:10-25) — at scripts/VermilionOldRodHouse.asm:12: .got_old_rod is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags1]
-; PRET| 	bit BIT_GOT_OLD_ROD, a
-; PRET| 	jr nz, .got_old_rod
-; PRET| 	ld hl, .DoYouLikeToFishText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .refused
-; PRET| 	lb bc, OLD_ROD, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, wStatusFlags1
-; PRET| 	set BIT_GOT_OLD_ROD, [hl]
-; PRET| 	ld hl, .TakeThisText
-; PRET| 	jr .print_text
+%assign event_byte -1
+VermilionOldRodHouseFishingGuruText:
+    mov al, [ebp + wStatusFlags1]
+    test al, (1 << (3))
+    jnz .got_old_rod
+    mov esi, .DoYouLikeToFishText
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .refused
+    mov bx, ((OLD_ROD) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, wStatusFlags1
+    or byte [ebp + esi], (1 << (3))
+    mov esi, .TakeThisText
+    jmp .print_text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionOldRodHouseFishingGuruText.bag_full (scripts/VermilionOldRodHouse.asm:27-28) — at scripts/VermilionOldRodHouse.asm:27: .NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .NoRoomText
-; PRET| 	jr .print_text
+%assign event_byte -1
+.bag_full:
+    mov esi, .NoRoomText
+    jmp .print_text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionOldRodHouseFishingGuruText.refused (scripts/VermilionOldRodHouse.asm:30-31) — at scripts/VermilionOldRodHouse.asm:30: .ThatsSoDisappointingText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ThatsSoDisappointingText
-; PRET| 	jr .print_text
+%assign event_byte -1
+.refused:
+    mov esi, .ThatsSoDisappointingText
+    jmp .print_text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionOldRodHouseFishingGuruText.got_old_rod (scripts/VermilionOldRodHouse.asm:33-36) — at scripts/VermilionOldRodHouse.asm:33: .HowAreTheFishBitingText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HowAreTheFishBitingText
-; PRET| .print_text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.got_old_rod:
+    mov esi, .HowAreTheFishBitingText
+.print_text:
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] VermilionOldRodHouseFishingGuruText.DoYouLikeToFishText (scripts/VermilionOldRodHouse.asm:39-58) — at scripts/VermilionOldRodHouse.asm:44: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _VermilionOldRodHouseFishingGuruDoYouLikeToFishText
-; PRET| 	text_end
-; PRET| 
-; PRET| .TakeThisText:
-; PRET| 	text_far _VermilionOldRodHouseFishingGuruTakeThisText
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _VermilionOldRodHouseFishingGuruFishingIsAWayOfLifeText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ThatsSoDisappointingText:
-; PRET| 	text_far _VermilionOldRodHouseFishingGuruThatsSoDisappointingText
-; PRET| 	text_end
-; PRET| 
-; PRET| .HowAreTheFishBitingText:
-; PRET| 	text_far _VermilionOldRodHouseFishingGuruHowAreTheFishBitingText
-; PRET| 	text_end
-; PRET| 
-; PRET| .NoRoomText:
-; PRET| 	text_far _VermilionOldRodHouseFishingGuruNoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.DoYouLikeToFishText:
+    text_far _VermilionOldRodHouseFishingGuruDoYouLikeToFishText
+    text_end
+.TakeThisText:
+    text_far _VermilionOldRodHouseFishingGuruTakeThisText
+    sound_get_item_1
+    text_far _VermilionOldRodHouseFishingGuruFishingIsAWayOfLifeText
+    text_end
+.ThatsSoDisappointingText:
+    text_far _VermilionOldRodHouseFishingGuruThatsSoDisappointingText
+    text_end
+.HowAreTheFishBitingText:
+    text_far _VermilionOldRodHouseFishingGuruHowAreTheFishBitingText
+    text_end
+.NoRoomText:
+    text_far _VermilionOldRodHouseFishingGuruNoRoomText
+    text_end

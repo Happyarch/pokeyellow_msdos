@@ -22,11 +22,17 @@ bits 32
 
 %include "assets/audio_constants.inc"
 
+global Pointers_f2100
 global SafariZoneEntranceAutoWalk
 global SafariZoneEntranceAutoWalk2
 global SafariZoneEntranceCalculateLowCostAdmission
 global SafariZoneEntranceText_f20c4
 global SafariZoneEntranceText_f20c9
+global SafariZoneEntranceText_f20f6
+global SafariZoneEntranceText_f210a
+global SafariZoneEntranceText_f210f
+global SafariZoneEntranceText_f2114
+global SafariZoneEntranceText_f2119
 global SafariZoneGateDefaultScript
 global SafariZoneGateLeavingSafariScript
 global SafariZoneGatePlayerMovingDownScript
@@ -58,16 +64,10 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern FillMemory   ; NOT YET DEFINED IN THE PORT
 extern HasEnoughMoney   ; NOT YET DEFINED IN THE PORT
 extern PlaySoundWaitForCurrent   ; NOT YET DEFINED IN THE PORT
-extern Pointers_f2100   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern PrintText_NoCreatingTextBox   ; NOT YET DEFINED IN THE PORT
 extern SafariZoneEntranceConvertBCDtoNumber   ; NOT YET DEFINED IN THE PORT
 extern SafariZoneEntranceGetLowCostAdmissionText   ; NOT YET DEFINED IN THE PORT
-extern SafariZoneEntranceText_f20f6   ; NOT YET DEFINED IN THE PORT
-extern SafariZoneEntranceText_f210a   ; NOT YET DEFINED IN THE PORT
-extern SafariZoneEntranceText_f210f   ; NOT YET DEFINED IN THE PORT
-extern SafariZoneEntranceText_f2114   ; NOT YET DEFINED IN THE PORT
-extern SafariZoneEntranceText_f2119   ; NOT YET DEFINED IN THE PORT
 extern SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
 extern SubBCDPredef   ; NOT YET DEFINED IN THE PORT
@@ -75,9 +75,12 @@ extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneGateSafariZoneWorker1CallYouOnThePAText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneGateSafariZoneWorker1GoodHaulComeAgainText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneGateSafariZoneWorker1GoodLuckText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneGateSafariZoneWorker1LeavingEarlyText   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneGateSafariZoneWorker1NotEnoughMoneyText   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneGateSafariZoneWorker1PleaseComeAgainText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneGateSafariZoneWorker1ReturnSafariBallsText   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneGateSafariZoneWorker1Text   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneGateSafariZoneWorker1ThatllBe500PleaseText   ; NOT YET DEFINED IN THE PORT
@@ -88,6 +91,11 @@ extern _SafariZoneGateSafariZoneWorker2YoureARegularHereText   ; NOT YET DEFINED
 extern _SafariZoneLowCostText1   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneLowCostText2   ; NOT YET DEFINED IN THE PORT
 extern _SafariZoneLowCostText3   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneLowCostText4   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneLowCostText5   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneLowCostText6   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneLowCostText7   ; NOT YET DEFINED IN THE PORT
+extern _SafariZoneLowCostText8   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_SAFARIZONEGATE_DEFAULT                  equ 0
@@ -351,7 +359,7 @@ SafariZoneGateSafariZoneWorker2Text:
     jmp TextScriptEnd
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText (scripts/SafariZoneGate_2.asm:2-19) — at scripts/SafariZoneGate_2.asm:2: .WelcomeText is defined in a region that bailed
+; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText (scripts/SafariZoneGate_2.asm:2-19) — at scripts/SafariZoneGate_2.asm:16: .has_positive_balance is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .WelcomeText
@@ -392,7 +400,7 @@ SafariZoneGateSafariZoneWorker2Text:
 ; PRET| 	jr .poor_mans_discount
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success (scripts/SafariZoneGate_2.asm:37-70) — at scripts/SafariZoneGate_2.asm:53: .MakePaymentText is defined in a region that bailed
+; BAIL[hl-half-register-access] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success (scripts/SafariZoneGate_2.asm:37-70) — at scripts/SafariZoneGate_2.asm:59: `h` is a half of ESI and has no flag-safe 8-bit x86 form
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	xor a
@@ -430,41 +438,34 @@ SafariZoneGateSafariZoneWorker2Text:
 ; PRET| 	ld [wSafariZoneGateCurScript], a
 ; PRET| 	jr .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.PleaseComeAgain (scripts/SafariZoneGate_2.asm:73-82) — at scripts/SafariZoneGate_2.asm:73: .PleaseComeAgainText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PleaseComeAgainText
-; PRET| 	call PrintText
-; PRET| .CantPayWalkDown
-; PRET| 	ld a, PAD_DOWN
-; PRET| 	ld c, 1
-; PRET| 	call SafariZoneEntranceAutoWalk2
-; PRET| 	ld a, SCRIPT_SAFARIZONEGATE_PLAYER_MOVING_DOWN
-; PRET| 	ld [wSafariZoneGateCurScript], a
-; PRET| .done
-; PRET| 	ret
+%assign event_byte -1
+.PleaseComeAgain:
+    mov esi, .PleaseComeAgainText
+    call PrintText
+.CantPayWalkDown:
+    mov al, PAD_DOWN
+    mov bl, 1
+    call SafariZoneEntranceAutoWalk2
+    mov al, SCRIPT_SAFARIZONEGATE_PLAYER_MOVING_DOWN
+    mov [ebp + wSafariZoneGateCurScript], al
+.done:
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.WelcomeText (scripts/SafariZoneGate_2.asm:85-100) — at scripts/SafariZoneGate_2.asm:90: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SafariZoneGateSafariZoneWorker1WouldYouLikeToJoinText
-; PRET| 	text_end
-; PRET| 
-; PRET| .MakePaymentText
-; PRET| 	text_far _SafariZoneGateSafariZoneWorker1ThatllBe500PleaseText
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _SafariZoneGateSafariZoneWorker1CallYouOnThePAText
-; PRET| 	text_end
-; PRET| 
-; PRET| .PleaseComeAgainText
-; PRET| 	text_far _SafariZoneGateSafariZoneWorker1PleaseComeAgainText
-; PRET| 	text_end
-; PRET| 
-; PRET| .NotEnoughMoneyText
-; PRET| 	text_far _SafariZoneGateSafariZoneWorker1NotEnoughMoneyText
-; PRET| 	text_end
+%assign event_byte -1
+.WelcomeText:
+    text_far _SafariZoneGateSafariZoneWorker1WouldYouLikeToJoinText
+    text_end
+.MakePaymentText:
+    text_far _SafariZoneGateSafariZoneWorker1ThatllBe500PleaseText
+    sound_get_item_1
+    text_far _SafariZoneGateSafariZoneWorker1CallYouOnThePAText
+    text_end
+.PleaseComeAgainText:
+    text_far _SafariZoneGateSafariZoneWorker1PleaseComeAgainText
+    text_end
+.NotEnoughMoneyText:
+    text_far _SafariZoneGateSafariZoneWorker1NotEnoughMoneyText
+    text_end
 
 %assign event_byte -1
 SafariZoneGatePrintSafariZoneWorker2Text:
@@ -585,37 +586,30 @@ SafariZoneEntranceText_f20c9:
     test al, al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] SafariZoneEntranceText_f20f6 (scripts/SafariZoneGate_2.asm:211-237) — at scripts/SafariZoneGate_2.asm:212: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _SafariZoneLowCostText3
-; PRET| 	sound_get_item_1
-; PRET| 	text_far _SafariZoneLowCostText4
-; PRET| 	text_end
-; PRET| 
-; PRET| Pointers_f2100:
-; PRET| 	dw SafariZoneEntranceText_f210a
-; PRET| 	dw SafariZoneEntranceText_f210f
-; PRET| 	dw SafariZoneEntranceText_f2114
-; PRET| 	dw SafariZoneEntranceText_f2119
-; PRET| 	dw SafariZoneEntranceText_f2119
-; PRET| 
-; PRET| SafariZoneEntranceText_f210a:
-; PRET| 	text_far _SafariZoneLowCostText5
-; PRET| 	text_end
-; PRET| 
-; PRET| SafariZoneEntranceText_f210f:
-; PRET| 	text_far _SafariZoneLowCostText6
-; PRET| 	text_end
-; PRET| 
-; PRET| SafariZoneEntranceText_f2114:
-; PRET| 	text_far _SafariZoneLowCostText7
-; PRET| 	text_end
-; PRET| 
-; PRET| SafariZoneEntranceText_f2119:
-; PRET| 	text_far _SafariZoneLowCostText8
-; PRET| 	text_end
+%assign event_byte -1
+SafariZoneEntranceText_f20f6:
+    text_far _SafariZoneLowCostText3
+    sound_get_item_1
+    text_far _SafariZoneLowCostText4
+    text_end
+Pointers_f2100:
+    dd SafariZoneEntranceText_f210a
+    dd SafariZoneEntranceText_f210f
+    dd SafariZoneEntranceText_f2114
+    dd SafariZoneEntranceText_f2119
+    dd SafariZoneEntranceText_f2119
+SafariZoneEntranceText_f210a:
+    text_far _SafariZoneLowCostText5
+    text_end
+SafariZoneEntranceText_f210f:
+    text_far _SafariZoneLowCostText6
+    text_end
+SafariZoneEntranceText_f2114:
+    text_far _SafariZoneLowCostText7
+    text_end
+SafariZoneEntranceText_f2119:
+    text_far _SafariZoneLowCostText8
+    text_end
 
 ; ---------------------------------------------------------------------------
 ; BAIL[hl-half-register-access] SafariZoneEntranceConvertBCDtoNumber (scripts/SafariZoneGate_2.asm:240-252) — at scripts/SafariZoneGate_2.asm:243: `l` is a half of ESI and has no flag-safe 8-bit x86 form

@@ -26,19 +26,21 @@ global CeladonDinerFisherText
 global CeladonDinerGymGuideText
 global CeladonDinerMiddleAgedManText
 global CeladonDinerMiddleAgedWomanText
+global CeladonDinerPrintGymGuideText
 global CeladonDiner_Script
 global CeladonDiner_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CeladonDinerPrintGymGuideText   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _CeladonDinerCookText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonDinerFisherText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonDinerGymGuideCoinCaseNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonDinerGymGuideImFlatOutBustedText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonDinerGymGuideReceivedCoinCaseText   ; NOT YET DEFINED IN THE PORT
+extern _CeladonDinerGymGuideWinItBackText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonDinerMiddleAgedManText   ; NOT YET DEFINED IN THE PORT
 extern _CeladonDinerMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
 
@@ -79,55 +81,44 @@ CeladonDinerGymGuideText:
     call CeladonDinerPrintGymGuideText
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonDinerPrintGymGuideText (scripts/CeladonDiner_2.asm:2-12) — at scripts/CeladonDiner_2.asm:3: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_COIN_CASE
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .ImFlatOutBustedText
-; PRET| 	call PrintText
-; PRET| 	lb bc, COIN_CASE, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	SetEvent EVENT_GOT_COIN_CASE
-; PRET| 	ld hl, .ReceivedCoinCaseText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+CeladonDinerPrintGymGuideText:
+    CheckEvent EVENT_GOT_COIN_CASE
+    jnz .got_item
+    mov esi, .ImFlatOutBustedText
+    call PrintText
+    mov bx, ((COIN_CASE) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    SetEvent EVENT_GOT_COIN_CASE
+    mov esi, .ReceivedCoinCaseText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonDinerPrintGymGuideText.bag_full (scripts/CeladonDiner_2.asm:14-16) — at scripts/CeladonDiner_2.asm:14: .CoinCaseNoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .CoinCaseNoRoomText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .CoinCaseNoRoomText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonDinerPrintGymGuideText.got_item (scripts/CeladonDiner_2.asm:18-21) — at scripts/CeladonDiner_2.asm:18: .WinItBackText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .WinItBackText
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	ret
+%assign event_byte -1
+.got_item:
+    mov esi, .WinItBackText
+    call PrintText
+.done:
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] CeladonDinerPrintGymGuideText.ImFlatOutBustedText (scripts/CeladonDiner_2.asm:24-38) — at scripts/CeladonDiner_2.asm:29: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _CeladonDinerGymGuideImFlatOutBustedText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedCoinCaseText:
-; PRET| 	text_far _CeladonDinerGymGuideReceivedCoinCaseText
-; PRET| 	sound_get_key_item
-; PRET| 	text_end
-; PRET| 
-; PRET| .CoinCaseNoRoomText:
-; PRET| 	text_far _CeladonDinerGymGuideCoinCaseNoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| .WinItBackText:
-; PRET| 	text_far _CeladonDinerGymGuideWinItBackText
-; PRET| 	text_end
+%assign event_byte -1
+.ImFlatOutBustedText:
+    text_far _CeladonDinerGymGuideImFlatOutBustedText
+    text_end
+.ReceivedCoinCaseText:
+    text_far _CeladonDinerGymGuideReceivedCoinCaseText
+    sound_get_key_item
+    text_end
+.CoinCaseNoRoomText:
+    text_far _CeladonDinerGymGuideCoinCaseNoRoomText
+    text_end
+.WinItBackText:
+    text_far _CeladonDinerGymGuideWinItBackText
+    text_end

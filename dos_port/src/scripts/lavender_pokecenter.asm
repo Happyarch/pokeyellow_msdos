@@ -22,25 +22,20 @@ bits 32
 
 
 global LavenderPokecenterChanseyText
+global LavenderPokecenterGentlemanText
+global LavenderPokecenterLinkReceptionistText
+global LavenderPokecenterLittleGirlText
+global LavenderPokecenterNurseText
 global LavenderPokecenter_Script
+global LavenderPokecenter_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern LavenderPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
-extern LavenderPokecenterLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
-extern LavenderPokecenterLittleGirlText   ; NOT YET DEFINED IN THE PORT
-extern LavenderPokecenterNurseText   ; NOT YET DEFINED IN THE PORT
-extern LavenderPokecenter_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_LAVENDERPOKECENTER_NURSE                  equ 1
-TEXT_LAVENDERPOKECENTER_GENTLEMAN              equ 2
-TEXT_LAVENDERPOKECENTER_LITTLE_GIRL            equ 3
-TEXT_LAVENDERPOKECENTER_LINK_RECEPTIONIST      equ 4
-TEXT_LAVENDERPOKECENTER_CHANSEY                equ 5
+extern _LavenderPokecenterGentlemanText   ; NOT YET DEFINED IN THE PORT
+extern _LavenderPokecenterLittleGirlText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -53,30 +48,23 @@ LavenderPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
 
-; ---------------------------------------------------------------------------
-; BAIL[text-script-command-unported] LavenderPokecenter_TextPointers (scripts/LavenderPokecenter.asm:6-25) — at scripts/LavenderPokecenter.asm:14: script_cable_club_receptionist
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const LavenderPokecenterNurseText,            TEXT_LAVENDERPOKECENTER_NURSE
-; PRET| 	dw_const LavenderPokecenterGentlemanText,        TEXT_LAVENDERPOKECENTER_GENTLEMAN
-; PRET| 	dw_const LavenderPokecenterLittleGirlText,       TEXT_LAVENDERPOKECENTER_LITTLE_GIRL
-; PRET| 	dw_const LavenderPokecenterLinkReceptionistText, TEXT_LAVENDERPOKECENTER_LINK_RECEPTIONIST
-; PRET| 	dw_const LavenderPokecenterChanseyText,          TEXT_LAVENDERPOKECENTER_CHANSEY
-; PRET| 
-; PRET| LavenderPokecenterLinkReceptionistText:
-; PRET| 	script_cable_club_receptionist
-; PRET| 
-; PRET| LavenderPokecenterNurseText:
-; PRET| 	script_pokecenter_nurse
-; PRET| 
-; PRET| LavenderPokecenterGentlemanText:
-; PRET| 	text_far _LavenderPokecenterGentlemanText
-; PRET| 	text_end
-; PRET| 
-; PRET| LavenderPokecenterLittleGirlText:
-; PRET| 	text_far _LavenderPokecenterLittleGirlText
-; PRET| 	text_end
+%assign event_byte -1
+LavenderPokecenter_TextPointers:
+    dd LavenderPokecenterNurseText
+    dd LavenderPokecenterGentlemanText
+    dd LavenderPokecenterLittleGirlText
+    dd LavenderPokecenterLinkReceptionistText
+    dd LavenderPokecenterChanseyText
+LavenderPokecenterLinkReceptionistText:
+    script_cable_club_receptionist
+LavenderPokecenterNurseText:
+    script_pokecenter_nurse
+LavenderPokecenterGentlemanText:
+    text_far _LavenderPokecenterGentlemanText
+    text_end
+LavenderPokecenterLittleGirlText:
+    text_far _LavenderPokecenterLittleGirlText
+    text_end
 
 %assign event_byte -1
 LavenderPokecenterChanseyText:

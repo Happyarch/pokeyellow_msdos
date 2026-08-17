@@ -22,6 +22,7 @@ bits 32
 
 
 global Route1PrintSignText
+global Route1PrintYoungster1Text
 global Route1PrintYoungster2Text
 global Route1SignText
 global Route1Youngster1Text
@@ -33,11 +34,12 @@ extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Route1PrintYoungster1Text   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _Route1SignText   ; NOT YET DEFINED IN THE PORT
+extern _Route1Youngster1AlsoGotPokeballsText   ; NOT YET DEFINED IN THE PORT
 extern _Route1Youngster1GotPotionText   ; NOT YET DEFINED IN THE PORT
 extern _Route1Youngster1MartSampleText   ; NOT YET DEFINED IN THE PORT
+extern _Route1Youngster1NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _Route1Youngster2Text   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
@@ -75,55 +77,44 @@ Route1SignText:
     call Route1PrintSignText
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route1PrintYoungster1Text (scripts/Route1_2.asm:2-10) — at scripts/Route1_2.asm:3: .got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckAndSetEvent EVENT_GOT_POTION_SAMPLE
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .MartSampleText
-; PRET| 	call PrintText
-; PRET| 	lb bc, POTION, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, .GotPotionText
-; PRET| 	jr .done
+%assign event_byte -1
+Route1PrintYoungster1Text:
+    CheckAndSetEvent EVENT_GOT_POTION_SAMPLE
+    jnz .got_item
+    mov esi, .MartSampleText
+    call PrintText
+    mov bx, ((POTION) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, .GotPotionText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route1PrintYoungster1Text.bag_full (scripts/Route1_2.asm:12-13) — at scripts/Route1_2.asm:12: .NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .NoRoomText
-; PRET| 	jr .done
+%assign event_byte -1
+.bag_full:
+    mov esi, .NoRoomText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route1PrintYoungster1Text.got_item (scripts/Route1_2.asm:15-18) — at scripts/Route1_2.asm:15: .AlsoGotPokeballsText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .AlsoGotPokeballsText
-; PRET| .done
-; PRET| 	call PrintText
-; PRET| 	ret
+%assign event_byte -1
+.got_item:
+    mov esi, .AlsoGotPokeballsText
+.done:
+    call PrintText
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] Route1PrintYoungster1Text.MartSampleText (scripts/Route1_2.asm:21-35) — at scripts/Route1_2.asm:26: sound_get_item_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _Route1Youngster1MartSampleText
-; PRET| 	text_end
-; PRET| 
-; PRET| .GotPotionText:
-; PRET| 	text_far _Route1Youngster1GotPotionText
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .AlsoGotPokeballsText:
-; PRET| 	text_far _Route1Youngster1AlsoGotPokeballsText
-; PRET| 	text_end
-; PRET| 
-; PRET| .NoRoomText:
-; PRET| 	text_far _Route1Youngster1NoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+.MartSampleText:
+    text_far _Route1Youngster1MartSampleText
+    text_end
+.GotPotionText:
+    text_far _Route1Youngster1GotPotionText
+    sound_get_item_1
+    text_end
+.AlsoGotPokeballsText:
+    text_far _Route1Youngster1AlsoGotPokeballsText
+    text_end
+.NoRoomText:
+    text_far _Route1Youngster1NoRoomText
+    text_end
 
 %assign event_byte -1
 Route1PrintYoungster2Text:

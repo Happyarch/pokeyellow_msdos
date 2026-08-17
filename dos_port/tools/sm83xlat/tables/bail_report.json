@@ -1,24 +1,21 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 1861,
- "regions_bailed": 669,
+ "regions_lowered": 2055,
+ "regions_bailed": 475,
  "by_reason": {
   "owned-by-generated-assets": 255,
-  "target-region-bailed": 245,
+  "target-region-bailed": 107,
   "screen-coord-projection": 4,
-  "inline-text-db": 11,
+  "inline-text-db": 12,
   "host-pointer-in-16bit-reg": 29,
-  "text-sound-command-unported": 49,
   "pikachu-table-index": 4,
-  "hl-half-register-access": 9,
-  "local-label-scope-collision": 12,
+  "event-byte-assembly-state": 15,
+  "hl-half-register-access": 10,
+  "local-label-scope-collision": 11,
   "pointer-domain-unknown": 15,
   "ld-via-bc-de": 2,
-  "text-script-command-unported": 16,
   "predef-leaves-parent-bank-in-a": 1,
   "add-hl-r16": 4,
-  "event-byte-assembly-state": 6,
-  "unresolved-symbol": 1,
   "checkevent-carry-form": 3,
   "event-macro-reuse-a-hint": 1,
   "owned-by-gen_map_script_tables": 1,
@@ -42,21 +39,18 @@
    ]
   },
   "scripts/BillsHouse.asm": {
-   "ok_regions": 30,
-   "bailed_regions": 7,
+   "ok_regions": 33,
+   "bailed_regions": 4,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "pikachu-table-index",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/BluesHouse.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 9,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/BrunosRoom.asm": {
    "ok_regions": 12,
@@ -71,29 +65,23 @@
    "reasons": []
   },
   "scripts/CeladonCity.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 4,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 14,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/CeladonDiner.asm": {
-   "ok_regions": 3,
-   "bailed_regions": 4,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 7,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/CeladonGym.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 15,
+   "ok_regions": 14,
+   "bailed_regions": 12,
    "reasons": [
+    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/CeladonHotel.asm": {
@@ -143,12 +131,9 @@
    "reasons": []
   },
   "scripts/CeladonMart3F.asm": {
-   "ok_regions": 4,
-   "bailed_regions": 4,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 8,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/CeladonMart4F.asm": {
    "ok_regions": 2,
@@ -168,24 +153,20 @@
    ]
   },
   "scripts/CeladonMartRoof.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 8,
+   "ok_regions": 11,
+   "bailed_regions": 5,
    "reasons": [
     "hl-half-register-access",
     "ld-via-bc-de",
     "pointer-domain-unknown",
     "screen-coord-projection",
-    "target-region-bailed",
-    "text-script-command-unported",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/CeladonPokecenter.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/CeruleanBadgeHouse.asm": {
    "ok_regions": 4,
@@ -212,21 +193,20 @@
    ]
   },
   "scripts/CeruleanCity.asm": {
-   "ok_regions": 24,
-   "bailed_regions": 7,
+   "ok_regions": 28,
+   "bailed_regions": 3,
    "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/CeruleanGym.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 11,
+   "ok_regions": 12,
+   "bailed_regions": 7,
    "reasons": [
+    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/CeruleanMart.asm": {
@@ -240,11 +220,9 @@
    "reasons": []
   },
   "scripts/CeruleanPokecenter.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/CeruleanTrashedHouse.asm": {
    "ok_regions": 4,
@@ -259,14 +237,14 @@
    "reasons": []
   },
   "scripts/CinnabarGym.asm": {
-   "ok_regions": 54,
-   "bailed_regions": 9,
+   "ok_regions": 57,
+   "bailed_regions": 6,
    "reasons": [
     "add-hl-r16",
+    "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
     "inline-text-db",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/CinnabarIsland.asm": {
@@ -289,12 +267,9 @@
    ]
   },
   "scripts/CinnabarLabMetronomeRoom.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 4,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 6,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/CinnabarLabTradeRoom.asm": {
    "ok_regions": 4,
@@ -307,11 +282,9 @@
    "reasons": []
   },
   "scripts/CinnabarPokecenter.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Colosseum.asm": {
    "ok_regions": 2,
@@ -324,12 +297,9 @@
    "reasons": []
   },
   "scripts/CopycatsHouse2F.asm": {
-   "ok_regions": 4,
-   "bailed_regions": 4,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 8,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Daycare.asm": {
    "ok_regions": 4,
@@ -379,18 +349,18 @@
    "ok_regions": 2,
    "bailed_regions": 5,
    "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "inline-text-db",
+    "target-region-bailed"
    ]
   },
   "scripts/FuchsiaGym.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 15,
+   "ok_regions": 15,
+   "bailed_regions": 11,
    "reasons": [
+    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/FuchsiaMart.asm": {
@@ -404,31 +374,23 @@
    "reasons": []
   },
   "scripts/FuchsiaPokecenter.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/GameCorner.asm": {
-   "ok_regions": 25,
-   "bailed_regions": 21,
+   "ok_regions": 42,
+   "bailed_regions": 4,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "inline-text-db",
-    "local-label-scope-collision",
-    "screen-coord-projection",
-    "target-region-bailed",
-    "text-sound-command-unported",
-    "unresolved-symbol"
+    "screen-coord-projection"
    ]
   },
   "scripts/GameCornerPrizeRoom.asm": {
-   "ok_regions": 1,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 2,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/HallOfFame.asm": {
    "ok_regions": 9,
@@ -441,11 +403,9 @@
    "reasons": []
   },
   "scripts/IndigoPlateauLobby.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/LancesRoom.asm": {
    "ok_regions": 15,
@@ -465,11 +425,9 @@
    "reasons": []
   },
   "scripts/LavenderPokecenter.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/LavenderTown.asm": {
    "ok_regions": 4,
@@ -484,21 +442,14 @@
    ]
   },
   "scripts/MrFujisHouse.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 7,
-   "reasons": [
-    "local-label-scope-collision",
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 15,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/MrPsychicsHouse.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 4,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 6,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/MtMoon1F.asm": {
    "ok_regions": 8,
@@ -513,31 +464,26 @@
    "reasons": []
   },
   "scripts/MtMoonB2F.asm": {
-   "ok_regions": 33,
-   "bailed_regions": 12,
+   "ok_regions": 34,
+   "bailed_regions": 11,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "local-label-scope-collision",
     "owned-by-generated-assets",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/MtMoonPokecenter.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 3,
+   "ok_regions": 9,
+   "bailed_regions": 1,
    "reasons": [
-    "checkevent-carry-form",
-    "text-script-command-unported"
+    "checkevent-carry-form"
    ]
   },
   "scripts/Museum1F.asm": {
-   "ok_regions": 18,
-   "bailed_regions": 12,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 30,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Museum2F.asm": {
    "ok_regions": 6,
@@ -552,16 +498,15 @@
    ]
   },
   "scripts/OaksLab.asm": {
-   "ok_regions": 48,
-   "bailed_regions": 44,
+   "ok_regions": 63,
+   "bailed_regions": 29,
    "reasons": [
     "event-byte-assembly-state",
     "hl-half-register-access",
     "local-label-scope-collision",
     "pikachu-table-index",
     "pointer-domain-unknown",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/PalletTown.asm": {
@@ -577,13 +522,13 @@
    "reasons": []
   },
   "scripts/PewterGym.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 11,
+   "ok_regions": 13,
+   "bailed_regions": 6,
    "reasons": [
+    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/PewterMart.asm": {
@@ -597,11 +542,10 @@
    "reasons": []
   },
   "scripts/PewterPokecenter.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 3,
+   "ok_regions": 9,
+   "bailed_regions": 1,
    "reasons": [
-    "host-pointer-in-16bit-reg",
-    "text-script-command-unported"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/PewterSpeechHouse.asm": {
@@ -610,12 +554,9 @@
    "reasons": []
   },
   "scripts/PokemonFanClub.asm": {
-   "ok_regions": 19,
-   "bailed_regions": 8,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 27,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/PokemonMansion1F.asm": {
    "ok_regions": 9,
@@ -725,11 +666,9 @@
    ]
   },
   "scripts/RockTunnelPokecenter.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/RocketHideoutB1F.asm": {
    "ok_regions": 7,
@@ -771,12 +710,9 @@
    ]
   },
   "scripts/Route1.asm": {
-   "ok_regions": 9,
-   "bailed_regions": 4,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 13,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Route10.asm": {
    "ok_regions": 7,
@@ -817,21 +753,16 @@
    "reasons": []
   },
   "scripts/Route12Gate2F.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 5,
+   "ok_regions": 11,
+   "bailed_regions": 1,
    "reasons": [
-    "checkevent-carry-form",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "checkevent-carry-form"
    ]
   },
   "scripts/Route12SuperRodHouse.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 5,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 7,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Route13.asm": {
    "ok_regions": 11,
@@ -872,12 +803,9 @@
    ]
   },
   "scripts/Route16FlyHouse.asm": {
-   "ok_regions": 3,
-   "bailed_regions": 4,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 7,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Route16Gate1F.asm": {
    "ok_regions": 12,
@@ -949,28 +877,23 @@
    ]
   },
   "scripts/Route22Gate.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 12,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Route23.asm": {
-   "ok_regions": 20,
-   "bailed_regions": 3,
+   "ok_regions": 21,
+   "bailed_regions": 2,
    "reasons": [
     "add-hl-r16",
-    "inline-text-db",
-    "text-sound-command-unported"
+    "inline-text-db"
    ]
   },
   "scripts/Route24.asm": {
-   "ok_regions": 17,
-   "bailed_regions": 6,
+   "ok_regions": 21,
+   "bailed_regions": 2,
    "reasons": [
-    "owned-by-generated-assets",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "owned-by-generated-assets"
    ]
   },
   "scripts/Route25.asm": {
@@ -1010,11 +933,9 @@
    "reasons": []
   },
   "scripts/Route5Gate.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 12,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/Route6.asm": {
    "ok_regions": 7,
@@ -1078,13 +999,12 @@
    "reasons": []
   },
   "scripts/SafariZoneGate.asm": {
-   "ok_regions": 26,
-   "bailed_regions": 8,
+   "ok_regions": 29,
+   "bailed_regions": 5,
    "reasons": [
     "add-hl-r16",
     "hl-half-register-access",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/SafariZoneNorth.asm": {
@@ -1098,12 +1018,9 @@
    "reasons": []
   },
   "scripts/SafariZoneSecretHouse.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 4,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 6,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/SafariZoneWest.asm": {
    "ok_regions": 2,
@@ -1116,20 +1033,18 @@
    "reasons": []
   },
   "scripts/SaffronCity.asm": {
-   "ok_regions": 1,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 2,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/SaffronGym.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 11,
+   "ok_regions": 13,
+   "bailed_regions": 9,
    "reasons": [
+    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/SaffronMart.asm": {
@@ -1143,11 +1058,9 @@
    "reasons": []
   },
   "scripts/SaffronPokecenter.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/SeafoamIslands1F.asm": {
    "ok_regions": 4,
@@ -1188,14 +1101,13 @@
    ]
   },
   "scripts/SilphCo11F.asm": {
-   "ok_regions": 30,
-   "bailed_regions": 10,
+   "ok_regions": 34,
+   "bailed_regions": 6,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/SilphCo1F.asm": {
@@ -1204,13 +1116,12 @@
    "reasons": []
   },
   "scripts/SilphCo2F.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 9,
+   "ok_regions": 11,
+   "bailed_regions": 6,
    "reasons": [
     "owned-by-generated-assets",
     "pointer-domain-unknown",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/SilphCo3F.asm": {
@@ -1335,11 +1246,9 @@
    ]
   },
   "scripts/SSAnneCaptainsRoom.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 9,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/SSAnneKitchen.asm": {
    "ok_regions": 6,
@@ -1409,13 +1318,13 @@
    ]
   },
   "scripts/VermilionGym.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 12,
+   "ok_regions": 15,
+   "bailed_regions": 8,
    "reasons": [
+    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/VermilionMart.asm": {
@@ -1424,12 +1333,9 @@
    "reasons": []
   },
   "scripts/VermilionOldRodHouse.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 5,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 7,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/VermilionPidgeyHouse.asm": {
    "ok_regions": 4,
@@ -1437,11 +1343,9 @@
    "reasons": []
   },
   "scripts/VermilionPokecenter.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/VermilionTradeHouse.asm": {
    "ok_regions": 2,
@@ -1472,12 +1376,10 @@
    ]
   },
   "scripts/ViridianCity.asm": {
-   "ok_regions": 62,
-   "bailed_regions": 5,
+   "ok_regions": 66,
+   "bailed_regions": 1,
    "reasons": [
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/ViridianForest.asm": {
@@ -1498,22 +1400,21 @@
    "reasons": []
   },
   "scripts/ViridianGym.asm": {
-   "ok_regions": 18,
-   "bailed_regions": 16,
+   "ok_regions": 22,
+   "bailed_regions": 12,
    "reasons": [
+    "event-byte-assembly-state",
     "inline-text-db",
     "owned-by-generated-assets",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/ViridianMart.asm": {
-   "ok_regions": 6,
-   "bailed_regions": 3,
+   "ok_regions": 7,
+   "bailed_regions": 2,
    "reasons": [
     "hl-half-register-access",
-    "target-region-bailed",
-    "text-sound-command-unported"
+    "target-region-bailed"
    ]
   },
   "scripts/ViridianNicknameHouse.asm": {
@@ -1522,11 +1423,9 @@
    "reasons": []
   },
   "scripts/ViridianPokecenter.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 1,
-   "reasons": [
-    "text-script-command-unported"
-   ]
+   "ok_regions": 3,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/ViridianSchoolHouse.asm": {
    "ok_regions": 8,
@@ -1534,12 +1433,9 @@
    "reasons": []
   },
   "scripts/WardensHouse.asm": {
-   "ok_regions": 4,
-   "bailed_regions": 5,
-   "reasons": [
-    "target-region-bailed",
-    "text-sound-command-unported"
-   ]
+   "ok_regions": 9,
+   "bailed_regions": 0,
+   "reasons": []
   }
  },
  "bails": [
@@ -1706,52 +1602,6 @@
   },
   {
    "file": "scripts/BillsHouse_2.asm",
-   "region": "BillsHousePrintBillSSTicketText",
-   "labels": [
-    "BillsHousePrintBillSSTicketText",
-    "BillsHousePrintBillSSTicketText.got_ss_ticket"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_ss_ticket is defined in a region that bailed",
-   "at": "scripts/BillsHouse_2.asm:33",
-   "lines": [
-    32,
-    51
-   ]
-  },
-  {
-   "file": "scripts/BillsHouse_2.asm",
-   "region": "BillsHousePrintBillSSTicketText.bag_full",
-   "labels": [
-    "BillsHousePrintBillSSTicketText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".SSTicketNoRoomText is defined in a region that bailed",
-   "at": "scripts/BillsHouse_2.asm:53",
-   "lines": [
-    53,
-    55
-   ]
-  },
-  {
-   "file": "scripts/BillsHouse_2.asm",
-   "region": "BillsHousePrintBillSSTicketText.ThankYouText",
-   "labels": [
-    "BillsHousePrintBillSSTicketText.ThankYouText",
-    "BillsHousePrintBillSSTicketText.SSTicketReceivedText",
-    "BillsHousePrintBillSSTicketText.SSTicketNoRoomText",
-    "BillsHousePrintBillSSTicketText.WhyDontYouGoInsteadOfMeText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/BillsHouse_2.asm:63",
-   "lines": [
-    58,
-    73
-   ]
-  },
-  {
-   "file": "scripts/BillsHouse_2.asm",
    "region": "BillsHouse_CheckPikachuEmotion",
    "labels": [
     "BillsHouse_CheckPikachuEmotion"
@@ -1762,26 +1612,6 @@
    "lines": [
     85,
     101
-   ]
-  },
-  {
-   "file": "scripts/BluesHouse.asm",
-   "region": "BluesHouseDaisyRivalAtLabText",
-   "labels": [
-    "BluesHouseDaisyRivalAtLabText",
-    "BluesHouseDaisyOfferMapText",
-    "GotMapText",
-    "BluesHouseDaisyBagFullText",
-    "BluesHouseDaisyUseMapText",
-    "BluesHouseDaisyWalkingText",
-    "BluesHouseTownMapText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/BluesHouse.asm:71",
-   "lines": [
-    62,
-    88
    ]
   },
   {
@@ -1815,128 +1645,6 @@
    "lines": [
     135,
     148
-   ]
-  },
-  {
-   "file": "scripts/CeladonCity.asm",
-   "region": "CeladonCityGramps3Text",
-   "labels": [
-    "CeladonCityGramps3Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".gotTM41 is defined in a region that bailed",
-   "at": "scripts/CeladonCity.asm:56",
-   "lines": [
-    55,
-    64
-   ]
-  },
-  {
-   "file": "scripts/CeladonCity.asm",
-   "region": "CeladonCityGramps3Text.Success",
-   "labels": [
-    "CeladonCityGramps3Text.Success"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".ReceivedTM41Text is defined in a region that bailed",
-   "at": "scripts/CeladonCity.asm:66",
-   "lines": [
-    66,
-    69
-   ]
-  },
-  {
-   "file": "scripts/CeladonCity.asm",
-   "region": "CeladonCityGramps3Text.gotTM41",
-   "labels": [
-    "CeladonCityGramps3Text.gotTM41",
-    "CeladonCityGramps3Text.Done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM41ExplanationText is defined in a region that bailed",
-   "at": "scripts/CeladonCity.asm:71",
-   "lines": [
-    71,
-    74
-   ]
-  },
-  {
-   "file": "scripts/CeladonCity.asm",
-   "region": "CeladonCityGramps3Text.Text",
-   "labels": [
-    "CeladonCityGramps3Text.Text",
-    "CeladonCityGramps3Text.ReceivedTM41Text",
-    "CeladonCityGramps3Text.TM41ExplanationText",
-    "CeladonCityGramps3Text.TM41NoRoomText",
-    "CeladonCityFisherText",
-    "CeladonCityPoliwrathText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/CeladonCity.asm:82",
-   "lines": [
-    77,
-    98
-   ]
-  },
-  {
-   "file": "scripts/CeladonDiner_2.asm",
-   "region": "CeladonDinerPrintGymGuideText",
-   "labels": [
-    "CeladonDinerPrintGymGuideText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/CeladonDiner_2.asm:3",
-   "lines": [
-    2,
-    12
-   ]
-  },
-  {
-   "file": "scripts/CeladonDiner_2.asm",
-   "region": "CeladonDinerPrintGymGuideText.bag_full",
-   "labels": [
-    "CeladonDinerPrintGymGuideText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".CoinCaseNoRoomText is defined in a region that bailed",
-   "at": "scripts/CeladonDiner_2.asm:14",
-   "lines": [
-    14,
-    16
-   ]
-  },
-  {
-   "file": "scripts/CeladonDiner_2.asm",
-   "region": "CeladonDinerPrintGymGuideText.got_item",
-   "labels": [
-    "CeladonDinerPrintGymGuideText.got_item",
-    "CeladonDinerPrintGymGuideText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".WinItBackText is defined in a region that bailed",
-   "at": "scripts/CeladonDiner_2.asm:18",
-   "lines": [
-    18,
-    21
-   ]
-  },
-  {
-   "file": "scripts/CeladonDiner_2.asm",
-   "region": "CeladonDinerPrintGymGuideText.ImFlatOutBustedText",
-   "labels": [
-    "CeladonDinerPrintGymGuideText.ImFlatOutBustedText",
-    "CeladonDinerPrintGymGuideText.ReceivedCoinCaseText",
-    "CeladonDinerPrintGymGuideText.CoinCaseNoRoomText",
-    "CeladonDinerPrintGymGuideText.WinItBackText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/CeladonDiner_2.asm:29",
-   "lines": [
-    24,
-    38
    ]
   },
   {
@@ -2010,60 +1718,12 @@
    "labels": [
     "CeladonGymErikaText"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".beforeBeat is defined in a region that bailed",
-   "at": "scripts/CeladonGym.asm:109",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_GOT_TM21",
+   "at": "scripts/CeladonGym.asm:110",
    "lines": [
     108,
     114
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymErikaText.afterBeat",
-   "labels": [
-    "CeladonGymErikaText.afterBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PostBattleAdviceText is defined in a region that bailed",
-   "at": "scripts/CeladonGym.asm:116",
-   "lines": [
-    116,
-    118
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymErikaText.beforeBeat",
-   "labels": [
-    "CeladonGymErikaText.beforeBeat",
-    "CeladonGymErikaText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PreBattleText is defined in a region that bailed",
-   "at": "scripts/CeladonGym.asm:120",
-   "lines": [
-    120,
-    138
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymErikaText.PreBattleText",
-   "labels": [
-    "CeladonGymErikaText.PreBattleText",
-    "CeladonGymErikaText.ReceivedRainbowBadgeText",
-    "CeladonGymErikaText.PostBattleAdviceText",
-    "CeladonGymRainbowBadgeInfoText",
-    "CeladonGymReceivedTM21Text",
-    "CeladonGymTM21NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/CeladonGym.asm:158",
-   "lines": [
-    141,
-    164
    ]
   },
   {
@@ -2296,66 +1956,6 @@
    ]
   },
   {
-   "file": "scripts/CeladonMart3F_2.asm",
-   "region": "CeladonMart3FPrintClerkText",
-   "labels": [
-    "CeladonMart3FPrintClerkText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/CeladonMart3F_2.asm:3",
-   "lines": [
-    2,
-    11
-   ]
-  },
-  {
-   "file": "scripts/CeladonMart3F_2.asm",
-   "region": "CeladonMart3FPrintClerkText.bag_full",
-   "labels": [
-    "CeladonMart3FPrintClerkText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM18NoRoomText is defined in a region that bailed",
-   "at": "scripts/CeladonMart3F_2.asm:13",
-   "lines": [
-    13,
-    14
-   ]
-  },
-  {
-   "file": "scripts/CeladonMart3F_2.asm",
-   "region": "CeladonMart3FPrintClerkText.got_item",
-   "labels": [
-    "CeladonMart3FPrintClerkText.got_item",
-    "CeladonMart3FPrintClerkText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM18ExplanationText is defined in a region that bailed",
-   "at": "scripts/CeladonMart3F_2.asm:16",
-   "lines": [
-    16,
-    19
-   ]
-  },
-  {
-   "file": "scripts/CeladonMart3F_2.asm",
-   "region": "CeladonMart3FPrintClerkText.TM18PreReceiveText",
-   "labels": [
-    "CeladonMart3FPrintClerkText.TM18PreReceiveText",
-    "CeladonMart3FPrintClerkText.ReceivedTM18Text",
-    "CeladonMart3FPrintClerkText.TM18ExplanationText",
-    "CeladonMart3FPrintClerkText.TM18NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/CeladonMart3F_2.asm:27",
-   "lines": [
-    22,
-    36
-   ]
-  },
-  {
    "file": "scripts/CeladonMartElevator.asm",
    "region": "CeladonMartElevatorStoreWarpEntriesScript",
    "labels": [
@@ -2415,28 +2015,6 @@
   },
   {
    "file": "scripts/CeladonMartRoof.asm",
-   "region": "CeladonMartRoofLittleGirlGiveHerWhichDrinkText",
-   "labels": [
-    "CeladonMartRoofLittleGirlGiveHerWhichDrinkText",
-    "CeladonMartRoofLittleGirlYayFreshWaterText",
-    "CeladonMartRoofLittleGirlReceivedTM13Text",
-    "CeladonMartRoofLittleGirlYaySodaPopText",
-    "CeladonMartRoofLittleGirlReceivedTM48Text",
-    "CeladonMartRoofLittleGirlYayLemonadeText",
-    "CeladonMartRoofLittleGirlReceivedTM49Text",
-    "CeladonMartRoofLittleGirlNoRoomText",
-    "CeladonMartRoofLittleGirlImNotThirstyText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/CeladonMartRoof.asm:152",
-   "lines": [
-    142,
-    189
-   ]
-  },
-  {
-   "file": "scripts/CeladonMartRoof.asm",
    "region": "CeladonMartRoofScript_PrintDrinksInBag",
    "labels": [
     "CeladonMartRoofScript_PrintDrinksInBag",
@@ -2457,61 +2035,11 @@
     "CeladonMartRoofLittleGirlText"
    ],
    "reason": "target-region-bailed",
-   "detail": ".noDrinksInBag is defined in a region that bailed",
-   "at": "scripts/CeladonMartRoof.asm:231",
+   "detail": ".done is defined in a region that bailed",
+   "at": "scripts/CeladonMartRoof.asm:239",
    "lines": [
     228,
     241
-   ]
-  },
-  {
-   "file": "scripts/CeladonMartRoof.asm",
-   "region": "CeladonMartRoofLittleGirlText.noDrinksInBag",
-   "labels": [
-    "CeladonMartRoofLittleGirlText.noDrinksInBag",
-    "CeladonMartRoofLittleGirlText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".ImThirstyText is defined in a region that bailed",
-   "at": "scripts/CeladonMartRoof.asm:243",
-   "lines": [
-    243,
-    246
-   ]
-  },
-  {
-   "file": "scripts/CeladonMartRoof.asm",
-   "region": "CeladonMartRoofLittleGirlText.ImThirstyText",
-   "labels": [
-    "CeladonMartRoofLittleGirlText.ImThirstyText",
-    "CeladonMartRoofLittleGirlText.GiveHerADrinkText",
-    "CeladonMartRoofVendingMachineText",
-    "CeladonMartRoofCurrentFloorSignText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_vending_machine",
-   "at": "scripts/CeladonMartRoof.asm:257",
-   "lines": [
-    249,
-    261
-   ]
-  },
-  {
-   "file": "scripts/CeladonPokecenter.asm",
-   "region": "CeladonPokecenter_TextPointers",
-   "labels": [
-    "CeladonPokecenter_TextPointers",
-    "CeladonPokecenterLinkReceptionistText",
-    "CeladonPokecenterNurseText",
-    "CeladonPokecenterGentlemanText",
-    "CeladonPokecenterBeautyText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_cable_club_receptionist",
-   "at": "scripts/CeladonPokecenter.asm:14",
-   "lines": [
-    6,
-    25
    ]
   },
   {
@@ -2605,71 +2133,6 @@
    ]
   },
   {
-   "file": "scripts/CeruleanCity.asm",
-   "region": "CeruleanCityRocketText",
-   "labels": [
-    "CeruleanCityRocketText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".beatRocketThief is defined in a region that bailed",
-   "at": "scripts/CeruleanCity.asm:270",
-   "lines": [
-    269,
-    285
-   ]
-  },
-  {
-   "file": "scripts/CeruleanCity.asm",
-   "region": "CeruleanCityRocketText.beatRocketThief",
-   "labels": [
-    "CeruleanCityRocketText.beatRocketThief"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".IllReturnTheTMText is defined in a region that bailed",
-   "at": "scripts/CeruleanCity.asm:287",
-   "lines": [
-    287,
-    294
-   ]
-  },
-  {
-   "file": "scripts/CeruleanCity.asm",
-   "region": "CeruleanCityRocketText.Success",
-   "labels": [
-    "CeruleanCityRocketText.Success",
-    "CeruleanCityRocketText.Done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".ReceivedTM28Text is defined in a region that bailed",
-   "at": "scripts/CeruleanCity.asm:298",
-   "lines": [
-    296,
-    302
-   ]
-  },
-  {
-   "file": "scripts/CeruleanCity.asm",
-   "region": "CeruleanCityRocketText.Text",
-   "labels": [
-    "CeruleanCityRocketText.Text",
-    "CeruleanCityRocketText.ReceivedTM28Text",
-    "CeruleanCityRocketText.TM28NoRoomText",
-    "CeruleanCityRocketText.IGiveUpText",
-    "CeruleanCityRocketText.IllReturnTheTMText",
-    "CeruleanCityCooltrainerMText",
-    "CeruleanCitySuperNerd1Text",
-    "CeruleanCitySuperNerd2Text",
-    "CeruleanCityGuardText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/CeruleanCity.asm:310",
-   "lines": [
-    305,
-    341
-   ]
-  },
-  {
    "file": "scripts/CeruleanGym.asm",
    "region": "CeruleanGym_Script",
    "labels": [
@@ -2735,60 +2198,12 @@
    "labels": [
     "CeruleanGymMistyText"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".beforeBeat is defined in a region that bailed",
-   "at": "scripts/CeruleanGym.asm:95",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_GOT_TM11",
+   "at": "scripts/CeruleanGym.asm:96",
    "lines": [
     94,
     100
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGymMistyText.afterBeat",
-   "labels": [
-    "CeruleanGymMistyText.afterBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM11ExplanationText is defined in a region that bailed",
-   "at": "scripts/CeruleanGym.asm:102",
-   "lines": [
-    102,
-    104
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGymMistyText.beforeBeat",
-   "labels": [
-    "CeruleanGymMistyText.beforeBeat",
-    "CeruleanGymMistyText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PreBattleText is defined in a region that bailed",
-   "at": "scripts/CeruleanGym.asm:106",
-   "lines": [
-    106,
-    125
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGymMistyText.PreBattleText",
-   "labels": [
-    "CeruleanGymMistyText.PreBattleText",
-    "CeruleanGymMistyText.TM11ExplanationText",
-    "CeruleanGymMistyCascadeBadgeInfoText",
-    "CeruleanGymMistyReceivedTM11Text",
-    "CeruleanGymMistyTM11NoRoomText",
-    "CeruleanGymMistyReceivedCascadeBadgeText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/CeruleanGym.asm:141",
-   "lines": [
-    128,
-    150
    ]
   },
   {
@@ -2821,38 +2236,6 @@
    "lines": [
     177,
     186
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGymGymGuideText",
-   "labels": [
-    "CeruleanGymGymGuideText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".afterBeat is defined in a region that bailed",
-   "at": "scripts/CeruleanGym.asm:191",
-   "lines": [
-    190,
-    194
-   ]
-  },
-  {
-   "file": "scripts/CeruleanPokecenter.asm",
-   "region": "CeruleanPokecenter_TextPointers",
-   "labels": [
-    "CeruleanPokecenter_TextPointers",
-    "CeruleanPokecenterLinkReceptionistText",
-    "CeruleanPokecenterNurseText",
-    "CeruleanPokecenterSuperNerdText",
-    "CeruleanPokecenterGentlemanText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_cable_club_receptionist",
-   "at": "scripts/CeruleanPokecenter.asm:14",
-   "lines": [
-    6,
-    25
    ]
   },
   {
@@ -2932,59 +2315,12 @@
    "labels": [
     "CinnabarGymBlaineText"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".beforeBeat is defined in a region that bailed",
-   "at": "scripts/CinnabarGym.asm:275",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_GOT_TM38",
+   "at": "scripts/CinnabarGym.asm:276",
    "lines": [
     274,
     280
-   ]
-  },
-  {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymBlaineText.afterBeat",
-   "labels": [
-    "CinnabarGymBlaineText.afterBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PostBattleAdviceText is defined in a region that bailed",
-   "at": "scripts/CinnabarGym.asm:282",
-   "lines": [
-    282,
-    284
-   ]
-  },
-  {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymBlaineText.beforeBeat",
-   "labels": [
-    "CinnabarGymBlaineText.beforeBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PreBattleText is defined in a region that bailed",
-   "at": "scripts/CinnabarGym.asm:286",
-   "lines": [
-    286,
-    293
-   ]
-  },
-  {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymBlaineText.PreBattleText",
-   "labels": [
-    "CinnabarGymBlaineText.PreBattleText",
-    "CinnabarGymBlaineText.ReceivedVolcanoBadgeText",
-    "CinnabarGymBlaineText.PostBattleAdviceText",
-    "CinnabarGymBlaineVolcanoBadgeInfoText",
-    "CinnabarGymBlaineReceivedTM38Text",
-    "CinnabarGymBlaineTM38NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item ; actually plays the second channel of SFX_BALL_POOF due to the wrong music bank being loaded",
-   "at": "scripts/CinnabarGym.asm:301",
-   "lines": [
-    296,
-    321
    ]
   },
   {
@@ -3070,152 +2406,6 @@
    "lines": [
     73,
     83
-   ]
-  },
-  {
-   "file": "scripts/CinnabarLabMetronomeRoom.asm",
-   "region": "CinnabarLabMetronomeRoomScientist1Text",
-   "labels": [
-    "CinnabarLabMetronomeRoomScientist1Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/CinnabarLabMetronomeRoom.asm:15",
-   "lines": [
-    14,
-    24
-   ]
-  },
-  {
-   "file": "scripts/CinnabarLabMetronomeRoom.asm",
-   "region": "CinnabarLabMetronomeRoomScientist1Text.bag_full",
-   "labels": [
-    "CinnabarLabMetronomeRoomScientist1Text.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM35NoRoomText is defined in a region that bailed",
-   "at": "scripts/CinnabarLabMetronomeRoom.asm:26",
-   "lines": [
-    26,
-    28
-   ]
-  },
-  {
-   "file": "scripts/CinnabarLabMetronomeRoom.asm",
-   "region": "CinnabarLabMetronomeRoomScientist1Text.got_item",
-   "labels": [
-    "CinnabarLabMetronomeRoomScientist1Text.got_item",
-    "CinnabarLabMetronomeRoomScientist1Text.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM35ExplanationText is defined in a region that bailed",
-   "at": "scripts/CinnabarLabMetronomeRoom.asm:30",
-   "lines": [
-    30,
-    33
-   ]
-  },
-  {
-   "file": "scripts/CinnabarLabMetronomeRoom.asm",
-   "region": "CinnabarLabMetronomeRoomScientist1Text.Text",
-   "labels": [
-    "CinnabarLabMetronomeRoomScientist1Text.Text",
-    "CinnabarLabMetronomeRoomScientist1Text.ReceivedTM35Text",
-    "CinnabarLabMetronomeRoomScientist1Text.TM35ExplanationText",
-    "CinnabarLabMetronomeRoomScientist1Text.TM35NoRoomText",
-    "CinnabarLabMetronomeRoomScientist2Text",
-    "CinnabarLabMetronomeRoomPCText",
-    "CinnabarLabMetronomeRoomAmberPipeText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/CinnabarLabMetronomeRoom.asm:41",
-   "lines": [
-    36,
-    62
-   ]
-  },
-  {
-   "file": "scripts/CinnabarPokecenter.asm",
-   "region": "CinnabarPokecenter_TextPointers",
-   "labels": [
-    "CinnabarPokecenter_TextPointers",
-    "CinnabarPokecenterNurseText",
-    "CinnabarPokecenterCooltrainerFText",
-    "CinnabarPokecenterGentlemanText",
-    "CinnabarPokecenterLinkReceptionistText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_pokecenter_nurse",
-   "at": "scripts/CinnabarPokecenter.asm:14",
-   "lines": [
-    6,
-    25
-   ]
-  },
-  {
-   "file": "scripts/CopycatsHouse2F.asm",
-   "region": "CopycatsHouse2FCopycatText",
-   "labels": [
-    "CopycatsHouse2FCopycatText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/CopycatsHouse2F.asm:17",
-   "lines": [
-    16,
-    36
-   ]
-  },
-  {
-   "file": "scripts/CopycatsHouse2F.asm",
-   "region": "CopycatsHouse2FCopycatText.bag_full",
-   "labels": [
-    "CopycatsHouse2FCopycatText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM31NoRoomText is defined in a region that bailed",
-   "at": "scripts/CopycatsHouse2F.asm:38",
-   "lines": [
-    38,
-    40
-   ]
-  },
-  {
-   "file": "scripts/CopycatsHouse2F.asm",
-   "region": "CopycatsHouse2FCopycatText.got_item",
-   "labels": [
-    "CopycatsHouse2FCopycatText.got_item",
-    "CopycatsHouse2FCopycatText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM31Explanation2Text is defined in a region that bailed",
-   "at": "scripts/CopycatsHouse2F.asm:42",
-   "lines": [
-    42,
-    45
-   ]
-  },
-  {
-   "file": "scripts/CopycatsHouse2F.asm",
-   "region": "CopycatsHouse2FCopycatText.DoYouLikePokemonText",
-   "labels": [
-    "CopycatsHouse2FCopycatText.DoYouLikePokemonText",
-    "CopycatsHouse2FCopycatText.TM31PreReceiveText",
-    "CopycatsHouse2FCopycatText.ReceivedTM31Text",
-    "CopycatsHouse2FCopycatText.TM31Explanation1Text",
-    "CopycatsHouse2FCopycatText.TM31Explanation2Text",
-    "CopycatsHouse2FCopycatText.TM31NoRoomText",
-    "CopycatsHouse2FDoduoText",
-    "CopycatsHouse2FRareDollText",
-    "CopycatsHouse2FSNESText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/CopycatsHouse2F.asm:57",
-   "lines": [
-    48,
-    82
    ]
   },
   {
@@ -3472,9 +2662,9 @@
     "FuchsiaGoodRodHouseFishingGuruText.HowAreTheFishText",
     "FuchsiaGoodRodHouseFishingGuruText.NoRoomText"
    ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/FuchsiaGoodRodHouse.asm:44",
+   "reason": "inline-text-db",
+   "detail": "para \"\u3064\u308a\u3000\u3053\u305d\"",
+   "at": "scripts/FuchsiaGoodRodHouse.asm:48",
    "lines": [
     39,
     67
@@ -3550,60 +2740,12 @@
    "labels": [
     "FuchsiaGymKogaText"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".beforeBeat is defined in a region that bailed",
-   "at": "scripts/FuchsiaGym.asm:109",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_GOT_TM06",
+   "at": "scripts/FuchsiaGym.asm:110",
    "lines": [
     108,
     114
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymKogaText.afterBeat",
-   "labels": [
-    "FuchsiaGymKogaText.afterBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PostBattleAdviceText is defined in a region that bailed",
-   "at": "scripts/FuchsiaGym.asm:116",
-   "lines": [
-    116,
-    118
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymKogaText.beforeBeat",
-   "labels": [
-    "FuchsiaGymKogaText.beforeBeat",
-    "FuchsiaGymKogaText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".BeforeBattleText is defined in a region that bailed",
-   "at": "scripts/FuchsiaGym.asm:120",
-   "lines": [
-    120,
-    139
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymKogaText.BeforeBattleText",
-   "labels": [
-    "FuchsiaGymKogaText.BeforeBattleText",
-    "FuchsiaGymKogaText.ReceivedSoulBadgeText",
-    "FuchsiaGymKogaText.PostBattleAdviceText",
-    "FuchsiaGymKogaSoulBadgeInfoText",
-    "FuchsiaGymKogaReceivedTM06Text",
-    "FuchsiaGymKogaTM06NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/FuchsiaGym.asm:159",
-   "lines": [
-    142,
-    165
    ]
   },
   {
@@ -3703,39 +2845,6 @@
    ]
   },
   {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymGymGuideText",
-   "labels": [
-    "FuchsiaGymGymGuideText",
-    "FuchsiaGymGymGuideText.afterBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".afterBeat is defined in a region that bailed",
-   "at": "scripts/FuchsiaGym.asm:279",
-   "lines": [
-    277,
-    283
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaPokecenter.asm",
-   "region": "FuchsiaPokecenter_TextPointers",
-   "labels": [
-    "FuchsiaPokecenter_TextPointers",
-    "FuchsiaPokecenterNurseText",
-    "FuchsiaPokecenterRockerText",
-    "FuchsiaPokecenterCooltrainerFText",
-    "FuchsiaPokecenterLinkReceptionistText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_pokecenter_nurse",
-   "at": "scripts/FuchsiaPokecenter.asm:14",
-   "lines": [
-    6,
-    25
-   ]
-  },
-  {
    "file": "scripts/GameCorner.asm",
    "region": "GameCornerRocketBattleScript",
    "labels": [
@@ -3761,255 +2870,6 @@
    "lines": [
     73,
     77
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerClerkText",
-   "labels": [
-    "GameCornerClerkText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".declined is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:153",
-   "lines": [
-    147,
-    171
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerClerkText.buy_coins",
-   "labels": [
-    "GameCornerClerkText.buy_coins"
-   ],
-   "reason": "unresolved-symbol",
-   "detail": "wPlayerCoins",
-   "at": "scripts/GameCorner.asm:189",
-   "lines": [
-    174,
-    196
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerClerkText.declined",
-   "labels": [
-    "GameCornerClerkText.declined"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".print_ret is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:199",
-   "lines": [
-    198,
-    199
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerClerkText.coin_case_full",
-   "labels": [
-    "GameCornerClerkText.coin_case_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".print_ret is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:202",
-   "lines": [
-    201,
-    202
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerFishingGuru1Text",
-   "labels": [
-    "GameCornerFishingGuru1Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".alreadyGotNpcCoins is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:244",
-   "lines": [
-    243,
-    265
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerFishingGuru1Text.alreadyGotNpcCoins",
-   "labels": [
-    "GameCornerFishingGuru1Text.alreadyGotNpcCoins"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".WinsComeAndGoText is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:267",
-   "lines": [
-    267,
-    268
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerFishingGuru1Text.coinCaseFull",
-   "labels": [
-    "GameCornerFishingGuru1Text.coinCaseFull"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".DontNeedMyCoinsText is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:270",
-   "lines": [
-    270,
-    271
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerFishingGuru1Text.WantToPlayText",
-   "labels": [
-    "GameCornerFishingGuru1Text.WantToPlayText",
-    "GameCornerFishingGuru1Text.Received10CoinsText",
-    "GameCornerFishingGuru1Text.DontNeedMyCoinsText",
-    "GameCornerFishingGuru1Text.WinsComeAndGoText",
-    "GameCornerMiddleAgedWomanText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/GameCorner.asm:284",
-   "lines": [
-    279,
-    297
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerMiddleAgedMan2Text",
-   "labels": [
-    "GameCornerMiddleAgedMan2Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".alreadyGotNpcCoins is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:324",
-   "lines": [
-    323,
-    343
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerMiddleAgedMan2Text.alreadyGotNpcCoins",
-   "labels": [
-    "GameCornerMiddleAgedMan2Text.alreadyGotNpcCoins"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".INeedMoreCoinsText is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:345",
-   "lines": [
-    345,
-    346
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerMiddleAgedMan2Text.coinCaseFull",
-   "labels": [
-    "GameCornerMiddleAgedMan2Text.coinCaseFull"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".YouHaveLotsOfCoinsText is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:348",
-   "lines": [
-    348,
-    349
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerMiddleAgedMan2Text.WantSomeCoinsText",
-   "labels": [
-    "GameCornerMiddleAgedMan2Text.WantSomeCoinsText",
-    "GameCornerMiddleAgedMan2Text.Received20CoinsText",
-    "GameCornerMiddleAgedMan2Text.YouHaveLotsOfCoinsText",
-    "GameCornerMiddleAgedMan2Text.INeedMoreCoinsText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/GameCorner.asm:362",
-   "lines": [
-    357,
-    371
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerFishingGuru2Text",
-   "labels": [
-    "GameCornerFishingGuru2Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".alreadyGotNpcCoins is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:376",
-   "lines": [
-    375,
-    395
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerFishingGuru2Text.alreadyGotNpcCoins",
-   "labels": [
-    "GameCornerFishingGuru2Text.alreadyGotNpcCoins"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".CloselyWatchTheReelsText is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:397",
-   "lines": [
-    397,
-    398
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerFishingGuru2Text.coinCaseFull",
-   "labels": [
-    "GameCornerFishingGuru2Text.coinCaseFull"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".YouGotYourOwnCoinsText is defined in a region that bailed",
-   "at": "scripts/GameCorner.asm:400",
-   "lines": [
-    400,
-    401
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerFishingGuru2Text.dontHaveCoinCase",
-   "labels": [
-    "GameCornerFishingGuru2Text.dontHaveCoinCase",
-    "GameCornerFishingGuru2Text.print_ret"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.dontHaveCoinCase', '.print_ret'] would redefine a local label already emitted in this scope",
-   "at": "scripts/GameCorner.asm:403",
-   "lines": [
-    403,
-    406
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerFishingGuru2Text.ThrowingMeOffText",
-   "labels": [
-    "GameCornerFishingGuru2Text.ThrowingMeOffText",
-    "GameCornerFishingGuru2Text.Received20CoinsText",
-    "GameCornerFishingGuru2Text.YouGotYourOwnCoinsText",
-    "GameCornerFishingGuru2Text.CloselyWatchTheReelsText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/GameCorner.asm:414",
-   "lines": [
-    409,
-    423
    ]
   },
   {
@@ -4041,41 +2901,6 @@
    "lines": [
     523,
     532
-   ]
-  },
-  {
-   "file": "scripts/GameCornerPrizeRoom.asm",
-   "region": "GameCornerPrizeRoom_TextPointers",
-   "labels": [
-    "GameCornerPrizeRoom_TextPointers",
-    "GameCornerPrizeRoomBaldingGuyText",
-    "GameCornerPrizeRoomGamblerText",
-    "GameCornerPRizeRoomPrizeVendorText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_prize_vendor",
-   "at": "scripts/GameCornerPrizeRoom.asm:22",
-   "lines": [
-    5,
-    22
-   ]
-  },
-  {
-   "file": "scripts/IndigoPlateauLobby.asm",
-   "region": "IndigoPlateauLobby_TextPointers",
-   "labels": [
-    "IndigoPlateauLobby_TextPointers",
-    "IndigoPlateauLobbyNurseText",
-    "IndigoPlateauLobbyGymGuideText",
-    "IndigoPlateauLobbyCooltrainerFText",
-    "IndigoPlateauLobbyLinkReceptionistText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_pokecenter_nurse",
-   "at": "scripts/IndigoPlateauLobby.asm:27",
-   "lines": [
-    18,
-    38
    ]
   },
   {
@@ -4111,24 +2936,6 @@
    ]
   },
   {
-   "file": "scripts/LavenderPokecenter.asm",
-   "region": "LavenderPokecenter_TextPointers",
-   "labels": [
-    "LavenderPokecenter_TextPointers",
-    "LavenderPokecenterLinkReceptionistText",
-    "LavenderPokecenterNurseText",
-    "LavenderPokecenterGentlemanText",
-    "LavenderPokecenterLittleGirlText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_cable_club_receptionist",
-   "at": "scripts/LavenderPokecenter.asm:14",
-   "lines": [
-    6,
-    25
-   ]
-  },
-  {
    "file": "scripts/LoreleisRoom.asm",
    "region": "LoreleisRoom_TextPointers",
    "labels": [
@@ -4159,170 +2966,6 @@
    "lines": [
     137,
     150
-   ]
-  },
-  {
-   "file": "scripts/MrFujisHouse.asm",
-   "region": "MrFujisHouseSuperNerdText",
-   "labels": [
-    "MrFujisHouseSuperNerdText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".rescued_mr_fuji is defined in a region that bailed",
-   "at": "scripts/MrFujisHouse.asm:17",
-   "lines": [
-    16,
-    20
-   ]
-  },
-  {
-   "file": "scripts/MrFujisHouse.asm",
-   "region": "MrFujisHouseLittleGirlText",
-   "labels": [
-    "MrFujisHouseLittleGirlText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".rescued_mr_fuji is defined in a region that bailed",
-   "at": "scripts/MrFujisHouse.asm:38",
-   "lines": [
-    37,
-    41
-   ]
-  },
-  {
-   "file": "scripts/MrFujisHouse.asm",
-   "region": "MrFujisHouseLittleGirlText.rescued_mr_fuji",
-   "labels": [
-    "MrFujisHouseLittleGirlText.rescued_mr_fuji",
-    "MrFujisHouseLittleGirlText.done"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.done', '.rescued_mr_fuji'] would redefine a local label already emitted in this scope",
-   "at": "scripts/MrFujisHouse.asm:43",
-   "lines": [
-    43,
-    46
-   ]
-  },
-  {
-   "file": "scripts/MrFujisHouse.asm",
-   "region": "MrFujisHouseMrFujiText",
-   "labels": [
-    "MrFujisHouseMrFujiText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/MrFujisHouse.asm:73",
-   "lines": [
-    72,
-    82
-   ]
-  },
-  {
-   "file": "scripts/MrFujisHouse.asm",
-   "region": "MrFujisHouseMrFujiText.bag_full",
-   "labels": [
-    "MrFujisHouseMrFujiText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PokeFluteNoRoomText is defined in a region that bailed",
-   "at": "scripts/MrFujisHouse.asm:84",
-   "lines": [
-    84,
-    86
-   ]
-  },
-  {
-   "file": "scripts/MrFujisHouse.asm",
-   "region": "MrFujisHouseMrFujiText.got_item",
-   "labels": [
-    "MrFujisHouseMrFujiText.got_item",
-    "MrFujisHouseMrFujiText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".HasMyFluteHelpedYouText is defined in a region that bailed",
-   "at": "scripts/MrFujisHouse.asm:88",
-   "lines": [
-    88,
-    91
-   ]
-  },
-  {
-   "file": "scripts/MrFujisHouse.asm",
-   "region": "MrFujisHouseMrFujiText.IThinkThisMayHelpYourQuestText",
-   "labels": [
-    "MrFujisHouseMrFujiText.IThinkThisMayHelpYourQuestText",
-    "MrFujisHouseMrFujiText.ReceivedPokeFluteText",
-    "MrFujisHouseMrFujiText.PokeFluteNoRoomText",
-    "MrFujisHouseMrFujiText.HasMyFluteHelpedYouText",
-    "MrFujisHouseMrFujiPokedexText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/MrFujisHouse.asm:99",
-   "lines": [
-    94,
-    113
-   ]
-  },
-  {
-   "file": "scripts/MrPsychicsHouse.asm",
-   "region": "MrPsychicsHouseMrPsychicText",
-   "labels": [
-    "MrPsychicsHouseMrPsychicText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/MrPsychicsHouse.asm:11",
-   "lines": [
-    10,
-    20
-   ]
-  },
-  {
-   "file": "scripts/MrPsychicsHouse.asm",
-   "region": "MrPsychicsHouseMrPsychicText.bag_full",
-   "labels": [
-    "MrPsychicsHouseMrPsychicText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM29NoRoomText is defined in a region that bailed",
-   "at": "scripts/MrPsychicsHouse.asm:22",
-   "lines": [
-    22,
-    24
-   ]
-  },
-  {
-   "file": "scripts/MrPsychicsHouse.asm",
-   "region": "MrPsychicsHouseMrPsychicText.got_item",
-   "labels": [
-    "MrPsychicsHouseMrPsychicText.got_item",
-    "MrPsychicsHouseMrPsychicText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM29ExplanationText is defined in a region that bailed",
-   "at": "scripts/MrPsychicsHouse.asm:26",
-   "lines": [
-    26,
-    29
-   ]
-  },
-  {
-   "file": "scripts/MrPsychicsHouse.asm",
-   "region": "MrPsychicsHouseMrPsychicText.YouWantedThisText",
-   "labels": [
-    "MrPsychicsHouseMrPsychicText.YouWantedThisText",
-    "MrPsychicsHouseMrPsychicText.ReceivedTM29Text",
-    "MrPsychicsHouseMrPsychicText.TM29ExplanationText",
-    "MrPsychicsHouseMrPsychicText.TM29NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/MrPsychicsHouse.asm:37",
-   "lines": [
-    32,
-    46
    ]
   },
   {
@@ -4520,20 +3163,6 @@
   },
   {
    "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FReceivedFossilText.Text",
-   "labels": [
-    "MtMoonB2FReceivedFossilText.Text"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/MtMoonB2F.asm:585",
-   "lines": [
-    584,
-    587
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
    "region": "MtMoonB2FYouHaveNoRoomText",
    "labels": [
     "MtMoonB2FYouHaveNoRoomText"
@@ -4575,38 +3204,6 @@
    ]
   },
   {
-   "file": "scripts/MtMoonPokecenter.asm",
-   "region": "MtMoonPokecenter_TextPointers",
-   "labels": [
-    "MtMoonPokecenter_TextPointers",
-    "MtMoonPokecenterNurseText",
-    "MtMoonPokecenterYoungsterText",
-    "MtMoonPokecenterGentlemanText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_pokecenter_nurse",
-   "at": "scripts/MtMoonPokecenter.asm:16",
-   "lines": [
-    6,
-    24
-   ]
-  },
-  {
-   "file": "scripts/MtMoonPokecenter.asm",
-   "region": "MtMoonPokecenterClipboardText",
-   "labels": [
-    "MtMoonPokecenterClipboardText",
-    "MtMoonPokecenterLinkReceptionistText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_cable_club_receptionist",
-   "at": "scripts/MtMoonPokecenter.asm:36",
-   "lines": [
-    32,
-    36
-   ]
-  },
-  {
    "file": "scripts/MtMoonPokecenter_2.asm",
    "region": "MagikarpSalesman",
    "labels": [
@@ -4618,180 +3215,6 @@
    "lines": [
     2,
     21
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist1Text",
-   "labels": [
-    "Museum1FPrintScientist1Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".not_right_of_scientist is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:4",
-   "lines": [
-    2,
-    8
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist1Text.not_right_of_scientist",
-   "labels": [
-    "Museum1FPrintScientist1Text.not_right_of_scientist",
-    "Museum1FPrintScientist1Text.not_behind_counter"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".not_behind_counter is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:11",
-   "lines": [
-    10,
-    20
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist1Text.check_ticket",
-   "labels": [
-    "Museum1FPrintScientist1Text.check_ticket",
-    "Museum1FPrintScientist1Text.already_bought_ticket"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".no_ticket is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:23",
-   "lines": [
-    22,
-    27
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist1Text.no_ticket",
-   "labels": [
-    "Museum1FPrintScientist1Text.no_ticket"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".deny_entry is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:39",
-   "lines": [
-    29,
-    49
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist1Text.buy_ticket",
-   "labels": [
-    "Museum1FPrintScientist1Text.buy_ticket"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".allow_entry is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:69",
-   "lines": [
-    51,
-    69
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist1Text.deny_entry",
-   "labels": [
-    "Museum1FPrintScientist1Text.deny_entry"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:79",
-   "lines": [
-    71,
-    79
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist1Text.allow_entry",
-   "labels": [
-    "Museum1FPrintScientist1Text.allow_entry"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:83",
-   "lines": [
-    81,
-    83
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist1Text.behind_counter",
-   "labels": [
-    "Museum1FPrintScientist1Text.behind_counter"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:94",
-   "lines": [
-    86,
-    94
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist2Text",
-   "labels": [
-    "Museum1FPrintScientist2Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:148",
-   "lines": [
-    147,
-    159
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist2Text.bag_full",
-   "labels": [
-    "Museum1FPrintScientist2Text.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".YouDontHaveSpaceText is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:161",
-   "lines": [
-    161,
-    162
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist2Text.got_item",
-   "labels": [
-    "Museum1FPrintScientist2Text.got_item",
-    "Museum1FPrintScientist2Text.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".GetTheOldAmberCheckText is defined in a region that bailed",
-   "at": "scripts/Museum1F_2.asm:164",
-   "lines": [
-    164,
-    167
-   ]
-  },
-  {
-   "file": "scripts/Museum1F_2.asm",
-   "region": "Museum1FPrintScientist2Text.TakeThisToAPokemonLabText",
-   "labels": [
-    "Museum1FPrintScientist2Text.TakeThisToAPokemonLabText",
-    "Museum1FPrintScientist2Text.ReceivedOldAmberText",
-    "Museum1FPrintScientist2Text.GetTheOldAmberCheckText",
-    "Museum1FPrintScientist2Text.YouDontHaveSpaceText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/Museum1F_2.asm:175",
-   "lines": [
-    170,
-    184
    ]
   },
   {
@@ -4807,48 +3230,6 @@
    "lines": [
     13,
     36
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabPlayerWatchRivalExitScript",
-   "labels": [
-    "OaksLabPlayerWatchRivalExitScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".checkRivalPosition is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:441",
-   "lines": [
-    439,
-    450
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabPlayerWatchRivalExitScript.checkRivalPosition",
-   "labels": [
-    "OaksLabPlayerWatchRivalExitScript.checkRivalPosition"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".turnPlayerLeft is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:458",
-   "lines": [
-    453,
-    460
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabPlayerWatchRivalExitScript.turnPlayerLeft",
-   "labels": [
-    "OaksLabPlayerWatchRivalExitScript.turnPlayerLeft"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:463",
-   "lines": [
-    462,
-    463
    ]
   },
   {
@@ -4877,48 +3258,6 @@
    "lines": [
     542,
     613
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabCalcRivalMovementScript",
-   "labels": [
-    "OaksLabCalcRivalMovementScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".not_below_oak is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:667",
-   "lines": [
-    661,
-    672
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabCalcRivalMovementScript.not_below_oak",
-   "labels": [
-    "OaksLabCalcRivalMovementScript.not_below_oak"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".not_above_oak is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:675",
-   "lines": [
-    674,
-    680
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabCalcRivalMovementScript.not_above_oak",
-   "labels": [
-    "OaksLabCalcRivalMovementScript.not_above_oak"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:689",
-   "lines": [
-    682,
-    689
    ]
   },
   {
@@ -4998,118 +3337,12 @@
    "labels": [
     "OaksLabOak1Text.check_for_poke_balls"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".come_see_me_sometimes is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:827",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_BATTLED_RIVAL_IN_OAKS_LAB",
+   "at": "scripts/OaksLab.asm:838",
    "lines": [
     825,
     845
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOak1Text.already_got_pokemon",
-   "labels": [
-    "OaksLabOak1Text.already_got_pokemon"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".YourPokemonCanFightText is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:847",
-   "lines": [
-    847,
-    849
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOak1Text.check_got_parcel",
-   "labels": [
-    "OaksLabOak1Text.check_got_parcel"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_parcel is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:853",
-   "lines": [
-    851,
-    856
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOak1Text.got_parcel",
-   "labels": [
-    "OaksLabOak1Text.got_parcel"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".DeliverParcelText is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:858",
-   "lines": [
-    858,
-    863
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOak1Text.mon_around_the_world",
-   "labels": [
-    "OaksLabOak1Text.mon_around_the_world"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PokemonAroundTheWorldText is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:865",
-   "lines": [
-    865,
-    867
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOak1Text.give_poke_balls",
-   "labels": [
-    "OaksLabOak1Text.give_poke_balls"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".come_see_me_sometimes is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:870",
-   "lines": [
-    869,
-    875
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOak1Text.come_see_me_sometimes",
-   "labels": [
-    "OaksLabOak1Text.come_see_me_sometimes",
-    "OaksLabOak1Text.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".ComeSeeMeSometimesText is defined in a region that bailed",
-   "at": "scripts/OaksLab.asm:877",
-   "lines": [
-    877,
-    880
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOak1Text.GoAheadItsYours",
-   "labels": [
-    "OaksLabOak1Text.GoAheadItsYours",
-    "OaksLabOak1Text.YourPokemonCanFightText",
-    "OaksLabOak1Text.YouShouldTalkToIt",
-    "OaksLabOak1Text.DeliverParcelText",
-    "OaksLabOak1Text.PokemonAroundTheWorldText",
-    "OaksLabOak1Text.GivePokeballsText",
-    "OaksLabOak1Text.ComeSeeMeSometimesText",
-    "OaksLabOak1Text.HowIsYourPokedexComingText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/OaksLab.asm:896",
-   "lines": [
-    883,
-    916
    ]
   },
   {
@@ -5254,39 +3487,6 @@
   },
   {
    "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalTakesText1",
-   "labels": [
-    "OaksLabRivalTakesText1",
-    "OaksLabRivalTakesText2",
-    "OaksLabRivalTakesText3",
-    "OaksLabRivalTakesText4",
-    "OaksLabRivalTakesText5"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/OaksLab.asm:1002",
-   "lines": [
-    997,
-    1015
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabOakGivesText",
-   "labels": [
-    "OaksLabOakGivesText",
-    "OaksLabReceivedText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/OaksLab.asm:1051",
-   "lines": [
-    1046,
-    1052
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
    "region": "OaksLabOakDontGoAwayYetText",
    "labels": [
     "OaksLabOakDontGoAwayYetText"
@@ -5412,9 +3612,9 @@
     "OaksLabOakThatWasMyDreamText",
     "OaksLabRivalLeaveItAllToMeText"
    ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/OaksLab.asm:1132",
+   "reason": "local-label-scope-collision",
+   "detail": "['.Text'] would redefine a local label already emitted in this scope",
+   "at": "scripts/OaksLab.asm:1111",
    "lines": [
     1111,
     1141
@@ -5527,60 +3727,12 @@
    "labels": [
     "PewterGymBrockText"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".beforeBeat is defined in a region that bailed",
-   "at": "scripts/PewterGym.asm:102",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_GOT_TM34",
+   "at": "scripts/PewterGym.asm:103",
    "lines": [
     101,
     107
-   ]
-  },
-  {
-   "file": "scripts/PewterGym.asm",
-   "region": "PewterGymBrockText.afterBeat",
-   "labels": [
-    "PewterGymBrockText.afterBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PostBattleAdviceText is defined in a region that bailed",
-   "at": "scripts/PewterGym.asm:109",
-   "lines": [
-    109,
-    111
-   ]
-  },
-  {
-   "file": "scripts/PewterGym.asm",
-   "region": "PewterGymBrockText.beforeBeat",
-   "labels": [
-    "PewterGymBrockText.beforeBeat",
-    "PewterGymBrockText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PreBattleText is defined in a region that bailed",
-   "at": "scripts/PewterGym.asm:113",
-   "lines": [
-    113,
-    133
-   ]
-  },
-  {
-   "file": "scripts/PewterGym.asm",
-   "region": "PewterGymBrockText.PreBattleText",
-   "labels": [
-    "PewterGymBrockText.PreBattleText",
-    "PewterGymBrockText.PostBattleAdviceText",
-    "PewterGymBrockWaitTakeThisText",
-    "PewterGymReceivedTM34Text",
-    "PewterGymTM34NoRoomText",
-    "PewterGymBrockReceivedBoulderBadgeText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/PewterGym.asm:149",
-   "lines": [
-    136,
-    161
    ]
   },
   {
@@ -5600,65 +3752,6 @@
    ]
   },
   {
-   "file": "scripts/PewterGym.asm",
-   "region": "PewterGymGuideText",
-   "labels": [
-    "PewterGymGuideText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".afterBeat is defined in a region that bailed",
-   "at": "scripts/PewterGym.asm:185",
-   "lines": [
-    183,
-    197
-   ]
-  },
-  {
-   "file": "scripts/PewterGym.asm",
-   "region": "PewterGymGuideText.PewterGymGuideBeginAdviceText",
-   "labels": [
-    "PewterGymGuideText.PewterGymGuideBeginAdviceText",
-    "PewterGymGuideText.PewterGymGuideAdviceText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/PewterGym.asm:204",
-   "lines": [
-    199,
-    204
-   ]
-  },
-  {
-   "file": "scripts/PewterPokecenter.asm",
-   "region": "PewterPokecenter_TextPointers",
-   "labels": [
-    "PewterPokecenter_TextPointers",
-    "PewterPokecenterNurseText",
-    "PewterPokecenterGentlemanText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_pokecenter_nurse",
-   "at": "scripts/PewterPokecenter.asm:18",
-   "lines": [
-    9,
-    22
-   ]
-  },
-  {
-   "file": "scripts/PewterPokecenter.asm",
-   "region": "PewterPokecenterLinkReceptionistText",
-   "labels": [
-    "PewterPokecenterLinkReceptionistText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_cable_club_receptionist",
-   "at": "scripts/PewterPokecenter.asm:30",
-   "lines": [
-    30,
-    30
-   ]
-  },
-  {
    "file": "scripts/PewterPokecenter_2.asm",
    "region": "PewterJigglypuff",
    "labels": [
@@ -5672,129 +3765,6 @@
    "lines": [
     11,
     68
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubChairmanText",
-   "labels": [
-    "PokemonFanClubChairmanText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".check_bike_voucher is defined in a region that bailed",
-   "at": "scripts/PokemonFanClub.asm:178",
-   "lines": [
-    177,
-    186
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubChairmanText.check_bike_voucher",
-   "labels": [
-    "PokemonFanClubChairmanText.check_bike_voucher"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".nothingleft is defined in a region that bailed",
-   "at": "scripts/PokemonFanClub.asm:190",
-   "lines": [
-    189,
-    207
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubChairmanText.bag_full",
-   "labels": [
-    "PokemonFanClubChairmanText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".BagFullText is defined in a region that bailed",
-   "at": "scripts/PokemonFanClub.asm:209",
-   "lines": [
-    209,
-    210
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubChairmanText.nothanks",
-   "labels": [
-    "PokemonFanClubChairmanText.nothanks"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".NoStoryText is defined in a region that bailed",
-   "at": "scripts/PokemonFanClub.asm:212",
-   "lines": [
-    212,
-    213
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubChairmanText.nothingleft",
-   "labels": [
-    "PokemonFanClubChairmanText.nothingleft",
-    "PokemonFanClubChairmanText.gbpals_print_text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".FinalText is defined in a region that bailed",
-   "at": "scripts/PokemonFanClub.asm:215",
-   "lines": [
-    215,
-    221
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubChairmanText.select_mon_to_print",
-   "labels": [
-    "PokemonFanClubChairmanText.select_mon_to_print"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".print is defined in a region that bailed",
-   "at": "scripts/PokemonFanClub.asm:232",
-   "lines": [
-    224,
-    236
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubChairmanText.print",
-   "labels": [
-    "PokemonFanClubChairmanText.print"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".gbpals_print_text is defined in a region that bailed",
-   "at": "scripts/PokemonFanClub.asm:255",
-   "lines": [
-    239,
-    257
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubChairmanText.IntroText",
-   "labels": [
-    "PokemonFanClubChairmanText.IntroText",
-    "PokemonFanClubChairmanText.StoryText",
-    "PokemonFanClubChairmanText.BikeVoucherText",
-    "PokemonFanClubChairmanText.NoStoryText",
-    "PokemonFanClubChairmanText.FinalText",
-    "PokemonFanClubChairmanText.BagFullText",
-    "Text_59c1f",
-    "Text_59c24",
-    "Text_59c29",
-    "Text_59c2e",
-    "PokemonFanClubReceptionistText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/PokemonFanClub.asm:269",
-   "lines": [
-    260,
-    303
    ]
   },
   {
@@ -6415,24 +4385,6 @@
    ]
   },
   {
-   "file": "scripts/RockTunnelPokecenter.asm",
-   "region": "RockTunnelPokecenter_TextPointers",
-   "labels": [
-    "RockTunnelPokecenter_TextPointers",
-    "RockTunnelPokecenterNurseText",
-    "RockTunnelPokecenterGentlemanText",
-    "RockTunnelPokecenterFisherText",
-    "RockTunnelPokecenterLinkReceptionistText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_pokecenter_nurse",
-   "at": "scripts/RockTunnelPokecenter.asm:14",
-   "lines": [
-    6,
-    25
-   ]
-  },
-  {
    "file": "scripts/RocketHideoutB1F.asm",
    "region": "RocketHideoutB1FDoorCallbackScript",
    "labels": [
@@ -6695,66 +4647,6 @@
    "lines": [
     18,
     32
-   ]
-  },
-  {
-   "file": "scripts/Route1_2.asm",
-   "region": "Route1PrintYoungster1Text",
-   "labels": [
-    "Route1PrintYoungster1Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/Route1_2.asm:3",
-   "lines": [
-    2,
-    10
-   ]
-  },
-  {
-   "file": "scripts/Route1_2.asm",
-   "region": "Route1PrintYoungster1Text.bag_full",
-   "labels": [
-    "Route1PrintYoungster1Text.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".NoRoomText is defined in a region that bailed",
-   "at": "scripts/Route1_2.asm:12",
-   "lines": [
-    12,
-    13
-   ]
-  },
-  {
-   "file": "scripts/Route1_2.asm",
-   "region": "Route1PrintYoungster1Text.got_item",
-   "labels": [
-    "Route1PrintYoungster1Text.got_item",
-    "Route1PrintYoungster1Text.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".AlsoGotPokeballsText is defined in a region that bailed",
-   "at": "scripts/Route1_2.asm:15",
-   "lines": [
-    15,
-    18
-   ]
-  },
-  {
-   "file": "scripts/Route1_2.asm",
-   "region": "Route1PrintYoungster1Text.MartSampleText",
-   "labels": [
-    "Route1PrintYoungster1Text.MartSampleText",
-    "Route1PrintYoungster1Text.GotPotionText",
-    "Route1PrintYoungster1Text.AlsoGotPokeballsText",
-    "Route1PrintYoungster1Text.NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/Route1_2.asm:26",
-   "lines": [
-    21,
-    35
    ]
   },
   {
@@ -7231,141 +5123,6 @@
    "lines": [
     12,
     22
-   ]
-  },
-  {
-   "file": "scripts/Route12Gate2F.asm",
-   "region": "Route12Gate2FBrunetteGirlText.bag_full",
-   "labels": [
-    "Route12Gate2FBrunetteGirlText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM39NoRoomText is defined in a region that bailed",
-   "at": "scripts/Route12Gate2F.asm:24",
-   "lines": [
-    24,
-    26
-   ]
-  },
-  {
-   "file": "scripts/Route12Gate2F.asm",
-   "region": "Route12Gate2FBrunetteGirlText.got_item",
-   "labels": [
-    "Route12Gate2FBrunetteGirlText.got_item",
-    "Route12Gate2FBrunetteGirlText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM39ExplanationText is defined in a region that bailed",
-   "at": "scripts/Route12Gate2F.asm:28",
-   "lines": [
-    28,
-    31
-   ]
-  },
-  {
-   "file": "scripts/Route12Gate2F.asm",
-   "region": "Route12Gate2FBrunetteGirlText.YouCanHaveThisText",
-   "labels": [
-    "Route12Gate2FBrunetteGirlText.YouCanHaveThisText",
-    "Route12Gate2FBrunetteGirlText.ReceivedTM39Text",
-    "Route12Gate2FBrunetteGirlText.TM39ExplanationText",
-    "Route12Gate2FBrunetteGirlText.TM39NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/Route12Gate2F.asm:39",
-   "lines": [
-    34,
-    48
-   ]
-  },
-  {
-   "file": "scripts/Route12Gate2F.asm",
-   "region": "GateUpstairsScript_PrintIfFacingUp",
-   "labels": [
-    "GateUpstairsScript_PrintIfFacingUp"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/Route12Gate2F.asm:73",
-   "lines": [
-    69,
-    73
-   ]
-  },
-  {
-   "file": "scripts/Route12SuperRodHouse.asm",
-   "region": "Route12SuperRodHouseFishingGuruText",
-   "labels": [
-    "Route12SuperRodHouseFishingGuruText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/Route12SuperRodHouse.asm:12",
-   "lines": [
-    10,
-    25
-   ]
-  },
-  {
-   "file": "scripts/Route12SuperRodHouse.asm",
-   "region": "Route12SuperRodHouseFishingGuruText.bag_full",
-   "labels": [
-    "Route12SuperRodHouseFishingGuruText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".NoRoomText is defined in a region that bailed",
-   "at": "scripts/Route12SuperRodHouse.asm:27",
-   "lines": [
-    27,
-    28
-   ]
-  },
-  {
-   "file": "scripts/Route12SuperRodHouse.asm",
-   "region": "Route12SuperRodHouseFishingGuruText.refused",
-   "labels": [
-    "Route12SuperRodHouseFishingGuruText.refused"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".ThatsDisappointingText is defined in a region that bailed",
-   "at": "scripts/Route12SuperRodHouse.asm:30",
-   "lines": [
-    30,
-    31
-   ]
-  },
-  {
-   "file": "scripts/Route12SuperRodHouse.asm",
-   "region": "Route12SuperRodHouseFishingGuruText.got_item",
-   "labels": [
-    "Route12SuperRodHouseFishingGuruText.got_item",
-    "Route12SuperRodHouseFishingGuruText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TryFishingText is defined in a region that bailed",
-   "at": "scripts/Route12SuperRodHouse.asm:33",
-   "lines": [
-    33,
-    36
-   ]
-  },
-  {
-   "file": "scripts/Route12SuperRodHouse.asm",
-   "region": "Route12SuperRodHouseFishingGuruText.DoYouLikeToFishText",
-   "labels": [
-    "Route12SuperRodHouseFishingGuruText.DoYouLikeToFishText",
-    "Route12SuperRodHouseFishingGuruText.ReceivedSuperRodText",
-    "Route12SuperRodHouseFishingGuruText.ThatsDisappointingText",
-    "Route12SuperRodHouseFishingGuruText.TryFishingText",
-    "Route12SuperRodHouseFishingGuruText.NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/Route12SuperRodHouse.asm:44",
-   "lines": [
-    39,
-    58
    ]
   },
   {
@@ -7934,66 +5691,6 @@
    "lines": [
     192,
     221
-   ]
-  },
-  {
-   "file": "scripts/Route16FlyHouse.asm",
-   "region": "Route16FlyHouseBrunetteGirlText",
-   "labels": [
-    "Route16FlyHouseBrunetteGirlText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".HM02ExplanationText is defined in a region that bailed",
-   "at": "scripts/Route16FlyHouse.asm:12",
-   "lines": [
-    11,
-    21
-   ]
-  },
-  {
-   "file": "scripts/Route16FlyHouse.asm",
-   "region": "Route16FlyHouseBrunetteGirlText.bag_full",
-   "labels": [
-    "Route16FlyHouseBrunetteGirlText.bag_full",
-    "Route16FlyHouseBrunetteGirlText.got_item"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".HM02NoRoomText is defined in a region that bailed",
-   "at": "scripts/Route16FlyHouse.asm:23",
-   "lines": [
-    23,
-    26
-   ]
-  },
-  {
-   "file": "scripts/Route16FlyHouse.asm",
-   "region": "Route16FlyHouseBrunetteGirlText.Text",
-   "labels": [
-    "Route16FlyHouseBrunetteGirlText.Text",
-    "Route16FlyHouseBrunetteGirlText.ReceivedHM02Text",
-    "Route16FlyHouseBrunetteGirlText.HM02ExplanationText",
-    "Route16FlyHouseBrunetteGirlText.HM02NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/Route16FlyHouse.asm:34",
-   "lines": [
-    29,
-    43
-   ]
-  },
-  {
-   "file": "scripts/Route16FlyHouse.asm",
-   "region": "Route16FlyHouseFearowText",
-   "labels": [
-    "Route16FlyHouseFearowText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/Route16FlyHouse.asm:47",
-   "lines": [
-    47,
-    52
    ]
   },
   {
@@ -8667,21 +6364,6 @@
    ]
   },
   {
-   "file": "scripts/Route22Gate.asm",
-   "region": "Route22GateGuardICantLetYouPassText",
-   "labels": [
-    "Route22GateGuardICantLetYouPassText",
-    "Route22GateGuardGoRightAheadText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/Route22Gate.asm:97",
-   "lines": [
-    92,
-    98
-   ]
-  },
-  {
    "file": "scripts/Route23.asm",
    "region": "Route23CopyBadgeTextScript",
    "labels": [
@@ -8718,21 +6400,6 @@
    ]
   },
   {
-   "file": "scripts/Route23.asm",
-   "region": "Route23OhThatIsTheBadgeText",
-   "labels": [
-    "Route23OhThatIsTheBadgeText",
-    "Route23VictoryRoadGateSignText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/Route23.asm:239",
-   "lines": [
-    238,
-    245
-   ]
-  },
-  {
    "file": "scripts/Route24.asm",
    "region": "Route24_TextPointers",
    "labels": [
@@ -8751,67 +6418,6 @@
    "lines": [
     81,
     106
-   ]
-  },
-  {
-   "file": "scripts/Route24.asm",
-   "region": "Route24CooltrainerM1Text",
-   "labels": [
-    "Route24CooltrainerM1Text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/Route24.asm:112",
-   "lines": [
-    110,
-    138
-   ]
-  },
-  {
-   "file": "scripts/Route24.asm",
-   "region": "Route24CooltrainerM1Text.got_item",
-   "labels": [
-    "Route24CooltrainerM1Text.got_item"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".YouCouldBecomeATopLeaderText is defined in a region that bailed",
-   "at": "scripts/Route24.asm:140",
-   "lines": [
-    140,
-    142
-   ]
-  },
-  {
-   "file": "scripts/Route24.asm",
-   "region": "Route24CooltrainerM1Text.bag_full",
-   "labels": [
-    "Route24CooltrainerM1Text.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".NoRoomText is defined in a region that bailed",
-   "at": "scripts/Route24.asm:144",
-   "lines": [
-    144,
-    147
-   ]
-  },
-  {
-   "file": "scripts/Route24.asm",
-   "region": "Route24CooltrainerM1Text.YouBeatOurContestText",
-   "labels": [
-    "Route24CooltrainerM1Text.YouBeatOurContestText",
-    "Route24CooltrainerM1Text.ReceivedNuggetText",
-    "Route24CooltrainerM1Text.NoRoomText",
-    "Route24CooltrainerM1Text.JoinTeamRocketText",
-    "Route24CooltrainerM1Text.DefeatedText",
-    "Route24CooltrainerM1Text.YouCouldBecomeATopLeaderText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/Route24.asm:151",
-   "lines": [
-    150,
-    175
    ]
   },
   {
@@ -9099,22 +6705,6 @@
    "lines": [
     42,
     59
-   ]
-  },
-  {
-   "file": "scripts/Route5Gate.asm",
-   "region": "SaffronGateGuardGeeImThirstyText",
-   "labels": [
-    "SaffronGateGuardGeeImThirstyText",
-    "SaffronGateGuardGiveDrinkText",
-    "SaffronGateGuardThanksForTheDrinkText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/Route5Gate.asm:104",
-   "lines": [
-    99,
-    110
    ]
   },
   {
@@ -9479,8 +7069,8 @@
     "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText"
    ],
    "reason": "target-region-bailed",
-   "detail": ".WelcomeText is defined in a region that bailed",
-   "at": "scripts/SafariZoneGate_2.asm:2",
+   "detail": ".has_positive_balance is defined in a region that bailed",
+   "at": "scripts/SafariZoneGate_2.asm:16",
    "lines": [
     2,
     19
@@ -9507,45 +7097,12 @@
     "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success",
     "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.poor_mans_discount"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".MakePaymentText is defined in a region that bailed",
-   "at": "scripts/SafariZoneGate_2.asm:53",
+   "reason": "hl-half-register-access",
+   "detail": "`h` is a half of ESI and has no flag-safe 8-bit x86 form",
+   "at": "scripts/SafariZoneGate_2.asm:59",
    "lines": [
     37,
     70
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneGate_2.asm",
-   "region": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.PleaseComeAgain",
-   "labels": [
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.PleaseComeAgain",
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.CantPayWalkDown",
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PleaseComeAgainText is defined in a region that bailed",
-   "at": "scripts/SafariZoneGate_2.asm:73",
-   "lines": [
-    73,
-    82
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneGate_2.asm",
-   "region": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.WelcomeText",
-   "labels": [
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.WelcomeText",
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.MakePaymentText",
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.PleaseComeAgainText",
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.NotEnoughMoneyText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/SafariZoneGate_2.asm:90",
-   "lines": [
-    85,
-    100
    ]
   },
   {
@@ -9564,25 +7121,6 @@
   },
   {
    "file": "scripts/SafariZoneGate_2.asm",
-   "region": "SafariZoneEntranceText_f20f6",
-   "labels": [
-    "SafariZoneEntranceText_f20f6",
-    "Pointers_f2100",
-    "SafariZoneEntranceText_f210a",
-    "SafariZoneEntranceText_f210f",
-    "SafariZoneEntranceText_f2114",
-    "SafariZoneEntranceText_f2119"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/SafariZoneGate_2.asm:212",
-   "lines": [
-    211,
-    237
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneGate_2.asm",
    "region": "SafariZoneEntranceConvertBCDtoNumber",
    "labels": [
     "SafariZoneEntranceConvertBCDtoNumber"
@@ -9593,103 +7131,6 @@
    "lines": [
     240,
     252
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneSecretHouse.asm",
-   "region": "SafariZoneSecretHouseFishingGuruText",
-   "labels": [
-    "SafariZoneSecretHouseFishingGuruText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/SafariZoneSecretHouse.asm:11",
-   "lines": [
-    10,
-    20
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneSecretHouse.asm",
-   "region": "SafariZoneSecretHouseFishingGuruText.bag_full",
-   "labels": [
-    "SafariZoneSecretHouseFishingGuruText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".HM03NoRoomText is defined in a region that bailed",
-   "at": "scripts/SafariZoneSecretHouse.asm:22",
-   "lines": [
-    22,
-    24
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneSecretHouse.asm",
-   "region": "SafariZoneSecretHouseFishingGuruText.got_item",
-   "labels": [
-    "SafariZoneSecretHouseFishingGuruText.got_item",
-    "SafariZoneSecretHouseFishingGuruText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".HM03ExplanationText is defined in a region that bailed",
-   "at": "scripts/SafariZoneSecretHouse.asm:26",
-   "lines": [
-    26,
-    29
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneSecretHouse.asm",
-   "region": "SafariZoneSecretHouseFishingGuruText.YouHaveWonText",
-   "labels": [
-    "SafariZoneSecretHouseFishingGuruText.YouHaveWonText",
-    "SafariZoneSecretHouseFishingGuruText.ReceivedHM03Text",
-    "SafariZoneSecretHouseFishingGuruText.HM03ExplanationText",
-    "SafariZoneSecretHouseFishingGuruText.HM03NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/SafariZoneSecretHouse.asm:37",
-   "lines": [
-    32,
-    46
-   ]
-  },
-  {
-   "file": "scripts/SaffronCity.asm",
-   "region": "SaffronCity_TextPointers",
-   "labels": [
-    "SaffronCity_TextPointers",
-    "SaffronCityRocket1Text",
-    "SaffronCityRocket2Text",
-    "SaffronCityRocket3Text",
-    "SaffronCityRocket4Text",
-    "SaffronCityRocket5Text",
-    "SaffronCityRocket6Text",
-    "SaffronCityRocket7Text",
-    "SaffronCityScientistText",
-    "SaffronCitySilphWorkerMText",
-    "SaffronCitySilphWorkerFText",
-    "SaffronCityGentlemanText",
-    "SaffronCityPidgeotText",
-    "SaffronCityRockerText",
-    "SaffronCityRocket8Text",
-    "SaffronCityRocket9Text",
-    "SaffronCitySignText",
-    "SaffronCityFightingDojoSignText",
-    "SaffronCityGymSignText",
-    "SaffronCityTrainerTips1Text",
-    "SaffronCityTrainerTips2Text",
-    "SaffronCitySilphCoSignText",
-    "SaffronCityMrPsychicsHouseSignText",
-    "SaffronCitySilphCoLatestProductSignText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_cry_pidgeot",
-   "at": "scripts/SaffronCity.asm:78",
-   "lines": [
-    5,
-    123
    ]
   },
   {
@@ -9763,9 +7204,9 @@
    "labels": [
     "SaffronGymSabrinaText"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".beforeBeat is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:110",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_GOT_TM46",
+   "at": "scripts/SaffronGym.asm:111",
    "lines": [
     109,
     115
@@ -9778,45 +7219,11 @@
     "SaffronGymSabrinaText.afterBeat"
    ],
    "reason": "target-region-bailed",
-   "detail": ".PostBattleAdviceText is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:117",
+   "detail": ".done is defined in a region that bailed",
+   "at": "scripts/SaffronGym.asm:119",
    "lines": [
     117,
     119
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymSabrinaText.beforeBeat",
-   "labels": [
-    "SaffronGymSabrinaText.beforeBeat",
-    "SaffronGymSabrinaText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".Text is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:121",
-   "lines": [
-    121,
-    138
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymSabrinaText.Text",
-   "labels": [
-    "SaffronGymSabrinaText.Text",
-    "SaffronGymSabrinaText.ReceivedMarshBadgeText",
-    "SaffronGymSabrinaText.PostBattleAdviceText",
-    "SaffronGymSabrinaMarshBadgeInfoText",
-    "SaffronGymSabrinaReceivedTM46Text",
-    "SaffronGymSabrinaTM46NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item ; actually plays the second channel of SFX_BALL_POOF due to the wrong music bank being loaded",
-   "at": "scripts/SaffronGym.asm:146",
-   "lines": [
-    141,
-    166
    ]
   },
   {
@@ -9882,24 +7289,6 @@
    "lines": [
     224,
     313
-   ]
-  },
-  {
-   "file": "scripts/SaffronPokecenter.asm",
-   "region": "SaffronPokecenter_TextPointers",
-   "labels": [
-    "SaffronPokecenter_TextPointers",
-    "SaffronPokecenterNurseText",
-    "SaffronPokecenterBeautyText",
-    "SaffronPokecenterGentlemanText",
-    "SaffronPokecenterLinkReceptionistText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_pokecenter_nurse",
-   "at": "scripts/SaffronPokecenter.asm:14",
-   "lines": [
-    6,
-    25
    ]
   },
   {
@@ -10080,70 +7469,6 @@
   },
   {
    "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FSilphPresidentText",
-   "labels": [
-    "SilphCo11FSilphPresidentText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/SilphCo11F.asm:525",
-   "lines": [
-    524,
-    534
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FSilphPresidentText.bag_full",
-   "labels": [
-    "SilphCo11FSilphPresidentText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".NoRoomText is defined in a region that bailed",
-   "at": "scripts/SilphCo11F.asm:536",
-   "lines": [
-    536,
-    538
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FSilphPresidentText.got_item",
-   "labels": [
-    "SilphCo11FSilphPresidentText.got_item",
-    "SilphCo11FSilphPresidentText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".MasterBallDescriptionText is defined in a region that bailed",
-   "at": "scripts/SilphCo11F.asm:540",
-   "lines": [
-    540,
-    543
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FSilphPresidentText.Text",
-   "labels": [
-    "SilphCo11FSilphPresidentText.Text",
-    "SilphCo11FSilphPresidentText.ReceivedMasterBallText",
-    "SilphCo11FSilphPresidentText.MasterBallDescriptionText",
-    "SilphCo11FSilphPresidentText.NoRoomText",
-    "SilphCo11FBeautyText",
-    "SilphCo11FGiovanniText",
-    "SilphCo10FGiovanniILostAgainText",
-    "SilphCo11FGiovanniYouRuinedOurPlansText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/SilphCo11F.asm:551",
-   "lines": [
-    546,
-    576
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
    "region": "SilphCo11FRocketBattleText",
    "labels": [
     "SilphCo11FRocketBattleText",
@@ -10234,52 +7559,6 @@
    "lines": [
     90,
     113
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2FSilphWorkerFText",
-   "labels": [
-    "SilphCo2FSilphWorkerFText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".already_have_tm is defined in a region that bailed",
-   "at": "scripts/SilphCo2F.asm:118",
-   "lines": [
-    117,
-    127
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2FSilphWorkerFText.already_have_tm",
-   "labels": [
-    "SilphCo2FSilphWorkerFText.already_have_tm",
-    "SilphCo2FSilphWorkerFText.print_text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM36ExplanationText is defined in a region that bailed",
-   "at": "scripts/SilphCo2F.asm:129",
-   "lines": [
-    129,
-    132
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2FSilphWorkerFText.PleaseTakeThisText",
-   "labels": [
-    "SilphCo2FSilphWorkerFText.PleaseTakeThisText",
-    "SilphCo2FSilphWorkerFText.ReceivedTM36Text",
-    "SilphCo2FSilphWorkerFText.TM36ExplanationText",
-    "SilphCo2FSilphWorkerFText.TM36NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/SilphCo2F.asm:140",
-   "lines": [
-    135,
-    149
    ]
   },
   {
@@ -11467,25 +8746,6 @@
    ]
   },
   {
-   "file": "scripts/SSAnneCaptainsRoom.asm",
-   "region": "SSAnneCaptainsRoomCaptainIFeelMuchBetterText",
-   "labels": [
-    "SSAnneCaptainsRoomCaptainIFeelMuchBetterText",
-    "SSAnneCaptainsRoomCaptainReceivedHM01Text",
-    "SSAnneCaptainsRoomCaptainNotSickAnymoreText",
-    "SSAnneCaptainsRoomCaptainHM01NoRoomText",
-    "SSAnneCaptainsRoomTrashText",
-    "SSAnneCaptainsRoomSeasickBookText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/SSAnneCaptainsRoom.asm:75",
-   "lines": [
-    70,
-    92
-   ]
-  },
-  {
    "file": "scripts/SummerBeachHouse.asm",
    "region": "SummerBeachHouseSurfinDudeText",
    "labels": [
@@ -11673,60 +8933,12 @@
    "labels": [
     "VermilionGymLTSurgeText"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".before_beat is defined in a region that bailed",
-   "at": "scripts/VermilionGym.asm:117",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_GOT_TM24",
+   "at": "scripts/VermilionGym.asm:118",
    "lines": [
     116,
     122
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGymLTSurgeText.got_tm24_already",
-   "labels": [
-    "VermilionGymLTSurgeText.got_tm24_already"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PostBattleAdviceText is defined in a region that bailed",
-   "at": "scripts/VermilionGym.asm:124",
-   "lines": [
-    124,
-    126
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGymLTSurgeText.before_beat",
-   "labels": [
-    "VermilionGymLTSurgeText.before_beat",
-    "VermilionGymLTSurgeText.text_script_end"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PreBattleText is defined in a region that bailed",
-   "at": "scripts/VermilionGym.asm:128",
-   "lines": [
-    128,
-    148
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGymLTSurgeText.PreBattleText",
-   "labels": [
-    "VermilionGymLTSurgeText.PreBattleText",
-    "VermilionGymLTSurgeText.PostBattleAdviceText",
-    "VermilionGymLTSurgeThunderBadgeInfoText",
-    "VermilionGymLTSurgeReceivedTM24Text",
-    "VermilionGymLTSurgeTM24NoRoomText",
-    "VermilionGymLTSurgeReceivedThunderBadgeText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/VermilionGym.asm:164",
-   "lines": [
-    151,
-    174
    ]
   },
   {
@@ -11775,113 +8987,6 @@
    "lines": [
     219,
     228
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGymGymGuideText",
-   "labels": [
-    "VermilionGymGymGuideText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".text_script_end is defined in a region that bailed",
-   "at": "scripts/VermilionGym.asm:237",
-   "lines": [
-    232,
-    237
-   ]
-  },
-  {
-   "file": "scripts/VermilionOldRodHouse.asm",
-   "region": "VermilionOldRodHouseFishingGuruText",
-   "labels": [
-    "VermilionOldRodHouseFishingGuruText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_old_rod is defined in a region that bailed",
-   "at": "scripts/VermilionOldRodHouse.asm:12",
-   "lines": [
-    10,
-    25
-   ]
-  },
-  {
-   "file": "scripts/VermilionOldRodHouse.asm",
-   "region": "VermilionOldRodHouseFishingGuruText.bag_full",
-   "labels": [
-    "VermilionOldRodHouseFishingGuruText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".NoRoomText is defined in a region that bailed",
-   "at": "scripts/VermilionOldRodHouse.asm:27",
-   "lines": [
-    27,
-    28
-   ]
-  },
-  {
-   "file": "scripts/VermilionOldRodHouse.asm",
-   "region": "VermilionOldRodHouseFishingGuruText.refused",
-   "labels": [
-    "VermilionOldRodHouseFishingGuruText.refused"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".ThatsSoDisappointingText is defined in a region that bailed",
-   "at": "scripts/VermilionOldRodHouse.asm:30",
-   "lines": [
-    30,
-    31
-   ]
-  },
-  {
-   "file": "scripts/VermilionOldRodHouse.asm",
-   "region": "VermilionOldRodHouseFishingGuruText.got_old_rod",
-   "labels": [
-    "VermilionOldRodHouseFishingGuruText.got_old_rod",
-    "VermilionOldRodHouseFishingGuruText.print_text"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".HowAreTheFishBitingText is defined in a region that bailed",
-   "at": "scripts/VermilionOldRodHouse.asm:33",
-   "lines": [
-    33,
-    36
-   ]
-  },
-  {
-   "file": "scripts/VermilionOldRodHouse.asm",
-   "region": "VermilionOldRodHouseFishingGuruText.DoYouLikeToFishText",
-   "labels": [
-    "VermilionOldRodHouseFishingGuruText.DoYouLikeToFishText",
-    "VermilionOldRodHouseFishingGuruText.TakeThisText",
-    "VermilionOldRodHouseFishingGuruText.ThatsSoDisappointingText",
-    "VermilionOldRodHouseFishingGuruText.HowAreTheFishBitingText",
-    "VermilionOldRodHouseFishingGuruText.NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/VermilionOldRodHouse.asm:44",
-   "lines": [
-    39,
-    58
-   ]
-  },
-  {
-   "file": "scripts/VermilionPokecenter.asm",
-   "region": "VermilionPokecenter_TextPointers",
-   "labels": [
-    "VermilionPokecenter_TextPointers",
-    "VermilionPokecenterNurseText",
-    "VermilionPokecenterFishingGuruText",
-    "VermilionPokecenterSailorText",
-    "VermilionPokecenterLinkReceptionistText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_pokecenter_nurse",
-   "at": "scripts/VermilionPokecenter.asm:14",
-   "lines": [
-    6,
-    25
    ]
   },
   {
@@ -12090,65 +9195,6 @@
    ]
   },
   {
-   "file": "scripts/ViridianCity_2.asm",
-   "region": "ViridianCityPrintFisherText",
-   "labels": [
-    "ViridianCityPrintFisherText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/ViridianCity_2.asm:90",
-   "lines": [
-    89,
-    99
-   ]
-  },
-  {
-   "file": "scripts/ViridianCity_2.asm",
-   "region": "ViridianCityPrintFisherText.bag_full",
-   "labels": [
-    "ViridianCityPrintFisherText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM42NoRoomText is defined in a region that bailed",
-   "at": "scripts/ViridianCity_2.asm:101",
-   "lines": [
-    101,
-    103
-   ]
-  },
-  {
-   "file": "scripts/ViridianCity_2.asm",
-   "region": "ViridianCityPrintFisherText.got_item",
-   "labels": [
-    "ViridianCityPrintFisherText.got_item"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".TM42ExplanationText is defined in a region that bailed",
-   "at": "scripts/ViridianCity_2.asm:105",
-   "lines": [
-    105,
-    107
-   ]
-  },
-  {
-   "file": "scripts/ViridianCity_2.asm",
-   "region": "ViridianCityPrintFisherText.YouCanHaveThisText",
-   "labels": [
-    "ViridianCityPrintFisherText.YouCanHaveThisText",
-    "ViridianCityPrintFisherText.ReceivedTM42Text",
-    "ViridianCityPrintFisherText.TM42ExplanationText",
-    "ViridianCityPrintFisherText.TM42NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_2",
-   "at": "scripts/ViridianCity_2.asm:115",
-   "lines": [
-    110,
-    124
-   ]
-  },
-  {
    "file": "scripts/ViridianForest.asm",
    "region": "ViridianForest_ScriptPointers",
    "labels": [
@@ -12257,61 +9303,12 @@
    "labels": [
     "ViridianGymGiovanniText"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".beforeBeat is defined in a region that bailed",
-   "at": "scripts/ViridianGym.asm:210",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_GOT_TM27",
+   "at": "scripts/ViridianGym.asm:211",
    "lines": [
     209,
     215
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGymGiovanniText.afterBeat",
-   "labels": [
-    "ViridianGymGiovanniText.afterBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PostBattleAdviceText is defined in a region that bailed",
-   "at": "scripts/ViridianGym.asm:219",
-   "lines": [
-    217,
-    228
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGymGiovanniText.beforeBeat",
-   "labels": [
-    "ViridianGymGiovanniText.beforeBeat",
-    "ViridianGymGiovanniText.text_script_end"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".PreBattleText is defined in a region that bailed",
-   "at": "scripts/ViridianGym.asm:230",
-   "lines": [
-    230,
-    247
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGymGiovanniText.PreBattleText",
-   "labels": [
-    "ViridianGymGiovanniText.PreBattleText",
-    "ViridianGymGiovanniText.ReceivedEarthBadgeText",
-    "ViridianGymGiovanniText.PostBattleAdviceText",
-    "ViridianGymGiovanniEarthBadgeInfoText",
-    "ViridianGymGiovanniReceivedTM27Text",
-    "ViridianGymGiovanniTM27ExplanationText",
-    "ViridianGymGiovanniTM27NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_level_up ; probably supposed to play SFX_GET_ITEM_1 but the wrong music bank is loaded",
-   "at": "scripts/ViridianGym.asm:255",
-   "lines": [
-    250,
-    277
    ]
   },
   {
@@ -12443,20 +9440,6 @@
    ]
   },
   {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGymGymGuideText",
-   "labels": [
-    "ViridianGymGymGuideText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".afterBeat is defined in a region that bailed",
-   "at": "scripts/ViridianGym.asm:426",
-   "lines": [
-    425,
-    429
-   ]
-  },
-  {
    "file": "scripts/ViridianMart.asm",
    "region": "ViridianMartCheckParcelDeliveredScript",
    "labels": [
@@ -12483,125 +9466,6 @@
    "lines": [
     15,
     21
-   ]
-  },
-  {
-   "file": "scripts/ViridianMart.asm",
-   "region": "ViridianMart_TextPointers",
-   "labels": [
-    "ViridianMart_TextPointers",
-    "ViridianMart_TextPointers2",
-    "ViridianMartClerkSayHiToOakText",
-    "ViridianMartClerkYouCameFromPalletTownText",
-    "ViridianMartClerkParcelQuestText",
-    "ViridianMartYoungsterText",
-    "ViridianMartCooltrainerMText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_key_item",
-   "at": "scripts/ViridianMart.asm:102",
-   "lines": [
-    78,
-    111
-   ]
-  },
-  {
-   "file": "scripts/ViridianPokecenter.asm",
-   "region": "ViridianPokecenter_TextPointers",
-   "labels": [
-    "ViridianPokecenter_TextPointers",
-    "ViridianPokecenterNurseText",
-    "ViridianPokecenterGentlemanText",
-    "ViridianPokecenterCooltrainerMText",
-    "ViridianPokecenterLinkReceptionistText"
-   ],
-   "reason": "text-script-command-unported",
-   "detail": "script_pokecenter_nurse",
-   "at": "scripts/ViridianPokecenter.asm:14",
-   "lines": [
-    6,
-    25
-   ]
-  },
-  {
-   "file": "scripts/WardensHouse.asm",
-   "region": "WardensHouseWardenText",
-   "labels": [
-    "WardensHouseWardenText",
-    "WardensHouseWardenText.refused"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".got_item is defined in a region that bailed",
-   "at": "scripts/WardensHouse.asm:15",
-   "lines": [
-    14,
-    31
-   ]
-  },
-  {
-   "file": "scripts/WardensHouse.asm",
-   "region": "WardensHouseWardenText.have_gold_teeth",
-   "labels": [
-    "WardensHouseWardenText.have_gold_teeth",
-    "WardensHouseWardenText.gave_gold_teeth"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".GaveTheGoldTeethText is defined in a region that bailed",
-   "at": "scripts/WardensHouse.asm:33",
-   "lines": [
-    33,
-    48
-   ]
-  },
-  {
-   "file": "scripts/WardensHouse.asm",
-   "region": "WardensHouseWardenText.got_item",
-   "labels": [
-    "WardensHouseWardenText.got_item"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".HM04ExplanationText is defined in a region that bailed",
-   "at": "scripts/WardensHouse.asm:50",
-   "lines": [
-    50,
-    52
-   ]
-  },
-  {
-   "file": "scripts/WardensHouse.asm",
-   "region": "WardensHouseWardenText.bag_full",
-   "labels": [
-    "WardensHouseWardenText.bag_full",
-    "WardensHouseWardenText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".HM04NoRoomText is defined in a region that bailed",
-   "at": "scripts/WardensHouse.asm:54",
-   "lines": [
-    54,
-    57
-   ]
-  },
-  {
-   "file": "scripts/WardensHouse.asm",
-   "region": "WardensHouseWardenText.Gibberish1Text",
-   "labels": [
-    "WardensHouseWardenText.Gibberish1Text",
-    "WardensHouseWardenText.Gibberish2Text",
-    "WardensHouseWardenText.Gibberish3Text",
-    "WardensHouseWardenText.GaveTheGoldTeethText",
-    "WardensHouseWardenText.PoppedInHisTeethText",
-    "WardensHouseWardenText.ThanksText",
-    "WardensHouseWardenText.ReceivedHM04Text",
-    "WardensHouseWardenText.HM04ExplanationText",
-    "WardensHouseWardenText.HM04NoRoomText"
-   ],
-   "reason": "text-sound-command-unported",
-   "detail": "sound_get_item_1",
-   "at": "scripts/WardensHouse.asm:73",
-   "lines": [
-    60,
-    94
    ]
   }
  ]

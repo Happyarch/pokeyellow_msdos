@@ -24,8 +24,13 @@ bits 32
 %include "assets/trainer_headers.inc"
 
 global VermilionGymGentlemanText
+global VermilionGymGymGuideText
 global VermilionGymLTSurgeAfterBattleScript
 global VermilionGymLTSurgeReceiveTM24Script
+global VermilionGymLTSurgeReceivedTM24Text
+global VermilionGymLTSurgeReceivedThunderBadgeText
+global VermilionGymLTSurgeTM24NoRoomText
+global VermilionGymLTSurgeThunderBadgeInfoText
 global VermilionGymResetScripts
 global VermilionGymSailorText
 global VermilionGymSetDoorTile
@@ -49,12 +54,7 @@ extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern VermilionGymGentlemanBattleText   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymGymGuideText   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymLTSurgeReceivedTM24Text   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymLTSurgeReceivedThunderBadgeText   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymLTSurgeTM24NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern VermilionGymLTSurgeText   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymLTSurgeThunderBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern VermilionGymSailorBattleText   ; NOT YET DEFINED IN THE PORT
 extern VermilionGymSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
 extern VermilionGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -63,11 +63,14 @@ extern VermilionGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern VermilionGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern VermilionGym_Script   ; NOT YET DEFINED IN THE PORT
 extern VermilionGym_TextPointers   ; NOT YET DEFINED IN THE PORT
+extern _TM24ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionGymGymGuideBeatLTSurgeText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionGymGymGuideChampInMakingText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionGymLTSurgePostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionGymLTSurgePreBattleText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionGymLTSurgeReceivedTM24Text   ; NOT YET DEFINED IN THE PORT
+extern _VermilionGymLTSurgeReceivedThunderBadgeText   ; NOT YET DEFINED IN THE PORT
+extern _VermilionGymLTSurgeTM24NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionGymLTSurgeThunderBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
@@ -197,7 +200,7 @@ VermilionGymLTSurgeReceiveTM24Script:
 ; VermilionGym_TextPointers (scripts/VermilionGym.asm:94-112) — not re-emitted: VermilionGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionGymLTSurgeText (scripts/VermilionGym.asm:116-122) — at scripts/VermilionGym.asm:117: .before_beat is defined in a region that bailed
+; BAIL[event-byte-assembly-state] VermilionGymLTSurgeText (scripts/VermilionGym.asm:116-122) — at scripts/VermilionGym.asm:118: CheckEventReuseA EVENT_GOT_TM24
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	CheckEvent EVENT_BEAT_LT_SURGE
@@ -208,68 +211,57 @@ VermilionGymLTSurgeReceiveTM24Script:
 ; PRET| 	call DisableWaitingAfterTextDisplay
 ; PRET| 	jr .text_script_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionGymLTSurgeText.got_tm24_already (scripts/VermilionGym.asm:124-126) — at scripts/VermilionGym.asm:124: .PostBattleAdviceText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PostBattleAdviceText
-; PRET| 	call PrintText
-; PRET| 	jr .text_script_end
+%assign event_byte -1
+.got_tm24_already:
+    mov esi, .PostBattleAdviceText
+    call PrintText
+    jmp .text_script_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionGymLTSurgeText.before_beat (scripts/VermilionGym.asm:128-148) — at scripts/VermilionGym.asm:128: .PreBattleText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .PreBattleText
-; PRET| 	call PrintText
-; PRET| 	ld hl, wStatusFlags3
-; PRET| 	set BIT_TALKED_TO_TRAINER, [hl]
-; PRET| 	set BIT_PRINT_END_BATTLE_TEXT, [hl]
-; PRET| 	ld hl, VermilionGymLTSurgeReceivedThunderBadgeText
-; PRET| 	ld de, VermilionGymLTSurgeReceivedThunderBadgeText
-; PRET| 	call SaveEndBattleTextPointers
-; PRET| 	ldh a, [hSpriteIndex]
-; PRET| 	ld [wSpriteIndex], a
-; PRET| 	call EngageMapTrainer
-; PRET| 	call InitBattleEnemyParameters
-; PRET| 	ld a, $3
-; PRET| 	ld [wGymLeaderNo], a
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, SCRIPT_VERMILIONGYM_LT_SURGE_AFTER_BATTLE
-; PRET| 	ld [wVermilionGymCurScript], a
-; PRET| 	ld [wCurMapScript], a
-; PRET| .text_script_end
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.before_beat:
+    mov esi, .PreBattleText
+    call PrintText
+    mov esi, wStatusFlags3
+    or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
+    or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
+    mov esi, VermilionGymLTSurgeReceivedThunderBadgeText
+    mov edx, VermilionGymLTSurgeReceivedThunderBadgeText   ; pret: ld de, VermilionGymLTSurgeReceivedThunderBadgeText — SaveEndBattleTextPointers takes it in EDX
+    call SaveEndBattleTextPointers
+    mov al, [ebp + hSpriteIndex]
+    mov [ebp + wSpriteIndex], al
+    call EngageMapTrainer
+    call InitBattleEnemyParameters
+    mov al, 0x3
+    mov [ebp + wGymLeaderNo], al
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, SCRIPT_VERMILIONGYM_LT_SURGE_AFTER_BATTLE
+    mov [ebp + wVermilionGymCurScript], al
+    mov [ebp + wCurMapScript], al
+.text_script_end:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[text-sound-command-unported] VermilionGymLTSurgeText.PreBattleText (scripts/VermilionGym.asm:151-174) — at scripts/VermilionGym.asm:164: sound_get_key_item
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _VermilionGymLTSurgePreBattleText
-; PRET| 	text_end
-; PRET| 
-; PRET| .PostBattleAdviceText:
-; PRET| 	text_far _VermilionGymLTSurgePostBattleAdviceText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymLTSurgeThunderBadgeInfoText:
-; PRET| 	text_far _VermilionGymLTSurgeThunderBadgeInfoText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymLTSurgeReceivedTM24Text:
-; PRET| 	text_far _VermilionGymLTSurgeReceivedTM24Text
-; PRET| 	sound_get_key_item
-; PRET| 	text_far _TM24ExplanationText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymLTSurgeTM24NoRoomText:
-; PRET| 	text_far _VermilionGymLTSurgeTM24NoRoomText
-; PRET| 	text_end
-; PRET| 
-; PRET| VermilionGymLTSurgeReceivedThunderBadgeText:
-; PRET| 	text_far _VermilionGymLTSurgeReceivedThunderBadgeText
-; PRET| 	text_end
+%assign event_byte -1
+.PreBattleText:
+    text_far _VermilionGymLTSurgePreBattleText
+    text_end
+.PostBattleAdviceText:
+    text_far _VermilionGymLTSurgePostBattleAdviceText
+    text_end
+VermilionGymLTSurgeThunderBadgeInfoText:
+    text_far _VermilionGymLTSurgeThunderBadgeInfoText
+    text_end
+VermilionGymLTSurgeReceivedTM24Text:
+    text_far _VermilionGymLTSurgeReceivedTM24Text
+    sound_get_key_item
+    text_far _TM24ExplanationText
+    text_end
+VermilionGymLTSurgeTM24NoRoomText:
+    text_far _VermilionGymLTSurgeTM24NoRoomText
+    text_end
+VermilionGymLTSurgeReceivedThunderBadgeText:
+    text_far _VermilionGymLTSurgeReceivedThunderBadgeText
+    text_end
 
 %assign event_byte -1
 VermilionGymGentlemanText:
@@ -295,16 +287,14 @@ VermilionGymSailorText:
 
 ; VermilionGymSailorBattleText (scripts/VermilionGym.asm:219-228) — not re-emitted: VermilionGymSailorBattleText is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionGymGymGuideText (scripts/VermilionGym.asm:232-237) — at scripts/VermilionGym.asm:237: .text_script_end is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wBeatGymFlags]
-; PRET| 	bit BIT_THUNDERBADGE, a
-; PRET| 	jr nz, .got_thunderbadge
-; PRET| 	ld hl, .ChampInMakingText
-; PRET| 	call PrintText
-; PRET| 	jr .text_script_end
+%assign event_byte -1
+VermilionGymGymGuideText:
+    mov al, [ebp + wBeatGymFlags]
+    test al, (1 << (2))
+    jnz .got_thunderbadge
+    mov esi, .ChampInMakingText
+    call PrintText
+    jmp .text_script_end
 
 %assign event_byte -1
 .got_thunderbadge:
