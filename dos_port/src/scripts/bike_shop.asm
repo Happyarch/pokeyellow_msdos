@@ -20,23 +20,24 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/script_strings.inc"
 
+global BikeShopBagFullText
+global BikeShopCantAffordText
+global BikeShopClerkDoYouLikeItText
+global BikeShopClerkHowDoYouLikeYourBicycleText
+global BikeShopClerkOhThatsAVoucherText
+global BikeShopClerkWelcomeText
+global BikeShopComeAgainText
+global BikeShopExchangedVoucherText
+global BikeShopMenuPrice
+global BikeShopMenuText
 global BikeShopMiddleAgedWomanText
 global BikeShopYoungsterText
 global BikeShop_Script
 global BikeShop_TextPointers
 
-extern BikeShopBagFullText   ; NOT YET DEFINED IN THE PORT
-extern BikeShopCantAffordText   ; NOT YET DEFINED IN THE PORT
-extern BikeShopClerkDoYouLikeItText   ; NOT YET DEFINED IN THE PORT
-extern BikeShopClerkHowDoYouLikeYourBicycleText   ; NOT YET DEFINED IN THE PORT
-extern BikeShopClerkOhThatsAVoucherText   ; NOT YET DEFINED IN THE PORT
 extern BikeShopClerkText   ; NOT YET DEFINED IN THE PORT
-extern BikeShopClerkWelcomeText   ; NOT YET DEFINED IN THE PORT
-extern BikeShopComeAgainText   ; NOT YET DEFINED IN THE PORT
-extern BikeShopExchangedVoucherText   ; NOT YET DEFINED IN THE PORT
-extern BikeShopMenuPrice   ; NOT YET DEFINED IN THE PORT
-extern BikeShopMenuText   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing
 extern GiveItem
 extern HandleMenuInput
@@ -47,6 +48,14 @@ extern RemoveItemByID
 extern TextBoxBorder
 extern TextScriptEnd
 extern UpdateSprites
+extern _BikeShopBagFullText   ; NOT YET DEFINED IN THE PORT
+extern _BikeShopCantAffordText   ; NOT YET DEFINED IN THE PORT
+extern _BikeShopClerkDoYouLikeItText   ; NOT YET DEFINED IN THE PORT
+extern _BikeShopClerkHowDoYouLikeYourBicycleText   ; NOT YET DEFINED IN THE PORT
+extern _BikeShopClerkOhThatsAVoucherText   ; NOT YET DEFINED IN THE PORT
+extern _BikeShopClerkWelcomeText   ; NOT YET DEFINED IN THE PORT
+extern _BikeShopComeAgainText   ; NOT YET DEFINED IN THE PORT
+extern _BikeShopExchangedVoucherText   ; NOT YET DEFINED IN THE PORT
 extern _BikeShopMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
 extern _BikeShopYoungsterCoolBikeText   ; NOT YET DEFINED IN THE PORT
 extern _BikeShopYoungsterTheseBikesAreExpensiveText   ; NOT YET DEFINED IN THE PORT
@@ -156,48 +165,37 @@ BikeShop_TextPointers:
 ; PRET| .Done
 ; PRET| 	jp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] BikeShopMenuText (scripts/BikeShop.asm:84-121) — at scripts/BikeShop.asm:84: db   "BICYCLE"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	db   "BICYCLE"
-; PRET| 	next "CANCEL@"
-; PRET| 
-; PRET| BikeShopMenuPrice:
-; PRET| 	db "¥1000000@"
-; PRET| 
-; PRET| BikeShopClerkWelcomeText:
-; PRET| 	text_far _BikeShopClerkWelcomeText
-; PRET| 	text_end
-; PRET| 
-; PRET| BikeShopClerkDoYouLikeItText:
-; PRET| 	text_far _BikeShopClerkDoYouLikeItText
-; PRET| 	text_end
-; PRET| 
-; PRET| BikeShopCantAffordText:
-; PRET| 	text_far _BikeShopCantAffordText
-; PRET| 	text_end
-; PRET| 
-; PRET| BikeShopClerkOhThatsAVoucherText:
-; PRET| 	text_far _BikeShopClerkOhThatsAVoucherText
-; PRET| 	text_end
-; PRET| 
-; PRET| BikeShopExchangedVoucherText:
-; PRET| 	text_far _BikeShopExchangedVoucherText
-; PRET| 	sound_get_key_item
-; PRET| 	text_end
-; PRET| 
-; PRET| BikeShopComeAgainText:
-; PRET| 	text_far _BikeShopComeAgainText
-; PRET| 	text_end
-; PRET| 
-; PRET| BikeShopClerkHowDoYouLikeYourBicycleText:
-; PRET| 	text_far _BikeShopClerkHowDoYouLikeYourBicycleText
-; PRET| 	text_end
-; PRET| 
-; PRET| BikeShopBagFullText:
-; PRET| 	text_far _BikeShopBagFullText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+BikeShopMenuText:
+    TEXT_BikeShopMenuText
+BikeShopMenuPrice:
+    TEXT_BikeShopMenuPrice
+BikeShopClerkWelcomeText:
+    text_far _BikeShopClerkWelcomeText
+    text_end
+BikeShopClerkDoYouLikeItText:
+    text_far _BikeShopClerkDoYouLikeItText
+    text_end
+BikeShopCantAffordText:
+    text_far _BikeShopCantAffordText
+    text_end
+BikeShopClerkOhThatsAVoucherText:
+    text_far _BikeShopClerkOhThatsAVoucherText
+    text_end
+BikeShopExchangedVoucherText:
+    text_far _BikeShopExchangedVoucherText
+    sound_get_key_item
+    text_end
+BikeShopComeAgainText:
+    text_far _BikeShopComeAgainText
+    text_end
+BikeShopClerkHowDoYouLikeYourBicycleText:
+    text_far _BikeShopClerkHowDoYouLikeYourBicycleText
+    text_end
+BikeShopBagFullText:
+    text_far _BikeShopBagFullText
+    text_end
 
 %assign event_byte -1
 %assign event_byte_a -1

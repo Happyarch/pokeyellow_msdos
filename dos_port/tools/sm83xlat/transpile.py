@@ -76,8 +76,8 @@ BASE_INCLUDES = ("gb_memmap.inc", "gb_constants.inc", "gb_text.inc",
 
 # tables/text_assets.json — pret label -> macro emitting its generated charmap
 # bytes, plus the include that defines those macros. Written by the generator
-# that owns the strings (tools/generators/gen_gym_names.py), so the map and the
-# bytes cannot drift apart.
+# that owns the strings (tools/generators/gen_script_strings.py), so the map and
+# the bytes cannot drift apart.
 # tables/entry_domains.json — the pointer domain of HL on ENTRY to a routine,
 # where every call site agrees. Fail-closed: no row means TOP means bail.
 _ENTRY_PATH = HERE / "tables" / "entry_domains.json"
@@ -225,7 +225,29 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
                                 _next_callee(flat, flat_pos[id(it)], labmap))
             try:
                 lines = None
-                if not region.is_data:
+                if region.is_data:
+                    # A GENERATOR may own this run's bytes (two-tier rule). The
+                    # macro emits the WHOLE run, so the remaining `span-1` source
+                    # items are consumed here rather than lowered again.
+                    hit = next((TEXT_ASSETS[l] for l in it.labels
+                                if l in TEXT_ASSETS), None)
+                    if hit is not None:
+                        span = hit.get("span", 1)
+                        end = idx + span
+                        # FAIL CLOSED on a stale span: never swallow an item that
+                        # carries a LABEL, because something references it and the
+                        # macro does not define it. A span that drifted from the
+                        # source stops the region instead of dropping bytes.
+                        if end > len(region.items) or any(
+                                region.items[k].labels for k in range(idx + 1, end)):
+                            raise emit.Bail(
+                                "text-asset-span-stale",
+                                f"{hit['macro']} claims {span} items but the "
+                                f"source run does not match")
+                        lines = [hit["macro"]]
+                        skip = span - 1
+                        out.text_macros = True
+                else:
                     fused = E.fuse(region.items, idx, an, out)
                     if fused is not None:
                         lines, consumed = fused
@@ -756,6 +778,7 @@ def _report(total_ok, total_bail, total_owned, reasons, per_file, shadowed,
         "owned-by-gen_map_script_tables": "the trainer-header tables are already "
             "generated into assets/map_script_tables.inc; emitting them here would "
             "put the same data under two owners",
+        "text-asset-span-stale": "a generated text macro claims more source items than the pret run actually has; regenerate the asset",
         "text-script-mart-item-list": "script_mart carries a variadic item list "
             "(db _NARG / db \\# / db -1), which is Tier-1 data owned by a generator; "
             "its seven zero-operand TX_SCRIPT_* siblings lower normally",

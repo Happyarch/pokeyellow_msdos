@@ -21,10 +21,14 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/script_strings.inc"
 
 global GameCornerBeauty1Text
 global GameCornerBeauty2Text
+global GameCornerBlankText1
+global GameCornerBlankText2
 global GameCornerClerkText
+global GameCornerCoinText
 global GameCornerDefaultScript
 global GameCornerFishingGuru1Text
 global GameCornerFishingGuru2Text
@@ -35,6 +39,7 @@ global GameCornerGymGuideTheyOfferRarePokemonText
 global GameCornerMiddleAgedMan1Text
 global GameCornerMiddleAgedMan2Text
 global GameCornerMiddleAgedWomanText
+global GameCornerMoneyText
 global GameCornerMovement_Rocket_WalkAroundPlayer
 global GameCornerMovement_Rocket_WalkDirect
 global GameCornerOopsForgotCoinCaseText
@@ -59,11 +64,7 @@ extern ClearScreenArea
 extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern EngageMapTrainer
-extern GameCornerBlankText1   ; NOT YET DEFINED IN THE PORT
-extern GameCornerBlankText2   ; NOT YET DEFINED IN THE PORT
-extern GameCornerCoinText   ; NOT YET DEFINED IN THE PORT
 extern GameCornerDrawCoinBox   ; NOT YET DEFINED IN THE PORT
-extern GameCornerMoneyText   ; NOT YET DEFINED IN THE PORT
 extern GameCornerRocketBattleScript   ; NOT YET DEFINED IN THE PORT
 extern HasEnoughCoins
 extern HasEnoughMoney
@@ -737,20 +738,16 @@ GameCornerOopsForgotCoinCaseText:
 ; PRET| 	res BIT_NO_TEXT_DELAY, [hl]
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] GameCornerMoneyText (scripts/GameCorner.asm:523-532) — at scripts/GameCorner.asm:523: db "MONEY@"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	db "MONEY@"
-; PRET| 
-; PRET| GameCornerCoinText:
-; PRET| 	db "COIN@"
-; PRET| 
-; PRET| GameCornerBlankText1:
-; PRET| 	db "       @"
-; PRET| 
-; PRET| GameCornerBlankText2:
-; PRET| 	db "       @"
+%assign event_byte -1
+%assign event_byte_a -1
+GameCornerMoneyText:
+    TEXT_GameCornerMoneyText
+GameCornerCoinText:
+    TEXT_GameCornerCoinText
+GameCornerBlankText1:
+    TEXT_GameCornerBlankText1
+GameCornerBlankText2:
+    TEXT_GameCornerBlankText2
 
 %assign event_byte -1
 %assign event_byte_a -1

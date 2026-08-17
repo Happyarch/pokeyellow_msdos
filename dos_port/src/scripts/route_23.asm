@@ -21,7 +21,13 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/script_strings.inc"
 
+global BadgeTextPointers
+global CascadeBadgeText
+global EarthBadgeText
+global MarshBadgeText
+global RainbowBadgeText
 global Route23CheckForBadgeScript
 global Route23DefaultScript
 global Route23Guard1Text
@@ -43,26 +49,21 @@ global Route23YouDontHaveTheBadgeYetText
 global Route23_Script
 global Route23_ScriptPointers
 global Route23_TextPointers
+global SoulBadgeText
+global ThunderBadgeText
+global VolcanoBadgeText
 
-extern BadgeTextPointers   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable
-extern CascadeBadgeText   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID
-extern EarthBadgeText   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing
 extern FlagActionPredef
 extern HideObject
-extern MarshBadgeText   ; NOT YET DEFINED IN THE PORT
 extern PlaySoundWaitForCurrent
 extern PrintText
-extern RainbowBadgeText   ; NOT YET DEFINED IN THE PORT
 extern Route23CopyBadgeTextScript   ; NOT YET DEFINED IN THE PORT
 extern ShowObject
-extern SoulBadgeText   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates
 extern TextScriptEnd
-extern ThunderBadgeText   ; NOT YET DEFINED IN THE PORT
-extern VolcanoBadgeText   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish
 extern _Route23GoRightAheadText   ; NOT YET DEFINED IN THE PORT
 extern _Route23OhThatIsTheBadgeText   ; NOT YET DEFINED IN THE PORT
@@ -205,38 +206,30 @@ Route23GuardsYCoords:
 ; PRET| 	jr nz, .copyTextLoop
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] BadgeTextPointers (scripts/Route23.asm:94-121) — at scripts/Route23.asm:103: db "EARTHBADGE@"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	dw CascadeBadgeText
-; PRET| 	dw ThunderBadgeText
-; PRET| 	dw RainbowBadgeText
-; PRET| 	dw SoulBadgeText
-; PRET| 	dw MarshBadgeText
-; PRET| 	dw VolcanoBadgeText
-; PRET| 	dw EarthBadgeText
-; PRET| 
-; PRET| EarthBadgeText:
-; PRET| 	db "EARTHBADGE@"
-; PRET| 
-; PRET| VolcanoBadgeText:
-; PRET| 	db "VOLCANOBADGE@"
-; PRET| 
-; PRET| MarshBadgeText:
-; PRET| 	db "MARSHBADGE@"
-; PRET| 
-; PRET| SoulBadgeText:
-; PRET| 	db "SOULBADGE@"
-; PRET| 
-; PRET| RainbowBadgeText:
-; PRET| 	db "RAINBOWBADGE@"
-; PRET| 
-; PRET| ThunderBadgeText:
-; PRET| 	db "THUNDERBADGE@"
-; PRET| 
-; PRET| CascadeBadgeText:
-; PRET| 	db "CASCADEBADGE@"
+%assign event_byte -1
+%assign event_byte_a -1
+BadgeTextPointers:
+    dd CascadeBadgeText
+    dd ThunderBadgeText
+    dd RainbowBadgeText
+    dd SoulBadgeText
+    dd MarshBadgeText
+    dd VolcanoBadgeText
+    dd EarthBadgeText
+EarthBadgeText:
+    TEXT_EarthBadgeText
+VolcanoBadgeText:
+    TEXT_VolcanoBadgeText
+MarshBadgeText:
+    TEXT_MarshBadgeText
+SoulBadgeText:
+    TEXT_SoulBadgeText
+RainbowBadgeText:
+    TEXT_RainbowBadgeText
+ThunderBadgeText:
+    TEXT_ThunderBadgeText
+CascadeBadgeText:
+    TEXT_CascadeBadgeText
 
 %assign event_byte -1
 %assign event_byte_a -1

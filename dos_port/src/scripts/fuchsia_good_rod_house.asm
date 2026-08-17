@@ -20,18 +20,22 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/script_strings.inc"
 
+global FuchsiaGoodRodHouseFishingGuruText
 global FuchsiaGoodRodHouse_Script
 global FuchsiaGoodRodHouse_TextPointers
 
 extern EnableAutoTextBoxDrawing
-extern FuchsiaGoodRodHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
 extern GiveItem
 extern PrintText
 extern TextScriptEnd
 extern YesNoChoice
+extern _FuchsiaGoodRodHouseFishingGuruHowAreTheFishText   ; NOT YET DEFINED IN THE PORT
+extern _FuchsiaGoodRodHouseFishingGuruNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaGoodRodHouseFishingGuruReceivedGoodRodText   ; NOT YET DEFINED IN THE PORT
 extern _FuchsiaGoodRodHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
+extern _FuchsiaGoodRodHouseFishingGuruThatsSoDisappointingText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -49,80 +53,63 @@ FuchsiaGoodRodHouse_Script:
 FuchsiaGoodRodHouse_TextPointers:
     dd FuchsiaGoodRodHouseFishingGuruText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGoodRodHouseFishingGuruText (scripts/FuchsiaGoodRodHouse.asm:10-25) — at scripts/FuchsiaGoodRodHouse.asm:12: FuchsiaGoodRodHouseFishingGuruText.got_item is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags1]
-; PRET| 	bit BIT_GOT_GOOD_ROD, a
-; PRET| 	jr nz, .got_item
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .refused
-; PRET| 	lb bc, GOOD_ROD, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld hl, wStatusFlags1
-; PRET| 	set BIT_GOT_GOOD_ROD, [hl]
-; PRET| 	ld hl, .ReceivedGoodRodText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+FuchsiaGoodRodHouseFishingGuruText:
+    mov al, [ebp + wStatusFlags1]
+    test al, (1 << (4))
+    jnz .got_item
+    mov esi, .Text
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .refused
+    mov bx, ((GOOD_ROD) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov esi, wStatusFlags1
+    or byte [ebp + esi], (1 << (4))
+    mov esi, .ReceivedGoodRodText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGoodRodHouseFishingGuruText.bag_full (scripts/FuchsiaGoodRodHouse.asm:27-28) — at scripts/FuchsiaGoodRodHouse.asm:27: .NoRoomText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .NoRoomText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+.bag_full:
+    mov esi, .NoRoomText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGoodRodHouseFishingGuruText.refused (scripts/FuchsiaGoodRodHouse.asm:30-31) — at scripts/FuchsiaGoodRodHouse.asm:30: .ThatsSoDisappointingText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ThatsSoDisappointingText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+.refused:
+    mov esi, .ThatsSoDisappointingText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGoodRodHouseFishingGuruText.got_item (scripts/FuchsiaGoodRodHouse.asm:33-36) — at scripts/FuchsiaGoodRodHouse.asm:33: .HowAreTheFishText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HowAreTheFishText
-; PRET| .done
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+.got_item:
+    mov esi, .HowAreTheFishText
+.done:
+    call PrintText
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[inline-text-db] FuchsiaGoodRodHouseFishingGuruText.Text (scripts/FuchsiaGoodRodHouse.asm:39-67) — at scripts/FuchsiaGoodRodHouse.asm:48: para "つり　こそ"
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _FuchsiaGoodRodHouseFishingGuruText
-; PRET| 	text_end
-; PRET| 
-; PRET| .ReceivedGoodRodText:
-; PRET| 	text_far _FuchsiaGoodRodHouseFishingGuruReceivedGoodRodText
-; PRET| 	sound_get_item_1
-; PRET| 	text_end
-; PRET| 
-; PRET| .UnusedText:
-; PRET| 	para "つり　こそ"
-; PRET| 	line "おとこの　ロマン　だ！"
-; PRET| 
-; PRET| 	para "へぼいつりざおは"
-; PRET| 	line "コイキングしか　つれ　なんだが"
-; PRET| 	line "この　いいつりざおなら"
-; PRET| 	line "もっと　いいもんが　つれるんじゃ！"
-; PRET| 	done
-; PRET| 
-; PRET| .ThatsSoDisappointingText:
-; PRET| 	text_far _FuchsiaGoodRodHouseFishingGuruThatsSoDisappointingText
-; PRET| 	text_end
-; PRET| 
-; PRET| .HowAreTheFishText:
-; PRET| 	text_far _FuchsiaGoodRodHouseFishingGuruHowAreTheFishText
-; PRET| 	text_end
-; PRET| 
-; PRET| .NoRoomText:
-; PRET| 	text_far _FuchsiaGoodRodHouseFishingGuruNoRoomText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.Text:
+    text_far _FuchsiaGoodRodHouseFishingGuruText
+    text_end
+.ReceivedGoodRodText:
+    text_far _FuchsiaGoodRodHouseFishingGuruReceivedGoodRodText
+    sound_get_item_1
+    text_end
+.UnusedText:
+    TEXT_FuchsiaGoodRodHouseFishingGuruText_UnusedText
+.ThatsSoDisappointingText:
+    text_far _FuchsiaGoodRodHouseFishingGuruThatsSoDisappointingText
+    text_end
+.HowAreTheFishText:
+    text_far _FuchsiaGoodRodHouseFishingGuruHowAreTheFishText
+    text_end
+.NoRoomText:
+    text_far _FuchsiaGoodRodHouseFishingGuruNoRoomText
+    text_end

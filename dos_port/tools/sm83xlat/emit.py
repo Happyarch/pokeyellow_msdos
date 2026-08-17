@@ -724,16 +724,10 @@ class Emitter:
 
         if name == "db":
             if '"' in it.line.argtext:
-                # A GENERATOR may already own these bytes. tables/text_assets.json
-                # maps a pret label to the NASM macro that emits them, so the
-                # script keeps pret's own local label and the charmap stays where
-                # the two-tier rule puts it — in a generator. Anything not in the
-                # map still bails: the tool encodes no glyph itself, ever.
-                for lab in it.labels:
-                    mac = self.text_assets.get(lab)
-                    if mac:
-                        out.text_macros = True
-                        return [mac]
+                # Generator-owned runs are intercepted by the DRIVER before this
+                # point (it also has to skip the run's remaining items). Reaching
+                # here means no generator owns these bytes, and the tool encodes
+                # no glyph itself, ever.
                 raise Bail("inline-text-db", it.line.raw.strip())
             return [f"db {', '.join(self.expr(a, out) for a in args)}"]
 

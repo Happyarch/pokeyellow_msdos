@@ -21,7 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
-%include "assets/gym_names.inc"
+%include "assets/script_strings.inc"
 
 global CinnabarGymBlainePostBattleScript
 global CinnabarGymBlaineReceivedTM38Text

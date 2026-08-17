@@ -1,13 +1,12 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
  "_owned_comment": "`owned` is NOT a bail list. Those regions are Tier-1 data the port's generators already define, so the tool must not emit them at all \u2014 emitting one would be a duplicate definition. They describe no outstanding work and are excluded from the coverage denominator; they are listed here so the exclusion stays auditable.",
- "regions_lowered": 2189,
- "regions_bailed": 86,
+ "regions_lowered": 2197,
+ "regions_bailed": 78,
  "regions_owned": 255,
  "by_reason": {
-  "target-region-bailed": 36,
+  "target-region-bailed": 32,
   "screen-coord-projection": 5,
-  "inline-text-db": 4,
   "host-pointer-in-16bit-reg": 11,
   "pikachu-table-index": 4,
   "hl-half-register-access": 9,
@@ -27,11 +26,10 @@
    "reasons": []
   },
   "scripts/BikeShop.asm": {
-   "ok_regions": 6,
-   "bailed_regions": 5,
+   "ok_regions": 7,
+   "bailed_regions": 4,
    "owned_regions": 0,
    "reasons": [
-    "inline-text-db",
     "screen-coord-projection",
     "target-region-bailed"
    ]
@@ -368,13 +366,10 @@
    "reasons": []
   },
   "scripts/FuchsiaGoodRodHouse.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 5,
+   "ok_regions": 7,
+   "bailed_regions": 0,
    "owned_regions": 0,
-   "reasons": [
-    "inline-text-db",
-    "target-region-bailed"
-   ]
+   "reasons": []
   },
   "scripts/FuchsiaGym.asm": {
    "ok_regions": 19,
@@ -401,12 +396,11 @@
    "reasons": []
   },
   "scripts/GameCorner.asm": {
-   "ok_regions": 43,
-   "bailed_regions": 3,
+   "ok_regions": 44,
+   "bailed_regions": 2,
    "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
-    "inline-text-db",
     "screen-coord-projection"
    ]
   },
@@ -903,12 +897,11 @@
    "reasons": []
   },
   "scripts/Route23.asm": {
-   "ok_regions": 21,
-   "bailed_regions": 2,
+   "ok_regions": 22,
+   "bailed_regions": 1,
    "owned_regions": 0,
    "reasons": [
-    "add-hl-r16",
-    "inline-text-db"
+    "add-hl-r16"
    ]
   },
   "scripts/Route24.asm": {
@@ -1529,29 +1522,6 @@
    ]
   },
   {
-   "file": "scripts/BikeShop.asm",
-   "region": "BikeShopMenuText",
-   "labels": [
-    "BikeShopMenuText",
-    "BikeShopMenuPrice",
-    "BikeShopClerkWelcomeText",
-    "BikeShopClerkDoYouLikeItText",
-    "BikeShopCantAffordText",
-    "BikeShopClerkOhThatsAVoucherText",
-    "BikeShopExchangedVoucherText",
-    "BikeShopComeAgainText",
-    "BikeShopClerkHowDoYouLikeYourBicycleText",
-    "BikeShopBagFullText"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db   \"BICYCLE\"",
-   "at": "scripts/BikeShop.asm:84",
-   "lines": [
-    84,
-    121
-   ]
-  },
-  {
    "file": "scripts/BillsHouse.asm",
    "region": "BillsHouseScript2",
    "labels": [
@@ -1906,82 +1876,6 @@
    ]
   },
   {
-   "file": "scripts/FuchsiaGoodRodHouse.asm",
-   "region": "FuchsiaGoodRodHouseFishingGuruText",
-   "labels": [
-    "FuchsiaGoodRodHouseFishingGuruText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "FuchsiaGoodRodHouseFishingGuruText.got_item is defined in a region that bailed",
-   "at": "scripts/FuchsiaGoodRodHouse.asm:12",
-   "lines": [
-    10,
-    25
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGoodRodHouse.asm",
-   "region": "FuchsiaGoodRodHouseFishingGuruText.bag_full",
-   "labels": [
-    "FuchsiaGoodRodHouseFishingGuruText.bag_full"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".NoRoomText is defined in a region that bailed",
-   "at": "scripts/FuchsiaGoodRodHouse.asm:27",
-   "lines": [
-    27,
-    28
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGoodRodHouse.asm",
-   "region": "FuchsiaGoodRodHouseFishingGuruText.refused",
-   "labels": [
-    "FuchsiaGoodRodHouseFishingGuruText.refused"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".ThatsSoDisappointingText is defined in a region that bailed",
-   "at": "scripts/FuchsiaGoodRodHouse.asm:30",
-   "lines": [
-    30,
-    31
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGoodRodHouse.asm",
-   "region": "FuchsiaGoodRodHouseFishingGuruText.got_item",
-   "labels": [
-    "FuchsiaGoodRodHouseFishingGuruText.got_item",
-    "FuchsiaGoodRodHouseFishingGuruText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".HowAreTheFishText is defined in a region that bailed",
-   "at": "scripts/FuchsiaGoodRodHouse.asm:33",
-   "lines": [
-    33,
-    36
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGoodRodHouse.asm",
-   "region": "FuchsiaGoodRodHouseFishingGuruText.Text",
-   "labels": [
-    "FuchsiaGoodRodHouseFishingGuruText.Text",
-    "FuchsiaGoodRodHouseFishingGuruText.ReceivedGoodRodText",
-    "FuchsiaGoodRodHouseFishingGuruText.UnusedText",
-    "FuchsiaGoodRodHouseFishingGuruText.ThatsSoDisappointingText",
-    "FuchsiaGoodRodHouseFishingGuruText.HowAreTheFishText",
-    "FuchsiaGoodRodHouseFishingGuruText.NoRoomText"
-   ],
-   "reason": "inline-text-db",
-   "detail": "para \"\u3064\u308a\u3000\u3053\u305d\"",
-   "at": "scripts/FuchsiaGoodRodHouse.asm:48",
-   "lines": [
-    39,
-    67
-   ]
-  },
-  {
    "file": "scripts/GameCorner.asm",
    "region": "GameCornerRocketBattleScript",
    "labels": [
@@ -2007,23 +1901,6 @@
    "lines": [
     489,
     520
-   ]
-  },
-  {
-   "file": "scripts/GameCorner.asm",
-   "region": "GameCornerMoneyText",
-   "labels": [
-    "GameCornerMoneyText",
-    "GameCornerCoinText",
-    "GameCornerBlankText1",
-    "GameCornerBlankText2"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"MONEY@\"",
-   "at": "scripts/GameCorner.asm:523",
-   "lines": [
-    523,
-    532
    ]
   },
   {
@@ -2284,27 +2161,6 @@
    "lines": [
     75,
     91
-   ]
-  },
-  {
-   "file": "scripts/Route23.asm",
-   "region": "BadgeTextPointers",
-   "labels": [
-    "BadgeTextPointers",
-    "EarthBadgeText",
-    "VolcanoBadgeText",
-    "MarshBadgeText",
-    "SoulBadgeText",
-    "RainbowBadgeText",
-    "ThunderBadgeText",
-    "CascadeBadgeText"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"EARTHBADGE@\"",
-   "at": "scripts/Route23.asm:103",
-   "lines": [
-    94,
-    121
    ]
   },
   {

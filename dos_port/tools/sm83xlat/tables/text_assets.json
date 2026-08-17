@@ -1,30 +1,137 @@
 {
  "_comment": [
-  "pret label -> NASM macro that emits its bytes. WRITTEN BY",
-  "tools/generators/gen_gym_names.py; do not hand-edit, and do not add a",
-  "row whose macro no generator emits \u2014 the transpiler trusts this map",
-  "and would emit a call to a macro that does not exist.",
+  "pret label -> the NASM macro emitting its bytes, and how many source",
+  "items that macro replaces. WRITTEN BY",
+  "tools/generators/gen_script_strings.py; do not hand-edit, and do not",
+  "add a row whose macro no generator emits \u2014 the transpiler trusts this",
+  "map and would call a macro that does not exist.",
   "",
-  "Consumed by sm83xlat/emit.py: a quoted `db` under one of these labels",
-  "lowers to the macro instead of bailing inline-text-db."
+  "Consumed by sm83xlat: a quoted text operand under one of these labels",
+  "lowers to the macro instead of bailing inline-text-db, and the next",
+  "span-1 items are skipped. The transpiler refuses to skip an item that",
+  "carries a label, so a stale span fails closed."
  ],
- "include": "assets/gym_names.inc",
+ "include": "assets/script_strings.inc",
  "labels": {
-  "PewterGym_Script.CityName": "TEXT_PewterGym_Script_CityName",
-  "PewterGym_Script.LeaderName": "TEXT_PewterGym_Script_LeaderName",
-  "CeruleanGym_Script.CityName": "TEXT_CeruleanGym_Script_CityName",
-  "CeruleanGym_Script.LeaderName": "TEXT_CeruleanGym_Script_LeaderName",
-  "VermilionGym_Script.CityName": "TEXT_VermilionGym_Script_CityName",
-  "VermilionGym_Script.LeaderName": "TEXT_VermilionGym_Script_LeaderName",
-  "CeladonGym_Script.CityName": "TEXT_CeladonGym_Script_CityName",
-  "CeladonGym_Script.LeaderName": "TEXT_CeladonGym_Script_LeaderName",
-  "FuchsiaGym_Script.CityName": "TEXT_FuchsiaGym_Script_CityName",
-  "FuchsiaGym_Script.LeaderName": "TEXT_FuchsiaGym_Script_LeaderName",
-  "SaffronGym_Script.CityName": "TEXT_SaffronGym_Script_CityName",
-  "SaffronGym_Script.LeaderName": "TEXT_SaffronGym_Script_LeaderName",
-  "CinnabarGymSetMapAndTiles.CityName": "TEXT_CinnabarGymSetMapAndTiles_CityName",
-  "CinnabarGymSetMapAndTiles.LeaderName": "TEXT_CinnabarGymSetMapAndTiles_LeaderName",
-  "ViridianGym_Script.CityName": "TEXT_ViridianGym_Script_CityName",
-  "ViridianGym_Script.LeaderName": "TEXT_ViridianGym_Script_LeaderName"
+  "PewterGym_Script.CityName": {
+   "macro": "TEXT_PewterGym_Script_CityName",
+   "span": 1
+  },
+  "PewterGym_Script.LeaderName": {
+   "macro": "TEXT_PewterGym_Script_LeaderName",
+   "span": 1
+  },
+  "CeruleanGym_Script.CityName": {
+   "macro": "TEXT_CeruleanGym_Script_CityName",
+   "span": 1
+  },
+  "CeruleanGym_Script.LeaderName": {
+   "macro": "TEXT_CeruleanGym_Script_LeaderName",
+   "span": 1
+  },
+  "VermilionGym_Script.CityName": {
+   "macro": "TEXT_VermilionGym_Script_CityName",
+   "span": 1
+  },
+  "VermilionGym_Script.LeaderName": {
+   "macro": "TEXT_VermilionGym_Script_LeaderName",
+   "span": 1
+  },
+  "CeladonGym_Script.CityName": {
+   "macro": "TEXT_CeladonGym_Script_CityName",
+   "span": 1
+  },
+  "CeladonGym_Script.LeaderName": {
+   "macro": "TEXT_CeladonGym_Script_LeaderName",
+   "span": 1
+  },
+  "FuchsiaGym_Script.CityName": {
+   "macro": "TEXT_FuchsiaGym_Script_CityName",
+   "span": 1
+  },
+  "FuchsiaGym_Script.LeaderName": {
+   "macro": "TEXT_FuchsiaGym_Script_LeaderName",
+   "span": 1
+  },
+  "SaffronGym_Script.CityName": {
+   "macro": "TEXT_SaffronGym_Script_CityName",
+   "span": 1
+  },
+  "SaffronGym_Script.LeaderName": {
+   "macro": "TEXT_SaffronGym_Script_LeaderName",
+   "span": 1
+  },
+  "CinnabarGymSetMapAndTiles.CityName": {
+   "macro": "TEXT_CinnabarGymSetMapAndTiles_CityName",
+   "span": 1
+  },
+  "CinnabarGymSetMapAndTiles.LeaderName": {
+   "macro": "TEXT_CinnabarGymSetMapAndTiles_LeaderName",
+   "span": 1
+  },
+  "ViridianGym_Script.CityName": {
+   "macro": "TEXT_ViridianGym_Script_CityName",
+   "span": 1
+  },
+  "ViridianGym_Script.LeaderName": {
+   "macro": "TEXT_ViridianGym_Script_LeaderName",
+   "span": 1
+  },
+  "BikeShopMenuText": {
+   "macro": "TEXT_BikeShopMenuText",
+   "span": 2
+  },
+  "BikeShopMenuPrice": {
+   "macro": "TEXT_BikeShopMenuPrice",
+   "span": 1
+  },
+  "GameCornerMoneyText": {
+   "macro": "TEXT_GameCornerMoneyText",
+   "span": 1
+  },
+  "GameCornerCoinText": {
+   "macro": "TEXT_GameCornerCoinText",
+   "span": 1
+  },
+  "GameCornerBlankText1": {
+   "macro": "TEXT_GameCornerBlankText1",
+   "span": 1
+  },
+  "GameCornerBlankText2": {
+   "macro": "TEXT_GameCornerBlankText2",
+   "span": 1
+  },
+  "CascadeBadgeText": {
+   "macro": "TEXT_CascadeBadgeText",
+   "span": 1
+  },
+  "ThunderBadgeText": {
+   "macro": "TEXT_ThunderBadgeText",
+   "span": 1
+  },
+  "RainbowBadgeText": {
+   "macro": "TEXT_RainbowBadgeText",
+   "span": 1
+  },
+  "SoulBadgeText": {
+   "macro": "TEXT_SoulBadgeText",
+   "span": 1
+  },
+  "MarshBadgeText": {
+   "macro": "TEXT_MarshBadgeText",
+   "span": 1
+  },
+  "VolcanoBadgeText": {
+   "macro": "TEXT_VolcanoBadgeText",
+   "span": 1
+  },
+  "EarthBadgeText": {
+   "macro": "TEXT_EarthBadgeText",
+   "span": 1
+  },
+  "FuchsiaGoodRodHouseFishingGuruText.UnusedText": {
+   "macro": "TEXT_FuchsiaGoodRodHouseFishingGuruText_UnusedText",
+   "span": 7
+  }
  }
 }
