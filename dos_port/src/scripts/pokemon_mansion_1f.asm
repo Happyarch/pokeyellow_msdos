@@ -28,6 +28,7 @@ global Mansion1LoadEmptyFloorTileBlock
 global Mansion1LoadHorizontalGateBlock
 global Mansion1ReplaceBlock
 global PokemonMansion1FScientistText
+global PokemonMansion1FSwitchText
 global PokemonMansion1F_Script
 
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
@@ -37,7 +38,6 @@ extern Mansion1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern PlaySound   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion1FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion1FSwitchText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
@@ -58,6 +58,7 @@ wPokemonMansion1FCurScript                     equ 0xD639
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonMansion1F_Script:
     call Mansion1CheckReplaceSwitchDoorBlocks
     call EnableAutoTextBoxDrawing
@@ -68,6 +69,7 @@ PokemonMansion1F_Script:
     mov [ebp + wPokemonMansion1FCurScript], al
     ret
 
+%assign event_byte -1
 Mansion1CheckReplaceSwitchDoorBlocks:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -88,6 +90,7 @@ Mansion1CheckReplaceSwitchDoorBlocks:
     mov bx, ((13) << 8) | (13)
     jmp Mansion1LoadHorizontalGateBlock
 
+%assign event_byte -1
 .switchTurnedOn:
     mov bx, ((6) << 8) | (12)
     call Mansion1LoadHorizontalGateBlock
@@ -98,11 +101,13 @@ Mansion1CheckReplaceSwitchDoorBlocks:
     mov bx, ((13) << 8) | (13)
     jmp Mansion1LoadEmptyFloorTileBlock
 
+%assign event_byte -1
 Mansion1LoadHorizontalGateBlock:
     mov al, 0x2d
     mov [ebp + wNewTileBlockID], al
     jmp Mansion1ReplaceBlock
 
+%assign event_byte -1
 Mansion1LoadEmptyFloorTileBlock:
     mov al, 0xe
     mov [ebp + wNewTileBlockID], al
@@ -115,6 +120,7 @@ Mansion1ReplaceBlock:
 
 ; PokemonMansion1F_ScriptPointers (scripts/PokemonMansion1F.asm:59-75) — not re-emitted: Mansion1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 PokemonMansion1FScientistText:
     mov esi, Mansion1TrainerHeader0
     call TalkToTrainer
@@ -122,35 +128,35 @@ PokemonMansion1FScientistText:
 
 ; PokemonMansion1FScientistBattleText (scripts/PokemonMansion1F.asm:84-93) — not re-emitted: PokemonMansion1FScientistBattleText is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] PokemonMansion1FSwitchText (scripts/PokemonMansion1F.asm:97-114) — at scripts/PokemonMansion1F.asm:113: ResetEventReuseHL EVENT_MANSION_SWITCH_ON
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .not_pressed
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	set BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	ld hl, .PressedText
-; PRET| 	call PrintText
-; PRET| 	ld a, SFX_GO_INSIDE
-; PRET| 	call PlaySound
-; PRET| 	CheckAndSetEvent EVENT_MANSION_SWITCH_ON
-; PRET| 	jr z, .done
-; PRET| 	ResetEventReuseHL EVENT_MANSION_SWITCH_ON
-; PRET| 	jr .done
+%assign event_byte -1
+PokemonMansion1FSwitchText:
+    mov esi, .Text
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .not_pressed
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, wCurrentMapScriptFlags
+    or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    mov esi, .PressedText
+    call PrintText
+    mov al, SFX_GO_INSIDE
+    call PlaySound
+    CheckAndSetEvent EVENT_MANSION_SWITCH_ON
+    jz .done
+    ResetEventReuseHL EVENT_MANSION_SWITCH_ON
+    jmp .done
 
+%assign event_byte -1
 .not_pressed:
     mov esi, .NotPressedText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _PokemonMansion1FSwitchText
     text_end

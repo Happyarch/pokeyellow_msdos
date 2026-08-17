@@ -117,6 +117,7 @@ wSprite03StateData1MovementStatus              equ 0xC131
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 RocketHideoutB4F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, RocketHideout4TrainerHeaders
@@ -126,6 +127,7 @@ RocketHideoutB4F_Script:
     mov [ebp + wRocketHideoutB4FCurScript], al
     ret
 
+%assign event_byte -1
 RocketHideoutB4FResetScripts:
     CheckAndResetEvent EVENT_6A0
     jz .sk_12
@@ -138,6 +140,7 @@ RocketHideoutB4FSetScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 RocketHideoutB4FScript_HideJessieJames:
     mov al, 134
     call RocketHideoutB4FScript_HideObject
@@ -145,6 +148,7 @@ RocketHideoutB4FScript_HideJessieJames:
     call RocketHideoutB4FScript_HideObject
     ret
 
+%assign event_byte -1
 RocketHideoutB4F_ScriptPointers:
     dd RocketHideoutB4FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -192,6 +196,7 @@ RocketHideoutB4F_ScriptPointers:
 ; PRET| 	ld [wCurMapScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
     CheckEvent EVENT_BEAT_ROCKET_HIDEOUT_4_JESSIE_JAMES
     jnz .sk_78
         call RocketHideoutB4FScript_455a5
@@ -247,6 +252,7 @@ RocketHideoutB4F_ScriptPointers:
 ; PRET| 	call RocketHideoutB4FSetScript
 ; PRET| 	ret
 
+%assign event_byte -1
 RocketHideoutB4FJessieJamesMovementData_45605:
     db 0x4
 RocketHideoutB4FJessieJamesMovementData_45606:
@@ -310,6 +316,7 @@ RocketHideoutB4FJessieJamesMovementData_45606:
 ; PRET| 	call RocketHideoutB4FSetScript
 ; PRET| 	ret
 
+%assign event_byte -1
 RocketHideoutB4FScript8:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -387,6 +394,7 @@ RocketHideoutB4FScript10:
 ; PRET| 	call RocketHideoutB4FSetScript
 ; PRET| 	ret
 
+%assign event_byte -1
 RocketHideoutB4FScript12:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -402,6 +410,7 @@ RocketHideoutB4FScript12:
     call RocketHideoutB4FSetScript
     ret
 
+%assign event_byte -1
 RocketHideoutB4FScript13:
     call PlayDefaultMusic
     xor al, al
@@ -422,6 +431,7 @@ RocketHideoutB4FScript13:
 ; PRET| 	call Delay3
 ; PRET| 	ret
 
+%assign event_byte -1
 RocketHideoutB4FScript_HideObject:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
@@ -447,6 +457,7 @@ RocketHideoutB4FScript_HideObject:
 ; PRET| 	call DelayFrames
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 RocketHideoutB4FText12:
     text_far _RocketHideoutJessieJamesText2
     text_end
@@ -456,10 +467,12 @@ RocketHideoutB4FJessieJamesEndBattleText:
 RocketHideoutB4FText13:
     text_far _RocketHideoutJessieJamesText4
 
+%assign event_byte -1
     mov bl, 64
     call DelayFrames
     jmp TextScriptEnd
 
+%assign event_byte -1
 RocketHideoutB4FGiovanniText:
     CheckEvent EVENT_BEAT_ROCKET_HIDEOUT_GIOVANNI
     jnz .beat_giovanni
@@ -482,12 +495,14 @@ RocketHideoutB4FGiovanniText:
     mov [ebp + wCurMapScript], al
     jmp .done
 
+%assign event_byte -1
 .beat_giovanni:
     mov esi, RocketHideoutB4FGiovanniHopeWeMeetAgainText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .ImpressedYouGotHereText:
     text_far _RocketHideoutB4FGiovanniImpressedYouGotHereText
     text_end
@@ -498,6 +513,7 @@ RocketHideoutB4FGiovanniHopeWeMeetAgainText:
     text_far _RocketHideoutB4FGiovanniHopeWeMeetAgainText
     text_end
 
+%assign event_byte -1
 RocketHideoutB4FRocketText:
     mov esi, RocketHideout4TrainerHeader0
     call TalkToTrainer
@@ -505,6 +521,7 @@ RocketHideoutB4FRocketText:
 
 ; RocketHideoutB4FRocketBattleText (scripts/RocketHideoutB4F.asm:394-399) — not re-emitted: RocketHideoutB4FRocketBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
     SetEvent EVENT_ROCKET_DROPPED_LIFT_KEY
     mov al, 140
     mov [ebp + wToggleableObjectIndex], al
@@ -514,6 +531,7 @@ RocketHideoutB4FRocketText:
 
 ; RocketHideoutB4FRocketAfterBattleText (scripts/RocketHideoutB4F.asm:409-411) — not re-emitted: RocketHideoutB4FRocketAfterBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 .Text:
     text_far _RocketHideoutB4FRocketAfterBattleText
     text_end

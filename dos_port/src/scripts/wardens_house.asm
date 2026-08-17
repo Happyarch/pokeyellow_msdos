@@ -51,9 +51,11 @@ TEXT_WARDENSHOUSE_DISPLAY_LEFT                 equ 4
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 WardensHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 WardensHouse_TextPointers:
     dd WardensHouseWardenText
     dd PickUpItemText
@@ -162,6 +164,7 @@ WardensHouse_TextPointers:
 ; PRET| 	text_far _WardensHouseWardenHM04NoRoomText
 ; PRET| 	text_end
 
+%assign event_byte -1
 WardensHouseDisplayText:
     mov al, [ebp + hTextID]
     cmp al, TEXT_WARDENSHOUSE_DISPLAY_LEFT
@@ -172,6 +175,7 @@ WardensHouseDisplayText:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .PhotosAndFossilsText:
     text_far _WardensHouseDisplayPhotosAndFossilsText
     text_end

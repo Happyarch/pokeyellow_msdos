@@ -37,10 +37,12 @@ extern _FuchsiaMartMiddleAgedManText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 FuchsiaMart_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 FuchsiaMart_TextPointers:
     dd FuchsiaMartClerkText
     dd FuchsiaMartMiddleAgedManText

@@ -38,10 +38,12 @@ extern _FuchsiaMeetingRoomSafariZoneWorker3   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 FuchsiaMeetingRoom_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 FuchsiaMeetingRoom_TextPointers:
     dd FuchsiaMeetingRoomSafariZoneWorker1
     dd FuchsiaMeetingRoomSafariZoneWorker2

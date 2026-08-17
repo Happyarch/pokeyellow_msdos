@@ -62,6 +62,7 @@ wRoute9CurScript                               equ 0xD603
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route9_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route9TrainerHeaders
@@ -73,38 +74,47 @@ Route9_Script:
 
 ; Route9_ScriptPointers (scripts/Route9.asm:11-50) — not re-emitted: Route9_ScriptPointers is already defined in assets/map_script_tables.inc.
 
+%assign event_byte -1
 Route9CooltrainerF1Text:
     mov esi, Route9TrainerHeader0
     jmp Route9TalkToTrainer
 
+%assign event_byte -1
 Route9AJText:
     mov esi, Route9TrainerHeader1
     jmp Route9TalkToTrainer
 
+%assign event_byte -1
 Route9CooltrainerM2Text:
     mov esi, Route9TrainerHeader2
     jmp Route9TalkToTrainer
 
+%assign event_byte -1
 Route9CooltrainerF2Text:
     mov esi, Route9TrainerHeader3
     jmp Route9TalkToTrainer
 
+%assign event_byte -1
 Route9Hiker1Text:
     mov esi, Route9TrainerHeader4
     jmp Route9TalkToTrainer
 
+%assign event_byte -1
 Route9Hiker2Text:
     mov esi, Route9TrainerHeader5
     jmp Route9TalkToTrainer
 
+%assign event_byte -1
 Route9Youngster1Text:
     mov esi, Route9TrainerHeader6
     jmp Route9TalkToTrainer
 
+%assign event_byte -1
 Route9Hiker3Text:
     mov esi, Route9TrainerHeader7
     jmp Route9TalkToTrainer
 
+%assign event_byte -1
 Route9Youngster2Text:
     mov esi, Route9TrainerHeader8
 Route9TalkToTrainer:

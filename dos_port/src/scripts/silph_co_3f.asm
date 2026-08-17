@@ -56,6 +56,7 @@ wSilphCo3FCurScript                            equ 0xD643
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCo3F_Script:
     call SilphCo3FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -93,6 +94,7 @@ SilphCo3F_Script:
 ; PRET| 	lb bc, 4, 8
 ; PRET| 	predef_jump ReplaceTileBlock
 
+%assign event_byte -1
 .GateCoordinates:
     db 4, 4
     db 4, 8
@@ -111,15 +113,14 @@ SilphCo3F_Script:
 ; PRET| 	SetEventReuseHL EVENT_SILPH_CO_3_UNLOCKED_DOOR1
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SilphCo3F_UnlockedDoorEventScript.unlock_door1 (scripts/SilphCo3F.asm:50-51) — at scripts/SilphCo3F.asm:50: SetEventAfterBranchReuseHL EVENT_SILPH_CO_3_UNLOCKED_DOOR2, EVENT_SILPH_CO_3_UNLOCKED_DOOR1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_3_UNLOCKED_DOOR2, EVENT_SILPH_CO_3_UNLOCKED_DOOR1
-; PRET| 	ret
+%assign event_byte -1
+.unlock_door1:
+    SetEventAfterBranchReuseHL EVENT_SILPH_CO_3_UNLOCKED_DOOR2, EVENT_SILPH_CO_3_UNLOCKED_DOOR1
+    ret
 
 ; SilphCo3F_ScriptPointers (scripts/SilphCo3F.asm:54-72) — not re-emitted: SilphCo3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo3FSilphWorkerMText:
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
     mov esi, .YouSavedUsText
@@ -129,6 +130,7 @@ SilphCo3FSilphWorkerMText:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .WhatShouldIDoText:
     text_far _SilphCo3FSilphWorkerMWhatShouldIDoText
     text_end
@@ -136,6 +138,7 @@ SilphCo3FSilphWorkerMText:
     text_far _SilphCo3FSilphWorkerMYouSavedUsText
     text_end
 
+%assign event_byte -1
 SilphCo3FRocketText:
     mov esi, SilphCo3TrainerHeader0
     call TalkToTrainer
@@ -143,6 +146,7 @@ SilphCo3FRocketText:
 
 ; SilphCo3FRocketBattleText (scripts/SilphCo3F.asm:99-108) — not re-emitted: SilphCo3FRocketBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo3FScientistText:
     mov esi, SilphCo3TrainerHeader1
     call TalkToTrainer

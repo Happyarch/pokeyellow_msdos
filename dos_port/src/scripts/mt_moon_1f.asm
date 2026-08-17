@@ -57,6 +57,7 @@ wMtMoon1FCurScript                             equ 0xD605
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 MtMoon1F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, MtMoon1TrainerHeaders
@@ -68,30 +69,37 @@ MtMoon1F_Script:
 
 ; MtMoon1F_ScriptPointers (scripts/MtMoon1F.asm:11-49) — not re-emitted: MtMoon1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 MtMoon1FHikerText:
     mov esi, MtMoon1TrainerHeader0
     jmp MtMoon1TalkToTrainer
 
+%assign event_byte -1
 MtMoon1FYoungster1Text:
     mov esi, MtMoon1TrainerHeader1
     jmp MtMoon1TalkToTrainer
 
+%assign event_byte -1
 MtMoon1FCooltrainerF1Text:
     mov esi, MtMoon1TrainerHeader2
     jmp MtMoon1TalkToTrainer
 
+%assign event_byte -1
 MtMoon1FSuperNerdText:
     mov esi, MtMoon1TrainerHeader3
     jmp MtMoon1TalkToTrainer
 
+%assign event_byte -1
 MtMoon1FCooltrainerF2Text:
     mov esi, MtMoon1TrainerHeader4
     jmp MtMoon1TalkToTrainer
 
+%assign event_byte -1
 MtMoon1FYoungster2Text:
     mov esi, MtMoon1TrainerHeader5
     jmp MtMoon1TalkToTrainer
 
+%assign event_byte -1
 MtMoon1FYoungster3Text:
     mov esi, MtMoon1TrainerHeader6
 MtMoon1TalkToTrainer:

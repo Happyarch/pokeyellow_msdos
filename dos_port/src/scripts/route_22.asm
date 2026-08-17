@@ -115,12 +115,14 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route22_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route22_ScriptPointers
     mov al, [ebp + wRoute22CurScript]
     jmp CallFunctionInTable
 
+%assign event_byte -1
 Route22_ScriptPointers:
     dd Route22DefaultScript
     dd Route22Rival1StartBattleScript
@@ -131,6 +133,7 @@ Route22_ScriptPointers:
     dd Route22Rival2ExitScript
     dd Route22NoopScript
 
+%assign event_byte -1
 Route22SetDefaultScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -138,6 +141,7 @@ Route22SetDefaultScript:
 Route22NoopScript:
     ret
 
+%assign event_byte -1
 Route22Script_50ed6:
     mov al, OPP_RIVAL1
     mov [ebp + wCurOpponent], al
@@ -145,6 +149,7 @@ Route22Script_50ed6:
     mov [ebp + wTrainerNo], al
     ret
 
+%assign event_byte -1
 Route22Script_50ee1:
     mov al, OPP_RIVAL2
     mov [ebp + wCurOpponent], al
@@ -168,6 +173,7 @@ Route22Script_50ee1:
 ; PRET| 	ldh [hSpriteFacingDirection], a
 ; PRET| 	jp SetSpriteFacingDirectionAndDelay
 
+%assign event_byte -1
 Route22RivalMovementData:
     db NPC_MOVEMENT_RIGHT
     db NPC_MOVEMENT_RIGHT
@@ -198,6 +204,7 @@ Route22RivalMovementData:
 ; PRET| 	jp nz, Route22SecondRivalBattleScript
 ; PRET| 	ret
 
+%assign event_byte -1
 .Route22RivalBattleCoords:
     db 4, 29
     db 5, 29
@@ -242,6 +249,7 @@ Route22RivalMovementData:
 ; PRET| 	ld a, SPRITE_FACING_UP
 ; PRET| 	jr .set_rival_facing_direction
 
+%assign event_byte -1
 .set_rival_facing_right:
     mov al, SPRITE_FACING_RIGHT
 .set_rival_facing_direction:
@@ -265,6 +273,7 @@ Route22RivalMovementData:
     mov [ebp + wRoute22CurScript], al
     ret
 
+%assign event_byte -1
 Route22Rival1DefeatedText:
     text_far _Route22Rival1DefeatedText
     text_end
@@ -342,6 +351,7 @@ Route22Rival1VictoryText:
 ; PRET| 	ldh [hSpriteIndex], a
 ; PRET| 	jp MoveSprite
 
+%assign event_byte -1
 Route22Rival1ExitMovementData1:
     db NPC_MOVEMENT_RIGHT
     db NPC_MOVEMENT_RIGHT
@@ -422,6 +432,7 @@ Route22Rival1ExitMovementData2:
 ; PRET| 	ld a, SPRITE_FACING_UP
 ; PRET| 	jr .set_rival_facing_direction
 
+%assign event_byte -1
 .set_player_direction_left:
     mov al, PLAYER_DIR_LEFT
     mov [ebp + wPlayerMovingDirection], al
@@ -445,6 +456,7 @@ Route22Rival1ExitMovementData2:
     mov [ebp + wRoute22CurScript], al
     ret
 
+%assign event_byte -1
 Route22Rival2DefeatedText:
     text_far _Route22Rival2DefeatedText
     text_end
@@ -520,6 +532,7 @@ Route22Rival2VictoryText:
 ; PRET| 	ldh [hSpriteIndex], a
 ; PRET| 	jp MoveSprite
 
+%assign event_byte -1
 Route22Rival2ExitMovementData1:
     db NPC_MOVEMENT_LEFT
 Route22Rival2ExitMovementData2:
@@ -546,26 +559,31 @@ Route22Rival2ExitMovementData2:
 ; PRET| 	ld [wRoute22CurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 Route22_TextPointers:
     dd Route22Rival1Text
     dd Route22Rival2Text
     dd Route22PokemonLeagueSignText
 
+%assign event_byte -1
 Route22Rival1Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Route22PrintRival1Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route22Rival2Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Route22PrintRival2Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route22PokemonLeagueSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Route22PrintPokemonLeagueSignText
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route22PrintRival1Text:
     CheckEvent EVENT_BEAT_ROUTE22_RIVAL_1ST_BATTLE
     jz .before_battle
@@ -573,12 +591,14 @@ Route22PrintRival1Text:
     call PrintText
     jmp .text_script_end
 
+%assign event_byte -1
 .before_battle:
     mov esi, Route22RivalBeforeBattleText1
     call PrintText
 .text_script_end:
     ret
 
+%assign event_byte -1
 Route22RivalBeforeBattleText1:
     text_far _Route22RivalBeforeBattleText1
     text_end
@@ -586,6 +606,7 @@ Route22RivalAfterBattleText1:
     text_far _Route22RivalAfterBattleText1
     text_end
 
+%assign event_byte -1
 Route22PrintRival2Text:
     CheckEvent EVENT_BEAT_ROUTE22_RIVAL_2ND_BATTLE
     jz .before_battle
@@ -593,12 +614,14 @@ Route22PrintRival2Text:
     call PrintText
     jmp .text_script_end
 
+%assign event_byte -1
 .before_battle:
     mov esi, Route22RivalBeforeBattleText2
     call PrintText
 .text_script_end:
     ret
 
+%assign event_byte -1
 Route22RivalBeforeBattleText2:
     text_far _Route22RivalBeforeBattleText2
     text_end
@@ -606,11 +629,13 @@ Route22RivalAfterBattleText2:
     text_far _Route22RivalAfterBattleText2
     text_end
 
+%assign event_byte -1
 Route22PrintPokemonLeagueSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _Route22PokemonLeagueSignText
     text_end

@@ -75,12 +75,14 @@ wPokemonTower2FCurScript                       equ 0xD62A
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonTower2F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, PokemonTower2F_ScriptPointers
     mov al, [ebp + wPokemonTower2FCurScript]
     jmp CallFunctionInTable
 
+%assign event_byte -1
 PokemonTower2FResetRivalEncounter:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -88,6 +90,7 @@ PokemonTower2FResetRivalEncounter:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 PokemonTower2F_ScriptPointers:
     dd PokemonTower2FDefaultScript
     dd PokemonTower2FDefeatedRivalScript
@@ -131,6 +134,7 @@ PokemonTower2F_ScriptPointers:
 ; PRET| 	ldh [hJoyPressed], a
 ; PRET| 	ret
 
+%assign event_byte -1
 PokemonTower2FRivalEncounterEventCoords:
     db 5, 15
     db 6, 14
@@ -165,6 +169,7 @@ PokemonTower2FRivalEncounterEventCoords:
 ; PRET| 	ld [wCurMapScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 PokemonTower2FRivalRightThenDownMovement:
     db NPC_MOVEMENT_RIGHT
     db NPC_MOVEMENT_DOWN
@@ -186,6 +191,7 @@ PokemonTower2FRivalDownThenRightMovement:
     db NPC_MOVEMENT_DOWN
     db -1
 
+%assign event_byte -1
 PokemonTower2FRivalExitsScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -204,10 +210,12 @@ PokemonTower2FRivalExitsScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 PokemonTower2F_TextPointers:
     dd PokemonTower2FRivalText
     dd PokemonTower2FChannelerText
 
+%assign event_byte -1
 PokemonTower2FRivalText:
     CheckEvent EVENT_BEAT_POKEMON_TOWER_RIVAL
     jz .do_battle
@@ -215,6 +223,7 @@ PokemonTower2FRivalText:
     call PrintText
     jmp .text_script_end
 
+%assign event_byte -1
 .do_battle:
     mov esi, .WhatBringsYouHereText
     call PrintText
@@ -235,6 +244,7 @@ PokemonTower2FRivalText:
 .text_script_end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .WhatBringsYouHereText:
     text_far _PokemonTower2FRivalWhatBringsYouHereText
     text_end
@@ -251,12 +261,14 @@ PokemonTower2FChannelerText:
     text_far _PokemonTower2FChannelerText
     text_end
 
+%assign event_byte -1
 PokemonTower2FPikachuMovementScript:
     mov esi, PokemonTower2FPikachuMovement
     mov bh, SPRITE_FACING_RIGHT
     call TryApplyPikachuMovementData
     ret
 
+%assign event_byte -1
 PokemonTower2FPikachuMovement:
     db 0x00
     db 0x1d

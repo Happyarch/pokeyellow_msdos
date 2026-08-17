@@ -57,10 +57,12 @@ extern _BikeShopYoungsterTheseBikesAreExpensiveText   ; NOT YET DEFINED IN THE P
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 BikeShop_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 BikeShop_TextPointers:
     dd BikeShopClerkText
     dd BikeShopMiddleAgedWomanText
@@ -195,15 +197,18 @@ BikeShop_TextPointers:
 ; PRET| 	text_far _BikeShopBagFullText
 ; PRET| 	text_end
 
+%assign event_byte -1
 BikeShopMiddleAgedWomanText:
     mov esi, .Text
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _BikeShopMiddleAgedWomanText
     text_end
 
+%assign event_byte -1
 BikeShopYoungsterText:
     CheckEvent EVENT_GOT_BICYCLE
     mov esi, .CoolBikeText
@@ -213,6 +218,7 @@ BikeShopYoungsterText:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .TheseBikesAreExpensiveText:
     text_far _BikeShopYoungsterTheseBikesAreExpensiveText
     text_end

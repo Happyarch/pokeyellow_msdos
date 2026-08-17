@@ -60,6 +60,7 @@ wRoute10CurScript                              equ 0xD604
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route10_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route10TrainerHeaders
@@ -71,6 +72,7 @@ Route10_Script:
 
 ; Route10_ScriptPointers (scripts/Route10.asm:11-43) — not re-emitted: Route10_ScriptPointers is already defined in assets/map_script_tables.inc.
 
+%assign event_byte -1
 Route10SuperNerd1Text:
     mov esi, Route10TrainerHeader0
     call TalkToTrainer
@@ -78,6 +80,7 @@ Route10SuperNerd1Text:
 
 ; Route10SuperNerd1BattleText (scripts/Route10.asm:52-61) — not re-emitted: Route10SuperNerd1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route10Hiker1Text:
     mov esi, Route10TrainerHeader1
     call TalkToTrainer
@@ -85,6 +88,7 @@ Route10Hiker1Text:
 
 ; Route10Hiker1BattleText (scripts/Route10.asm:70-79) — not re-emitted: Route10Hiker1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route10SuperNerd2Text:
     mov esi, Route10TrainerHeader2
     call TalkToTrainer
@@ -92,6 +96,7 @@ Route10SuperNerd2Text:
 
 ; Route10SuperNerd2BattleText (scripts/Route10.asm:88-97) — not re-emitted: Route10SuperNerd2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route10CooltrainerF1Text:
     mov esi, Route10TrainerHeader3
     call TalkToTrainer
@@ -99,6 +104,7 @@ Route10CooltrainerF1Text:
 
 ; Route10CooltrainerF1BattleText (scripts/Route10.asm:106-115) — not re-emitted: Route10CooltrainerF1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route10Hiker2Text:
     mov esi, Route10TrainerHeader4
     call TalkToTrainer
@@ -106,6 +112,7 @@ Route10Hiker2Text:
 
 ; Route10Hiker2BattleText (scripts/Route10.asm:124-133) — not re-emitted: Route10Hiker2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route10CooltrainerF2Text:
     mov esi, Route10TrainerHeader5
     call TalkToTrainer

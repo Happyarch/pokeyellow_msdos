@@ -32,8 +32,10 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SSAnneB1F_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 SSAnneB1F_TextPointers:
     text_end

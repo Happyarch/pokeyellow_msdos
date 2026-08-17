@@ -37,9 +37,11 @@ extern _Route2TradeHouseScientistText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route2TradeHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 Route2TradeHouse_TextPointers:
     dd Route2TradeHouseScientistText
     dd Route2TradeHouseGameboyKidText
@@ -47,6 +49,7 @@ Route2TradeHouseScientistText:
     text_far _Route2TradeHouseScientistText
     text_end
 
+%assign event_byte -1
 Route2TradeHouseGameboyKidText:
     mov al, 1
     mov [ebp + wWhichTrade], al

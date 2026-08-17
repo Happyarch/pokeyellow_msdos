@@ -145,6 +145,7 @@ wd474                                          equ 0xD474
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CinnabarGym_Script:
     call CinnabarGymSetMapAndTiles
     call EnableAutoTextBoxDrawing
@@ -185,6 +186,7 @@ CinnabarGym_Script:
 ; PRET| .LeaderName:
 ; PRET| 	db "BLAINE@"
 
+%assign event_byte -1
 CinnabarGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -193,15 +195,18 @@ CinnabarGymResetScripts:
     mov [ebp + wOpponentAfterWrongAnswer], al
     ret
 
+%assign event_byte -1
 CinnabarGymSetTrainerHeader:
     mov al, [ebp + hTextID]
     mov [ebp + wTrainerHeaderFlagBit], al
     ret
 
+%assign event_byte -1
 CinnabarGymFlagAction:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp FlagActionPredef
 
+%assign event_byte -1
 CinnabarGym_ScriptPointers:
     dd CinnabarGymDefaultScript
     dd CinnabarGymGetOpponentTextScript
@@ -226,6 +231,7 @@ CinnabarGym_ScriptPointers:
 ; PRET| 	ld de, MovementNpcToLeftAndUp
 ; PRET| 	jr .MoveSprite
 
+%assign event_byte -1
 .not_super_nerd3:
     mov al, PLAYER_DIR_RIGHT
     mov [ebp + wPlayerMovingDirection], al
@@ -240,6 +246,7 @@ CinnabarGym_ScriptPointers:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 MovementNpcToLeftAndUp:
     db NPC_MOVEMENT_LEFT
     db NPC_MOVEMENT_UP
@@ -260,6 +267,7 @@ PikachuMovementData_74f9e:
     db 0x38
     db 0x3f
 
+%assign event_byte -1
 CinnabarGymScript_74fa3:
     mov al, [ebp + wPikachuSpawnStateFlags]
     test al, (1 << (7))
@@ -280,6 +288,7 @@ CinnabarGymScript_74fa3:
     call ApplyPikachuMovementData
     ret
 
+%assign event_byte -1
 CinnabarGymGetOpponentTextScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -293,6 +302,7 @@ CinnabarGymGetOpponentTextScript:
     mov [ebp + hTextID], al
     jmp DisplayTextID
 
+%assign event_byte -1
 CinnabarGymOpenGateScript:
     call CinnabarGymScript_753e9
     mov al, [ebp + wIsInBattle]
@@ -303,6 +313,7 @@ CinnabarGymOpenGateScript:
     mov bl, al
     mov bh, FLAG_TEST
     mov esi, wEventFlags + EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
+    %assign event_byte EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
     call CinnabarGymFlagAction
     mov al, bl
     test al, al
@@ -320,6 +331,7 @@ CinnabarGymOpenGateScript:
     call WaitForSoundToFinish
     jmp .asm_75013
 
+%assign event_byte -1
 .no_sound:
     call CinnabarGymScript_75023
     call CinnabarGymScript_75041
@@ -332,34 +344,41 @@ CinnabarGymOpenGateScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 CinnabarGymScript_75023:
     mov al, [ebp + wTrainerHeaderFlagBit]
     mov [ebp + hGymGateIndex], al
     mov bl, al
     mov bh, FLAG_SET
     mov esi, wEventFlags + EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
+    %assign event_byte EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
     call CinnabarGymFlagAction
     ret
 
+%assign event_byte -1
 CinnabarGymScript_75032:
     mov al, [ebp + wTrainerHeaderFlagBit]
     mov [ebp + hGymGateIndex], al
     mov bl, al
     mov bh, FLAG_TEST
     mov esi, wEventFlags + EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
+    %assign event_byte EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
     call CinnabarGymFlagAction
     ret
 
+%assign event_byte -1
 CinnabarGymScript_75041:
     mov al, [ebp + wTrainerHeaderFlagBit]
     sub al, 2
     mov bl, al
     mov bh, FLAG_SET
     mov esi, wEventFlags + EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
+    %assign event_byte EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
     call CinnabarGymFlagAction
     call UpdateCinnabarGymGateTileBlocks
     ret
 
+%assign event_byte -1
 CinnabarGymBlainePostBattleScript:
     call CinnabarGymScript_753e9
     mov al, [ebp + wIsInBattle]
@@ -383,6 +402,7 @@ CinnabarGymReceiveTM38:
     SetEvent EVENT_GOT_TM38
     jmp .gymVictory
 
+%assign event_byte -1
 .BagFull:
     mov al, TEXT_CINNABARGYM_BLAINE_TM38_NO_ROOM
     mov [ebp + hTextID], al
@@ -397,6 +417,7 @@ CinnabarGymReceiveTM38:
     or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
     jmp CinnabarGymResetScripts
 
+%assign event_byte -1
 CinnabarGym_TextPointers:
     dd CinnabarGymBlaineText
     dd CinnabarGymSuperNerd1
@@ -411,6 +432,7 @@ CinnabarGym_TextPointers:
     dd CinnabarGymBlaineReceivedTM38Text
     dd CinnabarGymBlaineTM38NoRoomText
 
+%assign event_byte -1
 CinnabarGymStartBattleScript:
     mov al, [ebp + hSpriteIndex]
     mov [ebp + wSpriteIndex], al
@@ -425,6 +447,7 @@ CinnabarGymStartBattleScript:
     mov al, SCRIPT_CINNABARGYM_OPEN_GATE
     jmp .not_blaine
 
+%assign event_byte -1
 .blaine:
     mov al, SCRIPT_CINNABARGYM_BLAINE_POST_BATTLE
 .not_blaine:
@@ -496,6 +519,7 @@ CinnabarGymStartBattleScript:
 ; PRET| 	text_far _CinnabarGymBlaineTM38NoRoomText
 ; PRET| 	text_end
 
+%assign event_byte -1
 CinnabarGymSuperNerd1:
     call CinnabarGymSetTrainerHeader
     CheckEvent EVENT_BEAT_CINNABAR_GYM_TRAINER_0
@@ -507,11 +531,13 @@ CinnabarGymSuperNerd1:
     call SaveEndBattleTextPointers
     jmp CinnabarGymStartBattleScript
 
+%assign event_byte -1
 .defeated:
     mov esi, .AfterBattleText
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .BattleText:
     text_far _CinnabarGymSuperNerd1BattleText
     text_end
@@ -522,6 +548,7 @@ CinnabarGymSuperNerd1:
     text_far _CinnabarGymSuperNerd1AfterBattleText
     text_end
 
+%assign event_byte -1
 CinnabarGymSuperNerd2:
     call CinnabarGymSetTrainerHeader
     CheckEvent EVENT_BEAT_CINNABAR_GYM_TRAINER_1
@@ -533,6 +560,7 @@ CinnabarGymSuperNerd2:
     mov dl, 0x00
     jmp CinnabarGymScript_753de
 
+%assign event_byte -1
 .asm_75196:
     mov esi, .BattleText
     call PrintText
@@ -541,11 +569,13 @@ CinnabarGymSuperNerd2:
     call SaveEndBattleTextPointers
     jmp CinnabarGymStartBattleScript
 
+%assign event_byte -1
 .defeated:
     mov esi, .AfterBattleText
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .BattleText:
     text_far _CinnabarGymSuperNerd2BattleText
     text_end
@@ -556,6 +586,7 @@ CinnabarGymSuperNerd2:
     text_far _CinnabarGymSuperNerd2AfterBattleText
     text_end
 
+%assign event_byte -1
 CinnabarGymSuperNerd3:
     call CinnabarGymSetTrainerHeader
     CheckEvent EVENT_BEAT_CINNABAR_GYM_TRAINER_2
@@ -567,6 +598,7 @@ CinnabarGymSuperNerd3:
     mov dl, 0x1
     jmp CinnabarGymScript_753de
 
+%assign event_byte -1
 .asm_751dc:
     mov esi, .BattleText
     call PrintText
@@ -575,11 +607,13 @@ CinnabarGymSuperNerd3:
     call SaveEndBattleTextPointers
     jmp CinnabarGymStartBattleScript
 
+%assign event_byte -1
 .defeated:
     mov esi, .AfterBattleText
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .BattleText:
     text_far _CinnabarGymSuperNerd3BattleText
     text_end
@@ -590,6 +624,7 @@ CinnabarGymSuperNerd3:
     text_far _CinnabarGymSuperNerd3AfterBattleText
     text_end
 
+%assign event_byte -1
 CinnabarGymSuperNerd4:
     call CinnabarGymSetTrainerHeader
     CheckEvent EVENT_BEAT_CINNABAR_GYM_TRAINER_3
@@ -601,6 +636,7 @@ CinnabarGymSuperNerd4:
     mov dl, 0x2
     jmp CinnabarGymScript_753de
 
+%assign event_byte -1
 .asm_75222:
     mov esi, .BattleText
     call PrintText
@@ -609,11 +645,13 @@ CinnabarGymSuperNerd4:
     call SaveEndBattleTextPointers
     jmp CinnabarGymStartBattleScript
 
+%assign event_byte -1
 .defeated:
     mov esi, .AfterBattleText
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .BattleText:
     text_far _CinnabarGymSuperNerd4BattleText
     text_end
@@ -624,6 +662,7 @@ CinnabarGymSuperNerd4:
     text_far _CinnabarGymSuperNerd4AfterBattleText
     text_end
 
+%assign event_byte -1
 CinnabarGymSuperNerd5:
     call CinnabarGymSetTrainerHeader
     CheckEvent EVENT_BEAT_CINNABAR_GYM_TRAINER_4
@@ -635,6 +674,7 @@ CinnabarGymSuperNerd5:
     mov dl, 0x3
     jmp CinnabarGymScript_753de
 
+%assign event_byte -1
 .asm_75222:
     mov esi, .BattleText
     call PrintText
@@ -643,11 +683,13 @@ CinnabarGymSuperNerd5:
     call SaveEndBattleTextPointers
     jmp CinnabarGymStartBattleScript
 
+%assign event_byte -1
 .defeated:
     mov esi, .AfterBattleText
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .BattleText:
     text_far _CinnabarGymSuperNerd5BattleText
     text_end
@@ -658,6 +700,7 @@ CinnabarGymSuperNerd5:
     text_far _CinnabarGymSuperNerd5AfterBattleText
     text_end
 
+%assign event_byte -1
 CinnabarGymSuperNerd6:
     call CinnabarGymSetTrainerHeader
     CheckEvent EVENT_BEAT_CINNABAR_GYM_TRAINER_5
@@ -669,6 +712,7 @@ CinnabarGymSuperNerd6:
     mov dl, 0x4
     jmp CinnabarGymScript_753de
 
+%assign event_byte -1
 .asm_75222:
     mov esi, .BattleText
     call PrintText
@@ -677,11 +721,13 @@ CinnabarGymSuperNerd6:
     call SaveEndBattleTextPointers
     jmp CinnabarGymStartBattleScript
 
+%assign event_byte -1
 .defeated:
     mov esi, .AfterBattleText
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .BattleText:
     text_far _CinnabarGymSuperNerd6BattleText
     text_end
@@ -692,6 +738,7 @@ CinnabarGymSuperNerd6:
     text_far _CinnabarGymSuperNerd6AfterBattleText
     text_end
 
+%assign event_byte -1
 CinnabarGymSuperNerd7:
     call CinnabarGymSetTrainerHeader
     CheckEvent EVENT_BEAT_CINNABAR_GYM_TRAINER_6
@@ -703,6 +750,7 @@ CinnabarGymSuperNerd7:
     mov dl, 0x5
     jmp CinnabarGymScript_753de
 
+%assign event_byte -1
 .asm_75222:
     mov esi, .BattleText
     call PrintText
@@ -711,11 +759,13 @@ CinnabarGymSuperNerd7:
     call SaveEndBattleTextPointers
     jmp CinnabarGymStartBattleScript
 
+%assign event_byte -1
 .defeated:
     mov esi, .AfterBattleText
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .BattleText:
     text_far _CinnabarGymSuperNerd7BattleText
     text_end
@@ -726,16 +776,19 @@ CinnabarGymSuperNerd7:
     text_far _CinnabarGymSuperNerd7AfterBattleText
     text_end
 
+%assign event_byte -1
 CinnabarGymGymGuideText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CinnabarGymPrintGymGuideText
     jmp TextScriptEnd
 
+%assign event_byte -1
 CinnabarGymScript_753de:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Func_f2150
     jmp TextScriptEnd
 
+%assign event_byte -1
 CinnabarGymScript_753e9:
     push esi
     mov esi, wd474
@@ -744,6 +797,7 @@ CinnabarGymScript_753e9:
     pop esi
     ret
 
+%assign event_byte -1
 CinnabarGymScript_753f3:
     push esi
     mov esi, wd474
@@ -751,18 +805,21 @@ CinnabarGymScript_753f3:
     pop esi
     ret
 
+%assign event_byte -1
 CinnabarGymPrintGymGuideText:
     CheckEvent EVENT_BEAT_BLAINE
     jnz .afterBeat
     mov esi, .ChampInMakingText
     jmp .done
 
+%assign event_byte -1
 .afterBeat:
     mov esi, .BeatBlaineText
 .done:
     call PrintText
     ret
 
+%assign event_byte -1
 .ChampInMakingText:
     text_far _CinnabarGymGymGuideChampInMakingText
     text_end
@@ -783,6 +840,7 @@ CinnabarGymPrintGymGuideText:
 ; PRET| 	ld l, a
 ; PRET| 	jp PrintText
 
+%assign event_byte -1
 TextPointers_f215d:
     dd CinnabarGymText_f2169
     dd CinnabarGymText_f216e

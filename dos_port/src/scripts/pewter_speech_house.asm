@@ -36,9 +36,11 @@ extern _PewterSpeechHouseYoungsterText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PewterSpeechHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 PewterSpeechHouse_TextPointers:
     dd PewterSpeechHouseGamblerText
     dd PewterSpeechHouseYoungsterText

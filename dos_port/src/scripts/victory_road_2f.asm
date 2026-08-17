@@ -67,6 +67,7 @@ wVictoryRoad2FCurScript                        equ 0xD63E
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 VictoryRoad2F_Script:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
@@ -116,6 +117,7 @@ VictoryRoad2F_Script:
 ; PRET| 	predef ReplaceTileBlock
 ; PRET| 	ret
 
+%assign event_byte -1
 VictoryRoad2F_ScriptPointers:
     dd VictoryRoad2FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -140,45 +142,53 @@ VictoryRoad2F_ScriptPointers:
 ; PRET| 	ret nz
 ; PRET| 	jr .set_script_flag
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] VictoryRoad2FDefaultScript.second_switch (scripts/VictoryRoad2F.asm:61-67) — at scripts/VictoryRoad2F.asm:61: CheckEventAfterBranchReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH2, EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventAfterBranchReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH2, EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
-; PRET| 	SetEventReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH2
-; PRET| 	ret nz
-; PRET| .set_script_flag
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	set BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	ret
+%assign event_byte -1
+.second_switch:
+    CheckEventAfterBranchReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH2, EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1
+    pushfd    ; SM83 form writes no flags
+        SetEventReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH2
+    popfd
+    jz .nr_63
+        ret
+.nr_63:
+.set_script_flag:
+    mov esi, wCurrentMapScriptFlags
+    or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    ret
 
 ; VictoryRoad2FDefaultScript.SwitchCoords (scripts/VictoryRoad2F.asm:70-104) — not re-emitted: VictoryRoad2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 VictoryRoad2FHikerText:
     mov esi, VictoryRoad2TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 VictoryRoad2FSuperNerd1Text:
     mov esi, VictoryRoad2TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 VictoryRoad2FCooltrainerMText:
     mov esi, VictoryRoad2TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 VictoryRoad2FSuperNerd2Text:
     mov esi, VictoryRoad2TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 VictoryRoad2FSuperNerd3Text:
     mov esi, VictoryRoad2TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 VictoryRoad2FMoltresText:
     mov esi, MoltresTrainerHeader
     call TalkToTrainer
@@ -186,6 +196,7 @@ VictoryRoad2FMoltresText:
 
 ; VictoryRoad2FMoltresBattleText (scripts/VictoryRoad2F.asm:143-143) — not re-emitted: VictoryRoad2FMoltresBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
     mov al, 73
     call PlayCry
     call WaitForSoundToFinish

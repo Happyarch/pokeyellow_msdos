@@ -37,6 +37,7 @@ global SilphCo11FRocketText
 global SilphCo11FScript10
 global SilphCo11FScript11
 global SilphCo11FScript13
+global SilphCo11FScript14
 global SilphCo11FScript9
 global SilphCo11FScript_621c5
 global SilphCo11FScript_621ff
@@ -83,7 +84,6 @@ extern SilphCo11FGiovanniText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FGiovanniYouRuinedOurPlansText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FRocketBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript12   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FScript14   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript5   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript6   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript7   ; NOT YET DEFINED IN THE PORT
@@ -140,6 +140,7 @@ wSprite06StateData1MovementStatus              equ 0xC161
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCo11F_Script:
     call SilphCo11FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -150,6 +151,7 @@ SilphCo11F_Script:
     mov [ebp + wSilphCo11FCurScript], al
     ret
 
+%assign event_byte -1
 SilphCo11FGateCallbackScript:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -173,6 +175,7 @@ SilphCo11FGateCallbackScript:
     call ReplaceTileBlock
     ret
 
+%assign event_byte -1
 SilphCo11GateCoords:
     db 6, 3
     db -1
@@ -216,11 +219,13 @@ SilphCo11GateCoords:
 ; PRET| 	ld [hl], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .exit_loop:
     xor al, al
     mov [ebp + hUnlockedSilphCoDoors], al
     ret
 
+%assign event_byte -1
 SilphCo11FSetUnlockedDoorEventScript:
     mov al, [ebp + hUnlockedSilphCoDoors]
     test al, al
@@ -230,6 +235,7 @@ SilphCo11FSetUnlockedDoorEventScript:
     SetEvent EVENT_SILPH_CO_11_UNLOCKED_DOOR
     ret
 
+%assign event_byte -1
 SilphCo11FResetCurScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -238,6 +244,7 @@ SilphCo11FSetCurScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 SilphCo11F_ScriptPointers:
     dd SilphCo11FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -255,6 +262,7 @@ SilphCo11F_ScriptPointers:
     dd SilphCo11FScript13
     dd SilphCo11FScript14
 
+%assign event_byte -1
     CheckEvent EVENT_BEAT_SILPH_CO_11F_JESSIE_JAMES
     jnz .sk_107
         call SilphCo11FScript_6229c
@@ -269,6 +277,7 @@ SilphCo11F_ScriptPointers:
 .sk_111:
     ret
 
+%assign event_byte -1
 SilphCo11FScript_621c5:
     mov esi, .PlayerCoordsArray
     call ArePlayerCoordsInArray
@@ -291,6 +300,7 @@ SilphCo11FScript_621c5:
     call SilphCo11FSetCurScript
     ret
 
+%assign event_byte -1
 .PlayerCoordsArray:
     db 13, 6
     db 12, 7
@@ -301,6 +311,7 @@ SilphCo11FScript_621c5:
     db NPC_MOVEMENT_DOWN
     db -1
 
+%assign event_byte -1
 SilphCo11FScript_621ff:
     mov [ebp + wPlayerMovingDirection], al
     mov al, bh
@@ -309,6 +320,7 @@ SilphCo11FScript_621ff:
     mov [ebp + wSprite03StateData1MovementStatus], al
     ret
 
+%assign event_byte -1
 SilphCo11FGiovanniAfterBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -320,6 +332,7 @@ SilphCo11FGiovanniAfterBattleScript:
     mov bh, SPRITE_FACING_RIGHT
     jmp .continue
 
+%assign event_byte -1
 .face_player_up:
     mov al, PLAYER_DIR_UP
     mov bh, SPRITE_FACING_DOWN
@@ -341,6 +354,7 @@ SilphCo11FGiovanniAfterBattleScript:
     mov [ebp + wJoyIgnore], al
     jmp SilphCo11FSetCurScript
 
+%assign event_byte -1
 SilphCo11FGiovanniStartBattleScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -357,6 +371,7 @@ SilphCo11FGiovanniStartBattleScript:
     mov bh, SPRITE_FACING_RIGHT
     jmp .continue
 
+%assign event_byte -1
 .face_player_up:
     mov al, PLAYER_DIR_UP
     mov bh, SPRITE_FACING_DOWN
@@ -421,6 +436,7 @@ SilphCo11FGiovanniStartBattleScript:
 ; PRET| 	call SilphCo11FSetCurScript
 ; PRET| 	ret
 
+%assign event_byte -1
 SilphCo11FMovementData_622f5:
     db 0x5
     db 0x5
@@ -526,6 +542,7 @@ SilphCo11FMovementData_62311:
 ; PRET| 	call SilphCo11FSetCurScript
 ; PRET| 	ret
 
+%assign event_byte -1
 SilphCo11FScript9:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -602,6 +619,7 @@ SilphCo11FScript11:
 ; PRET| 	call SilphCo11FSetCurScript
 ; PRET| 	ret
 
+%assign event_byte -1
 SilphCo11FScript13:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -617,19 +635,17 @@ SilphCo11FScript13:
     call SilphCo11FSetCurScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SilphCo11FScript14 (scripts/SilphCo11F.asm:450-458) — at scripts/SilphCo11F.asm:455: SetEventReuseHL EVENT_BEAT_SILPH_CO_11F_JESSIE_JAMES
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call PlayDefaultMusic
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ResetEvent EVENT_782
-; PRET| 	SetEventReuseHL EVENT_BEAT_SILPH_CO_11F_JESSIE_JAMES
-; PRET| 	ld a, SCRIPT_SILPHCO11F_DEFAULT
-; PRET| 	call SilphCo11FSetCurScript
-; PRET| 	ret
+%assign event_byte -1
+SilphCo11FScript14:
+    call PlayDefaultMusic
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov [ebp + wJoyIgnore], al
+    ResetEvent EVENT_782
+    SetEventReuseHL EVENT_BEAT_SILPH_CO_11F_JESSIE_JAMES
+    mov al, SCRIPT_SILPHCO11F_DEFAULT
+    call SilphCo11FSetCurScript
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[predef-leaves-id-in-a] SilphCo11FScript_ShowObject (scripts/SilphCo11F.asm:461-465) — at scripts/SilphCo11F.asm:462: predef ShowObject
@@ -641,6 +657,7 @@ SilphCo11FScript13:
 ; PRET| 	call Delay3
 ; PRET| 	ret
 
+%assign event_byte -1
 SilphCo11FScript_HideObject:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
@@ -666,6 +683,7 @@ SilphCo11FScript_HideObject:
 ; PRET| 	call DelayFrames
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 SilphCo11FText9:
     text_far _SilphCoJessieJamesText2
     text_end
@@ -675,6 +693,7 @@ SilphCo11FText_624c2:
 SilphCo11FText10:
     text_far _SilphCoJessieJamesText4
 
+%assign event_byte -1
     mov bl, 64
     call DelayFrames
     jmp TextScriptEnd
@@ -748,6 +767,7 @@ SilphCo11FText10:
 ; PRET| 	text_far _SilphCo11FGiovanniYouRuinedOurPlansText
 ; PRET| 	text_end
 
+%assign event_byte -1
 SilphCo11FRocketText:
     mov esi, SilphCo11TrainerHeader0
     call TalkToTrainer
@@ -755,6 +775,7 @@ SilphCo11FRocketText:
 
 ; SilphCo11FRocketBattleText (scripts/SilphCo11F.asm:585-594) — not re-emitted: SilphCo11FRocketBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo11FTeamRocketLeavesScript:
     mov esi, .HideToggleableObjectIDs
 .hide_loop:
@@ -769,6 +790,7 @@ SilphCo11FTeamRocketLeavesScript:
     pop esi
     jmp .hide_loop
 
+%assign event_byte -1
 .done_hiding:
     mov esi, .ShowToggleableObjectIDs
 .show_loop:
@@ -785,6 +807,7 @@ SilphCo11FTeamRocketLeavesScript:
     pop esi
     jmp .show_loop
 
+%assign event_byte -1
 .ShowToggleableObjectIDs:
     db 18
     db 19

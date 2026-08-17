@@ -39,9 +39,11 @@ extern _Route12SuperRodHouseFishingGuruReceivedSuperRodText   ; NOT YET DEFINED 
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route12SuperRodHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 Route12SuperRodHouse_TextPointers:
     dd Route12SuperRodHouseFishingGuruText
 

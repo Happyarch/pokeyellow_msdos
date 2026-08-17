@@ -57,6 +57,7 @@ wSilphCo8FCurScript                            equ 0xD648
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCo8F_Script:
     call SilphCo8FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -67,6 +68,7 @@ SilphCo8F_Script:
     mov [ebp + wSilphCo8FCurScript], al
     ret
 
+%assign event_byte -1
 SilphCo8FGateCallbackScript:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -89,6 +91,7 @@ SilphCo8FGateCallbackScript:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp ReplaceTileBlock
 
+%assign event_byte -1
 .GateCoordinates:
     db 4, 3
     db -1
@@ -132,11 +135,13 @@ SilphCo8FGateCallbackScript:
 ; PRET| 	ld [hl], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .exit_loop:
     xor al, al
     mov [ebp + hUnlockedSilphCoDoors], al
     ret
 
+%assign event_byte -1
 SilphCo8F_UnlockedDoorEventScript:
     mov al, [ebp + hUnlockedSilphCoDoors]
     test al, al
@@ -148,6 +153,7 @@ SilphCo8F_UnlockedDoorEventScript:
 
 ; SilphCo8F_ScriptPointers (scripts/SilphCo8F.asm:74-94) — not re-emitted: SilphCo8TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo8FSilphWorkerMText:
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
     mov esi, .ThanksForSavingUsText
@@ -157,6 +163,7 @@ SilphCo8FSilphWorkerMText:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .SilphIsFinishedText:
     text_far _SilphCo8FSilphWorkerMSilphIsFinishedText
     text_end
@@ -164,16 +171,19 @@ SilphCo8FSilphWorkerMText:
     text_far _SilphCo8FSilphWorkerMThanksForSavingUsText
     text_end
 
+%assign event_byte -1
 SilphCo8FRocket1Text:
     mov esi, SilphCo8TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SilphCo8FScientistText:
     mov esi, SilphCo8TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SilphCo8FRocket2Text:
     mov esi, SilphCo8TrainerHeader2
     call TalkToTrainer

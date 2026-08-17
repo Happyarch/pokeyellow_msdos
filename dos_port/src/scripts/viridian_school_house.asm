@@ -43,10 +43,12 @@ extern _ViridianSchoolHouseLittleGirlText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 ViridianSchoolHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 ViridianSchoolHouse_TextPointers:
     dd ViridianSchoolHouseBrunetteGirlText
     dd ViridianSchoolHouseCooltrainerFText
@@ -55,30 +57,36 @@ ViridianSchoolHouseBrunetteGirlText:
     text_far _ViridianSchoolHouseBrunetteGirlText
     text_end
 
+%assign event_byte -1
 ViridianSchoolHouseCooltrainerFText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianSchoolHousePrintCooltrainerFText
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianSchoolHouseLittleGirlText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianSchoolHousePrintLittleGirlText
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianSchoolHousePrintLittleGirlText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianSchoolHouseLittleGirlText
     text_end
 
+%assign event_byte -1
 ViridianSchoolHousePrintCooltrainerFText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianSchoolHouseCooltrainerFText
     text_end

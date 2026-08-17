@@ -96,6 +96,7 @@ TEXT_SAFFRONCITY_SILPH_CO_LATEST_PRODUCT_SIGN  equ 25
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SaffronCity_Script:
     jmp EnableAutoTextBoxDrawing
 

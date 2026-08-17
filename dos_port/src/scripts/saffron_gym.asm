@@ -118,6 +118,7 @@ section .text
 ; PRET| .LeaderName:
 ; PRET| 	db "SABRINA@"
 
+%assign event_byte -1
 SaffronGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -125,12 +126,14 @@ SaffronGymResetScripts:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 SaffronGym_ScriptPointers:
     dd CheckFightingMapTrainers
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
     dd SaffronGymSabrinaPostBattle
 
+%assign event_byte -1
 SaffronGymSabrinaPostBattle:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -153,6 +156,7 @@ SaffronGymSabrinaReceiveTM46Script:
     SetEvent EVENT_GOT_TM46
     jmp .gymVictory
 
+%assign event_byte -1
 .BagFull:
     mov al, TEXT_SAFFRONGYM_SABRINA_TM46_NO_ROOM
     mov [ebp + hTextID], al
@@ -241,36 +245,43 @@ SaffronGymSabrinaReceiveTM46Script:
 ; PRET| 	text_far _SaffronGymSabrinaTM46NoRoomText
 ; PRET| 	text_end
 
+%assign event_byte -1
 SaffronGymChanneler1Text:
     mov esi, SaffronGymTrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SaffronGymYoungster1Text:
     mov esi, SaffronGymTrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SaffronGymChanneler2Text:
     mov esi, SaffronGymTrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SaffronGymYoungster2Text:
     mov esi, SaffronGymTrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SaffronGymChanneler3Text:
     mov esi, SaffronGymTrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SaffronGymYoungster3Text:
     mov esi, SaffronGymTrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SaffronGymYoungster4Text:
     mov esi, SaffronGymTrainerHeader6
     call TalkToTrainer

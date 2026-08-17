@@ -39,9 +39,11 @@ extern _FuchsiaGoodRodHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 FuchsiaGoodRodHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 FuchsiaGoodRodHouse_TextPointers:
     dd FuchsiaGoodRodHouseFishingGuruText
 

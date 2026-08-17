@@ -50,10 +50,12 @@ extern _MrFujisHouseSuperNerdMrFujiIsntHereText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 MrFujisHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 MrFujisHouse_TextPointers:
     dd MrFujisHouseSuperNerdText
     dd MrFujisHouseLittleGirlText
@@ -72,12 +74,14 @@ MrFujisHouse_TextPointers:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .rescued_mr_fuji:
     mov esi, .MrFujiHadBeenPrayingText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .MrFujiIsntHereText:
     text_far _MrFujisHouseSuperNerdMrFujiIsntHereText
     text_end
@@ -104,6 +108,7 @@ MrFujisHouse_TextPointers:
 ; PRET| .done
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 .ThisIsMrFujisHouseText:
     text_far _MrFujisHouseLittleGirlThisIsMrFujisHouseText
     text_end
@@ -113,13 +118,16 @@ MrFujisHouse_TextPointers:
 MrFujisHousePsyduckText:
     text_far _MrFujisHousePsyduckText
 
+%assign event_byte -1
     mov al, 47
     call PlayCry
     jmp TextScriptEnd
 
+%assign event_byte -1
 MrFujisHouseNidorinoText:
     text_far _MrFujisHouseNidorinoText
 
+%assign event_byte -1
     mov al, 167
     call PlayCry
     jmp TextScriptEnd

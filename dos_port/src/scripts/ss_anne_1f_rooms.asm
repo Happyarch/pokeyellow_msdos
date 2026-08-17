@@ -53,6 +53,7 @@ wSSAnne1FRoomsCurScript                        equ 0xD607
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SSAnne1FRooms_Script:
     call EnableAutoTextBoxDrawing
     mov esi, SSAnne8TrainerHeaders
@@ -64,29 +65,35 @@ SSAnne1FRooms_Script:
 
 ; SSAnne1FRooms_ScriptPointers (scripts/SSAnne1FRooms.asm:11-40) — not re-emitted: SSAnne8TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SSAnne1FRoomsGentleman1Text:
     mov esi, SSAnne8TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SSAnne1FRoomsGentleman2Text:
     mov esi, SSAnne8TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SSAnne1FRoomsYoungsterText:
     mov esi, SSAnne8TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SSAnne1FRoomsCooltrainerFText:
     mov esi, SSAnne8TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SSAnne1FRoomsWigglytuffText:
     text_far _SSAnne1FRoomsWigglytuffText
 
+%assign event_byte -1
     mov al, 101
     call PlayCry
     jmp TextScriptEnd

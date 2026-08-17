@@ -118,6 +118,7 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 BillsHouse_Script:
     call BillsHouse_CheckMetBill
     call EnableAutoTextBoxDrawing
@@ -126,6 +127,7 @@ BillsHouse_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 BillsHouse_ScriptPointers:
     dd BillsHouseScript0
     dd BillsHouseScript1
@@ -138,6 +140,7 @@ BillsHouse_ScriptPointers:
     dd BillsHouseScript8
     dd BillsHouseScript9
 
+%assign event_byte -1
 BillsHouse_CheckMetBill:
     mov esi, wPikachuMapScriptFlags
     test byte [ebp + esi], (1 << (7))
@@ -152,10 +155,12 @@ BillsHouse_CheckMetBill:
     jz .notMetBill
     jmp .metBill
 
+%assign event_byte -1
 .notMetBill:
     mov al, SCRIPT_BILLSHOUSE_SCRIPT0
     jmp .setScript
 
+%assign event_byte -1
 .metBill:
     mov al, SCRIPT_BILLSHOUSE_SCRIPT9
 .setScript:
@@ -179,6 +184,7 @@ BillsHouse_CheckMetBill:
 ; PRET| 	ld [wBillsHouseCurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 BillsHouseScript1:
     ret
 
@@ -205,6 +211,7 @@ BillsHouseScript1:
 ; PRET| 	ld [wBillsHouseCurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 BillMovement_WalkToCellSeparator:
     db NPC_MOVEMENT_UP
     db NPC_MOVEMENT_UP
@@ -246,6 +253,7 @@ BillMovement_WalkAroundPlayer:
 ; PRET| 	ld [wBillsHouseCurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 PikachuMovement_EnterCellSeparatorDown:
     db 0
     db 30
@@ -262,6 +270,7 @@ PikachuMovement_EnterCellSeparatorNotDown:
     db 54
     db 63
 
+%assign event_byte -1
 BillsHouseScript4:
     CheckEvent EVENT_USED_CELL_SEPARATOR_ON_BILL
     jnz .nr_137
@@ -320,6 +329,7 @@ BillsHouseScript4:
 ; PRET| 	ld [wBillsHouseCurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .BillExitMachineMovement:
     db NPC_MOVEMENT_DOWN
     db NPC_MOVEMENT_RIGHT
@@ -332,6 +342,7 @@ PikachuMovement_ExitCellSeparator:
     db 55
     db 63
 
+%assign event_byte -1
 BillsHouseScript6:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -344,6 +355,7 @@ BillsHouseScript6:
     mov [ebp + wBillsHouseCurScript], al
     ret
 
+%assign event_byte -1
 BillsHouseScript7:
     xor al, al
     mov [ebp + wPlayerMovingDirection], al
@@ -361,10 +373,12 @@ BillsHouseScript7:
     mov [ebp + wBillsHouseCurScript], al
     ret
 
+%assign event_byte -1
 RLE_1e219:
     db PAD_RIGHT, 0x3
     db 0xFF
 
+%assign event_byte -1
 BillsHouseScript8:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -389,9 +403,11 @@ BillsHouseScript8:
     mov [ebp + wBillsHouseCurScript], al
     ret
 
+%assign event_byte -1
 BillsHouseScript9:
     ret
 
+%assign event_byte -1
 BillsHouse_TextPointers:
     dd BillsHouseBillPokemonText
     dd BillsHouseBillSSTicketText
@@ -401,21 +417,25 @@ BillsHouseBillDontLeaveText:
     text_far _BillsHouseBillDontLeaveText
     text_end
 
+%assign event_byte -1
 BillsHouseBillPokemonText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call BillsHousePrintBillPokemonText
     jmp TextScriptEnd
 
+%assign event_byte -1
 BillsHouseBillSSTicketText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call BillsHousePrintBillSSTicketText
     jmp TextScriptEnd
 
+%assign event_byte -1
 BillsHouseBillCheckOutMyRarePokemonText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call BillsHousePrintBillCheckOutMyRarePokemonText
     jmp TextScriptEnd
 
+%assign event_byte -1
 BillsHousePrintBillPokemonText:
     mov esi, .ImNotAPokemonText
     call PrintText
@@ -430,11 +450,13 @@ BillsHousePrintBillPokemonText:
     mov [ebp + wBillsHouseCurScript], al
     ret
 
+%assign event_byte -1
 .answered_no:
     mov esi, .NoYouGottaHelpText
     call PrintText
     jmp .use_machine
 
+%assign event_byte -1
 .ImNotAPokemonText:
     text_far _BillsHouseBillImNotAPokemonText
     text_end
@@ -499,11 +521,13 @@ BillsHousePrintBillPokemonText:
 ; PRET| 	text_far _BillsHouseBillWhyDontYouGoInsteadOfMeText
 ; PRET| 	text_end
 
+%assign event_byte -1
 BillsHousePrintBillCheckOutMyRarePokemonText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _BillsHouseBillCheckOutMyRarePokemonText
     text_end
@@ -530,6 +554,7 @@ BillsHousePrintBillCheckOutMyRarePokemonText:
 ; PRET| 	ldpikaemotion e, PikachuEmotion31
 ; PRET| 	ret
 
+%assign event_byte -1
 .noEmotion:
     mov dl, 0xff
     ret
@@ -555,6 +580,7 @@ BillsHousePrintBillCheckOutMyRarePokemonText:
 ; PRET| 	callfar InitializePikachuTextID
 ; PRET| 	ret
 
+%assign event_byte -1
 PikachuMovement_Confused:
     db 0
     db 32
@@ -563,6 +589,7 @@ PikachuMovement_Confused:
     db 30
     db 63
 
+%assign event_byte -1
 BillsHousePikachuWatchPlayer:
     mov esi, PikachuMovement_WatchPlayer1
     mov bh, SPRITE_FACING_UP
@@ -572,6 +599,7 @@ BillsHousePikachuWatchPlayer:
     call TryApplyPikachuMovementData
     ret
 
+%assign event_byte -1
 PikachuMovement_WatchPlayer1:
     db 0
     db 31

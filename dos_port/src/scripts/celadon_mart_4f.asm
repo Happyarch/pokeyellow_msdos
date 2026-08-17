@@ -39,9 +39,11 @@ extern _CeladonMart4FYoungsterText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeladonMart4F_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 CeladonMart4F_TextPointers:
     dd CeladonMart4FClerkText
     dd CeladonMart4FSuperNerdText

@@ -42,10 +42,12 @@ extern _CinnabarLabTestingRoomSignText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CinnabarLab_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 CinnabarLab_TextPointers:
     dd CinnabarLabFishingGuruText
     dd CinnabarLabPhotoText

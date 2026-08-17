@@ -36,9 +36,11 @@ extern _ViridianForestNorthGateSuperNerdText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 ViridianForestNorthGate_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 ViridianForestNorthGate_TextPointers:
     dd ViridianForestNorthGateSuperNerdText
     dd ViridianForestNorthGateGrampsText

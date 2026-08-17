@@ -66,6 +66,7 @@ wRoute16Gate1FCurScript                        equ 0xD65F
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route16Gate1F_Script:
     mov esi, wStatusFlags6
     and byte [ebp + esi], ~(1 << (BIT_ALWAYS_ON_BIKE)) & 0xFF
@@ -74,12 +75,14 @@ Route16Gate1F_Script:
     mov esi, Route16Gate1F_ScriptPointers
     jmp CallFunctionInTable
 
+%assign event_byte -1
 Route16Gate1F_ScriptPointers:
     dd Route16Gate1FDefaultScript
     dd Route16Gate1FPlayerMovingUpScript
     dd Route16Gate1FGuardScript
     dd Route16Gate1FPlayerMovingRightScript
 
+%assign event_byte -1
 Route16Gate1FDefaultScript:
     call Route16Gate1FIsBicycleInBagScript
     jz .nr_18
@@ -111,11 +114,13 @@ Route16Gate1FDefaultScript:
     mov [ebp + wRoute16Gate1FCurScript], al
     ret
 
+%assign event_byte -1
 .next_to_counter:
     mov al, SCRIPT_ROUTE16GATE1F_GUARD
     mov [ebp + wRoute16Gate1FCurScript], al
     ret
 
+%assign event_byte -1
 .StopsPlayerCoords:
     db 7, 4
     db 8, 4
@@ -123,6 +128,7 @@ Route16Gate1FDefaultScript:
     db 10, 4
     db -1
 
+%assign event_byte -1
 Route16Gate1FPlayerMovingUpScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -144,6 +150,7 @@ Route16Gate1FGuardScript:
     mov [ebp + wRoute16Gate1FCurScript], al
     ret
 
+%assign event_byte -1
 Route16Gate1FPlayerMovingRightScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -158,15 +165,18 @@ Route16Gate1FPlayerMovingRightScript:
     mov [ebp + wRoute16Gate1FCurScript], al
     ret
 
+%assign event_byte -1
 Route16Gate1FIsBicycleInBagScript:
     mov bh, BICYCLE
     jmp IsItemInBag
 
+%assign event_byte -1
 Route16Gate1F_TextPointers:
     dd Route16Gate1FGuardText
     dd Route16Gate1FGamblerText
     dd Route16Gate1FGuardWaitUpText
 
+%assign event_byte -1
 Route16Gate1FGuardText:
     call Route16Gate1FIsBicycleInBagScript
     jz .no_bike
@@ -174,12 +184,14 @@ Route16Gate1FGuardText:
     call PrintText
     jmp .text_script_end
 
+%assign event_byte -1
 .no_bike:
     mov esi, .NoPedestriansAllowedText
     call PrintText
 .text_script_end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .NoPedestriansAllowedText:
     text_far _Route16Gate1FGuardNoPedestriansAllowedText
     text_end

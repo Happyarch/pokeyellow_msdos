@@ -36,10 +36,12 @@ extern _SSAnne1FWaiterText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SSAnne1F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 SSAnne1F_TextPointers:
     dd SSAnne1FWaiterText
     dd SSAnne1FSailorText

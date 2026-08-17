@@ -41,9 +41,11 @@ extern _SafariZoneWestTrainerTipsText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SafariZoneWest_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 SafariZoneWest_TextPointers:
     dd PickUpItemText
     dd PickUpItemText

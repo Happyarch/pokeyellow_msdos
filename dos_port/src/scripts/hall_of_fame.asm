@@ -70,24 +70,28 @@ wLoreleisRoomCurScript                         equ 0xD64C
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 HallOfFame_Script:
     call EnableAutoTextBoxDrawing
     mov esi, HallOfFame_ScriptPointers
     mov al, [ebp + wHallOfFameCurScript]
     jmp CallFunctionInTable
 
+%assign event_byte -1
 HallofFameRoomClearScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
     mov [ebp + wHallOfFameCurScript], al
     ret
 
+%assign event_byte -1
 HallOfFame_ScriptPointers:
     dd HallOfFameDefaultScript
     dd HallOfFameOakCongratulationsScript
     dd HallOfFameResetEventsAndSaveScript
     dd HallOfFameNoopScript
 
+%assign event_byte -1
 HallOfFameNoopScript:
     ret
 
@@ -131,6 +135,7 @@ HallOfFameNoopScript:
 ; PRET| 	call WaitForTextScrollButtonPress
 ; PRET| 	jp Init
 
+%assign event_byte -1
 HallOfFameDefaultScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -144,10 +149,12 @@ HallOfFameDefaultScript:
     mov [ebp + wHallOfFameCurScript], al
     ret
 
+%assign event_byte -1
 HallOfFameEntryMovement:
     db PAD_UP, 5
     db -1
 
+%assign event_byte -1
 HallOfFameOakCongratulationsScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -180,6 +187,7 @@ HallOfFameOakCongratulationsScript:
     mov [ebp + wHallOfFameCurScript], al
     ret
 
+%assign event_byte -1
 HallOfFame_TextPointers:
     dd HallOfFameOakText
 HallOfFameOakText:

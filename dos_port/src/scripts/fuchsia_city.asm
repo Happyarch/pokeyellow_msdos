@@ -71,9 +71,11 @@ extern _FuchsiaCityYoungster2Text   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 FuchsiaCity_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 FuchsiaCity_TextPointers:
     dd FuchsiaCityYoungster1Text
     dd FuchsiaCityGamblerText
@@ -130,6 +132,7 @@ FuchsiaCityGymSignText:
     text_far _FuchsiaCityGymSignText
     text_end
 
+%assign event_byte -1
 FuchsiaCityChanseySignText:
     mov esi, .Text
     call PrintText
@@ -137,10 +140,12 @@ FuchsiaCityChanseySignText:
     call DisplayPokedex
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _FuchsiaCityChanseySignText
     text_end
 
+%assign event_byte -1
 FuchsiaCityVoltorbSignText:
     mov esi, .Text
     call PrintText
@@ -148,10 +153,12 @@ FuchsiaCityVoltorbSignText:
     call DisplayPokedex
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _FuchsiaCityVoltorbSignText
     text_end
 
+%assign event_byte -1
 FuchsiaCityKangaskhanSignText:
     mov esi, .Text
     call PrintText
@@ -159,10 +166,12 @@ FuchsiaCityKangaskhanSignText:
     call DisplayPokedex
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _FuchsiaCityKangaskhanSignText
     text_end
 
+%assign event_byte -1
 FuchsiaCitySlowpokeSignText:
     mov esi, .Text
     call PrintText
@@ -170,10 +179,12 @@ FuchsiaCitySlowpokeSignText:
     call DisplayPokedex
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _FuchsiaCitySlowpokeSignText
     text_end
 
+%assign event_byte -1
 FuchsiaCityLaprasSignText:
     mov esi, .Text
     call PrintText
@@ -181,6 +192,7 @@ FuchsiaCityLaprasSignText:
     call DisplayPokedex
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _FuchsiaCityLaprasSignText
     text_end
@@ -197,12 +209,14 @@ FuchsiaCityLaprasSignText:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .got_dome_fossil:
     mov esi, .OmanyteText
     call PrintText
     mov al, 98
     jmp .display
 
+%assign event_byte -1
 .got_helix_fossil:
     mov esi, .KabutoText
     call PrintText
@@ -212,6 +226,7 @@ FuchsiaCityLaprasSignText:
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .OmanyteText:
     text_far _FuchsiaCityFossilSignOmanyteText
     text_end

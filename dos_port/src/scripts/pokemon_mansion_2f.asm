@@ -26,6 +26,7 @@ bits 32
 global Mansion2CheckReplaceSwitchDoorBlocks
 global Mansion2ReplaceBlock
 global PokemonMansion2FSuperNerdText
+global PokemonMansion2FSwitchText
 global PokemonMansion2F_Script
 
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
@@ -35,7 +36,6 @@ extern Mansion2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern PlaySound   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion2FSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion2FSwitchText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion2F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
@@ -56,6 +56,7 @@ wPokemonMansion2FCurScript                     equ 0xD63B
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonMansion2F_Script:
     call Mansion2CheckReplaceSwitchDoorBlocks
     call EnableAutoTextBoxDrawing
@@ -66,6 +67,7 @@ PokemonMansion2F_Script:
     mov [ebp + wPokemonMansion2FCurScript], al
     ret
 
+%assign event_byte -1
 Mansion2CheckReplaceSwitchDoorBlocks:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -88,6 +90,7 @@ Mansion2CheckReplaceSwitchDoorBlocks:
     call Mansion2ReplaceBlock
     ret
 
+%assign event_byte -1
 .switchTurnedOn:
     mov al, 0x5f
     mov bx, ((2) << 8) | (4)
@@ -100,6 +103,7 @@ Mansion2CheckReplaceSwitchDoorBlocks:
     call Mansion2ReplaceBlock
     ret
 
+%assign event_byte -1
 Mansion2ReplaceBlock:
     mov [ebp + wNewTileBlockID], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
@@ -109,6 +113,7 @@ Mansion2ReplaceBlock:
 
 ; PokemonMansion2F_ScriptPointers (scripts/PokemonMansion2F.asm:55-72) — not re-emitted: Mansion2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 PokemonMansion2FSuperNerdText:
     mov esi, Mansion2TrainerHeader0
     call TalkToTrainer
@@ -116,35 +121,35 @@ PokemonMansion2FSuperNerdText:
 
 ; PokemonMansion2FSuperNerdBattleText (scripts/PokemonMansion2F.asm:81-98) — not re-emitted: PokemonMansion2FSuperNerdBattleText is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] PokemonMansion2FSwitchText (scripts/PokemonMansion2F.asm:102-119) — at scripts/PokemonMansion2F.asm:118: ResetEventReuseHL EVENT_MANSION_SWITCH_ON
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .not_pressed
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	set BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	ld hl, .PressedText
-; PRET| 	call PrintText
-; PRET| 	ld a, SFX_GO_INSIDE
-; PRET| 	call PlaySound
-; PRET| 	CheckAndSetEvent EVENT_MANSION_SWITCH_ON
-; PRET| 	jr z, .done
-; PRET| 	ResetEventReuseHL EVENT_MANSION_SWITCH_ON
-; PRET| 	jr .done
+%assign event_byte -1
+PokemonMansion2FSwitchText:
+    mov esi, .Text
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .not_pressed
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, wCurrentMapScriptFlags
+    or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    mov esi, .PressedText
+    call PrintText
+    mov al, SFX_GO_INSIDE
+    call PlaySound
+    CheckAndSetEvent EVENT_MANSION_SWITCH_ON
+    jz .done
+    ResetEventReuseHL EVENT_MANSION_SWITCH_ON
+    jmp .done
 
+%assign event_byte -1
 .not_pressed:
     mov esi, .NotPressed
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _PokemonMansion2FSwitchText
     text_end

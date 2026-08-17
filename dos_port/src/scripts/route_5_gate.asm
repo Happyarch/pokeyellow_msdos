@@ -60,16 +60,19 @@ wRoute5GateCurScript                           equ 0xD661
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route5Gate_Script:
     call EnableAutoTextBoxDrawing
     mov al, [ebp + wRoute5GateCurScript]
     mov esi, Route5Gate_ScriptPointers
     jmp CallFunctionInTable
 
+%assign event_byte -1
 Route5Gate_ScriptPointers:
     dd Route5GateDefaultScript
     dd Route5GatePlayerMovingScript
 
+%assign event_byte -1
 Route5GateMovePlayerUpScript:
     mov al, PAD_UP
     mov [ebp + wSimulatedJoypadStatesEnd], al
@@ -103,6 +106,7 @@ Route5GateMovePlayerUpScript:
 ; PRET| 	ld [wRoute5GateCurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .have_drink:
     mov al, TEXT_ROUTE5GATE_GUARD_GIVE_DRINK
     mov [ebp + hTextID], al
@@ -111,11 +115,13 @@ Route5GateMovePlayerUpScript:
     or byte [ebp + esi], (1 << (6))
     ret
 
+%assign event_byte -1
 .PlayerInCoordsArray:
     db 3, 3
     db 3, 4
     db -1
 
+%assign event_byte -1
 Route5GatePlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -128,11 +134,13 @@ Route5GatePlayerMovingScript:
     mov [ebp + wRoute5GateCurScript], al
     ret
 
+%assign event_byte -1
 Route5Gate_TextPointers:
     dd SaffronGateGuardText
     dd SaffronGateGuardGeeImThirstyText
     dd SaffronGateGuardGiveDrinkText
 
+%assign event_byte -1
 SaffronGateGuardText:
     mov al, [ebp + wStatusFlags1]
     test al, (1 << (6))
@@ -149,6 +157,7 @@ SaffronGateGuardText:
     mov [ebp + wRoute5GateCurScript], al
     jmp TextScriptEnd
 
+%assign event_byte -1
 .have_drink:
     mov esi, SaffronGateGuardGiveDrinkText
     call PrintText
@@ -156,6 +165,7 @@ SaffronGateGuardText:
     or byte [ebp + esi], (1 << (6))
     jmp TextScriptEnd
 
+%assign event_byte -1
 .thanks_for_drink:
     mov esi, SaffronGateGuardThanksForTheDrinkText
     call PrintText

@@ -42,9 +42,11 @@ extern _SaffronPidgeyHouseYoungsterText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SaffronPidgeyHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 SaffronPidgeyHouse_TextPointers:
     dd SaffronPidgeyHouseBrunetteGirlText
     dd SaffronPidgeyHousePidgeyText
@@ -56,10 +58,12 @@ SaffronPidgeyHouseBrunetteGirlText:
 SaffronPidgeyHousePidgeyText:
     text_far _SaffronPidgeyHousePidgeyText
 
+%assign event_byte -1
     mov al, 36
     call PlayCry
     jmp TextScriptEnd
 
+%assign event_byte -1
 SaffronPidgeyHouseYoungsterText:
     text_far _SaffronPidgeyHouseYoungsterText
     text_end

@@ -68,6 +68,7 @@ wPriceTemp                                     equ 0xCD3D
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 MtMoonPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
@@ -96,6 +97,7 @@ MtMoonPokecenter_Script:
 ; PRET| 	text_far _MtMoonPokecenterGentlemanText
 ; PRET| 	text_end
 
+%assign event_byte -1
 MtMoonPokecenterMagikarpSalesmanText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call MagikarpSalesman
@@ -111,6 +113,7 @@ MtMoonPokecenterMagikarpSalesmanText:
 ; PRET| MtMoonPokecenterLinkReceptionistText:
 ; PRET| 	script_cable_club_receptionist
 
+%assign event_byte -1
 MtMoonPokecenterChanseyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PokecenterChanseyText
@@ -141,6 +144,7 @@ MtMoonPokecenterChanseyText:
 ; PRET| 	ld hl, .NoMoneyText
 ; PRET| 	jr .printText
 
+%assign event_byte -1
 .enoughMoney:
     mov bx, ((MAGIKARP) << 8) | (5)
     call GivePokemon
@@ -161,10 +165,12 @@ MtMoonPokecenterChanseyText:
     SetEvent EVENT_BOUGHT_MAGIKARP
     jmp .done
 
+%assign event_byte -1
 .choseNo:
     mov esi, .NoText
     jmp .printText
 
+%assign event_byte -1
 .alreadyBoughtMagikarp:
     mov esi, .NoRefundsText
 .printText:
@@ -172,6 +178,7 @@ MtMoonPokecenterChanseyText:
 .done:
     ret
 
+%assign event_byte -1
 .IGotADealText:
     text_far _MtMoonPokecenterMagikarpSalesmanIGotADealText
     text_end

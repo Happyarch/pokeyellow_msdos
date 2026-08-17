@@ -125,12 +125,14 @@ section .text
 ; PRET| .LeaderName:
 ; PRET| 	db "LT.SURGE@"
 
+%assign event_byte -1
 VermilionGymSetDoorTile:
     CheckEvent EVENT_2ND_LOCK_OPENED
     jnz .doorsOpen
     mov al, 0x24
     jmp .replaceTile
 
+%assign event_byte -1
 .doorsOpen:
     mov al, SFX_GO_INSIDE
     call PlaySound
@@ -141,6 +143,7 @@ VermilionGymSetDoorTile:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp ReplaceTileBlock
 
+%assign event_byte -1
 VermilionGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -148,12 +151,14 @@ VermilionGymResetScripts:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 VermilionGym_ScriptPointers:
     dd CheckFightingMapTrainers
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
     dd VermilionGymLTSurgeAfterBattleScript
 
+%assign event_byte -1
 VermilionGymLTSurgeAfterBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -176,6 +181,7 @@ VermilionGymLTSurgeReceiveTM24Script:
     SetEvent EVENT_GOT_TM24
     jmp .gym_victory
 
+%assign event_byte -1
 .bag_full:
     mov al, TEXT_VERMILIONGYM_LT_SURGE_TM24_NO_ROOM
     mov [ebp + hTextID], al
@@ -265,6 +271,7 @@ VermilionGymLTSurgeReceiveTM24Script:
 ; PRET| 	text_far _VermilionGymLTSurgeReceivedThunderBadgeText
 ; PRET| 	text_end
 
+%assign event_byte -1
 VermilionGymGentlemanText:
     mov esi, VermilionGymTrainerHeader0
     call TalkToTrainer
@@ -272,6 +279,7 @@ VermilionGymGentlemanText:
 
 ; VermilionGymGentlemanBattleText (scripts/VermilionGym.asm:183-192) — not re-emitted: VermilionGymGentlemanBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 VermilionGymSuperNerdText:
     mov esi, VermilionGymTrainerHeader1
     call TalkToTrainer
@@ -279,6 +287,7 @@ VermilionGymSuperNerdText:
 
 ; VermilionGymSuperNerdBattleText (scripts/VermilionGym.asm:201-210) — not re-emitted: VermilionGymSuperNerdBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 VermilionGymSailorText:
     mov esi, VermilionGymTrainerHeader2
     call TalkToTrainer
@@ -297,12 +306,14 @@ VermilionGymSailorText:
 ; PRET| 	call PrintText
 ; PRET| 	jr .text_script_end
 
+%assign event_byte -1
 .got_thunderbadge:
     mov esi, .BeatLTSurgeText
     call PrintText
 .text_script_end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .ChampInMakingText:
     text_far _VermilionGymGymGuideChampInMakingText
     text_end

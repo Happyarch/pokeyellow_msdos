@@ -84,9 +84,11 @@ wDayCareTotalCost                              equ 0xCD3F
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Daycare_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 Daycare_TextPointers:
     dd DaycareGentlemanText
 
@@ -331,6 +333,7 @@ Daycare_TextPointers:
 ; PRET| 	ld hl, .GotMonBackText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .leaveMonInDayCare:
     mov al, [ebp + wDayCareStartLevel]
     mov [ebp + wDayCareMonBoxLevel], al
@@ -338,6 +341,7 @@ Daycare_TextPointers:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .IntroText:
     text_far _DaycareGentlemanIntroText
     text_end

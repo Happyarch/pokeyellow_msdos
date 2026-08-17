@@ -54,6 +54,7 @@ wWarpedFromWhichWarp                           equ 0xD73A
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 RocketHideoutElevator_Script:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -98,6 +99,7 @@ RocketHideoutElevator_Script:
 ; PRET| 	ld [hli], a
 ; PRET| 	ret
 
+%assign event_byte -1
 RocketHideoutElevatorScript:
     mov esi, RocketHideoutElevatorFloors
     call LoadItemList
@@ -107,6 +109,7 @@ RocketHideoutElevatorScript:
     call CopyData
     ret
 
+%assign event_byte -1
 RocketHideoutElevatorFloors:
     db 3
     db 85
@@ -118,6 +121,7 @@ RocketHideoutElevatorWarpMaps:
     db 4, ROCKET_HIDEOUT_B2F
     db 2, ROCKET_HIDEOUT_B4F
 
+%assign event_byte -1
 .End:
 RocketHideoutElevatorShakeScript:
     call Delay3
@@ -125,9 +129,11 @@ RocketHideoutElevatorShakeScript:
     call ShakeElevator
     ret
 
+%assign event_byte -1
 RocketHideoutElevator_TextPointers:
     dd RocketHideoutElevatorText
 
+%assign event_byte -1
 RocketHideoutElevatorText:
     mov bh, 74
     call IsItemInBag
@@ -138,12 +144,14 @@ RocketHideoutElevatorText:
     call DisplayElevatorFloorMenu
     jmp .text_script_end
 
+%assign event_byte -1
 .no_key:
     mov esi, .AppearsToNeedKeyText
     call PrintText
 .text_script_end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .AppearsToNeedKeyText:
     text_far _RocketHideoutElevatorAppearsToNeedKeyText
     text_waitbutton

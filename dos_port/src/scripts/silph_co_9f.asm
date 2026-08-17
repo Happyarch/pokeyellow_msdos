@@ -62,6 +62,7 @@ wSilphCo9FCurScript                            equ 0xD649
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCo9F_Script:
     call SilphCo9FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -117,6 +118,7 @@ SilphCo9F_Script:
 ; PRET| 	lb bc, 6, 5
 ; PRET| 	predef_jump ReplaceTileBlock
 
+%assign event_byte -1
 .GateCoordinates:
     db 4, 1
     db 2, 9
@@ -163,6 +165,7 @@ SilphCo9F_Script:
 ; PRET| 	ld [hl], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .exit_loop:
     xor al, al
     mov [ebp + hUnlockedSilphCoDoors], al
@@ -199,14 +202,14 @@ SilphCo9F_Script:
 ; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_9_UNLOCKED_DOOR3, EVENT_SILPH_CO_9_UNLOCKED_DOOR1
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SilphCo9F_SetUnlockedSilphCoDoorsScript.unlock_door3 (scripts/SilphCo9F.asm:116-119) — at scripts/SilphCo9F.asm:118: SetEventAfterBranchReuseHL EVENT_SILPH_CO_9_UNLOCKED_DOOR4, EVENT_SILPH_CO_9_UNLOCKED_DOOR1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	cp $4
-; PRET| 	ret nz
-; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_9_UNLOCKED_DOOR4, EVENT_SILPH_CO_9_UNLOCKED_DOOR1
-; PRET| 	ret
+%assign event_byte -1
+.unlock_door3:
+    cmp al, 0x4
+    jz .nr_117
+        ret
+.nr_117:
+    SetEventAfterBranchReuseHL EVENT_SILPH_CO_9_UNLOCKED_DOOR4, EVENT_SILPH_CO_9_UNLOCKED_DOOR1
+    ret
 
 ; SilphCo9F_ScriptPointers (scripts/SilphCo9F.asm:122-142) — not re-emitted: SilphCo9TrainerHeaders is already defined in assets/trainer_headers.inc.
 
@@ -226,12 +229,14 @@ SilphCo9F_Script:
 ; PRET| 	call PrintText
 ; PRET| 	jr .text_script_end
 
+%assign event_byte -1
 .beat_giovanni:
     mov esi, .ThankYouText
     call PrintText
 .text_script_end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .YouLookTiredText:
     text_far SilphCo9FNurseYouLookTiredText
     text_end
@@ -242,16 +247,19 @@ SilphCo9F_Script:
     text_far SilphCo9FNurseThankYouText
     text_end
 
+%assign event_byte -1
 SilphCo9FRocket1Text:
     mov esi, SilphCo9TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SilphCo9FScientistText:
     mov esi, SilphCo9TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SilphCo9FRocket2Text:
     mov esi, SilphCo9TrainerHeader2
     call TalkToTrainer

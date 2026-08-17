@@ -60,6 +60,7 @@ wSilphCo2FCurScript                            equ 0xD642
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCo2F_Script:
     call SilphCo2FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -97,6 +98,7 @@ SilphCo2F_Script:
 ; PRET| 	lb bc, 5, 2
 ; PRET| 	predef_jump ReplaceTileBlock
 
+%assign event_byte -1
 .GateCoordinates:
     db 2, 2
     db 5, 2
@@ -141,6 +143,7 @@ SilphCo2F_Script:
 ; PRET| 	ld [hl], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .exit_loop:
     xor al, al
     mov [ebp + hUnlockedSilphCoDoors], al
@@ -159,12 +162,10 @@ SilphCo2F_Script:
 ; PRET| 	SetEventReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR1
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SilphCo2F_UnlockedDoorEventScript.unlock_door1 (scripts/SilphCo2F.asm:86-87) — at scripts/SilphCo2F.asm:86: SetEventAfterBranchReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
-; PRET| 	ret
+%assign event_byte -1
+.unlock_door1:
+    SetEventAfterBranchReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1
+    ret
 
 ; SilphCo2F_ScriptPointers (scripts/SilphCo2F.asm:90-113) — not re-emitted: SilphCo2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
@@ -213,21 +214,25 @@ SilphCo2F_Script:
 ; PRET| 	text_far _SilphCo2FSilphWorkerFTM36NoRoomText
 ; PRET| 	text_end
 
+%assign event_byte -1
 SilphCo2FScientist1Text:
     mov esi, SilphCo2TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SilphCo2FScientist2Text:
     mov esi, SilphCo2TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SilphCo2FRocket1Text:
     mov esi, SilphCo2TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 SilphCo2FRocket2Text:
     mov esi, SilphCo2TrainerHeader3
     call TalkToTrainer

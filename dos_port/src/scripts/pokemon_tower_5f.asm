@@ -67,6 +67,7 @@ wPokemonTower5FCurScript                       equ 0xD62D
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonTower5F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, PokemonTower5TrainerHeaders
@@ -76,6 +77,7 @@ PokemonTower5F_Script:
     mov [ebp + wPokemonTower5FCurScript], al
     ret
 
+%assign event_byte -1
 PokemonTower5F_ScriptPointers:
     dd PokemonTower5FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -119,6 +121,7 @@ PokemonTower5F_ScriptPointers:
 
 ; PokemonTower5FPurifiedZoneCoords (scripts/PokemonTower5F.asm:46-76) — not re-emitted: PokemonTower5TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 PokemonTower5FChanneler2Text:
     mov esi, PokemonTower5TrainerHeader0
     call TalkToTrainer
@@ -126,6 +129,7 @@ PokemonTower5FChanneler2Text:
 
 ; PokemonTower5FChanneler2BattleText (scripts/PokemonTower5F.asm:85-94) — not re-emitted: PokemonTower5FChanneler2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 PokemonTower5FChanneler3Text:
     mov esi, PokemonTower5TrainerHeader1
     call TalkToTrainer
@@ -133,6 +137,7 @@ PokemonTower5FChanneler3Text:
 
 ; PokemonTower5FChanneler3BattleText (scripts/PokemonTower5F.asm:103-112) — not re-emitted: PokemonTower5FChanneler3BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 PokemonTower5FChanneler4Text:
     mov esi, PokemonTower5TrainerHeader2
     call TalkToTrainer
@@ -140,6 +145,7 @@ PokemonTower5FChanneler4Text:
 
 ; PokemonTower5FChanneler4BattleText (scripts/PokemonTower5F.asm:121-130) — not re-emitted: PokemonTower5FChanneler4BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 PokemonTower5FChanneler5Text:
     mov esi, PokemonTower5TrainerHeader3
     call TalkToTrainer

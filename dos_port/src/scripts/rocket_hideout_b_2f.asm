@@ -96,6 +96,7 @@ wRocketHideoutB2FCurScript                     equ 0xD631
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 RocketHideoutB2F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, RocketHideout2TrainerHeaders
@@ -105,12 +106,14 @@ RocketHideoutB2F_Script:
     mov [ebp + wRocketHideoutB2FCurScript], al
     ret
 
+%assign event_byte -1
 RocketHideoutB2F_ScriptPointers:
     dd RocketHideoutB2FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
     dd RocketHideoutB2FPlayerSpinningScript
 
+%assign event_byte -1
 RocketHideoutB2FDefaultScript:
     mov al, [ebp + wYCoord]
     mov bh, al
@@ -131,6 +134,7 @@ RocketHideoutB2FDefaultScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 RocketHideout2ArrowTilePlayerMovement:
     db 9, 4
     dd RocketHideout2ArrowMovement1
@@ -358,6 +362,7 @@ RocketHideout2ArrowMovement36:
     db PAD_LEFT, 5
     db -1
 
+%assign event_byte -1
 RocketHideoutB2FPlayerSpinningScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -372,6 +377,7 @@ RocketHideoutB2FPlayerSpinningScript:
 
 ; RocketHideoutB2F_TextPointers (scripts/RocketHideoutB2F.asm:274-285) — not re-emitted: RocketHideout2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 RocketHideoutB2FRocketText:
     mov esi, RocketHideout2TrainerHeader0
     call TalkToTrainer

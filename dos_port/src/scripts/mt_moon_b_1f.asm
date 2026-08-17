@@ -34,10 +34,12 @@ extern _MtMoonB1FUnusedText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 MtMoonB1F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 MtMoonB1F_TextPointers:
     dd MtMoonB1FUnusedText
 MtMoonB1FUnusedText:

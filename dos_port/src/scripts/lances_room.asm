@@ -70,6 +70,7 @@ wLancesRoomCurScript                           equ 0xD652
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 LancesRoom_Script:
     call LanceShowOrHideEntranceBlocks
     call EnableAutoTextBoxDrawing
@@ -80,6 +81,7 @@ LancesRoom_Script:
     mov [ebp + wLancesRoomCurScript], al
     ret
 
+%assign event_byte -1
 LanceShowOrHideEntranceBlocks:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -95,6 +97,7 @@ LanceShowOrHideEntranceBlocks:
     mov bh, 0x32
     jmp .setEntranceBlocks
 
+%assign event_byte -1
 .closeEntrance:
     mov al, 0x72
     mov bh, 0x73
@@ -111,11 +114,13 @@ LanceShowOrHideEntranceBlocks:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp ReplaceTileBlock
 
+%assign event_byte -1
 ResetLanceScript:
     xor al, al
     mov [ebp + wLancesRoomCurScript], al
     ret
 
+%assign event_byte -1
 LancesRoom_ScriptPointers:
     dd LancesRoomDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -123,9 +128,11 @@ LancesRoom_ScriptPointers:
     dd LancesRoomPlayerIsMovingScript
     dd LancesRoomNoopScript
 
+%assign event_byte -1
 LancesRoomNoopScript:
     ret
 
+%assign event_byte -1
 LancesRoomDefaultScript:
     CheckEvent EVENT_BEAT_LANCE
     jz .nr_56
@@ -143,6 +150,7 @@ LancesRoomDefaultScript:
     mov [ebp + hTextID], al
     jmp DisplayTextID
 
+%assign event_byte -1
 .notStandingNextToLance:
     cmp al, 0x5
     jz WalkToLance
@@ -156,6 +164,7 @@ LancesRoomDefaultScript:
     call PlaySound
     jmp LanceShowOrHideEntranceBlocks
 
+%assign event_byte -1
 LanceTriggerMovementCoords:
     db 1, 5
     db 2, 6
@@ -164,6 +173,7 @@ LanceTriggerMovementCoords:
     db 16, 24
     db -1
 
+%assign event_byte -1
 LancesRoomLanceEndBattleScript:
     call EndTrainerBattle
     mov al, [ebp + wIsInBattle]
@@ -173,6 +183,7 @@ LancesRoomLanceEndBattleScript:
     mov [ebp + hTextID], al
     jmp DisplayTextID
 
+%assign event_byte -1
 WalkToLance:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -187,6 +198,7 @@ WalkToLance:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 WalkToLance_RLEList:
     db PAD_UP, 13
     db PAD_LEFT, 12
@@ -194,6 +206,7 @@ WalkToLance_RLEList:
     db PAD_LEFT, 6
     db -1
 
+%assign event_byte -1
 LancesRoomPlayerIsMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -209,6 +222,7 @@ LancesRoomPlayerIsMovingScript:
 
 ; LancesRoom_TextPointers (scripts/LancesRoom.asm:130-137) — not re-emitted: LancesRoomTrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 LancesRoomLanceText:
     mov esi, LancesRoomTrainerHeader0
     call TalkToTrainer
@@ -216,5 +230,6 @@ LancesRoomLanceText:
 
 ; LancesRoomLanceBeforeBattleText (scripts/LancesRoom.asm:146-154) — not re-emitted: LancesRoomLanceBeforeBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
     SetEvent EVENT_BEAT_LANCE
     jmp TextScriptEnd

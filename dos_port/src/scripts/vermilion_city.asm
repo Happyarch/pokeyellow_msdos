@@ -33,6 +33,7 @@ global VermilionCityGambler1Text
 global VermilionCityGambler2Text
 global VermilionCityGymSignText
 global VermilionCityHarborSignText
+global VermilionCityLeftSSAnneCallbackScript
 global VermilionCityMachopText
 global VermilionCityNoticeSignText
 global VermilionCityOfficerJennyText
@@ -50,6 +51,7 @@ global VermilionCityPrintSignText
 global VermilionCitySailor1Text
 global VermilionCitySailor2Text
 global VermilionCitySignText
+global VermilionCity_Script
 global VermilionCity_ScriptPointers
 global VermilionCity_TextPointers
 
@@ -69,8 +71,6 @@ extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern Random   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern VermilionCityLeftSSAnneCallbackScript   ; NOT YET DEFINED IN THE PORT
-extern VermilionCity_Script   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
 extern WaitForTextScrollButtonPress   ; NOT YET DEFINED IN THE PORT
 extern YesNoChoice   ; NOT YET DEFINED IN THE PORT
@@ -121,39 +121,49 @@ wVermilionCityCurScript                        equ 0xD629
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionCity_Script (scripts/VermilionCity.asm:2-18) — at scripts/VermilionCity.asm:17: .vermilionCityScript_19869 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	ld hl, wPikachuMapScriptFlags
-; PRET| 	res BIT_PIKACHU_MAP_SCRIPT_ACTIVE, [hl]
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	push hl
-; PRET| 	call nz, VermilionCityLeftSSAnneCallbackScript
-; PRET| 	pop hl
-; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	call nz, .setFirstLockTrashCanIndex
-; PRET| 	ld hl, VermilionCity_ScriptPointers
-; PRET| 	ld a, [wVermilionCityCurScript]
-; PRET| 	call CallFunctionInTable
-; PRET| 	call .vermilionCityScript_19869
-; PRET| 	ret
+%assign event_byte -1
+VermilionCity_Script:
+    call EnableAutoTextBoxDrawing
+    mov esi, wPikachuMapScriptFlags
+    and byte [ebp + esi], ~(1 << (7)) & 0xFF
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
+    popfd
+    push esi
+    jz .sk_9
+        call VermilionCityLeftSSAnneCallbackScript
+.sk_9:
+    pop esi
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    jz .sk_13
+        call .setFirstLockTrashCanIndex
+.sk_13:
+    mov esi, VermilionCity_ScriptPointers
+    mov al, [ebp + wVermilionCityCurScript]
+    call CallFunctionInTable
+    call .vermilionCityScript_19869
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] VermilionCity_Script.vermilionCityScript_19869 (scripts/VermilionCity.asm:21-26) — at scripts/VermilionCity.asm:23: CheckEventReuseHL EVENT_GOT_BIKE_VOUCHER
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventHL EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER
-; PRET| 	ret nz
-; PRET| 	CheckEventReuseHL EVENT_GOT_BIKE_VOUCHER
-; PRET| 	ret z
-; PRET| 	SetEventReuseHL EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER
-; PRET| 	ret
+%assign event_byte -1
+.vermilionCityScript_19869:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
+    test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
+    jz .nr_22
+        ret
+.nr_22:
+    CheckEventReuseHL EVENT_GOT_BIKE_VOUCHER
+    jnz .nr_24
+        ret
+.nr_24:
+    SetEventReuseHL EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER
+    ret
 
+%assign event_byte -1
 .setFirstLockTrashCanIndex:
     call Random
     mov al, [ebp + hRandomAdd]
@@ -164,19 +174,25 @@ section .text
     mov [ebp + wFirstLockTrashCanIndex], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] VermilionCityLeftSSAnneCallbackScript (scripts/VermilionCity.asm:39-46) — at scripts/VermilionCity.asm:41: CheckEventReuseHL EVENT_WALKED_PAST_GUARD_AFTER_SS_ANNE_LEFT
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventHL EVENT_SS_ANNE_LEFT
-; PRET| 	ret z
-; PRET| 	CheckEventReuseHL EVENT_WALKED_PAST_GUARD_AFTER_SS_ANNE_LEFT
-; PRET| 	SetEventReuseHL EVENT_WALKED_PAST_GUARD_AFTER_SS_ANNE_LEFT
-; PRET| 	ret nz
-; PRET| 	ld a, SCRIPT_VERMILIONCITY_PLAYER_EXIT_SHIP
-; PRET| 	ld [wVermilionCityCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+VermilionCityLeftSSAnneCallbackScript:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_SS_ANNE_LEFT)
+    test byte [ebp + esi], EVENT_MASK(EVENT_SS_ANNE_LEFT)
+    jnz .nr_40
+        ret
+.nr_40:
+    CheckEventReuseHL EVENT_WALKED_PAST_GUARD_AFTER_SS_ANNE_LEFT
+    pushfd    ; SM83 form writes no flags
+        SetEventReuseHL EVENT_WALKED_PAST_GUARD_AFTER_SS_ANNE_LEFT
+    popfd
+    jz .nr_43
+        ret
+.nr_43:
+    mov al, SCRIPT_VERMILIONCITY_PLAYER_EXIT_SHIP
+    mov [ebp + wVermilionCityCurScript], al
+    ret
 
+%assign event_byte -1
 VermilionCity_ScriptPointers:
     dd VermilionCityDefaultScript
     dd VermilionCityPlayerMovingUp1Script
@@ -184,6 +200,7 @@ VermilionCity_ScriptPointers:
     dd VermilionCityPlayerMovingUp2Script
     dd VermilionCityPlayerAllowedToPassScript
 
+%assign event_byte -1
 VermilionCityDefaultScript:
     mov al, [ebp + wSpritePlayerStateData1FacingDirection]
     test al, al
@@ -217,13 +234,16 @@ VermilionCityDefaultScript:
     mov [ebp + wVermilionCityCurScript], al
     ret
 
+%assign event_byte -1
 .return:
     ret
 
+%assign event_byte -1
 SSAnneTicketCheckCoords:
     db 30, 18
     db -1
 
+%assign event_byte -1
 VermilionCityPlayerAllowedToPassScript:
     mov esi, SSAnneTicketCheckCoords
     call ArePlayerCoordsInArray
@@ -234,6 +254,7 @@ VermilionCityPlayerAllowedToPassScript:
     mov [ebp + wVermilionCityCurScript], al
     ret
 
+%assign event_byte -1
 VermilionCityPlayerExitShipScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -247,6 +268,7 @@ VermilionCityPlayerExitShipScript:
     mov [ebp + wVermilionCityCurScript], al
     ret
 
+%assign event_byte -1
 VermilionCityPlayerMovingUp2Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -260,6 +282,7 @@ VermilionCityPlayerMovingUp2Script:
     mov [ebp + wVermilionCityCurScript], al
     ret
 
+%assign event_byte -1
 VermilionCityPlayerMovingUp1Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -272,6 +295,7 @@ VermilionCityPlayerMovingUp1Script:
     mov [ebp + wVermilionCityCurScript], al
     ret
 
+%assign event_byte -1
 VermilionCity_TextPointers:
     dd VermilionCityBeautyText
     dd VermilionCityGambler1Text
@@ -291,6 +315,7 @@ VermilionCityBeautyText:
     text_far _VermilionCityBeautyText
     text_end
 
+%assign event_byte -1
 VermilionCityGambler1Text:
     CheckEvent EVENT_SS_ANNE_LEFT
     jnz .ship_departed
@@ -298,12 +323,14 @@ VermilionCityGambler1Text:
     call PrintText
     jmp .text_script_end
 
+%assign event_byte -1
 .ship_departed:
     mov esi, .SSAnneDepartedText
     call PrintText
 .text_script_end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .DidYouSeeText:
     text_far _VermilionCityGambler1DidYouSeeText
     text_end
@@ -311,6 +338,7 @@ VermilionCityGambler1Text:
     text_far _VermilionCityGambler1SSAnneDepartedText
     text_end
 
+%assign event_byte -1
 VermilionCitySailor1Text:
     CheckEvent EVENT_SS_ANNE_LEFT
     jnz .ship_departed
@@ -325,6 +353,7 @@ VermilionCitySailor1Text:
     call PrintText
     jmp .end
 
+%assign event_byte -1
 .greet_player_and_check_ticket:
     mov esi, .DoYouHaveATicketText
     call PrintText
@@ -338,6 +367,7 @@ VermilionCitySailor1Text:
     call PrintText
     jmp .end
 
+%assign event_byte -1
 .player_has_ticket:
     mov esi, .FlashedTicketText
     call PrintText
@@ -345,12 +375,14 @@ VermilionCitySailor1Text:
     mov [ebp + wVermilionCityCurScript], al
     jmp .end
 
+%assign event_byte -1
 .ship_departed:
     mov esi, .ShipSetSailText
     call PrintText
 .end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .inFrontOfOrBehindGuardCoords:
     db 29, 19
     db 31, 19
@@ -376,12 +408,14 @@ VermilionCityGambler2Text:
 VermilionCityMachopText:
     text_far _VermilionCityMachopText
 
+%assign event_byte -1
     mov al, 106
     call PlayCry
     call WaitForSoundToFinish
     mov esi, .StompingTheLandFlatText
     ret
 
+%assign event_byte -1
 .StompingTheLandFlatText:
     text_far _VermilionCityMachopStompingTheLandFlatText
     text_end
@@ -389,36 +423,43 @@ VermilionCitySailor2Text:
     text_far _VermilionCitySailor2Text
     text_end
 
+%assign event_byte -1
 VermilionCitySignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintSignText
     jmp TextScriptEnd
 
+%assign event_byte -1
 VermilionCityNoticeSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintNoticeSignText
     jmp TextScriptEnd
 
+%assign event_byte -1
 VermilionCityPokemonFanClubSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintPokemonFanClubSignText
     jmp TextScriptEnd
 
+%assign event_byte -1
 VermilionCityGymSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintGymSignText
     jmp TextScriptEnd
 
+%assign event_byte -1
 VermilionCityHarborSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintHarborSignText
     jmp TextScriptEnd
 
+%assign event_byte -1
 VermilionCityOfficerJennyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call VermilionCityPrintOfficerJennyText
     jmp TextScriptEnd
 
+%assign event_byte -1
 VermilionCityPrintOfficerJennyText:
     CheckEvent EVENT_GOT_SQUIRTLE_FROM_OFFICER_JENNY
     jnz .asm_f1a69
@@ -429,6 +470,7 @@ VermilionCityPrintOfficerJennyText:
     call PrintText
     ret
 
+%assign event_byte -1
 .asm_f1a24:
     mov esi, OfficerJennyText2
     call PrintText
@@ -459,16 +501,19 @@ VermilionCityPrintOfficerJennyText:
     SetEvent EVENT_GOT_SQUIRTLE_FROM_OFFICER_JENNY
     ret
 
+%assign event_byte -1
 .asm_f1a62:
     mov esi, OfficerJennyText4
     call PrintText
     ret
 
+%assign event_byte -1
 .asm_f1a69:
     mov esi, OfficerJennyText5
     call PrintText
     ret
 
+%assign event_byte -1
 OfficerJennyText1:
     text_far _OfficerJennyText1
     text_end
@@ -486,47 +531,57 @@ OfficerJennyText5:
     text_far _OfficerJennyText5
     text_end
 
+%assign event_byte -1
 VermilionCityPrintSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _VermilionCitySignText
     text_end
 
+%assign event_byte -1
 VermilionCityPrintNoticeSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _VermilionCityNoticeSignText
     text_end
 
+%assign event_byte -1
 VermilionCityPrintPokemonFanClubSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _VermilionCityPokemonFanClubSignText
     text_end
 
+%assign event_byte -1
 VermilionCityPrintGymSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _VermilionCityGymSignText
     text_end
 
+%assign event_byte -1
 VermilionCityPrintHarborSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _VermilionCityHarborSignText
     text_end

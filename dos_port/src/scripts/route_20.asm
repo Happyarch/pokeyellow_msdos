@@ -67,6 +67,7 @@ wRoute20CurScript                              equ 0xD627
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route20_Script:
     CheckAndResetEvent EVENT_IN_SEAFOAM_ISLANDS
     jz .sk_3
@@ -80,6 +81,7 @@ Route20_Script:
     mov [ebp + wRoute20CurScript], al
     ret
 
+%assign event_byte -1
 Route20BoulderScript:
     CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
     jz .next_boulder_check
@@ -98,6 +100,7 @@ Route20BoulderScript:
     pop esi
     jmp .hide_toggleable_objects
 
+%assign event_byte -1
 .ToggleableObjectIDs:
     db 225
     db 226
@@ -107,6 +110,7 @@ Route20BoulderScript:
     db 232
     db -1
 
+%assign event_byte -1
 .next_boulder_check:
     CheckBothEventsSet EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE
     jnz .nr_40
@@ -138,51 +142,61 @@ Route20BoulderScript:
 
 ; Route20_ScriptPointers (scripts/Route20.asm:60-102) — not re-emitted: Route20TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route20Swimmer1Text:
     mov esi, Route20TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route20Swimmer2Text:
     mov esi, Route20TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route20Swimmer3Text:
     mov esi, Route20TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route20Swimmer4Text:
     mov esi, Route20TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route20Swimmer5Text:
     mov esi, Route20TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route20Swimmer6Text:
     mov esi, Route20TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route20CooltrainerMText:
     mov esi, Route20TrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route20Swimmer7Text:
     mov esi, Route20TrainerHeader7
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route20Swimmer8Text:
     mov esi, Route20TrainerHeader8
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route20Swimmer9Text:
     mov esi, Route20TrainerHeader9
     call TalkToTrainer

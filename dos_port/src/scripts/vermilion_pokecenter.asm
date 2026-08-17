@@ -48,6 +48,7 @@ TEXT_VERMILIONPOKECENTER_CHANSEY               equ 5
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 VermilionPokecenter_Script:
     call Serial_TryEstablishingExternallyClockedConnection
     jmp EnableAutoTextBoxDrawing
@@ -77,6 +78,7 @@ VermilionPokecenter_Script:
 ; PRET| VermilionPokecenterLinkReceptionistText:
 ; PRET| 	script_cable_club_receptionist
 
+%assign event_byte -1
 VermilionPokecenterChanseyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PokecenterChanseyText

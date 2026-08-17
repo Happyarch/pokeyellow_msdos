@@ -37,9 +37,11 @@ extern _CinnabarMartSilphWorkerFText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CinnabarMart_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 CinnabarMart_TextPointers:
     dd CinnabarMartClerkText
     dd CinnabarMartSilphWorkerFText

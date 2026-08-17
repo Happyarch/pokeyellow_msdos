@@ -66,6 +66,7 @@ wRoute3CurScript                               equ 0xD5F7
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route3_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route3TrainerHeaders
@@ -77,6 +78,7 @@ Route3_Script:
 
 ; Route3_ScriptPointers (scripts/Route3.asm:11-51) — not re-emitted: Route3_ScriptPointers is already defined in assets/map_script_tables.inc.
 
+%assign event_byte -1
 Route3Youngster1Text:
     mov esi, Route3TrainerHeader0
     call TalkToTrainer
@@ -84,6 +86,7 @@ Route3Youngster1Text:
 
 ; Route3Youngster1BattleText (scripts/Route3.asm:60-69) — not re-emitted: Route3Youngster1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route3Youngster2Text:
     mov esi, Route3TrainerHeader1
     call TalkToTrainer
@@ -91,6 +94,7 @@ Route3Youngster2Text:
 
 ; Route3Youngster2BattleText (scripts/Route3.asm:78-87) — not re-emitted: Route3Youngster2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route3CooltrainerF1Text:
     mov esi, Route3TrainerHeader2
     call TalkToTrainer
@@ -98,6 +102,7 @@ Route3CooltrainerF1Text:
 
 ; Route3CooltrainerF1BattleText (scripts/Route3.asm:96-105) — not re-emitted: Route3CooltrainerF1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route3Youngster3Text:
     mov esi, Route3TrainerHeader3
     call TalkToTrainer
@@ -105,6 +110,7 @@ Route3Youngster3Text:
 
 ; Route3Youngster3BattleText (scripts/Route3.asm:114-123) — not re-emitted: Route3Youngster3BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route3CooltrainerF2Text:
     mov esi, Route3TrainerHeader4
     call TalkToTrainer
@@ -112,6 +118,7 @@ Route3CooltrainerF2Text:
 
 ; Route3CooltrainerF2BattleText (scripts/Route3.asm:132-141) — not re-emitted: Route3CooltrainerF2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route3Youngster4Text:
     mov esi, Route3TrainerHeader5
     call TalkToTrainer
@@ -119,6 +126,7 @@ Route3Youngster4Text:
 
 ; Route3Youngster4BattleText (scripts/Route3.asm:150-159) — not re-emitted: Route3Youngster4BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route3Youngster5Text:
     mov esi, Route3TrainerHeader6
     call TalkToTrainer
@@ -126,6 +134,7 @@ Route3Youngster5Text:
 
 ; Route3Youngster5BattleText (scripts/Route3.asm:168-177) — not re-emitted: Route3Youngster5BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route3CooltrainerF3Text:
     mov esi, Route3TrainerHeader7
     call TalkToTrainer

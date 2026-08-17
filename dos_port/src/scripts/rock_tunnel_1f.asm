@@ -57,6 +57,7 @@ wRockTunnel1FCurScript                         equ 0xD620
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 RockTunnel1F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, RockTunnel1TrainerHeaders
@@ -68,30 +69,37 @@ RockTunnel1F_Script:
 
 ; RockTunnel1F_ScriptPointers (scripts/RockTunnel1F.asm:11-43) — not re-emitted: RockTunnel1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 RockTunnel1FHiker1Text:
     mov esi, RockTunnel1TrainerHeader0
     jmp RockTunnel1FTalkToTrainer
 
+%assign event_byte -1
 RockTunnel1FHiker2Text:
     mov esi, RockTunnel1TrainerHeader1
     jmp RockTunnel1FTalkToTrainer
 
+%assign event_byte -1
 RockTunnel1FHiker3Text:
     mov esi, RockTunnel1TrainerHeader2
     jmp RockTunnel1FTalkToTrainer
 
+%assign event_byte -1
 RockTunnel1FSuperNerdText:
     mov esi, RockTunnel1TrainerHeader3
     jmp RockTunnel1FTalkToTrainer
 
+%assign event_byte -1
 RockTunnel1FCooltrainerF1Text:
     mov esi, RockTunnel1TrainerHeader4
     jmp RockTunnel1FTalkToTrainer
 
+%assign event_byte -1
 RockTunnel1FCooltrainerF2Text:
     mov esi, RockTunnel1TrainerHeader5
     jmp RockTunnel1FTalkToTrainer
 
+%assign event_byte -1
 RockTunnel1FCooltrainerF3Text:
     mov esi, RockTunnel1TrainerHeader6
 RockTunnel1FTalkToTrainer:

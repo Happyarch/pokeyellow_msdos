@@ -105,6 +105,7 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonTower7F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, PokemonTower7F_ScriptPointers
@@ -112,6 +113,7 @@ PokemonTower7F_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 PokemonTower7FSetDefaultScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -119,6 +121,7 @@ PokemonTower7FSetScript:
     mov [ebp + wPokemonTower7FCurScript], al
     ret
 
+%assign event_byte -1
 PokemonTower7F_ScriptPointers:
     dd PokemonTower7FScript0
     dd PokemonTower7FScript1
@@ -133,6 +136,7 @@ PokemonTower7F_ScriptPointers:
     dd PokemonTower7FScript10
     dd PokemonTower7FWarpToMrFujiHouseScript
 
+%assign event_byte -1
     CheckEvent EVENT_BEAT_POKEMONTOWER_7_JESSIE_JAMES
     jnz .sk_36
         call PokemonTower7FScript_60d2a
@@ -178,6 +182,7 @@ PokemonTower7F_ScriptPointers:
 ; PRET| 	call PokemonTower7FSetScript
 ; PRET| 	ret
 
+%assign event_byte -1
 PokemonTower7FMovementData_60d7a:
     db 0x4
 PokemonTower7FMovementData_60d7b:
@@ -238,6 +243,7 @@ PokemonTower7FMovementData_60d7b:
 ; PRET| 	call PokemonTower7FSetScript
 ; PRET| 	ret
 
+%assign event_byte -1
 PokemonTower7FScript5:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -314,6 +320,7 @@ PokemonTower7FScript7:
 ; PRET| 	call PokemonTower7FSetScript
 ; PRET| 	ret
 
+%assign event_byte -1
 PokemonTower7FScript9:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -329,6 +336,7 @@ PokemonTower7FScript9:
     call PokemonTower7FSetScript
     ret
 
+%assign event_byte -1
 PokemonTower7FScript10:
     call PlayDefaultMusic
     xor al, al
@@ -349,12 +357,14 @@ PokemonTower7FScript10:
 ; PRET| 	call Delay3
 ; PRET| 	ret
 
+%assign event_byte -1
 PokemonTower7FScript_HideObject:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     ret
 
+%assign event_byte -1
 PokemonTower7FWarpToMrFujiHouseScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -376,6 +386,7 @@ PokemonTower7FWarpToMrFujiHouseScript:
     mov [ebp + wPokemonTower7FCurScript], al
     ret
 
+%assign event_byte -1
 PokemonTower7F_TextPointers:
     dd PokemonTower7FJessieJamesText
     dd PokemonTower7FJessieJamesText
@@ -405,6 +416,7 @@ PokemonTower7FText4:
 ; PRET| 	call DelayFrames
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 PokemonTower7FText5:
     text_far _PokemonTowerJessieJamesText2
     text_end
@@ -414,10 +426,12 @@ PokemonTower7FJessieJamesEndBattleText:
 PokemonTower7FText6:
     text_far _PokemonTowerJessieJamesText4
 
+%assign event_byte -1
     mov bl, 64
     call DelayFrames
     jmp TextScriptEnd
 
+%assign event_byte -1
 PokemonTower7FMrFujiText:
     mov esi, .RescueText
     call PrintText
@@ -439,6 +453,7 @@ PokemonTower7FMrFujiText:
     mov [ebp + wPokemonTower7FCurScript], al
     jmp TextScriptEnd
 
+%assign event_byte -1
 .RescueText:
     text_far _PokemonTower7FMrFujiRescueText
     text_end

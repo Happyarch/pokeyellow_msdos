@@ -72,6 +72,7 @@ wRoute11CurScript                              equ 0xD622
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route11_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route11TrainerHeaders
@@ -83,6 +84,7 @@ Route11_Script:
 
 ; Route11_ScriptPointers (scripts/Route11.asm:11-52) — not re-emitted: Route11_ScriptPointers is already defined in assets/map_script_tables.inc.
 
+%assign event_byte -1
 Route11Gambler1Text:
     mov esi, Route11TrainerHeader0
     call TalkToTrainer
@@ -90,6 +92,7 @@ Route11Gambler1Text:
 
 ; Route11Gambler1BattleText (scripts/Route11.asm:61-70) — not re-emitted: Route11Gambler1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route11Gambler2Text:
     mov esi, Route11TrainerHeader1
     call TalkToTrainer
@@ -97,6 +100,7 @@ Route11Gambler2Text:
 
 ; Route11Gambler2BattleText (scripts/Route11.asm:79-88) — not re-emitted: Route11Gambler2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route11Youngster1Text:
     mov esi, Route11TrainerHeader2
     call TalkToTrainer
@@ -104,6 +108,7 @@ Route11Youngster1Text:
 
 ; Route11Youngster1BattleText (scripts/Route11.asm:97-106) — not re-emitted: Route11Youngster1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route11SuperNerd1Text:
     mov esi, Route11TrainerHeader3
     call TalkToTrainer
@@ -111,6 +116,7 @@ Route11SuperNerd1Text:
 
 ; Route11SuperNerd1BattleText (scripts/Route11.asm:115-124) — not re-emitted: Route11SuperNerd1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route11Youngster2Text:
     mov esi, Route11TrainerHeader4
     call TalkToTrainer
@@ -118,6 +124,7 @@ Route11Youngster2Text:
 
 ; Route11Youngster2BattleText (scripts/Route11.asm:133-142) — not re-emitted: Route11Youngster2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route11Gambler3Text:
     mov esi, Route11TrainerHeader5
     call TalkToTrainer
@@ -125,6 +132,7 @@ Route11Gambler3Text:
 
 ; Route11Gambler3BattleText (scripts/Route11.asm:151-160) — not re-emitted: Route11Gambler3BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route11Gambler4Text:
     mov esi, Route11TrainerHeader6
     call TalkToTrainer
@@ -132,6 +140,7 @@ Route11Gambler4Text:
 
 ; Route11Gambler4BattleText (scripts/Route11.asm:169-178) — not re-emitted: Route11Gambler4BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route11Youngster3Text:
     mov esi, Route11TrainerHeader7
     call TalkToTrainer
@@ -139,6 +148,7 @@ Route11Youngster3Text:
 
 ; Route11Youngster3BattleText (scripts/Route11.asm:187-196) — not re-emitted: Route11Youngster3BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route11SuperNerd2Text:
     mov esi, Route11TrainerHeader8
     call TalkToTrainer
@@ -146,6 +156,7 @@ Route11SuperNerd2Text:
 
 ; Route11SuperNerd2BattleText (scripts/Route11.asm:205-214) — not re-emitted: Route11SuperNerd2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route11Youngster4Text:
     mov esi, Route11TrainerHeader9
     call TalkToTrainer

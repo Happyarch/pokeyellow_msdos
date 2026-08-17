@@ -49,6 +49,7 @@ wPokemonMansionB1FCurScript                    equ 0xD63D
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonMansionB1F_Script:
     call MansionB1FCheckReplaceSwitchDoorBlocks
     call EnableAutoTextBoxDrawing
@@ -59,6 +60,7 @@ PokemonMansionB1F_Script:
     mov [ebp + wPokemonMansionB1FCurScript], al
     ret
 
+%assign event_byte -1
 MansionB1FCheckReplaceSwitchDoorBlocks:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -84,6 +86,7 @@ MansionB1FCheckReplaceSwitchDoorBlocks:
     call Mansion2ReplaceBlock
     ret
 
+%assign event_byte -1
 .switchTurnedOn:
     mov al, 0x2d
     mov bx, ((8) << 8) | (13)
@@ -103,11 +106,13 @@ MansionB1FCheckReplaceSwitchDoorBlocks:
 
 ; PokemonMansionB1F_ScriptPointers (scripts/PokemonMansionB1F.asm:57-80) — not re-emitted: Mansion4TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 PokemonMansionB1FBurglarText:
     mov esi, Mansion4TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 PokemonMansionB1FScientistText:
     mov esi, Mansion4TrainerHeader1
     call TalkToTrainer

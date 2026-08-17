@@ -84,6 +84,7 @@ wWhichBadge                                    equ 0xCD3D
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route23_Script:
     call Route23SetVictoryRoadBoulders
     call EnableAutoTextBoxDrawing
@@ -91,6 +92,7 @@ Route23_Script:
     mov al, [ebp + wRoute23CurScript]
     jmp CallFunctionInTable
 
+%assign event_byte -1
 Route23SetVictoryRoadBoulders:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
@@ -111,11 +113,13 @@ Route23SetVictoryRoadBoulders:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp HideObject
 
+%assign event_byte -1
 Route23_ScriptPointers:
     dd Route23DefaultScript
     dd Route23PlayerMovingScript
     dd Route23ResetToDefaultScript
 
+%assign event_byte -1
 Route23DefaultScript:
     mov esi, Route23GuardsYCoords
     mov al, [ebp + wYCoord]
@@ -147,6 +151,7 @@ Route23DefaultScript:
     mov [ebp + wWhichBadge], al
     mov bh, FLAG_TEST
     mov esi, wEventFlags + EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
+    %assign event_byte EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call FlagActionPredef
     mov al, bl
@@ -160,6 +165,7 @@ Route23DefaultScript:
     mov [ebp + hJoyHeld], al
     ret
 
+%assign event_byte -1
 Route23GuardsYCoords:
     db 35
     db 56
@@ -225,6 +231,7 @@ Route23GuardsYCoords:
 ; PRET| CascadeBadgeText:
 ; PRET| 	db "CASCADEBADGE@"
 
+%assign event_byte -1
 Route23MovePlayerDownScript:
     mov al, 0x1
     mov [ebp + wSimulatedJoypadStatesIndex], al
@@ -235,6 +242,7 @@ Route23MovePlayerDownScript:
     mov [ebp + wJoyIgnore], al
     jmp StartSimulatingJoypadStates
 
+%assign event_byte -1
 Route23PlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -246,6 +254,7 @@ Route23ResetToDefaultScript:
     mov [ebp + wRoute23CurScript], al
     ret
 
+%assign event_byte -1
 Route23_TextPointers:
     dd Route23Guard1Text
     dd Route23Guard2Text
@@ -256,41 +265,49 @@ Route23_TextPointers:
     dd Route23Guard5Text
     dd Route23VictoryRoadGateSignText
 
+%assign event_byte -1
 Route23Guard1Text:
     mov al, ((EVENT_PASSED_CASCADEBADGE_CHECK) - ((EVENT_PASSED_CASCADEBADGE_CHECK) / 8) * 8) + ((EVENT_PASSED_EARTHBADGE_CHECK) - (EVENT_PASSED_CASCADEBADGE_CHECK))
     call Route23CheckForBadgeScript
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route23Guard2Text:
     mov al, ((EVENT_PASSED_CASCADEBADGE_CHECK) - ((EVENT_PASSED_CASCADEBADGE_CHECK) / 8) * 8) + ((EVENT_PASSED_VOLCANOBADGE_CHECK) - (EVENT_PASSED_CASCADEBADGE_CHECK))
     call Route23CheckForBadgeScript
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route23Swimmer1Text:
     mov al, ((EVENT_PASSED_CASCADEBADGE_CHECK) - ((EVENT_PASSED_CASCADEBADGE_CHECK) / 8) * 8) + ((EVENT_PASSED_MARSHBADGE_CHECK) - (EVENT_PASSED_CASCADEBADGE_CHECK))
     call Route23CheckForBadgeScript
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route23Swimmer2Text:
     mov al, ((EVENT_PASSED_CASCADEBADGE_CHECK) - ((EVENT_PASSED_CASCADEBADGE_CHECK) / 8) * 8) + ((EVENT_PASSED_SOULBADGE_CHECK) - (EVENT_PASSED_CASCADEBADGE_CHECK))
     call Route23CheckForBadgeScript
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route23Guard3Text:
     mov al, ((EVENT_PASSED_CASCADEBADGE_CHECK) - ((EVENT_PASSED_CASCADEBADGE_CHECK) / 8) * 8) + ((EVENT_PASSED_RAINBOWBADGE_CHECK) - (EVENT_PASSED_CASCADEBADGE_CHECK))
     call Route23CheckForBadgeScript
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route23Guard4Text:
     mov al, ((EVENT_PASSED_CASCADEBADGE_CHECK) - ((EVENT_PASSED_CASCADEBADGE_CHECK) / 8) * 8) + ((EVENT_PASSED_THUNDERBADGE_CHECK) - (EVENT_PASSED_CASCADEBADGE_CHECK))
     call Route23CheckForBadgeScript
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route23Guard5Text:
     mov al, (EVENT_PASSED_CASCADEBADGE_CHECK) - ((EVENT_PASSED_CASCADEBADGE_CHECK) / 8) * 8
     call Route23CheckForBadgeScript
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route23CheckForBadgeScript:
     mov [ebp + wWhichBadge], al
     call Route23CopyBadgeTextScript
@@ -311,6 +328,7 @@ Route23CheckForBadgeScript:
     mov [ebp + wRoute23CurScript], al
     ret
 
+%assign event_byte -1
 .have_badge:
     mov esi, Route23OhThatIsTheBadgeText
     call PrintText
@@ -318,19 +336,23 @@ Route23CheckForBadgeScript:
     mov bl, al
     mov bh, FLAG_SET
     mov esi, wEventFlags + EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
+    %assign event_byte EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     call FlagActionPredef
     mov al, SCRIPT_ROUTE23_RESET_TO_DEFAULT
     mov [ebp + wRoute23CurScript], al
     ret
 
+%assign event_byte -1
 Route23PrintOhThatsTheBadgeTextScript:
     mov esi, Route23OhThatIsTheBadgeText
     jmp PrintText
 
+%assign event_byte -1
 Route23YouDontHaveTheBadgeYetText:
     text_far _Route23YouDontHaveTheBadgeYetText
 
+%assign event_byte -1
     mov al, SFX_DENIED
     call PlaySoundWaitForCurrent
     call WaitForSoundToFinish

@@ -41,10 +41,12 @@ extern _VermilionPidgeyHouseYoungsterText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 VermilionPidgeyHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 VermilionPidgeyHouse_TextPointers:
     dd VermilionPidgeyHouseYoungsterText
     dd VermilionPidgeyHousePidgeyText
@@ -55,11 +57,13 @@ VermilionPidgeyHouseYoungsterText:
 VermilionPidgeyHousePidgeyText:
     text_far _VermilionPidgeyHousePidgeyText
 
+%assign event_byte -1
     mov al, 36
     call PlayCry
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
+%assign event_byte -1
 VermilionPidgeyHouseLetterText:
     text_far _VermilionPidgeyHouseLetterText
     text_end

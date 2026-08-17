@@ -147,6 +147,7 @@ wViridianCityCurScript                         equ 0xD5F3
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 ViridianCity_Script:
     call EnableAutoTextBoxDrawing
     mov esi, ViridianCity_ScriptPointers
@@ -154,6 +155,7 @@ ViridianCity_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 ViridianCity_ScriptPointers:
     dd ViridianCityDefaultScript
     dd ViridianCityAfterPokedexScript
@@ -167,17 +169,20 @@ ViridianCity_ScriptPointers:
     dd ViridianCityPostInitialCatchTraining
     dd ViridianCityOldManMovingDownScript
 
+%assign event_byte -1
 ViridianCityDefaultScript:
     call ViridianCityCheckGymOpenScript
     call ViridianCityCheckSleepingOldMan
     ret
 
+%assign event_byte -1
 ViridianCityAfterPokedexScript:
     call ViridianCityCheckWaitingOldMan
 ViridianCityPostCatchTraining:
     call ViridianCityCheckGymOpenScript
     ret
 
+%assign event_byte -1
 ViridianCityCheckGymOpenScript:
     CheckEvent EVENT_VIRIDIAN_GYM_OPEN
     jz .nr_35
@@ -189,6 +194,7 @@ ViridianCityCheckGymOpenScript:
     SetEvent EVENT_VIRIDIAN_GYM_OPEN
     ret
 
+%assign event_byte -1
 .gym_closed:
     mov al, [ebp + wYCoord]
     cmp al, 8
@@ -216,6 +222,7 @@ ViridianCityCheckGymOpenScript:
     mov [ebp + wViridianCityCurScript], al
     ret
 
+%assign event_byte -1
 ViridianCityPlayerMovingDownPostTrainingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -227,6 +234,7 @@ ViridianCityPlayerMovingDownPostTrainingScript:
     mov [ebp + wViridianCityCurScript], al
     ret
 
+%assign event_byte -1
 ViridianCityCheckSleepingOldMan:
     mov al, [ebp + wYCoord]
     cmp al, 9
@@ -248,6 +256,7 @@ ViridianCityCheckSleepingOldMan:
     mov [ebp + wViridianCityCurScript], al
     ret
 
+%assign event_byte -1
 ViridianCityOldManStartCatchTrainingScript:
     call .SetupSprite
     call .SetupBattle
@@ -256,6 +265,7 @@ ViridianCityOldManStartCatchTrainingScript:
     mov [ebp + wViridianCityCurScript], al
     ret
 
+%assign event_byte -1
 .SetupBattle:
     xor al, al
     mov [ebp + wListScrollOffset], al
@@ -267,6 +277,7 @@ ViridianCityOldManStartCatchTrainingScript:
     mov [ebp + wCurOpponent], al
     ret
 
+%assign event_byte -1
 .SetupSprite:
     mov al, [ebp + wSprite03StateData1YPixels]
     mov [ebp + hSpriteScreenYCoord], al
@@ -278,6 +289,7 @@ ViridianCityOldManStartCatchTrainingScript:
     mov [ebp + hSpriteMapXCoord], al
     ret
 
+%assign event_byte -1
 ViridianCityOldManEndCatchTrainingScript:
     call .SetupSprite
     call UpdateSprites
@@ -295,6 +307,7 @@ ViridianCityOldManEndCatchTrainingScript:
     mov [ebp + wViridianCityCurScript], al
     ret
 
+%assign event_byte -1
 .SetupSprite:
     mov al, [ebp + hSpriteScreenYCoord]
     mov [ebp + wSprite03StateData1YPixels], al
@@ -306,6 +319,7 @@ ViridianCityOldManEndCatchTrainingScript:
     mov [ebp + wSprite03StateData2MapX], al
     ret
 
+%assign event_byte -1
 ViridianCityPlayerMovingDownScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -317,6 +331,7 @@ ViridianCityPlayerMovingDownScript:
     mov [ebp + wViridianCityCurScript], al
     ret
 
+%assign event_byte -1
 ViridianCityMovePlayerDownScript:
     call StartSimulatingJoypadStates
     mov al, 0x1
@@ -328,6 +343,7 @@ ViridianCityMovePlayerDownScript:
     mov [ebp + wJoyIgnore], al
     ret
 
+%assign event_byte -1
 ViridianCityCheckWaitingOldMan:
     CheckEvent EVENT_COMPLETED_CATCH_TRAINING
     jz .nr_170
@@ -357,6 +373,7 @@ ViridianCityCheckWaitingOldMan:
     mov [ebp + wJoyIgnore], al
     ret
 
+%assign event_byte -1
 ViridianCityOldManInitialCatchTrainingScript:
     call ViridianCityOldManStartCatchTrainingScript.SetupSprite
     call ViridianCityOldManStartCatchTrainingScript.SetupBattle
@@ -367,6 +384,7 @@ ViridianCityOldManInitialCatchTrainingScript:
     mov [ebp + wViridianCityCurScript], al
     ret
 
+%assign event_byte -1
 ViridianCityOldManEndInitialCatchTrainingScript:
     call ViridianCityOldManEndCatchTrainingScript.SetupSprite
     call UpdateSprites
@@ -403,6 +421,7 @@ ViridianCityOldManEndInitialCatchTrainingScript:
 ; PRET| 	ld [wViridianCityCurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 ViridianCityOldManMovementData1:
     db NPC_MOVEMENT_RIGHT
 ViridianCityOldManMovementData2:
@@ -414,6 +433,7 @@ ViridianCityOldManMovementData2:
     db NPC_MOVEMENT_DOWN
     db 0xff
 
+%assign event_byte -1
 ViridianCityOldManMovingDownScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -430,6 +450,7 @@ ViridianCityOldManMovingDownScript:
     mov [ebp + wViridianCityCurScript], al
     ret
 
+%assign event_byte -1
 ViridianCity_TextPointers:
     dd ViridianCityYoungster1Text
     dd ViridianCityGambler1Text
@@ -448,45 +469,54 @@ ViridianCity_TextPointers:
     dd ViridianCityGymLockedText
     dd ViridianCityOldManYouNeedToWeakenTheTargetText
 
+%assign event_byte -1
 ViridianCityYoungster1Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintYoungster1Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityGambler1Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintGambler1Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityYoungster2Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintYoungster2Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityGirlText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintGirlText
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityOldManSleepyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintOldManSleepyText
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityFisherText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintFisherText
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityOldManText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintOldManText
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityOldManYouNeedToWeakenTheTargetText:
     text_far _ViridianCityOldManYouNeedToWeakenTheTargetText
     text_end
 
+%assign event_byte -1
 ViridianCityOldMan2Text:
     CheckEvent EVENT_COMPLETED_CATCH_TRAINING
     jnz .completed_training
@@ -498,12 +528,14 @@ ViridianCityOldMan2Text:
     mov [ebp + wViridianCityCurScript], al
     jmp .done
 
+%assign event_byte -1
 .completed_training:
     mov esi, .LosingMyTouchText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .HadMyCoffeeNowText:
     text_far _ViridianCityOldManHadMyCoffeeNowText
     text_end
@@ -511,40 +543,48 @@ ViridianCityOldMan2Text:
     text_far _ViridianCityOldManLosingMyTouchText
     text_end
 
+%assign event_byte -1
 ViridianCitySignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintSignText
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityTrainerTips1Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintTrainerTips1Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityTrainerTips2Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintTrainerTips2Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityGymSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintGymSignText
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityGymLockedText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call ViridianCityPrintGymLockedText
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianCityPrintYoungster1Text:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianCityYoungster1Text
     text_end
 
+%assign event_byte -1
 ViridianCityPrintGambler1Text:
     mov esi, .GymLeaderReturnedText
     mov al, [ebp + wObtainedBadges]
@@ -557,6 +597,7 @@ ViridianCityPrintGambler1Text:
     call PrintText
     ret
 
+%assign event_byte -1
 .GymAlwaysClosedText:
     text_far _ViridianCityGambler1GymAlwaysClosedText
     text_end
@@ -564,6 +605,7 @@ ViridianCityPrintGambler1Text:
     text_far _ViridianCityGambler1GymLeaderReturnedText
     text_end
 
+%assign event_byte -1
 ViridianCityPrintYoungster2Text:
     mov esi, .YouWantToKnowAboutText
     call PrintText
@@ -577,6 +619,7 @@ ViridianCityPrintYoungster2Text:
     call PrintText
     ret
 
+%assign event_byte -1
 .YouWantToKnowAboutText:
     text_far _ViridianCityYoungster2YouWantToKnowAboutText
     text_end
@@ -587,6 +630,7 @@ ViridianCityPrintYoungster2Text:
     text_far ViridianCityYoungster2CaterpieAndWeedleDescriptionText
     text_end
 
+%assign event_byte -1
 ViridianCityPrintGirlText:
     mov esi, .WhenIGoShopText
     CheckEvent EVENT_GOT_POKEDEX
@@ -596,6 +640,7 @@ ViridianCityPrintGirlText:
     call PrintText
     ret
 
+%assign event_byte -1
 .HasntHadHisCoffeeYetText:
     text_far _ViridianCityGirlHasntHadHisCoffeeYetText
     text_end
@@ -603,6 +648,7 @@ ViridianCityPrintGirlText:
     text_far _ViridianCityGirlWhenIGoShopText
     text_end
 
+%assign event_byte -1
 ViridianCityPrintOldManSleepyText:
     mov esi, .PrivatePropertyText
     call PrintText
@@ -615,6 +661,7 @@ ViridianCityPrintOldManSleepyText:
     mov [ebp + wViridianCityCurScript], al
     ret
 
+%assign event_byte -1
 .PrivatePropertyText:
     text_far _ViridianCityOldManSleepyPrivatePropertyText
     text_end
@@ -671,6 +718,7 @@ ViridianCityPrintOldManSleepyText:
 ; PRET| 	text_far _ViridianCityFisherTM42NoRoomText
 ; PRET| 	text_end
 
+%assign event_byte -1
 ViridianCityPrintOldManText:
     mov esi, .WantMeToShowYouAgainText
     call PrintText
@@ -686,12 +734,14 @@ ViridianCityPrintOldManText:
     mov [ebp + wViridianCityCurScript], al
     jmp .done
 
+%assign event_byte -1
 .refused:
     mov esi, .NotGoodEnoughForYouText
     call PrintText
 .done:
     ret
 
+%assign event_byte -1
 .WantMeToShowYouAgainText:
     text_far _ViridianCityOldManWantMeToShowYouAgainText
     text_end
@@ -702,57 +752,69 @@ ViridianCityPrintOldManText:
     text_far _ViridianCityOldManNotGoodEnoughForYouText
     text_end
 
+%assign event_byte -1
 ViridianCityPrintSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianCitySignText
     text_end
 
+%assign event_byte -1
 ViridianCityPrintTrainerTips1Text:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianCityTrainerTips1Text
     text_end
 
+%assign event_byte -1
 ViridianCityPrintTrainerTips2Text:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianCityTrainerTips2Text
     text_end
 
+%assign event_byte -1
 ViridianCityPrintGymSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianCityGymSignText
     text_end
 
+%assign event_byte -1
 ViridianCityPrintGymLockedText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianCityGymLockedText
     text_end
 
+%assign event_byte -1
 ViridianCityMovePikachu:
     mov esi, ViridianCityPikachuMovementData
     mov bh, SPRITE_FACING_RIGHT
     call TryApplyPikachuMovementData
     ret
 
+%assign event_byte -1
 ViridianCityPikachuMovementData:
     db 0x00
     db 0x1d

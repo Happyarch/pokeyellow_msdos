@@ -57,6 +57,7 @@ wRocketHideoutB1FCurScript                     equ 0xD630
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 RocketHideoutB1F_Script:
     call RocketHideoutB1FDoorCallbackScript
     call EnableAutoTextBoxDrawing
@@ -99,26 +100,31 @@ RocketHideoutB1F_Script:
 
 ; RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — not re-emitted: RocketHideout1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 RocketHideoutB1FRocket1Text:
     mov esi, RocketHideout1TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 RocketHideoutB1FRocket2Text:
     mov esi, RocketHideout1TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 RocketHideoutB1FRocket3Text:
     mov esi, RocketHideout1TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 RocketHideoutB1FRocket4Text:
     mov esi, RocketHideout1TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 RocketHideoutB1FRocket5Text:
     mov esi, RocketHideout1TrainerHeader4
     call TalkToTrainer

@@ -68,6 +68,7 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route22Gate_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route22Gate_ScriptPointers
@@ -82,11 +83,13 @@ Route22Gate_Script:
     mov [ebp + wLastMap], al
     ret
 
+%assign event_byte -1
 Route22Gate_ScriptPointers:
     dd Route22GateDefaultScript
     dd Route22GatePlayerMovingScript
     dd Route22GateNoopScript
 
+%assign event_byte -1
 Route22GateDefaultScript:
     mov esi, Route22GateScriptCoords
     call ArePlayerCoordsInArray
@@ -102,11 +105,13 @@ Route22GateDefaultScript:
     call DisplayTextID
     ret
 
+%assign event_byte -1
 Route22GateScriptCoords:
     db 2, 4
     db 2, 5
     db -1
 
+%assign event_byte -1
 Route22GateMovePlayerDownScript:
     mov al, 0x1
     mov [ebp + wSimulatedJoypadStatesIndex], al
@@ -116,6 +121,7 @@ Route22GateMovePlayerDownScript:
     mov [ebp + wJoyIgnore], al
     jmp StartSimulatingJoypadStates
 
+%assign event_byte -1
 Route22GatePlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -130,9 +136,11 @@ Route22GatePlayerMovingScript:
 Route22GateNoopScript:
     ret
 
+%assign event_byte -1
 Route22Gate_TextPointers:
     dd Route22GateGuardText
 
+%assign event_byte -1
 Route22GateGuardText:
     mov al, [ebp + wObtainedBadges]
     test al, (1 << (0))
@@ -143,6 +151,7 @@ Route22GateGuardText:
     mov al, SCRIPT_ROUTE22GATE_PLAYER_MOVING
     jmp .set_current_script
 
+%assign event_byte -1
 .has_boulderbadge:
     mov esi, Route22GateGuardGoRightAheadText
     call PrintText
@@ -151,9 +160,11 @@ Route22GateGuardText:
     mov [ebp + wRoute22GateCurScript], al
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route22GateGuardNoBoulderbadgeText:
     text_far _Route22GateGuardNoBoulderbadgeText
 
+%assign event_byte -1
     mov al, SFX_DENIED
     call PlaySoundWaitForCurrent
     call WaitForSoundToFinish

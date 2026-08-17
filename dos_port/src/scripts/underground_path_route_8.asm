@@ -35,11 +35,13 @@ extern _UndergroundPathRoute8GirlText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 UndergroundPathRoute8_Script:
     mov al, ROUTE_8
     mov [ebp + wLastMap], al
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 UndergroundPathRoute8_TextPointers:
     dd UndergroundPathRoute8GirlText
 UndergroundPathRoute8GirlText:

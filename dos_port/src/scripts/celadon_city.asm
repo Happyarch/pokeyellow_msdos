@@ -79,6 +79,7 @@ wCeladonCityCurScript                          equ 0xD640
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeladonCity_Script:
     call EnableAutoTextBoxDrawing
     mov esi, CeladonCity_ScriptPointers
@@ -86,14 +87,17 @@ CeladonCity_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 CeladonCity_ScriptPointers:
     dd CeladonCityScript1
 
+%assign event_byte -1
 CeladonCityScript1:
     ResetEvents EVENT_1B8, EVENT_1BF
     ResetEvent EVENT_67F
     ret
 
+%assign event_byte -1
 CeladonCity_TextPointers:
     dd CeladonCityLittleGirlText
     dd CeladonCityGramps1Text
@@ -186,10 +190,12 @@ CeladonCityGramps2Text:
 ; PRET| CeladonCityPoliwrathText:
 ; PRET| 	text_far _CeladonCityPoliwrathText
 
+%assign event_byte -1
     mov al, 111
     call PlayCry
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeladonCityRocket1Text:
     text_far _CeladonCityRocket1Text
     text_end
@@ -197,11 +203,13 @@ CeladonCityRocket2Text:
     text_far _CeladonCityRocket2Text
     text_end
 
+%assign event_byte -1
 CeladonCityTrainerTips1Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CeladonCityPrintTrainerTips1Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeladonCitySignText:
     text_far _CeladonCitySignText
     text_end
@@ -224,11 +232,13 @@ CeladonCityGameCornerSignText:
     text_far _CeladonCityGameCornerSignText
     text_end
 
+%assign event_byte -1
 CeladonCityPrintTrainerTips1Text:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _CeladonCityTrainerTips1Text
     text_end

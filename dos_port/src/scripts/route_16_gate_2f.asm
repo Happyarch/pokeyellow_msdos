@@ -43,45 +43,55 @@ extern _Route16Gate2FRightBinocularsText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route16Gate2F_Script:
     jmp DisableAutoTextBoxDrawing
 
+%assign event_byte -1
 Route16Gate2F_TextPointers:
     dd Route16Gate2FLittleBoyText
     dd Route16Gate2FLittleGirlText
     dd Route16Gate2FLeftBinocularsText
     dd Route16Gate2FRightBinocularsText
 
+%assign event_byte -1
 Route16Gate2FLittleBoyText:
     mov esi, .Text
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _Route16Gate2FLittleBoyText
     text_end
 
+%assign event_byte -1
 Route16Gate2FLittleGirlText:
     mov esi, .Text
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _Route16Gate2FLittleGirlText
     text_end
 
+%assign event_byte -1
 Route16Gate2FLeftBinocularsText:
     mov esi, .Text
     jmp GateUpstairsScript_PrintIfFacingUp
 
+%assign event_byte -1
 .Text:
     text_far _Route16Gate2FLeftBinocularsText
     text_end
 
+%assign event_byte -1
 Route16Gate2FRightBinocularsText:
     mov esi, .Text
     jmp GateUpstairsScript_PrintIfFacingUp
 
+%assign event_byte -1
 .Text:
     text_far _Route16Gate2FRightBinocularsText
     text_end

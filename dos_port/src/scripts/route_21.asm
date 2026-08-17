@@ -61,6 +61,7 @@ wRoute21CurScript                              equ 0xD61D
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route21_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route21TrainerHeaders
@@ -72,46 +73,55 @@ Route21_Script:
 
 ; Route21_ScriptPointers (scripts/Route21.asm:11-48) — not re-emitted: Route21_ScriptPointers is already defined in assets/map_script_tables.inc.
 
+%assign event_byte -1
 Route21Fisher1Text:
     mov esi, Route21TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route21Fisher2Text:
     mov esi, Route21TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route21Swimmer1Text:
     mov esi, Route21TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route21Swimmer2Text:
     mov esi, Route21TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route21Swimmer3Text:
     mov esi, Route21TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route21Swimmer4Text:
     mov esi, Route21TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route21Swimmer5Text:
     mov esi, Route21TrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route21Fisher3Text:
     mov esi, Route21TrainerHeader7
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route21Fisher4Text:
     mov esi, Route21TrainerHeader8
     call TalkToTrainer

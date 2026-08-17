@@ -41,10 +41,12 @@ extern _PewterNidoranHouseNidoranText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PewterNidoranHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 PewterNidoranHouse_TextPointers:
     dd PewterNidoranHouseNidoranText
     dd PewterNidoranHouseLittleBoyText
@@ -52,11 +54,13 @@ PewterNidoranHouse_TextPointers:
 PewterNidoranHouseNidoranText:
     text_far _PewterNidoranHouseNidoranText
 
+%assign event_byte -1
     mov al, 3
     call PlayCry
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
+%assign event_byte -1
 PewterNidoranHouseLittleBoyText:
     text_far _PewterNidoranHouseLittleBoyText
     text_end

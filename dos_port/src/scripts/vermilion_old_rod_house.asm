@@ -39,9 +39,11 @@ extern _VermilionOldRodHouseFishingGuruTakeThisText   ; NOT YET DEFINED IN THE P
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 VermilionOldRodHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 VermilionOldRodHouse_TextPointers:
     dd VermilionOldRodHouseFishingGuruText
 

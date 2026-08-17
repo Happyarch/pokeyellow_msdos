@@ -35,12 +35,14 @@ extern _DiglettsCaveRoute11GamblerText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 DiglettsCaveRoute11_Script:
     call EnableAutoTextBoxDrawing
     mov al, ROUTE_11
     mov [ebp + wLastMap], al
     ret
 
+%assign event_byte -1
 DiglettsCaveRoute11_TextPointers:
     dd DiglettsCaveRoute11GamblerText
 DiglettsCaveRoute11GamblerText:

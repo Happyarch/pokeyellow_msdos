@@ -69,29 +69,31 @@ section .text
 ; PRET| 	ld [wObjectToShow], a
 ; PRET| 	jr .hideAndShowBoulderObjects
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SeafoamIslandsB1F_Script.boulder2FellDownHole (scripts/SeafoamIslandsB1F.asm:21-32) — at scripts/SeafoamIslandsB1F.asm:21: SetEventAfterBranchReuseHL EVENT_SEAFOAM2_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM2_BOULDER1_DOWN_HOLE
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	SetEventAfterBranchReuseHL EVENT_SEAFOAM2_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM2_BOULDER1_DOWN_HOLE
-; PRET| 	ld a, TOGGLE_SEAFOAM_ISLANDS_B1F_BOULDER_2
-; PRET| 	ld [wObjectToHide], a
-; PRET| 	ld a, TOGGLE_SEAFOAM_ISLANDS_B2F_BOULDER_2
-; PRET| 	ld [wObjectToShow], a
-; PRET| .hideAndShowBoulderObjects
-; PRET| 	ld a, [wObjectToHide]
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld a, [wObjectToShow]
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef_jump ShowObject
+%assign event_byte -1
+.boulder2FellDownHole:
+    SetEventAfterBranchReuseHL EVENT_SEAFOAM2_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM2_BOULDER1_DOWN_HOLE
+    mov al, 226
+    mov [ebp + wObjectToHide], al
+    mov al, 228
+    mov [ebp + wObjectToShow], al
+.hideAndShowBoulderObjects:
+    mov al, [ebp + wObjectToHide]
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov al, [ebp + wObjectToShow]
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    jmp ShowObject
 
+%assign event_byte -1
 .noBoulderWasPushed:
     mov al, SEAFOAM_ISLANDS_B2F
     mov [ebp + wDungeonWarpDestinationMap], al
     mov esi, Seafoam2HolesCoords
     jmp IsPlayerOnDungeonWarp
 
+%assign event_byte -1
 Seafoam2HolesCoords:
     db 6, 18
     db 6, 23

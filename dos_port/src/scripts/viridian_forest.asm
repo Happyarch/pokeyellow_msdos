@@ -75,6 +75,7 @@ wViridianForestCurScript                       equ 0xD617
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 ViridianForest_Script:
     call EnableAutoTextBoxDrawing
     mov esi, ViridianForestTrainerHeaders
@@ -86,22 +87,27 @@ ViridianForest_Script:
 
 ; ViridianForest_ScriptPointers (scripts/ViridianForest.asm:11-51) — not re-emitted: ViridianForest_ScriptPointers is already defined in assets/map_script_tables.inc.
 
+%assign event_byte -1
 ViridianForestYoungster2Text:
     mov esi, ViridianForestTrainerHeader0
     jmp ViridianForestTalkToTrainer
 
+%assign event_byte -1
 ViridianForestYoungster3Text:
     mov esi, ViridianForestTrainerHeader1
     jmp ViridianForestTalkToTrainer
 
+%assign event_byte -1
 ViridianForestYoungster4Text:
     mov esi, ViridianForestTrainerHeader2
     jmp ViridianForestTalkToTrainer
 
+%assign event_byte -1
 ViridianForestCooltrainerFText:
     mov esi, ViridianForestTrainerHeader3
     jmp ViridianForestTalkToTrainer
 
+%assign event_byte -1
 ViridianForestYoungster5Text:
     mov esi, ViridianForestTrainerHeader4
 ViridianForestTalkToTrainer:
@@ -110,22 +116,27 @@ ViridianForestTalkToTrainer:
 
 ; ViridianForestYoungster2BattleText (scripts/ViridianForest.asm:81-142) — not re-emitted: ViridianForestYoungster2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 ViridianForestTrainerTips1Text:
     mov esi, ViridianForestPrintTrainerTips1Text
     jmp ViridianForestSign_Common
 
+%assign event_byte -1
 ViridianForestUseAntidoteSignText:
     mov esi, ViridianForestPrintUseAntidoteSignText
     jmp ViridianForestSign_Common
 
+%assign event_byte -1
 ViridianForestTrainerTips2Text:
     mov esi, ViridianForestPrintTrainerTips2Text
     jmp ViridianForestSign_Common
 
+%assign event_byte -1
 ViridianForestTrainerTips3Text:
     mov esi, ViridianForestPrintTrainerTips3Text
     jmp ViridianForestSign_Common
 
+%assign event_byte -1
 ViridianForestTrainerTips4Text:
     mov esi, ViridianForestPrintTrainerTips4Text
     jmp ViridianForestSign_Common
@@ -140,56 +151,68 @@ ViridianForestTrainerTips4Text:
 ; PRET| 	call Bankswitch
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 ViridianForestPrintTrainerTips1Text:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianForestTrainerTips1Text
     text_end
 
+%assign event_byte -1
 ViridianForestPrintUseAntidoteSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianForestUseAntidoteSignText
     text_end
 
+%assign event_byte -1
 ViridianForestPrintTrainerTips2Text:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianForestTrainerTips2Text
     text_end
 
+%assign event_byte -1
 ViridianForestPrintTrainerTips3Text:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianForestTrainerTips3Text
     text_end
 
+%assign event_byte -1
 ViridianForestPrintTrainerTips4Text:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianForestTrainerTips4Text
     text_end
 
+%assign event_byte -1
 ViridianForestPrintLeavingSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _ViridianForestLeavingSignText
     text_end

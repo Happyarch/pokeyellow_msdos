@@ -181,17 +181,13 @@ _m("CheckEventReuseA", CODE_EVENT, z="*", n="0", h="1", clobbers=("a",),
 _m("CheckEventAfterBranchReuseA", CODE_EVENT, z="*", n="0", h="1", clobbers=("a",),
    state_dependent=True)
 _m("CheckEventHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",))
-_m("CheckEventReuseHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",),
-   state_dependent=True)
+_m("CheckEventReuseHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",))
 _m("CheckEventForceReuseHL", CODE_EVENT, z="*", n="0", h="1")
-_m("CheckEventAfterBranchReuseHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",),
-   state_dependent=True)
+_m("CheckEventAfterBranchReuseHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",))
 _m("CheckAndSetEvent", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",))
 _m("CheckAndResetEvent", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",))
-_m("CheckAndSetEventReuseHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",),
-   state_dependent=True)
-_m("CheckAndResetEventReuseHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",),
-   state_dependent=True)
+_m("CheckAndSetEventReuseHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",))
+_m("CheckAndResetEventReuseHL", CODE_EVENT, z="*", n="0", h="1", clobbers=("hl",))
 _m("CheckAndSetEventA", CODE_EVENT, z="*", n="0", h="1", clobbers=("a",))
 _m("CheckAndResetEventA", CODE_EVENT, z="*", n="0", h="1", clobbers=("a",))
 # Counter-intuitive on purpose, and pret says so in a comment: these set Z when
@@ -215,14 +211,14 @@ _m("CheckEitherEventSetReuseA", CODE_EVENT, z="*", n="0", h="1", c="0",
    clobbers=("a",), state_dependent=True)
 
 _m("SetEvent", CODE_EVENT, clobbers=("hl",), note="ld hl / set b,[hl] — NO flags")
-_m("SetEventReuseHL", CODE_EVENT, clobbers=("hl",), state_dependent=True)
+_m("SetEventReuseHL", CODE_EVENT, clobbers=("hl",))
 _m("SetEventForceReuseHL", CODE_EVENT)
-_m("SetEventAfterBranchReuseHL", CODE_EVENT, clobbers=("hl",), state_dependent=True)
+_m("SetEventAfterBranchReuseHL", CODE_EVENT, clobbers=("hl",))
 _m("SetEvents", CODE_EVENT, clobbers=("hl",))
 _m("ResetEvent", CODE_EVENT, clobbers=("hl",))
-_m("ResetEventReuseHL", CODE_EVENT, clobbers=("hl",), state_dependent=True)
+_m("ResetEventReuseHL", CODE_EVENT, clobbers=("hl",))
 _m("ResetEventForceReuseHL", CODE_EVENT)
-_m("ResetEventAfterBranchReuseHL", CODE_EVENT, clobbers=("hl",), state_dependent=True)
+_m("ResetEventAfterBranchReuseHL", CODE_EVENT, clobbers=("hl",))
 _m("ResetEvents", CODE_EVENT, clobbers=("hl",))
 # The Range forms PASS THROUGH to the port's own macro. This row used to carry
 # always_bail="event-range-macro" with the note "modelling them means

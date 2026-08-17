@@ -48,10 +48,12 @@ extern _CeladonDinerMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeladonDiner_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 CeladonDiner_TextPointers:
     dd CeladonDinerCookText
     dd CeladonDinerMiddleAgedWomanText
@@ -71,6 +73,7 @@ CeladonDinerFisherText:
     text_far _CeladonDinerFisherText
     text_end
 
+%assign event_byte -1
 CeladonDinerGymGuideText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CeladonDinerPrintGymGuideText

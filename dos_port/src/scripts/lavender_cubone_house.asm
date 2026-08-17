@@ -40,20 +40,24 @@ extern _LavenderCuboneHouseCuboneText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 LavenderCuboneHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 LavenderCuboneHouse_TextPointers:
     dd LavenderCuboneHouseCuboneText
     dd LavenderCuboneHouseBrunetteGirlText
 LavenderCuboneHouseCuboneText:
     text_far _LavenderCuboneHouseCuboneText
 
+%assign event_byte -1
     mov al, 17
     call PlayCry
     jmp TextScriptEnd
 
+%assign event_byte -1
 LavenderCuboneHouseBrunetteGirlText:
     CheckEvent EVENT_RESCUED_MR_FUJI
     jnz .rescued_mr_fuji
@@ -61,12 +65,14 @@ LavenderCuboneHouseBrunetteGirlText:
     call PrintText
     jmp .done
 
+%assign event_byte -1
 .rescued_mr_fuji:
     mov esi, .TheGhostIsGoneText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .PoorCubonesMotherText:
     text_far _LavenderCuboneHouseBrunetteGirlPoorCubonesMotherText
     text_end

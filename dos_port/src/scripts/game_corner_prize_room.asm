@@ -44,6 +44,7 @@ TEXT_GAMECORNERPRIZEROOM_PRIZE_VENDOR_3        equ 5
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 GameCornerPrizeRoom_Script:
     jmp EnableAutoTextBoxDrawing
 

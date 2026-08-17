@@ -85,24 +85,25 @@ section .text
 ; PRET| 	ld [wObjectToShow], a
 ; PRET| 	jr .hideAndShowBoulderObjects
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SeafoamIslandsB3F_Script.boulder2FellDownHole (scripts/SeafoamIslandsB3F.asm:21-33) — at scripts/SeafoamIslandsB3F.asm:21: SetEventAfterBranchReuseHL EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	SetEventAfterBranchReuseHL EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE
-; PRET| 	ld a, TOGGLE_SEAFOAM_ISLANDS_B3F_BOULDER_2
-; PRET| 	ld [wObjectToHide], a
-; PRET| 	ld a, TOGGLE_SEAFOAM_ISLANDS_B4F_BOULDER_2
-; PRET| 	ld [wObjectToShow], a
-; PRET| .hideAndShowBoulderObjects
-; PRET| 	ld a, [wObjectToHide]
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld a, [wObjectToShow]
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	jr .runCurrentMapScript
+%assign event_byte -1
+.boulder2FellDownHole:
+    SetEventAfterBranchReuseHL EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE
+    mov al, 230
+    mov [ebp + wObjectToHide], al
+    mov al, 234
+    mov [ebp + wObjectToShow], al
+.hideAndShowBoulderObjects:
+    mov al, [ebp + wObjectToHide]
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov al, [ebp + wObjectToShow]
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    jmp .runCurrentMapScript
 
+%assign event_byte -1
 .noBoulderWasPushed:
     mov al, SEAFOAM_ISLANDS_B4F
     mov [ebp + wDungeonWarpDestinationMap], al
@@ -118,6 +119,7 @@ section .text
     mov al, [ebp + wSeafoamIslandsB3FCurScript]
     jmp CallFunctionInTable
 
+%assign event_byte -1
 Seafoam4HolesCoords:
     db 16, 3
     db 16, 6
@@ -128,6 +130,7 @@ SeafoamIslandsB3F_ScriptPointers:
     dd SeafoamIslandsB3FMoveObjectScript
     dd SeafoamIslandsB3FObjectMoving2Script
 
+%assign event_byte -1
 SeafoamIslandsB3FDefaultScript:
     CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
     jnz .nr_62
@@ -155,12 +158,14 @@ SeafoamIslandsB3FDefaultScript:
     mov [ebp + wSeafoamIslandsB3FCurScript], al
     ret
 
+%assign event_byte -1
 RLEList_ForcedSurfingStrongCurrentNearSteps:
     db PAD_DOWN, 6
     db PAD_RIGHT, 5
     db PAD_DOWN, 3
     db -1
 
+%assign event_byte -1
 SeafoamIslandsB3FObjectMoving1Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -186,6 +191,7 @@ SeafoamIslandsB3FObjectMoving1Script:
 ; PRET| 	ld de, .RLEList_StrongCurrentNearRightBoulder
 ; PRET| 	jr .forceSurfMovement
 
+%assign event_byte -1
 .playerFellThroughHoleLeft:
     mov edi, .RLEList_StrongCurrentNearLeftBoulder   ; pret: ld de, .RLEList_StrongCurrentNearLeftBoulder — DecodeRLEList takes it in EDI
 .forceSurfMovement:
@@ -204,6 +210,7 @@ SeafoamIslandsB3FObjectMoving1Script:
     mov [ebp + wSeafoamIslandsB3FCurScript], al
     ret
 
+%assign event_byte -1
 .RLEList_StrongCurrentNearRightBoulder:
     db PAD_DOWN, 6
     db PAD_RIGHT, 2
@@ -216,6 +223,7 @@ SeafoamIslandsB3FObjectMoving1Script:
     db PAD_DOWN, 4
     db -1
 
+%assign event_byte -1
 SeafoamIslandsB3FObjectMoving2Script:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -226,6 +234,7 @@ SeafoamIslandsB3FObjectMoving2Script:
     mov [ebp + wSeafoamIslandsB3FCurScript], al
     ret
 
+%assign event_byte -1
 SeafoamIslandsB3F_TextPointers:
     dd BoulderText
     dd BoulderText

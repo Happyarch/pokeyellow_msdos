@@ -42,6 +42,124 @@
     mov [ebp + wEventFlags + EVENT_BYTE(%1)], al
 %endmacro
 
+; ---------------------------------------------------------------------------
+; The *ReuseHL family — pret macros/scripts/events.asm.
+;
+; pret's versions skip reloading the pointer when the PREVIOUS event macro
+; already pointed HL at the same byte of wEventFlags, using `event_byte`: a
+; variable the ASSEMBLER carries across macro invocations. These mirrors do the
+; same thing with NASM's %assign, so the elision happens where pret does it
+; rather than being reconstructed by a tool that would have to model rgbasm's
+; bookkeeping and could omit a needed reload — which reads the WRONG event flag
+; with nothing to show for it.
+;
+; ESI is HL. Unlike CheckEvent/SetEvent above, these operate on [ebp+esi]
+; directly and DO NOT clobber AL, matching pret's `bit`/`set`/`res` on [hl].
+;
+; SEAM RULE: `event_byte` tracks the EMITTED sequence, so anything that breaks
+; the correspondence with pret's sequence — a bailed region between two of these
+; — must reset it. Emitters reset with `%assign event_byte -1` at each region
+; head, which forces a reload and degrades safely to the always-reload form.
+%assign event_byte -1
+
+%macro CheckEventReuseHL 1
+    %if event_byte != EVENT_BYTE(%1)
+        %assign event_byte EVENT_BYTE(%1)
+        mov esi, wEventFlags + event_byte
+    %endif
+    test byte [ebp + esi], EVENT_MASK(%1)
+%endmacro
+
+%macro SetEventReuseHL 1
+    %if event_byte != EVENT_BYTE(%1)
+        %assign event_byte EVENT_BYTE(%1)
+        mov esi, wEventFlags + event_byte
+    %endif
+    or byte [ebp + esi], EVENT_MASK(%1)
+%endmacro
+
+%macro ResetEventReuseHL 1
+    %if event_byte != EVENT_BYTE(%1)
+        %assign event_byte EVENT_BYTE(%1)
+        mov esi, wEventFlags + event_byte
+    %endif
+    and byte [ebp + esi], ~EVENT_MASK(%1) & 0xFF
+%endmacro
+
+; The AfterBranch forms take the event used BEFORE the branch as %2: pret cannot
+; know which path was taken, so it states the incoming state explicitly. THE PORT
+; DOES NOT USE %2 TO ELIDE, and always reloads. pret's assertion is about pret's
+; emitted code; in the port the pre-branch region may have BAILED and not been
+; emitted at all — measured on SilphCo2F, where the region holding the
+; EventFlagAddress that sets the pointer bails and only `.unlock_door1` survives.
+; Eliding there would write through whatever ESI happened to hold.
+%macro CheckEventAfterBranchReuseHL 2
+    %assign event_byte EVENT_BYTE(%1)
+    mov esi, wEventFlags + event_byte
+    test byte [ebp + esi], EVENT_MASK(%1)
+%endmacro
+
+%macro SetEventAfterBranchReuseHL 2
+    %assign event_byte EVENT_BYTE(%1)
+    mov esi, wEventFlags + event_byte
+    or byte [ebp + esi], EVENT_MASK(%1)
+%endmacro
+
+%macro ResetEventAfterBranchReuseHL 2
+    %assign event_byte EVENT_BYTE(%1)
+    mov esi, wEventFlags + event_byte
+    and byte [ebp + esi], ~EVENT_MASK(%1) & 0xFF
+%endmacro
+
+; pret: "dangerous, only use when HL is guaranteed to be the desired value", and
+; it emits no reload at all. THE PORT RELOADS ANYWAY. pret's guarantee is that HL
+; already equals wEventFlags + byte(%1), so loading exactly that cannot change the
+; pointer — but in the port the code that established it may sit in a region the
+; transpiler BAILED and never emitted, in which case ESI holds something unrelated
+; and the write lands in the wrong memory with nothing to show for it.
+%macro CheckEventForceReuseHL 1
+    %assign event_byte EVENT_BYTE(%1)
+    mov esi, wEventFlags + event_byte
+    test byte [ebp + esi], EVENT_MASK(%1)
+%endmacro
+
+%macro SetEventForceReuseHL 1
+    %assign event_byte EVENT_BYTE(%1)
+    mov esi, wEventFlags + event_byte
+    or byte [ebp + esi], EVENT_MASK(%1)
+%endmacro
+
+%macro ResetEventForceReuseHL 1
+    %assign event_byte EVENT_BYTE(%1)
+    mov esi, wEventFlags + event_byte
+    and byte [ebp + esi], ~EVENT_MASK(%1) & 0xFF
+%endmacro
+
+; pret does `bit` then `set`: on SM83 `set` writes no flags, so the Z from the
+; test survives to the consumer. x86's `or` DOES write ZF, so the mutation is
+; wrapped — same convention as CheckAndSetEvent below.
+%macro CheckAndSetEventReuseHL 1
+    %if event_byte != EVENT_BYTE(%1)
+        %assign event_byte EVENT_BYTE(%1)
+        mov esi, wEventFlags + event_byte
+    %endif
+    test byte [ebp + esi], EVENT_MASK(%1)
+    pushfd
+    or byte [ebp + esi], EVENT_MASK(%1)
+    popfd
+%endmacro
+
+%macro CheckAndResetEventReuseHL 1
+    %if event_byte != EVENT_BYTE(%1)
+        %assign event_byte EVENT_BYTE(%1)
+        mov esi, wEventFlags + event_byte
+    %endif
+    test byte [ebp + esi], EVENT_MASK(%1)
+    pushfd
+    and byte [ebp + esi], ~EVENT_MASK(%1) & 0xFF
+    popfd
+%endmacro
+
 %macro CheckAndSetEvent 1
     mov al, [ebp + wEventFlags + EVENT_BYTE(%1)]
     test al, EVENT_MASK(%1)
@@ -129,22 +247,21 @@
 %endmacro
 
 ; Register-reuse variants as no-op `%define` aliases.
+;
+; The *ReuseHL family USED TO BE ALIASED HERE TOO, and is not any more: it has
+; real macros above that mirror pret's `event_byte` elision. The aliases had two
+; defects that never surfaced only because nothing in the port called them yet:
+;   * the AfterBranch forms take TWO event indices and were aliased onto 1-arg
+;     macros, so `SetEventAfterBranchReuseHL A, B` could not assemble at all;
+;   * every alias routes through AL, while pret's `bit`/`set`/`res` on [hl] do
+;     not touch A — so the alias silently clobbered a register pret preserves.
+; A `%define` also SHADOWS a `%macro` of the same name, so leaving these in place
+; would quietly disable the mirrors above.
 %define CheckEventReuseA CheckEvent
 %define CheckEventAfterBranchReuseA CheckEvent
 %define CheckEventHL CheckEvent
-%define CheckEventReuseHL CheckEvent
-%define CheckEventForceReuseHL CheckEvent
-%define CheckEventAfterBranchReuseHL CheckEvent
 %define CheckAndSetEventA CheckAndSetEvent
 %define CheckAndResetEventA CheckAndResetEvent
-%define CheckAndSetEventReuseHL CheckAndSetEvent
-%define CheckAndResetEventReuseHL CheckAndResetEvent
-%define SetEventReuseHL SetEvent
-%define SetEventAfterBranchReuseHL SetEvent
-%define SetEventForceReuseHL SetEvent
-%define ResetEventReuseHL ResetEvent
-%define ResetEventAfterBranchReuseHL ResetEvent
-%define ResetEventForceReuseHL ResetEvent
 %define CheckEitherEventSetReuseA CheckEitherEventSet
 
 %endif ; EVENTS_INC

@@ -123,12 +123,14 @@ wSprite02StateData1FacingDirection             equ 0xC129
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeruleanCity_Script:
     call EnableAutoTextBoxDrawing
     mov esi, CeruleanCity_ScriptPointers
     mov al, [ebp + wCeruleanCityCurScript]
     jmp CallFunctionInTable
 
+%assign event_byte -1
 CeruleanCityClearScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -138,6 +140,7 @@ CeruleanCityClearScripts:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp HideObject
 
+%assign event_byte -1
 CeruleanCity_ScriptPointers:
     dd CeruleanCityDefaultScript
     dd CeruleanCityRivalBattleScript
@@ -145,6 +148,7 @@ CeruleanCity_ScriptPointers:
     dd CeruleanCityRivalCleanupScript
     dd CeruleanCityRocketDefeatedScript
 
+%assign event_byte -1
 CeruleanCityRocketDefeatedScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -227,6 +231,7 @@ CeruleanCityRocketDefeatedScript:
 ; PRET| 	ld [wCeruleanCityCurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 CeruleanCityCoords1:
     db 7, 30
     db 9, 30
@@ -241,6 +246,7 @@ CeruleanCityMovement1:
     db NPC_MOVEMENT_DOWN
     db -1
 
+%assign event_byte -1
 CeruleanCityFaceRivalScript:
     mov al, 1
     mov [ebp + hSpriteIndex], al
@@ -248,6 +254,7 @@ CeruleanCityFaceRivalScript:
     mov [ebp + hSpriteFacingDirection], al
     jmp SetSpriteFacingDirectionAndDelay
 
+%assign event_byte -1
 CeruleanCityRivalBattleScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -301,6 +308,7 @@ CeruleanCityRivalBattleScript:
 ; PRET| 	ld de, CeruleanCityMovement4
 ; PRET| 	jr .skip
 
+%assign event_byte -1
 .playerOnRightSideOfBridge:
     mov edi, CeruleanCityMovement3   ; pret: ld de, CeruleanCityMovement3 — MoveSprite takes it in EDI
 .skip:
@@ -311,6 +319,7 @@ CeruleanCityRivalBattleScript:
     mov [ebp + wCeruleanCityCurScript], al
     ret
 
+%assign event_byte -1
 CeruleanCityMovement3:
     db NPC_MOVEMENT_LEFT
     db NPC_MOVEMENT_DOWN
@@ -330,6 +339,7 @@ CeruleanCityMovement4:
     db NPC_MOVEMENT_DOWN
     db -1
 
+%assign event_byte -1
 CeruleanCityRivalCleanupScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -347,6 +357,7 @@ CeruleanCityRivalCleanupScript:
     mov [ebp + wCeruleanCityCurScript], al
     ret
 
+%assign event_byte -1
 CeruleanCity_TextPointers:
     dd CeruleanCityRivalText
     dd CeruleanCityRocketText
@@ -366,6 +377,7 @@ CeruleanCity_TextPointers:
     dd CeruleanCityBikeShopSign
     dd CeruleanCityGymSign
 
+%assign event_byte -1
 CeruleanCityRivalText:
     CheckEvent EVENT_BEAT_CERULEAN_RIVAL
     jz .PreBattle
@@ -373,12 +385,14 @@ CeruleanCityRivalText:
     call PrintText
     jmp .end
 
+%assign event_byte -1
 .PreBattle:
     mov esi, .PreBattleText
     call PrintText
 .end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .PreBattleText:
     text_far _CeruleanCityRivalPreBattleText
     text_end
@@ -481,6 +495,7 @@ CeruleanCityRivalIWentToBillsText:
 ; PRET| 	text_far _CeruleanCityGuardText
 ; PRET| 	text_end
 
+%assign event_byte -1
 CeruleanCityCooltrainerF1Text:
     mov al, [ebp + hRandomAdd]
     cmp al, 180
@@ -489,6 +504,7 @@ CeruleanCityCooltrainerF1Text:
     call PrintText
     jmp .end
 
+%assign event_byte -1
 .notFirstText:
     cmp al, 100
     jb .notSecondText
@@ -496,12 +512,14 @@ CeruleanCityCooltrainerF1Text:
     call PrintText
     jmp .end
 
+%assign event_byte -1
 .notSecondText:
     mov esi, .ElectrodeWithdrawText
     call PrintText
 .end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .ElectrodeUseSonicboomText:
     text_far _CeruleanCityCooltrainerF1ElectrodeUseSonicboomText
     text_end
@@ -512,6 +530,7 @@ CeruleanCityCooltrainerF1Text:
     text_far _CeruleanCityCooltrainerF1ElectrodeWithdrawText
     text_end
 
+%assign event_byte -1
 CeruleanCityElectrodeText:
     mov al, [ebp + hRandomAdd]
     cmp al, 180
@@ -520,6 +539,7 @@ CeruleanCityElectrodeText:
     call PrintText
     jmp .end
 
+%assign event_byte -1
 .notFirstText:
     cmp al, 120
     jb .notSecondText
@@ -527,6 +547,7 @@ CeruleanCityElectrodeText:
     call PrintText
     jmp .end
 
+%assign event_byte -1
 .notSecondText:
     cmp al, 60
     jb .notThirdText
@@ -534,12 +555,14 @@ CeruleanCityElectrodeText:
     call PrintText
     jmp .end
 
+%assign event_byte -1
 .notThirdText:
     mov esi, .IgnoredOrdersText
     call PrintText
 .end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .TookASnoozeText:
     text_far _CeruleanCityElectrodeTookASnoozeText
     text_end

@@ -57,10 +57,12 @@ wPikachuSpawnStateFlags                        equ 0xD471
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Museum2F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 Museum2F_TextPointers:
     dd Museum2FYoungsterText
     dd Museum2FGrampsText
@@ -82,6 +84,7 @@ Museum2FBrunetteGirlText:
     text_far _Museum2FBrunetteGirlText
     text_end
 
+%assign event_byte -1
 Museum2FHikerText:
     mov al, [ebp + wPikachuSpawnStateFlags]
     test al, (1 << (7))
@@ -90,6 +93,7 @@ Museum2FHikerText:
     call PrintText
     jmp .asm_5c20b
 
+%assign event_byte -1
 .asm_5c1f6:
     mov al, [ebp + wPikachuHappiness]
     cmp al, 101
@@ -98,12 +102,14 @@ Museum2FHikerText:
     call PrintText
     jmp .asm_5c20b
 
+%assign event_byte -1
 .asm_5c205:
     mov esi, Museum2FText_5c213
     call PrintText
 .asm_5c20b:
     jmp TextScriptEnd
 
+%assign event_byte -1
 Museum2FText_5c20e:
     text_far _Museum2FHikerText
     text_end

@@ -35,6 +35,7 @@ extern _SilphCo1FLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCo1F_Script:
     call EnableAutoTextBoxDrawing
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
@@ -50,6 +51,7 @@ SilphCo1F_Script:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp ShowObject
 
+%assign event_byte -1
 SilphCo1F_TextPointers:
     dd SilphCo1FLinkReceptionistText
 SilphCo1FLinkReceptionistText:

@@ -42,10 +42,12 @@ extern _PokemonTower1FReceptionistText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonTower1F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 PokemonTower1F_TextPointers:
     dd PokemonTower1FReceptionistText
     dd PokemonTower1FMiddleAgedWomanText

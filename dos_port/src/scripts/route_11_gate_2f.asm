@@ -55,15 +55,18 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route11Gate2F_Script:
     jmp DisableAutoTextBoxDrawing
 
+%assign event_byte -1
 Route11Gate2F_TextPointers:
     dd Route11Gate2FYoungsterText
     dd Route11Gate2FOaksAideText
     dd Route11Gate2FLeftBinocularsText
     dd Route11Gate2FRightBinocularsText
 
+%assign event_byte -1
 Route11Gate2FYoungsterText:
     mov al, 0
     mov [ebp + wWhichTrade], al
@@ -100,10 +103,12 @@ Route11Gate2FScriptEnd:
 ; PRET| .no_item
 ; PRET| 	jr Route11Gate2FScriptEnd
 
+%assign event_byte -1
 .ItemfinderDescriptionText:
     text_far _Route11Gate2FOaksAideItemfinderDescriptionText
     text_end
 
+%assign event_byte -1
 Route11Gate2FLeftBinocularsText:
     mov al, [ebp + wSpritePlayerStateData1FacingDirection]
     cmp al, SPRITE_FACING_UP
@@ -116,6 +121,7 @@ Route11Gate2FLeftBinocularsText:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .SnorlaxText:
     text_far _Route11Gate2FLeftBinocularsSnorlaxText
     text_end
@@ -123,10 +129,12 @@ Route11Gate2FLeftBinocularsText:
     text_far _Route11Gate2FLeftBinocularsNoSnorlaxText
     text_end
 
+%assign event_byte -1
 Route11Gate2FRightBinocularsText:
     mov esi, .Text
     jmp GateUpstairsScript_PrintIfFacingUp
 
+%assign event_byte -1
 .Text:
     text_far _Route11Gate2FRightBinocularsText
     text_end

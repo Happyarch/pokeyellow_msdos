@@ -23,6 +23,7 @@ bits 32
 
 global ViridianMartDefaultScript
 global ViridianMartOaksParcelScript
+global ViridianMartScript2
 global ViridianMart_Script
 global ViridianMart_ScriptPointers
 
@@ -42,7 +43,6 @@ extern ViridianMartClerkSayHiToOakText   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartClerkText   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartClerkYouCameFromPalletTownText   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartCooltrainerMText   ; NOT YET DEFINED IN THE PORT
-extern ViridianMartScript2   ; NOT YET DEFINED IN THE PORT
 extern ViridianMartYoungsterText   ; NOT YET DEFINED IN THE PORT
 extern ViridianMart_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern ViridianMart_TextPointers2   ; NOT YET DEFINED IN THE PORT
@@ -69,6 +69,7 @@ wViridianMartCurScript                         equ 0xD60C
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 ViridianMart_Script:
     call ViridianMartCheckParcelDeliveredScript
     call EnableAutoTextBoxDrawing
@@ -98,11 +99,13 @@ ViridianMart_Script:
 ; PRET| 	ld [wCurMapTextPtr+1], a
 ; PRET| 	ret
 
+%assign event_byte -1
 ViridianMart_ScriptPointers:
     dd ViridianMartDefaultScript
     dd ViridianMartOaksParcelScript
     dd ViridianMartScript2
 
+%assign event_byte -1
 ViridianMartDefaultScript:
     call UpdateSprites
     mov al, TEXT_VIRIDIANMART_CLERK_YOU_CAME_FROM_PALLET_TOWN
@@ -118,11 +121,13 @@ ViridianMartDefaultScript:
     mov [ebp + wViridianMartCurScript], al
     ret
 
+%assign event_byte -1
 .PlayerMovement:
     db PAD_LEFT, 1
     db PAD_UP, 2
     db -1
 
+%assign event_byte -1
 ViridianMartOaksParcelScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -140,21 +145,26 @@ ViridianMartOaksParcelScript:
     mov [ebp + wViridianMartCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] ViridianMartScript2 (scripts/ViridianMart.asm:65-75) — at scripts/ViridianMart.asm:67: CheckAndSetEventReuseHL EVENT_SPAWNED_OLD_MAN_1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventHL EVENT_COMPLETED_CATCH_TRAINING
-; PRET| 	ret z
-; PRET| 	CheckAndSetEventReuseHL EVENT_SPAWNED_OLD_MAN_1
-; PRET| 	ret nz
-; PRET| 	ld a, TOGGLE_OLD_MAN_2
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld a, TOGGLE_OLD_MAN_1
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	ret
+%assign event_byte -1
+ViridianMartScript2:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_COMPLETED_CATCH_TRAINING)
+    test byte [ebp + esi], EVENT_MASK(EVENT_COMPLETED_CATCH_TRAINING)
+    jnz .nr_66
+        ret
+.nr_66:
+    CheckAndSetEventReuseHL EVENT_SPAWNED_OLD_MAN_1
+    jz .nr_68
+        ret
+.nr_68:
+    mov al, 3
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov al, 2
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[text-sound-command-unported] ViridianMart_TextPointers (scripts/ViridianMart.asm:78-111) — at scripts/ViridianMart.asm:102: sound_get_key_item

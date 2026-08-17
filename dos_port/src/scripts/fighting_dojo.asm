@@ -88,6 +88,7 @@ wSavedCoordIndex                               equ 0xCF0D
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 FightingDojo_Script:
     call EnableAutoTextBoxDrawing
     mov esi, FightingDojoTrainerHeaders
@@ -97,6 +98,7 @@ FightingDojo_Script:
     mov [ebp + wFightingDojoCurScript], al
     ret
 
+%assign event_byte -1
 FightingDojoResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -104,12 +106,14 @@ FightingDojoResetScripts:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 FightingDojo_ScriptPointers:
     dd FightingDojoDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
     dd FightingDojoKarateMasterPostBattleScript
 
+%assign event_byte -1
 FightingDojoDefaultScript:
     CheckEvent EVENT_DEFEATED_FIGHTING_DOJO
     jz .nr_26
@@ -152,6 +156,7 @@ FightingDojoDefaultScript:
     call DisplayTextID
     ret
 
+%assign event_byte -1
 FightingDojoKarateMasterPostBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -206,17 +211,20 @@ FightingDojoKarateMasterPostBattleScript:
 ; PRET| 	ld [wCurMapScript], a
 ; PRET| 	jr .end
 
+%assign event_byte -1
 .defeated_dojo:
     mov esi, .StayAndTrainWithUsText
     call PrintText
     jmp .end
 
+%assign event_byte -1
 .defeated_master:
     mov esi, .IWillGiveYouAPokemonText
     call PrintText
 .end:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _FightingDojoKarateMasterText
     text_end
@@ -230,6 +238,7 @@ FightingDojoKarateMasterPostBattleScript:
     text_far _FightingDojoKarateMasterStayAndTrainWithUsText
     text_end
 
+%assign event_byte -1
 FightingDojoBlackbelt1Text:
     mov esi, FightingDojoTrainerHeader0
     call TalkToTrainer
@@ -237,6 +246,7 @@ FightingDojoBlackbelt1Text:
 
 ; FightingDojoBlackbelt1BattleText (scripts/FightingDojo.asm:161-170) — not re-emitted: FightingDojoBlackbelt1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 FightingDojoBlackbelt2Text:
     mov esi, FightingDojoTrainerHeader1
     call TalkToTrainer
@@ -244,6 +254,7 @@ FightingDojoBlackbelt2Text:
 
 ; FightingDojoBlackbelt2BattleText (scripts/FightingDojo.asm:179-188) — not re-emitted: FightingDojoBlackbelt2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 FightingDojoBlackbelt3Text:
     mov esi, FightingDojoTrainerHeader2
     call TalkToTrainer
@@ -251,6 +262,7 @@ FightingDojoBlackbelt3Text:
 
 ; FightingDojoBlackbelt3BattleText (scripts/FightingDojo.asm:197-206) — not re-emitted: FightingDojoBlackbelt3BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 FightingDojoBlackbelt4Text:
     mov esi, FightingDojoTrainerHeader3
     call TalkToTrainer
@@ -258,6 +270,7 @@ FightingDojoBlackbelt4Text:
 
 ; FightingDojoBlackbelt4BattleText (scripts/FightingDojo.asm:215-224) — not re-emitted: FightingDojoBlackbelt4BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 FightingDojoHitmonleePokeBallText:
     CheckEitherEventSet EVENT_GOT_HITMONLEE, EVENT_GOT_HITMONCHAN
     jz .GetMon
@@ -265,6 +278,7 @@ FightingDojoHitmonleePokeBallText:
     call PrintText
     jmp .done
 
+%assign event_byte -1
 .GetMon:
     mov al, 43
     call DisplayPokedex
@@ -287,10 +301,12 @@ FightingDojoHitmonleePokeBallText:
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _FightingDojoHitmonleePokeBallText
     text_end
 
+%assign event_byte -1
 FightingDojoHitmonchanPokeBallText:
     CheckEitherEventSet EVENT_GOT_HITMONLEE, EVENT_GOT_HITMONCHAN
     jz .GetMon
@@ -298,6 +314,7 @@ FightingDojoHitmonchanPokeBallText:
     call PrintText
     jmp .done
 
+%assign event_byte -1
 .GetMon:
     mov al, 44
     call DisplayPokedex
@@ -320,6 +337,7 @@ FightingDojoHitmonchanPokeBallText:
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _FightingDojoHitmonchanPokeBallText
     text_end

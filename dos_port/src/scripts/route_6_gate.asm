@@ -53,6 +53,7 @@ wSpritePlayerStateData2MovementByte1           equ 0xC206
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route6Gate_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route6Gate_ScriptPointers
@@ -60,6 +61,7 @@ Route6Gate_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 Route6Gate_ScriptPointers:
     dd Route6GateDefaultScript
     dd Route6GatePlayerMovingScript
@@ -90,6 +92,7 @@ Route6Gate_ScriptPointers:
 ; PRET| 	ld [wRoute6GateCurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .have_drink:
     mov esi, wStatusFlags1
     or byte [ebp + esi], (1 << (6))
@@ -97,11 +100,13 @@ Route6Gate_ScriptPointers:
     mov [ebp + hTextID], al
     jmp DisplayTextID
 
+%assign event_byte -1
 .PlayerInCoordsArray:
     db 2, 3
     db 2, 4
     db -1
 
+%assign event_byte -1
 Route6GatePlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -114,6 +119,7 @@ Route6GatePlayerMovingScript:
     mov [ebp + wRoute6GateCurScript], al
     ret
 
+%assign event_byte -1
 Route6GateMovePlayerDownScript:
     mov esi, wStatusFlags5
     or byte [ebp + esi], (1 << (BIT_SCRIPTED_MOVEMENT_STATE))
@@ -126,6 +132,7 @@ Route6GateMovePlayerDownScript:
     mov [ebp + wOverrideSimulatedJoypadStatesMask], al
     ret
 
+%assign event_byte -1
 Route6Gate_TextPointers:
     dd SaffronGateGuardText
     dd SaffronGateGuardGeeImThirstyText

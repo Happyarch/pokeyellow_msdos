@@ -36,9 +36,11 @@ extern _SafariZoneCenterRestHouseScientistText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SafariZoneCenterRestHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 SafariZoneCenterRestHouse_TextPointers:
     dd SafariZoneCenterRestHouseGirlText
     dd SafariZoneCenterRestHouseScientistText

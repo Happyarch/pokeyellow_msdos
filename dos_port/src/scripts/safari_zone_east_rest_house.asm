@@ -38,10 +38,12 @@ extern _SafariZoneEastRestHouseSilphWorkerMText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SafariZoneEastRestHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 SafariZoneEastRestHouse_TextPointers:
     dd SafariZoneEastRestHouseScientistText
     dd SafariZoneEastRestHouseRockerText

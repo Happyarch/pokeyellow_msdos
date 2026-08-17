@@ -51,10 +51,12 @@ extern _SSAnneCaptainsRoomRubCaptainsBackText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SSAnneCaptainsRoom_Script:
     call SSAnneCaptainsRoomEventScript
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 SSAnneCaptainsRoomEventScript:
     CheckEvent EVENT_GOT_HM01
     jz .nr_7
@@ -64,11 +66,13 @@ SSAnneCaptainsRoomEventScript:
     or byte [ebp + esi], (1 << (BIT_NO_NPC_FACE_PLAYER))
     ret
 
+%assign event_byte -1
 SSAnneCaptainsRoom_TextPointers:
     dd SSAnneCaptainsRoomCaptainText
     dd SSAnneCaptainsRoomTrashText
     dd SSAnneCaptainsRoomSeasickBookText
 
+%assign event_byte -1
 SSAnneCaptainsRoomCaptainText:
     CheckEvent EVENT_GOT_HM01
     jnz .got_item
@@ -86,17 +90,20 @@ SSAnneCaptainsRoomCaptainText:
     and byte [ebp + esi], ~(1 << (BIT_NO_NPC_FACE_PLAYER)) & 0xFF
     jmp .done
 
+%assign event_byte -1
 .bag_full:
     mov esi, SSAnneCaptainsRoomCaptainHM01NoRoomText
     call PrintText
     jmp .done
 
+%assign event_byte -1
 .got_item:
     mov esi, SSAnneCaptainsRoomCaptainNotSickAnymoreText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 SSAnneCaptainsRoomRubCaptainsBackText:
     text_far _SSAnneCaptainsRoomRubCaptainsBackText
 

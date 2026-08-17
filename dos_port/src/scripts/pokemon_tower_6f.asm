@@ -76,6 +76,7 @@ wSpritePlayerStateData2MovementByte1           equ 0xC206
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonTower6F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, PokemonTower6TrainerHeaders
@@ -85,6 +86,7 @@ PokemonTower6F_Script:
     mov [ebp + wPokemonTower6FCurScript], al
     ret
 
+%assign event_byte -1
 PokemonTower6FSetDefaultScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -92,6 +94,7 @@ PokemonTower6FSetDefaultScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 PokemonTower6F_ScriptPointers:
     dd PokemonTower6FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -99,6 +102,7 @@ PokemonTower6F_ScriptPointers:
     dd PokemonTower6FPlayerMovingScript
     dd PokemonTower6FMarowakBattleScript
 
+%assign event_byte -1
 PokemonTower6FDefaultScript:
     CheckEvent EVENT_BEAT_GHOST_MAROWAK
     jnz CheckFightingMapTrainers
@@ -119,10 +123,12 @@ PokemonTower6FDefaultScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 PokemonTower6FMarowakCoords:
     db 16, 10
     db -1
 
+%assign event_byte -1
 PokemonTower6FMarowakBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -151,6 +157,7 @@ PokemonTower6FMarowakBattleScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 .did_not_defeat:
     mov al, 0x1
     mov [ebp + wSimulatedJoypadStatesIndex], al
@@ -166,6 +173,7 @@ PokemonTower6FMarowakBattleScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 PokemonTower6FPlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -180,21 +188,25 @@ PokemonTower6FPlayerMovingScript:
 
 ; PokemonTower6F_TextPointers (scripts/PokemonTower6F.asm:100-117) — not re-emitted: PokemonTower6TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 PokemonTower6FChanneler1Text:
     mov esi, PokemonTower6TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 PokemonTower6FChanneler2Text:
     mov esi, PokemonTower6TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 PokemonTower6FChanneler3Text:
     mov esi, PokemonTower6TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 PokemonTower6FMarowakDepartedText:
     mov esi, PokemonTower6FGhostWasCubonesMotherText
     call PrintText

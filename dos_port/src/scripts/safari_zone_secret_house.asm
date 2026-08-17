@@ -38,9 +38,11 @@ extern _SafariZoneSecretHouseFishingGuruYouHaveWonText   ; NOT YET DEFINED IN TH
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SafariZoneSecretHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 SafariZoneSecretHouse_TextPointers:
     dd SafariZoneSecretHouseFishingGuruText
 

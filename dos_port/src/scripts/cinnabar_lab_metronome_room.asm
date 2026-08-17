@@ -41,9 +41,11 @@ extern _CinnabarLabMetronomeRoomScientist1Text   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CinnabarLabMetronomeRoom_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 CinnabarLabMetronomeRoom_TextPointers:
     dd CinnabarLabMetronomeRoomScientist1Text
     dd CinnabarLabMetronomeRoomScientist2Text

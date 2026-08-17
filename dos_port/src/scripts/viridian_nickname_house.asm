@@ -44,9 +44,11 @@ extern _ViridianNicknameHouseSpearySignText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 ViridianNicknameHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 ViridianNicknameHouse_TextPointers:
     dd ViridianNicknameHouseBaldingGuyText
     dd ViridianNicknameHouseLittleGirlText
@@ -59,6 +61,7 @@ ViridianNicknameHouseLittleGirlText:
     text_far _ViridianNicknameHouseLittleGirlText
     text_end
 
+%assign event_byte -1
 ViridianNicknameHouseSpearowText:
     mov esi, .Text
     call PrintText
@@ -67,6 +70,7 @@ ViridianNicknameHouseSpearowText:
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _ViridianNicknameHouseSpearowText
     text_end

@@ -151,6 +151,7 @@ section .text
 ; PRET| .LeaderName:
 ; PRET| 	db "GIOVANNI@"
 
+%assign event_byte -1
 ViridianGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -158,6 +159,7 @@ ViridianGymResetScripts:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 ViridianGym_ScriptPointers:
     dd ViridianGymDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -165,6 +167,7 @@ ViridianGym_ScriptPointers:
     dd ViridianGymGiovanniPostBattle
     dd ViridianGymPlayerSpinningScript
 
+%assign event_byte -1
 ViridianGymDefaultScript:
     mov al, [ebp + wYCoord]
     mov bh, al
@@ -185,6 +188,7 @@ ViridianGymDefaultScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 ViridianGymArrowTilePlayerMovement:
     db 11, 19
     dd ViridianGymArrowMovement1
@@ -248,6 +252,7 @@ ViridianGymArrowMovement12:
     db PAD_LEFT, 12
     db -1
 
+%assign event_byte -1
 ViridianGymPlayerSpinningScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -260,10 +265,12 @@ ViridianGymPlayerSpinningScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 .ViridianGymLoadSpinnerArrow:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farjp; behavior=bank switch dropped, jmp goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     jmp LoadSpinnerArrowTiles
 
+%assign event_byte -1
 ViridianGymGiovanniPostBattle:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -286,6 +293,7 @@ ViridianGymReceiveTM27:
     SetEvent EVENT_GOT_TM27
     jmp .gym_victory
 
+%assign event_byte -1
 .bag_full:
     mov al, TEXT_VIRIDIANGYM_GIOVANNI_TM27_NO_ROOM
     mov [ebp + hTextID], al
@@ -390,6 +398,7 @@ ViridianGymReceiveTM27:
 ; PRET| 	text_far _ViridianGymGiovanniTM27NoRoomText
 ; PRET| 	text_end
 
+%assign event_byte -1
 ViridianGymCooltrainerM1Text:
     mov esi, ViridianGymTrainerHeader0
     call TalkToTrainer
@@ -397,6 +406,7 @@ ViridianGymCooltrainerM1Text:
 
 ; ViridianGymCooltrainerM1BattleText (scripts/ViridianGym.asm:286-295) — not re-emitted: ViridianGymCooltrainerM1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 ViridianGymHiker1Text:
     mov esi, ViridianGymTrainerHeader1
     call TalkToTrainer
@@ -404,6 +414,7 @@ ViridianGymHiker1Text:
 
 ; ViridianGymHiker1BattleText (scripts/ViridianGym.asm:304-313) — not re-emitted: ViridianGymHiker1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 ViridianGymRocker1Text:
     mov esi, ViridianGymTrainerHeader2
     call TalkToTrainer
@@ -411,6 +422,7 @@ ViridianGymRocker1Text:
 
 ; ViridianGymRocker1BattleText (scripts/ViridianGym.asm:322-331) — not re-emitted: ViridianGymRocker1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 ViridianGymHiker2Text:
     mov esi, ViridianGymTrainerHeader3
     call TalkToTrainer
@@ -418,6 +430,7 @@ ViridianGymHiker2Text:
 
 ; ViridianGymHiker2BattleText (scripts/ViridianGym.asm:340-349) — not re-emitted: ViridianGymHiker2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 ViridianGymCooltrainerM2Text:
     mov esi, ViridianGymTrainerHeader4
     call TalkToTrainer
@@ -425,6 +438,7 @@ ViridianGymCooltrainerM2Text:
 
 ; ViridianGymCooltrainerM2BattleText (scripts/ViridianGym.asm:358-367) — not re-emitted: ViridianGymCooltrainerM2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 ViridianGymHiker3Text:
     mov esi, ViridianGymTrainerHeader5
     call TalkToTrainer
@@ -432,6 +446,7 @@ ViridianGymHiker3Text:
 
 ; ViridianGymHiker3BattleText (scripts/ViridianGym.asm:376-385) — not re-emitted: ViridianGymHiker3BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 ViridianGymRocker2Text:
     mov esi, ViridianGymTrainerHeader6
     call TalkToTrainer
@@ -439,6 +454,7 @@ ViridianGymRocker2Text:
 
 ; ViridianGymRocker2BattleText (scripts/ViridianGym.asm:394-403) — not re-emitted: ViridianGymRocker2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 ViridianGymCooltrainerM3Text:
     mov esi, ViridianGymTrainerHeader7
     call TalkToTrainer
@@ -456,12 +472,14 @@ ViridianGymCooltrainerM3Text:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .afterBeat:
     mov esi, ViridianGymGuidePostBattleText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 ViridianGymGuidePreBattleText:
     text_far _ViridianGymGuidePreBattleText
     text_end

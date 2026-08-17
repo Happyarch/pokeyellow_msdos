@@ -61,16 +61,19 @@ wAddedToParty                                  equ 0xCCD3
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeruleanMelaniesHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 CeruleanMelaniesHouse_TextPointers:
     dd CeruleanMelanieHouseMelanieText
     dd CeruleanMelanieHouseBulbasaurText
     dd CeruleanMelanieHouseOddishText
     dd CeruleanMelanieHouseSandshrewText
 
+%assign event_byte -1
 CeruleanMelanieHouseMelanieText:
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
@@ -115,16 +118,19 @@ CeruleanMelanieHouseMelanieText:
 .asm_1cfb3:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .asm_1cfb6:
     mov esi, CeruleanHouse1Text_1cfdf
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .asm_1cfbf:
     mov esi, CeruleanHouse1Text_1cfd9
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeruleanHouse1Text_1cfc8:
     text_far MelanieText1
     text_waitbutton
@@ -147,20 +153,25 @@ CeruleanHouse1Text_1cfdf:
 CeruleanMelanieHouseBulbasaurText:
     text_far MelanieBulbasaurText
 
+%assign event_byte -1
     mov al, 153
     call PlayCry
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeruleanMelanieHouseOddishText:
     text_far MelanieOddishText
 
+%assign event_byte -1
     mov al, 185
     call PlayCry
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeruleanMelanieHouseSandshrewText:
     text_far MelanieSandshrewText
 
+%assign event_byte -1
     mov al, 96
     call PlayCry
     jmp TextScriptEnd

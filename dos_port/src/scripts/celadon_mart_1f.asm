@@ -38,10 +38,12 @@ extern _CeladonMart1FReceptionistText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeladonMart1F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 CeladonMart1F_TextPointers:
     dd CeladonMart1FReceptionistText
     dd CeladonMart1FDirectorySignText

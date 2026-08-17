@@ -21,11 +21,13 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global PokemonFanClubClefairyFanText
 global PokemonFanClubClefairyText
 global PokemonFanClubPikachuMovementData
 global PokemonFanClubScript0
 global PokemonFanClubScript1
 global PokemonFanClubScript_59a39
+global PokemonFanClubSeelFanText
 global PokemonFanClubSeelText
 global PokemonFanClub_Script
 global PokemonFanClub_ScriptPointers
@@ -47,10 +49,8 @@ extern LoadGBPal   ; NOT YET DEFINED IN THE PORT
 extern LoadScreenTilesFromBuffer2   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
 extern PokemonFanClubChairmanText   ; NOT YET DEFINED IN THE PORT
-extern PokemonFanClubClefairyFanText   ; NOT YET DEFINED IN THE PORT
 extern PokemonFanClubReceptionistText   ; NOT YET DEFINED IN THE PORT
 extern PokemonFanClubScript_59a44   ; NOT YET DEFINED IN THE PORT
-extern PokemonFanClubSeelFanText   ; NOT YET DEFINED IN THE PORT
 extern PrintFanClubPortrait   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern Random   ; NOT YET DEFINED IN THE PORT
@@ -95,6 +95,7 @@ wSprite03StateData1MovementStatus              equ 0xC131
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonFanClub_Script:
     call EnableAutoTextBoxDrawing
     mov esi, PokemonFanClub_ScriptPointers
@@ -102,10 +103,12 @@ PokemonFanClub_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 PokemonFanClub_ScriptPointers:
     dd PokemonFanClubScript0
     dd PokemonFanClubScript1
 
+%assign event_byte -1
 PokemonFanClubScript0:
     mov esi, wPikachuMapScriptFlags
     test byte [ebp + esi], (1 << (7))
@@ -116,6 +119,7 @@ PokemonFanClubScript0:
     or byte [ebp + esi], (1 << (7))
     ret
 
+%assign event_byte -1
 PokemonFanClubScript1:
     mov esi, wPikachuMapScriptFlags
     test byte [ebp + esi], (1 << (7))
@@ -126,6 +130,7 @@ PokemonFanClubScript1:
     or byte [ebp + esi], (1 << (7))
     ret
 
+%assign event_byte -1
 PokemonFanClubScript_59a39:
     call Random
     mov al, [ebp + hRandomAdd]
@@ -165,6 +170,7 @@ PokemonFanClubScript_59a39:
 ; PRET| 	call DisablePikachuFollowingPlayer
 ; PRET| 	ret
 
+%assign event_byte -1
 PokemonFanClubPikachuMovementData:
     db 0x00
     db 0x26
@@ -181,37 +187,33 @@ PokemonFanClub_TextPointers:
     dd PokemonFanClubChairmanText
     dd PokemonFanClubReceptionistText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonFanClubClefairyFanText (scripts/PokemonFanClub.asm:83-87) — at scripts/PokemonFanClub.asm:84: .asm_59aaf is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventHL EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER
-; PRET| 	jr z, .asm_59aaf
-; PRET| 	ld hl, .yellowtext
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+PokemonFanClubClefairyFanText:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
+    test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
+    jz .asm_59aaf
+    mov esi, .yellowtext
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] PokemonFanClubClefairyFanText.asm_59aaf (scripts/PokemonFanClub.asm:90-95) — at scripts/PokemonFanClub.asm:90: CheckEventReuseHL EVENT_PIKACHU_FAN_BOAST
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventReuseHL EVENT_PIKACHU_FAN_BOAST
-; PRET| 	jr nz, .mineisbetter
-; PRET| 	SetEventReuseHL EVENT_SEEL_FAN_BOAST
-; PRET| 	ld hl, .normaltext
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.asm_59aaf:
+    CheckEventReuseHL EVENT_PIKACHU_FAN_BOAST
+    jnz .mineisbetter
+    SetEventReuseHL EVENT_SEEL_FAN_BOAST
+    mov esi, .normaltext
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] PokemonFanClubClefairyFanText.mineisbetter (scripts/PokemonFanClub.asm:97-101) — at scripts/PokemonFanClub.asm:97: ResetEventReuseHL EVENT_PIKACHU_FAN_BOAST
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ResetEventReuseHL EVENT_PIKACHU_FAN_BOAST
-; PRET| 	ld hl, .bettertext
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.mineisbetter:
+    ResetEventReuseHL EVENT_PIKACHU_FAN_BOAST
+    mov esi, .bettertext
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
+%assign event_byte -1
 .normaltext:
     text_far _PokemonFanClubClefairyFanNormalText
     text_end
@@ -222,52 +224,44 @@ PokemonFanClub_TextPointers:
     text_far _PokemonFanClubClefairyFanText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonFanClubSeelFanText (scripts/PokemonFanClub.asm:117-121) — at scripts/PokemonFanClub.asm:118: .asm_59ae7 is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventHL EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER
-; PRET| 	jr z, .asm_59ae7
-; PRET| 	ld hl, .yellowtext
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+PokemonFanClubSeelFanText:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
+    test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
+    jz .asm_59ae7
+    mov esi, .yellowtext
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] PokemonFanClubSeelFanText.asm_59ae7 (scripts/PokemonFanClub.asm:124-129) — at scripts/PokemonFanClub.asm:124: CheckEventReuseHL EVENT_SEEL_FAN_BOAST
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventReuseHL EVENT_SEEL_FAN_BOAST
-; PRET| 	jr nz, .mineisbetter
-; PRET| 	SetEventReuseHL EVENT_PIKACHU_FAN_BOAST
-; PRET| 	ld hl, .normaltext
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+.asm_59ae7:
+    CheckEventReuseHL EVENT_SEEL_FAN_BOAST
+    jnz .mineisbetter
+    SetEventReuseHL EVENT_PIKACHU_FAN_BOAST
+    mov esi, .normaltext
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] PokemonFanClubSeelFanText.mineisbetter (scripts/PokemonFanClub.asm:131-135) — at scripts/PokemonFanClub.asm:131: ResetEventReuseHL EVENT_SEEL_FAN_BOAST
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ResetEventReuseHL EVENT_SEEL_FAN_BOAST
-; PRET| 	ld hl, .bettertext
-; PRET| 	call PrintText
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+.mineisbetter:
+    ResetEventReuseHL EVENT_SEEL_FAN_BOAST
+    mov esi, .bettertext
+    call PrintText
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] PokemonFanClubSeelFanText.normaltext (scripts/PokemonFanClub.asm:138-147)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _PokemonFanClubSeelFanNormalText
-; PRET| 	text_end
-; PRET| 
-; PRET| .bettertext
-; PRET| 	text_far _PokemonFanClubSeelFanBetterText
-; PRET| 	text_end
-; PRET| 
-; PRET| .yellowtext
-; PRET| 	text_far _PokemonFanClubSeelFanText
-; PRET| 	text_end
+%assign event_byte -1
+.normaltext:
+    text_far _PokemonFanClubSeelFanNormalText
+    text_end
+.bettertext:
+    text_far _PokemonFanClubSeelFanBetterText
+    text_end
+.yellowtext:
+    text_far _PokemonFanClubSeelFanText
+    text_end
 
+%assign event_byte -1
 PokemonFanClubClefairyText:
     mov esi, .Text
     call PrintText
@@ -276,10 +270,12 @@ PokemonFanClubClefairyText:
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _PokemonFanClubClefairyText
     text_end
 
+%assign event_byte -1
 PokemonFanClubSeelText:
     mov esi, .Text
     call PrintText
@@ -288,6 +284,7 @@ PokemonFanClubSeelText:
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _PokemonFanClubSeelText
     text_end

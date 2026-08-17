@@ -51,6 +51,7 @@ wWarpedFromWhichWarp                           equ 0xD73A
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCoElevator_Script:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -95,6 +96,7 @@ SilphCoElevator_Script:
 ; PRET| 	ld [hli], a
 ; PRET| 	ret
 
+%assign event_byte -1
 SilphCoElevatorCopyWarpMapsScript:
     mov esi, SilphCoElevatorFloors
     call LoadItemList
@@ -104,6 +106,7 @@ SilphCoElevatorCopyWarpMapsScript:
     call CopyData
     ret
 
+%assign event_byte -1
 SilphCoElevatorFloors:
     db 11
     db 86
@@ -131,6 +134,7 @@ SilphCoElevatorWarpMaps:
     db 2, SILPH_CO_10F
     db 1, SILPH_CO_11F
 
+%assign event_byte -1
 .End:
 SilphCoElevatorShakeScript:
     call Delay3
@@ -138,9 +142,11 @@ SilphCoElevatorShakeScript:
     call ShakeElevator
     ret
 
+%assign event_byte -1
 SilphCoElevator_TextPointers:
     dd SilphCoElevatorElevatorText
 
+%assign event_byte -1
 SilphCoElevatorElevatorText:
     call SilphCoElevatorCopyWarpMapsScript
     mov esi, SilphCoElevatorWarpMaps

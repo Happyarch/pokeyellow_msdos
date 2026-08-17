@@ -64,6 +64,7 @@ wVictoryRoad3FCurScript                        equ 0xD63F
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 VictoryRoad3F_Script:
     call VictoryRoad3FCheckBoulderEventScript
     call EnableAutoTextBoxDrawing
@@ -89,6 +90,7 @@ VictoryRoad3F_Script:
 ; PRET| 	lb bc, 5, 3
 ; PRET| 	predef_jump ReplaceTileBlock
 
+%assign event_byte -1
 VictoryRoad3F_ScriptPointers:
     dd VictoryRoad3FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -116,6 +118,7 @@ VictoryRoad3F_ScriptPointers:
 ; PRET| 	SetEvent EVENT_VICTORY_ROAD_3_BOULDER_ON_SWITCH1
 ; PRET| 	ret
 
+%assign event_byte -1
 .handle_hole:
     CheckAndSetEvent EVENT_VICTORY_ROAD_3_BOULDER_ON_SWITCH2
     jnz .check_switch_hole
@@ -128,11 +131,13 @@ VictoryRoad3F_ScriptPointers:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp ShowObject
 
+%assign event_byte -1
 .SwitchOrHoleCoords:
     db 5, 3
     db 15, 23
     db -1
 
+%assign event_byte -1
 .check_switch_hole:
     mov al, VICTORY_ROAD_2F
     mov [ebp + wDungeonWarpDestinationMap], al
@@ -147,6 +152,7 @@ VictoryRoad3F_ScriptPointers:
     and byte [ebp + esi], ~(1 << (BIT_DUNGEON_WARP)) & 0xFF
     ret
 
+%assign event_byte -1
 .hole:
     mov al, [ebp + wStatusFlags3]
     test al, (1 << (4))
@@ -155,21 +161,25 @@ VictoryRoad3F_ScriptPointers:
 
 ; VictoryRoad3F_TextPointers (scripts/VictoryRoad3F.asm:82-104) — not re-emitted: VictoryRoad3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 VictoryRoad3FCooltrainerM1Text:
     mov esi, VictoryRoad3TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 VictoryRoad3FCooltrainerF1Text:
     mov esi, VictoryRoad3TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 VictoryRoad3FCooltrainerM2Text:
     mov esi, VictoryRoad3TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 VictoryRoad3FCooltrainerF2Text:
     mov esi, VictoryRoad3TrainerHeader3
     call TalkToTrainer

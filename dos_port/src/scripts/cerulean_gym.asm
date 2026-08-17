@@ -113,6 +113,7 @@ section .text
 ; PRET| .LeaderName:
 ; PRET| 	db "MISTY@"
 
+%assign event_byte -1
 CeruleanGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -120,12 +121,14 @@ CeruleanGymResetScripts:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 CeruleanGym_ScriptPointers:
     dd CheckFightingMapTrainers
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
     dd CeruleanGymMistyPostBattleScript
 
+%assign event_byte -1
 CeruleanGymMistyPostBattleScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -148,6 +151,7 @@ CeruleanGymReceiveTM11:
     SetEvent EVENT_GOT_TM11
     jmp .gymVictory
 
+%assign event_byte -1
 .BagFull:
     mov al, TEXT_CERULEANGYM_MISTY_TM11_NO_ROOM
     mov [ebp + hTextID], al
@@ -235,6 +239,7 @@ CeruleanGymReceiveTM11:
 ; PRET| 	text_far _CeruleanGymMistyReceivedCascadeBadgeText
 ; PRET| 	text_end
 
+%assign event_byte -1
 CeruleanGymCooltrainerFText:
     mov esi, CeruleanGymTrainerHeader0
     call TalkToTrainer
@@ -242,6 +247,7 @@ CeruleanGymCooltrainerFText:
 
 ; CeruleanGymBattleText1 (scripts/CeruleanGym.asm:159-168) — not re-emitted: CeruleanGymBattleText1 is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 CeruleanGymSwimmerText:
     mov esi, CeruleanGymTrainerHeader1
     call TalkToTrainer
@@ -259,12 +265,14 @@ CeruleanGymSwimmerText:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .afterBeat:
     mov esi, .BeatMistyText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .ChampInMakingText:
     text_far _CeruleanGymGymGuideChampInMakingText
     text_end

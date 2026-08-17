@@ -69,6 +69,7 @@ wRoute8CurScript                               equ 0xD600
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route8_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route8TrainerHeaders
@@ -80,6 +81,7 @@ Route8_Script:
 
 ; Route8_ScriptPointers (scripts/Route8.asm:11-49) — not re-emitted: Route8_ScriptPointers is already defined in assets/map_script_tables.inc.
 
+%assign event_byte -1
 Route8SuperNerd1Text:
     mov esi, Route8TrainerHeader0
     call TalkToTrainer
@@ -87,6 +89,7 @@ Route8SuperNerd1Text:
 
 ; Route8SuperNerd1BattleText (scripts/Route8.asm:58-67) — not re-emitted: Route8SuperNerd1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route8Gambler1Text:
     mov esi, Route8TrainerHeader1
     call TalkToTrainer
@@ -94,6 +97,7 @@ Route8Gambler1Text:
 
 ; Route8Gambler1BattleText (scripts/Route8.asm:76-85) — not re-emitted: Route8Gambler1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route8SuperNerd2Text:
     mov esi, Route8TrainerHeader2
     call TalkToTrainer
@@ -101,6 +105,7 @@ Route8SuperNerd2Text:
 
 ; Route8SuperNerd2BattleText (scripts/Route8.asm:94-103) — not re-emitted: Route8SuperNerd2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route8CooltrainerF1Text:
     mov esi, Route8TrainerHeader3
     call TalkToTrainer
@@ -108,6 +113,7 @@ Route8CooltrainerF1Text:
 
 ; Route8CooltrainerF1BattleText (scripts/Route8.asm:112-121) — not re-emitted: Route8CooltrainerF1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route8SuperNerd3Text:
     mov esi, Route8TrainerHeader4
     call TalkToTrainer
@@ -115,6 +121,7 @@ Route8SuperNerd3Text:
 
 ; Route8SuperNerd3BattleText (scripts/Route8.asm:130-139) — not re-emitted: Route8SuperNerd3BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route8CooltrainerF2Text:
     mov esi, Route8TrainerHeader5
     call TalkToTrainer
@@ -122,6 +129,7 @@ Route8CooltrainerF2Text:
 
 ; Route8CooltrainerF2BattleText (scripts/Route8.asm:148-157) — not re-emitted: Route8CooltrainerF2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route8CooltrainerF3Text:
     mov esi, Route8TrainerHeader6
     call TalkToTrainer
@@ -129,6 +137,7 @@ Route8CooltrainerF3Text:
 
 ; Route8CooltrainerF3BattleText (scripts/Route8.asm:166-175) — not re-emitted: Route8CooltrainerF3BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route8Gambler2Text:
     mov esi, Route8TrainerHeader7
     call TalkToTrainer
@@ -136,6 +145,7 @@ Route8Gambler2Text:
 
 ; Route8Gambler2BattleText (scripts/Route8.asm:184-193) — not re-emitted: Route8Gambler2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route8CooltrainerF4Text:
     mov esi, Route8TrainerHeader8
     call TalkToTrainer

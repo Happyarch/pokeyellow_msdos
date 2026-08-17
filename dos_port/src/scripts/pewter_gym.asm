@@ -124,6 +124,7 @@ section .text
 ; PRET| .LeaderName:
 ; PRET| 	db "BROCK@"
 
+%assign event_byte -1
 PewterGymResetScripts:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -131,12 +132,14 @@ PewterGymResetScripts:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 PewterGym_ScriptPointers:
     dd CheckFightingMapTrainers
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
     dd PewterGymBrockPostBattle
 
+%assign event_byte -1
 PewterGymBrockPostBattle:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -159,6 +162,7 @@ PewterGymScriptReceiveTM34:
     SetEvent EVENT_GOT_TM34
     jmp .gymVictory
 
+%assign event_byte -1
 .BagFull:
     mov al, TEXT_PEWTERGYM_TM34_NO_ROOM
     mov [ebp + hTextID], al
@@ -259,6 +263,7 @@ PewterGymScriptReceiveTM34:
 ; PRET| 	text_far _PewterGymBrockBoulderBadgeInfoText ; Text to tell that the flash technique can be used
 ; PRET| 	text_end
 
+%assign event_byte -1
 PewterGymCooltrainerMText:
     mov esi, PewterGymTrainerHeader0
     call TalkToTrainer
@@ -297,17 +302,20 @@ PewterGymCooltrainerMText:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .afterBeat:
     mov esi, PewterGymGuidePostBattleText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .asm_5c3fa:
     mov esi, PewterGymText_5c41c
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 PewterGymGuidePreAdviceText:
     text_far _PewterGymGuidePreAdviceText
     text_end

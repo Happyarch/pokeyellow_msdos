@@ -30,7 +30,9 @@ global IndigoPlateau_TextPointers
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 IndigoPlateau_Script:
     ret
 
+%assign event_byte -1
 IndigoPlateau_TextPointers:

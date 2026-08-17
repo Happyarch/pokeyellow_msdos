@@ -48,6 +48,7 @@ wPokemonTower4FCurScript                       equ 0xD62C
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PokemonTower4F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, PokemonTower4TrainerHeaders
@@ -59,16 +60,19 @@ PokemonTower4F_Script:
 
 ; PokemonTower4F_ScriptPointers (scripts/PokemonTower4F.asm:11-33) — not re-emitted: PokemonTower4TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 PokemonTower4FChanneler1Text:
     mov esi, PokemonTower4TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 PokemonTower4FChanneler2Text:
     mov esi, PokemonTower4TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 PokemonTower4FChanneler3Text:
     mov esi, PokemonTower4TrainerHeader2
     call TalkToTrainer

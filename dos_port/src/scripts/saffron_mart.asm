@@ -37,9 +37,11 @@ extern _SaffronMartSuperNerdText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SaffronMart_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 SaffronMart_TextPointers:
     dd SaffronMartClerkText
     dd SaffronMartSuperNerdText

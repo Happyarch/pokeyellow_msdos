@@ -33,8 +33,10 @@ extern _ColosseumOpponentText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
     jmp TradeCenter_Script
 
+%assign event_byte -1
 Colosseum_TextPointers:
     dd ColosseumOpponentText
 ColosseumOpponentText:

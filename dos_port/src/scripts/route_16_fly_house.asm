@@ -42,9 +42,11 @@ extern _Route16FlyHouseFearowText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route16FlyHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 Route16FlyHouse_TextPointers:
     dd Route16FlyHouseBrunetteGirlText
     dd Route16FlyHouseFearowText
@@ -105,6 +107,7 @@ Route16FlyHouse_TextPointers:
 ; PRET| 	call WaitForSoundToFinish
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _Route16FlyHouseFearowText
     text_end

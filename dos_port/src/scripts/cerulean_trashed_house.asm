@@ -42,10 +42,12 @@ extern _CeruleanTrashedHouseWallHoleText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeruleanTrashedHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 CeruleanTrashedHouse_TextPointers:
     dd CeruleanTrashedHouseFishingGuruText
     dd CeruleanTrashedHouseGirlText
@@ -63,12 +65,14 @@ CeruleanTrashedHouse_TextPointers:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .no_dig_tm:
     mov esi, .TheyStoleATMText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .TheyStoleATMText:
     text_far _CeruleanTrashedHouseFishingGuruTheyStoleATMText
     text_end

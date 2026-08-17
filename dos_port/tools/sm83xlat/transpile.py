@@ -236,6 +236,14 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
             if not lab.startswith(".") and "." not in lab:
                 out.globals_.append(lab)
         out.lines.append("")
+        # SEAM RESET for the *ReuseHL family. `event_byte` is assembly-time state
+        # tracking which byte of wEventFlags ESI points at, and it is only sound
+        # while the emitted sequence matches pret's. A bailed region between two
+        # of these breaks that correspondence, and so does entering a region from
+        # anywhere but its predecessor. Resetting at every region head forces the
+        # next event macro to reload the pointer: at worst one redundant load,
+        # where the alternative is reading the wrong flag.
+        out.lines.append("%assign event_byte -1")
         out.lines.extend(body)
 
     return out

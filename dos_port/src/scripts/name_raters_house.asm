@@ -54,9 +54,11 @@ extern _NameRatersHouseNameRaterWhichPokemonText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 NameRatersHouse_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 NameRatersHouseYesNoScript:
     call PrintText
     call YesNoChoice
@@ -93,13 +95,16 @@ NameRatersHouseYesNoScript:
 ; PRET| 	and a
 ; PRET| 	ret
 
+%assign event_byte -1
 .no_match:
     stc
     ret
 
+%assign event_byte -1
 NameRatersHouse_TextPointers:
     dd NameRatersHouseNameRaterText
 
+%assign event_byte -1
 NameRatersHouseNameRaterText:
     call SaveScreenTilesToBuffer2
     mov esi, .WantMeToRateText
@@ -137,10 +142,12 @@ NameRatersHouseNameRaterText:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .did_not_rename:
     mov esi, .ComeAnyTimeYouLikeText
     jmp .done
 
+%assign event_byte -1
 .WantMeToRateText:
     text_far _NameRatersHouseNameRaterWantMeToRateText
     text_end

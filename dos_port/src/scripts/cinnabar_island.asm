@@ -64,6 +64,7 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CinnabarIsland_Script:
     call EnableAutoTextBoxDrawing
     mov esi, wCurrentMapScriptFlags
@@ -74,10 +75,12 @@ CinnabarIsland_Script:
     mov al, [ebp + wCinnabarIslandCurScript]
     jmp CallFunctionInTable
 
+%assign event_byte -1
 CinnabarIsland_ScriptPointers:
     dd CinnabarIslandDefaultScript
     dd CinnabarIslandPlayerMovingScript
 
+%assign event_byte -1
 CinnabarIslandDefaultScript:
     mov bh, 43
     call IsItemInBag
@@ -113,6 +116,7 @@ CinnabarIslandDefaultScript:
     mov [ebp + wCinnabarIslandCurScript], al
     ret
 
+%assign event_byte -1
 CinnabarIslandPlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -124,6 +128,7 @@ CinnabarIslandPlayerMovingScript:
     mov [ebp + wCinnabarIslandCurScript], al
     ret
 
+%assign event_byte -1
 CinnabarIsland_TextPointers:
     dd CinnabarIslandGirlText
     dd CinnabarIslandGamblerText

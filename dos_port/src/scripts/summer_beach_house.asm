@@ -81,10 +81,12 @@ wPikachuSpawnStateFlags                        equ 0xD471
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SummerBeachHouse_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 SummerBeachHouse_TextPointers:
     dd SummerBeachHouseSurfinDudeText
     dd SummerBeachHousePikachuText
@@ -110,6 +112,7 @@ SummerBeachHouse_TextPointers:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .next:
     mov esi, wPikachuMapScriptFlags
     test byte [ebp + esi], (1 << (0))
@@ -120,6 +123,7 @@ SummerBeachHouse_TextPointers:
     mov esi, .SurfinDudeText1
     jmp .next3
 
+%assign event_byte -1
 .next2:
     mov esi, .SurfinDudeText3
 .next3:
@@ -136,12 +140,14 @@ SummerBeachHouse_TextPointers:
     or byte [ebp + esi], (1 << (1))
     jmp .done
 
+%assign event_byte -1
 .asm_f226b:
     mov esi, .SurfinDudeText2
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .SurfinDudeText1:
     text_far _SummerBeachHouseSurfinDudeText1
     text_end
@@ -155,6 +161,7 @@ SummerBeachHouse_TextPointers:
     text_far _SummerBeachHouseSurfinDudeText4
     text_end
 
+%assign event_byte -1
 SummerBeachHousePikachuText:
     mov esi, .SummerBeachHousePikachuText
     call PrintText
@@ -163,6 +170,7 @@ SummerBeachHousePikachuText:
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
+%assign event_byte -1
 .SummerBeachHousePikachuText:
     text_far _SummerBeachHousePikachuText
     text_end
@@ -180,6 +188,7 @@ SummerBeachHousePikachuText:
 ; PRET| 	call PrintText
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 .SummerBeachHousePoster1Text1:
     text_far _SummerBeachHousePoster1Text1
     text_end
@@ -200,6 +209,7 @@ SummerBeachHousePikachuText:
 ; PRET| 	call PrintText
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 .SummerBeachHousePoster2Text1:
     text_far _SummerBeachHousePoster2Text1
     text_end
@@ -220,6 +230,7 @@ SummerBeachHousePikachuText:
 ; PRET| 	call PrintText
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 .SummerBeachHousePoster3Text1:
     text_far _SummerBeachHousePoster3Text1
     text_end
@@ -227,6 +238,7 @@ SummerBeachHousePikachuText:
     text_far _SummerBeachHousePoster3Text2
     text_end
 
+%assign event_byte -1
 SummerBeachHousePrinterText:
     mov al, 1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
@@ -272,12 +284,14 @@ SummerBeachHousePrinterText:
     mov [ebp + wUpdateSpritesEnabled], al
     jmp .asm_f236f
 
+%assign event_byte -1
 .asm_f2369:
     mov esi, .SummerBeachHousePrinterText1
     call PrintText
 .asm_f236f:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .SummerBeachHousePrinterText1:
     text_far _SummerBeachHousePrinterText1
     text_waitbutton
@@ -293,6 +307,7 @@ SummerBeachHousePrinterText:
     text_far _SummerBeachHousePrinterText4
     text_end
 
+%assign event_byte -1
 Func_f23d0:
     call SaveScreenTilesToBuffer2
     xor al, al
@@ -318,6 +333,7 @@ Func_f23d0:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 Text_f240c:
     text_far _SummerBeachHousePrinterText5
     text_waitbutton

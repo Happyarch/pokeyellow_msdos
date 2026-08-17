@@ -67,6 +67,7 @@ wCoordIndex                                    equ 0xCD3D
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 BrunosRoom_Script:
     call BrunoShowOrHideExitBlock
     call EnableAutoTextBoxDrawing
@@ -77,6 +78,7 @@ BrunosRoom_Script:
     mov [ebp + wBrunosRoomCurScript], al
     ret
 
+%assign event_byte -1
 BrunoShowOrHideExitBlock:
     mov esi, wCurrentMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
@@ -91,6 +93,7 @@ BrunoShowOrHideExitBlock:
     mov al, 0x5
     jmp .setExitBlock
 
+%assign event_byte -1
 .blockExitToNextRoom:
     mov al, 0x24
 .setExitBlock:
@@ -99,11 +102,13 @@ BrunoShowOrHideExitBlock:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp ReplaceTileBlock
 
+%assign event_byte -1
 ResetBrunoScript:
     xor al, al
     mov [ebp + wBrunosRoomCurScript], al
     ret
 
+%assign event_byte -1
 BrunosRoom_ScriptPointers:
     dd BrunosRoomDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -111,9 +116,11 @@ BrunosRoom_ScriptPointers:
     dd BrunosRoomPlayerIsMovingScript
     dd BrunosRoomNoopScript
 
+%assign event_byte -1
 BrunosRoomNoopScript:
     ret
 
+%assign event_byte -1
 BrunoScriptWalkIntoRoom:
     mov esi, wSimulatedJoypadStatesEnd
     mov al, PAD_UP
@@ -136,6 +143,7 @@ BrunoScriptWalkIntoRoom:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 BrunosRoomDefaultScript:
     mov esi, BrunoEntranceCoords
     call ArePlayerCoordsInArray
@@ -164,6 +172,7 @@ BrunosRoomDefaultScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 BrunoEntranceCoords:
     db 10, 4
     db 10, 5
@@ -171,6 +180,7 @@ BrunoEntranceCoords:
     db 11, 5
     db -1
 
+%assign event_byte -1
 BrunosRoomPlayerIsMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -184,6 +194,7 @@ BrunosRoomPlayerIsMovingScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 BrunosRoomBrunoEndBattleScript:
     call EndTrainerBattle
     mov al, [ebp + wIsInBattle]
@@ -195,6 +206,7 @@ BrunosRoomBrunoEndBattleScript:
 
 ; BrunosRoom_TextPointers (scripts/BrunosRoom.asm:118-126) — not re-emitted: BrunosRoomTrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 BrunosRoomBrunoText:
     mov esi, BrunosRoomTrainerHeader0
     call TalkToTrainer

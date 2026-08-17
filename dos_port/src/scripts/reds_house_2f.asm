@@ -35,6 +35,7 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 RedsHouse2F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, RedsHouse2F_ScriptPointers
@@ -42,6 +43,7 @@ RedsHouse2F_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 RedsHouse2F_ScriptPointers:
     dd RedsHouse2FDefaultScript
     dd RedsHouse2FDefaultScript
@@ -49,8 +51,10 @@ RedsHouse2F_ScriptPointers:
     dd RedsHouse2FDefaultScript
     dd RedsHouse2FDefaultScript
 
+%assign event_byte -1
 RedsHouse2FDefaultScript:
     ret
 
+%assign event_byte -1
 RedsHouse2F_TextPointers:
     text_end

@@ -54,9 +54,11 @@ wFossilMon                                     equ 0xD70F
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CinnabarLabFossilRoom_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 CinnabarLabFossilRoom_TextPointers:
     dd CinnabarLabFossilRoomScientist1Text
     dd CinnabarLabFossilRoomScientist2Text
@@ -101,6 +103,7 @@ CinnabarLabFossilRoom_TextPointers:
 ; PRET| 	ld [de], a
 ; PRET| 	ret
 
+%assign event_byte -1
 FossilsList:
     db 41
     db 42
@@ -122,6 +125,7 @@ FossilsList:
 ; PRET| 	farcall GiveFossilToCinnabarLab
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .no_fossils:
     mov esi, .NoFossilsText
     call PrintText
@@ -154,6 +158,7 @@ FossilsList:
 ; PRET| 	ResetEvents EVENT_GAVE_FOSSIL_TO_LAB, EVENT_LAB_STILL_REVIVING_FOSSIL, EVENT_LAB_HANDING_OVER_FOSSIL_MON
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .Text:
     text_far _CinnabarLabFossilRoomScientist1Text
     text_end
@@ -167,6 +172,7 @@ FossilsList:
     text_far _CinnabarLabFossilRoomScientist1FossilIsBackToLifeText
     text_end
 
+%assign event_byte -1
 CinnabarLabFossilRoomScientist2Text:
     mov al, 3
     mov [ebp + wWhichTrade], al
@@ -174,6 +180,7 @@ CinnabarLabFossilRoomScientist2Text:
     call DoInGameTradeDialogue
     jmp TextScriptEnd
 
+%assign event_byte -1
 LoadFossilItemAndMonNameBank1D:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farjp; behavior=bank switch dropped, jmp goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     jmp LoadFossilItemAndMonName

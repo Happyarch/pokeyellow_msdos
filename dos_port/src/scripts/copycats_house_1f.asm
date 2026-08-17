@@ -40,9 +40,11 @@ extern _CopycatsHouse1FMiddleAgedWomanText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CopycatsHouse1F_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 CopycatsHouse1F_TextPointers:
     dd CopycatsHouse1FMiddleAgedWomanText
     dd CopycatsHouse1FMiddleAgedManText
@@ -56,6 +58,7 @@ CopycatsHouse1FMiddleAgedManText:
 CopycatsHouse1FChanseyText:
     text_far _CopycatsHouse1FChanseyText
 
+%assign event_byte -1
     mov al, 40
     call PlayCry
     jmp TextScriptEnd

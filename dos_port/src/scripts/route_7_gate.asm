@@ -53,6 +53,7 @@ wSpritePlayerStateData2MovementByte1           equ 0xC206
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route7Gate_Script:
     call EnableAutoTextBoxDrawing
     mov al, [ebp + wRoute7GateCurScript]
@@ -60,10 +61,12 @@ Route7Gate_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 Route7Gate_ScriptPointers:
     dd Route7DefaultScript
     dd Route7PlayerMovingScript
 
+%assign event_byte -1
 Route7GateMovePlayerLeftScript:
     mov esi, wStatusFlags5
     or byte [ebp + esi], (1 << (BIT_SCRIPTED_MOVEMENT_STATE))
@@ -102,6 +105,7 @@ Route7GateMovePlayerLeftScript:
 ; PRET| 	ld [wRoute7GateCurScript], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .have_drink:
     mov al, TEXT_ROUTE7GATE_GUARD_GIVE_DRINK
     mov [ebp + hTextID], al
@@ -110,11 +114,13 @@ Route7GateMovePlayerLeftScript:
     or byte [ebp + esi], (1 << (6))
     ret
 
+%assign event_byte -1
 .PlayerInCoordsArray:
     db 3, 3
     db 4, 3
     db -1
 
+%assign event_byte -1
 Route7PlayerMovingScript:
     mov al, [ebp + wSimulatedJoypadStatesIndex]
     test al, al
@@ -128,6 +134,7 @@ Route7PlayerMovingScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 Route7Gate_TextPointers:
     dd SaffronGateGuardText
     dd SaffronGateGuardGeeImThirstyText

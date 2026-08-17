@@ -70,6 +70,7 @@ wSprite03StateData1ImageIndex                  equ 0xC132
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 PewterPokecenter_Script:
     mov esi, wPikachuMapScriptFlags
     or byte [ebp + esi], (1 << (7))
@@ -96,6 +97,7 @@ PewterPokecenter_Script:
 ; PRET| 	text_far _PewterPokecenterGentlemanText
 ; PRET| 	text_end
 
+%assign event_byte -1
 PewterPokecenterJigglypuffText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PewterJigglypuff
@@ -107,21 +109,25 @@ PewterPokecenterJigglypuffText:
 ; ---------------------------------------------------------------------------
 ; PRET| 	script_cable_club_receptionist
 
+%assign event_byte -1
 PewterPokecenterCooltrainerFText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PewterPokecenterPrintCooltrainerFText
     jmp TextScriptEnd
 
+%assign event_byte -1
 PewterPokecenterChanseyText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PokecenterChanseyText
     jmp TextScriptEnd
 
+%assign event_byte -1
 PewterPokecenterPrintCooltrainerFText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _PewterPokecenterText3
     text_end
@@ -189,6 +195,7 @@ PewterPokecenterPrintCooltrainerFText:
 ; PRET| 	call DisablePikachuFollowingPlayer
 ; PRET| 	ret
 
+%assign event_byte -1
 .Text:
     text_far _PewterPokecenterJigglypuffText
     text_end

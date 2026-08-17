@@ -62,6 +62,7 @@ wSilphCo5FCurScript                            equ 0xD645
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCo5F_Script:
     call SilphCo5FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -108,6 +109,7 @@ SilphCo5F_Script:
 ; PRET| 	lb bc, 5, 7
 ; PRET| 	predef_jump ReplaceTileBlock
 
+%assign event_byte -1
 .GateCoordinates:
     db 2, 3
     db 6, 3
@@ -136,12 +138,10 @@ SilphCo5F_Script:
 ; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_5_UNLOCKED_DOOR2, EVENT_SILPH_CO_5_UNLOCKED_DOOR1
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SilphCo5F_SetUnlockedSilphCoDoorsScript.unlock_door2 (scripts/SilphCo5F.asm:65-66) — at scripts/SilphCo5F.asm:65: SetEventAfterBranchReuseHL EVENT_SILPH_CO_5_UNLOCKED_DOOR3, EVENT_SILPH_CO_5_UNLOCKED_DOOR1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_5_UNLOCKED_DOOR3, EVENT_SILPH_CO_5_UNLOCKED_DOOR1
-; PRET| 	ret
+%assign event_byte -1
+.unlock_door2:
+    SetEventAfterBranchReuseHL EVENT_SILPH_CO_5_UNLOCKED_DOOR3, EVENT_SILPH_CO_5_UNLOCKED_DOOR1
+    ret
 
 ; SilphCo5F_ScriptPointers (scripts/SilphCo5F.asm:69-98) — not re-emitted: SilphCo5TrainerHeaders is already defined in assets/trainer_headers.inc.
 
@@ -154,6 +154,7 @@ SilphCo5F_Script:
 ; PRET| 	call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 .ThatsYouRightText:
     text_far _SilphCo5FSilphWorkerMThatsYouRightText
     text_end
@@ -161,6 +162,7 @@ SilphCo5F_Script:
     text_far _SilphCo5FSilphWorkerMYoureOurHeroText
     text_end
 
+%assign event_byte -1
 SilphCo5FRocket1Text:
     mov esi, SilphCo5TrainerHeader0
     call TalkToTrainer
@@ -168,6 +170,7 @@ SilphCo5FRocket1Text:
 
 ; SilphCo5FRocket1BattleText (scripts/SilphCo5F.asm:122-131) — not re-emitted: SilphCo5FRocket1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo5FScientistText:
     mov esi, SilphCo5TrainerHeader1
     call TalkToTrainer
@@ -175,6 +178,7 @@ SilphCo5FScientistText:
 
 ; SilphCo5FScientistBattleText (scripts/SilphCo5F.asm:140-149) — not re-emitted: SilphCo5FScientistBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo5FRockerText:
     mov esi, SilphCo5TrainerHeader2
     call TalkToTrainer
@@ -182,6 +186,7 @@ SilphCo5FRockerText:
 
 ; SilphCo5FRockerBattleText (scripts/SilphCo5F.asm:158-167) — not re-emitted: SilphCo5FRockerBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo5FRocket2Text:
     mov esi, SilphCo5TrainerHeader3
     call TalkToTrainer

@@ -34,9 +34,11 @@ extern _Route12Gate1FGuardText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route12Gate1F_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 Route12Gate1F_TextPointers:
     dd Route12Gate1FGuardText
 Route12Gate1FGuardText:

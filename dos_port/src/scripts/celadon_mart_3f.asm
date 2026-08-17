@@ -62,9 +62,11 @@ extern _CeladonMart3FSportsGameText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeladonMart3F_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 CeladonMart3F_TextPointers:
     dd CeladonMart3FClerkText
     dd CeladonMart3FGameBoyKid1Text
@@ -84,11 +86,13 @@ CeladonMart3F_TextPointers:
     dd CeladonMart3FPokemonPosterText
     dd CeladonMart3FPokemonPosterText
 
+%assign event_byte -1
 CeladonMart3FClerkText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CeladonMart3FPrintClerkText
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeladonMart3FGameBoyKid1Text:
     text_far _CeladonMart3FGameBoyKid1Text
     text_end

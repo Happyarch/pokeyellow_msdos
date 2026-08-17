@@ -59,6 +59,7 @@ wSilphCo4FCurScript                            equ 0xD644
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCo4F_Script:
     call SilphCo4FGateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -96,6 +97,7 @@ SilphCo4F_Script:
 ; PRET| 	lb bc, 4, 6
 ; PRET| 	predef_jump ReplaceTileBlock
 
+%assign event_byte -1
 .GateCoordinates:
     db 6, 2
     db 4, 6
@@ -140,6 +142,7 @@ SilphCo4F_Script:
 ; PRET| 	ld [hl], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .exit_loop:
     xor al, al
     mov [ebp + hUnlockedSilphCoDoors], al
@@ -158,12 +161,10 @@ SilphCo4F_Script:
 ; PRET| 	SetEventReuseHL EVENT_SILPH_CO_4_UNLOCKED_DOOR1
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SilphCo4FUnlockedDoorEventScript.unlock_door1 (scripts/SilphCo4F.asm:86-87) — at scripts/SilphCo4F.asm:86: SetEventAfterBranchReuseHL EVENT_SILPH_CO_4_UNLOCKED_DOOR2, EVENT_SILPH_CO_4_UNLOCKED_DOOR1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_4_UNLOCKED_DOOR2, EVENT_SILPH_CO_4_UNLOCKED_DOOR1
-; PRET| 	ret
+%assign event_byte -1
+.unlock_door1:
+    SetEventAfterBranchReuseHL EVENT_SILPH_CO_4_UNLOCKED_DOOR2, EVENT_SILPH_CO_4_UNLOCKED_DOOR1
+    ret
 
 ; SilphCo4F_ScriptPointers (scripts/SilphCo4F.asm:90-113) — not re-emitted: SilphCo4TrainerHeaders is already defined in assets/trainer_headers.inc.
 
@@ -176,6 +177,7 @@ SilphCo4F_Script:
 ; PRET| 	call SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 .ImHidingText:
     text_far _SilphCo4FSilphWorkerMImHidingText
     text_end
@@ -183,6 +185,7 @@ SilphCo4F_Script:
     text_far _SilphCo4FSilphWorkerMTeamRocketIsGoneText
     text_end
 
+%assign event_byte -1
 SilphCo4FRocket1Text:
     mov esi, SilphCo4TrainerHeader0
     call TalkToTrainer
@@ -190,6 +193,7 @@ SilphCo4FRocket1Text:
 
 ; SilphCo4FRocket1BattleText (scripts/SilphCo4F.asm:137-146) — not re-emitted: SilphCo4FRocket1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo4FScientistText:
     mov esi, SilphCo4TrainerHeader1
     call TalkToTrainer
@@ -197,6 +201,7 @@ SilphCo4FScientistText:
 
 ; SilphCo4FScientistBattleText (scripts/SilphCo4F.asm:155-164) — not re-emitted: SilphCo4FScientistBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo4FRocket2Text:
     mov esi, SilphCo4TrainerHeader2
     call TalkToTrainer

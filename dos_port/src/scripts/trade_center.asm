@@ -42,6 +42,7 @@ wSprite01StateData2MapY                        equ 0xC214
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 TradeCenter_Script:
     call EnableAutoTextBoxDrawing
     mov al, [ebp + hSerialConnectionStatus]
@@ -81,6 +82,7 @@ TradeCenter_Script:
     mov [ebp + wSprite01StateData1FacingDirection], al
     ret
 
+%assign event_byte -1
 TradeCenter_TextPointers:
     dd TradeCenterOpponentText
 TradeCenterOpponentText:

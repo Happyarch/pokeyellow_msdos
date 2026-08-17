@@ -414,7 +414,20 @@ class Emitter:
 
         if name in ("CheckEvent", "SetEvent", "ResetEvent", "CheckAndSetEvent",
                     "CheckAndResetEvent", "SetEvents", "ResetEvents",
-                    "SetEventRange", "ResetEventRange"):
+                    "SetEventRange", "ResetEventRange",
+                    # The *ReuseHL family passes through as well: the port's
+                    # events.inc mirrors pret's macros, carrying `event_byte` in
+                    # the ASSEMBLER exactly as rgbasm does. Reconstructing that
+                    # elision here would mean reimplementing rgbasm's
+                    # bookkeeping, and getting it wrong omits a pointer reload
+                    # and reads the wrong event flag silently.
+                    "CheckEventReuseHL", "SetEventReuseHL", "ResetEventReuseHL",
+                    "CheckEventForceReuseHL", "SetEventForceReuseHL",
+                    "ResetEventForceReuseHL",
+                    "CheckEventAfterBranchReuseHL",
+                    "SetEventAfterBranchReuseHL",
+                    "ResetEventAfterBranchReuseHL",
+                    "CheckAndSetEventReuseHL", "CheckAndResetEventReuseHL"):
             rendered = f"{name} {', '.join(self.expr(a, out) for a in args)}"
             # The port's SetEvent/ResetEvent macros are NOT flag-transparent
             # (they lower to `or`/`and`), while pret's are. Where a flag is live
@@ -441,7 +454,16 @@ class Emitter:
             if reg is None:
                 raise Bail("unknown-operand-shape", it.line.raw.strip())
             dst = "esi" if args[0] == "hl" else reg
-            return [f"mov {dst}, wEventFlags + EVENT_BYTE({ev})"]
+            out_lines = [f"mov {dst}, wEventFlags + EVENT_BYTE({ev})"]
+            if dst == "esi":
+                # pret's EventFlagAddress also sets `event_byte`, so a following
+                # *ReuseHL on the same byte elides its reload. Mirror that — but
+                # ONLY for the hl form, because only that one leaves ESI holding
+                # the pointer the elision depends on. pret sets event_byte for
+                # `de`/`bc` too, which would license an elision against a pointer
+                # that was never established.
+                out_lines.append(f"%assign event_byte EVENT_BYTE({ev})")
+            return out_lines
 
         if name == "EventFlagBit":
             ev = self.expr(args[1], out)

@@ -56,6 +56,7 @@ extern _CeruleanBadgeHouseVolcanoBadgeText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeruleanBadgeHouse_Script:
     mov al, 1 << BIT_NO_AUTO_TEXT_BOX
     mov [ebp + wAutoTextBoxDrawingControl], al
@@ -63,6 +64,7 @@ CeruleanBadgeHouse_Script:
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     ret
 
+%assign event_byte -1
 CeruleanBadgeHouse_TextPointers:
     dd CeruleanBadgeHouseMiddleAgedManText
 
@@ -105,6 +107,7 @@ CeruleanBadgeHouse_TextPointers:
 ; PRET| 	call PrintText
 ; PRET| 	jr .loop
 
+%assign event_byte -1
 .done:
     xor al, al
     mov [ebp + wListScrollOffset], al
@@ -112,6 +115,7 @@ CeruleanBadgeHouse_TextPointers:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .BadgeItemList:
     db 8
     db 21

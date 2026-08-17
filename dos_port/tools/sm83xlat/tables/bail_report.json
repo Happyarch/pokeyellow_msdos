@@ -1,30 +1,29 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 1772,
- "regions_bailed": 758,
+ "regions_lowered": 1805,
+ "regions_bailed": 725,
  "by_reason": {
   "owned-by-generated-assets": 255,
-  "target-region-bailed": 257,
+  "target-region-bailed": 253,
   "screen-coord-projection": 4,
   "inline-text-db": 11,
   "bit-clobbers-live-carry": 14,
   "host-pointer-in-16bit-reg": 27,
-  "predef-leaves-id-in-a": 27,
+  "predef-leaves-id-in-a": 28,
   "text-sound-command-unported": 49,
   "pikachu-table-index": 3,
   "hl-half-register-access": 9,
-  "local-label-scope-collision": 13,
+  "local-label-scope-collision": 12,
   "pointer-domain-unknown": 14,
   "ld-via-bc-de": 2,
   "text-script-command-unported": 16,
   "add-hl-r16": 4,
-  "event-byte-assembly-state": 34,
-  "bank-expression": 12,
+  "event-byte-assembly-state": 5,
+  "bank-expression": 13,
   "unresolved-symbol": 1,
   "checkevent-carry-form": 3,
   "event-macro-reuse-a-hint": 1,
-  "owned-by-gen_map_script_tables": 1,
-  "unknown-macro": 1
+  "owned-by-gen_map_script_tables": 1
  },
  "per_file": {
   "scripts/AgathasRoom.asm": {
@@ -523,11 +522,10 @@
    "reasons": []
   },
   "scripts/MtMoonB2F.asm": {
-   "ok_regions": 28,
-   "bailed_regions": 17,
+   "ok_regions": 29,
+   "bailed_regions": 16,
    "reasons": [
     "bank-expression",
-    "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
     "local-label-scope-collision",
     "owned-by-generated-assets",
@@ -565,8 +563,8 @@
    ]
   },
   "scripts/OaksLab.asm": {
-   "ok_regions": 46,
-   "bailed_regions": 46,
+   "ok_regions": 47,
+   "bailed_regions": 45,
    "reasons": [
     "bank-expression",
     "event-byte-assembly-state",
@@ -627,29 +625,25 @@
    "reasons": []
   },
   "scripts/PokemonFanClub.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 16,
+   "ok_regions": 18,
+   "bailed_regions": 9,
    "reasons": [
     "bit-clobbers-live-carry",
-    "event-byte-assembly-state",
-    "local-label-scope-collision",
     "target-region-bailed",
     "text-sound-command-unported"
    ]
   },
   "scripts/PokemonMansion1F.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 4,
+   "ok_regions": 9,
+   "bailed_regions": 3,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets"
    ]
   },
   "scripts/PokemonMansion2F.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 4,
+   "ok_regions": 8,
+   "bailed_regions": 3,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets"
    ]
   },
@@ -836,10 +830,9 @@
    ]
   },
   "scripts/Route12.asm": {
-   "ok_regions": 11,
-   "bailed_regions": 9,
+   "ok_regions": 12,
+   "bailed_regions": 8,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets"
    ]
   },
@@ -900,8 +893,8 @@
    "ok_regions": 10,
    "bailed_regions": 8,
    "reasons": [
-    "event-byte-assembly-state",
-    "owned-by-generated-assets"
+    "owned-by-generated-assets",
+    "predef-leaves-id-in-a"
    ]
   },
   "scripts/Route16FlyHouse.asm": {
@@ -1009,10 +1002,9 @@
    ]
   },
   "scripts/Route25.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 4,
+   "ok_regions": 12,
+   "bailed_regions": 2,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets"
    ]
   },
@@ -1121,11 +1113,10 @@
    "reasons": []
   },
   "scripts/SafariZoneGate.asm": {
-   "ok_regions": 25,
-   "bailed_regions": 9,
+   "ok_regions": 26,
+   "bailed_regions": 8,
    "reasons": [
     "add-hl-r16",
-    "event-byte-assembly-state",
     "hl-half-register-access",
     "target-region-bailed",
     "text-sound-command-unported"
@@ -1194,35 +1185,31 @@
    ]
   },
   "scripts/SeafoamIslands1F.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 2,
+   "ok_regions": 3,
+   "bailed_regions": 1,
    "reasons": [
-    "bit-clobbers-live-carry",
-    "event-byte-assembly-state"
+    "bit-clobbers-live-carry"
    ]
   },
   "scripts/SeafoamIslandsB1F.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 2,
+   "ok_regions": 3,
+   "bailed_regions": 1,
    "reasons": [
-    "bit-clobbers-live-carry",
-    "event-byte-assembly-state"
+    "bit-clobbers-live-carry"
    ]
   },
   "scripts/SeafoamIslandsB2F.asm": {
-   "ok_regions": 2,
-   "bailed_regions": 2,
+   "ok_regions": 3,
+   "bailed_regions": 1,
    "reasons": [
-    "bit-clobbers-live-carry",
-    "event-byte-assembly-state"
+    "bit-clobbers-live-carry"
    ]
   },
   "scripts/SeafoamIslandsB3F.asm": {
-   "ok_regions": 9,
-   "bailed_regions": 3,
+   "ok_regions": 10,
+   "bailed_regions": 2,
    "reasons": [
     "bit-clobbers-live-carry",
-    "event-byte-assembly-state",
     "host-pointer-in-16bit-reg"
    ]
   },
@@ -1243,11 +1230,10 @@
    ]
   },
   "scripts/SilphCo11F.asm": {
-   "ok_regions": 25,
-   "bailed_regions": 15,
+   "ok_regions": 26,
+   "bailed_regions": 14,
    "reasons": [
     "bank-expression",
-    "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
@@ -1262,10 +1248,9 @@
    "reasons": []
   },
   "scripts/SilphCo2F.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 10,
+   "ok_regions": 8,
+   "bailed_regions": 9,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
     "target-region-bailed",
@@ -1273,19 +1258,17 @@
    ]
   },
   "scripts/SilphCo3F.asm": {
-   "ok_regions": 6,
-   "bailed_regions": 6,
+   "ok_regions": 7,
+   "bailed_regions": 5,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/SilphCo4F.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 10,
+   "ok_regions": 8,
+   "bailed_regions": 9,
    "reasons": [
-    "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
@@ -1293,10 +1276,9 @@
    ]
   },
   "scripts/SilphCo5F.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 10,
+   "ok_regions": 8,
+   "bailed_regions": 9,
    "reasons": [
-    "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "target-region-bailed"
@@ -1313,12 +1295,11 @@
    ]
   },
   "scripts/SilphCo7F.asm": {
-   "ok_regions": 26,
-   "bailed_regions": 15,
+   "ok_regions": 27,
+   "bailed_regions": 14,
    "reasons": [
     "bank-expression",
     "bit-clobbers-live-carry",
-    "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
@@ -1335,10 +1316,9 @@
    ]
   },
   "scripts/SilphCo9F.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 10,
+   "ok_regions": 9,
+   "bailed_regions": 9,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
     "predef-leaves-id-in-a",
@@ -1465,23 +1445,18 @@
    "reasons": []
   },
   "scripts/VermilionCity.asm": {
-   "ok_regions": 41,
-   "bailed_regions": 3,
-   "reasons": [
-    "event-byte-assembly-state",
-    "target-region-bailed"
-   ]
+   "ok_regions": 44,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/VermilionDock.asm": {
-   "ok_regions": 3,
-   "bailed_regions": 6,
+   "ok_regions": 5,
+   "bailed_regions": 4,
    "reasons": [
     "add-hl-r16",
-    "event-byte-assembly-state",
+    "bank-expression",
     "hl-half-register-access",
-    "screen-coord-projection",
-    "target-region-bailed",
-    "unknown-macro"
+    "screen-coord-projection"
    ]
   },
   "scripts/VermilionGym.asm": {
@@ -1533,10 +1508,9 @@
    ]
   },
   "scripts/VictoryRoad2F.asm": {
-   "ok_regions": 9,
-   "bailed_regions": 6,
+   "ok_regions": 10,
+   "bailed_regions": 5,
    "reasons": [
-    "event-byte-assembly-state",
     "owned-by-generated-assets",
     "target-region-bailed"
    ]
@@ -1587,10 +1561,9 @@
    ]
   },
   "scripts/ViridianMart.asm": {
-   "ok_regions": 5,
-   "bailed_regions": 4,
+   "ok_regions": 6,
+   "bailed_regions": 3,
    "reasons": [
-    "event-byte-assembly-state",
     "hl-half-register-access",
     "target-region-bailed",
     "text-sound-command-unported"
@@ -4608,20 +4581,6 @@
   },
   {
    "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FScript15",
-   "labels": [
-    "MtMoonB2FScript15"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "ResetEventReuseHL EVENT_57E",
-   "at": "scripts/MtMoonB2F.asm:399",
-   "lines": [
-    394,
-    402
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
    "region": "MtMoonB2FScript_ShowObject",
    "labels": [
     "MtMoonB2FScript_ShowObject"
@@ -5125,20 +5084,6 @@
    "lines": [
     542,
     613
-   ]
-  },
-  {
-   "file": "scripts/OaksLab.asm",
-   "region": "OaksLabRivalLeavesWithPokedexScript",
-   "labels": [
-    "OaksLabRivalLeavesWithPokedexScript"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "ResetEventReuseHL EVENT_2ND_ROUTE22_RIVAL_BATTLE",
-   "at": "scripts/OaksLab.asm:624",
-   "lines": [
-    616,
-    634
    ]
   },
   {
@@ -5981,108 +5926,6 @@
   },
   {
    "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubClefairyFanText",
-   "labels": [
-    "PokemonFanClubClefairyFanText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_59aaf is defined in a region that bailed",
-   "at": "scripts/PokemonFanClub.asm:84",
-   "lines": [
-    83,
-    87
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubClefairyFanText.asm_59aaf",
-   "labels": [
-    "PokemonFanClubClefairyFanText.asm_59aaf"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseHL EVENT_PIKACHU_FAN_BOAST",
-   "at": "scripts/PokemonFanClub.asm:90",
-   "lines": [
-    90,
-    95
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubClefairyFanText.mineisbetter",
-   "labels": [
-    "PokemonFanClubClefairyFanText.mineisbetter",
-    "PokemonFanClubClefairyFanText.done"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "ResetEventReuseHL EVENT_PIKACHU_FAN_BOAST",
-   "at": "scripts/PokemonFanClub.asm:97",
-   "lines": [
-    97,
-    101
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubSeelFanText",
-   "labels": [
-    "PokemonFanClubSeelFanText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_59ae7 is defined in a region that bailed",
-   "at": "scripts/PokemonFanClub.asm:118",
-   "lines": [
-    117,
-    121
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubSeelFanText.asm_59ae7",
-   "labels": [
-    "PokemonFanClubSeelFanText.asm_59ae7"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseHL EVENT_SEEL_FAN_BOAST",
-   "at": "scripts/PokemonFanClub.asm:124",
-   "lines": [
-    124,
-    129
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubSeelFanText.mineisbetter",
-   "labels": [
-    "PokemonFanClubSeelFanText.mineisbetter",
-    "PokemonFanClubSeelFanText.done"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "ResetEventReuseHL EVENT_SEEL_FAN_BOAST",
-   "at": "scripts/PokemonFanClub.asm:131",
-   "lines": [
-    131,
-    135
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
-   "region": "PokemonFanClubSeelFanText.normaltext",
-   "labels": [
-    "PokemonFanClubSeelFanText.normaltext",
-    "PokemonFanClubSeelFanText.bettertext",
-    "PokemonFanClubSeelFanText.yellowtext"
-   ],
-   "reason": "local-label-scope-collision",
-   "detail": "['.bettertext', '.normaltext', '.yellowtext'] would redefine a local label already emitted in this scope",
-   "at": "scripts/PokemonFanClub.asm:138",
-   "lines": [
-    138,
-    147
-   ]
-  },
-  {
-   "file": "scripts/PokemonFanClub.asm",
    "region": "PokemonFanClubChairmanText",
    "labels": [
     "PokemonFanClubChairmanText"
@@ -6252,20 +6095,6 @@
    ]
   },
   {
-   "file": "scripts/PokemonMansion1F.asm",
-   "region": "PokemonMansion1FSwitchText",
-   "labels": [
-    "PokemonMansion1FSwitchText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "ResetEventReuseHL EVENT_MANSION_SWITCH_ON",
-   "at": "scripts/PokemonMansion1F.asm:113",
-   "lines": [
-    97,
-    114
-   ]
-  },
-  {
    "file": "scripts/PokemonMansion2F.asm",
    "region": "Mansion2Script_Switches",
    "labels": [
@@ -6312,20 +6141,6 @@
    "lines": [
     81,
     98
-   ]
-  },
-  {
-   "file": "scripts/PokemonMansion2F.asm",
-   "region": "PokemonMansion2FSwitchText",
-   "labels": [
-    "PokemonMansion2FSwitchText"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "ResetEventReuseHL EVENT_MANSION_SWITCH_ON",
-   "at": "scripts/PokemonMansion2F.asm:118",
-   "lines": [
-    102,
-    119
    ]
   },
   {
@@ -7728,20 +7543,6 @@
   },
   {
    "file": "scripts/Route12.asm",
-   "region": "Route12DefaultScript",
-   "labels": [
-    "Route12DefaultScript"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseHL EVENT_FIGHT_ROUTE12_SNORLAX",
-   "at": "scripts/Route12.asm:27",
-   "lines": [
-    25,
-    43
-   ]
-  },
-  {
-   "file": "scripts/Route12.asm",
    "region": "Route12_TextPointers",
    "labels": [
     "Route12_TextPointers",
@@ -8480,9 +8281,9 @@
    "labels": [
     "Route16DefaultScript"
    ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseHL EVENT_FIGHT_ROUTE16_SNORLAX",
-   "at": "scripts/Route16.asm:27",
+   "reason": "predef-leaves-id-in-a",
+   "detail": "predef HideObject",
+   "at": "scripts/Route16.asm:39",
    "lines": [
     25,
     44
@@ -9607,35 +9408,6 @@
   },
   {
    "file": "scripts/Route25.asm",
-   "region": "Route25ToggleBillsScript",
-   "labels": [
-    "Route25ToggleBillsScript"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseHL EVENT_MET_BILL_2",
-   "at": "scripts/Route25.asm:25",
-   "lines": [
-    12,
-    31
-   ]
-  },
-  {
-   "file": "scripts/Route25.asm",
-   "region": "Route25ToggleBillsScript.met_bill",
-   "labels": [
-    "Route25ToggleBillsScript.met_bill",
-    "Route25ToggleBillsScript.done"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventAfterBranchReuseHL EVENT_GOT_SS_TICKET, EVENT_MET_BILL_2",
-   "at": "scripts/Route25.asm:33",
-   "lines": [
-    33,
-    46
-   ]
-  },
-  {
-   "file": "scripts/Route25.asm",
    "region": "Route25_ScriptPointers",
    "labels": [
     "Route25_ScriptPointers",
@@ -10318,20 +10090,6 @@
    ]
   },
   {
-   "file": "scripts/SafariZoneGate.asm",
-   "region": "SafariZoneGateLeavingSafariScript",
-   "labels": [
-    "SafariZoneGateLeavingSafariScript"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "ResetEventReuseHL EVENT_IN_SAFARI_ZONE",
-   "at": "scripts/SafariZoneGate.asm:82",
-   "lines": [
-    78,
-    98
-   ]
-  },
-  {
    "file": "scripts/SafariZoneGate_2.asm",
    "region": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText",
    "labels": [
@@ -10776,21 +10534,6 @@
    ]
   },
   {
-   "file": "scripts/SeafoamIslands1F.asm",
-   "region": "SeafoamIslands1F_Script.boulder2FellDownHole",
-   "labels": [
-    "SeafoamIslands1F_Script.boulder2FellDownHole",
-    "SeafoamIslands1F_Script.hideAndShowBoulderObjects"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SEAFOAM1_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM1_BOULDER1_DOWN_HOLE",
-   "at": "scripts/SeafoamIslands1F.asm:22",
-   "lines": [
-    22,
-    33
-   ]
-  },
-  {
    "file": "scripts/SeafoamIslandsB1F.asm",
    "region": "SeafoamIslandsB1F_Script",
    "labels": [
@@ -10802,21 +10545,6 @@
    "lines": [
     2,
     19
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB1F.asm",
-   "region": "SeafoamIslandsB1F_Script.boulder2FellDownHole",
-   "labels": [
-    "SeafoamIslandsB1F_Script.boulder2FellDownHole",
-    "SeafoamIslandsB1F_Script.hideAndShowBoulderObjects"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SEAFOAM2_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM2_BOULDER1_DOWN_HOLE",
-   "at": "scripts/SeafoamIslandsB1F.asm:21",
-   "lines": [
-    21,
-    32
    ]
   },
   {
@@ -10834,21 +10562,6 @@
    ]
   },
   {
-   "file": "scripts/SeafoamIslandsB2F.asm",
-   "region": "SeafoamIslandsB2F_Script.boulder2FellDownHole",
-   "labels": [
-    "SeafoamIslandsB2F_Script.boulder2FellDownHole",
-    "SeafoamIslandsB2F_Script.hideAndShowBoulderObjects"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE",
-   "at": "scripts/SeafoamIslandsB2F.asm:21",
-   "lines": [
-    21,
-    32
-   ]
-  },
-  {
    "file": "scripts/SeafoamIslandsB3F.asm",
    "region": "SeafoamIslandsB3F_Script",
    "labels": [
@@ -10860,21 +10573,6 @@
    "lines": [
     2,
     19
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB3F.asm",
-   "region": "SeafoamIslandsB3F_Script.boulder2FellDownHole",
-   "labels": [
-    "SeafoamIslandsB3F_Script.boulder2FellDownHole",
-    "SeafoamIslandsB3F_Script.hideAndShowBoulderObjects"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SEAFOAM4_BOULDER2_DOWN_HOLE, EVENT_SEAFOAM4_BOULDER1_DOWN_HOLE",
-   "at": "scripts/SeafoamIslandsB3F.asm:21",
-   "lines": [
-    21,
-    33
    ]
   },
   {
@@ -11067,20 +10765,6 @@
   },
   {
    "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FScript14",
-   "labels": [
-    "SilphCo11FScript14"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventReuseHL EVENT_BEAT_SILPH_CO_11F_JESSIE_JAMES",
-   "at": "scripts/SilphCo11F.asm:455",
-   "lines": [
-    450,
-    458
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
    "region": "SilphCo11FScript_ShowObject",
    "labels": [
     "SilphCo11FScript_ShowObject"
@@ -11262,20 +10946,6 @@
   },
   {
    "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2F_UnlockedDoorEventScript.unlock_door1",
-   "labels": [
-    "SilphCo2F_UnlockedDoorEventScript.unlock_door1"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SILPH_CO_2_UNLOCKED_DOOR2, EVENT_SILPH_CO_2_UNLOCKED_DOOR1",
-   "at": "scripts/SilphCo2F.asm:86",
-   "lines": [
-    86,
-    87
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
    "region": "SilphCo2F_ScriptPointers",
    "labels": [
     "SilphCo2F_ScriptPointers",
@@ -11396,20 +11066,6 @@
   },
   {
    "file": "scripts/SilphCo3F.asm",
-   "region": "SilphCo3F_UnlockedDoorEventScript.unlock_door1",
-   "labels": [
-    "SilphCo3F_UnlockedDoorEventScript.unlock_door1"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SILPH_CO_3_UNLOCKED_DOOR2, EVENT_SILPH_CO_3_UNLOCKED_DOOR1",
-   "at": "scripts/SilphCo3F.asm:50",
-   "lines": [
-    50,
-    51
-   ]
-  },
-  {
-   "file": "scripts/SilphCo3F.asm",
    "region": "SilphCo3F_ScriptPointers",
    "labels": [
     "SilphCo3F_ScriptPointers",
@@ -11514,20 +11170,6 @@
    "lines": [
     77,
     84
-   ]
-  },
-  {
-   "file": "scripts/SilphCo4F.asm",
-   "region": "SilphCo4FUnlockedDoorEventScript.unlock_door1",
-   "labels": [
-    "SilphCo4FUnlockedDoorEventScript.unlock_door1"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SILPH_CO_4_UNLOCKED_DOOR2, EVENT_SILPH_CO_4_UNLOCKED_DOOR1",
-   "at": "scripts/SilphCo4F.asm:86",
-   "lines": [
-    86,
-    87
    ]
   },
   {
@@ -11653,20 +11295,6 @@
    "lines": [
     60,
     63
-   ]
-  },
-  {
-   "file": "scripts/SilphCo5F.asm",
-   "region": "SilphCo5F_SetUnlockedSilphCoDoorsScript.unlock_door2",
-   "labels": [
-    "SilphCo5F_SetUnlockedSilphCoDoorsScript.unlock_door2"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SILPH_CO_5_UNLOCKED_DOOR3, EVENT_SILPH_CO_5_UNLOCKED_DOOR1",
-   "at": "scripts/SilphCo5F.asm:65",
-   "lines": [
-    65,
-    66
    ]
   },
   {
@@ -12011,20 +11639,6 @@
   },
   {
    "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7F_UnlockedDoorEventScript.unlock_door2",
-   "labels": [
-    "SilphCo7F_UnlockedDoorEventScript.unlock_door2"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SILPH_CO_7_UNLOCKED_DOOR3, EVENT_SILPH_CO_7_UNLOCKED_DOOR1",
-   "at": "scripts/SilphCo7F.asm:101",
-   "lines": [
-    101,
-    102
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
    "region": "SilphCo7FDefaultScript",
    "labels": [
     "SilphCo7FDefaultScript",
@@ -12320,20 +11934,6 @@
    "lines": [
     111,
     114
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9F_SetUnlockedSilphCoDoorsScript.unlock_door3",
-   "labels": [
-    "SilphCo9F_SetUnlockedSilphCoDoorsScript.unlock_door3"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "SetEventAfterBranchReuseHL EVENT_SILPH_CO_9_UNLOCKED_DOOR4, EVENT_SILPH_CO_9_UNLOCKED_DOOR1",
-   "at": "scripts/SilphCo9F.asm:118",
-   "lines": [
-    116,
-    119
    ]
   },
   {
@@ -12744,76 +12344,6 @@
    ]
   },
   {
-   "file": "scripts/VermilionCity.asm",
-   "region": "VermilionCity_Script",
-   "labels": [
-    "VermilionCity_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".vermilionCityScript_19869 is defined in a region that bailed",
-   "at": "scripts/VermilionCity.asm:17",
-   "lines": [
-    2,
-    18
-   ]
-  },
-  {
-   "file": "scripts/VermilionCity.asm",
-   "region": "VermilionCity_Script.vermilionCityScript_19869",
-   "labels": [
-    "VermilionCity_Script.vermilionCityScript_19869"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseHL EVENT_GOT_BIKE_VOUCHER",
-   "at": "scripts/VermilionCity.asm:23",
-   "lines": [
-    21,
-    26
-   ]
-  },
-  {
-   "file": "scripts/VermilionCity.asm",
-   "region": "VermilionCityLeftSSAnneCallbackScript",
-   "labels": [
-    "VermilionCityLeftSSAnneCallbackScript"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventReuseHL EVENT_WALKED_PAST_GUARD_AFTER_SS_ANNE_LEFT",
-   "at": "scripts/VermilionCity.asm:41",
-   "lines": [
-    39,
-    46
-   ]
-  },
-  {
-   "file": "scripts/VermilionDock.asm",
-   "region": "VermilionDock_Script",
-   "labels": [
-    "VermilionDock_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".walking_out_of_dock is defined in a region that bailed",
-   "at": "scripts/VermilionDock.asm:4",
-   "lines": [
-    2,
-    28
-   ]
-  },
-  {
-   "file": "scripts/VermilionDock.asm",
-   "region": "VermilionDock_Script.walking_out_of_dock",
-   "labels": [
-    "VermilionDock_Script.walking_out_of_dock"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventAfterBranchReuseHL EVENT_WALKED_OUT_OF_DOCK, EVENT_STARTED_WALKING_OUT_OF_DOCK",
-   "at": "scripts/VermilionDock.asm:30",
-   "lines": [
-    30,
-    37
-   ]
-  },
-  {
    "file": "scripts/VermilionDock.asm",
    "region": "VermilionDockSSAnneLeavesScript",
    "labels": [
@@ -12822,9 +12352,9 @@
     "VermilionDockSSAnneLeavesScript.smoke_puff_drift_loop",
     "VermilionDockSSAnneLeavesScript.delay_between_drifts"
    ],
-   "reason": "unknown-macro",
-   "detail": "SetEventForceReuseHL EVENT_SS_ANNE_LEFT",
-   "at": "scripts/VermilionDock.asm:40",
+   "reason": "bank-expression",
+   "detail": "BANK(Music_Surfing)",
+   "at": "scripts/VermilionDock.asm:44",
    "lines": [
     40,
     122
@@ -13233,21 +12763,6 @@
    "lines": [
     46,
     59
-   ]
-  },
-  {
-   "file": "scripts/VictoryRoad2F.asm",
-   "region": "VictoryRoad2FDefaultScript.second_switch",
-   "labels": [
-    "VictoryRoad2FDefaultScript.second_switch",
-    "VictoryRoad2FDefaultScript.set_script_flag"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckEventAfterBranchReuseHL EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH2, EVENT_VICTORY_ROAD_2_BOULDER_ON_SWITCH1",
-   "at": "scripts/VictoryRoad2F.asm:61",
-   "lines": [
-    61,
-    67
    ]
   },
   {
@@ -13810,20 +13325,6 @@
    "lines": [
     15,
     21
-   ]
-  },
-  {
-   "file": "scripts/ViridianMart.asm",
-   "region": "ViridianMartScript2",
-   "labels": [
-    "ViridianMartScript2"
-   ],
-   "reason": "event-byte-assembly-state",
-   "detail": "CheckAndSetEventReuseHL EVENT_SPAWNED_OLD_MAN_1",
-   "at": "scripts/ViridianMart.asm:67",
-   "lines": [
-    65,
-    75
    ]
   },
   {

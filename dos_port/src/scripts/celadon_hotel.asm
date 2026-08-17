@@ -38,9 +38,11 @@ extern _CeladonHotelSuperNerdText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeladonHotel_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 CeladonHotel_TextPointers:
     dd CeladonHotelGrannyText
     dd CeladonHotelBeautyText

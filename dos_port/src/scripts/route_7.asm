@@ -34,10 +34,12 @@ extern _Route7UndergroundPathSignText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route7_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 Route7_TextPointers:
     dd Route7UndergroundPathSignText
 Route7UndergroundPathSignText:

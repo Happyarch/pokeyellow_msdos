@@ -57,24 +57,29 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 RedsHouse1F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 RedsHouse1F_TextPointers:
     dd RedsHouse1FMomText
     dd RedsHouse1FTVText
 
+%assign event_byte -1
 RedsHouse1FMomText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call RedsHouse1FPrintMomText
     jmp TextScriptEnd
 
+%assign event_byte -1
 RedsHouse1FTVText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call RedsHouse1FPrintTVText
     jmp TextScriptEnd
 
+%assign event_byte -1
 RedsHouse1FPrintMomText:
     mov al, [ebp + wStatusFlags4]
     test al, (1 << (3))
@@ -83,10 +88,12 @@ RedsHouse1FPrintMomText:
     call PrintText
     ret
 
+%assign event_byte -1
 .WakeUpText:
     text_far _RedsHouse1FMomWakeUpText
     text_end
 
+%assign event_byte -1
 RedsHouse1FMomHealScript:
     mov esi, RedsHouse1FMomYouShouldRestText
     call PrintText
@@ -109,6 +116,7 @@ RedsHouse1FMomHealScript:
     call PrintText
     ret
 
+%assign event_byte -1
 RedsHouse1FMomYouShouldRestText:
     text_far _RedsHouse1FMomYouShouldRestText
     text_end
@@ -116,6 +124,7 @@ RedsHouse1FMomLookingGreatText:
     text_far _RedsHouse1FMomLookingGreatText
     text_end
 
+%assign event_byte -1
 RedsHouse1FPrintTVText:
     mov esi, .WrongSideText
     mov al, [ebp + wSpritePlayerStateData1FacingDirection]
@@ -126,6 +135,7 @@ RedsHouse1FPrintTVText:
     call PrintText
     ret
 
+%assign event_byte -1
 .StandByMeMovieText:
     text_far _RedsHouse1FTVStandByMeMovieText
     text_end

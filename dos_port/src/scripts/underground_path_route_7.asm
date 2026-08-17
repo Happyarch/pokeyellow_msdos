@@ -35,11 +35,13 @@ extern _UndergroundPathRoute7MiddleAgedManText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 UndergroundPathRoute7_Script:
     mov al, ROUTE_7
     mov [ebp + wLastMap], al
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 UndergroundPathRoute7_TextPointers:
     dd UndergroundPathRoute7MiddleAgedManText
 UndergroundPathRoute7MiddleAgedManText:

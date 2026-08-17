@@ -47,6 +47,7 @@ wCeruleanCaveB1FCurScript                      equ 0xD64F
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeruleanCaveB1F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, CeruleanCaveB1FTrainerHeaders
@@ -58,6 +59,7 @@ CeruleanCaveB1F_Script:
 
 ; CeruleanCaveB1F_ScriptPointers (scripts/CeruleanCaveB1F.asm:11-28) — not re-emitted: CeruleanCaveB1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
+%assign event_byte -1
 CeruleanCaveB1FMewtwoText:
     mov esi, MewtwoTrainerHeader
     call TalkToTrainer
@@ -65,6 +67,7 @@ CeruleanCaveB1FMewtwoText:
 
 ; MewtwoBattleText (scripts/CeruleanCaveB1F.asm:37-37) — not re-emitted: MewtwoBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
     mov al, 131
     call PlayCry
     call WaitForSoundToFinish

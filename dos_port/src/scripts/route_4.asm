@@ -45,6 +45,7 @@ wRoute4CurScript                               equ 0xD5F8
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route4_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route4TrainerHeaders
@@ -56,6 +57,7 @@ Route4_Script:
 
 ; Route4_ScriptPointers (scripts/Route4.asm:11-33) — not re-emitted: Route4_ScriptPointers is already defined in assets/map_script_tables.inc.
 
+%assign event_byte -1
 Route4CooltrainerF2Text:
     mov esi, Route4TrainerHeader0
     call TalkToTrainer

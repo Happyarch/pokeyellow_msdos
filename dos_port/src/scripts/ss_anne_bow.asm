@@ -47,6 +47,7 @@ wSSAnneBowCurScript                            equ 0xD616
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SSAnneBow_Script:
     call EnableAutoTextBoxDrawing
     mov esi, SSAnne5TrainerHeaders
@@ -58,6 +59,7 @@ SSAnneBow_Script:
 
 ; SSAnneBow_ScriptPointers (scripts/SSAnneBow.asm:11-42) — not re-emitted: SSAnne5TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SSAnneBowSailor2Text:
     mov esi, SSAnne5TrainerHeader0
     call TalkToTrainer
@@ -65,6 +67,7 @@ SSAnneBowSailor2Text:
 
 ; SSAnneBowSailor2BattleText (scripts/SSAnneBow.asm:51-60) — not re-emitted: SSAnneBowSailor2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SSAnneBowSailor3Text:
     mov esi, SSAnne5TrainerHeader1
     call TalkToTrainer

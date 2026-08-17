@@ -120,6 +120,7 @@ wSilphCo7FCurScript                            equ 0xD647
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SilphCo7F_Script:
     call SilphCo7F_GateCallbackScript
     call EnableAutoTextBoxDrawing
@@ -166,6 +167,7 @@ SilphCo7F_Script:
 ; PRET| 	lb bc, 6, 10
 ; PRET| 	predef_jump ReplaceTileBlock
 
+%assign event_byte -1
 .GateCoordinates:
     db 3, 5
     db 2, 10
@@ -211,6 +213,7 @@ SilphCo7F_Script:
 ; PRET| 	ld [hl], a
 ; PRET| 	ret
 
+%assign event_byte -1
 .exit_loop:
     xor al, al
     mov [ebp + hUnlockedSilphCoDoors], al
@@ -238,13 +241,12 @@ SilphCo7F_Script:
 ; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_7_UNLOCKED_DOOR2, EVENT_SILPH_CO_7_UNLOCKED_DOOR1
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] SilphCo7F_UnlockedDoorEventScript.unlock_door2 (scripts/SilphCo7F.asm:101-102) — at scripts/SilphCo7F.asm:101: SetEventAfterBranchReuseHL EVENT_SILPH_CO_7_UNLOCKED_DOOR3, EVENT_SILPH_CO_7_UNLOCKED_DOOR1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_7_UNLOCKED_DOOR3, EVENT_SILPH_CO_7_UNLOCKED_DOOR1
-; PRET| 	ret
+%assign event_byte -1
+.unlock_door2:
+    SetEventAfterBranchReuseHL EVENT_SILPH_CO_7_UNLOCKED_DOOR3, EVENT_SILPH_CO_7_UNLOCKED_DOOR1
+    ret
 
+%assign event_byte -1
 SilphCo7FSetDefaultScript:
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -253,6 +255,7 @@ SilphCo7FSetCurScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 SilphCo7F_ScriptPointers:
     dd SilphCo7FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -299,6 +302,7 @@ SilphCo7F_ScriptPointers:
 ; PRET| 	ld a, SCRIPT_SILPHCO7F_RIVAL_START_BATTLE
 ; PRET| 	jp SilphCo7FSetCurScript
 
+%assign event_byte -1
 .RivalEncounterCoordinates:
     db 2, 3
     db 3, 3
@@ -310,6 +314,7 @@ SilphCo7F_ScriptPointers:
     db NPC_MOVEMENT_UP
     db -1
 
+%assign event_byte -1
 SilphCo7FRivalStartBattleScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -371,6 +376,7 @@ SilphCo7FRivalStartBattleScript:
 ; PRET| 	ld a, SCRIPT_SILPHCO7F_RIVAL_EXIT
 ; PRET| 	jp SilphCo7FSetCurScript
 
+%assign event_byte -1
 .RivalExitRightMovement:
     db NPC_MOVEMENT_RIGHT
     db NPC_MOVEMENT_RIGHT
@@ -415,6 +421,7 @@ SilphCo7FRivalStartBattleScript:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .give_lapras:
     mov esi, .HaveThisPokemonText
     call PrintText
@@ -433,12 +440,14 @@ SilphCo7FRivalStartBattleScript:
     or byte [ebp + esi], (1 << (0))
     jmp .done
 
+%assign event_byte -1
 .saved_silph:
     mov esi, .SavedText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .HaveThisPokemonText:
     text_far _SilphCo7FSilphWorkerM1HaveThisPokemonText
     text_end
@@ -452,6 +461,7 @@ SilphCo7FRivalStartBattleScript:
     text_far _SilphCo7FSilphWorkerM1SavedText
     text_end
 
+%assign event_byte -1
 SilphCo7FSilphWorkerM2Text:
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
     jnz .saved_silph
@@ -459,12 +469,14 @@ SilphCo7FSilphWorkerM2Text:
     call PrintText
     jmp .done
 
+%assign event_byte -1
 .saved_silph:
     mov esi, .CancelledTheMasterBallText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .AfterTheMasterBallText:
     text_far _SilphCo7FSilphWorkerM2AfterTheMasterBallText
     text_end
@@ -472,6 +484,7 @@ SilphCo7FSilphWorkerM2Text:
     text_far _SilphCo7FSilphWorkerM2CancelledMasterBallText
     text_end
 
+%assign event_byte -1
 SilphCo7FSilphWorkerM3Text:
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
     jnz .saved_silph
@@ -479,12 +492,14 @@ SilphCo7FSilphWorkerM3Text:
     call PrintText
     jmp .done
 
+%assign event_byte -1
 .saved_silph:
     mov esi, .YouChasedOffTeamRocketText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .ItWouldBeBadText:
     text_far _SilphCo7FSilphWorkerM3ItWouldBeBadText
     text_end
@@ -492,6 +507,7 @@ SilphCo7FSilphWorkerM3Text:
     text_far _SilphCo7FSilphWorkerM3YouChasedOffTeamRocketText
     text_end
 
+%assign event_byte -1
 SilphCo7FSilphWorkerM4Text:
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
     jnz .saved_silph
@@ -499,12 +515,14 @@ SilphCo7FSilphWorkerM4Text:
     call PrintText
     jmp .done
 
+%assign event_byte -1
 .saved_silph:
     mov esi, .SafeAtLastText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 .ItsReallyDangerousHereText:
     text_far _SilphCo7FSilphWorkerM4ItsReallyDangerousHereText
     text_end
@@ -512,6 +530,7 @@ SilphCo7FSilphWorkerM4Text:
     text_far _SilphCo7FSilphWorkerM4SafeAtLastText
     text_end
 
+%assign event_byte -1
 SilphCo7FRocket1Text:
     mov esi, SilphCo7TrainerHeader0
     call TalkToTrainer
@@ -519,6 +538,7 @@ SilphCo7FRocket1Text:
 
 ; SilphCo7FRocket1BattleText (scripts/SilphCo7F.asm:400-409) — not re-emitted: SilphCo7FRocket1BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo7FScientistText:
     mov esi, SilphCo7TrainerHeader1
     call TalkToTrainer
@@ -526,6 +546,7 @@ SilphCo7FScientistText:
 
 ; SilphCo7FScientistBattleText (scripts/SilphCo7F.asm:418-427) — not re-emitted: SilphCo7FScientistBattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo7FRocket2Text:
     mov esi, SilphCo7TrainerHeader2
     call TalkToTrainer
@@ -533,6 +554,7 @@ SilphCo7FRocket2Text:
 
 ; SilphCo7FRocket2BattleText (scripts/SilphCo7F.asm:436-445) — not re-emitted: SilphCo7FRocket2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo7FRocket3Text:
     mov esi, SilphCo7TrainerHeader3
     call TalkToTrainer
@@ -540,11 +562,13 @@ SilphCo7FRocket3Text:
 
 ; SilphCo7FRocket3BattleText (scripts/SilphCo7F.asm:454-463) — not re-emitted: SilphCo7FRocket3BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 SilphCo7FRivalText:
     mov esi, .Text
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _SilphCo7FRivalText
     text_end

@@ -51,10 +51,12 @@ extern _SSAnneKitchenCook7MainCourseIsText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SSAnneKitchen_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 SSAnneKitchen_TextPointers:
     dd SSAnneKitchenCook1Text
     dd SSAnneKitchenCook2Text
@@ -82,6 +84,7 @@ SSAnneKitchenCook6Text:
     text_far _SSAnneKitchenCook6Text
     text_end
 
+%assign event_byte -1
 SSAnneKitchenCook7Text:
     mov esi, .MainCourseIsText
     call PrintText
@@ -91,18 +94,21 @@ SSAnneKitchenCook7Text:
     mov esi, .SalmonDuSaladText
     jmp .done
 
+%assign event_byte -1
 .not_dialog_1:
     test al, (1 << (4))
     jz .not_dialog_2
     mov esi, .EelsAuBarbecueText
     jmp .done
 
+%assign event_byte -1
 .not_dialog_2:
     mov esi, .PrimeBeefSteakText
 .done:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .MainCourseIsText:
     text_far _SSAnneKitchenCook7MainCourseIsText
     text_end

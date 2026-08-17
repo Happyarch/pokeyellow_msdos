@@ -80,10 +80,12 @@ hCanceledPrinting                              equ 0xFFDB
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeladonMansion3F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 CeladonMansion3_PokedexCount:
     mov esi, wPokedexOwned
     mov bh, wPokedexOwnedEnd - wPokedexOwned
@@ -91,6 +93,7 @@ CeladonMansion3_PokedexCount:
     mov al, [ebp + wNumSetBits]
     ret
 
+%assign event_byte -1
 CeladonMansion3F_TextPointers:
     dd CeladonMansion3FProgrammerText
     dd CeladonMansion3FGraphicArtistText
@@ -114,6 +117,7 @@ CeladonMansion3F_TextPointers:
 ; PRET| 	call PrintText
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 CeladonMansion3Text_486f0:
     text_far _CeladonMansion3FProgrammerText
     text_end
@@ -162,12 +166,14 @@ CeladonMansion3Text_486f5:
 ; PRET| 	ld hl, .Text4
 ; PRET| 	jr .print
 
+%assign event_byte -1
 .declined_print:
     mov esi, .Text3
 .print:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text1:
     text_far _CeladonMansion3FGraphicArtistText
     text_end
@@ -208,6 +214,7 @@ CeladonMansion3Text_486f5:
 ; PRET| 	text_far _CeladonMansion3FWriterText2
 ; PRET| 	text_end
 
+%assign event_byte -1
 CeladonMansion3FGameDesignerText:
     call CeladonMansion3_PokedexCount
     cmp al, 151 - 1
@@ -215,6 +222,7 @@ CeladonMansion3FGameDesignerText:
     mov esi, .Text
     jmp .done
 
+%assign event_byte -1
 .completed_dex:
     mov esi, .CompletedDexText
     call PrintText
@@ -226,6 +234,7 @@ CeladonMansion3FGameDesignerText:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .Text:
     text_far _CeladonMansion3FGameDesignerText
     text_end
@@ -233,68 +242,82 @@ CeladonMansion3FGameDesignerText:
     text_far _CeladonMansion3FGameDesignerCompletedDexText
     text_promptbutton
 
+%assign event_byte -1
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call DisplayDiploma
     mov al, 1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     jmp TextScriptEnd
 
+%assign event_byte -1
 .UnlockedDiplomaPrinting:
     text_far _CeladonMansion3FGameDesignerCompletedDexText2
     text_end
 
+%assign event_byte -1
 CeladonMansion3FGameProgramPCText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CeladonMansion3FPrintGameProgramPCText
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeladonMansion3FPlayingGamePCText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CeladonMansion3FPrintPlayingGamePCText
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeladonMansion3FGameScriptPCText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CeladonMansion3FPrintGameScriptPCText
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeladonMansion3FDevRoomSignText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call CeladonMansion3FPrintDevRoomSignText
     jmp TextScriptEnd
 
+%assign event_byte -1
 CeladonMansion3FPrintGameProgramPCText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _CeladonMansion3FGameProgramPCText
     text_end
 
+%assign event_byte -1
 CeladonMansion3FPrintPlayingGamePCText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _CeladonMansion3FPlayingGamePCText
     text_end
 
+%assign event_byte -1
 CeladonMansion3FPrintGameScriptPCText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _CeladonMansion3FGameScriptPCText
     text_end
 
+%assign event_byte -1
 CeladonMansion3FPrintDevRoomSignText:
     mov esi, .text
     call PrintText
     ret
 
+%assign event_byte -1
 .text:
     text_far _CeladonMansion3FDevRoomSignText
     text_end

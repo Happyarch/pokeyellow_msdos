@@ -34,9 +34,11 @@ extern _SSAnne3FSailorText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 SSAnne3F_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 SSAnne3F_TextPointers:
     dd SSAnne3FSailorText
 SSAnne3FSailorText:

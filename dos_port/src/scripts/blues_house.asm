@@ -58,6 +58,7 @@ wBluesHouseCurScript                           equ 0xD5F2
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 BluesHouse_Script:
     call EnableAutoTextBoxDrawing
     mov esi, BluesHouse_ScriptPointers
@@ -65,10 +66,12 @@ BluesHouse_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 BluesHouse_ScriptPointers:
     dd BluesHouseDefaultScript
     dd BluesHouseNoopScript
 
+%assign event_byte -1
 BluesHouseDefaultScript:
     SetEvent EVENT_ENTERED_BLUES_HOUSE
     mov al, SCRIPT_BLUESHOUSE_NOOP
@@ -76,6 +79,7 @@ BluesHouseDefaultScript:
 BluesHouseNoopScript:
     ret
 
+%assign event_byte -1
 BluesHouse_TextPointers:
     dd BluesHouseDaisySittingText
     dd BluesHouseDaisyWalkingText
@@ -110,11 +114,13 @@ BluesHouse_TextPointers:
 ; PRET| 	SetEvent EVENT_GOT_TOWN_MAP
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .got_town_map:
     mov esi, BluesHouseDaisyUseMapText
     call PrintText
     jmp .done
 
+%assign event_byte -1
 .bag_full:
     mov esi, BluesHouseDaisyBagFullText
     call PrintText

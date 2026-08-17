@@ -28,6 +28,7 @@ global Route25CooltrainerMText
 global Route25Hiker1Text
 global Route25Hiker2Text
 global Route25Hiker3Text
+global Route25ToggleBillsScript
 global Route25Youngster1Text
 global Route25Youngster2Text
 global Route25Youngster3Text
@@ -36,7 +37,6 @@ global Route25_Script
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern Route25ToggleBillsScript   ; NOT YET DEFINED IN THE PORT
 extern Route25TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route25TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route25TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -65,6 +65,7 @@ wRoute25CurScript                              equ 0xD602
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route25_Script:
     call EnableAutoTextBoxDrawing
     mov esi, Route25TrainerHeaders
@@ -75,92 +76,108 @@ Route25_Script:
     call Route25ToggleBillsScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] Route25ToggleBillsScript (scripts/Route25.asm:12-31) — at scripts/Route25.asm:25: CheckEventReuseHL EVENT_MET_BILL_2
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wPikachuMapScriptFlags
-; PRET| 	res BIT_PIKACHU_MAP_2, [hl]
-; PRET| 	res BIT_PIKACHU_MAP_3, [hl]
-; PRET| 	res BIT_PIKACHU_MAP_4, [hl]
-; PRET| 	res BIT_PIKACHU_MAP_SCRIPT_ACTIVE, [hl]
-; PRET| 	xor a
-; PRET| 	ld [wBillsHouseCurScript], a
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	ret z
-; PRET| 	CheckEventHL EVENT_LEFT_BILLS_HOUSE_AFTER_HELPING
-; PRET| 	ret nz
-; PRET| 	CheckEventReuseHL EVENT_MET_BILL_2
-; PRET| 	jr nz, .met_bill
-; PRET| 	ResetEventReuseHL EVENT_BILL_SAID_USE_CELL_SEPARATOR
-; PRET| 	ld a, TOGGLE_BILL_POKEMON
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	jr .done
+%assign event_byte -1
+Route25ToggleBillsScript:
+    mov esi, wPikachuMapScriptFlags
+    and byte [ebp + esi], ~(1 << (2)) & 0xFF
+    and byte [ebp + esi], ~(1 << (3)) & 0xFF
+    and byte [ebp + esi], ~(1 << (4)) & 0xFF
+    and byte [ebp + esi], ~(1 << (7)) & 0xFF
+    xor al, al
+    mov [ebp + wBillsHouseCurScript], al
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
+    popfd
+    jnz .nr_22
+        ret
+.nr_22:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_BILLS_HOUSE_AFTER_HELPING)
+    test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_BILLS_HOUSE_AFTER_HELPING)
+    jz .nr_24
+        ret
+.nr_24:
+    CheckEventReuseHL EVENT_MET_BILL_2
+    jnz .met_bill
+    ResetEventReuseHL EVENT_BILL_SAID_USE_CELL_SEPARATOR
+    mov al, 97
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] Route25ToggleBillsScript.met_bill (scripts/Route25.asm:33-46) — at scripts/Route25.asm:33: CheckEventAfterBranchReuseHL EVENT_GOT_SS_TICKET, EVENT_MET_BILL_2
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventAfterBranchReuseHL EVENT_GOT_SS_TICKET, EVENT_MET_BILL_2
-; PRET| 	jr z, .done
-; PRET| 	SetEventReuseHL EVENT_LEFT_BILLS_HOUSE_AFTER_HELPING
-; PRET| 	ld a, TOGGLE_NUGGET_BRIDGE_GUY
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld a, TOGGLE_BILL_1
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld a, TOGGLE_BILL_2
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| .done
-; PRET| 	ret
+%assign event_byte -1
+.met_bill:
+    CheckEventAfterBranchReuseHL EVENT_GOT_SS_TICKET, EVENT_MET_BILL_2
+    jz .done
+    SetEventReuseHL EVENT_LEFT_BILLS_HOUSE_AFTER_HELPING
+    mov al, 37
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov al, 98
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov al, 99
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+.done:
+    ret
 
 ; Route25_ScriptPointers (scripts/Route25.asm:49-88) — not re-emitted: Route25TrainerHeaders is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 Route25Youngster1Text:
     mov esi, Route25TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route25Youngster2Text:
     mov esi, Route25TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route25CooltrainerMText:
     mov esi, Route25TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route25CooltrainerF1Text:
     mov esi, Route25TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route25Youngster3Text:
     mov esi, Route25TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route25CooltrainerF2Text:
     mov esi, Route25TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route25Hiker1Text:
     mov esi, Route25TrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route25Hiker2Text:
     mov esi, Route25TrainerHeader7
     call TalkToTrainer
     jmp TextScriptEnd
 
+%assign event_byte -1
 Route25Hiker3Text:
     mov esi, Route25TrainerHeader8
     call TalkToTrainer

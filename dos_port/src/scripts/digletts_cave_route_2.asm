@@ -35,11 +35,13 @@ extern _DiglettsCaveRoute2FishingGuruText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 DiglettsCaveRoute2_Script:
     mov al, ROUTE_2
     mov [ebp + wLastMap], al
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 DiglettsCaveRoute2_TextPointers:
     dd DiglettsCaveRoute2FishingGuruText
 DiglettsCaveRoute2FishingGuruText:

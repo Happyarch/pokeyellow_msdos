@@ -26,6 +26,7 @@ bits 32
 global VermilionDockOAMBlock
 global VermilionDockUnusedText
 global VermilionDock_EmitSmokePuff
+global VermilionDock_Script
 global VermilionDock_TextPointers
 
 extern CopyScreenTileBufferToVRAM   ; NOT YET DEFINED IN THE PORT
@@ -44,7 +45,6 @@ extern UpdateCGBPal_OBP1   ; NOT YET DEFINED IN THE PORT
 extern VermilionDockSSAnneLeavesScript   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_AnimSmokePuffDriftRight   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_EraseSSAnne   ; NOT YET DEFINED IN THE PORT
-extern VermilionDock_Script   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_SyncScrollWithLY   ; NOT YET DEFINED IN THE PORT
 extern WriteOAMBlock   ; NOT YET DEFINED IN THE PORT
 extern _VermilionDockUnusedText   ; NOT YET DEFINED IN THE PORT
@@ -64,53 +64,60 @@ wVermilionDockTileMapBufferEnd                 equ 0xCD0F
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionDock_Script (scripts/VermilionDock.asm:2-28) — at scripts/VermilionDock.asm:4: .walking_out_of_dock is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	CheckEventHL EVENT_STARTED_WALKING_OUT_OF_DOCK
-; PRET| 	jr nz, .walking_out_of_dock
-; PRET| 	CheckEventReuseHL EVENT_GOT_HM01
-; PRET| 	ret z
-; PRET| 	ld a, [wDestinationWarpID]
-; PRET| 	cp $1
-; PRET| 	ret nz
-; PRET| 	CheckEventReuseHL EVENT_SS_ANNE_LEFT
-; PRET| 	jp z, VermilionDockSSAnneLeavesScript
-; PRET| 	SetEventReuseHL EVENT_STARTED_WALKING_OUT_OF_DOCK
-; PRET| 	call Delay3
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	set BIT_SCRIPTED_MOVEMENT_STATE, [hl]
-; PRET| 	ld hl, wSimulatedJoypadStatesEnd
-; PRET| 	ld a, PAD_UP
-; PRET| 	ld [hli], a
-; PRET| 	ld [hli], a
-; PRET| 	ld [hl], a
-; PRET| 	ld a, $3
-; PRET| 	ld [wSimulatedJoypadStatesIndex], a
-; PRET| 	xor a
-; PRET| 	ld [wSpritePlayerStateData2MovementByte1], a
-; PRET| 	ld [wOverrideSimulatedJoypadStatesMask], a
-; PRET| 	dec a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ret
+%assign event_byte -1
+VermilionDock_Script:
+    call EnableAutoTextBoxDrawing
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_STARTED_WALKING_OUT_OF_DOCK)
+    test byte [ebp + esi], EVENT_MASK(EVENT_STARTED_WALKING_OUT_OF_DOCK)
+    jnz .walking_out_of_dock
+    CheckEventReuseHL EVENT_GOT_HM01
+    jnz .nr_6
+        ret
+.nr_6:
+    mov al, [ebp + wDestinationWarpID]
+    cmp al, 0x1
+    jz .nr_9
+        ret
+.nr_9:
+    CheckEventReuseHL EVENT_SS_ANNE_LEFT
+    jz VermilionDockSSAnneLeavesScript
+    SetEventReuseHL EVENT_STARTED_WALKING_OUT_OF_DOCK
+    call Delay3
+    mov esi, wStatusFlags5
+    or byte [ebp + esi], (1 << (BIT_SCRIPTED_MOVEMENT_STATE))
+    mov esi, wSimulatedJoypadStatesEnd
+    mov al, PAD_UP
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+    mov al, 0x3
+    mov [ebp + wSimulatedJoypadStatesIndex], al
+    xor al, al
+    mov [ebp + wSpritePlayerStateData2MovementByte1], al
+    mov [ebp + wOverrideSimulatedJoypadStatesMask], al
+    dec al
+    mov [ebp + wJoyIgnore], al
+    ret
+
+%assign event_byte -1
+.walking_out_of_dock:
+    CheckEventAfterBranchReuseHL EVENT_WALKED_OUT_OF_DOCK, EVENT_STARTED_WALKING_OUT_OF_DOCK
+    jz .nr_31
+        ret
+.nr_31:
+    mov al, [ebp + wSimulatedJoypadStatesIndex]
+    test al, al
+    jz .nr_34
+        ret
+.nr_34:
+    mov [ebp + wJoyIgnore], al
+    SetEventReuseHL EVENT_WALKED_OUT_OF_DOCK
+    ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] VermilionDock_Script.walking_out_of_dock (scripts/VermilionDock.asm:30-37) — at scripts/VermilionDock.asm:30: CheckEventAfterBranchReuseHL EVENT_WALKED_OUT_OF_DOCK, EVENT_STARTED_WALKING_OUT_OF_DOCK
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventAfterBranchReuseHL EVENT_WALKED_OUT_OF_DOCK, EVENT_STARTED_WALKING_OUT_OF_DOCK
-; PRET| 	ret nz
-; PRET| 	ld a, [wSimulatedJoypadStatesIndex]
-; PRET| 	and a
-; PRET| 	ret nz
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	SetEventReuseHL EVENT_WALKED_OUT_OF_DOCK
-; PRET| 	ret
-
-; ---------------------------------------------------------------------------
-; BAIL[unknown-macro] VermilionDockSSAnneLeavesScript (scripts/VermilionDock.asm:40-122) — at scripts/VermilionDock.asm:40: SetEventForceReuseHL EVENT_SS_ANNE_LEFT
+; BAIL[bank-expression] VermilionDockSSAnneLeavesScript (scripts/VermilionDock.asm:40-122) — at scripts/VermilionDock.asm:44: BANK(Music_Surfing)
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	SetEventForceReuseHL EVENT_SS_ANNE_LEFT
@@ -218,6 +225,7 @@ section .text
 ; PRET| 	pop bc
 ; PRET| 	ret
 
+%assign event_byte -1
 VermilionDock_EmitSmokePuff:
     mov al, [ebp + wSSAnneSmokeX]
     sub al, 16
@@ -232,6 +240,7 @@ VermilionDock_EmitSmokePuff:
     call WriteOAMBlock
     ret
 
+%assign event_byte -1
 VermilionDockOAMBlock:
     db 0xfc, OAM_PAL1
     db 0xfd, OAM_PAL1
@@ -290,6 +299,7 @@ VermilionDockOAMBlock:
 ; PRET| 	call DelayFrames
 ; PRET| 	ret
 
+%assign event_byte -1
 VermilionDock_TextPointers:
     dd VermilionDockUnusedText
 VermilionDockUnusedText:

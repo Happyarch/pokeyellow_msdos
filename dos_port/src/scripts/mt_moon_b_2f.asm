@@ -42,6 +42,7 @@ global MtMoonB2FScript10
 global MtMoonB2FScript11
 global MtMoonB2FScript12
 global MtMoonB2FScript14
+global MtMoonB2FScript15
 global MtMoonB2FScript6
 global MtMoonB2FScript7
 global MtMoonB2FScript8
@@ -92,7 +93,6 @@ extern MtMoonB2FMoveSuperNerdScript   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FReceivedFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FScript13   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FScript15   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FScript_49e15   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FScript_ShowObject   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdOkIllShareText   ; NOT YET DEFINED IN THE PORT
@@ -153,6 +153,7 @@ wSprite06StateData1MovementStatus              equ 0xC161
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 MtMoonB2F_Script:
     call EnableAutoTextBoxDrawing
     mov esi, MtMoon3TrainerHeaders
@@ -171,11 +172,13 @@ MtMoonB2F_Script:
     or byte [ebp + esi], (1 << (BIT_NO_BATTLES))
     ret
 
+%assign event_byte -1
 .enable_battles:
     mov esi, wStatusFlags4
     and byte [ebp + esi], ~(1 << (BIT_NO_BATTLES)) & 0xFF
     ret
 
+%assign event_byte -1
 MtMoonB2FFossilAreaCoords:
     db 5, 11
     db 5, 12
@@ -195,6 +198,7 @@ MtMoonB2FFossilAreaCoords:
     db 8, 14
     db -1
 
+%assign event_byte -1
 MtMoonB2FResetScripts:
     CheckAndResetEvent EVENT_57E
     jz .sk_42
@@ -207,6 +211,7 @@ MtMoonB2FSetScript:
     mov [ebp + wCurMapScript], al
     ret
 
+%assign event_byte -1
 MtMoonB2FScript_HideJessieJames:
     mov al, 109
     call MtMoonB2FScript_HideObject
@@ -214,6 +219,7 @@ MtMoonB2FScript_HideJessieJames:
     call MtMoonB2FScript_HideObject
     ret
 
+%assign event_byte -1
 MtMoonB2F_ScriptPointers:
     dd MtMoonB2FDefaultScript
     dd DisplayEnemyTrainerTextAndStartBattle
@@ -232,6 +238,7 @@ MtMoonB2F_ScriptPointers:
     dd MtMoonB2FScript14
     dd MtMoonB2FScript15
 
+%assign event_byte -1
     CheckEitherEventSet EVENT_GOT_DOME_FOSSIL, EVENT_GOT_HELIX_FOSSIL
     jnz .sk_82
         call MtMoonB2FScript_49d28
@@ -242,6 +249,7 @@ MtMoonB2F_ScriptPointers:
 .sk_84:
     ret
 
+%assign event_byte -1
 MtMoonB2FScript_49d28:
     CheckEvent EVENT_BEAT_MT_MOON_EXIT_SUPER_NERD
     jnz .asm_49d4b
@@ -258,11 +266,13 @@ MtMoonB2FScript_49d28:
     call DisplayTextID
     ret
 
+%assign event_byte -1
 .asm_49d4b:
     CheckEitherEventSet EVENT_GOT_DOME_FOSSIL, EVENT_GOT_HELIX_FOSSIL
     jz CheckFightingMapTrainers
     ret
 
+%assign event_byte -1
 MtMoonB2FDefeatedSuperNerdScript:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
@@ -308,6 +318,7 @@ MtMoonB2FDefeatedSuperNerdScript:
 ; PRET| 	ld de, MovementData_49ddd
 ; PRET| 	jr .asm_49db3
 
+%assign event_byte -1
 .asm_49da8:
     mov bh, SPRITE_FACING_RIGHT
     mov esi, PikachuMovementData_49dca
@@ -322,6 +333,7 @@ MtMoonB2FDefeatedSuperNerdScript:
     call MtMoonB2FSetScript
     ret
 
+%assign event_byte -1
 CoordsData_49dc0:
     db 7, 12
     db 6, 11
@@ -354,6 +366,7 @@ MovementData_49ddd:
     db NPC_MOVEMENT_UP
     db -1
 
+%assign event_byte -1
 MtMoonB2FSuperNerdTakesOtherFossilScript:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
@@ -372,6 +385,7 @@ MtMoonB2FSuperNerdTakesOtherFossilScript:
     mov al, 111
     jmp .continue
 
+%assign event_byte -1
 .got_helix_fossil:
     mov al, 112
 .continue:
@@ -424,6 +438,7 @@ MtMoonB2FSuperNerdTakesOtherFossilScript:
 ; PRET| 	call MtMoonB2FSetScript
 ; PRET| 	ret
 
+%assign event_byte -1
 MovementData_f9e65:
     db 0x06
 MovementData_f9e66:
@@ -434,6 +449,7 @@ MovementData_f9e66:
     db 0x06
     db 0xFF
 
+%assign event_byte -1
 MtMoonB2FScript6:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -453,6 +469,7 @@ MtMoonB2FScript6:
     call MtMoonB2FSetScript
     ret
 
+%assign event_byte -1
 MtMoonB2FScript7:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -477,6 +494,7 @@ MtMoonB2FScript9:
     call MtMoonB2FSetScript
     ret
 
+%assign event_byte -1
 MtMoonB2FScript10:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -549,6 +567,7 @@ MtMoonB2FScript12:
 ; PRET| 	call MtMoonB2FSetScript
 ; PRET| 	ret
 
+%assign event_byte -1
 MtMoonB2FScript14:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -564,19 +583,17 @@ MtMoonB2FScript14:
     call MtMoonB2FSetScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[event-byte-assembly-state] MtMoonB2FScript15 (scripts/MtMoonB2F.asm:394-402) — at scripts/MtMoonB2F.asm:399: ResetEventReuseHL EVENT_57E
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call PlayDefaultMusic
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	SetEvent EVENT_BEAT_MT_MOON_3_JESSIE_JAMES
-; PRET| 	ResetEventReuseHL EVENT_57E
-; PRET| 	ld a, SCRIPT_MTMOONB2F_DEFAULT
-; PRET| 	call MtMoonB2FSetScript
-; PRET| 	ret
+%assign event_byte -1
+MtMoonB2FScript15:
+    call PlayDefaultMusic
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov [ebp + wJoyIgnore], al
+    SetEvent EVENT_BEAT_MT_MOON_3_JESSIE_JAMES
+    ResetEventReuseHL EVENT_57E
+    mov al, SCRIPT_MTMOONB2F_DEFAULT
+    call MtMoonB2FSetScript
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[predef-leaves-id-in-a] MtMoonB2FScript_ShowObject (scripts/MtMoonB2F.asm:405-409) — at scripts/MtMoonB2F.asm:406: predef ShowObject
@@ -588,6 +605,7 @@ MtMoonB2FScript14:
 ; PRET| 	call Delay3
 ; PRET| 	ret
 
+%assign event_byte -1
 MtMoonB2FScript_HideObject:
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
@@ -613,6 +631,7 @@ MtMoonB2FScript_HideObject:
 ; PRET| 	call DelayFrames
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 MtMoonB2FText13:
     text_far _MtMoonJessieJamesText2
     text_end
@@ -622,6 +641,7 @@ MtMoonB2FJessieJamesEndBattleText:
 MtMoonB2FText14:
     text_far _MtMoonJessieJamesText4
 
+%assign event_byte -1
     mov bl, 64
     call DelayFrames
     jmp TextScriptEnd
@@ -658,20 +678,24 @@ MtMoonB2FText14:
 ; PRET| 	call MtMoonB2FSetScript
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .got_a_fossil:
     mov esi, MtMoonB2FSuperNerdTheresAPokemonLabText
     call PrintText
 .done:
     jmp TextScriptEnd
 
+%assign event_byte -1
 MtMoonB2FRocket1Text:
     mov esi, MtMoon3TrainerHeader0
     jmp MtMoonB2FTalkToTrainer
 
+%assign event_byte -1
 MtMoonB2FRocket2Text:
     mov esi, MtMoon3TrainerHeader1
     jmp MtMoonB2FTalkToTrainer
 
+%assign event_byte -1
 MtMoonB2FRocket3Text:
     mov esi, MtMoon3TrainerHeader2
 MtMoonB2FTalkToTrainer:
@@ -703,6 +727,7 @@ MtMoonB2FTalkToTrainer:
 ; PRET| .done
 ; PRET| 	jp TextScriptEnd
 
+%assign event_byte -1
 .YouWantText:
     text_far _MtMoonB2FDomeFossilYouWantText
     text_end
@@ -765,6 +790,7 @@ MtMoonB2FTalkToTrainer:
 
 ; MtMoonB2FYouHaveNoRoomText.Text (scripts/MtMoonB2F.asm:595-654) — not re-emitted: MtMoonB2FRocket2BattleText is already defined in assets/trainer_headers.inc.
 
+%assign event_byte -1
 MtMoonB2FScript_ApplyPikachuMovementData:
     mov al, [ebp + wPikachuSpawnStateFlags]
     test al, (1 << (7))

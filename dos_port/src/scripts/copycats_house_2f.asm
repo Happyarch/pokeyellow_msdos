@@ -51,9 +51,11 @@ wSpritePlayerStateData1FacingDirection         equ 0xC109
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CopycatsHouse2F_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 CopycatsHouse2F_TextPointers:
     dd CopycatsHouse2FCopycatText
     dd CopycatsHouse2FDoduoText
@@ -146,6 +148,7 @@ CopycatsHouse2F_TextPointers:
 ; PRET| 	text_far _CopycatsHouse2FSNESText
 ; PRET| 	text_end
 
+%assign event_byte -1
 CopycatsHouse2FPCText:
     mov al, [ebp + wSpritePlayerStateData1FacingDirection]
     cmp al, SPRITE_FACING_UP
@@ -156,6 +159,7 @@ CopycatsHouse2FPCText:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .MySecretsText:
     text_far _CopycatsHouse2FPCMySecretsText
     text_end

@@ -34,10 +34,12 @@ extern _CeladonMansion2FMeetingRoomSignText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 CeladonMansion2F_Script:
     call EnableAutoTextBoxDrawing
     ret
 
+%assign event_byte -1
 CeladonMansion2F_TextPointers:
     dd CeladonMansion2FMeetingRoomSignText
 CeladonMansion2FMeetingRoomSignText:

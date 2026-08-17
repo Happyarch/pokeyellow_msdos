@@ -37,9 +37,11 @@ extern _Route2SignText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Route2_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 Route2_TextPointers:
     dd PickUpItemText
     dd PickUpItemText

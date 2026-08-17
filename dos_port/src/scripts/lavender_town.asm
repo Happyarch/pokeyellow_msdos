@@ -53,9 +53,11 @@ extern _LavenderTownSuperNerdText   ; NOT YET DEFINED IN THE PORT
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 LavenderTown_Script:
     jmp EnableAutoTextBoxDrawing
 
+%assign event_byte -1
 LavenderTown_TextPointers:
     dd LavenderTownLittleGirlText
     dd LavenderTownCooltrainerMText
@@ -67,6 +69,7 @@ LavenderTown_TextPointers:
     dd LavenderTownPokemonHouseSignText
     dd LavenderTownPokemonTowerSignText
 
+%assign event_byte -1
 LavenderTownLittleGirlText:
     mov esi, .DoYouBelieveInGhostsText
     call PrintText
@@ -80,6 +83,7 @@ LavenderTownLittleGirlText:
     call PrintText
     jmp TextScriptEnd
 
+%assign event_byte -1
 .DoYouBelieveInGhostsText:
     text_far _LavenderTownLittleGirlDoYouBelieveInGhostsText
     text_end

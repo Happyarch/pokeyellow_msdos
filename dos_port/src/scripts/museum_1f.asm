@@ -83,6 +83,7 @@ wPriceTemp                                     equ 0xCD3D
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
+%assign event_byte -1
 Museum1F_Script:
     mov al, 1 << BIT_NO_AUTO_TEXT_BOX
     mov [ebp + wAutoTextBoxDrawingControl], al
@@ -93,10 +94,12 @@ Museum1F_Script:
     call CallFunctionInTable
     ret
 
+%assign event_byte -1
 Museum1F_ScriptPointers:
     dd Museum1FDefaultScript
     dd Museum1FNoopScript
 
+%assign event_byte -1
 Museum1FDefaultScript:
     mov al, [ebp + wYCoord]
     cmp al, 4
@@ -118,9 +121,11 @@ Museum1FDefaultScript:
     mov [ebp + hTextID], al
     jmp DisplayTextID
 
+%assign event_byte -1
 Museum1FNoopScript:
     ret
 
+%assign event_byte -1
 Museum1F_TextPointers:
     dd Museum1FScientist1Text
     dd Museum1FGamblerText
@@ -128,26 +133,31 @@ Museum1F_TextPointers:
     dd Museum1FScientist3Text
     dd Museum1FOldAmberText
 
+%assign event_byte -1
 Museum1FScientist1Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintScientist1Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 Museum1FGamblerText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintGamblerText
     jmp TextScriptEnd
 
+%assign event_byte -1
 Museum1FScientist2Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintScientist2Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 Museum1FScientist3Text:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintScientist3Text
     jmp TextScriptEnd
 
+%assign event_byte -1
 Museum1FOldAmberText:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call Museum1FPrintOldAmberText
@@ -278,12 +288,14 @@ Museum1FOldAmberText:
 ; PRET| 	call PrintText
 ; PRET| 	jr .done
 
+%assign event_byte -1
 .explain_amber:
     mov esi, .AmberIsFossilizedTreeSapText
     call PrintText
 .done:
     ret
 
+%assign event_byte -1
 .ComeAgainText:
     text_far _Museum1FScientist1ComeAgainText
     text_end
@@ -312,11 +324,13 @@ Museum1FOldAmberText:
     text_far _Museum1FScientist1TakePlentyOfTimeText
     text_end
 
+%assign event_byte -1
 Museum1FPrintGamblerText:
     mov esi, .Text
     call PrintText
     ret
 
+%assign event_byte -1
 .Text:
     text_far _Museum1FGamblerText
     text_end
@@ -375,20 +389,24 @@ Museum1FPrintGamblerText:
 ; PRET| 	text_far _Museum1FScientist2YouDontHaveSpaceText
 ; PRET| 	text_end
 
+%assign event_byte -1
 Museum1FPrintScientist3Text:
     mov esi, .Text
     call PrintText
     ret
 
+%assign event_byte -1
 .Text:
     text_far _Museum1FScientist3Text
     text_end
 
+%assign event_byte -1
 Museum1FPrintOldAmberText:
     mov esi, .Text
     call PrintText
     ret
 
+%assign event_byte -1
 .Text:
     text_far _Museum1FOldAmberText
     text_end
