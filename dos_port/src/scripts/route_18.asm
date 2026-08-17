@@ -30,14 +30,14 @@ global Route18_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route18CooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route18CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route18CooltrainerM3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route18TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route18TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route18TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route18TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route18_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route18CooltrainerM1BattleText
+extern Route18CooltrainerM2BattleText
+extern Route18CooltrainerM3BattleText
+extern Route18TrainerHeader0
+extern Route18TrainerHeader1
+extern Route18TrainerHeader2
+extern Route18TrainerHeaders
+extern Route18_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

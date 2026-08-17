@@ -37,12 +37,12 @@ extern DisplayEnemyTrainerTextAndStartBattle
 extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
-extern Mansion2ReplaceBlock   ; NOT YET DEFINED IN THE PORT
+extern Mansion2ReplaceBlock
 extern Mansion3Script_Switches
-extern Mansion3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Mansion3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Mansion3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion3FSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
+extern Mansion3TrainerHeader0
+extern Mansion3TrainerHeader1
+extern Mansion3TrainerHeaders
+extern PokemonMansion3FSuperNerdBattleText
 extern PokemonMansion3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer
 extern TextScriptEnd

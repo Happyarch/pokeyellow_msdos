@@ -49,19 +49,19 @@ extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern EngageMapTrainer
 extern ExecuteCurMapScriptInTable
-extern FuchsiaGymRocker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker4BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker5BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker6BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymTrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymTrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymTrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern FuchsiaGymRocker1BattleText
+extern FuchsiaGymRocker2BattleText
+extern FuchsiaGymRocker3BattleText
+extern FuchsiaGymRocker4BattleText
+extern FuchsiaGymRocker5BattleText
+extern FuchsiaGymRocker6BattleText
+extern FuchsiaGymTrainerHeader0
+extern FuchsiaGymTrainerHeader1
+extern FuchsiaGymTrainerHeader2
+extern FuchsiaGymTrainerHeader3
+extern FuchsiaGymTrainerHeader4
+extern FuchsiaGymTrainerHeader5
+extern FuchsiaGymTrainerHeaders
 extern FuchsiaGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern GiveItem
 extern InitBattleEnemyParameters

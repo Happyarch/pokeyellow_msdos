@@ -50,14 +50,14 @@ extern ExecuteCurMapScriptInTable
 extern PrintText
 extern TalkToTrainer
 extern TextScriptEnd
-extern ViridianForestTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern ViridianForestTrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern ViridianForestTrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern ViridianForestTrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern ViridianForestTrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern ViridianForestTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern ViridianForestYoungster2BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianForest_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern ViridianForestTrainerHeader0
+extern ViridianForestTrainerHeader1
+extern ViridianForestTrainerHeader2
+extern ViridianForestTrainerHeader3
+extern ViridianForestTrainerHeader4
+extern ViridianForestTrainerHeaders
+extern ViridianForestYoungster2BattleText
+extern ViridianForest_ScriptPointers
 extern _ViridianForestLeavingSignText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianForestTrainerTips1Text   ; NOT YET DEFINED IN THE PORT
 extern _ViridianForestTrainerTips2Text   ; NOT YET DEFINED IN THE PORT

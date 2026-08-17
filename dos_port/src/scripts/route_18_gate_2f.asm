@@ -30,7 +30,7 @@ global Route18Gate2F_TextPointers
 
 extern DisableAutoTextBoxDrawing
 extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
-extern GateUpstairsScript_PrintIfFacingUp   ; NOT YET DEFINED IN THE PORT
+extern GateUpstairsScript_PrintIfFacingUp
 extern TextScriptEnd
 extern _Route18Gate2FLeftBinocularsText   ; NOT YET DEFINED IN THE PORT
 extern _Route18Gate2FRightBinocularsText   ; NOT YET DEFINED IN THE PORT

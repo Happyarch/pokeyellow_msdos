@@ -75,9 +75,9 @@ extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
 extern LoadSpinnerArrowTiles
 extern PlaySound
-extern RocketHideout2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern RocketHideout2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB2FRocketBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideout2TrainerHeader0
+extern RocketHideout2TrainerHeaders
+extern RocketHideoutB2FRocketBattleText
 extern RocketHideoutB2F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates
 extern TalkToTrainer

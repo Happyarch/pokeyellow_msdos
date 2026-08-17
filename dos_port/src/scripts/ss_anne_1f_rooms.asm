@@ -32,13 +32,13 @@ global SSAnne1FRooms_Script
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern PlayCry
-extern SSAnne1FRoomsGentleman1BattleText   ; NOT YET DEFINED IN THE PORT
+extern SSAnne1FRoomsGentleman1BattleText
 extern SSAnne1FRooms_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SSAnne8TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SSAnne8TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SSAnne8TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern SSAnne8TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern SSAnne8TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SSAnne8TrainerHeader0
+extern SSAnne8TrainerHeader1
+extern SSAnne8TrainerHeader2
+extern SSAnne8TrainerHeader3
+extern SSAnne8TrainerHeaders
 extern TalkToTrainer
 extern TextScriptEnd
 extern _SSAnne1FRoomsWigglytuffText   ; NOT YET DEFINED IN THE PORT

@@ -38,11 +38,11 @@ global CeruleanGymSwimmerText
 global CeruleanGym_Script
 global CeruleanGym_ScriptPointers
 
-extern CeruleanGymBattleText1   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymBattleText2   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern CeruleanGymBattleText1
+extern CeruleanGymBattleText2
+extern CeruleanGymTrainerHeader0
+extern CeruleanGymTrainerHeader1
+extern CeruleanGymTrainerHeaders
 extern CeruleanGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern CheckFightingMapTrainers
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT

@@ -37,28 +37,28 @@ global Route17_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route17Biker10BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17Biker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17Biker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17Biker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17Biker4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17Biker5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17Biker6BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17Biker7BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17Biker8BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17Biker9BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeader9   ; NOT YET DEFINED IN THE PORT
-extern Route17TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route17_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route17Biker10BattleText
+extern Route17Biker1BattleText
+extern Route17Biker2BattleText
+extern Route17Biker3BattleText
+extern Route17Biker4BattleText
+extern Route17Biker5BattleText
+extern Route17Biker6BattleText
+extern Route17Biker7BattleText
+extern Route17Biker8BattleText
+extern Route17Biker9BattleText
+extern Route17TrainerHeader0
+extern Route17TrainerHeader1
+extern Route17TrainerHeader2
+extern Route17TrainerHeader3
+extern Route17TrainerHeader4
+extern Route17TrainerHeader5
+extern Route17TrainerHeader6
+extern Route17TrainerHeader7
+extern Route17TrainerHeader8
+extern Route17TrainerHeader9
+extern Route17TrainerHeaders
+extern Route17_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

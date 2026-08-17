@@ -92,10 +92,10 @@ extern SaveEndBattleTextPointers
 extern SetSpriteMovementBytesToFF
 extern ShowObject
 extern SilphCo11FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FRocketBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo11FRocketBattleText
 extern SilphCo11F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SilphCo11TrainerHeader0
+extern SilphCo11TrainerHeaders
 extern StopAllMusic
 extern TalkToTrainer
 extern TextScriptEnd

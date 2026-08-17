@@ -37,28 +37,28 @@ global Route13_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route13Beauty1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13Beauty2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13BikerBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13CooltrainerF3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13CooltrainerF4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13CooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13CooltrainerM3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeader9   ; NOT YET DEFINED IN THE PORT
-extern Route13TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route13_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route13Beauty1BattleText
+extern Route13Beauty2BattleText
+extern Route13BikerBattleText
+extern Route13CooltrainerF1BattleText
+extern Route13CooltrainerF2BattleText
+extern Route13CooltrainerF3BattleText
+extern Route13CooltrainerF4BattleText
+extern Route13CooltrainerM1BattleText
+extern Route13CooltrainerM2BattleText
+extern Route13CooltrainerM3BattleText
+extern Route13TrainerHeader0
+extern Route13TrainerHeader1
+extern Route13TrainerHeader2
+extern Route13TrainerHeader3
+extern Route13TrainerHeader4
+extern Route13TrainerHeader5
+extern Route13TrainerHeader6
+extern Route13TrainerHeader7
+extern Route13TrainerHeader8
+extern Route13TrainerHeader9
+extern Route13TrainerHeaders
+extern Route13_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

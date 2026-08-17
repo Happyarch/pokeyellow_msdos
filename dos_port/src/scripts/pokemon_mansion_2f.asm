@@ -33,10 +33,10 @@ global PokemonMansion2F_Script
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern Mansion2Script_Switches
-extern Mansion2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Mansion2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern Mansion2TrainerHeader0
+extern Mansion2TrainerHeaders
 extern PlaySound
-extern PokemonMansion2FSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
+extern PokemonMansion2FSuperNerdBattleText
 extern PokemonMansion2F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern ReplaceTileBlock

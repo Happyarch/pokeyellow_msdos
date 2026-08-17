@@ -45,7 +45,7 @@ extern PlayMusic
 extern PlaySound
 extern PlaySoundWaitForCurrent
 extern StopAllMusic
-extern UpdateCGBPal_OBP1   ; NOT YET DEFINED IN THE PORT
+extern UpdateCGBPal_OBP1
 extern VermilionDockSSAnneLeavesScript   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_SyncScrollWithLY   ; NOT YET DEFINED IN THE PORT
 extern WriteOAMBlock

@@ -34,12 +34,12 @@ extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern PrintText
 extern ReplaceTileBlock
-extern SilphCo10FRocketBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo10FRocketBattleText
 extern SilphCo10F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern SilphCo2F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
+extern SilphCo10TrainerHeader0
+extern SilphCo10TrainerHeader1
+extern SilphCo10TrainerHeaders
+extern SilphCo2F_SetCardKeyDoorYScript
 extern TalkToTrainer
 extern TextScriptEnd
 extern _SilphCo10FSilphWorkerFImScaredText   ; NOT YET DEFINED IN THE PORT

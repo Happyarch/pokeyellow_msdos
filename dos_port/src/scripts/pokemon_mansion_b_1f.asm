@@ -30,12 +30,12 @@ global PokemonMansionB1F_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Mansion2ReplaceBlock   ; NOT YET DEFINED IN THE PORT
+extern Mansion2ReplaceBlock
 extern Mansion4Script_Switches
-extern Mansion4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Mansion4TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Mansion4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansionB1FBurglarBattleText   ; NOT YET DEFINED IN THE PORT
+extern Mansion4TrainerHeader0
+extern Mansion4TrainerHeader1
+extern Mansion4TrainerHeaders
+extern PokemonMansionB1FBurglarBattleText
 extern PokemonMansionB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer
 extern TextScriptEnd

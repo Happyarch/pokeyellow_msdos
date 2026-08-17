@@ -24,7 +24,7 @@ bits 32
 global ColosseumOpponentText
 global Colosseum_TextPointers
 
-extern TradeCenter_Script   ; NOT YET DEFINED IN THE PORT
+extern TradeCenter_Script
 extern _ColosseumOpponentText   ; NOT YET DEFINED IN THE PORT
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

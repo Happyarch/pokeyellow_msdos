@@ -42,16 +42,16 @@ extern ExecuteCurMapScriptInTable
 extern GBFadeInFromWhite
 extern GBFadeOutToWhite
 extern HealParty
-extern PokemonTower5FChanneler2BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler3BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler4BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler5BattleText   ; NOT YET DEFINED IN THE PORT
+extern PokemonTower5FChanneler2BattleText
+extern PokemonTower5FChanneler3BattleText
+extern PokemonTower5FChanneler4BattleText
+extern PokemonTower5FChanneler5BattleText
 extern PokemonTower5FPurifiedZoneCoords   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern PokemonTower5TrainerHeader0
+extern PokemonTower5TrainerHeader1
+extern PokemonTower5TrainerHeader2
+extern PokemonTower5TrainerHeader3
+extern PokemonTower5TrainerHeaders
 extern TalkToTrainer
 extern TextScriptEnd
 

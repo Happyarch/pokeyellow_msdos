@@ -35,14 +35,14 @@ global SilphCo4F_SetCardKeyDoorYScript
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern ReplaceTileBlock
-extern SilphCo4FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo4FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo4FScientistBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo4FRocket1BattleText
+extern SilphCo4FRocket2BattleText
+extern SilphCo4FScientistBattleText
 extern SilphCo4F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SilphCo4TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SilphCo4TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern SilphCo4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SilphCo4TrainerHeader0
+extern SilphCo4TrainerHeader1
+extern SilphCo4TrainerHeader2
+extern SilphCo4TrainerHeaders
 extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
 extern TalkToTrainer
 extern TextScriptEnd

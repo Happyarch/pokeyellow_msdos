@@ -44,21 +44,21 @@ extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
 extern HideObject
-extern Route12CooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12SuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route12TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route12TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route12TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route12TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route12TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route12TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route12TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern Route12CooltrainerMBattleText
+extern Route12Fisher1BattleText
+extern Route12Fisher2BattleText
+extern Route12Fisher3BattleText
+extern Route12Fisher4BattleText
+extern Route12Fisher5BattleText
+extern Route12SuperNerdBattleText
+extern Route12TrainerHeader0
+extern Route12TrainerHeader1
+extern Route12TrainerHeader2
+extern Route12TrainerHeader3
+extern Route12TrainerHeader4
+extern Route12TrainerHeader5
+extern Route12TrainerHeader6
+extern Route12TrainerHeaders
 extern Route12_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer
 extern TextScriptEnd

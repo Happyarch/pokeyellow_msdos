@@ -38,14 +38,14 @@ extern ExecuteCurMapScriptInTable
 extern GiveItem
 extern PrintText
 extern ReplaceTileBlock
-extern SilphCo2FScientist1BattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2FScientist1BattleText
 extern SilphCo2FSilphWorkerFPleaseTakeThisText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SilphCo2TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SilphCo2TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern SilphCo2TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern SilphCo2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SilphCo2TrainerHeader0
+extern SilphCo2TrainerHeader1
+extern SilphCo2TrainerHeader2
+extern SilphCo2TrainerHeader3
+extern SilphCo2TrainerHeaders
 extern TalkToTrainer
 extern TextScriptEnd
 extern _SilphCo2FSilphWorkerFReceivedTM36Text   ; NOT YET DEFINED IN THE PORT

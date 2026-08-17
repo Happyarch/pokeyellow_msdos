@@ -69,16 +69,16 @@ extern ReplaceTileBlock
 extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteMovementBytesToFF
-extern SilphCo7FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FRocket3BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FScientistBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo7FRocket1BattleText
+extern SilphCo7FRocket2BattleText
+extern SilphCo7FRocket3BattleText
+extern SilphCo7FScientistBattleText
 extern SilphCo7F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SilphCo7TrainerHeader0
+extern SilphCo7TrainerHeader1
+extern SilphCo7TrainerHeader2
+extern SilphCo7TrainerHeader3
+extern SilphCo7TrainerHeaders
 extern StopAllMusic
 extern TalkToTrainer
 extern TextScriptEnd

@@ -29,7 +29,7 @@ global Route16Gate2F_Script
 global Route16Gate2F_TextPointers
 
 extern DisableAutoTextBoxDrawing
-extern GateUpstairsScript_PrintIfFacingUp   ; NOT YET DEFINED IN THE PORT
+extern GateUpstairsScript_PrintIfFacingUp
 extern PrintText
 extern TextScriptEnd
 extern _Route16Gate2FLeftBinocularsText   ; NOT YET DEFINED IN THE PORT

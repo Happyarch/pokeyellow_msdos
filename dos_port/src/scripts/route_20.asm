@@ -41,18 +41,18 @@ global Route20_Script
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern HideObject
-extern Route20Swimmer1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeader9   ; NOT YET DEFINED IN THE PORT
-extern Route20TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern Route20Swimmer1BattleText
+extern Route20TrainerHeader0
+extern Route20TrainerHeader1
+extern Route20TrainerHeader2
+extern Route20TrainerHeader3
+extern Route20TrainerHeader4
+extern Route20TrainerHeader5
+extern Route20TrainerHeader6
+extern Route20TrainerHeader7
+extern Route20TrainerHeader8
+extern Route20TrainerHeader9
+extern Route20TrainerHeaders
 extern Route20_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern ShowObject
 extern TalkToTrainer

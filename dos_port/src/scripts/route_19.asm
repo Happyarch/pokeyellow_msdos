@@ -38,19 +38,19 @@ global Route19_TalkToTrainer
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route19CooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeader9   ; NOT YET DEFINED IN THE PORT
-extern Route19TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route19_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route19CooltrainerM1BattleText
+extern Route19TrainerHeader0
+extern Route19TrainerHeader1
+extern Route19TrainerHeader2
+extern Route19TrainerHeader3
+extern Route19TrainerHeader4
+extern Route19TrainerHeader5
+extern Route19TrainerHeader6
+extern Route19TrainerHeader7
+extern Route19TrainerHeader8
+extern Route19TrainerHeader9
+extern Route19TrainerHeaders
+extern Route19_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

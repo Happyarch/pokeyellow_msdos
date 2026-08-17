@@ -88,23 +88,23 @@ extern StartSimulatingJoypadStates
 extern TalkToTrainer
 extern TextScriptEnd
 extern UpdateSprites
-extern ViridianGymCooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymCooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymCooltrainerM3BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymHiker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymHiker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymHiker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymRocker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymRocker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymTrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymTrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymTrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymTrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymTrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern ViridianGymCooltrainerM1BattleText
+extern ViridianGymCooltrainerM2BattleText
+extern ViridianGymCooltrainerM3BattleText
+extern ViridianGymHiker1BattleText
+extern ViridianGymHiker2BattleText
+extern ViridianGymHiker3BattleText
+extern ViridianGymRocker1BattleText
+extern ViridianGymRocker2BattleText
+extern ViridianGymTrainerHeader0
+extern ViridianGymTrainerHeader1
+extern ViridianGymTrainerHeader2
+extern ViridianGymTrainerHeader3
+extern ViridianGymTrainerHeader4
+extern ViridianGymTrainerHeader5
+extern ViridianGymTrainerHeader6
+extern ViridianGymTrainerHeader7
+extern ViridianGymTrainerHeaders
 extern ViridianGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern _ViridianGymGiovanniEarthBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianGymGiovanniPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT

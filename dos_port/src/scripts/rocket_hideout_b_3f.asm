@@ -52,11 +52,11 @@ extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
 extern LoadSpinnerArrowTiles
 extern PlaySound
-extern RocketHideout3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern RocketHideout3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern RocketHideout3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB3FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB3FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideout3TrainerHeader0
+extern RocketHideout3TrainerHeader1
+extern RocketHideout3TrainerHeaders
+extern RocketHideoutB3FRocket1BattleText
+extern RocketHideoutB3FRocket2BattleText
 extern RocketHideoutB3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates
 extern TalkToTrainer

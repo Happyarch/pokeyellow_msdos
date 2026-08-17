@@ -33,7 +33,7 @@ global Route11Gate2F_TextPointers
 extern CopyData
 extern DisableAutoTextBoxDrawing
 extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
-extern GateUpstairsScript_PrintIfFacingUp   ; NOT YET DEFINED IN THE PORT
+extern GateUpstairsScript_PrintIfFacingUp
 extern GetItemName
 extern OaksAideScript   ; NOT YET DEFINED IN THE PORT
 extern PrintText

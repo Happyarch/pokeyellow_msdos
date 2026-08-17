@@ -58,13 +58,13 @@ extern ReplaceTileBlock
 extern SaveEndBattleTextPointers
 extern TalkToTrainer
 extern TextScriptEnd
-extern VermilionGymGentlemanBattleText   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymSailorBattleText   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern VermilionGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern VermilionGymGentlemanBattleText
+extern VermilionGymSailorBattleText
+extern VermilionGymSuperNerdBattleText
+extern VermilionGymTrainerHeader0
+extern VermilionGymTrainerHeader1
+extern VermilionGymTrainerHeader2
+extern VermilionGymTrainerHeaders
 extern VermilionGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern _TM24ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionGymGymGuideBeatLTSurgeText   ; NOT YET DEFINED IN THE PORT

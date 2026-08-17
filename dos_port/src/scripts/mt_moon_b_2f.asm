@@ -89,13 +89,13 @@ extern HideObject
 extern InitBattleEnemyParameters
 extern LoadPikachuShadowIntoVRAM   ; NOT YET DEFINED IN THE PORT
 extern MoveSprite
-extern MtMoon3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern MtMoon3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern MtMoon3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern MtMoon3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern MtMoon3TrainerHeader0
+extern MtMoon3TrainerHeader1
+extern MtMoon3TrainerHeader2
+extern MtMoon3TrainerHeaders
 extern MtMoonB2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FHelixFossilText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
+extern MtMoonB2FRocket2BattleText
 extern MtMoonB2FSuperNerdOkIllShareText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdTheresAPokemonLabText   ; NOT YET DEFINED IN THE PORT

@@ -56,14 +56,14 @@ extern GiveItem
 extern GivePokemon
 extern InitBattleEnemyParameters
 extern PrintText
-extern Route24CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route24TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route24TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route24TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route24TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route24TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route24TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern Route24CooltrainerM2BattleText
+extern Route24TrainerHeader0
+extern Route24TrainerHeader1
+extern Route24TrainerHeader2
+extern Route24TrainerHeader3
+extern Route24TrainerHeader4
+extern Route24TrainerHeader5
+extern Route24TrainerHeaders
 extern Route24_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers
 extern StartSimulatingJoypadStates

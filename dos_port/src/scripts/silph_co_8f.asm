@@ -36,12 +36,12 @@ extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern PrintText
 extern ReplaceTileBlock
-extern SilphCo8FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo8FRocket1BattleText
 extern SilphCo8F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SilphCo8TrainerHeader0
+extern SilphCo8TrainerHeader1
+extern SilphCo8TrainerHeader2
+extern SilphCo8TrainerHeaders
 extern TalkToTrainer
 extern TextScriptEnd
 extern _SilphCo8FSilphWorkerMSilphIsFinishedText   ; NOT YET DEFINED IN THE PORT

@@ -36,18 +36,18 @@ global Route21_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route21Fisher1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route21TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route21_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route21Fisher1BattleText
+extern Route21TrainerHeader0
+extern Route21TrainerHeader1
+extern Route21TrainerHeader2
+extern Route21TrainerHeader3
+extern Route21TrainerHeader4
+extern Route21TrainerHeader5
+extern Route21TrainerHeader6
+extern Route21TrainerHeader7
+extern Route21TrainerHeader8
+extern Route21TrainerHeaders
+extern Route21_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

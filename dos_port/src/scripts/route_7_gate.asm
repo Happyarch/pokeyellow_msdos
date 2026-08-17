@@ -36,9 +36,9 @@ extern Delay3
 extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern RemoveGuardDrink   ; NOT YET DEFINED IN THE PORT
-extern SaffronGateGuardGeeImThirstyText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGateGuardGiveDrinkText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGateGuardText   ; NOT YET DEFINED IN THE PORT
+extern SaffronGateGuardGeeImThirstyText
+extern SaffronGateGuardGiveDrinkText
+extern SaffronGateGuardText
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROUTE7GATE_PLAYER_MOVING                equ 1

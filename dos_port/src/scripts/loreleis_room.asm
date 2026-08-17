@@ -43,9 +43,9 @@ extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
-extern LoreleisRoomLoreleiBeforeBattleText   ; NOT YET DEFINED IN THE PORT
-extern LoreleisRoomTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern LoreleisRoomTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern LoreleisRoomLoreleiBeforeBattleText
+extern LoreleisRoomTrainerHeader0
+extern LoreleisRoomTrainerHeaders
 extern LoreleisRoom_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock
 extern StartSimulatingJoypadStates

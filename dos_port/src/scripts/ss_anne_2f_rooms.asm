@@ -45,13 +45,13 @@ extern DisplayPokedex   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable
 extern LoadScreenTilesFromBuffer1
 extern PrintText
-extern SSAnne2FRoomsGentleman1BattleText   ; NOT YET DEFINED IN THE PORT
+extern SSAnne2FRoomsGentleman1BattleText
 extern SSAnne2FRooms_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SSAnne9TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SSAnne9TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SSAnne9TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern SSAnne9TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern SSAnne9TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SSAnne9TrainerHeader0
+extern SSAnne9TrainerHeader1
+extern SSAnne9TrainerHeader2
+extern SSAnne9TrainerHeader3
+extern SSAnne9TrainerHeaders
 extern SaveScreenTilesToBuffer1
 extern TalkToTrainer
 extern TextScriptEnd

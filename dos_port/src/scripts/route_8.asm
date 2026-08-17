@@ -36,26 +36,26 @@ global Route8_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route8CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8Gambler1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8Gambler2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8SuperNerd1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8SuperNerd2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8SuperNerd3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route8TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route8_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route8CooltrainerF1BattleText
+extern Route8CooltrainerF2BattleText
+extern Route8CooltrainerF3BattleText
+extern Route8CooltrainerF4BattleText
+extern Route8Gambler1BattleText
+extern Route8Gambler2BattleText
+extern Route8SuperNerd1BattleText
+extern Route8SuperNerd2BattleText
+extern Route8SuperNerd3BattleText
+extern Route8TrainerHeader0
+extern Route8TrainerHeader1
+extern Route8TrainerHeader2
+extern Route8TrainerHeader3
+extern Route8TrainerHeader4
+extern Route8TrainerHeader5
+extern Route8TrainerHeader6
+extern Route8TrainerHeader7
+extern Route8TrainerHeader8
+extern Route8TrainerHeaders
+extern Route8_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

@@ -33,20 +33,20 @@ global Route10_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route10CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route10CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route10Hiker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route10Hiker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route10SuperNerd1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route10SuperNerd2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route10TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route10TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route10TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route10TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route10TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route10TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route10TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route10_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route10CooltrainerF1BattleText
+extern Route10CooltrainerF2BattleText
+extern Route10Hiker1BattleText
+extern Route10Hiker2BattleText
+extern Route10SuperNerd1BattleText
+extern Route10SuperNerd2BattleText
+extern Route10TrainerHeader0
+extern Route10TrainerHeader1
+extern Route10TrainerHeader2
+extern Route10TrainerHeader3
+extern Route10TrainerHeader4
+extern Route10TrainerHeader5
+extern Route10TrainerHeaders
+extern Route10_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

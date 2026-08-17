@@ -39,21 +39,21 @@ global PowerPlant_Script
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern PlayCry
-extern PowerPlantTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PowerPlantVoltorbBattleText   ; NOT YET DEFINED IN THE PORT
-extern PowerPlant_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern PowerPlantTrainerHeaders
+extern PowerPlantVoltorbBattleText
+extern PowerPlant_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
-extern Voltorb0TrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern Voltorb1TrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern Voltorb2TrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern Voltorb3TrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern Voltorb4TrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern Voltorb5TrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern Voltorb6TrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern Voltorb7TrainerHeader   ; NOT YET DEFINED IN THE PORT
+extern Voltorb0TrainerHeader
+extern Voltorb1TrainerHeader
+extern Voltorb2TrainerHeader
+extern Voltorb3TrainerHeader
+extern Voltorb4TrainerHeader
+extern Voltorb5TrainerHeader
+extern Voltorb6TrainerHeader
+extern Voltorb7TrainerHeader
 extern WaitForSoundToFinish
-extern ZapdosTrainerHeader   ; NOT YET DEFINED IN THE PORT
+extern ZapdosTrainerHeader
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

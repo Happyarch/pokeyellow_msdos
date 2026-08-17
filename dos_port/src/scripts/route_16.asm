@@ -43,20 +43,20 @@ extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
 extern HideObject
-extern Route16Biker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker6BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route16TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route16TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route16TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route16TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route16TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route16TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern Route16Biker1BattleText
+extern Route16Biker2BattleText
+extern Route16Biker3BattleText
+extern Route16Biker5BattleText
+extern Route16Biker6BattleText
+extern Route16TrainerHeader0
+extern Route16TrainerHeader1
+extern Route16TrainerHeader2
+extern Route16TrainerHeader3
+extern Route16TrainerHeader4
+extern Route16TrainerHeader5
+extern Route16TrainerHeaders
 extern Route16_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern Route16biker4BattleText   ; NOT YET DEFINED IN THE PORT
+extern Route16biker4BattleText
 extern TalkToTrainer
 extern TextScriptEnd
 extern UpdateSprites

@@ -37,28 +37,28 @@ global Route11_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route11Gambler1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11SuperNerd1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11SuperNerd2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeader9   ; NOT YET DEFINED IN THE PORT
-extern Route11TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route11Gambler1BattleText
+extern Route11Gambler2BattleText
+extern Route11Gambler3BattleText
+extern Route11Gambler4BattleText
+extern Route11SuperNerd1BattleText
+extern Route11SuperNerd2BattleText
+extern Route11TrainerHeader0
+extern Route11TrainerHeader1
+extern Route11TrainerHeader2
+extern Route11TrainerHeader3
+extern Route11TrainerHeader4
+extern Route11TrainerHeader5
+extern Route11TrainerHeader6
+extern Route11TrainerHeader7
+extern Route11TrainerHeader8
+extern Route11TrainerHeader9
+extern Route11TrainerHeaders
+extern Route11Youngster1BattleText
+extern Route11Youngster2BattleText
+extern Route11Youngster3BattleText
+extern Route11Youngster4BattleText
+extern Route11_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

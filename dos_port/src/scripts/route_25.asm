@@ -38,17 +38,17 @@ global Route25_Script
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern HideObject
-extern Route25TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route25TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route25TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route25TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route25TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route25TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route25TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route25TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route25TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route25TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route25Youngster1BattleText   ; NOT YET DEFINED IN THE PORT
+extern Route25TrainerHeader0
+extern Route25TrainerHeader1
+extern Route25TrainerHeader2
+extern Route25TrainerHeader3
+extern Route25TrainerHeader4
+extern Route25TrainerHeader5
+extern Route25TrainerHeader6
+extern Route25TrainerHeader7
+extern Route25TrainerHeader8
+extern Route25TrainerHeaders
+extern Route25Youngster1BattleText
 extern Route25_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern ShowObject
 extern TalkToTrainer

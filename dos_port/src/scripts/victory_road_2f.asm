@@ -42,19 +42,19 @@ extern DisplayEnemyTrainerTextAndStartBattle
 extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
-extern MoltresTrainerHeader   ; NOT YET DEFINED IN THE PORT
+extern MoltresTrainerHeader
 extern PlayCry
 extern ReplaceTileBlock
 extern TalkToTrainer
 extern TextScriptEnd
-extern VictoryRoad2FHikerBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FMoltresBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad2FHikerBattleText
+extern VictoryRoad2FMoltresBattleText
+extern VictoryRoad2TrainerHeader0
+extern VictoryRoad2TrainerHeader1
+extern VictoryRoad2TrainerHeader2
+extern VictoryRoad2TrainerHeader3
+extern VictoryRoad2TrainerHeader4
+extern VictoryRoad2TrainerHeaders
 extern WaitForSoundToFinish
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,

@@ -54,15 +54,15 @@ extern GiveItem
 extern InitBattleEnemyParameters
 extern LoadGymLeaderAndCityName
 extern PrintText
-extern SaffronGymChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymTrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymTrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymTrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymTrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SaffronGymChanneler1BattleText
+extern SaffronGymTrainerHeader0
+extern SaffronGymTrainerHeader1
+extern SaffronGymTrainerHeader2
+extern SaffronGymTrainerHeader3
+extern SaffronGymTrainerHeader4
+extern SaffronGymTrainerHeader5
+extern SaffronGymTrainerHeader6
+extern SaffronGymTrainerHeaders
 extern SaffronGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers
 extern TalkToTrainer

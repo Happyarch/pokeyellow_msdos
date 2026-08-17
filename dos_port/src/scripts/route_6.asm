@@ -33,20 +33,20 @@ global Route6_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route6CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route6TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route6TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route6TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route6TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route6TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route6TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route6Youngster1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6Youngster2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route6CooltrainerF1BattleText
+extern Route6CooltrainerF2BattleText
+extern Route6CooltrainerM1BattleText
+extern Route6CooltrainerM2BattleText
+extern Route6TrainerHeader0
+extern Route6TrainerHeader1
+extern Route6TrainerHeader2
+extern Route6TrainerHeader3
+extern Route6TrainerHeader4
+extern Route6TrainerHeader5
+extern Route6TrainerHeaders
+extern Route6Youngster1BattleText
+extern Route6Youngster2BattleText
+extern Route6_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

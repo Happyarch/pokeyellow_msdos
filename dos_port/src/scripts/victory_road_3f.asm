@@ -45,13 +45,13 @@ extern ReplaceTileBlock
 extern ShowObject
 extern TalkToTrainer
 extern TextScriptEnd
-extern VictoryRoad3FCooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad3FCooltrainerM1BattleText
 extern VictoryRoad3F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad3TrainerHeader0
+extern VictoryRoad3TrainerHeader1
+extern VictoryRoad3TrainerHeader2
+extern VictoryRoad3TrainerHeader3
+extern VictoryRoad3TrainerHeaders
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

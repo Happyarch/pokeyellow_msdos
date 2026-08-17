@@ -27,12 +27,12 @@ bits 32
 global CeruleanCaveB1FMewtwoText
 global CeruleanCaveB1F_Script
 
-extern CeruleanCaveB1FTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern CeruleanCaveB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern CeruleanCaveB1FTrainerHeaders
+extern CeruleanCaveB1F_ScriptPointers
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern MewtwoBattleText   ; NOT YET DEFINED IN THE PORT
-extern MewtwoTrainerHeader   ; NOT YET DEFINED IN THE PORT
+extern MewtwoBattleText
+extern MewtwoTrainerHeader
 extern PlayCry
 extern TalkToTrainer
 extern TextScriptEnd

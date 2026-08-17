@@ -37,18 +37,18 @@ global Route9_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route9CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route9TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route9_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route9CooltrainerF1BattleText
+extern Route9TrainerHeader0
+extern Route9TrainerHeader1
+extern Route9TrainerHeader2
+extern Route9TrainerHeader3
+extern Route9TrainerHeader4
+extern Route9TrainerHeader5
+extern Route9TrainerHeader6
+extern Route9TrainerHeader7
+extern Route9TrainerHeader8
+extern Route9TrainerHeaders
+extern Route9_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

@@ -41,21 +41,21 @@ global CeladonGymTM21NoRoomText
 global CeladonGym_Script
 global CeladonGym_ScriptPointers
 
-extern CeladonGymBattleText2   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymBattleText3   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymBattleText4   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymBattleText5   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymBattleText6   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymBattleText7   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymBattleText8   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymTrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymTrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymTrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymTrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern CeladonGymBattleText2
+extern CeladonGymBattleText3
+extern CeladonGymBattleText4
+extern CeladonGymBattleText5
+extern CeladonGymBattleText6
+extern CeladonGymBattleText7
+extern CeladonGymBattleText8
+extern CeladonGymTrainerHeader0
+extern CeladonGymTrainerHeader1
+extern CeladonGymTrainerHeader2
+extern CeladonGymTrainerHeader3
+extern CeladonGymTrainerHeader4
+extern CeladonGymTrainerHeader5
+extern CeladonGymTrainerHeader6
+extern CeladonGymTrainerHeaders
 extern CeladonGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern CheckFightingMapTrainers
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT

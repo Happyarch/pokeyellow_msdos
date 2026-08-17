@@ -43,12 +43,12 @@ extern ReplaceTileBlock
 extern SilphCo9FNurseDontGiveUpText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FNurseThankYouText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FNurseYouLookTiredText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo9FRocket1BattleText
 extern SilphCo9F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SilphCo9TrainerHeader0
+extern SilphCo9TrainerHeader1
+extern SilphCo9TrainerHeader2
+extern SilphCo9TrainerHeaders
 extern TalkToTrainer
 extern TextScriptEnd
 

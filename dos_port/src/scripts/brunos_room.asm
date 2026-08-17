@@ -36,9 +36,9 @@ global BrunosRoom_ScriptPointers
 global ResetBrunoScript
 
 extern ArePlayerCoordsInArray
-extern BrunoBeforeBattleText   ; NOT YET DEFINED IN THE PORT
-extern BrunosRoomTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern BrunosRoomTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern BrunoBeforeBattleText
+extern BrunosRoomTrainerHeader0
+extern BrunosRoomTrainerHeaders
 extern BrunosRoom_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern CheckFightingMapTrainers
 extern Delay3

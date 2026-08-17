@@ -70,11 +70,11 @@ extern MoveSprite
 extern PlayDefaultMusic
 extern PlayMusic
 extern PrintText
-extern RocketHideout4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern RocketHideout4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern RocketHideout4TrainerHeader0
+extern RocketHideout4TrainerHeaders
 extern RocketHideoutB4FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FRocketBattleText   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB4FRocketAfterBattleText
+extern RocketHideoutB4FRocketBattleText
 extern RocketHideoutB4F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers
 extern ShowObject

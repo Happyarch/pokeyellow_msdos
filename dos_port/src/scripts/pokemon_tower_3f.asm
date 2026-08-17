@@ -29,12 +29,12 @@ global PokemonTower3F_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern PokemonTower3FChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
+extern PokemonTower3FChanneler1BattleText
 extern PokemonTower3F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern PokemonTower3TrainerHeader0
+extern PokemonTower3TrainerHeader1
+extern PokemonTower3TrainerHeader2
+extern PokemonTower3TrainerHeaders
 extern TalkToTrainer
 extern TextScriptEnd
 

@@ -45,14 +45,14 @@ extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
 extern PlayCry
-extern PokemonTower6FChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
+extern PokemonTower6FChanneler1BattleText
 extern PokemonTower6FGhostWasCubonesMotherText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6FSoulWasCalmedText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern PokemonTower6TrainerHeader0
+extern PokemonTower6TrainerHeader1
+extern PokemonTower6TrainerHeader2
+extern PokemonTower6TrainerHeaders
 extern PrintText
 extern TalkToTrainer
 extern TextScriptEnd

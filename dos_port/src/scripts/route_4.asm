@@ -28,10 +28,10 @@ global Route4_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route4CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route4_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route4CooltrainerF2BattleText
+extern Route4TrainerHeader0
+extern Route4TrainerHeaders
+extern Route4_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

@@ -37,28 +37,28 @@ global Route14_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route14Biker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14Biker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14Biker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14Biker4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14CooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14CooltrainerM3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14CooltrainerM4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14CooltrainerM5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14CooltrainerM6BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeader9   ; NOT YET DEFINED IN THE PORT
-extern Route14TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route14_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route14Biker1BattleText
+extern Route14Biker2BattleText
+extern Route14Biker3BattleText
+extern Route14Biker4BattleText
+extern Route14CooltrainerM1BattleText
+extern Route14CooltrainerM2BattleText
+extern Route14CooltrainerM3BattleText
+extern Route14CooltrainerM4BattleText
+extern Route14CooltrainerM5BattleText
+extern Route14CooltrainerM6BattleText
+extern Route14TrainerHeader0
+extern Route14TrainerHeader1
+extern Route14TrainerHeader2
+extern Route14TrainerHeader3
+extern Route14TrainerHeader4
+extern Route14TrainerHeader5
+extern Route14TrainerHeader6
+extern Route14TrainerHeader7
+extern Route14TrainerHeader8
+extern Route14TrainerHeader9
+extern Route14TrainerHeaders
+extern Route14_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

@@ -46,9 +46,9 @@ extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
-extern LancesRoomLanceBeforeBattleText   ; NOT YET DEFINED IN THE PORT
-extern LancesRoomTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern LancesRoomTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern LancesRoomLanceBeforeBattleText
+extern LancesRoomTrainerHeader0
+extern LancesRoomTrainerHeaders
 extern LancesRoom_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PlaySound
 extern ReplaceTileBlock

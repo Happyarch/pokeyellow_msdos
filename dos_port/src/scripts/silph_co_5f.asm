@@ -35,17 +35,17 @@ global SilphCo5F_SetUnlockedSilphCoDoorsScript
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern ReplaceTileBlock
-extern SilphCo4F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FRockerBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FScientistBattleText   ; NOT YET DEFINED IN THE PORT
+extern SilphCo4F_SetCardKeyDoorYScript
+extern SilphCo5FRockerBattleText
+extern SilphCo5FRocket1BattleText
+extern SilphCo5FRocket2BattleText
+extern SilphCo5FScientistBattleText
 extern SilphCo5F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern SilphCo5TrainerHeader0
+extern SilphCo5TrainerHeader1
+extern SilphCo5TrainerHeader2
+extern SilphCo5TrainerHeader3
+extern SilphCo5TrainerHeaders
 extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript
 extern TalkToTrainer
 extern TextScriptEnd

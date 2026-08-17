@@ -35,24 +35,24 @@ global Route3_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route3CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route3CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route3CooltrainerF3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route3TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route3TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route3TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route3TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route3TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route3Youngster1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route3Youngster2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route3Youngster3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route3Youngster4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route3Youngster5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route3_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route3CooltrainerF1BattleText
+extern Route3CooltrainerF2BattleText
+extern Route3CooltrainerF3BattleText
+extern Route3TrainerHeader0
+extern Route3TrainerHeader1
+extern Route3TrainerHeader2
+extern Route3TrainerHeader3
+extern Route3TrainerHeader4
+extern Route3TrainerHeader5
+extern Route3TrainerHeader6
+extern Route3TrainerHeader7
+extern Route3TrainerHeaders
+extern Route3Youngster1BattleText
+extern Route3Youngster2BattleText
+extern Route3Youngster3BattleText
+extern Route3Youngster4BattleText
+extern Route3Youngster5BattleText
+extern Route3_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

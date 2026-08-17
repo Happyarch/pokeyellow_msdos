@@ -45,15 +45,15 @@ extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern EngageMapTrainer
 extern ExecuteCurMapScriptInTable
-extern FightingDojoBlackbelt1BattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt2BattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt3BattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt4BattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoTrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoTrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoTrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern FightingDojoBlackbelt1BattleText
+extern FightingDojoBlackbelt2BattleText
+extern FightingDojoBlackbelt3BattleText
+extern FightingDojoBlackbelt4BattleText
+extern FightingDojoTrainerHeader0
+extern FightingDojoTrainerHeader1
+extern FightingDojoTrainerHeader2
+extern FightingDojoTrainerHeader3
+extern FightingDojoTrainerHeaders
 extern FightingDojo_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern GivePokemon
 extern HideObject

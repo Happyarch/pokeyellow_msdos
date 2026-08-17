@@ -34,16 +34,16 @@ global MtMoon1TalkToTrainer
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern MtMoon1FHikerBattleText   ; NOT YET DEFINED IN THE PORT
+extern MtMoon1FHikerBattleText
 extern MtMoon1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern MtMoon1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern MtMoon1TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern MtMoon1TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern MtMoon1TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern MtMoon1TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern MtMoon1TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern MtMoon1TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern MtMoon1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern MtMoon1TrainerHeader0
+extern MtMoon1TrainerHeader1
+extern MtMoon1TrainerHeader2
+extern MtMoon1TrainerHeader3
+extern MtMoon1TrainerHeader4
+extern MtMoon1TrainerHeader5
+extern MtMoon1TrainerHeader6
+extern MtMoon1TrainerHeaders
 extern TalkToTrainer
 extern TextScriptEnd
 

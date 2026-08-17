@@ -55,9 +55,9 @@ extern GiveItem
 extern HideObject
 extern InitBattleEnemyParameters
 extern LoadGymLeaderAndCityName
-extern PewterGymCooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
-extern PewterGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern PewterGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern PewterGymCooltrainerMBattleText
+extern PewterGymTrainerHeader0
+extern PewterGymTrainerHeaders
 extern PewterGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern SaveEndBattleTextPointers

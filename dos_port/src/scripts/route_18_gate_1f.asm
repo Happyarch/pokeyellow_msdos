@@ -38,7 +38,7 @@ extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern FillMemory
 extern PrintText
-extern Route16Gate1FIsBicycleInBagScript   ; NOT YET DEFINED IN THE PORT
+extern Route16Gate1FIsBicycleInBagScript
 extern StartSimulatingJoypadStates
 extern TextScriptEnd
 extern _Route18Gate1FGuardCyclingRoadUphillText   ; NOT YET DEFINED IN THE PORT

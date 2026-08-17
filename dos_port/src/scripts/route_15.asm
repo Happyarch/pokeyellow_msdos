@@ -38,19 +38,19 @@ global Route15_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Route15CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader7   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader8   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeader9   ; NOT YET DEFINED IN THE PORT
-extern Route15TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route15_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route15CooltrainerF1BattleText
+extern Route15TrainerHeader0
+extern Route15TrainerHeader1
+extern Route15TrainerHeader2
+extern Route15TrainerHeader3
+extern Route15TrainerHeader4
+extern Route15TrainerHeader5
+extern Route15TrainerHeader6
+extern Route15TrainerHeader7
+extern Route15TrainerHeader8
+extern Route15TrainerHeader9
+extern Route15TrainerHeaders
+extern Route15_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 

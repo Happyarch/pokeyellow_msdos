@@ -38,10 +38,10 @@ extern ExecuteCurMapScriptInTable
 extern ReplaceTileBlock
 extern TalkToTrainer
 extern TextScriptEnd
-extern VictoryRoad1FCooltrainerFBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern VictoryRoad1FCooltrainerFBattleText
+extern VictoryRoad1TrainerHeader0
+extern VictoryRoad1TrainerHeader1
+extern VictoryRoad1TrainerHeaders
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.

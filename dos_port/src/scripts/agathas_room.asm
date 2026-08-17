@@ -35,9 +35,9 @@ global AgathasRoom_Script
 global AgathasRoom_ScriptPointers
 global ResetAgathaScript
 
-extern AgathaBeforeBattleText   ; NOT YET DEFINED IN THE PORT
-extern AgathasRoomTrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern AgathasRoomTrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern AgathaBeforeBattleText
+extern AgathasRoomTrainerHeader0
+extern AgathasRoomTrainerHeaders
 extern AgathasRoom_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern ArePlayerCoordsInArray
 extern CheckFightingMapTrainers

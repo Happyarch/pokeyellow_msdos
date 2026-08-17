@@ -34,16 +34,16 @@ global RockTunnel1F_Script
 
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern RockTunnel1FHiker1BattleText   ; NOT YET DEFINED IN THE PORT
+extern RockTunnel1FHiker1BattleText
 extern RockTunnel1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1TrainerHeader1   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1TrainerHeader2   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1TrainerHeader3   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1TrainerHeader4   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1TrainerHeader5   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1TrainerHeader6   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
+extern RockTunnel1TrainerHeader0
+extern RockTunnel1TrainerHeader1
+extern RockTunnel1TrainerHeader2
+extern RockTunnel1TrainerHeader3
+extern RockTunnel1TrainerHeader4
+extern RockTunnel1TrainerHeader5
+extern RockTunnel1TrainerHeader6
+extern RockTunnel1TrainerHeaders
 extern TalkToTrainer
 extern TextScriptEnd
 
