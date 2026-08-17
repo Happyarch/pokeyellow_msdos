@@ -31,7 +31,7 @@ W, H = 40, 25
 CX, CY = 20.0, 12.5
 ASPECT = 1.2          # display-space y scale (320x200 on a 4:3 monitor)
 NWEDGE = 20
-W_TILEMAP = 0xC3A0    # must match include/gb_memmap.inc
+wTileMap = 0xC3A0    # must match include/gb_memmap.inc
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "assets",
                    "battle_transition_arcs.inc")
@@ -141,7 +141,7 @@ def main():
             quad = "CIRCLE_RIGHT" if e["right"] else "CIRCLE_LEFT"
             out.append(f"    db {quad}")
             out.append(f"    dd BattleTransition_ArcData{e['k']}")
-            out.append(f"    dd {sy} * 40 + {sx} + 0x{W_TILEMAP:04X}  ; ({sx},{sy})")
+            out.append(f"    dd {sy} * 40 + {sx} + 0x{wTileMap:04X}  ; ({sx},{sy})")
     for e in entries:
         bs = ", ".join(f"0x{b:02X}" for b in e["data"])
         out.append(f"BattleTransition_ArcData{e['k']}: db {bs}")

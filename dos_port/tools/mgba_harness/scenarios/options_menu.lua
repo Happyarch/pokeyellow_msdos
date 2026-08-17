@@ -13,7 +13,7 @@
 -- same outdoor tileset under the full-screen takeover (same rationale as
 -- start_menu; the options screen itself covers all 360 tilemap cells).
 --
--- Port side: the OPTION screen draws W_TILEMAP as a GB-shaped STRIDE-20 scratch
+-- Port side: the OPTION screen draws wTileMap as a GB-shaped STRIDE-20 scratch
 -- (options.asm GBSCR_W) — the differ entry uses "stride": 20, window (0,0).
 
 local here = debug.getinfo(1, "S").source:match("^@(.*)$")

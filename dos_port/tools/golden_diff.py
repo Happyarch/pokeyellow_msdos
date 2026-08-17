@@ -140,9 +140,9 @@ DATASTRUCT_CLASS_WHY = (
 #            tilemap/vram/oam and needs no window
 #   flags  — make variables that build the matching DEBUG_* image
 #   window — (col,row) of the 20x18 GB screen inside the port's 40x25 canvas
-#   stride — optional; the port's W_TILEMAP row stride for this scenario
+#   stride — optional; the port's wTileMap row stride for this scenario
 #     (default 40, the canvas). Full-screen takeover screens (options menu,
-#     trainer card, pokédex) draw W_TILEMAP as a GB-SHAPED stride-20 scratch
+#     trainer card, pokédex) draw wTileMap as a GB-SHAPED stride-20 scratch
 #     (the screen sets text_row_stride=20 and mirrors rows 0-17 to GB_TILEMAP1),
 #     so golden cell (r,c) lives at flat offset r*20+c, NOT r*40+c. Such
 #     scenarios use "stride": 20 with window (0,0). The stride applies to the
@@ -351,7 +351,7 @@ SCENARIOS = {
         "window": (16, 8),
         "projections": [
             # The overworld dialog is drawn into a GB-SHAPED stride-20 scratch at
-            # W_TILEMAP + 12*20 (msgbox_dialog, home/text.asm) and displayed through the
+            # wTileMap + 12*20 (msgbox_dialog, home/text.asm) and displayed through the
             # dialog window from GB_TILEMAP1. Laid over the 40-wide canvas, those 6
             # stride-20 rows re-flow into 3 canvas rows x 2 panels — the same shape
             # party_menu/bag_menu's message box takes.
@@ -363,7 +363,7 @@ SCENARIOS = {
         "masks": {
             "tilemap": [
                 ((0, 0, 0, 19),
-                 "the stride-20 dialog scratch (W_TILEMAP+240..359) physically overlaps "
+                 "the stride-20 dialog scratch (wTileMap+240..359) physically overlaps "
                  "canvas rows 6-8 of the block-aligned map mirror, and at this window "
                  "(row 8) canvas row 8 is golden row 0 — so the map mirror's top row is "
                  "sitting under the dialog's last two rows. Invisible on screen (render_bg "
@@ -1642,7 +1642,7 @@ SCENARIOS = {
         "class": "semantic",
         "flags": "DEBUG_BATTLE_DAMAGE=1",
     },
-    # --- Stage 3: full-screen takeover menus. Both port screens draw W_TILEMAP
+    # --- Stage 3: full-screen takeover menus. Both port screens draw wTileMap
     # as a GB-shaped STRIDE-20 scratch (options.asm GBSCR_W / start_sub_menus.asm
     # TCSCR_W) and mirror rows 0-17 to GB_TILEMAP1, so the golden maps at
     # "stride": 20, window (0,0) — flat offset r*20+c, not the 40-wide canvas. ---
@@ -2071,7 +2071,7 @@ SCENARIOS = {
     "start_menu": {
         "flags": "DEBUG_STARTMENU=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
-        # Overworld portion: W_TILEMAP is the port's block-aligned map mirror;
+        # Overworld portion: wTileMap is the port's block-aligned map mirror;
         # at the (8,8) Pallet spawn its 20x18 GB window sits at (16,10)
         # (measured; block-grid alignment, not the pixel camera — the visible
         # screen compensates with the Xoff/Yoff pixel blit).

@@ -490,7 +490,7 @@ def lookup_symbol(name: str) -> str:
     "_AdvancePlayerSprite.scroll" resolve too). Code/data symbols return the
     program (VMA) address — the value set_breakpoint/x86_read expect.
     Prefix 'gb:' looks up GB memory constants from gb_memmap.inc instead.
-    Example: lookup_symbol("OverworldLoop") or lookup_symbol("gb:W_CUR_MAP")
+    Example: lookup_symbol("OverworldLoop") or lookup_symbol("gb:wCurMap")
     """
     try:
         if name.startswith('gb:'):
@@ -595,7 +595,7 @@ def set_watchpoint(gb_offset_or_name: str) -> str:
     """
     Set a memory-CHANGE watchpoint on one byte of the emulated GB address
     space: execution breaks when the byte's value changes. Argument is a hex
-    GB offset (e.g. "D35E") or a gb_memmap.inc constant (e.g. "W_CUR_MAP").
+    GB offset (e.g. "D35E") or a gb_memmap.inc constant (e.g. "wCurMap").
     The game must be paused first.
     """
     err = _game_ctx()
@@ -674,7 +674,7 @@ def gb_read(offset_or_name: str, length: int) -> str:
     """
     Read bytes from the emulated GB address space (only while paused).
     offset_or_name: hex GB offset (e.g. "C000") or gb_memmap.inc constant
-                    name (e.g. "W_CUR_MAP").
+                    name (e.g. "wCurMap").
     length: number of bytes to read (max 4096).
     Returns a hex dump of the memory contents.
     """

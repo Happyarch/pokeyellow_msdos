@@ -66,7 +66,7 @@ def emit(lay: schema.Layout) -> str:
                           ("WX", p.wx), ("WY", p.wy),
                           ("CLIP", p.clip), ("MAXY", p.max_y),
                           # byte offset into the canvas tilemap (row-major) —
-                          # the W_TILEMAP + OFS form battle call sites use
+                          # the wTileMap + OFS form battle call sites use
                           ("OFS", p.row * cols + p.col)):
             out.append(f"{pre}_{name:<4} equ {val}")
         if el.kind == "oam_row":

@@ -4,7 +4,7 @@
 Input:  constants/event_constants.asm  (rgbds const_def/const/const_skip/const_next)
 Output: dos_port/assets/event_constants.inc  (EVENT_* equ <bit index>, + NUM_EVENTS)
 
-Each EVENT_* is a bit position in wEventFlags (W_EVENT_FLAGS). events.inc turns an
+Each EVENT_* is a bit position in wEventFlags (wEventFlags). events.inc turns an
 index into (byte offset, bit mask). Mirrors macros/const.asm semantics:
   const_def [start=0] [inc=1]   reset counter
   const NAME                    NAME = counter; counter += inc

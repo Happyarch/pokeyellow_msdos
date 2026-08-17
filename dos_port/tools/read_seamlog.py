@@ -24,7 +24,7 @@ import struct
 MAP_BORDER = 7
 SCREEN_BLOCK_WIDTH = 12
 SCREEN_BLOCK_HEIGHT = 9
-W_OVERWORLD_MAP = 0xE800
+wOverworldMap = 0xE800
 
 REC = 12
 
@@ -33,7 +33,7 @@ def expected_ptr(x, y, width):
     stride = width + 2 * MAP_BORDER
     row = (y >> 1) + MAP_BORDER - SCREEN_BLOCK_HEIGHT // 2
     col = (x >> 1) + MAP_BORDER - SCREEN_BLOCK_WIDTH // 2
-    return (W_OVERWORLD_MAP + row * stride + col) & 0xFFFF
+    return (wOverworldMap + row * stride + col) & 0xFFFF
 
 
 def main(path):
@@ -69,8 +69,8 @@ def main(path):
         # what hid the bug: at x=0 the "lead of -1" IS the wrap.
         if w:
             stride = w + 2 * MAP_BORDER
-            col = (ptr - W_OVERWORLD_MAP) % stride
-            exp_col = (exp - W_OVERWORLD_MAP) % stride
+            col = (ptr - wOverworldMap) % stride
+            exp_col = (exp - wOverworldMap) % stride
             if abs(ptr - exp) <= 2 and abs(col - exp_col) > 2:
                 notes.append(f"*** VIEW-PTR ROW WRAP (col {exp_col} -> {col})")
                 bad_ptr += 1

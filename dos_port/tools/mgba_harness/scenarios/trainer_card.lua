@@ -11,7 +11,7 @@
 -- rendered digits/badge grid pin the drawing.
 --
 -- The walk to Pallet (8,8) matches the port's boot spawn (vChars2 tileset —
--- see options_menu.lua). Port side draws W_TILEMAP as a GB-shaped STRIDE-20
+-- see options_menu.lua). Port side draws wTileMap as a GB-shaped STRIDE-20
 -- scratch (trainer_card.asm TCSCR_W) — differ entry "stride": 20, window (0,0).
 
 local here = debug.getinfo(1, "S").source:match("^@(.*)$")

@@ -3,8 +3,8 @@
 
 pret's debug new-game names (data at DebugNewGamePlayerName / DebugNewGameRivalName,
 constants/... "NINTEN@" / "SONY@"). PrepareTitleScreen and PrepareOakSpeech both copy
-NAME_LENGTH (11) bytes starting at DebugNewGamePlayerName into W_PLAYER_NAME and again
-from DebugNewGameRivalName into W_RIVAL_NAME. Because "NINTEN@" is only 7 bytes and
+NAME_LENGTH (11) bytes starting at DebugNewGamePlayerName into wPlayerName and again
+from DebugNewGameRivalName into wRivalName. Because "NINTEN@" is only 7 bytes and
 "SONY@" 5, the 11-byte player copy DELIBERATELY OVERRUNS into the rival string, so
 wPlayerName holds "NINTEN@SONY" on hardware; the rival copy then overruns into a
 6-byte '@' tail. The three labels must therefore stay CONTIGUOUS and at pret's exact

@@ -881,7 +881,7 @@ def main(debug_warps=None):
         "",
         "; ==========================================================================",
         "; TILESET DISPATCH TABLES (flat DS addresses, not EBP-relative)",
-        "; Indexed by W_CUR_MAP_TILESET (0-24). Used by LoadTilesetHeader.",
+        "; Indexed by wCurMapTileset (0-24). Used by LoadTilesetHeader.",
         "; Tileset gfx/blocks/coll labels come from dos_port/assets/*_gfx.inc etc.",
         "; SIZE constants are defined in those same inc files.",
         "; ==========================================================================",
@@ -1001,7 +1001,7 @@ def main(debug_warps=None):
         "",
     ])
 
-    W_OVERWORLD_MAP = 0xE800
+    wOverworldMap = 0xE800
     current_addr = OW_MAP_HEADERS_GBADDR
 
     # MapHeaderPointers entries computed as we go
@@ -1039,8 +1039,8 @@ def main(debug_warps=None):
                 c = get_connection(d, t_id, offset,
                                    m["w"], m["h"], t_w, t_h)
                 strip_src  = OUTDOOR_BLK_ADDRS[tname] + c["blk"]
-                strip_dest = W_OVERWORLD_MAP + c["map"]
-                view_ptr   = W_OVERWORLD_MAP + c["win"]
+                strip_dest = wOverworldMap + c["map"]
+                view_ptr   = wOverworldMap + c["win"]
                 hdr_lines.append(f"    ; {d} connection to {tname}")
                 hdr_lines.append(f"    db 0x{c['conn_map_id']:02X}       ; map id")
                 hdr_lines.append(f"    dw 0x{strip_src:04X}     ; strip src")

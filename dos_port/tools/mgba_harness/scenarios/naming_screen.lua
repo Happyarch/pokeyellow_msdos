@@ -17,7 +17,7 @@
 -- construction (golden: Oak-speech remnants; port: the boot overworld tileset)
 -- — masked per slot in golden_diff.py, measured from the first diff.
 --
--- Port side draws W_TILEMAP as a GB-shaped STRIDE-20 scratch (naming_screen.asm
+-- Port side draws wTileMap as a GB-shaped STRIDE-20 scratch (naming_screen.asm
 -- GBSCR_W) — differ entry "stride": 20, window (0,0).
 
 local here = debug.getinfo(1, "S").source:match("^@(.*)$")

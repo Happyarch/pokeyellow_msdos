@@ -56,7 +56,7 @@ SCRIPTS = ROOT / "scripts"
 TEXTS   = ROOT / "text"
 
 TH_SIZE      = 22
-WEVENTFLAGS  = 0xD746   # W_EVENT_FLAGS (dos_port/include/gb_memmap.inc canonical)
+WEVENTFLAGS  = 0xD746   # wEventFlags (dos_port/include/gb_memmap.inc canonical)
 
 
 # ---------------------------------------------------------------------------
