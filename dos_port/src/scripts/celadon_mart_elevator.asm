@@ -27,11 +27,11 @@ global CeladonMartElevatorFloors
 global CeladonMartElevatorShakeScript
 global CeladonMartElevatorText
 global CeladonMartElevatorWarpMaps
+global CeladonMartElevator_Script
 global CeladonMartElevator_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CeladonMartElevatorStoreWarpEntriesScript   ; NOT YET DEFINED IN THE PORT
-extern CeladonMartElevator_Script   ; NOT YET DEFINED IN THE PORT
 extern CopyData   ; NOT YET DEFINED IN THE PORT
 extern DisplayElevatorFloorMenu   ; NOT YET DEFINED IN THE PORT
 extern LoadItemList   ; NOT YET DEFINED IN THE PORT
@@ -50,24 +50,29 @@ wWarpedFromWhichWarp                           equ 0xD73A
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] CeladonMartElevator_Script (scripts/CeladonMartElevator.asm:2-15) — at scripts/CeladonMartElevator.asm:8: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	push hl
-; PRET| 	call nz, CeladonMartElevatorStoreWarpEntriesScript
-; PRET| 	pop hl
-; PRET| 	bit BIT_CUR_MAP_USED_ELEVATOR, [hl]
-; PRET| 	res BIT_CUR_MAP_USED_ELEVATOR, [hl]
-; PRET| 	call nz, CeladonMartElevatorShakeScript
-; PRET| 	xor a
-; PRET| 	ld [wAutoTextBoxDrawingControl], a
-; PRET| 	inc a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ret
+CeladonMartElevator_Script:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    push esi
+    jz .sk_6
+        call CeladonMartElevatorStoreWarpEntriesScript
+.sk_6:
+    pop esi
+    test byte [ebp + esi], (1 << (7))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (7)) & 0xFF
+    popfd
+    jz .sk_10
+        call CeladonMartElevatorShakeScript
+.sk_10:
+    xor al, al
+    mov [ebp + wAutoTextBoxDrawingControl], al
+    inc al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] CeladonMartElevatorStoreWarpEntriesScript (scripts/CeladonMartElevator.asm:18-32) — at scripts/CeladonMartElevator.asm:23: .StoreWarpEntry is defined in a region that bailed

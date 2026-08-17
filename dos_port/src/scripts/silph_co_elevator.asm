@@ -27,6 +27,7 @@ global SilphCoElevatorElevatorText
 global SilphCoElevatorFloors
 global SilphCoElevatorShakeScript
 global SilphCoElevatorWarpMaps
+global SilphCoElevator_Script
 global SilphCoElevator_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
@@ -36,7 +37,6 @@ extern DisplayElevatorFloorMenu   ; NOT YET DEFINED IN THE PORT
 extern LoadItemList   ; NOT YET DEFINED IN THE PORT
 extern ShakeElevator   ; NOT YET DEFINED IN THE PORT
 extern SilphCoElevatorStoreWarpEntriesScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCoElevator_Script   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
@@ -51,24 +51,29 @@ wWarpedFromWhichWarp                           equ 0xD73A
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] SilphCoElevator_Script (scripts/SilphCoElevator.asm:2-15) — at scripts/SilphCoElevator.asm:8: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	push hl
-; PRET| 	call nz, SilphCoElevatorStoreWarpEntriesScript
-; PRET| 	pop hl
-; PRET| 	bit BIT_CUR_MAP_USED_ELEVATOR, [hl]
-; PRET| 	res BIT_CUR_MAP_USED_ELEVATOR, [hl]
-; PRET| 	call nz, SilphCoElevatorShakeScript
-; PRET| 	xor a
-; PRET| 	ld [wAutoTextBoxDrawingControl], a
-; PRET| 	inc a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ret
+SilphCoElevator_Script:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    push esi
+    jz .sk_6
+        call SilphCoElevatorStoreWarpEntriesScript
+.sk_6:
+    pop esi
+    test byte [ebp + esi], (1 << (7))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (7)) & 0xFF
+    popfd
+    jz .sk_10
+        call SilphCoElevatorShakeScript
+.sk_10:
+    xor al, al
+    mov [ebp + wAutoTextBoxDrawingControl], al
+    inc al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] SilphCoElevatorStoreWarpEntriesScript (scripts/SilphCoElevator.asm:18-32) — at scripts/SilphCoElevator.asm:23: .StoreWarpEntry is defined in a region that bailed

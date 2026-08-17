@@ -62,7 +62,7 @@ CinnabarLabFossilRoom_TextPointers:
     dd CinnabarLabFossilRoomScientist2Text
 
 ; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] Lab4Script_GetFossilsInBag (scripts/CinnabarLabFossilRoom.asm:11-37) — at scripts/CinnabarLabFossilRoom.asm:16: HL domain is top at a dereference
+; BAIL[target-region-bailed] Lab4Script_GetFossilsInBag (scripts/CinnabarLabFossilRoom.asm:11-37) — at scripts/CinnabarLabFossilRoom.asm:18: .done is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	xor a

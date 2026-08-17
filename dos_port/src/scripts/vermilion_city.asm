@@ -122,7 +122,7 @@ wVermilionCityCurScript                        equ 0xD629
 section .text
 
 ; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] VermilionCity_Script (scripts/VermilionCity.asm:2-18) — at scripts/VermilionCity.asm:11: HL domain is top at a dereference
+; BAIL[target-region-bailed] VermilionCity_Script (scripts/VermilionCity.asm:2-18) — at scripts/VermilionCity.asm:17: .vermilionCityScript_19869 is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	call EnableAutoTextBoxDrawing

@@ -250,28 +250,30 @@ def analyse(f: sparser.ScriptFile, resolver=None) -> Analysis:
         an.live_flags[id(items[i])] = out
 
     # --- forward pointer-domain propagation over HL ------------------------
-    dom_in: List[str] = [BOT] * n
+    state_in: List[tuple] = [(BOT, BOT_STACK)] * n
     # Entry points (a label with no fall-through predecessor) start at TOP: the
-    # caller decided what is in HL and we cannot see the caller.
+    # caller decided what is in HL and we cannot see the caller. The stack starts
+    # EMPTY rather than unknown — anything the caller pushed is not ours to pop,
+    # and popping an empty stack already yields TOP.
     for i in range(n):
         if not pred[i]:
-            dom_in[i] = TOP
+            state_in[i] = (TOP, ())
     changed = True
     guard = 0
     while changed and guard < 10000:
         guard += 1
         changed = False
         for i in range(n):
-            d = _domain_out(items[i], dom_in[i], resolver)
+            st = _state_out(items[i], state_in[i], resolver)
             for s in succ[i]:
                 if s is None or not (0 <= s < n):
                     continue
-                merged = join(dom_in[s], d)
-                if merged != dom_in[s]:
-                    dom_in[s] = merged
+                merged = _state_join(state_in[s], st)
+                if merged != state_in[s]:
+                    state_in[s] = merged
                     changed = True
     for i in range(n):
-        an.hl_domain[id(items[i])] = dom_in[i]
+        an.hl_domain[id(items[i])] = state_in[i][0]
 
     # --- is AL read before it is written, after each item? -----------------
     # Used for one specific question: pret's `predef` leaves the predef id in A,
@@ -360,35 +362,92 @@ def _a_use(item: sparser.Item) -> Tuple[bool, bool]:
     return False, False
 
 
-def _domain_out(item: sparser.Item, dom_in: str, resolver) -> str:
-    """The domain of HL after this item, given its domain before."""
+#: The dataflow state is (HL's domain, the domain stack). The stack is a tuple of
+#: domains, innermost last, or None meaning "unknown depth" — which is what two
+#: paths pushing different amounts join to. Modelling the stack is what lets
+#: `pop hl` recover a domain instead of surrendering to TOP: the scripts are full
+#: of `ld hl, <GB symbol>` / `push hl` / call / `pop hl` at a loop header, and
+#: without this every one of those dereferences bails. Measured: 21 of the 22
+#: pointer-domain-unknown bails were this exact shape, and all 22 were GB.
+#: The stack lattice needs its own BOTTOM, distinct from the empty stack. Seeding
+#: the dataflow with `()` instead treats "nothing known yet" as "provably empty",
+#: so the very first join against a pushed frame sees depth 0 vs depth 1, decides
+#: the depths disagree, and collapses to unknown — destroying the stack at the
+#: first push in every region. That bug made this whole analysis a no-op.
+BOT_STACK = "bot-stack"
+
+
+def _stack_join(a, b):
+    if a is BOT_STACK:
+        return b
+    if b is BOT_STACK:
+        return a
+    if a is None or b is None:
+        return None
+    if a == b:
+        return a
+    if len(a) != len(b):
+        return None        # different depths: nothing below is comparable
+    return tuple(join(x, y) for x, y in zip(a, b))
+
+
+def _state_join(a, b):
+    return (join(a[0], b[0]), _stack_join(a[1], b[1]))
+
+
+def _push(stack, dom):
+    if stack is None or stack is BOT_STACK:
+        return None
+    return stack + (dom,)
+
+
+def _pop(stack):
+    """(value on top, remaining stack). An unknown or empty stack yields TOP."""
+    if stack is None or stack is BOT_STACK or not stack:
+        return TOP, stack
+    return stack[-1], stack[:-1]
+
+
+def _state_out(item: sparser.Item, state, resolver):
+    """HL's domain and the domain stack after this item, given them before."""
+    dom_in, stack = state
     if item.kind == sparser.KIND_INSN and item.decoded is not None:
         d = item.decoded
         if d.mnemonic == "ld" and d.classes == (isa.CLS_R16, isa.CLS_IMM) \
                 and d.operands[0] == "hl":
-            return _domain_of_immediate(d.operands[1], resolver)
+            return _domain_of_immediate(d.operands[1], resolver), stack
         if d.mnemonic in ("inc", "dec") and d.operands and d.operands[0] == "hl":
-            return dom_in
+            return dom_in, stack
         if d.mnemonic == "ld" and d.classes and d.classes[0] == isa.CLS_MEMHLI:
-            return dom_in
+            return dom_in, stack
         if d.mnemonic == "add" and d.operands and d.operands[0] == "hl":
-            return dom_in
-        if d.mnemonic == "pop" and d.operands and d.operands[0] == "hl":
-            return TOP
+            return dom_in, stack
+        if d.mnemonic == "push" and d.operands:
+            # A non-HL push still moves the stack pointer, so it must be tracked
+            # or a later `pop hl` reads the wrong slot. Its domain is unknown,
+            # which is exactly TOP — `push bc` / `pop hl` genuinely does leave
+            # HL holding something this analysis cannot classify.
+            return dom_in, _push(stack, dom_in if d.operands[0] == "hl" else TOP)
+        if d.mnemonic == "pop" and d.operands:
+            top, rest = _pop(stack)
+            return (top if d.operands[0] == "hl" else dom_in), rest
         if d.effect.kind == "call":
-            return TOP     # the callee may have loaded HL
+            # HL is surrendered — the callee may have loaded it. The STACK is
+            # not: a called routine balances its own pushes, so the frame this
+            # region built is still there when it returns.
+            return TOP, stack
         if d.mnemonic == "ld" and d.operands and d.operands[0] in ("h", "l"):
-            return TOP     # a half-load: the pair is now half-known
-        return dom_in
+            return TOP, stack     # a half-load: the pair is now half-known
+        return dom_in, stack
     if item.kind == sparser.KIND_MACRO and item.macro is not None:
         mi = item.macro
         if "hl" in mi.clobbers:
             # Every event macro that touches HL points it at wEventFlags.
-            return GB if mi.cls == macros.CODE_EVENT else TOP
+            return (GB if mi.cls == macros.CODE_EVENT else TOP), stack
         if mi.cls == macros.CODE_CALL:
-            return TOP
-        return dom_in
-    return dom_in
+            return TOP, stack
+        return dom_in, stack
+    return dom_in, stack
 
 
 def _domain_of_immediate(text: str, resolver) -> str:

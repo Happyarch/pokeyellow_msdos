@@ -43,6 +43,7 @@ global SilphCo11FScript_621ff
 global SilphCo11FScript_HideObject
 global SilphCo11FSetCurScript
 global SilphCo11FSetUnlockedDoorEventScript
+global SilphCo11FTeamRocketLeavesScript
 global SilphCo11FText10
 global SilphCo11FText9
 global SilphCo11FText_624c2
@@ -90,7 +91,6 @@ extern SilphCo11FScript8   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript_6229c   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript_ShowObject   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FSilphPresidentText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FTeamRocketLeavesScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11TrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -755,35 +755,35 @@ SilphCo11FRocketText:
 
 ; SilphCo11FRocketBattleText (scripts/SilphCo11F.asm:585-594) — not re-emitted: SilphCo11FRocketBattleText is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] SilphCo11FTeamRocketLeavesScript (scripts/SilphCo11F_2.asm:2-11) — at scripts/SilphCo11F_2.asm:4: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .HideToggleableObjectIDs
-; PRET| .hide_loop
-; PRET| 	ld a, [hli]
-; PRET| 	cp $ff
-; PRET| 	jr z, .done_hiding
-; PRET| 	push hl
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	pop hl
-; PRET| 	jr .hide_loop
+SilphCo11FTeamRocketLeavesScript:
+    mov esi, .HideToggleableObjectIDs
+.hide_loop:
+    mov al, [esi]
+    lea esi, [esi+1]
+    cmp al, 0xff
+    jz .done_hiding
+    push esi
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    pop esi
+    jmp .hide_loop
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] SilphCo11FTeamRocketLeavesScript.done_hiding (scripts/SilphCo11F_2.asm:13-22) — at scripts/SilphCo11F_2.asm:15: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .ShowToggleableObjectIDs
-; PRET| .show_loop
-; PRET| 	ld a, [hli]
-; PRET| 	cp -1
-; PRET| 	ret z
-; PRET| 	push hl
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	pop hl
-; PRET| 	jr .show_loop
+.done_hiding:
+    mov esi, .ShowToggleableObjectIDs
+.show_loop:
+    mov al, [esi]
+    lea esi, [esi+1]
+    cmp al, -1
+    jnz .nr_17
+        ret
+.nr_17:
+    push esi
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    pop esi
+    jmp .show_loop
 
 .ShowToggleableObjectIDs:
     db 18

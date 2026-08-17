@@ -27,6 +27,7 @@ global RocketHideoutElevatorScript
 global RocketHideoutElevatorShakeScript
 global RocketHideoutElevatorText
 global RocketHideoutElevatorWarpMaps
+global RocketHideoutElevator_Script
 global RocketHideoutElevator_TextPointers
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
@@ -37,7 +38,6 @@ extern IsItemInBag   ; NOT YET DEFINED IN THE PORT
 extern LoadItemList   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutElevatorStoreWarpEntriesScript   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutElevator_Script   ; NOT YET DEFINED IN THE PORT
 extern ShakeElevator   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _RocketHideoutElevatorAppearsToNeedKeyText   ; NOT YET DEFINED IN THE PORT
@@ -54,24 +54,29 @@ wWarpedFromWhichWarp                           equ 0xD73A
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] RocketHideoutElevator_Script (scripts/RocketHideoutElevator.asm:2-15) — at scripts/RocketHideoutElevator.asm:8: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	push hl
-; PRET| 	call nz, RocketHideoutElevatorStoreWarpEntriesScript
-; PRET| 	pop hl
-; PRET| 	bit BIT_CUR_MAP_USED_ELEVATOR, [hl]
-; PRET| 	res BIT_CUR_MAP_USED_ELEVATOR, [hl]
-; PRET| 	call nz, RocketHideoutElevatorShakeScript
-; PRET| 	xor a
-; PRET| 	ld [wAutoTextBoxDrawingControl], a
-; PRET| 	inc a
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ret
+RocketHideoutElevator_Script:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    push esi
+    jz .sk_6
+        call RocketHideoutElevatorStoreWarpEntriesScript
+.sk_6:
+    pop esi
+    test byte [ebp + esi], (1 << (7))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (7)) & 0xFF
+    popfd
+    jz .sk_10
+        call RocketHideoutElevatorShakeScript
+.sk_10:
+    xor al, al
+    mov [ebp + wAutoTextBoxDrawingControl], al
+    inc al
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] RocketHideoutElevatorStoreWarpEntriesScript (scripts/RocketHideoutElevator.asm:18-32) — at scripts/RocketHideoutElevator.asm:23: .StoreWarpEntry is defined in a region that bailed

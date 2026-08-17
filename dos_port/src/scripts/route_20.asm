@@ -22,6 +22,7 @@ bits 32
 
 %include "assets/trainer_headers.inc"
 
+global Route20BoulderScript
 global Route20CooltrainerMText
 global Route20Swimmer1Text
 global Route20Swimmer2Text
@@ -37,7 +38,6 @@ global Route20_Script
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern Route20BoulderScript   ; NOT YET DEFINED IN THE PORT
 extern Route20HideObjectScript   ; NOT YET DEFINED IN THE PORT
 extern Route20ShowObjectScript   ; NOT YET DEFINED IN THE PORT
 extern Route20Swimmer1BattleText   ; NOT YET DEFINED IN THE PORT
@@ -80,25 +80,23 @@ Route20_Script:
     mov [ebp + wRoute20CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[pointer-domain-unknown] Route20BoulderScript (scripts/Route20.asm:13-27) — at scripts/Route20.asm:21: HL domain is top at a dereference
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
-; PRET| 	jr z, .next_boulder_check
-; PRET| 	ld a, TOGGLE_SEAFOAM_ISLANDS_1F_BOULDER_1
-; PRET| 	call Route20ShowObjectScript
-; PRET| 	ld a, TOGGLE_SEAFOAM_ISLANDS_1F_BOULDER_2
-; PRET| 	call Route20ShowObjectScript
-; PRET| 	ld hl, .ToggleableObjectIDs
-; PRET| .hide_toggleable_objects
-; PRET| 	ld a, [hli]
-; PRET| 	cp $ff
-; PRET| 	jr z, .next_boulder_check
-; PRET| 	push hl
-; PRET| 	call Route20HideObjectScript
-; PRET| 	pop hl
-; PRET| 	jr .hide_toggleable_objects
+Route20BoulderScript:
+    CheckBothEventsSet EVENT_SEAFOAM3_BOULDER1_DOWN_HOLE, EVENT_SEAFOAM3_BOULDER2_DOWN_HOLE
+    jz .next_boulder_check
+    mov al, 223
+    call Route20ShowObjectScript
+    mov al, 224
+    call Route20ShowObjectScript
+    mov esi, .ToggleableObjectIDs
+.hide_toggleable_objects:
+    mov al, [esi]
+    lea esi, [esi+1]
+    cmp al, 0xff
+    jz .next_boulder_check
+    push esi
+    call Route20HideObjectScript
+    pop esi
+    jmp .hide_toggleable_objects
 
 .ToggleableObjectIDs:
     db 225

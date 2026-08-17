@@ -1,10 +1,10 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 1766,
- "regions_bailed": 764,
+ "regions_lowered": 1772,
+ "regions_bailed": 758,
  "by_reason": {
   "owned-by-generated-assets": 255,
-  "target-region-bailed": 255,
+  "target-region-bailed": 257,
   "screen-coord-projection": 4,
   "inline-text-db": 11,
   "bit-clobbers-live-carry": 14,
@@ -14,7 +14,7 @@
   "pikachu-table-index": 3,
   "hl-half-register-access": 9,
   "local-label-scope-collision": 13,
-  "pointer-domain-unknown": 22,
+  "pointer-domain-unknown": 14,
   "ld-via-bc-de": 2,
   "text-script-command-unported": 16,
   "add-hl-r16": 4,
@@ -167,10 +167,9 @@
    "reasons": []
   },
   "scripts/CeladonMartElevator.asm": {
-   "ok_regions": 5,
-   "bailed_regions": 2,
+   "ok_regions": 6,
+   "bailed_regions": 1,
    "reasons": [
-    "pointer-domain-unknown",
     "target-region-bailed"
    ]
   },
@@ -293,7 +292,6 @@
    "reasons": [
     "event-byte-assembly-state",
     "ld-via-bc-de",
-    "pointer-domain-unknown",
     "target-region-bailed"
    ]
   },
@@ -797,10 +795,9 @@
    ]
   },
   "scripts/RocketHideoutElevator.asm": {
-   "ok_regions": 7,
-   "bailed_regions": 2,
+   "ok_regions": 8,
+   "bailed_regions": 1,
    "reasons": [
-    "pointer-domain-unknown",
     "target-region-bailed"
    ]
   },
@@ -962,11 +959,10 @@
    "reasons": []
   },
   "scripts/Route20.asm": {
-   "ok_regions": 13,
-   "bailed_regions": 5,
+   "ok_regions": 14,
+   "bailed_regions": 4,
    "reasons": [
     "owned-by-generated-assets",
-    "pointer-domain-unknown",
     "predef-leaves-id-in-a"
    ]
   },
@@ -1247,8 +1243,8 @@
    ]
   },
   "scripts/SilphCo11F.asm": {
-   "ok_regions": 23,
-   "bailed_regions": 17,
+   "ok_regions": 25,
+   "bailed_regions": 15,
    "reasons": [
     "bank-expression",
     "event-byte-assembly-state",
@@ -1350,10 +1346,9 @@
    ]
   },
   "scripts/SilphCoElevator.asm": {
-   "ok_regions": 5,
-   "bailed_regions": 2,
+   "ok_regions": 6,
+   "bailed_regions": 1,
    "reasons": [
-    "pointer-domain-unknown",
     "target-region-bailed"
    ]
   },
@@ -1474,7 +1469,7 @@
    "bailed_regions": 3,
    "reasons": [
     "event-byte-assembly-state",
-    "pointer-domain-unknown"
+    "target-region-bailed"
    ]
   },
   "scripts/VermilionDock.asm": {
@@ -2499,20 +2494,6 @@
   },
   {
    "file": "scripts/CeladonMartElevator.asm",
-   "region": "CeladonMartElevator_Script",
-   "labels": [
-    "CeladonMartElevator_Script"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/CeladonMartElevator.asm:8",
-   "lines": [
-    2,
-    15
-   ]
-  },
-  {
-   "file": "scripts/CeladonMartElevator.asm",
    "region": "CeladonMartElevatorStoreWarpEntriesScript",
    "labels": [
     "CeladonMartElevatorStoreWarpEntriesScript",
@@ -3178,9 +3159,9 @@
     "Lab4Script_GetFossilsInBag",
     "Lab4Script_GetFossilsInBag.loop"
    ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/CinnabarLabFossilRoom.asm:16",
+   "reason": "target-region-bailed",
+   "detail": ".done is defined in a region that bailed",
+   "at": "scripts/CinnabarLabFossilRoom.asm:18",
    "lines": [
     11,
     37
@@ -7349,20 +7330,6 @@
   },
   {
    "file": "scripts/RocketHideoutElevator.asm",
-   "region": "RocketHideoutElevator_Script",
-   "labels": [
-    "RocketHideoutElevator_Script"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/RocketHideoutElevator.asm:8",
-   "lines": [
-    2,
-    15
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutElevator.asm",
    "region": "RocketHideoutElevatorStoreWarpEntriesScript",
    "labels": [
     "RocketHideoutElevatorStoreWarpEntriesScript",
@@ -9032,21 +8999,6 @@
    "lines": [
     107,
     228
-   ]
-  },
-  {
-   "file": "scripts/Route20.asm",
-   "region": "Route20BoulderScript",
-   "labels": [
-    "Route20BoulderScript",
-    "Route20BoulderScript.hide_toggleable_objects"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/Route20.asm:21",
-   "lines": [
-    13,
-    27
    ]
   },
   {
@@ -11251,36 +11203,6 @@
    ]
   },
   {
-   "file": "scripts/SilphCo11F_2.asm",
-   "region": "SilphCo11FTeamRocketLeavesScript",
-   "labels": [
-    "SilphCo11FTeamRocketLeavesScript",
-    "SilphCo11FTeamRocketLeavesScript.hide_loop"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo11F_2.asm:4",
-   "lines": [
-    2,
-    11
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F_2.asm",
-   "region": "SilphCo11FTeamRocketLeavesScript.done_hiding",
-   "labels": [
-    "SilphCo11FTeamRocketLeavesScript.done_hiding",
-    "SilphCo11FTeamRocketLeavesScript.show_loop"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo11F_2.asm:15",
-   "lines": [
-    13,
-    22
-   ]
-  },
-  {
    "file": "scripts/SilphCo2F.asm",
    "region": "SilphCo2FGateCallbackScript",
    "labels": [
@@ -12471,20 +12393,6 @@
   },
   {
    "file": "scripts/SilphCoElevator.asm",
-   "region": "SilphCoElevator_Script",
-   "labels": [
-    "SilphCoElevator_Script"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCoElevator.asm:8",
-   "lines": [
-    2,
-    15
-   ]
-  },
-  {
-   "file": "scripts/SilphCoElevator.asm",
    "region": "SilphCoElevatorStoreWarpEntriesScript",
    "labels": [
     "SilphCoElevatorStoreWarpEntriesScript",
@@ -12841,9 +12749,9 @@
    "labels": [
     "VermilionCity_Script"
    ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/VermilionCity.asm:11",
+   "reason": "target-region-bailed",
+   "detail": ".vermilionCityScript_19869 is defined in a region that bailed",
+   "at": "scripts/VermilionCity.asm:17",
    "lines": [
     2,
     18
