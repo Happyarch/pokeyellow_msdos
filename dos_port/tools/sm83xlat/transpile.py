@@ -572,7 +572,7 @@ def _report(total_ok, total_bail, reasons, per_file, shadowed, written) -> str:
             "port HOST address is 32 bits and the callee has no abi.json entry",
         "event-byte-assembly-state": "a *Reuse* event macro whose expansion depends "
             "on the assembly-time event_byte DEF carried from a line above",
-        "predef-leaves-id-in-a": "pret's predef leaves the id in A and a direct call "
+        "predef-leaves-parent-bank-in-a": "pret's predef leaves the parent ROM bank in A and a direct call "
             "does not, and dataflow shows a live reader of A",
         "pointer-domain-unknown": "HL is dereferenced where the GB/HOST domain is not "
             "proven on every path",

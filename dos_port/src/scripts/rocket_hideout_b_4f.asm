@@ -23,6 +23,7 @@ bits 32
 %include "assets/audio_constants.inc"
 %include "assets/trainer_headers.inc"
 
+global RocketHideoutB4FBeatGiovanniScript
 global RocketHideoutB4FGiovanniHopeWeMeetAgainText
 global RocketHideoutB4FGiovanniText
 global RocketHideoutB4FJessieJamesEndBattleText
@@ -37,6 +38,7 @@ global RocketHideoutB4FScript8
 global RocketHideoutB4FScript9
 global RocketHideoutB4FScript_HideJessieJames
 global RocketHideoutB4FScript_HideObject
+global RocketHideoutB4FScript_ShowObject
 global RocketHideoutB4FSetScript
 global RocketHideoutB4FText12
 global RocketHideoutB4FText13
@@ -63,7 +65,6 @@ extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FBeatGiovanniScript   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FRocketBattleText   ; NOT YET DEFINED IN THE PORT
@@ -73,7 +74,6 @@ extern RocketHideoutB4FScript5   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript6   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript7   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript_455a5   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FScript_ShowObject   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
@@ -165,36 +165,36 @@ RocketHideoutB4F_ScriptPointers:
     dd RocketHideoutB4FScript12
     dd RocketHideoutB4FScript13
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] RocketHideoutB4FBeatGiovanniScript (scripts/RocketHideoutB4F.asm:45-70) — at scripts/RocketHideoutB4F.asm:60: predef ShowObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, RocketHideoutB4FResetScripts
-; PRET| 	ld a, PAD_SELECT | PAD_START | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	SetEvent EVENT_BEAT_ROCKET_HIDEOUT_GIOVANNI
-; PRET| 	ld a, TEXT_ROCKETHIDEOUTB4F_GIOVANNI_HOPE_WE_MEET_AGAIN
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	call GBFadeOutToBlack
-; PRET| 	ld a, TOGGLE_ROCKET_HIDEOUT_B4F_GIOVANNI
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld a, TOGGLE_ROCKET_HIDEOUT_B4F_ITEM_4
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	call UpdateSprites
-; PRET| 	call GBFadeInFromBlack
-; PRET| 	xor a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	set BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	ld a, SCRIPT_ROCKETHIDEOUTB4F_DEFAULT
-; PRET| 	ld [wRocketHideoutB4FCurScript], a
-; PRET| 	ld [wCurMapScript], a
-; PRET| 	ret
+%assign event_byte -1
+RocketHideoutB4FBeatGiovanniScript:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz RocketHideoutB4FResetScripts
+    mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    SetEvent EVENT_BEAT_ROCKET_HIDEOUT_GIOVANNI
+    mov al, TEXT_ROCKETHIDEOUTB4F_GIOVANNI_HOPE_WE_MEET_AGAIN
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    call GBFadeOutToBlack
+    mov al, 133
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov al, 139
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    call UpdateSprites
+    call GBFadeInFromBlack
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    mov esi, wCurrentMapScriptFlags
+    or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    mov al, SCRIPT_ROCKETHIDEOUTB4F_DEFAULT
+    mov [ebp + wRocketHideoutB4FCurScript], al
+    mov [ebp + wCurMapScript], al
+    ret
 
 %assign event_byte -1
     CheckEvent EVENT_BEAT_ROCKET_HIDEOUT_4_JESSIE_JAMES
@@ -421,41 +421,38 @@ RocketHideoutB4FScript13:
     call RocketHideoutB4FSetScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] RocketHideoutB4FScript_ShowObject (scripts/RocketHideoutB4F.asm:280-284) — at scripts/RocketHideoutB4F.asm:281: predef ShowObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	call UpdateSprites
-; PRET| 	call Delay3
-; PRET| 	ret
+%assign event_byte -1
+RocketHideoutB4FScript_ShowObject:
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    call UpdateSprites
+    call Delay3
+    ret
 
 %assign event_byte -1
 RocketHideoutB4FScript_HideObject:
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     ret
 
 ; RocketHideoutB4F_TextPointers (scripts/RocketHideoutB4F.asm:292-317) — not re-emitted: RocketHideout4TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] scripts/RocketHideoutB4F.asm:anon (scripts/RocketHideoutB4F.asm:319-330) — at scripts/RocketHideoutB4F.asm:327: predef EmotionBubble
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld c, 10
-; PRET| 	call DelayFrames
-; PRET| 	ld a, $8
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, $0
-; PRET| 	ld [wEmotionBubbleSpriteIndex], a
-; PRET| 	ld a, EXCLAMATION_BUBBLE
-; PRET| 	ld [wWhichEmotionBubble], a
-; PRET| 	predef EmotionBubble
-; PRET| 	ld c, 20
-; PRET| 	call DelayFrames
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+    mov bl, 10
+    call DelayFrames
+    mov al, 0x8
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, 0x0
+    mov [ebp + wEmotionBubbleSpriteIndex], al
+    mov al, 0
+    mov [ebp + wWhichEmotionBubble], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call EmotionBubble
+    mov bl, 20
+    call DelayFrames
+    jmp TextScriptEnd
 
 %assign event_byte -1
 RocketHideoutB4FText12:
@@ -525,7 +522,7 @@ RocketHideoutB4FRocketText:
     SetEvent EVENT_ROCKET_DROPPED_LIFT_KEY
     mov al, 140
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
     jmp TextScriptEnd
 

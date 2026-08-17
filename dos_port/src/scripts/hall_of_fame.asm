@@ -27,11 +27,13 @@ global HallOfFameEntryMovement
 global HallOfFameNoopScript
 global HallOfFameOakCongratulationsScript
 global HallOfFameOakText
+global HallOfFameResetEventsAndSaveScript
 global HallOfFame_Script
 global HallOfFame_ScriptPointers
 global HallOfFame_TextPointers
 global HallofFameRoomClearScripts
 
+extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
 extern DecodeRLEList   ; NOT YET DEFINED IN THE PORT
 extern Delay3   ; NOT YET DEFINED IN THE PORT
@@ -39,7 +41,6 @@ extern DelayFrames   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern HallOfFamePC   ; NOT YET DEFINED IN THE PORT
-extern HallOfFameResetEventsAndSaveScript   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern Init   ; NOT YET DEFINED IN THE PORT
 extern SaveGameData   ; NOT YET DEFINED IN THE PORT
@@ -57,8 +58,6 @@ TEXT_HALLOFFAME_OAK                            equ 1
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
 hSpriteFacingDirection                         equ 0xFF8D
-wAgathasRoomCurScript                          equ 0xD64E
-wBrunosRoomCurScript                           equ 0xD64D
 wHallOfFameCurScript                           equ 0xD64A
 wLancesRoomCurScript                           equ 0xD652
 wLastBlackoutMap                               equ 0xD718
@@ -95,45 +94,47 @@ HallOfFame_ScriptPointers:
 HallOfFameNoopScript:
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] HallOfFameResetEventsAndSaveScript (scripts/HallOfFame.asm:24-58) — at scripts/HallOfFame.asm:29: predef HallOfFamePC
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call Delay3
-; PRET| 	ld a, [wLetterPrintingDelayFlags]
-; PRET| 	push af
-; PRET| 	xor a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	predef HallOfFamePC
-; PRET| 	pop af
-; PRET| 	ld [wLetterPrintingDelayFlags], a
-; PRET| 	ld hl, wStatusFlags7
-; PRET| 	res BIT_NO_MAP_MUSIC, [hl]
-; PRET| 	ASSERT wStatusFlags7 + 1 == wElite4Flags
-; PRET| 	inc hl
-; PRET| 	set BIT_UNUSED_BEAT_ELITE_4, [hl] ; unused
-; PRET| 	xor a ; SCRIPT_*_DEFAULT
-; PRET| 	ld hl, wLoreleisRoomCurScript
-; PRET| 	ld [hli], a ; wLoreleisRoomCurScript
-; PRET| 	ld [hli], a ; wBrunosRoomCurScript
-; PRET| 	ld [hl], a ; wAgathasRoomCurScript
-; PRET| 	ld [wLancesRoomCurScript], a
-; PRET| 	ld [wHallOfFameCurScript], a
-; PRET| 	; Elite 4 events
-; PRET| 	ResetEventRange INDIGO_PLATEAU_EVENTS_START, INDIGO_PLATEAU_EVENTS_END, 1
-; PRET| 	xor a
-; PRET| 	ld [wHallOfFameCurScript], a
-; PRET| 	ld a, PALLET_TOWN
-; PRET| 	ld [wLastBlackoutMap], a
-; PRET| 	farcall SaveGameData
-; PRET| 	ld b, 5
-; PRET| .delayLoop
-; PRET| 	ld c, 600 / 5
-; PRET| 	call DelayFrames
-; PRET| 	dec b
-; PRET| 	jr nz, .delayLoop
-; PRET| 	call WaitForTextScrollButtonPress
-; PRET| 	jp Init
+%assign event_byte -1
+HallOfFameResetEventsAndSaveScript:
+    call Delay3
+    mov al, [ebp + wLetterPrintingDelayFlags]
+    pushfd
+    push eax
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HallOfFamePC
+    pop eax
+    popfd
+    mov [ebp + wLetterPrintingDelayFlags], al
+    mov esi, wStatusFlags7
+    and byte [ebp + esi], ~(1 << (BIT_NO_MAP_MUSIC)) & 0xFF
+    lea esi, [esi+1]
+    or byte [ebp + esi], (1 << (0))
+    xor al, al
+    mov esi, wLoreleisRoomCurScript
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+    mov [ebp + wLancesRoomCurScript], al
+    mov [ebp + wHallOfFameCurScript], al
+    ResetEventRange INDIGO_PLATEAU_EVENTS_START, INDIGO_PLATEAU_EVENTS_END, 1
+    xor al, al
+    mov [ebp + wHallOfFameCurScript], al
+    mov al, PALLET_TOWN
+    mov [ebp + wLastBlackoutMap], al
+; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call SaveGameData
+    mov bh, 5
+.delayLoop:
+    mov bl, 600 / 5
+    call DelayFrames
+    dec bh
+    jnz .delayLoop
+    call WaitForTextScrollButtonPress
+    jmp Init
 
 %assign event_byte -1
 HallOfFameDefaultScript:
@@ -181,7 +182,7 @@ HallOfFameOakCongratulationsScript:
     mov [ebp + wJoyIgnore], al
     mov al, 9
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     mov al, SCRIPT_HALLOFFAME_RESET_EVENTS_AND_SAVE
     mov [ebp + wHallOfFameCurScript], al

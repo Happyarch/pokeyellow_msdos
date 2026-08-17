@@ -31,6 +31,7 @@ global PalletTownOakGreetsPlayerScript
 global PalletTownOakHeyWaitScript
 global PalletTownOakNotSafeComeWithMeScript
 global PalletTownOakText
+global PalletTownOakWalksToPlayerScript
 global PalletTownOaksLabSignText
 global PalletTownPikachuBattleScript
 global PalletTownPlayerFollowsOakScript
@@ -52,7 +53,6 @@ extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern MoveSprite   ; NOT YET DEFINED IN THE PORT
 extern PalletTownDaisyScript   ; NOT YET DEFINED IN THE PORT
 extern PalletTownDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern PalletTownOakWalksToPlayerScript   ; NOT YET DEFINED IN THE PORT
 extern PalletTownSignText   ; NOT YET DEFINED IN THE PORT
 extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
@@ -172,7 +172,7 @@ PalletTownOakHeyWaitScript:
     mov [ebp + esi], al
     mov al, TOGGLE_PALLET_TOWN_OAK
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
     mov al, 0x2
     mov [ebp + wSprite01StateData1MovementStatus], al
@@ -182,31 +182,30 @@ PalletTownOakHeyWaitScript:
     mov [ebp + wPalletTownCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] PalletTownOakWalksToPlayerScript (scripts/PalletTown.asm:83-103) — at scripts/PalletTown.asm:91: predef CalcPositionOfPlayerRelativeToNPC
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call Delay3
-; PRET| 	ld a, 0
-; PRET| 	ld [wYCoord], a
-; PRET| 	ld a, 1
-; PRET| 	ldh [hNPCPlayerRelativePosPerspective], a
-; PRET| 	ld a, 1
-; PRET| 	swap a
-; PRET| 	ldh [hNPCSpriteOffset], a
-; PRET| 	predef CalcPositionOfPlayerRelativeToNPC
-; PRET| 	ld hl, hNPCPlayerYDistance
-; PRET| 	dec [hl]
-; PRET| 	predef FindPathToPlayer ; load Oak's movement into wNPCMovementDirections2
-; PRET| 	ld de, wNPCMovementDirections2
-; PRET| 	ld a, PALLETTOWN_OAK
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	call MoveSprite
-; PRET| 
-; PRET| 	; trigger the next script
-; PRET| 	ld a, SCRIPT_PALLETTOWN_OAK_GREETS_PLAYER
-; PRET| 	ld [wPalletTownCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+PalletTownOakWalksToPlayerScript:
+    call Delay3
+    mov al, 0
+    mov [ebp + wYCoord], al
+    mov al, 1
+    mov [ebp + hNPCPlayerRelativePosPerspective], al
+    mov al, 1
+    rol al, 4
+    test al, al   ; swap sets Z, clears C
+    mov [ebp + hNPCSpriteOffset], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call CalcPositionOfPlayerRelativeToNPC
+    mov esi, hNPCPlayerYDistance
+    dec byte [ebp + esi]
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call FindPathToPlayer
+    mov dx, wNPCMovementDirections2
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    call MoveSprite
+    mov al, SCRIPT_PALLETTOWN_OAK_GREETS_PLAYER
+    mov [ebp + wPalletTownCurScript], al
+    ret
 
 %assign event_byte -1
 PalletTownOakGreetsPlayerScript:
@@ -377,7 +376,7 @@ PalletTownOakText:
     mov [ebp + wEmotionBubbleSpriteIndex], al
     mov al, 0
     mov [ebp + wWhichEmotionBubble], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call EmotionBubble
     jmp TextScriptEnd
 

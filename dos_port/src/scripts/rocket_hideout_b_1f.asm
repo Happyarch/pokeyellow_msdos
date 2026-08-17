@@ -69,7 +69,7 @@ RocketHideoutB1F_Script:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] RocketHideoutB1FDoorCallbackScript (scripts/RocketHideoutB1F.asm:12-21) — at scripts/RocketHideoutB1F.asm:17: .door_open is defined in a region that bailed
+; BAIL[event-byte-assembly-state] RocketHideoutB1FDoorCallbackScript (scripts/RocketHideoutB1F.asm:12-21) — at scripts/RocketHideoutB1F.asm:18: CheckEventReuseA EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, wCurrentMapScriptFlags
@@ -83,20 +83,19 @@ RocketHideoutB1F_Script:
 ; PRET| 	ld a, $54 ; Door Block
 ; PRET| 	jr .set_door_block
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] RocketHideoutB1FDoorCallbackScript.play_sound_door_open (scripts/RocketHideoutB1F.asm:23-32) — at scripts/RocketHideoutB1F.asm:32: predef_jump ReplaceTileBlock
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, SFX_GO_INSIDE
-; PRET| 	call PlaySound
-; PRET| 	; [pret] BUG: should be SetEvent to avoid the SFX playing every time you enter the map
-; PRET| 	CheckEventHL EVENT_ENTERED_ROCKET_HIDEOUT
-; PRET| .door_open
-; PRET| 	ld a, $e ; Floor Block
-; PRET| .set_door_block
-; PRET| 	ld [wNewTileBlockID], a
-; PRET| 	lb bc, 8, 12
-; PRET| 	predef_jump ReplaceTileBlock
+%assign event_byte -1
+.play_sound_door_open:
+    mov al, SFX_GO_INSIDE
+    call PlaySound
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_ENTERED_ROCKET_HIDEOUT)
+    test byte [ebp + esi], EVENT_MASK(EVENT_ENTERED_ROCKET_HIDEOUT)
+.door_open:
+    mov al, 0xe
+.set_door_block:
+    mov [ebp + wNewTileBlockID], al
+    mov bx, ((8) << 8) | (12)
+; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    jmp ReplaceTileBlock
 
 ; RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — not re-emitted: RocketHideout1TrainerHeaders is already defined in assets/trainer_headers.inc.
 

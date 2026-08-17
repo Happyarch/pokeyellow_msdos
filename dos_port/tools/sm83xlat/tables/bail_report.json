@@ -1,24 +1,24 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 1805,
- "regions_bailed": 725,
+ "regions_lowered": 1832,
+ "regions_bailed": 698,
  "by_reason": {
   "owned-by-generated-assets": 255,
-  "target-region-bailed": 253,
+  "target-region-bailed": 252,
   "screen-coord-projection": 4,
   "inline-text-db": 11,
-  "bit-clobbers-live-carry": 14,
+  "bit-clobbers-live-carry": 13,
   "host-pointer-in-16bit-reg": 27,
-  "predef-leaves-id-in-a": 28,
   "text-sound-command-unported": 49,
   "pikachu-table-index": 3,
   "hl-half-register-access": 9,
   "local-label-scope-collision": 12,
-  "pointer-domain-unknown": 14,
+  "pointer-domain-unknown": 15,
   "ld-via-bc-de": 2,
   "text-script-command-unported": 16,
+  "predef-leaves-parent-bank-in-a": 1,
   "add-hl-r16": 4,
-  "event-byte-assembly-state": 5,
+  "event-byte-assembly-state": 6,
   "bank-expression": 13,
   "unresolved-symbol": 1,
   "checkevent-carry-form": 3,
@@ -43,23 +43,20 @@
    ]
   },
   "scripts/BillsHouse.asm": {
-   "ok_regions": 28,
-   "bailed_regions": 9,
+   "ok_regions": 29,
+   "bailed_regions": 8,
    "reasons": [
     "bit-clobbers-live-carry",
     "host-pointer-in-16bit-reg",
     "pikachu-table-index",
-    "predef-leaves-id-in-a",
     "target-region-bailed",
     "text-sound-command-unported"
    ]
   },
   "scripts/BluesHouse.asm": {
-   "ok_regions": 6,
-   "bailed_regions": 3,
+   "ok_regions": 8,
+   "bailed_regions": 1,
    "reasons": [
-    "predef-leaves-id-in-a",
-    "target-region-bailed",
     "text-sound-command-unported"
    ]
   },
@@ -217,10 +214,9 @@
    ]
   },
   "scripts/CeruleanCity.asm": {
-   "ok_regions": 23,
-   "bailed_regions": 8,
+   "ok_regions": 24,
+   "bailed_regions": 7,
    "reasons": [
-    "predef-leaves-id-in-a",
     "target-region-bailed",
     "text-sound-command-unported"
    ]
@@ -256,7 +252,7 @@
    "ok_regions": 4,
    "bailed_regions": 1,
    "reasons": [
-    "predef-leaves-id-in-a"
+    "predef-leaves-parent-bank-in-a"
    ]
   },
   "scripts/ChampionsRoom.asm": {
@@ -438,11 +434,9 @@
    ]
   },
   "scripts/HallOfFame.asm": {
-   "ok_regions": 8,
-   "bailed_regions": 1,
-   "reasons": [
-    "predef-leaves-id-in-a"
-   ]
+   "ok_regions": 9,
+   "bailed_regions": 0,
+   "reasons": []
   },
   "scripts/IndigoPlateau.asm": {
    "ok_regions": 2,
@@ -522,14 +516,13 @@
    "reasons": []
   },
   "scripts/MtMoonB2F.asm": {
-   "ok_regions": 29,
-   "bailed_regions": 16,
+   "ok_regions": 31,
+   "bailed_regions": 14,
    "reasons": [
     "bank-expression",
     "host-pointer-in-16bit-reg",
     "local-label-scope-collision",
     "owned-by-generated-assets",
-    "predef-leaves-id-in-a",
     "target-region-bailed",
     "text-sound-command-unported"
    ]
@@ -572,17 +565,15 @@
     "local-label-scope-collision",
     "pikachu-table-index",
     "pointer-domain-unknown",
-    "predef-leaves-id-in-a",
     "target-region-bailed",
     "text-sound-command-unported"
    ]
   },
   "scripts/PalletTown.asm": {
-   "ok_regions": 16,
-   "bailed_regions": 3,
+   "ok_regions": 17,
+   "bailed_regions": 2,
    "reasons": [
     "event-macro-reuse-a-hint",
-    "predef-leaves-id-in-a",
     "target-region-bailed"
    ]
   },
@@ -691,12 +682,10 @@
    ]
   },
   "scripts/PokemonTower5F.asm": {
-   "ok_regions": 6,
-   "bailed_regions": 7,
+   "ok_regions": 8,
+   "bailed_regions": 5,
    "reasons": [
-    "owned-by-generated-assets",
-    "predef-leaves-id-in-a",
-    "target-region-bailed"
+    "owned-by-generated-assets"
    ]
   },
   "scripts/PokemonTower6F.asm": {
@@ -707,12 +696,11 @@
    ]
   },
   "scripts/PokemonTower7F.asm": {
-   "ok_regions": 15,
-   "bailed_regions": 6,
+   "ok_regions": 17,
+   "bailed_regions": 4,
    "reasons": [
     "bank-expression",
     "host-pointer-in-16bit-reg",
-    "predef-leaves-id-in-a",
     "target-region-bailed"
    ]
   },
@@ -755,11 +743,11 @@
    ]
   },
   "scripts/RocketHideoutB1F.asm": {
-   "ok_regions": 6,
-   "bailed_regions": 6,
+   "ok_regions": 7,
+   "bailed_regions": 5,
    "reasons": [
+    "event-byte-assembly-state",
     "owned-by-generated-assets",
-    "predef-leaves-id-in-a",
     "target-region-bailed"
    ]
   },
@@ -778,13 +766,12 @@
    ]
   },
   "scripts/RocketHideoutB4F.asm": {
-   "ok_regions": 18,
-   "bailed_regions": 10,
+   "ok_regions": 21,
+   "bailed_regions": 7,
    "reasons": [
     "bank-expression",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
-    "predef-leaves-id-in-a",
     "target-region-bailed"
    ]
   },
@@ -890,11 +877,10 @@
    "reasons": []
   },
   "scripts/Route16.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 8,
+   "ok_regions": 11,
+   "bailed_regions": 7,
    "reasons": [
-    "owned-by-generated-assets",
-    "predef-leaves-id-in-a"
+    "owned-by-generated-assets"
    ]
   },
   "scripts/Route16FlyHouse.asm": {
@@ -952,11 +938,10 @@
    "reasons": []
   },
   "scripts/Route20.asm": {
-   "ok_regions": 14,
-   "bailed_regions": 4,
+   "ok_regions": 16,
+   "bailed_regions": 2,
    "reasons": [
-    "owned-by-generated-assets",
-    "predef-leaves-id-in-a"
+    "owned-by-generated-assets"
    ]
   },
   "scripts/Route21.asm": {
@@ -967,12 +952,11 @@
    ]
   },
   "scripts/Route22.asm": {
-   "ok_regions": 25,
-   "bailed_regions": 18,
+   "ok_regions": 27,
+   "bailed_regions": 16,
    "reasons": [
     "event-byte-assembly-state",
     "host-pointer-in-16bit-reg",
-    "predef-leaves-id-in-a",
     "target-region-bailed"
    ]
   },
@@ -1230,14 +1214,13 @@
    ]
   },
   "scripts/SilphCo11F.asm": {
-   "ok_regions": 26,
-   "bailed_regions": 14,
+   "ok_regions": 28,
+   "bailed_regions": 12,
    "reasons": [
     "bank-expression",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
-    "predef-leaves-id-in-a",
     "target-region-bailed",
     "text-sound-command-unported"
    ]
@@ -1295,15 +1278,14 @@
    ]
   },
   "scripts/SilphCo7F.asm": {
-   "ok_regions": 27,
-   "bailed_regions": 14,
+   "ok_regions": 28,
+   "bailed_regions": 13,
    "reasons": [
     "bank-expression",
     "bit-clobbers-live-carry",
     "host-pointer-in-16bit-reg",
     "owned-by-generated-assets",
     "pointer-domain-unknown",
-    "predef-leaves-id-in-a",
     "target-region-bailed"
    ]
   },
@@ -1316,12 +1298,11 @@
    ]
   },
   "scripts/SilphCo9F.asm": {
-   "ok_regions": 9,
-   "bailed_regions": 9,
+   "ok_regions": 10,
+   "bailed_regions": 8,
    "reasons": [
     "owned-by-generated-assets",
     "pointer-domain-unknown",
-    "predef-leaves-id-in-a",
     "target-region-bailed"
    ]
   },
@@ -1345,12 +1326,11 @@
    ]
   },
   "scripts/SSAnne2F.asm": {
-   "ok_regions": 14,
-   "bailed_regions": 3,
+   "ok_regions": 15,
+   "bailed_regions": 2,
    "reasons": [
     "bank-expression",
-    "host-pointer-in-16bit-reg",
-    "predef-leaves-id-in-a"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/SSAnne2FRooms.asm": {
@@ -1516,8 +1496,8 @@
    ]
   },
   "scripts/VictoryRoad3F.asm": {
-   "ok_regions": 10,
-   "bailed_regions": 4,
+   "ok_regions": 11,
+   "bailed_regions": 3,
    "reasons": [
     "bit-clobbers-live-carry",
     "owned-by-generated-assets"
@@ -1749,9 +1729,9 @@
     "BillsHouseScript3.applyPikachuMovement",
     "BillsHouseScript3.pikachuNotFollowing"
    ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HideObject",
-   "at": "scripts/BillsHouse.asm:99",
+   "reason": "target-region-bailed",
+   "detail": ".pikachuNotFollowing is defined in a region that bailed",
+   "at": "scripts/BillsHouse.asm:101",
    "lines": [
     94,
     116
@@ -1764,9 +1744,9 @@
     "BillsHouseScript5",
     "BillsHouseScript5.pikachuNotFollowing"
    ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef ShowObject",
-   "at": "scripts/BillsHouse.asm:158",
+   "reason": "target-region-bailed",
+   "detail": ".pikachuNotFollowing is defined in a region that bailed",
+   "at": "scripts/BillsHouse.asm:163",
    "lines": [
     145,
     186
@@ -1830,48 +1810,6 @@
    "lines": [
     85,
     101
-   ]
-  },
-  {
-   "file": "scripts/BillsHouse_2.asm",
-   "region": "BillsHousePikachuConfused",
-   "labels": [
-    "BillsHousePikachuConfused"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef EmotionBubble",
-   "at": "scripts/BillsHouse_2.asm:120",
-   "lines": [
-    108,
-    123
-   ]
-  },
-  {
-   "file": "scripts/BluesHouse.asm",
-   "region": "BluesHouseDaisySittingText",
-   "labels": [
-    "BluesHouseDaisySittingText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".give_town_map is defined in a region that bailed",
-   "at": "scripts/BluesHouse.asm:31",
-   "lines": [
-    28,
-    34
-   ]
-  },
-  {
-   "file": "scripts/BluesHouse.asm",
-   "region": "BluesHouseDaisySittingText.give_town_map",
-   "labels": [
-    "BluesHouseDaisySittingText.give_town_map"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HideObject",
-   "at": "scripts/BluesHouse.asm:44",
-   "lines": [
-    37,
-    48
    ]
   },
   {
@@ -2780,20 +2718,6 @@
    ]
   },
   {
-   "file": "scripts/CeruleanCity_2.asm",
-   "region": "CeruleanHideRocket",
-   "labels": [
-    "CeruleanHideRocket"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HideObject",
-   "at": "scripts/CeruleanCity_2.asm:14",
-   "lines": [
-    5,
-    16
-   ]
-  },
-  {
    "file": "scripts/CeruleanGym.asm",
    "region": "CeruleanGym_Script",
    "labels": [
@@ -2985,7 +2909,7 @@
    "labels": [
     "CeruleanTrashedHouseFishingGuruText"
    ],
-   "reason": "predef-leaves-id-in-a",
+   "reason": "predef-leaves-parent-bank-in-a",
    "detail": "predef GetQuantityOfItemInBag",
    "at": "scripts/CeruleanTrashedHouse.asm:14",
    "lines": [
@@ -4185,21 +4109,6 @@
    ]
   },
   {
-   "file": "scripts/HallOfFame.asm",
-   "region": "HallOfFameResetEventsAndSaveScript",
-   "labels": [
-    "HallOfFameResetEventsAndSaveScript",
-    "HallOfFameResetEventsAndSaveScript.delayLoop"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HallOfFamePC",
-   "at": "scripts/HallOfFame.asm:29",
-   "lines": [
-    24,
-    58
-   ]
-  },
-  {
    "file": "scripts/IndigoPlateauLobby.asm",
    "region": "IndigoPlateauLobby_TextPointers",
    "labels": [
@@ -4581,20 +4490,6 @@
   },
   {
    "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FScript_ShowObject",
-   "labels": [
-    "MtMoonB2FScript_ShowObject"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef ShowObject",
-   "at": "scripts/MtMoonB2F.asm:406",
-   "lines": [
-    405,
-    409
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
    "region": "MtMoonB2F_TextPointers",
    "labels": [
     "MtMoonB2F_TextPointers",
@@ -4611,18 +4506,6 @@
    "lines": [
     417,
     447
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
-   "region": "scripts/MtMoonB2F.asm:anon",
-   "labels": [],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef EmotionBubble",
-   "at": "scripts/MtMoonB2F.asm:457",
-   "lines": [
-    449,
-    460
    ]
   },
   {
@@ -5078,9 +4961,9 @@
    "labels": [
     "OaksLabOakGivesPokedexScript"
    ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HideObject",
-   "at": "scripts/OaksLab.asm:573",
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/OaksLab.asm:603",
    "lines": [
     542,
     613
@@ -5668,20 +5551,6 @@
    "lines": [
     25,
     52
-   ]
-  },
-  {
-   "file": "scripts/PalletTown.asm",
-   "region": "PalletTownOakWalksToPlayerScript",
-   "labels": [
-    "PalletTownOakWalksToPlayerScript"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef CalcPositionOfPlayerRelativeToNPC",
-   "at": "scripts/PalletTown.asm:91",
-   "lines": [
-    83,
-    103
    ]
   },
   {
@@ -6388,34 +6257,6 @@
   },
   {
    "file": "scripts/PokemonTower5F.asm",
-   "region": "PokemonTower5FDefaultScript",
-   "labels": [
-    "PokemonTower5FDefaultScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".in_purified_zone is defined in a region that bailed",
-   "at": "scripts/PokemonTower5F.asm:19",
-   "lines": [
-    17,
-    23
-   ]
-  },
-  {
-   "file": "scripts/PokemonTower5F.asm",
-   "region": "PokemonTower5FDefaultScript.in_purified_zone",
-   "labels": [
-    "PokemonTower5FDefaultScript.in_purified_zone"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HealParty",
-   "at": "scripts/PokemonTower5F.asm:33",
-   "lines": [
-    25,
-    43
-   ]
-  },
-  {
-   "file": "scripts/PokemonTower5F.asm",
    "region": "PokemonTower5FPurifiedZoneCoords",
    "labels": [
     "PokemonTower5FPurifiedZoneCoords",
@@ -6606,32 +6447,6 @@
    ]
   },
   {
-   "file": "scripts/PokemonTower7F.asm",
-   "region": "PokemonTower7FScript_ShowObject",
-   "labels": [
-    "PokemonTower7FScript_ShowObject"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef ShowObject",
-   "at": "scripts/PokemonTower7F.asm:227",
-   "lines": [
-    226,
-    230
-   ]
-  },
-  {
-   "file": "scripts/PokemonTower7F.asm",
-   "region": "scripts/PokemonTower7F.asm:anon",
-   "labels": [],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef EmotionBubble",
-   "at": "scripts/PokemonTower7F.asm:280",
-   "lines": [
-    272,
-    283
-   ]
-  },
-  {
    "file": "scripts/PowerPlant.asm",
    "region": "PowerPlant_ScriptPointers",
    "labels": [
@@ -6814,28 +6629,12 @@
    "labels": [
     "RocketHideoutB1FDoorCallbackScript"
    ],
-   "reason": "target-region-bailed",
-   "detail": ".door_open is defined in a region that bailed",
-   "at": "scripts/RocketHideoutB1F.asm:17",
+   "reason": "event-byte-assembly-state",
+   "detail": "CheckEventReuseA EVENT_BEAT_ROCKET_HIDEOUT_1_TRAINER_4",
+   "at": "scripts/RocketHideoutB1F.asm:18",
    "lines": [
     12,
     21
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB1F.asm",
-   "region": "RocketHideoutB1FDoorCallbackScript.play_sound_door_open",
-   "labels": [
-    "RocketHideoutB1FDoorCallbackScript.play_sound_door_open",
-    "RocketHideoutB1FDoorCallbackScript.door_open",
-    "RocketHideoutB1FDoorCallbackScript.set_door_block"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef_jump ReplaceTileBlock",
-   "at": "scripts/RocketHideoutB1F.asm:32",
-   "lines": [
-    23,
-    32
    ]
   },
   {
@@ -6996,20 +6795,6 @@
   },
   {
    "file": "scripts/RocketHideoutB4F.asm",
-   "region": "RocketHideoutB4FBeatGiovanniScript",
-   "labels": [
-    "RocketHideoutB4FBeatGiovanniScript"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef ShowObject",
-   "at": "scripts/RocketHideoutB4F.asm:60",
-   "lines": [
-    45,
-    70
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB4F.asm",
    "region": "RocketHideoutB4FScript_455a5",
    "labels": [
     "RocketHideoutB4FScript_455a5",
@@ -7072,20 +6857,6 @@
   },
   {
    "file": "scripts/RocketHideoutB4F.asm",
-   "region": "RocketHideoutB4FScript_ShowObject",
-   "labels": [
-    "RocketHideoutB4FScript_ShowObject"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef ShowObject",
-   "at": "scripts/RocketHideoutB4F.asm:281",
-   "lines": [
-    280,
-    284
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB4F.asm",
    "region": "RocketHideoutB4F_TextPointers",
    "labels": [
     "RocketHideoutB4F_TextPointers",
@@ -7100,18 +6871,6 @@
    "lines": [
     292,
     317
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB4F.asm",
-   "region": "scripts/RocketHideoutB4F.asm:anon",
-   "labels": [],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef EmotionBubble",
-   "at": "scripts/RocketHideoutB4F.asm:327",
-   "lines": [
-    319,
-    330
    ]
   },
   {
@@ -8277,20 +8036,6 @@
   },
   {
    "file": "scripts/Route16.asm",
-   "region": "Route16DefaultScript",
-   "labels": [
-    "Route16DefaultScript"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HideObject",
-   "at": "scripts/Route16.asm:39",
-   "lines": [
-    25,
-    44
-   ]
-  },
-  {
-   "file": "scripts/Route16.asm",
    "region": "Route16_TextPointers",
    "labels": [
     "Route16_TextPointers",
@@ -8804,34 +8549,6 @@
   },
   {
    "file": "scripts/Route20.asm",
-   "region": "Route20ShowObjectScript",
-   "labels": [
-    "Route20ShowObjectScript"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef_jump ShowObject",
-   "at": "scripts/Route20.asm:53",
-   "lines": [
-    52,
-    53
-   ]
-  },
-  {
-   "file": "scripts/Route20.asm",
-   "region": "Route20HideObjectScript",
-   "labels": [
-    "Route20HideObjectScript"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef_jump HideObject",
-   "at": "scripts/Route20.asm:57",
-   "lines": [
-    56,
-    57
-   ]
-  },
-  {
-   "file": "scripts/Route20.asm",
    "region": "Route20_ScriptPointers",
    "labels": [
     "Route20_ScriptPointers",
@@ -9099,20 +8816,6 @@
   },
   {
    "file": "scripts/Route22.asm",
-   "region": "Route22Rival1ExitScript",
-   "labels": [
-    "Route22Rival1ExitScript"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HideObject",
-   "at": "scripts/Route22.asm:231",
-   "lines": [
-    224,
-    236
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
    "region": "Route22SecondRivalBattleScript",
    "labels": [
     "Route22SecondRivalBattleScript",
@@ -9211,20 +8914,6 @@
    "lines": [
     347,
     351
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2ExitScript",
-   "labels": [
-    "Route22Rival2ExitScript"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HideObject",
-   "at": "scripts/Route22.asm:369",
-   "lines": [
-    362,
-    374
    ]
   },
   {
@@ -10765,20 +10454,6 @@
   },
   {
    "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FScript_ShowObject",
-   "labels": [
-    "SilphCo11FScript_ShowObject"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef ShowObject",
-   "at": "scripts/SilphCo11F.asm:462",
-   "lines": [
-    461,
-    465
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
    "region": "SilphCo11F_TextPointers",
    "labels": [
     "SilphCo11F_TextPointers",
@@ -10792,18 +10467,6 @@
    "lines": [
     473,
     492
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "scripts/SilphCo11F.asm:anon",
-   "labels": [],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef EmotionBubble",
-   "at": "scripts/SilphCo11F.asm:502",
-   "lines": [
-    494,
-    505
    ]
   },
   {
@@ -11669,20 +11332,6 @@
   },
   {
    "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7FRivalExitScript",
-   "labels": [
-    "SilphCo7FRivalExitScript"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HideObject",
-   "at": "scripts/SilphCo7F.asm:246",
-   "lines": [
-    241,
-    250
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
    "region": "SilphCo7F_TextPointers",
    "labels": [
     "SilphCo7F_TextPointers",
@@ -11957,20 +11606,6 @@
   },
   {
    "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9FNurseText",
-   "labels": [
-    "SilphCo9FNurseText"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HealParty",
-   "at": "scripts/SilphCo9F.asm:150",
-   "lines": [
-    146,
-    156
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
    "region": "SilphCo9FRocket1BattleText",
    "labels": [
     "SilphCo9FRocket1BattleText",
@@ -12082,20 +11717,6 @@
    "lines": [
     108,
     124
-   ]
-  },
-  {
-   "file": "scripts/SSAnne2F.asm",
-   "region": "SSAnne2FRivalExitScript",
-   "labels": [
-    "SSAnne2FRivalExitScript"
-   ],
-   "reason": "predef-leaves-id-in-a",
-   "detail": "predef HideObject",
-   "at": "scripts/SSAnne2F.asm:155",
-   "lines": [
-    148,
-    159
    ]
   },
   {
@@ -12827,20 +12448,6 @@
    "lines": [
     151,
     208
-   ]
-  },
-  {
-   "file": "scripts/VictoryRoad3F.asm",
-   "region": "VictoryRoad3FCheckBoulderEventScript",
-   "labels": [
-    "VictoryRoad3FCheckBoulderEventScript"
-   ],
-   "reason": "bit-clobbers-live-carry",
-   "detail": "bit BIT_CUR_MAP_LOADED_1, [hl]",
-   "at": "scripts/VictoryRoad3F.asm:13",
-   "lines": [
-    12,
-    21
    ]
   },
   {

@@ -54,7 +54,7 @@ CeruleanTrashedHouse_TextPointers:
     dd CeruleanTrashedHouseWallHoleText
 
 ; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] CeruleanTrashedHouseFishingGuruText (scripts/CeruleanTrashedHouse.asm:13-19) — at scripts/CeruleanTrashedHouse.asm:14: predef GetQuantityOfItemInBag
+; BAIL[predef-leaves-parent-bank-in-a] CeruleanTrashedHouseFishingGuruText (scripts/CeruleanTrashedHouse.asm:13-19) — at scripts/CeruleanTrashedHouse.asm:14: predef GetQuantityOfItemInBag
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld b, TM_DIG

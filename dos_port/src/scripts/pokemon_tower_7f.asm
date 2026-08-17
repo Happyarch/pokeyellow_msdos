@@ -34,6 +34,7 @@ global PokemonTower7FScript6
 global PokemonTower7FScript7
 global PokemonTower7FScript9
 global PokemonTower7FScript_HideObject
+global PokemonTower7FScript_ShowObject
 global PokemonTower7FSetDefaultScript
 global PokemonTower7FSetScript
 global PokemonTower7FText4
@@ -63,7 +64,6 @@ extern PokemonTower7FScript3   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript4   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript8   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower7FScript_60d2a   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower7FScript_ShowObject   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
@@ -347,20 +347,19 @@ PokemonTower7FScript10:
     call PokemonTower7FSetScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] PokemonTower7FScript_ShowObject (scripts/PokemonTower7F.asm:226-230) — at scripts/PokemonTower7F.asm:227: predef ShowObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	call UpdateSprites
-; PRET| 	call Delay3
-; PRET| 	ret
+%assign event_byte -1
+PokemonTower7FScript_ShowObject:
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    call UpdateSprites
+    call Delay3
+    ret
 
 %assign event_byte -1
 PokemonTower7FScript_HideObject:
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     ret
 
@@ -370,7 +369,7 @@ PokemonTower7FWarpToMrFujiHouseScript:
     mov [ebp + wJoyIgnore], al
     mov al, 67
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     mov al, SPRITE_FACING_UP
     mov [ebp + wSpritePlayerStateData1FacingDirection], al
@@ -399,22 +398,20 @@ PokemonTower7FJessieJamesText:
 PokemonTower7FText4:
     text_far _PokemonTowerJessieJamesText1
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] scripts/PokemonTower7F.asm:anon (scripts/PokemonTower7F.asm:272-283) — at scripts/PokemonTower7F.asm:280: predef EmotionBubble
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld c, 10
-; PRET| 	call DelayFrames
-; PRET| 	ld a, PLAYER_DIR_UP
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, $0
-; PRET| 	ld [wEmotionBubbleSpriteIndex], a
-; PRET| 	ld a, EXCLAMATION_BUBBLE
-; PRET| 	ld [wWhichEmotionBubble], a
-; PRET| 	predef EmotionBubble
-; PRET| 	ld c, 20
-; PRET| 	call DelayFrames
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+    mov bl, 10
+    call DelayFrames
+    mov al, PLAYER_DIR_UP
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, 0x0
+    mov [ebp + wEmotionBubbleSpriteIndex], al
+    mov al, 0
+    mov [ebp + wWhichEmotionBubble], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call EmotionBubble
+    mov bl, 20
+    call DelayFrames
+    jmp TextScriptEnd
 
 %assign event_byte -1
 PokemonTower7FText5:
@@ -439,15 +436,15 @@ PokemonTower7FMrFujiText:
     SetEvent EVENT_RESCUED_MR_FUJI_2
     mov al, 68
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
     mov al, 24
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     mov al, 25
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
     mov al, SCRIPT_POKEMONTOWER7F_WARP_TO_MR_FUJI_HOUSE
     mov [ebp + wPokemonTower7FCurScript], al

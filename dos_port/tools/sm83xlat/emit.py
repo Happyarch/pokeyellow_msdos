@@ -66,7 +66,11 @@ _BIN = re.compile(r"%([01][01_]*)")
 _LOCAL_REF = re.compile(r"\.[A-Za-z_]\w*")
 
 WIDENING = re.compile(r"\b(movzx|movsx|cbw|cwde|cdq|cwd)\b")
-SELF_TEST = re.compile(r"^\s*test\s+(\w+)\s*,\s*\1\s*$", re.M)
+#: A trailing comment must be tolerated: the `swap` lowering ALWAYS emits one
+#: (`test al, al   ; swap sets Z, clears C`), so an end-anchored pattern silently
+#: undercounts by exactly the number of swaps and the invariant then reports a
+#: violation with its numbers the wrong way round.
+SELF_TEST = re.compile(r"^\s*test\s+(\w+)\s*,\s*\1\s*(?:;.*)?$", re.M)
 
 
 @dataclass
@@ -506,17 +510,23 @@ class Emitter:
 
         if name in ("predef", "predef_jump"):
             target = self.target(args[0], out)
-            if an.a_live_after.get(id(it), True):
-                # pret's `predef` leaves the predef id in A. A direct call does
-                # not, so a reader of A downstream would see a different value.
-                raise Bail("predef-leaves-id-in-a", it.line.raw.strip())
+            if an.a_direct_read_after.get(id(it), True):
+                # A DIRECT read of A downstream. pret leaves the PARENT ROM BANK
+                # in A here (see the deviation text below), so a real consumer is
+                # consuming a bank number and the flat port has nothing correct to
+                # put there. Two sites corpus-wide; they need reading, not a rule.
+                raise Bail("predef-leaves-parent-bank-in-a", it.line.raw.strip())
             verb = "jmp" if name == "predef_jump" else "call"
             return [
                 f"; DEVIATION{{class=banking; pret=macros/predef.asm:{name}; "
-                f"behavior=Predef dispatch replaced by a direct {verb}, and the "
-                f"predef id is not left in A because no reader is live; "
-                f"evidence=PredefPointers is unported and the flat model needs no "
-                f"bank switch, dataflow shows A dead after this site; "
+                f"behavior=Predef dispatch replaced by a direct {verb}, and A is "
+                f"left holding whatever the callee left rather than pret's parent "
+                f"ROM bank; "
+                f"evidence=pret Predef saves hLoadedROMBank with push af and "
+                f"restores it with pop af before returning so A holds a BANK "
+                f"NUMBER on return - not the predef id - and the flat DPMI model "
+                f"has no banks for that value to mean anything, plus dataflow "
+                f"shows no direct read of A after this site; "
                 f"lifetime=retired when PredefPointers is ported}}",
                 f"{verb} {target}",
             ]

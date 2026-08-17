@@ -87,6 +87,9 @@ class Analysis:
     hl_domain: Dict[int, str] = field(default_factory=dict)
     #: item id -> True when AL is read after this item before being written.
     a_live_after: Dict[int, bool] = field(default_factory=dict)
+    #: item id -> True when that reader is a REAL read rather than an unmodelled
+    #: call. See the comment where this is computed.
+    a_direct_read_after: Dict[int, bool] = field(default_factory=dict)
     #: branches whose flag has no modelled producer on some path.
     unresolved_branches: List[Tuple[str, str]] = field(default_factory=list)
     #: census, comparable with the Stage 0 local walk.
@@ -188,6 +191,14 @@ def _successors(items: Sequence[sparser.Item], i: int,
     it = items[i]
     fall = i + 1 if i + 1 < len(items) else None
     if it.kind != sparser.KIND_INSN or it.decoded is None:
+        # A macro that TRANSFERS control has no fall-through. `_terminates`
+        # already knows this set and build_regions cuts on it; without the same
+        # rule here the CFG grew an edge from `predef_jump` into whatever routine
+        # happened to follow, and both analyses propagated across it. Measured on
+        # Route20, where it made A look live after a predef_jump because the NEXT
+        # routine opens by reading A.
+        if _terminates(it):
+            return []
         return [fall] if fall is not None else []
     d = it.decoded
     if d.effect.kind == "ret":
@@ -300,6 +311,39 @@ def analyse(f: sparser.ScriptFile, resolver=None) -> Analysis:
                 out = True
         an.a_live_after[id(items[i])] = out
 
+    # --- and is that reader a REAL read, or just an unmodelled call? --------
+    # `_a_use` reports a call as reading A, because a callee might take it as an
+    # argument. That pessimism is right in general and wrong for the one question
+    # it gets asked: pret's `predef` leaves the PARENT ROM BANK in A (Predef does
+    # `ldh a, [hLoadedROMBank]` / `push af` … `pop af`), and the flat port has no
+    # banks, so there is no correct value to reproduce. A downstream call that
+    # merely MIGHT read A is not evidence that anything consumes a bank number; a
+    # direct read is. Measured over the corpus: 33 of 35 live-A predef sites are
+    # the former.
+    for i in range(n):
+        first_is_direct = False
+        seen, queue = set(), [s for s in succ[i]]
+        while queue:
+            j = queue.pop(0)
+            if j is None or not (0 <= j < n) or j in seen:
+                continue
+            seen.add(j)
+            reads_a, writes_a = _a_use(items[j])
+            if reads_a:
+                d = items[j].decoded
+                is_call = (d is not None and d.effect.kind == "call") or (
+                    items[j].kind == sparser.KIND_MACRO
+                    and items[j].macro is not None
+                    and items[j].macro.cls == macros.CODE_CALL)
+                if not is_call:
+                    first_is_direct = True
+                    break
+                continue          # a call both reads and writes A: path ends
+            if writes_a:
+                continue          # A redefined before any read: path is clean
+            queue.extend(succ[j])
+        an.a_direct_read_after[id(items[i])] = first_is_direct
+
     _census(items, succ, pred, an)
     return an
 
@@ -350,6 +394,15 @@ def _a_use(item: sparser.Item) -> Tuple[bool, bool]:
             reads = True
         if d.mnemonic == "xor" and d.operands and d.operands[0] == "a":
             reads, writes = False, True   # `xor a` is a zeroing idiom
+        if d.mnemonic == "pop" and d.operands and d.operands[0] == "af":
+            # The ISA row models pop/push only as "stack" and lists no register
+            # writes, so `pop af` did not count as writing A. That made A look
+            # live across a `push af` / … / `pop af` bracket, which is the exact
+            # idiom scripts use to save A around a predef — HallOfFame.asm:26-31
+            # is the worked example.
+            return False, True
+        if d.mnemonic == "push" and d.operands and d.operands[0] == "af":
+            return True, False
         if d.effect.kind == "call":
             # Conservative both ways: a callee may consume A and may return one.
             return True, True

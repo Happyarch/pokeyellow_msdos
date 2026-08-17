@@ -42,6 +42,7 @@ global SilphCo11FScript9
 global SilphCo11FScript_621c5
 global SilphCo11FScript_621ff
 global SilphCo11FScript_HideObject
+global SilphCo11FScript_ShowObject
 global SilphCo11FSetCurScript
 global SilphCo11FSetUnlockedDoorEventScript
 global SilphCo11FTeamRocketLeavesScript
@@ -89,7 +90,6 @@ extern SilphCo11FScript6   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript7   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript8   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript_6229c   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FScript_ShowObject   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FSilphPresidentText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11F_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -171,7 +171,7 @@ SilphCo11FGateCallbackScript:
     mov al, 0x20
     mov [ebp + wNewTileBlockID], al
     mov bx, ((6) << 8) | (3)
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ReplaceTileBlock
     ret
 
@@ -647,41 +647,38 @@ SilphCo11FScript14:
     call SilphCo11FSetCurScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] SilphCo11FScript_ShowObject (scripts/SilphCo11F.asm:461-465) — at scripts/SilphCo11F.asm:462: predef ShowObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	call UpdateSprites
-; PRET| 	call Delay3
-; PRET| 	ret
+%assign event_byte -1
+SilphCo11FScript_ShowObject:
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    call UpdateSprites
+    call Delay3
+    ret
 
 %assign event_byte -1
 SilphCo11FScript_HideObject:
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     ret
 
 ; SilphCo11F_TextPointers (scripts/SilphCo11F.asm:473-492) — not re-emitted: SilphCo11TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] scripts/SilphCo11F.asm:anon (scripts/SilphCo11F.asm:494-505) — at scripts/SilphCo11F.asm:502: predef EmotionBubble
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld c, 10
-; PRET| 	call DelayFrames
-; PRET| 	ld a, $4
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, $0
-; PRET| 	ld [wEmotionBubbleSpriteIndex], a
-; PRET| 	ld a, EXCLAMATION_BUBBLE
-; PRET| 	ld [wWhichEmotionBubble], a
-; PRET| 	predef EmotionBubble
-; PRET| 	ld c, 20
-; PRET| 	call DelayFrames
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+    mov bl, 10
+    call DelayFrames
+    mov al, 0x4
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, 0x0
+    mov [ebp + wEmotionBubbleSpriteIndex], al
+    mov al, 0
+    mov [ebp + wWhichEmotionBubble], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call EmotionBubble
+    mov bl, 20
+    call DelayFrames
+    jmp TextScriptEnd
 
 %assign event_byte -1
 SilphCo11FText9:
@@ -785,7 +782,7 @@ SilphCo11FTeamRocketLeavesScript:
     jz .done_hiding
     push esi
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     pop esi
     jmp .hide_loop
@@ -802,7 +799,7 @@ SilphCo11FTeamRocketLeavesScript:
 .nr_17:
     push esi
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call ShowObject
     pop esi
     jmp .show_loop

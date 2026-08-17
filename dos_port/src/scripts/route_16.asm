@@ -28,6 +28,7 @@ global Route16Biker3Text
 global Route16Biker4Text
 global Route16Biker5Text
 global Route16Biker6Text
+global Route16DefaultScript
 global Route16ResetScripts
 global Route16SnorlaxPostBattleScript
 global Route16_Script
@@ -46,7 +47,6 @@ extern Route16Biker2BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker3BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker5BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker6BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16DefaultScript   ; NOT YET DEFINED IN THE PORT
 extern Route16TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route16TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route16TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -101,30 +101,32 @@ Route16_ScriptPointers:
     dd EndTrainerBattle
     dd Route16SnorlaxPostBattleScript
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] Route16DefaultScript (scripts/Route16.asm:25-44) — at scripts/Route16.asm:39: predef HideObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEventHL EVENT_BEAT_ROUTE16_SNORLAX
-; PRET| 	jp nz, CheckFightingMapTrainers
-; PRET| 	CheckEventReuseHL EVENT_FIGHT_ROUTE16_SNORLAX
-; PRET| 	ResetEventReuseHL EVENT_FIGHT_ROUTE16_SNORLAX
-; PRET| 	jp z, CheckFightingMapTrainers
-; PRET| 	ld a, TEXT_ROUTE16_SNORLAX_WOKE_UP
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	ld a, SNORLAX
-; PRET| 	ld [wCurOpponent], a
-; PRET| 	ld a, 30
-; PRET| 	ld [wCurEnemyLevel], a
-; PRET| 	ld a, TOGGLE_ROUTE_16_SNORLAX
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	call UpdateSprites
-; PRET| 	ld a, SCRIPT_ROUTE16_SNORLAX_POST_BATTLE
-; PRET| 	ld [wRoute16CurScript], a
-; PRET| 	ld [wCurMapScript], a
-; PRET| 	ret
+%assign event_byte -1
+Route16DefaultScript:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_BEAT_ROUTE16_SNORLAX)
+    test byte [ebp + esi], EVENT_MASK(EVENT_BEAT_ROUTE16_SNORLAX)
+    jnz CheckFightingMapTrainers
+    CheckEventReuseHL EVENT_FIGHT_ROUTE16_SNORLAX
+    pushfd    ; SM83 form writes no flags
+        ResetEventReuseHL EVENT_FIGHT_ROUTE16_SNORLAX
+    popfd
+    jz CheckFightingMapTrainers
+    mov al, TEXT_ROUTE16_SNORLAX_WOKE_UP
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    mov al, 132
+    mov [ebp + wCurOpponent], al
+    mov al, 30
+    mov [ebp + wCurEnemyLevel], al
+    mov al, 34
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    call UpdateSprites
+    mov al, SCRIPT_ROUTE16_SNORLAX_POST_BATTLE
+    mov [ebp + wRoute16CurScript], al
+    mov [ebp + wCurMapScript], al
+    ret
 
 %assign event_byte -1
 Route16SnorlaxPostBattleScript:

@@ -26,6 +26,7 @@ global PokemonTower5FChanneler2Text
 global PokemonTower5FChanneler3Text
 global PokemonTower5FChanneler4Text
 global PokemonTower5FChanneler5Text
+global PokemonTower5FDefaultScript
 global PokemonTower5F_Script
 global PokemonTower5F_ScriptPointers
 
@@ -44,7 +45,6 @@ extern PokemonTower5FChanneler2BattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FChanneler3BattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FChanneler4BattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FChanneler5BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FPurifiedZoneCoords   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -83,41 +83,40 @@ PokemonTower5F_ScriptPointers:
     dd DisplayEnemyTrainerTextAndStartBattle
     dd EndTrainerBattle
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PokemonTower5FDefaultScript (scripts/PokemonTower5F.asm:17-23) — at scripts/PokemonTower5F.asm:19: .in_purified_zone is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, PokemonTower5FPurifiedZoneCoords
-; PRET| 	call ArePlayerCoordsInArray
-; PRET| 	jr c, .in_purified_zone
-; PRET| 	ld hl, wStatusFlags4
-; PRET| 	res BIT_NO_BATTLES, [hl]
-; PRET| 	ResetEvent EVENT_IN_PURIFIED_ZONE
-; PRET| 	jp CheckFightingMapTrainers
+%assign event_byte -1
+PokemonTower5FDefaultScript:
+    mov esi, PokemonTower5FPurifiedZoneCoords
+    call ArePlayerCoordsInArray
+    jb .in_purified_zone
+    mov esi, wStatusFlags4
+    and byte [ebp + esi], ~(1 << (BIT_NO_BATTLES)) & 0xFF
+    ResetEvent EVENT_IN_PURIFIED_ZONE
+    jmp CheckFightingMapTrainers
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] PokemonTower5FDefaultScript.in_purified_zone (scripts/PokemonTower5F.asm:25-43) — at scripts/PokemonTower5F.asm:33: predef HealParty
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckAndSetEvent EVENT_IN_PURIFIED_ZONE
-; PRET| 	ret nz
-; PRET| 	xor a
-; PRET| 	ldh [hJoyHeld], a
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld hl, wStatusFlags4
-; PRET| 	set BIT_NO_BATTLES, [hl]
-; PRET| 	predef HealParty
-; PRET| 	call GBFadeOutToWhite
-; PRET| 	call Delay3
-; PRET| 	call Delay3
-; PRET| 	call GBFadeInFromWhite
-; PRET| 	ld a, TEXT_POKEMONTOWER5F_PURIFIEDZONE
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ret
+%assign event_byte -1
+.in_purified_zone:
+    CheckAndSetEvent EVENT_IN_PURIFIED_ZONE
+    jz .nr_26
+        ret
+.nr_26:
+    xor al, al
+    mov [ebp + hJoyHeld], al
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    mov esi, wStatusFlags4
+    or byte [ebp + esi], (1 << (BIT_NO_BATTLES))
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HealParty
+    call GBFadeOutToWhite
+    call Delay3
+    call Delay3
+    call GBFadeInFromWhite
+    mov al, TEXT_POKEMONTOWER5F_PURIFIEDZONE
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    ret
 
 ; PokemonTower5FPurifiedZoneCoords (scripts/PokemonTower5F.asm:46-76) — not re-emitted: PokemonTower5TrainerHeaders is already defined in assets/trainer_headers.inc.
 

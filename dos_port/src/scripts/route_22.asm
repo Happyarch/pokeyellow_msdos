@@ -30,11 +30,13 @@ global Route22PrintRival2Text
 global Route22Rival1DefeatedText
 global Route22Rival1ExitMovementData1
 global Route22Rival1ExitMovementData2
+global Route22Rival1ExitScript
 global Route22Rival1Text
 global Route22Rival1VictoryText
 global Route22Rival2DefeatedText
 global Route22Rival2ExitMovementData1
 global Route22Rival2ExitMovementData2
+global Route22Rival2ExitScript
 global Route22Rival2Text
 global Route22Rival2VictoryText
 global Route22RivalAfterBattleText1
@@ -69,10 +71,8 @@ extern Route22MoveRival1   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRival2   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRivalRightScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival1AfterBattleScript   ; NOT YET DEFINED IN THE PORT
-extern Route22Rival1ExitScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival1StartBattleScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival2AfterBattleScript   ; NOT YET DEFINED IN THE PORT
-extern Route22Rival2ExitScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival2StartBattleScript   ; NOT YET DEFINED IN THE PORT
 extern Route22SecondRivalBattleScript   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
@@ -374,23 +374,24 @@ Route22Rival1ExitMovementData2:
     db NPC_MOVEMENT_DOWN
     db -1
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] Route22Rival1ExitScript (scripts/Route22.asm:224-236) — at scripts/Route22.asm:231: predef HideObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| 	xor a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, TOGGLE_ROUTE_22_RIVAL_1
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	call PlayDefaultMusic
-; PRET| 	ResetEvents EVENT_1ST_ROUTE22_RIVAL_BATTLE, EVENT_ROUTE22_RIVAL_WANTS_BATTLE
-; PRET| 	ld a, SCRIPT_ROUTE22_DEFAULT
-; PRET| 	ld [wRoute22CurScript], a
-; PRET| 	ret
+%assign event_byte -1
+Route22Rival1ExitScript:
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_226
+        ret
+.nr_226:
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    mov al, 35
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    call PlayDefaultMusic
+    ResetEvents EVENT_1ST_ROUTE22_RIVAL_BATTLE, EVENT_ROUTE22_RIVAL_WANTS_BATTLE
+    mov al, SCRIPT_ROUTE22_DEFAULT
+    mov [ebp + wRoute22CurScript], al
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] Route22SecondRivalBattleScript (scripts/Route22.asm:239-256) — at scripts/Route22.asm:246: .walking is defined in a region that bailed
@@ -541,23 +542,24 @@ Route22Rival2ExitMovementData2:
     db NPC_MOVEMENT_LEFT
     db -1
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] Route22Rival2ExitScript (scripts/Route22.asm:362-374) — at scripts/Route22.asm:369: predef HideObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| 	xor a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, TOGGLE_ROUTE_22_RIVAL_2
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	call PlayDefaultMusic
-; PRET| 	ResetEvents EVENT_2ND_ROUTE22_RIVAL_BATTLE, EVENT_ROUTE22_RIVAL_WANTS_BATTLE
-; PRET| 	ld a, SCRIPT_ROUTE22_NOOP
-; PRET| 	ld [wRoute22CurScript], a
-; PRET| 	ret
+%assign event_byte -1
+Route22Rival2ExitScript:
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_364
+        ret
+.nr_364:
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    mov al, 36
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    call PlayDefaultMusic
+    ResetEvents EVENT_2ND_ROUTE22_RIVAL_BATTLE, EVENT_ROUTE22_RIVAL_WANTS_BATTLE
+    mov al, SCRIPT_ROUTE22_NOOP
+    mov [ebp + wRoute22CurScript], al
+    ret
 
 %assign event_byte -1
 Route22_TextPointers:

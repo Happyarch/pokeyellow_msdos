@@ -26,6 +26,7 @@ global SSAnne2FNoopScript
 global SSAnne2FResetScripts
 global SSAnne2FRivalCutMasterText
 global SSAnne2FRivalDefeatedText
+global SSAnne2FRivalExitScript
 global SSAnne2FRivalStartBattleScript
 global SSAnne2FRivalText
 global SSAnne2FRivalVictoryText
@@ -49,7 +50,6 @@ extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern SSAnne2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SSAnne2FRivalAfterBattleScript   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRivalExitScript   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteMovementBytesToFF   ; NOT YET DEFINED IN THE PORT
@@ -250,22 +250,23 @@ SSAnne2FRivalStartBattleScript:
     db NPC_MOVEMENT_DOWN
     db -1
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] SSAnne2FRivalExitScript (scripts/SSAnne2F.asm:148-159) — at scripts/SSAnne2F.asm:155: predef HideObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wStatusFlags5]
-; PRET| 	bit BIT_SCRIPTED_NPC_MOVEMENT, a
-; PRET| 	ret nz
-; PRET| 	xor a
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld a, TOGGLE_SS_ANNE_2F_RIVAL
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	call PlayDefaultMusic
-; PRET| 	ld a, SCRIPT_SSANNE2F_NOOP
-; PRET| 	ld [wSSAnne2FCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+SSAnne2FRivalExitScript:
+    mov al, [ebp + wStatusFlags5]
+    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
+    jz .nr_150
+        ret
+.nr_150:
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    mov al, 115
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    call PlayDefaultMusic
+    mov al, SCRIPT_SSANNE2F_NOOP
+    mov [ebp + wSSAnne2FCurScript], al
+    ret
 
 %assign event_byte -1
 SSAnne2F_TextPointers:

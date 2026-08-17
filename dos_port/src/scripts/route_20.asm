@@ -24,6 +24,8 @@ bits 32
 
 global Route20BoulderScript
 global Route20CooltrainerMText
+global Route20HideObjectScript
+global Route20ShowObjectScript
 global Route20Swimmer1Text
 global Route20Swimmer2Text
 global Route20Swimmer3Text
@@ -38,8 +40,6 @@ global Route20_Script
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern Route20HideObjectScript   ; NOT YET DEFINED IN THE PORT
-extern Route20ShowObjectScript   ; NOT YET DEFINED IN THE PORT
 extern Route20Swimmer1BattleText   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -126,19 +126,17 @@ Route20BoulderScript:
     call Route20HideObjectScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] Route20ShowObjectScript (scripts/Route20.asm:52-53) — at scripts/Route20.asm:53: predef_jump ShowObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef_jump ShowObject
+%assign event_byte -1
+Route20ShowObjectScript:
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    jmp ShowObject
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] Route20HideObjectScript (scripts/Route20.asm:56-57) — at scripts/Route20.asm:57: predef_jump HideObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef_jump HideObject
+%assign event_byte -1
+Route20HideObjectScript:
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    jmp HideObject
 
 ; Route20_ScriptPointers (scripts/Route20.asm:60-102) — not re-emitted: Route20TrainerHeaders is already defined in assets/trainer_headers.inc.
 

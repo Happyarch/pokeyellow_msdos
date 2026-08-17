@@ -22,6 +22,7 @@ bits 32
 
 %include "assets/trainer_headers.inc"
 
+global SilphCo9FNurseText
 global SilphCo9FRocket1Text
 global SilphCo9FRocket2Text
 global SilphCo9FScientistText
@@ -37,7 +38,6 @@ extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FGateCallbackScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FNurseDontGiveUpText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FNurseText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FNurseThankYouText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FNurseYouLookTiredText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
@@ -213,21 +213,20 @@ SilphCo9F_Script:
 
 ; SilphCo9F_ScriptPointers (scripts/SilphCo9F.asm:122-142) — not re-emitted: SilphCo9TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] SilphCo9FNurseText (scripts/SilphCo9F.asm:146-156) — at scripts/SilphCo9F.asm:150: predef HealParty
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
-; PRET| 	jr nz, .beat_giovanni
-; PRET| 	ld hl, .YouLookTiredText
-; PRET| 	call PrintText
-; PRET| 	predef HealParty
-; PRET| 	call GBFadeOutToWhite
-; PRET| 	call Delay3
-; PRET| 	call GBFadeInFromWhite
-; PRET| 	ld hl, .DontGiveUpText
-; PRET| 	call PrintText
-; PRET| 	jr .text_script_end
+%assign event_byte -1
+SilphCo9FNurseText:
+    CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
+    jnz .beat_giovanni
+    mov esi, .YouLookTiredText
+    call PrintText
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HealParty
+    call GBFadeOutToWhite
+    call Delay3
+    call GBFadeInFromWhite
+    mov esi, .DontGiveUpText
+    call PrintText
+    jmp .text_script_end
 
 %assign event_byte -1
 .beat_giovanni:

@@ -23,6 +23,7 @@ bits 32
 %include "assets/map_dims.inc"
 %include "assets/trainer_headers.inc"
 
+global VictoryRoad3FCheckBoulderEventScript
 global VictoryRoad3FCooltrainerF1Text
 global VictoryRoad3FCooltrainerF2Text
 global VictoryRoad3FCooltrainerM1Text
@@ -42,7 +43,6 @@ extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCheckBoulderEventScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3FCooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3F_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -75,20 +75,26 @@ VictoryRoad3F_Script:
     mov [ebp + wVictoryRoad3FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[bit-clobbers-live-carry] VictoryRoad3FCheckBoulderEventScript (scripts/VictoryRoad3F.asm:12-21) — at scripts/VictoryRoad3F.asm:13: bit BIT_CUR_MAP_LOADED_1, [hl]
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	ret z
-; PRET| 	CheckEventHL EVENT_VICTORY_ROAD_3_BOULDER_ON_SWITCH1
-; PRET| 	ret z
-; PRET| 	ld a, $1d
-; PRET| 	ld [wNewTileBlockID], a
-; PRET| 	lb bc, 5, 3
-; PRET| 	predef_jump ReplaceTileBlock
+%assign event_byte -1
+VictoryRoad3FCheckBoulderEventScript:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    jnz .nr_15
+        ret
+.nr_15:
+    mov esi, wEventFlags + EVENT_BYTE(EVENT_VICTORY_ROAD_3_BOULDER_ON_SWITCH1)
+    test byte [ebp + esi], EVENT_MASK(EVENT_VICTORY_ROAD_3_BOULDER_ON_SWITCH1)
+    jnz .nr_17
+        ret
+.nr_17:
+    mov al, 0x1d
+    mov [ebp + wNewTileBlockID], al
+    mov bx, ((5) << 8) | (3)
+; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    jmp ReplaceTileBlock
 
 %assign event_byte -1
 VictoryRoad3F_ScriptPointers:
@@ -124,11 +130,11 @@ VictoryRoad3F_ScriptPointers:
     jnz .check_switch_hole
     mov al, 124
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     mov al, 96
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     jmp ShowObject
 
 %assign event_byte -1

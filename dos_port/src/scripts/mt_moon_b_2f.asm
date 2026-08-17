@@ -51,6 +51,7 @@ global MtMoonB2FScript_49d28
 global MtMoonB2FScript_ApplyPikachuMovementData
 global MtMoonB2FScript_HideJessieJames
 global MtMoonB2FScript_HideObject
+global MtMoonB2FScript_ShowObject
 global MtMoonB2FSetScript
 global MtMoonB2FSuperNerdTakesOtherFossilScript
 global MtMoonB2FTalkToTrainer
@@ -94,7 +95,6 @@ extern MtMoonB2FReceivedFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FScript13   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FScript_49e15   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FScript_ShowObject   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdOkIllShareText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdTheresAPokemonLabText   ; NOT YET DEFINED IN THE PORT
@@ -390,7 +390,7 @@ MtMoonB2FSuperNerdTakesOtherFossilScript:
     mov al, 112
 .continue:
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -595,41 +595,38 @@ MtMoonB2FScript15:
     call MtMoonB2FSetScript
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] MtMoonB2FScript_ShowObject (scripts/MtMoonB2F.asm:405-409) — at scripts/MtMoonB2F.asm:406: predef ShowObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	call UpdateSprites
-; PRET| 	call Delay3
-; PRET| 	ret
+%assign event_byte -1
+MtMoonB2FScript_ShowObject:
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    call UpdateSprites
+    call Delay3
+    ret
 
 %assign event_byte -1
 MtMoonB2FScript_HideObject:
     mov [ebp + wToggleableObjectIndex], al
-; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     ret
 
 ; MtMoonB2F_TextPointers (scripts/MtMoonB2F.asm:417-447) — not re-emitted: MtMoon3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] scripts/MtMoonB2F.asm:anon (scripts/MtMoonB2F.asm:449-460) — at scripts/MtMoonB2F.asm:457: predef EmotionBubble
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld c, 10
-; PRET| 	call DelayFrames
-; PRET| 	ld a, PLAYER_DIR_UP
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, $0
-; PRET| 	ld [wEmotionBubbleSpriteIndex], a
-; PRET| 	ld a, EXCLAMATION_BUBBLE
-; PRET| 	ld [wWhichEmotionBubble], a
-; PRET| 	predef EmotionBubble
-; PRET| 	ld c, 20
-; PRET| 	call DelayFrames
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+    mov bl, 10
+    call DelayFrames
+    mov al, PLAYER_DIR_UP
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, 0x0
+    mov [ebp + wEmotionBubbleSpriteIndex], al
+    mov al, 0
+    mov [ebp + wWhichEmotionBubble], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call EmotionBubble
+    mov bl, 20
+    call DelayFrames
+    jmp TextScriptEnd
 
 %assign event_byte -1
 MtMoonB2FText13:

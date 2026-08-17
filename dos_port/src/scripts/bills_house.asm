@@ -28,6 +28,7 @@ global BillsHouseBillCheckOutMyRarePokemonText
 global BillsHouseBillDontLeaveText
 global BillsHouseBillPokemonText
 global BillsHouseBillSSTicketText
+global BillsHousePikachuConfused
 global BillsHousePikachuWatchPlayer
 global BillsHousePrintBillCheckOutMyRarePokemonText
 global BillsHousePrintBillPokemonText
@@ -51,7 +52,6 @@ global RLE_1e219
 
 extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern BillsHousePikachuConfused   ; NOT YET DEFINED IN THE PORT
 extern BillsHousePrintBillSSTicketText   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript0   ; NOT YET DEFINED IN THE PORT
 extern BillsHouseScript2   ; NOT YET DEFINED IN THE PORT
@@ -69,6 +69,7 @@ extern EmotionBubble   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
+extern InitializePikachuTextID   ; NOT YET DEFINED IN THE PORT
 extern MoveSprite   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
@@ -226,7 +227,7 @@ BillMovement_WalkAroundPlayer:
     db -1
 
 ; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] BillsHouseScript3 (scripts/BillsHouse.asm:94-116) — at scripts/BillsHouse.asm:99: predef HideObject
+; BAIL[target-region-bailed] BillsHouseScript3 (scripts/BillsHouse.asm:94-116) — at scripts/BillsHouse.asm:101: .pikachuNotFollowing is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, [wStatusFlags5]
@@ -283,7 +284,7 @@ BillsHouseScript4:
     ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] BillsHouseScript5 (scripts/BillsHouse.asm:145-186) — at scripts/BillsHouse.asm:158: predef ShowObject
+; BAIL[target-region-bailed] BillsHouseScript5 (scripts/BillsHouse.asm:145-186) — at scripts/BillsHouse.asm:163: .pikachuNotFollowing is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, BILLSHOUSE_BILL1
@@ -559,26 +560,26 @@ BillsHousePrintBillCheckOutMyRarePokemonText:
     mov dl, 0xff
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] BillsHousePikachuConfused (scripts/BillsHouse_2.asm:108-123) — at scripts/BillsHouse_2.asm:120: predef EmotionBubble
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, PAD_BUTTONS | PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	xor a
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	call UpdateSprites
-; PRET| 	call UpdateSprites
-; PRET| 	ld hl, PikachuMovement_Confused
-; PRET| 	call ApplyPikachuMovementData
-; PRET| 	ld a, $f ; pikachu
-; PRET| 	ld [wEmotionBubbleSpriteIndex], a
-; PRET| 	ld a, QUESTION_BUBBLE
-; PRET| 	ld [wWhichEmotionBubble], a
-; PRET| 	predef EmotionBubble
-; PRET| 	call DisablePikachuFollowingPlayer
-; PRET| 	callfar InitializePikachuTextID
-; PRET| 	ret
+%assign event_byte -1
+BillsHousePikachuConfused:
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    xor al, al
+    mov [ebp + wPlayerMovingDirection], al
+    call UpdateSprites
+    call UpdateSprites
+    mov esi, PikachuMovement_Confused
+    call ApplyPikachuMovementData
+    mov al, 0xf
+    mov [ebp + wEmotionBubbleSpriteIndex], al
+    mov al, 1
+    mov [ebp + wWhichEmotionBubble], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call EmotionBubble
+    call DisablePikachuFollowingPlayer
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call InitializePikachuTextID
+    ret
 
 %assign event_byte -1
 PikachuMovement_Confused:

@@ -200,7 +200,12 @@
     %endrep
 %endmacro
 
-%macro ResetEventRange 2
+; The optional THIRD argument is pret's "A is already zero" hint: its macro tests
+; `IF (_NARG < 3) || (((\1) % 8) != 0)` purely to decide whether to emit a `xor a`
+; before a run of `ld [hli], a`. This expansion is a per-event run of ResetEvent,
+; each of which loads, masks and stores through AL on its own, so it never depends
+; on A arriving zeroed. The argument is accepted and ignored.
+%macro ResetEventRange 2-3
     %assign i %1
     %rep (%2) - (%1) + 1
         ResetEvent i

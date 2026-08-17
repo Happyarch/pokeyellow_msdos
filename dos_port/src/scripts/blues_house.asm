@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 
+global BluesHouseDaisySittingText
 global BluesHouseDefaultScript
 global BluesHouseNoopScript
 global BluesHouse_Script
@@ -30,7 +31,6 @@ global BluesHouse_TextPointers
 extern BluesHouseDaisyBagFullText   ; NOT YET DEFINED IN THE PORT
 extern BluesHouseDaisyOfferMapText   ; NOT YET DEFINED IN THE PORT
 extern BluesHouseDaisyRivalAtLabText   ; NOT YET DEFINED IN THE PORT
-extern BluesHouseDaisySittingText   ; NOT YET DEFINED IN THE PORT
 extern BluesHouseDaisyUseMapText   ; NOT YET DEFINED IN THE PORT
 extern BluesHouseDaisyWalkingText   ; NOT YET DEFINED IN THE PORT
 extern BluesHouseTownMapText   ; NOT YET DEFINED IN THE PORT
@@ -85,34 +85,31 @@ BluesHouse_TextPointers:
     dd BluesHouseDaisyWalkingText
     dd BluesHouseTownMapText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BluesHouseDaisySittingText (scripts/BluesHouse.asm:28-34) — at scripts/BluesHouse.asm:31: .give_town_map is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_TOWN_MAP
-; PRET| 	jr nz, .got_town_map
-; PRET| 	CheckEvent EVENT_GOT_POKEDEX
-; PRET| 	jr nz, .give_town_map
-; PRET| 	ld hl, BluesHouseDaisyRivalAtLabText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+BluesHouseDaisySittingText:
+    CheckEvent EVENT_GOT_TOWN_MAP
+    jnz .got_town_map
+    CheckEvent EVENT_GOT_POKEDEX
+    jnz .give_town_map
+    mov esi, BluesHouseDaisyRivalAtLabText
+    call PrintText
+    jmp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-id-in-a] BluesHouseDaisySittingText.give_town_map (scripts/BluesHouse.asm:37-48) — at scripts/BluesHouse.asm:44: predef HideObject
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, BluesHouseDaisyOfferMapText
-; PRET| 	call PrintText
-; PRET| 	lb bc, TOWN_MAP, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld a, TOGGLE_TOWN_MAP
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	ld hl, GotMapText
-; PRET| 	call PrintText
-; PRET| 	SetEvent EVENT_GOT_TOWN_MAP
-; PRET| 	jr .done
+%assign event_byte -1
+.give_town_map:
+    mov esi, BluesHouseDaisyOfferMapText
+    call PrintText
+    mov bx, ((5) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov al, 42
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    mov esi, GotMapText
+    call PrintText
+    SetEvent EVENT_GOT_TOWN_MAP
+    jmp .done
 
 %assign event_byte -1
 .got_town_map:
