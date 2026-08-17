@@ -42,6 +42,7 @@ global CinnabarGymScript_75041
 global CinnabarGymScript_753de
 global CinnabarGymScript_753e9
 global CinnabarGymScript_753f3
+global CinnabarGymSetMapAndTiles
 global CinnabarGymSetTrainerHeader
 global CinnabarGymStartBattleScript
 global CinnabarGymSuperNerd1
@@ -71,7 +72,6 @@ extern ApplyPikachuMovementData
 extern Bankswitch
 extern CallFunctionInTable
 extern CinnabarGymDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern CinnabarGymSetMapAndTiles   ; NOT YET DEFINED IN THE PORT
 extern DelayFrames
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID
@@ -161,29 +161,35 @@ CinnabarGym_Script:
     mov al, [ebp + wCinnabarGymCurScript]
     jmp CallFunctionInTable
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarGymSetMapAndTiles (scripts/CinnabarGym.asm:9-19) — at scripts/CinnabarGym.asm:13: CinnabarGymSetMapAndTiles.LoadNames is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	push hl
-; PRET| 	call nz, .LoadNames
-; PRET| 	pop hl
-; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	call nz, UpdateCinnabarGymGateTileBlocks
-; PRET| 	ResetEvent EVENT_2A7
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+CinnabarGymSetMapAndTiles:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
+    popfd
+    push esi
+    jz .sk_13
+        call .LoadNames
+.sk_13:
+    pop esi
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    jz .sk_17
+        call UpdateCinnabarGymGateTileBlocks
+.sk_17:
+    ResetEvent EVENT_2A7
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] CinnabarGymSetMapAndTiles.LoadNames (scripts/CinnabarGym.asm:22-24) — at scripts/CinnabarGym.asm:23: de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .CityName
-; PRET| 	ld de, .LeaderName
-; PRET| 	jp LoadGymLeaderAndCityName
+%assign event_byte -1
+%assign event_byte_a -1
+.LoadNames:
+    mov esi, .CityName
+    mov edx, .LeaderName   ; pret: ld de, .LeaderName — LoadGymLeaderAndCityName takes it in EDX
+    jmp LoadGymLeaderAndCityName
 
 %assign event_byte -1
 %assign event_byte_a -1

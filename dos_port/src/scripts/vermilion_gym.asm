@@ -37,6 +37,7 @@ global VermilionGymResetScripts
 global VermilionGymSailorText
 global VermilionGymSetDoorTile
 global VermilionGymSuperNerdText
+global VermilionGym_Script
 global VermilionGym_ScriptPointers
 
 extern CheckFightingMapTrainers
@@ -63,7 +64,6 @@ extern VermilionGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern VermilionGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern VermilionGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern VermilionGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern VermilionGym_Script   ; NOT YET DEFINED IN THE PORT
 extern VermilionGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern _TM24ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern _VermilionGymGymGuideBeatLTSurgeText   ; NOT YET DEFINED IN THE PORT
@@ -92,34 +92,40 @@ wVermilionGymCurScript                         equ 0xD5FD
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] VermilionGym_Script (scripts/VermilionGym.asm:2-17) — at scripts/VermilionGym.asm:6: VermilionGym_Script.LoadNames is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 	push hl
-; PRET| 	call nz, .LoadNames
-; PRET| 	pop hl
-; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	call nz, VermilionGymSetDoorTile
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	ld hl, VermilionGymTrainerHeaders
-; PRET| 	ld de, VermilionGym_ScriptPointers
-; PRET| 	ld a, [wVermilionGymCurScript]
-; PRET| 	call ExecuteCurMapScriptInTable
-; PRET| 	ld [wVermilionGymCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+VermilionGym_Script:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_1)) & 0xFF
+    popfd
+    push esi
+    jz .sk_6
+        call .LoadNames
+.sk_6:
+    pop esi
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
+    popfd
+    jz .sk_10
+        call VermilionGymSetDoorTile
+.sk_10:
+    call EnableAutoTextBoxDrawing
+    mov esi, VermilionGymTrainerHeaders
+    mov edi, VermilionGym_ScriptPointers   ; pret: ld de, VermilionGym_ScriptPointers — ExecuteCurMapScriptInTable takes it in EDI
+    mov al, [ebp + wVermilionGymCurScript]
+    call ExecuteCurMapScriptInTable
+    mov [ebp + wVermilionGymCurScript], al
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] VermilionGym_Script.LoadNames (scripts/VermilionGym.asm:20-22) — at scripts/VermilionGym.asm:21: de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .CityName
-; PRET| 	ld de, .LeaderName
-; PRET| 	jp LoadGymLeaderAndCityName
+%assign event_byte -1
+%assign event_byte_a -1
+.LoadNames:
+    mov esi, .CityName
+    mov edx, .LeaderName   ; pret: ld de, .LeaderName — LoadGymLeaderAndCityName takes it in EDX
+    jmp LoadGymLeaderAndCityName
 
 %assign event_byte -1
 %assign event_byte_a -1

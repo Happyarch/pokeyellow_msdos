@@ -37,6 +37,7 @@ global SaffronGymYoungster1Text
 global SaffronGymYoungster2Text
 global SaffronGymYoungster3Text
 global SaffronGymYoungster4Text
+global SaffronGym_Script
 global SaffronGym_ScriptPointers
 
 extern CheckFightingMapTrainers
@@ -61,7 +62,6 @@ extern SaffronGymTrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern SaffronGym_Script   ; NOT YET DEFINED IN THE PORT
 extern SaffronGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers
 extern TalkToTrainer
@@ -91,29 +91,31 @@ wSaffronGymCurScript                           equ 0xD65B
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGym_Script (scripts/SaffronGym.asm:2-12) — at scripts/SaffronGym.asm:5: SaffronGym_Script.LoadNames is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	call nz, .LoadNames
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	ld hl, SaffronGymTrainerHeaders
-; PRET| 	ld de, SaffronGym_ScriptPointers
-; PRET| 	ld a, [wSaffronGymCurScript]
-; PRET| 	call ExecuteCurMapScriptInTable
-; PRET| 	ld [wSaffronGymCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+SaffronGym_Script:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
+    popfd
+    jz .sk_5
+        call .LoadNames
+.sk_5:
+    call EnableAutoTextBoxDrawing
+    mov esi, SaffronGymTrainerHeaders
+    mov edi, SaffronGym_ScriptPointers   ; pret: ld de, SaffronGym_ScriptPointers — ExecuteCurMapScriptInTable takes it in EDI
+    mov al, [ebp + wSaffronGymCurScript]
+    call ExecuteCurMapScriptInTable
+    mov [ebp + wSaffronGymCurScript], al
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] SaffronGym_Script.LoadNames (scripts/SaffronGym.asm:15-17) — at scripts/SaffronGym.asm:16: de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .CityName
-; PRET| 	ld de, .LeaderName
-; PRET| 	jp LoadGymLeaderAndCityName
+%assign event_byte -1
+%assign event_byte_a -1
+.LoadNames:
+    mov esi, .CityName
+    mov edx, .LeaderName   ; pret: ld de, .LeaderName — LoadGymLeaderAndCityName takes it in EDX
+    jmp LoadGymLeaderAndCityName
 
 %assign event_byte -1
 %assign event_byte_a -1

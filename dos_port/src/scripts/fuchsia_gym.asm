@@ -37,6 +37,7 @@ global FuchsiaGymRocker3Text
 global FuchsiaGymRocker4Text
 global FuchsiaGymRocker5Text
 global FuchsiaGymRocker6Text
+global FuchsiaGym_Script
 global FuchsiaGym_ScriptPointers
 
 extern CheckFightingMapTrainers
@@ -60,7 +61,6 @@ extern FuchsiaGymTrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymTrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymTrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGym_Script   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern GiveItem
 extern InitBattleEnemyParameters
@@ -96,31 +96,33 @@ wFuchsiaGymCurScript                           equ 0xD65A
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGym_Script (scripts/FuchsiaGym.asm:2-9) — at scripts/FuchsiaGym.asm:2: FuchsiaGym_Script.LoadNames is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call .LoadNames
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	ld hl, FuchsiaGymTrainerHeaders
-; PRET| 	ld de, FuchsiaGym_ScriptPointers
-; PRET| 	ld a, [wFuchsiaGymCurScript]
-; PRET| 	call ExecuteCurMapScriptInTable
-; PRET| 	ld [wFuchsiaGymCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+FuchsiaGym_Script:
+    call .LoadNames
+    call EnableAutoTextBoxDrawing
+    mov esi, FuchsiaGymTrainerHeaders
+    mov edi, FuchsiaGym_ScriptPointers   ; pret: ld de, FuchsiaGym_ScriptPointers — ExecuteCurMapScriptInTable takes it in EDI
+    mov al, [ebp + wFuchsiaGymCurScript]
+    call ExecuteCurMapScriptInTable
+    mov [ebp + wFuchsiaGymCurScript], al
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] FuchsiaGym_Script.LoadNames (scripts/FuchsiaGym.asm:12-19) — at scripts/FuchsiaGym.asm:17: de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	ret z
-; PRET| 	ld hl, .CityName
-; PRET| 	ld de, .LeaderName
-; PRET| 	call LoadGymLeaderAndCityName
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+.LoadNames:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
+    popfd
+    jnz .nr_15
+        ret
+.nr_15:
+    mov esi, .CityName
+    mov edx, .LeaderName   ; pret: ld de, .LeaderName — LoadGymLeaderAndCityName takes it in EDX
+    call LoadGymLeaderAndCityName
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

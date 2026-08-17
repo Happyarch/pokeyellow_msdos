@@ -39,6 +39,7 @@ global PewterGymResetScripts
 global PewterGymScriptReceiveTM34
 global PewterGymTM34NoRoomText
 global PewterGymText_5c41c
+global PewterGym_Script
 global PewterGym_ScriptPointers
 
 extern CheckFightingMapTrainers
@@ -56,7 +57,6 @@ extern LoadGymLeaderAndCityName
 extern PewterGymCooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern PewterGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PewterGym_Script   ; NOT YET DEFINED IN THE PORT
 extern PewterGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern SaveEndBattleTextPointers
@@ -96,30 +96,32 @@ wPikachuSpawnStateFlags                        equ 0xD471
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] PewterGym_Script (scripts/PewterGym.asm:2-12) — at scripts/PewterGym.asm:5: PewterGym_Script.LoadNames is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	call nz, .LoadNames
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	ld hl, PewterGymTrainerHeaders
-; PRET| 	ld de, PewterGym_ScriptPointers
-; PRET| 	ld a, [wPewterGymCurScript]
-; PRET| 	call ExecuteCurMapScriptInTable
-; PRET| 	ld [wPewterGymCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+PewterGym_Script:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
+    popfd
+    jz .sk_5
+        call .LoadNames
+.sk_5:
+    call EnableAutoTextBoxDrawing
+    mov esi, PewterGymTrainerHeaders
+    mov edi, PewterGym_ScriptPointers   ; pret: ld de, PewterGym_ScriptPointers — ExecuteCurMapScriptInTable takes it in EDI
+    mov al, [ebp + wPewterGymCurScript]
+    call ExecuteCurMapScriptInTable
+    mov [ebp + wPewterGymCurScript], al
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] PewterGym_Script.LoadNames (scripts/PewterGym.asm:15-18) — at scripts/PewterGym.asm:16: de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .CityName
-; PRET| 	ld de, .LeaderName
-; PRET| 	call LoadGymLeaderAndCityName
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+.LoadNames:
+    mov esi, .CityName
+    mov edx, .LeaderName   ; pret: ld de, .LeaderName — LoadGymLeaderAndCityName takes it in EDX
+    call LoadGymLeaderAndCityName
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

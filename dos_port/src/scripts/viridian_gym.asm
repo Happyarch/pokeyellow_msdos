@@ -58,6 +58,7 @@ global ViridianGymReceiveTM27
 global ViridianGymResetScripts
 global ViridianGymRocker1Text
 global ViridianGymRocker2Text
+global ViridianGym_Script
 global ViridianGym_ScriptPointers
 
 extern Bankswitch
@@ -103,7 +104,6 @@ extern ViridianGymTrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymTrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymTrainerHeader7   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern ViridianGym_Script   ; NOT YET DEFINED IN THE PORT
 extern ViridianGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern _ViridianGymGiovanniEarthBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern _ViridianGymGiovanniPostBattleAdviceText   ; NOT YET DEFINED IN THE PORT
@@ -134,20 +134,19 @@ wViridianGymCurScript                          equ 0xD5FA
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] ViridianGym_Script (scripts/ViridianGym.asm:2-11) — at scripts/ViridianGym.asm:3: de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .CityName
-; PRET| 	ld de, .LeaderName
-; PRET| 	call LoadGymLeaderAndCityName
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	ld hl, ViridianGymTrainerHeaders
-; PRET| 	ld de, ViridianGym_ScriptPointers
-; PRET| 	ld a, [wViridianGymCurScript]
-; PRET| 	call ExecuteCurMapScriptInTable
-; PRET| 	ld [wViridianGymCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+ViridianGym_Script:
+    mov esi, .CityName
+    mov edx, .LeaderName   ; pret: ld de, .LeaderName — LoadGymLeaderAndCityName takes it in EDX
+    call LoadGymLeaderAndCityName
+    call EnableAutoTextBoxDrawing
+    mov esi, ViridianGymTrainerHeaders
+    mov edi, ViridianGym_ScriptPointers   ; pret: ld de, ViridianGym_ScriptPointers — ExecuteCurMapScriptInTable takes it in EDI
+    mov al, [ebp + wViridianGymCurScript]
+    call ExecuteCurMapScriptInTable
+    mov [ebp + wViridianGymCurScript], al
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

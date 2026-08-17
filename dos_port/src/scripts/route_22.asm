@@ -24,6 +24,8 @@ bits 32
 
 global Route22DefaultScript
 global Route22FirstRivalBattleScript
+global Route22MoveRival1
+global Route22MoveRival2
 global Route22NoopScript
 global Route22PokemonLeagueSignText
 global Route22PrintPokemonLeagueSignText
@@ -70,8 +72,6 @@ extern Music_RivalAlternateTempo
 extern PlayDefaultMusic
 extern PlayMusic
 extern PrintText
-extern Route22MoveRival1   ; NOT YET DEFINED IN THE PORT
-extern Route22MoveRival2   ; NOT YET DEFINED IN THE PORT
 extern Route22MoveRivalRightScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival1AfterBattleScript   ; NOT YET DEFINED IN THE PORT
 extern Route22Rival2AfterBattleScript   ; NOT YET DEFINED IN THE PORT
@@ -314,7 +314,7 @@ Route22Rival1VictoryText:
 ; PRET| 	jr .set_rival_facing
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival1AfterBattleScript.not_facing_down (scripts/Route22.asm:163-181) — at scripts/Route22.asm:179: Route22Rival1AfterBattleScript.exit_movement_2 is defined in a region that bailed
+; BAIL[target-region-bailed] Route22Rival1AfterBattleScript.not_facing_down (scripts/Route22.asm:163-181) — at scripts/Route22.asm:180: Route22Rival1AfterBattleScript.RivalExit1Script is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, SPRITE_FACING_RIGHT
@@ -337,32 +337,30 @@ Route22Rival1VictoryText:
 ; PRET| 	call .RivalExit1Script
 ; PRET| 	jr .next_script
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival1AfterBattleScript.exit_movement_2 (scripts/Route22.asm:183-187) — at scripts/Route22.asm:183: Route22Rival1AfterBattleScript.RivalExit2Script is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call .RivalExit2Script
-; PRET| .next_script
-; PRET| 	ld a, SCRIPT_ROUTE22_RIVAL1_EXIT
-; PRET| 	ld [wRoute22CurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+.exit_movement_2:
+    call .RivalExit2Script
+.next_script:
+    mov al, SCRIPT_ROUTE22_RIVAL1_EXIT
+    mov [ebp + wRoute22CurScript], al
+    ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] Route22Rival1AfterBattleScript.RivalExit1Script (scripts/Route22.asm:190-191) — at scripts/Route22.asm:190: de cannot hold the 32-bit address of Route22Rival1ExitMovementData1; callee <none in range> has no abi.json entry
+; BAIL[host-pointer-in-16bit-reg] Route22Rival1AfterBattleScript.RivalExit1Script (scripts/Route22.asm:190-191) — at scripts/Route22.asm:190: de cannot hold the 32-bit address of Route22Rival1ExitMovementData1; callee Route22MoveRival1 has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld de, Route22Rival1ExitMovementData1
 ; PRET| 	jr Route22MoveRival1
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] Route22Rival1AfterBattleScript.RivalExit2Script (scripts/Route22.asm:194-198) — at scripts/Route22.asm:194: de cannot hold the 32-bit address of Route22Rival1ExitMovementData2; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld de, Route22Rival1ExitMovementData2
-; PRET| Route22MoveRival1:
-; PRET| 	ld a, ROUTE22_RIVAL1
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	jp MoveSprite
+%assign event_byte -1
+%assign event_byte_a -1
+.RivalExit2Script:
+    mov edi, Route22Rival1ExitMovementData2   ; pret: ld de, Route22Rival1ExitMovementData2 — MoveSprite takes it in EDI
+Route22MoveRival1:
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    jmp MoveSprite
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -502,7 +500,7 @@ Route22Rival2VictoryText:
 ; PRET| 	jr .set_rival_facing_direction
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival2AfterBattleScript.set_player_direction_left (scripts/Route22.asm:316-334) — at scripts/Route22.asm:332: Route22Rival2AfterBattleScript.exit_movement_2 is defined in a region that bailed
+; BAIL[target-region-bailed] Route22Rival2AfterBattleScript.set_player_direction_left (scripts/Route22.asm:316-334) — at scripts/Route22.asm:333: Route22Rival2AfterBattleScript.RivalExit1Script is defined in a region that bailed
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld a, PLAYER_DIR_LEFT
@@ -525,32 +523,30 @@ Route22Rival2VictoryText:
 ; PRET| 	call .RivalExit1Script
 ; PRET| 	jr .next_script
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] Route22Rival2AfterBattleScript.exit_movement_2 (scripts/Route22.asm:336-340) — at scripts/Route22.asm:336: Route22Rival2AfterBattleScript.RivalExit2Script is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call .RivalExit2Script
-; PRET| .next_script
-; PRET| 	ld a, SCRIPT_ROUTE22_RIVAL2_EXIT
-; PRET| 	ld [wRoute22CurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+.exit_movement_2:
+    call .RivalExit2Script
+.next_script:
+    mov al, SCRIPT_ROUTE22_RIVAL2_EXIT
+    mov [ebp + wRoute22CurScript], al
+    ret
 
 ; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] Route22Rival2AfterBattleScript.RivalExit1Script (scripts/Route22.asm:343-344) — at scripts/Route22.asm:343: de cannot hold the 32-bit address of Route22Rival2ExitMovementData1; callee <none in range> has no abi.json entry
+; BAIL[host-pointer-in-16bit-reg] Route22Rival2AfterBattleScript.RivalExit1Script (scripts/Route22.asm:343-344) — at scripts/Route22.asm:343: de cannot hold the 32-bit address of Route22Rival2ExitMovementData1; callee Route22MoveRival2 has no abi.json entry
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld de, Route22Rival2ExitMovementData1
 ; PRET| 	jr Route22MoveRival2
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] Route22Rival2AfterBattleScript.RivalExit2Script (scripts/Route22.asm:347-351) — at scripts/Route22.asm:347: de cannot hold the 32-bit address of Route22Rival2ExitMovementData2; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld de, Route22Rival2ExitMovementData2
-; PRET| Route22MoveRival2:
-; PRET| 	ld a, ROUTE22_RIVAL2
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	jp MoveSprite
+%assign event_byte -1
+%assign event_byte_a -1
+.RivalExit2Script:
+    mov edi, Route22Rival2ExitMovementData2   ; pret: ld de, Route22Rival2ExitMovementData2 — MoveSprite takes it in EDI
+Route22MoveRival2:
+    mov al, 2
+    mov [ebp + hSpriteIndex], al
+    jmp MoveSprite
 
 %assign event_byte -1
 %assign event_byte_a -1

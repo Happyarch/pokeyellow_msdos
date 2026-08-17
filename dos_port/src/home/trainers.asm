@@ -210,26 +210,40 @@ ExecuteCurMapScriptInTable:
 ; ----------------------------------------------------------------------------
 ; LoadGymLeaderAndCityName — copy gym city + leader names.
 ; pret: home/trainers.asm:LoadGymLeaderAndCityName
-; In (pret ABI, register-mapped): ESI (hl) = city-name source GB offset,
-;                                 EDX (de) = leader-name source GB offset.
-; CopyData is src(ESI)->dst(EDX), BX=count; dst must be a GB OFFSET in DX
-; (CopyData does movzx edi,dx / lea edi,[ebp+edi]), NOT an [ebp+..] lea.
-; OW-A.9 fix: two ABI bugs corrected — (1) dst was in EDI (CopyData ignores EDI,
-; reads dst from DX) → wrote to garbage; (2) the entry `push esi/pop esi` restored
-; the CITY src as the leader src (would copy the city name into wGymLeaderName).
-; Now push edx/pop esi, matching pret's push de / pop hl (leader src arrives in DE).
+; In:  ESI (pret hl) = FLAT pointer to the city name.
+;      EDX (pret de) = FLAT pointer to the gym leader name.
+; Out: ESI advanced past the leader name (as pret's hl is). ECX clobbered.
+;      Callers: pass both label addresses directly — they are program-image data.
+;
+; DEVIATION{class=projection; pret=home/trainers.asm:LoadGymLeaderAndCityName; behavior=take both name pointers as FLAT program-image addresses and copy inline instead of passing GB offsets to CopyData; evidence=pret reads these strings from ROM while the port emits them into the map script's own .text via the generated gym_names.inc macros, and CopyData resolves its source as a GB offset with lea esi,[ebp+esi] so a flat pointer would read far outside the emulated GB allocation; lifetime=permanent flat-program-image boundary, same as WriteOAMBlock and DecodeRLEList}
+;
+; WHY THE ABI CHANGED. The previous version declared both sources as GB OFFSETS
+; and called CopyData twice. It had NO callers (label_status --callers: 0), so
+; that ABI was an untested claim, and its only prospective callers are the eight
+; transpiled gym scripts — which pass `ld hl, .CityName` / `ld de, .LeaderName`,
+; both flat labels in the script's own .text. Wiring those into the old ABI would
+; have read garbage at a GB offset formed from a program-image address.
+;
+; The two `call CopyData`s are therefore DROPPED, deliberately: CopyData's source
+; is a GB offset by construction (`lea esi, [ebp + esi]`), so it cannot express a
+; flat source. The port has the same seam at WriteOAMBlock (src/home/oam.asm:82)
+; and DecodeRLEList, both of which take a full flat pointer for pret's `de` and
+; say so at the routine. pret's own structure — save de, copy city, recover it
+; into hl, copy leader — is preserved line for line.
 ; ----------------------------------------------------------------------------
 LoadGymLeaderAndCityName:
-    ; --- city name: src ESI, dst wGymCityName, len GYM_CITY_LENGTH ---
+    push edi
+    ; --- city name: src flat ESI, dst wGymCityName, len GYM_CITY_LENGTH ---
     push edx                        ; pret: push de — save leader-name src
-    mov edx, wGymCityName           ; dst GB offset (DX), pret: ld de, wGymCityName
-    mov ebx, GYM_CITY_LENGTH        ; count (BX)
-    call CopyData                   ; [ebp+ESI] -> [ebp+wGymCityName]
+    lea edi, [ebp + wGymCityName]   ; pret: ld de, wGymCityName
+    mov ecx, GYM_CITY_LENGTH        ; pret: ld bc, GYM_CITY_LENGTH
+    rep movsb                       ; pret: call CopyData — flat [esi] -> GB dest
     ; --- leader name: src ESI = leader src, dst wGymLeaderName, len NAME_LENGTH ---
-    pop esi                         ; pret: pop hl — ESI = leader-name src
-    mov edx, wGymLeaderName         ; dst GB offset (DX)
-    mov ebx, NAME_LENGTH
-    call CopyData                   ; [ebp+ESI] -> [ebp+wGymLeaderName]
+    pop esi                         ; pret: pop hl — ESI = leader-name src (flat)
+    lea edi, [ebp + wGymLeaderName] ; pret: ld de, wGymLeaderName
+    mov ecx, NAME_LENGTH            ; pret: ld bc, NAME_LENGTH
+    rep movsb                       ; pret: jp CopyData
+    pop edi
     ret
 
 ; ----------------------------------------------------------------------------

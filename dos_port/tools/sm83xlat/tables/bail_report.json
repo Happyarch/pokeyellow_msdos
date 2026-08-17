@@ -1,14 +1,14 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
  "_owned_comment": "`owned` is NOT a bail list. Those regions are Tier-1 data the port's generators already define, so the tool must not emit them at all \u2014 emitting one would be a duplicate definition. They describe no outstanding work and are excluded from the coverage denominator; they are listed here so the exclusion stays auditable.",
- "regions_lowered": 2134,
- "regions_bailed": 141,
+ "regions_lowered": 2153,
+ "regions_bailed": 122,
  "regions_owned": 255,
  "by_reason": {
-  "target-region-bailed": 49,
+  "target-region-bailed": 40,
   "screen-coord-projection": 5,
   "inline-text-db": 4,
-  "host-pointer-in-16bit-reg": 41,
+  "host-pointer-in-16bit-reg": 31,
   "pikachu-table-index": 4,
   "hl-half-register-access": 9,
   "local-label-scope-collision": 3,
@@ -76,13 +76,10 @@
    "reasons": []
   },
   "scripts/CeladonGym.asm": {
-   "ok_regions": 16,
-   "bailed_regions": 2,
+   "ok_regions": 18,
+   "bailed_regions": 0,
    "owned_regions": 8,
-   "reasons": [
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
-   ]
+   "reasons": []
   },
   "scripts/CeladonHotel.asm": {
    "ok_regions": 2,
@@ -217,13 +214,10 @@
    ]
   },
   "scripts/CeruleanGym.asm": {
-   "ok_regions": 14,
-   "bailed_regions": 2,
+   "ok_regions": 16,
+   "bailed_regions": 0,
    "owned_regions": 3,
-   "reasons": [
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
-   ]
+   "reasons": []
   },
   "scripts/CeruleanMart.asm": {
    "ok_regions": 2,
@@ -258,13 +252,12 @@
    "reasons": []
   },
   "scripts/CinnabarGym.asm": {
-   "ok_regions": 59,
-   "bailed_regions": 4,
+   "ok_regions": 61,
+   "bailed_regions": 2,
    "owned_regions": 0,
    "reasons": [
     "add-hl-r16",
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/CinnabarIsland.asm": {
@@ -386,13 +379,10 @@
    ]
   },
   "scripts/FuchsiaGym.asm": {
-   "ok_regions": 17,
-   "bailed_regions": 2,
+   "ok_regions": 19,
+   "bailed_regions": 0,
    "owned_regions": 7,
-   "reasons": [
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
-   ]
+   "reasons": []
   },
   "scripts/FuchsiaMart.asm": {
    "ok_regions": 2,
@@ -570,13 +560,10 @@
    "reasons": []
   },
   "scripts/PewterGym.asm": {
-   "ok_regions": 15,
-   "bailed_regions": 2,
+   "ok_regions": 17,
+   "bailed_regions": 0,
    "owned_regions": 2,
-   "reasons": [
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
-   ]
+   "reasons": []
   },
   "scripts/PewterMart.asm": {
    "ok_regions": 6,
@@ -911,8 +898,8 @@
    "reasons": []
   },
   "scripts/Route22.asm": {
-   "ok_regions": 32,
-   "bailed_regions": 11,
+   "ok_regions": 36,
+   "bailed_regions": 7,
    "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
@@ -1095,11 +1082,10 @@
    "reasons": []
   },
   "scripts/SaffronGym.asm": {
-   "ok_regions": 16,
-   "bailed_regions": 4,
+   "ok_regions": 18,
+   "bailed_regions": 2,
    "owned_regions": 2,
    "reasons": [
-    "host-pointer-in-16bit-reg",
     "target-region-bailed"
    ]
   },
@@ -1388,13 +1374,10 @@
    ]
   },
   "scripts/VermilionGym.asm": {
-   "ok_regions": 17,
-   "bailed_regions": 2,
+   "ok_regions": 19,
+   "bailed_regions": 0,
    "owned_regions": 4,
-   "reasons": [
-    "host-pointer-in-16bit-reg",
-    "target-region-bailed"
-   ]
+   "reasons": []
   },
   "scripts/VermilionMart.asm": {
    "ok_regions": 2,
@@ -1475,12 +1458,10 @@
    "reasons": []
   },
   "scripts/ViridianGym.asm": {
-   "ok_regions": 24,
-   "bailed_regions": 1,
+   "ok_regions": 25,
+   "bailed_regions": 0,
    "owned_regions": 9,
-   "reasons": [
-    "host-pointer-in-16bit-reg"
-   ]
+   "reasons": []
   },
   "scripts/ViridianMart.asm": {
    "ok_regions": 7,
@@ -1626,34 +1607,6 @@
    "lines": [
     85,
     101
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGym_Script",
-   "labels": [
-    "CeladonGym_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "CeladonGym_Script.LoadNames is defined in a region that bailed",
-   "at": "scripts/CeladonGym.asm:5",
-   "lines": [
-    2,
-    12
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGym_Script.LoadNames",
-   "labels": [
-    "CeladonGym_Script.LoadNames"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
-   "at": "scripts/CeladonGym.asm:16",
-   "lines": [
-    15,
-    17
    ]
   },
   {
@@ -1863,34 +1816,6 @@
    ]
   },
   {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGym_Script",
-   "labels": [
-    "CeruleanGym_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "CeruleanGym_Script.LoadNames is defined in a region that bailed",
-   "at": "scripts/CeruleanGym.asm:5",
-   "lines": [
-    2,
-    12
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGym_Script.LoadNames",
-   "labels": [
-    "CeruleanGym_Script.LoadNames"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
-   "at": "scripts/CeruleanGym.asm:16",
-   "lines": [
-    15,
-    17
-   ]
-  },
-  {
    "file": "scripts/CeruleanTrashedHouse.asm",
    "region": "CeruleanTrashedHouseFishingGuruText",
    "labels": [
@@ -1902,34 +1827,6 @@
    "lines": [
     13,
     19
-   ]
-  },
-  {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymSetMapAndTiles",
-   "labels": [
-    "CinnabarGymSetMapAndTiles"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "CinnabarGymSetMapAndTiles.LoadNames is defined in a region that bailed",
-   "at": "scripts/CinnabarGym.asm:13",
-   "lines": [
-    9,
-    19
-   ]
-  },
-  {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymSetMapAndTiles.LoadNames",
-   "labels": [
-    "CinnabarGymSetMapAndTiles.LoadNames"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
-   "at": "scripts/CinnabarGym.asm:23",
-   "lines": [
-    22,
-    24
    ]
   },
   {
@@ -2138,34 +2035,6 @@
    "lines": [
     39,
     67
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGym_Script",
-   "labels": [
-    "FuchsiaGym_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "FuchsiaGym_Script.LoadNames is defined in a region that bailed",
-   "at": "scripts/FuchsiaGym.asm:2",
-   "lines": [
-    2,
-    9
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGym_Script.LoadNames",
-   "labels": [
-    "FuchsiaGym_Script.LoadNames"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry",
-   "at": "scripts/FuchsiaGym.asm:17",
-   "lines": [
-    12,
-    19
    ]
   },
   {
@@ -2428,34 +2297,6 @@
    ]
   },
   {
-   "file": "scripts/PewterGym.asm",
-   "region": "PewterGym_Script",
-   "labels": [
-    "PewterGym_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "PewterGym_Script.LoadNames is defined in a region that bailed",
-   "at": "scripts/PewterGym.asm:5",
-   "lines": [
-    2,
-    12
-   ]
-  },
-  {
-   "file": "scripts/PewterGym.asm",
-   "region": "PewterGym_Script.LoadNames",
-   "labels": [
-    "PewterGym_Script.LoadNames"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry",
-   "at": "scripts/PewterGym.asm:16",
-   "lines": [
-    15,
-    18
-   ]
-  },
-  {
    "file": "scripts/PewterPokecenter_2.asm",
    "region": "PewterJigglypuff",
    "labels": [
@@ -2633,26 +2474,11 @@
     "Route22Rival1AfterBattleScript.set_rival_facing"
    ],
    "reason": "target-region-bailed",
-   "detail": "Route22Rival1AfterBattleScript.exit_movement_2 is defined in a region that bailed",
-   "at": "scripts/Route22.asm:179",
+   "detail": "Route22Rival1AfterBattleScript.RivalExit1Script is defined in a region that bailed",
+   "at": "scripts/Route22.asm:180",
    "lines": [
     163,
     181
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript.exit_movement_2",
-   "labels": [
-    "Route22Rival1AfterBattleScript.exit_movement_2",
-    "Route22Rival1AfterBattleScript.next_script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "Route22Rival1AfterBattleScript.RivalExit2Script is defined in a region that bailed",
-   "at": "scripts/Route22.asm:183",
-   "lines": [
-    183,
-    187
    ]
   },
   {
@@ -2662,26 +2488,11 @@
     "Route22Rival1AfterBattleScript.RivalExit1Script"
    ],
    "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival1ExitMovementData1; callee <none in range> has no abi.json entry",
+   "detail": "de cannot hold the 32-bit address of Route22Rival1ExitMovementData1; callee Route22MoveRival1 has no abi.json entry",
    "at": "scripts/Route22.asm:190",
    "lines": [
     190,
     191
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript.RivalExit2Script",
-   "labels": [
-    "Route22Rival1AfterBattleScript.RivalExit2Script",
-    "Route22MoveRival1"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival1ExitMovementData2; callee <none in range> has no abi.json entry",
-   "at": "scripts/Route22.asm:194",
-   "lines": [
-    194,
-    198
    ]
   },
   {
@@ -2706,26 +2517,11 @@
     "Route22Rival2AfterBattleScript.set_rival_facing_direction"
    ],
    "reason": "target-region-bailed",
-   "detail": "Route22Rival2AfterBattleScript.exit_movement_2 is defined in a region that bailed",
-   "at": "scripts/Route22.asm:332",
+   "detail": "Route22Rival2AfterBattleScript.RivalExit1Script is defined in a region that bailed",
+   "at": "scripts/Route22.asm:333",
    "lines": [
     316,
     334
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript.exit_movement_2",
-   "labels": [
-    "Route22Rival2AfterBattleScript.exit_movement_2",
-    "Route22Rival2AfterBattleScript.next_script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "Route22Rival2AfterBattleScript.RivalExit2Script is defined in a region that bailed",
-   "at": "scripts/Route22.asm:336",
-   "lines": [
-    336,
-    340
    ]
   },
   {
@@ -2735,26 +2531,11 @@
     "Route22Rival2AfterBattleScript.RivalExit1Script"
    ],
    "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival2ExitMovementData1; callee <none in range> has no abi.json entry",
+   "detail": "de cannot hold the 32-bit address of Route22Rival2ExitMovementData1; callee Route22MoveRival2 has no abi.json entry",
    "at": "scripts/Route22.asm:343",
    "lines": [
     343,
     344
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript.RivalExit2Script",
-   "labels": [
-    "Route22Rival2AfterBattleScript.RivalExit2Script",
-    "Route22MoveRival2"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival2ExitMovementData2; callee <none in range> has no abi.json entry",
-   "at": "scripts/Route22.asm:347",
-   "lines": [
-    347,
-    351
    ]
   },
   {
@@ -2862,34 +2643,6 @@
    "lines": [
     240,
     252
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGym_Script",
-   "labels": [
-    "SaffronGym_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "SaffronGym_Script.LoadNames is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:5",
-   "lines": [
-    2,
-    12
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGym_Script.LoadNames",
-   "labels": [
-    "SaffronGym_Script.LoadNames"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
-   "at": "scripts/SaffronGym.asm:16",
-   "lines": [
-    15,
-    17
    ]
   },
   {
@@ -3479,34 +3232,6 @@
    ]
   },
   {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGym_Script",
-   "labels": [
-    "VermilionGym_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": "VermilionGym_Script.LoadNames is defined in a region that bailed",
-   "at": "scripts/VermilionGym.asm:6",
-   "lines": [
-    2,
-    17
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGym_Script.LoadNames",
-   "labels": [
-    "VermilionGym_Script.LoadNames"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry",
-   "at": "scripts/VermilionGym.asm:21",
-   "lines": [
-    20,
-    22
-   ]
-  },
-  {
    "file": "scripts/VictoryRoad1F.asm",
    "region": "VictoryRoad1FDefaultScript",
    "labels": [
@@ -3547,20 +3272,6 @@
    "lines": [
     220,
     232
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGym_Script",
-   "labels": [
-    "ViridianGym_Script"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .LeaderName; callee LoadGymLeaderAndCityName has no abi.json entry",
-   "at": "scripts/ViridianGym.asm:3",
-   "lines": [
-    2,
-    11
    ]
   },
   {

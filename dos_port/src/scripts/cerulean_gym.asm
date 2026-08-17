@@ -34,6 +34,7 @@ global CeruleanGymMistyText
 global CeruleanGymReceiveTM11
 global CeruleanGymResetScripts
 global CeruleanGymSwimmerText
+global CeruleanGym_Script
 global CeruleanGym_ScriptPointers
 
 extern CeruleanGymBattleText1   ; NOT YET DEFINED IN THE PORT
@@ -41,7 +42,6 @@ extern CeruleanGymBattleText2   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGym_Script   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern CheckFightingMapTrainers
 extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
@@ -84,29 +84,31 @@ wCeruleanGymCurScript                          equ 0xD5FC
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeruleanGym_Script (scripts/CeruleanGym.asm:2-12) — at scripts/CeruleanGym.asm:5: CeruleanGym_Script.LoadNames is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	call nz, .LoadNames
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	ld hl, CeruleanGymTrainerHeaders
-; PRET| 	ld de, CeruleanGym_ScriptPointers
-; PRET| 	ld a, [wCeruleanGymCurScript]
-; PRET| 	call ExecuteCurMapScriptInTable
-; PRET| 	ld [wCeruleanGymCurScript], a
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+CeruleanGym_Script:
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
+    popfd
+    jz .sk_5
+        call .LoadNames
+.sk_5:
+    call EnableAutoTextBoxDrawing
+    mov esi, CeruleanGymTrainerHeaders
+    mov edi, CeruleanGym_ScriptPointers   ; pret: ld de, CeruleanGym_ScriptPointers — ExecuteCurMapScriptInTable takes it in EDI
+    mov al, [ebp + wCeruleanGymCurScript]
+    call ExecuteCurMapScriptInTable
+    mov [ebp + wCeruleanGymCurScript], al
+    ret
 
-; ---------------------------------------------------------------------------
-; BAIL[host-pointer-in-16bit-reg] CeruleanGym_Script.LoadNames (scripts/CeruleanGym.asm:15-17) — at scripts/CeruleanGym.asm:16: de cannot hold the 32-bit address of .LeaderName; callee <none in range> has no abi.json entry
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .CityName
-; PRET| 	ld de, .LeaderName
-; PRET| 	jp LoadGymLeaderAndCityName
+%assign event_byte -1
+%assign event_byte_a -1
+.LoadNames:
+    mov esi, .CityName
+    mov edx, .LeaderName   ; pret: ld de, .LeaderName — LoadGymLeaderAndCityName takes it in EDX
+    jmp LoadGymLeaderAndCityName
 
 %assign event_byte -1
 %assign event_byte_a -1

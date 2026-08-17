@@ -14,29 +14,34 @@
   "repository evidence at the definition, not inference from call sites."
  ],
  "callees": {
+  "DecodeRLEList": {
+   "de": "edi",
+   "evidence": "dos_port/src/home/map_objects.asm:251 \u2014 'In: EDI = flat pointer to the RLE source list' with ':252 ESI = GB output offset (EBP-relative)'. This was _deliberately_absent on the grounds that the port 'appears to SWAP pret's hl/de roles' and a swap must be confirmed at the routine rather than inferred. The routine's own signature comment confirms exactly that swap, which is the confirmation that note asked for.",
+   "sites": 11
+  },
   "ExecuteCurMapScriptInTable": {
    "de": "edi",
-   "evidence": "dos_port/src/home/trainers.asm:190 — 'EDI = flat function-pointer jumptable (pret's de)'",
+   "evidence": "dos_port/src/home/trainers.asm:190 \u2014 'EDI = flat function-pointer jumptable (pret's de)'",
    "sites": 67
+  },
+  "LoadGymLeaderAndCityName": {
+   "de": "edx",
+   "evidence": "dos_port/src/home/trainers.asm:214 \u2014 'EDX (pret de) = FLAT pointer to the gym leader name', with :215 'Callers: pass both label addresses directly \u2014 they are program-image data'. The routine was rewritten to take flat sources in the same commit: it had ZERO callers, so its previous GB-offset ABI was an untested claim, and its only prospective callers are the eight transpiled gym scripts, which pass flat .text labels. Same seam as WriteOAMBlock and DecodeRLEList.",
+   "sites": 8
   },
   "MoveSprite": {
    "de": "edi",
-   "evidence": "dos_port/src/home/pathfinding.asm:72 — 'EDI = flat pointer to $ff-terminated movement-direction bytes'",
+   "evidence": "dos_port/src/home/pathfinding.asm:72 \u2014 'EDI = flat pointer to $ff-terminated movement-direction bytes'",
    "sites": 36
   },
   "SaveEndBattleTextPointers": {
    "de": "edx",
-   "evidence": "dos_port/src/home/trainers.asm:616 — 'In: ESI = win text (flat), EDX = lose text (flat)'",
+   "evidence": "dos_port/src/home/trainers.asm:616 \u2014 'In: ESI = win text (flat), EDX = lose text (flat)'",
    "sites": 34
-  },
-  "DecodeRLEList": {
-   "de": "edi",
-   "evidence": "dos_port/src/home/map_objects.asm:251 — 'In: EDI = flat pointer to the RLE source list' with ':252 ESI = GB output offset (EBP-relative)'. This was _deliberately_absent on the grounds that the port 'appears to SWAP pret's hl/de roles' and a swap must be confirmed at the routine rather than inferred. The routine's own signature comment confirms exactly that swap, which is the confirmation that note asked for.",
-   "sites": 11
   },
   "WriteOAMBlock": {
    "de": "edx",
-   "evidence": "dos_port/src/home/oam.asm:82-87 — 'source = flat pointer in EDX ... those OAM-block tables are flat image labels (.data), NOT GB WRAM offsets — so take EDX as a full flat pointer rather than biasing a 16-bit offset by ebp. Callers: pass the block label in EDX.' This was _deliberately_absent for 'no signature comment found'; the comment exists and is explicit.",
+   "evidence": "dos_port/src/home/oam.asm:82-87 \u2014 'source = flat pointer in EDX ... those OAM-block tables are flat image labels (.data), NOT GB WRAM offsets \u2014 so take EDX as a full flat pointer rather than biasing a 16-bit offset by ebp. Callers: pass the block label in EDX.' This was _deliberately_absent for 'no signature comment found'; the comment exists and is explicit.",
    "sites": 1
   }
  },
@@ -44,7 +49,7 @@
   "_comment": [
    "These take a DE pointer too, and are LEFT OUT on purpose. Their port",
    "signature comments do not settle where the pointer goes, and a plausible",
-   "guess here would be invisible in review — the emitted code would assemble,",
+   "guess here would be invisible in review \u2014 the emitted code would assemble,",
    "link and run while reading the wrong memory. They bail instead.",
    "",
    "DecodeRLEList and WriteOAMBlock were promoted OUT of this list on 2026-08-17,",

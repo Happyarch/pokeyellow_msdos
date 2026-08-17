@@ -310,8 +310,25 @@ def _next_callee(items, i: int, window: int = 8):
         if d is not None and d.effect.kind == "call" and d.classes \
                 and d.classes[-1] == isa.CLS_IMM:
             return d.operands[-1]
-        if d is not None and d.effect.kind in ("branch", "ret"):
+        if d is not None and d.effect.kind == "branch":
+            # An UNCONDITIONAL `jp Routine` is a TAIL CALL: pret writes it where
+            # `call Routine / ret` would go, and the loads above it are its
+            # arguments. Recognising it is NOT the unsafe lookahead-widening the
+            # docstring warns about — that would skip PAST an intervening call to
+            # a later one (BillsHouse.asm:63). This still stops at the FIRST
+            # control transfer and simply reads it correctly.
+            #
+            # Conditional forms and jumps to a `.local` are excluded: a condition
+            # means control may not leave at all, and a local target is
+            # intra-routine flow rather than a call. `jp hl` is excluded by the
+            # CLS_IMM test.
+            if (not d.condition and d.classes
+                    and d.classes[-1] == isa.CLS_IMM
+                    and not d.operands[-1].strip().startswith(".")):
+                return d.operands[-1]
             return None            # control leaves; the call is not ours
+        if d is not None and d.effect.kind == "ret":
+            return None
         if it.kind == sparser.KIND_MACRO and it.macro is not None \
                 and it.macro.cls == macros.CODE_CALL and it.line.operands:
             return it.line.operands[0].strip()
