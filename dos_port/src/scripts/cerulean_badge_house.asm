@@ -71,7 +71,7 @@ CeruleanBadgeHouse_TextPointers:
     dd CeruleanBadgeHouseMiddleAgedManText
 
 ; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] CeruleanBadgeHouseMiddleAgedManText (scripts/CeruleanBadgeHouse.asm:14-47) — at scripts/CeruleanBadgeHouse.asm:25: `l` is a half of ESI and has no flag-safe 8-bit x86 form
+; BAIL[add-hl-r16] CeruleanBadgeHouseMiddleAgedManText (scripts/CeruleanBadgeHouse.asm:14-47) — at scripts/CeruleanBadgeHouse.asm:42: hl de
 ; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
 ; ---------------------------------------------------------------------------
 ; PRET| 	ld hl, .Text

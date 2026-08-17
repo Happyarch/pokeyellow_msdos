@@ -26,10 +26,10 @@ and reads the wrong byte.
 | `pointer-domain-unknown` | 15 | HL is dereferenced where the GB/HOST domain is not proven on every path |
 | `inline-text-db` | 12 | a quoted glyph run — Tier-1 data, belongs to a generator |
 | `local-label-scope-collision` | 11 | an intervening bail removed the global anchor, so two pret locals would collide in one NASM scope |
-| `hl-half-register-access` | 10 | `ld l, a` — ESI's low byte is not addressable in 32-bit mode without REX |
+| `hl-half-register-access` | 9 | `ld l, a` — ESI's low byte is not addressable in 32-bit mode without REX |
 | `screen-coord-projection` | 5 | the port's tilemap stride is context-dependent; a rule here would be a guess |
+| `add-hl-r16` | 5 | SM83 `add hl,r16` leaves Z alone and wraps at 16 bits; ESI is 32 |
 | `pikachu-table-index` | 4 | needs (X_id - Table) / N across object files |
-| `add-hl-r16` | 4 | SM83 `add hl,r16` leaves Z alone and wraps at 16 bits; ESI is 32 |
 | `ld-via-bc-de` | 2 | `ld a, [bc]` needs a 16-bit GB pointer in BX/DX |
 | `predef-leaves-parent-bank-in-a` | 1 | pret's predef leaves the parent ROM bank in A and a direct call does not, and dataflow shows a live reader of A |
 | `event-macro-reuse-a-hint` | 1 |  |

@@ -169,10 +169,21 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
                    f"{owned[0]} is already defined elsewhere in the port."))
             continue
 
+        skip = 0
         for idx, it in enumerate(region.items):
+            if skip:
+                skip -= 1          # consumed by a fused idiom on an earlier item
+                continue
             E.pending_callee = None if region.is_data else _next_callee(region.items, idx)
             try:
-                lines = E.data(it, out) if region.is_data else E.item(it, an, out)
+                lines = None
+                if not region.is_data:
+                    fused = E.fuse(region.items, idx, an, out)
+                    if fused is not None:
+                        lines, consumed = fused
+                        skip = consumed - 1
+                if lines is None:
+                    lines = E.data(it, out) if region.is_data else E.item(it, an, out)
             except emit.Bail as b:
                 failed = (b, it)
                 break

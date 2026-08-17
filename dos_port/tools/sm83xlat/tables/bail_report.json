@@ -10,12 +10,12 @@
   "inline-text-db": 12,
   "host-pointer-in-16bit-reg": 29,
   "pikachu-table-index": 4,
-  "hl-half-register-access": 10,
+  "hl-half-register-access": 9,
   "local-label-scope-collision": 11,
   "pointer-domain-unknown": 15,
   "ld-via-bc-de": 2,
+  "add-hl-r16": 5,
   "predef-leaves-parent-bank-in-a": 1,
-  "add-hl-r16": 4,
   "event-macro-reuse-a-hint": 1,
   "owned-by-gen_map_script_tables": 1
  },
@@ -188,7 +188,7 @@
    "bailed_regions": 1,
    "owned_regions": 0,
    "reasons": [
-    "hl-half-register-access"
+    "add-hl-r16"
    ]
   },
   "scripts/CeruleanCave1F.asm": {
@@ -1918,9 +1918,9 @@
     "CeruleanBadgeHouseMiddleAgedManText",
     "CeruleanBadgeHouseMiddleAgedManText.loop"
    ],
-   "reason": "hl-half-register-access",
-   "detail": "`l` is a half of ESI and has no flag-safe 8-bit x86 form",
-   "at": "scripts/CeruleanBadgeHouse.asm:25",
+   "reason": "add-hl-r16",
+   "detail": "hl de",
+   "at": "scripts/CeruleanBadgeHouse.asm:42",
    "lines": [
     14,
     47

@@ -236,6 +236,75 @@ class Emitter:
         raise Bail("pointer-domain-unknown",
                    f"HL domain is {domain} at a dereference")
 
+    # -- fused idioms ------------------------------------------------------
+
+    def fuse(self, items, idx: int, an: ir.Analysis, out: Emitted):
+        """Lower a MULTI-instruction SM83 idiom as one x86 form.
+
+        H and L have no 8-bit x86 name (ESI's low byte needs REX), which is why
+        `hl-half-register-access` exists. But pret never writes H or L on their
+        own: it writes them as halves of a 16-bit idiom, and the idiom as a whole
+        DOES have an exact x86 form. Refusing per instruction is true and refusing
+        per idiom is not — the same shape of mistake as the TX_SOUND_* bail.
+
+        Returns (lines, items_consumed), or None to fall through to `item`.
+
+        TWO GUARDS APPLY TO EVERY RULE HERE, and both are load-bearing:
+          * no fused item after the first may carry a LABEL — a label means
+            something can jump into the middle of the idiom, and fusing would
+            delete the entry point;
+          * HL must be GB-domain. These forms move the low 16 bits of ESI, which
+            IS the whole value for a GB address and is NOT for a 32-bit host
+            pointer. Fusing a host pointer would silently truncate it.
+        """
+        def insn(k):
+            if idx + k >= len(items):
+                return None
+            i = items[idx + k]
+            if i.kind != sparser.KIND_INSN or i.decoded is None:
+                return None
+            if k and i.labels:
+                return None                    # a jump target inside the idiom
+            return i
+
+        a = insn(0)
+        if a is None:
+            return None
+        if an.hl_domain.get(id(items[idx]), ir.TOP) != ir.GB:
+            return None
+
+        def is_ld(i, dst, src):
+            return (i is not None and i.decoded.mnemonic == "ld"
+                    and i.decoded.operands == (dst, src))
+
+        # --- `ld d, h` / `ld e, l` -> DE = HL (pret's 16-bit register copy) ---
+        b = insn(1)
+        if is_ld(a, "d", "h") and is_ld(b, "e", "l"):
+            return (["mov dx, si            ; ld d, h / ld e, l — DE = HL"], 2)
+
+        # --- `ld a, l` / `ld [X], a` / `ld a, h` / `ld [X+1], a`
+        #     -> store HL as a little-endian 16-bit GB pointer ---
+        c, e = insn(2), insn(3)
+        if (is_ld(a, "a", "l") and is_ld(c, "a", "h")
+                and b is not None and e is not None
+                and b.decoded.mnemonic == "ld" and e.decoded.mnemonic == "ld"
+                and b.decoded.classes == (isa.CLS_MEM, isa.CLS_R8)
+                and e.decoded.classes == (isa.CLS_MEM, isa.CLS_R8)
+                and b.decoded.operands[1] == "a"
+                and e.decoded.operands[1] == "a"):
+            lo, hi = b.decoded.operands[0], e.decoded.operands[0]
+            # The two stores must be to ADJACENT bytes, low first. Anything else
+            # (including pret's big-endian `h` then `l` form) is a different
+            # program and must not reach this rule.
+            if _adjacent(lo, hi):
+                # pret leaves A holding H. A 16-bit store does not, so this only
+                # applies where nothing reads A afterwards.
+                if not an.a_live_after.get(id(items[idx + 3]), True):
+                    return ([f"mov [ebp + {self.expr(_strip(lo), out)}], si"
+                             f"   ; ld a,l / ld [x],a / ld a,h / ld [x+1],a — "
+                             f"store HL little-endian"], 4)
+        return None
+
     # -- one item ----------------------------------------------------------
 
     def item(self, it: sparser.Item, an: ir.Analysis, out: Emitted) -> List[str]:
@@ -731,6 +800,32 @@ PASSTHROUGH_DATA = {
     "script_pokecenter_pc": 0, "script_prize_vendor": 0,
     "script_cable_club_receptionist": 0, "script_vending_machine": 0,
 }
+
+
+def _strip(mem: str) -> str:
+    """`[wFoo + 1]` -> `wFoo + 1`, and `wFoo + 1` -> `wFoo + 1`.
+
+    The parser normalises a CLS_MEM operand WITHOUT its brackets, so this must
+    tolerate both spellings — assuming the bracketed one silently truncated the
+    first and last characters of the symbol name.
+    """
+    t = mem.strip()
+    if t.startswith("[") and t.endswith("]"):
+        t = t[1:-1]
+    return t.strip()
+
+
+_PLUS1 = re.compile(r"^(.*?)\s*\+\s*1$")
+
+
+def _adjacent(lo: str, hi: str) -> bool:
+    """True when `hi` names the byte immediately after `lo`.
+
+    Textual on purpose: the only form pret uses is `[X]` then `[X + 1]`, and
+    anything cleverer here would be arithmetic this tool does not own.
+    """
+    m = _PLUS1.match(_strip(hi))
+    return bool(m) and m.group(1).strip() == _strip(lo)
 
 
 def _domain_of(text: str, R) -> str:
