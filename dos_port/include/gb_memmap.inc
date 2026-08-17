@@ -2175,7 +2175,7 @@ wWhichDungeonWarp             equ 0xD71D ; which dungeon warp in the source map 
 wDayCareInUse                 equ 0xDA47 ; 1 = a mon is in the day-care (IncrementDayCareMonExp gate)
 wDayCareMonName               equ 0xDA48 ; day-care mon nickname
 wDayCareMonOT                 equ 0xDA53 ; day-care mon OT name
-wPlayerCoins                  equ 0xD5A4 ; Game Corner coins (BCD, dw)
+wPlayerCoins                  equ 0xD5A3 ; Game Corner coins (BCD, dw)
 hCoins                        equ 0xFFA0 ; hCoins (dw; union w/ hMoney area)
 
 ; Lowercase pret-name aliases onto pre-existing UPPERCASE defs (CLAUDE.md: keep
