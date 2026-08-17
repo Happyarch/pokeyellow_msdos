@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global Mansion1CheckReplaceSwitchDoorBlocks
 global Mansion1LoadEmptyFloorTileBlock
@@ -29,23 +30,15 @@ global Mansion1ReplaceBlock
 global PokemonMansion1FScientistText
 global PokemonMansion1F_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern Mansion1Script_Switches   ; NOT YET DEFINED IN THE PORT
 extern Mansion1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion1FScientistAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion1FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion1FScientistEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion1FSwitchText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion1F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
@@ -55,19 +48,9 @@ extern _PokemonMansion1FSwitchNotPressedText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonMansion1FSwitchPressedText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonMansion1FSwitchText   ; NOT YET DEFINED IN THE PORT
 
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_POKEMONMANSION1F_DEFAULT                equ 0
-SCRIPT_POKEMONMANSION1F_START_BATTLE           equ 1
-SCRIPT_POKEMONMANSION1F_END_BATTLE             equ 2
-TEXT_POKEMONMANSION1F_SCIENTIST                equ 1
-TEXT_POKEMONMANSION1F_ESCAPE_ROPE              equ 2
-TEXT_POKEMONMANSION1F_CARBOS                   equ 3
-TEXT_POKEMONMANSION1F_SWITCH                   equ 4
-
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
 wPokemonMansion1FCurScript                     equ 0xD639
-wSpritePlayerStateData1FacingDirection         equ 0xC109
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -128,19 +111,16 @@ Mansion1ReplaceBlock:
     call ReplaceTileBlock
     ret
 
-; ---------------------------------------------------------------------------
-; Mansion1Script_Switches (scripts/PokemonMansion1F.asm:49-56) — Tier-1 data: Mansion1Script_Switches is generated into assets/hidden_events.inc.
+; Mansion1Script_Switches (scripts/PokemonMansion1F.asm:49-56) — not re-emitted: Mansion1Script_Switches is already defined elsewhere in the port.
 
-; ---------------------------------------------------------------------------
-; PokemonMansion1F_ScriptPointers (scripts/PokemonMansion1F.asm:59-75) — Tier-1 data: Mansion1TrainerHeaders is generated into assets/trainer_headers.inc.
+; PokemonMansion1F_ScriptPointers (scripts/PokemonMansion1F.asm:59-75) — not re-emitted: Mansion1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 PokemonMansion1FScientistText:
     mov esi, Mansion1TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PokemonMansion1FScientistBattleText (scripts/PokemonMansion1F.asm:84-93) — Tier-1 data: PokemonMansion1FScientistBattleText is generated into assets/trainer_headers.inc.
+; PokemonMansion1FScientistBattleText (scripts/PokemonMansion1F.asm:84-93) — not re-emitted: PokemonMansion1FScientistBattleText is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[event-byte-assembly-state] PokemonMansion1FSwitchText (scripts/PokemonMansion1F.asm:97-114) — at scripts/PokemonMansion1F.asm:113: ResetEventReuseHL EVENT_MANSION_SWITCH_ON

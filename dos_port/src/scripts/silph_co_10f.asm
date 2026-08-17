@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global SilphCo10FGateCallbackScript
 global SilphCo10FRocketText
@@ -27,40 +28,19 @@ global SilphCo10FScientistText
 global SilphCo10F_Script
 global SilphCo10F_SetUnlockedSilphCoDoorsScript
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10FRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10FRocketEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10FScientistAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10FScientistEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10FSilphWorkerFText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo10F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo10TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_SILPHCO10F_DEFAULT                      equ 0
-SCRIPT_SILPHCO10F_START_BATTLE                 equ 1
-SCRIPT_SILPHCO10F_END_BATTLE                   equ 2
-TEXT_SILPHCO10F_ROCKET                         equ 1
-TEXT_SILPHCO10F_SCIENTIST                      equ 2
-TEXT_SILPHCO10F_SILPH_WORKER_F                 equ 3
-TEXT_SILPHCO10F_TM_EARTHQUAKE                  equ 4
-TEXT_SILPHCO10F_RARE_CANDY                     equ 5
-TEXT_SILPHCO10F_CARBOS                         equ 6
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -118,8 +98,7 @@ SilphCo10F_SetUnlockedSilphCoDoorsScript:
     SetEvent EVENT_SILPH_CO_10_UNLOCKED_DOOR
     ret
 
-; ---------------------------------------------------------------------------
-; SilphCo10F_ScriptPointers (scripts/SilphCo10F.asm:38-58) — Tier-1 data: SilphCo10TrainerHeaders is generated into assets/trainer_headers.inc.
+; SilphCo10F_ScriptPointers (scripts/SilphCo10F.asm:38-58) — not re-emitted: SilphCo10TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 SilphCo10FRocketText:
     mov esi, SilphCo10TrainerHeader0
@@ -143,5 +122,4 @@ SilphCo10FScientistText:
 ; PRET| 	call PrintText
 ; PRET| 	jp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo10FSilphWorkerFText.ImScaredText (scripts/SilphCo10F.asm:83-112) — Tier-1 data: SilphCo10FRocketBattleText is generated into assets/trainer_headers.inc.
+; SilphCo10FSilphWorkerFText.ImScaredText (scripts/SilphCo10F.asm:83-112) — not re-emitted: SilphCo10FRocketBattleText is already defined in assets/trainer_headers.inc.

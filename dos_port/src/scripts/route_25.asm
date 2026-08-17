@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global Route25CooltrainerF1Text
 global Route25CooltrainerF2Text
@@ -32,32 +33,9 @@ global Route25Youngster2Text
 global Route25Youngster3Text
 global Route25_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
-extern Route25BillSignText   ; NOT YET DEFINED IN THE PORT
-extern Route25CooltrainerF1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25CooltrainerF1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25CooltrainerF2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25CooltrainerF2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25CooltrainerMAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25CooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25CooltrainerMEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Hiker1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Hiker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Hiker1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Hiker2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Hiker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Hiker2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Hiker3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Hiker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Hiker3EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route25ToggleBillsScript   ; NOT YET DEFINED IN THE PORT
 extern Route25TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route25TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -69,36 +47,11 @@ extern Route25TrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern Route25TrainerHeader7   ; NOT YET DEFINED IN THE PORT
 extern Route25TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route25TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route25Youngster1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route25Youngster1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Youngster1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Youngster2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Youngster2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Youngster2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Youngster3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Youngster3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route25Youngster3EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route25_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern Route25_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROUTE25_DEFAULT                         equ 0
-SCRIPT_ROUTE25_START_BATTLE                    equ 1
-SCRIPT_ROUTE25_END_BATTLE                      equ 2
-TEXT_ROUTE25_YOUNGSTER1                        equ 1
-TEXT_ROUTE25_YOUNGSTER2                        equ 2
-TEXT_ROUTE25_COOLTRAINER_M                     equ 3
-TEXT_ROUTE25_COOLTRAINER_F1                    equ 4
-TEXT_ROUTE25_YOUNGSTER3                        equ 5
-TEXT_ROUTE25_COOLTRAINER_F2                    equ 6
-TEXT_ROUTE25_HIKER1                            equ 7
-TEXT_ROUTE25_HIKER2                            equ 8
-TEXT_ROUTE25_HIKER3                            equ 9
-TEXT_ROUTE25_TM_SEISMIC_TOSS                   equ 10
-TEXT_ROUTE25_BILL_SIGN                         equ 11
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -166,8 +119,7 @@ Route25_Script:
 ; PRET| .done
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; Route25_ScriptPointers (scripts/Route25.asm:49-88) — Tier-1 data: Route25TrainerHeaders is generated into assets/trainer_headers.inc.
+; Route25_ScriptPointers (scripts/Route25.asm:49-88) — not re-emitted: Route25TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 Route25Youngster1Text:
     mov esi, Route25TrainerHeader0
@@ -214,5 +166,4 @@ Route25Hiker3Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route25Youngster1BattleText (scripts/Route25.asm:145-254) — Tier-1 data: Route25Youngster1BattleText is generated into assets/trainer_headers.inc.
+; Route25Youngster1BattleText (scripts/Route25.asm:145-254) — not re-emitted: Route25Youngster1BattleText is already defined in assets/trainer_headers.inc.

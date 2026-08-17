@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global PokemonTower6FChanneler1Text
 global PokemonTower6FChanneler2Text
@@ -42,18 +43,8 @@ extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6FBeGoneText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6FChanneler1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6FChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6FChanneler1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6FChanneler2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6FChanneler2BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6FChanneler2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6FChanneler3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6FChanneler3BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower6FChanneler3EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6FGhostWasCubonesMotherText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6FSoulWasCalmedText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower6F_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -71,11 +62,6 @@ extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
 SCRIPT_POKEMONTOWER6F_DEFAULT                  equ 0
 SCRIPT_POKEMONTOWER6F_PLAYER_MOVING            equ 3
 SCRIPT_POKEMONTOWER6F_MAROWAK_BATTLE           equ 4
-TEXT_POKEMONTOWER6F_CHANNELER1                 equ 1
-TEXT_POKEMONTOWER6F_CHANNELER2                 equ 2
-TEXT_POKEMONTOWER6F_CHANNELER3                 equ 3
-TEXT_POKEMONTOWER6F_RARE_CANDY                 equ 4
-TEXT_POKEMONTOWER6F_X_ACCURACY                 equ 5
 TEXT_POKEMONTOWER6F_BEGONE                     equ 6
 TEXT_POKEMONTOWER6F_MAROWAK_DEPARTED           equ 7
 
@@ -192,8 +178,7 @@ PokemonTower6FPlayerMovingScript:
     mov [ebp + wCurMapScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; PokemonTower6F_TextPointers (scripts/PokemonTower6F.asm:100-117) — Tier-1 data: PokemonTower6TrainerHeaders is generated into assets/trainer_headers.inc.
+; PokemonTower6F_TextPointers (scripts/PokemonTower6F.asm:100-117) — not re-emitted: PokemonTower6TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 PokemonTower6FChanneler1Text:
     mov esi, PokemonTower6TrainerHeader0
@@ -222,5 +207,4 @@ PokemonTower6FMarowakDepartedText:
     call PrintText
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PokemonTower6FGhostWasCubonesMotherText (scripts/PokemonTower6F.asm:151-196) — Tier-1 data: PokemonTower6FChanneler1BattleText is generated into assets/trainer_headers.inc.
+; PokemonTower6FGhostWasCubonesMotherText (scripts/PokemonTower6F.asm:151-196) — not re-emitted: PokemonTower6FChanneler1BattleText is already defined in assets/trainer_headers.inc.

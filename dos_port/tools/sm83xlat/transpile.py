@@ -148,16 +148,19 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
                 "detail": f"{owned[0]} is already defined in "
                           f"{R.symbol_include.get(owned[0], 'a generated asset')}",
                 "at": region.items[0].where, "lines": [lo, hi]})
+            # Deliberately NOT the full banner + verbatim pret dump the other
+            # bail paths emit. This region is Tier-1 data the port already
+            # generates, so nobody will ever hand-translate it: reproducing the
+            # pret source would be 5,975 lines of noise across 67 files (32% of
+            # all bails) describing work that does not exist. One line naming the
+            # owning asset is the whole useful content.
             out.lines.append("")
-            out.lines.append("; ---------------------------------------------------------------------------")
-            out.lines.append(f"; BAIL[owned-by-generated-assets] {region.name} "
-                             f"({f.path}:{lo}-{hi}) — "
-                             f"{R.symbol_include.get(owned[0], 'a generated asset')} "
-                             f"already defines {owned[0]}")
-            out.lines.append("; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.")
-            out.lines.append("; ---------------------------------------------------------------------------")
-            for n in range(lo, hi + 1):
-                out.lines.append("; PRET| " + _neutralise(pret_src[n - 1].rstrip()))
+            _owner = R.symbol_include.get(owned[0])
+            out.lines.append(
+                f"; {region.name} ({f.path}:{lo}-{hi}) — not re-emitted: "
+                + (f"{owned[0]} is already defined in {_owner}."
+                   if _owner else
+                   f"{owned[0]} is already defined elsewhere in the port."))
             continue
 
         for idx, it in enumerate(region.items):

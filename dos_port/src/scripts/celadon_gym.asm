@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global CeladonGymBeauty1Text
 global CeladonGymBeauty2Text
@@ -28,16 +29,11 @@ global CeladonGymCooltrainerF1Text
 global CeladonGymCooltrainerF2Text
 global CeladonGymCooltrainerF3Text
 global CeladonGymCooltrainerF4Text
+global CeladonGymErikaPostBattleScript
+global CeladonGymReceiveTM21
 global CeladonGymResetScripts
 global CeladonGym_ScriptPointers
 
-extern CeladonGymAfterBattleText2   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymAfterBattleText3   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymAfterBattleText4   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymAfterBattleText5   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymAfterBattleText6   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymAfterBattleText7   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymAfterBattleText8   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText2   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText3   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText4   ; NOT YET DEFINED IN THE PORT
@@ -45,17 +41,8 @@ extern CeladonGymBattleText5   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText6   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText7   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymBattleText8   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymEndBattleText2   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymEndBattleText3   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymEndBattleText4   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymEndBattleText5   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymEndBattleText6   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymEndBattleText7   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymEndBattleText8   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymErikaPostBattleScript   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymErikaText   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymRainbowBadgeInfoText   ; NOT YET DEFINED IN THE PORT
-extern CeladonGymReceiveTM21   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymReceivedTM21Text   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymTM21NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern CeladonGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -90,14 +77,6 @@ extern _CeladonGymReceivedTM21Text   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_CELADONGYM_ERIKA_POST_BATTLE            equ 3
-TEXT_CELADONGYM_ERIKA                          equ 1
-TEXT_CELADONGYM_COOLTRAINER_F1                 equ 2
-TEXT_CELADONGYM_BEAUTY1                        equ 3
-TEXT_CELADONGYM_COOLTRAINER_F2                 equ 4
-TEXT_CELADONGYM_BEAUTY2                        equ 5
-TEXT_CELADONGYM_COOLTRAINER_F3                 equ 6
-TEXT_CELADONGYM_BEAUTY3                        equ 7
-TEXT_CELADONGYM_COOLTRAINER_F4                 equ 8
 TEXT_CELADONGYM_RAINBOWBADGE_INFO              equ 9
 TEXT_CELADONGYM_RECEIVED_TM21                  equ 10
 TEXT_CELADONGYM_TM21_NO_ROOM                   equ 11
@@ -159,50 +138,41 @@ CeladonGym_ScriptPointers:
     dd EndTrainerBattle
     dd CeladonGymErikaPostBattleScript
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CeladonGymErikaPostBattleScript (scripts/CeladonGym.asm:40-58) — at scripts/CeladonGym.asm:53: .BagFull is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, CeladonGymResetScripts
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 
-; PRET| CeladonGymReceiveTM21:
-; PRET| 	ld a, TEXT_CELADONGYM_RAINBOWBADGE_INFO
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_BEAT_ERIKA
-; PRET| 	lb bc, TM_MEGA_DRAIN, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .BagFull
-; PRET| 	ld a, TEXT_CELADONGYM_RECEIVED_TM21
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_GOT_TM21
-; PRET| 	jr .gymVictory
+CeladonGymErikaPostBattleScript:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz CeladonGymResetScripts
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+CeladonGymReceiveTM21:
+    mov al, TEXT_CELADONGYM_RAINBOWBADGE_INFO
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    pushfd    ; SM83 form writes no flags
+        SetEvent EVENT_BEAT_ERIKA
+    popfd
+    mov bx, ((223) << 8) | (1)
+    call GiveItem
+    jae .BagFull
+    mov al, TEXT_CELADONGYM_RECEIVED_TM21
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    SetEvent EVENT_GOT_TM21
+    jmp .gymVictory
 
-; ---------------------------------------------------------------------------
-; BAIL[event-range-macro] CeladonGymReceiveTM21.BagFull (scripts/CeladonGym.asm:60-72) — at scripts/CeladonGym.asm:70: SetEventRange EVENT_BEAT_CELADON_GYM_TRAINER_0, EVENT_BEAT_CELADON_GYM_TRAINER_6
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, TEXT_CELADONGYM_TM21_NO_ROOM
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| .gymVictory
-; PRET| 	ld hl, wObtainedBadges
-; PRET| 	set BIT_RAINBOWBADGE, [hl]
-; PRET| 	ld hl, wBeatGymFlags
-; PRET| 	set BIT_RAINBOWBADGE, [hl]
-; PRET| 
-; PRET| 	; deactivate gym trainers
-; PRET| 	SetEventRange EVENT_BEAT_CELADON_GYM_TRAINER_0, EVENT_BEAT_CELADON_GYM_TRAINER_6
-; PRET| 
-; PRET| 	jp CeladonGymResetScripts
+.BagFull:
+    mov al, TEXT_CELADONGYM_TM21_NO_ROOM
+    mov [ebp + hTextID], al
+    call DisplayTextID
+.gymVictory:
+    mov esi, wObtainedBadges
+    or byte [ebp + esi], (1 << (3))
+    mov esi, wBeatGymFlags
+    or byte [ebp + esi], (1 << (3))
+    SetEventRange EVENT_BEAT_CELADON_GYM_TRAINER_0, EVENT_BEAT_CELADON_GYM_TRAINER_6
+    jmp CeladonGymResetScripts
 
-; ---------------------------------------------------------------------------
-; CeladonGym_TextPointers (scripts/CeladonGym.asm:75-104) — Tier-1 data: CeladonGymTrainerHeaders is generated into assets/trainer_headers.inc.
+; CeladonGym_TextPointers (scripts/CeladonGym.asm:75-104) — not re-emitted: CeladonGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] CeladonGymErikaText (scripts/CeladonGym.asm:108-114) — at scripts/CeladonGym.asm:109: .beforeBeat is defined in a region that bailed
@@ -282,53 +252,46 @@ CeladonGymCooltrainerF1Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; CeladonGymBattleText2 (scripts/CeladonGym.asm:173-182) — Tier-1 data: CeladonGymBattleText2 is generated into assets/trainer_headers.inc.
+; CeladonGymBattleText2 (scripts/CeladonGym.asm:173-182) — not re-emitted: CeladonGymBattleText2 is already defined in assets/trainer_headers.inc.
 
 CeladonGymBeauty1Text:
     mov esi, CeladonGymTrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; CeladonGymBattleText3 (scripts/CeladonGym.asm:191-200) — Tier-1 data: CeladonGymBattleText3 is generated into assets/trainer_headers.inc.
+; CeladonGymBattleText3 (scripts/CeladonGym.asm:191-200) — not re-emitted: CeladonGymBattleText3 is already defined in assets/trainer_headers.inc.
 
 CeladonGymCooltrainerF2Text:
     mov esi, CeladonGymTrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; CeladonGymBattleText4 (scripts/CeladonGym.asm:209-218) — Tier-1 data: CeladonGymBattleText4 is generated into assets/trainer_headers.inc.
+; CeladonGymBattleText4 (scripts/CeladonGym.asm:209-218) — not re-emitted: CeladonGymBattleText4 is already defined in assets/trainer_headers.inc.
 
 CeladonGymBeauty2Text:
     mov esi, CeladonGymTrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; CeladonGymBattleText5 (scripts/CeladonGym.asm:227-236) — Tier-1 data: CeladonGymBattleText5 is generated into assets/trainer_headers.inc.
+; CeladonGymBattleText5 (scripts/CeladonGym.asm:227-236) — not re-emitted: CeladonGymBattleText5 is already defined in assets/trainer_headers.inc.
 
 CeladonGymCooltrainerF3Text:
     mov esi, CeladonGymTrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; CeladonGymBattleText6 (scripts/CeladonGym.asm:245-254) — Tier-1 data: CeladonGymBattleText6 is generated into assets/trainer_headers.inc.
+; CeladonGymBattleText6 (scripts/CeladonGym.asm:245-254) — not re-emitted: CeladonGymBattleText6 is already defined in assets/trainer_headers.inc.
 
 CeladonGymBeauty3Text:
     mov esi, CeladonGymTrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; CeladonGymBattleText7 (scripts/CeladonGym.asm:263-272) — Tier-1 data: CeladonGymBattleText7 is generated into assets/trainer_headers.inc.
+; CeladonGymBattleText7 (scripts/CeladonGym.asm:263-272) — not re-emitted: CeladonGymBattleText7 is already defined in assets/trainer_headers.inc.
 
 CeladonGymCooltrainerF4Text:
     mov esi, CeladonGymTrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; CeladonGymBattleText8 (scripts/CeladonGym.asm:281-290) — Tier-1 data: CeladonGymBattleText8 is generated into assets/trainer_headers.inc.
+; CeladonGymBattleText8 (scripts/CeladonGym.asm:281-290) — not re-emitted: CeladonGymBattleText8 is already defined in assets/trainer_headers.inc.

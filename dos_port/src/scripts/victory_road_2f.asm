@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global VictoryRoad2FCooltrainerMText
 global VictoryRoad2FHikerText
@@ -37,32 +38,16 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern MoltresTrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FCheckBoulderEventScript   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FCooltrainerMAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FCooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FCooltrainerMEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FHikerAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FHikerBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FHikerEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FMoltresBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FReplaceTileBlockScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2FResetBoulderEventScript   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FSuperNerd1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FSuperNerd1BattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FSuperNerd1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FSuperNerd2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FSuperNerd2BattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FSuperNerd2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FSuperNerd3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FSuperNerd3BattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2FSuperNerd3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad2F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -70,21 +55,6 @@ extern VictoryRoad2TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_VICTORYROAD2F_HIKER                       equ 1
-TEXT_VICTORYROAD2F_SUPER_NERD1                 equ 2
-TEXT_VICTORYROAD2F_COOLTRAINER_M               equ 3
-TEXT_VICTORYROAD2F_SUPER_NERD2                 equ 4
-TEXT_VICTORYROAD2F_SUPER_NERD3                 equ 5
-TEXT_VICTORYROAD2F_MOLTRES                     equ 6
-TEXT_VICTORYROAD2F_TM_SUBMISSION               equ 7
-TEXT_VICTORYROAD2F_FULL_HEAL                   equ 8
-TEXT_VICTORYROAD2F_TM_MEGA_KICK                equ 9
-TEXT_VICTORYROAD2F_GUARD_SPEC                  equ 10
-TEXT_VICTORYROAD2F_BOULDER1                    equ 11
-TEXT_VICTORYROAD2F_BOULDER2                    equ 12
-TEXT_VICTORYROAD2F_BOULDER3                    equ 13
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -182,8 +152,7 @@ VictoryRoad2F_ScriptPointers:
 ; PRET| 	set BIT_CUR_MAP_LOADED_1, [hl]
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; VictoryRoad2FDefaultScript.SwitchCoords (scripts/VictoryRoad2F.asm:70-104) — Tier-1 data: VictoryRoad2TrainerHeaders is generated into assets/trainer_headers.inc.
+; VictoryRoad2FDefaultScript.SwitchCoords (scripts/VictoryRoad2F.asm:70-104) — not re-emitted: VictoryRoad2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 VictoryRoad2FHikerText:
     mov esi, VictoryRoad2TrainerHeader0
@@ -215,13 +184,11 @@ VictoryRoad2FMoltresText:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; VictoryRoad2FMoltresBattleText (scripts/VictoryRoad2F.asm:143-143) — Tier-1 data: VictoryRoad2FMoltresBattleText is generated into assets/trainer_headers.inc.
+; VictoryRoad2FMoltresBattleText (scripts/VictoryRoad2F.asm:143-143) — not re-emitted: VictoryRoad2FMoltresBattleText is already defined in assets/trainer_headers.inc.
 
     mov al, 73
     call PlayCry
     call WaitForSoundToFinish
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; VictoryRoad2FHikerBattleText (scripts/VictoryRoad2F.asm:151-208) — Tier-1 data: VictoryRoad2FHikerBattleText is generated into assets/trainer_headers.inc.
+; VictoryRoad2FHikerBattleText (scripts/VictoryRoad2F.asm:151-208) — not re-emitted: VictoryRoad2FHikerBattleText is already defined in assets/trainer_headers.inc.

@@ -20,17 +20,15 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global SilphCo9FRocket1Text
 global SilphCo9FRocket2Text
 global SilphCo9FScientistText
 global SilphCo9F_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
 extern Delay3   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern GBFadeInFromWhite   ; NOT YET DEFINED IN THE PORT
 extern GBFadeOutToWhite   ; NOT YET DEFINED IN THE PORT
@@ -42,34 +40,16 @@ extern SilphCo9FNurseDontGiveUpText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FNurseText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FNurseThankYouText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FNurseYouLookTiredText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FRocket1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FRocket1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FScientistAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9FScientistEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9F_SetUnlockedSilphCoDoorsScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo9F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern SilphCo9TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_SILPHCO9F_DEFAULT                       equ 0
-SCRIPT_SILPHCO9F_START_BATTLE                  equ 1
-SCRIPT_SILPHCO9F_END_BATTLE                    equ 2
-TEXT_SILPHCO9F_NURSE                           equ 1
-TEXT_SILPHCO9F_ROCKET1                         equ 2
-TEXT_SILPHCO9F_SCIENTIST                       equ 3
-TEXT_SILPHCO9F_ROCKET2                         equ 4
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -228,8 +208,7 @@ SilphCo9F_Script:
 ; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_9_UNLOCKED_DOOR4, EVENT_SILPH_CO_9_UNLOCKED_DOOR1
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; SilphCo9F_ScriptPointers (scripts/SilphCo9F.asm:122-142) — Tier-1 data: SilphCo9TrainerHeaders is generated into assets/trainer_headers.inc.
+; SilphCo9F_ScriptPointers (scripts/SilphCo9F.asm:122-142) — not re-emitted: SilphCo9TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[predef-leaves-id-in-a] SilphCo9FNurseText (scripts/SilphCo9F.asm:146-156) — at scripts/SilphCo9F.asm:150: predef HealParty
@@ -278,5 +257,4 @@ SilphCo9FRocket2Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo9FRocket1BattleText (scripts/SilphCo9F.asm:194-227) — Tier-1 data: SilphCo9FRocket1BattleText is generated into assets/trainer_headers.inc.
+; SilphCo9FRocket1BattleText (scripts/SilphCo9F.asm:194-227) — not re-emitted: SilphCo9FRocket1BattleText is already defined in assets/trainer_headers.inc.

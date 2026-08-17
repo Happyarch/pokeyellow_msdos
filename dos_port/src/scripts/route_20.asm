@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global Route20CooltrainerMText
 global Route20Swimmer1Text
@@ -33,46 +34,13 @@ global Route20Swimmer8Text
 global Route20Swimmer9Text
 global Route20_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern Route20BoulderScript   ; NOT YET DEFINED IN THE PORT
-extern Route20CooltrainerMAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20CooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20CooltrainerMEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route20HideObjectScript   ; NOT YET DEFINED IN THE PORT
-extern Route20SeafoamIslandsSignText   ; NOT YET DEFINED IN THE PORT
 extern Route20ShowObjectScript   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route20Swimmer1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer5AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer5EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer6AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer6BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer6EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer7AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer7BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer7EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer8AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer8BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer8EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer9AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer9BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route20Swimmer9EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -85,27 +53,9 @@ extern Route20TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeader9   ; NOT YET DEFINED IN THE PORT
 extern Route20TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route20_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern Route20_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROUTE20_DEFAULT                         equ 0
-SCRIPT_ROUTE20_START_BATTLE                    equ 1
-SCRIPT_ROUTE20_END_BATTLE                      equ 2
-TEXT_ROUTE20_SWIMMER1                          equ 1
-TEXT_ROUTE20_SWIMMER2                          equ 2
-TEXT_ROUTE20_SWIMMER3                          equ 3
-TEXT_ROUTE20_SWIMMER4                          equ 4
-TEXT_ROUTE20_SWIMMER5                          equ 5
-TEXT_ROUTE20_SWIMMER6                          equ 6
-TEXT_ROUTE20_COOLTRAINER_M                     equ 7
-TEXT_ROUTE20_SWIMMER7                          equ 8
-TEXT_ROUTE20_SWIMMER8                          equ 9
-TEXT_ROUTE20_SWIMMER9                          equ 10
-TEXT_ROUTE20_SEAFOAM_ISLANDS_WEST_SIGN         equ 11
-TEXT_ROUTE20_SEAFOAM_ISLANDS_EAST_SIGN         equ 12
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -188,8 +138,7 @@ Route20_Script:
 ; PRET| 	ld [wToggleableObjectIndex], a
 ; PRET| 	predef_jump HideObject
 
-; ---------------------------------------------------------------------------
-; Route20_ScriptPointers (scripts/Route20.asm:60-102) — Tier-1 data: Route20TrainerHeaders is generated into assets/trainer_headers.inc.
+; Route20_ScriptPointers (scripts/Route20.asm:60-102) — not re-emitted: Route20TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 Route20Swimmer1Text:
     mov esi, Route20TrainerHeader0
@@ -241,5 +190,4 @@ Route20Swimmer9Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route20Swimmer1BattleText (scripts/Route20.asm:165-286) — Tier-1 data: Route20Swimmer1BattleText is generated into assets/trainer_headers.inc.
+; Route20Swimmer1BattleText (scripts/Route20.asm:165-286) — not re-emitted: Route20Swimmer1BattleText is already defined in assets/trainer_headers.inc.

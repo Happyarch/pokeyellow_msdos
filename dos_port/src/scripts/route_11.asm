@@ -20,6 +20,8 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/map_script_tables.inc"
+%include "assets/trainer_headers.inc"
 
 global Route11Gambler1Text
 global Route11Gambler2Text
@@ -33,30 +35,14 @@ global Route11Youngster3Text
 global Route11Youngster4Text
 global Route11_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern Route11DiglettsCaveSignText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11Gambler1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11Gambler2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11Gambler3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler4AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11Gambler4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Gambler4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11SuperNerd1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11SuperNerd1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11SuperNerd1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11SuperNerd2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11SuperNerd2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11SuperNerd2EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route11TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route11TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -68,38 +54,13 @@ extern Route11TrainerHeader7   ; NOT YET DEFINED IN THE PORT
 extern Route11TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route11TrainerHeader9   ; NOT YET DEFINED IN THE PORT
 extern Route11TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11Youngster1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11Youngster2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11Youngster3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster4AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11Youngster4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route11Youngster4EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route11_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern Route11_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROUTE11_DEFAULT                         equ 0
-SCRIPT_ROUTE11_START_BATTLE                    equ 1
-SCRIPT_ROUTE11_END_BATTLE                      equ 2
-TEXT_ROUTE11_GAMBLER1                          equ 1
-TEXT_ROUTE11_GAMBLER2                          equ 2
-TEXT_ROUTE11_YOUNGSTER1                        equ 3
-TEXT_ROUTE11_SUPER_NERD1                       equ 4
-TEXT_ROUTE11_YOUNGSTER2                        equ 5
-TEXT_ROUTE11_GAMBLER3                          equ 6
-TEXT_ROUTE11_GAMBLER4                          equ 7
-TEXT_ROUTE11_YOUNGSTER3                        equ 8
-TEXT_ROUTE11_SUPER_NERD2                       equ 9
-TEXT_ROUTE11_YOUNGSTER4                        equ 10
-TEXT_ROUTE11_DIGLETTSCAVE_SIGN                 equ 11
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -120,85 +81,74 @@ Route11_Script:
     mov [ebp + wRoute11CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; Route11_ScriptPointers (scripts/Route11.asm:11-52) — Tier-1 data: Route11_ScriptPointers is generated into assets/map_script_tables.inc.
+; Route11_ScriptPointers (scripts/Route11.asm:11-52) — not re-emitted: Route11_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 Route11Gambler1Text:
     mov esi, Route11TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11Gambler1BattleText (scripts/Route11.asm:61-70) — Tier-1 data: Route11Gambler1BattleText is generated into assets/trainer_headers.inc.
+; Route11Gambler1BattleText (scripts/Route11.asm:61-70) — not re-emitted: Route11Gambler1BattleText is already defined in assets/trainer_headers.inc.
 
 Route11Gambler2Text:
     mov esi, Route11TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11Gambler2BattleText (scripts/Route11.asm:79-88) — Tier-1 data: Route11Gambler2BattleText is generated into assets/trainer_headers.inc.
+; Route11Gambler2BattleText (scripts/Route11.asm:79-88) — not re-emitted: Route11Gambler2BattleText is already defined in assets/trainer_headers.inc.
 
 Route11Youngster1Text:
     mov esi, Route11TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11Youngster1BattleText (scripts/Route11.asm:97-106) — Tier-1 data: Route11Youngster1BattleText is generated into assets/trainer_headers.inc.
+; Route11Youngster1BattleText (scripts/Route11.asm:97-106) — not re-emitted: Route11Youngster1BattleText is already defined in assets/trainer_headers.inc.
 
 Route11SuperNerd1Text:
     mov esi, Route11TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11SuperNerd1BattleText (scripts/Route11.asm:115-124) — Tier-1 data: Route11SuperNerd1BattleText is generated into assets/trainer_headers.inc.
+; Route11SuperNerd1BattleText (scripts/Route11.asm:115-124) — not re-emitted: Route11SuperNerd1BattleText is already defined in assets/trainer_headers.inc.
 
 Route11Youngster2Text:
     mov esi, Route11TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11Youngster2BattleText (scripts/Route11.asm:133-142) — Tier-1 data: Route11Youngster2BattleText is generated into assets/trainer_headers.inc.
+; Route11Youngster2BattleText (scripts/Route11.asm:133-142) — not re-emitted: Route11Youngster2BattleText is already defined in assets/trainer_headers.inc.
 
 Route11Gambler3Text:
     mov esi, Route11TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11Gambler3BattleText (scripts/Route11.asm:151-160) — Tier-1 data: Route11Gambler3BattleText is generated into assets/trainer_headers.inc.
+; Route11Gambler3BattleText (scripts/Route11.asm:151-160) — not re-emitted: Route11Gambler3BattleText is already defined in assets/trainer_headers.inc.
 
 Route11Gambler4Text:
     mov esi, Route11TrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11Gambler4BattleText (scripts/Route11.asm:169-178) — Tier-1 data: Route11Gambler4BattleText is generated into assets/trainer_headers.inc.
+; Route11Gambler4BattleText (scripts/Route11.asm:169-178) — not re-emitted: Route11Gambler4BattleText is already defined in assets/trainer_headers.inc.
 
 Route11Youngster3Text:
     mov esi, Route11TrainerHeader7
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11Youngster3BattleText (scripts/Route11.asm:187-196) — Tier-1 data: Route11Youngster3BattleText is generated into assets/trainer_headers.inc.
+; Route11Youngster3BattleText (scripts/Route11.asm:187-196) — not re-emitted: Route11Youngster3BattleText is already defined in assets/trainer_headers.inc.
 
 Route11SuperNerd2Text:
     mov esi, Route11TrainerHeader8
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11SuperNerd2BattleText (scripts/Route11.asm:205-214) — Tier-1 data: Route11SuperNerd2BattleText is generated into assets/trainer_headers.inc.
+; Route11SuperNerd2BattleText (scripts/Route11.asm:205-214) — not re-emitted: Route11SuperNerd2BattleText is already defined in assets/trainer_headers.inc.
 
 Route11Youngster4Text:
     mov esi, Route11TrainerHeader9
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route11Youngster4BattleText (scripts/Route11.asm:223-236) — Tier-1 data: Route11Youngster4BattleText is generated into assets/trainer_headers.inc.
+; Route11Youngster4BattleText (scripts/Route11.asm:223-236) — not re-emitted: Route11Youngster4BattleText is already defined in assets/trainer_headers.inc.

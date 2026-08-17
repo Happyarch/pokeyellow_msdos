@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global RockTunnel1FCooltrainerF1Text
 global RockTunnel1FCooltrainerF2Text
@@ -31,35 +32,10 @@ global RockTunnel1FSuperNerdText
 global RockTunnel1FTalkToTrainer
 global RockTunnel1F_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FCooltrainerF1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FCooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FCooltrainerF1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FCooltrainerF2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FCooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FCooltrainerF2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FCooltrainerF3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FCooltrainerF3BattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FCooltrainerF3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FHiker1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1FHiker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FHiker1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FHiker2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FHiker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FHiker2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FHiker3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FHiker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FHiker3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FSignText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FSuperNerdAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1FSuperNerdEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern RockTunnel1F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -70,19 +46,6 @@ extern RockTunnel1TrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern RockTunnel1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROCKTUNNEL1F_DEFAULT                    equ 0
-SCRIPT_ROCKTUNNEL1F_START_BATTLE               equ 1
-SCRIPT_ROCKTUNNEL1F_END_BATTLE                 equ 2
-TEXT_ROCKTUNNEL1F_HIKER1                       equ 1
-TEXT_ROCKTUNNEL1F_HIKER2                       equ 2
-TEXT_ROCKTUNNEL1F_HIKER3                       equ 3
-TEXT_ROCKTUNNEL1F_SUPER_NERD                   equ 4
-TEXT_ROCKTUNNEL1F_COOLTRAINER_F1               equ 5
-TEXT_ROCKTUNNEL1F_COOLTRAINER_F2               equ 6
-TEXT_ROCKTUNNEL1F_COOLTRAINER_F3               equ 7
-TEXT_ROCKTUNNEL1F_SIGN                         equ 8
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -103,8 +66,7 @@ RockTunnel1F_Script:
     mov [ebp + wRockTunnel1FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; RockTunnel1F_ScriptPointers (scripts/RockTunnel1F.asm:11-43) — Tier-1 data: RockTunnel1TrainerHeaders is generated into assets/trainer_headers.inc.
+; RockTunnel1F_ScriptPointers (scripts/RockTunnel1F.asm:11-43) — not re-emitted: RockTunnel1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 RockTunnel1FHiker1Text:
     mov esi, RockTunnel1TrainerHeader0
@@ -136,5 +98,4 @@ RockTunnel1FTalkToTrainer:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; RockTunnel1FHiker1BattleText (scripts/RockTunnel1F.asm:83-168) — Tier-1 data: RockTunnel1FHiker1BattleText is generated into assets/trainer_headers.inc.
+; RockTunnel1FHiker1BattleText (scripts/RockTunnel1F.asm:83-168) — not re-emitted: RockTunnel1FHiker1BattleText is already defined in assets/trainer_headers.inc.

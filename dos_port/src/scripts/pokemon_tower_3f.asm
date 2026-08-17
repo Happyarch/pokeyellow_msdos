@@ -20,44 +20,23 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global PokemonTower3FChanneler1Text
 global PokemonTower3FChanneler2Text
 global PokemonTower3FChanneler3Text
 global PokemonTower3F_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3FChanneler1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3FChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3FChanneler1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3FChanneler2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3FChanneler2BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3FChanneler2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3FChanneler3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3FChanneler3BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3FChanneler3EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_POKEMONTOWER3F_DEFAULT                  equ 0
-SCRIPT_POKEMONTOWER3F_START_BATTLE             equ 1
-SCRIPT_POKEMONTOWER3F_END_BATTLE               equ 2
-TEXT_POKEMONTOWER3F_CHANNELER1                 equ 1
-TEXT_POKEMONTOWER3F_CHANNELER2                 equ 2
-TEXT_POKEMONTOWER3F_CHANNELER3                 equ 3
-TEXT_POKEMONTOWER3F_ESCAPE_ROPE                equ 4
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -78,8 +57,7 @@ PokemonTower3F_Script:
     mov [ebp + wPokemonTower3FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; PokemonTower3F_ScriptPointers (scripts/PokemonTower3F.asm:11-31) — Tier-1 data: PokemonTower3TrainerHeaders is generated into assets/trainer_headers.inc.
+; PokemonTower3F_ScriptPointers (scripts/PokemonTower3F.asm:11-31) — not re-emitted: PokemonTower3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 PokemonTower3FChanneler1Text:
     mov esi, PokemonTower3TrainerHeader0
@@ -96,5 +74,4 @@ PokemonTower3FChanneler3Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PokemonTower3FChanneler1BattleText (scripts/PokemonTower3F.asm:52-85) — Tier-1 data: PokemonTower3FChanneler1BattleText is generated into assets/trainer_headers.inc.
+; PokemonTower3FChanneler1BattleText (scripts/PokemonTower3F.asm:52-85) — not re-emitted: PokemonTower3FChanneler1BattleText is already defined in assets/trainer_headers.inc.

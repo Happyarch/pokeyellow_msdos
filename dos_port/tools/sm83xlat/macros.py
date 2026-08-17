@@ -224,13 +224,19 @@ _m("ResetEventReuseHL", CODE_EVENT, clobbers=("hl",), state_dependent=True)
 _m("ResetEventForceReuseHL", CODE_EVENT)
 _m("ResetEventAfterBranchReuseHL", CODE_EVENT, clobbers=("hl",), state_dependent=True)
 _m("ResetEvents", CODE_EVENT, clobbers=("hl",))
-# The Range forms expand to a variable-length run of ld/or/and driven by
-# assembly-time arithmetic on the two event indices. Modelling them means
-# reimplementing the macro; 9 sites total, so they are hand-work by design.
-_m("SetEventRange", CODE_EVENT, z="*", n="0", h="*", c="0", clobbers=("a", "hl"),
-   always_bail="event-range-macro")
-_m("ResetEventRange", CODE_EVENT, z="*", n="0", h="*", c="0", clobbers=("a", "hl"),
-   always_bail="event-range-macro")
+# The Range forms PASS THROUGH to the port's own macro. This row used to carry
+# always_bail="event-range-macro" with the note "modelling them means
+# reimplementing the macro; 9 sites total, so they are hand-work by design" —
+# true only if the port lacked the macro, and it does not:
+# dos_port/include/events.inc defines `%macro SetEventRange 2` /
+# `%macro ResetEventRange 2`, expanding to a per-event run of SetEvent/ResetEvent.
+# That reaches the same final memory state as pret's byte-wise or/and form by a
+# different instruction sequence, which is the port macro's business, not this
+# tool's — exactly as for SetEvent/ResetEvent, which have always passed through.
+# Not flag-transparent on either side (pret's clobbers A, writes Z, clears C), so
+# no preservation wrapper is warranted.
+_m("SetEventRange", CODE_EVENT, z="*", n="0", h="*", c="0", clobbers=("a", "hl"))
+_m("ResetEventRange", CODE_EVENT, z="*", n="0", h="*", c="0", clobbers=("a", "hl"))
 _m("EventFlagAddress", CODE_EVENT, note="ld <reg>, wEventFlags+n — no flags")
 _m("EventFlagAddressA", CODE_EVENT)
 _m("AEventFlagAddress", CODE_EVENT, clobbers=("a",))

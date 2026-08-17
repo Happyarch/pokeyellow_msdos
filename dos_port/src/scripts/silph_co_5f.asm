@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global SilphCo5FRockerText
 global SilphCo5FRocket1Text
@@ -27,34 +28,18 @@ global SilphCo5FRocket2Text
 global SilphCo5FScientistText
 global SilphCo5F_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5FGateCallbackScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FPokemonReport1Text   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FPokemonReport2Text   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FPokemonReport3Text   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FRockerAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5FRockerBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FRockerEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FRocket1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FRocket1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FScientistAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5FScientistEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5FSilphWorkerMText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5F_SetUnlockedSilphCoDoorsScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo5F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo5TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -65,22 +50,6 @@ extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo5FSilphWorkerMThatsYouRightText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo5FSilphWorkerMYoureOurHeroText   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_SILPHCO5F_DEFAULT                       equ 0
-SCRIPT_SILPHCO5F_START_BATTLE                  equ 1
-SCRIPT_SILPHCO5F_END_BATTLE                    equ 2
-TEXT_SILPHCO5F_SILPH_WORKER_M                  equ 1
-TEXT_SILPHCO5F_ROCKET1                         equ 2
-TEXT_SILPHCO5F_SCIENTIST                       equ 3
-TEXT_SILPHCO5F_ROCKER                          equ 4
-TEXT_SILPHCO5F_ROCKET2                         equ 5
-TEXT_SILPHCO5F_TM_TAKE_DOWN                    equ 6
-TEXT_SILPHCO5F_PROTEIN                         equ 7
-TEXT_SILPHCO5F_CARD_KEY                        equ 8
-TEXT_SILPHCO5F_POKEMON_REPORT1                 equ 9
-TEXT_SILPHCO5F_POKEMON_REPORT2                 equ 10
-TEXT_SILPHCO5F_POKEMON_REPORT3                 equ 11
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -174,8 +143,7 @@ SilphCo5F_Script:
 ; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_5_UNLOCKED_DOOR3, EVENT_SILPH_CO_5_UNLOCKED_DOOR1
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; SilphCo5F_ScriptPointers (scripts/SilphCo5F.asm:69-98) — Tier-1 data: SilphCo5TrainerHeaders is generated into assets/trainer_headers.inc.
+; SilphCo5F_ScriptPointers (scripts/SilphCo5F.asm:69-98) — not re-emitted: SilphCo5TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[host-pointer-in-16bit-reg] SilphCo5FSilphWorkerMText (scripts/SilphCo5F.asm:102-105) — at scripts/SilphCo5F.asm:103: de cannot hold the 32-bit address of .YoureOurHeroText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry
@@ -198,29 +166,25 @@ SilphCo5FRocket1Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo5FRocket1BattleText (scripts/SilphCo5F.asm:122-131) — Tier-1 data: SilphCo5FRocket1BattleText is generated into assets/trainer_headers.inc.
+; SilphCo5FRocket1BattleText (scripts/SilphCo5F.asm:122-131) — not re-emitted: SilphCo5FRocket1BattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo5FScientistText:
     mov esi, SilphCo5TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo5FScientistBattleText (scripts/SilphCo5F.asm:140-149) — Tier-1 data: SilphCo5FScientistBattleText is generated into assets/trainer_headers.inc.
+; SilphCo5FScientistBattleText (scripts/SilphCo5F.asm:140-149) — not re-emitted: SilphCo5FScientistBattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo5FRockerText:
     mov esi, SilphCo5TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo5FRockerBattleText (scripts/SilphCo5F.asm:158-167) — Tier-1 data: SilphCo5FRockerBattleText is generated into assets/trainer_headers.inc.
+; SilphCo5FRockerBattleText (scripts/SilphCo5F.asm:158-167) — not re-emitted: SilphCo5FRockerBattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo5FRocket2Text:
     mov esi, SilphCo5TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo5FRocket2BattleText (scripts/SilphCo5F.asm:176-197) — Tier-1 data: SilphCo5FRocket2BattleText is generated into assets/trainer_headers.inc.
+; SilphCo5FRocket2BattleText (scripts/SilphCo5F.asm:176-197) — not re-emitted: SilphCo5FRocket2BattleText is already defined in assets/trainer_headers.inc.

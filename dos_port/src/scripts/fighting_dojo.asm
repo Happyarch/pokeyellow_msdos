@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global FightingDojoBetterNotGetGreedyText
 global FightingDojoBlackbelt1Text
@@ -29,6 +30,7 @@ global FightingDojoBlackbelt4Text
 global FightingDojoDefaultScript
 global FightingDojoHitmonchanPokeBallText
 global FightingDojoHitmonleePokeBallText
+global FightingDojoKarateMasterPostBattleScript
 global FightingDojoResetScripts
 global FightingDojo_Script
 global FightingDojo_ScriptPointers
@@ -41,19 +43,10 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoBlackbelt1BattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoBlackbelt2BattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoBlackbelt3BattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt4AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoBlackbelt4BattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoBlackbelt4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern FightingDojoKarateMasterPostBattleScript   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoKarateMasterText   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern FightingDojoTrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -79,15 +72,8 @@ extern _FightingDojoKarateMasterStayAndTrainWithUsText   ; NOT YET DEFINED IN TH
 extern _FightingDojoKarateMasterText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
-SCRIPT_FIGHTINGDOJO_DEFAULT                    equ 0
 SCRIPT_FIGHTINGDOJO_KARATE_MASTER_POST_BATTLE  equ 3
 TEXT_FIGHTINGDOJO_KARATE_MASTER                equ 1
-TEXT_FIGHTINGDOJO_BLACKBELT1                   equ 2
-TEXT_FIGHTINGDOJO_BLACKBELT2                   equ 3
-TEXT_FIGHTINGDOJO_BLACKBELT3                   equ 4
-TEXT_FIGHTINGDOJO_BLACKBELT4                   equ 5
-TEXT_FIGHTINGDOJO_HITMONLEE_POKE_BALL          equ 6
-TEXT_FIGHTINGDOJO_HITMONCHAN_POKE_BALL         equ 7
 TEXT_FIGHTINGDOJO_KARATE_MASTER_I_WILL_GIVE_YOU_A_POKEMON equ 8
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
@@ -166,38 +152,34 @@ FightingDojoDefaultScript:
     call DisplayTextID
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FightingDojoKarateMasterPostBattleScript (scripts/FightingDojo.asm:57-81) — at scripts/FightingDojo.asm:62: .already_facing is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, FightingDojoResetScripts
-; PRET| 	ld a, [wSavedCoordIndex]
-; PRET| 	and a ; nz if the player was at (4, 3), left of the Karate Master
-; PRET| 	jr z, .already_facing
-; PRET| 	ld a, PLAYER_DIR_RIGHT
-; PRET| 	ld [wPlayerMovingDirection], a
-; PRET| 	ld a, FIGHTINGDOJO_KARATE_MASTER
-; PRET| 	ldh [hSpriteIndex], a
-; PRET| 	ld a, SPRITE_FACING_LEFT
-; PRET| 	ldh [hSpriteFacingDirection], a
-; PRET| 	call SetSpriteFacingDirectionAndDelay
-; PRET| .already_facing
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	SetEventRange EVENT_BEAT_KARATE_MASTER, EVENT_BEAT_FIGHTING_DOJO_TRAINER_3
-; PRET| 	ld a, TEXT_FIGHTINGDOJO_KARATE_MASTER_I_WILL_GIVE_YOU_A_POKEMON
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	xor a ; SCRIPT_FIGHTINGDOJO_DEFAULT
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	ld [wFightingDojoCurScript], a
-; PRET| 	ld [wCurMapScript], a
-; PRET| 	ret
+FightingDojoKarateMasterPostBattleScript:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz FightingDojoResetScripts
+    mov al, [ebp + wSavedCoordIndex]
+    test al, al
+    jz .already_facing
+    mov al, PLAYER_DIR_RIGHT
+    mov [ebp + wPlayerMovingDirection], al
+    mov al, 1
+    mov [ebp + hSpriteIndex], al
+    mov al, SPRITE_FACING_LEFT
+    mov [ebp + hSpriteFacingDirection], al
+    call SetSpriteFacingDirectionAndDelay
+.already_facing:
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+    SetEventRange EVENT_BEAT_KARATE_MASTER, EVENT_BEAT_FIGHTING_DOJO_TRAINER_3
+    mov al, TEXT_FIGHTINGDOJO_KARATE_MASTER_I_WILL_GIVE_YOU_A_POKEMON
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    xor al, al
+    mov [ebp + wJoyIgnore], al
+    mov [ebp + wFightingDojoCurScript], al
+    mov [ebp + wCurMapScript], al
+    ret
 
-; ---------------------------------------------------------------------------
-; FightingDojo_TextPointers (scripts/FightingDojo.asm:84-104) — Tier-1 data: FightingDojoTrainerHeaders is generated into assets/trainer_headers.inc.
+; FightingDojo_TextPointers (scripts/FightingDojo.asm:84-104) — not re-emitted: FightingDojoTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[event-byte-assembly-state] FightingDojoKarateMasterText (scripts/FightingDojo.asm:108-127) — at scripts/FightingDojo.asm:110: CheckEventReuseA EVENT_BEAT_KARATE_MASTER
@@ -253,32 +235,28 @@ FightingDojoBlackbelt1Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FightingDojoBlackbelt1BattleText (scripts/FightingDojo.asm:161-170) — Tier-1 data: FightingDojoBlackbelt1BattleText is generated into assets/trainer_headers.inc.
+; FightingDojoBlackbelt1BattleText (scripts/FightingDojo.asm:161-170) — not re-emitted: FightingDojoBlackbelt1BattleText is already defined in assets/trainer_headers.inc.
 
 FightingDojoBlackbelt2Text:
     mov esi, FightingDojoTrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FightingDojoBlackbelt2BattleText (scripts/FightingDojo.asm:179-188) — Tier-1 data: FightingDojoBlackbelt2BattleText is generated into assets/trainer_headers.inc.
+; FightingDojoBlackbelt2BattleText (scripts/FightingDojo.asm:179-188) — not re-emitted: FightingDojoBlackbelt2BattleText is already defined in assets/trainer_headers.inc.
 
 FightingDojoBlackbelt3Text:
     mov esi, FightingDojoTrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FightingDojoBlackbelt3BattleText (scripts/FightingDojo.asm:197-206) — Tier-1 data: FightingDojoBlackbelt3BattleText is generated into assets/trainer_headers.inc.
+; FightingDojoBlackbelt3BattleText (scripts/FightingDojo.asm:197-206) — not re-emitted: FightingDojoBlackbelt3BattleText is already defined in assets/trainer_headers.inc.
 
 FightingDojoBlackbelt4Text:
     mov esi, FightingDojoTrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FightingDojoBlackbelt4BattleText (scripts/FightingDojo.asm:215-224) — Tier-1 data: FightingDojoBlackbelt4BattleText is generated into assets/trainer_headers.inc.
+; FightingDojoBlackbelt4BattleText (scripts/FightingDojo.asm:215-224) — not re-emitted: FightingDojoBlackbelt4BattleText is already defined in assets/trainer_headers.inc.
 
 FightingDojoHitmonleePokeBallText:
     CheckEitherEventSet EVENT_GOT_HITMONLEE, EVENT_GOT_HITMONCHAN

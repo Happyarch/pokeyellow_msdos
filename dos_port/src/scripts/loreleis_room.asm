@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global LoreleiEntranceCoords
 global LoreleiScriptWalkIntoRoom
@@ -41,10 +42,7 @@ extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern LoreleisRoomLoreleiAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern LoreleisRoomLoreleiBeforeBattleText   ; NOT YET DEFINED IN THE PORT
-extern LoreleisRoomLoreleiDontRunAwayText   ; NOT YET DEFINED IN THE PORT
-extern LoreleisRoomLoreleiEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern LoreleisRoomTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern LoreleisRoomTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern LoreleisRoom_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -197,13 +195,11 @@ LoreleisRoomLoreleiEndBattleScript:
     mov [ebp + hTextID], al
     jmp DisplayTextID
 
-; ---------------------------------------------------------------------------
-; LoreleisRoom_TextPointers (scripts/LoreleisRoom.asm:120-128) — Tier-1 data: LoreleisRoomTrainerHeaders is generated into assets/trainer_headers.inc.
+; LoreleisRoom_TextPointers (scripts/LoreleisRoom.asm:120-128) — not re-emitted: LoreleisRoomTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 LoreleisRoomLoreleiText:
     mov esi, LoreleisRoomTrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; LoreleisRoomLoreleiBeforeBattleText (scripts/LoreleisRoom.asm:137-150) — Tier-1 data: LoreleisRoomLoreleiBeforeBattleText is generated into assets/trainer_headers.inc.
+; LoreleisRoomLoreleiBeforeBattleText (scripts/LoreleisRoom.asm:137-150) — not re-emitted: LoreleisRoomLoreleiBeforeBattleText is already defined in assets/trainer_headers.inc.

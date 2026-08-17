@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global RocketHideoutB4FGiovanniHopeWeMeetAgainText
 global RocketHideoutB4FGiovanniText
@@ -57,7 +58,6 @@ extern GBFadeOutToBlack   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
 extern MoveSprite   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
 extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
@@ -65,10 +65,8 @@ extern RocketHideout4TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout4TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FBeatGiovanniScript   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FJessieJamesText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FRocketEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript11   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript4   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript5   ; NOT YET DEFINED IN THE PORT
@@ -76,7 +74,6 @@ extern RocketHideoutB4FScript6   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript7   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript_455a5   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FScript_ShowObject   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB4FText11   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
@@ -101,15 +98,6 @@ SCRIPT_ROCKETHIDEOUTB4F_SCRIPT8                equ 8
 SCRIPT_ROCKETHIDEOUTB4F_SCRIPT11               equ 11
 SCRIPT_ROCKETHIDEOUTB4F_SCRIPT12               equ 12
 SCRIPT_ROCKETHIDEOUTB4F_SCRIPT13               equ 13
-TEXT_ROCKETHIDEOUTB4F_GIOVANNI                 equ 1
-TEXT_ROCKETHIDEOUTB4F_JAMES                    equ 2
-TEXT_ROCKETHIDEOUTB4F_JESSIE                   equ 3
-TEXT_ROCKETHIDEOUTB4F_ROCKET                   equ 4
-TEXT_ROCKETHIDEOUTB4F_HP_UP                    equ 5
-TEXT_ROCKETHIDEOUTB4F_TM_RAZOR_WIND            equ 6
-TEXT_ROCKETHIDEOUTB4F_IRON                     equ 7
-TEXT_ROCKETHIDEOUTB4F_SILPH_SCOPE              equ 8
-TEXT_ROCKETHIDEOUTB4F_LIFT_KEY                 equ 9
 TEXT_ROCKETHIDEOUTB4F_GIOVANNI_HOPE_WE_MEET_AGAIN equ 10
 TEXT_ROCKETHIDEOUTB4F_TEXT11                   equ 11
 TEXT_ROCKETHIDEOUTB4F_TEXT12                   equ 12
@@ -440,8 +428,7 @@ RocketHideoutB4FScript_HideObject:
     call HideObject
     ret
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB4F_TextPointers (scripts/RocketHideoutB4F.asm:292-317) — Tier-1 data: RocketHideout4TrainerHeaders is generated into assets/trainer_headers.inc.
+; RocketHideoutB4F_TextPointers (scripts/RocketHideoutB4F.asm:292-317) — not re-emitted: RocketHideout4TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[predef-leaves-id-in-a] scripts/RocketHideoutB4F.asm:anon (scripts/RocketHideoutB4F.asm:319-330) — at scripts/RocketHideoutB4F.asm:327: predef EmotionBubble
@@ -516,8 +503,7 @@ RocketHideoutB4FRocketText:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB4FRocketBattleText (scripts/RocketHideoutB4F.asm:394-399) — Tier-1 data: RocketHideoutB4FRocketBattleText is generated into assets/trainer_headers.inc.
+; RocketHideoutB4FRocketBattleText (scripts/RocketHideoutB4F.asm:394-399) — not re-emitted: RocketHideoutB4FRocketBattleText is already defined in assets/trainer_headers.inc.
 
     SetEvent EVENT_ROCKET_DROPPED_LIFT_KEY
     mov al, 140
@@ -526,8 +512,7 @@ RocketHideoutB4FRocketText:
     call ShowObject
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB4FRocketAfterBattleText (scripts/RocketHideoutB4F.asm:409-411) — Tier-1 data: RocketHideoutB4FRocketAfterBattleText is generated into assets/trainer_headers.inc.
+; RocketHideoutB4FRocketAfterBattleText (scripts/RocketHideoutB4F.asm:409-411) — not re-emitted: RocketHideoutB4FRocketAfterBattleText is already defined in assets/trainer_headers.inc.
 
 .Text:
     text_far _RocketHideoutB4FRocketAfterBattleText

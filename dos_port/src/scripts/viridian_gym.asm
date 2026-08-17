@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global ViridianGymArrowMovement1
 global ViridianGymArrowMovement10
@@ -39,12 +40,14 @@ global ViridianGymCooltrainerM1Text
 global ViridianGymCooltrainerM2Text
 global ViridianGymCooltrainerM3Text
 global ViridianGymDefaultScript
+global ViridianGymGiovanniPostBattle
 global ViridianGymGuidePostBattleText
 global ViridianGymGuidePreBattleText
 global ViridianGymHiker1Text
 global ViridianGymHiker2Text
 global ViridianGymHiker3Text
 global ViridianGymPlayerSpinningScript
+global ViridianGymReceiveTM27
 global ViridianGymResetScripts
 global ViridianGymRocker1Text
 global ViridianGymRocker2Text
@@ -67,7 +70,6 @@ extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
 extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
 extern LoadSpinnerArrowTiles   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlaySound   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
@@ -76,38 +78,20 @@ extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymCooltrainerM1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymCooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymCooltrainerM1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymCooltrainerM2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymCooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymCooltrainerM2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymCooltrainerM3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymCooltrainerM3BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymCooltrainerM3EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymGiovanniEarthBadgeInfoText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymGiovanniPostBattle   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymGiovanniReceivedTM27Text   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymGiovanniTM27ExplanationText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymGiovanniTM27NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymGiovanniText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymGymGuideText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymHiker1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymHiker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymHiker1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymHiker2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymHiker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymHiker2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymHiker3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymHiker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymHiker3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymReceiveTM27   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymRocker1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymRocker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymRocker1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymRocker2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymRocker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern ViridianGymRocker2EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern ViridianGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -128,17 +112,6 @@ extern _ViridianGymGuidePreBattleText   ; NOT YET DEFINED IN THE PORT
 SCRIPT_VIRIDIANGYM_DEFAULT                     equ 0
 SCRIPT_VIRIDIANGYM_GIOVANNI_POST_BATTLE        equ 3
 SCRIPT_VIRIDIANGYM_PLAYER_SPINNING             equ 4
-TEXT_VIRIDIANGYM_GIOVANNI                      equ 1
-TEXT_VIRIDIANGYM_COOLTRAINER_M1                equ 2
-TEXT_VIRIDIANGYM_HIKER1                        equ 3
-TEXT_VIRIDIANGYM_ROCKER1                       equ 4
-TEXT_VIRIDIANGYM_HIKER2                        equ 5
-TEXT_VIRIDIANGYM_COOLTRAINER_M2                equ 6
-TEXT_VIRIDIANGYM_HIKER3                        equ 7
-TEXT_VIRIDIANGYM_ROCKER2                       equ 8
-TEXT_VIRIDIANGYM_COOLTRAINER_M3                equ 9
-TEXT_VIRIDIANGYM_GYM_GUIDE                     equ 10
-TEXT_VIRIDIANGYM_REVIVE                        equ 11
 TEXT_VIRIDIANGYM_GIOVANNI_EARTH_BADGE_INFO     equ 12
 TEXT_VIRIDIANGYM_GIOVANNI_RECEIVED_TM27        equ 13
 TEXT_VIRIDIANGYM_GIOVANNI_TM27_NO_ROOM         equ 14
@@ -291,54 +264,46 @@ ViridianGymPlayerSpinningScript:
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farjp; behavior=bank switch dropped, jmp goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     jmp LoadSpinnerArrowTiles
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] ViridianGymGiovanniPostBattle (scripts/ViridianGym.asm:132-150) — at scripts/ViridianGym.asm:145: .bag_full is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, ViridianGymResetScripts
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| ; fallthrough
-; PRET| ViridianGymReceiveTM27:
-; PRET| 	ld a, TEXT_VIRIDIANGYM_GIOVANNI_EARTH_BADGE_INFO
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_BEAT_VIRIDIAN_GYM_GIOVANNI
-; PRET| 	lb bc, TM_FISSURE, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .bag_full
-; PRET| 	ld a, TEXT_VIRIDIANGYM_GIOVANNI_RECEIVED_TM27
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_GOT_TM27
-; PRET| 	jr .gym_victory
+ViridianGymGiovanniPostBattle:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz ViridianGymResetScripts
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+ViridianGymReceiveTM27:
+    mov al, TEXT_VIRIDIANGYM_GIOVANNI_EARTH_BADGE_INFO
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    pushfd    ; SM83 form writes no flags
+        SetEvent EVENT_BEAT_VIRIDIAN_GYM_GIOVANNI
+    popfd
+    mov bx, ((229) << 8) | (1)
+    call GiveItem
+    jae .bag_full
+    mov al, TEXT_VIRIDIANGYM_GIOVANNI_RECEIVED_TM27
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    SetEvent EVENT_GOT_TM27
+    jmp .gym_victory
 
-; ---------------------------------------------------------------------------
-; BAIL[event-range-macro] ViridianGymReceiveTM27.bag_full (scripts/ViridianGym.asm:152-168) — at scripts/ViridianGym.asm:162: SetEventRange EVENT_BEAT_VIRIDIAN_GYM_TRAINER_0, EVENT_BEAT_VIRIDIAN_GYM_TRAINER_7
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, TEXT_VIRIDIANGYM_GIOVANNI_TM27_NO_ROOM
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| .gym_victory
-; PRET| 	ld hl, wObtainedBadges
-; PRET| 	set BIT_EARTHBADGE, [hl]
-; PRET| 	ld hl, wBeatGymFlags
-; PRET| 	set BIT_EARTHBADGE, [hl]
-; PRET| 
-; PRET| 	; deactivate gym trainers
-; PRET| 	SetEventRange EVENT_BEAT_VIRIDIAN_GYM_TRAINER_0, EVENT_BEAT_VIRIDIAN_GYM_TRAINER_7
-; PRET| 
-; PRET| 	ld a, TOGGLE_ROUTE_22_RIVAL_2
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef ShowObject
-; PRET| 	SetEvents EVENT_2ND_ROUTE22_RIVAL_BATTLE, EVENT_ROUTE22_RIVAL_WANTS_BATTLE
-; PRET| 	jp ViridianGymResetScripts
+.bag_full:
+    mov al, TEXT_VIRIDIANGYM_GIOVANNI_TM27_NO_ROOM
+    mov [ebp + hTextID], al
+    call DisplayTextID
+.gym_victory:
+    mov esi, wObtainedBadges
+    or byte [ebp + esi], (1 << (7))
+    mov esi, wBeatGymFlags
+    or byte [ebp + esi], (1 << (7))
+    SetEventRange EVENT_BEAT_VIRIDIAN_GYM_TRAINER_0, EVENT_BEAT_VIRIDIAN_GYM_TRAINER_7
+    mov al, 36
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
+    call ShowObject
+    SetEvents EVENT_2ND_ROUTE22_RIVAL_BATTLE, EVENT_ROUTE22_RIVAL_WANTS_BATTLE
+    jmp ViridianGymResetScripts
 
-; ---------------------------------------------------------------------------
-; ViridianGym_TextPointers (scripts/ViridianGym.asm:171-205) — Tier-1 data: ViridianGymTrainerHeaders is generated into assets/trainer_headers.inc.
+; ViridianGym_TextPointers (scripts/ViridianGym.asm:171-205) — not re-emitted: ViridianGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] ViridianGymGiovanniText (scripts/ViridianGym.asm:209-215) — at scripts/ViridianGym.asm:210: .beforeBeat is defined in a region that bailed
@@ -430,64 +395,56 @@ ViridianGymCooltrainerM1Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; ViridianGymCooltrainerM1BattleText (scripts/ViridianGym.asm:286-295) — Tier-1 data: ViridianGymCooltrainerM1BattleText is generated into assets/trainer_headers.inc.
+; ViridianGymCooltrainerM1BattleText (scripts/ViridianGym.asm:286-295) — not re-emitted: ViridianGymCooltrainerM1BattleText is already defined in assets/trainer_headers.inc.
 
 ViridianGymHiker1Text:
     mov esi, ViridianGymTrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; ViridianGymHiker1BattleText (scripts/ViridianGym.asm:304-313) — Tier-1 data: ViridianGymHiker1BattleText is generated into assets/trainer_headers.inc.
+; ViridianGymHiker1BattleText (scripts/ViridianGym.asm:304-313) — not re-emitted: ViridianGymHiker1BattleText is already defined in assets/trainer_headers.inc.
 
 ViridianGymRocker1Text:
     mov esi, ViridianGymTrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; ViridianGymRocker1BattleText (scripts/ViridianGym.asm:322-331) — Tier-1 data: ViridianGymRocker1BattleText is generated into assets/trainer_headers.inc.
+; ViridianGymRocker1BattleText (scripts/ViridianGym.asm:322-331) — not re-emitted: ViridianGymRocker1BattleText is already defined in assets/trainer_headers.inc.
 
 ViridianGymHiker2Text:
     mov esi, ViridianGymTrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; ViridianGymHiker2BattleText (scripts/ViridianGym.asm:340-349) — Tier-1 data: ViridianGymHiker2BattleText is generated into assets/trainer_headers.inc.
+; ViridianGymHiker2BattleText (scripts/ViridianGym.asm:340-349) — not re-emitted: ViridianGymHiker2BattleText is already defined in assets/trainer_headers.inc.
 
 ViridianGymCooltrainerM2Text:
     mov esi, ViridianGymTrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; ViridianGymCooltrainerM2BattleText (scripts/ViridianGym.asm:358-367) — Tier-1 data: ViridianGymCooltrainerM2BattleText is generated into assets/trainer_headers.inc.
+; ViridianGymCooltrainerM2BattleText (scripts/ViridianGym.asm:358-367) — not re-emitted: ViridianGymCooltrainerM2BattleText is already defined in assets/trainer_headers.inc.
 
 ViridianGymHiker3Text:
     mov esi, ViridianGymTrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; ViridianGymHiker3BattleText (scripts/ViridianGym.asm:376-385) — Tier-1 data: ViridianGymHiker3BattleText is generated into assets/trainer_headers.inc.
+; ViridianGymHiker3BattleText (scripts/ViridianGym.asm:376-385) — not re-emitted: ViridianGymHiker3BattleText is already defined in assets/trainer_headers.inc.
 
 ViridianGymRocker2Text:
     mov esi, ViridianGymTrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; ViridianGymRocker2BattleText (scripts/ViridianGym.asm:394-403) — Tier-1 data: ViridianGymRocker2BattleText is generated into assets/trainer_headers.inc.
+; ViridianGymRocker2BattleText (scripts/ViridianGym.asm:394-403) — not re-emitted: ViridianGymRocker2BattleText is already defined in assets/trainer_headers.inc.
 
 ViridianGymCooltrainerM3Text:
     mov esi, ViridianGymTrainerHeader7
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; ViridianGymCooltrainerM3BattleText (scripts/ViridianGym.asm:412-421) — Tier-1 data: ViridianGymCooltrainerM3BattleText is generated into assets/trainer_headers.inc.
+; ViridianGymCooltrainerM3BattleText (scripts/ViridianGym.asm:412-421) — not re-emitted: ViridianGymCooltrainerM3BattleText is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] ViridianGymGymGuideText (scripts/ViridianGym.asm:425-429) — at scripts/ViridianGym.asm:426: .afterBeat is defined in a region that bailed

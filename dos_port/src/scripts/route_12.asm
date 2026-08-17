@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global Route12CooltrainerMText
 global Route12Fisher1Text
@@ -41,34 +42,14 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
-extern Route12CooltrainerMAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12CooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12CooltrainerMEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12DefaultScript   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12Fisher1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12Fisher2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12Fisher3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher4AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12Fisher4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher5AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12Fisher5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12Fisher5EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12SignText   ; NOT YET DEFINED IN THE PORT
-extern Route12SnorlaxCalmedDownText   ; NOT YET DEFINED IN THE PORT
-extern Route12SnorlaxText   ; NOT YET DEFINED IN THE PORT
-extern Route12SnorlaxWokeUpText   ; NOT YET DEFINED IN THE PORT
-extern Route12SportFishingSignText   ; NOT YET DEFINED IN THE PORT
-extern Route12SuperNerdAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12SuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route12SuperNerdEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route12TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route12TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route12TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -85,18 +66,6 @@ extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROUTE12_DEFAULT                         equ 0
 SCRIPT_ROUTE12_SNORLAX_POST_BATTLE             equ 3
-TEXT_ROUTE12_SNORLAX                           equ 1
-TEXT_ROUTE12_FISHER1                           equ 2
-TEXT_ROUTE12_FISHER2                           equ 3
-TEXT_ROUTE12_COOLTRAINER_M                     equ 4
-TEXT_ROUTE12_SUPER_NERD                        equ 5
-TEXT_ROUTE12_FISHER3                           equ 6
-TEXT_ROUTE12_FISHER4                           equ 7
-TEXT_ROUTE12_FISHER5                           equ 8
-TEXT_ROUTE12_TM_PAY_DAY                        equ 9
-TEXT_ROUTE12_IRON                              equ 10
-TEXT_ROUTE12_SIGN                              equ 11
-TEXT_ROUTE12_SPORT_FISHING_SIGN                equ 12
 TEXT_ROUTE12_SNORLAX_WOKE_UP                   equ 13
 TEXT_ROUTE12_SNORLAX_CALMED_DOWN               equ 14
 
@@ -175,61 +144,53 @@ Route12SnorlaxPostBattleScript:
     mov [ebp + wCurMapScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; Route12_TextPointers (scripts/Route12.asm:65-109) — Tier-1 data: Route12TrainerHeaders is generated into assets/trainer_headers.inc.
+; Route12_TextPointers (scripts/Route12.asm:65-109) — not re-emitted: Route12TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 Route12Fisher1Text:
     mov esi, Route12TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route12Fisher1BattleText (scripts/Route12.asm:118-127) — Tier-1 data: Route12Fisher1BattleText is generated into assets/trainer_headers.inc.
+; Route12Fisher1BattleText (scripts/Route12.asm:118-127) — not re-emitted: Route12Fisher1BattleText is already defined in assets/trainer_headers.inc.
 
 Route12Fisher2Text:
     mov esi, Route12TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route12Fisher2BattleText (scripts/Route12.asm:136-145) — Tier-1 data: Route12Fisher2BattleText is generated into assets/trainer_headers.inc.
+; Route12Fisher2BattleText (scripts/Route12.asm:136-145) — not re-emitted: Route12Fisher2BattleText is already defined in assets/trainer_headers.inc.
 
 Route12CooltrainerMText:
     mov esi, Route12TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route12CooltrainerMBattleText (scripts/Route12.asm:154-163) — Tier-1 data: Route12CooltrainerMBattleText is generated into assets/trainer_headers.inc.
+; Route12CooltrainerMBattleText (scripts/Route12.asm:154-163) — not re-emitted: Route12CooltrainerMBattleText is already defined in assets/trainer_headers.inc.
 
 Route12SuperNerdText:
     mov esi, Route12TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route12SuperNerdBattleText (scripts/Route12.asm:172-181) — Tier-1 data: Route12SuperNerdBattleText is generated into assets/trainer_headers.inc.
+; Route12SuperNerdBattleText (scripts/Route12.asm:172-181) — not re-emitted: Route12SuperNerdBattleText is already defined in assets/trainer_headers.inc.
 
 Route12Fisher3Text:
     mov esi, Route12TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route12Fisher3BattleText (scripts/Route12.asm:190-199) — Tier-1 data: Route12Fisher3BattleText is generated into assets/trainer_headers.inc.
+; Route12Fisher3BattleText (scripts/Route12.asm:190-199) — not re-emitted: Route12Fisher3BattleText is already defined in assets/trainer_headers.inc.
 
 Route12Fisher4Text:
     mov esi, Route12TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route12Fisher4BattleText (scripts/Route12.asm:208-217) — Tier-1 data: Route12Fisher4BattleText is generated into assets/trainer_headers.inc.
+; Route12Fisher4BattleText (scripts/Route12.asm:208-217) — not re-emitted: Route12Fisher4BattleText is already defined in assets/trainer_headers.inc.
 
 Route12Fisher5Text:
     mov esi, Route12TrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route12Fisher5BattleText (scripts/Route12.asm:226-243) — Tier-1 data: Route12Fisher5BattleText is generated into assets/trainer_headers.inc.
+; Route12Fisher5BattleText (scripts/Route12.asm:226-243) — not re-emitted: Route12Fisher5BattleText is already defined in assets/trainer_headers.inc.

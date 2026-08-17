@@ -20,6 +20,8 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/map_script_tables.inc"
+%include "assets/trainer_headers.inc"
 
 global Route8CooltrainerF1Text
 global Route8CooltrainerF2Text
@@ -32,38 +34,17 @@ global Route8SuperNerd2Text
 global Route8SuperNerd3Text
 global Route8_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8CooltrainerF3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF4AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8CooltrainerF4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8CooltrainerF4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8Gambler1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8Gambler1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8Gambler1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8Gambler2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8Gambler2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8Gambler2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8SuperNerd1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8SuperNerd1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8SuperNerd1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8SuperNerd2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8SuperNerd2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8SuperNerd2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8SuperNerd3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8SuperNerd3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route8SuperNerd3EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route8TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route8TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route8TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -74,26 +55,9 @@ extern Route8TrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern Route8TrainerHeader7   ; NOT YET DEFINED IN THE PORT
 extern Route8TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route8TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route8UndergroundSignText   ; NOT YET DEFINED IN THE PORT
 extern Route8_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern Route8_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROUTE8_DEFAULT                          equ 0
-SCRIPT_ROUTE8_START_BATTLE                     equ 1
-SCRIPT_ROUTE8_END_BATTLE                       equ 2
-TEXT_ROUTE8_SUPER_NERD1                        equ 1
-TEXT_ROUTE8_GAMBLER1                           equ 2
-TEXT_ROUTE8_SUPER_NERD2                        equ 3
-TEXT_ROUTE8_COOLTRAINER_F1                     equ 4
-TEXT_ROUTE8_SUPER_NERD3                        equ 5
-TEXT_ROUTE8_COOLTRAINER_F2                     equ 6
-TEXT_ROUTE8_COOLTRAINER_F3                     equ 7
-TEXT_ROUTE8_GAMBLER2                           equ 8
-TEXT_ROUTE8_COOLTRAINER_F4                     equ 9
-TEXT_ROUTE8_UNDERGROUND_SIGN                   equ 10
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -114,77 +78,67 @@ Route8_Script:
     mov [ebp + wRoute8CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; Route8_ScriptPointers (scripts/Route8.asm:11-49) — Tier-1 data: Route8_ScriptPointers is generated into assets/map_script_tables.inc.
+; Route8_ScriptPointers (scripts/Route8.asm:11-49) — not re-emitted: Route8_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 Route8SuperNerd1Text:
     mov esi, Route8TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route8SuperNerd1BattleText (scripts/Route8.asm:58-67) — Tier-1 data: Route8SuperNerd1BattleText is generated into assets/trainer_headers.inc.
+; Route8SuperNerd1BattleText (scripts/Route8.asm:58-67) — not re-emitted: Route8SuperNerd1BattleText is already defined in assets/trainer_headers.inc.
 
 Route8Gambler1Text:
     mov esi, Route8TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route8Gambler1BattleText (scripts/Route8.asm:76-85) — Tier-1 data: Route8Gambler1BattleText is generated into assets/trainer_headers.inc.
+; Route8Gambler1BattleText (scripts/Route8.asm:76-85) — not re-emitted: Route8Gambler1BattleText is already defined in assets/trainer_headers.inc.
 
 Route8SuperNerd2Text:
     mov esi, Route8TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route8SuperNerd2BattleText (scripts/Route8.asm:94-103) — Tier-1 data: Route8SuperNerd2BattleText is generated into assets/trainer_headers.inc.
+; Route8SuperNerd2BattleText (scripts/Route8.asm:94-103) — not re-emitted: Route8SuperNerd2BattleText is already defined in assets/trainer_headers.inc.
 
 Route8CooltrainerF1Text:
     mov esi, Route8TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route8CooltrainerF1BattleText (scripts/Route8.asm:112-121) — Tier-1 data: Route8CooltrainerF1BattleText is generated into assets/trainer_headers.inc.
+; Route8CooltrainerF1BattleText (scripts/Route8.asm:112-121) — not re-emitted: Route8CooltrainerF1BattleText is already defined in assets/trainer_headers.inc.
 
 Route8SuperNerd3Text:
     mov esi, Route8TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route8SuperNerd3BattleText (scripts/Route8.asm:130-139) — Tier-1 data: Route8SuperNerd3BattleText is generated into assets/trainer_headers.inc.
+; Route8SuperNerd3BattleText (scripts/Route8.asm:130-139) — not re-emitted: Route8SuperNerd3BattleText is already defined in assets/trainer_headers.inc.
 
 Route8CooltrainerF2Text:
     mov esi, Route8TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route8CooltrainerF2BattleText (scripts/Route8.asm:148-157) — Tier-1 data: Route8CooltrainerF2BattleText is generated into assets/trainer_headers.inc.
+; Route8CooltrainerF2BattleText (scripts/Route8.asm:148-157) — not re-emitted: Route8CooltrainerF2BattleText is already defined in assets/trainer_headers.inc.
 
 Route8CooltrainerF3Text:
     mov esi, Route8TrainerHeader6
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route8CooltrainerF3BattleText (scripts/Route8.asm:166-175) — Tier-1 data: Route8CooltrainerF3BattleText is generated into assets/trainer_headers.inc.
+; Route8CooltrainerF3BattleText (scripts/Route8.asm:166-175) — not re-emitted: Route8CooltrainerF3BattleText is already defined in assets/trainer_headers.inc.
 
 Route8Gambler2Text:
     mov esi, Route8TrainerHeader7
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route8Gambler2BattleText (scripts/Route8.asm:184-193) — Tier-1 data: Route8Gambler2BattleText is generated into assets/trainer_headers.inc.
+; Route8Gambler2BattleText (scripts/Route8.asm:184-193) — not re-emitted: Route8Gambler2BattleText is already defined in assets/trainer_headers.inc.
 
 Route8CooltrainerF4Text:
     mov esi, Route8TrainerHeader8
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route8CooltrainerF4BattleText (scripts/Route8.asm:202-215) — Tier-1 data: Route8CooltrainerF4BattleText is generated into assets/trainer_headers.inc.
+; Route8CooltrainerF4BattleText (scripts/Route8.asm:202-215) — not re-emitted: Route8CooltrainerF4BattleText is already defined in assets/trainer_headers.inc.

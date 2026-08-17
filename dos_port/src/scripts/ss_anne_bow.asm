@@ -20,42 +20,22 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global SSAnneBowSailor2Text
 global SSAnneBowSailor3Text
 global SSAnneBow_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern SSAnne5TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SSAnne5TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SSAnne5TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern SSAnneBowCooltrainerMText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneBowSailor1Text   ; NOT YET DEFINED IN THE PORT
-extern SSAnneBowSailor2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SSAnneBowSailor2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneBowSailor2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneBowSailor3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SSAnneBowSailor3BattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneBowSailor3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneBowSuperNerdText   ; NOT YET DEFINED IN THE PORT
 extern SSAnneBow_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SSAnneBow_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_SSANNEBOW_DEFAULT                       equ 0
-SCRIPT_SSANNEBOW_START_BATTLE                  equ 1
-SCRIPT_SSANNEBOW_END_BATTLE                    equ 2
-TEXT_SSANNEBOW_SUPER_NERD                      equ 1
-TEXT_SSANNEBOW_SAILOR1                         equ 2
-TEXT_SSANNEBOW_COOLTRAINER_M                   equ 3
-TEXT_SSANNEBOW_SAILOR2                         equ 4
-TEXT_SSANNEBOW_SAILOR3                         equ 5
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -76,21 +56,18 @@ SSAnneBow_Script:
     mov [ebp + wSSAnneBowCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; SSAnneBow_ScriptPointers (scripts/SSAnneBow.asm:11-42) — Tier-1 data: SSAnne5TrainerHeaders is generated into assets/trainer_headers.inc.
+; SSAnneBow_ScriptPointers (scripts/SSAnneBow.asm:11-42) — not re-emitted: SSAnne5TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 SSAnneBowSailor2Text:
     mov esi, SSAnne5TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SSAnneBowSailor2BattleText (scripts/SSAnneBow.asm:51-60) — Tier-1 data: SSAnneBowSailor2BattleText is generated into assets/trainer_headers.inc.
+; SSAnneBowSailor2BattleText (scripts/SSAnneBow.asm:51-60) — not re-emitted: SSAnneBowSailor2BattleText is already defined in assets/trainer_headers.inc.
 
 SSAnneBowSailor3Text:
     mov esi, SSAnne5TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SSAnneBowSailor3BattleText (scripts/SSAnneBow.asm:69-78) — Tier-1 data: SSAnneBowSailor3BattleText is generated into assets/trainer_headers.inc.
+; SSAnneBowSailor3BattleText (scripts/SSAnneBow.asm:69-78) — not re-emitted: SSAnneBowSailor3BattleText is already defined in assets/trainer_headers.inc.

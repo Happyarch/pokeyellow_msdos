@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global BrunoEntranceCoords
 global BrunoScriptWalkIntoRoom
@@ -34,10 +35,7 @@ global BrunosRoom_ScriptPointers
 global ResetBrunoScript
 
 extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
-extern BrunoAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern BrunoBeforeBattleText   ; NOT YET DEFINED IN THE PORT
-extern BrunoEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern BrunosRoomBrunoDontRunAwayText   ; NOT YET DEFINED IN THE PORT
 extern BrunosRoomTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern BrunosRoomTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern BrunosRoom_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -195,13 +193,11 @@ BrunosRoomBrunoEndBattleScript:
     mov [ebp + hTextID], al
     jmp DisplayTextID
 
-; ---------------------------------------------------------------------------
-; BrunosRoom_TextPointers (scripts/BrunosRoom.asm:118-126) — Tier-1 data: BrunosRoomTrainerHeaders is generated into assets/trainer_headers.inc.
+; BrunosRoom_TextPointers (scripts/BrunosRoom.asm:118-126) — not re-emitted: BrunosRoomTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 BrunosRoomBrunoText:
     mov esi, BrunosRoomTrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BrunoBeforeBattleText (scripts/BrunosRoom.asm:135-148) — Tier-1 data: BrunoBeforeBattleText is generated into assets/trainer_headers.inc.
+; BrunoBeforeBattleText (scripts/BrunosRoom.asm:135-148) — not re-emitted: BrunoBeforeBattleText is already defined in assets/trainer_headers.inc.

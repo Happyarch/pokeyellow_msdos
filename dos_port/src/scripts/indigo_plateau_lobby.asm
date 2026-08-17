@@ -22,6 +22,7 @@ bits 32
 
 
 global IndigoPlateauLobbyChanseyText
+global IndigoPlateauLobby_Script
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
@@ -30,7 +31,6 @@ extern IndigoPlateauLobbyCooltrainerFText   ; NOT YET DEFINED IN THE PORT
 extern IndigoPlateauLobbyGymGuideText   ; NOT YET DEFINED IN THE PORT
 extern IndigoPlateauLobbyLinkReceptionistText   ; NOT YET DEFINED IN THE PORT
 extern IndigoPlateauLobbyNurseText   ; NOT YET DEFINED IN THE PORT
-extern IndigoPlateauLobby_Script   ; NOT YET DEFINED IN THE PORT
 extern IndigoPlateauLobby_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
@@ -50,24 +50,28 @@ TEXT_INDIGOPLATEAULOBBY_CHANSEY                equ 6
 ; separate section rebound every `.Text` to the wrong parent.
 section .text
 
-; ---------------------------------------------------------------------------
-; BAIL[event-range-macro] IndigoPlateauLobby_Script (scripts/IndigoPlateauLobby.asm:2-15) — at scripts/IndigoPlateauLobby.asm:14: ResetEventRange INDIGO_PLATEAU_EVENTS_START, EVENT_LANCES_ROOM_LOCK_DOOR
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call Serial_TryEstablishingExternallyClockedConnection
-; PRET| 	call EnableAutoTextBoxDrawing
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	bit BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	res BIT_CUR_MAP_LOADED_2, [hl]
-; PRET| 	ret z
-; PRET| 	ResetEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
-; PRET| 	; Reset Elite Four events if the player started challenging them before
-; PRET| 	ld hl, wElite4Flags
-; PRET| 	bit BIT_STARTED_ELITE_4, [hl]
-; PRET| 	res BIT_STARTED_ELITE_4, [hl]
-; PRET| 	ret z
-; PRET| 	ResetEventRange INDIGO_PLATEAU_EVENTS_START, EVENT_LANCES_ROOM_LOCK_DOOR
-; PRET| 	ret
+IndigoPlateauLobby_Script:
+    call Serial_TryEstablishingExternallyClockedConnection
+    call EnableAutoTextBoxDrawing
+    mov esi, wCurrentMapScriptFlags
+    test byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_2))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (BIT_CUR_MAP_LOADED_2)) & 0xFF
+    popfd
+    jnz .nr_7
+        ret
+.nr_7:
+    ResetEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
+    mov esi, wElite4Flags
+    test byte [ebp + esi], (1 << (1))
+    pushfd    ; SM83 form writes no flags
+        and byte [ebp + esi], ~(1 << (1)) & 0xFF
+    popfd
+    jnz .nr_13
+        ret
+.nr_13:
+    ResetEventRange INDIGO_PLATEAU_EVENTS_START, EVENT_LANCES_ROOM_LOCK_DOOR
+    ret
 
 ; ---------------------------------------------------------------------------
 ; BAIL[text-script-command-unported] IndigoPlateauLobby_TextPointers (scripts/IndigoPlateauLobby.asm:18-38) — at scripts/IndigoPlateauLobby.asm:27: script_pokecenter_nurse

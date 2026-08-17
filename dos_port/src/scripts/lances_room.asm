@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global LanceShowOrHideEntranceBlocks
 global LanceTriggerMovementCoords
@@ -43,9 +44,7 @@ extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern LancesRoomLanceAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern LancesRoomLanceBeforeBattleText   ; NOT YET DEFINED IN THE PORT
-extern LancesRoomLanceEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern LancesRoomTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern LancesRoomTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern LancesRoom_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -211,16 +210,14 @@ LancesRoomPlayerIsMovingScript:
     mov [ebp + wCurMapScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; LancesRoom_TextPointers (scripts/LancesRoom.asm:130-137) — Tier-1 data: LancesRoomTrainerHeaders is generated into assets/trainer_headers.inc.
+; LancesRoom_TextPointers (scripts/LancesRoom.asm:130-137) — not re-emitted: LancesRoomTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 LancesRoomLanceText:
     mov esi, LancesRoomTrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; LancesRoomLanceBeforeBattleText (scripts/LancesRoom.asm:146-154) — Tier-1 data: LancesRoomLanceBeforeBattleText is generated into assets/trainer_headers.inc.
+; LancesRoomLanceBeforeBattleText (scripts/LancesRoom.asm:146-154) — not re-emitted: LancesRoomLanceBeforeBattleText is already defined in assets/trainer_headers.inc.
 
     SetEvent EVENT_BEAT_LANCE
     jmp TextScriptEnd

@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global VictoryRoad1FCooltrainerFText
 global VictoryRoad1FCooltrainerMText
@@ -32,30 +33,14 @@ extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1FCooltrainerFAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1FCooltrainerFBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1FCooltrainerFEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1FCooltrainerMAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1FCooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1FCooltrainerMEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad1F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_VICTORYROAD1F_COOLTRAINER_F               equ 1
-TEXT_VICTORYROAD1F_COOLTRAINER_M               equ 2
-TEXT_VICTORYROAD1F_TM_SKY_ATTACK               equ 3
-TEXT_VICTORYROAD1F_RARE_CANDY                  equ 4
-TEXT_VICTORYROAD1F_BOULDER1                    equ 5
-TEXT_VICTORYROAD1F_BOULDER2                    equ 6
-TEXT_VICTORYROAD1F_BOULDER3                    equ 7
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -117,8 +102,7 @@ VictoryRoad1F_ScriptPointers:
 ; PRET| 	SetEvent EVENT_VICTORY_ROAD_1_BOULDER_ON_SWITCH
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; VictoryRoad1FDefaultScript.SwitchCoords (scripts/VictoryRoad1F.asm:42-61) — Tier-1 data: VictoryRoad1TrainerHeaders is generated into assets/trainer_headers.inc.
+; VictoryRoad1FDefaultScript.SwitchCoords (scripts/VictoryRoad1F.asm:42-61) — not re-emitted: VictoryRoad1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 VictoryRoad1FCooltrainerFText:
     mov esi, VictoryRoad1TrainerHeader0
@@ -130,5 +114,4 @@ VictoryRoad1FCooltrainerMText:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; VictoryRoad1FCooltrainerFBattleText (scripts/VictoryRoad1F.asm:76-97) — Tier-1 data: VictoryRoad1FCooltrainerFBattleText is generated into assets/trainer_headers.inc.
+; VictoryRoad1FCooltrainerFBattleText (scripts/VictoryRoad1F.asm:76-97) — not re-emitted: VictoryRoad1FCooltrainerFBattleText is already defined in assets/trainer_headers.inc.

@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global SilphCo7FRivalDefeatedText
 global SilphCo7FRivalGoodLuckToYouText
@@ -52,7 +53,6 @@ extern GivePokemon   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern MoveSprite   ; NOT YET DEFINED IN THE PORT
 extern Music_RivalAlternateStart   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
 extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
@@ -63,18 +63,10 @@ extern SetSpriteMovementBytesToFF   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRivalAfterBattleScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRivalExitScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FRocket1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FRocket1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FRocket3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FRocket3BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FRocket3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FScientistAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo7FScientistEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7FSilphWorkerM1Text   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7F_GateCallbackScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo7F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
@@ -109,20 +101,8 @@ extern _SilphCo7FSilphWorkerM4SafeAtLastText   ; NOT YET DEFINED IN THE PORT
 SCRIPT_SILPHCO7F_RIVAL_START_BATTLE            equ 3
 SCRIPT_SILPHCO7F_RIVAL_AFTER_BATTLE            equ 4
 SCRIPT_SILPHCO7F_RIVAL_EXIT                    equ 5
-TEXT_SILPHCO7F_SILPH_WORKER_M1                 equ 1
-TEXT_SILPHCO7F_SILPH_WORKER_M2                 equ 2
-TEXT_SILPHCO7F_SILPH_WORKER_M3                 equ 3
-TEXT_SILPHCO7F_SILPH_WORKER_M4                 equ 4
-TEXT_SILPHCO7F_ROCKET1                         equ 5
-TEXT_SILPHCO7F_SCIENTIST                       equ 6
-TEXT_SILPHCO7F_ROCKET2                         equ 7
-TEXT_SILPHCO7F_ROCKET3                         equ 8
 TEXT_SILPHCO7F_RIVAL                           equ 9
-TEXT_SILPHCO7F_CALCIUM                         equ 10
-TEXT_SILPHCO7F_TM_SWORDS_DANCE                 equ 11
-TEXT_SILPHCO7F_UNREFERENCED_ITEM               equ 12
 TEXT_SILPHCO7F_RIVAL_WAITED_HERE               equ 13
-TEXT_SILPHCO7F_RIVAL_DEFEATED                  equ 14
 TEXT_SILPHCO7F_RIVAL_GOOD_LUCK_TO_YOU          equ 15
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
@@ -420,8 +400,7 @@ SilphCo7FRivalStartBattleScript:
 ; PRET| 	ld [wJoyIgnore], a
 ; PRET| 	jp SilphCo7FSetCurScript
 
-; ---------------------------------------------------------------------------
-; SilphCo7F_TextPointers (scripts/SilphCo7F.asm:253-280) — Tier-1 data: SilphCo7TrainerHeaders is generated into assets/trainer_headers.inc.
+; SilphCo7F_TextPointers (scripts/SilphCo7F.asm:253-280) — not re-emitted: SilphCo7TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[bit-clobbers-live-carry] SilphCo7FSilphWorkerM1Text (scripts/SilphCo7F.asm:285-292) — at scripts/SilphCo7F.asm:286: bit BIT_GOT_LAPRAS, a
@@ -538,32 +517,28 @@ SilphCo7FRocket1Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo7FRocket1BattleText (scripts/SilphCo7F.asm:400-409) — Tier-1 data: SilphCo7FRocket1BattleText is generated into assets/trainer_headers.inc.
+; SilphCo7FRocket1BattleText (scripts/SilphCo7F.asm:400-409) — not re-emitted: SilphCo7FRocket1BattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo7FScientistText:
     mov esi, SilphCo7TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo7FScientistBattleText (scripts/SilphCo7F.asm:418-427) — Tier-1 data: SilphCo7FScientistBattleText is generated into assets/trainer_headers.inc.
+; SilphCo7FScientistBattleText (scripts/SilphCo7F.asm:418-427) — not re-emitted: SilphCo7FScientistBattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo7FRocket2Text:
     mov esi, SilphCo7TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo7FRocket2BattleText (scripts/SilphCo7F.asm:436-445) — Tier-1 data: SilphCo7FRocket2BattleText is generated into assets/trainer_headers.inc.
+; SilphCo7FRocket2BattleText (scripts/SilphCo7F.asm:436-445) — not re-emitted: SilphCo7FRocket2BattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo7FRocket3Text:
     mov esi, SilphCo7TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo7FRocket3BattleText (scripts/SilphCo7F.asm:454-463) — Tier-1 data: SilphCo7FRocket3BattleText is generated into assets/trainer_headers.inc.
+; SilphCo7FRocket3BattleText (scripts/SilphCo7F.asm:454-463) — not re-emitted: SilphCo7FRocket3BattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo7FRivalText:
     mov esi, .Text

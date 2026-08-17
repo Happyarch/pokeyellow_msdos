@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global PokemonTower5FChanneler2Text
 global PokemonTower5FChanneler3Text
@@ -39,24 +40,12 @@ extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern GBFadeInFromWhite   ; NOT YET DEFINED IN THE PORT
 extern GBFadeOutToWhite   ; NOT YET DEFINED IN THE PORT
 extern HealParty   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler1Text   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FChanneler2BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FChanneler3BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler4AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FChanneler4BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler5AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FChanneler5BattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FChanneler5EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5FPurifiedZoneCoords   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5FPurifiedZoneText   ; NOT YET DEFINED IN THE PORT
-extern PokemonTower5F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -66,12 +55,6 @@ extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
-TEXT_POKEMONTOWER5F_CHANNELER1                 equ 1
-TEXT_POKEMONTOWER5F_CHANNELER2                 equ 2
-TEXT_POKEMONTOWER5F_CHANNELER3                 equ 3
-TEXT_POKEMONTOWER5F_CHANNELER4                 equ 4
-TEXT_POKEMONTOWER5F_CHANNELER5                 equ 5
-TEXT_POKEMONTOWER5F_NUGGET                     equ 6
 TEXT_POKEMONTOWER5F_PURIFIEDZONE               equ 7
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
@@ -134,37 +117,32 @@ PokemonTower5F_ScriptPointers:
 ; PRET| 	ld [wJoyIgnore], a
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; PokemonTower5FPurifiedZoneCoords (scripts/PokemonTower5F.asm:46-76) — Tier-1 data: PokemonTower5TrainerHeaders is generated into assets/trainer_headers.inc.
+; PokemonTower5FPurifiedZoneCoords (scripts/PokemonTower5F.asm:46-76) — not re-emitted: PokemonTower5TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 PokemonTower5FChanneler2Text:
     mov esi, PokemonTower5TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PokemonTower5FChanneler2BattleText (scripts/PokemonTower5F.asm:85-94) — Tier-1 data: PokemonTower5FChanneler2BattleText is generated into assets/trainer_headers.inc.
+; PokemonTower5FChanneler2BattleText (scripts/PokemonTower5F.asm:85-94) — not re-emitted: PokemonTower5FChanneler2BattleText is already defined in assets/trainer_headers.inc.
 
 PokemonTower5FChanneler3Text:
     mov esi, PokemonTower5TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PokemonTower5FChanneler3BattleText (scripts/PokemonTower5F.asm:103-112) — Tier-1 data: PokemonTower5FChanneler3BattleText is generated into assets/trainer_headers.inc.
+; PokemonTower5FChanneler3BattleText (scripts/PokemonTower5F.asm:103-112) — not re-emitted: PokemonTower5FChanneler3BattleText is already defined in assets/trainer_headers.inc.
 
 PokemonTower5FChanneler4Text:
     mov esi, PokemonTower5TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PokemonTower5FChanneler4BattleText (scripts/PokemonTower5F.asm:121-130) — Tier-1 data: PokemonTower5FChanneler4BattleText is generated into assets/trainer_headers.inc.
+; PokemonTower5FChanneler4BattleText (scripts/PokemonTower5F.asm:121-130) — not re-emitted: PokemonTower5FChanneler4BattleText is already defined in assets/trainer_headers.inc.
 
 PokemonTower5FChanneler5Text:
     mov esi, PokemonTower5TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PokemonTower5FChanneler5BattleText (scripts/PokemonTower5F.asm:139-152) — Tier-1 data: PokemonTower5FChanneler5BattleText is generated into assets/trainer_headers.inc.
+; PokemonTower5FChanneler5BattleText (scripts/PokemonTower5F.asm:139-152) — not re-emitted: PokemonTower5FChanneler5BattleText is already defined in assets/trainer_headers.inc.

@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/map_dims.inc"
+%include "assets/trainer_headers.inc"
 
 global Mansion3CheckReplaceSwitchDoorBlocks
 global PokemonMansion3FScientistText
@@ -31,7 +32,6 @@ global PokemonMansion3F_ScriptPointers
 extern ArePlayerCoordsInArray   ; NOT YET DEFINED IN THE PORT
 extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
 extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
@@ -40,34 +40,17 @@ extern Mansion3Script_Switches   ; NOT YET DEFINED IN THE PORT
 extern Mansion3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Mansion3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion2FSwitchText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion3FDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion3FDiaryText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion3FScientistAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion3FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion3FScientistEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion3FSuperNerdAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion3FSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion3FSuperNerdEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_POKEMONMANSION3F_SUPER_NERD               equ 1
-TEXT_POKEMONMANSION3F_SCIENTIST                equ 2
-TEXT_POKEMONMANSION3F_MAX_POTION               equ 3
-TEXT_POKEMONMANSION3F_IRON                     equ 4
-TEXT_POKEMONMANSION3F_DIARY                    equ 5
-TEXT_POKEMONMANSION3F_SWITCH                   equ 6
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
 wCoordIndex                                    equ 0xCD3D
 wDungeonWarpDestinationMap                     equ 0xD71C
 wPokemonMansion3FCurScript                     equ 0xD63C
-wSpritePlayerStateData1FacingDirection         equ 0xC109
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -160,11 +143,9 @@ PokemonMansion3F_ScriptPointers:
 ; PRET| 	set BIT_DUNGEON_WARP, [hl]
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; Mansion3Script_Switches (scripts/PokemonMansion3F.asm:77-84) — Tier-1 data: Mansion3Script_Switches is generated into assets/hidden_events.inc.
+; Mansion3Script_Switches (scripts/PokemonMansion3F.asm:77-84) — not re-emitted: Mansion3Script_Switches is already defined elsewhere in the port.
 
-; ---------------------------------------------------------------------------
-; PokemonMansion3F_TextPointers (scripts/PokemonMansion3F.asm:87-101) — Tier-1 data: Mansion3TrainerHeaders is generated into assets/trainer_headers.inc.
+; PokemonMansion3F_TextPointers (scripts/PokemonMansion3F.asm:87-101) — not re-emitted: Mansion3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 PokemonMansion3FSuperNerdText:
     mov esi, Mansion3TrainerHeader0
@@ -176,5 +157,4 @@ PokemonMansion3FScientistText:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PokemonMansion3FSuperNerdBattleText (scripts/PokemonMansion3F.asm:116-141) — Tier-1 data: PokemonMansion3FSuperNerdBattleText is generated into assets/trainer_headers.inc.
+; PokemonMansion3FSuperNerdBattleText (scripts/PokemonMansion3F.asm:116-141) — not re-emitted: PokemonMansion3FSuperNerdBattleText is already defined in assets/trainer_headers.inc.

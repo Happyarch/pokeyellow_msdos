@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global SSAnne2FRoomsBeautyText
 global SSAnne2FRoomsBrunetteGirlText
@@ -39,29 +40,13 @@ global SSAnne2FRoomsPrintLittleBoyText
 global SSAnne2FRooms_Script
 
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
 extern DisableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern DisplayPokedex   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern LoadScreenTilesFromBuffer1   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsCooltrainerFAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsCooltrainerFBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsCooltrainerFEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsFisherAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsFisherBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsFisherEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsGentleman1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SSAnne2FRoomsGentleman1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsGentleman1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsGentleman2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsGentleman2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRoomsGentleman2EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SSAnne2FRooms_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SSAnne2FRooms_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SSAnne9TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SSAnne9TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SSAnne9TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -77,24 +62,6 @@ extern _SSAnne2FRoomsGentleman4Text   ; NOT YET DEFINED IN THE PORT
 extern _SSAnne2FRoomsGentleman5Text   ; NOT YET DEFINED IN THE PORT
 extern _SSAnne2FRoomsGrampsText   ; NOT YET DEFINED IN THE PORT
 extern _SSAnne2FRoomsLittleBoyText   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_SSANNE2FROOMS_DEFAULT                   equ 0
-SCRIPT_SSANNE2FROOMS_START_BATTLE              equ 1
-SCRIPT_SSANNE2FROOMS_END_BATTLE                equ 2
-TEXT_SSANNE2FROOMS_GENTLEMAN1                  equ 1
-TEXT_SSANNE2FROOMS_FISHER                      equ 2
-TEXT_SSANNE2FROOMS_GENTLEMAN2                  equ 3
-TEXT_SSANNE2FROOMS_COOLTRAINER_F               equ 4
-TEXT_SSANNE2FROOMS_GENTLEMAN3                  equ 5
-TEXT_SSANNE2FROOMS_MAX_ETHER                   equ 6
-TEXT_SSANNE2FROOMS_GENTLEMAN4                  equ 7
-TEXT_SSANNE2FROOMS_GRAMPS                      equ 8
-TEXT_SSANNE2FROOMS_RARE_CANDY                  equ 9
-TEXT_SSANNE2FROOMS_GENTLEMAN5                  equ 10
-TEXT_SSANNE2FROOMS_LITTLE_BOY                  equ 11
-TEXT_SSANNE2FROOMS_BRUNETTE_GIRL               equ 12
-TEXT_SSANNE2FROOMS_BEAUTY                      equ 13
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -115,8 +82,7 @@ SSAnne2FRooms_Script:
     mov [ebp + wSSAnne2FRoomsCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; SSAnne2FRooms_ScriptPointers (scripts/SSAnne2FRooms.asm:11-42) — Tier-1 data: SSAnne9TrainerHeaders is generated into assets/trainer_headers.inc.
+; SSAnne2FRooms_ScriptPointers (scripts/SSAnne2FRooms.asm:11-42) — not re-emitted: SSAnne9TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 SSAnne2FRoomsGentleman1Text:
     mov esi, SSAnne9TrainerHeader0
@@ -189,8 +155,7 @@ SSAnne2FRoomsBeautyText:
     call SSAnne2FRoomsPrintBeautyText
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SSAnne2FRoomsGentleman1BattleText (scripts/SSAnne2FRooms.asm:123-168) — Tier-1 data: SSAnne2FRoomsGentleman1BattleText is generated into assets/trainer_headers.inc.
+; SSAnne2FRoomsGentleman1BattleText (scripts/SSAnne2FRooms.asm:123-168) — not re-emitted: SSAnne2FRoomsGentleman1BattleText is already defined in assets/trainer_headers.inc.
 
 SSAnne2FRoomsPrintGentleman5Text:
     mov esi, .text

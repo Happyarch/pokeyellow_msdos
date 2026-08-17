@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global Route16Biker1Text
 global Route16Biker2Text
@@ -40,29 +41,12 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker5AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker5EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker6AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route16Biker6BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16Biker6EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route16CyclingRoadSignText   ; NOT YET DEFINED IN THE PORT
 extern Route16DefaultScript   ; NOT YET DEFINED IN THE PORT
-extern Route16SignText   ; NOT YET DEFINED IN THE PORT
-extern Route16SnorlaxReturnedToMountainsText   ; NOT YET DEFINED IN THE PORT
-extern Route16SnorlaxText   ; NOT YET DEFINED IN THE PORT
-extern Route16SnorlaxWokeUpText   ; NOT YET DEFINED IN THE PORT
 extern Route16TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route16TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route16TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -79,15 +63,6 @@ extern UpdateSprites   ; NOT YET DEFINED IN THE PORT
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROUTE16_DEFAULT                         equ 0
 SCRIPT_ROUTE16_SNORLAX_POST_BATTLE             equ 3
-TEXT_ROUTE16_BIKER1                            equ 1
-TEXT_ROUTE16_BIKER2                            equ 2
-TEXT_ROUTE16_BIKER3                            equ 3
-TEXT_ROUTE16_BIKER4                            equ 4
-TEXT_ROUTE16_BIKER5                            equ 5
-TEXT_ROUTE16_BIKER6                            equ 6
-TEXT_ROUTE16_SNORLAX                           equ 7
-TEXT_ROUTE16_CYCLING_ROAD_SIGN                 equ 8
-TEXT_ROUTE16_SIGN                              equ 9
 TEXT_ROUTE16_SNORLAX_WOKE_UP                   equ 10
 TEXT_ROUTE16_SNORLAX_RETURNED_TO_MOUNTAINS     equ 11
 
@@ -167,53 +142,46 @@ Route16SnorlaxPostBattleScript:
     mov [ebp + wCurMapScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; Route16_TextPointers (scripts/Route16.asm:66-93) — Tier-1 data: Route16TrainerHeaders is generated into assets/trainer_headers.inc.
+; Route16_TextPointers (scripts/Route16.asm:66-93) — not re-emitted: Route16TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 Route16Biker1Text:
     mov esi, Route16TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route16Biker1BattleText (scripts/Route16.asm:102-111) — Tier-1 data: Route16Biker1BattleText is generated into assets/trainer_headers.inc.
+; Route16Biker1BattleText (scripts/Route16.asm:102-111) — not re-emitted: Route16Biker1BattleText is already defined in assets/trainer_headers.inc.
 
 Route16Biker2Text:
     mov esi, Route16TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route16Biker2BattleText (scripts/Route16.asm:120-129) — Tier-1 data: Route16Biker2BattleText is generated into assets/trainer_headers.inc.
+; Route16Biker2BattleText (scripts/Route16.asm:120-129) — not re-emitted: Route16Biker2BattleText is already defined in assets/trainer_headers.inc.
 
 Route16Biker3Text:
     mov esi, Route16TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route16Biker3BattleText (scripts/Route16.asm:138-147) — Tier-1 data: Route16Biker3BattleText is generated into assets/trainer_headers.inc.
+; Route16Biker3BattleText (scripts/Route16.asm:138-147) — not re-emitted: Route16Biker3BattleText is already defined in assets/trainer_headers.inc.
 
 Route16Biker4Text:
     mov esi, Route16TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route16biker4BattleText (scripts/Route16.asm:156-165) — Tier-1 data: Route16biker4BattleText is generated into assets/trainer_headers.inc.
+; Route16biker4BattleText (scripts/Route16.asm:156-165) — not re-emitted: Route16biker4BattleText is already defined in assets/trainer_headers.inc.
 
 Route16Biker5Text:
     mov esi, Route16TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route16Biker5BattleText (scripts/Route16.asm:174-183) — Tier-1 data: Route16Biker5BattleText is generated into assets/trainer_headers.inc.
+; Route16Biker5BattleText (scripts/Route16.asm:174-183) — not re-emitted: Route16Biker5BattleText is already defined in assets/trainer_headers.inc.
 
 Route16Biker6Text:
     mov esi, Route16TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route16Biker6BattleText (scripts/Route16.asm:192-221) — Tier-1 data: Route16Biker6BattleText is generated into assets/trainer_headers.inc.
+; Route16Biker6BattleText (scripts/Route16.asm:192-221) — not re-emitted: Route16Biker6BattleText is already defined in assets/trainer_headers.inc.

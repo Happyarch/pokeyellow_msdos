@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global AgathaEntranceCoords
 global AgathaScriptWalkIntoRoom
@@ -33,10 +34,7 @@ global AgathasRoom_Script
 global AgathasRoom_ScriptPointers
 global ResetAgathaScript
 
-extern AgathaAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern AgathaBeforeBattleText   ; NOT YET DEFINED IN THE PORT
-extern AgathaEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern AgathasRoomAgathaDontRunAwayText   ; NOT YET DEFINED IN THE PORT
 extern AgathasRoomTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern AgathasRoomTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern AgathasRoom_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -200,13 +198,11 @@ AgathasRoomAgathaEndBattleScript:
     mov [ebp + wChampionsRoomCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; AgathasRoom_TextPointers (scripts/AgathasRoom.asm:121-129) — Tier-1 data: AgathasRoomTrainerHeaders is generated into assets/trainer_headers.inc.
+; AgathasRoom_TextPointers (scripts/AgathasRoom.asm:121-129) — not re-emitted: AgathasRoomTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 AgathasRoomAgathaText:
     mov esi, AgathasRoomTrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; AgathaBeforeBattleText (scripts/AgathasRoom.asm:138-151) — Tier-1 data: AgathaBeforeBattleText is generated into assets/trainer_headers.inc.
+; AgathaBeforeBattleText (scripts/AgathasRoom.asm:138-151) — not re-emitted: AgathaBeforeBattleText is already defined in assets/trainer_headers.inc.

@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global PewterGymBrockPostBattle
 global PewterGymCooltrainerMText
@@ -47,9 +48,7 @@ extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
 extern PewterGymBrockReceivedBoulderBadgeText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymBrockText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymBrockWaitTakeThisText   ; NOT YET DEFINED IN THE PORT
-extern PewterGymCooltrainerMAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymCooltrainerMBattleText   ; NOT YET DEFINED IN THE PORT
-extern PewterGymCooltrainerMEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymGuideText   ; NOT YET DEFINED IN THE PORT
 extern PewterGymReceivedTM34Text   ; NOT YET DEFINED IN THE PORT
 extern PewterGymTM34NoRoomText   ; NOT YET DEFINED IN THE PORT
@@ -75,9 +74,6 @@ extern _PewterGymReceivedTM34Text   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_PEWTERGYM_BROCK_POST_BATTLE             equ 3
-TEXT_PEWTERGYM_BROCK                           equ 1
-TEXT_PEWTERGYM_COOLTRAINER_M                   equ 2
-TEXT_PEWTERGYM_GYM_GUIDE                       equ 3
 TEXT_PEWTERGYM_BROCK_WAIT_TAKE_THIS            equ 4
 TEXT_PEWTERGYM_RECEIVED_TM34                   equ 5
 TEXT_PEWTERGYM_TM34_NO_ROOM                    equ 6
@@ -184,8 +180,7 @@ PewterGymScriptReceiveTM34:
     SetEvent EVENT_BEAT_PEWTER_GYM_TRAINER_0
     jmp PewterGymResetScripts
 
-; ---------------------------------------------------------------------------
-; PewterGym_TextPointers (scripts/PewterGym.asm:85-97) — Tier-1 data: PewterGymTrainerHeaders is generated into assets/trainer_headers.inc.
+; PewterGym_TextPointers (scripts/PewterGym.asm:85-97) — not re-emitted: PewterGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] PewterGymBrockText (scripts/PewterGym.asm:101-107) — at scripts/PewterGym.asm:102: .beforeBeat is defined in a region that bailed
@@ -269,8 +264,7 @@ PewterGymCooltrainerMText:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PewterGymCooltrainerMBattleText (scripts/PewterGym.asm:170-179) — Tier-1 data: PewterGymCooltrainerMBattleText is generated into assets/trainer_headers.inc.
+; PewterGymCooltrainerMBattleText (scripts/PewterGym.asm:170-179) — not re-emitted: PewterGymCooltrainerMBattleText is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] PewterGymGuideText (scripts/PewterGym.asm:183-197) — at scripts/PewterGym.asm:185: .afterBeat is defined in a region that bailed

@@ -413,7 +413,8 @@ class Emitter:
             raise Bail("event-byte-assembly-state", it.line.raw.strip())
 
         if name in ("CheckEvent", "SetEvent", "ResetEvent", "CheckAndSetEvent",
-                    "CheckAndResetEvent", "SetEvents", "ResetEvents"):
+                    "CheckAndResetEvent", "SetEvents", "ResetEvents",
+                    "SetEventRange", "ResetEventRange"):
             rendered = f"{name} {', '.join(self.expr(a, out) for a in args)}"
             # The port's SetEvent/ResetEvent macros are NOT flag-transparent
             # (they lower to `or`/`and`), while pret's are. Where a flag is live

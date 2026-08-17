@@ -20,6 +20,8 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/map_script_tables.inc"
+%include "assets/trainer_headers.inc"
 
 global Route15Beauty1Text
 global Route15Beauty2Text
@@ -34,43 +36,9 @@ global Route15CooltrainerM2Text
 global Route15TalkToTrainer
 global Route15_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
-extern Route15Beauty1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Beauty1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Beauty1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Beauty2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Beauty2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Beauty2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Biker1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Biker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Biker1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Biker2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Biker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15Biker2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route15CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerF4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerM1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerM1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerM2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15CooltrainerM2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route15SignText   ; NOT YET DEFINED IN THE PORT
 extern Route15TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route15TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route15TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -83,26 +51,8 @@ extern Route15TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route15TrainerHeader9   ; NOT YET DEFINED IN THE PORT
 extern Route15TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route15_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern Route15_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROUTE15_DEFAULT                         equ 0
-SCRIPT_ROUTE15_START_BATTLE                    equ 1
-SCRIPT_ROUTE15_END_BATTLE                      equ 2
-TEXT_ROUTE15_COOLTRAINER_F1                    equ 1
-TEXT_ROUTE15_COOLTRAINER_F2                    equ 2
-TEXT_ROUTE15_COOLTRAINER_M1                    equ 3
-TEXT_ROUTE15_COOLTRAINER_M2                    equ 4
-TEXT_ROUTE15_BEAUTY1                           equ 5
-TEXT_ROUTE15_BEAUTY2                           equ 6
-TEXT_ROUTE15_BIKER1                            equ 7
-TEXT_ROUTE15_BIKER2                            equ 8
-TEXT_ROUTE15_COOLTRAINER_F3                    equ 9
-TEXT_ROUTE15_COOLTRAINER_F4                    equ 10
-TEXT_ROUTE15_TM_RAGE                           equ 11
-TEXT_ROUTE15_SIGN                              equ 12
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -123,8 +73,7 @@ Route15_Script:
     mov [ebp + wRoute15CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; Route15_ScriptPointers (scripts/Route15.asm:11-53) — Tier-1 data: Route15_ScriptPointers is generated into assets/map_script_tables.inc.
+; Route15_ScriptPointers (scripts/Route15.asm:11-53) — not re-emitted: Route15_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 Route15CooltrainerF1Text:
     mov esi, Route15TrainerHeader0
@@ -168,5 +117,4 @@ Route15TalkToTrainer:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route15CooltrainerF1BattleText (scripts/Route15.asm:108-229) — Tier-1 data: Route15CooltrainerF1BattleText is generated into assets/trainer_headers.inc.
+; Route15CooltrainerF1BattleText (scripts/Route15.asm:108-229) — not re-emitted: Route15CooltrainerF1BattleText is already defined in assets/trainer_headers.inc.

@@ -20,6 +20,8 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/map_script_tables.inc"
+%include "assets/trainer_headers.inc"
 
 global Route21Fisher1Text
 global Route21Fisher2Text
@@ -32,38 +34,9 @@ global Route21Swimmer4Text
 global Route21Swimmer5Text
 global Route21_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route21Fisher1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Fisher4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer5AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route21Swimmer5EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route21TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route21TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route21TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -75,23 +48,8 @@ extern Route21TrainerHeader7   ; NOT YET DEFINED IN THE PORT
 extern Route21TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route21TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route21_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern Route21_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROUTE21_DEFAULT                         equ 0
-SCRIPT_ROUTE21_START_BATTLE                    equ 1
-SCRIPT_ROUTE21_END_BATTLE                      equ 2
-TEXT_ROUTE21_FISHER1                           equ 1
-TEXT_ROUTE21_FISHER2                           equ 2
-TEXT_ROUTE21_SWIMMER1                          equ 3
-TEXT_ROUTE21_SWIMMER2                          equ 4
-TEXT_ROUTE21_SWIMMER3                          equ 5
-TEXT_ROUTE21_SWIMMER4                          equ 6
-TEXT_ROUTE21_SWIMMER5                          equ 7
-TEXT_ROUTE21_FISHER3                           equ 8
-TEXT_ROUTE21_FISHER4                           equ 9
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -112,8 +70,7 @@ Route21_Script:
     mov [ebp + wRoute21CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; Route21_ScriptPointers (scripts/Route21.asm:11-48) — Tier-1 data: Route21_ScriptPointers is generated into assets/map_script_tables.inc.
+; Route21_ScriptPointers (scripts/Route21.asm:11-48) — not re-emitted: Route21_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 Route21Fisher1Text:
     mov esi, Route21TrainerHeader0
@@ -160,5 +117,4 @@ Route21Fisher4Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route21Fisher1BattleText (scripts/Route21.asm:105-210) — Tier-1 data: Route21Fisher1BattleText is generated into assets/trainer_headers.inc.
+; Route21Fisher1BattleText (scripts/Route21.asm:105-210) — not re-emitted: Route21Fisher1BattleText is already defined in assets/trainer_headers.inc.

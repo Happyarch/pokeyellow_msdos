@@ -1,10 +1,10 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
- "regions_lowered": 1739,
- "regions_bailed": 791,
+ "regions_lowered": 1753,
+ "regions_bailed": 777,
  "by_reason": {
   "owned-by-generated-assets": 255,
-  "target-region-bailed": 265,
+  "target-region-bailed": 258,
   "screen-coord-projection": 4,
   "inline-text-db": 11,
   "bit-clobbers-live-carry": 14,
@@ -12,7 +12,6 @@
   "predef-leaves-id-in-a": 27,
   "text-sound-command-unported": 49,
   "pikachu-table-index": 3,
-  "event-range-macro": 7,
   "hl-half-register-access": 9,
   "local-label-scope-collision": 13,
   "pointer-domain-unknown": 22,
@@ -94,10 +93,9 @@
    ]
   },
   "scripts/CeladonGym.asm": {
-   "ok_regions": 9,
-   "bailed_regions": 17,
+   "ok_regions": 11,
+   "bailed_regions": 15,
    "reasons": [
-    "event-range-macro",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed",
@@ -271,11 +269,10 @@
    ]
   },
   "scripts/CinnabarGym.asm": {
-   "ok_regions": 52,
-   "bailed_regions": 11,
+   "ok_regions": 54,
+   "bailed_regions": 9,
    "reasons": [
     "add-hl-r16",
-    "event-range-macro",
     "host-pointer-in-16bit-reg",
     "inline-text-db",
     "target-region-bailed",
@@ -371,12 +368,11 @@
    "reasons": []
   },
   "scripts/FightingDojo.asm": {
-   "ok_regions": 17,
-   "bailed_regions": 7,
+   "ok_regions": 18,
+   "bailed_regions": 6,
    "reasons": [
     "event-byte-assembly-state",
-    "owned-by-generated-assets",
-    "target-region-bailed"
+    "owned-by-generated-assets"
    ]
   },
   "scripts/FuchsiaBillsGrandpasHouse.asm": {
@@ -400,10 +396,9 @@
    ]
   },
   "scripts/FuchsiaGym.asm": {
-   "ok_regions": 9,
-   "bailed_regions": 17,
+   "ok_regions": 11,
+   "bailed_regions": 15,
    "reasons": [
-    "event-range-macro",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed",
@@ -461,10 +456,9 @@
    "reasons": []
   },
   "scripts/IndigoPlateauLobby.asm": {
-   "ok_regions": 1,
-   "bailed_regions": 2,
+   "ok_regions": 2,
+   "bailed_regions": 1,
    "reasons": [
-    "event-range-macro",
     "text-script-command-unported"
    ]
   },
@@ -1182,10 +1176,9 @@
    ]
   },
   "scripts/SaffronGym.asm": {
-   "ok_regions": 9,
-   "bailed_regions": 13,
+   "ok_regions": 11,
+   "bailed_regions": 11,
    "reasons": [
-    "event-range-macro",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed",
@@ -1505,10 +1498,9 @@
    ]
   },
   "scripts/VermilionGym.asm": {
-   "ok_regions": 9,
-   "bailed_regions": 14,
+   "ok_regions": 11,
+   "bailed_regions": 12,
    "reasons": [
-    "event-range-macro",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed",
@@ -1598,10 +1590,9 @@
    "reasons": []
   },
   "scripts/ViridianGym.asm": {
-   "ok_regions": 16,
-   "bailed_regions": 18,
+   "ok_regions": 18,
+   "bailed_regions": 16,
    "reasons": [
-    "event-range-macro",
     "inline-text-db",
     "owned-by-generated-assets",
     "target-region-bailed",
@@ -1655,7 +1646,7 @@
     "AgathasRoomTrainerHeader0"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "AgathasRoomTrainerHeaders is already defined in a generated asset",
+   "detail": "AgathasRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/AgathasRoom.asm:121",
    "lines": [
     121,
@@ -1672,7 +1663,7 @@
     "AgathasRoomAgathaDontRunAwayText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "AgathaBeforeBattleText is already defined in a generated asset",
+   "detail": "AgathaBeforeBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/AgathasRoom.asm:138",
    "lines": [
     138,
@@ -1967,7 +1958,7 @@
     "BrunosRoomTrainerHeader0"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "BrunosRoomTrainerHeaders is already defined in a generated asset",
+   "detail": "BrunosRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/BrunosRoom.asm:118",
    "lines": [
     118,
@@ -1984,7 +1975,7 @@
     "BrunosRoomBrunoDontRunAwayText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "BrunoBeforeBattleText is already defined in a generated asset",
+   "detail": "BrunoBeforeBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/BrunosRoom.asm:135",
    "lines": [
     135,
@@ -2158,36 +2149,6 @@
   },
   {
    "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymErikaPostBattleScript",
-   "labels": [
-    "CeladonGymErikaPostBattleScript",
-    "CeladonGymReceiveTM21"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".BagFull is defined in a region that bailed",
-   "at": "scripts/CeladonGym.asm:53",
-   "lines": [
-    40,
-    58
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymReceiveTM21.BagFull",
-   "labels": [
-    "CeladonGymReceiveTM21.BagFull",
-    "CeladonGymReceiveTM21.gymVictory"
-   ],
-   "reason": "event-range-macro",
-   "detail": "SetEventRange EVENT_BEAT_CELADON_GYM_TRAINER_0, EVENT_BEAT_CELADON_GYM_TRAINER_6",
-   "at": "scripts/CeladonGym.asm:70",
-   "lines": [
-    60,
-    72
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
    "region": "CeladonGym_TextPointers",
    "labels": [
     "CeladonGym_TextPointers",
@@ -2201,7 +2162,7 @@
     "CeladonGymTrainerHeader6"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymTrainerHeaders is already defined in a generated asset",
+   "detail": "CeladonGymTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeladonGym.asm:75",
    "lines": [
     75,
@@ -2279,7 +2240,7 @@
     "CeladonGymAfterBattleText2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText2 is already defined in a generated asset",
+   "detail": "CeladonGymBattleText2 is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeladonGym.asm:173",
    "lines": [
     173,
@@ -2295,7 +2256,7 @@
     "CeladonGymAfterBattleText3"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText3 is already defined in a generated asset",
+   "detail": "CeladonGymBattleText3 is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeladonGym.asm:191",
    "lines": [
     191,
@@ -2311,7 +2272,7 @@
     "CeladonGymAfterBattleText4"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText4 is already defined in a generated asset",
+   "detail": "CeladonGymBattleText4 is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeladonGym.asm:209",
    "lines": [
     209,
@@ -2327,7 +2288,7 @@
     "CeladonGymAfterBattleText5"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText5 is already defined in a generated asset",
+   "detail": "CeladonGymBattleText5 is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeladonGym.asm:227",
    "lines": [
     227,
@@ -2343,7 +2304,7 @@
     "CeladonGymAfterBattleText6"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText6 is already defined in a generated asset",
+   "detail": "CeladonGymBattleText6 is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeladonGym.asm:245",
    "lines": [
     245,
@@ -2359,7 +2320,7 @@
     "CeladonGymAfterBattleText7"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText7 is already defined in a generated asset",
+   "detail": "CeladonGymBattleText7 is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeladonGym.asm:263",
    "lines": [
     263,
@@ -2375,7 +2336,7 @@
     "CeladonGymAfterBattleText8"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText8 is already defined in a generated asset",
+   "detail": "CeladonGymBattleText8 is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeladonGym.asm:281",
    "lines": [
     281,
@@ -2757,7 +2718,7 @@
     "MewtwoTrainerHeader"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeruleanCaveB1F_ScriptPointers is already defined in a generated asset",
+   "detail": "CeruleanCaveB1F_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/CeruleanCaveB1F.asm:11",
    "lines": [
     11,
@@ -2771,7 +2732,7 @@
     "MewtwoBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "MewtwoBattleText is already defined in a generated asset",
+   "detail": "MewtwoBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeruleanCaveB1F.asm:37",
    "lines": [
     37,
@@ -2954,7 +2915,7 @@
     "CeruleanGymTrainerHeader1"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeruleanGymTrainerHeaders is already defined in a generated asset",
+   "detail": "CeruleanGymTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeruleanGym.asm:75",
    "lines": [
     75,
@@ -3032,7 +2993,7 @@
     "CeruleanGymAfterBattleText1"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeruleanGymBattleText1 is already defined in a generated asset",
+   "detail": "CeruleanGymBattleText1 is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeruleanGym.asm:159",
    "lines": [
     159,
@@ -3048,7 +3009,7 @@
     "CeruleanGymAfterBattleText2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "CeruleanGymBattleText2 is already defined in a generated asset",
+   "detail": "CeruleanGymBattleText2 is already defined in assets/trainer_headers.inc",
    "at": "scripts/CeruleanGym.asm:177",
    "lines": [
     177,
@@ -3184,36 +3145,6 @@
    "lines": [
     56,
     68
-   ]
-  },
-  {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymBlainePostBattleScript",
-   "labels": [
-    "CinnabarGymBlainePostBattleScript",
-    "CinnabarGymReceiveTM38"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".BagFull is defined in a region that bailed",
-   "at": "scripts/CinnabarGym.asm:213",
-   "lines": [
-    199,
-    218
-   ]
-  },
-  {
-   "file": "scripts/CinnabarGym.asm",
-   "region": "CinnabarGymReceiveTM38.BagFull",
-   "labels": [
-    "CinnabarGymReceiveTM38.BagFull",
-    "CinnabarGymReceiveTM38.gymVictory"
-   ],
-   "reason": "event-range-macro",
-   "detail": "SetEventRange EVENT_BEAT_CINNABAR_GYM_TRAINER_0, EVENT_BEAT_CINNABAR_GYM_TRAINER_6",
-   "at": "scripts/CinnabarGym.asm:230",
-   "lines": [
-    220,
-    235
    ]
   },
   {
@@ -3585,21 +3516,6 @@
   },
   {
    "file": "scripts/FightingDojo.asm",
-   "region": "FightingDojoKarateMasterPostBattleScript",
-   "labels": [
-    "FightingDojoKarateMasterPostBattleScript",
-    "FightingDojoKarateMasterPostBattleScript.already_facing"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".already_facing is defined in a region that bailed",
-   "at": "scripts/FightingDojo.asm:62",
-   "lines": [
-    57,
-    81
-   ]
-  },
-  {
-   "file": "scripts/FightingDojo.asm",
    "region": "FightingDojo_TextPointers",
    "labels": [
     "FightingDojo_TextPointers",
@@ -3610,7 +3526,7 @@
     "FightingDojoTrainerHeader3"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoTrainerHeaders is already defined in a generated asset",
+   "detail": "FightingDojoTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/FightingDojo.asm:84",
    "lines": [
     84,
@@ -3640,7 +3556,7 @@
     "FightingDojoBlackbelt1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoBlackbelt1BattleText is already defined in a generated asset",
+   "detail": "FightingDojoBlackbelt1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FightingDojo.asm:161",
    "lines": [
     161,
@@ -3656,7 +3572,7 @@
     "FightingDojoBlackbelt2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoBlackbelt2BattleText is already defined in a generated asset",
+   "detail": "FightingDojoBlackbelt2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FightingDojo.asm:179",
    "lines": [
     179,
@@ -3672,7 +3588,7 @@
     "FightingDojoBlackbelt3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoBlackbelt3BattleText is already defined in a generated asset",
+   "detail": "FightingDojoBlackbelt3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FightingDojo.asm:197",
    "lines": [
     197,
@@ -3688,7 +3604,7 @@
     "FightingDojoBlackbelt4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoBlackbelt4BattleText is already defined in a generated asset",
+   "detail": "FightingDojoBlackbelt4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FightingDojo.asm:215",
    "lines": [
     215,
@@ -3830,36 +3746,6 @@
   },
   {
    "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymKogaPostBattleScript",
-   "labels": [
-    "FuchsiaGymKogaPostBattleScript",
-    "FuchsiaGymReceiveTM06"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".BagFull is defined in a region that bailed",
-   "at": "scripts/FuchsiaGym.asm:55",
-   "lines": [
-    42,
-    60
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymReceiveTM06.BagFull",
-   "labels": [
-    "FuchsiaGymReceiveTM06.BagFull",
-    "FuchsiaGymReceiveTM06.gymVictory"
-   ],
-   "reason": "event-range-macro",
-   "detail": "SetEventRange EVENT_BEAT_FUCHSIA_GYM_TRAINER_0, EVENT_BEAT_FUCHSIA_GYM_TRAINER_5",
-   "at": "scripts/FuchsiaGym.asm:72",
-   "lines": [
-    62,
-    74
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
    "region": "FuchsiaGym_TextPointers",
    "labels": [
     "FuchsiaGym_TextPointers",
@@ -3872,7 +3758,7 @@
     "FuchsiaGymTrainerHeader5"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymTrainerHeaders is already defined in a generated asset",
+   "detail": "FuchsiaGymTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/FuchsiaGym.asm:77",
    "lines": [
     77,
@@ -3950,7 +3836,7 @@
     "FuchsiaGymRocker1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker1BattleText is already defined in a generated asset",
+   "detail": "FuchsiaGymRocker1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FuchsiaGym.asm:174",
    "lines": [
     174,
@@ -3966,7 +3852,7 @@
     "FuchsiaGymRocker2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker2BattleText is already defined in a generated asset",
+   "detail": "FuchsiaGymRocker2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FuchsiaGym.asm:192",
    "lines": [
     192,
@@ -3982,7 +3868,7 @@
     "FuchsiaGymRocker3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker3BattleText is already defined in a generated asset",
+   "detail": "FuchsiaGymRocker3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FuchsiaGym.asm:210",
    "lines": [
     210,
@@ -3998,7 +3884,7 @@
     "FuchsiaGymRocker4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker4BattleText is already defined in a generated asset",
+   "detail": "FuchsiaGymRocker4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FuchsiaGym.asm:228",
    "lines": [
     228,
@@ -4014,7 +3900,7 @@
     "FuchsiaGymRocker5AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker5BattleText is already defined in a generated asset",
+   "detail": "FuchsiaGymRocker5BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FuchsiaGym.asm:246",
    "lines": [
     246,
@@ -4030,7 +3916,7 @@
     "FuchsiaGymRocker6AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker6BattleText is already defined in a generated asset",
+   "detail": "FuchsiaGymRocker6BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/FuchsiaGym.asm:264",
    "lines": [
     264,
@@ -4426,20 +4312,6 @@
   },
   {
    "file": "scripts/IndigoPlateauLobby.asm",
-   "region": "IndigoPlateauLobby_Script",
-   "labels": [
-    "IndigoPlateauLobby_Script"
-   ],
-   "reason": "event-range-macro",
-   "detail": "ResetEventRange INDIGO_PLATEAU_EVENTS_START, EVENT_LANCES_ROOM_LOCK_DOOR",
-   "at": "scripts/IndigoPlateauLobby.asm:14",
-   "lines": [
-    2,
-    15
-   ]
-  },
-  {
-   "file": "scripts/IndigoPlateauLobby.asm",
    "region": "IndigoPlateauLobby_TextPointers",
    "labels": [
     "IndigoPlateauLobby_TextPointers",
@@ -4479,7 +4351,7 @@
     "LancesRoomTrainerHeader0"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "LancesRoomTrainerHeaders is already defined in a generated asset",
+   "detail": "LancesRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/LancesRoom.asm:130",
    "lines": [
     130,
@@ -4495,7 +4367,7 @@
     "LancesRoomLanceAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "LancesRoomLanceBeforeBattleText is already defined in a generated asset",
+   "detail": "LancesRoomLanceBeforeBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/LancesRoom.asm:146",
    "lines": [
     146,
@@ -4529,7 +4401,7 @@
     "LoreleisRoomTrainerHeader0"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "LoreleisRoomTrainerHeaders is already defined in a generated asset",
+   "detail": "LoreleisRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/LoreleisRoom.asm:120",
    "lines": [
     120,
@@ -4546,7 +4418,7 @@
     "LoreleisRoomLoreleiDontRunAwayText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "LoreleisRoomLoreleiBeforeBattleText is already defined in a generated asset",
+   "detail": "LoreleisRoomLoreleiBeforeBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/LoreleisRoom.asm:137",
    "lines": [
     137,
@@ -4733,7 +4605,7 @@
     "MtMoon1TrainerHeader6"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "MtMoon1TrainerHeaders is already defined in a generated asset",
+   "detail": "MtMoon1TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/MtMoon1F.asm:11",
    "lines": [
     11,
@@ -4768,7 +4640,7 @@
     "MtMoon1FBewareZubatSign"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "MtMoon1FHikerBattleText is already defined in a generated asset",
+   "detail": "MtMoon1FHikerBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/MtMoon1F.asm:89",
    "lines": [
     89,
@@ -4873,7 +4745,7 @@
     "MtMoonB2FText12"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "MtMoon3TrainerHeaders is already defined in a generated asset",
+   "detail": "MtMoon3TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/MtMoonB2F.asm:417",
    "lines": [
     417,
@@ -5027,7 +4899,7 @@
     "MtMoonB2FRocket4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "MtMoonB2FRocket2BattleText is already defined in a generated asset",
+   "detail": "MtMoonB2FRocket2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/MtMoonB2F.asm:595",
    "lines": [
     595,
@@ -6074,7 +5946,7 @@
     "PewterGymTrainerHeader0"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PewterGymTrainerHeaders is already defined in a generated asset",
+   "detail": "PewterGymTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/PewterGym.asm:85",
    "lines": [
     85,
@@ -6152,7 +6024,7 @@
     "PewterGymCooltrainerMAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PewterGymCooltrainerMBattleText is already defined in a generated asset",
+   "detail": "PewterGymCooltrainerMBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PewterGym.asm:170",
    "lines": [
     170,
@@ -6497,7 +6369,7 @@
     "Mansion1TrainerHeader0"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Mansion1TrainerHeaders is already defined in a generated asset",
+   "detail": "Mansion1TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonMansion1F.asm:59",
    "lines": [
     59,
@@ -6513,7 +6385,7 @@
     "PokemonMansion1FScientistAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonMansion1FScientistBattleText is already defined in a generated asset",
+   "detail": "PokemonMansion1FScientistBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonMansion1F.asm:84",
    "lines": [
     84,
@@ -6558,7 +6430,7 @@
     "Mansion2TrainerHeader0"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Mansion2TrainerHeaders is already defined in a generated asset",
+   "detail": "Mansion2TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonMansion2F.asm:55",
    "lines": [
     55,
@@ -6576,7 +6448,7 @@
     "PokemonMansion2FDiary2Text"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonMansion2FSuperNerdBattleText is already defined in a generated asset",
+   "detail": "PokemonMansion2FSuperNerdBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonMansion2F.asm:81",
    "lines": [
     81,
@@ -6650,7 +6522,7 @@
     "Mansion3TrainerHeader1"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Mansion3TrainerHeaders is already defined in a generated asset",
+   "detail": "Mansion3TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonMansion3F.asm:87",
    "lines": [
     87,
@@ -6670,7 +6542,7 @@
     "PokemonMansion3FDiaryText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonMansion3FSuperNerdBattleText is already defined in a generated asset",
+   "detail": "PokemonMansion3FSuperNerdBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonMansion3F.asm:116",
    "lines": [
     116,
@@ -6702,7 +6574,7 @@
     "Mansion4TrainerHeader1"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Mansion4TrainerHeaders is already defined in a generated asset",
+   "detail": "Mansion4TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonMansionB1F.asm:57",
    "lines": [
     57,
@@ -6722,7 +6594,7 @@
     "PokemonMansionB1FDiaryText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonMansionB1FBurglarBattleText is already defined in a generated asset",
+   "detail": "PokemonMansionB1FBurglarBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonMansionB1F.asm:95",
    "lines": [
     95,
@@ -6770,7 +6642,7 @@
     "PokemonTower3TrainerHeader2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower3TrainerHeaders is already defined in a generated asset",
+   "detail": "PokemonTower3TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower3F.asm:11",
    "lines": [
     11,
@@ -6792,7 +6664,7 @@
     "PokemonTower3FChanneler3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower3FChanneler1BattleText is already defined in a generated asset",
+   "detail": "PokemonTower3FChanneler1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower3F.asm:52",
    "lines": [
     52,
@@ -6811,7 +6683,7 @@
     "PokemonTower4TrainerHeader2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower4TrainerHeaders is already defined in a generated asset",
+   "detail": "PokemonTower4TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower4F.asm:11",
    "lines": [
     11,
@@ -6833,7 +6705,7 @@
     "PokemonTower4FChanneler3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower4FChanneler1BattleText is already defined in a generated asset",
+   "detail": "PokemonTower4FChanneler1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower4F.asm:54",
    "lines": [
     54,
@@ -6882,7 +6754,7 @@
     "PokemonTower5FChanneler1Text"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower5TrainerHeaders is already defined in a generated asset",
+   "detail": "PokemonTower5TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower5F.asm:46",
    "lines": [
     46,
@@ -6898,7 +6770,7 @@
     "PokemonTower5FChanneler2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower5FChanneler2BattleText is already defined in a generated asset",
+   "detail": "PokemonTower5FChanneler2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower5F.asm:85",
    "lines": [
     85,
@@ -6914,7 +6786,7 @@
     "PokemonTower5FChanneler3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower5FChanneler3BattleText is already defined in a generated asset",
+   "detail": "PokemonTower5FChanneler3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower5F.asm:103",
    "lines": [
     103,
@@ -6930,7 +6802,7 @@
     "PokemonTower5FChanneler4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower5FChanneler4BattleText is already defined in a generated asset",
+   "detail": "PokemonTower5FChanneler4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower5F.asm:121",
    "lines": [
     121,
@@ -6947,7 +6819,7 @@
     "PokemonTower5FPurifiedZoneText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower5FChanneler5BattleText is already defined in a generated asset",
+   "detail": "PokemonTower5FChanneler5BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower5F.asm:139",
    "lines": [
     139,
@@ -6965,7 +6837,7 @@
     "PokemonTower6TrainerHeader2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower6TrainerHeaders is already defined in a generated asset",
+   "detail": "PokemonTower6TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower6F.asm:100",
    "lines": [
     100,
@@ -6990,7 +6862,7 @@
     "PokemonTower6FBeGoneText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PokemonTower6FChanneler1BattleText is already defined in a generated asset",
+   "detail": "PokemonTower6FChanneler1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PokemonTower6F.asm:151",
    "lines": [
     151,
@@ -7103,7 +6975,7 @@
     "ZapdosTrainerHeader"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PowerPlant_ScriptPointers is already defined in a generated asset",
+   "detail": "PowerPlant_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/PowerPlant.asm:11",
    "lines": [
     11,
@@ -7118,7 +6990,7 @@
     "PowerPlantZapdosBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "PowerPlantVoltorbBattleText is already defined in a generated asset",
+   "detail": "PowerPlantVoltorbBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/PowerPlant.asm:107",
    "lines": [
     107,
@@ -7141,7 +7013,7 @@
     "RockTunnel1TrainerHeader6"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RockTunnel1TrainerHeaders is already defined in a generated asset",
+   "detail": "RockTunnel1TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/RockTunnel1F.asm:11",
    "lines": [
     11,
@@ -7176,7 +7048,7 @@
     "RockTunnel1FSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RockTunnel1FHiker1BattleText is already defined in a generated asset",
+   "detail": "RockTunnel1FHiker1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/RockTunnel1F.asm:83",
    "lines": [
     83,
@@ -7200,7 +7072,7 @@
     "RockTunnel2TrainerHeader7"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RockTunnel2TrainerHeaders is already defined in a generated asset",
+   "detail": "RockTunnel2TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/RockTunnelB1F.asm:11",
    "lines": [
     11,
@@ -7237,7 +7109,7 @@
     "RockTunnelB1FSuperNerd3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RockTunnelB1FCooltrainerF1BattleText is already defined in a generated asset",
+   "detail": "RockTunnelB1FCooltrainerF1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/RockTunnelB1F.asm:96",
    "lines": [
     96,
@@ -7306,7 +7178,7 @@
     "RocketHideout1TrainerHeader4"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideout1TrainerHeaders is already defined in a generated asset",
+   "detail": "RocketHideout1TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB1F.asm:35",
    "lines": [
     35,
@@ -7320,7 +7192,7 @@
     "RocketHideoutB1FRocket5EndBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideoutB1FRocket5EndBattleText is already defined in a generated asset",
+   "detail": "RocketHideoutB1FRocket5EndBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB1F.asm:95",
    "lines": [
     95,
@@ -7360,7 +7232,7 @@
     "RocketHideoutB1FRocket5AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideoutB1FRocket1BattleText is already defined in a generated asset",
+   "detail": "RocketHideoutB1FRocket1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB1F.asm:102",
    "lines": [
     102,
@@ -7376,7 +7248,7 @@
     "RocketHideout2TrainerHeader0"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideout2TrainerHeaders is already defined in a generated asset",
+   "detail": "RocketHideout2TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB2F.asm:274",
    "lines": [
     274,
@@ -7392,7 +7264,7 @@
     "RocketHideoutB2FRocketAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideoutB2FRocketBattleText is already defined in a generated asset",
+   "detail": "RocketHideoutB2FRocketBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB2F.asm:294",
    "lines": [
     294,
@@ -7409,7 +7281,7 @@
     "RocketHideout3TrainerHeader1"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideout3TrainerHeaders is already defined in a generated asset",
+   "detail": "RocketHideout3TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB3F.asm:129",
    "lines": [
     129,
@@ -7425,7 +7297,7 @@
     "RocketHideoutB3FRocket1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideoutB3FRocket1BattleText is already defined in a generated asset",
+   "detail": "RocketHideoutB3FRocket1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB3F.asm:150",
    "lines": [
     150,
@@ -7441,7 +7313,7 @@
     "RocketHideoutB3FRocket2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideoutB3FRocket2BattleText is already defined in a generated asset",
+   "detail": "RocketHideoutB3FRocket2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB3F.asm:168",
    "lines": [
     168,
@@ -7549,7 +7421,7 @@
     "RocketHideoutB4FText11"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideout4TrainerHeaders is already defined in a generated asset",
+   "detail": "RocketHideout4TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB4F.asm:292",
    "lines": [
     292,
@@ -7576,7 +7448,7 @@
     "RocketHideoutB4FRocketEndBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideoutB4FRocketBattleText is already defined in a generated asset",
+   "detail": "RocketHideoutB4FRocketBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB4F.asm:394",
    "lines": [
     394,
@@ -7590,7 +7462,7 @@
     "RocketHideoutB4FRocketAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "RocketHideoutB4FRocketAfterBattleText is already defined in a generated asset",
+   "detail": "RocketHideoutB4FRocketAfterBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/RocketHideoutB4F.asm:409",
    "lines": [
     409,
@@ -7701,7 +7573,7 @@
     "Route10TrainerHeader5"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route10_ScriptPointers is already defined in a generated asset",
+   "detail": "Route10_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route10.asm:11",
    "lines": [
     11,
@@ -7717,7 +7589,7 @@
     "Route10SuperNerd1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route10SuperNerd1BattleText is already defined in a generated asset",
+   "detail": "Route10SuperNerd1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route10.asm:52",
    "lines": [
     52,
@@ -7733,7 +7605,7 @@
     "Route10Hiker1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route10Hiker1BattleText is already defined in a generated asset",
+   "detail": "Route10Hiker1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route10.asm:70",
    "lines": [
     70,
@@ -7749,7 +7621,7 @@
     "Route10SuperNerd2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route10SuperNerd2BattleText is already defined in a generated asset",
+   "detail": "Route10SuperNerd2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route10.asm:88",
    "lines": [
     88,
@@ -7765,7 +7637,7 @@
     "Route10CooltrainerF1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route10CooltrainerF1BattleText is already defined in a generated asset",
+   "detail": "Route10CooltrainerF1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route10.asm:106",
    "lines": [
     106,
@@ -7781,7 +7653,7 @@
     "Route10Hiker2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route10Hiker2BattleText is already defined in a generated asset",
+   "detail": "Route10Hiker2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route10.asm:124",
    "lines": [
     124,
@@ -7799,7 +7671,7 @@
     "Route10PowerPlantSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route10CooltrainerF2BattleText is already defined in a generated asset",
+   "detail": "Route10CooltrainerF2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route10.asm:142",
    "lines": [
     142,
@@ -7825,7 +7697,7 @@
     "Route11TrainerHeader9"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11_ScriptPointers is already defined in a generated asset",
+   "detail": "Route11_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route11.asm:11",
    "lines": [
     11,
@@ -7841,7 +7713,7 @@
     "Route11Gambler1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11Gambler1BattleText is already defined in a generated asset",
+   "detail": "Route11Gambler1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:61",
    "lines": [
     61,
@@ -7857,7 +7729,7 @@
     "Route11Gambler2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11Gambler2BattleText is already defined in a generated asset",
+   "detail": "Route11Gambler2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:79",
    "lines": [
     79,
@@ -7873,7 +7745,7 @@
     "Route11Youngster1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11Youngster1BattleText is already defined in a generated asset",
+   "detail": "Route11Youngster1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:97",
    "lines": [
     97,
@@ -7889,7 +7761,7 @@
     "Route11SuperNerd1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11SuperNerd1BattleText is already defined in a generated asset",
+   "detail": "Route11SuperNerd1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:115",
    "lines": [
     115,
@@ -7905,7 +7777,7 @@
     "Route11Youngster2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11Youngster2BattleText is already defined in a generated asset",
+   "detail": "Route11Youngster2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:133",
    "lines": [
     133,
@@ -7921,7 +7793,7 @@
     "Route11Gambler3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11Gambler3BattleText is already defined in a generated asset",
+   "detail": "Route11Gambler3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:151",
    "lines": [
     151,
@@ -7937,7 +7809,7 @@
     "Route11Gambler4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11Gambler4BattleText is already defined in a generated asset",
+   "detail": "Route11Gambler4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:169",
    "lines": [
     169,
@@ -7953,7 +7825,7 @@
     "Route11Youngster3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11Youngster3BattleText is already defined in a generated asset",
+   "detail": "Route11Youngster3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:187",
    "lines": [
     187,
@@ -7969,7 +7841,7 @@
     "Route11SuperNerd2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11SuperNerd2BattleText is already defined in a generated asset",
+   "detail": "Route11SuperNerd2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:205",
    "lines": [
     205,
@@ -7986,7 +7858,7 @@
     "Route11DiglettsCaveSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route11Youngster4BattleText is already defined in a generated asset",
+   "detail": "Route11Youngster4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route11.asm:223",
    "lines": [
     223,
@@ -8041,7 +7913,7 @@
     "Route12SnorlaxCalmedDownText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route12TrainerHeaders is already defined in a generated asset",
+   "detail": "Route12TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route12.asm:65",
    "lines": [
     65,
@@ -8057,7 +7929,7 @@
     "Route12Fisher1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route12Fisher1BattleText is already defined in a generated asset",
+   "detail": "Route12Fisher1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route12.asm:118",
    "lines": [
     118,
@@ -8073,7 +7945,7 @@
     "Route12Fisher2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route12Fisher2BattleText is already defined in a generated asset",
+   "detail": "Route12Fisher2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route12.asm:136",
    "lines": [
     136,
@@ -8089,7 +7961,7 @@
     "Route12CooltrainerMAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route12CooltrainerMBattleText is already defined in a generated asset",
+   "detail": "Route12CooltrainerMBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route12.asm:154",
    "lines": [
     154,
@@ -8105,7 +7977,7 @@
     "Route12SuperNerdAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route12SuperNerdBattleText is already defined in a generated asset",
+   "detail": "Route12SuperNerdBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route12.asm:172",
    "lines": [
     172,
@@ -8121,7 +7993,7 @@
     "Route12Fisher3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route12Fisher3BattleText is already defined in a generated asset",
+   "detail": "Route12Fisher3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route12.asm:190",
    "lines": [
     190,
@@ -8137,7 +8009,7 @@
     "Route12Fisher4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route12Fisher4BattleText is already defined in a generated asset",
+   "detail": "Route12Fisher4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route12.asm:208",
    "lines": [
     208,
@@ -8155,7 +8027,7 @@
     "Route12SportFishingSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route12Fisher5BattleText is already defined in a generated asset",
+   "detail": "Route12Fisher5BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route12.asm:226",
    "lines": [
     226,
@@ -8330,7 +8202,7 @@
     "Route13TrainerHeader9"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13_ScriptPointers is already defined in a generated asset",
+   "detail": "Route13_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route13.asm:11",
    "lines": [
     11,
@@ -8346,7 +8218,7 @@
     "Route13CooltrainerM1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13CooltrainerM1BattleText is already defined in a generated asset",
+   "detail": "Route13CooltrainerM1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:63",
    "lines": [
     63,
@@ -8362,7 +8234,7 @@
     "Route13CooltrainerF1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13CooltrainerF1BattleText is already defined in a generated asset",
+   "detail": "Route13CooltrainerF1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:81",
    "lines": [
     81,
@@ -8378,7 +8250,7 @@
     "Route13CooltrainerF2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13CooltrainerF2BattleText is already defined in a generated asset",
+   "detail": "Route13CooltrainerF2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:99",
    "lines": [
     99,
@@ -8394,7 +8266,7 @@
     "Route13CooltrainerF3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13CooltrainerF3BattleText is already defined in a generated asset",
+   "detail": "Route13CooltrainerF3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:117",
    "lines": [
     117,
@@ -8410,7 +8282,7 @@
     "Route13CooltrainerF4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13CooltrainerF4BattleText is already defined in a generated asset",
+   "detail": "Route13CooltrainerF4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:135",
    "lines": [
     135,
@@ -8426,7 +8298,7 @@
     "Route13CooltrainerM2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13CooltrainerM2BattleText is already defined in a generated asset",
+   "detail": "Route13CooltrainerM2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:153",
    "lines": [
     153,
@@ -8442,7 +8314,7 @@
     "Route13Beauty1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13Beauty1BattleText is already defined in a generated asset",
+   "detail": "Route13Beauty1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:171",
    "lines": [
     171,
@@ -8458,7 +8330,7 @@
     "Route13Beauty2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13Beauty2BattleText is already defined in a generated asset",
+   "detail": "Route13Beauty2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:189",
    "lines": [
     189,
@@ -8474,7 +8346,7 @@
     "Route13BikerAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13BikerBattleText is already defined in a generated asset",
+   "detail": "Route13BikerBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:207",
    "lines": [
     207,
@@ -8493,7 +8365,7 @@
     "Route13SignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route13CooltrainerM3BattleText is already defined in a generated asset",
+   "detail": "Route13CooltrainerM3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route13.asm:225",
    "lines": [
     225,
@@ -8519,7 +8391,7 @@
     "Route14TrainerHeader9"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14_ScriptPointers is already defined in a generated asset",
+   "detail": "Route14_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route14.asm:11",
    "lines": [
     11,
@@ -8535,7 +8407,7 @@
     "Route14CooltrainerM1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14CooltrainerM1BattleText is already defined in a generated asset",
+   "detail": "Route14CooltrainerM1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:61",
    "lines": [
     61,
@@ -8551,7 +8423,7 @@
     "Route14CooltrainerM2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14CooltrainerM2BattleText is already defined in a generated asset",
+   "detail": "Route14CooltrainerM2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:79",
    "lines": [
     79,
@@ -8567,7 +8439,7 @@
     "Route14CooltrainerM3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14CooltrainerM3BattleText is already defined in a generated asset",
+   "detail": "Route14CooltrainerM3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:97",
    "lines": [
     97,
@@ -8583,7 +8455,7 @@
     "Route14CooltrainerM4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14CooltrainerM4BattleText is already defined in a generated asset",
+   "detail": "Route14CooltrainerM4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:115",
    "lines": [
     115,
@@ -8599,7 +8471,7 @@
     "Route14CooltrainerM5AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14CooltrainerM5BattleText is already defined in a generated asset",
+   "detail": "Route14CooltrainerM5BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:133",
    "lines": [
     133,
@@ -8615,7 +8487,7 @@
     "Route14CooltrainerM6AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14CooltrainerM6BattleText is already defined in a generated asset",
+   "detail": "Route14CooltrainerM6BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:151",
    "lines": [
     151,
@@ -8631,7 +8503,7 @@
     "Route14Biker1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14Biker1BattleText is already defined in a generated asset",
+   "detail": "Route14Biker1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:169",
    "lines": [
     169,
@@ -8647,7 +8519,7 @@
     "Route14Biker2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14Biker2BattleText is already defined in a generated asset",
+   "detail": "Route14Biker2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:187",
    "lines": [
     187,
@@ -8663,7 +8535,7 @@
     "Route14Biker3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14Biker3BattleText is already defined in a generated asset",
+   "detail": "Route14Biker3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:205",
    "lines": [
     205,
@@ -8680,7 +8552,7 @@
     "Route14SignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route14Biker4BattleText is already defined in a generated asset",
+   "detail": "Route14Biker4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route14.asm:223",
    "lines": [
     223,
@@ -8706,7 +8578,7 @@
     "Route15TrainerHeader9"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route15_ScriptPointers is already defined in a generated asset",
+   "detail": "Route15_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route15.asm:11",
    "lines": [
     11,
@@ -8750,7 +8622,7 @@
     "Route15SignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route15CooltrainerF1BattleText is already defined in a generated asset",
+   "detail": "Route15CooltrainerF1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route15.asm:108",
    "lines": [
     108,
@@ -8785,7 +8657,7 @@
     "Route16TrainerHeader5"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route16TrainerHeaders is already defined in a generated asset",
+   "detail": "Route16TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route16.asm:66",
    "lines": [
     66,
@@ -8801,7 +8673,7 @@
     "Route16Biker1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route16Biker1BattleText is already defined in a generated asset",
+   "detail": "Route16Biker1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route16.asm:102",
    "lines": [
     102,
@@ -8817,7 +8689,7 @@
     "Route16Biker2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route16Biker2BattleText is already defined in a generated asset",
+   "detail": "Route16Biker2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route16.asm:120",
    "lines": [
     120,
@@ -8833,7 +8705,7 @@
     "Route16Biker3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route16Biker3BattleText is already defined in a generated asset",
+   "detail": "Route16Biker3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route16.asm:138",
    "lines": [
     138,
@@ -8849,7 +8721,7 @@
     "Route16Biker4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route16biker4BattleText is already defined in a generated asset",
+   "detail": "Route16biker4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route16.asm:156",
    "lines": [
     156,
@@ -8865,7 +8737,7 @@
     "Route16Biker5AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route16Biker5BattleText is already defined in a generated asset",
+   "detail": "Route16Biker5BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route16.asm:174",
    "lines": [
     174,
@@ -8886,7 +8758,7 @@
     "Route16SignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route16Biker6BattleText is already defined in a generated asset",
+   "detail": "Route16Biker6BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route16.asm:192",
    "lines": [
     192,
@@ -8972,7 +8844,7 @@
     "Route17TrainerHeader9"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17_ScriptPointers is already defined in a generated asset",
+   "detail": "Route17_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route17.asm:11",
    "lines": [
     11,
@@ -8988,7 +8860,7 @@
     "Route17Biker1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker1BattleText is already defined in a generated asset",
+   "detail": "Route17Biker1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:66",
    "lines": [
     66,
@@ -9004,7 +8876,7 @@
     "Route17Biker2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker2BattleText is already defined in a generated asset",
+   "detail": "Route17Biker2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:84",
    "lines": [
     84,
@@ -9020,7 +8892,7 @@
     "Route17Biker3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker3BattleText is already defined in a generated asset",
+   "detail": "Route17Biker3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:102",
    "lines": [
     102,
@@ -9036,7 +8908,7 @@
     "Route17Biker4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker4BattleText is already defined in a generated asset",
+   "detail": "Route17Biker4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:120",
    "lines": [
     120,
@@ -9052,7 +8924,7 @@
     "Route17Biker5AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker5BattleText is already defined in a generated asset",
+   "detail": "Route17Biker5BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:138",
    "lines": [
     138,
@@ -9068,7 +8940,7 @@
     "Route17Biker6AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker6BattleText is already defined in a generated asset",
+   "detail": "Route17Biker6BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:156",
    "lines": [
     156,
@@ -9084,7 +8956,7 @@
     "Route17Biker7AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker7BattleText is already defined in a generated asset",
+   "detail": "Route17Biker7BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:174",
    "lines": [
     174,
@@ -9100,7 +8972,7 @@
     "Route17Biker8AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker8BattleText is already defined in a generated asset",
+   "detail": "Route17Biker8BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:192",
    "lines": [
     192,
@@ -9116,7 +8988,7 @@
     "Route17Biker9AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker9BattleText is already defined in a generated asset",
+   "detail": "Route17Biker9BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:210",
    "lines": [
     210,
@@ -9138,7 +9010,7 @@
     "Route17CyclingRoadEndsSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route17Biker10BattleText is already defined in a generated asset",
+   "detail": "Route17Biker10BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route17.asm:228",
    "lines": [
     228,
@@ -9157,7 +9029,7 @@
     "Route18TrainerHeader2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route18_ScriptPointers is already defined in a generated asset",
+   "detail": "Route18_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route18.asm:11",
    "lines": [
     11,
@@ -9173,7 +9045,7 @@
     "Route18CooltrainerM1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route18CooltrainerM1BattleText is already defined in a generated asset",
+   "detail": "Route18CooltrainerM1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route18.asm:41",
    "lines": [
     41,
@@ -9189,7 +9061,7 @@
     "Route18CooltrainerM2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route18CooltrainerM2BattleText is already defined in a generated asset",
+   "detail": "Route18CooltrainerM2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route18.asm:59",
    "lines": [
     59,
@@ -9207,7 +9079,7 @@
     "Route18CyclingRoadSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route18CooltrainerM3BattleText is already defined in a generated asset",
+   "detail": "Route18CooltrainerM3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route18.asm:77",
    "lines": [
     77,
@@ -9233,7 +9105,7 @@
     "Route19TrainerHeader9"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route19_ScriptPointers is already defined in a generated asset",
+   "detail": "Route19_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route19.asm:11",
    "lines": [
     11,
@@ -9277,7 +9149,7 @@
     "Route19SignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route19CooltrainerM1BattleText is already defined in a generated asset",
+   "detail": "Route19CooltrainerM1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route19.asm:107",
    "lines": [
     107,
@@ -9346,7 +9218,7 @@
     "Route20TrainerHeader9"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route20TrainerHeaders is already defined in a generated asset",
+   "detail": "Route20TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route20.asm:60",
    "lines": [
     60,
@@ -9390,7 +9262,7 @@
     "Route20SeafoamIslandsSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route20Swimmer1BattleText is already defined in a generated asset",
+   "detail": "Route20Swimmer1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route20.asm:165",
    "lines": [
     165,
@@ -9415,7 +9287,7 @@
     "Route21TrainerHeader8"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route21_ScriptPointers is already defined in a generated asset",
+   "detail": "Route21_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route21.asm:11",
    "lines": [
     11,
@@ -9455,7 +9327,7 @@
     "Route21Fisher4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route21Fisher1BattleText is already defined in a generated asset",
+   "detail": "Route21Fisher1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route21.asm:105",
    "lines": [
     105,
@@ -9804,7 +9676,7 @@
     "Route24TrainerHeader5"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route24TrainerHeaders is already defined in a generated asset",
+   "detail": "Route24TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route24.asm:81",
    "lines": [
     81,
@@ -9896,7 +9768,7 @@
     "Route24Youngster2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route24CooltrainerM2BattleText is already defined in a generated asset",
+   "detail": "Route24CooltrainerM2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route24.asm:214",
    "lines": [
     214,
@@ -9950,7 +9822,7 @@
     "Route25TrainerHeader8"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route25TrainerHeaders is already defined in a generated asset",
+   "detail": "Route25TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route25.asm:49",
    "lines": [
     49,
@@ -9991,7 +9863,7 @@
     "Route25BillSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route25Youngster1BattleText is already defined in a generated asset",
+   "detail": "Route25Youngster1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route25.asm:145",
    "lines": [
     145,
@@ -10016,7 +9888,7 @@
     "Route3SuperNerdText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route3_ScriptPointers is already defined in a generated asset",
+   "detail": "Route3_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route3.asm:11",
    "lines": [
     11,
@@ -10032,7 +9904,7 @@
     "Route3Youngster1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route3Youngster1BattleText is already defined in a generated asset",
+   "detail": "Route3Youngster1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route3.asm:60",
    "lines": [
     60,
@@ -10048,7 +9920,7 @@
     "Route3Youngster2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route3Youngster2BattleText is already defined in a generated asset",
+   "detail": "Route3Youngster2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route3.asm:78",
    "lines": [
     78,
@@ -10064,7 +9936,7 @@
     "Route3CooltrainerF1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route3CooltrainerF1BattleText is already defined in a generated asset",
+   "detail": "Route3CooltrainerF1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route3.asm:96",
    "lines": [
     96,
@@ -10080,7 +9952,7 @@
     "Route3Youngster3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route3Youngster3BattleText is already defined in a generated asset",
+   "detail": "Route3Youngster3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route3.asm:114",
    "lines": [
     114,
@@ -10096,7 +9968,7 @@
     "Route3CooltrainerF2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route3CooltrainerF2BattleText is already defined in a generated asset",
+   "detail": "Route3CooltrainerF2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route3.asm:132",
    "lines": [
     132,
@@ -10112,7 +9984,7 @@
     "Route3Youngster4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route3Youngster4BattleText is already defined in a generated asset",
+   "detail": "Route3Youngster4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route3.asm:150",
    "lines": [
     150,
@@ -10128,7 +10000,7 @@
     "Route3Youngster5AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route3Youngster5BattleText is already defined in a generated asset",
+   "detail": "Route3Youngster5BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route3.asm:168",
    "lines": [
     168,
@@ -10145,7 +10017,7 @@
     "Route3SignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route3CooltrainerF3BattleText is already defined in a generated asset",
+   "detail": "Route3CooltrainerF3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route3.asm:186",
    "lines": [
     186,
@@ -10163,7 +10035,7 @@
     "Route4CooltrainerF1Text"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route4_ScriptPointers is already defined in a generated asset",
+   "detail": "Route4_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route4.asm:11",
    "lines": [
     11,
@@ -10181,7 +10053,7 @@
     "Route4SignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route4CooltrainerF2BattleText is already defined in a generated asset",
+   "detail": "Route4CooltrainerF2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route4.asm:42",
    "lines": [
     42,
@@ -10233,7 +10105,7 @@
     "Route6TrainerHeader5"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route6_ScriptPointers is already defined in a generated asset",
+   "detail": "Route6_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route6.asm:11",
    "lines": [
     11,
@@ -10249,7 +10121,7 @@
     "Route6CooltrainerM1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route6CooltrainerM1BattleText is already defined in a generated asset",
+   "detail": "Route6CooltrainerM1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route6.asm:49",
    "lines": [
     49,
@@ -10265,7 +10137,7 @@
     "Route6CooltrainerF1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route6CooltrainerF1BattleText is already defined in a generated asset",
+   "detail": "Route6CooltrainerF1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route6.asm:67",
    "lines": [
     67,
@@ -10281,7 +10153,7 @@
     "Route6Youngster1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route6Youngster1BattleText is already defined in a generated asset",
+   "detail": "Route6Youngster1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route6.asm:85",
    "lines": [
     85,
@@ -10297,7 +10169,7 @@
     "Route6CooltrainerM2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route6CooltrainerM2BattleText is already defined in a generated asset",
+   "detail": "Route6CooltrainerM2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route6.asm:103",
    "lines": [
     103,
@@ -10313,7 +10185,7 @@
     "Route6CooltrainerF2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route6CooltrainerF2BattleText is already defined in a generated asset",
+   "detail": "Route6CooltrainerF2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route6.asm:121",
    "lines": [
     121,
@@ -10330,7 +10202,7 @@
     "Route6UndergroundPathSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route6Youngster2BattleText is already defined in a generated asset",
+   "detail": "Route6Youngster2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route6.asm:139",
    "lines": [
     139,
@@ -10383,7 +10255,7 @@
     "Route8TrainerHeader8"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8_ScriptPointers is already defined in a generated asset",
+   "detail": "Route8_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route8.asm:11",
    "lines": [
     11,
@@ -10399,7 +10271,7 @@
     "Route8SuperNerd1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8SuperNerd1BattleText is already defined in a generated asset",
+   "detail": "Route8SuperNerd1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route8.asm:58",
    "lines": [
     58,
@@ -10415,7 +10287,7 @@
     "Route8Gambler1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8Gambler1BattleText is already defined in a generated asset",
+   "detail": "Route8Gambler1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route8.asm:76",
    "lines": [
     76,
@@ -10431,7 +10303,7 @@
     "Route8SuperNerd2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8SuperNerd2BattleText is already defined in a generated asset",
+   "detail": "Route8SuperNerd2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route8.asm:94",
    "lines": [
     94,
@@ -10447,7 +10319,7 @@
     "Route8CooltrainerF1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8CooltrainerF1BattleText is already defined in a generated asset",
+   "detail": "Route8CooltrainerF1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route8.asm:112",
    "lines": [
     112,
@@ -10463,7 +10335,7 @@
     "Route8SuperNerd3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8SuperNerd3BattleText is already defined in a generated asset",
+   "detail": "Route8SuperNerd3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route8.asm:130",
    "lines": [
     130,
@@ -10479,7 +10351,7 @@
     "Route8CooltrainerF2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8CooltrainerF2BattleText is already defined in a generated asset",
+   "detail": "Route8CooltrainerF2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route8.asm:148",
    "lines": [
     148,
@@ -10495,7 +10367,7 @@
     "Route8CooltrainerF3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8CooltrainerF3BattleText is already defined in a generated asset",
+   "detail": "Route8CooltrainerF3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route8.asm:166",
    "lines": [
     166,
@@ -10511,7 +10383,7 @@
     "Route8Gambler2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8Gambler2BattleText is already defined in a generated asset",
+   "detail": "Route8Gambler2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route8.asm:184",
    "lines": [
     184,
@@ -10528,7 +10400,7 @@
     "Route8UndergroundSignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route8CooltrainerF4BattleText is already defined in a generated asset",
+   "detail": "Route8CooltrainerF4BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route8.asm:202",
    "lines": [
     202,
@@ -10567,7 +10439,7 @@
     "Route9TrainerHeader8"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route9_ScriptPointers is already defined in a generated asset",
+   "detail": "Route9_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/Route9.asm:11",
    "lines": [
     11,
@@ -10608,7 +10480,7 @@
     "Route9SignText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "Route9CooltrainerF1BattleText is already defined in a generated asset",
+   "detail": "Route9CooltrainerF1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/Route9.asm:100",
    "lines": [
     100,
@@ -10894,36 +10766,6 @@
   },
   {
    "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymSabrinaPostBattle",
-   "labels": [
-    "SaffronGymSabrinaPostBattle",
-    "SaffronGymSabrinaReceiveTM46Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".BagFull is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:53",
-   "lines": [
-    40,
-    58
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymSabrinaReceiveTM46Script.BagFull",
-   "labels": [
-    "SaffronGymSabrinaReceiveTM46Script.BagFull",
-    "SaffronGymSabrinaReceiveTM46Script.gymVictory"
-   ],
-   "reason": "event-range-macro",
-   "detail": "SetEventRange EVENT_BEAT_SAFFRON_GYM_TRAINER_0, EVENT_BEAT_SAFFRON_GYM_TRAINER_6",
-   "at": "scripts/SaffronGym.asm:70",
-   "lines": [
-    60,
-    72
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
    "region": "SaffronGym_TextPointers",
    "labels": [
     "SaffronGym_TextPointers",
@@ -10937,7 +10779,7 @@
     "SaffronGymTrainerHeader6"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SaffronGymTrainerHeaders is already defined in a generated asset",
+   "detail": "SaffronGymTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SaffronGym.asm:75",
    "lines": [
     75,
@@ -11064,7 +10906,7 @@
     "SaffronGymYoungster4AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SaffronGymChanneler1BattleText is already defined in a generated asset",
+   "detail": "SaffronGymChanneler1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SaffronGym.asm:224",
    "lines": [
     224,
@@ -11305,7 +11147,7 @@
     "SilphCo10TrainerHeader1"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo10TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo10TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo10F.asm:38",
    "lines": [
     38,
@@ -11341,7 +11183,7 @@
     "SilphCo10FScientistAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo10FRocketBattleText is already defined in a generated asset",
+   "detail": "SilphCo10FRocketBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo10F.asm:83",
    "lines": [
     83,
@@ -11477,7 +11319,7 @@
     "SilphCo11FJessieJamesText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo11TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo11TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo11F.asm:473",
    "lines": [
     473,
@@ -11569,7 +11411,7 @@
     "SilphCo11FRocketAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo11FRocketBattleText is already defined in a generated asset",
+   "detail": "SilphCo11FRocketBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo11F.asm:585",
    "lines": [
     585,
@@ -11691,7 +11533,7 @@
     "SilphCo2TrainerHeader3"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo2TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo2TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo2F.asm:90",
    "lines": [
     90,
@@ -11762,7 +11604,7 @@
     "SilphCo2FRocket2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo2FScientist1BattleText is already defined in a generated asset",
+   "detail": "SilphCo2FScientist1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo2F.asm:176",
    "lines": [
     176,
@@ -11823,7 +11665,7 @@
     "SilphCo3TrainerHeader1"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo3TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo3TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo3F.asm:54",
    "lines": [
     54,
@@ -11839,7 +11681,7 @@
     "SilphCo3FRocketAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo3FRocketBattleText is already defined in a generated asset",
+   "detail": "SilphCo3FRocketBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo3F.asm:99",
    "lines": [
     99,
@@ -11855,7 +11697,7 @@
     "SilphCo3FScientistAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo3FScientistBattleText is already defined in a generated asset",
+   "detail": "SilphCo3FScientistBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo3F.asm:117",
    "lines": [
     117,
@@ -11946,7 +11788,7 @@
     "SilphCo4TrainerHeader2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo4TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo4TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo4F.asm:90",
    "lines": [
     90,
@@ -11976,7 +11818,7 @@
     "SilphCo4FRocket1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo4FRocket1BattleText is already defined in a generated asset",
+   "detail": "SilphCo4FRocket1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo4F.asm:137",
    "lines": [
     137,
@@ -11992,7 +11834,7 @@
     "SilphCo4FScientistAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo4FScientistBattleText is already defined in a generated asset",
+   "detail": "SilphCo4FScientistBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo4F.asm:155",
    "lines": [
     155,
@@ -12008,7 +11850,7 @@
     "SilphCo4FRocket2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo4FRocket2BattleText is already defined in a generated asset",
+   "detail": "SilphCo4FRocket2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo4F.asm:173",
    "lines": [
     173,
@@ -12086,7 +11928,7 @@
     "SilphCo5TrainerHeader3"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo5TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo5TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo5F.asm:69",
    "lines": [
     69,
@@ -12116,7 +11958,7 @@
     "SilphCo5FRocket1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo5FRocket1BattleText is already defined in a generated asset",
+   "detail": "SilphCo5FRocket1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo5F.asm:122",
    "lines": [
     122,
@@ -12132,7 +11974,7 @@
     "SilphCo5FScientistAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo5FScientistBattleText is already defined in a generated asset",
+   "detail": "SilphCo5FScientistBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo5F.asm:140",
    "lines": [
     140,
@@ -12148,7 +11990,7 @@
     "SilphCo5FRockerAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo5FRockerBattleText is already defined in a generated asset",
+   "detail": "SilphCo5FRockerBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo5F.asm:158",
    "lines": [
     158,
@@ -12167,7 +12009,7 @@
     "SilphCo5FPokemonReport3Text"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo5FRocket2BattleText is already defined in a generated asset",
+   "detail": "SilphCo5FRocket2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo5F.asm:176",
    "lines": [
     176,
@@ -12186,7 +12028,7 @@
     "SilphCo6TrainerHeader2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo6TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo6TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo6F.asm:38",
    "lines": [
     38,
@@ -12301,7 +12143,7 @@
     "SilphCo6FRocket1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo6FRocket1BattleText is already defined in a generated asset",
+   "detail": "SilphCo6FRocket1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo6F.asm:158",
    "lines": [
     158,
@@ -12317,7 +12159,7 @@
     "SilphCo6FScientistAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo6FScientistBattleText is already defined in a generated asset",
+   "detail": "SilphCo6FScientistBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo6F.asm:176",
    "lines": [
     176,
@@ -12333,7 +12175,7 @@
     "SilphCo6FRocket2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo6FRocket2BattleText is already defined in a generated asset",
+   "detail": "SilphCo6FRocket2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo6F.asm:194",
    "lines": [
     194,
@@ -12483,7 +12325,7 @@
     "SilphCo7TrainerHeader3"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo7TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo7TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo7F.asm:253",
    "lines": [
     253,
@@ -12513,7 +12355,7 @@
     "SilphCo7FRocket1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo7FRocket1BattleText is already defined in a generated asset",
+   "detail": "SilphCo7FRocket1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo7F.asm:400",
    "lines": [
     400,
@@ -12529,7 +12371,7 @@
     "SilphCo7FScientistAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo7FScientistBattleText is already defined in a generated asset",
+   "detail": "SilphCo7FScientistBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo7F.asm:418",
    "lines": [
     418,
@@ -12545,7 +12387,7 @@
     "SilphCo7FRocket2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo7FRocket2BattleText is already defined in a generated asset",
+   "detail": "SilphCo7FRocket2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo7F.asm:436",
    "lines": [
     436,
@@ -12561,7 +12403,7 @@
     "SilphCo7FRocket3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo7FRocket3BattleText is already defined in a generated asset",
+   "detail": "SilphCo7FRocket3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo7F.asm:454",
    "lines": [
     454,
@@ -12609,7 +12451,7 @@
     "SilphCo8TrainerHeader2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo8TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo8TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo8F.asm:74",
    "lines": [
     74,
@@ -12631,7 +12473,7 @@
     "SilphCo8FRocket2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo8FRocket1BattleText is already defined in a generated asset",
+   "detail": "SilphCo8FRocket1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo8F.asm:133",
    "lines": [
     133,
@@ -12752,7 +12594,7 @@
     "SilphCo9TrainerHeader2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo9TrainerHeaders is already defined in a generated asset",
+   "detail": "SilphCo9TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo9F.asm:122",
    "lines": [
     122,
@@ -12788,7 +12630,7 @@
     "SilphCo9FRocket2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SilphCo9FRocket1BattleText is already defined in a generated asset",
+   "detail": "SilphCo9FRocket1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SilphCo9F.asm:194",
    "lines": [
     194,
@@ -12837,7 +12679,7 @@
     "SSAnne8TrainerHeader3"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SSAnne8TrainerHeaders is already defined in a generated asset",
+   "detail": "SSAnne8TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SSAnne1FRooms.asm:11",
    "lines": [
     11,
@@ -12867,7 +12709,7 @@
     "SSAnne1FRoomsGentleman3Text"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SSAnne1FRoomsGentleman1BattleText is already defined in a generated asset",
+   "detail": "SSAnne1FRoomsGentleman1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SSAnne1FRooms.asm:74",
    "lines": [
     74,
@@ -12929,7 +12771,7 @@
     "SSAnne9TrainerHeader3"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SSAnne9TrainerHeaders is already defined in a generated asset",
+   "detail": "SSAnne9TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SSAnne2FRooms.asm:11",
    "lines": [
     11,
@@ -12954,7 +12796,7 @@
     "SSAnne2FRoomsCooltrainerFAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SSAnne2FRoomsGentleman1BattleText is already defined in a generated asset",
+   "detail": "SSAnne2FRoomsGentleman1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SSAnne2FRooms.asm:123",
    "lines": [
     123,
@@ -12976,7 +12818,7 @@
     "SSAnne10TrainerHeader5"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SSAnne10TrainerHeaders is already defined in a generated asset",
+   "detail": "SSAnne10TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SSAnneB1FRooms.asm:11",
    "lines": [
     11,
@@ -13008,7 +12850,7 @@
     "SSAnneB1FRoomsSuperNerdText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SSAnneB1FRoomsSailor1BattleText is already defined in a generated asset",
+   "detail": "SSAnneB1FRoomsSailor1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SSAnneB1FRooms.asm:90",
    "lines": [
     90,
@@ -13029,7 +12871,7 @@
     "SSAnneBowCooltrainerMText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SSAnne5TrainerHeaders is already defined in a generated asset",
+   "detail": "SSAnne5TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/SSAnneBow.asm:11",
    "lines": [
     11,
@@ -13045,7 +12887,7 @@
     "SSAnneBowSailor2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SSAnneBowSailor2BattleText is already defined in a generated asset",
+   "detail": "SSAnneBowSailor2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SSAnneBow.asm:51",
    "lines": [
     51,
@@ -13061,7 +12903,7 @@
     "SSAnneBowSailor3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "SSAnneBowSailor3BattleText is already defined in a generated asset",
+   "detail": "SSAnneBowSailor3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/SSAnneBow.asm:69",
    "lines": [
     69,
@@ -13352,36 +13194,6 @@
   },
   {
    "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGymLTSurgeAfterBattleScript",
-   "labels": [
-    "VermilionGymLTSurgeAfterBattleScript",
-    "VermilionGymLTSurgeReceiveTM24Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".bag_full is defined in a region that bailed",
-   "at": "scripts/VermilionGym.asm:72",
-   "lines": [
-    59,
-    77
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGymLTSurgeReceiveTM24Script.bag_full",
-   "labels": [
-    "VermilionGymLTSurgeReceiveTM24Script.bag_full",
-    "VermilionGymLTSurgeReceiveTM24Script.gym_victory"
-   ],
-   "reason": "event-range-macro",
-   "detail": "SetEventRange EVENT_BEAT_VERMILION_GYM_TRAINER_0, EVENT_BEAT_VERMILION_GYM_TRAINER_2",
-   "at": "scripts/VermilionGym.asm:89",
-   "lines": [
-    79,
-    91
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
    "region": "VermilionGym_TextPointers",
    "labels": [
     "VermilionGym_TextPointers",
@@ -13391,7 +13203,7 @@
     "VermilionGymTrainerHeader2"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VermilionGymTrainerHeaders is already defined in a generated asset",
+   "detail": "VermilionGymTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/VermilionGym.asm:94",
    "lines": [
     94,
@@ -13469,7 +13281,7 @@
     "VermilionGymGentlemanAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VermilionGymGentlemanBattleText is already defined in a generated asset",
+   "detail": "VermilionGymGentlemanBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/VermilionGym.asm:183",
    "lines": [
     183,
@@ -13485,7 +13297,7 @@
     "VermilionGymSuperNerdAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VermilionGymSuperNerdBattleText is already defined in a generated asset",
+   "detail": "VermilionGymSuperNerdBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/VermilionGym.asm:201",
    "lines": [
     201,
@@ -13501,7 +13313,7 @@
     "VermilionGymSailorAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VermilionGymSailorBattleText is already defined in a generated asset",
+   "detail": "VermilionGymSailorBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/VermilionGym.asm:219",
    "lines": [
     219,
@@ -13640,7 +13452,7 @@
     "VictoryRoad1TrainerHeader1"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VictoryRoad1TrainerHeaders is already defined in a generated asset",
+   "detail": "VictoryRoad1TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/VictoryRoad1F.asm:42",
    "lines": [
     42,
@@ -13659,7 +13471,7 @@
     "VictoryRoad1FCooltrainerMAfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VictoryRoad1FCooltrainerFBattleText is already defined in a generated asset",
+   "detail": "VictoryRoad1FCooltrainerFBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/VictoryRoad1F.asm:76",
    "lines": [
     76,
@@ -13727,7 +13539,7 @@
     "MoltresTrainerHeader"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VictoryRoad2TrainerHeaders is already defined in a generated asset",
+   "detail": "VictoryRoad2TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/VictoryRoad2F.asm:70",
    "lines": [
     70,
@@ -13741,7 +13553,7 @@
     "VictoryRoad2FMoltresBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VictoryRoad2FMoltresBattleText is already defined in a generated asset",
+   "detail": "VictoryRoad2FMoltresBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/VictoryRoad2F.asm:143",
    "lines": [
     143,
@@ -13769,7 +13581,7 @@
     "VictoryRoad2FSuperNerd3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VictoryRoad2FHikerBattleText is already defined in a generated asset",
+   "detail": "VictoryRoad2FHikerBattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/VictoryRoad2F.asm:151",
    "lines": [
     151,
@@ -13816,7 +13628,7 @@
     "VictoryRoad3TrainerHeader3"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VictoryRoad3TrainerHeaders is already defined in a generated asset",
+   "detail": "VictoryRoad3TrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/VictoryRoad3F.asm:82",
    "lines": [
     82,
@@ -13841,7 +13653,7 @@
     "VictoryRoad3FCooltrainerF2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "VictoryRoad3FCooltrainerM1BattleText is already defined in a generated asset",
+   "detail": "VictoryRoad3FCooltrainerM1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/VictoryRoad3F.asm:131",
    "lines": [
     131,
@@ -13937,7 +13749,7 @@
     "ViridianForestYoungster1Text"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianForest_ScriptPointers is already defined in a generated asset",
+   "detail": "ViridianForest_ScriptPointers is already defined in assets/map_script_tables.inc",
    "at": "scripts/ViridianForest.asm:11",
    "lines": [
     11,
@@ -13966,7 +13778,7 @@
     "ViridianForestYoungster6Text"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianForestYoungster2BattleText is already defined in a generated asset",
+   "detail": "ViridianForestYoungster2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianForest.asm:81",
    "lines": [
     81,
@@ -14019,36 +13831,6 @@
   },
   {
    "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGymGiovanniPostBattle",
-   "labels": [
-    "ViridianGymGiovanniPostBattle",
-    "ViridianGymReceiveTM27"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".bag_full is defined in a region that bailed",
-   "at": "scripts/ViridianGym.asm:145",
-   "lines": [
-    132,
-    150
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGymReceiveTM27.bag_full",
-   "labels": [
-    "ViridianGymReceiveTM27.bag_full",
-    "ViridianGymReceiveTM27.gym_victory"
-   ],
-   "reason": "event-range-macro",
-   "detail": "SetEventRange EVENT_BEAT_VIRIDIAN_GYM_TRAINER_0, EVENT_BEAT_VIRIDIAN_GYM_TRAINER_7",
-   "at": "scripts/ViridianGym.asm:162",
-   "lines": [
-    152,
-    168
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
    "region": "ViridianGym_TextPointers",
    "labels": [
     "ViridianGym_TextPointers",
@@ -14063,7 +13845,7 @@
     "ViridianGymTrainerHeader7"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianGymTrainerHeaders is already defined in a generated asset",
+   "detail": "ViridianGymTrainerHeaders is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianGym.asm:171",
    "lines": [
     171,
@@ -14142,7 +13924,7 @@
     "ViridianGymCooltrainerM1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianGymCooltrainerM1BattleText is already defined in a generated asset",
+   "detail": "ViridianGymCooltrainerM1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianGym.asm:286",
    "lines": [
     286,
@@ -14158,7 +13940,7 @@
     "ViridianGymHiker1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianGymHiker1BattleText is already defined in a generated asset",
+   "detail": "ViridianGymHiker1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianGym.asm:304",
    "lines": [
     304,
@@ -14174,7 +13956,7 @@
     "ViridianGymRocker1AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianGymRocker1BattleText is already defined in a generated asset",
+   "detail": "ViridianGymRocker1BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianGym.asm:322",
    "lines": [
     322,
@@ -14190,7 +13972,7 @@
     "ViridianGymHiker2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianGymHiker2BattleText is already defined in a generated asset",
+   "detail": "ViridianGymHiker2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianGym.asm:340",
    "lines": [
     340,
@@ -14206,7 +13988,7 @@
     "ViridianGymCooltrainerM2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianGymCooltrainerM2BattleText is already defined in a generated asset",
+   "detail": "ViridianGymCooltrainerM2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianGym.asm:358",
    "lines": [
     358,
@@ -14222,7 +14004,7 @@
     "ViridianGymHiker3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianGymHiker3BattleText is already defined in a generated asset",
+   "detail": "ViridianGymHiker3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianGym.asm:376",
    "lines": [
     376,
@@ -14238,7 +14020,7 @@
     "ViridianGymRocker2AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianGymRocker2BattleText is already defined in a generated asset",
+   "detail": "ViridianGymRocker2BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianGym.asm:394",
    "lines": [
     394,
@@ -14254,7 +14036,7 @@
     "ViridianGymCooltrainerM3AfterBattleText"
    ],
    "reason": "owned-by-generated-assets",
-   "detail": "ViridianGymCooltrainerM3BattleText is already defined in a generated asset",
+   "detail": "ViridianGymCooltrainerM3BattleText is already defined in assets/trainer_headers.inc",
    "at": "scripts/ViridianGym.asm:412",
    "lines": [
     412,

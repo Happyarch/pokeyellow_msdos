@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global CeruleanGymCooltrainerFText
 global CeruleanGymMistyPostBattleScript
@@ -28,12 +29,8 @@ global CeruleanGymResetScripts
 global CeruleanGymSwimmerText
 global CeruleanGym_ScriptPointers
 
-extern CeruleanGymAfterBattleText1   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymAfterBattleText2   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymBattleText1   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymBattleText2   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymEndBattleText1   ; NOT YET DEFINED IN THE PORT
-extern CeruleanGymEndBattleText2   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymGymGuideText   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymMistyCascadeBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern CeruleanGymMistyReceivedCascadeBadgeText   ; NOT YET DEFINED IN THE PORT
@@ -68,10 +65,6 @@ extern _CeruleanGymMistyTM11ExplanationText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_CERULEANGYM_MISTY_POST_BATTLE           equ 3
-TEXT_CERULEANGYM_MISTY                         equ 1
-TEXT_CERULEANGYM_COOLTRAINER_F                 equ 2
-TEXT_CERULEANGYM_SWIMMER                       equ 3
-TEXT_CERULEANGYM_GYM_GUIDE                     equ 4
 TEXT_CERULEANGYM_MISTY_CASCADE_BADGE_INFO      equ 5
 TEXT_CERULEANGYM_MISTY_RECEIVED_TM11           equ 6
 TEXT_CERULEANGYM_MISTY_TM11_NO_ROOM            equ 7
@@ -167,8 +160,7 @@ CeruleanGymReceiveTM11:
     SetEvents EVENT_BEAT_CERULEAN_GYM_TRAINER_0, EVENT_BEAT_CERULEAN_GYM_TRAINER_1
     jmp CeruleanGymResetScripts
 
-; ---------------------------------------------------------------------------
-; CeruleanGym_TextPointers (scripts/CeruleanGym.asm:75-90) — Tier-1 data: CeruleanGymTrainerHeaders is generated into assets/trainer_headers.inc.
+; CeruleanGym_TextPointers (scripts/CeruleanGym.asm:75-90) — not re-emitted: CeruleanGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] CeruleanGymMistyText (scripts/CeruleanGym.asm:94-100) — at scripts/CeruleanGym.asm:95: .beforeBeat is defined in a region that bailed
@@ -248,16 +240,14 @@ CeruleanGymCooltrainerFText:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; CeruleanGymBattleText1 (scripts/CeruleanGym.asm:159-168) — Tier-1 data: CeruleanGymBattleText1 is generated into assets/trainer_headers.inc.
+; CeruleanGymBattleText1 (scripts/CeruleanGym.asm:159-168) — not re-emitted: CeruleanGymBattleText1 is already defined in assets/trainer_headers.inc.
 
 CeruleanGymSwimmerText:
     mov esi, CeruleanGymTrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; CeruleanGymBattleText2 (scripts/CeruleanGym.asm:177-186) — Tier-1 data: CeruleanGymBattleText2 is generated into assets/trainer_headers.inc.
+; CeruleanGymBattleText2 (scripts/CeruleanGym.asm:177-186) — not re-emitted: CeruleanGymBattleText2 is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] CeruleanGymGymGuideText (scripts/CeruleanGym.asm:190-194) — at scripts/CeruleanGym.asm:191: .afterBeat is defined in a region that bailed

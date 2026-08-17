@@ -20,7 +20,10 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
+global FuchsiaGymKogaPostBattleScript
+global FuchsiaGymReceiveTM06
 global FuchsiaGymResetScripts
 global FuchsiaGymRocker1Text
 global FuchsiaGymRocker2Text
@@ -38,30 +41,16 @@ extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern EngageMapTrainer   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymGymGuideText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymKogaPostBattleScript   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymKogaReceivedTM06Text   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymKogaSoulBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymKogaTM06NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymKogaText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymReceiveTM06   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker1BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker2BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker3AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker3BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker4AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker4BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker5AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker5BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker5EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker6AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymRocker6BattleText   ; NOT YET DEFINED IN THE PORT
-extern FuchsiaGymRocker6EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymTrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymTrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern FuchsiaGymTrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -88,14 +77,6 @@ extern _FuchsiaGymKogaSoulBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_FUCHSIAGYM_KOGA_POST_BATTLE             equ 3
-TEXT_FUCHSIAGYM_KOGA                           equ 1
-TEXT_FUCHSIAGYM_ROCKER1                        equ 2
-TEXT_FUCHSIAGYM_ROCKER2                        equ 3
-TEXT_FUCHSIAGYM_ROCKER3                        equ 4
-TEXT_FUCHSIAGYM_ROCKER4                        equ 5
-TEXT_FUCHSIAGYM_ROCKER5                        equ 6
-TEXT_FUCHSIAGYM_ROCKER6                        equ 7
-TEXT_FUCHSIAGYM_GYM_GUIDE                      equ 8
 TEXT_FUCHSIAGYM_KOGA_SOUL_BADGE_INFO           equ 9
 TEXT_FUCHSIAGYM_KOGA_RECEIVED_TM06             equ 10
 TEXT_FUCHSIAGYM_KOGA_TM06_NO_ROOM              equ 11
@@ -159,50 +140,41 @@ FuchsiaGym_ScriptPointers:
     dd EndTrainerBattle
     dd FuchsiaGymKogaPostBattleScript
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] FuchsiaGymKogaPostBattleScript (scripts/FuchsiaGym.asm:42-60) — at scripts/FuchsiaGym.asm:55: .BagFull is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, FuchsiaGymResetScripts
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| ; fallthrough
-; PRET| FuchsiaGymReceiveTM06:
-; PRET| 	ld a, TEXT_FUCHSIAGYM_KOGA_SOUL_BADGE_INFO
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_BEAT_KOGA
-; PRET| 	lb bc, TM_TOXIC, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .BagFull
-; PRET| 	ld a, TEXT_FUCHSIAGYM_KOGA_RECEIVED_TM06
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_GOT_TM06
-; PRET| 	jr .gymVictory
+FuchsiaGymKogaPostBattleScript:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz FuchsiaGymResetScripts
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+FuchsiaGymReceiveTM06:
+    mov al, TEXT_FUCHSIAGYM_KOGA_SOUL_BADGE_INFO
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    pushfd    ; SM83 form writes no flags
+        SetEvent EVENT_BEAT_KOGA
+    popfd
+    mov bx, ((208) << 8) | (1)
+    call GiveItem
+    jae .BagFull
+    mov al, TEXT_FUCHSIAGYM_KOGA_RECEIVED_TM06
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    SetEvent EVENT_GOT_TM06
+    jmp .gymVictory
 
-; ---------------------------------------------------------------------------
-; BAIL[event-range-macro] FuchsiaGymReceiveTM06.BagFull (scripts/FuchsiaGym.asm:62-74) — at scripts/FuchsiaGym.asm:72: SetEventRange EVENT_BEAT_FUCHSIA_GYM_TRAINER_0, EVENT_BEAT_FUCHSIA_GYM_TRAINER_5
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, TEXT_FUCHSIAGYM_KOGA_TM06_NO_ROOM
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| .gymVictory
-; PRET| 	ld hl, wObtainedBadges
-; PRET| 	set BIT_SOULBADGE, [hl]
-; PRET| 	ld hl, wBeatGymFlags
-; PRET| 	set BIT_SOULBADGE, [hl]
-; PRET| 
-; PRET| 	; deactivate gym trainers
-; PRET| 	SetEventRange EVENT_BEAT_FUCHSIA_GYM_TRAINER_0, EVENT_BEAT_FUCHSIA_GYM_TRAINER_5
-; PRET| 
-; PRET| 	jp FuchsiaGymResetScripts
+.BagFull:
+    mov al, TEXT_FUCHSIAGYM_KOGA_TM06_NO_ROOM
+    mov [ebp + hTextID], al
+    call DisplayTextID
+.gymVictory:
+    mov esi, wObtainedBadges
+    or byte [ebp + esi], (1 << (4))
+    mov esi, wBeatGymFlags
+    or byte [ebp + esi], (1 << (4))
+    SetEventRange EVENT_BEAT_FUCHSIA_GYM_TRAINER_0, EVENT_BEAT_FUCHSIA_GYM_TRAINER_5
+    jmp FuchsiaGymResetScripts
 
-; ---------------------------------------------------------------------------
-; FuchsiaGym_TextPointers (scripts/FuchsiaGym.asm:77-104) — Tier-1 data: FuchsiaGymTrainerHeaders is generated into assets/trainer_headers.inc.
+; FuchsiaGym_TextPointers (scripts/FuchsiaGym.asm:77-104) — not re-emitted: FuchsiaGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] FuchsiaGymKogaText (scripts/FuchsiaGym.asm:108-114) — at scripts/FuchsiaGym.asm:109: .beforeBeat is defined in a region that bailed
@@ -283,48 +255,42 @@ FuchsiaGymRocker1Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FuchsiaGymRocker1BattleText (scripts/FuchsiaGym.asm:174-183) — Tier-1 data: FuchsiaGymRocker1BattleText is generated into assets/trainer_headers.inc.
+; FuchsiaGymRocker1BattleText (scripts/FuchsiaGym.asm:174-183) — not re-emitted: FuchsiaGymRocker1BattleText is already defined in assets/trainer_headers.inc.
 
 FuchsiaGymRocker2Text:
     mov esi, FuchsiaGymTrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FuchsiaGymRocker2BattleText (scripts/FuchsiaGym.asm:192-201) — Tier-1 data: FuchsiaGymRocker2BattleText is generated into assets/trainer_headers.inc.
+; FuchsiaGymRocker2BattleText (scripts/FuchsiaGym.asm:192-201) — not re-emitted: FuchsiaGymRocker2BattleText is already defined in assets/trainer_headers.inc.
 
 FuchsiaGymRocker3Text:
     mov esi, FuchsiaGymTrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FuchsiaGymRocker3BattleText (scripts/FuchsiaGym.asm:210-219) — Tier-1 data: FuchsiaGymRocker3BattleText is generated into assets/trainer_headers.inc.
+; FuchsiaGymRocker3BattleText (scripts/FuchsiaGym.asm:210-219) — not re-emitted: FuchsiaGymRocker3BattleText is already defined in assets/trainer_headers.inc.
 
 FuchsiaGymRocker4Text:
     mov esi, FuchsiaGymTrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FuchsiaGymRocker4BattleText (scripts/FuchsiaGym.asm:228-237) — Tier-1 data: FuchsiaGymRocker4BattleText is generated into assets/trainer_headers.inc.
+; FuchsiaGymRocker4BattleText (scripts/FuchsiaGym.asm:228-237) — not re-emitted: FuchsiaGymRocker4BattleText is already defined in assets/trainer_headers.inc.
 
 FuchsiaGymRocker5Text:
     mov esi, FuchsiaGymTrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FuchsiaGymRocker5BattleText (scripts/FuchsiaGym.asm:246-255) — Tier-1 data: FuchsiaGymRocker5BattleText is generated into assets/trainer_headers.inc.
+; FuchsiaGymRocker5BattleText (scripts/FuchsiaGym.asm:246-255) — not re-emitted: FuchsiaGymRocker5BattleText is already defined in assets/trainer_headers.inc.
 
 FuchsiaGymRocker6Text:
     mov esi, FuchsiaGymTrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; FuchsiaGymRocker6BattleText (scripts/FuchsiaGym.asm:264-273) — Tier-1 data: FuchsiaGymRocker6BattleText is generated into assets/trainer_headers.inc.
+; FuchsiaGymRocker6BattleText (scripts/FuchsiaGym.asm:264-273) — not re-emitted: FuchsiaGymRocker6BattleText is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] FuchsiaGymGymGuideText (scripts/FuchsiaGym.asm:277-283) — at scripts/FuchsiaGym.asm:279: .afterBeat is defined in a region that bailed

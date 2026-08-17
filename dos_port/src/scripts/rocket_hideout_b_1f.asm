@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global RocketHideoutB1FRocket1Text
 global RocketHideoutB1FRocket2Text
@@ -29,12 +30,8 @@ global RocketHideoutB1FRocket4Text
 global RocketHideoutB1FRocket5Text
 global RocketHideoutB1F_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlaySound   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout1TrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -44,37 +41,11 @@ extern RocketHideout1TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout1TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout1TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1FDoorCallbackScript   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket3BattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket4BattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket5AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1FRocket5BattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1FRocket5EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB1F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROCKETHIDEOUTB1F_DEFAULT                equ 0
-SCRIPT_ROCKETHIDEOUTB1F_START_BATTLE           equ 1
-SCRIPT_ROCKETHIDEOUTB1F_END_BATTLE             equ 2
-TEXT_ROCKETHIDEOUTB1F_ROCKET1                  equ 1
-TEXT_ROCKETHIDEOUTB1F_ROCKET2                  equ 2
-TEXT_ROCKETHIDEOUTB1F_ROCKET3                  equ 3
-TEXT_ROCKETHIDEOUTB1F_ROCKET4                  equ 4
-TEXT_ROCKETHIDEOUTB1F_ROCKET5                  equ 5
-TEXT_ROCKETHIDEOUTB1F_ESCAPE_ROPE              equ 6
-TEXT_ROCKETHIDEOUTB1F_HYPER_POTION             equ 7
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -126,8 +97,7 @@ RocketHideoutB1F_Script:
 ; PRET| 	lb bc, 8, 12
 ; PRET| 	predef_jump ReplaceTileBlock
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — Tier-1 data: RocketHideout1TrainerHeaders is generated into assets/trainer_headers.inc.
+; RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — not re-emitted: RocketHideout1TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 RocketHideoutB1FRocket1Text:
     mov esi, RocketHideout1TrainerHeader0
@@ -154,8 +124,7 @@ RocketHideoutB1FRocket5Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB1FRocket5EndBattleText (scripts/RocketHideoutB1F.asm:95-95) — Tier-1 data: RocketHideoutB1FRocket5EndBattleText is generated into assets/trainer_headers.inc.
+; RocketHideoutB1FRocket5EndBattleText (scripts/RocketHideoutB1F.asm:95-95) — not re-emitted: RocketHideoutB1FRocket5EndBattleText is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] scripts/RocketHideoutB1F.asm:anon (scripts/RocketHideoutB1F.asm:97-99) — at scripts/RocketHideoutB1F.asm:98: .prompt_end is defined in a region that bailed
@@ -165,5 +134,4 @@ RocketHideoutB1FRocket5Text:
 ; PRET| 	ld hl, .prompt_end
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB1FRocket5EndBattleText.prompt_end (scripts/RocketHideoutB1F.asm:102-159) — Tier-1 data: RocketHideoutB1FRocket1BattleText is generated into assets/trainer_headers.inc.
+; RocketHideoutB1FRocket5EndBattleText.prompt_end (scripts/RocketHideoutB1F.asm:102-159) — not re-emitted: RocketHideoutB1FRocket1BattleText is already defined in assets/trainer_headers.inc.

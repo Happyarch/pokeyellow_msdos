@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global SSAnneB1FRoomsFisherText
 global SSAnneB1FRoomsMachokeText
@@ -30,12 +31,8 @@ global SSAnneB1FRoomsSailor4Text
 global SSAnneB1FRoomsSailor5Text
 global SSAnneB1FRooms_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
 extern SSAnne10TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SSAnne10TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -44,46 +41,11 @@ extern SSAnne10TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern SSAnne10TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern SSAnne10TrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern SSAnne10TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsFisherAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsFisherBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsFisherEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SSAnneB1FRoomsSailor1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor3BattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor4BattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor5AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor5BattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSailor5EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRoomsSuperNerdText   ; NOT YET DEFINED IN THE PORT
 extern SSAnneB1FRooms_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SSAnneB1FRooms_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _SSAnneB1FRoomsMachokeText   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_SSANNEB1FROOMS_DEFAULT                  equ 0
-SCRIPT_SSANNEB1FROOMS_START_BATTLE             equ 1
-SCRIPT_SSANNEB1FROOMS_END_BATTLE               equ 2
-TEXT_SSANNEB1FROOMS_SAILOR1                    equ 1
-TEXT_SSANNEB1FROOMS_SAILOR2                    equ 2
-TEXT_SSANNEB1FROOMS_SAILOR3                    equ 3
-TEXT_SSANNEB1FROOMS_SAILOR4                    equ 4
-TEXT_SSANNEB1FROOMS_SAILOR5                    equ 5
-TEXT_SSANNEB1FROOMS_FISHER                     equ 6
-TEXT_SSANNEB1FROOMS_SUPER_NERD                 equ 7
-TEXT_SSANNEB1FROOMS_MACHOKE                    equ 8
-TEXT_SSANNEB1FROOMS_ETHER                      equ 9
-TEXT_SSANNEB1FROOMS_TM_REST                    equ 10
-TEXT_SSANNEB1FROOMS_MAX_POTION                 equ 11
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -104,8 +66,7 @@ SSAnneB1FRooms_Script:
     mov [ebp + wSSAnneB1FRoomsCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; SSAnneB1FRooms_ScriptPointers (scripts/SSAnneB1FRooms.asm:11-44) — Tier-1 data: SSAnne10TrainerHeaders is generated into assets/trainer_headers.inc.
+; SSAnneB1FRooms_ScriptPointers (scripts/SSAnneB1FRooms.asm:11-44) — not re-emitted: SSAnne10TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 SSAnneB1FRoomsSailor1Text:
     mov esi, SSAnne10TrainerHeader0
@@ -144,5 +105,4 @@ SSAnneB1FRoomsMachokeText:
     call PlayCry
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SSAnneB1FRoomsSailor1BattleText (scripts/SSAnneB1FRooms.asm:90-163) — Tier-1 data: SSAnneB1FRoomsSailor1BattleText is generated into assets/trainer_headers.inc.
+; SSAnneB1FRoomsSailor1BattleText (scripts/SSAnneB1FRooms.asm:90-163) — not re-emitted: SSAnneB1FRoomsSailor1BattleText is already defined in assets/trainer_headers.inc.

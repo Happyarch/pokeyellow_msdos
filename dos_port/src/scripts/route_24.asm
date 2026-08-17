@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global Route24AfterRocketBattleScript
 global Route24CooltrainerF1Text
@@ -52,21 +53,9 @@ extern GetMonName   ; NOT YET DEFINED IN THE PORT
 extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern GivePokemon   ; NOT YET DEFINED IN THE PORT
 extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerF1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerF1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerF2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerF2EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route24CooltrainerM1Text   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerM2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route24CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerM2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerM3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerM3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24CooltrainerM3EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -74,12 +63,6 @@ extern Route24TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern Route24TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route24Youngster1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24Youngster1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24Youngster1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24Youngster2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24Youngster2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route24Youngster2EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route24_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
@@ -99,14 +82,6 @@ SCRIPT_ROUTE24_DEFAULT                         equ 0
 SCRIPT_ROUTE24_AFTER_ROCKET_BATTLE             equ 3
 SCRIPT_ROUTE24_PLAYER_MOVING                   equ 4
 TEXT_ROUTE24_COOLTRAINER_M1                    equ 1
-TEXT_ROUTE24_COOLTRAINER_M2                    equ 2
-TEXT_ROUTE24_COOLTRAINER_M3                    equ 3
-TEXT_ROUTE24_COOLTRAINER_F1                    equ 4
-TEXT_ROUTE24_YOUNGSTER1                        equ 5
-TEXT_ROUTE24_COOLTRAINER_F2                    equ 6
-TEXT_ROUTE24_YOUNGSTER2                        equ 7
-TEXT_ROUTE24_TM_THUNDER_WAVE                   equ 8
-TEXT_ROUTE24_COOLTRAINER_M4                    equ 9
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -201,8 +176,7 @@ Route24AfterRocketBattleScript:
     mov [ebp + wCurMapScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; Route24_TextPointers (scripts/Route24.asm:81-106) — Tier-1 data: Route24TrainerHeaders is generated into assets/trainer_headers.inc.
+; Route24_TextPointers (scripts/Route24.asm:81-106) — not re-emitted: Route24TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] Route24CooltrainerM1Text (scripts/Route24.asm:110-138) — at scripts/Route24.asm:112: .got_item is defined in a region that bailed
@@ -316,8 +290,7 @@ Route24Youngster2Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route24CooltrainerM2BattleText (scripts/Route24.asm:214-283) — Tier-1 data: Route24CooltrainerM2BattleText is generated into assets/trainer_headers.inc.
+; Route24CooltrainerM2BattleText (scripts/Route24.asm:214-283) — not re-emitted: Route24CooltrainerM2BattleText is already defined in assets/trainer_headers.inc.
 
 Route24CooltrainerM4Text:
     CheckEvent EVENT_54F

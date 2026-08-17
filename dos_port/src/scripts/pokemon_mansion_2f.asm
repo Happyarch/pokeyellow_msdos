@@ -21,31 +21,22 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global Mansion2CheckReplaceSwitchDoorBlocks
 global Mansion2ReplaceBlock
 global PokemonMansion2FSuperNerdText
 global PokemonMansion2F_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
-extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern Mansion2Script_Switches   ; NOT YET DEFINED IN THE PORT
 extern Mansion2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Mansion2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlaySound   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion2FDiary1Text   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion2FDiary2Text   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion2FSuperNerdAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion2FSuperNerdBattleText   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion2FSuperNerdEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion2FSwitchText   ; NOT YET DEFINED IN THE PORT
 extern PokemonMansion2F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern PokemonMansion2F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
@@ -55,20 +46,9 @@ extern _PokemonMansion2FSwitchNotPressedText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonMansion2FSwitchPressedText   ; NOT YET DEFINED IN THE PORT
 extern _PokemonMansion2FSwitchText   ; NOT YET DEFINED IN THE PORT
 
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_POKEMONMANSION2F_DEFAULT                equ 0
-SCRIPT_POKEMONMANSION2F_START_BATTLE           equ 1
-SCRIPT_POKEMONMANSION2F_END_BATTLE             equ 2
-TEXT_POKEMONMANSION2F_SUPER_NERD               equ 1
-TEXT_POKEMONMANSION2F_CALCIUM                  equ 2
-TEXT_POKEMONMANSION2F_DIARY1                   equ 3
-TEXT_POKEMONMANSION2F_DIARY2                   equ 4
-TEXT_POKEMONMANSION2F_SWITCH                   equ 5
-
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
 wPokemonMansion2FCurScript                     equ 0xD63B
-wSpritePlayerStateData1FacingDirection         equ 0xC109
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -125,19 +105,16 @@ Mansion2ReplaceBlock:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and the predef id is not left in A because no reader is live; evidence=PredefPointers is unported and the flat model needs no bank switch, dataflow shows A dead after this site; lifetime=retired when PredefPointers is ported}
     jmp ReplaceTileBlock
 
-; ---------------------------------------------------------------------------
-; Mansion2Script_Switches (scripts/PokemonMansion2F.asm:45-52) — Tier-1 data: Mansion2Script_Switches is generated into assets/hidden_events.inc.
+; Mansion2Script_Switches (scripts/PokemonMansion2F.asm:45-52) — not re-emitted: Mansion2Script_Switches is already defined elsewhere in the port.
 
-; ---------------------------------------------------------------------------
-; PokemonMansion2F_ScriptPointers (scripts/PokemonMansion2F.asm:55-72) — Tier-1 data: Mansion2TrainerHeaders is generated into assets/trainer_headers.inc.
+; PokemonMansion2F_ScriptPointers (scripts/PokemonMansion2F.asm:55-72) — not re-emitted: Mansion2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 PokemonMansion2FSuperNerdText:
     mov esi, Mansion2TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; PokemonMansion2FSuperNerdBattleText (scripts/PokemonMansion2F.asm:81-98) — Tier-1 data: PokemonMansion2FSuperNerdBattleText is generated into assets/trainer_headers.inc.
+; PokemonMansion2FSuperNerdBattleText (scripts/PokemonMansion2F.asm:81-98) — not re-emitted: PokemonMansion2FSuperNerdBattleText is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[event-byte-assembly-state] PokemonMansion2FSwitchText (scripts/PokemonMansion2F.asm:102-119) — at scripts/PokemonMansion2F.asm:118: ResetEventReuseHL EVENT_MANSION_SWITCH_ON

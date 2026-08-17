@@ -20,6 +20,8 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/map_script_tables.inc"
+%include "assets/trainer_headers.inc"
 
 global Route6CooltrainerF1Text
 global Route6CooltrainerF2Text
@@ -29,23 +31,12 @@ global Route6Youngster1Text
 global Route6Youngster2Text
 global Route6_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerF1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route6CooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerF1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerF2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route6CooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerF2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerM1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route6CooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerM1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerM2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route6CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6CooltrainerM2EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route6TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route6TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route6TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -53,29 +44,11 @@ extern Route6TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern Route6TrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern Route6TrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern Route6TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern Route6UndergroundPathSignText   ; NOT YET DEFINED IN THE PORT
-extern Route6Youngster1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route6Youngster1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6Youngster1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6Youngster2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route6Youngster2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route6Youngster2EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route6_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern Route6_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROUTE6_DEFAULT                          equ 0
-SCRIPT_ROUTE6_START_BATTLE                     equ 1
-SCRIPT_ROUTE6_END_BATTLE                       equ 2
-TEXT_ROUTE6_COOLTRAINER_M1                     equ 1
-TEXT_ROUTE6_COOLTRAINER_F1                     equ 2
-TEXT_ROUTE6_YOUNGSTER1                         equ 3
-TEXT_ROUTE6_COOLTRAINER_M2                     equ 4
-TEXT_ROUTE6_COOLTRAINER_F2                     equ 5
-TEXT_ROUTE6_YOUNGSTER2                         equ 6
-TEXT_ROUTE6_UNDERGROUND_PATH_SIGN              equ 7
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -96,53 +69,46 @@ Route6_Script:
     mov [ebp + wRoute6CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; Route6_ScriptPointers (scripts/Route6.asm:11-40) — Tier-1 data: Route6_ScriptPointers is generated into assets/map_script_tables.inc.
+; Route6_ScriptPointers (scripts/Route6.asm:11-40) — not re-emitted: Route6_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 Route6CooltrainerM1Text:
     mov esi, Route6TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route6CooltrainerM1BattleText (scripts/Route6.asm:49-58) — Tier-1 data: Route6CooltrainerM1BattleText is generated into assets/trainer_headers.inc.
+; Route6CooltrainerM1BattleText (scripts/Route6.asm:49-58) — not re-emitted: Route6CooltrainerM1BattleText is already defined in assets/trainer_headers.inc.
 
 Route6CooltrainerF1Text:
     mov esi, Route6TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route6CooltrainerF1BattleText (scripts/Route6.asm:67-76) — Tier-1 data: Route6CooltrainerF1BattleText is generated into assets/trainer_headers.inc.
+; Route6CooltrainerF1BattleText (scripts/Route6.asm:67-76) — not re-emitted: Route6CooltrainerF1BattleText is already defined in assets/trainer_headers.inc.
 
 Route6Youngster1Text:
     mov esi, Route6TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route6Youngster1BattleText (scripts/Route6.asm:85-94) — Tier-1 data: Route6Youngster1BattleText is generated into assets/trainer_headers.inc.
+; Route6Youngster1BattleText (scripts/Route6.asm:85-94) — not re-emitted: Route6Youngster1BattleText is already defined in assets/trainer_headers.inc.
 
 Route6CooltrainerM2Text:
     mov esi, Route6TrainerHeader3
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route6CooltrainerM2BattleText (scripts/Route6.asm:103-112) — Tier-1 data: Route6CooltrainerM2BattleText is generated into assets/trainer_headers.inc.
+; Route6CooltrainerM2BattleText (scripts/Route6.asm:103-112) — not re-emitted: Route6CooltrainerM2BattleText is already defined in assets/trainer_headers.inc.
 
 Route6CooltrainerF2Text:
     mov esi, Route6TrainerHeader4
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route6CooltrainerF2BattleText (scripts/Route6.asm:121-130) — Tier-1 data: Route6CooltrainerF2BattleText is generated into assets/trainer_headers.inc.
+; Route6CooltrainerF2BattleText (scripts/Route6.asm:121-130) — not re-emitted: Route6CooltrainerF2BattleText is already defined in assets/trainer_headers.inc.
 
 Route6Youngster2Text:
     mov esi, Route6TrainerHeader5
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route6Youngster2BattleText (scripts/Route6.asm:139-152) — Tier-1 data: Route6Youngster2BattleText is generated into assets/trainer_headers.inc.
+; Route6Youngster2BattleText (scripts/Route6.asm:139-152) — not re-emitted: Route6Youngster2BattleText is already defined in assets/trainer_headers.inc.

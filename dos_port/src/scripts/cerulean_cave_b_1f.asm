@@ -20,35 +20,22 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/map_script_tables.inc"
+%include "assets/trainer_headers.inc"
 
 global CeruleanCaveB1FMewtwoText
 global CeruleanCaveB1F_Script
 
 extern CeruleanCaveB1FTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern CeruleanCaveB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern CeruleanCaveB1F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern MewtwoBattleText   ; NOT YET DEFINED IN THE PORT
 extern MewtwoTrainerHeader   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_CERULEANCAVEB1F_DEFAULT                 equ 0
-SCRIPT_CERULEANCAVEB1F_START_BATTLE            equ 1
-SCRIPT_CERULEANCAVEB1F_END_BATTLE              equ 2
-TEXT_CERULEANCAVEB1F_MEWTWO                    equ 1
-TEXT_CERULEANCAVEB1F_ULTRA_BALL1               equ 2
-TEXT_CERULEANCAVEB1F_ULTRA_BALL2               equ 3
-TEXT_CERULEANCAVEB1F_MAX_REVIVE                equ 4
-TEXT_CERULEANCAVEB1F_MAX_ELIXER                equ 5
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -69,16 +56,14 @@ CeruleanCaveB1F_Script:
     mov [ebp + wCeruleanCaveB1FCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; CeruleanCaveB1F_ScriptPointers (scripts/CeruleanCaveB1F.asm:11-28) — Tier-1 data: CeruleanCaveB1F_ScriptPointers is generated into assets/map_script_tables.inc.
+; CeruleanCaveB1F_ScriptPointers (scripts/CeruleanCaveB1F.asm:11-28) — not re-emitted: CeruleanCaveB1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 CeruleanCaveB1FMewtwoText:
     mov esi, MewtwoTrainerHeader
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; MewtwoBattleText (scripts/CeruleanCaveB1F.asm:37-37) — Tier-1 data: MewtwoBattleText is generated into assets/trainer_headers.inc.
+; MewtwoBattleText (scripts/CeruleanCaveB1F.asm:37-37) — not re-emitted: MewtwoBattleText is already defined in assets/trainer_headers.inc.
 
     mov al, 131
     call PlayCry

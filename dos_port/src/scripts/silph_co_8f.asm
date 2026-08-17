@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global SilphCo8FGateCallbackScript
 global SilphCo8FRocket1Text
@@ -29,25 +30,13 @@ global SilphCo8FSilphWorkerMText
 global SilphCo8F_Script
 global SilphCo8F_UnlockedDoorEventScript
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8FRocket1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8FRocket1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8FScientistAfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8FScientistEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo8F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo8TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -56,15 +45,6 @@ extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo8FSilphWorkerMSilphIsFinishedText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo8FSilphWorkerMThanksForSavingUsText   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_SILPHCO8F_DEFAULT                       equ 0
-SCRIPT_SILPHCO8F_START_BATTLE                  equ 1
-SCRIPT_SILPHCO8F_END_BATTLE                    equ 2
-TEXT_SILPHCO8F_SILPH_WORKER_M                  equ 1
-TEXT_SILPHCO8F_ROCKET1                         equ 2
-TEXT_SILPHCO8F_SCIENTIST                       equ 3
-TEXT_SILPHCO8F_ROCKET2                         equ 4
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -166,8 +146,7 @@ SilphCo8F_UnlockedDoorEventScript:
     SetEvent EVENT_SILPH_CO_8_UNLOCKED_DOOR
     ret
 
-; ---------------------------------------------------------------------------
-; SilphCo8F_ScriptPointers (scripts/SilphCo8F.asm:74-94) — Tier-1 data: SilphCo8TrainerHeaders is generated into assets/trainer_headers.inc.
+; SilphCo8F_ScriptPointers (scripts/SilphCo8F.asm:74-94) — not re-emitted: SilphCo8TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 SilphCo8FSilphWorkerMText:
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
@@ -200,5 +179,4 @@ SilphCo8FRocket2Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo8FRocket1BattleText (scripts/SilphCo8F.asm:133-166) — Tier-1 data: SilphCo8FRocket1BattleText is generated into assets/trainer_headers.inc.
+; SilphCo8FRocket1BattleText (scripts/SilphCo8F.asm:133-166) — not re-emitted: SilphCo8FRocket1BattleText is already defined in assets/trainer_headers.inc.

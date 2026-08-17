@@ -20,30 +20,22 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global SilphCo3FRocketText
 global SilphCo3FScientistText
 global SilphCo3FSilphWorkerMText
 global SilphCo3F_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern SilphCo2F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3FGateCallbackScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo3FRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo3FRocketEndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo3FScientistAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo3FScientistEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3F_UnlockedDoorEventScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
@@ -52,15 +44,6 @@ extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo3FSilphWorkerMWhatShouldIDoText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo3FSilphWorkerMYouSavedUsText   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_SILPHCO3F_DEFAULT                       equ 0
-SCRIPT_SILPHCO3F_START_BATTLE                  equ 1
-SCRIPT_SILPHCO3F_END_BATTLE                    equ 2
-TEXT_SILPHCO3F_SILPH_WORKER_M                  equ 1
-TEXT_SILPHCO3F_ROCKET                          equ 2
-TEXT_SILPHCO3F_SCIENTIST                       equ 3
-TEXT_SILPHCO3F_HYPER_POTION                    equ 4
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -135,8 +118,7 @@ SilphCo3F_Script:
 ; PRET| 	SetEventAfterBranchReuseHL EVENT_SILPH_CO_3_UNLOCKED_DOOR2, EVENT_SILPH_CO_3_UNLOCKED_DOOR1
 ; PRET| 	ret
 
-; ---------------------------------------------------------------------------
-; SilphCo3F_ScriptPointers (scripts/SilphCo3F.asm:54-72) — Tier-1 data: SilphCo3TrainerHeaders is generated into assets/trainer_headers.inc.
+; SilphCo3F_ScriptPointers (scripts/SilphCo3F.asm:54-72) — not re-emitted: SilphCo3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 SilphCo3FSilphWorkerMText:
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
@@ -159,13 +141,11 @@ SilphCo3FRocketText:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo3FRocketBattleText (scripts/SilphCo3F.asm:99-108) — Tier-1 data: SilphCo3FRocketBattleText is generated into assets/trainer_headers.inc.
+; SilphCo3FRocketBattleText (scripts/SilphCo3F.asm:99-108) — not re-emitted: SilphCo3FRocketBattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo3FScientistText:
     mov esi, SilphCo3TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo3FScientistBattleText (scripts/SilphCo3F.asm:117-126) — Tier-1 data: SilphCo3FScientistBattleText is generated into assets/trainer_headers.inc.
+; SilphCo3FScientistBattleText (scripts/SilphCo3F.asm:117-126) — not re-emitted: SilphCo3FScientistBattleText is already defined in assets/trainer_headers.inc.

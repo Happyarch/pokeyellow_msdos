@@ -22,11 +22,13 @@ bits 32
 
 %include "assets/audio_constants.inc"
 
+global CinnabarGymBlainePostBattleScript
 global CinnabarGymFlagAction
 global CinnabarGymGetOpponentTextScript
 global CinnabarGymGymGuideText
 global CinnabarGymOpenGateScript
 global CinnabarGymPrintGymGuideText
+global CinnabarGymReceiveTM38
 global CinnabarGymResetScripts
 global CinnabarGymScript_74fa3
 global CinnabarGymScript_75023
@@ -63,13 +65,11 @@ global TextPointers_f215d
 extern ApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
 extern Bankswitch   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable   ; NOT YET DEFINED IN THE PORT
-extern CinnabarGymBlainePostBattleScript   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymBlaineReceivedTM38Text   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymBlaineTM38NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymBlaineText   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymBlaineVolcanoBadgeInfoText   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymDefaultScript   ; NOT YET DEFINED IN THE PORT
-extern CinnabarGymReceiveTM38   ; NOT YET DEFINED IN THE PORT
 extern CinnabarGymSetMapAndTiles   ; NOT YET DEFINED IN THE PORT
 extern DelayFrames   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID   ; NOT YET DEFINED IN THE PORT
@@ -360,51 +360,42 @@ CinnabarGymScript_75041:
     call UpdateCinnabarGymGateTileBlocks
     ret
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] CinnabarGymBlainePostBattleScript (scripts/CinnabarGym.asm:199-218) — at scripts/CinnabarGym.asm:213: .BagFull is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call CinnabarGymScript_753e9
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, CinnabarGymResetScripts
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| ; fallthrough
-; PRET| CinnabarGymReceiveTM38:
-; PRET| 	ld a, TEXT_CINNABARGYM_BLAINE_VOLCANO_BADGE_INFO
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_BEAT_BLAINE
-; PRET| 	lb bc, TM_FIRE_BLAST, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .BagFull
-; PRET| 	ld a, TEXT_CINNABARGYM_BLAINE_RECEIVED_TM38
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_GOT_TM38
-; PRET| 	jr .gymVictory
+CinnabarGymBlainePostBattleScript:
+    call CinnabarGymScript_753e9
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz CinnabarGymResetScripts
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+CinnabarGymReceiveTM38:
+    mov al, TEXT_CINNABARGYM_BLAINE_VOLCANO_BADGE_INFO
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    pushfd    ; SM83 form writes no flags
+        SetEvent EVENT_BEAT_BLAINE
+    popfd
+    mov bx, ((240) << 8) | (1)
+    call GiveItem
+    jae .BagFull
+    mov al, TEXT_CINNABARGYM_BLAINE_RECEIVED_TM38
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    SetEvent EVENT_GOT_TM38
+    jmp .gymVictory
 
-; ---------------------------------------------------------------------------
-; BAIL[event-range-macro] CinnabarGymReceiveTM38.BagFull (scripts/CinnabarGym.asm:220-235) — at scripts/CinnabarGym.asm:230: SetEventRange EVENT_BEAT_CINNABAR_GYM_TRAINER_0, EVENT_BEAT_CINNABAR_GYM_TRAINER_6
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, TEXT_CINNABARGYM_BLAINE_TM38_NO_ROOM
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| .gymVictory
-; PRET| 	ld hl, wObtainedBadges
-; PRET| 	set BIT_VOLCANOBADGE, [hl]
-; PRET| 	ld hl, wBeatGymFlags
-; PRET| 	set BIT_VOLCANOBADGE, [hl]
-; PRET| 
-; PRET| 	; deactivate gym trainers
-; PRET| 	SetEventRange EVENT_BEAT_CINNABAR_GYM_TRAINER_0, EVENT_BEAT_CINNABAR_GYM_TRAINER_6
-; PRET| 
-; PRET| 	ld hl, wCurrentMapScriptFlags
-; PRET| 	set BIT_CUR_MAP_LOADED_1, [hl]
-; PRET| 
-; PRET| 	jp CinnabarGymResetScripts
+.BagFull:
+    mov al, TEXT_CINNABARGYM_BLAINE_TM38_NO_ROOM
+    mov [ebp + hTextID], al
+    call DisplayTextID
+.gymVictory:
+    mov esi, wObtainedBadges
+    or byte [ebp + esi], (1 << (6))
+    mov esi, wBeatGymFlags
+    or byte [ebp + esi], (1 << (6))
+    SetEventRange EVENT_BEAT_CINNABAR_GYM_TRAINER_0, EVENT_BEAT_CINNABAR_GYM_TRAINER_6
+    mov esi, wCurrentMapScriptFlags
+    or byte [ebp + esi], (1 << (BIT_CUR_MAP_LOADED_1))
+    jmp CinnabarGymResetScripts
 
 CinnabarGym_TextPointers:
     dd CinnabarGymBlaineText

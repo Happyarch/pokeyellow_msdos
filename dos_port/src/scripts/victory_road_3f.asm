@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/map_dims.inc"
+%include "assets/trainer_headers.inc"
 
 global VictoryRoad3FCooltrainerF1Text
 global VictoryRoad3FCooltrainerF2Text
@@ -37,24 +38,12 @@ extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern HideObject   ; NOT YET DEFINED IN THE PORT
 extern IsPlayerOnDungeonWarp   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern ShowObject   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3FCheckBoulderEventScript   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerF1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerF1BattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerF1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerF2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerF2BattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerF2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerM1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3FCooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerM1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerM2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern VictoryRoad3FCooltrainerM2EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
@@ -62,18 +51,6 @@ extern VictoryRoad3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3TrainerHeader2   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3TrainerHeader3   ; NOT YET DEFINED IN THE PORT
 extern VictoryRoad3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-TEXT_VICTORYROAD3F_COOLTRAINER_M1              equ 1
-TEXT_VICTORYROAD3F_COOLTRAINER_F1              equ 2
-TEXT_VICTORYROAD3F_COOLTRAINER_M2              equ 3
-TEXT_VICTORYROAD3F_COOLTRAINER_F2              equ 4
-TEXT_VICTORYROAD3F_MAX_REVIVE                  equ 5
-TEXT_VICTORYROAD3F_TM_EXPLOSION                equ 6
-TEXT_VICTORYROAD3F_BOULDER1                    equ 7
-TEXT_VICTORYROAD3F_BOULDER2                    equ 8
-TEXT_VICTORYROAD3F_BOULDER3                    equ 9
-TEXT_VICTORYROAD3F_BOULDER4                    equ 10
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -176,8 +153,7 @@ VictoryRoad3F_ScriptPointers:
     jz CheckFightingMapTrainers
     ret
 
-; ---------------------------------------------------------------------------
-; VictoryRoad3F_TextPointers (scripts/VictoryRoad3F.asm:82-104) — Tier-1 data: VictoryRoad3TrainerHeaders is generated into assets/trainer_headers.inc.
+; VictoryRoad3F_TextPointers (scripts/VictoryRoad3F.asm:82-104) — not re-emitted: VictoryRoad3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 VictoryRoad3FCooltrainerM1Text:
     mov esi, VictoryRoad3TrainerHeader0
@@ -199,5 +175,4 @@ VictoryRoad3FCooltrainerF2Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; VictoryRoad3FCooltrainerM1BattleText (scripts/VictoryRoad3F.asm:131-176) — Tier-1 data: VictoryRoad3FCooltrainerM1BattleText is generated into assets/trainer_headers.inc.
+; VictoryRoad3FCooltrainerM1BattleText (scripts/VictoryRoad3F.asm:131-176) — not re-emitted: VictoryRoad3FCooltrainerM1BattleText is already defined in assets/trainer_headers.inc.

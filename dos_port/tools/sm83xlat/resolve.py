@@ -203,11 +203,18 @@ def _port_symbols_with_source(port: Path):
             # (assets/map_headers.inc) into script sources, which fails to
             # assemble on symbols that file needs and this one has no business
             # supplying.
-            asset_labels |= set(re.findall(r"^([A-Za-z_]\w*):", text, re.M))
+            labs = set(re.findall(r"^([A-Za-z_]\w*):", text, re.M))
+            asset_labels |= labs
             # `-I include/ -I .` from dos_port/, so an include/ header is named
             # bare and an assets/ file keeps its directory.
             inc = p.name if d == "include" else f"assets/{p.name}"
             for nm in names:
+                src.setdefault(nm, inc)
+            # Record the owning file for LABELS too, not just constants. Without
+            # this the owned-by-generated-assets note could only say "a generated
+            # asset" — true but unactionable, since the whole point of the note is
+            # to tell the reader where the data actually lives.
+            for nm in labs:
                 src.setdefault(nm, inc)
             out |= names
     return out, src, asset_labels

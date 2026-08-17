@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global RocketHideout3ArrowMovement1
 global RocketHideout3ArrowMovement10
@@ -49,17 +50,12 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern LoadSpinnerArrowTiles   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlaySound   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout3TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout3TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB3FRocket1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB3FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB3FRocket1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB3FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB3FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB3FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
@@ -68,10 +64,6 @@ extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROCKETHIDEOUTB3F_DEFAULT                equ 0
 SCRIPT_ROCKETHIDEOUTB3F_PLAYER_SPINNING        equ 3
-TEXT_ROCKETHIDEOUTB3F_ROCKET1                  equ 1
-TEXT_ROCKETHIDEOUTB3F_ROCKET2                  equ 2
-TEXT_ROCKETHIDEOUTB3F_TM_DOUBLE_EDGE           equ 3
-TEXT_ROCKETHIDEOUTB3F_RARE_CANDY               equ 4
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -211,21 +203,18 @@ RocketHideoutB3FPlayerSpinningScript:
     mov [ebp + wCurMapScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB3F_TextPointers (scripts/RocketHideoutB3F.asm:129-141) — Tier-1 data: RocketHideout3TrainerHeaders is generated into assets/trainer_headers.inc.
+; RocketHideoutB3F_TextPointers (scripts/RocketHideoutB3F.asm:129-141) — not re-emitted: RocketHideout3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 RocketHideoutB3FRocket1Text:
     mov esi, RocketHideout3TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB3FRocket1BattleText (scripts/RocketHideoutB3F.asm:150-159) — Tier-1 data: RocketHideoutB3FRocket1BattleText is generated into assets/trainer_headers.inc.
+; RocketHideoutB3FRocket1BattleText (scripts/RocketHideoutB3F.asm:150-159) — not re-emitted: RocketHideoutB3FRocket1BattleText is already defined in assets/trainer_headers.inc.
 
 RocketHideoutB3FRocket2Text:
     mov esi, RocketHideout3TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB3FRocket2BattleText (scripts/RocketHideoutB3F.asm:168-177) — Tier-1 data: RocketHideoutB3FRocket2BattleText is generated into assets/trainer_headers.inc.
+; RocketHideoutB3FRocket2BattleText (scripts/RocketHideoutB3F.asm:168-177) — not re-emitted: RocketHideoutB3FRocket2BattleText is already defined in assets/trainer_headers.inc.

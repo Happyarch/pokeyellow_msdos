@@ -21,11 +21,14 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global SaffronGymChanneler1Text
 global SaffronGymChanneler2Text
 global SaffronGymChanneler3Text
 global SaffronGymResetScripts
+global SaffronGymSabrinaPostBattle
+global SaffronGymSabrinaReceiveTM46Script
 global SaffronGymYoungster1Text
 global SaffronGymYoungster2Text
 global SaffronGymYoungster3Text
@@ -43,19 +46,9 @@ extern GiveItem   ; NOT YET DEFINED IN THE PORT
 extern InitBattleEnemyParameters   ; NOT YET DEFINED IN THE PORT
 extern LoadGymLeaderAndCityName   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymChanneler1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymChanneler1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymChanneler1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymChanneler2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymChanneler2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymChanneler2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymChanneler3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymChanneler3BattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymChanneler3EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymGymGuideText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymSabrinaMarshBadgeInfoText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymSabrinaPostBattle   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymSabrinaReceiveTM46Script   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymSabrinaReceivedTM46Text   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymSabrinaTM46NoRoomText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymSabrinaText   ; NOT YET DEFINED IN THE PORT
@@ -67,18 +60,6 @@ extern SaffronGymTrainerHeader4   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader5   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeader6   ; NOT YET DEFINED IN THE PORT
 extern SaffronGymTrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster3BattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster4BattleText   ; NOT YET DEFINED IN THE PORT
-extern SaffronGymYoungster4EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SaffronGym_Script   ; NOT YET DEFINED IN THE PORT
 extern SaffronGym_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SaveEndBattleTextPointers   ; NOT YET DEFINED IN THE PORT
@@ -89,15 +70,6 @@ extern _SaffronGymSabrinaText   ; NOT YET DEFINED IN THE PORT
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_SAFFRONGYM_SABRINA_POST_BATTLE          equ 3
-TEXT_SAFFRONGYM_SABRINA                        equ 1
-TEXT_SAFFRONGYM_CHANNELER1                     equ 2
-TEXT_SAFFRONGYM_YOUNGSTER1                     equ 3
-TEXT_SAFFRONGYM_CHANNELER2                     equ 4
-TEXT_SAFFRONGYM_YOUNGSTER2                     equ 5
-TEXT_SAFFRONGYM_CHANNELER3                     equ 6
-TEXT_SAFFRONGYM_YOUNGSTER3                     equ 7
-TEXT_SAFFRONGYM_YOUNGSTER4                     equ 8
-TEXT_SAFFRONGYM_GYM_GUIDE                      equ 9
 TEXT_SAFFRONGYM_SABRINA_MARSH_BADGE_INFO       equ 10
 TEXT_SAFFRONGYM_SABRINA_RECEIVED_TM46          equ 11
 TEXT_SAFFRONGYM_SABRINA_TM46_NO_ROOM           equ 12
@@ -159,50 +131,41 @@ SaffronGym_ScriptPointers:
     dd EndTrainerBattle
     dd SaffronGymSabrinaPostBattle
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] SaffronGymSabrinaPostBattle (scripts/SaffronGym.asm:40-58) — at scripts/SaffronGym.asm:53: .BagFull is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wIsInBattle]
-; PRET| 	cp $ff
-; PRET| 	jp z, SaffronGymResetScripts
-; PRET| 	ld a, PAD_CTRL_PAD
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 
-; PRET| SaffronGymSabrinaReceiveTM46Script:
-; PRET| 	ld a, TEXT_SAFFRONGYM_SABRINA_MARSH_BADGE_INFO
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_BEAT_SABRINA
-; PRET| 	lb bc, TM_PSYWAVE, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .BagFull
-; PRET| 	ld a, TEXT_SAFFRONGYM_SABRINA_RECEIVED_TM46
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| 	SetEvent EVENT_GOT_TM46
-; PRET| 	jr .gymVictory
+SaffronGymSabrinaPostBattle:
+    mov al, [ebp + wIsInBattle]
+    cmp al, 0xff
+    jz SaffronGymResetScripts
+    mov al, PAD_CTRL_PAD
+    mov [ebp + wJoyIgnore], al
+SaffronGymSabrinaReceiveTM46Script:
+    mov al, TEXT_SAFFRONGYM_SABRINA_MARSH_BADGE_INFO
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    pushfd    ; SM83 form writes no flags
+        SetEvent EVENT_BEAT_SABRINA
+    popfd
+    mov bx, ((248) << 8) | (1)
+    call GiveItem
+    jae .BagFull
+    mov al, TEXT_SAFFRONGYM_SABRINA_RECEIVED_TM46
+    mov [ebp + hTextID], al
+    call DisplayTextID
+    SetEvent EVENT_GOT_TM46
+    jmp .gymVictory
 
-; ---------------------------------------------------------------------------
-; BAIL[event-range-macro] SaffronGymSabrinaReceiveTM46Script.BagFull (scripts/SaffronGym.asm:60-72) — at scripts/SaffronGym.asm:70: SetEventRange EVENT_BEAT_SAFFRON_GYM_TRAINER_0, EVENT_BEAT_SAFFRON_GYM_TRAINER_6
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, TEXT_SAFFRONGYM_SABRINA_TM46_NO_ROOM
-; PRET| 	ldh [hTextID], a
-; PRET| 	call DisplayTextID
-; PRET| .gymVictory
-; PRET| 	ld hl, wObtainedBadges
-; PRET| 	set BIT_MARSHBADGE, [hl]
-; PRET| 	ld hl, wBeatGymFlags
-; PRET| 	set BIT_MARSHBADGE, [hl]
-; PRET| 
-; PRET| 	; deactivate gym trainers
-; PRET| 	SetEventRange EVENT_BEAT_SAFFRON_GYM_TRAINER_0, EVENT_BEAT_SAFFRON_GYM_TRAINER_6
-; PRET| 
-; PRET| 	jp SaffronGymResetScripts
+.BagFull:
+    mov al, TEXT_SAFFRONGYM_SABRINA_TM46_NO_ROOM
+    mov [ebp + hTextID], al
+    call DisplayTextID
+.gymVictory:
+    mov esi, wObtainedBadges
+    or byte [ebp + esi], (1 << (5))
+    mov esi, wBeatGymFlags
+    or byte [ebp + esi], (1 << (5))
+    SetEventRange EVENT_BEAT_SAFFRON_GYM_TRAINER_0, EVENT_BEAT_SAFFRON_GYM_TRAINER_6
+    jmp SaffronGymResetScripts
 
-; ---------------------------------------------------------------------------
-; SaffronGym_TextPointers (scripts/SaffronGym.asm:75-105) — Tier-1 data: SaffronGymTrainerHeaders is generated into assets/trainer_headers.inc.
+; SaffronGym_TextPointers (scripts/SaffronGym.asm:75-105) — not re-emitted: SaffronGymTrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] SaffronGymSabrinaText (scripts/SaffronGym.asm:109-115) — at scripts/SaffronGym.asm:110: .beforeBeat is defined in a region that bailed
@@ -332,5 +295,4 @@ SaffronGymYoungster4Text:
 ; PRET| .done
 ; PRET| 	jp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SaffronGymGymGuideText.ChampInMakingText (scripts/SaffronGym.asm:224-313) — Tier-1 data: SaffronGymChanneler1BattleText is generated into assets/trainer_headers.inc.
+; SaffronGymGymGuideText.ChampInMakingText (scripts/SaffronGym.asm:224-313) — not re-emitted: SaffronGymChanneler1BattleText is already defined in assets/trainer_headers.inc.

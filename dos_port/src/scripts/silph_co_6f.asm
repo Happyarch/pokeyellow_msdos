@@ -20,6 +20,7 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/trainer_headers.inc"
 
 global SilphCo6FRocket1Text
 global SilphCo6FRocket2Text
@@ -28,32 +29,21 @@ global SilphCo6F_GateCallbackScript
 global SilphCo6F_Script
 global SilphCo6F_UnlockedDoorEventScript
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
 extern ReplaceTileBlock   ; NOT YET DEFINED IN THE PORT
 extern SilphCo4F_SetCardKeyDoorYScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FBeatGiovanniPrintDEOrPrintHLScript   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FRocket1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FRocket1BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FRocket1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FScientistAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FScientistBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6FScientistEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FSilphWorkerF1Text   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FSilphWorkerF2Text   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FSilphWorkerM1Text   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FSilphWorkerM2Text   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6FSilphWorkerM3Text   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern SilphCo6F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern SilphCo6TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -70,21 +60,6 @@ extern _SilphCo6FSilphWorkerM3TargetedSilphText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo6FSilphWorkerM3WorkForSilphText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo6FSilphWorkerMHelpMePleaseText   ; NOT YET DEFINED IN THE PORT
 extern _SilphCo6FSilphWorkerMWeGotEngagedText   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_SILPHCO6F_DEFAULT                       equ 0
-SCRIPT_SILPHCO6F_START_BATTLE                  equ 1
-SCRIPT_SILPHCO6F_END_BATTLE                    equ 2
-TEXT_SILPHCO6F_SILPH_WORKER_M1                 equ 1
-TEXT_SILPHCO6F_SILPH_WORKER_M2                 equ 2
-TEXT_SILPHCO6F_SILPH_WORKER_F1                 equ 3
-TEXT_SILPHCO6F_SILPH_WORKER_F2                 equ 4
-TEXT_SILPHCO6F_SILPH_WORKER_M3                 equ 5
-TEXT_SILPHCO6F_ROCKET1                         equ 6
-TEXT_SILPHCO6F_SCIENTIST                       equ 7
-TEXT_SILPHCO6F_ROCKET2                         equ 8
-TEXT_SILPHCO6F_HP_UP                           equ 9
-TEXT_SILPHCO6F_X_ACCURACY                      equ 10
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -142,8 +117,7 @@ SilphCo6F_UnlockedDoorEventScript:
     SetEvent EVENT_SILPH_CO_6_UNLOCKED_DOOR
     ret
 
-; ---------------------------------------------------------------------------
-; SilphCo6F_ScriptPointers (scripts/SilphCo6F.asm:38-64) — Tier-1 data: SilphCo6TrainerHeaders is generated into assets/trainer_headers.inc.
+; SilphCo6F_ScriptPointers (scripts/SilphCo6F.asm:38-64) — not re-emitted: SilphCo6TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[target-region-bailed] SilphCo6FBeatGiovanniPrintDEOrPrintHLScript (scripts/SilphCo6F.asm:67-69) — at scripts/SilphCo6F.asm:68: .beat_giovanni is defined in a region that bailed
@@ -247,21 +221,18 @@ SilphCo6FRocket1Text:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo6FRocket1BattleText (scripts/SilphCo6F.asm:158-167) — Tier-1 data: SilphCo6FRocket1BattleText is generated into assets/trainer_headers.inc.
+; SilphCo6FRocket1BattleText (scripts/SilphCo6F.asm:158-167) — not re-emitted: SilphCo6FRocket1BattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo6FScientistText:
     mov esi, SilphCo6TrainerHeader1
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo6FScientistBattleText (scripts/SilphCo6F.asm:176-185) — Tier-1 data: SilphCo6FScientistBattleText is generated into assets/trainer_headers.inc.
+; SilphCo6FScientistBattleText (scripts/SilphCo6F.asm:176-185) — not re-emitted: SilphCo6FScientistBattleText is already defined in assets/trainer_headers.inc.
 
 SilphCo6FRocket2Text:
     mov esi, SilphCo6TrainerHeader2
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo6FRocket2BattleText (scripts/SilphCo6F.asm:194-203) — Tier-1 data: SilphCo6FRocket2BattleText is generated into assets/trainer_headers.inc.
+; SilphCo6FRocket2BattleText (scripts/SilphCo6F.asm:194-203) — not re-emitted: SilphCo6FRocket2BattleText is already defined in assets/trainer_headers.inc.

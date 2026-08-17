@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global CoordsData_49dc0
 global CoordsData_49dc7
@@ -87,32 +88,20 @@ extern MtMoon3TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FDomeFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FHelixFossilText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FJessieJamesText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FMoveSuperNerdScript   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FReceivedFossilText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FRocket2AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FRocket2BattleText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FRocket2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FRocket3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FRocket3BattleText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FRocket3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FRocket4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FRocket4BattleText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FRocket4EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FScript13   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FScript15   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FScript_49e15   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FScript_ShowObject   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdOkIllShareText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FSuperNerdThenThisIsMineText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdTheresAPokemonLabText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdTheyreBothMineText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FText12   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FYouHaveNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2fSuperNerdEachTakeOneText   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic   ; NOT YET DEFINED IN THE PORT
 extern PlayMusic   ; NOT YET DEFINED IN THE PORT
 extern PrintText   ; NOT YET DEFINED IN THE PORT
@@ -144,15 +133,6 @@ SCRIPT_MTMOONB2F_SCRIPT13                      equ 13
 SCRIPT_MTMOONB2F_SCRIPT14                      equ 14
 SCRIPT_MTMOONB2F_SCRIPT15                      equ 15
 TEXT_MTMOONB2F_SUPER_NERD                      equ 1
-TEXT_MTMOONB2F_JESSIE                          equ 2
-TEXT_MTMOONB2F_ROCKET1                         equ 3
-TEXT_MTMOONB2F_ROCKET2                         equ 4
-TEXT_MTMOONB2F_ROCKET3                         equ 5
-TEXT_MTMOONB2F_JAMES                           equ 6
-TEXT_MTMOONB2F_DOME_FOSSIL                     equ 7
-TEXT_MTMOONB2F_HELIX_FOSSIL                    equ 8
-TEXT_MTMOONB2F_HP_UP                           equ 9
-TEXT_MTMOONB2F_TM_MEGA_PUNCH                   equ 10
 TEXT_MTMOONB2F_SUPER_NERD_THEN_THIS_IS_MINE    equ 11
 TEXT_MTMOONB2F_TEXT12                          equ 12
 TEXT_MTMOONB2F_TEXT13                          equ 13
@@ -614,8 +594,7 @@ MtMoonB2FScript_HideObject:
     call HideObject
     ret
 
-; ---------------------------------------------------------------------------
-; MtMoonB2F_TextPointers (scripts/MtMoonB2F.asm:417-447) — Tier-1 data: MtMoon3TrainerHeaders is generated into assets/trainer_headers.inc.
+; MtMoonB2F_TextPointers (scripts/MtMoonB2F.asm:417-447) — not re-emitted: MtMoon3TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[predef-leaves-id-in-a] scripts/MtMoonB2F.asm:anon (scripts/MtMoonB2F.asm:449-460) — at scripts/MtMoonB2F.asm:457: predef EmotionBubble
@@ -784,8 +763,7 @@ MtMoonB2FTalkToTrainer:
 ; PRET| 	call PrintText
 ; PRET| 	jp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; MtMoonB2FYouHaveNoRoomText.Text (scripts/MtMoonB2F.asm:595-654) — Tier-1 data: MtMoonB2FRocket2BattleText is generated into assets/trainer_headers.inc.
+; MtMoonB2FYouHaveNoRoomText.Text (scripts/MtMoonB2F.asm:595-654) — not re-emitted: MtMoonB2FRocket2BattleText is already defined in assets/trainer_headers.inc.
 
 MtMoonB2FScript_ApplyPikachuMovementData:
     mov al, [ebp + wPikachuSpawnStateFlags]

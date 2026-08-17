@@ -20,6 +20,8 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/map_script_tables.inc"
+%include "assets/trainer_headers.inc"
 
 global PowerPlantElectrode1Text
 global PowerPlantElectrode2Text
@@ -33,18 +35,12 @@ global PowerPlantVoltorb6Text
 global PowerPlantZapdosText
 global PowerPlant_Script
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlayCry   ; NOT YET DEFINED IN THE PORT
 extern PowerPlantTrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern PowerPlantVoltorbBattleText   ; NOT YET DEFINED IN THE PORT
-extern PowerPlantZapdosBattleText   ; NOT YET DEFINED IN THE PORT
 extern PowerPlant_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern PowerPlant_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 extern Voltorb0TrainerHeader   ; NOT YET DEFINED IN THE PORT
@@ -57,25 +53,6 @@ extern Voltorb6TrainerHeader   ; NOT YET DEFINED IN THE PORT
 extern Voltorb7TrainerHeader   ; NOT YET DEFINED IN THE PORT
 extern WaitForSoundToFinish   ; NOT YET DEFINED IN THE PORT
 extern ZapdosTrainerHeader   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_POWERPLANT_DEFAULT                      equ 0
-SCRIPT_POWERPLANT_START_BATTLE                 equ 1
-SCRIPT_POWERPLANT_END_BATTLE                   equ 2
-TEXT_POWERPLANT_VOLTORB1                       equ 1
-TEXT_POWERPLANT_VOLTORB2                       equ 2
-TEXT_POWERPLANT_VOLTORB3                       equ 3
-TEXT_POWERPLANT_ELECTRODE1                     equ 4
-TEXT_POWERPLANT_VOLTORB4                       equ 5
-TEXT_POWERPLANT_VOLTORB5                       equ 6
-TEXT_POWERPLANT_ELECTRODE2                     equ 7
-TEXT_POWERPLANT_VOLTORB6                       equ 8
-TEXT_POWERPLANT_ZAPDOS                         equ 9
-TEXT_POWERPLANT_CARBOS                         equ 10
-TEXT_POWERPLANT_HP_UP                          equ 11
-TEXT_POWERPLANT_RARE_CANDY                     equ 12
-TEXT_POWERPLANT_TM_THUNDER                     equ 13
-TEXT_POWERPLANT_TM_REFLECT                     equ 14
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -96,8 +73,7 @@ PowerPlant_Script:
     mov [ebp + wPowerPlantCurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; PowerPlant_ScriptPointers (scripts/PowerPlant.asm:11-53) — Tier-1 data: PowerPlant_ScriptPointers is generated into assets/map_script_tables.inc.
+; PowerPlant_ScriptPointers (scripts/PowerPlant.asm:11-53) — not re-emitted: PowerPlant_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 PowerPlantInitBattleScript:
     call TalkToTrainer
@@ -141,8 +117,7 @@ PowerPlantZapdosText:
     mov esi, ZapdosTrainerHeader
     jmp PowerPlantInitBattleScript
 
-; ---------------------------------------------------------------------------
-; PowerPlantVoltorbBattleText (scripts/PowerPlant.asm:107-111) — Tier-1 data: PowerPlantVoltorbBattleText is generated into assets/trainer_headers.inc.
+; PowerPlantVoltorbBattleText (scripts/PowerPlant.asm:107-111) — not re-emitted: PowerPlantVoltorbBattleText is already defined in assets/trainer_headers.inc.
 
     mov al, 75
     call PlayCry

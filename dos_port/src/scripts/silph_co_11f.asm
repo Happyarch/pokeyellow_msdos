@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global SilphCo11FGateCallbackScript
 global SilphCo11FGiovanniAfterBattleScript
@@ -79,10 +80,7 @@ extern SilphCo11FBeautyText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FGiovanniText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FGiovanniYouRuinedOurPlansText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FJessieJamesText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern SilphCo11FRocketEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript12   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript14   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FScript5   ; NOT YET DEFINED IN THE PORT
@@ -117,12 +115,7 @@ SCRIPT_SILPHCO11F_SCRIPT9                      equ 9
 SCRIPT_SILPHCO11F_SCRIPT12                     equ 12
 SCRIPT_SILPHCO11F_SCRIPT13                     equ 13
 SCRIPT_SILPHCO11F_SCRIPT14                     equ 14
-TEXT_SILPHCO11F_SILPH_PRESIDENT                equ 1
-TEXT_SILPHCO11F_BEAUTY                         equ 2
 TEXT_SILPHCO11F_GIOVANNI                       equ 3
-TEXT_SILPHCO11F_JAMES                          equ 4
-TEXT_SILPHCO11F_ROCKET                         equ 5
-TEXT_SILPHCO11F_JESSIE                         equ 6
 TEXT_SILPHCO11F_GIOVANNI_YOU_RUINED_OUR_PLANS  equ 7
 TEXT_SILPHCO11F_TEXT8                          equ 8
 TEXT_SILPHCO11F_TEXT9                          equ 9
@@ -654,8 +647,7 @@ SilphCo11FScript_HideObject:
     call HideObject
     ret
 
-; ---------------------------------------------------------------------------
-; SilphCo11F_TextPointers (scripts/SilphCo11F.asm:473-492) — Tier-1 data: SilphCo11TrainerHeaders is generated into assets/trainer_headers.inc.
+; SilphCo11F_TextPointers (scripts/SilphCo11F.asm:473-492) — not re-emitted: SilphCo11TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[predef-leaves-id-in-a] scripts/SilphCo11F.asm:anon (scripts/SilphCo11F.asm:494-505) — at scripts/SilphCo11F.asm:502: predef EmotionBubble
@@ -761,8 +753,7 @@ SilphCo11FRocketText:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; SilphCo11FRocketBattleText (scripts/SilphCo11F.asm:585-594) — Tier-1 data: SilphCo11FRocketBattleText is generated into assets/trainer_headers.inc.
+; SilphCo11FRocketBattleText (scripts/SilphCo11F.asm:585-594) — not re-emitted: SilphCo11FRocketBattleText is already defined in assets/trainer_headers.inc.
 
 ; ---------------------------------------------------------------------------
 ; BAIL[pointer-domain-unknown] SilphCo11FTeamRocketLeavesScript (scripts/SilphCo11F_2.asm:2-11) — at scripts/SilphCo11F_2.asm:4: HL domain is top at a dereference

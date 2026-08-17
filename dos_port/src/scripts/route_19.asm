@@ -20,6 +20,8 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%include "assets/map_script_tables.inc"
+%include "assets/trainer_headers.inc"
 
 global Route19CooltrainerM1Text
 global Route19CooltrainerM2Text
@@ -34,42 +36,9 @@ global Route19Swimmer8Text
 global Route19_Script
 global Route19_TalkToTrainer
 
-extern CheckFightingMapTrainers   ; NOT YET DEFINED IN THE PORT
-extern DisplayEnemyTrainerTextAndStartBattle   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
-extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
-extern Route19CooltrainerM1AfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route19CooltrainerM1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19CooltrainerM1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19CooltrainerM2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19CooltrainerM2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19CooltrainerM2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19SignText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer1AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer1BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer1EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer2AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer2BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer2EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer3AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer3BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer3EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer4AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer4BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer4EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer5AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer5BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer5EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer6AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer6BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer6EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer7AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer7BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer7EndBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer8AfterBattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer8BattleText   ; NOT YET DEFINED IN THE PORT
-extern Route19Swimmer8EndBattleText   ; NOT YET DEFINED IN THE PORT
 extern Route19TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern Route19TrainerHeader1   ; NOT YET DEFINED IN THE PORT
 extern Route19TrainerHeader2   ; NOT YET DEFINED IN THE PORT
@@ -82,25 +51,8 @@ extern Route19TrainerHeader8   ; NOT YET DEFINED IN THE PORT
 extern Route19TrainerHeader9   ; NOT YET DEFINED IN THE PORT
 extern Route19TrainerHeaders   ; NOT YET DEFINED IN THE PORT
 extern Route19_ScriptPointers   ; NOT YET DEFINED IN THE PORT
-extern Route19_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
 extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
-
-; Script constants — pret defines these via dw_const in this file.
-SCRIPT_ROUTE19_DEFAULT                         equ 0
-SCRIPT_ROUTE19_START_BATTLE                    equ 1
-SCRIPT_ROUTE19_END_BATTLE                      equ 2
-TEXT_ROUTE19_COOLTRAINER_M1                    equ 1
-TEXT_ROUTE19_COOLTRAINER_M2                    equ 2
-TEXT_ROUTE19_SWIMMER1                          equ 3
-TEXT_ROUTE19_SWIMMER2                          equ 4
-TEXT_ROUTE19_SWIMMER3                          equ 5
-TEXT_ROUTE19_SWIMMER4                          equ 6
-TEXT_ROUTE19_SWIMMER5                          equ 7
-TEXT_ROUTE19_SWIMMER6                          equ 8
-TEXT_ROUTE19_SWIMMER7                          equ 9
-TEXT_ROUTE19_SWIMMER8                          equ 10
-TEXT_ROUTE19_SIGN                              equ 11
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -121,8 +73,7 @@ Route19_Script:
     mov [ebp + wRoute19CurScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; Route19_ScriptPointers (scripts/Route19.asm:11-52) — Tier-1 data: Route19_ScriptPointers is generated into assets/map_script_tables.inc.
+; Route19_ScriptPointers (scripts/Route19.asm:11-52) — not re-emitted: Route19_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 Route19CooltrainerM1Text:
     mov esi, Route19TrainerHeader0
@@ -166,5 +117,4 @@ Route19_TalkToTrainer:
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; Route19CooltrainerM1BattleText (scripts/Route19.asm:107-228) — Tier-1 data: Route19CooltrainerM1BattleText is generated into assets/trainer_headers.inc.
+; Route19CooltrainerM1BattleText (scripts/Route19.asm:107-228) — not re-emitted: Route19CooltrainerM1BattleText is already defined in assets/trainer_headers.inc.

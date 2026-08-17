@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/audio_constants.inc"
+%include "assets/trainer_headers.inc"
 
 global RocketHideout2ArrowMovement1
 global RocketHideout2ArrowMovement10
@@ -72,13 +73,10 @@ extern EnableAutoTextBoxDrawing   ; NOT YET DEFINED IN THE PORT
 extern EndTrainerBattle   ; NOT YET DEFINED IN THE PORT
 extern ExecuteCurMapScriptInTable   ; NOT YET DEFINED IN THE PORT
 extern LoadSpinnerArrowTiles   ; NOT YET DEFINED IN THE PORT
-extern PickUpItemText   ; NOT YET DEFINED IN THE PORT
 extern PlaySound   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout2TrainerHeader0   ; NOT YET DEFINED IN THE PORT
 extern RocketHideout2TrainerHeaders   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB2FRocketAfterBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB2FRocketBattleText   ; NOT YET DEFINED IN THE PORT
-extern RocketHideoutB2FRocketEndBattleText   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB2F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern StartSimulatingJoypadStates   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer   ; NOT YET DEFINED IN THE PORT
@@ -87,11 +85,6 @@ extern TextScriptEnd   ; NOT YET DEFINED IN THE PORT
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_ROCKETHIDEOUTB2F_DEFAULT                equ 0
 SCRIPT_ROCKETHIDEOUTB2F_PLAYER_SPINNING        equ 3
-TEXT_ROCKETHIDEOUTB2F_ROCKET                   equ 1
-TEXT_ROCKETHIDEOUTB2F_MOON_STONE               equ 2
-TEXT_ROCKETHIDEOUTB2F_NUGGET                   equ 3
-TEXT_ROCKETHIDEOUTB2F_TM_HORN_DRILL            equ 4
-TEXT_ROCKETHIDEOUTB2F_SUPER_POTION             equ 5
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
@@ -377,13 +370,11 @@ RocketHideoutB2FPlayerSpinningScript:
     mov [ebp + wCurMapScript], al
     ret
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB2F_TextPointers (scripts/RocketHideoutB2F.asm:274-285) — Tier-1 data: RocketHideout2TrainerHeaders is generated into assets/trainer_headers.inc.
+; RocketHideoutB2F_TextPointers (scripts/RocketHideoutB2F.asm:274-285) — not re-emitted: RocketHideout2TrainerHeaders is already defined in assets/trainer_headers.inc.
 
 RocketHideoutB2FRocketText:
     mov esi, RocketHideout2TrainerHeader0
     call TalkToTrainer
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; RocketHideoutB2FRocketBattleText (scripts/RocketHideoutB2F.asm:294-303) — Tier-1 data: RocketHideoutB2FRocketBattleText is generated into assets/trainer_headers.inc.
+; RocketHideoutB2FRocketBattleText (scripts/RocketHideoutB2F.asm:294-303) — not re-emitted: RocketHideoutB2FRocketBattleText is already defined in assets/trainer_headers.inc.
