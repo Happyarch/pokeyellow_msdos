@@ -2992,6 +2992,15 @@ assets/event_constants.inc:
 assets/script_constants.inc: tools/generators/gen_script_constants.py
 	python3 tools/generators/gen_script_constants.py
 
+# Far text streams for the translated map scripts, one .inc per map, from pret
+# text/*.asm (gen_map_text.py). Each is %included by that map's own script, so a
+# stream lives beside the only code that uses it — as pret keeps text/<Map>.asm
+# beside scripts/<Map>.asm. The stamp file stands in for the 162 outputs.
+assets/map_text/.stamp: tools/generators/gen_map_text.py \
+                        tools/generators/gen_battle_text.py
+	python3 tools/generators/gen_map_text.py
+	@touch $@
+
 # Fixed outside-map sprite sets (pret data/maps/sprite_sets.asm) — OW-A.2 sprite-set
 # machinery in map_sprites.asm. Pure data (no gfx dep); consumed from Phase 3 onward.
 assets/sprite_sets.inc: tools/generators/gen_sprite_sets.py
@@ -3681,7 +3690,7 @@ assets: assets/scenario_registry.inc \
         assets/red_bike_sprite.inc assets/seel_sprite.inc \
         assets/surfing_pikachu_sprite.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
-        assets/script_constants.inc \
+        assets/script_constants.inc assets/map_text/.stamp \
         assets/base_stats.inc assets/growth_rates.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/item_names.inc assets/item_prices.inc \
