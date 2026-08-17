@@ -90,8 +90,15 @@ class Emitted:
     globals_: List[str] = field(default_factory=list)
     equs: Dict[str, str] = field(default_factory=dict)
     bails: List[dict] = field(default_factory=list)
+    #: Regions the port's GENERATORS own, kept separate from `bails`. A bail is
+    #: "the tool could not lower this and the work remains"; these are "this is
+    #: not the tool's to emit, and never will be". Counting them together made
+    #: the headline coverage figure understate the tool by ~10 points and put 255
+    #: entries that describe NO work at the top of every bail histogram.
+    owned: List[dict] = field(default_factory=list)
     ok_regions: int = 0
     bailed_regions: int = 0
+    owned_regions: int = 0
     emitted_locals: Set[str] = field(default_factory=set)
     emitted_globals: Set[str] = field(default_factory=set)
     #: how many lowered items legitimately produce a `test r, r` — see

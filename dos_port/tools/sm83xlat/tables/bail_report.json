@@ -1,9 +1,10 @@
 {
  "_comment": "Every region the transpiler refused to lower. One entry per region; the region defines no symbol in the output.",
+ "_owned_comment": "`owned` is NOT a bail list. Those regions are Tier-1 data the port's generators already define, so the tool must not emit them at all \u2014 emitting one would be a duplicate definition. They describe no outstanding work and are excluded from the coverage denominator; they are listed here so the exclusion stays auditable.",
  "regions_lowered": 2086,
- "regions_bailed": 444,
+ "regions_bailed": 189,
+ "regions_owned": 255,
  "by_reason": {
-  "owned-by-generated-assets": 255,
   "target-region-bailed": 91,
   "screen-coord-projection": 4,
   "inline-text-db": 12,
@@ -23,14 +24,14 @@
  "per_file": {
   "scripts/AgathasRoom.asm": {
    "ok_regions": 12,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/BikeShop.asm": {
    "ok_regions": 6,
    "bailed_regions": 5,
+   "owned_regions": 0,
    "reasons": [
     "inline-text-db",
     "screen-coord-projection",
@@ -40,6 +41,7 @@
   "scripts/BillsHouse.asm": {
    "ok_regions": 33,
    "bailed_regions": 4,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "pikachu-table-index",
@@ -49,47 +51,52 @@
   "scripts/BluesHouse.asm": {
    "ok_regions": 9,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/BrunosRoom.asm": {
    "ok_regions": 12,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/CeladonChiefHouse.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonCity.asm": {
    "ok_regions": 14,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonDiner.asm": {
    "ok_regions": 7,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonGym.asm": {
    "ok_regions": 15,
-   "bailed_regions": 11,
+   "bailed_regions": 3,
+   "owned_regions": 8,
    "reasons": [
     "inline-text-db",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/CeladonHotel.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonMansion1F.asm": {
    "ok_regions": 11,
    "bailed_regions": 3,
+   "owned_regions": 0,
    "reasons": [
     "hl-half-register-access",
     "target-region-bailed"
@@ -98,11 +105,13 @@
   "scripts/CeladonMansion2F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonMansion3F.asm": {
    "ok_regions": 23,
    "bailed_regions": 5,
+   "owned_regions": 0,
    "reasons": [
     "local-label-scope-collision",
     "target-region-bailed"
@@ -111,41 +120,49 @@
   "scripts/CeladonMansionRoof.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonMansionRoofHouse.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonMart1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonMart2F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonMart3F.asm": {
    "ok_regions": 8,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonMart4F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonMart5F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeladonMartElevator.asm": {
    "ok_regions": 6,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "target-region-bailed"
    ]
@@ -153,6 +170,7 @@
   "scripts/CeladonMartRoof.asm": {
    "ok_regions": 11,
    "bailed_regions": 5,
+   "owned_regions": 0,
    "reasons": [
     "hl-half-register-access",
     "ld-via-bc-de",
@@ -164,11 +182,13 @@
   "scripts/CeladonPokecenter.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeruleanBadgeHouse.asm": {
    "ok_regions": 4,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "hl-half-register-access"
    ]
@@ -176,54 +196,60 @@
   "scripts/CeruleanCave1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeruleanCave2F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeruleanCaveB1F.asm": {
    "ok_regions": 3,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/CeruleanCity.asm": {
    "ok_regions": 28,
    "bailed_regions": 3,
+   "owned_regions": 0,
    "reasons": [
     "target-region-bailed"
    ]
   },
   "scripts/CeruleanGym.asm": {
    "ok_regions": 13,
-   "bailed_regions": 6,
+   "bailed_regions": 3,
+   "owned_regions": 3,
    "reasons": [
     "inline-text-db",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/CeruleanMart.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeruleanMelaniesHouse.asm": {
    "ok_regions": 11,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeruleanPokecenter.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CeruleanTrashedHouse.asm": {
    "ok_regions": 4,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "predef-leaves-parent-bank-in-a"
    ]
@@ -231,11 +257,13 @@
   "scripts/ChampionsRoom.asm": {
    "ok_regions": 24,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CinnabarGym.asm": {
    "ok_regions": 58,
    "bailed_regions": 5,
+   "owned_regions": 0,
    "reasons": [
     "add-hl-r16",
     "host-pointer-in-16bit-reg",
@@ -246,16 +274,19 @@
   "scripts/CinnabarIsland.asm": {
    "ok_regions": 5,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CinnabarLab.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CinnabarLabFossilRoom.asm": {
    "ok_regions": 7,
    "bailed_regions": 5,
+   "owned_regions": 0,
    "reasons": [
     "ld-via-bc-de",
     "target-region-bailed"
@@ -264,41 +295,49 @@
   "scripts/CinnabarLabMetronomeRoom.asm": {
    "ok_regions": 6,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CinnabarLabTradeRoom.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CinnabarMart.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CinnabarPokecenter.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Colosseum.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CopycatsHouse1F.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/CopycatsHouse2F.asm": {
    "ok_regions": 8,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Daycare.asm": {
    "ok_regions": 4,
    "bailed_regions": 5,
+   "owned_regions": 0,
    "reasons": [
     "hl-half-register-access",
     "pikachu-table-index",
@@ -308,38 +347,43 @@
   "scripts/DiglettsCave.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/DiglettsCaveRoute11.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/DiglettsCaveRoute2.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/FightingDojo.asm": {
    "ok_regions": 19,
-   "bailed_regions": 5,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 5,
+   "reasons": []
   },
   "scripts/FuchsiaBillsGrandpasHouse.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/FuchsiaCity.asm": {
    "ok_regions": 16,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/FuchsiaGoodRodHouse.asm": {
    "ok_regions": 2,
    "bailed_regions": 5,
+   "owned_regions": 0,
    "reasons": [
     "inline-text-db",
     "target-region-bailed"
@@ -347,31 +391,35 @@
   },
   "scripts/FuchsiaGym.asm": {
    "ok_regions": 16,
-   "bailed_regions": 10,
+   "bailed_regions": 3,
+   "owned_regions": 7,
    "reasons": [
     "inline-text-db",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/FuchsiaMart.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/FuchsiaMeetingRoom.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/FuchsiaPokecenter.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/GameCorner.asm": {
    "ok_regions": 42,
    "bailed_regions": 4,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "inline-text-db",
@@ -381,92 +429,101 @@
   "scripts/GameCornerPrizeRoom.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/HallOfFame.asm": {
    "ok_regions": 9,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/IndigoPlateau.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/IndigoPlateauLobby.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/LancesRoom.asm": {
    "ok_regions": 15,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/LavenderCuboneHouse.asm": {
    "ok_regions": 6,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/LavenderMart.asm": {
    "ok_regions": 5,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/LavenderPokecenter.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/LavenderTown.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/LoreleisRoom.asm": {
    "ok_regions": 12,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/MrFujisHouse.asm": {
    "ok_regions": 15,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/MrPsychicsHouse.asm": {
    "ok_regions": 6,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/MtMoon1F.asm": {
    "ok_regions": 8,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/MtMoonB1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/MtMoonB2F.asm": {
    "ok_regions": 34,
-   "bailed_regions": 11,
+   "bailed_regions": 9,
+   "owned_regions": 2,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "local-label-scope-collision",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/MtMoonPokecenter.asm": {
    "ok_regions": 9,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "checkevent-carry-form"
    ]
@@ -474,16 +531,19 @@
   "scripts/Museum1F.asm": {
    "ok_regions": 30,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Museum2F.asm": {
    "ok_regions": 6,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/NameRatersHouse.asm": {
    "ok_regions": 7,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "target-region-bailed"
    ]
@@ -491,6 +551,7 @@
   "scripts/OaksLab.asm": {
    "ok_regions": 66,
    "bailed_regions": 26,
+   "owned_regions": 0,
    "reasons": [
     "hl-half-register-access",
     "local-label-scope-collision",
@@ -502,6 +563,7 @@
   "scripts/PalletTown.asm": {
    "ok_regions": 18,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "event-macro-reuse-a-hint"
    ]
@@ -509,30 +571,34 @@
   "scripts/PewterCity.asm": {
    "ok_regions": 22,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/PewterGym.asm": {
    "ok_regions": 14,
-   "bailed_regions": 5,
+   "bailed_regions": 3,
+   "owned_regions": 2,
    "reasons": [
     "inline-text-db",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/PewterMart.asm": {
    "ok_regions": 6,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/PewterNidoranHouse.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/PewterPokecenter.asm": {
    "ok_regions": 9,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg"
    ]
@@ -540,84 +606,81 @@
   "scripts/PewterSpeechHouse.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/PokemonFanClub.asm": {
    "ok_regions": 27,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/PokemonMansion1F.asm": {
    "ok_regions": 9,
-   "bailed_regions": 3,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 3,
+   "reasons": []
   },
   "scripts/PokemonMansion2F.asm": {
    "ok_regions": 8,
-   "bailed_regions": 3,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 3,
+   "reasons": []
   },
   "scripts/PokemonMansion3F.asm": {
    "ok_regions": 9,
-   "bailed_regions": 3,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 3,
+   "reasons": []
   },
   "scripts/PokemonMansionB1F.asm": {
    "ok_regions": 5,
-   "bailed_regions": 3,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 3,
+   "reasons": []
   },
   "scripts/PokemonTower1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/PokemonTower2F.asm": {
    "ok_regions": 13,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/PokemonTower3F.asm": {
    "ok_regions": 4,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/PokemonTower4F.asm": {
    "ok_regions": 4,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/PokemonTower5F.asm": {
    "ok_regions": 8,
-   "bailed_regions": 5,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 5,
+   "reasons": []
   },
   "scripts/PokemonTower6F.asm": {
    "ok_regions": 12,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/PokemonTower7F.asm": {
    "ok_regions": 19,
    "bailed_regions": 2,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "target-region-bailed"
@@ -625,74 +688,73 @@
   },
   "scripts/PowerPlant.asm": {
    "ok_regions": 12,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/RedsHouse1F.asm": {
    "ok_regions": 10,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/RedsHouse2F.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/RockTunnel1F.asm": {
    "ok_regions": 8,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/RockTunnelB1F.asm": {
    "ok_regions": 9,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/RockTunnelPokecenter.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/RocketHideoutB1F.asm": {
    "ok_regions": 8,
-   "bailed_regions": 4,
+   "bailed_regions": 1,
+   "owned_regions": 3,
    "reasons": [
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/RocketHideoutB2F.asm": {
    "ok_regions": 6,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/RocketHideoutB3F.asm": {
    "ok_regions": 7,
-   "bailed_regions": 3,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 3,
+   "reasons": []
   },
   "scripts/RocketHideoutB4F.asm": {
    "ok_regions": 23,
-   "bailed_regions": 5,
+   "bailed_regions": 2,
+   "owned_regions": 3,
    "reasons": [
     "host-pointer-in-16bit-reg",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/RocketHideoutElevator.asm": {
    "ok_regions": 8,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "target-region-bailed"
    ]
@@ -700,49 +762,51 @@
   "scripts/Route1.asm": {
    "ok_regions": 13,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route10.asm": {
    "ok_regions": 7,
-   "bailed_regions": 7,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 7,
+   "reasons": []
   },
   "scripts/Route11.asm": {
    "ok_regions": 11,
-   "bailed_regions": 11,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 11,
+   "reasons": []
   },
   "scripts/Route11Gate1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route11Gate2F.asm": {
    "ok_regions": 8,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "checkevent-carry-form"
    ]
   },
   "scripts/Route12.asm": {
    "ok_regions": 12,
-   "bailed_regions": 8,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 8,
+   "reasons": []
   },
   "scripts/Route12Gate1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route12Gate2F.asm": {
    "ok_regions": 11,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "checkevent-carry-form"
    ]
@@ -750,114 +814,115 @@
   "scripts/Route12SuperRodHouse.asm": {
    "ok_regions": 7,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route13.asm": {
    "ok_regions": 11,
-   "bailed_regions": 11,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 11,
+   "reasons": []
   },
   "scripts/Route14.asm": {
    "ok_regions": 11,
-   "bailed_regions": 11,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 11,
+   "reasons": []
   },
   "scripts/Route15.asm": {
    "ok_regions": 11,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/Route15Gate1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route15Gate2F.asm": {
    "ok_regions": 6,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route16.asm": {
    "ok_regions": 11,
-   "bailed_regions": 7,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 7,
+   "reasons": []
   },
   "scripts/Route16FlyHouse.asm": {
    "ok_regions": 7,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route16Gate1F.asm": {
    "ok_regions": 12,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route16Gate2F.asm": {
    "ok_regions": 10,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route17.asm": {
    "ok_regions": 11,
-   "bailed_regions": 11,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 11,
+   "reasons": []
   },
   "scripts/Route18.asm": {
    "ok_regions": 4,
-   "bailed_regions": 4,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 4,
+   "reasons": []
   },
   "scripts/Route18Gate1F.asm": {
    "ok_regions": 11,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route18Gate2F.asm": {
    "ok_regions": 7,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route19.asm": {
    "ok_regions": 11,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/Route2.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route20.asm": {
    "ok_regions": 16,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/Route21.asm": {
    "ok_regions": 10,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/Route22.asm": {
    "ok_regions": 30,
    "bailed_regions": 13,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "target-region-bailed"
@@ -866,11 +931,13 @@
   "scripts/Route22Gate.asm": {
    "ok_regions": 12,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route23.asm": {
    "ok_regions": 21,
    "bailed_regions": 2,
+   "owned_regions": 0,
    "reasons": [
     "add-hl-r16",
     "inline-text-db"
@@ -878,116 +945,122 @@
   },
   "scripts/Route24.asm": {
    "ok_regions": 21,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/Route25.asm": {
    "ok_regions": 12,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/Route2Gate.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route2TradeHouse.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route3.asm": {
    "ok_regions": 9,
-   "bailed_regions": 9,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 9,
+   "reasons": []
   },
   "scripts/Route4.asm": {
    "ok_regions": 2,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/Route5.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route5Gate.asm": {
    "ok_regions": 12,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route6.asm": {
    "ok_regions": 7,
-   "bailed_regions": 7,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 7,
+   "reasons": []
   },
   "scripts/Route6Gate.asm": {
    "ok_regions": 8,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route7.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route7Gate.asm": {
    "ok_regions": 8,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route8.asm": {
    "ok_regions": 10,
-   "bailed_regions": 10,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 10,
+   "reasons": []
   },
   "scripts/Route8Gate.asm": {
    "ok_regions": 8,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/Route9.asm": {
    "ok_regions": 10,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/SafariZoneCenter.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SafariZoneCenterRestHouse.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SafariZoneEast.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SafariZoneEastRestHouse.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SafariZoneGate.asm": {
    "ok_regions": 29,
    "bailed_regions": 5,
+   "owned_regions": 0,
    "reasons": [
     "add-hl-r16",
     "hl-half-register-access",
@@ -997,75 +1070,88 @@
   "scripts/SafariZoneNorth.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SafariZoneNorthRestHouse.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SafariZoneSecretHouse.asm": {
    "ok_regions": 6,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SafariZoneWest.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SafariZoneWestRestHouse.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SaffronCity.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SaffronGym.asm": {
    "ok_regions": 13,
-   "bailed_regions": 9,
+   "bailed_regions": 7,
+   "owned_regions": 2,
    "reasons": [
     "inline-text-db",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/SaffronMart.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SaffronPidgeyHouse.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SaffronPokecenter.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SeafoamIslands1F.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SeafoamIslandsB1F.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SeafoamIslandsB2F.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SeafoamIslandsB3F.asm": {
    "ok_regions": 11,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg"
    ]
@@ -1073,6 +1159,7 @@
   "scripts/SeafoamIslandsB4F.asm": {
    "ok_regions": 16,
    "bailed_regions": 2,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg",
     "owned-by-gen_map_script_tables"
@@ -1080,18 +1167,18 @@
   },
   "scripts/SilphCo10F.asm": {
    "ok_regions": 6,
-   "bailed_regions": 3,
+   "bailed_regions": 1,
+   "owned_regions": 2,
    "reasons": [
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/SilphCo11F.asm": {
    "ok_regions": 34,
-   "bailed_regions": 6,
+   "bailed_regions": 4,
+   "owned_regions": 2,
    "reasons": [
     "host-pointer-in-16bit-reg",
-    "owned-by-generated-assets",
     "pointer-domain-unknown",
     "target-region-bailed"
    ]
@@ -1099,78 +1186,79 @@
   "scripts/SilphCo1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SilphCo2F.asm": {
    "ok_regions": 13,
-   "bailed_regions": 4,
+   "bailed_regions": 2,
+   "owned_regions": 2,
    "reasons": [
-    "owned-by-generated-assets",
     "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCo3F.asm": {
    "ok_regions": 9,
-   "bailed_regions": 3,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 3,
+   "reasons": []
   },
   "scripts/SilphCo4F.asm": {
    "ok_regions": 10,
-   "bailed_regions": 7,
+   "bailed_regions": 3,
+   "owned_regions": 4,
    "reasons": [
     "host-pointer-in-16bit-reg",
-    "owned-by-generated-assets",
     "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCo5F.asm": {
    "ok_regions": 11,
-   "bailed_regions": 6,
+   "bailed_regions": 1,
+   "owned_regions": 5,
    "reasons": [
-    "host-pointer-in-16bit-reg",
-    "owned-by-generated-assets"
+    "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/SilphCo6F.asm": {
    "ok_regions": 12,
-   "bailed_regions": 11,
+   "bailed_regions": 7,
+   "owned_regions": 4,
    "reasons": [
     "hl-half-register-access",
     "host-pointer-in-16bit-reg",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/SilphCo7F.asm": {
    "ok_regions": 32,
-   "bailed_regions": 9,
+   "bailed_regions": 4,
+   "owned_regions": 5,
    "reasons": [
     "host-pointer-in-16bit-reg",
-    "owned-by-generated-assets",
     "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCo8F.asm": {
    "ok_regions": 10,
-   "bailed_regions": 4,
+   "bailed_regions": 2,
+   "owned_regions": 2,
    "reasons": [
-    "owned-by-generated-assets",
     "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCo9F.asm": {
    "ok_regions": 14,
-   "bailed_regions": 4,
+   "bailed_regions": 2,
+   "owned_regions": 2,
    "reasons": [
-    "owned-by-generated-assets",
     "pointer-domain-unknown"
    ]
   },
   "scripts/SilphCoElevator.asm": {
    "ok_regions": 6,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "target-region-bailed"
    ]
@@ -1178,66 +1266,69 @@
   "scripts/SSAnne1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SSAnne1FRooms.asm": {
    "ok_regions": 7,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/SSAnne2F.asm": {
    "ok_regions": 15,
    "bailed_regions": 2,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/SSAnne2FRooms.asm": {
    "ok_regions": 23,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/SSAnne3F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SSAnneB1F.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SSAnneB1FRooms.asm": {
    "ok_regions": 9,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/SSAnneBow.asm": {
    "ok_regions": 3,
-   "bailed_regions": 3,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 3,
+   "reasons": []
   },
   "scripts/SSAnneCaptainsRoom.asm": {
    "ok_regions": 9,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SSAnneKitchen.asm": {
    "ok_regions": 6,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/SummerBeachHouse.asm": {
    "ok_regions": 16,
    "bailed_regions": 4,
+   "owned_regions": 0,
    "reasons": [
     "target-region-bailed"
    ]
@@ -1245,51 +1336,61 @@
   "scripts/TradeCenter.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/UndergroundPathNorthSouth.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/UndergroundPathRoute5.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/UndergroundPathRoute6.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/UndergroundPathRoute7.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/UndergroundPathRoute7Copy.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/UndergroundPathRoute8.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/UndergroundPathWestEast.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/VermilionCity.asm": {
    "ok_regions": 44,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/VermilionDock.asm": {
    "ok_regions": 5,
    "bailed_regions": 4,
+   "owned_regions": 0,
    "reasons": [
     "add-hl-r16",
     "bank-expression",
@@ -1299,97 +1400,104 @@
   },
   "scripts/VermilionGym.asm": {
    "ok_regions": 16,
-   "bailed_regions": 7,
+   "bailed_regions": 3,
+   "owned_regions": 4,
    "reasons": [
     "inline-text-db",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/VermilionMart.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/VermilionOldRodHouse.asm": {
    "ok_regions": 7,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/VermilionPidgeyHouse.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/VermilionPokecenter.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/VermilionTradeHouse.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/VictoryRoad1F.asm": {
    "ok_regions": 5,
-   "bailed_regions": 3,
+   "bailed_regions": 1,
+   "owned_regions": 2,
    "reasons": [
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/VictoryRoad2F.asm": {
    "ok_regions": 11,
-   "bailed_regions": 4,
+   "bailed_regions": 1,
+   "owned_regions": 3,
    "reasons": [
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/VictoryRoad3F.asm": {
    "ok_regions": 12,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/ViridianCity.asm": {
    "ok_regions": 66,
    "bailed_regions": 1,
+   "owned_regions": 0,
    "reasons": [
     "host-pointer-in-16bit-reg"
    ]
   },
   "scripts/ViridianForest.asm": {
    "ok_regions": 24,
-   "bailed_regions": 2,
-   "reasons": [
-    "owned-by-generated-assets"
-   ]
+   "bailed_regions": 0,
+   "owned_regions": 2,
+   "reasons": []
   },
   "scripts/ViridianForestNorthGate.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/ViridianForestSouthGate.asm": {
    "ok_regions": 2,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/ViridianGym.asm": {
    "ok_regions": 23,
-   "bailed_regions": 11,
+   "bailed_regions": 2,
+   "owned_regions": 9,
    "reasons": [
     "inline-text-db",
-    "owned-by-generated-assets",
     "target-region-bailed"
    ]
   },
   "scripts/ViridianMart.asm": {
    "ok_regions": 7,
    "bailed_regions": 2,
+   "owned_regions": 0,
    "reasons": [
     "hl-half-register-access",
     "target-region-bailed"
@@ -1398,58 +1506,29 @@
   "scripts/ViridianNicknameHouse.asm": {
    "ok_regions": 4,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/ViridianPokecenter.asm": {
    "ok_regions": 3,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/ViridianSchoolHouse.asm": {
    "ok_regions": 8,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   },
   "scripts/WardensHouse.asm": {
    "ok_regions": 9,
    "bailed_regions": 0,
+   "owned_regions": 0,
    "reasons": []
   }
  },
  "bails": [
-  {
-   "file": "scripts/AgathasRoom.asm",
-   "region": "AgathasRoom_TextPointers",
-   "labels": [
-    "AgathasRoom_TextPointers",
-    "AgathasRoomTrainerHeaders",
-    "AgathasRoomTrainerHeader0"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "AgathasRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/AgathasRoom.asm:121",
-   "lines": [
-    121,
-    129
-   ]
-  },
-  {
-   "file": "scripts/AgathasRoom.asm",
-   "region": "AgathaBeforeBattleText",
-   "labels": [
-    "AgathaBeforeBattleText",
-    "AgathaEndBattleText",
-    "AgathaAfterBattleText",
-    "AgathasRoomAgathaDontRunAwayText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "AgathaBeforeBattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/AgathasRoom.asm:138",
-   "lines": [
-    138,
-    151
-   ]
-  },
   {
    "file": "scripts/BikeShop.asm",
    "region": "BikeShopClerkText",
@@ -1593,39 +1672,6 @@
    ]
   },
   {
-   "file": "scripts/BrunosRoom.asm",
-   "region": "BrunosRoom_TextPointers",
-   "labels": [
-    "BrunosRoom_TextPointers",
-    "BrunosRoomTrainerHeaders",
-    "BrunosRoomTrainerHeader0"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "BrunosRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/BrunosRoom.asm:118",
-   "lines": [
-    118,
-    126
-   ]
-  },
-  {
-   "file": "scripts/BrunosRoom.asm",
-   "region": "BrunoBeforeBattleText",
-   "labels": [
-    "BrunoBeforeBattleText",
-    "BrunoEndBattleText",
-    "BrunoAfterBattleText",
-    "BrunosRoomBrunoDontRunAwayText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "BrunoBeforeBattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/BrunosRoom.asm:135",
-   "lines": [
-    135,
-    148
-   ]
-  },
-  {
    "file": "scripts/CeladonGym.asm",
    "region": "CeladonGym_Script",
    "labels": [
@@ -1666,140 +1712,6 @@
    "lines": [
     20,
     23
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGym_TextPointers",
-   "labels": [
-    "CeladonGym_TextPointers",
-    "CeladonGymTrainerHeaders",
-    "CeladonGymTrainerHeader0",
-    "CeladonGymTrainerHeader1",
-    "CeladonGymTrainerHeader2",
-    "CeladonGymTrainerHeader3",
-    "CeladonGymTrainerHeader4",
-    "CeladonGymTrainerHeader5",
-    "CeladonGymTrainerHeader6"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymTrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeladonGym.asm:75",
-   "lines": [
-    75,
-    104
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymBattleText2",
-   "labels": [
-    "CeladonGymBattleText2",
-    "CeladonGymEndBattleText2",
-    "CeladonGymAfterBattleText2"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText2 is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeladonGym.asm:173",
-   "lines": [
-    173,
-    182
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymBattleText3",
-   "labels": [
-    "CeladonGymBattleText3",
-    "CeladonGymEndBattleText3",
-    "CeladonGymAfterBattleText3"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText3 is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeladonGym.asm:191",
-   "lines": [
-    191,
-    200
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymBattleText4",
-   "labels": [
-    "CeladonGymBattleText4",
-    "CeladonGymEndBattleText4",
-    "CeladonGymAfterBattleText4"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText4 is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeladonGym.asm:209",
-   "lines": [
-    209,
-    218
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymBattleText5",
-   "labels": [
-    "CeladonGymBattleText5",
-    "CeladonGymEndBattleText5",
-    "CeladonGymAfterBattleText5"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText5 is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeladonGym.asm:227",
-   "lines": [
-    227,
-    236
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymBattleText6",
-   "labels": [
-    "CeladonGymBattleText6",
-    "CeladonGymEndBattleText6",
-    "CeladonGymAfterBattleText6"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText6 is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeladonGym.asm:245",
-   "lines": [
-    245,
-    254
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymBattleText7",
-   "labels": [
-    "CeladonGymBattleText7",
-    "CeladonGymEndBattleText7",
-    "CeladonGymAfterBattleText7"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText7 is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeladonGym.asm:263",
-   "lines": [
-    263,
-    272
-   ]
-  },
-  {
-   "file": "scripts/CeladonGym.asm",
-   "region": "CeladonGymBattleText8",
-   "labels": [
-    "CeladonGymBattleText8",
-    "CeladonGymEndBattleText8",
-    "CeladonGymAfterBattleText8"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeladonGymBattleText8 is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeladonGym.asm:281",
-   "lines": [
-    281,
-    290
    ]
   },
   {
@@ -2022,37 +1934,6 @@
    ]
   },
   {
-   "file": "scripts/CeruleanCaveB1F.asm",
-   "region": "CeruleanCaveB1F_ScriptPointers",
-   "labels": [
-    "CeruleanCaveB1F_ScriptPointers",
-    "CeruleanCaveB1F_TextPointers",
-    "CeruleanCaveB1FTrainerHeaders",
-    "MewtwoTrainerHeader"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeruleanCaveB1F_ScriptPointers is already defined in assets/map_script_tables.inc",
-   "at": "scripts/CeruleanCaveB1F.asm:11",
-   "lines": [
-    11,
-    28
-   ]
-  },
-  {
-   "file": "scripts/CeruleanCaveB1F.asm",
-   "region": "MewtwoBattleText",
-   "labels": [
-    "MewtwoBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "MewtwoBattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeruleanCaveB1F.asm:37",
-   "lines": [
-    37,
-    37
-   ]
-  },
-  {
    "file": "scripts/CeruleanCity.asm",
    "region": "scripts/CeruleanCity.asm:anon",
    "labels": [
@@ -2137,55 +2018,6 @@
    "lines": [
     20,
     23
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGym_TextPointers",
-   "labels": [
-    "CeruleanGym_TextPointers",
-    "CeruleanGymTrainerHeaders",
-    "CeruleanGymTrainerHeader0",
-    "CeruleanGymTrainerHeader1"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeruleanGymTrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeruleanGym.asm:75",
-   "lines": [
-    75,
-    90
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGymBattleText1",
-   "labels": [
-    "CeruleanGymBattleText1",
-    "CeruleanGymEndBattleText1",
-    "CeruleanGymAfterBattleText1"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeruleanGymBattleText1 is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeruleanGym.asm:159",
-   "lines": [
-    159,
-    168
-   ]
-  },
-  {
-   "file": "scripts/CeruleanGym.asm",
-   "region": "CeruleanGymBattleText2",
-   "labels": [
-    "CeruleanGymBattleText2",
-    "CeruleanGymEndBattleText2",
-    "CeruleanGymAfterBattleText2"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "CeruleanGymBattleText2 is already defined in assets/trainer_headers.inc",
-   "at": "scripts/CeruleanGym.asm:177",
-   "lines": [
-    177,
-    186
    ]
   },
   {
@@ -2420,89 +2252,6 @@
    ]
   },
   {
-   "file": "scripts/FightingDojo.asm",
-   "region": "FightingDojo_TextPointers",
-   "labels": [
-    "FightingDojo_TextPointers",
-    "FightingDojoTrainerHeaders",
-    "FightingDojoTrainerHeader0",
-    "FightingDojoTrainerHeader1",
-    "FightingDojoTrainerHeader2",
-    "FightingDojoTrainerHeader3"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoTrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FightingDojo.asm:84",
-   "lines": [
-    84,
-    104
-   ]
-  },
-  {
-   "file": "scripts/FightingDojo.asm",
-   "region": "FightingDojoBlackbelt1BattleText",
-   "labels": [
-    "FightingDojoBlackbelt1BattleText",
-    "FightingDojoBlackbelt1EndBattleText",
-    "FightingDojoBlackbelt1AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoBlackbelt1BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FightingDojo.asm:161",
-   "lines": [
-    161,
-    170
-   ]
-  },
-  {
-   "file": "scripts/FightingDojo.asm",
-   "region": "FightingDojoBlackbelt2BattleText",
-   "labels": [
-    "FightingDojoBlackbelt2BattleText",
-    "FightingDojoBlackbelt2EndBattleText",
-    "FightingDojoBlackbelt2AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoBlackbelt2BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FightingDojo.asm:179",
-   "lines": [
-    179,
-    188
-   ]
-  },
-  {
-   "file": "scripts/FightingDojo.asm",
-   "region": "FightingDojoBlackbelt3BattleText",
-   "labels": [
-    "FightingDojoBlackbelt3BattleText",
-    "FightingDojoBlackbelt3EndBattleText",
-    "FightingDojoBlackbelt3AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoBlackbelt3BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FightingDojo.asm:197",
-   "lines": [
-    197,
-    206
-   ]
-  },
-  {
-   "file": "scripts/FightingDojo.asm",
-   "region": "FightingDojoBlackbelt4BattleText",
-   "labels": [
-    "FightingDojoBlackbelt4BattleText",
-    "FightingDojoBlackbelt4EndBattleText",
-    "FightingDojoBlackbelt4AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FightingDojoBlackbelt4BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FightingDojo.asm:215",
-   "lines": [
-    215,
-    224
-   ]
-  },
-  {
    "file": "scripts/FuchsiaGoodRodHouse.asm",
    "region": "FuchsiaGoodRodHouseFishingGuruText",
    "labels": [
@@ -2622,123 +2371,6 @@
    ]
   },
   {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGym_TextPointers",
-   "labels": [
-    "FuchsiaGym_TextPointers",
-    "FuchsiaGymTrainerHeaders",
-    "FuchsiaGymTrainerHeader0",
-    "FuchsiaGymTrainerHeader1",
-    "FuchsiaGymTrainerHeader2",
-    "FuchsiaGymTrainerHeader3",
-    "FuchsiaGymTrainerHeader4",
-    "FuchsiaGymTrainerHeader5"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymTrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FuchsiaGym.asm:77",
-   "lines": [
-    77,
-    104
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymRocker1BattleText",
-   "labels": [
-    "FuchsiaGymRocker1BattleText",
-    "FuchsiaGymRocker1EndBattleText",
-    "FuchsiaGymRocker1AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker1BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FuchsiaGym.asm:174",
-   "lines": [
-    174,
-    183
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymRocker2BattleText",
-   "labels": [
-    "FuchsiaGymRocker2BattleText",
-    "FuchsiaGymRocker2EndBattleText",
-    "FuchsiaGymRocker2AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker2BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FuchsiaGym.asm:192",
-   "lines": [
-    192,
-    201
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymRocker3BattleText",
-   "labels": [
-    "FuchsiaGymRocker3BattleText",
-    "FuchsiaGymRocker3EndBattleText",
-    "FuchsiaGymRocker3AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker3BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FuchsiaGym.asm:210",
-   "lines": [
-    210,
-    219
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymRocker4BattleText",
-   "labels": [
-    "FuchsiaGymRocker4BattleText",
-    "FuchsiaGymRocker4EndBattleText",
-    "FuchsiaGymRocker4AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker4BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FuchsiaGym.asm:228",
-   "lines": [
-    228,
-    237
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymRocker5BattleText",
-   "labels": [
-    "FuchsiaGymRocker5BattleText",
-    "FuchsiaGymRocker5EndBattleText",
-    "FuchsiaGymRocker5AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker5BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FuchsiaGym.asm:246",
-   "lines": [
-    246,
-    255
-   ]
-  },
-  {
-   "file": "scripts/FuchsiaGym.asm",
-   "region": "FuchsiaGymRocker6BattleText",
-   "labels": [
-    "FuchsiaGymRocker6BattleText",
-    "FuchsiaGymRocker6EndBattleText",
-    "FuchsiaGymRocker6AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "FuchsiaGymRocker6BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/FuchsiaGym.asm:264",
-   "lines": [
-    264,
-    273
-   ]
-  },
-  {
    "file": "scripts/GameCorner.asm",
    "region": "GameCornerRocketBattleScript",
    "labels": [
@@ -2798,129 +2430,6 @@
    ]
   },
   {
-   "file": "scripts/LancesRoom.asm",
-   "region": "LancesRoom_TextPointers",
-   "labels": [
-    "LancesRoom_TextPointers",
-    "LancesRoomTrainerHeaders",
-    "LancesRoomTrainerHeader0"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "LancesRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/LancesRoom.asm:130",
-   "lines": [
-    130,
-    137
-   ]
-  },
-  {
-   "file": "scripts/LancesRoom.asm",
-   "region": "LancesRoomLanceBeforeBattleText",
-   "labels": [
-    "LancesRoomLanceBeforeBattleText",
-    "LancesRoomLanceEndBattleText",
-    "LancesRoomLanceAfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "LancesRoomLanceBeforeBattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/LancesRoom.asm:146",
-   "lines": [
-    146,
-    154
-   ]
-  },
-  {
-   "file": "scripts/LoreleisRoom.asm",
-   "region": "LoreleisRoom_TextPointers",
-   "labels": [
-    "LoreleisRoom_TextPointers",
-    "LoreleisRoomTrainerHeaders",
-    "LoreleisRoomTrainerHeader0"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "LoreleisRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/LoreleisRoom.asm:120",
-   "lines": [
-    120,
-    128
-   ]
-  },
-  {
-   "file": "scripts/LoreleisRoom.asm",
-   "region": "LoreleisRoomLoreleiBeforeBattleText",
-   "labels": [
-    "LoreleisRoomLoreleiBeforeBattleText",
-    "LoreleisRoomLoreleiEndBattleText",
-    "LoreleisRoomLoreleiAfterBattleText",
-    "LoreleisRoomLoreleiDontRunAwayText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "LoreleisRoomLoreleiBeforeBattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/LoreleisRoom.asm:137",
-   "lines": [
-    137,
-    150
-   ]
-  },
-  {
-   "file": "scripts/MtMoon1F.asm",
-   "region": "MtMoon1F_ScriptPointers",
-   "labels": [
-    "MtMoon1F_ScriptPointers",
-    "MtMoon1F_TextPointers",
-    "MtMoon1TrainerHeaders",
-    "MtMoon1TrainerHeader0",
-    "MtMoon1TrainerHeader1",
-    "MtMoon1TrainerHeader2",
-    "MtMoon1TrainerHeader3",
-    "MtMoon1TrainerHeader4",
-    "MtMoon1TrainerHeader5",
-    "MtMoon1TrainerHeader6"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "MtMoon1TrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/MtMoon1F.asm:11",
-   "lines": [
-    11,
-    49
-   ]
-  },
-  {
-   "file": "scripts/MtMoon1F.asm",
-   "region": "MtMoon1FHikerBattleText",
-   "labels": [
-    "MtMoon1FHikerBattleText",
-    "MtMoon1FHikerEndBattleText",
-    "MtMoon1FHikerAfterBattleText",
-    "MtMoon1FYoungster1BattleText",
-    "MtMoon1FYoungster1EndBattleText",
-    "MtMoon1FYoungster1AfterBattleText",
-    "MtMoon1FCooltrainerF1BattleText",
-    "MtMoon1FCooltrainerF1EndBattleText",
-    "MtMoon1FCooltrainerF1AfterBattleText",
-    "MtMoon1FSuperNerdBattleText",
-    "MtMoon1FSuperNerdEndBattleText",
-    "MtMoon1FSuperNerdAfterBattleText",
-    "MtMoon1FCooltrainerF2BattleText",
-    "MtMoon1FCooltrainerF2EndBattleText",
-    "MtMoon1FCooltrainerF2AfterBattleText",
-    "MtMoon1FYoungster2BattleText",
-    "MtMoon1FYoungster2EndBattleText",
-    "MtMoon1FYoungster2AfterBattleText",
-    "MtMoon1FYoungster3BattleText",
-    "MtMoon1FYoungster3EndBattleText",
-    "MtMoon1FYoungster3AfterBattleText",
-    "MtMoon1FBewareZubatSign"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "MtMoon1FHikerBattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/MtMoon1F.asm:89",
-   "lines": [
-    89,
-    174
-   ]
-  },
-  {
    "file": "scripts/MtMoonB2F.asm",
    "region": "MtMoonB2FMoveSuperNerdScript",
    "labels": [
@@ -2947,26 +2456,6 @@
    "lines": [
     140,
     145
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2F_TextPointers",
-   "labels": [
-    "MtMoonB2F_TextPointers",
-    "MtMoon3TrainerHeaders",
-    "MtMoon3TrainerHeader0",
-    "MtMoon3TrainerHeader1",
-    "MtMoon3TrainerHeader2",
-    "MtMoonB2FJessieJamesText",
-    "MtMoonB2FText12"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "MtMoon3TrainerHeaders is already defined in assets/trainer_headers.inc",
-   "at": "scripts/MtMoonB2F.asm:417",
-   "lines": [
-    417,
-    447
    ]
   },
   {
@@ -3067,34 +2556,6 @@
    "lines": [
     590,
     592
-   ]
-  },
-  {
-   "file": "scripts/MtMoonB2F.asm",
-   "region": "MtMoonB2FYouHaveNoRoomText.Text",
-   "labels": [
-    "MtMoonB2FYouHaveNoRoomText.Text",
-    "MtMoonB2FSuperNerdTheyreBothMineText",
-    "MtMoonB2FSuperNerdOkIllShareText",
-    "MtMoonB2fSuperNerdEachTakeOneText",
-    "MtMoonB2FSuperNerdTheresAPokemonLabText",
-    "MtMoonB2FSuperNerdThenThisIsMineText",
-    "MtMoonB2FRocket2BattleText",
-    "MtMoonB2FRocket2EndBattleText",
-    "MtMoonB2FRocket2AfterBattleText",
-    "MtMoonB2FRocket3BattleText",
-    "MtMoonB2FRocket3EndBattleText",
-    "MtMoonB2FRocket3AfterBattleText",
-    "MtMoonB2FRocket4BattleText",
-    "MtMoonB2FRocket4EndBattleText",
-    "MtMoonB2FRocket4AfterBattleText"
-   ],
-   "reason": "owned-by-generated-assets",
-   "detail": "MtMoonB2FRocket2BattleText is already defined in assets/trainer_headers.inc",
-   "at": "scripts/MtMoonB2F.asm:595",
-   "lines": [
-    595,
-    654
    ]
   },
   {
@@ -3558,6 +3019,1940 @@
    ]
   },
   {
+   "file": "scripts/PewterPokecenter_2.asm",
+   "region": "PewterJigglypuff",
+   "labels": [
+    "PewterJigglypuff",
+    "PewterJigglypuff.findMatchingFacingDirectionLoop",
+    "PewterJigglypuff.spinMovementLoop"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "bc cannot hold the 32-bit address of .FacingDirectionsEnd - .FacingDirections; callee CopyData has no abi.json entry",
+   "at": "scripts/PewterPokecenter_2.asm:22",
+   "lines": [
+    11,
+    68
+   ]
+  },
+  {
+   "file": "scripts/PokemonTower2F.asm",
+   "region": "PokemonTower2FDefeatedRivalScript",
+   "labels": [
+    "PokemonTower2FDefeatedRivalScript",
+    "PokemonTower2FDefeatedRivalScript.got_movement"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of PokemonTower2FRivalDownThenRightMovement; callee <none in range> has no abi.json entry",
+   "at": "scripts/PokemonTower2F.asm:74",
+   "lines": [
+    65,
+    88
+   ]
+  },
+  {
+   "file": "scripts/PokemonTower7F.asm",
+   "region": "PokemonTower7FScript1",
+   "labels": [
+    "PokemonTower7FScript1",
+    "PokemonTower7FScript1.asm_60d8c"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of PokemonTower7FMovementData_60d7b; callee <none in range> has no abi.json entry",
+   "at": "scripts/PokemonTower7F.asm:84",
+   "lines": [
+    84,
+    96
+   ]
+  },
+  {
+   "file": "scripts/PokemonTower7F.asm",
+   "region": "PokemonTower7FScript2",
+   "labels": [
+    "PokemonTower7FScript2",
+    "PokemonTower7FScript3",
+    "PokemonTower7FScript3.asm_60dba",
+    "PokemonTower7FScript4",
+    "PokemonTower7FScript4.asm_60dcc"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".asm_60dba is defined in a region that bailed",
+   "at": "scripts/PokemonTower7F.asm:108",
+   "lines": [
+    99,
+    127
+   ]
+  },
+  {
+   "file": "scripts/RocketHideoutB1F.asm",
+   "region": "scripts/RocketHideoutB1F.asm:anon",
+   "labels": [],
+   "reason": "target-region-bailed",
+   "detail": ".prompt_end is defined in a region that bailed",
+   "at": "scripts/RocketHideoutB1F.asm:98",
+   "lines": [
+    97,
+    99
+   ]
+  },
+  {
+   "file": "scripts/RocketHideoutB4F.asm",
+   "region": "RocketHideoutB4FScript4",
+   "labels": [
+    "RocketHideoutB4FScript4",
+    "RocketHideoutB4FScript4.asm_45617"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of RocketHideoutB4FJessieJamesMovementData_45605; callee <none in range> has no abi.json entry",
+   "at": "scripts/RocketHideoutB4F.asm:134",
+   "lines": [
+    134,
+    146
+   ]
+  },
+  {
+   "file": "scripts/RocketHideoutB4F.asm",
+   "region": "RocketHideoutB4FScript5",
+   "labels": [
+    "RocketHideoutB4FScript5",
+    "RocketHideoutB4FScript6",
+    "RocketHideoutB4FScript6.asm_4564a",
+    "RocketHideoutB4FScript7",
+    "RocketHideoutB4FScript7.asm_4565f"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".asm_4564a is defined in a region that bailed",
+   "at": "scripts/RocketHideoutB4F.asm:160",
+   "lines": [
+    149,
+    180
+   ]
+  },
+  {
+   "file": "scripts/RocketHideoutElevator.asm",
+   "region": "RocketHideoutElevatorStoreWarpEntriesScript",
+   "labels": [
+    "RocketHideoutElevatorStoreWarpEntriesScript",
+    "RocketHideoutElevatorStoreWarpEntriesScript.StoreWarpEntry"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".StoreWarpEntry is defined in a region that bailed",
+   "at": "scripts/RocketHideoutElevator.asm:23",
+   "lines": [
+    18,
+    32
+   ]
+  },
+  {
+   "file": "scripts/Route11Gate2F.asm",
+   "region": "Route11Gate2FOaksAideText",
+   "labels": [
+    "Route11Gate2FOaksAideText",
+    "Route11Gate2FOaksAideText.got_item",
+    "Route11Gate2FOaksAideText.no_item"
+   ],
+   "reason": "checkevent-carry-form",
+   "detail": "CheckEvent EVENT_GOT_ITEMFINDER, 1",
+   "at": "scripts/Route11Gate2F.asm:21",
+   "lines": [
+    21,
+    43
+   ]
+  },
+  {
+   "file": "scripts/Route12Gate2F.asm",
+   "region": "Route12Gate2FBrunetteGirlText",
+   "labels": [
+    "Route12Gate2FBrunetteGirlText"
+   ],
+   "reason": "checkevent-carry-form",
+   "detail": "CheckEvent EVENT_GOT_TM39, 1",
+   "at": "scripts/Route12Gate2F.asm:12",
+   "lines": [
+    12,
+    22
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22MoveRivalRightScript",
+   "labels": [
+    "Route22MoveRivalRightScript",
+    "Route22MoveRivalRightScript.skip_first_right"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of Route22RivalMovementData; callee <none in range> has no abi.json entry",
+   "at": "scripts/Route22.asm:41",
+   "lines": [
+    41,
+    50
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival1StartBattleScript",
+   "labels": [
+    "Route22Rival1StartBattleScript"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".set_rival_facing_direction is defined in a region that bailed",
+   "at": "scripts/Route22.asm:115",
+   "lines": [
+    106,
+    115
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival1AfterBattleScript",
+   "labels": [
+    "Route22Rival1AfterBattleScript",
+    "Route22Rival1AfterBattleScript.keep_rival_starter"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".keep_rival_starter is defined in a region that bailed",
+   "at": "scripts/Route22.asm:153",
+   "lines": [
+    148,
+    161
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival1AfterBattleScript.not_facing_down",
+   "labels": [
+    "Route22Rival1AfterBattleScript.not_facing_down",
+    "Route22Rival1AfterBattleScript.set_rival_facing"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".exit_movement_2 is defined in a region that bailed",
+   "at": "scripts/Route22.asm:179",
+   "lines": [
+    163,
+    181
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival1AfterBattleScript.exit_movement_2",
+   "labels": [
+    "Route22Rival1AfterBattleScript.exit_movement_2",
+    "Route22Rival1AfterBattleScript.next_script"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".RivalExit2Script is defined in a region that bailed",
+   "at": "scripts/Route22.asm:183",
+   "lines": [
+    183,
+    187
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival1AfterBattleScript.RivalExit1Script",
+   "labels": [
+    "Route22Rival1AfterBattleScript.RivalExit1Script"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of Route22Rival1ExitMovementData1; callee <none in range> has no abi.json entry",
+   "at": "scripts/Route22.asm:190",
+   "lines": [
+    190,
+    191
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival1AfterBattleScript.RivalExit2Script",
+   "labels": [
+    "Route22Rival1AfterBattleScript.RivalExit2Script",
+    "Route22MoveRival1"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of Route22Rival1ExitMovementData2; callee <none in range> has no abi.json entry",
+   "at": "scripts/Route22.asm:194",
+   "lines": [
+    194,
+    198
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival2StartBattleScript",
+   "labels": [
+    "Route22Rival2StartBattleScript"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".set_player_direction_left is defined in a region that bailed",
+   "at": "scripts/Route22.asm:266",
+   "lines": [
+    259,
+    270
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival2AfterBattleScript",
+   "labels": [
+    "Route22Rival2AfterBattleScript"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".set_player_direction_left is defined in a region that bailed",
+   "at": "scripts/Route22.asm:310",
+   "lines": [
+    303,
+    314
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival2AfterBattleScript.set_player_direction_left",
+   "labels": [
+    "Route22Rival2AfterBattleScript.set_player_direction_left",
+    "Route22Rival2AfterBattleScript.set_rival_facing_direction"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".exit_movement_2 is defined in a region that bailed",
+   "at": "scripts/Route22.asm:332",
+   "lines": [
+    316,
+    334
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival2AfterBattleScript.exit_movement_2",
+   "labels": [
+    "Route22Rival2AfterBattleScript.exit_movement_2",
+    "Route22Rival2AfterBattleScript.next_script"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".RivalExit2Script is defined in a region that bailed",
+   "at": "scripts/Route22.asm:336",
+   "lines": [
+    336,
+    340
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival2AfterBattleScript.RivalExit1Script",
+   "labels": [
+    "Route22Rival2AfterBattleScript.RivalExit1Script"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of Route22Rival2ExitMovementData1; callee <none in range> has no abi.json entry",
+   "at": "scripts/Route22.asm:343",
+   "lines": [
+    343,
+    344
+   ]
+  },
+  {
+   "file": "scripts/Route22.asm",
+   "region": "Route22Rival2AfterBattleScript.RivalExit2Script",
+   "labels": [
+    "Route22Rival2AfterBattleScript.RivalExit2Script",
+    "Route22MoveRival2"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of Route22Rival2ExitMovementData2; callee <none in range> has no abi.json entry",
+   "at": "scripts/Route22.asm:347",
+   "lines": [
+    347,
+    351
+   ]
+  },
+  {
+   "file": "scripts/Route23.asm",
+   "region": "Route23CopyBadgeTextScript",
+   "labels": [
+    "Route23CopyBadgeTextScript",
+    "Route23CopyBadgeTextScript.copyTextLoop"
+   ],
+   "reason": "add-hl-r16",
+   "detail": "hl bc",
+   "at": "scripts/Route23.asm:79",
+   "lines": [
+    75,
+    91
+   ]
+  },
+  {
+   "file": "scripts/Route23.asm",
+   "region": "BadgeTextPointers",
+   "labels": [
+    "BadgeTextPointers",
+    "EarthBadgeText",
+    "VolcanoBadgeText",
+    "MarshBadgeText",
+    "SoulBadgeText",
+    "RainbowBadgeText",
+    "ThunderBadgeText",
+    "CascadeBadgeText"
+   ],
+   "reason": "inline-text-db",
+   "detail": "db \"EARTHBADGE@\"",
+   "at": "scripts/Route23.asm:103",
+   "lines": [
+    94,
+    121
+   ]
+  },
+  {
+   "file": "scripts/SafariZoneGate_2.asm",
+   "region": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText",
+   "labels": [
+    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".has_positive_balance is defined in a region that bailed",
+   "at": "scripts/SafariZoneGate_2.asm:16",
+   "lines": [
+    2,
+    19
+   ]
+  },
+  {
+   "file": "scripts/SafariZoneGate_2.asm",
+   "region": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance",
+   "labels": [
+    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".success is defined in a region that bailed",
+   "at": "scripts/SafariZoneGate_2.asm:29",
+   "lines": [
+    22,
+    34
+   ]
+  },
+  {
+   "file": "scripts/SafariZoneGate_2.asm",
+   "region": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success",
+   "labels": [
+    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success",
+    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.poor_mans_discount"
+   ],
+   "reason": "hl-half-register-access",
+   "detail": "`h` is a half of ESI and has no flag-safe 8-bit x86 form",
+   "at": "scripts/SafariZoneGate_2.asm:59",
+   "lines": [
+    37,
+    70
+   ]
+  },
+  {
+   "file": "scripts/SafariZoneGate_2.asm",
+   "region": "SafariZoneEntranceGetLowCostAdmissionText",
+   "labels": [
+    "SafariZoneEntranceGetLowCostAdmissionText"
+   ],
+   "reason": "add-hl-r16",
+   "detail": "hl de",
+   "at": "scripts/SafariZoneGate_2.asm:190",
+   "lines": [
+    183,
+    200
+   ]
+  },
+  {
+   "file": "scripts/SafariZoneGate_2.asm",
+   "region": "SafariZoneEntranceConvertBCDtoNumber",
+   "labels": [
+    "SafariZoneEntranceConvertBCDtoNumber"
+   ],
+   "reason": "hl-half-register-access",
+   "detail": "`l` is a half of ESI and has no flag-safe 8-bit x86 form",
+   "at": "scripts/SafariZoneGate_2.asm:243",
+   "lines": [
+    240,
+    252
+   ]
+  },
+  {
+   "file": "scripts/SaffronGym.asm",
+   "region": "SaffronGym_Script",
+   "labels": [
+    "SaffronGym_Script"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".LoadNames is defined in a region that bailed",
+   "at": "scripts/SaffronGym.asm:5",
+   "lines": [
+    2,
+    12
+   ]
+  },
+  {
+   "file": "scripts/SaffronGym.asm",
+   "region": "SaffronGym_Script.LoadNames",
+   "labels": [
+    "SaffronGym_Script.LoadNames"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".CityName is defined in a region that bailed",
+   "at": "scripts/SaffronGym.asm:15",
+   "lines": [
+    15,
+    17
+   ]
+  },
+  {
+   "file": "scripts/SaffronGym.asm",
+   "region": "SaffronGym_Script.CityName",
+   "labels": [
+    "SaffronGym_Script.CityName",
+    "SaffronGym_Script.LeaderName"
+   ],
+   "reason": "inline-text-db",
+   "detail": "db \"SAFFRON CITY@\"",
+   "at": "scripts/SaffronGym.asm:20",
+   "lines": [
+    20,
+    23
+   ]
+  },
+  {
+   "file": "scripts/SaffronGym.asm",
+   "region": "SaffronGymSabrinaText",
+   "labels": [
+    "SaffronGymSabrinaText"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".afterBeat is defined in a region that bailed",
+   "at": "scripts/SaffronGym.asm:112",
+   "lines": [
+    109,
+    115
+   ]
+  },
+  {
+   "file": "scripts/SaffronGym.asm",
+   "region": "SaffronGymSabrinaText.afterBeat",
+   "labels": [
+    "SaffronGymSabrinaText.afterBeat"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".done is defined in a region that bailed",
+   "at": "scripts/SaffronGym.asm:119",
+   "lines": [
+    117,
+    119
+   ]
+  },
+  {
+   "file": "scripts/SaffronGym.asm",
+   "region": "SaffronGymGymGuideText",
+   "labels": [
+    "SaffronGymGymGuideText"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".afterBeat is defined in a region that bailed",
+   "at": "scripts/SaffronGym.asm:213",
+   "lines": [
+    212,
+    216
+   ]
+  },
+  {
+   "file": "scripts/SaffronGym.asm",
+   "region": "SaffronGymGymGuideText.afterBeat",
+   "labels": [
+    "SaffronGymGymGuideText.afterBeat",
+    "SaffronGymGymGuideText.done"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".BeatSabrinaText is defined in a region that bailed",
+   "at": "scripts/SaffronGym.asm:218",
+   "lines": [
+    218,
+    221
+   ]
+  },
+  {
+   "file": "scripts/SeafoamIslandsB3F.asm",
+   "region": "SeafoamIslandsB3FMoveObjectScript",
+   "labels": [
+    "SeafoamIslandsB3FMoveObjectScript"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearRightBoulder; callee <none in range> has no abi.json entry",
+   "at": "scripts/SeafoamIslandsB3F.asm:104",
+   "lines": [
+    96,
+    105
+   ]
+  },
+  {
+   "file": "scripts/SeafoamIslandsB4F.asm",
+   "region": "SeafoamIslandsB4FMoveObjectScript",
+   "labels": [
+    "SeafoamIslandsB4FMoveObjectScript"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearLeftBoulder; callee <none in range> has no abi.json entry",
+   "at": "scripts/SeafoamIslandsB4F.asm:86",
+   "lines": [
+    76,
+    87
+   ]
+  },
+  {
+   "file": "scripts/SeafoamIslandsB4F.asm",
+   "region": "SeafoamIslandsB4F_TextPointers",
+   "labels": [
+    "SeafoamIslandsB4F_TextPointers",
+    "ArticunoTrainerHeader"
+   ],
+   "reason": "owned-by-gen_map_script_tables",
+   "detail": "trainer EVENT_BEAT_ARTICUNO, 0, SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText",
+   "at": "scripts/SeafoamIslandsB4F.asm:149",
+   "lines": [
+    137,
+    150
+   ]
+  },
+  {
+   "file": "scripts/SilphCo10F.asm",
+   "region": "SilphCo10FSilphWorkerFText",
+   "labels": [
+    "SilphCo10FSilphWorkerFText",
+    "SilphCo10FSilphWorkerFText.beat_giovanni"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".QuietAboutMyCryingText is defined in a region that bailed",
+   "at": "scripts/SilphCo10F.asm:75",
+   "lines": [
+    74,
+    80
+   ]
+  },
+  {
+   "file": "scripts/SilphCo11F.asm",
+   "region": "SilphCo11F_SetCardKeyDoorYScript",
+   "labels": [
+    "SilphCo11F_SetCardKeyDoorYScript",
+    "SilphCo11F_SetCardKeyDoorYScript.loop_check_doors"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo11F.asm:42",
+   "lines": [
+    32,
+    52
+   ]
+  },
+  {
+   "file": "scripts/SilphCo11F.asm",
+   "region": "SilphCo11F_SetCardKeyDoorYScript.check_y_coord",
+   "labels": [
+    "SilphCo11F_SetCardKeyDoorYScript.check_y_coord"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo11F.asm:54",
+   "lines": [
+    54,
+    61
+   ]
+  },
+  {
+   "file": "scripts/SilphCo11F.asm",
+   "region": "SilphCo11FScript5",
+   "labels": [
+    "SilphCo11FScript5",
+    "SilphCo11FScript5.asm_6232d"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of SilphCo11FMovementData_622f5; callee <none in range> has no abi.json entry",
+   "at": "scripts/SilphCo11F.asm:307",
+   "lines": [
+    307,
+    323
+   ]
+  },
+  {
+   "file": "scripts/SilphCo11F.asm",
+   "region": "SilphCo11FScript6",
+   "labels": [
+    "SilphCo11FScript6",
+    "SilphCo11FScript7",
+    "SilphCo11FScript7.asm_6235e",
+    "SilphCo11FScript8",
+    "SilphCo11FScript8.asm_6237b"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".asm_6235e is defined in a region that bailed",
+   "at": "scripts/SilphCo11F.asm:338",
+   "lines": [
+    326,
+    361
+   ]
+  },
+  {
+   "file": "scripts/SilphCo2F.asm",
+   "region": "SilphCo2F_SetCardKeyDoorYScript",
+   "labels": [
+    "SilphCo2F_SetCardKeyDoorYScript",
+    "SilphCo2F_SetCardKeyDoorYScript.loop_check_doors"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo2F.asm:51",
+   "lines": [
+    41,
+    61
+   ]
+  },
+  {
+   "file": "scripts/SilphCo2F.asm",
+   "region": "SilphCo2F_SetCardKeyDoorYScript.check_y_coord",
+   "labels": [
+    "SilphCo2F_SetCardKeyDoorYScript.check_y_coord"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo2F.asm:63",
+   "lines": [
+    63,
+    70
+   ]
+  },
+  {
+   "file": "scripts/SilphCo4F.asm",
+   "region": "SilphCo4F_SetCardKeyDoorYScript",
+   "labels": [
+    "SilphCo4F_SetCardKeyDoorYScript",
+    "SilphCo4F_SetCardKeyDoorYScript.loop_check_doors"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo4F.asm:51",
+   "lines": [
+    41,
+    61
+   ]
+  },
+  {
+   "file": "scripts/SilphCo4F.asm",
+   "region": "SilphCo4F_SetCardKeyDoorYScript.check_y_coord",
+   "labels": [
+    "SilphCo4F_SetCardKeyDoorYScript.check_y_coord"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo4F.asm:63",
+   "lines": [
+    63,
+    70
+   ]
+  },
+  {
+   "file": "scripts/SilphCo4F.asm",
+   "region": "SilphCo4FSilphWorkerMText",
+   "labels": [
+    "SilphCo4FSilphWorkerMText"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .TeamRocketIsGoneText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
+   "at": "scripts/SilphCo4F.asm:118",
+   "lines": [
+    117,
+    120
+   ]
+  },
+  {
+   "file": "scripts/SilphCo5F.asm",
+   "region": "SilphCo5FSilphWorkerMText",
+   "labels": [
+    "SilphCo5FSilphWorkerMText"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .YoureOurHeroText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
+   "at": "scripts/SilphCo5F.asm:103",
+   "lines": [
+    102,
+    105
+   ]
+  },
+  {
+   "file": "scripts/SilphCo6F.asm",
+   "region": "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript",
+   "labels": [
+    "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".beat_giovanni is defined in a region that bailed",
+   "at": "scripts/SilphCo6F.asm:68",
+   "lines": [
+    67,
+    69
+   ]
+  },
+  {
+   "file": "scripts/SilphCo6F.asm",
+   "region": "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.beat_giovanni",
+   "labels": [
+    "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.beat_giovanni",
+    "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.print_text"
+   ],
+   "reason": "hl-half-register-access",
+   "detail": "`h` is a half of ESI and has no flag-safe 8-bit x86 form",
+   "at": "scripts/SilphCo6F.asm:71",
+   "lines": [
+    71,
+    74
+   ]
+  },
+  {
+   "file": "scripts/SilphCo6F.asm",
+   "region": "SilphCo6FSilphWorkerM1Text",
+   "labels": [
+    "SilphCo6FSilphWorkerM1Text"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .BackToWorkText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
+   "at": "scripts/SilphCo6F.asm:79",
+   "lines": [
+    78,
+    81
+   ]
+  },
+  {
+   "file": "scripts/SilphCo6F.asm",
+   "region": "SilphCo6FSilphWorkerM2Text",
+   "labels": [
+    "SilphCo6FSilphWorkerM2Text"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .WeGotEngagedText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
+   "at": "scripts/SilphCo6F.asm:94",
+   "lines": [
+    93,
+    96
+   ]
+  },
+  {
+   "file": "scripts/SilphCo6F.asm",
+   "region": "SilphCo6FSilphWorkerF1Text",
+   "labels": [
+    "SilphCo6FSilphWorkerF1Text"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .HaveToMarryHimText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
+   "at": "scripts/SilphCo6F.asm:109",
+   "lines": [
+    108,
+    111
+   ]
+  },
+  {
+   "file": "scripts/SilphCo6F.asm",
+   "region": "SilphCo6FSilphWorkerF2Text",
+   "labels": [
+    "SilphCo6FSilphWorkerF2Text"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .TeamRocketRanText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
+   "at": "scripts/SilphCo6F.asm:124",
+   "lines": [
+    123,
+    126
+   ]
+  },
+  {
+   "file": "scripts/SilphCo6F.asm",
+   "region": "SilphCo6FSilphWorkerM3Text",
+   "labels": [
+    "SilphCo6FSilphWorkerM3Text"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .WorkForSilphText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
+   "at": "scripts/SilphCo6F.asm:139",
+   "lines": [
+    138,
+    141
+   ]
+  },
+  {
+   "file": "scripts/SilphCo7F.asm",
+   "region": "SilphCo7F_SetCardKeyDoorYScript",
+   "labels": [
+    "SilphCo7F_SetCardKeyDoorYScript",
+    "SilphCo7F_SetCardKeyDoorYScript.loop_check_doors"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo7F.asm:61",
+   "lines": [
+    51,
+    71
+   ]
+  },
+  {
+   "file": "scripts/SilphCo7F.asm",
+   "region": "SilphCo7F_SetCardKeyDoorYScript.check_y_coord",
+   "labels": [
+    "SilphCo7F_SetCardKeyDoorYScript.check_y_coord"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo7F.asm:73",
+   "lines": [
+    73,
+    80
+   ]
+  },
+  {
+   "file": "scripts/SilphCo7F.asm",
+   "region": "SilphCo7FDefaultScript",
+   "labels": [
+    "SilphCo7FDefaultScript",
+    "SilphCo7FDefaultScript.full_rival_movement"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RivalMovementUp; callee <none in range> has no abi.json entry",
+   "at": "scripts/SilphCo7F.asm:144",
+   "lines": [
+    123,
+    155
+   ]
+  },
+  {
+   "file": "scripts/SilphCo7F.asm",
+   "region": "SilphCo7FRivalAfterBattleScript",
+   "labels": [
+    "SilphCo7FRivalAfterBattleScript",
+    "SilphCo7FRivalAfterBattleScript.walk_around_player"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RivalWalkAroundPlayerMovement; callee <none in range> has no abi.json entry",
+   "at": "scripts/SilphCo7F.asm:213",
+   "lines": [
+    195,
+    223
+   ]
+  },
+  {
+   "file": "scripts/SilphCo8F.asm",
+   "region": "SilphCo8F_SetCardKeyDoorYScript",
+   "labels": [
+    "SilphCo8F_SetCardKeyDoorYScript",
+    "SilphCo8F_SetCardKeyDoorYScript.loop_check_doors"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo8F.asm:41",
+   "lines": [
+    31,
+    51
+   ]
+  },
+  {
+   "file": "scripts/SilphCo8F.asm",
+   "region": "SilphCo8F_SetCardKeyDoorYScript.check_y_coord",
+   "labels": [
+    "SilphCo8F_SetCardKeyDoorYScript.check_y_coord"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo8F.asm:53",
+   "lines": [
+    53,
+    60
+   ]
+  },
+  {
+   "file": "scripts/SilphCo9F.asm",
+   "region": "SilphCo9F_SetCardKeyDoorYScript",
+   "labels": [
+    "SilphCo9F_SetCardKeyDoorYScript",
+    "SilphCo9F_SetCardKeyDoorYScript.loop_card_key_doors"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo9F.asm:71",
+   "lines": [
+    61,
+    81
+   ]
+  },
+  {
+   "file": "scripts/SilphCo9F.asm",
+   "region": "SilphCo9F_SetCardKeyDoorYScript.check_door",
+   "labels": [
+    "SilphCo9F_SetCardKeyDoorYScript.check_door"
+   ],
+   "reason": "pointer-domain-unknown",
+   "detail": "HL domain is top at a dereference",
+   "at": "scripts/SilphCo9F.asm:83",
+   "lines": [
+    83,
+    90
+   ]
+  },
+  {
+   "file": "scripts/SilphCoElevator.asm",
+   "region": "SilphCoElevatorStoreWarpEntriesScript",
+   "labels": [
+    "SilphCoElevatorStoreWarpEntriesScript",
+    "SilphCoElevatorStoreWarpEntriesScript.StoreWarpEntry"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".StoreWarpEntry is defined in a region that bailed",
+   "at": "scripts/SilphCoElevator.asm:23",
+   "lines": [
+    18,
+    32
+   ]
+  },
+  {
+   "file": "scripts/SSAnne2F.asm",
+   "region": "SSAnne2FDefaultScript",
+   "labels": [
+    "SSAnne2FDefaultScript"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry",
+   "at": "scripts/SSAnne2F.asm:48",
+   "lines": [
+    25,
+    49
+   ]
+  },
+  {
+   "file": "scripts/SSAnne2F.asm",
+   "region": "SSAnne2FRivalAfterBattleScript",
+   "labels": [
+    "SSAnne2FRivalAfterBattleScript"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry",
+   "at": "scripts/SSAnne2F.asm:123",
+   "lines": [
+    108,
+    124
+   ]
+  },
+  {
+   "file": "scripts/SummerBeachHouse.asm",
+   "region": "SummerBeachHouseSurfinDudeText",
+   "labels": [
+    "SummerBeachHouseSurfinDudeText"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".next is defined in a region that bailed",
+   "at": "scripts/SummerBeachHouse.asm:24",
+   "lines": [
+    16,
+    27
+   ]
+  },
+  {
+   "file": "scripts/SummerBeachHouse.asm",
+   "region": "SummerBeachHousePoster1Text",
+   "labels": [
+    "SummerBeachHousePoster1Text",
+    "SummerBeachHousePoster1Text.next"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".next is defined in a region that bailed",
+   "at": "scripts/SummerBeachHouse.asm:86",
+   "lines": [
+    83,
+    90
+   ]
+  },
+  {
+   "file": "scripts/SummerBeachHouse.asm",
+   "region": "SummerBeachHousePoster2Text",
+   "labels": [
+    "SummerBeachHousePoster2Text",
+    "SummerBeachHousePoster2Text.next"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".next is defined in a region that bailed",
+   "at": "scripts/SummerBeachHouse.asm:104",
+   "lines": [
+    101,
+    108
+   ]
+  },
+  {
+   "file": "scripts/SummerBeachHouse.asm",
+   "region": "SummerBeachHousePoster3Text",
+   "labels": [
+    "SummerBeachHousePoster3Text",
+    "SummerBeachHousePoster3Text.next"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".next is defined in a region that bailed",
+   "at": "scripts/SummerBeachHouse.asm:122",
+   "lines": [
+    119,
+    126
+   ]
+  },
+  {
+   "file": "scripts/VermilionDock.asm",
+   "region": "VermilionDockSSAnneLeavesScript",
+   "labels": [
+    "VermilionDockSSAnneLeavesScript",
+    "VermilionDockSSAnneLeavesScript.shift_columns_up",
+    "VermilionDockSSAnneLeavesScript.smoke_puff_drift_loop",
+    "VermilionDockSSAnneLeavesScript.delay_between_drifts"
+   ],
+   "reason": "bank-expression",
+   "detail": "HIGH(vBGMap1)",
+   "at": "scripts/VermilionDock.asm:52",
+   "lines": [
+    40,
+    122
+   ]
+  },
+  {
+   "file": "scripts/VermilionDock.asm",
+   "region": "VermilionDock_AnimSmokePuffDriftRight",
+   "labels": [
+    "VermilionDock_AnimSmokePuffDriftRight",
+    "VermilionDock_AnimSmokePuffDriftRight.drift_loop"
+   ],
+   "reason": "add-hl-r16",
+   "detail": "hl de",
+   "at": "scripts/VermilionDock.asm:135",
+   "lines": [
+    125,
+    140
+   ]
+  },
+  {
+   "file": "scripts/VermilionDock.asm",
+   "region": "VermilionDock_SyncScrollWithLY",
+   "labels": [
+    "VermilionDock_SyncScrollWithLY",
+    "VermilionDock_SyncScrollWithLY.sync_scroll_ly",
+    "VermilionDock_SyncScrollWithLY.wait_for_ly_match"
+   ],
+   "reason": "hl-half-register-access",
+   "detail": "`h` is a half of ESI and has no flag-safe 8-bit x86 form",
+   "at": "scripts/VermilionDock.asm:165",
+   "lines": [
+    165,
+    180
+   ]
+  },
+  {
+   "file": "scripts/VermilionDock.asm",
+   "region": "VermilionDock_EraseSSAnne",
+   "labels": [
+    "VermilionDock_EraseSSAnne"
+   ],
+   "reason": "screen-coord-projection",
+   "detail": "hlbgcoord 0, 10",
+   "at": "scripts/VermilionDock.asm:188",
+   "lines": [
+    184,
+    209
+   ]
+  },
+  {
+   "file": "scripts/VermilionGym.asm",
+   "region": "VermilionGym_Script",
+   "labels": [
+    "VermilionGym_Script"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".LoadNames is defined in a region that bailed",
+   "at": "scripts/VermilionGym.asm:6",
+   "lines": [
+    2,
+    17
+   ]
+  },
+  {
+   "file": "scripts/VermilionGym.asm",
+   "region": "VermilionGym_Script.LoadNames",
+   "labels": [
+    "VermilionGym_Script.LoadNames"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".CityName is defined in a region that bailed",
+   "at": "scripts/VermilionGym.asm:20",
+   "lines": [
+    20,
+    22
+   ]
+  },
+  {
+   "file": "scripts/VermilionGym.asm",
+   "region": "VermilionGym_Script.CityName",
+   "labels": [
+    "VermilionGym_Script.CityName",
+    "VermilionGym_Script.LeaderName"
+   ],
+   "reason": "inline-text-db",
+   "detail": "db \"VERMILION CITY@\"",
+   "at": "scripts/VermilionGym.asm:25",
+   "lines": [
+    25,
+    28
+   ]
+  },
+  {
+   "file": "scripts/VictoryRoad1F.asm",
+   "region": "VictoryRoad1FDefaultScript",
+   "labels": [
+    "VictoryRoad1FDefaultScript"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".SwitchCoords is defined in a region that bailed",
+   "at": "scripts/VictoryRoad1F.asm:30",
+   "lines": [
+    28,
+    39
+   ]
+  },
+  {
+   "file": "scripts/VictoryRoad2F.asm",
+   "region": "VictoryRoad2FDefaultScript",
+   "labels": [
+    "VictoryRoad2FDefaultScript"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".SwitchCoords is defined in a region that bailed",
+   "at": "scripts/VictoryRoad2F.asm:46",
+   "lines": [
+    46,
+    59
+   ]
+  },
+  {
+   "file": "scripts/ViridianCity.asm",
+   "region": "ViridianCityPostInitialCatchTraining",
+   "labels": [
+    "ViridianCityPostInitialCatchTraining",
+    "ViridianCityPostInitialCatchTraining.move_old_man"
+   ],
+   "reason": "host-pointer-in-16bit-reg",
+   "detail": "de cannot hold the 32-bit address of ViridianCityOldManMovementData2; callee <none in range> has no abi.json entry",
+   "at": "scripts/ViridianCity.asm:220",
+   "lines": [
+    220,
+    232
+   ]
+  },
+  {
+   "file": "scripts/ViridianGym.asm",
+   "region": "ViridianGym_Script",
+   "labels": [
+    "ViridianGym_Script"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".CityName is defined in a region that bailed",
+   "at": "scripts/ViridianGym.asm:2",
+   "lines": [
+    2,
+    11
+   ]
+  },
+  {
+   "file": "scripts/ViridianGym.asm",
+   "region": "ViridianGym_Script.CityName",
+   "labels": [
+    "ViridianGym_Script.CityName",
+    "ViridianGym_Script.LeaderName"
+   ],
+   "reason": "inline-text-db",
+   "detail": "db \"VIRIDIAN CITY@\"",
+   "at": "scripts/ViridianGym.asm:14",
+   "lines": [
+    14,
+    17
+   ]
+  },
+  {
+   "file": "scripts/ViridianMart.asm",
+   "region": "ViridianMartCheckParcelDeliveredScript",
+   "labels": [
+    "ViridianMartCheckParcelDeliveredScript"
+   ],
+   "reason": "target-region-bailed",
+   "detail": ".delivered_parcel is defined in a region that bailed",
+   "at": "scripts/ViridianMart.asm:11",
+   "lines": [
+    10,
+    13
+   ]
+  },
+  {
+   "file": "scripts/ViridianMart.asm",
+   "region": "ViridianMartCheckParcelDeliveredScript.delivered_parcel",
+   "labels": [
+    "ViridianMartCheckParcelDeliveredScript.delivered_parcel",
+    "ViridianMartCheckParcelDeliveredScript.done"
+   ],
+   "reason": "hl-half-register-access",
+   "detail": "`l` is a half of ESI and has no flag-safe 8-bit x86 form",
+   "at": "scripts/ViridianMart.asm:17",
+   "lines": [
+    15,
+    21
+   ]
+  }
+ ],
+ "owned": [
+  {
+   "file": "scripts/AgathasRoom.asm",
+   "region": "AgathasRoom_TextPointers",
+   "labels": [
+    "AgathasRoom_TextPointers",
+    "AgathasRoomTrainerHeaders",
+    "AgathasRoomTrainerHeader0"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "AgathasRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/AgathasRoom.asm:121",
+   "lines": [
+    121,
+    129
+   ]
+  },
+  {
+   "file": "scripts/AgathasRoom.asm",
+   "region": "AgathaBeforeBattleText",
+   "labels": [
+    "AgathaBeforeBattleText",
+    "AgathaEndBattleText",
+    "AgathaAfterBattleText",
+    "AgathasRoomAgathaDontRunAwayText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "AgathaBeforeBattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/AgathasRoom.asm:138",
+   "lines": [
+    138,
+    151
+   ]
+  },
+  {
+   "file": "scripts/BrunosRoom.asm",
+   "region": "BrunosRoom_TextPointers",
+   "labels": [
+    "BrunosRoom_TextPointers",
+    "BrunosRoomTrainerHeaders",
+    "BrunosRoomTrainerHeader0"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "BrunosRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/BrunosRoom.asm:118",
+   "lines": [
+    118,
+    126
+   ]
+  },
+  {
+   "file": "scripts/BrunosRoom.asm",
+   "region": "BrunoBeforeBattleText",
+   "labels": [
+    "BrunoBeforeBattleText",
+    "BrunoEndBattleText",
+    "BrunoAfterBattleText",
+    "BrunosRoomBrunoDontRunAwayText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "BrunoBeforeBattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/BrunosRoom.asm:135",
+   "lines": [
+    135,
+    148
+   ]
+  },
+  {
+   "file": "scripts/CeladonGym.asm",
+   "region": "CeladonGym_TextPointers",
+   "labels": [
+    "CeladonGym_TextPointers",
+    "CeladonGymTrainerHeaders",
+    "CeladonGymTrainerHeader0",
+    "CeladonGymTrainerHeader1",
+    "CeladonGymTrainerHeader2",
+    "CeladonGymTrainerHeader3",
+    "CeladonGymTrainerHeader4",
+    "CeladonGymTrainerHeader5",
+    "CeladonGymTrainerHeader6"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeladonGymTrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeladonGym.asm:75",
+   "lines": [
+    75,
+    104
+   ]
+  },
+  {
+   "file": "scripts/CeladonGym.asm",
+   "region": "CeladonGymBattleText2",
+   "labels": [
+    "CeladonGymBattleText2",
+    "CeladonGymEndBattleText2",
+    "CeladonGymAfterBattleText2"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeladonGymBattleText2 is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeladonGym.asm:173",
+   "lines": [
+    173,
+    182
+   ]
+  },
+  {
+   "file": "scripts/CeladonGym.asm",
+   "region": "CeladonGymBattleText3",
+   "labels": [
+    "CeladonGymBattleText3",
+    "CeladonGymEndBattleText3",
+    "CeladonGymAfterBattleText3"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeladonGymBattleText3 is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeladonGym.asm:191",
+   "lines": [
+    191,
+    200
+   ]
+  },
+  {
+   "file": "scripts/CeladonGym.asm",
+   "region": "CeladonGymBattleText4",
+   "labels": [
+    "CeladonGymBattleText4",
+    "CeladonGymEndBattleText4",
+    "CeladonGymAfterBattleText4"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeladonGymBattleText4 is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeladonGym.asm:209",
+   "lines": [
+    209,
+    218
+   ]
+  },
+  {
+   "file": "scripts/CeladonGym.asm",
+   "region": "CeladonGymBattleText5",
+   "labels": [
+    "CeladonGymBattleText5",
+    "CeladonGymEndBattleText5",
+    "CeladonGymAfterBattleText5"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeladonGymBattleText5 is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeladonGym.asm:227",
+   "lines": [
+    227,
+    236
+   ]
+  },
+  {
+   "file": "scripts/CeladonGym.asm",
+   "region": "CeladonGymBattleText6",
+   "labels": [
+    "CeladonGymBattleText6",
+    "CeladonGymEndBattleText6",
+    "CeladonGymAfterBattleText6"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeladonGymBattleText6 is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeladonGym.asm:245",
+   "lines": [
+    245,
+    254
+   ]
+  },
+  {
+   "file": "scripts/CeladonGym.asm",
+   "region": "CeladonGymBattleText7",
+   "labels": [
+    "CeladonGymBattleText7",
+    "CeladonGymEndBattleText7",
+    "CeladonGymAfterBattleText7"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeladonGymBattleText7 is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeladonGym.asm:263",
+   "lines": [
+    263,
+    272
+   ]
+  },
+  {
+   "file": "scripts/CeladonGym.asm",
+   "region": "CeladonGymBattleText8",
+   "labels": [
+    "CeladonGymBattleText8",
+    "CeladonGymEndBattleText8",
+    "CeladonGymAfterBattleText8"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeladonGymBattleText8 is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeladonGym.asm:281",
+   "lines": [
+    281,
+    290
+   ]
+  },
+  {
+   "file": "scripts/CeruleanCaveB1F.asm",
+   "region": "CeruleanCaveB1F_ScriptPointers",
+   "labels": [
+    "CeruleanCaveB1F_ScriptPointers",
+    "CeruleanCaveB1F_TextPointers",
+    "CeruleanCaveB1FTrainerHeaders",
+    "MewtwoTrainerHeader"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeruleanCaveB1F_ScriptPointers is already defined in assets/map_script_tables.inc",
+   "at": "scripts/CeruleanCaveB1F.asm:11",
+   "lines": [
+    11,
+    28
+   ]
+  },
+  {
+   "file": "scripts/CeruleanCaveB1F.asm",
+   "region": "MewtwoBattleText",
+   "labels": [
+    "MewtwoBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "MewtwoBattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeruleanCaveB1F.asm:37",
+   "lines": [
+    37,
+    37
+   ]
+  },
+  {
+   "file": "scripts/CeruleanGym.asm",
+   "region": "CeruleanGym_TextPointers",
+   "labels": [
+    "CeruleanGym_TextPointers",
+    "CeruleanGymTrainerHeaders",
+    "CeruleanGymTrainerHeader0",
+    "CeruleanGymTrainerHeader1"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeruleanGymTrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeruleanGym.asm:75",
+   "lines": [
+    75,
+    90
+   ]
+  },
+  {
+   "file": "scripts/CeruleanGym.asm",
+   "region": "CeruleanGymBattleText1",
+   "labels": [
+    "CeruleanGymBattleText1",
+    "CeruleanGymEndBattleText1",
+    "CeruleanGymAfterBattleText1"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeruleanGymBattleText1 is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeruleanGym.asm:159",
+   "lines": [
+    159,
+    168
+   ]
+  },
+  {
+   "file": "scripts/CeruleanGym.asm",
+   "region": "CeruleanGymBattleText2",
+   "labels": [
+    "CeruleanGymBattleText2",
+    "CeruleanGymEndBattleText2",
+    "CeruleanGymAfterBattleText2"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "CeruleanGymBattleText2 is already defined in assets/trainer_headers.inc",
+   "at": "scripts/CeruleanGym.asm:177",
+   "lines": [
+    177,
+    186
+   ]
+  },
+  {
+   "file": "scripts/FightingDojo.asm",
+   "region": "FightingDojo_TextPointers",
+   "labels": [
+    "FightingDojo_TextPointers",
+    "FightingDojoTrainerHeaders",
+    "FightingDojoTrainerHeader0",
+    "FightingDojoTrainerHeader1",
+    "FightingDojoTrainerHeader2",
+    "FightingDojoTrainerHeader3"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FightingDojoTrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FightingDojo.asm:84",
+   "lines": [
+    84,
+    104
+   ]
+  },
+  {
+   "file": "scripts/FightingDojo.asm",
+   "region": "FightingDojoBlackbelt1BattleText",
+   "labels": [
+    "FightingDojoBlackbelt1BattleText",
+    "FightingDojoBlackbelt1EndBattleText",
+    "FightingDojoBlackbelt1AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FightingDojoBlackbelt1BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FightingDojo.asm:161",
+   "lines": [
+    161,
+    170
+   ]
+  },
+  {
+   "file": "scripts/FightingDojo.asm",
+   "region": "FightingDojoBlackbelt2BattleText",
+   "labels": [
+    "FightingDojoBlackbelt2BattleText",
+    "FightingDojoBlackbelt2EndBattleText",
+    "FightingDojoBlackbelt2AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FightingDojoBlackbelt2BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FightingDojo.asm:179",
+   "lines": [
+    179,
+    188
+   ]
+  },
+  {
+   "file": "scripts/FightingDojo.asm",
+   "region": "FightingDojoBlackbelt3BattleText",
+   "labels": [
+    "FightingDojoBlackbelt3BattleText",
+    "FightingDojoBlackbelt3EndBattleText",
+    "FightingDojoBlackbelt3AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FightingDojoBlackbelt3BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FightingDojo.asm:197",
+   "lines": [
+    197,
+    206
+   ]
+  },
+  {
+   "file": "scripts/FightingDojo.asm",
+   "region": "FightingDojoBlackbelt4BattleText",
+   "labels": [
+    "FightingDojoBlackbelt4BattleText",
+    "FightingDojoBlackbelt4EndBattleText",
+    "FightingDojoBlackbelt4AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FightingDojoBlackbelt4BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FightingDojo.asm:215",
+   "lines": [
+    215,
+    224
+   ]
+  },
+  {
+   "file": "scripts/FuchsiaGym.asm",
+   "region": "FuchsiaGym_TextPointers",
+   "labels": [
+    "FuchsiaGym_TextPointers",
+    "FuchsiaGymTrainerHeaders",
+    "FuchsiaGymTrainerHeader0",
+    "FuchsiaGymTrainerHeader1",
+    "FuchsiaGymTrainerHeader2",
+    "FuchsiaGymTrainerHeader3",
+    "FuchsiaGymTrainerHeader4",
+    "FuchsiaGymTrainerHeader5"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FuchsiaGymTrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FuchsiaGym.asm:77",
+   "lines": [
+    77,
+    104
+   ]
+  },
+  {
+   "file": "scripts/FuchsiaGym.asm",
+   "region": "FuchsiaGymRocker1BattleText",
+   "labels": [
+    "FuchsiaGymRocker1BattleText",
+    "FuchsiaGymRocker1EndBattleText",
+    "FuchsiaGymRocker1AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FuchsiaGymRocker1BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FuchsiaGym.asm:174",
+   "lines": [
+    174,
+    183
+   ]
+  },
+  {
+   "file": "scripts/FuchsiaGym.asm",
+   "region": "FuchsiaGymRocker2BattleText",
+   "labels": [
+    "FuchsiaGymRocker2BattleText",
+    "FuchsiaGymRocker2EndBattleText",
+    "FuchsiaGymRocker2AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FuchsiaGymRocker2BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FuchsiaGym.asm:192",
+   "lines": [
+    192,
+    201
+   ]
+  },
+  {
+   "file": "scripts/FuchsiaGym.asm",
+   "region": "FuchsiaGymRocker3BattleText",
+   "labels": [
+    "FuchsiaGymRocker3BattleText",
+    "FuchsiaGymRocker3EndBattleText",
+    "FuchsiaGymRocker3AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FuchsiaGymRocker3BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FuchsiaGym.asm:210",
+   "lines": [
+    210,
+    219
+   ]
+  },
+  {
+   "file": "scripts/FuchsiaGym.asm",
+   "region": "FuchsiaGymRocker4BattleText",
+   "labels": [
+    "FuchsiaGymRocker4BattleText",
+    "FuchsiaGymRocker4EndBattleText",
+    "FuchsiaGymRocker4AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FuchsiaGymRocker4BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FuchsiaGym.asm:228",
+   "lines": [
+    228,
+    237
+   ]
+  },
+  {
+   "file": "scripts/FuchsiaGym.asm",
+   "region": "FuchsiaGymRocker5BattleText",
+   "labels": [
+    "FuchsiaGymRocker5BattleText",
+    "FuchsiaGymRocker5EndBattleText",
+    "FuchsiaGymRocker5AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FuchsiaGymRocker5BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FuchsiaGym.asm:246",
+   "lines": [
+    246,
+    255
+   ]
+  },
+  {
+   "file": "scripts/FuchsiaGym.asm",
+   "region": "FuchsiaGymRocker6BattleText",
+   "labels": [
+    "FuchsiaGymRocker6BattleText",
+    "FuchsiaGymRocker6EndBattleText",
+    "FuchsiaGymRocker6AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "FuchsiaGymRocker6BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/FuchsiaGym.asm:264",
+   "lines": [
+    264,
+    273
+   ]
+  },
+  {
+   "file": "scripts/LancesRoom.asm",
+   "region": "LancesRoom_TextPointers",
+   "labels": [
+    "LancesRoom_TextPointers",
+    "LancesRoomTrainerHeaders",
+    "LancesRoomTrainerHeader0"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "LancesRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/LancesRoom.asm:130",
+   "lines": [
+    130,
+    137
+   ]
+  },
+  {
+   "file": "scripts/LancesRoom.asm",
+   "region": "LancesRoomLanceBeforeBattleText",
+   "labels": [
+    "LancesRoomLanceBeforeBattleText",
+    "LancesRoomLanceEndBattleText",
+    "LancesRoomLanceAfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "LancesRoomLanceBeforeBattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/LancesRoom.asm:146",
+   "lines": [
+    146,
+    154
+   ]
+  },
+  {
+   "file": "scripts/LoreleisRoom.asm",
+   "region": "LoreleisRoom_TextPointers",
+   "labels": [
+    "LoreleisRoom_TextPointers",
+    "LoreleisRoomTrainerHeaders",
+    "LoreleisRoomTrainerHeader0"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "LoreleisRoomTrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/LoreleisRoom.asm:120",
+   "lines": [
+    120,
+    128
+   ]
+  },
+  {
+   "file": "scripts/LoreleisRoom.asm",
+   "region": "LoreleisRoomLoreleiBeforeBattleText",
+   "labels": [
+    "LoreleisRoomLoreleiBeforeBattleText",
+    "LoreleisRoomLoreleiEndBattleText",
+    "LoreleisRoomLoreleiAfterBattleText",
+    "LoreleisRoomLoreleiDontRunAwayText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "LoreleisRoomLoreleiBeforeBattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/LoreleisRoom.asm:137",
+   "lines": [
+    137,
+    150
+   ]
+  },
+  {
+   "file": "scripts/MtMoon1F.asm",
+   "region": "MtMoon1F_ScriptPointers",
+   "labels": [
+    "MtMoon1F_ScriptPointers",
+    "MtMoon1F_TextPointers",
+    "MtMoon1TrainerHeaders",
+    "MtMoon1TrainerHeader0",
+    "MtMoon1TrainerHeader1",
+    "MtMoon1TrainerHeader2",
+    "MtMoon1TrainerHeader3",
+    "MtMoon1TrainerHeader4",
+    "MtMoon1TrainerHeader5",
+    "MtMoon1TrainerHeader6"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "MtMoon1TrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/MtMoon1F.asm:11",
+   "lines": [
+    11,
+    49
+   ]
+  },
+  {
+   "file": "scripts/MtMoon1F.asm",
+   "region": "MtMoon1FHikerBattleText",
+   "labels": [
+    "MtMoon1FHikerBattleText",
+    "MtMoon1FHikerEndBattleText",
+    "MtMoon1FHikerAfterBattleText",
+    "MtMoon1FYoungster1BattleText",
+    "MtMoon1FYoungster1EndBattleText",
+    "MtMoon1FYoungster1AfterBattleText",
+    "MtMoon1FCooltrainerF1BattleText",
+    "MtMoon1FCooltrainerF1EndBattleText",
+    "MtMoon1FCooltrainerF1AfterBattleText",
+    "MtMoon1FSuperNerdBattleText",
+    "MtMoon1FSuperNerdEndBattleText",
+    "MtMoon1FSuperNerdAfterBattleText",
+    "MtMoon1FCooltrainerF2BattleText",
+    "MtMoon1FCooltrainerF2EndBattleText",
+    "MtMoon1FCooltrainerF2AfterBattleText",
+    "MtMoon1FYoungster2BattleText",
+    "MtMoon1FYoungster2EndBattleText",
+    "MtMoon1FYoungster2AfterBattleText",
+    "MtMoon1FYoungster3BattleText",
+    "MtMoon1FYoungster3EndBattleText",
+    "MtMoon1FYoungster3AfterBattleText",
+    "MtMoon1FBewareZubatSign"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "MtMoon1FHikerBattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/MtMoon1F.asm:89",
+   "lines": [
+    89,
+    174
+   ]
+  },
+  {
+   "file": "scripts/MtMoonB2F.asm",
+   "region": "MtMoonB2F_TextPointers",
+   "labels": [
+    "MtMoonB2F_TextPointers",
+    "MtMoon3TrainerHeaders",
+    "MtMoon3TrainerHeader0",
+    "MtMoon3TrainerHeader1",
+    "MtMoon3TrainerHeader2",
+    "MtMoonB2FJessieJamesText",
+    "MtMoonB2FText12"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "MtMoon3TrainerHeaders is already defined in assets/trainer_headers.inc",
+   "at": "scripts/MtMoonB2F.asm:417",
+   "lines": [
+    417,
+    447
+   ]
+  },
+  {
+   "file": "scripts/MtMoonB2F.asm",
+   "region": "MtMoonB2FYouHaveNoRoomText.Text",
+   "labels": [
+    "MtMoonB2FYouHaveNoRoomText.Text",
+    "MtMoonB2FSuperNerdTheyreBothMineText",
+    "MtMoonB2FSuperNerdOkIllShareText",
+    "MtMoonB2fSuperNerdEachTakeOneText",
+    "MtMoonB2FSuperNerdTheresAPokemonLabText",
+    "MtMoonB2FSuperNerdThenThisIsMineText",
+    "MtMoonB2FRocket2BattleText",
+    "MtMoonB2FRocket2EndBattleText",
+    "MtMoonB2FRocket2AfterBattleText",
+    "MtMoonB2FRocket3BattleText",
+    "MtMoonB2FRocket3EndBattleText",
+    "MtMoonB2FRocket3AfterBattleText",
+    "MtMoonB2FRocket4BattleText",
+    "MtMoonB2FRocket4EndBattleText",
+    "MtMoonB2FRocket4AfterBattleText"
+   ],
+   "reason": "owned-by-generated-assets",
+   "detail": "MtMoonB2FRocket2BattleText is already defined in assets/trainer_headers.inc",
+   "at": "scripts/MtMoonB2F.asm:595",
+   "lines": [
+    595,
+    654
+   ]
+  },
+  {
    "file": "scripts/PewterGym.asm",
    "region": "PewterGym_TextPointers",
    "labels": [
@@ -3587,22 +4982,6 @@
    "lines": [
     170,
     179
-   ]
-  },
-  {
-   "file": "scripts/PewterPokecenter_2.asm",
-   "region": "PewterJigglypuff",
-   "labels": [
-    "PewterJigglypuff",
-    "PewterJigglypuff.findMatchingFacingDirectionLoop",
-    "PewterJigglypuff.spinMovementLoop"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "bc cannot hold the 32-bit address of .FacingDirectionsEnd - .FacingDirections; callee CopyData has no abi.json entry",
-   "at": "scripts/PewterPokecenter_2.asm:22",
-   "lines": [
-    11,
-    68
    ]
   },
   {
@@ -3802,21 +5181,6 @@
    "lines": [
     95,
     120
-   ]
-  },
-  {
-   "file": "scripts/PokemonTower2F.asm",
-   "region": "PokemonTower2FDefeatedRivalScript",
-   "labels": [
-    "PokemonTower2FDefeatedRivalScript",
-    "PokemonTower2FDefeatedRivalScript.got_movement"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of PokemonTower2FRivalDownThenRightMovement; callee <none in range> has no abi.json entry",
-   "at": "scripts/PokemonTower2F.asm:74",
-   "lines": [
-    65,
-    88
    ]
   },
   {
@@ -4031,39 +5395,6 @@
    ]
   },
   {
-   "file": "scripts/PokemonTower7F.asm",
-   "region": "PokemonTower7FScript1",
-   "labels": [
-    "PokemonTower7FScript1",
-    "PokemonTower7FScript1.asm_60d8c"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of PokemonTower7FMovementData_60d7b; callee <none in range> has no abi.json entry",
-   "at": "scripts/PokemonTower7F.asm:84",
-   "lines": [
-    84,
-    96
-   ]
-  },
-  {
-   "file": "scripts/PokemonTower7F.asm",
-   "region": "PokemonTower7FScript2",
-   "labels": [
-    "PokemonTower7FScript2",
-    "PokemonTower7FScript3",
-    "PokemonTower7FScript3.asm_60dba",
-    "PokemonTower7FScript4",
-    "PokemonTower7FScript4.asm_60dcc"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_60dba is defined in a region that bailed",
-   "at": "scripts/PokemonTower7F.asm:108",
-   "lines": [
-    99,
-    127
-   ]
-  },
-  {
    "file": "scripts/PowerPlant.asm",
    "region": "PowerPlant_ScriptPointers",
    "labels": [
@@ -4259,18 +5590,6 @@
   },
   {
    "file": "scripts/RocketHideoutB1F.asm",
-   "region": "scripts/RocketHideoutB1F.asm:anon",
-   "labels": [],
-   "reason": "target-region-bailed",
-   "detail": ".prompt_end is defined in a region that bailed",
-   "at": "scripts/RocketHideoutB1F.asm:98",
-   "lines": [
-    97,
-    99
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB1F.asm",
    "region": "RocketHideoutB1FRocket5EndBattleText.prompt_end",
    "labels": [
     "RocketHideoutB1FRocket5EndBattleText.prompt_end",
@@ -4380,39 +5699,6 @@
   },
   {
    "file": "scripts/RocketHideoutB4F.asm",
-   "region": "RocketHideoutB4FScript4",
-   "labels": [
-    "RocketHideoutB4FScript4",
-    "RocketHideoutB4FScript4.asm_45617"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of RocketHideoutB4FJessieJamesMovementData_45605; callee <none in range> has no abi.json entry",
-   "at": "scripts/RocketHideoutB4F.asm:134",
-   "lines": [
-    134,
-    146
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB4F.asm",
-   "region": "RocketHideoutB4FScript5",
-   "labels": [
-    "RocketHideoutB4FScript5",
-    "RocketHideoutB4FScript6",
-    "RocketHideoutB4FScript6.asm_4564a",
-    "RocketHideoutB4FScript7",
-    "RocketHideoutB4FScript7.asm_4565f"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_4564a is defined in a region that bailed",
-   "at": "scripts/RocketHideoutB4F.asm:160",
-   "lines": [
-    149,
-    180
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutB4F.asm",
    "region": "RocketHideoutB4F_TextPointers",
    "labels": [
     "RocketHideoutB4F_TextPointers",
@@ -4456,21 +5742,6 @@
    "lines": [
     409,
     411
-   ]
-  },
-  {
-   "file": "scripts/RocketHideoutElevator.asm",
-   "region": "RocketHideoutElevatorStoreWarpEntriesScript",
-   "labels": [
-    "RocketHideoutElevatorStoreWarpEntriesScript",
-    "RocketHideoutElevatorStoreWarpEntriesScript.StoreWarpEntry"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".StoreWarpEntry is defined in a region that bailed",
-   "at": "scripts/RocketHideoutElevator.asm:23",
-   "lines": [
-    18,
-    32
    ]
   },
   {
@@ -4781,22 +6052,6 @@
    ]
   },
   {
-   "file": "scripts/Route11Gate2F.asm",
-   "region": "Route11Gate2FOaksAideText",
-   "labels": [
-    "Route11Gate2FOaksAideText",
-    "Route11Gate2FOaksAideText.got_item",
-    "Route11Gate2FOaksAideText.no_item"
-   ],
-   "reason": "checkevent-carry-form",
-   "detail": "CheckEvent EVENT_GOT_ITEMFINDER, 1",
-   "at": "scripts/Route11Gate2F.asm:21",
-   "lines": [
-    21,
-    43
-   ]
-  },
-  {
    "file": "scripts/Route12.asm",
    "region": "Route12_TextPointers",
    "labels": [
@@ -4933,20 +6188,6 @@
    "lines": [
     226,
     243
-   ]
-  },
-  {
-   "file": "scripts/Route12Gate2F.asm",
-   "region": "Route12Gate2FBrunetteGirlText",
-   "labels": [
-    "Route12Gate2FBrunetteGirlText"
-   ],
-   "reason": "checkevent-carry-form",
-   "detail": "CheckEvent EVENT_GOT_TM39, 1",
-   "at": "scripts/Route12Gate2F.asm:12",
-   "lines": [
-    12,
-    22
    ]
   },
   {
@@ -5984,232 +7225,6 @@
    ]
   },
   {
-   "file": "scripts/Route22.asm",
-   "region": "Route22MoveRivalRightScript",
-   "labels": [
-    "Route22MoveRivalRightScript",
-    "Route22MoveRivalRightScript.skip_first_right"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22RivalMovementData; callee <none in range> has no abi.json entry",
-   "at": "scripts/Route22.asm:41",
-   "lines": [
-    41,
-    50
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1StartBattleScript",
-   "labels": [
-    "Route22Rival1StartBattleScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".set_rival_facing_direction is defined in a region that bailed",
-   "at": "scripts/Route22.asm:115",
-   "lines": [
-    106,
-    115
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript",
-   "labels": [
-    "Route22Rival1AfterBattleScript",
-    "Route22Rival1AfterBattleScript.keep_rival_starter"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".keep_rival_starter is defined in a region that bailed",
-   "at": "scripts/Route22.asm:153",
-   "lines": [
-    148,
-    161
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript.not_facing_down",
-   "labels": [
-    "Route22Rival1AfterBattleScript.not_facing_down",
-    "Route22Rival1AfterBattleScript.set_rival_facing"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".exit_movement_2 is defined in a region that bailed",
-   "at": "scripts/Route22.asm:179",
-   "lines": [
-    163,
-    181
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript.exit_movement_2",
-   "labels": [
-    "Route22Rival1AfterBattleScript.exit_movement_2",
-    "Route22Rival1AfterBattleScript.next_script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".RivalExit2Script is defined in a region that bailed",
-   "at": "scripts/Route22.asm:183",
-   "lines": [
-    183,
-    187
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript.RivalExit1Script",
-   "labels": [
-    "Route22Rival1AfterBattleScript.RivalExit1Script"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival1ExitMovementData1; callee <none in range> has no abi.json entry",
-   "at": "scripts/Route22.asm:190",
-   "lines": [
-    190,
-    191
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival1AfterBattleScript.RivalExit2Script",
-   "labels": [
-    "Route22Rival1AfterBattleScript.RivalExit2Script",
-    "Route22MoveRival1"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival1ExitMovementData2; callee <none in range> has no abi.json entry",
-   "at": "scripts/Route22.asm:194",
-   "lines": [
-    194,
-    198
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2StartBattleScript",
-   "labels": [
-    "Route22Rival2StartBattleScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".set_player_direction_left is defined in a region that bailed",
-   "at": "scripts/Route22.asm:266",
-   "lines": [
-    259,
-    270
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript",
-   "labels": [
-    "Route22Rival2AfterBattleScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".set_player_direction_left is defined in a region that bailed",
-   "at": "scripts/Route22.asm:310",
-   "lines": [
-    303,
-    314
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript.set_player_direction_left",
-   "labels": [
-    "Route22Rival2AfterBattleScript.set_player_direction_left",
-    "Route22Rival2AfterBattleScript.set_rival_facing_direction"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".exit_movement_2 is defined in a region that bailed",
-   "at": "scripts/Route22.asm:332",
-   "lines": [
-    316,
-    334
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript.exit_movement_2",
-   "labels": [
-    "Route22Rival2AfterBattleScript.exit_movement_2",
-    "Route22Rival2AfterBattleScript.next_script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".RivalExit2Script is defined in a region that bailed",
-   "at": "scripts/Route22.asm:336",
-   "lines": [
-    336,
-    340
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript.RivalExit1Script",
-   "labels": [
-    "Route22Rival2AfterBattleScript.RivalExit1Script"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival2ExitMovementData1; callee <none in range> has no abi.json entry",
-   "at": "scripts/Route22.asm:343",
-   "lines": [
-    343,
-    344
-   ]
-  },
-  {
-   "file": "scripts/Route22.asm",
-   "region": "Route22Rival2AfterBattleScript.RivalExit2Script",
-   "labels": [
-    "Route22Rival2AfterBattleScript.RivalExit2Script",
-    "Route22MoveRival2"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of Route22Rival2ExitMovementData2; callee <none in range> has no abi.json entry",
-   "at": "scripts/Route22.asm:347",
-   "lines": [
-    347,
-    351
-   ]
-  },
-  {
-   "file": "scripts/Route23.asm",
-   "region": "Route23CopyBadgeTextScript",
-   "labels": [
-    "Route23CopyBadgeTextScript",
-    "Route23CopyBadgeTextScript.copyTextLoop"
-   ],
-   "reason": "add-hl-r16",
-   "detail": "hl bc",
-   "at": "scripts/Route23.asm:79",
-   "lines": [
-    75,
-    91
-   ]
-  },
-  {
-   "file": "scripts/Route23.asm",
-   "region": "BadgeTextPointers",
-   "labels": [
-    "BadgeTextPointers",
-    "EarthBadgeText",
-    "VolcanoBadgeText",
-    "MarshBadgeText",
-    "SoulBadgeText",
-    "RainbowBadgeText",
-    "ThunderBadgeText",
-    "CascadeBadgeText"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"EARTHBADGE@\"",
-   "at": "scripts/Route23.asm:103",
-   "lines": [
-    94,
-    121
-   ]
-  },
-  {
    "file": "scripts/Route24.asm",
    "region": "Route24_TextPointers",
    "labels": [
@@ -6873,120 +7888,6 @@
    ]
   },
   {
-   "file": "scripts/SafariZoneGate_2.asm",
-   "region": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText",
-   "labels": [
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".has_positive_balance is defined in a region that bailed",
-   "at": "scripts/SafariZoneGate_2.asm:16",
-   "lines": [
-    2,
-    19
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneGate_2.asm",
-   "region": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance",
-   "labels": [
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.has_positive_balance"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".success is defined in a region that bailed",
-   "at": "scripts/SafariZoneGate_2.asm:29",
-   "lines": [
-    22,
-    34
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneGate_2.asm",
-   "region": "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success",
-   "labels": [
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.success",
-    "SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText.poor_mans_discount"
-   ],
-   "reason": "hl-half-register-access",
-   "detail": "`h` is a half of ESI and has no flag-safe 8-bit x86 form",
-   "at": "scripts/SafariZoneGate_2.asm:59",
-   "lines": [
-    37,
-    70
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneGate_2.asm",
-   "region": "SafariZoneEntranceGetLowCostAdmissionText",
-   "labels": [
-    "SafariZoneEntranceGetLowCostAdmissionText"
-   ],
-   "reason": "add-hl-r16",
-   "detail": "hl de",
-   "at": "scripts/SafariZoneGate_2.asm:190",
-   "lines": [
-    183,
-    200
-   ]
-  },
-  {
-   "file": "scripts/SafariZoneGate_2.asm",
-   "region": "SafariZoneEntranceConvertBCDtoNumber",
-   "labels": [
-    "SafariZoneEntranceConvertBCDtoNumber"
-   ],
-   "reason": "hl-half-register-access",
-   "detail": "`l` is a half of ESI and has no flag-safe 8-bit x86 form",
-   "at": "scripts/SafariZoneGate_2.asm:243",
-   "lines": [
-    240,
-    252
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGym_Script",
-   "labels": [
-    "SaffronGym_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".LoadNames is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:5",
-   "lines": [
-    2,
-    12
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGym_Script.LoadNames",
-   "labels": [
-    "SaffronGym_Script.LoadNames"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:15",
-   "lines": [
-    15,
-    17
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGym_Script.CityName",
-   "labels": [
-    "SaffronGym_Script.CityName",
-    "SaffronGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"SAFFRON CITY@\"",
-   "at": "scripts/SaffronGym.asm:20",
-   "lines": [
-    20,
-    23
-   ]
-  },
-  {
    "file": "scripts/SaffronGym.asm",
    "region": "SaffronGym_TextPointers",
    "labels": [
@@ -7006,63 +7907,6 @@
    "lines": [
     75,
     105
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymSabrinaText",
-   "labels": [
-    "SaffronGymSabrinaText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".afterBeat is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:112",
-   "lines": [
-    109,
-    115
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymSabrinaText.afterBeat",
-   "labels": [
-    "SaffronGymSabrinaText.afterBeat"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".done is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:119",
-   "lines": [
-    117,
-    119
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymGymGuideText",
-   "labels": [
-    "SaffronGymGymGuideText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".afterBeat is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:213",
-   "lines": [
-    212,
-    216
-   ]
-  },
-  {
-   "file": "scripts/SaffronGym.asm",
-   "region": "SaffronGymGymGuideText.afterBeat",
-   "labels": [
-    "SaffronGymGymGuideText.afterBeat",
-    "SaffronGymGymGuideText.done"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".BeatSabrinaText is defined in a region that bailed",
-   "at": "scripts/SaffronGym.asm:218",
-   "lines": [
-    218,
-    221
    ]
   },
   {
@@ -7102,49 +7946,6 @@
    ]
   },
   {
-   "file": "scripts/SeafoamIslandsB3F.asm",
-   "region": "SeafoamIslandsB3FMoveObjectScript",
-   "labels": [
-    "SeafoamIslandsB3FMoveObjectScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearRightBoulder; callee <none in range> has no abi.json entry",
-   "at": "scripts/SeafoamIslandsB3F.asm:104",
-   "lines": [
-    96,
-    105
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB4F.asm",
-   "region": "SeafoamIslandsB4FMoveObjectScript",
-   "labels": [
-    "SeafoamIslandsB4FMoveObjectScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RLEList_StrongCurrentNearLeftBoulder; callee <none in range> has no abi.json entry",
-   "at": "scripts/SeafoamIslandsB4F.asm:86",
-   "lines": [
-    76,
-    87
-   ]
-  },
-  {
-   "file": "scripts/SeafoamIslandsB4F.asm",
-   "region": "SeafoamIslandsB4F_TextPointers",
-   "labels": [
-    "SeafoamIslandsB4F_TextPointers",
-    "ArticunoTrainerHeader"
-   ],
-   "reason": "owned-by-gen_map_script_tables",
-   "detail": "trainer EVENT_BEAT_ARTICUNO, 0, SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText",
-   "at": "scripts/SeafoamIslandsB4F.asm:149",
-   "lines": [
-    137,
-    150
-   ]
-  },
-  {
    "file": "scripts/SilphCo10F.asm",
    "region": "SilphCo10F_ScriptPointers",
    "labels": [
@@ -7160,21 +7961,6 @@
    "lines": [
     38,
     58
-   ]
-  },
-  {
-   "file": "scripts/SilphCo10F.asm",
-   "region": "SilphCo10FSilphWorkerFText",
-   "labels": [
-    "SilphCo10FSilphWorkerFText",
-    "SilphCo10FSilphWorkerFText.beat_giovanni"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".QuietAboutMyCryingText is defined in a region that bailed",
-   "at": "scripts/SilphCo10F.asm:75",
-   "lines": [
-    74,
-    80
    ]
   },
   {
@@ -7196,68 +7982,6 @@
    "lines": [
     83,
     112
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo11F_SetCardKeyDoorYScript",
-    "SilphCo11F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo11F.asm:42",
-   "lines": [
-    32,
-    52
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo11F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo11F.asm:54",
-   "lines": [
-    54,
-    61
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FScript5",
-   "labels": [
-    "SilphCo11FScript5",
-    "SilphCo11FScript5.asm_6232d"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of SilphCo11FMovementData_622f5; callee <none in range> has no abi.json entry",
-   "at": "scripts/SilphCo11F.asm:307",
-   "lines": [
-    307,
-    323
-   ]
-  },
-  {
-   "file": "scripts/SilphCo11F.asm",
-   "region": "SilphCo11FScript6",
-   "labels": [
-    "SilphCo11FScript6",
-    "SilphCo11FScript7",
-    "SilphCo11FScript7.asm_6235e",
-    "SilphCo11FScript8",
-    "SilphCo11FScript8.asm_6237b"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".asm_6235e is defined in a region that bailed",
-   "at": "scripts/SilphCo11F.asm:338",
-   "lines": [
-    326,
-    361
    ]
   },
   {
@@ -7291,35 +8015,6 @@
    "lines": [
     585,
     594
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo2F_SetCardKeyDoorYScript",
-    "SilphCo2F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo2F.asm:51",
-   "lines": [
-    41,
-    61
-   ]
-  },
-  {
-   "file": "scripts/SilphCo2F.asm",
-   "region": "SilphCo2F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo2F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo2F.asm:63",
-   "lines": [
-    63,
-    70
    ]
   },
   {
@@ -7419,35 +8114,6 @@
   },
   {
    "file": "scripts/SilphCo4F.asm",
-   "region": "SilphCo4F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo4F_SetCardKeyDoorYScript",
-    "SilphCo4F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo4F.asm:51",
-   "lines": [
-    41,
-    61
-   ]
-  },
-  {
-   "file": "scripts/SilphCo4F.asm",
-   "region": "SilphCo4F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo4F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo4F.asm:63",
-   "lines": [
-    63,
-    70
-   ]
-  },
-  {
-   "file": "scripts/SilphCo4F.asm",
    "region": "SilphCo4F_ScriptPointers",
    "labels": [
     "SilphCo4F_ScriptPointers",
@@ -7463,20 +8129,6 @@
    "lines": [
     90,
     113
-   ]
-  },
-  {
-   "file": "scripts/SilphCo4F.asm",
-   "region": "SilphCo4FSilphWorkerMText",
-   "labels": [
-    "SilphCo4FSilphWorkerMText"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .TeamRocketIsGoneText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
-   "at": "scripts/SilphCo4F.asm:118",
-   "lines": [
-    117,
-    120
    ]
   },
   {
@@ -7545,20 +8197,6 @@
    "lines": [
     69,
     98
-   ]
-  },
-  {
-   "file": "scripts/SilphCo5F.asm",
-   "region": "SilphCo5FSilphWorkerMText",
-   "labels": [
-    "SilphCo5FSilphWorkerMText"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .YoureOurHeroText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
-   "at": "scripts/SilphCo5F.asm:103",
-   "lines": [
-    102,
-    105
    ]
   },
   {
@@ -7649,105 +8287,6 @@
   },
   {
    "file": "scripts/SilphCo6F.asm",
-   "region": "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript",
-   "labels": [
-    "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".beat_giovanni is defined in a region that bailed",
-   "at": "scripts/SilphCo6F.asm:68",
-   "lines": [
-    67,
-    69
-   ]
-  },
-  {
-   "file": "scripts/SilphCo6F.asm",
-   "region": "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.beat_giovanni",
-   "labels": [
-    "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.beat_giovanni",
-    "SilphCo6FBeatGiovanniPrintDEOrPrintHLScript.print_text"
-   ],
-   "reason": "hl-half-register-access",
-   "detail": "`h` is a half of ESI and has no flag-safe 8-bit x86 form",
-   "at": "scripts/SilphCo6F.asm:71",
-   "lines": [
-    71,
-    74
-   ]
-  },
-  {
-   "file": "scripts/SilphCo6F.asm",
-   "region": "SilphCo6FSilphWorkerM1Text",
-   "labels": [
-    "SilphCo6FSilphWorkerM1Text"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .BackToWorkText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
-   "at": "scripts/SilphCo6F.asm:79",
-   "lines": [
-    78,
-    81
-   ]
-  },
-  {
-   "file": "scripts/SilphCo6F.asm",
-   "region": "SilphCo6FSilphWorkerM2Text",
-   "labels": [
-    "SilphCo6FSilphWorkerM2Text"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .WeGotEngagedText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
-   "at": "scripts/SilphCo6F.asm:94",
-   "lines": [
-    93,
-    96
-   ]
-  },
-  {
-   "file": "scripts/SilphCo6F.asm",
-   "region": "SilphCo6FSilphWorkerF1Text",
-   "labels": [
-    "SilphCo6FSilphWorkerF1Text"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .HaveToMarryHimText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
-   "at": "scripts/SilphCo6F.asm:109",
-   "lines": [
-    108,
-    111
-   ]
-  },
-  {
-   "file": "scripts/SilphCo6F.asm",
-   "region": "SilphCo6FSilphWorkerF2Text",
-   "labels": [
-    "SilphCo6FSilphWorkerF2Text"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .TeamRocketRanText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
-   "at": "scripts/SilphCo6F.asm:124",
-   "lines": [
-    123,
-    126
-   ]
-  },
-  {
-   "file": "scripts/SilphCo6F.asm",
-   "region": "SilphCo6FSilphWorkerM3Text",
-   "labels": [
-    "SilphCo6FSilphWorkerM3Text"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .WorkForSilphText; callee SilphCo6FBeatGiovanniPrintDEOrPrintHLScript has no abi.json entry",
-   "at": "scripts/SilphCo6F.asm:139",
-   "lines": [
-    138,
-    141
-   ]
-  },
-  {
-   "file": "scripts/SilphCo6F.asm",
    "region": "SilphCo6FRocket1BattleText",
    "labels": [
     "SilphCo6FRocket1BattleText",
@@ -7792,65 +8331,6 @@
    "lines": [
     194,
     203
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo7F_SetCardKeyDoorYScript",
-    "SilphCo7F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo7F.asm:61",
-   "lines": [
-    51,
-    71
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo7F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo7F.asm:73",
-   "lines": [
-    73,
-    80
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7FDefaultScript",
-   "labels": [
-    "SilphCo7FDefaultScript",
-    "SilphCo7FDefaultScript.full_rival_movement"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RivalMovementUp; callee <none in range> has no abi.json entry",
-   "at": "scripts/SilphCo7F.asm:144",
-   "lines": [
-    123,
-    155
-   ]
-  },
-  {
-   "file": "scripts/SilphCo7F.asm",
-   "region": "SilphCo7FRivalAfterBattleScript",
-   "labels": [
-    "SilphCo7FRivalAfterBattleScript",
-    "SilphCo7FRivalAfterBattleScript.walk_around_player"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RivalWalkAroundPlayerMovement; callee <none in range> has no abi.json entry",
-   "at": "scripts/SilphCo7F.asm:213",
-   "lines": [
-    195,
-    223
    ]
   },
   {
@@ -7938,35 +8418,6 @@
   },
   {
    "file": "scripts/SilphCo8F.asm",
-   "region": "SilphCo8F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo8F_SetCardKeyDoorYScript",
-    "SilphCo8F_SetCardKeyDoorYScript.loop_check_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo8F.asm:41",
-   "lines": [
-    31,
-    51
-   ]
-  },
-  {
-   "file": "scripts/SilphCo8F.asm",
-   "region": "SilphCo8F_SetCardKeyDoorYScript.check_y_coord",
-   "labels": [
-    "SilphCo8F_SetCardKeyDoorYScript.check_y_coord"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo8F.asm:53",
-   "lines": [
-    53,
-    60
-   ]
-  },
-  {
-   "file": "scripts/SilphCo8F.asm",
    "region": "SilphCo8F_ScriptPointers",
    "labels": [
     "SilphCo8F_ScriptPointers",
@@ -8008,35 +8459,6 @@
   },
   {
    "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9F_SetCardKeyDoorYScript",
-   "labels": [
-    "SilphCo9F_SetCardKeyDoorYScript",
-    "SilphCo9F_SetCardKeyDoorYScript.loop_card_key_doors"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo9F.asm:71",
-   "lines": [
-    61,
-    81
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
-   "region": "SilphCo9F_SetCardKeyDoorYScript.check_door",
-   "labels": [
-    "SilphCo9F_SetCardKeyDoorYScript.check_door"
-   ],
-   "reason": "pointer-domain-unknown",
-   "detail": "HL domain is top at a dereference",
-   "at": "scripts/SilphCo9F.asm:83",
-   "lines": [
-    83,
-    90
-   ]
-  },
-  {
-   "file": "scripts/SilphCo9F.asm",
    "region": "SilphCo9F_ScriptPointers",
    "labels": [
     "SilphCo9F_ScriptPointers",
@@ -8074,21 +8496,6 @@
    "lines": [
     194,
     227
-   ]
-  },
-  {
-   "file": "scripts/SilphCoElevator.asm",
-   "region": "SilphCoElevatorStoreWarpEntriesScript",
-   "labels": [
-    "SilphCoElevatorStoreWarpEntriesScript",
-    "SilphCoElevatorStoreWarpEntriesScript.StoreWarpEntry"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".StoreWarpEntry is defined in a region that bailed",
-   "at": "scripts/SilphCoElevator.asm:23",
-   "lines": [
-    18,
-    32
    ]
   },
   {
@@ -8139,34 +8546,6 @@
    "lines": [
     74,
     139
-   ]
-  },
-  {
-   "file": "scripts/SSAnne2F.asm",
-   "region": "SSAnne2FDefaultScript",
-   "labels": [
-    "SSAnne2FDefaultScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry",
-   "at": "scripts/SSAnne2F.asm:48",
-   "lines": [
-    25,
-    49
-   ]
-  },
-  {
-   "file": "scripts/SSAnne2F.asm",
-   "region": "SSAnne2FRivalAfterBattleScript",
-   "labels": [
-    "SSAnne2FRivalAfterBattleScript"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of .RivalDownFourMovement; callee <none in range> has no abi.json entry",
-   "at": "scripts/SSAnne2F.asm:123",
-   "lines": [
-    108,
-    124
    ]
   },
   {
@@ -8322,170 +8701,6 @@
    ]
   },
   {
-   "file": "scripts/SummerBeachHouse.asm",
-   "region": "SummerBeachHouseSurfinDudeText",
-   "labels": [
-    "SummerBeachHouseSurfinDudeText"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".next is defined in a region that bailed",
-   "at": "scripts/SummerBeachHouse.asm:24",
-   "lines": [
-    16,
-    27
-   ]
-  },
-  {
-   "file": "scripts/SummerBeachHouse.asm",
-   "region": "SummerBeachHousePoster1Text",
-   "labels": [
-    "SummerBeachHousePoster1Text",
-    "SummerBeachHousePoster1Text.next"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".next is defined in a region that bailed",
-   "at": "scripts/SummerBeachHouse.asm:86",
-   "lines": [
-    83,
-    90
-   ]
-  },
-  {
-   "file": "scripts/SummerBeachHouse.asm",
-   "region": "SummerBeachHousePoster2Text",
-   "labels": [
-    "SummerBeachHousePoster2Text",
-    "SummerBeachHousePoster2Text.next"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".next is defined in a region that bailed",
-   "at": "scripts/SummerBeachHouse.asm:104",
-   "lines": [
-    101,
-    108
-   ]
-  },
-  {
-   "file": "scripts/SummerBeachHouse.asm",
-   "region": "SummerBeachHousePoster3Text",
-   "labels": [
-    "SummerBeachHousePoster3Text",
-    "SummerBeachHousePoster3Text.next"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".next is defined in a region that bailed",
-   "at": "scripts/SummerBeachHouse.asm:122",
-   "lines": [
-    119,
-    126
-   ]
-  },
-  {
-   "file": "scripts/VermilionDock.asm",
-   "region": "VermilionDockSSAnneLeavesScript",
-   "labels": [
-    "VermilionDockSSAnneLeavesScript",
-    "VermilionDockSSAnneLeavesScript.shift_columns_up",
-    "VermilionDockSSAnneLeavesScript.smoke_puff_drift_loop",
-    "VermilionDockSSAnneLeavesScript.delay_between_drifts"
-   ],
-   "reason": "bank-expression",
-   "detail": "HIGH(vBGMap1)",
-   "at": "scripts/VermilionDock.asm:52",
-   "lines": [
-    40,
-    122
-   ]
-  },
-  {
-   "file": "scripts/VermilionDock.asm",
-   "region": "VermilionDock_AnimSmokePuffDriftRight",
-   "labels": [
-    "VermilionDock_AnimSmokePuffDriftRight",
-    "VermilionDock_AnimSmokePuffDriftRight.drift_loop"
-   ],
-   "reason": "add-hl-r16",
-   "detail": "hl de",
-   "at": "scripts/VermilionDock.asm:135",
-   "lines": [
-    125,
-    140
-   ]
-  },
-  {
-   "file": "scripts/VermilionDock.asm",
-   "region": "VermilionDock_SyncScrollWithLY",
-   "labels": [
-    "VermilionDock_SyncScrollWithLY",
-    "VermilionDock_SyncScrollWithLY.sync_scroll_ly",
-    "VermilionDock_SyncScrollWithLY.wait_for_ly_match"
-   ],
-   "reason": "hl-half-register-access",
-   "detail": "`h` is a half of ESI and has no flag-safe 8-bit x86 form",
-   "at": "scripts/VermilionDock.asm:165",
-   "lines": [
-    165,
-    180
-   ]
-  },
-  {
-   "file": "scripts/VermilionDock.asm",
-   "region": "VermilionDock_EraseSSAnne",
-   "labels": [
-    "VermilionDock_EraseSSAnne"
-   ],
-   "reason": "screen-coord-projection",
-   "detail": "hlbgcoord 0, 10",
-   "at": "scripts/VermilionDock.asm:188",
-   "lines": [
-    184,
-    209
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGym_Script",
-   "labels": [
-    "VermilionGym_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".LoadNames is defined in a region that bailed",
-   "at": "scripts/VermilionGym.asm:6",
-   "lines": [
-    2,
-    17
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGym_Script.LoadNames",
-   "labels": [
-    "VermilionGym_Script.LoadNames"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/VermilionGym.asm:20",
-   "lines": [
-    20,
-    22
-   ]
-  },
-  {
-   "file": "scripts/VermilionGym.asm",
-   "region": "VermilionGym_Script.CityName",
-   "labels": [
-    "VermilionGym_Script.CityName",
-    "VermilionGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"VERMILION CITY@\"",
-   "at": "scripts/VermilionGym.asm:25",
-   "lines": [
-    25,
-    28
-   ]
-  },
-  {
    "file": "scripts/VermilionGym.asm",
    "region": "VermilionGym_TextPointers",
    "labels": [
@@ -8553,20 +8768,6 @@
   },
   {
    "file": "scripts/VictoryRoad1F.asm",
-   "region": "VictoryRoad1FDefaultScript",
-   "labels": [
-    "VictoryRoad1FDefaultScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".SwitchCoords is defined in a region that bailed",
-   "at": "scripts/VictoryRoad1F.asm:30",
-   "lines": [
-    28,
-    39
-   ]
-  },
-  {
-   "file": "scripts/VictoryRoad1F.asm",
    "region": "VictoryRoad1FDefaultScript.SwitchCoords",
    "labels": [
     "VictoryRoad1FDefaultScript.SwitchCoords",
@@ -8600,20 +8801,6 @@
    "lines": [
     76,
     97
-   ]
-  },
-  {
-   "file": "scripts/VictoryRoad2F.asm",
-   "region": "VictoryRoad2FDefaultScript",
-   "labels": [
-    "VictoryRoad2FDefaultScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".SwitchCoords is defined in a region that bailed",
-   "at": "scripts/VictoryRoad2F.asm:46",
-   "lines": [
-    46,
-    59
    ]
   },
   {
@@ -8725,21 +8912,6 @@
    ]
   },
   {
-   "file": "scripts/ViridianCity.asm",
-   "region": "ViridianCityPostInitialCatchTraining",
-   "labels": [
-    "ViridianCityPostInitialCatchTraining",
-    "ViridianCityPostInitialCatchTraining.move_old_man"
-   ],
-   "reason": "host-pointer-in-16bit-reg",
-   "detail": "de cannot hold the 32-bit address of ViridianCityOldManMovementData2; callee <none in range> has no abi.json entry",
-   "at": "scripts/ViridianCity.asm:220",
-   "lines": [
-    220,
-    232
-   ]
-  },
-  {
    "file": "scripts/ViridianForest.asm",
    "region": "ViridianForest_ScriptPointers",
    "labels": [
@@ -8788,35 +8960,6 @@
    "lines": [
     81,
     142
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGym_Script",
-   "labels": [
-    "ViridianGym_Script"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".CityName is defined in a region that bailed",
-   "at": "scripts/ViridianGym.asm:2",
-   "lines": [
-    2,
-    11
-   ]
-  },
-  {
-   "file": "scripts/ViridianGym.asm",
-   "region": "ViridianGym_Script.CityName",
-   "labels": [
-    "ViridianGym_Script.CityName",
-    "ViridianGym_Script.LeaderName"
-   ],
-   "reason": "inline-text-db",
-   "detail": "db \"VIRIDIAN CITY@\"",
-   "at": "scripts/ViridianGym.asm:14",
-   "lines": [
-    14,
-    17
    ]
   },
   {
@@ -8968,35 +9111,6 @@
    "lines": [
     412,
     421
-   ]
-  },
-  {
-   "file": "scripts/ViridianMart.asm",
-   "region": "ViridianMartCheckParcelDeliveredScript",
-   "labels": [
-    "ViridianMartCheckParcelDeliveredScript"
-   ],
-   "reason": "target-region-bailed",
-   "detail": ".delivered_parcel is defined in a region that bailed",
-   "at": "scripts/ViridianMart.asm:11",
-   "lines": [
-    10,
-    13
-   ]
-  },
-  {
-   "file": "scripts/ViridianMart.asm",
-   "region": "ViridianMartCheckParcelDeliveredScript.delivered_parcel",
-   "labels": [
-    "ViridianMartCheckParcelDeliveredScript.delivered_parcel",
-    "ViridianMartCheckParcelDeliveredScript.done"
-   ],
-   "reason": "hl-half-register-access",
-   "detail": "`l` is a half of ESI and has no flag-safe 8-bit x86 form",
-   "at": "scripts/ViridianMart.asm:17",
-   "lines": [
-    15,
-    21
    ]
   }
  ]

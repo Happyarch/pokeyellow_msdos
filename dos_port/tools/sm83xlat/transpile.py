@@ -112,7 +112,13 @@ def transpile_file(f: sparser.ScriptFile, R: resolve.Resolver, abi: dict,
     dead_locals = set()
     for _ in range(4):          # a fixed point; the cascade is shallow
         probe = _emit_pass(f, regions, an, R, abi, dead_locals, pret_src)
-        newly = {l for b in probe.bails for l in b["labels"] if "." in l}
+        # OWNED regions feed this too, and must: the generated asset defines the
+        # region's TOP-LEVEL label, but nothing defines its `.locals` — the region
+        # is not emitted at all — so a jump to one is just as dead as a jump into
+        # a bailed region. Splitting `owned` out of `bails` for reporting must not
+        # quietly narrow this set.
+        newly = {l for b in probe.bails + probe.owned
+                 for l in b["labels"] if "." in l}
         if newly <= dead_locals:
             break
         dead_locals |= newly
@@ -139,10 +145,10 @@ def _emit_pass(f, regions, an, R, abi, dead_locals, pret_src) -> emit.Emitted:
         owned = [l for l in region.labels
                  if l in R.asset_labels and l not in R.shadow_exempt]
         if owned:
-            out.bailed_regions += 1
+            out.owned_regions += 1
             lo = region.items[0].line.lineno
             hi = region.items[-1].line.lineno
-            out.bails.append({
+            out.owned.append({
                 "file": f.path, "region": region.name, "labels": region.labels,
                 "reason": "owned-by-generated-assets",
                 "detail": f"{owned[0]} is already defined in "
@@ -443,7 +449,8 @@ def main(argv=None) -> int:
     reasons = Counter()
     per_file = {}
     all_bails = []
-    total_ok = total_bail = 0
+    all_owned = []
+    total_ok = total_bail = total_owned = 0
     written = []
     shadowed = []
 
@@ -477,19 +484,24 @@ def main(argv=None) -> int:
             merged.externs |= out.externs
             merged.globals_.extend(out.globals_)
             merged.bails.extend(out.bails)
+            merged.owned.extend(out.owned)
             merged.ok_regions += out.ok_regions
             merged.bailed_regions += out.bailed_regions
+            merged.owned_regions += out.owned_regions
             merged.self_tests += out.self_tests
         out = merged
         f = group[0]
         text = render(f, out, R, sources, group)
         total_ok += out.ok_regions
         total_bail += out.bailed_regions
+        total_owned += out.owned_regions
         for b in out.bails:
             reasons[b["reason"]] += 1
         all_bails.extend(out.bails)
+        all_owned.extend(out.owned)
         per_file[f.path] = {"ok_regions": out.ok_regions,
                             "bailed_regions": out.bailed_regions,
+                            "owned_regions": out.owned_regions,
                             "reasons": sorted({b["reason"] for b in out.bails})}
 
         dest = root / rel
@@ -512,8 +524,15 @@ def main(argv=None) -> int:
             print(f"INVARIANT VIOLATION in {rel}: {findings}", file=sys.stderr)
             return 3
 
+    # COVERAGE EXCLUDES THE OWNED REGIONS FROM ITS DENOMINATOR. They are Tier-1
+    # data the port's generators already define; the tool must not emit them
+    # (a second definition is a dup_def the static gate catches), so they are not
+    # work it failed to do and counting them as bails understated it by ~10
+    # points. They are still printed, and still listed in bail_report.json --
+    # excluded from a ratio, not hidden.
     print(f"regions: {total_ok} lowered, {total_bail} bailed "
-          f"({100.0 * total_ok / max(1, total_ok + total_bail):.1f}% lowered)")
+          f"({100.0 * total_ok / max(1, total_ok + total_bail):.1f}% lowered), "
+          f"{total_owned} owned by generated assets (excluded — not work)")
     for r, n in reasons.most_common():
         print(f"  {n:5d}  {r}")
     if shadowed:
@@ -526,23 +545,34 @@ def main(argv=None) -> int:
         (HERE / "tables" / "bail_report.json").write_text(json.dumps({
             "_comment": "Every region the transpiler refused to lower. One entry "
                         "per region; the region defines no symbol in the output.",
+            "_owned_comment": "`owned` is NOT a bail list. Those regions are "
+                              "Tier-1 data the port's generators already define, "
+                              "so the tool must not emit them at all — emitting "
+                              "one would be a duplicate definition. They describe "
+                              "no outstanding work and are excluded from the "
+                              "coverage denominator; they are listed here so the "
+                              "exclusion stays auditable.",
             "regions_lowered": total_ok,
             "regions_bailed": total_bail,
+            "regions_owned": total_owned,
             "by_reason": dict(reasons),
             "per_file": per_file,
             "bails": all_bails,
+            "owned": all_owned,
         }, indent=1))
 
     if not args.dry_run:
         (HERE / "transpile_report.md").write_text(_report(
-            total_ok, total_bail, reasons, per_file, shadowed, written))
+            total_ok, total_bail, total_owned, reasons, per_file, shadowed,
+            written))
 
     if args.assemble:
         return _assemble(root, port, written)
     return 0
 
 
-def _report(total_ok, total_bail, reasons, per_file, shadowed, written) -> str:
+def _report(total_ok, total_bail, total_owned, reasons, per_file, shadowed,
+            written) -> str:
     total = total_ok + total_bail
     L = ["# sm83xlat — the one shot (Stages 3-7)\n",
          "Generated by `transpile.py`. Every figure is a measurement over pret's",
@@ -550,6 +580,10 @@ def _report(total_ok, total_bail, reasons, per_file, shadowed, written) -> str:
          "quoting this file.\n",
          f"- regions lowered: **{total_ok} / {total} "
          f"({100.0 * total_ok / max(1, total):.1f}%)**",
+         f"- regions owned by generated assets: **{total_owned}** — excluded from"
+         f" the ratio above. These are Tier-1 data the port already generates, so"
+         f" the tool must not emit them; they are not work it failed to do."
+         f" Listed in `tables/bail_report.json` under `owned`.",
          f"- output files: **{len(written)}** "
          f"(251 pret files merge into 224 port files — 26 maps are split across "
          f"two or three pret sources)",

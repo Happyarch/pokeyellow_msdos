@@ -306,7 +306,7 @@ today, so the reason code `text-script-mart-item-list` is currently unexercised.
 
 ## *ReuseA pass (2026-08-17) — 81.2% → 82.5%
 
-Regions lowered 2,055 → **2,088**; bails 475 → **444**. `event-byte-assembly-state`
+Regions lowered 2,055 → **2,086**; bails 475 → **444**. `event-byte-assembly-state`
 15 → **0**. Decomposed: −13 event-byte, −18 cascade, 2 changed reason (both to
 `target-region-bailed`, i.e. still cascade), **0 regions started bailing**.
 
@@ -359,6 +359,47 @@ and the alias reloads unconditionally.
 `PKMN.EXE` byte-identical across the change (measured, not assumed —
 `%assign` emits no code), `pkmn.sym` unchanged, 224/224 assemble, static_gate
 PASS, lint 0, core fidelity 16/16.
+
+## The coverage figure was measuring the wrong denominator — 82.5% → **91.7%**
+
+**No code changed and no region moved; the emitted output is byte-identical.**
+This is an accounting fix, and it is worth more than it sounds because every
+decision about "what is left" was being made against a wrong number.
+
+`owned-by-generated-assets` was counted as a BAIL. It is not one. A bail means
+"the tool could not lower this and the work remains"; those 255 regions mean
+"this is Tier-1 data the port's generators already define, so the tool must not
+emit it at all" — emitting one would be a duplicate definition that `static_gate`
+correctly reports as `dup_def`. They describe **no outstanding work and never
+will**, yet they sat at the top of every bail histogram, 255 of 444, and dragged
+the headline coverage down by more than nine points.
+
+The tool now reports three outcomes instead of two — lowered / bailed / owned —
+and computes coverage as `lowered / (lowered + bailed)`:
+
+```
+regions: 2086 lowered, 189 bailed (91.7% lowered), 255 owned by generated assets (excluded — not work)
+```
+
+They are **excluded from a ratio, not hidden**: still printed, still enumerated
+in `tables/bail_report.json` under a top-level `owned` key (separate from
+`bails`), still per-file in `per_file.owned_regions`. The exclusion stays
+auditable.
+
+**The trap, for anyone touching this:** owned regions must keep feeding the
+`dead_locals` cascade fixpoint. The generated asset defines the region's
+TOP-LEVEL label, but nothing defines its `.locals` — the region is not emitted at
+all — so a jump into one is exactly as dead as a jump into a bailed region.
+Splitting `owned` out of `bails` for reporting must not narrow that set, so the
+fixpoint reads `probe.bails + probe.owned`. Verified by the output being
+byte-identical across the split (`f933e5cc…`): if the cascade had narrowed, bails
+would have fallen further and regions would have been emitted that reference
+undefined locals.
+
+**Correction:** the `*ReuseA` section above originally read 2,088 lowered. The
+tool reported **2,086**; 2,088 was derived from a delta instead of read from the
+output, and commit `b0fcab897`'s message carries the same wrong figure. The bail
+count (444) and the delta decomposition in that section are unaffected.
 
 ## Stage 0 corrections to this plan's own figures (measured 2026-08-16)
 
