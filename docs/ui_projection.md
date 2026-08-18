@@ -232,6 +232,40 @@ projection for every caller — the mart must set its own origin. A mart
 implementation that simply inherits the generic list anchor is wrong, and will
 look wrong in exactly the way this section exists to prevent.
 
+### Vending machine and Celadon prize menu — the mart rule, and nothing bespoke
+
+Decided 2026-08-18 under maintainer delegation ("whatever you do for the inferred
+projections is fine, I may overrule it later at my discretion"), following the
+Poké Mart ruling above. Geometry measured from pret, not inferred from the
+screenshots: TextBoxBorder's `lb bc, h, w` draws a (w+2) x (h+2) box, verified
+against the registry's own list-menu row (hlcoord 4,2 + lb de, 9,14 -> 16x11).
+
+  vending drink box  engine/events/vending_machine.asm:20  hlcoord 0,3 + lb bc, 8,12
+                     -> 14x10, GB cols 0-13,  rows 3-12   FLUSH LEFT
+  prize main box     engine/events/prize_menu.asm:25       hlcoord 0,2 + lb bc, 8,16
+                     -> 18x10, GB cols 0-17,  rows 2-11   FLUSH LEFT
+  prize coin box     engine/events/prize_menu.asm:145      hlcoord 11,0 + lb bc, 1,7
+                     -> 9x3,   GB cols 11-19, rows 0-2    FLUSH RIGHT (col 19 is last)
+
+The prize screen is STRUCTURALLY THE SAME SHAPE AS THE MART: a left-flush main box
+with a right-flush money/coin box in the top corner. Its coin box is even the same
+9x3 at GB (11,0) as MONEY_BOX_TEMPLATE. So it takes the same ruling — each box
+keeps the edge it was designed against, X+0 for the left one and X+20 for the right
+one — and the widescreen canvas spreads them apart exactly as it does on the mart.
+
+*** AND NEITHER SCREEN NEEDS A BESPOKE ORIGIN. *** Unlike the mart's priced item
+list, the prize main box and its coin box DO NOT OVERLAP on hardware — they occupy
+disjoint rows (2-11 vs 0-2) — so there is no 20x18 crowding artefact to undo, and
+plain per-axis edge anchoring is enough. The vending machine is a single box with
+no companion at all. That is the evidence that the mart's RAW (11,7) origin really
+is a one-off rather than the first of a pattern: it exists solely because pret's
+list menu had to paint over two other boxes for want of screen space, and no other
+service screen has that problem.
+
+Y is untranslated (Y+0) on all three, as everywhere else in overworld-ui: these are
+vertical positions within an 18-row layout that the 25-row canvas does not compress,
+and the rows are load-bearing (the prize box sits below its coin box by design).
+
 ### Future subsystems
 
 Add an entry here when introduced, stating the transform and whether it uses
@@ -314,6 +348,9 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (mart BUY/SELL/QUIT) | (0, 0) | 11×7 | anchor=top-LEFT, X+0, Y+0 | 7 | 0 | 88 | 56 | pokemart.asm (BUY_SELL_QUIT_MENU_TEMPLATE, data/text_boxes.asm) |
 | overworld-ui (mart MONEY)         | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | pokemart.asm (MONEY_BOX_TEMPLATE, data/text_boxes.asm) |
 | overworld-ui (mart priced list)   | (4, 2) | 16×11| RAW origin (11, 7) — one-off, see the Poké Mart section above | 95 | 56 | 128 | 144 | pokemart.asm (PRICEDITEMLISTMENU; overrides the generic list_menu.asm anchor) |
+| overworld-ui (vending drinks)     | (0, 3) | 14×10| anchor=top-LEFT, X+0, Y+0 | 7 | 24 | 112 | 104 | vending_machine.asm:20 (hlcoord 0,3 + lb bc,8,12) |
+| overworld-ui (prize menu)         | (0, 2) | 18×10| anchor=top-LEFT, X+0, Y+0 | 7 | 16 | 144 | 96 | prize_menu.asm:25 (hlcoord 0,2 + lb bc,8,16) |
+| overworld-ui (prize coin box)     | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | prize_menu.asm:145 PrintPrizePrice (hlcoord 11,0 + lb bc,1,7) |
 | overworld-field (tile reads) | (8, 9) player feet | 1×1 | +16col, +8row → W_TILEMAP (PLAYER_STANDING_COL=24, PLAYER_STANDING_ROW=17); facing-relative reads ±2 tiles (one block), two-steps ±4 | — | — | — | — | overworld.asm (GetTileInFrontOfPlayer), player_state.asm (_GetTileAndCoordsInFrontOfPlayer / GetTileTwoStepsInFrontOfPlayer), player_animations.asm (IsPlayerStandingOnWarpPadOrHole), wild_encounters.asm (PLAYER_STANDING_TILE, fixed OW-A.6) — NEVER copy pret stride-20 lda_coord literals |
 | battle-ui (YES/NO box)      | (cc,rr) | W×H   | battle center, X+10, Y+3    | —   | —  | —   | —   | yes_no.asm (mode 1) — UNVERIFIED, no caller wired |
 | battle-ui (whole screen)    | (0, 0)  | 20×18 | center in 40×25 BG, +10col/+3row | — | — | — | — | init_battle.asm (full widescreen canvas via render_bg) |
