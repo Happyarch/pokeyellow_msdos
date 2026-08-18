@@ -17,9 +17,6 @@
 ; pointer as OTID_ptr + (wPartyMon1HP - wPartyMon1OTID) = OTID_ptr - 11. pret
 ; relies on 16-bit `add hl, bc` wraparound; here it is a plain signed add of -11.
 ;
-; pret's IsSurfingStarterPikachuInParty is intentionally omitted (no linked caller
-; yet; it would pull in SURF / wPartyMon1Moves deps).
-
 bits 32
 
 %include "gb_memmap.inc"
@@ -28,6 +25,7 @@ bits 32
 section .text
 
 global IsStarterPikachuAliveInOurParty
+global IsSurfingStarterPikachuInParty
 global IsThisBoxMonStarterPikachu
 global IsThisPartyMonStarterPikachu
 global UpdatePikachuMoodAfterBattle
@@ -231,3 +229,87 @@ CheckPikachuStatusCondition:
 .noAilment:
     clc
     ret
+
+; ===========================================================================
+; IsSurfingStarterPikachuInParty
+; Out: CF set iff the player's starter Pikachu is in the party AND knows SURF.
+; Pret ref: engine/pikachu/pikachu_status.asm:IsSurfingStarterPikachuInParty.
+; ===========================================================================
+IsSurfingStarterPikachuInParty:
+    mov esi, wPartySpecies          ; hl = species list
+    mov edx, wPartyMon1Moves        ; de = first mon's moves
+    mov ebx, wPartyMonOT            ; bc = first mon's OT name
+    push esi
+.loop:
+    pop esi
+    mov al, [ebp + esi]             ; ld a, [hli]
+    inc esi
+    push esi
+    inc al                          ; $FF sentinel -> 0 (Z)
+    jz .noSurfingPlayerPikachu
+    cmp al, STARTER_PIKACHU + 1     ; cp STARTER_PIKACHU + 1
+    jne .curMonNotSurfingPlayerPikachu
+
+    mov esi, edx                    ; ld h, d / ld l, e
+    push esi
+    push ebx
+    mov bh, NUM_MOVES               ; ld b, NUM_MOVES (B = BH)
+.moveSearchLoop:
+    mov al, [ebp + esi]             ; ld a, [hli]
+    inc esi
+    cmp al, SURF                    ; cp SURF
+    je .foundSurfingPikachu
+    dec bh                          ; dec b
+    jnz .moveSearchLoop
+    pop ebx
+    pop esi
+    jmp .curMonNotSurfingPlayerPikachu
+
+.foundSurfingPikachu:
+    pop ebx
+    pop esi
+    add esi, 4                      ; inc hl x 4 (skips moves -> wPartyMon1OTID)
+    mov al, [ebp + wPlayerID]       ; ld a, [wPlayerID]
+    cmp al, [ebp + esi]             ; cp [hl]
+    jne .curMonNotSurfingPlayerPikachu
+    inc esi
+    mov al, [ebp + wPlayerID + 1]   ; ld a, [wPlayerID+1]
+    cmp al, [ebp + esi]             ; cp [hl]
+    jne .curMonNotSurfingPlayerPikachu
+
+    push edx
+    push ebx
+    mov esi, wPlayerName            ; ld hl, wPlayerName
+    mov dh, NAME_LENGTH_JP          ; ld d, NAME_LENGTH_JP  (counter)
+.nameCompareLoop:
+    dec dh
+    jz .foundSurfingPlayerPikachu
+    mov al, [ebp + ebx]             ; ld a, [bc]
+    inc ebx
+    cmp al, [ebp + esi]             ; cp [hl]
+    lea esi, [esi + 1]              ; inc hl — lea preserves the cmp ZF (inc would not)
+    je .nameCompareLoop
+    pop ebx
+    pop edx
+
+.curMonNotSurfingPlayerPikachu:
+    mov esi, wPartyMon2 - wPartyMon1   ; ld hl, stride
+    add esi, edx                       ; add hl, de
+    mov edx, esi                       ; ld d, h / ld e, l (de += stride)
+    mov esi, NAME_LENGTH               ; ld hl, NAME_LENGTH
+    add esi, ebx                       ; add hl, bc
+    mov ebx, esi                       ; ld b, h / ld c, l (bc += NAME_LENGTH)
+    jmp .loop
+
+.foundSurfingPlayerPikachu:
+    pop ebx
+    pop edx
+    pop esi
+    stc
+    ret
+
+.noSurfingPlayerPikachu:
+    pop esi
+    clc
+    ret
+

@@ -10,7 +10,6 @@ bits 32
 %include "gfx_macros.inc"
 %include "coords.inc"
 %include "assets/audio_constants.inc"
-%include "assets/surfing_pikachu.inc"
 
 ; ---------------------------------------------------------------------------
 ; Constants
@@ -141,11 +140,29 @@ extern WaitForSoundToFinish                         ; src/home/delay.asm
 extern RedrawRowOrColumn                            ; src/home/vcopy.asm
 extern VBlankCopy                                   ; src/home/vcopy.asm
 
-extern IsSurfingStarterPikachuInParty               ; NOT YET DEFINED — chunk 3
-extern ReloadMapAfterSurfingMinigame                ; NOT YET DEFINED — chunk 3
+extern IsSurfingStarterPikachuInParty               ; src/engine/pikachu/pikachu_status.asm
+extern ReloadMapAfterSurfingMinigame                ; src/home/overworld.asm
 extern SurfingPikachuFrames                         ; src/data/sprite_anims/surfing_pikachu_frames.asm
 extern SurfingPikachuOAMData                        ; src/data/sprite_anims/surfing_pikachu_oam.asm
+extern add_window                                   ; src/ppu/ppu.asm
+extern hide_window                                  ; src/ppu/ppu.asm
+extern g_bg_whiteout                                ; src/ppu/ppu.asm
+extern g_obj_clip                                   ; src/ppu/ppu.asm
+extern g_obj_over_window                            ; src/ppu/ppu.asm
+extern g_row_yoff                                   ; src/ppu/ppu.asm
+%ifdef DEBUG_SURFING_PIKACHU
+extern SurfingPikachuDebugFrameHook  ; src/debug/debug_dump.asm
+%endif
+extern g_row_yoff_on                                ; src/ppu/ppu.asm
+extern g_surface_redraw_cb                          ; src/ppu/ppu.asm
 extern g_tilecache_dirty                            ; src/ppu/ppu.asm
+extern g_windows                                    ; src/ppu/ppu.asm
+extern SurfingPikachu1Graphics1                     ; src/gfx/surfing_pikachu.asm
+extern SurfingPikachu1Graphics1End                  ; src/gfx/surfing_pikachu.asm
+extern SurfingPikachu1Graphics2                     ; src/gfx/surfing_pikachu.asm
+extern SurfingPikachu1Graphics2End                  ; src/gfx/surfing_pikachu.asm
+extern SurfingPikachu1Graphics3                     ; src/gfx/surfing_pikachu.asm
+extern SurfingPikachu1Graphics3End                  ; src/gfx/surfing_pikachu.asm
 
 ; ---------------------------------------------------------------------------
 ; Global declarations (all 175 pret labels)
@@ -345,8 +362,10 @@ SurfingPikachuMinigame:
     mov al, [ebp + hAutoBGTransferDest + 1]
     push eax
     mov byte [ebp + hAutoBGTransferDest + 1], vBGMap0 >> 8
+    call SurfingMinigame_SetupPresentation
     call SurfingPikachuMinigameIntro
     call SurfingPikachuLoop
+    call SurfingMinigame_TeardownPresentation
     xor al, al
     mov [ebp + IO_BGP], al
     mov [ebp + IO_OBP0], al
@@ -380,6 +399,154 @@ SurfingPikachuMinigame:
     mov [ebp + hTileAnimations], al
     ret
 
+; ===========================================================================
+; Port-only presentation glue (no pret counterpart)
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; SurfingMinigame_SetupPresentation — port-only PPU configuration.
+;
+; Configures the PPU for the Surfing Pikachu minigame:
+; - Whiteout BG matte (g_bg_whiteout = 1)
+; - Centered 160x144 projection via 2 window descriptors (BG plane + Status bar)
+; - Fine source scroll for BG torus wrapping
+; - Hardware OBJ over window order (g_obj_over_window = 1)
+; - Projected OBJ clip rectangle (80, 24, 240, 168)
+; - Arms per-frame presentation callback (g_surface_redraw_cb)
+; ---------------------------------------------------------------------------
+SurfingMinigame_SetupPresentation:
+    mov dword [g_bg_whiteout], 1
+    call hide_window
+
+    ; Window descriptor 0: BG plane
+    ; wx = 80 + 7, wy = 24, clip_w = 160, max_y = 168, tilemap = GB_TILEMAP0, start_row = 0
+    mov eax, 80 + 7
+    mov ebx, 24
+    mov ecx, 160
+    mov edx, 168
+    mov esi, GB_TILEMAP0
+    xor edi, edi
+    call add_window
+
+    ; Fine scroll offsets for BG plane
+    movzx eax, byte [ebp + hSCX]
+    mov [g_windows + WIN_SRC_X], eax
+    movzx eax, byte [ebp + hSCY]
+    mov [g_windows + WIN_SRC_Y], eax
+
+    ; Window descriptor 1: Status bar
+    ; wx = 80 + 7, wy = 24 + 0x7E, clip_w = 160, max_y = 168, tilemap = GB_TILEMAP1, start_row = 0
+    mov eax, 80 + 7
+    mov ebx, 24 + 0x7E
+    mov ecx, 160
+    mov edx, 168
+    mov esi, GB_TILEMAP1
+    xor edi, edi
+    call add_window
+
+    ; Hardware OBJ over window order (Pikachu draws over water)
+    mov dword [g_obj_over_window], 1
+
+    ; Projected OBJ clipping rectangle (x0, y0, x1, y1)
+    mov dword [g_obj_clip + 0], 80
+    mov dword [g_obj_clip + 4], 24
+    mov dword [g_obj_clip + 8], 240
+    mov dword [g_obj_clip + 12], 168
+
+    ; Arm per-frame callback and initialize
+    mov dword [g_surface_redraw_cb], SurfingMinigame_PerFramePresentation
+    call SurfingMinigame_PerFramePresentation
+    ret
+
+; ---------------------------------------------------------------------------
+; SurfingMinigame_TeardownPresentation — port-only PPU restoration.
+;
+; Restores all PPU presentation flags to defaults.
+; ---------------------------------------------------------------------------
+SurfingMinigame_TeardownPresentation:
+    mov dword [g_surface_redraw_cb], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0
+    mov dword [g_row_yoff_on], 0
+    mov dword [g_obj_clip + 0], 0
+    mov dword [g_obj_clip + 4], 0
+    mov dword [g_obj_clip + 8], RENDER_W
+    mov dword [g_obj_clip + 12], RENDER_H
+    call hide_window
+    ret
+
+; ---------------------------------------------------------------------------
+; SurfingMinigame_PerFramePresentation — port-only per-frame hook.
+;
+; Invoked each frame from DelayFrame via g_surface_redraw_cb.
+; Updates fine scrolling on BG plane, status bar WY, and scanline overrides.
+; ---------------------------------------------------------------------------
+SurfingMinigame_PerFramePresentation:
+    push eax
+    push ecx
+    push edx
+    push esi
+    push edi
+
+    ; 1. Refresh BG window descriptor fine scroll offsets
+    movzx eax, byte [ebp + hSCX]
+    mov [g_windows + WIN_SRC_X], eax
+    movzx eax, byte [ebp + hSCY]
+    mov [g_windows + WIN_SRC_Y], eax
+
+    ; 2. Refresh Status Bar window WY from hWY
+    movzx eax, byte [ebp + hWY]
+    add eax, 24
+    cmp eax, 168
+    jbe .wy_ok
+    mov eax, 168
+.wy_ok:
+    mov [g_windows + WIN_DESC_SIZE + WIN_WY], eax
+
+    ; 3. Per-scanline wave table mapping (g_row_yoff)
+    mov al, [ebp + hLCDCPointer]
+    test al, al
+    jz .disable_row_yoff
+
+    mov dword [g_row_yoff_on], 1
+
+    ; Clear top 24 rows: rows 0..23
+    xor eax, eax
+    mov edi, g_row_yoff
+    mov ecx, 24 / 4             ; 6 dwords = 24 bytes
+    rep stosd
+
+    ; Copy 144 GB scanlines: L = 0..143 -> screen rows 24..167
+    ; g_row_yoff[24 + L] = (wLYOverrides[L] - hSCY) & 0xFF
+    mov esi, wLYOverrides
+    mov dl, [ebp + hSCY]
+    mov ecx, 144
+.ly_loop:
+    mov al, [ebp + esi]
+    inc esi
+    sub al, dl
+    mov [edi], al
+    inc edi
+    dec ecx
+    jnz .ly_loop
+
+    ; Clear bottom 32 rows: rows 168..199
+    xor eax, eax
+    mov ecx, 32 / 4             ; 8 dwords = 32 bytes
+    rep stosd
+    jmp .done
+
+.disable_row_yoff:
+    mov dword [g_row_yoff_on], 0
+
+.done:
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop eax
+    ret
+
 ; ---------------------------------------------------------------------------
 ; SurfingPikachuLoop
 ; ---------------------------------------------------------------------------
@@ -407,6 +574,9 @@ SurfingPikachuLoop:
 
 .DelayFrame:
     call DelayFrame
+%ifdef DEBUG_SURFING_PIKACHU
+    call SurfingPikachuDebugFrameHook   ; harness: photograph frame N and exit
+%endif
     ret
 
 ; ---------------------------------------------------------------------------
@@ -3220,3 +3390,9 @@ SurfingMinigameWavePattern1C:
     db 0x00, 0x00, 0x00, 0x14, 0x14, 0x14, 0x14, 0x14
 SurfingMinigameBeachPattern:
     db 0x00, 0x00, 0x00, 0x12, 0x13, 0x13, 0x13, 0x13
+
+; ---------------------------------------------------------------------------
+; Surfing Pikachu tilemaps (pret engine/minigame/surfing_pikachu.asm)
+; ---------------------------------------------------------------------------
+%include "assets/surfing_pikachu_tilemaps.inc"
+

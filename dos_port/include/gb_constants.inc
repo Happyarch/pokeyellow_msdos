@@ -857,5 +857,8 @@ SLOTSFISH               equ 0x0E0C
 SLOTSBIRD               equ 0x1210
 SLOTSMOUSE              equ 0x1614
 
+; --- Pikachu map script flags (wPikachuMapScriptFlags) ---
+BIT_PIKACHU_MAP_SURF_SELECT equ 1
+
 %endif ; GB_CONSTANTS_INC
 

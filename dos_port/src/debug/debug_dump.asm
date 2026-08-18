@@ -111,6 +111,11 @@ global RunPPRestoreTest
 extern PrepareNewGameDebug
 global RunSurfTestSeed
 %endif
+%ifdef DEBUG_SURFING_PIKACHU
+extern PrepareNewGameDebug
+extern SurfingPikachuMinigame
+global RunSurfingPikachuTest
+%endif
 %ifdef DEBUG_LEDGE
 extern PrepareNewGameDebug
 global RunLedgeTestSeed
@@ -7314,6 +7319,53 @@ RunCinematicMarkersTest:
     call DumpBackbuffer             ; writes FRAME.BIN + exits (never returns)
 .hang:
     jmp .hang
+%endif
+
+%ifdef DEBUG_SURFING_PIKACHU
+; ---------------------------------------------------------------------------
+; RunSurfingPikachuTest — boots directly into SurfingPikachuMinigame with a
+; valid party (starter Pikachu knowing SURF) and script flags.
+; ---------------------------------------------------------------------------
+RunSurfingPikachuTest:
+    call PrepareNewGameDebug
+    or byte [ebp + wPikachuMapScriptFlags], 1 << BIT_PIKACHU_MAP_SURF_SELECT
+    call SurfingPikachuMinigame
+    mov ax, 0x4C00
+    int 0x21
+
+; ---------------------------------------------------------------------------
+; SurfingPikachuDebugFrameHook — called from SurfingPikachuLoop.DelayFrame, once
+; per loop iteration, ONLY in a DEBUG_SURFING_PIKACHU build.
+;
+; WHY THIS EXISTS. The minigame's loop exits only on game-over or a SELECT press,
+; so a headless run has no natural capture point: without input it just keeps
+; surfing. This photographs the composited frame at a fixed iteration count and
+; exits, which is what turns "it links" into "it renders". Frame count is
+; overridable so a caller can photograph a later phase:
+;   make DEBUG_SURFING_PIKACHU=1 SURF_DUMP_FRAME=<n>
+; This is a HARNESS hook, not game logic — hence it lives here and not in the
+; pret mirror, which carries only the three-line %ifdef'd call site.
+; ---------------------------------------------------------------------------
+%ifndef SURF_DUMP_FRAME
+%define SURF_DUMP_FRAME 90
+%endif
+global SurfingPikachuDebugFrameHook
+SurfingPikachuDebugFrameHook:
+    pushad
+    inc dword [surf_dbg_frames]
+    cmp dword [surf_dbg_frames], SURF_DUMP_FRAME
+    jb .out
+    call DumpBackbuffer
+    call DumpGBState
+    mov ax, 0x4C00
+    int 0x21
+.out:
+    popad
+    ret
+
+section .bss
+surf_dbg_frames: resd 1
+section .text
 %endif
 
 ; ===========================================================================

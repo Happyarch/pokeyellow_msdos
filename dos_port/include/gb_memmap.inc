@@ -2324,6 +2324,7 @@ wBoxMon1Moves                equ 0xDA9D
 wDayCareMonMoves             equ 0xDA66
 wEvolutionOccurred            equ 0xD120 ; set when a mon evolved this EvolutionAfterBattle
 wPikachuMood                  equ 0xD470
+wPikachuMapScriptFlags        equ 0xD492
 wPikachuEmotionModifier       equ 0xD49B
 
 ; ---------------------------------------------------------------------------

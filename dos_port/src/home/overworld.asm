@@ -100,7 +100,9 @@ extern MapTextTablePointers               ; assets/npc_dialogs/all_dialogs.inc
 extern PlayDefaultMusicFadeOutCurrent     ; src/home/audio.asm
 extern PlaySound                          ; src/home/audio.asm
 extern RefreshCollisionTileMap            ; src/engine/overworld/overworld.asm
+extern ReloadMapSpriteTilePatterns         ; src/home/reload_sprites.asm
 extern RunPaletteCommand                  ; src/home/palettes.asm
+extern SetMapSpecificScriptFlagsOnMapReload ; src/engine/overworld/specific_script_flags.asm
 extern UpdateMusic6Times                  ; src/home/audio.asm
 extern h_load_sprite_temp1                ; src/engine/overworld/overworld.asm
 extern h_load_sprite_temp2                ; src/engine/overworld/overworld.asm
@@ -185,6 +187,7 @@ extern RunSaveTest                        ; src/engine/menus/save.asm
 extern RunSplashTest                      ; src/engine/movie/splash.asm
 extern RunStatusScreenTest                ; src/debug/debug_dump.asm
 extern RunStoneTest                       ; src/debug/debug_dump.asm
+extern RunSurfingPikachuTest              ; src/debug/debug_dump.asm
 extern RunTMHMTest                        ; src/debug/debug_dump.asm
 extern RunTextBoxIDTest                   ; src/debug/debug_dump.asm
 extern RunTextTest                        ; src/debug/debug_dump.asm
@@ -965,6 +968,9 @@ EnterMap:
 %ifdef DEBUG_STATUS
     call RunStatusScreenTest               ; open status screen page 1, render one frame, dump FRAME.BIN, exits
 %endif
+%ifdef DEBUG_SURFING_PIKACHU
+    call RunSurfingPikachuTest             ; boot directly into SurfingPikachuMinigame
+%endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can
     ; WALK with the keyboard. WalkSpeedSample (called at each real tile completion)
@@ -1650,6 +1656,7 @@ global HandleMidJump
 global CheckMapConnections
 global CopyMapConnectionHeader
 global DrawTileBlock
+global FinishReloadingMap
 global LoadCurrentMapView
 global LoadDestinationWarpPosition
 global LoadEastWestConnectionsTileMap
@@ -1660,6 +1667,7 @@ global LoadScreenRelatedData
 global LoadTileBlockMap
 global LoadTilesetTilePatternData
 global PlayMapChangeSound
+global ReloadMapAfterSurfingMinigame
 global ResetMapVariables
 
 ; --------------------------------------------------------------------------
@@ -3490,6 +3498,33 @@ LoadScreenRelatedData:
     call LoadCurrentMapView
     ret
 
+; ---------------------------------------------------------------------------
+; ReloadMapAfterSurfingMinigame — faithful translation.
+; Pret ref: home/overworld.asm:ReloadMapAfterSurfingMinigame (:1991-2007)
+; ---------------------------------------------------------------------------
+; DEVIATION{class=HAL; pret=home/overworld.asm:ReloadMapAfterSurfingMinigame; behavior=drops CopyMapViewToVRAM and CopyMapViewToVRAM2 and flattens ROM banking; evidence=native-width renderer renders wSurroundingTiles directly so VRAM tilemap copies are obsolete (OW-A.5), and the port uses a flat 32-bit address space; lifetime=permanent}
+ReloadMapAfterSurfingMinigame:
+    mov al, [ebp + hLoadedROMBank]
+    push eax
+    call DisableLCD
+    call ResetMapVariables
+    mov al, [ebp + wCurMap]
+    call SwitchToMapRomBank
+    call LoadScreenRelatedData
+    ; CopyMapViewToVRAM and CopyMapViewToVRAM2 dropped (native renderer OW-A.5)
+    call EnableLCD
+    call ReloadMapSpriteTilePatterns
+    pop eax
+    call BankswitchCommon
+    jmp FinishReloadingMap
+
+; ---------------------------------------------------------------------------
+; FinishReloadingMap — faithful translation.
+; Pret ref: home/overworld.asm:FinishReloadingMap (:2016-2019)
+; ---------------------------------------------------------------------------
+FinishReloadingMap:
+    call SetMapSpecificScriptFlagsOnMapReload
+    ret
 
 ; LoadPlayerSpriteGraphics — RETIRED from this file (wild-live promotion).
 ; The Phase-2 scaffold that lived here (walking-only, standing tiles → $8000 /
