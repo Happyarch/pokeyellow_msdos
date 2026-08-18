@@ -214,8 +214,7 @@ ApplyPikachuMovementData:
     call BankswitchCommon
     ret
 
-; ApplyPikachuMovementData_ (pret engine/pikachu/pikachu_movement.asm) is a DEFERRED
-; ret-stub relocated to overworld_stubs.asm (OW-A.11; stub convention — a ret-only body
-; never lives in the file mirroring its pret source). Retire it there when the movement-
-; data interpreter (wCurPikaMovementData union, step timers, sprite placement) is ported.
-extern ApplyPikachuMovementData_        ; src/engine/overworld/overworld_stubs.asm (ret-stub)
+; ApplyPikachuMovementData_ (pret engine/pikachu/pikachu_movement.asm) —
+; movement-data interpreter (wCurPikaMovementData union, step timers, sprite placement).
+extern ApplyPikachuMovementData_        ; src/engine/pikachu/pikachu_movement.asm
+

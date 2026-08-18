@@ -22,3 +22,11 @@ section .text
 global PikachuWalksToNurseJoy
 PikachuWalksToNurseJoy:
     ret
+
+; StarterPikachuEmotionCommand_turnawayfromplayer — pret engine/pikachu/pikachu_emotions.asm:StarterPikachuEmotionCommand_turnawayfromplayer
+; TODO(follower_pikachu plan Phase 3): replace with the real body in pikachu_emotions.asm.
+; STUB{class=stub; label=StarterPikachuEmotionCommand_turnawayfromplayer; pret=engine/pikachu/pikachu_emotions.asm:StarterPikachuEmotionCommand_turnawayfromplayer; behavior=returns immediately so Pikachu does not turn away from player during map checks; evidence=real body is in pikachu_emotions.asm which is unported and owned by Phase 3 of follower_pikachu plan, callers in pikachu_movement.asm do not read return values or flags; lifetime=retire when follower_pikachu plan Phase 3 lands pikachu_emotions.asm}
+global StarterPikachuEmotionCommand_turnawayfromplayer
+StarterPikachuEmotionCommand_turnawayfromplayer:
+    ret
+

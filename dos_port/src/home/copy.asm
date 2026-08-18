@@ -42,9 +42,11 @@ bits 32
 global CopyData
 global FarCopyData
 global CopyVideoDataDoubleAlternate
+global CopyVideoDataAlternate
 
 extern CopyVideoDataDouble          ; src/home/copy2.asm
 extern FarCopyDataDouble            ; src/home/copy2.asm
+extern CopyVideoData                ; src/home/copy2.asm
 
 LCDC_ON_BIT equ 7                   ; B_LCDC_ENABLE (same spelling as src/home/lcd.asm)
 
@@ -118,3 +120,17 @@ CopyVideoDataDoubleAlternate:
                                                  ;   BL=$FF → $7F8, no wrap either side.
     xchg esi, edx                                ; push de / ld d,h / ld e,l / pop hl
     jmp FarCopyDataDouble                        ; jp FarCopyDataDouble
+
+; ---------------------------------------------------------------------------
+; CopyVideoDataAlternate — pret home/copy.asm:CopyVideoDataAlternate.
+;
+; In:  ESI = destination GB VRAM offset (HL)
+;      EDX = source FLAT pointer (DE)
+;      BH  = source bank (NO-OP under the flat model)
+;      BL  = 2bpp tile count
+; ---------------------------------------------------------------------------
+CopyVideoDataAlternate:
+    test byte [ebp + IO_LCDC], 1 << LCDC_ON_BIT  ; ldh a,[rLCDC] / bit B_LCDC_ENABLE,a
+    jnz CopyVideoData                            ; jp nz, CopyVideoData
+    jmp CopyVideoData                            ; flat model: same copy + tilecache dirty
+

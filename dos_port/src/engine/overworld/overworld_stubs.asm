@@ -14,17 +14,8 @@ section .text
 ; pikachu.asm is now LINKED (GAME_SRCS). Still only reached when a sprite
 ; slot's offset == $f0 (slot 15), which no current map activates.
 
-; ApplyPikachuMovementData_ — pret engine/pikachu/pikachu_movement.asm:ApplyPikachuMovementData_
-; (the Pikachu movement-data interpreter: wCurPikaMovementData union, step timers, sprite
-; placement). DEFERRED — needs the pikachu_movement subsystem + staged Pikachu overworld gfx.
-; OW-A.11 relocated this ret-stub out of pikachu.asm (stub convention: a ret-only body never
-; lives in the file mirroring its pret source). Called only by pikachu.asm:ApplyPikachuMovementData
-; (linked since OW-7.2), still unreachable while the follower is disabled (SpawnPikachu's
-; slot-15 gate never fires on current maps), so inert in the live build.
-; TODO(retire M9.1): replace with the real interpreter, then delete this stub.
-global ApplyPikachuMovementData_
-ApplyPikachuMovementData_:
-    ret
+; ApplyPikachuMovementData_ retired — real body ported into
+; src/engine/pikachu/pikachu_movement.asm (follower_pikachu Phase 2).
 
 ; DoScriptedNPCMovement retired — real body ported into movement.asm (OW-2.1),
 ; with pret's per-slot wNPCMovementScriptSpriteOffset dispatch gate.
