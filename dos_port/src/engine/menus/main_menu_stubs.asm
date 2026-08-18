@@ -36,10 +36,9 @@ section .text
 ; DisplayPokemonCenterDialogue_ stub RETIRED (overworld-events Stage 2):
 ; ported faithfully to src/engine/events/pokecenter.asm.
 
-; STUB{class=stub; label=VendingMachineMenu; pret=engine/menus/vending_machine.asm:VendingMachineMenu; behavior=return immediately instead of opening the vending-machine menu; evidence=overworld-events Stage 2 leaves vending tails open; lifetime=until vending service tail lands}
-global VendingMachineMenu
-VendingMachineMenu:
-    ret
+; VendingMachineMenu stub RETIRED (overworld-events Stage 2 / chunk 3):
+; ported faithfully to src/engine/events/vending_machine.asm.
+
 
 ; STUB{class=stub; label=CeladonPrizeMenu; pret=engine/menus/game_corner_prizes.asm:CeladonPrizeMenu; behavior=return immediately instead of opening the Game Corner prize menu; evidence=overworld-events Stage 2 records CeladonPrizeMenu as missing; lifetime=until prize-service tail lands}
 global CeladonPrizeMenu

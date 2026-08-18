@@ -653,6 +653,8 @@ GAME_SRCS := \
     src/engine/events/in_game_trades.asm \
     src/engine/events/pokemart.asm \
     src/engine/events/pokecenter.asm \
+    src/engine/events/vending_machine.asm \
+    src/data/items/vending_prices.asm \
     src/engine/events/set_blackout_map.asm \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/update_map.asm \
@@ -3258,9 +3260,9 @@ assets/script_strings.inc: assets/gb_charmap.txt tools/generators/gen_script_str
 assets/text_oracle.inc: assets/gb_charmap.txt tools/generators/gen_text_oracle.py tools/generators/gb_text.py
 	python3 tools/generators/gen_text_oracle.py
 
-assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/text_script_text.inc assets/pokemart_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc assets/elevator_text.inc assets/oaks_aide_text.inc assets/in_game_trade_text.inc &: \
+assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/text_script_text.inc assets/pokemart_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc assets/elevator_text.inc assets/oaks_aide_text.inc assets/in_game_trade_text.inc assets/vending_machine_text.inc &: \
                             assets/gb_charmap.txt tools/generators/gen_overworld_strings.py tools/generators/gb_text.py \
-                            tools/generators/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_7.asm ../data/text/text_8.asm ../data/text/text_9.asm \
+                            tools/generators/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_7.asm ../data/text/text_8.asm ../data/text/text_9.asm ../text/CeladonMartRoof.asm \
                             ../constants/charmap.asm
 	python3 tools/generators/gen_overworld_strings.py
 
@@ -3539,6 +3541,7 @@ src/engine/events/oaks_aide.o: assets/oaks_aide_text.inc assets/script_constants
 src/engine/events/elevator.o: assets/elevator_text.inc
 src/engine/events/pokemart.o: assets/pokemart_text.inc assets/audio_constants.inc
 src/engine/events/pokecenter.o: assets/pokecenter_text.inc assets/audio_constants.inc assets/map_dims.inc
+src/engine/events/vending_machine.o: assets/vending_machine_text.inc assets/audio_constants.inc
 src/engine/events/set_blackout_map.o: include/gb_memmap.inc
 src/data/maps/rest_house_maps.o: assets/map_dims.inc
 src/engine/events/in_game_trades.o: assets/in_game_trade_text.inc \
