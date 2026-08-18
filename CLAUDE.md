@@ -643,9 +643,10 @@ the environment, installs may proceed without prompting.
 
 ## Delegating to Gemini — the `agy` CLI invocation (stop rederiving this)
 
-The maintainer sometimes asks for a second-opinion study from Gemini via the
-`agy` CLI. The working headless invocation, learned the hard way three runs in
-a row (2026-08-15), is:
+Work is sometimes delegated to Gemini via the `agy` CLI — `gemini-3.7-flash-high`
+is a strong model and a capable implementer, not just a second opinion. The
+working headless invocation, learned the hard way three runs in a row
+(2026-08-15), is:
 
 ```sh
 agy --model gemini-3.7-flash-high --effort high \
@@ -664,11 +665,17 @@ The three traps, each of which produced a silent-looking failure:
   maintainer's standard usage for these runs. Do **NOT** add `--sandbox` — it
   breaks agy's MCP access.
 
-Scope an agy run like any other delegation: read-only when the task is a study,
-writing when the task is work. Demand file:line citations, and treat the answer
-per the delegation lesson in episode 61 — check the REASONING SCOPE, not just the
-citations. Report output lands on stdout (redirect it) or at an explicit
-`/home/happyarch/*.md` path named in the prompt.
+**Give it well-scoped EXECUTION, never planning.** It is strong at carrying out a
+task whose boundaries someone else drew and weak at drawing them — the same split
+the subagent rule at the top of this file already enforces, so the ROOT writes the
+spec and agy implements it. Scope the run like any other delegation: read-only
+when the task is a study, writing when the task is work. Always `--effort high`
+on this project; the complexity does not suit a lower tier.
+
+Demand file:line citations, and treat the answer per the delegation lesson in
+episode 61 — check the REASONING SCOPE, not just the citations. Report output
+lands on stdout (redirect it) or at an explicit `/home/happyarch/*.md` path named
+in the prompt.
 
 ## Commit Policy (stay within your task's scope)
 
