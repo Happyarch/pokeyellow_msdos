@@ -96,6 +96,29 @@ OAKS_AIDE_FAR = [
     "_OaksAideNoRoomText",
 ]
 
+# engine/events/in_game_trades.asm's 17 messages (all in data/text/text_9.asm):
+# the two unconditional ones plus the 5 x 3 TradeTextPointers1/2/3 dialogset
+# streams (WANNA_TRADE / NO_TRADE / WRONG_MON / THANKS / AFTER_TRADE).
+IN_GAME_TRADE_FAR = [
+    "_ConnectCableText",
+    "_TradedForText",
+    "_WannaTrade1Text",
+    "_NoTrade1Text",
+    "_WrongMon1Text",
+    "_Thanks1Text",
+    "_AfterTrade1Text",
+    "_WannaTrade2Text",
+    "_NoTrade2Text",
+    "_WrongMon2Text",
+    "_Thanks2Text",
+    "_AfterTrade2Text",
+    "_WannaTrade3Text",
+    "_NoTrade3Text",
+    "_WrongMon3Text",
+    "_Thanks3Text",
+    "_AfterTrade3Text",
+]
+
 # engine/events/pokecenter_chansey.asm's one message (data/text/text_1.asm).
 POKECENTER_CHANSEY_FAR = [
     "_NurseChanseyText",
@@ -164,6 +187,8 @@ def main() -> int:
          "Elevator floor-prompt FAR text stream for engine/overworld/elevator.asm"),
         ("oaks_aide_text", OAKS_AIDE_FAR,
          "Oak's Aide FAR text streams for engine/events/oaks_aide.asm"),
+        ("in_game_trade_text", IN_GAME_TRADE_FAR,
+         "In-game trade FAR text streams for engine/events/in_game_trades.asm (data/text/text_9.asm)"),
     ]
     for base, labels, desc in far_files:
         fout = [

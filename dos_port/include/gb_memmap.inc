@@ -336,6 +336,19 @@ wPlayerMonAccuracyMod  equ 0xCD1E
 wPlayerMonEvasionMod   equ 0xCD1F
 wPlayerMonStatModsEnd  equ 0xCD22
 
+; --- in-game trade scratch ($CD0F, NEXTU with the unmodified-stats block) ---
+; pret ram/wram.asm unions the in-game-trade working set over the battle
+; stat-stage scratch above: a trade and a battle never run at once. Addresses are
+; rgblink's, read from pokeyellow.sym, not inferred. NAME_LENGTH is 11, which is
+; what spaces the three name buffers ($CD13 -> $CD1E -> $CD29 -> $CD34).
+wInGameTradeGiveMonSpecies          equ 0xCD0F
+wInGameTradeTextPointerTablePointer equ 0xCD10
+wInGameTradeTextPointerTableIndex   equ 0xCD12
+wInGameTradeGiveMonName             equ 0xCD13
+wInGameTradeReceiveMonName          equ 0xCD1E
+wInGameTradeMonNick                 equ 0xCD29
+wInGameTradeReceiveMonSpecies       equ 0xCD34
+
 ; --- unmodified stats, enemy ($CD23) ---
 wEnemyMonUnmodifiedLevel    equ 0xCD23
 wEnemyMonUnmodifiedMaxHP    equ 0xCD24
@@ -2203,6 +2216,16 @@ wEnemyMonNicks                equ 0xD9ED ; enemy party nicknames
 ; ClearVariablesOnEnterMap map-entry scratch (OW-1.1; sym-verified vs origin/symbols:pokeyellow.sym)
 wWhichTrade                   equ 0xCD3D ; (union w/ wDayCareStartLevel scratch region)
 wStandingOnWarpPadOrHole      equ 0xCD5B ; end of the FillMemory clear range from wWhichTrade
+; Trade-animation exchange record ($CD3D, 30-byte UNION over the same scratch
+; wWhichTrade lives in — pret ram/wram.asm:775-783). InGameTrade_PrepareTradeData
+; fills it before the trade animation runs. Addresses read from pokeyellow.sym.
+wTradedPlayerMonSpecies       equ 0xCD3D
+wTradedEnemyMonSpecies        equ 0xCD3E
+wTradedPlayerMonOT            equ 0xCD41 ; ds NAME_LENGTH
+wTradedPlayerMonOTID          equ 0xCD4C ; dw, big-endian as all GB IDs are
+wTradedEnemyMonOT             equ 0xCD4E ; ds NAME_LENGTH
+wTradedEnemyMonOTID           equ 0xCD59 ; dw
+wCompletedInGameTradeFlags    equ 0xD736 ; dw, one bit per TRADE_FOR_* constant
 wStepCounter                  equ 0xD13A
 wNumberOfNoRandomBattleStepsLeft equ 0xD13B ; EnterMap grants 3 on WILD_ENCOUNTER_COOLDOWN (promoted from wild_encounter_check.asm, OW-A.4)
 wUnusedMapVariable            equ 0xD5A2

@@ -29,7 +29,7 @@ global Route18Gate2F_Script
 global Route18Gate2F_TextPointers
 
 extern DisableAutoTextBoxDrawing
-extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
+extern DoInGameTradeDialogue
 extern GateUpstairsScript_PrintIfFacingUp
 extern TextScriptEnd
 

@@ -29,7 +29,7 @@ global CinnabarLabTradeRoomSuperNerdText
 global CinnabarLabTradeRoom_Script
 global CinnabarLabTradeRoom_TextPointers
 
-extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
+extern DoInGameTradeDialogue
 extern EnableAutoTextBoxDrawing
 extern TextScriptEnd
 

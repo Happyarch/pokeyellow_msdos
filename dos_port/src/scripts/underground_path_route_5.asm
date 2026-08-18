@@ -28,7 +28,7 @@ global UndergroundPathRoute5LittleGirlText
 global UndergroundPathRoute5_Script
 global UndergroundPathRoute5_TextPointers
 
-extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
+extern DoInGameTradeDialogue
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

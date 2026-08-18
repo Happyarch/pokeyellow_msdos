@@ -635,7 +635,10 @@ GAME_SRCS := \
     src/engine/events/oaks_aide.asm \
     src/engine/events/saffron_guards.asm \
     src/data/items/guard_drink_items.asm \
+    src/data/items/marts.asm \
+    src/data/events/trades.asm \
     src/engine/events/elevator.asm \
+    src/engine/events/in_game_trades.asm \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/update_map.asm \
     src/engine/overworld/elevator.asm \
@@ -3204,7 +3207,7 @@ assets/script_strings.inc: assets/gb_charmap.txt tools/generators/gen_script_str
 assets/text_oracle.inc: assets/gb_charmap.txt tools/generators/gen_text_oracle.py tools/generators/gb_text.py
 	python3 tools/generators/gen_text_oracle.py
 
-assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc assets/elevator_text.inc assets/oaks_aide_text.inc &: \
+assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc assets/elevator_text.inc assets/oaks_aide_text.inc assets/in_game_trade_text.inc &: \
                             assets/gb_charmap.txt tools/generators/gen_overworld_strings.py tools/generators/gb_text.py \
                             tools/generators/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_8.asm ../data/text/text_9.asm \
                             ../constants/charmap.asm
@@ -3468,6 +3471,10 @@ assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
 src/home/overworld_text.o: assets/overworld_sign_text.inc
 src/engine/events/oaks_aide.o: assets/oaks_aide_text.inc assets/script_constants.inc
 src/engine/events/elevator.o: assets/elevator_text.inc
+src/engine/events/in_game_trades.o: assets/in_game_trade_text.inc \
+                                     assets/trade_trainer_string.inc \
+                                     assets/script_constants.inc
+src/data/events/trades.o: assets/trades.inc assets/script_constants.inc
 src/engine/events/pokecenter_chansey.o: assets/pokecenter_chansey_text.inc \
                                         assets/script_constants.inc
 src/home/start_menu.o: assets/event_constants.inc assets/audio_constants.inc
@@ -3544,7 +3551,16 @@ assets/item_text.inc: ../engine/items/item_effects.asm ../engine/menus/party_men
                       tools/generators/gen_battle_text.py tools/generators/gen_item_text.py assets/battle_text.inc
 	python3 tools/generators/gen_item_text.py
 
+assets/trades.inc assets/trade_trainer_string.inc &: ../data/events/trades.asm ../constants/charmap.asm \
+                   tools/generators/gen_trades.py tools/generators/gb_text.py
+	python3 tools/generators/gen_trades.py
+
+assets/marts.inc: ../data/items/marts.asm ../macros/scripts/text.asm \
+                  tools/generators/gen_marts.py
+	python3 tools/generators/gen_marts.py
+
 src/data/item_data.o: assets/items.inc
+src/data/items/marts.o: assets/marts.inc
 src/data/items/names.o: assets/item_names.inc
 src/data/items/prices.o: assets/item_prices.inc
 src/data/items/key_items.o: assets/key_item_flags.inc
@@ -3706,6 +3722,7 @@ assets: assets/scenario_registry.inc \
         assets/moves.inc assets/evos_moves.inc assets/monster_names.inc \
         assets/items.inc assets/item_names.inc assets/item_prices.inc \
         assets/key_item_flags.inc assets/tm_prices.inc assets/tmhm_moves.inc \
+        assets/marts.inc \
         assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
         assets/naming_strings.inc assets/pokedex_strings.inc \
         assets/bills_pc_text.inc \
@@ -3716,6 +3733,8 @@ assets: assets/scenario_registry.inc \
         assets/text_oracle.inc \
         assets/overworld_strings.inc assets/field_move_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc \
         assets/elevator_text.inc assets/oaks_aide_text.inc \
+        assets/in_game_trade_text.inc assets/trades.inc \
+        assets/trade_trainer_string.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \
         assets/field_move_names.inc \

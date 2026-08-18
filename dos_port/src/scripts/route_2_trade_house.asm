@@ -27,7 +27,7 @@ global Route2TradeHouseScientistText
 global Route2TradeHouse_Script
 global Route2TradeHouse_TextPointers
 
-extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
+extern DoInGameTradeDialogue
 extern EnableAutoTextBoxDrawing
 extern TextScriptEnd
 

@@ -31,7 +31,7 @@ global Lab4Script_GetFossilsInBag
 global LoadFossilItemAndMonNameBank1D
 
 extern Bankswitch
-extern DoInGameTradeDialogue   ; NOT YET DEFINED IN THE PORT
+extern DoInGameTradeDialogue
 extern EnableAutoTextBoxDrawing
 extern GetQuantityOfItemInBag
 extern GiveFossilToCinnabarLab   ; NOT YET DEFINED IN THE PORT
