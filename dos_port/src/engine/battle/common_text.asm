@@ -68,6 +68,12 @@ extern _EnoughText                  ; assets/battle_text.inc
 extern _OKExclamationText           ; assets/battle_text.inc
 extern _GoodText                    ; assets/battle_text.inc
 extern ComeBackText                 ; assets/battle_text.inc (ordinary generated wrapper)
+; --- PrintSendOutMonMessage intro streams and wrapper (added 2026-08-18) ---
+extern _GoText                      ; assets/battle_text.inc (generated Tier-1 intro)
+extern _DoItText                    ; assets/battle_text.inc
+extern _GetmText                    ; assets/battle_text.inc
+extern _EnemysWeakText              ; assets/battle_text.inc
+extern PlayerMon1Text               ; assets/battle_text.inc (ordinary generated wrapper)
 ; --- PrintBeginningBattleText callees (added 2026-08-13). PrintText above is
 ; --- shared with RetreatMon's chain and is deliberately not re-declared. ---
 extern PlayCry                      ; src/home/pokemon.asm
@@ -97,6 +103,12 @@ global OKExclamationText
 global GoodText
 global PrintComeBackText
 global PrintBeginningBattleText
+global PrintSendOutMonMessage
+global GoText
+global DoItText
+global GetmText
+global EnemysWeakText
+global PrintPlayerMon1Text
 
 section .text
 
@@ -190,6 +202,85 @@ GoodText:
 
 PrintComeBackText:
     mov esi, ComeBackText                       ; pret: ld hl, ComeBackText
+    ret
+
+; ---------------------------------------------------------------------------
+; PrintSendOutMonMessage — pret engine/battle/common_text.asm:113.
+; Prints the send-out line based on enemy mon HP percentage:
+;   >= 70% remaining -> GoText         ("Go! <MON>!")
+;   40% - 69%        -> DoItText       ("Do it! <MON>!")
+;   10% - 39%        -> GetmText       ("Get'm! <MON>!")
+;   0% - 9%          -> EnemysWeakText ("The enemy's weak! Get'm! <MON>!")
+; Special case: when enemy HP is 0 (battle init), GoText is selected
+; unconditionally and wLastSwitchInEnemyMonHP is NOT updated.
+;
+; DEVIATION{class=data-model; pret=engine/battle/common_text.asm:PrintSendOutMonMessage; behavior=the big-endian HP words are read at absolute offsets instead of pret's hl pointer walk with hli; evidence=pret walks the HP words with hli because the SM83 lacks displacement addressing while the port reads [ebp+disp] directly - the multiplication division and threshold comparisons are unchanged; lifetime=permanent while the port uses x86 addressing}
+; ---------------------------------------------------------------------------
+PrintSendOutMonMessage:
+    mov al, [ebp + wEnemyMonHP]
+    or al, [ebp + wEnemyMonHP + 1]
+    mov esi, GoText
+    jz .printText
+    mov byte [ebp + hMultiplicand], 0
+    mov al, [ebp + wEnemyMonHP]
+    mov [ebp + wLastSwitchInEnemyMonHP], al
+    mov [ebp + hMultiplicand + 1], al
+    mov al, [ebp + wEnemyMonHP + 1]
+    mov [ebp + wLastSwitchInEnemyMonHP + 1], al
+    mov [ebp + hMultiplicand + 2], al
+    mov byte [ebp + hMultiplier], 25
+    call Multiply
+    ; divisor = (wEnemyMonMaxHP >> 2) low byte
+    mov al, [ebp + wEnemyMonMaxHP]
+    mov bh, [ebp + wEnemyMonMaxHP + 1]
+    shr al, 1
+    rcr bh, 1
+    shr al, 1
+    rcr bh, 1
+    mov al, bh
+    mov bh, 4
+    mov [ebp + hDivisor], al
+    call Divide
+    mov al, [ebp + hQuotient + 3]
+    mov esi, GoText
+    cmp al, 70
+    jae .printText
+    mov esi, DoItText
+    cmp al, 40
+    jae .printText
+    mov esi, GetmText
+    cmp al, 10
+    jae .printText
+    mov esi, EnemysWeakText
+.printText:
+    jmp PrintText
+
+GoText:
+    db TX_FAR_CMD
+    dd _GoText
+    db TX_ASM_CMD
+    jmp short PrintPlayerMon1Text
+
+DoItText:
+    db TX_FAR_CMD
+    dd _DoItText
+    db TX_ASM_CMD
+    jmp short PrintPlayerMon1Text
+
+GetmText:
+    db TX_FAR_CMD
+    dd _GetmText
+    db TX_ASM_CMD
+    jmp short PrintPlayerMon1Text
+
+EnemysWeakText:
+    db TX_FAR_CMD
+    dd _EnemysWeakText
+    db TX_ASM_CMD
+    ; falls through into PrintPlayerMon1Text
+
+PrintPlayerMon1Text:
+    mov esi, PlayerMon1Text
     ret
 
 ; ---------------------------------------------------------------------------

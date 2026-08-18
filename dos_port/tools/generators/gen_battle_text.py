@@ -470,6 +470,13 @@ EXTRA_FAR = [
     "_EnoughText",
     "_OKExclamationText",
     "_GoodText",
+    # engine/battle/common_text.asm:PrintSendOutMonMessage and the four outcome lines
+    # it selects: GoText / DoItText / GetmText / EnemysWeakText. Same shape: each is
+    # `text_far _XText` + a `text_asm` that chains to PrintPlayerMon1Text.
+    "_GoText",
+    "_DoItText",
+    "_GetmText",
+    "_EnemysWeakText",
 ]
 
 def main():

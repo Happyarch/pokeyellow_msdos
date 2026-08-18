@@ -312,7 +312,7 @@ extern ClearScreenArea                 ; src/home/copy2.asm — ESI=wTileMap des
                                        ; uses it ~1000 lines before the old declaration)
 extern ClearSprites                    ; home/clear_sprites.asm
 extern IsItemInBag                     ; src/home/map_objects.asm
-extern PrintSendOutMonMessage          ; battle_stubs.asm (STUB) — pret engine/battle/common_text.asm
+extern PrintSendOutMonMessage          ; engine/battle/common_text.asm
 extern AnimateSendingOutMon            ; engine/battle/init_battle.asm — send-out pic animation
 extern LoadMonBackPic                  ; engine/battle/init_battle.asm — sent-out mon back pic
 extern IsThisPartyMonStarterPikachu    ; engine/pikachu/pikachu_status.asm — CF=1 when starter
