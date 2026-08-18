@@ -570,6 +570,26 @@ SurfingMinigame_PerFramePresentation:
     mov ebx, 24                         ; centred-GB-screen origin Y
     call PublishProjectedOAM
 
+    ; 5. RE-ARM THE HARDWARE OBJ-OVER-WINDOW ORDER, EVERY FRAME.
+    ;
+    ; SetupPresentation arms this once, but ClearSprites and HideSprites both
+    ; zero it ("the OBJ-over-window order dies with them", clear_sprites.asm),
+    ; and the minigame calls ClearSprites faithfully — SurfingPikachuLoop's very
+    ; first act is SurfingPikachuMinigame_LoadGFXAndLayout, which does so at
+    ; entry. Measured live 2026-08-18 with dosbox-mcp: g_obj_over_window read
+    ; back 0 while spr_oam_valid was 40 and spr_dos_sx/sy held in-clip canvas
+    ; positions — the OBJ were published and then painted over.
+    ;
+    ; On this screen that is total invisibility rather than a z-order nit:
+    ; window descriptor 0 IS the whole 160x144 GB screen, so the port's default
+    ; window-last order overpaints every OBJ pixel. That is why publishing OAM
+    ; alone left frame 90 byte-identical (commit 1a5da9d1b).
+    ;
+    ; Re-arming here rather than after the ClearSprites call keeps the flag with
+    ; the publish it belongs to and makes it immune to any further faithful
+    ; ClearSprites/HideSprites the minigame runs mid-loop.
+    mov dword [g_obj_over_window], 1
+
     pop edi
     pop esi
     pop edx
@@ -2968,6 +2988,9 @@ DrawSurfingPikachuMinigameIntroBackground:
     decoord 4, 9
     mov bx, SurfingMinigame_ToSurfRadTilemapEnd - SurfingMinigame_ToSurfRadTilemap
     call CopyData
+
+    ; DEVIATION{class=projection; pret=engine/minigame/surfing_pikachu.asm:DrawSurfingPikachuMinigameIntroBackground; behavior=the port commits the finished intro canvas from wTileMap to GB_TILEMAP0 with an explicit one-shot mirror, standing in for the GB's hAutoBGTransferEnabled VBlank transfer; evidence=the port retired pret's VBlank wTileMap-to-BG-map auto-transfer as the root cause of the OW-A.13 menu corruption family per the retirement note in src-home-vblank.asm so every screen mirrors its own staging, this routine is the only writer of the intro background and it writes wTileMap exclusively while the surface window samples GB_TILEMAP0, and measured live 2026-08-18 the intro rendered as a uniform tile 00 field with vBGMap0 all zeros while wTileMap held the drawn canvas; lifetime=permanent, the auto-transfer is not coming back}
+    call SurfingMinigame_MirrorIntroCanvas
     ret
 
 .CopyBox:
@@ -3002,6 +3025,61 @@ DrawSurfingPikachuMinigameIntroBackground:
     pop ebx
     dec bh
     jnz .fillRow
+    ret
+
+; ---------------------------------------------------------------------------
+; SurfingMinigame_MirrorIntroCanvas — port-only. Commit the intro canvas
+; (wTileMap) to the tilemap the surface window actually samples (GB_TILEMAP0).
+;
+; No pret counterpart: on the Game Boy the intro background is staged into
+; wTileMap and hAutoBGTransferEnabled = 1 lets the VBlank handler push it to
+; vBGMap0 a slice per frame. The port retired that auto-transfer outright (see
+; the retirement note in src/home/vblank.asm — its geometry could not serve both
+; the stride-20 scratch screens and the 40-wide canvas screens, and it was the
+; root cause of the OW-A.13 menu-corruption family), so a screen that stages
+; through wTileMap must commit it itself, exactly as the cinematic surfaces do
+; via MovieMirrorSurface.
+;
+; The MINIGAME PROPER does not need this and must not get it: SurfingMinigame_
+; GenerateBGMap writes vBGMap0 directly through hlbgcoord, which is why the game
+; screen was correct while the intro rendered as a uniform field of tile $00.
+; Mirroring per frame would overwrite that generated map with this canvas.
+;
+; Geometry: the canvas is SCREEN_WIDTH (40) wide; the surface window is 160 px
+; wide and spans y 24..168, i.e. the 20x18 GB screen, sourced from GB_TILEMAP0
+; (stride TILEMAP_WIDTH = 32) at its origin with hSCX = hSCY = 0.
+;
+; The SOURCE ORIGIN IS BCOORD(0,0), NOT wTileMap. This file re-defines hlcoord /
+; decoord to the battle projection (+10 columns, +3 rows, see the %macro block at
+; the top), so every cell this screen authors already sits at the projected origin
+; on the 40x25 canvas — the same origin MovieMirrorSurface reads from. Mirroring
+; from wTileMap instead puts the whole intro 10 columns right of where it belongs
+; and clips half of it off the window; that was measured on screen 2026-08-18.
+; So GB cell (c,r) takes canvas cell (c+10, r+3). Columns 20-31 of the GB map are
+; left alone: the intro never scrolls, so they are never sampled.
+;
+; In:  EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+SURF_INTRO_MIRROR_COLS equ 160 / 8             ; window clip width in tiles = 20
+SURF_INTRO_MIRROR_ROWS equ (168 - 24) / 8      ; window height in tiles      = 18
+
+SurfingMinigame_MirrorIntroCanvas:
+    pushad
+    lea esi, [ebp + BCOORD(0, 0)]              ; projected canvas origin, not wTileMap
+    lea edi, [ebp + GB_TILEMAP0]
+    mov edx, SURF_INTRO_MIRROR_ROWS
+.row:
+    push esi
+    push edi
+    mov ecx, SURF_INTRO_MIRROR_COLS
+    rep movsb
+    pop edi
+    pop esi
+    add esi, SCREEN_WIDTH                      ; next canvas row (stride 40)
+    add edi, TILEMAP_WIDTH                     ; next GB tilemap row (stride 32)
+    dec edx
+    jnz .row
+    popad
     ret
 
 ; ---------------------------------------------------------------------------
