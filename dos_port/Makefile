@@ -616,6 +616,7 @@ GAME_SRCS := \
     src/data/wild/probabilities.asm \
     src/data/maps/songs.asm \
     src/data/maps/map_headers.asm \
+    src/data/maps/rest_house_maps.asm \
     src/data/tilesets/pair_collision_tile_ids.asm \
     src/data/tilesets/ledge_tiles.asm \
     src/data/tilesets/bike_riding_tilesets.asm \
@@ -651,6 +652,8 @@ GAME_SRCS := \
     src/engine/events/elevator.asm \
     src/engine/events/in_game_trades.asm \
     src/engine/events/pokemart.asm \
+    src/engine/events/pokecenter.asm \
+    src/engine/events/set_blackout_map.asm \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/update_map.asm \
     src/engine/overworld/elevator.asm \
@@ -3535,6 +3538,9 @@ src/home/overworld_text.o: assets/overworld_sign_text.inc
 src/engine/events/oaks_aide.o: assets/oaks_aide_text.inc assets/script_constants.inc
 src/engine/events/elevator.o: assets/elevator_text.inc
 src/engine/events/pokemart.o: assets/pokemart_text.inc assets/audio_constants.inc
+src/engine/events/pokecenter.o: assets/pokecenter_text.inc assets/audio_constants.inc assets/map_dims.inc
+src/engine/events/set_blackout_map.o: include/gb_memmap.inc
+src/data/maps/rest_house_maps.o: assets/map_dims.inc
 src/engine/events/in_game_trades.o: assets/in_game_trade_text.inc \
                                      assets/trade_trainer_string.inc \
                                      assets/script_constants.inc

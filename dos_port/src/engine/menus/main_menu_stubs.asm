@@ -33,10 +33,8 @@ section .text
 ; ported faithfully to src/engine/events/pokemart.asm.
 
 
-; STUB{class=stub; label=DisplayPokemonCenterDialogue_; pret=engine/menus/pokemon_center.asm:DisplayPokemonCenterDialogue_; behavior=return immediately instead of running nurse heal flow and Pokemon Center PC shell; evidence=overworld-events Stage 2 keeps nurse verification open; lifetime=until Stage 2 ports the nurse heal flow}
-global DisplayPokemonCenterDialogue_
-DisplayPokemonCenterDialogue_:
-    ret
+; DisplayPokemonCenterDialogue_ stub RETIRED (overworld-events Stage 2):
+; ported faithfully to src/engine/events/pokecenter.asm.
 
 ; STUB{class=stub; label=VendingMachineMenu; pret=engine/menus/vending_machine.asm:VendingMachineMenu; behavior=return immediately instead of opening the vending-machine menu; evidence=overworld-events Stage 2 leaves vending tails open; lifetime=until vending service tail lands}
 global VendingMachineMenu

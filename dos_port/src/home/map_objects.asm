@@ -60,6 +60,7 @@ global GetPointerWithinSpriteStateData1
 global GetPointerWithinSpriteStateData2
 global SetSpriteFacingDirection
 global SetSpriteFacingDirectionAndDelay
+global SpriteFunc_34a1
 
 extern FillMemory                 ; home/copy2.asm — ESI=dest, BX=count, AL=val (ESI preserved)
 extern SaveScreenTilesToBuffer2         ; src/home/tilemap.asm
@@ -388,15 +389,27 @@ SetSpriteFacingDirection:
     ret
 
 ; ---------------------------------------------------------------------------
-; SpriteFunc_34a1 — pret home/map_objects.asm — NOT PORTED, deliberately.
-; pewter_city.asm externs it (its only caller). The body reads [hSpriteOffset] and
-; [hSpriteHeight], which in pret are HRAM bytes UNIONed with the pic decompressor's
-; (ram/hram.asm:44-47, hSpriteInterlaceCounter/hSpriteWidth/hSpriteHeight/
-; hSpriteOffset) — the reuse is deliberate on the GB. The port instead keeps those
-; two as flat .bss locals inside src/home/pics.asm (pics.asm:690-692), addressed
-; natively rather than through EBP, so they are NOT the same storage and are not
-; even visible here. Which storage SpriteFunc_34a1 should read is a real design
-; question about that deviation, not something to guess: a wrong choice assembles
-; clean and corrupts a sprite field. Left undefined so the reference stays a link
-; error rather than a plausible wrong lowering.
+; SpriteFunc_34a1 — pret home/map_objects.asm:SpriteFunc_34a1
+; Computes sprite VRAM/image index offset based on sprite's image base offset
+; in wSpriteStateData2 and stores into wSpriteStateData1 image index.
+; Reads [hSpriteIndex] ($FF8C, aliased as hSpriteHeight in pret union) and
+; [hSpriteImageIndex] ($FF8D, aliased as hSpriteOffset in pret union).
 ; ---------------------------------------------------------------------------
+SpriteFunc_34a1:
+    mov al, [ebp + hSpriteIndex]        ; ldh a, [hSpriteIndex]
+    rol al, 4                           ; swap a
+    add al, SPRITESTATEDATA2_IMAGEBASEOFFSET ; add $e
+    movzx esi, al                       ; ld l, a / ld h, $c2
+    add esi, wSpriteStateData2
+    mov cl, [ebp + esi]                 ; ld c, [hl]
+    dec cl                              ; dec c
+    rol cl, 4                           ; swap c
+    mov al, [ebp + hSpriteImageIndex]   ; ldh a, [hSpriteOffset]
+    add cl, al                          ; add c / ld c, a
+    mov al, [ebp + hSpriteIndex]        ; ldh a, [hSpriteHeight]
+    rol al, 4                           ; swap a
+    add al, SPRITESTATEDATA1_IMAGEINDEX ; add $2
+    movzx esi, al                       ; ld l, a / dec h ($c1)
+    add esi, wSpriteStateData1
+    mov [ebp + esi], cl                 ; ld [hl], c
+    ret
