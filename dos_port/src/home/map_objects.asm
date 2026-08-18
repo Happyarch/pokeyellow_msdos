@@ -67,7 +67,7 @@ extern SaveScreenTilesToBuffer2         ; src/home/tilemap.asm
 extern HoldTextDisplayOpen              ; home/text_script.asm
 extern PlayerPC                         ; engine/menus/players_pc.asm
 extern BillsPC_                         ; engine/pokemon/bills_pc.asm (real box UI)
-extern CeladonPrizeMenu                 ; engine/menus/main_menu_stubs.asm
+extern CeladonPrizeMenu                 ; src/engine/events/prize_menu.asm
 extern ActivatePC                       ; engine/menus/pc.asm
 extern GetQuantityOfItemInBag   ; src/engine/items/get_bag_item_quantity.asm (predef)
 extern DelayFrames               ; src/home/delay.asm (BL = frame count)

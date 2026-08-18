@@ -40,10 +40,8 @@ section .text
 ; ported faithfully to src/engine/events/vending_machine.asm.
 
 
-; STUB{class=stub; label=CeladonPrizeMenu; pret=engine/menus/game_corner_prizes.asm:CeladonPrizeMenu; behavior=return immediately instead of opening the Game Corner prize menu; evidence=overworld-events Stage 2 records CeladonPrizeMenu as missing; lifetime=until prize-service tail lands}
-global CeladonPrizeMenu
-CeladonPrizeMenu:
-    ret
+; CeladonPrizeMenu stub RETIRED (overworld-events Stage 2 / chunk 4):
+; ported faithfully to src/engine/events/prize_menu.asm.
 
 ; STUB{class=stub; label=CableClubNPC; pret=engine/menus/cable_club.asm:CableClubNPC; behavior=return immediately instead of opening cable-club flow; evidence=overworld-events Stage 2 says cable-club behavior remains Phase 4; lifetime=until Phase 4 cable/link behavior lands}
 global CableClubNPC
