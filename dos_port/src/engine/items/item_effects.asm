@@ -852,7 +852,7 @@ extern PrintStatsBox        ; engine/pokemon/status_screen.asm — DH = box type
 extern LearnMoveFromLevelUp ; engine/pokemon/evos_moves.asm (predef)
 extern TryEvolvingMon       ; engine/pokemon/evos_moves.asm
 extern ModifyPikachuHappiness    ; engine/events/pikachu_happiness.asm (pret mirror; DH = PIKAHAPPY_*)
-extern RespawnOverworldPikachu   ; battle_exp_stubs.asm (deferred)
+extern RespawnOverworldPikachu   ; src/engine/pikachu/respawn_overworld_pikachu.asm
 extern DoubleOrHalveSelectedStats   ; engine/battle/core.asm (pret mirror; bodies in unused_stats_functions.asm)
 
 ; --- screen / text / sound ---

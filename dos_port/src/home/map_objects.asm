@@ -41,6 +41,10 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
+%include "gb_constants.inc"
+
+BIT_PIKACHU_SPAWN_SURFING  equ 6
+BIT_PIKACHU_SPAWN_STARTER  equ 7
 
 global DecodeArrowMovementRLE
 global TextScript_ItemStoragePC
@@ -49,6 +53,7 @@ global TextScript_GameCornerPrizeMenu
 global TextScript_PokemonCenterPC
 global StartSimulatingJoypadStates
 global IsItemInBag
+global IsSurfingPikachuInParty
 global ArePlayerCoordsInArray
 global CheckCoords
 global CheckBoulderCoords
@@ -72,6 +77,7 @@ extern ActivatePC                       ; engine/menus/pc.asm
 extern GetQuantityOfItemInBag   ; src/engine/items/get_bag_item_quantity.asm (predef)
 extern DelayFrames               ; src/home/delay.asm (BL = frame count)
 extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
+extern IsStarterPikachuAliveInOurParty ; src/engine/pikachu/pikachu_status.asm
 
 ; ---------------------------------------------------------------------------
 ; Scaffold memmap symbol not yet in gb_memmap.inc (carried in with CheckCoords).
@@ -191,6 +197,52 @@ IsItemInBag:
     call GetQuantityOfItemInBag      ; → BH = quantity of that item in the bag
     mov al, bh                       ; ld a, b
     and al, al                       ; and a  (ZF=1 ⇒ qty 0 ⇒ not in bag)
+    ret
+
+; ---------------------------------------------------------------------------
+; IsSurfingPikachuInParty — pret home/map_objects.asm:IsSurfingPikachuInParty.
+; Sets BIT_PIKACHU_SPAWN_SURFING in wPikachuSpawnStateFlags if any Pikachu with
+; Surf is in party. Sets BIT_PIKACHU_SPAWN_STARTER if starter Pikachu is in party.
+; ---------------------------------------------------------------------------
+IsSurfingPikachuInParty:
+    and byte [ebp + wPikachuSpawnStateFlags], ~((1 << BIT_PIKACHU_SPAWN_STARTER) | (1 << BIT_PIKACHU_SPAWN_SURFING)) & 0xFF
+    mov esi, wPartyMon1
+    mov cl, PARTY_LENGTH
+    mov bh, SURF
+.loop:
+    mov al, [ebp + esi]                                 ; ld a, [hl]
+    cmp al, STARTER_PIKACHU                             ; cp STARTER_PIKACHU
+    jne .notPikachu
+    ; check if pikachu has surf as one of its moves (moves at offset 8..11)
+    cmp byte [ebp + esi + 8], bh
+    je .hasSurf
+    cmp byte [ebp + esi + 9], bh
+    je .hasSurf
+    cmp byte [ebp + esi + 10], bh
+    je .hasSurf
+    cmp byte [ebp + esi + 11], bh
+    jne .noSurf
+.hasSurf:
+    or byte [ebp + wPikachuSpawnStateFlags], (1 << BIT_PIKACHU_SPAWN_SURFING)
+.noSurf:
+.notPikachu:
+    add esi, wPartyMon2 - wPartyMon1
+    dec cl
+    jnz .loop
+    call .checkForStarter
+    ret
+
+.checkForStarter:
+    push esi
+    push ebx
+    push ecx
+    call IsStarterPikachuAliveInOurParty
+    pop ecx
+    pop ebx
+    pop esi
+    jnc .doneStarter
+    or byte [ebp + wPikachuSpawnStateFlags], (1 << BIT_PIKACHU_SPAWN_STARTER)
+.doneStarter:
     ret
 
 ; ---------------------------------------------------------------------------

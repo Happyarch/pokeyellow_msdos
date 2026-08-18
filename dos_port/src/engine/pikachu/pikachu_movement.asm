@@ -86,7 +86,7 @@ extern GetPikachuMovementScriptByte                     ; src/home/pikachu.asm
 extern CopyVideoDataAlternate                           ; src/home/copy.asm
 extern CopyVideoDataDoubleAlternate                     ; src/home/copy.asm
 extern EnablePikachuFollowingPlayer                     ; src/home/pikachu.asm
-extern StarterPikachuEmotionCommand_turnawayfromplayer  ; src/engine/pikachu/pikachu_stubs.asm
+extern StarterPikachuEmotionCommand_turnawayfromplayer  ; src/engine/pikachu/pikachu_emotions.asm
 extern LoadCurrentMapView                               ; src/home/overworld.asm
 extern UpdateSprites                                    ; src/home/update_sprites.asm
 extern PikachuSprite                                    ; src/engine/gfx/mon_icons.asm

@@ -70,16 +70,7 @@ global ResetUsingStrengthOutOfBattleBit
 ResetUsingStrengthOutOfBattleBit:
     ret
 
-; IsSurfingPikachuInParty — pret home/map_objects.asm:IsSurfingPikachuInParty. Sets
-; wPikachuSpawnStateFlags BIT_PIKACHU_SPAWN_STARTER / _SURFING by scanning the party
-; for a starter Pikachu (with Surf). Called unconditionally by EnterMap (and pret's
-; OverworldLoop), so it runs at boot. The real SpawnPikachu FSM is linked (pikachu.asm,
-; OW-7.2) but its slot-15 gate never fires on current maps, so the flags this would
-; set remain unused today.
-; TODO(faithful): port with the Pikachu-follower subsystem.
-global IsSurfingPikachuInParty
-IsSurfingPikachuInParty:
-    ret
+; IsSurfingPikachuInParty retired — real body ported into src/home/map_objects.asm (follower_pikachu Phase 3).
 
 ; LoadHoppingShadowOAM — pret engine/overworld/ledges.asm:LoadHoppingShadowOAM.
 ; The ledge-hop shadow sprite. pret loads shadow.1bpp to vChars1 tile $7f and two
@@ -102,14 +93,7 @@ LoadHoppingShadowOAM:
 ; _SwapOAMEntries). Its only caller (UsedCut, cut.asm) is check-only, so no
 ; linked caller depended on this stub — deleted cleanly (no dup_def).
 
-; TalkToPikachu — pret engine/pikachu/pikachu.asm:TalkToPikachu. DisplayTextID's
-; TEXT_PIKACHU_ANIM service reaches this tail, but the full Pikachu interaction
-; FSM is not part of the current Stage 2 text-service closure. The follower spawn
-; FSM is linked separately; this menu/dialog tail still needs its own port.
-; STUB{class=stub; label=TalkToPikachu; pret=engine/pikachu/pikachu.asm:TalkToPikachu; behavior=return immediately instead of running Pikachu emotion/dialog; evidence=overworld-events Stage 2 lists Pikachu tail open; lifetime=until Pikachu service tail lands}
-global TalkToPikachu
-TalkToPikachu:
-    ret
+; TalkToPikachu retired — real body ported into src/engine/pikachu/pikachu_emotions.asm (follower_pikachu Phase 3).
 
 ; PrintSafariGameOverText — pret engine/events/safari_game.asm:PrintSafariGameOverText.
 ; The Safari-zone service tail is deferred with the rest of Safari story/event

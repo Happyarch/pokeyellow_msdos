@@ -1479,6 +1479,8 @@ wPikachuFollowCommandBufferSize equ 0xD436
 wPikachuFollowCommandBuffer     equ 0xD437 ; ds 16
 wd435                        equ 0xD435 ; golden 00:d435; unnamed in pret. Set to $ff by
                                         ; IsSpriteInFrontOfPlayer when the sprite faced is Pikachu.
+wExpressionNumber            equ 0xD447 ; pret ram/wram.asm:2025
+wPikaPicAnimNumber           equ 0xD448 ; pret ram/wram.asm:2026
 
 wPikachuMovementScriptBank   equ 0xD449 ; ROM bank of the active Pikachu movement script
 wPikachuMovementScriptAddress equ 0xD44A ; dw: cursor into the movement script

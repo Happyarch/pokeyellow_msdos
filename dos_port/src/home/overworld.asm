@@ -136,7 +136,8 @@ extern _GetTileAndCoordsInFrontOfPlayer   ; src/engine/overworld/player_state.as
 extern IsNPCAtTargetBlock                 ; src/engine/overworld/map_sprites.asm
 extern IsNextTileShoreOrWater             ; src/engine/items/item_effects.asm
 extern IsPlayerStandingOnDoorTileOrWarpTile ; src/engine/overworld/player_state.asm
-extern IsSurfingPikachuInParty            ; src/engine/overworld/overworld_stubs.asm
+extern IsPlayerTalkingToPikachu            ; src/engine/pikachu/pikachu_emotions.asm
+extern IsSurfingPikachuInParty            ; src/home/map_objects.asm
 extern IsTilePassable                     ; src/home/copy2.asm
 extern LoadDestinationMapData                ; src/engine/overworld/overworld.asm
 extern MapEntryAfterBattle                ; src/engine/overworld/overworld_stubs.asm
@@ -1327,6 +1328,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; see DoSignInteraction's DEVIATION{class=temporary}.)
     mov byte [ebp + wd435], 0                  ; xor a / ld [wd435], a
     call IsSpriteOrSignInFrontOfPlayer
+    call Func_0ffe
     mov al, [ebp + hTextID]                    ; ldh a, [hTextID]
     test al, al                                ; and a
     jz .checkPADDown                           ; jp z, OverworldLoop — nothing found
@@ -3689,6 +3691,13 @@ HandleMidJump:
     call _HandleMidJump
 .ret:
     ret
+
+; ---------------------------------------------------------------------------
+; Func_0ffe — pret home/overworld.asm:2131 (jpfar IsPlayerTalkingToPikachu)
+; ---------------------------------------------------------------------------
+global Func_0ffe
+Func_0ffe:
+    jmp IsPlayerTalkingToPikachu
 
 global InitSprites
 global ZeroSpriteStateData
