@@ -37,6 +37,7 @@ bits 32
 
 global MakeNPCFacePlayer
 global Func_5357
+global InitializeSpriteScreenPosition
 ; Reached from sprite_collisions.asm:_UpdateSprites / UpdateNonPlayerSprite, which
 ; are the other half of the per-frame chain (see the header).
 global UpdatePlayerSprite

@@ -104,6 +104,7 @@ extern ReloadMapSpriteTilePatterns         ; src/home/reload_sprites.asm
 extern RunPaletteCommand                  ; src/home/palettes.asm
 extern SetMapSpecificScriptFlagsOnMapReload ; src/engine/overworld/specific_script_flags.asm
 extern UpdateMusic6Times                  ; src/home/audio.asm
+extern SchedulePikachuSpawnForAfterText   ; src/engine/pikachu/pikachu_follow.asm
 extern h_load_sprite_temp1                ; src/engine/overworld/overworld.asm
 extern h_load_sprite_temp2                ; src/engine/overworld/overworld.asm
 extern hide_window                        ; src/ppu/ppu.asm
@@ -3360,9 +3361,11 @@ LoadMapHeader:
 
     call LoadTilesetHeader
 
-    ; pret: (gated on !BIT_BATTLE_OVER_OR_BLACKOUT) callfar SchedulePikachuSpawnForAfterText —
-    ; queue the Pikachu-follower spawn to appear after the next text box.
-    ; TODO(faithful): not ported (Pikachu-follower subsystem absent; cf. SpawnPikachu stub).
+    mov al, [ebp + wStatusFlags4]
+    test al, (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    jnz .skipPikachuSpawn
+    call SchedulePikachuSpawnForAfterText
+.skipPikachuSpawn:
 
     ; Load this map's wild-encounter data (pret home/overworld.asm:LoadMapHeader:1900,
     ; callfar LoadWildData). Populates wGrassRate/wGrassMons + wWaterRate/wWaterMons from

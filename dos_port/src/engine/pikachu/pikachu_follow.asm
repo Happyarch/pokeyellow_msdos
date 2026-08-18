@@ -1,106 +1,192 @@
 ; pikachu_follow.asm — mirror of pret engine/pikachu/pikachu_follow.asm.
 ;
-; Was src/engine/overworld/pikachu.asm until the mirror repair. Holds eleven of
-; that pret file's labels, in pret order:
-;   ShouldPikachuSpawn (:1), ResetPikachuOverworldStateFlag2 (:344),
-;   SpawnPikachu_ (:351, see the naming note below), TrySpawnPikachu (:403),
-;   GetPikachuFacingDirectionAndReturnToE (:1110), GetPikachuFacingDirection (:1115),
-;   ClearPikachuFollowCommandBuffer (:1154), AppendPikachuFollowCommandToBuffer (:1165),
-;   RefreshPikachuFollow (:1175), ComputePikachuFollowCommand (:1182),
-;   CheckAbsoluteValueLessThan2 (:1249)
-;
-; The follow-command group (the last five) landed when
-; TryApplyPikachuMovementData was ported (src/engine/events/try_pikachu_movement.asm),
-; which tail-calls RefreshPikachuFollow.
-;
-; The remainder are unported, and all belong to the deferred follower FSM:
-; SchedulePikachuSpawnForAfterText, ClearPikachuSpriteStateData,
-; CalculatePikachuSpawnCoordsAndFacing, CalculatePikachuPlacementCoords,
-; CalculatePikachuFacingDirection, SetPikachuSpawnOutside, Pointer_fc64b,
-; Pointer_fc653, SetPikachuSpawnWarpPad, Pointer_fc68e, SetPikachuSpawnBackOutside,
-; SetPikachuOverworldStateFlag2, Func_fcc08, ComputePikachuFacingDirection.
-;
-; *** NAMING DEBT, PRE-EXISTING AND NOT INTRODUCED HERE: pret's label is
-; `SpawnPikachu_` and the port calls it `_SpawnPikachu` — a forked name, which
-; CLAUDE.md's "Preserve pret Labels" rule forbids. It is left alone in this commit
-; because renaming it is a behaviour-neutral but separate change touching its
-; caller in src/home/pikachu.asm, and because it is why the label reads `port_only`
-; rather than `translated` in the label DB. ***
-;
-; The home/pikachu.asm half — the state-flag plumbing, the SpawnPikachu wrapper,
-; Pikachu_IsInArray and the movement-script accessors — lives in its own mirror,
-; src/home/pikachu.asm.
-;
-; Yellow's starter Pikachu walks the overworld one tile behind the player. The
-; whole subsystem is INERT unless the follower is enabled: nothing turns it on
-; until a map/new-game path calls EnablePikachuFollowingPlayer AND the starter
-; Pikachu is alive in the party (IsStarterPikachuAliveInOurParty). No port map
-; does either today, so with this file linked the default overworld is byte-for-
-; byte unchanged (SpawnPikachu → _SpawnPikachu → TrySpawnPikachu.dont_spawn →
-; ret nc, drawing nothing).
+; Full implementation of Phase 1 Overworld Follower Pikachu Subsystem:
+; - Spawn calculation routines (CalculatePikachuPlacementCoords,
+;   CalculatePikachuSpawnCoordsAndFacing, CalculatePikachuFacingDirection,
+;   ComputePikachuFacingDirection, SchedulePikachuSpawnForAfterText,
+;   ClearPikachuSpriteStateData)
+; - Transition hooks & tables (SetPikachuSpawnOutside, SetPikachuSpawnWarpPad,
+;   SetPikachuSpawnBackOutside, Pointer_fc64b, Pointer_fc653, Pointer_fc68e)
+; - Spawn & visibility (SpawnPikachu_ / _SpawnPikachu, WillPikachuSpawnOnTheScreen,
+;   Func_fc745, Func_fc76a)
+; - 11-state follow state machine (PointerTable_fc710 and state handlers)
+; - Step interpolation and pixel math (AddPikachuStepVector,
+;   TryDoubleAddPikachuStepVectorToScreenPixelCoords,
+;   DoubleAddPikachuStepVectorToScreenPixelCoords,
+;   AddPikachuStepVectorToScreenPixelCoords, ResetPikachuStepVector,
+;   GetPikachuWalkingAnimationSpeed, UpdatePikachuWalkingSprite)
+; - Follow command FIFO buffer (Func_fcc08, Func_fcc23, Func_fcc42, Func_fcc64,
+;   Func_fcc92, GetPikachuFollowCommand,
+;   GetPikachuFollowCommandIfBufferSizeNonzero,
+;   AreThereAtLeastTwoStepsInPikachuFollowCommandBuffer,
+;   ComparePikachuHappinessTo80)
 ;
 ; Register map (CLAUDE.md): A→AL, HL→ESI, BC→BX (B=BH,C=BL), DE→DX; SM83 `swap a`
 ; = nibble swap = `ror al, 4`. GB memory = [ebp + SYM] (gb_memmap.inc).
 ;
 ; pret citations are given per routine as `pret <file>:<label>`.
-;
-; Build (standalone check): nasm -f coff -I dos_port/include/ -o /dev/null \
-;     dos_port/src/engine/pikachu/pikachu_follow.asm
-;
-; ============================================================================
-; LINK/CHECK STATUS: LINKED (GAME_SRCS, since OW-7.2). The ret-stub `SpawnPikachu`
-;   in overworld_stubs.asm was RETIRED when this file was promoted; the M6.2 $f0
-;   dispatch now reaches the real follower FSM here.
-;   The follower is nonetheless INERT in the live build: the Pikachu OVERWORLD
-;   SPRITE GRAPHICS are not staged (no LoadPlayerSpriteGraphics-style Pikachu tile
-;   load), and the deep movement FSM (pret PointerTable_fc710 state handlers,
-;   WillPikachuSpawnOnTheScreen, the pikachu_follow/pikachu_movement subsystem) is
-;   not ported. The only reachable path (follower disabled) is byte-faithful:
-;   SpawnPikachu -> _SpawnPikachu -> TrySpawnPikachu.dont_spawn -> ret nc. See SUMMARY.md.
-; ============================================================================
 
 bits 32
 
 %include "gb_memmap.inc"
+%include "gb_constants.inc"
 %include "gb_macros.inc"
 
 ; ---------------------------------------------------------------------------
-; Pikachu WRAM/sprite symbols now live in gb_memmap.inc (OW-A.11: promoted from a
-; former file-local placeholder block that stranded them here). The values are
-; pokeyellow-real and consistent with the existing gb_memmap Pikachu block
-; (W_D433 $D433, wPikachuHappiness $D46F): wPikachuOverworldStateFlags,
-; wPikachuMovementScriptBank, wPikachuMovementScriptAddress,
-; wSpritePikachuStateData1MovementStatus, wSpritePikachuStateData1ImageIndex.
+; Map IDs for spawn locations (constants/map_constants.asm)
 ; ---------------------------------------------------------------------------
+OAKS_LAB                         equ 0x28
+VIRIDIAN_FOREST_NORTH_GATE       equ 0x2F
+ROUTE_2_GATE                     equ 0x31
+VIRIDIAN_FOREST_SOUTH_GATE       equ 0x32
+VIRIDIAN_FOREST                  equ 0x33
+MT_MOON_B1F                      equ 0x3C
+CERULEAN_TRASHED_HOUSE           equ 0x3E
+ROUTE_7_GATE                     equ 0x4C
+ROUTE_8_GATE                     equ 0x4F
+ROCK_TUNNEL_1F                   equ 0x52
+ROUTE_11_GATE_1F                 equ 0x54
+VERMILION_DOCK                   equ 0x5E
+CELADON_MART_ELEVATOR            equ 0x7F
+CELADON_MANSION_1F               equ 0x80
+FUCHSIA_GOOD_ROD_HOUSE           equ 0xA4
+CINNABAR_LAB_TRADE_ROOM          equ 0xA8
+CINNABAR_LAB_METRONOME_ROOM      equ 0xA9
+CINNABAR_LAB_FOSSIL_ROOM         equ 0xAA
+ROUTE_15_GATE_1F                 equ 0xB8
+ROUTE_16_GATE_1F                 equ 0xBA
+ROUTE_18_GATE_1F                 equ 0xBE
+ROUTE_22_GATE                    equ 0xC1
+VICTORY_ROAD_2F                  equ 0xC2
+SAFARI_ZONE_CENTER_REST_HOUSE    equ 0xDD
+SAFARI_ZONE_SECRET_HOUSE         equ 0xDE
+SAFARI_ZONE_WEST_REST_HOUSE      equ 0xDF
+SAFARI_ZONE_EAST_REST_HOUSE      equ 0xE0
+SAFARI_ZONE_NORTH_REST_HOUSE     equ 0xE1
+CERULEAN_BADGE_HOUSE             equ 0xE6
+SILPH_CO_ELEVATOR                equ 0xEC
+
+BIT_PIKACHU_SPAWN_FOLLOWING      equ 5
+BIT_PIKACHU_SPAWN_STARTER        equ 7
+
+; ---------------------------------------------------------------------------
+; Pikachu WRAM & sprite offsets (mirror of pret usage)
+; ---------------------------------------------------------------------------
+wd431                            equ 0xD431
+wd432                            equ 0xD432
+
+wSpritePikachuStateData1                   equ wSpriteStateData1 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE
+wSpritePikachuStateData1PictureID          equ wSpritePikachuStateData1 + SPRITESTATEDATA1_PICTUREID
+wSpritePikachuStateData1YStepVector        equ wSpritePikachuStateData1 + SPRITESTATEDATA1_YSTEPVECTOR
+wSpritePikachuStateData1YPixels            equ wSpritePikachuStateData1 + SPRITESTATEDATA1_YPIXELS
+wSpritePikachuStateData1XStepVector        equ wSpritePikachuStateData1 + SPRITESTATEDATA1_XSTEPVECTOR
+wSpritePikachuStateData1XPixels            equ wSpritePikachuStateData1 + SPRITESTATEDATA1_XPIXELS
+wSpritePikachuStateData1IntraAnimFrameCounter equ wSpritePikachuStateData1 + SPRITESTATEDATA1_INTRAANIMFRAMECOUNTER
+wSpritePikachuStateData1AnimFrameCounter   equ wSpritePikachuStateData1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER
+wSpritePikachuStateData1FacingDirection    equ wSpritePikachuStateData1 + SPRITESTATEDATA1_FACINGDIRECTION
+
+wSpritePikachuStateData2                   equ wSpriteStateData2 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE
+wSpritePikachuStateData2WalkAnimationCounter equ wSpritePikachuStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER
+wSpritePikachuStateData2MapY               equ wSpritePikachuStateData2 + SPRITESTATEDATA2_MAPY
+wSpritePikachuStateData2MapX               equ wSpritePikachuStateData2 + SPRITESTATEDATA2_MAPX
+wSpritePikachuStateData2GrassPriority      equ wSpritePikachuStateData2 + SPRITESTATEDATA2_GRASSPRIORITY
+wSpritePikachuStateData2ImageBaseOffset    equ wSpritePikachuStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET
+
+wSpritePlayerStateData1FacingDirection     equ wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION
+wSpritePlayerStateData1ImageIndex          equ wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX
 
 ; ---------------------------------------------------------------------------
 ; Externs
 ; ---------------------------------------------------------------------------
-extern IsStarterPikachuAliveInOurParty  ; dos_port/src/engine/pikachu/pikachu_status.asm
-                                        ; (defined but currently UNLINKED — see SUMMARY)
-extern FillMemory                       ; dos_port/src/home/copy2.asm
-
-; ---------------------------------------------------------------------------
-; WRAM symbols not yet carried by include/gb_memmap.inc. Addresses are
-; pokeyellow.sym `00:d436 wPikachuFollowCommandBufferSize` and
-; `00:d437 wPikachuFollowCommandBuffer` — NOT inferred, and consistent with the
-; Pikachu block gb_memmap.inc already anchors ($D42F..$D435 immediately below).
-; gb_memmap.inc is maintainer-owned, so promoting these is left to its owner;
-; the same file-local-`equ` pattern is already used across src/scripts/ and by
-; src/home/lcd.asm.
-; ---------------------------------------------------------------------------
+extern IsStarterPikachuAliveInOurParty  ; src/engine/pikachu/pikachu_status.asm
+extern FillMemory                       ; src/home/copy2.asm
+extern EnablePikachuFollowingPlayer     ; src/home/pikachu.asm
+extern CheckPikachuFollowingPlayer      ; src/home/pikachu.asm
+extern Pikachu_IsInArray                ; src/home/pikachu.asm
+extern InitializeSpriteScreenPosition   ; src/engine/overworld/movement.asm
+extern Random                           ; src/home/random.asm
 
 ; ---------------------------------------------------------------------------
 ; Globals
 ; ---------------------------------------------------------------------------
-global _SpawnPikachu                    ; pret SpawnPikachu_; called by the home wrapper
+global ShouldPikachuSpawn
+global SchedulePikachuSpawnForAfterText
+global ClearPikachuSpriteStateData
+global CalculatePikachuSpawnCoordsAndFacing
+global CalculatePikachuPlacementCoords
+global CalculatePikachuFacingDirection
+global SetPikachuSpawnOutside
+global Pointer_fc64b
+global Pointer_fc653
+global SetPikachuSpawnWarpPad
+global Pointer_fc68e
+global SetPikachuSpawnBackOutside
+global SetPikachuOverworldStateFlag2
+global ResetPikachuOverworldStateFlag2
+global SpawnPikachu_
+global _SpawnPikachu
+global PointerTable_fc710
+global Func_fc745
+global Func_fc76a
+global Func_fc793
+global Func_fc7aa
+global Pointer_fc7e3
+global Func_fc803
+global Func_fc82e
+global Func_fc835
+global Func_fc842
+global PointerTable_fc85a
+global Func_fc862
+global asm_fc87f
+global Func_fc8c7
+global Pointer_fc8d6
+global Func_fc8f8
+global asm_fc904
+global Func_fc92b
+global asm_fc937
+global Func_fc95d
+global asm_fc969
+global NormalPikachuFollow
+global asm_fc9c3
+global FastPikachuFollow
+global asm_fc9ee
+global Func_fca0a
+global asm_fca1c
+global AddPikachuStepVector
+global TryDoubleAddPikachuStepVectorToScreenPixelCoords
+global DoubleAddPikachuStepVectorToScreenPixelCoords
+global AddPikachuStepVectorToScreenPixelCoords
+global ResetPikachuStepVector
+global GetPikachuWalkingAnimationSpeed
+global UpdatePikachuWalkingSprite
+global Func_fcae2
+global IsPikachuRightNextToPlayer
+global GetPikachuFacingDirectionAndReturnToE
+global GetPikachuFacingDirection
+global ClearPikachuFollowCommandBuffer
+global AppendPikachuFollowCommandToBuffer
 global RefreshPikachuFollow
+global ComputePikachuFollowCommand
+global CheckAbsoluteValueLessThan2
+global Func_fcc08
+global Func_fcc23
+global Func_fcc42
+global Func_fcc64
+global Func_fcc92
+global ComputePikachuFacingDirection
+global GetPikachuFollowCommand
+global GetPikachuFollowCommandIfBufferSizeNonzero
+global AreThereAtLeastTwoStepsInPikachuFollowCommandBuffer
+global WillPikachuSpawnOnTheScreen
+global ComparePikachuHappinessTo80
 
 section .text
 
+; ===========================================================================
 ; ShouldPikachuSpawn — pret pikachu_follow.asm:ShouldPikachuSpawn. Carry set only
 ; if Pikachu should be visible: not hidden (bits 5,7 clear), starter Pikachu alive
 ; in party, and on foot (wWalkBikeSurfState == 0).
+; ===========================================================================
 ShouldPikachuSpawn:
     test byte [ebp + wPikachuOverworldStateFlags], 0x20  ; bit 5, a
     jnz .hide
@@ -117,113 +203,1159 @@ ShouldPikachuSpawn:
     clc                                                   ; and a (clears carry)
     ret
 
-; ResetPikachuOverworldStateFlag2 — pret pikachu_follow.asm. Clear moved-flag bit 2.
-ResetPikachuOverworldStateFlag2:
-    and byte [ebp + wPikachuOverworldStateFlags], 0xFB ; res 2, [hl]
+; ===========================================================================
+; SchedulePikachuSpawnForAfterText — pret pikachu_follow.asm:SchedulePikachuSpawnForAfterText
+; ===========================================================================
+SchedulePikachuSpawnForAfterText:
+    ; FLAG ORDER IS LOAD-BEARING. pret is `bit 4,[hl]` / `res 4,[hl]` / `jr nz`,
+    ; and SM83 RES does NOT affect flags, so the branch reads the BIT result. x86
+    ; AND *does* set ZF, so testing before the clear let the clear's ZF (is the
+    ; whole byte zero once bit 4 is cleared?) reach the jump instead of "was bit 4
+    ; set?" — a different condition entirely. Sample the byte first, clear second,
+    ; test the sampled copy last, so the branch reads what pret's branch reads.
+    mov al, [ebp + wPikachuOverworldStateFlags]         ; ld hl, wPikachuOverworldStateFlags
+    and byte [ebp + wPikachuOverworldStateFlags], ~0x10 ; res 4, [hl]  (SM83: no flags)
+    test al, 0x10                                       ; bit 4, [hl]  (the flag the branch reads)
+    jnz .normal_spawn_state
+    call EnablePikachuFollowingPlayer
+    call ClearPikachuSpriteStateData
+    mov byte [ebp + wSpritePikachuStateData1ImageIndex], 0xFF
+    call ClearPikachuFollowCommandBuffer
+    call CalculatePikachuFacingDirection
+    ret
+
+.normal_spawn_state:
+    call CalculatePikachuPlacementCoords
+    xor al, al
+    mov [ebp + wPikachuSpawnState], al
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    mov [ebp + wSpritePikachuStateData1FacingDirection], al
     ret
 
 ; ===========================================================================
-; _SpawnPikachu — pret engine/pikachu/pikachu_follow.asm:SpawnPikachu_.
-;
-; ; SCAFFOLD: FAITHFUL GUARD ENTRY ONLY. The default/disabled path (the only one reachable
-; today) is complete and byte-faithful: reset the moved-flag, run TrySpawnPikachu;
-; if it declines (carry clear, the always-taken default), return having blanked
-; the sprite. The enabled path (WillPikachuSpawnOnTheScreen + the PointerTable_
-; fc710 movement-state machine + sprite drawing) is DEFERRED — it needs the
-; Pikachu overworld sprite graphics and the pikachu_follow/pikachu_movement
-; subsystem, neither staged. See SUMMARY.md.
-;
-;   pret:
-;     call ResetPikachuOverworldStateFlag2
-;     call TrySpawnPikachu
-;     ret nc
-;     ... (deferred FSM) ...
+; ClearPikachuSpriteStateData — pret pikachu_follow.asm:ClearPikachuSpriteStateData
 ; ===========================================================================
-_SpawnPikachu:
+ClearPikachuSpriteStateData:
+    mov esi, wSpritePikachuStateData1PictureID
+    call .clear
+    mov esi, wSpritePikachuStateData2
+.clear:
+    mov bx, 0x10
+    xor al, al
+    call FillMemory
+    ret
+
+; ===========================================================================
+; CalculatePikachuSpawnCoordsAndFacing — pret pikachu_follow.asm:CalculatePikachuSpawnCoordsAndFacing
+; ===========================================================================
+CalculatePikachuSpawnCoordsAndFacing:
+    call CalculatePikachuPlacementCoords
+    call CalculatePikachuFacingDirection
+    xor al, al
+    mov [ebp + wPikachuSpawnState], al
+    ret
+
+; ===========================================================================
+; CalculatePikachuPlacementCoords — pret pikachu_follow.asm:CalculatePikachuPlacementCoords
+; ===========================================================================
+CalculatePikachuPlacementCoords:
+    mov ebx, wSpritePikachuStateData1PictureID
+    mov al, [ebp + wYCoord]
+    add al, 4
+    mov dl, al                          ; e = y + 4
+    mov al, [ebp + wXCoord]
+    add al, 4
+    mov dh, al                          ; d = x + 4
+    mov al, [ebp + wPikachuSpawnState]
+    and al, al
+    jz .load_coords
+    cmp al, 0x01
+    jz .right_of_player
+    cmp al, 0x02
+    jz .check_player_facing2
+    cmp al, 0x03
+    jz .load_coords
+    cmp al, 0x04
+    jz .below_player
+    cmp al, 0x05
+    jz .above_player
+    cmp al, 0x06
+    jz .left_of_player
+    cmp al, 0x07
+    jz .check_player_facing
+    jmp .right_of_player
+
+.check_player_facing:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    and al, al                          ; SPRITE_FACING_DOWN (0)
+    jz .below_player
+    cmp al, SPRITE_FACING_UP
+    jz .above_player
+    cmp al, SPRITE_FACING_LEFT
+    jz .left_of_player
+    cmp al, SPRITE_FACING_RIGHT
+    jz .right_of_player
+.check_player_facing2:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    and al, al                          ; SPRITE_FACING_DOWN (0)
+    jnz .check_up
+    dec dl                              ; dec e
+    jmp .load_coords
+
+.check_up:
+    cmp al, SPRITE_FACING_UP
+    jnz .check_left
+    inc dl                              ; inc e
+    jmp .load_coords
+
+.check_left:
+    cmp al, SPRITE_FACING_LEFT
+    jnz .left_of_player_2
+    inc dh                              ; inc d
+    jmp .load_coords
+
+.left_of_player_2:
+    dec dh                              ; dec d
+    jmp .load_coords
+
+.right_of_player:
+    inc dh                              ; inc d
+    jmp .load_coords
+
+.left_of_player:
+    dec dh                              ; dec d
+    jmp .load_coords
+
+.below_player:
+    inc dl                              ; inc e
+    jmp .load_coords
+
+.above_player:
+    dec dl                              ; dec e
+    ; fallthrough to .load_coords
+
+.load_coords:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1
+    add esi, ebx
+    mov [ebp + esi], dl                 ; ld [hl], e
+    inc esi
+    mov [ebp + esi], dh                 ; ld [hl], d
+    inc esi
+    mov byte [ebp + esi], 0xFE          ; ld [hl], $fe
+    or byte [ebp + wPikachuSpawnStateFlags], (1 << BIT_PIKACHU_SPAWN_FOLLOWING)
+    ret
+
+; ===========================================================================
+; CalculatePikachuFacingDirection — pret pikachu_follow.asm:CalculatePikachuFacingDirection
+; ===========================================================================
+CalculatePikachuFacingDirection:
+    mov byte [ebp + wSpritePikachuStateData1PictureID], 0x49
+    mov byte [ebp + wSpritePikachuStateData1ImageIndex], 0xFF
+    mov al, [ebp + wPikachuSpawnState]
+    and al, al
+    jz .copy_player_facing
+    cmp al, 0x01
+    jz .copy_player_facing
+    cmp al, 0x03
+    jz .force_facing_down
+    cmp al, 0x04
+    jz .copy_player_facing
+    cmp al, 0x06
+    jz .copy_player_facing
+    cmp al, 0x07
+    jz .face_the_other_way
+    call ComputePikachuFacingDirection
+    ret
+
+.copy_player_facing:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    mov [ebp + wSpritePikachuStateData1FacingDirection], al
+    ret
+
+.force_facing_down:
+    mov byte [ebp + wSpritePikachuStateData1FacingDirection], SPRITE_FACING_DOWN
+    ret
+
+.face_the_other_way:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    xor al, 0x04
+    mov [ebp + wSpritePikachuStateData1FacingDirection], al
+    ret
+
+; ===========================================================================
+; SetPikachuSpawnOutside — pret pikachu_follow.asm:SetPikachuSpawnOutside
+; ===========================================================================
+SetPikachuSpawnOutside:
+    mov al, [ebp + wCurMap]
+    cmp al, OAKS_LAB
+    jz .oaks_lab
+    cmp al, ROUTE_22_GATE
+    jz .route_22_gate
+    cmp al, MT_MOON_B1F
+    jz .mt_moon_2
+    cmp al, ROCK_TUNNEL_1F
+    jz .rock_tunnel_1
+    mov al, [ebp + wCurMap]
+    mov esi, Pointer_fc64b
+    sub esi, ebp                        ; Pass ESI so [ebp + esi] in Pikachu_IsInArray reads flat Pointer_fc64b
+    call Pikachu_IsInArray
+    jc .map_list_1
+    mov al, [ebp + wCurMap]
+    mov esi, Pointer_fc653
+    sub esi, ebp                        ; Pass ESI so [ebp + esi] in Pikachu_IsInArray reads flat Pointer_fc653
+    call Pikachu_IsInArray
+    jnc .not_map_list_2
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    and al, al
+    jnz .not_map_list_2
+    mov al, 0x03
+    jmp .load
+
+.route_22_gate:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    and al, al
+    jz .rock_tunnel_1
+    jmp .not_map_list_2
+
+.mt_moon_2:
+    mov al, 0x03
+    jmp .load
+
+.map_list_1:
+    mov al, 0x04
+    jmp .load
+
+.oaks_lab:
+    mov al, 0x06
+    jmp .load
+
+.not_map_list_2:
+    mov al, 0x01
+    jmp .load
+
+.rock_tunnel_1:
+    mov al, 0x03
+.load:
+    mov [ebp + wPikachuSpawnState], al
+    ret
+
+Pointer_fc64b:
+    db VICTORY_ROAD_2F
+    db ROUTE_7_GATE
+    db ROUTE_8_GATE
+    db ROUTE_16_GATE_1F
+    db ROUTE_18_GATE_1F
+    db ROUTE_15_GATE_1F
+    db ROUTE_11_GATE_1F
+    db 0xFF
+
+Pointer_fc653:
+    db VIRIDIAN_FOREST_NORTH_GATE
+    db CERULEAN_BADGE_HOUSE
+    db CERULEAN_TRASHED_HOUSE
+    db VERMILION_DOCK
+    db CELADON_MANSION_1F
+    db ROUTE_2_GATE
+    db FUCHSIA_GOOD_ROD_HOUSE
+    db 0xFF
+
+; ===========================================================================
+; SetPikachuSpawnWarpPad — pret pikachu_follow.asm:SetPikachuSpawnWarpPad
+; ===========================================================================
+SetPikachuSpawnWarpPad:
+    mov al, [ebp + wCurMap]
+    cmp al, VIRIDIAN_FOREST_NORTH_GATE
+    jz .viridian_forest_exit
+    cmp al, VIRIDIAN_FOREST_SOUTH_GATE
+    jz .viridian_forest_entrance
+    mov al, [ebp + wCurMap]
+    mov esi, Pointer_fc68e
+    sub esi, ebp                        ; Pass ESI so [ebp + esi] in Pikachu_IsInArray reads flat Pointer_fc68e
+    call Pikachu_IsInArray
+    jc .in_array
+    jmp .not_in_array
+
+.viridian_forest_exit:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_UP
+    jz .in_array
+    jmp .not_in_array
+
+.viridian_forest_entrance:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    and al, al                          ; SPRITE_FACING_DOWN
+    jz .not_in_array
+    jmp .in_array
+
+.not_in_array:
+    mov al, 0x00
+    jmp .load_spawn_state
+
+.in_array:
+    mov al, 0x01
+.load_spawn_state:
+    mov [ebp + wPikachuSpawnState], al
+    ret
+
+Pointer_fc68e:
+    db VIRIDIAN_FOREST
+    db SAFARI_ZONE_CENTER_REST_HOUSE
+    db SAFARI_ZONE_WEST_REST_HOUSE
+    db SAFARI_ZONE_EAST_REST_HOUSE
+    db SAFARI_ZONE_NORTH_REST_HOUSE
+    db SAFARI_ZONE_SECRET_HOUSE
+    db SILPH_CO_ELEVATOR
+    db CELADON_MART_ELEVATOR
+    db CINNABAR_LAB_TRADE_ROOM
+    db CINNABAR_LAB_METRONOME_ROOM
+    db CINNABAR_LAB_FOSSIL_ROOM
+    db 0xFF
+
+; ===========================================================================
+; SetPikachuSpawnBackOutside — pret pikachu_follow.asm:SetPikachuSpawnBackOutside
+; ===========================================================================
+SetPikachuSpawnBackOutside:
+    mov al, [ebp + wCurMap]
+    cmp al, ROUTE_22_GATE
+    jz .asm_fc6a7
+    cmp al, ROUTE_2_GATE
+    jz .asm_fc6b0
+    jmp .asm_fc6bd
+
+.asm_fc6a7:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_UP
+    jz .asm_fc6b9
+    jmp .asm_fc6bd
+
+.asm_fc6b0:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_UP
+    jz .asm_fc6b9
+    jmp .asm_fc6bd
+
+.asm_fc6b9:
+    mov al, 0x01
+    jmp .asm_fc6c1
+
+.asm_fc6bd:
+    mov al, 0x03
+    jmp .asm_fc6c1
+
+.asm_fc6c1:
+    mov [ebp + wPikachuSpawnState], al
+    ret
+
+; ===========================================================================
+; SetPikachuOverworldStateFlag2 — pret pikachu_follow.asm:SetPikachuOverworldStateFlag2
+; ===========================================================================
+SetPikachuOverworldStateFlag2:
+    or byte [ebp + wPikachuOverworldStateFlags], 0x04   ; set 2, [hl]
+    ret
+
+; ===========================================================================
+; ResetPikachuOverworldStateFlag2 — pret pikachu_follow.asm:ResetPikachuOverworldStateFlag2
+; ===========================================================================
+ResetPikachuOverworldStateFlag2:
+    and byte [ebp + wPikachuOverworldStateFlags], ~0x04 ; res 2, [hl]
+    ret
+
+; ===========================================================================
+; SpawnPikachu_ / _SpawnPikachu — pret engine/pikachu/pikachu_follow.asm:SpawnPikachu_
+; ===========================================================================
+SpawnPikachu_:
     call ResetPikachuOverworldStateFlag2
     call TrySpawnPikachu
-    jnc .ret                                           ; ret nc (default path exits here)
-    ; TODO(M9.1 follow-up): WillPikachuSpawnOnTheScreen + PointerTable_fc710 state
-    ; handlers (RefreshPikachuFollow, UpdatePikachuWalkingSprite, Normal/Fast follow,
-    ; ...). Requires staged Pikachu overworld sprite tiles. Unreachable while the
-    ; follower is disabled, so the default overworld is unaffected.
+    jnc .ret
+    push ebx
+    call WillPikachuSpawnOnTheScreen
+    pop ebx
+    jc .ret
+
+    mov ebx, wSpriteStateData1 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    test byte [ebp + esi], 0x80         ; bit 7, [hl]
+    jnz Func_fc745
+    mov al, [ebp + wFontLoaded]
+    test al, (1 << BIT_FONT_LOADED)
+    jnz Func_fc76a
+    call CheckPikachuFollowingPlayer
+    jnz Func_fc76a
+    mov al, [ebp + esi]
+    and al, 0x7F
+    cmp al, 10
+    jb .valid
+    xor al, al
+.valid:
+    movzx eax, al
+    jmp [PointerTable_fc710 + eax*4]
 .ret:
     ret
 
-; TrySpawnPikachu — pret pikachu_follow.asm:TrySpawnPikachu. If Pikachu should not
-; spawn, blank its sprite state and return carry clear. If it should and is not yet
-; spawned, compute its spawn coords/facing (; SCAFFOLD: DEFERRED — the spawn-coord calc
-; is unreachable while the follower is disabled); then return carry set.
+_SpawnPikachu:
+    jmp SpawnPikachu_
+
+PointerTable_fc710:
+    dd Func_fc793
+    dd Func_fc7aa
+    dd Func_fc803
+    dd asm_fc9c3
+    dd asm_fca1c
+    dd asm_fc9ee
+    dd asm_fc87f
+    dd asm_fc904
+    dd asm_fc937
+    dd asm_fc969
+    dd .nop
+
+.nop:
+    ret
+
+; ===========================================================================
+; TrySpawnPikachu — pret pikachu_follow.asm:TrySpawnPikachu
+; ===========================================================================
 TrySpawnPikachu:
     call ShouldPikachuSpawn
     jnc .dont_spawn
     mov al, [ebp + wSpritePikachuStateData1MovementStatus]
     and al, al
     jnz .already_spawned
-    ; TODO(M9.1 follow-up): CalculatePikachuSpawnCoordsAndFacing (deep follow calc,
-    ; unreachable while the follower is disabled).
+    push ebx
+    push esi
+    call CalculatePikachuSpawnCoordsAndFacing
+    pop esi
+    pop ebx
 .already_spawned:
     stc
     ret
 .dont_spawn:
-    ; ld hl, wSpritePikachuStateData1ImageIndex; ld [hl],$ff; dec hl; ld [hl],$0
     mov byte [ebp + wSpritePikachuStateData1ImageIndex], 0xFF
-    mov byte [ebp + wSpritePikachuStateData1MovementStatus], 0 ; the byte before ImageIndex
-    xor al, al                                                 ; xor a (carry clear)
+    mov byte [ebp + wSpritePikachuStateData1MovementStatus], 0
+    xor al, al
+    ret
+
+; ===========================================================================
+; Func_fc745 — pret pikachu_follow.asm:Func_fc745
+; ===========================================================================
+Func_fc745:
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    and byte [ebp + esi], ~0x80         ; res 7, [hl]
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov [ebp + esi], al                 ; ld [hl], a
+    call CheckPikachuFollowingPlayer
+    jnz .okay
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    xor al, 0x04
+    mov esi, wSpritePikachuStateData1FacingDirection - wSpritePikachuStateData1
+    add esi, ebx
+    mov [ebp + esi], al
+.okay:
+    xor al, al
+    mov esi, wSpritePikachuStateData1IntraAnimFrameCounter - wSpritePikachuStateData1
+    add esi, ebx
+    mov [ebp + esi], al
+    mov [ebp + esi + 1], al
+    call UpdatePikachuWalkingSprite
+    ret
+
+; ===========================================================================
+; Func_fc76a — pret pikachu_follow.asm:Func_fc76a
+; ===========================================================================
+Func_fc76a:
+    xor al, al
+    mov esi, wSpritePikachuStateData1IntraAnimFrameCounter - wSpritePikachuStateData1
+    add esi, ebx
+    mov [ebp + esi], al
+    mov [ebp + esi + 1], al
+    call UpdatePikachuWalkingSprite
+    call Func_fc82e
+    jc .skip
+    push ebx
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
+    call InitializeSpriteScreenPosition
+    pop ebx
+.skip:
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x01
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x00
+    call RefreshPikachuFollow
+    ret
+
+; ===========================================================================
+; Func_fc793 — pret pikachu_follow.asm:Func_fc793 (State 0)
+; ===========================================================================
+Func_fc793:
+    call RefreshPikachuFollow
+    push ebx
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
+    call InitializeSpriteScreenPosition
+    pop ebx
+    mov esi, wSpritePikachuStateData1ImageIndex - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0xFF          ; ld [hl], $ff
+    dec esi
+    mov byte [ebp + esi], 0x01          ; dec hl; ld [hl], $1
+    ret
+
+; ===========================================================================
+; Func_fc7aa — pret pikachu_follow.asm:Func_fc7aa (State 1)
+; ===========================================================================
+Func_fc7aa:
+    call Func_fcc92
+    jc Func_fc803
+    dec al                              ; 0-based command index
+    movzx edx, al
+    shl edx, 2                          ; index * 4
+    mov al, [Pointer_fc7e3 + edx]
+    mov [ebp + ebx + SPRITESTATEDATA1_FACINGDIRECTION], al
+    mov al, [Pointer_fc7e3 + edx + 1]
+    mov [ebp + ebx + SPRITESTATEDATA1_XSTEPVECTOR], al
+    mov al, [Pointer_fc7e3 + edx + 2]
+    mov [ebp + ebx + SPRITESTATEDATA1_YSTEPVECTOR], al
+    mov al, [Pointer_fc7e3 + edx + 3]
+    mov [ebp + ebx + SPRITESTATEDATA1_MOVEMENTSTATUS], al
+    cmp al, 0x04
+    jz Func_fca0a
+    call AreThereAtLeastTwoStepsInPikachuFollowCommandBuffer
+    jc FastPikachuFollow
+    jmp NormalPikachuFollow
+
+Pointer_fc7e3:
+    db  0,  0,  1,  3
+    db  4,  0, -1,  3
+    db  8, -1,  0,  3
+    db 12,  1,  0,  3
+    db  0,  0,  1,  4
+    db  4,  0, -1,  4
+    db  8, -1,  0,  4
+    db 12,  1,  0,  4
+
+; ===========================================================================
+; Func_fc803 — pret pikachu_follow.asm:Func_fc803 (State 2)
+; ===========================================================================
+Func_fc803:
+    call Func_fcae2
+    jc .ret
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    dec byte [ebp + esi]
+    jnz .asm_fc823
+    push esi
+    call GetPikachuFollowCommand
+    pop esi
+    cmp al, 0x05
+    jae Func_fc842
+    mov byte [ebp + esi], 0x20
+    call Random
+    and al, 0x0C
+    mov esi, wSpritePikachuStateData1FacingDirection - wSpritePikachuStateData1
+    add esi, ebx
+    mov [ebp + esi], al
+.asm_fc823:
+    xor al, al
+    mov esi, wSpritePikachuStateData1IntraAnimFrameCounter - wSpritePikachuStateData1
+    add esi, ebx
+    mov [ebp + esi], al
+    mov [ebp + esi + 1], al
+    call UpdatePikachuWalkingSprite
+.ret:
+    ret
+
+; ===========================================================================
+; Func_fc82e — pret pikachu_follow.asm:Func_fc82e
+; ===========================================================================
+Func_fc82e:
+    mov al, [ebp + wWalkCounter]
+    and al, al
+    jz .ret
+    stc
+.ret:
+    ret
+
+; ===========================================================================
+; Func_fc835 — pret pikachu_follow.asm:Func_fc835
+; ===========================================================================
+Func_fc835:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x10
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x01
+    ret
+
+; ===========================================================================
+; Func_fc842 — pret pikachu_follow.asm:Func_fc842
+; ===========================================================================
+Func_fc842:
+    push eax
+    call Random
+    mov al, [ebp + hRandomAdd]
+    and al, 0x03
+    movzx edx, al
+    pop eax
+    jmp [PointerTable_fc85a + edx*4]
+
+PointerTable_fc85a:
+    dd Func_fc862
+    dd Func_fc8f8
+    dd Func_fc92b
+    dd Func_fc95d
+
+; ===========================================================================
+; Func_fc862 & asm_fc87f & Func_fc8c7 — pret pikachu_follow.asm (State 6)
+; ===========================================================================
+Func_fc862:
+    dec al
+    add al, al
+    add al, al
+    and al, 0x0C
+    mov esi, wSpritePikachuStateData1FacingDirection - wSpritePikachuStateData1
+    add esi, ebx
+    mov [ebp + esi], al
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x06
+    xor al, al
+    mov [ebp + wd431], al
+    mov [ebp + wd432], al
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x11
+asm_fc87f:
+    mov dl, [ebp + wd431]               ; e
+    mov dh, [ebp + wd432]               ; d
+    call Func_fc82e
+    jc Func_fc8c7
+    call SetPikachuOverworldStateFlag2
+    mov al, [ebp + ebx + SPRITESTATEDATA1_YPIXELS]
+    sub al, dl
+    mov cl, al                          ; base Y
+    mov al, [ebp + ebx + SPRITESTATEDATA1_XPIXELS]
+    sub al, dh
+    mov ch, al                          ; base X
+
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    movzx edx, byte [ebp + esi]
+    dec dl                              ; dec a
+    mov al, [Pointer_fc8d6 + edx*2]
+    mov [ebp + wd431], al
+    add al, cl
+    mov [ebp + ebx + SPRITESTATEDATA1_YPIXELS], al
+
+    mov al, [Pointer_fc8d6 + edx*2 + 1]
+    mov [ebp + wd432], al
+    add al, ch
+    mov [ebp + ebx + SPRITESTATEDATA1_XPIXELS], al
+
+    dec byte [ebp + esi]
+    jnz .ret
+    jmp Func_fc835
+.ret:
+    ret
+
+Func_fc8c7:
+    mov al, [ebp + ebx + SPRITESTATEDATA1_YPIXELS]
+    sub al, dl
+    mov [ebp + ebx + SPRITESTATEDATA1_YPIXELS], al
+    mov al, [ebp + ebx + SPRITESTATEDATA1_XPIXELS]
+    sub al, dh
+    mov [ebp + ebx + SPRITESTATEDATA1_XPIXELS], al
+    jmp Func_fc835
+
+Pointer_fc8d6:
+    db  0,  0
+    db -2,  1
+    db -4,  2
+    db -2,  3
+    db  0,  4
+    db -2,  3
+    db -4,  2
+    db -2,  1
+    db  0,  0
+    db -2, -1
+    db -4, -2
+    db -2, -3
+    db  0, -4
+    db -2, -3
+    db -4, -2
+    db -2, -1
+    db  0,  0
+
+; ===========================================================================
+; Func_fc8f8 & asm_fc904 — pret pikachu_follow.asm (State 7)
+; ===========================================================================
+Func_fc8f8:
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x07
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x30
+asm_fc904:
+    call Func_fc82e
+    jc Func_fc835
+    call SetPikachuOverworldStateFlag2
+    mov esi, wSpritePikachuStateData1IntraAnimFrameCounter - wSpritePikachuStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    inc al
+    cmp al, 0x08
+    mov [ebp + esi], al
+    jnz .asm_fc91f
+    xor al, al
+    mov [ebp + esi], al
+    inc esi
+    mov al, [ebp + esi]
+    inc al
+    and al, 0x03
+    mov [ebp + esi], al
+.asm_fc91f:
+    call UpdatePikachuWalkingSprite
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    dec byte [ebp + esi]
+    jnz .ret
+    jmp Func_fc835
+.ret:
+    ret
+
+; ===========================================================================
+; Func_fc92b & asm_fc937 — pret pikachu_follow.asm (State 8)
+; ===========================================================================
+Func_fc92b:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x20
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x08
+asm_fc937:
+    call Func_fc82e
+    jc Func_fc835
+    call SetPikachuOverworldStateFlag2
+    mov esi, wSpritePikachuStateData1IntraAnimFrameCounter - wSpritePikachuStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    inc al
+    cmp al, 0x08
+    mov [ebp + esi], al
+    jnz .asm_fc951
+    xor al, al
+    mov [ebp + esi], al
+    inc esi
+    mov al, [ebp + esi]
+    xor al, 0x01
+    mov [ebp + esi], al
+.asm_fc951:
+    call UpdatePikachuWalkingSprite
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    dec byte [ebp + esi]
+    jnz .ret
+    jmp Func_fc835
+.ret:
+    ret
+
+; ===========================================================================
+; Func_fc95d & asm_fc969 — pret pikachu_follow.asm (State 9)
+; ===========================================================================
+Func_fc95d:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x20
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x09
+asm_fc969:
+    call Func_fc82e
+    jc Func_fc835
+    call SetPikachuOverworldStateFlag2
+    mov esi, wSpritePikachuStateData1IntraAnimFrameCounter - wSpritePikachuStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    inc al
+    cmp al, 0x08
+    mov [ebp + esi], al
+    jnz .skip
+    xor al, al
+    mov [ebp + esi], al
+    mov esi, wSpritePikachuStateData1FacingDirection - wSpritePikachuStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    call .TurnClockwise
+    mov [ebp + esi], al
+.skip:
+    call UpdatePikachuWalkingSprite
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    dec byte [ebp + esi]
+    jnz .ret
+    jmp Func_fc835
+.ret:
+    ret
+
+.TurnClockwise:
+    push esi
+    mov esi, .Facings
+    mov dh, al
+.loop:
+    mov al, [esi]
+    inc esi
+    cmp al, dh
+    jnz .loop
+    mov al, [esi]
+    pop esi
+    ret
+
+.TurnCounterclockwise:
+    push esi
+    mov esi, .Facings_End
+    mov dh, al
+.loop_:
+    mov al, [esi]
+    dec esi
+    cmp al, dh
+    jnz .loop_
+    mov al, [esi]
+    pop esi
+    ret
+
+.Facings:
+    db SPRITE_FACING_DOWN, SPRITE_FACING_LEFT, SPRITE_FACING_UP, SPRITE_FACING_RIGHT
+    db SPRITE_FACING_DOWN, SPRITE_FACING_LEFT, SPRITE_FACING_UP, SPRITE_FACING_RIGHT
+.Facings_End: equ $ - 1
+
+; ===========================================================================
+; NormalPikachuFollow & asm_fc9c3 — pret pikachu_follow.asm (State 3)
+; ===========================================================================
+NormalPikachuFollow:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x08
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x03
+    call AddPikachuStepVector
+asm_fc9c3:
+    call TryDoubleAddPikachuStepVectorToScreenPixelCoords
+    call GetPikachuWalkingAnimationSpeed
+    call UpdatePikachuWalkingSprite
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    dec byte [ebp + esi]
+    jnz .ret
+    call ResetPikachuStepVector
+    call ComputePikachuFacingDirection
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x01
+.ret:
+    ret
+
+; ===========================================================================
+; FastPikachuFollow & asm_fc9ee — pret pikachu_follow.asm (State 5)
+; ===========================================================================
+FastPikachuFollow:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x04
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x05
+    call AddPikachuStepVector
+asm_fc9ee:
+    call DoubleAddPikachuStepVectorToScreenPixelCoords
+    call GetPikachuWalkingAnimationSpeed
+    call UpdatePikachuWalkingSprite
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    dec byte [ebp + esi]
+    jnz .ret
+    call ResetPikachuStepVector
+    call ComputePikachuFacingDirection
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x01
+.ret:
+    ret
+
+; ===========================================================================
+; Func_fca0a & asm_fca1c — pret pikachu_follow.asm (State 4)
+; ===========================================================================
+Func_fca0a:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x08
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x04
+    call AddPikachuStepVector
+    call AddPikachuStepVector
+asm_fca1c:
+    call DoubleAddPikachuStepVectorToScreenPixelCoords
+    call GetPikachuWalkingAnimationSpeed
+    call UpdatePikachuWalkingSprite
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
+    add esi, ebx
+    dec byte [ebp + esi]
+    jnz .ret
+    call ResetPikachuStepVector
+    call ComputePikachuFacingDirection
+    mov esi, wSpritePikachuStateData1MovementStatus - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0x01
+.ret:
+    ret
+
+; ===========================================================================
+; AddPikachuStepVector — pret pikachu_follow.asm:AddPikachuStepVector
+; ===========================================================================
+AddPikachuStepVector:
+    mov dl, [ebp + ebx + SPRITESTATEDATA1_YSTEPVECTOR]
+    mov dh, [ebp + ebx + SPRITESTATEDATA1_XSTEPVECTOR]
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    add al, dl
+    mov [ebp + esi], al
+    inc esi
+    mov al, [ebp + esi]
+    add al, dh
+    mov [ebp + esi], al
+    ret
+
+; ===========================================================================
+; TryDoubleAddPikachuStepVectorToScreenPixelCoords / DoubleAdd / Add
+; ===========================================================================
+TryDoubleAddPikachuStepVectorToScreenPixelCoords:
+    mov al, [ebp + wWalkBikeSurfState]
+    cmp al, 0x01                        ; biking
+    jnz AddPikachuStepVectorToScreenPixelCoords
+    mov al, [ebp + wMovementFlags]
+    test al, (1 << BIT_LEDGE_OR_FISHING)
+    jnz AddPikachuStepVectorToScreenPixelCoords
+DoubleAddPikachuStepVectorToScreenPixelCoords:
+    mov al, [ebp + ebx + SPRITESTATEDATA1_YSTEPVECTOR]
+    shl al, 2
+    add al, [ebp + ebx + SPRITESTATEDATA1_YPIXELS]
+    mov [ebp + ebx + SPRITESTATEDATA1_YPIXELS], al
+
+    mov al, [ebp + ebx + SPRITESTATEDATA1_XSTEPVECTOR]
+    shl al, 2
+    add al, [ebp + ebx + SPRITESTATEDATA1_XPIXELS]
+    mov [ebp + ebx + SPRITESTATEDATA1_XPIXELS], al
+    ret
+
+AddPikachuStepVectorToScreenPixelCoords:
+    mov al, [ebp + ebx + SPRITESTATEDATA1_YSTEPVECTOR]
+    add al, al
+    add al, [ebp + ebx + SPRITESTATEDATA1_YPIXELS]
+    mov [ebp + ebx + SPRITESTATEDATA1_YPIXELS], al
+
+    mov al, [ebp + ebx + SPRITESTATEDATA1_XSTEPVECTOR]
+    add al, al
+    add al, [ebp + ebx + SPRITESTATEDATA1_XPIXELS]
+    mov [ebp + ebx + SPRITESTATEDATA1_XPIXELS], al
+    ret
+
+; ===========================================================================
+; ResetPikachuStepVector — pret pikachu_follow.asm:ResetPikachuStepVector
+; ===========================================================================
+ResetPikachuStepVector:
+    mov byte [ebp + ebx + SPRITESTATEDATA1_YSTEPVECTOR], 0
+    mov byte [ebp + ebx + SPRITESTATEDATA1_XSTEPVECTOR], 0
+    ret
+
+; ===========================================================================
+; GetPikachuWalkingAnimationSpeed — pret pikachu_follow.asm:GetPikachuWalkingAnimationSpeed
+; ===========================================================================
+GetPikachuWalkingAnimationSpeed:
+    call ComparePikachuHappinessTo80
+    mov dh, 0x02
+    jnc .happy
+    mov dh, 0x05
+.happy:
+    mov esi, wSpritePikachuStateData1IntraAnimFrameCounter - wSpritePikachuStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    inc al
+    cmp al, dh
+    jnz .dont_reset
+    xor al, al
+.dont_reset:
+    mov [ebp + esi], al
+    jnz .ret
+    inc esi
+    mov al, [ebp + esi]
+    inc al
+    and al, 0x03
+    mov [ebp + esi], al
+.ret:
+    ret
+
+; ===========================================================================
+; UpdatePikachuWalkingSprite — pret pikachu_follow.asm:UpdatePikachuWalkingSprite
+; ===========================================================================
+UpdatePikachuWalkingSprite:
+    test byte [ebp + wPikachuOverworldStateFlags], 0x08 ; bit 3
+    jnz .uninitialized
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    dec al
+    ror al, 4                           ; swap a
+    mov dh, al                          ; d = (ImageBaseOffset - 1) << 4
+    mov al, [ebp + wMovementFlags]
+    test al, (1 << BIT_SPINNING)
+    jnz .copy_player
+    mov esi, wSpritePikachuStateData1FacingDirection - wSpritePikachuStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    or dh, al                           ; d |= FacingDirection
+    mov al, [ebp + wFontLoaded]
+    test al, (1 << BIT_FONT_LOADED)
+    jz .normal_get_sprite_index
+    call Func_fcae2
+    jc .ret
+    jmp .load_sprite_index
+
+.normal_get_sprite_index:
+    mov esi, wSpritePikachuStateData1AnimFrameCounter - wSpritePikachuStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    or dh, al                           ; d |= AnimFrameCounter
+
+.load_sprite_index:
+    mov esi, wSpritePikachuStateData1ImageIndex - wSpritePikachuStateData1
+    add esi, ebx
+    mov [ebp + esi], dh                 ; ImageIndex = d
+.ret:
+    ret
+
+.uninitialized:
+    mov esi, wSpritePikachuStateData1ImageIndex - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0xFF
+    ret
+
+.copy_player:
+    mov al, [ebp + wSpritePlayerStateData1ImageIndex]
+    and al, 0x0F
+    or al, dh
+    mov [ebp + wSpritePikachuStateData1ImageIndex], al
+    ret
+
+; ===========================================================================
+; Func_fcae2 — pret pikachu_follow.asm:Func_fcae2
+; ===========================================================================
+Func_fcae2:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + wYCoord]
+    add al, 4
+    cmp al, [ebp + esi]
+    jnz .on_screen
+    inc esi
+    mov al, [ebp + wXCoord]
+    add al, 4
+    cmp al, [ebp + esi]
+    jnz .on_screen
+    mov esi, wSpritePikachuStateData1ImageIndex - wSpritePikachuStateData1
+    add esi, ebx
+    mov byte [ebp + esi], 0xFF
+    stc
+    ret
+
+.on_screen:
+    clc
+    ret
+
+; ===========================================================================
+; IsPikachuRightNextToPlayer — pret pikachu_follow.asm:IsPikachuRightNextToPlayer
+; ===========================================================================
+IsPikachuRightNextToPlayer:
+    push ebx
+    push edx
+    push esi
+    mov ebx, wSpritePikachuStateData1PictureID
+    mov al, [ebp + wXCoord]
+    add al, 4
+    mov dh, al                          ; d = wXCoord + 4
+    mov al, [ebp + wYCoord]
+    add al, 4
+    mov dl, al                          ; e = wYCoord + 4
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    sub al, dl
+    jz .equal
+    cmp al, 0xFF
+    jz .one_away
+    cmp al, 0x01
+    jz .one_away
+    jmp .bad
+
+.one_away:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPX) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    sub al, dh
+    jz .good
+    jmp .bad
+
+.equal:
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPX) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + esi]
+    sub al, dh
+    cmp al, 0xFF
+    jz .good
+    cmp al, 0x01
+    jz .good
+    and al, al
+    jz .good
+    jmp .bad
+
+.good:
+    pop esi
+    pop edx
+    pop ebx
+    stc
+    ret
+
+.bad:
+    pop esi
+    pop edx
+    pop ebx
+    xor al, al
+    clc
     ret
 
 ; ===========================================================================
 ; GetPikachuFacingDirectionAndReturnToE — pret pikachu_follow.asm:1110
 ; GetPikachuFacingDirection             — pret pikachu_follow.asm:1115
-;
-; Answers "which way is Pikachu from the player?" as a SPRITE_FACING_* value
-; ($ff when Pikachu is standing on the player's own square). Y is tested first:
-; a Y mismatch decides the answer outright and X is never consulted, exactly as
-; pret does it.
-;
-; Out: AL = SPRITE_FACING_UP/DOWN/LEFT/RIGHT, or $ff (standing).
-;      GetPikachuFacingDirectionAndReturnToE additionally copies it to E (DL),
-;      which is what its one caller (TryApplyPikachuMovementData) compares
-;      against B.
-; Clobbers: BX (pret loads BC), DX (pret loads D/E), ESI (pret's HL).
-;
-; SYMBOLS: pret names two WRAM symbols this port's gb_memmap.inc does not carry
-; yet — wSpritePikachuStateData1PictureID and the
-; wSpritePlayerStateData2Map{Y,X} - wSpritePlayerStateData1 deltas. Rather than
-; invent a symbol or hard-code $C1F0/$104, both are written as arithmetic over
-; the constants gb_memmap.inc already defines, so they track the struct
-; definitions:
-;   wSpritePikachuStateData1PictureID
-;     = wSpriteStateData1 + PIKACHU_SPRITE_INDEX*SPRITESTATEDATA_STRUCT_SIZE
-;       + SPRITESTATEDATA1_PICTUREID                                  (= $C1F0)
-;   wSpritePlayerStateData2MapY - wSpritePlayerStateData1
-;     = (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1 (= $104)
-;
-; DEREFERENCES: every load is [ebp + ...] — wXCoord/wYCoord and the sprite state
-; arrays are all emulated GB memory. There is no flat program-image pointer in
-; this routine.
-;
-; FLAGS: pret's `cp e` / `jr z` / `jr nc` pair reads ZF then CF from the SAME
-; compare; `je` does not write flags, so the following `jae` still sees the
-; compare's CF. `cp` is unsigned on SM83, hence `jae` for `jr nc`.
 ; ===========================================================================
-global GetPikachuFacingDirectionAndReturnToE
-
 GetPikachuFacingDirectionAndReturnToE:
     call GetPikachuFacingDirection
     mov dl, al                          ; ld e, a
     ret
 
 GetPikachuFacingDirection:
-    ; ld bc, wSpritePikachuStateData1PictureID
-    mov ebx, wSpriteStateData1 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE + SPRITESTATEDATA1_PICTUREID
+    mov ebx, wSpritePikachuStateData1PictureID
     mov al, [ebp + wXCoord]
     add al, 4
     mov dh, al                          ; ld d, a
     mov al, [ebp + wYCoord]
     add al, 4
     mov dl, al                          ; ld e, a
-    ; ld hl, wSpritePlayerStateData2MapY - wSpritePlayerStateData1 / add hl, bc
     mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1
     add esi, ebx
     mov al, [ebp + esi]                 ; ld a, [hl] — Pikachu's map Y
@@ -238,7 +1370,6 @@ GetPikachuFacingDirection:
     ret
 
 .asm_fcb71:
-    ; ld hl, wSpritePlayerStateData2MapX - wSpritePlayerStateData1 / add hl, bc
     mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPX) - wSpriteStateData1
     add esi, ebx
     mov al, [ebp + esi]                 ; ld a, [hl] — Pikachu's map X
@@ -257,27 +1388,8 @@ GetPikachuFacingDirection:
     ret
 
 ; ===========================================================================
-; The follow-command buffer group — pret pikachu_follow.asm:1154-1255, in pret
-; order: ClearPikachuFollowCommandBuffer, AppendPikachuFollowCommandToBuffer,
-; RefreshPikachuFollow, ComputePikachuFollowCommand, CheckAbsoluteValueLessThan2.
-;
-; The "follow command" is a single byte describing where Pikachu is relative to
-; the player (1/2/3/4 = adjacent up/down/left/right-ish, 5/6/7/8 = the same
-; direction but two or more tiles away). RefreshPikachuFollow recomputes it and
-; leaves it as the sole entry of the command buffer.
+; ClearPikachuFollowCommandBuffer — pret pikachu_follow.asm:1154
 ; ===========================================================================
-
-; ---------------------------------------------------------------------------
-; ClearPikachuFollowCommandBuffer — pret pikachu_follow.asm:1154.
-;   push bc / ld hl, wPikachuFollowCommandBufferSize / ld [hl], $ff / inc hl
-;   ld bc, $10 / xor a / call FillMemory / pop bc / ret
-; Size starts at $ff so the first AppendPikachuFollowCommandToBuffer's `inc [hl]`
-; makes it 0, i.e. index 0 of the buffer.
-;
-; NOTE: pret's FillMemory advances HL past the filled range; the port's does not
-; (documented contract, src/home/copy2.asm). No caller of this routine reads HL
-; afterwards, so the difference is unobservable here.
-; ---------------------------------------------------------------------------
 ClearPikachuFollowCommandBuffer:
     push ebx                                            ; push bc
     mov esi, wPikachuFollowCommandBufferSize            ; ld hl, ...
@@ -289,14 +1401,9 @@ ClearPikachuFollowCommandBuffer:
     pop ebx                                             ; pop bc
     ret
 
-; ---------------------------------------------------------------------------
-; AppendPikachuFollowCommandToBuffer — pret pikachu_follow.asm:1165.
-;   ld hl, wPikachuFollowCommandBufferSize / inc [hl] / ld e, [hl] / ld d, 0
-;   ld hl, wPikachuFollowCommandBuffer / add hl, de / ld [hl], a / ret
-; In: AL = the command byte. Clobbers DX (pret's DE) and ESI (pret's HL).
-; No bounds check, exactly as pret: the buffer is 16 bytes and nothing here
-; stops the index running past it.
-; ---------------------------------------------------------------------------
+; ===========================================================================
+; AppendPikachuFollowCommandToBuffer — pret pikachu_follow.asm:1165
+; ===========================================================================
 AppendPikachuFollowCommandToBuffer:
     mov esi, wPikachuFollowCommandBufferSize            ; ld hl, wPikachuFollowCommandBufferSize
     inc byte [ebp + esi]                                ; inc [hl]
@@ -307,14 +1414,9 @@ AppendPikachuFollowCommandToBuffer:
     mov [ebp + esi], al                                 ; ld [hl], a
     ret
 
-; ---------------------------------------------------------------------------
-; RefreshPikachuFollow — pret pikachu_follow.asm:1175.
-;   call ClearPikachuFollowCommandBuffer
-;   call ComputePikachuFollowCommand
-;   ret c                       ; carry = "Pikachu is on the player's square"
-;   call AppendPikachuFollowCommandToBuffer
-;   ret
-; ---------------------------------------------------------------------------
+; ===========================================================================
+; RefreshPikachuFollow — pret pikachu_follow.asm:1175
+; ===========================================================================
 RefreshPikachuFollow:
     call ClearPikachuFollowCommandBuffer
     call ComputePikachuFollowCommand
@@ -323,30 +1425,11 @@ RefreshPikachuFollow:
 .ret:
     ret
 
-; ---------------------------------------------------------------------------
-; ComputePikachuFollowCommand — pret pikachu_follow.asm:1182.
-;
-; Y is decided first and, unless the Y difference is exactly zero, X is never
-; consulted — the same shape as GetPikachuFacingDirection above. The player's
-; wYCoord/wXCoord are compared in sprite-map space by adding 4.
-;
-; Out: AL = 1..8 with carry CLEAR (`and a`), or carry SET (`scf`) when Pikachu
-;      stands on the player's own square, in which case AL is undefined.
-;
-; SYMBOLS: same construction as GetPikachuFacingDirection — the pret symbol
-; wSpritePikachuStateData1PictureID and the
-; wSpritePlayerStateData2Map{Y,X} - wSpritePlayerStateData1 deltas are written
-; as arithmetic over the constants gb_memmap.inc already defines.
-;
-; FLAGS: `sub al, [..]` sets both ZF and CF; `je` does not write flags, so the
-; following `jb` still reads that same subtraction's CF, and so does
-; CheckAbsoluteValueLessThan2 (an x86 `call` writes no flags). SM83 `sub` is
-; unsigned, hence `jb` for `jr c`.
-; ---------------------------------------------------------------------------
+; ===========================================================================
+; ComputePikachuFollowCommand — pret pikachu_follow.asm:1182
+; ===========================================================================
 ComputePikachuFollowCommand:
-    ; ld bc, wSpritePikachuStateData1PictureID
-    mov ebx, wSpriteStateData1 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE + SPRITESTATEDATA1_PICTUREID
-    ; ld hl, wSpritePlayerStateData2MapY - wSpritePlayerStateData1 / add hl, bc
+    mov ebx, wSpritePikachuStateData1PictureID
     mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1
     add esi, ebx
     mov al, [ebp + wYCoord]             ; ld a, [wYCoord]
@@ -356,29 +1439,28 @@ ComputePikachuFollowCommand:
     jb .pikaAbovePlayer                 ; jr c
     call CheckAbsoluteValueLessThan2
     jb .return1                         ; jr c
-    mov al, 0x5
+    mov al, 0x05
     and al, al
     ret
 
 .return1:
-    mov al, 0x1
+    mov al, 0x01
     and al, al
     ret
 
 .pikaAbovePlayer:
     call CheckAbsoluteValueLessThan2
     jb .return2                         ; jr c
-    mov al, 0x6
+    mov al, 0x06
     and al, al
     ret
 
 .return2:
-    mov al, 0x2
+    mov al, 0x02
     and al, al
     ret
 
 .checkXCoord:
-    ; ld hl, wSpritePlayerStateData2MapX - wSpritePlayerStateData1 / add hl, bc
     mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPX) - wSpriteStateData1
     add esi, ebx
     mov al, [ebp + wXCoord]             ; ld a, [wXCoord]
@@ -388,24 +1470,24 @@ ComputePikachuFollowCommand:
     jb .pikaToLeftOfPlayer              ; jr c
     call CheckAbsoluteValueLessThan2
     jb .return4                         ; jr c
-    mov al, 0x8
+    mov al, 0x08
     and al, al
     ret
 
 .return4:
-    mov al, 0x4
+    mov al, 0x04
     and al, al
     ret
 
 .pikaToLeftOfPlayer:
     call CheckAbsoluteValueLessThan2
     jb .return3                         ; jr c
-    mov al, 0x7
+    mov al, 0x07
     and al, al
     ret
 
 .return3:
-    mov al, 0x3
+    mov al, 0x03
     and al, al
     ret
 
@@ -413,18 +1495,343 @@ ComputePikachuFollowCommand:
     stc                                 ; scf
     ret
 
-; ---------------------------------------------------------------------------
-; CheckAbsoluteValueLessThan2 — pret pikachu_follow.asm:1249.
-;   jr nc, .positive / cpl / inc a / .positive: cp $2 / ret
-; In:  AL = a signed difference, CF = the borrow of the subtraction that made it.
-; Out: CF set iff |AL| < 2. AL negated in place when it was negative.
-; `not` writes no flags on x86 and `inc` preserves CF, so the sequence carries
-; the same flag semantics as pret's `cpl` / `inc a`.
-; ---------------------------------------------------------------------------
+; ===========================================================================
+; CheckAbsoluteValueLessThan2 — pret pikachu_follow.asm:1249
+; ===========================================================================
 CheckAbsoluteValueLessThan2:
     jae .positive                       ; jr nc
     not al                              ; cpl
     inc al                              ; inc a
 .positive:
-    cmp al, 0x2                         ; cp $2
+    cmp al, 0x02                        ; cp $2
+    ret
+
+; ===========================================================================
+; Func_fcc08 — pret pikachu_follow.asm:Func_fcc08
+; ===========================================================================
+Func_fcc08:
+    call Func_fcc23
+    jnc .ret
+    mov al, [ebp + wMovementFlags]
+    test al, (1 << BIT_LEDGE_OR_FISHING)
+    jnz .asm_fcc1b
+    call Func_fcc42
+    jc .ret
+    call AppendPikachuFollowCommandToBuffer
+    ret
+
+.asm_fcc1b:
+    call Func_fcc64
+    jc .ret
+    call AppendPikachuFollowCommandToBuffer
+.ret:
+    ret
+
+; ===========================================================================
+; Func_fcc23 — pret pikachu_follow.asm:Func_fcc23
+; ===========================================================================
+Func_fcc23:
+    test byte [ebp + wPikachuOverworldStateFlags], 0x20  ; bit 5
+    jnz .asm_fcc40
+    test byte [ebp + wPikachuOverworldStateFlags], 0x80  ; bit 7
+    jnz .asm_fcc40
+    test byte [ebp + wPikachuSpawnStateFlags], (1 << BIT_PIKACHU_SPAWN_STARTER)
+    jz .asm_fcc40
+    mov al, [ebp + wWalkBikeSurfState]
+    and al, al
+    jnz .asm_fcc40
+    stc
+    ret
+
+.asm_fcc40:
+    clc
+    ret
+
+; ===========================================================================
+; Func_fcc42 — pret pikachu_follow.asm:Func_fcc42
+; ===========================================================================
+Func_fcc42:
+    mov al, [ebp + wPlayerDirection]
+    test al, (1 << PLAYER_DIR_BIT_UP)
+    jnz .asm_fcc58
+    test al, (1 << PLAYER_DIR_BIT_DOWN)
+    jnz .asm_fcc5b
+    test al, (1 << PLAYER_DIR_BIT_LEFT)
+    jnz .asm_fcc5e
+    test al, (1 << PLAYER_DIR_BIT_RIGHT)
+    jnz .asm_fcc61
+    stc
+    ret
+
+.asm_fcc58:
+    mov al, 0x02
+    clc
+    ret
+
+.asm_fcc5b:
+    mov al, 0x01
+    clc
+    ret
+
+.asm_fcc5e:
+    mov al, 0x03
+    clc
+    ret
+
+.asm_fcc61:
+    mov al, 0x04
+    clc
+    ret
+
+; ===========================================================================
+; Func_fcc64 — pret pikachu_follow.asm:Func_fcc64
+; ===========================================================================
+Func_fcc64:
+    test byte [ebp + wPikachuOverworldStateFlags], 0x40 ; bit 6
+    jz .asm_fcc6e
+    and byte [ebp + wPikachuOverworldStateFlags], ~0x40 ; res 6
+    stc                                                 ; CF=1 so caller's ret c fires
+    ret
+
+.asm_fcc6e:
+    or byte [ebp + wPikachuOverworldStateFlags], 0x40   ; set 6
+    mov al, [ebp + wPlayerDirection]
+    test al, (1 << PLAYER_DIR_BIT_UP)
+    jnz .asm_fcc86
+    test al, (1 << PLAYER_DIR_BIT_DOWN)
+    jnz .asm_fcc89
+    test al, (1 << PLAYER_DIR_BIT_LEFT)
+    jnz .asm_fcc8c
+    test al, (1 << PLAYER_DIR_BIT_RIGHT)
+    jnz .asm_fcc8f
+    stc
+    ret
+
+.asm_fcc86:
+    mov al, 0x06
+    clc
+    ret
+
+.asm_fcc89:
+    mov al, 0x05
+    clc
+    ret
+
+.asm_fcc8c:
+    mov al, 0x07
+    clc
+    ret
+
+.asm_fcc8f:
+    mov al, 0x08
+    clc
+    ret
+
+; ===========================================================================
+; Func_fcc92 — pret pikachu_follow.asm:Func_fcc92
+; ===========================================================================
+Func_fcc92:
+    mov esi, wPikachuFollowCommandBufferSize
+    mov al, [ebp + esi]
+    cmp al, 0xFF
+    jz .asm_fccb0
+    and al, al
+    jz .asm_fccb0
+    dec byte [ebp + esi]                ; dec [hl]
+    movzx ecx, al                       ; ecx = old size
+    mov dl, al                          ; dl = old size
+    mov esi, wPikachuFollowCommandBuffer
+    add esi, ecx                        ; esi = buffer + old size
+    inc dl                              ; count = old size + 1
+    mov al, 0xFF
+.asm_fcca8:
+    mov dh, [ebp + esi]                 ; d = [hl]
+    mov [ebp + esi], al                 ; [hl] = a
+    dec esi                             ; hld
+    mov al, dh                          ; a = d
+    dec dl                              ; dec e
+    jnz .asm_fcca8
+    and al, al                          ; clears CF
+    ret
+
+.asm_fccb0:
+    stc
+    ret
+
+; ===========================================================================
+; ComputePikachuFacingDirection — pret pikachu_follow.asm:ComputePikachuFacingDirection
+; ===========================================================================
+ComputePikachuFacingDirection:
+    call GetPikachuFollowCommandIfBufferSizeNonzero
+    and al, al
+    jz .check_y
+    dec al
+    and al, 0x03
+    shl al, 2                           ; add a; add a
+    jmp .load
+
+.check_y:
+    mov al, [ebp + wYCoord]
+    add al, 4
+    mov dh, al                          ; d = wYCoord + 4
+    mov al, [ebp + wXCoord]
+    add al, 4
+    mov dl, al                          ; e = wXCoord + 4
+    mov al, [ebp + wSpritePikachuStateData2MapY]
+    cmp al, dh
+    jz .check_x
+    jb .pika_facing_down                ; jr c
+    mov al, SPRITE_FACING_UP
+    jmp .load
+.pika_facing_down:
+    mov al, SPRITE_FACING_DOWN
+    jmp .load
+
+.check_x:
+    mov al, [ebp + wSpritePikachuStateData2MapX]
+    cmp al, dl
+    jz .copy_from_player
+    jb .pika_facing_right               ; jr c
+    mov al, SPRITE_FACING_LEFT
+    jmp .load
+.pika_facing_right:
+    mov al, SPRITE_FACING_RIGHT
+    jmp .load
+
+.copy_from_player:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+.load:
+    mov [ebp + wSpritePikachuStateData1FacingDirection], al
+    ret
+
+; ===========================================================================
+; GetPikachuFollowCommand — pret pikachu_follow.asm:GetPikachuFollowCommand
+; ===========================================================================
+GetPikachuFollowCommand:
+    mov al, [ebp + wPikachuFollowCommandBufferSize]
+    cmp al, 0xFF
+    jz .asm_fccff
+    movzx edx, al
+    mov al, [ebp + wPikachuFollowCommandBuffer + edx]
+    ret
+.asm_fccff:
+    xor al, al
+    ret
+
+; ===========================================================================
+; GetPikachuFollowCommandIfBufferSizeNonzero — pret pikachu_follow.asm
+; ===========================================================================
+GetPikachuFollowCommandIfBufferSizeNonzero:
+    mov al, [ebp + wPikachuFollowCommandBufferSize]
+    cmp al, 0xFF
+    jz .default
+    and al, al
+    jz .default
+    movzx edx, al
+    mov al, [ebp + wPikachuFollowCommandBuffer + edx]
+    ret
+.default:
+    xor al, al
+    ret
+
+; ===========================================================================
+; AreThereAtLeastTwoStepsInPikachuFollowCommandBuffer — pret pikachu_follow.asm
+; ===========================================================================
+AreThereAtLeastTwoStepsInPikachuFollowCommandBuffer:
+    mov al, [ebp + wPikachuFollowCommandBufferSize]
+    cmp al, 0xFF
+    jz .no_steps
+    cmp al, 0x02
+    jae .set_carry
+.no_steps:
+    clc
+    ret
+.set_carry:
+    stc
+    ret
+
+; ===========================================================================
+; WillPikachuSpawnOnTheScreen — pret pikachu_follow.asm:WillPikachuSpawnOnTheScreen
+; ===========================================================================
+WillPikachuSpawnOnTheScreen:
+    movzx esi, byte [ebp + hCurrentSpriteOffset]        ; $F0
+    mov bl, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
+    mov al, [ebp + wYCoord]
+    cmp al, bl
+    jz .same_y
+    jae .not_on_screen
+    add al, (18 / 2) - 1                                ; 8 (SCREEN_HEIGHT / 2 - 1)
+    cmp al, bl
+    jb .not_on_screen
+
+.same_y:
+    mov bl, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
+    mov al, [ebp + wXCoord]
+    cmp al, bl
+    jz .same_x
+    jae .not_on_screen
+    add al, (20 / 2) - 1                                ; 9 (SCREEN_WIDTH / 2 - 1)
+    cmp al, bl
+    jb .not_on_screen
+
+.same_x:
+    call .GetNPCCurrentTile
+    mov dh, 0x60
+    mov al, [ebp + esi]                                 ; ld a, [hli]
+    inc esi
+    mov dl, al                                          ; ld e, a
+    cmp al, dh
+    jae .not_on_screen
+    mov al, [ebp + esi]                                 ; ld a, [hld]
+    dec esi
+    cmp al, dh
+    jae .not_on_screen
+    sub esi, SCREEN_WIDTH                               ; ld bc, -SCREEN_WIDTH; add hl, bc
+    mov al, [ebp + esi]                                 ; ld a, [hli]
+    inc esi
+    cmp al, dh
+    jae .not_on_screen
+    mov al, [ebp + esi]                                 ; ld a, [hl]
+    cmp al, dh
+    jb .on_screen
+
+.not_on_screen:
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF
+    stc
+    ret
+
+.on_screen:
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
+    mov al, [ebp + wGrassTile]
+    cmp al, dl                                          ; cp e
+    mov al, 0
+    jnz .priority
+    mov al, 0x80
+.priority:
+    mov [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_GRASSPRIORITY], al
+    clc
+    ret
+
+.GetNPCCurrentTile:
+    movzx esi, byte [ebp + hCurrentSpriteOffset]
+    movzx eax, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
+    add eax, 4
+    and eax, 0xF0
+    shr eax, 4                                          ; row = (YPixels + 4 & 0xF0) / 16
+    imul eax, eax, SCREEN_WIDTH                         ; row * SCREEN_WIDTH
+
+    movzx ecx, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
+    add ecx, 2
+    shr ecx, 3                                          ; col = (XPixels + 2) / 8
+    add ecx, SCREEN_WIDTH                               ; + SCREEN_WIDTH (one row down)
+
+    lea esi, [wTileMap + eax + ecx]
+    ret
+
+; ===========================================================================
+; ComparePikachuHappinessTo80 — pret pikachu_follow.asm:ComparePikachuHappinessTo80
+; ===========================================================================
+ComparePikachuHappinessTo80:
+    cmp byte [ebp + wPikachuHappiness], 80
     ret
