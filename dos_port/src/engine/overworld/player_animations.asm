@@ -164,7 +164,6 @@ wShadowOAMSprite39YCoord equ 0xC39C
 vNPCSprites   equ 0x8000
 %endif
 %ifndef vNPCSprites2
-vNPCSprites2  equ 0x8800
 %endif
 
 ; --- misc constants ---

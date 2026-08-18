@@ -650,9 +650,17 @@ working headless invocation, learned the hard way three runs in a row
 
 ```sh
 agy --model gemini-3.7-flash-high --effort high \
-    --dangerously-skip-permissions --print-timeout 15m \
+    --dangerously-skip-permissions --print-timeout 120m --output-format json \
     -p "PROMPT TEXT" > /path/to/log 2>&1
 ```
+
+**`--print-timeout 120m`, not 15m** (maintainer, 2026-08-18). These are complex
+jobs and a real one can run well past a quarter of an hour; a short timeout kills
+useful work that was nearly done. `--output-format json` makes the run print one
+object whose `usage.input_tokens` is the agent's measured end-of-run context —
+always pass it, because the default text format discards that number
+irrecoverably. Run the job in the BACKGROUND and wait on its log, never in a
+foreground shell that a tool timeout can cut short.
 
 The three traps, each of which produced a silent-looking failure:
 - **No TTY in a background shell.** Without `-p` agy launches its interactive

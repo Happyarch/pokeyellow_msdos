@@ -75,7 +75,6 @@ TEXT_PEWTERGYM_TM34_NO_ROOM                    equ 6
 ; read from pokeyellow.sym — not inferred.
 wBeatGymFlags                                  equ 0xD729
 wPewterGymCurScript                            equ 0xD5FB
-wPikachuSpawnStateFlags                        equ 0xD471
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

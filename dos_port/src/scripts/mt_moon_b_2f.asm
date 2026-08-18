@@ -136,7 +136,6 @@ TEXT_MTMOONB2F_TEXT14                          equ 14
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
 wMtMoonB2FCurScript                            equ 0xD606
-wPikachuSpawnStateFlags                        equ 0xD471
 wSprite02StateData1FacingDirection             equ 0xC129
 wSprite02StateData1MovementStatus              equ 0xC121
 wSprite06StateData1FacingDirection             equ 0xC169

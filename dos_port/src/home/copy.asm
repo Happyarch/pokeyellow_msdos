@@ -1,9 +1,12 @@
 ; copy.asm — mirror of pret home/copy.asm.
 ;
-; Holds two of that file's four pret labels: CopyData and FarCopyData. The other
-; two, CopyVideoDataAlternate and CopyVideoDataDoubleAlternate, are unported
-; (status `missing`) — the port's VRAM-write primitive is CopyVideoData, a
-; home/vcopy.asm label in src/home/vcopy.asm, and nothing calls the Alternate pair.
+; Holds three of that file's four pret labels: CopyData, FarCopyData and
+; CopyVideoDataDoubleAlternate. The fourth, CopyVideoDataAlternate, is unported
+; (status `missing`) — the port's usual VRAM-write primitive is CopyVideoData, a
+; home/vcopy.asm label in src/home/vcopy.asm, and nothing calls it.
+; CopyVideoDataDoubleAlternate landed when LoadPikachuShadowIntoVRAM
+; (src/engine/pikachu/pikachu_movement.asm) was ported — that routine tail-jumps
+; to it, so it is a real caller, not a speculative addition.
 ;
 ; NOT in pret order, and deliberately left that way: pret puts FarCopyData first
 ; (home/copy.asm:1) and CopyData second (:13), while the port has them the other
@@ -38,6 +41,12 @@ bits 32
 
 global CopyData
 global FarCopyData
+global CopyVideoDataDoubleAlternate
+
+extern CopyVideoDataDouble          ; src/home/copy2.asm
+extern FarCopyDataDouble            ; src/home/copy2.asm
+
+LCDC_ON_BIT equ 7                   ; B_LCDC_ENABLE (same spelling as src/home/lcd.asm)
 
 section .text
 
@@ -71,3 +80,41 @@ CopyData:
 ; ---------------------------------------------------------------------------
 FarCopyData:
     jmp CopyData
+
+; ---------------------------------------------------------------------------
+; CopyVideoDataDoubleAlternate — pret home/copy.asm:CopyVideoDataDoubleAlternate.
+;
+;   ldh a, [rLCDC] / bit B_LCDC_ENABLE, a
+;   jp nz, CopyVideoDataDouble        ; LCD on: go through the VBlank-safe copier
+;   push de / ld d,h / ld e,l         ; swap: DE := dest VRAM
+;   ld a,b / push af                  ; save bank
+;   ld h,$0 / ld l,c / add hl,hl x3   ; HL := c * 8 = raw byte length
+;   ld b,h / ld c,l
+;   pop af / pop hl                   ; A := bank, HL := original DE (source)
+;   jp FarCopyDataDouble
+;
+; So the LCD-off arm just re-shuffles the arguments from CopyVideoDataDouble's
+; (dest, src, bank, TILE count) shape into FarCopyDataDouble's (src, dest, bank,
+; BYTE count) shape and tail-jumps. Both destinations arm `g_tilecache_dirty`
+; themselves, so no VRAM-cache handling is owed here.
+;
+; IO_LCDC is a live emulated GB memory byte in the port (src/home/lcd.asm,
+; src/home/init.asm write it), so the `bit B_LCDC_ENABLE` test is a literal
+; translation, not a HAL boundary.
+;
+; In:  ESI = destination GB VRAM offset (HL)
+;      EDX = source FLAT pointer (DE)
+;      BH  = source bank (NO-OP under the flat model)
+;      BL  = 1bpp tile count
+; ---------------------------------------------------------------------------
+CopyVideoDataDoubleAlternate:
+    test byte [ebp + IO_LCDC], 1 << LCDC_ON_BIT  ; ldh a,[rLCDC] / bit B_LCDC_ENABLE,a
+    jnz CopyVideoDataDouble                      ; jp nz, CopyVideoDataDouble
+    mov al, bh                                   ; ld a, b / push af (bank)
+    movzx ebx, bl                                ; ld h, $0 / ld l, c
+    shl ebx, 3                                   ; add hl,hl / add hl,hl / add hl,hl
+                                                 ;   → BX = tiles * 8 raw bytes.
+                                                 ;   16-bit-wide exactly as pret's HL:
+                                                 ;   BL=$FF → $7F8, no wrap either side.
+    xchg esi, edx                                ; push de / ld d,h / ld e,l / pop hl
+    jmp FarCopyDataDouble                        ; jp FarCopyDataDouble

@@ -52,7 +52,6 @@ extern TextScriptEnd
 ; read from pokeyellow.sym — not inferred.
 wJigglypuffFacingDirections                    equ 0xCD3F
 wPikachuMapScriptFlags                         equ 0xD492
-wPikachuSpawnStateFlags                        equ 0xD471
 wSprite03StateData1ImageIndex                  equ 0xC132
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

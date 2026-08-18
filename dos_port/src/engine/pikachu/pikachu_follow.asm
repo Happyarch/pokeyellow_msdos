@@ -1,12 +1,19 @@
 ; pikachu_follow.asm — mirror of pret engine/pikachu/pikachu_follow.asm.
 ;
-; Was src/engine/overworld/pikachu.asm until the mirror repair. Holds four of that
-; pret file's eighteen labels, in pret order:
+; Was src/engine/overworld/pikachu.asm until the mirror repair. Holds eleven of
+; that pret file's labels, in pret order:
 ;   ShouldPikachuSpawn (:1), ResetPikachuOverworldStateFlag2 (:344),
 ;   SpawnPikachu_ (:351, see the naming note below), TrySpawnPikachu (:403),
-;   GetPikachuFacingDirectionAndReturnToE (:1110), GetPikachuFacingDirection (:1115)
+;   GetPikachuFacingDirectionAndReturnToE (:1110), GetPikachuFacingDirection (:1115),
+;   ClearPikachuFollowCommandBuffer (:1154), AppendPikachuFollowCommandToBuffer (:1165),
+;   RefreshPikachuFollow (:1175), ComputePikachuFollowCommand (:1182),
+;   CheckAbsoluteValueLessThan2 (:1249)
 ;
-; The other twelve are unported, and all belong to the deferred follower FSM:
+; The follow-command group (the last five) landed when
+; TryApplyPikachuMovementData was ported (src/engine/events/try_pikachu_movement.asm),
+; which tail-calls RefreshPikachuFollow.
+;
+; The remainder are unported, and all belong to the deferred follower FSM:
 ; SchedulePikachuSpawnForAfterText, ClearPikachuSpriteStateData,
 ; CalculatePikachuSpawnCoordsAndFacing, CalculatePikachuPlacementCoords,
 ; CalculatePikachuFacingDirection, SetPikachuSpawnOutside, Pointer_fc64b,
@@ -71,11 +78,23 @@ bits 32
 ; ---------------------------------------------------------------------------
 extern IsStarterPikachuAliveInOurParty  ; dos_port/src/engine/pikachu/pikachu_status.asm
                                         ; (defined but currently UNLINKED — see SUMMARY)
+extern FillMemory                       ; dos_port/src/home/copy2.asm
+
+; ---------------------------------------------------------------------------
+; WRAM symbols not yet carried by include/gb_memmap.inc. Addresses are
+; pokeyellow.sym `00:d436 wPikachuFollowCommandBufferSize` and
+; `00:d437 wPikachuFollowCommandBuffer` — NOT inferred, and consistent with the
+; Pikachu block gb_memmap.inc already anchors ($D42F..$D435 immediately below).
+; gb_memmap.inc is maintainer-owned, so promoting these is left to its owner;
+; the same file-local-`equ` pattern is already used across src/scripts/ and by
+; src/home/lcd.asm.
+; ---------------------------------------------------------------------------
 
 ; ---------------------------------------------------------------------------
 ; Globals
 ; ---------------------------------------------------------------------------
 global _SpawnPikachu                    ; pret SpawnPikachu_; called by the home wrapper
+global RefreshPikachuFollow
 
 section .text
 
@@ -235,4 +254,177 @@ GetPikachuFacingDirection:
 
 .asm_fcb81:
     mov al, 0xFF                        ; ld a, $ff ; standing
+    ret
+
+; ===========================================================================
+; The follow-command buffer group — pret pikachu_follow.asm:1154-1255, in pret
+; order: ClearPikachuFollowCommandBuffer, AppendPikachuFollowCommandToBuffer,
+; RefreshPikachuFollow, ComputePikachuFollowCommand, CheckAbsoluteValueLessThan2.
+;
+; The "follow command" is a single byte describing where Pikachu is relative to
+; the player (1/2/3/4 = adjacent up/down/left/right-ish, 5/6/7/8 = the same
+; direction but two or more tiles away). RefreshPikachuFollow recomputes it and
+; leaves it as the sole entry of the command buffer.
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; ClearPikachuFollowCommandBuffer — pret pikachu_follow.asm:1154.
+;   push bc / ld hl, wPikachuFollowCommandBufferSize / ld [hl], $ff / inc hl
+;   ld bc, $10 / xor a / call FillMemory / pop bc / ret
+; Size starts at $ff so the first AppendPikachuFollowCommandToBuffer's `inc [hl]`
+; makes it 0, i.e. index 0 of the buffer.
+;
+; NOTE: pret's FillMemory advances HL past the filled range; the port's does not
+; (documented contract, src/home/copy2.asm). No caller of this routine reads HL
+; afterwards, so the difference is unobservable here.
+; ---------------------------------------------------------------------------
+ClearPikachuFollowCommandBuffer:
+    push ebx                                            ; push bc
+    mov esi, wPikachuFollowCommandBufferSize            ; ld hl, ...
+    mov byte [ebp + esi], 0xFF                          ; ld [hl], $ff
+    inc esi                                             ; inc hl
+    mov bx, 0x10                                        ; ld bc, $10
+    xor al, al                                          ; xor a
+    call FillMemory
+    pop ebx                                             ; pop bc
+    ret
+
+; ---------------------------------------------------------------------------
+; AppendPikachuFollowCommandToBuffer — pret pikachu_follow.asm:1165.
+;   ld hl, wPikachuFollowCommandBufferSize / inc [hl] / ld e, [hl] / ld d, 0
+;   ld hl, wPikachuFollowCommandBuffer / add hl, de / ld [hl], a / ret
+; In: AL = the command byte. Clobbers DX (pret's DE) and ESI (pret's HL).
+; No bounds check, exactly as pret: the buffer is 16 bytes and nothing here
+; stops the index running past it.
+; ---------------------------------------------------------------------------
+AppendPikachuFollowCommandToBuffer:
+    mov esi, wPikachuFollowCommandBufferSize            ; ld hl, wPikachuFollowCommandBufferSize
+    inc byte [ebp + esi]                                ; inc [hl]
+    mov dl, [ebp + esi]                                 ; ld e, [hl]
+    mov dh, 0                                           ; ld d, 0
+    movzx esi, dx                                       ; ld hl, buffer / add hl, de
+    add esi, wPikachuFollowCommandBuffer
+    mov [ebp + esi], al                                 ; ld [hl], a
+    ret
+
+; ---------------------------------------------------------------------------
+; RefreshPikachuFollow — pret pikachu_follow.asm:1175.
+;   call ClearPikachuFollowCommandBuffer
+;   call ComputePikachuFollowCommand
+;   ret c                       ; carry = "Pikachu is on the player's square"
+;   call AppendPikachuFollowCommandToBuffer
+;   ret
+; ---------------------------------------------------------------------------
+RefreshPikachuFollow:
+    call ClearPikachuFollowCommandBuffer
+    call ComputePikachuFollowCommand
+    jc .ret                                             ; ret c
+    call AppendPikachuFollowCommandToBuffer
+.ret:
+    ret
+
+; ---------------------------------------------------------------------------
+; ComputePikachuFollowCommand — pret pikachu_follow.asm:1182.
+;
+; Y is decided first and, unless the Y difference is exactly zero, X is never
+; consulted — the same shape as GetPikachuFacingDirection above. The player's
+; wYCoord/wXCoord are compared in sprite-map space by adding 4.
+;
+; Out: AL = 1..8 with carry CLEAR (`and a`), or carry SET (`scf`) when Pikachu
+;      stands on the player's own square, in which case AL is undefined.
+;
+; SYMBOLS: same construction as GetPikachuFacingDirection — the pret symbol
+; wSpritePikachuStateData1PictureID and the
+; wSpritePlayerStateData2Map{Y,X} - wSpritePlayerStateData1 deltas are written
+; as arithmetic over the constants gb_memmap.inc already defines.
+;
+; FLAGS: `sub al, [..]` sets both ZF and CF; `je` does not write flags, so the
+; following `jb` still reads that same subtraction's CF, and so does
+; CheckAbsoluteValueLessThan2 (an x86 `call` writes no flags). SM83 `sub` is
+; unsigned, hence `jb` for `jr c`.
+; ---------------------------------------------------------------------------
+ComputePikachuFollowCommand:
+    ; ld bc, wSpritePikachuStateData1PictureID
+    mov ebx, wSpriteStateData1 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE + SPRITESTATEDATA1_PICTUREID
+    ; ld hl, wSpritePlayerStateData2MapY - wSpritePlayerStateData1 / add hl, bc
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPY) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + wYCoord]             ; ld a, [wYCoord]
+    add al, 4                           ; add $4
+    sub al, [ebp + esi]                 ; sub [hl]
+    je .checkXCoord                     ; jr z
+    jb .pikaAbovePlayer                 ; jr c
+    call CheckAbsoluteValueLessThan2
+    jb .return1                         ; jr c
+    mov al, 0x5
+    and al, al
+    ret
+
+.return1:
+    mov al, 0x1
+    and al, al
+    ret
+
+.pikaAbovePlayer:
+    call CheckAbsoluteValueLessThan2
+    jb .return2                         ; jr c
+    mov al, 0x6
+    and al, al
+    ret
+
+.return2:
+    mov al, 0x2
+    and al, al
+    ret
+
+.checkXCoord:
+    ; ld hl, wSpritePlayerStateData2MapX - wSpritePlayerStateData1 / add hl, bc
+    mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_MAPX) - wSpriteStateData1
+    add esi, ebx
+    mov al, [ebp + wXCoord]             ; ld a, [wXCoord]
+    add al, 4                           ; add $4
+    sub al, [ebp + esi]                 ; sub [hl]
+    je .pikachuOnTopOfPlayer            ; jr z
+    jb .pikaToLeftOfPlayer              ; jr c
+    call CheckAbsoluteValueLessThan2
+    jb .return4                         ; jr c
+    mov al, 0x8
+    and al, al
+    ret
+
+.return4:
+    mov al, 0x4
+    and al, al
+    ret
+
+.pikaToLeftOfPlayer:
+    call CheckAbsoluteValueLessThan2
+    jb .return3                         ; jr c
+    mov al, 0x7
+    and al, al
+    ret
+
+.return3:
+    mov al, 0x3
+    and al, al
+    ret
+
+.pikachuOnTopOfPlayer:
+    stc                                 ; scf
+    ret
+
+; ---------------------------------------------------------------------------
+; CheckAbsoluteValueLessThan2 — pret pikachu_follow.asm:1249.
+;   jr nc, .positive / cpl / inc a / .positive: cp $2 / ret
+; In:  AL = a signed difference, CF = the borrow of the subtraction that made it.
+; Out: CF set iff |AL| < 2. AL negated in place when it was negative.
+; `not` writes no flags on x86 and `inc` preserves CF, so the sequence carries
+; the same flag semantics as pret's `cpl` / `inc a`.
+; ---------------------------------------------------------------------------
+CheckAbsoluteValueLessThan2:
+    jae .positive                       ; jr nc
+    not al                              ; cpl
+    inc al                              ; inc a
+.positive:
+    cmp al, 0x2                         ; cp $2
     ret
