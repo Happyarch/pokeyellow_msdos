@@ -153,6 +153,7 @@ extern g_row_yoff                                   ; src/ppu/ppu.asm
 %ifdef DEBUG_SURFING_PIKACHU
 extern SurfingPikachuDebugFrameHook  ; src/debug/debug_dump.asm
 %endif
+extern PublishProjectedOAM              ; src/engine/gfx/sprite_oam.asm
 extern g_row_yoff_on                                ; src/ppu/ppu.asm
 extern g_surface_redraw_cb                          ; src/ppu/ppu.asm
 extern g_tilecache_dirty                            ; src/ppu/ppu.asm
@@ -483,6 +484,7 @@ SurfingMinigame_TeardownPresentation:
 ; ---------------------------------------------------------------------------
 SurfingMinigame_PerFramePresentation:
     push eax
+    push ebx
     push ecx
     push edx
     push esi
@@ -540,10 +542,39 @@ SurfingMinigame_PerFramePresentation:
     mov dword [g_row_yoff_on], 0
 
 .done:
+    ; 4. PUBLISH SHADOW OAM TO THE COMPOSITOR.
+    ;
+    ; Without this the minigame draws NO SPRITES AT ALL — measured live
+    ; 2026-08-18: no Pikachu on the water and none in the status bar, on a
+    ; screen whose BG and HUD were otherwise correct. RunObjectAnimations fills
+    ; wShadowOAM ($C300) exactly as pret does, and on the Game Boy the hardware
+    ; OAM DMA would carry it to $FE00 and the PPU would scan it. The port has no
+    ; such DMA and render_sprites positions from spr_dos_sx/spr_dos_sy, so a
+    ; scene driver must publish its own OAM or nothing is drawn — the rule
+    ; CLAUDE.md states as "whoever owns the canvas owns OAM", and the contract
+    ; animated_objects.asm records ("the frame pipeline / scene driver publishes
+    ; it projected via PublishProjectedOAM").
+    ;
+    ; This screen sets wUpdateSpritesEnabled = $FF, which puts it on the
+    ; direct-OAM protocol: update_oam deliberately leaves it alone, so nothing
+    ; else was ever going to publish on its behalf.
+    ;
+    ; Origin (80,24) is the same centred-GB-screen origin as g_obj_clip, which
+    ; SetupPresentation arms to (80,24,240,168) — so an entry the GB would hide
+    ; off-screen projects outside the clip and produces no pixels, preserving
+    ; the hardware's hiding semantics. Same publish the battle animator uses
+    ; (engine/battle/animations.asm:DrawFrameBlock).
+    mov esi, wShadowOAM                 ; canonical OAM, GB offset
+    mov ecx, OAM_COUNT                  ; all 40; offscreen hidden by g_obj_clip
+    mov eax, 80                         ; centred-GB-screen origin X
+    mov ebx, 24                         ; centred-GB-screen origin Y
+    call PublishProjectedOAM
+
     pop edi
     pop esi
     pop edx
     pop ecx
+    pop ebx
     pop eax
     ret
 
