@@ -25,6 +25,8 @@ substrate it needs:
   `RedrawRowOrColumn`, the generic `VBlankCopy` tile transfer, and a
   per-scanline BG Y-displacement channel (the `wLYOverrides` wave).
 - A `DEBUG_SURFING_PIKACHU` entry gate so the minigame is reachable at runtime,
+  joined 2026-08-18 by `DEBUG_SURFING_PIKACHU_LIVE` (`a84fbeec5`) — the same entry
+  with the frame-capture hook compiled out, for playing rather than photographing,
   and a visual `FRAME.BIN` proof that it draws.
 - Merge back to `master`.
 
@@ -263,24 +265,43 @@ its box. A failed review holds the line.
 - [x] **Stage 6 — Root review of chunk 3** (§5.3).
 - [x] **Stage 7 — Merge `surfing-pikachu` back to `master`** (root), after a
       clean `fidelity-full` on the merge result.
-- [ ] **Stage 8 — Follow-up (deferred, not part of this plan's chunks): design a
-      deterministic golden scenario** (RNG pin + input tape) and add its
-      `scenario_manifest.json` row.
-- [ ] **Stage 9 — OPEN RUNTIME DEFECTS found by the Stage 6 render proof
-      (2026-08-18).** The minigame renders, is correctly centered and draws its HP
-      status bar, but two things are wrong and neither is cosmetic:
-      1. **Pikachu is not visible on the water.** The player sprite never appears in
-         the play field; the only Pikachu on screen is the HUD icon. Suspect the OBJ
-         path — the minigame drives `RunObjectAnimations` and the
-         `wSurfingMinigameSpriteOAM` staging rather than the overworld
-         `PrepareOAMData` publisher, so shadow OAM may never reach `spr_oam_valid`.
-      2. **The scene barely animates.** Frames 20 / 90 / 250 differ byte-wise but
-         are visually near-identical; the water field and wave shapes do not
-         visibly advance.
-      Captured evidence: three `FRAME.BIN` dumps at loop iterations 20/90/250 via
-      `make DEBUG_SURFING_PIKACHU=1 SURF_DUMP_FRAME=<n>`, all confined to
-      columns 80-239 (the centred GB band). Do NOT call the minigame "working"
-      until both are resolved.
+- [ ] **Stage 8 — NOT DONE, rehomed 2026-08-18 to
+      `docs/current_plan_backlog.md` item 34.** Design a deterministic golden
+      scenario (RNG pin + input tape) and add its `scenario_manifest.json` row.
+      Deliberately left unticked as this plan was archived: no scenario exists,
+      so ticking it would assert coverage the suite does not have. Per the archive
+      convention, "archived" means STOPPED, not "every box ticked" — the same way
+      `docs/plans/macros.md` is archived with its remaining chunks dropped.
+- [x] **Stage 9 — CLOSED 2026-08-18.** The two defects recorded here were
+      resolved, and a THIRD was found underneath them once sprites became visible.
+      They shared no mechanism; see `regression-surfing-pikachu-no-sprites` and
+      episode 75 for the full accounting.
+      1. **Pikachu not visible on the water — FIXED (`7445a3fa8`).** The suspicion
+         recorded here (shadow OAM never reaching `spr_oam_valid`) was WRONG, and
+         measuring it is what moved this forward: `spr_oam_valid` read 40 with
+         `spr_dos_sx/sy` in-clip, so the publish added in `1a5da9d1b` was landing.
+         The real cause was `g_obj_over_window` reading 0 — `ClearSprites`
+         (called by `LoadGFXAndLayout`, after `SetupPresentation` armed it) zeroes
+         it by design, and on a screen whose window IS the screen the port's
+         window-last order overpaints every OBJ pixel.
+      2. **"The scene barely animates" — NOT A DEFECT.** Maintainer confirmed on
+         live play that the water scrolls and the wave field advances correctly.
+         The near-identical 20/90/250 dumps were a poor oracle for motion, not
+         evidence of a stalled scene.
+      3. **Found underneath: the intro rendered as a uniform tile-`$00` field —
+         FIXED (`7445a3fa8`).** Nothing mirrored `wTileMap` to `GB_TILEMAP0`; the
+         port retired pret's VBlank auto-transfer. See `docs/ui_projection.md` →
+         "Surfing Pikachu minigame" for the mirror rule and the `BCOORD` origin trap.
+      4. **Found underneath that: the jump never landed — FIXED (`08154a437`).**
+         `SurfingMinigame_UpdatePikachuHeight` passed the fraction byte where pret
+         passes `ld a, h` (the magnitude), making the descent delta exactly zero
+         and `.reset` unreachable by construction.
+      Evidence: live `dosbox-mcp` reads and breakpoints (a break on
+      `SurfingMinigame_UpdateLandingPikachu`, reachable only after a completed
+      jump, now hits with state = LANDING), plus maintainer play-testing.
+      `lint_pret_labels` 0, `static_gate` PASS, `make fidelity` 16/16.
+      **The minigame is playable — `dos_port/run DEBUG_SURFING_PIKACHU_LIVE=1`
+      (`a84fbeec5`) — but "playable" is not "faithful": see Stage 8.**
 
 ---
 
@@ -1291,6 +1312,16 @@ not-ported list, and any `regression-*` memory this work touches.
 - **Deterministic golden scenario** for the minigame (Stage 8): needs RNG pinning
   and a scripted input tape on both the mGBA and DOSBox-X sides, because
   `Random` and `SurfingPikachu_GetJoypad_3FrameBuffer` drive the loop.
+  **This is now the plan's only substantive open item, and it is what stands
+  between "renders and plays" and "verified against pret."** Three real defects
+  were fixed here on 2026-08-18 and NONE of them is defended by the suite — the
+  evidence was screenshots and live memory reads, so a re-break would go
+  unnoticed. Nobody involved has played the original far enough to judge the
+  scoring, wave sequencing or crash timing by eye; the maintainer's plan is to
+  compare against mGBA (`tools/run_mgba_mcp.sh` runs the golden ROM, and the
+  minigame is reachable there through normal play via the Summer Beach House).
+  Do not let "the maintainer played it and it seemed fine" harden into a
+  fidelity claim.
 - **Printer high-score path** (`PrintSurfingMinigameHighScore`,
   `Printer_PrepareSurfingMinigameHighScoreTileMap`, and the two
   `gfx/surfing_pikachu/high_score_*.tilemap` blobs): permanently out of scope

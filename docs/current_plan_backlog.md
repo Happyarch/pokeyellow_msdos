@@ -846,6 +846,78 @@ live loop) is met.
 
 ---
 
+### 34. Surfing Pikachu minigame has NO golden scenario
+Filed 2026-08-18 when `docs/current_plan_surfing_pikachu.md` was archived. This is
+that plan's Stage 8, rehomed rather than ticked: the plan is archived as *stopped*,
+and this box was never done.
+
+**What is missing.** A deterministic golden scenario (RNG pin + scripted input
+tape on both the mGBA and DOSBox-X sides, because `Random` and
+`SurfingPikachu_GetJoypad_3FrameBuffer` drive the loop), plus its
+`tools/scenario_manifest.json` row and `golden_diff.py` `SCENARIOS` entry.
+
+**Why it matters more than a normal missing scenario.** THREE real defects were
+found and fixed in this minigame on 2026-08-18 — no OBJ at all (`7445a3fa8`), an
+intro that rendered as a uniform tile-`$00` field (`7445a3fa8`), and a jump that
+never landed (`08154a437`) — and **not one of them is defended by the suite**. The
+evidence for all three was screenshots and live `dosbox-mcp` memory reads. A
+re-break would go unnoticed until someone played it again.
+
+**It is also unverified against pret, which is a different claim from "it works".**
+The minigame renders and plays, and the maintainer play-tested it; nobody involved
+has played the original far enough to judge scoring, wave sequencing or crash
+timing by eye. The intended comparison is mGBA (`tools/run_mgba_mcp.sh` runs the
+golden ROM; the minigame is reachable there through normal play via the Summer
+Beach House). Do not let "the maintainer played it and it seemed fine" harden into
+a fidelity claim.
+
+**Reach caveat that shapes the scenario.** The minigame is harness-only in a
+normal build: its only production caller,
+`dos_port/src/scripts/summer_beach_house.asm`, is tracked but in no Makefile
+source list (2 of 225 files in `src/scripts/` are linked). A scenario must enter
+through `DEBUG_SURFING_PIKACHU`, and per the `build-and-debug` false-witness rule
+it must be shown to actually reach the routines under test.
+
+**Owner:** unassigned. Play harness for manual work:
+`dos_port/run DEBUG_SURFING_PIKACHU_LIVE=1`.
+Full history: `regression-surfing-pikachu-no-sprites`, episode 75, and the
+archived `docs/plans/surfing_pikachu.md`.
+
+---
+
+### 35. Script-transpiler tail — archived plan, nine open boxes
+Filed 2026-08-18 when `docs/current_plan_script_transpiler.md` was archived at the
+maintainer's request, as STOPPED rather than complete.
+
+Stages 0–7 are done and merged (`b2d55cfd2`); the transpiler is retired at
+2197/2275 lowered (96.6%) with `transpile.py` exiting 2 on every generating mode.
+Still open, in the archived plan's own words:
+
+- the three registry mappings;
+- teaching `faithdiff` to model map scripts from the emitted correspondence;
+- retiring `TrainerTalkHook` + the `TRAINER_TALK` sentinel;
+- retiring `TrainerMapScript` + `MapScriptParams` + the `SCRIPT` sentinel;
+- realigning the port's text commands so `TX_ASM` does what pret does;
+- the 18 screen-coord bail sites by hand (16 coord macros + 2 `SCREEN_WIDTH`
+  stride expressions);
+- the fine-comb fan-out and its central integration;
+- the closing gate run (`lint_pret_labels` 0 both modes, `make fidelity-full`,
+  `make pixellock`).
+
+**The fine-comb half already has a live owner in stigmergy, so start there, not
+here:** `script-fine-comb-fleet-queue` is THE LIVE QUEUE (68 BAIL banners across
+33 port files at `bc0dd2e2e`, tag `sm83xlat-baseline`), with method/history in
+`script-transpiler-fine-comb-progress` and `script-transpiler-stages-1-7`. This
+item exists so the NON-fan-out items above are not orphaned by the archive.
+
+Note the transpiled output is **Tier 2, tool-seeded once** — `src/scripts/*.asm`
+is hand-maintained from here, never regenerated (see the `project-conventions`
+skill). 223 of those 225 files are tracked but in no Makefile source list.
+
+**Owner:** unassigned. Plan: `docs/plans/script_transpiler.md`.
+
+---
+
 ## Relocation debt (has a live owner — pointer only)
 
 The legacy relocation inventory in `dos_port/tools/pret_label_allowlist.json`

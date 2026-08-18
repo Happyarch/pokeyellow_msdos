@@ -155,6 +155,39 @@ So OBJ vertical clipping is per-ROW and horizontal uses a separate
   `spr_oam_valid = 0` on the next `DelayFrame`. The parking value is **`$FF`**;
   `MovieBeginSurface` sets it and restores 1 on exit.
 
+### Surfing Pikachu minigame — GB-centered, but it owns its own presentation
+
+`engine/minigame/surfing_pikachu.asm` uses the same centred 160×144 surface as the
+cinematics — window at `wx = 80 + 7`, `wy = 24`, clip 160, max_y 168, sourcing
+`GB_TILEMAP0`, with the OBJ clip rectangle at (80, 24)–(240, 168). What it does
+*not* do is go through `MovieBeginSurface`: it hand-rolls the equivalent in
+`SurfingMinigame_SetupPresentation` / `_TeardownPresentation` / a per-frame
+`g_surface_redraw_cb` hook, because it also needs a second window descriptor for
+the status bar (sourcing `GB_TILEMAP1` at `wy = 24 + $7E`) and the per-scanline
+`wLYOverrides` wave channel. Treat it as a third projected-surface owner
+alongside the cinematics and battle, not as a `movie_projection.asm` client.
+
+Three consequences, each of which was a live bug on 2026-08-18
+(`7445a3fa8`, memory `regression-surfing-pikachu-no-sprites`):
+
+1. **The file re-defines `hlcoord` / `decoord` to `BCOORD` (+10 columns,
+   +3 rows).** Every cell this screen authors already sits at the projected canvas
+   origin, so anything that reads the canvas back must source `BCOORD(0, 0)` —
+   **not** `wTileMap`. Sourcing `wTileMap` puts the whole screen 10 columns right
+   and clips half of it off the window.
+2. **A screen that stages through `wTileMap` must mirror it itself.** The port
+   retired pret's `hAutoBGTransferEnabled` VBlank transfer (`src/home/vblank.asm`),
+   so the faithful `ldh [hAutoBGTransferEnabled], a` writes move nothing. The
+   minigame's *gameplay* is unaffected because `SurfingMinigame_GenerateBGMap`
+   writes `vBGMap0` directly via `hlbgcoord` — only the intro, which stages into
+   `wTileMap`, needed an explicit one-shot mirror. Mirroring per frame instead
+   would overwrite the generated BG map.
+3. **`g_obj_over_window` must be re-armed, not just armed.** Here the window *is*
+   the whole screen, so the port's default window-last order hides every OBJ
+   completely rather than merely reordering it — and `ClearSprites` / `HideSprites`
+   zero the flag by design. Arming it once in setup is not enough if any faithful
+   path clears sprites afterwards (this one does, at `LoadGFXAndLayout`).
+
 ### Future subsystems
 
 Add an entry here when introduced, stating the transform and whether it uses

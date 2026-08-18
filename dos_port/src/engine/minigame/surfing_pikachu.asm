@@ -812,7 +812,7 @@ SurfingPikachuMinigame_LoadGFXAndLayout:
     mov [ebp + hSCX], al
     mov [ebp + hSCY], al
     mov byte [ebp + hWY], 0x7E                 ; place HP window just below Pikachu's waterline
-    ; DEVIATION{class=HAL; pret=engine/minigame/surfing_pikachu.asm:SurfingPikachuMinigame_LoadGFXAndLayout; behavior=the per-scanline LY scroll override is stored faithfully to hLCDCPointer and wLYOverrides but nothing consumes them yet in chunk 2; evidence=hLCDCPointer and wLYOverrides are written by the minigame engine and will feed chunk 3 compositor channel; lifetime=retire when chunk 3 wires the per-scanline compositor channel}
+    ; DEVIATION{class=HAL; pret=engine/minigame/surfing_pikachu.asm:SurfingPikachuMinigame_LoadGFXAndLayout; behavior=the per-scanline LY scroll override is stored faithfully to hLCDCPointer and wLYOverrides and the compositor consumes it as a row displacement table rather than the GB's STAT HBlank interrupt rewriting hSCY mid-frame; evidence=SurfingMinigame_PerFramePresentation gates on hLCDCPointer and copies the 144 wLYOverrides entries into g_row_yoff as (wLYOverrides-hSCY) with g_row_yoff_on set, which is the same displacement the HBlank handler would have produced scanline by scanline, and the port emulates no STAT interrupt at all per the rSTAT deviation on SurfingPikachuMinigame above; lifetime=permanent software-video boundary}
     mov byte [ebp + hLCDCPointer], 0x42         ; rSCY - 0xFF00
     mov byte [ebp + wSurfingMinigamePikachuSpeed], 0x40 ; 0.25 initial speed
     xor al, al

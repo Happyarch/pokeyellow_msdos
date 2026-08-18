@@ -1,5 +1,23 @@
 # current_plan_script_transpiler — one-shot SM83→x86 transpiler for pret `scripts/`
 
+> **ARCHIVED 2026-08-18 (maintainer request) — as STOPPED, not as complete.**
+> Stages 0–7 landed and are merged (`b2d55cfd2`); the transpiler itself is retired
+> at 2197/2275 lowered (96.6%) and `transpile.py` exits 2 on every generating mode.
+> **Nine boxes below are still unticked and they are real work** — the registry
+> mappings, `faithdiff` map-script modelling, the `TrainerTalkHook` /
+> `TrainerMapScript` sentinel retirements, the `TX_ASM` realignment, the fine-comb
+> fan-out and its central integration, and the closing gate run.
+> Per the archive convention, "archived" means stopped: see `docs/plans/macros.md`,
+> archived with its remaining chunks dropped rather than done.
+>
+> **The open tail HAS a live owner, and it is not this file.** The fine-comb work
+> is tracked in stigmergy `script-fine-comb-fleet-queue` ("THE LIVE QUEUE", 68 BAIL
+> banners across 33 port files, measured at `bc0dd2e2e`, tag `sm83xlat-baseline`),
+> with method and history in `script-transpiler-fine-comb-progress` and
+> `script-transpiler-stages-1-7`. A backlog pointer was filed as
+> `docs/current_plan_backlog.md` item 35 so the non-fan-out items are not orphaned.
+> Do not treat the unticked boxes here as abandoned — check those first.
+
 **Worktree:** `../pokeyellow_msdos-transpiler`, branch `script-transpiler`, already
 created and built clean from prework commit `c1ea70331`. Build order in a worktree
 is load-bearing: `make -j$(nproc)` in the **repo root** first, then
@@ -144,7 +162,10 @@ someone to regenerate over hand edits. No Makefile wiring at all.
       `bail_report.json`
 - [ ] Integrate comb findings centrally; regenerate the shared dispatch and tables
 - [ ] `lint_pret_labels` 0 in both modes; `make fidelity-full`; `make pixellock`
-- [ ] Archive: `git mv docs/current_plan_script_transpiler.md docs/plans/script_transpiler.md`
+- [x] Archive: `git mv docs/current_plan_script_transpiler.md docs/plans/script_transpiler.md`
+      — done 2026-08-18 at the maintainer's request, with the nine boxes above
+      still open. See the ARCHIVED banner at the top of this file for where that
+      work is tracked now.
 
 ---
 
