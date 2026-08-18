@@ -7345,7 +7345,13 @@ RunSurfingPikachuTest:
 ;   make DEBUG_SURFING_PIKACHU=1 SURF_DUMP_FRAME=<n>
 ; This is a HARNESS hook, not game logic — hence it lives here and not in the
 ; pret mirror, which carries only the three-line %ifdef'd call site.
+;
+; NOT built for DEBUG_SURFING_PIKACHU_LIVE, the playable gate: that build wants
+; the minigame to run until the player stops it, so its call site is compiled out
+; (surfing_pikachu.asm:SurfingPikachuLoop.DelayFrame) and the body goes with it
+; rather than sitting in the image as an uncalled routine.
 ; ---------------------------------------------------------------------------
+%ifndef DEBUG_SURFING_PIKACHU_LIVE
 %ifndef SURF_DUMP_FRAME
 %define SURF_DUMP_FRAME 90
 %endif
@@ -7366,6 +7372,7 @@ SurfingPikachuDebugFrameHook:
 section .bss
 surf_dbg_frames: resd 1
 section .text
+%endif  ; DEBUG_SURFING_PIKACHU_LIVE
 %endif
 
 ; ===========================================================================

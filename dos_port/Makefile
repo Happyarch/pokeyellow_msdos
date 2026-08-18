@@ -2522,6 +2522,27 @@ ifdef DEBUG_SURFING_PIKACHU
 SURF_DUMP_FRAME ?= 90
 NASMFLAGS += -D SURF_DUMP_FRAME=$(SURF_DUMP_FRAME)
 endif
+# PLAYABLE Surfing Pikachu harness — the one to reach for when a human is at the
+# keyboard, rather than the capture gate above.
+#   dos_port/run DEBUG_SURFING_PIKACHU_LIVE=1
+# Same entry as the capture gate (RunSurfingPikachuTest: seeded party, starter
+# Pikachu with SURF, the SURF_SELECT script flag so SELECT quits), but it compiles
+# SurfingPikachuDebugFrameHook's call site OUT, so the minigame is never
+# photographed and never dump-and-exits — it just runs until you crash out or
+# press SELECT. That is why this is a gate and not merely SURF_DUMP_FRAME=999999:
+# a sentinel frame number leaves the hook counting every frame forever and still
+# drags DumpBackbuffer/DumpGBState into the build.
+#
+# INPUT IS REAL, and always was — this gate adds no autokey and neither does the
+# capture gate (dump_gate defines only the flag, NEED_DEBUG_DUMP and SKIP_TITLE).
+# The chain is Joypad -> hJoyHeld -> hJoy5 -> SurfingMinigame_DPadAction for
+# left/right, and hJoyPressed for A. Note the JUMP IS NOT A BUTTON:
+# SurfingMinigame_TryStartJump fires on riding a wave crest
+# (wSurfingMinigameBGMapReadBuffer == $14) at speed >= $0A on the right hSCX phase.
+ifdef DEBUG_SURFING_PIKACHU_LIVE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SURFING_PIKACHU -D DEBUG_SURFING_PIKACHU_LIVE -D SKIP_TITLE
+endif
 ifdef NEED_DEBUG_DUMP
 GAME_SRCS += src/debug/debug_dump.asm
 endif
