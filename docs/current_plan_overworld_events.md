@@ -301,13 +301,22 @@ boilerplate **and** a three-entry pointer table. Seventeen maps qualify; they ge
       Either the header generator gains an optional per-header "post-end-battle event"
       field consumed after `PrintEndBattleText`, or these two get bespoke hand-ports.
       **Tileset residency is NOT a wiring blocker, and this plan used to say it was.**
-      `gen_overworld_assets.py` embeds exactly one of pret's 20 tilesets
-      (`overworld.2bpp`), so CAVERN and FACILITY are absent — but so is FOREST, and
-      VIRIDIAN_FOREST wired anyway with a passing golden, because the sight goldens are
-      **wram-only** and never compare rendered tiles. Tileset residency blocks
-      *rendering* these maps, not wiring or gating them. It remains a real prerequisite
-      for anything that looks at the screen, is owned by no plan, and was flagged to the
-      maintainer as a candidate workstream.
+      VIRIDIAN_FOREST uses the `FOREST` tileset, which is no more resident than CAVERN
+      or FACILITY, and it wired anyway with a passing golden — because the sight
+      goldens are **wram-only** and never compare rendered tiles. Tileset residency
+      blocks *rendering* these maps, not wiring or gating them.
+      **And the residency gap is smaller than it looks — measured 2026-08-17.**
+      `gen_overworld_assets.py` does embed only `overworld.2bpp`, but it is SUPERSEDED
+      (its own docstring says so) by `gen_all_assets.py`, which already generates all
+      **21** tileset gfx blobs into `assets/*_gfx.inc` — `cavern_gfx.inc`,
+      `facility_gfx.inc`, `forest_gfx.inc` and the rest all exist after `make assets`.
+      What is missing is not the DATA but the wiring: only `overworld_gfx.inc` is
+      `%include`d by any source (`src/engine/overworld/overworld.asm:1171`), so
+      `cavern_gfx` and its 19 siblings are generated and then dropped on the floor —
+      none of them is a defined symbol in the build. So the remaining work is a
+      per-map tileset dispatch and the VRAM load that selects it, not asset
+      production. Do not quote the old "embeds exactly one of pret's 20 tilesets"
+      framing: it is true of the dead generator and misstates the cost.
 - [ ] **The four near-miss maps** (FightingDojo, Route12, Route16 at 4 pointers,
       Route24 at 5) have the skeleton body but non-standard pointer tables, so the
       driver needs a per-map tail. They are driver-EXTENSION candidates, not wiring
