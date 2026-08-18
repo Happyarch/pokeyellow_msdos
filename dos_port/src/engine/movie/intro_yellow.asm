@@ -412,10 +412,7 @@ YellowIntroScene7:
     ret
 
 ; Request7TileTransferFromC810ToC710 — queue a 7-tile VBlank copy of the rolled
-; wave data (wLYOverridesBuffer+$10 -> wLYOverrides+$10). Ported verbatim, but INERT:
-; the port has no generic VBlank tile copy, so the request bytes are written and
-; never consumed.
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:Request7TileTransferFromC810ToC710; behavior=the hVBlankCopySource/Dest/Size request is written but never acted on because the port has no generic VBlank tile copy (only VBlankCopyBgMap for BG-map rows), so the surfing LY-wave tile animation does not play; evidence=the port composites from tile_cache and does not emulate the per-scanline LY overrides this transfer feeds; lifetime=deferred VBlank tile-transfer HAL}
+; wave data (wLYOverridesBuffer+$10 -> wLYOverrides+$10).
 Request7TileTransferFromC810ToC710:
     mov al, 0x10
     mov [ebp + hVBlankCopySource], al               ; ldh [hVBlankCopySource], a
@@ -522,9 +519,7 @@ YellowIntroScene10:
 
 ; Scene 11 — "clouds": every 8th frame, queue a VBlank copy of 4 cloud tiles
 ; (alternating halves of YellowIntroCloudGFX by bit 3 of the timer) into vChars
-; $9600 — the cloud tile animation. INERT in the port (no generic VBlank tile
-; copy), so the request is written faithfully but the clouds do not cycle.
-; DEVIATION{class=HAL; pret=engine/movie/intro_yellow.asm:YellowIntroScene11; behavior=the hVBlankCopySource/Dest/Size cloud-tile request is written but never acted on because the port has no generic VBlank tile copy, so the cloud tiles do not animate; evidence=the port composites from tile_cache and does not run the generic VBlank tile transfer this scene queues; lifetime=deferred VBlank tile-transfer HAL}
+; $9600 — the cloud tile animation.
 YellowIntroScene11:
     call YellowIntro_CheckFrameTimerDecrement
     jc .expired                                    ; jr c, .expired

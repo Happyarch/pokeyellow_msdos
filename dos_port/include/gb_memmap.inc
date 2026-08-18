@@ -88,12 +88,49 @@ wObtainedBadges               equ 0xD355
 wTrainerCardBadgeAttributes equ 0xCC5D
 wObtainedHiddenItemsFlags     equ 0xD6EF
 wRivalStarter                 equ 0xD714
-wSurfingMinigamePikachuHP     equ 0xC5D6
-W_SURFING_MINIGAME_RADNESS_MTR equ 0xC5D9
-W_SURFING_MINIGAME_RADNESS_SCR equ 0xC5DA
-wSurfingMinigameTotalScore    equ 0xC5DC
-wSurfingMinigameTrickFlags    equ 0xC62F
-wSlotMachineWheel1Offset      equ 0xCD3E
+; --- Surfing Minigame WRAM data (pret ram/wram.asm:222-264) ---
+; Addresses read from pokeyellow.sym (00:c5d0-00:c637), never inferred.
+wSurfingMinigameData                    equ 0xC5D0 ; db
+wSurfingMinigameRoutineNumber           equ 0xC5D1 ; db
+wSurfingMinigamePikachuState            equ 0xC5D2 ; db
+wSurfingMinigameWaveFunctionNumber      equ 0xC5D3 ; dw
+wSurfingMinigameWaveRandomValue         equ 0xC5D5 ; db
+wSurfingMinigamePikachuHP               equ 0xC5D6 ; dw (little-endian BCD)
+wSurfingMinigameRadnessMeter            equ 0xC5D9 ; db (number of consecutive tricks)
+W_SURFING_MINIGAME_RADNESS_MTR          equ wSurfingMinigameRadnessMeter ; legacy alias
+wSurfingMinigameRadnessScore            equ 0xC5DA ; dw (little-endian BCD)
+W_SURFING_MINIGAME_RADNESS_SCR          equ wSurfingMinigameRadnessScore ; legacy alias
+wSurfingMinigameTotalScore              equ 0xC5DC ; dw (little-endian BCD)
+wSurfingMinigameBoardAngleOffset        equ 0xC5DE ; db
+wSurfingMinigameBoardAngleDecreasing    equ 0xC5DF ; db
+wSurfingMinigameBoardAngleTimer         equ 0xC5E0 ; db
+wSurfingMinigameCrashTimer              equ 0xC5E1 ; db
+wSurfingMinigameUnusedToggle            equ 0xC5E2 ; db
+wSurfingMinigamePikachuSpeed            equ 0xC5E3 ; dw (little-endian)
+wSurfingMinigameDistance                equ 0xC5E5 ; ds 3 (big-endian)
+wSurfingMinigameWaveHeightBuffer        equ 0xC5E8 ; dw
+wSurfingMinigamePikachuObjectHeight     equ 0xC5EA ; db
+wSurfingMinigameWaterSprayCounter       equ 0xC5EB ; db
+wSurfingMinigameJumpArcMagnitude        equ 0xC5EC ; db
+wSurfingMinigameJumpDescending          equ 0xC5ED ; db
+wSurfingMinigameJumpArcFraction         equ 0xC5EE ; db
+wSurfingMinigameBGMapReadBuffer         equ 0xC5EF ; ds 1 tiles + 24 = 40 bytes
+wSurfingMinigameSCX                     equ 0xC617 ; db
+wSurfingMinigameSCX2                    equ 0xC618 ; db
+wSurfingMinigameSCXHi                   equ 0xC619 ; db
+wSurfingMinigameWaveHeight              equ 0xC61A ; ds SCREEN_WIDTH (20 bytes)
+wSurfingMinigameXOffset                 equ 0xC62E ; db
+wSurfingMinigameTrickFlags              equ 0xC62F ; db
+wSurfingMinigameGameOver                equ 0xC630 ; db
+wSurfingMinigameGameOverDelay           equ 0xC631 ; db
+wSurfingMinigameRoutineDelay            equ 0xC632 ; db
+wSurfingMinigameIntroAnimationFinished  equ 0xC633 ; db
+; Shared with Yellow intro (unioned in pret)
+wSurfingMinigameMusicTempoEnabled       equ 0xC634 ; db
+wSurfingMinigameCloudScrollFraction     equ 0xC635 ; db
+wSurfingMinigameDataEnd                 equ 0xC637 ; extent end
+wSurfingMinigameHiScore                 equ 0xD494 ; ds 3 (BCD)
+
 wSlotMachineWheel2Offset      equ 0xCD3F
 wSlotMachineWheel3Offset      equ 0xCD40
 wSlotMachineWheel1BottomTile  equ 0xCD41
@@ -962,7 +999,10 @@ hTileAnimations          equ 0xFFD7     ; lowercase pret-name alias
 ANIM_FLOWER_TILE_ID      equ 0x03
 ANIM_WATER_TILE_ID       equ 0x14
 H_REDRAW_ROW_COL_MODE    equ 0xFFD0     ; hRedrawRowOrColumnMode
+hRedrawRowOrColumnMode        equ H_REDRAW_ROW_COL_MODE
 H_REDRAW_ROW_COL_DEST    equ 0xFFD1     ; hRedrawRowOrColumnDest
+hRedrawRowOrColumnDest        equ H_REDRAW_ROW_COL_DEST
+wRedrawRowOrColumnSrcTiles    equ 0xCBFC     ; ds SCREEN_WIDTH * 2 (40 bytes)
 hUILayoutFlags                equ 0xFFFA     ; hUILayoutFlags
 hItemToRemoveID          equ 0xFFDB     ; RemoveItemByID: item id to remove
 hItemToRemoveIndex       equ 0xFFDC     ; RemoveItemByID: running bag index
@@ -1269,8 +1309,7 @@ wAnimatedObjectGlobalXOffset    equ 0xF6C9 ; db
 ; RELOCATED: pret 0xC634 is inside the port's extended wTileMap too.
 ; pret's old wc634/wc635 aliases are gone as of upstream 51cb4a12, which also
 ; unions these two bytes with wSurfingMinigameMusicTempoEnabled /
-; wSurfingMinigameCloudScrollFraction — not modelled here, the port has no
-; surfing minigame yet.
+; wSurfingMinigameCloudScrollFraction.
 wYellowIntroCurrentScene        equ 0xF6CA ; db
 wYellowIntroSceneTimer          equ 0xF6CB ; db
 ; saved struct base of the scene's current animated object (2 bytes; RELOCATED
@@ -1296,15 +1335,30 @@ W_INTRO_FRAMES_DATA             equ W_INTRO_ANIM_DATA          ; 0xF700, size 0x
 W_INTRO_OAM_DATA                equ W_INTRO_ANIM_DATA + 0x53   ; 0xF753, size 0x21D (src/data/sprite_anims/intro_oam.asm)
 W_INTRO_SPAWN_DATA              equ W_INTRO_OAM_DATA + 0x21D   ; 0xF970 (engine/movie/intro_yellow.asm spawn table)
 W_INTRO_SPAWN_DATA_SIZE         equ 0x21   ; staged image ends 0xF991, inside the 0x2A0 reservation
-; wLYOverridesBuffer — the intro's LY-override staging buffer (surfing wobble).
-; Free echo RAM after the anim-data blob. The port does NOT emulate per-scanline
-; LY overrides, so this buffer is written faithfully but never consumed (inert).
-wLYOverridesBuffer            equ 0xFA00 ; wLYOverridesBuffer (ds 0x100)
-W_LY_OVERRIDES_BUFFER_SIZE      equ 0x100  ; 256 B, ends 0xFB00 (< GB_OAM 0xFE00)
-; wLYOverrides — pret's consumed per-scanline buffer, 0x100 before the source
-; buffer. The port does not emulate per-scanline LY, so only its HIGH byte is
-; referenced (by Request7TileTransferFromC810ToC710, into inert HRAM), never read.
-wLYOverrides                  equ wLYOverridesBuffer - 0x100 ; 0xF900 (inert)
+; wLYOverrides / wLYOverridesBuffer — the intro's LY-override staging buffers (surfing wobble).
+; Located in free echo RAM: wLYOverrides at 0xF500-0xF600, wLYOverridesBuffer at 0xF9A0-0xFAA0.
+; The port does NOT emulate per-scanline LY overrides, but VBlankCopy transfers the data
+; faithfully between them on Request7TileTransferFromC810ToC710.
+wLYOverrides                  equ 0xF500 ; wLYOverrides (ds 0x100)
+W_LY_OVERRIDES_SIZE           equ 0x100  ; 256 B, ends 0xF600 (< wAnimatedObjectsData 0xF600)
+wLYOverridesEnd               equ wLYOverrides + 0x100       ; 0xF600
+wLYOverridesBuffer            equ 0xF9A0 ; wLYOverridesBuffer (ds 0x100)
+W_LY_OVERRIDES_BUFFER_SIZE      equ 0x100  ; 256 B, ends 0xFAA0 (< W_SURF_ANIM_DATA 0xFB00)
+wLYOverridesBufferEnd         equ wLYOverridesBuffer + 0x100 ; 0xFAA0
+
+; --- Surfing-Pikachu animated-object DATA region (Chunk 1) ---
+; The Frames and OAM tables (pret data/sprite_anims/surfing_pikachu_frames.asm +
+; surfing_pikachu_oam.asm) are pure GB-pointer data. As with the Yellow intro,
+; they stay 16-bit GB pointers, assembled flat with GB-base-relative internal
+; pointers (its W_SURF_* base + offset) and copied flat->GB at minigame init,
+; composed back-to-back (frames then OAM, 258 + 446 = 704 bytes).
+; Located in free echo RAM at 0xFB00 (after wLYOverridesBuffer 0xFA00-0xFB00,
+; before GB_OAM 0xFE00).
+W_SURF_ANIM_DATA                equ 0xFB00 ; whole-region base (= W_SURF_FRAMES_DATA)
+W_SURF_ANIM_DATA_SIZE           equ 0x2C0  ; 704 bytes (0x102 frames + 0x1BE OAM), ends 0xFDCE <= 0xFE00
+W_SURF_FRAMES_DATA              equ W_SURF_ANIM_DATA          ; 0xFB00, size 0x102 (src/data/sprite_anims/surfing_pikachu_frames.asm)
+W_SURF_OAM_DATA                 equ W_SURF_ANIM_DATA + 0x102  ; 0xFC02, size 0x1BE (src/data/sprite_anims/surfing_pikachu_oam.asm)
+
 
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
 ; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old

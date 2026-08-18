@@ -19,6 +19,7 @@
   "hSCY": "renderer scroll plumbing — pret writes rSCY via HRAM+ISR (TODO-HW boundary)",
   "IO_SCX": "software-PPU scroll register mirror (TODO-HW boundary)",
   "IO_SCY": "software-PPU scroll register mirror (TODO-HW boundary)",
-  "hLoadedROMBank": "GB ROM banking does not exist in the port"
+  "hLoadedROMBank": "GB ROM banking does not exist in the port",
+  "hSPTemp": "GB stack-pointer save for pop-de VRAM transfer; x86 port uses flat rep movsb"
  }
 }

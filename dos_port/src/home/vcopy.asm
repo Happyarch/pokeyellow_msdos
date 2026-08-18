@@ -1,8 +1,8 @@
 ; dos_port/src/home/vcopy.asm
 ; ============================================================
 ; Mirror of pret home/vcopy.asm — the BG-map / BG-animation VBlank family.
-; Holds, in pret order: ClearBgMap, FillBgMap, VBlankCopyBgMap,
-; UpdateMovingBgTiles, FlowerTile1/2/3.
+; Holds, in pret order: ClearBgMap, FillBgMap, RedrawRowOrColumn,
+; VBlankCopyBgMap, VBlankCopy, UpdateMovingBgTiles, FlowerTile1/2/3.
 ;
 ; This file previously held CopyString and IsInRestOfArray under a "home util
 ; bucket" header. Those are home/copy_string.asm and home/array2.asm labels and
@@ -12,10 +12,10 @@
 ;
 ; pret labels of home/vcopy.asm this port does NOT hold, so nobody thinks they
 ; were lost in the move: GetRowColAddressBgMap, FillBgMapCommon,
-; RedrawRowOrColumn, AutoBgMapTransfer, TransferBgRows, VBlankCopyDouble,
-; VBlankCopy — none is translated. The port's native renderer does not scan the
-; GB $9800 BG map at all (see the renderer-integrity note below), which is why
-; that half of the file has never been needed.
+; AutoBgMapTransfer, TransferBgRows, VBlankCopyDouble — none is translated.
+; The port's native renderer does not scan the GB $9800 BG map at all (see the
+; renderer-integrity note below), which is why that half of the file has never
+; been needed.
 ;
 ; -- Renderer-integrity notes (this port diverges hard from GB geometry) ------
 ; The DOS port's native renderer (src/ppu/ppu.asm:render_bg) does NOT scan the
@@ -78,7 +78,9 @@ extern g_tilecache_dirty        ; src/ppu/ppu.asm — arm cache re-decode after 
 
 global ClearBgMap
 global FillBgMap
+global RedrawRowOrColumn
 global VBlankCopyBgMap
+global VBlankCopy
 global UpdateMovingBgTiles
 
 section .text
@@ -108,6 +110,97 @@ FillBgMap:
     rep stosb
     pop edi
     pop ecx
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════
+; RedrawRowOrColumn — redraw a BG row of height 2 or a BG column of width 2.
+; pret ref: home/vcopy.asm:RedrawRowOrColumn
+;
+; Copies tiles from wRedrawRowOrColumnSrcTiles to the GB address in
+; hRedrawRowOrColumnDest (mode 1 = column, 2 = row).
+; In:  EBP = GB memory base. Out: all registers preserved.
+; ═══════════════════════════════════════════════════════════════════════════
+RedrawRowOrColumn:
+    pushad
+    mov al, [ebp + hRedrawRowOrColumnMode]
+    test al, al
+    jz .done
+    mov bl, al
+    xor al, al
+    mov [ebp + hRedrawRowOrColumnMode], al
+    dec bl
+    jnz .redrawRow
+
+.redrawColumn:
+    mov esi, wRedrawRowOrColumnSrcTiles
+    mov dl, [ebp + hRedrawRowOrColumnDest]
+    mov dh, [ebp + hRedrawRowOrColumnDest + 1]
+    mov cl, 18                           ; SCREEN_HEIGHT (GB)
+.loop1:
+    mov al, [ebp + esi]
+    inc esi
+    movzx edi, dx
+    mov [ebp + edi], al
+    inc dx
+    mov al, [ebp + esi]
+    inc esi
+    movzx edi, dx
+    mov [ebp + edi], al
+    mov al, 32 - 1                       ; TILEMAP_WIDTH - 1
+    add dl, al
+    jnc .noCarry
+    inc dh
+.noCarry:
+    ; wrap from bottom to top if necessary (wrap inside 1024-byte vBGMap0 at 0x9800)
+    mov al, dh
+    and al, 0x03                         ; HIGH(TILEMAP_AREA - 1)
+    or al, 0x98                          ; HIGH(vBGMap0)
+    mov dh, al
+    dec cl
+    jnz .loop1
+    mov byte [ebp + hRedrawRowOrColumnMode], 0
+    popad
+    ret
+
+.redrawRow:
+    mov esi, wRedrawRowOrColumnSrcTiles
+    mov dl, [ebp + hRedrawRowOrColumnDest]
+    mov dh, [ebp + hRedrawRowOrColumnDest + 1]
+    push dx
+    call .DrawHalf                       ; draw upper half
+    pop dx
+    add dl, 32                           ; TILEMAP_WIDTH
+    call .DrawHalf                       ; draw lower half
+    popad
+    ret
+
+.DrawHalf:
+    mov cl, 20 / 2                       ; SCREEN_WIDTH / 2
+.loop2:
+    mov al, [ebp + esi]
+    inc esi
+    movzx edi, dx
+    mov [ebp + edi], al
+    inc dx
+    mov al, [ebp + esi]
+    inc esi
+    movzx edi, dx
+    mov [ebp + edi], al
+    mov al, dl
+    inc al
+    ; wrap from right edge to left edge if necessary (wrap within 32-wide row)
+    and al, 0x1F                         ; %11111
+    mov bl, al
+    mov al, dl
+    and al, 0xE0                         ; %11100000
+    or al, bl
+    mov dl, al
+    dec cl
+    jnz .loop2
+    ret
+
+.done:
+    popad
     ret
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -155,6 +248,69 @@ VBlankCopyBgMap:
     add edi, GB_BG_STRIDE - GB_BG_ROW_TILES ; +12 → dest advances 32 (one 32-wide row)
     dec ebx
     jnz .row
+.done:
+    popad
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════
+; VBlankCopy — copy [hVBlankCopySize] 2bpp tiles from hVBlankCopySource to
+; hVBlankCopyDest.
+; pret ref: home/vcopy.asm:VBlankCopy
+;
+; Source and destination addresses are updated so transfer can continue across
+; subsequent frames.
+; In:  EBP = GB memory base. Out: all registers preserved.
+; Sets g_tilecache_dirty whenever tile data is transferred.
+; ═══════════════════════════════════════════════════════════════════════════
+VBlankCopy:
+    pushad
+    mov al, [ebp + hVBlankCopySize]
+    test al, al
+    jz .done
+
+    mov byte [ebp + hVBlankCopySize], 0 ; transferred (pret: xor a / ldh [hVBlankCopySize], a)
+
+    movzx ecx, al
+    shl ecx, 4                          ; total bytes = size * 16 (TILE_SIZE)
+
+    movzx esi, word [ebp + hVBlankCopySource]
+    movzx edi, word [ebp + hVBlankCopyDest]
+
+    ; Save initial 16-bit GB pointers and byte count to update headers
+    push ecx
+    push esi
+    push edi
+
+    add esi, ebp
+    add edi, ebp
+    rep movsb
+
+    pop edi
+    pop esi
+    pop ecx
+
+    ; Arm the tile-pattern decode cache only when this transfer actually wrote
+    ; tile PATTERN bytes. The cache holds decoded patterns, so a pure tilemap
+    ; write ($9800+) changes which tiles are shown, not what they look like, and
+    ; needs no invalidation.
+    ;
+    ; THE TEST IS ON THE START ADDRESS, and that is load-bearing: EDI here is
+    ; still the transfer's first byte. Testing the END instead would silently
+    ; skip a copy that BEGINS in vChars and runs past GB_TILEMAP0 — it writes
+    ; pattern bytes, the flag never arms, and the compositor keeps drawing the
+    ; slots' previous occupants. That is the visible-corruption class, not a
+    ; missed optimisation. Start < GB_TILEMAP0 is exact here because the range
+    ; is contiguous and grows upward.
+    cmp di, GB_TILEMAP0
+    jae .noCacheDirty
+    mov byte [g_tilecache_dirty], 1     ; VRAM tile pattern data changed → rebuild decode cache
+.noCacheDirty:
+
+    add esi, ecx
+    add edi, ecx
+    mov [ebp + hVBlankCopySource], si
+    mov [ebp + hVBlankCopyDest], di
+
 .done:
     popad
     ret

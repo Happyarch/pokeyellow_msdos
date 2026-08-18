@@ -60,6 +60,8 @@ extern AutoKeyDrive          ; src/debug/debug_dump.asm
 %endif
 extern UpdateMovingBgTiles   ; src/home/vcopy.asm — BG tile-animation step (self-gates on hTileAnimations)
 extern VBlankCopyBgMap       ; src/home/vcopy.asm — staged BG-map copy (self-gates on its row-count)
+extern RedrawRowOrColumn     ; src/home/vcopy.asm — staged row/col copy (self-gates on hRedrawRowOrColumnMode)
+extern VBlankCopy            ; src/home/vcopy.asm — staged generic tile copy (self-gates on hVBlankCopySize)
 %ifdef DEBUG_NPC_WALK
 extern DumpNpcLog       ; dump NPC walk-decision log to NPCLOG.BIN on quit
 %endif
@@ -152,6 +154,8 @@ DelayFrame:
     ; call is correct — inert until their owners arm them.
     ; Does not reorder update_oam/render_bg/present.
     call VBlankCopyBgMap
+    call RedrawRowOrColumn
+    call VBlankCopy
     call UpdateMovingBgTiles
     ; Cinematic surface per-frame BG commit (0 = none). A movie surface draws into
     ; wTileMap but is shown through a window over GB_TILEMAP0, so its canvas must

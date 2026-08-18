@@ -326,6 +326,8 @@ g_obj_clip:
 ; one.
 global g_row_xoff_on
 g_row_xoff_on: dd 0             ; 0 = off (identity fast path); nonzero = consult g_row_xoff
+global g_row_yoff_on
+g_row_yoff_on: dd 0             ; 0 = off (identity fast path); nonzero = consult g_row_yoff
 
 ; --- 2bpp bitplane → 8bpp spread tables (compositor-perf Stage 4a) --------------
 ; A GB tile row is two bitplane bytes, MSB = leftmost pixel. Spreading one byte
@@ -405,6 +407,14 @@ spr_oam_valid: resd 1          ; count of valid entries written this frame (set 
 alignb 4
 global g_row_xoff
 g_row_xoff:        resb RENDER_H
+
+; Signed per-screen-row window source-Y displacement, consulted only in
+; render_window's fine path when g_row_yoff_on is nonzero. Follows the
+; g_row_xoff / g_obj_clip ownership model: only code that needs non-default
+; behaviour sets, owns and restores it. One byte per back-buffer row.
+alignb 4
+global g_row_yoff
+g_row_yoff:        resb RENDER_H
 
 ; bg_surface: 384×288 raw-color mirror of wSurroundingTiles.
 bg_surface:        resb SURF_W * SURF_H_TILES * 8
@@ -1682,6 +1692,11 @@ render_window:
 .fine_row:
     mov edx, [win_line_ctr]
     add edx, [win_src_y]
+    cmp dword [g_row_yoff_on], 0
+    jz .no_row_yoff
+    movsx eax, byte [g_row_yoff + ecx]
+    add edx, eax
+.no_row_yoff:
     and edx, 255                        ; src_y
     push edx
     shr edx, 3
