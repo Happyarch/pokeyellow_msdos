@@ -266,6 +266,39 @@ Y is untranslated (Y+0) on all three, as everywhere else in overworld-ui: these 
 vertical positions within an 18-row layout that the 25-row canvas does not compress,
 and the rows are load-bearing (the prize box sits below its coin box by design).
 
+### Pikachu front-pic animation (pikapic) — CENTERED, and the cel draw start must follow
+
+Decided 2026-08-18 under the same maintainer delegation as the vending/prize rows.
+
+`PlacePikapicTextBoxBorder` (engine/pikachu/pikachu_pic_animation.asm:139) is
+`hlcoord 6, 5` + `lb bc, 5, 5` -> a 7x7 box at GB cols 6-12, rows 5-11. Unlike
+every other screen ruled today it is NOT flush against either edge: it sits
+essentially centred on the 20-wide screen (box centre col 9, screen centre 9.5).
+So it takes the CENTER rule the dialog and party-menu rows already use — X+10,
+Y+0 -> canvas cols 16-22, rows 5-11 — not an edge anchor. Projecting a centred
+element to an edge would be as wrong as centring an edge-anchored one.
+
+*** THE FRAME IS NOT THE ONLY THING THAT MOVES. *** The animation's cels are not
+placed by an hlcoord literal; `ExecutePikaPicAnimScript`'s object drawer computes
+its destination as `wTileMap + wPikaPicPikaDrawStartY * SCREEN_WIDTH +
+wPikaPicPikaDrawStartX` (pikachu_pic_animation.asm:464, `hlcoord 0, 0` +
+`ld bc, SCREEN_WIDTH` + `AddNTimes`), plus the per-object X/Y offsets. Two
+consequences for the port:
+  - SCREEN_WIDTH there is a STRIDE (40 on the canvas), not a coordinate. It is
+    already correct if left as SCREEN_WIDTH; do NOT substitute pret's 20.
+  - The DRAW START values must carry the same +10/+0 projection as the frame, or
+    the cels will render at the GB origin while their frame sits 10 columns right.
+    The frame and the cels must be projected together or not at all.
+
+An open question deliberately left to the implementer to ANSWER WITH EVIDENCE
+rather than guess: pikapic plays during overworld emotion playback, so the
+overworld view pointer is live and this is NOT the flat-canvas path evolution
+uses. Whether it therefore needs canvas ownership (the evo_canvas_enter/_exit
+pattern), a window, or simply writes into the overworld's own staging is a
+measurement, not a preference. pret zeroes hAutoBGTransferEnabled around the box
+placement and re-enables it after, which is inert in the port — so whatever
+commits those cells, it is not that.
+
 ### Future subsystems
 
 Add an entry here when introduced, stating the transform and whether it uses
@@ -351,6 +384,7 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (vending drinks)     | (0, 3) | 14×10| anchor=top-LEFT, X+0, Y+0 | 7 | 24 | 112 | 104 | vending_machine.asm:20 (hlcoord 0,3 + lb bc,8,12) |
 | overworld-ui (prize menu)         | (0, 2) | 18×10| anchor=top-LEFT, X+0, Y+0 | 7 | 16 | 144 | 96 | prize_menu.asm:25 (hlcoord 0,2 + lb bc,8,16) |
 | overworld-ui (prize coin box)     | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | prize_menu.asm:145 PrintPrizePrice (hlcoord 11,0 + lb bc,1,7) |
+| overworld-ui (pikapic frame)      | (6, 5) | 7×7  | center, X+10, Y+0 | 135 | 40 | 56 | 96 | pikachu_pic_animation.asm:139 PlacePikapicTextBoxBorder (hlcoord 6,5 + lb bc,5,5) |
 | overworld-field (tile reads) | (8, 9) player feet | 1×1 | +16col, +8row → W_TILEMAP (PLAYER_STANDING_COL=24, PLAYER_STANDING_ROW=17); facing-relative reads ±2 tiles (one block), two-steps ±4 | — | — | — | — | overworld.asm (GetTileInFrontOfPlayer), player_state.asm (_GetTileAndCoordsInFrontOfPlayer / GetTileTwoStepsInFrontOfPlayer), player_animations.asm (IsPlayerStandingOnWarpPadOrHole), wild_encounters.asm (PLAYER_STANDING_TILE, fixed OW-A.6) — NEVER copy pret stride-20 lda_coord literals |
 | battle-ui (YES/NO box)      | (cc,rr) | W×H   | battle center, X+10, Y+3    | —   | —  | —   | —   | yes_no.asm (mode 1) — UNVERIFIED, no caller wired |
 | battle-ui (whole screen)    | (0, 0)  | 20×18 | center in 40×25 BG, +10col/+3row | — | — | — | — | init_battle.asm (full widescreen canvas via render_bg) |
