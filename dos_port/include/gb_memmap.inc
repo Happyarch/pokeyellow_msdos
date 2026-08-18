@@ -40,6 +40,7 @@ GB_TILEMAP1     equ 0x9C00
 ; overlays of vChars0/vChars1, which is why they share addresses.
 vChars0         equ 0x8000
 vChars1         equ 0x8800
+vNPCSprites2    equ vChars1     ; pret ram/vram.asm overworld UNION arm — same bytes
 vChars2         equ 0x9000
 vSprites        equ 0x8000     ; NEXTU battle/menu — overlays vChars0
 vFont           equ 0x8800     ; NEXTU battle/menu — overlays vChars1
@@ -1417,6 +1418,11 @@ W_D433                       equ 0xD433 ; wd433 — Pikachu collision direction 
 wPikachuOverworldStateFlags  equ 0xD42F ; bit1=following, bit2=moved, bit3=draw-disabled, bit5/7=hide
 wPikachuSpawnState           equ 0xD430 ; where/how Pikachu (re)spawns next (golden 00:d430; promoted from player_animations.asm local, OW-A.6)
 wPikachuCollisionCounter     equ 0xD434 ; post-turn grace frames before Pikachu-collision reactions (golden 00:d434)
+; Pikachu follow-command ring, pret ram/wram.asm:2022-2023. Addresses read from
+; pokeyellow.sym, not inferred. Promoted here 2026-08-18 from nine file-local
+; `equ`s that each re-typed the same address.
+wPikachuFollowCommandBufferSize equ 0xD436
+wPikachuFollowCommandBuffer     equ 0xD437 ; ds 16
 wd435                        equ 0xD435 ; golden 00:d435; unnamed in pret. Set to $ff by
                                         ; IsSpriteInFrontOfPlayer when the sprite faced is Pikachu.
 
@@ -2270,6 +2276,7 @@ wBoxMon1Moves                equ 0xDA9D
 wDayCareMonMoves             equ 0xDA66
 wEvolutionOccurred            equ 0xD120 ; set when a mon evolved this EvolutionAfterBattle
 wPikachuMood                  equ 0xD470
+wPikachuSpawnStateFlags       equ 0xD471 ; pret ram/wram.asm:2075 (golden 00:d471)
 wPikachuEmotionModifier       equ 0xD49B
 
 ; ---------------------------------------------------------------------------

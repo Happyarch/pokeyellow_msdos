@@ -107,7 +107,6 @@ hGymGateIndex                                  equ 0xFFDB
 wBeatGymFlags                                  equ 0xD729
 wCinnabarGymCurScript                          equ 0xD65D
 wOpponentAfterWrongAnswer                      equ 0xDA37
-wPikachuSpawnStateFlags                        equ 0xD471
 wd474                                          equ 0xD474
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

@@ -56,7 +56,6 @@ extern YesNoChoice
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
 wPikachuMapScriptFlags                         equ 0xD492
-wPikachuSpawnStateFlags                        equ 0xD471
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

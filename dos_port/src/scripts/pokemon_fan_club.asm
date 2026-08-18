@@ -75,7 +75,6 @@ SCRIPT_POKEMONFANCLUB_SCRIPT1                  equ 1
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
 wPikachuMapScriptFlags                         equ 0xD492
-wPikachuSpawnStateFlags                        equ 0xD471
 wPokemonFanClubCurScript                       equ 0xD5F9
 wSprite03StateData1FacingDirection             equ 0xC139
 wSprite03StateData1MovementStatus              equ 0xC131

@@ -633,6 +633,10 @@ GAME_SRCS := \
     src/engine/overworld/auto_movement.asm \
     src/home/overworld_text.asm \
     src/engine/pikachu/pikachu_follow.asm \
+    src/engine/pikachu/pikachu_movement.asm \
+    src/engine/events/try_pikachu_movement.asm \
+    src/engine/events/diploma.asm \
+    src/engine/events/diploma2.asm \
     src/engine/events/pewter_guys.asm \
     src/engine/events/pokecenter_chansey.asm \
     src/engine/events/oaks_aide.asm \
@@ -3478,6 +3482,7 @@ src/engine/events/in_game_trades.o: assets/in_game_trade_text.inc \
                                      assets/trade_trainer_string.inc \
                                      assets/script_constants.inc
 src/data/events/trades.o: assets/trades.inc assets/script_constants.inc
+src/engine/events/diploma2.o: assets/diploma_text.inc assets/diploma_tiles.inc
 src/engine/events/pokecenter_chansey.o: assets/pokecenter_chansey_text.inc \
                                         assets/script_constants.inc
 src/home/start_menu.o: assets/event_constants.inc assets/audio_constants.inc
@@ -3553,6 +3558,12 @@ assets/item_text.inc: ../engine/items/item_effects.asm ../engine/menus/party_men
                       ../constants/charmap.asm include/gb_memmap.inc \
                       tools/generators/gen_battle_text.py tools/generators/gen_item_text.py assets/battle_text.inc
 	python3 tools/generators/gen_item_text.py
+
+assets/diploma_text.inc assets/diploma_tiles.inc &: ../engine/events/diploma2.asm \
+                  ../gfx/diploma/diploma.2bpp ../gfx/diploma/diploma_pikachu.tilemap \
+                  ../gfx/diploma/diploma_mew.tilemap ../constants/charmap.asm \
+                  tools/generators/gen_diploma.py tools/generators/gb_text.py
+	python3 tools/generators/gen_diploma.py
 
 assets/trades.inc assets/trade_trainer_string.inc &: ../data/events/trades.asm ../constants/charmap.asm \
                    tools/generators/gen_trades.py tools/generators/gb_text.py
@@ -3737,6 +3748,7 @@ assets: assets/scenario_registry.inc \
         assets/overworld_strings.inc assets/field_move_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc \
         assets/elevator_text.inc assets/oaks_aide_text.inc \
         assets/in_game_trade_text.inc assets/trades.inc \
+        assets/diploma_text.inc assets/diploma_tiles.inc \
         assets/trade_trainer_string.inc \
         assets/cut_text.inc assets/player_anim_text.inc \
         assets/type_matchups.inc assets/move_names.inc assets/field_moves.inc \

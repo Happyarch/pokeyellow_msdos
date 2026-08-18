@@ -103,7 +103,6 @@ hSpriteScreenXCoord                            equ 0xFFEC
 hSpriteScreenYCoord                            equ 0xFFEB
 wBillsHouseCurScript                           equ 0xD660
 wPikachuMapScriptFlags                         equ 0xD492
-wPikachuSpawnStateFlags                        equ 0xD471
 wSpritePlayerStateData1FacingDirection         equ 0xC109
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
