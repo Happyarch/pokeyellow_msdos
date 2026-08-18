@@ -551,8 +551,37 @@ SetPal_Generic:                 mov al, SET_PAL_GENERIC
 ; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:SetPal_PartyMenu; behavior=applies only the static party-menu palette row and never the per-row HP-bar packet pret pairs with it; evidence=pret returns wPartyMenuBlkPacket alongside PalPacket_PartyMenu and SendSGBPackets feeds both to InitCGBPalettes on colour hardware while this port has no packet path and its per-tile-id tile_pal cannot colour six rows that share tile ids; lifetime=until backlog item 10b gives the party menu palette-able HP-bar tile ids}
 SetPal_PartyMenu:               mov al, SET_PAL_PARTY_MENU
                                 jmp SetPal_Screen
-SetPal_PokemonWholeScreen:      mov al, SET_PAL_POKEMON_WHOLE_SCREEN
-                                jmp SetPal_Screen
+; ---------------------------------------------------------------------------
+; SetPal_PokemonWholeScreen — pret engine/gfx/palettes.asm:SetPal_PokemonWholeScreen.
+;
+; Paint the WHOLE screen in one palette: PAL_BLACK (the evolution silhouette) or
+; the mon's own palette. pret copies PalPacket_Empty into wPalPacket, writes the
+; chosen id into wPalPacket + 1 (PAL_SET entry 0) and returns HL = wPalPacket /
+; DE = BlkPacket_WholeScreen for SendSGBPackets.
+;
+; In:  BL = pret's `c` — nonzero selects PAL_BLACK, zero selects the palette of
+;      [wWholeScreenPaletteMonSpecies]. RunPaletteCommand (home/palettes.asm)
+;      reads only BH, so BX arrives here as the caller left it.
+; Out: bg_slot_pal[0] / obj_slot_pal[0] = the chosen palette id, g_pal_dirty set.
+;      EBX preserved (SetPal_Screen is pushad/popad).
+;
+; DEVIATION{class=projection; pret=engine/gfx/palettes.asm:SetPal_PokemonWholeScreen; behavior=publishes the chosen palette id straight into bg_slot_pal and obj_slot_pal entry 0 after SetPal_Screen instead of copying PalPacket_Empty into wPalPacket and returning HL-DE for the SGB packet path, so faithdiff shows DROPPED CopyData and ADDED SetPal_Screen; evidence=the port has no wPalPacket-plus-SendSGBPackets stage - SetPal_Screen IS its realization of a PAL_SET packet plus its BlkPacket attribute plane, and SET_PAL_POKEMON_WHOLE_SCREEN already maps to the all-zero plane in set_pal_attr_table so slot 0 covers the whole screen exactly as BlkPacket_WholeScreen does on hardware, the same boundary SetPal_StatusScreen above already documents; lifetime=permanent, the port's palette-command boundary}
+SetPal_PokemonWholeScreen:
+    mov al, SET_PAL_POKEMON_WHOLE_SCREEN
+    call SetPal_Screen                  ; static row + the all-zero (whole-screen) plane
+    test bl, bl                         ; ld a, c / and a
+    mov al, PAL_BLACK                   ; ld a, PAL_BLACK — `mov` does NOT write ZF, so
+                                        ; the flag `test bl, bl` produced still stands
+                                        ; at the branch (pret leans on `ld` the same way)
+    jnz .next                           ; jr nz, .next
+    mov al, [ebp + wWholeScreenPaletteMonSpecies]
+    call DeterminePaletteIDOutOfBattle  ; pret's A-holds-the-species entry
+.next:
+    mov [bg_slot_pal + 0], al           ; ld [wPalPacket + 1], a — PAL_SET entry 0
+    mov [obj_slot_pal + 0], al
+    mov byte [g_pal_dirty], 1
+    ret
+
                                 ; pret SetPal_GameFreakIntro also publishes the
                                 ; default as SET_PAL_GENERIC.
 SetPal_GameFreakIntro:          mov byte [ebp + wDefaultPaletteCommand], SET_PAL_GENERIC
