@@ -115,6 +115,9 @@ global RunSurfTestSeed
 extern PrepareNewGameDebug
 extern SurfingPikachuMinigame
 global RunSurfingPikachuTest
+%ifdef DEBUG_SURFING_PIKACHU_INTRO
+global SurfingPikachuIntroDebugFrameHook
+%endif
 %endif
 %ifdef DEBUG_LEDGE
 extern PrepareNewGameDebug
@@ -1298,6 +1301,45 @@ gbstate_regions:
     ; wPartyMon1Exp has no port symbol; build it from the struct base + offset the
     ; way wDayCareMonExp does in gb_memmap.inc. 3 bytes, BIG-ENDIAN (GB order).
     gbregion "wPartyMon1Exp",    wPartyMons + MON_EXP, 3   ; EXP gained by the lead
+%endif
+%ifdef DEBUG_SURFING_PIKACHU_INTRO
+    ; surfing_pikachu_intro golden (backlog item 34 / archived
+    ; docs/plans/surfing_pikachu.md Stage 8). Same rule as the rows above:
+    ; scenario-local, mirrored by
+    ; tools/mgba_harness/scenarios/surfing_pikachu_intro.lua, joined by NAME.
+    ;
+    ; wCurMap and wPikachuSpawnStateFlags are deliberately NOT compared here —
+    ; both are ENTRY-MECHANISM artifacts, not evidence about the two rendering
+    ; defects this scenario defends. The golden reaches the checkpoint by real
+    ; map dispatch (wCurMap ends on SUMMER_BEACH_HOUSE, and seed.debug_new_game
+    ; sets wPikachuSpawnStateFlags bits the port's generic PrepareNewGameDebug
+    ; never models); RunSurfingPikachuTest reaches the SAME farcall by calling
+    ; SurfingPikachuMinigame directly, so it never touches either byte. Measured
+    ; 2026-08-18: comparing them produced only entry-mechanism noise (wCurMap
+    ; $00 vs $F8, wPikachuSpawnStateFlags $00 vs $E0), not a defect.
+    ;
+    ; The sentinel-then-poll anchor both sides use to reach the checkpoint —
+    ; must read back 0 (the value SurfingPikachuMinigameIntro.loop itself
+    ; writes right before the loop, not the $FF sentinel either side seeds).
+    ; Name kept <= GBSTATE_NAME_LEN (20): wSurfingMinigameIntroAnimationFinished
+    ; itself doesn't fit.
+    gbregion "wSurfIntroFinished", wSurfingMinigameIntroAnimationFinished, 1
+    ; The BG map at $9800 -- the bytes the compositor actually SAMPLES -- which no
+    ; other region reaches: "vram_tiles" is GBSTATE_VRAM_SIZE ($1800) from $8000
+    ; and so stops one byte short of $9800, and "wTileMap" compares the WRAM
+    ; STAGING buffer, which stays correct on both sides whether or not anything
+    ; ever commits it to the BG map.
+    ;
+    ; Without this row the scenario was a FALSE WITNESS, measured 2026-08-18:
+    ; with SurfingMinigame_MirrorIntroCanvas's call site commented out -- the exact
+    ; defect it exists to defend (7445a3fa8) -- goldencheck still reported PASS with
+    ; byte-identical output. The broken build was confirmed genuinely broken by
+    ; disassembly (`call ... <SurfingMinigame_MirrorIntroCanvas>`: 1x in the restored
+    ; object, 0x in the broken one). Two cheaper checks are worthless here and were
+    ; discarded: objdump -r shows no relocation either way because the call is
+    ; same-file and PC-relative, and the .o hash differs on every rebuild because
+    ; COFF embeds a timestamp.
+    gbregion "bgmap0",             GB_TILEMAP0, TILEMAP_W * TILEMAP_H
 %endif
 %ifdef DEBUG_TRAINER_ROUTE17
     ; ROUTE_17 / ForceBikeDown witness (map-script fidelity plan, third attempt).
@@ -7373,6 +7415,60 @@ section .bss
 surf_dbg_frames: resd 1
 section .text
 %endif  ; DEBUG_SURFING_PIKACHU_LIVE
+
+; ---------------------------------------------------------------------------
+; SurfingPikachuIntroDebugFrameHook — the golden-scenario checkpoint hook for
+; backlog item 34 (docs/current_plan_backlog.md #34; the archived
+; docs/plans/surfing_pikachu.md Stage 8). Called once per
+; SurfingPikachuMinigameIntro.loop iteration ONLY in a
+; DEBUG_SURFING_PIKACHU_INTRO build (a sub-flag of DEBUG_SURFING_PIKACHU — see
+; the Makefile gate), never in a gameplay-capture or LIVE build.
+;
+; WHY THE INTRO INSTEAD OF GAMEPLAY (see SurfingPikachuDebugFrameHook above for
+; why gameplay itself has no natural capture point): the gameplay loop is also
+; RNG-driven (SurfingMinigame_ChooseNextWaveSequence) and reads a 3-frame-
+; buffered joypad, so nothing about it is cross-emulator comparable.
+; SurfingPikachuMinigameIntro draws the fully scripted "Pikachu's Beach" title
+; screen with no RNG and no input read anywhere in it or its caller up to the
+; checkpoint, so it is the only deterministic surface this minigame has — see
+; tools/mgba_harness/scenarios/surfing_pikachu_intro.lua's header for the full
+; argument and tools/scenario_manifest.json's "surfing_pikachu_intro" entry.
+;
+; CHECKPOINT: exactly ONE loop iteration after
+; wSurfingMinigameIntroAnimationFinished goes to 0 (which pret's
+; SurfingPikachuMinigameIntro.loop does with a bare `xor a / ld
+; [wSurfingMinigameIntroAnimationFinished], a` immediately before entering the
+; loop) — i.e. after RunObjectAnimations has published the intro Pikachu's OAM
+; exactly once, but before its animation has moved it from its spawn X
+; (SurfingMinigameAnimatedObjectFn_IntroAnimationPikachu steps it only every
+; OTHER frame, so its first horizontal move is on iteration 2). This is the
+; SAME instant tools/mgba_harness/scenarios/surfing_pikachu_intro.lua's
+; sentinel-then-poll anchor reaches on the golden ROM (measured: two
+; independent mGBA runs of that scenario produced byte-identical
+; GOLDEN.BIN/.json). SURF_INTRO_DUMP_FRAME counts loop iterations (1-based,
+; matching SURF_DUMP_FRAME's own convention), default 1.
+; ---------------------------------------------------------------------------
+%ifdef DEBUG_SURFING_PIKACHU_INTRO
+%ifndef SURF_INTRO_DUMP_FRAME
+%define SURF_INTRO_DUMP_FRAME 1
+%endif
+SurfingPikachuIntroDebugFrameHook:
+    pushad
+    inc dword [surf_intro_dbg_frames]
+    cmp dword [surf_intro_dbg_frames], SURF_INTRO_DUMP_FRAME
+    jb .out
+    call DumpBackbuffer
+    call DumpGBState
+    mov ax, 0x4C00
+    int 0x21
+.out:
+    popad
+    ret
+
+section .bss
+surf_intro_dbg_frames: resd 1
+section .text
+%endif  ; DEBUG_SURFING_PIKACHU_INTRO
 %endif
 
 ; ===========================================================================

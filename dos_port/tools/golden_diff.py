@@ -301,6 +301,33 @@ _MAP_SIGHT_COMMON = {
 }
 
 
+# The BG map ($9800) is 32x32, but only the leftmost 20x18 is ever on screen and
+# only that window is what SurfingMinigame_MirrorIntroCanvas commits. Outside it
+# the two sides hold unrelated leftovers: the golden's is real hardware residue
+# from the maps it walked through to get here ($10 border / $7F blank), the
+# port's is zero because nothing ever wrote there. MEASURED 2026-08-18: 664
+# diverging bytes, which is EXACTLY 12*32 (cols 20-31) + 14*20 (rows 18-31) --
+# i.e. every out-of-window byte and not one byte more. The 20x18 window itself
+# matched byte-for-byte, which is the comparison this region exists to make.
+def _bgmap_offscreen_masks(why):
+    out = []
+    for row in range(32):
+        if row < GB_H:
+            out.append(((row * 32 + GB_W, row * 32 + 31), why))
+        else:
+            out.append(((row * 32, row * 32 + 31), why))
+    return out
+
+
+_SURF_BGMAP_OFFSCREEN = _bgmap_offscreen_masks(
+    "off-screen BG map: only the leftmost 20x18 of the 32x32 map is displayed, and "
+    "only that window is mirrored from wTileMap. Outside it the golden holds hardware "
+    "residue from the maps it walked through ($10 border / $7F blank) while the port "
+    "holds zero, because the port has no VBlank auto-transfer and nothing writes here. "
+    "The masked area is exactly the complement of the visible window -- measured, the "
+    "unmasked 20x18 matches byte-for-byte")
+
+
 SCENARIOS = {
     "status_p1": {
         "flags": "DEBUG_STATUS=1",
@@ -2091,6 +2118,125 @@ SCENARIOS = {
                              "(Session C differ note)"),
                 (256 + 0x14, "water tile: VRAM tile-DATA animation, phase depends on dump frame "
                              "(Session C differ note)"),
+            ],
+        },
+    },
+    "surfing_pikachu_intro": {
+        # Backlog item 34 / archived docs/plans/surfing_pikachu.md Stage 8. Full
+        # render comparison (tilemap + vram + oam + wram), NOT "datastruct": the
+        # whole point of this scenario is to defend the two rendering defects
+        # fixed 2026-08-18 (no OBJ drawn; intro rendered as a uniform tile-$00
+        # field, both 7445a3fa8) plus the dead jump arc (08154a437) is out of
+        # reach here (gameplay only) but the intro's checkpoint is exactly where
+        # the first two defects lived. Picking "datastruct" to dodge the tilemap
+        # diff would prove nothing about either fixed defect, defeating the
+        # scenario's reason for existing.
+        "flags": "DEBUG_SURFING_PIKACHU_INTRO=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Same CENTER-only projection as every other BCOORD-projected screen
+        # (status_p1/status_p2): this screen's hlcoord/decoord are redefined to
+        # +10 cols / +3 rows (docs/plans/surfing_pikachu.md section 1, "Projection
+        # ruling"), and DrawSurfingPikachuMinigameIntroBackground writes wTileMap
+        # entirely through decoord/hlcoord, so the whole 20x18 GB screen lands at
+        # a uniform (10,3) offset in the port's 40x25 canvas -- no per-element
+        # projections needed.
+        "window": (10, 3),
+        # All four masks below were ROOT-CAUSED against pret source and the port's
+        # own translation (not guessed), and none of them touches a cell/slot/entry
+        # this scenario exists to defend (the beach-intro tilemap art and the intro
+        # Pikachu's OBJ presence/tile-id/row are all outside every range here).
+        "masks": {
+            "tilemap": [
+                ((13, 9),
+                 "wSurfingMinigameIntroAnimationFinished ($C633) aliases wTileMap+659 on "
+                 "the port's 40x25 (1000-byte) flat canvas -- 0xC3A0 (port wTileMap base, "
+                 "same as pret's) + 659 = 0xC633 exactly. Pret's real wTileMap is only "
+                 "20x18=360 bytes, so on real hardware this is a genuinely separate WRAM "
+                 "byte; on the port, the canvas widened for the widescreen viewport "
+                 "(surfing_pikachu.asm:2956 DEVIATION, 'permanent viewport expansion') "
+                 "happens to span over it. The checkpoint's own sentinel-then-poll anchor "
+                 "relies on pret's `xor a / ld [wSurfingMinigameIntroAnimationFinished], a` "
+                 "running right before `.loop:` -- that exact write is what clobbers this "
+                 "one BG cell to 0 on the port a moment before the dump. Verified: with the "
+                 "checkpoint moved earlier (before that write executes) this cell reads "
+                 "$B3 on both sides."),
+            ],
+            "vram": (
+                # Neither the currently-spawned OBJ (tile ids $80-$A3, unsigned) nor this
+                # screen's SIGNED BG addressing (tile $00 = $9000; ids $80+ = vChars1)
+                # reference vChars0 tile ids $18-$23 at all. SurfingPikachu1Graphics2 --
+                # the only thing that ever loads vChars0 -- is copied by
+                # SurfingPikachuMinigame_LoadGFXAndLayout, which runs at the START of
+                # SurfingPikachuLoop, i.e. AFTER the intro this scenario dumps during.
+                # These 12 slots are simply whatever the boot path (seed.debug_new_game's
+                # real menu navigation vs the port's direct PrepareNewGameDebug call) left
+                # in VRAM before the minigame ever touched it.
+                [(s, "vChars0 tile ids $18-$23: undisplayed -- neither the intro's OBJ ($80-$A3) "
+                     "nor its signed BG addressing reference this range, and the loader that "
+                     "ever writes vChars0 (SurfingPikachu1Graphics2, via LoadGFXAndLayout) "
+                     "hasn't run yet at this checkpoint (it's gameplay-loop setup, after the "
+                     "intro) -- boot-path VRAM residue") for s in range(24, 36)]
+                # SurfingPikachuMinigameIntro copies `144 tiles` (2304 B) of
+                # SurfingPikachu1Graphics3 into vChars1, but the real asset
+                # (gfx/surfing_pikachu/surfing_pikachu_1c.2bpp) is only 2224 B = 139
+                # tiles (verified: `wc -c` on the file, and the port's generated
+                # assets/surfing_pikachu_tilemaps.inc carries the identical 2224 B --
+                # this is pret's OWN code reading past its labeled asset, tiles 139-143 =
+                # slots 267-271). On real hardware those 5 "extra" tiles are whatever ROM
+                # data immediately follows Graphics3 in pret's bank; the port's Tier-1
+                # generator cannot reproduce that ROM adjacency (its own generated .inc
+                # lays assets out in a different order/padding), so it reads different --
+                # but equally undisplayed -- bytes instead. Confirmed undisplayed: the
+                # current OAM only uses tile ids $80-$A3 (slots 128-163) and the current
+                # tilemap only reaches into this load's first ~11 tiles (the FRAME.BIN
+                # render, tools/render_frame.py output, shows a clean title/textbox/water
+                # frame with no corruption).
+                + [(s, "vChars1/2 tile ids $8B-$8F (slots 267-271): the last 5 of the 144 "
+                       "tiles SurfingPikachuMinigameIntro copies from SurfingPikachu1Graphics3, "
+                       "which is really only 139 tiles (2224 B) -- pret's own code reads past "
+                       "the labeled asset into whatever ROM data follows it; the port's "
+                       "generated asset has different (but equally undisplayed) trailing bytes")
+                   for s in range(267, 272)]
+                # Everything past the overrun tail is simply never loaded by anything
+                # before this checkpoint (same LoadGFXAndLayout-runs-later reasoning as
+                # the vChars0 range above) -- boot-path residue, not a rendering defect.
+                + [(s, "vChars2 tile ids $90-$DD: undisplayed -- nothing in "
+                       "SurfingPikachuMinigameIntro's setup writes here (SurfingPikachu1Graphics1, "
+                       "the only loader that ever touches this VRAM range, is also "
+                       "LoadGFXAndLayout/gameplay-loop-only) -- boot-path VRAM residue")
+                   for s in range(272, 350) if s != 291]
+            ),
+            "oam": [
+                (i, "OAM X off by exactly +2px (Y and tile/attr match exactly): "
+                    "UpdateCurrentAnimatedObjectFrame (engine/gfx/animated_objects.asm:178-188) "
+                    "adds wAnimatedObjectGlobalXOffset into every OBJ's final X -- and that "
+                    "byte (ram/wram.asm:217) has NO WRITER anywhere in pret's source tree or "
+                    "the port (grepped both whole-tree); it is uninitialized boot-path residue "
+                    "that differs because the golden reaches this screen through real "
+                    "navigation (many frames of menu/overworld code between boot and here) "
+                    "while the port's RunSurfingPikachuTest calls SurfingPikachuMinigame "
+                    "directly. The OBJ's actual identity (tile ids $80/$81/$82/$83 x3 rows, "
+                    "attr $20) and its Y row are exactly right on both sides -- this defends "
+                    "against 'no OBJ at all' just as well with the X value masked as without.")
+                for i in range(12)
+            ],
+        },
+        "wram_masks": {
+            # bgmap0 ($9800) is THE region that gives this scenario teeth: without
+            # it the whole thing still passed with SurfingMinigame_MirrorIntroCanvas's
+            # call removed (measured 2026-08-18). Only the off-screen complement of
+            # the visible 20x18 window is masked; the window itself is compared.
+            "bgmap0": list(_SURF_BGMAP_OFFSCREEN),
+            "wOptionsBlock": [
+                ((3, 3),
+                 "wLetterPrintingDelayFlags BIT_TEXT_DELAY: transient draw-layer state that "
+                 "depends on whether a text message is mid-print at the exact dump frame -- "
+                 "same class of divergence _BATTLE_WRAM_MASKS documents for the battle "
+                 "scenarios (PrintLetterDelay's port-side call pattern vs pret's per-message "
+                 "gate). This scenario's checkpoint is reached moments after the multi-page "
+                 "Surfin' Dude dialog and the YES/NO farcall, so the two sides' delay-flag "
+                 "phase differs; nothing else in wOptionsBlock (wOptions, "
+                 "wObtainedBadges, wUnusedObtainedBadges) is affected."),
             ],
         },
     },

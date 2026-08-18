@@ -2522,6 +2522,17 @@ ifdef DEBUG_SURFING_PIKACHU
 SURF_DUMP_FRAME ?= 90
 NASMFLAGS += -D SURF_DUMP_FRAME=$(SURF_DUMP_FRAME)
 endif
+# Surfing Pikachu INTRO golden checkpoint (backlog item 34 / archived
+# docs/plans/surfing_pikachu.md Stage 8): same RunSurfingPikachuTest entry as
+# the gameplay capture gate above, but the frame hook lives on
+# SurfingPikachuMinigameIntro.loop instead of the post-intro gameplay loop
+# (SurfingPikachuLoop.DelayFrame), because the intro is the minigame's only
+# RNG-free, input-free surface (see tools/mgba_harness/scenarios/
+# surfing_pikachu_intro.lua's header). make DEBUG_SURFING_PIKACHU_INTRO=1
+ifdef DEBUG_SURFING_PIKACHU_INTRO
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SURFING_PIKACHU -D DEBUG_SURFING_PIKACHU_INTRO -D SKIP_TITLE
+endif
 # PLAYABLE Surfing Pikachu harness — the one to reach for when a human is at the
 # keyboard, rather than the capture gate above.
 #   dos_port/run DEBUG_SURFING_PIKACHU_LIVE=1

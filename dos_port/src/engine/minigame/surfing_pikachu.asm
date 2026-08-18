@@ -153,6 +153,9 @@ extern g_row_yoff                                   ; src/ppu/ppu.asm
 %ifdef DEBUG_SURFING_PIKACHU
 %ifndef DEBUG_SURFING_PIKACHU_LIVE
 extern SurfingPikachuDebugFrameHook  ; src/debug/debug_dump.asm
+%ifdef DEBUG_SURFING_PIKACHU_INTRO
+extern SurfingPikachuIntroDebugFrameHook  ; src/debug/debug_dump.asm
+%endif
 %endif
 %endif
 extern PublishProjectedOAM              ; src/engine/gfx/sprite_oam.asm
@@ -2940,6 +2943,9 @@ SurfingPikachuMinigameIntro:
     mov byte [ebp + wCurrentAnimatedObjectOAMBufferOffset], 0
     call RunObjectAnimations
     call DelayFrame
+%ifdef DEBUG_SURFING_PIKACHU_INTRO
+    call SurfingPikachuIntroDebugFrameHook   ; harness: photograph loop iteration N and exit
+%endif
     jmp .loop
 .ret:
     ret
