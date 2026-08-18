@@ -40,7 +40,7 @@ extern SilphCo5FRockerBattleText
 extern SilphCo5FRocket1BattleText
 extern SilphCo5FRocket2BattleText
 extern SilphCo5FScientistBattleText
-extern SilphCo5F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SilphCo5F_ScriptPointers
 extern SilphCo5TrainerHeader0
 extern SilphCo5TrainerHeader1
 extern SilphCo5TrainerHeader2
@@ -164,7 +164,7 @@ SilphCo5F_SetUnlockedSilphCoDoorsScript:
     SetEventAfterBranchReuseHL EVENT_SILPH_CO_5_UNLOCKED_DOOR3, EVENT_SILPH_CO_5_UNLOCKED_DOOR1
     ret
 
-; SilphCo5F_ScriptPointers (scripts/SilphCo5F.asm:69-98) — not re-emitted: SilphCo5TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SilphCo5F_ScriptPointers (scripts/SilphCo5F.asm:69-98) — not re-emitted: SilphCo5F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

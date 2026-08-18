@@ -41,7 +41,7 @@ extern HealParty
 extern PrintText
 extern ReplaceTileBlock
 extern SilphCo9FRocket1BattleText
-extern SilphCo9F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SilphCo9F_ScriptPointers
 extern SilphCo9TrainerHeader0
 extern SilphCo9TrainerHeader1
 extern SilphCo9TrainerHeader2
@@ -236,7 +236,7 @@ SilphCo9F_SetUnlockedSilphCoDoorsScript:
     SetEventAfterBranchReuseHL EVENT_SILPH_CO_9_UNLOCKED_DOOR4, EVENT_SILPH_CO_9_UNLOCKED_DOOR1
     ret
 
-; SilphCo9F_ScriptPointers (scripts/SilphCo9F.asm:122-142) — not re-emitted: SilphCo9TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SilphCo9F_ScriptPointers (scripts/SilphCo9F.asm:122-142) — not re-emitted: SilphCo9F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

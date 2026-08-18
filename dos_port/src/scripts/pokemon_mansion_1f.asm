@@ -39,7 +39,7 @@ extern Mansion1TrainerHeader0
 extern Mansion1TrainerHeaders
 extern PlaySound
 extern PokemonMansion1FScientistBattleText
-extern PokemonMansion1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern PokemonMansion1F_ScriptPointers
 extern PrintText
 extern ReplaceTileBlock
 extern TalkToTrainer
@@ -127,7 +127,7 @@ Mansion1ReplaceBlock:
 
 ; Mansion1Script_Switches (scripts/PokemonMansion1F.asm:49-56) — not re-emitted: Mansion1Script_Switches is already defined elsewhere in the port.
 
-; PokemonMansion1F_ScriptPointers (scripts/PokemonMansion1F.asm:59-75) — not re-emitted: Mansion1TrainerHeaders is already defined in assets/trainer_headers.inc.
+; PokemonMansion1F_ScriptPointers (scripts/PokemonMansion1F.asm:59-75) — not re-emitted: PokemonMansion1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

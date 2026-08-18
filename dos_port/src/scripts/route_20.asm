@@ -53,7 +53,7 @@ extern Route20TrainerHeader7
 extern Route20TrainerHeader8
 extern Route20TrainerHeader9
 extern Route20TrainerHeaders
-extern Route20_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route20_ScriptPointers
 extern ShowObject
 extern TalkToTrainer
 extern TextScriptEnd
@@ -145,7 +145,7 @@ Route20HideObjectScript:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     jmp HideObject
 
-; Route20_ScriptPointers (scripts/Route20.asm:60-102) — not re-emitted: Route20TrainerHeaders is already defined in assets/trainer_headers.inc.
+; Route20_ScriptPointers (scripts/Route20.asm:60-102) — not re-emitted: Route20_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -36,7 +36,7 @@ extern Mansion4TrainerHeader0
 extern Mansion4TrainerHeader1
 extern Mansion4TrainerHeaders
 extern PokemonMansionB1FBurglarBattleText
-extern PokemonMansionB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern PokemonMansionB1F_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 
@@ -108,7 +108,7 @@ MansionB1FCheckReplaceSwitchDoorBlocks:
 
 ; Mansion4Script_Switches (scripts/PokemonMansionB1F.asm:47-54) — not re-emitted: Mansion4Script_Switches is already defined elsewhere in the port.
 
-; PokemonMansionB1F_ScriptPointers (scripts/PokemonMansionB1F.asm:57-80) — not re-emitted: Mansion4TrainerHeaders is already defined in assets/trainer_headers.inc.
+; PokemonMansionB1F_ScriptPointers (scripts/PokemonMansionB1F.asm:57-80) — not re-emitted: PokemonMansionB1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

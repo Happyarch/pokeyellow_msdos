@@ -37,7 +37,7 @@ extern ReplaceTileBlock
 extern SilphCo2F_SetCardKeyDoorYScript
 extern SilphCo3FRocketBattleText
 extern SilphCo3FScientistBattleText
-extern SilphCo3F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SilphCo3F_ScriptPointers
 extern SilphCo3TrainerHeader0
 extern SilphCo3TrainerHeader1
 extern SilphCo3TrainerHeaders
@@ -137,7 +137,7 @@ SilphCo3F_UnlockedDoorEventScript:
     SetEventAfterBranchReuseHL EVENT_SILPH_CO_3_UNLOCKED_DOOR2, EVENT_SILPH_CO_3_UNLOCKED_DOOR1
     ret
 
-; SilphCo3F_ScriptPointers (scripts/SilphCo3F.asm:54-72) — not re-emitted: SilphCo3TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SilphCo3F_ScriptPointers (scripts/SilphCo3F.asm:54-72) — not re-emitted: SilphCo3F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

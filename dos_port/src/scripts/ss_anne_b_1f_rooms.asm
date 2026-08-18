@@ -42,7 +42,7 @@ extern SSAnne10TrainerHeader4
 extern SSAnne10TrainerHeader5
 extern SSAnne10TrainerHeaders
 extern SSAnneB1FRoomsSailor1BattleText
-extern SSAnneB1FRooms_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SSAnneB1FRooms_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 
@@ -73,7 +73,7 @@ SSAnneB1FRooms_Script:
     mov [ebp + wSSAnneB1FRoomsCurScript], al
     ret
 
-; SSAnneB1FRooms_ScriptPointers (scripts/SSAnneB1FRooms.asm:11-44) — not re-emitted: SSAnne10TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SSAnneB1FRooms_ScriptPointers (scripts/SSAnneB1FRooms.asm:11-44) — not re-emitted: SSAnneB1FRooms_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -44,7 +44,7 @@ extern RockTunnel2TrainerHeader6
 extern RockTunnel2TrainerHeader7
 extern RockTunnel2TrainerHeaders
 extern RockTunnelB1FCooltrainerF1BattleText
-extern RockTunnelB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern RockTunnelB1F_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 
@@ -69,7 +69,7 @@ RockTunnelB1F_Script:
     mov [ebp + wRockTunnelB1FCurScript], al
     ret
 
-; RockTunnelB1F_ScriptPointers (scripts/RockTunnelB1F.asm:11-45) — not re-emitted: RockTunnel2TrainerHeaders is already defined in assets/trainer_headers.inc.
+; RockTunnelB1F_ScriptPointers (scripts/RockTunnelB1F.asm:11-45) — not re-emitted: RockTunnelB1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

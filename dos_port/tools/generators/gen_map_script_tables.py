@@ -29,6 +29,17 @@ src/scripts/trainer_map_script.asm) parameterised by a generated per-map block:
                       anchor. This retires the hand-pulled `wRoute3CurScript equ`
                       that route_3.asm carried (a golden-.sym value typed in by hand).
 
+TABLE EMISSION AND DRIVER ELIGIBILITY ARE SEPARATE QUESTIONS (2026-08-17). The
+jumptable above is emitted for EVERY map whose _ScriptPointers is that standard
+three-entry table — forty of them — while only the seventeen whose _Script body is
+also the exact skeleton get a MapScriptParams row and can run under the driver.
+The other twenty-three are maps like SilphCo2F, whose _Script is the skeleton plus
+a leading `call SilphCo2FGateCallbackScript`: the body is hand-translated in
+src/scripts/silph_co_2f.asm and stays there, but the jumptable is byte-identical to
+the ones already emitted. Conflating the two questions is why those twenty-three
+translated port scripts sat unlinkable on a table this generator could always have
+produced.
+
 WIRING IS NOT AUTOMATIC. Emitting a map's parameter block costs nothing at runtime;
 what makes a map live is MapScriptPointers (gen_map_scripts.py), which reads
 WIRED_MAPS below. Per the faithfulness-review skill's standing rule, a map is wired
@@ -251,47 +262,74 @@ def body_of(text, label):
     return [ln.strip() for ln in m.group(1).strip().splitlines()] if m else None
 
 
-def classify_scripts():
-    """Return (standard, near_miss, bespoke) over every pret map with a `_Script`.
+def standard_pointer_table(text, name):
+    """The map's SCRIPT_* const names if its _ScriptPointers is the standard
+    three-entry trainer table, else None.
 
-    standard  = {pret map name: script file stem} — driver-eligible.
-    near_miss = {name: why} — the skeleton body with a non-standard pointer table;
-                these are the candidates for a future driver extension, so they
-                are enumerated.
-    bespoke   = [name] — an ordinary hand-written map script. Counted, not listed:
-                it is not debt, it is just a map with real logic.
+    Deliberately says NOTHING about the map's _Script body — see classify_scripts.
     """
-    standard, rejected, bespoke = {}, {}, []
+    ptrs = body_of(text, f"{name}_ScriptPointers")
+    if not ptrs or len(ptrs) != len(POINTER_TABLE) or ptrs[0] != POINTER_TABLE[0] \
+       or not all(want_ptr in got for want_ptr, got in
+                  zip(POINTER_TABLE[1:], ptrs[1:])):
+        return None
+    # Keep pret's own SCRIPT_* constant spelling for the emitted comments: the
+    # names are declared implicitly by dw_const in the script file itself
+    # (def_script_pointers is just const_def), so there is no constants/ file
+    # to look them up in and no derivable rule (SCRIPT_ROUTE3_DEFAULT, not
+    # SCRIPT_ROUTE_3_DEFAULT).
+    return [ln.split(",")[-1].strip() for ln in ptrs[1:]]
+
+
+def classify_scripts():
+    """Return (standard, table_only, near_miss, bespoke) over every pret map with
+    a `_Script`.
+
+    TWO INDEPENDENT QUESTIONS, and conflating them was this generator's original
+    defect. "Is the pointer TABLE standard?" decides whether we can emit the
+    table. "Is the _Script BODY the standard skeleton?" decides whether the
+    generic TrainerMapScript driver can run the map. A map can answer yes to the
+    first and no to the second — SilphCo2F's _Script is the skeleton with a
+    leading `call SilphCo2FGateCallbackScript`, and 22 others are the same shape —
+    and until 2026-08-17 those maps got no table at all, which left 22 translated
+    port scripts unable to link on a jumptable that is byte-identical to the
+    seventeen we were already emitting.
+
+    standard   = {name: (stem, script consts)} — table AND skeleton: driver-eligible,
+                 gets a MapScriptParams row.
+    table_only = {name: (stem, script consts)} — standard table, bespoke body. Gets
+                 its _ScriptPointers table and NOTHING else: its _Script is
+                 hand-ported in src/scripts/<map>.asm and must stay that way.
+    near_miss  = {name: why} — the skeleton body with a non-standard pointer table;
+                 these are the candidates for a future driver extension, so they
+                 are enumerated.
+    bespoke    = [name] — an ordinary hand-written map script with a non-standard
+                 table too. Counted, not listed: it is not debt, it is just a map
+                 with real logic.
+    """
+    standard, table_only, rejected, bespoke = {}, {}, {}, []
     for path in sorted(SCRIPTS.glob("*.asm")):
         text = path.read_text()
         m = re.search(r"^(\w+)_Script:$", text, re.M)
         if not m:
             continue
         name = m.group(1)
-        body = body_of(text, f"{name}_Script")
-        want = [ln.format(name=name) for ln in SKELETON]
-        if body != want:
-            bespoke.append(name)
+        consts = standard_pointer_table(text, name)
+        skeleton = body_of(text, f"{name}_Script") == [ln.format(name=name)
+                                                       for ln in SKELETON]
+        if consts is None:
+            if skeleton:
+                ptrs = body_of(text, f"{name}_ScriptPointers")
+                # NEAR MISS: the skeleton body with extra/other sub-scripts. These
+                # are the maps the driver could cover if it grew a per-map tail, so
+                # they are named individually.
+                rejected[name] = (f"skeleton body but {len(ptrs) - 1 if ptrs else 0} "
+                                  f"script pointers (standard is 3)")
+            else:
+                bespoke.append(name)
             continue
-        ptrs = body_of(text, f"{name}_ScriptPointers")
-        if not ptrs or len(ptrs) != len(POINTER_TABLE) or ptrs[0] != POINTER_TABLE[0] \
-           or not all(want_ptr in got for want_ptr, got in
-                      zip(POINTER_TABLE[1:], ptrs[1:])):
-            # NEAR MISS: the skeleton body with extra/other sub-scripts. These are
-            # the maps the driver could cover if it grew a per-map tail, so they
-            # are named individually; a fully bespoke _Script is just an ordinary
-            # map, counted but not enumerated.
-            rejected[name] = (f"skeleton body but {len(ptrs) - 1 if ptrs else 0} "
-                              f"script pointers (standard is 3)")
-            continue
-        # Keep pret's own SCRIPT_* constant spelling for the emitted comments: the
-        # names are declared implicitly by dw_const in the script file itself
-        # (def_script_pointers is just const_def), so there is no constants/ file
-        # to look them up in and no derivable rule (SCRIPT_ROUTE3_DEFAULT, not
-        # SCRIPT_ROUTE_3_DEFAULT).
-        standard[name] = (path.stem,
-                          [ln.split(",")[-1].strip() for ln in ptrs[1:]])
-    return standard, rejected, bespoke
+        (standard if skeleton else table_only)[name] = (path.stem, consts)
+    return standard, table_only, rejected, bespoke
 
 
 def map_const_for(script_name, maps):
@@ -336,7 +374,7 @@ def main():
     maps = parse_map_order()
     cur_scripts = parse_cur_script_addresses()
     cross_checked = check_against_gb_memmap(cur_scripts)
-    standard, near_miss, bespoke = classify_scripts()
+    standard, table_only, near_miss, bespoke = classify_scripts()
 
     # Resolve each standard script to its map constant + per-map CurScript byte.
     rows, unresolved = {}, []
@@ -350,6 +388,17 @@ def main():
             unresolved.append(f"{name}: {label} not found in ram/wram.asm")
             continue
         rows[const] = (name, cur_scripts[label], standard[name][1])
+
+    # Every map whose table we emit, driver-eligible or not. The two sets are
+    # disjoint by construction (classify_scripts assigns each name to exactly one),
+    # but assert it: a name landing in both would emit the label twice and only
+    # fail at final link, a long way from here.
+    dup = set(standard) & set(table_only)
+    if dup:
+        sys.exit(f"gen_map_script_tables: {sorted(dup)} classified both "
+                 f"driver-eligible and table-only")
+    tables = {n: standard[n][1] for n in standard}
+    tables.update({n: table_only[n][1] for n in table_only})
 
     unknown = set(WIRED_MAPS) - set(rows)
     if unknown:
@@ -383,11 +432,20 @@ def main():
     out.append("")
 
     out.append("; ── per-map script-pointer tables (pret label names preserved) ────────")
-    for const in sorted(rows):
-        name, _addr, consts = rows[const]
+    out.append("; EVERY map whose _ScriptPointers is the standard three-entry trainer table,")
+    out.append("; whether or not its _Script body is the driver skeleton. A map marked")
+    out.append("; 'body ported in src/scripts' has a bespoke _Script (a callback call, an")
+    out.append("; extra sub-script) that is hand-translated in its own script file and gets")
+    out.append("; NO MapScriptParams row below — only this jumptable, which is byte-identical")
+    out.append("; to the driver-eligible ones and was the sole reason those scripts could not")
+    out.append("; link.")
+    for name in sorted(tables):
+        who = ("driver-eligible" if name in standard
+               else "body ported in src/scripts")
         out.append(f"global {name}_ScriptPointers")
-        out.append(f"{name}_ScriptPointers:")
-        for i, (target, script_const) in enumerate(zip(POINTER_TABLE[1:], consts)):
+        out.append(f"{name}_ScriptPointers:                    ; {who}")
+        for i, (target, script_const) in enumerate(zip(POINTER_TABLE[1:],
+                                                       tables[name])):
             out.append(f"    dd {target:<40} ; {script_const} ({i})")
     out.append("")
 
@@ -412,9 +470,16 @@ def main():
     # Report — no silent caps. Every pret map with a _Script lands in exactly one
     # bucket, and the buckets are printed with their sizes.
     print(f"wrote {dst} ({len(maps)} MapScriptParams entries, "
-          f"{len(rows)} standard trainer map(s), {len(WIRED_MAPS)} wired; "
+          f"{len(tables)} script-pointer table(s) = {len(rows)} driver-eligible "
+          f"+ {len(table_only)} table-only, {len(WIRED_MAPS)} wired; "
           f"{len(cur_scripts)} CurScript addresses derived, "
           f"{cross_checked} cross-checked vs gb_memmap.inc)")
+    if table_only:
+        print(f"  TABLE ONLY — standard jumptable, bespoke _Script body "
+              f"({len(table_only)}); the body is hand-ported in src/scripts/ and "
+              f"gets no MapScriptParams row:", file=sys.stderr)
+        for name in sorted(table_only):
+            print(f"    {name} ({table_only[name][0]}.asm)", file=sys.stderr)
     not_wired = sorted(set(rows) - set(WIRED_MAPS))
     if not_wired:
         print(f"  standard-shape, table emitted, NOT wired ({len(not_wired)}): "

@@ -44,7 +44,7 @@ extern SilphCo4F_SetCardKeyDoorYScript
 extern SilphCo6FRocket1BattleText
 extern SilphCo6FRocket2BattleText
 extern SilphCo6FScientistBattleText
-extern SilphCo6F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SilphCo6F_ScriptPointers
 extern SilphCo6TrainerHeader0
 extern SilphCo6TrainerHeader1
 extern SilphCo6TrainerHeader2
@@ -122,7 +122,7 @@ SilphCo6F_UnlockedDoorEventScript:
     SetEvent EVENT_SILPH_CO_6_UNLOCKED_DOOR
     ret
 
-; SilphCo6F_ScriptPointers (scripts/SilphCo6F.asm:38-64) — not re-emitted: SilphCo6TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SilphCo6F_ScriptPointers (scripts/SilphCo6F.asm:38-64) — not re-emitted: SilphCo6F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -30,7 +30,7 @@ global PokemonTower3F_Script
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern PokemonTower3FChanneler1BattleText
-extern PokemonTower3F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern PokemonTower3F_ScriptPointers
 extern PokemonTower3TrainerHeader0
 extern PokemonTower3TrainerHeader1
 extern PokemonTower3TrainerHeader2
@@ -59,7 +59,7 @@ PokemonTower3F_Script:
     mov [ebp + wPokemonTower3FCurScript], al
     ret
 
-; PokemonTower3F_ScriptPointers (scripts/PokemonTower3F.asm:11-31) — not re-emitted: PokemonTower3TrainerHeaders is already defined in assets/trainer_headers.inc.
+; PokemonTower3F_ScriptPointers (scripts/PokemonTower3F.asm:11-31) — not re-emitted: PokemonTower3F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -35,7 +35,7 @@ global MtMoon1TalkToTrainer
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern MtMoon1FHikerBattleText
-extern MtMoon1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern MtMoon1F_ScriptPointers
 extern MtMoon1TrainerHeader0
 extern MtMoon1TrainerHeader1
 extern MtMoon1TrainerHeader2
@@ -68,7 +68,7 @@ MtMoon1F_Script:
     mov [ebp + wMtMoon1FCurScript], al
     ret
 
-; MtMoon1F_ScriptPointers (scripts/MtMoon1F.asm:11-49) — not re-emitted: MtMoon1TrainerHeaders is already defined in assets/trainer_headers.inc.
+; MtMoon1F_ScriptPointers (scripts/MtMoon1F.asm:11-49) — not re-emitted: MtMoon1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

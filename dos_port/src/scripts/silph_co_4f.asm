@@ -38,7 +38,7 @@ extern ReplaceTileBlock
 extern SilphCo4FRocket1BattleText
 extern SilphCo4FRocket2BattleText
 extern SilphCo4FScientistBattleText
-extern SilphCo4F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SilphCo4F_ScriptPointers
 extern SilphCo4TrainerHeader0
 extern SilphCo4TrainerHeader1
 extern SilphCo4TrainerHeader2
@@ -188,7 +188,7 @@ SilphCo4FUnlockedDoorEventScript:
     SetEventAfterBranchReuseHL EVENT_SILPH_CO_4_UNLOCKED_DOOR2, EVENT_SILPH_CO_4_UNLOCKED_DOOR1
     ret
 
-; SilphCo4F_ScriptPointers (scripts/SilphCo4F.asm:90-113) — not re-emitted: SilphCo4TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SilphCo4F_ScriptPointers (scripts/SilphCo4F.asm:90-113) — not re-emitted: SilphCo4F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -46,7 +46,7 @@ extern ExecuteCurMapScriptInTable
 extern LoadScreenTilesFromBuffer1
 extern PrintText
 extern SSAnne2FRoomsGentleman1BattleText
-extern SSAnne2FRooms_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SSAnne2FRooms_ScriptPointers
 extern SSAnne9TrainerHeader0
 extern SSAnne9TrainerHeader1
 extern SSAnne9TrainerHeader2
@@ -83,7 +83,7 @@ SSAnne2FRooms_Script:
     mov [ebp + wSSAnne2FRoomsCurScript], al
     ret
 
-; SSAnne2FRooms_ScriptPointers (scripts/SSAnne2FRooms.asm:11-42) — not re-emitted: SSAnne9TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SSAnne2FRooms_ScriptPointers (scripts/SSAnne2FRooms.asm:11-42) — not re-emitted: SSAnne2FRooms_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

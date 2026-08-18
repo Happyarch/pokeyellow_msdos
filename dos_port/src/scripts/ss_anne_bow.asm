@@ -33,7 +33,7 @@ extern SSAnne5TrainerHeader1
 extern SSAnne5TrainerHeaders
 extern SSAnneBowSailor2BattleText
 extern SSAnneBowSailor3BattleText
-extern SSAnneBow_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SSAnneBow_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 
@@ -58,7 +58,7 @@ SSAnneBow_Script:
     mov [ebp + wSSAnneBowCurScript], al
     ret
 
-; SSAnneBow_ScriptPointers (scripts/SSAnneBow.asm:11-42) — not re-emitted: SSAnne5TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SSAnneBow_ScriptPointers (scripts/SSAnneBow.asm:11-42) — not re-emitted: SSAnneBow_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

@@ -35,7 +35,7 @@ extern ExecuteCurMapScriptInTable
 extern PrintText
 extern ReplaceTileBlock
 extern SilphCo10FRocketBattleText
-extern SilphCo10F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SilphCo10F_ScriptPointers
 extern SilphCo10TrainerHeader0
 extern SilphCo10TrainerHeader1
 extern SilphCo10TrainerHeaders
@@ -113,7 +113,7 @@ SilphCo10F_SetUnlockedSilphCoDoorsScript:
     SetEvent EVENT_SILPH_CO_10_UNLOCKED_DOOR
     ret
 
-; SilphCo10F_ScriptPointers (scripts/SilphCo10F.asm:38-58) — not re-emitted: SilphCo10TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SilphCo10F_ScriptPointers (scripts/SilphCo10F.asm:38-58) — not re-emitted: SilphCo10F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

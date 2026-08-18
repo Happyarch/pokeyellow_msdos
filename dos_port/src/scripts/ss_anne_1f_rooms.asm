@@ -33,7 +33,7 @@ extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern PlayCry
 extern SSAnne1FRoomsGentleman1BattleText
-extern SSAnne1FRooms_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern SSAnne1FRooms_ScriptPointers
 extern SSAnne8TrainerHeader0
 extern SSAnne8TrainerHeader1
 extern SSAnne8TrainerHeader2
@@ -69,7 +69,7 @@ SSAnne1FRooms_Script:
     mov [ebp + wSSAnne1FRoomsCurScript], al
     ret
 
-; SSAnne1FRooms_ScriptPointers (scripts/SSAnne1FRooms.asm:11-40) — not re-emitted: SSAnne8TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SSAnne1FRooms_ScriptPointers (scripts/SSAnne1FRooms.asm:11-40) — not re-emitted: SSAnne1FRooms_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

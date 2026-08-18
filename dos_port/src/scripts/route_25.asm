@@ -49,7 +49,7 @@ extern Route25TrainerHeader7
 extern Route25TrainerHeader8
 extern Route25TrainerHeaders
 extern Route25Youngster1BattleText
-extern Route25_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern Route25_ScriptPointers
 extern ShowObject
 extern TalkToTrainer
 extern TextScriptEnd
@@ -131,7 +131,7 @@ Route25ToggleBillsScript:
 .done:
     ret
 
-; Route25_ScriptPointers (scripts/Route25.asm:49-88) — not re-emitted: Route25TrainerHeaders is already defined in assets/trainer_headers.inc.
+; Route25_ScriptPointers (scripts/Route25.asm:49-88) — not re-emitted: Route25_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

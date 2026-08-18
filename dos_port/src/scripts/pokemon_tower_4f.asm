@@ -30,7 +30,7 @@ global PokemonTower4F_Script
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern PokemonTower4FChanneler1BattleText
-extern PokemonTower4F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern PokemonTower4F_ScriptPointers
 extern PokemonTower4TrainerHeader0
 extern PokemonTower4TrainerHeader1
 extern PokemonTower4TrainerHeader2
@@ -59,7 +59,7 @@ PokemonTower4F_Script:
     mov [ebp + wPokemonTower4FCurScript], al
     ret
 
-; PokemonTower4F_ScriptPointers (scripts/PokemonTower4F.asm:11-33) — not re-emitted: PokemonTower4TrainerHeaders is already defined in assets/trainer_headers.inc.
+; PokemonTower4F_ScriptPointers (scripts/PokemonTower4F.asm:11-33) — not re-emitted: PokemonTower4F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

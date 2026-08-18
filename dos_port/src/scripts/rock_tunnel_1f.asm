@@ -35,7 +35,7 @@ global RockTunnel1F_Script
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern RockTunnel1FHiker1BattleText
-extern RockTunnel1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern RockTunnel1F_ScriptPointers
 extern RockTunnel1TrainerHeader0
 extern RockTunnel1TrainerHeader1
 extern RockTunnel1TrainerHeader2
@@ -68,7 +68,7 @@ RockTunnel1F_Script:
     mov [ebp + wRockTunnel1FCurScript], al
     ret
 
-; RockTunnel1F_ScriptPointers (scripts/RockTunnel1F.asm:11-43) — not re-emitted: RockTunnel1TrainerHeaders is already defined in assets/trainer_headers.inc.
+; RockTunnel1F_ScriptPointers (scripts/RockTunnel1F.asm:11-43) — not re-emitted: RockTunnel1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1

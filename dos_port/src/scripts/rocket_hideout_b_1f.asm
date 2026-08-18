@@ -44,7 +44,7 @@ extern RocketHideout1TrainerHeader4
 extern RocketHideout1TrainerHeaders
 extern RocketHideoutB1FRocket1BattleText
 extern RocketHideoutB1FRocket5EndBattleText
-extern RocketHideoutB1F_ScriptPointers   ; NOT YET DEFINED IN THE PORT
+extern RocketHideoutB1F_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
 
@@ -103,7 +103,7 @@ RocketHideoutB1FDoorCallbackScript:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     jmp ReplaceTileBlock
 
-; RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — not re-emitted: RocketHideout1TrainerHeaders is already defined in assets/trainer_headers.inc.
+; RocketHideoutB1F_ScriptPointers (scripts/RocketHideoutB1F.asm:35-62) — not re-emitted: RocketHideoutB1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
 %assign event_byte -1
 %assign event_byte_a -1
