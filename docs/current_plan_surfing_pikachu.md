@@ -249,23 +249,38 @@ Chunks are dispatched **strictly sequentially**. Chunk N+1 is dispatched only
 after chunk N has returned *and* the root has verified it against §5 and ticked
 its box. A failed review holds the line.
 
-- [ ] **Stage 0 — Worktree standup (root session, not an execution agent).**
-- [ ] **Stage 1 — Chunk 1: substrate.** WRAM/staging symbols, Tier-1 generator +
+- [x] **Stage 0 — Worktree standup (root session, not an execution agent).**
+- [x] **Stage 1 — Chunk 1: substrate.** WRAM/staging symbols, Tier-1 generator +
       asset mirrors, and the three HAL primitives (`RedrawRowOrColumn`,
       `VBlankCopy`, per-scanline window Y override).
-- [ ] **Stage 2 — Root review of chunk 1** (§5.1). Tick only on evidence.
-- [ ] **Stage 3 — Chunk 2: the translation.** All 175 labels into
+- [x] **Stage 2 — Root review of chunk 1** (§5.1). Tick only on evidence.
+- [x] **Stage 3 — Chunk 2: the translation.** All 175 labels into
       `dos_port/src/engine/minigame/surfing_pikachu.asm`, check-only.
-- [ ] **Stage 4 — Root review of chunk 2** (§5.2).
-- [ ] **Stage 5 — Chunk 3: presentation, link, runtime gate.** The two missing
+- [x] **Stage 4 — Root review of chunk 2** (§5.2).
+- [x] **Stage 5 — Chunk 3: presentation, link, runtime gate.** The two missing
       externals, the window/projection glue, link the file,
       `DEBUG_SURFING_PIKACHU`, `FRAME.BIN` proof.
-- [ ] **Stage 6 — Root review of chunk 3** (§5.3).
-- [ ] **Stage 7 — Merge `surfing-pikachu` back to `master`** (root), after a
+- [x] **Stage 6 — Root review of chunk 3** (§5.3).
+- [x] **Stage 7 — Merge `surfing-pikachu` back to `master`** (root), after a
       clean `fidelity-full` on the merge result.
 - [ ] **Stage 8 — Follow-up (deferred, not part of this plan's chunks): design a
       deterministic golden scenario** (RNG pin + input tape) and add its
       `scenario_manifest.json` row.
+- [ ] **Stage 9 — OPEN RUNTIME DEFECTS found by the Stage 6 render proof
+      (2026-08-18).** The minigame renders, is correctly centered and draws its HP
+      status bar, but two things are wrong and neither is cosmetic:
+      1. **Pikachu is not visible on the water.** The player sprite never appears in
+         the play field; the only Pikachu on screen is the HUD icon. Suspect the OBJ
+         path — the minigame drives `RunObjectAnimations` and the
+         `wSurfingMinigameSpriteOAM` staging rather than the overworld
+         `PrepareOAMData` publisher, so shadow OAM may never reach `spr_oam_valid`.
+      2. **The scene barely animates.** Frames 20 / 90 / 250 differ byte-wise but
+         are visually near-identical; the water field and wave shapes do not
+         visibly advance.
+      Captured evidence: three `FRAME.BIN` dumps at loop iterations 20/90/250 via
+      `make DEBUG_SURFING_PIKACHU=1 SURF_DUMP_FRAME=<n>`, all confined to
+      columns 80-239 (the centred GB band). Do NOT call the minigame "working"
+      until both are resolved.
 
 ---
 
