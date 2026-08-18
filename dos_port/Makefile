@@ -3824,7 +3824,7 @@ assets: assets/scenario_registry.inc \
         assets/mon_icons.inc \
         assets/save_text.inc assets/main_menu_text.inc assets/league_pc_text.inc \
         assets/players_pc_text.inc assets/link_text.inc assets/oaks_pc_text.inc \
-        assets/pc_text.inc
+        assets/pc_text.inc assets/slots_text.inc
 	python3 tools/audit_memmap.py
 
 assets/scenario_registry.inc: tools/scenario_manifest.json tools/generators/gen_scenario_registry.py
