@@ -306,17 +306,17 @@ boilerplate **and** a three-entry pointer table. Seventeen maps qualify; they ge
       goldens are **wram-only** and never compare rendered tiles. Tileset residency
       blocks *rendering* these maps, not wiring or gating them.
       **And the residency gap is smaller than it looks — measured 2026-08-17.**
-      `gen_overworld_assets.py` does embed only `overworld.2bpp`, but it is SUPERSEDED
-      (its own docstring says so) by `gen_all_assets.py`, which already generates all
-      **21** tileset gfx blobs into `assets/*_gfx.inc` — `cavern_gfx.inc`,
+      `gen_all_assets.py` already generates all **21** tileset gfx blobs into
+      `assets/*_gfx.inc` — `cavern_gfx.inc`,
       `facility_gfx.inc`, `forest_gfx.inc` and the rest all exist after `make assets`.
       What is missing is not the DATA but the wiring: only `overworld_gfx.inc` is
       `%include`d by any source (`src/engine/overworld/overworld.asm:1171`), so
       `cavern_gfx` and its 19 siblings are generated and then dropped on the floor —
       none of them is a defined symbol in the build. So the remaining work is a
       per-map tileset dispatch and the VRAM load that selects it, not asset
-      production. Do not quote the old "embeds exactly one of pret's 20 tilesets"
-      framing: it is true of the dead generator and misstates the cost.
+      production. (The superseded `gen_overworld_assets.py`, whose docstring was the
+      source of the old "embeds exactly one of pret's 20 tilesets" framing, was
+      deleted 2026-08-17 — it had not been invoked by anything for some time.)
 - [ ] **The four near-miss maps** (FightingDojo, Route12, Route16 at 4 pointers,
       Route24 at 5) have the skeleton body but non-standard pointer tables, so the
       driver needs a per-map tail. They are driver-EXTENSION candidates, not wiring

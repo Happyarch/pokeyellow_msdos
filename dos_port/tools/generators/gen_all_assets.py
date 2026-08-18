@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Generate all dos_port/assets/*.inc files from pret binary sources.
 
-Supersedes tools/generators/gen_overworld_assets.py — run this instead.
+The single owner of dos_port/assets/*_gfx.inc, *_blocks.inc, *_coll.inc and
+*_blk.inc. (It superseded gen_overworld_assets.py, which was deleted 2026-08-17
+once every one of its outputs carried this file's DO NOT EDIT header.)
 
 Sources required (built by 'make' in repo root):
   gfx/tilesets/*.2bpp       — built by rgbgfx from .png files

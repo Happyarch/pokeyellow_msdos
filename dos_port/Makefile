@@ -289,10 +289,13 @@ endif
 # via GBSTATE, coins set, spawn issued) but GAME_CORNER renders as a blank room,
 # so there is no machine tile to face. GAME_CORNER's header is
 # `map_header GameCorner, GAME_CORNER, LOBBY, 0` -- it needs the LOBBY tileset,
-# and gen_overworld_assets.py embeds exactly ONE of pret's 20 tilesets
-# (gfx/tilesets/overworld.2bpp). The .blk data IS resident; the TILESET is not,
-# so every block falls out of range and draws flat. That is backlog item 31's
-# blocker verbatim, and it gates every interior, not just this one.
+# and only overworld_gfx.inc is %included by any source
+# (src/engine/overworld/overworld.asm), so only the OVERWORLD tileset reaches the
+# binary. The .blk data IS resident and so are the GFX BLOBS -- gen_all_assets.py
+# writes all 21 (cavern_gfx.inc, lobby_gfx.inc, ...) -- but nothing includes the
+# other 20, so every block falls out of range and draws flat. What is missing is a
+# per-map tileset dispatch, not the assets. That is backlog item 31's blocker, and
+# it gates every interior, not just this one.
 # The gate is kept because it is correct and will work unchanged the moment
 # multi-tileset residency lands -- but do NOT read a blank room here as a slots
 # defect. engine/slots is linked and assets/hidden_events.inc already carries 36

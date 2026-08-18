@@ -741,7 +741,8 @@ FALSE; the symptom is real but the cause was misidentified.**
 > 17×24 = 408 B).
 
 **The actual blocker is TILESET residency.**
-`tools/generators/gen_overworld_assets.py` embeds exactly one tileset —
+`tools/generators/gen_all_assets.py` generates all 21 tileset gfx blobs, but only
+`overworld_gfx.inc` is `%include`d by any source, so only one tileset is resident —
 `gfx/tilesets/overworld.2bpp` — plus one blockset and one collision list. pret
 ships 20 tilesets (`ls gfx/tilesets/*.2bpp`); the port embeds 1. `OW_GFX_SIZE`
 (0x600) and `OW_BLOCKS_SIZE` (0x900) are sized for the *largest* tileset and
