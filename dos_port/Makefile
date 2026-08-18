@@ -650,6 +650,7 @@ GAME_SRCS := \
     src/data/events/trades.asm \
     src/engine/events/elevator.asm \
     src/engine/events/in_game_trades.asm \
+    src/engine/events/pokemart.asm \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/update_map.asm \
     src/engine/overworld/elevator.asm \
@@ -736,6 +737,7 @@ ITEMS_SRCS := \
     src/engine/items/tms.asm \
     src/engine/items/tmhm.asm \
     src/engine/items/super_rod.asm \
+    src/engine/items/subtract_paid_money.asm \
     src/home/item_price.asm \
     src/engine/items/tm_prices.asm \
     src/home/compare.asm \
@@ -2710,9 +2712,10 @@ POKEMON_CHECK_SRCS :=
 # (menu-fidelity row 16 / M-64).
 # swap_items.asm MOVED to GAME_SRCS (menus S3): SELECT-swap links live with
 # the promoted list_menu.asm driver.
+# subtract_paid_money.asm MOVED to ITEMS_SRCS (services chunk 1 mart): called by pokemart.asm.
+# route_1.asm is an assembled unlinked script proving the check-only tier.
 ITEMS_CHECK_SRCS := \
-    src/engine/items/subtract_paid_money.asm \
-    src/engine/items/super_rod.asm
+    src/scripts/route_1.asm
 
 # Home routines that assemble-validate but aren't linked yet. count_set_bits
 # emits an undefined external for wNumSetBits (no memmap alias / no caller yet),
@@ -3252,9 +3255,9 @@ assets/script_strings.inc: assets/gb_charmap.txt tools/generators/gen_script_str
 assets/text_oracle.inc: assets/gb_charmap.txt tools/generators/gen_text_oracle.py tools/generators/gb_text.py
 	python3 tools/generators/gen_text_oracle.py
 
-assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc assets/elevator_text.inc assets/oaks_aide_text.inc assets/in_game_trade_text.inc &: \
+assets/overworld_strings.inc assets/field_move_text.inc assets/cut_text.inc assets/player_anim_text.inc assets/text_script_text.inc assets/pokemart_text.inc assets/overworld_sign_text.inc assets/pokecenter_chansey_text.inc assets/elevator_text.inc assets/oaks_aide_text.inc assets/in_game_trade_text.inc &: \
                             assets/gb_charmap.txt tools/generators/gen_overworld_strings.py tools/generators/gb_text.py \
-                            tools/generators/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_8.asm ../data/text/text_9.asm \
+                            tools/generators/gen_battle_text.py ../data/text/text_1.asm ../data/text/text_7.asm ../data/text/text_8.asm ../data/text/text_9.asm \
                             ../constants/charmap.asm
 	python3 tools/generators/gen_overworld_strings.py
 
@@ -3531,6 +3534,7 @@ assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
 src/home/overworld_text.o: assets/overworld_sign_text.inc
 src/engine/events/oaks_aide.o: assets/oaks_aide_text.inc assets/script_constants.inc
 src/engine/events/elevator.o: assets/elevator_text.inc
+src/engine/events/pokemart.o: assets/pokemart_text.inc assets/audio_constants.inc
 src/engine/events/in_game_trades.o: assets/in_game_trade_text.inc \
                                      assets/trade_trainer_string.inc \
                                      assets/script_constants.inc

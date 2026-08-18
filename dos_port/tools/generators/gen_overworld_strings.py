@@ -124,6 +124,22 @@ POKECENTER_CHANSEY_FAR = [
     "_NurseChanseyText",
 ]
 
+# Far-text streams for engine/events/pokemart.asm (mart transaction loop).
+# pret defs: data/text/text_7.asm.
+POKEMART_FAR = [
+    "_PokemartBuyingGreetingText",
+    "_PokemartTellBuyPriceText",
+    "_PokemartBoughtItemText",
+    "_PokemartNotEnoughMoneyText",
+    "_PokemartItemBagFullText",
+    "_PokemonSellingGreetingText",
+    "_PokemartTellSellPriceText",
+    "_PokemartItemBagEmptyText",
+    "_PokemartUnsellableItemText",
+    "_PokemartThankYouText",
+    "_PokemartAnythingElseText",
+]
+
 # The five `text_far _XxxText / text_end` wrappers in pret home/overworld_text.asm
 # (sign, boulder and ledge messages the map scripts extern). The port deferred all
 # five for want of exactly this: their strings are Tier-1 DATA and had no generator.
@@ -179,6 +195,8 @@ def main() -> int:
          "Fishing-result FAR text streams (data/text/text_1.asm)"),
         ("text_script_text", TEXT_SCRIPT_FAR,
          "DisplayTextID FAR text streams (data/text/text_7.asm)"),
+        ("pokemart_text", POKEMART_FAR,
+         "Poké Mart FAR text streams (data/text/text_7.asm)"),
         ("overworld_sign_text", OVERWORLD_SIGN_FAR,
          "Sign / boulder / ledge FAR text streams for home/overworld_text.asm"),
         ("pokecenter_chansey_text", POKECENTER_CHANSEY_FAR,

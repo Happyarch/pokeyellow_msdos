@@ -29,12 +29,9 @@ section .text
 ; linking engine/debug/debug_party.asm unconditionally (PrepareNewGameDebug).
 ; HandleBlackOut calls it for real, so this is no longer a dead path.
 
-; STUB{class=stub; label=DisplayPokemartDialogue_; pret=engine/menus/pokemart.asm:DisplayPokemartDialogue_; behavior=return immediately after DisplayTextID loads the mart item list instead of running buy/sell/service dialogs; evidence=overworld-events Stage 2 keeps mart transaction loops open; lifetime=until Stage 2 ports DisplayPokemartDialogue_ and the buy/sell loops}
-; The home-layer DisplayPokemartDialogue wrapper is linked now so normal
-; DisplayTextID text can run; the transaction UI remains a separate Stage 2 task.
-global DisplayPokemartDialogue_
-DisplayPokemartDialogue_:
-    ret
+; DisplayPokemartDialogue_ stub RETIRED (overworld-events Stage 2):
+; ported faithfully to src/engine/events/pokemart.asm.
+
 
 ; STUB{class=stub; label=DisplayPokemonCenterDialogue_; pret=engine/menus/pokemon_center.asm:DisplayPokemonCenterDialogue_; behavior=return immediately instead of running nurse heal flow and Pokemon Center PC shell; evidence=overworld-events Stage 2 keeps nurse verification open; lifetime=until Stage 2 ports the nurse heal flow}
 global DisplayPokemonCenterDialogue_
