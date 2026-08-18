@@ -151,7 +151,9 @@ extern g_obj_clip                                   ; src/ppu/ppu.asm
 extern g_obj_over_window                            ; src/ppu/ppu.asm
 extern g_row_yoff                                   ; src/ppu/ppu.asm
 %ifdef DEBUG_SURFING_PIKACHU
+%ifndef DEBUG_SURFING_PIKACHU_LIVE
 extern SurfingPikachuDebugFrameHook  ; src/debug/debug_dump.asm
+%endif
 %endif
 extern PublishProjectedOAM              ; src/engine/gfx/sprite_oam.asm
 extern g_row_yoff_on                                ; src/ppu/ppu.asm
@@ -626,7 +628,9 @@ SurfingPikachuLoop:
 .DelayFrame:
     call DelayFrame
 %ifdef DEBUG_SURFING_PIKACHU
+%ifndef DEBUG_SURFING_PIKACHU_LIVE
     call SurfingPikachuDebugFrameHook   ; harness: photograph frame N and exit
+%endif
 %endif
     ret
 
@@ -3203,9 +3207,12 @@ SurfingMinigame_UpdatePikachuHeight:
     mov [ebp + wSurfingMinigameJumpArcFraction], al
     mov [ebp + wSurfingMinigameJumpArcMagnitude], ah
 
-    ; -(4 * a ** 2)
-    mov dl, al
-    mov dh, 0
+    ; -(4 * a ** 2), where a is the MAGNITUDE byte — pret's `ld a, h` (the high
+    ; half of the 8.8 velocity), NOT the fraction in AL. Both NTimesDE arguments
+    ; come from it: DE is the multiplicand, AL the multiplier.
+    mov al, ah                                 ; pret: ld a, h  (multiplier)
+    mov dl, ah                                 ; pret: ld e, a
+    mov dh, 0                                  ; pret: ld d, $0
     movzx edx, dx
     call SurfingMinigame_NTimesDE
     mov dx, si
@@ -3249,9 +3256,11 @@ SurfingMinigame_UpdatePikachuHeight:
     mov [ebp + wSurfingMinigameJumpArcFraction], al
     mov [ebp + wSurfingMinigameJumpArcMagnitude], ah
 
-    ; 4 * a ** 2
-    mov dl, al
-    mov dh, 0
+    ; 4 * a ** 2, where a is the MAGNITUDE byte — pret's `ld a, h`, not the
+    ; fraction in AL. Same argument pairing as the ascending arc above.
+    mov al, ah                                 ; pret: ld a, h  (multiplier)
+    mov dl, ah                                 ; pret: ld e, a
+    mov dh, 0                                  ; pret: ld d, $0
     movzx edx, dx
     call SurfingMinigame_NTimesDE
     mov dx, si
