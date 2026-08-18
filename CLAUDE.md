@@ -664,21 +664,9 @@ The three traps, each of which produced a silent-looking failure:
   maintainer's standard usage for these runs. Do **NOT** add `--sandbox` — it
   breaks agy's MCP access.
 
-**There is no blanket "agy runs are READ-ONLY" rule — do not reintroduce one.**
-This paragraph used to say that every agy run must declare READ-ONLY and be
-followed by a `git status` check. The maintainer disowned it 2026-08-17 ("I never
-said agy was read only study"), and the provenance backs that: `817e32166` added
-it in the same commit as the three CLI traps above, whose message justifies only
-those traps and cites a maintainer directive solely about WHICH FILE to document
-them in. Nothing attributed the read-only line to the maintainer, and the
-memory `agent-fanout-worktree-setup` points the other way — agy agents are run in
-parallel git WORKTREES with their own MCP config, which is a setup for editing,
-not for study. Scope an agy run like any other delegation: read-only when the
-task is a study, writing when the task is work.
-
-What IS worth keeping from that paragraph, because it is about answer quality
-rather than permissions: demand file:line citations, and treat the answer per the
-delegation lesson in episode 61 — check the REASONING SCOPE, not just the
+Scope an agy run like any other delegation: read-only when the task is a study,
+writing when the task is work. Demand file:line citations, and treat the answer
+per the delegation lesson in episode 61 — check the REASONING SCOPE, not just the
 citations. Report output lands on stdout (redirect it) or at an explicit
 `/home/happyarch/*.md` path named in the prompt.
 
