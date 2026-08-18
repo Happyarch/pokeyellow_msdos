@@ -2770,9 +2770,13 @@ DATA_CHECK_SRCS := src/gfx/surfing_pikachu.asm
 # ReloadMapSpriteTilePatterns; its externs (DisableLCD/EnableLCD/InitMapSprites/
 # LoadPlayerSpriteGraphics/LoadFontTilePatterns/UpdateSprites) are all linked.
 
+# Surfing Pikachu minigame (Chunk 2 check-only; chunk 3 links it)
+MINIGAME_CHECK_SRCS := \
+    src/engine/minigame/surfing_pikachu.asm
+
 # ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
 # the not-yet-linked battle backend + check-only pokemon/items/home backends.
-ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS) $(POKEMON_CHECK_SRCS) $(ITEMS_CHECK_SRCS) $(HOME_CHECK_SRCS) $(DATA_CHECK_SRCS)
+ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS) $(POKEMON_CHECK_SRCS) $(ITEMS_CHECK_SRCS) $(HOME_CHECK_SRCS) $(DATA_CHECK_SRCS) $(MINIGAME_CHECK_SRCS)
 ALL_OBJS := $(ALL_SRCS:.asm=.o)
 
 # ---------------------------------------------------------------------------
