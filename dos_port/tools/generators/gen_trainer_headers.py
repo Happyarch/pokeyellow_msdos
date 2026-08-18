@@ -238,7 +238,7 @@ def main() -> int:
         "",
     ]
 
-    global_labels = []      # table + per-trainer header labels (cross-file refs)
+    global_labels = []      # table, per-trainer header and battle-text stream labels
     body_blocks = []
     emitted_streams = set()
     truncated = []          # (stream_label, dropped asm/directive lines)
@@ -272,6 +272,12 @@ def main() -> int:
             if lbl in emitted_streams:
                 continue
             emitted_streams.add(lbl)
+            # The battle-text streams are cross-file references too: pret defines
+            # them in scripts/<Map>.asm, so the port's transpiled src/scripts/*.asm
+            # `extern`s them rather than re-emitting (see the "not re-emitted"
+            # comments there). Without a `global` the definition is invisible to
+            # the linker and every referencing script fails to link.
+            global_labels.append(lbl)
             far_lbl, extra = wrappers.get(lbl, (None, []))
             if far_lbl is None:
                 # A few maps wrap the after-battle text in a `text_asm` routine
