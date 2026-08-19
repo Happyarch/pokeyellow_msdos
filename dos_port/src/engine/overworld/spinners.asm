@@ -27,12 +27,12 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
 %ifndef FACILITY
-FACILITY  equ 22
 %endif
 %ifndef GB_VTILESET
 GB_VTILESET equ GB_VCHARS2 ; vTileset = $9000

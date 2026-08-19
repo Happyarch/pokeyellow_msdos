@@ -40,6 +40,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "gb_text.inc"                       ; text_far / text_end
@@ -49,7 +50,6 @@ bits 32
 %ifndef W_SPRITE_PLAYER_FACING_DIR
 %endif
 %ifndef GYM
-GYM                     equ 7      ; constants/tileset_constants.asm
 %endif
 %ifndef OBJ_SIZE
 OBJ_SIZE                equ 4      ; bytes per OAM entry

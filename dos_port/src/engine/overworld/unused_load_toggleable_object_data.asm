@@ -29,6 +29,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
@@ -37,7 +38,6 @@ bits 32
 
 ; --- constants ---
 %ifndef BLUES_HOUSE
-BLUES_HOUSE                equ 0x27
 %endif
 %ifndef TOGGLE_DAISY_SITTING_COPY
 %endif

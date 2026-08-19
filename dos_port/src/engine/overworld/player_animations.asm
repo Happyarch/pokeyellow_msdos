@@ -46,6 +46,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
@@ -86,13 +87,10 @@ SCREEN_HEIGHT_PX    equ 144
 %endif
 ; tileset ids for WarpPadAndHoleData
 %ifndef INTERIOR
-INTERIOR  equ 16
 %endif
 %ifndef CAVERN
-CAVERN    equ 17
 %endif
 %ifndef FACILITY
-FACILITY  equ 22
 %endif
 
 global EnterMapAnim

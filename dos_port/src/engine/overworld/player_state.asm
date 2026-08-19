@@ -45,6 +45,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "gb_constants.inc"
 
 ; ---------------------------------------------------------------------------
@@ -72,19 +73,14 @@ H_PLAYER_X_COORD             equ 0xFFDD ; hPlayerXCoord (golden 00:ffdd)
 
 ; --- Map constants (constants/map_constants.asm) ---------------------------
 %ifndef ROUTE_16
-ROUTE_16                     equ 0x1B
 %endif
 %ifndef ROUTE_18
-ROUTE_18                     equ 0x1D
 %endif
 %ifndef SEAFOAM_ISLANDS_B3F
-SEAFOAM_ISLANDS_B3F          equ 0xA1
 %endif
 %ifndef SEAFOAM_ISLANDS_B4F
-SEAFOAM_ISLANDS_B4F          equ 0xA2
 %endif
 %ifndef CERULEAN_CAVE_2F
-CERULEAN_CAVE_2F             equ 0xE2
 %endif
 ; SAFARI_ZONE_EAST already in gb_constants.inc (0xD9).
 

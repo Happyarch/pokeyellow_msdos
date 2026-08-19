@@ -29,6 +29,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
@@ -36,35 +37,6 @@ bits 32
 ; ---------------------------------------------------------------------------
 ; Map IDs for spawn locations (constants/map_constants.asm)
 ; ---------------------------------------------------------------------------
-OAKS_LAB                         equ 0x28
-VIRIDIAN_FOREST_NORTH_GATE       equ 0x2F
-ROUTE_2_GATE                     equ 0x31
-VIRIDIAN_FOREST_SOUTH_GATE       equ 0x32
-VIRIDIAN_FOREST                  equ 0x33
-MT_MOON_B1F                      equ 0x3C
-CERULEAN_TRASHED_HOUSE           equ 0x3E
-ROUTE_7_GATE                     equ 0x4C
-ROUTE_8_GATE                     equ 0x4F
-ROCK_TUNNEL_1F                   equ 0x52
-ROUTE_11_GATE_1F                 equ 0x54
-VERMILION_DOCK                   equ 0x5E
-CELADON_MART_ELEVATOR            equ 0x7F
-CELADON_MANSION_1F               equ 0x80
-FUCHSIA_GOOD_ROD_HOUSE           equ 0xA4
-CINNABAR_LAB_TRADE_ROOM          equ 0xA8
-CINNABAR_LAB_METRONOME_ROOM      equ 0xA9
-CINNABAR_LAB_FOSSIL_ROOM         equ 0xAA
-ROUTE_15_GATE_1F                 equ 0xB8
-ROUTE_16_GATE_1F                 equ 0xBA
-ROUTE_18_GATE_1F                 equ 0xBE
-ROUTE_22_GATE                    equ 0xC1
-VICTORY_ROAD_2F                  equ 0xC2
-SAFARI_ZONE_SECRET_HOUSE         equ 0xDE
-SAFARI_ZONE_WEST_REST_HOUSE      equ 0xDF
-SAFARI_ZONE_EAST_REST_HOUSE      equ 0xE0
-SAFARI_ZONE_NORTH_REST_HOUSE     equ 0xE1
-CERULEAN_BADGE_HOUSE             equ 0xE6
-SILPH_CO_ELEVATOR                equ 0xEC
 
 ; ---------------------------------------------------------------------------
 ; Pikachu WRAM & sprite offsets (mirror of pret usage)

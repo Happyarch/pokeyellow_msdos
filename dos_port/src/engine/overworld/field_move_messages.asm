@@ -25,6 +25,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
@@ -39,7 +40,6 @@ bits 32
 %ifndef BIT_SURF_ALLOWED
 %endif
 %ifndef SEAFOAM_ISLANDS_B4F
-SEAFOAM_ISLANDS_B4F equ 0xA2  ; constants/map_constants.asm ($A2)
 %endif
 
 global PrintStrengthText

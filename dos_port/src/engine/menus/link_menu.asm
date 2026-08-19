@@ -75,6 +75,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
@@ -189,10 +190,8 @@ global ColosseumVersionText
 %ifndef BIT_DEBUG_MODE
 %endif
 %ifndef TRADE_CENTER
-TRADE_CENTER            equ 0xEF           ; constants/map_constants.asm
 %endif
 %ifndef COLOSSEUM
-COLOSSEUM               equ 0xF0           ; constants/map_constants.asm
 %endif
 LINK_STATE_IN_CABLE_CLUB equ 0x01          ; constants/serial_constants.asm
 USING_INTERNAL_CLOCK     equ 0x02          ; constants/serial_constants.asm

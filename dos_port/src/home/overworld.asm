@@ -33,7 +33,6 @@ bits 32
 ; definition in gb_memmap.inc would collide with them.
 
 ; file-local constants carried in with the routines that read them
-INDIGO_PLATEAU              equ 0x09
 MAP_ROCKET_HIDEOUT_B1F  equ 0xC7
 MAP_ROCKET_HIDEOUT_B2F  equ 0xC8
 MAP_ROCKET_HIDEOUT_B4F  equ 0xCA
@@ -41,15 +40,12 @@ MAP_ROCK_TUNNEL_1F      equ 0x52
 MAP_SS_ANNE_3F          equ 0x61
 PLAYER_HALF_BYTES equ PLAYER_HALF_TILES * TILE_SIZE   ; 192 bytes ($C0)
 PLAYER_HALF_TILES equ 12                       ; 12 tiles per VRAM half
-ROUTE_23                   equ 0x22
 STANDING_TILE_OFF   equ wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 TILESET_PLATEAU     equ 23          ; Route 23 / Indigo Plateau
 TILESET_SHIP        equ 13          ; S.S. Anne interior
 TILESET_SHIP_PORT   equ 14          ; Vermilion Port
 W_D472                      equ 0xD472
 W_PIKACHU_SPAWN_STATE_FLAGS equ 0xD471
-CEMETERY                    equ 15
-FACILITY                    equ 22
 OVERWORLD_DOOR_TILE         equ 0x0B   ; pret: door tile in tileset 0 (PlayMapChangeSound)
 
 extern DelayFrame                    ; src/home/vblank.asm

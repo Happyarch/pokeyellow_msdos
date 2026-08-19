@@ -255,8 +255,6 @@ TILESET_OVERWORLD           equ 0x00
 ; exists in gb_constants.inc, which this file does not include — and the two headers
 ; must not both define it (bare `equ` redefinition is a NASM error in any file that
 ; includes both). Local def, same as player_gfx.asm / special_warps.asm do for theirs.
-PALLET_TOWN_WIDTH           equ 10
-PALLET_TOWN_HEIGHT          equ 9
 PALLET_TOWN_BORDER_BLOCK    equ 0x0B   ; border block from PalletTown_Object
 TILESET_BANK_FLAT           equ 0x01   ; ignored in flat model (TODO-HW: ROM banking)
 

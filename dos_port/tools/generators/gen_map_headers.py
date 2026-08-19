@@ -1280,6 +1280,13 @@ def main(debug_warps=None):
         for _m in _re.finditer(r"^\s*([A-Za-z_]\w*)\s+equ\s", _t, _re.M):
             _declared.add(_m.group(1))
 
+    # These stay `equ`, deliberately. %define was tried and reverted: the
+    # constants are consumed through token-pasting macros (special_warps.asm's
+    # `event_displacement %{1}_WIDTH, ...`), which want an assembly symbol, and a
+    # macro would also have to precede every use rather than merely be included.
+    # The cost is real and known -- NASM emits each `equ` as a local absolute COFF
+    # symbol in every including object, ~178 KB across the 13 new includers -- and
+    # is accepted here rather than paid for with a fragile preprocessor rewrite.
     # Names include/ already owns are SKIPPED, not re-emitted: gb_constants.inc
     # %defines many map/tileset ids, and a `NAME equ V` line whose NAME is a live
     # macro expands to `0xD9 equ 0xD9` and fails to assemble. That break was latent

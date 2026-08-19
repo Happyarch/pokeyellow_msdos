@@ -37,6 +37,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "gb_macros.inc"
 %include "assets/audio_constants.inc"   ; SFX_LEDGE (real id; audio engine is live)
 
@@ -46,8 +47,6 @@ extern TilePairCollisionsWater          ; src/data/tilesets/pair_collision_tile_
 extern LedgeTiles                       ; src/data/tilesets/ledge_tiles.asm
 
 ; --- Tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) -----
-OVERWORLD           equ 0
-CAVERN              equ 17
 
 ; PAD_BUTTONS | PAD_CTRL_PAD = every button ($0F | $F0). pret sets wJoyIgnore to
 ; this so no real input is honored while the ledge hop plays out.

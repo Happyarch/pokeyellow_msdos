@@ -16,6 +16,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 
 ; ---------------------------------------------------------------------------
 ; wCurrentMapScriptFlags bit indices (constants/ram_constants.asm). Guarded
@@ -37,82 +38,56 @@ bits 32
 ; warp_check.asm that used to define a handful of MAP_* names is gone).
 ; ---------------------------------------------------------------------------
 %ifndef VERMILION_GYM
-VERMILION_GYM           equ 0x5C
 %endif
 %ifndef SILPH_CO_2F
-SILPH_CO_2F             equ 0xCF
 %endif
 %ifndef SILPH_CO_3F
-SILPH_CO_3F             equ 0xD0
 %endif
 %ifndef SILPH_CO_4F
-SILPH_CO_4F             equ 0xD1
 %endif
 %ifndef SILPH_CO_5F
-SILPH_CO_5F             equ 0xD2
 %endif
 %ifndef SILPH_CO_6F
-SILPH_CO_6F             equ 0xD3
 %endif
 %ifndef SILPH_CO_7F
-SILPH_CO_7F             equ 0xD4
 %endif
 %ifndef SILPH_CO_8F
-SILPH_CO_8F             equ 0xD5
 %endif
 %ifndef SILPH_CO_9F
-SILPH_CO_9F             equ 0xE9
 %endif
 %ifndef SILPH_CO_10F
-SILPH_CO_10F            equ 0xEA
 %endif
 %ifndef SILPH_CO_11F
-SILPH_CO_11F            equ 0xEB
 %endif
 %ifndef POKEMON_MANSION_2F
-POKEMON_MANSION_2F      equ 0xD6
 %endif
 %ifndef POKEMON_MANSION_3F
-POKEMON_MANSION_3F      equ 0xD7
 %endif
 %ifndef POKEMON_MANSION_B1F
-POKEMON_MANSION_B1F     equ 0xD8
 %endif
 %ifndef POKEMON_MANSION_1F
-POKEMON_MANSION_1F      equ 0xA5
 %endif
 %ifndef CINNABAR_GYM
-CINNABAR_GYM            equ 0xA6
 %endif
 %ifndef GAME_CORNER
-GAME_CORNER             equ 0x87
 %endif
 %ifndef ROCKET_HIDEOUT_B1F
-ROCKET_HIDEOUT_B1F      equ 0xC7
 %endif
 %ifndef ROCKET_HIDEOUT_B4F
-ROCKET_HIDEOUT_B4F      equ 0xCA
 %endif
 %ifndef VICTORY_ROAD_3F
-VICTORY_ROAD_3F         equ 0xC6
 %endif
 %ifndef VICTORY_ROAD_1F
-VICTORY_ROAD_1F         equ 0x6C
 %endif
 %ifndef VICTORY_ROAD_2F
-VICTORY_ROAD_2F         equ 0xC2
 %endif
 %ifndef LANCES_ROOM
-LANCES_ROOM             equ 0x71
 %endif
 %ifndef LORELEIS_ROOM
-LORELEIS_ROOM           equ 0xF5
 %endif
 %ifndef BRUNOS_ROOM
-BRUNOS_ROOM             equ 0xF6
 %endif
 %ifndef AGATHAS_ROOM
-AGATHAS_ROOM            equ 0xF7
 %endif
 
 extern IsInArray                     ; src/home/array2.asm — $FF-terminated flat search

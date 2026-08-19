@@ -18,6 +18,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
@@ -30,9 +31,6 @@ vNPCSprites                     equ vChars0                     ; 0x8000
 TILE_1BPP                       equ 8
 TILE_2BPP                       equ 16
 
-PEWTER_POKECENTER               equ 0x3A
-BILLS_HOUSE                     equ 0x58
-POKEMON_FAN_CLUB                equ 0x5A
 
 ; wSpriteStateData offsets and helper aliases
 

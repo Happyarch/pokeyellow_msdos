@@ -43,6 +43,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
@@ -62,7 +63,6 @@ LINK_STATE_NONE         equ 0x00        ; constants/serial_constants.asm
 TRUE                    equ 1
 %endif
 %ifndef HALL_OF_FAME
-HALL_OF_FAME            equ 0x76        ; constants/map_constants.asm (map id $76)
 %endif
 %ifndef LEADING_ZEROES
 %endif
