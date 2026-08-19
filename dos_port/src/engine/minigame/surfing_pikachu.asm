@@ -755,9 +755,14 @@ SurfingPikachuMinigame_LoadGFXAndLayout:
     mov bx, wSurfingMinigameDataEnd - wSurfingMinigameData
     xor al, al
     call FillMemory
+    ; DEVIATION{class=data-model; pret=engine/minigame/surfing_pikachu.asm:SurfingPikachuMinigame_LoadGFXAndLayout; behavior=clear the two LY-override buffers as two 0x100 fills instead of pret's single wLYOverridesBufferEnd - wLYOverrides span; evidence=pret's buffers are ADJACENT at 0xC700 and 0xC800 so that span is 0x200, but the port relocates them apart to 0xF500 and 0xF9A0 where the same expression is 0x5A0 and would zero the wAnimatedObject block and the Yellow-intro scene state between them; lifetime=until the two buffers are made contiguous again}
     mov esi, wLYOverrides
-    mov bx, wLYOverridesBufferEnd - wLYOverrides
+    mov bx, wLYOverridesEnd - wLYOverrides          ; 0x100, was (BufferEnd - wLYOverrides)
     xor al, al
+    call FillMemory
+    mov esi, wLYOverridesBuffer
+    mov bx, wLYOverridesBufferEnd - wLYOverridesBuffer  ; 0x100 - the port's second buffer
+    xor al, al                                      ;   is NOT adjacent to the first
     call FillMemory
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al
