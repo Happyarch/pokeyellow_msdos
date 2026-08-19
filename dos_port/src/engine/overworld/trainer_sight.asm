@@ -65,17 +65,22 @@ wSavedSpriteMapY    equ 0xD131
 %ifndef wSavedSpriteMapX
 wSavedSpriteMapX    equ 0xD132
 %endif
+; pret addresses, from pokeyellow.sym (00:ffeb..00:ffee) — NOT inferred. These were
+; previously 0xFF82-0xFF85, which is inside pret's hDMARoutine and is not where any
+; of these live. That broke the GetSpritePosition1 / SetSpritePosition1 handoff: the
+; transpiled map scripts (oaks_lab, bills_house, viridian_city, pewter_city) read and
+; write 0xFFEB-0xFFEE, so a script stored a coord the accessor here never read back.
 %ifndef hSpriteScreenYCoord
-hSpriteScreenYCoord equ 0xFF82
+hSpriteScreenYCoord equ 0xFFEB
 %endif
 %ifndef hSpriteScreenXCoord
-hSpriteScreenXCoord equ 0xFF83
+hSpriteScreenXCoord equ 0xFFEC
 %endif
 %ifndef hSpriteMapYCoord
-hSpriteMapYCoord    equ 0xFF84
+hSpriteMapYCoord    equ 0xFFED
 %endif
 %ifndef hSpriteMapXCoord
-hSpriteMapXCoord    equ 0xFF85
+hSpriteMapXCoord    equ 0xFFEE
 %endif
 
 ; Delta to hop from array1's XPIXELS[slot] to array2's MAPY[slot] (same slot).
