@@ -491,29 +491,29 @@ AnimateCurrentPikaPicAnimFrame:
     push eax                                ; push af
     push ebx                                ; push bc
     mov esi, ebx                            ; ld hl, 0 / add hl, bc
-    mov al, [esi]                           ; ld a, [hli]
+    mov al, [ebp + esi]                     ; ld a, [hli]
     inc esi
     test al, al                             ; and a
     jz .skip                                ; jr z, .skip
-    mov al, [esi]
+    mov al, [ebp + esi]
     inc esi
     mov [ebp + wCurPikaPicAnimObjectScriptIdx], al
-    mov al, [esi]
+    mov al, [ebp + esi]
     inc esi
     mov [ebp + wCurPikaPicAnimObjectFrameIdx], al
-    mov al, [esi]
+    mov al, [ebp + esi]
     inc esi
     mov [ebp + wCurPikaPicAnimObjectFrameTimer], al
-    mov al, [esi]
+    mov al, [ebp + esi]
     inc esi
     mov [ebp + wCurPikaPicAnimObjectVTileOffset], al
-    mov al, [esi]
+    mov al, [ebp + esi]
     inc esi
     mov [ebp + wCurPikaPicAnimObjectXOffset], al
-    mov al, [esi]
+    mov al, [ebp + esi]
     inc esi
     mov [ebp + wCurPikaPicAnimObjectYOffset], al
-    mov al, [esi]
+    mov al, [ebp + esi]
     mov [ebp + wCurPikaPicAnimObject + 6], al
     push ebx                                ; push bc
     call LoadPikaPicAnimObjectData
