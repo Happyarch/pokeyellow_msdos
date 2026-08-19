@@ -487,10 +487,17 @@ DisplayChooseQuantityMenu:
     ; text box: GB(15,9) 1x3 (quantity only) or GB(7,9) 1x11 (quantity+price).
     ; PROJ overworld-ui: GB(15,9) 5x3 --(anchor=top-right, X+20, Y+0)--> wx=287 wy=72 clip=40 max_y=96
     ; TODO(proj): PRICEDITEMLISTMENU is a Pokémart box (GB 7,9 x11) → needs the
-    ; mart anchor. Deferred, and genuinely unreachable today — the only setter of
-    ; PRICEDITEMLISTMENU is home/text_script.asm:DisplayPokemartDialogue, whose
-    ; DisplayPokemartDialogue_ is still a ret-stub in engine/menus/main_menu_stubs.asm. So the
-    ; priced branch below is reasoned from pret, NOT observed at runtime.
+    ; mart anchor. STILL OPEN, but no longer unreachable — updated 2026-08-18.
+    ; This used to say DisplayPokemartDialogue_ "is still a ret-stub in
+    ; engine/menus/main_menu_stubs.asm"; it is not, it is ported at
+    ; engine/events/pokemart.asm (63473f858) and the stub is gone. So the priced
+    ; branch IS reachable now, and this box is the one part of the mart screen the
+    ; 2026-08-18 projection ruling does NOT cover: docs/ui_projection.md rules the
+    ; BUY/SELL/QUIT box (X+0), the MONEY box (X+20) and the priced item list (raw
+    ; origin 11,7), but not the quantity box that opens on top of them. It still
+    ; inherits the generic top-right X+20 anchor on the line above, which is very
+    ; likely wrong now that the list it belongs to sits at (11,7).
+    ; The branch below remains reasoned from pret, NOT observed at runtime.
     mov esi, QTY_SCRATCH                       ; box-relative top-left in scratch
     mov bl, 3                                  ; interior width  (quantity only)
     mov bh, 1                                  ; interior height

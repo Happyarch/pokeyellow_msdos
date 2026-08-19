@@ -46,10 +46,15 @@ section .text
 ; registers directly and call AddBCD (matching subtract_paid_money.asm's SubBCD).
 ;
 ; BUG{class=temporary; pret=home/inventory.asm:AddAmountSoldToMoney; behavior=the sale never plays SFX_PURCHASE and never waits for the current sound to drain, so a shop sale is silent and does not block; evidence=pret home/inventory.asm:AddAmountSoldToMoney ends `ld a, SFX_PURCHASE / call PlaySoundWaitForCurrent / jp WaitForSoundToFinish` and tools/faithdiff AddAmountSoldToMoney reports both as DROPPED, while the comment that justified the omission (audio HAL deferred to Phase 3) is measurably stale — both routines have real linked bodies in src/home/delay.asm and PlaySound is live in src/home/audio.asm; lifetime=until the two calls are restored and a shop scenario covers them}
-; NOT fixed in the chunk-16 relocation commit: restoring dropped calls is a
-; behaviour change, and no golden scenario reaches this routine (label_status
-; --callers reports zero port callers — the shop layer is unported), so the
-; change would be unverifiable. Scenario first, then the calls.
+; STILL NOT FIXED, but the reason CHANGED on 2026-08-18 and the old one is dead.
+; This used to read "no golden scenario reaches this routine (label_status
+; --callers reports zero port callers — the shop layer is unported)". The shop
+; layer IS ported now: label_status --callers AddAmountSoldToMoney reports
+; DisplayPokemartDialogue_ calling it at engine/events/pokemart.asm:164 (landed
+; 63473f858). What remains is only the second half — there is still no golden
+; scenario that walks a mart SALE, so restoring the two dropped calls would still
+; be an unverifiable behaviour change. Scenario first, then the calls; the
+; scenario is now actually writable, which it was not before.
 ; ---------------------------------------------------------------------------
 AddAmountSoldToMoney:
     mov edx, wPlayerMoney + 2      ; ld de, wPlayerMoney + 2 (LSB)
