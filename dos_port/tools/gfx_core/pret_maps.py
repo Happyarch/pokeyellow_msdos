@@ -34,7 +34,13 @@ def _parse_map_border() -> int:
     no longer reads."""
     import re
     inc = ROOT / "dos_port" / "include" / "gb_memmap.inc"
-    m = re.search(r"^MAP_BORDER\s+equ\s+(\d+)", inc.read_text(), re.M)
+    # BOTH spellings. gb_memmap.inc declares constants as %define (an `equ` emits
+    # a COFF symbol into every including object), and this tool was left matching
+    # only `equ` by that migration -- so it raised "MAP_BORDER equ not found" the
+    # moment anything regenerated assets from a clean tree. Several tools read the
+    # port's headers this way; match both forms, always.
+    m = re.search(r"^\s*(?:%define\s+MAP_BORDER\s+|MAP_BORDER\s+equ\s+)(\d+)",
+                  inc.read_text(), re.M)
     if not m:
         raise RuntimeError(f"MAP_BORDER equ not found in {inc}")
     return int(m.group(1))
