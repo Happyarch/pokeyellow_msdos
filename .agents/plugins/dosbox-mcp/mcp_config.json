@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "dosbox-mcp": {
+      "command": "python3",
+      "args": [
+        "dos_port/tools/dosbox_mcp/server.py"
+      ]
+    }
+  }
+}
