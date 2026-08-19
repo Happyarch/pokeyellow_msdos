@@ -299,6 +299,52 @@ measurement, not a preference. pret zeroes hAutoBGTransferEnabled around the box
 placement and re-enables it after, which is inert in the port — so whatever
 commits those cells, it is not that.
 
+### The mart quantity box — positioned RELATIVE TO ITS LIST, not to the screen
+
+Maintainer ruling, 2026-08-18: "the quantity list needs to be the same relative
+position here to the priced item list as it is in pret."
+
+This is the one case so far where neither an edge anchor nor a centre rule is
+right, because the box's meaningful relationship is to ANOTHER BOX rather than to
+the screen. Measured from pret (TextBoxBorder's `lb bc, h, w` draws (w+2)x(h+2)):
+
+  priced item list   home/list_menu.asm:34   hlcoord 4,2  + lb de, 9,14 -> 16x11, GB cols 4-19,  rows 2-12
+  quantity only      home/list_menu.asm:199  hlcoord 15,9 + lb bc, 1,3  ->  5x3,  GB cols 15-19, rows 9-11
+  quantity + price   home/list_menu.asm:205  hlcoord 7,9  + lb bc, 1,11 -> 13x3,  GB cols 7-19,  rows 9-11
+
+On the GB BOTH quantity variants end at col 19 — EXACTLY the list's right edge —
+and sit at rows 9-11, one row above the list's bottom border. They are flush-right
+INSIDE their parent. That containment is the thing to preserve.
+
+Offsets from the priced list's origin: quantity-only +11 col / +7 row;
+quantity+price +3 col / +7 row. Applied to the port's list origin (11, 7):
+
+  quantity only     -> (22, 14)  5x3   canvas cols 22-26, rows 14-16
+  quantity + price  -> (14, 14)  13x3  canvas cols 14-26, rows 14-16
+
+Both again end at col 26 — exactly the port list's right edge (cols 11-26) — and
+again sit one row above its bottom (row 17). The relationship survives the
+projection intact, which is the check that this is the right rule rather than a
+plausible one.
+
+*** WHY THE GENERIC ANCHOR IS NOT MERELY SUBOPTIMAL BUT BROKEN HERE. *** The
+`overworld-ui (list quantity)` row anchors this box top-right X+20, which is
+correct for the bag, the PC and the elevator, whose lists also sit at X+20. It is
+wrong for the mart, whose list is at the raw origin (11, 7):
+  quantity only    X+20 -> canvas cols 35-39, while its list is at 11-26 — the box
+                   floats NINE columns clear of its own parent.
+  quantity + price X+20 -> canvas cols 27-39, starting one column PAST the list's
+                   last column. The box and the list it belongs to would not
+                   overlap at all.
+So this row does not merely need a different anchor; inheriting the shared one
+detaches a child box from its parent entirely.
+
+CONSEQUENCE FOR THE CODE: DisplayChooseQuantityMenu (src/home/list_menu.asm) is
+shared by all list-menu callers, so it must select this placement on the
+PRICEDITEMLISTMENU branch — which is the branch pret already tests there — and
+keep X+20 for every other caller. The existing TODO(proj) at that site records the
+gap; this section is its answer.
+
 ### Future subsystems
 
 Add an entry here when introduced, stating the transform and whether it uses
@@ -385,6 +431,8 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (prize menu)         | (0, 2) | 18×10| anchor=top-LEFT, X+0, Y+0 | 7 | 16 | 144 | 96 | prize_menu.asm:25 (hlcoord 0,2 + lb bc,8,16) |
 | overworld-ui (prize coin box)     | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | prize_menu.asm:145 PrintPrizePrice (hlcoord 11,0 + lb bc,1,7) |
 | overworld-ui (pikapic frame)      | (6, 5) | 7×7  | center, X+10, Y+0 | 135 | 40 | 56 | 96 | pikachu_pic_animation.asm:139 PlacePikapicTextBoxBorder (hlcoord 6,5 + lb bc,5,5) |
+| overworld-ui (mart qty only)      | (15, 9)| 5×3  | RELATIVE to the mart priced list: +11 col, +7 row from its origin → (22, 14) | 183 | 112 | 40 | 136 | list_menu.asm:199 DisplayChooseQuantityMenu (hlcoord 15,9 + lb bc,1,3) |
+| overworld-ui (mart qty + price)   | (7, 9) | 13×3 | RELATIVE to the mart priced list: +3 col, +7 row from its origin → (14, 14) | 119 | 112 | 104 | 136 | list_menu.asm:205 DisplayChooseQuantityMenu PRICEDITEMLISTMENU branch (hlcoord 7,9 + lb bc,1,11) |
 | overworld-field (tile reads) | (8, 9) player feet | 1×1 | +16col, +8row → W_TILEMAP (PLAYER_STANDING_COL=24, PLAYER_STANDING_ROW=17); facing-relative reads ±2 tiles (one block), two-steps ±4 | — | — | — | — | overworld.asm (GetTileInFrontOfPlayer), player_state.asm (_GetTileAndCoordsInFrontOfPlayer / GetTileTwoStepsInFrontOfPlayer), player_animations.asm (IsPlayerStandingOnWarpPadOrHole), wild_encounters.asm (PLAYER_STANDING_TILE, fixed OW-A.6) — NEVER copy pret stride-20 lda_coord literals |
 | battle-ui (YES/NO box)      | (cc,rr) | W×H   | battle center, X+10, Y+3    | —   | —  | —   | —   | yes_no.asm (mode 1) — UNVERIFIED, no caller wired |
 | battle-ui (whole screen)    | (0, 0)  | 20×18 | center in 40×25 BG, +10col/+3row | — | — | — | — | init_battle.asm (full widescreen canvas via render_bg) |
