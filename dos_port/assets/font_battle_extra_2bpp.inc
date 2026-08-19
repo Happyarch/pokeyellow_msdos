@@ -1,5 +1,5 @@
 ; font_battle_extra_2bpp.inc — generated from gfx/font/font_battle_extra.png
-; via dos_port/tools/gen_font_battle_extra_inc.py.  DO NOT EDIT BY HAND.
+; via dos_port/tools/generators/gen_font_battle_extra_inc.py.  DO NOT EDIT BY HAND.
 ; 30 tiles (chars $62–$7F), 2bpp GB format, 16 bytes per tile.
 ; Loaded by LoadHpBarAndStatusTilePatterns to vChars2 tile $62 (EBP $9620).
 
