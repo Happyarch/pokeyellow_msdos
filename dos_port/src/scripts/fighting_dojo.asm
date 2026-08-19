@@ -21,7 +21,20 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern FightingDojoBlackbelt1BattleText ; assets/trainer_headers.inc
+extern FightingDojoBlackbelt2BattleText ; assets/trainer_headers.inc
+extern FightingDojoBlackbelt3BattleText ; assets/trainer_headers.inc
+extern FightingDojoBlackbelt4BattleText ; assets/trainer_headers.inc
+extern FightingDojoTrainerHeader0       ; assets/trainer_headers.inc
+extern FightingDojoTrainerHeader1       ; assets/trainer_headers.inc
+extern FightingDojoTrainerHeader2       ; assets/trainer_headers.inc
+extern FightingDojoTrainerHeader3       ; assets/trainer_headers.inc
+extern FightingDojoTrainerHeaders       ; assets/trainer_headers.inc
 
 global FightingDojoBetterNotGetGreedyText
 global FightingDojoBlackbelt1Text
@@ -69,11 +82,6 @@ extern YesNoChoice
 SCRIPT_FIGHTINGDOJO_KARATE_MASTER_POST_BATTLE  equ 3
 TEXT_FIGHTINGDOJO_KARATE_MASTER                equ 1
 TEXT_FIGHTINGDOJO_KARATE_MASTER_I_WILL_GIVE_YOU_A_POKEMON equ 8
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wFightingDojoCurScript                         equ 0xD641
-wSavedCoordIndex                               equ 0xCF0D
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

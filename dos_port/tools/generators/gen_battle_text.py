@@ -116,7 +116,10 @@ def encode(s: str, cm: list) -> list:
 def load_memmap() -> dict:
     syms = {}
     for line in MEMMAP.read_text(encoding="utf-8").splitlines():
-        m = re.match(r'\s*(\w+)\s+equ\s+0x([0-9A-Fa-f]+)', line)
+        # accept both `NAME equ 0x..` and `%define NAME 0x..` (see gen_pret_ram.py:
+        # constants are %define so they emit no COFF symbol)
+        m = re.match(r'\s*(?:%define\s+)?(\w+)\s+equ\s+0x([0-9A-Fa-f]+)', line) \
+            or re.match(r'\s*%define\s+(\w+)\s+0x([0-9A-Fa-f]+)', line)
         if m:
             syms[m.group(1)] = int(m.group(2), 16)
     return syms

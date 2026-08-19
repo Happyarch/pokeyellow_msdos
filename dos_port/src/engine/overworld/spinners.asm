@@ -31,15 +31,6 @@ bits 32
 %include "gb_macros.inc"
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
-%ifndef wSpritePlayerStateData1ImageIndex
-wSpritePlayerStateData1ImageIndex equ 0xC102 ; golden 00:c102
-%endif
-%ifndef wCurMapTileset
-wCurMapTileset             equ 0xD366 ; golden 00:d366
-%endif
-%ifndef wSimulatedJoypadStatesIndex
-wSimulatedJoypadStatesIndex equ 0xCD38 ; golden 00:cd38
-%endif
 %ifndef FACILITY
 FACILITY  equ 22
 %endif

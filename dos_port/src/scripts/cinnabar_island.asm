@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global CinnabarIslandDefaultScript
 global CinnabarIslandDoorIsLockedText
 global CinnabarIslandGamblerText
@@ -47,11 +46,6 @@ extern StartSimulatingJoypadStates
 SCRIPT_CINNABARISLAND_DEFAULT                  equ 0
 SCRIPT_CINNABARISLAND_PLAYER_MOVING            equ 1
 TEXT_CINNABARISLAND_DOOR_IS_LOCKED             equ 8
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCinnabarIslandCurScript                       equ 0xD638
-wSpritePlayerStateData1FacingDirection         equ 0xC109
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

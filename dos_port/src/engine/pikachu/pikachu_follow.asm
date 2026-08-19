@@ -29,6 +29,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 
@@ -58,7 +59,6 @@ ROUTE_16_GATE_1F                 equ 0xBA
 ROUTE_18_GATE_1F                 equ 0xBE
 ROUTE_22_GATE                    equ 0xC1
 VICTORY_ROAD_2F                  equ 0xC2
-SAFARI_ZONE_CENTER_REST_HOUSE    equ 0xDD
 SAFARI_ZONE_SECRET_HOUSE         equ 0xDE
 SAFARI_ZONE_WEST_REST_HOUSE      equ 0xDF
 SAFARI_ZONE_EAST_REST_HOUSE      equ 0xE0
@@ -66,34 +66,11 @@ SAFARI_ZONE_NORTH_REST_HOUSE     equ 0xE1
 CERULEAN_BADGE_HOUSE             equ 0xE6
 SILPH_CO_ELEVATOR                equ 0xEC
 
-BIT_PIKACHU_SPAWN_FOLLOWING      equ 5
-BIT_PIKACHU_SPAWN_STARTER        equ 7
-
 ; ---------------------------------------------------------------------------
 ; Pikachu WRAM & sprite offsets (mirror of pret usage)
 ; ---------------------------------------------------------------------------
 wd431                            equ 0xD431
 wd432                            equ 0xD432
-
-wSpritePikachuStateData1                   equ wSpriteStateData1 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE
-wSpritePikachuStateData1PictureID          equ wSpritePikachuStateData1 + SPRITESTATEDATA1_PICTUREID
-wSpritePikachuStateData1YStepVector        equ wSpritePikachuStateData1 + SPRITESTATEDATA1_YSTEPVECTOR
-wSpritePikachuStateData1YPixels            equ wSpritePikachuStateData1 + SPRITESTATEDATA1_YPIXELS
-wSpritePikachuStateData1XStepVector        equ wSpritePikachuStateData1 + SPRITESTATEDATA1_XSTEPVECTOR
-wSpritePikachuStateData1XPixels            equ wSpritePikachuStateData1 + SPRITESTATEDATA1_XPIXELS
-wSpritePikachuStateData1IntraAnimFrameCounter equ wSpritePikachuStateData1 + SPRITESTATEDATA1_INTRAANIMFRAMECOUNTER
-wSpritePikachuStateData1AnimFrameCounter   equ wSpritePikachuStateData1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER
-wSpritePikachuStateData1FacingDirection    equ wSpritePikachuStateData1 + SPRITESTATEDATA1_FACINGDIRECTION
-
-wSpritePikachuStateData2                   equ wSpriteStateData2 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE
-wSpritePikachuStateData2WalkAnimationCounter equ wSpritePikachuStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER
-wSpritePikachuStateData2MapY               equ wSpritePikachuStateData2 + SPRITESTATEDATA2_MAPY
-wSpritePikachuStateData2MapX               equ wSpritePikachuStateData2 + SPRITESTATEDATA2_MAPX
-wSpritePikachuStateData2GrassPriority      equ wSpritePikachuStateData2 + SPRITESTATEDATA2_GRASSPRIORITY
-wSpritePikachuStateData2ImageBaseOffset    equ wSpritePikachuStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET
-
-wSpritePlayerStateData1FacingDirection     equ wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION
-wSpritePlayerStateData1ImageIndex          equ wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX
 
 ; ---------------------------------------------------------------------------
 ; Externs

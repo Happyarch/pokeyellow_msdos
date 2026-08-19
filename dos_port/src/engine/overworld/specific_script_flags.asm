@@ -24,10 +24,8 @@ bits 32
 ; later promotion to gb_memmap.inc a no-op here.
 ; ---------------------------------------------------------------------------
 %ifndef BIT_CUR_MAP_LOADED_1
-BIT_CUR_MAP_LOADED_1   equ 5   ; ram_constants.asm: wCurrentMapScriptFlags bit 5
 %endif
 %ifndef BIT_CUR_MAP_LOADED_2
-BIT_CUR_MAP_LOADED_2   equ 6   ; ram_constants.asm: wCurrentMapScriptFlags bit 6
 %endif
 
 ; ---------------------------------------------------------------------------

@@ -149,7 +149,6 @@ SET_PAL_POKEDEX   equ 0x04
 ; slot (hMapStride / hPreviousTileset / hItemPrice / hWarpDestinationMap). That
 ; sharing is exactly why pret save/restores the two bytes around the weight print, and
 ; why the port now does too — see DrawDexEntryOnScreen.owned (M-76).
-hDexWeight        equ 0xFF8B
 ; hClearLetterPrintingDelayFlags — pret ram/hram.asm (the byte before hUILayoutFlags).
 H_CLEAR_LETTER_PRINTING_DELAY_FLAGS equ 0xFFF9
 ; hUILayoutFlags bit (pret constants/gfx_constants.asm) — treat <PAGE> as <NEXT>.
@@ -157,7 +156,6 @@ BIT_PAGE_CHAR_IS_NEXT equ 3
 ; wPrinterPokedexEntryTextPointer — pret ram/wram.asm (dw). Read only by the GB-Printer
 ; path (Pokedex_PrepareDexEntryForPrinting); the port reaches the flavor through
 ; dex_flavor_ptr instead, so nothing populates it (see the tag at that routine).
-wPrinterPokedexEntryTextPointer equ 0xCAF5
 ; wDexFlavorBuf — PORT-ONLY staging buffer (DEVIATION, see Pokedex_PrintFlavorTextAtBC).
 ; TextCommandProcessor reads its stream EBP-relative but the flavor lives in flat .data,
 ; so the bytes are copied into GB space first. Reuses wTileMapBackup2 (wTileMapBackup2
@@ -174,7 +172,6 @@ GLYPH_INCHES      equ 0x61          ; '″'  (dex tileset)
 GLYPH_ZERO        equ 0xF6          ; '0'
 
 GBSCR_W           equ 20            ; pret SCREEN_WIDTH — the stride-20 scratch
-LEADING_ZEROES    equ 0x80         ; PrintNumber BH flag (BIT_LEADING_ZEROES = 7)
 
 ; Raw tile ids drawn directly (charmap glyphs written as tile bytes).
 TILE_HLINE        equ 0x7A         ; '─'   pokedex horizontal divider

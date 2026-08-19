@@ -32,13 +32,11 @@ section .text
 ; DisplayPokemartDialogue_ stub RETIRED (overworld-events Stage 2):
 ; ported faithfully to src/engine/events/pokemart.asm.
 
-
 ; DisplayPokemonCenterDialogue_ stub RETIRED (overworld-events Stage 2):
 ; ported faithfully to src/engine/events/pokecenter.asm.
 
 ; VendingMachineMenu stub RETIRED (overworld-events Stage 2 / chunk 3):
 ; ported faithfully to src/engine/events/vending_machine.asm.
-
 
 ; CeladonPrizeMenu stub RETIRED (overworld-events Stage 2 / chunk 4):
 ; ported faithfully to src/engine/events/prize_menu.asm.

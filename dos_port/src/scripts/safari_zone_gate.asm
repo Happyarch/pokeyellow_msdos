@@ -90,14 +90,6 @@ TEXT_SAFARIZONEGATE_SAFARI_ZONE_WORKER1_WOULD_YOU_LIKE_TO_JOIN equ 4
 TEXT_SAFARIZONEGATE_SAFARI_ZONE_WORKER1_LEAVING_EARLY equ 5
 TEXT_SAFARIZONEGATE_SAFARI_ZONE_WORKER1_GOOD_HAUL_COME_AGAIN equ 6
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCoordIndex                                    equ 0xCD3D
-wNextSafariZoneGateScript                      equ 0xCF0D
-wPriceTemp                                     equ 0xCD3D
-wSafariSteps                                   equ 0xD70C
-wSpritePlayerStateData1FacingDirection         equ 0xC109
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

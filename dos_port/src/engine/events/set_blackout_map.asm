@@ -9,10 +9,6 @@ bits 32
 
 %include "gb_memmap.inc"
 
-%ifndef wLastBlackoutMap
-wLastBlackoutMap equ 0xD718
-%endif
-
 section .text
 
 global SetLastBlackoutMap

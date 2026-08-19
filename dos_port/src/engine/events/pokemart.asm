@@ -24,8 +24,9 @@ bits 32
 %include "gb_text.inc"
 %include "assets/audio_constants.inc"
 
-; pret ram/wram.asm:1172
-wBoughtOrSoldItemInMart equ 0xCCD5
+; pret ram/wram.asm:1172. Address from pokeyellow.sym (00:cf0a) — NOT inferred.
+; Was 0xCCD5, which is pret's wAILayer2Encouragement: the mart flag was landing on
+; a trainer-AI byte.
 
 section .text
 

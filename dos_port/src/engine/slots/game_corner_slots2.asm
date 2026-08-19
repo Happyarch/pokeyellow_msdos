@@ -76,7 +76,6 @@ AbleToPlaySlotsCheck:
     ; ret
     ret
 
-
 section .data
 
 ; Both message streams here are Tier-1 data, now GENERATED into

@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global CeladonMansionRoofHouseSignText
 global CeladonMansionRoof_Script
 global CeladonMansionRoof_TextPointers

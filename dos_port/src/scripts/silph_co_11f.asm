@@ -22,7 +22,14 @@ bits 32
 %include "assets/script_constants.inc"
 
 %include "assets/audio_constants.inc"
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern SilphCo11FRocketBattleText ; assets/trainer_headers.inc
+extern SilphCo11TrainerHeader0    ; assets/trainer_headers.inc
+extern SilphCo11TrainerHeaders    ; assets/trainer_headers.inc
 
 global SilphCo10FGiovanniILostAgainText
 global SilphCo11FBeautyText
@@ -116,19 +123,6 @@ TEXT_SILPHCO11F_GIOVANNI_YOU_RUINED_OUR_PLANS  equ 7
 TEXT_SILPHCO11F_TEXT8                          equ 8
 TEXT_SILPHCO11F_TEXT9                          equ 9
 TEXT_SILPHCO11F_TEXT10                         equ 10
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hUnlockedSilphCoDoors                          equ 0xFFE0
-wCoordIndex                                    equ 0xCD3D
-wSavedCoordIndex                               equ 0xCF0D
-wSilphCo11FCurScript                           equ 0xD658
-wSprite03StateData1FacingDirection             equ 0xC139
-wSprite03StateData1MovementStatus              equ 0xC131
-wSprite04StateData1FacingDirection             equ 0xC149
-wSprite04StateData1MovementStatus              equ 0xC141
-wSprite06StateData1FacingDirection             equ 0xC169
-wSprite06StateData1MovementStatus              equ 0xC161
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

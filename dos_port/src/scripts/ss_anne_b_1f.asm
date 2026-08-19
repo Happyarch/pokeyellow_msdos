@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global SSAnneB1F_Script
 global SSAnneB1F_TextPointers
 

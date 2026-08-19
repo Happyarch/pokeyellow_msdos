@@ -14,6 +14,7 @@ LD      := i386-pc-msdosdjgpp-ld
 # djgpp objdump: extracts the EXE's COFF symbol table (incl. NASM local
 # labels) for pkmn.sym — the debugger/MCP symbol source of truth.
 OBJDUMP := i586-pc-msdosdjgpp-objdump
+OBJCOPY := i586-pc-msdosdjgpp-objcopy
 
 NASMFLAGS := -f coff -I include/ -I . -O0
 
@@ -579,6 +580,211 @@ GAME_SRCS := \
     src/data/map_script_tables.asm \
     src/scripts/pallet_town.asm \
     src/scripts/trainer_map_script.asm \
+    src/scripts/cinnabar_lab_fossil_room.asm \
+    src/scripts/fighting_dojo.asm \
+    src/scripts/fuchsia_city.asm \
+    src/scripts/game_corner.asm \
+    src/scripts/ss_anne_2f_rooms.asm \
+    src/scripts/agathas_room.asm \
+    src/scripts/bills_house.asm \
+    src/scripts/blues_house.asm \
+    src/scripts/brunos_room.asm \
+    src/scripts/celadon_chief_house.asm \
+    src/scripts/celadon_city.asm \
+    src/scripts/celadon_diner.asm \
+    src/scripts/celadon_gym.asm \
+    src/scripts/celadon_hotel.asm \
+    src/scripts/celadon_mansion_1f.asm \
+    src/scripts/celadon_mansion_2f.asm \
+    src/scripts/celadon_mansion_roof.asm \
+    src/scripts/celadon_mansion_roof_house.asm \
+    src/scripts/celadon_mart_1f.asm \
+    src/scripts/celadon_mart_2f.asm \
+    src/scripts/celadon_mart_3f.asm \
+    src/scripts/celadon_mart_4f.asm \
+    src/scripts/celadon_mart_5f.asm \
+    src/scripts/celadon_mart_elevator.asm \
+    src/scripts/celadon_mart_roof.asm \
+    src/scripts/celadon_pokecenter.asm \
+    src/scripts/cerulean_badge_house.asm \
+    src/scripts/cerulean_cave_1f.asm \
+    src/scripts/cerulean_cave_2f.asm \
+    src/scripts/cerulean_cave_b_1f.asm \
+    src/scripts/cerulean_city.asm \
+    src/scripts/cerulean_gym.asm \
+    src/scripts/cerulean_mart.asm \
+    src/scripts/cerulean_melanies_house.asm \
+    src/scripts/cerulean_pokecenter.asm \
+    src/scripts/champions_room.asm \
+    src/scripts/cinnabar_gym.asm \
+    src/scripts/cinnabar_island.asm \
+    src/scripts/cinnabar_lab.asm \
+    src/scripts/cinnabar_lab_metronome_room.asm \
+    src/scripts/cinnabar_lab_trade_room.asm \
+    src/scripts/cinnabar_mart.asm \
+    src/scripts/cinnabar_pokecenter.asm \
+    src/scripts/colosseum.asm \
+    src/scripts/copycats_house_1f.asm \
+    src/scripts/copycats_house_2f.asm \
+    src/scripts/digletts_cave.asm \
+    src/scripts/digletts_cave_route_11.asm \
+    src/scripts/digletts_cave_route_2.asm \
+    src/scripts/fuchsia_bills_grandpas_house.asm \
+    src/scripts/fuchsia_good_rod_house.asm \
+    src/scripts/fuchsia_gym.asm \
+    src/scripts/fuchsia_mart.asm \
+    src/scripts/fuchsia_meeting_room.asm \
+    src/scripts/fuchsia_pokecenter.asm \
+    src/scripts/game_corner_prize_room.asm \
+    src/scripts/indigo_plateau.asm \
+    src/scripts/indigo_plateau_lobby.asm \
+    src/scripts/lances_room.asm \
+    src/scripts/lavender_cubone_house.asm \
+    src/scripts/lavender_mart.asm \
+    src/scripts/lavender_pokecenter.asm \
+    src/scripts/lavender_town.asm \
+    src/scripts/loreleis_room.asm \
+    src/scripts/mr_fujis_house.asm \
+    src/scripts/mr_psychics_house.asm \
+    src/scripts/mt_moon_1f.asm \
+    src/scripts/mt_moon_b_1f.asm \
+    src/scripts/mt_moon_pokecenter.asm \
+    src/scripts/museum_1f.asm \
+    src/scripts/museum_2f.asm \
+    src/scripts/name_raters_house.asm \
+    src/scripts/pewter_city.asm \
+    src/scripts/pewter_gym.asm \
+    src/scripts/pewter_mart.asm \
+    src/scripts/pewter_nidoran_house.asm \
+    src/scripts/pewter_pokecenter.asm \
+    src/scripts/pewter_speech_house.asm \
+    src/scripts/pokemon_mansion_1f.asm \
+    src/scripts/pokemon_mansion_2f.asm \
+    src/scripts/pokemon_mansion_3f.asm \
+    src/scripts/pokemon_mansion_b_1f.asm \
+    src/scripts/pokemon_tower_1f.asm \
+    src/scripts/pokemon_tower_3f.asm \
+    src/scripts/pokemon_tower_4f.asm \
+    src/scripts/power_plant.asm \
+    src/scripts/reds_house_1f.asm \
+    src/scripts/reds_house_2f.asm \
+    src/scripts/rock_tunnel_1f.asm \
+    src/scripts/rock_tunnel_b_1f.asm \
+    src/scripts/rock_tunnel_pokecenter.asm \
+    src/scripts/rocket_hideout_b_1f.asm \
+    src/scripts/rocket_hideout_b_2f.asm \
+    src/scripts/rocket_hideout_b_3f.asm \
+    src/scripts/rocket_hideout_elevator.asm \
+    src/scripts/route_1.asm \
+    src/scripts/route_10.asm \
+    src/scripts/route_11.asm \
+    src/scripts/route_11_gate_1f.asm \
+    src/scripts/route_11_gate_2f.asm \
+    src/scripts/route_12.asm \
+    src/scripts/route_12_gate_1f.asm \
+    src/scripts/route_12_gate_2f.asm \
+    src/scripts/route_12_super_rod_house.asm \
+    src/scripts/route_13.asm \
+    src/scripts/route_14.asm \
+    src/scripts/route_15.asm \
+    src/scripts/route_15_gate_1f.asm \
+    src/scripts/route_15_gate_2f.asm \
+    src/scripts/route_16.asm \
+    src/scripts/route_16_fly_house.asm \
+    src/scripts/route_16_gate_1f.asm \
+    src/scripts/route_16_gate_2f.asm \
+    src/scripts/route_17.asm \
+    src/scripts/route_18.asm \
+    src/scripts/route_18_gate_1f.asm \
+    src/scripts/route_18_gate_2f.asm \
+    src/scripts/route_19.asm \
+    src/scripts/route_2.asm \
+    src/scripts/route_20.asm \
+    src/scripts/route_21.asm \
+    src/scripts/route_22.asm \
+    src/scripts/route_22_gate.asm \
+    src/scripts/route_23.asm \
+    src/scripts/route_24.asm \
+    src/scripts/route_25.asm \
+    src/scripts/route_2_gate.asm \
+    src/scripts/route_2_trade_house.asm \
+    src/scripts/route_3.asm \
+    src/scripts/route_4.asm \
+    src/scripts/route_5.asm \
+    src/scripts/route_5_gate.asm \
+    src/scripts/route_6.asm \
+    src/scripts/route_6_gate.asm \
+    src/scripts/route_7.asm \
+    src/scripts/route_7_gate.asm \
+    src/scripts/route_8.asm \
+    src/scripts/route_8_gate.asm \
+    src/scripts/route_9.asm \
+    src/scripts/safari_zone_center.asm \
+    src/scripts/safari_zone_center_rest_house.asm \
+    src/scripts/safari_zone_east.asm \
+    src/scripts/safari_zone_east_rest_house.asm \
+    src/scripts/safari_zone_north.asm \
+    src/scripts/safari_zone_north_rest_house.asm \
+    src/scripts/safari_zone_secret_house.asm \
+    src/scripts/safari_zone_west.asm \
+    src/scripts/safari_zone_west_rest_house.asm \
+    src/scripts/saffron_city.asm \
+    src/scripts/saffron_gym.asm \
+    src/scripts/saffron_mart.asm \
+    src/scripts/saffron_pidgey_house.asm \
+    src/scripts/saffron_pokecenter.asm \
+    src/scripts/seafoam_islands_1f.asm \
+    src/scripts/seafoam_islands_b_1f.asm \
+    src/scripts/seafoam_islands_b_2f.asm \
+    src/scripts/seafoam_islands_b_3f.asm \
+    src/scripts/silph_co_10f.asm \
+    src/scripts/silph_co_1f.asm \
+    src/scripts/silph_co_2f.asm \
+    src/scripts/silph_co_3f.asm \
+    src/scripts/silph_co_4f.asm \
+    src/scripts/silph_co_5f.asm \
+    src/scripts/silph_co_6f.asm \
+    src/scripts/silph_co_7f.asm \
+    src/scripts/silph_co_8f.asm \
+    src/scripts/silph_co_9f.asm \
+    src/scripts/silph_co_elevator.asm \
+    src/scripts/ss_anne_1f.asm \
+    src/scripts/ss_anne_1f_rooms.asm \
+    src/scripts/ss_anne_2f.asm \
+    src/scripts/ss_anne_3f.asm \
+    src/scripts/ss_anne_b_1f.asm \
+    src/scripts/ss_anne_b_1f_rooms.asm \
+    src/scripts/ss_anne_bow.asm \
+    src/scripts/ss_anne_captains_room.asm \
+    src/scripts/ss_anne_kitchen.asm \
+    src/scripts/trade_center.asm \
+    src/scripts/underground_path_north_south.asm \
+    src/scripts/underground_path_route_5.asm \
+    src/scripts/underground_path_route_6.asm \
+    src/scripts/underground_path_route_7.asm \
+    src/scripts/underground_path_route_7_copy.asm \
+    src/scripts/underground_path_route_8.asm \
+    src/scripts/underground_path_west_east.asm \
+    src/scripts/vermilion_city.asm \
+    src/scripts/vermilion_gym.asm \
+    src/scripts/vermilion_mart.asm \
+    src/scripts/vermilion_old_rod_house.asm \
+    src/scripts/vermilion_pidgey_house.asm \
+    src/scripts/vermilion_pokecenter.asm \
+    src/scripts/vermilion_trade_house.asm \
+    src/scripts/victory_road_1f.asm \
+    src/scripts/victory_road_2f.asm \
+    src/scripts/victory_road_3f.asm \
+    src/scripts/viridian_city.asm \
+    src/scripts/viridian_forest.asm \
+    src/scripts/viridian_forest_north_gate.asm \
+    src/scripts/viridian_forest_south_gate.asm \
+    src/scripts/viridian_gym.asm \
+    src/scripts/viridian_mart.asm \
+    src/scripts/viridian_nickname_house.asm \
+    src/scripts/viridian_pokecenter.asm \
+    src/scripts/viridian_school_house.asm \
+    src/scripts/wardens_house.asm \
     src/engine/math/random.asm \
     src/engine/menus/draw_start_menu.asm \
     src/engine/menus/start_sub_menus.asm \
@@ -658,6 +864,8 @@ GAME_SRCS := \
     src/engine/events/prize_menu.asm \
     src/data/events/prizes.asm \
     src/data/events/prize_mon_levels.asm \
+    src/engine/events/cinnabar_lab.asm \
+    src/engine/events/display_pokedex.asm \
     src/engine/events/set_blackout_map.asm \
     src/engine/overworld/toggleable_objects.asm \
     src/engine/overworld/update_map.asm \
@@ -2743,9 +2951,30 @@ POKEMON_CHECK_SRCS :=
 # swap_items.asm MOVED to GAME_SRCS (menus S3): SELECT-swap links live with
 # the promoted list_menu.asm driver.
 # subtract_paid_money.asm MOVED to ITEMS_SRCS (services chunk 1 mart): called by pokemart.asm.
-# route_1.asm is an assembled unlinked script proving the check-only tier.
+# The check-only tier is now the map scripts that cannot LINK yet: each one
+# references a symbol nothing defines (transpiler BAIL regions + unported engine
+# routines -- see docs/current_plan_script_linking.md). They assemble-validate
+# here so a change that breaks them is still caught, and each graduates to
+# SCRIPT_SRCS above as its blocking symbol lands.
 ITEMS_CHECK_SRCS := \
-    src/scripts/route_1.asm
+    src/scripts/bike_shop.asm \
+    src/scripts/celadon_mansion_3f.asm \
+    src/scripts/cerulean_trashed_house.asm \
+    src/scripts/daycare.asm \
+    src/scripts/hall_of_fame.asm \
+    src/scripts/mt_moon_b_2f.asm \
+    src/scripts/oaks_lab.asm \
+    src/scripts/pokemon_fan_club.asm \
+    src/scripts/pokemon_tower_2f.asm \
+    src/scripts/pokemon_tower_5f.asm \
+    src/scripts/pokemon_tower_6f.asm \
+    src/scripts/pokemon_tower_7f.asm \
+    src/scripts/rocket_hideout_b_4f.asm \
+    src/scripts/safari_zone_gate.asm \
+    src/scripts/seafoam_islands_b_4f.asm \
+    src/scripts/silph_co_11f.asm \
+    src/scripts/summer_beach_house.asm \
+    src/scripts/vermilion_dock.asm
 
 # Home routines that assemble-validate but aren't linked yet. count_set_bits
 # emits an undefined external for wNumSetBits (no memmap alias / no caller yet),
@@ -3588,6 +3817,7 @@ src/engine/events/pokemart.o: assets/pokemart_text.inc assets/audio_constants.in
 src/engine/events/pokecenter.o: assets/pokecenter_text.inc assets/audio_constants.inc assets/map_dims.inc
 src/engine/events/vending_machine.o: assets/vending_machine_text.inc assets/audio_constants.inc
 src/engine/events/prize_menu.o: assets/prize_menu_text.inc
+src/engine/events/cinnabar_lab.o: assets/map_text/.stamp
 src/data/events/prizes.o: assets/script_constants.inc
 src/data/events/prize_mon_levels.o: assets/script_constants.inc
 src/engine/events/set_blackout_map.o: include/gb_memmap.inc
@@ -3834,7 +4064,7 @@ src/engine/items/town_map.o: assets/town_map_data.inc assets/town_map_gfx.inc
 # CanLearnTM/TMToMove index TechnicalMachines (assets/tmhm_moves.inc, gen_items.py).
 src/engine/items/tms.o: assets/tmhm_moves.inc
 
-assets: assets/scenario_registry.inc \
+assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
         assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc \
         assets/map_songs.inc \
@@ -3958,10 +4188,34 @@ regen:
 
 all: $(TARGET) image
 
+# PKMN.EXE is stripped ONLY when STRIP=1. Every binary is a DEBUG binary until the
+# port is complete (maintainer, 2026-08-19), so the default build keeps its symbol
+# table. Stripping will be wanted at release; the recipe is kept working so it is
+# not rediscovered then.
+#
+# NASM emits every `equ` as a local ABSOLUTE COFF symbol even without `global`, and
+# essentially every file includes the big constant assets (event_constants.inc,
+# script_constants.inc, gb_memmap.inc). The result was ~2.1 MILLION symbol entries:
+# a 39 MB PKMN.EXE against ~2.4 MB of real .text+.data, i.e. 94% symbol table. A
+# single map-script object was 143 KB carrying 78 BYTES of .text.
+#
+# That is pure file size -- the go32 stub loads only the section extents, so it cost
+# no runtime memory -- but PKMN.IMG inherits it, and tools/pgate.sh copies the image
+# PER SCENARIO across the 85-scenario suite.
+#
+# Ordering is load-bearing: gen_symfile runs BEFORE the strip, so pkmn.sym keeps
+# every symbol (including NASM local labels like _AdvancePlayerSprite.scroll, which
+# dosbox-mcp resolves against), while the shipped EXE carries none. The trailing
+# `touch` keeps pkmn.sym NEWER than the EXE -- the MCP symbol server treats an EXE
+# newer than its symbol file as stale and refuses to resolve.
 $(TARGET): $(LINK_OBJS) link.ld
 	$(LD) $(LDFLAGS) -Map=pkmn.map $(LINK_OBJS) -o $@
 	$(OBJDUMP) -t $@ | python3 tools/generators/gen_symfile.py > pkmn.sym
-	@echo "Built: $@"
+ifeq ($(STRIP),1)
+	$(OBJCOPY) --strip-all $@ $@.tmp && mv -f $@.tmp $@
+	@touch pkmn.sym
+endif
+	@echo "Built: $@ ($$(stat -c%s $@) bytes)"
 
 # ---------------------------------------------------------------------------
 # image — bundle PKMN.EXE + the DPMI host into a self-contained, PARTITIONED
@@ -4090,3 +4344,6 @@ check:
 
 clean:
 	rm -f $(ALL_OBJS) $(TARGET) $(NASMFLAGS_STAMP) pkmn.sym
+
+assets/pret_ram.inc: tools/generators/gen_pret_ram.py ../pokeyellow.sym
+	python3 tools/generators/gen_pret_ram.py

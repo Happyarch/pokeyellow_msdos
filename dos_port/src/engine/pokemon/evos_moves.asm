@@ -32,9 +32,6 @@ bits 32
 %include "gb_constants.inc"
 ; Pret-name aliases for HRAM / WRAM symbols that use the H_ / W_ prefix in our
 ; includes, so the translation reads identically to the pret source.
-hTileAnimations             equ hTileAnimations
-hAutoBGTransferEnabled      equ hAutoBGTransferEnabled
-wUpdateSpritesEnabled       equ wUpdateSpritesEnabled
 
 global TryEvolvingMon
 global EvolutionAfterBattle

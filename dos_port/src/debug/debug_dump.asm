@@ -21,6 +21,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_macros.inc"
 %include "gb_constants.inc"
 %include "coords.inc"                   ; BCOORD — battle-frame projection (DEBUG_ANIM_SHOW label)
@@ -2055,7 +2056,6 @@ section .text
 ; ---------------------------------------------------------------------------
 GHOST_LEVEL equ 30                              ; pret's Pokemon Tower ghost Marowak
 %ifdef DEBUG_BATTLE_UNVEIL
-SILPH_SCOPE equ 0x48                            ; pret constants/item_constants.asm
 ; POKEMON_TOWER_3F is $90 (assets/map_dims.inc; NOT %included here — same reason
 ; BT_DEMO_DUNGEON_MAP and the CAVERN tileset id are defined locally). Leaving it
 ; undefined does NOT fail loudly: NASM sizes the instruction differently across

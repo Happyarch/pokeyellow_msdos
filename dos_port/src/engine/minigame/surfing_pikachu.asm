@@ -6,6 +6,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "gb_constants.inc"          ; shared game constants (%define: emits no COFF symbol)
 %include "gb_macros.inc"
 %include "gfx_macros.inc"
 %include "coords.inc"
@@ -77,14 +78,8 @@ ANIM_OBJ_FIELD_E         equ 0x0E
 ANIM_OBJ_FIELD_F         equ 0x0F
 
 ; OAM sprite fields
-wShadowOAMSprite00TileID equ wShadowOAM + 0*4 + 2
-wShadowOAMSprite02TileID equ wShadowOAM + 2*4 + 2
-wShadowOAMSprite04XCoord equ wShadowOAM + 4*4 + 1
-wShadowOAMSprite05XCoord equ wShadowOAM + 5*4 + 1
 
 ; WRAM / Script flag definitions
-wPikachuMapScriptFlags       equ 0xD492
-BIT_PIKACHU_MAP_SURF_SELECT equ 1
 
 ; Animated-object spawn table staging destination in GB space
 W_SURF_SPAWN_DATA equ W_SURF_OAM_DATA + 0x1BE

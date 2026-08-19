@@ -58,7 +58,6 @@ global PikaPicAnimScript29
 ; PikachuSprite: pret gfx/sprites/pikachu.2bpp, carried by engine/gfx/mon_icons.asm.
 extern PikachuSprite
 
-
 section .data
 
 %include "assets/pikachu_pic_animation.inc"

@@ -89,7 +89,6 @@ extern ItemPrices
 ; *_NAME type ids (MONSTER_NAME/ITEM_NAME/PLAYEROT_NAME/ENEMYOT_NAME) and
 ; wUnusedNamePointer now come from the includes.
 
-
 InitList:
     mov al, byte [ebp + wInitListType]
 

@@ -54,12 +54,6 @@ SCRIPT_ROUTE22GATE_PLAYER_MOVING               equ 1
 SCRIPT_ROUTE22GATE_NOOP                        equ 2
 TEXT_ROUTE22GATE_GUARD                         equ 1
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wRoute22GateCurScript                          equ 0xD60D
-wSprite01StateData1FacingDirection             equ 0xC119
-wSpritePlayerStateData1FacingDirection         equ 0xC109
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

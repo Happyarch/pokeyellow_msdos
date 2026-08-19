@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global PokemonFanClubChairmanText
 global PokemonFanClubClefairyFanText
 global PokemonFanClubClefairyText
@@ -71,13 +70,6 @@ extern YesNoChoice
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_POKEMONFANCLUB_SCRIPT1                  equ 1
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wPikachuMapScriptFlags                         equ 0xD492
-wPokemonFanClubCurScript                       equ 0xD5F9
-wSprite03StateData1FacingDirection             equ 0xC139
-wSprite03StateData1MovementStatus              equ 0xC131
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

@@ -25,6 +25,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 
 section .text
@@ -80,23 +81,12 @@ SCREEN_HEIGHT_PX   equ 144
 B_PAD_A            equ 0
 B_PAD_UP           equ 6
 B_PAD_DOWN         equ 7
-BIT_FLY_WARP       equ 3          ; constants/ram_constants.asm (wStatusFlags6)
-BIT_USED_FLY       equ 7          ; constants/ram_constants.asm (wStatusFlags7)
 ; TODO-HW(audio): real SFX ids from constants/music_constants.asm (PlaySound is a stub)
 SFX_TINK           equ 0x00
 SFX_HEAL_AILMENT   equ 0x00
 ; HRAM joypad (port layout: FFB3 pressed, FFB4 held, FFB5 hJoy5, FFB6, FFB7 hJoy7)
 ; %ifndef-guarded so these coexist once root promotes hJoy5/6/7 into
 ; gb_memmap.inc (shared with src/home/joypad2.asm).
-%ifndef hJoy5
-hJoy5             equ 0xFFB5
-%endif
-%ifndef hJoy6
-hJoy6             equ 0xFFB6
-%endif
-%ifndef hJoy7
-hJoy7             equ 0xFFB7
-%endif
 
 ; TownMapCoordsToOAMCoords does `ld [hli], a` twice. At its DisplayWildLocations
 ; call site HL is a shadow-OAM pointer and those writes are load-bearing. At the
@@ -126,8 +116,10 @@ TOWNMAP_Y_PX       equ TOWNMAP_ROW_OFFSET * 8      ; 24
 %define vChars2Tile(n)   (GB_VCHARS2 + (n) * TILE_SIZE)
 TILE_1BPP               equ 8      ; TILE_1BPP_SIZE
 
-; named shadow-OAM slots (wShadowOAM = wShadowOAM)
-%define wShadowOAM                 wShadowOAM
+; named shadow-OAM slots. wShadowOAM itself comes from gb_memmap.inc; the old
+; `%define wShadowOAM wShadowOAM` self-alias is gone -- it was a no-op bridge that
+; only worked while the header spelled it `equ` (the macro expanded to a token NASM
+; resolved as a real symbol). With the header on %define it self-referenced.
 %define wShadowOAMSprite00         (wShadowOAM + 0  * OBJ_SIZE)
 %define wShadowOAMSprite04         (wShadowOAM + 4  * OBJ_SIZE)
 %define wShadowOAMSprite32         (wShadowOAM + 32 * OBJ_SIZE)
@@ -407,7 +399,6 @@ LoadTownMap_Fly:
     mov esi, wFlyLocationsList + NUM_CITY_MAPS
     jmp .pressedDownFly
 
-
 ; --------------------------------------------------------------------------- #
 ; BuildFlyLocationsList — visited-town bitfield -> list of map numbers.
 ; --------------------------------------------------------------------------- #
@@ -672,7 +663,6 @@ DisplayWildLocations:
     mov edx, wShadowOAMBackup           ; ld de, wShadowOAMBackup
     mov bx, OAM_COUNT * 4
     jmp CopyData
-
 
 ; --------------------------------------------------------------------------- #
 ; TownMapCoordsToOAMCoords — packed map coords -> OAM pixel coords (centered).

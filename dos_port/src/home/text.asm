@@ -29,6 +29,8 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
+%include "gb_constants.inc"          ; shared game constants (%define: emits no COFF symbol)
 %include "gb_macros.inc"
 
 extern DelayFrame
@@ -85,8 +87,6 @@ CHAR_DEXEND     equ 0x5F   ; <DEXEND>  prints "."
 
 CHAR_FIRST_GLYPH equ 0x60  ; first renderable character
 
-BIT_LEFT_ALIGN  equ 6      ; PrintNumber flag bit (constants/text_constants.asm)
-
 SCREEN_W_TILES  equ 20     ; SCREEN_WIDTH in tile units
 
 ; Message box geometry (data/text_boxes.asm: MESSAGE_BOX entry = 0,12,19,17)
@@ -117,7 +117,6 @@ PAD_B_BIT   equ 1
 ;   H_CLEAR_LETTER_PRINTING_DELAY_FLAGS equ 0xFFF9  ; hClearLetterPrintingDelayFlags (ram/hram.asm)
 BIT_PAGE_CHAR_IS_NEXT               equ 3          ; hUILayoutFlags bit 3 → treat <PAGE> as <NEXT>
 H_CLEAR_LETTER_PRINTING_DELAY_FLAGS equ 0xFFF9     ; hClearLetterPrintingDelayFlags (byte before hUILayoutFlags)
-LINK_STATE_BATTLING                 equ 0x04       ; wLinkState value (constants/serial_constants.asm); in gb_constants.inc too
 CHAR_DOTS_GLYPH                     equ 0x75       ; '…' single ellipsis glyph (constants/charmap.asm)
 
 ; ---------------------------------------------------------------------------
@@ -156,13 +155,10 @@ extern PlayCry             ; src/home/pokemon.asm — pret home/pokemon.asm:140 
 ; internal indexes). STARTER_PIKACHU/DEWGONG live in gb_constants.inc, which this
 ; file does not pull in; defined %ifndef-safe with their pret values.
 %ifndef STARTER_PIKACHU
-STARTER_PIKACHU     equ 0x54
 %endif
 %ifndef PIDGEOT
-PIDGEOT             equ 0x97
 %endif
 %ifndef DEWGONG
-DEWGONG             equ 0x78
 %endif
 
 ; ---------------------------------------------------------------------------

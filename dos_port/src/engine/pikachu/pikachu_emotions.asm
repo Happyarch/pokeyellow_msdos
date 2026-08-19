@@ -16,6 +16,7 @@ bits 32
 
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 
 ; ---------------------------------------------------------------------------
@@ -25,8 +26,6 @@ PEWTER_POKECENTER               equ 0x3A
 POKEMON_FAN_CLUB                equ 0x5A
 POKEMON_TOWER_1F                equ 0x8E
 POKEMON_TOWER_7F                equ 0x94
-
-BIT_PIKACHU_MAP_SCRIPT_ACTIVE   equ 7
 
 section .text
 

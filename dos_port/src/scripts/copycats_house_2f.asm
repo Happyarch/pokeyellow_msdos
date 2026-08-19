@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global CopycatsHouse2FCopycatText
 global CopycatsHouse2FDoduoText
 global CopycatsHouse2FPCText
@@ -37,10 +36,6 @@ extern IsItemInBag
 extern PrintText
 extern RemoveItemByID
 extern TextScriptEnd
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wSpritePlayerStateData1FacingDirection         equ 0xC109
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

@@ -18,6 +18,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 
@@ -25,7 +26,6 @@ bits 32
 ; VRAM & Map constants (pret constants/map_constants.asm, vram.asm)
 ; ---------------------------------------------------------------------------
 vNPCSprites                     equ vChars0                     ; 0x8000
-vNPCSprites2                    equ vChars1                     ; 0x8800
 
 TILE_1BPP                       equ 8
 TILE_2BPP                       equ 16
@@ -34,48 +34,10 @@ PEWTER_POKECENTER               equ 0x3A
 BILLS_HOUSE                     equ 0x58
 POKEMON_FAN_CLUB                equ 0x5A
 
-PIKASTEPDIR_DOWN                equ 0
-PIKASTEPDIR_UP                  equ 1
-PIKASTEPDIR_LEFT                equ 2
-PIKASTEPDIR_RIGHT               equ 3
-PIKASTEPDIR_DOWN_LEFT           equ 4
-PIKASTEPDIR_DOWN_RIGHT          equ 5
-PIKASTEPDIR_UP_LEFT             equ 6
-PIKASTEPDIR_UP_RIGHT            equ 7
-
 ; wSpriteStateData offsets and helper aliases
-wSpritePlayerStateData1         equ wSpriteStateData1
-wSpritePlayerStateData2         equ wSpriteStateData2
-wSpritePikachuStateData1        equ wSpriteStateData1 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE
-wSpritePikachuStateData2        equ wSpriteStateData2 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE
-
-wSpritePlayerStateData1FacingDirection  equ wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION
-wSpritePlayerStateData1ImageIndex       equ wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX
-wSpritePlayerStateData1YPixels          equ wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS
-wSpritePlayerStateData1XPixels          equ wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS
-wSpritePlayerStateData1IntraAnimFrameCounter equ wSpriteStateData1 + SPRITESTATEDATA1_INTRAANIMFRAMECOUNTER
-wSpritePlayerStateData1AnimFrameCounter equ wSpriteStateData1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER
-
-wSpritePlayerStateData2GrassPriority    equ wSpriteStateData2 + SPRITESTATEDATA2_GRASSPRIORITY
-wSpritePlayerStateData2ImageBaseOffset  equ wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET
-wSpritePlayerStateData2MapY             equ wSpriteStateData2 + SPRITESTATEDATA2_MAPY
-wSpritePlayerStateData2MapX             equ wSpriteStateData2 + SPRITESTATEDATA2_MAPX
 
 ; Pikachu WRAM variables
-wPikachuMovementFlags           equ 0xD44C
-wCurPikaMovementData            equ 0xD44D
-wCurPikaMovementParam1          equ 0xD44D
-wCurPikaMovementFunc1           equ 0xD44E
-wCurPikaMovementParam2          equ 0xD44F
-wCurPikaMovementFunc2           equ 0xD450
 wd451                           equ 0xD451
-wCurPikaMovementSpriteImageIdx  equ 0xD452
-wPikaSpriteX                    equ 0xD453
-wPikaSpriteY                    equ 0xD454
-wPikachuMovementXOffset         equ 0xD455
-wPikachuMovementYOffset         equ 0xD456
-wPikachuStepTimer               equ 0xD457
-wPikachuStepSubtimer            equ 0xD458
 
 ; ---------------------------------------------------------------------------
 ; Externs

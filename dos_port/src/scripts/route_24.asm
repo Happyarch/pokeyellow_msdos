@@ -21,7 +21,19 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern Route24CooltrainerM2BattleText ; assets/trainer_headers.inc
+extern Route24TrainerHeader0          ; assets/trainer_headers.inc
+extern Route24TrainerHeader1          ; assets/trainer_headers.inc
+extern Route24TrainerHeader2          ; assets/trainer_headers.inc
+extern Route24TrainerHeader3          ; assets/trainer_headers.inc
+extern Route24TrainerHeader4          ; assets/trainer_headers.inc
+extern Route24TrainerHeader5          ; assets/trainer_headers.inc
+extern Route24TrainerHeaders          ; assets/trainer_headers.inc
 
 global Route24AfterRocketBattleScript
 global Route24CooltrainerF1Text
@@ -78,11 +90,6 @@ SCRIPT_ROUTE24_DEFAULT                         equ 0
 SCRIPT_ROUTE24_AFTER_ROCKET_BATTLE             equ 3
 SCRIPT_ROUTE24_PLAYER_MOVING                   equ 4
 TEXT_ROUTE24_COOLTRAINER_M1                    equ 1
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wAddedToParty                                  equ 0xCCD3
-wRoute24CurScript                              equ 0xD601
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

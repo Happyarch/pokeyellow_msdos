@@ -53,11 +53,6 @@ bits 32
 ; already-present hTileAnimations=0xFFD7). Once root adds them to gb_memmap.inc,
 ; DELETE this whole block (nasm `equ` cannot be %ifndef-guarded, so leaving both
 ; a memmap def and this local def would be a redefinition error).
-hVBlankCopyBGSource      equ 0xFFC1   ; dw — low byte doubles as the enable byte
-hVBlankCopyBGDest        equ 0xFFC3   ; dw
-hVBlankCopyBGNumRows     equ 0xFFC5   ; db
-hMovingBGTilesCounter1   equ 0xFFD8   ; db  (byte after hTileAnimations $FFD7)
-wMovingBGTilesCounter2   equ 0xD084   ; db  (pret wram.asm; after wFBTileCounter)
 ; ── end ROOT-INTEGRATION block ──────────────────────────────────────────────
 
 ; GB-faithful BG-map geometry for VBlankCopyBgMap. Hardcoded on purpose: the

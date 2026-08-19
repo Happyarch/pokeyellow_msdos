@@ -81,29 +81,6 @@ bits 32
 ; union (ram/wram.asm:673-693) sharing bytes with wTrainerCardBadgeAttributes,
 ; whose $CC5D is already pinned in gb_memmap.inc — so that union's base is $CC5B.
 ; ---------------------------------------------------------------------------
-wCurPikaMovementData             equ 0xD44D
-wCurPikaMovementDataEnd          equ 0xD45E     ; 17 bytes (arm 1 is the longer arm)
-wPikaPicAnimPointer              equ 0xD44D     ; dw — see the shadow DEVIATION below
-wPikaPicAnimPointerSetupFinished equ 0xD44F
-wPikaPicAnimCurGraphicID         equ 0xD450
-wPikaPicAnimTimer                equ 0xD451     ; dw
-wPikaPicAnimDelay                equ 0xD453
-wPikaPicPikaDrawStartX           equ 0xD454
-wPikaPicPikaDrawStartY           equ 0xD455
-wCurPikaPicAnimObject            equ 0xD456
-wCurPikaPicAnimObjectVTileOffset equ 0xD456
-wCurPikaPicAnimObjectXOffset     equ 0xD457
-wCurPikaPicAnimObjectYOffset     equ 0xD458
-wCurPikaPicAnimObjectScriptIdx   equ 0xD459
-wCurPikaPicAnimObjectFrameIdx    equ 0xD45A
-wCurPikaPicAnimObjectFrameTimer  equ 0xD45B
-
-wPikaPicUsedGFXCount             equ 0xCC5B
-wPikaPicUsedGFX                  equ 0xCC5C     ; 8 * 2
-wPikaPicUsedGFXEnd               equ 0xCC6C
-wPikaPicAnimObjectDataBufferSize equ 0xCC97
-wPikaPicAnimObjectDataBuffer     equ 0xCC98     ; 4 structs of 8
-wPikaPicAnimObjectDataBufferEnd  equ 0xCCB8
 
 ; pret ram/vram.asm:20 — the overworld UNION arm at $8000. gb_memmap.inc carries
 ; its sibling vNPCSprites2 (= vChars1) but not this one.

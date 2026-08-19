@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global ChampionsRoomCleanupScript
 global ChampionsRoomDefaultScript
 global ChampionsRoomOakArrivesScript
@@ -86,11 +85,6 @@ TEXT_CHAMPIONSROOM_OAK                         equ 2
 TEXT_CHAMPIONSROOM_OAK_CONGRATULATES_PLAYER    equ 3
 TEXT_CHAMPIONSROOM_OAK_DISAPPOINTED_WITH_RIVAL equ 4
 TEXT_CHAMPIONSROOM_OAK_COME_WITH_ME            equ 5
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wChampionsRoomCurScript                        equ 0xD64B
-wPlayerStarter                                 equ 0xD716
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

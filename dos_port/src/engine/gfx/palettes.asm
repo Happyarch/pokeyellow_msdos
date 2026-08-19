@@ -331,7 +331,6 @@ set_pal_attr_table:
 SET_PAL_ATTR_TABLE_LEN equ $ - set_pal_attr_table
 section .text
 
-
 ; ===========================================================================
 ; GetPal_Pikachu — pret engine/gfx/palettes.asm:392.  "similar to SetPal_Overworld":
 ; return, in AL, the palette id of the map Pikachu is standing on.  It is NOT the

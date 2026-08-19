@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global MagikarpSalesman
 global MtMoonPokecenterChanseyText
 global MtMoonPokecenterClipboardText
@@ -43,10 +42,6 @@ extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN 
 extern SubBCDPredef
 extern TextScriptEnd
 extern YesNoChoice
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wPriceTemp                                     equ 0xCD3D
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

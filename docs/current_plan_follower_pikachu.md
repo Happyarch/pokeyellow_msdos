@@ -61,7 +61,7 @@ The subsystem consists of four primary components:
 ### Phase 5: Verification & Golden Scenarios
 - [x] Run `dos_port/tools/lint_pret_labels --no-scan --strict-claims`. (0 findings, via `static_gate` checks 2+3)
 - [x] Run `dos_port/tools/faithdiff` across all newly ported Pikachu routines.
-- [x] Run `make -C dos_port static_gate`. (PASS — 5 static checks)
+- [x] Run `make -C dos_port static_gate`. (PASS — static gate green)
 - [x] Run core fidelity suite (`make -C dos_port fidelity`). (16/16 PASS; `fidelity-full` 85 also run for the warp-path change)
 - [~] Golden scenarios: NOT AUTHORED, by maintainer decision (2026-08-18). A follower that
   walks behind the player is self-demonstrating — running the game exercises it — and a

@@ -1,5 +1,12 @@
 ; gb_constants.inc — Pokémon data-structure offsets and engine constants.
 ;
+; Emitted as %define (a preprocessor MACRO), not equ. NASM emits every `equ` as a
+; local ABSOLUTE COFF symbol -- without `global`, and whether or not the file uses
+; it -- so a shared constants header lands its whole contents in EVERY object that
+; includes it. Measured 2026-08-19: that was ~2.05M symbol entries and 39 MB of a
+; 41 MB PKMN.EXE, against ~2.4 MB of real .text+.data. A %define expands textually,
+; emits no symbol, and generates byte-identical code. Constants are not code
+; addresses: none of them ever appeared in pkmn.sym, so nothing debuggable is lost.
 ; Source of truth: constants/pokemon_data_constants.asm (repo root, pret spec).
 ; These mirror the rgbds `rsreset`/`rb`/`rw` struct definitions as plain NASM
 ; `equ`s so the translated Pokémon-engine routines (add_mon, load_mon_data,
@@ -10,53 +17,53 @@
 %ifndef GB_CONSTANTS_INC
 %define GB_CONSTANTS_INC
 
-NUM_STATS               equ 5
-NUM_MOVES               equ 4       ; move slots per mon (not total moves in the game)
+%define NUM_STATS                    5
+%define NUM_MOVES                    4   ; move slots per mon (not total moves in the game)
 
 ; --- mon-pic decompressor (constants/gfx_constants.asm) ---
-TILE_1BPP_SIZE          equ 8       ; TILE_SIZE/2 — bytes per 1bpp 8×8 tile
-PIC_WIDTH               equ 7       ; max pic size in tiles
-PIC_HEIGHT              equ 7
-PIC_SIZE                equ PIC_WIDTH * PIC_HEIGHT ; 49 tiles (constants/gfx_constants.asm)
-SPRITEBUFFERSIZE        equ PIC_WIDTH * PIC_HEIGHT * TILE_1BPP_SIZE  ; 392 = 0x188
-NAME_LENGTH             equ 11      ; '@'-terminated fixed-width name field (mon names)
-NAME_LENGTH_JP          equ 6       ; JP name length (OT-name compare in pikachu_status)
-NAME_BUFFER_LENGTH      equ 20      ; wNameBuffer size (GetName dest; bounds the copy)
-MOVE_NAME_LENGTH        equ 14      ; constants/text_constants.asm (12 printed + '@' + prefix)
-PARTY_LENGTH            equ 6
+%define TILE_1BPP_SIZE               8   ; TILE_SIZE/2 — bytes per 1bpp 8×8 tile
+%define PIC_WIDTH                    7   ; max pic size in tiles
+%define PIC_HEIGHT                   7
+%define PIC_SIZE                     (PIC_WIDTH * PIC_HEIGHT)   ; 49 tiles (constants/gfx_constants.asm)
+%define SPRITEBUFFERSIZE             (PIC_WIDTH * PIC_HEIGHT * TILE_1BPP_SIZE)   ; 392 = 0x188
+%define NAME_LENGTH                  11   ; '@'-terminated fixed-width name field (mon names)
+%define NAME_LENGTH_JP               6   ; JP name length (OT-name compare in pikachu_status)
+%define NAME_BUFFER_LENGTH           20   ; wNameBuffer size (GetName dest; bounds the copy)
+%define MOVE_NAME_LENGTH             14   ; constants/text_constants.asm (12 printed + '@' + prefix)
+%define PARTY_LENGTH                 6
 ; Hall-of-Fame record layout (pret constants/pokemon_data_constants.asm:63-65),
 ; menus S6 package A (league_pc.asm).
-HOF_MON                 equ 0x10                    ; 16 bytes per recorded mon
-HOF_TEAM                equ PARTY_LENGTH * HOF_MON  ; 96 bytes per recorded team
-HOF_TEAM_CAPACITY       equ 50                      ; max HoF teams stored in SRAM
+%define HOF_MON                      0x10   ; 16 bytes per recorded mon
+%define HOF_TEAM                     (PARTY_LENGTH * HOF_MON)   ; 96 bytes per recorded team
+%define HOF_TEAM_CAPACITY            50   ; max HoF teams stored in SRAM
 ; palette-command id (pret constants/palette_constants.asm:17) — consumed only by
 ; league_pc's TODO-HW RunPaletteCommand no-op (Phase 5 palette HAL).
-SET_PAL_POKEMON_WHOLE_SCREEN equ 0x0B
-MONS_PER_BOX            equ 20
-NUM_BOXES               equ 12
-NUM_TMS                 equ 50
-NUM_HMS                 equ 5
-NUM_TM_HM               equ NUM_TMS + NUM_HMS    ; 55
+%define SET_PAL_POKEMON_WHOLE_SCREEN 0x0B
+%define MONS_PER_BOX                 20
+%define NUM_BOXES                    12
+%define NUM_TMS                      50
+%define NUM_HMS                      5
+%define NUM_TM_HM                    (NUM_TMS + NUM_HMS)   ; 55
 
 ; --- base data struct (data/pokemon/base_stats/*.asm) ---
-BASE_DEX_NO             equ 0x00
-BASE_STATS              equ 0x01    ; 5 bytes
-BASE_HP                 equ 0x01
-BASE_ATK                equ 0x02
-BASE_DEF                equ 0x03
-BASE_SPD                equ 0x04
-BASE_SPC                equ 0x05
-BASE_TYPE_1             equ 0x06
-BASE_TYPE_2             equ 0x07
-BASE_CATCH_RATE         equ 0x08
-BASE_EXP                equ 0x09
-BASE_PIC_SIZE           equ 0x0A
-BASE_FRONTPIC           equ 0x0B    ; word
-BASE_BACKPIC            equ 0x0D    ; word
-BASE_MOVES              equ 0x0F    ; 4 bytes
-BASE_GROWTH_RATE        equ 0x13
-BASE_TMHM               equ 0x14    ; (NUM_TM_HM + 7) / 8 = 7 bytes
-BASE_DATA_SIZE          equ 0x1C    ; 28 bytes total (incl. 1 padding byte)
+%define BASE_DEX_NO                  0x00
+%define BASE_STATS                   0x01   ; 5 bytes
+%define BASE_HP                      0x01
+%define BASE_ATK                     0x02
+%define BASE_DEF                     0x03
+%define BASE_SPD                     0x04
+%define BASE_SPC                     0x05
+%define BASE_TYPE_1                  0x06
+%define BASE_TYPE_2                  0x07
+%define BASE_CATCH_RATE              0x08
+%define BASE_EXP                     0x09
+%define BASE_PIC_SIZE                0x0A
+%define BASE_FRONTPIC                0x0B   ; word
+%define BASE_BACKPIC                 0x0D   ; word
+%define BASE_MOVES                   0x0F   ; 4 bytes
+%define BASE_GROWTH_RATE             0x13
+%define BASE_TMHM                    0x14   ; (NUM_TM_HM + 7) / 8 = 7 bytes
+%define BASE_DATA_SIZE               0x1C   ; 28 bytes total (incl. 1 padding byte)
 
 ; --- party_struct / box_struct members (macros/ram.asm) ---
 ; GEN-2 FORWARD-COMPAT: these offsets and the struct lengths below
@@ -65,84 +72,84 @@ BASE_DATA_SIZE          equ 0x1C    ; 28 bytes total (incl. 1 padding byte)
 ; that slot is load-bearing for the planned Gen 2 port — do NOT repurpose it or
 ; shrink/realign the struct. Party↔box conversion (deposit/withdraw, when added)
 ; must preserve +7 verbatim.
-MON_SPECIES             equ 0x00
-MON_HP                  equ 0x01    ; word (big-endian)
-MON_BOX_LEVEL           equ 0x03
-MON_STATUS              equ 0x04
-MON_TYPE                equ 0x05
-MON_TYPE1               equ 0x05
-MON_TYPE2               equ 0x06
-MON_CATCH_RATE          equ 0x07
-MON_MOVES               equ 0x08    ; 4 bytes
-MON_OTID                equ 0x0C    ; word
-MON_EXP                 equ 0x0E    ; 3 bytes (big-endian)
-MON_HP_EXP              equ 0x11    ; word
-MON_ATK_EXP             equ 0x13    ; word
-MON_DEF_EXP             equ 0x15    ; word
-MON_SPD_EXP            equ 0x17    ; word
-MON_SPC_EXP             equ 0x19    ; word
-MON_DVS                 equ 0x1B    ; word
-MON_PP                  equ 0x1D    ; 4 bytes
-BOXMON_STRUCT_LENGTH    equ 0x21    ; 33
-MON_LEVEL               equ 0x21
-MON_STATS               equ 0x22    ; 5 words
-MON_MAXHP               equ 0x22
-MON_ATK                 equ 0x24
-MON_DEF                 equ 0x26
-MON_SPD                 equ 0x28
-MON_SPC                 equ 0x2A
-PARTYMON_STRUCT_LENGTH  equ 0x2C    ; 44
+%define MON_SPECIES                  0x00
+%define MON_HP                       0x01   ; word (big-endian)
+%define MON_BOX_LEVEL                0x03
+%define MON_STATUS                   0x04
+%define MON_TYPE                     0x05
+%define MON_TYPE1                    0x05
+%define MON_TYPE2                    0x06
+%define MON_CATCH_RATE               0x07
+%define MON_MOVES                    0x08   ; 4 bytes
+%define MON_OTID                     0x0C   ; word
+%define MON_EXP                      0x0E   ; 3 bytes (big-endian)
+%define MON_HP_EXP                   0x11   ; word
+%define MON_ATK_EXP                  0x13   ; word
+%define MON_DEF_EXP                  0x15   ; word
+%define MON_SPD_EXP                  0x17   ; word
+%define MON_SPC_EXP                  0x19   ; word
+%define MON_DVS                      0x1B   ; word
+%define MON_PP                       0x1D   ; 4 bytes
+%define BOXMON_STRUCT_LENGTH         0x21   ; 33
+%define MON_LEVEL                    0x21
+%define MON_STATS                    0x22   ; 5 words
+%define MON_MAXHP                    0x22
+%define MON_ATK                      0x24
+%define MON_DEF                      0x26
+%define MON_SPD                      0x28
+%define MON_SPC                      0x2A
+%define PARTYMON_STRUCT_LENGTH       0x2C   ; 44
 
-STARTER_PIKACHU         equ 84      ; = PIKACHU internal index ($54); pikachu_status
-MAGIKARP                equ 0x85    ; internal index (constants/pokemon_constants.asm); ItemUseOldRod's fixed catch
+%define STARTER_PIKACHU              84   ; = PIKACHU internal index ($54); pikachu_status
+%define MAGIKARP                     0x85   ; internal index (constants/pokemon_constants.asm); ItemUseOldRod's fixed catch
 
 ; --- Moves table record (data/moves/moves.asm; gen_moves.py) ---
-MOVE_LENGTH             equ 6
-MOVE_ANIM               equ 0x00
-MOVE_EFFECT             equ 0x01
-MOVE_POWER              equ 0x02
-MOVE_TYPE               equ 0x03
-MOVE_ACC                equ 0x04
-MOVE_PP                 equ 0x05
+%define MOVE_LENGTH                  6
+%define MOVE_ANIM                    0x00
+%define MOVE_EFFECT                  0x01
+%define MOVE_POWER                   0x02
+%define MOVE_TYPE                    0x03
+%define MOVE_ACC                     0x04
+%define MOVE_PP                      0x05
 ; (NUM_ATTACKS now comes from the generated battle_anim_constants.inc, included below)
 
-BANK_MoveNames          equ 0          ; flat model: ROM bank ignored (wPredefBank)
+%define BANK_MoveNames               0   ; flat model: ROM bank ignored (wPredefBank)
 
 ; --- name-list type ids (constants/list_constants.asm; NamePointers index) ---
-MONSTER_NAME            equ 1
-MOVE_NAME               equ 2
-UNUSED_NAME             equ 3
-ITEM_NAME               equ 4
-PLAYEROT_NAME           equ 5
-ENEMYOT_NAME            equ 6
-TRAINER_NAME            equ 7
+%define MONSTER_NAME                 1
+%define MOVE_NAME                    2
+%define UNUSED_NAME                  3
+%define ITEM_NAME                    4
+%define PLAYEROT_NAME                5
+%define ENEMYOT_NAME                 6
+%define TRAINER_NAME                 7
 
 ; --- item inventory capacities (constants/menu_constants.asm) ---
-BAG_ITEM_CAPACITY       equ 20
-PC_ITEM_CAPACITY        equ 50
+%define BAG_ITEM_CAPACITY            20
+%define PC_ITEM_CAPACITY             50
 
 ; --- item ids referenced by item-use effects (constants/item_constants.asm) ---
-MASTER_BALL             equ 0x01    ; the four ball ids ItemUseBall's catch math keys on
-ULTRA_BALL              equ 0x02
-GREAT_BALL              equ 0x03
-POKE_BALL               equ 0x04
-SAFARI_BALL             equ 0x08
+%define MASTER_BALL                  0x01   ; the four ball ids ItemUseBall's catch math keys on
+%define ULTRA_BALL                   0x02
+%define GREAT_BALL                   0x03
+%define POKE_BALL                    0x04
+%define SAFARI_BALL                  0x08
 ; SAFARI_ROCK is pret's deliberate OVERLOAD of the CASCADEBADGE item id
 ; (constants/item_constants.asm:34 — `DEF SAFARI_ROCK EQU CASCADEBADGE`, $16).
 ; PartyMenuOrRockOrRun stores it in wCurItem so UseBagItem runs the rock.
 ; SAFARI_BAIT is pret's matching overload of the BOULDERBADGE item id
 ; (constants/item_constants.asm:32 — `DEF SAFARI_BAIT EQU BOULDERBADGE`, $15).
 ; DisplayBattleMenu's ITEM slot stores it in wCurItem in a Safari battle.
-SAFARI_BAIT             equ 0x15
-SAFARI_ROCK             equ 0x16
-HP_UP                   equ 0x23    ; first vitamin (PROTEIN/IRON/CARBOS/CALCIUM follow)
-PROTEIN                 equ 0x24
-IRON                    equ 0x25
-CARBOS                  equ 0x26
-CALCIUM                 equ 0x27    ; last vitamin before RARE_CANDY
-RARE_CANDY              equ 0x28
-HM01                    equ 0xC4    ; first HM; HMs $C4-$C8, TMs $C9-$FA
-TM01                    equ 0xC9    ; first TM (index into TechnicalMachinePrices)
+%define SAFARI_BAIT                  0x15
+%define SAFARI_ROCK                  0x16
+%define HP_UP                        0x23   ; first vitamin (PROTEIN/IRON/CARBOS/CALCIUM follow)
+%define PROTEIN                      0x24
+%define IRON                         0x25
+%define CARBOS                       0x26
+%define CALCIUM                      0x27   ; last vitamin before RARE_CANDY
+%define RARE_CANDY                   0x28
+%define HM01                         0xC4   ; first HM; HMs $C4-$C8, TMs $C9-$FA
+%define TM01                         0xC9   ; first TM (index into TechnicalMachinePrices)
 
 ; --- the TM/HM item ids, under their pret names -----------------------------
 ; constants/item_constants.asm `add_hm` (:141-) and `add_tm` (:161-) blocks, in
@@ -152,96 +159,96 @@ TM01                    equ 0xC9    ; first TM (index into TechnicalMachinePrice
 ; Each id is expressed off HM01/TM01 so the sequence property stays visible and
 ; the base lives in exactly one place. Trailing comment = the TM/HM number the
 ; game shows the player, then the raw id.
-HM_CUT                  equ HM01 + 0  ; HM01 = $C4
-HM_FLY                  equ HM01 + 1  ; HM02 = $C5
-HM_SURF                 equ HM01 + 2  ; HM03 = $C6
-HM_STRENGTH             equ HM01 + 3  ; HM04 = $C7
-HM_FLASH                equ HM01 + 4  ; HM05 = $C8
+%define HM_CUT                       (HM01 + 0)   ; HM01 = $C4
+%define HM_FLY                       (HM01 + 1)   ; HM02 = $C5
+%define HM_SURF                      (HM01 + 2)   ; HM03 = $C6
+%define HM_STRENGTH                  (HM01 + 3)   ; HM04 = $C7
+%define HM_FLASH                     (HM01 + 4)   ; HM05 = $C8
 
-TM_MEGA_PUNCH           equ TM01 + 0  ; TM01 = $C9
-TM_RAZOR_WIND           equ TM01 + 1  ; TM02 = $CA
-TM_SWORDS_DANCE         equ TM01 + 2  ; TM03 = $CB
-TM_WHIRLWIND            equ TM01 + 3  ; TM04 = $CC
-TM_MEGA_KICK            equ TM01 + 4  ; TM05 = $CD
-TM_TOXIC                equ TM01 + 5  ; TM06 = $CE
-TM_HORN_DRILL           equ TM01 + 6  ; TM07 = $CF
-TM_BODY_SLAM            equ TM01 + 7  ; TM08 = $D0
-TM_TAKE_DOWN            equ TM01 + 8  ; TM09 = $D1
-TM_DOUBLE_EDGE          equ TM01 + 9  ; TM10 = $D2
-TM_BUBBLEBEAM           equ TM01 + 10 ; TM11 = $D3
-TM_WATER_GUN            equ TM01 + 11 ; TM12 = $D4
-TM_ICE_BEAM             equ TM01 + 12 ; TM13 = $D5
-TM_BLIZZARD             equ TM01 + 13 ; TM14 = $D6
-TM_HYPER_BEAM           equ TM01 + 14 ; TM15 = $D7
-TM_PAY_DAY              equ TM01 + 15 ; TM16 = $D8
-TM_SUBMISSION           equ TM01 + 16 ; TM17 = $D9
-TM_COUNTER              equ TM01 + 17 ; TM18 = $DA
-TM_SEISMIC_TOSS         equ TM01 + 18 ; TM19 = $DB
-TM_RAGE                 equ TM01 + 19 ; TM20 = $DC
-TM_MEGA_DRAIN           equ TM01 + 20 ; TM21 = $DD
-TM_SOLARBEAM            equ TM01 + 21 ; TM22 = $DE
-TM_DRAGON_RAGE          equ TM01 + 22 ; TM23 = $DF
-TM_THUNDERBOLT          equ TM01 + 23 ; TM24 = $E0 — Pikachu's mood bonus (ItemUseTMHM)
-TM_THUNDER              equ TM01 + 24 ; TM25 = $E1 — likewise
-TM_EARTHQUAKE           equ TM01 + 25 ; TM26 = $E2
-TM_FISSURE              equ TM01 + 26 ; TM27 = $E3
-TM_DIG                  equ TM01 + 27 ; TM28 = $E4
-TM_PSYCHIC_M            equ TM01 + 28 ; TM29 = $E5
-TM_TELEPORT             equ TM01 + 29 ; TM30 = $E6
-TM_MIMIC                equ TM01 + 30 ; TM31 = $E7
-TM_DOUBLE_TEAM          equ TM01 + 31 ; TM32 = $E8
-TM_REFLECT              equ TM01 + 32 ; TM33 = $E9
-TM_BIDE                 equ TM01 + 33 ; TM34 = $EA
-TM_METRONOME            equ TM01 + 34 ; TM35 = $EB
-TM_SELFDESTRUCT         equ TM01 + 35 ; TM36 = $EC
-TM_EGG_BOMB             equ TM01 + 36 ; TM37 = $ED
-TM_FIRE_BLAST           equ TM01 + 37 ; TM38 = $EE
-TM_SWIFT                equ TM01 + 38 ; TM39 = $EF
-TM_SKULL_BASH           equ TM01 + 39 ; TM40 = $F0
-TM_SOFTBOILED           equ TM01 + 40 ; TM41 = $F1
-TM_DREAM_EATER          equ TM01 + 41 ; TM42 = $F2
-TM_SKY_ATTACK           equ TM01 + 42 ; TM43 = $F3
-TM_REST                 equ TM01 + 43 ; TM44 = $F4
-TM_THUNDER_WAVE         equ TM01 + 44 ; TM45 = $F5
-TM_PSYWAVE              equ TM01 + 45 ; TM46 = $F6
-TM_EXPLOSION            equ TM01 + 46 ; TM47 = $F7
-TM_ROCK_SLIDE           equ TM01 + 47 ; TM48 = $F8
-TM_TRI_ATTACK           equ TM01 + 48 ; TM49 = $F9
-TM_SUBSTITUTE           equ TM01 + 49 ; TM50 = $FA
-ANTIDOTE                equ 0x0B
-BURN_HEAL               equ 0x0C
-ICE_HEAL                equ 0x0D
-AWAKENING               equ 0x0E
-PARLYZ_HEAL             equ 0x0F
-HYPER_POTION            equ 0x12
-FULL_HEAL               equ 0x34
-REVIVE                  equ 0x35
-MAX_REVIVE              equ 0x36
-SURFBOARD               equ 0x07    ; ItemUseSurfboard (the SURF field-move item)
+%define TM_MEGA_PUNCH                (TM01 + 0)   ; TM01 = $C9
+%define TM_RAZOR_WIND                (TM01 + 1)   ; TM02 = $CA
+%define TM_SWORDS_DANCE              (TM01 + 2)   ; TM03 = $CB
+%define TM_WHIRLWIND                 (TM01 + 3)   ; TM04 = $CC
+%define TM_MEGA_KICK                 (TM01 + 4)   ; TM05 = $CD
+%define TM_TOXIC                     (TM01 + 5)   ; TM06 = $CE
+%define TM_HORN_DRILL                (TM01 + 6)   ; TM07 = $CF
+%define TM_BODY_SLAM                 (TM01 + 7)   ; TM08 = $D0
+%define TM_TAKE_DOWN                 (TM01 + 8)   ; TM09 = $D1
+%define TM_DOUBLE_EDGE               (TM01 + 9)   ; TM10 = $D2
+%define TM_BUBBLEBEAM                (TM01 + 10)   ; TM11 = $D3
+%define TM_WATER_GUN                 (TM01 + 11)   ; TM12 = $D4
+%define TM_ICE_BEAM                  (TM01 + 12)   ; TM13 = $D5
+%define TM_BLIZZARD                  (TM01 + 13)   ; TM14 = $D6
+%define TM_HYPER_BEAM                (TM01 + 14)   ; TM15 = $D7
+%define TM_PAY_DAY                   (TM01 + 15)   ; TM16 = $D8
+%define TM_SUBMISSION                (TM01 + 16)   ; TM17 = $D9
+%define TM_COUNTER                   (TM01 + 17)   ; TM18 = $DA
+%define TM_SEISMIC_TOSS              (TM01 + 18)   ; TM19 = $DB
+%define TM_RAGE                      (TM01 + 19)   ; TM20 = $DC
+%define TM_MEGA_DRAIN                (TM01 + 20)   ; TM21 = $DD
+%define TM_SOLARBEAM                 (TM01 + 21)   ; TM22 = $DE
+%define TM_DRAGON_RAGE               (TM01 + 22)   ; TM23 = $DF
+%define TM_THUNDERBOLT               (TM01 + 23)   ; TM24 = $E0 — Pikachu's mood bonus (ItemUseTMHM)
+%define TM_THUNDER                   (TM01 + 24)   ; TM25 = $E1 — likewise
+%define TM_EARTHQUAKE                (TM01 + 25)   ; TM26 = $E2
+%define TM_FISSURE                   (TM01 + 26)   ; TM27 = $E3
+%define TM_DIG                       (TM01 + 27)   ; TM28 = $E4
+%define TM_PSYCHIC_M                 (TM01 + 28)   ; TM29 = $E5
+%define TM_TELEPORT                  (TM01 + 29)   ; TM30 = $E6
+%define TM_MIMIC                     (TM01 + 30)   ; TM31 = $E7
+%define TM_DOUBLE_TEAM               (TM01 + 31)   ; TM32 = $E8
+%define TM_REFLECT                   (TM01 + 32)   ; TM33 = $E9
+%define TM_BIDE                      (TM01 + 33)   ; TM34 = $EA
+%define TM_METRONOME                 (TM01 + 34)   ; TM35 = $EB
+%define TM_SELFDESTRUCT              (TM01 + 35)   ; TM36 = $EC
+%define TM_EGG_BOMB                  (TM01 + 36)   ; TM37 = $ED
+%define TM_FIRE_BLAST                (TM01 + 37)   ; TM38 = $EE
+%define TM_SWIFT                     (TM01 + 38)   ; TM39 = $EF
+%define TM_SKULL_BASH                (TM01 + 39)   ; TM40 = $F0
+%define TM_SOFTBOILED                (TM01 + 40)   ; TM41 = $F1
+%define TM_DREAM_EATER               (TM01 + 41)   ; TM42 = $F2
+%define TM_SKY_ATTACK                (TM01 + 42)   ; TM43 = $F3
+%define TM_REST                      (TM01 + 43)   ; TM44 = $F4
+%define TM_THUNDER_WAVE              (TM01 + 44)   ; TM45 = $F5
+%define TM_PSYWAVE                   (TM01 + 45)   ; TM46 = $F6
+%define TM_EXPLOSION                 (TM01 + 46)   ; TM47 = $F7
+%define TM_ROCK_SLIDE                (TM01 + 47)   ; TM48 = $F8
+%define TM_TRI_ATTACK                (TM01 + 48)   ; TM49 = $F9
+%define TM_SUBSTITUTE                (TM01 + 49)   ; TM50 = $FA
+%define ANTIDOTE                     0x0B
+%define BURN_HEAL                    0x0C
+%define ICE_HEAL                     0x0D
+%define AWAKENING                    0x0E
+%define PARLYZ_HEAL                  0x0F
+%define HYPER_POTION                 0x12
+%define FULL_HEAL                    0x34
+%define REVIVE                       0x35
+%define MAX_REVIVE                   0x36
+%define SURFBOARD                    0x07   ; ItemUseSurfboard (the SURF field-move item)
 ; Key items the map scripts hand out (constants/item_constants.asm), named here
 ; for the same reason as the TM/HM block above: pret writes `lb bc, TOWN_MAP, 1`.
-TOWN_MAP                equ 0x05    ; constants/item_constants.asm:14
-OLD_AMBER               equ 0x1F    ; :43
-BIKE_VOUCHER            equ 0x2D    ; :57
-S_S_TICKET              equ 0x3F    ; :75
-OAKS_PARCEL             equ 0x46    ; :82
-POKE_FLUTE              equ 0x49    ; :85
-COIN_CASE               equ 0x45    ; constants/item_constants.asm:81 — AbleToPlaySlotsCheck
-OLD_ROD                 equ 0x4C    ; constants/item_constants.asm — fishing rods
-GOOD_ROD                equ 0x4D
-SUPER_ROD               equ 0x4E
+%define TOWN_MAP                     0x05   ; constants/item_constants.asm:14
+%define OLD_AMBER                    0x1F   ; :43
+%define BIKE_VOUCHER                 0x2D   ; :57
+%define S_S_TICKET                   0x3F   ; :75
+%define OAKS_PARCEL                  0x46   ; :82
+%define POKE_FLUTE                   0x49   ; :85
+%define COIN_CASE                    0x45   ; constants/item_constants.asm:81 — AbleToPlaySlotsCheck
+%define OLD_ROD                      0x4C   ; constants/item_constants.asm — fishing rods
+%define GOOD_ROD                     0x4D
+%define SUPER_ROD                    0x4E
 ; The PP family is a contiguous run in pret constants/item_constants.asm — the
 ; adjacency is load-bearing: ItemUsePPRestore's .useElixir decrements the item id
 ; TWICE so ELIXER becomes ETHER and MAX_ELIXER becomes MAX_ETHER.
-PP_UP                   equ 0x4F
-ETHER                   equ 0x50
-MAX_ETHER               equ 0x51
-ELIXER                  equ 0x52
-MAX_ELIXER              equ 0x53
+%define PP_UP                        0x4F
+%define ETHER                        0x50
+%define MAX_ETHER                    0x51
+%define ELIXER                       0x52
+%define MAX_ELIXER                   0x53
 
 ; --- move PP byte fields (constants/battle_constants.asm) ---
-PP_UP_MASK              equ 0xC0    ; %11000000, PP Ups applied
-PP_MASK                 equ 0x3F    ; %00111111, remaining PP
+%define PP_UP_MASK                   0xC0   ; %11000000, PP Ups applied
+%define PP_MASK                      0x3F   ; %00111111, remaining PP
 
 ; --- battle-animation ids + SE/subanim-type constants: GENERATED (Tier-1) ---
 ; The whole anim-id tail (STATUS_AFFECTED_ANIM..BAIT_ANIM), SE_* command ids,
@@ -251,193 +258,193 @@ PP_MASK                 equ 0x3F    ; %00111111, remaining PP
 %include "assets/battle_anim_constants.inc"
 
 ; --- naming-screen types (constants/menu_constants.asm) ---
-NAME_PLAYER_SCREEN      equ 0
-NAME_RIVAL_SCREEN       equ 1
-NAME_MON_SCREEN         equ 2
+%define NAME_PLAYER_SCREEN           0
+%define NAME_RIVAL_SCREEN            1
+%define NAME_MON_SCREEN              2
 
 ; --- the ghost Marowak (constants/pokemon_constants.asm: RESTLESS_SOUL = MAROWAK) ---
-MAROWAK                 equ 0x91    ; internal species index
-RESTLESS_SOUL           equ MAROWAK ; Pokémon Tower 6F's uncatchable ghost
-DITTO                   equ 0x4C    ; internal index (Transform → assumed Ditto)
+%define MAROWAK                      0x91   ; internal species index
+%define RESTLESS_SOUL                (MAROWAK)   ; Pokémon Tower 6F's uncatchable ghost
+%define DITTO                        0x4C   ; internal index (Transform → assumed Ditto)
 
 ; --- Gen-2 forward-compat: held item carried in the catch-rate byte ---
 ; The party/box mon struct's MON_CATCH_RATE byte (offset 7) is Gen 2's held-item
 ; slot across the Time Capsule. Kadabra ships holding a TwistedSpoon (pret).
-KADABRA                 equ 0x26    ; internal species index
-TWISTEDSPOON_GSC        equ 0x60    ; Gen-2 held item id stored in the catch-rate byte
+%define KADABRA                      0x26   ; internal species index
+%define TWISTEDSPOON_GSC             0x60   ; Gen-2 held item id stored in the catch-rate byte
 
 ; --- mon data locations (wMonDataLocation values) ---
-PLAYER_PARTY_DATA       equ 0
-ENEMY_PARTY_DATA        equ 1
-BOX_DATA                equ 2
-DAYCARE_DATA            equ 3
-BATTLE_MON_DATA         equ 4
+%define PLAYER_PARTY_DATA            0
+%define ENEMY_PARTY_DATA             1
+%define BOX_DATA                     2
+%define DAYCARE_DATA                 3
+%define BATTLE_MON_DATA              4
 
 ; --- growth rates (index into GrowthRateTable) ---
-GROWTH_MEDIUM_FAST      equ 0
-GROWTH_SLIGHTLY_FAST    equ 1
-GROWTH_SLIGHTLY_SLOW    equ 2
-GROWTH_MEDIUM_SLOW      equ 3
-GROWTH_FAST             equ 4
-GROWTH_SLOW             equ 5
+%define GROWTH_MEDIUM_FAST           0
+%define GROWTH_SLIGHTLY_FAST         1
+%define GROWTH_SLIGHTLY_SLOW         2
+%define GROWTH_MEDIUM_SLOW           3
+%define GROWTH_FAST                  4
+%define GROWTH_SLOW                  5
 
-MAX_STAT_VALUE          equ 999
-MAX_LEVEL               equ 100
+%define MAX_STAT_VALUE               999
+%define MAX_LEVEL                    100
 
 ; --- flag-action predef modes (constants/misc_constants.asm) ---
-FLAG_RESET              equ 0
-FLAG_SET               equ 1
-FLAG_TEST              equ 2
+%define FLAG_RESET                   0
+%define FLAG_SET                     1
+%define FLAG_TEST                    2
 
 ; --- evolution trigger types (constants/pokemon_data_constants.asm) ---
-EVOLVE_LEVEL           equ 1
-EVOLVE_ITEM            equ 2
-EVOLVE_TRADE           equ 3
+%define EVOLVE_LEVEL                 1
+%define EVOLVE_ITEM                  2
+%define EVOLVE_TRADE                 3
 
 ; --- link/evolution ids (evolution.asm; promoted per pokemon_behavior Stage 0) ---
-LINK_STATE_TRADING     equ 0x32    ; constants/serial_constants.asm
-THUNDER_STONE          equ 0x21    ; item id (constants/item_constants.asm)
-THUNDERBOLT            equ 0x55    ; move id 0x55 (constants/move_constants.asm ; 55 = hex). Was `equ 55` (=0x37): pret's hex comment misread as decimal — broke Pikachu's THUNDER/THUNDERBOLT mood boost (evos_moves.asm) and the anim-id dispatch. Fixed 2026-08-07.
-THUNDER                equ 0x57    ; move id 0x57 (constants/move_constants.asm ; 57 = hex). Was `equ 57` (=0x39, collided with SURF): pret's hex comment misread as decimal — broke Pikachu's THUNDER mood boost (evos_moves.asm). Fixed 2026-08-07.
+%define LINK_STATE_TRADING           0x32   ; constants/serial_constants.asm
+%define THUNDER_STONE                0x21   ; item id (constants/item_constants.asm)
+%define THUNDERBOLT                  0x55   ; move id 0x55 (constants/move_constants.asm ; 55 = hex). Was `equ 55` (=0x37): pret's hex comment misread as decimal — broke Pikachu's THUNDER/THUNDERBOLT mood boost (evos_moves.asm) and the anim-id dispatch. Fixed 2026-08-07.
+%define THUNDER                      0x57   ; move id 0x57 (constants/move_constants.asm ; 57 = hex). Was `equ 57` (=0x39, collided with SURF): pret's hex comment misread as decimal — broke Pikachu's THUNDER mood boost (evos_moves.asm). Fixed 2026-08-07.
 
 ; --- move ids (constants/move_constants.asm) ---
-ABSORB                 equ 0x47    ; move #71 (Leech Seed drain anim source)
+%define ABSORB                       0x47   ; move #71 (Leech Seed drain anim source)
 
 ; --- misc menu / event constants ---
-PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm
-PIKAHAPPY_USEDITEM     equ 2       ; (ItemUseMedicine: a non-vitamin item was used on a mon)
-PIKAHAPPY_USEDXITEM    equ 3       ; (X Accuracy / X Attack&co / Dire Hit / Guard Spec)
-PIKAHAPPY_GYMLEADER    equ 4       ; (checks the WHOLE party, not the acted-on mon)
-PIKAHAPPY_USEDTMHM     equ 5       ; (ItemUseTMHM: a TM/HM was taught to a party mon)
-PIKAHAPPY_WALKING      equ 6       ; (checks the WHOLE party, not the acted-on mon)
-PIKAHAPPY_DEPOSITED    equ 7       ; (BillsPCDeposit: starter Pikachu was boxed)
-PIKAHAPPY_FAINTED      equ 8       ; (fainted in battle)
-PIKAHAPPY_PSNFNT       equ 9       ; (fainted to poison outside battle)
-PIKAHAPPY_CARELESSTRAINER equ 10   ; (fainted to a mon 30+ levels higher)
-PIKAHAPPY_TRADE        equ 11      ; (traded away)
-STATUS_SCREEN_STATS_BOX equ 0      ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
-LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0)
-SET_PAL_BATTLE_BLACK   equ 0x00    ; constants/palette_constants.asm (RunPaletteCommand id)
-SET_PAL_BATTLE         equ 0x01    ; constants/palette_constants.asm (RunPaletteCommand id)
-SET_PAL_STATUS_SCREEN  equ 0x03    ; constants/palette_constants.asm (RunPaletteCommand id)
-SET_PAL_OVERWORLD      equ 0x09    ; constants/palette_constants.asm (RunPaletteCommand id)
-SET_PAL_TITLE_SCREEN   equ 0x06    ; constants/palette_constants.asm (RunPaletteCommand id)
-BIT_UNUSED_CARD_KEY    equ 7       ; constants/ram_constants.asm (wStatusFlags1 bit; never read)
-BIT_NO_AUDIO_FADE_OUT  equ 1       ; constants/ram_constants.asm (wStatusFlags2 bit)
-BIT_WILD_ENCOUNTER_COOLDOWN equ 0  ; constants/ram_constants.asm (wStatusFlags2 bit)
-CHAN5                  equ 4       ; constants/audio_constants.asm (5th sound channel index)
-LEADING_ZEROES         equ 0x80    ; PrintNumber flag (1<<BIT_LEADING_ZEROES): print '0' not space
+%define PIKAHAPPY_LEVELUP            1   ; constants/pikachu_emotion_constants.asm
+%define PIKAHAPPY_USEDITEM           2   ; (ItemUseMedicine: a non-vitamin item was used on a mon)
+%define PIKAHAPPY_USEDXITEM          3   ; (X Accuracy / X Attack&co / Dire Hit / Guard Spec)
+%define PIKAHAPPY_GYMLEADER          4   ; (checks the WHOLE party, not the acted-on mon)
+%define PIKAHAPPY_USEDTMHM           5   ; (ItemUseTMHM: a TM/HM was taught to a party mon)
+%define PIKAHAPPY_WALKING            6   ; (checks the WHOLE party, not the acted-on mon)
+%define PIKAHAPPY_DEPOSITED          7   ; (BillsPCDeposit: starter Pikachu was boxed)
+%define PIKAHAPPY_FAINTED            8   ; (fainted in battle)
+%define PIKAHAPPY_PSNFNT             9   ; (fainted to poison outside battle)
+%define PIKAHAPPY_CARELESSTRAINER    10   ; (fainted to a mon 30+ levels higher)
+%define PIKAHAPPY_TRADE              11   ; (traded away)
+%define STATUS_SCREEN_STATS_BOX      0   ; constants/menu_constants.asm (PrintStatsBox d=0 → status-screen box)
+%define LEVEL_UP_STATS_BOX           1   ; constants/menu_constants.asm (STATUS_SCREEN=0)
+%define SET_PAL_BATTLE_BLACK         0x00   ; constants/palette_constants.asm (RunPaletteCommand id)
+%define SET_PAL_BATTLE               0x01   ; constants/palette_constants.asm (RunPaletteCommand id)
+%define SET_PAL_STATUS_SCREEN        0x03   ; constants/palette_constants.asm (RunPaletteCommand id)
+%define SET_PAL_OVERWORLD            0x09   ; constants/palette_constants.asm (RunPaletteCommand id)
+%define SET_PAL_TITLE_SCREEN         0x06   ; constants/palette_constants.asm (RunPaletteCommand id)
+%define BIT_UNUSED_CARD_KEY          7   ; constants/ram_constants.asm (wStatusFlags1 bit; never read)
+%define BIT_NO_AUDIO_FADE_OUT        1   ; constants/ram_constants.asm (wStatusFlags2 bit)
+%define BIT_WILD_ENCOUNTER_COOLDOWN  0   ; constants/ram_constants.asm (wStatusFlags2 bit)
+%define CHAN5                        4   ; constants/audio_constants.asm (5th sound channel index)
+%define LEADING_ZEROES               0x80   ; PrintNumber flag (1<<BIT_LEADING_ZEROES): print '0' not space
 
 ; --- battle init / type (constants/battle_constants.asm, map_constants.asm) ---
-BATTLE_TYPE_SAFARI     equ 2
-SAFARI_ZONE_EAST       equ 0xD9
-SAFARI_ZONE_CENTER_REST_HOUSE equ 0xDD
+%define BATTLE_TYPE_SAFARI           2
+%define SAFARI_ZONE_EAST             0xD9
+%define SAFARI_ZONE_CENTER_REST_HOUSE 0xDD
 
 ; --- trainer AI (src/engine/battle/trainer_ai.asm) ---
-EFFECT_01              equ 0x01    ; unused sleep effect (StatusAilmentMoveEffects)
+%define EFFECT_01                    0x01   ; unused sleep effect (StatusAilmentMoveEffects)
 ; (anim-id constants moved to the generated assets/battle_anim_constants.inc, included above)
 ; move ids referenced by move-effect handlers (constants/move_constants.asm)
-POUND                   equ 0x01
-RAZOR_WIND              equ 0x0D
-THRASH                  equ 0x25
-BIDE                    equ 0x75
-ROAR                    equ 0x2E
-SOLARBEAM               equ 0x4C
-SKULL_BASH              equ 0x82
-SKY_ATTACK              equ 0x8F
+%define POUND                        0x01
+%define RAZOR_WIND                   0x0D
+%define THRASH                       0x25
+%define BIDE                         0x75
+%define ROAR                         0x2E
+%define SOLARBEAM                    0x4C
+%define SKULL_BASH                   0x82
+%define SKY_ATTACK                   0x8F
 ; move ids referenced by the battle-animation dispatch tables (SpecialEffectPointers /
 ; AnimationIdSpecialEffects) and interpreter (constants/move_constants.asm hex comments):
-MEGA_PUNCH              equ 0x05
-GUILLOTINE              equ 0x0C
-MEGA_KICK               equ 0x19
-HEADBUTT                equ 0x1D
-TAIL_WHIP               equ 0x27
-GROWL                   equ 0x2D
-DISABLE                 equ 0x32
-BLIZZARD                equ 0x3B
-BUBBLEBEAM              equ 0x3D
-HYPER_BEAM              equ 0x3F
-REFLECT                 equ 0x73
-SELFDESTRUCT            equ 0x78
-AMNESIA                 equ 0x85
-SPORE                   equ 0x93
-EXPLOSION               equ 0x99
+%define MEGA_PUNCH                   0x05
+%define GUILLOTINE                   0x0C
+%define MEGA_KICK                    0x19
+%define HEADBUTT                     0x1D
+%define TAIL_WHIP                    0x27
+%define GROWL                        0x2D
+%define DISABLE                      0x32
+%define BLIZZARD                     0x3B
+%define BUBBLEBEAM                   0x3D
+%define HYPER_BEAM                   0x3F
+%define REFLECT                      0x73
+%define SELFDESTRUCT                 0x78
+%define AMNESIA                      0x85
+%define SPORE                        0x93
+%define EXPLOSION                    0x99
 %define REST 0x9C       ; move id 0x9C — %define, not equ: REST is a NASM-reserved token
-ROCK_SLIDE              equ 0x9D
-NUM_TRAINERS           equ 47      ; trainer_constants.asm (LANCE = 0x2F)
+%define ROCK_SLIDE                   0x9D
+%define NUM_TRAINERS                 47   ; trainer_constants.asm (LANCE = 0x2F)
 
 ; --- item ids used by trainer-AI item use (constants/item_constants.asm) ---
 ; (HYPER_POTION=0x12 / FULL_HEAL=0x34 already defined above)
-FULL_RESTORE           equ 0x10
-SUPER_POTION           equ 0x13
-POTION                 equ 0x14
-MAX_POTION             equ 0x11
-FRESH_WATER            equ 0x3C
-SODA_POP               equ 0x3D
-LEMONADE               equ 0x3E
-X_ACCURACY             equ 0x2E
-GUARD_SPEC             equ 0x37
-DIRE_HIT               equ 0x3A
-X_ATTACK               equ 0x41
-X_DEFEND               equ 0x42
-X_SPEED                equ 0x43
-X_SPECIAL              equ 0x44
-ITEMFINDER             equ 0x47
-BICYCLE                equ 0x06   ; StartMenu_Item special-cases it (skips the USE/TOSS box)
+%define FULL_RESTORE                 0x10
+%define SUPER_POTION                 0x13
+%define POTION                       0x14
+%define MAX_POTION                   0x11
+%define FRESH_WATER                  0x3C
+%define SODA_POP                     0x3D
+%define LEMONADE                     0x3E
+%define X_ACCURACY                   0x2E
+%define GUARD_SPEC                   0x37
+%define DIRE_HIT                     0x3A
+%define X_ATTACK                     0x41
+%define X_DEFEND                     0x42
+%define X_SPEED                      0x43
+%define X_SPECIAL                    0x44
+%define ITEMFINDER                   0x47
+%define BICYCLE                      0x06   ; StartMenu_Item special-cases it (skips the USE/TOSS box)
 
 ; --- wStatusFlags4/6 bits used by the START menu / bag (constants/ram_constants.asm) ---
-BIT_TEXT_PREDEF        equ 0      ; wTextPredefFlag: PrintPredefTextID table active
-BIT_LINK_CONNECTED     equ 6      ; wStatusFlags4: link session active (SAVE → RESET label)
-BIT_ALWAYS_ON_BIKE     equ 5      ; wStatusFlags6: map forbids dismounting (Cycling Road)
+%define BIT_TEXT_PREDEF              0   ; wTextPredefFlag: PrintPredefTextID table active
+%define BIT_LINK_CONNECTED           6   ; wStatusFlags4: link session active (SAVE → RESET label)
+%define BIT_ALWAYS_ON_BIKE           5   ; wStatusFlags6: map forbids dismounting (Cycling Road)
 
 ; --- joypad button masks (constants/hardware.inc:96-97) ---
 %ifndef PAD_CTRL_PAD
-PAD_CTRL_PAD           equ 0xF0   ; %1111_0000 — D-pad (down/up/left/right)
+%define PAD_CTRL_PAD                 0xF0   ; %1111_0000 — D-pad (down/up/left/right)
 %endif
 %ifndef PAD_BUTTONS
-PAD_BUTTONS            equ 0x0F   ; %0000_1111 — A/B/SELECT/START
+%define PAD_BUTTONS                  0x0F   ; %0000_1111 — A/B/SELECT/START
 %endif
 
 ; --- wild encounter constants (constants/pokemon_data_constants.asm) ---
-NUM_WILDMONS            equ 10
-WILDDATA_LENGTH         equ 1 + NUM_WILDMONS * 2   ; = 21 (rate + 10×(level,species))
+%define NUM_WILDMONS                 10
+%define WILDDATA_LENGTH              (1 + NUM_WILDMONS * 2)   ; = 21 (rate + 10×(level,species))
 
 ; --- map / tileset constants used by wild-encounter generation ---
 ; FIRST_INDOOR_MAP = REDS_HOUSE_1F ($25); FOREST = Viridian Forest/Safari tileset.
-FIRST_INDOOR_MAP        equ 0x25
-LAST_MAP                equ 0xFF    ; constants/map_constants.asm:406 — warp destination meaning
+%define FIRST_INDOOR_MAP             0x25
+%define LAST_MAP                     0xFF   ; constants/map_constants.asm:406 — warp destination meaning
                                     ; "return to wLastMap" (the outside map you came from)
-FOREST                  equ 3
+%define FOREST                       3
 
 ; --- MINIMIZE move id + stat-name length (stat-modifier effects, Stage 5) ---
-MINIMIZE                equ 0x6B
-STAT_NAME_LENGTH        equ 10
-RAGE                    equ 0x63       ; move id 0x63 (HandleBuildingRage restores it; pret ; 63 = hex). Was `equ 63` (=0x3F): pret's hex comment misread as decimal — broke Rage move detection/name. Fixed 2026-08-07.
-TOXIC                   equ 0x5C       ; move id (PoisonEffect: badly-poison branch)
+%define MINIMIZE                     0x6B
+%define STAT_NAME_LENGTH             10
+%define RAGE                         0x63   ; move id 0x63 (HandleBuildingRage restores it; pret ; 63 = hex). Was `equ 63` (=0x3F): pret's hex comment misread as decimal — broke Rage move detection/name. Fixed 2026-08-07.
+%define TOXIC                        0x5C   ; move id (PoisonEffect: badly-poison branch)
 
 ; --- DisplayTextID special text IDs (constants/text_constants.asm) ---
-TEXT_MON_FAINTED        equ 0xD0
-TEXT_BLACKED_OUT        equ 0xD1
-TEXT_REPEL_WORE_OFF     equ 0xD2
-TEXT_SAFARI_GAME_OVER   equ 0xD3
-TEXT_PIKACHU_ANIM       equ 0xD4
+%define TEXT_MON_FAINTED             0xD0
+%define TEXT_BLACKED_OUT             0xD1
+%define TEXT_REPEL_WORE_OFF          0xD2
+%define TEXT_SAFARI_GAME_OVER        0xD3
+%define TEXT_PIKACHU_ANIM            0xD4
 
 ; --- DisplayTextID TX_SCRIPT sentinels (macros/scripts/text.asm) ---
-TX_SCRIPT_POKECENTER_NURSE        equ 0xFF
-TX_SCRIPT_MART                    equ 0xFE
-TX_SCRIPT_BILLS_PC                equ 0xFD
-TX_SCRIPT_PLAYERS_PC              equ 0xFC
-TX_SCRIPT_POKECENTER_PC           equ 0xF9
-TX_SCRIPT_PRIZE_VENDOR            equ 0xF7
-TX_SCRIPT_CABLE_CLUB_RECEPTIONIST equ 0xF6
-TX_SCRIPT_VENDING_MACHINE         equ 0xF5
+%define TX_SCRIPT_POKECENTER_NURSE   0xFF
+%define TX_SCRIPT_MART               0xFE
+%define TX_SCRIPT_BILLS_PC           0xFD
+%define TX_SCRIPT_PLAYERS_PC         0xFC
+%define TX_SCRIPT_POKECENTER_PC      0xF9
+%define TX_SCRIPT_PRIZE_VENDOR       0xF7
+%define TX_SCRIPT_CABLE_CLUB_RECEPTIONIST 0xF6
+%define TX_SCRIPT_VENDING_MACHINE    0xF5
 
 ; --- move record load (GetCurrentMove) ---
 ; (MOVE_LENGTH defined once in the Moves-table-record section above.)
-BIT_TEST_BATTLE         equ 0          ; wStatusFlags7 bit (debug TestBattle)
+%define BIT_TEST_BATTLE              0   ; wStatusFlags7 bit (debug TestBattle)
 
 ; --- auto text-box drawing control (EnableAutoTextBoxDrawing) ---
-BIT_NO_AUTO_TEXT_BOX    equ 0          ; wAutoTextBoxDrawingControl bit
+%define BIT_NO_AUTO_TEXT_BOX         0   ; wAutoTextBoxDrawingControl bit
 
 ; ===========================================================================
 ; Battle engine constants (current_plan_battle_engine.md)
@@ -446,282 +453,282 @@ BIT_NO_AUTO_TEXT_BOX    equ 0          ; wAutoTextBoxDrawingControl bit
 ; ===========================================================================
 
 ; --- significant stat values (stat-stage modifier range, base = 7) ---
-BASE_STAT_LEVEL         equ 7
-MAX_STAT_LEVEL          equ 13
+%define BASE_STAT_LEVEL              7
+%define MAX_STAT_LEVEL               13
 
 ; --- VitaminStats / stat indexes (1-based, see data/battle/stat_names.asm) ---
-STAT_HEALTH             equ 1
-STAT_ATTACK             equ 2
-STAT_DEFENSE            equ 3
-STAT_SPEED              equ 4
-STAT_SPECIAL            equ 5
+%define STAT_HEALTH                  1
+%define STAT_ATTACK                  2
+%define STAT_DEFENSE                 3
+%define STAT_SPEED                   4
+%define STAT_SPECIAL                 5
 
 ; --- StatModTextStrings indexes (0-based; wWhichStat / stat-mod handlers) ---
-MOD_ATTACK              equ 0
-MOD_DEFENSE             equ 1
-MOD_SPEED               equ 2
-MOD_SPECIAL             equ 3
-MOD_ACCURACY            equ 4
-MOD_EVASION             equ 5
-NUM_STAT_MODS           equ 8          ; const_value after const_skip 2
+%define MOD_ATTACK                   0
+%define MOD_DEFENSE                  1
+%define MOD_SPEED                    2
+%define MOD_SPECIAL                  3
+%define MOD_ACCURACY                 4
+%define MOD_EVASION                  5
+%define NUM_STAT_MODS                8   ; const_value after const_skip 2
 
 ; --- battle type constants (wBattleType values) ---
-BATTLE_TYPE_NORMAL      equ 0
-BATTLE_TYPE_OLD_MAN     equ 1
-BATTLE_TYPE_SAFARI      equ 2
-BATTLE_TYPE_RUN         equ 3
-BATTLE_TYPE_PIKACHU     equ 4
+%define BATTLE_TYPE_NORMAL           0
+%define BATTLE_TYPE_OLD_MAN          1
+%define BATTLE_TYPE_SAFARI           2
+%define BATTLE_TYPE_RUN              3
+%define BATTLE_TYPE_PIKACHU          4
 
 ; --- damage limits before type effectiveness ---
-MIN_NEUTRAL_DAMAGE      equ 2
-MAX_NEUTRAL_DAMAGE      equ 999
+%define MIN_NEUTRAL_DAMAGE           2
+%define MAX_NEUTRAL_DAMAGE           999
 
 ; --- fixed-damage move constants ---
-SONICBOOM_DAMAGE        equ 20
-DRAGON_RAGE_DAMAGE      equ 40
+%define SONICBOOM_DAMAGE             20
+%define DRAGON_RAGE_DAMAGE           40
 
 ; --- move ids consumed by ApplyAttackTo*Pokemon special-damage dispatch ---
 ; (values from constants/move_constants.asm; canonical Gen-1 move indices)
-SONICBOOM               equ 0x31    ; 49
-SEISMIC_TOSS            equ 0x45    ; 69
-DRAGON_RAGE             equ 0x52    ; 82
-NIGHT_SHADE             equ 0x65    ; 101
-PSYWAVE                 equ 0x95    ; 149
+%define SONICBOOM                    0x31   ; 49
+%define SEISMIC_TOSS                 0x45   ; 69
+%define DRAGON_RAGE                  0x52   ; 82
+%define NIGHT_SHADE                  0x65   ; 101
+%define PSYWAVE                      0x95   ; 149
 
 ; --- type effectiveness factors, scaled by 10 (TypeEffects table values) ---
-SUPER_EFFECTIVE         equ 20
-MORE_EFFECTIVE          equ 15
-EFFECTIVE               equ 10
-NOT_VERY_EFFECTIVE      equ 5
-NO_EFFECT               equ 0
+%define SUPER_EFFECTIVE              20
+%define MORE_EFFECTIVE               15
+%define EFFECTIVE                    10
+%define NOT_VERY_EFFECTIVE           5
+%define NO_EFFECT                    0
 
 ; --- non-volatile status (wBattleMonStatus / MON_STATUS bits) ---
-SLP_MASK                equ 0x07       ; %111, sleep counter 0-7 turns
-PSN                     equ 3
-BRN                     equ 4
-FRZ                     equ 5
-PAR                     equ 6
+%define SLP_MASK                     0x07   ; %111, sleep counter 0-7 turns
+%define PSN                          3
+%define BRN                          4
+%define FRZ                          5
+%define PAR                          6
 ; status as single-bit masks (1 << n)
-SLP                     equ 7          ; counter region (any of bits 0-2)
-PSN_MASK                equ (1 << PSN) ; 0x08
-BRN_MASK                equ (1 << BRN) ; 0x10
-FRZ_MASK                equ (1 << FRZ) ; 0x20
-PAR_MASK                equ (1 << PAR) ; 0x40
+%define SLP                          7   ; counter region (any of bits 0-2)
+%define PSN_MASK                     ((1 << PSN))   ; 0x08
+%define BRN_MASK                     ((1 << BRN))   ; 0x10
+%define FRZ_MASK                     ((1 << FRZ))   ; 0x20
+%define PAR_MASK                     ((1 << PAR))   ; 0x40
 
 ; --- trainer DVs (read_trainer_party) ---
-ATKDEFDV_TRAINER        equ 0x98
-SPDSPCDV_TRAINER        equ 0x88
+%define ATKDEFDV_TRAINER             0x98
+%define SPDSPCDV_TRAINER             0x88
 
 ; --- wDamageMultipliers field ---
-BIT_STAB_DAMAGE         equ 7
-EFFECTIVENESS_MASK      equ 0x7F       ; %01111111
+%define BIT_STAB_DAMAGE              7
+%define EFFECTIVENESS_MASK           0x7F   ; %01111111
 
 ; --- wPlayerBattleStatus1 / wEnemyBattleStatus1 bit flags ---
-STORING_ENERGY          equ 0          ; Bide
-THRASHING_ABOUT         equ 1          ; Thrash, Petal Dance
-ATTACKING_MULTIPLE_TIMES equ 2         ; Double Kick, Fury Attack, etc.
-FLINCHED                equ 3
-CHARGING_UP             equ 4          ; Solar Beam, Fly, etc.
-USING_TRAPPING_MOVE     equ 5          ; Wrap, etc.
-INVULNERABLE            equ 6          ; charging Fly/Dig
-CONFUSED                equ 7
+%define STORING_ENERGY               0   ; Bide
+%define THRASHING_ABOUT              1   ; Thrash, Petal Dance
+%define ATTACKING_MULTIPLE_TIMES     2   ; Double Kick, Fury Attack, etc.
+%define FLINCHED                     3
+%define CHARGING_UP                  4   ; Solar Beam, Fly, etc.
+%define USING_TRAPPING_MOVE          5   ; Wrap, etc.
+%define INVULNERABLE                 6   ; charging Fly/Dig
+%define CONFUSED                     7
 
 ; --- wPlayerBattleStatus2 / wEnemyBattleStatus2 bit flags ---
-USING_X_ACCURACY        equ 0
-PROTECTED_BY_MIST       equ 1
-GETTING_PUMPED          equ 2          ; Focus Energy
-HAS_SUBSTITUTE_UP       equ 4
-NEEDS_TO_RECHARGE       equ 5          ; Hyper Beam
-USING_RAGE              equ 6
-SEEDED                  equ 7          ; Leech Seed
+%define USING_X_ACCURACY             0
+%define PROTECTED_BY_MIST            1
+%define GETTING_PUMPED               2   ; Focus Energy
+%define HAS_SUBSTITUTE_UP            4
+%define NEEDS_TO_RECHARGE            5   ; Hyper Beam
+%define USING_RAGE                   6
+%define SEEDED                       7   ; Leech Seed
 
 ; --- wPlayerBattleStatus3 / wEnemyBattleStatus3 bit flags ---
-BADLY_POISONED          equ 0          ; Toxic
-HAS_LIGHT_SCREEN_UP     equ 1
-HAS_REFLECT_UP          equ 2
-TRANSFORMED             equ 3
+%define BADLY_POISONED               0   ; Toxic
+%define HAS_LIGHT_SCREEN_UP          1
+%define HAS_REFLECT_UP               2
+%define TRANSFORMED                  3
 
 ; --- type constants (constants/type_constants.asm) ---
-PHYSICAL                equ 0x00       ; types < SPECIAL are physical
-NORMAL                  equ 0x00
-FIGHTING                equ 0x01
-FLYING                  equ 0x02
-POISON                  equ 0x03
-GROUND                  equ 0x04
-ROCK                    equ 0x05
-BIRD                    equ 0x06
-BUG                     equ 0x07
-GHOST                   equ 0x08
-SPECIAL                 equ 0x14       ; types >= SPECIAL use Special stat
-FIRE                    equ 0x14
-WATER                   equ 0x15
-GRASS                   equ 0x16
-ELECTRIC                equ 0x17
-PSYCHIC_TYPE            equ 0x18
-ICE                     equ 0x19
-DRAGON                  equ 0x1A
-NUM_TYPES               equ 0x1B
+%define PHYSICAL                     0x00   ; types < SPECIAL are physical
+%define NORMAL                       0x00
+%define FIGHTING                     0x01
+%define FLYING                       0x02
+%define POISON                       0x03
+%define GROUND                       0x04
+%define ROCK                         0x05
+%define BIRD                         0x06
+%define BUG                          0x07
+%define GHOST                        0x08
+%define SPECIAL                      0x14   ; types >= SPECIAL use Special stat
+%define FIRE                         0x14
+%define WATER                        0x15
+%define GRASS                        0x16
+%define ELECTRIC                     0x17
+%define PSYCHIC_TYPE                 0x18
+%define ICE                          0x19
+%define DRAGON                       0x1A
+%define NUM_TYPES                    0x1B
 
 ; --- move effect constants (MoveEffectPointerTable indexes) ---
-NO_ADDITIONAL_EFFECT       equ 0x00
-POISON_SIDE_EFFECT1        equ 0x02
-DRAIN_HP_EFFECT            equ 0x03
-BURN_SIDE_EFFECT1          equ 0x04
-FREEZE_SIDE_EFFECT1        equ 0x05
-PARALYZE_SIDE_EFFECT1      equ 0x06
-EXPLODE_EFFECT             equ 0x07
-DREAM_EATER_EFFECT         equ 0x08
-MIRROR_MOVE_EFFECT         equ 0x09
-ATTACK_UP1_EFFECT          equ 0x0A
-DEFENSE_UP1_EFFECT         equ 0x0B
-SPEED_UP1_EFFECT           equ 0x0C
-SPECIAL_UP1_EFFECT         equ 0x0D
-ACCURACY_UP1_EFFECT        equ 0x0E
-EVASION_UP1_EFFECT         equ 0x0F
-PAY_DAY_EFFECT             equ 0x10
-SWIFT_EFFECT               equ 0x11
-ATTACK_DOWN1_EFFECT        equ 0x12
-DEFENSE_DOWN1_EFFECT       equ 0x13
-SPEED_DOWN1_EFFECT         equ 0x14
-SPECIAL_DOWN1_EFFECT       equ 0x15
-ACCURACY_DOWN1_EFFECT      equ 0x16
-EVASION_DOWN1_EFFECT       equ 0x17
-CONVERSION_EFFECT          equ 0x18
-HAZE_EFFECT                equ 0x19
-BIDE_EFFECT                equ 0x1A
-THRASH_PETAL_DANCE_EFFECT  equ 0x1B
-SWITCH_AND_TELEPORT_EFFECT equ 0x1C
-TWO_TO_FIVE_ATTACKS_EFFECT equ 0x1D
-FLINCH_SIDE_EFFECT1        equ 0x1F
-SLEEP_EFFECT               equ 0x20
-POISON_SIDE_EFFECT2        equ 0x21
-BURN_SIDE_EFFECT2          equ 0x22
-FREEZE_SIDE_EFFECT2        equ 0x23
-PARALYZE_SIDE_EFFECT2      equ 0x24
-FLINCH_SIDE_EFFECT2        equ 0x25
-OHKO_EFFECT                equ 0x26
-CHARGE_EFFECT              equ 0x27
-SUPER_FANG_EFFECT          equ 0x28
-SPECIAL_DAMAGE_EFFECT      equ 0x29
-TRAPPING_EFFECT            equ 0x2A
-FLY_EFFECT                 equ 0x2B
-ATTACK_TWICE_EFFECT        equ 0x2C
-JUMP_KICK_EFFECT           equ 0x2D
-MIST_EFFECT                equ 0x2E
-FOCUS_ENERGY_EFFECT        equ 0x2F
-RECOIL_EFFECT              equ 0x30
-CONFUSION_EFFECT           equ 0x31
-ATTACK_UP2_EFFECT          equ 0x32
-DEFENSE_UP2_EFFECT         equ 0x33
-SPEED_UP2_EFFECT           equ 0x34
-SPECIAL_UP2_EFFECT         equ 0x35
-ACCURACY_UP2_EFFECT        equ 0x36
-EVASION_UP2_EFFECT         equ 0x37
-HEAL_EFFECT                equ 0x38
-TRANSFORM_EFFECT           equ 0x39
-ATTACK_DOWN2_EFFECT        equ 0x3A
-DEFENSE_DOWN2_EFFECT       equ 0x3B
-SPEED_DOWN2_EFFECT         equ 0x3C
-SPECIAL_DOWN2_EFFECT       equ 0x3D
-ACCURACY_DOWN2_EFFECT      equ 0x3E
-EVASION_DOWN2_EFFECT       equ 0x3F
-LIGHT_SCREEN_EFFECT        equ 0x40
-REFLECT_EFFECT             equ 0x41
-POISON_EFFECT              equ 0x42
-PARALYZE_EFFECT            equ 0x43
-ATTACK_DOWN_SIDE_EFFECT    equ 0x44
-DEFENSE_DOWN_SIDE_EFFECT   equ 0x45
-SPEED_DOWN_SIDE_EFFECT     equ 0x46
-SPECIAL_DOWN_SIDE_EFFECT   equ 0x47
-CONFUSION_SIDE_EFFECT      equ 0x4C
-TWINEEDLE_EFFECT           equ 0x4D
-SUBSTITUTE_EFFECT          equ 0x4F
-HYPER_BEAM_EFFECT          equ 0x50
-RAGE_EFFECT                equ 0x51
-MIMIC_EFFECT               equ 0x52
-METRONOME_EFFECT           equ 0x53
-LEECH_SEED_EFFECT          equ 0x54
-SPLASH_EFFECT              equ 0x55
-DISABLE_EFFECT             equ 0x56
-NUM_MOVE_EFFECTS           equ 0x56
+%define NO_ADDITIONAL_EFFECT         0x00
+%define POISON_SIDE_EFFECT1          0x02
+%define DRAIN_HP_EFFECT              0x03
+%define BURN_SIDE_EFFECT1            0x04
+%define FREEZE_SIDE_EFFECT1          0x05
+%define PARALYZE_SIDE_EFFECT1        0x06
+%define EXPLODE_EFFECT               0x07
+%define DREAM_EATER_EFFECT           0x08
+%define MIRROR_MOVE_EFFECT           0x09
+%define ATTACK_UP1_EFFECT            0x0A
+%define DEFENSE_UP1_EFFECT           0x0B
+%define SPEED_UP1_EFFECT             0x0C
+%define SPECIAL_UP1_EFFECT           0x0D
+%define ACCURACY_UP1_EFFECT          0x0E
+%define EVASION_UP1_EFFECT           0x0F
+%define PAY_DAY_EFFECT               0x10
+%define SWIFT_EFFECT                 0x11
+%define ATTACK_DOWN1_EFFECT          0x12
+%define DEFENSE_DOWN1_EFFECT         0x13
+%define SPEED_DOWN1_EFFECT           0x14
+%define SPECIAL_DOWN1_EFFECT         0x15
+%define ACCURACY_DOWN1_EFFECT        0x16
+%define EVASION_DOWN1_EFFECT         0x17
+%define CONVERSION_EFFECT            0x18
+%define HAZE_EFFECT                  0x19
+%define BIDE_EFFECT                  0x1A
+%define THRASH_PETAL_DANCE_EFFECT    0x1B
+%define SWITCH_AND_TELEPORT_EFFECT   0x1C
+%define TWO_TO_FIVE_ATTACKS_EFFECT   0x1D
+%define FLINCH_SIDE_EFFECT1          0x1F
+%define SLEEP_EFFECT                 0x20
+%define POISON_SIDE_EFFECT2          0x21
+%define BURN_SIDE_EFFECT2            0x22
+%define FREEZE_SIDE_EFFECT2          0x23
+%define PARALYZE_SIDE_EFFECT2        0x24
+%define FLINCH_SIDE_EFFECT2          0x25
+%define OHKO_EFFECT                  0x26
+%define CHARGE_EFFECT                0x27
+%define SUPER_FANG_EFFECT            0x28
+%define SPECIAL_DAMAGE_EFFECT        0x29
+%define TRAPPING_EFFECT              0x2A
+%define FLY_EFFECT                   0x2B
+%define ATTACK_TWICE_EFFECT          0x2C
+%define JUMP_KICK_EFFECT             0x2D
+%define MIST_EFFECT                  0x2E
+%define FOCUS_ENERGY_EFFECT          0x2F
+%define RECOIL_EFFECT                0x30
+%define CONFUSION_EFFECT             0x31
+%define ATTACK_UP2_EFFECT            0x32
+%define DEFENSE_UP2_EFFECT           0x33
+%define SPEED_UP2_EFFECT             0x34
+%define SPECIAL_UP2_EFFECT           0x35
+%define ACCURACY_UP2_EFFECT          0x36
+%define EVASION_UP2_EFFECT           0x37
+%define HEAL_EFFECT                  0x38
+%define TRANSFORM_EFFECT             0x39
+%define ATTACK_DOWN2_EFFECT          0x3A
+%define DEFENSE_DOWN2_EFFECT         0x3B
+%define SPEED_DOWN2_EFFECT           0x3C
+%define SPECIAL_DOWN2_EFFECT         0x3D
+%define ACCURACY_DOWN2_EFFECT        0x3E
+%define EVASION_DOWN2_EFFECT         0x3F
+%define LIGHT_SCREEN_EFFECT          0x40
+%define REFLECT_EFFECT               0x41
+%define POISON_EFFECT                0x42
+%define PARALYZE_EFFECT              0x43
+%define ATTACK_DOWN_SIDE_EFFECT      0x44
+%define DEFENSE_DOWN_SIDE_EFFECT     0x45
+%define SPEED_DOWN_SIDE_EFFECT       0x46
+%define SPECIAL_DOWN_SIDE_EFFECT     0x47
+%define CONFUSION_SIDE_EFFECT        0x4C
+%define TWINEEDLE_EFFECT             0x4D
+%define SUBSTITUTE_EFFECT            0x4F
+%define HYPER_BEAM_EFFECT            0x50
+%define RAGE_EFFECT                  0x51
+%define MIMIC_EFFECT                 0x52
+%define METRONOME_EFFECT             0x53
+%define LEECH_SEED_EFFECT            0x54
+%define SPLASH_EFFECT                0x55
+%define DISABLE_EFFECT               0x56
+%define NUM_MOVE_EFFECTS             0x56
 
 ; --- move ids referenced by battle logic (constants/move_constants.asm) ---
 ; (Only the handful the engine name-checks; the Moves table is indexed by id.)
-NO_MOVE                 equ 0x00
-KARATE_CHOP             equ 0x02
-COUNTER                 equ 0x44
-RAZOR_LEAF              equ 0x4B
-QUICK_ATTACK            equ 0x62       ; turn-order priority (ExecutePlayerTurn)
-CRABHAMMER              equ 0x98
-SLASH                   equ 0xA3
-STRUGGLE                equ 0xA5
+%define NO_MOVE                      0x00
+%define KARATE_CHOP                  0x02
+%define COUNTER                      0x44
+%define RAZOR_LEAF                   0x4B
+%define QUICK_ATTACK                 0x62   ; turn-order priority (ExecutePlayerTurn)
+%define CRABHAMMER                   0x98
+%define SLASH                        0xA3
+%define STRUGGLE                     0xA5
 
 ; --- InitList selectors (constants/list_constants.asm, const_def 1) ---
-INIT_ENEMYOT_LIST       equ 1
-INIT_BAG_ITEM_LIST      equ 2
-INIT_OTHER_ITEM_LIST    equ 3
-INIT_PLAYEROT_LIST      equ 4
-INIT_MON_LIST           equ 5
+%define INIT_ENEMYOT_LIST            1
+%define INIT_BAG_ITEM_LIST           2
+%define INIT_OTHER_ITEM_LIST         3
+%define INIT_PLAYEROT_LIST           4
+%define INIT_MON_LIST                5
 
 ; --- other move ids used by name (constants/move_constants.asm) ---
-GUST                    equ 0x10    ; the battle_blackout gate pins the wild
+%define GUST                         0x10   ; the battle_blackout gate pins the wild
                                     ; enemy's 4 moves to it so its turn always
                                     ; damages (see src/debug/debug_dump.asm)
 
 ; --- field-move ids (data/moves/field_moves.asm; lifted out of party_menu.asm) ---
-CUT                     equ 0x0F
-FLY                     equ 0x13
-SURF                    equ 0x39
-EXP_ALL                 equ 0x4B    ; constants/item_constants.asm (was a file-local equ in core.asm)
-PAY_DAY                 equ 0x06    ; constants/move_constants.asm
-WRAP                    equ 0x23    ; constants/move_constants.asm (trapping move)
-STRENGTH                equ 0x46
-ULTRATOSS_ANIM          equ 0xC6    ; constants/move_constants.asm; the toss
+%define CUT                          0x0F
+%define FLY                          0x13
+%define SURF                         0x39
+%define EXP_ALL                      0x4B   ; constants/item_constants.asm (was a file-local equ in core.asm)
+%define PAY_DAY                      0x06   ; constants/move_constants.asm
+%define WRAP                         0x23   ; constants/move_constants.asm (trapping move)
+%define STRENGTH                     0x46
+%define ULTRATOSS_ANIM               0xC6   ; constants/move_constants.asm; the toss
                                     ; animation pret picks for any ball that is
                                     ; not POKE_BALL/GREAT_BALL, i.e. the one the
                                     ; MASTER BALL route in ball_catch plays
-THUNDERSHOCK            equ 0x54    ; constants/move_constants.asm; the Stage-6
+%define THUNDERSHOCK                 0x54   ; constants/move_constants.asm; the Stage-6
                                     ; elemental animation gate pins it into the
                                     ; player's move slot 4 (see debug_dump.asm)
-DIG                     equ 0x5B
-TELEPORT                equ 0x64
-SOFTBOILED              equ 0x87
-FLASH                   equ 0x94
+%define DIG                          0x5B
+%define TELEPORT                     0x64
+%define SOFTBOILED                   0x87
+%define FLASH                        0x94
 
 ; --- serial / link state (battle RNG boundary) ---
-LINK_STATE_BATTLING     equ 0x04
+%define LINK_STATE_BATTLING          0x04
 
 ; --- trainer class / species ids name-checked by AI (constants/*.asm) ---
-LORELEI                 equ 0x2C       ; trainer class
-DEWGONG                 equ 0x78       ; species
+%define LORELEI                      0x2C   ; trainer class
+%define DEWGONG                      0x78   ; species
 
 ; --- battle-mon struct field offsets (battle_struct, macros/ram.asm) ---
 ; wBattleMon ($D013) and wEnemyMon ($CFE4) share this 29-byte layout. Direct
 ; per-field WRAM aliases are also defined in gb_memmap.inc; these offsets let
 ; code index a battle_struct generically (e.g. from a base pointer).
-BMON_SPECIES            equ 0x00
-BMON_HP                 equ 0x01       ; word (big-endian)
-BMON_BOXLEVEL           equ 0x03       ; = PartyPos for player
-BMON_STATUS             equ 0x04
-BMON_TYPE1              equ 0x05
-BMON_TYPE2              equ 0x06
-BMON_CATCH_RATE         equ 0x07
-BMON_MOVES              equ 0x08       ; 4 bytes
-BMON_DVS                equ 0x0C       ; word
-BMON_LEVEL              equ 0x0E
-BMON_MAXHP              equ 0x0F       ; word
-BMON_ATTACK             equ 0x11       ; word
-BMON_DEFENSE            equ 0x13       ; word
-BMON_SPEED             equ 0x15       ; word
-BMON_SPECIAL            equ 0x17       ; word
-BMON_PP                 equ 0x19       ; 4 bytes
-BATTLE_STRUCT_LENGTH    equ 0x1D       ; 29 bytes
+%define BMON_SPECIES                 0x00
+%define BMON_HP                      0x01   ; word (big-endian)
+%define BMON_BOXLEVEL                0x03   ; = PartyPos for player
+%define BMON_STATUS                  0x04
+%define BMON_TYPE1                   0x05
+%define BMON_TYPE2                   0x06
+%define BMON_CATCH_RATE              0x07
+%define BMON_MOVES                   0x08   ; 4 bytes
+%define BMON_DVS                     0x0C   ; word
+%define BMON_LEVEL                   0x0E
+%define BMON_MAXHP                   0x0F   ; word
+%define BMON_ATTACK                  0x11   ; word
+%define BMON_DEFENSE                 0x13   ; word
+%define BMON_SPEED                   0x15   ; word
+%define BMON_SPECIAL                 0x17   ; word
+%define BMON_PP                      0x19   ; 4 bytes
+%define BATTLE_STRUCT_LENGTH         0x1D   ; 29 bytes
 
 ; --- number/BCD printing flag bits (constants/text_constants.asm) ---
 ; Passed in the high bits of the flags byte to PrintNumber / PrintBCDNumber.
-BIT_MONEY_SIGN          equ 5          ; prepend '¥' currency glyph (BCD)
-BIT_LEFT_ALIGN          equ 6          ; left-justify (don't pad leading positions)
-BIT_LEADING_ZEROES      equ 7          ; print leading zeroes instead of spaces
+%define BIT_MONEY_SIGN               5   ; prepend '¥' currency glyph (BCD)
+%define BIT_LEFT_ALIGN               6   ; left-justify (don't pad leading positions)
+%define BIT_LEADING_ZEROES           7   ; print leading zeroes instead of spaces
 
 ; ---------------------------------------------------------------------------
 ; Wave 4 (home-rectification) — menu framework constants (pret constants/
@@ -729,82 +736,82 @@ BIT_LEADING_ZEROES      equ 7          ; print leading zeroes instead of spaces
 ; placeholders; these are canonical.
 ; ---------------------------------------------------------------------------
 ; wListMenuID values
-PCPOKEMONLISTMENU       equ 0x00
-MOVESLISTMENU           equ 0x01
-PRICEDITEMLISTMENU      equ 0x02
-ITEMLISTMENU            equ 0x03
-SPECIALLISTMENU         equ 0x04   ; special "items": elevator floor list, badge list
+%define PCPOKEMONLISTMENU            0x00
+%define MOVESLISTMENU                0x01
+%define PRICEDITEMLISTMENU           0x02
+%define ITEMLISTMENU                 0x03
+%define SPECIALLISTMENU              0x04   ; special "items": elevator floor list, badge list
 ; wTextBoxID (pret constants/menu_constants.asm text box IDs; JP_* templates
 ; omitted — the port ships the EN tables only, matching the S1 layout seeder)
-MESSAGE_BOX                       equ 0x01
-MENU_TEMPLATE_03                  equ 0x03   ; unused in pret
-FIELD_MOVE_MON_MENU               equ 0x04
-USE_TOSS_MENU_TEMPLATE            equ 0x06
-MENU_TEMPLATE_07                  equ 0x07   ; unused in pret
-BATTLE_MENU_TEMPLATE              equ 0x0B
-SWITCH_STATS_CANCEL_MENU_TEMPLATE equ 0x0C
-LIST_MENU_BOX           equ 0x0D
-BUY_SELL_QUIT_MENU_TEMPLATE       equ 0x0E
-MONEY_BOX_TEMPLATE                equ 0x0F
-MENU_TEMPLATE_10                  equ 0x10   ; unused in pret
-MON_SPRITE_POPUP                  equ 0x11
-TWO_OPTION_MENU         equ 0x14
-BUY_SELL_QUIT_MENU                equ 0x15
-SAFARI_BATTLE_MENU_TEMPLATE       equ 0x1B
+%define MESSAGE_BOX                  0x01
+%define MENU_TEMPLATE_03             0x03   ; unused in pret
+%define FIELD_MOVE_MON_MENU          0x04
+%define USE_TOSS_MENU_TEMPLATE       0x06
+%define MENU_TEMPLATE_07             0x07   ; unused in pret
+%define BATTLE_MENU_TEMPLATE         0x0B
+%define SWITCH_STATS_CANCEL_MENU_TEMPLATE 0x0C
+%define LIST_MENU_BOX                0x0D
+%define BUY_SELL_QUIT_MENU_TEMPLATE  0x0E
+%define MONEY_BOX_TEMPLATE           0x0F
+%define MENU_TEMPLATE_10             0x10   ; unused in pret
+%define MON_SPRITE_POPUP             0x11
+%define TWO_OPTION_MENU              0x14
+%define BUY_SELL_QUIT_MENU           0x15
+%define SAFARI_BATTLE_MENU_TEMPLATE  0x1B
 ; wPartyMenuTypeOrMessageID values (pret constants/menu_constants.asm)
-NORMAL_PARTY_MENU       equ 0x00
-USE_ITEM_PARTY_MENU     equ 0x01
-BATTLE_PARTY_MENU       equ 0x02
-TMHM_PARTY_MENU         equ 0x03
-SWAP_MONS_PARTY_MENU    equ 0x04
-EVO_STONE_PARTY_MENU    equ 0x05
+%define NORMAL_PARTY_MENU            0x00
+%define USE_ITEM_PARTY_MENU          0x01
+%define BATTLE_PARTY_MENU            0x02
+%define TMHM_PARTY_MENU              0x03
+%define SWAP_MONS_PARTY_MENU         0x04
+%define EVO_STONE_PARTY_MENU         0x05
 ; wPartyMenuTypeOrMessageID message IDs — pret `const_next $F0` (menu_constants.asm).
 ; RedrawPartyMenu_ masks the id with $0F to index PartyMenuItemUseMessagePointers,
 ; so the base MUST be $F0 (it was 0x06 here — off by the const_next, harmless only
 ; while no message id was ever stored; ItemUseMedicine stores them).
-FIRST_PARTY_MENU_TEXT_ID equ 0xF0  ; ids >= this select PartyMenuItemUseMessagePointers
-ANTIDOTE_MSG            equ 0xF0
-BURN_HEAL_MSG           equ 0xF1
-ICE_HEAL_MSG            equ 0xF2
-AWAKENING_MSG           equ 0xF3
-PARALYZ_HEAL_MSG        equ 0xF4
-POTION_MSG              equ 0xF5
-FULL_HEAL_MSG           equ 0xF6
-REVIVE_MSG              equ 0xF7
-RARE_CANDY_MSG          equ 0xF8
+%define FIRST_PARTY_MENU_TEXT_ID     0xF0   ; ids >= this select PartyMenuItemUseMessagePointers
+%define ANTIDOTE_MSG                 0xF0
+%define BURN_HEAL_MSG                0xF1
+%define ICE_HEAL_MSG                 0xF2
+%define AWAKENING_MSG                0xF3
+%define PARALYZ_HEAL_MSG             0xF4
+%define POTION_MSG                   0xF5
+%define FULL_HEAL_MSG                0xF6
+%define REVIVE_MSG                   0xF7
+%define RARE_CANDY_MSG               0xF8
 ; hUILayoutFlags bit (pret constants/gfx_constants.asm; BIT_SINGLE_SPACED_LINES
 ; already lives in gb_memmap.inc's hUILayoutFlags block)
-BIT_PARTY_MENU_HP_BAR   equ 0      ; DrawHP_: HP fraction right of the bar, not below
+%define BIT_PARTY_MENU_HP_BAR        0   ; DrawHP_: HP fraction right of the bar, not below
 ; wTwoOptionMenuID variants
-YES_NO_MENU             equ 0x00
-NORTH_WEST_MENU         equ 0x01
-SOUTH_EAST_MENU         equ 0x02
-WIDE_YES_NO_MENU        equ 0x03
-NORTH_EAST_MENU         equ 0x04
-TRADE_CANCEL_MENU       equ 0x05
-HEAL_CANCEL_MENU        equ 0x06
-NO_YES_MENU             equ 0x07
-BIT_SECOND_MENU_OPTION_DEFAULT equ 7
+%define YES_NO_MENU                  0x00
+%define NORTH_WEST_MENU              0x01
+%define SOUTH_EAST_MENU              0x02
+%define WIDE_YES_NO_MENU             0x03
+%define NORTH_EAST_MENU              0x04
+%define TRADE_CANCEL_MENU            0x05
+%define HEAL_CANCEL_MENU             0x06
+%define NO_YES_MENU                  0x07
+%define BIT_SECOND_MENU_OPTION_DEFAULT 7
 ; wMenuExitMethod
-CHOSE_MENU_ITEM         equ 0x01
-CHOSE_FIRST_ITEM        equ 0x01
-CHOSE_SECOND_ITEM       equ 0x02
-CANCELLED_MENU          equ 0x02
+%define CHOSE_MENU_ITEM              0x01
+%define CHOSE_FIRST_ITEM             0x01
+%define CHOSE_SECOND_ITEM            0x02
+%define CANCELLED_MENU               0x02
 
 ; ---------------------------------------------------------------------------
 ; Wave 5 (home-rectification) — pokemon/item constants (pret menu_constants.asm /
 ; pokemon_constants.asm).
 ; ---------------------------------------------------------------------------
-MONEY_BOX               equ 0x13   ; wTextBoxID: money display box
+%define MONEY_BOX                    0x13   ; wTextBoxID: money display box
 ; wMonDataLocation move directions (menu_constants.asm)
-BOX_TO_PARTY            equ 0x00
-PARTY_TO_BOX            equ 0x01
-DAYCARE_TO_PARTY        equ 0x02
-PARTY_TO_DAYCARE        equ 0x03
+%define BOX_TO_PARTY                 0x00
+%define PARTY_TO_BOX                 0x01
+%define DAYCARE_TO_PARTY             0x02
+%define PARTY_TO_DAYCARE             0x03
 ; special sprite-ID mons with no BaseStats row (pokemon_constants.asm)
-FOSSIL_KABUTOPS         equ 0xB6
-FOSSIL_AERODACTYL       equ 0xB7
-MON_GHOST               equ 0xB8
+%define FOSSIL_KABUTOPS              0xB6
+%define FOSSIL_AERODACTYL            0xB7
+%define MON_GHOST                    0xB8
 
 ; PORT-ONLY front-pic handles for those same three mons. pret stores each pic's
 ; ROM address in wMonHFrontSprite (a 16-bit GB pointer) and UncompressMonSprite
@@ -815,10 +822,10 @@ MON_GHOST               equ 0xB8
 ; mon carries, because gen_base_stats.py zeroes the sprite-dim + both pic
 ; pointers in every BaseStats row, so the handle range can never collide with
 ; real data. See the DEVIATION at src/home/pokemon.asm:GetMonHeader.specialID.
-SPECIAL_PIC_NONE              equ 0
-SPECIAL_PIC_FOSSIL_KABUTOPS   equ 1
-SPECIAL_PIC_GHOST             equ 2
-SPECIAL_PIC_FOSSIL_AERODACTYL equ 3
+%define SPECIAL_PIC_NONE             0
+%define SPECIAL_PIC_FOSSIL_KABUTOPS  1
+%define SPECIAL_PIC_GHOST            2
+%define SPECIAL_PIC_FOSSIL_AERODACTYL 3
 
 ; ---------------------------------------------------------------------------
 ; Trainer classes and opponent ids (constants/trainer_constants.asm).
@@ -828,39 +835,39 @@ SPECIAL_PIC_FOSSIL_AERODACTYL equ 3
 ; each comment is pret's own $xx, which makes every line checkable against
 ; constants/trainer_constants.asm instead of trusted.
 ; ---------------------------------------------------------------------------
-OPP_ID_OFFSET           equ 200
-ROCKET                  equ 0x1E   ; trainer class $1E (IsFightingJessieJames)
-RIVAL3                  equ 0x2B   ; trainer class $2B (TrainerBattleVictory final rival)
-OPP_LASS                equ OPP_ID_OFFSET + 0x03
-OPP_JR_TRAINER_F        equ OPP_ID_OFFSET + 0x06
-OPP_UNUSED_JUGGLER      equ OPP_ID_OFFSET + 0x0D
-OPP_GAMBLER             equ OPP_ID_OFFSET + 0x11
-OPP_BEAUTY              equ OPP_ID_OFFSET + 0x12
-OPP_ROCKER              equ OPP_ID_OFFSET + 0x14
-OPP_JUGGLER             equ OPP_ID_OFFSET + 0x15
-OPP_RIVAL1              equ OPP_ID_OFFSET + 0x19
-OPP_CHIEF               equ OPP_ID_OFFSET + 0x1B
-OPP_SCIENTIST           equ OPP_ID_OFFSET + 0x1C
-OPP_GIOVANNI            equ OPP_ID_OFFSET + 0x1D
-OPP_ROCKET              equ OPP_ID_OFFSET + ROCKET
-OPP_COOLTRAINER_F       equ OPP_ID_OFFSET + 0x20
-OPP_RIVAL2              equ OPP_ID_OFFSET + 0x2A
-OPP_RIVAL3              equ OPP_ID_OFFSET + 0x2B
-OPP_LANCE               equ OPP_ID_OFFSET + 0x2F   ; plays the gym-leader battle theme
+%define OPP_ID_OFFSET                200
+%define ROCKET                       0x1E   ; trainer class $1E (IsFightingJessieJames)
+%define RIVAL3                       0x2B   ; trainer class $2B (TrainerBattleVictory final rival)
+%define OPP_LASS                     (OPP_ID_OFFSET + 0x03)
+%define OPP_JR_TRAINER_F             (OPP_ID_OFFSET + 0x06)
+%define OPP_UNUSED_JUGGLER           (OPP_ID_OFFSET + 0x0D)
+%define OPP_GAMBLER                  (OPP_ID_OFFSET + 0x11)
+%define OPP_BEAUTY                   (OPP_ID_OFFSET + 0x12)
+%define OPP_ROCKER                   (OPP_ID_OFFSET + 0x14)
+%define OPP_JUGGLER                  (OPP_ID_OFFSET + 0x15)
+%define OPP_RIVAL1                   (OPP_ID_OFFSET + 0x19)
+%define OPP_CHIEF                    (OPP_ID_OFFSET + 0x1B)
+%define OPP_SCIENTIST                (OPP_ID_OFFSET + 0x1C)
+%define OPP_GIOVANNI                 (OPP_ID_OFFSET + 0x1D)
+%define OPP_ROCKET                   (OPP_ID_OFFSET + ROCKET)
+%define OPP_COOLTRAINER_F            (OPP_ID_OFFSET + 0x20)
+%define OPP_RIVAL2                   (OPP_ID_OFFSET + 0x2A)
+%define OPP_RIVAL3                   (OPP_ID_OFFSET + 0x2B)
+%define OPP_LANCE                    (OPP_ID_OFFSET + 0x2F)   ; plays the gym-leader battle theme
 
 ; Gym-leader name/city field width (constants/text_constants.asm:7).
-GYM_CITY_LENGTH         equ 17
+%define GYM_CITY_LENGTH              17
 
 ; --- slot symbols (constants/script_constants.asm:13-18) ---
-SLOTS7                  equ 0x0200
-SLOTSBAR                equ 0x0604
-SLOTSCHERRY             equ 0x0A08
-SLOTSFISH               equ 0x0E0C
-SLOTSBIRD               equ 0x1210
-SLOTSMOUSE              equ 0x1614
+%define SLOTS7                       0x0200
+%define SLOTSBAR                     0x0604
+%define SLOTSCHERRY                  0x0A08
+%define SLOTSFISH                    0x0E0C
+%define SLOTSBIRD                    0x1210
+%define SLOTSMOUSE                   0x1614
 
 ; --- Pikachu map script flags (wPikachuMapScriptFlags) ---
-BIT_PIKACHU_MAP_SURF_SELECT equ 1
+%define BIT_PIKACHU_MAP_SURF_SELECT  1
 
 %endif ; GB_CONSTANTS_INC
 

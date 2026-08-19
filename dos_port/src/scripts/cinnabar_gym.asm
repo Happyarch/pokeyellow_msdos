@@ -103,10 +103,6 @@ TEXT_CINNABARGYM_BLAINE_TM38_NO_ROOM           equ 12
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-hGymGateIndex                                  equ 0xFFDB
-wBeatGymFlags                                  equ 0xD729
-wCinnabarGymCurScript                          equ 0xD65D
-wOpponentAfterWrongAnswer                      equ 0xDA37
 wd474                                          equ 0xD474
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

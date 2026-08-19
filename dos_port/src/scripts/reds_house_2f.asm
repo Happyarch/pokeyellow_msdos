@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global RedsHouse2FDefaultScript
 global RedsHouse2F_Script
 global RedsHouse2F_ScriptPointers

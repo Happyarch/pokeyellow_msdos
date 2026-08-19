@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global Route7UndergroundPathSignText
 global Route7_Script
 global Route7_TextPointers

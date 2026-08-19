@@ -37,13 +37,6 @@ bits 32
 %ifndef FIRST_ROUTE_MAP
 FIRST_ROUTE_MAP     equ 0x0C  ; constants/map_constants.asm (after UNUSED_MAP_0B)
 %endif
-%ifndef wTownVisitedFlag
-; golden 00:d70a. NOTE: town_map.asm's reader currently uses a placeholder
-; (TOWNMAP_WRAM_PLACEHOLDER 0xDE00 + 0xA6 = 0xDEA6) — a documented "not a real
-; allocation" TODO there. Until that reader is reconciled to this golden address,
-; the town-visited-for-flying flag written here and read by town_map won't agree.
-wTownVisitedFlag    equ 0xD70A
-%endif
 
 global MarkTownVisitedAndLoadToggleableObjects
 global ShowObject

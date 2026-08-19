@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global SafariZoneSecretHouseFishingGuruText
 global SafariZoneSecretHouse_Script
 global SafariZoneSecretHouse_TextPointers

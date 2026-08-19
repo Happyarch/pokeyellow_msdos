@@ -27,9 +27,10 @@
 ;                                  src/home/names.asm and src/home/item.asm).
 ;
 ; Routine order follows pret home/map_objects.asm. SetSpriteFacingDirection and
-; family and the GetPointerWithinSpriteStateData family landed 2026-08-17. The
-; remaining pret labels in that file (IsSurfingPikachuInParty — a stub;
-; DisplayPokedex, which needs _DisplayPokedex; SetSpriteMovementBytesToFE;
+; family and the GetPointerWithinSpriteStateData family landed 2026-08-17.
+; DisplayPokedex (-> _DisplayPokedex, src/engine/events/display_pokedex.asm)
+; landed 2026-08-19 (fossil/pokedex spec). The remaining pret labels in that
+; file (IsSurfingPikachuInParty — a stub; SetSpriteMovementBytesToFE;
 ; SpriteFunc_34a1, whose HRAM-union question is documented at its site below) are
 ; not translated anywhere in the port and are deliberately NOT invented here.
 ;
@@ -40,11 +41,9 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_macros.inc"
 %include "gb_constants.inc"
-
-BIT_PIKACHU_SPAWN_SURFING  equ 6
-BIT_PIKACHU_SPAWN_STARTER  equ 7
 
 global DecodeArrowMovementRLE
 global TextScript_ItemStoragePC
@@ -66,6 +65,7 @@ global GetPointerWithinSpriteStateData2
 global SetSpriteFacingDirection
 global SetSpriteFacingDirectionAndDelay
 global SpriteFunc_34a1
+global DisplayPokedex
 
 extern FillMemory                 ; home/copy2.asm — ESI=dest, BX=count, AL=val (ESI preserved)
 extern SaveScreenTilesToBuffer2         ; src/home/tilemap.asm
@@ -78,6 +78,7 @@ extern GetQuantityOfItemInBag   ; src/engine/items/get_bag_item_quantity.asm (pr
 extern DelayFrames               ; src/home/delay.asm (BL = frame count)
 extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
 extern IsStarterPikachuAliveInOurParty ; src/engine/pikachu/pikachu_status.asm
+extern _DisplayPokedex                 ; src/engine/events/display_pokedex.asm
 
 ; ---------------------------------------------------------------------------
 ; Scaffold memmap symbol not yet in gb_memmap.inc (carried in with CheckCoords).
@@ -421,6 +422,16 @@ _GetPointerWithinSpriteStateData:
     movzx eax, al                       ; ld l, a — 8-bit, so it wraps in-page as pret does
     add esi, eax
     ret
+
+; ---------------------------------------------------------------------------
+; DisplayPokedex — pret home/map_objects.asm:126-128.
+; In: AL = pokédex number (1-based). Out: farjp into _DisplayPokedex
+; (engine/events/display_pokedex.asm) after stashing it in wPokedexNum.
+; ---------------------------------------------------------------------------
+DisplayPokedex:
+    mov [ebp + wPokedexNum], al         ; ld [wPokedexNum], a
+; DEVIATION{class=banking; pret=home/map_objects.asm:DisplayPokedex; behavior=jmp directly to _DisplayPokedex instead of the pret farjp; evidence=the DPMI model is flat so every routine is always addressable and Bankswitch has no port counterpart, same convention every other farjp site in this tree uses; lifetime=permanent flat-memory boundary}
+    jmp _DisplayPokedex                 ; farjp _DisplayPokedex
 
 ; ---------------------------------------------------------------------------
 ; SetSpriteFacingDirection / SetSpriteFacingDirectionAndDelay — pret

@@ -38,6 +38,7 @@
 ; ===========================================================================
 
 %include "gb_memmap.inc"
+%include "gb_constants.inc"           ; shared constants (%define: no COFF symbol)
 %include "gb_macros.inc"
 %include "gb_text.inc"                  ; text_far / text_end wrappers
 
@@ -45,10 +46,6 @@
 ; a resolved text stream in $F6-$FF selects a special DisplayTextID handler instead of
 ; ordinary text. Defined locally (not in this file's include chain); the canonical
 ; copies are in include/gb_constants.inc. ------------------------------------------
-TX_SCRIPT_PRIZE_VENDOR              equ 0xF7
-TX_SCRIPT_POKECENTER_PC             equ 0xF9
-TX_SCRIPT_PLAYERS_PC                equ 0xFC
-TX_SCRIPT_BILLS_PC                  equ 0xFD
 TX_SCRIPT_LOWEST                    equ 0xF6  ; = TX_SCRIPT_CABLE_CLUB_RECEPTIONIST (range floor)
 
 section .text

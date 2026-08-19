@@ -32,37 +32,22 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "assets/audio_constants.inc"       ; SFX_PUSH_BOULDER, SFX_CUT
 
 ; --- symbols not yet in the shared headers (pret constants/*.asm, sym-verified) ---
 %ifndef BIT_STRENGTH_ACTIVE
-BIT_STRENGTH_ACTIVE     equ 0     ; wStatusFlags1 bit (constants/ram_constants.asm)
 %endif
 %ifndef BIT_BOULDER_DUST
-BIT_BOULDER_DUST        equ 1     ; wMiscFlags bit (constants/ram_constants.asm)
 %endif
 %ifndef BIT_TRIED_PUSH_BOULDER
-BIT_TRIED_PUSH_BOULDER  equ 6     ; wMiscFlags bit (constants/ram_constants.asm)
 %endif
 %ifndef BIT_PUSHED_BOULDER
-BIT_PUSHED_BOULDER      equ 7     ; wMiscFlags bit (constants/ram_constants.asm)
 %endif
 %ifndef BOULDER_MOVEMENT_BYTE_2
 BOULDER_MOVEMENT_BYTE_2 equ 0x10  ; constants/map_object_constants.asm
-%endif
-%ifndef hSpriteIndex
-hSpriteIndex          equ 0xFF8C ; hSpriteIndex — sprite SLOT number; golden 00:ff8c
-%endif
-%ifndef wSpritePlayerStateData1MovementStatus
-wSpritePlayerStateData1MovementStatus equ 0xC101 ; wSpriteStateData1+1; golden 00:c101
-%endif
-%ifndef wSpritePlayerStateData1FacingDirection
-wSpritePlayerStateData1FacingDirection equ 0xC109 ; golden 00:c109 (= W_SPRITE_PLAYER_FACING_DIR)
-%endif
-%ifndef wTileInFrontOfBoulderAndBoulderCollisionResult
-wTileInFrontOfBoulderAndBoulderCollisionResult equ 0xD71B ; golden 00:d71b
 %endif
 
 global TryPushingBoulder

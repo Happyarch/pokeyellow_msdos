@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global CeladonMansion3FDevRoomSignText
 global CeladonMansion3FGameDesignerText
 global CeladonMansion3FGameProgramPCText
@@ -55,10 +54,6 @@ extern RestoreScreenTilesAndReloadTilePatterns
 extern SaveScreenTilesToBuffer2
 extern TextScriptEnd
 extern YesNoChoice
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hCanceledPrinting                              equ 0xFFDB
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

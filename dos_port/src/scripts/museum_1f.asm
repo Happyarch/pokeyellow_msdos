@@ -59,11 +59,6 @@ extern YesNoChoice
 SCRIPT_MUSEUM1F_NOOP                           equ 1
 TEXT_MUSEUM1F_SCIENTIST1                       equ 1
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wMuseum1FCurScript                             equ 0xD618
-wPriceTemp                                     equ 0xCD3D
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

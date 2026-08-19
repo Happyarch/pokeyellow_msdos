@@ -16,7 +16,6 @@ section .text
 ; The real body is in its pret-mirrored home, src/engine/battle/common_text.asm,
 ; together with GoText, DoItText, GetmText, EnemysWeakText, and PrintPlayerMon1Text.
 
-
 ; StarterPikachuBattleEntranceAnimation — pret
 ; engine/battle/pikachu_entrance_anim.asm:StarterPikachuBattleEntranceAnimation.
 ; The Yellow starter-Pikachu send-out entrance, used instead of the POOF_ANIM +

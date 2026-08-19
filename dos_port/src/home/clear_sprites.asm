@@ -31,7 +31,6 @@ bits 32
 
 OBJ_SIZE         equ 4
 SCREEN_HEIGHT_PX equ 144
-OAM_Y_OFS        equ 16
 
 extern spr_oam_valid            ; ppu/ppu.asm — render_sprites' live-entry count
 extern g_obj_over_window        ; ppu/ppu.asm — OBJ-over-window z-order (party/naming icons)

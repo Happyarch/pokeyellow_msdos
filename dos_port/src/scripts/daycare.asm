@@ -58,13 +58,6 @@ extern YesNoChoice
 extern _DaycareGentlemanMonHasGrownText   ; NOT YET DEFINED IN THE PORT
 extern _DaycareGentlemanOweMoneyText   ; NOT YET DEFINED IN THE PORT
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wDayCareMonBoxLevel                            equ 0xDA61
-wDayCareNumLevelsGrown                         equ 0xCD3E
-wDayCarePerLevelCost                           equ 0xCD41
-wDayCareTotalCost                              equ 0xCD3F
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

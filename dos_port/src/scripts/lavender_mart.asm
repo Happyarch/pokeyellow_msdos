@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global LavenderMartBaldingGuyText
 global LavenderMartCooltrainerMText
 global LavenderMart_Script

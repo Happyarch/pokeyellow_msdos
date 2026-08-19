@@ -1,3 +1,4 @@
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 ; pikachu_emotions.asm — pret mirror of data/pikachu/pikachu_emotions.asm.
 ;
 ; Pikachu emotion bytecode scripts (0 to 32) and movement scripts.
@@ -9,34 +10,6 @@ bits 32
 ; ---------------------------------------------------------------------------
 ; Constants
 ; ---------------------------------------------------------------------------
-EXCLAMATION_BUBBLE              equ 0
-QUESTION_BUBBLE                 equ 1
-SMILE_BUBBLE                    equ 2
-SKULL_BUBBLE                    equ 3
-HEART_BUBBLE                    equ 4
-BOLT_BUBBLE                     equ 5
-ZZZ_BUBBLE                      equ 6
-FISH_BUBBLE                     equ 7
-
-PIKAEMOTION_DUMMY1              equ 0
-PIKAEMOTION_PRINTTEXT           equ 1
-PIKAEMOTION_PLAYPCMSOUNDCLIP    equ 2
-PIKAEMOTION_DOEMOTIONBUBBLE     equ 3
-PIKAEMOTION_4                   equ 4
-PIKAEMOTION_5                   equ 5
-PIKAEMOTION_SUBCMD              equ 6
-PIKAEMOTION_DELAYFRAMES         equ 7
-PIKAEMOTION_DUMMY2              equ 8
-PIKAEMOTION_9                   equ 9
-PIKAEMOTION_DUMMY3              equ 10
-
-PIKAEMOTION_SUBCMD_LOADEXTRAPIKASPRITES equ 0
-PIKAEMOTION_SUBCMD_LOADFONT             equ 1
-PIKAEMOTION_SUBCMD_SHOWMAPVIEW          equ 2
-PIKAEMOTION_SUBCMD_WAITBUTTONPRESS      equ 3
-PIKAEMOTION_SUBCMD_CHECKPEWTERCENTER    equ 4
-PIKAEMOTION_SUBCMD_CHECKLAVENDERTOWER   equ 5
-PIKAEMOTION_SUBCMD_CHECKBILLSHOUSE      equ 6
 
 section .data
 

@@ -48,7 +48,6 @@ extern LedgeTiles                       ; src/data/tilesets/ledge_tiles.asm
 ; --- Tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) -----
 OVERWORLD           equ 0
 CAVERN              equ 17
-FOREST              equ 3
 
 ; PAD_BUTTONS | PAD_CTRL_PAD = every button ($0F | $F0). pret sets wJoyIgnore to
 ; this so no real input is honored while the ledge hop plays out.

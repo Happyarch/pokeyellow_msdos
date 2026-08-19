@@ -25,6 +25,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_macros.inc"
 
 ; ---------------------------------------------------------------------------
@@ -33,13 +34,10 @@ bits 32
 ; root should promote these to the canonical memmap/constants and they will win.
 ; ---------------------------------------------------------------------------
 %ifndef BIT_GAME_TIMER_COUNTING
-BIT_GAME_TIMER_COUNTING      equ 0          ; wStatusFlags6 bit 0 (constants/ram_constants.asm)
 %endif
 %ifndef BIT_UNKNOWN_5_1
-BIT_UNKNOWN_5_1              equ 1          ; wStatusFlags5 bit 1
 %endif
 %ifndef BIT_UNKNOWN_5_2
-BIT_UNKNOWN_5_2              equ 2          ; wStatusFlags5 bit 2
 %endif
 %ifndef W_D479
 W_D479                       equ 0xD479     ; wd479 (bit 0 = force-max in-game timer)

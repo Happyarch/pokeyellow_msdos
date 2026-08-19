@@ -622,7 +622,6 @@ DisplayMonListMenu:
     mov [ebp + wPartyAndBillsPCSavedMenuItem], al
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; KnowsHMMove
 ; Returns whether the party mon at index [wWhichPokemon] knows any HM move.

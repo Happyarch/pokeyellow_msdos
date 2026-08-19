@@ -57,7 +57,6 @@ section .text
 
 global DefaultMapScript
 
-
 ; Default _Script for maps without a ported one. Most pret map scripts that do
 ; nothing else are exactly `jp EnableAutoTextBoxDrawing`, so that is the faithful
 ; default (a few, e.g. Indigo Plateau, are a bare ret — close enough here).

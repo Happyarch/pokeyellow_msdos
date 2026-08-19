@@ -93,13 +93,6 @@ SCRIPT_CERULEANCITY_RIVAL_CLEANUP              equ 3
 SCRIPT_CERULEANCITY_ROCKET_DEFEATED            equ 4
 TEXT_CERULEANCITY_RIVAL                        equ 1
 TEXT_CERULEANCITY_ROCKET                       equ 2
-TOGGLE_CERULEAN_RIVAL                          equ 6
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCeruleanCityCurScript                         equ 0xD60E
-wCoordIndex                                    equ 0xCD3D
-wSprite02StateData1FacingDirection             equ 0xC129
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

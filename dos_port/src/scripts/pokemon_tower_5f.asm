@@ -21,7 +21,20 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern PokemonTower5FChanneler2BattleText ; assets/trainer_headers.inc
+extern PokemonTower5FChanneler3BattleText ; assets/trainer_headers.inc
+extern PokemonTower5FChanneler4BattleText ; assets/trainer_headers.inc
+extern PokemonTower5FChanneler5BattleText ; assets/trainer_headers.inc
+extern PokemonTower5TrainerHeader0        ; assets/trainer_headers.inc
+extern PokemonTower5TrainerHeader1        ; assets/trainer_headers.inc
+extern PokemonTower5TrainerHeader2        ; assets/trainer_headers.inc
+extern PokemonTower5TrainerHeader3        ; assets/trainer_headers.inc
+extern PokemonTower5TrainerHeaders        ; assets/trainer_headers.inc
 
 global PokemonTower5FChanneler2Text
 global PokemonTower5FChanneler3Text
@@ -57,10 +70,6 @@ extern TextScriptEnd
 
 ; Script constants — pret defines these via dw_const in this file.
 TEXT_POKEMONTOWER5F_PURIFIEDZONE               equ 7
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wPokemonTower5FCurScript                       equ 0xD62D
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

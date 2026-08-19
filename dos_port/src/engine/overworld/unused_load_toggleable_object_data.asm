@@ -29,29 +29,21 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
-%ifndef wCurMap
-wCurMap               equ 0xD35D ; golden 00:d35d
-%endif
-%ifndef wToggleableObjectList
-wToggleableObjectList equ 0xD5CD ; golden 00:d5cd (unused by the port's flat model)
-%endif
 
 ; --- constants ---
 %ifndef BLUES_HOUSE
 BLUES_HOUSE                equ 0x27
 %endif
 %ifndef TOGGLE_DAISY_SITTING_COPY
-TOGGLE_DAISY_SITTING_COPY  equ 0xEC
 %endif
 %ifndef TOGGLE_DAISY_WALKING_COPY
-TOGGLE_DAISY_WALKING_COPY  equ 0xED
 %endif
 %ifndef TOGGLE_TOWN_MAP_COPY
-TOGGLE_TOWN_MAP_COPY       equ 0xEE
 %endif
 
 global Func_f0a54

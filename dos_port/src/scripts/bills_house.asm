@@ -95,16 +95,6 @@ SCRIPT_BILLSHOUSE_SCRIPT8                      equ 8
 SCRIPT_BILLSHOUSE_SCRIPT9                      equ 9
 TEXT_BILLSHOUSE_BILL_SS_TICKET                 equ 2
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hSpriteMapXCoord                               equ 0xFFEE
-hSpriteMapYCoord                               equ 0xFFED
-hSpriteScreenXCoord                            equ 0xFFEC
-hSpriteScreenYCoord                            equ 0xFFEB
-wBillsHouseCurScript                           equ 0xD660
-wPikachuMapScriptFlags                         equ 0xD492
-wSpritePlayerStateData1FacingDirection         equ 0xC109
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

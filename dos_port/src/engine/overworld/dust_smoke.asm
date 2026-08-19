@@ -32,18 +32,6 @@ bits 32
 %include "gb_macros.inc"
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
-%ifndef wWhichAnimationOffsets
-wWhichAnimationOffsets  equ 0xCD50 ; golden 00:cd50
-%endif
-%ifndef wCoordAdjustmentAmount
-wCoordAdjustmentAmount  equ 0xD089 ; golden 00:d089
-%endif
-%ifndef wShadowOAMSprite36
-wShadowOAMSprite36      equ 0xC390 ; golden 00:c390
-%endif
-%ifndef wSpritePlayerStateData1FacingDirection
-wSpritePlayerStateData1FacingDirection equ 0xC109 ; golden 00:c109
-%endif
 
 global AnimateBoulderDust
 global GetMoveBoulderDustFunctionPointer

@@ -25,28 +25,6 @@ bits 32
 TEXT_GAMECORNERPRIZEROOM_PRIZE_VENDOR_1 equ 0x03
 
 ; Prize menu WRAM / HRAM definitions (pret ram/wram.asm:1837, 1848, 1860-1872; ram/hram.asm:175)
-%ifndef wWhichPrizeWindow
-wWhichPrizeWindow               equ 0xD12E
-%endif
-%ifndef wWhichPrize
-wWhichPrize                     equ 0xD138
-%endif
-%ifndef wPrize1
-wPrize1                         equ 0xD13C
-wPrize2                         equ 0xD13D
-wPrize3                         equ 0xD13E
-%endif
-%ifndef wPrize1Price
-wPrize1Price                    equ 0xD140
-wPrize2Price                    equ 0xD142
-wPrize3Price                    equ 0xD144
-%endif
-%ifndef hUnusedCoinsByte
-hUnusedCoinsByte                equ 0xFF9F
-%endif
-%ifndef wAddedToParty
-wAddedToParty                   equ 0xCCD3
-%endif
 
 section .text
 

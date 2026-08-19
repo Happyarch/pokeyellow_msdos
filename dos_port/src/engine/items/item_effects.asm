@@ -812,7 +812,6 @@ RestoreBonusPP:
 ;
 ; Build: nasm -f coff -I include/ -I . -o item_use.o src/engine/items/item_use.asm
 
-
 %include "assets/audio_constants.inc"
 
 global UseItem_
@@ -2933,7 +2932,6 @@ Func_d85d:
     clc
     ret
 
-
 ; === ItemUseRepel family (items-plan Stage 9) ==============================
 ;
 ; Source: engine/items/item_effects.asm:ItemUseRepel / ItemUseSuperRepel /
@@ -2994,7 +2992,6 @@ PrintItemUseTextAndRemoveItem:
     call PlaySound
     call WaitForTextScrollButtonPress
     jmp RemoveUsedItem                  ; pret: fallthrough
-
 
 ; === Battle items (items-plan Stage 10) ====================================
 ;
@@ -3119,7 +3116,6 @@ ItemUseXStat:
     pop eax                             ; [A]
     mov [ebp + esi], al                 ; restore wPlayerMoveNum
     ret
-
 
 ; === Key items (items-plan Stage 11) =======================================
 ;
@@ -3458,7 +3454,6 @@ global ItemUsePokedex
 ItemUsePokedex:
     jmp ShowPokedexMenu                 ; pret: predef_jump ShowPokedexMenu
 
-
 ; === ItemUsePokeFlute (items-plan Stage 11) ================================
 ;
 ; Source: engine/items/item_effects.asm:ItemUsePokeFlute.
@@ -3626,7 +3621,6 @@ iu_played_flute_had_effect:
     call PlayDefaultMusic               ; back to the map music
 .done:
     ret
-
 
 ; === ItemUseCardKey (items-plan Stage 11) =================================
 ;

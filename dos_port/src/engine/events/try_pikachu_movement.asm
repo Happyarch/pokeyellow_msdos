@@ -28,6 +28,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_macros.inc"
 
 ; ---------------------------------------------------------------------------
@@ -40,8 +41,6 @@ bits 32
 ; scripts under src/scripts/ (e.g. pokemon_fan_club.asm:78). gb_memmap.inc is
 ; maintainer-owned, so promotion of this symbol is left to its owner.
 ; ---------------------------------------------------------------------------
-
-BIT_PIKACHU_SPAWN_STARTER       equ 7      ; constants/pikachu_emotion_constants.asm
 
 ; ---------------------------------------------------------------------------
 ; Externs

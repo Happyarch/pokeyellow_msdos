@@ -34,13 +34,6 @@ extern HideObject
 extern IsPlayerOnDungeonWarp
 extern ShowObject
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCoordIndex                                    equ 0xCD3D
-wDungeonWarpDestinationMap                     equ 0xD71C
-wObjectToHide                                  equ 0xD078
-wObjectToShow                                  equ 0xD079
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

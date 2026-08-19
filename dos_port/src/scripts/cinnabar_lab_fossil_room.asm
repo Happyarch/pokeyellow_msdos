@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global CinnabarLabFossilRoomScientist1Text
 global CinnabarLabFossilRoomScientist2Text
 global CinnabarLabFossilRoom_Script
@@ -39,12 +38,6 @@ extern GivePokemon
 extern LoadFossilItemAndMonName   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern TextScriptEnd
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wFilteredBagItems                              equ 0xCC5B
-wFilteredBagItemsCount                         equ 0xCD37
-wFossilMon                                     equ 0xD70F
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

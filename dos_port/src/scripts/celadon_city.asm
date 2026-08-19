@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global CeladonCityDeptStoreSignText
 global CeladonCityFisherText
 global CeladonCityGameCornerSignText
@@ -53,10 +52,6 @@ extern PlayCry
 extern PokeCenterSignText   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern TextScriptEnd
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCeladonCityCurScript                          equ 0xD640
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

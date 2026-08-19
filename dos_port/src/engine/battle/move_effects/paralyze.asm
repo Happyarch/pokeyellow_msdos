@@ -10,7 +10,6 @@ extern PrintMayNotAttackText
 extern PrintDidntAffectText
 extern PrintDoesntAffectText
 
-
 section .text
 global ParalyzeEffect_
 

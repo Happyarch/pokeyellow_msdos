@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global MovementData_PewterGymGuyExit
 global MovementData_PewterMuseumGuyExit
 global PewterCityCheckPlayerLeavingEastScript
@@ -79,16 +78,6 @@ SCRIPT_PEWTERCITY_RESET_YOUNGSTER              equ 6
 TEXT_PEWTERCITY_YOUNGSTER                      equ 5
 TEXT_PEWTERCITY_SUPER_NERD1_ITS_RIGHT_HERE     equ 13
 TEXT_PEWTERCITY_YOUNGSTER_GO_TAKE_ON_BROCK     equ 14
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hSpriteMapXCoord                               equ 0xFFEE
-hSpriteMapYCoord                               equ 0xFFED
-hSpriteScreenXCoord                            equ 0xFFEC
-hSpriteScreenYCoord                            equ 0xFFEB
-wMuseum1FCurScript                             equ 0xD618
-wPewterCityCurScript                           equ 0xD5F6
-wPikachuMapScriptFlags                         equ 0xD492
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

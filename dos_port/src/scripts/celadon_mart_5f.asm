@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global CeladonMart5FCurrentFloorSignText
 global CeladonMart5FGentlemanText
 global CeladonMart5FSailorText

@@ -184,7 +184,6 @@ msgbox_party:
     dd 0                                    ; MB_WIN_TILEMAP  ] window list survives
     dd 0                                    ; MB_WIN_STARTROW ]
 
-
 section .text
 
 ; ---------------------------------------------------------------------------

@@ -20,7 +20,6 @@ extern GetMonHeader
 extern FlagAction               ; ESI=array, CL=bit index, BH=action; result in CL
 extern TechnicalMachines        ; assets/items.inc
 
-
 ; ---------------------------------------------------------------------------
 ; CanLearnTM — tests if mon [wCurPartySpecies] can learn move [wMoveNum].
 ; Out: CL = 0 (can't learn) / non-zero (learnable learnset bit set).

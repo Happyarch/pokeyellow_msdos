@@ -42,6 +42,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "assets/map_dims.inc"        ; POKEMON_TOWER_3F / _7F map ids (generated)
 %include "assets/audio_constants.inc" ; SFX_TRAINER_APPEARED (generated)
@@ -51,7 +52,6 @@ TX_ASM_CMD equ 0x08                 ; TextCommandProcessor TX_ASM
 ; --- PrintBeginningBattleText constants (added 2026-08-13) ---
 ; pret constants/item_constants.asm — the const_def run puts SILPH_SCOPE at $48.
 ; File-local: this is its only consumer in the port so far.
-SILPH_SCOPE equ 0x48
 ; pret macros/pikachu.asm `ldpikacry e, PikachuCryNN` resolves to the 0-based
 ; index into PikachuCriesPointerTable. Same two values SendOutMon already uses
 ; (core.asm .starterPikachu) — taken from there rather than re-derived.

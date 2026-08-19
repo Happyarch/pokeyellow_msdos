@@ -23,7 +23,28 @@ bits 32
 
 %include "assets/audio_constants.inc"
 %include "assets/script_strings.inc"
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern ViridianGymCooltrainerM1BattleText ; assets/trainer_headers.inc
+extern ViridianGymCooltrainerM2BattleText ; assets/trainer_headers.inc
+extern ViridianGymCooltrainerM3BattleText ; assets/trainer_headers.inc
+extern ViridianGymHiker1BattleText        ; assets/trainer_headers.inc
+extern ViridianGymHiker2BattleText        ; assets/trainer_headers.inc
+extern ViridianGymHiker3BattleText        ; assets/trainer_headers.inc
+extern ViridianGymRocker1BattleText       ; assets/trainer_headers.inc
+extern ViridianGymRocker2BattleText       ; assets/trainer_headers.inc
+extern ViridianGymTrainerHeader0          ; assets/trainer_headers.inc
+extern ViridianGymTrainerHeader1          ; assets/trainer_headers.inc
+extern ViridianGymTrainerHeader2          ; assets/trainer_headers.inc
+extern ViridianGymTrainerHeader3          ; assets/trainer_headers.inc
+extern ViridianGymTrainerHeader4          ; assets/trainer_headers.inc
+extern ViridianGymTrainerHeader5          ; assets/trainer_headers.inc
+extern ViridianGymTrainerHeader6          ; assets/trainer_headers.inc
+extern ViridianGymTrainerHeader7          ; assets/trainer_headers.inc
+extern ViridianGymTrainerHeaders          ; assets/trainer_headers.inc
 
 global ViridianGymArrowMovement1
 global ViridianGymArrowMovement10
@@ -114,11 +135,6 @@ SCRIPT_VIRIDIANGYM_PLAYER_SPINNING             equ 4
 TEXT_VIRIDIANGYM_GIOVANNI_EARTH_BADGE_INFO     equ 12
 TEXT_VIRIDIANGYM_GIOVANNI_RECEIVED_TM27        equ 13
 TEXT_VIRIDIANGYM_GIOVANNI_TM27_NO_ROOM         equ 14
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wBeatGymFlags                                  equ 0xD729
-wViridianGymCurScript                          equ 0xD5FA
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

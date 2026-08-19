@@ -58,9 +58,6 @@ extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=
 ; pret wNumSprites (ram/wram.asm) — number of sprites on the current map. Read by
 ; src/home/text_script.asm; not in this file's include chain, so define it here
 ; (guarded; gb_memmap.inc carries the canonical copy at the same value).
-%ifndef wNumSprites
-wNumSprites equ 0xD4E0
-%endif
 extern InitToggleableObjectFlags          ; src/engine/overworld/map_sprites.asm
 extern text_engine_init                   ; src/home/text.asm
                                     ; CF=1 + [hTextID]=sign id or sprite slot
@@ -251,7 +248,6 @@ global h_load_sprite_temp2
 ; ---------------------------------------------------------------------------
 ; Map and tileset constants
 ; ---------------------------------------------------------------------------
-MAP_ID_PALLET_TOWN          equ 0x00
 TILESET_OVERWORLD           equ 0x00
 ; tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) — PlayMapChangeSound
 ; wStatusFlags6 bit 5 (constants/ram_constants.asm). Its siblings (BIT_FLY_WARP,
@@ -278,8 +274,6 @@ PALLET_TOWN_VIEW_PTR        equ wOverworldMap + (MAP_BORDER) * (PALLET_TOWN_WIDT
 ; Pallet Town map connections (computed from the pret `connection` macro for the
 ; north=Route1 / south=Route21 connections, both at offset 0). See
 ; macros/scripts/maps.asm:connection. Route1 = 10×18, Route21 = 10×45.
-MAP_ID_ROUTE_1              equ 0x0C
-MAP_ID_ROUTE_21             equ 0x20
 
 ; The Pallet Town north(Route1)/south(Route21) strip + view-pointer equs that
 ; used to live here are GONE. They were hand-computed for MAP_BORDER = 6 (e.g.
@@ -946,9 +940,6 @@ section .text
 ; pret RAM symbol gb_memmap.inc does not carry. Address is rgblink's, read from
 ; pokeyellow.sym (00:d73a) — not inferred. Defined locally because the transpiled
 ; elevator scripts define it bare, so a central definition would collide.
-%ifndef wWarpedFromWhichWarp
-wWarpedFromWhichWarp equ 0xD73A
-%endif
 
 CheckWarpTile:
     push eax

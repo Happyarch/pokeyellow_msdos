@@ -18,13 +18,13 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_text.inc"
 %include "assets/audio_constants.inc"
 %include "assets/map_dims.inc"
 
 %ifndef BIT_USED_POKECENTER
-BIT_USED_POKECENTER equ 2
 %endif
 
 section .text

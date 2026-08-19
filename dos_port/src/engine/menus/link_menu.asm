@@ -75,6 +75,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "gb_text.inc"                  ; text_far / text_end
@@ -186,7 +187,6 @@ global ColosseumVersionText
 
 ; --- constants not (yet) in the port includes ------------------------------
 %ifndef BIT_DEBUG_MODE
-BIT_DEBUG_MODE          equ 1              ; wStatusFlags6 (constants/ram_constants.asm)
 %endif
 %ifndef TRADE_CENTER
 TRADE_CENTER            equ 0xEF           ; constants/map_constants.asm
@@ -197,7 +197,6 @@ COLOSSEUM               equ 0xF0           ; constants/map_constants.asm
 LINK_STATE_IN_CABLE_CLUB equ 0x01          ; constants/serial_constants.asm
 USING_INTERNAL_CLOCK     equ 0x02          ; constants/serial_constants.asm
 CONNECTION_NOT_ESTABLISHED equ 0xFF        ; constants/serial_constants.asm
-MEW                      equ 0x15          ; constants/pokemon_constants.asm (=21)
 ; (TX_END — the '@' string terminator PetitCup scans for — comes from
 ; gb_text.inc's %define, already included above.)
 
@@ -205,8 +204,6 @@ MEW                      equ 0x15          ; constants/pokemon_constants.asm (=2
 ; sym anchor); the other two party slots are +N*PARTYMON_STRUCT_LENGTH from
 ; it, same as wPartyMon{d:n} in pret's ram/wram.asm. Local equ, not touching
 ; gb_memmap.inc — root may want to promote these if another package needs them.
-wPartyMon2Level equ wPartyMon1Level + PARTYMON_STRUCT_LENGTH
-wPartyMon3Level equ wPartyMon2Level + PARTYMON_STRUCT_LENGTH
 
 ; --- charmap tiles (constants/charmap.asm; NOT GB-memory symbols) ----------
 CHAR_SPACE  equ 0x7F            ; ' '  blank tile

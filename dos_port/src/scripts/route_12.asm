@@ -21,7 +21,26 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern Route12CooltrainerMBattleText ; assets/trainer_headers.inc
+extern Route12Fisher1BattleText      ; assets/trainer_headers.inc
+extern Route12Fisher2BattleText      ; assets/trainer_headers.inc
+extern Route12Fisher3BattleText      ; assets/trainer_headers.inc
+extern Route12Fisher4BattleText      ; assets/trainer_headers.inc
+extern Route12Fisher5BattleText      ; assets/trainer_headers.inc
+extern Route12SuperNerdBattleText    ; assets/trainer_headers.inc
+extern Route12TrainerHeader0         ; assets/trainer_headers.inc
+extern Route12TrainerHeader1         ; assets/trainer_headers.inc
+extern Route12TrainerHeader2         ; assets/trainer_headers.inc
+extern Route12TrainerHeader3         ; assets/trainer_headers.inc
+extern Route12TrainerHeader4         ; assets/trainer_headers.inc
+extern Route12TrainerHeader5         ; assets/trainer_headers.inc
+extern Route12TrainerHeader6         ; assets/trainer_headers.inc
+extern Route12TrainerHeaders         ; assets/trainer_headers.inc
 
 global Route12CooltrainerMText
 global Route12DefaultScript
@@ -69,10 +88,6 @@ SCRIPT_ROUTE12_DEFAULT                         equ 0
 SCRIPT_ROUTE12_SNORLAX_POST_BATTLE             equ 3
 TEXT_ROUTE12_SNORLAX_WOKE_UP                   equ 13
 TEXT_ROUTE12_SNORLAX_CALMED_DOWN               equ 14
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wRoute12CurScript                              equ 0xD623
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

@@ -72,12 +72,6 @@ SCRIPT_ROUTE23_DEFAULT                         equ 0
 SCRIPT_ROUTE23_PLAYER_MOVING                   equ 1
 SCRIPT_ROUTE23_RESET_TO_DEFAULT                equ 2
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wRoute23CurScript                              equ 0xD666
-wSpritePlayerStateData1FacingDirection         equ 0xC109
-wWhichBadge                                    equ 0xCD3D
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

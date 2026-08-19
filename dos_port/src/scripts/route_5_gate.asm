@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global Route5GateDefaultScript
 global Route5GateMovePlayerUpScript
 global Route5GatePlayerMovingScript
@@ -48,10 +47,6 @@ extern TextScriptEnd
 SCRIPT_ROUTE5GATE_PLAYER_MOVING                equ 1
 TEXT_ROUTE5GATE_GUARD_GEE_IM_THIRSTY           equ 2
 TEXT_ROUTE5GATE_GUARD_GIVE_DRINK               equ 3
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wRoute5GateCurScript                           equ 0xD661
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

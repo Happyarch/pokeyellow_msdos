@@ -2,7 +2,6 @@
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 
-
 section .text
 global OneHitKOEffect_
 

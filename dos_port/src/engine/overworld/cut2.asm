@@ -30,36 +30,6 @@ bits 32
 %include "gb_macros.inc"
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
-%ifndef wCutTile
-wCutTile                 equ 0xCD4D ; golden 00:cd4d
-%endif
-%ifndef wCoordAdjustmentAmount
-wCoordAdjustmentAmount   equ 0xD089 ; golden 00:d089
-%endif
-%ifndef wBuffer
-wBuffer                  equ 0xCEE9 ; golden 00:cee9
-%endif
-%ifndef wShadowOAMSprite36
-wShadowOAMSprite36       equ 0xC390 ; golden 00:c390
-%endif
-%ifndef wShadowOAMSprite36YCoord
-wShadowOAMSprite36YCoord equ 0xC390 ; golden 00:c390
-%endif
-%ifndef wShadowOAMSprite36XCoord
-wShadowOAMSprite36XCoord equ 0xC391 ; golden 00:c391
-%endif
-%ifndef wShadowOAMSprite37XCoord
-wShadowOAMSprite37XCoord equ 0xC395 ; golden 00:c395
-%endif
-%ifndef wShadowOAMSprite38
-wShadowOAMSprite38       equ 0xC398 ; golden 00:c398
-%endif
-%ifndef wShadowOAMSprite38XCoord
-wShadowOAMSprite38XCoord equ 0xC399 ; golden 00:c399
-%endif
-%ifndef wShadowOAMSprite39XCoord
-wShadowOAMSprite39XCoord equ 0xC39D ; golden 00:c39d
-%endif
 %ifndef OBJ_SIZE
 OBJ_SIZE                 equ 4
 %endif

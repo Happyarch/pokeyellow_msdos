@@ -67,7 +67,6 @@ extern PrintText                     ; home/window.asm — ESI = text stream
 %include "assets/audio_constants.inc"   ; SFX_SHRINK, MUSIC_ROUTES2, MUSIC_PALLET_TOWN(+_BANK)
 
 %ifndef BIT_DEBUG_MODE
-BIT_DEBUG_MODE  equ 1                 ; wStatusFlags6 bit (constants/ram_constants.asm)
 %endif
 PROF_OAK_PIC_LEN  equ 286
 RED_PIC_LEN       equ 255
@@ -75,13 +74,8 @@ RIVAL1_PIC_LEN    equ 241
 SHRINK1_PIC_LEN   equ 90
 SHRINK2_PIC_LEN   equ 50
 
-NAME_LENGTH  equ 11                  ; wPlayerName / wRivalName field size
-
 ; wSurfingMinigameHiScore (pret sym 00:d494) — not yet in gb_memmap.inc; report
 ; to root for promotion. %ifndef-guarded so promotion is a no-op here.
-%ifndef wSurfingMinigameHiScore
-wSurfingMinigameHiScore equ 0xD494
-%endif
 
 global DisplayPicCenteredOrUpperRight
 global IntroDisplayPicCenteredOrUpperRight

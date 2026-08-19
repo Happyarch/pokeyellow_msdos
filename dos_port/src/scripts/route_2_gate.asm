@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global Route2GateOaksAideText
 global Route2GateYoungsterText
 global Route2Gate_Script

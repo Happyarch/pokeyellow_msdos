@@ -21,19 +21,12 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global TradeCenterOpponentText
 global TradeCenter_Script
 global TradeCenter_TextPointers
 
 extern EnableAutoTextBoxDrawing
 extern SetSpriteFacingDirection   ; NOT YET DEFINED IN THE PORT
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wSprite01StateData1FacingDirection             equ 0xC119
-wSprite01StateData2MapX                        equ 0xC215
-wSprite01StateData2MapY                        equ 0xC214
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

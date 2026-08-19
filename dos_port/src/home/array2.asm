@@ -38,7 +38,6 @@ CallFunctionInTable:
     pop esi
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; IsInArray — pret home/array2.asm:IsInArray (shared home global).
 ; Search a $FF(-1)-terminated array at ESI (HL) for the value in AL (A).
@@ -66,7 +65,6 @@ IsInArray:
 .found:
     stc
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; IsInRestOfArray — mid-array entry for the IsInArray search (pret array2.asm).

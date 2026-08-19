@@ -23,8 +23,6 @@ bits 32
 %include "assets/audio_constants.inc"
 
 ; HRAM definitions for vending machine (pret ram/hram.asm:310-311, union at 0xFFDB)
-hVendingMachineItem   equ 0xFFDB
-hVendingMachinePrice  equ 0xFFDC
 
 section .text
 

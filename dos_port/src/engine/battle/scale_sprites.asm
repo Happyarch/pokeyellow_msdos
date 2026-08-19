@@ -99,12 +99,10 @@ ScalePixelsByTwo:
 ; ---------------------------------------------------------------------------
 section .data
 
-
 ; repeats each input bit twice, e.g. DuplicateBitsTable[%0101] = %00110011
 DuplicateBitsTable:
     db 0x00, 0x03, 0x0C, 0x0F, 0x30, 0x33, 0x3C, 0x3F
     db 0xC0, 0xC3, 0xCC, 0xCF, 0xF0, 0xF3, 0xFC, 0xFF
-
 
 section .bss
 hSpriteScaleCtr: resb 1                ; ScaleLastSpriteColumnByTwo inner counter

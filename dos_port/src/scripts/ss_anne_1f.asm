@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global SSAnne1FSailorText
 global SSAnne1FWaiterText
 global SSAnne1F_Script

@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global SeafoamIslandsB4FArticunoBattleText
 global SeafoamIslandsB4FArticunoText
 global SeafoamIslandsB4FBouldersSignText
@@ -61,11 +60,6 @@ TEXT_SEAFOAMISLANDSB4F_BOULDER2                equ 2
 TEXT_SEAFOAMISLANDSB4F_ARTICUNO                equ 3
 TEXT_SEAFOAMISLANDSB4F_BOULDERS_SIGN           equ 4
 TEXT_SEAFOAMISLANDSB4F_DANGER_SIGN             equ 5
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCoordIndex                                    equ 0xCD3D
-wSeafoamIslandsB4FCurScript                    equ 0xD667
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

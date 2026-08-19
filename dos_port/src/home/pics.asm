@@ -551,7 +551,6 @@ LoadEmbeddedBackPicFallback:
     call LoadMonBackPicToVRAM              ; decode → VRAM only; the slide-in places it
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; DebugLoadEmbeddedTrainerPic — DEBUG-HARNESS ONLY. Decodes the Bug Catcher trainer
 ; sprite (7x7 front-style, not scaled) to the enemy pic VRAM ($00) for the

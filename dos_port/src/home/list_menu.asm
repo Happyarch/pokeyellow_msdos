@@ -124,14 +124,6 @@ extern HandleItemListSwapping
 ; CANCELLED_MENU) now live canonically in gb_memmap.inc / gb_constants.inc (Wave 4).
 ;
 ; Local lowercase aliases onto existing port H_*/W_* symbols the code below uses:
-wStatusFlags5               equ wStatusFlags5
-hAutoBGTransferEnabled      equ hAutoBGTransferEnabled
-hJoyPressed                 equ hJoyPressed
-hJoy7                       equ hJoy7
-hItemPrice                  equ hItemPrice
-hMoney                      equ hMoney
-hDivideBCDDivisor           equ hDivideBCDDivisor
-hDivideBCDQuotient          equ hDivideBCDQuotient
 
 ; ── list-box geometry: REUSED from bag_menu.asm LIST_* (confirmed projection) ─
 LIST_STRIDE     equ 20          ; wTileMap box-relative stride (NOT port SCREEN_WIDTH=40)

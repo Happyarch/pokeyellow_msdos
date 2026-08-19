@@ -19,6 +19,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "assets/audio_constants.inc"   ; SFX_COLLISION / MUSIC_* (audio engine is live)
@@ -30,19 +31,8 @@ bits 32
 ; pokeyellow.sym (00:d73b, 00:d365) - not inferred. Defined locally because the
 ; transpiled elevator scripts define wWarpedFromWhichMap bare, so a central
 ; definition in gb_memmap.inc would collide with them.
-%ifndef wWarpedFromWhichMap
-wWarpedFromWhichMap equ 0xD73B
-%endif
-%ifndef wUnusedLastMapWidth
-wUnusedLastMapWidth equ 0xD365
-%endif
 
 ; file-local constants carried in with the routines that read them
-BIT_DUNGEON_WARP           equ 4
-BIT_NO_BATTLES                  equ 4        ; wStatusFlags4 bit 4
-BIT_ON_DUNGEON_WARP             equ 4        ; wStatusFlags3 bit 4
-BIT_PIKACHU_SPAWN_SURFING  equ 6
-BIT_WILD_ENCOUNTER_COOLDOWN     equ 0        ; wStatusFlags2 bit 0
 INDIGO_PLATEAU              equ 0x09
 MAP_ROCKET_HIDEOUT_B1F  equ 0xC7
 MAP_ROCKET_HIDEOUT_B2F  equ 0xC8
@@ -58,17 +48,9 @@ TILESET_SHIP        equ 13          ; S.S. Anne interior
 TILESET_SHIP_PORT   equ 14          ; Vermilion Port
 W_D472                      equ 0xD472
 W_PIKACHU_SPAWN_STATE_FLAGS equ 0xD471
-wStepCounter                    equ 0xD13A
 CEMETERY                    equ 15
-CONNECTION_NORTH           equ 1 << 3   ; wCurMapConnections bits (EAST=1,WEST=2,SOUTH=4,NORTH=8)
-CONNECTION_SOUTH           equ 1 << 2
 FACILITY                    equ 22
-MAP_NO_CONNECTION           equ 0xFF
 OVERWORLD_DOOR_TILE         equ 0x0B   ; pret: door tile in tileset 0 (PlayMapChangeSound)
-wNumSprites equ 0xD4E0
-BIT_ALWAYS_ON_BIKE          equ 5
-PAD_BUTTONS  equ 0x0F   ; A|B|SELECT|START (button byte low nibble)
-PAD_CTRL_PAD equ 0xF0   ; RIGHT|LEFT|UP|DOWN (D-pad high nibble)
 
 extern DelayFrame                    ; src/home/vblank.asm
 extern LoadGBPal                     ; src/home/fade.asm — reload rBGP/rOBP0/rOBP1
@@ -238,8 +220,6 @@ extern seed_party_done                    ; src/engine/overworld/overworld.asm (
 %endif
 %endif
 extern set_single_window                  ; src/ppu/ppu.asm
-
-
 
 ; ---------------------------------------------------------------------------
 ; EnterMap — faithful map (re-)entry. Pret ref: home/overworld.asm:1-41 (EnterMap).
@@ -1790,7 +1770,6 @@ NewBattle:
     clc
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; DoBikeSpeedup — bikes move twice as fast as walking (OW-A.6).
 ; Pret ref: home/overworld.asm:339 DoBikeSpeedup.
@@ -2003,7 +1982,6 @@ CheckMapConnections:
     stc                                        ; CF=1 → transition occurred
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; PlayMapChangeSound — on a warp, play the "go inside" jingle if the player
 ; walked through an overworld door tile, else "go outside".
@@ -2135,7 +2113,6 @@ HandleBlackOut:
     call PlayDefaultMusicFadeOutCurrent
     jmp SpecialEnterMap                 ; jp SpecialEnterMap (tail)
 
-
 ; ---------------------------------------------------------------------------
 ; StopMusic — arm the audio fade-out (AL = wAudioFadeOutControl), stop the music
 ; engine, wait for the fade to finish, then silence every channel.
@@ -2177,7 +2154,6 @@ StopMusic:
 .done:
     jmp StopAllSounds                       ; jp StopAllSounds (tail)
 
-
 ; ---------------------------------------------------------------------------
 ; HandleFlyWarpOrDungeonWarp — leave the current map by a SPECIAL warp (Fly, Dig,
 ; Escape Rope, or a dungeon warp-pad/hole), rather than by stepping on a warp tile.
@@ -2213,7 +2189,6 @@ HandleFlyWarpOrDungeonWarp:
     call BankswitchCommon               ; flat: records hLoadedROMBank (no MBC write)
     call PrepareForSpecialWarp
     jmp SpecialEnterMap                 ; jp SpecialEnterMap (tail)
-
 
 ; ---------------------------------------------------------------------------
 ; LeaveMapAnim — pret home/overworld.asm:778 (`farjp _LeaveMapAnim`). The bank
@@ -2312,7 +2287,6 @@ LoadTilesetTilePatternData:
     mov bx,  0x0600                                ; BX = BC = $600 bytes
     movzx eax, byte [ebp + wTilesetBank]         ; AL = bank (ignored)
     jmp FarCopyData                                ; tail call
-
 
 ; ---------------------------------------------------------------------------
 ; LoadTileBlockMap — faithful translation.
@@ -2437,7 +2411,6 @@ LoadTileBlockMap:
     pop esi
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; LoadNorthSouthConnectionsTileMap — faithful translation.
 ; Pret ref: home/overworld.asm:LoadNorthSouthConnectionsTileMap
@@ -2474,7 +2447,6 @@ LoadNorthSouthConnectionsTileMap:
     dec ecx
     jnz .row
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; LoadEastWestConnectionsTileMap — faithful translation.
@@ -2656,7 +2628,6 @@ SignLoop:
     jnz .signLoop
     clc
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; CollisionCheckOnLand — tile passability + sprite collision check.
@@ -2848,7 +2819,6 @@ CheckForTilePairCollisions:
     clc
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; LoadCurrentMapView — faithful translation.
 ; Pret ref: home/overworld.asm:LoadCurrentMapView
@@ -2945,8 +2915,6 @@ LoadCurrentMapView:
     pop edi
     pop esi
     ret
-
-
 
 ; ---------------------------------------------------------------------------
 ; AdvancePlayerSprite — home wrapper.
@@ -3124,7 +3092,6 @@ GetSimulatedInput:
     xor al, al                               ; pret: and a — AL=0, CF=0
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; CollisionCheckOnWater — collision check while surfing (OW-A.6).
 ; Pret ref: home/overworld.asm:1665 CollisionCheckOnWater.
@@ -3284,7 +3251,6 @@ LoadPlayerSpriteGraphicsCommon:
     mov ecx, PLAYER_HALF_BYTES
     rep movsb
     ret
-
 
 ; (IsTilePassable moved to its pret mirror home/copy2.asm as the trampoline to
 ;  _IsTilePassable, whose body now lives at ITS pret mirror
@@ -3478,7 +3444,6 @@ LoadMapHeader:
     pop eax
     ret
 
-
 CopyMapConnectionHeader:
     push ecx
     push edi
@@ -3570,7 +3535,6 @@ LoadMapData:
 .noMapMusic:
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; LoadScreenRelatedData — faithful translation.
 ; Pret ref: home/overworld.asm:LoadScreenRelatedData
@@ -3651,7 +3615,6 @@ ResetMapVariables:
 SwitchToMapRomBank:
     call BankswitchCommon                        ; record AL in hLoadedROMBank (flat no-op MBC)
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; IgnoreInputForHalfSecond — suppress player input for ~30 frames after a warp.
@@ -3854,7 +3817,6 @@ InitSprites:
     popad
     ret
 
-
 ; Zero sprite state data for slots 1-14 (slot 15 is Pikachu, left intact — pret).
 ZeroSpriteStateData:
     push eax
@@ -3871,7 +3833,6 @@ ZeroSpriteStateData:
     pop ecx
     pop eax
     ret
-
 
 ; Disable regular sprites: SPRITESTATEDATA1_IMAGEINDEX for slots 1-14.
 ; DIVERGENCE (harness-only; zero real-game effect): pret writes $ff here — a
@@ -3901,7 +3862,6 @@ DisableRegularSprites:
     pop esi
     pop ecx
     ret
-
 
 ; LoadSprite (pret home/overworld.asm:2218). In: ECX = wMapSpriteData/ExtraData byte
 ; index ((slot-1)*2); ESI = GB read ptr just past the text-id byte; temp1 = movement

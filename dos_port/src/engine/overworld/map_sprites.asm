@@ -30,6 +30,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "gb_constants.inc"  ; FIRST_INDOOR_MAP etc. (%define: no COFF symbol)
 %include "gb_macros.inc"
 %include "assets/event_constants.inc"
 %include "events.inc"
@@ -204,10 +205,7 @@ section .text
 ; this file provides the tile-pattern loader (from LoadMapData / .mapTransition /
 ; post-text reload), which mirrors pret's file split exactly.
 ;
-; pret has FIRST_INDOOR_MAP; the port's gb_memmap.inc names it FIRST_INDOOR_MAP_ID.
-%ifndef FIRST_INDOOR_MAP
-FIRST_INDOOR_MAP equ FIRST_INDOOR_MAP_ID
-%endif
+; pret's FIRST_INDOOR_MAP comes from gb_constants.inc (included above).
 ; ---------------------------------------------------------------------------
 
 ; ---------------------------------------------------------------------------
@@ -587,7 +585,6 @@ GetSpriteImageBaseOffset:
     pop ecx
     pop ebx
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; InitToggleableObjectFlags — seed global event/visibility flags to defaults.

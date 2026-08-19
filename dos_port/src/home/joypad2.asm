@@ -34,15 +34,6 @@ bits 32
 ; %ifndef-guarded so this file self-assembles AND coexists once root promotes
 ; them into gb_memmap.inc (see SUMMARY.md "missing memmap symbols").
 ; ---------------------------------------------------------------------------
-%ifndef hJoy5
-hJoy5  equ 0xFFB5      ; hJoy5 — OUTPUT: pressed buttons (usual format)
-%endif
-%ifndef hJoy6
-hJoy6  equ 0xFFB6      ; hJoy6 — flag: 0 = suppress repeat while A/B held
-%endif
-%ifndef hJoy7
-hJoy7  equ 0xFFB7      ; hJoy7 — flag: 0 = newly-pressed only, 1 = held+delay
-%endif
 
 ; ---------------------------------------------------------------------------
 ; Exported symbols
@@ -53,7 +44,6 @@ global WaitForTextScrollButtonPress
 
 extern HandleDownArrowBlinkTiming     ; src/home/window.asm — faithful ▼ blink (COUNT1==0 guard)
 extern DelayFrame                     ; src/home/vblank.asm
-
 
 section .text
 

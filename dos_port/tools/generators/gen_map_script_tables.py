@@ -355,7 +355,9 @@ def check_against_gb_memmap(cur_scripts):
     """
     inc = (ROOT / "dos_port" / "include" / "gb_memmap.inc").read_text()
     checked = 0
-    for m in re.finditer(r"^(w\w*CurScript)\s+equ\s+(0x[0-9A-Fa-f]+)", inc, re.M):
+    # accept `equ` and `%define` (gb_memmap.inc uses %define so constants emit no
+    # COFF symbol; see tools/generators/gen_pret_ram.py)
+    for m in re.finditer(r"^(?:%define\s+)?(w\w*CurScript)\s+(?:equ\s+)?(0x[0-9A-Fa-f]+)", inc, re.M):
         label, addr = m.group(1), int(m.group(2), 16)
         if label not in cur_scripts:
             continue

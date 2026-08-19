@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global Route2TradeHouseGameboyKidText
 global Route2TradeHouseScientistText
 global Route2TradeHouse_Script

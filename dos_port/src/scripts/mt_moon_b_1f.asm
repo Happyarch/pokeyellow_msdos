@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global MtMoonB1FUnusedText
 global MtMoonB1F_Script
 global MtMoonB1F_TextPointers
