@@ -405,6 +405,8 @@ WILDDATA_LENGTH         equ 1 + NUM_WILDMONS * 2   ; = 21 (rate + 10×(level,spe
 ; --- map / tileset constants used by wild-encounter generation ---
 ; FIRST_INDOOR_MAP = REDS_HOUSE_1F ($25); FOREST = Viridian Forest/Safari tileset.
 FIRST_INDOOR_MAP        equ 0x25
+LAST_MAP                equ 0xFF    ; constants/map_constants.asm:406 — warp destination meaning
+                                    ; "return to wLastMap" (the outside map you came from)
 FOREST                  equ 3
 
 ; --- MINIMIZE move id + stat-name length (stat-modifier effects, Stage 5) ---

@@ -962,6 +962,11 @@ CheckWarpTile:
     mov bl, [esi+2]             ; dest_warp_id (0-based index in dest map)
     mov [ebp + wDestinationWarpID], bl
     mov bl, [esi+3]             ; dest_map_id (0xFF = LAST_MAP)
+    ; pret WarpFound1 (home/overworld.asm:452): `ldh [hWarpDestinationMap], a` records
+    ; the RAW byte before any LAST_MAP resolution, and WarpFound2 branches on it to pick
+    ; the Pikachu spawn setter. The port resolves 0xFF here, so record it first or the
+    ; .goBackOutside case becomes indistinguishable from a warp naming wLastMap outright.
+    mov [ebp + hWarpDestinationMap], bl
     cmp bl, 0xFF
     jne .found
     mov bl, [ebp + wLastMap]  ; resolve LAST_MAP to the previous map

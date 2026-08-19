@@ -105,6 +105,10 @@ extern RunPaletteCommand                  ; src/home/palettes.asm
 extern SetMapSpecificScriptFlagsOnMapReload ; src/engine/overworld/specific_script_flags.asm
 extern UpdateMusic6Times                  ; src/home/audio.asm
 extern SchedulePikachuSpawnForAfterText   ; src/engine/pikachu/pikachu_follow.asm
+extern Func_fcc08                         ; src/engine/pikachu/pikachu_follow.asm
+extern SetPikachuSpawnOutside             ; src/engine/pikachu/pikachu_follow.asm
+extern SetPikachuSpawnWarpPad             ; src/engine/pikachu/pikachu_follow.asm
+extern SetPikachuSpawnBackOutside         ; src/engine/pikachu/pikachu_follow.asm
 extern h_load_sprite_temp1                ; src/engine/overworld/overworld.asm
 extern h_load_sprite_temp2                ; src/engine/overworld/overworld.asm
 extern hide_window                        ; src/ppu/ppu.asm
@@ -1456,6 +1460,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 
 .startWalk:
     mov byte [ebp + wWalkCounter], 8        ; begin an 8-frame step
+    call Func_fcc08                            ; callfar Func_fcc08 — push this step into Pikachu's follow FIFO
     jmp .moveAhead                             ; pret: jr .moveAhead2 — advance immediately, no extra delay
 
 .noDirection:
@@ -1547,8 +1552,25 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     cmp al, FIRST_INDOOR_MAP_ID
     jae .skipLastMapUpdate
     mov [ebp + wLastMap], al
-.skipLastMapUpdate:
     mov [ebp + wCurMap], bl
+    ; pret WarpFound2 outside branch (:476): SetPikachuSpawnOutside runs AFTER wCurMap
+    ; becomes the destination, so it reads the DESTINATION map.
+    call SetPikachuSpawnOutside
+    jmp .pikachuSpawnDone
+.skipLastMapUpdate:
+    ; pret .indoorMaps (:482): LAST_MAP destination -> .goBackOutside, else warp pad.
+    ; SetPikachuSpawnBackOutside runs BEFORE wCurMap is reassigned and therefore reads
+    ; the SOURCE map, while SetPikachuSpawnWarpPad runs after and reads the DESTINATION.
+    ; That ordering is load-bearing: both routines switch on wCurMap.
+    cmp byte [ebp + hWarpDestinationMap], LAST_MAP
+    jne .pikachuWarpPad
+    call SetPikachuSpawnBackOutside            ; reads wCurMap = source (pret :507)
+    mov [ebp + wCurMap], bl
+    jmp .pikachuSpawnDone
+.pikachuWarpPad:
+    mov [ebp + wCurMap], bl
+    call SetPikachuSpawnWarpPad                ; reads wCurMap = destination (pret :503)
+.pikachuSpawnDone:
     ; Update text table dispatch for the new map.
     movzx eax, byte [ebp + wCurMap]
     lea esi, [MapTextTablePointers]
@@ -1603,6 +1625,12 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov byte [ebp + hSCX], 0
     mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
 
+    ; pret home/overworld.asm:.loadNewMap (:648-651) — set the follower's
+    ; "crossed a connection" flag and request spawn state 2 BEFORE LoadMapHeader,
+    ; so the reloaded map re-places Pikachu beside the player. Deferred while the
+    ; follow engine was unported; live now (follower phases 1-4).
+    or byte [ebp + wPikachuOverworldStateFlags], (1 << 4) ; set 4, [hl]
+    mov byte [ebp + wPikachuSpawnState], 2                ; ld a, $2 / ld [wPikachuSpawnState], a
     call LoadMapHeader
     ; pret home/overworld.asm:.loadNewMap (:652-654): LoadMapHeader (loads the new map's
     ; wMapMusicSoundID via the MapSongBanks load above) then fade in that music. Real now
@@ -1610,8 +1638,6 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call PlayDefaultMusicFadeOutCurrent
     mov bh, SET_PAL_OVERWORLD
     call RunPaletteCommand
-    ; pret also does the Pikachu spawn set (wPikachuOverworldStateFlags bit 4 /
-    ;   wPikachuSpawnState = 2) at .loadNewMap — deferred with the Pikachu-follow engine.
     call InitMapSprites                        ; populate NPC slots for the new map
     ; Update text table dispatch for the new map.
     movzx eax, byte [ebp + wCurMap]

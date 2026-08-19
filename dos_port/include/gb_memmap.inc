@@ -946,6 +946,10 @@ hMapStride                    equ 0xFF8B     ; hMapStride (= map block row strid
 hPreviousTileset              equ 0xFF8B     ; hPreviousTileset (HRAM union with hMapStride)
 hROMBankTemp             equ 0xFF8B     ; golden 00:ff8b — PlayAnimation writes 0, unread ("nothing reads this"); no ROM banking in the flat model. UNION with hMapStride/hItemPrice at 0xFF8B; disjoint lifetimes (battle anim entry vs map load / item price).
 hBaseTileID              equ 0xFF8B     ; golden 00:ff8b — base tile ID added by CopyTileIDs (ram/hram.asm). Same $FF8B union as above, and pret intends it: PlayAnimation zeroes hROMBankTemp at entry, CopyPicTiles then writes hBaseTileID and CopyTileIDs reads it back — one byte, ordered, exactly as on hardware.
+hWarpDestinationMap      equ 0xFF8B     ; ram/hram.asm — SAME UNION byte as hBaseTileID/hOAMTile/
+                                        ; hROMBankTemp/hPreviousTileset/hRLEByteValue. pret writes it in
+                                        ; WarpFound1 and reads it a few instructions later in WarpFound2
+                                        ; (.indoorMaps/.goBackOutside); the port mirrors that short window.
 ; 0xFF8C is a UNION of hMapWidth / hNorthSouthConnectedMapWidth
 hMapWidth                     equ 0xFF8C     ; hMapWidth (= wCurMapWidth, stored for row-copy inner loop)
 hSerialConnectionStatus       equ 0xFFAA     ; hSerialConnectionStatus
