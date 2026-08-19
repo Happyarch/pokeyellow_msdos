@@ -943,6 +943,13 @@ section .text
 ; Returns CF=0 if no match.
 ; Pret ref: home/overworld.asm:CheckForWarpTile (approach)
 ; ---------------------------------------------------------------------------
+; pret RAM symbol gb_memmap.inc does not carry. Address is rgblink's, read from
+; pokeyellow.sym (00:d73a) — not inferred. Defined locally because the transpiled
+; elevator scripts define it bare, so a central definition would collide.
+%ifndef wWarpedFromWhichWarp
+wWarpedFromWhichWarp equ 0xD73A
+%endif
+
 CheckWarpTile:
     push eax
     push ecx
@@ -967,6 +974,17 @@ CheckWarpTile:
     ; the Pikachu spawn setter. The port resolves 0xFF here, so record it first or the
     ; .goBackOutside case becomes indistinguishable from a warp naming wLastMap outright.
     mov [ebp + hWarpDestinationMap], bl
+    ; pret WarpFound2 (home/overworld.asm:456-458):
+    ;   ld a, [wNumberOfWarps] / sub c / ld [wWarpedFromWhichWarp], a
+    ; pret does this in WarpFound2, but the port's warp scan lives HERE and owns the
+    ; counter, so the store belongs here. ECX is exactly pret's `c`: it is decremented
+    ; only on a NON-match (.next), so on a match it still counts the current entry.
+    ; The three elevator scripts (celadon_mart, rocket_hideout, silph_co) READ this;
+    ; before this store nothing in the port ever wrote it. AL/AH held the player's
+    ; Y/X for the scan and are dead here (EAX is restored by the pop at .found).
+    mov al, [ebp + wNumberOfWarps]
+    sub al, cl
+    mov [ebp + wWarpedFromWhichWarp], al
     cmp bl, 0xFF
     jne .found
     mov bl, [ebp + wLastMap]  ; resolve LAST_MAP to the previous map

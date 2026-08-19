@@ -26,6 +26,17 @@ bits 32
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (EVENT_2A7, OW-A.6)
 %include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over wEventFlags
 
+; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's, read from
+; pokeyellow.sym (00:d73b, 00:d365) - not inferred. Defined locally because the
+; transpiled elevator scripts define wWarpedFromWhichMap bare, so a central
+; definition in gb_memmap.inc would collide with them.
+%ifndef wWarpedFromWhichMap
+wWarpedFromWhichMap equ 0xD73B
+%endif
+%ifndef wUnusedLastMapWidth
+wUnusedLastMapWidth equ 0xD365
+%endif
+
 ; file-local constants carried in with the routines that read them
 BIT_DUNGEON_WARP           equ 4
 BIT_NO_BATTLES                  equ 4        ; wStatusFlags4 bit 4
@@ -109,6 +120,7 @@ extern Func_fcc08                         ; src/engine/pikachu/pikachu_follow.as
 extern SetPikachuSpawnOutside             ; src/engine/pikachu/pikachu_follow.asm
 extern SetPikachuSpawnWarpPad             ; src/engine/pikachu/pikachu_follow.asm
 extern SetPikachuSpawnBackOutside         ; src/engine/pikachu/pikachu_follow.asm
+extern IsPlayerStandingOnWarpPadOrHole     ; src/engine/overworld/player_animations.asm
 extern h_load_sprite_temp1                ; src/engine/overworld/overworld.asm
 extern h_load_sprite_temp2                ; src/engine/overworld/overworld.asm
 extern hide_window                        ; src/ppu/ppu.asm
@@ -1538,40 +1550,88 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call ExtraWarpCheck
     jnc OverworldLoop                         ; pret: jr nc, ...Retry2 (no other match)
 .warpTransition:
-    ; BL = resolved destination map; wDestinationWarpID = 0-based spawn warp index
-    ; Only update wLastMap when leaving an outdoor map (mirrors pret CheckIfInOutsideMap).
-    ; Indoor→indoor and indoor→outdoor transitions must NOT overwrite wLastMap or the
-    ; 0xFF warp-destination resolver will return an indoor map instead of Pallet Town.
-    ; ; DIVERGENCE: this is the `wCurMap < FIRST_INDOOR_MAP_ID` heuristic, NOT pret's
-    ; tileset-based CheckIfInOutsideMap (OVERWORLD/PLATEAU → outside). The two disagree
-    ; for edge maps (e.g. Route 23 / Indigo Plateau use the PLATEAU tileset but sit above
-    ; FIRST_INDOOR_MAP_ID), so those would be misclassified here.
-    ; ; TODO(edge-maps): switch this test to `call CheckIfInOutsideMap` (this file,
-    ; already global + faithful) when Route 23 / Plateau warping is exercised.
+    ; ---------------------------------------------------------------------
+    ; pret's WarpFound1 body (read the warp entry, store wDestinationWarpID and
+    ; hWarpDestinationMap) lives in CheckWarpTile here, because the port merged
+    ; pret's warp SCAN with its found-handling; this block is pret's WarpFound2.
+    ; TODO(pret-label): it should CARRY the name WarpFound2 (faithdiff reports that
+    ; label `missing`), but it sits mid-routine inside OverworldLoopLessDelay, so a
+    ; non-local label here rescopes every following `.local` and breaks the jumps
+    ; from above. Adopting the name needs the block hoisted out first.
+    ; pret WarpFound2 (home/overworld.asm:453-517), restored to its THREE
+    ; branches. This used to be one collapsed path with a
+    ; `wCurMap < FIRST_INDOOR_MAP_ID` heuristic standing in for
+    ; CheckIfInOutsideMap, which dropped pret's per-branch behaviour wholesale:
+    ; the wWarpedFromWhichWarp/Map stores (READ by the three elevator scripts,
+    ; and never written), wUnusedLastMapWidth, the ROCK_TUNNEL_1F fade, the
+    ; warp-pad/fly branch, and .goBackOutside's wMapPalOffset reset.
+    ;
+    ; BL = destination map with LAST_MAP already resolved by CheckWarpTile;
+    ; hWarpDestinationMap = the RAW destination byte, which is what pret
+    ; branches on.
+    ; ---------------------------------------------------------------------
+    ; ld a, [wCurMap] / ld [wWarpedFromWhichMap], a   (pret :459-460)
     mov al, [ebp + wCurMap]
-    cmp al, FIRST_INDOOR_MAP_ID
-    jae .skipLastMapUpdate
-    mov [ebp + wLastMap], al
-    mov [ebp + wCurMap], bl
-    ; pret WarpFound2 outside branch (:476): SetPikachuSpawnOutside runs AFTER wCurMap
-    ; becomes the destination, so it reads the DESTINATION map.
-    call SetPikachuSpawnOutside
-    jmp .pikachuSpawnDone
-.skipLastMapUpdate:
-    ; pret .indoorMaps (:482): LAST_MAP destination -> .goBackOutside, else warp pad.
-    ; SetPikachuSpawnBackOutside runs BEFORE wCurMap is reassigned and therefore reads
-    ; the SOURCE map, while SetPikachuSpawnWarpPad runs after and reads the DESTINATION.
-    ; That ordering is load-bearing: both routines switch on wCurMap.
-    cmp byte [ebp + hWarpDestinationMap], LAST_MAP
-    jne .pikachuWarpPad
-    call SetPikachuSpawnBackOutside            ; reads wCurMap = source (pret :507)
-    mov [ebp + wCurMap], bl
-    jmp .pikachuSpawnDone
-.pikachuWarpPad:
-    mov [ebp + wCurMap], bl
-    call SetPikachuSpawnWarpPad                ; reads wCurMap = destination (pret :503)
-.pikachuSpawnDone:
-    ; Update text table dispatch for the new map.
+    mov [ebp + wWarpedFromWhichMap], al
+    ; call CheckIfInOutsideMap / jr nz, .indoorMaps   (pret :461-462)
+    call CheckIfInOutsideMap                   ; ZF=1 -> outside (tileset OVERWORLD/PLATEAU)
+    jnz .indoorMaps
+
+; --- outside maps: cannot have the $FF destination ------------------- pret :463
+    mov al, [ebp + wCurMap]
+    mov [ebp + wLastMap], al                   ; ld [wLastMap], a
+    mov al, [ebp + wCurMapWidth]
+    mov [ebp + wUnusedLastMapWidth], al        ; ld [wUnusedLastMapWidth], a
+    mov al, [ebp + hWarpDestinationMap]        ; ldh a, [hWarpDestinationMap]
+    mov [ebp + wCurMap], al                    ; ld [wCurMap], a
+    cmp al, ROCK_TUNNEL_1F                     ; cp ROCK_TUNNEL_1F
+    jne .notRockTunnel
+    mov byte [ebp + wMapPalOffset], 6          ; ld a, $06 / ld [wMapPalOffset], a
+    call GBFadeOutToBlack
+.notRockTunnel:
+    call SetPikachuSpawnOutside                ; callfar SetPikachuSpawnOutside
+    call PlayMapChangeSound                    ; reads the SOURCE tileset - must precede
+    jmp .warpDone                              ;   LoadDestinationMapData (see .warpDone)
+
+; --- maps that can carry the $FF destination ------------------------- pret :482
+.indoorMaps:
+    mov al, [ebp + hWarpDestinationMap]        ; ldh a, [hWarpDestinationMap]
+    cmp al, LAST_MAP                           ; cp LAST_MAP
+    je .goBackOutside
+    mov [ebp + wCurMap], al                    ; ld [wCurMap], a
+    call IsPlayerStandingOnWarpPadOrHole        ; farcall IsPlayerStandingOnWarpPadOrHole
+    mov al, [ebp + wStandingOnWarpPadOrHole]
+    dec al                                     ; dec a - is the player on a warp pad?
+    jnz .notWarpPad
+    call LeaveMapAnim
+    or byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP)   ; set BIT_FLY_WARP, [hl]
+    jmp .skipMapChangeSound                    ; a warp pad plays NO map-change jingle
+.notWarpPad:
+    call PlayMapChangeSound
+.skipMapChangeSound:
+    ; res BIT_STANDING_ON_DOOR / res BIT_EXITING_DOOR   (pret :498-500)
+    and byte [ebp + wMovementFlags], ~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR)) & 0xFF
+    call SetPikachuSpawnWarpPad                ; callfar SetPikachuSpawnWarpPad
+    jmp .warpDone
+
+; --- $FF destination: return to the outside map we came from --------- pret :506
+.goBackOutside:
+    ; SetPikachuSpawnBackOutside runs BEFORE wCurMap is reassigned, so it reads the
+    ; SOURCE map. The other two setters run after and read the DESTINATION. Ordering
+    ; is load-bearing: all three switch on wCurMap.
+    call SetPikachuSpawnBackOutside            ; callfar SetPikachuSpawnBackOutside
+    mov al, [ebp + wLastMap]                   ; ld a, [wLastMap]
+    mov [ebp + wCurMap], al                    ; ld [wCurMap], a
+    call PlayMapChangeSound
+    mov byte [ebp + wMapPalOffset], 0          ; xor a / ld [wMapPalOffset], a
+
+; --- pret .done ------------------------------------------------------ pret :513
+.warpDone:
+    ; Port-specific arrival work. pret reaches the destination load through
+    ; EnterMap -> LoadMapData; the port stages part of it here. It sits AFTER the
+    ; branches because every branch has already called PlayMapChangeSound, which
+    ; must read the SOURCE map's tileset and door tile (OW-A.14) - loading the
+    ; destination first would make it read the wrong tileset.
     movzx eax, byte [ebp + wCurMap]
     lea esi, [MapTextTablePointers]
     mov esi, [esi + eax*4]
@@ -1582,32 +1642,20 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov byte [ebp + hSCY], 0
     mov byte [ebp + hSCX], 0
     mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
-    ; pret WarpFound2 plays the map-change jingle here (:477/498/510), BEFORE the
-    ; destination is loaded, so it reads the SOURCE map's tileset + door tile. Must
-    ; precede LoadDestinationMapData (which calls LoadMapHeader → destination tileset/
-    ; tilemap + music). OW-A.14. Warp-pad/fly skip branch is deferred, so the single
-    ; call here matches pret's 3 non-skip branches.
-    call PlayMapChangeSound
     call LoadDestinationMapData
     call InitMapSprites                        ; populate NPC slots for the new map
-    ; pret: home/overworld.asm:515 (WarpFound2.indoorMaps) — clear BIT_EXITING_DOOR,
-    ; then set BIT_STANDING_ON_DOOR to trigger RunNPCMovementScript→PlayerStepOutFromDoor
-    ; on the next idle frame. PlayerStepOutFromDoor re-sets BIT_EXITING_DOOR only if the
-    ; arrival tile is a door tile; stair arrivals leave it clear.
-    and byte [ebp + wMovementFlags], ~(1 << BIT_EXITING_DOOR)
+    ; set BIT_STANDING_ON_DOOR - have the player step out from the door, if any.
+    ; pret :513-514. The .indoorMaps branch cleared both door bits above; this set is
+    ; unconditional in pret and drives RunNPCMovementScript -> PlayerStepOutFromDoor on
+    ; the next idle frame. PlayerStepOutFromDoor re-sets BIT_EXITING_DOOR only when the
+    ; arrival tile really is a door, so stair arrivals leave it clear.
     or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_DOOR)
-    call IgnoreInputForHalfSecond
-    ; OW-A.4(b): re-enter EnterMap on every warp, faithful to pret WarpFound2.done
-    ; (home/overworld.asm:517, `jp EnterMap`). The pre-work above (wCurMap/wLastMap,
-    ; LoadDestinationMapData, view/scroll reset, door flags) mirrors WarpFound2's body;
-    ; EnterMap then re-runs the full reset ladder — wJoyIgnore gate, LoadMapData
-    ; (re-loads header/blocks/view/sprites for the new map), ClearVariablesOnEnterMap,
-    ; the fly/dungeon-warp & battle-return resets, UpdateSprites, CUR_MAP_LOADED_1/2 —
-    ; which the old `jmp OverworldLoop` silently skipped. The RunNPCMovementScript
-    ; PlayerStepOutFromDoor still fires on the first post-warp idle frame (BIT_STANDING_ON_DOOR
-    ; set above survives the LoadMapData reload). NOTE: the port's InitMapSprites here is
-    ; now partially redundant with LoadMapData's sprite load inside EnterMap — verified
-    ; harmless (idempotent slot repopulate), MCP live-warp confirmed.
+    call IgnoreInputForHalfSecond              ; call IgnoreInputForHalfSecond
+    ; OW-A.4(b): pret WarpFound2.done ends `jp EnterMap`. EnterMap re-runs the full
+    ; reset ladder - wJoyIgnore gate, LoadMapData, ClearVariablesOnEnterMap, the
+    ; fly/dungeon-warp and battle-return resets, UpdateSprites, CUR_MAP_LOADED_1/2.
+    ; InitMapSprites above is therefore partly redundant with LoadMapData's sprite
+    ; load, and is a harmless idempotent slot repopulate (MCP live-warp confirmed).
     jmp EnterMap
 
 .mapTransition:
