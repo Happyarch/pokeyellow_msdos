@@ -353,9 +353,6 @@ CHAR_1     equ 0xF7
 
 ; wChangeBoxSavedMapTextPointer (pret ram/wram.asm:998, union alias @ 0xCD3D).
 ; NEEDED in gb_memmap.inc — reported to root; local fallback until then.
-%ifndef wChangeBoxSavedMapTextPointer
-wChangeBoxSavedMapTextPointer equ 0xCD3D
-%endif
 
 ; ===========================================================================
 section .data

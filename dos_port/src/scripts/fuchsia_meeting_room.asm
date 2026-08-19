@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global FuchsiaMeetingRoomSafariZoneWorker1
 global FuchsiaMeetingRoomSafariZoneWorker2
 global FuchsiaMeetingRoomSafariZoneWorker3

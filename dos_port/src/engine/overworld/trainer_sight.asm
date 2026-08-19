@@ -53,30 +53,11 @@ global ReadTrainerScreenPosition
 ;   these four are NOT in gb_memmap.inc, so they do not show in an HRAM occupancy
 ;   scan of that file alone — scan the tree.
 ; ----------------------------------------------------------------------------
-%ifndef wSavedSpriteScreenY
-wSavedSpriteScreenY equ 0xD12F
-%endif
-%ifndef wSavedSpriteScreenX
-wSavedSpriteScreenX equ 0xD130
-%endif
-%ifndef wSavedSpriteMapY
-wSavedSpriteMapY    equ 0xD131
-%endif
-%ifndef wSavedSpriteMapX
-wSavedSpriteMapX    equ 0xD132
-%endif
-%ifndef hSpriteScreenYCoord
-hSpriteScreenYCoord equ 0xFF82
-%endif
-%ifndef hSpriteScreenXCoord
-hSpriteScreenXCoord equ 0xFF83
-%endif
-%ifndef hSpriteMapYCoord
-hSpriteMapYCoord    equ 0xFF84
-%endif
-%ifndef hSpriteMapXCoord
-hSpriteMapXCoord    equ 0xFF85
-%endif
+; pret addresses, from pokeyellow.sym (00:ffeb..00:ffee) — NOT inferred. These were
+; previously 0xFF82-0xFF85, which is inside pret's hDMARoutine and is not where any
+; of these live. That broke the GetSpritePosition1 / SetSpritePosition1 handoff: the
+; transpiled map scripts (oaks_lab, bills_house, viridian_city, pewter_city) read and
+; write 0xFFEB-0xFFEE, so a script stored a coord the accessor here never read back.
 
 ; Delta to hop from array1's XPIXELS[slot] to array2's MAPY[slot] (same slot).
 ; pret: `ld de, wSpritePlayerStateData2MapY - wSpritePlayerStateData1XPixels`

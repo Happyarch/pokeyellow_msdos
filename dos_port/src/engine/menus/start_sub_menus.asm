@@ -54,6 +54,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_text.inc"                   ; text_far / text_end + TX_* codes
 %include "assets/audio_constants.inc"    ; SFX_SWAP
@@ -189,9 +190,6 @@ TC_VCHARS1 equ 0x8800
 ; trainer-card union scratch (pret ram/wram.asm; sym-verified $CD3D block;
 ; the same union DrawBadges' wBadgeNumberTile/wBadgeNameTile reuse — both routines
 ; write every byte before reading it, no cross-dependency)
-wTrainerInfoTextBoxWidthPlus1     equ 0xCD3D
-wTrainerInfoTextBoxWidth          equ 0xCD3E
-wTrainerInfoTextBoxNextRowOffset  equ 0xCD3F
 TCSCR_W  equ 20                      ; stride-20 scratch (pret SCREEN_WIDTH)
 %define TC_HL(X,Y)  (wTileMap + (Y) * TCSCR_W + (X))
 ; number-print flag bytes (constants/gfx_constants.asm bit positions)
@@ -213,20 +211,12 @@ section .text
 ; --- field-move dispatch constants (not yet in the shared headers; the %ifndef +
 ; pret-source-comment pattern used by field_move_messages.asm) ---
 %ifndef BIT_BOULDERBADGE
-BIT_BOULDERBADGE equ 0               ; wObtainedBadges bits — constants/ram_constants.asm
-BIT_CASCADEBADGE equ 1
-BIT_THUNDERBADGE equ 2
-BIT_RAINBOWBADGE equ 3
-BIT_SOULBADGE    equ 4
 %endif
 %ifndef BIT_SURF_ALLOWED
-BIT_SURF_ALLOWED equ 1               ; wStatusFlags1 bit (constants/ram_constants.asm)
 %endif
 %ifndef SURFBOARD
-SURFBOARD    equ 0x07                ; constants/item_constants.asm
 %endif
 %ifndef ESCAPE_ROPE
-ESCAPE_ROPE  equ 0x1D                ; constants/item_constants.asm
 %endif
 %ifndef wd472
 wd472        equ 0xD472              ; ram/wram.asm:wd472 — surf state (1 = board, 2 = Pikachu)

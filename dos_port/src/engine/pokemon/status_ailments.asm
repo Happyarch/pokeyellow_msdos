@@ -25,8 +25,6 @@ PSN_BIT      equ 3
 BRN_BIT      equ 4
 FRZ_BIT      equ 5
 PAR_BIT      equ 6
-SLP_MASK     equ 0x07
-
 
 section .data
 ; 3-letter strings in the GB charmap ('A' = $80)

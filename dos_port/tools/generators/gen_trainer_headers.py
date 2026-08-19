@@ -47,6 +47,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_battle_text as gbt  # noqa: E402  (charmap/memmap/parse_body machinery)
+import gb_addrs
 
 ROOT    = Path(__file__).resolve().parents[3]
 ASSETS  = ROOT / "dos_port" / "assets"
@@ -56,7 +57,7 @@ SCRIPTS = ROOT / "scripts"
 TEXTS   = ROOT / "text"
 
 TH_SIZE      = 22
-WEVENTFLAGS  = 0xD746   # wEventFlags (dos_port/include/gb_memmap.inc canonical)
+WEVENTFLAGS  = gb_addrs.addr("wEventFlags")   # from the port's headers, never a literal
 
 
 # ---------------------------------------------------------------------------
@@ -238,7 +239,7 @@ def main() -> int:
         "",
     ]
 
-    global_labels = []      # table + per-trainer header labels (cross-file refs)
+    global_labels = []      # table, per-trainer header and battle-text stream labels
     body_blocks = []
     emitted_streams = set()
     truncated = []          # (stream_label, dropped asm/directive lines)
@@ -272,6 +273,12 @@ def main() -> int:
             if lbl in emitted_streams:
                 continue
             emitted_streams.add(lbl)
+            # The battle-text streams are cross-file references too: pret defines
+            # them in scripts/<Map>.asm, so the port's transpiled src/scripts/*.asm
+            # `extern`s them rather than re-emitting (see the "not re-emitted"
+            # comments there). Without a `global` the definition is invisible to
+            # the linker and every referencing script fails to link.
+            global_labels.append(lbl)
             far_lbl, extra = wrappers.get(lbl, (None, []))
             if far_lbl is None:
                 # A few maps wrap the after-battle text in a `text_asm` routine

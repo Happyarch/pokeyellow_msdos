@@ -44,6 +44,8 @@ bits 32
 %define PAL_CAVE            35
 %define PAL_MEWMON          16
 %define PAL_PIKACHUS_BEACH  37
+%define PAL_PIKACHU_PORTRAIT 38
+%define NAME_RATERS_HOUSE   0xe5
 ; pret writes `ld bc, wPartyMon2 - wPartyMon1`; this file defines its constants
 ; locally rather than including gb_constants.inc (same style as the PAL_* above).
 %define PARTYMON_STRUCT_LENGTH 0x2C
@@ -55,6 +57,8 @@ global SetPal_TitleScreen, SetPal_NidorinoIntro, SetPal_Generic, SetPal_Overworl
 global SetPal_PartyMenu, SetPal_PokemonWholeScreen, SetPal_GameFreakIntro
 global SetPal_TrainerCard, SetPal_PikachusBeach, SetPal_PikachusBeachTitle
 global YellowIntroPaletteAction
+global GetPal_Pikachu
+global LoadOverworldPikachuFrontpicPalettes
 
 extern IndexToPokedex               ; engine/menus/pokedex.asm — predef, wPokedexNum in place
 extern AddNTimes                    ; src/home/array.asm — ESI += BX * AL
@@ -327,6 +331,100 @@ set_pal_attr_table:
 SET_PAL_ATTR_TABLE_LEN equ $ - set_pal_attr_table
 section .text
 
+; ===========================================================================
+; GetPal_Pikachu — pret engine/gfx/palettes.asm:392.  "similar to SetPal_Overworld":
+; return, in AL, the palette id of the map Pikachu is standing on.  It is NOT the
+; same dispatch as SetPal_Overworld above — pret writes them differently (this one
+; sends NAME_RATERS_HOUSE and below to the cave palette) — so it is translated from
+; its own source rather than folded into that routine.
+;
+; Out: AL = palette id. Clobbers EAX only.
+; ===========================================================================
+GetPal_Pikachu:
+    mov al, [ebp + wCurMapTileset]
+    cmp al, CEMETERY
+    je .PokemonTowerOrAgatha                ; jr z
+    cmp al, CAVERN
+    je .caveOrBruno                         ; jr z
+    mov al, [ebp + wCurMap]
+    cmp al, FIRST_INDOOR_MAP                ; cp REDS_HOUSE_1F
+    jb .townOrRoute                         ; jr c
+    cmp al, CERULEAN_CAVE_2F
+    jb .normalDungeonOrBuilding             ; jr c
+    cmp al, NAME_RATERS_HOUSE
+    jb .caveOrBruno                         ; jr c
+    cmp al, LORELEIS_ROOM
+    je .Lorelei                             ; jr z
+    cmp al, BRUNOS_ROOM
+    je .caveOrBruno                         ; jr z
+    cmp al, TRADE_CENTER
+    je .battleOrTradeCenter                 ; jr z
+    cmp al, COLOSSEUM
+    je .battleOrTradeCenter                 ; jr z
+.normalDungeonOrBuilding:
+    mov al, [ebp + wLastMap]                ; the town or route this interior sits on
+.townOrRoute:
+    cmp al, NUM_CITY_MAPS                   ; cp SAFFRON_CITY + 1
+    jb .town                                ; jr c
+    mov al, PAL_ROUTE - 1
+.town:
+    inc al                                  ; a town's palette id is its map id + 1
+    ret
+
+.PokemonTowerOrAgatha:
+    mov al, PAL_GRAYMON - 1
+    jmp .town                               ; jr .town
+.caveOrBruno:
+    mov al, PAL_CAVE - 1
+    jmp .town
+.Lorelei:
+    xor al, al                              ; xor a ; PAL_PALLET - 1
+    jmp .town
+.battleOrTradeCenter:
+    mov al, PAL_GRAYMON - 1
+    jmp .town
+
+; ===========================================================================
+; LoadOverworldPikachuFrontpicPalettes — pret engine/gfx/palettes.asm:345.
+; The palette publisher for the pikapic portrait
+; (src/engine/pikachu/pikachu_pic_animation.asm).
+;
+; pret builds two SGB/CGB packets: the first puts GetPal_Pikachu's map palette in
+; entry 0 and PAL_PIKACHU_PORTRAIT in entry 1, the second re-sends the whole-screen
+; BLK packet.  The port has no packet path at all — RunPaletteCommand publishes
+; bg_slot_pal / obj_slot_pal / tile_pal directly — so the two packet sends become
+; the state they would have produced, exactly as SetPal_Overworld does for its own.
+;
+; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:LoadOverworldPikachuFrontpicPalettes; behavior=publishes the two slot palettes and the portrait tile-id band straight into bg_slot_pal, obj_slot_pal and tile_pal instead of assembling wPalPacket plus wPartyMenuBlkPacket and handing them to SendSGBPacket or InitCGBPalettes; evidence=the port has no SGB packet path and no per-cell BLK plane for a screen with per-element anchoring - RunPaletteCommand's own SetPal_* bodies all publish the slot tables directly - and the portrait cels are BG tile ids 0x80 and up which tile_pal is the only mechanism that can colour; lifetime=until backlog item 10b gives the port a per-cell attribute plane for anchored screens}
+;
+; All registers preserved.
+; ===========================================================================
+LoadOverworldPikachuFrontpicPalettes:
+    pushad
+    call GetPal_Pikachu                     ; entry 0 of pret's packet
+    mov [bg_slot_pal], al
+    mov [obj_slot_pal], al
+    mov byte [bg_slot_pal + 1], PAL_PIKACHU_PORTRAIT
+    mov byte [obj_slot_pal + 1], PAL_PIKACHU_PORTRAIT
+    ; Bind the portrait's tile ids to slot 1.  PikaPicAnimCommand_loadgfx writes
+    ; its cels to vNPCSprites + id*16, so ids 0x80-0xFF are tile-cache entries
+    ; 128-255; everything else keeps slot 0, which is what pret's PAL_SET 0,0,0,0
+    ; base packet leaves behind.
+    xor al, al
+    mov edi, tile_pal
+    mov ecx, 384
+    rep stosb
+    mov al, 1
+    mov edi, tile_pal + 0x80
+    mov ecx, 0x80
+    rep stosb
+    ; tile_pal's band is BAKED into tile_cache by rebuild_tile_cache, so a tile_pal
+    ; change needs the cache flag as well as the DAC flag.
+    mov byte [g_tilecache_dirty], 1
+    mov byte [g_pal_dirty], 1
+    popad
+    ret
+
 ; ---------------------------------------------------------------------------
 ; YellowIntroPaletteAction — pret engine/gfx/palettes.asm:YellowIntroPaletteAction
 ;
@@ -551,8 +649,37 @@ SetPal_Generic:                 mov al, SET_PAL_GENERIC
 ; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:SetPal_PartyMenu; behavior=applies only the static party-menu palette row and never the per-row HP-bar packet pret pairs with it; evidence=pret returns wPartyMenuBlkPacket alongside PalPacket_PartyMenu and SendSGBPackets feeds both to InitCGBPalettes on colour hardware while this port has no packet path and its per-tile-id tile_pal cannot colour six rows that share tile ids; lifetime=until backlog item 10b gives the party menu palette-able HP-bar tile ids}
 SetPal_PartyMenu:               mov al, SET_PAL_PARTY_MENU
                                 jmp SetPal_Screen
-SetPal_PokemonWholeScreen:      mov al, SET_PAL_POKEMON_WHOLE_SCREEN
-                                jmp SetPal_Screen
+; ---------------------------------------------------------------------------
+; SetPal_PokemonWholeScreen — pret engine/gfx/palettes.asm:SetPal_PokemonWholeScreen.
+;
+; Paint the WHOLE screen in one palette: PAL_BLACK (the evolution silhouette) or
+; the mon's own palette. pret copies PalPacket_Empty into wPalPacket, writes the
+; chosen id into wPalPacket + 1 (PAL_SET entry 0) and returns HL = wPalPacket /
+; DE = BlkPacket_WholeScreen for SendSGBPackets.
+;
+; In:  BL = pret's `c` — nonzero selects PAL_BLACK, zero selects the palette of
+;      [wWholeScreenPaletteMonSpecies]. RunPaletteCommand (home/palettes.asm)
+;      reads only BH, so BX arrives here as the caller left it.
+; Out: bg_slot_pal[0] / obj_slot_pal[0] = the chosen palette id, g_pal_dirty set.
+;      EBX preserved (SetPal_Screen is pushad/popad).
+;
+; DEVIATION{class=projection; pret=engine/gfx/palettes.asm:SetPal_PokemonWholeScreen; behavior=publishes the chosen palette id straight into bg_slot_pal and obj_slot_pal entry 0 after SetPal_Screen instead of copying PalPacket_Empty into wPalPacket and returning HL-DE for the SGB packet path, so faithdiff shows DROPPED CopyData and ADDED SetPal_Screen; evidence=the port has no wPalPacket-plus-SendSGBPackets stage - SetPal_Screen IS its realization of a PAL_SET packet plus its BlkPacket attribute plane, and SET_PAL_POKEMON_WHOLE_SCREEN already maps to the all-zero plane in set_pal_attr_table so slot 0 covers the whole screen exactly as BlkPacket_WholeScreen does on hardware, the same boundary SetPal_StatusScreen above already documents; lifetime=permanent, the port's palette-command boundary}
+SetPal_PokemonWholeScreen:
+    mov al, SET_PAL_POKEMON_WHOLE_SCREEN
+    call SetPal_Screen                  ; static row + the all-zero (whole-screen) plane
+    test bl, bl                         ; ld a, c / and a
+    mov al, PAL_BLACK                   ; ld a, PAL_BLACK — `mov` does NOT write ZF, so
+                                        ; the flag `test bl, bl` produced still stands
+                                        ; at the branch (pret leans on `ld` the same way)
+    jnz .next                           ; jr nz, .next
+    mov al, [ebp + wWholeScreenPaletteMonSpecies]
+    call DeterminePaletteIDOutOfBattle  ; pret's A-holds-the-species entry
+.next:
+    mov [bg_slot_pal + 0], al           ; ld [wPalPacket + 1], a — PAL_SET entry 0
+    mov [obj_slot_pal + 0], al
+    mov byte [g_pal_dirty], 1
+    ret
+
                                 ; pret SetPal_GameFreakIntro also publishes the
                                 ; default as SET_PAL_GENERIC.
 SetPal_GameFreakIntro:          mov byte [ebp + wDefaultPaletteCommand], SET_PAL_GENERIC

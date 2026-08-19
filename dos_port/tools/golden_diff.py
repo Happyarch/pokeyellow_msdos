@@ -2243,6 +2243,31 @@ SCENARIOS = {
 }
 
 
+
+# --- the prefix-sum WRAM expansion -----------------------------------------
+# Shared with gen_pret_ram.py / check_ram_addresses.py / check_ram_straddle.py.
+# tools/wram_growth.json is the single source.
+def _load_wram_growth():
+    import json as _json
+    try:
+        _g = _json.loads((Path(__file__).resolve().parent /
+                          "wram_growth.json").read_text())["growths"]
+    except FileNotFoundError:
+        return {}
+    return {int(e["pret"], 16): e["port_size"] - e["pret_size"] for e in _g}
+
+
+_WRAM_GROWTH = _load_wram_growth()
+_GB_OAM_ADDR = 0xFE00
+
+
+def _port_addr_of(pret_addr):
+    """Where a pret address lives in the port's expanded WRAM."""
+    if pret_addr >= _GB_OAM_ADDR:
+        return pret_addr
+    return pret_addr + sum(g for a, g in _WRAM_GROWTH.items() if a < pret_addr)
+
+
 def load_charmap(path):
     cmap = {}
     for line in Path(path).read_text(encoding="utf-8").splitlines():
@@ -2362,9 +2387,19 @@ def check_addresses(golden, port, scenario, cfg=None):
         if golden[name]["addr"] == FLAT_ADDR_SENTINEL or port[name]["addr"] == FLAT_ADDR_SENTINEL:
             continue  # composed region: gb_addr is the "not memory-mapped" sentinel
         g, p = golden[name], port[name]
-        if g["addr"] != p["addr"] or g["size"] != p["size"]:
-            bad.append(f"  {name}: golden ${g['addr']:04X}/{g['size']}B (pret .sym) != "
-                       f"port ${p['addr']:04X}/{p['size']}B (gb_memmap.inc)")
+        # The port is a Game Boy with MORE WRAM: a grown buffer keeps its pret
+        # address and everything above it shifts up by the growth
+        # (tools/wram_growth.json, docs/current_plan_wram_expansion.md). So the
+        # two sides are comparable when the port sits at the SHIFTED pret address,
+        # not the identical one. Sizes must still match exactly.
+        if g["addr"] != FLAT_ADDR_SENTINEL:
+            want = _port_addr_of(g["addr"])
+        else:
+            want = p["addr"]
+        if p["addr"] != want or g["size"] != p["size"]:
+            bad.append(f"  {name}: golden ${g['addr']:04X}/{g['size']}B (pret .sym) => "
+                       f"expected port ${want:04X}/{g['size']}B under the WRAM "
+                       f"expansion, dump says ${p['addr']:04X}/{p['size']}B")
     if bad:
         print(f"REGION LAYOUT MISMATCH ({scenario}) — the two sides disagree on where a region "
               f"lives, so the bytes are not comparable:")

@@ -28,9 +28,7 @@ section .text
 ; a mon levels up (Yellow re-places the overworld Pikachu).
 ; DoubleOrHalveSelectedStats is now REAL (engine/battle/core.asm, the pret mirror,
 ; over the two bodies in unused_stats_functions.asm) — no longer stubbed. It was
-; blocked on the in-battle ITEM menu, which landed with battle plan 2c.
-; TODO(pikachu):     RespawnOverworldPikachu — with the Yellow Pikachu-follow engine.
-global RespawnOverworldPikachu
+; RespawnOverworldPikachu retired — real body ported into src/engine/pikachu/respawn_overworld_pikachu.asm (follower_pikachu Phase 3).
 ; DrawPlayerHUDAndHPBar is now REAL (full body in engine/battle/core.asm since
 ; the 2026-08-13 alias-fork retirement) — no longer stubbed here (retired with
 ; the enemy-side DrawEnemyHUDAndHPBar pattern).
@@ -40,6 +38,3 @@ global RespawnOverworldPikachu
 ; (status_penalties.asm) are now REAL + linked via the move-effect scaffold — no longer
 ; stubbed here (the documented latent collision is resolved by deleting these stubs).
 ; LearnMoveFromLevelUp is now REAL (evos_moves.asm) — no longer stubbed.
-
-RespawnOverworldPikachu:
-    ret

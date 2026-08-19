@@ -20,7 +20,20 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern MtMoon1FHikerBattleText ; assets/trainer_headers.inc
+extern MtMoon1TrainerHeader0   ; assets/trainer_headers.inc
+extern MtMoon1TrainerHeader1   ; assets/trainer_headers.inc
+extern MtMoon1TrainerHeader2   ; assets/trainer_headers.inc
+extern MtMoon1TrainerHeader3   ; assets/trainer_headers.inc
+extern MtMoon1TrainerHeader4   ; assets/trainer_headers.inc
+extern MtMoon1TrainerHeader5   ; assets/trainer_headers.inc
+extern MtMoon1TrainerHeader6   ; assets/trainer_headers.inc
+extern MtMoon1TrainerHeaders   ; assets/trainer_headers.inc
 
 global MtMoon1FCooltrainerF1Text
 global MtMoon1FCooltrainerF2Text
@@ -46,10 +59,6 @@ extern MtMoon1TrainerHeader6
 extern MtMoon1TrainerHeaders
 extern TalkToTrainer
 extern TextScriptEnd
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wMtMoon1FCurScript                             equ 0xD605
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

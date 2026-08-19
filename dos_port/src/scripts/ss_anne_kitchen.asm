@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global SSAnneKitchenCook1Text
 global SSAnneKitchenCook2Text
 global SSAnneKitchenCook3Text

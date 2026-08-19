@@ -55,13 +55,6 @@ SCRIPT_HALLOFFAME_OAK_CONGRATULATIONS          equ 1
 SCRIPT_HALLOFFAME_RESET_EVENTS_AND_SAVE        equ 2
 TEXT_HALLOFFAME_OAK                            equ 1
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wHallOfFameCurScript                           equ 0xD64A
-wLancesRoomCurScript                           equ 0xD652
-wLastBlackoutMap                               equ 0xD718
-wLoreleisRoomCurScript                         equ 0xD64C
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

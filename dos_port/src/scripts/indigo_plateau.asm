@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global IndigoPlateau_Script
 global IndigoPlateau_TextPointers
 

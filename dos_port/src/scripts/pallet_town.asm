@@ -70,16 +70,10 @@ SCRIPT_PALLETTOWN_NOOP                 equ 9
 TEXT_PALLETTOWN_OAK                    equ 1
 TEXT_PALLETTOWN_OAK_COME_WITH_ME       equ 8
 PALLETTOWN_OAK                         equ 1
-TOGGLE_DAISY_SITTING                   equ 0x28
-TOGGLE_DAISY_WALKING                   equ 0x29
-EXCLAMATION_BUBBLE                     equ 0
 
-wSavedCoordIndex                       equ 0xCF0D
-wOakWalkedToPlayer                     equ 0xCF0E
-wSprite01StateData1MovementStatus      equ wSpriteStateData1 + 0x10 + SPRITESTATEDATA1_MOVEMENTSTATUS
-wSprite01StateData1FacingDirection     equ wSpriteStateData1 + 0x10 + SPRITESTATEDATA1_FACINGDIRECTION
-wSprite01StateData2MapY                equ wSpriteStateData2 + 0x10 + SPRITESTATEDATA2_MAPY
-wSprite01StateData2MapX                equ wSpriteStateData2 + 0x10 + SPRITESTATEDATA2_MAPX
+; pret UNIONS wSavedCoordIndex / wOakWalkedToPlayer / wNextSafariZoneGateScript onto
+; ONE byte at 0xCF0D (ram/wram.asm:1183-1185). This said 0xCF0E, which is
+; wTilePlayerStandingOn — so the script read the wrong byte and corrupted that one.
 
 ; ---------------------------------------------------------------------------
 section .data

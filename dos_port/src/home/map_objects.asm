@@ -27,9 +27,10 @@
 ;                                  src/home/names.asm and src/home/item.asm).
 ;
 ; Routine order follows pret home/map_objects.asm. SetSpriteFacingDirection and
-; family and the GetPointerWithinSpriteStateData family landed 2026-08-17. The
-; remaining pret labels in that file (IsSurfingPikachuInParty — a stub;
-; DisplayPokedex, which needs _DisplayPokedex; SetSpriteMovementBytesToFE;
+; family and the GetPointerWithinSpriteStateData family landed 2026-08-17.
+; DisplayPokedex (-> _DisplayPokedex, src/engine/events/display_pokedex.asm)
+; landed 2026-08-19 (fossil/pokedex spec). The remaining pret labels in that
+; file (IsSurfingPikachuInParty — a stub; SetSpriteMovementBytesToFE;
 ; SpriteFunc_34a1, whose HRAM-union question is documented at its site below) are
 ; not translated anywhere in the port and are deliberately NOT invented here.
 ;
@@ -40,7 +41,9 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_macros.inc"
+%include "gb_constants.inc"
 
 global DecodeArrowMovementRLE
 global TextScript_ItemStoragePC
@@ -49,6 +52,7 @@ global TextScript_GameCornerPrizeMenu
 global TextScript_PokemonCenterPC
 global StartSimulatingJoypadStates
 global IsItemInBag
+global IsSurfingPikachuInParty
 global ArePlayerCoordsInArray
 global CheckCoords
 global CheckBoulderCoords
@@ -60,17 +64,21 @@ global GetPointerWithinSpriteStateData1
 global GetPointerWithinSpriteStateData2
 global SetSpriteFacingDirection
 global SetSpriteFacingDirectionAndDelay
+global SpriteFunc_34a1
+global DisplayPokedex
 
 extern FillMemory                 ; home/copy2.asm — ESI=dest, BX=count, AL=val (ESI preserved)
 extern SaveScreenTilesToBuffer2         ; src/home/tilemap.asm
 extern HoldTextDisplayOpen              ; home/text_script.asm
 extern PlayerPC                         ; engine/menus/players_pc.asm
 extern BillsPC_                         ; engine/pokemon/bills_pc.asm (real box UI)
-extern CeladonPrizeMenu                 ; engine/menus/main_menu_stubs.asm
+extern CeladonPrizeMenu                 ; src/engine/events/prize_menu.asm
 extern ActivatePC                       ; engine/menus/pc.asm
 extern GetQuantityOfItemInBag   ; src/engine/items/get_bag_item_quantity.asm (predef)
 extern DelayFrames               ; src/home/delay.asm (BL = frame count)
 extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
+extern IsStarterPikachuAliveInOurParty ; src/engine/pikachu/pikachu_status.asm
+extern _DisplayPokedex                 ; src/engine/events/display_pokedex.asm
 
 ; ---------------------------------------------------------------------------
 ; Scaffold memmap symbol not yet in gb_memmap.inc (carried in with CheckCoords).
@@ -190,6 +198,52 @@ IsItemInBag:
     call GetQuantityOfItemInBag      ; → BH = quantity of that item in the bag
     mov al, bh                       ; ld a, b
     and al, al                       ; and a  (ZF=1 ⇒ qty 0 ⇒ not in bag)
+    ret
+
+; ---------------------------------------------------------------------------
+; IsSurfingPikachuInParty — pret home/map_objects.asm:IsSurfingPikachuInParty.
+; Sets BIT_PIKACHU_SPAWN_SURFING in wPikachuSpawnStateFlags if any Pikachu with
+; Surf is in party. Sets BIT_PIKACHU_SPAWN_STARTER if starter Pikachu is in party.
+; ---------------------------------------------------------------------------
+IsSurfingPikachuInParty:
+    and byte [ebp + wPikachuSpawnStateFlags], ~((1 << BIT_PIKACHU_SPAWN_STARTER) | (1 << BIT_PIKACHU_SPAWN_SURFING)) & 0xFF
+    mov esi, wPartyMon1
+    mov cl, PARTY_LENGTH
+    mov bh, SURF
+.loop:
+    mov al, [ebp + esi]                                 ; ld a, [hl]
+    cmp al, STARTER_PIKACHU                             ; cp STARTER_PIKACHU
+    jne .notPikachu
+    ; check if pikachu has surf as one of its moves (moves at offset 8..11)
+    cmp byte [ebp + esi + 8], bh
+    je .hasSurf
+    cmp byte [ebp + esi + 9], bh
+    je .hasSurf
+    cmp byte [ebp + esi + 10], bh
+    je .hasSurf
+    cmp byte [ebp + esi + 11], bh
+    jne .noSurf
+.hasSurf:
+    or byte [ebp + wPikachuSpawnStateFlags], (1 << BIT_PIKACHU_SPAWN_SURFING)
+.noSurf:
+.notPikachu:
+    add esi, wPartyMon2 - wPartyMon1
+    dec cl
+    jnz .loop
+    call .checkForStarter
+    ret
+
+.checkForStarter:
+    push esi
+    push ebx
+    push ecx
+    call IsStarterPikachuAliveInOurParty
+    pop ecx
+    pop ebx
+    pop esi
+    jnc .doneStarter
+    or byte [ebp + wPikachuSpawnStateFlags], (1 << BIT_PIKACHU_SPAWN_STARTER)
+.doneStarter:
     ret
 
 ; ---------------------------------------------------------------------------
@@ -370,6 +424,16 @@ _GetPointerWithinSpriteStateData:
     ret
 
 ; ---------------------------------------------------------------------------
+; DisplayPokedex — pret home/map_objects.asm:126-128.
+; In: AL = pokédex number (1-based). Out: farjp into _DisplayPokedex
+; (engine/events/display_pokedex.asm) after stashing it in wPokedexNum.
+; ---------------------------------------------------------------------------
+DisplayPokedex:
+    mov [ebp + wPokedexNum], al         ; ld [wPokedexNum], a
+; DEVIATION{class=banking; pret=home/map_objects.asm:DisplayPokedex; behavior=jmp directly to _DisplayPokedex instead of the pret farjp; evidence=the DPMI model is flat so every routine is always addressable and Bankswitch has no port counterpart, same convention every other farjp site in this tree uses; lifetime=permanent flat-memory boundary}
+    jmp _DisplayPokedex                 ; farjp _DisplayPokedex
+
+; ---------------------------------------------------------------------------
 ; SetSpriteFacingDirection / SetSpriteFacingDirectionAndDelay — pret
 ; home/map_objects.asm. Write [hSpriteFacingDirection] into sprite
 ; [hSpriteIndex]'s facing-direction member; the ...AndDelay form then waits 6
@@ -388,15 +452,27 @@ SetSpriteFacingDirection:
     ret
 
 ; ---------------------------------------------------------------------------
-; SpriteFunc_34a1 — pret home/map_objects.asm — NOT PORTED, deliberately.
-; pewter_city.asm externs it (its only caller). The body reads [hSpriteOffset] and
-; [hSpriteHeight], which in pret are HRAM bytes UNIONed with the pic decompressor's
-; (ram/hram.asm:44-47, hSpriteInterlaceCounter/hSpriteWidth/hSpriteHeight/
-; hSpriteOffset) — the reuse is deliberate on the GB. The port instead keeps those
-; two as flat .bss locals inside src/home/pics.asm (pics.asm:690-692), addressed
-; natively rather than through EBP, so they are NOT the same storage and are not
-; even visible here. Which storage SpriteFunc_34a1 should read is a real design
-; question about that deviation, not something to guess: a wrong choice assembles
-; clean and corrupts a sprite field. Left undefined so the reference stays a link
-; error rather than a plausible wrong lowering.
+; SpriteFunc_34a1 — pret home/map_objects.asm:SpriteFunc_34a1
+; Computes sprite VRAM/image index offset based on sprite's image base offset
+; in wSpriteStateData2 and stores into wSpriteStateData1 image index.
+; Reads [hSpriteIndex] ($FF8C, aliased as hSpriteHeight in pret union) and
+; [hSpriteImageIndex] ($FF8D, aliased as hSpriteOffset in pret union).
 ; ---------------------------------------------------------------------------
+SpriteFunc_34a1:
+    mov al, [ebp + hSpriteIndex]        ; ldh a, [hSpriteIndex]
+    rol al, 4                           ; swap a
+    add al, SPRITESTATEDATA2_IMAGEBASEOFFSET ; add $e
+    movzx esi, al                       ; ld l, a / ld h, $c2
+    add esi, wSpriteStateData2
+    mov cl, [ebp + esi]                 ; ld c, [hl]
+    dec cl                              ; dec c
+    rol cl, 4                           ; swap c
+    mov al, [ebp + hSpriteImageIndex]   ; ldh a, [hSpriteOffset]
+    add cl, al                          ; add c / ld c, a
+    mov al, [ebp + hSpriteIndex]        ; ldh a, [hSpriteHeight]
+    rol al, 4                           ; swap a
+    add al, SPRITESTATEDATA1_IMAGEINDEX ; add $2
+    movzx esi, al                       ; ld l, a / dec h ($c1)
+    add esi, wSpriteStateData1
+    mov [ebp + esi], cl                 ; ld [hl], c
+    ret

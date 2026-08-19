@@ -49,9 +49,6 @@ extern GetTileAndCoordsInFrontOfPlayer  ; src/engine/overworld/player_state.asm 
 extern UpdateCinnabarGymGateTileBlocks_ ; src/engine/overworld/hidden_object_stubs.asm (stub)
 
 ; --- Deep-tier memmap symbols — golden sym-verified (were PLACEHOLDER) ---
-%ifndef hSpriteIndex
-hSpriteIndex              equ 0xFF8C   ; hSpriteIndex (golden 00:ff8c)
-%endif
 %ifndef H_ITEM_ALREADY_FOUND
 H_ITEM_ALREADY_FOUND       equ 0xFFEB   ; hItemAlreadyFound (golden 00:ffeb)
 %endif
@@ -65,7 +62,6 @@ H_INTERACTED_WITH_BOOKSHELF equ 0xFFDB  ; hInteractedWithBookshelf (golden 00:ff
 W_HIDDEN_EVENT_FUNCTION_ROM_BANK equ 0xCD3E ; wHiddenEventFunctionRomBank (golden 00:cd3e)
 %endif
 %ifndef W_SPRITE_PLAYER_FACING_DIR
-W_SPRITE_PLAYER_FACING_DIR equ 0xC109   ; wSpritePlayerStateData1FacingDirection
 %endif
 
 extern CheckForHiddenEvent               ; src/engine/overworld/hidden_events.asm

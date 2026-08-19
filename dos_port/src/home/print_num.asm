@@ -59,7 +59,6 @@ FarPrintText:
     call BankswitchCommon
     ret
 
-
 PrintNumber:
     push ebx
     push edi

@@ -45,6 +45,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 
@@ -92,12 +93,6 @@ OPT_PRINTER_NORMAL    equ 2
 OPT_PRINTER_DARKER    equ 3
 OPT_PRINTER_DARKEST   equ 4
 NUM_PRINTER_OPTS      equ 5
-
-PRINTER_BRIGHTNESS_LIGHTEST equ 0x00
-PRINTER_BRIGHTNESS_LIGHTER  equ 0x20
-PRINTER_BRIGHTNESS_NORMAL   equ 0x40
-PRINTER_BRIGHTNESS_DARKER   equ 0x60
-PRINTER_BRIGHTNESS_DARKEST  equ 0x7F
 
 GBSCR_W   equ 20        ; pret SCREEN_WIDTH — stride of the stride-20 scratch
 TILE_SPC       equ 0x7F      ; ' ' blank tile

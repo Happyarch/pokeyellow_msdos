@@ -1,9 +1,21 @@
 ; copy.asm — mirror of pret home/copy.asm.
 ;
-; Holds three of that file's four pret labels: CopyData, FarCopyData and
-; CopyVideoDataDoubleAlternate. The fourth, CopyVideoDataAlternate, is unported
-; (status `missing`) — the port's usual VRAM-write primitive is CopyVideoData, a
-; home/vcopy.asm label in src/home/vcopy.asm, and nothing calls it.
+; Holds ALL FOUR of that file's pret labels: CopyData, FarCopyData,
+; CopyVideoDataAlternate and CopyVideoDataDoubleAlternate.
+;
+; CORRECTED 2026-08-18. This header used to say CopyVideoDataAlternate was
+; "unported (status `missing`) ... and nothing calls it". Both halves were false,
+; and were contradicted by this file's own body ~120 lines below and by four live
+; call sites: pikachu_movement.asm:986,1003,1013 (the follower VRAM loaders) and
+; pikachu_pic_animation.asm:887 (RequestPikaPicAnimGFX). It landed with the
+; follower-Pikachu port and the header was never updated. Left uncorrected it was
+; the worst kind of stale comment — a confident negative claim about the file it
+; sits at the top of, which is exactly what the Evidence policy in CLAUDE.md
+; forbids asserting without checking.
+;
+; The port's usual VRAM-write primitive is still CopyVideoData (a home/vcopy.asm
+; label, in src/home/vcopy.asm); CopyVideoDataAlternate tail-jumps to it on both
+; branches, which is how callers get g_tilecache_dirty armed for free.
 ; CopyVideoDataDoubleAlternate landed when LoadPikachuShadowIntoVRAM
 ; (src/engine/pikachu/pikachu_movement.asm) was ported — that routine tail-jumps
 ; to it, so it is a real caller, not a speculative addition.
@@ -42,9 +54,11 @@ bits 32
 global CopyData
 global FarCopyData
 global CopyVideoDataDoubleAlternate
+global CopyVideoDataAlternate
 
 extern CopyVideoDataDouble          ; src/home/copy2.asm
 extern FarCopyDataDouble            ; src/home/copy2.asm
+extern CopyVideoData                ; src/home/copy2.asm
 
 LCDC_ON_BIT equ 7                   ; B_LCDC_ENABLE (same spelling as src/home/lcd.asm)
 
@@ -118,3 +132,17 @@ CopyVideoDataDoubleAlternate:
                                                  ;   BL=$FF → $7F8, no wrap either side.
     xchg esi, edx                                ; push de / ld d,h / ld e,l / pop hl
     jmp FarCopyDataDouble                        ; jp FarCopyDataDouble
+
+; ---------------------------------------------------------------------------
+; CopyVideoDataAlternate — pret home/copy.asm:CopyVideoDataAlternate.
+;
+; In:  ESI = destination GB VRAM offset (HL)
+;      EDX = source FLAT pointer (DE)
+;      BH  = source bank (NO-OP under the flat model)
+;      BL  = 2bpp tile count
+; ---------------------------------------------------------------------------
+CopyVideoDataAlternate:
+    test byte [ebp + IO_LCDC], 1 << LCDC_ON_BIT  ; ldh a,[rLCDC] / bit B_LCDC_ENABLE,a
+    jnz CopyVideoData                            ; jp nz, CopyVideoData
+    jmp CopyVideoData                            ; flat model: same copy + tilecache dirty
+

@@ -12,18 +12,9 @@ section .text
 ; TrainerNamePointers name table ... not yet generated") was stale: the names are
 ; generated into assets/trainer_names.inc by gen_trainer_names.py.
 
-; PrintSendOutMonMessage — pret engine/battle/common_text.asm:PrintSendOutMonMessage.
-; Prints the send-out line, choosing among Go/DoIt/Getm/EnemysWeak/SoDo text by the
-; enemy mon's remaining HP percentage ((curHP * 25) / (maxHP / 4)), and latches
-; wLastSwitchInEnemyMonHP. The real body needs those five text streams as generated
-; Tier-1 data (the two-tier rule forbids hand-encoding them here) plus the
-; hMultiplicand/hDivisor Multiply/Divide plumbing. Restored as a call site by
-; SendOutMon (plan item 1f); while stubbed the send-out prints no message and
-; wLastSwitchInEnemyMonHP keeps its prior value.
-; STUB{label=PrintSendOutMonMessage; class=stub; pret=engine/battle/common_text.asm:PrintSendOutMonMessage; behavior=return without printing the send-out message or latching wLastSwitchInEnemyMonHP; evidence=label DB reports PrintSendOutMonMessage missing and its four outcome streams GoText DoItText GetmText and EnemysWeakText still have no generated Tier-1 asset because collect_wrappers deliberately skips the text_far plus text_asm shape - only PlayerMon1Text became available when common_text.asm entered BATTLE_SRC on 2026-08-12; lifetime=until the send-out text is generated and the real body is ported under battle_completion 1d}
-global PrintSendOutMonMessage
-PrintSendOutMonMessage:
-    ret
+; PrintSendOutMonMessage — STUB RETIRED 2026-08-18 (battle plan sendout messages).
+; The real body is in its pret-mirrored home, src/engine/battle/common_text.asm,
+; together with GoText, DoItText, GetmText, EnemysWeakText, and PrintPlayerMon1Text.
 
 ; StarterPikachuBattleEntranceAnimation — pret
 ; engine/battle/pikachu_entrance_anim.asm:StarterPikachuBattleEntranceAnimation.

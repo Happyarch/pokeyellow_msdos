@@ -112,9 +112,6 @@ extern g_tilecache_dirty               ; ppu/ppu.asm — VRAM tile writes must s
 ; per the two-tier rule — these are jump-table indices / UI enums, not data).
 ; pret ref: constants/menu_constants.asm, constants/text_constants.asm
 ; ---------------------------------------------------------------------------
-NAME_PLAYER_SCREEN     equ 0
-NAME_RIVAL_SCREEN      equ 1
-NAME_MON_SCREEN        equ 2
 PLAYER_NAME_LENGTH     equ 8
 
 ; pret ref: constants/palette_constants.asm

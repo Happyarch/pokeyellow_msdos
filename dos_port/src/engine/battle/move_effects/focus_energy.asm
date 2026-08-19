@@ -8,7 +8,6 @@ extern DelayFrames
 extern PrintButItFailedText_
 extern GettingPumpedText
 
-
 section .text
 global FocusEnergyEffect_
 

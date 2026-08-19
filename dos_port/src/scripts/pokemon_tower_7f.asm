@@ -85,16 +85,6 @@ TEXT_POKEMONTOWER7F_TEXT4                      equ 4
 TEXT_POKEMONTOWER7F_TEXT5                      equ 5
 TEXT_POKEMONTOWER7F_TEXT6                      equ 6
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hWarpDestinationMap                            equ 0xFF8B
-wPokemonTower7FCurScript                       equ 0xD62F
-wSprite01StateData1FacingDirection             equ 0xC119
-wSprite01StateData1MovementStatus              equ 0xC111
-wSprite02StateData1FacingDirection             equ 0xC129
-wSprite02StateData1MovementStatus              equ 0xC121
-wSpritePlayerStateData1FacingDirection         equ 0xC109
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

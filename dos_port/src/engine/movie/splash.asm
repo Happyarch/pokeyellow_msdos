@@ -34,9 +34,6 @@ extern PlayIntro                     ; engine/movie/intro.asm — full boot cine
 
 ; wMoveDownSmallStarsOAMCount (pokeyellow.sym 00:cd3d) — not yet in gb_memmap.inc;
 ; report to root for promotion. %ifndef-guarded so promotion is a no-op here.
-%ifndef wMoveDownSmallStarsOAMCount
-wMoveDownSmallStarsOAMCount equ 0xCD3D
-%endif
 
 section .text
 
@@ -265,7 +262,6 @@ MoveDownSmallStars:
     jnz .loop
 .done:
     ret
-
 
 %ifdef DEBUG_CINEMATIC_SPLASH
 ; ---------------------------------------------------------------------------

@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global OfficerJennyText1
 global OfficerJennyText2
 global OfficerJennyText3
@@ -83,16 +82,6 @@ SCRIPT_VERMILIONCITY_PLAYER_EXIT_SHIP          equ 2
 SCRIPT_VERMILIONCITY_PLAYER_MOVING_UP2         equ 3
 SCRIPT_VERMILIONCITY_PLAYER_ALLOWED_TO_PASS    equ 4
 TEXT_VERMILIONCITY_SAILOR1                     equ 3
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wAddedToParty                                  equ 0xCCD3
-wBeatGymFlags                                  equ 0xD729
-wFirstLockTrashCanIndex                        equ 0xD742
-wPikachuMapScriptFlags                         equ 0xD492
-wSavedCoordIndex                               equ 0xCF0D
-wSpritePlayerStateData1FacingDirection         equ 0xC109
-wVermilionCityCurScript                        equ 0xD629
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

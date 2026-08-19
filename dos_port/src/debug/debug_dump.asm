@@ -21,6 +21,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_macros.inc"
 %include "gb_constants.inc"
 %include "coords.inc"                   ; BCOORD — battle-frame projection (DEBUG_ANIM_SHOW label)
@@ -118,6 +119,16 @@ global RunSurfingPikachuTest
 %ifdef DEBUG_SURFING_PIKACHU_INTRO
 global SurfingPikachuIntroDebugFrameHook
 %endif
+%endif
+%ifdef DEBUG_PIKAPIC
+extern PrepareNewGameDebug
+extern pikapic_window_enter                 ; src/engine/pikachu/pikachu_pic_animation.asm
+extern PlacePikapicTextBoxBorder            ; src/engine/pikachu/pikachu_pic_animation.asm
+extern LoadOverworldPikachuFrontpicPalettes ; src/engine/gfx/palettes.asm
+extern ResetPikaPicAnimBuffer               ; src/engine/pikachu/pikachu_pic_animation.asm
+extern LoadCurrentPikaPicAnimScriptPointer  ; src/engine/pikachu/pikachu_pic_animation.asm
+extern ExecutePikaPicAnimScript             ; src/engine/pikachu/pikachu_pic_animation.asm
+global RunPikaPicTest
 %endif
 %ifdef DEBUG_LEDGE
 extern PrepareNewGameDebug
@@ -1405,15 +1416,15 @@ fseam: db "SEAMLOG.BIN", 0
 ;   $D31C bag: MASTER_BALL's qty must drop 99 → 98 (and only that slot changes)
 ;   $DA7F wBoxCount (must stay 0: the party had a free slot)
 windows:
-    dd 0xD11B    ; wCapturedMonSpecies / wPokeBallAnimData
-    dd 0xD162    ; wPartyCount + wPartySpecies
-    dd 0xD246    ; party mon 6 struct = wPartyMon1 + 5*44 ($D16A + 220) — the caught mon
-    dd 0xD31C    ; wNumBagItems + (id,qty) pairs
-    dd 0xDA7F    ; wBoxCount + wBoxSpecies
-    dd 0xCFE4    ; wEnemyMon (species/HP/status — LoadEnemyMonData round-trip)
-    dd 0xD2F6    ; wPokedexOwned (the caught species' bit must be set)
-    dd 0xD309    ; wPokedexSeen
-    dd 0xD11B    ; overview repeat
+    dd wCapturedMonSpecies    ; wCapturedMonSpecies / wPokeBallAnimData
+    dd wPartyCount    ; wPartyCount + wPartySpecies
+    dd wPartyMon6    ; party mon 6 struct = wPartyMon1 + 5*44 ($D16A + 220) — the caught mon
+    dd wNumBagItems    ; wNumBagItems + (id,qty) pairs
+    dd wBoxCount    ; wBoxCount + wBoxSpecies
+    dd wEnemyMon    ; wEnemyMon (species/HP/status — LoadEnemyMonData round-trip)
+    dd wPokedexOwned    ; wPokedexOwned (the caught species' bit must be set)
+    dd wPokedexSeen    ; wPokedexSeen
+    dd wCapturedMonSpecies    ; overview repeat
 %elifdef DEBUG_ITEMTM
 ; Items-plan Stage 7 (DEBUG_ITEMTM) — teaching a TM/HM. Expectations:
 ;   $D16A party mon 1 struct — MON_MOVES (+$08) gains the machine's move; the PP
@@ -1422,15 +1433,15 @@ windows:
 ;   $D31C bag — a TM is consumed (count drops, slot 0 gone); an HM is NOT
 ;   $CD6A wActionResultOrTookBattleTurn — 2 = the player said no / it wasn't used
 windows:
-    dd 0xD16A    ; party mon 1 struct (species, HP, moves at +$08, PP at +$1D)
-    dd 0xD31C    ; wNumBagItems + (id,qty) pairs — consumed (TM) or kept (HM)
-    dd 0xD0DF    ; wMoveNum (+ wMovesString)
-    dd 0xD11B    ; wTempTMHM / wNamedObjectIndex cluster ($D11D)
-    dd 0xD162    ; wPartyCount + wPartySpecies
-    dd 0xD2B4    ; wPartyMonNicks
-    dd 0xCD6A    ; wActionResultOrTookBattleTurn
-    dd 0xD035    ; wTempMoveNameBuffer / wLearnMoveMonName
-    dd 0xD16A    ; overview repeat
+    dd wPartyMon1    ; party mon 1 struct (species, HP, moves at +$08, PP at +$1D)
+    dd wNumBagItems    ; wNumBagItems + (id,qty) pairs — consumed (TM) or kept (HM)
+    dd wMoveNum    ; wMoveNum (+ wMovesString)
+    dd wCapturedMonSpecies    ; wTempTMHM / wNamedObjectIndex cluster ($D11D)
+    dd wPartyCount    ; wPartyCount + wPartySpecies
+    dd wPartyMonNicks    ; wPartyMonNicks
+    dd wActionResultOrTookBattleTurn    ; wActionResultOrTookBattleTurn
+    dd wLearnMoveMonName    ; wTempMoveNameBuffer / wLearnMoveMonName
+    dd wPartyMon1    ; overview repeat
 %elifdef DEBUG_ITEMSTONE
 ; Items-plan Stage 8 (DEBUG_ITEMSTONE) — evolution stones. Expectations:
 ;   $D16A party mon 1 struct — species becomes the evolved form (VULPIX $52 +
@@ -1440,72 +1451,72 @@ windows:
 ;   $CD6A wActionResultOrTookBattleTurn — 0 = item not used (no-effect / canceled)
 ;   $D155 wEvoStoneItemID — the stone ItemUseEvoStone parked for the party menu
 windows:
-    dd 0xCD3D    ; Stage 11: wWereAnyMonsAsleep. CAUTION: it reads 0 by dump time —
+    dd wWereAnyMonsAsleep    ; Stage 11: wWereAnyMonsAsleep. CAUTION: it reads 0 by dump time —
                  ; $CD3D is aliased scratch that the TEXT path reuses after the flute's
                  ; branch decision. The wake itself is visible as wPartyMon1Status
                  ; ($D16E, in the $D162 window) going 3 -> 0.
                  ; (was wWalkBikeSurfState $D6FF for the BICYCLE check — verified)
-    dd 0xD31C    ; wNumBagItems + (id,qty) pairs
-    dd 0xD162    ; wPartyCount + wPartySpecies
-    dd 0xCD6A    ; wActionResultOrTookBattleTurn
-    dd 0xD700    ; Stage 11: wUnusedCardKeyGateID ($D71E, +$1E) + wStatusFlags1
+    dd wNumBagItems    ; wNumBagItems + (id,qty) pairs
+    dd wPartyCount    ; wPartyCount + wPartySpecies
+    dd wActionResultOrTookBattleTurn    ; wActionResultOrTookBattleTurn
+    dd 0xE4CC    ; Stage 11: wUnusedCardKeyGateID ($D71E, +$1E) + wStatusFlags1 [WRAM-expansion shifted]
                  ; ($D727, +$27, BIT_UNUSED_CARD_KEY = bit 7) — drive with
                  ; ITEMSTONE_ID=CARD_KEY $30. Both stay 0 on real hardware: pret's
                  ; ItemUseCardKey reads the wrong byte and always falls to
                  ; ItemUseNotTime (see the BUG note there).
                  ; (was wEvoStoneItemID $D155 for Stage 8 — verified)
-    dd 0xCCD3    ; wCanEvolveFlags + wForceEvolution
-    dd 0xD000    ; Stage 11 (Safari): wEnemyMonActualCatchRate ($D006, +6) — drive with
+    dd wCanEvolveFlags    ; wCanEvolveFlags + wForceEvolution
+    dd 0xDDCC    ; Stage 11 (Safari): wEnemyMonActualCatchRate ($D006, +6) — drive with [WRAM-expansion shifted]
                  ; ITEMSTONE_INBATTLE=1 and ITEMSTONE_ID=SAFARI_BAIT $15 (halves it) /
                  ; SAFARI_ROCK $16 (doubles it, saturating). The two Safari factors
                  ; ($CCE8/$CCE9) already fall inside the $CCD3 window above, at +$15/+$16.
                  ; (was wEvoOldSpecies/wEvoNewSpecies $CEE9 for Stage 8 — verified)
-    dd 0xD0DA    ; wRepelRemainingSteps — Stage 9 (drive with ITEMSTONE_ID=REPEL
+    dd wRepelRemainingSteps    ; wRepelRemainingSteps — Stage 9 (drive with ITEMSTONE_ID=REPEL
                  ; $1E / SUPER_REPEL $38 / MAX_REPEL $39; RunStoneTest dispatches
                  ; UseItem by wCurItem, so it exercises any item's handler)
-    dd 0xD062    ; Stage 10: wPlayerBattleStatus2 (+$15 = wEscapedFromBattle @ $D077)
+    dd wPlayerBattleStatus2    ; Stage 10: wPlayerBattleStatus2 (+$15 = wEscapedFromBattle @ $D077)
                  ; drive with ITEMSTONE_INBATTLE=1 and ITEMSTONE_ID=X_ACCURACY $2E /
                  ; DIRE_HIT $3A / GUARD_SPEC $37 / POKE_DOLL $33 / X_ATTACK $41
 %elifdef DEBUG_CALCSTATS
 ; CalcStats gate: one 64-byte window over the test scratch at $D1E0 covers the
 ; scratch mon (DVs at +$1B) and both stat results (L5 at +$20, L100 at +$30).
 windows:
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
 %elifdef DEBUG_PARTY
 ; Party-seed gate: party count + species list, the four seeded mon structs
 ; (44 B each from $D16A), party nicknames, and the bag (count + (id,qty) pairs).
 windows:
-    dd 0xD162    ; wPartyCount + wPartySpecies (6 + $FF) + start of mon1
-    dd 0xD16A    ; party mon 1 struct (Snorlax)
-    dd 0xD196    ; party mon 2 struct (Persian)  = $D16A + 44
-    dd 0xD1C2    ; party mon 3 struct (Jigglypuff)
-    dd 0xD1EE    ; party mon 4 struct (Pikachu)
-    dd 0xD2B4    ; wPartyMonNicks (6 x 11)
-    dd 0xD31C    ; wNumBagItems + bag (id,qty) pairs
-    dd 0xD33C    ; bag items continued
-    dd 0xD162    ; overview repeat
+    dd wPartyCount    ; wPartyCount + wPartySpecies (6 + $FF) + start of mon1
+    dd wPartyMon1    ; party mon 1 struct (Snorlax)
+    dd wPartyMon2    ; party mon 2 struct (Persian)  = $D16A + 44
+    dd wPartyMon3    ; party mon 3 struct (Jigglypuff)
+    dd wPartyMon4    ; party mon 4 struct (Pikachu)
+    dd wPartyMonNicks    ; wPartyMonNicks (6 x 11)
+    dd wNumBagItems    ; wNumBagItems + bag (id,qty) pairs
+    dd 0xE108    ; bag items continued [WRAM-expansion shifted]
+    dd wPartyCount    ; overview repeat
 %elifdef DEBUG_WALKSPEED
 ; Walk-speed probe: one 64-byte window over the $D1E0 scratch holds the frame-rate
 ; measurement — +$00 start tick (dword), +$04 end tick, +$08 DelayFrame count.
 ; delta (end-start) == count → clean 60 Hz; delta < count → loop free-runs faster.
 windows:
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
-    dd 0xD1E0
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAC   ; [WRAM-expansion shifted]
 %elifdef DEBUG_AUDIO
 ; Audio-engine gate: the whole engine RAM block + the virtual APU after 120
 ; ticks of Pallet Town BGM. Expected (music id $BA on CHAN1-3, tempo 160):
@@ -1514,28 +1525,28 @@ windows:
 ;   win4 $C0C6 note speeds = 12; $C0E8/E9 wMusicTempo = $00,$A0 (big-endian)
 ;   win6 $FF10-26 nonzero pulse regs; $FF24 rAUDVOL = $77; $FF25 panning
 windows:
-    dd 0xC000    ; wSoundID/panning/vol, wChannelCommandPointers, ReturnAddrs, SoundIDs, Flags1/2
+    dd wUnusedMusicByte    ; wSoundID/panning/vol, wChannelCommandPointers, ReturnAddrs, SoundIDs, Flags1/2
     dd 0xC040    ; duty patterns, vibrato arrays, freq low bytes, reload values
     dd 0xC080    ; pitch-slide arrays
     dd 0xC0B0    ; note delays, loop counters, speeds, octaves, volumes, tempos, ids, banks
-    dd 0xC0F0    ; frequency/tempo modifiers
+    dd wAudioSavedROMBank    ; frequency/tempo modifiers
     dd 0xFF00    ; virtual APU: rAUD10-26 ($FF10-26) + wave RAM ($FF30-3F)
-    dd 0xCFC0    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9)
-    dd 0xD1E0    ; opl_dbg_snapshot: present, opl3, voice_state[0..61]
-    dd 0xD220    ; SB detect (+0..6) + MIDI driver state (+7..: cfg,
+    dd 0xDD8C    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9) [WRAM-expansion shifted]
+    dd 0xDFAC    ; opl_dbg_snapshot: present, opl3, voice_state[0..61] [WRAM-expansion shifted]
+    dd wPartyMon5Type2    ; SB detect (+0..6) + MIDI driver state (+7..: cfg,
                  ; present, active, on, dw progress, scale, cc7[16]);
                  ; $D240 pika PCM, $D246 shim device, $D248 tandy, $D250 spk, $D258 enh
 %elifdef DEBUG_BATTLE
 windows:
-    dd 0xC468    ; wTileMap row 5 (enemy HP-bar tile IDs, cols 12-20)
-    dd 0xC5A8    ; wTileMap row 13 (player HP-bar tile IDs, for comparison)
-    dd 0xCFE4    ; wEnemyMon: species, HP hi(+1), HP lo(+2)
-    dd 0xD0D6    ; wDamage
-    dd 0xCFD1    ; wPlayerMove* (num,effect,power,type)
-    dd 0xD014    ; wBattleMonHP (player HP, big-endian) — enemy-hit ground-truth
-    dd 0xCFCB    ; wEnemyMove* (num,effect,power,type) — enemy-hit ground-truth
-    dd 0xCFE4
-    dd 0xD0D6
+    dd 0xC6E8    ; wTileMap row 5 (enemy HP-bar tile IDs, cols 12-20) [WRAM-expansion shifted]
+    dd wAnimatedObject8FieldC    ; wTileMap row 13 (player HP-bar tile IDs, for comparison)
+    dd wEnemyMon    ; wEnemyMon: species, HP hi(+1), HP lo(+2)
+    dd wDamage    ; wDamage
+    dd wPlayerMoveNum    ; wPlayerMove* (num,effect,power,type)
+    dd wBattleMonHP    ; wBattleMonHP (player HP, big-endian) — enemy-hit ground-truth
+    dd wEnemyMoveNum    ; wEnemyMove* (num,effect,power,type) — enemy-hit ground-truth
+    dd wEnemyMon
+    dd wDamage
 %else
 windows:
     dd OW_BLOCKS_GBADDR             ; blockset blocks 0..3
@@ -1600,7 +1611,7 @@ section .text
 RunCalcStatsTest:
     mov byte [ebp + wCurSpecies], 0x99      ; Bulbasaur internal index
     call GetMonHeader
-    mov word [ebp + 0xD1FB], 0xFFFF         ; scratch DVs (all 15) at monbase+MON_DVS
+    mov word [ebp + 0xDFC7], 0xFFFF         ; scratch DVs (all 15) at monbase+MON_DVS [WRAM-expansion shifted]
     mov byte [ebp + wCurEnemyLevel], 5      ; --- L5 ---
     xor bh, bh                              ; b=0: ignore stat exp
     mov esi, 0xD1F0                         ; stat-exp base ptr (= monbase + $10)
@@ -1690,10 +1701,10 @@ RunAudioTest:
 ; ---------------------------------------------------------------------------
 RunPartySeedTest:
     ; Start from an empty party + bag (WRAM is not guaranteed zeroed pre-Init).
-    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0      ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug
     jmp DebugDumpMemory             ; writes DUMP.BIN, exits
 %endif
@@ -1708,17 +1719,17 @@ RunPartySeedTest:
 ; Call from EnterMap (after the overworld is loaded) so Pallet Town backs the box.
 ; ---------------------------------------------------------------------------
 RunBagMenuTest:
-    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0      ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; seed party + bag
 %ifdef DEBUG_BAGMENU_EMPTY
     ; Empty-inventory variant (the user's live worst-case symptom): re-zero the
     ; bag after the seed so the list is just CANCEL. make DEBUG_BAGMENU=1
     ; DEBUG_BAGMENU_EMPTY=1
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
 %endif
     ; Swap the font into vFont so the list glyphs render (caller contract).
     or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
@@ -1742,10 +1753,10 @@ RunBagMenuTest:
 ; dumps FRAME.BIN. Never returns. In: EBP = GB memory base.
 ; ---------------------------------------------------------------------------
 RunPartyMenuTest:
-    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0      ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug
     or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
@@ -1984,8 +1995,8 @@ RunTrainerRouteTestSeed:
     ; beaten bit clear, map script at its DEFAULT handler. The trainer itself comes
     ; from the generated map data, not from here — that is what makes this an
     ; end-to-end check of assets/trainer_headers.inc rather than of a seeded state.
-    and byte [ebp + 0xD7C2], ~(1 << 2) & 0xff   ; Route 3 trainer 0 beaten flag
-    mov byte [ebp + 0xD5F7], 0                  ; wRoute3CurScript = DEFAULT (0)
+    and byte [ebp + 0xE58E], ~(1 << 2) & 0xff   ; Route 3 trainer 0 beaten flag [WRAM-expansion shifted]
+    mov byte [ebp + wRoute3CurScript], 0                  ; wRoute3CurScript = DEFAULT (0)
     mov byte [ebp + wCurMapScript], 0
 .alreadySeeded:
     ret
@@ -2043,8 +2054,8 @@ RunTrainerRoute17TestSeed:
     mov byte [ebp + wNumBagItems], 0
     mov byte [ebp + wBagItems], 0xFF
     call PrepareNewGameDebug
-    and byte [ebp + 0xD7E1], ~(1 << 2) & 0xff   ; Route 17 trainer 9 (BIKER10) beaten flag
-    mov byte [ebp + 0xD61B], 0                  ; wRoute17CurScript = DEFAULT (0)
+    and byte [ebp + 0xE5AD], ~(1 << 2) & 0xff   ; Route 17 trainer 9 (BIKER10) beaten flag [WRAM-expansion shifted]
+    mov byte [ebp + wRoute17CurScript], 0                  ; wRoute17CurScript = DEFAULT (0)
     mov byte [ebp + wCurMapScript], 0
 .alreadySeeded17:
     ret
@@ -2087,7 +2098,6 @@ section .text
 ; ---------------------------------------------------------------------------
 GHOST_LEVEL equ 30                              ; pret's Pokemon Tower ghost Marowak
 %ifdef DEBUG_BATTLE_UNVEIL
-SILPH_SCOPE equ 0x48                            ; pret constants/item_constants.asm
 ; POKEMON_TOWER_3F is $90 (assets/map_dims.inc; NOT %included here — same reason
 ; BT_DEMO_DUNGEON_MAP and the CAVERN tileset id are defined locally). Leaving it
 ; undefined does NOT fail loudly: NASM sizes the instruction differently across
@@ -2147,10 +2157,10 @@ section .text
 ; block in HandleMenuInput — verify 0x15's box via template 0x0E instead.
 ; ---------------------------------------------------------------------------
 RunTextBoxIDTest:
-    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0      ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; party + bag + money (MONEY_BOX reads it)
     ; give party mon 0 a field move and select it, so FIELD_MOVE_MON_MENU (0x04)
     ; lists a real field move above STATS/SWITCH/CANCEL; inert for every other id
@@ -2292,10 +2302,10 @@ RunYesNoTest:
 ; Never returns. In: EBP = GB base.
 ; ---------------------------------------------------------------------------
 RunListMenuTest:
-    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0      ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; party + bag + money
     or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
     call LoadFontTilePatterns
@@ -2428,8 +2438,8 @@ RunBattleTest:
 
     ; Route 3 standard-script state and first trainer header. The generated
     ; header binds flag bit 2 in event byte $D7C2.
-    and byte [ebp + 0xD7C2], ~(1 << 2) & 0xff
-    mov byte [ebp + 0xD5F7], 1          ; wRoute3CurScript: start-battle handler
+    and byte [ebp + 0xE58E], ~(1 << 2) & 0xff   ; [WRAM-expansion shifted]
+    mov byte [ebp + wRoute3CurScript], 1          ; wRoute3CurScript: start-battle handler
     mov byte [ebp + wCurMapScript], 1
     mov byte [ebp + wSpriteIndex], 1
     mov esi, Route3TrainerHeader0
@@ -2498,7 +2508,7 @@ RunBattleTest:
     call FinalizeTrainerBattleOutcome    ; loss publishes wIsInBattle=$ff
     call EndTrainerBattle                ; win sets flag, loss skips it; both reset script
     mov al, [ebp + wCurMapScript]
-    mov [ebp + 0xD5F7], al               ; ExecuteCurMapScriptInTable write-back
+    mov [ebp + wRoute3CurScript], al               ; ExecuteCurMapScriptInTable write-back
 %ifdef DEBUG_TRAINER_LOSS
     call ResetStatusAndHalveMoneyOnBlackout
 %endif
@@ -2512,9 +2522,9 @@ RunBattleTest:
     stosb
     mov al, [ebp + wCurMapScript]
     stosb
-    mov al, [ebp + 0xD5F7]
+    mov al, [ebp + wRoute3CurScript]
     stosb
-    mov al, [ebp + 0xD7C2]
+    mov al, [ebp + 0xE58E]   ; [WRAM-expansion shifted]
     stosb
     mov al, [ebp + wMiscFlags]
     stosb
@@ -2566,10 +2576,10 @@ RunBattleTest:
     ; types, catch rate, moves, PP) are NOT written here, so a loader
     ; regression fails the golden diff instead of being papered over.
     ; ------------------------------------------------------------------
-    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0      ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; the standard debug new-game seed
     ; TryDoWildEncounter's outputs, per the spec (the golden walks Route 1
     ; grass with wGrassMons forced to 10 x (L13, PIDGEY)):
@@ -4133,10 +4143,10 @@ anim_show_label:
 %endif
 
 %else ; ------- the interactive/synthetic DEBUG_BATTLE harness -------
-    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0      ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; seed party + bag (player mons for later stages)
     ; --- Stage-1b HUD test data: seed enemy + player battle-mon structs so the HUD
     ; has names / levels / HP to render (real path = LoadBattleMonFromParty, Stage 2/3).
@@ -4408,10 +4418,10 @@ anim_show_label:
 ; set to slot 3 so the in-battle wBattleMonMoves/PP sync branch runs too.
 ; ---------------------------------------------------------------------------
 RunLearnMoveTest:
-    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0      ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; seeds party incl. slot3 = STARTER_PIKACHU L5
 
     ; InitBattle reads wEnemyMonSpecies/Level/Nick to load the enemy pic; the
@@ -4459,10 +4469,10 @@ RunLearnMoveTest:
 ; the STARTER_PIKACHU in slot 3, and let StatusScreen's DEBUG_STATUS hook render one
 ; frame + dump FRAME.BIN before its button-wait. Never returns.
 RunStatusScreenTest:
-    mov byte [ebp + 0xD162], 0      ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF   ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0      ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF   ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0      ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF   ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0      ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF   ; wBagItems sentinel
     call PrepareNewGameDebug        ; seeds party incl. slot3 = STARTER_PIKACHU L5
 
     or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
@@ -7358,6 +7368,48 @@ RunCinematicMarkersTest:
     call DelayFrame
     call DelayFrame
     call DelayFrame
+    call DumpBackbuffer             ; writes FRAME.BIN + exits (never returns)
+.hang:
+    jmp .hang
+%endif
+
+%ifdef DEBUG_PIKAPIC
+; ---------------------------------------------------------------------------
+; RunPikaPicTest — headless runtime witness for the pikapic front-pic facial
+; animation engine (follower-Pikachu plan, phase 4). Modelled on
+; RunSurfingPikachuTest below: seeds a valid party (PrepareNewGameDebug, which
+; includes the starter Pikachu) and calls the routine's own building blocks
+; directly rather than through a scripted event trigger.
+;
+; Calls the SAME sequence StarterPikachuEmotionCommand_pikapic's .RunPikapic
+; runs (pikapic_window_enter -> PlacePikapicTextBoxBorder ->
+; LoadOverworldPikachuFrontpicPalettes -> ResetPikaPicAnimBuffer ->
+; LoadCurrentPikaPicAnimScriptPointer -> ExecutePikaPicAnimScript), but NOT
+; through StarterPikachuEmotionCommand_pikapic itself: that routine also closes
+; the window (PlacePikapicTextBoxBorder + RunDefaultPaletteCommand +
+; pikapic_window_exit) before it returns, and it has no natural mid-animation
+; return point — unlike the free-running surf minigame there is no per-loop
+; hook to attach a frame-count dump to. Calling the building blocks directly
+; means the dump lands right after ExecutePikaPicAnimScript's own natural exit
+; (the chosen script's pikapic_setduration timer running out — 40 frames for
+; PikaPicAnimScript0 — since headless input never satisfies its A/B early-out),
+; while the window is still open and the last cel is still mirrored into
+; GB_TILEMAP0. Skipping pikapic_window_exit is deliberate: DumpBackbuffer never
+; returns, so there is nothing later that needs the window torn down.
+;
+; wPikaPicAnimNumber is set directly (bypassing GetPikaPicAnimationScriptIndex's
+; mood/happiness matrix, which only feeds the real TalkToPikachu path) to select
+; PikaPicAnimScript0, the shortest scripted animation (duration 40).
+; ---------------------------------------------------------------------------
+RunPikaPicTest:
+    call PrepareNewGameDebug
+    mov byte [ebp + wPikaPicAnimNumber], 0  ; PikaPicAnimScript0 (pikapic_setduration 40)
+    call pikapic_window_enter
+    call PlacePikapicTextBoxBorder
+    call LoadOverworldPikachuFrontpicPalettes
+    call ResetPikaPicAnimBuffer
+    call LoadCurrentPikaPicAnimScriptPointer
+    call ExecutePikaPicAnimScript
     call DumpBackbuffer             ; writes FRAME.BIN + exits (never returns)
 .hang:
     jmp .hang

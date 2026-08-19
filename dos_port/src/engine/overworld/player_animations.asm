@@ -46,6 +46,8 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "gb_text.inc"                        ; text_far / text_end
@@ -53,111 +55,9 @@ bits 32
 %include "assets/audio_constants.inc"         ; SFX_TELEPORT_*/SFX_FLY
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
-%ifndef wSpritePlayerStateData1YPixels
-wSpritePlayerStateData1YPixels      equ 0xC104 ; golden 00:c104
-%endif
-%ifndef wSpritePlayerStateData1XPixels
-wSpritePlayerStateData1XPixels      equ 0xC106 ; golden 00:c106
-%endif
-%ifndef wSpritePlayerStateData1ImageIndex
-wSpritePlayerStateData1ImageIndex   equ 0xC102 ; golden 00:c102
-%endif
-%ifndef wSavedPlayerScreenY
-wSavedPlayerScreenY                 equ 0xCD4F ; golden 00:cd4f
-%endif
-%ifndef wSavedPlayerFacingDirection
-wSavedPlayerFacingDirection         equ 0xCD50 ; golden 00:cd50
-%endif
-%ifndef wFacingDirectionList
-wFacingDirectionList                equ 0xCD48 ; golden 00:cd48
-%endif
 ; animation-scratch union at wFlyAnimUsingCoordList / wPlayerSpin*… (all 00:cd3d)
-%ifndef wFlyAnimUsingCoordList
-wFlyAnimUsingCoordList              equ 0xCD3D ; golden 00:cd3d
-%endif
-%ifndef wFlyAnimCounter
-wFlyAnimCounter                    equ 0xCD3E ; golden 00:cd3e
-%endif
-%ifndef wFlyAnimBirdSpriteImageIndex
-wFlyAnimBirdSpriteImageIndex       equ 0xCD3F ; golden 00:cd3f
-%endif
-%ifndef wPlayerSpinInPlaceAnimFrameDelay
-wPlayerSpinInPlaceAnimFrameDelay          equ 0xCD3D
-%endif
-%ifndef wPlayerSpinInPlaceAnimFrameDelayDelta
-wPlayerSpinInPlaceAnimFrameDelayDelta     equ 0xCD3E
-%endif
-%ifndef wPlayerSpinInPlaceAnimFrameDelayEndValue
-wPlayerSpinInPlaceAnimFrameDelayEndValue  equ 0xCD3F
-%endif
-%ifndef wPlayerSpinInPlaceAnimSoundID
-wPlayerSpinInPlaceAnimSoundID             equ 0xCD40
-%endif
-%ifndef wPlayerSpinWhileMovingUpOrDownAnimDeltaY
-wPlayerSpinWhileMovingUpOrDownAnimDeltaY  equ 0xCD3D
-%endif
-%ifndef wPlayerSpinWhileMovingUpOrDownAnimMaxY
-wPlayerSpinWhileMovingUpOrDownAnimMaxY    equ 0xCD3E
-%endif
-%ifndef wPlayerSpinWhileMovingUpOrDownAnimFrameDelay
-wPlayerSpinWhileMovingUpOrDownAnimFrameDelay equ 0xCD3F
-%endif
 ; wPikachuSpawnState promoted to gb_memmap.inc (0xD430) — OW-A.6.
-%ifndef wCurMapTileset
-wCurMapTileset                     equ 0xD366 ; golden 00:d366
-%endif
-%ifndef wStatusFlags6
-wStatusFlags6                      equ 0xD731 ; golden 00:d731
-%endif
-%ifndef wStatusFlags7
-wStatusFlags7                      equ 0xD732 ; golden 00:d732
-%endif
-%ifndef wMovementFlags
-wMovementFlags                     equ 0xD735 ; golden 00:d735
-%endif
-%ifndef wOnSGB
-wOnSGB                             equ 0xCF1A ; golden 00:cf1a
-%endif
-%ifndef wEmotionBubbleSpriteIndex
-wEmotionBubbleSpriteIndex          equ 0xCD4F ; golden 00:cd4f
-%endif
-%ifndef wStandingOnWarpPadOrHole
-wStandingOnWarpPadOrHole           equ 0xCD5B ; golden 00:cd5b
-%endif
-%ifndef wUpdateSpritesEnabled
-wUpdateSpritesEnabled              equ 0xCFCA ; golden 00:cfca
-%endif
 ; shadow OAM (golden-verified; Y/TileID pairs)
-%ifndef wShadowOAMSprite00YCoord
-wShadowOAMSprite00YCoord equ 0xC300
-%endif
-%ifndef wShadowOAMSprite00TileID
-wShadowOAMSprite00TileID equ 0xC302
-%endif
-%ifndef wShadowOAMSprite01YCoord
-wShadowOAMSprite01YCoord equ 0xC304
-%endif
-%ifndef wShadowOAMSprite01TileID
-wShadowOAMSprite01TileID equ 0xC306
-%endif
-%ifndef wShadowOAMSprite02YCoord
-wShadowOAMSprite02YCoord equ 0xC308
-%endif
-%ifndef wShadowOAMSprite02TileID
-wShadowOAMSprite02TileID equ 0xC30A
-%endif
-%ifndef wShadowOAMSprite03YCoord
-wShadowOAMSprite03YCoord equ 0xC30C
-%endif
-%ifndef wShadowOAMSprite03TileID
-wShadowOAMSprite03TileID equ 0xC30E
-%endif
-%ifndef wShadowOAMSprite39
-wShadowOAMSprite39       equ 0xC39C
-%endif
-%ifndef wShadowOAMSprite39YCoord
-wShadowOAMSprite39YCoord equ 0xC39C
-%endif
 
 ; VRAM tile banks (overworld union — vNPCSprites=0x8000, vNPCSprites2=0x8800)
 %ifndef vNPCSprites
@@ -168,16 +68,12 @@ vNPCSprites   equ 0x8000
 
 ; --- misc constants ---
 %ifndef BIT_USED_FLY
-BIT_USED_FLY        equ 7   ; wStatusFlags7 bit 7
 %endif
 %ifndef BIT_ESCAPE_WARP
-BIT_ESCAPE_WARP     equ 6   ; wStatusFlags6 bit 6
 %endif
 %ifndef BIT_DUNGEON_WARP
-BIT_DUNGEON_WARP    equ 4   ; wStatusFlags6 bit 4
 %endif
 %ifndef BIT_LEDGE_OR_FISHING
-BIT_LEDGE_OR_FISHING equ 6  ; wMovementFlags bit 6
 %endif
 %ifndef OBJ_SIZE
 OBJ_SIZE            equ 4
@@ -186,20 +82,15 @@ OBJ_SIZE            equ 4
 SCREEN_HEIGHT_PX    equ 144
 %endif
 %ifndef OAM_Y_OFS
-OAM_Y_OFS           equ 16
 %endif
 %ifndef EXCLAMATION_BUBBLE
-EXCLAMATION_BUBBLE  equ 0
 %endif
 ; tileset ids for WarpPadAndHoleData
 %ifndef INTERIOR
-INTERIOR  equ 16
 %endif
 %ifndef CAVERN
-CAVERN    equ 17
 %endif
 %ifndef FACILITY
-FACILITY  equ 22
 %endif
 
 global EnterMapAnim

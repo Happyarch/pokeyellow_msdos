@@ -36,8 +36,16 @@ are a tool, not a manual procedure.
                           runs whether or not you remember it — install with
                           `make -C dos_port install-hooks`. It rescans the label
                           DB (`update_label_db`) and then runs BOTH
-                          lint_pret_labels modes, the label-DB pytest suite, and
-                          validate_scenarios.py. THE RATCHET GOES BOTH WAYS: a
+                          lint_pret_labels modes, the label-DB pytest suite,
+                          validate_scenarios.py, and check_ram_addresses.py
+                          (every pret RAM/HRAM label must sit where rgblink put
+                          it in pokeyellow.sym; the port's deliberate
+                          relocations are baselined in
+                          tools/ram_address_baseline.json). That last one exists
+                          because a NASM `equ` is FILE-LOCAL, so two files could
+                          declare one pret label at DIFFERENT addresses and still
+                          assemble, link and pass every other gate — six wrong
+                          addresses shipped that way. THE RATCHET GOES BOTH WAYS: a
                           class that shrank fails too, until the baseline is
                           lowered deliberately (`--update-baseline`) with a
                           stated reason.

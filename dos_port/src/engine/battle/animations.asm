@@ -51,9 +51,6 @@ SCREEN_HEIGHT_PX         equ 144   ; constants/hardware.inc
 ; WavyScreenLineOffsets entry count (pret's table before its $80 terminator).
 ; MUST be a power of two — WavyScreen_SetSCX wraps the phase with AND, not MOD.
 WAVY_SCREEN_NUM_OFFSETS  equ 32
-%ifndef wCoordAdjustmentAmount
-wCoordAdjustmentAmount   equ 0xD089 ; golden 00:d089
-%endif
 ; wOnSGB now comes from gb_memmap.inc (0xCF1A); it is 1 in the port — colour
 ; hardware, set at init like pret LoadSGB on CGB (memory battle-anim-cgb-obj-palette-model).
 

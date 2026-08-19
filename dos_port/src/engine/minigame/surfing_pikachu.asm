@@ -6,6 +6,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "gb_constants.inc"          ; shared game constants (%define: emits no COFF symbol)
 %include "gb_macros.inc"
 %include "gfx_macros.inc"
 %include "coords.inc"
@@ -77,14 +78,8 @@ ANIM_OBJ_FIELD_E         equ 0x0E
 ANIM_OBJ_FIELD_F         equ 0x0F
 
 ; OAM sprite fields
-wShadowOAMSprite00TileID equ wShadowOAM + 0*4 + 2
-wShadowOAMSprite02TileID equ wShadowOAM + 2*4 + 2
-wShadowOAMSprite04XCoord equ wShadowOAM + 4*4 + 1
-wShadowOAMSprite05XCoord equ wShadowOAM + 5*4 + 1
 
 ; WRAM / Script flag definitions
-wPikachuMapScriptFlags       equ 0xD492
-BIT_PIKACHU_MAP_SURF_SELECT equ 1
 
 ; Animated-object spawn table staging destination in GB space
 W_SURF_SPAWN_DATA equ W_SURF_OAM_DATA + 0x1BE
@@ -763,9 +758,14 @@ SurfingPikachuMinigame_LoadGFXAndLayout:
     mov bx, wSurfingMinigameDataEnd - wSurfingMinigameData
     xor al, al
     call FillMemory
+    ; DEVIATION{class=data-model; pret=engine/minigame/surfing_pikachu.asm:SurfingPikachuMinigame_LoadGFXAndLayout; behavior=clear the two LY-override buffers as two 0x100 fills instead of pret's single wLYOverridesBufferEnd - wLYOverrides span; evidence=pret's buffers are ADJACENT at 0xC700 and 0xC800 so that span is 0x200, but the port relocates them apart to 0xF500 and 0xF9A0 where the same expression is 0x5A0 and would zero the wAnimatedObject block and the Yellow-intro scene state between them; lifetime=until the two buffers are made contiguous again}
     mov esi, wLYOverrides
-    mov bx, wLYOverridesBufferEnd - wLYOverrides
+    mov bx, wLYOverridesEnd - wLYOverrides          ; 0x100, was (BufferEnd - wLYOverrides)
     xor al, al
+    call FillMemory
+    mov esi, wLYOverridesBuffer
+    mov bx, wLYOverridesBufferEnd - wLYOverridesBuffer  ; 0x100 - the port's second buffer
+    xor al, al                                      ;   is NOT adjacent to the first
     call FillMemory
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al

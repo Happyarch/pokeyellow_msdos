@@ -22,7 +22,26 @@ bits 32
 %include "assets/script_constants.inc"
 
 %include "assets/script_strings.inc"
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern CeladonGymBattleText2    ; assets/trainer_headers.inc
+extern CeladonGymBattleText3    ; assets/trainer_headers.inc
+extern CeladonGymBattleText4    ; assets/trainer_headers.inc
+extern CeladonGymBattleText5    ; assets/trainer_headers.inc
+extern CeladonGymBattleText6    ; assets/trainer_headers.inc
+extern CeladonGymBattleText7    ; assets/trainer_headers.inc
+extern CeladonGymBattleText8    ; assets/trainer_headers.inc
+extern CeladonGymTrainerHeader0 ; assets/trainer_headers.inc
+extern CeladonGymTrainerHeader1 ; assets/trainer_headers.inc
+extern CeladonGymTrainerHeader2 ; assets/trainer_headers.inc
+extern CeladonGymTrainerHeader3 ; assets/trainer_headers.inc
+extern CeladonGymTrainerHeader4 ; assets/trainer_headers.inc
+extern CeladonGymTrainerHeader5 ; assets/trainer_headers.inc
+extern CeladonGymTrainerHeader6 ; assets/trainer_headers.inc
+extern CeladonGymTrainerHeaders ; assets/trainer_headers.inc
 
 global CeladonGymBeauty1Text
 global CeladonGymBeauty2Text
@@ -78,11 +97,6 @@ SCRIPT_CELADONGYM_ERIKA_POST_BATTLE            equ 3
 TEXT_CELADONGYM_RAINBOWBADGE_INFO              equ 9
 TEXT_CELADONGYM_RECEIVED_TM21                  equ 10
 TEXT_CELADONGYM_TM21_NO_ROOM                   equ 11
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wBeatGymFlags                                  equ 0xD729
-wCeladonGymCurScript                           equ 0xD5FE
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

@@ -20,8 +20,23 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-%include "assets/map_script_tables.inc"
-%include "assets/trainer_headers.inc"
+; Map script-pointer tables are DEFINED once, by the single carrier
+; src/data/map_script_tables.asm. Declare what this script uses; do NOT %include
+; assets/map_script_tables.inc here — the asset DEFINES every table, so an include
+; makes them duplicate globals as soon as a second script links.
+extern ViridianForest_ScriptPointers ; assets/map_script_tables.inc
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern ViridianForestTrainerHeader0       ; assets/trainer_headers.inc
+extern ViridianForestTrainerHeader1       ; assets/trainer_headers.inc
+extern ViridianForestTrainerHeader2       ; assets/trainer_headers.inc
+extern ViridianForestTrainerHeader3       ; assets/trainer_headers.inc
+extern ViridianForestTrainerHeader4       ; assets/trainer_headers.inc
+extern ViridianForestTrainerHeaders       ; assets/trainer_headers.inc
+extern ViridianForestYoungster2BattleText ; assets/trainer_headers.inc
 
 global ViridianForestCooltrainerFText
 global ViridianForestLeavingSignText
@@ -58,10 +73,6 @@ extern ViridianForestTrainerHeader4
 extern ViridianForestTrainerHeaders
 extern ViridianForestYoungster2BattleText
 extern ViridianForest_ScriptPointers
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wViridianForestCurScript                       equ 0xD617
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

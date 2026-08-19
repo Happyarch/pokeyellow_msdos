@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global Route15Gate1FGuardText
 global Route15Gate1F_Script
 global Route15Gate1F_TextPointers

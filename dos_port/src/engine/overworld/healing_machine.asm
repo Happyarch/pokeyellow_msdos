@@ -39,35 +39,9 @@ bits 32
 %include "assets/audio_constants.inc"         ; MUSIC_PKMN_HEALED / SFX_HEALING_MACHINE
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
-%ifndef wShadowOAMSprite33
-wShadowOAMSprite33   equ 0xC384 ; golden 00:c384
-%endif
-%ifndef wAudioFadeOutControl
-wAudioFadeOutControl equ 0xCFC6 ; golden 00:cfc6
-%endif
-%ifndef wPartyCount
-wPartyCount          equ 0xD162 ; golden 00:d162
-%endif
-%ifndef wAudioROMBank
-wAudioROMBank        equ 0xC0EF ; golden 00:c0ef
-%endif
-%ifndef wAudioSavedROMBank
-wAudioSavedROMBank   equ 0xC0F0 ; golden 00:c0f0
-%endif
-%ifndef wNewSoundID
-wNewSoundID          equ 0xC0EE ; golden 00:c0ee
-%endif
-%ifndef wChannelSoundIDs
-wChannelSoundIDs     equ 0xC026 ; golden 00:c026
-%endif
-%ifndef wUpdateSpritesEnabled
-wUpdateSpritesEnabled equ 0xCFCA ; golden 00:cfca
-%endif
 %ifndef GB_VCHARS0
-GB_VCHARS0           equ 0x8000 ; vChars0 (generic VRAM tile bank 0)
 %endif
 %ifndef OAM_XFLIP
-OAM_XFLIP            equ 1 << 5
 %endif
 
 ; bounded-wait caps (DIVERGENCE — see header)

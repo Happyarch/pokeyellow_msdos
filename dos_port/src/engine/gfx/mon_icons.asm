@@ -42,6 +42,7 @@ bits 32
 %include "gb_macros.inc"
 
 global MonsterSprite               ; assets/mon_icons.inc blob — AnimationSubstitute reads its tiles
+global PikachuSprite               ; assets/mon_icons.inc blob — LoadPikachuSpriteIntoVRAM
 global AnimatePartyMon
 global AnimatePartyMon_ForceSpeed1
 global GetAnimationSpeed

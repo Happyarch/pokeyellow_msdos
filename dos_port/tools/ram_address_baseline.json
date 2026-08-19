@@ -1,0 +1,11 @@
+{
+  "hHalveItemPrices": "0xFFA8",
+  "hLCDCPointer": "0xFFC2",
+  "hRLEByteValue": "0xFF81",
+  "wEndBattleLoseTextPointer": "0xF404",
+  "wEndBattleTextRomBank": "0xF408",
+  "wEndBattleWinTextPointer": "0xF400",
+  "wMenuWrappingEnabled": "0xD628",
+  "wTempPic": "0x21A00",
+  "wTrainerPicPointer": "0xDE14"
+}

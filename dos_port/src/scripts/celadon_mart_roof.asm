@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global CeladonMartRoofCurrentFloorSignText
 global CeladonMartRoofDrinkList
 global CeladonMartRoofLittleGirlGiveHerWhichDrinkText
@@ -58,12 +57,6 @@ extern TextScriptEnd
 extern UpdateSprites
 extern YesNoChoice
 extern text_row_stride   ; src/home/text.asm — live wTileMap row stride (20 menu scratch / 40 flat canvas)
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hItemCounter                                   equ 0xFFDB
-wFilteredBagItems                              equ 0xCC5B
-wFilteredBagItemsCount                         equ 0xCD37
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

@@ -19,6 +19,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "assets/audio_constants.inc"   ; SFX_COLLISION / MUSIC_* (audio engine is live)
@@ -26,13 +27,12 @@ bits 32
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (EVENT_2A7, OW-A.6)
 %include "events.inc"                   ; CheckEvent/SetEvent/ResetEvent over wEventFlags
 
+; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's, read from
+; pokeyellow.sym (00:d73b, 00:d365) - not inferred. Defined locally because the
+; transpiled elevator scripts define wWarpedFromWhichMap bare, so a central
+; definition in gb_memmap.inc would collide with them.
+
 ; file-local constants carried in with the routines that read them
-BIT_DUNGEON_WARP           equ 4
-BIT_NO_BATTLES                  equ 4        ; wStatusFlags4 bit 4
-BIT_ON_DUNGEON_WARP             equ 4        ; wStatusFlags3 bit 4
-BIT_PIKACHU_SPAWN_SURFING  equ 6
-BIT_WILD_ENCOUNTER_COOLDOWN     equ 0        ; wStatusFlags2 bit 0
-INDIGO_PLATEAU              equ 0x09
 MAP_ROCKET_HIDEOUT_B1F  equ 0xC7
 MAP_ROCKET_HIDEOUT_B2F  equ 0xC8
 MAP_ROCKET_HIDEOUT_B4F  equ 0xCA
@@ -40,24 +40,13 @@ MAP_ROCK_TUNNEL_1F      equ 0x52
 MAP_SS_ANNE_3F          equ 0x61
 PLAYER_HALF_BYTES equ PLAYER_HALF_TILES * TILE_SIZE   ; 192 bytes ($C0)
 PLAYER_HALF_TILES equ 12                       ; 12 tiles per VRAM half
-ROUTE_23                   equ 0x22
 STANDING_TILE_OFF   equ wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 TILESET_PLATEAU     equ 23          ; Route 23 / Indigo Plateau
 TILESET_SHIP        equ 13          ; S.S. Anne interior
 TILESET_SHIP_PORT   equ 14          ; Vermilion Port
 W_D472                      equ 0xD472
 W_PIKACHU_SPAWN_STATE_FLAGS equ 0xD471
-wStepCounter                    equ 0xD13A
-CEMETERY                    equ 15
-CONNECTION_NORTH           equ 1 << 3   ; wCurMapConnections bits (EAST=1,WEST=2,SOUTH=4,NORTH=8)
-CONNECTION_SOUTH           equ 1 << 2
-FACILITY                    equ 22
-MAP_NO_CONNECTION           equ 0xFF
 OVERWORLD_DOOR_TILE         equ 0x0B   ; pret: door tile in tileset 0 (PlayMapChangeSound)
-wNumSprites equ 0xD4E0
-BIT_ALWAYS_ON_BIKE          equ 5
-PAD_BUTTONS  equ 0x0F   ; A|B|SELECT|START (button byte low nibble)
-PAD_CTRL_PAD equ 0xF0   ; RIGHT|LEFT|UP|DOWN (D-pad high nibble)
 
 extern DelayFrame                    ; src/home/vblank.asm
 extern LoadGBPal                     ; src/home/fade.asm — reload rBGP/rOBP0/rOBP1
@@ -104,6 +93,12 @@ extern ReloadMapSpriteTilePatterns         ; src/home/reload_sprites.asm
 extern RunPaletteCommand                  ; src/home/palettes.asm
 extern SetMapSpecificScriptFlagsOnMapReload ; src/engine/overworld/specific_script_flags.asm
 extern UpdateMusic6Times                  ; src/home/audio.asm
+extern SchedulePikachuSpawnForAfterText   ; src/engine/pikachu/pikachu_follow.asm
+extern Func_fcc08                         ; src/engine/pikachu/pikachu_follow.asm
+extern SetPikachuSpawnOutside             ; src/engine/pikachu/pikachu_follow.asm
+extern SetPikachuSpawnWarpPad             ; src/engine/pikachu/pikachu_follow.asm
+extern SetPikachuSpawnBackOutside         ; src/engine/pikachu/pikachu_follow.asm
+extern IsPlayerStandingOnWarpPadOrHole     ; src/engine/overworld/player_animations.asm
 extern h_load_sprite_temp1                ; src/engine/overworld/overworld.asm
 extern h_load_sprite_temp2                ; src/engine/overworld/overworld.asm
 extern hide_window                        ; src/ppu/ppu.asm
@@ -135,7 +130,8 @@ extern _GetTileAndCoordsInFrontOfPlayer   ; src/engine/overworld/player_state.as
 extern IsNPCAtTargetBlock                 ; src/engine/overworld/map_sprites.asm
 extern IsNextTileShoreOrWater             ; src/engine/items/item_effects.asm
 extern IsPlayerStandingOnDoorTileOrWarpTile ; src/engine/overworld/player_state.asm
-extern IsSurfingPikachuInParty            ; src/engine/overworld/overworld_stubs.asm
+extern IsPlayerTalkingToPikachu            ; src/engine/pikachu/pikachu_emotions.asm
+extern IsSurfingPikachuInParty            ; src/home/map_objects.asm
 extern IsTilePassable                     ; src/home/copy2.asm
 extern LoadDestinationMapData                ; src/engine/overworld/overworld.asm
 extern MapEntryAfterBattle                ; src/engine/overworld/overworld_stubs.asm
@@ -181,6 +177,7 @@ extern RunTrainerRouteTestSeed            ; src/debug/debug_dump.asm (Stage 1b c
 extern RunTrainerRoute17TestSeed          ; src/debug/debug_dump.asm (ROUTE_17/ForceBikeDown witness)
 extern RunGhostBattleTestSeed             ; src/debug/debug_dump.asm (4c ghost witness)
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
+extern RunPikaPicTest                     ; src/debug/debug_dump.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
 extern RunSavePerfTest                    ; src/engine/menus/save.asm (DEBUG_SAVEPERF)
 extern RunSaveTest                        ; src/engine/menus/save.asm
@@ -219,8 +216,6 @@ extern seed_party_done                    ; src/engine/overworld/overworld.asm (
 %endif
 %endif
 extern set_single_window                  ; src/ppu/ppu.asm
-
-
 
 ; ---------------------------------------------------------------------------
 ; EnterMap — faithful map (re-)entry. Pret ref: home/overworld.asm:1-41 (EnterMap).
@@ -791,10 +786,10 @@ EnterMap:
     ; Live, interactive: seed a full bag + money, then fall through to the normal
     ; OverworldLoop. Open the bag via START → ITEM (the real path) to exercise the
     ; list, TOSS quantity chooser, YES/NO confirm, and the "TOO IMPORTANT!" notice.
-    mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0             ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF          ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0             ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF          ; wBagItems sentinel
     call PrepareNewGameDebug               ; seed party + bag + money (returns)
 %endif
 %ifdef DEBUG_SEED_PARTY
@@ -829,10 +824,10 @@ EnterMap:
     cmp byte [seed_party_done], 0
     jne .seed_party_already
     mov byte [seed_party_done], 1
-    mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0             ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF          ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0             ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF          ; wBagItems sentinel
     call PrepareNewGameDebug               ; seed party + bag + money (returns)
 .seed_party_already:
 %endif
@@ -971,6 +966,9 @@ EnterMap:
 %ifdef DEBUG_SURFING_PIKACHU
     call RunSurfingPikachuTest             ; boot directly into SurfingPikachuMinigame
 %endif
+%ifdef DEBUG_PIKAPIC
+    call RunPikaPicTest                    ; boot directly into the pikapic front-pic engine
+%endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can
     ; WALK with the keyboard. WalkSpeedSample (called at each real tile completion)
@@ -978,11 +976,11 @@ EnterMap:
     ; quit hook. tick_count is the true 60 Hz PIT counter, so avg ticks/tile = 16 →
     ; faithful walk speed; notably < 16 → movement really is too fast.
     ;   $D1E0 first tick   $D1E4 last tick   $D1E8 tiles   $D1EC min Δ   $D1F0 init flag
-    mov dword [ebp + 0xD1E0], 0
-    mov dword [ebp + 0xD1E4], 0
-    mov dword [ebp + 0xD1E8], 0
-    mov dword [ebp + 0xD1EC], 0xFFFFFFFF
-    mov dword [ebp + 0xD1F0], 0
+    mov dword [ebp + (W_PORT_SCRATCH + 0x00)], 0
+    mov dword [ebp + wPartyMon3MaxHP], 0
+    mov dword [ebp + wPartyMon3Defense], 0
+    mov dword [ebp + wPartyMon3Special], 0xFFFFFFFF
+    mov dword [ebp + (W_PORT_SCRATCH + 0x10)], 0
 %endif
 
     ; --- faithful EnterMap reset ladder (pret home/overworld.asm:6-41) ----------
@@ -1326,6 +1324,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; see DoSignInteraction's DEVIATION{class=temporary}.)
     mov byte [ebp + wd435], 0                  ; xor a / ld [wd435], a
     call IsSpriteOrSignInFrontOfPlayer
+    call Func_0ffe
     mov al, [ebp + hTextID]                    ; ldh a, [hTextID]
     test al, al                                ; and a
     jz .checkPADDown                           ; jp z, OverworldLoop — nothing found
@@ -1449,6 +1448,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 
 .startWalk:
     mov byte [ebp + wWalkCounter], 8        ; begin an 8-frame step
+    call Func_fcc08                            ; callfar Func_fcc08 — push this step into Pikachu's follow FIFO
     jmp .moveAhead                             ; pret: jr .moveAhead2 — advance immediately, no extra delay
 
 .noDirection:
@@ -1526,23 +1526,88 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call ExtraWarpCheck
     jnc OverworldLoop                         ; pret: jr nc, ...Retry2 (no other match)
 .warpTransition:
-    ; BL = resolved destination map; wDestinationWarpID = 0-based spawn warp index
-    ; Only update wLastMap when leaving an outdoor map (mirrors pret CheckIfInOutsideMap).
-    ; Indoor→indoor and indoor→outdoor transitions must NOT overwrite wLastMap or the
-    ; 0xFF warp-destination resolver will return an indoor map instead of Pallet Town.
-    ; ; DIVERGENCE: this is the `wCurMap < FIRST_INDOOR_MAP_ID` heuristic, NOT pret's
-    ; tileset-based CheckIfInOutsideMap (OVERWORLD/PLATEAU → outside). The two disagree
-    ; for edge maps (e.g. Route 23 / Indigo Plateau use the PLATEAU tileset but sit above
-    ; FIRST_INDOOR_MAP_ID), so those would be misclassified here.
-    ; ; TODO(edge-maps): switch this test to `call CheckIfInOutsideMap` (this file,
-    ; already global + faithful) when Route 23 / Plateau warping is exercised.
+    ; ---------------------------------------------------------------------
+    ; pret's WarpFound1 body (read the warp entry, store wDestinationWarpID and
+    ; hWarpDestinationMap) lives in CheckWarpTile here, because the port merged
+    ; pret's warp SCAN with its found-handling; this block is pret's WarpFound2.
+    ; TODO(pret-label): it should CARRY the name WarpFound2 (faithdiff reports that
+    ; label `missing`), but it sits mid-routine inside OverworldLoopLessDelay, so a
+    ; non-local label here rescopes every following `.local` and breaks the jumps
+    ; from above. Adopting the name needs the block hoisted out first.
+    ; pret WarpFound2 (home/overworld.asm:453-517), restored to its THREE
+    ; branches. This used to be one collapsed path with a
+    ; `wCurMap < FIRST_INDOOR_MAP_ID` heuristic standing in for
+    ; CheckIfInOutsideMap, which dropped pret's per-branch behaviour wholesale:
+    ; the wWarpedFromWhichWarp/Map stores (READ by the three elevator scripts,
+    ; and never written), wUnusedLastMapWidth, the ROCK_TUNNEL_1F fade, the
+    ; warp-pad/fly branch, and .goBackOutside's wMapPalOffset reset.
+    ;
+    ; BL = destination map with LAST_MAP already resolved by CheckWarpTile;
+    ; hWarpDestinationMap = the RAW destination byte, which is what pret
+    ; branches on.
+    ; ---------------------------------------------------------------------
+    ; ld a, [wCurMap] / ld [wWarpedFromWhichMap], a   (pret :459-460)
     mov al, [ebp + wCurMap]
-    cmp al, FIRST_INDOOR_MAP_ID
-    jae .skipLastMapUpdate
-    mov [ebp + wLastMap], al
-.skipLastMapUpdate:
-    mov [ebp + wCurMap], bl
-    ; Update text table dispatch for the new map.
+    mov [ebp + wWarpedFromWhichMap], al
+    ; call CheckIfInOutsideMap / jr nz, .indoorMaps   (pret :461-462)
+    call CheckIfInOutsideMap                   ; ZF=1 -> outside (tileset OVERWORLD/PLATEAU)
+    jnz .indoorMaps
+
+; --- outside maps: cannot have the $FF destination ------------------- pret :463
+    mov al, [ebp + wCurMap]
+    mov [ebp + wLastMap], al                   ; ld [wLastMap], a
+    mov al, [ebp + wCurMapWidth]
+    mov [ebp + wUnusedLastMapWidth], al        ; ld [wUnusedLastMapWidth], a
+    mov al, [ebp + hWarpDestinationMap]        ; ldh a, [hWarpDestinationMap]
+    mov [ebp + wCurMap], al                    ; ld [wCurMap], a
+    cmp al, ROCK_TUNNEL_1F                     ; cp ROCK_TUNNEL_1F
+    jne .notRockTunnel
+    mov byte [ebp + wMapPalOffset], 6          ; ld a, $06 / ld [wMapPalOffset], a
+    call GBFadeOutToBlack
+.notRockTunnel:
+    call SetPikachuSpawnOutside                ; callfar SetPikachuSpawnOutside
+    call PlayMapChangeSound                    ; reads the SOURCE tileset - must precede
+    jmp .warpDone                              ;   LoadDestinationMapData (see .warpDone)
+
+; --- maps that can carry the $FF destination ------------------------- pret :482
+.indoorMaps:
+    mov al, [ebp + hWarpDestinationMap]        ; ldh a, [hWarpDestinationMap]
+    cmp al, LAST_MAP                           ; cp LAST_MAP
+    je .goBackOutside
+    mov [ebp + wCurMap], al                    ; ld [wCurMap], a
+    call IsPlayerStandingOnWarpPadOrHole        ; farcall IsPlayerStandingOnWarpPadOrHole
+    mov al, [ebp + wStandingOnWarpPadOrHole]
+    dec al                                     ; dec a - is the player on a warp pad?
+    jnz .notWarpPad
+    call LeaveMapAnim
+    or byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP)   ; set BIT_FLY_WARP, [hl]
+    jmp .skipMapChangeSound                    ; a warp pad plays NO map-change jingle
+.notWarpPad:
+    call PlayMapChangeSound
+.skipMapChangeSound:
+    ; res BIT_STANDING_ON_DOOR / res BIT_EXITING_DOOR   (pret :498-500)
+    and byte [ebp + wMovementFlags], ~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR)) & 0xFF
+    call SetPikachuSpawnWarpPad                ; callfar SetPikachuSpawnWarpPad
+    jmp .warpDone
+
+; --- $FF destination: return to the outside map we came from --------- pret :506
+.goBackOutside:
+    ; SetPikachuSpawnBackOutside runs BEFORE wCurMap is reassigned, so it reads the
+    ; SOURCE map. The other two setters run after and read the DESTINATION. Ordering
+    ; is load-bearing: all three switch on wCurMap.
+    call SetPikachuSpawnBackOutside            ; callfar SetPikachuSpawnBackOutside
+    mov al, [ebp + wLastMap]                   ; ld a, [wLastMap]
+    mov [ebp + wCurMap], al                    ; ld [wCurMap], a
+    call PlayMapChangeSound
+    mov byte [ebp + wMapPalOffset], 0          ; xor a / ld [wMapPalOffset], a
+
+; --- pret .done ------------------------------------------------------ pret :513
+.warpDone:
+    ; Port-specific arrival work. pret reaches the destination load through
+    ; EnterMap -> LoadMapData; the port stages part of it here. It sits AFTER the
+    ; branches because every branch has already called PlayMapChangeSound, which
+    ; must read the SOURCE map's tileset and door tile (OW-A.14) - loading the
+    ; destination first would make it read the wrong tileset.
     movzx eax, byte [ebp + wCurMap]
     lea esi, [MapTextTablePointers]
     mov esi, [esi + eax*4]
@@ -1553,32 +1618,20 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov byte [ebp + hSCY], 0
     mov byte [ebp + hSCX], 0
     mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
-    ; pret WarpFound2 plays the map-change jingle here (:477/498/510), BEFORE the
-    ; destination is loaded, so it reads the SOURCE map's tileset + door tile. Must
-    ; precede LoadDestinationMapData (which calls LoadMapHeader → destination tileset/
-    ; tilemap + music). OW-A.14. Warp-pad/fly skip branch is deferred, so the single
-    ; call here matches pret's 3 non-skip branches.
-    call PlayMapChangeSound
     call LoadDestinationMapData
     call InitMapSprites                        ; populate NPC slots for the new map
-    ; pret: home/overworld.asm:515 (WarpFound2.indoorMaps) — clear BIT_EXITING_DOOR,
-    ; then set BIT_STANDING_ON_DOOR to trigger RunNPCMovementScript→PlayerStepOutFromDoor
-    ; on the next idle frame. PlayerStepOutFromDoor re-sets BIT_EXITING_DOOR only if the
-    ; arrival tile is a door tile; stair arrivals leave it clear.
-    and byte [ebp + wMovementFlags], ~(1 << BIT_EXITING_DOOR)
+    ; set BIT_STANDING_ON_DOOR - have the player step out from the door, if any.
+    ; pret :513-514. The .indoorMaps branch cleared both door bits above; this set is
+    ; unconditional in pret and drives RunNPCMovementScript -> PlayerStepOutFromDoor on
+    ; the next idle frame. PlayerStepOutFromDoor re-sets BIT_EXITING_DOOR only when the
+    ; arrival tile really is a door, so stair arrivals leave it clear.
     or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_DOOR)
-    call IgnoreInputForHalfSecond
-    ; OW-A.4(b): re-enter EnterMap on every warp, faithful to pret WarpFound2.done
-    ; (home/overworld.asm:517, `jp EnterMap`). The pre-work above (wCurMap/wLastMap,
-    ; LoadDestinationMapData, view/scroll reset, door flags) mirrors WarpFound2's body;
-    ; EnterMap then re-runs the full reset ladder — wJoyIgnore gate, LoadMapData
-    ; (re-loads header/blocks/view/sprites for the new map), ClearVariablesOnEnterMap,
-    ; the fly/dungeon-warp & battle-return resets, UpdateSprites, CUR_MAP_LOADED_1/2 —
-    ; which the old `jmp OverworldLoop` silently skipped. The RunNPCMovementScript
-    ; PlayerStepOutFromDoor still fires on the first post-warp idle frame (BIT_STANDING_ON_DOOR
-    ; set above survives the LoadMapData reload). NOTE: the port's InitMapSprites here is
-    ; now partially redundant with LoadMapData's sprite load inside EnterMap — verified
-    ; harmless (idempotent slot repopulate), MCP live-warp confirmed.
+    call IgnoreInputForHalfSecond              ; call IgnoreInputForHalfSecond
+    ; OW-A.4(b): pret WarpFound2.done ends `jp EnterMap`. EnterMap re-runs the full
+    ; reset ladder - wJoyIgnore gate, LoadMapData, ClearVariablesOnEnterMap, the
+    ; fly/dungeon-warp and battle-return resets, UpdateSprites, CUR_MAP_LOADED_1/2.
+    ; InitMapSprites above is therefore partly redundant with LoadMapData's sprite
+    ; load, and is a harmless idempotent slot repopulate (MCP live-warp confirmed).
     jmp EnterMap
 
 .mapTransition:
@@ -1596,6 +1649,12 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov byte [ebp + hSCX], 0
     mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
 
+    ; pret home/overworld.asm:.loadNewMap (:648-651) — set the follower's
+    ; "crossed a connection" flag and request spawn state 2 BEFORE LoadMapHeader,
+    ; so the reloaded map re-places Pikachu beside the player. Deferred while the
+    ; follow engine was unported; live now (follower phases 1-4).
+    or byte [ebp + wPikachuOverworldStateFlags], (1 << 4) ; set 4, [hl]
+    mov byte [ebp + wPikachuSpawnState], 2                ; ld a, $2 / ld [wPikachuSpawnState], a
     call LoadMapHeader
     ; pret home/overworld.asm:.loadNewMap (:652-654): LoadMapHeader (loads the new map's
     ; wMapMusicSoundID via the MapSongBanks load above) then fade in that music. Real now
@@ -1603,8 +1662,6 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call PlayDefaultMusicFadeOutCurrent
     mov bh, SET_PAL_OVERWORLD
     call RunPaletteCommand
-    ; pret also does the Pikachu spawn set (wPikachuOverworldStateFlags bit 4 /
-    ;   wPikachuSpawnState = 2) at .loadNewMap — deferred with the Pikachu-follow engine.
     call InitMapSprites                        ; populate NPC slots for the new map
     ; Update text table dispatch for the new map.
     movzx eax, byte [ebp + wCurMap]
@@ -1708,7 +1765,6 @@ NewBattle:
 .noBattle:
     clc
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; DoBikeSpeedup — bikes move twice as fast as walking (OW-A.6).
@@ -1922,7 +1978,6 @@ CheckMapConnections:
     stc                                        ; CF=1 → transition occurred
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; PlayMapChangeSound — on a warp, play the "go inside" jingle if the player
 ; walked through an overworld door tile, else "go outside".
@@ -2054,7 +2109,6 @@ HandleBlackOut:
     call PlayDefaultMusicFadeOutCurrent
     jmp SpecialEnterMap                 ; jp SpecialEnterMap (tail)
 
-
 ; ---------------------------------------------------------------------------
 ; StopMusic — arm the audio fade-out (AL = wAudioFadeOutControl), stop the music
 ; engine, wait for the fade to finish, then silence every channel.
@@ -2096,7 +2150,6 @@ StopMusic:
 .done:
     jmp StopAllSounds                       ; jp StopAllSounds (tail)
 
-
 ; ---------------------------------------------------------------------------
 ; HandleFlyWarpOrDungeonWarp — leave the current map by a SPECIAL warp (Fly, Dig,
 ; Escape Rope, or a dungeon warp-pad/hole), rather than by stepping on a warp tile.
@@ -2132,7 +2185,6 @@ HandleFlyWarpOrDungeonWarp:
     call BankswitchCommon               ; flat: records hLoadedROMBank (no MBC write)
     call PrepareForSpecialWarp
     jmp SpecialEnterMap                 ; jp SpecialEnterMap (tail)
-
 
 ; ---------------------------------------------------------------------------
 ; LeaveMapAnim — pret home/overworld.asm:778 (`farjp _LeaveMapAnim`). The bank
@@ -2231,7 +2283,6 @@ LoadTilesetTilePatternData:
     mov bx,  0x0600                                ; BX = BC = $600 bytes
     movzx eax, byte [ebp + wTilesetBank]         ; AL = bank (ignored)
     jmp FarCopyData                                ; tail call
-
 
 ; ---------------------------------------------------------------------------
 ; LoadTileBlockMap — faithful translation.
@@ -2356,7 +2407,6 @@ LoadTileBlockMap:
     pop esi
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; LoadNorthSouthConnectionsTileMap — faithful translation.
 ; Pret ref: home/overworld.asm:LoadNorthSouthConnectionsTileMap
@@ -2393,7 +2443,6 @@ LoadNorthSouthConnectionsTileMap:
     dec ecx
     jnz .row
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; LoadEastWestConnectionsTileMap — faithful translation.
@@ -2575,7 +2624,6 @@ SignLoop:
     jnz .signLoop
     clc
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; CollisionCheckOnLand — tile passability + sprite collision check.
@@ -2767,7 +2815,6 @@ CheckForTilePairCollisions:
     clc
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; LoadCurrentMapView — faithful translation.
 ; Pret ref: home/overworld.asm:LoadCurrentMapView
@@ -2864,8 +2911,6 @@ LoadCurrentMapView:
     pop edi
     pop esi
     ret
-
-
 
 ; ---------------------------------------------------------------------------
 ; AdvancePlayerSprite — home wrapper.
@@ -3043,7 +3088,6 @@ GetSimulatedInput:
     xor al, al                               ; pret: and a — AL=0, CF=0
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; CollisionCheckOnWater — collision check while surfing (OW-A.6).
 ; Pret ref: home/overworld.asm:1665 CollisionCheckOnWater.
@@ -3204,7 +3248,6 @@ LoadPlayerSpriteGraphicsCommon:
     rep movsb
     ret
 
-
 ; (IsTilePassable moved to its pret mirror home/copy2.asm as the trampoline to
 ;  _IsTilePassable, whose body now lives at ITS pret mirror
 ;  engine/gfx/sprite_oam.asm — relocated-labels grind, 2026-07-24.)
@@ -3360,9 +3403,11 @@ LoadMapHeader:
 
     call LoadTilesetHeader
 
-    ; pret: (gated on !BIT_BATTLE_OVER_OR_BLACKOUT) callfar SchedulePikachuSpawnForAfterText —
-    ; queue the Pikachu-follower spawn to appear after the next text box.
-    ; TODO(faithful): not ported (Pikachu-follower subsystem absent; cf. SpawnPikachu stub).
+    mov al, [ebp + wStatusFlags4]
+    test al, (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    jnz .skipPikachuSpawn
+    call SchedulePikachuSpawnForAfterText
+.skipPikachuSpawn:
 
     ; Load this map's wild-encounter data (pret home/overworld.asm:LoadMapHeader:1900,
     ; callfar LoadWildData). Populates wGrassRate/wGrassMons + wWaterRate/wWaterMons from
@@ -3394,7 +3439,6 @@ LoadMapHeader:
     pop ebx
     pop eax
     ret
-
 
 CopyMapConnectionHeader:
     push ecx
@@ -3487,7 +3531,6 @@ LoadMapData:
 .noMapMusic:
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; LoadScreenRelatedData — faithful translation.
 ; Pret ref: home/overworld.asm:LoadScreenRelatedData
@@ -3568,7 +3611,6 @@ ResetMapVariables:
 SwitchToMapRomBank:
     call BankswitchCommon                        ; record AL in hLoadedROMBank (flat no-op MBC)
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; IgnoreInputForHalfSecond — suppress player input for ~30 frames after a warp.
@@ -3687,6 +3729,13 @@ HandleMidJump:
 .ret:
     ret
 
+; ---------------------------------------------------------------------------
+; Func_0ffe — pret home/overworld.asm:2131 (jpfar IsPlayerTalkingToPikachu)
+; ---------------------------------------------------------------------------
+global Func_0ffe
+Func_0ffe:
+    jmp IsPlayerTalkingToPikachu
+
 global InitSprites
 global ZeroSpriteStateData
 global DisableRegularSprites
@@ -3764,7 +3813,6 @@ InitSprites:
     popad
     ret
 
-
 ; Zero sprite state data for slots 1-14 (slot 15 is Pikachu, left intact — pret).
 ZeroSpriteStateData:
     push eax
@@ -3781,7 +3829,6 @@ ZeroSpriteStateData:
     pop ecx
     pop eax
     ret
-
 
 ; Disable regular sprites: SPRITESTATEDATA1_IMAGEINDEX for slots 1-14.
 ; DIVERGENCE (harness-only; zero real-game effect): pret writes $ff here — a
@@ -3811,7 +3858,6 @@ DisableRegularSprites:
     pop esi
     pop ecx
     ret
-
 
 ; LoadSprite (pret home/overworld.asm:2218). In: ECX = wMapSpriteData/ExtraData byte
 ; index ((slot-1)*2); ESI = GB read ptr just past the text-id byte; temp1 = movement

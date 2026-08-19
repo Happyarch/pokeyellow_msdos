@@ -48,12 +48,6 @@ extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN 
 extern StopAllMusic
 extern TextScriptEnd
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wJigglypuffFacingDirections                    equ 0xCD3F
-wPikachuMapScriptFlags                         equ 0xD492
-wSprite03StateData1ImageIndex                  equ 0xC132
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

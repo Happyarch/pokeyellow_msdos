@@ -29,7 +29,6 @@ global UndergroundPathRoute7CopyUnusedTeamRocketHadAHideoutText
 global UndergroundPathRoute7Copy_Script
 global UndergroundPathRoute7Copy_TextPointers
 
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

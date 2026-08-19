@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global CeruleanHouse1Text_1cfc8
 global CeruleanHouse1Text_1cfce
 global CeruleanHouse1Text_1cfd3
@@ -43,10 +42,6 @@ extern PrintText
 extern TextScriptEnd
 extern WaitForTextScrollButtonPress
 extern YesNoChoice
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wAddedToParty                                  equ 0xCCD3
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

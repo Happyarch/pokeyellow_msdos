@@ -41,7 +41,11 @@ INC_FILES = [
     DOS_PORT / "assets" / "rom_window.inc",
 ]
 
-EQU_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s+equ\s+0x([0-9A-Fa-f]+)\s*(?:;.*)?$")
+# Both spellings: gb_memmap.inc declares constants as %define (an equ emits a COFF
+# symbol into every object that includes the header), older entries may be equ.
+EQU_RE = re.compile(
+    r"^\s*(?:%define\s+([A-Za-z_][A-Za-z0-9_]*)\s+|([A-Za-z_][A-Za-z0-9_]*)\s+equ\s+)"
+    r"0x([0-9A-Fa-f]+)\s*(?:;.*)?$")
 
 # ---------------------------------------------------------------------------
 # Curated extents: port-invented buffers whose size is not an equ.
@@ -96,7 +100,8 @@ def parse_symbols():
         for line in f.read_text().splitlines():
             m = EQU_RE.match(line)
             if m:
-                name, val = m.group(1), int(m.group(2), 16)
+                # group1 = %define spelling, group2 = equ spelling, group3 = address
+                name, val = (m.group(1) or m.group(2)), int(m.group(3), 16)
                 syms.setdefault(name, val)   # first def wins (guarded incs)
     return syms
 

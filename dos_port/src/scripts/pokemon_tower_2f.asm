@@ -60,11 +60,6 @@ SCRIPT_POKEMONTOWER2F_DEFEATED_RIVAL           equ 1
 SCRIPT_POKEMONTOWER2F_RIVAL_EXITS              equ 2
 TEXT_POKEMONTOWER2F_RIVAL                      equ 1
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCoordIndex                                    equ 0xCD3D
-wPokemonTower2FCurScript                       equ 0xD62A
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

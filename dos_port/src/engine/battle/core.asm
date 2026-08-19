@@ -13,6 +13,7 @@
 ; Build: nasm -f coff -I include/ -I . -o core.o core.asm
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "coords.inc"          ; BCOORD (hoisted here from a local %define, battle_animations 2b)
 %include "assets/audio_constants.inc"   ; AUDIO_BANK_2 (PlayBattleVictoryMusic)
@@ -38,11 +39,6 @@ bits 32
 ; carried in with CalculateDamage (was core_damage.asm)
 EFFECT_1E equ 0x1E                     ; unused move effect, special-cased in CalculateDamage
 ; carried in with the unit-C faint/send-out cluster
-wPartyMon1HP      equ (wPartyMon1 + MON_HP)
-wPartyMon1Speed   equ (wPartyMon1 + MON_SPD)   ; pret ram/wram.asm — DoUseNextMonDialogue's run odds
-wPartyMon1Species equ wPartyMon1
-wEnemyMon1        equ wEnemyMons
-wEnemyMon1Level   equ (wEnemyMons + MON_LEVEL)
 MIRROR_MOVE       equ 0x4D
 HP_BAR_RED        equ 2       ; constants/gfx_constants.asm
 
@@ -312,7 +308,7 @@ extern ClearScreenArea                 ; src/home/copy2.asm — ESI=wTileMap des
                                        ; uses it ~1000 lines before the old declaration)
 extern ClearSprites                    ; home/clear_sprites.asm
 extern IsItemInBag                     ; src/home/map_objects.asm
-extern PrintSendOutMonMessage          ; battle_stubs.asm (STUB) — pret engine/battle/common_text.asm
+extern PrintSendOutMonMessage          ; engine/battle/common_text.asm
 extern AnimateSendingOutMon            ; engine/battle/init_battle.asm — send-out pic animation
 extern LoadMonBackPic                  ; engine/battle/init_battle.asm — sent-out mon back pic
 extern IsThisPartyMonStarterPikachu    ; engine/pikachu/pikachu_status.asm — CF=1 when starter
@@ -351,7 +347,6 @@ extern DrawHPBar                       ; src/home/pokemon.asm — ESI coord, DH 
 %define T_HUD_73  0x73                 ; HUD vertical connector
 %define CHAR_SLSH 0xF3                 ; '/' in the HP fraction
 extern SkipFixedLengthTextEntries      ; home/array.asm
-
 
 ; ---------------------------------------------------------------------------
 ; MainInBattleLoop — pret engine/battle/core.asm:MainInBattleLoop (line 289).
@@ -2206,14 +2201,6 @@ SwapPlayerAndEnemyLevels:
 ; Verified vs pret ram/wram.asm + constants/ram_constants.asm (badge_boosts.asm also
 ; defines wObtainedBadges=0xD355 locally, so keep these file-local to avoid an include
 ; double-definition). MON_OTID (0x0C) and wPartyMon1 (0xD16A) come from the includes.
-%ifndef wObtainedBadges
-wObtainedBadges     equ 0xD355
-%endif
-wPartyMon1OTID      equ (wPartyMon1 + MON_OTID)
-BIT_CASCADEBADGE    equ 1
-BIT_RAINBOWBADGE    equ 3
-BIT_MARSHBADGE      equ 5
-BIT_EARTHBADGE      equ 7
 
 CheckForDisobedience:
     xor al, al
@@ -3646,7 +3633,6 @@ BattleMenu_RunWasSelected:
     stc                                 ; MainInBattleLoop: jc .ret → battle ends (ran)
     ret
 
-
 ; ===========================================================================
 ; Consolidated from other port files — grind session 8. These are pret
 ; engine/battle/core.asm labels that had been split into satellite port files;
@@ -4100,7 +4086,6 @@ PlayMoveAnimation:
     call MoveAnimation                  ; predef MoveAnimation (direct in flat model)
     call Func_78e98                     ; callfar Func_78e98
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; The damage pipeline — pret engine/battle/core.asm, moved here from
@@ -5014,14 +4999,12 @@ AIGetTypeEffectiveness:
 .ret:
     ret
 
-
 ; ---------------------------------------------------------------------------
 ; The faint / send-out / residual-damage cluster — pret engine/battle/core.asm,
 ; moved here from seven satellite port files (grind session 8, unit C). Each of
 ; those files held nothing but pret core.asm labels, so all seven are gone.
 ; Bodies moved by line range, not retyped.
 ; ---------------------------------------------------------------------------
-
 
 ; --- was src/engine/battle/faint_switch.asm ---
 
@@ -6784,7 +6767,6 @@ global HandleExplodingAnimation
 %define MSG_LINE1    UI_DIALOG_LINE1_OFS
 %define DLG_INT(n)   (UI_DIALOG_BOX_OFS + (n) * FW + 1)
 
-
 ; ---------------------------------------------------------------------------
 ; DrawPlayerHUDAndHPBar — faithful player-ONLY HUD+HP-bar redraw (pret
 ; engine/battle/core.asm:DrawPlayerHUDAndHPBar). Retires the former bare-ret stub in
@@ -7411,7 +7393,6 @@ UpdateCurMonHPBar:
     pop ebx                             ; pop bc
     ret
 
-
 ; ===========================================================================
 ; Consolidated 2026-07-26 (mirror rule): the eleven pret engine/battle/core.asm
 ; labels the port had grown in ten separate files. Grouped by the file each came
@@ -7435,10 +7416,6 @@ TRUE equ 1
 ; 2. wEnemyStatsToDouble / wEnemyStatsToHalve — now defined directly in
 ;    gb_memmap.inc (0xD064/0xD065, = wEnemyBattleStatus1 - 2/-1), so the
 ;    %ifndef guard below is inert. Kept only as a fallback.
-%ifndef wEnemyStatsToDouble
-wEnemyStatsToDouble equ wEnemyBattleStatus1 - 2   ; = 0xD064
-wEnemyStatsToHalve  equ wEnemyBattleStatus1 - 1   ; = 0xD065
-%endif
 
 ; 3. EXP_ALL — item id constant, not defined anywhere in gb_constants.inc or
 ;    dos_port/assets (grepped the whole dos_port/ tree). Value from pret
@@ -7455,8 +7432,6 @@ wEnemyStatsToHalve  equ wEnemyBattleStatus1 - 1   ; = 0xD065
 %ifndef MUSIC_DEFEATED_WILD_MON
 MUSIC_DEFEATED_WILD_MON equ 0xF9
 %endif
-
-
 
 ; ---------------------------------------------------------------------------
 ; FaintEnemyPokemon — pret engine/battle/core.asm:741-867.
@@ -7633,7 +7608,6 @@ section .text
 
 ; --- was src/audio/play_battle_music.asm ---
 
-
 ; ---------------------------------------------------------------------------
 ; EndLowHealthAlarm — pret engine/battle/core.asm:EndLowHealthAlarm.
 ; Called on battle win: turn off the low-health alarm and free its SFX channel.
@@ -7647,7 +7621,6 @@ EndLowHealthAlarm:
     mov [ebp + wLowHealthAlarm], al               ; turn off low-health alarm
     mov [ebp + wChannelSoundIDs + CHAN5], al       ; free the alarm's SFX channel
     ret
-
 
 ; ---------------------------------------------------------------------------
 ; PlayBattleVictoryMusic — pret engine/battle/core.asm:PlayBattleVictoryMusic.
@@ -7665,7 +7638,6 @@ PlayBattleVictoryMusic:
     jmp Delay3                     ; pret: jp Delay3 (tail)
 
 ; --- was src/home/wild_encounter_check.asm ---
-
 
 ; --------------------------------------------------------------------------
 ; StepCountCheck — decrement the per-step counters (pret home/overworld.asm:298).
@@ -7710,7 +7682,6 @@ AnyPartyAlive:
     ret
 
 ; --- was src/engine/battle/load_enemy_from_party.asm ---
-
 
 ; ---------------------------------------------------------------------------
 ; LoadEnemyMonFromParty — pret engine/battle/core.asm:1711-1762
@@ -7831,8 +7802,6 @@ LoadEnemyMonFromParty:
 ; pret `n percent` = n * $ff / 100 (macros/data.asm). 25→63, 50→127, 75→191.
 %define PERCENT(n) ((n) * 0xFF / 100)
 
-
-
 SelectEnemyMove:
     ; TODO-HW: link-battle move exchange (Phase 4 network HAL). Single-player skips
     ; it and selects locally; the link path would read the opponent's chosen move.
@@ -7917,7 +7886,6 @@ SelectEnemyMove:
 
 ; --- was src/engine/battle/print_move_failure.asm ---
 
-
 ; ===========================================================================
 ; PrintMoveFailureText — pret engine/battle/core.asm:3889
 ; Prints why a move had no effect (immune / missed / already-unaffected via
@@ -8001,7 +7969,6 @@ PrintMoveFailureText:
     ret
 
 ; --- was src/engine/battle/counter.asm ---
-
 
 ; ===========================================================================
 ; HandleCounterMove — engine/battle/core.asm:4718.
@@ -8090,7 +8057,6 @@ HandleCounterMove:
 
 ; --- was src/engine/battle/building_rage.asm ---
 
-
 HandleBuildingRage:
     ; values for the player's turn (target = enemy mon)
     mov esi, wEnemyBattleStatus2
@@ -8142,7 +8108,6 @@ METRONOME_MOVE  equ 0x4C     ; METRONOME
 STRUGGLE_MOVE   equ 0xA5     ; STRUGGLE — pret ASSERT NUM_ATTACKS == STRUGGLE;
                               ; ids >= STRUGGLE are not real moves and are rejected.
 
-
                               ; ids >= STRUGGLE are not real moves and are rejected.
 
 ; ===========================================================================
@@ -8183,7 +8148,6 @@ MetronomePickMove:
 %define EXPLOSION_MOVE     0x63     ; EXPLOSION move id
 %define MEGA_PUNCH_ANIM    0x05     ; MEGA_PUNCH animation id — pret ASSERTs this ==
                                      ; ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT (5)
-
 
                                      ; ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT (5)
 

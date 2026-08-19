@@ -36,9 +36,6 @@ bits 32
 %include "assets/audio_constants.inc"         ; SFX_COLLISION / SFX_SAFARI_ZONE_PA
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
-%ifndef wChannelSoundIDs
-wChannelSoundIDs   equ 0xC026 ; golden 00:c026
-%endif
 
 WAIT_PA_MAX  equ 600  ; bounded audio-wait cap (DIVERGENCE — see header)
 

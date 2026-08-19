@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global BluesHouseDaisyBagFullText
 global BluesHouseDaisyOfferMapText
 global BluesHouseDaisyRivalAtLabText
@@ -45,10 +44,6 @@ extern TextScriptEnd
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_BLUESHOUSE_NOOP                         equ 1
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wBluesHouseCurScript                           equ 0xD5F2
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

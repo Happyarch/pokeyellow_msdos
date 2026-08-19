@@ -43,6 +43,8 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "gb_text.inc"                  ; text_far / text_end
@@ -61,24 +63,18 @@ LINK_STATE_NONE         equ 0x00        ; constants/serial_constants.asm
 TRUE                    equ 1
 %endif
 %ifndef HALL_OF_FAME
-HALL_OF_FAME            equ 0x76        ; constants/map_constants.asm (map id $76)
 %endif
 %ifndef LEADING_ZEROES
-LEADING_ZEROES          equ 1 << BIT_LEADING_ZEROES   ; text_constants.asm ($80)
 %endif
 ; wStatusFlags6 bit indices (constants/ram_constants.asm)
 %ifndef BIT_GAME_TIMER_COUNTING
-BIT_GAME_TIMER_COUNTING equ 0
 %endif
 %ifndef BIT_DEBUG_MODE
-BIT_DEBUG_MODE          equ 1
 %endif
 %ifndef BIT_FLY_OR_DUNGEON_WARP
-BIT_FLY_OR_DUNGEON_WARP equ 2
 %endif
 ; wCurrentMapScriptFlags bit (constants/ram_constants.asm)
 %ifndef BIT_CUR_MAP_LOADED_1
-BIT_CUR_MAP_LOADED_1    equ 5
 %endif
 
 ; ---------------------------------------------------------------------------
@@ -86,18 +82,6 @@ BIT_CUR_MAP_LOADED_1    equ 5
 ; authoritative origin/symbols:pokeyellow.sym bank-00 offsets (reported for root
 ; to promote into gb_memmap.inc). %ifndef-guarded so promotion is a no-op here.
 ; ---------------------------------------------------------------------------
-%ifndef wDefaultMap
-wDefaultMap             equ 0xD07B      ; sym 00:d07b (union lane of wAnimationID)
-%endif
-%ifndef wDestinationMap
-wDestinationMap         equ 0xD719      ; sym 00:d719
-%endif
-%ifndef wCableClubDestinationMap
-wCableClubDestinationMap equ 0xD72C     ; sym 00:d72c (= wStatusFlags3 union lane)
-%endif
-%ifndef wEnteringCableClub
-wEnteringCableClub      equ 0xCC47      ; sym 00:cc47 (pret ram/wram.asm:430)
-%endif
 
 ; charmap control code (constants/charmap.asm) — used only by the DEBUG_MAINMENU
 ; harness's player-name seed; the rendered strings themselves are Tier-1 DATA in

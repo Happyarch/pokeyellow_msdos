@@ -31,8 +31,6 @@ bits 32
 
 ; pret HRAM names for the auto-BG-transfer registers — used so the faithful (inert)
 ; writes below cross-reference against pret by name (faithdiff matches stores by name).
-hAutoBGTransferEnabled equ hAutoBGTransferEnabled
-hAutoBGTransferDest    equ hAutoBGTransferDest
 
 global YellowIntro_AnimatedObjectJumptable
 global Func_fa007, Func_fa008, Func_fa014, Func_fa02b, Func_fa062
@@ -761,7 +759,6 @@ YellowIntroScene2_PlaceGraphic:
     mov al, 1
     call YellowIntro_PublishGraphicAttr
     ret
-
 
 ; Scene 3 — hold the "running Pikachu 1" pose while scrolling the BG right to
 ; hSCX = 0x68, then mask the objects and advance. hSCX is the port's own scroll

@@ -40,12 +40,6 @@ extern LoadItemList
 extern ShakeElevator
 extern TextScriptEnd
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wElevatorWarpMaps                              equ 0xCC5B
-wWarpedFromWhichMap                            equ 0xD73B
-wWarpedFromWhichWarp                           equ 0xD73A
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

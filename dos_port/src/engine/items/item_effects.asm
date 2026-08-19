@@ -812,7 +812,6 @@ RestoreBonusPP:
 ;
 ; Build: nasm -f coff -I include/ -I . -o item_use.o src/engine/items/item_use.asm
 
-
 %include "assets/audio_constants.inc"
 
 global UseItem_
@@ -852,7 +851,7 @@ extern PrintStatsBox        ; engine/pokemon/status_screen.asm — DH = box type
 extern LearnMoveFromLevelUp ; engine/pokemon/evos_moves.asm (predef)
 extern TryEvolvingMon       ; engine/pokemon/evos_moves.asm
 extern ModifyPikachuHappiness    ; engine/events/pikachu_happiness.asm (pret mirror; DH = PIKAHAPPY_*)
-extern RespawnOverworldPikachu   ; battle_exp_stubs.asm (deferred)
+extern RespawnOverworldPikachu   ; src/engine/pikachu/respawn_overworld_pikachu.asm
 extern DoubleOrHalveSelectedStats   ; engine/battle/core.asm (pret mirror; bodies in unused_stats_functions.asm)
 
 ; --- screen / text / sound ---
@@ -2933,7 +2932,6 @@ Func_d85d:
     clc
     ret
 
-
 ; === ItemUseRepel family (items-plan Stage 9) ==============================
 ;
 ; Source: engine/items/item_effects.asm:ItemUseRepel / ItemUseSuperRepel /
@@ -2994,7 +2992,6 @@ PrintItemUseTextAndRemoveItem:
     call PlaySound
     call WaitForTextScrollButtonPress
     jmp RemoveUsedItem                  ; pret: fallthrough
-
 
 ; === Battle items (items-plan Stage 10) ====================================
 ;
@@ -3119,7 +3116,6 @@ ItemUseXStat:
     pop eax                             ; [A]
     mov [ebp + esi], al                 ; restore wPlayerMoveNum
     ret
-
 
 ; === Key items (items-plan Stage 11) =======================================
 ;
@@ -3458,17 +3454,14 @@ global ItemUsePokedex
 ItemUsePokedex:
     jmp ShowPokedexMenu                 ; pret: predef_jump ShowPokedexMenu
 
-
 ; === ItemUsePokeFlute (items-plan Stage 11) ================================
 ;
 ; Source: engine/items/item_effects.asm:ItemUsePokeFlute.
 ;
-; DEFERRED (documented divergence): pret's third overworld branch — PEWTER_POKECENTER,
-; "wake the sleeping Pikachu next to you" — needs `IsPikachuRightNextToPlayer` and
-; `PlaySpecificPikachuEmotion`, neither of which is ported (label_status: missing).
-; That branch therefore falls into `.noSnorlaxOrPikachuToWakeUp` ("played the flute,
-; no effect"), which is what pret does for every other map anyway. Restore it when
-; the Pikachu-emotion routines land.
+; pret's third overworld branch — PEWTER_POKECENTER, "wake the sleeping Pikachu next
+; to you" — is LIVE as of the follower-Pikachu wiring. It was deferred while
+; `IsPikachuRightNextToPlayer` and `PlaySpecificPikachuEmotion` were unported; both are
+; ported and linked now, so the branch below calls them directly.
 ;
 ; The Route 12/16 branches only SET the fight event; the Snorlax that reads it is a
 ; map script (overworld plan). Playing the flute on the right tile is faithful today;
@@ -3508,8 +3501,28 @@ ItemUsePokeFlute:
     ret
 
 .notRoute16:
-    ; DEFERRED: pret's PEWTER_POKECENTER sleeping-Pikachu branch (see header).
-    ; Falls through to the no-effect message, as pret does for any other map.
+    ; pret engine/items/item_effects.asm:1884-1895 — PEWTER_POKECENTER, wake the
+    ; sleeping Pikachu standing next to you. Was deferred because
+    ; IsPikachuRightNextToPlayer / PlaySpecificPikachuEmotion were unported; both
+    ; landed with the follower engine, so the branch is live.
+    ; NOTE: pret prints the text and reloads the overworld here WITHOUT the flute
+    ; music, so this must not reuse iu_played_flute_had_effect (which plays SFX).
+    cmp al, PEWTER_POKECENTER
+    jne .noSnorlaxOrPikachuToWakeUp
+    call CheckPikachuFollowingPlayer        ; ZF set = not following
+    jz .noSnorlaxOrPikachuToWakeUp
+    call IsPikachuRightNextToPlayer         ; CF set = adjacent
+    jnc .noSnorlaxOrPikachuToWakeUp
+    mov esi, [PlayedFluteHadEffectText_ref] ; ld hl, PlayedFluteHadEffectText
+    call iu_print_text                      ; call PrintText
+    call ItemUseReloadOverworldData         ; call ItemUseReloadOverworldData
+    ; ldpikaemotion e, PikachuEmotion26 -> (PikachuEmotion26_id - PikachuEmotionTable)/2.
+    ; PikachuEmotionTable is strictly ordinal (34 entries, PikachuEmotion0..33), so the
+    ; index is literally 26. Computed here as a literal because the pret expression is
+    ; assembly-time DIVISION on a label in another object file, which cannot relocate.
+    mov dl, 26                              ; E = emotion index
+    call PlaySpecificPikachuEmotion
+    ret
 
 .noSnorlaxOrPikachuToWakeUp:
     mov esi, [PlayedFluteNoEffectText_ref]
@@ -3608,7 +3621,6 @@ iu_played_flute_had_effect:
     call PlayDefaultMusic               ; back to the map music
 .done:
     ret
-
 
 ; === ItemUseCardKey (items-plan Stage 11) =================================
 ;
@@ -3752,6 +3764,9 @@ extern WildDataPointers, WildDataPointersEnd   ; data/wild_data.asm
 extern msgbox_centered                  ; src/engine/battle/core.asm — centered projection
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
+extern CheckPikachuFollowingPlayer        ; src/home/pikachu.asm
+extern IsPikachuRightNextToPlayer         ; src/engine/pikachu/pikachu_follow.asm
+extern PlaySpecificPikachuEmotion         ; src/engine/pikachu/pikachu_emotions.asm
 
 FindWildLocationsOfMon:
     mov edx, wBuffer                    ; ld de, wBuffer

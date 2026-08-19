@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global SilphCo1FLinkReceptionistText
 global SilphCo1F_Script
 global SilphCo1F_TextPointers

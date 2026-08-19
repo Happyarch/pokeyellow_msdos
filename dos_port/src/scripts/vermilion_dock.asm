@@ -50,15 +50,6 @@ extern VermilionDockSSAnneLeavesScript   ; NOT YET DEFINED IN THE PORT
 extern VermilionDock_SyncScrollWithLY   ; NOT YET DEFINED IN THE PORT
 extern WriteOAMBlock
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wSSAnneSmokeDriftAmount                        equ 0xCD3D
-wSSAnneSmokeX                                  equ 0xCD3E
-wShadowOAMSprite04XCoord                       equ 0xC311
-wSpritePlayerStateData2MovementByte1           equ 0xC206
-wVermilionDockTileMapBuffer                    equ 0xCC5B
-wVermilionDockTileMapBufferEnd                 equ 0xCD0F
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

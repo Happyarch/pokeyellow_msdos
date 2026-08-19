@@ -46,50 +46,25 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "coords.inc"              ; event_displacement (re-derived) for the data tables
 %include "assets/map_dims.inc"     ; map ids, <MAP>_WIDTH, tileset ids (generated)
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
-%ifndef wStatusFlags6
-wStatusFlags6      equ 0xD731 ; golden 00:d731
-%endif
-%ifndef wStatusFlags3
-wStatusFlags3      equ 0xD72C ; golden 00:d72c (unions wCableClubDestinationMap)
-%endif
-%ifndef wDestinationMap
-wDestinationMap    equ 0xD719 ; golden 00:d719
-%endif
-%ifndef wLastMap
-wLastMap           equ 0xD364 ; golden 00:d364
-%endif
-%ifndef wLastBlackoutMap
-wLastBlackoutMap   equ 0xD718 ; golden 00:d718
-%endif
-%ifndef wDungeonWarpDestinationMap
-wDungeonWarpDestinationMap equ 0xD71C ; golden 00:d71c
-%endif
-%ifndef wDungeonWarpDataEntrySize
-wDungeonWarpDataEntrySize  equ 0xD12E ; golden 00:d12e (unions wWhichPewterGuy)
-%endif
 
 ; --- constants ---
 ; (PALLET_TOWN and the other map ids come from assets/map_dims.inc)
 %ifndef BIT_FLY_OR_DUNGEON_WARP
-BIT_FLY_OR_DUNGEON_WARP   equ 2   ; wStatusFlags6 bit 2
 %endif
 %ifndef BIT_DEBUG_MODE
-BIT_DEBUG_MODE            equ 1   ; wStatusFlags6 bit 1
 %endif
 %ifndef BIT_DUNGEON_WARP
-BIT_DUNGEON_WARP          equ 4   ; wStatusFlags6 bit 4
 %endif
 %ifndef BIT_ESCAPE_WARP
-BIT_ESCAPE_WARP           equ 6   ; wStatusFlags6 bit 6
 %endif
 %ifndef BIT_ON_DUNGEON_WARP
-BIT_ON_DUNGEON_WARP       equ 4   ; wStatusFlags3 bit 4
 %endif
 %ifndef USING_INTERNAL_CLOCK
 USING_INTERNAL_CLOCK      equ 0x02 ; constants/serial_constants.asm

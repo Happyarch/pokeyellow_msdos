@@ -6,9 +6,6 @@ extern PlayCurrentMoveAnimation
 extern PrintText
 extern StatusChangesEliminatedText
 
-
-
-
 section .text
 global HazeEffect_
 global CureVolatileStatuses

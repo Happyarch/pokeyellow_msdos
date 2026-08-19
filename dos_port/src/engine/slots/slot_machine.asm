@@ -2,6 +2,7 @@
 
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_text.inc"
 %include "coords.inc"
@@ -122,33 +123,6 @@ extern CloseTextDisplay             ; src/home/text_script.asm
 %define BIT_SLOTS_CAN_WIN_WITH_7_OR_BAR 7
 
 SET_PAL_SLOTS                   equ 5
-SMILE_BUBBLE                    equ 2
-
-wPayoutCoins                    equ 0xCD4A
-wTempCoins1                     equ 0xCD46
-wTempCoins2                     equ 0xCD4A
-wSlotMachineWinningSymbol       equ 0xCD41
-SLOTS7                          equ 0x0200
-SLOTSBAR                        equ 0x0604
-SLOTSCHERRY                     equ 0x0A08
-wStoppingWhichSlotMachineWheel  equ 0xCD3D
-wSlotMachineWheel1Offset        equ 0xCD3E
-wSlotMachineWheel2Offset        equ 0xCD3F
-wSlotMachineWheel3Offset        equ 0xCD40
-wSlotMachineWheel1BottomTile    equ 0xCD41
-wSlotMachineWheel1MiddleTile    equ 0xCD42
-wSlotMachineWheel1TopTile       equ 0xCD43
-wSlotMachineWheel2BottomTile    equ 0xCD44
-wSlotMachineWheel2MiddleTile    equ 0xCD45
-wSlotMachineWheel2TopTile       equ 0xCD46
-wSlotMachineWheel3BottomTile    equ 0xCD47
-wSlotMachineWheel3MiddleTile    equ 0xCD48
-wSlotMachineWheel3TopTile       equ 0xCD49
-wSlotMachineFlags               equ 0xCD4C
-wSlotMachineWheel1SlipCounter   equ 0xCD4D
-wSlotMachineWheel2SlipCounter   equ 0xCD4E
-wSlotMachineRerollCounter       equ 0xCD4F
-
 
 ; -----------------------------------------------------------------------------
 ; SlotMachine_SetFlags
@@ -1214,5 +1188,4 @@ PromptUserToPlaySlots:
     movzx eax, byte [ebp + wSlotMachineSavedROMBank]
     push eax
     jmp CloseTextDisplay
-
 

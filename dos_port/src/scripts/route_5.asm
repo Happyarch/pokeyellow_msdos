@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global Route5UndergroundPathSignText
 global Route5_Script
 global Route5_TextPointers

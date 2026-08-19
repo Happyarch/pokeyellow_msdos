@@ -58,9 +58,6 @@ extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=
 ; pret wNumSprites (ram/wram.asm) — number of sprites on the current map. Read by
 ; src/home/text_script.asm; not in this file's include chain, so define it here
 ; (guarded; gb_memmap.inc carries the canonical copy at the same value).
-%ifndef wNumSprites
-wNumSprites equ 0xD4E0
-%endif
 extern InitToggleableObjectFlags          ; src/engine/overworld/map_sprites.asm
 extern text_engine_init                   ; src/home/text.asm
                                     ; CF=1 + [hTextID]=sign id or sprite slot
@@ -251,7 +248,6 @@ global h_load_sprite_temp2
 ; ---------------------------------------------------------------------------
 ; Map and tileset constants
 ; ---------------------------------------------------------------------------
-MAP_ID_PALLET_TOWN          equ 0x00
 TILESET_OVERWORLD           equ 0x00
 ; tileset ids (constants/tileset_constants.asm; not in gb_memmap.inc) — PlayMapChangeSound
 ; wStatusFlags6 bit 5 (constants/ram_constants.asm). Its siblings (BIT_FLY_WARP,
@@ -259,8 +255,6 @@ TILESET_OVERWORLD           equ 0x00
 ; exists in gb_constants.inc, which this file does not include — and the two headers
 ; must not both define it (bare `equ` redefinition is a NASM error in any file that
 ; includes both). Local def, same as player_gfx.asm / special_warps.asm do for theirs.
-PALLET_TOWN_WIDTH           equ 10
-PALLET_TOWN_HEIGHT          equ 9
 PALLET_TOWN_BORDER_BLOCK    equ 0x0B   ; border block from PalletTown_Object
 TILESET_BANK_FLAT           equ 0x01   ; ignored in flat model (TODO-HW: ROM banking)
 
@@ -278,8 +272,6 @@ PALLET_TOWN_VIEW_PTR        equ wOverworldMap + (MAP_BORDER) * (PALLET_TOWN_WIDT
 ; Pallet Town map connections (computed from the pret `connection` macro for the
 ; north=Route1 / south=Route21 connections, both at offset 0). See
 ; macros/scripts/maps.asm:connection. Route1 = 10×18, Route21 = 10×45.
-MAP_ID_ROUTE_1              equ 0x0C
-MAP_ID_ROUTE_21             equ 0x20
 
 ; The Pallet Town north(Route1)/south(Route21) strip + view-pointer equs that
 ; used to live here are GONE. They were hand-computed for MAP_BORDER = 6 (e.g.
@@ -731,21 +723,21 @@ WalkSpeedSample:
     push eax
     push edx
     mov eax, [tick_count]
-    cmp dword [ebp + 0xD1F0], 0
+    cmp dword [ebp + (W_PORT_SCRATCH + 0x10)], 0
     jne .have
-    mov [ebp + 0xD1E0], eax                 ; first tick
-    mov [ebp + 0xD1E4], eax                 ; last tick
-    mov dword [ebp + 0xD1E8], 1             ; tiles = 1
-    mov dword [ebp + 0xD1F0], 1             ; initialized
+    mov [ebp + (W_PORT_SCRATCH + 0x00)], eax                 ; first tick
+    mov [ebp + wPartyMon3MaxHP], eax                 ; last tick
+    mov dword [ebp + wPartyMon3Defense], 1             ; tiles = 1
+    mov dword [ebp + (W_PORT_SCRATCH + 0x10)], 1             ; initialized
     jmp .done
 .have:
     mov edx, eax
-    sub edx, [ebp + 0xD1E4]                 ; delta = now - last
-    mov [ebp + 0xD1E4], eax                 ; last = now
-    inc dword [ebp + 0xD1E8]                ; tiles++
-    cmp edx, [ebp + 0xD1EC]
+    sub edx, [ebp + wPartyMon3MaxHP]                 ; delta = now - last
+    mov [ebp + wPartyMon3MaxHP], eax                 ; last = now
+    inc dword [ebp + wPartyMon3Defense]                ; tiles++
+    cmp edx, [ebp + wPartyMon3Special]
     jae .done
-    mov [ebp + 0xD1EC], edx                 ; min delta
+    mov [ebp + wPartyMon3Special], edx                 ; min delta
 .done:
     pop edx
     pop eax
@@ -943,6 +935,10 @@ section .text
 ; Returns CF=0 if no match.
 ; Pret ref: home/overworld.asm:CheckForWarpTile (approach)
 ; ---------------------------------------------------------------------------
+; pret RAM symbol gb_memmap.inc does not carry. Address is rgblink's, read from
+; pokeyellow.sym (00:d73a) — not inferred. Defined locally because the transpiled
+; elevator scripts define it bare, so a central definition would collide.
+
 CheckWarpTile:
     push eax
     push ecx
@@ -962,6 +958,22 @@ CheckWarpTile:
     mov bl, [esi+2]             ; dest_warp_id (0-based index in dest map)
     mov [ebp + wDestinationWarpID], bl
     mov bl, [esi+3]             ; dest_map_id (0xFF = LAST_MAP)
+    ; pret WarpFound1 (home/overworld.asm:452): `ldh [hWarpDestinationMap], a` records
+    ; the RAW byte before any LAST_MAP resolution, and WarpFound2 branches on it to pick
+    ; the Pikachu spawn setter. The port resolves 0xFF here, so record it first or the
+    ; .goBackOutside case becomes indistinguishable from a warp naming wLastMap outright.
+    mov [ebp + hWarpDestinationMap], bl
+    ; pret WarpFound2 (home/overworld.asm:456-458):
+    ;   ld a, [wNumberOfWarps] / sub c / ld [wWarpedFromWhichWarp], a
+    ; pret does this in WarpFound2, but the port's warp scan lives HERE and owns the
+    ; counter, so the store belongs here. ECX is exactly pret's `c`: it is decremented
+    ; only on a NON-match (.next), so on a match it still counts the current entry.
+    ; The three elevator scripts (celadon_mart, rocket_hideout, silph_co) READ this;
+    ; before this store nothing in the port ever wrote it. AL/AH held the player's
+    ; Y/X for the scan and are dead here (EAX is restored by the pop at .found).
+    mov al, [ebp + wNumberOfWarps]
+    sub al, cl
+    mov [ebp + wWarpedFromWhichWarp], al
     cmp bl, 0xFF
     jne .found
     mov bl, [ebp + wLastMap]  ; resolve LAST_MAP to the previous map

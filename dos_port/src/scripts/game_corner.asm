@@ -23,6 +23,7 @@ bits 32
 
 %include "assets/audio_constants.inc"
 %include "assets/script_strings.inc"
+%include "coords.inc"
 
 global GameCornerBeauty1Text
 global GameCornerBeauty2Text
@@ -31,6 +32,7 @@ global GameCornerBlankText2
 global GameCornerClerkText
 global GameCornerCoinText
 global GameCornerDefaultScript
+global GameCornerDrawCoinBox
 global GameCornerFishingGuru1Text
 global GameCornerFishingGuru2Text
 global GameCornerGamblerText
@@ -66,7 +68,6 @@ extern ClearScreenArea
 extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern EngageMapTrainer
-extern GameCornerDrawCoinBox   ; NOT YET DEFINED IN THE PORT
 extern HasEnoughCoins
 extern HasEnoughMoney
 extern HideObject
@@ -94,11 +95,6 @@ SCRIPT_GAMECORNER_DEFAULT                      equ 0
 SCRIPT_GAMECORNER_ROCKET_BATTLE                equ 1
 SCRIPT_GAMECORNER_ROCKET_EXIT                  equ 2
 TEXT_GAMECORNER_ROCKET_AFTER_BATTLE            equ 13
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hUnusedCoinsByte                               equ 0xFF9F
-wGameCornerCurScript                           equ 0xD65E
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -678,41 +674,58 @@ GameCornerOopsForgotCoinCaseText:
     text_end
 
 ; ---------------------------------------------------------------------------
-; BAIL[screen-coord-projection] GameCornerDrawCoinBox (scripts/GameCorner.asm:489-520) — at scripts/GameCorner.asm:491: hlcoord 11, 0
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; GameCornerDrawCoinBox — pret ref: scripts/GameCorner.asm:489-520.
+; Draws the money/coin box in the top-right corner of the Game Corner screen
+; (same 9x3 box shape and GB anchor as MONEY_BOX_TEMPLATE / the prize coin box).
+;
+; UI PROJECTION (docs/ui_projection.md):
+;   ; PROJ overworld-ui (game corner coin box): GB(11,0) 9x3 --(anchor=top-right, X+20, Y+0)--> wx=255 wy=0 clip=72 max_y=56
+; Same anchor ruling as the mart MONEY box and the Celadon prize coin box
+; (identical GB origin/shape); the interior hlcoord calls below (12,1 / 12,2 /
+; 12,3 / 12,4 / 12,5 / 15,5) carry the same X+20/Y+0 mapping and are written
+; pret-literal, matching the established prize_menu.asm/vending_machine.asm/
+; pokemart.asm convention for this class of box.
 ; ---------------------------------------------------------------------------
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	set BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	hlcoord 11, 0
-; PRET| 	lb bc, 5, 7
-; PRET| 	call TextBoxBorder
-; PRET| 	call UpdateSprites
-; PRET| 	hlcoord 12, 1
-; PRET| 	lb bc, 4, 7
-; PRET| 	call ClearScreenArea
-; PRET| 	hlcoord 12, 2
-; PRET| 	ld de, GameCornerMoneyText
-; PRET| 	call PlaceString
-; PRET| 	hlcoord 12, 3
-; PRET| 	ld de, GameCornerBlankText1
-; PRET| 	call PlaceString
-; PRET| 	hlcoord 12, 3
-; PRET| 	ld de, wPlayerMoney
-; PRET| 	ld c, 3 | MONEY_SIGN | LEADING_ZEROES
-; PRET| 	call PrintBCDNumber
-; PRET| 	hlcoord 12, 4
-; PRET| 	ld de, GameCornerCoinText
-; PRET| 	call PlaceString
-; PRET| 	hlcoord 12, 5
-; PRET| 	ld de, GameCornerBlankText2
-; PRET| 	call PlaceString
-; PRET| 	hlcoord 15, 5
-; PRET| 	ld de, wPlayerCoins
-; PRET| 	ld c, 2 | LEADING_ZEROES
-; PRET| 	call PrintBCDNumber
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	res BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	ret
+%assign event_byte -1
+%assign event_byte_a -1
+GameCornerDrawCoinBox:
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY) ; ld hl, wStatusFlags5 / set BIT_NO_TEXT_DELAY, [hl]
+    ; PROJ overworld-ui (game corner coin box): GB(11,0) 9x3 --(anchor=top-right, X+20, Y+0)--> wx=255 wy=0 clip=72 max_y=56
+    hlcoord 11, 0                                 ; hlcoord 11, 0
+    mov bh, 5                                     ; lb bc, 5, 7
+    mov bl, 7
+    call TextBoxBorder                            ; call TextBoxBorder
+    call UpdateSprites                            ; call UpdateSprites
+    hlcoord 12, 1                                 ; hlcoord 12, 1
+    mov bh, 4                                     ; lb bc, 4, 7
+    mov bl, 7
+    call ClearScreenArea                          ; call ClearScreenArea
+    hlcoord 12, 2                                 ; hlcoord 12, 2
+    mov eax, GameCornerMoneyText                  ; ld de, GameCornerMoneyText
+    mov edx, eax
+    call PlaceString                              ; call PlaceString
+    hlcoord 12, 3                                 ; hlcoord 12, 3
+    mov eax, GameCornerBlankText1                 ; ld de, GameCornerBlankText1
+    mov edx, eax
+    call PlaceString                              ; call PlaceString
+    hlcoord 12, 3                                 ; hlcoord 12, 3
+    mov edx, wPlayerMoney                         ; ld de, wPlayerMoney
+    mov bl, 3 | (1 << BIT_MONEY_SIGN) | LEADING_ZEROES ; ld c, 3 | MONEY_SIGN | LEADING_ZEROES
+    call PrintBCDNumber                           ; call PrintBCDNumber
+    hlcoord 12, 4                                 ; hlcoord 12, 4
+    mov eax, GameCornerCoinText                   ; ld de, GameCornerCoinText
+    mov edx, eax
+    call PlaceString                              ; call PlaceString
+    hlcoord 12, 5                                 ; hlcoord 12, 5
+    mov eax, GameCornerBlankText2                 ; ld de, GameCornerBlankText2
+    mov edx, eax
+    call PlaceString                              ; call PlaceString
+    hlcoord 15, 5                                 ; hlcoord 15, 5
+    mov edx, wPlayerCoins                         ; ld de, wPlayerCoins
+    mov bl, 2 | LEADING_ZEROES                    ; ld c, 2 | LEADING_ZEROES
+    call PrintBCDNumber                           ; call PrintBCDNumber
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF ; ld hl, wStatusFlags5 / res BIT_NO_TEXT_DELAY, [hl]
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

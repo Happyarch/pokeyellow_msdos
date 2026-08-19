@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global LavenderCuboneHouseBrunetteGirlText
 global LavenderCuboneHouseCuboneText
 global LavenderCuboneHouse_Script

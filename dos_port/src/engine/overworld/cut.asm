@@ -40,41 +40,16 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/map_dims.inc"   ; map-id / tileset-id constants (Tier-1 generated)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
 %include "gb_text.inc"                       ; text_far / text_end
 %include "assets/audio_constants.inc"        ; SFX_CUT
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
-%ifndef wActionResultOrTookBattleTurn
-wActionResultOrTookBattleTurn equ 0xCD6A ; golden 00:cd6a
-%endif
-%ifndef wCutTile
-wCutTile                equ 0xCD4D ; golden 00:cd4d
-%endif
-%ifndef wTileInFrontOfPlayer
-wTileInFrontOfPlayer    equ 0xCFC5 ; golden 00:cfc5
-%endif
-%ifndef wWhichAnimationOffsets
-wWhichAnimationOffsets  equ 0xCD50 ; golden 00:cd50
-%endif
-%ifndef wSpritePlayerStateData1YPixels
-wSpritePlayerStateData1YPixels equ 0xC104 ; golden 00:c104
-%endif
-%ifndef wShadowOAMSprite36Attributes
-wShadowOAMSprite36Attributes   equ 0xC393 ; golden 00:c393
-%endif
-%ifndef wYBlockCoord
-wYBlockCoord            equ 0xD362 ; golden 00:d362
-%endif
-%ifndef wXBlockCoord
-wXBlockCoord            equ 0xD363 ; golden 00:d363
-%endif
 %ifndef W_SPRITE_PLAYER_FACING_DIR
-W_SPRITE_PLAYER_FACING_DIR equ 0xC109
 %endif
 %ifndef GYM
-GYM                     equ 7      ; constants/tileset_constants.asm
 %endif
 %ifndef OBJ_SIZE
 OBJ_SIZE                equ 4      ; bytes per OAM entry

@@ -10,7 +10,6 @@ extern ShroudedInMistText
 section .text
 global MistEffect_
 
-
 MistEffect_:
     mov esi, wPlayerBattleStatus2
     mov al, byte [ebp + hWhoseTurn]

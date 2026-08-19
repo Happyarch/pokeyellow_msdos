@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global Func_f23d0
 global SummerBeachHousePikachuText
 global SummerBeachHousePoster1Text
@@ -52,10 +51,6 @@ extern TextScriptEnd
 extern WaitForSoundToFinish
 extern WaitForTextScrollButtonPress
 extern YesNoChoice
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wPikachuMapScriptFlags                         equ 0xD492
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

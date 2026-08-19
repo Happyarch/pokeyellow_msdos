@@ -1,4 +1,4 @@
-; font_1bpp.inc — generated from gfx/font/font.png via tools/gen_font_inc.py.
+; font_1bpp.inc — generated from gfx/font/font.png via tools/generators/gen_font_inc.py.
 ; 128 tiles, 1bpp, 8 bytes each. Char code C ($80='A') -> tile (C-$80).
 ; DO NOT EDIT BY HAND.
 

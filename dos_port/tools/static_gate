@@ -37,6 +37,9 @@ WHAT IT RUNS (all static — no emulator, no ROM, no golden)
   3. lint_pret_labels --strict-claims   per-class counts vs the baseline
   4. pytest tools/test_label_db.py      the label-DB build-graph suite
   5. validate_scenarios.py    manifest <-> generated scenario registry
+  6. check_ram_addresses.py   pret RAM/HRAM labels vs pokeyellow.sym
+  7. check_ram_collisions.py  port-introduced RAM aliasing (pret unions pass)
+  8. check_ram_straddle.py    WRAM growth vs symbol-difference expressions
 
 DELIBERATELY NOT HERE: `make fidelity` / `fidelity-full` / `goldens-verify`.
 Those need DOSBox-X, mGBA and a built ROM; they are the RUNTIME tier and stay a
@@ -160,7 +163,7 @@ def main():
     db_args = []
     if not args.no_scan:
         where = 'in place' if args.write_db else 'to a temp DB'
-        print(f'{BOLD}[1/5] update_label_db{OFF} {DIM}({where}){OFF}')
+        print(f'{BOLD}[1/6] update_label_db{OFF} {DIM}({where}){OFF}')
         cmd = ['tools/update_label_db']
         if not args.write_db:
             tmpdir = tempfile.TemporaryDirectory(prefix='gate-db.')
@@ -181,7 +184,7 @@ def main():
             [('lint', [], 'lint_pret_labels'),
              ('strict', ['--strict-claims'], 'lint_pret_labels --strict-claims')],
             start=2):
-        print(f'{BOLD}[{idx}/5] {title}{OFF}')
+        print(f'{BOLD}[{idx}/6] {title}{OFF}')
         r = run(['tools/lint_pret_labels', '--no-scan'] + db_args + extra)
         seen[key] = parse_classes(r.stdout)
         ok, notes = compare(title, seen[key], base.get(key, {}),
@@ -195,7 +198,7 @@ def main():
         steps.append(title)
 
     # ── 4. the label-DB suite ──────────────────────────────────────────────
-    print(f'{BOLD}[4/5] pytest tools/test_label_db.py{OFF}')
+    print(f'{BOLD}[4/6] pytest tools/test_label_db.py{OFF}')
     r = run([sys.executable, '-m', 'pytest', 'tools/test_label_db.py', '-q'])
     tail = [ln for ln in r.stdout.strip().split('\n') if ln.strip()][-1:]
     print('  ' + (tail[0] if tail else '(no output)'))
@@ -205,12 +208,43 @@ def main():
     steps.append('test_label_db.py')
 
     # ── 5. scenario manifest <-> generated registry ────────────────────────
-    print(f'{BOLD}[5/5] validate_scenarios.py{OFF}')
+    print(f'{BOLD}[5/6] validate_scenarios.py{OFF}')
     r = run([sys.executable, 'tools/validate_scenarios.py'])
     print('  ' + r.stdout.strip().replace('\n', '\n  '))
     if r.returncode != 0:
         failures.append('validate_scenarios.py failed')
     steps.append('validate_scenarios.py')
+
+    # ── 6. pret RAM/HRAM addresses match rgblink's own symbol file ─────────
+    print(f'{BOLD}[6/8] check_ram_addresses.py{OFF}')
+    r = run([sys.executable, 'tools/check_ram_addresses.py'])
+    print('  ' + r.stdout.strip().replace('\n', '\n  '))
+    if r.returncode != 0:
+        failures.append('check_ram_addresses.py failed')
+    steps.append('check_ram_addresses.py')
+
+    # 7. PORT-INTRODUCED RAM collisions. pret's own NEXTU unions are faithful and
+    # must pass; two buffers pret keeps apart sharing one port address must not.
+    # check_ram_addresses (6) cannot see these -- it ratchets whether a baselined
+    # address MOVED, not whether the address was sane, so both halves of the
+    # 0xF500 collision sat in its baseline, green, for months.
+    print(f'{BOLD}[7/8] check_ram_collisions.py{OFF}')
+    r = run([sys.executable, 'tools/check_ram_collisions.py'])
+    print('  ' + r.stdout.strip().replace('\n', '\n  '))
+    if r.returncode != 0:
+        failures.append('check_ram_collisions.py failed')
+    steps.append('check_ram_collisions.py')
+
+    # 8. WRAM growth points vs symbol-difference expressions. A uniform shift is
+    # invisible to pret's symbol arithmetic; a growth BETWEEN two operands
+    # silently changes the difference. Also reports a growth inside the saved
+    # WRAM block, which would change the .dsv payload layout.
+    print(f'{BOLD}[8/8] check_ram_straddle.py{OFF}')
+    r = run([sys.executable, 'tools/check_ram_straddle.py'])
+    print('  ' + r.stdout.strip().replace('\n', '\n  '))
+    if r.returncode != 0:
+        failures.append('check_ram_straddle.py failed')
+    steps.append('check_ram_straddle.py')
 
     if args.update_baseline:
         json.dump(seen, open(BASELINE, 'w', encoding='utf-8'),

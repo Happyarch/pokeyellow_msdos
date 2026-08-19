@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global Route16Gate1FDefaultScript
 global Route16Gate1FGamblerText
 global Route16Gate1FGuardScript
@@ -51,11 +50,6 @@ SCRIPT_ROUTE16GATE1F_GUARD                     equ 2
 SCRIPT_ROUTE16GATE1F_PLAYER_MOVING_RIGHT       equ 3
 TEXT_ROUTE16GATE1F_GUARD                       equ 1
 TEXT_ROUTE16GATE1F_GUARD_WAIT_UP               equ 3
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCoordIndex                                    equ 0xCD3D
-wRoute16Gate1FCurScript                        equ 0xD65F
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

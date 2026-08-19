@@ -51,6 +51,7 @@ Run from repo root (or dos_port/); paths resolve relative to the repo root.
 import re
 import sys
 from pathlib import Path
+import gb_addrs
 
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "dos_port" / "assets"
@@ -69,7 +70,7 @@ MSP_SIZE = 12
 # include/gb_memmap.inc, and the golden pokeyellow.sym agrees
 # (wOaksLabCurScript = $D5EF). Everything else in the block is derived by walking
 # ram/wram.asm from here, so adding a map costs no new hand-typed address.
-WGAMEPROGRESSFLAGS = 0xD5EF
+WGAMEPROGRESSFLAGS = gb_addrs.addr("wOaksLabCurScript")
 
 # Maps whose script layer is LIVE (MapScriptPointers -> TrainerMapScript). Each
 # entry must have a golden scenario exercising at least its default script path;
@@ -355,7 +356,9 @@ def check_against_gb_memmap(cur_scripts):
     """
     inc = (ROOT / "dos_port" / "include" / "gb_memmap.inc").read_text()
     checked = 0
-    for m in re.finditer(r"^(w\w*CurScript)\s+equ\s+(0x[0-9A-Fa-f]+)", inc, re.M):
+    # accept `equ` and `%define` (gb_memmap.inc uses %define so constants emit no
+    # COFF symbol; see tools/generators/gen_pret_ram.py)
+    for m in re.finditer(r"^(?:%define\s+)?(w\w*CurScript)\s+(?:equ\s+)?(0x[0-9A-Fa-f]+)", inc, re.M):
         label, addr = m.group(1), int(m.group(2), 16)
         if label not in cur_scripts:
             continue

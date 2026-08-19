@@ -20,8 +20,37 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-%include "assets/map_script_tables.inc"
-%include "assets/trainer_headers.inc"
+; Map script-pointer tables are DEFINED once, by the single carrier
+; src/data/map_script_tables.asm. Declare what this script uses; do NOT %include
+; assets/map_script_tables.inc here — the asset DEFINES every table, so an include
+; makes them duplicate globals as soon as a second script links.
+extern Route11_ScriptPointers ; assets/map_script_tables.inc
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern Route11Gambler1BattleText   ; assets/trainer_headers.inc
+extern Route11Gambler2BattleText   ; assets/trainer_headers.inc
+extern Route11Gambler3BattleText   ; assets/trainer_headers.inc
+extern Route11Gambler4BattleText   ; assets/trainer_headers.inc
+extern Route11SuperNerd1BattleText ; assets/trainer_headers.inc
+extern Route11SuperNerd2BattleText ; assets/trainer_headers.inc
+extern Route11TrainerHeader0       ; assets/trainer_headers.inc
+extern Route11TrainerHeader1       ; assets/trainer_headers.inc
+extern Route11TrainerHeader2       ; assets/trainer_headers.inc
+extern Route11TrainerHeader3       ; assets/trainer_headers.inc
+extern Route11TrainerHeader4       ; assets/trainer_headers.inc
+extern Route11TrainerHeader5       ; assets/trainer_headers.inc
+extern Route11TrainerHeader6       ; assets/trainer_headers.inc
+extern Route11TrainerHeader7       ; assets/trainer_headers.inc
+extern Route11TrainerHeader8       ; assets/trainer_headers.inc
+extern Route11TrainerHeader9       ; assets/trainer_headers.inc
+extern Route11TrainerHeaders       ; assets/trainer_headers.inc
+extern Route11Youngster1BattleText ; assets/trainer_headers.inc
+extern Route11Youngster2BattleText ; assets/trainer_headers.inc
+extern Route11Youngster3BattleText ; assets/trainer_headers.inc
+extern Route11Youngster4BattleText ; assets/trainer_headers.inc
 
 global Route11Gambler1Text
 global Route11Gambler2Text
@@ -61,10 +90,6 @@ extern Route11Youngster4BattleText
 extern Route11_ScriptPointers
 extern TalkToTrainer
 extern TextScriptEnd
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wRoute11CurScript                              equ 0xD622
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

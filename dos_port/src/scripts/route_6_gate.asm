@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global Route6GateDefaultScript
 global Route6GateMovePlayerDownScript
 global Route6GatePlayerMovingScript
@@ -44,11 +43,6 @@ extern SaffronGateGuardText
 SCRIPT_ROUTE6GATE_PLAYER_MOVING                equ 1
 TEXT_ROUTE6GATE_GUARD_GEE_IM_THIRSTY           equ 2
 TEXT_ROUTE6GATE_GUARD_GIVE_DRINK               equ 3
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wRoute6GateCurScript                           equ 0xD635
-wSpritePlayerStateData2MovementByte1           equ 0xC206
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

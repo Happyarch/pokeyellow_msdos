@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global Museum2FBrunetteGirlText
 global Museum2FGrampsText
 global Museum2FHikerText

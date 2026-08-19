@@ -115,11 +115,11 @@ PlayPikachuSoundClip:
 ; ---------------------------------------------------------------------------
 pika_dbg_snapshot:
     mov al, [pika_dbg_clip]
-    mov [ebp + 0xD240], al
+    mov [ebp + (W_PORT_SCRATCH + 0x60)], al
     mov al, [pika_dbg_device]
-    mov [ebp + 0xD241], al
+    mov [ebp + (W_PORT_SCRATCH + 0x61)], al
     mov eax, [pika_dbg_played]
-    mov [ebp + 0xD242], eax
+    mov [ebp + (W_PORT_SCRATCH + 0x62)], eax
     ret
 
 section .bss

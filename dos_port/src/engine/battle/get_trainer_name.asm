@@ -13,7 +13,6 @@ extern CopyData
 
 RIVAL1              equ 0x19
 RIVAL2              equ 0x2A
-RIVAL3              equ 0x2B
 TRAINER_NAME_LENGTH equ 13
 
 GetTrainerName_:

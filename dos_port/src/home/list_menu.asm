@@ -124,14 +124,6 @@ extern HandleItemListSwapping
 ; CANCELLED_MENU) now live canonically in gb_memmap.inc / gb_constants.inc (Wave 4).
 ;
 ; Local lowercase aliases onto existing port H_*/W_* symbols the code below uses:
-wStatusFlags5               equ wStatusFlags5
-hAutoBGTransferEnabled      equ hAutoBGTransferEnabled
-hJoyPressed                 equ hJoyPressed
-hJoy7                       equ hJoy7
-hItemPrice                  equ hItemPrice
-hMoney                      equ hMoney
-hDivideBCDDivisor           equ hDivideBCDDivisor
-hDivideBCDQuotient          equ hDivideBCDQuotient
 
 ; ── list-box geometry: REUSED from bag_menu.asm LIST_* (confirmed projection) ─
 LIST_STRIDE     equ 20          ; wTileMap box-relative stride (NOT port SCREEN_WIDTH=40)
@@ -162,6 +154,24 @@ QTY_WY          equ 72
 QTY_CLIP        equ 40
 QTY_MAXY        equ 96
 QTY_SROW        equ 12          ; GB_TILEMAP0 start row (below the 11-row list box)
+; Mart variant of the quantity box. PRICEDITEMLISTMENU is the ONLY list id that
+; takes pret's wider `hlcoord 7,9 / lb bc,1,11` layout (13x3), and it is also the
+; only caller whose parent list is NOT at the shared X+20 anchor — the mart's
+; priced item list sits at the raw canvas origin (11,7). So this box is placed
+; RELATIVE TO THAT LIST, reproducing pret's containment exactly; see
+; docs/ui_projection.md, "The mart quantity box — positioned RELATIVE TO ITS LIST".
+; pret offsets from the priced list's origin (4,2): +3 col, +7 row.
+; Port: (11,7) + (3,7) = canvas (14,14), so cols 14-26 x rows 14-16 — ending on
+; col 26, exactly the port list's right edge, one row above its bottom (17), which
+; is the same flush-right containment pret has ending on col 19.
+QTY_MART_COL    equ 11 + 3      ; mart list origin col + pret's dcol
+QTY_MART_ROW    equ 7 + 7       ; mart list origin row + pret's drow
+QTY_MART_WX     equ 8 * QTY_MART_COL + 7        ; 119
+QTY_MART_WY     equ 8 * QTY_MART_ROW            ; 112
+QTY_MART_CLIP   equ 8 * 13                      ; 104 — the 13-wide priced box, NOT
+                                                ; QTY_CLIP's 5-tile 40, which would
+                                                ; clip 8 of its 13 columns away
+QTY_MART_MAXY   equ 8 * (QTY_MART_ROW + 3)      ; 136
 QTY_SCRATCH     equ wTileMap + QTY_SROW * LIST_STRIDE  ; scratch row == tilemap row
 QTY_TOTAL_W     equ 13          ; widest (priced) box; small box clipped by window
 QTY_TOTAL_H     equ 3
@@ -486,11 +496,10 @@ ExitListMenu:
 DisplayChooseQuantityMenu:
     ; text box: GB(15,9) 1x3 (quantity only) or GB(7,9) 1x11 (quantity+price).
     ; PROJ overworld-ui: GB(15,9) 5x3 --(anchor=top-right, X+20, Y+0)--> wx=287 wy=72 clip=40 max_y=96
-    ; TODO(proj): PRICEDITEMLISTMENU is a Pokémart box (GB 7,9 x11) → needs the
-    ; mart anchor. Deferred, and genuinely unreachable today — the only setter of
-    ; PRICEDITEMLISTMENU is home/text_script.asm:DisplayPokemartDialogue, whose
-    ; DisplayPokemartDialogue_ is still a ret-stub in engine/menus/main_menu_stubs.asm. So the
-    ; priced branch below is reasoned from pret, NOT observed at runtime.
+    ; RESOLVED 2026-08-18 (maintainer ruling): the PRICEDITEMLISTMENU box follows
+    ; its LIST, not the screen edge — see list_add_qty_window below and
+    ; docs/ui_projection.md. The branch below is still reasoned from pret and has
+    ; NOT been observed at runtime; no golden scenario walks a mart purchase.
     mov esi, QTY_SCRATCH                       ; box-relative top-left in scratch
     mov bl, 3                                  ; interior width  (quantity only)
     mov bh, 1                                  ; interior height
@@ -877,10 +886,23 @@ list_draw_box_border:
     ret
 
 list_add_qty_window:
+    ; PROJ overworld-ui (list quantity): GB(15,9) 5x3 --(anchor=top-right, X+20, Y+0)--> wx=287 wy=72 clip=40 max_y=96
+    ; PROJ overworld-ui (mart qty + price): GB(7,9) 13x3 --(RELATIVE to the mart priced list, +3 col +7 row from its (11,7) origin)--> wx=119 wy=112 clip=104 max_y=136
     mov eax, QTY_WX
     mov ebx, QTY_WY
     mov ecx, QTY_CLIP
     mov edx, QTY_MAXY
+    ; The mart is the one caller whose parent list is not at X+20, so its quantity
+    ; box follows the list instead of the screen edge. Every other caller (bag, PC,
+    ; elevator) keeps the shared anchor above. This is the same PRICEDITEMLISTMENU
+    ; test pret itself makes to choose the wider box.
+    cmp byte [ebp + wListMenuID], PRICEDITEMLISTMENU
+    jne .publish
+    mov eax, QTY_MART_WX
+    mov ebx, QTY_MART_WY
+    mov ecx, QTY_MART_CLIP
+    mov edx, QTY_MART_MAXY
+.publish:
     mov esi, GB_TILEMAP0
     mov edi, QTY_SROW
     call add_window

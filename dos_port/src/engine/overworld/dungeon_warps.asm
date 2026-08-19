@@ -36,6 +36,7 @@
 bits 32
 
 %include "gb_memmap.inc"
+%include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 
 ; ---------------------------------------------------------------------------
 ; Scaffold WRAM symbols not yet in gb_memmap.inc.
@@ -63,11 +64,9 @@ W_COORD_INDEX         equ 0xD152   ; ram/wram.asm:1015 wCoordIndex
 
 ; wStatusFlags3 bit -- constants/ram_constants.asm (wStatusFlags3 const_def block)
 %ifndef BIT_ON_DUNGEON_WARP
-BIT_ON_DUNGEON_WARP   equ 4
 %endif
 ; wStatusFlags6 bit -- constants/ram_constants.asm (wStatusFlags6 const_def block)
 %ifndef BIT_DUNGEON_WARP
-BIT_DUNGEON_WARP      equ 4
 %endif
 
 section .text

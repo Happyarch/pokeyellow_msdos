@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global Route12SuperRodHouseFishingGuruText
 global Route12SuperRodHouse_Script
 global Route12SuperRodHouse_TextPointers

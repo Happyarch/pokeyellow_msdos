@@ -668,8 +668,8 @@ PlayerPCMirror:
 ; Town backs the box. make DEBUG_PLAYERSPC=1 (root wires the call site).
 ; ---------------------------------------------------------------------------
 RunPlayersPCTest:
-    mov byte [ebp + 0xD162], 0                  ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF               ; wPartySpecies sentinel
+    mov byte [ebp + wPartyCount], 0                  ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF               ; wPartySpecies sentinel
     mov byte [ebp + wNumBagItems], 0
     mov byte [ebp + wBagItems], 0xFF
     call PrepareNewGameDebug                     ; seed party + bag

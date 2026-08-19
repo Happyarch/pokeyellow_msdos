@@ -1,0 +1,65 @@
+{
+  "_doc": [
+    "THE GROWTH TABLE — single source for the port's WRAM expansion.",
+    "",
+    "The port is a Game Boy that has more WRAM. A buffer that must grow keeps its",
+    "pret address; everything ABOVE it shifts up by the growth, and successive",
+    "growths compose in address order:",
+    "",
+    "    port_addr = pret_addr + sum(growth for every growth point strictly below it)",
+    "",
+    "It is an append, not a repack: each grown buffer ends exactly where its",
+    "successor's shifted address begins. Read by gen_pret_ram.py (to emit shifted",
+    "addresses) and check_ram_straddle.py (to prove no symbol-difference expression",
+    "spans a growth point).",
+    "",
+    "pret_size is the DECLARED ds size from ram/wram.asm, largest lane for a NEXTU",
+    "union — NOT inferred from address gaps. pret's unions make gap inference wrong,",
+    "which is the exact bug gen_pret_ram.py exists to avoid.",
+    "",
+    "INVARIANTS (see docs/current_plan_wram_expansion.md):",
+    "  1. No growth point at or above wMainDataStart. save.asm copies",
+    "     wMainDataEnd - wMainDataStart into SRAM, so a growth inside that span",
+    "     changes the .dsv payload layout. check_ram_straddle.py reports it.",
+    "  2. Total growth stays a multiple of 0x100 — wCurrentAnimatedObjectOAMBufferOffset",
+    "     holds a low-byte cursor added directly to wShadowOAM.",
+    "  3. Everything must stay below GB_OAM (0xFE00) so OAM/IO/HRAM keep their pret",
+    "     addresses. Headroom is finite; when it runs out the choice reopens as",
+    "     'shift OAM up' or 'bank it via rWBK'."
+  ],
+  "growths": [
+    {
+      "pret": "0xC3A0",
+      "name": "wTileMap",
+      "pret_size": 360,
+      "port_size": 1000,
+      "why": "40x25 viewport instead of the GB's 20x18"
+    },
+    {
+      "pret": "0xC508",
+      "name": "wSurroundingTiles (largest lane of pret's NEXTU at 0xC508)",
+      "pret_size": 480,
+      "port_size": 1728,
+      "why": "48x36 decode surface for DrawTileBlock"
+    },
+    {
+      "pret": "0xC6E8",
+      "name": "wOverworldMap (largest lane of pret's NEXTU at 0xC6E8)",
+      "pret_size": 1300,
+      "port_size": 2304,
+      "why": "MAP_BORDER=7 instead of pret's 3"
+    },
+    {
+      "pret": "0xCD81",
+      "name": "wTileMapBackup2",
+      "pret_size": 360,
+      "port_size": 1000,
+      "why": "wTileMap copy, same 40x25 growth"
+    }
+  ],
+  "port_only_regions": {
+    "_doc": "No pret counterpart — appended above the shifted pret WRAM.",
+    "W_INTRO_ANIM_DATA": {"size": "0x2A0", "why": "Yellow-intro anim tables staged into GB space for 16-bit pointer arithmetic"},
+    "W_SURF_ANIM_DATA": {"size": "0x2C0", "why": "surfing-minigame anim tables, same reason"}
+  }
+}

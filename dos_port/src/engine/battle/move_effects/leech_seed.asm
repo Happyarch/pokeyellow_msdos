@@ -14,7 +14,6 @@ extern DelayFrames
 extern WasSeededText
 extern EvadedAttackText
 
-
 global LeechSeedEffect_
 
 LeechSeedEffect_:
@@ -49,5 +48,4 @@ LeechSeedEffect_:
 	call DelayFrames
 	mov esi, EvadedAttackText
 	jmp PrintText
-
 

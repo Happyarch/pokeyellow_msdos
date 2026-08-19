@@ -13,7 +13,6 @@ extern PrintText
 extern PrintButItFailedText_
 extern ConvertedTypeText
 
-
 ConversionEffect_:
     mov esi, wEnemyMonType1
     mov edx, wBattleMonType1
@@ -39,7 +38,6 @@ ConversionEffect_:
     call PlayCurrentMoveAnimation
     mov esi, ConvertedTypeText
     jmp PrintText
-
 
 PrintButItFailedText:
     jmp PrintButItFailedText_

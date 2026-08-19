@@ -181,21 +181,6 @@ TEXT_OAKSLAB_PIKACHU_DISLIKES_POKEBALLS1       equ 26
 TEXT_OAKSLAB_PIKACHU_DISLIKES_POKEBALLS2       equ 27
 SCRIPT_VIRIDIANCITY_AFTER_POKEDEX              equ 1
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hSpriteMapXCoord                               equ 0xFFEE
-hSpriteMapYCoord                               equ 0xFFED
-hSpriteScreenXCoord                            equ 0xFFEC
-hSpriteScreenYCoord                            equ 0xFFEB
-wOaksLabCurScript                              equ 0xD5EF
-wPartyMon1CatchRate                            equ 0xD171
-wPlayerStarter                                 equ 0xD716
-wSavedNPCMovementDirections2Index              equ 0xD156
-wSprite01StateData1FacingDirection             equ 0xC119
-wSprite01StateData1MovementStatus              equ 0xC111
-wSpritePlayerStateData1FacingDirection         equ 0xC109
-wViridianCityCurScript                         equ 0xD5F3
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

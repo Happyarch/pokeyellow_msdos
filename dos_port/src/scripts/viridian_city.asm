@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global ViridianCityAfterPokedexScript
 global ViridianCityCheckGymOpenScript
 global ViridianCityCheckSleepingOldMan
@@ -105,19 +104,6 @@ TEXT_VIRIDIANCITY_OLD_MAN_SLEEPY               equ 5
 TEXT_VIRIDIANCITY_OLD_MAN2                     equ 8
 TEXT_VIRIDIANCITY_GYM_LOCKED                   equ 15
 TEXT_VIRIDIANCITY_OLD_MAN_YOU_NEED_TO_WEAKEN_THE_TARGET equ 16
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hSpriteMapXCoord                               equ 0xFFEE
-hSpriteMapYCoord                               equ 0xFFED
-hSpriteScreenXCoord                            equ 0xFFEC
-hSpriteScreenYCoord                            equ 0xFFEB
-wSprite03StateData1XPixels                     equ 0xC136
-wSprite03StateData1YPixels                     equ 0xC134
-wSprite03StateData2MapX                        equ 0xC235
-wSprite03StateData2MapY                        equ 0xC234
-wSpritePlayerStateData1FacingDirection         equ 0xC109
-wViridianCityCurScript                         equ 0xD5F3
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

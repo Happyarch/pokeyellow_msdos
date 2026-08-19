@@ -537,20 +537,20 @@ tandy_att:
 ; ---------------------------------------------------------------------------
 tandy_dbg_snapshot:
     mov al, [g_tandy_on]
-    mov [ebp + 0xD248], al
+    mov [ebp + (W_PORT_SCRATCH + 0x68)], al
     mov al, [tandy_state + 0*TS_SIZE + TS_LASTATT]
-    mov [ebp + 0xD249], al
+    mov [ebp + (W_PORT_SCRATCH + 0x69)], al
     mov al, [tandy_state + 1*TS_SIZE + TS_LASTATT]
-    mov [ebp + 0xD24A], al
+    mov [ebp + (W_PORT_SCRATCH + 0x6A)], al
     mov al, [tandy_state + 2*TS_SIZE + TS_LASTATT]
-    mov [ebp + 0xD24B], al
+    mov [ebp + (W_PORT_SCRATCH + 0x6B)], al
     mov al, [tandy_state + 3*TS_SIZE + TS_LASTATT]
-    mov [ebp + 0xD24C], al
+    mov [ebp + (W_PORT_SCRATCH + 0x6C)], al
     mov al, [tandy_state + 3*TS_SIZE + TS_LASTDIV]
-    mov [ebp + 0xD24D], al
+    mov [ebp + (W_PORT_SCRATCH + 0x6D)], al
     mov ax, [tandy_state + 0*TS_SIZE + TS_LASTDIV]
-    mov [ebp + 0xD24E], al
-    mov [ebp + 0xD24F], ah
+    mov [ebp + (W_PORT_SCRATCH + 0x6E)], al
+    mov [ebp + (W_PORT_SCRATCH + 0x6F)], ah
     ret
 
 section .data

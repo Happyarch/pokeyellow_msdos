@@ -416,23 +416,23 @@ global midi_dbg_snapshot
 midi_dbg_snapshot:
     push ecx
     mov al, [g_cfg_midi]
-    mov [ebp + 0xD227], al
+    mov [ebp + (W_PORT_SCRATCH + 0x47)], al
     mov al, [g_mpu_present]
-    mov [ebp + 0xD228], al
+    mov [ebp + (W_PORT_SCRATCH + 0x48)], al
     mov al, [g_midi_music]
-    mov [ebp + 0xD229], al
+    mov [ebp + (W_PORT_SCRATCH + 0x49)], al
     mov al, [midi_on]
-    mov [ebp + 0xD22A], al
+    mov [ebp + (W_PORT_SCRATCH + 0x4A)], al
     mov eax, [midi_ptr]
     sub eax, [midi_base]
-    mov [ebp + 0xD22B], al
-    mov [ebp + 0xD22C], ah
+    mov [ebp + (W_PORT_SCRATCH + 0x4B)], al
+    mov [ebp + (W_PORT_SCRATCH + 0x4C)], ah
     mov al, [midi_scale]
-    mov [ebp + 0xD22D], al
+    mov [ebp + (W_PORT_SCRATCH + 0x4D)], al
     xor ecx, ecx
 .cc7:
     mov al, [midi_cc7_base + ecx]
-    mov [ebp + 0xD22E + ecx], al
+    mov [ebp + (W_PORT_SCRATCH + 0x4E) + ecx], al
     inc ecx
     cmp ecx, 16
     jb .cc7

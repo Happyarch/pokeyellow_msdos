@@ -80,12 +80,6 @@ SOFT_RESET_FRAMES equ 16    ; pret Init sets hSoftReset = 16 (frames of combo)
 ; assembles standalone. Addresses from ram/hram.asm (consecutive with the
 ; already-mapped hJoyPressed=0xFFB3 / hJoyHeld=0xFFB4). Root should promote
 ; these to gb_memmap.inc canonically (see SUMMARY.md).
-%ifndef hJoyLast
-hJoyLast      equ 0xFFB1  ; hJoyLast     — previous frame's polled input
-%endif
-%ifndef hJoyReleased
-hJoyReleased  equ 0xFFB2  ; hJoyReleased — buttons released this frame
-%endif
 
 ; ---------------------------------------------------------------------------
 ; Exported symbols

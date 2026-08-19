@@ -22,7 +22,17 @@ bits 32
 %include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern VictoryRoad3FCooltrainerM1BattleText ; assets/trainer_headers.inc
+extern VictoryRoad3TrainerHeader0           ; assets/trainer_headers.inc
+extern VictoryRoad3TrainerHeader1           ; assets/trainer_headers.inc
+extern VictoryRoad3TrainerHeader2           ; assets/trainer_headers.inc
+extern VictoryRoad3TrainerHeader3           ; assets/trainer_headers.inc
+extern VictoryRoad3TrainerHeaders           ; assets/trainer_headers.inc
 
 global VictoryRoad3FCheckBoulderEventScript
 global VictoryRoad3FCooltrainerF1Text
@@ -52,12 +62,6 @@ extern VictoryRoad3TrainerHeader1
 extern VictoryRoad3TrainerHeader2
 extern VictoryRoad3TrainerHeader3
 extern VictoryRoad3TrainerHeaders
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCoordIndex                                    equ 0xCD3D
-wDungeonWarpDestinationMap                     equ 0xD71C
-wVictoryRoad3FCurScript                        equ 0xD63F
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

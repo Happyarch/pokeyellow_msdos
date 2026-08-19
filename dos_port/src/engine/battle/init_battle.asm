@@ -45,7 +45,6 @@ bits 32
 
 %define FW    SCREEN_TILES_W           ; 40 — canvas stride (full widescreen)
 
-
 ; Bottom dialog box — geometry from the generated battle UI layout (Tier 1,
 ; assets/ui_layout_battle.inc; edit via tools/ui_layout/battle.py). The old
 ; +10col/+3row GB-centering now lives in the sidecar's per-element shifts.

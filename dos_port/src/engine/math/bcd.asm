@@ -239,7 +239,6 @@ AddBCD:
 .done:
     ret
 
-
 SubBCDPredef:
     call GetPredefRegisters
     ; Fallthrough

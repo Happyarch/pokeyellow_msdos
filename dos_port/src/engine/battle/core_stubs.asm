@@ -24,7 +24,6 @@ section .text
 ; JumpMoveEffect is now LIVE in effects.asm (MoveEffectPointerTable dispatch) — its
 ; stub here was removed when the move-effect scaffold linked effects.asm into the EXE.
 
-
 ; FormatMovesString: RETIRED 2026-08-13 (Stage-7 retirement sweep) — the real body
 ; is the faithful mirror src/engine/battle/misc.asm:FormatMovesString, which now
 ; LINKS. This stand-in's stated reason ("GetName/names.asm is not yet link-ready

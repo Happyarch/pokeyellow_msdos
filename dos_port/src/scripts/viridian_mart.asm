@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global ViridianMartCheckParcelDeliveredScript
 global ViridianMartClerkParcelQuestText
 global ViridianMartClerkSayHiToOakText
@@ -53,10 +52,6 @@ SCRIPT_VIRIDIANMART_OAKS_PARCEL                equ 1
 SCRIPT_VIRIDIANMART_SCRIPT2                    equ 2
 TEXT_VIRIDIANMART_CLERK_YOU_CAME_FROM_PALLET_TOWN equ 3
 TEXT_VIRIDIANMART_CLERK_PARCEL_QUEST           equ 4
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wViridianMartCurScript                         equ 0xD60C
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

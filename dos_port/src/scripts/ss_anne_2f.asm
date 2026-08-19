@@ -66,12 +66,6 @@ SCRIPT_SSANNE2F_NOOP                           equ 4
 TEXT_SSANNE2F_RIVAL                            equ 2
 TEXT_SSANNE2F_RIVAL_CUT_MASTER                 equ 3
 
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-hSavedCoordIndex                               equ 0xFFDB
-wCoordIndex                                    equ 0xCD3D
-wSSAnne2FCurScript                             equ 0xD664
-
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
 ; non-local label above it, so hoisting the text streams into a

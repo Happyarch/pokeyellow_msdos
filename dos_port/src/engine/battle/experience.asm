@@ -54,17 +54,9 @@ bits 32
 ; Orchestrator must add these to gb_memmap.inc / gb_constants.inc to keep the
 ; includes authoritative.
 ; ---------------------------------------------------------------------------
-%ifndef wPlayerID
-wPlayerID              equ 0xD358  ; sym-pinned (pokeyellow.sym bank 00:d358)
-%endif
-%ifndef wCalculateWhoseStats
-wCalculateWhoseStats   equ 0xD11D  ; = wTempByteValue (sym: 00:d11d); orchestrator add
-%endif
 %ifndef PIKAHAPPY_LEVELUP
-PIKAHAPPY_LEVELUP      equ 1       ; constants/pikachu_emotion_constants.asm const_def 1
 %endif
 %ifndef LEVEL_UP_STATS_BOX
-LEVEL_UP_STATS_BOX     equ 1       ; constants/menu_constants.asm (STATUS_SCREEN=0, LEVELUP=1)
 %endif
 
 ; ---------------------------------------------------------------------------

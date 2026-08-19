@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global PokemonTower1FBaldingGuyText
 global PokemonTower1FChannelerText
 global PokemonTower1FGirlText

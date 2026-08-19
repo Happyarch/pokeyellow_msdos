@@ -27,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_items  # noqa: E402  (sibling generator: load_item_ids owns the TM/HM forms)
+import gb_addrs
 
 ROOT = Path(__file__).resolve().parent.parent.parent.parent
 ASSETS = ROOT / "dos_port" / "assets"
@@ -1001,7 +1002,7 @@ def main(debug_warps=None):
         "",
     ])
 
-    wOverworldMap = 0xE800
+    wOverworldMap = gb_addrs.addr("wOverworldMap")
     current_addr = OW_MAP_HEADERS_GBADDR
 
     # MapHeaderPointers entries computed as we go
@@ -1260,12 +1261,50 @@ def main(debug_warps=None):
         "",
         "; --- map id / width / height (pret names; width/height in blocks) ---",
     ]
+    # GAP-FILLER, like gen_pret_ram.inc: skip any name the port already declares.
+    # Three places can declare a map/tileset id -- include/gb_constants.inc
+    # (%define), a file-local `equ` in src/, and here -- and NASM cannot survive
+    # two of them: a `NAME equ V` line whose NAME is a live macro expands to
+    # `0xD9 equ 0xD9`. That break was latent for as long as the checked-out
+    # assets/ tree was stale, and surfaced the moment anything regenerated it.
+    # include/ ONLY. A src-file `equ` must NOT suppress emission: NASM equs are
+    # FILE-LOCAL, so skipping on one file starves every other file of the symbol
+    # (gen_pret_ram.py carries the same warning). A src-local equ that clashes
+    # with a name emitted here is a duplicate and gets DELETED from the src file.
+    _declared = set()
+    import re as _re
+    for _f in (ROOT / "dos_port" / "include").glob("*.inc"):
+        _t = _f.read_text(errors="ignore")
+        for _m in _re.finditer(r"^\s*%define\s+([A-Za-z_]\w*)", _t, _re.M):
+            _declared.add(_m.group(1))
+        for _m in _re.finditer(r"^\s*([A-Za-z_]\w*)\s+equ\s", _t, _re.M):
+            _declared.add(_m.group(1))
+
+    # These stay `equ`, deliberately. %define was tried and reverted: the
+    # constants are consumed through token-pasting macros (special_warps.asm's
+    # `event_displacement %{1}_WIDTH, ...`), which want an assembly symbol, and a
+    # macro would also have to precede every use rather than merely be included.
+    # The cost is real and known -- NASM emits each `equ` as a local absolute COFF
+    # symbol in every including object, ~178 KB across the 13 new includers -- and
+    # is accepted here rather than paid for with a fragile preprocessor rewrite.
+    # Names include/ already owns are SKIPPED, not re-emitted: gb_constants.inc
+    # %defines many map/tileset ids, and a `NAME equ V` line whose NAME is a live
+    # macro expands to `0xD9 equ 0xD9` and fails to assemble. That break was latent
+    # for as long as the checked-out assets/ tree was stale, and surfaced the
+    # moment anything regenerated it.
+    _skipped = 0
     for const, (id_, w, h) in sorted(MAP_INFO.items(), key=lambda kv: kv[1][0]):
-        dims_lines.append(f"{const:<34} equ 0x{id_:02X}")
-        dims_lines.append(f"{const + '_WIDTH':<34} equ {w}")
-        dims_lines.append(f"{const + '_HEIGHT':<34} equ {h}")
+        for _n, _v in ((const, f"0x{id_:02X}"), (const + "_WIDTH", str(w)),
+                       (const + "_HEIGHT", str(h))):
+            if _n in _declared:
+                _skipped += 1
+                continue
+            dims_lines.append(f"{_n:<34} equ {_v}")
     dims_lines += ["", "; --- tileset ids (constants/tileset_constants.asm) ---"]
     for tname, tid in sorted(TILESET_IDS.items(), key=lambda kv: kv[1]):
+        if tname in _declared:
+            _skipped += 1
+            continue
         dims_lines.append(f"{tname:<34} equ {tid}")
     dims_lines += ["", "%endif ; MAP_DIMS_INC"]
     dims_path = ASSETS / "map_dims.inc"

@@ -20,7 +20,6 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
-
 global Route15Gate2FBinocularsText
 global Route15Gate2FOaksAideText
 global Route15Gate2F_Script

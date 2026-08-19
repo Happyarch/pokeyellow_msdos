@@ -115,7 +115,6 @@ StartSlotMachine:
     ; ret
     ret
 
-
 section .data
 
 ; The three GameCorner message streams pret defines here are Tier-1 data and are

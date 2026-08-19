@@ -22,7 +22,15 @@ bits 32
 %include "assets/script_constants.inc"
 
 %include "assets/map_dims.inc"
-%include "assets/trainer_headers.inc"
+; Trainer headers and battle text are DEFINED once, by the single carrier
+; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
+; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
+; include makes every one of them a duplicate global the moment a second script
+; links. (That is what kept 202 link-ready scripts out of the build.)
+extern Mansion3TrainerHeader0              ; assets/trainer_headers.inc
+extern Mansion3TrainerHeader1              ; assets/trainer_headers.inc
+extern Mansion3TrainerHeaders              ; assets/trainer_headers.inc
+extern PokemonMansion3FSuperNerdBattleText ; assets/trainer_headers.inc
 
 global Mansion3CheckReplaceSwitchDoorBlocks
 global PokemonMansion3FDefaultScript
@@ -46,12 +54,6 @@ extern PokemonMansion3FSuperNerdBattleText
 extern PokemonMansion3F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern TalkToTrainer
 extern TextScriptEnd
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wCoordIndex                                    equ 0xCD3D
-wDungeonWarpDestinationMap                     equ 0xD71C
-wPokemonMansion3FCurScript                     equ 0xD63C
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

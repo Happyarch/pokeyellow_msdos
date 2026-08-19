@@ -20,6 +20,7 @@
 ; starts in GB power-on state. The flag must be set FIRST or the reset itself
 ; would be swallowed by the gate.
 
+%include "gb_memmap.inc"        ; W_PORT_SCRATCH — port-only audio scratch
 global audio_tick
 global audio_init
 global audio_shutdown
@@ -144,9 +145,9 @@ audio_shutdown:
 ; window 9; see the shims' snapshot maps for $D248+). Clobbers EAX.
 hal_dbg_snapshot:
     mov al, [g_shim_device]
-    mov [ebp + 0xD246], al
+    mov [ebp + (W_PORT_SCRATCH + 0x66)], al
     mov al, [g_cfg_shim]
-    mov [ebp + 0xD247], al
+    mov [ebp + (W_PORT_SCRATCH + 0x67)], al
     ret
 
 section .data

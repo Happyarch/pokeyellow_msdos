@@ -26,12 +26,13 @@ wedges must be the full 1000-cell canvas.
 import math
 import os
 import sys
+import gb_addrs
 
 W, H = 40, 25
 CX, CY = 20.0, 12.5
 ASPECT = 1.2          # display-space y scale (320x200 on a 4:3 monitor)
 NWEDGE = 20
-wTileMap = 0xC3A0    # must match include/gb_memmap.inc
+wTileMap = gb_addrs.addr("wTileMap")   # from the port's headers, never a literal
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "assets",
                    "battle_transition_arcs.inc")

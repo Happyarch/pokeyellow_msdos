@@ -21,7 +21,6 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
-
 global Route11Gate2FLeftBinocularsText
 global Route11Gate2FOaksAideText
 global Route11Gate2FRightBinocularsText
@@ -38,10 +37,6 @@ extern GetItemName
 extern OaksAideScript   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern TextScriptEnd
-
-; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
-; read from pokeyellow.sym — not inferred.
-wSpritePlayerStateData1FacingDirection         equ 0xC109
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last

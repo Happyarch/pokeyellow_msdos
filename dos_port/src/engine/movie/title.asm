@@ -115,20 +115,11 @@ global DisplayTitleScreen        ; MainMenu "B returns to title" seam
 ; ---------------------------------------------------------------------------
 ; Constants
 ; ---------------------------------------------------------------------------
-NAME_LENGTH          equ 11      ; wPlayerName / wRivalName field size
 
 ; LCDC bit 7 — LCD enable (used by EnableLCD/DisableLCD in lcd.asm)
 LCDC_DEFAULT_VAL     equ 0xE3
 
 ; GB joypad bits in the hJoyHeld shadow (active HIGH)
-PAD_A                equ 0x01
-PAD_B                equ 0x02
-PAD_SELECT           equ 0x04
-PAD_START            equ 0x08
-PAD_RIGHT            equ 0x10
-PAD_LEFT             equ 0x20
-PAD_UP               equ 0x40
-PAD_DOWN             equ 0x80
 
 SCREEN_HEIGHT_PX     equ 144     ; pret's hWY "hide the window layer" value (see the hWY note below)
 

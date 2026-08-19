@@ -1,5 +1,5 @@
 ; font_extra_2bpp.inc — generated from gfx/font/font_extra.png
-; via tools/gen_font_extra_inc.py.  DO NOT EDIT BY HAND.
+; via tools/generators/gen_font_extra_inc.py.  DO NOT EDIT BY HAND.
 ; 32 tiles (chars $60–$7F), 2bpp GB format, 16 bytes per tile.
 ; Loaded by LoadTextBoxTilePatterns to vChars2+$60 (EBP offset $9600).
 
