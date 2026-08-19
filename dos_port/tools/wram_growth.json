@@ -1,6 +1,6 @@
 {
   "_doc": [
-    "THE GROWTH TABLE — single source for the port's WRAM expansion.",
+    "THE GROWTH TABLE \u2014 single source for the port's WRAM expansion.",
     "",
     "The port is a Game Boy that has more WRAM. A buffer that must grow keeps its",
     "pret address; everything ABOVE it shifts up by the growth, and successive",
@@ -14,14 +14,14 @@
     "spans a growth point).",
     "",
     "pret_size is the DECLARED ds size from ram/wram.asm, largest lane for a NEXTU",
-    "union — NOT inferred from address gaps. pret's unions make gap inference wrong,",
+    "union \u2014 NOT inferred from address gaps. pret's unions make gap inference wrong,",
     "which is the exact bug gen_pret_ram.py exists to avoid.",
     "",
     "INVARIANTS (see docs/current_plan_wram_expansion.md):",
     "  1. No growth point at or above wMainDataStart. save.asm copies",
     "     wMainDataEnd - wMainDataStart into SRAM, so a growth inside that span",
     "     changes the .dsv payload layout. check_ram_straddle.py reports it.",
-    "  2. Total growth stays a multiple of 0x100 — wCurrentAnimatedObjectOAMBufferOffset",
+    "  2. Total growth stays a multiple of 0x100 \u2014 wCurrentAnimatedObjectOAMBufferOffset",
     "     holds a low-byte cursor added directly to wShadowOAM.",
     "  3. Everything must stay below GB_OAM (0xFE00) so OAM/IO/HRAM keep their pret",
     "     addresses. Headroom is finite; when it runs out the choice reopens as",
@@ -43,6 +43,13 @@
       "why": "48x36 decode surface for DrawTileBlock"
     },
     {
+      "pret": "0xC5C4",
+      "name": "wAnimatedObjectJumptablePointer (dw -> dd flat-pointer widening)",
+      "pret_size": 2,
+      "port_size": 4,
+      "why": "callback addresses are 32-bit flat x86 labels, not 2-byte GB pointers (DEVIATION in engine/gfx/animated_objects.asm). A WIDENING IS A GROWTH: without it the field derives at pret's 2-byte spacing, its high half lands on wAnimatedObjectOAMDataPointer, and ExecuteCurrentAnimatedObjectCallback reads a garbage flat pointer -> page fault."
+    },
+    {
       "pret": "0xC6E8",
       "name": "wOverworldMap (largest lane of pret's NEXTU at 0xC6E8)",
       "pret_size": 1300,
@@ -58,8 +65,14 @@
     }
   ],
   "port_only_regions": {
-    "_doc": "No pret counterpart — appended above the shifted pret WRAM.",
-    "W_INTRO_ANIM_DATA": {"size": "0x2A0", "why": "Yellow-intro anim tables staged into GB space for 16-bit pointer arithmetic"},
-    "W_SURF_ANIM_DATA": {"size": "0x2C0", "why": "surfing-minigame anim tables, same reason"}
+    "_doc": "No pret counterpart \u2014 appended above the shifted pret WRAM.",
+    "W_INTRO_ANIM_DATA": {
+      "size": "0x2A0",
+      "why": "Yellow-intro anim tables staged into GB space for 16-bit pointer arithmetic"
+    },
+    "W_SURF_ANIM_DATA": {
+      "size": "0x2C0",
+      "why": "surfing-minigame anim tables, same reason"
+    }
   }
 }

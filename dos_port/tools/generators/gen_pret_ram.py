@@ -46,10 +46,10 @@ OUT  = pathlib.Path(__file__).resolve().parents[2] / "assets" / "pret_ram.inc"
 # keeps every OAM/IO/HRAM symbol at its pret address.
 import json
 
-_GROWTH = {int(g["pret"], 16): g["port_size"] - g["pret_size"]
+_GROWTH = [(int(g["pret"], 16), g["pret_size"], g["port_size"] - g["pret_size"])
            for g in json.loads(
                (pathlib.Path(__file__).resolve().parents[2] /
-                "tools" / "wram_growth.json").read_text())["growths"]}
+                "tools" / "wram_growth.json").read_text())["growths"]]
 _GB_OAM = 0xFE00
 
 
@@ -57,7 +57,9 @@ def _shift(addr):
     """pret address -> port address under the prefix-sum expansion."""
     if addr >= _GB_OAM:
         return addr
-    return addr + sum(g for p, g in _GROWTH.items() if p < addr)
+    # A growth applies only at or ABOVE the END of the grown region. `p < addr`
+    # tears the region apart: a symbol INSIDE it accrues the region's own growth.
+    return addr + sum(g for p, sz, g in _GROWTH if p + sz <= addr)
 
 
 def main():

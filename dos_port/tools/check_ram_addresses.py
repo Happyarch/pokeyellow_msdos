@@ -72,9 +72,9 @@ def declarations():
 # never shift, which is what keeps every OAM/IO/HRAM symbol at its pret address.
 # The growth table (tools/wram_growth.json) is the single source, shared with
 # gen_pret_ram.py and check_ram_straddle.py.
-_GROWTH = {int(g["pret"], 16): g["port_size"] - g["pret_size"]
+_GROWTH = [(int(g["pret"], 16), g["pret_size"], g["port_size"] - g["pret_size"])
            for g in json.loads(
-               (ROOT / "tools" / "wram_growth.json").read_text())["growths"]}
+               (ROOT / "tools" / "wram_growth.json").read_text())["growths"]]
 _GB_OAM = 0xFE00
 
 
@@ -82,7 +82,9 @@ def _expected(pret_addr):
     """Where a pret symbol should live in the port."""
     if pret_addr >= _GB_OAM:
         return pret_addr
-    return pret_addr + sum(g for p, g in _GROWTH.items() if p < pret_addr)
+    # A growth applies only at or ABOVE the END of the grown region. `p < addr`
+    # tears the region apart: a symbol INSIDE it accrues the region's own growth.
+    return pret_addr + sum(g for p, sz, g in _GROWTH if p + sz <= pret_addr)
 
 
 def main():

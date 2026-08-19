@@ -1299,7 +1299,7 @@ gbstate_regions:
     ; beaten bit (event byte $D7C2 bit 2) must be SET by the victory path.
     gbregion "wCurMapScript",    wCurMapScript, 1
     gbregion "wRoute3Script",    wRoute3CurScript, 1
-    gbregion "wRoute3Event",     0xE58E, 1   ; pret 0xD7C2 + WRAM-expansion shift (no pret symbol: inside wEventFlags)
+    gbregion "wRoute3Event",     0xE590, 1   ; pret 0xD7C2 + WRAM-expansion shift (no pret symbol: inside wEventFlags)
     ; .battleOccurred's own flag work — the tail that only the real loop runs.
     gbregion "wStatusFlags3",    wStatusFlags3, 1       ; BIT_TALKED_TO_TRAINER cleared
     gbregion "wStatusFlags4",    wStatusFlags4, 1       ; BIT_BATTLE_OVER_OR_BLACKOUT set
@@ -1378,7 +1378,7 @@ gbstate_regions:
     gbregion "wEnemyMonSpc",     wEnemyMonSpecies, 1
     gbregion "wCurMapScript",    wCurMapScript, 1
     gbregion "wRoute17Script",   wRoute17CurScript, 1
-    gbregion "wRoute17Event",    0xE5AD, 1   ; pret 0xD7E1 + WRAM-expansion shift (no pret symbol: inside wEventFlags)
+    gbregion "wRoute17Event",    0xE5AF, 1   ; pret 0xD7E1 + WRAM-expansion shift (no pret symbol: inside wEventFlags)
     gbregion "wStatusFlags3",    wStatusFlags3, 1       ; BIT_TALKED_TO_TRAINER
     gbregion "wStatusFlags4",    wStatusFlags4, 1
     gbregion "wStatusFlags7",    wStatusFlags7, 1       ; BIT_TRAINER_BATTLE
@@ -1459,14 +1459,14 @@ windows:
     dd wNumBagItems    ; wNumBagItems + (id,qty) pairs
     dd wPartyCount    ; wPartyCount + wPartySpecies
     dd wActionResultOrTookBattleTurn    ; wActionResultOrTookBattleTurn
-    dd 0xE4CC    ; Stage 11: wUnusedCardKeyGateID ($D71E, +$1E) + wStatusFlags1 [WRAM-expansion shifted]
+    dd 0xE4CE    ; Stage 11: wUnusedCardKeyGateID ($D71E, +$1E) + wStatusFlags1 [WRAM-expansion shifted]
                  ; ($D727, +$27, BIT_UNUSED_CARD_KEY = bit 7) — drive with
                  ; ITEMSTONE_ID=CARD_KEY $30. Both stay 0 on real hardware: pret's
                  ; ItemUseCardKey reads the wrong byte and always falls to
                  ; ItemUseNotTime (see the BUG note there).
                  ; (was wEvoStoneItemID $D155 for Stage 8 — verified)
     dd wCanEvolveFlags    ; wCanEvolveFlags + wForceEvolution
-    dd 0xDDCC    ; Stage 11 (Safari): wEnemyMonActualCatchRate ($D006, +6) — drive with [WRAM-expansion shifted]
+    dd 0xDDCE    ; Stage 11 (Safari): wEnemyMonActualCatchRate ($D006, +6) — drive with [WRAM-expansion shifted]
                  ; ITEMSTONE_INBATTLE=1 and ITEMSTONE_ID=SAFARI_BAIT $15 (halves it) /
                  ; SAFARI_ROCK $16 (doubles it, saturating). The two Safari factors
                  ; ($CCE8/$CCE9) already fall inside the $CCD3 window above, at +$15/+$16.
@@ -1481,15 +1481,15 @@ windows:
 ; CalcStats gate: one 64-byte window over the test scratch at $D1E0 covers the
 ; scratch mon (DVs at +$1B) and both stat results (L5 at +$20, L100 at +$30).
 windows:
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
 %elifdef DEBUG_PARTY
 ; Party-seed gate: party count + species list, the four seeded mon structs
 ; (44 B each from $D16A), party nicknames, and the bag (count + (id,qty) pairs).
@@ -1501,22 +1501,22 @@ windows:
     dd wPartyMon4    ; party mon 4 struct (Pikachu)
     dd wPartyMonNicks    ; wPartyMonNicks (6 x 11)
     dd wNumBagItems    ; wNumBagItems + bag (id,qty) pairs
-    dd 0xE108    ; bag items continued [WRAM-expansion shifted]
+    dd 0xE10A    ; bag items continued [WRAM-expansion shifted]
     dd wPartyCount    ; overview repeat
 %elifdef DEBUG_WALKSPEED
 ; Walk-speed probe: one 64-byte window over the $D1E0 scratch holds the frame-rate
 ; measurement — +$00 start tick (dword), +$04 end tick, +$08 DelayFrame count.
 ; delta (end-start) == count → clean 60 Hz; delta < count → loop free-runs faster.
 windows:
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
-    dd 0xDFAC   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
+    dd 0xDFAE   ; [WRAM-expansion shifted]
 %elifdef DEBUG_AUDIO
 ; Audio-engine gate: the whole engine RAM block + the virtual APU after 120
 ; ticks of Pallet Town BGM. Expected (music id $BA on CHAN1-3, tempo 160):
@@ -1531,14 +1531,14 @@ windows:
     dd 0xC0B0    ; note delays, loop counters, speeds, octaves, volumes, tempos, ids, banks
     dd wAudioSavedROMBank    ; frequency/tempo modifiers
     dd 0xFF00    ; virtual APU: rAUD10-26 ($FF10-26) + wave RAM ($FF30-3F)
-    dd 0xDD8C    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9) [WRAM-expansion shifted]
-    dd 0xDFAC    ; opl_dbg_snapshot: present, opl3, voice_state[0..61] [WRAM-expansion shifted]
+    dd 0xDD8E    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9) [WRAM-expansion shifted]
+    dd 0xDFAE    ; opl_dbg_snapshot: present, opl3, voice_state[0..61] [WRAM-expansion shifted]
     dd wPartyMon5Type2    ; SB detect (+0..6) + MIDI driver state (+7..: cfg,
                  ; present, active, on, dw progress, scale, cc7[16]);
                  ; $D240 pika PCM, $D246 shim device, $D248 tandy, $D250 spk, $D258 enh
 %elifdef DEBUG_BATTLE
 windows:
-    dd 0xC6E8    ; wTileMap row 5 (enemy HP-bar tile IDs, cols 12-20) [WRAM-expansion shifted]
+    dd 0xC468    ; wTileMap row 5 (enemy HP-bar tile IDs, cols 12-20) [WRAM-expansion shifted]
     dd wAnimatedObject8FieldC    ; wTileMap row 13 (player HP-bar tile IDs, for comparison)
     dd wEnemyMon    ; wEnemyMon: species, HP hi(+1), HP lo(+2)
     dd wDamage    ; wDamage
@@ -1611,16 +1611,16 @@ section .text
 RunCalcStatsTest:
     mov byte [ebp + wCurSpecies], 0x99      ; Bulbasaur internal index
     call GetMonHeader
-    mov word [ebp + 0xDFC7], 0xFFFF         ; scratch DVs (all 15) at monbase+MON_DVS [WRAM-expansion shifted]
+    mov word [ebp + 0xDFC9], 0xFFFF         ; scratch DVs (all 15) at monbase+MON_DVS [WRAM-expansion shifted]
     mov byte [ebp + wCurEnemyLevel], 5      ; --- L5 ---
     xor bh, bh                              ; b=0: ignore stat exp
-    mov esi, 0xDFBC                         ; stat-exp base ptr (= monbase + $10)
-    mov edx, 0xDFCC                         ; result dest
+    mov esi, 0xDFBE                         ; stat-exp base ptr (= monbase + $10)
+    mov edx, 0xDFCE                         ; result dest
     call CalcStats
     mov byte [ebp + wCurEnemyLevel], 100    ; --- L100 ---
     xor bh, bh
-    mov esi, 0xDFBC   ; [WRAM-expansion shifted]
-    mov edx, 0xDFDC   ; [WRAM-expansion shifted]
+    mov esi, 0xDFBE   ; [WRAM-expansion shifted]
+    mov edx, 0xDFDE   ; [WRAM-expansion shifted]
     call CalcStats
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 %endif
@@ -1995,7 +1995,7 @@ RunTrainerRouteTestSeed:
     ; beaten bit clear, map script at its DEFAULT handler. The trainer itself comes
     ; from the generated map data, not from here — that is what makes this an
     ; end-to-end check of assets/trainer_headers.inc rather than of a seeded state.
-    and byte [ebp + 0xE58E], ~(1 << 2) & 0xff   ; Route 3 trainer 0 beaten flag [WRAM-expansion shifted]
+    and byte [ebp + 0xE590], ~(1 << 2) & 0xff   ; Route 3 trainer 0 beaten flag [WRAM-expansion shifted]
     mov byte [ebp + wRoute3CurScript], 0                  ; wRoute3CurScript = DEFAULT (0)
     mov byte [ebp + wCurMapScript], 0
 .alreadySeeded:
@@ -2054,7 +2054,7 @@ RunTrainerRoute17TestSeed:
     mov byte [ebp + wNumBagItems], 0
     mov byte [ebp + wBagItems], 0xFF
     call PrepareNewGameDebug
-    and byte [ebp + 0xE5AD], ~(1 << 2) & 0xff   ; Route 17 trainer 9 (BIKER10) beaten flag [WRAM-expansion shifted]
+    and byte [ebp + 0xE5AF], ~(1 << 2) & 0xff   ; Route 17 trainer 9 (BIKER10) beaten flag [WRAM-expansion shifted]
     mov byte [ebp + wRoute17CurScript], 0                  ; wRoute17CurScript = DEFAULT (0)
     mov byte [ebp + wCurMapScript], 0
 .alreadySeeded17:
@@ -2438,7 +2438,7 @@ RunBattleTest:
 
     ; Route 3 standard-script state and first trainer header. The generated
     ; header binds flag bit 2 in event byte $D7C2.
-    and byte [ebp + 0xE58E], ~(1 << 2) & 0xff   ; [WRAM-expansion shifted]
+    and byte [ebp + 0xE590], ~(1 << 2) & 0xff   ; [WRAM-expansion shifted]
     mov byte [ebp + wRoute3CurScript], 1          ; wRoute3CurScript: start-battle handler
     mov byte [ebp + wCurMapScript], 1
     mov byte [ebp + wSpriteIndex], 1
@@ -2524,7 +2524,7 @@ RunBattleTest:
     stosb
     mov al, [ebp + wRoute3CurScript]
     stosb
-    mov al, [ebp + 0xE58E]   ; [WRAM-expansion shifted]
+    mov al, [ebp + 0xE3C5]   ; [WRAM-expansion shifted]
     stosb
     mov al, [ebp + wMiscFlags]
     stosb

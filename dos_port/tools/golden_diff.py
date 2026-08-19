@@ -2253,8 +2253,9 @@ def _load_wram_growth():
         _g = _json.loads((Path(__file__).resolve().parent /
                           "wram_growth.json").read_text())["growths"]
     except FileNotFoundError:
-        return {}
-    return {int(e["pret"], 16): e["port_size"] - e["pret_size"] for e in _g}
+        return []
+    return [(int(e["pret"], 16), e["pret_size"], e["port_size"] - e["pret_size"])
+            for e in _g]
 
 
 _WRAM_GROWTH = _load_wram_growth()
@@ -2265,7 +2266,9 @@ def _port_addr_of(pret_addr):
     """Where a pret address lives in the port's expanded WRAM."""
     if pret_addr >= _GB_OAM_ADDR:
         return pret_addr
-    return pret_addr + sum(g for a, g in _WRAM_GROWTH.items() if a < pret_addr)
+    # A growth applies only at or ABOVE the END of the grown region. `p < addr`
+    # tears the region apart: a symbol INSIDE it accrues the region's own growth.
+    return pret_addr + sum(g for a, sz, g in _WRAM_GROWTH if a + sz <= pret_addr)
 
 
 def load_charmap(path):
