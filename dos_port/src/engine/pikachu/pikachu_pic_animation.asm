@@ -221,6 +221,16 @@ global LookUpTileOffsetForCurrentPikaPicAnimGFX
 global PikaPicAnimCommand_cry
 global PikaPicAnimCommand_thunderbolt
 
+; Port-only presentation helper, exported ONLY so the DEBUG_PIKAPIC harness
+; (src/debug/debug_dump.asm:RunPikaPicTest) can drive the same choreography
+; StarterPikachuEmotionCommand_pikapic runs without going through that routine
+; itself (which has no natural mid-animation return point to dump a frame at —
+; see RunPikaPicTest's header). No behavior change: `global` only affects link
+; visibility. pikapic_mirror / pikapic_window_exit stay file-local because
+; ExecutePikaPicAnimScript (already global) calls pikapic_mirror internally
+; every frame, and the harness dumps-and-exits before window_exit would run.
+global pikapic_window_enter
+
 section .bss
 align 4
 ; DEVIATION{class=data-model; pret=engine/pikachu/pikachu_pic_animation.asm:UpdatePikaPicAnimPointer; behavior=the live animation-script cursor is a 32-bit host dword and the pret-named 16-bit wPikaPicAnimPointer keeps only its low half as a write-only shadow, where pret reads its cursor straight back out of that WRAM word; evidence=the pikapic scripts are linked into the DOS program image above the 16-bit GB address space so a dw cannot hold one, and every reader here goes through GetPikaPicAnimByte or PikaPicAnimCommand_jump which take the dword; lifetime=permanent flat 32-bit memory model}

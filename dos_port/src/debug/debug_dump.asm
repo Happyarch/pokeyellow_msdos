@@ -116,6 +116,16 @@ extern PrepareNewGameDebug
 extern SurfingPikachuMinigame
 global RunSurfingPikachuTest
 %endif
+%ifdef DEBUG_PIKAPIC
+extern PrepareNewGameDebug
+extern pikapic_window_enter                 ; src/engine/pikachu/pikachu_pic_animation.asm
+extern PlacePikapicTextBoxBorder            ; src/engine/pikachu/pikachu_pic_animation.asm
+extern LoadOverworldPikachuFrontpicPalettes ; src/engine/gfx/palettes.asm
+extern ResetPikaPicAnimBuffer               ; src/engine/pikachu/pikachu_pic_animation.asm
+extern LoadCurrentPikaPicAnimScriptPointer  ; src/engine/pikachu/pikachu_pic_animation.asm
+extern ExecutePikaPicAnimScript             ; src/engine/pikachu/pikachu_pic_animation.asm
+global RunPikaPicTest
+%endif
 %ifdef DEBUG_LEDGE
 extern PrepareNewGameDebug
 global RunLedgeTestSeed
@@ -7316,6 +7326,48 @@ RunCinematicMarkersTest:
     call DelayFrame
     call DelayFrame
     call DelayFrame
+    call DumpBackbuffer             ; writes FRAME.BIN + exits (never returns)
+.hang:
+    jmp .hang
+%endif
+
+%ifdef DEBUG_PIKAPIC
+; ---------------------------------------------------------------------------
+; RunPikaPicTest — headless runtime witness for the pikapic front-pic facial
+; animation engine (follower-Pikachu plan, phase 4). Modelled on
+; RunSurfingPikachuTest below: seeds a valid party (PrepareNewGameDebug, which
+; includes the starter Pikachu) and calls the routine's own building blocks
+; directly rather than through a scripted event trigger.
+;
+; Calls the SAME sequence StarterPikachuEmotionCommand_pikapic's .RunPikapic
+; runs (pikapic_window_enter -> PlacePikapicTextBoxBorder ->
+; LoadOverworldPikachuFrontpicPalettes -> ResetPikaPicAnimBuffer ->
+; LoadCurrentPikaPicAnimScriptPointer -> ExecutePikaPicAnimScript), but NOT
+; through StarterPikachuEmotionCommand_pikapic itself: that routine also closes
+; the window (PlacePikapicTextBoxBorder + RunDefaultPaletteCommand +
+; pikapic_window_exit) before it returns, and it has no natural mid-animation
+; return point — unlike the free-running surf minigame there is no per-loop
+; hook to attach a frame-count dump to. Calling the building blocks directly
+; means the dump lands right after ExecutePikaPicAnimScript's own natural exit
+; (the chosen script's pikapic_setduration timer running out — 40 frames for
+; PikaPicAnimScript0 — since headless input never satisfies its A/B early-out),
+; while the window is still open and the last cel is still mirrored into
+; GB_TILEMAP0. Skipping pikapic_window_exit is deliberate: DumpBackbuffer never
+; returns, so there is nothing later that needs the window torn down.
+;
+; wPikaPicAnimNumber is set directly (bypassing GetPikaPicAnimationScriptIndex's
+; mood/happiness matrix, which only feeds the real TalkToPikachu path) to select
+; PikaPicAnimScript0, the shortest scripted animation (duration 40).
+; ---------------------------------------------------------------------------
+RunPikaPicTest:
+    call PrepareNewGameDebug
+    mov byte [ebp + wPikaPicAnimNumber], 0  ; PikaPicAnimScript0 (pikapic_setduration 40)
+    call pikapic_window_enter
+    call PlacePikapicTextBoxBorder
+    call LoadOverworldPikachuFrontpicPalettes
+    call ResetPikaPicAnimBuffer
+    call LoadCurrentPikaPicAnimScriptPointer
+    call ExecutePikaPicAnimScript
     call DumpBackbuffer             ; writes FRAME.BIN + exits (never returns)
 .hang:
     jmp .hang

@@ -183,6 +183,7 @@ extern RunTrainerRouteTestSeed            ; src/debug/debug_dump.asm (Stage 1b c
 extern RunTrainerRoute17TestSeed          ; src/debug/debug_dump.asm (ROUTE_17/ForceBikeDown witness)
 extern RunGhostBattleTestSeed             ; src/debug/debug_dump.asm (4c ghost witness)
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
+extern RunPikaPicTest                     ; src/debug/debug_dump.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
 extern RunSavePerfTest                    ; src/engine/menus/save.asm (DEBUG_SAVEPERF)
 extern RunSaveTest                        ; src/engine/menus/save.asm
@@ -972,6 +973,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_SURFING_PIKACHU
     call RunSurfingPikachuTest             ; boot directly into SurfingPikachuMinigame
+%endif
+%ifdef DEBUG_PIKAPIC
+    call RunPikaPicTest                    ; boot directly into the pikapic front-pic engine
 %endif
 %ifdef DEBUG_WALKSPEED
     ; Live walk-speed instrumentation: boots normally into OverworldLoop so you can

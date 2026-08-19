@@ -2529,6 +2529,21 @@ DEBUG_STATUS := 1
 NASMFLAGS += -D DEBUG_STATUS_PAGE2
 endif
 $(eval $(call dump_gate,DEBUG_STATUS))
+# pikapic (follower-Pikachu front-pic facial animation, phase 4) runtime witness:
+# seed a valid party (PrepareNewGameDebug), then drive the same presentation
+# choreography StarterPikachuEmotionCommand_pikapic runs
+# (pikapic_window_enter -> PlacePikapicTextBoxBorder ->
+# LoadOverworldPikachuFrontpicPalettes -> ResetPikaPicAnimBuffer ->
+# LoadCurrentPikaPicAnimScriptPointer -> ExecutePikaPicAnimScript) directly from
+# the harness rather than through StarterPikachuEmotionCommand_pikapic itself, so
+# the dump lands BEFORE pikapic_window_exit tears the window down --
+# StarterPikachuEmotionCommand_pikapic runs start-to-finish as one call with no
+# natural mid-animation return point. No forced frame-count hook is needed the
+# way the free-running surf minigame needs one: ExecutePikaPicAnimScript returns
+# by itself once the chosen script's own animation timer (PikaPicAnimScript0's
+# pikapic_setduration 40) expires.
+# make DEBUG_PIKAPIC=1
+$(eval $(call dump_gate,DEBUG_PIKAPIC))
 # Surfing Pikachu minigame gate: boot directly into SurfingPikachuMinigame with
 # seeded party (starter Pikachu with SURF) and script flags.
 # make DEBUG_SURFING_PIKACHU=1
