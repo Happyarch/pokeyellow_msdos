@@ -784,9 +784,9 @@ opl_dbg_snapshot:
     push edi
     push ecx
     mov al, [g_opl_present]
-    mov [ebp + 0xD1E0], al
+    mov [ebp + (W_PORT_SCRATCH + 0x00)], al
     mov al, [g_opl3]
-    mov [ebp + 0xD1E1], al
+    mov [ebp + (W_PORT_SCRATCH + 0x01)], al
     mov esi, voice_state
     mov edi, 0xD1E2
     mov ecx, 62
@@ -797,17 +797,17 @@ opl_dbg_snapshot:
     inc edi
     loop .copy
     mov al, [g_sb_present]
-    mov [ebp + 0xD220], al
+    mov [ebp + (W_PORT_SCRATCH + 0x40)], al
     mov ax, [g_sb_base]
-    mov [ebp + 0xD221], al
-    mov [ebp + 0xD222], ah
+    mov [ebp + (W_PORT_SCRATCH + 0x41)], al
+    mov [ebp + (W_PORT_SCRATCH + 0x42)], ah
     mov ax, [g_sb_dsp_ver]
-    mov [ebp + 0xD223], al          ; minor
-    mov [ebp + 0xD224], ah          ; major
+    mov [ebp + (W_PORT_SCRATCH + 0x43)], al          ; minor
+    mov [ebp + (W_PORT_SCRATCH + 0x44)], ah          ; major
     mov al, [g_sb_irq]
-    mov [ebp + 0xD225], al
+    mov [ebp + (W_PORT_SCRATCH + 0x45)], al
     mov al, [g_sb_dma]
-    mov [ebp + 0xD226], al
+    mov [ebp + (W_PORT_SCRATCH + 0x46)], al
     pop ecx
     pop edi
     pop esi

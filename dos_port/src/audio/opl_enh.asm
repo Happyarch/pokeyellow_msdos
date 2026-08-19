@@ -398,7 +398,7 @@ enh_dbg_snapshot:
     push ecx
     push edx
     mov al, [enh_on]
-    mov [ebp + 0xD258], al
+    mov [ebp + (W_PORT_SCRATCH + 0x78)], al
     xor eax, eax
     xor ecx, ecx
     mov edx, enh_state
@@ -411,10 +411,10 @@ enh_dbg_snapshot:
     inc ecx
     cmp ecx, POOL_SIZE
     jb .mask
-    mov [ebp + 0xD259], ax
+    mov [ebp + (W_PORT_SCRATCH + 0x79)], ax
     mov eax, [enh_ptr]
     sub eax, [enh_base]
-    mov [ebp + 0xD25B], ax
+    mov [ebp + (W_PORT_SCRATCH + 0x7B)], ax
     pop edx
     pop ecx
     pop eax

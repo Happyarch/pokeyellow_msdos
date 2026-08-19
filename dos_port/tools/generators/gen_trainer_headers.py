@@ -47,6 +47,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_battle_text as gbt  # noqa: E402  (charmap/memmap/parse_body machinery)
+import gb_addrs
 
 ROOT    = Path(__file__).resolve().parents[3]
 ASSETS  = ROOT / "dos_port" / "assets"
@@ -56,7 +57,7 @@ SCRIPTS = ROOT / "scripts"
 TEXTS   = ROOT / "text"
 
 TH_SIZE      = 22
-WEVENTFLAGS  = 0xD746   # wEventFlags (dos_port/include/gb_memmap.inc canonical)
+WEVENTFLAGS  = gb_addrs.addr("wEventFlags")   # from the port's headers, never a literal
 
 
 # ---------------------------------------------------------------------------

@@ -174,6 +174,55 @@ do not report the raw counts as a bug tally.
 constants come from `dos_port/include/gb_memmap.inc`. All offsets derived from
 `constants/hardware.inc`.
 
+### The port is a Game Boy with MORE WRAM (prefix-sum expansion)
+
+The port's screen is 40×25 where the GB's is 20×18, so several buffers must be
+bigger than pret's. They are not squeezed in somewhere — the machine has more
+WRAM, and the layout is derived:
+
+> **`port_addr = pret_addr + Σ(growths strictly below it)`**
+
+A grown buffer keeps its pret address; everything above it shifts up; successive
+growths compose in address order, so each grown buffer ends exactly where its
+successor begins. The growth table is **`dos_port/tools/wram_growth.json`** — the
+single source, read by `gen_pret_ram.py`, `check_ram_addresses.py` and
+`check_ram_straddle.py`. Addresses at or above `GB_OAM` ($FE00) never shift, so
+**every OAM/IO/HRAM symbol keeps its pret address.**
+
+You do not hand-place anything, and you do not hand-compute a shifted address:
+add a growth to the table and regenerate.
+
+### NEVER ASSERT THAT AN ADDRESS IS FREE — DERIVE IT
+
+This is the rule that matters most in this section, because breaking it produced
+**seven** port-introduced RAM collisions, every one of which passed every gate:
+
+- *"free echo RAM"* — there is no free echo RAM. `$E000-$FDFF` mirrors
+  `$C000-$DDFF` on hardware, so `$F500` **is** `$D500`, which pret populates. The
+  port survives only because it does not implement the mirror. Two authors each
+  read that phrase as a hardware fact and both put a buffer at `$F500`.
+- *"root-allocated free bytes"* — `$FFA9`/`$FFAA` are `hSerialReceivedNewData` /
+  `hSerialConnectionStatus`.
+- *"port-assigned to free hram"* — `$FFC1` is `hVBlankCopyBGSource`, live in the
+  `DelayFrame` path.
+
+**A declaration gap is not free space — check EXTENTS.** `$FFA6`/`$FFA7` have no
+symbol of their own and are inside `hDivideBCDBuffer`. `$D094` has none and is
+inside `wSubAnimAddrPtr`.
+
+So, in order of preference:
+1. **Use pret's own address.** Usually it is simply free in the port. Three of
+   the seven collisions were fixed this way, and it is strictly more faithful.
+2. **Use a pret union.** If pret puts your scratch on a shared byte (as it does
+   for `hSwapItemID`/`hDividend`), that union is the original game's design and
+   is proven safe by pret itself. `check_ram_collisions.py` recognises it.
+3. **Port-only space above the expanded WRAM**, for something with no pret
+   counterpart — e.g. a `dw`→`dd` flat-adaptation that no longer fits pret's gap.
+
+`tools/check_ram_collisions.py` decides authorised-vs-invented mechanically:
+group symbols by port address, compare their *pret* addresses. Same → pret unions
+them. Different → you invented an alias. Run it before you believe a placement.
+
 **DJGPP addressing (critical, verified in testing):** the DS/CS selector base
 is the program image, NOT linear 0. `setup_flat_access` (boot/entry.asm) raises
 the DS limit to 4 GB (DPMI fn 0008h — the "nearptr" model) and stores the DS

@@ -37,6 +37,29 @@ import re, sys, pathlib
 PRET = pathlib.Path(__file__).resolve().parents[3]
 OUT  = pathlib.Path(__file__).resolve().parents[2] / "assets" / "pret_ram.inc"
 
+
+# --- the prefix-sum WRAM expansion -----------------------------------------
+# The port is a Game Boy with more WRAM: a grown buffer keeps its pret address and
+# everything ABOVE it shifts up by the growth (docs/current_plan_wram_expansion.md).
+# The growth table is tools/wram_growth.json -- the SINGLE source, also read by
+# check_ram_straddle.py. Addresses at or above GB_OAM never move, which is what
+# keeps every OAM/IO/HRAM symbol at its pret address.
+import json
+
+_GROWTH = {int(g["pret"], 16): g["port_size"] - g["pret_size"]
+           for g in json.loads(
+               (pathlib.Path(__file__).resolve().parents[2] /
+                "tools" / "wram_growth.json").read_text())["growths"]}
+_GB_OAM = 0xFE00
+
+
+def _shift(addr):
+    """pret address -> port address under the prefix-sum expansion."""
+    if addr >= _GB_OAM:
+        return addr
+    return addr + sum(g for p, g in _GROWTH.items() if p < addr)
+
+
 def main():
     sym = PRET / "pokeyellow.sym"
     if not sym.exists():
@@ -56,7 +79,7 @@ def main():
             continue
         if not (0xC000 <= addr <= 0xFFFF):          # WRAM, echo, OAM, HRAM
             continue
-        seen.setdefault(name, addr)
+        seen.setdefault(name, _shift(addr))
 
     # Skip anything already declared anywhere in the port: gb_memmap.inc carries the
     # deliberate relocations, and src/ still holds per-file declarations. Emitting a

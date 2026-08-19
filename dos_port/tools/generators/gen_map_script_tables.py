@@ -51,6 +51,7 @@ Run from repo root (or dos_port/); paths resolve relative to the repo root.
 import re
 import sys
 from pathlib import Path
+import gb_addrs
 
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "dos_port" / "assets"
@@ -69,7 +70,7 @@ MSP_SIZE = 12
 # include/gb_memmap.inc, and the golden pokeyellow.sym agrees
 # (wOaksLabCurScript = $D5EF). Everything else in the block is derived by walking
 # ram/wram.asm from here, so adding a map costs no new hand-typed address.
-WGAMEPROGRESSFLAGS = 0xD5EF
+WGAMEPROGRESSFLAGS = gb_addrs.addr("wOaksLabCurScript")
 
 # Maps whose script layer is LIVE (MapScriptPointers -> TrainerMapScript). Each
 # entry must have a golden scenario exercising at least its default script path;

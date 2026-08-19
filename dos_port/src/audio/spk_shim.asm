@@ -355,19 +355,19 @@ spk_length:
 ; ---------------------------------------------------------------------------
 spk_dbg_snapshot:
     mov al, [g_spk_on]
-    mov [ebp + 0xD250], al
+    mov [ebp + (W_PORT_SCRATCH + 0x70)], al
     mov al, [spk_active_ch]
-    mov [ebp + 0xD251], al
+    mov [ebp + (W_PORT_SCRATCH + 0x71)], al
     mov ax, [spk_last_div]
-    mov [ebp + 0xD252], al
-    mov [ebp + 0xD253], ah
+    mov [ebp + (W_PORT_SCRATCH + 0x72)], al
+    mov [ebp + (W_PORT_SCRATCH + 0x73)], ah
     mov al, [spk_state + 0*SS_SIZE + SS_KEY]
-    mov [ebp + 0xD254], al
+    mov [ebp + (W_PORT_SCRATCH + 0x74)], al
     mov al, [spk_state + 1*SS_SIZE + SS_KEY]
-    mov [ebp + 0xD255], al
+    mov [ebp + (W_PORT_SCRATCH + 0x75)], al
     mov ax, [spk_div_writes]
-    mov [ebp + 0xD256], al
-    mov [ebp + 0xD257], ah
+    mov [ebp + (W_PORT_SCRATCH + 0x76)], al
+    mov [ebp + (W_PORT_SCRATCH + 0x77)], ah
     ret
 
 section .data

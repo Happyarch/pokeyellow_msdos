@@ -1301,7 +1301,7 @@ Func_5288:
     ; data2/data1 here writes data1[off] = PICTUREID = 8, then dec h lands on
     ; page $C0 and writes $C000+off+1 = 3 — one byte into AUDIO ENGINE WRAM
     ; (slot-dependent: $C011 wChannelCommandPointers+11, $C031 wChannelFlags1+3,
-    ; …). The port memmap mirrors pret's WRAM layout, so [ebp+0xC001+off] hits
+    ; …). The port memmap mirrors pret's WRAM layout, so [ebp+wSoundID+off] hits
     ; the port's live audio state the same way. Reachability: no shipped movement
     ; list contains $11-$14; only the WALK OOB-read path (see .scriptedNext) or
     ; memory corruption can route here — latent in the original, latent here.

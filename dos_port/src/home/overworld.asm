@@ -790,10 +790,10 @@ EnterMap:
     ; Live, interactive: seed a full bag + money, then fall through to the normal
     ; OverworldLoop. Open the bag via START → ITEM (the real path) to exercise the
     ; list, TOSS quantity chooser, YES/NO confirm, and the "TOO IMPORTANT!" notice.
-    mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0             ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF          ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0             ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF          ; wBagItems sentinel
     call PrepareNewGameDebug               ; seed party + bag + money (returns)
 %endif
 %ifdef DEBUG_SEED_PARTY
@@ -828,10 +828,10 @@ EnterMap:
     cmp byte [seed_party_done], 0
     jne .seed_party_already
     mov byte [seed_party_done], 1
-    mov byte [ebp + 0xD162], 0             ; wPartyCount = 0
-    mov byte [ebp + 0xD163], 0xFF          ; wPartySpecies sentinel
-    mov byte [ebp + 0xD31C], 0             ; wNumBagItems = 0
-    mov byte [ebp + 0xD31D], 0xFF          ; wBagItems sentinel
+    mov byte [ebp + wPartyCount], 0             ; wPartyCount = 0
+    mov byte [ebp + wPartySpecies], 0xFF          ; wPartySpecies sentinel
+    mov byte [ebp + wNumBagItems], 0             ; wNumBagItems = 0
+    mov byte [ebp + wBagItems], 0xFF          ; wBagItems sentinel
     call PrepareNewGameDebug               ; seed party + bag + money (returns)
 .seed_party_already:
 %endif
@@ -980,11 +980,11 @@ EnterMap:
     ; quit hook. tick_count is the true 60 Hz PIT counter, so avg ticks/tile = 16 →
     ; faithful walk speed; notably < 16 → movement really is too fast.
     ;   $D1E0 first tick   $D1E4 last tick   $D1E8 tiles   $D1EC min Δ   $D1F0 init flag
-    mov dword [ebp + 0xD1E0], 0
-    mov dword [ebp + 0xD1E4], 0
-    mov dword [ebp + 0xD1E8], 0
-    mov dword [ebp + 0xD1EC], 0xFFFFFFFF
-    mov dword [ebp + 0xD1F0], 0
+    mov dword [ebp + (W_PORT_SCRATCH + 0x00)], 0
+    mov dword [ebp + wPartyMon3MaxHP], 0
+    mov dword [ebp + wPartyMon3Defense], 0
+    mov dword [ebp + wPartyMon3Special], 0xFFFFFFFF
+    mov dword [ebp + (W_PORT_SCRATCH + 0x10)], 0
 %endif
 
     ; --- faithful EnterMap reset ladder (pret home/overworld.asm:6-41) ----------

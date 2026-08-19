@@ -84,76 +84,76 @@
 ; WRAM bank 0 — $C000–$CFFF (4 KB)
 ; Always available. General-purpose work RAM.
 %define GB_WRAM0                     0xC000
-%define W_PARTY_MON4_MOVES           0xD1F6
-%define wPlayerMoney                 0xD346   ; 3-byte BCD (trainer-card money display)
-%define wObtainedBadges              0xD355
+%define W_PARTY_MON4_MOVES           0xDFC2
+%define wPlayerMoney                 0xE112   ; 3-byte BCD (trainer-card money display)
+%define wObtainedBadges              0xE121
 ; wTrainerCardBadgeAttributes — pret ram/wram.asm. READ ONLY by
 ; HandleBadgeFaceAttributes, and pret never writes it under this name: it is a
 ; UNION member sharing these bytes with the misc battle-data block
 ; (wEnemyBideAccumulatedDamage / wEnemyNumHits) and with wPikaPicUsedGFXCount /
 ; wPikaPicUsedGFX. The port models GB memory FLAT, so that aliasing reproduces
 ; itself here for free — same byte, same address, exactly as on hardware.
-%define wTrainerCardBadgeAttributes  0xCC5D
-%define wObtainedHiddenItemsFlags    0xD6EF
-%define wRivalStarter                0xD714
+%define wTrainerCardBadgeAttributes  0xD7A9
+%define wObtainedHiddenItemsFlags    0xE4BB
+%define wRivalStarter                0xE4E0
 ; --- Surfing Minigame WRAM data (pret ram/wram.asm:222-264) ---
 ; Addresses read from pokeyellow.sym (00:c5d0-00:c637), never inferred.
-%define wSurfingMinigameData         0xC5D0   ; db
-%define wSurfingMinigameRoutineNumber 0xC5D1   ; db
-%define wSurfingMinigamePikachuState 0xC5D2   ; db
-%define wSurfingMinigameWaveFunctionNumber 0xC5D3   ; dw
-%define wSurfingMinigameWaveRandomValue 0xC5D5   ; db
-%define wSurfingMinigamePikachuHP    0xC5D6   ; dw (little-endian BCD)
-%define wSurfingMinigameRadnessMeter 0xC5D9   ; db (number of consecutive tricks)
+%define wSurfingMinigameData         0xCD30   ; db
+%define wSurfingMinigameRoutineNumber 0xCD31   ; db
+%define wSurfingMinigamePikachuState 0xCD32   ; db
+%define wSurfingMinigameWaveFunctionNumber 0xCD33   ; dw
+%define wSurfingMinigameWaveRandomValue 0xCD35   ; db
+%define wSurfingMinigamePikachuHP    0xCD36   ; dw (little-endian BCD)
+%define wSurfingMinigameRadnessMeter 0xCD39   ; db (number of consecutive tricks)
 %define W_SURFING_MINIGAME_RADNESS_MTR (wSurfingMinigameRadnessMeter)   ; legacy alias
-%define wSurfingMinigameRadnessScore 0xC5DA   ; dw (little-endian BCD)
+%define wSurfingMinigameRadnessScore 0xCD3A   ; dw (little-endian BCD)
 %define W_SURFING_MINIGAME_RADNESS_SCR (wSurfingMinigameRadnessScore)   ; legacy alias
-%define wSurfingMinigameTotalScore   0xC5DC   ; dw (little-endian BCD)
-%define wSurfingMinigameBoardAngleOffset 0xC5DE   ; db
-%define wSurfingMinigameBoardAngleDecreasing 0xC5DF   ; db
-%define wSurfingMinigameBoardAngleTimer 0xC5E0   ; db
-%define wSurfingMinigameCrashTimer   0xC5E1   ; db
-%define wSurfingMinigameUnusedToggle 0xC5E2   ; db
-%define wSurfingMinigamePikachuSpeed 0xC5E3   ; dw (little-endian)
-%define wSurfingMinigameDistance     0xC5E5   ; ds 3 (big-endian)
-%define wSurfingMinigameWaveHeightBuffer 0xC5E8   ; dw
-%define wSurfingMinigamePikachuObjectHeight 0xC5EA   ; db
-%define wSurfingMinigameWaterSprayCounter 0xC5EB   ; db
-%define wSurfingMinigameJumpArcMagnitude 0xC5EC   ; db
-%define wSurfingMinigameJumpDescending 0xC5ED   ; db
-%define wSurfingMinigameJumpArcFraction 0xC5EE   ; db
-%define wSurfingMinigameBGMapReadBuffer 0xC5EF   ; ds 1 tiles + 24 = 40 bytes
-%define wSurfingMinigameSCX          0xC617   ; db
-%define wSurfingMinigameSCX2         0xC618   ; db
-%define wSurfingMinigameSCXHi        0xC619   ; db
-%define wSurfingMinigameWaveHeight   0xC61A   ; ds SCREEN_WIDTH (20 bytes)
-%define wSurfingMinigameXOffset      0xC62E   ; db
-%define wSurfingMinigameTrickFlags   0xC62F   ; db
-%define wSurfingMinigameGameOver     0xC630   ; db
-%define wSurfingMinigameGameOverDelay 0xC631   ; db
-%define wSurfingMinigameRoutineDelay 0xC632   ; db
-%define wSurfingMinigameIntroAnimationFinished 0xC633   ; db
+%define wSurfingMinigameTotalScore   0xCD3C   ; dw (little-endian BCD)
+%define wSurfingMinigameBoardAngleOffset 0xCD3E   ; db
+%define wSurfingMinigameBoardAngleDecreasing 0xCD3F   ; db
+%define wSurfingMinigameBoardAngleTimer 0xCD40   ; db
+%define wSurfingMinigameCrashTimer   0xCD41   ; db
+%define wSurfingMinigameUnusedToggle 0xCD42   ; db
+%define wSurfingMinigamePikachuSpeed 0xCD43   ; dw (little-endian)
+%define wSurfingMinigameDistance     0xCD45   ; ds 3 (big-endian)
+%define wSurfingMinigameWaveHeightBuffer 0xCD48   ; dw
+%define wSurfingMinigamePikachuObjectHeight 0xCD4A   ; db
+%define wSurfingMinigameWaterSprayCounter 0xCD4B   ; db
+%define wSurfingMinigameJumpArcMagnitude 0xCD4C   ; db
+%define wSurfingMinigameJumpDescending 0xCD4D   ; db
+%define wSurfingMinigameJumpArcFraction 0xCD4E   ; db
+%define wSurfingMinigameBGMapReadBuffer 0xCD4F   ; ds 1 tiles + 24 = 40 bytes
+%define wSurfingMinigameSCX          0xCD77   ; db
+%define wSurfingMinigameSCX2         0xCD78   ; db
+%define wSurfingMinigameSCXHi        0xCD79   ; db
+%define wSurfingMinigameWaveHeight   0xCD7A   ; ds SCREEN_WIDTH (20 bytes)
+%define wSurfingMinigameXOffset      0xCD8E   ; db
+%define wSurfingMinigameTrickFlags   0xCD8F   ; db
+%define wSurfingMinigameGameOver     0xCD90   ; db
+%define wSurfingMinigameGameOverDelay 0xCD91   ; db
+%define wSurfingMinigameRoutineDelay 0xCD92   ; db
+%define wSurfingMinigameIntroAnimationFinished 0xCD93   ; db
 ; Shared with Yellow intro (unioned in pret)
-%define wSurfingMinigameMusicTempoEnabled 0xC634   ; db
-%define wSurfingMinigameCloudScrollFraction 0xC635   ; db
-%define wSurfingMinigameDataEnd      0xC637   ; extent end
-%define wSurfingMinigameHiScore      0xD494   ; ds 3 (BCD)
+%define wSurfingMinigameMusicTempoEnabled 0xCD94   ; db
+%define wSurfingMinigameCloudScrollFraction 0xCD95   ; db
+%define wSurfingMinigameDataEnd      0xCD97   ; extent end
+%define wSurfingMinigameHiScore      0xE260   ; ds 3 (BCD)
 
-%define wSlotMachineWheel2Offset     0xCD3F
-%define wSlotMachineWheel3Offset     0xCD40
-%define wSlotMachineWheel1BottomTile 0xCD41
-%define wSlotMachineWheel1MiddleTile 0xCD42
-%define wSlotMachineWheel1TopTile    0xCD43
-%define wSlotMachineWheel2BottomTile 0xCD44
-%define wSlotMachineWheel2MiddleTile 0xCD45
-%define wSlotMachineWheel2TopTile    0xCD46
-%define wSlotMachineWheel3BottomTile 0xCD47
-%define wSlotMachineWheel3MiddleTile 0xCD48
-%define wSlotMachineWheel3TopTile    0xCD49
-%define wSlotMachineFlags            0xCD4C
-%define wSlotMachineWheel1SlipCounter 0xCD4D
-%define wSlotMachineWheel2SlipCounter 0xCD4E
-%define wSlotMachineAllowMatchesCounter 0xD095
+%define wSlotMachineWheel2Offset     0xD88B
+%define wSlotMachineWheel3Offset     0xD88C
+%define wSlotMachineWheel1BottomTile 0xD88D
+%define wSlotMachineWheel1MiddleTile 0xD88E
+%define wSlotMachineWheel1TopTile    0xD88F
+%define wSlotMachineWheel2BottomTile 0xD890
+%define wSlotMachineWheel2MiddleTile 0xD891
+%define wSlotMachineWheel2TopTile    0xD892
+%define wSlotMachineWheel3BottomTile 0xD893
+%define wSlotMachineWheel3MiddleTile 0xD894
+%define wSlotMachineWheel3TopTile    0xD895
+%define wSlotMachineFlags            0xD898
+%define wSlotMachineWheel1SlipCounter 0xD899
+%define wSlotMachineWheel2SlipCounter 0xD89A
+%define wSlotMachineAllowMatchesCounter 0xDE61
 
 ; --- pret-named aliases for the slots / hidden-event bytes above -------------
 ; The W_SLOT_MACHINE_* names are the port's legacy convention and stay as the
@@ -161,10 +161,10 @@
 ; for the SAME addresses, so engine/slots/ can be a literal pret mirror. Adding
 ; alongside, never renaming (CLAUDE.md "Preserve pret Labels").
 ; Addresses verified against pokeyellow.sym, not inferred.
-%define wSlotMachineSevenAndBarModeChance 0xCC5B   ; == wSlotMachineSevenAndBarModeChance
-%define wSlotMachineSavedROMBank     0xCC5E
-%define wLuckySlotHiddenEventIndex   0xCD05
-%define wHiddenEventIndex            0xCD3F   ; == wSlotMachineWheel2Offset (union)
+%define wSlotMachineSevenAndBarModeChance 0xD7A7   ; == wSlotMachineSevenAndBarModeChance
+%define wSlotMachineSavedROMBank     0xD7AA
+%define wLuckySlotHiddenEventIndex   0xD851
+%define wHiddenEventIndex            0xD88B   ; == wSlotMachineWheel2Offset (union)
 %define wSpritePlayerStateData1ImageIndex 0xC102   ; player sprite slot, +2 = ImageIndex
 
 ; *** wHiddenEventFunctionArgument and wCanPlaySlots ARE THE SAME BYTE ($CD3D),
@@ -175,9 +175,9 @@
 ; That ordering is pret's and is correct there because the argument is spent by
 ; then; it is recorded because a reordering that looks harmless is not.
 ; wDayCareStartLevel (below) is a third alias of the same address.
-%define wHiddenEventFunctionArgument 0xCD3D
-%define wCanPlaySlots                0xCD3D
-%define W_LOADED_MON_EXP             0xCFA5
+%define wHiddenEventFunctionArgument 0xD889
+%define wCanPlaySlots                0xD889
+%define W_LOADED_MON_EXP             0xDD71
 
 ; ---------------------------------------------------------------------------
 ; Pokémon data engine — lowercase pret-name aliases (Pokémon data/stats plan).
@@ -188,7 +188,7 @@
 ; loaded/enemy/box/daycare aliases land in Stage 5 once a pokeyellow.sym confirms
 ; their cross-section addresses.
 ; ---------------------------------------------------------------------------
-%define wCurSpecies                  0xD0B4
+%define wCurSpecies                  0xDE80
 ; wMonHeader region — addresses now pinned to pokeyellow.sym (symbols branch).
 ; The whole block was previously off by one (too high): wMonHeader read $D0B8,
 ; but the sym (and hand-derivation from ram/wram.asm) put it at $D0B7. The error
@@ -197,134 +197,134 @@
 ; the computed stats were correct in isolation while the absolute placement was
 ; one byte high — i.e. it would corrupt the byte past wMonHeaderEnd and read the
 ; wrong cells once integrated with real game WRAM. Corrected here.
-%define wMonHeader                   0xD0B7
-%define wMonHIndex                   0xD0B7
-%define wMonHBaseStats               0xD0B8
-%define wMonHBaseHP                  0xD0B8
-%define wMonHBaseAttack              0xD0B9
-%define wMonHBaseDefense             0xD0BA
-%define wMonHBaseSpeed               0xD0BB
-%define wMonHBaseSpecial             0xD0BC
-%define wMonHTypes                   0xD0BD
-%define wMonHType1                   0xD0BD
-%define wMonHType2                   0xD0BE
-%define wMonHCatchRate               0xD0BF
-%define wMonHBaseEXP                 0xD0C0
-%define wMonHSpriteDim               0xD0C1
-%define wMonHFrontSprite             0xD0C2
-%define wMonHBackSprite              0xD0C4
-%define wMonHMoves                   0xD0C6
-%define wMonHGrowthRate              0xD0CA   ; sym-verified; NOT $D0CB (see wMonHGrowthRate note above)
-%define wMonHLearnset                0xD0CB
-%define wCurEnemyLevel               0xD126   ; CalcStat level input
-%define wCurPartySpecies             0xCF90
-%define wWhichPokemon                0xCF91
-%define wMonDataLocation             0xCC49
-%define wRemoveMonFromBox            0xCF94   ; = wRemoveMonFromBox (0=party, !=0=box)
-%define wLearningMovesFromDayCare    0xCEE9   ; WriteMonMoves daycare gate (0 = normal)
-%define wDayCareStartLevel           0xCD3D   ; WriteMonMoves daycare min-level check
-%define wPokedexNum                  0xD11D   ; SetPartyMonTypes input (sym)
-%define wPartyCount                  0xD162
-%define wPartySpecies                0xD163   ; wPartyCount+1; 6 species + $FF sentinel
-%define wPartyMons                   0xD16A
-%define wPartyMonOT                  0xD272
-%define wEnemyMonOT                  0xD9AB   ; enemy OT-name list (NamePointers ENEMYOT; sym)
-%define wPartyMonNicks               0xD2B4
-%define wPartyMonNicksEnd            0xD2F6
-%define wPlayerName                  0xD157   ; = wPlayerName (OT name source)
+%define wMonHeader                   0xDE83
+%define wMonHIndex                   0xDE83
+%define wMonHBaseStats               0xDE84
+%define wMonHBaseHP                  0xDE84
+%define wMonHBaseAttack              0xDE85
+%define wMonHBaseDefense             0xDE86
+%define wMonHBaseSpeed               0xDE87
+%define wMonHBaseSpecial             0xDE88
+%define wMonHTypes                   0xDE89
+%define wMonHType1                   0xDE89
+%define wMonHType2                   0xDE8A
+%define wMonHCatchRate               0xDE8B
+%define wMonHBaseEXP                 0xDE8C
+%define wMonHSpriteDim               0xDE8D
+%define wMonHFrontSprite             0xDE8E
+%define wMonHBackSprite              0xDE90
+%define wMonHMoves                   0xDE92
+%define wMonHGrowthRate              0xDE96   ; sym-verified; NOT $D0CB (see wMonHGrowthRate note above)
+%define wMonHLearnset                0xDE97
+%define wCurEnemyLevel               0xDEF2   ; CalcStat level input
+%define wCurPartySpecies             0xDD5C
+%define wWhichPokemon                0xDD5D
+%define wMonDataLocation             0xD795
+%define wRemoveMonFromBox            0xDD60   ; = wRemoveMonFromBox (0=party, !=0=box)
+%define wLearningMovesFromDayCare    0xDCB5   ; WriteMonMoves daycare gate (0 = normal)
+%define wDayCareStartLevel           0xD889   ; WriteMonMoves daycare min-level check
+%define wPokedexNum                  0xDEE9   ; SetPartyMonTypes input (sym)
+%define wPartyCount                  0xDF2E
+%define wPartySpecies                0xDF2F   ; wPartyCount+1; 6 species + $FF sentinel
+%define wPartyMons                   0xDF36
+%define wPartyMonOT                  0xE03E
+%define wEnemyMonOT                  0xE777   ; enemy OT-name list (NamePointers ENEMYOT; sym)
+%define wPartyMonNicks               0xE080
+%define wPartyMonNicksEnd            0xE0C2
+%define wPlayerName                  0xDF23   ; = wPlayerName (OT name source)
 
 ; Predef register save slots (home/predef.asm:GetPredefRegisters). Big-endian:
 ; [addr] = high byte, [addr+1] = low byte.
-%define wPredefHL                    0xCC4F
-%define wPredefDE                    0xCC51
-%define wPredefBC                    0xCC53
+%define wPredefHL                    0xD79B
+%define wPredefDE                    0xD79D
+%define wPredefBC                    0xD79F
 
 ; --- item bag / PC inventory (engine/items/inventory.asm) ---
 ; An inventory is: db count, then (item id, quantity) pairs, then $FF terminator.
-%define wNumBagItems                 0xD31C
-%define wBagItems                    0xD31D
-%define wNumBoxItems                 0xD539   ; PC item storage
-%define wBoxItems                    0xD53A
-%define wCurItem                     0xCF90   ; = wCurPartySpecies (shared "current" slot)
-%define wItemQuantity                0xCF95
-%define wMaxItemQuantity             0xCF96
+%define wNumBagItems                 0xE0E8
+%define wBagItems                    0xE0E9
+%define wNumBoxItems                 0xE305   ; PC item storage
+%define wBoxItems                    0xE306
+%define wCurItem                     0xDD5C   ; = wCurPartySpecies (shared "current" slot)
+%define wItemQuantity                0xDD61
+%define wMaxItemQuantity             0xDD62
 ; --- item-use effect scratch (engine/items/item_effects.asm) ---
 ; --- battle-transition scratch (engine/battle/battle_transitions.asm) ---
 ; All on the established 0xCD3D union scratch lane (modal transition, nothing
 ; else on the lane is live while it runs); pret ram/wram.asm:812-827 places them
 ; in the same NEXTU union.
-%define wBattleTransitionCircleScreenQuadrantY 0xCD3D   ; 0 = upper half, 1 = lower half
-%define wBattleTransitionCircleScreenQuadrantX 0xCD3E   ; CIRCLE_LEFT / CIRCLE_RIGHT
-%define wBattleTransitionCopyTilesOffset 0xCD3D   ; dw — offset to the next row/column to copy
-%define wInwardSpiralUpdateScreenCounter 0xCD3D   ; counts down (port: from 19) between TransferDelay3s
-%define wBattleTransitionSpiralDirection 0xCD47   ; 0 = outward, 1 = inward (pret: union +10)
+%define wBattleTransitionCircleScreenQuadrantY 0xD889   ; 0 = upper half, 1 = lower half
+%define wBattleTransitionCircleScreenQuadrantX 0xD88A   ; CIRCLE_LEFT / CIRCLE_RIGHT
+%define wBattleTransitionCopyTilesOffset 0xD889   ; dw — offset to the next row/column to copy
+%define wInwardSpiralUpdateScreenCounter 0xD889   ; counts down (port: from 19) between TransferDelay3s
+%define wBattleTransitionSpiralDirection 0xD893   ; 0 = outward, 1 = inward (pret: union +10)
 ; wOutwardSpiralTileMapPointer: pret splits the tilemap pointer over two db
 ; stores (h/l). The port stores it as ONE 16-bit GB tilemap offset word (the
 ; wMenuCursorLocation precedent, window.asm) at pret's address — same 2-byte
 ; footprint 0xD099-0xD09A pret's `+ 1` stores use.
-%define wOutwardSpiralTileMapPointer 0xD099
-%define wOutwardSpiralCurrentDirection 0xD09E   ; pret union slot (= wNewTileBlockID lane)
-%define wPPRestoreItem               0xCD3D   ; which Ether/Elixer item is being used
-%define wWereAnyMonsAsleep           0xCD3D   ; Poke Flute: set if a party mon woke (aliased)
-%define wChargeMoveNum               0xCD3D   ; charge move number (aliased union lane)
-%define wDexMaxSeenMon               0xCD3D   ; pokedex.asm: highest seen dex # (aliased union lane, S8)
-%define wBoxNumString                0xCD3D   ; bills_pc.asm: 3-byte "##"/spaces box-number text spliced into MonWasStoredText (aliased union lane, pret ram/wram.asm:809)
-%define wRodResponse                 0xCD3D   ; fishing: 0 no bite, 1 bite, 2 no fish (aliased
+%define wOutwardSpiralTileMapPointer 0xDE65
+%define wOutwardSpiralCurrentDirection 0xDE6A   ; pret union slot (= wNewTileBlockID lane)
+%define wPPRestoreItem               0xD889   ; which Ether/Elixer item is being used
+%define wWereAnyMonsAsleep           0xD889   ; Poke Flute: set if a party mon woke (aliased)
+%define wChargeMoveNum               0xD889   ; charge move number (aliased union lane)
+%define wDexMaxSeenMon               0xD889   ; pokedex.asm: highest seen dex # (aliased union lane, S8)
+%define wBoxNumString                0xD889   ; bills_pc.asm: 3-byte "##"/spaces box-number text spliced into MonWasStoredText (aliased union lane, pret ram/wram.asm:809)
+%define wRodResponse                 0xD889   ; fishing: 0 no bite, 1 bite, 2 no fish (aliased
                                     ; union lane — unions with wPPRestoreItem above and
                                     ; the wFlyAnimUsingCoordList / wPlayerSpin* scratch;
                                     ; promoted from a player_animations.asm local shadow,
                                     ; backlog #25)
-%define wMaxPP                       0xD11D   ; max PP of the move being PP-restored
+%define wMaxPP                       0xDEE9   ; max PP of the move being PP-restored
 ; --- item-use dispatch state (engine/items/item_effects.asm:UseItem_) ---
-%define wPseudoItemID                0xD151   ; nonzero = a move/field action is impersonating
+%define wPseudoItemID                0xDF1D   ; nonzero = a move/field action is impersonating
                                     ; an item (Softboiled/Dig/Surf); suppresses the
                                     ; item consumption + menu teardown in ItemUse*
-%define wUsedItemOnWhichPokemon      0xCF06   ; party index the item was applied to (the party
+%define wUsedItemOnWhichPokemon      0xDCD2   ; party index the item was applied to (the party
                                     ; menu's own wWhichPokemon is restored after)
 ; Menu state these routines reset (plain WRAM writes; the rendering is elsewhere).
-%define wListScrollOffset            0xCC36
-%define wTopMenuItemY                0xCC24   ; cursor Y of menu item id 0
-%define wTopMenuItemX                0xCC25   ; cursor X of menu item id 0
-%define wCurrentMenuItem             0xCC26
-%define wTileBehindCursor            0xCC27   ; tile the cursor overwrote (for erase)
-%define wBagSavedMenuItem            0xCC2C
-%define wSavedListScrollOffset       0xD07D   ; = wSavedListScrollOffset
-%define wListCount                   0xD129   ; = wListCount
-%define wMaxMenuItem                 0xCC28
-%define wMenuWatchedKeys             0xCC29   ; bit mask of keys the menu responds to
-%define wLastMenuItem                0xCC2A   ; previously selected menu item
-%define wMenuItemToSwap              0xCC35   ; SELECT-swap selection (0 = none); 1-based
-%define wBattleAndStartSavedMenuItem 0xCC2D   ; remembered battle/START cursor (reset each battle)
+%define wListScrollOffset            0xD782
+%define wTopMenuItemY                0xD770   ; cursor Y of menu item id 0
+%define wTopMenuItemX                0xD771   ; cursor X of menu item id 0
+%define wCurrentMenuItem             0xD772
+%define wTileBehindCursor            0xD773   ; tile the cursor overwrote (for erase)
+%define wBagSavedMenuItem            0xD778
+%define wSavedListScrollOffset       0xDE49   ; = wSavedListScrollOffset
+%define wListCount                   0xDEF5   ; = wListCount
+%define wMaxMenuItem                 0xD774
+%define wMenuWatchedKeys             0xD775   ; bit mask of keys the menu responds to
+%define wLastMenuItem                0xD776   ; previously selected menu item
+%define wMenuItemToSwap              0xD781   ; SELECT-swap selection (0 = none); 1-based
+%define wBattleAndStartSavedMenuItem 0xD779   ; remembered battle/START cursor (reset each battle)
 
 ; Loaded-mon + enemy / current-box / daycare aliases — the Stage 1 cross-section
 ; deferrals, now resolved against pokeyellow.sym (symbols branch).
-%define wLoadedMon                   0xCF97   ; LoadMonData_ destination (party_struct)
-%define wEnemyPartyCount             0xD89B
-%define wLinkEnemyTrainerName        0xD886
-%define wEnemyPartySpecies           0xD89C   ; PARTY_LENGTH+1 species + $FF sentinel
-%define wEnemyMons                   0xD8A3
-%define wDayCareMon                  0xDA5E   ; box_struct (wDayCareMonSpecies = first byte)
-%define wDayCareMonSpecies           0xDA5E
-%define wDayCareMonExp               0xDA6C   ; wDayCareMon + MON_EXP (3-byte big-endian EXP; IncrementDayCareMonExp)
-%define wBoxCount                    0xDA7F
-%define wBoxSpecies                  0xDA80   ; MONS_PER_BOX+1 species + $FF sentinel
-%define wBoxMons                     0xDA95
-%define wBoxMon1                     0xDA95   ; = wBoxMons (pikachu_status alias)
-%define wBoxMon2                     0xDAB6   ; wBoxMon1 + BOXMON_STRUCT_LENGTH (33)
-%define wBoxMon1CatchRate            0xDA9C   ; = wBoxMon1 + MON_CATCH_RATE (Gen-2 held-item slot)
-%define wBoxMonOT                    0xDD29
-%define wBoxMon1OT                   0xDD29   ; = wBoxMonOT (first OT-name slot; SendNewMonToBox)
-%define wBoxMonNicks                 0xDE05
-%define wBoxMon1Nick                 0xDE05   ; = wBoxMonNicks (first nickname slot; SendNewMonToBox)
-%define wBoxMonNicksEnd              0xDEE1
-%define wNumSafariBalls              0xDA46   ; Safari Zone ball count (ItemUseBall decrements it)
-%define wSafariZoneGateCurScript     0xD61E   ; Safari gate script index (ItemUseEscapeRope resets it
+%define wLoadedMon                   0xDD63   ; LoadMonData_ destination (party_struct)
+%define wEnemyPartyCount             0xE667
+%define wLinkEnemyTrainerName        0xE652
+%define wEnemyPartySpecies           0xE668   ; PARTY_LENGTH+1 species + $FF sentinel
+%define wEnemyMons                   0xE66F
+%define wDayCareMon                  0xE82A   ; box_struct (wDayCareMonSpecies = first byte)
+%define wDayCareMonSpecies           0xE82A
+%define wDayCareMonExp               0xE838   ; wDayCareMon + MON_EXP (3-byte big-endian EXP; IncrementDayCareMonExp)
+%define wBoxCount                    0xE84B
+%define wBoxSpecies                  0xE84C   ; MONS_PER_BOX+1 species + $FF sentinel
+%define wBoxMons                     0xE861
+%define wBoxMon1                     0xE861   ; = wBoxMons (pikachu_status alias)
+%define wBoxMon2                     0xE882   ; wBoxMon1 + BOXMON_STRUCT_LENGTH (33)
+%define wBoxMon1CatchRate            0xE868   ; = wBoxMon1 + MON_CATCH_RATE (Gen-2 held-item slot)
+%define wBoxMonOT                    0xEAF5
+%define wBoxMon1OT                   0xEAF5   ; = wBoxMonOT (first OT-name slot; SendNewMonToBox)
+%define wBoxMonNicks                 0xEBD1
+%define wBoxMon1Nick                 0xEBD1   ; = wBoxMonNicks (first nickname slot; SendNewMonToBox)
+%define wBoxMonNicksEnd              0xECAD
+%define wNumSafariBalls              0xE812   ; Safari Zone ball count (ItemUseBall decrements it)
+%define wSafariZoneGateCurScript     0xE3EA   ; Safari gate script index (ItemUseEscapeRope resets it
                                     ; to SCRIPT_SAFARIZONEGATE_DEFAULT) — sym-verified
 
 ; --- ItemUseBall (catching) scratch, pret wram.asm ---
-%define wCapturedMonSpecies          0xD11B   ; species just caught (0 = nothing caught this throw)
-%define wPokeBallAnimData            0xD11D   ; the throw's outcome/shake code ($10/$20/$61-$63/$43)
-%define wPokeBallCaptureCalcTemp     0xD11D   ; = wPokeBallAnimData (pret unions them; X is stashed
+%define wCapturedMonSpecies          0xDEE7   ; species just caught (0 = nothing caught this throw)
+%define wPokeBallAnimData            0xDEE9   ; the throw's outcome/shake code ($10/$20/$61-$63/$43)
+%define wPokeBallCaptureCalcTemp     0xDEE9   ; = wPokeBallAnimData (pret unions them; X is stashed
                                     ; here only across the failed-capture shake math, which
                                     ; writes wPokeBallAnimData afterwards — never both live)
 
@@ -334,273 +334,273 @@
 ; ===========================================================================
 
 ; --- selected / used moves and per-side move scratch ($CCxx) ---
-%define wPlayerMoveListIndex         0xCC2E
-%define wPlayerMonNumber             0xCC2F   ; party index of the active player mon
-%define wPlayerSubstituteHP          0xCCD7
-%define wEnemySubstituteHP           0xCCD8
-%define wMoveMenuType                0xCCDB
-%define wPlayerSelectedMove          0xCCDC
-%define wEnemySelectedMove           0xCCDD
-%define wEnemyMoveListIndex          0xCCE2
+%define wPlayerMoveListIndex         0xD77A
+%define wPlayerMonNumber             0xD77B   ; party index of the active player mon
+%define wPlayerSubstituteHP          0xD823
+%define wEnemySubstituteHP           0xD824
+%define wMoveMenuType                0xD827
+%define wPlayerSelectedMove          0xD828
+%define wEnemySelectedMove           0xD829
+%define wEnemyMoveListIndex          0xD82E
 ; The enemy mon's HP when it (or the current player mon) was last switched in,
 ; whichever was more recent — big-endian word, pret ram/wram.asm:619. Read only
 ; by PlayerMon2Text, which turns the drop since then into the switch-out message
 ; (Enough / Come back / OK! / Good). ADDRESS VERIFIED against pokeyellow.sym
 ; (`00:cce3 wLastSwitchInEnemyMonHP`), not inferred from its neighbours.
-%define wLastSwitchInEnemyMonHP      0xCCE3   ; dw
-%define wTotalPayDayMoney            0xCCE5   ; Pay Day running total (BCD, 3 bytes)
-%define wTransformedEnemyMonOriginalDVs 0xCCEB   ; Transform: saved target DVs (word)
-%define wPlayerDisabledMoveNumber    0xCCEE
-%define wEnemyDisabledMoveNumber     0xCCEF
-%define wInHandlePlayerMonFainted    0xCCF0
-%define wPlayerUsedMove              0xCCF1
-%define wEnemyUsedMove               0xCCF2
-%define wEnemyMonMinimized           0xCCF3
-%define wMonIsDisobedient            0xCCED
-%define wMoveDidntMiss               0xCCF4
-%define wPlayerMonMinimized          0xCCF7
+%define wLastSwitchInEnemyMonHP      0xD82F   ; dw
+%define wTotalPayDayMoney            0xD831   ; Pay Day running total (BCD, 3 bytes)
+%define wTransformedEnemyMonOriginalDVs 0xD837   ; Transform: saved target DVs (word)
+%define wPlayerDisabledMoveNumber    0xD83A
+%define wEnemyDisabledMoveNumber     0xD83B
+%define wInHandlePlayerMonFainted    0xD83C
+%define wPlayerUsedMove              0xD83D
+%define wEnemyUsedMove               0xD83E
+%define wEnemyMonMinimized           0xD83F
+%define wMonIsDisobedient            0xD839
+%define wMoveDidntMiss               0xD840
+%define wPlayerMonMinimized          0xD843
 
 ; --- enemy "Bide"/multi-hit accumulators ($CD05) ---
-%define wEnemyBideAccumulatedDamage  0xCD05
-%define wEnemyNumHits                0xCD05
+%define wEnemyBideAccumulatedDamage  0xD851
+%define wEnemyNumHits                0xD851
 
 ; --- unmodified (pre-stat-stage) stats, player ($CD0F) ---
-%define wPlayerMonUnmodifiedLevel    0xCD0F
-%define wPlayerMonUnmodifiedMaxHP    0xCD10
-%define wPlayerMonUnmodifiedAttack   0xCD12
-%define wPlayerMonUnmodifiedDefense  0xCD14
-%define wPlayerMonUnmodifiedSpeed    0xCD16
-%define wPlayerMonUnmodifiedSpecial  0xCD18
+%define wPlayerMonUnmodifiedLevel    0xD85B
+%define wPlayerMonUnmodifiedMaxHP    0xD85C
+%define wPlayerMonUnmodifiedAttack   0xD85E
+%define wPlayerMonUnmodifiedDefense  0xD860
+%define wPlayerMonUnmodifiedSpeed    0xD862
+%define wPlayerMonUnmodifiedSpecial  0xD864
 ; --- player stat-stage modifiers (6 bytes, base value 7) ---
-%define wPlayerMonStatMods           0xCD1A
-%define wPlayerMonAttackMod          0xCD1A
-%define wPlayerMonDefenseMod         0xCD1B
-%define wPlayerMonSpeedMod           0xCD1C
-%define wPlayerMonSpecialMod         0xCD1D
-%define wPlayerMonAccuracyMod        0xCD1E
-%define wPlayerMonEvasionMod         0xCD1F
-%define wPlayerMonStatModsEnd        0xCD22
+%define wPlayerMonStatMods           0xD866
+%define wPlayerMonAttackMod          0xD866
+%define wPlayerMonDefenseMod         0xD867
+%define wPlayerMonSpeedMod           0xD868
+%define wPlayerMonSpecialMod         0xD869
+%define wPlayerMonAccuracyMod        0xD86A
+%define wPlayerMonEvasionMod         0xD86B
+%define wPlayerMonStatModsEnd        0xD86E
 
 ; --- in-game trade scratch ($CD0F, NEXTU with the unmodified-stats block) ---
 ; pret ram/wram.asm unions the in-game-trade working set over the battle
 ; stat-stage scratch above: a trade and a battle never run at once. Addresses are
 ; rgblink's, read from pokeyellow.sym, not inferred. NAME_LENGTH is 11, which is
 ; what spaces the three name buffers ($CD13 -> $CD1E -> $CD29 -> $CD34).
-%define wInGameTradeGiveMonSpecies   0xCD0F
-%define wInGameTradeTextPointerTablePointer 0xCD10
-%define wInGameTradeTextPointerTableIndex 0xCD12
-%define wInGameTradeGiveMonName      0xCD13
-%define wInGameTradeReceiveMonName   0xCD1E
-%define wInGameTradeMonNick          0xCD29
-%define wInGameTradeReceiveMonSpecies 0xCD34
+%define wInGameTradeGiveMonSpecies   0xD85B
+%define wInGameTradeTextPointerTablePointer 0xD85C
+%define wInGameTradeTextPointerTableIndex 0xD85E
+%define wInGameTradeGiveMonName      0xD85F
+%define wInGameTradeReceiveMonName   0xD86A
+%define wInGameTradeMonNick          0xD875
+%define wInGameTradeReceiveMonSpecies 0xD880
 
 ; --- unmodified stats, enemy ($CD23) ---
-%define wEnemyMonUnmodifiedLevel     0xCD23
-%define wEnemyMonUnmodifiedMaxHP     0xCD24
-%define wEnemyMonUnmodifiedAttack    0xCD26
-%define wEnemyMonUnmodifiedDefense   0xCD28
-%define wEnemyMonUnmodifiedSpeed     0xCD2A
-%define wEnemyMonUnmodifiedSpecial   0xCD2C
-%define wEngagedTrainerClass         0xCD2D
-%define wEngagedTrainerSet           0xCD2E
+%define wEnemyMonUnmodifiedLevel     0xD86F
+%define wEnemyMonUnmodifiedMaxHP     0xD870
+%define wEnemyMonUnmodifiedAttack    0xD872
+%define wEnemyMonUnmodifiedDefense   0xD874
+%define wEnemyMonUnmodifiedSpeed     0xD876
+%define wEnemyMonUnmodifiedSpecial   0xD878
+%define wEngagedTrainerClass         0xD879
+%define wEngagedTrainerSet           0xD87A
 ; --- enemy stat-stage modifiers ---
-%define wEnemyMonStatMods            0xCD2E
-%define wEnemyMonAttackMod           0xCD2E
-%define wEnemyMonDefenseMod          0xCD2F
-%define wEnemyMonSpeedMod            0xCD30
-%define wEnemyMonSpecialMod          0xCD31
-%define wEnemyMonAccuracyMod         0xCD32
-%define wEnemyMonEvasionMod          0xCD33
-%define wEnemyMonStatModsEnd         0xCD36
+%define wEnemyMonStatMods            0xD87A
+%define wEnemyMonAttackMod           0xD87A
+%define wEnemyMonDefenseMod          0xD87B
+%define wEnemyMonSpeedMod            0xD87C
+%define wEnemyMonSpecialMod          0xD87D
+%define wEnemyMonAccuracyMod         0xD87E
+%define wEnemyMonEvasionMod          0xD87F
+%define wEnemyMonStatModsEnd         0xD882
 
-%define wNumMovesMinusOne            0xCD6C
-%define wBattleMenuCurrentPP         0xCD6D   ; PrintMenuItem's scratch copy of the highlighted
+%define wNumMovesMinusOne            0xD8B8
+%define wBattleMenuCurrentPP         0xD8B9   ; PrintMenuItem's scratch copy of the highlighted
                                     ; move's current PP (PrintNumber source). Aliased
                                     ; onto the same scratch union as wMoveData below —
                                     ; that is pret's own layout (wram.asm:1091).
-%define wMoveData                    0xCD6D   ; 6-byte scratch move record (GetMoveData)
-%define wPayDayMoney                 0xCD6D   ; Pay Day scratch (BCD, 3 bytes; aliased scratch union)
-%define wNormalMaxPPList             0xCD78   ; 4-byte scratch: each move's normal max PP (RestoreBonusPP)
+%define wMoveData                    0xD8B9   ; 6-byte scratch move record (GetMoveData)
+%define wPayDayMoney                 0xD8B9   ; Pay Day scratch (BCD, 3 bytes; aliased scratch union)
+%define wNormalMaxPPList             0xD8C4   ; 4-byte scratch: each move's normal max PP (RestoreBonusPP)
 
 ; --- per-side current-move struct ($CFCB enemy / $CFD1 player) ---
-%define wEnemyMoveNum                0xCFCB
-%define wEnemyMoveEffect             0xCFCC
-%define wEnemyMovePower              0xCFCD
-%define wEnemyMoveType               0xCFCE
-%define wEnemyMoveAccuracy           0xCFCF
-%define wEnemyMoveMaxPP              0xCFD0
-%define wPlayerMoveNum               0xCFD1
-%define wPlayerMoveEffect            0xCFD2
-%define wPlayerMovePower             0xCFD3
-%define wPlayerMoveType              0xCFD4
-%define wPlayerMoveAccuracy          0xCFD5
-%define wPlayerMoveMaxPP             0xCFD6
-%define wEnemyMonSpecies2            0xCFD7
-%define wBattleMonSpecies2           0xCFD8
+%define wEnemyMoveNum                0xDD97
+%define wEnemyMoveEffect             0xDD98
+%define wEnemyMovePower              0xDD99
+%define wEnemyMoveType               0xDD9A
+%define wEnemyMoveAccuracy           0xDD9B
+%define wEnemyMoveMaxPP              0xDD9C
+%define wPlayerMoveNum               0xDD9D
+%define wPlayerMoveEffect            0xDD9E
+%define wPlayerMovePower             0xDD9F
+%define wPlayerMoveType              0xDDA0
+%define wPlayerMoveAccuracy          0xDDA1
+%define wPlayerMoveMaxPP             0xDDA2
+%define wEnemyMonSpecies2            0xDDA3
+%define wBattleMonSpecies2           0xDDA4
 
 ; --- enemy battle-mon struct ($CFE4, 29-byte battle_struct) ---
-%define wEnemyMonNick                0xCFD9   ; NAME_LENGTH bytes
-%define wEnemyMon                    0xCFE4
-%define wEnemyMonSpecies             0xCFE4
-%define wEnemyMonHP                  0xCFE5   ; word, big-endian
-%define wEnemyMonBoxLevel            0xCFE7
-%define wEnemyMonPartyPos            0xCFE7
-%define wEnemyMonStatus              0xCFE8
-%define wEnemyMonType                0xCFE9
-%define wEnemyMonType1               0xCFE9
-%define wEnemyMonType2               0xCFEA
-%define wEnemyMonCatchRate           0xCFEB
-%define wEnemyMonMoves               0xCFEC   ; 4 bytes
-%define wEnemyMonDVs                 0xCFF0   ; word
-%define wEnemyMonLevel               0xCFF2
-%define wEnemyMonMaxHP               0xCFF3   ; word
-%define wEnemyMonStats               0xCFF3
-%define wEnemyMonAttack              0xCFF5
-%define wEnemyMonDefense             0xCFF7
-%define wEnemyMonSpeed               0xCFF9
-%define wEnemyMonSpecial             0xCFFB
-%define wEnemyMonPP                  0xCFFD   ; 4 bytes
-%define wEnemyMonBaseStats           0xD001
-%define wEnemyMonActualCatchRate     0xD006
-%define wEnemyMonBaseExp             0xD007
+%define wEnemyMonNick                0xDDA5   ; NAME_LENGTH bytes
+%define wEnemyMon                    0xDDB0
+%define wEnemyMonSpecies             0xDDB0
+%define wEnemyMonHP                  0xDDB1   ; word, big-endian
+%define wEnemyMonBoxLevel            0xDDB3
+%define wEnemyMonPartyPos            0xDDB3
+%define wEnemyMonStatus              0xDDB4
+%define wEnemyMonType                0xDDB5
+%define wEnemyMonType1               0xDDB5
+%define wEnemyMonType2               0xDDB6
+%define wEnemyMonCatchRate           0xDDB7
+%define wEnemyMonMoves               0xDDB8   ; 4 bytes
+%define wEnemyMonDVs                 0xDDBC   ; word
+%define wEnemyMonLevel               0xDDBE
+%define wEnemyMonMaxHP               0xDDBF   ; word
+%define wEnemyMonStats               0xDDBF
+%define wEnemyMonAttack              0xDDC1
+%define wEnemyMonDefense             0xDDC3
+%define wEnemyMonSpeed               0xDDC5
+%define wEnemyMonSpecial             0xDDC7
+%define wEnemyMonPP                  0xDDC9   ; 4 bytes
+%define wEnemyMonBaseStats           0xDDCD
+%define wEnemyMonActualCatchRate     0xDDD2
+%define wEnemyMonBaseExp             0xDDD3
 
 ; Safari Zone battle state (sym-verified vs origin/symbols:pokeyellow.sym).
 ; Read by the Safari battle's flee/catch roll; written by BAIT / ROCK.
-%define wSafariEscapeFactor          0xCCE8
-%define wSafariBaitFactor            0xCCE9
+%define wSafariEscapeFactor          0xD834
+%define wSafariBaitFactor            0xD835
 
 ; --- player battle-mon struct ($D013, 29-byte battle_struct) ---
-%define wBattleMonNick               0xD008   ; NAME_LENGTH bytes
-%define wBattleMon                   0xD013
-%define wBattleMonSpecies            0xD013
-%define wBattleMonHP                 0xD014   ; word, big-endian
-%define wBattleMonBoxLevel           0xD016
-%define wBattleMonPartyPos           0xD016
-%define wBattleMonStatus             0xD017
-%define wBattleMonType               0xD018
-%define wBattleMonType1              0xD018
-%define wBattleMonType2              0xD019
-%define wBattleMonCatchRate          0xD01A
-%define wBattleMonMoves              0xD01B   ; 4 bytes
-%define wBattleMonDVs                0xD01F   ; word
-%define wBattleMonLevel              0xD021
-%define wBattleMonMaxHP              0xD022   ; word
-%define wBattleMonStats              0xD022
-%define wBattleMonAttack             0xD024
-%define wBattleMonDefense            0xD026
-%define wBattleMonSpeed              0xD028
-%define wBattleMonSpecial            0xD02A
-%define wBattleMonPP                 0xD02C   ; 4 bytes
+%define wBattleMonNick               0xDDD4   ; NAME_LENGTH bytes
+%define wBattleMon                   0xDDDF
+%define wBattleMonSpecies            0xDDDF
+%define wBattleMonHP                 0xDDE0   ; word, big-endian
+%define wBattleMonBoxLevel           0xDDE2
+%define wBattleMonPartyPos           0xDDE2
+%define wBattleMonStatus             0xDDE3
+%define wBattleMonType               0xDDE4
+%define wBattleMonType1              0xDDE4
+%define wBattleMonType2              0xDDE5
+%define wBattleMonCatchRate          0xDDE6
+%define wBattleMonMoves              0xDDE7   ; 4 bytes
+%define wBattleMonDVs                0xDDEB   ; word
+%define wBattleMonLevel              0xDDED
+%define wBattleMonMaxHP              0xDDEE   ; word
+%define wBattleMonStats              0xDDEE
+%define wBattleMonAttack             0xDDF0
+%define wBattleMonDefense            0xDDF2
+%define wBattleMonSpeed              0xDDF4
+%define wBattleMonSpecial            0xDDF6
+%define wBattleMonPP                 0xDDF8   ; 4 bytes
 
-%define wTrainerClass                0xD030
-%define wTrainerName                 0xD049
-%define wForcePlayerToChooseMon      0xD11E   ; set on failed escape; read by multi-mon switch-in (pret wram.asm:1781)
-%define wNumRunAttempts              0xD11F   ; run-from-battle attempt count (escape-odds boost)
-%define wIsInBattle                  0xD056   ; 0 none, 1 wild, 2 trainer ($FF = lost)
-%define wBattleType                  0xD059
-%define wDamageMultipliers           0xD05A   ; bit 7 = STAB, low bits = type-eff numerator
-%define wCriticalHitOrOHKO           0xD05D
-%define wMoveMissed                  0xD05E
-%define wPlayerStatsToDouble         0xD05F   ; pret wBattleStatusData: always 0; cleared on send-out
-%define wBattleStatusData            0xD05F   ; pret alias (start of the 0x18-byte battle-status block)
-%define wBattleStatusDataEnd         0xD077   ; end (exclusive) of wBattleStatusData; EndOfBattle clears the range
-%define wPlayerStatsToHalve          0xD060   ; always 0
-%define wPlayerBattleStatus1         0xD061
-%define wPlayerBattleStatus2         0xD062
-%define wPlayerBattleStatus3         0xD063
-%define wEnemyStatsToDouble          0xD064   ; pret: always 0; cleared on faint / send-out
-%define wEnemyStatsToHalve           0xD065   ; always 0
-%define wEnemyBattleStatus1          0xD066
-%define wEnemyBattleStatus2          0xD067
-%define wEnemyBattleStatus3          0xD068
-%define wPlayerNumAttacksLeft        0xD069
-%define wPlayerConfusedCounter       0xD06A
-%define wPlayerDisabledMove          0xD06C
-%define wEnemyNumAttacksLeft         0xD06E
-%define wEnemyConfusedCounter        0xD06F
-%define wEnemyDisabledMove           0xD071
-%define wPlayerBideAccumulatedDamage 0xD073
-%define wPlayerNumHits               0xD073
+%define wTrainerClass                0xDDFC
+%define wTrainerName                 0xDE15
+%define wForcePlayerToChooseMon      0xDEEA   ; set on failed escape; read by multi-mon switch-in (pret wram.asm:1781)
+%define wNumRunAttempts              0xDEEB   ; run-from-battle attempt count (escape-odds boost)
+%define wIsInBattle                  0xDE22   ; 0 none, 1 wild, 2 trainer ($FF = lost)
+%define wBattleType                  0xDE25
+%define wDamageMultipliers           0xDE26   ; bit 7 = STAB, low bits = type-eff numerator
+%define wCriticalHitOrOHKO           0xDE29
+%define wMoveMissed                  0xDE2A
+%define wPlayerStatsToDouble         0xDE2B   ; pret wBattleStatusData: always 0; cleared on send-out
+%define wBattleStatusData            0xDE2B   ; pret alias (start of the 0x18-byte battle-status block)
+%define wBattleStatusDataEnd         0xDE43   ; end (exclusive) of wBattleStatusData; EndOfBattle clears the range
+%define wPlayerStatsToHalve          0xDE2C   ; always 0
+%define wPlayerBattleStatus1         0xDE2D
+%define wPlayerBattleStatus2         0xDE2E
+%define wPlayerBattleStatus3         0xDE2F
+%define wEnemyStatsToDouble          0xDE30   ; pret: always 0; cleared on faint / send-out
+%define wEnemyStatsToHalve           0xDE31   ; always 0
+%define wEnemyBattleStatus1          0xDE32
+%define wEnemyBattleStatus2          0xDE33
+%define wEnemyBattleStatus3          0xDE34
+%define wPlayerNumAttacksLeft        0xDE35
+%define wPlayerConfusedCounter       0xDE36
+%define wPlayerDisabledMove          0xDE38
+%define wEnemyNumAttacksLeft         0xDE3A
+%define wEnemyConfusedCounter        0xDE3B
+%define wEnemyDisabledMove           0xDE3D
+%define wPlayerBideAccumulatedDamage 0xDE3F
+%define wPlayerNumHits               0xDE3F
 
-%define wDamage                      0xD0D6   ; word, big-endian
-%define wTypeEffectiveness           0xD11D   ; shared scratch byte (=wPokedexNum union)
-%define wMoveType                    0xD11D   ; scratch (AdjustDamageForMoveType); shares $D11D
-%define wLinkState                   0xD12A   ; LINK_STATE_*; non-link single-player = 0
-%define wLoadedMonSpeedExp           0xCFAE   ; wLoadedMon + MON_SPD_EXP (GetEnemyMonStat)
+%define wDamage                      0xDEA2   ; word, big-endian
+%define wTypeEffectiveness           0xDEE9   ; shared scratch byte (=wPokedexNum union)
+%define wMoveType                    0xDEE9   ; scratch (AdjustDamageForMoveType); shares $D11D
+%define wLinkState                   0xDEF6   ; LINK_STATE_*; non-link single-player = 0
+%define wLoadedMonSpeedExp           0xDD7A   ; wLoadedMon + MON_SPD_EXP (GetEnemyMonStat)
 ; party-mon stat fields (wPartyMons base $D16A + MON_* offsets) used by crit recompute
-%define wPartyMon1Attack             0xD18E
-%define wPartyMon1Defense            0xD190
-%define wPartyMon1Special            0xD194
-%define wEnemyMon1Stats              0xD8C5   ; link-battle enemy party stats (GetEnemyMonStat)
+%define wPartyMon1Attack             0xDF5A
+%define wPartyMon1Defense            0xDF5C
+%define wPartyMon1Special            0xDF60
+%define wEnemyMon1Stats              0xE691   ; link-battle enemy party stats (GetEnemyMonStat)
 ; party-mon struct (pret wPartyMon1* = wPartyMons base $D16A; DecrementPP/GainExp)
-%define wPartyMon1                   0xD16A
-%define wPartyMon1HP                 0xD16B   ; party-mon struct HP word (pikachu_status)
-%define wPartyMon1MaxHP              0xD18C   ; = wPartyMons + MON_MAXHP (Softboiled's 1/5 max HP)
-%define wPartyMon1Status             0xD16E
-%define wPartyMon1OTID               0xD176   ; party-mon struct OT id word (pikachu_status)
-%define wPartyMon1PP                 0xD187
-%define wPartyMon2                   0xD196   ; wPartyMon1 + PARTYMON_STRUCT_LENGTH (44)
-%define wPartyGainExpFlags           0xD057   ; bitfield: which party mons gain exp this battle
+%define wPartyMon1                   0xDF36
+%define wPartyMon1HP                 0xDF37   ; party-mon struct HP word (pikachu_status)
+%define wPartyMon1MaxHP              0xDF58   ; = wPartyMons + MON_MAXHP (Softboiled's 1/5 max HP)
+%define wPartyMon1Status             0xDF3A
+%define wPartyMon1OTID               0xDF42   ; party-mon struct OT id word (pikachu_status)
+%define wPartyMon1PP                 0xDF53
+%define wPartyMon2                   0xDF62   ; wPartyMon1 + PARTYMON_STRUCT_LENGTH (44)
+%define wPartyGainExpFlags           0xDE23   ; bitfield: which party mons gain exp this battle
 
 ; --- Wave-1 backend aliases (sym-pinned, origin/symbols:pokeyellow.sym) ---
 ; exp/level-up flow (GainExperience, src/engine/battle/experience.asm)
-%define wBoostExpByExpAll            0xCC5B   ; (union wUnusedFlag / slot-machine scratch)
-%define wExpAmountGained             0xCF4A   ; word (union wStringBuffer region)
-%define wGainBoostedExp              0xCF4C
-%define wTempByteValue               0xD11D
-%define wPartyFoughtCurrentEnemyFlags 0xCCF5
+%define wBoostExpByExpAll            0xD7A7   ; (union wUnusedFlag / slot-machine scratch)
+%define wExpAmountGained             0xDD16   ; word (union wStringBuffer region)
+%define wGainBoostedExp              0xDD18
+%define wTempByteValue               0xDEE9
+%define wPartyFoughtCurrentEnemyFlags 0xD841
 ; Set when the player has already won, so DrawPlayerHUDAndHPBar must not re-arm
 ; the red-HP alarm. Address from pokeyellow.sym (00:ccf6), not inferred.
-%define wLowHealthAlarmDisabled      0xCCF6
-%define wLearnMoveMonName            0xD035
+%define wLowHealthAlarmDisabled      0xD842
+%define wLearnMoveMonName            0xDE01
 ; UNION with wLearnMoveMonName (ram/wram.asm) — ItemUseTMHM parks the move name here
 ; across DisplayPartyMenu, which overwrites wStringBuffer.
-%define wTempMoveNameBuffer          0xD035
+%define wTempMoveNameBuffer          0xDE01
 ; The TM/HM number under TMToMove / CanLearnTM. Unions with the D11D scratch cluster
 ; (wPokedexNum / wMaxPP / wTempByteValue), exactly as pret does.
-%define wTempTMHM                    0xD11D
+%define wTempTMHM                    0xDEE9
 ; evolution (src/engine/movie/evolution.asm)
-%define wCanEvolveFlags              0xCCD3
-%define wForceEvolution              0xCCD4
-%define wEvoOldSpecies               0xCEE9   ; (union wHPBarMaxHP scratch)
-%define wEvoNewSpecies               0xCEEA
-%define wEvoMonTileOffset            0xCEEB   ; [2b] palette-flash morph scratch (deferred)
-%define wEvoCancelled                0xCEEC   ; EvolveMon sets 1 on B-cancel → CF
-%define wEvoStoneItemID              0xD155
+%define wCanEvolveFlags              0xD81F
+%define wForceEvolution              0xD820
+%define wEvoOldSpecies               0xDCB5   ; (union wHPBarMaxHP scratch)
+%define wEvoNewSpecies               0xDCB6
+%define wEvoMonTileOffset            0xDCB7   ; [2b] palette-flash morph scratch (deferred)
+%define wEvoCancelled                0xDCB8   ; EvolveMon sets 1 on B-cancel → CF
+%define wEvoStoneItemID              0xDF21
 ; Bill's PC (src/engine/pokemon/bills_pc.asm)
-%define wMoveMonType                 0xCF94   ; = wMoveMonType (union wRemoveMonFromBox)
+%define wMoveMonType                 0xDD60   ; = wMoveMonType (union wRemoveMonFromBox)
 ; residual damage (src/engine/battle/residual_damage.asm)
-%define wAnimationType               0xCC5B   ; (union wUnusedFlag)
-%define wPlayerToxicCounter          0xD06B
-%define wEnemyToxicCounter           0xD070
+%define wAnimationType               0xD7A7   ; (union wUnusedFlag)
+%define wPlayerToxicCounter          0xDE37
+%define wEnemyToxicCounter           0xDE3C
 ; GainExperience (src/engine/battle/experience.asm)
-%define wPlayerID                    0xD358   ; word (player trainer id)
-%define wCalculateWhoseStats         0xD11D   ; = wTempByteValue (union)
+%define wPlayerID                    0xE124   ; word (player trainer id)
+%define wCalculateWhoseStats         0xDEE9   ; = wTempByteValue (union)
 ; battle init / front-end (Wave 2, src/engine/battle/init_battle*.asm)
-%define wPartyAndBillsPCSavedMenuItem 0xCC2B
-%define wMiscBattleData              0xCCD3   ; = wCanEvolveFlags (first byte of the block)
-%define wMiscBattleDataEnd           0xCD0F
-%define wActionResultOrTookBattleTurn 0xCD6A
-%define wBattleResult                0xCF0B
-%define wPlayerHPBarColor            0xCF1C
-%define wEnemyHPBarColor             0xCF1D
-%define wCurOpponent                 0xD058
-%define wEscapedFromBattle           0xD077
-%define wLowHealthAlarm              0xD082   ; nonzero = low-HP alarm enabled; EndOfBattle disables it
+%define wPartyAndBillsPCSavedMenuItem 0xD777
+%define wMiscBattleData              0xD81F   ; = wCanEvolveFlags (first byte of the block)
+%define wMiscBattleDataEnd           0xD85B
+%define wActionResultOrTookBattleTurn 0xD8B6
+%define wBattleResult                0xDCD7
+%define wPlayerHPBarColor            0xDCE8
+%define wEnemyHPBarColor             0xDCE9
+%define wCurOpponent                 0xDE24
+%define wEscapedFromBattle           0xDE43
+%define wLowHealthAlarm              0xDE4E   ; nonzero = low-HP alarm enabled; EndOfBattle disables it
 %define wChannelSoundIDs             0xC026   ; per-sound-channel active sound IDs (NUM_CHANNELS bytes)
-%define wSavedTileAnimations         0xD0D3
-%define wMapPalOffset                0xD35C
+%define wSavedTileAnimations         0xDE9F
+%define wMapPalOffset                0xE128
 ; trainer AI + read_trainer_party (src/engine/battle/trainer_ai.asm, read_trainer_party.asm)
-%define wAILayer2Encouragement       0xCCD5
-%define wAICount                     0xCCDF
-%define wBuffer                      0xCEE9   ; (union wHPBarMaxHP, 30B scratch)
-%define wAIItem                      0xCF05
-%define wTrainerBaseMoney            0xD045   ; word, BCD
-%define wLoneAttackNo                0xD05B
-%define wTrainerNo                   0xD05C
-%define wAmountMoneyWon              0xD078   ; 3 bytes, BCD
-%define wAnimationID                 0xD07B   ; current battle-animation id (= wMenuItemOffset/wDefaultMap union)
-%define wFirstMonsNotOutYet          0xD11C
+%define wAILayer2Encouragement       0xD821
+%define wAICount                     0xD82B
+%define wBuffer                      0xDCB5   ; (union wHPBarMaxHP, 30B scratch)
+%define wAIItem                      0xDCD1
+%define wTrainerBaseMoney            0xDE11   ; word, BCD
+%define wLoneAttackNo                0xDE27
+%define wTrainerNo                   0xDE28
+%define wAmountMoneyWon              0xDE44   ; 3 bytes, BCD
+%define wAnimationID                 0xDE47   ; current battle-animation id (= wMenuItemOffset/wDefaultMap union)
+%define wFirstMonsNotOutYet          0xDEE8
 
 ; --- battle animation engine (src/engine/battle/animations.asm) — sym-pinned vs golden ---
 ; pret ram/wram.asm unions its special-effect scratch heavily; every address below is
@@ -608,63 +608,63 @@
 ; (also wCoordAdjustmentAmount / mon-icon wAnimCounter); $CD3D is the same scratch
 ; lane battle_transitions.asm parks its port-only vars on (transition runs before the
 ; battle, ball shakes run inside it — lifetimes are disjoint by construction).
-%define wAnimSoundID                 0xCF07   ; move-1 sound index for current anim command; NO_MOVE-1 = none
-%define wAnimPalette                 0xCC79   ; OBP0 value staged for the animation (SGB-aware)
-%define wTempTilesetNumTiles         0xD07C   ; tile count for LoadMoveAnimationTiles' CopyVideoData
-%define wBaseCoordX                  0xD080   ; current frame block base X (GB pixel space)
-%define wBaseCoordY                  0xD081   ; current frame block base Y (GB pixel space)
-%define wdef4                        0xDEF4   ; DrawFrameBlock off-screen-adjust scratch (pret's address-named placeholder label, kept verbatim)
-%define wFBTileCounter               0xD083   ; DrawFrameBlock per-entry loop counter
-%define wSubAnimFrameDelay           0xD085   ; frames between frame blocks (command byte bits 0-5)
-%define wSubAnimCounter              0xD086   ; remaining subentries in the current subanimation
-%define wNumFBTiles                  0xD088   ; sprite-entry count of the current frame block
-%define wSubAnimTransform            0xD08A   ; SUBANIMTYPE_* applied by DrawFrameBlock (union wAnimCounter/wSpiralBallsBaseX)
-%define wSubAnimAddrPtr              0xD093   ; word: address of the current subanim's pointer (big-endian pair as pret stores it)
-%define wSubAnimSubEntryAddr         0xD095   ; word: address of the current 3-byte subentry
-%define wUnusedMoveAnimByte          0xD09A   ; golden 00:d09a — MoveAnimation write-only scratch, unread (pret ram/wram.asm:wUnusedMoveAnimByte). UNION with wTownMapSpriteBlinkingEnabled/wPartyMenuAnimMonEnabled at 0xD09A; disjoint lifetimes (battle anim vs town map / party menu).
-%define wFBDestAddr                  0xD09B   ; word: running wShadowOAM write cursor (big-endian)
-%define wFBMode                      0xD09D   ; FRAMEBLOCKMODE_* post-frame-block behavior
-%define wWhichBattleAnimTileset      0xD09E   ; 0/1/2 -> MoveAnimationTilesPointers row
-%define wTempSCX                     0xCD3D   ; golden 00:cd3d — ShakeEnemyHUD_ShakeBG's saved scroll value. Same $CD3D scratch lane as the entries below.
-%define wFallingObjectsMovementData  0xCD3D   ; golden 00:cd3d — ds 20, one movement byte per falling object (AnimationFallingObjects). Head of the same $CD3D scratch lane as wSavedY / wNumShakes / wWhichTownMapLocation; pret unions them the same way and only one battle animation runs at a time.
-%define wSavedY                      0xCD3D   ; golden 00:cd3d — AnimationShootManyBallsUpward's per-pillar Y. Same $CD3D scratch lane as wNumShakes / wWhichTownMapLocation below; lifetimes disjoint (one battle anim at a time).
-%define wNumShakes                   0xCD3D   ; ball-shake count (low nybble of wPokeBallAnimData; transitions scratch lane union)
-%define wDownscaledMonSize           0xCD6C   ; 0 = 5x5, 1 = 3x3 (send-out/recall downscale)
+%define wAnimSoundID                 0xDCD3   ; move-1 sound index for current anim command; NO_MOVE-1 = none
+%define wAnimPalette                 0xD7C5   ; OBP0 value staged for the animation (SGB-aware)
+%define wTempTilesetNumTiles         0xDE48   ; tile count for LoadMoveAnimationTiles' CopyVideoData
+%define wBaseCoordX                  0xDE4C   ; current frame block base X (GB pixel space)
+%define wBaseCoordY                  0xDE4D   ; current frame block base Y (GB pixel space)
+%define wdef4                        0xECC0   ; DrawFrameBlock off-screen-adjust scratch (pret's address-named placeholder label, kept verbatim)
+%define wFBTileCounter               0xDE4F   ; DrawFrameBlock per-entry loop counter
+%define wSubAnimFrameDelay           0xDE51   ; frames between frame blocks (command byte bits 0-5)
+%define wSubAnimCounter              0xDE52   ; remaining subentries in the current subanimation
+%define wNumFBTiles                  0xDE54   ; sprite-entry count of the current frame block
+%define wSubAnimTransform            0xDE56   ; SUBANIMTYPE_* applied by DrawFrameBlock (union wAnimCounter/wSpiralBallsBaseX)
+%define wSubAnimAddrPtr              0xDE5F   ; word: address of the current subanim's pointer (big-endian pair as pret stores it)
+%define wSubAnimSubEntryAddr         0xDE61   ; word: address of the current 3-byte subentry
+%define wUnusedMoveAnimByte          0xDE66   ; golden 00:d09a — MoveAnimation write-only scratch, unread (pret ram/wram.asm:wUnusedMoveAnimByte). UNION with wTownMapSpriteBlinkingEnabled/wPartyMenuAnimMonEnabled at 0xD09A; disjoint lifetimes (battle anim vs town map / party menu).
+%define wFBDestAddr                  0xDE67   ; word: running wShadowOAM write cursor (big-endian)
+%define wFBMode                      0xDE69   ; FRAMEBLOCKMODE_* post-frame-block behavior
+%define wWhichBattleAnimTileset      0xDE6A   ; 0/1/2 -> MoveAnimationTilesPointers row
+%define wTempSCX                     0xD889   ; golden 00:cd3d — ShakeEnemyHUD_ShakeBG's saved scroll value. Same $CD3D scratch lane as the entries below.
+%define wFallingObjectsMovementData  0xD889   ; golden 00:cd3d — ds 20, one movement byte per falling object (AnimationFallingObjects). Head of the same $CD3D scratch lane as wSavedY / wNumShakes / wWhichTownMapLocation; pret unions them the same way and only one battle animation runs at a time.
+%define wSavedY                      0xD889   ; golden 00:cd3d — AnimationShootManyBallsUpward's per-pillar Y. Same $CD3D scratch lane as wNumShakes / wWhichTownMapLocation below; lifetimes disjoint (one battle anim at a time).
+%define wNumShakes                   0xD889   ; ball-shake count (low nybble of wPokeBallAnimData; transitions scratch lane union)
+%define wDownscaledMonSize           0xD8B8   ; 0 = 5x5, 1 = 3x3 (send-out/recall downscale)
 ; per-effect scratch unions at $D089 (comment-only aliases resolve to the same byte):
-%define wSpiralBallsBaseY            0xD089
-%define wFallingObjectMovementByte   0xD089
-%define wFlashScreenLongCounter      0xD089
-%define wNumShootingBalls            0xD089
-%define wSpiralBallsBaseX            0xD08A   ; (= wSubAnimTransform; effects that use it do not run inside a transformed subanim)
-%define wNumFallingObjects           0xD08A
-%define wSlideMonDelay               0xD08A   ; golden 00:d08a — V-blanks per tile of _AnimationSlideMonOff. Same pret $D08A union as above (wSubAnimTransform / wSpiralBallsBaseX / wNumFallingObjects); pret aliases them on hardware too, so the collision is reproduced, not introduced.
-%define wDropletTile                 0xD09E   ; golden 00:d09e — tile id of the Surf/Mist/Toxic droplet. Same pret $D09E union as the two below.
-%define wSquishMonCurrentDirection   0xD09E   ; golden 00:d09e — 0 = left, 1 = right, read by _AnimationSquishMonPic. Same pret $D09E union as the two below.
-%define wSlideMonUpBottomRowLeftTile 0xD09E   ; golden 00:d09e — tile id seeding _AnimationSlideMonUp's refilled bottom row. UNION with wWhichBattleAnimTileset / wOutwardSpiralCurrentDirection at 0xD09E, as in pret; the slide never calls LoadMoveAnimationTiles, so the lifetimes are disjoint.
-%define wUnusedWaterDropletsByte     0xD089   ; golden 00:d089 — written by AnimationWaterDropletsEverywhere, never read (pret name says so). Same $D089 union lane as the aliases above.
+%define wSpiralBallsBaseY            0xDE55
+%define wFallingObjectMovementByte   0xDE55
+%define wFlashScreenLongCounter      0xDE55
+%define wNumShootingBalls            0xDE55
+%define wSpiralBallsBaseX            0xDE56   ; (= wSubAnimTransform; effects that use it do not run inside a transformed subanim)
+%define wNumFallingObjects           0xDE56
+%define wSlideMonDelay               0xDE56   ; golden 00:d08a — V-blanks per tile of _AnimationSlideMonOff. Same pret $D08A union as above (wSubAnimTransform / wSpiralBallsBaseX / wNumFallingObjects); pret aliases them on hardware too, so the collision is reproduced, not introduced.
+%define wDropletTile                 0xDE6A   ; golden 00:d09e — tile id of the Surf/Mist/Toxic droplet. Same pret $D09E union as the two below.
+%define wSquishMonCurrentDirection   0xDE6A   ; golden 00:d09e — 0 = left, 1 = right, read by _AnimationSquishMonPic. Same pret $D09E union as the two below.
+%define wSlideMonUpBottomRowLeftTile 0xDE6A   ; golden 00:d09e — tile id seeding _AnimationSlideMonUp's refilled bottom row. UNION with wWhichBattleAnimTileset / wOutwardSpiralCurrentDirection at 0xD09E, as in pret; the slide never calls LoadMoveAnimationTiles, so the lifetimes are disjoint.
+%define wUnusedWaterDropletsByte     0xDE55   ; golden 00:d089 — written by AnimationWaterDropletsEverywhere, never read (pret name says so). Same $D089 union lane as the aliases above.
 %ifndef wCoordAdjustmentAmount
-%define wNewSlotMachineBallTile      0xD089   ; SlotMachine_UpdateBallTiles (same $D089 union lane)
-%define wCoordAdjustmentAmount       0xD089   ; AdjustOAMBlock* signed delta (was locally %ifndef-defined in animations.asm/dust_smoke.asm)
+%define wNewSlotMachineBallTile      0xDE55   ; SlotMachine_UpdateBallTiles (same $D089 union lane)
+%define wCoordAdjustmentAmount       0xDE55   ; AdjustOAMBlock* signed delta (was locally %ifndef-defined in animations.asm/dust_smoke.asm)
 %endif
-%define wEnemyMon1HP                 0xD8A4
-%define wEnemyMon1Status             0xD8A7
-%define wEnemyMon1Moves              0xD8AB
-%define wEnemyMon1PP                 0xD8C0   ; enemy party struct base 0xD8A3 + MON_PP (0x1D); used by IncrementMovePP (mirror_move.asm)
+%define wEnemyMon1HP                 0xE670
+%define wEnemyMon1Status             0xE673
+%define wEnemyMon1Moves              0xE677
+%define wEnemyMon1PP                 0xE68C   ; enemy party struct base 0xD8A3 + MON_PP (0x1D); used by IncrementMovePP (mirror_move.asm)
 
 ; --- HP-bar update scratch (UpdateHPBar / used by drain_hp etc.) — sym-pinned ---
 ; ChangeMonPic staging (pret animations.asm). Golden 00:cee9/00:ceea — the same
 ; $CEE9/$CEEA shared scratch lane as wHPBarMaxHP / wEvoOldSpecies / wBuffer /
 ; wTownMapCoords above, unioned in pret exactly as here; a mon-pic change and an
 ; HP-bar update are never live at once.
-%define wChangeMonPicEnemyTurnSpecies 0xCEE9
-%define wChangeMonPicPlayerTurnSpecies 0xCEEA
-%define wHPBarMaxHP                  0xCEE9   ; word
-%define wHPBarOldHP                  0xCEEB   ; word
-%define wHPBarNewHP                  0xCEED   ; word
-%define wHPBarDelta                  0xCEEF
-%define wHPBarTempHP                 0xCEF0   ; word
-%define wHPBarHPDifference           0xCEFD   ; word
-%define wHPBarType                   0xCF93
+%define wChangeMonPicEnemyTurnSpecies 0xDCB5
+%define wChangeMonPicPlayerTurnSpecies 0xDCB6
+%define wHPBarMaxHP                  0xDCB5   ; word
+%define wHPBarOldHP                  0xDCB7   ; word
+%define wHPBarNewHP                  0xDCB9   ; word
+%define wHPBarDelta                  0xDCBB
+%define wHPBarTempHP                 0xDCBC   ; word
+%define wHPBarHPDifference           0xDCC9   ; word
+%define wHPBarType                   0xDD5F
 
 ; --- battle math / turn aliases (lowercase, for pret-faithful drafts) ---
 ; hWhoseTurn: 0 on player's turn, 1 on enemy's turn.
@@ -694,9 +694,9 @@
 ; back over it. Sym-verified; these had been file-local equs in the emitted map
 ; scripts, which also kept _OaksAideHiText ungeneratable: its `text_decimal
 ; hOaksAideRequirement` needs the address resolvable from gb_memmap.inc.
-%define wElevatorWarpMaps            0xCC5B   ; ram/wram.asm:503 `ds 11*2` — NEXTU union with
+%define wElevatorWarpMaps            0xD7A7   ; ram/wram.asm:503 `ds 11*2` — NEXTU union with
                                     ; wOaksAideRewardItemName below, hence the shared address
-%define wOaksAideRewardItemName      0xCC5B   ; ram/wram.asm:500 (ds ITEM_NAME_LENGTH) — the
+%define wOaksAideRewardItemName      0xD7A7   ; ram/wram.asm:500 (ds ITEM_NAME_LENGTH) — the
                                     ; item name _OaksAideHiText text_rams into its line
 %define hOaksAideResult              0xFFDB
 %define hOaksAideRequirement         0xFFDB   ; same byte as hOaksAideResult (written literal:
@@ -839,7 +839,7 @@
 ; print it any more. Copying a flat stream in was a workaround for TCP's old
 ; EBP-relative stream pointer, and it silently truncated anything past 256 bytes
 ; (four real dialogs rendered garbage). Don't route a flat stream through here.
-%define NPC_DIALOG_BUF               0xCB00   ; composed-stream scratch (≤256 B)
+%define NPC_DIALOG_BUF               0xD64C   ; composed-stream scratch (≤256 B)
 %define NPC_DIALOG_LEN               256   ; its capacity
 
 ; NPC movement-byte sentinel values (constants/map_object_constants.asm)
@@ -880,15 +880,15 @@
 ; of garbage glyphs across the map). It goes in the Echo region instead, with the other
 ; buffers that outgrew their pret slots (wSurroundingTiles, wOverworldMap,
 ; wTileMapBackup2 — which ends at 0xF4E8).
-%define wShadowOAMBackup             0xF500   ; 160 B (OAM_COUNT * 4), ends 0xF59F
-%define wTownMapSpriteBlinkingEnabled 0xD09A
-%define wTownVisitedFlag             0xD70A   ; = wTownVisitedFlag (2 bytes)
+%define wShadowOAMBackup             0xC788   ; 160 B (OAM_COUNT * 4), ends 0xF59F
+%define wTownMapSpriteBlinkingEnabled 0xDE66
+%define wTownVisitedFlag             0xE4D6   ; = wTownVisitedFlag (2 bytes)
 ; The three below are aliased-scratch lanes, like every other 0xCD3D/0xCEE9 user
 ; above — the town map is a modal screen, so nothing else is live while it runs.
-%define wWhichTownMapLocation        0xCD3D
-%define wFlyAnimUsingCoordList       0xCD3D
-%define wFlyLocationsList            0xCD3E   ; NUM_CITY_MAPS + 2
-%define wTownMapCoords               0xCEE9
+%define wWhichTownMapLocation        0xD889
+%define wFlyAnimUsingCoordList       0xD889
+%define wFlyLocationsList            0xD88A   ; NUM_CITY_MAPS + 2
+%define wTownMapCoords               0xDCB5
 
 ; Battle-HUD scratch — pret ram/wram.asm:863-868, another lane of the same
 ; $CD3E union. Addresses CONFIRMED against the ROM symbol file (pokeyellow.sym),
@@ -900,12 +900,12 @@
 ; in the same union (pret wram.asm:815 and :863 are separate NEXTU lanes). The
 ; transition animation completes before the battle HUD and the pokeball rows are
 ; drawn, which is exactly why the original could share the byte.
-%define wHUDPokeballGfxOffsetX       0xCD3E   ; signed X delta between adjacent pokeballs
-%define wHUDGraphicsTiles            0xCD3F   ; 3-byte table copied from ROM per HUD side
-%define wHUDUnusedTopTile            0xCD3F   ; [0] unused — $73 is hardcoded in PlaceHUDTiles
-%define wHUDCornerTile               0xCD40   ; [1] corner tile of the HUD underline
-%define wHUDTriangleTile             0xCD41   ; [2] triangle tile at the far end
-%define wHUDGraphicsTilesEnd         0xCD42
+%define wHUDPokeballGfxOffsetX       0xD88A   ; signed X delta between adjacent pokeballs
+%define wHUDGraphicsTiles            0xD88B   ; 3-byte table copied from ROM per HUD side
+%define wHUDUnusedTopTile            0xD88B   ; [0] unused — $73 is hardcoded in PlaceHUDTiles
+%define wHUDCornerTile               0xD88C   ; [1] corner tile of the HUD underline
+%define wHUDTriangleTile             0xD88D   ; [2] triangle tile at the far end
+%define wHUDGraphicsTilesEnd         0xD88E
 %define wShadowOAMEnd                0xC3A0
 %define W_SHADOW_OAM_SIZE            0xA0   ; 160 bytes
 %define wTileMap                     0xC3A0   ; wTileMap — 40×25 screen tile buffer
@@ -914,14 +914,20 @@
 ; WRAM bank 1 — $D000–$DFFF (4 KB)
 ; On CGB: banks 1–7 are switchable via rWBK ($FF70).
 ; For now, bank 1 is the only one allocated here. CGB banking TBD.
-%define GB_WRAM1                     0xD000
+%define GB_WRAM1                     0xDDCC
 
 ; Echo RAM region — $E000–$FDFF
 ; The pret source never addresses this range, so we use it for expanded
 ; DOS-port-only buffers (wSurroundingTiles, wOverworldMap, redraw scratch,
 ; wTileMapBackup2) that grew beyond their original WRAM0/1 slots.
 ; All addresses are within the DPMI allocation (EBP + 0xE000 is valid).
-%define GB_ECHO                      0xE000
+; RETIRED AS A CONCEPT (2026-08-19). This was never echo RAM in any meaningful
+; sense -- the port does not implement the $E000-$FDFF mirror, and calling the
+; region "free echo RAM" is what let two authors each believe they owned 0xF500.
+; It is simply MORE WRAM: the port is a Game Boy whose WRAM runs to 0xEDCB, with
+; port-only staging above that. See docs/current_plan_wram_expansion.md.
+%define GB_WRAM_EXPANDED_END         0xEDCC   ; end-exclusive; pret 0xDFFF + 3532
+%define GB_ECHO                      0xE000   ; legacy name, no longer a mirror
 
 ; OAM — $FE00–$FE9F (160 bytes = 40 sprites × 4 bytes each)
 ; Format per sprite: Y, X, tile ID, flags. See constants/hardware.inc OAM constants.
@@ -963,24 +969,27 @@
 ; Link-menu / serial exchange scratch (menus S8 package I — link_menu.asm).
 ; Sym-verified vs origin/symbols:pokeyellow.sym; the 0xCC3D/0xCC42 pairs are
 ; union-aliased (send/receive buffer overlaps the nybble-exchange lanes).
-%define wLinkMenuSelectionReceiveBuffer 0xCC3D   ; wram.asm:425 (dw)
-%define wSerialSyncAndExchangeNybbleReceiveData 0xCC3D   ; wram.asm:437 (db; aliases recv buf)
-%define wSerialExchangeNybbleReceiveData 0xCC3E   ; wram.asm:439 (db)
-%define wLinkMenuSelectionSendBuffer 0xCC42   ; wram.asm:428 (dw)
-%define wSerialExchangeNybbleSendData 0xCC42   ; wram.asm:442 (db; aliases send buf)
-%define wUnknownSerialCounter        0xCC47   ; wram.asm:444 (dw; aliases wEnteringCableClub)
-%define wEnteringCableClub           0xCC47   ; wram.asm:430 (db; sym 00:cc47)
-%define wUnusedLinkMenuByte          0xCD37   ; wram.asm:754 (db; was worker 0xCC83)
+%define wLinkMenuSelectionReceiveBuffer 0xD789   ; wram.asm:425 (dw)
+%define wSerialSyncAndExchangeNybbleReceiveData 0xD789   ; wram.asm:437 (db; aliases recv buf)
+%define wSerialExchangeNybbleReceiveData 0xD78A   ; wram.asm:439 (db)
+%define wLinkMenuSelectionSendBuffer 0xD78E   ; wram.asm:428 (dw)
+%define wSerialExchangeNybbleSendData 0xD78E   ; wram.asm:442 (db; aliases send buf)
+%define wUnknownSerialCounter        0xD793   ; wram.asm:444 (dw; aliases wEnteringCableClub)
+%define wEnteringCableClub           0xD793   ; wram.asm:430 (db; sym 00:cc47)
+%define wUnusedLinkMenuByte          0xD883   ; wram.asm:754 (db; was worker 0xCC83)
 %define hSerialSendData              0xFFAC   ; hram.asm:193 (db)
 %define hSerialReceiveData           0xFFAD   ; hram.asm:194 (db)
 %define hSCX                         0xFFAE   ; hSCX — shadow of rSCX
 %define hSCY                         0xFFAF   ; hSCY — shadow of rSCY
 ; Scripted-NPC-anim scratch (pret hSpriteVRAMSlotAndFacing / hSpriteAnimFrameCounter).
-; Port-assigned to free hram; transient scratch within the DoScriptedNPCMovement anim
-; chain only (write+read same call), never persisted/cross-referenced — exact pret
-; hram address not load-bearing.
-%define hSpriteVRAMSlotAndFacing     0xFFC0   ; hSpriteVRAMSlotAndFacing
-%define hSpriteAnimFrameCounter      0xFFC1   ; hSpriteAnimFrameCounter
+; AT PRET'S OWN ADDRESSES as of 2026-08-19. They were previously port-assigned to
+; 0xFFC0/0xFFC1 as "free hram", which was ASSERTED not measured: 0xFFC1 is
+; hVBlankCopyBGSource, live in the DelayFrame path, so the alias was active rather
+; than latent. pret's 0xFFEA unions hSpriteAnimFrameCounter with
+; hCoordsInFrontOfPlayerMatch — that union is pret's own design, not a port
+; invention. A free address is DERIVED from pokeyellow.sym, never asserted.
+%define hSpriteVRAMSlotAndFacing     0xFFE9   ; hSpriteVRAMSlotAndFacing
+%define hSpriteAnimFrameCounter      0xFFEA   ; hSpriteAnimFrameCounter (pret union with hCoordsInFrontOfPlayerMatch)
 ; hLCDCPointer — pret's per-scanline LCDC pointer (STAT-ISR driven). The port
 ; does not emulate per-scanline LCDC, so this is an inert HRAM byte; the intro
 ; writes 0 (disabled) at scene starts. Port-assigned to free HRAM (exact pret
@@ -1014,7 +1023,7 @@
 %define hRedrawRowOrColumnMode       (H_REDRAW_ROW_COL_MODE)
 %define H_REDRAW_ROW_COL_DEST        0xFFD1   ; hRedrawRowOrColumnDest
 %define hRedrawRowOrColumnDest       (H_REDRAW_ROW_COL_DEST)
-%define wRedrawRowOrColumnSrcTiles   0xCBFC   ; ds SCREEN_WIDTH * 2 (40 bytes)
+%define wRedrawRowOrColumnSrcTiles   0xD748   ; ds SCREEN_WIDTH * 2 (40 bytes)
 %define hUILayoutFlags               0xFFFA   ; hUILayoutFlags
 %define hItemToRemoveID              0xFFDB   ; RemoveItemByID: item id to remove
 %define hItemToRemoveIndex           0xFFDC   ; RemoveItemByID: running bag index
@@ -1107,13 +1116,13 @@
 %define wTempoModifier               0xC0F2   ; cry tempo modifier
 
 ; Audio fade-out block ($CFC6) + map-music vars ($D35A)
-%define wAudioFadeOutControl         0xCFC6   ; = wAudioFadeOutControl below
-%define wAudioFadeOutCounterReloadValue 0xCFC7
-%define wAudioFadeOutCounter         0xCFC8
-%define wLastMusicSoundID            0xCFC9
-%define wMapMusicSoundID             0xD35A
-%define wMapMusicROMBank             0xD35B
-%define wGymLeaderNo                 0xD05B   ; union with wLoneAttackNo (pret)
+%define wAudioFadeOutControl         0xDD92   ; = wAudioFadeOutControl below
+%define wAudioFadeOutCounterReloadValue 0xDD93
+%define wAudioFadeOutCounter         0xDD94
+%define wLastMusicSoundID            0xDD95
+%define wMapMusicSoundID             0xE126
+%define wMapMusicROMBank             0xE127
+%define wGymLeaderNo                 0xDE27   ; union with wLoneAttackNo (pret)
 %define hDexRatingNumMonsOwned       0xFFDC   ; HRAM (pokedex rating SFX)
 %define BIT_NO_AUDIO_FADE_OUT        1   ; wStatusFlags2 bit 1
 
@@ -1193,14 +1202,14 @@
 %define MAP_ID_VICTORY_ROAD_3F       0xC6
 
 ; Misc WRAM ($CC–$CFC range)
-%define wUnusedFlag                  0xCC5B   ; wUnusedFlag
+%define wUnusedFlag                  0xD7A7   ; wUnusedFlag
 
 ; Title-screen state ($CD3D)
-%define wTitleScreenScene            0xCD3D   ; wTitleScreenScene (byte; +1 = timer)
-%define wTitleScreenTimer            0xCD3E   ; wTitleScreenTimer
+%define wTitleScreenScene            0xD889   ; wTitleScreenScene (byte; +1 = timer)
+%define wTitleScreenTimer            0xD88A   ; wTitleScreenTimer
 
 ; Name buffers (WRAM1) — sym-verified
-%define wRivalName                   0xD349   ; wRivalName  — 11 bytes, '@'-terminated
+%define wRivalName                   0xE115   ; wRivalName  — 11 bytes, '@'-terminated
 
 ; ---------------------------------------------------------------------------
 ; Save / options / naming WRAM (menus S7) — all sym-pinned
@@ -1208,48 +1217,48 @@
 ; symbols name the exact WRAM ranges pret's SaveMainData/SaveCurrentBoxData/
 ; SavePartyAndDexData serialize; src/save/dsv_io.asm writes/reads that set.
 ; ---------------------------------------------------------------------------
-%define wSaveFileStatus              0xD087   ; 1 = no save, 2 = save present
-%define wOptionsInitialized          0xD089   ; InitOptions gate (main_menu.asm)
-%define wLetterPrintingDelayFlags    0xD357   ; text-speed delay flags (InitOptions)
+%define wSaveFileStatus              0xDE53   ; 1 = no save, 2 = save present
+%define wOptionsInitialized          0xDE55   ; InitOptions gate (main_menu.asm)
+%define wLetterPrintingDelayFlags    0xE123   ; text-speed delay flags (InitOptions)
 ; save-serialized WRAM ranges (pret ram/wram.asm section boundaries)
-%define wMainDataStart               0xD2F6   ; = wPokedexOwned (main data block)
-%define wMainDataEnd                 0xDA7F   ; = wBoxDataStart (1929 bytes)
+%define wMainDataStart               0xE0C2   ; = wPokedexOwned (main data block)
+%define wMainDataEnd                 0xE84B   ; = wBoxDataStart (1929 bytes)
 %define wSpriteDataStart             0xC100   ; = wSpriteStateData1 (sprite block)
 %define wSpriteDataEnd               0xC300   ; = wShadowOAM (512 bytes)
-%define wBoxDataStart                0xDA7F   ; current-box block
-%define wBoxDataEnd                  0xDEE1   ; (1122 bytes)
-%define wPartyDataStart              0xD162   ; = wPartyCount (party block)
-%define wPartyDataEnd                0xD2F6   ; = wMainDataStart (404 bytes)
-%define wPokedexOwnedEnd             0xD309   ; = wPokedexSeen (owned-mon bitset end)
-%define wPokedexSeenEnd              0xD31C   ; seen bitset end
+%define wBoxDataStart                0xE84B   ; current-box block
+%define wBoxDataEnd                  0xECAD   ; (1122 bytes)
+%define wPartyDataStart              0xDF2E   ; = wPartyCount (party block)
+%define wPartyDataEnd                0xE0C2   ; = wMainDataStart (404 bytes)
+%define wPokedexOwnedEnd             0xE0D5   ; = wPokedexSeen (owned-mon bitset end)
+%define wPokedexSeenEnd              0xE0E8   ; seen bitset end
 ; play time (main data; PrintPlayTime, main_menu.asm)
-%define wPlayTimeHours               0xDA40
-%define wPlayTimeMinutes             0xDA42
+%define wPlayTimeHours               0xE80C
+%define wPlayTimeMinutes             0xE80E
 ; box-change UI (save.asm ChangeBox)
-%define wCurrentBoxNum               0xD59F   ; current PC box (low 7 bits) + changed-box bit 7
-%define wBoxMonCounts                0xCD3D   ; NUM_BOXES scratch (GetMonCountsForAllBoxes)
-%define wPikachuHappiness            0xD46F   ; saved by SavePartyAndDexData tail
+%define wCurrentBoxNum               0xE36B   ; current PC box (low 7 bits) + changed-box bit 7
+%define wBoxMonCounts                0xD889   ; NUM_BOXES scratch (GetMonCountsForAllBoxes)
+%define wPikachuHappiness            0xE23B   ; saved by SavePartyAndDexData tail
 ; status-flag bytes (main_menu.asm / save.asm) — not previously aliased
-%define wStatusFlags5                0xD72F   ; BIT_NO_TEXT_DELAY lives here
-%define wStatusFlags6                0xD731   ; BIT_GAME_TIMER_COUNTING, special-warp bits
+%define wStatusFlags5                0xE4FB   ; BIT_NO_TEXT_DELAY lives here
+%define wStatusFlags6                0xE4FD   ; BIT_GAME_TIMER_COUNTING, special-warp bits
 ; new-game player-data init (engine/movie/oak_speech/init_player_data.asm) —
 ; addresses sym-verified against origin/symbols:pokeyellow.sym (2026-07-03).
-%define wUnusedObtainedBadges        0xD356   ; wObtainedBadges+1 (wObtainedBadges = 0xD355)
-%define wGameProgressFlags           0xD5EF   ; event-flag bit array
-%define wGameProgressFlagsEnd        0xD6B7   ; one past the last event flag byte
-%define wUnusedPlayerDataByte        0xD71A   ; set to $ff by InitPlayerData2
+%define wUnusedObtainedBadges        0xE122   ; wObtainedBadges+1 (wObtainedBadges = 0xD355)
+%define wGameProgressFlags           0xE3BB   ; event-flag bit array
+%define wGameProgressFlagsEnd        0xE483   ; one past the last event flag byte
+%define wUnusedPlayerDataByte        0xE4E6   ; set to $ff by InitPlayerData2
 ; naming screen (engine/menus/naming_screen.asm, package C)
-%define wNamingScreenNameLength      0xCEE9
-%define wNamingScreenSubmitName      0xCEEA
-%define wAlphabetCase                0xCEEB
-%define wNamingScreenLetter          0xCEED
-%define wNamingScreenType            0xD07C   ; PLAYER/RIVAL/MON/BOX select
+%define wNamingScreenNameLength      0xDCB5
+%define wNamingScreenSubmitName      0xDCB6
+%define wAlphabetCase                0xDCB7
+%define wNamingScreenLetter          0xDCB9
+%define wNamingScreenType            0xDE48   ; PLAYER/RIVAL/MON/BOX select
 ; main_menu.asm (E) / save.asm (H) — sym-verified (origin/symbols:pokeyellow.sym)
-%define wDefaultMap                  0xD07B   ; boot default map (main_menu clears it)
-%define wDestinationMap              0xD719   ; special-warp destination (HoF continue path)
-%define wCableClubDestinationMap     0xD72C   ; SpecialEnterMap clears it (= wStatusFlags3 union)
-%define wNumSetBits                  0xD11D   ; CountSetBits result byte (shared 0xD11D scratch)
-%define wChangeBoxSavedMapTextPointer 0xCD3D   ; ChangeBox saves/restores wCurMapTextPtr here
+%define wDefaultMap                  0xDE47   ; boot default map (main_menu clears it)
+%define wDestinationMap              0xE4E5   ; special-warp destination (HoF continue path)
+%define wCableClubDestinationMap     0xE4F8   ; SpecialEnterMap clears it (= wStatusFlags3 union)
+%define wNumSetBits                  0xDEE9   ; CountSetBits result byte (shared 0xD11D scratch)
+%define wChangeBoxSavedMapTextPointer 0xD889   ; ChangeBox saves/restores wCurMapTextPtr here
 
 ; Tile-map save/restore buffers — relocated to echo RAM ($E000+) to avoid
 ; overlapping pret WRAM1 symbols.  All via constants; no hardcoded addresses
@@ -1264,12 +1273,12 @@
 ; must not overlap the next buffer. Growing MAP_BORDER 6→7 pushed wOverworldMapEnd
 ; from $F000 to $F100 and silently clobbered wTileMapBackup2's first 256 bytes
 ; until it was moved here.
-%define wTileMapBackup               0xE000   ; wTileMapBackup (= wSurroundingTiles, see below)
-%define wTileMapBackup2              0xF100   ; wTileMapBackup2 (1000 B)
+%define wTileMapBackup               0xC788   ; wTileMapBackup (= wSurroundingTiles, see below)
+%define wTileMapBackup2              0xD8CD   ; wTileMapBackup2 (1000 B)
 
 ; Overworld surrounding-tiles buffer (alias for wTileMapBackup)
 ; 48×36 = 1728 bytes; DrawTileBlock writes here before crop to wTileMap.
-%define wSurroundingTiles            0xE000   ; wSurroundingTiles = wTileMapBackup
+%define wSurroundingTiles            0xC788   ; wSurroundingTiles = wTileMapBackup
 
 ; --- Animated-object engine (menu-intro B1: engine/gfx/animated_objects.asm) ---
 ; RELOCATED (port-only): pret places this WRAM0 union branch at 0xC508 (the
@@ -1297,24 +1306,24 @@
 ; slot 2->4 bytes grows the block 200->202 B; safe — this is engine-internal
 ; runtime scratch, not Gen-1 save/party data (the byte-identical rule is scoped
 ; to mon structs).
-%define wAnimatedObjectsData         0xF600   ; wAnimatedObjectsData (block base)
+%define wAnimatedObjectsData         0xC788   ; wAnimatedObjectsData (block base)
 %define W_ANIMATED_OBJECTS_DATA_SIZE 0xCA   ; 202 B, ends 0xF6CA (wAnimatedObjectsDataEnd)
-%define wAnimatedObjectStartTileOffsets 0xF600   ; ds 10*2 (20 B)
-%define wAnimatedObjectDataStructs   0xF614   ; wAnimatedObject0 (10 x 16 = 160 B)
-%define wNumLoadedAnimatedObjects    0xF6B4   ; db — running spawn counter → struct Index
-%define wCurrentAnimatedObjectOAMBufferOffset 0xF6B5   ; ds 3 (LOW-byte shadow-OAM cursor)
-%define wAnimatedObjectSpawnStateDataPointer 0xF6B8   ; dw → per-set spawn table (GB blob)
-%define wAnimatedObjectFramesDataPointer 0xF6BA   ; dw → per-set frame-script table (GB blob)
-%define wAnimatedObjectJumptablePointer 0xF6BC   ; dd → per-set callback jumptable (FLAT, port)
-%define wAnimatedObjectOAMDataPointer 0xF6C0   ; dw → per-set OAM template table (GB blob)
-%define wCurAnimatedObjectOAMAttributes 0xF6C2   ; db — flip/prio/pal scratch for current frame
-%define wCurrentAnimatedObjectVTileOffset 0xF6C3   ; db
-%define wCurrentAnimatedObjectXCoord 0xF6C4   ; db
-%define wCurrentAnimatedObjectYCoord 0xF6C5   ; db
-%define wCurrentAnimatedObjectXOffset 0xF6C6   ; db
-%define wCurrentAnimatedObjectYOffset 0xF6C7   ; db
-%define wAnimatedObjectGlobalYOffset 0xF6C8   ; db
-%define wAnimatedObjectGlobalXOffset 0xF6C9   ; db
+%define wAnimatedObjectStartTileOffsets 0xC788   ; ds 10*2 (20 B)
+%define wAnimatedObjectDataStructs   0xCC7C   ; wAnimatedObject0 (10 x 16 = 160 B)
+%define wNumLoadedAnimatedObjects    0xCD1C   ; db — running spawn counter → struct Index
+%define wCurrentAnimatedObjectOAMBufferOffset 0xCD1D   ; ds 3 (LOW-byte shadow-OAM cursor)
+%define wAnimatedObjectSpawnStateDataPointer 0xCD20   ; dw → per-set spawn table (GB blob)
+%define wAnimatedObjectFramesDataPointer 0xCD22   ; dw → per-set frame-script table (GB blob)
+%define wAnimatedObjectJumptablePointer 0xCD24   ; dd → per-set callback jumptable (FLAT, port)
+%define wAnimatedObjectOAMDataPointer 0xCD26   ; dw → per-set OAM template table (GB blob)
+%define wCurAnimatedObjectOAMAttributes 0xCD28   ; db — flip/prio/pal scratch for current frame
+%define wCurrentAnimatedObjectVTileOffset 0xCD29   ; db
+%define wCurrentAnimatedObjectXCoord 0xCD2A   ; db
+%define wCurrentAnimatedObjectYCoord 0xCD2B   ; db
+%define wCurrentAnimatedObjectXOffset 0xCD2C   ; db
+%define wCurrentAnimatedObjectYOffset 0xCD2D   ; db
+%define wAnimatedObjectGlobalYOffset 0xCD2E   ; db
+%define wAnimatedObjectGlobalXOffset 0xCD2F   ; db
 ; Yellow-intro scene state (menu-intro B3 will grow this; the engine already
 ; reads wYellowIntroCurrentScene in UpdateCurrentAnimatedObjectFrame: cp $7
 ; skips the per-OBJ attribute write during scene 7).
@@ -1322,12 +1331,12 @@
 ; pret's old wc634/wc635 aliases are gone as of upstream 51cb4a12, which also
 ; unions these two bytes with wSurfingMinigameMusicTempoEnabled /
 ; wSurfingMinigameCloudScrollFraction.
-%define wYellowIntroCurrentScene     0xF6CA   ; db
-%define wYellowIntroSceneTimer       0xF6CB   ; db
+%define wYellowIntroCurrentScene     0xCD94   ; db
+%define wYellowIntroSceneTimer       0xCD95   ; db
 ; saved struct base of the scene's current animated object (2 bytes; RELOCATED
 ; with the rest of the intro scene state). Free echo gap 0xF6CC-0xF6FF (before
 ; the anim-data blob at 0xF700).
-%define wYellowIntroAnimatedObjectStructPointer 0xF6CC   ; dw
+%define wYellowIntroAnimatedObjectStructPointer 0xCD96   ; dw
 
 ; --- Yellow-intro animated-object DATA region (menu-intro B1) ---
 ; The Frames/OAM/Spawn tables (pret data/sprite_anims/intro_frames.asm +
@@ -1341,7 +1350,7 @@
 ; static assert that its assembled size matches these region deltas, so the
 ; fixed bases cannot silently drift from the tables. 657 B total; reserved
 ; 0x2A0. Intro-cinematic-only, echo RAM, never live with the overworld buffers.
-%define W_INTRO_ANIM_DATA            0xF700   ; whole-region base (= W_INTRO_FRAMES_DATA)
+%define W_INTRO_ANIM_DATA            0xEE00   ; whole-region base (= W_INTRO_FRAMES_DATA)
 %define W_INTRO_ANIM_DATA_SIZE       0x2A0   ; reservation (actual 0x291), ends <= 0xF9A0
 %define W_INTRO_FRAMES_DATA          (W_INTRO_ANIM_DATA)   ; 0xF700, size 0x53 (src/data/sprite_anims/intro_frames.asm)
 %define W_INTRO_OAM_DATA             (W_INTRO_ANIM_DATA + 0x53)   ; 0xF753, size 0x21D (src/data/sprite_anims/intro_oam.asm)
@@ -1351,10 +1360,10 @@
 ; Located in free echo RAM: wLYOverrides at 0xF500-0xF600, wLYOverridesBuffer at 0xF9A0-0xFAA0.
 ; The port does NOT emulate per-scanline LY overrides, but VBlankCopy transfers the data
 ; faithfully between them on Request7TileTransferFromC810ToC710.
-%define wLYOverrides                 0xF500   ; wLYOverrides (ds 0x100)
+%define wLYOverrides                 0xD24C   ; wLYOverrides (ds 0x100)
 %define W_LY_OVERRIDES_SIZE          0x100   ; 256 B, ends 0xF600 (< wAnimatedObjectsData 0xF600)
 %define wLYOverridesEnd              (wLYOverrides + 0x100)   ; 0xF600
-%define wLYOverridesBuffer           0xF9A0   ; wLYOverridesBuffer (ds 0x100)
+%define wLYOverridesBuffer           0xD34C   ; wLYOverridesBuffer (ds 0x100)
 %define W_LY_OVERRIDES_BUFFER_SIZE   0x100   ; 256 B, ends 0xFAA0 (< W_SURF_ANIM_DATA 0xFB00)
 %define wLYOverridesBufferEnd        (wLYOverridesBuffer + 0x100)   ; 0xFAA0
 
@@ -1366,7 +1375,7 @@
 ; composed back-to-back (frames then OAM, 258 + 446 = 704 bytes).
 ; Located in free echo RAM at 0xFB00 (after wLYOverridesBuffer 0xFA00-0xFB00,
 ; before GB_OAM 0xFE00).
-%define W_SURF_ANIM_DATA             0xFB00   ; whole-region base (= W_SURF_FRAMES_DATA)
+%define W_SURF_ANIM_DATA             0xF100   ; whole-region base (= W_SURF_FRAMES_DATA)
 %define W_SURF_ANIM_DATA_SIZE        0x2C0   ; 704 bytes (0x102 frames + 0x1BE OAM), ends 0xFDCE <= 0xFE00
 %define W_SURF_FRAMES_DATA           (W_SURF_ANIM_DATA)   ; 0xFB00, size 0x102 (src/data/sprite_anims/surfing_pikachu_frames.asm)
 %define W_SURF_OAM_DATA              (W_SURF_ANIM_DATA + 0x102)   ; 0xFC02, size 0x1BE (src/data/sprite_anims/surfing_pikachu_oam.asm)
@@ -1375,23 +1384,23 @@
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
 ; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old
 ; 2048. Grown to 0x900; end = 0xF100, and nothing is used until GB_OAM at 0xFE00.
-%define wOverworldMap                0xE800   ; wOverworldMap
+%define wOverworldMap                0xCE48   ; wOverworldMap
 %define W_OVERWORLD_MAP_SIZE         0x900   ; wOverworldMapEnd − wOverworldMap (2304 bytes)
 
 ; Turn-delay state (pret: wCheckFor180DegreeTurn / wPlayerLastStopDirection)
 ; W_CHECK_FOR_TURN=1 means "first direction press changes facing only; walk starts on hold".
 ; Reset to 0 on the first press (so subsequent frames in same direction walk).
 ; Restored to 1 when no direction is held (.noDirection path).
-%define W_CHECK_FOR_TURN             0xCADD   ; wCheckFor180DegreeTurn (1=check next press)
-%define wPlayerLastStopDirection     0xCFAE   ; wPlayerLastStopDirection (dir held when player last stopped)
+%define W_CHECK_FOR_TURN             0xD629   ; wCheckFor180DegreeTurn (1=check next press)
+%define wPlayerLastStopDirection     0xE2F4   ; wPlayerLastStopDirection (dir held when player last stopped)
 
 ; Walk/sprite state
-%define wFontLoaded                  0xCFC3
-%define wWalkCounter                 0xCFC4   ; wWalkCounter
-%define wTileInFrontOfPlayer         0xCFC5   ; wTileInFrontOfPlayer (collision check result)
+%define wFontLoaded                  0xDD8F
+%define wWalkCounter                 0xDD90   ; wWalkCounter
+%define wTileInFrontOfPlayer         0xDD91   ; wTileInFrontOfPlayer (collision check result)
 
 ; Sprite-engine scratch WRAM — sym-verified.
-%define wSavedSpriteImageIndex       0xD5CC   ; wSavedSpriteImageIndex (PrepareOAMData scratch / VRAM base tile)
+%define wSavedSpriteImageIndex       0xE398   ; wSavedSpriteImageIndex (PrepareOAMData scratch / VRAM base tile)
 ; Bit indices for wMovementFlags (pret: constants/ram_constants.asm)
 %define BIT_STANDING_ON_DOOR         0   ; set by warp arrival; triggers auto-walk-off
 %define BIT_EXITING_DOOR             1   ; set by PlayerStepOutFromDoor (door tile); player is auto-walking off door
@@ -1404,32 +1413,32 @@
 %define BIT_SCRIPTED_MOVEMENT_STATE  7   ; simulated joypad active (door exit / scripted walk)
 
 ; Map-tileset copies
-%define wUnusedCurMapTilesetCopy     0xD118   ; wUnusedCurMapTilesetCopy
-%define wWalkBikeSurfStateCopy       0xD119   ; = wWalkBikeSurfStateCopy (pret name)
+%define wUnusedCurMapTilesetCopy     0xDEE4   ; wUnusedCurMapTilesetCopy
+%define wWalkBikeSurfStateCopy       0xDEE5   ; = wWalkBikeSurfStateCopy (pret name)
 
 ; Joypad/input control
                                           ; (golden 00:cd6b; was wrongly 0xCCB7 — inside the 180-byte
                                           ;  wNPCMovementDirections buffer, clobbered by scripted moves)
-%define wSimulatedJoypadStatesEnd    0xCCD3   ; wSimulatedJoypadStatesEnd — PAD_* byte queued by scripts
+%define wSimulatedJoypadStatesEnd    0xD81F   ; wSimulatedJoypadStatesEnd — PAD_* byte queued by scripts
                                           ; (golden sym 00:ccd3; was wrongly 0xCC5B, colliding with
                                           ;  wNPCMovementDirections so MoveSprite zeroed step[0] — OW-2.2 fix)
-%define wSimulatedJoypadStatesIndex  0xCD38   ; wSimulatedJoypadStatesIndex — steps remaining (0=done)
+%define wSimulatedJoypadStatesIndex  0xD884   ; wSimulatedJoypadStatesIndex — steps remaining (0=done)
                                           ; (golden 00:cd38; was wrongly 0xCC84 — inside wNPCMovementDirections)
-%define wUnusedSimulatedJoypadStatesMask 0xCD39   ; wUnusedSimulatedJoypadStatesMask (golden 00:cd39)
+%define wUnusedSimulatedJoypadStatesMask 0xD885   ; wUnusedSimulatedJoypadStatesMask (golden 00:cd39)
                                           ; Written (zeroed) by ItemUseSurfboard's .makePlayerMoveForward and
                                           ; never read — "Unused" is pret's own name for it, not a port note.
                                           ; Kept because the write is part of the routine's WRAM footprint and
                                           ; the golden compares it.
-%define wIgnoreInputCounter          0xD139   ; wIgnoreInputCounter — counts down 30→0; clears BIT_DISABLE_JOYPAD
+%define wIgnoreInputCounter          0xDF05   ; wIgnoreInputCounter — counts down 30→0; clears BIT_DISABLE_JOYPAD
 
 ; Current-map script flags
-%define wCurrentMapScriptFlags       0xD125   ; wCurrentMapScriptFlags
+%define wCurrentMapScriptFlags       0xDEF1   ; wCurrentMapScriptFlags
 
 ; Letter-printing delay and text speed options (text engine)
 ; Pret ref: constants/ram_constants.asm, engine/menus/main_menu.asm:InitOptions
-%define wInitListType                0xD11A   ; pret sym d11a; InitList's selector (engine/battle/misc.asm)
-%define wItemPrices                  0xCF8E   ; pret sym cf8e; InitList stashes the ItemPrices pointer here
-%define wOptions                     0xD354   ; pret-name alias (bit 6 = battle style, 7 = battle anim)
+%define wInitListType                0xDEE6   ; pret sym d11a; InitList's selector (engine/battle/misc.asm)
+%define wItemPrices                  0xDD5A   ; pret sym cf8e; InitList stashes the ItemPrices pointer here
+%define wOptions                     0xE120   ; pret-name alias (bit 6 = battle style, 7 = battle anim)
 
 ; wOptions high-bit indices (pret ref: constants/ram_constants.asm BIT_BATTLE_*)
 %define BIT_BATTLE_SHIFT             6   ; 0=SHIFT, 1=SET battle style
@@ -1439,8 +1448,8 @@
 ; Menus S6 package D (options) — sym-verified (origin/symbols:pokeyellow.sym).
 ; wOptionsCursorLocation is another lane of the 0xCD3D scratch union (aliases the
 ; badge/HoF/field-move/swap bytes; the OPTION menu is modal, never concurrent).
-%define wOptionsCursorLocation       0xCD3D   ; highlighted OPTION row (0..7)
-%define wPrinterSettings             0xD497   ; GB-Printer brightness value (stored, not sent)
+%define wOptionsCursorLocation       0xD889   ; highlighted OPTION row (0..7)
+%define wPrinterSettings             0xE263   ; GB-Printer brightness value (stored, not sent)
 
 ; wLetterPrintingDelayFlags bit indices
 %define BIT_FAST_TEXT_DELAY          0   ; 1=read speed from wOptions; 0=always 1 frame/char
@@ -1456,114 +1465,114 @@
 %define TEXT_DELAY_MASK              0x0F   ; bits 3-0 of wOptions hold text speed
 
 ; Current map identity
-%define W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR 0xD35E   ; wCurrentTileBlockMapViewPointer (2 bytes)
+%define W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR 0xE12A   ; wCurrentTileBlockMapViewPointer (2 bytes)
 %ifndef wNewTileBlockID
-%define wNewTileBlockID              0xD09E   ; wNewTileBlockID (golden 00:d09e; ReplaceTileBlock)
+%define wNewTileBlockID              0xDE6A   ; wNewTileBlockID (golden 00:d09e; ReplaceTileBlock)
 %endif
 %ifndef wBoulderSpriteIndex
-%define wBoulderSpriteIndex          0xD717   ; golden 00:d717 (boulder push subsystem)
+%define wBoulderSpriteIndex          0xE4E3   ; golden 00:d717 (boulder push subsystem)
 %endif
 %ifndef wNumSprites
-%define wNumSprites                  0xD4E0   ; golden 00:d4e0 (dup: overworld.asm, home/overworld.asm)
+%define wNumSprites                  0xE2AC   ; golden 00:d4e0 (dup: overworld.asm, home/overworld.asm)
 %endif
-%define wTextPredefFlag              0xCF11   ; BIT_TEXT_PREDEF gates PrintPredefTextID text table
-%define wSpriteIndex                 0xCF13   ; DisplayTextID stores hTextID/hSpriteIndex here
-%define wItemList                    0xCF7A   ; mart item-list scratch
-%define wItemListPointer             0xD127   ; big-endian pointer to current mart item list
-%define wYCoord                      0xD360   ; wYCoord (player map Y, in tiles)
-%define wXCoord                      0xD361   ; wXCoord (player map X, in tiles)
-%define wYBlockCoord                 0xD362   ; wYBlockCoord
-%define wXBlockCoord                 0xD363   ; wXBlockCoord
-%define W_D433                       0xD433   ; wd433 — Pikachu collision direction (set by sprite collision engine)
+%define wTextPredefFlag              0xDCDD   ; BIT_TEXT_PREDEF gates PrintPredefTextID text table
+%define wSpriteIndex                 0xDCDF   ; DisplayTextID stores hTextID/hSpriteIndex here
+%define wItemList                    0xDD46   ; mart item-list scratch
+%define wItemListPointer             0xDEF3   ; big-endian pointer to current mart item list
+%define wYCoord                      0xE12C   ; wYCoord (player map Y, in tiles)
+%define wXCoord                      0xE12D   ; wXCoord (player map X, in tiles)
+%define wYBlockCoord                 0xE12E   ; wYBlockCoord
+%define wXBlockCoord                 0xE12F   ; wXBlockCoord
+%define W_D433                       0xE1FF   ; wd433 — Pikachu collision direction (set by sprite collision engine)
 ; --- Overworld-Pikachu WRAM block (OW-A.11: promoted from pikachu.asm file-local placeholders).
 ; pokeyellow-real addresses, consistent with the existing Pikachu symbols here (W_D433,
 ; wPikachuHappiness $D46F, wPikachuMood $D470). Absolute anchoring rides the deferred gb_memmap
 ; Red-vs-Yellow decision (see memory gb_memmap-anchoring); the block is internally consistent
 ; (correct relative offsets) so it moves as a unit if the layout is ever re-anchored.
-%define wPikachuOverworldStateFlags  0xD42F   ; bit1=following, bit2=moved, bit3=draw-disabled, bit5/7=hide
-%define wPikachuSpawnState           0xD430   ; where/how Pikachu (re)spawns next (golden 00:d430; promoted from player_animations.asm local, OW-A.6)
-%define wPikachuCollisionCounter     0xD434   ; post-turn grace frames before Pikachu-collision reactions (golden 00:d434)
+%define wPikachuOverworldStateFlags  0xE1FB   ; bit1=following, bit2=moved, bit3=draw-disabled, bit5/7=hide
+%define wPikachuSpawnState           0xE1FC   ; where/how Pikachu (re)spawns next (golden 00:d430; promoted from player_animations.asm local, OW-A.6)
+%define wPikachuCollisionCounter     0xE200   ; post-turn grace frames before Pikachu-collision reactions (golden 00:d434)
 ; Pikachu follow-command ring, pret ram/wram.asm:2022-2023. Addresses read from
 ; pokeyellow.sym, not inferred. Promoted here 2026-08-18 from nine file-local
 ; `equ`s that each re-typed the same address.
-%define wPikachuFollowCommandBufferSize 0xD436
-%define wPikachuFollowCommandBuffer  0xD437   ; ds 16
-%define wd435                        0xD435   ; golden 00:d435; unnamed in pret. Set to $ff by
+%define wPikachuFollowCommandBufferSize 0xE202
+%define wPikachuFollowCommandBuffer  0xE203   ; ds 16
+%define wd435                        0xE201   ; golden 00:d435; unnamed in pret. Set to $ff by
                                         ; IsSpriteInFrontOfPlayer when the sprite faced is Pikachu.
-%define wExpressionNumber            0xD447   ; pret ram/wram.asm:2025
-%define wPikaPicAnimNumber           0xD448   ; pret ram/wram.asm:2026
+%define wExpressionNumber            0xE213   ; pret ram/wram.asm:2025
+%define wPikaPicAnimNumber           0xE214   ; pret ram/wram.asm:2026
 
-%define wPikachuMovementScriptBank   0xD449   ; ROM bank of the active Pikachu movement script
-%define wPikachuMovementScriptAddress 0xD44A   ; dw: cursor into the movement script
+%define wPikachuMovementScriptBank   0xE215   ; ROM bank of the active Pikachu movement script
+%define wPikachuMovementScriptAddress 0xE216   ; dw: cursor into the movement script
 %define wSpritePikachuStateData1MovementStatus 0xC1F1   ; slot-15 data1+1 (wSpriteStateData1 $C100 + 15*$10 +1)
 %define wSpritePikachuStateData1ImageIndex 0xC1F2   ; slot-15 data1+2 ($ff = off screen/hidden)
-%define wLastMap                     0xD364   ; wLastMap
+%define wLastMap                     0xE130   ; wLastMap
 
 ; Fixed map header (wCurMapHeader = wCurMapTileset at $D366)
 ; This is a contiguous 10-byte region that LoadMapHeader copies into from the ROM header.
 ; Layout: tileset(1) + height(1) + width(1) + dataptr(2) + textptr(2) + scriptptr(2) + connections(1)
-%define wCurMapHeader                0xD366   ; wCurMapHeader (start of fixed header copy target)
+%define wCurMapHeader                0xE132   ; wCurMapHeader (start of fixed header copy target)
 %define BIT_NO_PREVIOUS_MAP          7   ; wCurMapTileset bit 7 (constants/ram_constants.asm) — set by save-load, LoadMapHeader res's it
-%define wCurMapHeight                0xD367   ; wCurMapHeight
-%define wCurMapWidth                 0xD368   ; wCurMapWidth
-%define wCurMapDataPtr               0xD369   ; wCurMapDataPtr (2 bytes, LE)
-%define wCurMapTextPtr               0xD36B
-%define wCurMapScriptPtr             0xD36D   ; wCurMapScriptPtr (2 bytes, LE)
-%define wCurMapConnections           0xD36F   ; wCurMapConnections (NORTH|SOUTH|WEST|EAST bits)
-%define wCurMapHeaderEnd             0xD370   ; wCurMapHeaderEnd (byte after connections)
+%define wCurMapHeight                0xE133   ; wCurMapHeight
+%define wCurMapWidth                 0xE134   ; wCurMapWidth
+%define wCurMapDataPtr               0xE135   ; wCurMapDataPtr (2 bytes, LE)
+%define wCurMapTextPtr               0xE137
+%define wCurMapScriptPtr             0xE139   ; wCurMapScriptPtr (2 bytes, LE)
+%define wCurMapConnections           0xE13B   ; wCurMapConnections (NORTH|SOUTH|WEST|EAST bits)
+%define wCurMapHeaderEnd             0xE13C   ; wCurMapHeaderEnd (byte after connections)
 %define W_CUR_MAP_HEADER_SIZE        (wCurMapHeaderEnd - wCurMapHeader)   ; = 10 bytes
 
 ; lowercase aliases (pret-faithful wild-encounter / battle drafts)
-%define wCurMap                      0xD35D   ; = wCurMap
-%define wCurMapTileset               0xD366   ; = wCurMapTileset
+%define wCurMap                      0xE129   ; = wCurMap
+%define wCurMapTileset               0xE132   ; = wCurMapTileset
 
 ; --- wild encounter WRAM (sym-pinned, origin/symbols:pokeyellow.sym) ---
 ; wGrassMons/wWaterMons each hold WILDDATA_LENGTH-1 (=20) bytes: 10×(level,species).
-%define wGrassRate                   0xD886
-%define wGrassMons                   0xD887
-%define wWaterRate                   0xD8A3
-%define wWaterMons                   0xD8A4
-%define wRepelRemainingSteps         0xD0DA
-%define wMoves                       0xD0DB   ; 4 move ids for FormatMovesString
-%define wMoveNum                     0xD0DF
-%define wMovesString                 0xD0E0   ; NUM_MOVES*MOVE_NAME_LENGTH (56), <NEXT>-joined
-%define wNPCMovementScriptPointerTableNum 0xCC57
-%define wMovementFlags               0xD735
-%define wStringBuffer                0xCF4A   ; PrintStatText destination (Stage 5)
-%define wGrassTile                   0xD534   ; = wGrassTile (tall-grass tile id)
-%define wPartyMon1Level              0xD18B   ; lead party mon level (repel check)
-%define wNameListIndex               0xD0B4   ; selected name id (GetName input; sym)
+%define wGrassRate                   0xE652
+%define wGrassMons                   0xE653
+%define wWaterRate                   0xE66F
+%define wWaterMons                   0xE670
+%define wRepelRemainingSteps         0xDEA6
+%define wMoves                       0xDEA7   ; 4 move ids for FormatMovesString
+%define wMoveNum                     0xDEAB
+%define wMovesString                 0xDEAC   ; NUM_MOVES*MOVE_NAME_LENGTH (56), <NEXT>-joined
+%define wNPCMovementScriptPointerTableNum 0xD7A3
+%define wMovementFlags               0xE501
+%define wStringBuffer                0xDD16   ; PrintStatText destination (Stage 5)
+%define wGrassTile                   0xE300   ; = wGrassTile (tall-grass tile id)
+%define wPartyMon1Level              0xDF57   ; lead party mon level (repel check)
+%define wNameListIndex               0xDE80   ; selected name id (GetName input; sym)
 ; --- name lookup (GetName / NamePointers; sym-pinned) ---
-%define wNameListType                0xD0B5   ; which NamePointers list (MONSTER_NAME..TRAINER_NAME)
-%define wPredefBank                  0xD0B6   ; ROM bank of the name list (flat port: ignored)
-%define wNamedObjectIndex            0xD11D   ; resolved name index (=wPokedexNum/wMoveType union)
-%define wNameBuffer                  0xCD6D   ; NAME_BUFFER_LENGTH dest (=wMoveData scratch union)
-%define wUnusedNamePointer           0xCF8C   ; faithful: GetName stores last name ptr here
-%define wPalletTownCurScript         0xD5F0   ; Pallet Town _Script state index (sym)
-%define wAutoTextBoxDrawingControl   0xCF0C   ; bit BIT_NO_AUTO_TEXT_BOX: 0=auto-draw boxes
-%define wDoNotWaitForButtonPressAfterDisplayingText 0xCC3C
-%define wStatusFlags7                0xD732   ; = wStatusFlags7 (BIT_TEST_BATTLE)
-%define wTestBattlePlayerSelectedMove 0xCCD9   ; debug TestBattle forced move
+%define wNameListType                0xDE81   ; which NamePointers list (MONSTER_NAME..TRAINER_NAME)
+%define wPredefBank                  0xDE82   ; ROM bank of the name list (flat port: ignored)
+%define wNamedObjectIndex            0xDEE9   ; resolved name index (=wPokedexNum/wMoveType union)
+%define wNameBuffer                  0xD8B9   ; NAME_BUFFER_LENGTH dest (=wMoveData scratch union)
+%define wUnusedNamePointer           0xDD58   ; faithful: GetName stores last name ptr here
+%define wPalletTownCurScript         0xE3BC   ; Pallet Town _Script state index (sym)
+%define wAutoTextBoxDrawingControl   0xDCD8   ; bit BIT_NO_AUTO_TEXT_BOX: 0=auto-draw boxes
+%define wDoNotWaitForButtonPressAfterDisplayingText 0xD788
+%define wStatusFlags7                0xE4FE   ; = wStatusFlags7 (BIT_TEST_BATTLE)
+%define wTestBattlePlayerSelectedMove 0xD825   ; debug TestBattle forced move
 
 ; --- Sprite (mon-pic) decompressor scratch (home/uncompress.asm) ---
 ; The 20-byte decompressor var block sits immediately before wCurSpecies ($D0B4)
 ; in pret's wram.asm (10 bytes + 5 words). Derived: $D0B4 - 0x14 = $D0A0; the block
 ; ends exactly at wCurSpecies (verifies the count). $D0A0-$D0B3 is otherwise unused.
-%define wSpriteCurPosX               0xD0A0
-%define wSpriteCurPosY               0xD0A1
-%define wSpriteWidth                 0xD0A2   ; pixels (tiles*8)
-%define wSpriteHeight                0xD0A3   ; pixels (tiles*8)
-%define wSpriteInputCurByte          0xD0A4
-%define wSpriteInputBitCounter       0xD0A5
-%define wSpriteOutputBitOffset       0xD0A6   ; 3..0 → which 2-bit column of the output byte
-%define wSpriteLoadFlags             0xD0A7   ; bit0 = use buffer2, bit1 = last chunk
-%define wSpriteUnpackMode            0xD0A8
-%define wSpriteFlipped               0xD0A9
-%define wSpriteInputPtr              0xD0AA   ; dw
-%define wSpriteOutputPtr             0xD0AC   ; dw
-%define wSpriteOutputPtrCached       0xD0AE   ; dw
-%define wSpriteDecodeTable0Ptr       0xD0B0   ; dw
-%define wSpriteDecodeTable1Ptr       0xD0B2   ; dw
+%define wSpriteCurPosX               0xDE6C
+%define wSpriteCurPosY               0xDE6D
+%define wSpriteWidth                 0xDE6E   ; pixels (tiles*8)
+%define wSpriteHeight                0xDE6F   ; pixels (tiles*8)
+%define wSpriteInputCurByte          0xDE70
+%define wSpriteInputBitCounter       0xDE71
+%define wSpriteOutputBitOffset       0xDE72   ; 3..0 → which 2-bit column of the output byte
+%define wSpriteLoadFlags             0xDE73   ; bit0 = use buffer2, bit1 = last chunk
+%define wSpriteUnpackMode            0xDE74
+%define wSpriteFlipped               0xDE75
+%define wSpriteInputPtr              0xDE76   ; dw
+%define wSpriteOutputPtr             0xDE78   ; dw
+%define wSpriteOutputPtrCached       0xDE7A   ; dw
+%define wSpriteDecodeTable0Ptr       0xDE7C   ; dw
+%define wSpriteDecodeTable1Ptr       0xDE7E   ; dw
 
 ; Sprite buffers + save SRAM — pret ram/sram.asm, with port-resident banks.
 ; DEVIATION{class=banking; pret=ram/sram.asm:sGameData; behavior=SRAM banks 1 through 3 are resident at fixed EBP-relative offsets above the GB window rather than switched through A000-BFFF; evidence=current_plan_sram_pc_storage resident SRAM design and audited CopyData destination truncation require full 32-bit SRAM addresses; lifetime=permanent flat SRAM model}
@@ -1651,68 +1660,68 @@
 %define sBank3IndividualBoxChecksums_SIZE 0x0006
 
 ; Connection-strip headers (each 11 bytes: map, strip-src, strip-dst, length, map-width, Y-align, X-align, view-ptr)
-%define wNorthConnectedMap           0xD370   ; wNorthConnectedMap ($FF = none)
-%define W_SOUTH_CONNECTED_MAP        0xD37B   ; wSouthConnectedMap
-%define W_WEST_CONNECTED_MAP         0xD386   ; wWestConnectedMap
-%define W_EAST_CONNECTED_MAP         0xD391   ; wEastConnectedMap
+%define wNorthConnectedMap           0xE13C   ; wNorthConnectedMap ($FF = none)
+%define W_SOUTH_CONNECTED_MAP        0xE147   ; wSouthConnectedMap
+%define W_WEST_CONNECTED_MAP         0xE152   ; wWestConnectedMap
+%define W_EAST_CONNECTED_MAP         0xE15D   ; wEastConnectedMap
 
 ; Sprite/object data
-%define wSpriteSet                   0xD39C   ; wSpriteSet (SPRITE_SET_LENGTH = 11 bytes, precedes wSpriteSetID)
-%define wSpriteSetID                 0xD3A7   ; wSpriteSetID
-%define W_OBJECT_DATA_PTR_TEMP       0xD3A8   ; wObjectDataPointerTemp (2 bytes)
+%define wSpriteSet                   0xE168   ; wSpriteSet (SPRITE_SET_LENGTH = 11 bytes, precedes wSpriteSetID)
+%define wSpriteSetID                 0xE173   ; wSpriteSetID
+%define W_OBJECT_DATA_PTR_TEMP       0xE174   ; wObjectDataPointerTemp (2 bytes)
 
 ; Map object header (follows connections in object data)
-%define wMapBackgroundTile           0xD3AC   ; wMapBackgroundTile (border block ID for wOverworldMap)
-%define wNumberOfWarps               0xD3AD   ; wNumberOfWarps
-%define wWarpEntries                 0xD3AE   ; wWarpEntries (MAX_WARP_EVENTS * 4 bytes max)
-%define wDestinationWarpID           0xD42E   ; pret alias of wDestinationWarpID
-%define wUnknownSerialFlag_d499      0xD499   ; GB-Stadium-link flag; restricts Sleep counter reroll range when set (0 on real HW/this port)
+%define wMapBackgroundTile           0xE178   ; wMapBackgroundTile (border block ID for wOverworldMap)
+%define wNumberOfWarps               0xE179   ; wNumberOfWarps
+%define wWarpEntries                 0xE17A   ; wWarpEntries (MAX_WARP_EVENTS * 4 bytes max)
+%define wDestinationWarpID           0xE1FA   ; pret alias of wDestinationWarpID
+%define wUnknownSerialFlag_d499      0xE264   ; GB-Stadium-link flag; restricts Sleep counter reroll range when set (0 on real HW/this port)
 
 ; Sign/BG event data
-%define wNumSigns                    0xD4AF   ; wNumSigns
-%define wSignCoords                  0xD4B0   ; wSignCoords (MAX_BG_EVENTS * 2 bytes: Y, X pairs)
-%define wSignTextIDs                 0xD4D0   ; wSignTextIDs (MAX_BG_EVENTS bytes)
+%define wNumSigns                    0xE27B   ; wNumSigns
+%define wSignCoords                  0xE27C   ; wSignCoords (MAX_BG_EVENTS * 2 bytes: Y, X pairs)
+%define wSignTextIDs                 0xE29C   ; wSignTextIDs (MAX_BG_EVENTS bytes)
 
 %define MAX_WARP_EVENTS              32
 %define MAX_BG_EVENTS                16
 
 ; Special-warp step offsets (incremented as the block-map pointer crosses
 ; block boundaries; faithful bookkeeping, not yet consumed by warp logic).
-%define wYOffsetSinceLastSpecialWarp 0xD4E1   ; wYOffsetSinceLastSpecialWarp
-%define wXOffsetSinceLastSpecialWarp 0xD4E2   ; wXOffsetSinceLastSpecialWarp
+%define wYOffsetSinceLastSpecialWarp 0xE2AD   ; wYOffsetSinceLastSpecialWarp
+%define wXOffsetSinceLastSpecialWarp 0xE2AE   ; wXOffsetSinceLastSpecialWarp
 
 ; Edge detection thresholds (height*2 / width*2) — used by CheckMapConnections
-%define wCurrentMapHeight2           0xD523   ; wCurrentMapHeight2 = wCurMapHeight * 2
-%define wCurrentMapWidth2            0xD524   ; wCurrentMapWidth2 = wCurMapWidth * 2
+%define wCurrentMapHeight2           0xE2EF   ; wCurrentMapHeight2 = wCurMapHeight * 2
+%define wCurrentMapWidth2            0xE2F0   ; wCurrentMapWidth2 = wCurMapWidth * 2
 
 ; Map-view VRAM pointer and player facing
-%define wMapViewVRAMPointer          0xD525   ; wMapViewVRAMPointer (Stage A Note: dropped/unused after native renderer)
-%define wPlayerMovingDirection       0xD527   ; wPlayerMovingDirection (PLAYER_DIR_*)
-%define wPlayerDirection             0xD529   ; wPlayerDirection (PLAYER_DIR_*)
+%define wMapViewVRAMPointer          0xE2F1   ; wMapViewVRAMPointer (Stage A Note: dropped/unused after native renderer)
+%define wPlayerMovingDirection       0xE2F3   ; wPlayerMovingDirection (PLAYER_DIR_*)
+%define wPlayerDirection             0xE2F5   ; wPlayerDirection (PLAYER_DIR_*)
 
 ; Active tileset WRAM (set from tileset header by LoadTilesetHeader)
 ; LoadTilesetHeader copies 11 bytes here from the tileset header table,
 ; then reads the 12th byte (animations) to hTileAnimations.
-%define wTilesetBank                 0xD52A   ; wTilesetBank (1 byte)
-%define wTilesetBlocksPtr            0xD52B   ; wTilesetBlocksPtr (2 bytes, LE)
-%define wTilesetGfxPtr               0xD52D   ; wTilesetGfxPtr   (2 bytes, LE)
-%define wTilesetCollisionPtr         0xD52F   ; wTilesetCollisionPtr (2 bytes, LE; passable-tile list)
-%define wTilesetTalkingOverTiles     0xD531   ; wTilesetTalkingOverTiles (3 bytes: counter tiles)
+%define wTilesetBank                 0xE2F6   ; wTilesetBank (1 byte)
+%define wTilesetBlocksPtr            0xE2F7   ; wTilesetBlocksPtr (2 bytes, LE)
+%define wTilesetGfxPtr               0xE2F9   ; wTilesetGfxPtr   (2 bytes, LE)
+%define wTilesetCollisionPtr         0xE2FB   ; wTilesetCollisionPtr (2 bytes, LE; passable-tile list)
+%define wTilesetTalkingOverTiles     0xE2FD   ; wTilesetTalkingOverTiles (3 bytes: counter tiles)
 ; NOTE: wTilesetGrassTile ($D534) is the same address as wGrassTile.
 ; LoadTilesetHeader copies it as part of the 11-byte block.
 %define W_TILESET_HEADER_COPY_SIZE   11   ; bytes copied from tileset header to wTilesetBank
 %define W_TILESET_HEADER_FULL_SIZE   12   ; full tileset header entry size (11 + animations)
 
 ; Walk/bike/surf state
-%define wWalkBikeSurfState           0xD6FF   ; = wWalkBikeSurfState (pret name)
+%define wWalkBikeSurfState           0xE4CB   ; = wWalkBikeSurfState (pret name)
 
-%define wUnusedCardKeyGateID         0xD71E   ; ItemUseCardKey's gate id (pret: "never checked")
+%define wUnusedCardKeyGateID         0xE4EA   ; ItemUseCardKey's gate id (pret: "never checked")
 
 ; Status flags (game-state bitfields)
-%define wStatusFlags1                0xD727   ; = wStatusFlags1 (pret name)
-%define wStatusFlags2                0xD72B   ; pret alias of wStatusFlags2
-%define wStatusFlags4                0xD72D   ; wStatusFlags4
-%define wElite4Flags                 0xD733   ; wElite4Flags
+%define wStatusFlags1                0xE4F3   ; = wStatusFlags1 (pret name)
+%define wStatusFlags2                0xE4F7   ; pret alias of wStatusFlags2
+%define wStatusFlags4                0xE4F9   ; wStatusFlags4
+%define wElite4Flags                 0xE4FF   ; wElite4Flags
 
 ; wStatusFlags bit indices (constants/ram_constants.asm) — consumed by EnterMap (OW-A.4).
 ; Some of these are ALSO defined (same value) in gb_constants.inc or under a local
@@ -2042,30 +2051,30 @@
 %define hDividend2                   0xFFE5   ; hDividend2
 %define hDivisor2                    0xFFE6   ; hDivisor2
 %define hQuotient2                   0xFFE7   ; hQuotient2
-%define wNPCMovementDirections       0xCC5B   ; wNPCMovementDirections (union base; sim-joypad end/dirs2 overlay it)
-%define wUnusedOverrideSimulatedJoypadStatesIndex 0xCD3A   ; wUnusedOverrideSimulatedJoypadStatesIndex (golden 00:cd3a; was 0xCC86)
-%define wOverrideSimulatedJoypadStatesMask 0xCD3B   ; wOverrideSimulatedJoypadStatesMask (golden 00:cd3b; was 0xCC87)
-%define wRLEByteCount                0xCCD2   ; wRLEByteCount
-%define wNPCNumScriptedSteps         0xCF0F   ; wNPCNumScriptedSteps
-%define wNPCMovementScriptFunctionNum 0xCF10   ; wNPCMovementScriptFunctionNum
-%define wNPCMovementScriptBank       0xCC58   ; wNPCMovementScriptBank (scripted-dispatch, macro-gated)
+%define wNPCMovementDirections       0xD7A7   ; wNPCMovementDirections (union base; sim-joypad end/dirs2 overlay it)
+%define wUnusedOverrideSimulatedJoypadStatesIndex 0xD886   ; wUnusedOverrideSimulatedJoypadStatesIndex (golden 00:cd3a; was 0xCC86)
+%define wOverrideSimulatedJoypadStatesMask 0xD887   ; wOverrideSimulatedJoypadStatesMask (golden 00:cd3b; was 0xCC87)
+%define wRLEByteCount                0xD81E   ; wRLEByteCount
+%define wNPCNumScriptedSteps         0xDCDB   ; wNPCNumScriptedSteps
+%define wNPCMovementScriptFunctionNum 0xDCDC   ; wNPCMovementScriptFunctionNum
+%define wNPCMovementScriptBank       0xD7A4   ; wNPCMovementScriptBank (scripted-dispatch, macro-gated)
 %define BIT_SCRIPTED_NPC_MOVEMENT    0   ; wStatusFlags5 bit — MoveSprite scripted NPC walk
 ; DoScriptedNPCMovement chain (OW-2.1) — pret engine/overworld/movement.asm
 %ifndef wNPCMovementDirections2
-%define wNPCMovementDirections2      0xCC97   ; 10-byte scripted-move direction buffer
+%define wNPCMovementDirections2      0xD7E3   ; 10-byte scripted-move direction buffer
                                           ; (golden sym 00:cc97 — unions with wNPCMovementDirections;
                                           ;  was wrongly 0xCF08. OW-2.2 fix)
 %endif
-%define wNPCMovementDirections2Index 0xCD37   ; = wUnusedLinkMenuByte (pret alias)
-%define wNPCMovementScriptSpriteOffset 0xCF17   ; sprite offset controlled by NPC move script
-%define wScriptedNPCWalkCounter      0xCF18   ; 8→0 per scripted step
+%define wNPCMovementDirections2Index 0xD883   ; = wUnusedLinkMenuByte (pret alias)
+%define wNPCMovementScriptSpriteOffset 0xDCE3   ; sprite offset controlled by NPC move script
+%define wScriptedNPCWalkCounter      0xDCE4   ; 8→0 per scripted step
 %define BIT_INIT_SCRIPTED_MOVEMENT   7   ; wStatusFlags4 bit 7 — scripted move initialised
 
 ; wDefaultPaletteCommand (golden sym 00:cf1b) — the SET_PAL_* command that
 ; RunDefaultPaletteCommand / SET_PAL_DEFAULT resolves to. pret's _RunPaletteCommand
 ; substitutes it for SET_PAL_DEFAULT; SetPal_Overworld / SetPal_Battle /
 ; SetPal_GameFreakIntro publish it (engine/gfx/palettes.asm).
-%define wDefaultPaletteCommand       0xCF1B
+%define wDefaultPaletteCommand       0xDCE7
 
 ; wOnSGB (golden sym 00:cf1a) — pret's "running on SGB (or CGB)" flag, published by
 ; LoadSGB. The port sets it to 1 in home/init.asm: the DOS port IS colour hardware
@@ -2073,7 +2082,7 @@
 ; (measured in mGBA on the golden ROM: hOnCGB=1 AND wOnSGB=1), so every wOnSGB
 ; branch takes the colour/SGB path. Files that also carry a local %ifndef fallback
 ; for this address now resolve it from here.
-%define wOnSGB                       0xCF1A
+%define wOnSGB                       0xDCE6
 
 ; FindPathToPlayer / CalcPositionOfPlayerRelativeToNPC (OW-2.2, pret engine/overworld/
 ; pathfinding.asm). HRAM addresses from golden sym (pret ram/hram.asm union at 0xFF95).
@@ -2093,12 +2102,12 @@
 %define BIT_PLAYER_LOWER_Y           0   ; hNPCPlayerRelativePosFlags bit 0 (target north)
 %define BIT_PLAYER_LOWER_X           1   ; hNPCPlayerRelativePosFlags bit 1 (target west)
 %ifndef wWhichPewterGuy
-%define wWhichPewterGuy              0xD12E   ; PewterGuys selector (golden 00:d12e; unions
+%define wWhichPewterGuy              0xDEFA   ; PewterGuys selector (golden 00:d12e; unions
                                           ; wDungeonWarpDataEntrySize/wGymGateTileBlock/wWhichPrizeWindow)
 %endif
 ; auto_movement.asm (OW-2.3) — Pallet Oak-walk / Pewter guide movement scripts
 %ifndef wNumStepsToTake
-%define wNumStepsToTake              0xCCA1   ; golden 00:cca1 (right after wNPCMovementDirections2)
+%define wNumStepsToTake              0xD7ED   ; golden 00:cca1 (right after wNPCMovementDirections2)
 %endif
 %ifndef NO_INPUT
 %define NO_INPUT                     0   ; constants/misc_constants.asm
@@ -2117,29 +2126,35 @@
 ; identical-value local placeholders (NASM allows same-value equ redef); these
 ; canonical defs are the single source of truth.
 ; ---------------------------------------------------------------------------
-%define wMenuWrappingEnabled         0xCADC   ; HandleMenuInput up/down wrap gate
-%define wMenuCursorLocation          0xCC30   ; dw — tile addr under the menu cursor (EraseMenuCursor)
-%define wMenuJoypadPollCount         0xCC34   ; menu input timeout countdown (0 = disabled)
-%define wMenuWatchMovingOutOfBounds  0xCC37   ; return up/down at list edge so caller can scroll
-%define wListPointer                 0xCF8A   ; dw — source list for DisplayListMenuID
-%define wCurListMenuItem             0xCF90   ; = wCurItem — id of highlighted list entry
-%define wPrintItemPrices             0xCF92   ; list menu: append item price column
-%define wListMenuID                  0xCF93   ; ITEMLISTMENU / MOVESLISTMENU / PRICED / PC-box
-%define wLoadedMonBoxLevel           0xCF9A   ; wLoadedMon + 3 (box_struct BoxLevel; pret sym cf9a).
+%define wMenuWrappingEnabled         0xD628   ; HandleMenuInput up/down wrap gate
+%define wMenuCursorLocation          0xD77C   ; dw — tile addr under the menu cursor (EraseMenuCursor)
+%define wMenuJoypadPollCount         0xD780   ; menu input timeout countdown (0 = disabled)
+%define wMenuWatchMovingOutOfBounds  0xD783   ; return up/down at list edge so caller can scroll
+%define wListPointer                 0xDD56   ; dw — source list for DisplayListMenuID
+%define wCurListMenuItem             0xDD5C   ; = wCurItem — id of highlighted list entry
+%define wPrintItemPrices             0xDD5E   ; list menu: append item price column
+%define wListMenuID                  0xDD5F   ; ITEMLISTMENU / MOVESLISTMENU / PRICED / PC-box
+%define wLoadedMonBoxLevel           0xDD66   ; wLoadedMon + 3 (box_struct BoxLevel; pret sym cf9a).
                                          ; Was 0xCFB3 (= wLoadedMon + 28, DV byte 2) until the
                                          ; bills_pc_ops golden caught the PC list printing a DV
                                          ; byte as the box level (want $0F got $76 at wLoadedMon
                                          ; level after the release-list entry print).
-%define wLoadedMonLevel              0xCFB8   ; loaded-mon level
-%define wIsKeyItem                   0xD123   ; set by IsKeyItem_ (list menu / toss)
-%define wTextBoxID                   0xD124   ; DisplayTextBoxID dispatcher selector
-%define wTwoOptionMenuID             0xD12B   ; YES_NO_MENU / WIDE_YES_NO / HEAL_CANCEL / ...
-%define wChosenMenuItem              0xD12C   ; menu result: chosen item index
-%define wMenuExitMethod              0xD12D   ; CHOSE_MENU_ITEM / CANCELLED_MENU
-; HRAM — swap-items scratch (root-allocated free bytes after hDivideBCDBuffer 0xFFA5-A7)
+%define wLoadedMonLevel              0xDD84   ; loaded-mon level
+%define wIsKeyItem                   0xDEEF   ; set by IsKeyItem_ (list menu / toss)
+%define wTextBoxID                   0xDEF0   ; DisplayTextBoxID dispatcher selector
+%define wTwoOptionMenuID             0xDEF7   ; YES_NO_MENU / WIDE_YES_NO / HEAL_CANCEL / ...
+%define wChosenMenuItem              0xDEF8   ; menu result: chosen item index
+%define wMenuExitMethod              0xDEF9   ; CHOSE_MENU_ITEM / CANCELLED_MENU
+; HRAM — swap-items scratch. AT PRET'S OWN ADDRESSES as of 2026-08-19: pret
+; unions hSwapItemID/hSwapItemQuantity with hDividend/hMultiplicand (0xFF95/96),
+; which is the original game's design and therefore proven safe by pret itself.
+; They were previously at 0xFFA9/0xFFAA, described as "root-allocated free bytes"
+; — those are hSerialReceivedNewData / hSerialConnectionStatus, and 0xFFA6-A7 are
+; inside hDivideBCDBuffer's extent, so neither was free. Declaration gaps are not
+; free space: check EXTENTS, and derive from pokeyellow.sym.
 %define hHalveItemPrices             0xFFA8   ; list_menu priced path
-%define hSwapItemID                  0xFFA9   ; item-list SELECT swap scratch
-%define hSwapItemQuantity            0xFFAA   ; item-list SELECT swap scratch
+%define hSwapItemID                  0xFF95   ; item-list SELECT swap scratch
+%define hSwapItemQuantity            0xFF96   ; item-list SELECT swap scratch
 ; ---------------------------------------------------------------------------
 ; Menus S2 (text_box / display_text_id_init) — pret ram/wram.asm + ram/hram.asm.
 ; wFieldMoves is golden-sym verified (00:cd3d): it shares the 0xCD3D+ scratch
@@ -2150,11 +2165,11 @@
 ; hFieldMoveMonMenuTopMenuItemX sits between hUILayoutFlags 0xFFFA and
 ; hPikachuSpriteVRAMOffset 0xFFFC.
 ; ---------------------------------------------------------------------------
-%define wFieldMoves                  0xCD3D   ; 4 bytes — current mon's field-move name indices (golden 00:cd3d)
-%define wNumFieldMoves               0xCD41   ; count of entries in wFieldMoves (golden 00:cd41)
-%define wFieldMovesLeftmostXCoord    0xCD42   ; GB X of leftmost field-move name (golden 00:cd42)
-%define wLastFieldMoveID             0xCD43   ; unused in pret (bookkeeping kept faithful; golden 00:cd43)
-%define wMiscFlags                   0xCD60   ; bit BIT_NO_SPRITE_UPDATES: skip UpdateSprites in DisplayTextIDInit
+%define wFieldMoves                  0xD889   ; 4 bytes — current mon's field-move name indices (golden 00:cd3d)
+%define wNumFieldMoves               0xD88D   ; count of entries in wFieldMoves (golden 00:cd41)
+%define wFieldMovesLeftmostXCoord    0xD88E   ; GB X of leftmost field-move name (golden 00:cd42)
+%define wLastFieldMoveID             0xD88F   ; unused in pret (bookkeeping kept faithful; golden 00:cd43)
+%define wMiscFlags                   0xD8AC   ; bit BIT_NO_SPRITE_UPDATES: skip UpdateSprites in DisplayTextIDInit
 ; wMiscFlags bits (constants/ram_constants.asm:9-15). The boulder bits are canonical
 ; here as of overworld-events Stage 4; push_boulder.asm's copies are %ifndef-guarded.
 %define BIT_BOULDER_DUST             1   ; boulder dust animation is running
@@ -2164,7 +2179,7 @@
 %define BIT_TURNING                  2   ; wMiscFlags bit — player is turning in place this frame (constants/ram_constants.asm)
 %define BIT_USING_GENERIC_PC         3   ; wMiscFlags bit — HoF/Bill's/generic PC hosts the menu (S6 pkg F)
 %define BIT_NO_MENU_BUTTON_SOUND     5   ; wMiscFlags bit — suppress the menu A-press SFX
-%define wParentMenuItem              0xCCD3   ; players_pc parent-menu selection (= wAddedToParty; sym-verified, S6 pkg F)
+%define wParentMenuItem              0xD81F   ; players_pc parent-menu selection (= wAddedToParty; sym-verified, S6 pkg F)
 %define hFieldMoveMonMenuTopMenuItemX 0xFFFB   ; GB X of the field-move menu cursor column
 
 ; ---------------------------------------------------------------------------
@@ -2184,9 +2199,9 @@
 ;   hPartyMonIndex aliases hTextID 0xFF8C (ram/hram.asm:19-21); hSwapTemp heads
 ;     the hExperience 0xFF96 union lane (ram/hram.asm:166-168).
 ; ---------------------------------------------------------------------------
-%define wSwitchPartyMonTempBuffer    0xCC97   ; 44 bytes — party-mon swap staging (union lane)
-%define wPartyMenuHPBarColors        0xCF1E   ; PARTY_LENGTH bytes — 0 green / 1 yellow / 2 red
-%define wWhichPartyMenuHPBar         0xCF2C   ; running index while RedrawPartyMenu_ colors bars
+%define wSwitchPartyMonTempBuffer    0xD7E3   ; 44 bytes — party-mon swap staging (union lane)
+%define wPartyMenuHPBarColors        0xDCEA   ; PARTY_LENGTH bytes — 0 green / 1 yellow / 2 red
+%define wWhichPartyMenuHPBar         0xDCF8   ; running index while RedrawPartyMenu_ colors bars
 ; The SGB BLK packet, and the CGB attribute buffer that IS the same bytes.
 ;
 ; ram/wram.asm:1256-1266 puts wCopyingSGBTileData / wWhichPartyMenuHPBar /
@@ -2203,11 +2218,11 @@
 ; reproduces itself for free — exactly as it does for wTrainerCardBadgeAttributes.
 ; Cross-check: the union's `ds 29` lane gives wStringBuffer = 0xCF2D + 29 =
 ; 0xCF4A, which is the address already recorded for it below.
-%define wPartyMenuBlkPacket          0xCF2D   ; $30 bytes — SGB BLK packet (union base)
-%define wPartyHPBarAttributes        0xCF36   ; = wPartyMenuBlkPacket + 9; PARTY_LENGTH entries, stride 6
-%define wPartyMenuTypeOrMessageID    0xD07C   ; NORMAL/USE_ITEM/BATTLE/TMHM/SWAP/EVO_STONE_PARTY_MENU
-%define wPartyMenuAnimMonEnabled     0xD09A   ; nonzero ($40) while the selected mon's icon animates
-%define wSwappedMenuItem             0xCD3D   ; = wChargeMoveNum union byte; SwitchPartyMon result
+%define wPartyMenuBlkPacket          0xDCF9   ; $30 bytes — SGB BLK packet (union base)
+%define wPartyHPBarAttributes        0xDD02   ; = wPartyMenuBlkPacket + 9; PARTY_LENGTH entries, stride 6
+%define wPartyMenuTypeOrMessageID    0xDE48   ; NORMAL/USE_ITEM/BATTLE/TMHM/SWAP/EVO_STONE_PARTY_MENU
+%define wPartyMenuAnimMonEnabled     0xDE66   ; nonzero ($40) while the selected mon's icon animates
+%define wSwappedMenuItem             0xD889   ; = wChargeMoveNum union byte; SwitchPartyMon result
 %define hPartyMonIndex               0xFF8C   ; = hTextID (ram/hram.asm union)
 %define hSwapTemp                    0xFF95   ; byte-swap scratch (overlaps hDividend lane)
 
@@ -2222,7 +2237,7 @@
 %define hMutateWX                    0xFF97   ; PredefShakeScreenHorizontally xor-walk state
 ; Also spelled W_DISABLE_VBLANK_WY_UPDATE locally in src/home/vblank.asm, which
 ; is the consumer (commit_shadow_regs skips the WY commit when nonzero).
-%define wDisableVBlankWYUpdate       0xD09F
+%define wDisableVBlankWYUpdate       0xDE6B
 
 ; ---------------------------------------------------------------------------
 ; Menus S6 package B (draw_badges) — trainer-card badge scratch. All four sit
@@ -2234,10 +2249,10 @@
 ; wObtainedBadges 0xD355 (sym-confirmed). DrawBadges writes every scratch byte
 ; before reading it, so the union overlap is safe.
 ; ---------------------------------------------------------------------------
-%define wBadgeNumberTile             0xCD3D   ; tile id of the badge number being drawn
-%define wBadgeNameTile               0xCD3E   ; first tile id of the name being drawn
-%define wBadgeOrFaceTiles            0xCD3F   ; ds NUM_BADGES+1 (+1 byte read by the back-shift)
-%define wTempObtainedBadgesBooleans  0xCD49   ; ds NUM_BADGES (0=not obtained, 1=obtained)
+%define wBadgeNumberTile             0xD889   ; tile id of the badge number being drawn
+%define wBadgeNameTile               0xD88A   ; first tile id of the name being drawn
+%define wBadgeOrFaceTiles            0xD88B   ; ds NUM_BADGES+1 (+1 byte read by the back-shift)
+%define wTempObtainedBadgesBooleans  0xD895   ; ds NUM_BADGES (0=not obtained, 1=obtained)
 
 ; ---------------------------------------------------------------------------
 ; Party-mon icons (engine/gfx/mon_icons.asm + the OAM writers pret keeps in
@@ -2251,11 +2266,11 @@
 ; wOAMBaseTile likewise aliases wStandingOnWarpPadOrHole / wGymTrashCanIndex (0xCD5B),
 ; exactly the union pret declares.
 ; ---------------------------------------------------------------------------
-%define wMonPartySpritesSavedOAM     0xCC5B   ; OBJ_SIZE * 4 * PARTY_LENGTH (96) — icon frame-1 copy
-%define wOAMBaseTile                 0xCD5B   ; = wStandingOnWarpPadOrHole (pret union)
-%define wSymmetricSpriteOAMAttributes 0xCD5C   ; WriteSymmetricMonPartySpriteOAM's X-flip toggle
-%define wMonPartySpriteSpecies       0xCD5D   ; WriteMonPartySpriteOAMBySpecies' input (naming screen)
-%define wAnimCounter                 0xD08A   ; V-blanks elapsed in the icon's current frame
+%define wMonPartySpritesSavedOAM     0xD7A7   ; OBJ_SIZE * 4 * PARTY_LENGTH (96) — icon frame-1 copy
+%define wOAMBaseTile                 0xD8A7   ; = wStandingOnWarpPadOrHole (pret union)
+%define wSymmetricSpriteOAMAttributes 0xD8A8   ; WriteSymmetricMonPartySpriteOAM's X-flip toggle
+%define wMonPartySpriteSpecies       0xD8A9   ; WriteMonPartySpriteOAMBySpecies' input (naming screen)
+%define wAnimCounter                 0xDE56   ; V-blanks elapsed in the icon's current frame
 
 ; ---------------------------------------------------------------------------
 ; Menus S6 package A (league_pc / oaks_pc) — Hall-of-Fame reader state. All
@@ -2266,86 +2281,86 @@
 ; The whole cluster is only live once the S7 save layer feeds LoadHallOfFameTeams;
 ; PKMNLeaguePC guards its team loop off while wNumHoFTeams==0, so it is dead now.
 ; ---------------------------------------------------------------------------
-%define wHallOfFame                  0xCC5B   ; ds HOF_TEAM (96) — current team's mon records
-%define wHoFMonSpecies               0xCD3D   ; = wHoFTeamIndex (union byte 0)
-%define wHoFTeamIndex                0xCD3D
-%define wHoFPartyMonIndex            0xCD3E
-%define wHoFMonLevel                 0xCD3F
-%define wHoFMonOrPlayer              0xCD40
-%define wHoFTeamIndex2               0xCD41
-%define wHoFTeamNo                   0xCD42
-%define wWholeScreenPaletteMonSpecies 0xCF1C   ; species for SET_PAL_POKEMON_WHOLE_SCREEN
-%define wNumHoFTeams                 0xD5A1   ; total recorded HoF teams (0 until S7)
+%define wHallOfFame                  0xD7A7   ; ds HOF_TEAM (96) — current team's mon records
+%define wHoFMonSpecies               0xD889   ; = wHoFTeamIndex (union byte 0)
+%define wHoFTeamIndex                0xD889
+%define wHoFPartyMonIndex            0xD88A
+%define wHoFMonLevel                 0xD88B
+%define wHoFMonOrPlayer              0xD88C
+%define wHoFTeamIndex2               0xD88D
+%define wHoFTeamNo                   0xD88E
+%define wWholeScreenPaletteMonSpecies 0xDCE8   ; species for SET_PAL_POKEMON_WHOLE_SCREEN
+%define wNumHoFTeams                 0xE36D   ; total recorded HoF teams (0 until S7)
 
 ; ---------------------------------------------------------------------------
 ; Wave 5 (home-rectification) — pokemon/item data (add_party_mon / add_mon /
 ; pokemon / give / money). Lowercase Dex aliases onto existing W_POKEDEX_*;
 ; new WRAM from pret ram/wram.asm chained off verified anchors.
 ; ---------------------------------------------------------------------------
-%define wPokedexOwned                0xD2F6   ; 0xD2F6 (lowercase alias)
-%define wPokedexSeen                 0xD309   ; 0xD309 (lowercase alias)
-%define wUnusedAlreadyOwnedFlag      0xD152   ; pret dead store (write-only)
-%define wEnemyMonNicks               0xD9ED   ; enemy party nicknames
+%define wPokedexOwned                0xE0C2   ; 0xD2F6 (lowercase alias)
+%define wPokedexSeen                 0xE0D5   ; 0xD309 (lowercase alias)
+%define wUnusedAlreadyOwnedFlag      0xDF1E   ; pret dead store (write-only)
+%define wEnemyMonNicks               0xE7B9   ; enemy party nicknames
 ; ClearVariablesOnEnterMap map-entry scratch (OW-1.1; sym-verified vs origin/symbols:pokeyellow.sym)
-%define wWhichTrade                  0xCD3D   ; (union w/ wDayCareStartLevel scratch region)
-%define wStandingOnWarpPadOrHole     0xCD5B   ; end of the FillMemory clear range from wWhichTrade
+%define wWhichTrade                  0xD889   ; (union w/ wDayCareStartLevel scratch region)
+%define wStandingOnWarpPadOrHole     0xD8A7   ; end of the FillMemory clear range from wWhichTrade
 ; Trade-animation exchange record ($CD3D, 30-byte UNION over the same scratch
 ; wWhichTrade lives in — pret ram/wram.asm:775-783). InGameTrade_PrepareTradeData
 ; fills it before the trade animation runs. Addresses read from pokeyellow.sym.
-%define wTradedPlayerMonSpecies      0xCD3D
-%define wTradedEnemyMonSpecies       0xCD3E
-%define wTradedPlayerMonOT           0xCD41   ; ds NAME_LENGTH
-%define wTradedPlayerMonOTID         0xCD4C   ; dw, big-endian as all GB IDs are
-%define wTradedEnemyMonOT            0xCD4E   ; ds NAME_LENGTH
-%define wTradedEnemyMonOTID          0xCD59   ; dw
-%define wCompletedInGameTradeFlags   0xD736   ; dw, one bit per TRADE_FOR_* constant
-%define wStepCounter                 0xD13A
-%define wNumberOfNoRandomBattleStepsLeft 0xD13B   ; EnterMap grants 3 on WILD_ENCOUNTER_COOLDOWN (promoted from wild_encounter_check.asm, OW-A.4)
-%define wUnusedMapVariable           0xD5A2
-%define wCardKeyDoorY                0xD73E
-%define wCardKeyDoorX                0xD73F   ; = wCardKeyDoorY + 1
-%define wWhichDungeonWarp            0xD71D   ; which dungeon warp in the source map was used
-%define wDayCareInUse                0xDA47   ; 1 = a mon is in the day-care (IncrementDayCareMonExp gate)
-%define wDayCareMonName              0xDA48   ; day-care mon nickname
-%define wDayCareMonOT                0xDA53   ; day-care mon OT name
-%define wPlayerCoins                 0xD5A3   ; Game Corner coins (BCD, dw)
+%define wTradedPlayerMonSpecies      0xD889
+%define wTradedEnemyMonSpecies       0xD88A
+%define wTradedPlayerMonOT           0xD88D   ; ds NAME_LENGTH
+%define wTradedPlayerMonOTID         0xD898   ; dw, big-endian as all GB IDs are
+%define wTradedEnemyMonOT            0xD89A   ; ds NAME_LENGTH
+%define wTradedEnemyMonOTID          0xD8A5   ; dw
+%define wCompletedInGameTradeFlags   0xE502   ; dw, one bit per TRADE_FOR_* constant
+%define wStepCounter                 0xDF06
+%define wNumberOfNoRandomBattleStepsLeft 0xDF07   ; EnterMap grants 3 on WILD_ENCOUNTER_COOLDOWN (promoted from wild_encounter_check.asm, OW-A.4)
+%define wUnusedMapVariable           0xE36E
+%define wCardKeyDoorY                0xE50A
+%define wCardKeyDoorX                0xE50B   ; = wCardKeyDoorY + 1
+%define wWhichDungeonWarp            0xE4E9   ; which dungeon warp in the source map was used
+%define wDayCareInUse                0xE813   ; 1 = a mon is in the day-care (IncrementDayCareMonExp gate)
+%define wDayCareMonName              0xE814   ; day-care mon nickname
+%define wDayCareMonOT                0xE81F   ; day-care mon OT name
+%define wPlayerCoins                 0xE36F   ; Game Corner coins (BCD, dw)
 %define hCoins                       0xFFA0   ; hCoins (dw; union w/ hMoney area)
 
 ; Lowercase pret-name aliases onto pre-existing UPPERCASE defs (CLAUDE.md: keep
 ; pret labels for cross-referenceability). engine/pokemon label-rename pass.
 %define hExperience                  0xFF96   ; 0xFF96 (alias of hProduct+1)
-%define wLoadedMonSpecies            0xCF97   ; 0xCF97
+%define wLoadedMonSpecies            0xDD63   ; 0xCF97
 %define wLoadedMonExp                (W_LOADED_MON_EXP)   ; 0xCFA5
-%define wUpdateSpritesEnabled        0xCFCA   ; 0xCFCA
+%define wUpdateSpritesEnabled        0xDD96   ; 0xCFCA
 
 ; engine/pokemon behavior layer (evolution/learn-move/status-screen). All
 ; sym-verified via origin/symbols:pokeyellow.sym; promoted from evolution.asm's
 ; in-file %ifndef self-aliases (docs/current_plan_pokemon_behavior.md Stage 0).
-%define wLoadedMonHP                 0xCF98   ; wLoadedMon + MON_HP
-%define wLoadedMonStatus             0xCF9B   ; wLoadedMon + MON_STATUS (PrintStatusCondition input)
-%define wLoadedMonHPExp              0xCFA8   ; wLoadedMon + MON_STAT_EXP (HP stat-exp)
-%define wLoadedMonMaxHP              0xCFB9   ; wLoadedMon + MON_MAXHP (first computed stat)
-%define wLoadedMonStats              0xCFB9   ; = wLoadedMonMaxHP (stats block starts at MaxHP)
+%define wLoadedMonHP                 0xDD64   ; wLoadedMon + MON_HP
+%define wLoadedMonStatus             0xDD67   ; wLoadedMon + MON_STATUS (PrintStatusCondition input)
+%define wLoadedMonHPExp              0xDD74   ; wLoadedMon + MON_STAT_EXP (HP stat-exp)
+%define wLoadedMonMaxHP              0xDD85   ; wLoadedMon + MON_MAXHP (first computed stat)
+%define wLoadedMonStats              0xDD85   ; = wLoadedMonMaxHP (stats block starts at MaxHP)
 ; Status/summary screen inputs (sym-verified vs origin/symbols; Stage 4).
-%define wLoadedMonMoves              0xCF9F   ; wLoadedMon + MON_MOVES (4 move ids)
-%define wLoadedMonOTID               0xCFA3   ; wLoadedMon + MON_OTID (2 bytes, big-endian)
-%define wLoadedMonAttack             0xCFBB   ; stats block: MaxHP,Atk,Def,Spd,Spc (2 bytes each)
-%define wLoadedMonDefense            0xCFBD
-%define wLoadedMonSpeed              0xCFBF
-%define wLoadedMonSpecial            0xCFC1
-%define wStatusScreenHPBarColor      0xCF24   ; GetHealthBarColor output (cosmetic; palette Phase 5)
-%define wStatusScreenCurrentPP       0xCD71   ; scratch: current move PP for StatusScreen2 PrintNumber
+%define wLoadedMonMoves              0xDD6B   ; wLoadedMon + MON_MOVES (4 move ids)
+%define wLoadedMonOTID               0xDD6F   ; wLoadedMon + MON_OTID (2 bytes, big-endian)
+%define wLoadedMonAttack             0xDD87   ; stats block: MaxHP,Atk,Def,Spd,Spc (2 bytes each)
+%define wLoadedMonDefense            0xDD89
+%define wLoadedMonSpeed              0xDD8B
+%define wLoadedMonSpecial            0xDD8D
+%define wStatusScreenHPBarColor      0xDCF0   ; GetHealthBarColor output (cosmetic; palette Phase 5)
+%define wStatusScreenCurrentPP       0xD8BD   ; scratch: current move PP for StatusScreen2 PrintNumber
 ; GetMaxPP scratch + per-source move lists (sym-verified vs origin/symbols; Stage 4).
-%define wPPUpCountAndMaxPP           0xCD73   ; = wMoveData + MOVE_PP + 1 (AddBonusPP work byte)
-%define wUsingPPUp                   0xD11D   ; (union wMaxPP/wPokedexNum scratch — see GetMaxPP order)
-%define wPartyMon1Moves              0xD172   ; party mon 0 move-id list (GetSelectedMoveOffset base)
-%define wBoxMon1Moves                0xDA9D
-%define wDayCareMonMoves             0xDA66
-%define wEvolutionOccurred           0xD120   ; set when a mon evolved this EvolutionAfterBattle
-%define wPikachuMood                 0xD470
-%define wPikachuSpawnStateFlags      0xD471   ; pret ram/wram.asm:2075 (golden 00:d471)
-%define wPikachuMapScriptFlags       0xD492
-%define wPikachuEmotionModifier      0xD49B
+%define wPPUpCountAndMaxPP           0xD8BF   ; = wMoveData + MOVE_PP + 1 (AddBonusPP work byte)
+%define wUsingPPUp                   0xDEE9   ; (union wMaxPP/wPokedexNum scratch — see GetMaxPP order)
+%define wPartyMon1Moves              0xDF3E   ; party mon 0 move-id list (GetSelectedMoveOffset base)
+%define wBoxMon1Moves                0xE869
+%define wDayCareMonMoves             0xE832
+%define wEvolutionOccurred           0xDEEC   ; set when a mon evolved this EvolutionAfterBattle
+%define wPikachuMood                 0xE23C
+%define wPikachuSpawnStateFlags      0xE23D   ; pret ram/wram.asm:2075 (golden 00:d471)
+%define wPikachuMapScriptFlags       0xE25E
+%define wPikachuEmotionModifier      0xE267
 
 ; ---------------------------------------------------------------------------
 ; Trainer-header / trainer-sight / emotion-bubble / toggleable-object scratch.
@@ -2367,12 +2382,12 @@
 ;     the route3_sight golden caught the first). With the scaffold gone, the pret
 ;     name reaches the real array again — do not redefine it here.
 ; ---------------------------------------------------------------------------
-%define wJoyIgnore                   0xCD6B   ; golden 00:cd6b (pret alias)
-%define wStatusFlags3                0xD72C   ; golden 00:d72c (pret alias)
-%define wEventFlags                  0xD746   ; golden 00:d746 (pret alias)
-%define wCurMapScript                0xDA38   ; golden 00:da38
-%define wTrainerHeaderFlagBit        0xCC55   ; golden 00:cc55
-%define wEnemyMonOrTrainerClass      0xD712   ; golden 00:d712 — pret keeps this as a copy
+%define wJoyIgnore                   0xD8B7   ; golden 00:cd6b (pret alias)
+%define wStatusFlags3                0xE4F8   ; golden 00:d72c (pret alias)
+%define wEventFlags                  0xE512   ; golden 00:d746 (pret alias)
+%define wCurMapScript                0xE804   ; golden 00:da38
+%define wTrainerHeaderFlagBit        0xD7A1   ; golden 00:cc55
+%define wEnemyMonOrTrainerClass      0xE4DE   ; golden 00:d712 — pret keeps this as a copy
                                            ;  SEPARATE from wCurOpponent precisely because
                                            ;  wCurOpponent is cleared before
                                            ;  EndTrainerBattle reads the class back
@@ -2380,29 +2395,44 @@
 ; pointer keeps its golden base; lose/bank shift by the +2/+4 widening. All three
 ; land in the golden gap d08b..d094 (wOptionsInitialized 0xD089,
 ; wSlotMachineAllowMatchesCounter 0xD095 — no overlap).
-%define wEndBattleWinTextPointer     0xD08B   ; golden 00:d08b (dw)   ** flat-adapted: 4 bytes **
-%define wEndBattleLoseTextPointer    0xD08F   ; golden 00:d08d +2     ** flat-adapted: 4 bytes **
-%define wEndBattleTextRomBank        0xD093   ; golden 00:d091 +2
-%define wGymCityName                 0xCF5E   ; golden 00:cf5e
-%define wGymLeaderName               0xCF6F   ; golden 00:cf6f
-%define wToggleableObjectIndex       0xCC4D   ; golden 00:cc4d
-%define wToggleableObjectList        0xD5CD   ; golden 00:d5cd (ds 16*2+1)
+; PORT-ONLY placement, above the expanded WRAM (2026-08-19). These three are
+; flat-adapted (dw -> dd, 4 bytes each), so the trio needs 9 bytes where pret uses
+; 5 and CANNOT sit in pret's own gap: the previous placement collided with
+; wSubAnimAddrPtr (pret 0xD093), which the old comment's "no overlap" claim missed
+; because it checked only the two neighbours its author thought of. A widening
+; needs port-only space, not a pret gap.
+; --- port-only scratch (audio shims + a few overworld temporaries) ---
+; These were raw `[ebp + 0xD1E0]`-style LITERALS sitting in pret WRAM slack:
+; addresses with no pret symbol of their own, which looked free. Under the WRAM
+; expansion the shifted pret data moves INTO that slack, so they had to become
+; symbolic and move above the expanded WRAM. Offsets keep their old relative
+; layout (old base 0xD1E0), so no consumer had to change beyond the base.
+%define W_PORT_SCRATCH               0xF500   ; 124 B, ends 0xF57B
+%define W_PORT_SCRATCH_SIZE          0x7C
+
+%define wEndBattleWinTextPointer     0xF400   ; ** flat-adapted: 4 bytes **
+%define wEndBattleLoseTextPointer    0xF404   ; ** flat-adapted: 4 bytes **
+%define wEndBattleTextRomBank        0xF408
+%define wGymCityName                 0xDD2A   ; golden 00:cf5e
+%define wGymLeaderName               0xDD3B   ; golden 00:cf6f
+%define wToggleableObjectIndex       0xD799   ; golden 00:cc4d
+%define wToggleableObjectList        0xE399   ; golden 00:d5cd (ds 16*2+1)
 ; golden 00:d032, but the flat dd widening (4 bytes) would overlap wLearnMoveMonName
 ; (0xD035); the port keeps its slot in the free d048..d04b gap (wTrainerBaseMoney
 ; 0xD045 word below, wIsInBattle 0xD056 above — no overlap).
-%define wTrainerPicPointer           0xD048   ; port flat slot ** flat-adapted: 4 bytes **
+%define wTrainerPicPointer           0xDE14   ; port flat slot ** flat-adapted: 4 bytes **
 ; Trainer-sight / emotion scratch — the shared 0xCD3D+ union (slot-machine / HoF /
 ; badges / options), golden-sym verified 2026-07-09. The earlier guesses put the
 ; union base at 0xCD37, uniformly 6/7 bytes low, colliding with
 ; wNPCMovementDirections2Index and the sim-joypad control bytes.
-%define wTrainerSpriteOffset         0xCD3D   ; golden 00:cd3d
-%define wTrainerEngageDistance       0xCD3E   ; golden 00:cd3e
-%define wTrainerFacingDirection      0xCD3F   ; golden 00:cd3f
-%define wTrainerScreenY              0xCD40   ; golden 00:cd40
-%define wTrainerScreenX              0xCD41   ; golden 00:cd41
-%define wEmotionBubbleSpriteIndex    0xCD4F   ; golden 00:cd4f
-%define wWhichEmotionBubble          0xCD50   ; golden 00:cd50
-%define wSlotMachineBet              0xCD50   ; golden 00:cd50 — same union lane as the above
+%define wTrainerSpriteOffset         0xD889   ; golden 00:cd3d
+%define wTrainerEngageDistance       0xD88A   ; golden 00:cd3e
+%define wTrainerFacingDirection      0xD88B   ; golden 00:cd3f
+%define wTrainerScreenY              0xD88C   ; golden 00:cd40
+%define wTrainerScreenX              0xD88D   ; golden 00:cd41
+%define wEmotionBubbleSpriteIndex    0xD89B   ; golden 00:cd4f
+%define wWhichEmotionBubble          0xD89C   ; golden 00:cd50
+%define wSlotMachineBet              0xD89C   ; golden 00:cd50 — same union lane as the above
 
 
 ; ---------------------------------------------------------------------------
