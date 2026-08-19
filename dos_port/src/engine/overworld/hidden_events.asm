@@ -40,19 +40,19 @@ H_DIDNT_FIND_ANY_HIDDEN_EVENT equ 0xFFEE ; hDidntFindAnyHiddenEvent (golden 00:f
 H_COORDS_IN_FRONT_OF_PLAYER_MATCH equ 0xFFEA ; hCoordsInFrontOfPlayerMatch (golden 00:ffea)
 %endif
 %ifndef W_HIDDEN_EVENT_FUNCTION_ARGUMENT
-W_HIDDEN_EVENT_FUNCTION_ARGUMENT equ 0xCD3D ; wHiddenEventFunctionArgument (golden 00:cd3d)
+W_HIDDEN_EVENT_FUNCTION_ARGUMENT equ 0xD889 ; wHiddenEventFunctionArgument (golden 00:cd3d)
 %endif
 %ifndef W_HIDDEN_EVENT_FUNCTION_ROM_BANK
-W_HIDDEN_EVENT_FUNCTION_ROM_BANK equ 0xCD3E ; wHiddenEventFunctionRomBank (golden 00:cd3e)
+W_HIDDEN_EVENT_FUNCTION_ROM_BANK equ 0xD88A ; wHiddenEventFunctionRomBank (golden 00:cd3e)
 %endif
 %ifndef W_HIDDEN_EVENT_INDEX
-W_HIDDEN_EVENT_INDEX       equ 0xCD3F   ; wHiddenEventIndex (golden 00:cd3f)
+W_HIDDEN_EVENT_INDEX       equ 0xD88B   ; wHiddenEventIndex (golden 00:cd3f)
 %endif
 %ifndef W_HIDDEN_EVENT_Y
-W_HIDDEN_EVENT_Y           equ 0xCD40   ; wHiddenEventY (golden 00:cd40)
+W_HIDDEN_EVENT_Y           equ 0xD88C   ; wHiddenEventY (golden 00:cd40)
 %endif
 %ifndef W_HIDDEN_EVENT_X
-W_HIDDEN_EVENT_X           equ 0xCD41   ; wHiddenEventX (golden 00:cd41)
+W_HIDDEN_EVENT_X           equ 0xD88D   ; wHiddenEventX (golden 00:cd41)
 %endif
 
 global CheckForHiddenEvent

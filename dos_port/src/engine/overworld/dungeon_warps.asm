@@ -59,7 +59,7 @@ bits 32
 ; ram/wram.asm:906-1027); reusing the value already declared in this port's
 ; src/engine/overworld/hidden_events.asm (its own PLACEHOLDER for the same
 ; symbol) so both files agree rather than introducing a second guess.
-W_COORD_INDEX         equ 0xD152   ; ram/wram.asm:1015 wCoordIndex
+W_COORD_INDEX         equ 0xDF1E   ; ram/wram.asm:1015 wCoordIndex
 %endif
 
 ; wStatusFlags3 bit -- constants/ram_constants.asm (wStatusFlags3 const_def block)

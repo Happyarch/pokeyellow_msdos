@@ -41,8 +41,8 @@ bits 32
 ; ---------------------------------------------------------------------------
 ; Pikachu WRAM & sprite offsets (mirror of pret usage)
 ; ---------------------------------------------------------------------------
-wd431                            equ 0xD431
-wd432                            equ 0xD432
+wd431                            equ 0xE1FD   ; [WRAM-expansion shifted]
+wd432                            equ 0xE1FE   ; [WRAM-expansion shifted]
 
 ; ---------------------------------------------------------------------------
 ; Externs

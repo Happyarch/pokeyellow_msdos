@@ -1298,8 +1298,8 @@ gbstate_regions:
     ; must both be back to 0 after EndTrainerBattle, and the trainer's persistent
     ; beaten bit (event byte $D7C2 bit 2) must be SET by the victory path.
     gbregion "wCurMapScript",    wCurMapScript, 1
-    gbregion "wRoute3Script",    0xD5F7, 1
-    gbregion "wRoute3Event",     0xD7C2, 1
+    gbregion "wRoute3Script",    wRoute3CurScript, 1
+    gbregion "wRoute3Event",     0xE58E, 1   ; pret 0xD7C2 + WRAM-expansion shift (no pret symbol: inside wEventFlags)
     ; .battleOccurred's own flag work — the tail that only the real loop runs.
     gbregion "wStatusFlags3",    wStatusFlags3, 1       ; BIT_TALKED_TO_TRAINER cleared
     gbregion "wStatusFlags4",    wStatusFlags4, 1       ; BIT_BATTLE_OVER_OR_BLACKOUT set
@@ -1377,8 +1377,8 @@ gbstate_regions:
     gbregion "wCurOpponent",     wCurOpponent, 1
     gbregion "wEnemyMonSpc",     wEnemyMonSpecies, 1
     gbregion "wCurMapScript",    wCurMapScript, 1
-    gbregion "wRoute17Script",   0xD61B, 1
-    gbregion "wRoute17Event",    0xD7E1, 1
+    gbregion "wRoute17Script",   wRoute17CurScript, 1
+    gbregion "wRoute17Event",    0xE5AD, 1   ; pret 0xD7E1 + WRAM-expansion shift (no pret symbol: inside wEventFlags)
     gbregion "wStatusFlags3",    wStatusFlags3, 1       ; BIT_TALKED_TO_TRAINER
     gbregion "wStatusFlags4",    wStatusFlags4, 1
     gbregion "wStatusFlags7",    wStatusFlags7, 1       ; BIT_TRAINER_BATTLE
@@ -1614,13 +1614,13 @@ RunCalcStatsTest:
     mov word [ebp + 0xDFC7], 0xFFFF         ; scratch DVs (all 15) at monbase+MON_DVS [WRAM-expansion shifted]
     mov byte [ebp + wCurEnemyLevel], 5      ; --- L5 ---
     xor bh, bh                              ; b=0: ignore stat exp
-    mov esi, 0xD1F0                         ; stat-exp base ptr (= monbase + $10)
-    mov edx, 0xD200                         ; result dest
+    mov esi, 0xDFBC                         ; stat-exp base ptr (= monbase + $10)
+    mov edx, 0xDFCC                         ; result dest
     call CalcStats
     mov byte [ebp + wCurEnemyLevel], 100    ; --- L100 ---
     xor bh, bh
-    mov esi, 0xD1F0
-    mov edx, 0xD210
+    mov esi, 0xDFBC   ; [WRAM-expansion shifted]
+    mov edx, 0xDFDC   ; [WRAM-expansion shifted]
     call CalcStats
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 %endif

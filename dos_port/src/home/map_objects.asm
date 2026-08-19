@@ -84,7 +84,7 @@ extern _DisplayPokedex                 ; src/engine/events/display_pokedex.asm
 ; Scaffold memmap symbol not yet in gb_memmap.inc (carried in with CheckCoords).
 ; ---------------------------------------------------------------------------
 %ifndef W_COORD_INDEX
-W_COORD_INDEX   equ 0xD152   ; wCoordIndex  — PLACEHOLDER, sym-verify vs pret Yellow
+W_COORD_INDEX   equ 0xDF1E   ; wCoordIndex  — PLACEHOLDER, sym-verify vs pret Yellow
 %endif
 
 section .text

@@ -44,8 +44,8 @@ STANDING_TILE_OFF   equ wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER
 TILESET_PLATEAU     equ 23          ; Route 23 / Indigo Plateau
 TILESET_SHIP        equ 13          ; S.S. Anne interior
 TILESET_SHIP_PORT   equ 14          ; Vermilion Port
-W_D472                      equ 0xD472
-W_PIKACHU_SPAWN_STATE_FLAGS equ 0xD471
+W_D472                      equ 0xE23E   ; [WRAM-expansion shifted]
+W_PIKACHU_SPAWN_STATE_FLAGS equ 0xE23D   ; [WRAM-expansion shifted]
 OVERWORLD_DOOR_TILE         equ 0x0B   ; pret: door tile in tileset 0 (PlayMapChangeSound)
 
 extern DelayFrame                    ; src/home/vblank.asm

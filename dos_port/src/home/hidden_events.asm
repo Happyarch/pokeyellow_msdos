@@ -59,7 +59,7 @@ H_DIDNT_FIND_ANY_HIDDEN_EVENT equ 0xFFEE ; hDidntFindAnyHiddenEvent (golden 00:f
 H_INTERACTED_WITH_BOOKSHELF equ 0xFFDB  ; hInteractedWithBookshelf (golden 00:ffdb)
 %endif
 %ifndef W_HIDDEN_EVENT_FUNCTION_ROM_BANK
-W_HIDDEN_EVENT_FUNCTION_ROM_BANK equ 0xCD3E ; wHiddenEventFunctionRomBank (golden 00:cd3e)
+W_HIDDEN_EVENT_FUNCTION_ROM_BANK equ 0xD88A ; wHiddenEventFunctionRomBank (golden 00:cd3e)
 %endif
 %ifndef W_SPRITE_PLAYER_FACING_DIR
 %endif

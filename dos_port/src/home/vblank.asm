@@ -109,7 +109,7 @@ global DelayFrame
 ; it to the canonical memmap that definition wins.
 ; ---------------------------------------------------------------------------
 %ifndef W_DISABLE_VBLANK_WY_UPDATE
-W_DISABLE_VBLANK_WY_UPDATE   equ 0xD09F   ; wDisableVBlankWYUpdate — nonzero = skip WY commit
+W_DISABLE_VBLANK_WY_UPDATE   equ 0xDE6B   ; wDisableVBlankWYUpdate — nonzero = skip WY commit
 %endif
 
 section .text

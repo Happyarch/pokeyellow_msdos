@@ -35,7 +35,7 @@ TILE_2BPP                       equ 16
 ; wSpriteStateData offsets and helper aliases
 
 ; Pikachu WRAM variables
-wd451                           equ 0xD451
+wd451                           equ 0xE21D   ; [WRAM-expansion shifted]
 
 ; ---------------------------------------------------------------------------
 ; Externs

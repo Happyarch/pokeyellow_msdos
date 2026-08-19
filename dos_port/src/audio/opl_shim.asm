@@ -788,7 +788,7 @@ opl_dbg_snapshot:
     mov al, [g_opl3]
     mov [ebp + (W_PORT_SCRATCH + 0x01)], al
     mov esi, voice_state
-    mov edi, 0xD1E2
+    mov edi, (W_PORT_SCRATCH + 0x02)   ; [WRAM-expansion shifted]
     mov ecx, 62
 .copy:
     mov al, [esi]
