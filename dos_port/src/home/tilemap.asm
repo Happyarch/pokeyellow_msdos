@@ -1,8 +1,11 @@
 ; tilemap.asm — the wTileMap save/restore buffer routines.
 ;
-; Source: home/tilemap.asm (pret/pokeyellow). That file's remaining label,
-; UncompressSpriteFromDE, is realized by the pic-staging path in home/pics.asm
-; (the PIC_STAGE flat-source model) and is not defined here.
+; Source: home/tilemap.asm (pret/pokeyellow). All six of its labels live here as
+; of the pikapic port: the five buffer routines below plus UncompressSpriteFromDE,
+; which had been left undefined while every caller open-coded the PIC_STAGE
+; flat-source staging inline.  The first caller that could not open-code it
+; (DecompressRequestPikaPicAnimGFX, which reaches it through a data table rather
+; than a literal blob label) is what brought it back to its mirrored path.
 ;
 ; This file is the single canonical provider of the five pret buffer labels.
 ; It retires two prior placements (menu-intro review, 2026-07-23):
@@ -24,6 +27,8 @@ bits 32
 
 %include "gb_memmap.inc"
 
+extern UncompressSpriteData             ; src/home/uncompress.asm
+
 section .bss
 ; The port realization of pret's wTileMapBackup (see the DEVIATION below).
 ; Moved here from battle_menu.asm, which named it screen_save.
@@ -31,6 +36,7 @@ screen_save: resb SCREEN_AREA
 
 section .text
 
+global UncompressSpriteFromDE
 global SaveScreenTilesToBuffer1
 global LoadScreenTilesFromBuffer1
 global SaveScreenTilesToBuffer2
@@ -38,6 +44,31 @@ global LoadScreenTilesFromBuffer2
 global LoadScreenTilesFromBuffer2DisableBGTransfer
 global SaveBattleScreen
 global RestoreBattleScreen
+
+; ---------------------------------------------------------------------------
+; UncompressSpriteFromDE — pret home/tilemap.asm: "decompress pic at a:de".
+;
+; pret stores DE into wSpriteInputPtr and tail-jumps to UncompressSpriteData,
+; because on the GB the compressed stream is already addressable at a 16-bit
+; address.  Here it is a flat program-image blob and the decoder reads its input
+; EBP-relative, so the stream is first staged into the GB-space PIC_STAGE scratch
+; — the same staging every open-coded call site in this port performs, now in one
+; place.  The bank byte is a flat-model no-op.
+;
+; DEVIATION{class=data-model; pret=home/tilemap.asm:UncompressSpriteFromDE; behavior=takes a flat source pointer plus a byte length and copies the stream into the PIC_STAGE GB scratch before pointing wSpriteInputPtr at it, where pret points wSpriteInputPtr straight at the caller's DE; evidence=UncompressSpriteData reads its input through EBP-relative GB memory but the port links compressed pics into the DOS program image outside that space, so a flat pointer cannot be stored in the 16-bit wSpriteInputPtr and the length is needed to bound the staging copy; lifetime=permanent flat 32-bit memory model}
+;
+; In:  EDX = flat pointer to the compressed stream, ECX = its byte length,
+;      AL = source bank (ignored).
+; Out: as UncompressSpriteData. All other registers preserved.
+; ---------------------------------------------------------------------------
+UncompressSpriteFromDE:
+    pushad
+    mov esi, edx                             ; flat source
+    lea edi, [ebp + PIC_STAGE]
+    rep movsb                                ; ECX bytes into the GB-space scratch
+    mov word [ebp + wSpriteInputPtr], PIC_STAGE   ; ld [hl], e / inc hl / ld [hl], d
+    popad
+    jmp UncompressSpriteData                 ; jp UncompressSpriteData
 
 ; ---------------------------------------------------------------------------
 ; SaveScreenTilesToBuffer1 / LoadScreenTilesFromBuffer1 — snapshot wTileMap

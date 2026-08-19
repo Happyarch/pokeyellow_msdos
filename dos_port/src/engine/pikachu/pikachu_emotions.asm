@@ -76,8 +76,8 @@ extern IsThisPartyMonStarterPikachu                     ; src/engine/pikachu/pik
 extern AddNTimes                                        ; src/home/array.asm
 extern ApplyPikachuMovementData                         ; src/home/pikachu.asm
 extern BillsHouse_CheckPikachuEmotion                   ; src/engine/pikachu/pikachu_stubs.asm
-extern GetPikaPicAnimationScriptIndex                   ; src/engine/pikachu/pikachu_stubs.asm
-extern StarterPikachuEmotionCommand_pikapic              ; src/engine/pikachu/pikachu_stubs.asm
+extern GetPikaPicAnimationScriptIndex                   ; src/engine/pikachu/pikachu_pic_animation.asm
+extern StarterPikachuEmotionCommand_pikapic              ; src/engine/pikachu/pikachu_pic_animation.asm
 
 ; Pikachu emotion scripts & movement scripts from src/data/pikachu/pikachu_emotions.asm
 extern PikachuEmotion0                                  ; src/data/pikachu/pikachu_emotions.asm

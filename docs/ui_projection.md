@@ -188,6 +188,117 @@ Three consequences, each of which was a live bug on 2026-08-18
    zero the flag by design. Arming it once in setup is not enough if any faithful
    path clears sprites afterwards (this one does, at `LoadGFXAndLayout`).
 
+### Poké Mart — the one screen that anchors to BOTH edges, plus one raw origin
+
+Ruling by the maintainer, 2026-08-18, per the per-element process rule in
+"Anchor rule (TRANSFORM subsystems, per axis, by developer intent)" below.
+
+The mart is the first screen whose GB layout hugs **both** edges at once
+(`data/text_boxes.asm`): `BUY_SELL_QUIT_MENU_TEMPLATE` is (0,0)-(10,6), flush
+LEFT at column 0, and `MONEY_BOX_TEMPLATE` is (11,0)-(19,2), flush RIGHT with
+column 19 the last GB column. A center `X+10` projection would detach both from
+the edges they were designed against and float them into the middle of the
+canvas, so each keeps its own edge instead:
+
+- **BUY/SELL/QUIT — `X+0`.** The mirror image of the START menu's rule. GB col 0
+  maps to canvas col 0, same box size, no scaling. This is the FIRST top-left
+  anchored element in the registry; everything else in overworld-ui is top-right.
+- **MONEY — `X+20`.** Inherits the existing overworld-ui convention unchanged.
+
+The result spreads the mart UI across the widescreen canvas rather than
+stretching or centering it, because the GB screen's two edges land on the port's
+two edges.
+
+**The priced item list is a deliberate one-off with RAW coordinates, not an
+anchor rule.** On hardware it is drawn at `hlcoord 4, 2` with `lb de, 9, 14`
+(`home/list_menu.asm:34`) — a 16x11 box over GB cols 4-19, rows 2-12 — which
+partially covers the MONEY box's bottom border AND paints over BUY/SELL/QUIT.
+That overlap is a 20x18 SCREEN-SIZE CONSTRAINT, not a design intent, and at 40x25
+there is room to stop borrowing those cells. The port therefore places it at a
+raw canvas origin of **(11, 7)**: its top-left corner just touches the
+bottom-right corner of BUY/SELL/QUIT, so the list unfolds down-and-right from the
+menu that opened it and overlaps NOTHING (menu cols 0-10 rows 0-6; money cols
+31-39 rows 0-2; list cols 11-26 rows 7-17).
+
+Recorded as raw coordinates ON PURPOSE. It is genuinely a one-off: the registry's
+vocabulary is per-axis translation, and "offset from another element's box" is a
+relative-anchor concept no other screen needs. Inventing one for a single screen
+would add a mechanism with exactly one user.
+
+**Consequence for the code, and it is not just a table edit:** the generic
+`list_menu.asm` row `(4,2) 16x11` is shared by the bag, the PC and the elevator,
+all of which stay `X+20`. `DisplayListMenuID` therefore CANNOT apply one
+projection for every caller — the mart must set its own origin. A mart
+implementation that simply inherits the generic list anchor is wrong, and will
+look wrong in exactly the way this section exists to prevent.
+
+### Vending machine and Celadon prize menu — the mart rule, and nothing bespoke
+
+Decided 2026-08-18 under maintainer delegation ("whatever you do for the inferred
+projections is fine, I may overrule it later at my discretion"), following the
+Poké Mart ruling above. Geometry measured from pret, not inferred from the
+screenshots: TextBoxBorder's `lb bc, h, w` draws a (w+2) x (h+2) box, verified
+against the registry's own list-menu row (hlcoord 4,2 + lb de, 9,14 -> 16x11).
+
+  vending drink box  engine/events/vending_machine.asm:20  hlcoord 0,3 + lb bc, 8,12
+                     -> 14x10, GB cols 0-13,  rows 3-12   FLUSH LEFT
+  prize main box     engine/events/prize_menu.asm:25       hlcoord 0,2 + lb bc, 8,16
+                     -> 18x10, GB cols 0-17,  rows 2-11   FLUSH LEFT
+  prize coin box     engine/events/prize_menu.asm:145      hlcoord 11,0 + lb bc, 1,7
+                     -> 9x3,   GB cols 11-19, rows 0-2    FLUSH RIGHT (col 19 is last)
+
+The prize screen is STRUCTURALLY THE SAME SHAPE AS THE MART: a left-flush main box
+with a right-flush money/coin box in the top corner. Its coin box is even the same
+9x3 at GB (11,0) as MONEY_BOX_TEMPLATE. So it takes the same ruling — each box
+keeps the edge it was designed against, X+0 for the left one and X+20 for the right
+one — and the widescreen canvas spreads them apart exactly as it does on the mart.
+
+*** AND NEITHER SCREEN NEEDS A BESPOKE ORIGIN. *** Unlike the mart's priced item
+list, the prize main box and its coin box DO NOT OVERLAP on hardware — they occupy
+disjoint rows (2-11 vs 0-2) — so there is no 20x18 crowding artefact to undo, and
+plain per-axis edge anchoring is enough. The vending machine is a single box with
+no companion at all. That is the evidence that the mart's RAW (11,7) origin really
+is a one-off rather than the first of a pattern: it exists solely because pret's
+list menu had to paint over two other boxes for want of screen space, and no other
+service screen has that problem.
+
+Y is untranslated (Y+0) on all three, as everywhere else in overworld-ui: these are
+vertical positions within an 18-row layout that the 25-row canvas does not compress,
+and the rows are load-bearing (the prize box sits below its coin box by design).
+
+### Pikachu front-pic animation (pikapic) — CENTERED, and the cel draw start must follow
+
+Decided 2026-08-18 under the same maintainer delegation as the vending/prize rows.
+
+`PlacePikapicTextBoxBorder` (engine/pikachu/pikachu_pic_animation.asm:139) is
+`hlcoord 6, 5` + `lb bc, 5, 5` -> a 7x7 box at GB cols 6-12, rows 5-11. Unlike
+every other screen ruled today it is NOT flush against either edge: it sits
+essentially centred on the 20-wide screen (box centre col 9, screen centre 9.5).
+So it takes the CENTER rule the dialog and party-menu rows already use — X+10,
+Y+0 -> canvas cols 16-22, rows 5-11 — not an edge anchor. Projecting a centred
+element to an edge would be as wrong as centring an edge-anchored one.
+
+*** THE FRAME IS NOT THE ONLY THING THAT MOVES. *** The animation's cels are not
+placed by an hlcoord literal; `ExecutePikaPicAnimScript`'s object drawer computes
+its destination as `wTileMap + wPikaPicPikaDrawStartY * SCREEN_WIDTH +
+wPikaPicPikaDrawStartX` (pikachu_pic_animation.asm:464, `hlcoord 0, 0` +
+`ld bc, SCREEN_WIDTH` + `AddNTimes`), plus the per-object X/Y offsets. Two
+consequences for the port:
+  - SCREEN_WIDTH there is a STRIDE (40 on the canvas), not a coordinate. It is
+    already correct if left as SCREEN_WIDTH; do NOT substitute pret's 20.
+  - The DRAW START values must carry the same +10/+0 projection as the frame, or
+    the cels will render at the GB origin while their frame sits 10 columns right.
+    The frame and the cels must be projected together or not at all.
+
+An open question deliberately left to the implementer to ANSWER WITH EVIDENCE
+rather than guess: pikapic plays during overworld emotion playback, so the
+overworld view pointer is live and this is NOT the flat-canvas path evolution
+uses. Whether it therefore needs canvas ownership (the evo_canvas_enter/_exit
+pattern), a window, or simply writes into the overworld's own staging is a
+measurement, not a preference. pret zeroes hAutoBGTransferEnabled around the box
+placement and re-enables it after, which is inert in the port — so whatever
+commits those cells, it is not that.
+
 ### Future subsystems
 
 Add an entry here when introduced, stating the transform and whether it uses
@@ -267,6 +378,14 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (HEAL/CANCEL)  | (11, 6) | 9×6   | anchor=top-right, X+20, Y+0 | 255 | 48 | 72  | 96  | yes_no.asm (YesNoChoicePokeCenter) |
 | overworld-ui (list menu)    | (4, 2)  | 16×11 | anchor=top-right, X+20, Y+0 | 199 | 16 | 128 | 104 | list_menu.asm (generic; reuses bag LIST_* anchor) |
 | overworld-ui (list quantity)| (15, 9) | 5×3   | anchor=top-right, X+20, Y+0 | 287 | 72 | 40  | 96  | list_menu.asm (DisplayChooseQuantityMenu) |
+| overworld-ui (mart BUY/SELL/QUIT) | (0, 0) | 11×7 | anchor=top-LEFT, X+0, Y+0 | 7 | 0 | 88 | 56 | pokemart.asm (BUY_SELL_QUIT_MENU_TEMPLATE, data/text_boxes.asm) |
+| overworld-ui (mart MONEY)         | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | pokemart.asm (MONEY_BOX_TEMPLATE, data/text_boxes.asm) |
+| overworld-ui (mart priced list)   | (4, 2) | 16×11| RAW origin (11, 7) — one-off, see the Poké Mart section above | 95 | 56 | 128 | 144 | pokemart.asm (PRICEDITEMLISTMENU; overrides the generic list_menu.asm anchor) |
+| overworld-ui (vending drinks)     | (0, 3) | 14×10| anchor=top-LEFT, X+0, Y+0 | 7 | 24 | 112 | 104 | vending_machine.asm:20 (hlcoord 0,3 + lb bc,8,12) |
+| overworld-ui (prize menu)         | (0, 2) | 18×10| anchor=top-LEFT, X+0, Y+0 | 7 | 16 | 144 | 96 | prize_menu.asm:25 (hlcoord 0,2 + lb bc,8,16) |
+| overworld-ui (prize coin box)     | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | prize_menu.asm:145 PrintPrizePrice (hlcoord 11,0 + lb bc,1,7) |
+| overworld-ui (pikapic frame)      | (6, 5) | 7×7  | center, X+10, Y+0 | 135 | 40 | 56 | 96 | pikachu_pic_animation.asm:139 PlacePikapicTextBoxBorder (hlcoord 6,5 + lb bc,5,5) |
+| overworld-ui (pikapic cel start)  | (7, 6) | —    | center, X+10, Y+0 | —   | —  | —   | —     | pikachu_pic_animation.asm:131 ResetPikaPicAnimBuffer (wPikaPicPikaDrawStartX/Y, consumed arithmetically by LoadCurPikaPicObjectTilemap.GetStartCoords — SCREEN_WIDTH there is the stride 40, NOT pret's 20) |
 | overworld-field (tile reads) | (8, 9) player feet | 1×1 | +16col, +8row → W_TILEMAP (PLAYER_STANDING_COL=24, PLAYER_STANDING_ROW=17); facing-relative reads ±2 tiles (one block), two-steps ±4 | — | — | — | — | overworld.asm (GetTileInFrontOfPlayer), player_state.asm (_GetTileAndCoordsInFrontOfPlayer / GetTileTwoStepsInFrontOfPlayer), player_animations.asm (IsPlayerStandingOnWarpPadOrHole), wild_encounters.asm (PLAYER_STANDING_TILE, fixed OW-A.6) — NEVER copy pret stride-20 lda_coord literals |
 | battle-ui (YES/NO box)      | (cc,rr) | W×H   | battle center, X+10, Y+3    | —   | —  | —   | —   | yes_no.asm (mode 1) — UNVERIFIED, no caller wired |
 | battle-ui (whole screen)    | (0, 0)  | 20×18 | center in 40×25 BG, +10col/+3row | — | — | — | — | init_battle.asm (full widescreen canvas via render_bg) |

@@ -58,6 +58,13 @@ extern repaint_front_table, tile_pal, bg_slot_pal, g_pal_dirty
 global SlideBattlePicsIn
 
 global LoadMonPicToVRAM
+; InterlaceMergeSpriteBuffers takes its output address in DE on the GB; here it
+; reads pic_dest, so a caller that is NOT LoadMonPicToVRAM must set it.  The one
+; such caller is DecompressRequestPikaPicAnimGFX
+; (src/engine/pikachu/pikachu_pic_animation.asm), which mirrors pret's `ld d,h /
+; ld e,l` immediately before the call.
+global pic_dest
+global InterlaceMergeSpriteBuffers
 global LoadMonBackPicToVRAM
 global PlacePicTilemap
 

@@ -724,6 +724,11 @@ POKEMON_SRCS := \
     src/engine/pikachu/pikachu_status.asm \
     src/data/pikachu/pikachu_emotions.asm \
     src/engine/pikachu/pikachu_emotions.asm \
+    src/gfx/pikachu.asm \
+    src/data/pikachu/pikachu_pic_tilemaps.asm \
+    src/data/pikachu/pikachu_pic_objects.asm \
+    src/data/pikachu/pikachu_pic_animation.asm \
+    src/engine/pikachu/pikachu_pic_animation.asm \
     src/engine/pikachu/respawn_overworld_pikachu.asm \
     src/engine/pikachu/pikachu_stubs.asm \
     src/engine/movie/evolution.asm \
@@ -3516,6 +3521,26 @@ assets/surfing_pikachu.inc assets/surfing_pikachu_tilemaps.inc: ../gfx/surfing_p
 src/gfx/surfing_pikachu.o: assets/surfing_pikachu.inc
 src/engine/minigame/surfing_pikachu.o: assets/surfing_pikachu_tilemaps.inc
 
+# pikapic (follower Pikachu Phase 4) — Tier-1 data for the Pikachu front-pic
+# facial animation engine.  One generated .inc per pret source file.
+PIKAPIC_GFX_SRCS := $(wildcard ../gfx/pikachu/*.2bpp) $(wildcard ../gfx/pikachu/*.pic)
+assets/pikachu_pic_gfx.inc assets/pikachu_pic_gfx_globals.inc \
+assets/pikachu_pic_gfx_externs.inc assets/pikachu_pic_tilemaps.inc \
+assets/pikachu_pic_objects.inc assets/pikachu_pic_animation.inc: \
+                            ../gfx/pikachu.asm \
+                            ../data/pikachu/pikachu_pic_tilemaps.asm \
+                            ../data/pikachu/pikachu_pic_objects.asm \
+                            ../data/pikachu/pikachu_pic_animation.asm \
+                            $(PIKAPIC_GFX_SRCS) \
+                            tools/generators/gen_pikachu_pic.py
+	python3 tools/generators/gen_pikachu_pic.py
+
+src/gfx/pikachu.o: assets/pikachu_pic_gfx.inc assets/pikachu_pic_gfx_globals.inc
+src/data/pikachu/pikachu_pic_tilemaps.o: assets/pikachu_pic_tilemaps.inc
+src/data/pikachu/pikachu_pic_objects.o: assets/pikachu_pic_objects.inc
+src/data/pikachu/pikachu_pic_animation.o: assets/pikachu_pic_animation.inc \
+                                          assets/pikachu_pic_gfx_externs.inc
+
 # home/trainers.asm %includes the generated _TrainerNameText far stream +
 # MUSIC_MEET_* ids.
 src/home/trainers.o: assets/trainer_text.inc assets/audio_constants.inc
@@ -3804,6 +3829,8 @@ assets: assets/scenario_registry.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
         assets/red_bike_sprite.inc assets/seel_sprite.inc \
         assets/surfing_pikachu_sprite.inc assets/surfing_pikachu.inc \
+        assets/pikachu_pic_gfx.inc assets/pikachu_pic_tilemaps.inc \
+        assets/pikachu_pic_objects.inc assets/pikachu_pic_animation.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \
         assets/script_constants.inc assets/map_text/.stamp \
         assets/base_stats.inc assets/growth_rates.inc \
