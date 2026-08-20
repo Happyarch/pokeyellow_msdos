@@ -2524,7 +2524,7 @@ RunBattleTest:
     stosb
     mov al, [ebp + wRoute3CurScript]
     stosb
-    mov al, [ebp + 0xE3C5]   ; [WRAM-expansion shifted]
+    mov al, [ebp + 0xE590]   ; [WRAM-expansion shifted]
     stosb
     mov al, [ebp + wMiscFlags]
     stosb

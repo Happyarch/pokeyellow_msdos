@@ -219,7 +219,7 @@ section .text
 %ifndef ESCAPE_ROPE
 %endif
 %ifndef wd472
-wd472        equ 0xE23E              ; ram/wram.asm:wd472 — surf state (1 = board, 2 = Pikachu)
+wd472        equ 0xE240              ; ram/wram.asm:wd472 — surf state (1 = board, 2 = Pikachu)
 %endif
 ; BIT_UNKNOWN_4_1 (wStatusFlags4 bit 1, constants/ram_constants.asm) is canonical in
 ; gb_memmap.inc as of 2026-07-27; the local %ifndef copy that lived here is gone.

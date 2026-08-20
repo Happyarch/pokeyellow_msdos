@@ -40,22 +40,22 @@ bits 32
 %ifndef BIT_UNKNOWN_5_2
 %endif
 %ifndef W_D479
-W_D479                       equ 0xE245     ; wd479 (bit 0 = force-max in-game timer)
+W_D479                       equ 0xE247     ; wd479 (bit 0 = force-max in-game timer)
 %endif
 %ifndef W_PLAY_TIME_HOURS
-W_PLAY_TIME_HOURS            equ 0xE80C     ; wPlayTimeHours
+W_PLAY_TIME_HOURS            equ 0xE80E     ; wPlayTimeHours
 %endif
 %ifndef W_PLAY_TIME_MAXED
-W_PLAY_TIME_MAXED            equ 0xE80D     ; wPlayTimeMaxed
+W_PLAY_TIME_MAXED            equ 0xE80F     ; wPlayTimeMaxed
 %endif
 %ifndef W_PLAY_TIME_MINUTES
-W_PLAY_TIME_MINUTES          equ 0xE80E     ; wPlayTimeMinutes
+W_PLAY_TIME_MINUTES          equ 0xE810     ; wPlayTimeMinutes
 %endif
 %ifndef W_PLAY_TIME_SECONDS
-W_PLAY_TIME_SECONDS          equ 0xE80F     ; wPlayTimeSeconds
+W_PLAY_TIME_SECONDS          equ 0xE811     ; wPlayTimeSeconds
 %endif
 %ifndef W_PLAY_TIME_FRAMES
-W_PLAY_TIME_FRAMES           equ 0xE810     ; wPlayTimeFrames
+W_PLAY_TIME_FRAMES           equ 0xE812     ; wPlayTimeFrames
 %endif
 
 global TrackPlayTime
