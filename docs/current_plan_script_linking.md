@@ -18,7 +18,9 @@ cur=None; c={}
 for l in Path('dos_port/Makefile').read_text().splitlines():
     m=re.match(r'^([A-Za-z_][A-Za-z0-9_]*)\s*\+?:?=', l)
     if m: cur=m.group(1)
-    for s in re.findall(r'src/scripts/([a-z0-9_]+)\.asm', l): c[s]=cur
+    # [A-Za-z0-9_]+, not [a-z0-9_]+ — the script files were renamed to pret's
+    # exact PascalCase on 2026-08-20, and the old class silently matched nothing.
+    for s in re.findall(r'src/scripts/([A-Za-z0-9_]+)\.asm', l): c[s]=cur
 print(collections.Counter(c.values()))
 EOF
 ```

@@ -176,9 +176,10 @@ with `python3 -c 'import json;d=json.load(open("dos_port/tools/pret_label_allowl
    `--no-scan` when you only want findings against the existing DB (and always
    when another agent may be building or rescanning). It enforces: pret-named
    globals live in the
-   path-mirrored file or a `*_stubs.asm`; and — for names taken from pret
-   `scripts/*.asm`, which have **no** call-graph/status model — the provenance
-   rules `script_collision` / `script_misplaced` (see "Map scripts" below). A `mirror` finding means move the
+   path-mirrored file or a `*_stubs.asm` — **including pret `scripts/*.asm`
+   labels, since 2026-08-20**: the port's script files now carry pret's exact
+   names, so one placement rule covers the whole tree. `script_collision` still
+   guards names borrowed OUTSIDE the script layer (see "Map scripts" below). A `mirror` finding means move the
    complete routine to the mirrored file; it is not an instruction to edit the
    relocation registry. Existing registered relocations are printed loudly as
    legacy debt and must be moved when touched; stubs stay
@@ -222,13 +223,26 @@ from pret `scripts/*.asm` is `port_only`: `faithdiff` answers "not a pret label"
 and the mirror rule cannot fire. What *does* cover them:
 
 - **`script_labels`** — a names-only side table of every pret `scripts/*.asm`
-  global (3.7k names, no status, no headline-count impact).
+  global (3.7k names). Since 2026-08-20 they ALSO carry a real status in
+  `labels` under `tier='script'` — 95.9% translated — so they do count toward the
+  progress report. They still have NO call-graph edges: `--callers`,
+  reachability and faithdiff's call comparison mean nothing on a script row.
 - **`script_collision`** — a port symbol borrowing one of those names is defined
   outside `dos_port/src/scripts/`. Either the port symbol means something else
   (rename it) or a map's script layer landed in the wrong subsystem.
-- **`script_misplaced`** — right layer, wrong map file. Expected path is
-  `dos_port/src/scripts/<snake_case map>.asm`; pret's bank-split continuations
-  (`Route1_2.asm`) belong in the same file as the main half.
+- **`script_misplaced` — RETIRED 2026-08-20.** It existed because the port's
+  script files were snake_case, so the generic `mirror` rule could not judge
+  them. They now carry pret's exact names (`dos_port/src/scripts/PalletTown.asm`)
+  and every pret `scripts/` label has a `labels` row, so **`mirror` judges the
+  script tier like everything else**. Right layer / wrong map file is now a
+  `mirror` finding. Keeping both rules meant two expectations for one fact, and
+  they disagreed the moment the rename landed.
+- **pret's bank-split continuations** (`Route1_2.asm`, `CinnabarGym_3.asm` — 27
+  files) live in the same port file as the main half, because **the port is flat
+  by design**. Each is declared in `pret_label_allowlist.json`'s
+  `relocated_files`, so those 126 labels report as *sanctioned structure*, listed
+  separately from the legacy-relocation debt counter — which is at zero and must
+  stay there.
 - Exempt: `*_stubs.asm` (the stub convention owns stand-in placement), and
   labels defined inside a generated `assets/*.inc` (the scan walks `.asm` only —
   placement of generated Tier-1 data is governed by its carrier file).

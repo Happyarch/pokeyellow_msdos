@@ -6,10 +6,120 @@
   "structural_findings records audited legacy violations as OPEN debt, never precedent or authority for new work.",
   "Agents may not add entries or edit either category to make their own lint failure pass; registry edits may only retire/reclassify debt and the exact file hash is approved outside the worktree.",
   "suppress: linter suppressions [{rule, key, why}].",
-  "Legacy entries began as a 2026-07-07 full-tree inventory and remain subject to structural audit."
+  "Legacy entries began as a 2026-07-07 full-tree inventory and remain subject to structural audit.",
+  "bank_splits: the relocated_files entries are ONE sanctioned class, not per-file decisions \u2014 pret's 27 `scripts/<Map>_N.asm` bank continuations, which the port merges into dos_port/src/scripts/<Map>.asm because it has no banks. Maintainer-directed 2026-08-20 (\"Banks should all be allow list ignored\"). They are the only structural difference left between the port's script layer and pret's, are excluded from the legacy-relocation debt counter, and are NOT precedent for anything else."
  ],
  "structural_findings": {},
- "relocated_files": {},
+ "relocated_files": {
+  "scripts/BillsHouse_2.asm": {
+   "port_file": "dos_port/src/scripts/BillsHouse.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/CeladonCity_2.asm": {
+   "port_file": "dos_port/src/scripts/CeladonCity.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/CeladonDiner_2.asm": {
+   "port_file": "dos_port/src/scripts/CeladonDiner.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/CeladonMansion1F_2.asm": {
+   "port_file": "dos_port/src/scripts/CeladonMansion1F.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/CeladonMansion3F_2.asm": {
+   "port_file": "dos_port/src/scripts/CeladonMansion3F.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/CeladonMart3F_2.asm": {
+   "port_file": "dos_port/src/scripts/CeladonMart3F.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/CeruleanCity_2.asm": {
+   "port_file": "dos_port/src/scripts/CeruleanCity.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/CinnabarGym_2.asm": {
+   "port_file": "dos_port/src/scripts/CinnabarGym.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/CinnabarGym_3.asm": {
+   "port_file": "dos_port/src/scripts/CinnabarGym.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/GameCorner_2.asm": {
+   "port_file": "dos_port/src/scripts/GameCorner.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/MtMoonB2F_2.asm": {
+   "port_file": "dos_port/src/scripts/MtMoonB2F.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/MtMoonPokecenter_2.asm": {
+   "port_file": "dos_port/src/scripts/MtMoonPokecenter.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/Museum1F_2.asm": {
+   "port_file": "dos_port/src/scripts/Museum1F.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/OaksLab_2.asm": {
+   "port_file": "dos_port/src/scripts/OaksLab.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/PewterPokecenter_2.asm": {
+   "port_file": "dos_port/src/scripts/PewterPokecenter.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/PokemonTower2F_2.asm": {
+   "port_file": "dos_port/src/scripts/PokemonTower2F.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/RedsHouse1F_2.asm": {
+   "port_file": "dos_port/src/scripts/RedsHouse1F.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/Route1_2.asm": {
+   "port_file": "dos_port/src/scripts/Route1.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/Route22_2.asm": {
+   "port_file": "dos_port/src/scripts/Route22.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/SSAnne2FRooms_2.asm": {
+   "port_file": "dos_port/src/scripts/SSAnne2FRooms.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/SafariZoneGate_2.asm": {
+   "port_file": "dos_port/src/scripts/SafariZoneGate.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/SilphCo11F_2.asm": {
+   "port_file": "dos_port/src/scripts/SilphCo11F.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/SummerBeachHouse_2.asm": {
+   "port_file": "dos_port/src/scripts/SummerBeachHouse.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/VermilionCity_2.asm": {
+   "port_file": "dos_port/src/scripts/VermilionCity.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/ViridianCity_2.asm": {
+   "port_file": "dos_port/src/scripts/ViridianCity.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/ViridianForest_2.asm": {
+   "port_file": "dos_port/src/scripts/ViridianForest.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  },
+  "scripts/ViridianSchoolHouse_2.asm": {
+   "port_file": "dos_port/src/scripts/ViridianSchoolHouse.asm",
+   "why": "pret bank-split script continuation; the port is FLAT BY DESIGN so both halves live in the file named for the map. See _comment bank_splits."
+  }
+ },
  "relocated_labels": {},
  "suppress": [
   {

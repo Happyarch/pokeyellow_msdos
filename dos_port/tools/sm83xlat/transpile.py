@@ -100,10 +100,13 @@ else:
 def port_path(db: Path, pret_file: str) -> str:
     """The output path, read from translation.db rather than re-derived.
 
-    `lint_pret_labels`' `script_misplaced` rule decides where a pret scripts/
-    label may live, and it reads the same table. Inventing a snake_case rule
-    here would let the output and the linter disagree; reading the oracle makes
-    that impossible by construction.
+    `lint_pret_labels`' `mirror` rule decides where a pret scripts/ label may
+    live (it was `script_misplaced` until that rule was retired 2026-08-20), and
+    it reads the same table. Re-deriving the path here would let the output and
+    the linter disagree; reading the oracle makes that impossible by
+    construction. Note the port's script files carry pret's EXACT names as of
+    2026-08-20 — they were snake_case before, which is precisely the kind of
+    re-derivation this docstring warns against.
     """
     con = sqlite3.connect(db)
     row = con.execute(
@@ -612,7 +615,8 @@ Final state at retirement (commit 5a9a1666f):
     43 of the 78 are real work; the other 35 are cascade.
 
 WHAT TO DO INSTEAD
-  * Editing a script      -> edit dos_port/src/scripts/<map>.asm directly.
+  * Editing a script      -> edit dos_port/src/scripts/<Map>.asm directly
+                             (pret's exact file name, PascalCase).
   * Checking your edit    -> transpile.py --verify-only
                              (assembles every emitted file, writes NOTHING)
   * Reading what bailed   -> tools/sm83xlat/tables/bail_report.json

@@ -190,8 +190,20 @@ def main():
     structural_findings = allow.get('structural_findings', {})
     con = sqlite3.connect(args.db)
     cur = con.cursor()
-    legacy_relocation_count = cur.execute(
-        "SELECT COUNT(*) FROM labels WHERE status='relocated'").fetchone()[0]
+    # Two kinds of `relocated` row, and conflating them makes the debt counter
+    # useless. BANK-SPLIT rows come from pret's `_N` script continuations, which
+    # the port merges into one file per map because IT IS FLAT BY DESIGN — they
+    # are sanctioned structure, they will never be "paid down", and counting them
+    # as debt means the number can never reach zero and a real new relocation
+    # hides among them. Everything else is genuine legacy debt to ratchet down.
+    legacy_relocation_count, banked_relocation_count = cur.execute(
+        """SELECT SUM(CASE WHEN pret_file GLOB 'scripts/*_[0-9].asm'
+                           THEN 0 ELSE 1 END),
+                  SUM(CASE WHEN pret_file GLOB 'scripts/*_[0-9].asm'
+                           THEN 1 ELSE 0 END)
+           FROM labels WHERE status='relocated'""").fetchone()
+    legacy_relocation_count = legacy_relocation_count or 0
+    banked_relocation_count = banked_relocation_count or 0
     findings = []      # (rule, key, message)
     suppressed = 0
 
@@ -220,20 +232,17 @@ def main():
     # generated stream to live at, so the mirror rule has nothing to say about it.
     # The rule still governs every hand-written .asm, which is what it is for.
     #
-    # tier='script' is EXCLUDED here, and not as a weakening: pret's scripts/ file
-    # names are PascalCase (scripts/WardensHouse.asm) while the port's script layer
-    # is snake_case (src/scripts/wardens_house.asm), and pret's bank-split `_N`
-    # continuation files collapse to one port file. A path mirror is simply the
-    # wrong predicate for that tier. Those rows are governed by script_misplaced
-    # below, which compares against script_labels.expect_port_file and honours the
-    # accept_stems tolerances — so the tier is still gated, by the rule that fits
-    # it. (Before scripts entered `labels` on 2026-08-20 this exclusion was
-    # implicit, because the rows did not exist.)
+    # tier='script' is INCLUDED, as of 2026-08-20. The port's script files carry
+    # pret's exact names now (they were snake_case until that day, which is why
+    # this rule briefly had to skip them), so `dos_port/src/<pret path>` is the
+    # right predicate for scripts too — one placement rule for the whole tree.
+    # pret's 27 bank-split `_N` continuations are declared in
+    # pret_label_allowlist.json's relocated_files: the port is flat by design, so
+    # both halves live in the file named for the map.
     open_structural = []
     for name, pret_file, port_file in cur.execute("""
             SELECT name, pret_file, port_file FROM labels
             WHERE status='translated'
-              AND tier != 'script'
               AND port_file != 'dos_port/src/' || pret_file
               AND port_file NOT LIKE 'dos_port/assets/%'
             ORDER BY pret_file, name"""):
@@ -376,11 +385,19 @@ def main():
                 f"outside the script layer (expected {expect}); rename the port "
                 f"symbol if it means something else, or move the map script")
             continue
-        stem = os.path.splitext(os.path.basename(file))[0]
-        if stem not in stems.split('|'):
-            add('script_misplaced', f'{file}:{name}',
-                f"{file}:{line}: {name} belongs to pret {pret_file} "
-                f"(expected {expect})")
+        # script_misplaced is RETIRED as of 2026-08-20, and deliberately not
+        # replaced by a weaker form. It existed because the port's script files
+        # were snake_case, so `mirror` could not judge them and this rule had to
+        # do it with a stem tolerance. The files now carry pret's exact names and
+        # every pret scripts/ label has a `labels` row, so `mirror` judges them —
+        # with pret's 27 bank-split `_N` continuations declared in
+        # relocated_files, the port being flat by design. Keeping both rules meant
+        # two expectations for one fact, and they disagreed the moment the rename
+        # landed: `mirror` passed while this fired 127 times on the same rows.
+        #
+        # script_collision above is NOT retired: it answers a different question
+        # (a port symbol borrowing a pret scripts/ name from outside the script
+        # layer), which no other rule asks.
 
     # ── aux_misplaced: pret audio/ + data/ provenance ─────────────────────
     #
@@ -509,12 +526,17 @@ def main():
               "remain outside their mirrored files !!")
         print("  NEW RELOCATIONS ARE FORBIDDEN. This registry is not precedent. "
               "Move any touched label to dos_port/src/<pret path>.")
+    if banked_relocation_count:
+        print(f"\n   ({banked_relocation_count} further relocated label(s) come from "
+              "pret's bank-split `_N` script files, which the port merges one-per-map "
+              "because it is flat by design. Sanctioned structure, not debt — they are "
+              "excluded from the count above so it can still reach zero.)")
     if open_structural:
         print(f"\n== OPEN structural_findings ({len(open_structural)}; non-precedent debt) ==")
         print('\n'.join('  ' + m for m in open_structural))
     for rule in ('registry_approval', 'mirror', 'non_ret_stub', 'dup_def',
                  'call_into_data', 'stale_extern', 'stale_provider',
-                 'script_collision', 'script_misplaced', 'aux_misplaced',
+                 'script_collision', 'aux_misplaced',
                  'local_shadow', 'weak_relocation', 'relocation_shape'):
         msgs = by_rule.get(rule, [])
         if msgs:

@@ -873,7 +873,7 @@ a fidelity claim.
 
 **Reach caveat that shapes the scenario.** The minigame is harness-only in a
 normal build: its only production caller,
-`dos_port/src/scripts/summer_beach_house.asm`, is tracked but in no Makefile
+`dos_port/src/scripts/SummerBeachHouse.asm`, is tracked but in no Makefile
 source list (2 of 225 files in `src/scripts/` are linked). A scenario must enter
 through `DEBUG_SURFING_PIKACHU`, and per the `build-and-debug` false-witness rule
 it must be shown to actually reach the routines under test.

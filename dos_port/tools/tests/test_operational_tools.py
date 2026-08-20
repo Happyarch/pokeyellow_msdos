@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import importlib.machinery
 import importlib.util
+import os
 import pathlib
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -81,43 +83,77 @@ class StructuredAnnotationTests(unittest.TestCase):
 
 
 class ScriptProvenanceMappingTests(unittest.TestCase):
-    """pret scripts/<Map>.asm -> dos_port/src/scripts/<map>.asm naming."""
+    """pret scripts/<Map>.asm -> dos_port/src/scripts/<Map>.asm naming.
 
-    def test_canonical_snake_case(self):
+    REWRITTEN 2026-08-20. The port's script files were snake_case
+    (dos_port/src/scripts/pallet_town.asm) and this class tested the conversion
+    and its two tolerances. The files now carry pret's EXACT names, so the
+    mapping is an identity and the tolerances are gone — which is the point:
+    consistency with home/ and engine/, where the port has always mirrored pret's
+    own file names, and one placement rule for the whole tree.
+    """
+
+    def test_port_file_is_prets_exact_name(self):
         for pret, expect in (
-                ("scripts/Route3.asm", "route_3"),
-                ("scripts/PalletTown.asm", "pallet_town"),
-                ("scripts/CeladonMart1F.asm", "celadon_mart_1f"),
-                ("scripts/SSAnne1FRooms.asm", "ss_anne_1f_rooms"),
-                ("scripts/SilphCo11F.asm", "silph_co_11f"),
+                ("scripts/Route3.asm", "Route3"),
+                ("scripts/PalletTown.asm", "PalletTown"),
+                ("scripts/CeladonMart1F.asm", "CeladonMart1F"),
+                ("scripts/SSAnne1FRooms.asm", "SSAnne1FRooms"),
+                ("scripts/SilphCo11F.asm", "SilphCo11F"),
+                ("scripts/MtMoonB1F.asm", "MtMoonB1F"),
                 ("scripts/UndergroundPathRoute7Copy.asm",
-                 "underground_path_route_7_copy")):
+                 "UndergroundPathRoute7Copy")):
             with self.subTest(pret=pret):
                 self.assertEqual(uld.script_port_stems(pret)[0], expect)
+                self.assertEqual(uld.script_port_file(pret),
+                                 "dos_port/src/scripts/" + expect + ".asm")
 
-    def test_bank_split_continuations_map_to_the_same_map_file(self):
-        # pret splits a map's script across banks (Route1_2.asm); the port has
-        # no banks, so both halves belong in one file.
+    def test_only_one_legal_path_per_pret_file(self):
+        # There used to be two accepted stems (mt_moon_b1f / mt_moon_b_1f).
+        # A tolerance is a place where two answers are both "right", which is
+        # exactly where the mirror rule and script_misplaced drifted apart.
+        for pret in ("scripts/MtMoonB1F.asm", "scripts/Route3.asm",
+                     "scripts/Route1_2.asm"):
+            with self.subTest(pret=pret):
+                self.assertEqual(len(uld.script_port_stems(pret)[1]), 1)
+
+    def test_bank_split_keeps_prets_path_so_the_allowlist_is_consulted(self):
+        # pret splits a map's script across banks (Route1_2.asm); THE PORT IS
+        # FLAT BY DESIGN, so both halves live in one file. That merge is declared
+        # in pret_label_allowlist.json's relocated_files, which requires the
+        # mirror here to stay pret's RAW path — collapsing `_N` would make the
+        # row read `translated` and the declaration would never be consulted.
         self.assertEqual(uld.script_port_file("scripts/Route1_2.asm"),
-                         uld.script_port_file("scripts/Route1.asm"))
-        self.assertEqual(uld.script_port_file("scripts/CinnabarGym_3.asm"),
-                         "dos_port/src/scripts/cinnabar_gym.asm")
+                         "dos_port/src/scripts/Route1_2.asm")
+        self.assertNotEqual(uld.script_port_file("scripts/Route1_2.asm"),
+                            uld.script_port_file("scripts/Route1.asm"))
 
     def test_split_suffix_is_not_confused_with_a_numbered_map(self):
-        # The reason matching is stem-exact rather than underscore-insensitive:
-        # "route1_2" and "route12" would otherwise collide.
         self.assertNotEqual(uld.script_port_file("scripts/Route1_2.asm"),
                             uld.script_port_file("scripts/Route12.asm"))
 
-    def test_floor_token_spelling_is_tolerated(self):
-        self.assertEqual(uld.script_port_stems("scripts/MtMoonB1F.asm")[1],
-                         ["mt_moon_b1f", "mt_moon_b_1f"])
+    def test_every_bank_split_is_declared_in_the_allowlist(self):
+        # The 27 `_N` files are the ONLY structural difference left between the
+        # port's script layer and pret's. If pret gains another one, this fails
+        # rather than the mirror rule failing later with no explanation.
+        import json
+        allow = json.loads((pathlib.Path(uld.__file__).resolve().parent
+                            / "pret_label_allowlist.json").read_text())
+        declared = set(allow.get("relocated_files", {}))
+        splits = {f"scripts/{f}" for f in os.listdir(
+            pathlib.Path(uld.REPO_ROOT) / "scripts")
+            if re.search(r"_\d+\.asm$", f)}
+        self.assertTrue(splits, "expected pret bank-split script files")
+        self.assertEqual(splits - declared, set(),
+                         "undeclared pret bank-split script file(s)")
 
 
 class ScriptProvenanceLintTests(unittest.TestCase):
     """The rules fire on a seeded violation (the tree itself is clean)."""
 
-    def _lint(self, seed_defs):
+    def _lint(self, seed_defs, move_label=None):
+        """seed_defs adds port_defs rows; move_label=(name, port_file) rewrites a
+        `labels` row's provider, which is what the mirror rule actually reads."""
         with tempfile.TemporaryDirectory() as tmp:
             db = pathlib.Path(tmp) / "seeded.db"
             shutil.copy(DB, db)
@@ -126,6 +162,9 @@ class ScriptProvenanceLintTests(unittest.TestCase):
                 con.execute(
                     "INSERT INTO port_defs VALUES (?,?,?,0,1,1,3,0,'.text')",
                     (name, file, 1))
+            if move_label:
+                con.execute("UPDATE labels SET port_file=? WHERE name=?",
+                            (move_label[1], move_label[0]))
             con.commit()
             con.close()
             r = subprocess.run(
@@ -147,10 +186,23 @@ class ScriptProvenanceLintTests(unittest.TestCase):
         self.assertIn("Route3SignText", out)
 
     def test_misplaced_inside_the_script_layer(self):
+        # script_misplaced was RETIRED 2026-08-20 when the port's script files
+        # were renamed to pret's exact names: the generic `mirror` rule now judges
+        # placement for the script tier too, so keeping a second expectation was
+        # how the two came to disagree. A label in the wrong map file is still a
+        # violation — it is a `mirror` one, raised from the labels table rather
+        # than from script_labels.
+        # A TRANSLATED label, moved to another map's file. Route3SignText (the
+        # old fixture) is `missing` — no port definition — so the mirror rule
+        # correctly skips it and the test would pass on a broken linter.
         code, out = self._lint(
-            [("Route3SignText", "dos_port/src/scripts/pallet_town.asm")])
-        self.assertEqual(code, 1)
-        self.assertIn("script_misplaced", out)
+            [("AgathaScriptWalkIntoRoom", "dos_port/src/scripts/PalletTown.asm")],
+            move_label=("AgathaScriptWalkIntoRoom",
+                        "dos_port/src/scripts/PalletTown.asm"))
+        self.assertEqual(code, 1, out)
+        self.assertIn("mirror", out)
+        self.assertIn("AgathaScriptWalkIntoRoom", out)
+        self.assertNotIn("script_misplaced", out)
 
     def test_stub_files_are_exempt(self):
         # hidden_object_stubs.asm legitimately holds the Mansion*Script_Switches

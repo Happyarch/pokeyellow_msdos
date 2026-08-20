@@ -197,22 +197,30 @@ SPLIT_SUFFIX_RE = re.compile(r'_\d+$')
 def script_port_stems(pret_file):
     """pret 'scripts/Route3.asm' -> (canonical stem, all accepted stems).
 
-    Two tolerances, both deliberate and both narrow (underscore-insensitive
-    matching is NOT used: it would conflate Route1_2 with Route12):
-      * pret's bank-split continuation files (Route1_2.asm, CinnabarGym_3.asm)
-        are the same map — the port has no banks, so one file per map is right
-        and the canonical stem drops the `_N` suffix.
-      * a basement/floor token may be spelled either way (mt_moon_b_1f or
-        mt_moon_b1f).
+    The port's script files carry pret's EXACT names as of 2026-08-20 (they were
+    snake_case before), so this is now an identity on the stem with ONE
+    transform: pret's bank-split continuation files (Route1_2.asm,
+    CinnabarGym_3.asm) are the same map, and the port is flat by design, so the
+    `_N` suffix is dropped and both halves live in one file. Those 27 pret files
+    are declared in pret_label_allowlist.json's relocated_files, so the mirror
+    rule sees a declared relocation rather than a violation.
+
+    The old snake_case conversion and the b_1f/b1f spelling tolerance are gone
+    with the rename: there is exactly one legal path per pret script file now.
+
+    NOTE the `_N` suffix is NOT dropped here, deliberately. Dropping it would make
+    a continuation file's mirror match the merged port file, so the row would be
+    classified `translated` and the allowlist would never be consulted — the 27
+    bank splits would be silently normal rather than declared. Keeping pret's raw
+    path means each one is `relocated` against an explicit relocated_files entry,
+    which is what "banks are allowlist-ignored" has to mean if it is to be
+    auditable.
     """
-    stem = SPLIT_SUFFIX_RE.sub(
-        '', os.path.splitext(os.path.basename(pret_file))[0])
-    canonical = script_snake_case(stem)
-    accepted = {canonical, re.sub(r'_b_(\d)', r'_b\1', canonical)}
-    return canonical, sorted(accepted)
+    stem = os.path.splitext(os.path.basename(pret_file))[0]
+    return stem, [stem]
 
 def script_port_file(pret_file):
-    """pret 'scripts/Route3.asm' -> 'dos_port/src/scripts/route_3.asm'."""
+    """pret 'scripts/Route3.asm' -> 'dos_port/src/scripts/Route3.asm'."""
     return 'dos_port/src/scripts/' + script_port_stems(pret_file)[0] + '.asm'
 
 def scan_pret_scripts(exclude):

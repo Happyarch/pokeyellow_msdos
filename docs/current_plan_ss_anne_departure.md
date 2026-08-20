@@ -1,6 +1,6 @@
 # Current Plan: The S.S. Anne Departure Cutscene
 
-The last of groups A/B. `src/scripts/vermilion_dock.asm` is 1 of 5 scripts still
+The last of groups A/B. `src/scripts/VermilionDock.asm` is 1 of 5 scripts still
 check-only; it cannot link because `VermilionDockSSAnneLeavesScript`
 (pret `scripts/VermilionDock.asm:40-122`) is un-lowered.
 
@@ -57,7 +57,7 @@ ways. Both are latent — the file is check-only, so nothing runs — and both m
 fixed before it links:
 
 1. **It arms `g_row_xoff_on` and never clears it**
-   (`src/scripts/vermilion_dock.asm:303`; no clearing write exists in the file).
+   (`src/scripts/VermilionDock.asm:303`; no clearing write exists in the file).
    The wavy-screen precedent it copied is battle-scoped and cleared by
    `ClearSprites`; this is not. Leaving it armed leaks a per-row displacement into
    every screen drawn afterwards.
