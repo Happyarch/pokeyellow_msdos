@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_items  # noqa: E402  (sibling generator: load_item_ids owns the TM/HM forms)
 import gb_addrs
+import map_expansion
 
 ROOT = Path(__file__).resolve().parent.parent.parent.parent
 ASSETS = ROOT / "dos_port" / "assets"
@@ -491,14 +492,27 @@ def const_to_pascal(const: str) -> str:
     return "".join(w.capitalize() for w in const.split("_"))
 
 
-def parse_map_constants():
-    """Return {const_name: (id, w, h)}."""
+def parse_map_constants(expand=True):
+    """Return {const_name: (id, w, h)}.
+
+    By default these are the dimensions THE PORT uses, i.e. pret's with
+    map_expansion applied (see tools/generators/map_expansion.py). Every width
+    the port sees -- assets/map_dims.inc's <MAP>_WIDTH, the map-header blob --
+    must come from here, so an expanded map cannot end up with a 22-column blob
+    behind a header that says 14.
+
+    Pass expand=False for the raw pret dimensions. The only caller that wants
+    them is the one slicing pret's own .blk rows, which are still pret-sized.
+    """
     result = {}
     for line in MAP_CONSTANTS.read_text().splitlines():
         m = re.match(r"\s*map_const\s+(\w+),\s*(\d+),\s*(\d+)\s*;\s*\$([0-9A-Fa-f]+)", line)
         if m:
             name, w, h, hex_id = m.groups()
-            result[name] = (int(hex_id, 16), int(w), int(h))
+            w, h = int(w), int(h)
+            if expand:
+                w, h = map_expansion.expanded_dims(name, w, h)
+            result[name] = (int(hex_id, 16), w, h)
     return result
 
 

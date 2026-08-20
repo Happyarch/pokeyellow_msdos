@@ -20,7 +20,11 @@ Or via make:
 """
 import sys
 import re
+import functools
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import map_expansion  # noqa: E402  (sibling module: the port-side map widening rule)
 
 ROOT = Path(__file__).resolve().parent.parent.parent.parent
 ASSETS = ROOT / "dos_port" / "assets"
@@ -99,6 +103,24 @@ def write_inc(dst: Path, label: str, data: bytes, comment: str = "",
     print(f"  wrote {dst} ({len(data)} bytes)")
 
 
+@functools.lru_cache(maxsize=1)
+def _pret_dims():
+    """{const: (id, w, h)} at PRET's dimensions — the grid maps/*.blk is in."""
+    import gen_map_headers as gmh
+    return gmh.parse_map_constants(expand=False)
+
+
+@functools.lru_cache(maxsize=1)
+def _const_by_pascal():
+    import gen_map_headers as gmh
+    return {gmh.const_to_pascal(c): c for c in _pret_dims()}
+
+
+def _blk_const_of(pascal: str):
+    """Map const for a maps/<Pascal>.blk stem, or None if it has no constant."""
+    return _const_by_pascal().get(pascal)
+
+
 def apply_map_overrides(pascal: str, data: bytearray) -> int:
     """Merge assets/map_overrides/<Pascal>.json into the blk bytes (C5).
 
@@ -110,8 +132,11 @@ def apply_map_overrides(pascal: str, data: bytearray) -> int:
         return 0
     import json
     import gen_map_headers as gmh
+    # expand=False: sidecar cells are authored against PRET's grid, and this
+    # runs before map_expansion widens the rows. Using the expanded stride here
+    # would scatter every override cell of an expanded map.
     dims = {gmh.const_to_pascal(c): (w, h)
-            for c, (_i, w, h) in gmh.parse_map_constants().items()}
+            for c, (_i, w, h) in gmh.parse_map_constants(expand=False).items()}
     if pascal not in dims:
         sys.exit(f"{ov}: no map_const dimensions found for {pascal}")
     w, h = dims[pascal]
@@ -381,6 +406,18 @@ def main():
         data = bytearray(blk_file.read_bytes())
         n_over = apply_map_overrides(pascal, data)
         note = f" (+{n_over} authored override cells)" if n_over else ""
+        # Port-side horizontal expansion (tools/generators/map_expansion.py).
+        # Overrides are authored against pret's grid, so they are applied FIRST
+        # and the expansion widens the result. Identity for every map with no
+        # expansion entry.
+        const = _blk_const_of(pascal)
+        if const:
+            _, pw, ph = _pret_dims()[const]
+            grown = map_expansion.expand_blk(const, bytes(data), pw, ph)
+            if len(grown) != len(data):
+                note += (f" (widened {pw}->{map_expansion.expanded_dims(const, pw, ph)[0]}"
+                         f" block columns for the port)")
+                data = bytearray(grown)
         write_inc(
             ASSETS / f"{label}.inc",
             label,

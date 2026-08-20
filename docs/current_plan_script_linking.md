@@ -5,8 +5,8 @@ game". Seeded 2026-08-19 (commits `c3709ae13`, `b5b4efbae`).
 
 ## State
 
-**220 of 225 linked** (measured 2026-08-19; was 207 at seeding, 352 + 1 before
-that). The check-only tier IS the 5 that cannot link yet — they assemble-validate
+**221 of 225 linked** (measured 2026-08-20; was 220 on 2026-08-19, 207 at seeding, 352 + 1 before
+that). The check-only tier IS the 4 that cannot link yet — they assemble-validate
 so a change that breaks them is still caught, and each graduates as its blocker
 lands. Count it, do not quote it:
 
@@ -23,7 +23,7 @@ print(collections.Counter(c.values()))
 EOF
 ```
 
-### Groups A and B are CLOSED except vermilion_dock
+### Groups A and B are CLOSED (vermilion_dock landed 2026-08-20)
 
 The plan's A/B/C split held, but linking all the candidates at once and reading
 the LINK ERRORS found four failure modes where it predicted two. The extra two are
@@ -50,7 +50,7 @@ H/L use is incidental). **Read the pair, not the instruction.**
 
 | script | blocked on | size |
 |---|---|---|
-| `vermilion_dock` | `ScheduleEastColumnRedraw` + `ScheduleColumnRedrawHelper` (pret home/overworld.asm:1491) — under the mirror rule they belong in `src/home/overworld.asm`. Plus the scene's outer scroll count, which needs a frame. | small; the redraw machinery (`RedrawRowOrColumn`, `wRedrawRowOrColumnSrcTiles`, `hRedrawRowOrColumnMode`/`Dest`) is already ported |
+| ~~`vermilion_dock`~~ | **DONE 2026-08-20.** This row's premise was WRONG: `ScheduleEastColumnRedraw` was NOT what it needed. That routine feeds `RedrawRowOrColumn` → `GB_TILEMAP0`, which `render_bg`'s overworld path never reads, so porting it would have been dead code. See `docs/current_plan_ss_anne_departure.md` and memory `ss-anne-departure-scroll`. | — |
 | `celadon_mansion_3f` | `PrintDiploma` | Game Boy Printer tier |
 | `pokemon_fan_club` | `PrintFanClubPortrait` | Game Boy Printer tier |
 | `summer_beach_house` | `PrintSurfingMinigameHighScore`, `Printer_PrepareSurfingMinigameHighScoreTileMap` | Game Boy Printer tier |
@@ -81,7 +81,8 @@ it. Do not `%include` the asset.**
 Measured 2026-08-19. Three distinct kinds of work — do not treat them as one queue.
 
 ### A. 7 files with a real transpiler BAIL — needs translation
-`bike_shop` (4), `daycare` (5), `mt_moon_b_2f` (4), `vermilion_dock` (2),
+`mt_moon_b_2f` (4), `bills_house` (1) — re-measured 2026-08-20, 5 banners in 2
+files; `bike_shop`, `daycare` and `vermilion_dock` are consumed. Older text:
 `cerulean_trashed_house` (1), `oaks_lab` (1), `seafoam_islands_b_4f` (1).
 
 19 banners / 8 files tree-wide. By class: 7 `target-region-bailed` (cascade — they
@@ -138,7 +139,7 @@ Nothing wrong with the scripts. They need:
 - [x] Get maintainer rulings for the 2 `screen-coord-projection` sites — bike shop
       ruled AS THE POKÉ MART, S.S. Anne ruled FULL SPAN with a timing consequence
       (docs/ui_projection.md)
-- [ ] `vermilion_dock`: port `ScheduleEastColumnRedraw` +
+- [x] `vermilion_dock`: DONE 2026-08-20 — but NOT by porting `ScheduleEastColumnRedraw` +
       `ScheduleColumnRedrawHelper` into `src/home/overworld.asm`, then lower
       `VermilionDockSSAnneLeavesScript` and settle its scroll count visually
 - [ ] Group C: port the Printer tier and `HallOfFamePC`

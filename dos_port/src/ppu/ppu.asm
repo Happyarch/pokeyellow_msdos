@@ -392,6 +392,12 @@ alignb 4
 tiledata_mode:   resd 1    ; 1 = $8000 unsigned, 0 = $8800 signed
 ; render_bg surface-mirror state
 bg_tilemap_base: resd 1    ; BG tilemap base addr ($9800 or $9C00)
+; Exported: a scene that has to place work in SURFACE rows needs the same
+; vertical origin the blit uses. bg_scy is the surface pixel row that screen row
+; 0 samples, so surface_row = (bg_scy + screen_py) >> 3. Deriving it a second
+; time in the scene would be a second source of truth for the camera anchor —
+; the exact thing that made the S.S. Anne band constants wrong.
+global bg_scy, bg_scx
 bg_scy:          resd 1    ; SCY shadow
 bg_scx:          resd 1    ; SCX shadow
 sprite_shift_x:  resd 1    ; Dynamic X shift for sprites to align with DOS camera

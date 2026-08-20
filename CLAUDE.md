@@ -347,6 +347,23 @@ The map-editing tools (`dos_port/tools/map_editor/`) are kept regardless — not
 because the clamps need retiring, but because they are genuinely useful to
 modders authoring new maps.
 
+**ONE SANCTIONED MAP EXPANSION EXISTS, and it does not reopen the above.**
+`dos_port/tools/generators/map_expansion.py` widens `VERMILION_DOCK` from 14 to
+22 block columns at generation time (maintainer decision, 2026-08-20). It is not
+a step toward retiring the clamps — the clamps stay, and the scene's own
+re-decode reproduces the out-of-map answer rather than assuming the widening
+makes it unreachable. It exists because the S.S. Anne departure walks the map
+view 8 blocks east (the port's ship starts 8 blocks from the left screen edge
+where the GB's is flush with it), and an out-of-map read returns
+`wMapBackgroundTile` = `$0F`, the BORDER block — not sea. Constraints, which any
+future expansion must also meet: pret's `maps/*.blk` and
+`constants/map_constants.asm` are NEVER written, so the golden harness still runs
+the real ROM; the widening is DERIVED by a generator, never hand-authored; and
+every dimension flows through the single chokepoint
+`gen_map_headers.parse_map_constants()` so the blob, the header and
+`<MAP>_WIDTH` cannot disagree. Adding a second entry to that table is a
+maintainer decision, not an agent's.
+
 ---
 
 ## Hard Rules (always in force)

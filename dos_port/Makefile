@@ -779,6 +779,7 @@ GAME_SRCS := \
     src/scripts/underground_path_route_8.asm \
     src/scripts/underground_path_west_east.asm \
     src/scripts/vermilion_city.asm \
+    src/scripts/vermilion_dock.asm \
     src/scripts/vermilion_gym.asm \
     src/scripts/vermilion_mart.asm \
     src/scripts/vermilion_old_rod_house.asm \
@@ -2981,7 +2982,6 @@ POKEMON_CHECK_SRCS :=
 # here so a change that breaks them is still caught, and each graduates to
 # SCRIPT_SRCS above as its blocking symbol lands.
 ITEMS_CHECK_SRCS := \
-    src/scripts/vermilion_dock.asm \
     src/scripts/celadon_mansion_3f.asm \
     src/scripts/hall_of_fame.asm \
     src/scripts/pokemon_fan_club.asm \

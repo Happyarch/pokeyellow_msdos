@@ -26,6 +26,9 @@ bits 32
 %include "coords.inc"
 
 global VermilionDock_SyncScrollWithLY
+global VermilionDockSSAnneLeavesScript
+global VermilionDock_BeginDeparture
+global VermilionDock_EndDeparture
 global VermilionDockOAMBlock
 global VermilionDockUnusedText
 global VermilionDock_AnimSmokePuffDriftRight
@@ -37,6 +40,7 @@ global VermilionDock_TextPointers
 extern DelayFrame                ; src/home/vblank.asm
 extern g_row_xoff                ; src/ppu/ppu.asm — per-scanline BG X displacement
 extern g_row_xoff_on             ; src/ppu/ppu.asm — arms the per-row HAL
+extern bg_scy                    ; src/ppu/ppu.asm — surface px row that screen row 0 samples
 extern CopyScreenTileBufferToVRAM
 extern CopyVideoData
 extern Delay3
@@ -50,8 +54,6 @@ extern PlaySound
 extern PlaySoundWaitForCurrent
 extern StopAllMusic
 extern UpdateCGBPal_OBP1
-extern VermilionDockSSAnneLeavesScript   ; NOT YET DEFINED IN THE PORT
-extern VermilionDock_SyncScrollWithLY   ; NOT YET DEFINED IN THE PORT
 extern WriteOAMBlock
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
@@ -120,93 +122,127 @@ VermilionDock_Script:
     SetEventReuseHL EVENT_WALKED_OUT_OF_DOCK
     ret
 
+%assign event_byte -1
+%assign event_byte_a -1
 ; ---------------------------------------------------------------------------
-; BAIL[screen-coord-projection] VermilionDockSSAnneLeavesScript (scripts/VermilionDock.asm:40-122) — at scripts/VermilionDock.asm:54: hlcoord 0, 10
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; VermilionDockSSAnneLeavesScript — pret scripts/VermilionDock.asm:39-122.
+;
+; The bail was `screen-coord-projection` on `hlcoord 0, 10`. That coord is a
+; wTileMap write, which the port projects the ordinary way (stride 40); the
+; region needed hand-lowering for the SCROLL, not for the coord.
+;
+; Two substitutions, both annotated at their site:
+;   * `call ScheduleEastColumnRedraw` is DROPPED. It fills wScreenEdgeTiles for
+;     RedrawRowOrColumn, which writes GB_TILEMAP0 — a buffer render_bg's
+;     overworld path never reads. Porting it would assemble, link, pass every
+;     gate and do nothing. The eastward walk it exists to feed is realised by
+;     VermilionDock_RedecodeBand, driven from VermilionDock_SyncScrollWithLY.
+;   * the outer count is DOCK_WALK_BLOCKS*2 (16) rather than pret's 8, because
+;     the port's ship starts 8 blocks from the left screen edge instead of flush
+;     with it. Same 16 px per pass, so the ship moves at pret's speed and the
+;     scene runs twice as long — it does not move twice as fast.
 ; ---------------------------------------------------------------------------
-; PRET| 	SetEventForceReuseHL EVENT_SS_ANNE_LEFT
-; PRET| 	ld a, $ff
-; PRET| 	ld [wJoyIgnore], a
-; PRET| 	call StopAllMusic
-; PRET| 	ld c, BANK(Music_Surfing)
-; PRET| 	ld a, MUSIC_SURFING
-; PRET| 	call PlayMusic
-; PRET| 	farcall LoadSmokeTileFourTimes
-; PRET| 	xor a
-; PRET| 	ld [wSpritePlayerStateData1ImageIndex], a
-; PRET| 	ld c, 120
-; PRET| 	call DelayFrames
-; PRET| 	ld b, HIGH(vBGMap1)
-; PRET| 	call CopyScreenTileBufferToVRAM
-; PRET| 	hlcoord 0, 10
-; PRET| 	ld bc, SCREEN_WIDTH * 6
-; PRET| 	ld a, $14 ; water tile
-; PRET| 	call FillMemory
-; PRET| 	ld a, 1
-; PRET| 	ldh [hAutoBGTransferEnabled], a
-; PRET| 	call Delay3
-; PRET| 	xor a
-; PRET| 	ldh [hAutoBGTransferEnabled], a
-; PRET| 	ld [wSSAnneSmokeDriftAmount], a
-; PRET| 	ldh [rOBP1], a
-; PRET| 	call UpdateCGBPal_OBP1
-; PRET| 	ld a, 88
-; PRET| 	ld [wSSAnneSmokeX], a
-; PRET| 	ld hl, wMapViewVRAMPointer
-; PRET| 	ld c, [hl]
-; PRET| 	inc hl
-; PRET| 	ld b, [hl]
-; PRET| 	push bc
-; PRET| 	push hl
-; PRET| 	ld a, SFX_SS_ANNE_HORN
-; PRET| 	call PlaySoundWaitForCurrent
-; PRET| 	ld a, $ff
-; PRET| 	ld [wUpdateSpritesEnabled], a
-; PRET| 	ld d, $0
-; PRET| 	ld e, $8
-; PRET| .shift_columns_up
-; PRET| 	ld hl, $2
-; PRET| 	add hl, bc
-; PRET| 	ld a, l
-; PRET| 	ld [wMapViewVRAMPointer], a
-; PRET| 	ld a, h
-; PRET| 	ld [wMapViewVRAMPointer + 1], a
-; PRET| 	push hl
-; PRET| 	push de
-; PRET| 	call ScheduleEastColumnRedraw
-; PRET| 	call VermilionDock_EmitSmokePuff
-; PRET| 	pop de
-; PRET| 	ld b, $10
-; PRET| .smoke_puff_drift_loop
-; PRET| 	call VermilionDock_AnimSmokePuffDriftRight
-; PRET| 	ld c, $8
-; PRET| .delay_between_drifts
-; PRET| 	call VermilionDock_SyncScrollWithLY
-; PRET| 	dec c
-; PRET| 	jr nz, .delay_between_drifts
-; PRET| 	inc d
-; PRET| 	dec b
-; PRET| 	jr nz, .smoke_puff_drift_loop
-; PRET| 	pop bc
-; PRET| 	dec e
-; PRET| 	jr nz, .shift_columns_up
-; PRET| 	xor a
-; PRET| 	ldh [rWY], a
-; PRET| 	ldh [hWY], a
-; PRET| 	call VermilionDock_EraseSSAnne
-; PRET| 	ld a, $90
-; PRET| 	ldh [hWY], a
-; PRET| 	ld a, $1
-; PRET| 	ld [wUpdateSpritesEnabled], a
-; PRET| 	pop hl
-; PRET| 	pop bc
-; PRET| 	ld [hl], b
-; PRET| 	dec hl
-; PRET| 	ld [hl], c
-; PRET| 	call LoadPlayerSpriteGraphics
-; PRET| 	ld hl, wNumberOfWarps
-; PRET| 	dec [hl]
-; PRET| 	ret
+VermilionDockSSAnneLeavesScript:
+    SetEventForceReuseHL EVENT_SS_ANNE_LEFT
+    mov al, 0xff
+    mov [ebp + wJoyIgnore], al
+    call StopAllMusic
+    mov bl, 0                                ; ld c, BANK(Music_Surfing) — flat, no-op
+    mov al, MUSIC_SURFING
+    call PlayMusic
+    call LoadSmokeTileFourTimes              ; farcall — flat address space
+    xor al, al
+    mov [ebp + wSpritePlayerStateData1ImageIndex], al
+    mov bl, 120                              ; ld c, 120
+    call DelayFrames
+    mov bh, (GB_TILEMAP1 >> 8) & 0xFF        ; ld b, HIGH(vBGMap1) — ignored by
+    call CopyScreenTileBufferToVRAM          ; the port's 3-frame pacing form
+
+    ; pret paints the water band into the screen buffer here. On the port's
+    ; overworld path wTileMap is not what render_bg samples (it decodes
+    ; wSurroundingTiles), so this write is inert — kept because it is pret's
+    ; line and harmless, not because it does the work. The water actually
+    ; arrives through VermilionDock_RedecodeBand and VermilionDock_EraseSSAnne.
+    hlcoord 0, 10
+    mov bx, SCREEN_WIDTH * 6
+    mov al, 0x14                             ; water tile
+    call FillMemory
+
+    mov al, 1
+    mov [ebp + hAutoBGTransferEnabled], al
+    call Delay3
+    xor al, al
+    mov [ebp + hAutoBGTransferEnabled], al
+    mov [ebp + wSSAnneSmokeDriftAmount], al
+    mov [ebp + IO_OBP1], al
+    call UpdateCGBPal_OBP1
+    mov al, 88
+    mov [ebp + wSSAnneSmokeX], al
+
+    ; pret saves wMapViewVRAMPointer, walks it east through the loop, and puts
+    ; it back at the end. The port's renderer does not consume that pointer
+    ; (gb_memmap.inc records it as dropped after the native renderer), so the
+    ; walk is bookkeeping here — but it is pret's state and the save/restore
+    ; pair is what keeps it honest, so it is carried verbatim.
+    mov esi, wMapViewVRAMPointer
+    mov bl, [ebp + esi]                      ; ld c, [hl]
+    inc esi
+    mov bh, [ebp + esi]                      ; ld b, [hl]
+    push ebx
+    push esi
+
+    mov al, SFX_SS_ANNE_HORN
+    call PlaySoundWaitForCurrent
+    mov al, 0xff
+    mov [ebp + wUpdateSpritesEnabled], al
+
+    call VermilionDock_BeginDeparture        ; port-only: arm the per-row HAL
+
+    mov dh, 0x0                              ; ld d, $0 — travel so far, px
+    mov dl, DOCK_WALK_BLOCKS * 2             ; ld e, $8 — see the header note
+.shift_columns_up:
+    movzx esi, bx
+    add esi, 0x2                             ; ld hl, $2 / add hl, bc
+    mov [ebp + wMapViewVRAMPointer], si
+    push esi
+    push edx
+    ; call ScheduleEastColumnRedraw — dropped, see the header note.
+    call VermilionDock_EmitSmokePuff
+    pop edx
+    mov bh, 0x10                             ; ld b, $10
+.smoke_puff_drift_loop:
+    call VermilionDock_AnimSmokePuffDriftRight
+    mov bl, 0x8                              ; ld c, $8
+.delay_between_drifts:
+    call VermilionDock_SyncScrollWithLY
+    dec bl
+    jnz .delay_between_drifts
+    inc dh
+    dec bh
+    jnz .smoke_puff_drift_loop
+    pop ebx                                  ; pop bc — the advanced pointer
+    dec dl
+    jnz .shift_columns_up
+
+    call VermilionDock_EndDeparture          ; port-only: disarm the per-row HAL
+
+    xor al, al
+    mov [ebp + IO_WY], al
+    mov [ebp + hWY], al
+    call VermilionDock_EraseSSAnne
+    mov al, 0x90
+    mov [ebp + hWY], al
+    mov al, 0x1
+    mov [ebp + wUpdateSpritesEnabled], al
+    pop esi                                  ; pop hl
+    pop ebx                                  ; pop bc
+    mov [ebp + esi], bh                      ; ld [hl], b
+    dec esi
+    mov [ebp + esi], bl                      ; ld [hl], c
+    call LoadPlayerSpriteGraphics
+    mov esi, wNumberOfWarps
+    dec byte [ebp + esi]                     ; the S.S. Anne warp is deleted —
+    ret                                      ; real state change, not cleanup
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -263,44 +299,206 @@ VermilionDockOAMBlock:
 
 %assign event_byte -1
 %assign event_byte_a -1
+; ===========================================================================
+; THE DEPARTURE SCROLL — port realisation of pret's view walk.
+;
+; pret does not move the ship. It walks the BG's SAMPLING WINDOW east
+; (wMapViewVRAMPointer += 2 per outer pass, ScheduleEastColumnRedraw feeding the
+; columns that scroll in) while holding rSCX at 0 outside one 48-px band, so the
+; ship appears to sail west out from under a stationary camera.
+;
+; The port has no VRAM torus for that walk to happen in — render_bg decodes
+; wSurroundingTiles into its own surface and never reads GB_TILEMAP0 on the
+; overworld path — so the walk is realised where the port's map view actually
+; lives: the band's rows of wSurroundingTiles are re-decoded from wOverworldMap
+; at an advanced block offset (the COARSE half, 32 px per block) and the
+; remainder rides the compositor's per-row X displacement (the FINE half,
+; 0..31 px). Coarse + fine reproduces the same continuous motion pret gets from
+; pointer + rSCX, and it is the same decomposition pret uses.
+;
+; DEVIATION{class=projection; pret=scripts/VermilionDock.asm:VermilionDockSSAnneLeavesScript; behavior=the eastward view walk is realised by re-decoding the scrolling band's rows of wSurroundingTiles from wOverworldMap at an advancing block offset plus a 0..31 px per-row displacement, instead of advancing wMapViewVRAMPointer and letting ScheduleEastColumnRedraw feed a 32-tile VRAM torus, and the walk is 8 blocks instead of pret's 4; evidence=render_bg's overworld path decodes wSurroundingTiles and never reads GB_TILEMAP0 or wMapViewVRAMPointer so a ported ScheduleEastColumnRedraw would have no consumer, and the port's 40-tile viewport places the ship 8 blocks from the left screen edge against the GB's 0 so twice the walk is needed for it to clear; lifetime=permanent, a consequence of the native-surface renderer and the widened viewport}
+; ===========================================================================
+
+; The band is the six tile rows starting at the row the player's feet occupy.
+; NOT a transplant of pret's literal scanlines 80 and 128: those are anchored to
+; the GB camera, whose vertical origin is not the port's, and an earlier version
+; of this file copied them across with a comment claiming the numbers coincided.
+; They do not. What DOES carry is the relationship — pret's 80 is its own feet
+; row (10) times 8, and its 128 is six rows below that.
+DOCK_BAND_TOP_PY  equ PLAYER_STANDING_ROW * 8
+DOCK_BAND_ROWS    equ 6
+DOCK_BAND_BOT_PY  equ DOCK_BAND_TOP_PY + DOCK_BAND_ROWS * 8
+
+; Blocks the band walks east. 8, not pret's 4: the ship sits at port screen
+; columns 16..31 of 40 rather than flush with the left edge, so it must travel
+; 32 tile columns to clear. maps/VermilionDock.blk is widened to 22 block
+; columns by tools/generators/map_expansion.py so the walk lands on real cells
+; instead of wMapBackgroundTile.
+DOCK_WALK_BLOCKS  equ 8
+
+section .bss
+; Last coarse offset applied, so the band is re-decoded once per block crossed
+; rather than once per frame. -1 = nothing decoded yet.
+dock_coarse:      resd 1
+; RedecodeBand locals. Explicit storage rather than stack slots: the routine is
+; under pushad, and an earlier draft stashed these over pushad's saved EAX/EBX
+; slots, which would have corrupted the registers it promises to preserve.
+dock_row_end:     resd 1
+dock_stride:      resd 1
+dock_subofs:      resd 1
+dock_offset:      resd 1
+section .text
+
 ; ---------------------------------------------------------------------------
-; VermilionDock_SyncScrollWithLY — pret scripts/VermilionDock.asm:165-180.
+; VermilionDock_BeginDeparture / VermilionDock_EndDeparture — port-only.
 ;
-; The bail called this `hl-half-register-access`, but the half-register use is
-; incidental: pret is loading H and L as a (scanline, scroll) PAIR to drive one
-; helper twice. What the routine actually IS, is a RASTER SPLIT SCROLL —
-;     wait LY == $50, set rSCX = D      (scanlines 80..127 scroll by D)
-;     wait LY == $80, set rSCX = 0      (everything else does not)
-; which is how the water below the dock drifts while the land above it stays put.
+; Own the compositor state this scene borrows. The per-row HAL is armed here and
+; DISARMED on the way out: a leaked g_row_xoff_on displaces every screen drawn
+; afterwards, and the wavy-screen precedent this borrows from is battle-scoped
+; and cleared by ClearSprites, which this scene never calls.
+; ---------------------------------------------------------------------------
+VermilionDock_BeginDeparture:
+    pushad
+    mov dword [dock_coarse], -1
+    xor eax, eax
+    mov ecx, RENDER_H
+    mov edi, g_row_xoff
+    rep stosb                                ; identity displacement to start
+    mov dword [g_row_xoff_on], 1
+    popad
+    ret
+
+VermilionDock_EndDeparture:
+    pushad
+    mov dword [g_row_xoff_on], 0             ; identity fast path restored
+    xor eax, eax
+    mov ecx, RENDER_H
+    mov edi, g_row_xoff
+    rep stosb
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; VermilionDock_RedecodeBand — port-only. Re-fill the band's rows of
+; wSurroundingTiles from wOverworldMap, sampling ECX blocks east of the current
+; view. This is the port's form of pret's wMapViewVRAMPointer advance plus
+; ScheduleEastColumnRedraw: rather than scheduling the one column that scrolled
+; in, it redraws the whole band at the new offset, which is the same picture and
+; costs 288 tile writes on the eight frames where the offset changes.
 ;
-; DEVIATION{class=HAL; pret=scripts/VermilionDock.asm:VermilionDock_SyncScrollWithLY; behavior=the per-scanline rSCX split is expressed as a per-row displacement table consumed by the compositor instead of two rLY spin-waits writing rSCX mid-frame; evidence=rLY and rSTAT are inert in the port so a literal LY spin never terminates, and the port already realizes this exact effect through g_row_xoff plus g_row_xoff_on for AnimationWavyScreen; lifetime=permanent software-video boundary}
+; In:  ECX = block offset east. EBP = GB memory base. All registers preserved.
+; ---------------------------------------------------------------------------
+VermilionDock_RedecodeBand:
+    pushad
+    mov [dock_offset], ecx
+
+    ; Surface row range. bg_scy is the surface pixel row screen row 0 samples,
+    ; so the band's first surface tile row is (bg_scy + DOCK_BAND_TOP_PY) >> 3.
+    mov eax, [bg_scy]
+    add eax, DOCK_BAND_TOP_PY
+    shr eax, 3
+    mov edi, eax                             ; EDI = current surface tile row
+    add eax, DOCK_BAND_ROWS
+    mov [dock_row_end], eax                  ; exclusive end
+
+    ; Block-map row stride = wCurMapWidth + MAP_BORDER*2.
+    movzx eax, byte [ebp + wCurMapWidth]
+    add eax, MAP_BORDER * 2
+    mov [dock_stride], eax
+
+.row:
+    ; Block-map address of this row's column 0, offset east by the walk.
+    mov eax, edi
+    shr eax, 2                               ; block row
+    imul eax, [dock_stride]
+    movzx edx, word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR]
+    add edx, eax
+    add edx, [dock_offset]                   ; EDX = block-map addr, column 0
+
+    ; Byte offset of this surface row inside the block: (row & 3) * BLOCK_WIDTH.
+    mov eax, edi
+    and eax, 3
+    shl eax, 2
+    mov [dock_subofs], eax
+
+    ; Destination: wSurroundingTiles + row * SURROUNDING_WIDTH.
+    mov esi, edi
+    imul esi, SURROUNDING_WIDTH
+    add esi, wSurroundingTiles
+
+    mov ecx, SCREEN_BLOCK_WIDTH              ; 12 block columns across the surface
+.col:
+    ; Block id, with the same out-of-map answer LoadCurrentMapView gives. With
+    ; the map widened east this should not fire during the walk; it is kept
+    ; because a clamp that only exists when you expect to need it is not a clamp.
+    cmp edx, wOverworldMap
+    jb .oob
+    cmp edx, wOverworldMap + W_OVERWORLD_MAP_SIZE
+    jae .oob
+    movzx eax, byte [ebp + edx]
+    jmp .have_id
+.oob:
+    movzx eax, byte [ebp + wMapBackgroundTile]
+.have_id:
+    ; Blockset row: wTilesetBlocksPtr + id*16 + subrow*BLOCK_WIDTH. Four tile
+    ; ids are contiguous there, so one dword move carries the whole row.
+    shl eax, 4
+    add eax, [dock_subofs]
+    movzx ebx, word [ebp + wTilesetBlocksPtr]
+    add eax, ebx
+    mov ebx, [ebp + eax]
+    mov [ebp + esi], ebx
+    add esi, BLOCK_WIDTH
+    inc edx
+    dec ecx
+    jnz .col
+
+    inc edi
+    cmp edi, [dock_row_end]
+    jb .row
+
+    popad
+    ret
+
+%assign event_byte -1
+%assign event_byte_a -1
+; ---------------------------------------------------------------------------
+; VermilionDock_SyncScrollWithLY — pret scripts/VermilionDock.asm:164-180.
 ;
-; The split point needs NO projection. pret splits at LY 80 and 128; the water is
-; filled from `hlcoord 0, 10` for 6 rows, and in the PORT that coord is already in
-; port rows, so rows 10..15 are pixels 80..127 on both sides. The numbers coincide
-; because both are "the six rows starting at row 10", not by luck.
+; pret waits for LY == $50, writes rSCX = D, waits for LY == $80 and writes
+; rSCX = 0, so scanlines 80..127 scroll and the rest does not. rLY and rSTAT are
+; inert in the port, so a literal LY spin never terminates. The split is instead
+; expressed over the band's rows: the coarse part re-decodes the band's map
+; source, the fine part rides the per-row displacement.
 ;
-; In: DH = pret's D, the drift amount. Preserves every register the caller needs
-; (the caller counts with BL and increments DH).
+; DEVIATION{class=HAL; pret=scripts/VermilionDock.asm:VermilionDock_SyncScrollWithLY; behavior=the per-scanline rSCX split is realised as a coarse re-decode of the band's rows of wSurroundingTiles plus a 0..31 px per-row displacement over the band's screen rows, instead of two rLY spin-waits writing rSCX mid-frame; evidence=rLY and rSTAT are inert in the port so a literal LY spin never terminates, and a single rSCX-equivalent cannot express the port's 256 px of travel because bg_scx is clamped to the 64 px of slack between the 384 px surface and the 320 px window; lifetime=permanent software-video boundary}
+;
+; In: DH = pret's D, total travel in pixels (0..255). Preserves every register
+; the caller needs (the caller counts with BL and increments DH).
 ; ---------------------------------------------------------------------------
 VermilionDock_SyncScrollWithLY:
     pushad
-    movzx eax, dh                                 ; the scroll amount (pret: ld h, d)
-    xor ecx, ecx
+    movzx eax, dh                            ; total travel so far, px
+
+    ; Coarse: whole blocks crossed. Re-decode only when it changes.
+    mov ecx, eax
+    shr ecx, 5                               ; 32 px per block
+    cmp ecx, [dock_coarse]
+    je .fine
+    mov [dock_coarse], ecx
+    call VermilionDock_RedecodeBand
+.fine:
+    and eax, 31                              ; remainder, 0..31 px — inside the
+                                             ; 64 px the channel can express
+
+    ; Publish the remainder over the band's screen rows, identity elsewhere.
+    mov ecx, DOCK_BAND_TOP_PY
 .row:
-    cmp ecx, 80                                   ; pret: wait LY == $50, then rSCX = D
-    jb .zero
-    cmp ecx, 128                                  ; pret: wait LY == $80, then rSCX = 0
-    jae .zero
     mov [g_row_xoff + ecx], al
-    jmp .next
-.zero:
-    mov byte [g_row_xoff + ecx], 0
-.next:
     inc ecx
-    cmp ecx, RENDER_H
+    cmp ecx, DOCK_BAND_BOT_PY
     jb .row
-    mov byte [g_row_xoff_on], 1                   ; arm the per-row HAL
+
     popad
 ; pret's two LY spin-waits are what make this routine take one frame; the port
 ; has no rLY to spin on, so the frame boundary is the DelayFrame the compositor
@@ -336,6 +534,24 @@ VermilionDock_EraseSSAnne:
 ; the player and won't be redrawn when the player automatically walks north and
 ; exits the map. This code could be removed without affecting anything.
     hlowcoord 5, 2, VERMILION_DOCK_WIDTH
+    mov al, 0xd                              ; water block
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+    lea esi, [esi+1]
+    mov [ebp + esi], al
+
+    ; PORT MUST DO MORE THAN PRET HERE. pret clears only the ship's LOWER block
+    ; row and its own comment calls even that unnecessary, because on the GB the
+    ; ship is south of the player and those blocks are never redrawn before the
+    ; map exits. The port rebuilds the map view from wOverworldMap every frame,
+    ; so anything left in the ship's blocks comes straight back — the upper row
+    ; would leave the top half of the S.S. Anne moored after it has sailed.
+    ;
+    ; DEVIATION{class=projection; pret=scripts/VermilionDock.asm:VermilionDock_EraseSSAnne; behavior=the ship's UPPER block row is cleared to the water block as well as the lower row pret clears; evidence=pret notes the block clear is unnecessary because the blocks are south of the player and are not redrawn before the map exits, whereas the port regenerates wSurroundingTiles from wOverworldMap every frame so an uncleared block reappears, and the port's 40x25 viewport shows both of the ship's block rows rather than the GB's lower band only; lifetime=permanent, a consequence of the native-surface renderer and the widened viewport}
+    hlowcoord 5, 1, VERMILION_DOCK_WIDTH
     mov al, 0xd                              ; water block
     mov [ebp + esi], al
     lea esi, [esi+1]
