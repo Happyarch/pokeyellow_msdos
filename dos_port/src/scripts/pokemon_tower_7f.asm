@@ -24,6 +24,7 @@ bits 32
 %include "assets/audio_constants.inc"
 %include "assets/map_dims.inc"
 
+global PokemonTower7FScript0
 global PokemonTower7FJessieJamesEndBattleText
 global PokemonTower7FJessieJamesText
 global PokemonTower7FMovementData_60d7a
@@ -64,7 +65,6 @@ extern HideObject
 extern MoveSprite
 extern PlayDefaultMusic
 extern PlayMusic
-extern PokemonTower7FScript0   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern SaveEndBattleTextPointers
 extern ShowObject
@@ -133,6 +133,11 @@ PokemonTower7F_ScriptPointers:
 
 %assign event_byte -1
 %assign event_byte_a -1
+; LABEL-DROP REPAIR: the body below is the transpiler's own correct output; it emitted
+; NO label for it because pret guards the routine's first lines with IF DEF(_DEBUG)
+; and the tool consumed the label with the stripped block. Only the pret label is
+; restored. Same mode as the three DefaultScripts fixed in 3b4a7ed48's follow-up.
+PokemonTower7FScript0:
     CheckEvent EVENT_BEAT_POKEMONTOWER_7_JESSIE_JAMES
     jnz .sk_36
         call PokemonTower7FScript_60d2a

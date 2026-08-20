@@ -579,6 +579,9 @@ GAME_SRCS := \
     src/data/trainer_headers.asm \
     src/data/map_script_tables.asm \
     src/scripts/pallet_town.asm \
+    src/scripts/pokemon_tower_2f.asm \
+    src/scripts/pokemon_tower_7f.asm \
+    src/scripts/safari_zone_gate.asm \
     src/scripts/cerulean_trashed_house.asm \
     src/scripts/daycare.asm \
     src/scripts/oaks_lab.asm \
@@ -2982,9 +2985,6 @@ ITEMS_CHECK_SRCS := \
     src/scripts/celadon_mansion_3f.asm \
     src/scripts/hall_of_fame.asm \
     src/scripts/pokemon_fan_club.asm \
-    src/scripts/pokemon_tower_2f.asm \
-    src/scripts/pokemon_tower_7f.asm \
-    src/scripts/safari_zone_gate.asm \
     src/scripts/summer_beach_house.asm \
 
 # Home routines that assemble-validate but aren't linked yet. count_set_bits

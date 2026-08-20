@@ -23,6 +23,7 @@ bits 32
 
 %include "assets/audio_constants.inc"
 
+global PokemonTower2FDefaultScript
 global PokemonTower2FChannelerText
 global PokemonTower2FDefeatedRivalScript
 global PokemonTower2FPikachuMovement
@@ -46,7 +47,6 @@ extern MoveSprite
 extern Music_RivalAlternateStart
 extern PlayDefaultMusic
 extern PlayMusic
-extern PokemonTower2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern SaveEndBattleTextPointers
 extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
@@ -98,6 +98,11 @@ PokemonTower2F_ScriptPointers:
 
 %assign event_byte -1
 %assign event_byte_a -1
+; LABEL-DROP REPAIR: the body below is the transpiler's own correct output; it emitted
+; NO label for it because pret guards the routine's first lines with IF DEF(_DEBUG)
+; and the tool consumed the label with the stripped block. Only the pret label is
+; restored. Same mode as the three DefaultScripts fixed in 3b4a7ed48's follow-up.
+PokemonTower2FDefaultScript:
     CheckEvent EVENT_BEAT_POKEMON_TOWER_RIVAL
     jz .nr_26
         ret
