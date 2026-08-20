@@ -215,14 +215,6 @@ def build_report(scan):
     rows.append(['**total pret labels**', total, '100%'])
 
     lines += [md_table(['status', 'labels', 'share'], rows), '']
-    lines += ['', '> **The headline moved on 2026-08-20, and not because the port'
-              ' advanced that day.** pret `scripts/` labels were admitted to the label'
-              ' DB; before that they had no status and were counted nowhere, while'
-              ' 2276 of them were simultaneously misfiled as bespoke `port_only` code.'
-              ' The tier is 95.9% translated, so folding it in raised the overall'
-              ' figure in one step. Compare like with like across that boundary by'
-              ' reading the `core` row of the tier table below, which is the number'
-              ' this summary used to report.', '']
     lines += [f'_{linked} of those labels have a provider the current build links._'
               ' Port-only labels (routines with no pret counterpart — HAL boundaries,'
               ' debug harnesses) are deliberately excluded: they are not pret coverage,'
