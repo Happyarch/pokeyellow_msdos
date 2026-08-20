@@ -149,6 +149,17 @@ largest cost feared for this change does not materialise.
 **only on branch `script-linking`** (21 commits, unpushed; `static_gate` 6 checks
 there vs 5 on master). This plan presupposes that branch merging first.
 
+## Status: COMPLETE
+
+fidelity-full **86/86** (nonzero=0), static_gate **PASS — 8 checks**, and the CI
+chain (`make assets`, `make check`, `static_gate`) verified from a clean asset
+tree. Landed 2026-08-19 across `3b4a7ed48`, `e4d4892bd`, `44e388643`.
+
+Two rules make the model correct, and both were learned the hard way: a growth
+applies at or above the END of its region (`p + pret_size <= addr`, or grown
+regions tear apart), and **a widening is a growth** (the `dw`→`dd` jumptable
+pointer needs its 4 bytes modelled, not inherited from pret's 2).
+
 ## Stages
 
 - [x] **S1 — Land the collision detector as a gate.** Group port symbols by port
@@ -178,7 +189,7 @@ there vs 5 on master). This plan presupposes that branch merging first.
 - [x] **S5 — Shrink `gb_memmap.inc` to deliberate exceptions**, deleting the
       hand-placed echo addresses the generator now derives, and rename the region
       so nothing calls it "free echo RAM" again.
-- [ ] **S6 — Rebase the above-window arena** (`GB_VRAM1`, `GB_BACKBUF`, SRAM
+- [x] **S6 — Rebase the above-window arena** (`GB_VRAM1`, `GB_BACKBUF`, SRAM
       banks, `wTempPic`). NOT DONE and NOT NEEDED for the expansion: the whole
       shift fits below `GB_OAM`, so nothing above `0x10000` had to move.
       `wTempPic` stays exiled at `0x21A00` — pret unions it with `wOverworldMap`
