@@ -25,6 +25,7 @@ bits 32
 %include "assets/map_dims.inc"
 %include "coords.inc"
 
+global VermilionDock_SyncScrollWithLY
 global VermilionDockOAMBlock
 global VermilionDockUnusedText
 global VermilionDock_AnimSmokePuffDriftRight
@@ -33,6 +34,9 @@ global VermilionDock_EraseSSAnne
 global VermilionDock_Script
 global VermilionDock_TextPointers
 
+extern DelayFrame                ; src/home/vblank.asm
+extern g_row_xoff                ; src/ppu/ppu.asm — per-scanline BG X displacement
+extern g_row_xoff_on             ; src/ppu/ppu.asm — arms the per-row HAL
 extern CopyScreenTileBufferToVRAM
 extern CopyVideoData
 extern Delay3
@@ -257,26 +261,53 @@ VermilionDockOAMBlock:
     db 0xfe, OAM_PAL1
     db 0xff, OAM_PAL1
 
+%assign event_byte -1
+%assign event_byte_a -1
 ; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] VermilionDock_SyncScrollWithLY (scripts/VermilionDock.asm:165-180) — at scripts/VermilionDock.asm:165: `h` is a half of ESI and has no flag-safe 8-bit x86 form
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; VermilionDock_SyncScrollWithLY — pret scripts/VermilionDock.asm:165-180.
+;
+; The bail called this `hl-half-register-access`, but the half-register use is
+; incidental: pret is loading H and L as a (scanline, scroll) PAIR to drive one
+; helper twice. What the routine actually IS, is a RASTER SPLIT SCROLL —
+;     wait LY == $50, set rSCX = D      (scanlines 80..127 scroll by D)
+;     wait LY == $80, set rSCX = 0      (everything else does not)
+; which is how the water below the dock drifts while the land above it stays put.
+;
+; DEVIATION{class=HAL; pret=scripts/VermilionDock.asm:VermilionDock_SyncScrollWithLY; behavior=the per-scanline rSCX split is expressed as a per-row displacement table consumed by the compositor instead of two rLY spin-waits writing rSCX mid-frame; evidence=rLY and rSTAT are inert in the port so a literal LY spin never terminates, and the port already realizes this exact effect through g_row_xoff plus g_row_xoff_on for AnimationWavyScreen; lifetime=permanent software-video boundary}
+;
+; The split point needs NO projection. pret splits at LY 80 and 128; the water is
+; filled from `hlcoord 0, 10` for 6 rows, and in the PORT that coord is already in
+; port rows, so rows 10..15 are pixels 80..127 on both sides. The numbers coincide
+; because both are "the six rows starting at row 10", not by luck.
+;
+; In: DH = pret's D, the drift amount. Preserves every register the caller needs
+; (the caller counts with BL and increments DH).
 ; ---------------------------------------------------------------------------
-; PRET| 	ld h, d
-; PRET| 	ld l, $50
-; PRET| 	call .sync_scroll_ly
-; PRET| 	ld h, $0
-; PRET| 	ld l, $80
-; PRET| .sync_scroll_ly
-; PRET| 	ldh a, [rLY]
-; PRET| 	cp l
-; PRET| 	jr nz, .sync_scroll_ly
-; PRET| 	ld a, h
-; PRET| 	ldh [rSCX], a
-; PRET| .wait_for_ly_match
-; PRET| 	ldh a, [rLY]
-; PRET| 	cp h
-; PRET| 	jr z, .wait_for_ly_match
-; PRET| 	ret
+VermilionDock_SyncScrollWithLY:
+    pushad
+    movzx eax, dh                                 ; the scroll amount (pret: ld h, d)
+    xor ecx, ecx
+.row:
+    cmp ecx, 80                                   ; pret: wait LY == $50, then rSCX = D
+    jb .zero
+    cmp ecx, 128                                  ; pret: wait LY == $80, then rSCX = 0
+    jae .zero
+    mov [g_row_xoff + ecx], al
+    jmp .next
+.zero:
+    mov byte [g_row_xoff + ecx], 0
+.next:
+    inc ecx
+    cmp ecx, RENDER_H
+    jb .row
+    mov byte [g_row_xoff_on], 1                   ; arm the per-row HAL
+    popad
+; pret's two LY spin-waits are what make this routine take one frame; the port
+; has no rLY to spin on, so the frame boundary is the DelayFrame the compositor
+; already provides. The caller's `ld c, $8` delay loop therefore still costs the
+; same eight frames per drift step.
+    call DelayFrame
+    ret
 
 %assign event_byte -1
 %assign event_byte_a -1

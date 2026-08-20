@@ -384,14 +384,24 @@ ruling asks for, and it comes for free from the symbolic constant.
 
 **AND THE SCENE GETS LONGER — maintainer, 2026-08-19: "it has to reach the
 screen's edge, which will factually take longer now."** This is the first ruling
-in this document with a TIMING consequence rather than only a geometric one. The
-departure is an animation whose ship crosses the screen; on a 40-column canvas it
-has twice the distance to cover, so pret's frame counts (`ld c, 120` /
-`DelayFrames`, and the per-step waits in the drift loop) are DISTANCES expressed
-as time and must scale with the canvas, not be copied verbatim. A verbatim copy
-would show the ship reaching the old GB edge and vanishing mid-canvas.
-That makes it a `class=timing` DEVIATION at the site, not a `projection` one, and
-it is the "specialist work" the ruling anticipated.
+in this document with a TIMING consequence rather than only a geometric one.
+
+**It is NOT "twice the distance" — an earlier draft of this section said that and
+was wrong (maintainer correction).** The ship does not cross the screen; it starts
+at its dock position and travels to ONE edge. The extra travel is only the canvas
+the port added beyond the old GB edge, not a doubling.
+
+What actually moves, measured from `scripts/VermilionDock.asm:78-105`: no sprite
+walks anywhere. The MAP VIEW scrolls east. The outer loop is `ld e, $8`, and each
+iteration advances `wMapViewVRAMPointer` by 2 and calls `ScheduleEastColumnRedraw`
+while `d` counts 0..15 through `VermilionDock_SyncScrollWithLY`. So the scene is
+8 iterations x 16 px = **128 px = 16 tile columns** of eastward scroll across a
+20-column screen, which slides the S.S. Anne off the left edge before
+`VermilionDock_EraseSSAnne` paints water over where it was.
+
+So the quantity to scale is the OUTER COUNT, and the increment is the number of
+extra columns between the ship and the port's left edge — not a factor of two.
+That makes it a `class=timing` DEVIATION at the site, not a `projection` one.
 
 The VERTICAL extent is the part that needs care and is NOT settled by the
 horizontal ruling. On the GB the fill covers rows 10-15 of 18, leaving the bottom
