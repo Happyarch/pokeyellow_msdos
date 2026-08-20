@@ -99,73 +99,93 @@ finished a delicate expansion, and buys one cutscene.
 block-granular, with the fine motion faked. Cheapest, least faithful, and the
 label chain would no longer correspond to pret's.
 
-## S1 RESOLVED 2026-08-20: (A), and what (A) turned out to mean
+## S1 RESOLVED 2026-08-20: (A), as the surf-minigame convention
 
-Maintainer chose (A) — "if it is the most faithful". Reading the window
-compositor at implementation depth split (A) into three, and only one of them
-satisfies both halves of what has been asked for.
+Maintainer: "(A) would make the most sense if it is the most faithful" — then,
+on being shown the sub-variants: "I don't care about the how. I just want it to
+be faithful without rewriting everything. The convention used for the surfing
+minigame and such is probably okay."
 
-**A1 — the cinematic surface, `MovieBeginSurface` (`engine/movie/movie_projection.asm`).**
-This is the mechanically ideal (A): the screen becomes one window descriptor
-sourcing `GB_TILEMAP0`, `MovieMirrorSurface` repacks the stride-40 canvas into
-the stride-32 GB map every frame, and `hSCX` transfers to `WIN_SRC_X`. pret's
-`ScheduleEastColumnRedraw` / `RedrawRowOrColumn` would drive a real consumer and
-the ship would travel exactly pret's 128 px. **It is rejected on the maintainer's
-own ruling**: that model deliberately keeps the GB's 160x144 framing centred in a
-matte (`movie_projection.asm:9-17`), so the dock scene would letterbox mid-
-gameplay — the opposite of "it has to reach the screen's edge".
+That ruling **supersedes the earlier "it has to reach the screen's edge"**, and it
+is the ruling that makes this tractable, so it is worth being explicit about why.
+The surf minigame (`SurfingMinigame_SetupPresentation`) is the same 160x144
+centred projection the boot cinematics use: `g_bg_whiteout` matte, window
+descriptors at wx 87 / wy 24 / clip_w 160 / max_y 168 sourcing `GB_TILEMAP0`,
+`hSCX` -> `WIN_SRC_X`, OBJ clip (80,24,240,168), `g_surface_redraw_cb` armed.
+Under that convention the dock scene's screen edge IS the GB screen edge, so
+**the ship travels pret's exact 128 px** and every scale-up in the sections above
+evaporates.
 
-**A2 — a full-canvas (320 px) window.** Not viable, and the limit is structural,
-not a tuning knob: `win_rowbuf8` is **256 bytes per row** and `render_window`
-masks the fine source with `and eax, 255` (`ppu.asm`), so a window row is a
-256-px torus. A 320-px `clip_w` cannot be fed. Making it possible IS approach
-(B) — renderer surgery — wearing (A)'s name.
+Three problems this dissolves outright, all of which the earlier sections
+document as blocking:
 
-**A3 — CHOSEN. Keep the overworld BG path; split pret's scroll the way pret
-already splits it.** pret advances two quantities in lockstep: a COARSE one
-(`wMapViewVRAMPointer += 2` per outer pass, with `ScheduleEastColumnRedraw`
-feeding a fresh east column so the torus never re-shows stale content) and a FINE
-one (`rSCX = d`, 0..15 within each pass). The port realises the coarse half by
-shifting the affected rows of `wSurroundingTiles` west two tiles and filling the
-new east columns with water, and the fine half through the existing per-row HAL —
-which now only ever needs **0..15 px**, comfortably inside the 64 px the channel
-has and inside the clamp added above. The 256-px problem dissolves: it was only
-ever a problem for a mechanism that had to express the whole scroll as a view
-offset.
+1. **The 256-px scroll.** Gone. 128 px, exactly pret's, because the surface is
+   160 px wide.
+2. **The band-position defect.** The `80`/`128` scanline split becomes correct
+   again: on a GB-sized surface those are surface-local rows, projected once by
+   the descriptor's `wy`. The camera-anchor mismatch that made them wrong only
+   existed while the scene lived on the port's own widescreen camera.
+3. **The dead-code objection that opened this plan.** `ScheduleEastColumnRedraw`
+   / `ScheduleColumnRedrawHelper` now feed a REAL consumer: they fill
+   `wRedrawRowOrColumnSrcTiles` / `hRedrawRowOrColumnDest` /
+   `hRedrawRowOrColumnMode`, `RedrawRowOrColumn` writes `GB_TILEMAP0`, and the
+   window samples it. The surf minigame already drives that exact interface
+   (`SurfingMinigame_GenerateBGMap`), which is the proof it works.
 
-Consequence for the pret labels, stated plainly rather than discovered later:
-`ScheduleEastColumnRedraw` / `ScheduleColumnRedrawHelper` are **not** ported.
-They write `wScreenEdgeTiles` for `RedrawRowOrColumn`, which writes `GB_TILEMAP0`,
-which the overworld path does not read — porting them would be the dead-code
-false witness this plan opened by rejecting. The port keeps their *decomposition*
-and records the substitution as a `DEVIATION{class=projection}`.
+**A3 (coarse shift of `wSurroundingTiles` + fine per-row HAL) is DROPPED.** It was
+the best available answer to "span the full canvas without touching the
+compositor"; once the scene is GB-framed it is a bespoke mechanism solving a
+problem that no longer exists. The per-row HAL is not used by this scene at all —
+`VermilionDock_SyncScrollWithLY`'s raster split is expressed as **three window
+descriptors** over one tilemap instead (`MAX_WINDOWS` is 6, surf already uses 2):
+
+| rows | descriptor | `WIN_SRC_X` |
+|---|---|---|
+| above the split | wy 24, max_y 104, start_row 0 | 0 |
+| the water band | wy 104, max_y 152, start_row 10 | `d` |
+| below the split | wy 152, max_y 168, start_row 16 | 0 |
+
+The right-edge clamp committed in `438fea426` stays — it is a real asymmetry in
+the HAL and the two battle callers keep it — but it is no longer on this scene's
+path.
 
 ## Stages
 
-- [x] **S1 — Maintainer decision: A, B or C.** (A), realised as A3 above.
-- [ ] **S2 — Fix the two `SyncScrollWithLY` defects** (clear `g_row_xoff_on` on
-      scene exit; bound the offsets to the channel's real range, or drop the HAL
-      entirely if S1 picks (A), where `hSCX`/`WIN_SRC_X` carries the scroll and the
-      row split is expressed on the window instead).
-- [ ] **S3 — Implement A3.** A scene-scoped coarse shift of the water band in
-      `wSurroundingTiles` (west 2 tiles per outer pass, east columns refilled with
-      water tile $14), plus the fine 0..15 px through `g_row_xoff`. No window
-      descriptor, no compositor change, and NOT a port of
-      `ScheduleEastColumnRedraw` — see the S1 note for why porting it would be
-      dead code.
-- [ ] **S4 — Lower `VermilionDockSSAnneLeavesScript`** and scale the outer count
-      from 8 to whatever clears the port's left edge (arithmetic says 16, i.e.
-      double, but this is the number to CHECK against a frame rather than trust).
-- [ ] **S5 — Restore-on-exit audit.** pret saves and restores
-      `wMapViewVRAMPointer` around the loop precisely because the loop destroys it
-      (`VermilionDock.asm:68-70`, `:113-116`); the port's equivalent state must get
-      the same treatment. Also `rWY`/`hWY`, `wUpdateSpritesEnabled`,
-      `hAutoBGTransferEnabled`, `rOBP1`, and whatever (A)/(B)/(C) introduces.
-- [ ] **S6 — Link it** (`vermilion_dock` → `GAME_SRCS`), `make static_gate` (8
-      checks), `make fidelity-full`.
-- [ ] **S7 — A golden scenario.** There is none for this map, so every stage above
-      is gate-verified and not runtime-verified. A cutscene with a scroll count
-      tuned by eye and no witness will silently rot.
+- [x] **S1 — Maintainer decision.** (A), via the surf/cinematic surface convention.
+- [ ] **S2 — Rework `VermilionDock_SyncScrollWithLY`** to publish `WIN_SRC_X` on
+      the band descriptor rather than writing `g_row_xoff`. This retires BOTH
+      recorded defects (the never-cleared `g_row_xoff_on` and the out-of-range
+      offsets) by removing the HAL from this scene, rather than by patching them.
+      Its `DEVIATION{}` needs rewriting to match: the split is realised as
+      descriptors, not as a per-row displacement table.
+- [ ] **S3 — Presentation entry/exit** modelled on
+      `SurfingMinigame_{Setup,Teardown}Presentation`: matte, descriptors, OBJ
+      clip, `g_obj_over_window`, `g_surface_redraw_cb` to mirror the canvas into
+      `GB_TILEMAP0`. Port-only glue, descriptive names, one `class=projection`
+      annotation.
+- [ ] **S4 — Port `ScheduleEastColumnRedraw` + `ScheduleColumnRedrawHelper`**
+      faithfully into `src/home/overworld.asm` (mirror rule), and lower
+      `VermilionDockSSAnneLeavesScript` with pret's counts UNCHANGED (`e=8`,
+      `b=$10`, `c=8`) — under this convention they are correct as written.
+- [ ] **S5 — Restore-on-exit audit.** `wMapViewVRAMPointer` (pret pushes/pops it
+      around the loop for a reason), `rWY`/`hWY`, `wUpdateSpritesEnabled`,
+      `hAutoBGTransferEnabled`, `rOBP1`, plus the presentation teardown.
+- [ ] **S6 — Link it** (`vermilion_dock` -> `GAME_SRCS`), `make static_gate`,
+      `make fidelity-full`.
+- [ ] **S7 — A golden scenario.** Still required, but no longer a PREREQUISITE:
+      with the scene GB-framed, mGBA and the port are composing the same 160x144
+      picture, so the scenario is a comparison rather than the only way to
+      discover where the band sits.
+
+### The one place the port must do MORE than pret
+
+pret's `VermilionDock_EraseSSAnne` replaces only the ship's LOWER block row
+(`hlowcoord 5, 2`, four blocks) and its own comment calls even that unnecessary,
+because the ship is south of the player and never redrawn before the map exits.
+The port regenerates the view from `wOverworldMap` every frame, so whatever is
+left in those blocks comes BACK. Whether the upper row also needs clearing is a
+question for the frame, not for arithmetic — check it at S7 and annotate if the
+port has to clear more.
 
 ## Traps recorded from the sweep
 
