@@ -30,6 +30,14 @@ from pathlib import Path
 ROOT   = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "dos_port" / "assets"
 MEMMAP = ROOT / "dos_port" / "include" / "gb_memmap.inc"
+# gb_memmap.inc %includes assets/pret_ram.inc at its end, but this file line-scans
+# rather than following includes, so the generated pret addresses have to be read
+# explicitly. Without it, any stream whose text_ram/text_bcd/text_decimal names a
+# symbol that lives only in pret_ram.inc resolves to nothing and the WHOLE STREAM is
+# silently skipped — which is exactly why _DaycareGentlemanMonHasGrownText and
+# _DaycareGentlemanOweMoneyText were missing (wDayCareNumLevelsGrown /
+# wDayCareTotalCost are pret_ram symbols).
+PRET_RAM = ROOT / "dos_port" / "assets" / "pret_ram.inc"
 OUT    = ASSETS / "battle_text.inc"
 
 # Control-code byte values (constants/text_constants.asm / charmap.asm)
@@ -115,7 +123,8 @@ def encode(s: str, cm: list) -> list:
 # ---------------------------------------------------------------------------
 def load_memmap() -> dict:
     syms = {}
-    for line in MEMMAP.read_text(encoding="utf-8").splitlines():
+    sources = [MEMMAP] + ([PRET_RAM] if PRET_RAM.exists() else [])
+    for line in (l for f in sources for l in f.read_text(encoding="utf-8").splitlines()):
         # accept both `NAME equ 0x..` and `%define NAME 0x..` (see gen_pret_ram.py:
         # constants are %define so they emit no COFF symbol)
         m = re.match(r'\s*(?:%define\s+)?(\w+)\s+equ\s+0x([0-9A-Fa-f]+)', line) \

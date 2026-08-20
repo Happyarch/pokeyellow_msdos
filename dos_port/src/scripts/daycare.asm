@@ -23,6 +23,7 @@ bits 32
 %include "assets/audio_constants.inc"
 %include "assets/pika_pcm.inc"
 
+global DaycareGentlemanText
 global Daycare_Script
 global Daycare_TextPointers
 
@@ -31,7 +32,6 @@ extern AddNTimes
 extern Bankswitch
 extern CalcExperience
 extern CalcLevelFromExperience
-extern DaycareGentlemanText   ; NOT YET DEFINED IN THE PORT
 extern DisplayPartyMenu
 extern DisplayTextBoxID
 extern EnableAutoTextBoxDrawing
@@ -80,246 +80,264 @@ Daycare_Script:
 Daycare_TextPointers:
     dd DaycareGentlemanText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] DaycareGentlemanText (scripts/Daycare.asm:10-63) — at scripts/Daycare.asm:13: DaycareGentlemanText.daycareInUse is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	call SaveScreenTilesToBuffer2
-; PRET| 	ld a, [wDayCareInUse]
-; PRET| 	and a
-; PRET| 	jp nz, .daycareInUse
-; PRET| 	ld hl, .IntroText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	ld hl, .ComeAgainText
-; PRET| 	jp nz, .done
-; PRET| 	ld a, [wPartyCount]
-; PRET| 	dec a
-; PRET| 	ld hl, .OnlyHaveOneMonText
-; PRET| 	jp z, .done
-; PRET| 	ld hl, .WhichMonText
-; PRET| 	call PrintText
-; PRET| 	xor a
-; PRET| 	ld [wUpdateSpritesEnabled], a
-; PRET| 	ld [wPartyMenuTypeOrMessageID], a
-; PRET| 	ld [wMenuItemToSwap], a
-; PRET| 	call DisplayPartyMenu
-; PRET| 	push af
-; PRET| 	call GBPalWhiteOutWithDelay3
-; PRET| 	call RestoreScreenTilesAndReloadTilePatterns
-; PRET| 	call LoadGBPal
-; PRET| 	pop af
-; PRET| 	ld hl, .AllRightThenText
-; PRET| 	jp c, .done
-; PRET| 	callfar KnowsHMMove
-; PRET| 	ld hl, .CantAcceptMonWithHMText
-; PRET| 	jp c, .done
-; PRET| 	xor a
-; PRET| 	ld [wPartyAndBillsPCSavedMenuItem], a
-; PRET| 	ld a, [wWhichPokemon]
-; PRET| 	ld hl, wPartyMonNicks
-; PRET| 	call GetPartyMonName
-; PRET| 	ld hl, .WillLookAfterMonText
-; PRET| 	call PrintText
-; PRET| 	ld a, 1
-; PRET| 	ld [wDayCareInUse], a
-; PRET| 	ld a, PARTY_TO_DAYCARE
-; PRET| 	ld [wMoveMonType], a
-; PRET| 	call MoveMon
-; PRET| 	callfar IsThisPartyMonStarterPikachu
-; PRET| 	push af
-; PRET| 	xor a
-; PRET| 	ld [wRemoveMonFromBox], a
-; PRET| 	call RemovePokemon
-; PRET| 	pop af
-; PRET| 	jr c, .depositedPikachuIntoDayCare
-; PRET| 	ld a, [wCurPartySpecies]
-; PRET| 	call PlayCry
-; PRET| 	jr .asm_562e3
+%assign event_byte -1
+%assign event_byte_a -1
+DaycareGentlemanText:
+    call SaveScreenTilesToBuffer2                 ; call SaveScreenTilesToBuffer2
+    mov al, [ebp + wDayCareInUse]                 ; ld a, [wDayCareInUse]
+    test al, al                                   ; and a
+    jnz .daycareInUse                             ; jp nz, .daycareInUse
+    mov esi, .IntroText                           ; ld hl, .IntroText
+    call PrintText                                ; call PrintText
+    call YesNoChoice                              ; call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]              ; ld a, [wCurrentMenuItem]
+    test al, al                                   ; and a
+    mov esi, .ComeAgainText                       ; ld hl, .ComeAgainText
+    jnz .done                                     ; jp nz, .done
+    mov al, [ebp + wPartyCount]                   ; ld a, [wPartyCount]
+    dec al                                        ; dec a
+    mov esi, .OnlyHaveOneMonText                  ; ld hl, .OnlyHaveOneMonText
+    jz .done                                      ; jp z, .done
+    mov esi, .WhichMonText                        ; ld hl, .WhichMonText
+    call PrintText                                ; call PrintText
+    xor al, al                                    ; xor a
+    mov [ebp + wUpdateSpritesEnabled], al         ; ld [wUpdateSpritesEnabled], a
+    mov [ebp + wPartyMenuTypeOrMessageID], al     ; ld [wPartyMenuTypeOrMessageID], a
+    mov [ebp + wMenuItemToSwap], al               ; ld [wMenuItemToSwap], a
+    call DisplayPartyMenu                         ; call DisplayPartyMenu
+    pushfd                                        ; push af  (carry from DisplayPartyMenu)
+    call GBPalWhiteOutWithDelay3                  ; call GBPalWhiteOutWithDelay3
+    call RestoreScreenTilesAndReloadTilePatterns  ; call RestoreScreenTilesAndReloadTilePatterns
+    call LoadGBPal                                ; call LoadGBPal
+    popfd                                         ; pop af
+    mov esi, .AllRightThenText                    ; ld hl, .AllRightThenText
+    jc .done                                      ; jp c, .done
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call KnowsHMMove                              ; callfar KnowsHMMove
+    mov esi, .CantAcceptMonWithHMText             ; ld hl, .CantAcceptMonWithHMText
+    jc .done                                      ; jp c, .done
+    xor al, al                                    ; xor a
+    mov [ebp + wPartyAndBillsPCSavedMenuItem], al ; ld [wPartyAndBillsPCSavedMenuItem], a
+    mov al, [ebp + wWhichPokemon]                 ; ld a, [wWhichPokemon]
+    mov esi, wPartyMonNicks                       ; ld hl, wPartyMonNicks
+    call GetPartyMonName                          ; call GetPartyMonName
+    mov esi, .WillLookAfterMonText                ; ld hl, .WillLookAfterMonText
+    call PrintText                                ; call PrintText
+    mov al, 1                                     ; ld a, 1
+    mov [ebp + wDayCareInUse], al                 ; ld [wDayCareInUse], a
+    mov al, PARTY_TO_DAYCARE                      ; ld a, PARTY_TO_DAYCARE
+    mov [ebp + wMoveMonType], al                  ; ld [wMoveMonType], a
+    call MoveMon                                  ; call MoveMon
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call IsThisPartyMonStarterPikachu             ; callfar IsThisPartyMonStarterPikachu
+    pushfd                                        ; push af
+    xor al, al                                    ; xor a
+    mov [ebp + wRemoveMonFromBox], al             ; ld [wRemoveMonFromBox], a
+    call RemovePokemon                            ; call RemovePokemon
+    popfd                                         ; pop af
+    jc .depositedPikachuIntoDayCare               ; jr c, .depositedPikachuIntoDayCare
+    mov al, [ebp + wCurPartySpecies]              ; ld a, [wCurPartySpecies]
+    call PlayCry                                  ; call PlayCry
+    jmp .asm_562e3                                ; jr .asm_562e3
 
-; ---------------------------------------------------------------------------
-; BAIL[pikachu-table-index] DaycareGentlemanText.depositedPikachuIntoDayCare (scripts/Daycare.asm:66-70) — at scripts/Daycare.asm:66: ldpikacry needs (X_id - Table) / N across object files
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ldpikacry e, PikachuCry28
-; PRET| 	callfar PlayPikachuSoundClip
-; PRET| .asm_562e3
-; PRET| 	ld hl, .ComeSeeMeInAWhileText
-; PRET| 	jp .done
+%assign event_byte -1
+%assign event_byte_a -1
+.depositedPikachuIntoDayCare:
+; ldpikacry lowers to a LITERAL: pret's macro is `(X_id - PikachuCriesPointerTable) / 3`,
+; a cross-object-file difference NASM cannot fold. It does not need to — the table is
+; strictly ordinal across all 42 entries (measured, zero violations), so PikachuCryN is
+; index N-1, the same lowering the port already uses at celadon_mansion_1f.asm:98.
+    mov dl, 27                                    ; ldpikacry e, PikachuCry28
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call PlayPikachuSoundClip                     ; callfar PlayPikachuSoundClip
+.asm_562e3:
+    mov esi, .ComeSeeMeInAWhileText               ; ld hl, .ComeSeeMeInAWhileText
+    jmp .done                                     ; jp .done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] DaycareGentlemanText.daycareInUse (scripts/Daycare.asm:73-160) — at scripts/Daycare.asm:82: DaycareGentlemanText.skipCalcExp is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ld hl, wDayCareMonName
-; PRET| 	call GetPartyMonName
-; PRET| 	ld a, DAYCARE_DATA
-; PRET| 	ld [wMonDataLocation], a
-; PRET| 	call LoadMonData
-; PRET| 	callfar CalcLevelFromExperience
-; PRET| 	ld a, d
-; PRET| 	cp MAX_LEVEL
-; PRET| 	jr c, .skipCalcExp
-; PRET| 
-; PRET| 	ld d, MAX_LEVEL
-; PRET| 	callfar CalcExperience
-; PRET| 	ld hl, wDayCareMonExp
-; PRET| 	ldh a, [hExperience]
-; PRET| 	ld [hli], a
-; PRET| 	ldh a, [hExperience + 1]
-; PRET| 	ld [hli], a
-; PRET| 	ldh a, [hExperience + 2]
-; PRET| 	ld [hl], a
-; PRET| 	ld d, MAX_LEVEL
-; PRET| 
-; PRET| .skipCalcExp
-; PRET| 	xor a
-; PRET| 	ld [wDayCareNumLevelsGrown], a
-; PRET| 	ld hl, wDayCareMonBoxLevel
-; PRET| 	ld a, [hl]
-; PRET| 	ld [wDayCareStartLevel], a
-; PRET| 	cp d
-; PRET| 	ld [hl], d
-; PRET| 	ld hl, .MonNeedsMoreTimeText
-; PRET| 	jr z, .next
-; PRET| 	ld a, [wDayCareStartLevel]
-; PRET| 	ld b, a
-; PRET| 	ld a, d
-; PRET| 	sub b
-; PRET| 	ld [wDayCareNumLevelsGrown], a
-; PRET| 	ld hl, .MonHasGrownText
-; PRET| 
-; PRET| .next
-; PRET| 	call PrintText
-; PRET| 	ld a, [wPartyCount]
-; PRET| 	cp PARTY_LENGTH
-; PRET| 	ld hl, .NoRoomForMonText
-; PRET| 	jp z, .leaveMonInDayCare
-; PRET| 	ld de, wDayCareTotalCost
-; PRET| 	xor a
-; PRET| 	ld [de], a
-; PRET| 	inc de
-; PRET| 	ld [de], a
-; PRET| 	ld hl, wDayCarePerLevelCost
-; PRET| 	ld a, $1
-; PRET| 	ld [hli], a
-; PRET| 	ld [hl], $0
-; PRET| 	ld a, [wDayCareNumLevelsGrown]
-; PRET| 	inc a
-; PRET| 	ld b, a
-; PRET| 	ld c, 2
-; PRET| .calcPriceLoop
-; PRET| 	push hl
-; PRET| 	push de
-; PRET| 	push bc
-; PRET| 	predef AddBCDPredef
-; PRET| 	pop bc
-; PRET| 	pop de
-; PRET| 	pop hl
-; PRET| 	dec b
-; PRET| 	jr nz, .calcPriceLoop
-; PRET| 	ld hl, .OweMoneyText
-; PRET| 	call PrintText
-; PRET| 	ld a, MONEY_BOX
-; PRET| 	ld [wTextBoxID], a
-; PRET| 	call DisplayTextBoxID
-; PRET| 	call YesNoChoice
-; PRET| 	ld hl, .AllRightThenText
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jp nz, .leaveMonInDayCare
-; PRET| 	ld hl, wDayCareTotalCost
-; PRET| 	ldh [hMoney], a
-; PRET| 	ld a, [hli]
-; PRET| 	ldh [hMoney + 1], a
-; PRET| 	ld a, [hl]
-; PRET| 	ldh [hMoney + 2], a
-; PRET| 	call HasEnoughMoney
-; PRET| 	jr nc, .enoughMoney
-; PRET| 	ld hl, .NotEnoughMoneyText
-; PRET| 	jp .leaveMonInDayCare
+%assign event_byte -1
+%assign event_byte_a -1
+.daycareInUse:
+    xor al, al                                    ; xor a
+    mov esi, wDayCareMonName                      ; ld hl, wDayCareMonName
+    call GetPartyMonName                          ; call GetPartyMonName
+    mov al, DAYCARE_DATA                          ; ld a, DAYCARE_DATA
+    mov [ebp + wMonDataLocation], al              ; ld [wMonDataLocation], a
+    call LoadMonData                              ; call LoadMonData
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call CalcLevelFromExperience                  ; callfar CalcLevelFromExperience
+    mov al, dh                                    ; ld a, d
+    cmp al, MAX_LEVEL                             ; cp MAX_LEVEL
+    jb .skipCalcExp                               ; jr c, .skipCalcExp
 
-; ---------------------------------------------------------------------------
-; BAIL[hl-half-register-access] DaycareGentlemanText.enoughMoney (scripts/Daycare.asm:163-218) — at scripts/Daycare.asm:190: `h` is a half of ESI and has no flag-safe 8-bit x86 form
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	xor a
-; PRET| 	ld [wDayCareInUse], a
-; PRET| 	ld hl, wDayCareNumLevelsGrown
-; PRET| 	ld [hli], a
-; PRET| 	inc hl
-; PRET| 	ld de, wPlayerMoney + 2
-; PRET| 	ld c, $3
-; PRET| 	predef SubBCDPredef
-; PRET| 	ld a, SFX_PURCHASE
-; PRET| 	call PlaySoundWaitForCurrent
-; PRET| 	ld a, MONEY_BOX
-; PRET| 	ld [wTextBoxID], a
-; PRET| 	call DisplayTextBoxID
-; PRET| 	ld hl, .HeresYourMonText
-; PRET| 	call PrintText
-; PRET| 	ld a, DAYCARE_TO_PARTY
-; PRET| 	ld [wMoveMonType], a
-; PRET| 	call MoveMon
-; PRET| 	ld a, [wDayCareMonSpecies]
-; PRET| 	ld [wCurPartySpecies], a
-; PRET| 	ld a, [wPartyCount]
-; PRET| 	dec a
-; PRET| 	push af
-; PRET| 	ld bc, PARTYMON_STRUCT_LENGTH
-; PRET| 	push bc
-; PRET| 	ld hl, wPartyMon1Moves
-; PRET| 	call AddNTimes
-; PRET| 	ld d, h
-; PRET| 	ld e, l
-; PRET| 	ld a, 1
-; PRET| 	ld [wLearningMovesFromDayCare], a
-; PRET| 	predef WriteMonMoves
-; PRET| 	pop bc
-; PRET| 	pop af
-; PRET| 
-; PRET| ; set mon's HP to max
-; PRET| 	ld hl, wPartyMon1HP
-; PRET| 	call AddNTimes
-; PRET| 	ld d, h
-; PRET| 	ld e, l
-; PRET| 	ld bc, MON_MAXHP - MON_HP
-; PRET| 	add hl, bc
-; PRET| 	ld a, [hli]
-; PRET| 	ld [de], a
-; PRET| 	inc de
-; PRET| 	ld a, [hl]
-; PRET| 	ld [de], a
-; PRET| 
-; PRET| 	ld a, [wPartyCount]
-; PRET| 	dec a
-; PRET| 	ld [wWhichPokemon], a
-; PRET| 	callfar IsThisPartyMonStarterPikachu
-; PRET| 	jr c, .withdrewPikachuFromDayCare
-; PRET| 	ld a, [wCurPartySpecies]
-; PRET| 	call PlayCry
-; PRET| 	jr .asm_56430
+    mov dh, MAX_LEVEL                             ; ld d, MAX_LEVEL
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call CalcExperience                           ; callfar CalcExperience
+    mov esi, wDayCareMonExp                       ; ld hl, wDayCareMonExp
+    mov al, [ebp + hExperience]                   ; ldh a, [hExperience]
+    mov [ebp + esi], al                           ; ld [hli], a
+    inc esi
+    mov al, [ebp + hExperience + 1]               ; ldh a, [hExperience + 1]
+    mov [ebp + esi], al                           ; ld [hli], a
+    inc esi
+    mov al, [ebp + hExperience + 2]               ; ldh a, [hExperience + 2]
+    mov [ebp + esi], al                           ; ld [hl], a
+    mov dh, MAX_LEVEL                             ; ld d, MAX_LEVEL
 
-; ---------------------------------------------------------------------------
-; BAIL[pikachu-table-index] DaycareGentlemanText.withdrewPikachuFromDayCare (scripts/Daycare.asm:221-233) — at scripts/Daycare.asm:229: ldpikacry needs (X_id - Table) / N across object files
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, $6
-; PRET| 	ld [wPikachuSpawnState], a
-; PRET| 
-; PRET| 	; GameFreak... TriHard
-; PRET| 	ld hl, SchedulePikachuSpawnForAfterText
-; PRET| 	ld b, BANK(SchedulePikachuSpawnForAfterText)
-; PRET| 	ld hl, Bankswitch
-; PRET| 
-; PRET| 	ldpikacry e, PikachuCry35
-; PRET| 	callfar PlayPikachuSoundClip
-; PRET| .asm_56430
-; PRET| 	ld hl, .GotMonBackText
-; PRET| 	jr .done
+.skipCalcExp:
+    xor al, al                                    ; xor a
+    mov [ebp + wDayCareNumLevelsGrown], al        ; ld [wDayCareNumLevelsGrown], a
+    mov esi, wDayCareMonBoxLevel                  ; ld hl, wDayCareMonBoxLevel
+    mov al, [ebp + esi]                           ; ld a, [hl]
+    mov [ebp + wDayCareStartLevel], al            ; ld [wDayCareStartLevel], a
+    cmp al, dh                                    ; cp d
+    mov [ebp + esi], dh                           ; ld [hl], d
+    mov esi, .MonNeedsMoreTimeText                ; ld hl, .MonNeedsMoreTimeText
+    jz .next                                      ; jr z, .next
+    mov al, [ebp + wDayCareStartLevel]            ; ld a, [wDayCareStartLevel]
+    mov bh, al                                    ; ld b, a
+    mov al, dh                                    ; ld a, d
+    sub al, bh                                    ; sub b
+    mov [ebp + wDayCareNumLevelsGrown], al        ; ld [wDayCareNumLevelsGrown], a
+    mov esi, .MonHasGrownText                     ; ld hl, .MonHasGrownText
+
+.next:
+    call PrintText                                ; call PrintText
+    mov al, [ebp + wPartyCount]                   ; ld a, [wPartyCount]
+    cmp al, PARTY_LENGTH                          ; cp PARTY_LENGTH
+    mov esi, .NoRoomForMonText                    ; ld hl, .NoRoomForMonText
+    jz .leaveMonInDayCare                         ; jp z, .leaveMonInDayCare
+    mov edx, wDayCareTotalCost                    ; ld de, wDayCareTotalCost
+    xor al, al                                    ; xor a
+    mov [ebp + edx], al                           ; ld [de], a
+    inc edx                                       ; inc de
+    mov [ebp + edx], al                           ; ld [de], a
+    inc edx                                       ; inc de
+    mov [ebp + edx], al                           ; ld [de], a
+    mov esi, wDayCarePerLevelCost                 ; ld hl, wDayCarePerLevelCost
+    mov al, 1                                     ; ld a, $1
+    mov [ebp + esi], al                           ; ld [hli], a
+    inc esi
+    mov byte [ebp + esi], 0                       ; ld [hl], $0
+    mov al, [ebp + wDayCareNumLevelsGrown]        ; ld a, [wDayCareNumLevelsGrown]
+    inc al                                        ; inc a
+    mov bh, al                                    ; ld b, a
+    mov bl, 2                                     ; ld c, 2
+.calcPriceLoop:
+    push esi                                      ; push hl
+    push edx                                      ; push de
+    push ebx                                      ; push bc
+    call AddBCDPredef                             ; predef AddBCDPredef
+    pop ebx                                       ; pop bc
+    pop edx                                       ; pop de
+    pop esi                                       ; pop hl
+    dec bh                                        ; dec b
+    jnz .calcPriceLoop                            ; jr nz, .calcPriceLoop
+    mov esi, .OweMoneyText                        ; ld hl, .OweMoneyText
+    call PrintText                                ; call PrintText
+    mov al, MONEY_BOX                             ; ld a, MONEY_BOX
+    mov [ebp + wTextBoxID], al                    ; ld [wTextBoxID], a
+    call DisplayTextBoxID                         ; call DisplayTextBoxID
+    call YesNoChoice                              ; call YesNoChoice
+    mov esi, .AllRightThenText                    ; ld hl, .AllRightThenText
+    mov al, [ebp + wCurrentMenuItem]              ; ld a, [wCurrentMenuItem]
+    test al, al                                   ; and a
+    jnz .leaveMonInDayCare                        ; jp nz, .leaveMonInDayCare
+    mov esi, wDayCareTotalCost                    ; ld hl, wDayCareTotalCost
+    mov [ebp + hMoney], al                        ; ldh [hMoney], a   (A is 0 here)
+    mov al, [ebp + esi]                           ; ld a, [hli]
+    inc esi
+    mov [ebp + hMoney + 1], al                    ; ldh [hMoney + 1], a
+    mov al, [ebp + esi]                           ; ld a, [hl]
+    mov [ebp + hMoney + 2], al                    ; ldh [hMoney + 2], a
+    call HasEnoughMoney                           ; call HasEnoughMoney
+    jae .enoughMoney                              ; jr nc, .enoughMoney
+    mov esi, .NotEnoughMoneyText                  ; ld hl, .NotEnoughMoneyText
+    jmp .leaveMonInDayCare                        ; jp .leaveMonInDayCare
+
+%assign event_byte -1
+%assign event_byte_a -1
+.enoughMoney:
+    xor al, al                                    ; xor a
+    mov [ebp + wDayCareInUse], al                 ; ld [wDayCareInUse], a
+    mov esi, wDayCareNumLevelsGrown               ; ld hl, wDayCareNumLevelsGrown
+    mov [ebp + esi], al                           ; ld [hli], a
+    inc esi
+    inc esi                                       ; inc hl
+    mov edx, wPlayerMoney + 2                     ; ld de, wPlayerMoney + 2
+    mov bl, 3                                     ; ld c, $3
+    call SubBCDPredef                             ; predef SubBCDPredef
+    mov al, SFX_PURCHASE                          ; ld a, SFX_PURCHASE
+    call PlaySoundWaitForCurrent                  ; call PlaySoundWaitForCurrent
+    mov al, MONEY_BOX                             ; ld a, MONEY_BOX
+    mov [ebp + wTextBoxID], al                    ; ld [wTextBoxID], a
+    call DisplayTextBoxID                         ; call DisplayTextBoxID
+    mov esi, .HeresYourMonText                    ; ld hl, .HeresYourMonText
+    call PrintText                                ; call PrintText
+    mov al, DAYCARE_TO_PARTY                      ; ld a, DAYCARE_TO_PARTY
+    mov [ebp + wMoveMonType], al                  ; ld [wMoveMonType], a
+    call MoveMon                                  ; call MoveMon
+    mov al, [ebp + wDayCareMonSpecies]            ; ld a, [wDayCareMonSpecies]
+    mov [ebp + wCurPartySpecies], al              ; ld [wCurPartySpecies], a
+    mov al, [ebp + wPartyCount]                   ; ld a, [wPartyCount]
+    dec al                                        ; dec a
+    pushfd                                        ; push af
+    mov bx, PARTYMON_STRUCT_LENGTH                ; ld bc, PARTYMON_STRUCT_LENGTH
+    push ebx                                      ; push bc
+    mov esi, wPartyMon1Moves                      ; ld hl, wPartyMon1Moves
+    call AddNTimes                                ; call AddNTimes
+; `ld d, h` / `ld e, l` is a register-PAIR copy, NOT two half-register accesses, which is
+; what the bail message read it as. HL is ESI and DE is EDX here, so the pair lowers to a
+; single `mov edx, esi`; neither SM83 `ld r, r` nor x86 `mov` touches flags.
+    mov edx, esi                                  ; ld d, h / ld e, l
+    mov al, 1                                     ; ld a, 1
+    mov [ebp + wLearningMovesFromDayCare], al     ; ld [wLearningMovesFromDayCare], a
+    call WriteMonMoves                            ; predef WriteMonMoves
+    pop ebx                                       ; pop bc
+    popfd                                         ; pop af
+
+; set mon's HP to max
+    mov esi, wPartyMon1HP                         ; ld hl, wPartyMon1HP
+    call AddNTimes                                ; call AddNTimes
+    mov edx, esi                                  ; ld d, h / ld e, l
+    mov bx, MON_MAXHP - MON_HP                    ; ld bc, MON_MAXHP - MON_HP
+    add esi, ebx                                  ; add hl, bc
+    mov al, [ebp + esi]                           ; ld a, [hli]
+    inc esi
+    mov [ebp + edx], al                           ; ld [de], a
+    inc edx                                       ; inc de
+    mov al, [ebp + esi]                           ; ld a, [hl]
+    mov [ebp + edx], al                           ; ld [de], a
+
+    mov al, [ebp + wPartyCount]                   ; ld a, [wPartyCount]
+    dec al                                        ; dec a
+    mov [ebp + wWhichPokemon], al                 ; ld [wWhichPokemon], a
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call IsThisPartyMonStarterPikachu             ; callfar IsThisPartyMonStarterPikachu
+    jc .withdrewPikachuFromDayCare                ; jr c, .withdrewPikachuFromDayCare
+    mov al, [ebp + wCurPartySpecies]              ; ld a, [wCurPartySpecies]
+    call PlayCry                                  ; call PlayCry
+    jmp .asm_56430                                ; jr .asm_56430
+
+%assign event_byte -1
+%assign event_byte_a -1
+.withdrewPikachuFromDayCare:
+    mov al, 6                                     ; ld a, $6
+    mov [ebp + wPikachuSpawnState], al            ; ld [wPikachuSpawnState], a
+; pret's own comment here is "; GameFreak... TriHard", and it marks DEAD CODE: the
+; three lines load HL, then B, then IMMEDIATELY overwrite HL with the address of
+; Bankswitch, which is never CALLed. The intended callfar of
+; SchedulePikachuSpawnForAfterText was written as a load, so the spawn is never
+; scheduled. Both HL and B are dead before their next read, so nothing observable
+; follows; the port omits the loads rather than reproducing writes with no effect.
+; BUG{class=data-model; pret=scripts/Daycare.asm:DaycareGentlemanText.withdrewPikachuFromDayCare; behavior=pret loads Bankswitch into HL instead of calling it so SchedulePikachuSpawnForAfterText is never invoked and the Pikachu spawn is not scheduled after the text, and the port omits the three dead loads entirely; evidence=ld hl SchedulePikachuSpawnForAfterText then ld b BANK then ld hl Bankswitch with no call anywhere in the region, flagged by pret's own GameFreak TriHard comment; lifetime=permanent original-game behavior}
+; ldpikacry -> literal index, see the note on .depositedPikachuIntoDayCare above.
+    mov dl, 34                                    ; ldpikacry e, PikachuCry35
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call PlayPikachuSoundClip                     ; callfar PlayPikachuSoundClip
+.asm_56430:
+    mov esi, .GotMonBackText                      ; ld hl, .GotMonBackText
+    jmp .done                                     ; jr .done
+
 
 %assign event_byte -1
 %assign event_byte_a -1

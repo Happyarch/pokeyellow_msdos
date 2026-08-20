@@ -579,6 +579,8 @@ GAME_SRCS := \
     src/data/trainer_headers.asm \
     src/data/map_script_tables.asm \
     src/scripts/pallet_town.asm \
+    src/scripts/cerulean_trashed_house.asm \
+    src/scripts/daycare.asm \
     src/scripts/oaks_lab.asm \
     src/scripts/seafoam_islands_b_4f.asm \
     src/scripts/bike_shop.asm \
@@ -2976,8 +2978,6 @@ POKEMON_CHECK_SRCS :=
 # here so a change that breaks them is still caught, and each graduates to
 # SCRIPT_SRCS above as its blocking symbol lands.
 ITEMS_CHECK_SRCS := \
-    src/scripts/cerulean_trashed_house.asm \
-    src/scripts/daycare.asm \
     src/scripts/vermilion_dock.asm \
     src/scripts/celadon_mansion_3f.asm \
     src/scripts/hall_of_fame.asm \

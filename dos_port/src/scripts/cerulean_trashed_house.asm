@@ -20,12 +20,12 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+global CeruleanTrashedHouseFishingGuruText
 global CeruleanTrashedHouseGirlText
 global CeruleanTrashedHouseWallHoleText
 global CeruleanTrashedHouse_Script
 global CeruleanTrashedHouse_TextPointers
 
-extern CeruleanTrashedHouseFishingGuruText   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing
 extern GetQuantityOfItemInBag
 extern PrintText
@@ -56,17 +56,41 @@ CeruleanTrashedHouse_TextPointers:
     dd CeruleanTrashedHouseGirlText
     dd CeruleanTrashedHouseWallHoleText
 
-; ---------------------------------------------------------------------------
-; BAIL[predef-leaves-parent-bank-in-a] CeruleanTrashedHouseFishingGuruText (scripts/CeruleanTrashedHouse.asm:13-19) — at scripts/CeruleanTrashedHouse.asm:14: predef GetQuantityOfItemInBag
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld b, TM_DIG
-; PRET| 	predef GetQuantityOfItemInBag
-; PRET| 	and b
-; PRET| 	jr z, .no_dig_tm
-; PRET| 	ld hl, .WhatsLostIsLostText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+%assign event_byte -1
+%assign event_byte_a -1
+CeruleanTrashedHouseFishingGuruText:
+; pret writes `predef GetQuantityOfItemInBag` / `and b`, and on the GB A is NOT zero
+; there: home/predef.asm:11-14 stashes the caller's ROM bank and pushes it, and the tail
+; (home/predef.asm:29-31) does `pop af` / `call BankswitchCommon` / `ret` — and
+; BankswitchCommon (home/bankswitch2.asm:1-4) only READS A. So A on return is the
+; CALLER'S BANK, and `and b` computes `bank & quantity`.
+;
+; This script links into bank $07 (maps.asm:110 "Maps 4" -> layout.link:58-61 ROMX $7),
+; and DisplayTextID switches to the map's own bank before the text_asm body runs with
+; nothing switching it back, so the mask is literally %00000111. The test therefore reads
+; "has the TM" iff `quantity mod 8 != 0` — it would report the TM STOLEN while holding
+; 8, 16, ... 96 of them.
+;
+; It is a BUG, not an idiom: every other `predef GetQuantityOfItemInBag` caller in the
+; tree uses the canonical `ld a, b` / `and a` (VermilionCity.asm:72,195;
+; CinnabarLabFossilRoom.asm:23; CeladonMartRoof.asm:19; hidden_items.asm:59;
+; game_corner_slots2.asm:6; home/map_objects.asm:66), and there is no second
+; `predef ... / and b` anywhere. It is masked in practice because the mask happens to be
+; %111 and TM_DIG is granted exactly once (CeruleanCity.asm:289, one copy), so the
+; reachable quantity is 0 or 1.
+;
+; The port has no banking, so there is no honest value to AND with — hard-coding 7 would
+; invent a banking artifact in a bankless target. The test collapses to `quantity != 0`,
+; which is exactly equivalent for every reachable input and differs only for a
+; glitch-only 8/16/.../96, where the port is right and the GB is wrong.
+; BUG{class=data-model; pret=scripts/CeruleanTrashedHouse.asm:CeruleanTrashedHouseFishingGuruText; behavior=pret ANDs the bag quantity with the caller ROM bank left in A by predef so the TM reads as absent for any quantity that is a nonzero multiple of 8, and the port tests quantity against zero instead; evidence=home/predef.asm:29-31 restores A from the pushed hLoadedROMBank and BankswitchCommon does not modify it, this map links into bank 7 per layout.link:58-61, and every other GetQuantityOfItemInBag caller uses ld a b then and a; lifetime=permanent, the port has no bank to reproduce the mask with}
+    mov bh, TM_DIG                                ; ld b, TM_DIG
+    call GetQuantityOfItemInBag                   ; predef GetQuantityOfItemInBag
+    test bh, bh                                   ; and b  (pret: A = caller bank; see above)
+    jz .no_dig_tm                                 ; jr z, .no_dig_tm
+    mov esi, .WhatsLostIsLostText                 ; ld hl, .WhatsLostIsLostText
+    call PrintText                                ; call PrintText
+    jmp .done                                     ; jr .done
 
 %assign event_byte -1
 %assign event_byte_a -1
