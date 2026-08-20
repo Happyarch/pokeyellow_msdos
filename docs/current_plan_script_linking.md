@@ -5,9 +5,64 @@ game". Seeded 2026-08-19 (commits `c3709ae13`, `b5b4efbae`).
 
 ## State
 
-**207 of 225 linked.** `build: 559 linked + 18 check-only sources` (was 352 + 1).
-The check-only tier IS the 18 that cannot link yet — they assemble-validate so a
-change that breaks them is still caught, and each graduates as its blocker lands.
+**220 of 225 linked** (measured 2026-08-19; was 207 at seeding, 352 + 1 before
+that). The check-only tier IS the 5 that cannot link yet — they assemble-validate
+so a change that breaks them is still caught, and each graduates as its blocker
+lands. Count it, do not quote it:
+
+```
+python3 - <<'EOF'
+import re, collections
+from pathlib import Path
+cur=None; c={}
+for l in Path('dos_port/Makefile').read_text().splitlines():
+    m=re.match(r'^([A-Za-z_][A-Za-z0-9_]*)\s*\+?:?=', l)
+    if m: cur=m.group(1)
+    for s in re.findall(r'src/scripts/([a-z0-9_]+)\.asm', l): c[s]=cur
+print(collections.Counter(c.values()))
+EOF
+```
+
+### Groups A and B are CLOSED except vermilion_dock
+
+The plan's A/B/C split held, but linking all the candidates at once and reading
+the LINK ERRORS found four failure modes where it predicted two. The extra two are
+worth knowing because they are cheap and invisible:
+
+* **LABEL-DROP** (five instances: RocketHideoutB4F, MtMoonB2F, SilphCo11F,
+  PokemonTower2F, PokemonTower7F DefaultScript/Script0). The body is already
+  lowered CORRECTLY and sitting in the file with NO LABEL, because pret guards the
+  routine's first lines with `IF DEF(_DEBUG)` and the tool consumed the label with
+  the stripped block. No bail banner, no drop note — silently absent. One line each.
+* **A MISSING FAR TEXT STREAM** (safari_zone_gate). Not a script defect at all:
+  `gen_battle_text`'s `load_memmap()` read only `gb_memmap.inc`, so any stream
+  whose `text_ram`/`text_bcd`/`text_decimal` named a symbol living in the generated
+  `assets/pret_ram.inc` was SILENTLY SKIPPED WHOLE. Fixing it took the tree from
+  1023 to 1032 generated labels.
+
+Two bail messages also LIED by reading instructions in isolation, the same class
+the `add-hl-r16` note in `script-fine-comb-fleet-queue` records:
+`hl-half-register-access` on daycare's `ld d, h` / `ld e, l` (a register-PAIR copy,
+`mov edx, esi`) and on VermilionDock_SyncScrollWithLY (a raster split-scroll whose
+H/L use is incidental). **Read the pair, not the instruction.**
+
+### The 5 that remain, and what each needs
+
+| script | blocked on | size |
+|---|---|---|
+| `vermilion_dock` | `ScheduleEastColumnRedraw` + `ScheduleColumnRedrawHelper` (pret home/overworld.asm:1491) — under the mirror rule they belong in `src/home/overworld.asm`. Plus the scene's outer scroll count, which needs a frame. | small; the redraw machinery (`RedrawRowOrColumn`, `wRedrawRowOrColumnSrcTiles`, `hRedrawRowOrColumnMode`/`Dest`) is already ported |
+| `celadon_mansion_3f` | `PrintDiploma` | Game Boy Printer tier |
+| `pokemon_fan_club` | `PrintFanClubPortrait` | Game Boy Printer tier |
+| `summer_beach_house` | `PrintSurfingMinigameHighScore`, `Printer_PrepareSurfingMinigameHighScoreTileMap` | Game Boy Printer tier |
+| `hall_of_fame` | `HallOfFamePC` — 6 lines, but 5 of its dependencies are missing: `AnimateHallOfFame`, `Credits`, `CreditsCopyTileMapToVRAM`, `CreditsLoadFont`, `FillFourRowsWithBlack` | the endgame cinematic, its own plan |
+
+**The printer tier is `engine/printer/printer.asm`, 979 lines / 35 labels, with
+NOTHING ported** — `printer_stubs.asm` holds only `PrintPokedexEntry` and
+`PrintPCBox`. Its existing stub comment records the real blocker: "until a serial
+HAL exists (Phase 4)". So there is a deliberate choice to make, not just work to
+do: four `ret`-stubs under the normal stub convention would link three of these
+five scripts today, leaving printing unimplemented. That is a maintainer decision
+about stubbing a feature, not something to do silently.
 
 ## What actually blocked this (worth knowing before touching it again)
 
@@ -75,10 +130,17 @@ Nothing wrong with the scripts. They need:
 - [x] Make the check-only tier the genuinely-blocked set, not a token file
 - [x] Implement `DisplayPokedex`/`_DisplayPokedex`, the fossil trio, and
       `GameCornerDrawCoinBox` rather than stubbing them (+5 scripts linked)
-- [ ] Group B: re-emit the sibling-dropped labels in the 5 files
-- [ ] Group A: translate the 19 bails — start with the 4 pikachu-table-index, which
-      have a proven technique
-- [ ] Get maintainer rulings for the 2 `screen-coord-projection` sites
+- [x] Group B: re-emit the sibling-dropped labels (and the 5 LABEL-DROPS the plan
+      did not know about, and the far-text-stream generator gap)
+- [x] Group A: translate the bails — the 4 pikachu-table-index went by the ordinal
+      table (42 entries, zero violations, so PikachuCryN is index N-1), daycare's
+      5-bail chain and cerulean_trashed_house's predef/`and b` are done
+- [x] Get maintainer rulings for the 2 `screen-coord-projection` sites — bike shop
+      ruled AS THE POKÉ MART, S.S. Anne ruled FULL SPAN with a timing consequence
+      (docs/ui_projection.md)
+- [ ] `vermilion_dock`: port `ScheduleEastColumnRedraw` +
+      `ScheduleColumnRedrawHelper` into `src/home/overworld.asm`, then lower
+      `VermilionDockSSAnneLeavesScript` and settle its scroll count visually
 - [ ] Group C: port the Printer tier and `HallOfFamePC`
 - [ ] Re-audit: with scripts linked, a dropped global is now a link error rather
       than silence. Re-run the sibling-drop audit across all 225, not just the
@@ -86,7 +148,7 @@ Nothing wrong with the scripts. They need:
 
 ## Verification for any change here
 
-`make assets` → `make -j8` → `make static_gate` (must print **6** static checks) →
+`make assets` → `make -j8` → `make static_gate` (must print **8** static checks) →
 `make fidelity-full`. A linked script that assembles is not evidence it behaves;
 `faithdiff` has no model for `scripts/` labels by design, so `lint_pret_labels`
 (`script_labels` / `script_collision` / `script_misplaced`) is the structural check
