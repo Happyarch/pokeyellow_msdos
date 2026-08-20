@@ -977,9 +977,9 @@ EnterMap:
     ; faithful walk speed; notably < 16 → movement really is too fast.
     ;   $D1E0 first tick   $D1E4 last tick   $D1E8 tiles   $D1EC min Δ   $D1F0 init flag
     mov dword [ebp + (W_PORT_SCRATCH + 0x00)], 0
-    mov dword [ebp + wPartyMon3MaxHP], 0
-    mov dword [ebp + wPartyMon3Defense], 0
-    mov dword [ebp + wPartyMon3Special], 0xFFFFFFFF
+    mov dword [ebp + (W_PORT_SCRATCH + 0x04)], 0
+    mov dword [ebp + (W_PORT_SCRATCH + 0x08)], 0
+    mov dword [ebp + (W_PORT_SCRATCH + 0x0C)], 0xFFFFFFFF
     mov dword [ebp + (W_PORT_SCRATCH + 0x10)], 0
 %endif
 
@@ -1131,6 +1131,17 @@ EnterMap:
     call SeedDeterministicPlayerIdentity
     call SeamReseatView
     call RunTrainerRoute17TestSeed           ; debug party, empty bag; RETURNS
+    ; The golden reaches this tile by REAL navigation down Cycling Road, so pret
+    ; arrives with wPlayerLastStopDirection already DOWN and ForceBikeDown's first
+    ; injected PAD_DOWN walks immediately. EnterMap's spawn reset
+    ; (engine/overworld/overworld.asm: "player spawns stopped") clears it to 0, so
+    ; a seeded spawn would spend that first frame TURNING instead of stepping and
+    ; land one tile north of ground truth (wYCoord $78 vs $79).
+    ; This matched by accident until 2026-08-19: wPlayerLastStopDirection was
+    ; hand-placed at 0xCFAE, colliding with wLoadedMonSpeedExp, and the debug
+    ; party's stat-exp byte happened to satisfy the compare. Retiring that
+    ; collision exposed the real dependency, so the harness now states it.
+    mov byte [ebp + wPlayerLastStopDirection], PLAYER_DIR_DOWN
 %endif
 %ifdef DEBUG_BATTLE_GHOST
     ; Same shape as DEBUG_LEDGE/FISH/TRAINER_ROUTE above: seed, then FALL THROUGH

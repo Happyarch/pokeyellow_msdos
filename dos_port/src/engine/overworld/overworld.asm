@@ -726,18 +726,18 @@ WalkSpeedSample:
     cmp dword [ebp + (W_PORT_SCRATCH + 0x10)], 0
     jne .have
     mov [ebp + (W_PORT_SCRATCH + 0x00)], eax                 ; first tick
-    mov [ebp + wPartyMon3MaxHP], eax                 ; last tick
-    mov dword [ebp + wPartyMon3Defense], 1             ; tiles = 1
+    mov [ebp + (W_PORT_SCRATCH + 0x04)], eax                 ; last tick
+    mov dword [ebp + (W_PORT_SCRATCH + 0x08)], 1             ; tiles = 1
     mov dword [ebp + (W_PORT_SCRATCH + 0x10)], 1             ; initialized
     jmp .done
 .have:
     mov edx, eax
-    sub edx, [ebp + wPartyMon3MaxHP]                 ; delta = now - last
-    mov [ebp + wPartyMon3MaxHP], eax                 ; last = now
-    inc dword [ebp + wPartyMon3Defense]                ; tiles++
-    cmp edx, [ebp + wPartyMon3Special]
+    sub edx, [ebp + (W_PORT_SCRATCH + 0x04)]                 ; delta = now - last
+    mov [ebp + (W_PORT_SCRATCH + 0x04)], eax                 ; last = now
+    inc dword [ebp + (W_PORT_SCRATCH + 0x08)]                ; tiles++
+    cmp edx, [ebp + (W_PORT_SCRATCH + 0x0C)]
     jae .done
-    mov [ebp + wPartyMon3Special], edx                 ; min delta
+    mov [ebp + (W_PORT_SCRATCH + 0x0C)], edx                 ; min delta
 .done:
     pop edx
     pop eax
