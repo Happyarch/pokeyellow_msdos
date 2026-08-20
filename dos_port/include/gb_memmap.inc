@@ -839,7 +839,7 @@
 ; print it any more. Copying a flat stream in was a workaround for TCP's old
 ; EBP-relative stream pointer, and it silently truncated anything past 256 bytes
 ; (four real dialogs rendered garbage). Don't route a flat stream through here.
-%define NPC_DIALOG_BUF               0xD262   ; composed-stream scratch (≤256 B)
+%define NPC_DIALOG_BUF               0xF600   ; composed-stream scratch (≤256 B)
 %define NPC_DIALOG_LEN               256   ; its capacity
 
 ; NPC movement-byte sentinel values (constants/map_object_constants.asm)
@@ -1391,7 +1391,12 @@
 ; W_CHECK_FOR_TURN=1 means "first direction press changes facing only; walk starts on hold".
 ; Reset to 0 on the first press (so subsequent frames in same direction walk).
 ; Restored to 1 when no direction is held (.noDirection path).
-%define W_CHECK_FOR_TURN             0xD23F   ; wCheckFor180DegreeTurn (1=check next press)
+; PORT-ONLY, above the expanded WRAM (2026-08-19). Both used to sit INSIDE a
+; pret buffer -- W_CHECK_FOR_TURN mid-wPrinterTileBuffer, NPC_DIALOG_BUF
+; mid-wPrinterPokedexMonIsOwned -- which is squatting just as surely as a
+; shared start address, and was latent only because the Game Boy Printer tier
+; is unported. check_ram_collisions.py now reports this class as a STRAY.
+%define W_CHECK_FOR_TURN             0xF580   ; wCheckFor180DegreeTurn (1=check next press)
 %define wPlayerLastStopDirection     0xE2F6   ; wPlayerLastStopDirection (dir held when player last stopped)
 
 ; Walk/sprite state

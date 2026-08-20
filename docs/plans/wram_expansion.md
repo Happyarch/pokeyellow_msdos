@@ -143,10 +143,10 @@ largest cost feared for this change does not materialise.
 4. Gen-1/Gen-2 byte-identical mon structs are unaffected — nothing here touches
    struct layout, only base addresses.
 
-## Sequencing note
+## Sequencing note (historical — that branch merged in `d157dd0c6`)
 
-`gen_pret_ram.py`, `check_ram_addresses.py` and `ram_address_baseline.json` exist
-**only on branch `script-linking`** (21 commits, unpushed; `static_gate` 6 checks
+`gen_pret_ram.py`, `check_ram_addresses.py` and `ram_address_baseline.json` were
+at the time of writing **only on branch `script-linking`** (21 commits, unpushed; `static_gate` 6 checks
 there vs 5 on master). This plan presupposes that branch merging first.
 
 ## Status: COMPLETE

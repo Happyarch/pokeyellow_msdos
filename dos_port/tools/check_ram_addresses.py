@@ -87,6 +87,47 @@ def _expected(pret_addr):
     return pret_addr + sum(g for p, sz, g in _GROWTH if p + sz <= pret_addr)
 
 
+
+# ---------------------------------------------------------------------------
+# GAP SEALED 2026-08-19: file-local ALIASES of pret addresses.
+#
+# The scan above only sees names matching pret's own [wh]Foo convention, so a
+# port-invented UPPERCASE alias of a pret address -- W_PLAY_TIME_HOURS,
+# W_HIDDEN_EVENT_X, W_DISABLE_VBLANK_WY_UPDATE, W_COORD_INDEX, W_D472 -- was
+# completely ungated. Sixteen of them silently held pre-expansion addresses
+# through the WRAM shift and were found BY HAND, which is exactly the failure
+# this file exists to prevent.
+#
+# The pairing rule is the alias's own trailing comment: these are written as
+#     W_PLAY_TIME_HOURS  equ 0xE80E   ; wPlayTimeHours
+# so the first pret RAM/HRAM symbol named in the comment IS the alias target.
+# That is a convention, not a guarantee, so a site that means something else
+# opts out with `; no-ram-alias-check`.
+_ALIAS_RE = re.compile(r"^\s*([A-Za-z_]\w*)\s+equ\s+0x([0-9A-Fa-f]{4})\b(.*)$")
+_ALIAS_SYM_RE = re.compile(r"\b([wh][A-Za-z0-9_]{3,})\b")
+
+
+def alias_findings(sym):
+    """[(file, line, alias, value, target, expected)] for stale pret aliases."""
+    out = []
+    for f in sorted((ROOT / "src").rglob("*.asm")):
+        for n, line in enumerate(f.read_text(errors="ignore").splitlines(), 1):
+            m = _ALIAS_RE.match(line)
+            if not m or "no-ram-alias-check" in line:
+                continue
+            val = int(m.group(2), 16)
+            if not (0xC000 <= val <= 0xFFFF):
+                continue
+            for cand in _ALIAS_SYM_RE.findall(m.group(3)):
+                if cand in sym:
+                    want = _expected(sym[cand])
+                    if val != want:
+                        out.append((f.relative_to(ROOT), n, m.group(1),
+                                    val, cand, want))
+                    break
+    return out
+
+
 def main():
     sym = pret_symbols()
     if sym is None:
@@ -120,6 +161,12 @@ def main():
     healed = [k for k in base if k not in divergent]
 
     fail = False
+    aliases = alias_findings(sym)
+    for f, n, alias, val, target, want in aliases:
+        print(f"  STALE ALIAS  {f}:{n}  {alias} = 0x{val:04X}, but {target} "
+              f"(pret 0x{sym[target]:04X}) is at 0x{want:04X} in the port")
+    if aliases:
+        fail = True
     for label, addrs in conflicts:
         fail = True
         print(f"  CONFLICT  {label} declared at "

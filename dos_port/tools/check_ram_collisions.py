@@ -78,6 +78,54 @@ def pret_symbols():
     return syms
 
 
+
+# ---------------------------------------------------------------------------
+# GAP SEALED 2026-08-19: the pret-address comparison above cannot speak to a
+# PORT-ONLY symbol, because it has no pret address to compare. That left 17
+# shared-address groups unevaluable and, worse, said nothing at all about a
+# port-only buffer parked in the MIDDLE of a pret one -- which is squatting just
+# as surely as a shared start address, and is how W_CHECK_FOR_TURN and
+# NPC_DIALOG_BUF came to sit inside pret's printer buffers.
+#
+# Extents come free from pokeyellow.sym ordering (next distinct address minus
+# this one), so this needs no curated size table either.
+#
+# An EXACT address match is an alias and is handled by the group check above; only
+# landing STRICTLY INSIDE another buffer is reported here.
+GB_WRAM_END = 0xE000        # cap extents here: pret's last WRAM symbol (wStack)
+                            # otherwise runs to the first HRAM symbol and swallows
+                            # every legitimate port-only region above the expansion.
+
+
+def pret_extents(pret):
+    addrs = sorted({a for a in pret.values() if a < GB_WRAM_END})
+    out = {}
+    for i, a in enumerate(addrs):
+        nxt = addrs[i + 1] if i + 1 < len(addrs) else GB_WRAM_END
+        out[a] = nxt - a
+    return out
+
+
+def strays(port, pret, shift):
+    """port-only symbols landing strictly inside a pret buffer's port extent."""
+    ext = pret_extents(pret)
+    spans = sorted((shift(a), shift(a) + n, a) for a, n in ext.items() if n > 0)
+    owners = {}
+    for n, a in pret.items():
+        owners.setdefault(a, []).append(n)
+    out = []
+    for name, val in sorted(port.items(), key=lambda kv: kv[1]):
+        if name in pret or not (0xC000 <= val < 0xFE00):
+            continue
+        if name.startswith("GB_"):      # region markers, not storage
+            continue
+        for lo, hi, pa in spans:
+            if lo < val < hi:
+                out.append((name, val, pa, lo, hi, owners.get(pa, [])))
+                break
+    return out
+
+
 def classify(port, pret):
     """-> (unauthorised, authorised_count, unevaluable)."""
     groups = collections.defaultdict(list)
@@ -161,6 +209,20 @@ def main():
 
     unauthorised, authorised, unevaluable = classify(port, pret)
 
+    import json as _json
+    _g = _json.loads((DOS_PORT / "tools" / "wram_growth.json").read_text())["growths"]
+    _R = [(int(e["pret"], 16), e["pret_size"], e["port_size"] - e["pret_size"])
+          for e in _g]
+
+    def _shift(a):
+        return a if a >= 0xFE00 else a + sum(g for q, sz, g in _R if q + sz <= a)
+
+    stray = strays(port, pret, _shift)
+    for name, val, pa, lo, hi, own in stray:
+        print(f"  STRAY 0x{val:04X}  {name} sits INSIDE "
+              f"{', '.join(own[:2])} (pret 0x{pa:04X} -> port "
+              f"0x{lo:04X}-0x{hi - 1:04X})")
+
     if "--verbose" in sys.argv:
         print(f"check_ram_collisions: {len(port)} port symbols, "
               f"{authorised} authorised pret unions, "
@@ -171,9 +233,9 @@ def main():
             f"{n} (pret 0x{v:04X})" for n, v in sorted(known.items(),
                                                        key=lambda kv: kv[1])))
 
-    if unauthorised:
-        print(f"check_ram_collisions: {len(unauthorised)} PORT-INTRODUCED "
-              f"collision(s) — two buffers pret keeps apart share one address.")
+    if unauthorised or stray:
+        print(f"check_ram_collisions: {len(unauthorised)} port-introduced "
+              f"collision(s), {len(stray)} stray(s) inside a pret buffer.")
         print("  Fix the address; do not add an allowlist. A free address is "
               "DERIVED from pokeyellow.sym, never asserted.")
         return 1
