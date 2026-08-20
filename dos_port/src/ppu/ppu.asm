@@ -716,7 +716,7 @@ render_bg:
     jz .no_row_xoff
     movsx ebx, byte [g_row_xoff + edx]  ; signed offset for THIS screen row
     add ecx, ebx
-    jns .no_row_xoff
+    jns .row_xoff_hi
     ; Clamp at the left edge. On GB rSCX indexes a 256px BG torus, so a negative
     ; displacement wraps to the far side of the map; bg_surface is a FLAT 384px
     ; row with no wrap, and sampling at x < 0 would pull in the tail of the
@@ -728,6 +728,20 @@ render_bg:
     ; must not begin a line with an annotation keyword or lint_pret_labels
     ; --strict-claims reads it as a legacy free-form annotation (it did).
     xor ecx, ecx
+    jmp .no_row_xoff
+.row_xoff_hi:
+    ; Clamp at the RIGHT edge, for the same reason and with the same asymmetry
+    ; the GB does not have. bg_scx is already held to 0..SURF_W-RENDER_W by the
+    ; scroll path; a per-row displacement is added AFTER that clamp, so a large
+    ; positive offset walks the source pointer off the end of this surface row
+    ; and into the head of the NEXT one — the mirror image of the tear below.
+    ; The two current callers stay small (WavyScreenLineOffsets reaches +2,
+    ; ShakeEnemyHUD a few px) so this is unexercised today, but the channel is
+    ; byte-wide and a caller writing up to +127 is a translation away: the
+    ; S.S. Anne dock scroll is exactly that, which is how the gap was found.
+    cmp ecx, SURF_W - RENDER_W
+    jbe .no_row_xoff
+    mov ecx, SURF_W - RENDER_W
 .no_row_xoff:
     add eax, ecx
     lea esi, [bg_surface + eax]
