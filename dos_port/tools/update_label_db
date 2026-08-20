@@ -9,6 +9,8 @@ dos_port/tools/translation.db:
     labels     one row per pret top-level label ∪ port global:
                name, pret_file, port_file, status, stub_file, scanned_at, git_hash
                status: translated | stub | missing | relocated | port_only
+               tier:   core (pret home/+engine/) | script (pret scripts/) |
+                       port (no pret counterpart)
     port_defs  every port `global`-declared definition (raw; feeds the linter):
                name, file, line, is_stub, defined_here, instr_count, has_call
     calls      caller → callee edges, side = pret | port, with kind
@@ -21,15 +23,15 @@ dos_port/tools/translation.db:
                project_state's reachability BFS consumes only build_active=1.
     externs    every port `extern` (file, symbol, trailing comment, line)
     script_labels
-               NAMES-ONLY provenance side table for pret scripts/*.asm globals:
-               name, pret_file. Per-map scripts are macro-heavy (def_script_pointers,
-               dw_const, CheckEvent…), so they are deliberately NOT modelled as
-               call graphs or given a translated/missing status — pulling them into
-               `labels` would swamp the headline counts with thousands of rows the
-               port never intends to translate one-for-one. The table exists purely
-               so lint_pret_labels can answer "does this port symbol borrow a pret
-               scripts/ name, and if so is it in the right map file?"
-               (rules script_collision / script_misplaced).
+               Stem-tolerance side table for pret scripts/*.asm globals:
+               name, pret_file, expect_port_file, accept_stems. It no longer
+               carries the tier's status — since 2026-08-20 every pret scripts/
+               label gets a real `labels` row with tier='script'. It remains
+               because lint_pret_labels' script_collision / script_misplaced
+               rules need accept_stems (pret's bank-split `_N` files and the
+               b_1f/b1f spelling tolerance), which `labels` has no column for.
+               Scripts are still NOT modelled as call graphs: they are
+               macro-heavy (def_script_pointers, dw_const, CheckEvent…).
 
 THE DB IS ALWAYS DERIVED BY RESCANNING — never hand-edited, never written
 directly by agents. These four tables are dropped and rebuilt on every run;
@@ -1337,10 +1339,19 @@ CREATE TABLE labels (
                ('translated','stub','missing','relocated','port_only')),
     stub_file  TEXT,
     scanned_at TEXT,
-    git_hash   TEXT
+    git_hash   TEXT,
+    -- Which pret tier the row belongs to:
+    --   'core'   pret home/ + engine/ — the mirror-rule universe
+    --   'script' pret scripts/ — the per-map script layer
+    --   'port'   no pret counterpart (status is always port_only)
+    -- The column exists so admitting ~3.7k script labels does not silently move
+    -- every historical ratio: a report that wants the old headline filters
+    -- tier='core', and one that wants port completeness sums both.
+    tier       TEXT NOT NULL CHECK(tier IN ('core','script','port'))
 );
 CREATE INDEX idx_labels_name   ON labels(name);
 CREATE INDEX idx_labels_status ON labels(status);
+CREATE INDEX idx_labels_tier   ON labels(tier);
 CREATE TABLE port_defs (
     name         TEXT NOT NULL,
     file         TEXT NOT NULL,
@@ -1518,30 +1529,49 @@ def main():
     for row in port_defs:
         by_name.setdefault(row[0], []).append(row)
 
-    label_rows = []
-    for name in sorted(pret_labels):
-        pret_file = pret_labels[name]
+    def classify(name, pret_file, mirror, tier):
+        """One pret label -> one `labels` row. Shared by the core (home/+engine/)
+        and script (scripts/) tiers so both get the same status vocabulary and
+        the same provider-picking rules; only the mirror path differs."""
         defs = by_name.get(name, [])
         nonstub = sorted(d[1] for d in defs if not d[3])
         stubs   = sorted(d[1] for d in defs if d[3])
         if nonstub:
-            mirror = mirror_path(pret_file)
             port_file = pick_provider(defs, mirror, built)
             status = 'translated'
-            if port_file != mirror_path(pret_file):
+            if port_file != mirror:
                 if reloc_labels.get(name) == port_file or \
                    reloc_files.get(pret_file) == port_file:
                     status = 'relocated'
-            label_rows.append((name, pret_file, port_file, status,
-                               stubs[0] if stubs else None,
-                               scanned_at, git_hash))
-        elif stubs:
-            label_rows.append((name, pret_file, None, 'stub', stubs[0],
-                               scanned_at, git_hash))
-        else:
-            label_rows.append((name, pret_file, None, 'missing', None,
-                               scanned_at, git_hash))
-    for name in sorted(set(by_name) - set(pret_labels)):
+            return (name, pret_file, port_file, status,
+                    stubs[0] if stubs else None, scanned_at, git_hash, tier)
+        if stubs:
+            return (name, pret_file, None, 'stub', stubs[0],
+                    scanned_at, git_hash, tier)
+        return (name, pret_file, None, 'missing', None,
+                scanned_at, git_hash, tier)
+
+    label_rows = []
+    for name in sorted(pret_labels):
+        pret_file = pret_labels[name]
+        label_rows.append(
+            classify(name, pret_file, mirror_path(pret_file), 'core'))
+
+    # The script tier. It used to be names-only in script_labels, on the reasoning
+    # that the port "never intends to translate them one-for-one". That premise
+    # expired: 221 of 225 script files are translated and linked, and leaving them
+    # out did not merely hide a tier — it MISFILED it. Every script label with a
+    # port definition fell through to the port_only sweep below, so 2276 of 2860
+    # port_only rows (80%) were faithful pret labels recorded as bespoke port code
+    # by elimination. That is the exact failure mode CLAUDE.md's evidence policy
+    # warns about, at a scale its recorded measurement (91 of 433) predates.
+    # script_labels is KEPT: the linter's script_collision / script_misplaced rules
+    # read its accept_stems tolerances, which `labels` has no column for.
+    for name in sorted(script_labels):
+        pret_file = script_labels[name]
+        label_rows.append(
+            classify(name, pret_file, script_port_file(pret_file), 'script'))
+    for name in sorted(set(by_name) - set(pret_labels) - set(script_labels)):
         defs = by_name[name]
         # Generated-data names that are NOT pret labels stay out of `labels`, for
         # the same reason scan_pret_scripts keeps pret's scripts/ names in a side
@@ -1555,12 +1585,13 @@ def main():
         stubs   = sorted(d[1] for d in defs if d[3])
         label_rows.append((name, None,
                            nonstub[0] if nonstub else None, 'port_only',
-                           stubs[0] if stubs else None, scanned_at, git_hash))
+                           stubs[0] if stubs else None, scanned_at, git_hash,
+                           'port'))
 
     con = sqlite3.connect(args.db)
     cur = con.cursor()
     cur.executescript(SCHEMA)
-    cur.executemany("INSERT INTO labels VALUES (?,?,?,?,?,?,?)", label_rows)
+    cur.executemany("INSERT INTO labels VALUES (?,?,?,?,?,?,?,?)", label_rows)
     cur.executemany("INSERT INTO port_defs VALUES (?,?,?,?,?,?,?,?,?)",
                     sorted(port_defs))
     cur.executemany("INSERT INTO calls VALUES (?,?,?,'pret',?,?,NULL)",
@@ -1579,6 +1610,10 @@ def main():
 
     counts = {s: n for s, n in cur.execute(
         "SELECT status, COUNT(*) FROM labels GROUP BY status")}
+    tiers = {}
+    for t, st, n in cur.execute(
+            "SELECT tier, status, COUNT(*) FROM labels GROUP BY tier, status"):
+        tiers.setdefault(t, {})[st] = n
     con.close()
 
     # Deterministic content hash over everything this scan derived — the
@@ -1593,8 +1628,13 @@ def main():
 
     print(f"labels: {sum(counts.values())} "
           f"({', '.join(f'{k}={v}' for k, v in sorted(counts.items()))})")
+    for t in ('core', 'script', 'port'):
+        d = tiers.get(t)
+        if d:
+            print(f"  tier {t:6} {sum(d.values()):5}  "
+                  f"({', '.join(f'{k}={v}' for k, v in sorted(d.items()))})")
     print(f"script_labels: {len(script_rows)} pret scripts/ names "
-          f"(provenance side table; no status)")
+          f"(stem-tolerance side table for the linter; status lives in labels)")
     print(f"aux_labels: {len(aux_rows)} pret {'/, '.join(AUX_PRET_DIRS)}/ names "
           f"(provenance side table; no status)")
     print(f"port_defs: {len(port_defs)}  calls: "

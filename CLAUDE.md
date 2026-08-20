@@ -113,18 +113,34 @@ and `no caller` must cite generated state (`dos_port/tools/project_state`) or
 runtime evidence.
 
 **`port-only` is a positive claim that needs the same discipline, and the raw
-`status` column does NOT support it.** `update_label_db` models pret `home/` +
-`engine/` only, so a faithful pret label from `audio/`, `data/`, `gfx/`, `ram/`
-or `scripts/` is recorded `port_only` *by elimination* — nobody determined it was
-bespoke. Measured 2026-08-02: 91 of 433 `port_only` rows were real pret labels
-(data 41, audio 22, scripts 16, gfx 10, ram 2) — audio includes
-`PlayPikachuSoundClip`, which the upstream pret merge 46b8e169 moved out of
-`engine/pikachu/` into `audio/`. Cite the `aux_labels` /
-`script_labels` provenance tables, or the dependency graph's `display_status`
-(`pret-unmodeled`) and `aux_pret_file`. A label is genuinely port-only only when
+`status` column does NOT support it.** `update_label_db` gives a status to pret
+`home/` + `engine/` (`tier='core'`) and, since 2026-08-20, pret `scripts/`
+(`tier='script'`). A faithful pret label from `audio/`, `data/`, `gfx/` or `ram/`
+is still recorded `port_only` *by elimination* — nobody determined it was
+bespoke. Measured 2026-08-20: **212 of 584** `port_only` rows are real pret
+labels (data 169, audio 22, gfx 19, ram 2); the other 372 are genuinely port-only.
+audio includes `PlayPikachuSoundClip`, which the upstream pret merge 46b8e169
+moved out of `engine/pikachu/` into `audio/`. Cite the `aux_labels` provenance
+table, or the dependency graph's `display_status` (`pret-unmodeled`) and
+`aux_pret_file`. A label is genuinely port-only only when
 `display_status == "port_only"` AND `aux_pret_file` is null. Calling a pret
 routine "port-only" invites exactly the forked-name duplication the "Preserve
 pret Labels" rule exists to prevent.
+
+**How bad this gets when a whole tier is unmodelled: on 2026-08-20 admitting
+`scripts/` moved 2276 rows out of `port_only` in one step** — 80% of the column
+was faithful pret script labels filed as bespoke port code. The figures above are
+measurements with a date on them, not constants: re-measure rather than quoting
+them (this paragraph read "91 of 433" for eighteen days while the real number
+drifted by an order of magnitude).
+
+**Not every tier is equal, and `tier` says which.** `core` is the mirror-rule
+universe and the ONLY tier with call-graph edges. `script` rows carry a status
+but no edges — per-map scripts are macro-heavy, so `--callers`, reachability and
+`faithdiff`'s call comparison mean nothing on them. `tools/project_state --json`
+and the dependency-graph API both expose `tier`; `docs/translation_progress.md`
+breaks the headline down by it, and the `core` row is the number that report
+carried before scripts were admitted.
 
 **`unreachable` needs runtime evidence; the `reachability` column is never proof
 of unreachability.** It supports the positive direction only

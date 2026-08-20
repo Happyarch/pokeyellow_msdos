@@ -219,10 +219,21 @@ def main():
     # assets/*.inc and %included. There is no dos_port/src/<pret path> for a
     # generated stream to live at, so the mirror rule has nothing to say about it.
     # The rule still governs every hand-written .asm, which is what it is for.
+    #
+    # tier='script' is EXCLUDED here, and not as a weakening: pret's scripts/ file
+    # names are PascalCase (scripts/WardensHouse.asm) while the port's script layer
+    # is snake_case (src/scripts/wardens_house.asm), and pret's bank-split `_N`
+    # continuation files collapse to one port file. A path mirror is simply the
+    # wrong predicate for that tier. Those rows are governed by script_misplaced
+    # below, which compares against script_labels.expect_port_file and honours the
+    # accept_stems tolerances — so the tier is still gated, by the rule that fits
+    # it. (Before scripts entered `labels` on 2026-08-20 this exclusion was
+    # implicit, because the rows did not exist.)
     open_structural = []
     for name, pret_file, port_file in cur.execute("""
             SELECT name, pret_file, port_file FROM labels
             WHERE status='translated'
+              AND tier != 'script'
               AND port_file != 'dos_port/src/' || pret_file
               AND port_file NOT LIKE 'dos_port/assets/%'
             ORDER BY pret_file, name"""):

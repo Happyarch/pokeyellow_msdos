@@ -213,21 +213,67 @@ def build_report(scan):
     for k in sorted(other):
         rows.append([k, other[k], pct(other[k], total)])
     rows.append(['**total pret labels**', total, '100%'])
+
     lines += [md_table(['status', 'labels', 'share'], rows), '']
+    lines += ['', '> **The headline moved on 2026-08-20, and not because the port'
+              ' advanced that day.** pret `scripts/` labels were admitted to the label'
+              ' DB; before that they had no status and were counted nowhere, while'
+              ' 2276 of them were simultaneously misfiled as bespoke `port_only` code.'
+              ' The tier is 95.9% translated, so folding it in raised the overall'
+              ' figure in one step. Compare like with like across that boundary by'
+              ' reading the `core` row of the tier table below, which is the number'
+              ' this summary used to report.', '']
     lines += [f'_{linked} of those labels have a provider the current build links._'
               ' Port-only labels (routines with no pret counterpart — HAL boundaries,'
               ' debug harnesses) are deliberately excluded: they are not pret coverage,'
               ' so counting them would inflate every number here.', '']
 
+
+    # ── By pret tier ─────────────────────────────────────────────────────────
+    # The script tier entered this report on 2026-08-20. Before that, pret
+    # scripts/ labels had no status at all: they fell through update_label_db's
+    # port_only sweep, so 2276 faithful pret labels were filed as bespoke port
+    # code and the report simply did not count them. Both halves of that are
+    # fixed, and the split is shown rather than folded into one number, because
+    # the tiers are not interchangeable: only `core` carries call-graph edges, so
+    # only `core` rows can be reasoned about with --callers or reachability.
+    by_tier = collections.defaultdict(collections.Counter)
+    for l in labels:
+        by_tier[l.get('tier', 'core')][l['status']] += 1
+    lines += ['', '### By pret tier', '']
+    tier_note = {'core': 'pret `home/` + `engine/` — the mirror-rule universe, '
+                         'the only tier with call-graph edges',
+                 'script': 'pret `scripts/` — per-map scripts; status only, '
+                           'deliberately not modelled as a call graph'}
+    trows = []
+    for t in ('core', 'script'):
+        c = by_tier.get(t)
+        if not c:
+            continue
+        tot = sum(c.values())
+        trows.append([f'`{t}`', tot,
+                      c.get('translated', 0), pct(c.get('translated', 0), tot),
+                      c.get('stub', 0), c.get('missing', 0), tier_note[t]])
+    lines += [md_table(['tier', 'labels', 'translated', '%', 'stub', 'unported',
+                    'what it is'], trows), '']
+
+
     # ── Per-subsystem ────────────────────────────────────────────────────────
     lines += ['## By pret subsystem', '',
               '_Sorted by how much is left. `%` is translated / total._', '',
               '> **Blind spot, stated so nobody reads it as a zero:** the label scanner'
-              ' models pret `home/` and `engine/` only. pret `audio/`, `data/` and'
-              ' `scripts/` have no rows here at all — their absence from this table is'
-              ' the scanner\'s scope, not evidence that they are done or that they are'
-              ' empty. (`scripts/` labels do live in the DB\'s separate'
-              ' `script_labels` provenance table, which carries no status.)', '']
+              ' models pret `home/`, `engine/` and (since 2026-08-20) `scripts/`.'
+              ' pret `audio/`, `data/`, `gfx/` and `ram/` have no rows here at all —'
+              ' their absence is the scanner\'s scope, not evidence that they are done'
+              ' or empty. Their labels live in the DB\'s `aux_labels` provenance table,'
+              ' which carries names only, no status.',
+              '>',
+              '> **`scripts/` rows carry a status but NO call-graph edges.** Per-map'
+              ' scripts are macro-heavy (`def_script_pointers`, `dw_const`,'
+              ' `CheckEvent`), so they are deliberately not modelled as a call graph.'
+              ' A script label therefore cannot be reasoned about with `--callers` or'
+              ' reachability, and absent edges on one mean nothing.',
+              '']
     per = collections.defaultdict(collections.Counter)
     for l in labels:
         per[subsystem_of(l.get('pret_file'))][l['status']] += 1

@@ -160,6 +160,11 @@ def main():
             deviation = relocated_labels.get(row["name"]) or relocated_files.get(row["pret_file"])
         records.append({
             "label": row["name"], "pret_file": row["pret_file"],
+            # Which pret tier: 'core' (home/+engine/, the mirror-rule universe,
+            # the only tier with call-graph edges) or 'script' (pret scripts/,
+            # status-modelled since 2026-08-20 but deliberately not graphed).
+            # Consumers that want the historical headline filter tier == 'core'.
+            "tier": (row["tier"] if "tier" in row.keys() else "core"),
             "provider": provider, "provider_type": provider_type,
             "linkage": linkage, "linked_callers": len(callers.get(row['name'], ())),
             # Names say exactly what the analysis proves. "static-live-entry"
