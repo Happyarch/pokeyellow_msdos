@@ -21,8 +21,10 @@ bits 32
 %include "assets/event_constants.inc"
 
 %include "assets/script_strings.inc"
+%include "coords.inc"
 
 global BikeShopBagFullText
+global BikeShopClerkText
 global BikeShopCantAffordText
 global BikeShopClerkDoYouLikeItText
 global BikeShopClerkHowDoYouLikeYourBicycleText
@@ -37,7 +39,6 @@ global BikeShopYoungsterText
 global BikeShop_Script
 global BikeShop_TextPointers
 
-extern BikeShopClerkText   ; NOT YET DEFINED IN THE PORT
 extern EnableAutoTextBoxDrawing
 extern GiveItem
 extern HandleMenuInput
@@ -74,91 +75,92 @@ BikeShop_TextPointers:
     dd BikeShopMiddleAgedWomanText
     dd BikeShopYoungsterText
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BikeShopClerkText (scripts/BikeShop.asm:13-17) — at scripts/BikeShop.asm:14: BikeShopClerkText.dontHaveBike is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_GOT_BICYCLE
-; PRET| 	jr z, .dontHaveBike
-; PRET| 	ld hl, BikeShopClerkHowDoYouLikeYourBicycleText
-; PRET| 	call PrintText
-; PRET| 	jp .Done
+%assign event_byte -1
+%assign event_byte_a -1
+BikeShopClerkText:
+    CheckEvent EVENT_GOT_BICYCLE                  ; CheckEvent EVENT_GOT_BICYCLE
+    jz .dontHaveBike                              ; jr z, .dontHaveBike
+    mov esi, BikeShopClerkHowDoYouLikeYourBicycleText ; ld hl, ...
+    call PrintText                                ; call PrintText
+    jmp .Done                                     ; jp .Done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BikeShopClerkText.dontHaveBike (scripts/BikeShop.asm:19-33) — at scripts/BikeShop.asm:21: BikeShopClerkText.dontHaveVoucher is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld b, BIKE_VOUCHER
-; PRET| 	call IsItemInBag
-; PRET| 	jr z, .dontHaveVoucher
-; PRET| 	ld hl, BikeShopClerkOhThatsAVoucherText
-; PRET| 	call PrintText
-; PRET| 	lb bc, BICYCLE, 1
-; PRET| 	call GiveItem
-; PRET| 	jr nc, .BagFull
-; PRET| 	ld a, BIKE_VOUCHER
-; PRET| 	ldh [hItemToRemoveID], a
-; PRET| 	farcall RemoveItemByID
-; PRET| 	SetEvent EVENT_GOT_BICYCLE
-; PRET| 	ld hl, BikeShopExchangedVoucherText
-; PRET| 	call PrintText
-; PRET| 	jr .Done
+%assign event_byte -1
+%assign event_byte_a -1
+.dontHaveBike:
+    mov bh, BIKE_VOUCHER                          ; ld b, BIKE_VOUCHER
+    call IsItemInBag                              ; call IsItemInBag
+    jz .dontHaveVoucher                           ; jr z, .dontHaveVoucher
+    mov esi, BikeShopClerkOhThatsAVoucherText     ; ld hl, ...
+    call PrintText                                ; call PrintText
+    mov bx, (BICYCLE << 8) | (1)                  ; lb bc, BICYCLE, 1
+    call GiveItem                                 ; call GiveItem
+    jae .BagFull                                  ; jr nc, .BagFull  (CF clear = failure)
+    mov al, BIKE_VOUCHER                          ; ld a, BIKE_VOUCHER
+    mov [ebp + hItemToRemoveID], al               ; ldh [hItemToRemoveID], a
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call RemoveItemByID                           ; farcall RemoveItemByID
+    SetEvent EVENT_GOT_BICYCLE                    ; SetEvent EVENT_GOT_BICYCLE
+    mov esi, BikeShopExchangedVoucherText         ; ld hl, ...
+    call PrintText                                ; call PrintText
+    jmp .Done                                     ; jr .Done
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] BikeShopClerkText.BagFull (scripts/BikeShop.asm:35-37) — at scripts/BikeShop.asm:37: BikeShopClerkText.Done is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, BikeShopBagFullText
-; PRET| 	call PrintText
-; PRET| 	jr .Done
+%assign event_byte -1
+%assign event_byte_a -1
+.BagFull:
+    mov esi, BikeShopBagFullText                  ; ld hl, BikeShopBagFullText
+    call PrintText                                ; call PrintText
+    jmp .Done                                     ; jr .Done
 
-; ---------------------------------------------------------------------------
-; BAIL[screen-coord-projection] BikeShopClerkText.dontHaveVoucher (scripts/BikeShop.asm:39-81) — at scripts/BikeShop.asm:54: hlcoord 0, 0
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld hl, BikeShopClerkWelcomeText
-; PRET| 	call PrintText
-; PRET| 	xor a
-; PRET| 	ld [wCurrentMenuItem], a
-; PRET| 	ld [wLastMenuItem], a
-; PRET| 	ld a, PAD_A | PAD_B
-; PRET| 	ld [wMenuWatchedKeys], a
-; PRET| 	ld a, $1
-; PRET| 	ld [wMaxMenuItem], a
-; PRET| 	ld a, $2
-; PRET| 	ld [wTopMenuItemY], a
-; PRET| 	ld a, $1
-; PRET| 	ld [wTopMenuItemX], a
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	set BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	hlcoord 0, 0
-; PRET| 	lb bc, 4, 15
-; PRET| 	call TextBoxBorder
-; PRET| 	call UpdateSprites
-; PRET| 	hlcoord 2, 2
-; PRET| 	ld de, BikeShopMenuText
-; PRET| 	call PlaceString
-; PRET| 	hlcoord 8, 3
-; PRET| 	ld de, BikeShopMenuPrice
-; PRET| 	call PlaceString
-; PRET| 	ld hl, BikeShopClerkDoYouLikeItText
-; PRET| 	call PrintText
-; PRET| 	; This fixes the bike shop instatext glitch
-; PRET| 	ld hl, wStatusFlags5
-; PRET| 	res BIT_NO_TEXT_DELAY, [hl]
-; PRET| 	call HandleMenuInput
-; PRET| 	bit B_PAD_B, a
-; PRET| 	jr nz, .cancel
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .cancel
-; PRET| 	ld hl, BikeShopCantAffordText
-; PRET| 	call PrintText
-; PRET| .cancel
-; PRET| 	ld hl, BikeShopComeAgainText
-; PRET| 	call PrintText
-; PRET| .Done
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+.dontHaveVoucher:
+    mov esi, BikeShopClerkWelcomeText             ; ld hl, BikeShopClerkWelcomeText
+    call PrintText                                ; call PrintText
+    xor al, al                                    ; xor a
+    mov [ebp + wCurrentMenuItem], al              ; ld [wCurrentMenuItem], a
+    mov [ebp + wLastMenuItem], al                 ; ld [wLastMenuItem], a
+    mov al, PAD_A | PAD_B                         ; ld a, PAD_A | PAD_B
+    mov [ebp + wMenuWatchedKeys], al              ; ld [wMenuWatchedKeys], a
+    mov al, 1                                     ; ld a, $1
+    mov [ebp + wMaxMenuItem], al                  ; ld [wMaxMenuItem], a
+    mov al, 2                                     ; ld a, $2
+    mov [ebp + wTopMenuItemY], al                 ; ld [wTopMenuItemY], a
+    mov al, 1                                     ; ld a, $1
+    mov [ebp + wTopMenuItemX], al                 ; ld [wTopMenuItemX], a
+    or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY) ; ld hl, wStatusFlags5 / set BIT_NO_TEXT_DELAY, [hl]
+    ; PROJ overworld-ui (bike shop menu box): GB(0,0) 17x6 --(anchor=top-LEFT, X+0, Y+0)--> ruled as the mart BUY/SELL/QUIT box
+    hlcoord 0, 0                                  ; hlcoord 0, 0
+    mov bh, 4                                     ; lb bc, 4, 15
+    mov bl, 15
+    call TextBoxBorder                            ; call TextBoxBorder
+    call UpdateSprites                            ; call UpdateSprites
+    ; PROJ overworld-ui (bike shop menu text): INHERITS the box, +2 col +2 row
+    hlcoord 2, 2                                  ; hlcoord 2, 2
+    mov eax, BikeShopMenuText                     ; ld de, BikeShopMenuText
+    mov edx, eax
+    call PlaceString                              ; call PlaceString
+    ; PROJ overworld-ui (bike shop price): INHERITS the box, +8 col +3 row
+    hlcoord 8, 3                                  ; hlcoord 8, 3
+    mov eax, BikeShopMenuPrice                    ; ld de, BikeShopMenuPrice
+    mov edx, eax
+    call PlaceString                              ; call PlaceString
+    mov esi, BikeShopClerkDoYouLikeItText         ; ld hl, ...
+    call PrintText                                ; call PrintText
+    ; This fixes the bike shop instatext glitch
+    and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF ; res BIT_NO_TEXT_DELAY, [hl]
+    call HandleMenuInput                          ; call HandleMenuInput
+    test al, PAD_B                                ; bit B_PAD_B, a
+    jnz .cancel                                   ; jr nz, .cancel
+    mov al, [ebp + wCurrentMenuItem]              ; ld a, [wCurrentMenuItem]
+    test al, al                                   ; and a
+    jnz .cancel                                   ; jr nz, .cancel
+    mov esi, BikeShopCantAffordText               ; ld hl, BikeShopCantAffordText
+    call PrintText                                ; call PrintText
+.cancel:
+    mov esi, BikeShopComeAgainText                ; ld hl, BikeShopComeAgainText
+    call PrintText                                ; call PrintText
+.Done:
+    jmp TextScriptEnd                             ; jp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1

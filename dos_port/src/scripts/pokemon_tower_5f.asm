@@ -40,6 +40,7 @@ global PokemonTower5FChanneler2Text
 global PokemonTower5FChanneler3Text
 global PokemonTower5FChanneler4Text
 global PokemonTower5FChanneler5Text
+global PokemonTower5FPurifiedZoneCoords
 global PokemonTower5FDefaultScript
 global PokemonTower5F_Script
 global PokemonTower5F_ScriptPointers
@@ -59,7 +60,6 @@ extern PokemonTower5FChanneler2BattleText
 extern PokemonTower5FChanneler3BattleText
 extern PokemonTower5FChanneler4BattleText
 extern PokemonTower5FChanneler5BattleText
-extern PokemonTower5FPurifiedZoneCoords   ; NOT YET DEFINED IN THE PORT
 extern PokemonTower5TrainerHeader0
 extern PokemonTower5TrainerHeader1
 extern PokemonTower5TrainerHeader2
@@ -132,7 +132,18 @@ PokemonTower5FDefaultScript:
     mov [ebp + wJoyIgnore], al
     ret
 
-; PokemonTower5FPurifiedZoneCoords (scripts/PokemonTower5F.asm:46-76) — not re-emitted: PokemonTower5TrainerHeaders is already defined in assets/trainer_headers.inc.
+; SIBLING-DROP REPAIR: the transpiler drops a whole pret REGION when it contains an
+; owned label, taking non-owned siblings with it. pret region PokemonTower5F.asm:46-76
+; holds BOTH PokemonTower5FPurifiedZoneCoords (non-owned, used right here by
+; PokemonTower5FDefaultScript) and PokemonTower5TrainerHeaders (owned by
+; assets/trainer_headers.inc). Only the non-owned label is re-emitted; re-emitting the
+; owned one would collide with the generated asset. pret `dbmapcoord x, y` is `db y, x`.
+PokemonTower5FPurifiedZoneCoords:
+    db  8, 10                                     ; dbmapcoord 10,  8
+    db  8, 11                                     ; dbmapcoord 11,  8
+    db  9, 10                                     ; dbmapcoord 10,  9
+    db  9, 11                                     ; dbmapcoord 11,  9
+    db -1                                         ; db -1 ; end
 
 %assign event_byte -1
 %assign event_byte_a -1

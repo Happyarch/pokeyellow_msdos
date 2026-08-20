@@ -33,6 +33,13 @@ extern MtMoon3TrainerHeader2      ; assets/trainer_headers.inc
 extern MtMoon3TrainerHeaders      ; assets/trainer_headers.inc
 extern MtMoonB2FRocket2BattleText ; assets/trainer_headers.inc
 
+global MtMoonB2FYouHaveNoRoomText
+global MtMoonB2FSuperNerdTheyreBothMineText
+global MtMoonB2FSuperNerdOkIllShareText
+global MtMoonB2fSuperNerdEachTakeOneText
+global MtMoonB2FSuperNerdTheresAPokemonLabText
+global MtMoonB2FSuperNerdThenThisIsMineText
+global MtMoonB2FDefaultScript
 global CoordsData_49dc0
 global CoordsData_49dc7
 global CoordsData_49dce
@@ -102,16 +109,10 @@ extern MtMoon3TrainerHeader0
 extern MtMoon3TrainerHeader1
 extern MtMoon3TrainerHeader2
 extern MtMoon3TrainerHeaders
-extern MtMoonB2FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FHelixFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FRocket2BattleText
-extern MtMoonB2FSuperNerdOkIllShareText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FSuperNerdText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FSuperNerdTheresAPokemonLabText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FSuperNerdTheyreBothMineText   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2FYouHaveNoRoomText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2F_TextPointers   ; NOT YET DEFINED IN THE PORT
-extern MtMoonB2fSuperNerdEachTakeOneText   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic
 extern PlayMusic
 extern PrintText
@@ -247,6 +248,11 @@ MtMoonB2F_ScriptPointers:
 
 %assign event_byte -1
 %assign event_byte_a -1
+; LABEL-DROP REPAIR: the transpiler lowered this body correctly but emitted NO
+; label for it — pret guards the routine's first lines with IF DEF(_DEBUG), and the
+; tool consumed the label along with the stripped block. The body below is the
+; tool's own output, unchanged; only the pret label is restored.
+MtMoonB2FDefaultScript:
     CheckEitherEventSet EVENT_GOT_DOME_FOSSIL, EVENT_GOT_HELIX_FOSSIL
     jnz .sk_82
         call MtMoonB2FScript_49d28
@@ -813,7 +819,41 @@ MtMoonB2FReceivedFossilText:
 ; PRET| 	call PrintText
 ; PRET| 	jp TextScriptEnd
 
-; MtMoonB2FYouHaveNoRoomText.Text (scripts/MtMoonB2F.asm:595-654) — not re-emitted: MtMoonB2FRocket2BattleText is already defined in assets/trainer_headers.inc.
+; SIBLING-DROP REPAIR: pret region MtMoonB2F.asm:595-654 holds these six non-owned
+; labels alongside MtMoonB2FRocket2BattleText, which assets/trainer_headers.inc
+; owns, so the whole region was dropped. Only the non-owned labels are re-emitted;
+; the Rocket2/Rocket3 battle texts stay owned by the generated asset. Far streams
+; are Tier-1 data from gen_map_text.py, discovered via these text_far references.
+MtMoonB2FYouHaveNoRoomText:
+    mov esi, .Text                                ; ld hl, .Text
+    call PrintText                                ; call PrintText
+    jmp TextScriptEnd                             ; jp TextScriptEnd
+
+.Text:
+    text_far _MtMoonB2FYouHaveNoRoomText
+    text_waitbutton
+    text_end
+
+MtMoonB2FSuperNerdTheyreBothMineText:
+    text_far _MtMoonB2FSuperNerdTheyreBothMineText
+    text_end
+
+MtMoonB2FSuperNerdOkIllShareText:
+    text_far _MtMoonB2FSuperNerdOkIllShareText
+    text_end
+
+MtMoonB2fSuperNerdEachTakeOneText:
+    text_far _MtMoonB2fSuperNerdEachTakeOneText
+    text_end
+
+MtMoonB2FSuperNerdTheresAPokemonLabText:
+    text_far _MtMoonB2FSuperNerdTheresAPokemonLabText
+    text_end
+
+MtMoonB2FSuperNerdThenThisIsMineText:
+    text_far _MtMoonB2FSuperNerdThenThisIsMineText
+    sound_get_key_item
+    text_end
 
 %assign event_byte -1
 %assign event_byte_a -1

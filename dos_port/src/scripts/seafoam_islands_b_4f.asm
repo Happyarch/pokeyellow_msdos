@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
+global ArticunoTrainerHeader
 global SeafoamIslandsB4FArticunoBattleText
 global SeafoamIslandsB4FArticunoText
 global SeafoamIslandsB4FBouldersSignText
@@ -35,7 +36,6 @@ global SeafoamIslandsB4F_Script
 global SeafoamIslandsB4F_ScriptPointers
 
 extern ArePlayerCoordsInArray
-extern ArticunoTrainerHeader   ; NOT YET DEFINED IN THE PORT
 extern BoulderText   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable
 extern DecodeRLEList
@@ -243,23 +243,29 @@ SeafoamIslandsB4FObjectMoving2Script:
     jmp ForceBikeOrSurf
 
 ; ---------------------------------------------------------------------------
-; BAIL[owned-by-gen_map_script_tables] SeafoamIslandsB4F_TextPointers (scripts/SeafoamIslandsB4F.asm:137-150) — at scripts/SeafoamIslandsB4F.asm:149: trainer EVENT_BEAT_ARTICUNO, 0, SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	def_text_pointers
-; PRET| 	dw_const BoulderText,                       TEXT_SEAFOAMISLANDSB4F_BOULDER1
-; PRET| 	dw_const BoulderText,                       TEXT_SEAFOAMISLANDSB4F_BOULDER2
-; PRET| 	dw_const SeafoamIslandsB4FArticunoText,     TEXT_SEAFOAMISLANDSB4F_ARTICUNO
-; PRET| 	dw_const SeafoamIslandsB4FBouldersSignText, TEXT_SEAFOAMISLANDSB4F_BOULDERS_SIGN
-; PRET| 	dw_const SeafoamIslandsB4FDangerSignText,   TEXT_SEAFOAMISLANDSB4F_DANGER_SIGN
-; PRET| 
-; PRET| ; Articuno is object 3, but its event flag is bit 2.
-; PRET| ; This is not a problem because its sight range is 0, and
-; PRET| ; trainer headers were not stored by ExecuteCurMapScriptInTable.
-; PRET| 	def_trainers 2
-; PRET| ArticunoTrainerHeader:
-; PRET| 	trainer EVENT_BEAT_ARTICUNO, 0, SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText
-; PRET| 	db -1 ; end
+; ArticunoTrainerHeader — re-emitted here, NOT by gen_trainer_headers.py.
+;
+; The region bailed as owned-by-gen_map_script_tables because it holds the map's
+; text-pointer table, which IS generated. But the standalone trainer header inside
+; it is NOT: measured tree-wide, only two pret trainer-header labels are absent
+; from assets/trainer_headers.inc, and this is one of them — the generator emits
+; headers from `def_trainers` GROUPS and this one is a lone entry. It is therefore
+; a non-owned sibling, and the sibling-drop rule applies: re-emit only it.
+;
+; Layout mirrors the generated asset exactly (macros/scripts/maps.asm:trainer):
+;   db CURRENT_TRAINER_BIT, view << 4 / dd flag_ptr / dd battle, after, end, end
+; pret's `def_trainers 2` sets CURRENT_TRAINER_BIT = 2 here — Articuno is object 3
+; but its flag is bit 2, which pret comments on and relies on (sight range 0).
+;
+; The flag pointer is written SYMBOLICALLY, not as the 0xE64F it currently
+; evaluates to. A literal would silently rot the next time WRAM moves, which is
+; precisely the bug class the prefix-sum expansion spent a day removing.
+ArticunoTrainerHeader:
+    db 2, 0 << 4                                  ; db CURRENT_TRAINER_BIT / db 0 << 4
+    dd wEventFlags + ((EVENT_BEAT_ARTICUNO - 2) / 8) ; dw wEventFlags + (\1 - CURRENT_TRAINER_BIT) / 8
+    dd SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText, \
+       SeafoamIslandsB4FArticunoBattleText, SeafoamIslandsB4FArticunoBattleText
+    db -1                                         ; db -1 ; end
 
 %assign event_byte -1
 %assign event_byte_a -1

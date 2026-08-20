@@ -24,6 +24,7 @@ bits 32
 %include "assets/audio_constants.inc"
 %include "assets/pika_pcm.inc"
 
+global OaksLabPikachuDislikesPokeballsText1
 global OakEntryMovement
 global OaksLabCalcRivalMovementScript
 global OaksLabChoseStarterScript
@@ -121,7 +122,6 @@ extern HideObject
 extern IsItemInBag
 extern MoveSprite
 extern Music_RivalAlternateStart
-extern OaksLabPikachuDislikesPokeballsText1   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic
 extern PlayMusic
 extern PlayPikachuSoundClip
@@ -1492,15 +1492,20 @@ OaksLabRivalSmellYouLaterText:
     text_far _OaksLabRivalSmellYouLaterText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[pikachu-table-index] OaksLabPikachuDislikesPokeballsText1 (scripts/OaksLab.asm:1094-1098) — at scripts/OaksLab.asm:1094: ldpikacry needs (X_id - Table) / N across object files
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ldpikacry e, PikachuCry2
-; PRET| 	callfar PlayPikachuSoundClip
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
+%assign event_byte -1
+%assign event_byte_a -1
+OaksLabPikachuDislikesPokeballsText1:
+; ldpikacry lowers to a LITERAL: pret's macro is `(X_id - PikachuCriesPointerTable) / 3`,
+; a cross-object-file difference NASM cannot fold. It does not need to — measured
+; against audio/pikachu_cries_pointers.asm, the table is strictly ordinal across all
+; 42 entries (zero violations), so PikachuCryN is index N-1. Same lowering the port
+; already uses at celadon_mansion_1f.asm:98 for PikachuCry23 -> 22.
+    mov dl, 1                                     ; ldpikacry e, PikachuCry2 (0-based clip index)
+; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
+    call PlayPikachuSoundClip                     ; callfar PlayPikachuSoundClip
+    mov esi, OaksLabPikachuDislikesPokeballsText1.Text ; ld hl, .Text
+    call PrintText                                ; call PrintText
+    jmp TextScriptEnd                             ; jp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1

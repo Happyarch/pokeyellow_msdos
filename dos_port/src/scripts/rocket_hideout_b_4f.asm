@@ -32,6 +32,7 @@ extern RocketHideout4TrainerHeaders          ; assets/trainer_headers.inc
 extern RocketHideoutB4FRocketAfterBattleText ; assets/trainer_headers.inc
 extern RocketHideoutB4FRocketBattleText      ; assets/trainer_headers.inc
 
+global RocketHideoutB4FDefaultScript
 global RocketHideoutB4FBeatGiovanniScript
 global RocketHideoutB4FGiovanniHopeWeMeetAgainText
 global RocketHideoutB4FGiovanniText
@@ -80,7 +81,6 @@ extern PlayMusic
 extern PrintText
 extern RocketHideout4TrainerHeader0
 extern RocketHideout4TrainerHeaders
-extern RocketHideoutB4FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern RocketHideoutB4FRocketAfterBattleText
 extern RocketHideoutB4FRocketBattleText
 extern RocketHideoutB4F_TextPointers   ; NOT YET DEFINED IN THE PORT
@@ -203,6 +203,11 @@ RocketHideoutB4FBeatGiovanniScript:
 
 %assign event_byte -1
 %assign event_byte_a -1
+; LABEL-DROP REPAIR: the transpiler lowered this body correctly but emitted NO
+; label for it — pret guards the routine's first lines with IF DEF(_DEBUG), and the
+; tool consumed the label along with the stripped block. The body below is the
+; tool's own output, unchanged; only the pret label is restored.
+RocketHideoutB4FDefaultScript:
     CheckEvent EVENT_BEAT_ROCKET_HIDEOUT_4_JESSIE_JAMES
     jnz .sk_78
         call RocketHideoutB4FScript_455a5

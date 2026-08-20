@@ -345,6 +345,61 @@ PRICEDITEMLISTMENU branch — which is the branch pret already tests there — a
 keep X+20 for every other caller. The existing TODO(proj) at that site records the
 gap; this section is its answer.
 
+### Bike Shop menu — ruled AS THE POKÉ MART, 2026-08-19
+
+Maintainer ruling: "treat the bike shop like the pokemart."
+
+`scripts/BikeShop.asm:54` draws `hlcoord 0, 0` + `lb bc, 4, 15` — TextBoxBorder's
+(w+2)x(h+2), so a 17x6 box over GB cols 0-16, rows 0-5. It is flush LEFT at column
+0, exactly like `BUY_SELL_QUIT_MENU_TEMPLATE`, so it takes the same rule:
+**anchor=top-LEFT, X+0, Y+0**, same box size, no scaling.
+
+Its two inner strings inherit the box's anchor rather than being projected
+independently — the principle the mart quantity box established: a child's
+meaningful relationship is to its PARENT, not to the screen. Offsets from the box
+origin are preserved, so on the canvas:
+
+  BikeShopMenuText   hlcoord 2, 2  -> (2, 2)   (+2 col, +2 row from the box)
+  BikeShopMenuPrice  hlcoord 8, 3  -> (8, 3)   (+8 col, +3 row)
+
+Because the box is anchored at X+0 with no scaling, "inherit the parent" and
+"project each independently at X+0" happen to agree here. They would NOT agree for
+a right-anchored or centred parent, which is why the rule is stated as inheritance.
+
+### S.S. Anne departure water fill — ruled FULL SPAN, 2026-08-19
+
+Maintainer ruling: "SS Anne, might need some specialist work to extend it across
+the entire screen span."
+
+`scripts/VermilionDock.asm:54` is NOT a box — it is a raw span fill:
+`hlcoord 0, 10` + `ld bc, SCREEN_WIDTH * 6` + water tile `$14` + `FillMemory`,
+painting the sea after the ship departs.
+
+`SCREEN_WIDTH` here is doing double duty, which is the trap
+`docs/plans/battle_animations.md` documents: as a row STRIDE it is correct
+verbatim on both sides (20 there, 40 here), but this expression also encodes HOW
+MANY ROWS. Translated verbatim with the port's `SCREEN_WIDTH` = 40, the fill
+covers 6 rows of the FULL 40-column canvas — which is the horizontal span the
+ruling asks for, and it comes for free from the symbolic constant.
+
+**AND THE SCENE GETS LONGER — maintainer, 2026-08-19: "it has to reach the
+screen's edge, which will factually take longer now."** This is the first ruling
+in this document with a TIMING consequence rather than only a geometric one. The
+departure is an animation whose ship crosses the screen; on a 40-column canvas it
+has twice the distance to cover, so pret's frame counts (`ld c, 120` /
+`DelayFrames`, and the per-step waits in the drift loop) are DISTANCES expressed
+as time and must scale with the canvas, not be copied verbatim. A verbatim copy
+would show the ship reaching the old GB edge and vanishing mid-canvas.
+That makes it a `class=timing` DEVIATION at the site, not a `projection` one, and
+it is the "specialist work" the ruling anticipated.
+
+The VERTICAL extent is the part that needs care and is NOT settled by the
+horizontal ruling. On the GB the fill covers rows 10-15 of 18, leaving the bottom
+2 rows. The port's canvas is 25 rows, so a verbatim 6-row fill leaves rows 16-24
+unpainted below the sea — visible canvas the GB never had. Preserving the
+INTENT ("sea from row 10 to just above the text area") means deriving the row
+count from the canvas height rather than inheriting pret's literal 6.
+
 ### Future subsystems
 
 Add an entry here when introduced, stating the transform and whether it uses
@@ -434,6 +489,10 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (fossil list box)    | (0, 0) | 15×(dynamic) | anchor=top-LEFT, X+0, Y+0 | 7 | 0 | 120 | 8*(3+2*(N-1)) | engine/events/cinnabar_lab.asm GiveFossilToCinnabarLab (hlcoord 0,0 + AddNTimes-computed height, N=wFilteredBagItemsCount) — same left-flush ruling as the vending drink box / prize main box |
 | overworld-ui (pikapic frame)      | (6, 5) | 7×7  | center, X+10, Y+0 | 135 | 40 | 56 | 96 | pikachu_pic_animation.asm:139 PlacePikapicTextBoxBorder (hlcoord 6,5 + lb bc,5,5) |
 | overworld-ui (pikapic cel start)  | (7, 6) | —    | center, X+10, Y+0 | —   | —  | —   | —     | pikachu_pic_animation.asm:131 ResetPikaPicAnimBuffer (wPikaPicPikaDrawStartX/Y, consumed arithmetically by LoadCurPikaPicObjectTilemap.GetStartCoords — SCREEN_WIDTH there is the stride 40, NOT pret's 20) |
+| overworld-ui (bike shop menu box) | (0, 0) | 17×6 | anchor=top-LEFT, X+0, Y+0 | 7 | 0 | 136 | 48 | scripts/BikeShop.asm:54 (hlcoord 0,0 + lb bc,4,15) — ruled as the mart BUY/SELL/QUIT box |
+| overworld-ui (bike shop menu text) | (2, 2) | — | INHERITS the bike shop box: +2 col, +2 row from its origin → (2, 2) | — | — | — | — | scripts/BikeShop.asm:58 PlaceString BikeShopMenuText |
+| overworld-ui (bike shop price)    | (8, 3) | — | INHERITS the bike shop box: +8 col, +3 row from its origin → (8, 3) | — | — | — | — | scripts/BikeShop.asm:61 PlaceString BikeShopMenuPrice |
+| overworld-field (SS Anne water fill) | (0, 10) | 20×6 | FULL SPAN: 40 cols; row count derived from canvas height, not pret's literal 6 | — | — | — | — | scripts/VermilionDock.asm:54 (hlcoord 0,10 + SCREEN_WIDTH*6 + FillMemory $14) |
 | overworld-ui (mart qty only)      | (15, 9)| 5×3  | RELATIVE to the mart priced list: +11 col, +7 row from its origin → (22, 14) | 183 | 112 | 40 | 136 | list_menu.asm:199 DisplayChooseQuantityMenu (hlcoord 15,9 + lb bc,1,3) |
 | overworld-ui (mart qty + price)   | (7, 9) | 13×3 | RELATIVE to the mart priced list: +3 col, +7 row from its origin → (14, 14) | 119 | 112 | 104 | 136 | list_menu.asm:205 DisplayChooseQuantityMenu PRICEDITEMLISTMENU branch (hlcoord 7,9 + lb bc,1,11) |
 | overworld-field (tile reads) | (8, 9) player feet | 1×1 | +16col, +8row → W_TILEMAP (PLAYER_STANDING_COL=24, PLAYER_STANDING_ROW=17); facing-relative reads ±2 tiles (one block), two-steps ±4 | — | — | — | — | overworld.asm (GetTileInFrontOfPlayer), player_state.asm (_GetTileAndCoordsInFrontOfPlayer / GetTileTwoStepsInFrontOfPlayer), player_animations.asm (IsPlayerStandingOnWarpPadOrHole), wild_encounters.asm (PLAYER_STANDING_TILE, fixed OW-A.6) — NEVER copy pret stride-20 lda_coord literals |

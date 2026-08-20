@@ -579,6 +579,14 @@ GAME_SRCS := \
     src/data/trainer_headers.asm \
     src/data/map_script_tables.asm \
     src/scripts/pallet_town.asm \
+    src/scripts/oaks_lab.asm \
+    src/scripts/seafoam_islands_b_4f.asm \
+    src/scripts/bike_shop.asm \
+    src/scripts/mt_moon_b_2f.asm \
+    src/scripts/pokemon_tower_5f.asm \
+    src/scripts/pokemon_tower_6f.asm \
+    src/scripts/rocket_hideout_b_4f.asm \
+    src/scripts/silph_co_11f.asm \
     src/scripts/trainer_map_script.asm \
     src/scripts/cinnabar_lab_fossil_room.asm \
     src/scripts/fighting_dojo.asm \
@@ -2968,24 +2976,16 @@ POKEMON_CHECK_SRCS :=
 # here so a change that breaks them is still caught, and each graduates to
 # SCRIPT_SRCS above as its blocking symbol lands.
 ITEMS_CHECK_SRCS := \
-    src/scripts/bike_shop.asm \
-    src/scripts/celadon_mansion_3f.asm \
     src/scripts/cerulean_trashed_house.asm \
     src/scripts/daycare.asm \
+    src/scripts/vermilion_dock.asm \
+    src/scripts/celadon_mansion_3f.asm \
     src/scripts/hall_of_fame.asm \
-    src/scripts/mt_moon_b_2f.asm \
-    src/scripts/oaks_lab.asm \
     src/scripts/pokemon_fan_club.asm \
     src/scripts/pokemon_tower_2f.asm \
-    src/scripts/pokemon_tower_5f.asm \
-    src/scripts/pokemon_tower_6f.asm \
     src/scripts/pokemon_tower_7f.asm \
-    src/scripts/rocket_hideout_b_4f.asm \
     src/scripts/safari_zone_gate.asm \
-    src/scripts/seafoam_islands_b_4f.asm \
-    src/scripts/silph_co_11f.asm \
     src/scripts/summer_beach_house.asm \
-    src/scripts/vermilion_dock.asm
 
 # Home routines that assemble-validate but aren't linked yet. count_set_bits
 # emits an undefined external for wNumSetBits (no memmap alias / no caller yet),

@@ -31,6 +31,7 @@ extern SilphCo11FRocketBattleText ; assets/trainer_headers.inc
 extern SilphCo11TrainerHeader0    ; assets/trainer_headers.inc
 extern SilphCo11TrainerHeaders    ; assets/trainer_headers.inc
 
+global SilphCo11FDefaultScript
 global SilphCo10FGiovanniILostAgainText
 global SilphCo11FBeautyText
 global SilphCo11FGateCallbackScript
@@ -98,7 +99,6 @@ extern ReplaceTileBlock
 extern SaveEndBattleTextPointers
 extern SetSpriteMovementBytesToFF
 extern ShowObject
-extern SilphCo11FDefaultScript   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11FRocketBattleText
 extern SilphCo11F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern SilphCo11TrainerHeader0
@@ -269,6 +269,11 @@ SilphCo11F_ScriptPointers:
 
 %assign event_byte -1
 %assign event_byte_a -1
+; LABEL-DROP REPAIR: the transpiler lowered this body correctly but emitted NO
+; label for it — pret guards the routine's first lines with IF DEF(_DEBUG), and the
+; tool consumed the label along with the stripped block. The body below is the
+; tool's own output, unchanged; only the pret label is restored.
+SilphCo11FDefaultScript:
     CheckEvent EVENT_BEAT_SILPH_CO_11F_JESSIE_JAMES
     jnz .sk_107
         call SilphCo11FScript_6229c
