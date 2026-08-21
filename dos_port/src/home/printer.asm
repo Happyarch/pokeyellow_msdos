@@ -3,13 +3,14 @@
 ;
 ; pret's home/printer.asm holds three labels:
 ;   PrinterSerial, SerialFunction            — the home-bank serial entry the GB
-;                                              Printer drives. TODO-HW: the port has
-;                                              no serial hardware and no transport,
-;                                              so these are NOT ported here; the
-;                                              printer's other entry points are
-;                                              already stubbed under their pret names
-;                                              in src/engine/printer/printer_stubs.asm
-;                                              and src/home/serial_stubs.asm.
+;                                              Printer drives. NOT ported here: the
+;                                              link plan owns src/home/serial.asm
+;                                              (whose Serial handler retains pret's
+;                                              wPrinterConnectionOpen branch as a
+;                                              documented dead branch), and
+;                                              PrinterSerial is a ret-stub in
+;                                              src/engine/printer/printer_stubs.asm
+;                                              until the printer plan ports its pump.
 ;   DisableWaitingAfterTextDisplay           — ported below.
 ;
 ; This file exists so the third one lives in its MIRROR (CLAUDE.md: a pret-labeled

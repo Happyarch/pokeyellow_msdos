@@ -31,7 +31,7 @@ global FuchsiaPokecenter_TextPointers
 extern Bankswitch
 extern EnableAutoTextBoxDrawing
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
-extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
+extern Serial_TryEstablishingExternallyClockedConnection   ; src/home/serial.asm (pret home/serial.asm)
 extern TextScriptEnd
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.

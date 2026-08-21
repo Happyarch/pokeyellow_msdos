@@ -7824,3 +7824,50 @@ Makefile); golden side is the new shared `lib/hidden_object.lua`. Both drive the
 REAL dispatch rather than calling the handler.
 Verified by the break-it probe, not by the pass alone: with the handler forced to
 `ret`, the scenario fails with 224 unmasked divergences across all four regions.
+
+## 2026-08-21 — home/serial.asm: the serial core over the net HAL (link plan Stage 1)
+
+**`src/home/serial.asm` — all 13 pret labels translated** (`Serial`,
+`Serial_ExchangeBytes`, `Serial_ExchangeByte`, `WaitLoop_15Iterations`,
+`IsUnknownCounterZero`, `SetUnknownCounterToFFFF`,
+`Serial_ExchangeLinkMenuSelection`,
+`Serial_PrintWaitingTextAndSyncAndExchangeNybble`,
+`Serial_SyncAndExchangeNybble`, `Serial_ExchangeNybble`, `Serial_SendZeroByte`,
+`Serial_TryEstablishingExternallyClockedConnection`, `PrinterSerial__`), and
+`src/home/serial_stubs.asm` is DELETED. The HAL line is
+`docs/current_plan_link_cable.md`'s message-level seam:
+
+- rSB/rSC are the virtual bytes `IO_SB`/`IO_SC`; every `rSC = SC_START|*` site
+  keeps the register write as state and adds `NetHAL_StartTransfer`
+  (`src/net/net_hal.asm`, new subsystem, `NET_SRCS`).
+- The serial INTERRUPT is replaced by pump delivery: a transport pump that
+  completes an exchange calls the pret `Serial` handler (`reti` → `ret`,
+  `DEVIATION{class=HAL}`); `Serial_ExchangeByte`'s wait loop polls
+  `NetHAL_Pump`, and `DelayFrame` pumps once per frame beside `audio_tick`.
+- **No-partner escape hatches** (one annotated `DEVIATION{class=HAL}` per
+  exchange primitive): with no link session the faithful bodies' own loops
+  have NO exit — hSerialReceivedNewData is interrupt-set, and LinkMenu's call
+  sites zero `wUnknownSerialCounter`, disabling the bounding watchdog — and
+  pret itself never runs them partnerless (the GB's no-partner terminations
+  live in the callers). Each hatch reproduces the retired serial_stubs.asm
+  contract byte-for-byte ($c0 / $d0$d0 / $ff / $ff), so single-player
+  behavior through LinkMenu/`Func_f531b` is unchanged.
+- Watchdog counters translated verbatim (8-bit borrow/carry chains, 8-bit
+  spins kept 8-bit); the `Serial` handler's rDIV 3→$80 hardware-settle wait is
+  skipped under `DEVIATION{class=timing}` (rDIV is inert in the port).
+- The frame-paced resend tail's incidental `ld a,[hl]` clamps ESI to the GB
+  64K domain before the `[ebp+esi]` read — HL is 16 bits on the GB, and
+  Func_f531b reaches that tail with a flat pointer in ESI.
+
+faithdiff findings per label are exactly the annotated HAL boundary
+(NetHAL_* calls, `[IO_SB]`/`[IO_SC]` — invisible on the pret side by the
+store-regex blind spot — and the pointer-indirect-store blind spot on
+`wUnknownSerialCounter`/receive buffers). Stub bookkeeping: NEW
+`src/engine/link/link_stubs.asm` holds `CloseLinkConnection` (pret
+cable_club_npc.asm, Stage 2) and `PrintWaitingText` (pret
+print_waiting_text.asm, Stage 3 — needs the trade-screen projection);
+`PrinterSerial` is a ret-stub in `printer_stubs.asm` behind the retained
+`wPrinterConnectionOpen` dead branch. `link_menu.asm`'s 15
+`TODO-HW: network HAL` sites are swept, including restoring the
+`.doneChoosingMenuSelection` `rSC = SC_START|SC_INTERNAL` write pret has and
+the stub era dropped.

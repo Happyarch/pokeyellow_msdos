@@ -38,7 +38,7 @@ extern GivePokemon
 extern HasEnoughMoney
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern PrintText
-extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
+extern Serial_TryEstablishingExternallyClockedConnection   ; src/home/serial.asm (pret home/serial.asm)
 extern SubBCDPredef
 extern TextScriptEnd
 extern YesNoChoice

@@ -463,7 +463,7 @@ BOOT_SRCS := \
 
 HOME_SRCS := \
     src/home/home_stubs.asm \
-    src/home/serial_stubs.asm \
+    src/home/serial.asm \
     src/home/copy.asm \
     src/home/overworld.asm \
     src/home/pikachu.asm \
@@ -499,7 +499,8 @@ HAL_SRCS := \
 # per-transport drivers (null transport first; COM UART, IPX, TCP per plan stage).
 # Uses only standard .text/.data/.bss — no link.ld change needed or allowed here.
 # (NOT named LINK_SRCS: that var is the linker-input aggregate below.)
-NET_SRCS :=
+NET_SRCS := \
+    src/net/net_hal.asm
 
 # Save HAL — the battery. SramLoadImage/SramStoreImage move the emulated 32 KiB
 # SRAM image between the resident banks and POKEMON.DSV (.dsv v2, raw image).
@@ -860,6 +861,7 @@ GAME_SRCS := \
     src/data/events/slot_machine_wheels.asm \
     src/engine/menus/swap_items.asm \
     src/engine/link/cable_club.asm \
+    src/engine/link/link_stubs.asm \
     src/engine/overworld/ledges.asm \
     src/home/pathfinding.asm \
     src/engine/overworld/pathfinding.asm \

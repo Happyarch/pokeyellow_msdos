@@ -38,6 +38,7 @@ extern SeamLogRecord     ; src/debug/debug_dump.asm (seam trace)
 extern wait_vblank
 extern wait_pit_tick
 extern audio_tick            ; src/audio/audio_hal.asm — pret VBlank audio block
+extern NetHAL_Pump           ; src/net/net_hal.asm — link-cable transport poll
 extern commit_palette
 extern ApplyBGMapAttributes  ; engine/gfx/bg_map_attributes.asm
 extern render_bg
@@ -203,6 +204,12 @@ DelayFrame:
     ; dec): FadeOutAudio → Music_DoLowHealthAlarm → Audio1_UpdateMusic →
     ; device-shim pass. Self-gates on g_audio_engine_online.
     call audio_tick
+    ; Link-cable HAL pump (docs/current_plan_link_cable.md Stage 1): poll the
+    ; bound transport once per frame — RX/delivery for the serial primitives'
+    ; frame-paced exchanges. Fast no-op (one compare) while no transport is
+    ; bound, which is every single-player frame; shares PERF_AUDIO's slot
+    ; rather than renumbering the perf stages for a compare.
+    call NetHAL_Pump
     PERF_MARK PERF_AUDIO
     ; BG: render_bg picks its own path from wCurrentTileBlockMapViewPointer —
     ; nonzero = overworld surface, zero = flat 40×25 wTileMap (title / menus /
