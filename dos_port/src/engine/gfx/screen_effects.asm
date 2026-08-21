@@ -2,9 +2,11 @@
 ;
 ; battle_animations Stage 3b (docs/plans/battle_animations.md): the two
 ; screen-shake predefs that the battle animation engine's shake family jumps to.
-; ChangeBGPalColor0_4Frames (the third routine in pret's file, used by
-; engine/events/poison.asm) is NOT ported here — nothing in the port references
-; it yet, and it belongs to the overworld poison flash, not this stage.
+; ChangeBGPalColor0_4Frames (the third routine in pret's file) is now ported here
+; too — engine/events/poison.asm's ApplyOutOfBattlePoisonDamage calls it for the
+; overworld poison flash. It landed with the events fan-out: that batch had this
+; file outside its allow-list, so it inlined the body at the call site under a
+; class=temporary DEVIATION and left instructions to lift it. This is the lift.
 ;
 ; ---------------------------------------------------------------------------
 ; THE PROJECTION (why these write hSCX/hSCY and not rWX/rWY)
@@ -54,10 +56,12 @@ bits 32
 
 %include "gb_memmap.inc"
 
+global ChangeBGPalColor0_4Frames
 global PredefShakeScreenVertically
 global PredefShakeScreenHorizontally
 
 extern DelayFrames                     ; src/home/delay.asm — BL = frame count
+extern UpdateCGBPal_BGP                ; src/home/cgb_palettes.asm
 
 section .text
 
@@ -144,3 +148,30 @@ PredefShakeScreenHorizontally:
     mov [ebp + hSCX], al
     mov bl, 4                                ; ld c,4
     jmp DelayFrames                          ; jp DelayFrames
+
+; ---------------------------------------------------------------------------
+; ChangeBGPalColor0_4Frames — pret engine/gfx/screen_effects.asm:2.
+; Invert BGP, hold it for 4 frames, invert it back: the white->dark-grey flash
+; the overworld poison tick shows. Called by ApplyOutOfBattlePoisonDamage.
+;
+; pret opens with `call GetPredefRegisters`, which its own comment calls a
+; "leftover of red/blue, has no use here" — the routine reads no argument (its
+; caller's `ld b, $2` is dead). The port therefore calls it directly, the same
+; register-passing-predef convention used at every other predef site here.
+;
+; No TODO-HW is owed for the rBGP writes: a write to [ebp + IO_BGP] IS the whole
+; effect, because commit_palette re-reads the three DMG palette registers every
+; DelayFrame (see the asm-translation skill, "Hardware I/O Boundary").
+; ---------------------------------------------------------------------------
+ChangeBGPalColor0_4Frames:
+    mov al, [ebp + IO_BGP]                   ; ldh a, [rBGP]
+    xor al, 0xFF                             ; xor $ff
+    mov [ebp + IO_BGP], al                   ; ldh [rBGP], a
+    call UpdateCGBPal_BGP
+    mov bl, 4                                ; ld c, 4
+    call DelayFrames
+    mov al, [ebp + IO_BGP]                   ; ldh a, [rBGP]
+    xor al, 0xFF                             ; xor $ff
+    mov [ebp + IO_BGP], al                   ; ldh [rBGP], a
+    call UpdateCGBPal_BGP
+    ret
