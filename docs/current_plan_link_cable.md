@@ -392,6 +392,20 @@ the book.
 
 ## Environment notes for implementation sessions
 
+- **Fidelity runs from Claude's VM/remote sessions use the SERIAL tiers:**
+  `make -C dos_port fidelity-serial` / `fidelity-full-serial` (maintainer
+  directive 2026-08-21 — this satisfies CLAUDE.md's "unless the maintainer
+  explicitly asks" requirement, scoped to resource-limited VM/remote
+  sessions). The parallel `pgate.sh` default is sized for the maintainer's
+  96-thread / 512 GB workstation; a 4-thread / 15 GB VM sits at pgate's
+  concurrency floor (4 jobs, each with a tmpfs shadow copy), and
+  oversubscription is the documented way parallelism can corrupt a result
+  (goldencheck timeout kills). Every `make fidelity` reference in this plan
+  reads per-environment: serial tiers on VM/remote, parallel on the
+  workstation. Budget the serial full tier's wall time (historically
+  ~1750 s at 86 scenarios — re-measure, the scenario count drifts upward)
+  and keep the standing shell rules: no source edits while a suite runs,
+  gate on a status FILE (never a pipeline tail), never poll with pgrep.
 - Submodules must be initialized (`git submodule update --init`) at least for
   `dos_port/tools/dosbox-x` (serial/IPX/NE2000 testing), `unicode_converter`
   (text generators) and `mgba` (goldens). The Happyarch fork submodule URLs
