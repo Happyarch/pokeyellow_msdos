@@ -84,6 +84,8 @@ extern InitMapSprites                     ; src/home/palettes.asm
 extern LoadTextBoxTilePatterns            ; src/home/load_font.asm
 extern LoadTilesetHeader                  ; src/engine/overworld/tilesets.asm
 extern StageIndoorMapBlk                  ; src/engine/overworld/overworld.asm
+extern SafariZoneCheckSteps               ; src/engine/events/hidden_events/safari_game.asm
+extern SafariZoneCheck                    ; src/engine/events/hidden_events/safari_game.asm
 extern LoadWildData                       ; src/engine/overworld/wild_mons.asm
 extern MapTextTablePointers               ; assets/npc_dialogs/all_dialogs.inc
 extern PlayDefaultMusicFadeOutCurrent     ; src/home/audio.asm
@@ -1336,11 +1338,28 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ;   pret: ld a, [wStatusFlags6] / and (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
     ;         jp nz, HandleFlyWarpOrDungeonWarp        (home/overworld.asm:62-64)
     ; PLACEMENT DEVIATION: pret tests this AFTER JoypadOverworld + SafariZoneCheck + the
-    ; script-warp check; the port's loop reads the joypad further down (and has no
-    ; SafariZoneCheck/script-warp check here yet), so the test sits at the top of the
+    ; script-warp check; the port's loop reads the joypad further down (SafariZoneCheck
+    ; is now restored immediately above; the script-warp check is still absent), so
+    ; the test sits at the top of the
     ; idle branch instead. Equivalent: the bits are set by an item/script on a PREVIOUS
     ; iteration, never by this iteration's input, and we leave the map either way — so
     ; nothing between the two positions can observe the difference.
+    ; --- Safari Zone: out of BALLS (pret home/overworld.asm:54-57) ------------
+    ; RESTORED 2026-08-21, the companion to the out-of-STEPS branch further down.
+    ; pret runs this right after JoypadOverworld; the port reads the joypad further
+    ; down, so it sits here at the top of the idle branch — the same relocation, and
+    ; for the same reason, as the fly/dungeon-warp test immediately below, and it
+    ; keeps pret's ORDER relative to that test (pret: SafariZoneCheck, then the
+    ; script-warp check, then the fly-warp test).
+    ; Inert outside the Safari Zone by construction: SafariZoneCheck's own first act
+    ; is CheckEventHL EVENT_IN_SAFARI_ZONE, and it falls through to
+    ; SafariZoneGameStillGoing (which zeroes wSafariZoneGameOver) unless
+    ; wNumSafariBalls has reached 0.
+    call SafariZoneCheck                     ; pret: farcall SafariZoneCheck
+    mov al, [ebp + wSafariZoneGameOver]
+    test al, al                              ; pret: and a
+    jnz .warpTransition                      ; pret: jp nz, WarpFound2
+
     test byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
     jnz HandleFlyWarpOrDungeonWarp           ; jp nz (tail — SpecialEnterMap re-enters the loop)
 
@@ -1584,6 +1603,24 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; that NewBattle's DetermineWildOpponent gate reads. Wild encounters are LIVE
     ; (the WILD_ENCOUNTERS_LIVE gate is retired).
     call StepCountCheck
+    ; --- Safari Zone step countdown (pret home/overworld.asm:249-256) ----------
+    ; RESTORED 2026-08-21. This branch was absent: the port went straight from
+    ; StepCountCheck to NewBattle, so wSafariSteps never decremented while walking
+    ; and the "PA: Ding-dong! / Time's up!" game over was UNREACHABLE — the Safari
+    ; Zone was playable but could not time out. SafariZoneCheckSteps and
+    ; SafariZoneGameOver were both translated with no caller in the tree.
+    ; pret's `farcall` is a direct call here (flat model, no banking).
+    ; pret's `jp nz, WarpFound2` targets the block this routine carries at
+    ; .warpTransition — the same body, still under a port-local name (see the
+    ; TODO(pret-label) there; adopting the pret label needs the block hoisted out
+    ; of this routine first, which is why the jump is local).
+    CheckEvent EVENT_IN_SAFARI_ZONE
+    jz .notSafariZone                         ; pret: jr z, .notSafariZone
+    call SafariZoneCheckSteps                 ; pret: farcall SafariZoneCheckSteps
+    mov al, [ebp + wSafariZoneGameOver]
+    test al, al                               ; pret: and a
+    jnz .warpTransition                       ; pret: jp nz, WarpFound2
+.notSafariZone:
     call NewBattle                            ; CF=1 → a wild/forced battle occurred
     jnc .noBattleOccurred                     ; pret: jp nc, CheckWarpsNoCollision
 .battleOccurred:
