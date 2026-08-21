@@ -910,6 +910,7 @@ GAME_SRCS := \
     src/engine/events/hidden_events/vermilion_gym_trash2.asm \
     src/engine/events/card_key.asm \
     src/engine/events/poison.asm \
+    src/engine/events/hidden_events/safari_game.asm \
     src/home/money.asm \
     src/engine/overworld/push_boulder.asm \
     src/engine/overworld/dust_smoke.asm \
@@ -4057,6 +4058,14 @@ assets/pokedex_rating_text.inc: ../engine/events/pokedex_rating.asm ../text/poke
 	python3 tools/generators/gen_pokedex_rating_text.py
 
 src/engine/events/pokedex_rating.o: assets/pokedex_rating_text.inc assets/event_constants.inc
+# Safari Zone game over text (TimesUpText, GameOverText). Generated from
+# engine/events/hidden_events/safari_game.asm + data/text/text_2.asm + constants/charmap.asm.
+assets/safari_text.inc: ../engine/events/hidden_events/safari_game.asm ../data/text/text_2.asm \
+                        ../constants/charmap.asm tools/generators/gen_battle_text.py \
+                        tools/generators/gen_safari_text.py
+	python3 tools/generators/gen_safari_text.py
+
+src/engine/events/hidden_events/safari_game.o: assets/safari_text.inc
 
 # Naming-screen kana voicing tables (Dakutens / Handakutens). Generated from
 # data/text/dakutens.asm + constants/charmap.asm; carrier src/data/text/dakutens.asm.
@@ -4238,7 +4247,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/mon_icons.inc \
         assets/save_text.inc assets/main_menu_text.inc assets/league_pc_text.inc \
         assets/players_pc_text.inc assets/link_text.inc assets/oaks_pc_text.inc \
-        assets/pc_text.inc assets/slots_text.inc
+        assets/pc_text.inc assets/slots_text.inc assets/safari_text.inc
 	python3 tools/audit_memmap.py
 
 assets/scenario_registry.inc: tools/scenario_manifest.json tools/generators/gen_scenario_registry.py
