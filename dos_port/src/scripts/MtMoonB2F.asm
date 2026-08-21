@@ -151,7 +151,7 @@ TEXT_MTMOONB2F_TEXT14                          equ 14
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/mt_moon_b_2f.inc"
+%include "assets/map_text/MtMoonB2F.inc"
 
 section .text
 

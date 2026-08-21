@@ -68,7 +68,7 @@ TEXT_POKEMONTOWER2F_RIVAL                      equ 1
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/pokemon_tower_2f.inc"
+%include "assets/map_text/PokemonTower2F.inc"
 
 section .text
 

@@ -98,7 +98,7 @@ TEXT_SAFARIZONEGATE_SAFARI_ZONE_WORKER1_GOOD_HAUL_COME_AGAIN equ 6
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/safari_zone_gate.inc"
+%include "assets/map_text/SafariZoneGate.inc"
 
 section .text
 

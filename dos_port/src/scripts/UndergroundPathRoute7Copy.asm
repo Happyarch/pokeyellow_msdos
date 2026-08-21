@@ -37,7 +37,7 @@ global UndergroundPathRoute7Copy_TextPointers
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/underground_path_route_7_copy.inc"
+%include "assets/map_text/UndergroundPathRoute7Copy.inc"
 
 section .text
 

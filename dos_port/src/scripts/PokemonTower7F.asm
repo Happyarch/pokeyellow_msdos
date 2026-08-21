@@ -93,7 +93,7 @@ TEXT_POKEMONTOWER7F_TEXT6                      equ 6
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/pokemon_tower_7f.inc"
+%include "assets/map_text/PokemonTower7F.inc"
 
 section .text
 

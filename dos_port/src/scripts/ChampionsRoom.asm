@@ -94,7 +94,7 @@ TEXT_CHAMPIONSROOM_OAK_COME_WITH_ME            equ 5
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/champions_room.inc"
+%include "assets/map_text/ChampionsRoom.inc"
 
 section .text
 

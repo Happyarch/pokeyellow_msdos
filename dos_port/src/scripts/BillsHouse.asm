@@ -103,7 +103,7 @@ TEXT_BILLSHOUSE_BILL_SS_TICKET                 equ 2
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/bills_house.inc"
+%include "assets/map_text/BillsHouse.inc"
 
 section .text
 

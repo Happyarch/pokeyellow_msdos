@@ -113,7 +113,7 @@ TEXT_ROCKETHIDEOUTB4F_TEXT13                   equ 13
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/rocket_hideout_b_4f.inc"
+%include "assets/map_text/RocketHideoutB4F.inc"
 
 section .text
 

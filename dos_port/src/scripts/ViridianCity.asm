@@ -113,7 +113,7 @@ TEXT_VIRIDIANCITY_OLD_MAN_YOU_NEED_TO_WEAKEN_THE_TARGET equ 16
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/viridian_city.inc"
+%include "assets/map_text/ViridianCity.inc"
 
 section .text
 

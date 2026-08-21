@@ -62,7 +62,7 @@ TEXT_ROUTE22GATE_GUARD                         equ 1
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/route_22_gate.inc"
+%include "assets/map_text/Route22Gate.inc"
 
 section .text
 

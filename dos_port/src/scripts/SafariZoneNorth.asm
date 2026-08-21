@@ -39,7 +39,7 @@ extern PickUpItemText
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/safari_zone_north.inc"
+%include "assets/map_text/SafariZoneNorth.inc"
 
 section .text
 

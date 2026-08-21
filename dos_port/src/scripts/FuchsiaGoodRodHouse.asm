@@ -41,7 +41,7 @@ extern YesNoChoice
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/fuchsia_good_rod_house.inc"
+%include "assets/map_text/FuchsiaGoodRodHouse.inc"
 
 section .text
 

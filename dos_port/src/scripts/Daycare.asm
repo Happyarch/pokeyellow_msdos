@@ -66,7 +66,7 @@ extern _DaycareGentlemanOweMoneyText   ; NOT YET DEFINED IN THE PORT
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/daycare.inc"
+%include "assets/map_text/Daycare.inc"
 
 section .text
 

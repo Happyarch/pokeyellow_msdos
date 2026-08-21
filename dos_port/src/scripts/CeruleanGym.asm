@@ -83,7 +83,7 @@ TEXT_CERULEANGYM_MISTY_TM11_NO_ROOM            equ 7
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/cerulean_gym.inc"
+%include "assets/map_text/CeruleanGym.inc"
 
 section .text
 

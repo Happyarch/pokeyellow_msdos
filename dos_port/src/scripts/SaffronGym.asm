@@ -95,7 +95,7 @@ TEXT_SAFFRONGYM_SABRINA_TM46_NO_ROOM           equ 12
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/saffron_gym.inc"
+%include "assets/map_text/SaffronGym.inc"
 
 section .text
 

@@ -101,7 +101,7 @@ TEXT_ROUTE22_RIVAL2                            equ 2
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/route_22.inc"
+%include "assets/map_text/Route22.inc"
 
 section .text
 

@@ -112,7 +112,7 @@ TEXT_CINNABARGYM_BLAINE_TM38_NO_ROOM           equ 12
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/cinnabar_gym.inc"
+%include "assets/map_text/CinnabarGym.inc"
 
 section .text
 

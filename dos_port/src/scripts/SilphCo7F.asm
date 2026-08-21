@@ -113,7 +113,7 @@ TEXT_SILPHCO7F_RIVAL_GOOD_LUCK_TO_YOU          equ 15
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/silph_co_7f.inc"
+%include "assets/map_text/SilphCo7F.inc"
 
 section .text
 

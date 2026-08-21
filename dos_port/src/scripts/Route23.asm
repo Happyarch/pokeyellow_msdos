@@ -80,7 +80,7 @@ SCRIPT_ROUTE23_RESET_TO_DEFAULT                equ 2
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/route_23.inc"
+%include "assets/map_text/Route23.inc"
 
 section .text
 

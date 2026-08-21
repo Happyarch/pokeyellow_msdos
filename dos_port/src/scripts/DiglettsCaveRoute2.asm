@@ -36,7 +36,7 @@ extern EnableAutoTextBoxDrawing
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/digletts_cave_route_2.inc"
+%include "assets/map_text/DiglettsCaveRoute2.inc"
 
 section .text
 

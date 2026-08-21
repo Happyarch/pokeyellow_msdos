@@ -74,7 +74,7 @@ TEXT_SSANNE2F_RIVAL_CUT_MASTER                 equ 3
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/ss_anne_2f.inc"
+%include "assets/map_text/SSAnne2F.inc"
 
 section .text
 

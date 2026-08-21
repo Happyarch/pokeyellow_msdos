@@ -102,7 +102,7 @@ TEXT_FUCHSIAGYM_KOGA_TM06_NO_ROOM              equ 11
 ; tools/generators/gen_map_text.py. Defined HERE because every one is used
 ; only by this script, exactly as pret keeps text/<Map>.asm beside scripts/<Map>.asm.
 section .data
-%include "assets/map_text/fuchsia_gym.inc"
+%include "assets/map_text/FuchsiaGym.inc"
 
 section .text
 
