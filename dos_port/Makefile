@@ -809,7 +809,6 @@ GAME_SRCS := \
     src/engine/menus/draw_badges.asm \
     src/engine/menus/pc.asm \
     src/engine/menus/oaks_pc.asm \
-    src/engine/menus/oaks_pc_stubs.asm \
     src/engine/menus/league_pc.asm \
     src/engine/menus/league_pc_stubs.asm \
     src/engine/menus/options.asm \
@@ -867,6 +866,7 @@ GAME_SRCS := \
     src/engine/events/pewter_guys.asm \
     src/engine/events/pokecenter_chansey.asm \
     src/engine/events/oaks_aide.asm \
+    src/engine/events/pokedex_rating.asm \
     src/engine/events/saffron_guards.asm \
     src/data/items/guard_drink_items.asm \
     src/data/items/marts.asm \
@@ -4028,6 +4028,18 @@ assets/cinnabar_gym_quiz_text.inc: ../engine/events/hidden_events/cinnabar_gym_q
                          tools/generators/gen_battle_text.py \
                          tools/generators/gen_cinnabar_gym_quiz_text.py
 	python3 tools/generators/gen_cinnabar_gym_quiz_text.py
+# Pokédex-rating text (DexCompletionText + the 16 DexRatingText_Own<N>To<M>
+# bands). Generated from engine/events/pokedex_rating.asm (the wrapper
+# labels) + text/pokedex_ratings.asm (the far bodies, incl. the two
+# text_decimal fields against hDexRatingNumMonsSeen/hDexRatingNumMonsOwned)
+# + constants/charmap.asm.
+assets/pokedex_rating_text.inc: ../engine/events/pokedex_rating.asm ../text/pokedex_ratings.asm \
+                                ../constants/charmap.asm include/gb_memmap.inc \
+                                tools/generators/gen_battle_text.py \
+                                tools/generators/gen_pokedex_rating_text.py
+	python3 tools/generators/gen_pokedex_rating_text.py
+
+src/engine/events/pokedex_rating.o: assets/pokedex_rating_text.inc assets/event_constants.inc
 
 # Naming-screen kana voicing tables (Dakutens / Handakutens). Generated from
 # data/text/dakutens.asm + constants/charmap.asm; carrier src/data/text/dakutens.asm.
@@ -4196,6 +4208,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/options_strings.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/school_blackboard_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/cinnabar_gym_quiz_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
+        assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/pokedex_rating_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \
 		assets/colors/palettes.inc \
