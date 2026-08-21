@@ -139,9 +139,9 @@ PrintIndigoPlateauHQText:
 global PrintBookcaseText
 PrintBookcaseText:
     ret
-global PrintNotebookText
-PrintNotebookText:
-    ret
+; PrintNotebookText — RETIRED (school-notebooks batch). The real faithful body is
+; LINKED at its pret mirror
+; src/engine/events/hidden_events/school_notebooks.asm.
 ; PrintBlackboardLinkCableText — RETIRED (school-blackboard batch). The real
 ; faithful body is LINKED at its pret mirror
 ; src/engine/events/hidden_events/school_blackboard.asm.
