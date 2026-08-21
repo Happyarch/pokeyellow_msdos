@@ -120,9 +120,9 @@ scenario.run(function()
 
 	-- A on the PC → "<PLAYER> turned on / the PC." → PC main menu.
 	navigate.tap_until("A", text:encode("turned on"))
-	-- "PROF.OAK", not "PROF.OAK's PC": the 's is a single charmap ligature tile
-	-- that gbtext's one-glyph encoder cannot produce (the pc.lib "SOMEONE"
-	-- lesson). "PROF.OAK" is unique on this menu.
+	-- "PROF.OAK" is unique on this menu, so the shorter needle suffices. (The old
+	-- reason — that gbtext could not encode the 's ligature — no longer holds: the
+	-- encoder is greedy as of 2026-08-21 and emits $BD.)
 	navigate.dialog_until_text(text:encode("PROF.OAK"))
 	scenario.wait(30) -- settle: a tap into a just-drawn menu is swallowed
 	navigate.choose(text:encode("PROF.OAK"))

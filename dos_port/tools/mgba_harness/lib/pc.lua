@@ -260,8 +260,10 @@ end
 -- Activate the PC and enter Bill's box UI as a generic-PC guest:
 -- A on the PC → "turned on the PC" → PC main menu → SOMEONE's PC →
 -- the WITHDRAW/DEPOSIT/RELEASE/CHANGE BOX/PRINT BOX/SEE YA menu.
--- ("SOMEONE" not "SOMEONE's": the 's is a single charmap ligature tile that
--- gbtext's one-glyph encoder cannot produce, and "SOMEONE" is unique here.)
+-- ("SOMEONE" not "SOMEONE's" — "SOMEONE" is unique here, so the shorter needle is
+-- enough. NOTE: the reason this used to be MANDATORY is gone. gbtext's encoder is
+-- greedy as of 2026-08-21 and produces the 's ligature tile $BD, so an apostrophe
+-- needle is writable now.)
 function pc.open_someones_pc(text)
 	-- "<PLAYER> turned on / the PC." — the needle must not span the line break
 	navigate.tap_until("A", text:encode("turned on"))

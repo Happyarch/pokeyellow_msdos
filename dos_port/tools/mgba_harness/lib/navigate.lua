@@ -52,6 +52,49 @@ local function row_containing(tm, needle)
 	return nil
 end
 
+-- (row, col) of the first occurrence of `needle`, or nil.
+local function pos_of(tm, needle)
+	for r, row in ipairs(rows_of(tm)) do
+		local c = row:find(needle, 1, true)
+		if c then
+			return r, c
+		end
+	end
+	return nil
+end
+
+-- The row of the cursor that BELONGS TO the menu `needle` sits in.
+--
+-- *** THERE CAN BE MORE THAN ONE ▶ ON SCREEN, AND THE FIRST ONE IS OFTEN THE
+-- WRONG ONE. *** Measured on dex_rating_oak_pc: the Pokémon Center PC menu keeps
+-- its own cursor drawn beside "PROF.OAK's PC" (row 6, col 1) while the
+-- "Want to get your #DEX rated?" YES/NO box opens in a SEPARATE panel with its own
+-- cursor (row 10, col 15). Picking the first ▶ made choose() try to walk the
+-- dead left-hand cursor onto a row in the right-hand box: it tapped DOWN for
+-- 1200 frames, moved only the live cursor it was not looking at, and timed out.
+--
+-- A menu's cursor sits in the SAME COLUMN as its items, so column proximity
+-- identifies the panel; row proximity only breaks ties within it. Screens with a
+-- single cursor are unaffected, which is why this is a strict improvement rather
+-- than a behaviour change for the scenarios that already pass.
+local function cursor_row_for(tm, needle)
+	local nr, nc = pos_of(tm, needle)
+	if not nr then
+		return nil
+	end
+	local best_r, best_score
+	for r, row in ipairs(rows_of(tm)) do
+		local c = row:find(CURSOR, 1, true)
+		if c then
+			local score = math.abs(c - nc) * 100 + math.abs(r - nr)
+			if not best_score or score < best_score then
+				best_r, best_score = r, score
+			end
+		end
+	end
+	return best_r
+end
+
 local function deadline(max_frames, what)
 	local limit = scenario.frame() + max_frames
 	return function()
@@ -132,7 +175,7 @@ function navigate.choose(needle, max_frames, cursor_delta)
 	while true do
 		local tm = navigate.tilemap()
 		local rt = row_containing(tm, needle)
-		local rc = row_containing(tm, CURSOR)
+		local rc = cursor_row_for(tm, needle)
 		if rt and rc then
 			if rc == rt + cursor_delta then
 				input.tap("A", 2, 8)
