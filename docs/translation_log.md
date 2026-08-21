@@ -7142,3 +7142,46 @@ labels each one prints or dispatches through.
 - Divergences: none (faithful).
 - Stubs retired: `PrintNotebookText` from `dos_port/src/engine/overworld/hidden_object_stubs.asm`, `ViridianSchoolNotebook` from `dos_port/src/engine/events/hidden_events/hidden_events_stubs.asm`.
 - Evidence: `nasm` assembly clean; `make -C dos_port -j8` built `PKMN.EXE`; `dos_port/tools/update_label_db` translated all 10 labels; `dos_port/tools/faithdiff` clean on all labels (0 ADDED, 0 DROPPED); `dos_port/tools/lint_pret_labels` and `--strict-claims` 0 violations; `make -C dos_port static_gate` PASS.
+## 2026-08-21 — engine/events/hidden_events/cinnabar_gym_quiz.asm (the Blaine gate quiz)
+
+- Ported the whole pret file to
+  `dos_port/src/engine/events/hidden_events/cinnabar_gym_quiz.asm`: 19 pret
+  labels — `PrintCinnabarQuiz`, `CinnabarGymQuiz`, `CinnabarGymQuiz_AskQuestion`,
+  `CinnabarGymQuizCorrectText`, `CinnabarGymGateFlagAction`,
+  `UpdateCinnabarGymGateTileBlocks_`, `CinnabarGym_ReplaceTileBlock`,
+  `CinnabarGymGateCoords`, `CinnabarQuizQuestions`, plus the 10 pure `text_far`
+  wrappers.
+- Three ret-stubs retired: `CinnabarGymQuiz` and `PrintCinnabarQuiz` and
+  `UpdateCinnabarGymGateTileBlocks_` (the first from
+  `src/engine/events/hidden_events/hidden_events_stubs.asm`, the other two from
+  `src/engine/overworld/hidden_object_stubs.asm`). `src/home/hidden_events.asm`'s
+  extern comment for `UpdateCinnabarGymGateTileBlocks_` repointed at the mirror.
+- Text is DATA: `tools/generators/gen_cinnabar_gym_quiz_text.py` →
+  `assets/cinnabar_gym_quiz_text.inc` (10 flattened wrappers +
+  `_CinnabarGymQuizCorrectText`, the far body the mixed
+  `text_far`/`text_asm` `CinnabarGymQuizCorrectText` carrier still needs). No
+  hand-encoded charmap bytes. `CinnabarQuizQuestions` / `CinnabarGymGateCoords`
+  are pointer/coordinate tables and stay hand-written Tier-2.
+- `CinnabarGym_ReplaceTileBlock` re-derives pret's `+3`/`+6` literals through the
+  port's `MAP_BORDER` (7), matching `ReplaceTileBlock`
+  (`src/engine/overworld/update_map.asm`) and `coords.inc`'s `owcoord`. It
+  mutates `wOverworldMap` block ids, NOT VRAM tile patterns, so it owes no
+  `g_tilecache_dirty`; the redraw it tails into (`RedrawMapView`) arms the flag
+  itself.
+- `CinnabarGymQuiz` carries NO leading `text_asm` ($08) byte. pret needs one
+  because a GB `TextPredefs` row is always a stream; the port's row is a
+  `predef_code` row (`src/data/text_predef_pointers.asm`, id $33) whose
+  `TEXT_ASM_ENTRY` size slot makes `DisplayTextID` `call esi` straight at the
+  label — a leading `$08` would execute as x86. Same shape as `PickUpItemText`.
+  `CinnabarGymQuizCorrectText` IS a real stream (PrintText walks it) and keeps
+  its `text_asm` byte.
+- `faithdiff` ADDED/DROPPED, all justified in the commit message: the
+  `FlagActionPredef` → `FlagAction` direct calls (registers hand-set; the
+  `toggleable_objects.asm` convention), `PrintPredefTextID` from the
+  `tx_pre_jump` macro pret's scanner does not expand, and four pointer-indirect
+  pret stores (`ld hl, X / set n,[hl]`) that faithdiff cannot see on the pret
+  side.
+- Evidence: `make -j8` links (`Built: PKMN.EXE`); all 19 labels read `translated`
+  in `translation.db`; `lint_pret_labels` and `--strict-claims` both 0;
+  `make static_gate` PASS. NO EMULATOR WAS RUN (host-crash directive) — there is
+  no golden scenario for this path yet, see the report/commit message.

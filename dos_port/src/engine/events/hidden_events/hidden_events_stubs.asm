@@ -108,16 +108,6 @@ global BillsHousePokemonList
 BillsHousePokemonList:
     ret
 
-; CinnabarGymQuiz — pret engine/events/hidden_events/cinnabar_gym_quiz.asm.
-; The gym's question state machine (per-question event flags, right/wrong branches,
-; trainer engagement on a wrong answer).
-; Unreachable in the live build (PrintCinnabarQuiz is a ret-stub).
-; TODO(overworld-events Stage 5, Cinnabar batch): port the state machine, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/cinnabar_gym_quiz.asm:CinnabarGymQuiz; behavior=the gym quiz displays nothing instead of running its question state machine; evidence=pret CinnabarGymQuiz is a text_asm state machine and label_status reports it missing; lifetime=until the overworld-events Cinnabar batch lands; label=CinnabarGymQuiz}
-global CinnabarGymQuiz
-CinnabarGymQuiz:
-    ret
-
 ; IndigoPlateauStatues — pret engine/events/hidden_events/indigo_plateau_statues.asm.
 ; Counts obtained badges and picks the matching line.
 ; Unreachable in the live build (PrintIndigoPlateauHQText is a ret-stub).
