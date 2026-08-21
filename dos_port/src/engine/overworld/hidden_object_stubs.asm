@@ -120,32 +120,14 @@ Mansion4Script_Switches:
 ; PrintMagazinesText — RETIRED (hidden-text-a batch). The real faithful body is
 ; LINKED at its pret mirror src/engine/events/hidden_events/magazines.asm.
 
-; --- Oak's Lab posters / email (Stage 5: Pallet) ---
-global DisplayOakLabLeftPoster
-DisplayOakLabLeftPoster:
-    ret
-global DisplayOakLabRightPoster
-DisplayOakLabRightPoster:
-    ret
-global DisplayOakLabEmailText
-DisplayOakLabEmailText:
-    ret
-
-; --- museum fossils (Stage 5: Pewter) ---
-global AerodactylFossil
-AerodactylFossil:
-    ret
-global KabutopsFossil
-KabutopsFossil:
-    ret
-
-; --- Pokémon Fan Club pictures (Stage 5: Vermilion) ---
-global FanClubPicture1
-FanClubPicture1:
-    ret
-global FanClubPicture2
-FanClubPicture2:
-    ret
+; DisplayOakLabLeftPoster, DisplayOakLabRightPoster — RETIRED. Real bodies in
+; src/engine/events/hidden_events/oaks_lab_posters.asm.
+; DisplayOakLabEmailText — RETIRED. Real body in
+; src/engine/events/hidden_events/oaks_lab_email.asm.
+; AerodactylFossil, KabutopsFossil — RETIRED. Real bodies in
+; src/engine/events/hidden_events/museum_fossils.asm.
+; FanClubPicture1, FanClubPicture2 — RETIRED. Real bodies in
+; src/engine/events/hidden_events/fanclub_pictures.asm.
 
 ; --- Route 15 gate binoculars (Stage 5) ---
 ; Route15GateLeftBinoculars — RETIRED (hidden-text-a batch). The real faithful body

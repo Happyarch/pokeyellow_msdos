@@ -7502,4 +7502,40 @@ report), and the only entry gate that would change that is in `src/debug/debug_d
   * `lint_pret_labels` and `lint_pret_labels --strict-claims` reporting 0 violations.
   * `make -C dos_port static_gate` fully passing (all 8 static checks).
 
+## engine/events/hidden_events batch (events/hidden-text-c)
+
+- **Sources:**
+  * `engine/events/hidden_events/oaks_lab_posters.asm`
+  * `engine/events/hidden_events/oaks_lab_email.asm`
+  * `engine/events/hidden_events/fanclub_pictures.asm`
+  * `engine/events/hidden_events/museum_fossils.asm`
+  * `engine/events/hidden_events/museum_fossils2.asm`
+  * `engine/events/hidden_events/town_map.asm`
+- **Translated:**
+  * `dos_port/src/engine/events/hidden_events/oaks_lab_posters.asm`
+  * `dos_port/src/engine/events/hidden_events/oaks_lab_email.asm`
+  * `dos_port/src/engine/events/hidden_events/fanclub_pictures.asm`
+  * `dos_port/src/engine/events/hidden_events/museum_fossils.asm`
+  * `dos_port/src/engine/events/hidden_events/museum_fossils2.asm`
+  * `dos_port/src/engine/events/hidden_events/town_map.asm`
+- **Labels ported (9):**
+  * `DisplayOakLabLeftPoster`: calls `EnableAutoTextBoxDrawing`, prints `PushStartText` via `PrintPredefTextID`.
+  * `DisplayOakLabRightPoster`: counts owned dex bits with `CountSetBits`, branches (< 2 owned -> `SaveOptionText`, >= 2 -> `StrengthsAndWeaknessesText`), prints via `PrintPredefTextID`.
+  * `DisplayOakLabEmailText`: checks `wSpritePlayerStateData1FacingDirection == SPRITE_FACING_UP`, calls `EnableAutoTextBoxDrawing`, displays `OakLabEmailText`.
+  * `FanClubPicture1`: sets `wCurPartySpecies = RAPIDASH`, calls `DisplayMonFrontSpriteInBox`, displays `FanClubPicture1Text`.
+  * `FanClubPicture2`: sets `wCurPartySpecies = FEAROW`, calls `DisplayMonFrontSpriteInBox`, displays `FanClubPicture2Text`.
+  * `AerodactylFossil`: sets `wCurPartySpecies = FOSSIL_AERODACTYL`, calls `DisplayMonFrontSpriteInBox`, displays `AerodactylFossilText`.
+  * `KabutopsFossil`: sets `wCurPartySpecies = FOSSIL_KABUTOPS`, calls `DisplayMonFrontSpriteInBox`, displays `KabutopsFossilText`.
+  * `DisplayMonFrontSpriteInBox`: displays popup window (`MON_SPRITE_POPUP`), loads front pic to `vChars1 tile $31` ($8B10), animates mon send-out (`AnimateSendingOutMon`), waits for button press, restores screen.
+  * `TownMapText`: overworld wall Town Map `predef_code` trampoline, prints `_TownMapText`, opens Town Map screen via `DisplayTownMap`, returns via `CloseTextDisplay`.
+- **Stubs retired (8):**
+  * `DisplayOakLabLeftPoster`, `DisplayOakLabRightPoster`, `DisplayOakLabEmailText`, `AerodactylFossil`, `KabutopsFossil`, `FanClubPicture1`, `FanClubPicture2` removed from `src/engine/overworld/hidden_object_stubs.asm`.
+  * `TownMapText` removed from `src/engine/events/hidden_events/hidden_events_stubs.asm`.
+- **Tier-1 Generator:**
+  * Created `dos_port/tools/generators/gen_town_map_text.py` generating `dos_port/assets/town_map_text.inc` for `_TownMapText`.
+- **Annotations:**
+  * `DisplayMonFrontSpriteInBox`: `DEVIATION{class=data-model}` for converting species to `dex-1` for `LoadMonFrontSprite`; `DEVIATION{class=projection}` for `BCOORD(10, 11)` coordinate mapping in `MON_SPRITE_POPUP`.
+  * `TownMapText`: `DEVIATION{class=projection}` for `predef_code` code trampoline calling `PrintText_NoCreatingTextBox`.
+- **Scenario:**
+  * Authored `oaks_lab_posters.lua` in `dos_port/tools/mgba_harness/scenarios/` (UNRUN per safety addendum).
 
