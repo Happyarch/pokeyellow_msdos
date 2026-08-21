@@ -111,9 +111,9 @@ BillsHousePokemonList:
 ; BookOrSculptureText — RETIRED (hidden-text-a batch). The real faithful body is
 ; LINKED at its pret mirror src/engine/events/hidden_events/book_or_sculpture.asm.
 
-; DisplayMonFrontSpriteInBox — pret engine/events/hidden_events/museum_fossils2.asm.
-; Displays a pokemon's front sprite in a pop-up window.
-; STUB{class=stub; pret=engine/events/hidden_events/museum_fossils2.asm:DisplayMonFrontSpriteInBox; behavior=does not display pokemon front sprite popup box; evidence=pret DisplayMonFrontSpriteInBox and label_status reports it missing; lifetime=until museum_fossils2.asm lands; label=DisplayMonFrontSpriteInBox}
-global DisplayMonFrontSpriteInBox
-DisplayMonFrontSpriteInBox:
-    ret
+; DisplayMonFrontSpriteInBox — RETIRED at integration. hidden-text-a added a
+; ret-stub for it because route_15_binoculars.asm calls it and the label was
+; missing on that branch; hidden-text-c ported museum_fossils2.asm, which is
+; pret's home for it. Both branches were correct alone and collided on merge
+; (multiple definition). The real body wins, per stub rule 5: retire, do not
+; shadow. Real body: src/engine/events/hidden_events/museum_fossils2.asm.

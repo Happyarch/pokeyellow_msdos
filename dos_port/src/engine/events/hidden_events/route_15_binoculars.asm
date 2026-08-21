@@ -34,7 +34,7 @@ section .text
 extern EnableAutoTextBoxDrawing         ; src/home/window.asm
 extern PrintPredefTextID                ; src/home/predef_text.asm
 extern PlayCry                          ; src/home/pokemon.asm
-extern DisplayMonFrontSpriteInBox       ; src/engine/events/hidden_events/hidden_events_stubs.asm
+extern DisplayMonFrontSpriteInBox       ; src/engine/events/hidden_events/museum_fossils2.asm
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; Route15GateLeftBinoculars — pret engine/events/hidden_events/route_15_binoculars.asm:Route15GateLeftBinoculars.
