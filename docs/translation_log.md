@@ -7086,3 +7086,15 @@ UNWITNESSED: nothing calls MarowakAnim until the rest of 4c lands.
   `make fidelity-full` PASS, 86/86 reported, 0 nonzero, 419 s; that is
   regression-only evidence for the new bodies (nothing calls them), but the
   `naming_screen` scenario is real coverage for the `LoadEDTile` operand switch.
+
+---
+
+## engine/events/diploma2.asm — DisplayDiplomaBottom and data labels (CongratulationsTiles, DiplomaMewTiles, DiplomaPikachuTiles, DiplomaPlayTime)
+- Source: pret `engine/events/diploma2.asm:DisplayDiplomaBottom`, `DiplomaPikachuTiles`, `CongratulationsTiles`, `DiplomaMewTiles`, `DiplomaPlayTime`.
+- Translated: `dos_port/src/engine/events/diploma2.asm` (completed the file; `DisplayDiplomaTop`, borders and top text were previously ported).
+- Generated Tier-1 assets: `dos_port/tools/generators/gen_diploma.py` extended to generate `DiplomaPlayTime` in `assets/diploma_text.inc`, and `DiplomaPikachuTiles` (120 bytes from `gfx/diploma/diploma_pikachu.tilemap`), `CongratulationsTiles` (11 bytes), and `DiplomaMewTiles` (20 bytes from `gfx/diploma/diploma_mew.tilemap`) in `assets/diploma_tiles.inc`.
+- Divergences:
+  * `DEVIATION{class=projection; pret=engine/events/diploma2.asm:DisplayDiplomaBottom; behavior=the diploma layout is centered on the 40x25 canvas by adding 10 columns and 3 rows to pret hlcoords; evidence=pret 20x18 layout centered on port 40x25 canvas per maintainer screen projection ruling; lifetime=permanent while the port renders a 40x25 canvas}`
+- Subsystem stubs: Added `STUB{class=stub; label=Diploma_Surfing_CopyBox; pret=engine/printer/printer.asm:Diploma_Surfing_CopyBox; ...}` in `dos_port/src/engine/printer/printer_stubs.asm` for unported `engine/printer/printer.asm`.
+- Evidence: `nasm` clean, `make -C dos_port` reaches "Built: PKMN.EXE", `update_label_db` shows all 5 labels translated, `faithdiff` 6/6 calls matched and clean, `lint_pret_labels` and `--strict-claims` 0 violations, `static_gate` PASS (8 static checks); emulator runs omitted per ADDENDUM.
+
