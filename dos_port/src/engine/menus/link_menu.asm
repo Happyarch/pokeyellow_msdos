@@ -54,14 +54,16 @@
 ;      as it is up (pret overlays the box on the live tilemap).  Each caller's next
 ;      act is the redraw that restores it — Func_f531b's `jp Func_f531b` retry, or
 ;      LinkMenu's .choseCancel window-stack drop.  Same trade as save.asm's dialogs.
-;  * SERIAL IS ALL STUBS (no port serial hardware).  Every Serial_* /
-;    CloseLinkConnection / hSerial* / rSC access is ; TODO-HW: network HAL.  The
-;    stubs themselves are pret home/serial.asm's, so they live in
-;    src/home/serial_stubs.asm — NOT here; this file is a CALLER, and a stub in a
-;    caller's mirror file is the shadow class the stub convention forbids (row 20
-;    part 2, M-112).  The no-partner return contract they are tuned to (which drives
-;    each menu to a pret terminal path rather than a bare ret) is documented in full
-;    at the top of that file.
+;  * SERIAL IS REAL (link plan Stage 1): the Serial_* primitives are the faithful
+;    pret bodies in src/home/serial.asm, cut at the message-level HAL line over
+;    src/net/net_hal.asm (docs/current_plan_link_cable.md).  With no link session
+;    up — all of Stage 1, whose only transport is the null transport — each
+;    primitive takes its annotated no-partner escape hatch, which reproduces the
+;    retired serial_stubs.asm contract verbatim (drives each menu to a pret
+;    terminal path rather than a bare ret); that contract is documented at the
+;    top of src/home/serial.asm.  CloseLinkConnection is still a stub (a pret
+;    engine/link/cable_club_npc.asm label, Stage 2) in
+;    src/engine/link/link_stubs.asm.
 ;  * NO LIVE CALLER (M-111): pret reaches LinkMenu from CableClubNPC
 ;    (engine/link/cable_club_npc.asm), which the port has not translated — every
 ;    label of that file is `missing` in translation.db.  LinkMenu and Func_f531b are
@@ -109,13 +111,14 @@ extern UpdateSprites            ; src/home/update_sprites.asm
 extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm (pret home/tilemap.asm)
 
-; --- serial: ; TODO-HW: network HAL — stubs in src/home/serial_stubs.asm ----
-extern Serial_ExchangeByte
-extern Serial_ExchangeLinkMenuSelection
-extern Serial_ExchangeNybble
-extern Serial_SyncAndExchangeNybble
-extern Serial_SendZeroByte
-extern CloseLinkConnection
+; --- serial: real pret bodies over the net HAL (link plan Stage 1) ----------
+extern Serial_ExchangeByte              ; src/home/serial.asm (pret home/serial.asm)
+extern Serial_ExchangeLinkMenuSelection ; src/home/serial.asm (pret home/serial.asm)
+extern Serial_ExchangeNybble            ; src/home/serial.asm (pret home/serial.asm)
+extern Serial_SyncAndExchangeNybble     ; src/home/serial.asm (pret home/serial.asm)
+extern Serial_SendZeroByte              ; src/home/serial.asm (pret home/serial.asm)
+extern CloseLinkConnection              ; link_stubs.asm — pret: engine/link/cable_club_npc.asm (Stage 2)
+extern NetHAL_StartTransfer             ; src/net/net_hal.asm — the rSC-write HAL site
 
 ; --- dispatch seam (ROOT-WIRED, Session 9 spine) ---------------------------
 extern PrepareForSpecialWarp    ; engine/overworld/special_warps.asm (callfar target)
@@ -431,7 +434,8 @@ Func_f531b:
     mov [ebp + wLinkMenuSelectionSendBuffer + 1], al
 .asm_f5399:
     ; send/receive the byte twice, require two equal reads whose hi nybble = $c0.
-    ; TODO-HW: network HAL — hSerialSendData is written but the stub ignores it.
+    ; No partner (all of Stage 1): Serial_ExchangeByte's no-link hatch returns a
+    ; fixed $c0, which passes both gates with "partner pressed nothing".
     mov al, [ebp + wLinkMenuSelectionSendBuffer]
     mov [ebp + hSerialSendData], al
     call Serial_ExchangeByte
@@ -461,7 +465,7 @@ Func_f531b:
     and al, 0x0C
     jz .asm_f53d1                   ; player didn't press -> use enemy's selection
     ; both pressed: the gameboy clocking the connection wins.
-    mov al, [ebp + hSerialConnectionStatus]  ; TODO-HW: network HAL
+    mov al, [ebp + hSerialConnectionStatus]  ; $ff no-link / Stage-2 HELLO election
     cmp al, USING_INTERNAL_CLOCK
     je .asm_f53df
 .asm_f53d1:
@@ -474,13 +478,13 @@ Func_f531b:
     call DelayFrame
     call DelayFrame
     mov al, [ebp + wLinkMenuSelectionSendBuffer]
-    mov [ebp + hSerialSendData], al ; TODO-HW: network HAL
+    mov [ebp + hSerialSendData], al
     call Serial_ExchangeByte
     call Serial_ExchangeByte
     mov bh, 0x14                    ; ld b,$14 — drain 20 zero bytes
 .loop:
     call DelayFrame
-    call Serial_SendZeroByte        ; TODO-HW: network HAL
+    call Serial_SendZeroByte
     dec bh
     jnz .loop
     ; --- lock in the ▷ cursor arrows (single-player: the chosen cup) ----------
@@ -533,7 +537,7 @@ Func_f531b:
 .returnaddress:
     mov [ebp + wLinkMenuSelectionSendBuffer], al ; local eligibility result
     mov word [ebp + wUnknownSerialCounter], 0
-    call Serial_SyncAndExchangeNybble           ; TODO-HW: network HAL
+    call Serial_SyncAndExchangeNybble   ; no-link hatch -> $ff (remote-ineligible path)
     ; local ineligible? (send buffer != 0)
     mov al, [ebp + wLinkMenuSelectionSendBuffer]
     and al, al
@@ -1034,9 +1038,11 @@ lm_link_show_window:
 ; 0,0) and shown at UI_LINK_MENU, so pret's GB-absolute coords are shifted by
 ; (-5,-3): text (7,5)->(2,2), cursor (6,5)->(1,2).
 LinkMenu:
-    ; TODO-HW: network HAL — no serial handshake precedes this menu in the port;
-    ; pin the connection status to "not established" so every not-internal-clock
-    ; branch is deterministic (see the serial_stubs.asm contract).
+    ; No serial handshake precedes this menu YET (link plan Stage 2 gives
+    ; CableClubNPC the HELLO role election that owns this byte); pin the status
+    ; to "not established" so every not-internal-clock branch is deterministic
+    ; and the primitives' no-partner hatches govern (src/home/serial.asm
+    ; contract). Stage 2 removes this pin along with the DEBUG_I1_LINK gate.
     mov byte [ebp + hSerialConnectionStatus], CONNECTION_NOT_ESTABLISHED
     ; xor a / ld [wLetterPrintingDelayFlags],a
     mov byte [ebp + wLetterPrintingDelayFlags], 0
@@ -1110,7 +1116,7 @@ LinkMenu:
     mov [ebp + wLinkMenuSelectionSendBuffer], al
     mov [ebp + wLinkMenuSelectionSendBuffer + 1], al
 .exchangeMenuSelectionLoop:
-    call Serial_ExchangeLinkMenuSelection   ; TODO-HW: network HAL
+    call Serial_ExchangeLinkMenuSelection   ; no-link hatch -> $d0/$d0 (see serial.asm)
     ; ld a,[recv[0]] / ld b,a / and $f0 / cp $d0 / jr z .checkEnemy
     mov al, [ebp + wLinkMenuSelectionReceiveBuffer]
     mov bh, al
@@ -1138,7 +1144,7 @@ LinkMenu:
     and al, 0x0C
     jz .useEnemyMenuSelection       ; only enemy pressed -> use enemy's selection
     ; both pressed: the gameboy clocking the connection wins.
-    mov al, [ebp + hSerialConnectionStatus]        ; TODO-HW: network HAL
+    mov al, [ebp + hSerialConnectionStatus]        ; $ff no-link / Stage-2 election
     cmp al, USING_INTERNAL_CLOCK
     je .doneChoosingMenuSelection
 .useEnemyMenuSelection:
@@ -1149,13 +1155,16 @@ LinkMenu:
     mov [ebp + wCurrentMenuItem], al
 .doneChoosingMenuSelection:
     ; ldh a,[hSerialConnectionStatus] / cp USING_INTERNAL_CLOCK / jr nz skip
-    mov al, [ebp + hSerialConnectionStatus]        ; TODO-HW: network HAL
+    mov al, [ebp + hSerialConnectionStatus]        ; $ff no-link / Stage-2 election
     cmp al, USING_INTERNAL_CLOCK
     jne .skipStartingTransfer
     call DelayFrame
     call DelayFrame
-    ; ld a,SC_START|SC_INTERNAL / ldh [rSC],a
-    ; TODO-HW: network HAL — start the internally-clocked serial transfer.
+    ; ld a,SC_START|SC_INTERNAL / ldh [rSC],a — start the internally-clocked
+    ; transfer: virtual rSC write + the net-HAL poke (the serial.asm rSC-site
+    ; pattern; unreachable until Stage 2 elects a master).
+    mov byte [ebp + IO_SC], 0x80 | 0x01     ; SC_START | SC_INTERNAL
+    call NetHAL_StartTransfer
 .skipStartingTransfer:
     ; b=' ' c=' ' d=' ' e='▷'
     mov bh, CHAR_SPACE
@@ -1232,7 +1241,7 @@ LinkMenu:
     mov [ebp + wMenuJoypadPollCount], al
     call Delay3
     ; callfar CloseLinkConnection
-    call CloseLinkConnection        ; TODO-HW: network HAL
+    call CloseLinkConnection        ; link_stubs.asm ret-stub until Stage 2
     ; drop the whole LinkMenu window stack back to the entry baseline, then show
     ; the "link canceled" dialog. The structured projection deviation above covers
     ; this window-stack restore for the pret
@@ -1269,7 +1278,7 @@ LinkMenu:
     mov byte [ebp + wLinkMenuSelectionSendBuffer], 0x0B
     mov bh, 0x78                    ; ld b,$78 — 120-frame timeout
 .loop2:                             ; pret .loop
-    mov al, [ebp + hSerialConnectionStatus]        ; TODO-HW: network HAL
+    mov al, [ebp + hSerialConnectionStatus]        ; $ff no-link / Stage-2 election
     cmp al, USING_INTERNAL_CLOCK
     jne .noDelay
     call DelayFrame                 ; call z,DelayFrame
@@ -1277,7 +1286,7 @@ LinkMenu:
     dec bh
     jz .asm_f59b2                    ; timeout -> the no-partner branch
     push ebx
-    call Serial_ExchangeNybble      ; TODO-HW: network HAL
+    call Serial_ExchangeNybble      ; no-link hatch -> $ff (timeout counts down)
     call DelayFrame
     pop ebx
     ; ld a,[wSerialExchangeNybbleReceiveData] / inc a / jr z .loop

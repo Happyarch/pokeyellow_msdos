@@ -260,19 +260,38 @@ blocks in `src/engine/menus/naming_screen.asm`.
       (global, for the Stage-1 `PrintWaitingText` mirror)
 
 ### Stage 1 — serial core + no-transport parity
-- [ ] `net_hal.asm` skeleton: session state, mailboxes, pump + reentrancy
-      guard, transport vtable with a null transport; pump hook in `DelayFrame`
-      beside `audio_tick`
-- [ ] Translate `src/home/serial.asm` (all labels; exchange primitives as the
-      HAL line with `DEVIATION{class=HAL}` each; watchdog counters verbatim;
-      spins time-calibrated with `class=timing`); **delete
-      `src/home/serial_stubs.asm`** (loud-collision rule) and sweep the 15
-      `TODO-HW: network HAL` sites in `link_menu.asm`; repoint extern comments
-      per stub-retirement rule 5; `update_label_db`
-- [ ] Gates: faithdiff per label, lint 0, `make fidelity` core+full (zero
-      single-player drift); new `cable_club_nolink` golden vs mGBA (no-peer
-      receptionist timeout is mGBA-comparable); re-verify LinkMenu /
-      `Func_f531b` no-partner termination against real watchdog wall time
+- [x] `net_hal.asm` skeleton 2026-08-21 (`src/net/net_hal.asm`): session state
+      (`g_net_transport`/`g_net_link_up`/`g_peer_game_gen`), pump + reentrancy
+      guard, `NetHAL_LinkAlive`, `NetHAL_StartTransfer`, transport vtable with
+      the null transport row; pump hooked in `DelayFrame` beside `audio_tick`
+      (inside `PERF_AUDIO`'s slot — one compare per frame while unbound).
+      Exchange mailboxes deferred to Stage 2 with the frame codec that defines
+      their shape
+- [x] `src/home/serial.asm` translated 2026-08-21 — all 13 pret labels;
+      primitives cut at the HAL line, each no-partner escape hatch carries a
+      `DEVIATION{class=HAL}` reproducing the retired stub contract verbatim
+      (the faithful bodies' own loops have no exit with no partner — measured
+      against the pret flow, see the file header); watchdogs verbatim; the
+      `Serial` handler's rDIV wait is a `class=timing` deviation (rDIV inert);
+      `serial_stubs.asm` DELETED; the 15 `TODO-HW: network HAL` sites in
+      `link_menu.asm` swept (incl. restoring the `.doneChoosingMenuSelection`
+      rSC write as IO_SC + `NetHAL_StartTransfer`); extern comments repointed
+      (link_menu, printer.asm header, 13 Pokecenter scripts); NEW stubs per
+      convention: `CloseLinkConnection` + `PrintWaitingText` →
+      `src/engine/link/link_stubs.asm` (their pret sources are Stage 2/3
+      files; PrintWaitingText's real mirror needs the trade-screen projection
+      decided in Stage 3), `PrinterSerial` → `printer_stubs.asm` (retained
+      dead branch); `update_label_db` rescanned
+- [ ] Gates: faithdiff per label run 2026-08-21 (all findings are the
+      annotated HAL boundary: NetHAL_* calls, virtual IO_SB/IO_SC stores, and
+      faithdiff's documented pointer-indirect-store blind spot on
+      wUnknownSerialCounter / the receive buffers); lint 0 in both modes;
+      full build links; `fidelity-serial` core tier 16/16 PASS 2026-08-21
+      (zero single-player drift with the DelayFrame pump call in place;
+      run AFTER fixing the VM's silent sfdisk/MBR image-mount failure — see
+      Environment notes). STILL OPEN: the new `cable_club_nolink` golden vs
+      mGBA, and the LinkMenu / `Func_f531b` no-partner wall-time
+      re-verification (needs a DEBUG_I1_LINK build)
 
 ### Stage 2 — UART transport + handshake
 - [ ] `net_frame.asm` codec + ARQ, with a DEBUG-only RAM-pipe transport unit
@@ -406,6 +425,15 @@ the book.
   ~1750 s at 86 scenarios — re-measure, the scenario count drifts upward)
   and keep the standing shell rules: no source edits while a suite runs,
   gate on a status FILE (never a pipeline tail), never poll with pgrep.
+- **A fresh VM may lack `sfdisk` (util-linux's fdisk tools), and the failure
+  is SILENT and misleading** (measured 2026-08-21): the `image` recipe pipes
+  `sfdisk` to /dev/null, so a missing binary yields an MBR-less `PKMN.IMG`
+  that mtools reads fine but DOSBox-X `imgmount` refuses ("Could not extract
+  drive geometry") — and every goldencheck then reports "no GBSTATE.BIN in
+  image — run crashed before the dump?", which reads as a game crash and is a
+  MOUNT failure. Check `which sfdisk` before the first image build (Ubuntu:
+  `apt-get install fdisk`), and after installing, `rm dos_port/PKMN.IMG` so
+  the recipe recreates it with a real MBR.
 - Submodules must be initialized (`git submodule update --init`) at least for
   `dos_port/tools/dosbox-x` (serial/IPX/NE2000 testing), `unicode_converter`
   (text generators) and `mgba` (goldens). The Happyarch fork submodule URLs
