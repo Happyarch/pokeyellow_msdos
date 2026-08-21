@@ -9,10 +9,13 @@ half stays there) and graduates `celadon_mansion_3f.asm`,
 
 ## Binding constraints
 
-- **The serial/link layer stays unwired** (maintainer directive 2026-08-17,
-  memory `link-layer-planned-transports`). This plan intercepts inside the
-  printer engine at the software/hardware seam — no rSB/rSC emulation, no
-  `home/serial.asm` ISR work. The directive memory is not weakened by this plan.
+- **This plan does no serial/link-layer work** — it intercepts inside the
+  printer engine at the software/hardware seam: no rSB/rSC emulation, no
+  `home/serial.asm` work. (The 2026-08-17 "link stays unwired" directive was
+  superseded 2026-08-21: `docs/current_plan_link_cable.md` now owns
+  `home/serial.asm` and the transports. The two seams are disjoint — the
+  printer keeps its in-memory device fork, the link plan keeps the serial
+  mirror — and neither plan touches the other's cut point.)
 - **Real printers cannot be verified** (maintainer, 2026-08-20). The backend is
   written strictly against the Epson ESC/P Reference Manual using the most
   conservative command subset, with runtime escape hatches (`/PRINT9`,
@@ -331,7 +334,8 @@ over renderer state, feeds the device below the seam, invisible to pret code).
 - [ ] Evidence-discipline wording sweep (docs, comments, this plan's status
       lines): "spec-conformant + verified under DOSBox-X emulation" only
 - [ ] Stigmergy feature memory updated to final state;
-      `link-layer-planned-transports` left untouched
+      `link-layer-planned-transports` not touched by PRINTER work (it is now
+      owned by `docs/current_plan_link_cable.md` Stage 0, reopened 2026-08-21)
 - [ ] Archive: `git mv docs/current_plan_printer.md docs/plans/printer.md`
 
 ## Key references for implementers

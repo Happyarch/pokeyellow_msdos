@@ -155,9 +155,12 @@ naming their retirement.
       PC shell. Verify party healing and the rendered dialog, not merely menu entry.
 - [ ] Port the vending, prize, Safari and Pikachu tails, replacing their stubs with
       real providers plus must-hit scenarios.
-      **Cable is explicitly NOT in this list any more.** Maintainer directive
-      2026-08-17: the link-cable layer is not to be wired for the foreseeable future.
-      `CableClubNPC` keeps its stub; see stigmergy `link-layer-planned-transports`.
+      **Cable is explicitly NOT in this list any more — it has its own plan.**
+      The 2026-08-17 "stays unwired" directive was superseded 2026-08-21 by the
+      maintainer reopening the link layer: the work is owned by
+      `docs/current_plan_link_cable.md` (its Stage 2 retires the `CableClubNPC`
+      stub). Stigmergy `link-layer-planned-transports` is to be rewritten from a
+      host session (that plan's Stage 0).
 
 **Known gap, not a bullet:** `ShowTextStream`
 (`src/engine/overworld/map_sprites.asm:991`) unconditionally calls
