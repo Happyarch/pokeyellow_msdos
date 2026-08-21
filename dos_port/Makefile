@@ -903,6 +903,7 @@ GAME_SRCS := \
     src/data/text_predef_pointers.asm \
     src/engine/events/hidden_events/hidden_events_stubs.asm \
     src/engine/events/hidden_events/reds_room.asm \
+    src/engine/events/hidden_events/school_blackboard.asm \
     src/home/money.asm \
     src/engine/overworld/push_boulder.asm \
     src/engine/overworld/dust_smoke.asm \
@@ -3994,6 +3995,17 @@ assets/pikachu_text.inc: ../engine/pikachu/pikachu_emotions.asm ../data/text/tex
 
 src/engine/pikachu/pikachu_emotions.o: assets/pikachu_text.inc
 
+# School-blackboard hidden-event text (Viridian School blackboard + link-cable
+# help). Generated from engine/events/hidden_events/school_blackboard.asm +
+# data/text/text_2.asm + constants/charmap.asm.
+assets/school_blackboard_text.inc: ../engine/events/hidden_events/school_blackboard.asm \
+                         ../data/text/text_2.asm ../constants/charmap.asm \
+                         tools/generators/gen_battle_text.py \
+                         tools/generators/gen_school_blackboard_text.py
+	python3 tools/generators/gen_school_blackboard_text.py
+
+src/engine/events/hidden_events/school_blackboard.o: assets/school_blackboard_text.inc
+
 # Naming-screen kana voicing tables (Dakutens / Handakutens). Generated from
 # data/text/dakutens.asm + constants/charmap.asm; carrier src/data/text/dakutens.asm.
 assets/dakutens.inc: ../data/text/dakutens.asm ../constants/charmap.asm \
@@ -4157,7 +4169,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/trainer_text.inc \
         assets/party_menu_strings.inc assets/home_pokemon_strings.inc assets/emotes.inc \
         assets/options_strings.inc \
-        assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
+        assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/school_blackboard_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \
 		assets/colors/palettes.inc \

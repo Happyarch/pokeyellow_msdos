@@ -79,23 +79,9 @@ global ViridianSchoolNotebook
 ViridianSchoolNotebook:
     ret
 
-; ViridianSchoolBlackboard — pret engine/events/hidden_events/school_blackboard.asm.
-; Paged blackboard reader (same shape as the notebook).
-; Unreachable in the live build (PrintBlackboardLinkCableText is a ret-stub).
-; TODO(overworld-events Stage 5, Viridian batch): port the paged reader, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/school_blackboard.asm:ViridianSchoolBlackboard; behavior=the blackboard displays nothing instead of running its paged reader; evidence=pret ViridianSchoolBlackboard is a text_asm paged reader and label_status reports it missing; lifetime=until the overworld-events Viridian batch lands; label=ViridianSchoolBlackboard}
-global ViridianSchoolBlackboard
-ViridianSchoolBlackboard:
-    ret
-
-; LinkCableHelp — pret engine/events/hidden_events/school_blackboard.asm:LinkCableHelp.
-; The link-cable help reader that shares the blackboard's paging machinery.
-; Unreachable in the live build (PrintBlackboardLinkCableText is a ret-stub).
-; TODO(overworld-events Stage 5, Viridian batch): port with the blackboard, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/school_blackboard.asm:LinkCableHelp; behavior=the link-cable help displays nothing instead of running its paged reader; evidence=pret LinkCableHelp is a text_asm paged reader and label_status reports it missing; lifetime=until the overworld-events Viridian batch lands; label=LinkCableHelp}
-global LinkCableHelp
-LinkCableHelp:
-    ret
+; ViridianSchoolBlackboard / LinkCableHelp / PrintBlackboardLinkCableText —
+; RETIRED (school-blackboard batch). The real faithful bodies are LINKED at their
+; pret mirror src/engine/events/hidden_events/school_blackboard.asm.
 
 ; FoundHiddenItemText — pret engine/events/hidden_items.asm:FoundHiddenItemText.
 ; The item-award tail that runs AFTER the far "found an item" intro: gives the item

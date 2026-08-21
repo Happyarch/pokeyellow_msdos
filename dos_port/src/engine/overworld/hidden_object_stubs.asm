@@ -142,9 +142,9 @@ PrintBookcaseText:
 global PrintNotebookText
 PrintNotebookText:
     ret
-global PrintBlackboardLinkCableText
-PrintBlackboardLinkCableText:
-    ret
+; PrintBlackboardLinkCableText — RETIRED (school-blackboard batch). The real
+; faithful body is LINKED at its pret mirror
+; src/engine/events/hidden_events/school_blackboard.asm.
 global PrintNewBikeText
 PrintNewBikeText:
     ret
