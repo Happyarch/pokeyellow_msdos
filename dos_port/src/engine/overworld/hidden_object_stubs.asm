@@ -98,34 +98,15 @@ global Mansion4Script_Switches
 Mansion4Script_Switches:
     ret
 
-; --- gym / dojo interactables (Stage 5) ---
-global GymStatues
-GymStatues:
-    ret
-global PrintFightingDojoText
-PrintFightingDojoText:
-    ret
-global PrintFightingDojoText2
-PrintFightingDojoText2:
-    ret
-global PrintFightingDojoText3
-PrintFightingDojoText3:
-    ret
 
 ; --- Print*Text bench/flavor handlers (Stage 5) ---
 global PrintBenchGuyText
 PrintBenchGuyText:
     ret
-global PrintIndigoPlateauHQText
-PrintIndigoPlateauHQText:
-    ret
 ; PrintRedSNESText — RETIRED 2026-08-02 (predef-text plan). The real faithful body
 ; is LINKED at its pret mirror src/engine/events/hidden_events/reds_room.asm; it is
 ; the port's first real end-to-end predef-text call site (tx_pre_jump
 ; RedBedroomSNESText -> PrintPredefTextID).
-global PrintBookcaseText
-PrintBookcaseText:
-    ret
 ; PrintNotebookText — RETIRED (school-notebooks batch). The real faithful body is
 ; LINKED at its pret mirror
 ; src/engine/events/hidden_events/school_notebooks.asm.
