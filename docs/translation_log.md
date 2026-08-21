@@ -7538,4 +7538,60 @@ report), and the only entry gate that would change that is in `src/debug/debug_d
   * `TownMapText`: `DEVIATION{class=projection}` for `predef_code` code trampoline calling `PrintText_NoCreatingTextBox`.
 - **Scenario:**
   * Authored `oaks_lab_posters.lua` in `dos_port/tools/mgba_harness/scenarios/` (UNRUN per safety addendum).
+## PC access: pokecenter_pc.asm, reds_room.asm, bookshelves.asm, hidden_items.asm, starter_dex.asm
+
+- **Sources:** `engine/events/hidden_events/pokecenter_pc.asm`,
+  `engine/events/hidden_events/reds_room.asm`,
+  `engine/events/hidden_events/bookshelves.asm`, `engine/events/hidden_items.asm`,
+  `engine/events/starter_dex.asm`.
+- **Translated:** the five matching `dos_port/src/...` mirror paths.
+- **Labels ported (10):** `OpenPokemonCenterPC`, `PokemonCenterPCText`,
+  `OpenRedsPC`, `RedBedroomPCText`, `PrintBookshelfText`, `HiddenItems`,
+  `HiddenCoins`, `FoundHiddenItemText`, `FindHiddenItemOrCoinsIndex`,
+  `StarterDex`.
+- **The `predef_code` trap (per CLAUDE.md/addendum):** `RedBedroomPCText`,
+  `PokemonCenterPCText` and `FoundHiddenItemText` are all `predef_code` rows in
+  `src/data/text_predef_pointers.asm` ($03/$21/$26) — `DisplayTextID` `call esi`s
+  them directly as x86 code, so none carries pret's leading
+  `script_players_pc`/`script_pokecenter_pc`/`text_far` byte. `RedBedroomPCText`/
+  `PokemonCenterPCText` instead jump straight into the already-linked
+  `TextScript_ItemStoragePC`/`TextScript_PokemonCenterPC`
+  (`src/home/map_objects.asm`) — the same routines pret's own byte-stream dict
+  dispatches those markers to, so the continuation is identical.
+  `FoundHiddenItemText` explicitly `call`s `PrintText` on its generated far
+  intro (`_FoundHiddenItemText`, new `gen_hidden_items_text.py`) before running
+  its code tail, since the far text is no longer walked by the text-command
+  interpreter.
+- **Stubs retired (8):** `OpenPokemonCenterPC`, `HiddenItems`, `HiddenCoins`,
+  `OpenRedsPC`, `PrintBookshelfText` from `hidden_object_stubs.asm`;
+  `RedBedroomPCText`, `PokemonCenterPCText`, `FoundHiddenItemText` from
+  `hidden_events_stubs.asm`. `label_status --callers` found one stale extern
+  comment this task cannot fix (`src/home/hidden_events.asm:47`, outside the
+  file allow-list) — see the report.
+- **Generators added:** `gen_hidden_coin_coords.py` (→
+  `assets/hidden_coin_coords.inc`, the `gen_hidden_item_coords.py` sibling for
+  `HiddenCoinCoords`) and `gen_hidden_items_text.py` (→
+  `assets/hidden_items_text.inc`, `FoundHiddenItemText`'s far intro).
+  `HiddenItemCoords` was already generated (`gen_hidden_item_coords.py`,
+  consumed by the itemfinder) and is `extern`ed here rather than re-included.
+  `BookshelfTileIDs` (bookshelves.asm) is a hand-written pointer/id table per
+  the `CinnabarGymGateCoords` two-tier precedent, inlined directly since no
+  mirror file exists for pret's separate `data/tilesets/bookshelf_tile_ids.asm`.
+- **Annotations:** `DEVIATION{class=banking}` on each predef-dispatch bypass
+  (`FlagActionPredef`→`FlagAction` ×3, `AddBCDPredef`→`AddBCD`,
+  `ShowPokedexData` direct call) — registers hand-set at the call site, per the
+  established `toggleable_objects.asm`/`cinnabar_gym_quiz.asm`/
+  `display_pokedex.asm` convention.
+- **Projection:** `PrintBookshelfText` reads the already-published
+  `wTileInFrontOfPlayer` (set by the caller's `GetTileAndCoordsInFrontOfPlayer`)
+  instead of re-deriving pret's `lda_coord 8, 7` screen coordinate.
+- **No golden authored:** every label here is reached only through the
+  predef-text path or an interior-map hidden-event handler, and
+  `docs/current_plan_backlog.md` #31 (re-verified during this task) already
+  establishes that NO map the port can currently render makes a predef text
+  reachable (blocked on tileset residency, not map data — Red's/Blue's house,
+  Oak's Lab and the Pokémon Centers are all interior maps whose tileset is not
+  yet resident). Authoring a scenario now would be a false witness. Unblocking
+  it needs per-tileset gfx/blockset/collision residency work well outside this
+  task's file allow-list.
 

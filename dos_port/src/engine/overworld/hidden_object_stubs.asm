@@ -15,10 +15,15 @@
 ;
 ; RETIREMENT: these are per-object handlers (project-conventions two-tier rule:
 ; behavior is Tier-2 code). Each retires when its owning subsystem / map lands:
-;   * HiddenItems / HiddenCoins  -> overworld-events Stage 3 bullets 2-3 + items plan
+;   * HiddenItems / HiddenCoins / PrintBookshelfText / OpenPokemonCenterPC /
+;     OpenRedsPC -> RETIRED 2026-08-21. The real bodies are in
+;                   src/engine/events/hidden_items.asm,
+;                   src/engine/events/hidden_events/bookshelves.asm,
+;                   src/engine/events/hidden_events/pokecenter_pc.asm and
+;                   src/engine/events/hidden_events/reds_room.asm respectively.
 ;   * StartSlotMachine           -> RETIRED 2026-08-15. engine/slots/ is in the
 ;                                   Makefile SRCS list and supplies the real body.
-;   * OpenPokemonCenterPC / OpenRedsPC / BillsHousePC / CableClub{Left,Right}Gameboy
+;   * BillsHousePC / CableClub{Left,Right}Gameboy
 ;                                -> PC / cable-club service work (Stage 2 tails / Phase 4)
 ;   * GymTrashScript / PrintTrashText -> RETIRED 2026-08-21. The real bodies are in
 ;                                   src/engine/events/hidden_events/vermilion_gym_trash.asm
@@ -44,36 +49,19 @@ H_INTERACTED_WITH_BOOKSHELF equ 0xFFDB
 
 section .text
 
-; ---------------------------------------------------------------------------
-; PrintBookshelfText — pret engine/events/hidden_events/bookshelves.asm.
-; Dispatch callee of CheckForHiddenEventOrBookshelfOrCardKeyDoor's fallback (NOT a
-; data-table handler). The caller reads hInteractedWithBookshelf right after: $00
-; = "bookshelf handled" (suppresses the sprite/sign scan), $FF = "no bookshelf
-; here" (falls through to the sprite/sign scan). This stub MUST report $FF, or a
-; stale value would silently break NPC/sign interaction. The real body does a
-; (tileset, tile-in-front) lookup in BookshelfTileIDs + a PrintCardKeyText tail.
-; RETIREMENT: port bookshelves.asm + BookshelfTileIDs + card-key-door text.
-; ---------------------------------------------------------------------------
-global PrintBookshelfText
-PrintBookshelfText:
-    mov byte [ebp + H_INTERACTED_WITH_BOOKSHELF], 0xFF   ; no bookshelf found
-    ret
+; PrintBookshelfText — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_events/bookshelves.asm (BookshelfTileIDs
+; lookup + PrintCardKeyText tail).
 
-; --- ground items / coins (Stage 3 bullets 2-3) ---
-global HiddenItems
-HiddenItems:
-    ret
-global HiddenCoins
-HiddenCoins:
-    ret
+; HiddenItems / HiddenCoins — RETIRED. The real faithful bodies are LINKED at
+; their pret mirror src/engine/events/hidden_items.asm.
 
-; --- PC access (PC / cable-club service tails) ---
-global OpenPokemonCenterPC
-OpenPokemonCenterPC:
-    ret
-global OpenRedsPC
-OpenRedsPC:
-    ret
+; OpenPokemonCenterPC — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_events/pokecenter_pc.asm.
+
+; OpenRedsPC — RETIRED. The real faithful body is LINKED at its pret mirror
+; src/engine/events/hidden_events/reds_room.asm.
+
 global BillsHousePC
 BillsHousePC:
     ret
