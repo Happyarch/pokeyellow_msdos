@@ -28,6 +28,11 @@ for harness work.
   for future maintainer use.
 - **Packet-loss handling is required** — reliability layer + desync detection,
   not best-effort.
+- **In-game link setup UI (maintainer requirement, 2026-08-21):** the player
+  must be able to select serial vs IPX vs TCP in-game and type addresses for
+  IPX and TCP, with **up to five saved TCP and five saved IPX connections**.
+  CLI flags remain as the non-interactive path (harness/scripting) and skip
+  the UI. See "Link setup UI + connection book" below.
 - **Printer and link keep separate forks of the pret serial functions.**
   Verified compatible: the printer plan cuts inside the printer engine
   (`Printer_PrepareToSend` → in-memory device; `docs/current_plan_printer.md`
@@ -135,6 +140,49 @@ change (say so in the commit message so nobody "fixes" it). CLI flags parse in
    pret's own timeout text fires where it exists; where none exists, a
    hold-B abort routes into `CloseLinkConnection` + link-error text.
 
+### Link setup UI + connection book (port-only)
+
+No pret counterpart — descriptive names, no pret labels absorbed. Lives in
+the net subsystem (`src/net/link_ui.asm`, `src/net/link_book.asm`) so the
+whole feature stays greppable in one place.
+
+- **Entry point — the receptionist flow.** `CableClubNPC` gains one
+  port-only seam after the receptionist dialog and before the connection
+  attempt: if no transport was preselected on the command line, show
+  "HOW WILL YOU LINK?" — SERIAL / IPX / TCP / CANCEL (SERIAL offers a
+  COM1-4 pick, default COM1). Only after the transport is up does pret's
+  90-frame establish loop run, reading HELLO-election state as before.
+  CANCEL falls into pret's no-partner path. One `DEVIATION{class=HAL}` at
+  the seam. CLI flags (`/COM1-4`, `/IPX[...]`, `/TCP=`, `/TCPWAIT`)
+  preselect and skip the UI entirely — required by the headless
+  two-instance harness, which cannot drive interactive setup.
+- **Connection book — 5 TCP + 5 IPX slots.** Choosing IPX or TCP opens the
+  book for that transport: saved entries (shown as their address text) plus
+  NEW, EDIT, DELETE; selecting an entry connects. IPX additionally offers
+  AUTO (broadcast discovery, the default) above the saved slots.
+- **Address entry is keyboard text input, not a GB character grid.** This
+  is DOS: every machine has the keyboard the port already owns (IRQ1). A
+  port-only line-edit widget reads raw scancodes through a text-entry mode
+  added beside the existing joypad scancode path (`src/input/joypad.asm`),
+  rendered with `TextBoxBorder`/`PlaceString`. Charset is restricted per
+  field: TCP = dotted quad + `:port`; IPX = 8 hex net digits + 12 hex node
+  digits (AUTO covers the common case so hand-typed IPX addresses are the
+  exception). Input validated on accept; invalid → error text, re-edit.
+- **Persistence: `LINKBOOK.DAT`, a separate port-only DOS file — NOT the
+  `.dsv`.** The save file is byte-for-byte the raw 32 KiB SRAM image (v2),
+  and the Gen-1/Gen-2 byte-identity rule forbids smuggling port config into
+  GB SRAM. Same int 21h file-I/O pattern as `src/save/dsv_io.asm`: magic
+  `LNKB`, version byte, additive checksum, then 10 fixed-size records
+  (5 TCP: ip4+port2; 5 IPX: net4+node6; padded to a fixed record size with
+  an in-use flag). Corrupt/absent file = empty book, never an error.
+  `saveconv.py` untouched — this file is not save data.
+- **Strings are Tier-1 data**: every label ("HOW WILL YOU LINK?", "SERIAL",
+  "IPX", "TCP", "AUTO", "NEW", …) comes from a new
+  `tools/generators/gen_link_ui_strings.py` → `assets/link_ui_strings.inc`,
+  wired into `make assets`. No hand-encoded charmap bytes.
+- **Harness note**: scenarios drive the UI via AutoKeyDrive where the UI
+  itself is under test; everything else uses the CLI-flag bypass.
+
 ## Stages
 
 ### Stage 0 — governance + groundwork
@@ -209,22 +257,40 @@ change (say so in the commit message so nobody "fixes" it). CLI flags parse in
 - [ ] Two-instance battle to a consistent result on both sides;
       run/struggle/no-action paths; mid-battle disconnect
 
-### Stage 5 — IPX
-- [ ] `ipx_dos.asm` (detect, socket `/IPXSOCK=`, DOS-memory ECBs, poll loop,
-      broadcast discovery); linkcheck IPXNET variant; rerun the Stage 3/4
-      scenario battery
+### Stage 5 — link setup UI + connection book
+- [ ] Keyboard text-entry mode beside the joypad scancode path
+      (`src/input/joypad.asm`): port-only line-edit widget, per-field
+      charset, no effect on normal joypad mapping
+- [ ] `src/net/link_ui.asm`: transport-select menu in the `CableClubNPC`
+      seam (CLI flags bypass), COM1-4 pick, per-transport address-book
+      screens (5 slots + AUTO for IPX + NEW/EDIT/DELETE), validation +
+      error text
+- [ ] `src/net/link_book.asm`: `LINKBOOK.DAT` load/save (magic `LNKB`,
+      version, additive checksum, 5 TCP + 5 IPX fixed records; corrupt or
+      absent → empty book)
+- [ ] `tools/generators/gen_link_ui_strings.py` → `assets/link_ui_strings.inc`
+      wired into `make assets`; zero hand-encoded charmap bytes
+      (`lint_pret_labels --no-scan --strict-claims` stays 0)
+- [ ] AutoKeyDrive scenario: create a TCP and an IPX entry, reboot the
+      instance, assert both persist and connect state is selectable;
+      full-book (5/5) and delete paths
 
-### Stage 6 — native TCP
+### Stage 6 — IPX
+- [ ] `ipx_dos.asm` (detect, socket `/IPXSOCK=`, DOS-memory ECBs, poll loop,
+      broadcast discovery + direct net:node address from the book);
+      linkcheck IPXNET variant; rerun the Stage 3/4 scenario battery
+
+### Stage 7 — native TCP
 - [ ] Slirp reachability spike FIRST (two NE2000+slirp guests are NATed
       apart — host port-forward topology; pcap fallback documented); gates
       the rest of the stage
 - [ ] `pktdrv.asm` (DPMI 0303h real-mode RX callback — new pattern,
       document it) + `net_ip.asm` (ARP, IPv4, minimal stop-and-wait TCP);
       flags `/TCPWAIT[=port]`, `/TCP=ip[:port]`, `/IP= /MASK= /GW=`
-      (no DHCP in v1 — recorded as deferred); linkcheck NE2000 variant;
-      rerun battery
+      (no DHCP in v1 — recorded as deferred); book entries feed the
+      connect path; linkcheck NE2000 variant; rerun battery
 
-### Stage 7 — hardening + bookkeeping
+### Stage 8 — hardening + bookkeeping
 - [ ] Soak: repeated trades/battles per transport, injected drops,
       pause/resume one instance; keepalive tuning
 - [ ] Docs sweep (`dos_port/run` header flags, ROADMAP Phase 4,
@@ -240,7 +306,9 @@ the two-instance harness; all fidelity gates green; no single-player
 regression in `make fidelity` core+full; real-hardware paths (UART on a
 physical null modem cable, Novell IPX, packet-driver TCP) ship
 spec-conformant with runtime escape hatches — the printer-backend precedent
-for unverifiable hardware.
+for unverifiable hardware. UI acceptance: transport selectable in-game at
+the receptionist, TCP and IPX addresses enterable by keyboard, five saved
+connections per transport surviving a reboot via `LINKBOOK.DAT`.
 
 ## Risks / open questions
 
