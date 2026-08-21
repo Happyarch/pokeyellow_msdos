@@ -7001,3 +7001,88 @@ faithdiff: MarowakAnim 8/8 calls, 3/3 pret stores, one `+ ADDED [IO_OBP1]` that
 is the hardware-register blind spot (pret writes rOBP1 3x, the port writes
 IO_OBP1 3x — counted, not assumed). CopyMonPicFromBGToSpriteVRAM clean.
 UNWITNESSED: nothing calls MarowakAnim until the rest of 4c lands.
+
+## 2026-08-20 — engine/items/town_map.asm (Func_70f87) — engine/items reaches 151/151
+
+- Source: `engine/items/town_map.asm:110` (`Func_70f87`, marked `; unreferenced` by pret).
+- Translated: `dos_port/src/engine/items/town_map.asm`.
+- Date: 2026-08-20
+- H-flag: not involved
+- Bug tags: none
+- Divergences: none (faithful). `callfar PlayPikachuSoundClip` → near `call`
+  (the project-wide flat-banking translation, suppressed in
+  `faithdiff_suppress.json`); pret's `ret z` is written as `jz .ret` over the
+  call so both exits share one `ret`.
+- Notes: the port previously carried a one-line comment saying this label was
+  "unreferenced dead code — omitted". It was the **only** `missing` label in
+  `engine/items/` (150 translated / 1 missing before this change; 151/151 after,
+  measured from `translation.db` after `update_label_db`). Ported for
+  label-for-label parity with the pret file rather than for behaviour: it has no
+  caller here either, exactly as in pret.
+  `DL` (pret `E`) is the Pikachu clip index and this routine does not set it —
+  it plays whatever clip its (nonexistent) caller left in `E`. That is pret's
+  code, not an omission on the port side, and the source comment says so.
+  Kept non-`global`, matching pret's single-colon (non-exported) label; the
+  label DB indexes column-0 defs that match a pret label, so it still scores.
+  Verified in the object file: `Func_70f87` at `0x16a`, `and $0xc0`
+  (= `PAD_UP | PAD_DOWN`), one `DISP32` relocation to `PlayPikachuSoundClip`.
+  faithdiff clean (1/1 calls); `lint_pret_labels --no-scan` 0 violations; full
+  build links.
+
+## 2026-08-20 — engine/menus completed: unused_input.asm, DakutensAndHandakutens, TwoOptionMenu save/restore, ED_Tile
+
+- Source: `engine/menus/unused_input.asm` (all 3 labels), `engine/menus/naming_screen.asm`
+  (`DakutensAndHandakutens`, `ED_Tile`/`ED_TileEnd`), `engine/menus/text_box.asm`
+  (`TwoOptionMenu_SaveScreenTiles`, `TwoOptionMenu_RestoreScreenTiles`),
+  `data/text/dakutens.asm` (`Dakutens`, `Handakutens`).
+- Translated: `dos_port/src/engine/menus/unused_input.asm` (new),
+  `dos_port/src/engine/menus/naming_screen.asm`,
+  `dos_port/src/engine/menus/text_box.asm`,
+  `dos_port/src/data/text/dakutens.asm` (new carrier) +
+  `dos_port/tools/generators/gen_dakutens.py` → `assets/dakutens.inc` (new),
+  `dos_port/tools/generators/gen_alphabets.py` (emits the pret `ED_Tile` labels).
+- Date: 2026-08-20
+- H-flag: not involved
+- Bug tags: none
+- Divergences: two `DEVIATION{class=projection}` (both at their routines) for the
+  canvas row stride — `PlaceMenuCursorDuplicate` steps by `text_row_stride` and
+  `2 * text_row_stride` where pret writes the literals 20 and `$28`, and the
+  TwoOptionMenu helpers step by `text_row_stride - 6` where pret writes
+  `SCREEN_WIDTH - 6`. One `DEVIATION{class=data-model}` on `ED_Tile`: the port
+  stores the glyph pre-expanded to 2bpp (16 B) where pret INCBINs the raw 1bpp
+  glyph (8 B), matching how every other font tile is stored. No new suppressions.
+- Notes: **`engine/menus` is now 280/280 translated** (277 before this change +
+  the 3 duplicates; 272 + 5 + 3 across the two steps — decomposed against
+  `translation.db`: `missing` 815 → 807, `translated` 6110 → 6118, and
+  `labels` 7712 → 7714 because `Dakutens`/`Handakutens` enter as new pret-`data/`
+  rows, which is why `port_only` reads 584 → 586 with `aux_pret_file` set on both;
+  they are pret labels filed port_only by elimination, not bespoke code).
+  Everything here is UNREFERENCED in the port, deliberately:
+  * `unused_input.asm` — pret marks all three `; unreferenced`. Carried verbatim,
+    including the entry defect in `PlaceMenuCursorDuplicate` (`hlcoord 0, 0` runs
+    only on the `wTopMenuItemY != 0` path, so a top row of 0 indexes off the
+    caller's HL). That defect is a plausible reason the family is dead code, and
+    "fixing" it would be a divergence.
+  * `DakutensAndHandakutens` — the EN alphabet never emits CHAR_DAKUTEN /
+    CHAR_HANDAKUTEN, so the call site keeps its existing `class=temporary`
+    DEVIATION and does not call it. The kana tables encode cleanly from
+    `constants/charmap.asm` (the EN charmap carries the full kana set):
+    Dakutens 40 pairs + $FF = 81 B, Handakutens 10 pairs + $FF = 21 B.
+  * `TwoOptionMenu_{Save,Restore}ScreenTiles` — `DisplayTwoOptionMenu` here
+    composites a window descriptor over an untouched background and so restores
+    by dropping the descriptor; the note on `yn_teardown` was updated from "the
+    port has no such routines" to "they are ported but not called".
+  * `ED_Tile` / `ED_TileEnd` — the data already shipped as `alphabet_ed_tile`;
+    the generator now emits pret's labels as the primary names with the port
+    alias alongside (Preserve pret Labels), and `LoadEDTile` reads
+    `ED_Tile` / `ED_TileEnd - ED_Tile`. Same address, same bytes.
+- Evidence: build links; `lint_pret_labels` 0 violations; `faithdiff` clean on all
+  four new pret-labeled bodies (`DakutensAndHandakutens` 2/2 calls + 1/1 store,
+  `TwoOptionMenu_RestoreScreenTiles` 1/1, `TwoOptionMenu_SaveScreenTiles` 0/0,
+  `Func_70f87` 1/1). `fidelity_gate` exits non-zero, and every ADDED/DROPPED line
+  it prints was **reproduced byte-identically from a HEAD worktree** before these
+  edits (DisplayNamingScreen, DisplayTwoOptionMenu, LoadTownMap, LoadTownMap_Fly,
+  AskName) — pre-existing divergence in the touched files, not introduced here.
+  `make fidelity-full` PASS, 86/86 reported, 0 nonzero, 419 s; that is
+  regression-only evidence for the new bodies (nothing calls them), but the
+  `naming_screen` scenario is real coverage for the `LoadEDTile` operand switch.

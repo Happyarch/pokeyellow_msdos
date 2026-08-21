@@ -61,6 +61,7 @@ extern HideSprites                     ; home/clear_sprites.asm — zero shadow 
 extern FindWildLocationsOfMon          ; engine/items/item_effects.asm (pret: predef)
 extern RunPaletteCommand               ; src/home/palettes.asm
 extern RunDefaultPaletteCommand        ; src/home/palettes.asm
+extern PlayPikachuSoundClip            ; src/audio/pikachu_pcm.asm (DL = clip index)
 
 ; ---- town-map WRAM ---------------------------------------------------------
 ; Now REAL allocations in gb_memmap.inc, at pret's own addresses. The old
@@ -241,7 +242,22 @@ DisplayTownMap:
     mov [ebp + wWhichTownMapLocation], al
     jmp .townMapLoop
 
-; Func_70f87 (pret) is unreferenced dead code (PlayPikachuSoundClip) — omitted.
+; --------------------------------------------------------------------------- #
+; Func_70f87 — unreferenced in pret (engine/items/town_map.asm:110), and
+; unreferenced here too. Ported anyway so the file mirrors pret label-for-label.
+; pret's `ret z` structure is kept; `callfar` collapses to a near `call` because
+; the port is flat (the standard banking translation, suppressed project-wide).
+; DL (pret E) is the Pikachu clip index and is NOT set by this routine — it plays
+; whatever clip the caller left in E. That is pret's behaviour, not an omission:
+; the routine has no caller to establish the value.
+; --------------------------------------------------------------------------- #
+Func_70f87:
+    mov al, [ebp + hJoy5]              ; ldh a, [hJoy5]
+    and al, PAD_DOWN | PAD_UP          ; and PAD_DOWN | PAD_UP
+    jz .ret                            ; ret z
+    call PlayPikachuSoundClip          ; callfar PlayPikachuSoundClip
+.ret:
+    ret
 
 ; --------------------------------------------------------------------------- #
 ; LoadTownMap_Nest — the Pokedex "<MON>'s NEST" area screen.

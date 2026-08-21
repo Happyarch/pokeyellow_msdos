@@ -815,9 +815,11 @@ GAME_SRCS := \
     src/engine/menus/options.asm \
     src/engine/menus/players_pc.asm \
     src/engine/menus/display_text_id_init.asm \
+    src/engine/menus/unused_input.asm \
     src/engine/menus/main_menu.asm \
     src/engine/menus/main_menu_stubs.asm \
     src/engine/menus/save.asm \
+    src/data/text/dakutens.asm \
     src/engine/menus/naming_screen.asm \
     src/engine/menus/pokedex.asm \
     src/home/printer.asm \
@@ -3983,6 +3985,23 @@ assets/alphabets.inc: ../data/text/alphabets.asm ../constants/charmap.asm \
                       ../gfx/font/ED.1bpp tools/generators/gen_alphabets.py
 	python3 tools/generators/gen_alphabets.py
 
+# Pikachu emotion-command text (ExpressionText). Generated from
+# engine/pikachu/pikachu_emotions.asm + data/text/text_3.asm + constants/charmap.asm.
+assets/pikachu_text.inc: ../engine/pikachu/pikachu_emotions.asm ../data/text/text_3.asm \
+                         ../constants/charmap.asm tools/generators/gen_battle_text.py \
+                         tools/generators/gen_pikachu_text.py
+	python3 tools/generators/gen_pikachu_text.py
+
+src/engine/pikachu/pikachu_emotions.o: assets/pikachu_text.inc
+
+# Naming-screen kana voicing tables (Dakutens / Handakutens). Generated from
+# data/text/dakutens.asm + constants/charmap.asm; carrier src/data/text/dakutens.asm.
+assets/dakutens.inc: ../data/text/dakutens.asm ../constants/charmap.asm \
+                     tools/generators/gen_alphabets.py tools/generators/gen_dakutens.py
+	python3 tools/generators/gen_dakutens.py
+
+src/data/text/dakutens.o: assets/dakutens.inc
+
 # Pokédex entries (menus S8, package G2 / I2). dex_entries = PokedexEntryPointers
 # (flat dd) + inlined per-mon name/height/weight/flavor blobs (text_far flavor
 # inlined). NOTE: the index->dex order table pret keeps as PokedexOrder is NOT
@@ -4138,7 +4157,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/trainer_text.inc \
         assets/party_menu_strings.inc assets/home_pokemon_strings.inc assets/emotes.inc \
         assets/options_strings.inc \
-        assets/alphabets.inc assets/dex_entries.inc assets/sprite_sets.inc \
+        assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \
 		assets/colors/palettes.inc \

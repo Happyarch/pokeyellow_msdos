@@ -23,6 +23,13 @@ bits 32
 ; ---------------------------------------------------------------------------
 ; Constants
 ; ---------------------------------------------------------------------------
+; pret computes an emotion id as (<Label>_id - PikachuEmotionTable) / 2 because
+; its table entries are 2-byte `dw`s; the port's are flat 4-byte `dd`s, so the
+; same index is / 4. Both labels are in this file, so the division is ordinary
+; assembly-time arithmetic (a cross-object `equ` could not be divided).
+PIKACHU_EMOTION1_INDEX  equ (PikachuEmotion1_id  - PikachuEmotionTable) / 4
+PIKACHU_EMOTION33_INDEX equ (PikachuEmotion33_id - PikachuEmotionTable) / 4
+
 
 section .text
 
@@ -62,6 +69,7 @@ extern LoadPikachuSpriteIntoVRAM                        ; src/engine/pikachu/pik
 extern LoadFontTilePatterns                             ; src/home/load_font.asm
 extern Pikachu_LoadCurrentMapViewUpdateSpritesAndDelay3 ; src/engine/pikachu/pikachu_movement.asm
 extern WaitForTextScrollButtonPress                     ; src/home/joypad2.asm
+extern HallOfFamePC                                     ; src/engine/movie/evolution_stubs.asm (ret-stub) — pret: engine/movie/credits.asm
 extern PikachuPewterPokecenterCheck                     ; src/engine/pikachu/pikachu_movement.asm
 extern PikachuFanClubCheck                              ; src/engine/pikachu/pikachu_movement.asm
 extern PikachuBillsHouseCheck                           ; src/engine/pikachu/pikachu_movement.asm
@@ -259,8 +267,40 @@ StarterPikachuEmotionCommand_subcmd:
     dd PikachuFanClubCheck
     dd PikachuBillsHouseCheck
 
+; ---------------------------------------------------------------------------
+; StarterPikachuEmotionCommand_nop2 — pret engine/pikachu/pikachu_emotions.asm.
+; Emotion-jumptable entry 8. In a debug build it prints "This expression is
+; No. <n>." in Red's bedroom; in a release build pret assembles a bare `ret`.
+;
+; DEVIATION{class=data-model; pret=engine/pikachu/pikachu_emotions.asm:StarterPikachuEmotionCommand_nop2; behavior=assemble pret's IF DEF(_DEBUG) body unconditionally where a release build assembles only ret, so ExpressionText exists in the port; evidence=the body's first act is bit BIT_DEBUG_MODE on wStatusFlags6 and nothing in the port ever SETS that bit - pret sets it only in engine/debug/debug_menu.asm which is unported - so the routine returns at its first branch exactly like the release ret; lifetime=permanent unless a port debug menu ever sets BIT_DEBUG_MODE}
+; ---------------------------------------------------------------------------
 StarterPikachuEmotionCommand_nop2:
+    push esi                              ; push hl
+    mov esi, wStatusFlags6                ; ld hl, wStatusFlags6
+    test byte [ebp + esi], 1 << BIT_DEBUG_MODE  ; bit BIT_DEBUG_MODE, [hl]
+    pop esi                               ; pop hl (pop sets no flags)
+    jz .ret                               ; ret z
+    push edx                              ; push de
+    mov dh, al                            ; ld d, a
+    mov al, [ebp + wCurMap]
+    cmp al, REDS_HOUSE_2F
+    mov al, dh                            ; ld a, d (mov/pop keep ZF)
+    pop edx                               ; pop de
+    jne .ret                              ; ret nz
+    push edx                              ; push de
+    call Pikachu_LoadCurrentMapViewUpdateSpritesAndDelay3
+    call LoadFontTilePatterns
+    mov esi, ExpressionText                ; ld hl, ExpressionText
+    call PrintText
+    call Pikachu_LoadCurrentMapViewUpdateSpritesAndDelay3
+    pop edx                               ; pop de
+.ret:
     ret
+
+; ExpressionText itself is the Tier-1 generated stream at the end of this file
+; (assets/pikachu_text.inc, tools/generators/gen_pikachu_text.py) — pret writes
+; it here as `text_far _ExpressionText / text_end`, which the port's flat TX_FAR
+; model inlines.
 
 StarterPikachuEmotionCommand_9:
     push edx
@@ -275,8 +315,47 @@ StarterPikachuEmotionCommand_turnawayfromplayer:
     mov [ebp + wSpriteStateData1 + PIKACHU_SPRITE_INDEX * SPRITESTATEDATA_STRUCT_SIZE + SPRITESTATEDATA1_FACINGDIRECTION], al
     ret
 
+; ---------------------------------------------------------------------------
+; DeletedFunction_fcffb — pret engine/pikachu/pikachu_emotions.asm. pret's own
+; comment: "Inexplicably empty." Five nops, then (debug builds only) an
+; expression-number stepper. Called from TalkToPikachu.
+;
+; DEVIATION{class=data-model; pret=engine/pikachu/pikachu_emotions.asm:DeletedFunction_fcffb; behavior=assemble pret's IF DEF(_DEBUG) body unconditionally where a release build assembles only ret, so HallOfFamePCForever exists in the port; evidence=same BIT_DEBUG_MODE gate as StarterPikachuEmotionCommand_nop2 above and no port code sets that bit, so the routine returns at its first branch exactly like the release ret; lifetime=permanent unless a port debug menu ever sets BIT_DEBUG_MODE}
+; ---------------------------------------------------------------------------
 DeletedFunction_fcffb:
+    times 5 nop                           ; REPT 5 / nop / ENDR
+    push esi                              ; push hl
+    mov esi, wStatusFlags6                ; ld hl, wStatusFlags6
+    test byte [ebp + esi], 1 << BIT_DEBUG_MODE  ; bit BIT_DEBUG_MODE, [hl]
+    pop esi                               ; pop hl
+    jz .ret                               ; ret z
+    push edx                              ; push de
+    mov dh, al                            ; ld d, a
+    mov al, [ebp + wCurMap]
+    cmp al, REDS_HOUSE_2F
+    mov al, dh                            ; ld a, d
+    pop edx                               ; pop de
+    jne .ret                              ; ret nz
+    mov al, [ebp + wExpressionNumber]
+    inc al
+    cmp al, PIKACHU_EMOTION33_INDEX       ; cp (PikachuEmotion33_id - PikachuEmotionTable) / 2
+    jb .valid                             ; jr c, .valid
+    mov al, PIKACHU_EMOTION1_INDEX        ; ldpikaemotion a, PikachuEmotion1
+.valid:
+    mov [ebp + wExpressionNumber], al
+.ret:
     ret
+
+; ---------------------------------------------------------------------------
+; HallOfFamePCForever — pret engine/pikachu/pikachu_emotions.asm, debug-only and
+; called by nothing: an intentional infinite loop that replays the Hall of Fame
+; PC screen. Unreferenced here too, so it never runs; ported for label-for-label
+; parity with the pret file.
+; ---------------------------------------------------------------------------
+HallOfFamePCForever:
+    call HallOfFamePC                     ; callfar HallOfFamePC
+    call WaitForTextScrollButtonPress
+    jmp HallOfFamePCForever               ; jr HallOfFamePCForever
 
 PlaySpecificPikachuEmotion:
     mov al, dl
@@ -476,6 +555,7 @@ PikachuWalksToNurseJoy:
 ; ---------------------------------------------------------------------------
 PikachuEmotionTable:
     dd PikachuEmotion0
+PikachuEmotion1_id:                        ; pret's per-entry `\1_id` label (macros/pikachu.asm)
     dd PikachuEmotion1
     dd PikachuEmotion2
     dd PikachuEmotion3
@@ -508,6 +588,7 @@ PikachuEmotionTable:
     dd PikachuEmotion30
     dd PikachuEmotion31
     dd PikachuEmotion32
+PikachuEmotion33_id:                       ; pret's per-entry `\1_id` label
     dd PikachuEmotion33
 
 ; ---------------------------------------------------------------------------
@@ -515,3 +596,10 @@ PikachuEmotionTable:
 ; ---------------------------------------------------------------------------
 PikachuEmotion33:
     db 0xFF
+
+; ---------------------------------------------------------------------------
+; assets/pikachu_text.inc — Tier-1 generated text stream (gen_pikachu_text.py):
+; ExpressionText, pret's `text_far _ExpressionText` (data/text/text_3.asm)
+; flattened into the port's inline TX_FAR model. Emits its own `section .data`.
+; ---------------------------------------------------------------------------
+%include "assets/pikachu_text.inc"

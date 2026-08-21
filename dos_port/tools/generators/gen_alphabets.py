@@ -138,8 +138,17 @@ def main() -> int:
     out += db_lines("LowerCaseAlphabet", lower,
                     "letters + symbols grid, then 'UPPER CASE@' toggle")
     out.append("")
+    # pret's own label for this blob is ED_Tile / ED_TileEnd
+    # (engine/menus/naming_screen.asm). Keep the pret names
+    # as the primary symbols, with the port's descriptive alias alongside, per the
+    # "Preserve pret Labels" rule. NOTE the bytes are NOT byte-identical to pret's
+    # ED_Tile: pret INCBINs the 8-byte 1bpp glyph and races HBlank to copy it,
+    # while the port stores it pre-expanded to 2bpp like every other font tile
+    # (see LoadEDTile's DEVIATION in src/engine/menus/naming_screen.asm).
+    out.append("ED_Tile:            ; pret: engine/menus/naming_screen.asm:ED_Tile")
     out += db_lines("alphabet_ed_tile", ed_2bpp,
                     "ED.1bpp expanded 1bpp->2bpp (LoadFontTilePatterns convention)")
+    out.append("ED_TileEnd:")
     out.append("")
 
     ASSETS.mkdir(parents=True, exist_ok=True)
