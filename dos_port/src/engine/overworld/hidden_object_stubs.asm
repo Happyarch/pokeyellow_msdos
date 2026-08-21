@@ -139,9 +139,6 @@ PrintIndigoPlateauHQText:
 global PrintBookcaseText
 PrintBookcaseText:
     ret
-global PrintNotebookText
-PrintNotebookText:
-    ret
 global PrintBlackboardLinkCableText
 PrintBlackboardLinkCableText:
     ret

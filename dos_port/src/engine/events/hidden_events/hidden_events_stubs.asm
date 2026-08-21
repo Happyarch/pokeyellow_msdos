@@ -70,15 +70,6 @@ global SaffronCityPokecenterBenchGuyText
 SaffronCityPokecenterBenchGuyText:
     ret
 
-; ViridianSchoolNotebook — pret engine/events/hidden_events/school_notebooks.asm.
-; The 5-page TurnPageSchoolNotebook reader (page state + A/B paging loop).
-; Unreachable in the live build (PrintNotebookText is a ret-stub).
-; TODO(overworld-events Stage 5, Viridian batch): port the paged reader, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/school_notebooks.asm:ViridianSchoolNotebook; behavior=the notebook displays nothing instead of running the 5-page TurnPageSchoolNotebook reader; evidence=pret ViridianSchoolNotebook is a text_asm paged reader and label_status reports it missing; lifetime=until the overworld-events Viridian batch lands; label=ViridianSchoolNotebook}
-global ViridianSchoolNotebook
-ViridianSchoolNotebook:
-    ret
-
 ; ViridianSchoolBlackboard — pret engine/events/hidden_events/school_blackboard.asm.
 ; Paged blackboard reader (same shape as the notebook).
 ; Unreachable in the live build (PrintBlackboardLinkCableText is a ret-stub).

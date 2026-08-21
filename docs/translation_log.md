@@ -7086,3 +7086,14 @@ UNWITNESSED: nothing calls MarowakAnim until the rest of 4c lands.
   `make fidelity-full` PASS, 86/86 reported, 0 nonzero, 419 s; that is
   regression-only evidence for the new bodies (nothing calls them), but the
   `naming_screen` scenario is real coverage for the `LoadEDTile` operand switch.
+
+## 2026-08-21 — engine/events/hidden_events/school_notebooks.asm ported
+
+- Source: `engine/events/hidden_events/school_notebooks.asm` (all 10 labels: `PrintNotebookText`, `TMNotebook`, `ViridianSchoolNotebook`, `TurnPageSchoolNotebook`, `TurnPageText`, `ViridianSchoolNotebookText1`, `ViridianSchoolNotebookText2`, `ViridianSchoolNotebookText3`, `ViridianSchoolNotebookText4`, `ViridianSchoolNotebookText5`).
+- Translated: `dos_port/src/engine/events/hidden_events/school_notebooks.asm`, `dos_port/tools/generators/gen_school_notebooks_text.py` → `dos_port/assets/school_notebooks_text.inc`.
+- Date: 2026-08-21
+- H-flag: not involved
+- Bug tags: none
+- Divergences: none (faithful).
+- Stubs retired: `PrintNotebookText` from `dos_port/src/engine/overworld/hidden_object_stubs.asm`, `ViridianSchoolNotebook` from `dos_port/src/engine/events/hidden_events/hidden_events_stubs.asm`.
+- Evidence: `nasm` assembly clean; `make -C dos_port -j8` built `PKMN.EXE`; `dos_port/tools/update_label_db` translated all 10 labels; `dos_port/tools/faithdiff` clean on all labels (0 ADDED, 0 DROPPED); `dos_port/tools/lint_pret_labels` and `--strict-claims` 0 violations; `make -C dos_port static_gate` PASS.
