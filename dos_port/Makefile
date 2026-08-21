@@ -913,6 +913,11 @@ GAME_SRCS := \
     src/engine/events/hidden_events/magazines.asm \
     src/engine/events/hidden_events/new_bike.asm \
     src/engine/events/hidden_events/route_15_binoculars.asm \
+    src/engine/events/hidden_events/indigo_plateau_statues.asm \
+    src/engine/events/hidden_events/indigo_plateau_hq.asm \
+    src/engine/events/hidden_events/gym_statues.asm \
+    src/engine/events/hidden_events/fighting_dojo.asm \
+    src/engine/events/hidden_events/blues_room.asm \
     src/engine/events/card_key.asm \
     src/engine/events/poison.asm \
     src/engine/events/hidden_events/safari_game.asm \
@@ -3472,6 +3477,12 @@ src/engine/events/hidden_events/book_or_sculpture.o: assets/book_or_sculpture_te
 src/engine/events/hidden_events/magazines.o: assets/predef_text_ids.inc include/predef.inc
 src/engine/events/hidden_events/new_bike.o: assets/predef_text_ids.inc include/predef.inc
 src/engine/events/hidden_events/route_15_binoculars.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/indigo_plateau_statues.o: assets/indigo_plateau_statues_text.inc
+src/engine/events/hidden_events/indigo_plateau_hq.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/gym_statues.o: assets/predef_text_ids.inc include/predef.inc \
+    assets/badge_maps.inc
+src/engine/events/hidden_events/fighting_dojo.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/blues_room.o: assets/predef_text_ids.inc include/predef.inc
 
 src/data/audio_data.o: assets/audio_rom.inc
 src/data/pokemon/cries.o: assets/cry_data.inc
@@ -4072,6 +4083,17 @@ assets/book_or_sculpture_text.inc: ../engine/events/hidden_events/book_or_sculpt
                          tools/generators/gen_book_or_sculpture_text.py
 	python3 tools/generators/gen_book_or_sculpture_text.py
 
+# Indigo Plateau statues message streams (the 3 pure text_far wrappers). Generated from
+# engine/events/hidden_events/indigo_plateau_statues.asm + data/text/text_2.asm.
+assets/indigo_plateau_statues_text.inc: ../engine/events/hidden_events/indigo_plateau_statues.asm \
+                         ../data/text/text_2.asm ../constants/charmap.asm \
+                         tools/generators/gen_battle_text.py \
+                         tools/generators/gen_indigo_plateau_statues_text.py
+	python3 tools/generators/gen_indigo_plateau_statues_text.py
+
+# Map badge flags table (MapBadgeFlags). Generated from data/maps/badge_maps.asm.
+assets/badge_maps.inc: ../data/maps/badge_maps.asm tools/generators/gen_badge_maps.py
+	python3 tools/generators/gen_badge_maps.py
 # Pokédex-rating text (DexCompletionText + the 16 DexRatingText_Own<N>To<M>
 # bands). Generated from engine/events/pokedex_rating.asm (the wrapper
 # labels) + text/pokedex_ratings.asm (the far bodies, incl. the two
@@ -4264,6 +4286,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/options_strings.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/school_blackboard_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/cinnabar_gym_quiz_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
+        assets/indigo_plateau_statues_text.inc assets/badge_maps.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/pokedex_rating_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \

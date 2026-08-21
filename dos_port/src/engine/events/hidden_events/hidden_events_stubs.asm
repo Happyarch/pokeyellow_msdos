@@ -102,15 +102,6 @@ global BillsHousePokemonList
 BillsHousePokemonList:
     ret
 
-; IndigoPlateauStatues — pret engine/events/hidden_events/indigo_plateau_statues.asm.
-; Counts obtained badges and picks the matching line.
-; Unreachable in the live build (PrintIndigoPlateauHQText is a ret-stub).
-; TODO(overworld-events Stage 5, Indigo batch): port the badge-count branch, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/indigo_plateau_statues.asm:IndigoPlateauStatues; behavior=the statues display nothing instead of branching on the badge count; evidence=pret IndigoPlateauStatues is a text_asm badge-count branch and label_status reports it missing; lifetime=until the overworld-events Indigo batch lands; label=IndigoPlateauStatues}
-global IndigoPlateauStatues
-IndigoPlateauStatues:
-    ret
-
 ; TownMapText — pret engine/events/hidden_events/town_map.asm:TownMapText.
 ; Opens the town map from a wall map rather than printing. NOTE the town-map screen
 ; itself IS ported (src/engine/items/town_map.asm) — this is the hidden-event entry

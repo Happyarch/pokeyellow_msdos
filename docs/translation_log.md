@@ -7463,5 +7463,43 @@ report), and the only entry gate that would change that is in `src/debug/debug_d
   * `BookOrSculptureText`: `DEVIATION{class=projection; pret=engine/events/hidden_events/book_or_sculpture.asm:BookOrSculptureText; behavior=reads tile at (PLAYER_STANDING_COL, PLAYER_STANDING_ROW - 3) = (24, 14) on 40x25 canvas instead of GB literal coord (8, 6); evidence=pret lda_coord 8, 6 is 3 rows above player feet (8, 9) which projects to (24, 14) per ui_projection.md; lifetime=permanent}`
 - **Scenario:**
   * Authored `route_15_binoculars` in `dos_port/tools/mgba_harness/scenarios/route_15_binoculars.lua` (UNRUN per addendum; port-entry gate hook in debug_dump.asm outside allow-list).
+## Hidden Events Batch (5 files): Indigo Plateau Statues/HQ, Gym Statues, Fighting Dojo, Blue's Room
+
+- **Sources:**
+  * `engine/events/hidden_events/indigo_plateau_statues.asm`
+  * `engine/events/hidden_events/indigo_plateau_hq.asm`
+  * `engine/events/hidden_events/gym_statues.asm`
+  * `engine/events/hidden_events/fighting_dojo.asm`
+  * `engine/events/hidden_events/blues_room.asm`
+- **Translated:**
+  * `dos_port/src/engine/events/hidden_events/indigo_plateau_statues.asm`
+  * `dos_port/src/engine/events/hidden_events/indigo_plateau_hq.asm`
+  * `dos_port/src/engine/events/hidden_events/gym_statues.asm`
+  * `dos_port/src/engine/events/hidden_events/fighting_dojo.asm`
+  * `dos_port/src/engine/events/hidden_events/blues_room.asm`
+- **Labels ported (12):**
+  * `IndigoPlateauStatues` (routine): branches on `wXCoord` parity to display text.
+  * `IndigoPlateauStatuesText1..3` (Tier-1 data): generated into `assets/indigo_plateau_statues_text.inc`.
+  * `PrintIndigoPlateauHQText` (routine): checks `SPRITE_FACING_UP`, enables auto text box drawing, trampolines via `tx_pre_id IndigoPlateauHQText` to `PrintPredefTextID`.
+  * `GymStatues` (routine): checks `SPRITE_FACING_UP`, scans `MapBadgeFlags` for `wCurMap`, checks `wBeatGymFlags`, and trampolines via `GymStatueText2` / `GymStatueText1` to `PrintPredefTextID`.
+  * `MapBadgeFlags` (Tier-1 data table from `data/maps/badge_maps.asm`): generated into `assets/badge_maps.inc`.
+  * `PrintFightingDojoText2` (routine): trampolines via `tx_pre_id EnemiesOnEverySideText` to `PrintPredefTextID`.
+  * `PrintFightingDojoText3` (routine): trampolines via `tx_pre_id WhatGoesAroundComesAroundText` to `PrintPredefTextID`.
+  * `PrintFightingDojoText` (routine): trampolines via `tx_pre_id FightingDojoText` to `PrintPredefTextID`.
+  * `PrintBookcaseText` (routine): trampolines via `tx_pre_id BookcaseText` to `PrintPredefTextID`.
+- **Stubs retired (6):**
+  * `IndigoPlateauStatues` in `dos_port/src/engine/events/hidden_events/hidden_events_stubs.asm`
+  * `PrintIndigoPlateauHQText`, `GymStatues`, `PrintFightingDojoText`, `PrintFightingDojoText2`, `PrintFightingDojoText3`, `PrintBookcaseText` in `dos_port/src/engine/overworld/hidden_object_stubs.asm`
+- **Tier-1 Generators:**
+  * Created `dos_port/tools/generators/gen_indigo_plateau_statues_text.py` generating `dos_port/assets/indigo_plateau_statues_text.inc`.
+  * Created `dos_port/tools/generators/gen_badge_maps.py` generating `dos_port/assets/badge_maps.inc`.
+- **Scenario:**
+  * Authored `indigo_plateau_statues` in `dos_port/tools/mgba_harness/scenarios/indigo_plateau_statues.lua` (UNRUN per addendum).
+- **Verification:**
+  * Built cleanly with `make -C dos_port -j8` producing `PKMN.EXE`.
+  * `update_label_db` executed cleanly; retired 6 stubs.
+  * `faithdiff` clean across all ported routines.
+  * `lint_pret_labels` and `lint_pret_labels --strict-claims` reporting 0 violations.
+  * `make -C dos_port static_gate` fully passing (all 8 static checks).
 
 
