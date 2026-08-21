@@ -30,7 +30,9 @@ for harness work.
   not best-effort.
 - **In-game link setup UI (maintainer requirement, 2026-08-21):** the player
   must be able to select serial vs IPX vs TCP in-game and type addresses for
-  IPX and TCP, with **up to five saved TCP and five saved IPX connections**.
+  IPX and TCP, with **up to five saved TCP and five saved IPX connections —
+  each user-nameable, editable and deletable — plus a DIRECT connect option**
+  for one-off connections to no saved profile (maintainer, 2026-08-21).
   CLI flags remain as the non-interactive path (harness/scripting) and skip
   the UI. See "Link setup UI + connection book" below.
 - **Keyboard naming screen as a BUILD option (maintainer requirement,
@@ -163,10 +165,16 @@ whole feature stays greppable in one place.
   the seam. CLI flags (`/COM1-4`, `/IPX[...]`, `/TCP=`, `/TCPWAIT`)
   preselect and skip the UI entirely — required by the headless
   two-instance harness, which cannot drive interactive setup.
-- **Connection book — 5 TCP + 5 IPX slots.** Choosing IPX or TCP opens the
-  book for that transport: saved entries (shown as their address text) plus
-  NEW, EDIT, DELETE; selecting an entry connects. IPX additionally offers
-  AUTO (broadcast discovery, the default) above the saved slots.
+- **Connection book — 5 TCP + 5 IPX slots, nameable (maintainer,
+  2026-08-21).** Choosing IPX or TCP opens the book for that transport:
+  - **DIRECT** — type an address and connect without touching the book
+    (for one-off connections to no saved profile);
+  - **AUTO** (IPX only) — broadcast discovery, the IPX default;
+  - the saved entries, **shown by their user-typed name** (label entered
+    through the same keyboard widget; address shown alongside/on select);
+    selecting one opens **CONNECT / EDIT / DELETE / CANCEL** — EDIT reopens
+    name+address for retyping, DELETE frees the slot (confirm prompt);
+  - **NEW** — enter name + address into a free slot (grayed/absent at 5/5).
 - **Address entry is keyboard text input, not a GB character grid.** This
   is DOS: every machine has the keyboard the port already owns (IRQ1). A
   port-only line-edit widget reads raw scancodes through a text-entry mode
@@ -179,9 +187,11 @@ whole feature stays greppable in one place.
   `.dsv`.** The save file is byte-for-byte the raw 32 KiB SRAM image (v2),
   and the Gen-1/Gen-2 byte-identity rule forbids smuggling port config into
   GB SRAM. Same int 21h file-I/O pattern as `src/save/dsv_io.asm`: magic
-  `LNKB`, version byte, additive checksum, then 10 fixed-size records
-  (5 TCP: ip4+port2; 5 IPX: net4+node6; padded to a fixed record size with
-  an in-use flag). Corrupt/absent file = empty book, never an error.
+  `LNKB`, version byte, additive checksum, then 10 fixed-size records —
+  in-use flag, **16-byte charmap-encoded name** (typed via the keyboard
+  widget, game charset incl. picker chars), and the address payload
+  (TCP: ip4+port2; IPX: net4+node6), padded to one fixed record size for
+  both types. Corrupt/absent file = empty book, never an error.
   `saveconv.py` untouched — this file is not save data.
 - **Strings are Tier-1 data**: every label ("HOW WILL YOU LINK?", "SERIAL",
   "IPX", "TCP", "AUTO", "NEW", …) comes from a new
@@ -297,18 +307,21 @@ blocks in `src/engine/menus/naming_screen.asm`.
       (`src/input/joypad.asm`): port-only line-edit widget, per-field
       charset, no effect on normal joypad mapping
 - [ ] `src/net/link_ui.asm`: transport-select menu in the `CableClubNPC`
-      seam (CLI flags bypass), COM1-4 pick, per-transport address-book
-      screens (5 slots + AUTO for IPX + NEW/EDIT/DELETE), validation +
-      error text
+      seam (CLI flags bypass), COM1-4 pick, per-transport book screens —
+      DIRECT (connect without saving), AUTO (IPX), named entries with
+      CONNECT/EDIT/DELETE/CANCEL, NEW (name + address); validation +
+      error text; DELETE confirms
 - [ ] `src/net/link_book.asm`: `LINKBOOK.DAT` load/save (magic `LNKB`,
-      version, additive checksum, 5 TCP + 5 IPX fixed records; corrupt or
-      absent → empty book)
+      version, additive checksum, 5 TCP + 5 IPX fixed records with in-use
+      flag + 16-byte charmap name + address payload; corrupt or absent →
+      empty book)
 - [ ] `tools/generators/gen_link_ui_strings.py` → `assets/link_ui_strings.inc`
       wired into `make assets`; zero hand-encoded charmap bytes
       (`lint_pret_labels --no-scan --strict-claims` stays 0)
-- [ ] AutoKeyDrive scenario: create a TCP and an IPX entry, reboot the
-      instance, assert both persist and connect state is selectable;
-      full-book (5/5) and delete paths
+- [ ] AutoKeyDrive scenario: create a named TCP and a named IPX entry,
+      reboot the instance, assert names + addresses persist; EDIT an entry
+      and re-verify; DIRECT connect path; full-book (5/5, NEW unavailable)
+      and DELETE-with-confirm paths
 - [ ] `KBD_NAMING=1` build option: Makefile flag (BUG_FIX_LEVEL plumbing
       pattern), `%if`-guarded keyboard path in
       `src/engine/menus/naming_screen.asm` with `DEVIATION{class=projection}`,
@@ -350,8 +363,10 @@ regression in `make fidelity` core+full; real-hardware paths (UART on a
 physical null modem cable, Novell IPX, packet-driver TCP) ship
 spec-conformant with runtime escape hatches — the printer-backend precedent
 for unverifiable hardware. UI acceptance: transport selectable in-game at
-the receptionist, TCP and IPX addresses enterable by keyboard, five saved
-connections per transport surviving a reboot via `LINKBOOK.DAT`.
+the receptionist; TCP and IPX addresses enterable by keyboard; five saved,
+user-named connections per transport surviving a reboot via `LINKBOOK.DAT`,
+each editable and deletable; and a DIRECT connect path that never touches
+the book.
 
 ## Risks / open questions
 
