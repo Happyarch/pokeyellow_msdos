@@ -368,6 +368,65 @@ SCENARIOS = {
             ],
         },
     },
+    "route_15_binoculars": {
+        "flags": "DEBUG_BINOCULARS=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Route 15 Gate 2F, player at (3,1) facing UP, reading the LEFT binoculars
+        # (`hidden_event 2, 1, Route15GateLeftBinoculars, SPRITE_FACING_UP`). The player
+        # tile is one BELOW the prop because CheckIfCoordsInFrontOfPlayerMatch matches
+        # the tile in front of the facing, not the tile stood on.
+        # MEASURED, not guessed: the port's block-aligned map mirror puts the golden's
+        # (row 4, col 6) at canvas (row 10, col 22), so the window is (16, 6). A
+        # brute-force search over every (dx, dy) confirms it is the unique minimum.
+        "window": (16, 6),
+        "projections": [
+            # Same overworld dialog re-flow as sign_pallet: the stride-20 dialog scratch
+            # at wTileMap + 12*20 (msgbox_dialog, home/text.asm) becomes 3 canvas rows
+            # x 2 panels on the 40-wide canvas. Coordinates are absolute canvas cells.
+            ((12 + k, 0, 12 + k, 19), (20 * (k % 2), (6 + k // 2) - (12 + k)),
+             "stride-20 dialog scratch re-flowed over the 40-wide canvas: "
+             "6 rows x 1 panel -> 3 rows x 2 panels")
+            for k in range(6)
+        ],
+        "masks": {
+            "tilemap": [
+                ((r, 0, r, 19),
+                 "the stride-20 dialog scratch physically overlaps canvas rows 6-8 of the "
+                 "block-aligned map mirror, and at this window (row 6) golden rows 0-2 ARE "
+                 "canvas rows 6-8 — so these map-mirror rows sit under the dialog. Both "
+                 "sides are off the top of the room here (all $10 filler on the golden). "
+                 "Invisible on screen: render_bg draws from the tile surface and the dialog "
+                 "from GB_TILEMAP1. Same staging-buffer collision sign_pallet masks for the "
+                 "same reason (fidelity plan F-13, M-29 family)")
+                for r in range(3)
+            ] + [
+                ((16, 18, 16, 18),
+                 "the parked prompt's blinking down-arrow. Both sides DRAW it — it is "
+                 "visible in the port's own FRAME.BIN render — but the blink phase is "
+                 "driven by each side's own frame counter from an unrelated origin, so "
+                 "which half of the cycle the dump lands in is not comparable. Same cell "
+                 "and same reason as battle_intro's masked prompt arrow"),
+            ],
+            # NO oam mask: OAM matches byte-for-byte, all 40 entries — the player
+            # (tiles $04-$07) and the map's SPRITE_SCIENTIST / Oak's Aide (tiles
+            # $18-$1B, object_event 4, 2 in data/maps/objects/Route15Gate2F.asm).
+            # An earlier draft of this entry masked entries 4-39 "as unused"; that was
+            # wrong and would have hidden the NPC.
+            "vram": [
+                (i, "unreferenced OBJ residue: hardware retains the sprite tiles of the "
+                    "maps the golden WALKED through to get here, while the port's gate "
+                    "warps straight in and leaves the slots it does not need at zero. "
+                    "MEASURED, not assumed: of 384 slots exactly 93 diverge, every one "
+                    "port-zero / golden-non-zero, and NONE is referenced by either side's "
+                    "OAM or tilemap. The slots that ARE referenced — player $04-$07, NPC "
+                    "$18-$1B, the whole vChars1 font/walk bank (0/128 diverging) and all "
+                    "of vChars2 except the likewise-unreferenced BG tile $5F — match "
+                    "exactly. Invisible by construction: no OAM entry and no tilemap cell "
+                    "points at any masked slot")
+                for i in list(range(36, 128)) + [351]
+            ],
+        },
+    },
     "sign_pallet": {
         "flags": "DEBUG_SIGNTEXT=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),

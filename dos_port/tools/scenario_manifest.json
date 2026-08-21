@@ -2647,6 +2647,37 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "backlog item 34 / archived docs/plans/surfing_pikachu.md Stage 8, defending the two rendering defects fixed 2026-08-18 (7445a3fa8): no OBJ ever drawn on this screen (g_obj_over_window zeroed by ClearSprites) and the intro rendering as a uniform tile-$00 field (nothing mirrored wTileMap to GB_TILEMAP0). Entry is FORCED and SYMMETRIC with the port's RunSurfingPikachuTest debug gate (maintainer directive): seed.debug_new_game byte-for-byte matches PrepareNewGameDebug's party/bag/pokedex/money/badges, wPikachuSpawnStateFlags BIT_PIKACHU_SPAWN_SURFING is seeded to bypass the NPC's own precondition, and the golden reaches the SAME farcall SurfingPikachuMinigame the port gate calls directly -- but through the real in-game dispatch (a script-warp next to the Summer Beach House's Surfin' Dude NPC, then two real button presses through the actual SummerBeachHouseSurfinDudeText script), not by skipping it. RNG (SurfingMinigame_ChooseNextWaveSequence) and the 3-frame-buffered joypad make the gameplay loop cross-emulator uncomparable, so this witnesses only SurfingPikachuMinigameIntro, whose background draw has no RNG and no input read. Checkpoint is content-based (wTileMap fully drawn), not frame-count based: a sentinel ($FF) is seeded into wSurfingMinigameIntroAnimationFinished, polled until pret's own `xor a / ld [wSurfingMinigameIntroAnimationFinished], a` overwrites it with 0 immediately before `.loop:`, then exactly one loop iteration (one DelayFrame) is let run so OAM is published once by RunObjectAnimations before the intro Pikachu's own per-2-frame step has moved it from its spawn X -- so OAM position is compared with no frame-alignment slack needed. Measured deterministic: two independent mGBA runs produced a byte-identical golden .bin/.json."
+    },
+    {
+      "name": "route_15_binoculars",
+      "id": 88,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BINOCULARS=1",
+      "port_entry_gate": "DEBUG_BINOCULARS",
+      "navigation_script": "tools/mgba_harness/scenarios/route_15_binoculars.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "Route15GateLeftBinoculars",
+        "DisplayMonFrontSpriteInBox"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "The real A-press dispatch (CheckForHiddenEventOrBookshelfOrCardKeyDoor -> CheckForHiddenEvent -> Route15GateLeftBinoculars) runs on both sides: the port seeds the player in front of the prop and the golden walks/turns into it. Compares the tilemap and VRAM because the interesting half is the Articuno front-sprite pop-up from DisplayMonFrontSpriteInBox, which a WRAM-only class could not see."
     }
   ],
   "disabled_scenarios": []

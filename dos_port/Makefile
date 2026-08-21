@@ -1981,6 +1981,72 @@ AUTOKEY_DUMP_FRAME ?= 260
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 
+# ---------------------------------------------------------------------------
+# Hidden-object / bookshelf golden gates (2026-08-21).
+#
+# All of these share ONE port-side seed+dispatch gate, DEBUG_HIDDENOBJ (see
+# EnterMap in src/home/overworld.asm): seed map/coords/facing, seed the A press
+# into hJoyHeld, then call the REAL
+# CheckForHiddenEventOrBookshelfOrCardKeyDoor. Each scenario still needs its own
+# DEBUG_<X> symbol because assets/scenario_registry.inc dispatches GBSTATE_SCENARIO
+# on the gate name — the seed is shared, the id cannot be.
+#
+# HIDDENOBJ_Y/X are the tile the PLAYER STANDS ON, which is NOT the prop's tile.
+# CheckForHiddenEvent matches each row against CheckIfCoordsInFrontOfPlayerMatch —
+# the tile IN FRONT of the player for the seeded facing — so a prop at (y,x) read
+# facing UP requires the player at (y+1, x). Seeding the player onto the prop's own
+# tile matches nothing and the dispatch silently finds no event: measured here as a
+# correctly-rendered room with no dialog at all.
+# The prop coordinates themselves are NOT invented: each is the prop's own
+# `hidden_event` row in assets/hidden_events.inc (y, x, facing-arg), generated from
+# pret's data/events/hidden_events.asm. HIDDENOBJ_DIR 0xFF = ANY_FACING.
+define hiddenobj_gate
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D $(1) -D DEBUG_HIDDENOBJ -D SKIP_TITLE
+NASMFLAGS += -D HIDDENOBJ_MAP=$(2) -D HIDDENOBJ_Y=$(3) -D HIDDENOBJ_X=$(4) -D HIDDENOBJ_DIR=$(5)
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 260
+# $$ so the reference survives $(call)'s expansion and is resolved by $(eval),
+# i.e. AFTER the ?= above has run. With a single $ it expands during the call,
+# when AUTOKEY_DUMP_FRAME is still empty, and NASM dies on `cmp ecx,` with no
+# operand (debug_dump.asm:5399) rather than on anything to do with this gate.
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$$(AUTOKEY_DUMP_FRAME)
+endef
+
+# Route 15 Gate 2F left binoculars. assets/hidden_events.inc:
+#   HiddenEventsFor_ROUTE_15_GATE_2F: db 2, 1, 0x04 -> Route15GateLeftBinoculars
+# prop (y=2,x=1) read facing UP -> player stands at (y=3,x=1)
+# make DEBUG_BINOCULARS=1 [AUTOKEY_DUMP_FRAME=n]
+ifdef DEBUG_BINOCULARS
+$(eval $(call hiddenobj_gate,DEBUG_BINOCULARS,0xB9,3,1,0x04))
+endif
+
+# Oak's Lab LEFT poster. assets/hidden_events.inc:
+#   HiddenEventsFor_OAKS_LAB: db 0, 4, 0x04 -> DisplayOakLabLeftPoster
+#                             db 0, 5, 0x04 -> DisplayOakLabRightPoster
+# OAKS_LAB_POSTER=right selects the x=5 tile instead, so the one gate covers both
+# handlers; the scenario registers the LEFT one.
+OAKS_LAB_POSTER ?= left
+ifdef DEBUG_OAKSPOSTER
+ifeq ($(OAKS_LAB_POSTER),right)
+$(eval $(call hiddenobj_gate,DEBUG_OAKSPOSTER,0x28,1,5,0x04))
+else
+$(eval $(call hiddenobj_gate,DEBUG_OAKSPOSTER,0x28,1,4,0x04))
+endif
+endif
+
+# Bill's House PC prop (the teleporter/cell-separator cutscene machine, NOT the box
+# UI — see engine/events/hidden_events/bills_house_pc.asm). assets/hidden_events.inc:
+#   HiddenEventsFor_BILLS_HOUSE: db 4, 1, 0x04 -> BillsHousePC
+# BillsHousePC branches on event flags; the scenario seeds
+# EVENT_BILL_SAID_USE_CELL_SEPARATOR to select .doCellSeparator, which is the branch
+# the golden drives. That seeding is the scenario's job, not the gate's.
+# make DEBUG_BILLSHOUSEPC=1 [AUTOKEY_DUMP_FRAME=n]
+ifdef DEBUG_BILLSHOUSEPC
+$(eval $(call hiddenobj_gate,DEBUG_BILLSHOUSEPC,0x58,5,1,0x04))
+endif
+
+
 # Surfboard gate (items-plan Stage 11): spawn on the Pallet Town shore, seed a
 # SURFBOARD into bag slot 0, then FALL THROUGH into the real OverworldLoop and let
 # AUTOKEY_SURF's scripted joypad drive mount and dismount with live collision.

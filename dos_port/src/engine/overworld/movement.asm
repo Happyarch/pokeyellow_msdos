@@ -60,7 +60,7 @@ extern Random_
 
 extern DetectCollisionBetweenSprites  ; src/engine/overworld/sprite_collisions.asm
 extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
-extern IsToggleableHidden        ; map_sprites.asm — port name of pret's IsObjectHidden predef (CF=1 hidden)
+extern IsObjectHidden          ; src/engine/overworld/toggleable_objects.asm (pret predef)
 
 %ifdef DEBUG_NPC_WALK
 extern npc_log
@@ -781,7 +781,8 @@ Func_5033:
 ; CheckSpriteAvailability — visibility test for one NPC slot.
 ; Pret ref: engine/overworld/movement.asm:CheckSpriteAvailability.
 ;
-; Stubs: IsObjectHidden / hIsToggleableObjectOff (always visible — no predef yet).
+; Hidden-object gate: IsObjectHidden / hIsToggleableObjectOff (pret's predef contract,
+; ported 2026-08-21 — this line previously read "always visible — no predef yet").
 ; Scripted movement (MOVEMENTBYTE1 < WALK) skips X/Y range tests.
 ; Calls UpdateSpriteImage and sets GRASSPRIORITY when wWalkCounter == 0.
 ;
@@ -794,9 +795,9 @@ CheckSpriteAvailability:
     ; jp nz, .spriteInvisible — the PER-FRAME hidden-object gate, and it must be
     ; per-frame: ShowObject/HideObject flip the flag at runtime and pret's model
     ; is that the SLOT persists while only visibility tracks the flag. The
-    ; port's IsToggleableHidden (map_sprites.asm) is the faithful equivalent of
-    ; pret's IsObjectHidden predef: AL = local object id, CF=1 = hidden
-    ; toggleable, non-toggleables never hidden, clobbers AL only.
+    ; IsObjectHidden (toggleable_objects.asm) is pret's predef itself; it delegates
+    ; the flat-model lookup to IsToggleableHidden (map_sprites.asm), which
+    ; InitMapSprites also uses at map-load time.
     ; This line was a documented "always visible" stub while hiding was done
     ; DESTRUCTIVELY at map load (ApplyToggleableHiddenGate zeroed the slot's
     ; PICTUREID) — which made a runtime ShowObject a no-op on a slot that no
@@ -804,11 +805,20 @@ CheckSpriteAvailability:
     ; (Oak's slot had coords+facing but PICTUREID=0, UpdateSprites skipped it,
     ; BIT_SCRIPTED_NPC_MOVEMENT never cleared —
     ; regression-oak-cutscene-never-advances).
+    ; pret's own shape, restored 2026-08-21: the predef publishes its answer in
+    ; hIsToggleableObjectOff and the caller tests that byte. This used to call the
+    ; port-only IsToggleableHidden directly, which left pret's IsObjectHidden label
+    ; with no body anywhere in the tree (a name fork). IsObjectHidden now exists at
+    ; its mirror path, reads hCurrentSpriteOffset and delegates to that helper.
+    ; hCurrentSpriteOffset is the slot byte offset this loop is working on — the
+    ; same value ESI carries — so publish it before the call, exactly as pret's
+    ; _UpdateSprites loop does.
     mov eax, esi
-    shr eax, 4
-    dec eax                             ; local object id (0-based) = slot-1
-    call IsToggleableHidden             ; CF=1 → hidden toggleable
-    jc .spriteInvisible
+    mov [ebp + hCurrentSpriteOffset], al
+    call IsObjectHidden                 ; predef IsObjectHidden
+    mov al, [ebp + hIsToggleableObjectOff]
+    test al, al                         ; and a
+    jnz .spriteInvisible                ; jp nz, .spriteInvisible
     mov al, [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1]
     cmp al, WALK
     jb .skipXYVisibility                 ; scripted movement: always show, skip range test

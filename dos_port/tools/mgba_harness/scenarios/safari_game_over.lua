@@ -26,7 +26,8 @@ local sym = symbols.load()
 local text = gbtext.load()
 navigate.init(sym, text)
 
-local SAFARI_ZONE_CENTER = 157 -- pret constants/map_constants.asm: SAFARI_ZONE_CENTER
+local SAFARI_ZONE_CENTER = 0xDC -- constants/map_constants.asm: map_const SAFARI_ZONE_CENTER ... ; $DC
+-- WAS 157 (= $9D = FUCHSIA_GYM) until 2026-08-21. Never run, so never observed.
 
 scenario.run(function()
 	navigate.boot_to_main_menu()

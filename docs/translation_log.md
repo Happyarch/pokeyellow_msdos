@@ -7694,3 +7694,45 @@ report), and the only entry gate that would change that is in `src/debug/debug_d
   2026-08-16 (`566c3027c`) and backlog #31's cause superseded. This scenario's
   actual, narrower blocker is the missing debug gate and golden artifacts
   above, not tileset residency.
+
+## 2026-08-21 — `IsObjectHidden` + the first hidden-object golden
+
+**`IsObjectHidden`** (pret `engine/overworld/toggleable_objects.asm`) is ported to
+its mirror path. It was recorded `missing`, but the *behaviour* was never absent —
+it existed under the bespoke name `IsToggleableHidden` (`map_sprites.asm`), which
+`CheckSpriteAvailability` called directly. That is a **name fork** of exactly the
+kind the "Preserve pret Labels" rule exists to prevent, and it left pret's label
+with no body anywhere in the tree.
+
+- `IsObjectHidden` now reproduces pret's predef contract exactly: read the slot
+  from `hCurrentSpriteOffset`, publish "hidden?" to `hIsToggleableObjectOff`.
+  `CheckSpriteAvailability` was repointed to that contract
+  (`predef IsObjectHidden` / `ldh a,[hIsToggleableObjectOff]` / `and a` /
+  `jp nz`), replacing its direct CF-returning call.
+- **Structural split, deliberate:** `IsToggleableHidden` is KEPT as the flat-model
+  helper and `IsObjectHidden` delegates to it, because `InitMapSprites` calls it at
+  map-load time where `hCurrentSpriteOffset` is not live and there is no HRAM
+  result to publish. CLAUDE.md sanctions one pret routine realised as two when a
+  bespoke variant already exists, provided the pret name is on the pret contract
+  and the split is explained — it is, at the site.
+- **faithdiff:** `- DROPPED ToggleableObjectFlagAction` / `+ ADDED
+  IsToggleableHidden`, stores matched (`hIsToggleableObjectOff`). Both are the
+  documented `DEVIATION{class=data-model}`: the port flattened this subsystem
+  ahead of OW-3.2, so `wToggleableObjectList` is never built and has no readers.
+  Behaviour through the HRAM contract is identical.
+- **Behaviour-neutral, and measured to be:** the same helper computes the same
+  answer from the same input, so this is a routing change. Confirmed rather than
+  asserted — an Oak's Lab OAM capture is byte-identical before and after, and
+  `fidelity-full` is 87/87.
+- The port's `_UpdateSprites` does not maintain `hCurrentSpriteOffset` (only
+  `sprite_collisions.asm` wrote it), so `CheckSpriteAvailability` publishes it
+  before the call, which is where pret's own loop sets it.
+
+**Golden `route_15_binoculars` (id 88) is registered and PASSES** — the suite's
+first hidden-object scenario, and the first witness for
+`CheckForHiddenEventOrBookshelfOrCardKeyDoor` reaching a prop handler. Port side
+is the new shared `DEBUG_HIDDENOBJ` gate (`EnterMap`, `hiddenobj_gate` in the
+Makefile); golden side is the new shared `lib/hidden_object.lua`. Both drive the
+REAL dispatch rather than calling the handler.
+Verified by the break-it probe, not by the pass alone: with the handler forced to
+`ret`, the scenario fails with 224 unmasked divergences across all four regions.

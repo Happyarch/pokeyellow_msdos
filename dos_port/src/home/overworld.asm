@@ -371,6 +371,39 @@ EnterMap:
     mov byte [ebp + wXCoord], 3
     mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
 %endif
+%ifdef DEBUG_HIDDENOBJ
+    ; Generic hidden-object gate. DEBUG_PREDEFTEXT above is the same shape welded to
+    ; one prop (Red's SNES); this is the parameterised form, so a scenario that only
+    ; differs by WHICH prop it reads does not need its own copy of the seed. Same
+    ; convention as SIGNTEXT_MAP/Y/X/DIR.
+    ;
+    ; The scenario's own DEBUG_<X> flag still exists and is what selects
+    ; GBSTATE_SCENARIO (assets/scenario_registry.inc dispatches on the gate symbol,
+    ; so the id cannot be shared even though the seed can). Its Makefile block sets
+    ; DEBUG_HIDDENOBJ plus these defines.
+    ;
+    ; This gate does NOT call the handler. It seeds the player onto the prop's tile
+    ; and lets AUTOKEY_APRESS drive a real A press through OverworldLoop into the
+    ; hidden-object dispatch, so the routine under test is REACHED BY PRODUCTION
+    ; rather than reproduced here (bug-class-false-witness-scenario instance 3: a
+    ; harness that rebuilds the sequence carries its own copy of the very omission
+    ; it is meant to detect).
+    ;
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
+    mov byte [ebp + wCurMap], HIDDENOBJ_MAP
+    mov byte [ebp + wYCoord], HIDDENOBJ_Y
+    mov byte [ebp + wXCoord], HIDDENOBJ_X
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    ; Every prop this gate reaches is INDOORS, and an indoor spawn must stage its
+    ; .blk into the shared INDOOR_BLK_GBADDR window itself: only
+    ; LoadDestinationMapData (the warp path) does that, and a hand-seeded spawn does
+    ; not go through it. Without this the room loads its header and tileset
+    ; correctly and then draws off an EMPTY block window — measured here as a
+    ; lilac checkerboard with the player alone on it, which reads as missing map
+    ; data or a missing tileset and is neither. DEBUG_SPAWN carries the same call
+    ; for the same reason (interior-maps-blocked-by-tileset-residency-not-blk).
+    call StageIndoorMapBlk
+%endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; Map-script sight gate (map-script fidelity plan, Stage 3): spawn inside a
     ; trainer's view range on a driver-wired map, so the map's _Script engages on
@@ -1075,6 +1108,44 @@ EnterMap:
 .predeftext_wait:
     call DelayFrame
     jmp .predeftext_wait
+%endif
+%ifdef DEBUG_HIDDENOBJ
+    ; Generic hidden-object / bookshelf gate — the parameterised form of
+    ; DEBUG_PREDEFTEXT above (see the seed block earlier in EnterMap).
+    ;
+    ; The coords were seeded before LoadMapData; LoadMapData does not derive the view
+    ; pointer for a hand-seeded spawn, so do that first.
+    call SeedDeterministicPlayerIdentity      ; "RED" / id 0 — the golden's identity
+    call SeamReseatView
+    ; Facing is seeded HERE, not with the coords: InitSprites (from LoadMapData)
+    ; rebuilds wSpriteStateData1 from the map's object binary, so a facing written
+    ; before it does not survive. CheckForHiddenEvent compares this byte against the
+    ; prop's `hidden_event` facing argument, and the mGBA side seeds the same address
+    ; (seed.warp + write8 wSpritePlayerStateData1FacingDirection).
+    ; HIDDENOBJ_DIR 0xFF means ANY_FACING — leave whatever the map gave us.
+%if HIDDENOBJ_DIR != 0xFF
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], HIDDENOBJ_DIR
+%endif
+    ; *** THE A PRESS IS LOAD-BEARING AND MUST BE SEEDED. ***
+    ; CheckForHiddenEventOrBookshelfOrCardKeyDoor's FIRST act is
+    ; `ldh a,[hJoyHeld] / and PAD_A / jr z,.nothingFound` (src/home/hidden_events.asm).
+    ; Headless there is no keyboard, and AUTOKEY_QUIET injects nothing, so without
+    ; this the call returns at once having dispatched NOTHING — a gate that runs,
+    ; exits 0 and proves nothing (bug-class-false-witness-scenario, instance 1).
+    ; DEBUG_PREDEFTEXT above has exactly that hole; it is unregistered, so no golden
+    ; ever caught it.
+    or byte [ebp + hJoyHeld], PAD_A
+    ; Run the REAL dispatch, not a bespoke "print this predef" shortcut: the text
+    ; must reach the screen through CheckForHiddenEventOrBookshelfOrCardKeyDoor ->
+    ; CheckForHiddenEvent -> the prop's handler (or, when no hidden event matches,
+    ; GetTileAndCoordsInFrontOfPlayer -> PrintBookshelfText for the bookshelf-tile
+    ; props such as IndigoPlateauStatues).
+    call CheckForHiddenEventOrBookshelfOrCardKeyDoor
+    ; The dialog waits for A. AUTOKEY_QUIET presses nothing, so the message stays on
+    ; screen and AutoKeyDrive photographs it at AUTOKEY_DUMP_FRAME.
+.hiddenobj_wait:
+    call DelayFrame
+    jmp .hiddenobj_wait
 %endif
 %ifdef DEBUG_SURF
     ; Placed at the end of EnterMap for the same reason DEBUG_MAPSCRIPT_SIGHT is:

@@ -43,10 +43,12 @@ global ShowObject
 global ShowObject2
 global HideObject
 global ToggleableObjectFlagAction
+global IsObjectHidden
 
 extern FlagAction              ; src/engine/flag_action.asm (ebp-relative flag bit-manip)
 extern UpdateSprites           ; src/home/update_sprites.asm
 extern g_toggleable_flags      ; src/engine/overworld/map_sprites.asm (flat .bss bit array)
+extern IsToggleableHidden      ; src/engine/overworld/map_sprites.asm (flat-model scan)
 
 section .text
 
@@ -117,4 +119,48 @@ ToggleableObjectFlagAction:
     ret
 .read:
     bt [g_toggleable_flags], ecx             ; CF = current bit
+    ret
+
+; ---------------------------------------------------------------------------
+; IsObjectHidden — pret engine/overworld/toggleable_objects.asm:IsObjectHidden
+;
+; pret is a predef, reached as `predef IsObjectHidden` from
+; engine/overworld/movement.asm:CheckSpriteAvailability, and its whole contract is
+; the HRAM pair: it reads the slot from hCurrentSpriteOffset and publishes
+; "hidden?" to hIsToggleableObjectOff, which the caller then tests. That contract
+; is reproduced here exactly; only the LOOKUP inside diverges.
+;
+; STRUCTURAL SPLIT (CLAUDE.md "Preserve pret Labels"): the flat-model scan already
+; existed as the port-only helper IsToggleableHidden (map_sprites.asm), which takes
+; the object id in AL and answers in CF. It is kept, because InitMapSprites calls it
+; at MAP LOAD time where hCurrentSpriteOffset is not live and there is no HRAM
+; result to publish. IsObjectHidden is pret's per-frame entry point and delegates to
+; it, so the pret label names the pret contract and neither half is a fork of the
+; other. Before this routine existed the pret label was absent entirely and
+; CheckSpriteAvailability called the bespoke helper directly — a name fork of
+; exactly the kind that rule exists to prevent.
+;
+; DEVIATION{class=data-model; pret=engine/overworld/toggleable_objects.asm:IsObjectHidden; behavior=the hidden bit is looked up in the flat g_toggleable_flags array through the precomputed per-map toggle list instead of scanning pret's wToggleableObjectList and testing wToggleableObjectFlags via ToggleableObjectFlagAction; evidence=the port flattened this subsystem ahead of OW-3.2 (tools/generators/gen_toggleable_objects.py plus map_sprites.asm) so wToggleableObjectList is never built and has no readers, and behaviour through the HRAM contract is identical; lifetime=retires if the toggleable subsystem is re-derived to pret's ebp-relative wToggleableObjectFlags model}
+;
+; In:  [EBP + hCurrentSpriteOffset] = slot byte offset (a multiple of $10).
+; Out: [EBP + hIsToggleableObjectOff] = nonzero if this object is hidden.
+; ---------------------------------------------------------------------------
+IsObjectHidden:
+    mov al, [ebp + hCurrentSpriteOffset]    ; ldh a, [hCurrentSpriteOffset]
+    ; pret: `swap a` — the offset is always a multiple of $10 and below $100, so the
+    ; nibble swap is exactly a >> 4, yielding the 1-based sprite slot number.
+    shr al, 4
+    ; The port's per-map toggle lists are keyed by the 0-based LOCAL OBJECT ID
+    ; (= slot - 1), which is what gen_toggleable_objects.py emits and what
+    ; IsToggleableHidden compares against. pret compares the swapped offset directly
+    ; because its own list stores that form.
+    dec al
+    call IsToggleableHidden                 ; CF = 1 -> hidden. Clobbers AL only.
+    ; `mov` does not touch flags, so CF still holds IsToggleableHidden's answer at
+    ; the jnc below (the flag-preservation rule).
+    mov al, 0
+    jnc .store
+    mov al, 1
+.store:
+    mov [ebp + hIsToggleableObjectOff], al  ; ldh [hIsToggleableObjectOff], a
     ret

@@ -805,6 +805,31 @@ swappable slot like the indoor `.blk` one; what `LoadTilesetHeader` currently do
 when handed a non-overworld tileset id; and whether the `FOREST`/`FACILITY`/
 `CAVERN` collision lists differ in ways `CollisionCheckOnLand` cares about.
 
+**CLOSED 2026-08-21 — the acceptance this item was waiting for now exists and
+passes.** Golden scenario **`route_15_binoculars` (id 88)** drives
+`CheckForHiddenEventOrBookshelfOrCardKeyDoor` -> `CheckForHiddenEvent` ->
+`Route15GateLeftBinoculars` -> `tx_pre Route15UpstairsBinocularsText` ->
+`PrintPredefTextID`, on a real interior map (`ROUTE_15_GATE_2F`), and compares
+tilemap + VRAM + OAM + WRAM against the ROM. It is a true witness, verified with
+the break-it probe rather than by its pass: with the handler forced to `ret` the
+scenario fails with 224 unmasked divergences.
+
+**And the TILESET diagnosis above is ALSO superseded** — this item has now been
+wrong three times about the same symptom, so the record matters more than the
+verdict. All 20 tilesets are generated, linked and dispatched; measured live,
+`vTileset` held 1602/2048 non-zero bytes on a LOBBY map *before* any fix. The real
+cause was that a hand-seeded spawn never staged the indoor `.blk` into the shared
+`INDOOR_BLK_GBADDR` window, because only `LoadDestinationMapData` (the warp path)
+does that — fixed 2026-08-16 in `566c3027c` by `StageIndoorMapBlk`. See stigmergy
+`interior-maps-blocked-by-tileset-residency-not-blk`.
+
+Independently re-confirmed 2026-08-21 while building this scenario's port gate:
+`DEBUG_HIDDENOBJ` first rendered `ROUTE_15_GATE_2F` as a bare lilac checkerboard
+with the player alone on it, and adding `call StageIndoorMapBlk` to the seed block
+— nothing else — made the room render completely. The blank-interior symptom is a
+missing staging call on the seeding path, not a data, tileset or text-engine gap.
+
+
 ### 32. `tx_pre_jump` cannot be a macro at a routine tail
 Filed 2026-08-02. pret has `tx_pre_jump` (macros/predef.asm); `include/predef.inc`
 deliberately does **not**, and the jump form is spelled `tx_pre_id X` + `jmp
