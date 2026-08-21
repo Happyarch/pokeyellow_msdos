@@ -403,6 +403,14 @@ EnterMap:
     ; data or a missing tileset and is neither. DEBUG_SPAWN carries the same call
     ; for the same reason (interior-maps-blocked-by-tileset-residency-not-blk).
     call StageIndoorMapBlk
+    ; Optional event seeding. A prop handler that branches on an event flag (e.g.
+    ; BillsHousePC's .doCellSeparator, gated on EVENT_BILL_SAID_USE_CELL_SEPARATOR)
+    ; needs the branch selected before the dispatch runs. The mGBA side seeds the
+    ; same flag through seed.set_event in the scenario's `before` hook, so both
+    ; sides enter the handler on the same branch.
+%ifdef HIDDENOBJ_EVENT
+    SetEvent HIDDENOBJ_EVENT
+%endif
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; Map-script sight gate (map-script fidelity plan, Stage 3): spawn inside a
@@ -1134,6 +1142,16 @@ EnterMap:
     ; exits 0 and proves nothing (bug-class-false-witness-scenario, instance 1).
     ; DEBUG_PREDEFTEXT above has exactly that hole; it is unregistered, so no golden
     ; ever caught it.
+    ; Optional map-script tick. A prop whose TEXT is spliced from WRAM the map script
+    ; populates cannot be read straight after EnterMap: GymStatues' GymStatueText1 is
+    ; `text_ram wGymCityName` + `text_ram wGymLeaderName`, and those are filled by the
+    ; gym's own script calling LoadGymLeaderAndCityName. Without a script tick the port
+    ; prints the statue text with a BLANK city line while the ROM — whose overworld
+    ; loop has run the script — prints "PEWTER CITY" (measured: 10 diverging cells,
+    ; all of them that line). Running the script once is what the real arrival does.
+%ifdef HIDDENOBJ_RUNSCRIPT
+    call RunMapScript
+%endif
     or byte [ebp + hJoyHeld], PAD_A
     ; Run the REAL dispatch, not a bespoke "print this predef" shortcut: the text
     ; must reach the screen through CheckForHiddenEventOrBookshelfOrCardKeyDoor ->

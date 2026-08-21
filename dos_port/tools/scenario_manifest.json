@@ -2678,6 +2678,37 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "The real A-press dispatch (CheckForHiddenEventOrBookshelfOrCardKeyDoor -> CheckForHiddenEvent -> Route15GateLeftBinoculars) runs on both sides: the port seeds the player in front of the prop and the golden walks/turns into it. Compares the tilemap and VRAM because the interesting half is the Articuno front-sprite pop-up from DisplayMonFrontSpriteInBox, which a WRAM-only class could not see."
+    },
+    {
+      "name": "oaks_lab_posters",
+      "id": 89,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_OAKSPOSTER=1",
+      "port_entry_gate": "DEBUG_OAKSPOSTER",
+      "navigation_script": "tools/mgba_harness/scenarios/oaks_lab_posters.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayOakLabLeftPoster",
+        "PrintPredefTextID"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Reads the LEFT poster in Oak's Lab through the real A-press dispatch on both sides, proving DisplayOakLabLeftPoster's tx_pre_jump tail lands in PrintPredefTextID \u2014 the shape faithdiff cannot see through. DisplayOakLabRightPoster is a different handler and is NOT witnessed here. OAM above the player is masked because the port's wider sprite window admits objects pret's cuts off; all 12 of the golden's on-screen entries were verified PRESENT in the port by value first."
     }
   ],
   "disabled_scenarios": []

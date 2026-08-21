@@ -2042,8 +2042,52 @@ endif
 # EVENT_BILL_SAID_USE_CELL_SEPARATOR to select .doCellSeparator, which is the branch
 # the golden drives. That seeding is the scenario's job, not the gate's.
 # make DEBUG_BILLSHOUSEPC=1 [AUTOKEY_DUMP_FRAME=n]
+# Indigo Plateau statues. NOT a hidden_event: IndigoPlateauStatues is a BOOKSHELF
+# TILE (data/tilesets/bookshelf_tile_ids.asm: `bookshelf_tile PLATEAU, $30`) and a
+# predef_code TextPredefs row ($3C). The shared gate covers it because
+# CheckForHiddenEventOrBookshelfOrCardKeyDoor falls through to
+# GetTileAndCoordsInFrontOfPlayer -> PrintBookshelfText when no hidden event matches.
+# Coordinates are the tile the player stands on, facing the statue tile.
+# Gym statues (pret engine/events/hidden_events/gym_statues.asm:GymStatues).
+# PEWTER_GYM ($36, 5x7, GYM tileset) is the easiest instance: two statues, an open
+# floor in front of them, and no map script in the way.
+# assets/hidden_events.inc:
+#   HiddenEventsFor_PEWTER_GYM: db 10, 3, 0x04 -> GymStatues
+#                               db 10, 6, 0x04 -> GymStatues
+# The prop is (y=10, x=3) so the player stands at (y=11, x=3) facing UP.
+# WALKABILITY VERIFIED, not assumed: decoding pewter_gym_blk through gym_blocks and
+# gym_coll, all four GB tiles of player (11,3) are $11 and passable, while (10,3) is
+# $22/$23/$32/$33 and impassable — i.e. the statue itself. An earlier revision of
+# this gate aimed at INDIGO_PLATEAU and seeded the player INSIDE a statue pillar; a
+# seeded spawn skips collision so the port still printed the text, but no player can
+# stand there and the mGBA side, which walks, could never reproduce it.
+STATUES_Y ?= 11
+STATUES_X ?= 3
+STATUES_DIR ?= 0x04
+ifdef DEBUG_STATUES
+$(eval $(call hiddenobj_gate,DEBUG_STATUES,0x36,$(STATUES_Y),$(STATUES_X),$(STATUES_DIR)))
+# GymStatueText1 splices wGymCityName/wGymLeaderName out of WRAM, and the gym's own
+# map script is what fills them (LoadGymLeaderAndCityName). Tick the script once so
+# the port reaches the state the ROM's overworld loop has already reached.
+NASMFLAGS += -D HIDDENOBJ_RUNSCRIPT
+endif
+
 ifdef DEBUG_BILLSHOUSEPC
 $(eval $(call hiddenobj_gate,DEBUG_BILLSHOUSEPC,0x58,5,1,0x04))
+# BillsHousePC dispatches on event flags, and the branch choice decides whether this
+# gate can be compared at all. EVENT_LEFT_BILLS_HOUSE_AFTER_HELPING selects
+# .displayBillsHousePokemonList, which draws the Eevee-evolution menu and PARKS in
+# HandleMenuInput — a stable state both sides hold indefinitely.
+#
+# NOT .doCellSeparator (EVENT_BILL_SAID_USE_CELL_SEPARATOR): that branch sets
+# wDoNotWaitForButtonPressAfterDisplayingText and RETURNS, so it is not a state at
+# all. The port's gate parks after the dispatch and freezes the dialog on screen,
+# while the ROM's overworld loop resumes and redraws over it — the two sides settle
+# in structurally different places, and no dump instant makes them comparable.
+# Gating that branch needs a gate that falls back into OverworldLoop plus a
+# scenario-local wEventFlags region to witness SetEvent
+# EVENT_USED_CELL_SEPARATOR_ON_BILL. Not built; see the scenario header.
+NASMFLAGS += -D HIDDENOBJ_EVENT=EVENT_LEFT_BILLS_HOUSE_AFTER_HELPING
 endif
 
 

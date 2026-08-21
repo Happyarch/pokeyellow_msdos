@@ -368,6 +368,59 @@ SCENARIOS = {
             ],
         },
     },
+    "oaks_lab_posters": {
+        "flags": "DEBUG_OAKSPOSTER=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Oak's Lab, player at (1,4) facing UP, reading `hidden_event 0, 4,
+        # DisplayOakLabLeftPoster, SPRITE_FACING_UP`. Window MEASURED by brute force
+        # over every (dx,dy), not guessed.
+        "window": (18, 6),
+        "projections": [
+            ((12 + k, 0, 12 + k, 19), (20 * (k % 2), (6 + k // 2) - (12 + k)),
+             "stride-20 dialog scratch re-flowed over the 40-wide canvas: "
+             "6 rows x 1 panel -> 3 rows x 2 panels")
+            for k in range(6)
+        ],
+        "masks": {
+            "tilemap": [
+                ((r, 0, r, 19),
+                 "map-mirror rows sitting under the dialog: at this window golden rows "
+                 "0-2 ARE canvas rows 6-8, where the stride-20 dialog scratch lives. "
+                 "Same staging-buffer collision sign_pallet and route_15_binoculars mask")
+                for r in range(3)
+            ],
+            "oam": [
+                (i, "the port's sprite-visibility window is DELIBERATELY WIDER than "
+                    "pret's, so it admits objects the 20x18 GB screen cuts off and the "
+                    "visible SET differs — which also shifts slot packing, so entries "
+                    "above the player's 0-3 are not index-comparable. DERIVED, not "
+                    "assumed: pret admits MAPY in [y,y+8] / MAPX in [x,x+9] "
+                    "(CheckSpriteAvailability), the port [y-2,y+9] / [x-6,x+13]; with the "
+                    "player at (1,4) pret's window admits exactly RIVAL (x4,y3) and "
+                    "EEVEE_POKE_BALL (x7,y3) of the six non-hidden objects in "
+                    "data/maps/objects/OaksLab.asm, which is exactly what the golden "
+                    "shows. Checked POSITIVELY before masking: all 12 of the golden's "
+                    "on-screen OAM entries are present in the port BY VALUE, so this "
+                    "mask cannot be hiding a missing sprite")
+                for i in range(4, 40)
+            ],
+            "vram": [
+                (256 + 0x14, "water tile: VRAM tile-DATA animation rewritten in place by "
+                             "UpdateMovingBgTiles, so its phase depends on the dump frame. "
+                             "Not referenced by either side's tilemap here. Same slot and "
+                             "reason as sign_pallet"),
+            ] + [
+                (i, "unreferenced OBJ residue: hardware retains the sprite tiles of the "
+                    "maps the golden WALKED through, while the port's gate warps straight "
+                    "in and leaves unneeded slots at zero. MEASURED: 48 diverging OBJ "
+                    "slots, every one port-zero, and NONE referenced by any on-screen OAM "
+                    "entry on either side; vChars1 diverges 0/128. The range starts at "
+                    "$48 because slots below it hold the player and the map's own "
+                    "on-screen sprites, which MATCH")
+                for i in range(0x48, 128)
+            ],
+        },
+    },
     "route_15_binoculars": {
         "flags": "DEBUG_BINOCULARS=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
