@@ -7086,3 +7086,29 @@ UNWITNESSED: nothing calls MarowakAnim until the rest of 4c lands.
   `make fidelity-full` PASS, 86/86 reported, 0 nonzero, 419 s; that is
   regression-only evidence for the new bodies (nothing calls them), but the
   `naming_screen` scenario is real coverage for the `LoadEDTile` operand switch.
+
+---
+
+## engine/events/hidden_events/safari_game.asm
+
+- **Source:** `engine/events/hidden_events/safari_game.asm`
+- **Translated:** `dos_port/src/engine/events/hidden_events/safari_game.asm`
+- **Labels ported (8):**
+  * `SafariZoneCheck` (routine): checks `EVENT_IN_SAFARI_ZONE` and `wNumSafariBalls`.
+  * `SafariZoneCheckSteps` (routine): decrements 16-bit big-endian `wSafariSteps` and triggers game over on 0.
+  * `SafariZoneGameStillGoing` (routine/label): clears `wSafariZoneGameOver` and returns.
+  * `SafariZoneGameOver` (routine): plays `SFX_SAFARI_ZONE_PA`, triggers `TEXT_SAFARI_GAME_OVER` via `DisplayTextID`, arms warp to `SAFARI_ZONE_GATE` script 5, sets `EVENT_SAFARI_GAME_OVER` and `wSafariZoneGameOver = 1`.
+  * `PrintSafariGameOverText` (routine): clears `wJoyIgnore` and prints `SafariGameOverText`.
+  * `SafariGameOverText` (routine/text): `text_asm` checking remaining balls, printing `TimesUpText` if steps ran out with balls remaining, then `GameOverText`.
+  * `TimesUpText` (data): Tier-1 text data stream from `data/text/text_2.asm:_TimesUpText` ("PA: Ding-dong!\n\nTime's up!\n").
+  * `GameOverText` (data): Tier-1 text data stream from `data/text/text_2.asm:_GameOverText` ("PA: Your SAFARI\nGAME is over!\n").
+- **Stubs retired (1):**
+  * `PrintSafariGameOverText` stub block deleted from `dos_port/src/engine/overworld/overworld_stubs.asm`.
+- **Tier-1 Generator:**
+  * Created `dos_port/tools/generators/gen_safari_text.py` generating `dos_port/assets/safari_text.inc`.
+- **Annotations:**
+  * `SafariZoneCheckSteps`: `DEVIATION{class=data-model; pret=engine/events/hidden_events/safari_game.asm:SafariZoneCheckSteps; behavior=pret IF DEF(_DEBUG) DebugPressedOrHeldB call is omitted in release build; evidence=the port defines no _DEBUG matching retail Yellow where _DEBUG is unset; lifetime=until a debug build defines _DEBUG}`
+  * `SafariZoneGameOver`: `DEVIATION{class=HAL; pret=engine/events/hidden_events/safari_game.asm:SafariZoneGameOver; behavior=poll on wChannelSoundIDs CHAN5 SFX_SAFARI_ZONE_PA early-outs when g_audio_engine_online is 0; evidence=DelayFrame audio tick self-gates on g_audio_engine_online and without the guard the loop spins forever on a machine with no sound card; lifetime=permanent while the port supports running with no sound device}`
+- **Scenario:**
+  * Authored `safari_game_over` (id 88) in `dos_port/tools/scenario_manifest.json` and `dos_port/tools/mgba_harness/scenarios/safari_game_over.lua` (UNRUN per addendum).
+
