@@ -44,3 +44,9 @@ PrintPokedexEntry:
 global PrintPCBox
 PrintPCBox:
     ret
+
+; STUB{class=stub; label=Diploma_Surfing_CopyBox; pret=engine/printer/printer.asm:Diploma_Surfing_CopyBox; behavior=return immediately without copying tile box; evidence=engine/printer/printer.asm is unported; lifetime=until engine/printer/printer.asm is ported}
+global Diploma_Surfing_CopyBox
+Diploma_Surfing_CopyBox:
+    ret
+

@@ -410,6 +410,10 @@ unpainted below the sea — visible canvas the GB never had. Preserving the
 INTENT ("sea from row 10 to just above the text area") means deriving the row
 count from the canvas height rather than inheriting pret's literal 6.
 
+### Diploma (Hall of Fame & bottom half) — GB-centered
+
+The diploma screens (`src/engine/events/diploma2.asm`: `DisplayDiplomaTop`, `DisplayDiplomaBottom`) are centered in the 40×25 canvas via a uniform **+10 col / +3 row** tile offset (maintainer ruling, 2026-08-17). The 20×18 certificate is drawn centered without individual element re-anchoring.
+
 ### Future subsystems
 
 Add an entry here when introduced, stating the transform and whether it uses
@@ -525,6 +529,9 @@ grep -rn '; PROJ' dos_port/src
 | battle-anim (Marowak dodge) | (17,0) | 7×7 | BCOORD; pret's adjacent `ld de, 20` is a row STRIDE and carries the port's 40 | — | — | — | — | animations.asm (DoBallTossSpecialEffects) |
 | battle-anim (enemy HUD shake)| rows 0-6 | 20×7 | canvas pixel rows 24..79 (GB tile rows 0-6 at +3), displaced by the per-row HAL `g_row_xoff` instead of pret's window+rSCX trick | — | — | — | — | animations.asm (ShakeEnemyHUD_SetHUDRows) |
 | battle-anim (showcase label)| (1,14) | 12×1 | BCOORD; DEBUG_ANIM_SHOW only — move name printed in the battle frame | — | — | — | — | debug_dump.asm (DEBUG_ANIM_SHOW) |
+| events (diploma top)       | (0, 0)  | 20×18 | center, X+10, Y+3 | — | — | — | — | diploma2.asm (DisplayDiplomaTop) |
+| events (diploma bottom)    | (0, 0)  | 20×18 | center, X+10, Y+3 | — | — | — | — | diploma2.asm (DisplayDiplomaBottom) |
+
 
 ---
 

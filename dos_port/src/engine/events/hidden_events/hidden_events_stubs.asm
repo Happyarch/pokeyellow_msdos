@@ -70,32 +70,13 @@ global SaffronCityPokecenterBenchGuyText
 SaffronCityPokecenterBenchGuyText:
     ret
 
-; ViridianSchoolNotebook — pret engine/events/hidden_events/school_notebooks.asm.
-; The 5-page TurnPageSchoolNotebook reader (page state + A/B paging loop).
-; Unreachable in the live build (PrintNotebookText is a ret-stub).
-; TODO(overworld-events Stage 5, Viridian batch): port the paged reader, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/school_notebooks.asm:ViridianSchoolNotebook; behavior=the notebook displays nothing instead of running the 5-page TurnPageSchoolNotebook reader; evidence=pret ViridianSchoolNotebook is a text_asm paged reader and label_status reports it missing; lifetime=until the overworld-events Viridian batch lands; label=ViridianSchoolNotebook}
-global ViridianSchoolNotebook
-ViridianSchoolNotebook:
-    ret
+; ViridianSchoolNotebook — RETIRED (school-notebooks batch). The real faithful
+; body is LINKED at its pret mirror
+; src/engine/events/hidden_events/school_notebooks.asm.
 
-; ViridianSchoolBlackboard — pret engine/events/hidden_events/school_blackboard.asm.
-; Paged blackboard reader (same shape as the notebook).
-; Unreachable in the live build (PrintBlackboardLinkCableText is a ret-stub).
-; TODO(overworld-events Stage 5, Viridian batch): port the paged reader, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/school_blackboard.asm:ViridianSchoolBlackboard; behavior=the blackboard displays nothing instead of running its paged reader; evidence=pret ViridianSchoolBlackboard is a text_asm paged reader and label_status reports it missing; lifetime=until the overworld-events Viridian batch lands; label=ViridianSchoolBlackboard}
-global ViridianSchoolBlackboard
-ViridianSchoolBlackboard:
-    ret
-
-; LinkCableHelp — pret engine/events/hidden_events/school_blackboard.asm:LinkCableHelp.
-; The link-cable help reader that shares the blackboard's paging machinery.
-; Unreachable in the live build (PrintBlackboardLinkCableText is a ret-stub).
-; TODO(overworld-events Stage 5, Viridian batch): port with the blackboard, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/school_blackboard.asm:LinkCableHelp; behavior=the link-cable help displays nothing instead of running its paged reader; evidence=pret LinkCableHelp is a text_asm paged reader and label_status reports it missing; lifetime=until the overworld-events Viridian batch lands; label=LinkCableHelp}
-global LinkCableHelp
-LinkCableHelp:
-    ret
+; ViridianSchoolBlackboard / LinkCableHelp / PrintBlackboardLinkCableText —
+; RETIRED (school-blackboard batch). The real faithful bodies are LINKED at their
+; pret mirror src/engine/events/hidden_events/school_blackboard.asm.
 
 ; FoundHiddenItemText — pret engine/events/hidden_items.asm:FoundHiddenItemText.
 ; The item-award tail that runs AFTER the far "found an item" intro: gives the item
@@ -127,16 +108,6 @@ global BillsHousePokemonList
 BillsHousePokemonList:
     ret
 
-; CinnabarGymQuiz — pret engine/events/hidden_events/cinnabar_gym_quiz.asm.
-; The gym's question state machine (per-question event flags, right/wrong branches,
-; trainer engagement on a wrong answer).
-; Unreachable in the live build (PrintCinnabarQuiz is a ret-stub).
-; TODO(overworld-events Stage 5, Cinnabar batch): port the state machine, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/cinnabar_gym_quiz.asm:CinnabarGymQuiz; behavior=the gym quiz displays nothing instead of running its question state machine; evidence=pret CinnabarGymQuiz is a text_asm state machine and label_status reports it missing; lifetime=until the overworld-events Cinnabar batch lands; label=CinnabarGymQuiz}
-global CinnabarGymQuiz
-CinnabarGymQuiz:
-    ret
-
 ; IndigoPlateauStatues — pret engine/events/hidden_events/indigo_plateau_statues.asm.
 ; Counts obtained badges and picks the matching line.
 ; Unreachable in the live build (PrintIndigoPlateauHQText is a ret-stub).
@@ -144,33 +115,6 @@ CinnabarGymQuiz:
 ; STUB{class=stub; pret=engine/events/hidden_events/indigo_plateau_statues.asm:IndigoPlateauStatues; behavior=the statues display nothing instead of branching on the badge count; evidence=pret IndigoPlateauStatues is a text_asm badge-count branch and label_status reports it missing; lifetime=until the overworld-events Indigo batch lands; label=IndigoPlateauStatues}
 global IndigoPlateauStatues
 IndigoPlateauStatues:
-    ret
-
-; VermilionGymTrashSuccessText1 — pret engine/events/hidden_events/vermilion_gym_trash.asm.
-; First-switch success line with a WaitForSoundToFinish tail.
-; Unreachable in the live build (PrintTrashText / GymTrashScript are ret-stubs).
-; TODO(overworld-events Stage 5, Vermilion batch): port the tail, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/vermilion_gym_trash.asm:VermilionGymTrashSuccessText1; behavior=the first trash-can success message displays nothing and waits for no sound; evidence=pret VermilionGymTrashSuccessText1 is a text_asm WaitForSoundToFinish tail and label_status reports it missing; lifetime=until the overworld-events Vermilion batch lands; label=VermilionGymTrashSuccessText1}
-global VermilionGymTrashSuccessText1
-VermilionGymTrashSuccessText1:
-    ret
-
-; VermilionGymTrashSuccessText3 — pret engine/events/hidden_events/vermilion_gym_trash.asm.
-; Second-switch success line with a WaitForSoundToFinish tail.
-; Unreachable in the live build (PrintTrashText / GymTrashScript are ret-stubs).
-; TODO(overworld-events Stage 5, Vermilion batch): port the tail, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/vermilion_gym_trash.asm:VermilionGymTrashSuccessText3; behavior=the second trash-can success message displays nothing and waits for no sound; evidence=pret VermilionGymTrashSuccessText3 is a text_asm WaitForSoundToFinish tail and label_status reports it missing; lifetime=until the overworld-events Vermilion batch lands; label=VermilionGymTrashSuccessText3}
-global VermilionGymTrashSuccessText3
-VermilionGymTrashSuccessText3:
-    ret
-
-; VermilionGymTrashFailText — pret engine/events/hidden_events/vermilion_gym_trash.asm.
-; Wrong-can line with a WaitForSoundToFinish tail (resets the switch pair).
-; Unreachable in the live build (PrintTrashText / GymTrashScript are ret-stubs).
-; TODO(overworld-events Stage 5, Vermilion batch): port the tail, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/vermilion_gym_trash.asm:VermilionGymTrashFailText; behavior=the wrong-can message displays nothing and waits for no sound; evidence=pret VermilionGymTrashFailText is a text_asm WaitForSoundToFinish tail and label_status reports it missing; lifetime=until the overworld-events Vermilion batch lands; label=VermilionGymTrashFailText}
-global VermilionGymTrashFailText
-VermilionGymTrashFailText:
     ret
 
 ; TownMapText — pret engine/events/hidden_events/town_map.asm:TownMapText.

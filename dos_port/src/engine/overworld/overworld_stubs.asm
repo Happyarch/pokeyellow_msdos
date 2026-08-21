@@ -95,11 +95,3 @@ LoadHoppingShadowOAM:
 
 ; TalkToPikachu retired — real body ported into src/engine/pikachu/pikachu_emotions.asm (follower_pikachu Phase 3).
 
-; PrintSafariGameOverText — pret engine/events/safari_game.asm:PrintSafariGameOverText.
-; The Safari-zone service tail is deferred with the rest of Safari story/event
-; rollout; keep it as a structured overworld/event stub, not as a hidden
-; DisplayTextID link blocker.
-; STUB{class=stub; label=PrintSafariGameOverText; pret=engine/events/safari_game.asm:PrintSafariGameOverText; behavior=return immediately instead of printing Safari game-over text; evidence=overworld-events Stage 2 lists Safari tail open; lifetime=until Safari service tail lands}
-global PrintSafariGameOverText
-PrintSafariGameOverText:
-    ret

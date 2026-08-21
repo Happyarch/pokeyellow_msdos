@@ -45,7 +45,7 @@ extern YesNoChoice                      ; home/yes_no.asm — sets [wCurrentMenu
 extern SaveScreenTilesToBuffer2         ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2       ; src/home/tilemap.asm
 extern hide_window                      ; ppu/ppu.asm — drop the dialog window layer
-extern DisplayDexRating                 ; oaks_pc_stubs.asm SEAM (pokédex package)
+extern DisplayDexRating                 ; src/engine/events/pokedex_rating.asm
 
 %ifdef DEBUG_OAKSPC
 global RunOaksPCTest

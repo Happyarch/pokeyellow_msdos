@@ -20,7 +20,10 @@
 ;                                   Makefile SRCS list and supplies the real body.
 ;   * OpenPokemonCenterPC / OpenRedsPC / BillsHousePC / CableClub{Left,Right}Gameboy
 ;                                -> PC / cable-club service work (Stage 2 tails / Phase 4)
-;   * Mansion{1..4}Script_Switches, GymTrashScript/GymStatues, the Print*Text
+;   * GymTrashScript / PrintTrashText -> RETIRED 2026-08-21. The real bodies are in
+;                                   src/engine/events/hidden_events/vermilion_gym_trash.asm
+;                                   (linked via GAME_SRCS).
+;   * Mansion{1..4}Script_Switches, GymStatues, the remaining Print*Text
 ;     bodies, fossils, posters, pictures, quiz, binoculars
 ;                                -> their per-map story batches (Stage 5)
 ;
@@ -54,16 +57,6 @@ section .text
 global PrintBookshelfText
 PrintBookshelfText:
     mov byte [ebp + H_INTERACTED_WITH_BOOKSHELF], 0xFF   ; no bookshelf found
-    ret
-
-; ---------------------------------------------------------------------------
-; UpdateCinnabarGymGateTileBlocks_ — pret engine/events/hidden_events/
-; cinnabar_gym_quiz.asm. Real body flips Cinnabar gym gate blocks per unlock
-; flags. No linked caller reaches it yet (only the deep-tier
-; UpdateCinnabarGymGateTileBlocks wrapper calls it). RETIREMENT: Stage 5 Cinnabar.
-; ---------------------------------------------------------------------------
-global UpdateCinnabarGymGateTileBlocks_
-UpdateCinnabarGymGateTileBlocks_:
     ret
 
 ; --- ground items / coins (Stage 3 bullets 2-3) ---
@@ -106,9 +99,6 @@ Mansion4Script_Switches:
     ret
 
 ; --- gym / dojo interactables (Stage 5) ---
-global GymTrashScript
-GymTrashScript:
-    ret
 global GymStatues
 GymStatues:
     ret
@@ -123,9 +113,6 @@ PrintFightingDojoText3:
     ret
 
 ; --- Print*Text bench/flavor handlers (Stage 5) ---
-global PrintTrashText
-PrintTrashText:
-    ret
 global PrintBenchGuyText
 PrintBenchGuyText:
     ret
@@ -139,20 +126,17 @@ PrintIndigoPlateauHQText:
 global PrintBookcaseText
 PrintBookcaseText:
     ret
-global PrintNotebookText
-PrintNotebookText:
-    ret
-global PrintBlackboardLinkCableText
-PrintBlackboardLinkCableText:
-    ret
+; PrintNotebookText — RETIRED (school-notebooks batch). The real faithful body is
+; LINKED at its pret mirror
+; src/engine/events/hidden_events/school_notebooks.asm.
+; PrintBlackboardLinkCableText — RETIRED (school-blackboard batch). The real
+; faithful body is LINKED at its pret mirror
+; src/engine/events/hidden_events/school_blackboard.asm.
 global PrintNewBikeText
 PrintNewBikeText:
     ret
 global PrintMagazinesText
 PrintMagazinesText:
-    ret
-global PrintCinnabarQuiz
-PrintCinnabarQuiz:
     ret
 
 ; --- Oak's Lab posters / email (Stage 5: Pallet) ---
