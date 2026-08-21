@@ -903,6 +903,10 @@ GAME_SRCS := \
     src/data/text_predef_pointers.asm \
     src/engine/events/hidden_events/hidden_events_stubs.asm \
     src/engine/events/hidden_events/reds_room.asm \
+    src/engine/events/hidden_events/pokecenter_pc.asm \
+    src/engine/events/hidden_events/bookshelves.asm \
+    src/engine/events/hidden_items.asm \
+    src/engine/events/starter_dex.asm \
     src/engine/events/hidden_events/school_blackboard.asm \
     src/engine/events/hidden_events/school_notebooks.asm \
     src/engine/events/hidden_events/cinnabar_gym_quiz.asm \
@@ -3393,6 +3397,22 @@ assets/hidden_events.inc:
 assets/hidden_item_coords.inc:
 	python3 tools/generators/gen_hidden_item_coords.py
 
+# HiddenCoinCoords data (generated from data/events/hidden_coins.asm) — the
+# gen_hidden_item_coords.py sibling, consumed by
+# src/engine/events/hidden_items.asm:FindHiddenItemOrCoinsIndex.
+assets/hidden_coin_coords.inc:
+	python3 tools/generators/gen_hidden_coin_coords.py
+
+# FoundHiddenItemText's far intro (generated from data/text/text_2.asm's
+# _FoundHiddenItemText), consumed by src/engine/events/hidden_items.asm.
+assets/hidden_items_text.inc: tools/generators/gen_hidden_items_text.py tools/generators/gen_battle_text.py
+	python3 tools/generators/gen_hidden_items_text.py
+
+src/engine/events/hidden_items.o: assets/hidden_coin_coords.inc assets/hidden_items_text.inc \
+    assets/predef_text_ids.inc include/predef.inc assets/script_constants.inc assets/audio_constants.inc
+src/engine/events/hidden_events/pokecenter_pc.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/bookshelves.o: assets/predef_text_ids.inc include/predef.inc
+
 # PickUpItem message streams (generated from engine/events/pick_up_item.asm).
 assets/pickup_text.inc: assets/item_text.inc assets/battle_text.inc
 	python3 tools/generators/gen_pickup_text.py
@@ -4212,6 +4232,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/map_script_tables.inc \
         assets/hidden_events.inc \
         assets/hidden_item_coords.inc assets/pickup_text.inc \
+        assets/hidden_coin_coords.inc assets/hidden_items_text.inc \
         assets/school_notebooks_text.inc \
         assets/give_pokemon_text.inc \
         assets/predef_text.inc \

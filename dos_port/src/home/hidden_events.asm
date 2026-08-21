@@ -44,7 +44,7 @@ section .text
 ; ===========================================================================
 
 extern BankswitchCommon                 ; src/home/bankswitch2.asm (flat no-op)
-extern PrintBookshelfText               ; src/engine/overworld/hidden_object_stubs.asm (stub → $ff)
+extern PrintBookshelfText               ; src/engine/events/hidden_events/bookshelves.asm
 extern JumpToAddress                    ; src/home/bankswitch2.asm
 extern GetTileAndCoordsInFrontOfPlayer  ; src/engine/overworld/player_state.asm (linked predef)
 extern UpdateCinnabarGymGateTileBlocks_ ; src/engine/events/hidden_events/cinnabar_gym_quiz.asm (translated)

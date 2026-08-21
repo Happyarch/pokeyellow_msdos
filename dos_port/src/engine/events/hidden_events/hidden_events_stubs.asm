@@ -28,24 +28,13 @@ section .text
 
 ; --- script_* dispatch markers (3) -----------------------------------------
 
-; RedBedroomPCText — pret engine/events/hidden_events/reds_room.asm:RedBedroomPCText.
-; A `script_players_pc` marker: the real entry opens the item-storage PC rather than
-; printing anything. Unreachable in the live build (its handler OpenRedsPC is a
-; ret-stub in hidden_object_stubs.asm).
-; TODO(PC service work): replace with the players-PC dispatch, then delete this stub.
-; STUB{class=stub; pret=engine/events/hidden_events/reds_room.asm:RedBedroomPCText; behavior=the players-PC script marker returns without opening the item-storage PC, so the predef text displays nothing; evidence=pret RedBedroomPCText is a script_players_pc marker and label_status reports it missing; lifetime=until the PC service work lands a real body; label=RedBedroomPCText}
-global RedBedroomPCText
-RedBedroomPCText:
-    ret
+; RedBedroomPCText — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_events/reds_room.asm (jumps into the linked
+; TextScript_ItemStoragePC, src/home/map_objects.asm).
 
-; PokemonCenterPCText — pret engine/events/hidden_events/pokecenter_pc.asm:PokemonCenterPCText.
-; A `script_pokecenter_pc` marker: opens the Pokémon Center PC. Unreachable in the
-; live build (its handler OpenPokemonCenterPC is a ret-stub in hidden_object_stubs.asm).
-; TODO(PC service work): replace with the pokecenter-PC dispatch, then delete this stub.
-; STUB{class=stub; pret=engine/events/hidden_events/pokecenter_pc.asm:PokemonCenterPCText; behavior=the pokecenter-PC script marker returns without opening the Pokemon Center PC; evidence=pret PokemonCenterPCText is a script_pokecenter_pc marker and label_status reports it missing; lifetime=until the PC service work lands a real body; label=PokemonCenterPCText}
-global PokemonCenterPCText
-PokemonCenterPCText:
-    ret
+; PokemonCenterPCText — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_events/pokecenter_pc.asm (jumps into the
+; linked TextScript_PokemonCenterPC, src/home/map_objects.asm).
 
 ; OpenBillsPCText — pret engine/pokemon/bills_pc.asm:OpenBillsPCText.
 ; A `script_bills_pc` marker. NOTE the faithful Bill's PC box UI IS linked
@@ -78,17 +67,12 @@ SaffronCityPokecenterBenchGuyText:
 ; RETIRED (school-blackboard batch). The real faithful bodies are LINKED at their
 ; pret mirror src/engine/events/hidden_events/school_blackboard.asm.
 
-; FoundHiddenItemText — pret engine/events/hidden_items.asm:FoundHiddenItemText.
-; The item-award tail that runs AFTER the far "found an item" intro: gives the item
-; and sets the obtained flag. Unreachable in the live build — HiddenItems is a
-; ret-stub, and no reachable map carries a hidden item yet (the same gap that leaves
-; ItemUseItemfinder's must-hit scenario owing evidence, docs/items_blockers.md).
-; TODO(overworld-events Stage 3 / items plan): port the award tail with the first
-; reachable hidden-item map, then delete this stub.
-; STUB{class=stub; pret=engine/events/hidden_items.asm:FoundHiddenItemText; behavior=the hidden-item award tail displays nothing and awards no item after the far intro text; evidence=pret FoundHiddenItemText is a text_asm item-award tail and label_status reports it missing; lifetime=until the hidden-item award path lands with the first reachable hidden-item map; label=FoundHiddenItemText}
-global FoundHiddenItemText
-FoundHiddenItemText:
-    ret
+; FoundHiddenItemText — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_items.asm (prints the generated far intro,
+; then gives the item and sets the obtained flag). No reachable map carries a
+; hidden item yet (the same gap that leaves ItemUseItemfinder's must-hit
+; scenario owing evidence, docs/items_blockers.md), so it is still unreached in
+; the live build — but the body itself is complete and correct.
 
 ; BillsHouseInitiatedText — pret engine/events/hidden_events/bills_house_pc.asm.
 ; StopAllMusic + SFX_SWITCH sequence when Bill's PC is switched on.
