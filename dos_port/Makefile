@@ -898,7 +898,7 @@ GAME_SRCS := \
     src/engine/events/heal_party.asm \
     src/engine/events/pick_up_item.asm \
     src/engine/events/pikachu_happiness.asm \
-    src/engine/events/give_pokemon_stubs.asm \
+    src/engine/events/give_pokemon.asm \
     src/data/pickup_text.asm \
     src/data/text_predef_pointers.asm \
     src/engine/events/hidden_events/hidden_events_stubs.asm \
@@ -3383,6 +3383,12 @@ assets/hidden_item_coords.inc:
 assets/pickup_text.inc: assets/item_text.inc assets/battle_text.inc
 	python3 tools/generators/gen_pickup_text.py
 
+# GivePokemon message streams (generated from engine/events/give_pokemon.asm).
+assets/give_pokemon_text.inc: tools/generators/gen_give_pokemon_text.py tools/generators/gen_battle_text.py
+	python3 tools/generators/gen_give_pokemon_text.py
+
+src/engine/events/give_pokemon.o: assets/give_pokemon_text.inc
+
 assets/predef_text.inc: tools/generators/gen_predef_text.py tools/generators/gen_battle_text.py
 	python3 tools/generators/gen_predef_text.py
 assets/predef_text_ids.inc: assets/predef_text.inc
@@ -4137,6 +4143,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/map_script_tables.inc \
         assets/hidden_events.inc \
         assets/hidden_item_coords.inc assets/pickup_text.inc \
+        assets/give_pokemon_text.inc \
         assets/predef_text.inc \
         assets/predef_text_ids.inc \
         assets/oak_speech_strings.inc \
