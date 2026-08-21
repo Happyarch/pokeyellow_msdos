@@ -7185,3 +7185,26 @@ labels each one prints or dispatches through.
   in `translation.db`; `lint_pret_labels` and `--strict-claims` both 0;
   `make static_gate` PASS. NO EMULATOR WAS RUN (host-crash directive) — there is
   no golden scenario for this path yet, see the report/commit message.
+## 2026-08-21 — engine/events/give_pokemon.asm ported (_GivePokemon, SetPokedexOwnedFlag, text streams)
+
+- Source: `engine/events/give_pokemon.asm` (`_GivePokemon`, `SetPokedexOwnedFlag`, `UnknownTerminator_f6794`, `GotMonText`, `SentToBoxText`, `BoxIsFullText`).
+- Translated: `dos_port/src/engine/events/give_pokemon.asm` (mirror path), `dos_port/tools/generators/gen_give_pokemon_text.py` -> `dos_port/assets/give_pokemon_text.inc`.
+- Retired stubs: `_GivePokemon` retired from `dos_port/src/engine/events/give_pokemon_stubs.asm`.
+- Date: 2026-08-21
+- H-flag: not involved
+- Bug tags: none
+- Divergences: one `DEVIATION{class=banking; pret=engine/events/give_pokemon.asm:SetPokedexOwnedFlag; behavior=call FlagAction directly instead of predef FlagActionPredef; evidence=port has no predef dispatcher so register-passing predefs call the leaf routine directly without clobbering registers via GetPredefRegisters; lifetime=permanent flat-code calling boundary}` in `SetPokedexOwnedFlag`.
+- Notes:
+  * `_GivePokemon` adds a mon to the player's party (up to `PARTY_LENGTH`), or current box if party is full (up to `MONS_PER_BOX`), or displays `BoxIsFullText`. Formats box number string into `wStringBuffer` for single-digit or double-digit box numbers.
+  * `SetPokedexOwnedFlag` indexes species to Pokedex number via `IndexToPokedex`, sets bit in `wPokedexOwned` via `FlagAction` with `FLAG_SET`, fetches mon name via `GetMonName`, and prints `GotMonText`.
+  * Tier-1 text streams (`GotMonText`, `SentToBoxText`, `BoxIsFullText`, `UnknownTerminator_f6794`) generated deterministically via `tools/generators/gen_give_pokemon_text.py` into `assets/give_pokemon_text.inc`, included by carrier `give_pokemon.asm`.
+  * Deleted stub block in `dos_port/src/engine/events/give_pokemon_stubs.asm` and replaced stub with `src/engine/events/give_pokemon.asm` in `dos_port/Makefile` `GAME_SRCS`.
+- Evidence:
+  * Assembled with NASM: `nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0 -o /dev/null src/engine/events/give_pokemon.asm` (exit 0).
+  * `make -C dos_port -j8` built `PKMN.EXE`.
+  * `update_label_db` confirms all 6 labels read `translated` in `translation.db`.
+  * `faithdiff _GivePokemon`: clean (6/6 calls, 4/4 stores).
+  * `faithdiff SetPokedexOwnedFlag`: 3/4 calls matching, 1 predef deviation (FlagActionPredef -> FlagAction) documented with `DEVIATION{class=banking...}`.
+  * `lint_pret_labels --no-scan` and `lint_pret_labels --strict-claims --no-scan` both exit 0 with 0 violations.
+  * `make -C dos_port static_gate`: PASS (all 8 static checks pass).
+
