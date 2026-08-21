@@ -77,7 +77,13 @@ def main():
         bank, addr, name = m.group(1), int(m.group(2), 16), m.group(3)
         if bank != "00":
             continue
-        if not re.match(r"^[wh][A-Z]", name):      # wFoo / hFoo, pret's RAM convention
+        # wFoo / hFoo is pret's usual RAM convention, but pret also names a byte it
+        # never gave a meaning after its own ADDRESS — wd474, wc6ea, hff8c. Those are
+        # pret RAM labels too, and excluding them is what forced five .asm files to
+        # declare them by hand, which is exactly the file-local-equ hazard this
+        # generator exists to remove (a src equ is FILE-LOCAL, so two files can
+        # disagree about an address and still assemble, link and pass every gate).
+        if not re.match(r"^[wh]([A-Z]|[0-9a-f]{2,4}$)", name):
             continue
         if not (0xC000 <= addr <= 0xFFFF):          # WRAM, echo, OAM, HRAM
             continue

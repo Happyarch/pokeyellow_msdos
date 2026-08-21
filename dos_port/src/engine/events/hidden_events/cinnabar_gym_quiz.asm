@@ -93,7 +93,6 @@ bits 32
 ; independently against tools/wram_growth.json: pret wd474 = 0xD474
 ; (pokeyellow.sym), every growth point below it (0xC3A0/0xC508/0xC5C4/0xC6E8/0xCD81)
 ; sums to 0xDCE, so port = 0xD474 + 0xDCE = 0xE242 — matches CinnabarGym.asm exactly.
-wd474 equ 0xE242
 
 global PrintCinnabarQuiz
 global CinnabarGymQuiz

@@ -103,7 +103,6 @@ TEXT_CINNABARGYM_BLAINE_TM38_NO_ROOM           equ 12
 
 ; pret RAM symbols gb_memmap.inc does not carry. Addresses are rgblink's,
 ; read from pokeyellow.sym — not inferred.
-wd474                                          equ 0xE242   ; [WRAM-expansion shifted]
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
