@@ -146,33 +146,6 @@ global IndigoPlateauStatues
 IndigoPlateauStatues:
     ret
 
-; VermilionGymTrashSuccessText1 — pret engine/events/hidden_events/vermilion_gym_trash.asm.
-; First-switch success line with a WaitForSoundToFinish tail.
-; Unreachable in the live build (PrintTrashText / GymTrashScript are ret-stubs).
-; TODO(overworld-events Stage 5, Vermilion batch): port the tail, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/vermilion_gym_trash.asm:VermilionGymTrashSuccessText1; behavior=the first trash-can success message displays nothing and waits for no sound; evidence=pret VermilionGymTrashSuccessText1 is a text_asm WaitForSoundToFinish tail and label_status reports it missing; lifetime=until the overworld-events Vermilion batch lands; label=VermilionGymTrashSuccessText1}
-global VermilionGymTrashSuccessText1
-VermilionGymTrashSuccessText1:
-    ret
-
-; VermilionGymTrashSuccessText3 — pret engine/events/hidden_events/vermilion_gym_trash.asm.
-; Second-switch success line with a WaitForSoundToFinish tail.
-; Unreachable in the live build (PrintTrashText / GymTrashScript are ret-stubs).
-; TODO(overworld-events Stage 5, Vermilion batch): port the tail, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/vermilion_gym_trash.asm:VermilionGymTrashSuccessText3; behavior=the second trash-can success message displays nothing and waits for no sound; evidence=pret VermilionGymTrashSuccessText3 is a text_asm WaitForSoundToFinish tail and label_status reports it missing; lifetime=until the overworld-events Vermilion batch lands; label=VermilionGymTrashSuccessText3}
-global VermilionGymTrashSuccessText3
-VermilionGymTrashSuccessText3:
-    ret
-
-; VermilionGymTrashFailText — pret engine/events/hidden_events/vermilion_gym_trash.asm.
-; Wrong-can line with a WaitForSoundToFinish tail (resets the switch pair).
-; Unreachable in the live build (PrintTrashText / GymTrashScript are ret-stubs).
-; TODO(overworld-events Stage 5, Vermilion batch): port the tail, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/vermilion_gym_trash.asm:VermilionGymTrashFailText; behavior=the wrong-can message displays nothing and waits for no sound; evidence=pret VermilionGymTrashFailText is a text_asm WaitForSoundToFinish tail and label_status reports it missing; lifetime=until the overworld-events Vermilion batch lands; label=VermilionGymTrashFailText}
-global VermilionGymTrashFailText
-VermilionGymTrashFailText:
-    ret
-
 ; TownMapText — pret engine/events/hidden_events/town_map.asm:TownMapText.
 ; Opens the town map from a wall map rather than printing. NOTE the town-map screen
 ; itself IS ported (src/engine/items/town_map.asm) — this is the hidden-event entry
