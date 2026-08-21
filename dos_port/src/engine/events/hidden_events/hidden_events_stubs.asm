@@ -117,16 +117,8 @@ global IndigoPlateauStatues
 IndigoPlateauStatues:
     ret
 
-; TownMapText — pret engine/events/hidden_events/town_map.asm:TownMapText.
-; Opens the town map from a wall map rather than printing. NOTE the town-map screen
-; itself IS ported (src/engine/items/town_map.asm) — this is the hidden-event entry
-; into it, so another WIRING gap rather than an unported feature.
-; Unreachable in the live build (its handler is a ret-stub).
-; TODO(overworld-events Stage 5): dispatch to the linked town map, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/town_map.asm:TownMapText; behavior=the wall town map displays nothing instead of opening the town map screen; evidence=pret TownMapText is a text_asm that opens the town map and label_status reports it missing while the town-map screen itself is ported at src/engine/items/town_map.asm; lifetime=until the hidden-event dispatch is wired to the linked town map; label=TownMapText}
-global TownMapText
-TownMapText:
-    ret
+; TownMapText — RETIRED. Real body in
+; src/engine/events/hidden_events/town_map.asm.
 
 ; BookOrSculptureText — pret engine/events/hidden_events/book_or_sculpture.asm.
 ; Branches on wCurMapTileset to say "bookshelf" or "sculpture".
