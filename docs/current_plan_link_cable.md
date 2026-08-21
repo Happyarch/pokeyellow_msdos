@@ -231,23 +231,33 @@ blocks in `src/engine/menus/naming_screen.asm`.
 ## Stages
 
 ### Stage 0 — governance + groundwork
-- [ ] Directive doc sites updated (done in this plan's landing commit):
+- [x] Directive doc sites updated (done in this plan's landing commit):
       `docs/current_plan_overworld_events.md`, `docs/current_plan_printer.md`
 - [ ] HOST SESSION: rewrite stigmergy `link-layer-planned-transports` to the
       reopened state + these transport decisions; run
       `memory_search regression link` / `regression serial` and fold findings
-      back into this plan
-- [ ] Verify + close backlog #17 (cable-club warp seam — appears already
-      root-wired: `SpecialEnterMap` honors `wEnteringCableClub`,
-      `PrepareForSpecialWarp` stub retired); cite `label_status --callers`
-- [ ] `gb_memmap.inc`: add missing serial defines (`hSerialReceivedNewData`,
-      `hSerialIgnoringInitialData`, `wUnknownSerialCounter2`, nybble temp —
-      audit the block for gaps); `check_ram_collisions.py` + `audit_memmap.py`
-      clean (NEVER assert an address free — derive it)
-- [ ] Makefile `NET_SRCS` bucket wired into the link aggregate; note "no
-      link.ld change — standard sections"
-- [ ] Generated-strings audit for cable-club/link texts (two-tier rule;
-      needs the `unicode_converter` submodule)
+      back into this plan (2026-08-21 remote session could not do this —
+      stigmergy is host-only; still open)
+- [x] Verify + close backlog #17 (2026-08-21): root-wired — `SpecialEnterMap`
+      honors `wEnteringCableClub` (`main_menu.asm:426-431`),
+      `PrepareForSpecialWarp` translated (`special_warps.asm:73`, stub retired
+      per `main_menu_stubs.asm:27`; `label_status --callers` = 5 callers incl.
+      LinkMenu). Closure written into `docs/current_plan_backlog.md` #17
+- [x] `gb_memmap.inc` serial defines added 2026-08-21: `hSerialReceivedNewData`
+      $FFA9, `hSerialIgnoringInitialData` $FFAB (contiguous pret HRAM block),
+      `wSerialExchangeNybbleTempReceiveData` $D78B (pret union),
+      `wLinkTimeoutCounter` $D795 (pret same-byte declaration),
+      `wUnknownSerialCounter2` $DE41 (pret union w/ Bide),
+      `wPrinterConnectionOpen` $E267 (contiguous run E265-E269);
+      `check_ram_collisions` + `check_ram_addresses` + `audit_memmap` +
+      `check_ram_straddle` all clean
+- [x] Makefile `NET_SRCS` bucket (empty, beside HAL_SRCS) wired into the
+      `LINK_SRCS` aggregate 2026-08-21; no link.ld change — standard sections
+- [x] Generated-strings audit 2026-08-21: `assets/link_text.inc` already
+      carries all link_menu + Colosseum/TradeCenter streams; one gap found —
+      pret `WaitingText` (`engine/link/print_waiting_text.asm`) had no
+      generator. Added to `gen_menu_strings.py` LINK_STRINGS → link_text.inc
+      (global, for the Stage-1 `PrintWaitingText` mirror)
 
 ### Stage 1 — serial core + no-transport parity
 - [ ] `net_hal.asm` skeleton: session state, mailboxes, pump + reentrancy
