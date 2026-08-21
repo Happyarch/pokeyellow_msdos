@@ -7086,3 +7086,146 @@ UNWITNESSED: nothing calls MarowakAnim until the rest of 4c lands.
   `make fidelity-full` PASS, 86/86 reported, 0 nonzero, 419 s; that is
   regression-only evidence for the new bodies (nothing calls them), but the
   `naming_screen` scenario is real coverage for the `LoadEDTile` operand switch.
+
+## 2026-08-20 — engine/events/pokedex_rating.asm (DisplayDexRating + DexRatingsTable + 17 texts)
+
+- Ported pret's Oak's-PC / OaksLabOak1Text pokédex-rating cutscene to
+  `dos_port/src/engine/events/pokedex_rating.asm`: `DisplayDexRating` (counts
+  owned/seen species via `CountSetBits`, indexes `DexRatingsTable`'s
+  owned-count-banded threshold table, then either prints
+  `DexCompletionText` + the matched band and plays the fanfare, or packs
+  `{seen, owned, ratingText}` for `HallOfFame`'s own printout on a repeat
+  view), `DexRatingsTable` itself, `DexCompletionText`, and the 16
+  `DexRatingText_Own<N>To<M>` band texts.
+- `DexRatingsTable`'s band boundaries and the `.findRating` index arithmetic
+  (unsigned `cp b` / `jr c` → `cmp al,bl` / `jb`, i.e. "first band whose
+  threshold exceeds owned count") were re-derived directly from the pret
+  source, not pattern-matched: bands are owned-count 0-9, 10-19, ..., 140-149,
+  150-151, with thresholds 10,20,...,150,152 (`NUM_POKEMON+1`, 151+1).
+- Text is Tier-1 data: `tools/generators/gen_pokedex_rating_text.py` (new)
+  reuses `gen_battle_text.py`'s charmap/memmap/far-text machinery, extending
+  its `TEXT_SRC` for pret's `text/pokedex_ratings.asm` (the 17 wrapper bodies'
+  far streams), and parses the 17 wrapper headers directly out of
+  `engine/events/pokedex_rating.asm` (they don't match `collect_wrappers`'
+  name-pattern regex, same reason `gen_predef_text.py` parses its table
+  directly). Output: `assets/pokedex_rating_text.inc`. `DexCompletionText`'s
+  two `text_decimal` fields (hDexRatingNumMonsSeen/hDexRatingNumMonsOwned)
+  resolved correctly against the port's `gb_memmap.inc` (which already
+  %includes the generated `pret_ram.inc`, so no new WRAM/HRAM symbols were
+  needed — `hDexRatingNumMonsSeen` and `wDexRatingNumMonsSeen/Owned/Text`
+  were already present there, matching pret's own union of
+  `wDexRatingNumMonsSeen`/`wTrainerCardBlkPacket`/`wHallOfFame`/
+  `wNPCMovementDirections` at pret address `$CC5B`).
+- One genuine translation defect caught by faithdiff during this session: an
+  initial `global DexCompletionText` was redundantly declared in
+  `pokedex_rating.asm` itself, duplicating the `global` the generated `.inc`
+  already emits; `update_label_db` picked the `.asm` as the label's
+  `port_file` because of it, and `faithdiff` then failed body extraction
+  there (the actual `DexCompletionText:` definition lives in the `.inc`).
+  Fixed by removing the redundant `global`; `port_defs` count in
+  `update_label_db`'s summary dropped by exactly 1, confirming the fix.
+- Retired the `DisplayDexRating` ret-stub: deleted
+  `dos_port/src/engine/menus/oaks_pc_stubs.asm` in full (it declared exactly
+  one global, `DisplayDexRating`, so retiring the stub retires the whole
+  file) and dropped its line from the Makefile `GAME_SRCS` list. Repointed
+  the one stale `extern DisplayDexRating` comment in
+  `dos_port/src/engine/menus/oaks_pc.asm:48` from `oaks_pc_stubs.asm SEAM
+  (pokédex package)` to `src/engine/events/pokedex_rating.asm` — required
+  because `lint_pret_labels`' `stale_extern` check hard-fails on a comment
+  naming a stub file that no longer exists; this is the one file touched
+  outside the task's stated allow-list, and it is a one-line comment change
+  with no logic/behavior effect.
+- Golden scenario: NOT added. `DisplayDexRating` is reachable (`OpenOaksPC`
+  in `oaks_pc.asm`, `OaksLabOak1Text` in `scripts/OaksLab.asm`) and a
+  `RunDexRatingTest`-style datastruct harness (seed `wPokedexOwned`/
+  `wPokedexSeen` bit patterns, force `EVENT_HALL_OF_FAME_DEX_RATING` clear
+  and set to hit both branches, `call DisplayDexRating`, dump WRAM) is the
+  right shape — same pattern as `item_pp_restore`/`item_tm_teach` — but
+  authoring it needs a new stanza in `src/debug/debug_dump.asm` and a
+  `%ifdef DEBUG_DEXRATING` call site in `src/home/overworld.asm`'s
+  `EnterMap`, both outside this task's allow-list. `make fidelity` (core,
+  16/16) is regression-only evidence.
+- Evidence: build links (`Built: PKMN.EXE`); `update_label_db` reports all 18
+  labels `translated`; `faithdiff` clean on `DisplayDexRating` (4/4 calls,
+  2/2 stores, pret order), `DexRatingsTable` (0/0), and all 17 text labels
+  (0/0, each after the `global` fix above); `lint_pret_labels` and
+  `--strict-claims` both 0 violations; `static_gate` PASS (8 checks); `make
+  fidelity` PASS 16/16.
+
+## 2026-08-21 — engine/events/pokedex_rating.asm (DisplayDexRating + DexRatingsTable + 17 texts)
+
+- Ported pret's Oak's-PC / OaksLabOak1Text pokédex-rating cutscene to
+  `dos_port/src/engine/events/pokedex_rating.asm`: `DisplayDexRating` (counts
+  owned/seen species via `CountSetBits`, walks `DexRatingsTable`'s owned-count
+  threshold table, then either prints `DexCompletionText` + the matched band
+  and plays the fanfare, or packs `{seen, owned, band stream}` for
+  `HallOfFame`'s own printout on a repeat view), `DexRatingsTable` itself,
+  `DexCompletionText`, and the 16 `DexRatingText_Own<N>To<M>` band texts.
+- Band boundaries and index arithmetic re-derived from the pret source.
+  `.findRating` is `ld a,[hli] / ld b,a / ldh a,[hDexRatingNumMonsOwned] /
+  cp b / jr c`, an UNSIGNED compare, so an entry is taken when
+  `owned < threshold`: thresholds 10,20,...,150,`NUM_POKEMON+1`(=152) select
+  owned-count windows 0-9, 10-19, ..., 140-149, 150-151. The walk cannot run
+  off the table because the last threshold (152) exceeds the maximum possible
+  owned count (151) — the same termination argument as pret's.
+- Entry STRIDE differs and is the one arithmetic change: pret's `dbw` is
+  1 + 2 = 3 bytes, the port's `db` + `dd` is 1 + 4 = 5, because the flat DPMI
+  model widens the bank-relative `dw` pointer to a 32-bit `dd` (the
+  `MoveEffectPointerTable` precedent). So pret's post-read `inc hl / inc hl`
+  becomes `add esi, 4`.
+- Text is Tier-1 data: `tools/generators/gen_pokedex_rating_text.py` reuses
+  `gen_battle_text.py`'s charmap/memmap/far-text machinery, extends its
+  `TEXT_SRC` with pret's `text/pokedex_ratings.asm`, and parses the 17 wrapper
+  headers directly out of `engine/events/pokedex_rating.asm` (they do not match
+  `collect_wrappers`' name-pattern regex, the same reason `gen_predef_text.py`
+  parses its table directly). Output `assets/pokedex_rating_text.inc`, 17
+  labels / 934 bytes, regenerated idempotently. No charmap hex is hand-written
+  in the `.asm`. `DexCompletionText`'s two `text_decimal` fields resolve
+  against `hDexRatingNumMonsSeen`/`hDexRatingNumMonsOwned`, which
+  `gb_memmap.inc` already carried; no WRAM/HRAM symbol was added.
+- THREE ADDRESS-SPACE DEFECTS were found and fixed in review of the first
+  draft, all the same root cause: `DexRatingsTable` and the text streams are
+  FLAT program-image `.data` addresses (PrintText's own `In: ESI = flat
+  pointer` contract, `src/home/window.asm:110`), but the draft dereferenced
+  all three through the GB base as `[ebp + esi]`. That reads ~`ebp` plus a
+  linear address — out of the DPMI allocation, i.e. garbage or a page fault —
+  at `.findRating`'s threshold read, `.foundRating`'s pointer load and
+  `.copyRatingTextLoop`'s stream read. Every static gate passed with them in
+  place, and no existing golden calls the routine, so nothing could have
+  caught them. The file header now states the two-address-space split
+  explicitly and every `[hli]` carries which space it reads.
+  Also corrected: pret's `ld b, a` had been translated to `mov bl, al`; `B` is
+  `BH` in the register map, so it is now `mov bh, al` / `cmp al, bh`.
+- One DEVIATION, on the hall-of-fame copy loop
+  (`class=data-model`): the GB copies the 4-byte `TX_FAR` command into
+  `wDexRatingText`, the port copies the whole flattened stream (37-76 bytes),
+  because the port has no ROM banks and the generator flattens `text_far`.
+  The printed result is identical. Bound check recorded at the site: pret's
+  union spans 180 bytes, `wDexRatingText` sits at +2, longest band stream is
+  `DexRatingText_Own50To59` at 76 — 76 <= 178.
+- Retired the `DisplayDexRating` ret-stub: deleted
+  `dos_port/src/engine/menus/oaks_pc_stubs.asm` in full (it declared exactly
+  one global, so retiring the stub retires the file), dropped its line from the
+  Makefile `GAME_SRCS` list, and repointed the one stale extern comment at
+  `dos_port/src/engine/menus/oaks_pc.asm:48`. `label_status --callers
+  DisplayDexRating` now reports 2 port callers (`OpenOaksPC`,
+  `OaksLabOak1Text`) and no extern naming a stub file.
+- GOLDEN: AUTHORED BUT UNRUN AND UNREGISTERED. The mGBA half is
+  `tools/mgba_harness/scenarios/dex_rating_oak_pc.lua` (bedroom -> Viridian
+  Center PC -> PROF.OAK's PC -> YES, with 55 owned / 70 seen seeded so the
+  walk must land on `DexRatingText_Own50To59`). It is deliberately NOT
+  registered in `scenario_manifest.json` / `golden_diff.py`: registering a
+  scenario whose `tests/goldens/*.bin`+`.json` do not exist makes
+  `validate_scenarios.py` — step 5 of `static_gate` — fail, and producing them
+  requires `make goldens`, an emulator run. The port-side entry gate
+  (`RunDexRatingTest` in `src/debug/debug_dump.asm`, its `EnterMap` dispatch in
+  `src/home/overworld.asm`, and the `DEBUG_DEXRATING` Makefile gate) is
+  outside this task's file allow-list and was not written. The `.lua` header
+  lists exactly what remains.
+- Evidence run this session: build links (`Built: PKMN.EXE`); `update_label_db`
+  reports all 18 labels `translated`; `faithdiff` clean on `DisplayDexRating`
+  (4 calls / 4 calls, 2 stores / 2 stores, pret order), `DexRatingsTable` and
+  all 17 text labels; `lint_pret_labels --no-scan` and
+  `--no-scan --strict-claims` both 0 violations; `static_gate` PASS. NO
+  EMULATOR WAS RUN, so there is NO runtime evidence for this routine at all —
+  it is `linked`, not `executed`.
