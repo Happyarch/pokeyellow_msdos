@@ -20,7 +20,10 @@
 ;                                   Makefile SRCS list and supplies the real body.
 ;   * OpenPokemonCenterPC / OpenRedsPC / BillsHousePC / CableClub{Left,Right}Gameboy
 ;                                -> PC / cable-club service work (Stage 2 tails / Phase 4)
-;   * Mansion{1..4}Script_Switches, GymTrashScript/GymStatues, the Print*Text
+;   * GymTrashScript / PrintTrashText -> RETIRED 2026-08-21. The real bodies are in
+;                                   src/engine/events/hidden_events/vermilion_gym_trash.asm
+;                                   (linked via GAME_SRCS).
+;   * Mansion{1..4}Script_Switches, GymStatues, the remaining Print*Text
 ;     bodies, fossils, posters, pictures, quiz, binoculars
 ;                                -> their per-map story batches (Stage 5)
 ;
@@ -96,9 +99,6 @@ Mansion4Script_Switches:
     ret
 
 ; --- gym / dojo interactables (Stage 5) ---
-global GymTrashScript
-GymTrashScript:
-    ret
 global GymStatues
 GymStatues:
     ret
@@ -113,9 +113,6 @@ PrintFightingDojoText3:
     ret
 
 ; --- Print*Text bench/flavor handlers (Stage 5) ---
-global PrintTrashText
-PrintTrashText:
-    ret
 global PrintBenchGuyText
 PrintBenchGuyText:
     ret
