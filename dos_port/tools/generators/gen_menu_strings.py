@@ -397,6 +397,10 @@ LINK_STRINGS = [
                     "CANCEL", TERM]),
     ("TradeCenterText", ["TRADE CENTER", NEXT, "COLOSSEUM", NEXT, "COLOSSEUM2",
                          NEXT, "CANCEL", TERM]),
+    # pret engine/link/print_waiting_text.asm — the one string that file holds.
+    # Rides in link_text.inc (same subsystem) for the home/serial.asm mirror's
+    # Serial_PrintWaitingTextAndSyncAndExchangeNybble -> PrintWaitingText path.
+    ("WaitingText", ["Waiting...!", TERM]),
 ]
 
 
@@ -751,7 +755,7 @@ def main() -> int:
         ]
         kout.append(f"{label}:\n" + "\n".join(rows))
     kout.append("")
-    insert_globals(kout, ['Text_f56f4', 'Text_f5728', 'Text_f575b', 'Text_f5791', 'Text_f579c', 'TradeCenterText'])
+    insert_globals(kout, ['Text_f56f4', 'Text_f5728', 'Text_f575b', 'Text_f5791', 'Text_f579c', 'TradeCenterText', 'WaitingText'])
     kdst = ASSETS / "link_text.inc"
     kdst.write_text("\n".join(kout))
     print(f"wrote {kdst} ({len(LINK_STRINGS)} labels + {len(LINK_FAR)} far)")

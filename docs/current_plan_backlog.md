@@ -700,8 +700,23 @@ real fix is extending the map data so the extended viewport reads real blocks;
 both clamps then become dead code and should be deleted. CLAUDE.md is the record
 of this work because no other file tracks it — keep it that way until it lands.
 
-### 17. Cable-club warp seam
-From `docs/plans/menus.md`.
+### 17. Cable-club warp seam — **CLOSED 2026-08-21 (link-cable Stage 0)**
+From `docs/plans/menus.md` (S10 item 4: "LinkMenu's `SpecialEnterMap`/
+`PrepareForSpecialWarp` cable-club hand-off is a tagged stub — confirm S9's
+spine wired it"). Verified wired, no stub remains:
+- `PrepareForSpecialWarp` is **translated**, not stubbed: real body at
+  `dos_port/src/engine/overworld/special_warps.asm:73`; the old stub's
+  retirement is recorded at `src/engine/menus/main_menu_stubs.asm:27`
+  (wild-live promotion, 2026-07-10). `label_status --callers
+  PrepareForSpecialWarp`: 5 port callers incl. `LinkMenu`
+  (`link_menu.asm:1217`) and `MainMenu` (`main_menu.asm:344`), 4 externs all
+  pointing at the real mirror.
+- `SpecialEnterMap` honors `wEnteringCableClub`
+  (`src/engine/menus/main_menu.asm:426-431`, mirroring pret
+  `engine/menus/main_menu.asm` `ret nz`).
+Static wiring only — the live enter-cable-club transition gets its runtime
+scenario when `CableClubNPC` lands (`docs/current_plan_link_cable.md`
+Stage 2), which is the first build where the receptionist path can run.
 
 ### 18. Hidden-event / overworld-events Stage 3 lint tail
 Memory: `overworld-events-stage3-hidden-events-linked`.

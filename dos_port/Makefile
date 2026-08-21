@@ -494,6 +494,13 @@ HAL_SRCS := \
     src/input/joypad.asm \
     src/engine/joypad.asm
 
+# Network/link-cable HAL (docs/current_plan_link_cable.md). Port-owned transport
+# layer below the home/serial.asm HAL line: session state, framing/ARQ, and the
+# per-transport drivers (null transport first; COM UART, IPX, TCP per plan stage).
+# Uses only standard .text/.data/.bss — no link.ld change needed or allowed here.
+# (NOT named LINK_SRCS: that var is the linker-input aggregate below.)
+NET_SRCS :=
+
 # Save HAL — the battery. SramLoadImage/SramStoreImage move the emulated 32 KiB
 # SRAM image between the resident banks and POKEMON.DSV (.dsv v2, raw image).
 SAVE_SRCS := \
@@ -3115,7 +3122,7 @@ BATTLE_SUPPORT_SRCS := \
     src/home/copy2.asm \
     src/engine/items/get_bag_item_quantity.asm
 
-LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(SAVE_SRCS) $(AUDIO_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
+LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(NET_SRCS) $(SAVE_SRCS) $(AUDIO_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
 # Stable de-dup: several DEBUG_* gates each append debug_party.asm, so combining two
 # (e.g. DEBUG_SEED_PARTY + DEBUG_STATUS) would list its object twice → ld "multiple
 # definition". Drop duplicates while preserving first-seen order (link layout unchanged).
