@@ -113,9 +113,8 @@ PrintFightingDojoText3:
     ret
 
 ; --- Print*Text bench/flavor handlers (Stage 5) ---
-global PrintBenchGuyText
-PrintBenchGuyText:
-    ret
+; PrintBenchGuyText — RETIRED (hidden-text-a batch). The real faithful body is
+; LINKED at its pret mirror src/engine/events/hidden_events/bench_guys.asm.
 global PrintIndigoPlateauHQText
 PrintIndigoPlateauHQText:
     ret
@@ -132,12 +131,10 @@ PrintBookcaseText:
 ; PrintBlackboardLinkCableText — RETIRED (school-blackboard batch). The real
 ; faithful body is LINKED at its pret mirror
 ; src/engine/events/hidden_events/school_blackboard.asm.
-global PrintNewBikeText
-PrintNewBikeText:
-    ret
-global PrintMagazinesText
-PrintMagazinesText:
-    ret
+; PrintNewBikeText — RETIRED (hidden-text-a batch). The real faithful body is
+; LINKED at its pret mirror src/engine/events/hidden_events/new_bike.asm.
+; PrintMagazinesText — RETIRED (hidden-text-a batch). The real faithful body is
+; LINKED at its pret mirror src/engine/events/hidden_events/magazines.asm.
 
 ; --- Oak's Lab posters / email (Stage 5: Pallet) ---
 global DisplayOakLabLeftPoster
@@ -167,6 +164,6 @@ FanClubPicture2:
     ret
 
 ; --- Route 15 gate binoculars (Stage 5) ---
-global Route15GateLeftBinoculars
-Route15GateLeftBinoculars:
-    ret
+; Route15GateLeftBinoculars — RETIRED (hidden-text-a batch). The real faithful body
+; is LINKED at its pret mirror src/engine/events/hidden_events/route_15_binoculars.asm.
+

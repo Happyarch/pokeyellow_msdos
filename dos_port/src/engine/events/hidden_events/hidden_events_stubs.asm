@@ -61,14 +61,8 @@ OpenBillsPCText:
 
 ; --- text_asm wrappers (14) -------------------------------------------------
 
-; SaffronCityPokecenterBenchGuyText — pret engine/events/hidden_events/bench_guys.asm.
-; Branches on EVENT_BEAT_SILPH_CO_GIOVANNI to pick which line the bench guy says.
-; Unreachable in the live build (PrintBenchGuyText is a ret-stub).
-; TODO(overworld-events Stage 5, Saffron batch): port the event branch, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/bench_guys.asm:SaffronCityPokecenterBenchGuyText; behavior=the bench guy says nothing instead of branching on EVENT_BEAT_SILPH_CO_GIOVANNI; evidence=pret SaffronCityPokecenterBenchGuyText is a text_asm event branch and label_status reports it missing; lifetime=until the overworld-events Saffron batch lands; label=SaffronCityPokecenterBenchGuyText}
-global SaffronCityPokecenterBenchGuyText
-SaffronCityPokecenterBenchGuyText:
-    ret
+; SaffronCityPokecenterBenchGuyText — RETIRED (hidden-text-a batch). The real faithful
+; body is LINKED at its pret mirror src/engine/events/hidden_events/bench_guys.asm.
 
 ; ViridianSchoolNotebook — RETIRED (school-notebooks batch). The real faithful
 ; body is LINKED at its pret mirror
@@ -128,11 +122,12 @@ global TownMapText
 TownMapText:
     ret
 
-; BookOrSculptureText — pret engine/events/hidden_events/book_or_sculpture.asm.
-; Branches on wCurMapTileset to say "bookshelf" or "sculpture".
-; Unreachable in the live build (PrintBookcaseText is a ret-stub).
-; TODO(overworld-events Stage 5): port the tileset branch, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/book_or_sculpture.asm:BookOrSculptureText; behavior=the bookshelf or sculpture displays nothing instead of branching on wCurMapTileset; evidence=pret BookOrSculptureText is a text_asm tileset branch and label_status reports it missing; lifetime=until the overworld-events story batch lands; label=BookOrSculptureText}
-global BookOrSculptureText
-BookOrSculptureText:
+; BookOrSculptureText — RETIRED (hidden-text-a batch). The real faithful body is
+; LINKED at its pret mirror src/engine/events/hidden_events/book_or_sculpture.asm.
+
+; DisplayMonFrontSpriteInBox — pret engine/events/hidden_events/museum_fossils2.asm.
+; Displays a pokemon's front sprite in a pop-up window.
+; STUB{class=stub; pret=engine/events/hidden_events/museum_fossils2.asm:DisplayMonFrontSpriteInBox; behavior=does not display pokemon front sprite popup box; evidence=pret DisplayMonFrontSpriteInBox and label_status reports it missing; lifetime=until museum_fossils2.asm lands; label=DisplayMonFrontSpriteInBox}
+global DisplayMonFrontSpriteInBox
+DisplayMonFrontSpriteInBox:
     ret
