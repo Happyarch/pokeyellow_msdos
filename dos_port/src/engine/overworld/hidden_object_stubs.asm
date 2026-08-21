@@ -23,8 +23,10 @@
 ;                   src/engine/events/hidden_events/reds_room.asm respectively.
 ;   * StartSlotMachine           -> RETIRED 2026-08-15. engine/slots/ is in the
 ;                                   Makefile SRCS list and supplies the real body.
-;   * BillsHousePC / CableClub{Left,Right}Gameboy
-;                                -> PC / cable-club service work (Stage 2 tails / Phase 4)
+;   * BillsHousePC -> RETIRED 2026-08-21. The real body is in
+;                                   src/engine/events/hidden_events/bills_house_pc.asm.
+;   * CableClub{Left,Right}Gameboy
+;                                -> cable-club service work (Stage 2 tails / Phase 4)
 ;   * GymTrashScript / PrintTrashText -> RETIRED 2026-08-21. The real bodies are in
 ;                                   src/engine/events/hidden_events/vermilion_gym_trash.asm
 ;                                   (linked via GAME_SRCS).
@@ -62,9 +64,9 @@ section .text
 ; OpenRedsPC — RETIRED. The real faithful body is LINKED at its pret mirror
 ; src/engine/events/hidden_events/reds_room.asm.
 
-global BillsHousePC
-BillsHousePC:
-    ret
+; BillsHousePC — RETIRED. The real faithful body is LINKED at its pret mirror
+; src/engine/events/hidden_events/bills_house_pc.asm.
+
 global CableClubLeftGameboy
 CableClubLeftGameboy:
     ret

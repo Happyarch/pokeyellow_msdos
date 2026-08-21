@@ -68,23 +68,11 @@ OpenBillsPCText:
 ; scenario owing evidence, docs/items_blockers.md), so it is still unreached in
 ; the live build — but the body itself is complete and correct.
 
-; BillsHouseInitiatedText — pret engine/events/hidden_events/bills_house_pc.asm.
-; StopAllMusic + SFX_SWITCH sequence when Bill's PC is switched on.
-; Unreachable in the live build (BillsHousePC is a ret-stub).
-; TODO(overworld-events Stage 5, Bill's house batch): port the sound sequence, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/bills_house_pc.asm:BillsHouseInitiatedText; behavior=no StopAllMusic or SFX_SWITCH sequence plays when Bills PC is switched on; evidence=pret BillsHouseInitiatedText is a text_asm sound sequence and label_status reports it missing; lifetime=until the overworld-events Bills-house batch lands; label=BillsHouseInitiatedText}
-global BillsHouseInitiatedText
-BillsHouseInitiatedText:
-    ret
-
-; BillsHousePokemonList — pret engine/events/hidden_events/bills_house_pc.asm.
-; HandleMenuInput + DisplayPokedex menu over Bill's mon list.
-; Unreachable in the live build (BillsHousePC is a ret-stub).
-; TODO(overworld-events Stage 5, Bill's house batch): port the menu, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/bills_house_pc.asm:BillsHousePokemonList; behavior=the mon list displays nothing instead of running its HandleMenuInput plus DisplayPokedex menu; evidence=pret BillsHousePokemonList is a text_asm menu handler and label_status reports it missing; lifetime=until the overworld-events Bills-house batch lands; label=BillsHousePokemonList}
-global BillsHousePokemonList
-BillsHousePokemonList:
-    ret
+; BillsHouseInitiatedText / BillsHousePokemonList — RETIRED 2026-08-21. The
+; real faithful bodies are LINKED at their pret mirror
+; src/engine/events/hidden_events/bills_house_pc.asm (whose handler
+; BillsHousePC is likewise linked at that same file, no longer a ret-stub in
+; hidden_object_stubs.asm).
 
 ; IndigoPlateauStatues — RETIRED (hidden-text-b batch). Real body at its pret
 ; mirror src/engine/events/hidden_events/indigo_plateau_statues.asm.

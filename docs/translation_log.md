@@ -7595,3 +7595,102 @@ report), and the only entry gate that would change that is in `src/debug/debug_d
   it needs per-tileset gfx/blockset/collision residency work well outside this
   task's file allow-list.
 
+## Bill's House PC: bills_house_pc.asm
+
+- **Source:** `engine/events/hidden_events/bills_house_pc.asm`.
+- **Translated:** `dos_port/src/engine/events/hidden_events/bills_house_pc.asm`
+  (the pret mirror path).
+- **Labels ported (6):** `BillsHousePC`, `BillsHouseInitiatedText`,
+  `BillsHousePokemonList`, `BillsHousePokemonListText1`,
+  `BillsHousePokemonListText2`, `BillsMonListText`.
+- **Not the box-storage PC.** `BillsHousePC` is the hidden-object PC prop in
+  Bill's house itself (`data/events/hidden_events.asm`:
+  `hidden_event 1, 4, BillsHousePC, SPRITE_FACING_UP`) — the teleporter/cell-
+  separator cutscene machine. It is unrelated to
+  `src/engine/pokemon/bills_pc.asm` (the box-storage UI, reached from a
+  different pret label, `OpenBillsPCText`/`engine/pokemon/bills_pc.asm`); pret
+  never calls between them and neither does the port.
+- **The `predef_code` trap:** `BillsHouseInitiatedText` (id 48/$30) and
+  `BillsHousePokemonList` (id 49/$31) are both `predef_code` rows in
+  `src/data/text_predef_pointers.asm` — `DisplayTextID`'s TEXT_PREDEF branch
+  does a bare `call esi` straight at the label, so each must be x86 code at
+  offset 0. Both keep pret's own `text_far`/`text_promptbutton`/`text_asm`
+  command bytes VERBATIM at a local `.stream` label (using the `text_far`/
+  `text_promptbutton`/`text_asm` NASM macros from `gb_text.inc`) instead of at
+  the label's own offset 0, and the label itself is a three-instruction
+  trampoline (`mov [text_msgbox], msgbox_dialog` / `mov esi, .stream` /
+  `call PrintText_NoCreatingTextBox` / `ret`) that reproduces exactly what
+  `DisplayTextID`'s own `.notScriptEntry` path does with a stream. This is the
+  SAME established pattern already linked in
+  `src/engine/events/hidden_events/town_map.asm:TownMapText` and
+  `vermilion_gym_trash.asm:VermilionGymTrashSuccessText1/Text3/
+  VermilionGymTrashSuccessPlaySfx` (the last one is the bare-`text_asm` shape,
+  matching `BillsHousePokemonList` exactly) — not a new invention for this
+  file. An earlier unreviewed draft of this file (preserved outside the repo)
+  instead hand-rewrote `BillsHouseInitiatedText`'s preamble into a
+  separately-generated, differently-terminated stream and called
+  `PrintText_NoCreatingTextBox` on that; it was replaced with the verbatim
+  `.stream`/`.hook` trampoline above once `town_map.asm` was found to already
+  establish the more faithful (and less code) precedent.
+- **`DEVIATION{class=projection}` on both trampolines** — same annotation
+  wording as `town_map.asm`/`vermilion_gym_trash.asm`'s.
+- **Text generator:** `tools/generators/gen_bills_house_pc_text.py` ->
+  `assets/bills_house_pc_text.inc`. `BillsHousePokemonListText1`/`Text2` are
+  the two PURE `text_far _X / text_end` wrappers, flattened directly under
+  their own names via `gen_battle_text.collect_wrappers` (the same "no
+  indirection needed when nothing follows text_end" pattern
+  `gen_cinnabar_gym_quiz_text.py` uses for its 10 pure wrappers — NOT
+  hand-written `text_far` shells, which the earlier draft used).
+  `_BillsHouseInitiatedText` is kept as a standalone (non-flattened) far body
+  via `collect_far`, since the hand-written carrier needs a real `text_far`
+  command byte ahead of its `text_promptbutton`/`text_asm` tail.
+  `BillsMonListText` (the Eevee/Flareon/Jolteon/Vaporeon/Cancel menu list) is
+  hand-listed (pret's mixed `db "..."` / `next "..."` menu-macro form matches
+  no generic scanner), same shape as `gen_battle_text.py`'s PLAIN STRINGS.
+- **Stubs retired (3):** `BillsHousePC` from
+  `src/engine/overworld/hidden_object_stubs.asm`; `BillsHouseInitiatedText` and
+  `BillsHousePokemonList` from
+  `src/engine/events/hidden_events/hidden_events_stubs.asm`. No stale extern
+  comments found (`label_status --callers` on all three: no other file names
+  either stub file as their provider).
+- **faithdiff, all three justified (pre-existing pattern, verified against
+  already-linked `town_map.asm`/`vermilion_gym_trash.asm` which show the
+  identical findings):**
+  * `BillsHousePC`: `+ ADDED PrintPredefTextID (jmp)` — pret's
+    `tx_pre_jump BillsHouseMonitorText` is spelled out as
+    `tx_pre_id BillsHouseMonitorText` + `jmp PrintPredefTextID` per
+    `include/predef.inc`'s own documented reason (a macro that jumps out at a
+    routine tail defeats the build-graph scanner); this is exactly what the
+    macro expands to, so nothing behavioral differs. Same treatment as
+    `reds_room.asm:OpenRedsPC`/`PrintRedSNESText`.
+  * `BillsHouseInitiatedText`: `+ ADDED PrintText_NoCreatingTextBox (call)` —
+    the `DEVIATION{class=projection}` trampoline call, identical finding to
+    `TownMapText`/`VermilionGymTrashSuccessText1`.
+  * `BillsHousePokemonList`: `+ ADDED PrintText_NoCreatingTextBox (call)` (same
+    as above) and `+ ADDED [wStatusFlags5]` — the documented `faithdiff`
+    store-matching blind spot (faithfulness-review skill): pret writes
+    `wStatusFlags5` through `[hl]` after an earlier `ld hl, wStatusFlags5`, so
+    the pret-side store regex (which matches by literal symbol name at the
+    write site) never associates the two, while the port's literal
+    `[ebp + wStatusFlags5]` writes are named. `TownMapText` shows the identical
+    `+ ADDED [wStatusFlags5]` finding for the same reason. Not a real
+    divergence; confirmed against the source, not suppressed.
+- **Scenario:** authored `bills_house_pc_cell_separator.lua` in
+  `dos_port/tools/mgba_harness/scenarios/` (drives `BillsHousePC`'s
+  `.doCellSeparator` branch and `BillsHouseInitiatedText`'s trampoline via the
+  game's own script-warp mechanism, matching `lib/sight.lua`'s pattern).
+  **Deliberately NOT added to `tools/scenario_manifest.json`**: doing so fails
+  `tools/validate_scenarios.py` (run by `static_gate`) for reasons outside this
+  file's own correctness — no `DEBUG_BILLSHOUSEPC` id exists yet (needs a boot
+  dispatch in `src/home/overworld.asm` + a dump block in
+  `src/debug/debug_dump.asm`, both outside this task's file allow-list) and no
+  committed golden `.bin`/`.json` can exist without running the (forbidden)
+  emulator. The scenario file documents exactly what those two hooks need to
+  do. Its header also corrects a stale premise repeated by the immediately
+  preceding PC-access batch in this same subsystem (this file's own log
+  entry, and `docs/current_plan_backlog.md` #31): interior-map tileset
+  residency is NOT what blocks a predef-text golden — stigmergy memory
+  `interior-maps-blocked-by-tileset-residency-not-blk` records that fixed
+  2026-08-16 (`566c3027c`) and backlog #31's cause superseded. This scenario's
+  actual, narrower blocker is the missing debug gate and golden artifacts
+  above, not tileset residency.
