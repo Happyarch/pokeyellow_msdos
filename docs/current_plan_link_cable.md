@@ -33,6 +33,13 @@ for harness work.
   IPX and TCP, with **up to five saved TCP and five saved IPX connections**.
   CLI flags remain as the non-interactive path (harness/scripting) and skip
   the UI. See "Link setup UI + connection book" below.
+- **Keyboard naming screen as a BUILD option (maintainer requirement,
+  2026-08-21):** `make KBD_NAMING=1` converts the game's name-entry UI
+  (player/rival/nickname, `DisplayNamingScreen`) to direct keyboard typing;
+  a dedicated key opens a small on-screen picker showing ONLY the
+  game-specific characters a US keyboard cannot type. Default build (flag
+  off/0) keeps the faithful on-screen grid. See "Keyboard naming screen"
+  under the UI section.
 - **Printer and link keep separate forks of the pret serial functions.**
   Verified compatible: the printer plan cuts inside the printer engine
   (`Printer_PrepareToSend` → in-memory device; `docs/current_plan_printer.md`
@@ -183,6 +190,34 @@ whole feature stays greppable in one place.
 - **Harness note**: scenarios drive the UI via AutoKeyDrive where the UI
   itself is under test; everything else uses the CLI-flag bypass.
 
+### Keyboard naming screen (build option `KBD_NAMING=1`)
+
+Rides on the same Stage-5 text-entry infrastructure (scancode text mode +
+line-edit widget). Build plumbing mirrors `BUG_FIX_LEVEL`: `KBD_NAMING ?= 0`
+in the Makefile, `-D KBD_NAMING=$(KBD_NAMING)` in `NASMFLAGS`, `%if`-guarded
+blocks in `src/engine/menus/naming_screen.asm`.
+
+- **Flag on**: `DisplayNamingScreen` accepts typed input directly — any
+  Gen-1 name-charset character a US keyboard produces (letters with Shift
+  for case, digits/punctuation where the charset has them), Backspace
+  deletes, Enter confirms (pret END semantics), pret length limits
+  unchanged. The letter grid is not drawn.
+- **Special-char picker**: one dedicated key (F2 unless implementation
+  finds a conflict) opens a compact on-screen picker listing ONLY the
+  game-specific characters not typable on a US keyboard (♂ ♀ é × PK MN …),
+  arrows + Enter to insert, Esc to close. The picker's character list and
+  the scancode→charmap table are both **generated** — derived from pret's
+  naming-screen charset minus the typable mapping by a
+  `gen_kbd_naming.py` generator into `assets/` (two-tier rule: these are
+  data, and deriving the "special" set at generation time means it cannot
+  drift from the charset).
+- **Fidelity**: flag off is the faithful default — goldens and
+  `make fidelity` run it. Flag on is a sanctioned divergence: one
+  `DEVIATION{class=projection}` on the naming screen with the `%if` blocks,
+  covered by a port-only AutoKeyDrive scenario on a `KBD_NAMING=1` build
+  (type a name including one picker character; assert the resulting name
+  bytes in a dump).
+
 ## Stages
 
 ### Stage 0 — governance + groundwork
@@ -274,6 +309,14 @@ whole feature stays greppable in one place.
 - [ ] AutoKeyDrive scenario: create a TCP and an IPX entry, reboot the
       instance, assert both persist and connect state is selectable;
       full-book (5/5) and delete paths
+- [ ] `KBD_NAMING=1` build option: Makefile flag (BUG_FIX_LEVEL plumbing
+      pattern), `%if`-guarded keyboard path in
+      `src/engine/menus/naming_screen.asm` with `DEVIATION{class=projection}`,
+      special-char picker, `gen_kbd_naming.py` generated scancode map +
+      picker charset; default build byte-identical behavior
+- [ ] Port-only scenario on a `KBD_NAMING=1` build: type a name including
+      one picker character, assert name bytes in a dump; default-build
+      goldens untouched
 
 ### Stage 6 — IPX
 - [ ] `ipx_dos.asm` (detect, socket `/IPXSOCK=`, DOS-memory ECBs, poll loop,
