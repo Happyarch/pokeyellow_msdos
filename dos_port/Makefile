@@ -908,6 +908,11 @@ GAME_SRCS := \
     src/engine/events/hidden_events/cinnabar_gym_quiz.asm \
     src/engine/events/hidden_events/vermilion_gym_trash.asm \
     src/engine/events/hidden_events/vermilion_gym_trash2.asm \
+    src/engine/events/hidden_events/bench_guys.asm \
+    src/engine/events/hidden_events/book_or_sculpture.asm \
+    src/engine/events/hidden_events/magazines.asm \
+    src/engine/events/hidden_events/new_bike.asm \
+    src/engine/events/hidden_events/route_15_binoculars.asm \
     src/engine/events/card_key.asm \
     src/engine/events/poison.asm \
     src/engine/events/hidden_events/safari_game.asm \
@@ -3461,6 +3466,12 @@ src/engine/events/hidden_events/cinnabar_gym_quiz.o: assets/predef_text_ids.inc 
 src/engine/events/hidden_events/vermilion_gym_trash.o: assets/vermilion_gym_trash_text.inc \
     assets/event_constants.inc assets/predef_text_ids.inc assets/audio_constants.inc
 src/engine/events/hidden_events/vermilion_gym_trash2.o: include/gb_macros.inc include/gb_memmap.inc
+src/engine/events/hidden_events/bench_guys.o: assets/bench_guys_text.inc assets/predef_text_ids.inc \
+    assets/event_constants.inc assets/map_dims.inc
+src/engine/events/hidden_events/book_or_sculpture.o: assets/book_or_sculpture_text.inc
+src/engine/events/hidden_events/magazines.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/new_bike.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/route_15_binoculars.o: assets/predef_text_ids.inc include/predef.inc
 
 src/data/audio_data.o: assets/audio_rom.inc
 src/data/pokemon/cries.o: assets/cry_data.inc
@@ -4046,6 +4057,21 @@ assets/cinnabar_gym_quiz_text.inc: ../engine/events/hidden_events/cinnabar_gym_q
                          tools/generators/gen_battle_text.py \
                          tools/generators/gen_cinnabar_gym_quiz_text.py
 	python3 tools/generators/gen_cinnabar_gym_quiz_text.py
+
+# Bench guys text streams and BenchGuyTextPointers table.
+assets/bench_guys_text.inc: ../engine/events/hidden_events/bench_guys.asm \
+                         ../data/events/bench_guys.asm ../data/text/text_2.asm \
+                         ../constants/charmap.asm tools/generators/gen_battle_text.py \
+                         tools/generators/gen_bench_guys_text.py
+	python3 tools/generators/gen_bench_guys_text.py
+
+# Book or sculpture text streams.
+assets/book_or_sculpture_text.inc: ../engine/events/hidden_events/book_or_sculpture.asm \
+                         ../data/text/text_2.asm ../constants/charmap.asm \
+                         tools/generators/gen_battle_text.py \
+                         tools/generators/gen_book_or_sculpture_text.py
+	python3 tools/generators/gen_book_or_sculpture_text.py
+
 # Pokédex-rating text (DexCompletionText + the 16 DexRatingText_Own<N>To<M>
 # bands). Generated from engine/events/pokedex_rating.asm (the wrapper
 # labels) + text/pokedex_ratings.asm (the far bodies, incl. the two
@@ -4213,6 +4239,8 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/hidden_events.inc \
         assets/hidden_item_coords.inc assets/pickup_text.inc \
         assets/school_notebooks_text.inc \
+        assets/bench_guys_text.inc \
+        assets/book_or_sculpture_text.inc \
         assets/give_pokemon_text.inc \
         assets/predef_text.inc \
         assets/predef_text_ids.inc \

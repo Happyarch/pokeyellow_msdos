@@ -7422,3 +7422,46 @@ report), and the only entry gate that would change that is in `src/debug/debug_d
 - **Scenario:**
   * Authored `safari_game_over` (id 88) in `dos_port/tools/scenario_manifest.json` and `dos_port/tools/mgba_harness/scenarios/safari_game_over.lua` (UNRUN per addendum).
 
+---
+
+## engine/events/hidden_events/{bench_guys,book_or_sculpture,magazines,new_bike,route_15_binoculars}.asm
+
+- **Sources:**
+  * `engine/events/hidden_events/bench_guys.asm`
+  * `engine/events/hidden_events/book_or_sculpture.asm`
+  * `engine/events/hidden_events/magazines.asm`
+  * `engine/events/hidden_events/new_bike.asm`
+  * `engine/events/hidden_events/route_15_binoculars.asm`
+- **Translated:**
+  * `dos_port/src/engine/events/hidden_events/bench_guys.asm`
+  * `dos_port/src/engine/events/hidden_events/book_or_sculpture.asm`
+  * `dos_port/src/engine/events/hidden_events/magazines.asm`
+  * `dos_port/src/engine/events/hidden_events/new_bike.asm`
+  * `dos_port/src/engine/events/hidden_events/route_15_binoculars.asm`
+- **Labels ported (10):**
+  * `PrintBenchGuyText` (routine): looks up current map in `BenchGuyTextPointers`, checks player facing direction (`SPRITE_FACING_LEFT`), and dispatches to `PrintPredefTextID`.
+  * `SaffronCityPokecenterBenchGuyText` (routine/predef_code): checks `EVENT_BEAT_SILPH_CO_GIOVANNI` and displays `SaffronCityPokecenterBenchGuyText2` or `SaffronCityPokecenterBenchGuyText1`.
+  * `SaffronCityPokecenterBenchGuyText1` (data): Tier-1 text data generated into `assets/bench_guys_text.inc`.
+  * `SaffronCityPokecenterBenchGuyText2` (data): Tier-1 text data generated into `assets/bench_guys_text.inc`.
+  * `BookOrSculptureText` (routine/predef_code): checks `wCurMapTileset` for `MANSION` (19) and tile at `(PLAYER_STANDING_COL, PLAYER_STANDING_ROW - 3)` = `(24, 14)` for tile `0x38` (Diglett sculpture), printing `DiglettSculptureText` or `PokemonBooksText`.
+  * `DiglettSculptureText` (data): Tier-1 text data generated into `assets/book_or_sculpture_text.inc`.
+  * `PokemonBooksText` (data): Tier-1 text data generated into `assets/book_or_sculpture_text.inc`.
+  * `PrintMagazinesText` (routine): enables auto text box and calls `tx_pre MagazinesText` (predef text id $32).
+  * `PrintNewBikeText` (routine): enables auto text box and tail-jumps to `tx_pre_id NewBicycleText` + `jmp PrintPredefTextID` (predef text id $3B).
+  * `Route15GateLeftBinoculars` (routine): if player facing UP, enables auto text box, displays `Route15UpstairsBinocularsText` (predef text id $0A), loads `ARTICUNO` into `wCurPartySpecies`, plays cry, displays front sprite box, and clears `hAutoBGTransferEnabled`.
+- **Stubs retired (6):**
+  * `SaffronCityPokecenterBenchGuyText` deleted from `dos_port/src/engine/events/hidden_events/hidden_events_stubs.asm`.
+  * `BookOrSculptureText` deleted from `dos_port/src/engine/events/hidden_events/hidden_events_stubs.asm`.
+  * `PrintBenchGuyText` deleted from `dos_port/src/engine/overworld/hidden_object_stubs.asm`.
+  * `PrintNewBikeText` deleted from `dos_port/src/engine/overworld/hidden_object_stubs.asm`.
+  * `PrintMagazinesText` deleted from `dos_port/src/engine/overworld/hidden_object_stubs.asm`.
+  * `Route15GateLeftBinoculars` deleted from `dos_port/src/engine/overworld/hidden_object_stubs.asm`.
+- **Tier-1 Generators:**
+  * Created `dos_port/tools/generators/gen_bench_guys_text.py` generating `dos_port/assets/bench_guys_text.inc`.
+  * Created `dos_port/tools/generators/gen_book_or_sculpture_text.py` generating `dos_port/assets/book_or_sculpture_text.inc`.
+- **Annotations:**
+  * `BookOrSculptureText`: `DEVIATION{class=projection; pret=engine/events/hidden_events/book_or_sculpture.asm:BookOrSculptureText; behavior=reads tile at (PLAYER_STANDING_COL, PLAYER_STANDING_ROW - 3) = (24, 14) on 40x25 canvas instead of GB literal coord (8, 6); evidence=pret lda_coord 8, 6 is 3 rows above player feet (8, 9) which projects to (24, 14) per ui_projection.md; lifetime=permanent}`
+- **Scenario:**
+  * Authored `route_15_binoculars` in `dos_port/tools/mgba_harness/scenarios/route_15_binoculars.lua` (UNRUN per addendum; port-entry gate hook in debug_dump.asm outside allow-list).
+
+
