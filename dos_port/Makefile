@@ -903,11 +903,31 @@ GAME_SRCS := \
     src/data/text_predef_pointers.asm \
     src/engine/events/hidden_events/hidden_events_stubs.asm \
     src/engine/events/hidden_events/reds_room.asm \
+    src/engine/events/hidden_events/pokecenter_pc.asm \
+    src/engine/events/hidden_events/bookshelves.asm \
+    src/engine/events/hidden_items.asm \
+    src/engine/events/starter_dex.asm \
     src/engine/events/hidden_events/school_blackboard.asm \
     src/engine/events/hidden_events/school_notebooks.asm \
     src/engine/events/hidden_events/cinnabar_gym_quiz.asm \
     src/engine/events/hidden_events/vermilion_gym_trash.asm \
     src/engine/events/hidden_events/vermilion_gym_trash2.asm \
+    src/engine/events/hidden_events/bench_guys.asm \
+    src/engine/events/hidden_events/book_or_sculpture.asm \
+    src/engine/events/hidden_events/magazines.asm \
+    src/engine/events/hidden_events/new_bike.asm \
+    src/engine/events/hidden_events/route_15_binoculars.asm \
+    src/engine/events/hidden_events/indigo_plateau_statues.asm \
+    src/engine/events/hidden_events/indigo_plateau_hq.asm \
+    src/engine/events/hidden_events/gym_statues.asm \
+    src/engine/events/hidden_events/fighting_dojo.asm \
+    src/engine/events/hidden_events/blues_room.asm \
+    src/engine/events/hidden_events/oaks_lab_posters.asm \
+    src/engine/events/hidden_events/oaks_lab_email.asm \
+    src/engine/events/hidden_events/fanclub_pictures.asm \
+    src/engine/events/hidden_events/museum_fossils.asm \
+    src/engine/events/hidden_events/museum_fossils2.asm \
+    src/engine/events/hidden_events/town_map.asm \
     src/engine/events/card_key.asm \
     src/engine/events/poison.asm \
     src/engine/events/hidden_events/safari_game.asm \
@@ -3393,6 +3413,22 @@ assets/hidden_events.inc:
 assets/hidden_item_coords.inc:
 	python3 tools/generators/gen_hidden_item_coords.py
 
+# HiddenCoinCoords data (generated from data/events/hidden_coins.asm) — the
+# gen_hidden_item_coords.py sibling, consumed by
+# src/engine/events/hidden_items.asm:FindHiddenItemOrCoinsIndex.
+assets/hidden_coin_coords.inc:
+	python3 tools/generators/gen_hidden_coin_coords.py
+
+# FoundHiddenItemText's far intro (generated from data/text/text_2.asm's
+# _FoundHiddenItemText), consumed by src/engine/events/hidden_items.asm.
+assets/hidden_items_text.inc: tools/generators/gen_hidden_items_text.py tools/generators/gen_battle_text.py
+	python3 tools/generators/gen_hidden_items_text.py
+
+src/engine/events/hidden_items.o: assets/hidden_coin_coords.inc assets/hidden_items_text.inc \
+    assets/predef_text_ids.inc include/predef.inc assets/script_constants.inc assets/audio_constants.inc
+src/engine/events/hidden_events/pokecenter_pc.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/bookshelves.o: assets/predef_text_ids.inc include/predef.inc
+
 # PickUpItem message streams (generated from engine/events/pick_up_item.asm).
 assets/pickup_text.inc: assets/item_text.inc assets/battle_text.inc
 	python3 tools/generators/gen_pickup_text.py
@@ -3461,6 +3497,28 @@ src/engine/events/hidden_events/cinnabar_gym_quiz.o: assets/predef_text_ids.inc 
 src/engine/events/hidden_events/vermilion_gym_trash.o: assets/vermilion_gym_trash_text.inc \
     assets/event_constants.inc assets/predef_text_ids.inc assets/audio_constants.inc
 src/engine/events/hidden_events/vermilion_gym_trash2.o: include/gb_macros.inc include/gb_memmap.inc
+src/engine/events/hidden_events/bench_guys.o: assets/bench_guys_text.inc assets/predef_text_ids.inc \
+    assets/event_constants.inc assets/map_dims.inc
+src/engine/events/hidden_events/book_or_sculpture.o: assets/book_or_sculpture_text.inc
+src/engine/events/hidden_events/magazines.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/new_bike.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/route_15_binoculars.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/indigo_plateau_statues.o: assets/indigo_plateau_statues_text.inc
+src/engine/events/hidden_events/indigo_plateau_hq.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/gym_statues.o: assets/predef_text_ids.inc include/predef.inc \
+    assets/badge_maps.inc
+src/engine/events/hidden_events/fighting_dojo.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/blues_room.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/oaks_lab_posters.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/oaks_lab_email.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/fanclub_pictures.o: assets/predef_text_ids.inc include/predef.inc assets/script_constants.inc
+src/engine/events/hidden_events/museum_fossils.o: assets/predef_text_ids.inc include/predef.inc
+src/engine/events/hidden_events/museum_fossils2.o: include/coords.inc include/gb_constants.inc include/gb_memmap.inc
+src/engine/events/hidden_events/town_map.o: assets/town_map_text.inc
+
+# Wall Town Map text string (generated by gen_town_map_text.py)
+assets/town_map_text.inc: tools/generators/gen_town_map_text.py tools/generators/gen_battle_text.py
+	python3 tools/generators/gen_town_map_text.py
 
 src/data/audio_data.o: assets/audio_rom.inc
 src/data/pokemon/cries.o: assets/cry_data.inc
@@ -4046,6 +4104,32 @@ assets/cinnabar_gym_quiz_text.inc: ../engine/events/hidden_events/cinnabar_gym_q
                          tools/generators/gen_battle_text.py \
                          tools/generators/gen_cinnabar_gym_quiz_text.py
 	python3 tools/generators/gen_cinnabar_gym_quiz_text.py
+
+# Bench guys text streams and BenchGuyTextPointers table.
+assets/bench_guys_text.inc: ../engine/events/hidden_events/bench_guys.asm \
+                         ../data/events/bench_guys.asm ../data/text/text_2.asm \
+                         ../constants/charmap.asm tools/generators/gen_battle_text.py \
+                         tools/generators/gen_bench_guys_text.py
+	python3 tools/generators/gen_bench_guys_text.py
+
+# Book or sculpture text streams.
+assets/book_or_sculpture_text.inc: ../engine/events/hidden_events/book_or_sculpture.asm \
+                         ../data/text/text_2.asm ../constants/charmap.asm \
+                         tools/generators/gen_battle_text.py \
+                         tools/generators/gen_book_or_sculpture_text.py
+	python3 tools/generators/gen_book_or_sculpture_text.py
+
+# Indigo Plateau statues message streams (the 3 pure text_far wrappers). Generated from
+# engine/events/hidden_events/indigo_plateau_statues.asm + data/text/text_2.asm.
+assets/indigo_plateau_statues_text.inc: ../engine/events/hidden_events/indigo_plateau_statues.asm \
+                         ../data/text/text_2.asm ../constants/charmap.asm \
+                         tools/generators/gen_battle_text.py \
+                         tools/generators/gen_indigo_plateau_statues_text.py
+	python3 tools/generators/gen_indigo_plateau_statues_text.py
+
+# Map badge flags table (MapBadgeFlags). Generated from data/maps/badge_maps.asm.
+assets/badge_maps.inc: ../data/maps/badge_maps.asm tools/generators/gen_badge_maps.py
+	python3 tools/generators/gen_badge_maps.py
 # Pokédex-rating text (DexCompletionText + the 16 DexRatingText_Own<N>To<M>
 # bands). Generated from engine/events/pokedex_rating.asm (the wrapper
 # labels) + text/pokedex_ratings.asm (the far bodies, incl. the two
@@ -4175,6 +4259,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/bike_riding_tilesets.inc assets/card_key_coords.inc \
         assets/card_key_maps.inc \
         assets/vermilion_gym_trash_text.inc \
+        assets/town_map_text.inc \
         assets/copyright_text.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
         assets/red_bike_sprite.inc assets/seel_sprite.inc \
@@ -4212,7 +4297,10 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/map_script_tables.inc \
         assets/hidden_events.inc \
         assets/hidden_item_coords.inc assets/pickup_text.inc \
+        assets/hidden_coin_coords.inc assets/hidden_items_text.inc \
         assets/school_notebooks_text.inc \
+        assets/bench_guys_text.inc \
+        assets/book_or_sculpture_text.inc \
         assets/give_pokemon_text.inc \
         assets/predef_text.inc \
         assets/predef_text_ids.inc \
@@ -4236,6 +4324,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/options_strings.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/school_blackboard_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/cinnabar_gym_quiz_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
+        assets/indigo_plateau_statues_text.inc assets/badge_maps.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/pokedex_rating_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/sprite_sheet_pointers.inc assets/pokedex_tiles.inc \
         assets/mon_pics.inc \

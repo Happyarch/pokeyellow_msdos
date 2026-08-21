@@ -15,10 +15,15 @@
 ;
 ; RETIREMENT: these are per-object handlers (project-conventions two-tier rule:
 ; behavior is Tier-2 code). Each retires when its owning subsystem / map lands:
-;   * HiddenItems / HiddenCoins  -> overworld-events Stage 3 bullets 2-3 + items plan
+;   * HiddenItems / HiddenCoins / PrintBookshelfText / OpenPokemonCenterPC /
+;     OpenRedsPC -> RETIRED 2026-08-21. The real bodies are in
+;                   src/engine/events/hidden_items.asm,
+;                   src/engine/events/hidden_events/bookshelves.asm,
+;                   src/engine/events/hidden_events/pokecenter_pc.asm and
+;                   src/engine/events/hidden_events/reds_room.asm respectively.
 ;   * StartSlotMachine           -> RETIRED 2026-08-15. engine/slots/ is in the
 ;                                   Makefile SRCS list and supplies the real body.
-;   * OpenPokemonCenterPC / OpenRedsPC / BillsHousePC / CableClub{Left,Right}Gameboy
+;   * BillsHousePC / CableClub{Left,Right}Gameboy
 ;                                -> PC / cable-club service work (Stage 2 tails / Phase 4)
 ;   * GymTrashScript / PrintTrashText -> RETIRED 2026-08-21. The real bodies are in
 ;                                   src/engine/events/hidden_events/vermilion_gym_trash.asm
@@ -44,36 +49,19 @@ H_INTERACTED_WITH_BOOKSHELF equ 0xFFDB
 
 section .text
 
-; ---------------------------------------------------------------------------
-; PrintBookshelfText — pret engine/events/hidden_events/bookshelves.asm.
-; Dispatch callee of CheckForHiddenEventOrBookshelfOrCardKeyDoor's fallback (NOT a
-; data-table handler). The caller reads hInteractedWithBookshelf right after: $00
-; = "bookshelf handled" (suppresses the sprite/sign scan), $FF = "no bookshelf
-; here" (falls through to the sprite/sign scan). This stub MUST report $FF, or a
-; stale value would silently break NPC/sign interaction. The real body does a
-; (tileset, tile-in-front) lookup in BookshelfTileIDs + a PrintCardKeyText tail.
-; RETIREMENT: port bookshelves.asm + BookshelfTileIDs + card-key-door text.
-; ---------------------------------------------------------------------------
-global PrintBookshelfText
-PrintBookshelfText:
-    mov byte [ebp + H_INTERACTED_WITH_BOOKSHELF], 0xFF   ; no bookshelf found
-    ret
+; PrintBookshelfText — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_events/bookshelves.asm (BookshelfTileIDs
+; lookup + PrintCardKeyText tail).
 
-; --- ground items / coins (Stage 3 bullets 2-3) ---
-global HiddenItems
-HiddenItems:
-    ret
-global HiddenCoins
-HiddenCoins:
-    ret
+; HiddenItems / HiddenCoins — RETIRED. The real faithful bodies are LINKED at
+; their pret mirror src/engine/events/hidden_items.asm.
 
-; --- PC access (PC / cable-club service tails) ---
-global OpenPokemonCenterPC
-OpenPokemonCenterPC:
-    ret
-global OpenRedsPC
-OpenRedsPC:
-    ret
+; OpenPokemonCenterPC — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_events/pokecenter_pc.asm.
+
+; OpenRedsPC — RETIRED. The real faithful body is LINKED at its pret mirror
+; src/engine/events/hidden_events/reds_room.asm.
+
 global BillsHousePC
 BillsHousePC:
     ret
@@ -98,75 +86,38 @@ global Mansion4Script_Switches
 Mansion4Script_Switches:
     ret
 
-; --- gym / dojo interactables (Stage 5) ---
-global GymStatues
-GymStatues:
-    ret
-global PrintFightingDojoText
-PrintFightingDojoText:
-    ret
-global PrintFightingDojoText2
-PrintFightingDojoText2:
-    ret
-global PrintFightingDojoText3
-PrintFightingDojoText3:
-    ret
 
 ; --- Print*Text bench/flavor handlers (Stage 5) ---
-global PrintBenchGuyText
-PrintBenchGuyText:
-    ret
-global PrintIndigoPlateauHQText
-PrintIndigoPlateauHQText:
-    ret
+; PrintBenchGuyText — RETIRED (hidden-text-a batch). The real faithful body is
+; LINKED at its pret mirror src/engine/events/hidden_events/bench_guys.asm.
+; PrintIndigoPlateauHQText — RETIRED (hidden-text-b batch). The real faithful
+; body is LINKED at its pret mirror
+; src/engine/events/hidden_events/indigo_plateau_hq.asm.
 ; PrintRedSNESText — RETIRED 2026-08-02 (predef-text plan). The real faithful body
 ; is LINKED at its pret mirror src/engine/events/hidden_events/reds_room.asm; it is
 ; the port's first real end-to-end predef-text call site (tx_pre_jump
 ; RedBedroomSNESText -> PrintPredefTextID).
-global PrintBookcaseText
-PrintBookcaseText:
-    ret
 ; PrintNotebookText — RETIRED (school-notebooks batch). The real faithful body is
 ; LINKED at its pret mirror
 ; src/engine/events/hidden_events/school_notebooks.asm.
 ; PrintBlackboardLinkCableText — RETIRED (school-blackboard batch). The real
 ; faithful body is LINKED at its pret mirror
 ; src/engine/events/hidden_events/school_blackboard.asm.
-global PrintNewBikeText
-PrintNewBikeText:
-    ret
-global PrintMagazinesText
-PrintMagazinesText:
-    ret
+; PrintNewBikeText — RETIRED (hidden-text-a batch). The real faithful body is
+; LINKED at its pret mirror src/engine/events/hidden_events/new_bike.asm.
+; PrintMagazinesText — RETIRED (hidden-text-a batch). The real faithful body is
+; LINKED at its pret mirror src/engine/events/hidden_events/magazines.asm.
 
-; --- Oak's Lab posters / email (Stage 5: Pallet) ---
-global DisplayOakLabLeftPoster
-DisplayOakLabLeftPoster:
-    ret
-global DisplayOakLabRightPoster
-DisplayOakLabRightPoster:
-    ret
-global DisplayOakLabEmailText
-DisplayOakLabEmailText:
-    ret
-
-; --- museum fossils (Stage 5: Pewter) ---
-global AerodactylFossil
-AerodactylFossil:
-    ret
-global KabutopsFossil
-KabutopsFossil:
-    ret
-
-; --- Pokémon Fan Club pictures (Stage 5: Vermilion) ---
-global FanClubPicture1
-FanClubPicture1:
-    ret
-global FanClubPicture2
-FanClubPicture2:
-    ret
+; DisplayOakLabLeftPoster, DisplayOakLabRightPoster — RETIRED. Real bodies in
+; src/engine/events/hidden_events/oaks_lab_posters.asm.
+; DisplayOakLabEmailText — RETIRED. Real body in
+; src/engine/events/hidden_events/oaks_lab_email.asm.
+; AerodactylFossil, KabutopsFossil — RETIRED. Real bodies in
+; src/engine/events/hidden_events/museum_fossils.asm.
+; FanClubPicture1, FanClubPicture2 — RETIRED. Real bodies in
+; src/engine/events/hidden_events/fanclub_pictures.asm.
 
 ; --- Route 15 gate binoculars (Stage 5) ---
-global Route15GateLeftBinoculars
-Route15GateLeftBinoculars:
-    ret
+; Route15GateLeftBinoculars — RETIRED (hidden-text-a batch). The real faithful body
+; is LINKED at its pret mirror src/engine/events/hidden_events/route_15_binoculars.asm.
+

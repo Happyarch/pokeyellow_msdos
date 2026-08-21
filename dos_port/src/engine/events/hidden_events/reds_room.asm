@@ -1,21 +1,29 @@
 ; reds_room.asm — Red's bedroom hidden-event handlers.
 ;
-; Faithful translation of pret `engine/events/hidden_events/reds_room.asm`.
-; Only PrintRedSNESText is ported here; OpenRedsPC and the two text entries it and
-; PrintRedSNESText name are elsewhere:
-;   * RedBedroomSNESText is a plain `text_far` wrapper, so it is Tier-1 DATA and is
-;     generated into assets/predef_text.inc (via tools/generators/gen_predef_text.py).
-;   * RedBedroomPCText is a `script_players_pc` marker with no port body yet — it
-;     stands in at src/engine/events/hidden_events/hidden_events_stubs.asm.
-;   * OpenRedsPC stays a ret-stub in src/engine/overworld/hidden_object_stubs.asm
-;     until the PC service work lands; porting it here would only reach that stub.
+; Faithful translation of pret `engine/events/hidden_events/reds_room.asm`. All
+; four pret labels are here now:
+;   PrintRedSNESText / RedBedroomSNESText — ported 2026-08-02 (the predef-text
+;     plan's first end-to-end acceptance path); unchanged by this pass.
+;   OpenRedsPC — the item-storage PC's per-map hidden-event handler. Retires the
+;     ret-stub in src/engine/overworld/hidden_object_stubs.asm.
+;   RedBedroomPCText — its `script_players_pc` predef marker. Retires the
+;     ret-stub in src/engine/events/hidden_events/hidden_events_stubs.asm.
 ;
-; WHY THIS ONE ROUTINE, NOW: it is the cheapest REAL end-to-end path through the
-; predef-text dispatch — press A at the SNES in Red's bedroom and the chain runs
-; PrintRedSNESText -> PrintPredefTextID -> DisplayTextID's TEXT_PREDEF branch ->
-; the flat TextPredefs row -> the generated RedBedroomSNESText stream. That is the
-; must-hit acceptance the predef-text plan owes for editing DisplayTextID, and the
-; bedroom is where every golden scenario already starts.
+; RedBedroomPCText is a predef_code TextPredefs row ($03,
+; src/data/text_predef_pointers.asm) — DisplayTextID's TEXT_PREDEF branch does a
+; bare `call esi` straight at this label (TEXT_ASM_ENTRY sentinel), so the label
+; must be x86 CODE at offset 0, not pret's one-byte `script_players_pc` marker
+; ($FC, TX_SCRIPT_PLAYERS_PC). Dropping that byte is not a behavior change:
+; DisplayTextID's ordinary byte-stream dict path (src/home/text_script.asm)
+; dispatches that exact byte to TextScript_ItemStoragePC (src/home/map_objects.asm,
+; already linked: SaveScreenTilesToBuffer2 then a jump into PlayerPC ->
+; BankswitchAndContinue -> jp HoldTextDisplayOpen, matching pret's
+; TextScript_ItemStoragePC). Calling that same routine directly reproduces the
+; identical continuation — same pattern as CinnabarGymQuiz
+; (src/engine/events/hidden_events/cinnabar_gym_quiz.asm) dropping its text_asm
+; byte, and PokemonCenterPCText
+; (src/engine/events/hidden_events/pokecenter_pc.asm) doing the same for
+; script_pokecenter_pc.
 ;
 ; Register map: A=AL; GB memory at [EBP + addr].
 ;
@@ -33,6 +41,7 @@ section .text
 
 extern EnableAutoTextBoxDrawing         ; src/home/window.asm
 extern PrintPredefTextID                ; src/home/predef_text.asm
+extern TextScript_ItemStoragePC         ; src/home/map_objects.asm (linked)
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; PrintRedSNESText — pret engine/events/hidden_events/reds_room.asm:PrintRedSNESText.
@@ -42,8 +51,27 @@ extern PrintPredefTextID                ; src/home/predef_text.asm
 global PrintRedSNESText
 PrintRedSNESText:
     call EnableAutoTextBoxDrawing
-    ; pret: `tx_pre_jump RedBedroomSNESText`, which is tx_pre_id + jp. Spelled out
-    ; because a jump-out macro AT A ROUTINE TAIL defeats the build-graph scanner —
-    ; see the note in include/predef.inc.
+    ; pret: `tx_pre_jump RedBedroomSNESText`, spelled out (see include/predef.inc —
+    ; a jump-out macro at a routine tail defeats the build-graph scanner).
     tx_pre_id RedBedroomSNESText
     jmp PrintPredefTextID
+
+; ─────────────────────────────────────────────────────────────────────────────
+; OpenRedsPC — pret engine/events/hidden_events/reds_room.asm:OpenRedsPC.
+; The bedroom item-storage PC's hidden-event handler. No facing check (unlike
+; OpenPokemonCenterPC) — matches pret exactly.
+; ─────────────────────────────────────────────────────────────────────────────
+global OpenRedsPC
+OpenRedsPC:
+    call EnableAutoTextBoxDrawing
+    ; pret: `tx_pre_jump RedBedroomPCText`, spelled out.
+    tx_pre_id RedBedroomPCText
+    jmp PrintPredefTextID
+
+; ─────────────────────────────────────────────────────────────────────────────
+; RedBedroomPCText — pret engine/events/hidden_events/reds_room.asm:RedBedroomPCText.
+; See file header for why this label carries no leading text_asm/script byte.
+; ─────────────────────────────────────────────────────────────────────────────
+global RedBedroomPCText
+RedBedroomPCText:
+    jmp TextScript_ItemStoragePC

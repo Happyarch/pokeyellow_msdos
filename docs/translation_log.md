@@ -7422,3 +7422,176 @@ report), and the only entry gate that would change that is in `src/debug/debug_d
 - **Scenario:**
   * Authored `safari_game_over` (id 88) in `dos_port/tools/scenario_manifest.json` and `dos_port/tools/mgba_harness/scenarios/safari_game_over.lua` (UNRUN per addendum).
 
+---
+
+## engine/events/hidden_events/{bench_guys,book_or_sculpture,magazines,new_bike,route_15_binoculars}.asm
+
+- **Sources:**
+  * `engine/events/hidden_events/bench_guys.asm`
+  * `engine/events/hidden_events/book_or_sculpture.asm`
+  * `engine/events/hidden_events/magazines.asm`
+  * `engine/events/hidden_events/new_bike.asm`
+  * `engine/events/hidden_events/route_15_binoculars.asm`
+- **Translated:**
+  * `dos_port/src/engine/events/hidden_events/bench_guys.asm`
+  * `dos_port/src/engine/events/hidden_events/book_or_sculpture.asm`
+  * `dos_port/src/engine/events/hidden_events/magazines.asm`
+  * `dos_port/src/engine/events/hidden_events/new_bike.asm`
+  * `dos_port/src/engine/events/hidden_events/route_15_binoculars.asm`
+- **Labels ported (10):**
+  * `PrintBenchGuyText` (routine): looks up current map in `BenchGuyTextPointers`, checks player facing direction (`SPRITE_FACING_LEFT`), and dispatches to `PrintPredefTextID`.
+  * `SaffronCityPokecenterBenchGuyText` (routine/predef_code): checks `EVENT_BEAT_SILPH_CO_GIOVANNI` and displays `SaffronCityPokecenterBenchGuyText2` or `SaffronCityPokecenterBenchGuyText1`.
+  * `SaffronCityPokecenterBenchGuyText1` (data): Tier-1 text data generated into `assets/bench_guys_text.inc`.
+  * `SaffronCityPokecenterBenchGuyText2` (data): Tier-1 text data generated into `assets/bench_guys_text.inc`.
+  * `BookOrSculptureText` (routine/predef_code): checks `wCurMapTileset` for `MANSION` (19) and tile at `(PLAYER_STANDING_COL, PLAYER_STANDING_ROW - 3)` = `(24, 14)` for tile `0x38` (Diglett sculpture), printing `DiglettSculptureText` or `PokemonBooksText`.
+  * `DiglettSculptureText` (data): Tier-1 text data generated into `assets/book_or_sculpture_text.inc`.
+  * `PokemonBooksText` (data): Tier-1 text data generated into `assets/book_or_sculpture_text.inc`.
+  * `PrintMagazinesText` (routine): enables auto text box and calls `tx_pre MagazinesText` (predef text id $32).
+  * `PrintNewBikeText` (routine): enables auto text box and tail-jumps to `tx_pre_id NewBicycleText` + `jmp PrintPredefTextID` (predef text id $3B).
+  * `Route15GateLeftBinoculars` (routine): if player facing UP, enables auto text box, displays `Route15UpstairsBinocularsText` (predef text id $0A), loads `ARTICUNO` into `wCurPartySpecies`, plays cry, displays front sprite box, and clears `hAutoBGTransferEnabled`.
+- **Stubs retired (6):**
+  * `SaffronCityPokecenterBenchGuyText` deleted from `dos_port/src/engine/events/hidden_events/hidden_events_stubs.asm`.
+  * `BookOrSculptureText` deleted from `dos_port/src/engine/events/hidden_events/hidden_events_stubs.asm`.
+  * `PrintBenchGuyText` deleted from `dos_port/src/engine/overworld/hidden_object_stubs.asm`.
+  * `PrintNewBikeText` deleted from `dos_port/src/engine/overworld/hidden_object_stubs.asm`.
+  * `PrintMagazinesText` deleted from `dos_port/src/engine/overworld/hidden_object_stubs.asm`.
+  * `Route15GateLeftBinoculars` deleted from `dos_port/src/engine/overworld/hidden_object_stubs.asm`.
+- **Tier-1 Generators:**
+  * Created `dos_port/tools/generators/gen_bench_guys_text.py` generating `dos_port/assets/bench_guys_text.inc`.
+  * Created `dos_port/tools/generators/gen_book_or_sculpture_text.py` generating `dos_port/assets/book_or_sculpture_text.inc`.
+- **Annotations:**
+  * `BookOrSculptureText`: `DEVIATION{class=projection; pret=engine/events/hidden_events/book_or_sculpture.asm:BookOrSculptureText; behavior=reads tile at (PLAYER_STANDING_COL, PLAYER_STANDING_ROW - 3) = (24, 14) on 40x25 canvas instead of GB literal coord (8, 6); evidence=pret lda_coord 8, 6 is 3 rows above player feet (8, 9) which projects to (24, 14) per ui_projection.md; lifetime=permanent}`
+- **Scenario:**
+  * Authored `route_15_binoculars` in `dos_port/tools/mgba_harness/scenarios/route_15_binoculars.lua` (UNRUN per addendum; port-entry gate hook in debug_dump.asm outside allow-list).
+## Hidden Events Batch (5 files): Indigo Plateau Statues/HQ, Gym Statues, Fighting Dojo, Blue's Room
+
+- **Sources:**
+  * `engine/events/hidden_events/indigo_plateau_statues.asm`
+  * `engine/events/hidden_events/indigo_plateau_hq.asm`
+  * `engine/events/hidden_events/gym_statues.asm`
+  * `engine/events/hidden_events/fighting_dojo.asm`
+  * `engine/events/hidden_events/blues_room.asm`
+- **Translated:**
+  * `dos_port/src/engine/events/hidden_events/indigo_plateau_statues.asm`
+  * `dos_port/src/engine/events/hidden_events/indigo_plateau_hq.asm`
+  * `dos_port/src/engine/events/hidden_events/gym_statues.asm`
+  * `dos_port/src/engine/events/hidden_events/fighting_dojo.asm`
+  * `dos_port/src/engine/events/hidden_events/blues_room.asm`
+- **Labels ported (12):**
+  * `IndigoPlateauStatues` (routine): branches on `wXCoord` parity to display text.
+  * `IndigoPlateauStatuesText1..3` (Tier-1 data): generated into `assets/indigo_plateau_statues_text.inc`.
+  * `PrintIndigoPlateauHQText` (routine): checks `SPRITE_FACING_UP`, enables auto text box drawing, trampolines via `tx_pre_id IndigoPlateauHQText` to `PrintPredefTextID`.
+  * `GymStatues` (routine): checks `SPRITE_FACING_UP`, scans `MapBadgeFlags` for `wCurMap`, checks `wBeatGymFlags`, and trampolines via `GymStatueText2` / `GymStatueText1` to `PrintPredefTextID`.
+  * `MapBadgeFlags` (Tier-1 data table from `data/maps/badge_maps.asm`): generated into `assets/badge_maps.inc`.
+  * `PrintFightingDojoText2` (routine): trampolines via `tx_pre_id EnemiesOnEverySideText` to `PrintPredefTextID`.
+  * `PrintFightingDojoText3` (routine): trampolines via `tx_pre_id WhatGoesAroundComesAroundText` to `PrintPredefTextID`.
+  * `PrintFightingDojoText` (routine): trampolines via `tx_pre_id FightingDojoText` to `PrintPredefTextID`.
+  * `PrintBookcaseText` (routine): trampolines via `tx_pre_id BookcaseText` to `PrintPredefTextID`.
+- **Stubs retired (6):**
+  * `IndigoPlateauStatues` in `dos_port/src/engine/events/hidden_events/hidden_events_stubs.asm`
+  * `PrintIndigoPlateauHQText`, `GymStatues`, `PrintFightingDojoText`, `PrintFightingDojoText2`, `PrintFightingDojoText3`, `PrintBookcaseText` in `dos_port/src/engine/overworld/hidden_object_stubs.asm`
+- **Tier-1 Generators:**
+  * Created `dos_port/tools/generators/gen_indigo_plateau_statues_text.py` generating `dos_port/assets/indigo_plateau_statues_text.inc`.
+  * Created `dos_port/tools/generators/gen_badge_maps.py` generating `dos_port/assets/badge_maps.inc`.
+- **Scenario:**
+  * Authored `indigo_plateau_statues` in `dos_port/tools/mgba_harness/scenarios/indigo_plateau_statues.lua` (UNRUN per addendum).
+- **Verification:**
+  * Built cleanly with `make -C dos_port -j8` producing `PKMN.EXE`.
+  * `update_label_db` executed cleanly; retired 6 stubs.
+  * `faithdiff` clean across all ported routines.
+  * `lint_pret_labels` and `lint_pret_labels --strict-claims` reporting 0 violations.
+  * `make -C dos_port static_gate` fully passing (all 8 static checks).
+
+## engine/events/hidden_events batch (events/hidden-text-c)
+
+- **Sources:**
+  * `engine/events/hidden_events/oaks_lab_posters.asm`
+  * `engine/events/hidden_events/oaks_lab_email.asm`
+  * `engine/events/hidden_events/fanclub_pictures.asm`
+  * `engine/events/hidden_events/museum_fossils.asm`
+  * `engine/events/hidden_events/museum_fossils2.asm`
+  * `engine/events/hidden_events/town_map.asm`
+- **Translated:**
+  * `dos_port/src/engine/events/hidden_events/oaks_lab_posters.asm`
+  * `dos_port/src/engine/events/hidden_events/oaks_lab_email.asm`
+  * `dos_port/src/engine/events/hidden_events/fanclub_pictures.asm`
+  * `dos_port/src/engine/events/hidden_events/museum_fossils.asm`
+  * `dos_port/src/engine/events/hidden_events/museum_fossils2.asm`
+  * `dos_port/src/engine/events/hidden_events/town_map.asm`
+- **Labels ported (9):**
+  * `DisplayOakLabLeftPoster`: calls `EnableAutoTextBoxDrawing`, prints `PushStartText` via `PrintPredefTextID`.
+  * `DisplayOakLabRightPoster`: counts owned dex bits with `CountSetBits`, branches (< 2 owned -> `SaveOptionText`, >= 2 -> `StrengthsAndWeaknessesText`), prints via `PrintPredefTextID`.
+  * `DisplayOakLabEmailText`: checks `wSpritePlayerStateData1FacingDirection == SPRITE_FACING_UP`, calls `EnableAutoTextBoxDrawing`, displays `OakLabEmailText`.
+  * `FanClubPicture1`: sets `wCurPartySpecies = RAPIDASH`, calls `DisplayMonFrontSpriteInBox`, displays `FanClubPicture1Text`.
+  * `FanClubPicture2`: sets `wCurPartySpecies = FEAROW`, calls `DisplayMonFrontSpriteInBox`, displays `FanClubPicture2Text`.
+  * `AerodactylFossil`: sets `wCurPartySpecies = FOSSIL_AERODACTYL`, calls `DisplayMonFrontSpriteInBox`, displays `AerodactylFossilText`.
+  * `KabutopsFossil`: sets `wCurPartySpecies = FOSSIL_KABUTOPS`, calls `DisplayMonFrontSpriteInBox`, displays `KabutopsFossilText`.
+  * `DisplayMonFrontSpriteInBox`: displays popup window (`MON_SPRITE_POPUP`), loads front pic to `vChars1 tile $31` ($8B10), animates mon send-out (`AnimateSendingOutMon`), waits for button press, restores screen.
+  * `TownMapText`: overworld wall Town Map `predef_code` trampoline, prints `_TownMapText`, opens Town Map screen via `DisplayTownMap`, returns via `CloseTextDisplay`.
+- **Stubs retired (8):**
+  * `DisplayOakLabLeftPoster`, `DisplayOakLabRightPoster`, `DisplayOakLabEmailText`, `AerodactylFossil`, `KabutopsFossil`, `FanClubPicture1`, `FanClubPicture2` removed from `src/engine/overworld/hidden_object_stubs.asm`.
+  * `TownMapText` removed from `src/engine/events/hidden_events/hidden_events_stubs.asm`.
+- **Tier-1 Generator:**
+  * Created `dos_port/tools/generators/gen_town_map_text.py` generating `dos_port/assets/town_map_text.inc` for `_TownMapText`.
+- **Annotations:**
+  * `DisplayMonFrontSpriteInBox`: `DEVIATION{class=data-model}` for converting species to `dex-1` for `LoadMonFrontSprite`; `DEVIATION{class=projection}` for `BCOORD(10, 11)` coordinate mapping in `MON_SPRITE_POPUP`.
+  * `TownMapText`: `DEVIATION{class=projection}` for `predef_code` code trampoline calling `PrintText_NoCreatingTextBox`.
+- **Scenario:**
+  * Authored `oaks_lab_posters.lua` in `dos_port/tools/mgba_harness/scenarios/` (UNRUN per safety addendum).
+## PC access: pokecenter_pc.asm, reds_room.asm, bookshelves.asm, hidden_items.asm, starter_dex.asm
+
+- **Sources:** `engine/events/hidden_events/pokecenter_pc.asm`,
+  `engine/events/hidden_events/reds_room.asm`,
+  `engine/events/hidden_events/bookshelves.asm`, `engine/events/hidden_items.asm`,
+  `engine/events/starter_dex.asm`.
+- **Translated:** the five matching `dos_port/src/...` mirror paths.
+- **Labels ported (10):** `OpenPokemonCenterPC`, `PokemonCenterPCText`,
+  `OpenRedsPC`, `RedBedroomPCText`, `PrintBookshelfText`, `HiddenItems`,
+  `HiddenCoins`, `FoundHiddenItemText`, `FindHiddenItemOrCoinsIndex`,
+  `StarterDex`.
+- **The `predef_code` trap (per CLAUDE.md/addendum):** `RedBedroomPCText`,
+  `PokemonCenterPCText` and `FoundHiddenItemText` are all `predef_code` rows in
+  `src/data/text_predef_pointers.asm` ($03/$21/$26) — `DisplayTextID` `call esi`s
+  them directly as x86 code, so none carries pret's leading
+  `script_players_pc`/`script_pokecenter_pc`/`text_far` byte. `RedBedroomPCText`/
+  `PokemonCenterPCText` instead jump straight into the already-linked
+  `TextScript_ItemStoragePC`/`TextScript_PokemonCenterPC`
+  (`src/home/map_objects.asm`) — the same routines pret's own byte-stream dict
+  dispatches those markers to, so the continuation is identical.
+  `FoundHiddenItemText` explicitly `call`s `PrintText` on its generated far
+  intro (`_FoundHiddenItemText`, new `gen_hidden_items_text.py`) before running
+  its code tail, since the far text is no longer walked by the text-command
+  interpreter.
+- **Stubs retired (8):** `OpenPokemonCenterPC`, `HiddenItems`, `HiddenCoins`,
+  `OpenRedsPC`, `PrintBookshelfText` from `hidden_object_stubs.asm`;
+  `RedBedroomPCText`, `PokemonCenterPCText`, `FoundHiddenItemText` from
+  `hidden_events_stubs.asm`. `label_status --callers` found one stale extern
+  comment this task cannot fix (`src/home/hidden_events.asm:47`, outside the
+  file allow-list) — see the report.
+- **Generators added:** `gen_hidden_coin_coords.py` (→
+  `assets/hidden_coin_coords.inc`, the `gen_hidden_item_coords.py` sibling for
+  `HiddenCoinCoords`) and `gen_hidden_items_text.py` (→
+  `assets/hidden_items_text.inc`, `FoundHiddenItemText`'s far intro).
+  `HiddenItemCoords` was already generated (`gen_hidden_item_coords.py`,
+  consumed by the itemfinder) and is `extern`ed here rather than re-included.
+  `BookshelfTileIDs` (bookshelves.asm) is a hand-written pointer/id table per
+  the `CinnabarGymGateCoords` two-tier precedent, inlined directly since no
+  mirror file exists for pret's separate `data/tilesets/bookshelf_tile_ids.asm`.
+- **Annotations:** `DEVIATION{class=banking}` on each predef-dispatch bypass
+  (`FlagActionPredef`→`FlagAction` ×3, `AddBCDPredef`→`AddBCD`,
+  `ShowPokedexData` direct call) — registers hand-set at the call site, per the
+  established `toggleable_objects.asm`/`cinnabar_gym_quiz.asm`/
+  `display_pokedex.asm` convention.
+- **Projection:** `PrintBookshelfText` reads the already-published
+  `wTileInFrontOfPlayer` (set by the caller's `GetTileAndCoordsInFrontOfPlayer`)
+  instead of re-deriving pret's `lda_coord 8, 7` screen coordinate.
+- **No golden authored:** every label here is reached only through the
+  predef-text path or an interior-map hidden-event handler, and
+  `docs/current_plan_backlog.md` #31 (re-verified during this task) already
+  establishes that NO map the port can currently render makes a predef text
+  reachable (blocked on tileset residency, not map data — Red's/Blue's house,
+  Oak's Lab and the Pokémon Centers are all interior maps whose tileset is not
+  yet resident). Authoring a scenario now would be a false witness. Unblocking
+  it needs per-tileset gfx/blockset/collision residency work well outside this
+  task's file allow-list.
+

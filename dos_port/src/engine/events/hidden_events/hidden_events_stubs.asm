@@ -28,24 +28,13 @@ section .text
 
 ; --- script_* dispatch markers (3) -----------------------------------------
 
-; RedBedroomPCText — pret engine/events/hidden_events/reds_room.asm:RedBedroomPCText.
-; A `script_players_pc` marker: the real entry opens the item-storage PC rather than
-; printing anything. Unreachable in the live build (its handler OpenRedsPC is a
-; ret-stub in hidden_object_stubs.asm).
-; TODO(PC service work): replace with the players-PC dispatch, then delete this stub.
-; STUB{class=stub; pret=engine/events/hidden_events/reds_room.asm:RedBedroomPCText; behavior=the players-PC script marker returns without opening the item-storage PC, so the predef text displays nothing; evidence=pret RedBedroomPCText is a script_players_pc marker and label_status reports it missing; lifetime=until the PC service work lands a real body; label=RedBedroomPCText}
-global RedBedroomPCText
-RedBedroomPCText:
-    ret
+; RedBedroomPCText — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_events/reds_room.asm (jumps into the linked
+; TextScript_ItemStoragePC, src/home/map_objects.asm).
 
-; PokemonCenterPCText — pret engine/events/hidden_events/pokecenter_pc.asm:PokemonCenterPCText.
-; A `script_pokecenter_pc` marker: opens the Pokémon Center PC. Unreachable in the
-; live build (its handler OpenPokemonCenterPC is a ret-stub in hidden_object_stubs.asm).
-; TODO(PC service work): replace with the pokecenter-PC dispatch, then delete this stub.
-; STUB{class=stub; pret=engine/events/hidden_events/pokecenter_pc.asm:PokemonCenterPCText; behavior=the pokecenter-PC script marker returns without opening the Pokemon Center PC; evidence=pret PokemonCenterPCText is a script_pokecenter_pc marker and label_status reports it missing; lifetime=until the PC service work lands a real body; label=PokemonCenterPCText}
-global PokemonCenterPCText
-PokemonCenterPCText:
-    ret
+; PokemonCenterPCText — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_events/pokecenter_pc.asm (jumps into the
+; linked TextScript_PokemonCenterPC, src/home/map_objects.asm).
 
 ; OpenBillsPCText — pret engine/pokemon/bills_pc.asm:OpenBillsPCText.
 ; A `script_bills_pc` marker. NOTE the faithful Bill's PC box UI IS linked
@@ -61,14 +50,8 @@ OpenBillsPCText:
 
 ; --- text_asm wrappers (14) -------------------------------------------------
 
-; SaffronCityPokecenterBenchGuyText — pret engine/events/hidden_events/bench_guys.asm.
-; Branches on EVENT_BEAT_SILPH_CO_GIOVANNI to pick which line the bench guy says.
-; Unreachable in the live build (PrintBenchGuyText is a ret-stub).
-; TODO(overworld-events Stage 5, Saffron batch): port the event branch, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/bench_guys.asm:SaffronCityPokecenterBenchGuyText; behavior=the bench guy says nothing instead of branching on EVENT_BEAT_SILPH_CO_GIOVANNI; evidence=pret SaffronCityPokecenterBenchGuyText is a text_asm event branch and label_status reports it missing; lifetime=until the overworld-events Saffron batch lands; label=SaffronCityPokecenterBenchGuyText}
-global SaffronCityPokecenterBenchGuyText
-SaffronCityPokecenterBenchGuyText:
-    ret
+; SaffronCityPokecenterBenchGuyText — RETIRED (hidden-text-a batch). The real faithful
+; body is LINKED at its pret mirror src/engine/events/hidden_events/bench_guys.asm.
 
 ; ViridianSchoolNotebook — RETIRED (school-notebooks batch). The real faithful
 ; body is LINKED at its pret mirror
@@ -78,17 +61,12 @@ SaffronCityPokecenterBenchGuyText:
 ; RETIRED (school-blackboard batch). The real faithful bodies are LINKED at their
 ; pret mirror src/engine/events/hidden_events/school_blackboard.asm.
 
-; FoundHiddenItemText — pret engine/events/hidden_items.asm:FoundHiddenItemText.
-; The item-award tail that runs AFTER the far "found an item" intro: gives the item
-; and sets the obtained flag. Unreachable in the live build — HiddenItems is a
-; ret-stub, and no reachable map carries a hidden item yet (the same gap that leaves
-; ItemUseItemfinder's must-hit scenario owing evidence, docs/items_blockers.md).
-; TODO(overworld-events Stage 3 / items plan): port the award tail with the first
-; reachable hidden-item map, then delete this stub.
-; STUB{class=stub; pret=engine/events/hidden_items.asm:FoundHiddenItemText; behavior=the hidden-item award tail displays nothing and awards no item after the far intro text; evidence=pret FoundHiddenItemText is a text_asm item-award tail and label_status reports it missing; lifetime=until the hidden-item award path lands with the first reachable hidden-item map; label=FoundHiddenItemText}
-global FoundHiddenItemText
-FoundHiddenItemText:
-    ret
+; FoundHiddenItemText — RETIRED. The real faithful body is LINKED at its pret
+; mirror src/engine/events/hidden_items.asm (prints the generated far intro,
+; then gives the item and sets the obtained flag). No reachable map carries a
+; hidden item yet (the same gap that leaves ItemUseItemfinder's must-hit
+; scenario owing evidence, docs/items_blockers.md), so it is still unreached in
+; the live build — but the body itself is complete and correct.
 
 ; BillsHouseInitiatedText — pret engine/events/hidden_events/bills_house_pc.asm.
 ; StopAllMusic + SFX_SWITCH sequence when Bill's PC is switched on.
@@ -108,31 +86,18 @@ global BillsHousePokemonList
 BillsHousePokemonList:
     ret
 
-; IndigoPlateauStatues — pret engine/events/hidden_events/indigo_plateau_statues.asm.
-; Counts obtained badges and picks the matching line.
-; Unreachable in the live build (PrintIndigoPlateauHQText is a ret-stub).
-; TODO(overworld-events Stage 5, Indigo batch): port the badge-count branch, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/indigo_plateau_statues.asm:IndigoPlateauStatues; behavior=the statues display nothing instead of branching on the badge count; evidence=pret IndigoPlateauStatues is a text_asm badge-count branch and label_status reports it missing; lifetime=until the overworld-events Indigo batch lands; label=IndigoPlateauStatues}
-global IndigoPlateauStatues
-IndigoPlateauStatues:
-    ret
+; IndigoPlateauStatues — RETIRED (hidden-text-b batch). Real body at its pret
+; mirror src/engine/events/hidden_events/indigo_plateau_statues.asm.
 
-; TownMapText — pret engine/events/hidden_events/town_map.asm:TownMapText.
-; Opens the town map from a wall map rather than printing. NOTE the town-map screen
-; itself IS ported (src/engine/items/town_map.asm) — this is the hidden-event entry
-; into it, so another WIRING gap rather than an unported feature.
-; Unreachable in the live build (its handler is a ret-stub).
-; TODO(overworld-events Stage 5): dispatch to the linked town map, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/town_map.asm:TownMapText; behavior=the wall town map displays nothing instead of opening the town map screen; evidence=pret TownMapText is a text_asm that opens the town map and label_status reports it missing while the town-map screen itself is ported at src/engine/items/town_map.asm; lifetime=until the hidden-event dispatch is wired to the linked town map; label=TownMapText}
-global TownMapText
-TownMapText:
-    ret
+; TownMapText — RETIRED (hidden-text-c batch). Real body at its pret mirror
+; src/engine/events/hidden_events/town_map.asm.
 
-; BookOrSculptureText — pret engine/events/hidden_events/book_or_sculpture.asm.
-; Branches on wCurMapTileset to say "bookshelf" or "sculpture".
-; Unreachable in the live build (PrintBookcaseText is a ret-stub).
-; TODO(overworld-events Stage 5): port the tileset branch, then delete.
-; STUB{class=stub; pret=engine/events/hidden_events/book_or_sculpture.asm:BookOrSculptureText; behavior=the bookshelf or sculpture displays nothing instead of branching on wCurMapTileset; evidence=pret BookOrSculptureText is a text_asm tileset branch and label_status reports it missing; lifetime=until the overworld-events story batch lands; label=BookOrSculptureText}
-global BookOrSculptureText
-BookOrSculptureText:
-    ret
+; BookOrSculptureText — RETIRED (hidden-text-a batch). The real faithful body is
+; LINKED at its pret mirror src/engine/events/hidden_events/book_or_sculpture.asm.
+
+; DisplayMonFrontSpriteInBox — RETIRED at integration. hidden-text-a added a
+; ret-stub for it because route_15_binoculars.asm calls it and the label was
+; missing on that branch; hidden-text-c ported museum_fossils2.asm, which is
+; pret's home for it. Both branches were correct alone and collided on merge
+; (multiple definition). The real body wins, per stub rule 5: retire, do not
+; shadow. Real body: src/engine/events/hidden_events/museum_fossils2.asm.
