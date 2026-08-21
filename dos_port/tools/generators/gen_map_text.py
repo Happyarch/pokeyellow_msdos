@@ -49,6 +49,37 @@ gbt.TEXT_SRC = (sorted((ROOT / "text").glob("*.asm"))
                 + sorted((ROOT / "data" / "text").glob("text_*.asm")))
 
 
+def has_dedicated_text_inc(src: Path) -> bool:
+    """Does this carrier already own a DEDICATED generated text .inc?
+
+    A source that `%include`s `assets/<name>_text.inc` gets its far streams from
+    that generator, so this one must not emit them a second time.
+
+    *** WHY THIS IS NOT LEFT TO port_defined(). ***
+    port_defined() answers "already defined?" by SCANNING assets/ ON DISK, so its
+    answer depends on whether a sibling generator has run yet. On a developer tree
+    the sibling .inc is left over from a previous build and the duplicate is
+    suppressed; on a clean checkout it may not exist yet and the duplicate IS
+    emitted. That is a generator whose output depends on build ORDER, and it failed
+    exactly where such things fail — in CI, never locally: `_FoundHiddenItemText`
+    defined in BOTH assets/hidden_items_text.inc and
+    assets/map_text/event_hidden_items.inc (lint dup_def, 2026-08-21).
+    This check reads the carrier's own tracked .asm, which is always present, so it
+    gives the same answer no matter what has been generated yet or in what order.
+    Measured when added: of 9 event_*.inc outputs only cinnabar_lab and pokecenter
+    were actually %included by their carrier; the other 7 were orphans whose
+    carriers each already had a dedicated *_text.inc, and every one of them was a
+    latent dup_def waiting for the build order to shift.
+    """
+    txt = src.read_text(encoding="utf-8", errors="ignore")
+    for inc in re.findall(r'%include\s+"(assets/[^"]+)"', txt):
+        if inc.startswith("assets/map_text/"):
+            continue
+        if inc.endswith("_text.inc"):
+            return True
+    return False
+
+
 def port_defined():
     """Every symbol already defined in the port, EXCLUDING what we generate here.
 
@@ -56,6 +87,10 @@ def port_defined():
     second time and collide at link. Most far streams are `_Foo`, but pret does not
     use that prefix consistently -- MelanieText1, FanClubChairPrintText1 and 21
     others are plain names -- so the filter cannot be "starts with an underscore".
+
+    NOTE: this is a best-effort, ORDER-DEPENDENT scan (see has_dedicated_text_inc).
+    It is kept because it catches hand-written definitions, which are always on
+    disk; it must not be relied on to arbitrate between two GENERATORS.
     """
     seen = set()
     for root in (DOS / "src", DOS / "assets"):
@@ -82,6 +117,11 @@ def wanted(defined, far, srcdir):
     """
     out = {}
     for p in sorted(srcdir.glob("*.asm")):
+        # Order-independent ownership: a carrier with its own dedicated *_text.inc
+        # already has these streams. Skipping it here is what makes this generator's
+        # output independent of which generator make happens to run first.
+        if has_dedicated_text_inc(p):
+            continue
         code = "\n".join(l.split(";", 1)[0] for l in p.read_text(encoding="utf-8").splitlines())
         seen, labels = set(), []
         for tok in re.findall(r"\b[A-Za-z_]\w*\b", code):
@@ -100,6 +140,7 @@ def emit(far, wanted_map, filename_fmt, includer_fmt):
     """
     files = labels = skipped = 0
     missing = []
+    written = []
     for stem, want in sorted(wanted_map.items()):
         have = [l for l in want if l in far]
         skipped += len(want) - len(have)
@@ -120,8 +161,9 @@ def emit(far, wanted_map, filename_fmt, includer_fmt):
             body.append("%s:\n%s" % (label, "\n".join(rows)))
             labels += 1
         (OUTDIR / out_name).write_text("\n".join(body) + "\n", encoding="utf-8")
+        written.append(out_name)
         files += 1
-    return files, labels, skipped, missing
+    return files, labels, skipped, missing, written
 
 
 def main() -> int:
@@ -131,18 +173,35 @@ def main() -> int:
 
     files = labels = skipped = 0
     missing = []
+    kept, pruned = set(), []
     for srcdir, filename_fmt, includer_fmt in (
         (SCRIPTS, "%s.inc", "src/scripts/%s.asm"),
         (EVENTS, "event_%s.inc", "src/engine/events/%s.asm"),
     ):
-        f, l, s, m = emit(far, wanted(defined, far, srcdir), filename_fmt, includer_fmt)
+        f, l, s, m, w = emit(far, wanted(defined, far, srcdir), filename_fmt, includer_fmt)
         files += f
         labels += l
         skipped += s
         missing += m
+        kept.update(w)
+
+    # PRUNE stale outputs. Generated assets are gitignored and nothing else deletes
+    # them, so a file this generator has stopped owning would sit on a developer tree
+    # for ever, still defining its labels and still colliding — the same stale-orphan
+    # class that has broken CI three times (assets/slots_text.inc, event_pokecenter.inc,
+    # the gen_map_text PascalCase rename). Removing what this run did not write makes
+    # this directory a FUNCTION of the sources rather than an accumulation.
+    for stale in sorted(OUTDIR.glob("*.inc")):
+        if stale.name not in kept:
+            stale.unlink()
+            pruned.append(stale.name)
 
     print("gen_map_text.py: %d labels -> %d file(s) in %s"
           % (labels, files, OUTDIR.relative_to(ROOT)))
+    if pruned:
+        print("  pruned %d stale output(s) this generator no longer owns:" % len(pruned))
+        for n in pruned[:8]:
+            print("     ", n)
     if skipped:
         print("  %d label(s) not emitted (body is not pure data — they keep their extern)"
               % skipped)
