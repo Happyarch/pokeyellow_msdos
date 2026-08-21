@@ -56,16 +56,6 @@ PrintBookshelfText:
     mov byte [ebp + H_INTERACTED_WITH_BOOKSHELF], 0xFF   ; no bookshelf found
     ret
 
-; ---------------------------------------------------------------------------
-; UpdateCinnabarGymGateTileBlocks_ — pret engine/events/hidden_events/
-; cinnabar_gym_quiz.asm. Real body flips Cinnabar gym gate blocks per unlock
-; flags. No linked caller reaches it yet (only the deep-tier
-; UpdateCinnabarGymGateTileBlocks wrapper calls it). RETIREMENT: Stage 5 Cinnabar.
-; ---------------------------------------------------------------------------
-global UpdateCinnabarGymGateTileBlocks_
-UpdateCinnabarGymGateTileBlocks_:
-    ret
-
 ; --- ground items / coins (Stage 3 bullets 2-3) ---
 global HiddenItems
 HiddenItems:
@@ -150,9 +140,6 @@ PrintNewBikeText:
     ret
 global PrintMagazinesText
 PrintMagazinesText:
-    ret
-global PrintCinnabarQuiz
-PrintCinnabarQuiz:
     ret
 
 ; --- Oak's Lab posters / email (Stage 5: Pallet) ---

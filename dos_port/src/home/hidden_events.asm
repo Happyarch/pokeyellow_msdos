@@ -4,8 +4,9 @@
 ; Holds BOTH of that pret file's labels:
 ;   CheckForHiddenEventOrBookshelfOrCardKeyDoor, UpdateCinnabarGymGateTileBlocks
 ; Both are LINKED (overworld-events Stage 3). Their deps resolve: the Tier-2
-; handler stubs + PrintBookshelfText / UpdateCinnabarGymGateTileBlocks_
-; (src/engine/overworld/hidden_object_stubs.asm), JumpToAddress
+; handler stubs + PrintBookshelfText (src/engine/overworld/hidden_object_stubs.asm),
+; the translated UpdateCinnabarGymGateTileBlocks_
+; (src/engine/events/hidden_events/cinnabar_gym_quiz.asm), JumpToAddress
 ; (src/home/bankswitch2.asm), and the linked GetTileAndCoordsInFrontOfPlayer
 ; predef (src/engine/overworld/player_state.asm).
 ;
@@ -46,7 +47,7 @@ extern BankswitchCommon                 ; src/home/bankswitch2.asm (flat no-op)
 extern PrintBookshelfText               ; src/engine/overworld/hidden_object_stubs.asm (stub → $ff)
 extern JumpToAddress                    ; src/home/bankswitch2.asm
 extern GetTileAndCoordsInFrontOfPlayer  ; src/engine/overworld/player_state.asm (linked predef)
-extern UpdateCinnabarGymGateTileBlocks_ ; src/engine/overworld/hidden_object_stubs.asm (stub)
+extern UpdateCinnabarGymGateTileBlocks_ ; src/engine/events/hidden_events/cinnabar_gym_quiz.asm (translated)
 
 ; --- Deep-tier memmap symbols — golden sym-verified (were PLACEHOLDER) ---
 %ifndef H_ITEM_ALREADY_FOUND
