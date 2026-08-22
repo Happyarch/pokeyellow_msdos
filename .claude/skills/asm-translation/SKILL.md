@@ -441,9 +441,15 @@ high-byte inputs — the ones a quick test never reaches.
    `; BUG(level):` form is DEAD**: `lint_pret_labels --strict-claims` reports it
    as `legacy_annotation`, and the tree-wide count is currently zero. Writing one
    is a regression. Schema → skill `project-conventions`.
-7. Add an entry to `docs/translation_log.md` (narrative log; not gated by any
-   tool, and commits do drift from it — write the entry, don't read it as
-   authority).
+7. **Write the narrative in the COMMIT MESSAGE.** `docs/translation_log.md` was
+   deleted 2026-08-21 at the maintainer's direction: 7806 lines of per-routine
+   prose that nothing gated, nothing read, and that drifted from the tree it
+   described — the same failure mode that killed `TODO.md`. Do not recreate it,
+   and do not start a replacement log. The durable homes are the ones with
+   teeth: a machine-parsed `DEVIATION{}`/`BUG{}`/`GLITCH{}`/`STUB{}` at the code
+   for anything that diverges, a stigmergy memory for a lesson that outlives the
+   commit, and the commit message for the reasoning. Old entries stay reachable
+   through git history.
 8. Verify assembly from `dos_port/`:
    `nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0 -o /dev/null <file>`.
    Both the `-I` flags and `-D BUG_FIX_LEVEL=` are required — the Makefile

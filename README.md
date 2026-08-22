@@ -322,7 +322,6 @@ enabled on bare hardware.
 - [docs/current_plan_backlog.md](docs/current_plan_backlog.md) — Deferred tails
   with no other owner (the tracker TODO.md used to be)
 - [docs/register_map.md](docs/register_map.md) — SM83→x86 register mapping (living doc)
-- [docs/translation_log.md](docs/translation_log.md) — Per-routine translation notes
 - [docs/glitch_safety.md](docs/glitch_safety.md) — Glitch sandbox guidance
 - [docs/references/README.md](docs/references/README.md) — GB hardware and DOS programming references
 

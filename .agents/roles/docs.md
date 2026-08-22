@@ -14,9 +14,15 @@ placement. Does not translate or place code.
 
 ---
 
-## Translation Log Entries
+## Translation Notes
 
-For each function the Integration Agent just placed, append a log entry to `docs/translation_log.md` detailing the changes. Use the Translation Notes Header from the worker's translation. If the worker left notes blank, fill in what you can infer from the diff before committing.
+`docs/translation_log.md` was DELETED 2026-08-21 at the maintainer's direction —
+do not recreate it or start a replacement log. For each function the Integration
+Agent places, put the worker's Translation Notes Header into the COMMIT MESSAGE,
+and put anything durable where a tool can see it: a machine-parsed
+`DEVIATION{}`/`BUG{}`/`GLITCH{}`/`STUB{}` annotation at the code that diverges,
+or a stigmergy memory for a lesson. If the worker left notes blank, fill in what
+you can infer from the diff before committing.
 
 ---
 

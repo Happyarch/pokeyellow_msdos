@@ -96,7 +96,6 @@ dos_port/
 docs/
   assembly.md              ← build flags, tools, dependencies (start here)
   register_map.md          ← SM83 → x86 register mapping (living doc)
-  translation_log.md       ← per-routine translation notes
   glitch_safety.md         ← glitch sandbox guidance
   386_optimization_strategy.md ← Guide for fast and faithful 386 assembly optimizations
   ui_projection.md         ← per-subsystem GB→port UI coordinate registry + ; PROJ tags
@@ -205,7 +204,8 @@ ROM and stay local and manual.
 **Never hand-edit generated `assets/*.inc` files.** Fix the generator and re-run
 `make assets`. The `MapHeaderPointers` table is computed at generation time — a
 partial edit desyncs pointer addresses from blob offsets and silently corrupts
-map loads (see `docs/translation_log.md` for the 2026-06-22 postmortem).
+map loads. (The 2026-06-22 postmortem for this lived in the deleted
+`docs/translation_log.md`; it is in git history if ever wanted.)
 
 ## Debugging (inspecting emulated GB memory)
 

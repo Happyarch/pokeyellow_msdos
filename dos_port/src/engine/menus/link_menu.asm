@@ -19,7 +19,8 @@
 ;     pret_label_allowlist.json, now retired).
 ;
 ; ---------------------------------------------------------------------------
-; PORT MODEL (CLAUDE.md + translation_log "menus-port S2..S7"):
+; PORT MODEL (CLAUDE.md + docs/plans/menus.md; the "menus-port S2..S7" entries
+; it used to cite were in docs/translation_log.md, deleted 2026-08-21):
 ;  * SM83->x86: A=AL, BC=BX (B=BH,C=BL), DE=DX, HL=ESI, EBP = GB base; GB memory
 ;    at [EBP+sym] (gb_memmap.inc).  FLAGS ARE NOT THE GB'S — every ZF/CF branch is
 ;    re-derived on the flag set by the SAME op pret used.
