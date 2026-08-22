@@ -332,3 +332,50 @@ section .text
 CableClubReceptionistScript:
     call CableClubNPC
     ret
+
+; ===========================================================================
+; # RunLinkCheck — %ifdef DEBUG_LINKCHECK two-instance harness driver.
+; #
+; # tools/linkcheck.sh runs two DOSBox-X instances joined by a nullmodem
+; # cable, each booted with `PKMN.EXE /COM1 /LINKLOG` on this gate. The
+; # harness seeds the pokédex event (the receptionist's gate) and then loops
+; # the REAL CableClubNPC: with no peer yet, each attempt runs the faithful
+; # 90-frame race into the "reserved for 2 friends" text and returns; once
+; # both instances' races overlap, the net session synthesizes establishment
+; # and CableClubNPC proceeds — save prompt (AUTOKEY_LINKCHECK's A train
+; # answers YES), rendezvous, then LinkMenu, which parks awaiting input.
+; # LinkMenu's entry sets linkcheck_in_menu (debug hook in link_menu.asm),
+; # which STOPS the A train — an A in LinkMenu would select TRADE CENTER,
+; # a Stage-3 flow. AutoKeyDrive photographs the parked menu at
+; # AUTOKEY_DUMP_FRAME (GBSTATE + FRAME + LINKLOG.BIN), and linkcheck.sh
+; # asserts the $02/$01 role split and the crossed exchange logs.
+; #
+; # The attempt bound only marks diagnostics (lcMarks in GBSTATE): after it,
+; # the harness parks so the photograph still fires and shows the failure.
+; ===========================================================================
+%ifdef DEBUG_LINKCHECK
+global RunLinkCheck
+global linkcheck_marks
+global linkcheck_in_menu
+
+LINKCHECK_MAX_ATTEMPTS equ 40
+
+section .bss
+linkcheck_marks:                        ; GBSTATE flat region "lcMarks", 2 bytes
+linkcheck_attempts: resb 1              ; CableClubNPC attempts used
+linkcheck_in_menu:  resb 1              ; 1 = LinkMenu entered (set by its hook)
+
+section .text
+RunLinkCheck:
+    SetEvent EVENT_GOT_POKEDEX          ; open the receptionist's gate
+    mov byte [linkcheck_attempts], 0
+.try:
+    inc byte [linkcheck_attempts]
+    mov byte [linkcheck_in_menu], 0     ; re-arm the A train per attempt
+    call CableClubNPC                   ; parks in LinkMenu on success
+    cmp byte [linkcheck_attempts], LINKCHECK_MAX_ATTEMPTS
+    jb .try
+.park:                                  ; gave up: hold still for the photograph
+    call DelayFrame
+    jmp .park
+%endif

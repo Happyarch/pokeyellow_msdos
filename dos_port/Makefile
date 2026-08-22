@@ -2812,6 +2812,22 @@ endif
 $(eval $(call dump_gate,DEBUG_I2))
 # Link-cable Stage 2: net_frame codec/ARQ RAM-pipe unit test (src/net/net_test.asm).
 $(eval $(call dump_gate,DEBUG_NETTEST))
+# Link-cable Stage 2 step 5: the two-instance nullmodem harness gate
+# (tools/linkcheck.sh). RunLinkCheck loops the real CableClubNPC against the
+# peer; AUTOKEY_LINKCHECK's A train answers the receptionist prompts and stops
+# at LinkMenu entry (linkcheck_in_menu), where both instances park; the
+# photograph at AUTOKEY_DUMP_FRAME writes GBSTATE/FRAME/PAL (+LINKLOG.BIN when
+# the game runs with /LINKLOG) for the script's role/exchange-log assertions.
+# 3600 default: late enough for a several-second boot stagger between the two
+# instances plus the retry loop, well inside linkcheck.sh's run timeout.
+ifdef DEBUG_LINKCHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_LINKCHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_LINKCHECK
+AUTOKEY_DUMP_FRAME ?= 3600
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D SKIP_TITLE
+endif
 # Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
 # LoadEnemyMonData → LoadBattleMonFromParty) + the convergence-spec DV overwrite
 # replace DEBUG_BATTLE's synthetic seed. Combine with DEBUG_BATTLE_INTRO /

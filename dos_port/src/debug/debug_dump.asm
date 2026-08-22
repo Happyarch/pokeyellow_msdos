@@ -32,6 +32,26 @@ bits 32
 %endif
 
 extern ds_base
+; net_hal.asm (always linked): the /LINKLOG exchange ring, dumped to
+; LINKLOG.BIN by DumpLinkLog on the DumpBackbuffer exit path, and the session
+; diagnostics the DEBUG_LINKCHECK probe regions publish.
+extern g_net_linklog
+extern g_nlog_count
+extern g_nlog_buf
+extern g_net_link_up
+extern net_role_master
+extern net_state
+extern net_desyncs
+%ifdef DEBUG_LINKCHECK
+extern linkcheck_marks           ; src/engine/link/cable_club_npc.asm (harness)
+extern linkcheck_in_menu
+extern link_ncb                  ; net_hal.asm — diagnostics probe regions
+extern net_estab_local
+extern net_exch_ctr
+extern net_pump_ticks
+extern g_uart_diag               ; com_uart.asm
+extern g_nf_diag                 ; net_frame.asm
+%endif
 extern pal_rgb_table, bg_slot_pal, obj_slot_pal
 extern pal_cgb_table    ; assets/colors/palettes.inc — BGR555 twin of pal_rgb_table
 extern tile_pal
@@ -785,6 +805,7 @@ fname: db "DUMP.BIN", 0
 fbname: db "FRAME.BIN", 0
 fgbname: db "GBSTATE.BIN", 0
 fpname: db "PAL.BIN", 0
+nlogname: db "LINKLOG.BIN", 0
 %ifdef DEBUG_ANIM_DEMO
 ; DEBUG_ANIM_DEMO's iteration counter. In MEMORY, not a register: every callee
 ; under PlayMoveAnimation clobbers the general registers.
@@ -952,6 +973,30 @@ gbstate_regions:
     ;   bit4 SwitchEnemyMon entered
     gbregion_flat "pAIMarks",  aiswitch_marks,  1
 %endif
+%endif
+%ifdef DEBUG_LINKCHECK
+    ; linkcheck two-instance harness (tools/linkcheck.sh): the role split and
+    ; session diagnostics its assertions read. PROBE-tier regions — this gate
+    ; has no mGBA golden (a second GB has no headless twin here); the harness
+    ; script, not golden_diff.py, is the consumer.
+    gbregion "linkStatus",    hSerialConnectionStatus, 1   ; $02/$01 role split
+    gbregion "wLinkState",    wLinkState,    1
+    gbregion_flat "netLinkUp",  g_net_link_up,   1
+    gbregion_flat "netRole",    net_role_master, 1
+    gbregion_flat "netState",   net_state,       1
+    gbregion_flat "netDesyncs", net_desyncs,     2
+    gbregion_flat "lcMarks",    linkcheck_marks, 2         ; attempts, in_menu
+    ; deeper diagnostics for a failing run: the raw codec control block
+    ; (parsed host-side against net_frame.inc's NFCB layout — skip the 16
+    ; callback bytes, stop before tx_buf), the establishment latches
+    ; (estab_local/estab_peer/estab_pend/kick_open — contiguous in .bss),
+    ; the lockstep counter, and the UART RX ring accounting.
+    gbregion_flat "ncbState",   link_ncb + 16,   540
+    gbregion_flat "netEstab",   net_estab_local, 4
+    gbregion_flat "netExchCtr", net_exch_ctr,    2
+    gbregion_flat "netPumps",   net_pump_ticks,  4
+    gbregion_flat "uartDiag",   g_uart_diag,     40
+    gbregion_flat "nfDiag",     g_nf_diag,       16
 %endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph
 ; (AUTOKEY_DUMP_ON_BATTLE) or the state-gated follow-stall probe
@@ -4861,6 +4906,7 @@ DumpGBState:
 DumpBackbuffer:
     call DumpGBState               ; GBSTATE.BIN alongside every FRAME.BIN
     call DumpPalette               ; PAL.BIN keeps host frame rendering lockstep
+    call DumpLinkLog               ; LINKLOG.BIN — no-op unless /LINKLOG given
     ; --- Allocate a conventional DOS buffer big enough for 0x10 + 64000 bytes ---
     ; 0x10 + 64000 = 64016 bytes -> 4001 paragraphs; round up to 0x1001 (4097).
     mov ax, 0x0100
@@ -5063,6 +5109,101 @@ DumpPalette:
     int 0x31
 .done:
     popad
+    ret
+
+; ---------------------------------------------------------------------------
+; DumpLinkLog — write net_hal's /LINKLOG exchange ring to LINKLOG.BIN.
+; Called from DumpBackbuffer's exit path; a no-op unless the game was run
+; with /LINKLOG (g_net_linklog). File layout ("NLG1", version-in-magic):
+;   +0x00  magic "NLG1"
+;   +0x04  u8  role (net_role_master: 1 = elected GB master)
+;   +0x05  u8  net_state (NS_* — net_hal.asm)
+;   +0x06  u16 desync count
+;   +0x08  u32 record count
+;   +0x0C  u32 reserved (0)
+;   +0x10  records: count x {u8 dir (0=TX 1=RX), u8 gb_byte, u16 exch_id LE}
+; tools/linkcheck.sh cross-checks the two instances' logs (A.tx == B.rx).
+; ---------------------------------------------------------------------------
+NLOG_FILE_MAX equ 16 + 4096 * 4    ; header + full ring (net_hal NLOG_MAX)
+DumpLinkLog:
+    cmp byte [g_net_linklog], 0
+    je .off
+    ; conventional buffer: 0x10 filename + header + records
+    mov ax, 0x0100
+    mov bx, (0x10 + NLOG_FILE_MAX + 15) / 16 + 1
+    int 0x31
+    jc .off
+    mov [dos_seg], ax
+    mov [dos_sel], dx
+    movzx eax, ax
+    shl eax, 4
+    sub eax, [ds_base]
+    mov [dos_flat], eax
+
+    ; filename at offset 0
+    mov esi, nlogname
+    mov edi, [dos_flat]
+    mov ecx, 12                    ; "LINKLOG.BIN" + NUL
+    rep movsb
+
+    ; header at 0x10
+    mov edi, [dos_flat]
+    add edi, 0x10
+    mov dword [edi], 'NLG1'
+    mov al, [net_role_master]
+    mov [edi + 4], al
+    mov al, [net_state]
+    mov [edi + 5], al
+    mov ax, [net_desyncs]
+    mov [edi + 6], ax
+    mov eax, [g_nlog_count]
+    mov [edi + 8], eax
+    mov dword [edi + 12], 0
+
+    ; records at 0x20
+    add edi, 16
+    mov esi, g_nlog_buf
+    mov ecx, [g_nlog_count]
+    shl ecx, 2
+    rep movsb
+
+    ; create LINKLOG.BIN
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x3C00
+    mov dword [rmcs + RMCS_EDX], 0
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+    test byte [rmcs + RMCS_FLAGS], 1
+    jnz .free
+    mov ax, [rmcs + RMCS_EAX]
+    mov [file_handle], ax
+
+    ; write header + records
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x4000
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    mov eax, [g_nlog_count]
+    shl eax, 2
+    add eax, 16
+    mov [rmcs + RMCS_ECX], eax     ; <= NLOG_FILE_MAX = 16400, fits int 21h CX
+    mov dword [rmcs + RMCS_EDX], 0x10
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+
+    ; close
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x3E00
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    call sim_int21
+.free:
+    mov ax, 0x0101
+    mov dx, [dos_sel]
+    int 0x31
+.off:
     ret
 
 %ifdef DEBUG_NPC_WALK
@@ -6123,6 +6264,19 @@ AutoKeyDrive:
     add esi, 12
     jmp .scan
 .apply:
+%ifdef AUTOKEY_LINKCHECK
+    ; *** STATE-GATED A (linkcheck harness). *** The A train answers the
+    ; receptionist prompts (text, the save YES/NO) but must STOP the moment
+    ; LinkMenu is entered — an A there would SELECT TRADE CENTER, a Stage-3
+    ; flow, instead of parking the menu for the photograph. The flag is set
+    ; at LinkMenu's entry (debug hook) and re-armed per attempt by
+    ; RunLinkCheck; the press SCHEDULE stays fixed, same rule as the other
+    ; state gates below.
+    cmp byte [linkcheck_in_menu], 0
+    je .lcAOk
+    and dl, ~PAD_A & 0xFF
+.lcAOk:
+%endif
 %ifdef AUTOKEY_TRAINER_ROUTE
     ; *** STATE-GATED D-PAD (measured 2026-08-05, two stalled 26000-frame runs). ***
     ; A frame-scheduled D-pad press lands in whatever UI is up. One DOWN that hits
@@ -6276,6 +6430,18 @@ autokey_script:
     ; DumpBackbuffer the routine never reaches. NOTE: the battle golden gates keep
     ; this AND still get one A — AutoKeyDrive emits the intro-prompt dismiss
     ; outside the script, then runs this timeline shifted past it.
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_LINKCHECK
+    ; linkcheck harness: a long A train answering every prompt CableClubNPC
+    ; raises across retries (welcome text, the save YES/NO — cursor default
+    ; is YES). The state gate at .apply strips A once LinkMenu is entered,
+    ; so the train's length just needs to outlast AUTOKEY_DUMP_FRAME (the
+    ; default 3600; 900 presses x 20 = 18000 frames of coverage).
+%assign AK_L 120
+%rep 900
+    dd AK_L, AK_L + 5, PAD_A
+%assign AK_L AK_L + 20
+%endrep
     dd  -1,  -1, 0
 %elifdef AUTOKEY_BATTLE_GHOST
     ; battle_ghost: ONE step to trigger the forced battle, then nothing. The

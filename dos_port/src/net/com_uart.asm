@@ -69,9 +69,18 @@ orig_vec_off:   resd 1              ; saved protected-mode vector (0204h)
 orig_vec_sel:   resw 1
 orig_pic_mask:  resb 1              ; saved IRQ mask bit state
 rx_ring:        resb RX_RING_SIZE
+global g_uart_diag                  ; DEBUG_LINKCHECK GBSTATE probe region
+g_uart_diag:                        ; (8 dwords, layout below)
 rx_head:        resd 1              ; ISR writes
 rx_tail:        resd 1              ; reader consumes
 rx_overruns:    resd 1              ; ring-full drops (diagnostic)
+cnt_rx_calls:   resd 1              ; ComUart_RxByte entries
+cnt_rx_ring:    resd 1              ; ... that popped the ring
+cnt_rx_port:    resd 1              ; ... that pulled the port directly
+cnt_rx_empty:   resd 1              ; ... that returned CF=1 empty
+cnt_isr:        resd 1              ; uart_isr entries
+cnt_tx_sent:    resd 1              ; TxByte successes
+cnt_tx_drop:    resd 1              ; TxByte THRE timeouts (byte dropped)
 
 section .data
 align 4
@@ -200,6 +209,30 @@ ComUart_Init:
     mov al, 0x01                    ; received-data-available interrupt only
     out dx, al
 
+    ; --- post-enable drain: force INTR low so the first arrival AFTER this
+    ; point is a fresh edge. The peer may have been transmitting throughout
+    ; our boot (linkcheck's staggered second instance boots into the first
+    ; one's HELLO retransmissions, measured 2026-08-22): a byte already in
+    ; the RBR when IER goes live holds the INTR line high, the 8259 is
+    ; edge-triggered, and a held line is a dead line — the ISR never fires
+    ; and every later byte overruns. Drain RBR (the discarded bytes are
+    ; mid-frame noise; the ARQ retransmits), clear LSR error latches, and
+    ; read IIR to retire any latched interrupt id. ---
+    mov ecx, 64
+.post_drain:
+    movzx edx, word [uart_base]
+    add edx, U_IIR
+    in al, dx
+    movzx edx, word [uart_base]
+    add edx, U_LSR
+    in al, dx
+    test al, LSR_DATA_READY
+    jz .post_done
+    movzx edx, word [uart_base]
+    in al, dx
+    loop .post_drain
+.post_done:
+
     pop ebx
     clc
     ret
@@ -262,6 +295,7 @@ ComUart_TxByte:
     jnz .ready
     loop .poll
     pop eax
+    inc dword [cnt_tx_drop]
 .timeout:
     stc
     ret
@@ -269,24 +303,56 @@ ComUart_TxByte:
     pop eax
     movzx edx, word [uart_base]
     out dx, al
+    inc dword [cnt_tx_sent]
     clc
     ret
 
 ; ---------------------------------------------------------------------------
-; ComUart_RxByte — pop one byte from the RX ring. Out: CF=1 empty, else AL.
-; Preserves EBX/ESI/EDI.
+; ComUart_RxByte — pop one byte from the RX ring; with the ring empty, poll
+; the port directly. Out: CF=1 nothing available, else AL. Preserves
+; EBX/ESI/EDI.
+;
+; The direct poll is the IRQ-less fallback: if an interrupt edge is ever
+; lost (see the post-enable drain note in ComUart_Init), the pump still
+; drains the UART — slower (per-pump instead of per-byte, so overruns can
+; cost retransmissions) but alive instead of deaf. The whole check-then-read
+; runs under CLI so the ISR cannot interleave a ring push between the
+; empty check and the port read (that reordering would deliver byte n+1
+; before byte n and every frame CRC after it would reject).
 ; ---------------------------------------------------------------------------
 ComUart_RxByte:
+    cmp word [uart_base], 0
+    je .unbound
+    inc dword [cnt_rx_calls]
+    pushfd
+    cli
     mov ecx, [rx_tail]
     cmp ecx, [rx_head]
-    je .empty
+    jne .ring
+    movzx edx, word [uart_base]     ; ring empty: poll the line status
+    add edx, U_LSR
+    in al, dx
+    test al, LSR_DATA_READY
+    jz .none
+    movzx edx, word [uart_base]
+    in al, dx
+    inc dword [cnt_rx_port]
+    popfd
+    clc
+    ret
+.ring:
     mov al, [rx_ring + ecx]
     inc ecx
     and ecx, RX_RING_MASK
     mov [rx_tail], ecx
+    inc dword [cnt_rx_ring]
+    popfd
     clc
     ret
-.empty:
+.none:
+    inc dword [cnt_rx_empty]
+    popfd
+.unbound:
     stc
     ret
 
@@ -305,6 +371,7 @@ uart_isr:
     mov ds, ax
     mov es, ax
 
+    inc dword [cnt_isr]
     movzx edx, word [uart_base]
     add edx, U_LSR
 .drain:

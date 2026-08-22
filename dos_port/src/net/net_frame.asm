@@ -52,6 +52,16 @@ section .bss
 
 crc_table:      resw 256                ; CRC16-CCITT, built on first use
 
+; diagnostics (all instances pooled; only link_ncb is live outside tests) —
+; DEBUG_LINKCHECK dumps these as the "nfDiag" GBSTATE probe region.
+global g_nf_diag
+align 4
+g_nf_diag:
+nf_ka_sent:     resd 1                  ; keepalive sends attempted (Tick)
+nf_ctl_sent:    resd 1                  ; nf_send_ctl entries (acks+keepalives)
+nf_rtx_count:   resd 1                  ; nf_tx_stored retransmissions
+nf_tick_live:   resd 1                  ; Tick entries while not dead
+
 section .data
 
 crc_table_ready: db 0
@@ -134,6 +144,7 @@ nf_crc_cont:
 ; nf_tx_stored — (re)transmit the stored frame at .tx_buf/.tx_len. EBX = NFCB.
 ; ---------------------------------------------------------------------------
 nf_tx_stored:
+    inc dword [nf_rtx_count]
     xor ecx, ecx
 .loop:
     cmp cx, [ebx + NFCB.tx_len]
@@ -155,6 +166,7 @@ nf_tx_stored:
 ; In: AL = type, AH = ack value. EBX = NFCB.
 ; ---------------------------------------------------------------------------
 nf_send_ctl:
+    inc dword [nf_ctl_sent]
     sub esp, 12                         ; frame staged on the stack (10 bytes)
     mov edi, esp
     mov byte [edi + 0], NF_SOF
@@ -252,6 +264,7 @@ NetFrame_SendMsg:
 NetFrame_Tick:
     cmp byte [ebx + NFCB.dead], 0
     jne .ret
+    inc dword [nf_tick_live]
 .rx_loop:
     call [ebx + NFCB.cb_rxbyte]         ; CF=1: no more bytes this tick
     jc .rx_done
@@ -279,6 +292,7 @@ NetFrame_Tick:
     inc word [ebx + NFCB.idle_timer]
     cmp word [ebx + NFCB.idle_timer], NF_KEEPALIVE_IDLE
     jb .ret
+    inc dword [nf_ka_sent]
     mov al, NF_KEEPALIVE
     mov ah, [ebx + NFCB.rx_last_seq]
     call nf_send_ctl

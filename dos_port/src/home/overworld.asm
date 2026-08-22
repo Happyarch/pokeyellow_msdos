@@ -157,6 +157,9 @@ extern RunLinkCupsTest                    ; src/engine/menus/link_menu.asm
 %ifdef DEBUG_NETTEST
 extern RunNetPipeTest                     ; src/net/net_test.asm
 %endif
+%ifdef DEBUG_LINKCHECK
+extern RunLinkCheck                       ; src/engine/link/cable_club_npc.asm
+%endif
 extern RunLinkMenuTest                    ; src/engine/menus/link_menu.asm
 extern RunListMenuTest                    ; src/debug/debug_dump.asm
 extern RunMainMenuTest                    ; src/engine/menus/main_menu.asm
@@ -1036,6 +1039,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_NETTEST
     call RunNetPipeTest                     ; net_frame codec/ARQ RAM-pipe test, results -> wTileMap, dump, exits
+%endif
+%ifdef DEBUG_LINKCHECK
+    call RunLinkCheck                       ; loop the real CableClubNPC against the nullmodem peer; parks in LinkMenu, AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_LEARNMOVE
     call RunLearnMoveTest                  ; force a level-up move-learn, render one frame, dump FRAME.BIN, exits
