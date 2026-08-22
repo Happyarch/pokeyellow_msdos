@@ -204,8 +204,8 @@ ROM and stay local and manual.
 **Never hand-edit generated `assets/*.inc` files.** Fix the generator and re-run
 `make assets`. The `MapHeaderPointers` table is computed at generation time — a
 partial edit desyncs pointer addresses from blob offsets and silently corrupts
-map loads. (The 2026-06-22 postmortem for this lived in the deleted
-`docs/translation_log.md`; it is in git history if ever wanted.)
+map loads (the 2026-06-22 postmortem is in the closed
+`docs/archive/translation_log.md`).
 
 ## Debugging (inspecting emulated GB memory)
 

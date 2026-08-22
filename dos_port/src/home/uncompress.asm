@@ -1,9 +1,9 @@
 ; uncompress.asm — faithful port of the Gen-1 runtime sprite decompressor.
 ;
 ; Source: home/uncompress.asm (pret/pokeyellow), 1:1 in behavior.
-; Reference: docs/plans/battle_frontend.md (Stage 1c research). The
-;            UncompressSpriteData entry in docs/translation_log.md is gone with
-;            that file (deleted 2026-08-21); see git history if needed.
+; Reference: docs/archive/translation_log.md (UncompressSpriteData entry — that
+;            log is CLOSED as of 2026-08-21, verify against the tree),
+;            docs/plans/battle_frontend.md (Stage 1c research).
 ;
 ; NOTE (bounding box): a sprite's declared dims (width×height tiles) bound the
 ; NORMAL case, but the GB decoder can technically write past the box for glitch

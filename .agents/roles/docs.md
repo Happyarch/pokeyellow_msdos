@@ -16,8 +16,9 @@ placement. Does not translate or place code.
 
 ## Translation Notes
 
-`docs/translation_log.md` was DELETED 2026-08-21 at the maintainer's direction —
-do not recreate it or start a replacement log. For each function the Integration
+`docs/translation_log.md` is CLOSED — archived at
+`docs/archive/translation_log.md` (2026-08-21). Do not append to it and do not
+start a replacement log. For each function the Integration
 Agent places, put the worker's Translation Notes Header into the COMMIT MESSAGE,
 and put anything durable where a tool can see it: a machine-parsed
 `DEVIATION{}`/`BUG{}`/`GLITCH{}`/`STUB{}` annotation at the code that diverges,
