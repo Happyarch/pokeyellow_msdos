@@ -33,6 +33,11 @@ extern pit_restore       ; boot/timing.asm
 extern joypad_init       ; src/input/joypad.asm
 extern joypad_restore    ; src/input/joypad.asm
 extern audio_init        ; src/audio/audio_hal.asm
+extern NetInit           ; src/net/net_hal.asm — link-cable transport bind
+extern NetShutdown       ; src/net/net_hal.asm — UART vector/PIC restore
+extern g_net_com_sel     ; src/net/net_hal.asm — /COM1-4 -> 1..4
+extern g_net_baud_div    ; src/net/net_hal.asm — /BAUD=n -> 115200/n divisor
+extern g_net_linklog     ; src/net/net_hal.asm — /LINKLOG flag
 extern audio_shutdown    ; src/audio/audio_hal.asm
 extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at boot
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
@@ -81,6 +86,13 @@ arg_tandy:    db '/TANDY',   0
 arg_spk:      db '/SPK',     0
 arg_noenh:    db '/NOENH',   0
 arg_loop:     db '/LOOP',    0
+; Link-cable transport selection (docs/current_plan_link_cable.md Stage 2).
+arg_com1:     db '/COM1',    0
+arg_com2:     db '/COM2',    0
+arg_com3:     db '/COM3',    0
+arg_com4:     db '/COM4',    0
+arg_baud:     db '/BAUD=',   0
+arg_linklog:  db '/LINKLOG', 0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -108,6 +120,7 @@ start:
     call pit_init            ; reprogram PIT to ~60 Hz, install tick ISR
     call joypad_init         ; hook IRQ 1 (keyboard) → GB joypad state
     call audio_init          ; enable the engine + GB power-on audio state
+    call NetInit             ; bind the /COMx link transport (no flag: no-op)
 
 %ifdef DEBUG_AUDIO
     call RunAudioTest        ; play Pallet Town BGM 120 ticks, dump, exit (never returns)
@@ -313,6 +326,54 @@ parse_cmdline:
     mov byte [g_cfg_musicloop], 1 ; DEBUG_AUDIO: music-only, loop forever
 .no_loop:
 
+    ; --- link-cable transport flags (net_hal.asm owns the config bytes) ----
+    mov edi, arg_com1
+    call find_token
+    jnz .no_com1
+    mov byte [g_net_com_sel], 1
+.no_com1:
+    mov edi, arg_com2
+    call find_token
+    jnz .no_com2
+    mov byte [g_net_com_sel], 2
+.no_com2:
+    mov edi, arg_com3
+    call find_token
+    jnz .no_com3
+    mov byte [g_net_com_sel], 3
+.no_com3:
+    mov edi, arg_com4
+    call find_token
+    jnz .no_com4
+    mov byte [g_net_com_sel], 4
+.no_com4:
+    mov edi, arg_linklog
+    call find_token
+    jnz .no_linklog
+    mov byte [g_net_linklog], 1
+.no_linklog:
+    ; /BAUD=n — parse the decimal rate, store the 115200/n divisor. An
+    ; unparsable or out-of-range value is ignored (default 115200 stands).
+    mov edi, arg_baud
+    call find_token_pos
+    jnz .no_baud
+    call parse_decimal            ; EAX ptr -> EAX value, CF=1 no digits
+    jc .no_baud
+    test eax, eax
+    jz .no_baud
+    cmp eax, 115200
+    ja .no_baud
+    mov ecx, eax
+    mov eax, 115200
+    xor edx, edx
+    div ecx                       ; divisor = 115200 / baud
+    test eax, eax
+    jz .no_baud
+    cmp eax, 0xFFFF
+    ja .no_baud
+    mov [g_net_baud_div], ax
+.no_baud:
+
 .done:
     pop edi
     pop esi
@@ -402,10 +463,99 @@ find_token:
     ret
 
 ; ---------------------------------------------------------------------------
+; find_token_pos — find_token variant for `=value` flags (/BAUD=n): same
+; inputs (EDI = NUL-terminated token, ESI = command line, ECX = remaining
+; length), but on a hit returns ZF=1 AND EAX = flat pointer to the first
+; character PAST the token (the value). ZF=0 on miss (EAX undefined).
+; Preserves EBX/ECX/ESI/EDI.
+; ---------------------------------------------------------------------------
+find_token_pos:
+    push ebx
+    push ecx
+    push esi
+    push edi
+
+    mov ebx, edi
+.tok_len:
+    cmp byte [ebx], 0
+    je .tok_len_done
+    inc ebx
+    jmp .tok_len
+.tok_len_done:
+    sub ebx, edi                 ; EBX = token length
+
+.scan_loop:
+    cmp ecx, ebx
+    jl .not_found
+    push ecx
+    push esi
+    push edi
+    mov ecx, ebx
+    repe cmpsb
+    pop edi
+    pop esi
+    pop ecx
+    je .found
+    inc esi
+    dec ecx
+    jmp .scan_loop
+.found:
+    lea eax, [esi + ebx]         ; first char past the token
+    cmp eax, eax                 ; ZF=1
+    jmp .out
+.not_found:
+    or esp, 0                    ; ZF=0 (esp is never 0)
+.out:
+    pop edi
+    pop esi
+    pop ecx
+    pop ebx
+    ret
+
+; ---------------------------------------------------------------------------
+; parse_decimal — EAX = flat pointer to ASCII digits; parse up to a
+; non-digit. Out: CF=0 + EAX = value (clamped at 999999), CF=1 no digits.
+; Clobbers EDX. Preserves the rest.
+; ---------------------------------------------------------------------------
+parse_decimal:
+    push esi
+    push ecx
+    mov esi, eax
+    xor eax, eax
+    xor ecx, ecx                 ; digit count
+.next:
+    movzx edx, byte [esi]
+    sub dl, '0'
+    cmp dl, 9
+    ja .done
+    imul eax, eax, 10
+    movzx edx, dl
+    add eax, edx
+    cmp eax, 999999
+    jbe .no_clamp
+    mov eax, 999999
+.no_clamp:
+    inc esi
+    inc ecx
+    jmp .next
+.done:
+    test ecx, ecx
+    jz .none
+    clc
+    jmp .out
+.none:
+    stc
+.out:
+    pop ecx
+    pop esi
+    ret
+
+; ---------------------------------------------------------------------------
 ; cleanup — restore PIT, IRQ0, IRQ1 and return to text mode
 ; ---------------------------------------------------------------------------
 cleanup:
     push eax
+    call NetShutdown         ; restore the UART vector/PIC state (no-op if unbound)
     call audio_shutdown
     call joypad_restore
     call pit_restore
