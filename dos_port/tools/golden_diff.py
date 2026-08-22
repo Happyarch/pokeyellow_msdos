@@ -465,6 +465,15 @@ SCENARIOS = {
             # $18-$1B, object_event 4, 2 in data/maps/objects/Route15Gate2F.asm).
             # An earlier draft of this entry masked entries 4-39 "as unused"; that was
             # wrong and would have hidden the NPC.
+            # NO oam mask. The map's only object_event (SAFARIZONECENTER_NUGGET, a
+            # SPRITE_POKE_BALL 7 tiles south and 10 east of the player) IS a
+            # divergence in the raw bytes — pret leaves the sprite's X/tile/attr in
+            # entries 4-7 and hides it by writing Y = $A0, where the port's shadow-OAM
+            # slot is simply zeroed — but the differ's own both-hidden rule already
+            # absorbs it (Y >= 160 is off a 144-line screen on either side), so a mask
+            # here would be dead and would imply a divergence the run never reports.
+            # Nothing is drawn on the port side either: its FRAME.BIN render shows no
+            # ball at the canvas cell the wider camera would put it in.
             "vram": [
                 (i, "unreferenced OBJ residue: hardware retains the sprite tiles of the "
                     "maps the golden WALKED through to get here, while the port's gate "
@@ -477,6 +486,60 @@ SCENARIOS = {
                     "exactly. Invisible by construction: no OAM entry and no tilemap cell "
                     "points at any masked slot")
                 for i in list(range(36, 128)) + [351]
+            ],
+        },
+    },
+    "safari_game_over": {
+        "flags": "DEBUG_SAFARI_GAMEOVER=1",
+        # SAFARI_ZONE_CENTER, player spawned at (1,4) and WALKED two tiles south to
+        # (3,4) on both sides. The subject is the walk itself: the step countdown
+        # (wSafariSteps, seeded to 1) reaches zero on the second step's
+        # SafariZoneCheckSteps, which falls into SafariZoneGameOver and prints
+        # TimesUpText. Both sides park on the `prompt` after ONE page turn.
+        #
+        # NO wram_skip, deliberately, and this is the one non-battle scenario that
+        # compares the four battle-scratch regions instead of skipping them.
+        # MEASURED: wBattleFlags 0/4, wEnemyMonNick 0/11, wEnemyMon 0/29,
+        # wBattleMonNick 0/11, wBattleMon 0/29 — identical on both sides, because
+        # neither ever entered a battle and both hold the new game's cleared WRAM.
+        # Comparing them is strictly stronger than _NONBATTLE_WRAM_SKIP; if this
+        # ever flakes, the skip is one line away.
+        #
+        # Window MEASURED by brute force over every (dx, dy): (18, 6) is the unique
+        # minimum at 180 mismatching cells, and all 180 are in the two masked/
+        # projected bands below — golden rows 3-11, the whole visible map, match
+        # exactly.
+        "window": (18, 6),
+        "projections": [
+            # The same stride-20 dialog re-flow route_15_binoculars and sign_pallet
+            # carry, and MEASURED here rather than assumed: searching the port canvas
+            # for each golden dialog row's 20 bytes finds row 12+k at canvas
+            # (6 + k//2, 20 * (k%2)) for every k, unambiguously for the non-blank rows.
+            ((12 + k, 0, 12 + k, 19), (20 * (k % 2), (6 + k // 2) - (12 + k)),
+             "stride-20 dialog scratch re-flowed over the 40-wide canvas: "
+             "6 rows x 1 panel -> 3 rows x 2 panels")
+            for k in range(6)
+        ],
+        "masks": {
+            "tilemap": [
+                ((r, 0, r, 19),
+                 "the stride-20 dialog scratch physically overlaps canvas rows 6-8 of "
+                 "the block-aligned map mirror, and at this window (dy 6) golden rows "
+                 "0-2 ARE canvas rows 6-8 — so these map-mirror rows sit under the "
+                 "dialog. Invisible on screen: render_bg draws from the tile surface "
+                 "and the dialog from GB_TILEMAP1. Same staging-buffer collision "
+                 "sign_pallet and route_15_binoculars mask, for the same reason")
+                for r in range(3)
+            ],
+                        "vram": [
+                (i, "unreferenced OBJ residue: hardware retains the sprite tiles of "
+                    "whatever each side loaded on the way here, and the two took "
+                    "different routes to this map (the golden walked out of Pallet "
+                    "Town, the port spawned). MEASURED: every visible OAM entry on "
+                    "BOTH sides references only tiles 0-3, those four slots MATCH, and "
+                    "no differing slot is referenced by any entry with Y < 160. Nothing "
+                    "in this range reaches the screen")
+                for i in range(0x18, 0x80)
             ],
         },
     },

@@ -178,6 +178,7 @@ extern RunSurfTestSeed                    ; src/debug/debug_dump.asm
 extern RunTrainerRouteTestSeed            ; src/debug/debug_dump.asm (Stage 1b continuous gate)
 extern RunTrainerRoute17TestSeed          ; src/debug/debug_dump.asm (ROUTE_17/ForceBikeDown witness)
 extern RunGhostBattleTestSeed             ; src/debug/debug_dump.asm (4c ghost witness)
+extern RunSafariGameOverTestSeed          ; src/debug/debug_dump.asm (safari walker)
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern RunPikaPicTest                     ; src/debug/debug_dump.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
@@ -413,6 +414,31 @@ EnterMap:
 %ifdef HIDDENOBJ_EVENT
     SetEvent HIDDENOBJ_EVENT
 %endif
+%endif
+%ifdef DEBUG_SAFARI_GAMEOVER
+    ; Safari-Zone step-countdown gate (the safari_game_over golden). Unlike every
+    ; gate above it, this one does not seed the player next to the thing under
+    ; test — there is nothing to stand next to. The subject is a COMPLETED STEP,
+    ; so the spawn only has to be somewhere the player can walk south from, and
+    ; the walking is AUTOKEY_SAFARI_GAMEOVER's job.
+    ;
+    ; SAFARI_ZONE_CENTER (0xDC) at (y=1, x=4). DERIVED, not guessed, and the same
+    ; tile the golden uses: decoding safari_zone_center_blk through forest_blocks
+    ; and forest_coll, (1,4) and the three tiles below it are all passable. The
+    ; golden's earlier (10,10) is blocked — the warp landed on the right map and
+    ; the player never moved, so the counter never decremented and no game over
+    ; fired. A spawn that cannot walk fails this scenario SILENTLY.
+    ;
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
+    mov byte [ebp + wCurMap], SAFARI_GAMEOVER_MAP
+    mov byte [ebp + wYCoord], SAFARI_GAMEOVER_Y
+    mov byte [ebp + wXCoord], SAFARI_GAMEOVER_X
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    ; 0xDC is at or above FIRST_INDOOR_MAP_ID (0x25), so its .blk lives in the
+    ; shared INDOOR_BLK_GBADDR window and a hand-seeded spawn must stage it — only
+    ; the warp path (LoadDestinationMapData) does that on its own. Same call and
+    ; the same reason as DEBUG_SPAWN and DEBUG_HIDDENOBJ.
+    call StageIndoorMapBlk
 %endif
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; Map-script sight gate (map-script fidelity plan, Stage 3): spawn inside a
@@ -1242,6 +1268,21 @@ EnterMap:
     call SeedDeterministicPlayerIdentity
     call SeamReseatView
     call RunGhostBattleTestSeed              ; debug party, empty bag, wCurOpponent; RETURNS
+%endif
+%ifdef DEBUG_SAFARI_GAMEOVER
+    ; Same shape as DEBUG_LEDGE/FISH/TRAINER_ROUTE/BATTLE_GHOST above: seed, then
+    ; FALL THROUGH into the real OverworldLoop. The loop does the rest and nothing
+    ; here touches the subject — AUTOKEY_SAFARI_GAMEOVER's held PAD_DOWN walks two
+    ; live steps against live collision, StepCountCheck's own arm calls
+    ; SafariZoneCheckSteps once per completed step, the second call sees zero and
+    ; falls into SafariZoneGameOver, and that prints TimesUpText through the real
+    ; DisplayTextID. A gate that called SafariZoneCheckSteps itself would prove the
+    ; routine works and say NOTHING about the loop arm, which is the half that was
+    ; actually missing until 2077fdb3f (bug-class-false-witness-scenario).
+    ; LoadMapData does not derive the view pointer for a hand-seeded spawn.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunSafariGameOverTestSeed           ; event, balls, wSafariSteps; RETURNS
 %endif
 
     ; fall through to OverworldLoop

@@ -23,6 +23,74 @@ if it took none. This is the swarm's divergence audit trail.
 
 ---
 
+## safari_game_over registered — the first WALKING port gate
+
+- Date: 2026-08-21
+- Source: `engine/events/hidden_events/safari_game.asm`
+  (`SafariZoneCheckSteps` -> `SafariZoneGameOver` -> `PrintSafariGameOverText`),
+  reached from `home/overworld.asm:249-256` (`OverworldLoopLessDelay`, after
+  `StepCountCheck`).
+- Translated: no new translation. This entry is the ACCEPTANCE for `2077fdb3f`,
+  which restored both Safari game-over branches to the port's
+  `OverworldLoopLessDelay`; the golden that proves them now runs.
+- H-flag: not involved.
+- Bug tags: none.
+- Divergences: none introduced. `SafariZoneCheckSteps` keeps its existing
+  `DEVIATION{class=data-model}` for pret's `IF DEF(_DEBUG)` `DebugPressedOrHeldB`
+  block, and `SafariZoneGameOver` its `DEVIATION{class=HAL}` for the
+  `g_audio_engine_online` early-out on the `wChannelSoundIDs` spin.
+- Notes:
+
+  **Why a walking gate had to exist.** Every previous overworld gate seeds the
+  player next to its subject and presses A. That shape cannot reach this one:
+  the subject IS a completed step. `SafariZoneCheckSteps` is called only from
+  `StepCountCheck`'s arm in `OverworldLoopLessDelay`, once per finished step, so
+  a gate that called the routine directly would have witnessed the routine and
+  said nothing about the arm — and the arm is precisely the half that was missing
+  from the port until `2077fdb3f` (both routines were `translated` with no caller
+  anywhere in the tree). That is `bug-class-false-witness-scenario` in its exact
+  original shape.
+
+  So `DEBUG_SAFARI_GAMEOVER` seeds a spawn on `SAFARI_ZONE_CENTER` ($DC) at
+  (y=1, x=4), falls through into the real `OverworldLoop`, and lets a new
+  `AUTOKEY_SAFARI_GAMEOVER` timeline hold `PAD_DOWN` for two live steps against
+  live collision. The golden walks the same two tiles.
+
+  **Three things are load-bearing and each was measured, not assumed:**
+  * `wSafariSteps` is seeded **big-endian** ($00,$01 = one step). pret's `dw` is
+    read hi-then-lo; little-endian gives 256 steps, which walks past the harness
+    timeout instead of failing.
+  * `wNumSafariBalls = 30` is not decoration. `SafariGameOverText` is a
+    `text_asm` that branches on it, and "Time's up!" — the landmark both sides
+    wait for — exists only on the non-zero arm.
+  * **Exactly one A press.** `TimesUpText` is `text` / `para` / `prompt`, so one A
+    turns the `para` page and both sides then park on the `prompt`. A second A
+    would page into `GameOverText` and the two sides would compare different
+    screens.
+
+  **No debug party, unlike every sibling `Run*TestSeed`.** Those seed one because
+  they start a battle; this gate never enters one, and the golden warps out of
+  Pallet Town before Oak hands over a starter. Leaving the party and bag at the
+  new game's empty state took `wPartyData` from 269/404 differing bytes to 0 and
+  let the scenario compare all 13 WRAM regions with **zero skips** — including
+  the four battle-scratch regions `_NONBATTLE_WRAM_SKIP` normally hides
+  (measured identical on both sides).
+
+  **Evidence.** `goldencheck safari_game_over` PASS: tilemap 360 cells at window
+  (18,6), VRAM 384 slots, OAM 40 entries, WRAM 13 regions / 0 skipped. The window
+  was brute-forced over every (dx,dy) — (18,6) is the unique minimum at 180
+  mismatching cells, and all 180 fall in the two documented bands (the stride-20
+  dialog re-flow, measured cell-for-cell, and the map-mirror rows under it).
+  Break-it probe: deleting the `SafariZoneCheckSteps` branch from
+  `OverworldLoopLessDelay` turns the PASS into **FAIL, 336 unmasked divergences**
+  — so the scenario is evidence, not decoration. All 89 goldens regenerate
+  byte-identically. `lint_pret_labels` 0 in both modes; `static_gate` PASS;
+  `faithdiff EnterMap` gains exactly one finding versus HEAD, `+ ADDED
+  RunSafariGameOverTestSeed`, joining the seven sibling `Run*TestSeed` calls
+  already there.
+
+---
+
 ## Battle Stage 1b close — EnemySendOutFirstMon send-out tail restored; scenario 51 green
 
 - Date: 2026-08-05 (`fefdf0ab` fixes, `ee5ba354` registration)

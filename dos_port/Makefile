@@ -2072,6 +2072,35 @@ $(eval $(call hiddenobj_gate,DEBUG_STATUES,0x36,$(STATUES_Y),$(STATUES_X),$(STAT
 NASMFLAGS += -D HIDDENOBJ_RUNSCRIPT
 endif
 
+# ---------------------------------------------------------------------------
+# safari_game_over — the Safari Zone step countdown running out. THE WALKING GATE.
+#
+# Every other overworld gate seeds the player next to the thing under test and
+# presses A. This one cannot: the subject is a COMPLETED STEP. SafariZoneCheckSteps
+# is reached only from StepCountCheck's arm in OverworldLoopLessDelay, once per
+# finished step, so the gate walks — spawn, fall through into the real loop, and
+# let AUTOKEY_SAFARI_GAMEOVER hold PAD_DOWN.
+#
+# SAFARI_ZONE_CENTER is $DC (assets/map_dims.inc). (y=1, x=4) and the tiles below
+# it are passable in forest_coll; the golden spawns on the same tile.
+#
+# AUTOKEY_DUMP_FRAME is a FRAME number, not a landmark, and this gate can afford
+# that because the whole timeline is scripted and parks: after the single A that
+# turns TimesUpText's `para` page, both sides sit at a `prompt` waiting for a
+# button that never comes. Nothing moves between the page turn and the dump.
+#   make DEBUG_SAFARI_GAMEOVER=1 [AK_SAFARI_WALK=n] [AK_SAFARI_PAGE=n] [AUTOKEY_DUMP_FRAME=n]
+ifdef DEBUG_SAFARI_GAMEOVER
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_SAFARI_GAMEOVER -D SKIP_TITLE
+NASMFLAGS += -D SAFARI_GAMEOVER_MAP=0xDC -D SAFARI_GAMEOVER_Y=1 -D SAFARI_GAMEOVER_X=4
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_SAFARI_GAMEOVER
+AK_SAFARI_WALK ?= 60
+AK_SAFARI_PAGE ?= 300
+NASMFLAGS += -D AK_SAFARI_WALK=$(AK_SAFARI_WALK) -D AK_SAFARI_PAGE=$(AK_SAFARI_PAGE)
+AUTOKEY_DUMP_FRAME ?= 420
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 ifdef DEBUG_BILLSHOUSEPC
 $(eval $(call hiddenobj_gate,DEBUG_BILLSHOUSEPC,0x58,5,1,0x04))
 # BillsHousePC dispatches on event flags, and the branch choice decides whether this

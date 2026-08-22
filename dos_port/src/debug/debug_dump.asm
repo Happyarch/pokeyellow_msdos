@@ -25,6 +25,8 @@ bits 32
 %include "gb_macros.inc"
 %include "gb_constants.inc"
 %include "coords.inc"                   ; BCOORD — battle-frame projection (DEBUG_ANIM_SHOW label)
+%include "assets/event_constants.inc"    ; EVENT_* indices (SetEvent's operand)
+%include "events.inc"                   ; SetEvent — both %ifndef-guarded, gb_memmap.inc first
 %ifdef DEBUG_MAPSCRIPT_SIGHT
 ; Trainer-flow WRAM addresses the shared memmap has not absorbed yet (M8.2 scaffold).
 %endif
@@ -151,6 +153,12 @@ extern PrepareNewGameDebug
 %endif
 %endif
 global RunTrainerRoute17TestSeed
+%endif
+%ifdef DEBUG_SAFARI_GAMEOVER
+; The walking gate (safari_game_over). No PrepareNewGameDebug extern: this seed
+; deliberately leaves the party and bag at the new game's own empty state, which
+; is what the golden has (see RunSafariGameOverTestSeed).
+global RunSafariGameOverTestSeed
 %endif
 %ifdef DEBUG_BATTLE_GHOST
 %ifndef DEBUG_FISH
@@ -2142,6 +2150,68 @@ ghost_enemy_rearmed: resb 1                     ; unveil: 0 none, 1 re-armed, 2 
 ghost_saw_ghost_nick: resb 1                    ; the GHOST rename was observed
 ghost_dump_frame:    resd 1                     ; in-battle frames since send-out
 ghost_press_a:       resb 1                     ; this frame's intro-dismiss pulse
+section .text
+%endif
+
+%ifdef DEBUG_SAFARI_GAMEOVER
+; ---------------------------------------------------------------------------
+; RunSafariGameOverTestSeed — the safari_game_over gate's seed (the WALKER).
+;
+; SEEDS AND RETURNS, exactly like RunLedgeTestSeed / RunGhostBattleTestSeed:
+; EnterMap falls through into the real OverworldLoop and AUTOKEY_SAFARI_GAMEOVER's
+; held PAD_DOWN takes the steps. Nothing here calls SafariZoneCheckSteps — that is
+; the whole point. This is the port's FIRST gate whose subject is reached by
+; WALKING rather than by a seeded spawn plus one press, and it is what
+; safari_game_over needs: the countdown only decrements on a COMPLETED step
+; (StepCountCheck runs once per step in OverworldLoopLessDelay), so a gate that
+; calls the routine directly would witness the routine and not the branch that
+; was missing from the loop until 2077fdb3f.
+;
+; THE SEEDED STATE, and why each byte is here — the mGBA side seeds the same four
+; in its own scenario.exec block, so both sides enter the countdown identically:
+;   EVENT_IN_SAFARI_ZONE   SafariZoneCheck's first act is CheckEventHL on it; clear,
+;                          every path falls to SafariZoneGameStillGoing and nothing
+;                          this scenario is about can ever run.
+;   wNumSafariBalls = 30   NOT decoration. SafariGameOverText is a `text_asm` that
+;                          branches on it: zero prints GameOverText ALONE, non-zero
+;                          prints TimesUpText first. "Time's up!" — the golden's
+;                          landmark — exists only on the non-zero arm.
+;   wSafariSteps = $0001   BIG-ENDIAN, one step remaining: SafariZoneCheckSteps
+;                          reads hi from [wSafariSteps] and lo from [wSafariSteps+1]
+;                          (pret `dw`). Writing it little-endian gives $0100 = 256
+;                          steps, which walks for ~4000 frames and times the harness
+;                          out rather than failing.
+;   wSafariZoneGameOver=0  the loop's branch condition; the gate must not pre-arm
+;                          the very byte whose transition it is witnessing.
+;
+; ONE-SHOT, same latch and the same reason as the ghost/trainer-route gates:
+; EnterMap re-runs this on every map entry.
+;
+; In: EBP = GB memory base.  Returns.
+; ---------------------------------------------------------------------------
+SAFARI_GAMEOVER_BALLS equ 30            ; a full Safari game's ball allocation
+RunSafariGameOverTestSeed:
+    cmp byte [safari_gameover_seeded], 0
+    jne .alreadySeeded
+    mov byte [safari_gameover_seeded], 1
+    ; NO PARTY, NO BAG, NO PrepareNewGameDebug — deliberately, and unlike every
+    ; other Run*TestSeed here. Those gates seed a debug party because they start a
+    ; battle; this one never enters one, and the golden reaches SAFARI_ZONE_CENTER
+    ; by warping straight out of Pallet Town before Oak hands over a starter, so
+    ; ITS party and bag are the new game's own empty ones. Seeding a debug party
+    ; would put 269 of wPartyData's 404 bytes into the diff and buy a wram_skip
+    ; that hides real state — the port's SKIP_TITLE boot already lands on the same
+    ; empty new-game state the golden has.
+    SetEvent EVENT_IN_SAFARI_ZONE
+    mov byte [ebp + wNumSafariBalls], SAFARI_GAMEOVER_BALLS
+    mov byte [ebp + wSafariSteps], 0x00         ; big-endian hi
+    mov byte [ebp + wSafariSteps + 1], 0x01     ; big-endian lo — one step left
+    mov byte [ebp + wSafariZoneGameOver], 0
+.alreadySeeded:
+    ret
+
+section .bss
+safari_gameover_seeded: resb 1                  ; 0 = seed on first EnterMap only
 section .text
 %endif
 
@@ -5345,6 +5415,12 @@ RunStoneTest:
 %ifndef AK_WALK_BASE
 %define AK_WALK_BASE 9000               ; AUTOKEY_ROUTE_WALK post-battle walk start
 %endif
+%ifndef AK_SAFARI_WALK
+%define AK_SAFARI_WALK 60               ; AUTOKEY_SAFARI_GAMEOVER: first frame of the hold
+%endif
+%ifndef AK_SAFARI_PAGE
+%define AK_SAFARI_PAGE 300              ; ...and the single A that turns to "Time's up!"
+%endif
 global AutoKeyDrive
 AutoKeyDrive:
     pushad
@@ -6193,6 +6269,33 @@ autokey_script:
     ; is left PARKED at its own prompt for the photograph — the same thing
     ; battle_intro does, and the reason no A follows the DOWN.
     dd  90,  98, PAD_DOWN
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_SAFARI_GAMEOVER
+    ; safari_game_over: THE WALKER. Everything this scenario is about happens
+    ; because the player COMPLETES STEPS — SafariZoneCheckSteps is called from
+    ; StepCountCheck's arm in OverworldLoopLessDelay, once per finished step, and
+    ; there is no other way in. So this script holds PAD_DOWN through the live
+    ; overworld loop with live collision rather than pressing anything clever.
+    ;
+    ; TWO steps, not one. The seed leaves wSafariSteps = 1: step 1 decrements it
+    ; to 0 and returns through SafariZoneGameStillGoing, and it is the NEXT step's
+    ; check that sees zero and falls into SafariZoneGameOver. The golden walks the
+    ; same two (navigate.walk("DOWN", 1) twice).
+    ;
+    ; The hold ENDS well before the text. A held direction cannot advance a text
+    ; box, so this is belt-and-braces, but it also means an over-long hold cannot
+    ; walk the player somewhere the golden did not go: after the second step the
+    ; countdown has already fired and the loop is inside DisplayTextID.
+    dd  AK_SAFARI_WALK, AK_SAFARI_WALK + 110, PAD_DOWN
+    ; EXACTLY ONE A, and the count is load-bearing. TimesUpText is
+    ;     text "PA: Ding-dong!" / para "Time's up!" / prompt
+    ; so page 1 types itself, `para` parks behind a prompt, this A turns the page,
+    ; and `prompt` parks again on page 2 — which is the state both sides
+    ; photograph. A SECOND A would page on into GameOverText ("PA: Your SAFARI
+    ; GAME is over!") and the two sides would then be comparing different screens.
+    ; The golden stops for the same reason: dialog_until_text returns the moment
+    ; its needle appears and presses nothing further.
+    dd  AK_SAFARI_PAGE, AK_SAFARI_PAGE + 8, PAD_A
     dd  -1,  -1, 0
 %elifdef AUTOKEY_SAFARI
     ; battle_safari_result: drive the SAFARI menu to BAIT, which is the only

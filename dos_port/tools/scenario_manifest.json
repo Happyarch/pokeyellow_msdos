@@ -2680,6 +2680,38 @@
       "verification": "The real A-press dispatch (CheckForHiddenEventOrBookshelfOrCardKeyDoor -> CheckForHiddenEvent -> Route15GateLeftBinoculars) runs on both sides: the port seeds the player in front of the prop and the golden walks/turns into it. Compares the tilemap and VRAM because the interesting half is the Articuno front-sprite pop-up from DisplayMonFrontSpriteInBox, which a WRAM-only class could not see."
     },
     {
+      "name": "safari_game_over",
+      "id": 90,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_SAFARI_GAMEOVER=1",
+      "port_entry_gate": "DEBUG_SAFARI_GAMEOVER",
+      "navigation_script": "tools/mgba_harness/scenarios/safari_game_over.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "SafariZoneCheckSteps",
+        "SafariZoneGameOver",
+        "PrintSafariGameOverText"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "THE FIRST WALKING SCENARIO. Every other overworld gate seeds the player next to its subject and presses A; this one cannot, because the subject IS a completed step. SafariZoneCheckSteps is reachable only from StepCountCheck's arm in OverworldLoopLessDelay, once per finished step, so both sides WALK two tiles south with live collision and let the loop do the rest. That arm, and the out-of-balls SafariZoneCheck arm beside it, were absent from the port until 2077fdb3f: both routines were translated with no caller anywhere in the tree, so wSafariSteps never decremented and a Safari game could not end. A gate that called SafariZoneCheckSteps directly would have witnessed the routine and said nothing about the missing branch. wSafariSteps is seeded to 1 BIG-ENDIAN on both sides (pret reads hi from [wSafariSteps], lo from [wSafariSteps+1]); little-endian gives 256 steps and times the harness out instead of failing. wNumSafariBalls = 30 is load-bearing rather than decoration: SafariGameOverText is a text_asm that branches on it, and \"Time's up!\" -- the landmark -- exists only on the non-zero arm. Both sides park on TimesUpText's `prompt` after exactly ONE page turn; a second A would page on into GameOverText and the two would be comparing different screens."
+    },
+    {
       "name": "oaks_lab_posters",
       "id": 89,
       "tier": "full",
