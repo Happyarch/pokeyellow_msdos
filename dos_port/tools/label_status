@@ -13,6 +13,31 @@ label_status — "check before you call" query over the Stage 2.1 label DB
                                   with its trailing comment — the stub
                                   retirement checklist (repoint comments,
                                   audit callers for stub-era assumptions).
+  label_status --subsystem PAT    what is left in a subsystem: every label whose
+                                  pret file matches PAT (a substring, or a glob
+                                  with * / ?), as a per-file coverage table plus
+                                  the missing/stub names with their port callers.
+                                  PAT is matched against the PRET path, so
+                                  `--subsystem overworld` covers home/overworld.asm
+                                  and engine/overworld/ together.
+                                  `--all` also lists the translated names.
+
+  NOT A SECOND INVENTORY, and deliberately so: --subsystem is a thin VIEW over
+  the same `labels` table dependency_graph.py reads, so the two cannot disagree.
+  The viewer already covers the HUMAN version of this question — tick "unported"
+  in its status filter and type a path in its search box. What this adds is the
+  terminal one-liner, a per-FILE coverage rollup (the viewer draws nodes, not
+  file totals), and the port-callers column inline. If you want it in the
+  browser, use the viewer; do not build a third thing.
+
+  *** READ THE COUNT CORRECTLY. *** --subsystem reports tier='core' only, because
+  that is the only tier with a mirror rule and call-graph edges; script-tier rows
+  carry a status but no edges, so "port callers" is meaningless for them. And a
+  `missing` row is NOT automatically work to do: much of what pret puts in a file
+  is replaced wholesale by a port mechanism (the VRAM row/column staggering, for
+  instance, has no counterpart in a surface renderer), and some is a NAME FORK —
+  present under a port-local name, which reads exactly like absent. Check before
+  reporting a number as a backlog.
 
 Data comes from translation.db; run tools/update_label_db first if the tree
 changed. The DB is rescan-derived — never edit it by hand.
@@ -42,10 +67,62 @@ def status_of(cur, name):
         "SELECT name, pret_file, port_file, status, stub_file FROM labels "
         "WHERE name=?", (name,)).fetchone()
 
+def subsystem_report(cur, pat, show_all):
+    """Per-file coverage for every core-tier label whose PRET path matches pat."""
+    # A bare word is a substring match; anything with a glob char is a glob.
+    like = pat if any(ch in pat for ch in '*?') else f'*{pat}*'
+    rows = cur.execute("""
+        SELECT name, pret_file, status FROM labels
+        WHERE tier='core' AND pret_file GLOB ?
+        ORDER BY pret_file, name""", (like,)).fetchall()
+    if not rows:
+        print(f"no core-tier pret files match {pat!r} "
+              f"(try a fragment of the path, e.g. 'overworld' or 'engine/battle')")
+        return 1
+
+    files = {}
+    for name, pf, st in rows:
+        files.setdefault(pf, []).append((name, st))
+
+    print(f"{'pret file':<52} {'missing':>7} {'stub':>5} {'transl':>7} {'total':>6}")
+    tot = [0, 0, 0, 0]
+    for pf in sorted(files, key=lambda f: (-sum(1 for _, s in files[f] if s == 'missing'), f)):
+        ls = files[pf]
+        m = sum(1 for _, s in ls if s == 'missing')
+        b = sum(1 for _, s in ls if s == 'stub')
+        t = sum(1 for _, s in ls if s == 'translated')
+        print(f"{pf:<52} {m:7} {b:5} {t:7} {len(ls):6}")
+        tot = [tot[0] + m, tot[1] + b, tot[2] + t, tot[3] + len(ls)]
+    print(f"{'TOTAL':<52} {tot[0]:7} {tot[1]:5} {tot[2]:7} {tot[3]:6}")
+
+    wanted = ('missing', 'stub') if not show_all else ('missing', 'stub', 'translated')
+    for pf in sorted(files):
+        listed = [(n, s) for n, s in files[pf] if s in wanted]
+        if not listed:
+            continue
+        print(f"\n### {pf}")
+        for name, st in listed:
+            callers = [r[0] for r in cur.execute(
+                "SELECT DISTINCT caller FROM calls WHERE callee=? AND side='port'",
+                (name,))]
+            tag = {'missing': 'miss', 'stub': 'STUB', 'translated': ' ok '}[st]
+            print(f"  [{tag}] {name:<38} "
+                  f"port callers: {', '.join(callers) if callers else '(none)'}")
+    print("\nA `missing` row is not automatically work: some are replaced wholesale "
+          "by a port mechanism, and some are NAME FORKS (present under a port-local "
+          "name). `port callers: (none)` on a missing row is the usual shape of "
+          "both. Verify against the source before treating a count as a backlog.")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('names', nargs='+', metavar='Label')
+    ap.add_argument('names', nargs='*', metavar='Label')
+    ap.add_argument('--subsystem', metavar='PAT',
+                    help='list a subsystem\'s labels by pret-path match')
+    ap.add_argument('--all', action='store_true',
+                    help='--subsystem: also list translated labels')
     ap.add_argument('--callees', action='store_true',
                     help='report the pret routine\'s call targets + statuses')
     ap.add_argument('--callers', action='store_true',
@@ -55,6 +132,11 @@ def main():
     con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     rc = 0
+
+    if args.subsystem:
+        sys.exit(subsystem_report(cur, args.subsystem, args.all))
+    if not args.names:
+        ap.error('give one or more Labels, or --subsystem PAT')
 
     for name in args.names:
         row = status_of(cur, name)
