@@ -125,6 +125,24 @@ def local_tail_is_standard(script_text, label):
     return any(m.group(1) == label for m in LOCAL_TAIL.finditer(script_text))
 SCRIPT_OVERRIDES = {
     'PalletTownOakText': 'PalletTownOakText',
+    # Link receptionists (docs/current_plan_link_cable.md Stage 2): pret
+    # routes TX_SCRIPT_CABLE_CLUB_RECEPTIONIST ($f6) through DisplayTextID;
+    # the port's NPC-talk path dispatches SCRIPT table entries, so every
+    # receptionist text id routes to the shared shim in
+    # src/engine/link/cable_club_npc.asm (which runs the real CableClubNPC).
+    'CeladonPokecenterLinkReceptionistText':    'CableClubReceptionistScript',
+    'CeruleanPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
+    'CinnabarPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
+    'FuchsiaPokecenterLinkReceptionistText':    'CableClubReceptionistScript',
+    'IndigoPlateauLobbyLinkReceptionistText':   'CableClubReceptionistScript',
+    'LavenderPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
+    'MtMoonPokecenterLinkReceptionistText':     'CableClubReceptionistScript',
+    'PewterPokecenterLinkReceptionistText':     'CableClubReceptionistScript',
+    'RockTunnelPokecenterLinkReceptionistText': 'CableClubReceptionistScript',
+    'SaffronPokecenterLinkReceptionistText':    'CableClubReceptionistScript',
+    'SilphCo1FLinkReceptionistText':            'CableClubReceptionistScript',
+    'VermilionPokecenterLinkReceptionistText':  'CableClubReceptionistScript',
+    'ViridianPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
 }
 
 # ---------------------------------------------------------------------------

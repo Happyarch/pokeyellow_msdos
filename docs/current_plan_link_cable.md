@@ -332,9 +332,23 @@ blocks in `src/engine/menus/naming_screen.asm`.
       test (injected drops/corruption); game-level loopback rejected (breaks
       role asymmetry)
 - [ ] `com_uart.asm` (`/COM1-4`, `/BAUD=`, FIFO detect, IRQ RX ring, polled TX)
-- [ ] Translate `cable_club_npc.asm` (retire the `CableClubNPC` stub in
-      `main_menu_stubs.asm`); HELLO election incl. `game_gen`; drop the
-      `DEBUG_I1_LINK` build gate
+- [x] `cable_club_npc.asm` translated 2026-08-22 (all pret labels + the
+      seven receptionist texts via the new `LINK_NPC_FAR` generator list ->
+      `assets/link_npc_text.inc`; `collect_far` learned to strip VC
+      scaffolding); `CableClubNPC` + `CloseLinkConnection` stubs retired;
+      HELLO election incl. `game_gen` landed in step 2's session core.
+      RECEPTIONIST WIRING (found in planning: stub retirement alone was not
+      enough — the NPC-talk path never dispatched TX_SCRIPT ids): all 13
+      `<Map>LinkReceptionistText` ids route via `gen_npc_dialogs.py`
+      `SCRIPT_OVERRIDES` to the port-only `CableClubReceptionistScript`
+      shim running pret's DisplayTextID $f6 body. The `DEBUG_I1_LINK` gate
+      is KEPT as a photography harness (no longer the only reachability —
+      that is what this line originally meant to drop); LinkMenu's Stage-1
+      status pin moved into that harness. Two smoke notes for the golden
+      (step 4): a debug indoor spawn renders with a WHITE DAC (deferred
+      fade/palette path — tilemap content is fine, so compare tilemap/WRAM,
+      not pixels), and PrintText dialog lands in the WINDOW scratch, not
+      wTileMap — pick the compared surface accordingly
 - [ ] `tools/linkcheck.sh` two-instance harness: per-instance `PKMN.IMG`
       clones (`run_headless.sh` pattern — sidesteps `dos_port/run`'s fuser
       lock), confs derived from the tracked transport-less `dosbox-x.conf`,

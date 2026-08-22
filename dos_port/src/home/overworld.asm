@@ -364,6 +364,11 @@ EnterMap:
     mov byte [ebp + wYCoord], SIGNTEXT_Y
     mov byte [ebp + wXCoord], SIGNTEXT_X
     mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    ; An INDOOR SIGNTEXT_MAP needs its .blk staged exactly like DEBUG_HIDDENOBJ
+    ; below (no-op for outdoor maps — the routine early-outs). Without it the
+    ; room draws off an empty block window (measured 2026-08-22 seeding a
+    ; Pokecenter for the link-receptionist smoke: blank screen).
+    call StageIndoorMapBlk
 %endif
 %ifdef DEBUG_PREDEFTEXT
     ; Predef-text gate (predef-text plan Stage 2 acceptance). Stand ON the SNES tile

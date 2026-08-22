@@ -866,6 +866,7 @@ GAME_SRCS := \
     src/data/events/slot_machine_wheels.asm \
     src/engine/menus/swap_items.asm \
     src/engine/link/cable_club.asm \
+    src/engine/link/cable_club_npc.asm \
     src/engine/link/link_stubs.asm \
     src/engine/overworld/ledges.asm \
     src/home/pathfinding.asm \
@@ -3746,7 +3747,7 @@ assets/menu_strings.inc assets/menu_text.inc assets/trainer_card_strings.inc \
         assets/options_strings.inc assets/naming_strings.inc \
         assets/pokedex_strings.inc assets/bills_pc_text.inc \
         assets/save_text.inc assets/main_menu_text.inc assets/league_pc_text.inc \
-        assets/players_pc_text.inc assets/link_text.inc assets/oaks_pc_text.inc \
+        assets/players_pc_text.inc assets/link_text.inc assets/link_npc_text.inc assets/oaks_pc_text.inc \
         assets/pc_text.inc: \
         assets/gb_charmap.txt tools/generators/gen_menu_strings.py \
         tools/generators/gb_text.py tools/generators/gen_battle_text.py
@@ -4130,6 +4131,7 @@ src/engine/menus/pokedex.o: assets/ui_layout_menus.inc \
 src/data/pokemon/dex_entries.o: assets/dex_entries.inc
 src/engine/gfx/load_pokedex_tiles.o: assets/pokedex_tiles.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc assets/link_text.inc
+src/engine/link/cable_club_npc.o: assets/link_npc_text.inc assets/event_constants.inc assets/audio_constants.inc
 
 # Status screen %includes the generated status_strings.inc label block.
 src/engine/pokemon/status_screen.o: assets/status_strings.inc
@@ -4510,7 +4512,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \
         assets/mon_icons.inc \
         assets/save_text.inc assets/main_menu_text.inc assets/league_pc_text.inc \
-        assets/players_pc_text.inc assets/link_text.inc assets/oaks_pc_text.inc \
+        assets/players_pc_text.inc assets/link_text.inc assets/link_npc_text.inc assets/oaks_pc_text.inc \
         assets/pc_text.inc assets/slots_text.inc assets/safari_text.inc
 	python3 tools/audit_memmap.py
 
