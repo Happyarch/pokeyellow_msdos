@@ -187,11 +187,16 @@ bodies at their pret mirrors — `PrintBlackboardLinkCableText`, `PrintNotebookT
 `src/engine/events/hidden_events/hidden_events_stubs.asm`. **None of that discharges
 the runtime evidence the bullets below ask for:** the handlers are linked, not
 witnessed. Two golden scenarios were authored (`dex_rating_oak_pc.lua`,
-`safari_game_over.lua`) and are committed UNRUN and unregistered, because every one
-of them needs a port-side entry gate in `src/debug/debug_dump.asm` plus the
-`EnterMap` dispatch in `src/home/overworld.asm`, and registering a manifest row
-without committed golden artifacts fails `validate_scenarios.py` for everyone.
-That gate is the single thing standing between this stage and its evidence.
+`safari_game_over.lua`). **Updated 2026-08-21: the gate problem is solved and
+`safari_game_over` is REGISTERED (id 90) and passing** — `DEBUG_SAFARI_GAMEOVER`,
+the port's first gate that WALKS, because its subject is a completed step rather
+than an A press (template + traps: memory `harness-walking-gate-pattern`). Its
+break-it probe measures 336 unmasked divergences, and it compares all 13 WRAM
+regions with zero skips. `dex_rating_oak_pc` is the one still unregistered: its
+golden is committed and reproduces, and it needs only a port-side
+`RunDexRatingTest` gate (seed the two dex bitsets, reach `DisplayDexRating`).
+The two reusable gate shapes are `DEBUG_HIDDENOBJ` + `lib/hidden_object.lua` for
+press-and-seed props and `DEBUG_SAFARI_GAMEOVER` for anything reached by moving.
 
 `PrintBookshelfText`'s stub is deliberately functional (it sets
 `hInteractedWithBookshelf = $ff` so the sprite/sign scan still runs — a plain `ret`

@@ -66,7 +66,8 @@ The subsystem consists of four primary components:
 - [~] Golden scenarios: NOT AUTHORED, by maintainer decision (2026-08-18). A follower that
   walks behind the player is self-demonstrating — running the game exercises it — and a
   golden for it would be about as useful as a golden for the act of walking. The subsystem
-  is covered by the static tier plus the existing 85 scenarios (which prove it regresses
+  is covered by the static tier plus the existing golden suite (89 scenarios at
+  2026-08-21 — re-measure, it drifts upward) (which prove it regresses
   nothing); visual confirmation is by playing.
 
 

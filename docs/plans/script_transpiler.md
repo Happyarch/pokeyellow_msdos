@@ -676,7 +676,8 @@ a consequence of hand-translation drifting structurally. A 1:1 transpile creates
 exact call-graph correspondence, which is faithdiff's precondition, and the tool
 can emit the pret-label → port-label correspondence as a byproduct.
 
-This matters because scenarios do not scale: the manifest holds **85 scenarios**,
+This matters because scenarios do not scale: the manifest holds **89 scenarios**
+(2026-08-21; the count only grows),
 each with a Lua navigation script, a `DEBUG_*` build flag, a manifest entry and a
 golden. Per-map scenarios for 251 maps is not viable. With faithdiff carrying the
 structural load, goldens stay behavioural spot-checks.
