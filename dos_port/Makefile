@@ -2845,6 +2845,33 @@ NASMFLAGS += -D LINKCHECK_MENU_HOLD=$(LINKCHECK_MENU_HOLD)
 endif
 NASMFLAGS += -D SKIP_TITLE
 endif
+# Link-receptionist no-link golden (cable_club_nolink — link cable plan Stage 2
+# step 4): spawn on the Pewter Pokecenter talk tile facing the link receptionist
+# (`object_event 11, 2, SPRITE_LINK_RECEPTIONIST, STAY, DOWN`; the player stands
+# at y=3, x=11 facing UP — open floor per PewterPokecenter.blk decoded through
+# Pokecenter_Coll), seed EVENT_GOT_POKEDEX, and let AUTOKEY_APRESS drive a REAL
+# A press through OverworldLoop -> IsSpriteOrSignInFrontOfPlayer ->
+# CheckNPCInteraction -> the generated SCRIPT entry ->
+# CableClubReceptionistScript -> CableClubNPC. With no /COM1 there is no net
+# session, the 90-frame establishment race expires, AUTOKEY_APRESS answers the
+# failure text's two `cont` page waits, and the shim's DEBUG_CABLECLUB hook
+# photographs the moment CableClubNPC returns (last page still on screen).
+# make DEBUG_CABLECLUB=1
+ifdef DEBUG_CABLECLUB
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_CABLECLUB
+NASMFLAGS += -D SKIP_TITLE
+CABLECLUB_MAP ?= 0x3A
+CABLECLUB_Y   ?= 3
+CABLECLUB_X   ?= 11
+CABLECLUB_DIR ?= SPRITE_FACING_UP
+NASMFLAGS += -D CABLECLUB_MAP=$(CABLECLUB_MAP) -D CABLECLUB_Y=$(CABLECLUB_Y) \
+             -D CABLECLUB_X=$(CABLECLUB_X) -D CABLECLUB_DIR=$(CABLECLUB_DIR)
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
+# The gate dumps itself (the shim hook); keep AutoKeyDrive's own dump away.
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
 # LoadEnemyMonData → LoadBattleMonFromParty) + the convergence-spec DV overwrite
 # replace DEBUG_BATTLE's synthetic seed. Combine with DEBUG_BATTLE_INTRO /

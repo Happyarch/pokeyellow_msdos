@@ -2772,6 +2772,37 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "The TEXT-ENGINE gate for <PLAYER> name substitution (text-engine realign plan, Stage 4.2). Reads Pallet Town's player's-house sign from (6,3) facing UP through the real A-press dispatch on both sides; _PalletTownPlayersHouseSignText is `text \"<PLAYER>'s house \" / done`, so the printed box IS the output of PrintPlayerName -> PlaceCommandCharacter. Chosen by MEASUREMENT, not intuition: <PLAYER> is the most-used control code in pret's text data after the page/line family (152 uses) and had NO golden \u2014 oak_intro, the obvious candidate, parks at _OakSpeechText1 page 1 and never reaches _OakSpeechText3's \"<PLAYER>!\". sign_pallet already covers line/cont/done and route_15_binoculars covers para. This scenario does NOT witness <RIVAL>, <TARGET>, <USER> or the print_name constants (<PC>/<TM>/<TRAINER>/<ROCKET>/<\u2026\u2026>), the last group of which has zero uses in pret's text data at all. must_hit is DisplaySignText alone for now: PrintPlayerName does not exist as a label yet \u2014 it is one of the 26 the plan's Stage 3 restores, and it joins must_hit there, at which point this scenario also PROVES that label is reached."
+    },
+    {
+      "name": "cable_club_nolink",
+      "id": 92,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_CABLECLUB=1",
+      "port_entry_gate": "DEBUG_CABLECLUB",
+      "navigation_script": "tools/mgba_harness/scenarios/cable_club_nolink.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "CableClubNPC",
+        "CableClubReceptionistScript"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Talks to the Pewter Pokecenter link receptionist with the pokedex and NO peer, through the real A-press dispatch on both sides (port: CheckNPCInteraction -> generated SCRIPT entry -> CableClubReceptionistScript; ROM: DisplayTextID's TX_SCRIPT case), running CableClubNPC's full 90-frame establishment race to expiry and the two-page failure text. The dump lands with the last page on screen and .didNotConnect's WRAM aftermath latched (linkStatus $FF, serial watchdog and poll count zeroed). SCOPE: the timeout path only \u2014 the connected path needs a peer and is covered by tools/linkcheck.sh, not a golden."
     }
   ],
   "disabled_scenarios": []

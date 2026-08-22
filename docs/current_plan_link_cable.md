@@ -325,7 +325,8 @@ blocks in `src/engine/menus/naming_screen.asm`.
       compares the RECEPTIONIST's 90-frame no-peer timeout, which is
       `CableClubNPC`'s loop, still a ret-stub until Stage 2 translates
       cable_club_npc.asm; the golden therefore LANDS WITH STAGE 2, not here
-      (recorded 2026-08-21 — Stage 1 sequenced it optimistically)
+      (recorded 2026-08-21 — Stage 1 sequenced it optimistically; landed
+      2026-08-22, see the Stage 2 `cable_club_nolink` entry)
 
 ### Stage 2 — UART transport + handshake
 - [x] `net_frame.asm` codec + ARQ landed 2026-08-22 (`7847346`), proven by the
@@ -400,48 +401,40 @@ blocks in `src/engine/menus/naming_screen.asm`.
       3/3 consecutive linkcheck.sh runs green (662/663/662 LINKLOG records,
       both directions matching, zero desyncs, both sides in LinkMenu and
       NS_ESTABLISHED at dump)
-      (2026-08-22, session end): the harness, the `DEBUG_LINKCHECK` gate
-      (`RunLinkCheck` loops the real `CableClubNPC`; `AUTOKEY_LINKCHECK` A
-      train answers the prompts and stops at LinkMenu entry via the
-      `linkcheck_in_menu` hook), the `/LINKLOG` ring (`net_hal.asm`,
-      records real EXCH bytes only) + `LINKLOG.BIN` dump
-      (`DumpLinkLog`, debug_dump.asm, runs on the photograph path), and
-      GBSTATE probe regions (linkStatus/netRole/netState/desyncs/lcMarks +
-      diagnostic ncbState/netEstab/netExchCtr/netPumps/uartDiag/nfDiag)
-      all work. Runs get through election, establishment, the save prompt,
-      the rendezvous and into LinkMenu on BOTH instances with the correct
-      $02/$01 role split and 11-12 LINKLOG records matching both ways
-      (scratchpad lc5/lc6). ONE OPEN FAILURE: ~7-10 s after both sides
-      park in LinkMenu (a quiet cable is correct there — keepalives are
-      the only traffic), one side's UART stops seeing inbound bytes
-      ENTIRELY for 600+ ticks (ring empty per counters, LSR DR=0 per the
-      per-tick poll, ZERO DOSBox-side overruns, bytes queue upstream and
-      arrive only later) → its codec death timer starves → NS_DOWN both
-      sides. Guest counters prove the guest kept pumping (netPumps ≈
-      frames, cb_rxbyte called each tick) and the peer kept transmitting
-      (tx_ok counted, tx_drop=0), so the stall is in DOSBox-X nullmodem
-      RX delivery. PRIME SUSPECT (read in the fork source,
-      /tmp/dosbox-x-mcp-src/src/hardware/serialport/serialport.cpp
-      receiveByteEx): `if(rxfifo->getUsage()==rx_interrupt_threshold)
-      rise(RX_PRIORITY)` — the RX interrupt rises only when fifo usage
-      EQUALS the threshold (1 with our FCR trigger), so a burst that
-      lands while usage >1 raises nothing and delivery stalls behind the
-      SERIAL_RX_TIMEOUT_EVENT path; correlates with the stall starting
-      right when exchange traffic stops (the burst boundary). NEXT STEPS
-      for the follow-up session: (a) confirm by reading the timeout-event
-      path in serialport.cpp; (b) likely guest-side fix regardless of
-      emulator: have NetHAL keepalives also reset the peer death timer on
-      ANY inbound byte (not just full frames), and/or raise
-      NF_DEATH_TICKS, and/or have the parked master send a periodic
-      reliable NOP so ARQ retransmission (which does recover) covers the
-      gap — but prefer root-causing the delivery stall first, since Stage
-      3 block transfers will hit it harder; (c) rerun `tools/linkcheck.sh`
-      (env: LINKCHECK_PORT/LINKCHECK_DUMP_FRAME/RUN_TIMEOUT/
-      LINKCHECK_STAGGER) — needs the C_MODEM fork binary at
-      `tools/dosbox-x-mcp/dosbox-x-mcp` (build_dosbox_mcp.sh; system
-      dosbox-x lacks nullmodem). Scenario target unchanged: both
-      instances reach the link menu with consistent master/slave roles,
-      `/LINKLOG` cross-check green, session still alive at the dump
+      Harness inventory: the `DEBUG_LINKCHECK` gate (`RunLinkCheck` loops the
+      real `CableClubNPC`; `AUTOKEY_LINKCHECK`'s A train answers the prompts
+      and stops at LinkMenu entry via the `linkcheck_in_menu` hook), the
+      `/LINKLOG` ring (`net_hal.asm`, records real EXCH bytes only) +
+      `LINKLOG.BIN` dump (`DumpLinkLog`, debug_dump.asm, photograph path),
+      and the GBSTATE probe regions (linkStatus/netRole/netState/desyncs/
+      lcMarks + diagnostic ncbState/netEstab/netExchCtr/netPumps/uartDiag/
+      nfDiag). Env knobs: LINKCHECK_PORT/LINKCHECK_DUMP_FRAME/RUN_TIMEOUT/
+      LINKCHECK_STAGGER; needs the C_MODEM fork binary at
+      `tools/dosbox-x-mcp/dosbox-x-mcp` (build_dosbox_mcp.sh — the system
+      dosbox-x lacks nullmodem). An earlier draft of this entry blamed a
+      DOSBox `rx_interrupt_threshold` edge; that suspicion is DISPROVEN
+      (see the GREEN paragraph above) — do not re-investigate it
+- [x] `cable_club_nolink` golden landed 2026-08-22 (id 91, tier full) — the
+      Stage-1 deferred item. Talks to the PEWTER_POKECENTER link
+      receptionist (player seeded at (3,11) facing UP, EVENT_GOT_POKEDEX
+      set) with no peer, on both sides through the real A-press dispatch:
+      port `DEBUG_CABLECLUB` gate falls through into OverworldLoop and
+      AUTOKEY_APRESS drives IsSpriteOrSignInFrontOfPlayer ->
+      CheckNPCInteraction -> generated SCRIPT entry ->
+      CableClubReceptionistScript -> CableClubNPC; the mGBA side
+      (cable_club_nolink.lua) script-warps in and presses the same A.
+      CableClubNPC's 90-frame race expires into the two-page failure text
+      (both `cont` waits answered by A on both sides) and the shim's
+      DEBUG_CABLECLUB hook photographs the moment CableClubNPC returns.
+      Golden verified by decomposition (linkStatus $FF, linkTimeout 0,
+      serialCounter 0, menuPollCount 0, map $3A at (3,11), last page
+      "friends who are / linked by cable." on screen), regen byte-identical
+      (determinism), goldencheck end-to-end PASS with window (16,6)
+      brute-force-measured and every mask justified per class (dialog-
+      scratch overlap rows 0-2, wider-OAM-window packing with the
+      receptionist verified present by value, walked-through OBJ residue
+      $60-$7F, MAP_BORDER view-pointer). SCOPE: the timeout path only —
+      the connected path needs a peer and is covered by linkcheck.sh
 
 ### Stage 3 — Trade Center
 - [ ] Complete `src/engine/link/cable_club.asm` to all 23 labels

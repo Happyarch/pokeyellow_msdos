@@ -109,6 +109,9 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %ifdef DEBUG_HIDDENOBJ
 %define NEED_SEED_IDENTITY
 %endif
+%ifdef DEBUG_CABLECLUB
+%define NEED_SEED_IDENTITY
+%endif
 %ifdef NEED_SEED_IDENTITY
 %endif
 ; SeamReseatView: any harness that hand-seeds wYCoord/wXCoord must derive the view
@@ -150,6 +153,9 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %define NEED_SEAM_RESEAT
 %endif
 %ifdef DEBUG_SAFARI_GAMEOVER
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_CABLECLUB
 %define NEED_SEAM_RESEAT
 %endif
 %ifdef DEBUG_BAGMENU_LIVE
