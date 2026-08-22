@@ -82,7 +82,7 @@ standing precedent.
 - `[x]` 1.2 `update_label_db`: exactly 8 rows `missing -> translated`
 - `[x]` 1.3 gates: lint 0, `--strict-claims` 0, `static_gate`, `fidelity-full`
 
-### Stage 2 — `TextCommand_*` (18). Mechanical, one routine.
+### Stage 2 — `TextCommand_*` (18). Mechanical, one routine. **DONE**
 
 `NextTextCommand`, `TextCommandJumpTable`, `TextCommandSounds`, and
 `TextCommand_{BOX,START,RAM,BCD,MOVE,LOW,PROMPT_BUTTON,SCROLL,START_ASM,NUM,PAUSE,SOUND,DOTS,WAIT_BUTTON,FAR}`.
@@ -92,11 +92,48 @@ to its pret name.
 
 **`TextCommandJumpTable` is the one open design decision — see "Decision" below.**
 
-- `[ ]` 2.1 promote the 15 `.cmd_*` bodies + `.next_cmd` + `.TextCommandSounds`
-- `[ ]` 2.2 rebind every `.local` that the promotions re-scope (see Hazard 1)
-- `[ ]` 2.3 `TextCommandJumpTable` per the decision
-- `[ ]` 2.4 `faithdiff TextCommandProcessor` + each promoted label
-- `[ ]` 2.5 gates incl. `fidelity-full`; `DEBUG_PERF` before/after if 2.3 lands
+- `[x]` 2.1 promoted the 15 `.cmd_*` bodies + `.next_cmd` + `.TextCommandSounds`
+- `[x]` 2.2 no cross-handler local survived the re-scope; the only shared chain
+  (`.cmd_skip3/2/1/0`) had ZERO references and was deleted as dead port-only code
+- `[x]` 2.3 `TextCommandJumpTable` restored, 14 `dd` entries, ladder retired.
+  `jmp [TextCommandJumpTable + eax*4]` — an indirect jump THROUGH the table, not
+  a load into a scratch register, because `TextCommand_SOUND` reads AL as the
+  command byte. No `call_into_data` finding.
+- `[x]` 2.4 `faithdiff` on all 18 (see "Findings surfaced" below)
+- `[x]` 2.5 gates incl. `fidelity-full`
+
+#### Findings surfaced by Stage 2 — the realignment's first dividend
+
+Giving the handlers their own labels made `faithdiff` able to see them for the
+first time. Three real divergences had been invisible while collapsed:
+
+1. **`TextCommand_DOTS` / `TextCommand_PAUSE` dropped `DelayFrames`** — both
+   open-coded a `call DelayFrame` loop under a comment blaming a missing
+   hFrameCounter decrementer ("Wave-2/M2.1"). **That reason was measurably
+   false**: `DelayFrames` is live at `src/home/delay.asm:59` and the guarded
+   decrement is live at `src/home/vblank.asm:195`. The real constraint is
+   different and pret shares it — `DelayFrames` takes its count in `BL` and
+   `EBX` is the live cursor — which is exactly why pret's own
+   `TextCommand_PAUSE` brackets the call in `push bc` / `pop bc`. FIXED in
+   Stage 2 by doing what pret does. This is the "confident comment" defect class
+   the archived menu-fidelity plan named as its main lesson.
+2. **`TextCommand_DOTS` widened an 8-bit counter.** `movzx edx, byte [esi]` +
+   `dec edx` where pret has `dec d`: entered with count 0 the GB writes 256
+   glyphs and stops, the port wrote ~4 billion and walks off the DPMI
+   allocation. FIXED to `dec dl`. Bug class
+   `bug-class-gb-counter-widened-to-32-bit`; no stream is known to encode zero,
+   so this was exposure rather than a live defect, but the bound belongs where
+   the hardware put it.
+3. **`Joypad` is dropped in both**, deliberately: the port's joypad state is
+   ISR-published and refreshed in the `DelayFrame` pipeline, so `hJoyHeld` is
+   live at every frame boundary these loops cross. Now carries a
+   `DEVIATION{class=HAL}` at each site instead of being silently absent.
+
+**Still open, deferred to Stage 4 rather than fixed here:**
+`TextCommandProcessor` drops pret's two `wTextDest` stores (entry, and again in
+`TextCommand_MOVE`). Nothing in pret READS `wTextDest` — it is write-only there
+too — and the port has no such symbol at all, so closing it means adding a WRAM
+declaration and running the RAM-address tooling. Not folded into a naming stage.
 
 ### Stage 3 — `PlaceNextChar`'s char handlers (26). Highest risk.
 
@@ -199,9 +236,17 @@ tooling work and is deliberately out of this plan's scope.
 
 - `label_status --subsystem home` reports `home/text.asm` **56/56 translated**,
   taking home's missing count from 97 to 45.
-  (Stage 1 took it to 89.)
+  (Stage 1 took it to 89; Stage 2 to 71.)
 - Every remaining structural difference carries a machine-parsed `DEVIATION{}`.
 - `lint_pret_labels` 0, `--strict-claims` 0, `static_gate` PASS.
 - `make fidelity-full` reported = registered, non-zero = 0, at each stage.
 - No behaviour change: this is a naming and structure pass, and any observed
   behaviour delta is a defect in the pass, not an improvement.
+
+### Stage 4 — residue
+
+- `[ ]` 4.1 `wTextDest`: declare it and restore pret's two stores, or record a
+  `DEVIATION` saying why a write-only variable is not carried
+- `[ ]` 4.2 a dedicated dialog/text golden scenario — Hazard 3 says the suite
+  cannot presently see a subtle text regression, and Stage 3 is where one would
+  be introduced. **Do this BEFORE Stage 3, not after.**

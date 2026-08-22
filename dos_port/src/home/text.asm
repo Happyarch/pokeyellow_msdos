@@ -34,6 +34,7 @@ bits 32
 %include "gb_macros.inc"
 
 extern DelayFrame
+extern DelayFrames                  ; src/home/delay.asm — BL = frame count
 extern PrintLetterDelay             ; src/home/print_text.asm
 
 ; ---------------------------------------------------------------------------
@@ -126,6 +127,23 @@ global TextBoxBorder
 global PlaceString
 global PlaceNextChar
 global TextCommandProcessor
+global NextTextCommand
+global TextCommand_START
+global TextCommand_RAM
+global TextCommand_BCD
+global TextCommand_MOVE
+global TextCommand_BOX
+global TextCommand_LOW
+global TextCommand_PROMPT_BUTTON
+global TextCommand_SCROLL
+global TextCommand_START_ASM
+global TextCommand_NUM
+global TextCommand_PAUSE
+global TextCommand_SOUND
+global TextCommand_DOTS
+global TextCommand_WAIT_BUTTON
+global TextCommand_FAR
+global TextCommandSounds
 global text_msgbox              ; → the active msgbox projection record (msgbox.inc)
 global msgbox_dialog            ; the overworld dialog projection (this file, .data)
 global sync_dialog_window
@@ -978,7 +996,7 @@ PlaceNextChar:
 .handle_done:
     ; <DONE> ($57): end the text command stream. Restore the PlaceString stack
     ; frame and return EDX = a FLAT pointer at the TX_END sentinel pair, so that
-    ; .cmd_start's `lea esi,[edx+1]` lands on a TX_END byte → TCP exits.
+    ; TextCommand_START's `lea esi,[edx+1]` lands on a TX_END byte → TCP exits.
     ; The sentinel is .data (done_sentinel_flat), NOT GB WRAM: it used to live at
     ; GB $C0F0/$C0F1, which are pret's wAudioSavedROMBank/wFrequencyModifier —
     ; the first GetMoveSound freq-modifier write overwrote the terminator and sent
@@ -1047,7 +1065,7 @@ PlaceNextChar:
 ; done_sentinel_flat — the <DONE>/<PROMPT> stream terminator, in .data.
 ;
 ; Port-only glue (no pret counterpart): <DONE>/<PROMPT> return EDX pointing here
-; and .cmd_start's `lea esi,[edx+1]` reads the second TX_END byte flat, ending
+; and TextCommand_START's `lea esi,[edx+1]` reads the second TX_END byte flat, ending
 ; the stream. History: this sentinel used to be two runtime-written bytes at GB
 ; $C0F0/$C0F1 (text_engine_init) — but those are pret's wAudioSavedROMBank and
 ; wFrequencyModifier, so the battle animation engine's first cry-modifier write
@@ -1106,48 +1124,27 @@ TextCommandProcessor:
     xor al, cl
     mov [ebp + wLetterPrintingDelayFlags], al
 
-.next_cmd:
+NextTextCommand:
     movzx eax, byte [esi]           ; stream is FLAT (see header)
     inc esi                         ; ESI now points to operands / next command
 
     cmp al, TX_END                  ; $50
     je .done
 
-    cmp al, TX_FAR                  ; $17: far-bank text — skip 3 bytes in flat model
-    je .cmd_far
+    cmp al, TX_FAR                  ; $17 (pret: cp TX_FAR / jp z, TextCommand_FAR)
+    je TextCommand_FAR
 
-    cmp al, TX_SOUND_PDEX_RATE      ; $0E-$16: TextCommand_SOUND family
-    jae .cmd_sound                  ; (TX_FAR $17 / TX_END $50 handled above)
+    cmp al, TX_SOUND_PDEX_RATE      ; $0E-$16 (pret: cp TX_SOUND_POKEDEX_RATING / jp nc)
+    jae TextCommand_SOUND
 
-    cmp al, TX_START
-    je .cmd_start
-    cmp al, TX_RAM
-    je .cmd_ram
-    cmp al, TX_BCD
-    je .cmd_bcd
-    cmp al, TX_MOVE
-    je .cmd_move
-    cmp al, TX_BOX
-    je .cmd_box
-    cmp al, TX_LOW
-    je .cmd_low
-    cmp al, TX_PROMPT_BUTTON
-    je .cmd_prompt_btn
-    cmp al, TX_SCROLL
-    je .cmd_scroll
-    cmp al, TX_START_ASM
-    je .cmd_asm
-    cmp al, TX_NUM
-    je .cmd_num
-    cmp al, TX_PAUSE
-    je .cmd_pause
-    cmp al, TX_SOUND_GET_ITEM_1     ; $0B: same TextCommand_SOUND dispatch
-    je .cmd_sound
-    cmp al, TX_DOTS
-    je .cmd_dots
-    cmp al, TX_WAIT_BUTTON
-    je .cmd_wait_btn
-    jmp .next_cmd                   ; unknown command: skip
+    ; pret: ld hl, TextCommandJumpTable / add a / ld c,a / add hl,bc / jp hl.
+    ; TX_FAR and the >= TX_SOUND_PDEX_RATE range are handled above, exactly as
+    ; pret handles them before its own table lookup, so AL here is 0..$0D and
+    ; the 14-entry table is EXHAUSTIVE — which is why pret has no default arm
+    ; and neither does this. EAX must survive the jump: TextCommand_SOUND reads
+    ; AL as the command byte, so the dispatch is an indirect jump THROUGH the
+    ; table rather than a load into a scratch register.
+    jmp [TextCommandJumpTable + eax*4]
 
 .done:
     pop eax
@@ -1158,7 +1155,7 @@ TextCommandProcessor:
     ret
 
 ; --- TX_START ($00): render '@'-terminated string at cursor ---
-.cmd_start:
+TextCommand_START:
     ; ESI = source string (flat ptr into the command stream), EBX = cursor
     mov eax, esi           ; PlaceString takes a flat-linear source in EAX
     mov esi, ebx           ; ESI (HL) = cursor
@@ -1167,7 +1164,7 @@ TextCommandProcessor:
     ; <DONE>/<PROMPT> instead return EDX = flat ptr to the TX_END sentinel
     ; (text_engine_init), so the same two instructions terminate the stream.
     lea esi, [edx + 1]     ; ESI = past '@' = next command (flat)
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_FAR ($17): far-bank text — faithful recursive splice. ---
 ; Source: home/text.asm:TextCommand_FAR (pret/pokeyellow).
@@ -1192,7 +1189,7 @@ TextCommandProcessor:
 ; by one byte. It never fired because the only producers are unlinked
 ; (text_script.asm is check-only; gen_battle_text.py inlines far text instead of
 ; emitting the command) — see docs/current_plan_text_engine.md finding T-1.
-.cmd_far:
+TextCommand_FAR:
     ; ESI -> operand: dd <flat target>. EBX = current cursor (carried forward).
     mov  eax, [esi]                     ; EAX = far stream ptr (flat, 32-bit)
     add  esi, 4                         ; ESI = resume point in the outer stream
@@ -1200,20 +1197,20 @@ TextCommandProcessor:
     mov  esi, eax                       ; ESI (HL) = far stream ptr
     call TextCommandProcessor           ; recurse: render far text; advances EBX cursor
     pop  esi                            ; restore outer stream ptr      (pret: pop hl)
-    jmp  .next_cmd
+    jmp  NextTextCommand
 
 ; --- TX_MOVE ($03): set cursor to new tile-buffer address ---
-.cmd_move:
+TextCommand_MOVE:
     movzx ebx, byte [esi]          ; lo byte of new cursor addr
     inc esi
     movzx ecx, byte [esi]          ; hi byte
     inc esi
     shl ecx, 8
     or  ebx, ecx                   ; EBX = new cursor (BC in SM83)
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_BOX ($04): draw a text box ---
-.cmd_box:
+TextCommand_BOX:
     ; Operands: addr_lo, addr_hi, b_height, c_width
     movzx eax, byte [esi]          ; lo of tile buf destination
     inc esi
@@ -1234,7 +1231,7 @@ TextCommandProcessor:
     call TextBoxBorder
     pop ebx                         ; restore cursor
     pop esi                         ; restore stream ptr
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_LOW ($05): cursor to the box's 2nd text line. Pret ref:
 ;     home/text.asm:TextCommand_LOW, `bccoord 1, 16`.
@@ -1249,16 +1246,16 @@ TextCommandProcessor:
 ;     with the tail "LL!" the only part inside the compared window. Every other
 ;     (1,16) site here (handle_para, and the two scroll anchors) already used
 ;     [text_line2]; this one was missed. ---
-.cmd_low:
+TextCommand_LOW:
     mov ebx, [text_line2]
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_PROMPT_BUTTON ($06): show ▼ and wait for A/B; in a link battle, defer to
 ;     TX_WAIT_BUTTON (no arrow). Pret ref: home/text.asm:TextCommand_PROMPT_BUTTON. ---
-.cmd_prompt_btn:
+TextCommand_PROMPT_BUTTON:
     movzx eax, byte [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
-    je .cmd_wait_btn                    ; in battle: no arrow (fall to WAIT_BUTTON path)
+    je TextCommand_WAIT_BUTTON                    ; in battle: no arrow (fall to WAIT_BUTTON path)
     ; text_pause, NOT manual_text_scroll: the ▼ + wait must go through the
     ; [text_prompt_hook] dispatch so it lands on the ACTIVE msgbox projection.
     ; manual_text_scroll is the overworld display specifically — it writes the
@@ -1271,34 +1268,44 @@ TextCommandProcessor:
     ; battle_intro's LAST divergence was exactly the ▼ cell at GB (18,16),
     ; want $EE got $7F.
     call text_pause                     ; shows ▼, blinks it, waits for A/B, erases it
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_WAIT_BUTTON ($0D): wait for A/B, NO arrow. Pret ref: TextCommand_WAIT_BUTTON. ---
-.cmd_wait_btn:
+TextCommand_WAIT_BUTTON:
     mov byte [mts_hide_arrow], 1        ; suppress the ▼ for this wait
     call manual_text_scroll
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_PAUSE ($0A): if A or B is already held, continue immediately; otherwise
 ;     pause ~30 frames. Pret ref: home/text.asm:TextCommand_PAUSE. No operand. ---
-.cmd_pause:
+; The push/pop around DelayFrames is PRET'S OWN (`push bc` / `pop bc`): the count
+; goes in the same register pair that holds the cursor, so pret protects it too.
+; DEVIATION{class=HAL; pret=home/text.asm:TextCommand_PAUSE; behavior=hJoyHeld is read directly instead of calling Joypad to refresh it first; evidence=the port's joypad state is published by the keyboard ISR and re-read in the DelayFrame pipeline (src/home/vblank.asm) rather than by an explicit polling routine, so hJoyHeld is already live at every DelayFrame boundary this loop crosses; lifetime=permanent while input is ISR-driven}
+TextCommand_PAUSE:
+    push ebx                            ; pret: push bc (DelayFrames takes BL)
     movzx eax, byte [ebp + hJoyHeld]
     test al, PAD_A | PAD_B
-    jnz .next_cmd
-    ; DelayFrames c=30. Bounded DelayFrame loop (the set-hFrameCounter-and-spin idiom
-    ; would deadlock until Wave-2/M2.1 adds the hFrameCounter decrementer).
-    mov ecx, 30
-.pause_wait:
-    call DelayFrame
-    dec ecx
-    jnz .pause_wait
-    jmp .next_cmd
+    jnz .done
+    mov bl, 30                          ; ld c, 30 — half a second
+    call DelayFrames
+.done:
+    pop ebx                             ; pret: pop bc
+    jmp NextTextCommand
 
 ; --- TX_DOTS ($0C): print N '…' glyphs, pausing ~10 frames per glyph unless A/B is
 ;     held. Operand: 1-byte glyph count. Pret ref: home/text.asm:TextCommand_DOTS.
 ;     Cursor is EBX (BC); it advances by the glyph count, matching pret. ---
-.cmd_dots:
-    movzx edx, byte [esi]               ; EDX = glyph count (pret d)
+; DEVIATION{class=HAL; pret=home/text.asm:TextCommand_DOTS; behavior=hJoyHeld is read directly instead of calling Joypad to refresh it first; evidence=the port's joypad state is published by the keyboard ISR and re-read in the DelayFrame pipeline (src/home/vblank.asm) rather than by an explicit polling routine, so hJoyHeld is already live at every DelayFrame boundary this loop crosses; lifetime=permanent while input is ISR-driven}
+;
+; The count is kept 8 bits wide (`dec dl`, not `dec edx`) because the GB's
+; register width IS the bound: pret's `dec d / jr nz` entered with d=0 writes 256
+; glyphs and stops, where a 32-bit counter would write ~4 billion and walk off the
+; DPMI allocation. See the counter-width rule in the asm-translation skill and
+; memory `bug-class-gb-counter-widened-to-32-bit`. No stream is known to encode a
+; zero count, but that is the caller's invariant, not this loop's, so the bound
+; stays where the hardware put it.
+TextCommand_DOTS:
+    movzx edx, byte [esi]               ; DL = glyph count (pret d)
     inc esi                             ; past the 1-byte count operand
 .dots_loop:
     mov byte [ebp + ebx], CHAR_DOTS_GLYPH   ; write '…' at the cursor
@@ -1306,20 +1313,21 @@ TextCommandProcessor:
     movzx eax, byte [ebp + hJoyHeld]
     test al, PAD_A | PAD_B
     jnz .dots_next                      ; button held: skip this glyph's delay
-    mov ecx, 10                         ; DelayFrames c=10 (bounded loop; see M2.1 note above)
-.dots_delay:
-    call DelayFrame
-    dec ecx
-    jnz .dots_delay
+    push ebx                            ; DelayFrames takes BL; EBX is the cursor
+    push edx                            ; pret frees BC by parking the cursor in HL
+    mov bl, 10                          ; ld c, 10
+    call DelayFrames
+    pop edx
+    pop ebx
 .dots_next:
-    dec edx
+    dec dl                              ; pret: dec d — 8-bit, as on the GB
     jnz .dots_loop
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_SCROLL ($07): scroll text up two lines, then reposition to the box's
 ;     2nd text line. Pret ref: home/text.asm:TextCommand_SCROLL.
 ;
-;     Same one-operand correction as .cmd_low above, and for the same reason:
+;     Same one-operand correction as TextCommand_LOW above, and for the same reason:
 ;     the hardcoded `wTileMap + 16 * SCREEN_W_TILES + 1` is pret's GB offset
 ;     used as a raw flat index into the port's 40-wide tilemap. [text_line2] is
 ;     that coordinate, republished per projection by PrintText.
@@ -1331,16 +1339,16 @@ TextCommandProcessor:
 ;     text and no scenario can ever compare it. Fixed anyway, because leaving one
 ;     of two identical siblings wrong is how the next reader gets bitten; see
 ;     regression-text-txlow-raw-gb-coord for the sibling that WAS reachable. ---
-.cmd_scroll:
+TextCommand_SCROLL:
     call scroll_text_up
     call scroll_text_up
     mov ebx, [text_line2]
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_RAM ($01): write an '@'-terminated string from a RAM address ---
 ; Pret ref: home/text.asm:TextCommand_RAM. Operands: addr_lo, addr_hi (little-
 ; endian WRAM pointer, e.g. wBattleMonNick). PlaceString it at the cursor.
-.cmd_ram:
+TextCommand_RAM:
     movzx edx, byte [esi]          ; lo of RAM source addr
     inc esi
     movzx eax, byte [esi]          ; hi
@@ -1352,12 +1360,12 @@ TextCommandProcessor:
     lea eax, [ebp + edx]           ; flat-linear source ptr (RAM addr → linear)
     call PlaceString               ; EBX = end cursor, ESI = line start, EDX = '@'
     pop esi                        ; restore stream ptr
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_NUM ($09 / text_decimal): print a decimal number ---
 ; Pret ref: home/text.asm:TextCommand_NUM. Operands: addr_lo, addr_hi, format,
 ; where format = (byte-count << 4) | digit-count. LEFT_ALIGN is forced on.
-.cmd_num:
+TextCommand_NUM:
     movzx edx, byte [esi]          ; lo of value addr
     inc esi
     movzx eax, byte [esi]          ; hi
@@ -1376,11 +1384,11 @@ TextCommandProcessor:
     call PrintNumber               ; advances ESI past the field
     mov ebx, esi                   ; cursor := end
     pop esi                        ; restore stream ptr
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_BCD ($02 / text_bcd): print a BCD number (money) ---
 ; Pret ref: home/text.asm:TextCommand_BCD. Operands: addr_lo, addr_hi, flags|len.
-.cmd_bcd:
+TextCommand_BCD:
     movzx edx, byte [esi]          ; lo of BCD addr
     inc esi
     movzx eax, byte [esi]          ; hi
@@ -1395,7 +1403,7 @@ TextCommandProcessor:
     call PrintBCDNumber            ; advances ESI
     mov ebx, esi                   ; cursor := end
     pop esi                        ; restore stream ptr
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; --- TX_START_ASM ($08 / text_asm): run the inline code spliced into the stream ---
 ; Pret ref: home/text.asm:TextCommand_START_ASM —
@@ -1417,29 +1425,19 @@ TextCommandProcessor:
 ; makes TextScriptEnd (overworld_text.asm: `mov esi, TextScriptEndingText / ret`)
 ; end the message — it returns onto a lone $50. TextCommandProcessor's saved
 ; EAX/ECX/EDX + delay flags stay on the stack below and unwind normally at .done.
-.cmd_asm:
-    push .next_cmd                  ; pret: ld de, NextTextCommand / push de
+TextCommand_START_ASM:
+    push NextTextCommand                  ; pret: ld de, NextTextCommand / push de
     jmp esi                         ; pret: jp hl
-
-; --- Operand-skip helpers ---
-.cmd_skip3:
-    inc esi
-.cmd_skip2:
-    inc esi
-.cmd_skip1:
-    inc esi
-.cmd_skip0:
-    jmp .next_cmd
 
 ; --- TX sound commands ($0B, $0E-$16): pret home/text.asm:TextCommand_SOUND ---
 ; Faithful TextCommandSounds dispatch: the three cry commands route through
-; PlayCry (a ret-stub today — the call structure is pret's, so text-stream cries
-; go live the moment PlayCry lands); the rest PlaySound + WaitForSoundToFinish.
+; PlayCry (LIVE since d9bca84c4 — the "ret-stub today" note here was stale); the
+; rest PlaySound + WaitForSoundToFinish.
 ; Zero operand bytes, so ESI is already at the next command.
-.cmd_sound:
+TextCommand_SOUND:
     pushad
-    lea edi, [.TextCommandSounds]
-    mov ecx, (.TextCommandSoundsEnd - .TextCommandSounds) / 2
+    lea edi, [TextCommandSounds]
+    mov ecx, (TextCommandSoundsEnd - TextCommandSounds) / 2
 .sound_lookup:
     cmp al, [edi]
     je .sound_found
@@ -1447,7 +1445,7 @@ TextCommandProcessor:
     dec ecx
     jnz .sound_lookup
     popad                           ; not in the table ($18-$4F junk): skip, as before
-    jmp .next_cmd
+    jmp NextTextCommand
 .sound_found:
     mov dl, [edi + 1]               ; SFX id, or species for the cry commands
     cmp al, TX_SOUND_CRY_PIKACHU
@@ -1455,16 +1453,16 @@ TextCommandProcessor:
     mov al, dl                      ; pret .pokemonCry: ld a, [hl] / call PlayCry
     call PlayCry
     popad
-    jmp .next_cmd
+    jmp NextTextCommand
 .sound_sfx:
     mov al, dl                      ; pret: ld a, [hl] / call PlaySound
     call PlaySound
     call WaitForSoundToFinish
     popad
-    jmp .next_cmd
+    jmp NextTextCommand
 
 ; pret home/text.asm:TextCommandSounds — same pairs, same order.
-.TextCommandSounds:
+TextCommandSounds:
     db TX_SOUND_GET_ITEM_1,           SFX_GET_ITEM_1   ; plays SFX_LEVEL_UP under the battle audio engine (pret note)
     db 0x12,                          SFX_CAUGHT_MON             ; TX_SOUND_CAUGHT_MON
     db TX_SOUND_PDEX_RATE,            SFX_POKEDEX_RATING         ; TX_SOUND_POKEDEX_RATING (unused)
@@ -1475,7 +1473,44 @@ TextCommandProcessor:
     db TX_SOUND_CRY_PIKACHU,          STARTER_PIKACHU            ; used in OakSpeechText2
     db 0x15,                          PIDGEOT                    ; TX_SOUND_CRY_PIDGEOT (SaffronCityPidgeotText)
     db 0x16,                          DEWGONG                    ; TX_SOUND_CRY_DEWGONG (unused)
-.TextCommandSoundsEnd:
+TextCommandSoundsEnd:
+
+; ---------------------------------------------------------------------------
+; TextCommandJumpTable — pret home/text.asm:TextCommandJumpTable.
+; Entries correspond to TX_* constants (macros/scripts/text.asm), index = the
+; command byte. pret's `dw` (bank-relative) becomes `dd` (flat DPMI linear), as
+; every other dispatch table in this port does.
+;
+; pret's TX_SCROLL slot is `_ContTextNoPause` under IF DEF(_DEBUG) and
+; TextCommand_SCROLL otherwise; the port takes the non-debug arm.
+;
+; KNOWN COST, accepted by maintainer ruling 2026-08-22 and written down so it is
+; not misread later: a `dd Label` table emits no call-graph edge, so the fourteen
+; handlers below read `not-proven-reached` and faithdiff's call comparison over
+; TextCommandProcessor is blind. NEITHER is evidence that a handler is dead —
+; cite `label_status --callers`, this table, or runtime evidence instead.
+; ---------------------------------------------------------------------------
+section .data
+align 4
+global TextCommandJumpTable
+TextCommandJumpTable:
+    dd TextCommand_START            ; $00 TX_START
+    dd TextCommand_RAM              ; $01 TX_RAM
+    dd TextCommand_BCD              ; $02 TX_BCD
+    dd TextCommand_MOVE             ; $03 TX_MOVE
+    dd TextCommand_BOX              ; $04 TX_BOX
+    dd TextCommand_LOW              ; $05 TX_LOW
+    dd TextCommand_PROMPT_BUTTON    ; $06 TX_PROMPT_BUTTON
+    dd TextCommand_SCROLL           ; $07 TX_SCROLL
+    dd TextCommand_START_ASM        ; $08 TX_START_ASM
+    dd TextCommand_NUM              ; $09 TX_NUM
+    dd TextCommand_PAUSE            ; $0A TX_PAUSE
+    dd TextCommand_SOUND            ; $0B TX_SOUND_GET_ITEM_1 (also the other TX_SOUND_*)
+    dd TextCommand_DOTS             ; $0C TX_DOTS
+    dd TextCommand_WAIT_BUTTON      ; $0D TX_WAIT_BUTTON
+    ; greater TX_* constants are handled directly by NextTextCommand
+
+section .text
 
 ; ---------------------------------------------------------------------------
 ; msgbox_dialog — the OVERWORLD dialog projection (msgbox.inc).
