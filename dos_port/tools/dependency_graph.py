@@ -26,6 +26,22 @@ build_graph() corrects for this by joining the names-only `aux_labels` and
     *** A node is genuinely port-only only when display_status == "port_only"
         AND aux_pret_file is null. ***
 
+READING `relocated` -- the second trap, fixed 2026-08-21
+--------------------------------------------------------
+pret bank-splits a long map script across `Foo.asm` and `Foo_2.asm` for ROM
+BANKING reasons. The port is FLAT BY DESIGN and keeps both halves in the one
+file named for the map, so `dos_port/src/scripts/Foo.asm` IS the faithful
+mirror of both -- but the scan compares paths, sees `scripts/Foo_2.asm` against
+`.../Foo.asm`, and records `relocated`. Rendering that raw made 126 labels look
+like relocation debt when the debt counter is actually ZERO.
+Such nodes now get display_status = "bank-split" (own colour, filter and legend
+entry) plus `bank_split_of`, resolved against `pret_label_allowlist.json`'s
+`relocated_files` -- the same declaration `lint_pret_labels` already uses to
+exclude them from its counter, so the two tools tell one story.
+*** The relabel requires the port file to MATCH the one the allowlist declares.
+    A label that wandered somewhere else keeps saying `relocated`. ***
+Measured 2026-08-21: 126 bank-split, 0 genuinely relocated.
+
 Measured 2026-08-20: 212 pret-unmodeled vs 372 genuinely port-only (584 rows
 carry status `port_only`), so reading raw `status` overstates the port's
 divergence by 212 labels. RE-MEASURE rather than quoting this line -- it read
@@ -61,6 +77,29 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 DEFAULT_DB = HERE / "translation.db"
 STATUSES = {"translated", "relocated", "stub", "missing", "port_only", "pret-unmodeled"}
+# display-only, never a DB status (see load_bank_splits)
+DISPLAY_EXTRA = {"bank-split"}
+ALLOWLIST = HERE / "pret_label_allowlist.json"
+
+
+def load_bank_splits():
+    """pret's bank-split script continuations -> the port file that holds them.
+
+    pret splits a long map script across `Foo.asm` and `Foo_2.asm` because of ROM
+    BANKING. The port is FLAT BY DESIGN, so both halves live in the one file named
+    for the map — `dos_port/src/scripts/Foo.asm` IS the faithful mirror of both.
+    The scan cannot see that (the paths differ), so those labels land in the DB as
+    `relocated`, which reads as debt. It is not: `pret_label_allowlist.json`
+    declares each such file under `relocated_files` with that reason, and
+    `lint_pret_labels` already excludes them from its relocation-debt counter.
+    This does the same for the viewer, so the two tools tell one story.
+    """
+    try:
+        with open(ALLOWLIST, encoding="utf-8") as fh:
+            return {k: v.get("port_file") for k, v in
+                    (json.load(fh).get("relocated_files") or {}).items()}
+    except (OSError, ValueError):
+        return {}
 REQUIRED = {
     "labels": {"name", "pret_file", "port_file", "status", "stub_file", "scanned_at", "git_hash"},
     "calls": {"caller", "callee", "kind", "side", "file", "line", "build_active"},
@@ -233,6 +272,7 @@ def aggregate_edges(rows):
 def build_graph(con, side, annotations=None):
     if side not in ("pret", "port"):
         raise ValueError(side)
+    bank_splits = load_bank_splits()
     label_rows = [dict(r) for r in con.execute("SELECT * FROM labels ORDER BY name")]
     nodes = {}
     for row in label_rows:
@@ -277,6 +317,15 @@ def build_graph(con, side, annotations=None):
             # Not a port addition: a faithful pret label outside the modeled
             # home/ + engine/ universe. Say so instead of implying it is bespoke.
             node["display_status"] = "pret-unmodeled"
+        # Same shape, different cause: `relocated` on a pret bank-split
+        # continuation is SANCTIONED STRUCTURE, not debt. Only relabel when the
+        # port file is the one the allowlist declares — a label that wandered
+        # somewhere else really is relocated and must keep saying so.
+        if node.get("status") == "relocated":
+            declared = bank_splits.get(node.get("pret_file"))
+            if declared and declared == node.get("port_file"):
+                node["display_status"] = "bank-split"
+                node["bank_split_of"] = node["pret_file"]
     edges = aggregate_edges(calls)
     positions = layout(nodes, edges)
     result_nodes = []
@@ -290,7 +339,7 @@ def build_graph(con, side, annotations=None):
         node["callees"] = outgoing[name]
         result_nodes.append(node)
     return {"side": side, "nodes": result_nodes, "edges": edges,
-            "coverage_note": "STATUS covers pret home/ + engine/ (tier=core) and pret scripts/ (tier=script, since 2026-08-20). CALL EDGES cover tier=core only: scripts are macro-heavy (def_script_pointers, dw_const, CheckEvent) and are not modeled as call graphs, so a script node's missing edges mean nothing. dd dispatch tables and address-taken targets emit no edge either, so ISR and jump-table execution is not disproved by absence. Nodes shown as pret-unmodeled are FAITHFUL PRET LABELS from audio/, data/, gfx/ or ram/ that no tier models: aux_pret_file gives their provenance, but they carry no status and no edges. A node is only genuinely port-only if display_status is port_only AND aux_pret_file is null (measured 2026-08-20: 584 port_only rows = 212 pret-unmodeled + 372 genuinely port-only)."}
+            "coverage_note": "Nodes shown as bank-split are pret BANK-SPLIT SCRIPT CONTINUATIONS (scripts/Foo_2.asm) whose labels live in the port's single flat scripts/Foo.asm -- sanctioned structure, not relocation debt, declared in pret_label_allowlist.json relocated_files and excluded from lint_pret_labels' counter for the same reason (measured 2026-08-21: 126 bank-split, 0 genuinely relocated). STATUS covers pret home/ + engine/ (tier=core) and pret scripts/ (tier=script, since 2026-08-20). CALL EDGES cover tier=core only: scripts are macro-heavy (def_script_pointers, dw_const, CheckEvent) and are not modeled as call graphs, so a script node's missing edges mean nothing. dd dispatch tables and address-taken targets emit no edge either, so ISR and jump-table execution is not disproved by absence. Nodes shown as pret-unmodeled are FAITHFUL PRET LABELS from audio/, data/, gfx/ or ram/ that no tier models: aux_pret_file gives their provenance, but they carry no status and no edges. A node is only genuinely port-only if display_status is port_only AND aux_pret_file is null (measured 2026-08-20: 584 port_only rows = 212 pret-unmodeled + 372 genuinely port-only)."}
 
 
 def metadata(con, db_path):
@@ -317,7 +366,7 @@ aside{overflow:auto;padding:12px;background:#141d29;border-left:1px solid #31415
 
 JS = r"""
 'use strict';
-const colors={translated:'#43c879',relocated:'#a873e8',stub:'#e7aa3b',missing:'#e45858',port_only:'#42cad5','pret-unmodeled':'#d98adf',unindexed:'#8491a3'};
+const colors={translated:'#43c879',relocated:'#a873e8','bank-split':'#7fc7b0',stub:'#e7aa3b',missing:'#e45858',port_only:'#42cad5','pret-unmodeled':'#d98adf',unindexed:'#8491a3'};
 const state={side:'pret',graphs:{},cams:{pret:{x:0,y:0,z:1,tx:0,ty:0,tz:1},port:{x:0,y:0,z:1,tx:0,ty:0,tz:1}},selected:null,query:'',enabled:new Set(Object.keys(colors)),tiers:new Set(['core','script','port','none']),drag:null};
 const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d'),panel=document.querySelector('aside'),count=document.querySelector('#count');
 function graph(){return state.graphs[state.side]} function cam(){return state.cams[state.side]}
@@ -336,7 +385,7 @@ document.querySelectorAll('.filters input').forEach(x=>x.onchange=()=>x.checked?
 Promise.all(['pret','port'].map(s=>fetch('/api/graph/'+s).then(r=>r.json()).then(g=>state.graphs[s]=g))).then(()=>fit());fetch('/api/meta').then(r=>r.json()).then(m=>{if(m.commit_mismatch||m.source_dirty)document.querySelector('#warning').textContent='⚠ DB may be stale';document.querySelector('#stamp').textContent=(m.db_commit||'?').slice(0,8)+' @ '+(m.scanned_at||'?')});requestAnimationFrame(render);
 """
 
-HTML = """<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><title>Pret / DOS Dependency Graph</title><style>""" + CSS + """</style><header><button class='tab active' data-side=pret>Pret</button><button class=tab data-side=port>DOS port</button><input id=search placeholder='Search label or path…'><button id=fit>Fit (0)</button><span class=grow></span><span id=warning class=warn></span><small id=stamp></small></header><div id=main><section id=stage><canvas></canvas><div id=hud><div id=count>Loading…</div><div class=filters>""" + "".join(f"<label><input type=checkbox checked value='{s}'>{'unported' if s=='missing' else s}</label>" for s in sorted(STATUSES | {'unindexed'})) + """</div><div class=tiers>tier: """ + "".join(f"<label><input type=checkbox checked value='{t}'>{lbl}</label>" for t, lbl in [("core","core (home/+engine/)"),("script","script (scripts/)"),("port","port-only"),("none","unindexed")]) + """</div><div class=legend>""" + "".join(f"<span><i class=dot style='background:{c}'></i>{'unported' if s=='missing' else s}</span>" for s,c in [("translated","#43c879"),("relocated","#a873e8"),("stub","#e7aa3b"),("missing","#e45858"),("port_only","#42cad5"),("pret-unmodeled","#d98adf"),("unindexed","#8491a3")]) + """<br>solid active · dashed inactive/check-only · dotted fall-through</div><small>Drag/trackpad pan · cursor wheel zoom · arrows pan · 0 fits. Isolated nodes are grouped below the connected graph.<br>Coverage caveat: dd/address-taken dispatch targets emit no edge; absent edges do not prove an ISR or jump-table handler is unexecuted.</small></div></section><aside><p>Select a node for details.</p></aside></div><script>""" + JS + """</script>"""
+HTML = """<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><title>Pret / DOS Dependency Graph</title><style>""" + CSS + """</style><header><button class='tab active' data-side=pret>Pret</button><button class=tab data-side=port>DOS port</button><input id=search placeholder='Search label or path…'><button id=fit>Fit (0)</button><span class=grow></span><span id=warning class=warn></span><small id=stamp></small></header><div id=main><section id=stage><canvas></canvas><div id=hud><div id=count>Loading…</div><div class=filters>""" + "".join(f"<label><input type=checkbox checked value='{s}'>{'unported' if s=='missing' else s}</label>" for s in sorted(STATUSES | DISPLAY_EXTRA | {'unindexed'})) + """</div><div class=tiers>tier: """ + "".join(f"<label><input type=checkbox checked value='{t}'>{lbl}</label>" for t, lbl in [("core","core (home/+engine/)"),("script","script (scripts/)"),("port","port-only"),("none","unindexed")]) + """</div><div class=legend>""" + "".join(f"<span><i class=dot style='background:{c}'></i>{'unported' if s=='missing' else s}</span>" for s,c in [("translated","#43c879"),("relocated","#a873e8"),("bank-split","#7fc7b0"),("stub","#e7aa3b"),("missing","#e45858"),("port_only","#42cad5"),("pret-unmodeled","#d98adf"),("unindexed","#8491a3")]) + """<br>solid active · dashed inactive/check-only · dotted fall-through</div><small>Drag/trackpad pan · cursor wheel zoom · arrows pan · 0 fits. Isolated nodes are grouped below the connected graph.<br>Coverage caveat: dd/address-taken dispatch targets emit no edge; absent edges do not prove an ISR or jump-table handler is unexecuted.</small></div></section><aside><p>Select a node for details.</p></aside></div><script>""" + JS + """</script>"""
 
 
 class App:

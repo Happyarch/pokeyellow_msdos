@@ -76,24 +76,43 @@ def subsystem_report(cur, pat, show_all):
         WHERE tier='core' AND pret_file GLOB ?
         ORDER BY pret_file, name""", (like,)).fetchall()
     if not rows:
-        print(f"no core-tier pret files match {pat!r} "
-              f"(try a fragment of the path, e.g. 'overworld' or 'engine/battle')")
+        # Do not just say "no match" — the usual cause is that the pattern DID
+        # match, in a tier this view deliberately excludes. Say which.
+        other = cur.execute("""
+            SELECT tier, COUNT(*) FROM labels
+            WHERE pret_file GLOB ? GROUP BY tier ORDER BY tier""", (like,)).fetchall()
+        if other:
+            where = ', '.join(f"{n} in tier={t}" for t, n in other)
+            print(f"no CORE-tier pret files match {pat!r}, but the pattern does "
+                  f"match elsewhere: {where}.")
+            print("  This view is core-only on purpose: core (pret home/ + engine/) "
+                  "is the only tier with call-graph edges, so `port callers` is "
+                  "meaningless outside it. For a script-tier label use "
+                  "`label_status <Label>`, which works on every tier.")
+        else:
+            print(f"nothing matches {pat!r} "
+                  f"(try a fragment of the pret path, e.g. 'overworld' or 'engine/battle')")
         return 1
 
     files = {}
     for name, pf, st in rows:
         files.setdefault(pf, []).append((name, st))
 
-    print(f"{'pret file':<52} {'missing':>7} {'stub':>5} {'transl':>7} {'total':>6}")
-    tot = [0, 0, 0, 0]
+    print(f"{'pret file':<52} {'missing':>7} {'stub':>5} {'reloc':>6} {'transl':>7} {'total':>6}")
+    tot = [0, 0, 0, 0, 0]
     for pf in sorted(files, key=lambda f: (-sum(1 for _, s in files[f] if s == 'missing'), f)):
         ls = files[pf]
         m = sum(1 for _, s in ls if s == 'missing')
         b = sum(1 for _, s in ls if s == 'stub')
+        r = sum(1 for _, s in ls if s == 'relocated')
         t = sum(1 for _, s in ls if s == 'translated')
-        print(f"{pf:<52} {m:7} {b:5} {t:7} {len(ls):6}")
-        tot = [tot[0] + m, tot[1] + b, tot[2] + t, tot[3] + len(ls)]
-    print(f"{'TOTAL':<52} {tot[0]:7} {tot[1]:5} {tot[2]:7} {tot[3]:6}")
+        print(f"{pf:<52} {m:7} {b:5} {r:6} {t:7} {len(ls):6}")
+        tot = [tot[0]+m, tot[1]+b, tot[2]+r, tot[3]+t, tot[4]+len(ls)]
+    print(f"{'TOTAL':<52} {tot[0]:7} {tot[1]:5} {tot[2]:6} {tot[3]:7} {tot[4]:6}")
+    if tot[2]:
+        print("  (`reloc` on a pret scripts/Foo_2.asm row is a BANK-SPLIT continuation "
+              "living in the port's flat scripts/Foo.asm — sanctioned structure, not "
+              "debt. The graph viewer shows these as `bank-split`.)")
 
     wanted = ('missing', 'stub') if not show_all else ('missing', 'stub', 'translated')
     for pf in sorted(files):
