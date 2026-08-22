@@ -62,8 +62,14 @@ align 4
 g_nf_diag:
 nf_ka_sent:     resd 1                  ; keepalive sends attempted (Tick)
 nf_ctl_sent:    resd 1                  ; nf_send_ctl entries (acks+keepalives)
-nf_rtx_count:   resd 1                  ; nf_tx_stored retransmissions
+nf_rtx_count:   resd 1                  ; nf_tx_stored entries (initial sends
+                                        ; INCLUDED — this is not retx-only)
 nf_tick_live:   resd 1                  ; Tick entries while not dead
+; death forensics (linkcheck lc3 follow-up): when and how the timer moved
+nf_dbg_latch_clk:  resd 1              ; [nf_clock] value at nf_go_dead
+nf_dbg_reset_clk:  resd 1              ; [nf_clock] value at last death reset
+nf_dbg_big_deltas: resd 1              ; Ticks whose raw delta exceeded 60
+nf_dbg_max_delta:  resd 1              ; largest raw delta observed
 
 section .data
 
@@ -295,6 +301,11 @@ NetFrame_Tick:
     mov [ebx + NFCB.last_clock], eax
     cmp ecx, NF_KEEPALIVE_IDLE
     jbe .delta_ok
+    inc dword [nf_dbg_big_deltas]
+    cmp ecx, [nf_dbg_max_delta]
+    jbe .not_max
+    mov [nf_dbg_max_delta], ecx
+.not_max:
     mov ecx, NF_KEEPALIVE_IDLE          ; clamp: first Tick after Reset / gap
 .delta_ok:
     test ecx, ecx
@@ -333,6 +344,11 @@ nf_go_dead:
     cmp byte [ebx + NFCB.dead], 0
     jne .ret
     mov byte [ebx + NFCB.dead], 1
+    push eax
+    mov eax, [nf_clock]
+    mov eax, [eax]
+    mov [nf_dbg_latch_clk], eax
+    pop eax
     call [ebx + NFCB.cb_dead]
 .ret:
     ret
@@ -419,6 +435,11 @@ nf_crc_hdr_payload:
 ; ---------------------------------------------------------------------------
 nf_rx_frame:
     mov word [ebx + NFCB.death_timer], 0
+    push eax
+    mov eax, [nf_clock]
+    mov eax, [eax]
+    mov [nf_dbg_reset_clk], eax
+    pop eax
     mov al, [ebx + NFCB.rx_type]
     cmp al, NF_ACK
     je .ack

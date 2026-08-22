@@ -363,7 +363,43 @@ blocks in `src/engine/menus/naming_screen.asm`.
       fade/palette path — tilemap content is fine, so compare tilemap/WRAM,
       not pixels), and PrintText dialog lands in the WINDOW scratch, not
       wTileMap — pick the compared surface accordingly
-- [ ] `tools/linkcheck.sh` two-instance harness — BUILT AND NEARLY GREEN
+- [x] `tools/linkcheck.sh` two-instance harness — GREEN 2026-08-22 (lc5-lc7):
+      establishment, $02/$01 role split, LINKLOG cross-check both ways, zero
+      desyncs, session alive at both dumps, through a 15 s and a 30 s parked
+      LinkMenu (the park is exchange-heavy — pret's selection loop exchanges
+      continuously, ~40 msg/s). THE 2026-08-22 STALL WAS NEVER THE EMULATOR:
+      byte counters on both sides of the fork's nullmodem (NMDBG heartbeat)
+      showed flushed==delivered in lockstep every second of every failing run,
+      and the DOSBox `rx_interrupt_threshold` suspect below is exonerated (the
+      guest read LSR DR=0 — bytes never reached the fifo because they were
+      never sent). Root cause was GUEST-side: NetFrame_Tick counted its ARQ
+      timers per PUMP CALL, and the pump runs 100-1000x frame rate inside
+      wait loops, so NF_DEATH_TICKS=600 collapsed from ~10 s wall to ~1 s —
+      inside the peer's 1/s keepalive gap; one side died between keepalives
+      and its silence killed the other (the "UART stall" was the post-death
+      ring backlog, a symptom). Fixed in `3222bbd`: timers now advance by
+      elapsed frames of the 60 Hz PIT `tick_count` read through the
+      `nf_clock` pointer (DEBUG_NETTEST repoints it at its iteration counter;
+      battery still 60/60 PASS). Second, separate failure after that fix:
+      the boot-relative AUTOKEY_DUMP_FRAME photograph — the instances boot
+      seconds apart, the first dumper exits, and the survivor's park sits
+      peer-less >10 s so its CORRECT no-peer death latches before its own
+      dump (nfDiag forensics: latch−reset = exactly 600 frames). Fixed by
+      photographing LINKCHECK_MENU_HOLD (default 900) frames after
+      linkcheck_in_menu — LinkMenu entry is a wire-synchronized rendezvous,
+      so both dumps land within an exchange RTT; AUTOKEY_DUMP_FRAME stays
+      the ceiling for runs that never reach the menu. The fork's NMDBG
+      1 Hz nullmodem heartbeat (rx_state/gather-buffer/byte counters) is
+      kept for future transport debugging — Stage 3 blocks and the IPX/TCP
+      transports will want it. MAINTAINER NOTE: that instrumentation is a
+      LOCAL uncommitted diff in the `dos_port/tools/dosbox-x` submodule
+      working tree only — nothing was pushed to Happyarch/dosbox-x (not
+      authorized) and the submodule pointer in this repo is unchanged;
+      `tools/build_dosbox_mcp.sh` rsyncs the working tree, so rebuilds pick
+      it up as-is. Independently re-verified 2026-08-22 (second session):
+      3/3 consecutive linkcheck.sh runs green (662/663/662 LINKLOG records,
+      both directions matching, zero desyncs, both sides in LinkMenu and
+      NS_ESTABLISHED at dump)
       (2026-08-22, session end): the harness, the `DEBUG_LINKCHECK` gate
       (`RunLinkCheck` loops the real `CableClubNPC`; `AUTOKEY_LINKCHECK` A
       train answers the prompts and stops at LinkMenu entry via the

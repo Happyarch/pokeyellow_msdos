@@ -996,7 +996,7 @@ gbstate_regions:
     gbregion_flat "netExchCtr", net_exch_ctr,    2
     gbregion_flat "netPumps",   net_pump_ticks,  4
     gbregion_flat "uartDiag",   g_uart_diag,     40
-    gbregion_flat "nfDiag",     g_nf_diag,       16
+    gbregion_flat "nfDiag",     g_nf_diag,       32
 %endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph
 ; (AUTOKEY_DUMP_ON_BATTLE) or the state-gated follow-stall probe
@@ -5555,6 +5555,11 @@ RunStoneTest:
 %ifndef AUTOKEY_DUMP_FRAME
 %define AUTOKEY_DUMP_FRAME 200
 %endif
+%ifdef DEBUG_LINKCHECK
+%ifndef LINKCHECK_MENU_HOLD
+%define LINKCHECK_MENU_HOLD 900         ; parked-in-LinkMenu frames before the
+%endif                                  ; synchronized photograph (see below)
+%endif
 %ifdef DEBUG_BATTLE_GHOST
 %ifndef GHOST_DUMP_DELAY
 %define GHOST_DUMP_DELAY 120            ; in-battle frames after send-out; the
@@ -5628,8 +5633,36 @@ AutoKeyDrive:
     jb .introOnly                       ; still inside the intro window
 %endif
 %endif
+%ifdef DEBUG_LINKCHECK
+    ; ------------------------------------------------------------------
+    ; PHOTOGRAPH SYNCHRONIZED BY THE PROTOCOL, NOT BY BOOT TIME (lc3/lc4).
+    ; The two instances boot seconds apart and at different wall rates, so a
+    ; boot-relative AUTOKEY_DUMP_FRAME lands their dumps at different wall
+    ; moments; the first dumper then EXITS, and the survivor's park sits
+    ; peer-less long enough for its (correct) 10 s no-peer death to latch
+    ; before its own dump — photographing NS_DOWN out of a healthy run.
+    ; LinkMenu entry, however, is a rendezvous the wire itself synchronizes,
+    ; so dump LINKCHECK_MENU_HOLD frames after linkcheck_in_menu instead:
+    ; both photographs land within an exchange RTT of each other, and the
+    ; hold is long enough (~15 s of parked exchanges) to re-witness the
+    ; timer-collapse failure class this harness exists to catch.
+    ; AUTOKEY_DUMP_FRAME stays as the fallback ceiling: it still photographs
+    ; a run that never reaches the menu.
+    cmp byte [linkcheck_in_menu], 0
+    jne .lcInMenu
+    mov dword [lc_menu_frames], 0       ; re-armed per attempt with in_menu
+    jmp .lcNotInMenu
+.lcInMenu:
+    inc dword [lc_menu_frames]
+    cmp dword [lc_menu_frames], LINKCHECK_MENU_HOLD
+    je .doDump
+.lcNotInMenu:
+%endif
     cmp ecx, AUTOKEY_DUMP_FRAME
     jne .noDump
+%ifdef DEBUG_LINKCHECK
+.doDump:
+%endif
 %ifdef DEBUG_BATTLE_INTRO
     ; THE ONE CELL THAT CANNOT BE COMPARED: the parked prompt's blinking ▼ at
     ; GB (18,16) = canvas (19,28). Both sides blink it and both are ON at their
@@ -6382,6 +6415,9 @@ AutoKeyDrive:
 
 section .data
 autokey_frame: dd 0
+%ifdef DEBUG_LINKCHECK
+lc_menu_frames: dd 0                    ; frames since linkcheck_in_menu set
+%endif
 %ifdef DEBUG_BATTLE_GOLDEN
 %ifndef DEBUG_BATTLE_INTRO
 ; set for the frames of the intro-dismiss press window; applied where DL is built

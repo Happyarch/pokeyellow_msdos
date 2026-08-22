@@ -2826,6 +2826,12 @@ NASMFLAGS += -D DEBUG_LINKCHECK
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_LINKCHECK
 AUTOKEY_DUMP_FRAME ?= 3600
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+# Parked-in-LinkMenu frames before the protocol-synchronized photograph
+# (debug_dump.asm defaults it to 900; AUTOKEY_DUMP_FRAME stays the ceiling
+# for runs that never reach the menu).
+ifdef LINKCHECK_MENU_HOLD
+NASMFLAGS += -D LINKCHECK_MENU_HOLD=$(LINKCHECK_MENU_HOLD)
+endif
 NASMFLAGS += -D SKIP_TITLE
 endif
 # Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
