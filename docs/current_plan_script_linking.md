@@ -52,7 +52,7 @@ H/L use is incidental). **Read the pair, not the instruction.**
 
 | script | blocked on | size |
 |---|---|---|
-| ~~`vermilion_dock`~~ | **DONE 2026-08-20.** This row's premise was WRONG: `ScheduleEastColumnRedraw` was NOT what it needed. That routine feeds `RedrawRowOrColumn` → `GB_TILEMAP0`, which `render_bg`'s overworld path never reads, so porting it would have been dead code. See `docs/current_plan_ss_anne_departure.md` and memory `ss-anne-departure-scroll`. | — |
+| ~~`vermilion_dock`~~ | **DONE 2026-08-20.** This row's premise was WRONG: `ScheduleEastColumnRedraw` was NOT what it needed. That routine feeds `RedrawRowOrColumn` → `GB_TILEMAP0`, which `render_bg`'s overworld path never reads, so porting it would have been dead code. See `docs/plans/ss_anne_departure.md` and memory `ss-anne-departure-scroll`. | — |
 | `celadon_mansion_3f` | `PrintDiploma` | Game Boy Printer tier |
 | `pokemon_fan_club` | `PrintFanClubPortrait` | Game Boy Printer tier |
 | `summer_beach_house` | `PrintSurfingMinigameHighScore`, `Printer_PrepareSurfingMinigameHighScoreTileMap` | Game Boy Printer tier |

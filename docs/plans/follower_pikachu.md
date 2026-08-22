@@ -1,5 +1,12 @@
 # Current Plan: Overworld Follower Pikachu Subsystem
 
+> **ARCHIVED 2026-08-21.** Every implementation and verification box is `[x]`.
+> The one remaining line is a `[~]` MAINTAINER DECISION of 2026-08-18 not to
+> author golden scenarios for a follower that is self-demonstrating — a
+> resolution, not outstanding work, so `project_state --plans` counting it as
+> open is a parser artifact rather than a reason to keep the plan active.
+> Moved here from `docs/current_plan_follower_pikachu.md`.
+
 Implementation plan to bring the overworld companion Pikachu subsystem to full completion, implementing follower placement, stepping state machines, movement command FIFO buffers, scripted movement interpreters, dialogue emotion reactions, and front-pic portrait animations.
 
 ## Background & Architecture

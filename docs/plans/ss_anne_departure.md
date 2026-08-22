@@ -1,5 +1,11 @@
 # Current Plan: The S.S. Anne Departure Cutscene
 
+> **ARCHIVED 2026-08-21.** All stages S1-S7 are `[x]` and the header below
+> already records COMPLETE 2026-08-20; the no-golden-scenario item is a
+> maintainer decision of the same date, not open work. Moved here from
+> `docs/current_plan_ss_anne_departure.md` per the archive convention
+> (project-conventions skill: drop the `current_plan_` prefix).
+
 The last of groups A/B. `src/scripts/VermilionDock.asm` is 1 of 5 scripts still
 check-only; it cannot link because `VermilionDockSSAnneLeavesScript`
 (pret `scripts/VermilionDock.asm:40-122`) is un-lowered.
