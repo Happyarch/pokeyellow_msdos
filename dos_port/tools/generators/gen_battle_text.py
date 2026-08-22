@@ -244,6 +244,32 @@ def parse_flags(expr: str) -> int:
 # ---------------------------------------------------------------------------
 # Collect `_FarLabel:: <body>` definitions from data/text/*.asm
 # ---------------------------------------------------------------------------
+def strip_vc(lines):
+    # Drop Virtual-Console patch scaffolding, keeping the NON-VC branch: the
+    # port's ground truth is the cartridge build, so inside
+    # `IF DEF(_YELLOW_VC) ... ELSE ... ENDC` only the ELSE half survives, and
+    # vc_patch/vc_patch_end/vc_hook lines vanish. (First needed for
+    # _CableClubNPCLinkClosedBecauseOfInactivityText, data/text/text_8.asm.)
+    out, in_vc_true = [], False
+    for raw in lines:
+        t = raw.strip()
+        if t.startswith("vc_patch") or t.startswith("vc_hook"):
+            continue
+        if re.match(r'IF\s+DEF\(_YELLOW_VC\)', t):
+            in_vc_true = True
+            continue
+        if t == "ELSE" and in_vc_true:
+            in_vc_true = False
+            continue
+        if t == "ENDC":
+            in_vc_true = False
+            continue
+        if in_vc_true:
+            continue
+        out.append(raw)
+    return out
+
+
 def collect_far(cm, mem):
     # First pass: capture raw line blocks per label (defer encoding for text_far order).
     blocks = {}
@@ -252,12 +278,12 @@ def collect_far(cm, mem):
         for raw in path.read_text(encoding="utf-8").splitlines():
             m = re.match(r'(\w+)::\s*$', raw.strip())
             if m:
-                if cur: blocks[cur] = buf
+                if cur: blocks[cur] = strip_vc(buf)
                 cur, buf = m.group(1), []
                 continue
             if cur is not None:
                 buf.append(raw)
-        if cur: blocks[cur] = buf
+        if cur: blocks[cur] = strip_vc(buf)
     # Encode with simple dependency handling: retry until all text_far refs resolve.
     far_db, pending = {}, dict(blocks)
     for _ in range(8):

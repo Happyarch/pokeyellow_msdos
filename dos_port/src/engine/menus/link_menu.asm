@@ -117,7 +117,7 @@ extern Serial_ExchangeLinkMenuSelection ; src/home/serial.asm (pret home/serial.
 extern Serial_ExchangeNybble            ; src/home/serial.asm (pret home/serial.asm)
 extern Serial_SyncAndExchangeNybble     ; src/home/serial.asm (pret home/serial.asm)
 extern Serial_SendZeroByte              ; src/home/serial.asm (pret home/serial.asm)
-extern CloseLinkConnection              ; link_stubs.asm — pret: engine/link/cable_club_npc.asm (Stage 2)
+extern CloseLinkConnection              ; src/engine/link/cable_club_npc.asm (pret mirror, Stage 2)
 extern NetHAL_StartTransfer             ; src/net/net_hal.asm — the rSC-write HAL site
 
 ; --- dispatch seam (ROOT-WIRED, Session 9 spine) ---------------------------
@@ -1038,12 +1038,11 @@ lm_link_show_window:
 ; 0,0) and shown at UI_LINK_MENU, so pret's GB-absolute coords are shifted by
 ; (-5,-3): text (7,5)->(2,2), cursor (6,5)->(1,2).
 LinkMenu:
-    ; No serial handshake precedes this menu YET (link plan Stage 2 gives
-    ; CableClubNPC the HELLO role election that owns this byte); pin the status
-    ; to "not established" so every not-internal-clock branch is deterministic
-    ; and the primitives' no-partner hatches govern (src/home/serial.asm
-    ; contract). Stage 2 removes this pin along with the DEBUG_I1_LINK gate.
-    mov byte [ebp + hSerialConnectionStatus], CONNECTION_NOT_ESTABLISHED
+    ; (The Stage-1 hSerialConnectionStatus pin is gone: CableClubNPC — the
+    ; real one, src/engine/link/cable_club_npc.asm — owns establishment before
+    ; this menu runs, exactly as pret sequences it. The DEBUG_I1_LINK harness,
+    ; which calls this routine directly with no receptionist, pins the byte
+    ; itself below.)
     ; xor a / ld [wLetterPrintingDelayFlags],a
     mov byte [ebp + wLetterPrintingDelayFlags], 0
     ; ld hl,wStatusFlags4 / set BIT_LINK_CONNECTED,[hl]
@@ -1241,7 +1240,7 @@ LinkMenu:
     mov [ebp + wMenuJoypadPollCount], al
     call Delay3
     ; callfar CloseLinkConnection
-    call CloseLinkConnection        ; link_stubs.asm ret-stub until Stage 2
+    call CloseLinkConnection        ; the real pret body (cable_club_npc.asm)
     ; drop the whole LinkMenu window stack back to the entry baseline, then show
     ; the "link canceled" dialog. The structured projection deviation above covers
     ; this window-stack restore for the pret
@@ -1415,10 +1414,12 @@ RunLinkMenuTest:
     call LoadTextBoxTilePatterns
     call ClearSprites
     mov byte [ebp + wUpdateSpritesEnabled], 0
+    ; both harness paths run with no receptionist/establishment: pin the
+    ; status so the primitives' no-partner hatches govern deterministically
+    mov byte [ebp + hSerialConnectionStatus], CONNECTION_NOT_ESTABLISHED
 %ifdef DEBUG_I1_LINK
     call LinkMenu                   ; spins in .waitForInputLoop; AUTOKEY dumps
 %else
-    mov byte [ebp + hSerialConnectionStatus], CONNECTION_NOT_ESTABLISHED
     call Func_f531b                 ; spins in .asm_f5377;      AUTOKEY dumps
 %endif
 .hang:
