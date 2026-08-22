@@ -21,7 +21,12 @@ NF_KEEPALIVE        equ 5               ; control, unreliable (seq 0)
 
 NET_MAX_PAYLOAD     equ 512             ; Stage 3's 424-byte block + headroom
 
-; timers, in pump ticks (~frames at 60 Hz)
+; timers, in ~60 Hz frames of the nf_clock source (boot/timing.asm tick_count
+; by default — see NetFrame_Tick). NOT pump calls: the pump runs far faster
+; than the frame rate inside wait loops, and call-counted timers collapse the
+; death window in wall time (measured 2026-08-22, linkcheck lc2: a LinkMenu
+; park ticked ~10x frame rate, so the 600-"tick" death window shrank to ~1 s
+; while the peer's keepalives still came at 1/s — both sides died).
 NF_RTX_TICKS        equ 6               ; retransmit cadence (~100 ms)
 NF_MAX_RETRIES      equ 180             ; retries before declaring dead
 NF_KEEPALIVE_IDLE   equ 60              ; ~1 s idle -> keepalive
@@ -59,6 +64,9 @@ struc NFCB
     ; stored outstanding frame (SOF..crc) for retransmit
     .tx_len:        resw 1
     .tx_buf:        resb 1 + NF_HDR_LEN + NET_MAX_PAYLOAD + 2
+    ; ARQ timer clock (kept AFTER tx_buf so the DEBUG_LINKCHECK ncbState
+    ; probe's fixed 540-byte window keeps its field offsets)
+    .last_clock:    resd 1              ; [nf_clock] value at the last Tick
     .size:
 endstruc
 
