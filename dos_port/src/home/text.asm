@@ -126,6 +126,29 @@ CHAR_DOTS_GLYPH                     equ 0x75       ; '…' single ellipsis glyph
 global TextBoxBorder
 global PlaceString
 global PlaceNextChar
+global NextChar
+global NullChar
+global PageChar
+global PlacePKMN
+global _ContText
+global _ContTextNoPause
+global Paragraph
+global PrintPlayerName
+global PrintRivalName
+global PlacePOKe
+global ContText
+global SixDotsChar
+global DoneText
+global PromptText
+global PlaceMoveTargetsName
+global PlaceMoveUsersName
+global PCChar
+global TMChar
+global TrainerChar
+global RocketChar
+global PlaceDexEnd
+global PlaceCommandCharacter
+global ScrollTextUpOneLine
 global TextCommandProcessor
 global NextTextCommand
 global TextCommand_START
@@ -381,7 +404,7 @@ TextBoxBorder:
 ; ---------------------------------------------------------------------------
 ; text_pause — the "▼, wait for A/B" step of <_CONT>/<CONT>/<PARA>.
 ;
-; Same dispatch <PROMPT> already uses (.handle_prompt): [text_prompt_hook] = 0 is
+; Same dispatch <PROMPT> already uses (PromptText): [text_prompt_hook] = 0 is
 ; the overworld display (manual_text_scroll hijacks the window layer to show the
 ; dialog rows); non-zero is the owning screen's own wait (battle: BattlePromptWait,
 ; which blinks the ▼ at [text_arrow_pos] in wTileMap). Calling manual_text_scroll
@@ -475,7 +498,7 @@ manual_text_scroll:
 
 ; --- pokédex flavor page-break (<PAGE>): full-page window, no dialog hijack ---
 .dex_flavor_page:
-    ; The ▼ is already in the wTileMap scratch at (18,16) — .handle_page wrote
+    ; The ▼ is already in the wTileMap scratch at (18,16) — PageChar wrote
     ; it there as pret's PageChar does — so the full-page mirror carries it into
     ; the window. The wait then BLINKS the scratch cell (pret: ManualTextScroll →
     ; WaitForTextScrollButtonPress blinking hlcoord 18,16 of wTileMap) and
@@ -495,7 +518,7 @@ manual_text_scroll:
     mov [ebp + GB_TILEMAP1 + POKEDEX_ARROW_TILEMAP_OFFSET], al  ; …and show it
     test byte [ebp + hJoyHeld], PAD_A | PAD_B
     jz .dfp_press
-    ; the scratch cell is cleared by .handle_page's 7×18 page clear right after
+    ; the scratch cell is cleared by PageChar's 7×18 page clear right after
     ; this returns (pret: PageChar's ClearScreenArea does the same)
     mov byte [ebp + GB_TILEMAP1 + POKEDEX_ARROW_TILEMAP_OFFSET], TILE_SPC
     popad
@@ -507,7 +530,7 @@ manual_text_scroll:
     ret
 
 ; ---------------------------------------------------------------------------
-; scroll_text_up — scroll tile rows 14-16 up one row and clear row 16 interior.
+; ScrollTextUpOneLine — scroll tile rows 14-16 up one row and clear row 16 interior.
 ;
 ; Copies wTileMap rows 14,15,16 → rows 13,14,15 (60 bytes), then clears
 ; the 18-column interior of row 16 with TILE_SPC.
@@ -521,7 +544,7 @@ manual_text_scroll:
 ; scroll is visible in the window layer.
 ; All registers preserved.
 ; ---------------------------------------------------------------------------
-scroll_text_up:
+ScrollTextUpOneLine:
     pushad
     ; Geometry is derived, not hardcoded: [text_line2] is the box's 2nd text line
     ; (col 1 of it) and [text_row_stride] the tilemap row stride — the same two
@@ -691,13 +714,13 @@ PlaceNextChar:
 
     ; --- Terminator '@' ($50) ---
     cmp al, CHAR_TERMINATOR
-    jne .not_term
+    jne .NotTerminator
     mov ebx, esi               ; BC = current cursor
     pop esi                    ; restore HL = line start
     ret
 
     ; --- <NEXT> ($4E): advance one or two rows ---
-.not_term:
+.NotTerminator:
     cmp al, CHAR_NEXT
     jne .not_next
     pop esi                    ; restore line start
@@ -707,7 +730,7 @@ PlaceNextChar:
     add esi, [text_row_stride]  ; double-spaced: +2 rows total
 .next_push:
     push esi
-    jmp .advance
+    jmp NextChar
 
     ; --- <LINE> ($4F): cursor to (1,16) ---
 .not_next:
@@ -716,7 +739,7 @@ PlaceNextChar:
     pop esi
     mov esi, [text_line2]              ; box 2nd text line (overworld default / battle-set)
     push esi
-    jmp .advance
+    jmp NextChar
 
     ; --- Control codes $00–$5F (excluding $4E/$4F/$50 already handled) ---
 .not_line:
@@ -725,67 +748,69 @@ PlaceNextChar:
 
     ; Dispatch control codes
     cmp al, CHAR_NULL
-    je .handle_null            ; $00
+    je NullChar            ; $00
     cmp al, CHAR_PAGE
-    je .handle_page            ; $49 — Pokedex page break (or <NEXT>)
+    je PageChar            ; $49 — Pokedex page break (or <NEXT>)
     cmp al, CHAR_PKMN
-    je .handle_pkmn            ; $4A
+    je PlacePKMN            ; $4A
     cmp al, CHAR_CONT_
-    je .handle_cont_scroll     ; $4B — _ContText (arrow+wait, then scroll)
+    je _ContText     ; $4B — _ContText (arrow+wait, then scroll)
     cmp al, CHAR_SCROLL
-    je .handle_scroll          ; $4C — _ContTextNoPause (scroll only)
+    je _ContTextNoPause          ; $4C — _ContTextNoPause (scroll only)
     cmp al, CHAR_PARA
-    je .handle_para            ; $51
+    je Paragraph            ; $51
     cmp al, CHAR_PLAYER
-    je .handle_player          ; $52
+    je PrintPlayerName          ; $52
     cmp al, CHAR_RIVAL
-    je .handle_rival           ; $53
+    je PrintRivalName           ; $53
     cmp al, CHAR_POKE
-    je .handle_poke            ; $54
+    je PlacePOKe            ; $54
     cmp al, CHAR_CONT
-    je .handle_cont            ; $55
+    je ContText            ; $55
     cmp al, CHAR_DOTS
-    je .handle_dots6           ; $56
+    je SixDotsChar           ; $56
     cmp al, CHAR_DONE
-    je .handle_done            ; $57
+    je DoneText            ; $57
     cmp al, CHAR_PROMPT
-    je .handle_prompt          ; $58
+    je PromptText          ; $58
     cmp al, CHAR_TARGET
-    je .handle_target          ; $59
+    je PlaceMoveTargetsName          ; $59
     cmp al, CHAR_USER
-    je .handle_user            ; $5A
+    je PlaceMoveUsersName            ; $5A
     cmp al, CHAR_PC
-    je .handle_pc              ; $5B
+    je PCChar              ; $5B
     cmp al, CHAR_TM
-    je .handle_tm              ; $5C
+    je TMChar              ; $5C
     cmp al, CHAR_TRAINER
-    je .handle_trainer         ; $5D
+    je TrainerChar         ; $5D
     cmp al, CHAR_ROCKET
-    je .handle_rocket          ; $5E
+    je RocketChar          ; $5E
     cmp al, CHAR_DEXEND
-    je .handle_dexend          ; $5F
-    jmp .advance               ; unknown control code: skip
+    je PlaceDexEnd          ; $5F
+    jmp NextChar               ; unknown control code: skip
 
     ; --- Renderable glyph ---
 .glyph:
     mov [ebp + esi], al
     inc esi
     call PrintLetterDelay
-    jmp .advance
+    jmp NextChar
 
-.advance:
+; NextChar — pret home/text.asm:NextChar. The shared "consume this byte and loop"
+; tail every handler ends in (pret: `inc de / jp PlaceNextChar`).
+NextChar:
     inc edx
     jmp PlaceNextChar
 
 ; ── Control code handlers ──────────────────────────────────────────────────
 
-.handle_null:
+NullChar:
     ; <NULL> ($00): debug error terminator — stop silently
     mov ebx, esi
     pop esi
     ret
 
-.handle_page:
+PageChar:
     ; <PAGE> ($49): PageChar. If BIT_PAGE_CHAR_IS_NEXT is set in hUILayoutFlags,
     ; behave exactly like <NEXT>; otherwise (Pokedex full-page break) wait for input,
     ; clear the 7×18 text area at coord(1,10), pause ~20 frames, and re-home the
@@ -793,7 +818,7 @@ PlaceNextChar:
     test byte [ebp + hUILayoutFlags], 1 << BIT_PAGE_CHAR_IS_NEXT
     jz .page_full
     mov al, CHAR_NEXT
-    jmp .not_term                    ; process as <NEXT> (pret: jp PlaceNextChar.NotTerminator)
+    jmp PlaceNextChar.NotTerminator  ; pret: jp PlaceNextChar.NotTerminator
 .page_full:
     ; pret PageChar: `ld a,'▼' / ldcoord_a 18,16` — into wTileMap itself, BEFORE
     ; the wait; the window mirror below then carries it. (The port used to poke
@@ -821,50 +846,49 @@ PlaceNextChar:
     pop edx
     pop ecx
     pop eax
-    ; DelayFrames c=20. Bounded DelayFrame loop — the pret set-hFrameCounter-and-spin
-    ; idiom would deadlock until Wave-2/M2.1 adds the hFrameCounter decrementer.
-    push ecx
-    mov ecx, 20
-.page_wait:
-    call DelayFrame
-    dec ecx
-    jnz .page_wait
-    pop ecx
+    ; pret: ld c, 20 / call DelayFrames. EBX is the live cursor and DelayFrames takes
+    ; its count in BL, so it is bracketed — the same shape pret's own
+    ; TextCommand_PAUSE uses (`push bc` / `pop bc`). The old open-coded DelayFrame
+    ; loop here blamed a missing hFrameCounter decrementer ("Wave-2/M2.1"); that was
+    ; measurably false (src/home/delay.asm:59, src/home/vblank.asm:195) and the same
+    ; stale claim TextCommand_DOTS/PAUSE carried.
+    push ebx
+    mov bl, 20
+    call DelayFrames
+    pop ebx
     ; re-home cursor at coord(1,11) (pret: pop hl / hlcoord 1,11 / push hl)
     pop esi
     mov esi, wTileMap + 11 * SCREEN_W_TILES + 1
     push esi
-    jmp .advance
+    jmp NextChar
 
-.handle_pkmn:
+PlacePKMN:
     ; <PKMN> ($4A): prints "PK MN" glyphs ($E1,$E2)
     push eax
     mov eax, PlacePKMNText
-    call place_flat_str
-    pop eax
-    jmp .advance
+    jmp PlaceCommandCharacter
 
-.handle_cont_scroll:
+_ContText:
     ; <_CONT> ($4B): _ContText — show the ▼, wait for A/B, THEN scroll up two lines.
     ; Pret ref: home/text.asm:_ContText (falls through into _ContTextNoPause).
     call text_pause                  ; ▼ + wait; (pret places arrow, ProtectedDelay3, ManualTextScroll)
     ; fall through into the scroll
-.handle_scroll:
+_ContTextNoPause:
     ; <SCROLL> ($4C): _ContTextNoPause — scroll up two lines, cursor to (1,16), no wait.
     ; Pret ref: home/text.asm:_ContTextNoPause.
-    call scroll_text_up
-    call scroll_text_up
+    call ScrollTextUpOneLine
+    call ScrollTextUpOneLine
     pop esi
     mov esi, [text_line2]            ; pret's (1,16) — the box's 2nd text line
     push esi
-    jmp .advance
+    jmp NextChar
 
-.handle_para:
+Paragraph:
     ; <PARA> ($51): paragraph break — wait for input, clear text area, reposition at (1,14).
     ; Pret ref: home/text.asm:Paragraph — ManualTextScroll, ClearScreenArea 4×18 at (1,13).
     call text_pause
     ; Clear all 4 interior rows (pret's rows 13-16, cols 1-18) with TILE_SPC —
-    ; addressed off [text_line2]/[text_row_stride], as scroll_text_up is.
+    ; addressed off [text_line2]/[text_row_stride], as ScrollTextUpOneLine is.
     pushad
     mov ecx, [text_row_stride]
     mov edx, [text_line2]                ; (1, line2) = pret's (1,16)
@@ -890,9 +914,9 @@ PlaceNextChar:
     sub esi, [text_row_stride]
     sub esi, [text_row_stride]           ; pret's (1,14) — the box's 1st text line
     push esi
-    jmp .advance
+    jmp NextChar
 
-.handle_player:
+PrintPlayerName:
     ; <PLAYER> ($52): insert player name from wPlayerName (EBP+wPlayerName)
     push edx
     mov edx, wPlayerName
@@ -909,9 +933,9 @@ PlaceNextChar:
     jmp .player_loop
 .player_done:
     pop edx
-    jmp .advance
+    jmp NextChar
 
-.handle_rival:
+PrintRivalName:
     ; <RIVAL> ($53): insert rival name from wRivalName (EBP+wRivalName)
     push edx
     mov edx, wRivalName
@@ -928,17 +952,17 @@ PlaceNextChar:
     jmp .rival_loop
 .rival_done:
     pop edx
-    jmp .advance
+    jmp NextChar
 
-.handle_target:
+PlaceMoveTargetsName:
     ; <TARGET> ($59): the move TARGET's name. Pret PlaceMoveTargetsName: hWhoseTurn ^ 1.
     mov al, [ebp + hWhoseTurn]
     xor al, 1
-    jmp .place_battler_name
-.handle_user:
+    jmp PlaceMoveUsersName.place
+PlaceMoveUsersName:
     ; <USER> ($5A): the move USER's name. Pret PlaceMoveUsersName: hWhoseTurn.
     mov al, [ebp + hWhoseTurn]
-.place_battler_name:
+PlaceMoveUsersName.place:
     ; AL == 0 → player side: wBattleMonNick (no prefix).
     ; AL != 0 → enemy side: "Enemy " + wEnemyMonNick.  (home/text.asm:.place)
     push edx                        ; save outer command-string ptr
@@ -965,35 +989,51 @@ PlaceNextChar:
     jmp .battler_copy
 .battler_done:
     pop edx                         ; restore outer string ptr
-    jmp .advance
+    jmp NextChar
 
-.handle_poke:
+PlacePOKe:
     ; '#' ($54): prints "POKe"
     push eax
     mov eax, PlacePOKeText
-    call place_flat_str
-    pop eax
-    jmp .advance
+    jmp PlaceCommandCharacter
 
-.handle_cont:
+ContText:
     ; <CONT> ($55): ContText — scroll two lines, reposition at (1,16)
     call text_pause
-    call scroll_text_up
-    call scroll_text_up
+    call ScrollTextUpOneLine
+    call ScrollTextUpOneLine
     pop esi
     mov esi, [text_line2]            ; pret's (1,16) — the box's 2nd text line
     push esi
-    jmp .advance
+    jmp NextChar
 
-.handle_dots6:
+SixDotsChar:
     ; <......> ($56): prints "......"
     push eax
     mov eax, SixDotsCharText
-    call place_flat_str
-    pop eax
-    jmp .advance
+    jmp PlaceCommandCharacter
 
-.handle_done:
+PromptText:
+    ; <PROMPT> ($58): pret PromptText — draw ▼, wait for A/B, then FALL THROUGH into
+    ; DoneText, which is what terminates the box. The display context is
+    ; [text_prompt_hook]: 0 = overworld window scroll; non-zero = the owning screen's
+    ; own wait (battle draws the ▼ at text_arrow_pos in wTileMap, waits, erases it).
+    ;
+    ; THE FALLTHROUGH IS PRET'S AND IS LOAD-BEARING ORDER. The port used to define
+    ; these two the other way round and duplicate DoneText's two-line tail inside
+    ; PromptText; restoring pret's order lets the duplication go. Do not insert a
+    ; body between them — see memory regression-pokemon-evolution-fallthrough-severed
+    ; for what that costs elsewhere in this tree.
+    mov eax, [text_prompt_hook]
+    test eax, eax
+    jz .prompt_overworld
+    call eax
+    jmp DoneText
+.prompt_overworld:
+    call manual_text_scroll
+    ; fall through into DoneText (pret: PromptText runs on into DoneText)
+
+DoneText:
     ; <DONE> ($57): end the text command stream. Restore the PlaceString stack
     ; frame and return EDX = a FLAT pointer at the TX_END sentinel pair, so that
     ; TextCommand_START's `lea esi,[edx+1]` lands on a TX_END byte → TCP exits.
@@ -1006,52 +1046,39 @@ PlaceNextChar:
     mov edx, done_sentinel_flat     ; flat ptr to the TX_END sentinel pair
     ret
 
-.handle_prompt:
-    ; <PROMPT> ($58): pret PromptText — draw ▼, wait for A/B, erase, then TERMINATE
-    ; the text box (PromptText falls through to DoneText). The display context is
-    ; [text_prompt_hook]: 0 = overworld window scroll; non-zero = battle routine that
-    ; draws the ▼ at text_arrow_pos in wTileMap, waits, and erases it.
-    mov eax, [text_prompt_hook]
-    test eax, eax
-    jz .prompt_overworld
-    call eax
-    jmp .prompt_done
-.prompt_overworld:
-    call manual_text_scroll
-.prompt_done:
-    pop esi                            ; restore line start, terminate like <DONE>
-    mov edx, done_sentinel_flat
-    ret
-
-.handle_pc:
+PCChar:
     push eax
     mov eax, PCCharText
-    call place_flat_str
-    pop eax
-    jmp .advance
+    jmp PlaceCommandCharacter
 
-.handle_tm:
+TMChar:
     push eax
     mov eax, TMCharText
-    call place_flat_str
-    pop eax
-    jmp .advance
+    jmp PlaceCommandCharacter
 
-.handle_trainer:
+TrainerChar:
     push eax
     mov eax, TrainerCharText
-    call place_flat_str
-    pop eax
-    jmp .advance
+    jmp PlaceCommandCharacter
 
-.handle_rocket:
+RocketChar:
     push eax
     mov eax, RocketCharText
-    call place_flat_str
-    pop eax
-    jmp .advance
+    jmp PlaceCommandCharacter
 
-.handle_dexend:
+; ---------------------------------------------------------------------------
+; PlaceCommandCharacter — pret home/text.asm:PlaceCommandCharacter.
+; The shared tail of pret's `print_name` family: render the named string at the
+; cursor, then resume the outer stream at NextChar.
+;
+; DEVIATION{class=data-model; pret=home/text.asm:PlaceCommandCharacter; behavior=only the seven flat program-image constants funnel through this tail while PrintPlayerName, PrintRivalName and the two battler-name handlers keep their own EBP-relative copy loops; evidence=pret has ONE address space so its PlaceString reads a WRAM name and a ROM constant through the same DE, whereas the port's constants live in DS program image and its names live in emulated GB memory at [ebp+edx] - place_flat_str reads the former and cannot address the latter; lifetime=permanent while the port keeps the DJGPP flat-plus-EBP split}
+; ---------------------------------------------------------------------------
+PlaceCommandCharacter:
+    call place_flat_str             ; pret: call PlaceString / ld h,b / ld l,c
+    pop eax
+    jmp NextChar                    ; pret: pop de / inc de / jp PlaceNextChar
+
+PlaceDexEnd:
     ; <DEXEND> ($5F): prints "." and terminates PlaceString
     push eax
     mov eax, str_dot
@@ -1340,8 +1367,8 @@ TextCommand_DOTS:
 ;     of two identical siblings wrong is how the next reader gets bitten; see
 ;     regression-text-txlow-raw-gb-coord for the sibling that WAS reachable. ---
 TextCommand_SCROLL:
-    call scroll_text_up
-    call scroll_text_up
+    call ScrollTextUpOneLine
+    call ScrollTextUpOneLine
     mov ebx, [text_line2]
     jmp NextTextCommand
 

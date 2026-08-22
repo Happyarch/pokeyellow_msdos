@@ -135,7 +135,7 @@ first time. Three real divergences had been invisible while collapsed:
 too — and the port has no such symbol at all, so closing it means adding a WRAM
 declaration and running the RAM-address tooling. Not folded into a naming stage.
 
-### Stage 3 — `PlaceNextChar`'s char handlers (26). Highest risk.
+### Stage 3 — `PlaceNextChar`'s char handlers (26). Highest risk. **23 of 26 DONE**
 
 `NextChar`, `NullChar`, `PlaceCommandCharacter`, `PrintPlayerName`,
 `PrintRivalName`, `TrainerChar`, `TMChar`, `PCChar`, `RocketChar`, `PlacePOKe`,
@@ -150,14 +150,64 @@ plus the two `text_far` wrappers moved down from Stage 1: `ContCharText`
 `ProtectedDelay3`'s `push ebx / call Delay3 / pop ebx` body is faithful and free).
 The other 22 are `.handle_*` locals.
 
-- `[ ]` 3.1 promote the 22 `.handle_*` bodies to their pret names
-- `[ ]` 3.2 rename `scroll_text_up` -> `ScrollTextUpOneLine`, add `ProtectedDelay3`
-- `[ ]` 3.3 rebind the shared tails (Hazard 1) — the bulk of the work
-- `[ ]` 3.4 preserve pret's fallthrough order exactly (Hazard 2)
-- `[ ]` 3.5 `DEVIATION{class=data-model}` on the `print_name` fork,
-  `DEVIATION{class=projection}` on the coordinate-bearing handlers
-- `[ ]` 3.6 generate `_ContCharText` / `_TextIDErrorText` + their wrappers
-- `[ ]` 3.7 `faithdiff` each; gates incl. `fidelity-full`
+- `[x]` 3.1 promoted the 20 `.handle_*` bodies to their pret names
+- `[x]` 3.2 renamed `scroll_text_up` -> `ScrollTextUpOneLine`
+- `[x]` 3.3 shared tails rebound. `.advance` became pret's `NextChar` (identical
+  body: `inc de` / `jp PlaceNextChar`). `.not_term` became `.NotTerminator`, and
+  **Hazard 1 fired exactly as written**: promoting `PageChar` re-scoped its
+  `jmp .NotTerminator` to `PageChar.NotTerminator` and the assembler rejected it.
+  The fix is pret's own spelling, `PlaceNextChar.NotTerminator` — which is how
+  pret writes that very jump.
+- `[x]` 3.4 `PromptText` -> `DoneText` fallthrough RESTORED. The port had the two
+  defined in the opposite order with DoneText's tail duplicated inside PromptText;
+  pret's order lets the duplicate go.
+- `[x]` 3.5 `PlaceCommandCharacter` added as pret's shared tail for the seven
+  flat-constant handlers, carrying the `DEVIATION{class=data-model}` for why the
+  four EBP-relative name handlers cannot join it
+- `[ ]` 3.6 `ContCharText` / `TextIDErrorText` — DEFERRED to 3b with their bodies
+- `[ ]` 3.7 `ProtectedDelay3` — DEFERRED to 3b, see below
+- `[x]` 3.8 `faithdiff` on all promoted labels; gates incl. `fidelity-full` 90/90
+
+**Result: home/text.asm 26 -> 3 missing (53 translated of 56); home/ 71 -> 48.**
+
+#### Findings surfaced by Stage 3
+
+Same dividend as Stage 2, larger. These were invisible while the handlers were
+anonymous locals:
+
+1. **`ManualTextScroll` IS A FORKED PRET NAME.** The port calls it
+   `manual_text_scroll` in `src/home/text.asm`, but it is pret's
+   `home/joypad2.asm:ManualTextScroll` and `label_status` reports that label
+   `missing`. This breaks the "Preserve pret Labels" hard rule, and fixing it is
+   a MOVE to `dos_port/src/home/joypad2.asm`, not a rename — so it is a separate
+   piece of work on a different file's label, not Stage 3's. **Do not close it
+   with an alias**; the mirror rule wants the body at the pret path.
+2. **`Paragraph` and `PageChar` dropped `ClearScreenArea`.** Both open-code the
+   box clear. The port's versions are projection-aware (they address off
+   `text_line2` / `text_row_stride`), so routing them through `ClearScreenArea`
+   needs the projected coordinates worked out — behaviour-equivalent but real
+   work on a hot path. Not folded into a naming stage.
+3. **`PageChar` dropped `DelayFrames`** with the same false "Wave-2/M2.1"
+   comment Stage 2 found twice. FIXED here, identically.
+4. **`Paragraph` does not delay at all** where pret does `ld c, 20` /
+   `call DelayFrames`. Unlike PageChar's, this is NOT an equivalence — adding it
+   is +20 frames on every paragraph break, which can shift the fixed-frame
+   autokey scenarios. DEFERRED to 3b so it gets its own suite run.
+5. **`ContText` dropped `TextCommandProcessor`.** pret's `ContText` runs the
+   processor over `ContCharText`; the port inlines the effect. Closing this is
+   the same item as generating `ContCharText` (3.6).
+
+### Stage 3b — the deferred three
+
+- `[ ]` 3b.1 `ProtectedDelay3`: define it, and wire it where pret wires it
+  (`PromptText`, `Paragraph`, `PageChar`, `_ContText`, each immediately before
+  the scroll). **This adds 3 frames per text wait**, so it needs its own
+  `fidelity-full` and may re-time autokey scenarios — the same way enabling
+  `PlayCry` re-timed `bills_pc_ops` (memory
+  `playcry-blocking-contract-destubbed`).
+- `[ ]` 3b.2 `Paragraph`'s missing `DelayFrames(20)` — same risk, same run
+- `[ ]` 3b.3 `ContCharText` + `TextIDErrorText`, with `ContText`'s
+  `TextCommandProcessor` call and `NullChar`'s error-text return
 
 ---
 
@@ -257,7 +307,7 @@ tooling work and is deliberately out of this plan's scope.
 
 - `label_status --subsystem home` reports `home/text.asm` **56/56 translated**,
   taking home's missing count from 97 to 45.
-  (Stage 1 took it to 89; Stage 2 to 71.)
+  (Stage 1 took it to 89; Stage 2 to 71; Stage 3 to 48.)
 - Every remaining structural difference carries a machine-parsed `DEVIATION{}`.
 - `lint_pret_labels` 0, `--strict-claims` 0, `static_gate` PASS.
 - `make fidelity-full` reported = registered, non-zero = 0, at each stage.
