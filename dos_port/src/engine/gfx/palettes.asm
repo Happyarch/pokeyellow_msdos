@@ -67,6 +67,7 @@ extern g_pal_dirty, bg_slot_pal, obj_slot_pal
 extern mon_pal_table, battle_slot_pal, battle_tile_pal, command_pal_table
 extern RefreshMonFrontRepaintPalette
 extern LoadBGMapAttributes, g_bg_attr_table  ; engine/gfx/bg_map_attributes.asm
+extern BlkPacket_PartyMenu       ; src/data/sgb/sgb_packets.asm (generated)
 
 section .text
 
@@ -124,6 +125,40 @@ _RunPaletteCommand:
     movzx eax, al
     jmp [SetPalFunctions + eax*4]
 .done:
+    ret
+
+; ---------------------------------------------------------------------------
+; ---------------------------------------------------------------------------
+; InitPartyMenuBlkPacket — pret engine/gfx/palettes.asm:441-445.
+;   ld hl, BlkPacket_PartyMenu / ld de, wPartyMenuBlkPacket / ld bc, $30 / jp CopyData
+;
+; Seeds wPartyMenuBlkPacket with the static packet before RedrawPartyMenu_ walks
+; the party. UpdatePartyMenuBlkPacket below then overwrites ONE HP-bar colour byte
+; per displayed mon, and HandlePartyHPBarAttributes reads all six back.
+;
+; WHY IT IS HERE AT ALL, since the port has no SGB packet sender: the six bytes
+; UpdatePartyMenuBlkPacket writes are only the bars belonging to mons the menu
+; actually drew. Rows for empty party slots keep whatever the buffer held, and
+; HandlePartyHPBarAttributes walks all PARTY_LENGTH rows regardless — so without
+; this seed those rows resolve `and $3` against uninitialised WRAM. Initialising
+; them is bug-compatible with the hardware in the exact sense pret is: the same
+; bytes, in the same buffer, before the same reader runs. (Maintainer decision,
+; 2026-08-21: initialise them even where nothing observably reads them.)
+;
+; DEVIATION{class=projection; pret=engine/gfx/palettes.asm:InitPartyMenuBlkPacket; behavior=copies with an inline rep movsb from a flat .data label instead of tail-jumping to CopyData; evidence=CopyData's port contract is ESI and EDX as GB-space offsets read through [EBP+reg] (src/home/copy.asm) and BlkPacket_PartyMenu is a flat DS label in the port's own .data, not a GB address, so it cannot be passed through that contract - the copied bytes and the destination are identical either way; lifetime=permanent while pret ROM data lives in flat .data rather than emulated GB space}
+;
+; In: EBP = GB memory base. Out: all registers preserved.
+; ---------------------------------------------------------------------------
+global InitPartyMenuBlkPacket
+InitPartyMenuBlkPacket:
+    pushad
+    lea esi, [BlkPacket_PartyMenu]                  ; ld hl, BlkPacket_PartyMenu
+    lea edi, [ebp + wPartyMenuBlkPacket]            ; ld de, wPartyMenuBlkPacket
+    mov ecx, 0x30                                   ; ld bc, $30 — pret's own
+                                                    ; literal; gen_sgb_packets.py
+                                                    ; asserts the blob is 0x30
+    rep movsb                                       ; jp CopyData (see DEVIATION)
+    popad
     ret
 
 ; ---------------------------------------------------------------------------

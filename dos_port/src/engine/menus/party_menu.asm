@@ -225,7 +225,7 @@ RedrawPartyMenu_:
     cmp al, SWAP_MONS_PARTY_MENU
     jz .printMessage                        ; jp z,.printMessage
     call ErasePartyMenuCursors
-    ; farcall InitPartyMenuBlkPacket — TODO-HW: SGB palette BLK packet (Phase 5)
+    call InitPartyMenuBlkPacket             ; farcall InitPartyMenuBlkPacket
     mov esi, wTileMap + 0 * GBSCR_W + 3 ; hlcoord 3,0
     mov edx, wPartySpecies                  ; ld de,wPartySpecies
     xor al, al
@@ -505,6 +505,7 @@ SetPartyMenuHPBarColor:
 ; copy here is now a runtime [text_row_stride] read). Only DrawHP2 is called
 ; from this file.
 extern DrawHP2                          ; engine/pokemon/status_screen.asm
+extern InitPartyMenuBlkPacket   ; src/engine/gfx/palettes.asm
 
 ; ---------------------------------------------------------------------------
 ; ShowPartyMenuWindows — (re)build the party screen's window descriptors:

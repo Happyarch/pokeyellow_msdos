@@ -840,6 +840,7 @@ GAME_SRCS := \
     src/data/maps/rest_house_maps.asm \
     src/data/tilesets/pair_collision_tile_ids.asm \
     src/data/tilesets/ledge_tiles.asm \
+    src/data/sgb/sgb_packets.asm \
     src/data/tilesets/bike_riding_tilesets.asm \
     src/engine/overworld/wild_mons.asm \
     src/home/hidden_events.asm \
@@ -3437,6 +3438,7 @@ src/data/maps/map_headers.o: \
     assets/extra_includes.inc
 
 src/data/maps/songs.o: assets/map_songs.inc
+src/data/sgb/sgb_packets.o: assets/sgb_packets.inc
 src/data/tilesets/pair_collision_tile_ids.o: assets/pair_collision_tile_ids.inc assets/map_dims.inc
 src/data/tilesets/ledge_tiles.o: assets/ledge_tiles.inc assets/map_dims.inc
 src/data/tilesets/bike_riding_tilesets.o: assets/bike_riding_tilesets.inc assets/map_dims.inc
@@ -3448,6 +3450,10 @@ assets/pair_collision_tile_ids.inc assets/ledge_tiles.inc \
 assets/bike_riding_tilesets.inc assets/card_key_coords.inc \
 assets/copyright_text.inc &: tools/generators/gen_static_tables.py
 	python3 tools/generators/gen_static_tables.py
+
+# The one SGB packet the port reads the BYTES of — see the carrier's header.
+assets/sgb_packets.inc: tools/generators/gen_sgb_packets.py
+	python3 tools/generators/gen_sgb_packets.py
 
 assets/card_key_maps.inc: tools/generators/gen_card_key_maps.py
 	python3 tools/generators/gen_card_key_maps.py
@@ -4410,6 +4416,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/pair_collision_tile_ids.inc assets/ledge_tiles.inc \
         assets/bike_riding_tilesets.inc assets/card_key_coords.inc \
         assets/card_key_maps.inc \
+        assets/sgb_packets.inc \
         assets/vermilion_gym_trash_text.inc \
         assets/town_map_text.inc \
         assets/copyright_text.inc \
