@@ -7,8 +7,9 @@
 ; BillsPCChangeBox, DisplayMonListMenu, BillsPCMenuText, BoxNoPCText,
 ; KnowsHMMove, HMMoveArray, DisplayDepositWithdrawMenu, DepositPCText,
 ; WithdrawPCText, StatsCancelPCText, and the text_far wrapper block.
+; OpenBillsPCText is here too (pret file order puts it last).
 ; NOT here: CableClubLeftGameboy / CableClubRightGameboy / JustAMomentText /
-; UnusedOpenBillsPC (+ OpenBillsPCText) — the serial-link tail of pret's file.
+; UnusedOpenBillsPC — the serial-link tail of pret's file.
 ; The cable club is a serial-HAL boundary (TODO-HW: network HAL, Phase 4) and
 ; its entry points are owned by engine/link/cable_club.asm's package.
 ;
@@ -62,7 +63,9 @@ bits 32
 global DisplayPCMainMenu
 global BillsPC_
 global KnowsHMMove
+global OpenBillsPCText
 
+extern TextScript_BillsPC       ; src/home/map_objects.asm (linked)
 extern MoveMon                  ; src/home/move_mon.asm (pret home wrapper)
 extern RemovePokemon            ; src/home/move_mon.asm (pret home wrapper)
 extern IsInArray                ; src/home/array2.asm (shared home global)
@@ -975,6 +978,24 @@ BillsPCMirror:
     jb .row
     popad
     ret
+
+; ---------------------------------------------------------------------------
+; OpenBillsPCText — pret engine/pokemon/bills_pc.asm:OpenBillsPCText.
+;
+; `predef_code OpenBillsPCText` ($25, src/data/text_predef_pointers.asm), so
+; DisplayTextID's TEXT_PREDEF branch does a bare `call esi` at this label and it
+; must be x86 CODE at offset 0. pret spells it as the one-byte
+; `script_bills_pc` marker ($FD, TX_SCRIPT_BILLS_PC); dropping that byte is not a
+; behavior change, because the ordinary byte-stream dict path
+; (src/home/text_script.asm) dispatches that exact byte to TextScript_BillsPC —
+; which is what this jumps to. Identical continuation, one dispatch step fewer.
+; Same pattern, same reasoning as PokemonCenterPCText
+; (src/engine/events/hidden_events/pokecenter_pc.asm) and CinnabarGymQuiz.
+;
+; Retires the ret-stub that stood in hidden_events_stubs.asm.
+; ---------------------------------------------------------------------------
+OpenBillsPCText:
+    jmp TextScript_BillsPC
 
 ; ===========================================================================
 %ifdef DEBUG_BILLSPC

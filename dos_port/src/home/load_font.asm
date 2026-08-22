@@ -31,13 +31,13 @@ extern g_tilecache_dirty
 ; below uses only literal tile counts, so externing the two labels is enough here.
 extern battle_hud_tiles1_2bpp    ; src/engine/battle/core.asm
 extern battle_hud_tiles23_2bpp   ; src/engine/battle/core.asm
+extern ptile_2bpp                ; src/engine/pokemon/status_screen.asm (pret PTile)
 
 section .data
 align 4
 %include "assets/font_1bpp.inc"
 %include "assets/font_extra_2bpp.inc"
 %include "assets/font_battle_extra_2bpp.inc"
-%include "assets/ptile_2bpp.inc"
 
 section .text
 

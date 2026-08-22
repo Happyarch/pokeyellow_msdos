@@ -61,6 +61,18 @@ align 4
 ; tools/generators/gen_status_strings.py. DO NOT hand-edit the .inc.
 %include "assets/status_strings.inc"
 
+; PTile — pret's bold 'P' tile for the "PP" label, at its mirrored path. The
+; port stores it PRE-DOUBLED to 2bpp (the asset pipeline does pret's
+; CopyVideoDataDouble expansion at generation time — see the DEVIATION on
+; LoadStatusScreenHudTilePatterns, src/home/load_font.asm, which loads it).
+; `ptile_2bpp` (in the .inc) is the port-side alias the loader has always used;
+; the pret name is primary, per CLAUDE.md's "Preserve pret Labels", and is
+; defined HERE rather than in the generated .inc so the label's provider is this
+; mirrored file (a pret label defined inside an .inc reads as a local shadow to
+; lint_pret_labels --strict-claims).
+PTile:
+%include "assets/ptile_2bpp.inc"
+
 ; Name / OT pointer tables — 16-bit GB offsets (pret dw). Indexed by wMonDataLocation.
 ; NOT generated: these are port-specific WRAM-offset pointer tables (like a jump
 ; table), kept hand-written per the two-tier rule (code, not data).
@@ -78,6 +90,8 @@ global DrawHP2                          ; lives here, in its mirror — stride-
 global DrawHP_                          ; parameterized via [text_row_stride]
 global DrawLineBox
 global CalcExpToLevelUp
+global PTile                            ; assets/ptile_2bpp.inc
+global ptile_2bpp                       ; port-side alias, same bytes
 
 ; data / stat helpers (all linked)
 extern LoadMonData
@@ -106,6 +120,7 @@ extern g_bg_whiteout                                 ; ppu/ppu.asm — full-scre
 extern IsThisPartyMonStarterPikachu                  ; engine/pikachu/pikachu_status.asm (CF = starter)
 extern IsThisBoxMonStarterPikachu                    ; engine/pikachu/pikachu_status.asm
 extern PlayPikachuSoundClip                          ; audio/pikachu_pcm.asm (DL = clip index)
+extern PlayCry                                       ; src/home/pokemon.asm — AL = species; blocks
 extern WaitForTextScrollButtonPress   ; src/home/joypad2.asm
 extern spr_oam_valid                                 ; ppu.asm — render_sprites active-entry count
 extern Delay3
@@ -318,8 +333,8 @@ StatusScreen:
     call PlayPikachuSoundClip
     jmp .continue
 .playRegularCry:
-    ; TODO-HW: pret plays [wCurPartySpecies] via PlayCry — synth-cry translation
-    ; is deferred (audio plan, Phase A leftovers).
+    mov al, [ebp + wCurPartySpecies]                 ; ld a, [wCurPartySpecies]
+    call PlayCry                                     ; blocks for the cry's length
 .continue:
 
 %ifdef DEBUG_STATUS

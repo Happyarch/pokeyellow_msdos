@@ -36,17 +36,9 @@ section .text
 ; mirror src/engine/events/hidden_events/pokecenter_pc.asm (jumps into the
 ; linked TextScript_PokemonCenterPC, src/home/map_objects.asm).
 
-; OpenBillsPCText — pret engine/pokemon/bills_pc.asm:OpenBillsPCText.
-; A `script_bills_pc` marker. NOTE the faithful Bill's PC box UI IS linked
-; (src/engine/pokemon/bills_pc.asm, golden-gated by bills_pc_ops and
-; box_change_roundtrip) — what is missing is only this hidden-event entry point into
-; it, so this stub is a WIRING gap, not an unported feature. Unreachable in the live
-; build (its handler BillsHousePC is a ret-stub in hidden_object_stubs.asm).
-; TODO(PC service work): dispatch to the linked Bill's PC UI, then delete this stub.
-; STUB{class=stub; pret=engine/pokemon/bills_pc.asm:OpenBillsPCText; behavior=the Bills-PC script marker returns without dispatching into the box UI; evidence=pret OpenBillsPCText is a script_bills_pc marker and label_status reports it missing while the faithful box UI in src/engine/pokemon/bills_pc.asm is linked and reached only by its own callers; lifetime=until the hidden-event PC dispatch is wired to the linked Bills PC UI; label=OpenBillsPCText}
-global OpenBillsPCText
-OpenBillsPCText:
-    ret
+; OpenBillsPCText — RETIRED. The real body is LINKED at its pret mirror
+; src/engine/pokemon/bills_pc.asm (jumps into the linked TextScript_BillsPC,
+; src/home/map_objects.asm, and on into BillsPC_).
 
 ; --- text_asm wrappers (14) -------------------------------------------------
 

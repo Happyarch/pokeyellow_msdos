@@ -489,6 +489,13 @@ EXTRA_FAR = [
     "_DoItText",
     "_GetmText",
     "_EnemysWeakText",
+    # engine/pokemon/learn_move.asm:OneTwoAndText — `text_far _OneTwoAndText` +
+    # `text_pause` + a `text_asm` that mutes the music, plays SFX_SWAP on audio
+    # bank 1, and continues at PoofText. collect_wrappers cannot reconstruct it
+    # (the text_pause between the far and the asm falls outside its adjacency
+    # check), so the composed wrapper lives in code at
+    # src/engine/pokemon/learn_move.asm and only the far stream comes from here.
+    "_OneTwoAndText",
 ]
 
 def main():

@@ -12,11 +12,7 @@
 ; lost in the move:
 ;   EvolvedText / IntoText / StoppedEvolvingText / IsEvolvingText — generated
 ;     text-command streams, defined in assets/battle_text.inc (translated).
-;   Evolution_FlagAction — pret's `predef_jump FlagActionPredef` trampoline; the
-;     port has no predef dispatcher and calls FlagAction directly (see the note
-;     in TryEvolvingMon).
-;   Evolution_ReloadTilesetTilePatterns, Func_3b079, Func_3b0a2, Func_3b10f —
-;     not translated.
+;   Func_3b079, Func_3b0a2, Func_3b10f — not translated.
 ;
 ; The two GetMonLearnset_Evo* helpers at the bottom are PORT-ONLY (no pret
 ; counterpart) and came here with EvolutionAfterBattle, their only caller.
@@ -35,6 +31,9 @@ bits 32
 
 global TryEvolvingMon
 global EvolutionAfterBattle
+global Evolution_PartyMonLoop   ; pret label inside EvolutionAfterBattle
+global Evolution_FlagAction
+global Evolution_ReloadTilesetTilePatterns
 global RenameEvolvedMon
 global CancelledEvolution
 global LearnMoveFromLevelUp
@@ -80,6 +79,7 @@ extern ClearSprites             ; zero shadow OAM
 extern ClearScreen              ; home/copy2.asm — blank tilemap + Delay3
 extern DelayFrames              ; (BL = frame count)
 extern ReloadTilesetTilePatterns ; home/reload_tiles.asm — restore map tileset after evo screen
+extern PlayDefaultMusic          ; home/audio.asm — map music after the evo sequence
 
 ; Evolution text command streams (generated into assets/battle_text.inc by
 ; tools/generators/gen_battle_text.py from engine/pokemon/evos_moves.asm wrappers):
@@ -106,11 +106,7 @@ TryEvolvingMon:
     mov al, [ebp + wWhichPokemon]
     mov cl, al                      ; c = party index
     mov bh, FLAG_SET
-    ; pret: `predef FlagActionPredef`. The port has no predef dispatcher, so it
-    ; calls FlagAction directly with the registers set — FlagActionPredef's first
-    ; act is GetPredefRegisters, which would OVERWRITE ESI/EBX from the (stale)
-    ; wPredefHL/BC slots. Same convention as experience.asm's four call sites.
-    call FlagAction
+    call Evolution_FlagAction       ; pret: call Evolution_FlagAction
     ; NO `ret` HERE — pret's TryEvolvingMon FALLS THROUGH into EvolutionAfterBattle
     ; (engine/pokemon/evos_moves.asm: the two labels are contiguous). It sets the
     ; mon's wCanEvolveFlags bit and then runs the evolution loop for it. A `ret`
@@ -141,7 +137,10 @@ EvolutionAfterBattle:
     mov esi, wPartyCount            ; HL = &wPartyCount (the loop incs to the species list)
     push esi
 
-.Evolution_PartyMonLoop:
+; Evolution_PartyMonLoop — pret's own global label, in the middle of
+; EvolutionAfterBattle. Every `.local` below scopes under it, exactly as in
+; pret (whose `.evoEntryLoop` / `.done` / `.nextEvoEntry*` do the same).
+Evolution_PartyMonLoop:
     mov esi, wWhichPokemon
     inc byte [ebp + esi]            ; [wWhichPokemon]++
     pop esi                         ; HL = ptr into wPartySpecies list
@@ -157,10 +156,10 @@ EvolutionAfterBattle:
     mov cl, al
     mov esi, wCanEvolveFlags
     mov bh, FLAG_TEST
-    call FlagAction                 ; pret: predef FlagActionPredef — see TryEvolvingMon
+    call Evolution_FlagAction       ; pret: call Evolution_FlagAction
     mov al, cl
     test al, al
-    jz .Evolution_PartyMonLoop      ; flag not set → skip this mon
+    jz Evolution_PartyMonLoop       ; flag not set → skip this mon
 
     ; Get evolution blob for this species (EvoOldSpecies is the internal index).
     ; pret resolves the blob pointer HERE — BEFORE LoadMonData — and pushes it
@@ -185,7 +184,7 @@ EvolutionAfterBattle:
     mov al, [esi]
     inc esi
     test al, al
-    jz .Evolution_PartyMonLoop      ; end of evo entries → next mon
+    jz Evolution_PartyMonLoop       ; end of evo entries → next mon
 
     mov bh, al                      ; bh = evolution type
     cmp al, EVOLVE_TRADE
@@ -194,7 +193,7 @@ EvolutionAfterBattle:
     ; Not TRADE evo — if currently trading, skip this mon entirely
     mov al, [ebp + wLinkState]
     cmp al, LINK_STATE_TRADING
-    je .Evolution_PartyMonLoop
+    je Evolution_PartyMonLoop
 
     cmp bh, EVOLVE_ITEM
     je .checkItemEvo
@@ -203,7 +202,7 @@ EvolutionAfterBattle:
     ; (wForceEvolution is set when using a stone; stone evos are EVOLVE_ITEM)
     mov al, [ebp + wForceEvolution]
     test al, al
-    jnz .Evolution_PartyMonLoop
+    jnz Evolution_PartyMonLoop
 
     cmp bh, EVOLVE_LEVEL
     jne .nextEvoEntry1              ; unknown type: skip entry
@@ -229,7 +228,7 @@ EvolutionAfterBattle:
     mov bh, al
     mov al, [ebp + wLoadedMonLevel]
     cmp al, bh
-    jc .Evolution_PartyMonLoop      ; level < min_level → skip to next mon
+    jc Evolution_PartyMonLoop       ; level < min_level → skip to next mon
     jmp .doEvolution
 
 .checkItemEvo:
@@ -434,11 +433,8 @@ EvolutionAfterBattle:
     ; during a link trade, else reloads the map tileset over the evo-screen tiles.
     mov al, [ebp + wIsInBattle]
     test al, al
-    jnz .skipTilesetReload           ; in battle: HUD/tiles managed by battle — skip
-    mov al, [ebp + wLinkState]
-    cmp al, LINK_STATE_TRADING
-    je .skipTilesetReload             ; link trade: skip (pret `ret z`)
-    call ReloadTilesetTilePatterns    ; pret `jp ReloadTilesetTilePatterns`
+    jnz .skipTilesetReload           ; pret: `and a` / `call z, ...` — in battle, skip
+    call Evolution_ReloadTilesetTilePatterns
 .skipTilesetReload:
 
     ; Mark pokedex seen/owned for the new species
@@ -453,14 +449,14 @@ EvolutionAfterBattle:
     mov bh, FLAG_SET
     mov esi, wPokedexOwned
     push ebx
-    call FlagAction                 ; pret: predef FlagActionPredef — see TryEvolvingMon
+    call Evolution_FlagAction       ; pret: call Evolution_FlagAction
     pop ebx
     mov esi, wPokedexSeen
-    call FlagAction                 ; pret: predef FlagActionPredef — see TryEvolvingMon
+    call Evolution_FlagAction       ; pret: call Evolution_FlagAction
 
     ; Update party species list entry. Stack top here is [C] (the blob cursor
     ; re-pushed in .doEvolution before GetName), then [G] (the per-iteration
-    ; party-species cursor pushed at .Evolution_PartyMonLoop). pret's tail is
+    ; party-species cursor pushed at Evolution_PartyMonLoop). pret's tail is
     ; `pop de` (blob cursor) / `pop hl` (species cursor) / write [hl] / `push hl`
     ; / `ld l,e; ld h,d` — mirrored below. (The pre-[C] version popped the species
     ; cursor into EDX and then wrongly ate the routine-entry saved DE; adding the
@@ -496,7 +492,8 @@ EvolutionAfterBattle:
 
     mov al, [ebp + wEvolutionOccurred]
     test al, al
-    ; DEFERRED: call PlayDefaultMusic if nz (al != 0, evolution happened)
+    jz .return
+    call PlayDefaultMusic           ; pret: `call nz, PlayDefaultMusic`
 .return:
     ret
 
@@ -554,6 +551,20 @@ RenameEvolvedMon:
     ret
 
 ; ===========================================================================
+; Evolution_ReloadTilesetTilePatterns
+; Restore the map tileset over the evolution screen's tiles — unless a link
+; trade is in progress, where the trade screen owns VRAM.
+; Pret ref: engine/pokemon/evos_moves.asm Evolution_ReloadTilesetTilePatterns
+; ===========================================================================
+Evolution_ReloadTilesetTilePatterns:
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_TRADING
+    je .return                      ; pret `ret z`
+    jmp ReloadTilesetTilePatterns   ; pret `jp ReloadTilesetTilePatterns`
+.return:
+    ret
+
+; ===========================================================================
 ; CancelledEvolution
 ; Handles the case where the player pressed B during the evolution animation.
 ; Pret ref: engine/pokemon/evos_moves.asm CancelledEvolution
@@ -567,9 +578,8 @@ CancelledEvolution:
     ; re-push has not happened yet, so the stack top is [B] (pushed at
     ; .doEvolution before the intro text). Discard it, matching pret's `pop hl`.
     pop esi                         ; [B] discard blob cursor
-    ; DEFERRED: Evolution_ReloadTilesetTilePatterns (reload_tiles.asm is
-    ; HOME_CHECK-only; not linked yet).
-    jmp EvolutionAfterBattle.Evolution_PartyMonLoop
+    call Evolution_ReloadTilesetTilePatterns
+    jmp Evolution_PartyMonLoop
 
 ; LearnMoveFromLevelUp — faithful pret evos_moves.asm:LearnMoveFromLevelUp. Scans the
 ; leveled mon's learnset for a move taught at wCurEnemyLevel; if unknown and a free slot
@@ -743,8 +753,32 @@ WriteMonMoves_ShiftMoveData:
 
 ; ---------------------------------------------------------------------------
 
+; ===========================================================================
+; Evolution_FlagAction
+; pret's `predef_jump FlagActionPredef` trampoline. The port has no predef
+; dispatcher, and FlagActionPredef's first act is GetPredefRegisters, which
+; would OVERWRITE ESI/EBX from the stale wPredefHL/wPredefBC slots — so this
+; jumps straight to FlagAction with the registers the caller set. See memory
+; `flagactionpredef-clobbers-regs`.
+;
+; DEVIATION{class=HAL; pret=engine/pokemon/evos_moves.asm:Evolution_FlagAction; behavior=jumps directly to FlagAction instead of dispatching through predef FlagActionPredef; evidence=the port has no predef dispatcher and FlagActionPredef reloads ESI/EBX from wPredefHL/wPredefBC which callers here do not populate - the same convention every other port call site of FlagAction uses; lifetime=retire if the port ever gains a predef dispatcher}
+;
+; In: ESI = flag array, BL = flag index, BH = FLAG_SET/RESET/TEST.
+; ===========================================================================
+; NOTE ON PLACEMENT: this sits where pret puts it (evos_moves.asm:614, just
+; before GetMonLearnset) and NOT above EvolutionAfterBattle. TryEvolvingMon
+; FALLS THROUGH into EvolutionAfterBattle — a body inserted between them
+; severs that fallthrough and no mon evolves at all. Measured: doing so failed
+; golden item_stone_evolve with 28 WRAM divergences (the mon never evolved).
+Evolution_FlagAction:
+    jmp FlagAction
+
+; ===========================================================================
+; GetMonLearnset
+; Pret ref: engine/pokemon/evos_moves.asm GetMonLearnset
 ; In:  [wCurPartySpecies] = internal index.
 ; Out: ESI (hl) = flat pointer to the level-up learnset (past the evo data).
+; ===========================================================================
 GetMonLearnset:
     movzx ecx, byte [ebp + wCurPartySpecies]
     dec ecx                                  ; index = species - 1
