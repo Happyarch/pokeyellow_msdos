@@ -306,20 +306,22 @@ blocks in `src/engine/menus/naming_screen.asm`.
       files; PrintWaitingText's real mirror needs the trade-screen projection
       decided in Stage 3), `PrinterSerial` → `printer_stubs.asm` (retained
       dead branch); `update_label_db` rescanned
-- [ ] Gates: faithdiff per label run 2026-08-21 (all findings are the
+- [x] Gates: faithdiff per label run 2026-08-21 (all findings are the
       annotated HAL boundary: NetHAL_* calls, virtual IO_SB/IO_SC stores, and
       faithdiff's documented pointer-indirect-store blind spot on
       wUnknownSerialCounter / the receive buffers); lint 0 in both modes;
       full build links; `fidelity-serial` core tier 16/16 PASS 2026-08-21
-      (zero single-player drift with the DelayFrame pump call in place;
-      run AFTER fixing the VM's silent sfdisk/MBR image-mount failure — see
-      Environment notes); DEBUG_I1 + DEBUG_I1_LINK harness photos verified
+      AND `fidelity-full-serial` 87/87 PASS 2026-08-22 (zero single-player
+      drift with the DelayFrame pump call in place; both run AFTER fixing
+      the VM's silent sfdisk/MBR image-mount failure — see Environment
+      notes); DEBUG_I1 + DEBUG_I1_LINK harness photos verified
       2026-08-21 (both menus draw correctly and FRAME.BIN lands at frame 90,
       so DelayFrame + pump kept 90 frames advancing with the real serial
       layer linked — the AUTOKEY_QUIET harness parks in HandleMenuInput
       before any exchange call, so the hatch VALUES are covered by the
       construction argument in serial.asm's header plus the fidelity tiers,
-      not by these photos). STILL OPEN: the `cable_club_nolink` golden — it
+      not by these photos). Checked off 2026-08-22 with the full tier green;
+      the one deferred item: the `cable_club_nolink` golden — it
       compares the RECEPTIONIST's 90-frame no-peer timeout, which is
       `CableClubNPC`'s loop, still a ret-stub until Stage 2 translates
       cable_club_npc.asm; the golden therefore LANDS WITH STAGE 2, not here
