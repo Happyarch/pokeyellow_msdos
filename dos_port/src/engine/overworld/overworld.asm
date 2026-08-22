@@ -1018,18 +1018,17 @@ CheckWarpTile:
 ;                wDestinationWarpID = 0-based index into that map's warp
 ;                table, used to resolve the player spawn coords.
 ;
-; OW-A.5 DIVERGENCE (deferred faithfulness): this is a bespoke consolidation of
-; pret's WarpFound2 map-change tail (home/overworld.asm:455-517). The following
-; WarpFound2 pieces are intentionally NOT ported yet — each waits on its subsystem:
-;   - ROCK_TUNNEL_1F special-case: wMapPalOffset=$06 + GBFadeOutToBlack (:470-474)
-;     — TODO-HW: palette/fade (Phase 5; DMG-green is debug-only until then).
-;   - PlayMapChangeSound (:477/498/510) — TODO-HW: audio (Phase 3).
-;   - IsPlayerStandingOnWarpPadOrHole → warp-pad branch: LeaveMapAnim +
-;     set BIT_FLY_WARP (:488-495) — TODO: fly/warp-pad subsystem (rides OW-7.2 /
-;     the fly/dungeon-warp anim block already gated in EnterMap).
-;   - SetPikachuSpawnOutside/WarpPad/BackOutside (:476/503/507) — TODO: Pikachu-
-;     follower subsystem (cf. SpawnPikachu stub).
-;   - wMapPalOffset reset on the .goBackOutside path (:512) — TODO-HW: palette.
+; OW-A.5 — HISTORICAL NOTE, CORRECTED 2026-08-21. This comment used to say that
+; LoadDestinationMapData was "a bespoke consolidation of pret's WarpFound2 tail"
+; and list six WarpFound2 pieces as "intentionally NOT ported yet". EVERY ITEM ON
+; THAT LIST IS NOW PORTED, and it is not here — pret's WarpFound2 lives at its own
+; pret label in src/home/overworld.asm (hoisted out of OverworldLoopLessDelay
+; 2026-08-21 so it could carry the name), with all three of pret's branches: the
+; ROCK_TUNNEL_1F wMapPalOffset=$06 + GBFadeOutToBlack special case, the three
+; PlayMapChangeSound calls, IsPlayerStandingOnWarpPadOrHole and its
+; LeaveMapAnim + BIT_FLY_WARP arm, all three SetPikachuSpawn* setters, and
+; .goBackOutside's wMapPalOffset reset. What THIS routine does is the port-only
+; destination staging WarpFound2.done delegates to.
 ;   - wWarpedFromWhichWarp/wWarpedFromWhichMap saves (:456-460) — not yet consumed
 ;     by any ported code; restore with the map-script/back-warp resolver.
 ; The wCurMap/wLastMap update + BIT_STANDING_ON_DOOR + IgnoreInputForHalfSecond +

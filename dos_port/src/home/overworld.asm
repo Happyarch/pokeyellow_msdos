@@ -2231,8 +2231,31 @@ PlayMapChangeSound:
     mov al, SFX_GO_OUTSIDE
 .playSound:
     call PlaySound
-    ; pret tail: if wMapPalOffset != 0 ret; else jp GBFadeOutToBlack.
-    ; TODO-HW: palette/fade (Phase 5) — GBFadeOutToBlack deferred (DMG-green debug palette).
+    ; --- pret :681-684. RESTORED 2026-08-21. ***THIS TAIL IS THE DOOR/STAIR/LADDER
+    ; TRANSITION.*** Gen 1 has no door-opening animation: walking into a door, up or
+    ; down stairs, or up or down a ladder fades the screen to black here, loads the
+    ; destination while it is black, and the first LoadGBPal of the next
+    ; OverworldLoopLessDelay iteration snaps the palette back. Without this tail the
+    ; map simply cut, which is what "the transitions do not work" looked like.
+    ;
+    ; It was stubbed as "TODO-HW: palette/fade (Phase 5) — deferred (DMG-green debug
+    ; palette)". THAT PREMISE EXPIRED with the colorization plan (2026-07-13): there
+    ; is no DMG-green ramp any more, and these fades never needed Phase-5 colour in
+    ; the first place. GBFadeOutToBlack only walks the three DMG palette REGISTERS
+    ; down the FadePal shade ramps (src/home/fade.asm's own header says so), and
+    ; commit_palette re-maps whatever those registers hold through the live CGB slot
+    ; palettes every DelayFrame. The routine was already translated AND already called
+    ; from ROCK_TUNNEL_1F's arm above, HandleBlackOut, and a dozen map scripts — this
+    ; one call site was the only thing still missing.
+    ;
+    ; The wMapPalOffset guard is pret's and is load-bearing, not defensive: the
+    ; ROCK_TUNNEL_1F branch in WarpFound2 sets the offset to 6 and fades ITSELF before
+    ; calling here, so without the guard that warp would fade twice.
+    mov al, [ebp + wMapPalOffset]
+    test al, al                                  ; pret: and a
+    jnz .noFade                                  ; pret: ret nz
+    jmp GBFadeOutToBlack                         ; pret: jp GBFadeOutToBlack
+.noFade:
     ret
 
 CheckIfInOutsideMap:
