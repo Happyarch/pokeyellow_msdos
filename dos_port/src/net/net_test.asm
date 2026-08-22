@@ -50,6 +50,11 @@ global RunNetPipeTest
 extern NetFrame_Reset               ; src/net/net_frame.asm
 extern NetFrame_SendMsg
 extern NetFrame_Tick
+extern nf_clock                     ; repointed at nt_clock below: the ARQ
+                                    ; timers advance per tick_both iteration
+                                    ; (wall frames would barely move in this
+                                    ; tight loop), keeping every *_BOUND and
+                                    ; NF_*_TICKS expectation an iteration count
 extern DebugDumpMemory              ; src/debug/debug_dump.asm — writes
                                     ; DUMP.BIN (+GBSTATE.BIN) and exits
 
@@ -64,6 +69,7 @@ section .bss
 
 ncb_a:          resb NFCB.size
 ncb_b:          resb NFCB.size
+nt_clock:       resd 1              ; the test's tick counter (see nf_clock)
 
 fifo_ab_buf:    resb FIFO_SIZE
 fifo_ba_buf:    resb FIFO_SIZE
@@ -241,6 +247,7 @@ b_dead_cb:
 ; tick_both — one tick on each codec.
 ; ---------------------------------------------------------------------------
 tick_both:
+    inc dword [nt_clock]
     mov ebx, ncb_a
     call NetFrame_Tick
     mov ebx, ncb_b
@@ -309,6 +316,7 @@ run_phase:
 ; RunNetPipeTest — the harness entry (called at boot from overworld.asm).
 ; ---------------------------------------------------------------------------
 RunNetPipeTest:
+    mov dword [nf_clock], nt_clock  ; iteration-denominated timers (above)
     ; wire A
     mov ebx, ncb_a
     mov dword [ebx + NFCB.cb_txbyte],  a_txbyte

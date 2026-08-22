@@ -47,6 +47,9 @@ bits 32
 global NetFrame_Reset
 global NetFrame_SendMsg
 global NetFrame_Tick
+global nf_clock                         ; -> dword the ARQ timers count in
+
+extern tick_count                       ; boot/timing.asm — ~60 Hz PIT frames
 
 section .bss
 
@@ -65,6 +68,13 @@ nf_tick_live:   resd 1                  ; Tick entries while not dead
 section .data
 
 crc_table_ready: db 0
+
+; The clock the ARQ timers advance by. Default: the PIT frame counter, so
+; NF_*_TICKS are wall-time frames however fast the pump is polled. The
+; DEBUG_NETTEST harness repoints this at its own per-iteration counter so
+; its tick-denominated bounds keep meaning "iterations".
+align 4
+nf_clock:       dd tick_count
 
 section .text
 
@@ -271,8 +281,26 @@ NetFrame_Tick:
     call nf_rx_byte
     jmp .rx_loop
 .rx_done:
-    ; death timer: ticks since the last VALID inbound frame
-    inc word [ebx + NFCB.death_timer]
+    ; Elapsed frames of [nf_clock] since the last Tick. The timers advance
+    ; by WALL frames, never by pump calls: the pump polls far faster than
+    ; 60 Hz inside wait loops, and call-counted timers collapse the death
+    ; window in wall time while the peer's keepalive cadence does not
+    ; (measured 2026-08-22, linkcheck lc2 — both sides died parked in
+    ; LinkMenu with the transport in perfect byte-lockstep). Zero elapsed
+    ; = same frame: the RX drain above still ran, the timers hold still.
+    mov eax, [nf_clock]
+    mov eax, [eax]
+    mov ecx, eax
+    sub ecx, [ebx + NFCB.last_clock]
+    mov [ebx + NFCB.last_clock], eax
+    cmp ecx, NF_KEEPALIVE_IDLE
+    jbe .delta_ok
+    mov ecx, NF_KEEPALIVE_IDLE          ; clamp: first Tick after Reset / gap
+.delta_ok:
+    test ecx, ecx
+    jz .ret
+    ; death timer: frames since the last VALID inbound frame
+    add [ebx + NFCB.death_timer], cx
     cmp word [ebx + NFCB.death_timer], NF_DEATH_TICKS
     jb .alive
     jmp nf_go_dead
@@ -280,16 +308,18 @@ NetFrame_Tick:
     ; retransmit
     cmp byte [ebx + NFCB.tx_out], 0
     je .no_rtx
-    inc word [ebx + NFCB.tx_timer]
+    add [ebx + NFCB.tx_timer], cx
     cmp word [ebx + NFCB.tx_timer], NF_RTX_TICKS
     jb .no_rtx
     inc word [ebx + NFCB.tx_retries]
     cmp word [ebx + NFCB.tx_retries], NF_MAX_RETRIES
     jae nf_go_dead
+    push ecx
     call nf_tx_stored
+    pop ecx
 .no_rtx:
     ; keepalive when idle
-    inc word [ebx + NFCB.idle_timer]
+    add [ebx + NFCB.idle_timer], cx
     cmp word [ebx + NFCB.idle_timer], NF_KEEPALIVE_IDLE
     jb .ret
     inc dword [nf_ka_sent]
