@@ -589,6 +589,54 @@ SCENARIOS = {
             ],
         },
     },
+    "sign_pallet_house": {
+        "flags": "DEBUG_SIGNTEXT=1 DEBUG_SIGNTEXT_HOUSE=1 SIGNTEXT_Y=6 SIGNTEXT_X=3 "
+                 "SIGNTEXT_DIR=SPRITE_FACING_UP",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Pallet Town, player at (6,3) facing UP, reading `bg_event 3, 5` — the
+        # player's-house sign, read from the path tile BELOW it. (Contrast
+        # sign_pallet, whose town sign stands in grass and can only be read from the
+        # side.) The text-engine gate for <PLAYER> substitution; see the scenario's
+        # own header and its manifest `verification` for why this screen.
+        "window": (16, 8),  # same block-aligned camera as sign_pallet (both Pallet Town)
+        "projections": [
+            # Identical dialog re-flow to sign_pallet: the overworld message box is
+            # drawn into the GB-shaped stride-20 scratch at wTileMap + 12*20
+            # (msgbox_dialog, home/text.asm) and shown through the dialog window, so
+            # over the 40-wide canvas those 6 stride-20 rows become 3 rows x 2 panels.
+            ((12 + k, 0, 12 + k, 19), (20 * (k % 2), (6 + k // 2) - (12 + k)),
+             "stride-20 dialog scratch re-flowed over the 40-wide canvas: "
+             "6 rows x 1 panel -> 3 rows x 2 panels")
+            for k in range(6)
+        ],
+        "masks": {
+            "tilemap": [
+                ((0, 0, 0, 19),
+                 "the stride-20 dialog scratch (wTileMap+240..359) physically overlaps "
+                 "canvas rows 6-8 of the block-aligned map mirror, and at this window "
+                 "(row 8) canvas row 8 is golden row 0 — so the map mirror's top row is "
+                 "sitting under the dialog's last two rows. Identical to sign_pallet, "
+                 "which has the identical window (16,8) and masks the same row for the "
+                 "same reason. Fidelity plan F-13, M-29 family. NOTE this masks a MAP "
+                 "row, never the dialog: the message box is compared through the six "
+                 "projections above, and it matched cell-for-cell on the first run — "
+                 "which is what makes this scenario a text gate at all"),
+            ],
+            "vram": [
+                (256 + 0x03, "flower tile: VRAM tile-DATA animation, phase depends on dump frame"),
+                (256 + 0x14, "water tile: VRAM tile-DATA animation, phase depends on dump frame"),
+            ] + [
+                (128 + t, "stale font residue at the vChars1 tail (see overworld_pallet mask)")
+                for t in range(0x78, 0x80)
+            ],
+            "oam": [
+                (i, "NPC entries: the GIRL/FISHER wander state is RNG-path-dependent "
+                    "(the golden's NPCs walked during its navigation to the sign) — it "
+                    "cannot converge between emulator runs; player entries 0-3 are compared")
+                for i in range(4, 40)
+            ],
+        },
+    },
     "party_menu": {
         "flags": "DEBUG_PARTYMENU=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),

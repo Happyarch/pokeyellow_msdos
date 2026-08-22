@@ -189,12 +189,33 @@ severed their fallthrough and no mon evolved — with lint 0, `--strict-claims` 
 `static_gate` 8/8 and `faithdiff` CLEAN. Only the golden suite saw it. See
 memory `regression-pokemon-evolution-fallthrough-severed`.
 
-**Hazard 3 — no golden gates the text engine as such.** Text fidelity is
-incidental to the menu/dialog scenarios. The suite will catch a gross break, but
-a subtle one (a `<PARA>` landing one row off, a `<PROMPT>` arrow at the wrong
-cell) may pass. Mitigation: `tools/pixelcheck.sh` on a dialog-heavy scenario
-before and after each stage, and consider a dedicated text-engine scenario as
-Stage 4.
+**Hazard 3 — text-engine coverage. MEASURED 2026-08-22, and the original
+statement here ("no golden gates the text engine as such") was WRONG.** It was
+written from impression, not measurement. Counting control codes across all of
+pret's text data:
+
+| code | uses | gated by |
+| --- | --- | --- |
+| `line` | 3065 | sign_pallet, oak_intro, many |
+| `cont` | 1791 | sign_pallet (dumps page 2, after a `cont`) |
+| `done` | 1699 | sign_pallet and most dialog scenarios |
+| `para` | 969 | route_15_binoculars |
+| `prompt` | 672 | naming_screen reaches it via `_IntroducePlayerText` |
+| `<PLAYER>` | 152 | **sign_pallet_house (added by Stage 4.2)** |
+| `<RIVAL>` | 44 | — |
+| `<USER>` / `<TARGET>` | 36 / 24 | battle scenarios |
+| `<PKMN>` | 8 | oak_intro |
+| `<TRAINER>` | 1 | — |
+| `<PC>` `<TM>` `<ROCKET>` `<……>` `<NULL>` `<PAGE>` `<DEXEND>` | **0** | n/a — dead in pret's own text data |
+
+So the hot path was already gated, and the real gap was the one place intuition
+would not have looked: `<PLAYER>`, the most-used substitution in the game, had NO
+golden. `oak_intro` is the obvious candidate and cannot serve — it parks at
+`_OakSpeechText1` page 1 and never reaches `_OakSpeechText3`'s `"<PLAYER>!"`.
+
+The seven zero-use codes are worth stating plainly: their handlers cannot regress
+observably, because no text in the game reaches them. Restoring their labels in
+Stage 3 is bookkeeping, and no scenario should be invented to cover them.
 
 **Hazard 4 — hot path.** `PlaceNextChar` runs per rendered character. Take a
 `DEBUG_PERF` baseline before Stage 2/3 and compare after.
@@ -247,6 +268,22 @@ tooling work and is deliberately out of this plan's scope.
 
 - `[ ]` 4.1 `wTextDest`: declare it and restore pret's two stores, or record a
   `DEVIATION` saying why a write-only variable is not carried
-- `[ ]` 4.2 a dedicated dialog/text golden scenario — Hazard 3 says the suite
-  cannot presently see a subtle text regression, and Stage 3 is where one would
-  be introduced. **Do this BEFORE Stage 3, not after.**
+- `[x]` 4.2 **DONE — `sign_pallet_house`**, the `<PLAYER>`-substitution gate.
+  Reads Pallet Town's player's-house sign (`bg_event 3, 5`) from (6,3) facing UP
+  through the real A-press dispatch on both sides;
+  `_PalletTownPlayersHouseSignText` is `text "<PLAYER>'s house " / done`, so the
+  printed box IS the output of `PrintPlayerName` -> `PlaceCommandCharacter`.
+  Registered as id 91, tier `full`; window (16,8) — the same block-aligned camera
+  as `sign_pallet`, derived by sweeping offsets against a captured port dump
+  rather than guessed.
+  **NEGATIVE CONTROL RUN, because a green scenario that never witnesses its
+  target is a false witness and fails green.** Disabling the port's `<PLAYER>`
+  handler made it FAIL with 10 tilemap divergences; restoring it returned PASS.
+  The scenario provably compares the substituted name.
+  Its single tilemap mask is the F-13 dialog-scratch/map-mirror overlap
+  `sign_pallet` masks at the identical window — it covers a MAP row, never the
+  dialog, which is compared through the six projections and matched cell-for-cell
+  on the first run.
+  `must_hit` is `DisplaySignText` alone for now: `PrintPlayerName` is not yet a
+  label. **Add it to `must_hit` in Stage 3** — at that point this scenario also
+  proves the restored label is reached.

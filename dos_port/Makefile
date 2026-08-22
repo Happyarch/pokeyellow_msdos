@@ -1120,6 +1120,17 @@ SIGNTEXT_X   ?= 8
 SIGNTEXT_DIR ?= SPRITE_FACING_LEFT
 NASMFLAGS += -D SIGNTEXT_MAP=$(SIGNTEXT_MAP) -D SIGNTEXT_Y=$(SIGNTEXT_Y) \
              -D SIGNTEXT_X=$(SIGNTEXT_X) -D SIGNTEXT_DIR=$(SIGNTEXT_DIR)
+# DEBUG_SIGNTEXT_HOUSE is an ID SELECTOR, nothing more. It changes no behaviour —
+# the coords above already do that — and exists because two golden scenarios cannot
+# share one `port_entry_gate`: assets/scenario_registry.inc is a %ifdef chain keyed on
+# the gate, so a second scenario declaring DEBUG_SIGNTEXT would take over
+# GBSTATE_SCENARIO for sign_pallet as well. Defining a distinct symbol gives the
+# sign_pallet_house golden (the <PLAYER>-substitution text gate) its own id while
+# reusing the same harness. Ordering is automatic: the registry sorts gates by
+# build-flag count descending, so the 5-flag house variant is tested first.
+ifdef DEBUG_SIGNTEXT_HOUSE
+NASMFLAGS += -D DEBUG_SIGNTEXT_HOUSE
+endif
 # The Pallet Town sign's stream is "PALLET TOWN <line> Shades of your <cont> journey
 # await!", and <cont> ($55) is a WAITING command (it scrolls, then blocks on A/B) —
 # a headless run with no keyboard parks there forever. AUTOKEY answers it, exactly as
