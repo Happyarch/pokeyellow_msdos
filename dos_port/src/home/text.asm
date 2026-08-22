@@ -821,7 +821,7 @@ PlaceNextChar:
 .handle_pkmn:
     ; <PKMN> ($4A): prints "PK MN" glyphs ($E1,$E2)
     push eax
-    mov eax, str_pkmn
+    mov eax, PlacePKMNText
     call place_flat_str
     pop eax
     jmp .advance
@@ -930,7 +930,7 @@ PlaceNextChar:
     jmp .battler_copy
 .battler_enemy:
     push eax
-    mov eax, str_enemy              ; "Enemy " (flat DS prefix)
+    mov eax, EnemyText              ; "Enemy " (flat DS prefix)
     call place_flat_str             ; writes glyphs at [ebp+esi], advances ESI
     pop eax
     mov edx, wEnemyMonNick
@@ -952,7 +952,7 @@ PlaceNextChar:
 .handle_poke:
     ; '#' ($54): prints "POKe"
     push eax
-    mov eax, str_poke
+    mov eax, PlacePOKeText
     call place_flat_str
     pop eax
     jmp .advance
@@ -970,7 +970,7 @@ PlaceNextChar:
 .handle_dots6:
     ; <......> ($56): prints "......"
     push eax
-    mov eax, str_dots6
+    mov eax, SixDotsCharText
     call place_flat_str
     pop eax
     jmp .advance
@@ -1007,28 +1007,28 @@ PlaceNextChar:
 
 .handle_pc:
     push eax
-    mov eax, str_pc
+    mov eax, PCCharText
     call place_flat_str
     pop eax
     jmp .advance
 
 .handle_tm:
     push eax
-    mov eax, str_tm
+    mov eax, TMCharText
     call place_flat_str
     pop eax
     jmp .advance
 
 .handle_trainer:
     push eax
-    mov eax, str_trainer
+    mov eax, TrainerCharText
     call place_flat_str
     pop eax
     jmp .advance
 
 .handle_rocket:
     push eax
-    mov eax, str_rocket
+    mov eax, RocketCharText
     call place_flat_str
     pop eax
     jmp .advance
