@@ -122,34 +122,29 @@ sources" (Makefile:2949). Standard `.text/.data/.bss` only ⇒ no `link.ld`
 change (say so in the commit message so nobody "fixes" it). CLI flags parse in
 `boot/entry.asm:parse_cmdline` beside `/NOSOUND`.
 
-### Remote-play trade audio — the two-GB "duet" (maintainer, 2026-08-22)
+### Remote-play trade audio — investigated, NO provision needed (2026-08-22)
 
-The trade sequence (only — not battles, maintainer-confirmed) splits its audio
-across the two machines: `InternalClockTradeAnim` / `ExternalClockTradeAnim`
-run role-MIRRORED animation sequences, each side playing its own SFX/cries at
-its own animation points (your mon exits screen-left on one GB while entering
-screen-right on the other). Two machines side by side — real null-modem
-hardware, or two DOSBox-X instances in one room — produce the intended spatial
-call-and-response for free, so the blind port is correct there. On remote
-transports (IPX across a LAN, TCP, or a nullmodem tunnel between distant
-hosts) each player would hear only their half.
+Raised as a possible edge case (a cross-GB "duet" during the trade sequence
+that remote IPX/TCP players would each half-hear), investigated same day,
+and RESOLVED AS A NON-ISSUE (maintainer, 2026-08-22) — recorded so it is not
+re-litigated:
 
-Measured basis (2026-08-21 pret grep): the Cable Club map MUSIC itself is NOT
-role-split — `data/maps/songs.asm` gives TRADE_CENTER and COLOSSEUM the same
-`MUSIC_CELADON`, and nothing under `audio/` reads `hSerialConnectionStatus` —
-so the duet is an SFX/animation phenomenon, not a channel-partitioned score.
+- The trade sequence's music is one complete track played in full on EACH
+  machine: `engine/link/cable_club.asm:836-840` starts `MUSIC_SAFARI_ZONE`
+  (the track unused in the Safari Zone itself — the same music the evolution
+  scene uses) locally on both sides. No channel partitioning.
+- The Cable Club map music is likewise identical both sides
+  (`data/maps/songs.asm`: TRADE_CENTER and COLOSSEUM both `MUSIC_CELADON`),
+  and nothing under pret `audio/` reads `hSerialConnectionStatus`.
+- The only per-side asymmetry is the role-MIRRORED trade animations
+  (`InternalClockTradeAnim` / `ExternalClockTradeAnim`) playing their own
+  SFX/cries at their own animation points — which is a complete, coherent
+  soundscape for each player standalone, so remote play loses nothing a
+  player would miss. Battles have no per-side audio asymmetry at all.
 
-Provision (Stage 3): the trade animation is already frame-deterministic and
-serial-silent between sync points, so the peer's audio cues are DERIVABLE
-from shared state — each side locally schedules the peer half's SFX/cries at
-the mirrored animation points. No wire traffic, no cross-machine audio sync
-(each machine renders the full two-sided soundscape locally). Where both
-halves would collide on the 4 GB channels, route the peer part through the
-existing beyond-4-channel rendering (the OPL3 enhancement-channel pipeline);
-a full second virtual-APU bank is the fallback only if a genuinely
-channel-partitioned piece is ever identified. Gate the behavior on the
-transport being remote (or a config flag), defaulting local/serial to the
-faithful one-sided rendering.
+No extended APU, second channel bank, or peer-cue scheduling is required.
+If a genuinely channel-partitioned piece is ever identified, the fallback
+sketch lives in this section's git history (c86733f).
 
 ### Session protocol (port-owned, below the line)
 
@@ -351,10 +346,6 @@ blocks in `src/engine/menus/naming_screen.asm`.
       + its `WaitForTextScrollButtonPress` poll hook)
 - [ ] Translate `engine/movie/trade.asm` (retire the core_stubs trade-anim
       stubs)
-- [ ] Remote-transport duet audio: schedule the peer half's trade-anim
-      SFX/cries locally at the mirrored animation points (see "Remote-play
-      trade audio" above); gated on remote transport / config flag, faithful
-      one-sided rendering on local serial
 - [ ] Two-instance scripted trade: `.dsv` postconditions (byte-identical
       44-byte structs incl. offset 7 per the Gen-2 rule, OT/ID swap, party
       counts), cancel ($F) and re-trade paths
