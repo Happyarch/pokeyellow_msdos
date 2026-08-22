@@ -436,6 +436,15 @@ blocks in `src/engine/menus/naming_screen.asm`.
       receptionist verified present by value, walked-through OBJ residue
       $60-$7F, MAP_BORDER view-pointer). SCOPE: the timeout path only —
       the connected path needs a peer and is covered by linkcheck.sh
+- [x] Stage 2 close-out battery 2026-08-22: `fidelity-serial` core 16/16
+      PASS (after `3222bbd` + the synchronized-photograph commit) and
+      `fidelity-full-serial` 90/90 PASS, 0 FAIL, exit 0 — the whole
+      registry including the new cable_club_nolink (this VM uses the
+      serial tiers per the maintainer's standing instruction). Zero
+      single-player drift from the whole Stage 2 net layer. The fork's
+      NMDBG instrumentation is pushed on Happyarch/dosbox-x `mcp-debug`
+      (`0eff618fd`) and the submodule pointer tracks it (maintainer
+      authorization, this session)
 
 ### Stage 3 — Trade Center
 - [ ] Complete `src/engine/link/cable_club.asm` to all 23 labels
