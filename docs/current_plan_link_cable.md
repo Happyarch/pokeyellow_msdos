@@ -392,12 +392,13 @@ blocks in `src/engine/menus/naming_screen.asm`.
       the ceiling for runs that never reach the menu. The fork's NMDBG
       1 Hz nullmodem heartbeat (rx_state/gather-buffer/byte counters) is
       kept for future transport debugging — Stage 3 blocks and the IPX/TCP
-      transports will want it. MAINTAINER NOTE: that instrumentation is a
-      LOCAL uncommitted diff in the `dos_port/tools/dosbox-x` submodule
-      working tree only — nothing was pushed to Happyarch/dosbox-x (not
-      authorized) and the submodule pointer in this repo is unchanged;
-      `tools/build_dosbox_mcp.sh` rsyncs the working tree, so rebuilds pick
-      it up as-is. Independently re-verified 2026-08-22 (second session):
+      transports will want it. The instrumentation is committed on the
+      fork's `mcp-debug` branch (`0eff618fd`, pushed to Happyarch/dosbox-x
+      2026-08-22 with maintainer authorization — it began as a local-only
+      diff) and the submodule pointer here tracks it, so a fresh clone can
+      rebuild the C_MODEM fork with `tools/build_dosbox_mcp.sh` and run
+      linkcheck anywhere. Independently re-verified 2026-08-22 (second
+      session):
       3/3 consecutive linkcheck.sh runs green (662/663/662 LINKLOG records,
       both directions matching, zero desyncs, both sides in LinkMenu and
       NS_ESTABLISHED at dump)
