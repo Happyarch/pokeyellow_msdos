@@ -62,12 +62,17 @@ PAD_ALL             equ 0xFF
 STANDING_TILE_OFF   equ wTileMap + PLAYER_STANDING_ROW * SCREEN_TILES_W + PLAYER_STANDING_COL
 
 global HandleLedges
+global LoadHoppingShadowOAM
+; LedgeHoppingShadow{,End} / LedgeHoppingShadowOAM{,End} are defined in the
+; generated assets/ledge_shadow.inc below and are deliberately NOT `global` —
+; declaring them here would make this file a second provider of a label the .inc
+; already defines (lint_pret_labels `local_shadow`). Same convention as
+; EmotionBubbles in emotion_bubbles.asm.
 extern StartSimulatingJoypadStates    ; src/home/map_objects.asm (linked)
 extern PlaySound                      ; src/home/audio.asm (real gateway, linked)
-; LoadHoppingShadowOAM stub lives in overworld_stubs.asm (stub convention: a stub never
-; sits in the file mirroring its own pret source). Retire the stub + restore the real
-; body here once PrepareOAMData models shadow-OAM slots. See overworld_stubs.asm.
-extern LoadHoppingShadowOAM           ; src/engine/overworld/overworld_stubs.asm (ret-stub, linked)
+extern CopyVideoDataDouble            ; src/home/copy2.asm (1bpp -> 2bpp VRAM expand)
+extern GBScreenToCanvasXY             ; src/engine/gfx/sprite_oam.asm — GB-screen -> canvas
+extern spr_dos_sy, spr_dos_sx, spr_oam_valid  ; src/ppu/ppu.asm
 
 section .text
 
@@ -175,6 +180,97 @@ HandleLedges:
     call PlaySound                                  ; pret: ld a,SFX_LEDGE / call PlaySound
 .ret:
     ret
+
+; ---------------------------------------------------------------------------
+; LoadHoppingShadowOAM — pret engine/overworld/ledges.asm:LoadHoppingShadowOAM.
+;
+;     ld hl, vChars1 tile $7f
+;     ld de, LedgeHoppingShadow
+;     lb bc, BANK(LedgeHoppingShadow), (LedgeHoppingShadowEnd - LedgeHoppingShadow) / TILE_1BPP_SIZE
+;     call CopyVideoDataDouble
+;     ld hl, LedgeHoppingShadowOAM
+;     ld de, wShadowOAMSprite36
+;     ld bc, LedgeHoppingShadowOAMEnd - LedgeHoppingShadowOAM
+;     call CopyData
+;     ld a, $a0
+;     ld [wShadowOAMSprite38YCoord], a
+;     ld [wShadowOAMSprite39YCoord], a
+;
+; REPLACED THE RET-STUB 2026-08-22. The stub's justification was that "the port's
+; OAM path models sprites differently and has no dedicated shadow slots yet" —
+; that premise is false: PrepareOAMData (src/engine/gfx/sprite_oam.asm) already
+; carries pret's `.clearUnused` special case that STOPS at wShadowOAMSprite36
+; ($90) while BIT_LEDGE_OR_FISHING is set, precisely so entries 36-39 survive a
+; hop. The four slots were being preserved for a shadow nobody wrote.
+;
+; wShadowOAMSprite36/38/39 have no symbols in gb_memmap.inc; they are the standard
+; 4-bytes-per-entry offsets from wShadowOAM, written the same way PrepareOAMData
+; writes its own `0x90` low-byte comparison.
+;
+; DEVIATION{class=HAL; pret=engine/overworld/ledges.asm:LoadHoppingShadowOAM; behavior=after the two faithful shadow-OAM writes the port additionally projects each entry onto the widescreen canvas through GBScreenToCanvasXY into spr_dos_sy and spr_dos_sx, grows spr_oam_valid to cover index 37 without lowering it, and mirrors both entries into GB_OAM at fe00; evidence=render_sprites in src/ppu/ppu.asm positions OBJ exclusively from spr_dos_sy and spr_dos_sx gated by the spr_oam_valid count and reads tile and attr from GB_OAM never from the shadow bytes, so a raw shadow-OAM write draws nothing at all - the identical publish and mirror is what WriteOAMBlock in src/home/oam.asm does and why the trainer-sight emotion bubble needed it, and on hardware the unconditional VBlank OAM DMA plus the hardware OBJ scan give pret both for free; lifetime=permanent, the OBJ side of the software video HAL}
+; ---------------------------------------------------------------------------
+LoadHoppingShadowOAM:
+    push eax
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
+
+    ; 1bpp shadow tile -> vChars1 tile $7f. The OAM records name tile $ff, which is
+    ; the same VRAM address seen through the $8000-based OBJ tile index.
+    ; CopyVideoDataDouble arms g_tilecache_dirty itself.
+    mov esi, GB_VFONT + 0x7F * TILE_SIZE     ; ld hl, vChars1 tile $7f
+    mov edx, LedgeHoppingShadow              ; ld de, LedgeHoppingShadow (flat .data label)
+    mov bh, 0                                ; BANK(LedgeHoppingShadow) — flat no-op
+    mov bl, LEDGE_SHADOW_TILES               ; (End - Start) / TILE_1BPP_SIZE
+    call CopyVideoDataDouble
+
+    ; The two OAM records -> wShadowOAMSprite36. pret uses CopyData, whose port
+    ; contract takes BOTH pointers as EBP-relative GB offsets; the source here is a
+    ; flat .data label, so the copy is written out rather than routed through it.
+    mov esi, LedgeHoppingShadowOAM
+    lea edi, [ebp + wShadowOAM + 36 * 4]     ; wShadowOAMSprite36
+    mov ecx, LedgeHoppingShadowOAMEnd - LedgeHoppingShadowOAM
+    rep movsb
+
+    mov byte [ebp + wShadowOAM + 38 * 4], 0xA0  ; ld [wShadowOAMSprite38YCoord], a
+    mov byte [ebp + wShadowOAM + 39 * 4], 0xA0  ; ld [wShadowOAMSprite39YCoord], a
+
+    ; --- port-only publish (see the DEVIATION above) -------------------------
+    ; Entries 36 and 37 only; 38/39 were just parked off-screen at Y=$a0 and are
+    ; not published, so render_sprites never reaches them through a stale
+    ; spr_dos position (PrepareOAMData's .clearUnused stops at 36 during a hop).
+    mov ecx, 36
+.publish:
+    mov bh, [ebp + wShadowOAM + ecx * 4]     ; OAM-byte-convention Y
+    mov bl, [ebp + wShadowOAM + ecx * 4 + 1] ; OAM-byte-convention X
+    mov eax, [ebp + wShadowOAM + ecx * 4]    ; the 4 bytes (Y, X, tile, attr)
+    mov [ebp + GB_OAM + ecx * 4], eax        ; mirror into $FE00 (tile/attr source)
+    call GBScreenToCanvasXY                  ; -> EAX = canvas Y, EDX = canvas X
+    mov [spr_dos_sy + ecx * 4], eax
+    mov [spr_dos_sx + ecx * 4], edx
+    inc ecx
+    cmp ecx, 38
+    jb .publish
+    ; grow, never lower — another publisher may already have raised the count
+    cmp dword [spr_oam_valid], 38
+    jae .done
+    mov dword [spr_oam_valid], 38
+.done:
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    ret
+
+; Tier-1 generated data: LedgeHoppingShadow{,End} (pret gfx/overworld/shadow.1bpp)
+; and LedgeHoppingShadowOAM{,End} (pret's two dbsprite records).
+section .data
+%include "assets/ledge_shadow.inc"
+section .text
 
 ; ---------------------------------------------------------------------------
 ; HandleMidJump — pret home/overworld.asm:HandleMidJump.

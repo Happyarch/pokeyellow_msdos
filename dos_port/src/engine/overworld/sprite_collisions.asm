@@ -19,14 +19,14 @@
 ; mirror is in pret order. The swap is inert — SetSpriteCollisionValues ends in
 ; `ret` on both arms, so nothing fell through into it.
 ;
-; THE OTHER TWO pret LABELS ARE `missing` BY DESIGN, NOT PENDING:
-;   Func_4d0a               INLINED into DetectCollisionBetweenSprites
-;   SpriteCollisionBitTable INLINED into DetectCollisionBetweenSprites
-; The port's DetectCollisionBetweenSprites is a bespoke native rewrite that keeps
-; its thresholds in stack slots and DH rather than pret's HRAM temps, so neither
-; has a callable/addressable boundary here; extracting them would add an
-; unfaithful seam rather than mirror pret. Both are documented at their inline
-; sites below (search "Func_4d0a" and "SpriteCollisionBitTable").
+; It now holds ALL SIX, still in pret's order — Func_4d0a and
+; SpriteCollisionBitTable were de-inlined 2026-08-22. The header used to argue
+; they were "`missing` by design, not pending" because DetectCollisionBetweenSprites
+; is a native rewrite with no callable boundary for them; that conflated the two.
+; SpriteCollisionBitTable is pure data and had no boundary problem at all (the
+; inline recomputed the same sixteen values with a shift), and Func_4d0a's boundary
+; exists in pret, so the port carries it with the operands passed in registers
+; instead of pret's HRAM temps — see the DEVIATION on the routine.
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=BX), D=DH, E=DL (DE=EDX), HL=ESI, EBP=GB base.
 ;
@@ -37,6 +37,8 @@ bits 32
 %include "gb_memmap.inc"
 
 global _UpdateSprites
+global Func_4d0a
+global SpriteCollisionBitTable
 global UpdateNonPlayerSprite
 global DetectCollisionBetweenSprites
 
@@ -308,32 +310,16 @@ DetectCollisionBetweenSprites:
     jnc   .next_j
 
 .collision:
-    ; pret: engine/overworld/sprite_collisions.asm:Func_4d0a — INLINED (documented, not
-    ; de-folded). pret factors the slot-15 (Pikachu) collision-direction pick into a separate
-    ; Func_4d0a called at its `cp $f` test. This DetectCollisionBetweenSprites is a bespoke
-    ; native rewrite whose thresholds live in stack slots ([esp+8]=thr_i_x, [esp+4]=thr_i_y)
-    ; and DH, not pret's HRAM temps — so Func_4d0a has no callable boundary here; extracting it
-    ; would add an unfaithful call seam rather than mirror pret. The .pika_* block below IS
-    ; Func_4d0a's body.
     ; --- Pikachu special case: i==player (slot 0) AND j==pikachu (slot 15) ---
+    ; pret reaches this at its `ldh a,[hCollidingSpriteOffset] / cp $f / call Func_4d0a`.
     cmp   esi, wSpriteStateData1
     jne   .standard_col
     mov   byte [ebp + W_D433], 0
     cmp   dl, 15
     jne   .standard_col
-    ; Pikachu path: set wd433, skip COLLISIONDATA update
-    mov   al, byte [esp + 8]   ; thr_i_x
-    mov   bl, byte [esp + 4]   ; thr_i_y
-    cmp   bl, al               ; thr_i_y vs thr_i_x
-    jc    .pika_ybits          ; (label misnomer: this branch selects the X bits)
-    mov   bl, 0x0C             ; thr_i_y >= thr_i_x: select DH[3:2] = Y direction
-    jmp   .pika_apply
-.pika_ybits:
-    mov   bl, 0x03             ; thr_i_y < thr_i_x:  select DH[1:0] = X direction
-.pika_apply:
-    mov   al, dh
-    and   al, bl
-    mov   byte [ebp + W_D433], al
+    mov   al, byte [esp + 8]   ; thr_i_x  (pret hCollidingSpriteTempXValue)
+    mov   bl, byte [esp + 4]   ; thr_i_y  (pret hCollidingSpriteTempYValue)
+    call  Func_4d0a
     jmp   .update_bitmap
 
 .standard_col:
@@ -354,22 +340,18 @@ DetectCollisionBetweenSprites:
     mov   byte [ebp + esi + SPRITESTATEDATA1_COLLISIONDATA], al
 
 .update_bitmap:
-    ; Set bit j in the 16-bit collision bitmap at [0x0E:0x0F] (MSB:LSB).
-    ; Slots 0–7 → bit in LO byte (0x0F); slots 8–15 → bit in HI byte (0x0E).
-    ; pret: engine/overworld/sprite_collisions.asm:SpriteCollisionBitTable (the
-    ; 16-entry `bigdw 1 << n` LUT indexed by hCollidingSpriteOffset) — INLINED
-    ; here as `1 << (j & 7)` into the LO/HI byte, so the data label has no port
-    ; body (same bespoke-DetectCollisionBetweenSprites rewrite as Func_4d0a).
-    mov   cl, dl
-    and   cl, 0x07
-    mov   al, 1
-    shl   al, cl               ; AL = 1 << (j & 7)
-    test  dl, 0x08
-    jnz   .bit_hi
-    or    byte [ebp + esi + SPRITESTATEDATA1_COLLISIONBITMAP_LO], al
-    jmp   .next_j
-.bit_hi:
+    ; Set bit j in the 16-bit collision bitmap at [0x0E:0x0F] (MSB:LSB), through
+    ; pret's own LUT rather than recomputing the mask:
+    ;   ld de, SpriteCollisionBitTable / add a / add e / ld e,a ...
+    ;   ld a,[de] / or [hl] / ld [hli],a      ; big-endian HIGH byte -> $0E
+    ;   inc de / ld a,[de] / or [hl] / ld [hl],a  ; LOW byte -> $0F
+    ; The inline `1 << (j & 7)` + hi/lo select that stood here computed the same
+    ; sixteen values, but it left the pret data label with no port body.
+    movzx ecx, dl
+    mov   al, [SpriteCollisionBitTable + ecx*2]      ; big-endian HIGH byte
     or    byte [ebp + esi + SPRITESTATEDATA1_COLLISIONBITMAP_HI], al
+    mov   al, [SpriteCollisionBitTable + ecx*2 + 1]  ; big-endian LOW byte
+    or    byte [ebp + esi + SPRITESTATEDATA1_COLLISIONBITMAP_LO], al
 
 .next_j:
     inc   dl
@@ -383,6 +365,40 @@ DetectCollisionBetweenSprites:
     pop   edx
     pop   ecx
     pop   ebx
+    ret
+
+; ---------------------------------------------------------------------------
+; Func_4d0a — pret engine/overworld/sprite_collisions.asm:Func_4d0a (:341-359).
+;
+; The slot-15 (Pikachu) collision-direction pick: choose the DH bit pair belonging
+; to whichever axis threshold is larger, and store it to wd433 instead of OR-ing it
+; into the sprite's COLLISIONDATA.
+;
+; This was INLINED into DetectCollisionBetweenSprites, with a header note arguing
+; that "extracting it would add an unfaithful call seam rather than mirror pret".
+; That reasoning is backwards — pret HAS the seam, and the note left the pret label
+; reporting `missing`. What the port genuinely cannot mirror is pret's operand
+; SOURCE: the port's DetectCollisionBetweenSprites keeps its thresholds in stack
+; slots and DH rather than pret's hCollidingSpriteTempXValue / ...YValue HRAM
+; bytes, so those two values are passed in registers here.
+;
+; DEVIATION{class=projection; pret=engine/overworld/sprite_collisions.asm:Func_4d0a; behavior=the two axis thresholds arrive in AL and BL instead of being read from hCollidingSpriteTempXValue and hCollidingSpriteTempYValue, and pret two inc l pointer steps are absent; evidence=the port DetectCollisionBetweenSprites is a native rewrite that holds the thresholds in stack slots rather than the HRAM temps and addresses sprite fields by structure offset rather than by walking an HL cursor, so there is no HRAM value to read and no cursor to advance; lifetime=permanent while DetectCollisionBetweenSprites stays a native rewrite}
+;
+; In:  AL = thr_i_x (pret hCollidingSpriteTempXValue), BL = thr_i_y
+;      (pret hCollidingSpriteTempYValue), DH = the four direction bits.
+; Out: [W_D433] = the selected bit pair. Clobbers AL, BL.
+; ---------------------------------------------------------------------------
+Func_4d0a:
+    cmp   bl, al               ; cp b  (thr_i_y vs thr_i_x)
+    jc    .xbits               ; jr c, .asm_4d17
+    mov   bl, 0x0C             ; thr_i_y >= thr_i_x: select DH[3:2] = Y direction
+    jmp   .apply
+.xbits:
+    mov   bl, 0x03             ; thr_i_y < thr_i_x:  select DH[1:0] = X direction
+.apply:
+    mov   al, dh               ; ld a, c
+    and   al, bl               ; and b
+    mov   byte [ebp + W_D433], al  ; ld [wd433], a
     ret
 
 ; ---------------------------------------------------------------------------
@@ -407,3 +423,24 @@ SetSpriteCollisionValues:
     xor  bl, bl
     xor  cl, cl
     ret
+
+; ---------------------------------------------------------------------------
+; SpriteCollisionBitTable — pret engine/overworld/sprite_collisions.asm:
+;
+;     SpriteCollisionBitTable:
+;     FOR n, $10
+;         bigdw 1 << n
+;     ENDR
+;
+; Sixteen BIG-ENDIAN words, one per sprite slot, indexed by the colliding slot
+; number. The high byte lands in SPRITESTATEDATA1_COLLISIONBITMAP_HI ($0E) and the
+; low byte in ..._LO ($0F), which is why the order is big-endian and must stay so
+; (CLAUDE.md, "Data is big-endian").
+; ---------------------------------------------------------------------------
+section .data
+SpriteCollisionBitTable:
+%assign n 0
+%rep 16
+    db (1 << n) >> 8, (1 << n) & 0xFF   ; bigdw 1 << n
+%assign n n+1
+%endrep

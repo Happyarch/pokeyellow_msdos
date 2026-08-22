@@ -58,7 +58,8 @@ extern hide_window           ; src/ppu/ppu.asm — empty the window list (count=
 ; pret wNumSprites (ram/wram.asm) — number of sprites on the current map. Read by
 ; src/home/text_script.asm; not in this file's include chain, so define it here
 ; (guarded; gb_memmap.inc carries the canonical copy at the same value).
-extern InitToggleableObjectFlags          ; src/engine/overworld/map_sprites.asm
+extern InitializeToggleableObjectsFlags   ; src/engine/overworld/toggleable_objects.asm
+extern IsPlayerStandingOnWarp             ; src/engine/overworld/player_state.asm
 extern text_engine_init                   ; src/home/text.asm
                                     ; CF=1 + [hTextID]=sign id or sprite slot
 ; Hidden-event / bookshelf / card-key A-press dispatch (checked before signs/sprites).
@@ -233,7 +234,6 @@ global EnterMapBoot
 ; IsSpriteOrSignInFrontOfPlayer (complete: sign + counter + sprite scan) and
 ; IsSpriteInFrontOfPlayer / IsSpriteInFrontOfPlayer2 moved to their pret mirror,
 ; src/home/overworld.asm (menu-intro review + R-002 retirement, 2026-07-23).
-global CheckWarpTile
 global LoadDestinationMapData
 ; LoadPlayerSpriteGraphics moved to engine/overworld/player_gfx.asm (wild-live
 ; promotion) — the scaffold here is retired; player_sprite is exported to it.
@@ -359,7 +359,7 @@ EnterMapBoot:
     ; the title screen; SKIP_TITLE bypasses that, leaving the sentinel as garbage so
     ; any CHAR_DONE-terminated dialog ran off into a bogus TX_BOX → page fault.
     call text_engine_init
-    call InitToggleableObjectFlags     ; seed global event/visibility flags to defaults
+    call InitializeToggleableObjectsFlags  ; seed global event/visibility flags to defaults
     ; EnterMap now lives in its pret mirror src/home/overworld.asm, so the
     ; original fallthrough becomes an explicit tail jump (same semantics,
     ; same stack depth -- EnterMap never returns to EnterMapBoot).
@@ -845,12 +845,11 @@ SeamReseatView:
     ; Seed BIT_STANDING_ON_WARP exactly as LoadDestinationMapData does, or a spawn
     ; that lands on a warp tile (every map-edge gate spawn does) can never take
     ; the collision-exit path — an artifact that would make the harness disagree
-    ; with the live game.
+    ; with the live game. IsPlayerStandingOnWarp is pret's own routine for this
+    ; (home/overworld.asm calls it from EnterMap and MapEntryAfterBattle) and sets
+    ; the bit itself, so there is no CF to branch on.
     and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP)
-    call CheckWarpTile
-    jnc .noSpawnWarp
-    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_WARP)
-.noSpawnWarp:
+    call IsPlayerStandingOnWarp
     pop ecx
     pop ebx
     pop eax
@@ -937,71 +936,14 @@ h_load_sprite_temp1: db 0    ; pret hLoadSpriteTemp1
 h_load_sprite_temp2: db 0    ; pret hLoadSpriteTemp2
 
 section .text
-; ---------------------------------------------------------------------------
-; CheckWarpTile — scan wWarpEntries for a player coord match.
-; Returns CF=1 if a warp matches; BL = resolved destination map ID;
-; wDestinationWarpID = 0-based warp index in the destination map.
-; Returns CF=0 if no match.
-; Pret ref: home/overworld.asm:CheckForWarpTile (approach)
-; ---------------------------------------------------------------------------
-; pret RAM symbol gb_memmap.inc does not carry. Address is rgblink's, read from
-; pokeyellow.sym (00:d73a) — not inferred. Defined locally because the transpiled
-; elevator scripts define it bare, so a central definition would collide.
-
-CheckWarpTile:
-    push eax
-    push ecx
-    push esi
-
-    movzx ecx, byte [ebp + wNumberOfWarps]
-    test ecx, ecx
-    jz .none
-    mov al, [ebp + wYCoord]
-    mov ah, [ebp + wXCoord]
-    lea esi, [ebp + wWarpEntries]
-.loop:
-    cmp al, [esi]               ; Y match?
-    jne .next
-    cmp ah, [esi+1]             ; X match?
-    jne .next
-    mov bl, [esi+2]             ; dest_warp_id (0-based index in dest map)
-    mov [ebp + wDestinationWarpID], bl
-    mov bl, [esi+3]             ; dest_map_id (0xFF = LAST_MAP)
-    ; pret WarpFound1 (home/overworld.asm:452): `ldh [hWarpDestinationMap], a` records
-    ; the RAW byte before any LAST_MAP resolution, and WarpFound2 branches on it to pick
-    ; the Pikachu spawn setter. The port resolves 0xFF here, so record it first or the
-    ; .goBackOutside case becomes indistinguishable from a warp naming wLastMap outright.
-    mov [ebp + hWarpDestinationMap], bl
-    ; pret WarpFound2 (home/overworld.asm:456-458):
-    ;   ld a, [wNumberOfWarps] / sub c / ld [wWarpedFromWhichWarp], a
-    ; pret does this in WarpFound2, but the port's warp scan lives HERE and owns the
-    ; counter, so the store belongs here. ECX is exactly pret's `c`: it is decremented
-    ; only on a NON-match (.next), so on a match it still counts the current entry.
-    ; The three elevator scripts (celadon_mart, rocket_hideout, silph_co) READ this;
-    ; before this store nothing in the port ever wrote it. AL/AH held the player's
-    ; Y/X for the scan and are dead here (EAX is restored by the pop at .found).
-    mov al, [ebp + wNumberOfWarps]
-    sub al, cl
-    mov [ebp + wWarpedFromWhichWarp], al
-    cmp bl, 0xFF
-    jne .found
-    mov bl, [ebp + wLastMap]  ; resolve LAST_MAP to the previous map
-.found:
-    pop esi
-    pop ecx
-    pop eax
-    stc
-    ret
-.next:
-    add esi, 4
-    dec ecx
-    jnz .loop
-.none:
-    pop esi
-    pop ecx
-    pop eax
-    clc
-    ret
+; CheckWarpTile — DELETED 2026-08-22. It was the port's merge of pret's two warp
+; scans (CheckWarpsNoCollision / CheckWarpsCollision) plus WarpFound1's entry read,
+; under a port-local name, which is why all seven of those pret labels reported
+; `missing`. The faithful routines now live at their pret mirror,
+; src/home/overworld.asm; the two spawn-detection callers that used to borrow this
+; helper for its CF now call pret's own IsPlayerStandingOnWarp
+; (src/engine/overworld/player_state.asm), which is what pret uses for exactly that
+; job (home/overworld.asm:EnterMap and :MapEntryAfterBattle).
 
 ; ---------------------------------------------------------------------------
 ; LoadDestinationMapData — load the destination map after a warp transition.
@@ -1087,7 +1029,8 @@ LoadDestinationMapData:
     call LoadTilesetTilePatternData
 
     ; Resolve spawn coords from the destination map's warp table.
-    ; wDestinationWarpID is the 0-based index set by CheckWarpTile.
+    ; wDestinationWarpID is the 0-based index set by the warp scan (WarpFound1 /
+    ; CheckWarpsCollision, src/home/overworld.asm) or by IsPlayerStandingOnWarp.
     ; Factored into the shared LoadDestinationWarpPosition (pret name; see its
     ; definition above, right after LoadTilesetHeader) so this always-run warp
     ; arrival resolution and LoadTilesetHeader's pret-faithful, gated tail (which
@@ -1134,9 +1077,9 @@ LoadDestinationMapData:
     ; BIT_STANDING_ON_WARP. Required so the collision-exit path fires when the
     ; scripted (or manual) south-step hits the building exit on the next idle frame.
     ; Mirrors pret: IsPlayerStandingOnWarp called from EnterMap.
-    ; CheckWarpTile uses the wWarpEntries now loaded for the destination map,
-    ; and overwrites BL with the resolved back-destination — safe since EBX is
-    ; caller-saved (pushed at the top of this routine).
+    ; IsPlayerStandingOnWarp scans the wWarpEntries now loaded for the destination
+    ; map and sets the bit itself. It clobbers AL/BL/ESI (pret's a/c/hl) — safe
+    ; here, EBX and ESI are pushed at the top of this routine.
     ;
     ; DIVERGENCE (double map load): pret's WarpFound2 does not call LoadMapHeader —
     ; it falls into EnterMap, which loads the map exactly once. The port front-loads
@@ -1144,8 +1087,8 @@ LoadDestinationMapData:
     ; LoadMapHeader → LoadTilesetHeader runs a SECOND time. LoadTilesetHeader's
     ; faithful pret tail (engine/overworld/tilesets.asm:21-47) re-derives the spawn
     ; coords with `call LoadDestinationWarpPosition` whenever the tileset changed and
-    ; wDestinationWarpID != $FF. CheckWarpTile below overwrites wDestinationWarpID
-    ; with the ARRIVAL tile's outbound warp id, so that second pass resolved a
+    ; wDestinationWarpID != $FF. IsPlayerStandingOnWarp below overwrites
+    ; wDestinationWarpID with the ARRIVAL tile's outbound warp id, so that second pass resolved a
     ; different warp entry: entering Viridian Forest from the south gate (warp 3,
     ; the bottom of the map) landed the player on warp 1 (the top) while the view
     ; pointer — already stored above — still pointed at warp 3. Player and camera
@@ -1154,10 +1097,7 @@ LoadDestinationMapData:
     ; Retire this save/restore when the front-loaded LoadMapHeader goes away.
     mov cl, [ebp + wDestinationWarpID]
     and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP)
-    call CheckWarpTile
-    jnc .no_spawn_warp
-    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_WARP)
-.no_spawn_warp:
+    call IsPlayerStandingOnWarp
     mov [ebp + wDestinationWarpID], cl
 
     ; Reset turn state: player spawns stopped, so the next press should turn

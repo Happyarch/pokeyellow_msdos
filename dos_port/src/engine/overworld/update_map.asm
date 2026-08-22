@@ -99,6 +99,8 @@ ReplaceTileBlock:
 ; ---------------------------------------------------------------------------
 ; RedrawMapView — repaint the visible map after a block mutation.
 ; pret: engine/overworld/update_map.asm:RedrawMapView (PROJ re-expression — see header).
+;
+; DEVIATION{class=HAL; pret=engine/overworld/update_map.asm:RedrawMapView; behavior=the staggered per-row REDRAW_ROW loop is replaced by one LoadCurrentMapView plus a decode-cache dirty and a single DelayFrame, so the CopyToRedrawRowOrColumnSrcTiles helper it calls has no port body and that pret label is absent; evidence=CopyToRedrawRowOrColumnSrcTiles only gathers one 2-row strip of wTileMap into wRedrawRowOrColumnSrcTiles for RedrawRowOrColumn to DMA into the 256x256 VRAM tilemap torus during the next VBlank, and the port has no torus - render_bg in src/ppu/ppu.asm composites the whole visible surface from wSurroundingTiles through tile_cache every frame - so there is no staging buffer to fill and no VBlank window to fill it for, see the header of this file and docs/plans/compositor_perf.md; lifetime=permanent, structural to the surface renderer}
 ; ---------------------------------------------------------------------------
 RedrawMapView:
     mov al, [ebp + wIsInBattle]

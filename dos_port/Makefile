@@ -4009,6 +4009,15 @@ assets/emotes.inc: ../gfx/emotes/shock.2bpp ../gfx/emotes/question.2bpp \
 
 src/engine/overworld/emotion_bubbles.o: assets/emotes.inc
 
+# Ledge-hop shadow sprite (1bpp passthrough of gfx/overworld/shadow.1bpp + pret's
+# two dbsprite OAM records) for LoadHoppingShadowOAM
+# (src/engine/overworld/ledges.asm pret mirror).
+assets/ledge_shadow.inc: ../gfx/overworld/shadow.1bpp \
+                         tools/generators/gen_ledge_shadow.py
+	python3 tools/generators/gen_ledge_shadow.py
+
+src/engine/overworld/ledges.o: assets/ledge_shadow.inc
+
 # Surfing Pikachu graphics and tilemaps (Tier-1 data from gen_surfing_pikachu.py)
 assets/surfing_pikachu.inc assets/surfing_pikachu_tilemaps.inc: ../gfx/surfing_pikachu/surfing_pikachu_1a.2bpp \
                             ../gfx/surfing_pikachu/surfing_pikachu_1b.2bpp \
@@ -4479,7 +4488,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/map_border_overrides.inc assets/badge_tiles.inc \
         assets/trainer_card_tiles.inc assets/trainer_card_strings.inc \
         assets/trainer_text.inc \
-        assets/party_menu_strings.inc assets/home_pokemon_strings.inc assets/emotes.inc \
+        assets/party_menu_strings.inc assets/home_pokemon_strings.inc assets/emotes.inc assets/ledge_shadow.inc \
         assets/options_strings.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/school_blackboard_text.inc assets/dex_entries.inc assets/sprite_sets.inc \
         assets/alphabets.inc assets/dakutens.inc assets/pikachu_text.inc assets/cinnabar_gym_quiz_text.inc assets/dex_entries.inc assets/sprite_sets.inc \

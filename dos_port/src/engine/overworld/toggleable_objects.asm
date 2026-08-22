@@ -33,12 +33,18 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"                  ; FLAG_SET / FLAG_RESET / FLAG_TEST
 %include "gb_macros.inc"
+%include "assets/event_constants.inc"        ; EVENT_* (DEBUG_OAK_EVENT harness)
+%include "events.inc"                        ; SetEvent
 
 %ifndef FIRST_ROUTE_MAP
 FIRST_ROUTE_MAP     equ 0x0C  ; constants/map_constants.asm (after UNUSED_MAP_0B)
 %endif
 
 global MarkTownVisitedAndLoadToggleableObjects
+global InitializeToggleableObjectsFlags
+global InitToggleableObjectFlags
+global IsToggleableHidden
+global g_toggleable_flags
 global ShowObject
 global ShowObject2
 global HideObject
@@ -47,8 +53,6 @@ global IsObjectHidden
 
 extern FlagAction              ; src/engine/flag_action.asm (ebp-relative flag bit-manip)
 extern UpdateSprites           ; src/home/update_sprites.asm
-extern g_toggleable_flags      ; src/engine/overworld/map_sprites.asm (flat .bss bit array)
-extern IsToggleableHidden      ; src/engine/overworld/map_sprites.asm (flat-model scan)
 
 section .text
 
@@ -164,3 +168,130 @@ IsObjectHidden:
 .store:
     mov [ebp + hIsToggleableObjectOff], al  ; ldh [hIsToggleableObjectOff], a
     ret
+
+; ---------------------------------------------------------------------------
+; InitializeToggleableObjectsFlags — pret engine/overworld/toggleable_objects.asm.
+;
+; NAME FORK CLOSED 2026-08-22. This routine was `InitToggleableObjectFlags` in
+; map_sprites.asm, so the pret label read `missing` and its only pret caller,
+; InitPlayerData2, tail-jumped to a ret-stub in overworld_stubs.asm instead of to
+; this body. It now carries pret's name (the port-local alias is kept alongside
+; per CLAUDE.md's "Preserve pret Labels" rule) and lives at its pret mirror.
+;
+; It is the FLATTENED-MODEL equivalent of pret's routine, not a line-for-line
+; translation of it — see this file's header. pret clears an ebp-relative
+; wToggleableObjectFlags bit array and then walks ToggleableObjectStates calling
+; ToggleableObjectFlagAction for every entry marked OFF; the port's default-hidden
+; bitmap is precomputed by tools/generators/gen_toggleable_objects.py, so the whole
+; walk collapses into one copy of toggleable_default_flags into g_toggleable_flags.
+;
+; DEVIATION{class=data-model; pret=engine/overworld/toggleable_objects.asm:InitializeToggleableObjectsFlags; behavior=the per-entry ToggleableObjectStates walk that sets a flag for every object marked OFF is replaced by a single copy of a precomputed default-hidden bitmap into the flat g_toggleable_flags array, and the routine additionally zeroes the wEventFlags region which pret does not touch here; evidence=the port precomputes each object global index at generation time in tools/generators/gen_toggleable_objects.py so there is no runtime pointer-difference divide to perform and no wToggleableObjectList to rebuild - see this file header - and the explicit wEventFlags clear exists because a DPMI allocation is not guaranteed zero-filled where a fresh cartridge WRAM effectively is; lifetime=permanent while the toggleable subsystem stays flat-model rather than pret ebp-relative}
+;
+; Called once at game start (EnterMap, before the first LoadMapData) so default-
+; hidden objects (e.g. Oak in Pallet Town) do not spawn.  Also clears the general
+; wEventFlags region — its new-game default is all-zero; explicit so a non-zeroed
+; DPMI allocation can't leak stale event bits.
+;
+; TODO-GLOBAL-EVENTS: when the save / script engine lands, move this to the real
+; new-game init and let scripts toggle g_toggleable_flags / wEventFlags at runtime.
+; All registers preserved.
+; ---------------------------------------------------------------------------
+InitializeToggleableObjectsFlags:
+InitToggleableObjectFlags:               ; port-local alias (pre-2026-08-22 name)
+    push eax
+    push ecx
+    push esi
+    push edi
+
+    ; Copy default-hidden bitmap into the persistent flag array.
+    mov esi, toggleable_default_flags   ; flat .data source
+    mov edi, g_toggleable_flags         ; flat .bss dest
+    mov ecx, TOGGLEABLE_FLAG_BYTES
+    rep movsb
+
+    ; Clear the general event-flag region (wEventFlags, NUM_EVENTS bits ≈ 0x140 B).
+    lea edi, [ebp + wEventFlags]
+    xor al, al
+    mov ecx, 0x140
+    rep stosb
+
+%ifdef DEBUG_OAK_EVENT
+    ; Test harness: force the event that PalletTownOakText gates on so the "set"
+    ; branch ("OAK: That was close!") shows instead of the default "Hey! Wait!".
+    SetEvent EVENT_GOT_POKEBALLS_FROM_OAK
+%endif
+
+    pop edi
+    pop esi
+    pop ecx
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; IsToggleableHidden — is the given object on the current map hidden by default?
+; Pret ref: engine/overworld/toggleable_objects.asm:IsObjectHidden.
+;
+; In:  AL = local object id (0-based slot index, = text_id).
+;      [EBP + wCurMap] = current map id.
+; Out: CF = 1 if the object is a toggleable that is currently flagged hidden.
+; Clobbers: AL only (EBX/ECX/EDX/ESI preserved for the InitMapSprites caller).
+; ---------------------------------------------------------------------------
+IsToggleableHidden:
+    push ebx
+    push ecx
+    push edx
+    push esi
+
+    movzx ebx, al                       ; BL = local object id to find
+    movzx eax, byte [ebp + wCurMap]
+    mov esi, [ToggleableMapPointers + eax*4]  ; flat ptr to this map's list (0 = none)
+    test esi, esi
+    jz .not_hidden
+
+.scan:
+    movzx eax, byte [esi]               ; runtime_slot (0xFF = end of list)
+    cmp al, 0xFF
+    je .not_hidden
+    cmp al, bl
+    je .match
+    add esi, 2                          ; next (slot, global_index) pair
+    jmp .scan
+
+.match:
+    movzx ecx, byte [esi + 1]           ; global toggleable index
+    bt [g_toggleable_flags], ecx        ; CF = hidden bit
+    jc .hidden
+
+.not_hidden:
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    clc
+    ret
+
+.hidden:
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    stc
+    ret
+
+; ---------------------------------------------------------------------------
+; Toggleable-object flag storage + generated tables. Moved here 2026-08-22 from
+; map_sprites.asm, which is where the flat-model rewrite originally landed them;
+; this file is the pret mirror for the whole toggleable subsystem.
+; ---------------------------------------------------------------------------
+section .bss
+; Global toggleable-object (event) flags — pret's wToggleableObjectFlags. Bit g set
+; (LSB-first) => toggleable object g is hidden. Persistent across map loads; seeded
+; once from toggleable_default_flags by InitializeToggleableObjectsFlags at game start.
+; Sized 64 B (TOGGLEABLE_FLAG_BYTES is ~30) so a dword-width `bt` near the end never
+; reads past the array.
+g_toggleable_flags:   resb 64
+
+; Toggleable-object (event) flag defaults + per-map gating lists.
+; Defines toggleable_default_flags, TOGGLEABLE_FLAG_BYTES, toggle_list_*,
+; and ToggleableMapPointers.  Generated by tools/generators/gen_toggleable_objects.py.
+%include "assets/toggleable_objects.inc"

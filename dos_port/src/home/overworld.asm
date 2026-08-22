@@ -101,6 +101,8 @@ extern SetPikachuSpawnOutside             ; src/engine/pikachu/pikachu_follow.as
 extern SetPikachuSpawnWarpPad             ; src/engine/pikachu/pikachu_follow.asm
 extern SetPikachuSpawnBackOutside         ; src/engine/pikachu/pikachu_follow.asm
 extern IsPlayerStandingOnWarpPadOrHole     ; src/engine/overworld/player_animations.asm
+extern IsPlayerStandingOnWarp              ; src/engine/overworld/player_state.asm (MapEntryAfterBattle)
+extern GBFadeInFromWhite                   ; src/home/fade.asm (MapEntryAfterBattle)
 extern h_load_sprite_temp1                ; src/engine/overworld/overworld.asm
 extern h_load_sprite_temp2                ; src/engine/overworld/overworld.asm
 extern hide_window                        ; src/ppu/ppu.asm
@@ -117,7 +119,6 @@ extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern CheckForceBikeOrSurf               ; src/engine/overworld/player_state.asm
 extern CheckNPCInteraction                ; src/engine/overworld/map_sprites.asm
 extern CheckTrainerSight                  ; src/engine/overworld/map_sprites.asm
-extern CheckWarpTile                      ; src/engine/overworld/overworld.asm
 extern ClearVariablesOnEnterMap           ; src/engine/overworld/clear_variables.asm
 extern DebugDumpMemory                    ; src/debug/debug_dump.asm
 extern Delay3                             ; src/home/palettes.asm
@@ -133,14 +134,15 @@ extern IsNPCAtTargetBlock                 ; src/engine/overworld/map_sprites.asm
 extern IsNextTileShoreOrWater             ; src/engine/items/item_effects.asm
 extern IsPlayerStandingOnDoorTileOrWarpTile ; src/engine/overworld/player_state.asm
 extern IsPlayerTalkingToPikachu            ; src/engine/pikachu/pikachu_emotions.asm
+extern LoadSpinnerArrowTiles               ; src/engine/overworld/spinners.asm (IsSpinning tail)
+extern MarkTownVisitedAndLoadToggleableObjects ; src/engine/overworld/toggleable_objects.asm
+extern LoadToggleableObjectData            ; src/engine/overworld/unused_load_toggleable_object_data.asm
 extern IsSurfingPikachuInParty            ; src/home/map_objects.asm
 extern IsTilePassable                     ; src/home/copy2.asm
 extern LoadDestinationMapData                ; src/engine/overworld/overworld.asm
-extern MapEntryAfterBattle                ; src/engine/overworld/overworld_stubs.asm
 extern PrepareForSpecialWarp              ; src/engine/overworld/special_warps.asm
 extern PrepareNewGameDebug                ; src/engine/debug/debug_party.asm
 extern ResetStatusAndHalveMoneyOnBlackout ; src/engine/events/black_out.asm
-extern ResetUsingStrengthOutOfBattleBit   ; src/engine/overworld/overworld_stubs.asm
 extern RunAnimObjectTest                  ; src/engine/movie/intro_yellow.asm
 extern RunBagMenuTest                     ; src/debug/debug_dump.asm
 extern RunBattleTest                      ; src/debug/debug_dump.asm
@@ -1301,42 +1303,22 @@ EnterMap:
 ;     land collision check, and (if passable) start an 8-frame walk.
 ; ---------------------------------------------------------------------------
 OverworldLoop:
-    ; RunMapScript now runs pret's full per-frame chain internally — TryPushingBoulder
-    ; → [dust] → RunNPCMovementScript → the map's _Script (home/overworld.asm:1712).
-    ; The RunNPCMovementScript call that used to sit here (door-exit auto-walk,
-    ; BIT_STANDING_ON_DOOR path) was a hoisted copy from inside RunMapScript; it moved
-    ; back where pret has it, so calling it here too would run it twice per frame.
-    ; pret reaches RunMapScript via JoypadOverworld, which the port does not have —
-    ; that remaining deviation is documented on RunMapScript itself.
-    call RunMapScript                            ; per-frame map _Script (default no-op; Pallet event-gate)
-
-    ; --- Stage 1b: pret's battle-entry poll (home/overworld.asm:65-67) ---
-    ; pret runs this immediately after JoypadOverworld, which is where its
-    ; RunMapScript lives; the port calls RunMapScript directly, so the check sits
-    ; at the same seam.  The trainer script chain
-    ; (CheckFightingMapTrainers -> DisplayEnemyTrainerTextAndStartBattle ->
-    ; StartTrainerBattle) does not run the battle itself: it SEEDS wCurOpponent
-    ; and returns, and this poll is what turns that seed into a battle.
-    ;   pret: ld a, [wCurOpponent] / and a / jp nz, .newBattle
-    ; NewBattle -> InitBattle -> InitOpponent (wCurOpponent >= OPP_ID_OFFSET =
-    ; trainer), and EndOfBattle.resetVariables clears wCurOpponent on the way out,
-    ; so this cannot re-enter.  CF=1 means a battle ran: take pret's shared
-    ; .battleOccurred tail (BIT_TALKED_TO_TRAINER/BIT_TRAINER_BATTLE reset,
-    ; AnyPartyAlive -> AllPokemonFainted -> HandleBlackOut, then EnterMap).
+    ; pret's OverworldLoop is `call DelayFrame` and nothing else. Two of the three
+    ; things the port had here MOVED on 2026-08-22 to the positions pret gives
+    ; them: the wCurOpponent battle-entry poll is now right after the
+    ; fly/dungeon-warp test (pret :65-67), and JoypadOverworld (pret :49) took over
+    ; the step-vector clears plus ForceBikeDown / AreInputsSimulated.
     ;
-    ; This poll REPLACES the old wIsInBattle==$ff scaffold that stood here. That
-    ; block existed only because StartTrainerBattle used to call InitBattle
-    ; inline (the retired TRAINER_BATTLE_LIVE guard), which made the post-battle
-    ; sentinel visible on return from RunMapScript and needed a second
-    ; RunMapScript to reach EndTrainerBattle. The battle no longer runs inside
-    ; RunMapScript, so the sentinel can no longer be set here: blackout is now
-    ; reached the way pret reaches it, through .battleOccurred's AnyPartyAlive.
-    cmp byte [ebp + wCurOpponent], 0
-    je .noPendingOpponent
-    call NewBattle                               ; CF=1 → a battle occurred
-    jc OverworldLoopLessDelay.battleOccurred
-.noPendingOpponent:
-.mapScriptComplete:
+    ; RunMapScript did NOT move, and that is a measured decision rather than an
+    ; oversight — see the timing DEVIATION on JoypadOverworld. Running it here
+    ; fires it on every iteration including mid-step ones, where pret runs it only
+    ; when wWalkCounter is 0; moving it broke route17_trainer_battle by one tile
+    ; and left the other 88 scenarios green.
+    ;
+    ; UpdateSprites also stays here. pret calls it from .noDirectionChange and
+    ; .moveAhead instead; that placement deviation predates this change, and it is
+    ; the prime suspect for the route17 result above.
+    call RunMapScript                            ; per-frame map _Script (default no-op)
     ; wIgnoreInputCounter countdown now runs faithfully via CountDownIgnoreInputBitReset
     ; (called by TrackPlayTime inside DelayFrame, Wave-2/M2.1). The old inline block that
     ; lived here decremented an extra time per loop (double-decrement) and only cleared
@@ -1370,9 +1352,13 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     cmp byte [ebp + wWalkCounter], 0
     jne .moveAhead                           ; still mid-step → keep walking
 
-    ; --- idle: clear step vectors, then sample the held D-pad ---
-    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
-    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
+    ; --- idle: pret :49, `call JoypadOverworld` ------------------------------
+    ; Zeroes both player step vectors, runs the map script, and applies the
+    ; Cycling Road / simulated-input overrides. Restored as a real routine on
+    ; 2026-08-22; its five statements used to be scattered across this loop (the
+    ; step-vector clears here, RunMapScript at the top of OverworldLoop, and
+    ; ForceBikeDown + AreInputsSimulated further down past the trainer-sight hook).
+    call JoypadOverworld
 
     ; A special warp was armed since the last idle iteration (Escape Rope / Dig / Fly /
     ; a dungeon warp-pad): leave the map now, before any input is acted on.
@@ -1428,6 +1414,31 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     test byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
     jnz HandleFlyWarpOrDungeonWarp           ; jp nz (tail — SpecialEnterMap re-enters the loop)
 
+    ; --- Stage 1b: pret's battle-entry poll (home/overworld.asm:65-67) -------
+    ;   ld a, [wCurOpponent] / and a / jp nz, .newBattle
+    ; MOVED here 2026-08-22 from the top of OverworldLoop, where it had been put
+    ; because the port called RunMapScript there. RunMapScript now runs inside
+    ; JoypadOverworld at pret's position, so the poll can sit at pret's position
+    ; too — immediately after the fly/dungeon-warp test.
+    ;
+    ; The trainer script chain (CheckFightingMapTrainers ->
+    ; DisplayEnemyTrainerTextAndStartBattle -> StartTrainerBattle) does not run
+    ; the battle itself: it SEEDS wCurOpponent and returns, and this poll is what
+    ; turns that seed into a battle. NewBattle -> InitBattle -> InitOpponent
+    ; (wCurOpponent >= OPP_ID_OFFSET = trainer), and EndOfBattle.resetVariables
+    ; clears wCurOpponent on the way out, so this cannot re-enter. CF=1 means a
+    ; battle ran: take pret's shared .battleOccurred tail.
+    ;
+    ; It REPLACED the old wIsInBattle==$ff scaffold, which existed only because
+    ; StartTrainerBattle used to call InitBattle inline (the retired
+    ; TRAINER_BATTLE_LIVE guard); blackout is now reached the way pret reaches
+    ; it, through .battleOccurred's AnyPartyAlive.
+    cmp byte [ebp + wCurOpponent], 0
+    je .noPendingOpponent
+    call NewBattle                           ; CF=1 → a battle occurred
+    jc .battleOccurred                       ; pret: jp nz, .newBattle -> .battleOccurred
+.noPendingOpponent:
+
     ; --- Stage 1b: the bespoke sight path is now GATED OFF where the faithful
     ; one is wired. pret has no CheckTrainerSight/TrainerEncounterFlow; its only
     ; trainer-sight mechanism is the map's own _Script -> CheckFightingMapTrainers,
@@ -1454,16 +1465,13 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp OverworldLoop
 .noTrainerSight:
 
-    ; Cycling Road auto-scroll (pret home/overworld.asm, JoypadOverworld's third
-    ; call: Joypad -> ForceBikeDown -> AreInputsSimulated). The port has no
-    ; JoypadOverworld — see RunMapScript's DEVIATION — so the call sits at the
-    ; same SEAM instead: real input has been sampled by joypad_update, and
-    ; AreInputsSimulated (which overrides hJoyHeld for scripted movement) runs
-    ; immediately after, exactly as in pret. Order matters: ForceBikeDown must
-    ; not clobber a simulated step, and pret guarantees that by running first.
-    call ForceBikeDown
-
-    ; Simulated joypad state overrides real input (pret: AreInputsSimulated).
+    ; ForceBikeDown (Cycling Road auto-scroll) and AreInputsSimulated used to sit
+    ; HERE, at the seam where the port had unpacked JoypadOverworld. Both moved
+    ; back inside JoypadOverworld on 2026-08-22, which is where pret has them —
+    ; so they now run BEFORE the Safari / warp / fly-warp tests above rather than
+    ; after them, matching pret's order.
+    ;
+    ; The notes that lived on them are still worth keeping:
     ; BIT_SCRIPTED_MOVEMENT_STATE is armed by StartSimulatingJoypadStates
     ; (PlayerStepOutFromDoor's single step, HandleLedges' two hop steps, …).
     ; AreInputsSimulated (this file) pops the next queued PAD_* byte into
@@ -1473,7 +1481,14 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; hJoyPressed): joypad_update runs twice per OverworldLoop idle iteration (one
     ; per DelayFrame), so hJoyPressed is always cleared before we read it.
     ; Re-trigger after dialog dismiss is prevented by .waitAReleased below.
-    call AreInputsSimulated
+    ;
+    ; The `call AreInputsSimulated` that stood HERE is gone — JoypadOverworld at the
+    ; top of this branch makes it, once, where pret does. Leaving both in place ran
+    ; it TWICE per idle iteration, and since each call POPS one entry off the
+    ; simulated-joypad queue that silently ate every other scripted step: measured
+    ; 2026-08-22 as ledge_hop, surf_round_trip and route17_trainer_battle each
+    ; landing the player exactly one tile short of the golden, with ledge_hop's
+    ; wSimulatedJoypadStatesEnd drained to 0 where the ROM still held PAD_DOWN.
     movzx eax, byte [ebp + hJoyHeld]
     test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jnz .checkPADDown                               ; scripted step: skip START/A, go to D-pad
@@ -1622,18 +1637,17 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; jp c, CheckWarpsCollision). Replaces the hardcoded "facing DOWN" test with
     ; pret's per-map function-1 (IsPlayerFacingEdgeOfMap) / function-2
     ; (IsWarpTileInFrontOfPlayer) dispatch. Register-safe (returns only CF); DL
-    ; is no longer consulted here. CheckWarpTile below is the port's
-    ; CheckWarpsCollision (scans wWarpEntries by the player's current coords).
+    ; is no longer consulted here. The scan that follows it is pret's own
+    ; CheckWarpsCollision now (it was an inline `call CheckWarpTile` + `jmp
+    ; WarpFound2` until 2026-08-22).
     call ExtraWarpCheck
-    jnc OverworldLoop
-    call CheckWarpTile
-    jnc OverworldLoop
-    jmp WarpFound2
+    jc CheckWarpsCollision                    ; pret: jp c, CheckWarpsCollision
+    jmp OverworldLoop                         ; pret: jp OverworldLoop
 
 .startWalk:
     mov byte [ebp + wWalkCounter], 8        ; begin an 8-frame step
     call Func_fcc08                            ; callfar Func_fcc08 — push this step into Pikachu's follow FIFO
-    jmp .moveAhead                             ; pret: jr .moveAhead2 — advance immediately, no extra delay
+    jmp .moveAhead2                            ; pret: jr .moveAhead2 — advance immediately, no extra delay
 
 .noDirection:
     ; Save the last-used moving direction so the next press can check for a turn.
@@ -1646,6 +1660,20 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp OverworldLoop
 
 .moveAhead:
+    ; pret .moveAhead (home/overworld.asm:234-236) — the MID-WALK entry only. The
+    ; fresh-step entry (.startWalk above, pret's .noCollision) jumps past it
+    ; straight to .moveAhead2, which is why pret splits the two labels at all.
+    ; The port had them merged into one until 2026-08-22, so IsSpinning — the
+    ; spinner-tile blink that carries the player across a Rocket HQ / Viridian Gym
+    ; floor — had nowhere to be called from and the translated LoadSpinnerArrowTiles
+    ; sat with zero callers.
+    ;
+    ; pret's second call here, `call UpdateSprites`, is NOT restored: the port
+    ; already runs UpdateSprites once per iteration at the top of OverworldLoop
+    ; (a pre-existing placement deviation, not one introduced here), so calling it
+    ; again would advance the walk animation twice on every mid-walk frame.
+    call IsSpinning
+.moveAhead2:
     ; pret .moveAhead2 head (home/overworld.asm:243-248): clear the in-place-turn
     ; flag + Pikachu-collision grace counter, then the bike double-step, then
     ; advance. DoBikeSpeedup is live but inert (wWalkBikeSurfState is never 1
@@ -1686,7 +1714,15 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jnz WarpFound2                            ; pret: jp nz, WarpFound2
 .notSafariZone:
     call NewBattle                            ; CF=1 → a wild/forced battle occurred
-    jnc .noBattleOccurred                     ; pret: jp nc, CheckWarpsNoCollision
+    ; pret :265-268: the `res BIT_STANDING_ON_WARP` sits BETWEEN the call and the
+    ; branch, so it runs on BOTH arms — SM83 `res` does not touch flags. On x86
+    ; `and` does, so the carry NewBattle returned is banked across it. The port
+    ; used to do the clear only on the no-battle arm (inside .noBattleOccurred),
+    ; which left the bit set across a battle entered from a warp tile.
+    pushf
+    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP) & 0xFF
+    popf
+    jnc CheckWarpsNoCollision                 ; pret: jp nc, CheckWarpsNoCollision
 .battleOccurred:
     ; pret .battleOccurred (home/overworld.asm:269-296) — reached from the
     ; post-step NewBattle above and the on-turn NewBattle in .handleDirection.
@@ -1712,22 +1748,6 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp EnterMap                              ; full map re-entry (reset ladder, OW-A.4)
 .allFainted:
     jmp AllPokemonFainted                     ; wild_encounter_check.asm → HandleBlackOut
-.noBattleOccurred:
-    ; pret CheckWarpsNoCollision (home/overworld.asm:360-417). The coord scan is
-    ; CheckWarpTile (the port's CheckWarpsNoCollisionLoop); for the matched entry
-    ; pret sets BIT_STANDING_ON_WARP, then fires on
-    ; IsPlayerStandingOnDoorTileOrWarpTile (CF=1 → WarpFound1) and otherwise on
-    ; ExtraWarpCheck. The `res` precedes the scan (pret does it at :267).
-    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP)
-    call CheckWarpTile
-    jnc OverworldLoop                         ; no coord match → bit stays cleared
-    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_WARP)
-    call IsPlayerStandingOnDoorTileOrWarpTile ; may `res` the bit for a warp carpet
-    jc WarpFound2                             ; pret: jr c, WarpFound1
-    call ExtraWarpCheck
-    jnc OverworldLoop                         ; pret: jr nc, ...Retry2 (no other match)
-    jmp WarpFound2                            ; pret: jr WarpFound2 (CheckWarpsCollision :439)
-
 .mapTransition:
     ; A connection was crossed — reload everything for the new map.
     mov byte [ebp + wWalkCounter], 0
@@ -1767,6 +1787,164 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 
     jmp OverworldLoopLessDelay
 
+
+; ---------------------------------------------------------------------------
+; CheckWarpsNoCollision / ...Loop / ...Retry1 / ...Retry2 /
+; ContinueCheckWarpsNoCollisionLoop / CheckWarpsCollision / WarpFound1
+;   — pret home/overworld.asm:360-454, restored 2026-08-22.
+;
+; NAME FORK CLOSED. All seven labels reported `missing`: the port had merged both
+; of pret's warp scans into one port-local helper, CheckWarpTile
+; (src/engine/overworld/overworld.asm), which OverworldLoop called inline at the
+; two seams where pret jumps to these routines. That helper is now DELETED — this
+; is the same debt WarpFound2 carried until it was hoisted on 2026-08-21, and this
+; is the other half of it.
+;
+; The merge also lost real behaviour, restored here with the names:
+;   * pret's no-collision scan CONTINUES to the next warp entry when a coord match
+;     fails its ExtraWarpCheck or its held-D-pad test (Retry2); the merged helper
+;     stopped at the first coord match and gave up. Two warps on one tile is not a
+;     thing, but a warp whose ExtraWarpCheck fails is, and pret keeps looking.
+;   * pret's BIT_FORCED_WARP arm (wStatusFlags7) — a script-forced warp bypasses
+;     the "must be holding a direction" test entirely. Never ported before.
+;   * the tail is `jp CheckMapConnections`, not `jp OverworldLoop`. The port sent
+;     an unmatched scan straight back to the loop, so the only thing that ever ran
+;     CheckMapConnections was _AdvancePlayerSprite's own call.
+;
+; The one thing NOT restored is pret's `call Joypad` inside the scan; the port's
+; hJoyHeld is already this frame's. It is annotated at that spot.
+;
+; Register map: pret b (warp number) -> BH, c (warps remaining) -> BL,
+; d/e (player Y/X) -> DH/DL, hl (wWarpEntries cursor) -> ESI as a GB offset.
+; BL is live all the way into WarpFound2, which subtracts it from wNumberOfWarps
+; to recover the matched warp's index — so nothing between here and there may
+; clobber it.
+; ---------------------------------------------------------------------------
+global CheckWarpsNoCollision
+global CheckWarpsNoCollisionLoop
+global CheckWarpsNoCollisionRetry1
+global CheckWarpsNoCollisionRetry2
+global ContinueCheckWarpsNoCollisionLoop
+global CheckWarpsCollision
+global WarpFound1
+
+; check if the player has stepped onto a warp after having not collided
+CheckWarpsNoCollision:
+    cmp byte [ebp + wNumberOfWarps], 0         ; ld a,[wNumberOfWarps] / and a
+    je WarpScanToMapConnections  ; jp z, CheckMapConnections
+    mov bh, 0                                  ; ld b, 0 — warp number
+    mov bl, [ebp + wNumberOfWarps]             ; ld c, a — warps remaining
+    mov dh, [ebp + wYCoord]                    ; ld d, a
+    mov dl, [ebp + wXCoord]                    ; ld e, a
+    mov esi, wWarpEntries                      ; ld hl, wWarpEntries
+CheckWarpsNoCollisionLoop:
+    mov al, [ebp + esi]                        ; ld a, [hli] — warp Y
+    inc esi
+    cmp al, dh
+    jne CheckWarpsNoCollisionRetry1
+    mov al, [ebp + esi]                        ; ld a, [hli] — warp X
+    inc esi
+    cmp al, dl
+    jne CheckWarpsNoCollisionRetry2
+    ; --- coord match ------------------------------------------------- pret :377
+    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_WARP)  ; set BIT_STANDING_ON_WARP,[hl]
+    push esi
+    push ebx
+    call IsPlayerStandingOnDoorTileOrWarpTile  ; farcall — may `res` the bit for a warp carpet
+    pop ebx
+    pop esi
+    jc WarpFound1                              ; jr c — standing on a door or warp tile
+    push esi
+    push ebx
+    call ExtraWarpCheck                        ; CF=1 -> a warp is possible here
+    pop ebx
+    pop esi
+    jnc CheckWarpsNoCollisionRetry2            ; jr nc — keep scanning
+    ; --- the extra check passed -------------------------------------- pret :393
+    test byte [ebp + wStatusFlags7], (1 << BIT_FORCED_WARP)
+    jnz WarpFound1                             ; a forced warp ignores the input test
+    ; pret: push de / push bc / call Joypad / pop bc / pop de.
+    ; DEVIATION{class=HAL; pret=home/overworld.asm:CheckWarpsNoCollision; behavior=the `call Joypad` before the held-direction test is dropped; evidence=the port `Joypad` recomputes the edge layer from hJoyInput which only ReadJoypad_ writes and which nothing in the frame loop calls, while joypad_update already runs the same pret _Joypad edge layer once per DelayFrame from the live pad state - so the call would read a stale hJoyInput and ZERO hJoyHeld, making this test never pass, and hJoyHeld is already fresh without it - the same reason every other ported `call Joypad` site drops it, see JoypadLowSensitivity in src/home/joypad2.asm; lifetime=permanent while input is polled from the PIT/keyboard ISR rather than a joypad register}
+    test byte [ebp + hJoyHeld], PAD_CTRL_PAD
+    jz CheckWarpsNoCollisionRetry2             ; not pressing a direction -> don't warp
+    jmp WarpFound1
+
+; ---------------------------------------------------------------------------
+; WarpScanToMapConnections — port-only. pret's `jp CheckMapConnections`,
+; adapted to the port's callable CheckMapConnections.
+;
+; pret's CheckMapConnections is a JUMP TARGET: it ends `jp OverworldLoopLessDelay`
+; when a connection was crossed and `jp OverworldLoop` when it was not, so pret can
+; simply `jp` into it. The port's is a CALLABLE routine with a push/pop frame that
+; returns CF and leaves the reload to its caller (see its .loadNewMap note), so
+; jumping into it desynchronises the stack and its `ret` lands on garbage — which
+; is exactly what it did for the ~90 seconds this file carried a literal `jmp`
+; there (measured 2026-08-22: ledge_hop, surf_round_trip and safari_game_over all
+; died before their dump frame).
+;
+; Re-running it here is harmless as well as faithful: _AdvancePlayerSprite already
+; called it during the step, and if it had fired there the CF would have taken the
+; loop to .mapTransition and never reached a warp scan — so by the time control is
+; here the coords are inside the map and the second call cannot fire either.
+;
+; A port-only descriptive name, not a forked pret one: pret has no routine here at
+; all, only two `jp CheckMapConnections` instructions.
+; ---------------------------------------------------------------------------
+WarpScanToMapConnections:
+    call CheckMapConnections
+    jc OverworldLoopLessDelay.mapTransition    ; pret: jp OverworldLoopLessDelay
+    jmp OverworldLoop                          ; pret: jp OverworldLoop
+
+CheckWarpsNoCollisionRetry1:
+    inc esi                                    ; inc hl (skip the X byte too)
+CheckWarpsNoCollisionRetry2:
+    inc esi                                    ; inc hl
+    inc esi                                    ; inc hl (past dest warp id + dest map)
+ContinueCheckWarpsNoCollisionLoop:
+    inc bh                                     ; inc b — warp number
+    dec bl                                     ; dec c — warps remaining
+    jnz CheckWarpsNoCollisionLoop              ; jp nz
+    jmp WarpScanToMapConnections  ; jp CheckMapConnections
+
+; check if the player has stepped onto a warp after having collided
+CheckWarpsCollision:
+    mov bl, [ebp + wNumberOfWarps]             ; ld a,[wNumberOfWarps] / ld c, a
+    mov esi, wWarpEntries                      ; ld hl, wWarpEntries
+.loop:
+    mov bh, [ebp + esi]                        ; ld a,[hli] / ld b, a — warp Y
+    inc esi
+    mov al, [ebp + wYCoord]
+    cmp al, bh                                 ; cp b
+    jne .retry1
+    mov bh, [ebp + esi]                        ; ld a,[hli] / ld b, a — warp X
+    inc esi
+    mov al, [ebp + wXCoord]
+    cmp al, bh                                 ; cp b
+    jne .retry2
+    mov al, [ebp + esi]                        ; ld a, [hli]
+    inc esi
+    mov [ebp + wDestinationWarpID], al
+    mov al, [ebp + esi]                        ; ld a, [hl] — NOT hli, pret leaves it here
+    mov [ebp + hWarpDestinationMap], al
+    jmp WarpFound2                             ; jr WarpFound2 — note: NOT WarpFound1
+.retry1:
+    inc esi
+.retry2:
+    inc esi
+    inc esi
+    dec bl                                     ; dec c
+    jnz .loop
+    jmp OverworldLoop                          ; jp OverworldLoop
+
+WarpFound1:
+    mov al, [ebp + esi]                        ; ld a, [hli]
+    inc esi
+    mov [ebp + wDestinationWarpID], al
+    mov al, [ebp + esi]                        ; ld a, [hli]
+    inc esi
+    mov [ebp + hWarpDestinationMap], al
+    ; falls through into WarpFound2 — pret has no jump either
+
 ; ---------------------------------------------------------------------------
 ; WarpFound2 — pret home/overworld.asm:455-517.
 ;
@@ -1779,20 +1957,21 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 ; jumps above it. Hoisting is what makes the name possible, and it also puts the
 ; body where pret puts it — after the loop, before CheckMapConnections.
 ;
-; pret's WarpFound1 body (read the warp entry, store wDestinationWarpID and
-; hWarpDestinationMap) lives in CheckWarpTile here, because the port merged pret's
-; warp SCAN with its found-handling. There is therefore no separate WarpFound1
-; label in the port; CheckWarpTile carries that half and jumps here.
+; pret's WarpFound1 is immediately above and falls through into this, as in pret.
+; (It used to have no port body at all: the port's merged CheckWarpTile helper
+; carried that half. The helper is gone — see CheckWarpsNoCollision above.)
 ;
-; Reached from four sites, all of them pret's own: the two Safari game-over arms
-; (pret :57 and :256), the script warp (pret :61), and the warp-tile scan's
-; `jr c, WarpFound1` (pret :387/:397/:406 via CheckWarpsNoCollision).
+; Reached from five sites, all of them pret's own: the two Safari game-over arms
+; (pret :57 and :256), the script warp (pret :61), CheckWarpsCollision's own
+; `jr WarpFound2` (pret :439), and the fall-through from WarpFound1.
 ;
-; In: EBP = GB base. hWarpDestinationMap = the RAW destination byte (which is what
-; pret branches on); BL = destination map with LAST_MAP already resolved by
-; CheckWarpTile. Does not return — tail-jumps to EnterMap.
+; In: EBP = GB base. hWarpDestinationMap = the RAW destination byte, which is what
+; pret branches on and what this routine reads directly (it resolves LAST_MAP
+; itself in .indoorMaps). BL = pret's `c`, the warps-remaining counter, live only
+; on the two scan entries — see the DEVIATION below. Does not return — tail-jumps
+; to EnterMap.
 ;
-; DEVIATION{class=projection; pret=home/overworld.asm:WarpFound2; behavior=pret's `ld a,[wNumberOfWarps] / sub c / ld [wWarpedFromWhichWarp],a` is not here — the port stores wWarpedFromWhichWarp in CheckWarpTile instead, so the three non-scan entries (both Safari game-over arms and the script warp) leave the previous value standing where pret would overwrite it from a register the scan never set; evidence=the port merged pret's warp SCAN into CheckWarpTile which is the only place the entry counter exists, and the value's only readers (the Celadon Mart, Rocket Hideout and Silph Co elevator scripts) are always entered through a warp TILE so the scan has always run; lifetime=permanent while the scan and the found-handling stay merged}
+; DEVIATION{class=projection; pret=home/overworld.asm:WarpFound2; behavior=none on the wWarpedFromWhichWarp store itself, which is now pret's own `ld a,[wNumberOfWarps] / sub c` — but on the three entries that are not a warp scan, both Safari game-over arms and the script warp, BL holds whatever the port last left there rather than whatever pret last left in c, so the garbage value written differs from the ROM garbage value; evidence=pret reads c on those arms too and nothing sets it there, so the store is indeterminate in the ROM as well - the value's only readers are the Celadon Mart, Rocket Hideout and Silph Co elevator scripts and all three are entered through a warp TILE where the scan has run and both sides agree; lifetime=permanent, an artifact of pret reading an unset register}
 ; DEVIATION{class=projection; pret=home/overworld.asm:WarpFound2; behavior=.done additionally calls LoadDestinationMapData and InitMapSprites and resets wWalkCounter, both player step vectors, hSCX/hSCY and wMapViewVRAMPointer, none of which pret does here; evidence=pret reaches the destination load through the tail `jp EnterMap` -> LoadMapData, and the port must stage it before that tail because PlayMapChangeSound in every branch above reads the SOURCE map's tileset and door tile — loading the destination first makes it read the wrong tileset; lifetime=permanent, structural}
 ; ---------------------------------------------------------------------------
 WarpFound2:
@@ -1804,10 +1983,17 @@ WarpFound2:
     ; and never written), wUnusedLastMapWidth, the ROCK_TUNNEL_1F fade, the
     ; warp-pad/fly branch, and .goBackOutside's wMapPalOffset reset.
     ;
-    ; BL = destination map with LAST_MAP already resolved by CheckWarpTile;
     ; hWarpDestinationMap = the RAW destination byte, which is what pret
-    ; branches on.
+    ; branches on; this routine resolves LAST_MAP itself in .indoorMaps.
     ; ---------------------------------------------------------------------
+    ; ld a, [wNumberOfWarps] / sub c / ld [wWarpedFromWhichWarp], a  (pret :456-458)
+    ; RESTORED 2026-08-22 with the warp scans; it had been displaced into the
+    ; deleted CheckWarpTile helper. BL is pret's c — the warps-remaining counter,
+    ; decremented only on a NON-match, so on a match it still counts the current
+    ; entry and wNumberOfWarps - c is its 0-based index.
+    mov al, [ebp + wNumberOfWarps]
+    sub al, bl
+    mov [ebp + wWarpedFromWhichWarp], al
     ; ld a, [wCurMap] / ld [wWarpedFromWhichMap], a   (pret :459-460)
     mov al, [ebp + wCurMap]
     mov [ebp + wWarpedFromWhichMap], al
@@ -2334,6 +2520,32 @@ ExtraWarpCheck:
     pop ebx
     pop eax
     ret
+
+; ---------------------------------------------------------------------------
+; MapEntryAfterBattle — pret home/overworld.asm:MapEntryAfterBattle (:730-735).
+;
+;     farcall IsPlayerStandingOnWarp   ; for enabling warp testing after collisions
+;     ld a, [wMapPalOffset] / and a
+;     jp z, GBFadeInFromWhite
+;     jp LoadGBPal
+;
+; Called from EnterMap's `call nz` on the post-battle re-entry path. Retired the
+; ret-stub in overworld_stubs.asm (2026-08-22). The stub was NOT behaviour-neutral:
+; without the IsPlayerStandingOnWarp call, BIT_STANDING_ON_WARP is left cleared when
+; the player returns from a battle fought while standing on a warp tile, and the
+; collision-exit path in OverworldLoop then refuses to fire — the player is stuck
+; on a doorway until they step off and back on.
+;
+; Both tails are jumps, not calls: pret ends on `jp`.
+; ---------------------------------------------------------------------------
+global MapEntryAfterBattle
+MapEntryAfterBattle:
+    call IsPlayerStandingOnWarp             ; farcall — flat model, direct call
+    cmp byte [ebp + wMapPalOffset], 0       ; ld a,[wMapPalOffset] / and a
+    jne .loadPal
+    jmp GBFadeInFromWhite                   ; jp z, GBFadeInFromWhite
+.loadPal:
+    jmp LoadGBPal                           ; jp LoadGBPal
 
 ; ---------------------------------------------------------------------------
 ; HandleBlackOut — the whole party fainted: fade out, kill the music, halve the
@@ -2951,8 +3163,12 @@ CollisionCheckOnLand:
     pop edx
     pop ebx
     jc .blocked                                    ; illegal tile-pair boundary → blocked
-    movzx ecx, byte [ebp + wTileInFrontOfPlayer] ; restore CL (HandleLedges clobbered ECX)
-    call IsTilePassable                            ; CF = 1 if not passable
+    ; pret :1254-1255 — `call CheckTilePassable / jr nc, .noCollision`. The routine
+    ; re-derives the front tile itself (HandleLedges clobbered ECX above), which is
+    ; why the inline `movzx ecx, [wTileInFrontOfPlayer]` that used to stand here is
+    ; gone with it. EDX is dead from here on — IsNPCAtTargetBlock reads only
+    ; wYCoord/wXCoord/W_SPRITE_PLAYER_FACING_DIR — so its clobber is harmless.
+    call CheckTilePassable                         ; CF = 1 if not passable
     jc .blocked                                    ; tile impassable → blocked
     ; IsNPCAtTargetBlock is the port's BESPOKE replacement for pret's IsSpriteInFrontOfPlayer
     ; (home/overworld.asm:1234) plus the res BIT_FACE_PLAYER / hTextID / Pikachu-collision-
@@ -2987,6 +3203,36 @@ CollisionCheckOnLand:
     clc
     ret
 %endif
+
+; ---------------------------------------------------------------------------
+; CheckTilePassable — pret home/overworld.asm:CheckTilePassable (:1271-1276).
+;
+; "function that checks if the tile in front of the player is passable —
+;  clears carry if it is, sets carry if not."
+;
+; Was INLINED into CollisionCheckOnLand (a `movzx ecx, byte [wTileInFrontOfPlayer]`
+; + `call IsTilePassable` pair) until 2026-08-22, which left the pret label reading
+; `missing` — the same NAME-FORK class as WarpFound2. Extracted here so the label
+; exists and the call site reads as pret's does.
+;
+; pret re-derives the front tile with `predef GetTileAndCoordsInFrontOfPlayer`
+; rather than trusting the value the caller already stored, and that is
+; load-bearing rather than redundant: CollisionCheckOnLand's preceding
+; CheckForJumpingAndTilePairCollisions runs HandleLedges, which clobbers ECX.
+; The port calls the direct entry `_GetTileAndCoordsInFrontOfPlayer` instead of
+; the predef wrapper, per the established pattern (the wrapper's
+; GetPredefRegisters would restore ESI/EBX from stale wPredefHL/wPredefBC — see
+; memory flagactionpredef-clobbers-regs).
+;
+; In:  EBP = GB base; W_SPRITE_PLAYER_FACING_DIR / wYCoord / wXCoord.
+; Out: CF = 0 passable, CF = 1 blocked. Clobbers AL, ECX, EDX, ESI (as pret
+;      clobbers a/c/de/hl).
+; ---------------------------------------------------------------------------
+CheckTilePassable:
+    call _GetTileAndCoordsInFrontOfPlayer          ; predef GetTileAndCoordsInFrontOfPlayer
+    movzx ecx, byte [ebp + wTileInFrontOfPlayer]   ; ld a, [wTileInFrontOfPlayer] / ld c, a
+    call IsTilePassable
+    ret
 
 ; ---------------------------------------------------------------------------
 ; CheckForJumpingAndTilePairCollisions — pret home/overworld.asm.
@@ -3262,6 +3508,43 @@ DrawTileBlock:
 ; Out: hJoyHeld = PAD_DOWN when all three guards pass; otherwise untouched
 ; Clobbers: AL, flags
 ; ---------------------------------------------------------------------------
+; JoypadOverworld — pret home/overworld.asm:JoypadOverworld (:1579-1587).
+;
+;     xor a
+;     ld [wSpritePlayerStateData1YStepVector], a
+;     ld [wSpritePlayerStateData1XStepVector], a
+;     call RunMapScript
+;     call Joypad
+;     call ForceBikeDown
+;     call AreInputsSimulated
+;     ret
+;
+; "function to update joypad state and simulate button presses."
+;
+; RESTORED 2026-08-22. Every one of these statements already existed in the port,
+; but scattered across OverworldLoop / OverworldLoopLessDelay at three different
+; seams, so the pret label read `missing` and — more than a bookkeeping problem —
+; RunMapScript ran on EVERY loop iteration rather than only when wWalkCounter is
+; 0, and ForceBikeDown / AreInputsSimulated ran AFTER the Safari, script-warp and
+; fly-warp tests instead of before them.
+;
+; DEVIATION{class=HAL; pret=home/overworld.asm:JoypadOverworld; behavior=pret's `call Joypad` is dropped; evidence=the port `Joypad` recomputes the edge layer from hJoyInput which only ReadJoypad_ writes and which nothing in the frame loop calls, while joypad_update runs that same pret _Joypad edge layer once per DelayFrame from the live pad state - calling it here would zero hJoyHeld and hJoyPressed for the rest of the iteration - and this is the established treatment of `call Joypad` across the port, see JoypadLowSensitivity in src/home/joypad2.asm; lifetime=permanent while input is polled from the PIT and keyboard ISR rather than a joypad register}
+; DEVIATION{class=timing; pret=home/overworld.asm:JoypadOverworld; behavior=pret's `call RunMapScript` is not here - the port keeps the call at the top of OverworldLoop, where it runs on EVERY loop iteration including mid-step ones rather than only when wWalkCounter is 0; evidence=moving it here was implemented and MEASURED to break one golden, route17_trainer_battle, which engages its trainer one tile north of the ROM (wYCoord 78 against the golden 79) while every other field including wCurMapScript and wEngagedTrainer still matched, and the other sixteen route sight goldens stayed green - the sight test CheckSpriteCanSeePlayer in src/engine/overworld/trainer_sight.asm is an EXACT-EQUALITY test on the trainer sprite SCREEN position, so it only fires on the frames where that position lands on the player row or column, and the port updates those sprite positions on a different cadence than pret does because UpdateSprites is called once at the top of OverworldLoop instead of from pret .noDirectionChange and .moveAhead - the extra per-iteration RunMapScript is what currently covers that window, see memory regression-overworld-sight-needs-per-iteration-mapscript; lifetime=retired when the UpdateSprites call sites are reconciled with pret and route17_trainer_battle passes with the call moved here}
+; ---------------------------------------------------------------------------
+global JoypadOverworld
+JoypadOverworld:
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0  ; wSpritePlayerStateData1YStepVector
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0  ; wSpritePlayerStateData1XStepVector
+    ; call RunMapScript — NOT here; see the second DEVIATION above. It stays at the
+    ; top of OverworldLoop, which is where the port has always called it.
+    ; call Joypad — dropped, see the first DEVIATION above.
+    ; Order matters: ForceBikeDown must not clobber a simulated step, and pret
+    ; guarantees that by running it first.
+    call ForceBikeDown
+    call AreInputsSimulated
+    ret
+
+; ---------------------------------------------------------------------------
 ForceBikeDown:
     test byte [ebp + wStatusFlags7], (1 << BIT_TRAINER_BATTLE)
     jnz .ret                                  ; ld a,[wStatusFlags7] / bit BIT_TRAINER_BATTLE,a / ret nz
@@ -3510,12 +3793,48 @@ LoadMapHeader:
     push esi
     push edi
 
-    ; pret: farcall MarkTownVisitedAndLoadToggleableObjects (mark this town visited on
-    ; the town map + load per-map toggleable-object visibility flags).
-    ; TODO(faithful): not ported — the town-map visited-flag set and the hidden/toggleable
-    ; object show-flag load aren't implemented yet (cf. InitToggleableObjectFlags scaffold,
-    ; map_sprites.asm). Harmless for the current maps; restore with the town-map subsystem.
+    ; pret: farcall MarkTownVisitedAndLoadToggleableObjects / jr asm_0dbd.
+    ; RESTORED 2026-08-22. The comment that stood here claimed the routine was "not
+    ; ported — the town-map visited-flag set and the hidden/toggleable object show-flag
+    ; load aren't implemented yet"; that was measurably false (label_status reports it
+    ; translated in src/engine/overworld/toggleable_objects.asm), so LoadMapHeader was
+    ; silently skipping the wTownVisitedFlag set on every map load.
+    call MarkTownVisitedAndLoadToggleableObjects
+    jmp asm_0dbd                            ; pret: jr asm_0dbd
 
+; ---------------------------------------------------------------------------
+; Func_0db5 — pret home/overworld.asm:1797, marked `; unreferenced` there and
+; unreferenced here too. It is LoadMapHeader's alternate head: instead of
+; MarkTownVisitedAndLoadToggleableObjects it runs LoadToggleableObjectData (pret's
+; own unused loader, engine/overworld/unused_load_toggleable_object_data.asm),
+; then joins the shared body at asm_0dbd.
+;
+; The port cannot simply fall through into LoadMapHeader's asm_0dbd the way pret
+; does, because the port's LoadMapHeader opens with a five-register save that pret
+; has no counterpart for; entering below it would leave the epilogue popping a
+; frame that was never pushed. So the prologue is repeated here and the entry
+; joins at exactly pret's join point.
+; ---------------------------------------------------------------------------
+global Func_0db5
+Func_0db5:
+    push eax
+    push ebx
+    push ecx
+    push esi
+    push edi
+    call LoadToggleableObjectData           ; pret: farcall LoadToggleableObjectData
+    ; falls through — pret has no jump either
+global asm_0dbd
+asm_0dbd:
+    ; pret :1800-1801 — `ld a,[wCurMapTileset] / ld [wUnusedCurMapTilesetCopy], a`,
+    ; the first two instructions of the shared body. Restored 2026-08-22 with the
+    ; label: the port wrote wUnusedCurMapTilesetCopy only from ResetMapVariables
+    ; (which zeroes it), so the copy never held a tileset. Nothing reads it on
+    ; either side — pret's own name says so — but it is two instructions and its
+    ; absence was invisible only because the whole body sat under LoadMapHeader's
+    ; label, where faithdiff had a 3-line pret routine to compare against.
+    mov al, [ebp + wCurMapTileset]
+    mov [ebp + wUnusedCurMapTilesetCopy], al
     ; pret: ld a,[wCurMapTileset] / ld b,a / res BIT_NO_PREVIOUS_MAP,a /
     ;       ld [wCurMapTileset],a / ldh [hPreviousTileset],a.
     ; Snapshot the previous map's tileset into hPreviousTileset BEFORE the header copy
@@ -3548,14 +3867,12 @@ LoadMapHeader:
     ;     jnz .noPreviousMapReturn   ; pop edi/esi/ecx/ebx/eax ; ret
 
     ; wCurMapHeader is a 10-byte buffer: tileset(1), h(1), w(1), blkptr(2), txtptr(2), scrptr(2), conn(1)
-    movzx eax, byte [ebp + wCurMap]
-    add eax, eax ; * 2 (MapHeaderPointers table is 2 bytes per entry)
-    mov esi, MapHeaderPointers
-    movzx ebx, word [esi + eax]
-    add ebx, ebp ; EBX = address of map header in flat space (rom window)
-    
+    ; pret :1811 — `call GetMapHeaderPointer`. The table lookup was inlined here
+    ; until 2026-08-22, which left the pret label reading `missing`; it is now the
+    ; routine below and this is its only caller, as in pret.
+    call GetMapHeaderPointer                ; ESI = flat address of wCurMap's header
+
     ; Copy 10 bytes to wCurMapHeader
-    mov esi, ebx
     lea edi, [ebp + wCurMapHeader]
     mov ecx, W_CUR_MAP_HEADER_SIZE
     rep movsb
@@ -3753,6 +4070,7 @@ LoadMapData:
     mov esi, [esi + eax*4]
     mov [w_map_text_table_ptr], esi
     call InitMapSprites                 ; pret: InitMapSprites (load sprite tile patterns)
+    ; DEVIATION{class=HAL; pret=home/overworld.asm:LoadMapData; behavior=pret's `call CopyMapViewToVRAM` after LoadScreenRelatedData is dropped, and with it both CopyMapViewToVRAM and its CopyMapViewToVRAM2 entry point have no port body; evidence=the routine copies the 20x18 wTileMap into the vBGMap0 tilemap for the hardware PPU to scan, and the port has no such scan - render_bg in src/ppu/ppu.asm decodes wSurroundingTiles into a 48x36-tile surface through tile_cache and blits a 320x200 window out of it every frame, so the tilemap the copy would fill is never read, see CLAUDE.md on render_bg and the removal of the 256x256 VRAM torus - the other drop site is ReloadMapAfterSurfingMinigame in this file which carries its own annotation; lifetime=permanent, structural to the surface renderer}
     ; OW-A.5: pret calls LoadScreenRelatedData ONCE (home/overworld.asm:1967) then
     ; CopyMapViewToVRAM. The port's LoadScreenRelatedData (LoadTileBlockMap +
     ; LoadTilesetTilePatternData + LoadCurrentMapView) is idempotent and its
@@ -3809,6 +4127,30 @@ ReloadMapAfterSurfingMinigame:
     jmp FinishReloadingMap
 
 ; ---------------------------------------------------------------------------
+; ReloadMapAfterPrinter — pret home/overworld.asm:ReloadMapAfterPrinter (:2008-2015).
+;
+; Rebuilds the block map after the Game Boy Printer has taken over the screen, then
+; falls through into FinishReloadingMap exactly as pret does. Its five callers all
+; live in pret engine/printer/printer.asm, which the port has not reached yet
+; (docs/current_plan_printer.md) — so this has no port caller today and is here
+; because the printer tier will need it and because the label was reading `missing`.
+;
+; The hLoadedROMBank save/restore and SwitchToMapRomBank are kept: they are the
+; port's flat no-op MBC bookkeeping, matching every other translated site in this
+; file (ReloadMapAfterSurfingMinigame does the same).
+; ---------------------------------------------------------------------------
+global ReloadMapAfterPrinter
+ReloadMapAfterPrinter:
+    mov al, [ebp + hLoadedROMBank]
+    push eax
+    mov al, [ebp + wCurMap]
+    call SwitchToMapRomBank
+    call LoadTileBlockMap
+    pop eax
+    call BankswitchCommon
+    ; falls through — pret has no jump either
+
+; ---------------------------------------------------------------------------
 ; FinishReloadingMap — faithful translation.
 ; Pret ref: home/overworld.asm:FinishReloadingMap (:2016-2019)
 ; ---------------------------------------------------------------------------
@@ -3860,6 +4202,31 @@ SwitchToMapRomBank:
     ret
 
 ; ---------------------------------------------------------------------------
+; GetMapHeaderPointer — pret home/overworld.asm:GetMapHeaderPointer (:2077-2093).
+;
+; Returns the address of wCurMap's entry in MapHeaderPointers. pret brackets the
+; lookup with a BankswitchCommon pair for BANK(MapHeaderPointers); the port is
+; flat, so the bank save/restore has no counterpart and is dropped.
+;
+; MapHeaderPointers is a table of GB (16-bit) addresses, so the port biases the
+; entry by EBP to make it a flat pointer — pret's HL is already a bank-relative
+; address that its callers dereference directly.
+;
+; In:  EBP = GB base, wCurMap.
+; Out: ESI = flat address of the map header (pret: HL). Clobbers EAX.
+;      pret preserves DE across the lookup (`push de` / `pop de`); the port's DX
+;      is untouched here, so no save is needed.
+; ---------------------------------------------------------------------------
+global GetMapHeaderPointer
+GetMapHeaderPointer:
+    movzx eax, byte [ebp + wCurMap]         ; ld a,[wCurMap] / ld e,a / ld d,0
+    add eax, eax                            ; add hl,de / add hl,de — 2 bytes per entry
+    mov esi, MapHeaderPointers
+    movzx esi, word [esi + eax]             ; ld a,[hli] / ld h,[hl] / ld l,a
+    add esi, ebp                            ; GB address -> flat pointer
+    ret
+
+; ---------------------------------------------------------------------------
 ; IgnoreInputForHalfSecond — suppress player input for ~30 frames after a warp.
 ; Sets wIgnoreInputCounter=30 and BIT_DISABLE_JOYPAD in wStatusFlags5.
 ; The countdown runs at the top of OverworldLoop; joypad is re-enabled when it
@@ -3869,6 +4236,22 @@ SwitchToMapRomBank:
 IgnoreInputForHalfSecond:
     mov byte [ebp + wIgnoreInputCounter], 30
     or byte [ebp + wStatusFlags5], (1 << BIT_DISABLE_JOYPAD) | (1 << 2) | (1 << 1)
+    ret
+
+; ---------------------------------------------------------------------------
+; ResetUsingStrengthOutOfBattleBit — pret home/overworld.asm:2105-2108.
+;
+;     ld hl, wStatusFlags1 / res BIT_STRENGTH_ACTIVE, [hl] / ret
+;
+; Called from EnterMap on the non-battle-return path. Retired the ret-stub in
+; overworld_stubs.asm (2026-08-22): the stub was behaviour-equivalent only while
+; nothing ever SET the bit, and that is not a property to keep leaning on — the
+; field-move Strength path sets it, and a stub here would silently leave Strength
+; active across a map change.
+; ---------------------------------------------------------------------------
+global ResetUsingStrengthOutOfBattleBit
+ResetUsingStrengthOutOfBattleBit:
+    and byte [ebp + wStatusFlags1], ~(1 << BIT_STRENGTH_ACTIVE) & 0xFF
     ret
 
 global IsSpriteOrSignInFrontOfPlayer         ; A-press dispatch head (overworld.asm)
@@ -3973,6 +4356,26 @@ HandleMidJump:
     test byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
     jz  .ret
     call _HandleMidJump
+.ret:
+    ret
+
+; ---------------------------------------------------------------------------
+; IsSpinning — pret home/overworld.asm:IsSpinning (:2125-2129).
+;
+;     ld a, [wMovementFlags] / bit BIT_SPINNING, a / ret z
+;     farjp LoadSpinnerArrowTiles          ; spin while moving
+;
+; Called once per mid-walk OverworldLoopLessDelay iteration (pret's .moveAhead,
+; :234-235). The port had the spinner TILE loader (LoadSpinnerArrowTiles,
+; engine/overworld/spinners.asm) translated with no caller, so the spinner-tile
+; blink that pushes the player across a Team Rocket HQ / Viridian Gym floor could
+; never run. The `farjp` is a plain tail jump in the flat model.
+; ---------------------------------------------------------------------------
+global IsSpinning
+IsSpinning:
+    test byte [ebp + wMovementFlags], (1 << BIT_SPINNING)
+    jz .ret                                  ; ret z — not spinning
+    jmp LoadSpinnerArrowTiles                ; farjp LoadSpinnerArrowTiles
 .ret:
     ret
 
@@ -4202,7 +4605,7 @@ global OverworldLoopLessDelay
 ; wCurrentTileBlockMapViewPointer/wYCoord/wXCoord. The port has no parallel
 ; per-map view-pointer table; it reads Y/X directly out of the already-loaded
 ; wWarpEntries (Y, X, dest_warp_id, dest_map_id per entry — see the
-; `warp_event` macro / CheckWarpTile), and leaves wCurrentTileBlockMapViewPointer
+; `warp_event` macro / the CheckWarps* scans), and leaves wCurrentTileBlockMapViewPointer
 ; to LoadDestinationMapData's explicit stride-math recompute, which replaces
 ; pret's ROM view-pointer lookup with an equivalent runtime computation.
 ; In:  wDestinationWarpID = 0-based warp index (destination map's table)

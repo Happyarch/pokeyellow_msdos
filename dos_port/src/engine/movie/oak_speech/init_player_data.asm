@@ -29,7 +29,7 @@ global InitializeEmptyList
 
 extern Random                              ; home/random.asm
 extern FillMemory                          ; home/copy2.asm — ESI=dst, BX=count, AL=value
-extern InitializeToggleableObjectsFlags    ; overworld_stubs.asm (TODO: toggleable_objects.asm)
+extern InitializeToggleableObjectsFlags    ; src/engine/overworld/toggleable_objects.asm
 
 START_MONEY equ 0x3000
 
