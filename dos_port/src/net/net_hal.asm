@@ -72,6 +72,15 @@ global g_peer_game_gen
 global g_net_com_sel
 global g_net_baud_div
 global g_net_linklog
+global g_nlog_count                 ; /LINKLOG ring (debug_dump.asm dumps it)
+global g_nlog_buf
+global net_role_master              ; session diagnostics, read by the
+global net_state                    ; DEBUG_LINKCHECK GBSTATE probe regions
+global net_desyncs                  ; (debug_dump.asm gbregion_flat rows)
+global net_estab_local              ; ..estab_peer/estab_pend/kick_open follow
+global net_exch_ctr
+global net_pump_ticks
+global link_ncb                     ; raw NFCB, parsed host-side by linkcheck
 
 extern NetFrame_Reset               ; src/net/net_frame.asm
 extern NetFrame_SendMsg
@@ -127,9 +136,22 @@ net_token       resd 1              ; our election token
 net_peer_token  resd 1
 net_exch_ctr    resw 1              ; monotonic exchange counter (lockstep)
 net_desyncs     resw 1              ; diagnostic
+net_pump_ticks  resd 1              ; diagnostic: net_uart_pump entries
 hello_buf       resb 8              ; staged HELLO payload
 exch_buf        resb 4              ; staged EXCH payload
 link_ncb        resb NFCB.size      ; the one live codec instance
+
+; /LINKLOG exchange ring — one 4-byte record per REAL exchange byte (exch_id
+; >= 1; establishment synthesis and ESTABLISH_REQ are net bookkeeping, not
+; cable bytes, and are excluded so two sides' logs cross-check as A.tx == B.rx).
+; Record: {u8 dir (0=TX 1=RX), u8 gb_byte, u16 exch_id LE}. Saturating, not
+; wrapping: the cross-check compares whole sequences from exchange 1, and a
+; wrapped ring would silently drop the front. Port-only diagnostic data —
+; little-endian is fine (the big-endian rule is for GB game data).
+NLOG_MAX        equ 4096
+align 4
+g_nlog_count    resd 1              ; records written (saturates at NLOG_MAX)
+g_nlog_buf      resb NLOG_MAX * 4
 
 section .data
 
@@ -253,6 +275,29 @@ NetHAL_StartTransfer:
 net_null_op:
     ret
 
+; ---------------------------------------------------------------------------
+; net_log_rec — append one /LINKLOG record. In: AH = dir (0=TX 1=RX),
+; AL = GB byte, CX = exch_id. No-op unless /LINKLOG was given. Preserves
+; all registers and does not touch the codec, so it is safe at any point
+; in the session paths.
+; ---------------------------------------------------------------------------
+net_log_rec:
+    cmp byte [g_net_linklog], 0
+    je .off
+    pushad
+    mov edx, [g_nlog_count]
+    cmp edx, NLOG_MAX
+    jae .full                       ; saturate (see the ring comment in .bss)
+    lea edi, [g_nlog_buf + edx * 4]
+    mov [edi], ah                   ; dir
+    mov [edi + 1], al               ; byte
+    mov [edi + 2], cx               ; exch_id (LE, port-only diagnostic)
+    inc dword [g_nlog_count]
+.full:
+    popad
+.off:
+    ret
+
 ; ===========================================================================
 ; UART transport row (session logic; the byte layer is com_uart.asm)
 ; ===========================================================================
@@ -261,6 +306,7 @@ net_null_op:
 ; net_uart_pump — tick the codec, then run session upkeep + queued sends.
 ; ---------------------------------------------------------------------------
 net_uart_pump:
+    inc dword [net_pump_ticks]
     mov ebx, link_ncb
     call NetFrame_Tick
     ; bootstrap recovery: a codec that dies while still in HELLO just means
@@ -356,6 +402,18 @@ net_uart_start:
     mov al, [ebp + IO_SC]
     test al, SC_INTERNAL_BIT
     jz .ret
+    cmp byte [net_estab_pend], 0
+    jne .ret                        ; our ESTABLISH_REQ is still queued: a kick
+                                    ; sent now OVERTAKES it (kicks go out
+                                    ; synchronously, the REQ from the next pump
+                                    ; tick), reaches the peer while it is still
+                                    ; NS_UP, and is codec-acked but dropped —
+                                    ; then never resent, wedging net_kick_open
+                                    ; shut for the whole session (measured in
+                                    ; linkcheck 2026-08-22: tx_seq showed
+                                    ; HELLO=1 EXCH=2 REQ=3 on the wire). The
+                                    ; skipped kick costs nothing: the zero-byte
+                                    ; and nybble senders re-arm every frame.
     cmp byte [net_kick_open], 0
     jne .ret                        ; previous exchange still completing —
                                     ; frame-paced callers re-kick next frame
@@ -375,6 +433,10 @@ net_uart_start:
     dec word [net_exch_ctr]         ; refused: retry on the next kick
     ret
 .kicked:
+    mov al, [exch_buf]
+    mov cx, [net_exch_ctr]
+    xor ah, ah                      ; /LINKLOG: TX of the kick byte
+    call net_log_rec
     mov byte [net_kick_open], 1
     ret
 
@@ -449,7 +511,10 @@ net_session_deliver:
     mov [exch_buf], al
     push ecx
     push dword [esi]                ; master's byte (payload[0]) — ESI may be
-    mov al, NF_EXCH                 ; the codec rx_buf, invalid after sends
+                                    ; the codec rx_buf, invalid after sends
+    xor ah, ah
+    call net_log_rec                ; /LINKLOG: TX of the reply (CX = exch_id)
+    mov al, NF_EXCH
     mov esi, exch_buf
     mov dx, 1
     call NetFrame_SendMsg           ; refused only if outstanding: cannot be —
@@ -457,6 +522,8 @@ net_session_deliver:
                                     ; went out and nothing else is in flight
     pop eax                         ; AL = master's byte
     pop ecx
+    mov ah, 1                       ; /LINKLOG: RX of the master's byte
+    call net_log_rec
     jmp net_deliver_gb_byte
 .master_reply:
     ; ---- master: slave's reply to our kick ----
@@ -464,6 +531,8 @@ net_session_deliver:
     jne .desync
     mov byte [net_kick_open], 0
     mov al, [esi]
+    mov ah, 1                       ; /LINKLOG: RX of the reply (CX = exch_id)
+    call net_log_rec
     jmp net_deliver_gb_byte
 .desync:
     inc word [net_desyncs]

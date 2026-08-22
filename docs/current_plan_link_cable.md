@@ -328,10 +328,24 @@ blocks in `src/engine/menus/naming_screen.asm`.
       (recorded 2026-08-21 — Stage 1 sequenced it optimistically)
 
 ### Stage 2 — UART transport + handshake
-- [ ] `net_frame.asm` codec + ARQ, with a DEBUG-only RAM-pipe transport unit
-      test (injected drops/corruption); game-level loopback rejected (breaks
-      role asymmetry)
-- [ ] `com_uart.asm` (`/COM1-4`, `/BAUD=`, FIFO detect, IRQ RX ring, polled TX)
+- [x] `net_frame.asm` codec + ARQ landed 2026-08-22 (`7847346`), proven by the
+      DEBUG_NETTEST RAM-pipe test: 5 phases (clean / drop-every-17th /
+      corrupt-every-19th / idle-keepalive / dead-pipe), 60/60 both ways,
+      PASS=1 — and it caught a real bug (nf_crc_init clobbered ECX/EDX on
+      first use, poisoning the stored retransmit frame's CRC); game-level
+      loopback rejected (breaks role asymmetry)
+- [x] `com_uart.asm` + CLI flags + session core landed 2026-08-22 (`2a29f82`);
+      two REAL bugs found and fixed by the linkcheck harness (step 5 below):
+      (1) IRQ edge-loss at init — the staggered second instance boots into
+      the first one's HELLO retransmissions, so a byte already in the RBR
+      when IER goes live holds INTR high and the edge-triggered 8259 never
+      fires; fixed with a post-IER drain (RBR+LSR+IIR) plus a CLI-guarded
+      direct-port polling fallback in ComUart_RxByte; (2) the master's
+      first kick OVERTOOK its own pump-queued ESTABLISH_REQ (kicks send
+      synchronously from StartTransfer), reaching the peer while still
+      NS_UP where the EXCH was codec-acked but semantically dropped, never
+      resent, wedging net_kick_open for the whole session — fixed by
+      holding kicks while net_estab_pend is set
 - [x] `cable_club_npc.asm` translated 2026-08-22 (all pret labels + the
       seven receptionist texts via the new `LINK_NPC_FAR` generator list ->
       `assets/link_npc_text.inc`; `collect_far` learned to strip VC
@@ -349,11 +363,49 @@ blocks in `src/engine/menus/naming_screen.asm`.
       fade/palette path — tilemap content is fine, so compare tilemap/WRAM,
       not pixels), and PrintText dialog lands in the WINDOW scratch, not
       wTileMap — pick the compared surface accordingly
-- [ ] `tools/linkcheck.sh` two-instance harness: per-instance `PKMN.IMG`
-      clones (`run_headless.sh` pattern — sidesteps `dos_port/run`'s fuser
-      lock), confs derived from the tracked transport-less `dosbox-x.conf`,
-      nullmodem server/client pair; scenario: both instances reach the link
-      menu with consistent master/slave roles; `/LINKLOG` cross-check green
+- [ ] `tools/linkcheck.sh` two-instance harness — BUILT AND NEARLY GREEN
+      (2026-08-22, session end): the harness, the `DEBUG_LINKCHECK` gate
+      (`RunLinkCheck` loops the real `CableClubNPC`; `AUTOKEY_LINKCHECK` A
+      train answers the prompts and stops at LinkMenu entry via the
+      `linkcheck_in_menu` hook), the `/LINKLOG` ring (`net_hal.asm`,
+      records real EXCH bytes only) + `LINKLOG.BIN` dump
+      (`DumpLinkLog`, debug_dump.asm, runs on the photograph path), and
+      GBSTATE probe regions (linkStatus/netRole/netState/desyncs/lcMarks +
+      diagnostic ncbState/netEstab/netExchCtr/netPumps/uartDiag/nfDiag)
+      all work. Runs get through election, establishment, the save prompt,
+      the rendezvous and into LinkMenu on BOTH instances with the correct
+      $02/$01 role split and 11-12 LINKLOG records matching both ways
+      (scratchpad lc5/lc6). ONE OPEN FAILURE: ~7-10 s after both sides
+      park in LinkMenu (a quiet cable is correct there — keepalives are
+      the only traffic), one side's UART stops seeing inbound bytes
+      ENTIRELY for 600+ ticks (ring empty per counters, LSR DR=0 per the
+      per-tick poll, ZERO DOSBox-side overruns, bytes queue upstream and
+      arrive only later) → its codec death timer starves → NS_DOWN both
+      sides. Guest counters prove the guest kept pumping (netPumps ≈
+      frames, cb_rxbyte called each tick) and the peer kept transmitting
+      (tx_ok counted, tx_drop=0), so the stall is in DOSBox-X nullmodem
+      RX delivery. PRIME SUSPECT (read in the fork source,
+      /tmp/dosbox-x-mcp-src/src/hardware/serialport/serialport.cpp
+      receiveByteEx): `if(rxfifo->getUsage()==rx_interrupt_threshold)
+      rise(RX_PRIORITY)` — the RX interrupt rises only when fifo usage
+      EQUALS the threshold (1 with our FCR trigger), so a burst that
+      lands while usage >1 raises nothing and delivery stalls behind the
+      SERIAL_RX_TIMEOUT_EVENT path; correlates with the stall starting
+      right when exchange traffic stops (the burst boundary). NEXT STEPS
+      for the follow-up session: (a) confirm by reading the timeout-event
+      path in serialport.cpp; (b) likely guest-side fix regardless of
+      emulator: have NetHAL keepalives also reset the peer death timer on
+      ANY inbound byte (not just full frames), and/or raise
+      NF_DEATH_TICKS, and/or have the parked master send a periodic
+      reliable NOP so ARQ retransmission (which does recover) covers the
+      gap — but prefer root-causing the delivery stall first, since Stage
+      3 block transfers will hit it harder; (c) rerun `tools/linkcheck.sh`
+      (env: LINKCHECK_PORT/LINKCHECK_DUMP_FRAME/RUN_TIMEOUT/
+      LINKCHECK_STAGGER) — needs the C_MODEM fork binary at
+      `tools/dosbox-x-mcp/dosbox-x-mcp` (build_dosbox_mcp.sh; system
+      dosbox-x lacks nullmodem). Scenario target unchanged: both
+      instances reach the link menu with consistent master/slave roles,
+      `/LINKLOG` cross-check green, session still alive at the dump
 
 ### Stage 3 — Trade Center
 - [ ] Complete `src/engine/link/cable_club.asm` to all 23 labels

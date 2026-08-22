@@ -1043,6 +1043,13 @@ LinkMenu:
     ; this menu runs, exactly as pret sequences it. The DEBUG_I1_LINK harness,
     ; which calls this routine directly with no receptionist, pins the byte
     ; itself below.)
+%ifdef DEBUG_LINKCHECK
+    ; linkcheck harness hook: entering this menu stops the AUTOKEY_LINKCHECK
+    ; A train (an A here would SELECT an option — Stage-3 flow), so both
+    ; instances park for the photograph. Harness state, not game logic.
+    extern linkcheck_in_menu            ; src/engine/link/cable_club_npc.asm
+    mov byte [linkcheck_in_menu], 1
+%endif
     ; xor a / ld [wLetterPrintingDelayFlags],a
     mov byte [ebp + wLetterPrintingDelayFlags], 0
     ; ld hl,wStatusFlags4 / set BIT_LINK_CONNECTED,[hl]
