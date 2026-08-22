@@ -421,6 +421,66 @@ SCENARIOS = {
             ],
         },
     },
+    "cable_club_nolink": {
+        "flags": "DEBUG_CABLECLUB=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # Pewter Pokecenter, player at (3,11) facing UP, talking to the link
+        # receptionist (`object_event 11, 2, SPRITE_LINK_RECEPTIONIST, STAY, DOWN`)
+        # with no peer: CableClubNPC's 90-frame race expires and the dump parks on
+        # the failure text's last page. Window MEASURED by brute force over every
+        # full-fit (dx,dy) on the non-dialog rows 0-11 (oaks_lab_posters rule:
+        # measured, not guessed): (16,6) is the unique maximum.
+        "window": (16, 6),
+        "projections": [
+            # Same overworld dialog re-flow as sign_pallet: the stride-20 dialog
+            # scratch at wTileMap + 12*20 (msgbox_dialog, home/text.asm) becomes
+            # 3 canvas rows x 2 panels on the 40-wide canvas.
+            ((12 + k, 0, 12 + k, 19), (20 * (k % 2), (6 + k // 2) - (12 + k)),
+             "stride-20 dialog scratch re-flowed over the 40-wide canvas: "
+             "6 rows x 1 panel -> 3 rows x 2 panels")
+            for k in range(6)
+        ],
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc), so the same player "
+                         "position yields a different pointer into a differently-sized "
+                         "wOverworldMap. wCurMap at +0 and wYCoord/wXCoord at +3/+4 ARE "
+                         "compared, and they are what pins the player to (3,11)."),
+            ],
+        },
+        "masks": {
+            "tilemap": [
+                ((r, 0, r, 19),
+                 "map-mirror rows sitting under the dialog: at this window golden rows "
+                 "0-2 ARE canvas rows 6-8, where the stride-20 dialog scratch lives. "
+                 "Same staging-buffer collision oaks_lab_posters, sign_pallet and "
+                 "route_15_binoculars mask. MEASURED: exactly these 60 cells diverge, "
+                 "every 'got' byte a box-border or space glyph from the failure textbox")
+                for r in range(3)
+            ],
+            "oam": [
+                (i, "the port's sprite-visibility window is DELIBERATELY WIDER than "
+                    "pret's, so it admits the Pokecenter NPCs the 20x18 GB screen cuts "
+                    "off and slot packing shifts (same class and justification as "
+                    "oaks_lab_posters). Checked POSITIVELY before masking: the golden's "
+                    "only on-screen non-player entries — the receptionist, tiles "
+                    "$3C-$3F at (Y=60,X=72)/(68,80) — are present BY VALUE in the "
+                    "port's entries 16-19, and player entries 0-3 match unmasked")
+                for i in range(4, 40)
+            ],
+            "vram": [
+                (96 + i, "unreferenced OBJ residue: hardware retains the sprite tiles "
+                         "of the maps the golden WALKED through (vChars0 $60-$7F), "
+                         "while the port's gate warps straight in and leaves unneeded "
+                         "slots at zero. MEASURED: all 32 diverging slots are "
+                         "golden-data/port-zero, and NONE is referenced by any OAM "
+                         "entry on either side (golden references tiles <= $3F, port "
+                         "<= $57). Same class as oaks_lab_posters")
+                for i in range(32)
+            ],
+        },
+    },
     "route_15_binoculars": {
         "flags": "DEBUG_BINOCULARS=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),

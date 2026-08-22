@@ -52,6 +52,9 @@ global CableClubNPCMakingPreparationsText
 
 extern PrintText                    ; src/home/window.asm
 extern DelayFrame                   ; src/home/vblank.asm
+%ifdef DEBUG_CABLECLUB
+extern DumpBackbuffer               ; src/debug/debug_dump.asm — FRAME.BIN + GBSTATE.BIN, then exit
+%endif
 extern DelayFrames                  ; src/home/delay.asm — In: BL = frames
 extern Delay3                       ; src/home/palettes.asm
 extern CheckPikachuFollowingPlayer  ; src/home/pikachu.asm — ZF=0: following
@@ -331,6 +334,15 @@ section .text
 ; ---------------------------------------------------------------------------
 CableClubReceptionistScript:
     call CableClubNPC
+%ifdef DEBUG_CABLECLUB
+    ; cable_club_nolink golden photograph: CableClubNPC has just returned from
+    ; the no-peer path — the failure text's last page is still on screen and
+    ; .didNotConnect's WRAM aftermath is latched (hSerialConnectionStatus $FF,
+    ; wUnknownSerialCounter zeroed, wMenuJoypadPollCount zeroed). One DelayFrame
+    ; lets the compositor draw the final reveal, then dump-and-exit.
+    call DelayFrame
+    call DumpBackbuffer                     ; FRAME.BIN + GBSTATE.BIN, then exits
+%endif
     ret
 
 ; ===========================================================================

@@ -2741,6 +2741,37 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "Reads the LEFT poster in Oak's Lab through the real A-press dispatch on both sides, proving DisplayOakLabLeftPoster's tx_pre_jump tail lands in PrintPredefTextID \u2014 the shape faithdiff cannot see through. DisplayOakLabRightPoster is a different handler and is NOT witnessed here. OAM above the player is masked because the port's wider sprite window admits objects pret's cuts off; all 12 of the golden's on-screen entries were verified PRESENT in the port by value first."
+    },
+    {
+      "name": "cable_club_nolink",
+      "id": 91,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_CABLECLUB=1",
+      "port_entry_gate": "DEBUG_CABLECLUB",
+      "navigation_script": "tools/mgba_harness/scenarios/cable_club_nolink.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "CableClubNPC",
+        "CableClubReceptionistScript"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Talks to the Pewter Pokecenter link receptionist with the pokedex and NO peer, through the real A-press dispatch on both sides (port: CheckNPCInteraction -> generated SCRIPT entry -> CableClubReceptionistScript; ROM: DisplayTextID's TX_SCRIPT case), running CableClubNPC's full 90-frame establishment race to expiry and the two-page failure text. The dump lands with the last page on screen and .didNotConnect's WRAM aftermath latched (linkStatus $FF, serial watchdog and poll count zeroed). SCOPE: the timeout path only — the connected path needs a peer and is covered by tools/linkcheck.sh, not a golden."
     }
   ],
   "disabled_scenarios": []

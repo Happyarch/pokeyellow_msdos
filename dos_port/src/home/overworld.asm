@@ -373,6 +373,27 @@ EnterMap:
     ; Pokecenter for the link-receptionist smoke: blank screen).
     call StageIndoorMapBlk
 %endif
+%ifdef DEBUG_CABLECLUB
+    ; Link-receptionist no-link gate (cable_club_nolink golden — link cable plan
+    ; Stage 2 step 4): spawn on the Pokecenter talk tile below the receptionist
+    ; (`object_event 11, 2, SPRITE_LINK_RECEPTIONIST, STAY, DOWN` — the defaults
+    ; put the player at y=3, x=11 in PEWTER_POKECENTER, open floor per
+    ; PewterPokecenter.blk + Pokecenter_Coll). The talk itself is driven by
+    ; AUTOKEY_APRESS through the real OverworldLoop dispatch — see the
+    ; post-LoadMapData block at the end of EnterMap.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
+    mov byte [ebp + wCurMap], CABLECLUB_MAP
+    mov byte [ebp + wYCoord], CABLECLUB_Y
+    mov byte [ebp + wXCoord], CABLECLUB_X
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    ; Every Pokecenter is INDOORS: stage the .blk into the shared window (same
+    ; call and reason as DEBUG_HIDDENOBJ above).
+    call StageIndoorMapBlk
+    ; The receptionist's gate: without the pokedex CableClubNPC takes the
+    ; "making preparations" branch, not the 90-frame race under test. The mGBA
+    ; side seeds the same flag (cable_club_nolink.lua, seed.set_event).
+    SetEvent EVENT_GOT_POKEDEX
+%endif
 %ifdef DEBUG_PREDEFTEXT
     ; Predef-text gate (predef-text plan Stage 2 acceptance). Stand ON the SNES tile
     ; in Red's bedroom. pret: `hidden_event 3, 5, PrintRedSNESText, ANY_FACING`
@@ -1222,6 +1243,20 @@ EnterMap:
     call SeedDeterministicPlayerIdentity
     call SeamReseatView
     call RunSurfTestSeed                     ; party + bag + SURFBOARD; RETURNS
+%endif
+%ifdef DEBUG_CABLECLUB
+    ; Same shape as DEBUG_SURF above: seed, then FALL THROUGH into the real
+    ; OverworldLoop. AUTOKEY_APRESS's A press runs the production talk dispatch
+    ; (IsSpriteOrSignInFrontOfPlayer -> CheckNPCInteraction -> the generated
+    ; SCRIPT entry -> CableClubReceptionistScript -> CableClubNPC) and answers
+    ; the failure text's two `cont` page waits; the dump hook lives in the shim
+    ; (src/engine/link/cable_club_npc.asm).
+    ; LoadMapData does not derive the view pointer for a hand-seeded spawn.
+    call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
+    call SeamReseatView
+    ; Facing is seeded HERE, not with the coords: InitSprites (from LoadMapData)
+    ; rebuilds wSpriteStateData1 (same rule as DEBUG_HIDDENOBJ).
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], CABLECLUB_DIR
 %endif
 %ifdef DEBUG_LEDGE
     ; Same shape as DEBUG_SURF above: seed, then FALL THROUGH into the real

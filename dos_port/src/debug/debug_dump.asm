@@ -998,6 +998,22 @@ gbstate_regions:
     gbregion_flat "uartDiag",   g_uart_diag,     40
     gbregion_flat "nfDiag",     g_nf_diag,       32
 %endif
+%ifdef DEBUG_CABLECLUB
+    ; --- cable_club_nolink golden (link cable plan Stage 2 step 4) ---
+    ; SCENARIO-LOCAL rows (same rule as DEBUG_MAPSCRIPT_SIGHT below): the differ
+    ; joins regions by NAME, and tools/mgba_harness/scenarios/cable_club_nolink.lua
+    ; mirrors this list. The no-peer aftermath CableClubNPC leaves behind: the
+    ; 90-frame race expired (linkTimeout 0), every iteration parked the status at
+    ; CONNECTION_NOT_ESTABLISHED (linkStatus $FF), and .didNotConnect zeroed the
+    ; serial watchdog and the menu poll count. (linkTimeout and serialCounter
+    ; overlap at $D795 by pret's own union — both named so either side's report
+    ; is legible.)
+    gbregion "linkStatus",    hSerialConnectionStatus, 1
+    gbregion "linkTimeout",   wLinkTimeoutCounter, 1
+    gbregion "serialCounter", wUnknownSerialCounter, 2
+    gbregion "menuPollCount", wMenuJoypadPollCount, 1
+    gbregion "wPlayerMapPos", wCurMap, 5                 ; wCurMap .. wXCoord
+%endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph
 ; (AUTOKEY_DUMP_ON_BATTLE) or the state-gated follow-stall probe
 ; (AUTOKEY_DUMP_ON_FOLLOW). NASM %ifdef has no OR, so fold both into one helper.
