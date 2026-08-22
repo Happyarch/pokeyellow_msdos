@@ -154,6 +154,9 @@ extern RunBillsPCTest                     ; src/engine/pokemon/bills_pc.asm
 extern RunLeaguePCTest                    ; src/engine/menus/league_pc.asm
 extern RunLearnMoveTest                   ; src/debug/debug_dump.asm
 extern RunLinkCupsTest                    ; src/engine/menus/link_menu.asm
+%ifdef DEBUG_NETTEST
+extern RunNetPipeTest                     ; src/net/net_test.asm
+%endif
 extern RunLinkMenuTest                    ; src/engine/menus/link_menu.asm
 extern RunListMenuTest                    ; src/debug/debug_dump.asm
 extern RunMainMenuTest                    ; src/engine/menus/main_menu.asm
@@ -1025,6 +1028,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_I2
     call RunLinkCupsTest                    ; run cup validators (pass+gated fail), record codes, dump, exits
+%endif
+%ifdef DEBUG_NETTEST
+    call RunNetPipeTest                     ; net_frame codec/ARQ RAM-pipe test, results -> wTileMap, dump, exits
 %endif
 %ifdef DEBUG_LEARNMOVE
     call RunLearnMoveTest                  ; force a level-up move-learn, render one frame, dump FRAME.BIN, exits
