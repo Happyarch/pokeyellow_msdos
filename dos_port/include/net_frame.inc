@@ -18,6 +18,11 @@ NF_HELLO_ACK        equ 2               ; reliable — handshake reply
 NF_EXCH             equ 3               ; reliable — one semantic GB exchange
 NF_ACK              equ 4               ; control, unreliable (seq 0)
 NF_KEEPALIVE        equ 5               ; control, unreliable (seq 0)
+NF_BLK              equ 6               ; reliable — one whole Serial_ExchangeBytes
+                                        ; block (Stage 3; net_hal.asm
+                                        ; NetHAL_ExchangeBlock). The codec treats
+                                        ; it as a generic reliable type; the
+                                        ; session layer owns its semantics.
 
 NET_MAX_PAYLOAD     equ 512             ; Stage 3's 424-byte block + headroom
 

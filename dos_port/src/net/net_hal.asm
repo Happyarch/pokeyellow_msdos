@@ -47,6 +47,19 @@
 ;    mismatch is a detected desync -> session down (the primitives' hatches
 ;    then drive pret terminal paths).
 ; 5. Codec death (ARQ exhaustion / silence) after UP -> session down.
+; 6. Block exchange (Stage 3): Serial_ExchangeBytes' 17/424/200-byte blocks
+;    cross as ONE reliable NF_BLK each way per exchange (the plan's
+;    message-level seam table), never as per-byte EXCH lockstep. Both sides
+;    call NetHAL_ExchangeBlock symmetrically: send own block with a
+;    monotonic block id, wait for the peer's; ids and lengths must match or
+;    it is a detected desync -> session down. The peer's block can arrive
+;    BEFORE our own call (the peer runs ahead inside the same rendezvous
+;    window), so delivery stages it in a one-deep buffer; one-deep is
+;    sufficient because the peer cannot complete exchange N (and so cannot
+;    send N+1) until it has received OUR block N. Block traffic is not
+;    /LINKLOG'd — the ring records single-byte exchanges only, and the
+;    tradecheck harness asserts block content end-to-end from the party
+;    data instead.
 ;
 ; Register contract: NetHAL_* preserve all GP registers (pushad around the
 ; transport work); flags are clobbered (LinkAlive's ZF IS its result).
@@ -64,6 +77,7 @@ bits 32
 global NetHAL_Pump
 global NetHAL_LinkAlive
 global NetHAL_StartTransfer
+global NetHAL_ExchangeBlock
 global NetInit
 global NetShutdown
 global g_net_transport
@@ -139,6 +153,15 @@ net_desyncs     resw 1              ; diagnostic
 net_pump_ticks  resd 1              ; diagnostic: net_uart_pump entries
 hello_buf       resb 8              ; staged HELLO payload
 exch_buf        resb 4              ; staged EXCH payload
+; block exchange (design note 6 above): args snapshot + one-deep RX stage
+net_blk_ctr     resw 1              ; monotonic block id (lockstep, like exch)
+blk_tx_off      resd 1              ; caller's send GB offset
+blk_rx_off      resd 1              ; caller's receive GB offset
+blk_len         resw 1              ; caller's byte count
+blk_rx_id       resw 1              ; staged peer block: id
+blk_rx_len      resw 1              ;   ..length
+blk_rx_have     resb 1              ;   ..1 = staged and unconsumed
+blk_rx_buf      resb NET_MAX_PAYLOAD
 link_ncb        resb NFCB.size      ; the one live codec instance
 
 ; /LINKLOG exchange ring — one 4-byte record per REAL exchange byte (exch_id
@@ -274,6 +297,72 @@ NetHAL_StartTransfer:
 
 net_null_op:
     ret
+
+; ---------------------------------------------------------------------------
+; NetHAL_ExchangeBlock — one whole-block exchange (design note 6). Both sides
+; call this symmetrically from Serial_ExchangeBytes' HAL cut.
+; In:  ESI = send data GB offset, EDX = receive data GB offset,
+;      BX = length (1..NET_MAX_PAYLOAD).
+; Out: on success the peer's block is copied into [EBP+EDX..+BX). On session
+;      death or desync nothing is copied and the session is down — the caller
+;      re-checks NetHAL_LinkAlive and takes its no-partner hatch. Preserves
+;      all GP registers; clobbers flags (the NetHAL_* contract).
+; The wait loops are tight pump polls with no DelayFrame: pret's own block
+; exchange runs with rIE narrowed to IE_SERIAL, i.e. the frame loop is frozen
+; for its duration, and the ARQ timers advance by wall frames of the PIT
+; tick_count regardless (net_frame.inc), so codec death still bounds the wait.
+; ---------------------------------------------------------------------------
+NetHAL_ExchangeBlock:
+    cmp byte [g_net_transport], NET_TRANSPORT_NONE
+    je .idle
+    mov [blk_tx_off], esi
+    mov [blk_rx_off], edx
+    mov [blk_len], bx
+    pushad
+    cmp byte [net_state], NS_ESTABLISHED
+    jne .out
+    inc word [net_blk_ctr]
+.send_wait:
+    call NetHAL_Pump
+    cmp byte [g_net_link_up], 0
+    je .out                         ; died while our previous frame drained
+    mov ebx, link_ncb
+    cmp byte [ebx + NFCB.tx_out], 0
+    jne .send_wait                  ; a kick/keepalive is still unacked
+    mov al, NF_BLK
+    mov cx, [net_blk_ctr]
+    mov esi, [blk_tx_off]
+    lea esi, [ebp + esi]            ; SendMsg copies from a flat pointer
+    mov dx, [blk_len]
+    call NetFrame_SendMsg
+    jc .send_wait                   ; refused (raced a pump send): retry
+.recv_wait:
+    call NetHAL_Pump
+    cmp byte [g_net_link_up], 0
+    je .out                         ; died waiting for the peer's block
+    cmp byte [blk_rx_have], 0
+    je .recv_wait
+    ; peer's block staged: lockstep id + length must match
+    mov ax, [blk_rx_id]
+    cmp ax, [net_blk_ctr]
+    jne .desync
+    mov ax, [blk_rx_len]
+    cmp ax, [blk_len]
+    jne .desync
+    movzx ecx, ax
+    mov esi, blk_rx_buf
+    mov edi, [blk_rx_off]
+    lea edi, [ebp + edi]
+    rep movsb
+    mov byte [blk_rx_have], 0
+.out:
+    popad
+.idle:
+    ret
+.desync:
+    inc word [net_desyncs]
+    call net_session_down
+    jmp .out
 
 ; ---------------------------------------------------------------------------
 ; net_log_rec — append one /LINKLOG record. In: AH = dir (0=TX 1=RX),
@@ -447,6 +536,8 @@ net_uart_start:
 net_session_deliver:
     cmp al, NF_HELLO
     je .hello
+    cmp al, NF_BLK
+    je .blk
     cmp al, NF_EXCH
     jne .ret
     test cx, cx
@@ -454,6 +545,25 @@ net_session_deliver:
     jmp .exch
 .ret:
     ret
+
+.blk:
+    ; stage the peer's block (one-deep — see design note 6). An overrun means
+    ; the peer ran a second exchange before we consumed the first, which the
+    ; lockstep makes impossible unless the streams diverged: detected desync.
+    cmp byte [net_state], NS_ESTABLISHED
+    jne .ret
+    cmp byte [blk_rx_have], 0
+    jne .blk_overrun
+    mov [blk_rx_id], cx
+    mov [blk_rx_len], dx
+    movzx ecx, dx
+    mov edi, blk_rx_buf
+    rep movsb                       ; ESI = codec rx_buf (flat)
+    mov byte [blk_rx_have], 1
+    ret
+.blk_overrun:
+    inc word [net_desyncs]
+    jmp net_session_down
 
 .hello:
     cmp dx, 8
@@ -553,6 +663,8 @@ net_try_establish:
     je .ret
     mov byte [net_state], NS_ESTABLISHED
     mov word [net_exch_ctr], 0
+    mov word [net_blk_ctr], 0
+    mov byte [blk_rx_have], 0
     mov byte [net_kick_open], 0
     mov byte [net_estab_local], 0
     mov byte [net_estab_peer], 0
@@ -586,4 +698,5 @@ net_session_down:
     mov byte [net_state], NS_DOWN
     mov byte [g_net_link_up], 0
     mov byte [net_kick_open], 0
+    mov byte [blk_rx_have], 0
     ret

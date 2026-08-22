@@ -68,6 +68,8 @@ global PrinterSerial__
 extern NetHAL_Pump              ; src/net/net_hal.asm — poll the bound transport
 extern NetHAL_LinkAlive         ; src/net/net_hal.asm — ZF=1: no link session
 extern NetHAL_StartTransfer     ; src/net/net_hal.asm — the rSC-write HAL site
+extern NetHAL_ExchangeBlock     ; src/net/net_hal.asm — whole-block exchange
+                                ; (Serial_ExchangeBytes' HAL cut, Stage 3)
 extern DelayFrame               ; src/home/vblank.asm
 extern PrinterSerial            ; src/engine/printer/printer_stubs.asm — dead
                                 ; branch, see PrinterSerial__ below
@@ -161,48 +163,30 @@ Serial:
 ;      all GB offsets.
 ; Out: ESI/EDX advanced past the block, BX = 0 (as pret leaves bc).
 ;
-; DEVIATION{class=HAL; pret=home/serial.asm:Serial_ExchangeBytes; behavior=returns immediately with the receive buffer untouched when no link session is up at entry or when it dies mid-block instead of continuing the exchange loop; evidence=with no partner Serial_ExchangeByte never yields the preamble byte so pret's loop has no exit, and no pret caller of this routine links before Stage 3 (cable_club.asm block exchange); lifetime=permanent no-partner boundary alongside live transports from Stage 2}
+; DEVIATION{class=HAL; pret=home/serial.asm:Serial_ExchangeBytes; behavior=the whole block crosses the wire as one reliable message each way via NetHAL_ExchangeBlock instead of pret's per-byte Serial_ExchangeByte loop with the ignore-until-preamble alignment, and the receive buffer holds the peer's send block verbatim from byte 0 where hardware stored it shifted 1-3 bytes by the preamble hunt, and it returns with the receive buffer untouched when no link session is up at entry or when it dies mid-exchange; evidence=maintainer architecture decision that byte-level lockstep must not be replayed over the network (one message per semantic exchange - docs/current_plan_link_cable.md exchange table) and every pret consumer of the received blocks scans past leading preamble slash zero bytes (cable_club.asm RNG-list and enemy-name scans skip 00 FD FE, the patch-list walker keys on FF terminators) so the verbatim alignment lands on identical downstream state, with both peers DOS ports seeing the same alignment by construction; lifetime=permanent HAL boundary}
+;
+; pret's register/WRAM exit contract is reproduced exactly: HL and DE advanced
+; past the block, BC = 0 with ZF set, hSerialIgnoringInitialData written at
+; entry as pret does (nothing else reads it between here and the next
+; exchange). The 48-iteration inter-byte spin and the wUnknownSerialCounter2
+; block-mode watchdog are per-byte pacing with no block-level counterpart;
+; codec death (net_frame NF_DEATH_TICKS) bounds the wait instead.
 ; ---------------------------------------------------------------------------
 Serial_ExchangeBytes:
     call NetHAL_LinkAlive
     jz .noLink
     mov byte [ebp + hSerialIgnoringInitialData], 1
-.loop:
-    call NetHAL_LinkAlive           ; session died mid-block: same hatch (the
-    jz .noLink                      ; per-byte loop has no other exit)
-    mov al, [ebp + esi]             ; ld a,[hl]
-    mov [ebp + hSerialSendData], al
-    call Serial_ExchangeByte
-    push ebx                        ; push bc
-    mov bh, al                      ; ld b,a — hold the received byte
-    inc esi                         ; inc hl
-    mov al, 48
-.waitLoop:
-    ; 8-BIT spin, kept verbatim (local pacing between byte exchanges; the
-    ; wire pacing is the transport's). See "Preserve Counter WIDTH".
-    dec al
-    jnz .waitLoop
-    mov al, [ebp + hSerialIgnoringInitialData]
-    test al, al                     ; and a — Z = past the preamble
-    mov al, bh                      ; ld a,b (flag-preserving)
-    pop ebx                         ; pop bc (flag-preserving)
-    jz .storeReceivedByte
-    ; still ignoring initial data: wait for the preamble byte
-    dec esi                         ; dec hl
-    cmp al, SERIAL_PREAMBLE_BYTE
-    jne .loop
-    xor al, al
-    mov [ebp + hSerialIgnoringInitialData], al
-    jmp .loop
-.storeReceivedByte:
-    mov [ebp + edx], al             ; ld [de],a
-    inc edx                         ; inc de
-    ; dec bc / ld a,b / or c — 16-bit count in BX exactly as pret's bc, so
-    ; BC=0 on entry runs 65536 exchanges and stops (pret's own bound).
-    dec bx
-    mov al, bh
-    or al, bl
-    jnz .loop
+    call NetHAL_ExchangeBlock       ; one reliable message each way (deviation)
+    call NetHAL_LinkAlive           ; died mid-exchange: receive buffer is
+    jz .noLink                      ; untouched (ExchangeBlock copies only on
+                                    ; a validated peer block)
+    ; pret exit state: hl/de past the block, bc = 0 (ZF set by the loop's
+    ; final `or`)
+    movzx eax, bx
+    add esi, eax
+    add edx, eax
+    xor bx, bx                      ; ZF=1, as pret's ld a,b / or c leaves it
+    mov al, 0                       ; pret exits with a = b|c = 0 (flag-safe)
     ret
 .noLink:
     ret
