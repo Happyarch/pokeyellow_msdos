@@ -5043,9 +5043,29 @@ RemoveFaintedPlayerMon:
     call FlagAction
     ; res ATTACKING_MULTIPLE_TIMES on the enemy
     and byte [ebp + wEnemyBattleStatus1], (~(1 << ATTACKING_MULTIPLE_TIMES)) & 0xFF
-    ; TODO-HW: low-health alarm (audio HAL, Phase 3).
+    ; pret core.asm:1023-1029, RESTORED 2026-08-21. The "TODO-HW: low-health alarm
+    ; (audio HAL, Phase 3)" that stood here was stale in the same way EndOfBattle's
+    ; WaitForSoundToFinish note was (retired 2026-08-14): the audio HAL is real and
+    ; WaitForSoundToFinish is translated and already called from MoveAnimation.
+    ;
+    ; SILENCE THE ALARM BEFORE THE FAINT. Without the store, wLowHealthAlarm keeps
+    ; its armed value across the faint and the beeping outlives the mon that caused
+    ; it; without the wait, the cry/faint audio steps on a still-sounding alarm.
+    ; The wait is GUARDED on the alarm actually sounding — it is pret's guard, and
+    ; it is what keeps a blocking call off the faint path in the common case.
+    mov al, [ebp + wLowHealthAlarm]
+    test al, (1 << BIT_LOW_HEALTH_ALARM)     ; pret: bit BIT_LOW_HEALTH_ALARM, a
+    jz .skipWaitForSound                     ; pret: jr z, .skipWaitForSound
+    mov byte [ebp + wLowHealthAlarm], DISABLE_LOW_HEALTH_ALARM
+    call WaitForSoundToFinish
+    xor al, al                               ; pret: xor a
+.skipWaitForSound:
+    ; pret's comment: "a is 0, so this zeroes the enemy's accumulated damage." On the
+    ; NOT-taken path that holds only because wLowHealthAlarm is 0 whenever the alarm
+    ; bit is clear — pret relies on it and so does this, deliberately, rather than
+    ; inserting an `xor` pret does not have. The port previously zeroed AL
+    ; unconditionally here, which was the same value by a different route.
     ; a==0 here → zero the enemy's accumulated Bide damage (both bytes) + status
-    xor al, al
     mov [ebp + wEnemyBideAccumulatedDamage + 0], al
     mov [ebp + wEnemyBideAccumulatedDamage + 1], al
     mov [ebp + wBattleMonStatus], al
@@ -5060,17 +5080,29 @@ RemoveFaintedPlayerMon:
     mov al, [ebp + wInHandlePlayerMonFainted]
     and al, al
     jz .ret
-    ; TODO-HW: PlayCry(wBattleMonSpecies) (audio HAL). The Pikachu cry arm
-    ; (IsThisPartyMonStarterPikachu / ldpikacry PikachuCry4 / PlayPikachuSoundClip,
-    ; pret core.asm:1056-1060) rides with it.
-    ;
     ; pret core.asm:1054 — wWhichPokemon selects the mon IsThisPartyMonStarterPikachu
-    ; tests, and BOTH the cry arm above and the happiness block below read it. pret
-    ; stores it twice (1054 and 1067) because PrintText sits between; the second
-    ; store is the one the happiness block depends on, so it is NOT redundant here
-    ; even with the cry arm deferred.
+    ; tests, and BOTH the cry arm below and the happiness block further down read it.
+    ; pret stores it twice (1054 and 1067) because PrintText sits between; the second
+    ; store is the one the happiness block depends on, so neither is redundant.
     mov al, [ebp + wPlayerMonNumber]
     mov [ebp + wWhichPokemon], al
+    ; pret core.asm:1056-1063, RESTORED 2026-08-21 — the fainting mon's cry. It was
+    ; dropped as "TODO-HW: PlayCry (audio HAL)"; the audio HAL is real, PlayCry is
+    ; translated, and both arms' callees are live (IsThisPartyMonStarterPikachu is
+    ; translated, PlayPikachuSoundClip is the real digitized-clip player).
+    ; The starter Pikachu gets its digitized clip instead of a synthesized cry —
+    ; `ldpikacry e, PikachuCry4` is clip INDEX 3, since PikachuCryN is index N-1
+    ; (the pointer table is strictly ordinal across all 42 entries; same lowering
+    ; the scripts already use).
+    call IsThisPartyMonStarterPikachu    ; callfar; CF=1 iff it is our Pikachu
+    jnc .notPlayerPikachu                ; pret: jr nc, .notPlayerPikachu
+    mov dl, 3                            ; ldpikacry e, PikachuCry4 (0-based index)
+    call PlayPikachuSoundClip            ; callfar PlayPikachuSoundClip
+    jmp .printFaintText                  ; pret: jr .printText
+.notPlayerPikachu:
+    mov al, [ebp + wBattleMonSpecies]    ; ld a, [wBattleMonSpecies]
+    call PlayCry
+.printFaintText:
     mov eax, PlayerMonFaintedText
     call PrintBattleText                 ; "<nick> fainted!"
     ; pret core.asm:1067-1083 — the fainting penalty. Two reason codes, chosen by

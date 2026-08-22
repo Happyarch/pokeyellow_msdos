@@ -1368,7 +1368,25 @@ ItemUseMedicine:
     test al, al                         ; using Softboiled?
     jnz .ret                            ; ret nz
     call GBPalWhiteOut
-    ; call z, RunDefaultPaletteCommand — TODO-HW: SGB/CGB palette command (Phase 5)
+    ; pret :1373 `call z, RunDefaultPaletteCommand`. RESTORED 2026-08-21; it had been
+    ; dropped as "TODO-HW: SGB/CGB palette command (Phase 5)", a premise that expired
+    ; — RunDefaultPaletteCommand is translated and is the port's live palette path.
+    ;
+    ; WHAT THE DROP COST IS NOT ESTABLISHED, and this comment deliberately does not
+    ; claim it: what is established is that the call is pret's and the port had it
+    ; missing. The tempting story — "the screen stays whited out" — is NOT supported.
+    ; ReloadMapData below does not touch palettes (home/reload_tiles.asm), but
+    ; LoadGBPal at the top of every OverworldLoopLessDelay iteration rewrites
+    ; rBGP/rOBP0/rOBP1 from the FadePal table, so the DMG registers GBPalWhiteOut
+    ; zeroed come back on their own. What this call republishes that nothing else
+    ; does is the CGB SLOT palettes, through _RunPaletteCommand -> SetPal_Overworld.
+    ; The condition is faithful and the ZF is real: GBPalWhiteOut now ends on its
+    ; pret `xor a`, so ZF=1 here on both sides and the call always fires (derivation
+    ; at GBPalWhiteOut in src/home/palettes.asm). Kept as a branch rather than
+    ; straight-lined so the structure still matches pret line for line.
+    jnz .noDefaultPalette
+    call RunDefaultPaletteCommand
+.noDefaultPalette:
     mov al, [ebp + wIsInBattle]
     test al, al
     jnz .ret                            ; ret nz

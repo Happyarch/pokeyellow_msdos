@@ -169,10 +169,23 @@ GBPalNormal:
 ;   deleted, 2026-07-24.)
 ; ===========================================================================
 GBPalWhiteOut:
-    mov byte [ebp + IO_BGP],  0x00        ; xor a / ldh [rBGP],  a
-    mov byte [ebp + IO_OBP0], 0x00        ;         ldh [rOBP0], a
-    mov byte [ebp + IO_OBP1], 0x00        ;         ldh [rOBP1], a
-    call UpdateCGBPal_BGP
+    ; *** THE `xor a` IS LOAD-BEARING FOR ITS EXIT FLAGS, not just for the value. ***
+    ; This was three flag-neutral `mov byte [..], 0x00` stores until 2026-08-21, which
+    ; produces the same three zero bytes and DESTROYS the ZF pret leaves behind. One
+    ; caller reads it: ItemUseMedicine's tail does `call GBPalWhiteOut` /
+    ; `call z, RunDefaultPaletteCommand` (engine/items/item_effects.asm:1372-1373).
+    ;
+    ; That ZF is provably 1 on exit, and the proof is why the conditional call always
+    ; fires: `xor a` sets it, `ldh [x], a` does not touch flags, and all three
+    ; UpdateCGBPal_* are `push af` ... `pop af` / `ret` in pret (home/cgb_palettes.asm),
+    ; so they RESTORE the caller's flags. The port's three are
+    ; `mov byte [g_pal_dirty], 1` / `ret`, which is also flag-neutral — so both sides
+    ; return ZF=1 and the `call z` is unconditional in practice on both.
+    xor al, al                            ; xor a
+    mov [ebp + IO_BGP],  al               ; ldh [rBGP],  a
+    mov [ebp + IO_OBP0], al               ; ldh [rOBP0], a
+    mov [ebp + IO_OBP1], al               ; ldh [rOBP1], a
+    call UpdateCGBPal_BGP                 ; flag-neutral (see above) — ZF survives
     call UpdateCGBPal_OBP0
     call UpdateCGBPal_OBP1
     ret

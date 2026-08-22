@@ -34,6 +34,7 @@ extern GetPredefRegisters       ; src/home/predef.asm (restores BX=b:c, DX=d:e, 
 extern LoadCurrentMapView       ; src/home/overworld.asm
 extern DelayFrame               ; src/home/vblank.asm
 extern g_tilecache_dirty        ; src/ppu/ppu.asm (flat global)
+extern RunDefaultPaletteCommand ; src/home/palettes.asm
 
 section .text
 
@@ -107,8 +108,15 @@ RedrawMapView:
     ; staggered per-row REDRAW_ROW VRAM copy loop, and calls RunDefaultPaletteCommand.
     ; The port's surface renderer needs none of the VRAM staggering; it rebuilds the
     ; view, dirties the decode cache, and presents one frame.
-    ; TODO-HW: palette — pret's RunDefaultPaletteCommand is unimplemented (home/fade.asm).
+    ; pret :61 calls RunDefaultPaletteCommand right after LoadCurrentMapView, and the
+    ; port now does too (restored 2026-08-21). The old note here — "TODO-HW: palette —
+    ; pret's RunDefaultPaletteCommand is unimplemented (home/fade.asm)" — was wrong on
+    ; both counts: the routine is translated, and it lives in home/palettes.asm, not
+    ; home/fade.asm. SET_PAL_DEFAULT resolves through wDefaultPaletteCommand, which the
+    ; overworld sets to SET_PAL_OVERWORLD, so this repaints with the MAP'S OWN palette
+    ; after a block mutation (Cut is the caller) rather than with a generic one.
     call LoadCurrentMapView
+    call RunDefaultPaletteCommand              ; pret :61
     mov byte [g_tilecache_dirty], 1            ; VRAM/view changed → rebuild decode cache
     call DelayFrame
 .ret:
