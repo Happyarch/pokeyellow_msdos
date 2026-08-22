@@ -289,9 +289,17 @@ blocks in `src/engine/menus/naming_screen.asm`.
       full build links; `fidelity-serial` core tier 16/16 PASS 2026-08-21
       (zero single-player drift with the DelayFrame pump call in place;
       run AFTER fixing the VM's silent sfdisk/MBR image-mount failure — see
-      Environment notes). STILL OPEN: the new `cable_club_nolink` golden vs
-      mGBA, and the LinkMenu / `Func_f531b` no-partner wall-time
-      re-verification (needs a DEBUG_I1_LINK build)
+      Environment notes); DEBUG_I1 + DEBUG_I1_LINK harness photos verified
+      2026-08-21 (both menus draw correctly and FRAME.BIN lands at frame 90,
+      so DelayFrame + pump kept 90 frames advancing with the real serial
+      layer linked — the AUTOKEY_QUIET harness parks in HandleMenuInput
+      before any exchange call, so the hatch VALUES are covered by the
+      construction argument in serial.asm's header plus the fidelity tiers,
+      not by these photos). STILL OPEN: the `cable_club_nolink` golden — it
+      compares the RECEPTIONIST's 90-frame no-peer timeout, which is
+      `CableClubNPC`'s loop, still a ret-stub until Stage 2 translates
+      cable_club_npc.asm; the golden therefore LANDS WITH STAGE 2, not here
+      (recorded 2026-08-21 — Stage 1 sequenced it optimistically)
 
 ### Stage 2 — UART transport + handshake
 - [ ] `net_frame.asm` codec + ARQ, with a DEBUG-only RAM-pipe transport unit
@@ -433,7 +441,9 @@ the book.
   image — run crashed before the dump?", which reads as a game crash and is a
   MOUNT failure. Check `which sfdisk` before the first image build (Ubuntu:
   `apt-get install fdisk`), and after installing, `rm dos_port/PKMN.IMG` so
-  the recipe recreates it with a real MBR.
+  the recipe recreates it with a real MBR. The same VM also lacked `pytest`
+  (`pip install pytest`), without which `static_gate` — and therefore the
+  pre-commit hook — fails on its label-DB test step.
 - Submodules must be initialized (`git submodule update --init`) at least for
   `dos_port/tools/dosbox-x` (serial/IPX/NE2000 testing), `unicode_converter`
   (text generators) and `mgba` (goldens). The Happyarch fork submodule URLs
