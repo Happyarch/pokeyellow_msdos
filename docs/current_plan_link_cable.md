@@ -257,11 +257,13 @@ blocks in `src/engine/menus/naming_screen.asm`.
 ### Stage 0 — governance + groundwork
 - [x] Directive doc sites updated (done in this plan's landing commit):
       `docs/current_plan_overworld_events.md`, `docs/current_plan_printer.md`
-- [ ] HOST SESSION: rewrite stigmergy `link-layer-planned-transports` to the
-      reopened state + these transport decisions; run
-      `memory_search regression link` / `regression serial` and fold findings
-      back into this plan (2026-08-21 remote session could not do this —
-      stigmergy is host-only; still open)
+- [ ] HOST SESSION: apply the stigmergy edits queued in
+      `docs/stigmergy_outbox.jsonl` (the `link-layer-planned-transports`
+      rewrite, the regression memory_search fold-back, and the Stage 2
+      episode_record — full args are in the file, replay them verbatim and
+      delete each line in the applying commit). This item closes when the
+      outbox holds only its README line (2026-08-21/22 remote sessions could
+      not do this — stigmergy is host-only)
 - [x] Verify + close backlog #17 (2026-08-21): root-wired — `SpecialEnterMap`
       honors `wEnteringCableClub` (`main_menu.asm:426-431`),
       `PrepareForSpecialWarp` translated (`special_warps.asm:73`, stub retired
@@ -520,7 +522,9 @@ blocks in `src/engine/menus/naming_screen.asm`.
 - [ ] Docs sweep (`dos_port/run` header flags, ROADMAP Phase 4,
       evidence-discipline wording: "verified under two-instance DOSBox-X",
       never "works on real hardware"); `update_label_db`
-- [ ] HOST SESSION: stigmergy final state + `episode_record`
+- [ ] HOST SESSION: stigmergy final state + `episode_record` — queue the
+      concrete edits in `docs/stigmergy_outbox.jsonl` as the stages land
+      (Stage 2's are already there), then apply-and-delete host-side
 - [ ] Archive: `git mv docs/current_plan_link_cable.md docs/plans/link_cable.md`
 
 ## Acceptance (ROADMAP Phase 4)
@@ -581,4 +585,6 @@ the book.
   are SSH (`git@github.com:…`) — remote/CI sessions may need an https URL
   rewrite.
 - Stigmergy is unavailable in remote sessions; all memory/episode items above
-  are marked HOST SESSION.
+  are marked HOST SESSION, and their concrete edits are queued in
+  `docs/stigmergy_outbox.jsonl` (schema + apply-and-delete protocol in that
+  file's README line) rather than described in prose.
