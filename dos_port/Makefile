@@ -500,7 +500,11 @@ HAL_SRCS := \
 # Uses only standard .text/.data/.bss — no link.ld change needed or allowed here.
 # (NOT named LINK_SRCS: that var is the linker-input aggregate below.)
 NET_SRCS := \
-    src/net/net_hal.asm
+    src/net/net_hal.asm \
+    src/net/net_frame.asm
+ifdef DEBUG_NETTEST
+NET_SRCS += src/net/net_test.asm
+endif
 
 # Save HAL — the battery. SramLoadImage/SramStoreImage move the emulated 32 KiB
 # SRAM image between the resident banks and POKEMON.DSV (.dsv v2, raw image).
@@ -2815,6 +2819,8 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
 NASMFLAGS += -D SKIP_TITLE
 endif
 $(eval $(call dump_gate,DEBUG_I2))
+# Link-cable Stage 2: net_frame codec/ARQ RAM-pipe unit test (src/net/net_test.asm).
+$(eval $(call dump_gate,DEBUG_NETTEST))
 # Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
 # LoadEnemyMonData → LoadBattleMonFromParty) + the convergence-spec DV overwrite
 # replace DEBUG_BATTLE's synthetic seed. Combine with DEBUG_BATTLE_INTRO /

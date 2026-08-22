@@ -1433,6 +1433,21 @@ windows:
     dd wPokedexOwned    ; wPokedexOwned (the caught species' bit must be set)
     dd wPokedexSeen    ; wPokedexSeen
     dd wCapturedMonSpecies    ; overview repeat
+%elifdef DEBUG_NETTEST
+; Link-cable Stage 2 net_frame RAM-pipe test (src/net/net_test.asm): the
+; results block lives at wTileMap (+0 'N','T',ver,pass; then the counter
+; words — layout in net_test.asm's header). One window covers all 22 bytes;
+; the rest are don't-care repeats to fill NUM_WINDOWS.
+windows:
+    dd wTileMap    ; results block (22 bytes used of the 64)
+    dd wTileMap
+    dd wTileMap
+    dd wTileMap
+    dd wTileMap
+    dd wTileMap
+    dd wTileMap
+    dd wTileMap
+    dd wTileMap
 %elifdef DEBUG_ITEMTM
 ; Items-plan Stage 7 (DEBUG_ITEMTM) — teaching a TM/HM. Expectations:
 ;   $D16A party mon 1 struct — MON_MOVES (+$08) gains the machine's move; the PP
