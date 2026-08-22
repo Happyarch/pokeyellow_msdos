@@ -501,7 +501,8 @@ HAL_SRCS := \
 # (NOT named LINK_SRCS: that var is the linker-input aggregate below.)
 NET_SRCS := \
     src/net/net_hal.asm \
-    src/net/net_frame.asm
+    src/net/net_frame.asm \
+    src/net/com_uart.asm
 ifdef DEBUG_NETTEST
 NET_SRCS += src/net/net_test.asm
 endif

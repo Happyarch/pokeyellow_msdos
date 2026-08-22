@@ -161,13 +161,15 @@ Serial:
 ;      all GB offsets.
 ; Out: ESI/EDX advanced past the block, BX = 0 (as pret leaves bc).
 ;
-; DEVIATION{class=HAL; pret=home/serial.asm:Serial_ExchangeBytes; behavior=returns immediately with the receive buffer untouched when no link session is up instead of entering the exchange loop; evidence=with no partner Serial_ExchangeByte never yields the preamble byte so pret's loop has no exit, and no pret caller of this routine links before Stage 3 (cable_club.asm block exchange); lifetime=permanent no-partner boundary alongside live transports from Stage 2}
+; DEVIATION{class=HAL; pret=home/serial.asm:Serial_ExchangeBytes; behavior=returns immediately with the receive buffer untouched when no link session is up at entry or when it dies mid-block instead of continuing the exchange loop; evidence=with no partner Serial_ExchangeByte never yields the preamble byte so pret's loop has no exit, and no pret caller of this routine links before Stage 3 (cable_club.asm block exchange); lifetime=permanent no-partner boundary alongside live transports from Stage 2}
 ; ---------------------------------------------------------------------------
 Serial_ExchangeBytes:
     call NetHAL_LinkAlive
     jz .noLink
     mov byte [ebp + hSerialIgnoringInitialData], 1
 .loop:
+    call NetHAL_LinkAlive           ; session died mid-block: same hatch (the
+    jz .noLink                      ; per-byte loop has no other exit)
     mov al, [ebp + esi]             ; ld a,[hl]
     mov [ebp + hSerialSendData], al
     call Serial_ExchangeByte
@@ -211,7 +213,7 @@ Serial_ExchangeBytes:
 ;      (only read on the frame-paced no-data resend tail, as in pret).
 ; Out: AL = the exchanged byte (or the no-partner contract byte).
 ;
-; DEVIATION{class=HAL; pret=home/serial.asm:Serial_ExchangeByte; behavior=returns AL=$c0 immediately when no link session is up instead of entering the wait loop, and the wait loop polls NetHAL_Pump because delivery is pump-driven rather than interrupt-driven; evidence=hSerialReceivedNewData is only ever set by the Serial delivery handler so with no partner the loop has no exit, and the $c0 contract is the measured serial_stubs value that keeps Func_f531b's two-read gate on its pret terminal path; lifetime=permanent no-partner boundary alongside live transports from Stage 2}
+; DEVIATION{class=HAL; pret=home/serial.asm:Serial_ExchangeByte; behavior=returns AL=$c0 immediately when no link session is up at entry or when it dies mid-wait instead of continuing the wait loop, and the wait loop polls NetHAL_Pump because delivery is pump-driven rather than interrupt-driven; evidence=hSerialReceivedNewData is only ever set by the Serial delivery handler so with no partner the loop has no exit, and the $c0 contract is the measured serial_stubs value that keeps Func_f531b's two-read gate on its pret terminal path; lifetime=permanent no-partner boundary alongside live transports from Stage 2}
 ; ---------------------------------------------------------------------------
 Serial_ExchangeByte:
     call NetHAL_LinkAlive
@@ -227,6 +229,8 @@ Serial_ExchangeByte:
 .loop:
     call NetHAL_Pump                ; port: interrupt -> polled delivery (see
                                     ; the HAL deviation above); no flags live
+    call NetHAL_LinkAlive           ; session died mid-wait: escape through
+    jz .noLink                      ; the no-partner hatch
     mov al, [ebp + hSerialReceivedNewData]
     test al, al                     ; and a
     jnz .ok
@@ -411,13 +415,15 @@ Serial_PrintWaitingTextAndSyncAndExchangeNybble:
 ; wire traffic beyond the nybble re-sends, exactly as pret paces them.
 ; (Non-VC branch: b=10; the _YELLOW_VC vc_patch 26-frame variants are VC-only.)
 ;
-; DEVIATION{class=HAL; pret=home/serial.asm:Serial_SyncAndExchangeNybble; behavior=writes $ff to wSerialSyncAndExchangeNybbleReceiveData and returns when no link session is up instead of entering the rendezvous loop; evidence=with no partner the nybble never arrives and LinkMenu's call sites zero wUnknownSerialCounter which disables the bounding watchdog so loop1 has no exit, and $ff is the measured serial_stubs value that routes Func_f531b to its remote-ineligible retry path; lifetime=permanent no-partner boundary alongside live transports from Stage 2}
+; DEVIATION{class=HAL; pret=home/serial.asm:Serial_SyncAndExchangeNybble; behavior=writes $ff to wSerialSyncAndExchangeNybbleReceiveData and returns when no link session is up at entry or when it dies mid-rendezvous instead of continuing the rendezvous loop; evidence=with no partner the nybble never arrives and LinkMenu's call sites zero wUnknownSerialCounter which disables the bounding watchdog so loop1 has no exit, and $ff is the measured serial_stubs value that routes Func_f531b to its remote-ineligible retry path; lifetime=permanent no-partner boundary alongside live transports from Stage 2}
 ; ---------------------------------------------------------------------------
 Serial_SyncAndExchangeNybble:
     call NetHAL_LinkAlive
     jz .noLink
     mov byte [ebp + wSerialExchangeNybbleReceiveData], 0xFF
 .loop1:
+    call NetHAL_LinkAlive           ; session died mid-rendezvous: escape
+    jz .noLink                      ; through the no-partner hatch
     call Serial_ExchangeNybble
     call DelayFrame
     call IsUnknownCounterZero
