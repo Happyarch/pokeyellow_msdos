@@ -49,7 +49,7 @@ extern RemoveItemFromInventory          ; src/home/inventory.asm
 extern GetItemName                      ; src/home/names.asm
 extern CopyToStringBuffer               ; src/home/copy_string.asm
 extern AddItemToInventory               ; src/home/inventory.asm
-extern SubtractAmountPaidFromMoney_     ; src/engine/items/subtract_paid_money.asm (pret farjp)
+extern SubtractAmountPaidFromMoney      ; src/home/inventory.asm (farjp wrapper -> subtract_paid_money.asm)
 extern PlaySoundWaitForCurrent          ; src/home/delay.asm
 extern WaitForSoundToFinish             ; src/home/delay.asm
 extern StringCmp                        ; src/home/compare.asm
@@ -236,7 +236,7 @@ DisplayPokemartDialogue_:
     mov esi, wNumBagItems                        ; ld hl, wNumBagItems
     call AddItemToInventory                      ; call AddItemToInventory
     jnc .bagFull                                 ; jr nc, .bagFull
-    call SubtractAmountPaidFromMoney_            ; call SubtractAmountPaidFromMoney
+    call SubtractAmountPaidFromMoney             ; call SubtractAmountPaidFromMoney
     mov al, [ebp + wBoughtOrSoldItemInMart]      ; ld a, [wBoughtOrSoldItemInMart]
     test al, al                                  ; and a
     jnz .skipSettingFlag2                        ; jr nz, .skipSettingFlag2

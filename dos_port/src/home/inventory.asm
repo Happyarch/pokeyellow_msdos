@@ -1,14 +1,13 @@
 ; inventory.asm — mirror of pret home/inventory.asm.
 ;
-; Holds three of that pret file's four labels, in pret's order:
+; Holds all four of that pret file's labels, in pret's order:
+;   SubtractAmountPaidFromMoney — the farjp wrapper around the banked body
+;                              SubtractAmountPaidFromMoney_, which stays in its
+;                              own mirror src/engine/items/subtract_paid_money.asm
 ;   AddAmountSoldToMoney     — was src/home/money.asm (which keeps pret
 ;                              home/money.asm's own HasEnoughMoney/HasEnoughCoins)
 ;   RemoveItemFromInventory  — was src/engine/items/inventory.asm
 ;   AddItemToInventory       — was src/engine/items/inventory.asm
-;
-; The fourth, SubtractAmountPaidFromMoney, is `missing` in the port: only its
-; banked body SubtractAmountPaidFromMoney_ is translated, in
-; src/engine/items/subtract_paid_money.asm. No home wrapper exists yet.
 ;
 ; The two inventory routines are pret's own wrapper/body split: the `_`-suffixed
 ; bodies AddItemToInventory_ and RemoveItemFromInventory_ are
@@ -26,16 +25,28 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 
+global SubtractAmountPaidFromMoney
 global AddAmountSoldToMoney
 global RemoveItemFromInventory
 global AddItemToInventory
 
+extern SubtractAmountPaidFromMoney_  ; src/engine/items/subtract_paid_money.asm
 extern AddItemToInventory_           ; src/engine/items/inventory.asm
 extern RemoveItemFromInventory_      ; src/engine/items/inventory.asm
 extern AddBCD                        ; EDX=de LSB (dest), ESI=hl LSB (src), CL=len; BCD add
 extern DisplayTextBoxID              ; redraw the text box selected by [wTextBoxID]
 
 section .text
+
+; ---------------------------------------------------------------------------
+; SubtractAmountPaidFromMoney — pret home/inventory.asm's `farjp
+; SubtractAmountPaidFromMoney_` wrapper. On the GB the farjp is the bank shuffle
+; into the body's bank; the port's flat address space collapses that to a plain
+; tail jump, so the body's `ret` returns straight to our caller and its carry
+; output (0 = paid, 1 = could not afford) reaches the caller unchanged.
+; ---------------------------------------------------------------------------
+SubtractAmountPaidFromMoney:
+    jmp SubtractAmountPaidFromMoney_ ; farjp — no bank to switch in the flat model
 
 ; ---------------------------------------------------------------------------
 ; AddAmountSoldToMoney — add the sale total (hMoney) to the player's money, then

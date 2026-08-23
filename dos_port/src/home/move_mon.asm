@@ -1,15 +1,13 @@
 ; move_mon.asm — mirror of pret home/move_mon.asm.
 ;
-; Holds six of that file's seven pret labels, in pret order:
-;   CopyDataUntil, RemovePokemon, AddPartyMon, CalcStats, CalcStat, MoveMon
+; Holds all seven of that file's pret labels, in pret order:
+;   CopyDataUntil, RemovePokemon, AddPartyMon, CalcStats, CalcStat,
+;   AddEnemyMonToPlayerParty, MoveMon
 ; CopyDataUntil arrived from src/home/copy_data.asm in the mirror repair; the file
 ; was measured already pret-ordered, so it was prepended and the whole file still is.
 ; RemovePokemon/MoveMon are the home wrappers over the long-linked _RemovePokemon/
 ; _MoveMon engine bodies (pret jpfar / homecall_sf; flat model -> plain jmp, which
 ; also trivially preserves _MoveMon's CF the way homecall_sf exists to do).
-; AddEnemyMonToPlayerParty remains unported (status `missing`, no port definition
-; anywhere).
-;
 ; Stat formula (per stat): (((Base + IV) * 2 + ceil(sqrt(statExp))/4) * Level)/100
 ;   then + Level + 10 for HP, or + 5 for the others; capped at MAX_STAT_VALUE (999).
 ;
@@ -35,6 +33,8 @@ extern _AddPartyMon
 global CopyDataUntil
 global RemovePokemon
 extern _RemovePokemon              ; src/engine/pokemon/remove_mon.asm
+global AddEnemyMonToPlayerParty
+extern _AddEnemyMonToPlayerParty   ; src/engine/pokemon/add_mon.asm
 global MoveMon
 extern _MoveMon                    ; src/engine/pokemon/add_mon.asm
 
@@ -291,6 +291,23 @@ CalcStat:
     pop edx
     pop esi
     ret
+
+; ---------------------------------------------------------------------------
+; AddEnemyMonToPlayerParty — home wrapper around _AddEnemyMonToPlayerParty, which
+; copies wLoadedMon into the next free party slot (pret's link-trade receive path;
+; engine/pokemon/add_mon.asm). pret: `homecall_sf _AddEnemyMonToPlayerParty` + ret.
+;
+; As with MoveMon below, the _sf variant is the flag-SAVING banked call — it pops
+; the saved bank into bc rather than af so the body's CF survives BankswitchCommon.
+; The flat model has no bank to switch, so the tail jump passes CF through
+; untouched and the body's ret returns straight to our caller.
+;
+; pret's one call site is engine/link/cable_club.asm:821 (trade completion), which
+; the port has not reached yet, so this wrapper is currently unlinked. It is here
+; because the pret label exists, not because a caller demanded it.
+; ---------------------------------------------------------------------------
+AddEnemyMonToPlayerParty:
+    jmp _AddEnemyMonToPlayerParty            ; pret: homecall_sf _AddEnemyMonToPlayerParty
 
 ; ---------------------------------------------------------------------------
 ; MoveMon — home wrapper around _MoveMon (party<->box mover; reads

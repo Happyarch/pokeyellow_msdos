@@ -21,7 +21,17 @@
   "files": {
     "home/pikachu_cries.asm": {
       "reason": "The Game Boy's 1-bit wave-channel bit-bang loop for Pikachu's digitized voice. PlayPikachuPCM streams samples by writing rAUD3LEVEL in a tight timing loop; LoadNextSoundClipSample and PlaySoundClipSample are its inner helpers. The port cannot host this even in principle: its APU is virtual, and the per-device shims read rAUD3LEVEL ONCE PER audio_tick (src/audio/opl_shim.asm:707, src/audio/tandy_shim.asm:492), so a literal translation would emit silence rather than sound. The data model diverges too - tools/audio/gen_pika_pcm.py has already low-pass-filtered and decimated pret's 1-bit streams to 8-bit PCM. The cry itself IS implemented, faithfully and at its correct pret path: pret moved PlayPikachuSoundClip into audio/pikachu_pcm.asm (upstream bd1b695b) and the port mirrors it there, dispatching to the Sound Blaster DSP or the PC-speaker PWM player. src/audio/sb_pcm.asm:25 already carries the DEVIATION{class=HAL} for this replacement. Maintainer decision 2026-08-23.",
-      "labels": ["PlayPikachuPCM", "LoadNextSoundClipSample", "PlaySoundClipSample"]
+      "labels": [
+        "PlayPikachuPCM",
+        "LoadNextSoundClipSample",
+        "PlaySoundClipSample"
+      ]
+    },
+    "home/timer.asm": {
+      "reason": "The Game Boy's timer-interrupt vector. Timer is not a routine anything calls: its sole reference in pret is home/header.asm:57 `jp Timer` at the $0050 hardware vector, and its entire body is `reti` under pret's own comment, \"timer interrupt is apparently not invoked anyway\" - the ROM never enables IE bit 2, so it does not run even on hardware. The port has no GB interrupt-vector table to hang it on: its timing is a native PIT channel-0 ISR installed by pit_init (dos_port/boot/entry.asm, divisor from -D PIT_DIVISOR, see boot/timing.asm), which is the DOS host's own interrupt path and shares nothing with the GB's. There is therefore no site at which a translated `reti` could be placed and nothing that would reach it. This is exclusion in the strict sense the header requires - unportable in this framework, not merely unported - and it is NOT the disallowed 'unused in pret' rationale: the bar those routines clear (GetwMoves, OverwritewMoves) is being genuinely portable, which a hardware interrupt vector on absent hardware is not. Maintainer decision 2026-08-23.",
+      "labels": [
+        "Timer"
+      ]
     }
   }
 }
