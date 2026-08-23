@@ -1,6 +1,6 @@
 {
  "_comment": [
-  "faithdiff suppression list — GLOBAL translation boundaries only (symbols that",
+  "faithdiff suppression list \u2014 GLOBAL translation boundaries only (symbols that",
   "legitimately appear on one side of every routine). Routine-specific divergences",
   "(a dropped PlayCry, a substituted helper) must stay visible: they are the report.",
   "Each entry carries its why; --all-hits shows suppressed items."
@@ -11,15 +11,16 @@
   "perf_evt_begin": "DEBUG_PERF event-recorder hook (perf.asm timing DEVIATION), %ifdef-gated, not game logic",
   "perf_evt_lap": "DEBUG_PERF event-recorder hook (perf.asm timing DEVIATION), %ifdef-gated, not game logic",
   "perf_evt_commit": "DEBUG_PERF event-recorder hook (perf.asm timing DEVIATION), %ifdef-gated, not game logic",
-  "hide_window": "port window-compositor HAL boundary (GB hides the window via LCDC writes — TODO-HW)",
+  "hide_window": "port window-compositor HAL boundary (GB hides the window via LCDC writes \u2014 TODO-HW)",
   "Bankswitch": "GB ROM banking does not exist in the flat 32-bit port"
  },
  "stores": {
-  "hSCX": "renderer scroll plumbing — pret writes rSCX via HRAM+ISR (TODO-HW boundary)",
-  "hSCY": "renderer scroll plumbing — pret writes rSCY via HRAM+ISR (TODO-HW boundary)",
+  "hSCX": "renderer scroll plumbing \u2014 pret writes rSCX via HRAM+ISR (TODO-HW boundary)",
+  "hSCY": "renderer scroll plumbing \u2014 pret writes rSCY via HRAM+ISR (TODO-HW boundary)",
   "IO_SCX": "software-PPU scroll register mirror (TODO-HW boundary)",
   "IO_SCY": "software-PPU scroll register mirror (TODO-HW boundary)",
   "hLoadedROMBank": "GB ROM banking does not exist in the port",
-  "hSPTemp": "GB stack-pointer save for pop-de VRAM transfer; x86 port uses flat rep movsb"
+  "hSPTemp": "GB stack-pointer save for pop-de VRAM transfer; x86 port uses flat rep movsb",
+  "CC": "the cable-club/trade projected-coordinate macro CC(x,y) \u2014 the X+10 Y+3 canvas transform (cable_club.asm header projection DEVIATION), not a WRAM symbol; ldcoord_a-style stores are spelled mov [ebp + CC(x,y)] so the port store scanner captures the macro NAME on every screen routine of the area"
  }
 }

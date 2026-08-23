@@ -7,8 +7,8 @@
 ; RemovePokemon/MoveMon are the home wrappers over the long-linked _RemovePokemon/
 ; _MoveMon engine bodies (pret jpfar / homecall_sf; flat model -> plain jmp, which
 ; also trivially preserves _MoveMon's CF the way homecall_sf exists to do).
-; AddEnemyMonToPlayerParty remains unported (status `missing`, no port definition
-; anywhere).
+; AddEnemyMonToPlayerParty joined them in link plan Stage 3 (TradeCenter_Trade is
+; its first linked caller), completing the pret file's seven labels.
 ;
 ; Stat formula (per stat): (((Base + IV) * 2 + ceil(sqrt(statExp))/4) * Level)/100
 ;   then + Level + 10 for HP, or + 5 for the others; capped at MAX_STAT_VALUE (999).
@@ -37,6 +37,8 @@ global RemovePokemon
 extern _RemovePokemon              ; src/engine/pokemon/remove_mon.asm
 global MoveMon
 extern _MoveMon                    ; src/engine/pokemon/add_mon.asm
+global AddEnemyMonToPlayerParty
+extern _AddEnemyMonToPlayerParty   ; src/engine/pokemon/add_mon.asm
 
 MAX_STAT_HIGH   equ (MAX_STAT_VALUE >> 8) & 0xFF    ; HIGH(999) = 0x03
 MAX_STAT_LOW    equ MAX_STAT_VALUE & 0xFF            ; LOW(999)  = 0xE7
@@ -72,6 +74,19 @@ CopyDataUntil:
 ; ---------------------------------------------------------------------------
 RemovePokemon:
     jmp _RemovePokemon
+
+; ---------------------------------------------------------------------------
+; AddEnemyMonToPlayerParty — home wrapper (pret home/move_mon.asm:233,
+; `homecall_sf _AddEnemyMonToPlayerParty` + ret). Appends the mon whose struct
+; TradeCenter_Trade staged in wLoadedMon (species in wCurPartySpecies) to the
+; party verbatim — offset 7 (catch rate / Gen-2 held item) included. The flat
+; model drops only the banking; homecall_sf's push/pop af around the switch is
+; register-neutral, so a plain call matches pret's exit state (CF from the
+; body passes through: CF=1 = party full).
+; ---------------------------------------------------------------------------
+AddEnemyMonToPlayerParty:
+    call _AddEnemyMonToPlayerParty
+    ret
 
 ; ---------------------------------------------------------------------------
 ; AddPartyMon — home wrapper around _AddPartyMon (pret home/move_mon.asm).

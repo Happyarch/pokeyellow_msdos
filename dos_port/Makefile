@@ -867,7 +867,7 @@ GAME_SRCS := \
     src/engine/menus/swap_items.asm \
     src/engine/link/cable_club.asm \
     src/engine/link/cable_club_npc.asm \
-    src/engine/link/link_stubs.asm \
+    src/engine/link/print_waiting_text.asm \
     src/engine/overworld/ledges.asm \
     src/home/pathfinding.asm \
     src/engine/overworld/pathfinding.asm \

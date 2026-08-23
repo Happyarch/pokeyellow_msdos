@@ -61,15 +61,15 @@
 ;    primitive takes its annotated no-partner escape hatch, which reproduces the
 ;    retired serial_stubs.asm contract verbatim (drives each menu to a pret
 ;    terminal path rather than a bare ret); that contract is documented at the
-;    top of src/home/serial.asm.  CloseLinkConnection is still a stub (a pret
-;    engine/link/cable_club_npc.asm label, Stage 2) in
-;    src/engine/link/link_stubs.asm.
-;  * NO LIVE CALLER (M-111): pret reaches LinkMenu from CableClubNPC
-;    (engine/link/cable_club_npc.asm), which the port has not translated — every
-;    label of that file is `missing` in translation.db.  LinkMenu and Func_f531b are
-;    therefore reachable today only from the DEBUG_I1* harness at the bottom of this
-;    file; that harness calls the real routines (it draws nothing itself), so what it
-;    photographs IS this code.
+;    top of src/home/serial.asm.  CloseLinkConnection is REAL as of Stage 2
+;    (src/engine/link/cable_club_npc.asm), and link_stubs.asm is DELETED as of
+;    Stage 3 (its last stub, PrintWaitingText, went real in
+;    src/engine/link/print_waiting_text.asm).
+;  * LIVE CALLER (Stage 2): pret reaches LinkMenu from CableClubNPC, which is
+;    translated (src/engine/link/cable_club_npc.asm) and wired from the 13
+;    Pokecenter receptionists — the old "NO LIVE CALLER (M-111)" note here
+;    predated that. The DEBUG_I1* harness at the bottom of this file remains as
+;    a photography path that calls the same real routines.
 ;
 ; Build (standalone check):
 ;   nasm -f coff -I include/ -I . -o /dev/null src/engine/menus/link_menu.asm

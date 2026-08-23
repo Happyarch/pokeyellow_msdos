@@ -73,9 +73,9 @@ extern NetHAL_ExchangeBlock     ; src/net/net_hal.asm — whole-block exchange
 extern DelayFrame               ; src/home/vblank.asm
 extern PrinterSerial            ; src/engine/printer/printer_stubs.asm — dead
                                 ; branch, see PrinterSerial__ below
-extern PrintWaitingText         ; src/engine/link/link_stubs.asm — Stage 3
-                                ; ports the real screen (pret engine/link/
-                                ; print_waiting_text.asm)
+extern PrintWaitingText         ; src/engine/link/print_waiting_text.asm
+                                ; (pret mirror, real as of Stage 3 — the
+                                ; link_stubs.asm stub is retired)
 extern SaveScreenTilesToBuffer1     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm
 

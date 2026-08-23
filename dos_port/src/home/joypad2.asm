@@ -61,6 +61,7 @@ extern DelayFrame                     ; src/home/vblank.asm
 extern DelayFrames                    ; src/home/delay.asm — BL = frame count
 extern WaitForSoundToFinish           ; src/home/delay.asm
 extern PlaySound                      ; src/home/audio.asm — AL = sound id
+extern CableClub_Run                  ; src/engine/link/cable_club.asm — pret predef (Stage 3)
 
 section .text
 
@@ -149,9 +150,12 @@ JoypadLowSensitivity:
 ;
 ; The port's WaitForAPress is a port-only alias on the same body, kept alongside
 ; the pret name (never in place of it) because most of its call sites read as
-; "wait for A" rather than as text scrolling.
-WaitForTextScrollButtonPress:
+; "wait for A" rather than as text scrolling. The ALIAS is declared first so the
+; body attributes to the pret label (the scanners assign a body to the label
+; immediately preceding it; the old order read WaitForTextScrollButtonPress as
+; empty and reported its whole call set DROPPED).
 WaitForAPress:
+WaitForTextScrollButtonPress:
     mov al, [ebp + H_DOWN_ARROW_COUNT1]
     mov [wtsbp_saved_c1], al
     mov al, [ebp + H_DOWN_ARROW_COUNT2]
@@ -162,6 +166,13 @@ WaitForAPress:
     mov esi, [wtsbp_arrow_pos]                  ; pret: hlcoord 18,16 (projected)
     call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
     call DelayFrame
+    ; pret: predef CableClub_Run — THE entry hook into the whole cable-club
+    ; engine: CableClubLeftGameboy/RightGameboy set wLinkState = START_TRADE/
+    ; START_BATTLE during JustAMomentText, and this poll (running while that
+    ; text waits for A/B) is what dispatches into CableClub_DoBattleOrTrade.
+    ; Single-player cost: one wLinkState compare per scroll-wait frame.
+    ; DEVIATION{class=banking; pret=home/joypad2.asm:WaitForTextScrollButtonPress; behavior=call the linked CableClub_Run directly instead of through the predef dispatch table; evidence=pret predef CableClub_Run at data/predef_pointers.asm:58 and the flat single-address-space port which has no predef jump table for code predefs; lifetime=permanent flat-code boundary}
+    call CableClub_Run
     test byte [ebp + hJoyPressed], PAD_A | PAD_B
     jz .wait
     mov al, [wtsbp_saved_c1]                      ; pret: pop af / ldh [hDownArrowBlinkCount1]

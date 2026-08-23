@@ -29,6 +29,11 @@ global InternalClockTradeAnim
 InternalClockTradeAnim:
     ret
 
+; STUB{class=temporary; label=ExternalClockTradeAnim; pret=engine/movie/trade.asm:ExternalClockTradeAnim; behavior=return immediately instead of playing the externally-clocked side's mirrored trade cinematic; evidence=engine/movie/trade.asm is unported and its only caller is TradeCenter_Trade which performs every data-side effect of the trade itself, same as the InternalClockTradeAnim stub above; lifetime=until engine/movie/trade.asm is translated in link plan Stage 3 step 3, the very next step after the cable_club.asm completion that links this}
+global ExternalClockTradeAnim
+ExternalClockTradeAnim:
+    ret
+
 ; The Hall of Fame PC screen (pret engine/movie/credits.asm:HallOfFamePC), the
 ; post-championship "PROF.OAK's PC" replay of the Hall of Fame entries. Its only
 ; port caller is HallOfFamePCForever in src/engine/pikachu/pikachu_emotions.asm,
