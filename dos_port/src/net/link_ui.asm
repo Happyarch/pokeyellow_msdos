@@ -120,6 +120,10 @@ extern g_net_com_sel        ; src/net/net_hal.asm — 1..4, consumed by NetInit
 extern NetInit              ; src/net/net_hal.asm — re-callable (net_hal.asm:196-215):
                              ; no-ops when g_net_com_sel==0, else binds the UART or
                              ; leaves g_net_transport at NONE with no hang if absent.
+extern g_net_ipx_sel        ; src/net/net_hal.asm — Stage 6 step 1: /IPX flag,
+                             ; also settable here to bind IPX from the UI
+extern g_net_ipx_peer       ; src/net/ipx_dos.asm — 10-byte net+node (flat);
+                             ; all-zero = AUTO/broadcast search
 
 extern linkbook_load        ; src/net/link_book.asm
 extern linkbook_store       ; src/net/link_book.asm
@@ -167,6 +171,7 @@ LBC_CANCELLED    equ 5       ; diagnostic: the player cancelled all the way out
 ; files rather than shared).
 ; ---------------------------------------------------------------------------
 NET_TRANSPORT_NONE        equ 0     ; src/net/net_hal.asm
+NET_TRANSPORT_IPX         equ 2     ; src/net/net_hal.asm (Stage 6 step 1)
 LINKBOOK_FAMILY_TCP       equ 0     ; src/net/link_book.asm
 LINKBOOK_FAMILY_IPX       equ 1     ; src/net/link_book.asm
 LINKBOOK_SLOTS_PER_FAMILY equ 5     ; src/net/link_book.asm
@@ -269,11 +274,20 @@ LinkTransportSelect:
     jmp .redraw_transport
 .do_ipx:
     mov bl, LINKBOOK_FAMILY_IPX
-    call lu_book_screen
+    call lu_book_screen           ; Out: AL=1 connected / 0 cancelled-or-failed
+    test al, al
+    jnz .success
     jmp .redraw_transport
 .do_tcp:
     mov bl, LINKBOOK_FAMILY_TCP
-    call lu_book_screen
+    call lu_book_screen           ; Out: AL=1 connected / 0 cancelled-or-failed
+                                   ; (the TCP arm of link_ui_connect_attempt is
+                                   ; fail-only this step, so AL=1 cannot come
+                                   ; from here yet — the check is symmetric
+                                   ; with .do_ipx so nothing here special-cases
+                                   ; a transport by name)
+    test al, al
+    jnz .success
 .redraw_transport:
     call lu_draw_transport_menu
     call lu_mirror
@@ -459,9 +473,10 @@ lu_show_message:
 
 ; ===========================================================================
 ; lu_book_screen — In: BL = family (LINKBOOK_FAMILY_TCP/IPX). Loops the
-; connection-book list until CANCEL/B; every action returns here to redraw.
-; Out: none (caller always redraws its own screen — the transport menu —
-; regardless of how the book screen exits).
+; connection-book list until CANCEL/B or a successful connect.
+; Out: AL=1 a connect_attempt succeeded (caller should stop redrawing and
+; unwind all the way out, per LinkTransportSelect's .success path) / AL=0
+; cancelled or every attempt failed (caller redraws the transport menu).
 ; ===========================================================================
 lu_book_screen:
     mov [lu_family], bl
@@ -490,17 +505,25 @@ lu_book_screen:
     call linkbook_record          ; ESI -> record; preserves EAX (AL still = family)
     cmp byte [esi + LBREC.in_use], 0
     je .loop                      ; EMPTY row selected -> no-op (NEW is the create path)
-    call lu_record_menu           ; CONNECT/EDIT/DELETE/CANCEL for this record
+    call lu_record_menu           ; Out: AL=1 connected / 0 otherwise
+    test al, al
+    jnz .connected
     jmp .redraw
 .row_direct_auto:
     mov bl, [lu_family]
     mov bh, 0xFF                  ; sentinel: no specific record
-    call link_ui_connect_attempt
+    call link_ui_connect_attempt  ; Out: AL=1 connected / 0 otherwise
+    test al, al
+    jnz .connected
     jmp .redraw
 .row_new:
     call lu_new_entry
     jmp .redraw
 .done:
+    xor al, al
+    ret
+.connected:
+    mov al, 1
     ret
 
 ; ===========================================================================
@@ -566,8 +589,9 @@ lu_draw_book_list:
 
 ; ===========================================================================
 ; lu_record_menu — per-record CONNECT/EDIT/DELETE/CANCEL submenu. In:
-; lu_family/lu_slot already set by the caller (lu_book_screen). Out: none —
-; caller always redraws the book list next.
+; lu_family/lu_slot already set by the caller (lu_book_screen). Out: AL=1 a
+; CONNECT succeeded (propagate straight out — see lu_book_screen) / AL=0
+; otherwise (caller redraws the book list next).
 ; ===========================================================================
 lu_record_menu:
     call lu_draw_record_menu
@@ -587,14 +611,15 @@ lu_record_menu:
 .do_connect:
     mov bl, [lu_family]
     mov bh, [lu_slot]
-    call link_ui_connect_attempt
-    jmp .back
+    call link_ui_connect_attempt  ; Out: AL=1 connected / 0 otherwise — propagate
+    ret                          ; as-is either way (0 = caller redraws the list)
 .do_edit:
     call lu_edit_entry
     jmp .back
 .do_delete:
     call lu_delete_entry
 .back:
+    xor al, al
     ret
 
 lu_draw_record_menu:
@@ -630,17 +655,65 @@ lu_draw_record_menu:
 ; ===========================================================================
 ; link_ui_connect_attempt — port-only seam. In: BL = family
 ; (LINKBOOK_FAMILY_TCP/IPX), BH = record slot (0-4) or 0xFF for the
-; DIRECT/AUTO row (no specific record). Stage 5 has no IPX/TCP transport at
-; all — this ALWAYS shows "NOT IN THIS BUILD!" and returns; it never
-; touches g_net_transport, the UART, or the serial.asm HAL path. Stage 6/7
-; are expected to replace this body with a real bind keyed on
-; family/slot/g_net_transport, keeping this same entry point and contract
-; (In:/Out: as documented here) so lu_book_screen/lu_record_menu need no
-; changes. Out: none. Clobbers as a normal internal call.
+; DIRECT/AUTO row (no specific record). Out: AL=1 connected (caller should
+; unwind all the way out to LinkTransportSelect's success return) / AL=0
+; otherwise (caller redraws/returns to the book screen).
+;
+; TCP arm: unchanged from Stage 5 — always shows "NOT IN THIS BUILD!" and
+; returns AL=0; it never touches g_net_transport or any transport driver.
+; TCP transport work is not in this build (Stage 6 step 1 is IPX only).
+;
+; IPX arm (Stage 6 step 1): AUTO (BH=0xFF) zeroes g_net_ipx_peer (broadcast/
+; search mode — see ipx_dos.asm's peer-latch design) before binding; CONNECT
+; on a record (BH=0-4) copies that record's 10-byte addr field (net+node,
+; the same layout g_net_ipx_peer uses — see lu_parse_ipx_addr's header)
+; into g_net_ipx_peer first, so ipx_dos.asm addresses every send at that
+; specific peer instead of broadcasting. Either way then sets g_net_ipx_sel
+; and re-calls NetInit (net_hal.asm:196-215 documents why this re-call is
+; safe: the IPX branch only fires when g_net_transport is still NONE, so it
+; can never clobber an unrelated already-bound transport). Success (AL=1,
+; no message — matches lu_com_menu's own silent-success precedent) leaves
+; g_net_transport = NET_TRANSPORT_IPX for the caller to see. Failure (no IPX
+; stack resident) shows LinkUIStr_NoIpx and returns AL=0 to the book screen,
+; per the step's own spec.
 ; ===========================================================================
 link_ui_connect_attempt:
+    cmp bl, LINKBOOK_FAMILY_IPX
+    je .ipx
     mov eax, LinkUIStr_NotInBuild
     call lu_show_message
+    xor al, al
+    ret
+.ipx:
+    cmp bh, 0xFF
+    jne .from_record
+    ; AUTO: broadcast/search until the first responder is latched
+    mov edi, g_net_ipx_peer
+    xor eax, eax
+    mov ecx, 10
+    rep stosb
+    jmp .bind
+.from_record:
+    ; CONNECT on a saved entry: copy its net+node into g_net_ipx_peer first
+    movzx eax, bh
+    mov ah, al
+    mov al, LINKBOOK_FAMILY_IPX
+    call linkbook_record          ; ESI -> record; preserves EAX/EBX
+    lea esi, [esi + LBREC.addr]
+    mov edi, g_net_ipx_peer
+    mov ecx, 10
+    rep movsb
+.bind:
+    mov byte [g_net_ipx_sel], 1
+    call NetInit
+    cmp byte [g_net_transport], NET_TRANSPORT_IPX
+    je .connected
+    mov eax, LinkUIStr_NoIpx
+    call lu_show_message
+    xor al, al
+    ret
+.connected:
+    mov al, 1
     ret
 
 ; ===========================================================================

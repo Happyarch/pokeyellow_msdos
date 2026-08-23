@@ -27,6 +27,24 @@
 # Env overrides: LINKCHECK_PORT (default 23456), LINKCHECK_DUMP_FRAME (default
 # 3600 — the Makefile gate's default), RUN_TIMEOUT (default 150 s per instance),
 # LINKCHECK_STAGGER (default 3 s between instance launches).
+#
+# TRANSPORT=ipx (Stage 6 step 1): swaps the [serial] nullmodem link for
+# DOSBox-X's IPX emulation and the game's /IPX flag in place of /COM1. IPX
+# needs TWO things, not one: `[ipx]\nipx=true` in each instance's conf (the
+# subsystem enable — the [serial] section's role) AND, separately, the
+# `ipxnet startserver`/`ipxnet connect` DOS-prompt COMMANDS that actually
+# join the two instances over TCP (there is no conf-KEY equivalent of the
+# nullmodem section's server:/port: parameters — IPXNET is a DOSBox-X
+# built-in program, run like any other DOS command). Those commands go in
+# the generated [autoexec] section, BEFORE the game launch line: the tracked
+# dosbox-x.conf's own [autoexec] is exactly `imgmount ... / c: / PKMN.EXE`
+# (verified by reading it), and the existing sed below already rewrites the
+# bare `PKMN.EXE` line into a small block ending in `exit` — the ipx variant
+# below reuses that exact same substitution point to prepend the ipxnet line
+# ahead of the game launch instead of adding a new sed pass.
+# LINKCHECK_IPX_PORT (default 213, DOSBox-X's IPXNET default) picks the TCP
+# port IPXNET tunnels over — independent of LINKCHECK_PORT, which stays the
+# nullmodem-only knob.
 set -eu
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"   # dos_port/
@@ -35,7 +53,9 @@ cd "$HERE"
 OUT="${1:-${TMPDIR:-/tmp}/linkcheck.$$}"
 mkdir -p "$OUT/a" "$OUT/b"
 
+TRANSPORT="${TRANSPORT:-serial}"
 PORT="${LINKCHECK_PORT:-23456}"
+IPX_PORT="${LINKCHECK_IPX_PORT:-213}"
 DUMP_FRAME="${LINKCHECK_DUMP_FRAME:-3600}"
 RUN_TIMEOUT="${RUN_TIMEOUT:-150}"
 STAGGER="${LINKCHECK_STAGGER:-3}"
@@ -51,7 +71,7 @@ SCRATCH="${TMPDIR:-/tmp}/linkcheck.scratch.$$"
 mkdir -p "$SCRATCH/a" "$SCRATCH/b"
 trap 'rm -rf "$SCRATCH"' EXIT
 
-echo "== linkcheck: make image DEBUG_LINKCHECK=1 AUTOKEY_DUMP_FRAME=$DUMP_FRAME" >&2
+echo "== linkcheck: TRANSPORT=$TRANSPORT make image DEBUG_LINKCHECK=1 AUTOKEY_DUMP_FRAME=$DUMP_FRAME" >&2
 make image DEBUG_LINKCHECK=1 AUTOKEY_DUMP_FRAME="$DUMP_FRAME" \
     >"$SCRATCH/build.log" 2>&1 || {
     tail -20 "$SCRATCH/build.log"; echo "linkcheck: build failed" >&2; exit 2; }
@@ -65,18 +85,36 @@ for side in a b; do
     done
 done
 
-# Derive the two confs from the tracked one: per-instance image, /COM1 /LINKLOG
-# on the game's command line, exit after the game, and a [serial] section the
-# tracked conf deliberately does not carry. Instance A is the nullmodem TCP
-# server (no server: parameter — it listens); B connects to it. transparent:1
-# is required for raw bytes (without it the link speaks telnet escaping).
-sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/a/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE /COM1 /LINKLOG\nexit|" \
-    dosbox-x.conf >"$SCRATCH/a/run.conf"
-printf '\n[serial]\nserial1=nullmodem port:%s transparent:1\n' "$PORT" >>"$SCRATCH/a/run.conf"
+if [ "$TRANSPORT" = "ipx" ]; then
+    # Derive the two confs from the tracked one: per-instance image, /IPX
+    # /LINKLOG on the game's command line (instead of /COM1), an `ipxnet`
+    # command line PREPENDED ahead of PKMN.EXE in [autoexec] (there is no
+    # conf-key equivalent of the nullmodem section's server:/port: — see the
+    # file header), and `[ipx]\nipx=true` to enable the subsystem itself.
+    # Instance A starts the IPXNET server; B connects to it — same
+    # stagger/roles as the serial case below.
+    sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/a/pkmn.img|; s|^PKMN.EXE\$|ipxnet startserver $IPX_PORT\nPKMN.EXE /IPX /LINKLOG\nexit|" \
+        dosbox-x.conf >"$SCRATCH/a/run.conf"
+    printf '\n[ipx]\nipx=true\n' >>"$SCRATCH/a/run.conf"
 
-sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/b/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE /COM1 /LINKLOG\nexit|" \
-    dosbox-x.conf >"$SCRATCH/b/run.conf"
-printf '\n[serial]\nserial1=nullmodem server:localhost port:%s transparent:1\n' "$PORT" >>"$SCRATCH/b/run.conf"
+    sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/b/pkmn.img|; s|^PKMN.EXE\$|ipxnet connect localhost $IPX_PORT\nPKMN.EXE /IPX /LINKLOG\nexit|" \
+        dosbox-x.conf >"$SCRATCH/b/run.conf"
+    printf '\n[ipx]\nipx=true\n' >>"$SCRATCH/b/run.conf"
+else
+    # Derive the two confs from the tracked one: per-instance image, /COM1
+    # /LINKLOG on the game's command line, exit after the game, and a
+    # [serial] section the tracked conf deliberately does not carry.
+    # Instance A is the nullmodem TCP server (no server: parameter — it
+    # listens); B connects to it. transparent:1 is required for raw bytes
+    # (without it the link speaks telnet escaping).
+    sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/a/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE /COM1 /LINKLOG\nexit|" \
+        dosbox-x.conf >"$SCRATCH/a/run.conf"
+    printf '\n[serial]\nserial1=nullmodem port:%s transparent:1\n' "$PORT" >>"$SCRATCH/a/run.conf"
+
+    sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/b/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE /COM1 /LINKLOG\nexit|" \
+        dosbox-x.conf >"$SCRATCH/b/run.conf"
+    printf '\n[serial]\nserial1=nullmodem server:localhost port:%s transparent:1\n' "$PORT" >>"$SCRATCH/b/run.conf"
+fi
 
 echo "== linkcheck: instance A (server) up, B follows after ${STAGGER}s (timeout ${RUN_TIMEOUT}s each)" >&2
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout -s KILL "$RUN_TIMEOUT" \

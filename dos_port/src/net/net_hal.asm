@@ -95,6 +95,20 @@ global net_estab_local              ; ..estab_peer/estab_pend/kick_open follow
 global net_exch_ctr
 global net_pump_ticks
 global link_ncb                     ; raw NFCB, parsed host-side by linkcheck
+global net_uart_start                ; Stage 6 step 1: despite the name this is
+                                    ; pure GB-register/session-state logic (no
+                                    ; UART calls); the NET_TRANSPORT_IPX
+                                    ; net_vt_start row points at it directly
+                                    ; (see the vtable comment below)
+global net_session_pump_tail         ; Stage 6 step 1: net_uart_pump's HELLO/
+                                    ; ESTABLISH_REQ flush logic, factored out
+                                    ; so ipx_dos_pump shares it verbatim instead
+                                    ; of cloning ~30 lines of transport-agnostic
+                                    ; session bookkeeping
+global g_net_ipx_sel                ; /IPX flag (boot/entry.asm), consumed here
+global g_net_ipx_socket              ; /IPXSOCK=n override, default 0x869C
+                                    ; (DOSBox-X's dynamic-range convention);
+                                    ; src/net/ipx_dos.asm reads it at Open Socket
 
 extern NetFrame_Reset               ; src/net/net_frame.asm
 extern NetFrame_SendMsg
@@ -103,13 +117,19 @@ extern ComUart_Init                 ; src/net/com_uart.asm
 extern ComUart_Shutdown
 extern ComUart_TxByte
 extern ComUart_RxByte
+extern Ipx_Init                     ; src/net/ipx_dos.asm
+extern Ipx_Shutdown
+extern Ipx_TxByte
+extern Ipx_RxByte
+extern ipx_dos_pump
 extern Serial                       ; src/home/serial.asm — the pret handler;
                                     ; delivery = stage IO_SB, call it
 
 ; Transport ids (vtable rows). CLI flags/UI select by storing g_net_transport.
 NET_TRANSPORT_NONE  equ 0
 NET_TRANSPORT_UART  equ 1
-NET_TRANSPORT_COUNT equ 2
+NET_TRANSPORT_IPX   equ 2
+NET_TRANSPORT_COUNT equ 3
 
 ; Session states
 NS_IDLE         equ 0               ; no transport bound
@@ -134,6 +154,7 @@ g_peer_game_gen resb 1              ; peer's game_gen from HELLO
 g_net_com_sel   resb 1              ; /COM1-4 -> 1..4 (0 = none given)
 g_net_linklog   resb 1              ; /LINKLOG flag (consumed in Stage 2 step 5)
 net_pump_lock   resb 1              ; pump reentrancy guard
+g_net_ipx_sel   resb 1              ; /IPX flag (Stage 6 step 1; 0 = not selected)
 align 2
 g_net_baud_div  resw 1              ; /BAUD=n -> 115200/n (0 = default 115200)
 
@@ -178,40 +199,96 @@ g_nlog_buf      resb NLOG_MAX * 4
 
 section .data
 
+; /IPXSOCK=n override target — DOSBox-X's dynamic socket range convention is
+; fine as a fixed default; entry.asm overwrites it before NetInit runs.
+align 2
+g_net_ipx_socket: dw 0x869C
+
 ; Transport vtable, indexed by g_net_transport. Row 0 = null transport.
 net_vt_pump:
     dd net_null_op                  ; NET_TRANSPORT_NONE
     dd net_uart_pump                ; NET_TRANSPORT_UART
+    dd ipx_dos_pump                 ; NET_TRANSPORT_IPX
 net_vt_start:
     dd net_null_op
     dd net_uart_start
+    dd net_uart_start               ; NET_TRANSPORT_IPX: same row — despite the
+                                    ; name this routine is pure IO_SB/IO_SC/
+                                    ; session-state arm logic with no UART
+                                    ; access (see its header), so IPX arms and
+                                    ; kicks on exactly the NetHAL_StartTransfer
+                                    ; edges the game generates, byte-for-byte
+                                    ; the UART transport's proven timing. A
+                                    ; per-tick poll was rejected in review: it
+                                    ; would keep kicking the STALE staged
+                                    ; IO_SC/hSerialSendData after the game
+                                    ; leaves an exchange loop, sending
+                                    ; exchanges the UART transport never sends.
 
 section .text
 
 ; ---------------------------------------------------------------------------
 ; NetInit — bind the transport selected on the command line (nothing given =
-; single-player, byte-identical behavior). Runs from boot/entry.asm after
-; joypad_init. Preserves all registers.
+; single-player, byte-identical behavior: both branches below are gated on
+; their own sel flag, default 0, so a plain run with no /COMx or /IPX takes
+; neither and NetInit is a pushad/popad no-op exactly as before this step).
+; Runs from boot/entry.asm after joypad_init. Preserves all registers.
+;
+; Re-callable (the link-cable UI re-invokes this on every connect attempt —
+; src/net/link_ui.asm): the IPX branch only runs when g_net_transport is
+; STILL NONE after the COM branch, so a stale g_net_com_sel/g_net_ipx_sel
+; left over from an earlier FAILED attempt in the same run can never clobber
+; an already-bound transport — by the time either branch could re-fire,
+; g_net_transport is provably NONE (LinkTransportSelect's own top-level guard
+; skips the whole UI once a transport is bound, so this file never observes a
+; retry after success, only after a failure that left it NONE).
 ; ---------------------------------------------------------------------------
 NetInit:
     pushad
     cmp byte [g_net_com_sel], 0
-    je .done                        ; no /COMx: stay unbound
+    je .try_ipx                     ; no /COMx: fall through to IPX
     call ComUart_Init
-    jc .done                        ; no UART present: degrade, never hang
-    ; wire the codec to the UART
+    jc .try_ipx                     ; no UART present: degrade, try IPX next
     mov ebx, link_ncb
     mov dword [ebx + NFCB.cb_txbyte],  ComUart_TxByte
     mov dword [ebx + NFCB.cb_rxbyte],  ComUart_RxByte
     mov dword [ebx + NFCB.cb_deliver], net_session_deliver
     mov dword [ebx + NFCB.cb_dead],    net_session_dead
+    mov al, NET_TRANSPORT_UART
+    call net_bind_common
+    jmp .done
+.try_ipx:
+    cmp byte [g_net_transport], NET_TRANSPORT_NONE
+    jne .done                       ; already bound (defensive; see header)
+    cmp byte [g_net_ipx_sel], 0
+    je .done                        ; no /IPX: stay unbound
+    call Ipx_Init
+    jc .done                        ; no IPX stack: degrade, never hang
+    mov ebx, link_ncb
+    mov dword [ebx + NFCB.cb_txbyte],  Ipx_TxByte
+    mov dword [ebx + NFCB.cb_rxbyte],  Ipx_RxByte
+    mov dword [ebx + NFCB.cb_deliver], net_session_deliver
+    mov dword [ebx + NFCB.cb_dead],    net_session_dead
+    mov al, NET_TRANSPORT_IPX
+    call net_bind_common
+.done:
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; net_bind_common — the tail shared by both NetInit branches once their NFCB
+; callbacks are wired: reset the codec, latch the transport id, roll the
+; election token, and queue the first HELLO. In: AL = NET_TRANSPORT_*,
+; EBX = link_ncb (callbacks already stored by the caller).
+; ---------------------------------------------------------------------------
+net_bind_common:
+    push eax
     call NetFrame_Reset
-    mov byte [g_net_transport], NET_TRANSPORT_UART
+    pop eax
+    mov [g_net_transport], al
     call net_roll_token
     mov byte [net_state], NS_HELLO
     mov byte [net_hello_pend], 1    ; sent from the first pump tick
-.done:
-    popad
     ret
 
 ; ---------------------------------------------------------------------------
@@ -220,6 +297,7 @@ NetInit:
 NetShutdown:
     pushad
     call ComUart_Shutdown           ; safe when never bound
+    call Ipx_Shutdown               ; safe when never bound
     mov byte [g_net_transport], NET_TRANSPORT_NONE
     mov byte [g_net_link_up], 0
     mov byte [net_state], NS_IDLE
@@ -398,6 +476,18 @@ net_uart_pump:
     inc dword [net_pump_ticks]
     mov ebx, link_ncb
     call NetFrame_Tick
+    call net_session_pump_tail
+    ret
+
+; ---------------------------------------------------------------------------
+; net_session_pump_tail — bootstrap recovery + queued HELLO/ESTABLISH_REQ
+; flush. Factored out of net_uart_pump (Stage 6 step 1) so ipx_dos_pump
+; shares it verbatim instead of cloning this transport-agnostic session
+; bookkeeping: everything here reads/writes net_state/net_hello_pend/
+; net_estab_pend and the codec's own NFCB fields, never touches a byte
+; transport directly. In: EBX = link_ncb, already Tick'd by the caller.
+; ---------------------------------------------------------------------------
+net_session_pump_tail:
     ; bootstrap recovery: a codec that dies while still in HELLO just means
     ; the peer isn't up yet — reset and keep offering
     cmp byte [net_state], NS_HELLO
@@ -459,6 +549,17 @@ net_send_hello:
 
 ; ---------------------------------------------------------------------------
 ; net_uart_start — the game armed a transfer. EBX not assumed.
+;
+; Despite the name, everything below is GB-register/session-state logic
+; (IO_SB, IO_SC, net_role_master, net_estab_*, net_kick_open, net_exch_ctr) —
+; it never touches the UART. That is exactly why Stage 6 step 1 made it
+; `global` and calls it a second way: as the UART vtable's edge-triggered
+; `start` row (via NetHAL_StartTransfer, unchanged) AND polled once per tick
+; from ipx_dos_pump (src/net/ipx_dos.asm), since a datagram transport has no
+; hardware line to kick synchronously the way a UART register write does.
+; Both call sites are safe together because every branch below self-guards
+; on net_state/net_estab_local/net_estab_pend/net_kick_open, so a redundant
+; poll when nothing is armed is just an early `ret`.
 ; ---------------------------------------------------------------------------
 net_uart_start:
     mov ebx, link_ncb

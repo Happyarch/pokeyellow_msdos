@@ -38,6 +38,8 @@ extern NetShutdown       ; src/net/net_hal.asm — UART vector/PIC restore
 extern g_net_com_sel     ; src/net/net_hal.asm — /COM1-4 -> 1..4
 extern g_net_baud_div    ; src/net/net_hal.asm — /BAUD=n -> 115200/n divisor
 extern g_net_linklog     ; src/net/net_hal.asm — /LINKLOG flag
+extern g_net_ipx_sel     ; src/net/net_hal.asm — /IPX flag (Stage 6 step 1)
+extern g_net_ipx_socket  ; src/net/net_hal.asm — /IPXSOCK=n override
 extern g_cfg_partyb      ; src/engine/debug/debug_party.asm — /PARTYB flag (tradecheck harness)
 extern audio_shutdown    ; src/audio/audio_hal.asm
 extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at boot
@@ -94,6 +96,14 @@ arg_com3:     db '/COM3',    0
 arg_com4:     db '/COM4',    0
 arg_baud:     db '/BAUD=',   0
 arg_linklog:  db '/LINKLOG', 0
+arg_ipx:      db '/IPX',     0     ; Stage 6 step 1 (docs/current_plan_link_cable.md)
+arg_ipxsock:  db '/IPXSOCK=',0     ; note: this is a literal substring of the
+                                    ; token above, so "/IPXSOCK=n" alone (no
+                                    ; separate "/IPX") also sets g_net_ipx_sel
+                                    ; via find_token's plain substring match —
+                                    ; benign (giving a socket override implies
+                                    ; IPX intent), same tolerance the existing
+                                    ; /MT32 vs /GM ordering note nearby accepts
 ; DEBUG_TRADECHECK two-instance harness (tools/tradecheck.sh): per-side party/
 ; identity selection, same clone-of-/LINKLOG pattern.
 arg_partyb:   db '/PARTYB',  0
@@ -382,6 +392,25 @@ parse_cmdline:
     ja .no_baud
     mov [g_net_baud_div], ax
 .no_baud:
+    ; --- IPX transport flag (Stage 6 step 1) ---
+    mov edi, arg_ipx
+    call find_token
+    jnz .no_ipx
+    mov byte [g_net_ipx_sel], 1
+.no_ipx:
+    ; /IPXSOCK=n — decimal socket number override (default 0x869C stands on
+    ; a parse failure or an out-of-range value).
+    mov edi, arg_ipxsock
+    call find_token_pos
+    jnz .no_ipxsock
+    call parse_decimal            ; EAX ptr -> EAX value, CF=1 no digits
+    jc .no_ipxsock
+    test eax, eax
+    jz .no_ipxsock                ; socket 0 is not a usable override
+    cmp eax, 0xFFFF
+    ja .no_ipxsock
+    mov [g_net_ipx_socket], ax
+.no_ipxsock:
 
 .done:
     pop edi

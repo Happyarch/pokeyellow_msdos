@@ -513,7 +513,8 @@ NET_SRCS := \
     src/net/link_book.asm \
     src/net/link_ui.asm \
     src/net/net_frame.asm \
-    src/net/com_uart.asm
+    src/net/com_uart.asm \
+    src/net/ipx_dos.asm
 ifdef DEBUG_NETTEST
 NET_SRCS += src/net/net_test.asm
 endif
