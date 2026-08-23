@@ -391,3 +391,66 @@ RunLinkCheck:
     call DelayFrame
     jmp .park
 %endif
+
+; ===========================================================================
+; # RunTradeCheck — %ifdef DEBUG_TRADECHECK two-instance harness driver.
+; #
+; # tools/tradecheck.sh runs two DOSBox-X instances joined by a nullmodem
+; # cable exactly like linkcheck.sh (a different default TCP port, 23457, so
+; # the two harnesses can coexist), one plain and one with /PARTYB
+; # (boot/entry.asm), both booted on this DEBUG_TRADECHECK build. The retry
+; # loop below is RunLinkCheck's verbatim, same cross-instance boot-skew
+; # rationale: the REAL CableClubNPC races up to TRADECHECK_MAX_ATTEMPTS times
+; # until both instances' 90-frame establishment windows overlap.
+; #
+; # UNLIKE RunLinkCheck, a successful race is not parked here: selecting TRADE
+; # CENTER in LinkMenu tail-jumps to SpecialEnterMap (link_menu.asm:1244,
+; # `jmp SpecialEnterMap`) and never returns up this call chain, so once
+; # AUTOKEY_TRADECHECK's A train lands its press on the parked LinkMenu — there
+; # is no linkcheck-style A-suppression gate here, because the default cursor
+; # item 0 already IS "TRADE CENTER" (link_menu.asm:1208-1218, wCurrentMenuItem
+; # test == 0) — control leaves RunTradeCheck for good and the normal
+; # OverworldLoop machinery drives the rest (the walk to the table, both trade
+; # rounds) under its own per-frame DelayFrame pump like any other overworld
+; # screen. `.park` below is reached only on total failure (no peer within
+; # TRADECHECK_MAX_ATTEMPTS), matching RunLinkCheck's own give-up shape.
+; ===========================================================================
+%ifdef DEBUG_TRADECHECK
+global RunTradeCheck
+global tradecheck_marks
+
+TRADECHECK_MAX_ATTEMPTS equ 40          ; same bound as LINKCHECK_MAX_ATTEMPTS
+
+section .bss
+tradecheck_attempts: resb 1             ; CableClubNPC attempts used (this harness only)
+; GBSTATE flat region "tcMarks" (debug_dump.asm): round1_traded/round2_cancelled
+; are the two DEBUG_TRADECHECK-gated mark stores in cable_club.asm
+; (TradeCenter_Trade's .tradeCompleted and ReturnToCableClubRoom's entry);
+; steps_taken is diagnostic-only bookkeeping written by AUTOKEY_TRADECHECK's
+; own walk state machine (debug_dump.asm) and is not read by any
+; tools/tradecheck.sh assertion.
+tradecheck_marks:
+tradecheck_round1_traded:    resb 1
+tradecheck_round2_cancelled: resb 1
+tradecheck_steps_taken:      resd 1
+; +6: set by cable_club_link_down's DEBUG_TRADECHECK hook (cable_club.asm) the
+; moment the link-death escape hatch fires. STICKY where wTradeCenterPointerTableIndex
+; is not: after the hatch's title reset, tradecheck --kill's A keeps auto-pressing
+; A and can start a NEW GAME whose WRAM init rewrites CC38-area variables before
+; the dump frame — this flat .bss byte survives that, so the --kill assertion
+; reads the hatch's firing, not whatever the post-reset game state left behind.
+tradecheck_link_down_hatch:  resb 1
+
+section .text
+RunTradeCheck:
+    SetEvent EVENT_GOT_POKEDEX          ; open the receptionist's gate
+    mov byte [tradecheck_attempts], 0
+.try:
+    inc byte [tradecheck_attempts]
+    call CableClubNPC                   ; success tail-jumps away for good; see header
+    cmp byte [tradecheck_attempts], TRADECHECK_MAX_ATTEMPTS
+    jb .try
+.park:                                  ; gave up: hold still for the AUTOKEY_DUMP_FRAME photograph
+    call DelayFrame
+    jmp .park
+%endif

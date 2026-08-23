@@ -109,6 +109,9 @@ extern SramStoreImage           ; src/save/dsv_io.asm — .dsv commit (HAL DEVIA
 extern ClearVariablesOnEnterMap ; src/engine/overworld/clear_variables.asm
 extern ModifyPikachuHappiness   ; src/engine/events/pikachu_happiness.asm — DH = kind
 extern DisplayTitleScreen       ; src/engine/movie/title.asm
+%ifdef DEBUG_TRADECHECK
+extern tradecheck_marks         ; src/engine/link/cable_club_npc.asm (harness)
+%endif
 ; generated tileset pointer tables (assets/map_headers.inc; carrier overworld.asm)
 extern TilesetGfxPtrs
 extern TilesetGfxSizes
@@ -554,6 +557,13 @@ CallCurrentTradeCenterFunction:
 ; DEVIATION{class=HAL; pret=engine/link/cable_club.asm:CallCurrentTradeCenterFunction; behavior=when the net session dies mid-trade-center the nybble consumers jump here and reset via pret's own index-ff DisplayTitleScreen path instead of consuming the death-hatch ff value as data; evidence=a GB with a pulled cable hangs in the serial wait loops which the port's primitives cannot do (serial.asm publishes ff and returns) so ff would flow onward - the choseTrade consumer would index enemy mon ff and the tradeConfirmed dec-al test reads ff as confirm, executing a one-sided trade against stale block data; lifetime=permanent, the no-partner hatch is the port's substitute for the GB hang}
 ; ---------------------------------------------------------------------------
 cable_club_link_down:
+%ifdef DEBUG_TRADECHECK
+    ; tradecheck --kill hook: sticky record that the hatch fired. The $ff index
+    ; below can be rewritten by a post-reset NEW GAME's WRAM init before the
+    ; harness dump frame; this flat .bss byte cannot. Harness state, not game
+    ; logic (third gated site, sanctioned for the step-6 kill assertion).
+    mov byte [tradecheck_marks + 6], 1      ; tradecheck_link_down_hatch
+%endif
     mov al, 0xFF
     mov [ebp + wTradeCenterPointerTableIndex], al
     jmp CallCurrentTradeCenterFunction
@@ -819,6 +829,13 @@ TradeCenter_SelectMon:
 ; Fade white, reload the club room, fade back in.
 ; ---------------------------------------------------------------------------
 ReturnToCableClubRoom:
+%ifdef DEBUG_TRADECHECK
+    ; tradecheck harness hook: the only reachable route here in this build is
+    ; the mutual-CANCEL handshake in TradeCenter_SelectMon (cable_club.asm:528's
+    ; ReturnToCableClubRoom entry is LINK_STATE_START_BATTLE-only, unreached by
+    ; a trade-only session). Harness state, not game logic.
+    mov byte [tradecheck_marks + 1], 1      ; tradecheck_round2_cancelled
+%endif
     call GBPalWhiteOutWithDelay3
     mov al, [ebp + wFontLoaded]     ; push af (value; pret also pushes hl,
     push eax                        ; the pointer — direct addressing here)
@@ -1153,6 +1170,11 @@ TradeCenter_Trade:
     call SavePartyAndDexData        ; pret predef — allows reset into Pokecenter
     ; DEVIATION{class=HAL; pret=engine/link/cable_club.asm:TradeCenter_Trade; behavior=call SramStoreImage after SavePartyAndDexData so the traded party reaches the .dsv file; evidence=on GB hardware SavePartyAndDexData's SRAM writes are instantly durable but the port's SavePartyAndDexData only updates the resident image - SramStoreImage is the declared disk-boundary seam and only SaveGameData calls it (src/engine/menus/save.asm:738), so without this call a reset after a link trade loses the traded mon; lifetime=permanent flat SRAM model, same seam contract as SaveGameData}
     call SramStoreImage
+%ifdef DEBUG_TRADECHECK
+    ; tradecheck harness hook: a trade just fully completed (both nybble
+    ; exchanges + the .dsv commit above). Harness state, not game logic.
+    mov byte [tradecheck_marks], 1          ; tradecheck_round1_traded
+%endif
     mov bl, 50
     call DelayFrames
     xor al, al

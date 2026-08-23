@@ -162,6 +162,9 @@ extern RunNetPipeTest                     ; src/net/net_test.asm
 %ifdef DEBUG_LINKCHECK
 extern RunLinkCheck                       ; src/engine/link/cable_club_npc.asm
 %endif
+%ifdef DEBUG_TRADECHECK
+extern RunTradeCheck                      ; src/engine/link/cable_club_npc.asm
+%endif
 extern RunLinkMenuTest                    ; src/engine/menus/link_menu.asm
 extern RunListMenuTest                    ; src/debug/debug_dump.asm
 extern RunMainMenuTest                    ; src/engine/menus/main_menu.asm
@@ -1065,6 +1068,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_LINKCHECK
     call RunLinkCheck                       ; loop the real CableClubNPC against the nullmodem peer; parks in LinkMenu, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_TRADECHECK
+    call RunTradeCheck                      ; loop the real CableClubNPC; success falls through LinkMenu into a real trade-center session
 %endif
 %ifdef DEBUG_LEARNMOVE
     call RunLearnMoveTest                  ; force a level-up move-learn, render one frame, dump FRAME.BIN, exits

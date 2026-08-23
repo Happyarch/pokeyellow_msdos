@@ -38,6 +38,7 @@ extern NetShutdown       ; src/net/net_hal.asm — UART vector/PIC restore
 extern g_net_com_sel     ; src/net/net_hal.asm — /COM1-4 -> 1..4
 extern g_net_baud_div    ; src/net/net_hal.asm — /BAUD=n -> 115200/n divisor
 extern g_net_linklog     ; src/net/net_hal.asm — /LINKLOG flag
+extern g_cfg_partyb      ; src/engine/debug/debug_party.asm — /PARTYB flag (tradecheck harness)
 extern audio_shutdown    ; src/audio/audio_hal.asm
 extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at boot
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
@@ -93,6 +94,9 @@ arg_com3:     db '/COM3',    0
 arg_com4:     db '/COM4',    0
 arg_baud:     db '/BAUD=',   0
 arg_linklog:  db '/LINKLOG', 0
+; DEBUG_TRADECHECK two-instance harness (tools/tradecheck.sh): per-side party/
+; identity selection, same clone-of-/LINKLOG pattern.
+arg_partyb:   db '/PARTYB',  0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -352,6 +356,11 @@ parse_cmdline:
     jnz .no_linklog
     mov byte [g_net_linklog], 1
 .no_linklog:
+    mov edi, arg_partyb
+    call find_token
+    jnz .no_partyb
+    mov byte [g_cfg_partyb], 1
+.no_partyb:
     ; /BAUD=n — parse the decimal rate, store the 115200/n divisor. An
     ; unparsable or out-of-range value is ignored (default 115200 stands).
     mov edi, arg_baud

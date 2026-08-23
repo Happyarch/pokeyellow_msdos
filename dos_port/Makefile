@@ -2847,6 +2847,27 @@ NASMFLAGS += -D LINKCHECK_MENU_HOLD=$(LINKCHECK_MENU_HOLD)
 endif
 NASMFLAGS += -D SKIP_TITLE
 endif
+# Link-cable Stage 3 step 5: the two-instance trade harness gate
+# (tools/tradecheck.sh). Clone of DEBUG_LINKCHECK: RunTradeCheck loops the real
+# CableClubNPC against the peer exactly like RunLinkCheck, but AUTOKEY_TRADECHECK
+# does NOT strip A at LinkMenu — it presses through the default TRADE CENTER
+# selection, drives the one-tile walk to the role's table gameboy
+# (CableClubLeftGameboy/RightGameboy, assets/hidden_events.inc), then both
+# rounds of the trade-center menu (round 1: both sides pick party slot 0 and
+# confirm; round 2: both sides navigate to CANCEL and confirm). AUTOKEY_DUMP_FRAME
+# is far larger than linkcheck's: on top of the same rendezvous-skew retry loop,
+# the harness also waits out the real trade animation and two full menu rounds.
+# 14000 is a generous starting point (docs/current_plan_link_cable.md step 5) —
+# tune against a real run once the maintainer's end-of-plan battery executes it.
+# make DEBUG_TRADECHECK=1
+ifdef DEBUG_TRADECHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRADECHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_TRADECHECK
+AUTOKEY_DUMP_FRAME ?= 14000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D SKIP_TITLE
+endif
 # Link-receptionist no-link golden (cable_club_nolink — link cable plan Stage 2
 # step 4): spawn on the Pewter Pokecenter talk tile facing the link receptionist
 # (`object_event 11, 2, SPRITE_LINK_RECEPTIONIST, STAY, DOWN`; the player stands

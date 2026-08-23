@@ -3,11 +3,20 @@
 %include "gb_macros.inc"
 %include "gb_memmap.inc"
 
+section .bss
+; DEBUG_TRADECHECK harness flag: set by boot/entry.asm's /PARTYB parse (same
+; ownership pattern as g_net_linklog, owned by net_hal.asm). Nonzero selects
+; DebugNewGamePartyB in SetDebugNewGameParty and the BLUE/otid-66 identity in
+; SeedDeterministicPlayerIdentity, so the two tradecheck instances seed
+; distinguishable party/OT data for the round-trip byte-identity assertions.
+g_cfg_partyb: resb 1
+
 section .text
 
 global SetDebugNewGameParty
 global PrepareNewGameDebug
 global SeedDeterministicPlayerIdentity
+global g_cfg_partyb
 extern AddPartyMon
 extern AddItemToInventory            ; src/home/inventory.asm
 extern GetMonHeader                ; home/pokemon.asm — base stats -> wMonHeader
@@ -42,6 +51,17 @@ extern CopyData                    ; home/copy.asm
 %define CHARIZARD 0xB4      ; internal index (dex_order.asm line - 2)
 %define LAPRAS 0x13
 
+; DEBUG_TRADECHECK /PARTYB table (constants/pokemon_constants.asm internal
+; index, verified against the const_def list): every species here is disjoint
+; from DebugNewGameParty above so a link-trade harness can tell the two sides'
+; structs apart byte-for-byte.
+%define ABRA 0x94
+%define GEODUDE 0xA9
+%define VULPIX 0x52
+%define MACHOP 0x6A
+%define EEVEE 0x66
+%define ONIX 0x22
+
 ; LATENT BUG FIXED 2026-08-08: this was 135 (0x87 — a const_skip/MissingNo slot in
 ; the internal index list), so the debug seed marked the rival's starter as a
 ; glitch species. Jolteon's real internal index is $68 (pret pokemon_constants +
@@ -63,6 +83,9 @@ SetDebugNewGameParty:
     ; shipping value before returning.
     mov byte [ebp + wMonDataLocation], 0x10
     lea esi, [DebugNewGameParty]
+    cmp byte [g_cfg_partyb], 0
+    jz .loop
+    lea esi, [DebugNewGamePartyB]   ; DEBUG_TRADECHECK: distinct per-side table
 
 .loop:
     mov al, byte [esi]
@@ -232,6 +255,8 @@ PrepareNewGameDebug:
 ; (not asset-pipeline text).
 ; -----------------------------------------------------------------------------
 SeedDeterministicPlayerIdentity:
+    cmp byte [g_cfg_partyb], 0
+    jnz .partyB
     mov byte [ebp + wPlayerName + 0], 0x91   ; R
     mov byte [ebp + wPlayerName + 1], 0x84   ; E
     mov byte [ebp + wPlayerName + 2], 0x83   ; D
@@ -244,6 +269,29 @@ SeedDeterministicPlayerIdentity:
     dec ecx
     jnz .padName
     mov word [ebp + wPlayerID], 0            ; big-endian 0
+    ret
+.partyB:
+    ; DEBUG_TRADECHECK /PARTYB side: "BLUE" + a nonzero OTID, so the trade
+    ; harness can assert the received mon's OT name/id came from THIS side
+    ; and not the RED default. Charmap per constants/charmap.asm (A=$80..Z=$99,
+    ; matching this file's existing R/E/D numeric-id convention above).
+    mov byte [ebp + wPlayerName + 0], 0x81   ; B
+    mov byte [ebp + wPlayerName + 1], 0x8B   ; L
+    mov byte [ebp + wPlayerName + 2], 0x94   ; U
+    mov byte [ebp + wPlayerName + 3], 0x84   ; E
+    mov edi, wPlayerName + 4
+    mov ecx, NAME_LEN - 4
+    mov al, 0x50                             ; '@' terminator/pad
+.padNameB:
+    mov byte [ebp + edi], al
+    inc edi
+    dec ecx
+    jnz .padNameB
+    ; OTID = 66 ($0042), big-endian (Data is big-endian hard rule): write the
+    ; two bytes explicitly high-then-low rather than a native `mov word`,
+    ; which would store the host's little-endian byte order instead.
+    mov byte [ebp + wPlayerID], 0x00
+    mov byte [ebp + wPlayerID + 1], 0x42
     ret
 
 ; -----------------------------------------------------------------------------
@@ -296,6 +344,20 @@ DebugNewGameParty:
     db STARTER_PIKACHU, 5
     db CHARIZARD, 50
     db LAPRAS, 34
+    db 0xFF ; end (-1)
+
+; DEBUG_TRADECHECK /PARTYB table: lead ABRA 30 + 5 more, every species AND
+; level disjoint from DebugNewGameParty above (verified against
+; constants/pokemon_constants.asm's const_def list) so a link-trade harness's
+; struct-verbatim assertion has no byte that could coincidentally match by
+; construction between the two sides.
+DebugNewGamePartyB:
+    db ABRA, 30
+    db GEODUDE, 25
+    db VULPIX, 22
+    db MACHOP, 28
+    db EEVEE, 20
+    db ONIX, 35
     db 0xFF ; end (-1)
 
 ; Debug items. We only use numeric values here.

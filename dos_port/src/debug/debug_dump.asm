@@ -52,6 +52,10 @@ extern net_pump_ticks
 extern g_uart_diag               ; com_uart.asm
 extern g_nf_diag                 ; net_frame.asm
 %endif
+%ifdef DEBUG_TRADECHECK
+extern tradecheck_marks          ; src/engine/link/cable_club_npc.asm (harness)
+extern net_exch_ctr              ; net_hal.asm — session diagnostics probe region
+%endif
 extern pal_rgb_table, bg_slot_pal, obj_slot_pal
 extern pal_cgb_table    ; assets/colors/palettes.inc — BGR555 twin of pal_rgb_table
 extern tile_pal
@@ -804,6 +808,10 @@ align 4
 fname: db "DUMP.BIN", 0
 fbname: db "FRAME.BIN", 0
 fgbname: db "GBSTATE.BIN", 0
+%ifdef DEBUG_TRADECHECK
+fgbseedname: db "GBSEED.BIN", 0        ; DumpGBStateSeed's file — see its header
+fgbseedname_len equ $ - fgbseedname
+%endif
 fpname: db "PAL.BIN", 0
 nlogname: db "LINKLOG.BIN", 0
 %ifdef DEBUG_ANIM_DEMO
@@ -997,6 +1005,32 @@ gbstate_regions:
     gbregion_flat "netPumps",   net_pump_ticks,  4
     gbregion_flat "uartDiag",   g_uart_diag,     40
     gbregion_flat "nfDiag",     g_nf_diag,       32
+%endif
+%ifdef DEBUG_TRADECHECK
+    ; tradecheck two-instance harness (tools/tradecheck.sh): the same role/
+    ; session diagnostics DEBUG_LINKCHECK publishes, PLUS the trade-center
+    ; scratch state and the two harness marks tools/tradecheck.sh reads.
+    ; PROBE-tier regions (no mGBA golden — a second GB has no headless twin
+    ; here), same rule as DEBUG_LINKCHECK's block above.
+    ;
+    ; NOT re-declared here: wPartyData/wPlayerName/wPlayerID (the unconditional
+    ; rows above, wPartyCount..wPartyMonNicksEnd / wPlayerName / wPlayerID,
+    ; already cover the full party-swap surface this harness asserts — count,
+    ; species list, all 6 44-byte structs incl. offset 7, OT names, nicknames,
+    ; and the player identity — every dump already carries them regardless of
+    ; this gate, so a tradecheck-only duplicate would just be a second name for
+    ; the same bytes).
+    gbregion "linkStatus",    hSerialConnectionStatus, 1   ; $02/$01 role split
+    gbregion "wLinkState",    wLinkState,    1
+    gbregion_flat "netLinkUp",  g_net_link_up,   1
+    gbregion_flat "netState",   net_state,       1
+    gbregion_flat "netDesyncs", net_desyncs,     2
+    gbregion_flat "netExchCtr", net_exch_ctr,    2
+    ; trade-center scratch: which party slot each side offered, and the
+    ; TradeCenter_SelectMon/TradeCenter_Trade jumptable stage (0/1/$ff).
+    gbregion "tcPointerIdx",  wTradeCenterPointerTableIndex, 1
+    gbregion "tcWhichMons",   wTradingWhichPlayerMon,        2  ; player + enemy, contiguous
+    gbregion_flat "tcMarks",   tradecheck_marks, 7         ; round1_traded, round2_cancelled, steps_taken(4), link_down_hatch
 %endif
 %ifdef DEBUG_CABLECLUB
     ; --- cable_club_nolink golden (link cable plan Stage 2 step 4) ---
@@ -4910,6 +4944,128 @@ DumpGBState:
 .ret:
     ret
 
+%ifdef DEBUG_TRADECHECK
+; ---------------------------------------------------------------------------
+; DumpGBStateSeed — tradecheck harness only. Verbatim clone of DumpGBState
+; above, writing "GBSEED.BIN" instead of "GBSTATE.BIN" (fgbseedname) so a
+; SECOND, EARLIER snapshot can coexist with the final AUTOKEY_DUMP_FRAME
+; photograph without clobbering it. Called once per instance from the
+; AUTOKEY_TRADECHECK gate (this file's AutoKeyDrive .apply block) the first
+; frame wCurMap==TRADE_CENTER && wLinkState==LINK_STATE_IN_CABLE_CLUB is
+; observed — i.e. BEFORE either side's slot-0 mon is traded away.
+;
+; tools/tradecheck.sh uses this file as "the peer's original slot-0 struct"
+; for the swap assertion: the FINAL dump alone cannot supply that reference —
+; a side's own slot-0 mon LEAVES its own party during round 1
+; (src/engine/pokemon/remove_mon.asm's shift-up removal, then
+; _AddEnemyMonToPlayerParty appends the received mon at the new LAST slot,
+; src/engine/pokemon/add_mon.asm:413-464), so a side's post-trade dump has
+; nothing left at slot 0 to compare the OTHER side's received mon against.
+; The pre-walk seed dump is what round 1 actually sent, read straight off
+; live WRAM rather than recomputed host-side (CalcStats' derived-stat formula
+; is exactly the kind of thing that is "too easy to get wrong-by-construction"
+; outside the real routine).
+;
+; RETURNS (does not exit) — the harness continues into the walk and both
+; trade rounds after this call. Duplicates DumpGBState's body rather than
+; parameterizing it, so this gate cannot regress any of DumpGBState's other
+; (exit-on-return) call sites.
+; In: EBP = GB memory base. Preserves all registers (pushad/popad).
+; ---------------------------------------------------------------------------
+global DumpGBStateSeed
+DumpGBStateSeed:
+    pushad
+    call ComposeCGBPalettes
+    mov ax, 0x0100
+    mov bx, 0x280
+    int 0x31
+    jc .ret
+    mov [dos_seg], ax
+    mov [dos_sel], dx
+    movzx eax, ax
+    shl eax, 4
+    sub eax, [ds_base]
+    mov [dos_flat], eax
+
+    mov esi, fgbseedname
+    mov edi, [dos_flat]
+    mov ecx, fgbseedname_len
+    rep movsb
+
+    mov ebx, [dos_flat]
+    add ebx, 0x10
+    mov dword [ebx], 'GBST'
+    mov byte [ebx + 4], GBSTATE_VERSION
+    mov byte [ebx + 5], GBSTATE_TERMINAL
+    mov word [ebx + 6], GBSTATE_REGION_COUNT
+    mov dword [ebx + 8], GBSTATE_DIR_SIZE
+    mov dword [ebx + 12], GBSTATE_TOTAL
+
+    mov esi, gbstate_regions
+    lea edi, [ebx + GBSTATE_HDR_SIZE]
+    mov ecx, GBSTATE_DIR_SIZE
+    rep movsb
+
+    mov edx, ebx
+    add edx, GBSTATE_HDR_SIZE
+    mov ebx, gbstate_regions
+    mov eax, GBSTATE_HDR_SIZE + GBSTATE_DIR_SIZE
+.region:
+    cmp ebx, gbstate_regions_end
+    jae .regions_done
+    mov [edx + GBSTATE_NAME_LEN + 8], eax
+    mov esi, [ebx + GBSTATE_NAME_LEN]
+    mov ecx, [ebx + GBSTATE_NAME_LEN + 4]
+    add eax, ecx
+    cmp esi, GBSTATE_FLAT_MIN
+    jae .flat_source
+    lea esi, [ebp + esi]
+    jmp .have_source
+.flat_source:
+    mov dword [edx + GBSTATE_NAME_LEN], GBSTATE_FLAT_ADDR
+.have_source:
+    rep movsb
+    add ebx, GBSTATE_DIRENT_SIZE
+    add edx, GBSTATE_DIRENT_SIZE
+    jmp .region
+.regions_done:
+
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x3C00
+    mov dword [rmcs + RMCS_EDX], 0
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+    test byte [rmcs + RMCS_FLAGS], 1
+    jnz .free
+    mov ax, [rmcs + RMCS_EAX]
+    mov [file_handle], ax
+
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x4000
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    mov dword [rmcs + RMCS_ECX], GBSTATE_TOTAL
+    mov dword [rmcs + RMCS_EDX], 0x10
+    mov ax, [dos_seg]
+    mov [rmcs + RMCS_DS], ax
+    call sim_int21
+
+    call zero_rmcs
+    mov word [rmcs + RMCS_EAX], 0x3E00
+    movzx eax, word [file_handle]
+    mov [rmcs + RMCS_EBX], eax
+    call sim_int21
+
+.free:
+    mov ax, 0x0101
+    mov dx, [dos_sel]
+    int 0x31
+.ret:
+    popad
+    ret
+%endif
+
 ; ---------------------------------------------------------------------------
 ; DumpBackbuffer — write the full GB_BACKBUF (RENDER_W*RENDER_H = 64000 raw
 ; palette-indexed bytes) to FRAME.BIN, then exit. Lets the host render the exact
@@ -6326,6 +6482,125 @@ AutoKeyDrive:
     and dl, ~PAD_A & 0xFF
 .lcAOk:
 %endif
+%ifdef AUTOKEY_TRADECHECK
+    ; *** STATE-GATED WALK + MENU NAV (tradecheck harness). *** Three live-WRAM
+    ; adjustments to the base A-train's `dl`, evaluated every frame. See
+    ; RunTradeCheck's header (src/engine/link/cable_club_npc.asm) and the
+    ; Makefile's DEBUG_TRADECHECK comment for the overall shape.
+%ifndef USING_INTERNAL_CLOCK
+USING_INTERNAL_CLOCK equ 0x02              ; net_hal.asm — master
+%endif
+%ifndef LINK_STATE_IN_CABLE_CLUB
+LINK_STATE_IN_CABLE_CLUB equ 0x01          ; constants/serial_constants.asm
+%endif
+%ifndef TC_TRADE_CENTER_MAP
+TC_TRADE_CENTER_MAP equ 0xEF               ; TRADE_CENTER (assets/map_dims.inc; not %included here)
+%endif
+    ; (1) THE WALK. First entry into TRADE_CENTER lands wLinkState at
+    ; LINK_STATE_IN_CABLE_CLUB (link_menu.asm:1239-1240, set right before the
+    ; `jmp SpecialEnterMap` that loads the map) one tile from the role's own
+    ; table gameboy: TradeCenterPlayerWarp spawns the internal-clock master at
+    ; x=3, TradeCenterFriendWarp spawns the external-clock friend at x=6, both
+    ; y=4 (src/data/maps/special_warps.asm) — and the hidden events sit at
+    ; (y=4,x=4)=CableClubLeftGameboy / (y=4,x=5)=CableClubRightGameboy
+    ; (assets/hidden_events.inc:484-488). CableClubLeftGameboy only fires for
+    ; hSerialConnectionStatus != USING_EXTERNAL_CLOCK (the master) facing
+    ; RIGHT; CableClubRightGameboy only for != USING_INTERNAL_CLOCK (the
+    ; friend) facing LEFT (src/engine/pokemon/bills_pc.asm:883-923) — so the
+    ; master at x=3 walks RIGHT onto x=4 and the friend at x=6 walks LEFT onto
+    ; x=5, each arriving facing the direction its own gameboy handler requires.
+    ; Movement is level-triggered on hJoyHeld (src/home/overworld.asm), so the
+    ; hold must self-terminate after exactly one tile or it would keep walking
+    ; past the table: hold while wWalkCounter has not yet gone
+    ; 0 -> nonzero -> 0 once (started, then finished), tracked in
+    ; tc_walk_started/tc_walk_done rather than a frame count, since the
+    ; map-load frame itself is unbounded (cross-instance rendezvous skew, the
+    ; same reason AUTOKEY_LINKCHECK's own photograph is protocol- not
+    ; frame-synchronized). The base A train keeps pulsing throughout; a press
+    ; mid-stride is a no-op (the real hidden-event dispatch only fires once
+    ; stationary), and the next scheduled pulse after arrival triggers it.
+    cmp byte [ebp + wCurMap], TC_TRADE_CENTER_MAP
+    jne .tcWalkOff
+    cmp byte [ebp + wLinkState], LINK_STATE_IN_CABLE_CLUB
+    jne .tcWalkOff
+    ; Fire the pre-trade seed dump exactly once, on the FIRST frame this
+    ; condition is observed — see DumpGBStateSeed's header (both sides' own
+    ; slot-0 mon is still theirs at this point, before either walk begins).
+    cmp byte [tc_seed_dumped], 0
+    jne .tcSeedDone
+    mov byte [tc_seed_dumped], 1
+    call DumpGBStateSeed
+.tcSeedDone:
+    cmp byte [tc_walk_done], 0
+    jne .tcWalkOff
+    cmp byte [ebp + wWalkCounter], 0
+    je .tcWalkCheckDone
+    mov byte [tc_walk_started], 1
+    jmp .tcWalkAssert
+.tcWalkCheckDone:
+    cmp byte [tc_walk_started], 0
+    je .tcWalkAssert                        ; hold not yet registered — keep asserting
+    mov byte [tc_walk_done], 1
+    inc dword [tradecheck_marks + 2]        ; tcMarks.steps_taken (diagnostic only)
+    jmp .tcWalkOff
+.tcWalkAssert:
+    mov al, [ebp + hSerialConnectionStatus]
+    cmp al, USING_INTERNAL_CLOCK
+    jne .tcWalkFriend
+    or dl, PAD_RIGHT
+    jmp .tcWalkOff
+.tcWalkFriend:
+    or dl, PAD_LEFT
+.tcWalkOff:
+    ; (2) STATS -> TRADE. TradeCenter_SelectMon's post-mon-pick popup
+    ; (cable_club.asm:.selectStatsMenuItem) defaults the cursor on STATS
+    ; (wCurrentMenuItem carried over as 0 from the party pick) and watches
+    ; RIGHT|B|A; one RIGHT moves it onto TRADE (.selectTradeMenuItem, watched
+    ; LEFT|B|A instead — a different watched-key value, so this condition
+    ; self-clears the moment the move lands and never double-presses). No A
+    ; suppression needed: the caller tests PAD_RIGHT before PAD_A, so RIGHT
+    ; wins even if a table-scheduled A pulse coincides on the same frame.
+    cmp byte [ebp + wCurMap], TC_TRADE_CENTER_MAP
+    jne .tcStatsOff
+    mov al, [ebp + wMenuWatchedKeys]
+    cmp al, PAD_RIGHT | PAD_B | PAD_A
+    jne .tcStatsOff
+    or dl, PAD_RIGHT
+.tcStatsOff:
+    ; (3) ROUND 2: DOWN TO CANCEL. Once round1_traded is set (tcMarks byte 0 —
+    ; round 1 cannot have completed without having already left this same
+    ; screen once, so this can only be live in round 2 or later), the player
+    ; party menu (wWhichTradeMonSelectionMenu==0, watched DOWN|RIGHT|A) needs
+    ; wPartyCount DOWN presses to walk the cursor onto the CANCEL row
+    ; (wCurrentMenuItem == wMaxMenuItem, home/window.asm:HandleMenuInput_'s
+    ; clamped-not-wrapped DOWN handling) before A can safely land — A is
+    ; watched FIRST in .playerMonMenu_SomethingPressed, so an A that coincides
+    ; with a DOWN edge would misread as "choose this party slot", not
+    ; "continue toward CANCEL". DOWN's cursor step is edge-triggered on
+    ; hJoyPressed (home/window.asm), so a flat continuous hold gives exactly
+    ; ONE edge; strobe it (4-on/4-off on the free-running autokey_frame
+    ; counter) for repeated presses. Self-terminates the instant the cursor
+    ; reaches CANCEL, at which point A is no longer suppressed and the next
+    ; scheduled base-train pulse selects it (.selectedCancelMenuItem's
+    ; JoypadLowSensitivity wait, then the mutual $F/$F handshake).
+    cmp byte [tradecheck_marks], 0          ; tcMarks.round1_traded
+    je .tcCancelOff
+    cmp byte [ebp + wWhichTradeMonSelectionMenu], 0
+    jne .tcCancelOff
+    mov al, [ebp + wMenuWatchedKeys]
+    cmp al, PAD_DOWN | PAD_RIGHT | PAD_A
+    jne .tcCancelOff
+    mov al, [ebp + wCurrentMenuItem]
+    cmp al, [ebp + wMaxMenuItem]
+    je .tcCancelOff
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .tcCancelOff
+    or dl, PAD_DOWN
+.tcCancelOff:
+%endif
 %ifdef AUTOKEY_TRAINER_ROUTE
     ; *** STATE-GATED D-PAD (measured 2026-08-05, two stalled 26000-frame runs). ***
     ; A frame-scheduled D-pad press lands in whatever UI is up. One DOWN that hits
@@ -6434,6 +6709,11 @@ autokey_frame: dd 0
 %ifdef DEBUG_LINKCHECK
 lc_menu_frames: dd 0                    ; frames since linkcheck_in_menu set
 %endif
+%ifdef AUTOKEY_TRADECHECK
+tc_walk_started: db 0                   ; wWalkCounter observed nonzero (mid-step)
+tc_walk_done:    db 0                   ; the one-tile walk to the table finished
+tc_seed_dumped:  db 0                   ; DumpGBStateSeed fired once, pre-walk
+%endif
 %ifdef DEBUG_BATTLE_GOLDEN
 %ifndef DEBUG_BATTLE_INTRO
 ; set for the frames of the intro-dismiss press window; applied where DL is built
@@ -6489,6 +6769,22 @@ autokey_script:
     ; is YES). The state gate at .apply strips A once LinkMenu is entered,
     ; so the train's length just needs to outlast AUTOKEY_DUMP_FRAME (the
     ; default 3600; 900 presses x 20 = 18000 frames of coverage).
+%assign AK_L 120
+%rep 900
+    dd AK_L, AK_L + 5, PAD_A
+%assign AK_L AK_L + 20
+%endrep
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_TRADECHECK
+    ; tradecheck harness: the SAME long A train as AUTOKEY_LINKCHECK (answers
+    ; every prompt CableClubNPC raises across retries, then the parked
+    ; LinkMenu's default-cursor TRADE CENTER selection, then every plain A
+    ; confirm the trade-center screens raise). UNLIKE AUTOKEY_LINKCHECK there
+    ; is no state gate stripping A at LinkMenu — see RunTradeCheck's header.
+    ; The three moments that need something OTHER than a bare A (the one-tile
+    ; walk to the table, the STATS->TRADE cursor step, round 2's DOWN-to-CANCEL
+    ; climb) are handled below at .apply by reading live WRAM, not by rows
+    ; here — this table's only job is "keep answering A forever".
 %assign AK_L 120
 %rep 900
     dd AK_L, AK_L + 5, PAD_A
