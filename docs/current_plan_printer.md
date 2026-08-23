@@ -285,10 +285,10 @@ over renderer state, feeds the device below the seam, invisible to pret code).
       `docs/ui_projection.md`
 
 ### Stage 1 — serial.asm mirror (state machine)
-- [ ] Translate `dos_port/src/engine/printer/serial.asm` (pret :1-450);
+- [x] Translate `dos_port/src/engine/printer/serial.asm` (pret :1-450);
       `Printer_PrepareToSend` → minimal ACK-only `PrintDev_ConsumePacket`
       (handshake $81 / flags 0 / opcode 0, data discarded)
-- [ ] `PrinterSerial_` documented-unported header note; faithdiff + lint
+- [x] `PrinterSerial_` documented-unported header note; faithdiff + lint
       clean; assembles (check-only until Stage 2 links)
 
 ### Stage 2 — printer.asm/printer2.asm mirrors + integration

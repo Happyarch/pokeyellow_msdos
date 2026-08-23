@@ -1386,6 +1386,7 @@
 ; Unions with wPrinterData (0xCE4A..0xD257).
 %define wOverworldMap                0xCE4A   ; wOverworldMap
 %define W_OVERWORLD_MAP_SIZE         0x900   ; wOverworldMapEnd − wOverworldMap (2304 bytes)
+%define W_PRINTER_DATA_SIZE          0x40D   ; wPrinterDataEnd − wPrinterData (1037 bytes)
 %define wcae2                        0xD244   ; printer margin/sheet byte (pret wram.asm:321, in wPrinterData union)
 
 ; Turn-delay state (pret: wCheckFor180DegreeTurn / wPlayerLastStopDirection)

@@ -3538,9 +3538,13 @@ DATA_CHECK_SRCS :=
 # Surfing Pikachu minigame (LINKED in Chunk 3)
 MINIGAME_CHECK_SRCS :=
 
+# Game Boy Printer tier (serial.asm check-only until Stage 2 links printer.asm)
+PRINTER_CHECK_SRCS := \
+    src/engine/printer/serial.asm
+
 # ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
 # the not-yet-linked battle backend + check-only pokemon/items/home backends.
-ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS) $(POKEMON_CHECK_SRCS) $(ITEMS_CHECK_SRCS) $(HOME_CHECK_SRCS) $(DATA_CHECK_SRCS) $(MINIGAME_CHECK_SRCS)
+ALL_SRCS := $(LINK_SRCS) $(BATTLE_SRCS) $(POKEMON_CHECK_SRCS) $(ITEMS_CHECK_SRCS) $(HOME_CHECK_SRCS) $(DATA_CHECK_SRCS) $(MINIGAME_CHECK_SRCS) $(PRINTER_CHECK_SRCS)
 ALL_OBJS := $(ALL_SRCS:.asm=.o)
 
 # ---------------------------------------------------------------------------
