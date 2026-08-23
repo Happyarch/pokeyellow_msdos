@@ -2835,6 +2835,59 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "Route 2 Trade House NPC trade (data/events/trades.asm index 1, TRADE_FOR_MILES): gives CLEFAIRY, receives MR.MIME nicknamed MILES, through the real DoInGameTradeDialogue dispatch (talk -> WannaTrade1Text -> YES/NO confirm, cursor default YES -> party-menu CLEFAIRY pick -> ConnectCableText -> InternalClockTradeAnim -> TradeAnimCommon -> TradedForText -> Thanks1Text) on both sides. The single-player fidelity anchor for retiring the InternalClockTradeAnim/TradeAnimCommon stubs (link cable plan Stage 3 step 4). Dump is STATE-GATED (the closing Thanks1Text dismissed, a stable idle overworld frame), not frame-gated -- DOSBox-side dynamic verification is DEFERRED to the end-of-plan battery (maintainer directive 2026-08-23). The received MR.MIME struct is NOT fully deterministic by construction: its DVs and OT ID come from Random_ (rDIV/CPU-cycle timing), reproducible run-to-run of this exact script but not predictable from the trade tables -- see the task report."
+    },
+    {
+      "name": "link_book_roundtrip",
+      "id": 94,
+      "tier": "full",
+      "scenario_class": "port_only",
+      "build_flags": "DEBUG_LINKBOOKCHECK=1",
+      "port_entry_gate": "DEBUG_LINKBOOKCHECK",
+      "navigation_script": null,
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "LinkTransportSelect",
+        "linkbook_load",
+        "linkbook_store"
+      ],
+      "comparison": {
+        "regions": [],
+        "projection": "n/a (port_only: the keyboard + connection book do not exist on a GB, so there is no ROM ground truth and no golden_diff.SCENARIOS entry)",
+        "masks": "n/a (port_only)"
+      },
+      "verification": "PORT-ONLY (link cable plan Stage 5 step 5, Deliverable 2): the connection-book persistence round trip, asserted directly against GBSTATE.BIN + the on-disk LINKBOOK.DAT by tools/linkbookcheck.sh, not through goldencheck. RunLinkBookCheck (src/engine/link/cable_club_npc.asm) calls the real CableClubNPC with no CLI transport flag and no peer, so its LinkTransportSelect call opens the port-only transport-select + connection-book UI (src/net/link_ui.asm) and blocks there -- the DEVIATION seam documented at CableClubNPC's .receivedPokedex. A scripted (scancode,shift) table (AUTOKEY_KBDSCRIPT, src/debug/debug_dump.asm, consumed via the new kbd_ring_push in src/input/joypad.asm) drives the NAME?/ADDRESS? kbd_text_edit fields; a phase-gated pad-navigation state machine (AUTOKEY_LINKBOOKCHECK[_PHASE2]) drives the transport/book/record menus and YesNoChoice. tools/linkbookcheck.sh runs this SAME gate twice against the SAME image: run 1 (fresh LINKBOOK.DAT) creates a TCP entry (NEW, name HOME, address 10.0.0.1:5000) and an IPX entry (NEW, name LAN, address hex FEED:C0FFEE001122) then cancels all the way out with no connect attempt (the connect seam fails by design in Stage 5 -- link_ui_connect_attempt always shows NOT IN THIS BUILD!); run 2 (SAME image, LINKBOOK.DAT NOT purged -- that is the persistence point) builds with LBC_PHASE2=1 and EDITs the TCP entry's name (to WORK) and address, then DELETEs (with YES confirm) the IPX entry. linkbookcheck_marks (GBSTATE region lbcMarks) records each commit from the real game-code sites in src/net/link_ui.asm, not from harness bookkeeping. SCOPE, deferred per the plan spec's explicit allowance: the FULL-book path (5/5 entries + the FULL! message) is NOT exercised by either run -- it would need a third phase filling the remaining 4 slots per family, left for a future battery addition. DOSBox-side dynamic verification (both runs, and the FULL-book addition) is DEFERRED to the end-of-plan battery -- this implementer's checks are static only, per the plan's directive."
+    },
+    {
+      "name": "kbd_naming_entry",
+      "id": 95,
+      "tier": "full",
+      "scenario_class": "port_only",
+      "build_flags": "KBD_NAMING=1 DEBUG_KBDNAMECHECK=1",
+      "port_entry_gate": "DEBUG_KBDNAMECHECK",
+      "navigation_script": null,
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayNamingScreen",
+        "kbd_ring_pop"
+      ],
+      "comparison": {
+        "regions": [],
+        "projection": "n/a (port_only: the DOS keyboard input path does not exist on a GB, so there is no ROM ground truth and no golden_diff.SCENARIOS entry)",
+        "masks": "n/a (port_only)"
+      },
+      "verification": "PORT-ONLY (link cable plan Stage 5 step 5, Deliverable 3): the KBD_NAMING keyboard-entry path on the naming screen, asserted directly against GBSTATE.BIN by tools/kbdnamecheck.sh, not through goldencheck. RunKbdNameCheckTest (src/engine/menus/naming_screen.asm) seeds the deterministic RED/id-0 identity then calls the REAL, blocking DisplayNamingScreen for the PLAYER screen (dest wPlayerName) -- unlike the DEBUG_NAMINGSCREEN golden's RunNamingScreenTest, which deliberately never enters that loop. The SAME AUTOKEY_KBDSCRIPT scancode-injection mechanism link_book_roundtrip's driver uses (src/debug/debug_dump.asm, via kbd_ring_push) types \"Ab\" (shift A, unshifted b) through DisplayNamingScreen's KBD_NAMING branch (%if KBD_NAMING; kbd_ring_pop), opens the special-character picker with Tab, picks its deterministic index-0 entry (KbdPickerChars[0], assets/kbd_scancode_map.inc) with Enter, then submits with a second Enter (.kbdEnter -> .pressedStart -> .submitNickname). kbdnamecheck_marks (GBSTATE region knMarks) is set only once .submitNickname actually commits -- a game-code-gated store, not harness bookkeeping. The default KBD_NAMING=0 build is unaffected: step 4 already SHA1-proved that build byte-identical, and every symbol this scenario touches (kbdnamecheck_marks, RunKbdNameCheckTest, the AUTOKEY_KBDSCRIPT push) lives behind DEBUG_KBDNAMECHECK/AUTOKEY_KBDSCRIPT, which this scenario's own build is the only build that defines. DOSBox-side dynamic verification is DEFERRED to the end-of-plan battery -- this implementer's checks are static only, per the plan's directive."
     }
   ],
   "disabled_scenarios": []

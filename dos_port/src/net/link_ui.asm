@@ -146,6 +146,19 @@ extern DelayFrames          ; src/home/delay.asm — In: BL=frame count
 
 extern YesNoChoice          ; src/home/yes_no.asm — Out: wCurrentMenuItem 0=YES/1=NO
 
+%ifdef DEBUG_LINKBOOKCHECK
+extern linkbookcheck_marks  ; src/engine/link/cable_club_npc.asm — GBSTATE flat
+                             ; region "lbcMarks" (harness, tools/linkbookcheck.sh).
+                             ; Offsets below; see RunLinkBookCheck's header for
+                             ; the two-run shape these hooks exist to witness.
+LBC_TCP_NEW      equ 0       ; run1: TCP NEW commits (lu_finish_addr_entry)
+LBC_IPX_NEW      equ 1       ; run1: IPX NEW commits
+LBC_TCP_EDITED   equ 2       ; run2: TCP EDIT commits
+LBC_IPX_DELETED  equ 3       ; run2: IPX DELETE commits (lu_delete_entry, post-YES)
+LBC_MENU_OPENED  equ 4       ; diagnostic: LinkTransportSelect's UI actually opened
+LBC_CANCELLED    equ 5       ; diagnostic: the player cancelled all the way out
+%endif
+
 ; ---------------------------------------------------------------------------
 ; Local mirrors of constants that other files declare as plain (non-global)
 ; `equ` — NASM equ's are not linkable symbols, so a caller cannot `extern`
@@ -198,6 +211,13 @@ lu_name_scratch: resb 16    ; staged NEW/EDIT name, before a record commit
 lu_addr_scratch: resb 10    ; parsed binary address, staged before a record commit
 lu_family:      resb 1      ; current book screen's family (0 TCP / 1 IPX)
 lu_slot:        resb 1      ; record slot (0-4) the record submenu/NEW targets
+%ifdef DEBUG_LINKBOOKCHECK
+lu_is_edit:     resb 1      ; harness-only: 0 = lu_new_entry's flow, 1 = lu_edit_entry's
+                             ; (both share lu_new_edit_common/lu_finish_addr_entry, so
+                             ; the commit-site mark hook there needs this to tell a NEW
+                             ; commit from an EDIT commit) -- see link_book_roundtrip's
+                             ; DEBUG_LINKBOOKCHECK hooks below.
+%endif
 
 ; ---------------------------------------------------------------------------
 ; The generated strings (Tier-1 data; DO-NOT-EDIT header inside).
@@ -223,6 +243,13 @@ LinkTransportSelect:
 
     call lu_draw_transport_menu
     call lu_show_window          ; mirrors + add_window, ONCE for this whole call
+%ifdef DEBUG_LINKBOOKCHECK
+    ; harness hook: the transport-select UI is about to block waiting for
+    ; input -- proof the receptionist path actually reached it (link cable
+    ; plan Stage 5 step 5, tools/linkbookcheck.sh). Harness state, not game
+    ; logic (same convention as cable_club.asm's DEBUG_TRADECHECK hooks).
+    mov byte [linkbookcheck_marks + LBC_MENU_OPENED], 1
+%endif
 .transport_loop:
     call HandleMenuInput         ; Out: AL = watched keys pressed
     test al, PAD_B
@@ -252,6 +279,9 @@ LinkTransportSelect:
     call lu_mirror
     jmp .transport_loop
 .cancel_all:
+%ifdef DEBUG_LINKBOOKCHECK
+    mov byte [linkbookcheck_marks + LBC_CANCELLED], 1
+%endif
     mov eax, [lu_saved_wc]
     mov [g_window_count], eax
     xor al, al
@@ -633,6 +663,9 @@ lu_new_entry:
     ret
 .found_free:
     mov [lu_slot], bl
+%ifdef DEBUG_LINKBOOKCHECK
+    mov byte [lu_is_edit], 0
+%endif
     jmp lu_new_edit_common
 
 ; ===========================================================================
@@ -642,6 +675,9 @@ lu_new_entry:
 ; pre-seeded with the record's current name/address.
 ; ===========================================================================
 lu_edit_entry:
+%ifdef DEBUG_LINKBOOKCHECK
+    mov byte [lu_is_edit], 1
+%endif
     ; falls through to the shared flow below
 
 ; ---------------------------------------------------------------------------
@@ -758,6 +794,26 @@ lu_finish_addr_entry:
     call linkbook_record
     mov byte [esi + LBREC.in_use], 1
     call linkbook_store
+%ifdef DEBUG_LINKBOOKCHECK
+    ; harness hook (link cable plan Stage 5 step 5, tools/linkbookcheck.sh):
+    ; a NEW or EDIT commit just persisted. lu_is_edit tells the two apart
+    ; (both flows share this one commit site); only TCP is ever EDITed by
+    ; this harness (run2 phase 2 targets the TCP entry only), so the EDIT
+    ; branch does not bother distinguishing family. Harness state, not game
+    ; logic (same convention as cable_club.asm's DEBUG_TRADECHECK hooks).
+    cmp byte [lu_is_edit], 0
+    jne .lbcEdited
+    cmp byte [lu_family], LINKBOOK_FAMILY_TCP
+    jne .lbcIpxNew
+    mov byte [linkbookcheck_marks + LBC_TCP_NEW], 1
+    jmp .lbcMarkDone
+.lbcIpxNew:
+    mov byte [linkbookcheck_marks + LBC_IPX_NEW], 1
+    jmp .lbcMarkDone
+.lbcEdited:
+    mov byte [linkbookcheck_marks + LBC_TCP_EDITED], 1
+.lbcMarkDone:
+%endif
     mov eax, LinkUIStr_Saved
     call lu_show_message
 .done:
@@ -796,6 +852,14 @@ lu_delete_entry:
     mov ecx, LBREC.size
     rep stosb
     call linkbook_store
+%ifdef DEBUG_LINKBOOKCHECK
+    ; harness hook (link cable plan Stage 5 step 5, tools/linkbookcheck.sh):
+    ; a confirmed DELETE just persisted. This harness only ever deletes the
+    ; IPX entry (run2 phase 2), so no family check is needed. Harness state,
+    ; not game logic (same convention as cable_club.asm's DEBUG_TRADECHECK
+    ; hooks).
+    mov byte [linkbookcheck_marks + LBC_IPX_DELETED], 1
+%endif
     mov eax, LinkUIStr_Saved
     call lu_show_message
 .done:

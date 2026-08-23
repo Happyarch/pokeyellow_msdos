@@ -60,6 +60,28 @@ extern net_exch_ctr              ; net_hal.asm — session diagnostics probe reg
 extern battlecheck_marks         ; src/engine/link/cable_club_npc.asm (harness)
 extern net_exch_ctr              ; net_hal.asm — session diagnostics probe region
 %endif
+%ifdef DEBUG_LINKBOOKCHECK
+extern linkbookcheck_marks       ; src/engine/link/cable_club_npc.asm (harness)
+extern g_net_transport           ; src/net/net_hal.asm — NET_TRANSPORT_* (0=none)
+; Local mirror of src/net/link_ui.asm's own local (non-global) equ's -- NASM
+; equ's are not linkable symbols, so this file keeps its own copy at the same
+; value (the existing convention; see link_ui.asm's own header comment on
+; USING_INTERNAL_CLOCK etc.).
+LBC_TCP_NEW      equ 0
+LBC_IPX_NEW      equ 1
+LBC_TCP_EDITED   equ 2
+LBC_IPX_DELETED  equ 3
+LBC_MENU_OPENED  equ 4
+LBC_CANCELLED    equ 5
+%endif
+%ifdef DEBUG_KBDNAMECHECK
+extern kbdnamecheck_marks        ; src/engine/menus/naming_screen.asm (harness)
+%endif
+%ifdef AUTOKEY_KBDSCRIPT
+extern kbd_ring_push             ; src/input/joypad.asm — In: AL=scancode AH=shift
+extern g_kbd_text_mode           ; src/input/joypad.asm — byte, 1 while a keyboard
+                                  ; text field is actually polling the ring
+%endif
 extern pal_rgb_table, bg_slot_pal, obj_slot_pal
 extern pal_cgb_table    ; assets/colors/palettes.inc — BGR555 twin of pal_rgb_table
 extern tile_pal
@@ -1085,6 +1107,29 @@ gbstate_regions:
     gbregion "serialCounter", wUnknownSerialCounter, 2
     gbregion "menuPollCount", wMenuJoypadPollCount, 1
     gbregion "wPlayerMapPos", wCurMap, 5                 ; wCurMap .. wXCoord
+%endif
+%ifdef DEBUG_LINKBOOKCHECK
+    ; --- link_book_roundtrip golden (link cable plan Stage 5 step 5,
+    ; Deliverable 2) --- port_only: no ROM ground truth, tools/linkbookcheck.sh
+    ; asserts against these regions directly, not via golden_diff. lbcMarks is
+    ; the per-phase completion evidence (see src/net/link_ui.asm's
+    ; DEBUG_LINKBOOKCHECK hooks, LBC_* offsets); netTransport confirms the
+    ; scenario never actually bound a transport (the connect seam fails by
+    ; design in Stage 5 — no CLI /COMx flag, no peer).
+    gbregion_flat "lbcMarks",    linkbookcheck_marks, 6
+    gbregion_flat "netTransport", g_net_transport, 1
+%endif
+%ifdef DEBUG_KBDNAMECHECK
+    ; --- kbd_naming_entry golden (link cable plan Stage 5 step 5,
+    ; Deliverable 3) --- port_only: tools/kbdnamecheck.sh asserts the
+    ; committed name bytes directly against this region. NOT re-declared
+    ; here: "wPlayerName" (the unconditional row a few lines above this
+    ; block, gbregion "wPlayerName", wPlayerName, NAME_LENGTH) already dumps
+    ; the exact bytes RunKbdNameCheckTest's dest (wPlayerName) writes — a
+    ; kbdnamecheck-only duplicate would just be a second name for the same
+    ; bytes. knMarks is set only once DisplayNamingScreen's .submitNickname
+    ; has actually committed (see naming_screen.asm's DEBUG_KBDNAMECHECK hook).
+    gbregion_flat "knMarks",    kbdnamecheck_marks, 1
 %endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph
 ; (AUTOKEY_DUMP_ON_BATTLE) or the state-gated follow-stall probe
@@ -5797,6 +5842,45 @@ AutoKeyDrive:
     pushad
     mov ecx, [autokey_frame]
     inc dword [autokey_frame]
+%ifdef AUTOKEY_KBDSCRIPT
+    ; *** SCANCODE-INJECTION HARNESS (link cable plan Stage 5 step 5). ***
+    ; AUTOKEY drives pad bits only; the link UI's NEW/EDIT fields
+    ; (kbd_text_edit) and the KBD_NAMING naming-screen path (DisplayNamingScreen)
+    ; read raw keyboard scancodes off kbd_ring instead, so a headless run needs
+    ; a way to synthesize keystrokes -- this block is that way. kbdscript_table
+    ; (below, in .data) is a flat sequence of {scancode, shift} byte pairs, one
+    ; entry selected per scenario (%ifdef ladder further down), $FF-terminated
+    ; on the scancode byte (never a legal 7-bit make code). kbdscript_idx walks
+    ; it forward by exactly one pair per tick THIS BLOCK ACTUALLY RUNS, which is
+    ; gated on [g_kbd_text_mode] != 0 -- i.e. only while some field is really
+    ; polling the ring. This is deliberate, not merely convenient: it removes
+    ; ALL frame-number guessing (typewriter delays, DelayFrames(60) SAVED-message
+    ; holds, PrintText timing -- none of it has to be predicted), and it cannot
+    ; overflow the ring's 8-pair capacity (KBD_RING_SIZE=16 bytes / 2) because
+    ; each push happens on a SEPARATE tick, one apiece, matching kbd_text_edit's/
+    ; DisplayNamingScreen's own one-pop-per-DelayFrame poll cadence exactly. A
+    ; push that lands on a tick BEFORE any field has opened this cycle never
+    ; happens (the mode gate is false then), so nothing is silently discarded by
+    ; a field's own entry-time ring drain (kbd_text_edit's .drain /
+    ; DisplayNamingScreen's .kbdDrainRing) — every pushed pair is always meant
+    ; for whichever field is open at push time.
+    ;
+    ; Control data, not human-rendered text (CLAUDE.md's text-strings-are-DATA
+    ; rule does not apply): these are raw IBM PC/AT scancode set-1 make codes
+    ; and a shift flag, consumed by kbd_ring_pop's callers exactly like a real
+    ; keypress -- there is no charmap glyph here for gb_text.py to encode.
+    cmp byte [g_kbd_text_mode], 0
+    je .kbdScriptDone
+    movzx eax, byte [kbdscript_idx]
+    imul eax, eax, 2
+    cmp byte [kbdscript_table + eax], 0xFF
+    je .kbdScriptDone
+    mov al, [kbdscript_table + eax]
+    mov ah, [kbdscript_table + eax + 1]
+    call kbd_ring_push
+    inc byte [kbdscript_idx]
+.kbdScriptDone:
+%endif
 %ifdef DEBUG_BATTLE_GOLDEN
 %ifndef DEBUG_BATTLE_INTRO
     ; ------------------------------------------------------------------
@@ -6781,6 +6865,269 @@ BC_COLOSSEUM_MAP equ 0xF0                  ; COLOSSEUM (assets/map_dims.inc; not
     mov byte [battlecheck_marks], 1
 .bcStartedOff:
 %endif
+%ifdef AUTOKEY_LINKBOOKCHECK
+%ifdef AUTOKEY_LINKBOOKCHECK_PHASE2
+    ; *** PHASE-GATED NAVIGATION (linkbookcheck harness, run2: EDIT + DELETE). ***
+    ; See RunLinkBookCheck's header (src/engine/link/cable_club_npc.asm) for the
+    ; overall two-run shape. UNLIKE run1 below, this run needs a genuine PHASE
+    ; counter, not just marks-derived targeting: the transport menu AND the
+    ; record menu draw with the IDENTICAL (wMaxMenuItem, wMenuWatchedKeys) =
+    ; (3, PAD_A|PAD_B) signature (lu_draw_transport_menu / lu_draw_record_menu,
+    ; src/net/link_ui.asm), so nothing in WRAM alone tells them apart -- the
+    ; phase counter is what disambiguates. Each phase uses the same DOWN-strobe/
+    ; A-suppress idiom as AUTOKEY_BATTLECHECK's LinkMenu gate above (4-on/4-off
+    ; on the free-running autokey_frame counter); a book-list return (item
+    ; selection already defaults to row 0, both records this harness ever
+    ; touches — see the marks precondition in RunLinkBookCheck's header) needs
+    ; no DOWN at all. Typing (name+address) is NOT gated here -- that runs
+    ; entirely through the AUTOKEY_KBDSCRIPT block above, keyed off
+    ; [g_kbd_text_mode], and this state machine just waits for
+    ; wMaxMenuItem to read 7 again (back at the book list) to know typing is
+    ; done, since kbd_text_edit ignores pad state completely.
+    movzx eax, byte [lbc2_phase]
+    cmp eax, 0
+    jne .lbc2P0Off
+    ; phase 0: transport menu -> target item 2 (TCP-IP)
+    cmp byte [ebp + wMaxMenuItem], 3
+    jne .lbc2Off
+    cmp byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
+    jne .lbc2Off
+    cmp byte [ebp + wCurrentMenuItem], 2
+    je .lbc2P0A
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .lbc2Off
+    or dl, PAD_DOWN
+    jmp .lbc2Off
+.lbc2P0A:
+    or dl, PAD_A
+    mov byte [lbc2_phase], 1
+    jmp .lbc2Off
+.lbc2P0Off:
+    cmp eax, 1
+    jne .lbc2P1Off
+    ; phase 1: TCP book list, row 0 ("HOME") already selected -> press A
+    cmp byte [ebp + wMaxMenuItem], 7
+    jne .lbc2Off
+    or dl, PAD_A
+    mov byte [lbc2_phase], 2
+    jmp .lbc2Off
+.lbc2P1Off:
+    cmp eax, 2
+    jne .lbc2P2Off
+    ; phase 2: record menu -> target item 1 (EDIT)
+    cmp byte [ebp + wMaxMenuItem], 3
+    jne .lbc2Off
+    cmp byte [ebp + wCurrentMenuItem], 1
+    je .lbc2P2A
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .lbc2Off
+    or dl, PAD_DOWN
+    jmp .lbc2Off
+.lbc2P2A:
+    or dl, PAD_A
+    mov byte [lbc2_phase], 3
+    jmp .lbc2Off
+.lbc2P2Off:
+    cmp eax, 3
+    jne .lbc2P3Off
+    ; phase 3: EDIT's name+address typing (AUTOKEY_KBDSCRIPT block, above) --
+    ; wait for the commit to return control to the book list.
+    cmp byte [ebp + wMaxMenuItem], 7
+    jne .lbc2Off
+    mov byte [lbc2_phase], 4
+    jmp .lbc2Off
+.lbc2P3Off:
+    cmp eax, 4
+    jne .lbc2P4Off
+    ; phase 4: TCP book list (post-EDIT) -> B, back to the transport menu
+    cmp byte [ebp + wMaxMenuItem], 7
+    jne .lbc2Off
+    or dl, PAD_B
+    mov byte [lbc2_phase], 5
+    jmp .lbc2Off
+.lbc2P4Off:
+    cmp eax, 5
+    jne .lbc2P5Off
+    ; phase 5: transport menu -> target item 1 (IPX)
+    cmp byte [ebp + wMaxMenuItem], 3
+    jne .lbc2Off
+    cmp byte [ebp + wCurrentMenuItem], 1
+    je .lbc2P5A
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .lbc2Off
+    or dl, PAD_DOWN
+    jmp .lbc2Off
+.lbc2P5A:
+    or dl, PAD_A
+    mov byte [lbc2_phase], 6
+    jmp .lbc2Off
+.lbc2P5Off:
+    cmp eax, 6
+    jne .lbc2P6Off
+    ; phase 6: IPX book list, row 0 ("LAN") already selected -> press A
+    cmp byte [ebp + wMaxMenuItem], 7
+    jne .lbc2Off
+    or dl, PAD_A
+    mov byte [lbc2_phase], 7
+    jmp .lbc2Off
+.lbc2P6Off:
+    cmp eax, 7
+    jne .lbc2P7Off
+    ; phase 7: record menu -> target item 2 (DELETE)
+    cmp byte [ebp + wMaxMenuItem], 3
+    jne .lbc2Off
+    cmp byte [ebp + wCurrentMenuItem], 2
+    je .lbc2P7A
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .lbc2Off
+    or dl, PAD_DOWN
+    jmp .lbc2Off
+.lbc2P7A:
+    or dl, PAD_A
+    mov byte [lbc2_phase], 8
+    jmp .lbc2Off
+.lbc2P7Off:
+    cmp eax, 8
+    jne .lbc2P8Off
+    ; phase 8: YesNoChoice DELETE confirm (wMaxMenuItem==1 is unique to it in
+    ; this scenario); default cursor is already YES (item 0 -- YES_NO_MENU's
+    ; BIT_SECOND_MENU_OPTION_DEFAULT bit is clear, text_box.asm's
+    ; DisplayTwoOptionMenu) -> press A
+    cmp byte [ebp + wMaxMenuItem], 1
+    jne .lbc2Off
+    or dl, PAD_A
+    mov byte [lbc2_phase], 9
+    jmp .lbc2Off
+.lbc2P8Off:
+    cmp eax, 9
+    jne .lbc2P9Off
+    ; phase 9: IPX book list (post-DELETE) -> B, back to the transport menu
+    cmp byte [ebp + wMaxMenuItem], 7
+    jne .lbc2Off
+    or dl, PAD_B
+    mov byte [lbc2_phase], 10
+    jmp .lbc2Off
+.lbc2P9Off:
+    cmp eax, 10
+    jne .lbc2Off
+    ; phase 10: transport menu -> target item 3 (CANCEL); phase 11 = done
+    cmp byte [ebp + wMaxMenuItem], 3
+    jne .lbc2Off
+    cmp byte [ebp + wCurrentMenuItem], 3
+    je .lbc2P10A
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .lbc2Off
+    or dl, PAD_DOWN
+    jmp .lbc2Off
+.lbc2P10A:
+    or dl, PAD_A
+    mov byte [lbc2_phase], 11
+.lbc2Off:
+%else
+    ; *** PHASE-GATED NAVIGATION (linkbookcheck harness, run1: two NEWs). ***
+    ; Simpler than run2: every book-list visit targets item 6 (NEW) — no
+    ; record menu is ever reached (both slots start empty), so there is no
+    ; (3,A|B) signature collision with the transport menu to resolve, and a
+    ; plain marks-derived target (linkbookcheck_marks, src/net/link_ui.asm's
+    ; DEBUG_LINKBOOKCHECK hooks) is enough to pick the transport-menu item —
+    ; no separate phase counter needed for that part. lbc1_phase only tracks
+    ; the two book-list-local sub-steps (open vs. leave) each visit needs.
+    cmp byte [ebp + wMaxMenuItem], 3
+    jne .lbc1TMOff
+    cmp byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
+    jne .lbc1TMOff
+    cmp byte [linkbookcheck_marks + LBC_TCP_NEW], 0
+    je .lbc1TMTarget2
+    cmp byte [linkbookcheck_marks + LBC_IPX_NEW], 0
+    je .lbc1TMTarget1
+    mov al, 3                               ; both created -> CANCEL
+    jmp .lbc1TMHave
+.lbc1TMTarget2:
+    mov al, 2
+    jmp .lbc1TMHave
+.lbc1TMTarget1:
+    mov al, 1
+.lbc1TMHave:
+    cmp [ebp + wCurrentMenuItem], al
+    je .lbc1TMPressA
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .lbc1TMOff
+    or dl, PAD_DOWN
+    jmp .lbc1TMOff
+.lbc1TMPressA:
+    or dl, PAD_A
+.lbc1TMOff:
+    cmp byte [ebp + wMaxMenuItem], 7
+    jne .lbc1Off
+    cmp byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
+    jne .lbc1Off
+    ; book list: phase 0 = navigate to NEW (item 6); phase 1 = leave (B) once
+    ; this book's entry is committed. lbc1_phase flips 0->1 at the marks
+    ; commit below and 1->0 the instant B is asserted.
+    ;
+    ; STALENESS TRAP (why .lbc1BLLeave gates on cursor==0, not just phase==1):
+    ; wMaxMenuItem/wCurrentMenuItem are NOT refreshed while the NEW flow's
+    ; name/address prompts and its ~60-frame SAVED-message hold run -- they
+    ; stay at this book list's LAST drawn values (cursor still 6, the row that
+    ; opened NEW) for the whole typing+SAVED duration, because none of that
+    ; code path touches them. If "leave" fired the instant a NEW mark lands
+    ; (asserting B while cursor is still stuck at 6), the assertion would be
+    ; WASTED: lu_show_message's DelayFrames busy-wait reads no pad state at
+    ; all, so B does nothing there, and by the time the book list actually
+    ; redraws live (lu_book_screen's .redraw, cursor genuinely reset to 0)
+    ; phase would already be back to 0 -- re-triggering a SECOND, unwanted
+    ; NEW on the same book. Waiting for cursor==0 confirms the redraw already
+    ; happened and HandleMenuInput is really polling again.
+    cmp byte [lbc1_phase], 1
+    je .lbc1BLLeave
+    cmp byte [ebp + wCurrentMenuItem], 6
+    je .lbc1BLPressA
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .lbc1Off
+    or dl, PAD_DOWN
+    jmp .lbc1Off
+.lbc1BLPressA:
+    or dl, PAD_A
+    ; the NEW commit (name+address, AUTOKEY_KBDSCRIPT block above) hasn't run
+    ; yet at the instant A is pressed here -- flip to "leave" only once one of
+    ; the two NEW marks has actually landed, so this doesn't fire early on the
+    ; SAME frame the row is picked.
+    cmp byte [linkbookcheck_marks + LBC_TCP_NEW], 0
+    jne .lbc1BLArm
+    cmp byte [linkbookcheck_marks + LBC_IPX_NEW], 0
+    je .lbc1Off
+.lbc1BLArm:
+    mov byte [lbc1_phase], 1
+    jmp .lbc1Off
+.lbc1BLLeave:
+    cmp byte [ebp + wCurrentMenuItem], 0
+    jne .lbc1Off             ; still stale (typing/SAVED-hold in progress) -- wait
+    or dl, PAD_B
+    mov byte [lbc1_phase], 0
+.lbc1Off:
+%endif
+%endif
 %ifdef AUTOKEY_TRADE_GOLDEN
     ; *** STATE-GATED PARTY-MENU DOWN CLIMB (in_game_trade golden). ***
     ; InGameTrade_DoTrade's DisplayPartyMenu opens with the cursor on
@@ -6919,6 +7266,113 @@ BC_COLOSSEUM_MAP equ 0xF0                  ; COLOSSEUM (assets/map_dims.inc; not
 
 section .data
 autokey_frame: dd 0
+%ifdef AUTOKEY_KBDSCRIPT
+; kbdscript_idx/kbdscript_table -- the scancode-injection harness's data (link
+; cable plan Stage 5 step 5). See AutoKeyDrive's AUTOKEY_KBDSCRIPT block above
+; for the push mechanism and why the table needs no frame numbers at all.
+; Exactly one of AUTOKEY_LINKBOOKCHECK[_PHASE2] / AUTOKEY_KBDNAMECHECK is
+; defined per build (the Makefile enforces this), selecting which sequence
+; below compiles as `kbdscript_table`.
+;
+; CONTROL DATA, NOT TEXT: every row is a raw scancode + shift flag consumed by
+; kbd_ring_pop's callers exactly like a real IRQ1 keystroke -- there is no
+; charmap glyph here, so the "text strings are DATA, generate them" rule does
+; not apply (see AutoKeyDrive's own block comment for the full rationale).
+; Scancode values are US QWERTY set-1 make codes, the same LAYOUT table
+; tools/generators/gen_kbd_naming.py already encodes (assets/kbd_scancode_map.inc);
+; a shift byte of 1 selects that generator's shifted-glyph column.
+align 2
+kbdscript_idx: db 0
+kbdscript_table:
+%ifdef AUTOKEY_LINKBOOKCHECK
+%ifdef AUTOKEY_LINKBOOKCHECK_PHASE2
+    ; run2 (tools/linkbookcheck.sh, same image, LINKBOOK.DAT NOT purged):
+    ; EDIT the TCP entry -- new name "WORK", new address "10.0.0.2:5001" (both
+    ; fields retype fully; kbd_text_edit never pre-seeds from the record's
+    ; current content -- see link_ui.asm's file header). DELETing the IPX
+    ; entry needs no typing (pad + YesNoChoice only, see AutoKeyDrive's
+    ; AUTOKEY_LINKBOOKCHECK_PHASE2 navigation block below), so the table ends
+    ; once the EDIT's address commits.
+    db 0x11, 1   ; W
+    db 0x18, 1   ; O
+    db 0x13, 1   ; R
+    db 0x25, 1   ; K
+    db 0x1C, 0   ; Enter -- commits the name
+    db 0x02, 0   ; 1
+    db 0x0B, 0   ; 0
+    db 0x34, 0   ; .
+    db 0x0B, 0   ; 0
+    db 0x34, 0   ; .
+    db 0x0B, 0   ; 0
+    db 0x34, 0   ; .
+    db 0x03, 0   ; 2
+    db 0x27, 1   ; :
+    db 0x06, 0   ; 5
+    db 0x0B, 0   ; 0
+    db 0x0B, 0   ; 0
+    db 0x02, 0   ; 1
+    db 0x1C, 0   ; Enter -- commits the address ("10.0.0.2:5001"); SAVED
+%else
+    ; run1 (fresh image, LINKBOOK.DAT purged): NEW a TCP entry (name "HOME",
+    ; address "10.0.0.1:5000"), then NEW an IPX entry (name "LAN", address
+    ; hex "FEED:C0FFEE001122" -- net=FEED, node=C0FFEE001122, exercising both
+    ; digits and uppercase hex letters against CHARSET_HEX's 0x80-0x85 range).
+    db 0x23, 1   ; H
+    db 0x18, 1   ; O
+    db 0x32, 1   ; M
+    db 0x12, 1   ; E
+    db 0x1C, 0   ; Enter -- commits the name
+    db 0x02, 0   ; 1
+    db 0x0B, 0   ; 0
+    db 0x34, 0   ; .
+    db 0x0B, 0   ; 0
+    db 0x34, 0   ; .
+    db 0x0B, 0   ; 0
+    db 0x34, 0   ; .
+    db 0x02, 0   ; 1
+    db 0x27, 1   ; :
+    db 0x06, 0   ; 5
+    db 0x0B, 0   ; 0
+    db 0x0B, 0   ; 0
+    db 0x0B, 0   ; 0
+    db 0x1C, 0   ; Enter -- commits the address ("10.0.0.1:5000"); SAVED (TCP done)
+    db 0x26, 1   ; L
+    db 0x1E, 1   ; A
+    db 0x31, 1   ; N
+    db 0x1C, 0   ; Enter -- commits the name
+    db 0x21, 1   ; F
+    db 0x12, 1   ; E
+    db 0x12, 1   ; E
+    db 0x20, 1   ; D
+    db 0x27, 1   ; :
+    db 0x2E, 1   ; C
+    db 0x0B, 0   ; 0
+    db 0x21, 1   ; F
+    db 0x21, 1   ; F
+    db 0x12, 1   ; E
+    db 0x12, 1   ; E
+    db 0x0B, 0   ; 0
+    db 0x0B, 0   ; 0
+    db 0x02, 0   ; 1
+    db 0x02, 0   ; 1
+    db 0x03, 0   ; 2
+    db 0x03, 0   ; 2
+    db 0x1C, 0   ; Enter -- commits the address ("FEED:C0FFEE001122"); SAVED (IPX done)
+%endif
+%elifdef AUTOKEY_KBDNAMECHECK
+    ; kbd_naming_entry (tools/kbdnamecheck.sh): type "Ab" (shift A, unshifted
+    ; b), Tab opens the KBD_NAMING picker overlay, Enter picks its index-0
+    ; entry (deterministic -- that is already the overlay's default shown
+    ; character, no Left/Right needed), Enter again submits the whole name
+    ; via .kbdEnter -> .pressedStart -> .submitNickname.
+    db 0x1E, 1   ; A
+    db 0x30, 0   ; b
+    db 0x0F, 0   ; Tab
+    db 0x1C, 0   ; Enter -- picks KbdPickerChars[0]
+    db 0x1C, 0   ; Enter -- submits the name
+%endif
+    db 0xFF, 0   ; terminator -- 0xFF is never a legal 7-bit make code
+%endif
 %ifdef DEBUG_LINKCHECK
 lc_menu_frames: dd 0                    ; frames since linkcheck_in_menu set
 %endif
@@ -6930,6 +7384,13 @@ tc_seed_dumped:  db 0                   ; DumpGBStateSeed fired once, pre-walk
 %ifdef AUTOKEY_BATTLECHECK
 bc_walk_started: db 0                   ; wWalkCounter observed nonzero (mid-step)
 bc_walk_done:    db 0                   ; the one-tile walk to the table finished
+%endif
+%ifdef AUTOKEY_LINKBOOKCHECK
+%ifdef AUTOKEY_LINKBOOKCHECK_PHASE2
+lbc2_phase: db 0                        ; run2's 12-step (0-11) navigation phase counter
+%else
+lbc1_phase: db 0                        ; run1's book-list open(0)/leave(1) sub-step
+%endif
 %endif
 %ifdef DEBUG_BATTLE_GOLDEN
 %ifndef DEBUG_BATTLE_INTRO

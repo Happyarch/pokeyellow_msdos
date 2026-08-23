@@ -532,3 +532,74 @@ RunBattleCheck:
     call DelayFrame
     jmp .park
 %endif
+
+; ===========================================================================
+; # RunLinkBookCheck — %ifdef DEBUG_LINKBOOKCHECK SINGLE-instance harness
+; # driver (link cable plan Stage 5 step 5, Deliverable 2 — the linkbook
+; # persistence scenario, `link_book_roundtrip` in tools/scenario_manifest.json).
+; #
+; # UNLIKE RunLinkCheck/RunTradeCheck/RunBattleCheck above, this is genuinely
+; # single-instance: NO nullmodem cable, no peer, no CLI transport flag
+; # (`/COM1` etc.) is ever passed. With g_net_transport left at its default
+; # NET_TRANSPORT_NONE, CableClubNPC's LinkTransportSelect call (the
+; # DEVIATION seam documented at CableClubNPC's .receivedPokedex above) does
+; # NOT race an establishment window at all -- it opens the port-only
+; # transport-select + connection-book UI (src/net/link_ui.asm) and blocks
+; # there, which is exactly the surface this scenario exists to exercise. A
+; # single CableClubNPC call is therefore enough: there is no partner to wait
+; # for, so none of RunLinkCheck/RunTradeCheck/RunBattleCheck's retry-loop-
+; # until-the-race-lands shape applies here.
+; #
+; # tools/linkbookcheck.sh drives the whole flow with TWO layers, both in
+; # src/debug/debug_dump.asm's AutoKeyDrive:
+; #   - pad-level menu navigation (%ifdef AUTOKEY_LINKBOOKCHECK /
+; #     AUTOKEY_LINKBOOKCHECK_PHASE2): a phase-gated state machine reading
+; #     wMaxMenuItem/wCurrentMenuItem/wMenuWatchedKeys to walk the transport
+; #     menu -> book list -> (record menu, run2 only) -> YesNoChoice, the
+; #     same "DOWN-strobe while not at target, else assert A" idiom
+; #     RunTradeCheck/RunBattleCheck's own AUTOKEY blocks already use.
+; #   - keyboard-level field typing (%ifdef AUTOKEY_KBDSCRIPT, shared with
+; #     kbd_naming_entry's driver): a scripted (scancode,shift) table pushed
+; #     one pair per frame into the SAME kbd_ring kbd_isr feeds, via the new
+; #     port-only kbd_ring_push (src/input/joypad.asm) -- see that routine's
+; #     header for why AUTOKEY (pad bits only) cannot reach the NAME?/
+; #     ADDRESS? fields on its own.
+; #
+; # Two builds of this SAME gate exist (both DEBUG_LINKBOOKCHECK; the
+; # PHASE2 sub-define picks which AUTOKEY navigation + kbdscript table is
+; # compiled in -- see debug_dump.asm): run1 (fresh LINKBOOK.DAT) creates a
+; # TCP and an IPX entry and cancels out; run2 (same image, LINKBOOK.DAT NOT
+; # purged) EDITs the TCP entry's name and DELETEs the IPX entry. Marks land
+; # in linkbookcheck_marks (below) for tools/linkbookcheck.sh to assert
+; # against, per-phase, exactly like battlecheck_marks above.
+; ===========================================================================
+%ifdef DEBUG_LINKBOOKCHECK
+global RunLinkBookCheck
+global linkbookcheck_marks
+
+; GBSTATE flat region "lbcMarks" (debug_dump.asm). Every byte here is a
+; game-code-gated store from src/net/link_ui.asm's DEBUG_LINKBOOKCHECK hooks
+; (LBC_* offsets defined there) -- none is written from the AUTOKEY driver
+; itself, so a mark set is proof the real commit code path ran, not just
+; that the harness's own navigation reached the right screen.
+section .bss
+align 4
+linkbookcheck_marks:
+lbc_tcp_new:      resb 1     ; +0 — run1: TCP NEW committed (LBC_TCP_NEW)
+lbc_ipx_new:      resb 1     ; +1 — run1: IPX NEW committed (LBC_IPX_NEW)
+lbc_tcp_edited:   resb 1     ; +2 — run2: TCP EDIT committed (LBC_TCP_EDITED)
+lbc_ipx_deleted:  resb 1     ; +3 — run2: IPX DELETE committed (LBC_IPX_DELETED)
+lbc_menu_opened:  resb 1     ; +4 — diagnostic: transport UI actually opened
+lbc_cancelled:    resb 1     ; +5 — diagnostic: cancelled all the way out
+
+section .text
+RunLinkBookCheck:
+    SetEvent EVENT_GOT_POKEDEX          ; open the receptionist's gate
+    call CableClubNPC                   ; blocks in LinkTransportSelect's UI;
+                                         ; returns once the player cancels all
+                                         ; the way out -- no transport exists
+                                         ; in this stage to actually bind
+.park:                                  ; hold still for the AUTOKEY_DUMP_FRAME photograph
+    call DelayFrame
+    jmp .park
+%endif

@@ -15,8 +15,15 @@ def scenarios():
 
 
 def names(tier):
+    # port_only rows (no ROM ground truth -- see scenario_manifest.json's
+    # schema note) are excluded from BOTH tiers: the fidelity tiers run
+    # goldencheck, which needs a golden these rows do not have. They still
+    # get a GBSTATE_SCENARIO gate id from render_nasm() below -- only this
+    # --names projection (which feeds FIDELITY_SCENARIOS_CORE/FULL in the
+    # Makefile) excludes them.
     return [item["name"] for item in scenarios()
-            if tier == "full" or item["tier"] == "core"]
+            if item.get("scenario_class") != "port_only"
+            and (tier == "full" or item["tier"] == "core")]
 
 
 def render_nasm():

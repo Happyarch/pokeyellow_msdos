@@ -2938,6 +2938,68 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Link-cable Stage 5 step 5, Deliverable 2: the single-instance connection-book
+# persistence harness gate (tools/linkbookcheck.sh; `link_book_roundtrip` in
+# tools/scenario_manifest.json, scenario_class "port_only" -- no ROM ground
+# truth, so this is asserted directly against GBSTATE.BIN + LINKBOOK.DAT, not
+# through goldencheck). UNLIKE DEBUG_LINKCHECK/TRADECHECK/BATTLECHECK above,
+# there is NO nullmodem cable and no /COM1: RunLinkBookCheck (src/engine/
+# link/cable_club_npc.asm) calls the real CableClubNPC exactly once, and with
+# g_net_transport left at NET_TRANSPORT_NONE its LinkTransportSelect call
+# opens the port-only transport-select/connection-book UI (src/net/link_ui.asm)
+# instead of racing an establishment window against a peer. AUTOKEY_LINKBOOKCHECK
+# (debug_dump.asm's AutoKeyDrive) drives pad-level menu navigation, phase-gated
+# off live WRAM state; AUTOKEY_KBDSCRIPT drives the NAME?/ADDRESS? fields via a
+# scripted (scancode,shift) table pushed through the new kbd_ring_push
+# (src/input/joypad.asm) -- the same scancode-injection mechanism
+# DEBUG_KBDNAMECHECK below shares.
+#
+# LBC_PHASE2 selects the SECOND run's navigation + typing script (EDIT the TCP
+# entry's name, DELETE the IPX entry) instead of the first run's (NEW both);
+# tools/linkbookcheck.sh builds this SAME gate twice, once per run, per its own
+# header -- the underlying scenario/GBSTATE id stays DEBUG_LINKBOOKCHECK
+# either way, LBC_PHASE2 only swaps which AUTOKEY_LINKBOOKCHECK[_PHASE2]
+# navigation state machine and which kbdscript_table variant compile in.
+#
+# 3000 is an unmeasured starting point -- this implementer's checks are static
+# only per the plan's directive (no DOSBox-X run happened here); tune against
+# a real run once the maintainer's end-of-plan dynamic battery executes it.
+# make DEBUG_LINKBOOKCHECK=1  [LBC_PHASE2=1]
+ifdef DEBUG_LINKBOOKCHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_LINKBOOKCHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_LINKBOOKCHECK -D AUTOKEY_KBDSCRIPT
+AUTOKEY_DUMP_FRAME ?= 3000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D SKIP_TITLE
+ifdef LBC_PHASE2
+NASMFLAGS += -D AUTOKEY_LINKBOOKCHECK_PHASE2
+endif
+endif
+# Link-cable Stage 5 step 5, Deliverable 3: the KBD_NAMING naming-screen
+# scancode-injection gate (tools/kbdnamecheck.sh; `kbd_naming_entry` in
+# tools/scenario_manifest.json, scenario_class "port_only"). Requires
+# KBD_NAMING=1 -- naming_screen.asm %errors at assemble time otherwise (see
+# RunKbdNameCheckTest's header). RunKbdNameCheckTest clones
+# RunNamingScreenTest's identity seed but then calls the REAL (blocking)
+# DisplayNamingScreen instead of drawing the letter grid by hand, so this
+# gate's scripted "Ab" + Tab (opens the picker) + Enter (picks index 0) +
+# Enter (submits) sequence -- pushed through the SAME AUTOKEY_KBDSCRIPT
+# mechanism DEBUG_LINKBOOKCHECK above shares -- actually drives the KBD_NAMING
+# input path (%if KBD_NAMING in naming_screen.asm) end to end.
+# AUTOKEY_QUIET: no pad presses at all -- kbd_text.asm/DisplayNamingScreen's
+# KBD_NAMING branch reads only the keyboard ring, never pad state, so this
+# scenario needs none of AUTOKEY_LINKBOOKCHECK's menu-navigation gate.
+# 600 is an unmeasured starting point, same caveat as DEBUG_LINKBOOKCHECK's own.
+# make KBD_NAMING=1 DEBUG_KBDNAMECHECK=1
+ifdef DEBUG_KBDNAMECHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_KBDNAMECHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_KBDSCRIPT -D AUTOKEY_KBDNAMECHECK
+AUTOKEY_DUMP_FRAME ?= 600
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D SKIP_TITLE
+endif
 # in_game_trade golden (link cable plan Stage 3 step 4 — the trade.asm fidelity
 # anchor): the Route 2 Trade House CLEFAIRY -> MR_MIME "MILES" trade
 # (data/events/trades.asm index 1, TRADE_FOR_MILES; scripts/Route2TradeHouse.asm's

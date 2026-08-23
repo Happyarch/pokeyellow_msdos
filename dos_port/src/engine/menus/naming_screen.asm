@@ -651,6 +651,13 @@ DisplayNamingScreen:
     mov esi, wStringBuffer
     mov bx, NAME_LENGTH
     call CopyData
+%ifdef DEBUG_KBDNAMECHECK
+    ; harness hook (link cable plan Stage 5 step 5, tools/kbdnamecheck.sh):
+    ; the typed+picked name just committed into the caller's dest buffer.
+    ; Harness state, not game logic (same convention as cable_club.asm's
+    ; DEBUG_TRADECHECK hooks).
+    mov byte [kbdnamecheck_marks], 1
+%endif
     call GBPalWhiteOutWithDelay3
     call ClearScreen
     call ClearSprites
@@ -1178,6 +1185,64 @@ RunNamingScreenTest:
     call DelayFrame
     call DelayFrame
     call DumpBackbuffer                    ; writes FRAME.BIN + exits
+.hang:
+    jmp .hang
+%endif
+
+; ===========================================================================
+; RunKbdNameCheckTest — link cable plan Stage 5 step 5, Deliverable 3
+; (`kbd_naming_entry` in tools/scenario_manifest.json). Requires KBD_NAMING=1
+; (the naming-screen keyboard path this scenario exists to exercise) AND
+; DEBUG_KBDNAMECHECK=1: make KBD_NAMING=1 DEBUG_KBDNAMECHECK=1
+;
+; Clone of RunNamingScreenTest's IDENTITY seed above, but NOT its manual
+; draw: RunNamingScreenTest deliberately skips DisplayNamingScreen's own
+; blocking input loop (it is a static open-state gate, see its own header),
+; which is exactly the loop this scenario needs to drive — so this harness
+; calls the REAL DisplayNamingScreen and lets src/debug/debug_dump.asm's
+; AUTOKEY_KBDSCRIPT scancode table (shared mechanism with link_book_roundtrip's
+; driver — see its header in src/engine/link/cable_club_npc.asm) type through
+; it: "Ab" (shift A, unshifted b), Tab (opens the KBD_NAMING picker overlay),
+; Enter (picks the picker's index-0 entry — deterministic, no Left/Right
+; needed since that is already the overlay's default shown character), Enter
+; again (submits the name via .kbdEnter -> .pressedStart -> .submitNickname).
+; DisplayNamingScreen itself seeds every field this normally needs
+; (wTopMenuItemY/X, wCurrentMenuItem, wMaxMenuItem, wStringBuffer, ...) at its
+; own entry, and does its own ClearScreen/LoadHpBarAndStatusTilePatterns/
+; LoadEDTile/SetMonPartySpriteOrigin/LoadMonPartySpriteGfx — none of that
+; needs duplicating here, unlike RunNamingScreenTest (which bypasses
+; DisplayNamingScreen entirely and so must do all of it by hand).
+;
+; dest = wPlayerName: the real PLAYER-naming call site's own target (pret
+; ram/wram.asm), matching wNamingScreenType=NAME_PLAYER_SCREEN below.
+; ---------------------------------------------------------------------------
+%ifdef DEBUG_KBDNAMECHECK
+%if KBD_NAMING == 0
+%error "DEBUG_KBDNAMECHECK requires KBD_NAMING=1 (make KBD_NAMING=1 DEBUG_KBDNAMECHECK=1)"
+%endif
+global RunKbdNameCheckTest
+global kbdnamecheck_marks
+extern LoadFontTilePatterns            ; gfx/load_font.asm
+extern DumpBackbuffer                  ; debug/debug_dump.asm — writes GBSTATE.BIN + FRAME.BIN, exits
+extern SeedDeterministicPlayerIdentity ; engine/debug/debug_party.asm — "RED"/id 0 (seed.lua spec)
+
+section .bss
+; GBSTATE flat region "knMarks" (debug_dump.asm): 1 once DisplayNamingScreen's
+; .submitNickname has committed the typed+picked name into wPlayerName.
+kbdnamecheck_marks: resb 1
+
+section .text
+RunKbdNameCheckTest:
+    call SeedDeterministicPlayerIdentity
+
+    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
+    call LoadFontTilePatterns
+
+    mov byte [ebp + wNamingScreenType], NAME_PLAYER_SCREEN
+    mov esi, wPlayerName
+    call DisplayNamingScreen               ; REAL, blocking -- AUTOKEY_KBDSCRIPT drives it
+
+    call DumpBackbuffer                    ; writes GBSTATE.BIN + FRAME.BIN, exits
 .hang:
     jmp .hang
 %endif

@@ -168,6 +168,12 @@ extern RunTradeCheck                      ; src/engine/link/cable_club_npc.asm
 %ifdef DEBUG_BATTLECHECK
 extern RunBattleCheck                     ; src/engine/link/cable_club_npc.asm
 %endif
+%ifdef DEBUG_LINKBOOKCHECK
+extern RunLinkBookCheck                   ; src/engine/link/cable_club_npc.asm
+%endif
+%ifdef DEBUG_KBDNAMECHECK
+extern RunKbdNameCheckTest                ; src/engine/menus/naming_screen.asm
+%endif
 extern RunLinkMenuTest                    ; src/engine/menus/link_menu.asm
 extern RunListMenuTest                    ; src/debug/debug_dump.asm
 extern RunMainMenuTest                    ; src/engine/menus/main_menu.asm
@@ -1094,6 +1100,12 @@ EnterMap:
 %endif
 %ifdef DEBUG_BATTLECHECK
     call RunBattleCheck                     ; loop the real CableClubNPC; success falls through LinkMenu into a real Colosseum link battle
+%endif
+%ifdef DEBUG_LINKBOOKCHECK
+    call RunLinkBookCheck                   ; single call to the real CableClubNPC; blocks in LinkTransportSelect's book UI, no peer
+%endif
+%ifdef DEBUG_KBDNAMECHECK
+    call RunKbdNameCheckTest                ; open the REAL (blocking) PLAYER naming screen, KBD_NAMING path driven by AUTOKEY_KBDSCRIPT
 %endif
 %ifdef DEBUG_LEARNMOVE
     call RunLearnMoveTest                  ; force a level-up move-learn, render one frame, dump FRAME.BIN, exits

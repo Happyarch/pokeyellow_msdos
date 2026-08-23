@@ -85,10 +85,20 @@ def debug_ids():
 def validate():
     scenarios = load_manifest()
     manifest = {x['name']: x for x in scenarios}
+    port_only = {name for name, item in manifest.items()
+                 if item.get('scenario_class') == 'port_only'}
     errors = []
     registry = golden_registry()
-    if set(manifest) != set(registry):
-        errors.append(f"golden registry names differ: manifest-only={sorted(set(manifest)-set(registry))}, golden-only={sorted(set(registry)-set(manifest))}")
+    # port_only rows have no ROM ground truth (no golden), so they must NOT
+    # appear in golden_diff.SCENARIOS at all -- the parity check below
+    # compares only the non-port_only subset, and a port_only name showing up
+    # in the golden registry anyway is flagged as its own error.
+    comparable_manifest = set(manifest) - port_only
+    if comparable_manifest != set(registry):
+        errors.append(f"golden registry names differ: manifest-only={sorted(comparable_manifest-set(registry))}, golden-only={sorted(set(registry)-comparable_manifest)}")
+    port_only_in_golden = port_only & set(registry)
+    if port_only_in_golden:
+        errors.append(f"port_only scenarios must not appear in golden_diff.SCENARIOS: {sorted(port_only_in_golden)}")
     makefile = (PORT / 'Makefile').read_text(encoding='utf-8')
     for tier, variable in (("core", "FIDELITY_SCENARIOS_CORE"),
                            ("full", "FIDELITY_SCENARIOS_FULL")):
@@ -106,25 +116,35 @@ def validate():
     if not REGISTRY.is_file() or REGISTRY.read_text(encoding='ascii') != generator.render_nasm():
         errors.append('assets/scenario_registry.inc is stale')
     ids = debug_ids()
+    sources = '\n'.join(path.read_text(encoding='utf-8', errors='replace')
+                        for path in (PORT / 'src').rglob('*.asm'))
     for name, item in manifest.items():
-        cfg = registry.get(name, {})
-        for key in ('build_flags', 'scenario_class'):
-            if cfg.get(key) != item[key]:
-                errors.append(f"{name}: {key} manifest={item[key]!r}, golden_diff={cfg.get(key)!r}")
+        is_port_only = name in port_only
+        if is_port_only:
+            # port_only rows (Deliverable 1, link cable plan Stage 5 step 5):
+            # no ROM ground truth exists, so navigation_script must be JSON
+            # null (the file-existence check below is skipped entirely) and
+            # the committed golden .bin/.json pair is never required. The
+            # gate-id match and must_hit checks below still apply unchanged.
+            if item['navigation_script'] is not None:
+                errors.append(f"{name}: port_only navigation_script must be null, got {item['navigation_script']!r}")
+        else:
+            cfg = registry.get(name, {})
+            for key in ('build_flags', 'scenario_class'):
+                if cfg.get(key) != item[key]:
+                    errors.append(f"{name}: {key} manifest={item[key]!r}, golden_diff={cfg.get(key)!r}")
+            nav = PORT / item['navigation_script']
+            if not nav.is_file():
+                errors.append(f"{name}: missing navigation script {nav.relative_to(ROOT)}")
+            for suffix in ('.bin', '.json'):
+                artifact = PORT / 'tests' / 'goldens' / f'{name}{suffix}'
+                if not artifact.is_file():
+                    errors.append(f"{name}: missing golden {artifact.relative_to(ROOT)}")
+            sidecar = PORT / 'tests' / 'goldens' / f'{name}.json'
+            if sidecar.is_file() and json.loads(sidecar.read_text()).get('scenario') != name:
+                errors.append(f"{name}: sidecar scenario identity mismatch")
         if ids.get(item['port_entry_gate']) != item['id']:
             errors.append(f"{name}: gate {item['port_entry_gate']} id manifest={item['id']}, asm={ids.get(item['port_entry_gate'])}")
-        nav = PORT / item['navigation_script']
-        if not nav.is_file():
-            errors.append(f"{name}: missing navigation script {nav.relative_to(ROOT)}")
-        for suffix in ('.bin', '.json'):
-            artifact = PORT / 'tests' / 'goldens' / f'{name}{suffix}'
-            if not artifact.is_file():
-                errors.append(f"{name}: missing golden {artifact.relative_to(ROOT)}")
-        sidecar = PORT / 'tests' / 'goldens' / f'{name}.json'
-        if sidecar.is_file() and json.loads(sidecar.read_text()).get('scenario') != name:
-            errors.append(f"{name}: sidecar scenario identity mismatch")
-        sources = '\n'.join(path.read_text(encoding='utf-8', errors='replace')
-                            for path in (PORT / 'src').rglob('*.asm'))
         for label in item['must_hit']:
             if not re.search(rf'(?m)^{re.escape(label)}:', sources):
                 errors.append(f"{name}: must_hit label {label} is not defined")

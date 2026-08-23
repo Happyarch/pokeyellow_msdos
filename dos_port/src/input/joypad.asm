@@ -458,6 +458,49 @@ kbd_ring_pop:
     test ecx, ecx      ; ZF = 1 ("empty")
     ret
 
+%ifdef AUTOKEY_KBDSCRIPT
+; ---------------------------------------------------------------------------
+; kbd_ring_push — push one (scancode, shift) pair into kbd_ring, following
+; kbd_isr's own push discipline exactly (same head/tail advance, same
+; overflow rule: a full ring drops the oldest pair). Port-only, harness-only:
+; link cable plan Stage 5 step 5's scancode-injection scenarios (src/debug/
+; debug_dump.asm, %ifdef AUTOKEY_KBDSCRIPT) call this to feed kbd_ring_pop's
+; consumers (kbd_text_edit / DisplayNamingScreen's KBD_NAMING path) from a
+; scripted table, because AUTOKEY only ever drives pad bits and cannot
+; synthesize the real IRQ1 keystrokes those consumers read. The ISR path
+; above (kbd_isr) is untouched by this addition — gated behind
+; AUTOKEY_KBDSCRIPT so it does not exist at all outside these debug builds.
+;
+; In:  AL = scancode (7-bit make code, no release/high bit), AH = shift (0/1).
+; Out: none. Clobbers ECX/EDX. cli/sti-bracketed, same as kbd_ring_pop --
+; kbd_isr may run concurrently and mutate kbd_ring_head/kbd_ring_tail.
+; ---------------------------------------------------------------------------
+global kbd_ring_push
+kbd_ring_push:
+    cli
+    push eax
+    movzx ecx, byte [kbd_ring_head]
+    mov [kbd_ring + ecx], al
+    inc ecx
+    and ecx, KBD_RING_SIZE - 1
+    mov [kbd_ring + ecx], ah
+    inc ecx
+    and ecx, KBD_RING_SIZE - 1
+    mov dl, [kbd_ring_tail]
+    cmp cl, dl
+    jne .no_overflow
+    ; ring full: drop the oldest key by advancing tail past it (kbd_isr's
+    ; own overflow rule, verbatim)
+    add dl, 2
+    and dl, KBD_RING_SIZE - 1
+    mov [kbd_ring_tail], dl
+.no_overflow:
+    mov [kbd_ring_head], cl
+    pop eax
+    sti
+    ret
+%endif
+
 ; ---------------------------------------------------------------------------
 ; joypad_update — compose the IO_JOYP shadow from the held-state nibbles
 ;
