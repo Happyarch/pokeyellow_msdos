@@ -637,6 +637,7 @@ GAME_SRCS := \
     src/scripts/CeladonHotel.asm \
     src/scripts/CeladonMansion1F.asm \
     src/scripts/CeladonMansion2F.asm \
+    src/scripts/CeladonMansion3F.asm \
     src/scripts/CeladonMansionRoof.asm \
     src/scripts/CeladonMansionRoofHouse.asm \
     src/scripts/CeladonMart1F.asm \
@@ -699,6 +700,7 @@ GAME_SRCS := \
     src/scripts/PewterNidoranHouse.asm \
     src/scripts/PewterPokecenter.asm \
     src/scripts/PewterSpeechHouse.asm \
+    src/scripts/PokemonFanClub.asm \
     src/scripts/PokemonMansion1F.asm \
     src/scripts/PokemonMansion2F.asm \
     src/scripts/PokemonMansion3F.asm \
@@ -798,6 +800,7 @@ GAME_SRCS := \
     src/scripts/SSAnneBow.asm \
     src/scripts/SSAnneCaptainsRoom.asm \
     src/scripts/SSAnneKitchen.asm \
+    src/scripts/SummerBeachHouse.asm \
     src/scripts/TradeCenter.asm \
     src/scripts/UndergroundPathNorthSouth.asm \
     src/scripts/UndergroundPathRoute5.asm \
@@ -850,7 +853,9 @@ GAME_SRCS := \
     src/engine/menus/naming_screen.asm \
     src/engine/menus/pokedex.asm \
     src/home/printer.asm \
-    src/engine/printer/printer_stubs.asm \
+    src/engine/printer/printer.asm \
+    src/engine/printer/printer2.asm \
+    src/engine/printer/serial.asm \
     src/engine/menus/link_menu.asm \
     src/home/reload_sprites.asm \
     src/home/map_objects.asm \
@@ -3437,10 +3442,7 @@ POKEMON_CHECK_SRCS :=
 # here so a change that breaks them is still caught, and each graduates to
 # SCRIPT_SRCS above as its blocking symbol lands.
 ITEMS_CHECK_SRCS := \
-    src/scripts/CeladonMansion3F.asm \
     src/scripts/HallOfFame.asm \
-    src/scripts/PokemonFanClub.asm \
-    src/scripts/SummerBeachHouse.asm \
 
 # Home routines that assemble-validate but aren't linked yet. count_set_bits
 # emits an undefined external for wNumSetBits (no memmap alias / no caller yet),
@@ -3538,9 +3540,8 @@ DATA_CHECK_SRCS :=
 # Surfing Pikachu minigame (LINKED in Chunk 3)
 MINIGAME_CHECK_SRCS :=
 
-# Game Boy Printer tier (serial.asm check-only until Stage 2 links printer.asm)
-PRINTER_CHECK_SRCS := \
-    src/engine/printer/serial.asm
+# Game Boy Printer tier (LINKED in Stage 2)
+PRINTER_CHECK_SRCS :=
 
 # ALL_SRCS = everything that must assemble cleanly (check) and be cleaned, incl.
 # the not-yet-linked battle backend + check-only pokemon/items/home backends.
@@ -4355,7 +4356,7 @@ assets/ledge_shadow.inc: ../gfx/overworld/shadow.1bpp \
 src/engine/overworld/ledges.o: assets/ledge_shadow.inc
 
 # Surfing Pikachu graphics and tilemaps (Tier-1 data from gen_surfing_pikachu.py)
-assets/surfing_pikachu.inc assets/surfing_pikachu_tilemaps.inc: ../gfx/surfing_pikachu/surfing_pikachu_1a.2bpp \
+assets/surfing_pikachu.inc assets/surfing_pikachu2.inc assets/surfing_pikachu_tilemaps.inc: ../gfx/surfing_pikachu/surfing_pikachu_1a.2bpp \
                             ../gfx/surfing_pikachu/surfing_pikachu_1b.2bpp \
                             ../gfx/surfing_pikachu/surfing_pikachu_1c.2bpp \
                             ../gfx/surfing_pikachu/surfing_pikachu_2.2bpp \
@@ -4371,6 +4372,8 @@ assets/surfing_pikachu.inc assets/surfing_pikachu_tilemaps.inc: ../gfx/surfing_p
 
 src/gfx/surfing_pikachu.o: assets/surfing_pikachu.inc
 src/engine/minigame/surfing_pikachu.o: assets/surfing_pikachu_tilemaps.inc
+src/engine/printer/printer.o: assets/surfing_pikachu2.inc assets/printer_strings.inc
+src/engine/printer/printer2.o: assets/printer_gfx.inc
 
 # Game Boy Printer graphics (Tier-1 data from gen_printer_gfx_inc.py)
 assets/printer_gfx.inc: ../gfx/printer/hp.1bpp \

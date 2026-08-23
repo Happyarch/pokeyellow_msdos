@@ -71,7 +71,7 @@ extern NetHAL_StartTransfer     ; src/net/net_hal.asm — the rSC-write HAL site
 extern NetHAL_ExchangeBlock     ; src/net/net_hal.asm — whole-block exchange
                                 ; (Serial_ExchangeBytes' HAL cut, Stage 3)
 extern DelayFrame               ; src/home/vblank.asm
-extern PrinterSerial            ; src/engine/printer/printer_stubs.asm — dead
+extern PrinterSerial            ; src/home/printer.asm — dead
                                 ; branch, see PrinterSerial__ below
 extern PrintWaitingText         ; src/engine/link/print_waiting_text.asm
                                 ; (pret mirror, real as of Stage 3 — the

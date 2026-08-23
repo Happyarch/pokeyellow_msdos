@@ -63,7 +63,7 @@ extern PrintNumber              ; src/home/print_num.asm
 extern RunPaletteCommand        ; src/home/palettes.asm
 extern Delay3                   ; src/home/palettes.asm
 extern GBPalNormal              ; src/home/palettes.asm
-extern Diploma_Surfing_CopyBox  ; src/engine/printer/printer_stubs.asm
+extern Diploma_Surfing_CopyBox  ; src/engine/printer/printer.asm
 
 section .text
 

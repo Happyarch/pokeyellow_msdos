@@ -335,6 +335,8 @@ global SurfingMinigameWavePattern1A
 global SurfingMinigameWavePattern1B
 global SurfingMinigameWavePattern1C
 global SurfingMinigameBeachPattern
+global SurfingMinigame_HighScore1Tilemap
+global SurfingMinigame_HighScore2Tilemap
 
 section .text
 

@@ -40,13 +40,13 @@ extern GBPalNormal
 extern GBPalWhiteOutWithDelay3
 extern LoadScreenTilesFromBuffer2
 extern PlayCry
-extern PrintSurfingMinigameHighScore   ; NOT YET DEFINED IN THE PORT
+extern PrintSurfingMinigameHighScore   ; src/engine/printer/printer.asm
 extern PrintText
-extern Printer_PrepareSurfingMinigameHighScoreTileMap   ; NOT YET DEFINED IN THE PORT
+extern Printer_PrepareSurfingMinigameHighScoreTileMap   ; src/engine/printer/printer.asm
 extern ReloadTilesetTilePatterns
 extern RestoreScreenTilesAndReloadTilePatterns
 extern SaveScreenTilesToBuffer2
-extern SurfingPikachuMinigame   ; NOT YET DEFINED IN THE PORT
+extern SurfingPikachuMinigame   ; src/engine/minigame/surfing_pikachu.asm
 extern TextScriptEnd
 extern WaitForSoundToFinish
 extern WaitForTextScrollButtonPress

@@ -42,12 +42,12 @@ global CeladonMansion3_PokedexCount
 extern Bankswitch
 extern CountSetBits
 extern Delay3
-extern DisplayDiploma   ; NOT YET DEFINED IN THE PORT
+extern DisplayDiploma   ; src/engine/events/diploma.asm
 extern EnableAutoTextBoxDrawing
 extern GBPalNormal
 extern GBPalWhiteOutWithDelay3
 extern LoadScreenTilesFromBuffer2
-extern PrintDiploma   ; NOT YET DEFINED IN THE PORT
+extern PrintDiploma     ; src/engine/printer/printer.asm
 extern PrintText
 extern ReloadTilesetTilePatterns
 extern RestoreScreenTilesAndReloadTilePatterns

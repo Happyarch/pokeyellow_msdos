@@ -292,19 +292,19 @@ over renderer state, feeds the device below the seam, invisible to pret code).
       clean; assembles (check-only until Stage 2 links)
 
 ### Stage 2 — printer.asm/printer2.asm mirrors + integration
-- [ ] Translate `dos_port/src/engine/printer/printer.asm` in full (entry
+- [x] Translate `dos_port/src/engine/printer/printer.asm` in full (entry
       points, parameterized capture pair + projection DEVIATIONs,
       `Printer_StopIfPressB` → `PrintDev_Cancel`, error/status UI, surf
       high-score tilemap builder, PC-box pages)
-- [ ] Translate `Printer_GetMonStats` (printer2.asm); PrinterDebug half
+- [x] Translate `Printer_GetMonStats` (printer2.asm); PrinterDebug half
       documented-unported
-- [ ] `ReloadMapAfterPrinter` in `src/home/overworld.asm`; reconcile
+- [x] `ReloadMapAfterPrinter` in `src/home/overworld.asm`; reconcile
       diploma2.asm with `Diploma_Surfing_CopyBox`
-- [ ] Delete `printer_stubs.asm`; `label_status --callers` sweep; repoint
+- [x] Delete `printer_stubs.asm`; `label_status --callers` sweep; repoint
       externs; `update_label_db`
-- [ ] Graduate the 3 scripts from `ITEMS_CHECK_SRCS`; tick script_linking
+- [x] Graduate the 3 scripts from `ITEMS_CHECK_SRCS`; tick script_linking
       Group C (printer half)
-- [ ] Gate: build + static_gate + fidelity core + visual DOSBox-X pass of all
+- [x] Gate: build + static_gate + fidelity core + visual DOSBox-X pass of all
       5 entry points (ACK-only device: full UI flow, instant "print")
 
 ### Stage 3 — real virtual device + capture golden

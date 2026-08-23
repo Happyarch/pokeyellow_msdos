@@ -123,7 +123,7 @@ extern PlayPikachuSoundClip     ; src/audio/pikachu_pcm.asm — DL = 0-based cli
 extern PlayCry                  ; src/home/pokemon.asm — AL = species
 extern ModifyPikachuHappiness   ; engine/events/pikachu_happiness.asm — DH = PIKAHAPPY_* kind (pret ld d)
 extern ChangeBox                ; engine/menus/save.asm — first live caller
-extern PrintPCBox               ; engine/printer/printer_stubs.asm STUB
+extern PrintPCBox               ; src/engine/printer/printer.asm
 extern StatusScreen             ; engine/pokemon/status_screen.asm (pret predef)
 extern StatusScreen2            ; engine/pokemon/status_screen.asm (pret predef)
 extern ReloadTilesetTilePatterns ; src/home/reload_tiles.asm

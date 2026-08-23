@@ -2,15 +2,10 @@
 ; printer.asm — pret mirror of home/printer.asm.
 ;
 ; pret's home/printer.asm holds three labels:
-;   PrinterSerial, SerialFunction            — the home-bank serial entry the GB
-;                                              Printer drives. NOT ported here: the
-;                                              link plan owns src/home/serial.asm
-;                                              (whose Serial handler retains pret's
-;                                              wPrinterConnectionOpen branch as a
-;                                              documented dead branch), and
-;                                              PrinterSerial is a ret-stub in
-;                                              src/engine/printer/printer_stubs.asm
-;                                              until the printer plan ports its pump.
+;   PrinterSerial, SerialFunction            — unported; superseded by the
+;                                              in-memory virtual GB Printer
+;                                              packet consumption (PrintDev_ConsumePacket).
+;                                              See docs/current_plan_printer.md.
 ;   DisableWaitingAfterTextDisplay           — ported below.
 ;
 ; This file exists so the third one lives in its MIRROR (CLAUDE.md: a pret-labeled
@@ -28,8 +23,24 @@ bits 32
 %include "gb_memmap.inc"
 
 global DisableWaitingAfterTextDisplay
+global PrinterSerial
+global SerialFunction
 
 section .text
+
+; ---------------------------------------------------------------------------
+; PrinterSerial — pret home/printer.asm:1-26.
+; Unported: serial transmission is superseded by synchronous in-memory packet device.
+; ---------------------------------------------------------------------------
+PrinterSerial:
+    ret
+
+; ---------------------------------------------------------------------------
+; SerialFunction — pret home/printer.asm:27-29.
+; Unported: VBlank poller superseded by synchronous in-memory packet device.
+; ---------------------------------------------------------------------------
+SerialFunction:
+    ret
 
 ; ---------------------------------------------------------------------------
 ; DisableWaitingAfterTextDisplay — pret home/printer.asm:30-33.

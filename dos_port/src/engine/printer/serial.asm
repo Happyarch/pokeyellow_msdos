@@ -63,6 +63,7 @@ global PrinterDataPacket5
 global PrinterDataPacket6
 
 global PrintDev_ConsumePacket
+global PrintDev_Cancel
 
 section .text
 
@@ -293,6 +294,11 @@ PrintDev_ConsumePacket:
     ; Minimal ACK-only device response for Stage 1: publish handshake $81, status $00, opcode $00
     mov byte [ebp + wPrinterHandshake], 0x81
     mov byte [ebp + wPrinterStatusFlags], 0x00
+    mov byte [ebp + wPrinterOpcode], 0x00
+    ret
+
+PrintDev_Cancel:
+    ; Minimal cancel response: clear opcode
     mov byte [ebp + wPrinterOpcode], 0x00
     ret
 

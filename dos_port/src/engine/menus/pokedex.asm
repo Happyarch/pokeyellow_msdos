@@ -124,7 +124,7 @@ extern g_bg_whiteout                 ; ppu/ppu.asm
 extern PlaySound                     ; home/audio.asm — a REAL body
 extern GetCryData                    ; src/home/pokemon.asm — pret home/pokemon.asm:157
 extern LoadTownMap_Nest              ; engine/items/town_map.asm — REAL body, linked (M-64)
-extern PrintPokedexEntry             ; engine/printer/printer_stubs.asm — STUB (GB printer)
+extern PrintPokedexEntry             ; src/engine/printer/printer.asm (GB printer)
 ; ---- externs used only by the DATA (entry) page ---------------------------
 extern TextCommandProcessor          ; home/text.asm — ESI = stream (FLAT ptr), EBX = cursor
 extern GetMonHeader                  ; home/pokemon.asm — wCurSpecies → wMonHeader
@@ -1064,9 +1064,7 @@ Pokedex_PrintFlavorTextAtBC:
 ; ---------------------------------------------------------------------------
 ; Pokedex_PrepareDexEntryForPrinting — pret ref: pokedex.asm.
 ; The GB-Printer entry layout (a 13-row box), with <PAGE> forced to act as <NEXT>.
-; Its only caller is PrintPokedexEntry, which is a ret-only STUB (the GB Printer is a
-; serial-link peripheral — TODO-HW: serial), so nothing reaches this today; it is
-; ported in full so that filling that stub in is all the printer needs.
+; Called by PrintPokedexEntry (src/engine/printer/printer.asm).
 ; ---------------------------------------------------------------------------
 Pokedex_PrepareDexEntryForPrinting:
     mov esi, HL(0, 0)                    ; hlcoord 0,0

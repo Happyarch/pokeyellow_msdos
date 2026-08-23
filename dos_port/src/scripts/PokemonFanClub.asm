@@ -52,12 +52,12 @@ extern EnableAutoTextBoxDrawing
 extern GBPalNormal
 extern GBPalWhiteOutWithDelay3
 extern GiveItem
-extern InitializePikachuTextID   ; NOT YET DEFINED IN THE PORT
+extern InitializePikachuTextID   ; src/engine/pikachu/pikachu_emotions.asm
 extern LoadCurrentMapView
 extern LoadGBPal
 extern LoadScreenTilesFromBuffer2
 extern PlayCry
-extern PrintFanClubPortrait   ; NOT YET DEFINED IN THE PORT
+extern PrintFanClubPortrait     ; src/engine/printer/printer.asm
 extern PrintText
 extern Random
 extern ReloadTilesetTilePatterns
