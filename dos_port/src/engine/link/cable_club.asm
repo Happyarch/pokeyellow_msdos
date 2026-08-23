@@ -106,6 +106,7 @@ extern ExternalClockTradeAnim   ; src/engine/movie/evolution_stubs.asm (stub;
                                 ; Stage 3 step 3 moves it to engine/movie/trade.asm)
 extern TryEvolvingMon           ; src/engine/pokemon/evos_moves.asm
 extern SavePartyAndDexData      ; src/engine/menus/save.asm
+extern SramStoreImage           ; src/save/dsv_io.asm — .dsv commit (HAL DEVIATION at the TradeCenter_Trade call site)
 extern ClearVariablesOnEnterMap ; src/engine/overworld/clear_variables.asm
 extern ModifyPikachuHappiness   ; src/engine/events/pikachu_happiness.asm — DH = kind
 extern DisplayTitleScreen       ; src/engine/movie/title.asm
@@ -1126,6 +1127,8 @@ TradeCenter_Trade:
     mov esi, CC(1, 14)
     call PlaceString
     call SavePartyAndDexData        ; pret predef — allows reset into Pokecenter
+    ; DEVIATION{class=HAL; pret=engine/link/cable_club.asm:TradeCenter_Trade; behavior=call SramStoreImage after SavePartyAndDexData so the traded party reaches the .dsv file; evidence=on GB hardware SavePartyAndDexData's SRAM writes are instantly durable but the port's SavePartyAndDexData only updates the resident image - SramStoreImage is the declared disk-boundary seam and only SaveGameData calls it (src/engine/menus/save.asm:738), so without this call a reset after a link trade loses the traded mon; lifetime=permanent flat SRAM model, same seam contract as SaveGameData}
+    call SramStoreImage
     mov bl, 50
     call DelayFrames
     xor al, al
