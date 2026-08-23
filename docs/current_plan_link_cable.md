@@ -487,10 +487,32 @@ blocks in `src/engine/menus/naming_screen.asm`.
       Trade_AnimLeftToRight/RightToLeft is not visually reproduced; retiring
       it means extending ppu.asm's window model (maintainer call, not
       blocking)
-- [ ] Two-instance scripted trade: `.dsv` postconditions (byte-identical
+- [~] Two-instance scripted trade: `.dsv` postconditions (byte-identical
       44-byte structs incl. offset 7 per the Gen-2 rule, OT/ID swap, party
-      counts), cancel ($F) and re-trade paths
-- [ ] Disconnect escape hatch + mid-trade kill test
+      counts), cancel ($F) and re-trade paths — HARNESS AUTHORED 2026-08-23
+      (`da5f81a`): /PARTYB per-side party+identity, DEBUG_TRADECHECK gate,
+      state-gated AUTOKEY_TRADECHECK (every key/step cited to source),
+      GBSEED.BIN pre-walk seed dumps (the received mon lands at the LAST
+      party slot per remove_mon shift-up + add_mon append — the sender's own
+      post-trade dump holds nothing to compare, so "sent" is the seed dump),
+      tools/tradecheck.sh with the full assertion battery incl. offset 7 and
+      `.dsv`==GBSTATE. FIRST EXECUTION DEFERRED to the end-of-plan dynamic
+      battery (maintainer directive 2026-08-23, serial VM); DUMP_FRAME=14000
+      and the walk gates are unvalidated until then
+- [~] Disconnect escape hatch + mid-trade kill test — CODE + TEST AUTHORED:
+      hatch landed 2026-08-23 (`5eeb434`, cable_club_link_down, four death
+      windows routed through pret's own index-$ff DisplayTitleScreen path —
+      without it $FF flowed onward as data: enemy-mon index $FF, a one-sided
+      trade past the dec-al confirm test, unbounded preamble-hunt scans over
+      stale buffers); `tradecheck --kill` (`da5f81a`) SIGKILLs B mid-session
+      and asserts A's dump exists (no hang) + the sticky link_down_hatch mark
+      + netLinkUp 0 + desyncs 0. Execution deferred with the harness above
+- [ ] END-OF-PLAN DYNAMIC BATTERY (added 2026-08-23, maintainer directive:
+      dynamic checks deferred until the plan closes; serial VM): run and tune
+      `tools/tradecheck.sh` (+ `--kill`), `goldencheck in_game_trade`,
+      `fidelity-serial` core, `fidelity-full-serial`. Until this runs, Stage
+      3's steps 2-6 are verified to the STATIC tier only (builds, lint,
+      label DB, faithdiff, static_gate) — no runtime claim is made
 
 ### Stage 4 — Colosseum link battle
 - [ ] Divergence-site audit: enumerate every pret
