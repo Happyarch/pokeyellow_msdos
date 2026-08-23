@@ -145,6 +145,15 @@ Nothing wrong with the scripts. They need:
       `ScheduleColumnRedrawHelper` into `src/home/overworld.asm`, then lower
       `VermilionDockSSAnneLeavesScript` and settle its scroll count visually
 - [ ] Group C: port the Printer tier and `HallOfFamePC`
+      - **`HallOfFamePC` is DONE 2026-08-23** (4d3345837): the whole of
+        `engine/movie/credits.asm` is ported (20/20) on the back of
+        `engine/movie/hall_of_fame.asm` (17/17, 07828148b), so
+        `HallOfFame_Script`'s predef call now runs the ceremony and the roll
+        instead of a ret-stub. The stub is deleted from `evolution_stubs.asm`.
+        See [[ending-chain-hof-and-credits-ported]].
+      - The **Printer tier is out of this tree's lane** — maintainer directive
+        2026-08-23, it is being worked in another tree. This item stays open only
+        for that half.
 - [ ] Re-audit: with scripts linked, a dropped global is now a link error rather
       than silence. Re-run the sibling-drop audit across all 225, not just the
       blocked 18.
