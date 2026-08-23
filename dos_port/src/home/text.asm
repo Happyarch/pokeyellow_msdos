@@ -36,6 +36,7 @@ bits 32
 extern DelayFrame
 extern DelayFrames                  ; src/home/delay.asm — BL = frame count
 extern PrintLetterDelay             ; src/home/print_text.asm
+extern Delay3                       ; src/home/palettes.asm — wait 3 frames
 
 ; ---------------------------------------------------------------------------
 ; TX_* command bytes (home/macros/scripts/text.asm const_def block)
@@ -148,6 +149,7 @@ global TrainerChar
 global RocketChar
 global PlaceDexEnd
 global PlaceCommandCharacter
+global ProtectedDelay3
 global ScrollTextUpOneLine
 global TextCommandProcessor
 global NextTextCommand
@@ -588,6 +590,21 @@ ScrollTextUpOneLine:
     ret
 
 ; ---------------------------------------------------------------------------
+; ProtectedDelay3 — pret home/text.asm:ProtectedDelay3.
+;
+; pret brackets Delay3 in `push bc` / `pop bc` because BC is the live text cursor
+; and Delay3 passes its count in C. The port's Delay3 (src/home/palettes.asm)
+; already saves and restores EBX itself, so the bracket here is redundant — it is
+; kept anyway because it is pret's body, it costs two instructions, and it keeps
+; the contract local rather than borrowed from a callee in another file.
+; ---------------------------------------------------------------------------
+ProtectedDelay3:
+    push ebx                            ; pret: push bc (BC = the live cursor)
+    call Delay3
+    pop ebx                             ; pret: pop bc
+    ret
+
+; ---------------------------------------------------------------------------
 ; sync_dialog_window — mirror wTileMap dialog rows to the window tilemap.
 ;
 ; Copies wTileMap rows 12-17 (6 × 20 tiles) into GB_TILEMAP1 rows 0-5
@@ -805,9 +822,19 @@ NextChar:
 ; ── Control code handlers ──────────────────────────────────────────────────
 
 NullChar:
-    ; <NULL> ($00): debug error terminator — stop silently
-    mov ebx, esi
-    pop esi
+    ; <NULL> ($00): pret home/text.asm:NullChar. A debugging leftover — end the
+    ; string and hand the caller a stream that prints "[hTextID] error." in
+    ; decimal. TextCommand_START resumes at EDX+1, which is why pret's `ld de,
+    ; TextIDErrorText / dec de` translates to the same off-by-one here (the
+    ; identical convention DoneText uses with done_sentinel_flat).
+    ;
+    ; Unreachable in practice, and deliberately so: <NULL> has ZERO uses across
+    ; pret's whole text data (measured — see the control-code census in
+    ; docs/current_plan_text_engine_realign.md), so no scenario can gate it.
+    mov ebx, esi                        ; pret: ld b,h / ld c,l
+    pop esi                             ; pret: pop hl
+    mov edx, TextIDErrorText            ; pret: ld de, TextIDErrorText
+    dec edx                             ; pret: dec de
     ret
 
 PageChar:
@@ -824,7 +851,8 @@ PageChar:
     ; the wait; the window mirror below then carries it. (The port used to poke
     ; the arrow only into GB_TILEMAP1 — see POKEDEX_ARROW_SCRATCH_OFFSET.)
     mov byte [ebp + POKEDEX_ARROW_SCRATCH_OFFSET], CHAR_DOWN_ARROW
-    call manual_text_scroll          ; ▼ + wait (pret: ProtectedDelay3 + ManualTextScroll)
+    call ProtectedDelay3             ; pret: call ProtectedDelay3
+    call manual_text_scroll          ; ▼ + wait (pret: ManualTextScroll)
     ; ClearScreenArea b=7 rows, c=18 cols at hlcoord(1,10). EDX is the live source
     ; ptr (DE) — preserve it; use it as the row counter only inside this block.
     push eax
@@ -871,7 +899,8 @@ PlacePKMN:
 _ContText:
     ; <_CONT> ($4B): _ContText — show the ▼, wait for A/B, THEN scroll up two lines.
     ; Pret ref: home/text.asm:_ContText (falls through into _ContTextNoPause).
-    call text_pause                  ; ▼ + wait; (pret places arrow, ProtectedDelay3, ManualTextScroll)
+    call ProtectedDelay3             ; pret: call ProtectedDelay3
+    call text_pause                  ; ▼ + wait; (pret places the arrow, then ManualTextScroll)
     ; fall through into the scroll
 _ContTextNoPause:
     ; <SCROLL> ($4C): _ContTextNoPause — scroll up two lines, cursor to (1,16), no wait.
@@ -885,7 +914,9 @@ _ContTextNoPause:
 
 Paragraph:
     ; <PARA> ($51): paragraph break — wait for input, clear text area, reposition at (1,14).
-    ; Pret ref: home/text.asm:Paragraph — ManualTextScroll, ClearScreenArea 4×18 at (1,13).
+    ; Pret ref: home/text.asm:Paragraph — ProtectedDelay3, ManualTextScroll,
+    ; ClearScreenArea 4×18 at (1,13), DelayFrames 20.
+    call ProtectedDelay3
     call text_pause
     ; Clear all 4 interior rows (pret's rows 13-16, cols 1-18) with TILE_SPC —
     ; addressed off [text_line2]/[text_row_stride], as ScrollTextUpOneLine is.
@@ -909,6 +940,15 @@ Paragraph:
     jnz .para_row
     popad
     call sync_dialog_window              ; show cleared box immediately
+    ; pret: ld c, 20 / call DelayFrames — the beat between clearing the box and
+    ; typing the next paragraph. It was absent entirely (not an equivalence: the
+    ; box cleared and refilled with no pause). EBX is the live cursor and
+    ; DelayFrames takes its count in BL, so bracket it the way pret's own
+    ; TextCommand_PAUSE does.
+    push ebx
+    mov bl, 20
+    call DelayFrames
+    pop ebx
     pop esi
     mov esi, [text_line2]
     sub esi, [text_row_stride]
@@ -998,14 +1038,20 @@ PlacePOKe:
     jmp PlaceCommandCharacter
 
 ContText:
-    ; <CONT> ($55): ContText — scroll two lines, reposition at (1,16)
-    call text_pause
-    call ScrollTextUpOneLine
-    call ScrollTextUpOneLine
-    pop esi
-    mov esi, [text_line2]            ; pret's (1,16) — the box's 2nd text line
-    push esi
-    jmp NextChar
+    ; <CONT> ($55): pret home/text.asm:ContText. pret does NOT open-code the
+    ; wait-and-scroll — it runs TextCommandProcessor over ContCharText, a
+    ; one-character stream holding <_CONT>, so the work happens in _ContText and
+    ; ContText is only the splice. The port used to inline the effect, which
+    ; dropped both the TextCommandProcessor call and (via _ContText)
+    ; ProtectedDelay3. Stage 3b restores pret's structure.
+    push edx                            ; pret: push de
+    mov ebx, esi                        ; pret: ld b,h / ld c,l (BC = cursor)
+    mov esi, ContCharText               ; pret: ld hl, ContCharText
+    call TextCommandProcessor
+    mov esi, ebx                        ; pret: ld h,b / ld l,c
+    pop edx                             ; pret: pop de
+    inc edx                             ; pret: inc de
+    jmp PlaceNextChar                   ; pret: jp PlaceNextChar
 
 SixDotsChar:
     ; <......> ($56): prints "......"
@@ -1024,6 +1070,7 @@ PromptText:
     ; PromptText; restoring pret's order lets the duplication go. Do not insert a
     ; body between them — see memory regression-pokemon-evolution-fallthrough-severed
     ; for what that costs elsewhere in this tree.
+    ; DEVIATION{class=timing; pret=home/text.asm:PromptText; behavior=pret's unconditional ProtectedDelay3 before the wait is NOT called here, though it IS called at pret's other three sites (_ContText, PageChar, Paragraph); evidence=MEASURED 2026-08-22 - adding it PARKS item_potion_use and battle_thrash forever, item_potion_use still reading wLetterPrintingDelayFlags $03 at frame 1600 (an open TextCommandProcessor session, not a slow one), because the port's fixed-frame autokey scripts tap A once per message while manual_text_scroll needs a FRESH press, so a tap that now completes during the 3-frame delay is never seen - the mGBA side does not park because its Lua taps repeatedly, and the three other sites were each verified clean on both scenarios; lifetime=until the two scenarios' port-side press trains are retimed to survive a wait that starts 3 frames later}
     mov eax, [text_prompt_hook]
     test eax, eax
     jz .prompt_overworld

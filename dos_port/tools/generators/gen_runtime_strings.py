@@ -18,17 +18,41 @@ def db(label, parts, cm, aliases=(), emit_global=False):
     the selected provider, which lint_pret_labels --strict-claims reports as
     `local_shadow` (measured 2026-08-22 on PTile). battle_text.inc is the
     standing precedent for doing it this way.
+
+    Directives are emitted in order, so a part may also be a ("dd", "Label")
+    tuple: pret's `text_far` operand is a pointer, and the port encodes it as one
+    32-bit flat pointer (include/gb_text.inc `text_far`, and the TX_FAR handler in
+    src/home/text.asm). A byte list cannot express a relocated label, so the
+    emitter breaks the run and writes a `dd` line.
     """
-    data = []
-    for part in parts:
-        data.extend(encode(part, cm) if isinstance(part, str) else part)
     out = []
     if emit_global:
         for name in (label, *aliases):
             out.append(f"global {name}")
     for name in aliases:
         out.append(f"{name}:")
-    out.append(f"{label}: db " + ", ".join(f"0x{x:02X}" for x in data))
+
+    prefix = f"{label}: "
+    pending = []
+
+    def flush():
+        nonlocal prefix, pending
+        if pending:
+            out.append(prefix + "db " + ", ".join(f"0x{x:02X}" for x in pending))
+            prefix = ""
+            pending = []
+
+    for part in parts:
+        if isinstance(part, tuple):
+            directive, operand = part
+            flush()
+            out.append(prefix + f"{directive} {operand}")
+            prefix = ""
+        else:
+            pending.extend(encode(part, cm) if isinstance(part, str) else part)
+    flush()
+    if prefix:                      # label with no data of its own
+        out.append(prefix.rstrip())
     return "\n".join(out)
 
 
@@ -147,6 +171,25 @@ FILES = {
         ("SixDotsCharText", [[0x75, 0x75, 0x50]]),
         ("PlacePKMNText", ["<PK><MN>", [0x50]]),
         ("EnemyText", ["Enemy ", [0x50]]),
+        # The two `text_far` wrappers pret defines in home/text.asm, with their
+        # far targets from data/text/text_3.asm. Stage 3b of
+        # docs/current_plan_text_engine_realign.md; they land here rather than in
+        # the .asm because _TextIDErrorText contains a rendered glyph run
+        # (" error."), which is Tier-1 data.
+        #
+        # The wrapper operand is ONE 32-bit flat pointer, not pret's
+        # addr_lo/addr_hi/bank triple — see the DEVIATION{class=banking} on
+        # TextCommand_FAR in src/home/text.asm. TX_FAR = 0x17, TX_END = 0x50,
+        # TX_NUM = 0x09, TX_START = 0x00, CHAR_DONE = 0x57, <_CONT> = 0x4B.
+        #
+        # _TextIDErrorText = `text_decimal hTextID, 1, 2` + `text " error."` +
+        # `done`; hTextID is 0xFF8C (include/gb_memmap.inc:682), and the format
+        # byte is (1 << 4) | 2 = 0x12.
+        ("_TextIDErrorText", [[0x09, 0x8C, 0xFF, 0x12, 0x00], " error.", [0x57]]),
+        ("TextIDErrorText", [[0x17], ("dd", "_TextIDErrorText"), [0x50]]),
+        # _ContCharText = `text "<_CONT>@"` + `text_end`.
+        ("_ContCharText", [[0x00, 0x4B, 0x50, 0x50]]),
+        ("ContCharText", [[0x17], ("dd", "_ContCharText"), [0x50]]),
         # PORT-ONLY, no pret counterpart: pret's PlaceDexEnd writes the '.' with
         # `ld [hl], '.'`, but the port routes it through place_flat_str like the
         # other substitutions, so it needs a one-glyph string to point at.

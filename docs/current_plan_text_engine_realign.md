@@ -164,8 +164,8 @@ The other 22 are `.handle_*` locals.
 - `[x]` 3.5 `PlaceCommandCharacter` added as pret's shared tail for the seven
   flat-constant handlers, carrying the `DEVIATION{class=data-model}` for why the
   four EBP-relative name handlers cannot join it
-- `[ ]` 3.6 `ContCharText` / `TextIDErrorText` — DEFERRED to 3b with their bodies
-- `[ ]` 3.7 `ProtectedDelay3` — DEFERRED to 3b, see below
+- `[x]` 3.6 `ContCharText` / `TextIDErrorText` — done in 3b
+- `[x]` 3.7 `ProtectedDelay3` — done in 3b
 - `[x]` 3.8 `faithdiff` on all promoted labels; gates incl. `fidelity-full` 90/90
 
 **Result: home/text.asm 26 -> 3 missing (53 translated of 56); home/ 71 -> 48.**
@@ -197,17 +197,73 @@ anonymous locals:
    processor over `ContCharText`; the port inlines the effect. Closing this is
    the same item as generating `ContCharText` (3.6).
 
-### Stage 3b — the deferred three
+### Stage 3b — the deferred three. **DONE, with one call site deferred**
 
-- `[ ]` 3b.1 `ProtectedDelay3`: define it, and wire it where pret wires it
-  (`PromptText`, `Paragraph`, `PageChar`, `_ContText`, each immediately before
-  the scroll). **This adds 3 frames per text wait**, so it needs its own
-  `fidelity-full` and may re-time autokey scenarios — the same way enabling
-  `PlayCry` re-timed `bills_pc_ops` (memory
-  `playcry-blocking-contract-destubbed`).
-- `[ ]` 3b.2 `Paragraph`'s missing `DelayFrames(20)` — same risk, same run
-- `[ ]` 3b.3 `ContCharText` + `TextIDErrorText`, with `ContText`'s
-  `TextCommandProcessor` call and `NullChar`'s error-text return
+- `[x]` 3b.1 `ProtectedDelay3` defined in `src/home/text.asm` at pret's own
+  position (after `ScrollTextUpOneLine`), body `push ebx / call Delay3 / pop ebx
+  / ret`, `global`. Wired at **three** of pret's four sites — `_ContText`,
+  `PageChar`, `Paragraph`. **`PromptText`'s is DEFERRED**; see "The one deferred
+  call site" below.
+- `[x]` 3b.2 `Paragraph`'s missing `DelayFrames(20)`, bracketed in
+  `push ebx`/`pop ebx` the way pret's own `TextCommand_PAUSE` is.
+- `[x]` 3b.3 `ContCharText` + `TextIDErrorText` generated into
+  `assets/home_text_runtime_strings.inc` together with their far targets
+  `_ContCharText` / `_TextIDErrorText` (pret `data/text/text_3.asm`).
+  `gen_runtime_strings.py` grew a `("dd", "Label")` part kind so a `text_far`
+  operand can be emitted as the port's single 32-bit flat pointer. `ContText`
+  now runs `TextCommandProcessor` over `ContCharText` as pret does instead of
+  open-coding the wait-and-scroll — which gives TX_FAR its first live producer —
+  and `NullChar` returns `TextIDErrorText - 1` instead of stopping silently.
+
+**Result: `home/text.asm` 3 -> 0 missing, 56/56 translated. `home/` 48 -> 45.**
+`lint_pret_labels` 0 in both modes, `static_gate` PASS (8 checks),
+`make fidelity-full` **reported=90/90, nonzero=0**.
+
+#### The one deferred call site — `PromptText`'s `ProtectedDelay3`
+
+**MEASURED, not assumed.** With all four sites wired, `fidelity-full` returned
+`reported=90/90 nonzero=2`: `item_potion_use` and `battle_thrash`. Both PASS at
+`08e66af97`, so Stage 3b caused them. Bisected in three steps:
+
+1. Reverting only the timing changes (the four `ProtectedDelay3` calls +
+   `Paragraph`'s `DelayFrames(20)`) made both PASS — so `ContText`,
+   `NullChar`, the generated wrappers and every restored label are functionally
+   clean, and the failures are frames, not behaviour.
+2. Reverting **only `PromptText`'s** call also made both PASS. All of it comes
+   from that one site; the other three were each verified clean on both
+   scenarios.
+3. Probing at `AUTOKEY_DUMP_FRAME=1600` still read
+   `wLetterPrintingDelayFlags $03` — an OPEN `TextCommandProcessor` session at
+   frame 1600. The flow **parks forever**; it is not merely slower. Nudging a
+   press cannot fix that, and `+20` on the five presses plus a raised dump
+   budget were both tried and both still failed.
+
+Mechanism: the port's fixed-frame autokey scripts tap A once per message, and
+`manual_text_scroll` needs a FRESH press — as pret's own
+`WaitForTextScrollButtonPress` does via `JoypadLowSensitivity`. A tap that now
+finishes *during* the added 3-frame delay is never seen. The mGBA side does not
+park because its Lua taps repeatedly (`i % 4 == 0`). This is the same failure the
+`AUTOKEY_ITEMUSE` script already records from 2026-08-08, when `UpdateHPBar2`
+landing made the frame-420 press miss and produced this identical `$03`.
+
+The site carries a `DEVIATION{class=timing}` naming what retires it. **Retiring
+it is harness work, not port work**: `item_potion_use` and `battle_thrash` need
+port-side press trains that survive a wait starting 3 frames later. It was NOT
+done here because both available shortcuts are bad trades — a press train risks
+advancing past the photographed state (an extra A in the bag list re-enters
+USE/TOSS), and masking the field weakens a compared region to land one `call`.
+
+#### Findings surfaced by Stage 3b
+
+1. **`faithdiff`'s pret-side extent over a DATA label sweeps in the next
+   routine's macro body.** `TextIDErrorText` reports a phantom
+   `- DROPPED PlaceCommandCharacter (jr)`: it is a 6-byte data label, and pret's
+   next `::` label is `PrintPlayerName`, so the `print_name` MACRO body between
+   them is attributed to it. Do not "fix" this.
+2. **`_ContTextNoPause` pops and re-pushes the `PlaceString` frame where pret
+   just sets HL.** Net effect is the same and the stack stays balanced, so it is
+   left alone — but it is a real textual divergence, unrelated to 3b, and it is
+   recorded here rather than lost.
 
 ---
 
@@ -307,7 +363,7 @@ tooling work and is deliberately out of this plan's scope.
 
 - `label_status --subsystem home` reports `home/text.asm` **56/56 translated**,
   taking home's missing count from 97 to 45.
-  (Stage 1 took it to 89; Stage 2 to 71; Stage 3 to 48.)
+  (Stage 1 took it to 89; Stage 2 to 71; Stage 3 to 48; Stage 3b to 45 — MET.)
 - Every remaining structural difference carries a machine-parsed `DEVIATION{}`.
 - `lint_pret_labels` 0, `--strict-claims` 0, `static_gate` PASS.
 - `make fidelity-full` reported = registered, non-zero = 0, at each stage.
@@ -336,4 +392,5 @@ tooling work and is deliberately out of this plan's scope.
   on the first run.
   `must_hit` is `DisplaySignText` alone for now: `PrintPlayerName` is not yet a
   label. **Add it to `must_hit` in Stage 3** — at that point this scenario also
-  proves the restored label is reached.
+  proves the restored label is reached. STILL OPEN after 3b: `PrintPlayerName`
+  is a label as of Stage 3, so this is now a one-line manifest edit.
