@@ -6,8 +6,13 @@
 # PKMN.EXE command-line flags, everything else goes to make, e.g.:
 #   dos_port/run SKIP_TITLE=1                 # make arg
 #   dos_port/run DEBUG_AUDIO=1 /LOOP /NOENH   # make arg + two EXE flags
-# EXE flags currently understood: /NOSOUND /MT32 /GM /TANDY /SPK /NOENH /LOOP
-# (see boot/entry.asm parse_cmdline).
+# EXE flags currently understood (see boot/entry.asm parse_cmdline):
+#   audio:      /NOSOUND /MT32 /GM /TANDY /SPK /NOENH /LOOP
+#   link cable: /COM1 /COM2 /COM3 /COM4 /BAUD=n /LINKLOG
+#               /IPX /IPXSOCK=n /PKTINT=0xNN
+#               /TCPWAIT[=port] /TCP=a.b.c.d[:port] /IP=a.b.c.d
+#               /MASK=a.b.c.d /GW=a.b.c.d
+#   harness:    /PARTYB (tradecheck/battlecheck B-side debug party)
 set -e
 DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

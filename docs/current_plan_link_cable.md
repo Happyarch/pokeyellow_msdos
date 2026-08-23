@@ -515,17 +515,34 @@ blocks in `src/engine/menus/naming_screen.asm`.
       RNG-derived mask candidate (received mon DVs/OTID from rDIV) documented
       in the entry. The DOSBox-side goldencheck run is in the battery below
 - [ ] END-OF-PLAN DYNAMIC BATTERY (added 2026-08-23, maintainer directive:
-      dynamic checks deferred until the plan closes; serial VM): run and tune
-      `tools/tradecheck.sh` (+ `--kill`), `tools/battlecheck.sh` (+ `--kill`;
-      added Stage 4 step 3 — validate `AUTOKEY_DUMP_FRAME=20000`,
-      `BATTLECHECK_KILL_AFTER=90`, `RUN_TIMEOUT=420`, all reasoned estimates),
-      `goldencheck in_game_trade` (first
-      DOSBox run: measure the window offset + confirm/deny the DVs/OTID mask
-      candidate with a real diff), `fidelity-serial` core,
-      `fidelity-full-serial`. Until this runs, Stage 3's steps 2-6 AND
-      Stage 4's steps 1-3 are
-      verified to the STATIC tier only (builds, lint, label DB, faithdiff,
-      static_gate) — no runtime claim is made
+      dynamic checks deferred until the plan closes; serial VM). FINAL LIST
+      (consolidated at the Stage 8 sweep — this is the ONE enumeration of the
+      plan's runtime debt; everything below is verified to the STATIC tier
+      only until it runs):
+      1. `linkcheck.sh` per transport: serial (re-run; last live pass was
+         Stage 2), `TRANSPORT=ipx`, `TRANSPORT=tcp` — the tcp run VALIDATES
+         OR REFUTES the slirp port-forward topology (designed, unverified;
+         pcap is the documented fallback, not a second slirp guess).
+      2. `tools/tradecheck.sh` (+ `--kill` disconnect variant) — serial,
+         then over IPX and TCP.
+      3. `tools/battlecheck.sh` (+ `--kill`) — validate the reasoned-estimate
+         timings (`AUTOKEY_DUMP_FRAME=20000`, `BATTLECHECK_KILL_AFTER=90`,
+         `RUN_TIMEOUT=420`); serial, then over IPX and TCP.
+      4. `goldencheck in_game_trade` (first DOSBox run: measure the window
+         offset + confirm/deny the DVs/OTID mask candidate with a real diff).
+      5. The two port-only scenarios: `link_book_roundtrip`
+         (linkbookcheck.sh) and `kbd_naming_entry` (kbdnamecheck.sh) — their
+         timing defaults are also unmeasured reasoned estimates.
+      6. `fidelity-serial` core + `fidelity-full-serial` (single-player
+         regression sweep; serial tiers per the VM directive below).
+      7. Soak (Stage 8's dynamic half): repeated trades/battles per
+         transport, injected drops, pause/resume one instance; keepalive/
+         retry tuning from what the soak shows (NF_* cadences, TCP_RTX/
+         ARP_RTX, IPX payload cap vs DOSBox-X MTU, partial-Ipx_Init retry
+         safety, net_ip RX_STAGE sizing vs pktdrv's 2-slot drain).
+      Until this battery runs, Stage 3 steps 2-6, Stage 4 steps 1-3, and
+      Stages 5-7 in full carry NO runtime claim (builds, lint, label DB,
+      faithdiff, static_gate, authored-never-run scenarios only)
 
 #### Stage 3 close-out notes (2026-08-23; written for the post-/clear session)
 
@@ -914,15 +931,44 @@ address cap (above) and SetupPlayerAndEnemyPokeballs OAM placement (Stage 4).
       fire-and-forget ACKs (peer retransmit re-triggers)
 
 ### Stage 8 — hardening + bookkeeping
-- [ ] Soak: repeated trades/battles per transport, injected drops,
-      pause/resume one instance; keepalive tuning
-- [ ] Docs sweep (`dos_port/run` header flags, ROADMAP Phase 4,
-      evidence-discipline wording: "verified under two-instance DOSBox-X",
-      never "works on real hardware"); `update_label_db`
-- [ ] HOST SESSION: stigmergy final state + `episode_record` — queue the
-      concrete edits in `docs/stigmergy_outbox.jsonl` as the stages land
-      (Stage 2's are already there), then apply-and-delete host-side
+- [x] Soak — MOVED WHOLLY INTO THE BATTERY (2026-08-23): it is dynamic by
+      definition, and the plan's static-only close-out cannot run or tune
+      it. It is item 7 of the END-OF-PLAN DYNAMIC BATTERY above, with the
+      concrete tuning candidates enumerated there
+- [x] Docs sweep DONE 2026-08-23 (Stage 8 sweep commits): `dos_port/run`
+      header now lists every EXE flag by family (audio / link cable /
+      harness — cross-checked against boot/entry.asm's arg_ table); ROADMAP
+      Phase 4 rewritten from its years-stale "decide during implementation"
+      + serial_stubs.asm wording to the delivered three-transport HAL
+      reality, with the evidence discipline stated ("verified under
+      two-instance DOSBox-X", never "works on real hardware") and the [~]
+      acceptance rows pointing at the battery; `update_label_db` rescanned
+      (translation.db committed alongside each sweep commit). The sweep
+      also RESTORED pret StartBattle's .findFirstAliveEnemyMonLoop seed in
+      _InitBattleCommon (see that commit — the stale 'TODO-HW: network HAL'
+      deferral it replaced was the last one in the battle layer, and the
+      Stage 4 arm that reads the seeded mailbox was live without it)
+- [ ] HOST SESSION: stigmergy final state + `episode_record` — ALL entries
+      queued in `docs/stigmergy_outbox.jsonl` as of the Stage 8 sweep
+      (stages 4-8 progress memories + the episode chain); the box stays
+      unticked because the host-side apply-and-delete is the deliverable,
+      and only a session WITH stigmergy tools can do it
 - [ ] Archive: `git mv docs/current_plan_link_cable.md docs/plans/link_cable.md`
+      — DO NOT ARCHIVE YET: the battery above is open, and archiving with
+      open runtime debt hides it. The plan closes as STATIC-COMPLETE,
+      BATTERY PENDING (see the close-out note below); whoever runs the
+      battery archives the plan in the same workstream
+
+#### Stage 8 close-out note (2026-08-23) — plan status: STATIC-COMPLETE, battery pending
+
+Every stage's code, harnesses, scenarios, UI and docs are landed, pushed and
+static-verified on `claude/link-cable-protocol-planning-s5d09u` (nasm
+per-file, full link, update_label_db, lint 0 in both modes, static_gate via
+the pre-commit hook on every commit; generators idempotent; gated builds
+byte-identical where a build flag was added). NOTHING in stages 3-8 carries a
+runtime claim: the END-OF-PLAN DYNAMIC BATTERY item (Stage 3 section, final
+list consolidated 2026-08-23) is the single enumeration of that debt and the
+gate for archiving this plan.
 
 ## Acceptance (ROADMAP Phase 4)
 
