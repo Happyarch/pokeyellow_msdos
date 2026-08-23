@@ -871,3 +871,15 @@
 
 %endif ; GB_CONSTANTS_INC
 
+; ---------------------------------------------------------------------------
+; SRAM bank numbers, from the pret linker script layout.link:248-255
+;   SRAM $0 "Sprite Buffers" | $1 "Save Data" | $2 "Saved Boxes 1" | $3 "Saved Boxes 2"
+; These are bank NUMBERS, not addresses, which is why they live here and not in
+; gb_memmap.inc — tools/audit_memmap.py reads that header as an address map and
+; correctly rejects cartridge-space values (an earlier attempt to put the MBC
+; registers there failed the build on rROMB $2000 colliding with a map blob).
+; ---------------------------------------------------------------------------
+%define SRAM_BANK_SPRITE_BUFFERS  0
+%define SRAM_BANK_SAVE_DATA       1
+%define SRAM_BANK_SAVED_BOXES_1   2
+%define SRAM_BANK_SAVED_BOXES_2   3

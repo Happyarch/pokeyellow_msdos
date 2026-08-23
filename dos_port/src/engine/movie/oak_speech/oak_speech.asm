@@ -462,6 +462,7 @@ IntroDisplayPicCenteredOrUpperRight:
     mov byte [ebp + wSpriteFlipped], 0
     mov al, [ebp + PIC_STAGE]          ; dimensions byte (hi=H, lo=W tiles)
     mov edx, GB_VCHARS2                    ; merge dest = vFrontPic ($9000, signed tile $00)
+    ; DEVIATION{class=banking; pret=engine/movie/oak_speech/oak_speech.asm:IntroDisplayPicCenteredOrUpperRight; behavior=pret's explicit sSpriteBuffer1 to sSpriteBuffer0 CopyData and its OpenSRAM/CloseSRAM bracket are not repeated here; evidence=the port folds that copy into LoadMonPicToVRAM, whose buffer work runs inside LoadUncompressedSpriteData and InterlaceMergeSpriteBuffers (src/home/pics.asm) and is bracketed there with pret's own OpenSRAM/CloseSRAM as of 2026-08-23, so this level touches no sSpriteBuffer byte and a bracket here would guard nothing; lifetime=permanent while the port keeps the pic staging folded into LoadMonPicToVRAM}
     call LoadMonPicToVRAM                 ; decode + centre + merge + arm tilecache
 
     pop ebx

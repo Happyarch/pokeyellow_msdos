@@ -92,6 +92,9 @@ extern MonFrontPics
 extern SpecialMonPics
 %endif
 
+extern OpenSRAM                      ; src/home/bankswitch2.asm — SRAM write-protect latch
+extern CloseSRAM                     ; src/home/bankswitch2.asm
+
 ; pret constants not carried in gb_constants.inc:
 ;   RHYDON = internal index $01 (constants/pokemon_constants.asm)
 ;   NUM_POKEMON = 151          (constants/pokedex_constants.asm)
@@ -149,6 +152,8 @@ LoadUncompressedSpriteData:
     add al, al                         ; *8  — combined overall offset, in bytes
     mov [hSpriteOffset], al
 
+    mov al, SRAM_BANK_SPRITE_BUFFERS    ; ld a, BANK("Sprite Buffers")
+    call OpenSRAM
     mov esi, sSpriteBuffer0
     call ZeroSpriteBuffer
     mov edx, sSpriteBuffer1            ; src chunk1
@@ -159,6 +164,7 @@ LoadUncompressedSpriteData:
     mov edx, sSpriteBuffer2            ; src chunk2
     mov esi, sSpriteBuffer1            ; -> buffer1 (becomes 2bpp LSB)
     call AlignSpriteDataCentered
+    call CloseSRAM                     ; pret: call CloseSRAM
     ; fall through to InterlaceMergeSpriteBuffers
 
 ; ---------------------------------------------------------------------------
@@ -167,6 +173,8 @@ LoadUncompressedSpriteData:
 ; nybble-swap for a flipped sprite, then copy the 49 tiles to [pic_dest] VRAM.
 ; ---------------------------------------------------------------------------
 InterlaceMergeSpriteBuffers:
+    mov al, SRAM_BANK_SPRITE_BUFFERS    ; ld a, BANK("Sprite Buffers")
+    call OpenSRAM
     mov edi, sSpriteBuffer2 + SPRITEBUFFERSIZE - 1   ; dest end (walk down)
     mov edx, sSpriteBuffer1 + SPRITEBUFFERSIZE - 1   ; source 2: buffer1 end
     mov esi, sSpriteBuffer0 + SPRITEBUFFERSIZE - 1   ; source 1: buffer0 end
@@ -209,7 +217,7 @@ InterlaceMergeSpriteBuffers:
     mov ecx, PIC_SIZE * 16
     rep movsb
     mov byte [g_tilecache_dirty], 1
-    ret
+    jmp CloseSRAM                                    ; pret: jp CloseSRAM (tail call)
 
 ; ---------------------------------------------------------------------------
 ; AlignSpriteDataCentered — copy hSpriteWidth columns of hSpriteHeight bytes from

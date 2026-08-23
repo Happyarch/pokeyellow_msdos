@@ -7,7 +7,7 @@
 ; They arrived from src/home/pics.asm, which calls ScaleSpriteByTwo out of
 ; LoadMonBackPicToVRAM and keeps the rest of the pic-loading family.
 ;
-; DEVIATION{class=banking; pret=engine/battle/scale_sprites.asm:ScaleSpriteByTwo; behavior=no OpenSRAM/CloseSRAM wrapper around the scaling body, so pret ScaleSpriteByTwo and its .ScaleSpriteByTwo inner label collapse into one routine; evidence=port flat DPMI address space with SRAM mapped unconditionally at $A000 per gb_memmap.inc sSpriteBuffer0, and pret ScaleSpriteByTwo whose outer body is only the bank open plus close; lifetime=permanent under the flat memory model}
+; DEVIATION{class=banking; pret=engine/battle/scale_sprites.asm:ScaleSpriteByTwo; behavior=pret's outer ScaleSpriteByTwo and its .ScaleSpriteByTwo inner label collapse into ONE routine here, so the OpenSRAM/CloseSRAM bracket wraps the scaling body inline instead of wrapping a call to it - faithdiff therefore reports an ORDER warning placing CloseSRAM last rather than second; evidence=pret's outer body is only the bank open, a call to the inner label and the bank close, and the port has no ROM banking so there is nothing for the outer frame to do beyond the bracket itself, which IS carried as of 2026-08-23 now that OpenSRAM and CloseSRAM drive the SRAM write-protect latch in src/home/bankswitch2.asm; lifetime=permanent under the flat memory model}
 ;
 ; Register map: a=AL, b=BH, c=BL (bc=EBX), d=DH, e=DL (de=EDX), hl=ESI,
 ; EBP = GB memory base. The sprite buffers are GB SRAM ($A000+), so they are
@@ -21,6 +21,8 @@ bits 32
 %include "gb_constants.inc"
 
 global ScaleSpriteByTwo
+extern OpenSRAM                          ; src/home/bankswitch2.asm
+extern CloseSRAM                         ; src/home/bankswitch2.asm
 
 section .text
 
@@ -30,6 +32,8 @@ section .text
 ; engine/battle/scale_sprites.asm. chunk1(buffer1)->buffer0, chunk2(buffer2)->buffer1.
 ; ---------------------------------------------------------------------------
 ScaleSpriteByTwo:
+    mov al, SRAM_BANK_SPRITE_BUFFERS        ; ld a, BANK("Sprite Buffers")
+    call OpenSRAM
     mov edx, sSpriteBuffer1 + (4*4*8) - 5    ; last input byte (last 4 rows pre-skipped)
     mov esi, sSpriteBuffer0 + SPRITEBUFFERSIZE - 1
     call ScaleLastSpriteColumnByTwo          ; last tile column is a special case
@@ -38,7 +42,7 @@ ScaleSpriteByTwo:
     mov esi, sSpriteBuffer1 + SPRITEBUFFERSIZE - 1
     call ScaleLastSpriteColumnByTwo
     call ScaleFirstThreeSpriteColumnsByTwo
-    ret
+    jmp CloseSRAM                            ; pret: call CloseSRAM / ret
 
 ; In: EDX = source (read backward), ESI = dest (written backward).
 ScaleFirstThreeSpriteColumnsByTwo:

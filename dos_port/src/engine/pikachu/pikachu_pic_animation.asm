@@ -149,6 +149,8 @@ extern PikaPicAnimScript18, PikaPicAnimScript19, PikaPicAnimScript20
 extern PikaPicAnimScript21, PikaPicAnimScript22, PikaPicAnimScript23
 extern PikaPicAnimScript24, PikaPicAnimScript25, PikaPicAnimScript26
 extern PikaPicAnimScript27, PikaPicAnimScript28, PikaPicAnimScript29
+extern OpenSRAM                         ; src/home/bankswitch2.asm
+extern CloseSRAM                        ; src/home/bankswitch2.asm
 
 %include "assets/audio_constants.inc"   ; SFX_BATTLE_2F, AUDIO_BANK_2
 
@@ -882,12 +884,18 @@ DecompressRequestPikaPicAnimGFX:
     jc .failed                              ; jr c, .failed
     mov al, bh                              ; ld a, b — the bank; a no-op flat
     call UncompressSpriteFromDE             ; EDX flat src, ECX length
-    ; pret brackets the buffer copy with OpenSRAM/CloseSRAM; the port has no bank
-    ; switch (src/home/bankswitch2.asm), so the sprite buffers are always mapped.
+    ; pret's OpenSRAM/CloseSRAM bracket, restored 2026-08-23. The old comment
+    ; here said the port "has no bank switch, so the sprite buffers are always
+    ; mapped" — still true of ADDRESSING, but no longer the whole story: these
+    ; calls now drive the SRAM write-protect latch (src/home/bankswitch2.asm),
+    ; and the sprite buffers ARE SRAM bank 0.
+    mov al, SRAM_BANK_SPRITE_BUFFERS        ; ld a, BANK("Sprite Buffers")
+    call OpenSRAM
     mov esi, sSpriteBuffer1                 ; ld hl, sSpriteBuffer1
     mov edx, sSpriteBuffer0                 ; ld de, sSpriteBuffer0
     mov bx, SPRITEBUFFERSIZE * 2            ; ld bc, SPRITEBUFFERSIZE * 2
     call CopyData
+    call CloseSRAM                          ; pret: call CloseSRAM
     mov al, [ebp + wPikaPicAnimCurGraphicID]
     call LookUpTileOffsetForCurrentPikaPicAnimGFX
     call GetPikaPicVRAMAddressForNewGFX     ; ESI = VRAM address

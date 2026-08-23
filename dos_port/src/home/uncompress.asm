@@ -61,12 +61,6 @@ extern BankswitchCommon             ; src/home/bankswitch2.asm
 extern OpenSRAM                     ; src/home/bankswitch2.asm — SRAM write-protect latch
 extern CloseSRAM                    ; src/home/bankswitch2.asm
 
-; pret `BANK("Sprite Buffers")`. MEASURED from the pret linker script
-; layout.link:248-249 — `SRAM $0` holds "Sprite Buffers" (bank 1 is "Save Data",
-; 2 and 3 are "Saved Boxes 1"/"Saved Boxes 2"). Local equ rather than a
-; gb_memmap.inc entry because it is a bank NUMBER, not an address, and
-; tools/audit_memmap.py reads that header as an address map.
-SRAM_BANK_SPRITE_BUFFERS equ 0
 
 global UncompressSpriteData
 global _UncompressSpriteData

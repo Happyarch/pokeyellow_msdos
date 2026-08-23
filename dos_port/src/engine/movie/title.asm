@@ -366,7 +366,7 @@ DisplayTitleScreen:
     ; Place Pokemon logo (16×7 tiles) at tilemap coord (col=2, row=1)
     call TitleScreen_PlacePokemonLogo
 
-    ; DEVIATION{class=HAL; pret=engine/movie/title.asm:FillSpriteBuffer0WithAA; behavior=the call is dropped, no port label exists; evidence=the routine only primes SRAM sSpriteBuffer0 with $AA through OpenSRAM/CloseSRAM and the port has no SRAM emulation (Phase 5), nothing reads the pattern before the next pic decode overwrites it; lifetime=retired when Phase 5 SRAM emulation lands}
+    call FillSpriteBuffer0WithAA          ; pret: call FillSpriteBuffer0WithAA
 
     ; Write copyright row tiles at tilemap row 17 (bottom row)
     call WriteCopyrightTiles
@@ -912,6 +912,9 @@ section .text
 ; In: ESI = flat source name, EDI = flat dest (EBP-biased). Clobbers ECX/ESI/EDI.
 ; ---------------------------------------------------------------------------
 global CopyDebugName
+global FillSpriteBuffer0WithAA
+extern OpenSRAM                      ; src/home/bankswitch2.asm
+extern CloseSRAM                     ; src/home/bankswitch2.asm
 CopyDebugName:
     mov ecx, NAME_LENGTH               ; ld bc, NAME_LENGTH
     rep movsb                          ; jp CopyData
@@ -957,3 +960,28 @@ IncrementResetCounter:
     mov al, 0x0C
     stc                                 ; mov does not disturb CF
     ret
+
+; ---------------------------------------------------------------------------
+; FillSpriteBuffer0WithAA — pret engine/movie/title.asm:FillSpriteBuffer0WithAA.
+;
+; Primes the first $20 bytes of SRAM sSpriteBuffer0 with $AA, bracketed by
+; OpenSRAM/CloseSRAM on bank 0 ("Sprite Buffers").
+;
+; This used to be DROPPED, under a DEVIATION{class=HAL} whose evidence read "the
+; port has no SRAM emulation (Phase 5)" and whose lifetime read "retired when
+; Phase 5 SRAM emulation lands". Both are stale as of 2026-08-23: SRAM is
+; emulated (all four banks resident, gb_memmap.inc:1588-1594) and OpenSRAM /
+; CloseSRAM now drive a real write-protect latch (src/home/bankswitch2.asm), so
+; the stated condition for retiring the deviation is met and the routine is
+; simply ported. Nothing observable changes — the pattern is overwritten by the
+; next pic decode, exactly as on hardware — but it is pret's code, it is
+; portable here, and it exercises the latch.
+; ---------------------------------------------------------------------------
+FillSpriteBuffer0WithAA:
+    xor al, al                            ; xor a — bank 0 = BANK("Sprite Buffers")
+    call OpenSRAM
+    mov esi, sSpriteBuffer0               ; ld hl, sSpriteBuffer0
+    mov bx, 0x20                          ; ld bc, $20
+    mov al, 0xAA                          ; ld a, $aa
+    call FillMemory
+    jmp CloseSRAM                         ; pret: call CloseSRAM / ret
