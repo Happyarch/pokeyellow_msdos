@@ -492,6 +492,7 @@ HOME_SRCS := \
 HAL_SRCS := \
     src/ppu/ppu.asm \
     src/input/joypad.asm \
+    src/input/kbd_text.asm \
     src/engine/joypad.asm
 
 # Network/link-cable HAL (docs/current_plan_link_cable.md). Port-owned transport
@@ -501,6 +502,7 @@ HAL_SRCS := \
 # (NOT named LINK_SRCS: that var is the linker-input aggregate below.)
 NET_SRCS := \
     src/net/net_hal.asm \
+    src/net/link_book.asm \
     src/net/net_frame.asm \
     src/net/com_uart.asm
 ifdef DEBUG_NETTEST
@@ -3935,6 +3937,12 @@ assets/textbox_strings.inc: assets/gb_charmap.txt tools/generators/gen_textbox_s
 assets/list_menu_strings.inc: assets/gb_charmap.txt tools/generators/gen_list_menu_strings.py tools/generators/gb_text.py
 	python3 tools/generators/gen_list_menu_strings.py
 
+# Link-cable setup UI strings (docs/current_plan_link_cable.md Stage 5 step 2):
+# the transport-select menu + connection-book screens. Port-only (LinkUIStr_*,
+# no pret counterpart draws this UI); consumed by step 3's src/net/link_ui.asm.
+assets/link_ui_strings.inc: assets/gb_charmap.txt tools/generators/gen_link_ui_strings.py tools/generators/gb_text.py
+	python3 tools/generators/gen_link_ui_strings.py
+
 # Two-option (YES/NO) menu options — pret data/yes_no_menu_strings.asm.
 assets/yes_no_strings.inc: assets/gb_charmap.txt tools/generators/gen_yes_no_strings.py tools/generators/gb_text.py
 	python3 tools/generators/gen_yes_no_strings.py
@@ -4443,6 +4451,15 @@ assets/alphabets.inc: ../data/text/alphabets.asm ../constants/charmap.asm \
                       ../gfx/font/ED.1bpp tools/generators/gen_alphabets.py
 	python3 tools/generators/gen_alphabets.py
 
+# Keyboard text-entry scancode->charmap tables (link cable plan Stage 5 step
+# 1: src/input/kbd_text.asm). Port-only US-keyboard layout data — no pret
+# source, but the byte values still route through gb_text.encode() (the GB
+# charmap), not hand-transcribed hex.
+assets/kbd_scancode_map.inc: tools/generators/gen_kbd_naming.py assets/gb_charmap.txt
+	python3 tools/generators/gen_kbd_naming.py
+
+src/input/kbd_text.o: assets/kbd_scancode_map.inc
+
 # Pikachu emotion-command text (ExpressionText). Generated from
 # engine/pikachu/pikachu_emotions.asm + data/text/text_3.asm + constants/charmap.asm.
 assets/pikachu_text.inc: ../engine/pikachu/pikachu_emotions.asm ../data/text/text_3.asm \
@@ -4705,7 +4722,8 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/players_pc_text.inc assets/link_text.inc assets/link_npc_text.inc assets/oaks_pc_text.inc \
         assets/pc_text.inc assets/slots_text.inc assets/safari_text.inc \
         assets/cable_club_text.inc assets/trade_tiles.inc assets/trade_text.inc \
-        assets/trade_mon_info_text.inc
+        assets/trade_mon_info_text.inc \
+        assets/kbd_scancode_map.inc assets/link_ui_strings.inc
 	python3 tools/audit_memmap.py
 
 assets/scenario_registry.inc: tools/scenario_manifest.json tools/generators/gen_scenario_registry.py

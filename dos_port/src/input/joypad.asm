@@ -26,6 +26,20 @@
 ; joypad_restore puts the original vector back on exit. Same [cs:var] DS
 ; recovery technique as the PIT ISR (see boot/timing.asm).
 ;
+; KEYBOARD TEXT-ENTRY MODE (link cable plan Stage 5 step 1, added beside the
+; joypad path above; port-only, no pret counterpart): when g_kbd_text_mode is
+; nonzero, kbd_isr ALSO pushes each make-code's (scancode, shift) pair into a
+; small ring (kbd_ring), independent of and in parallel with the joypad
+; mapping cascade above, which keeps running unchanged (arrows/Enter/etc.
+; still produce pad bits — menus stay alive while a text field is being
+; edited). kbd_shift_state tracks LSHIFT/RSHIFT make/break unconditionally,
+; regardless of g_kbd_text_mode; RSHIFT (0x36) KEEPS its existing Select
+; binding below. kbd_ring_pop (host-side, non-ISR) drains the ring;
+; src/input/kbd_text.asm's kbd_text_edit is the consumer. No caller invokes
+; kbd_text_edit yet in a normal build this step — this file's job is only to
+; make the raw-scancode capture available and leave the existing joypad
+; mapping provably unaffected when g_kbd_text_mode == 0 (its default).
+;
 ; Build: nasm -f coff -I include/ -o joypad.o joypad.asm
 
 bits 32
@@ -47,6 +61,7 @@ SC_RIGHT        equ 0x4D
 SC_X            equ 0x2D
 SC_Z            equ 0x2C
 SC_ENTER        equ 0x1C
+SC_LSHIFT       equ 0x2A    ; text-entry shift tracking only (no joypad binding)
 SC_RSHIFT       equ 0x36
 SC_TAB          equ 0x0F
 SC_BACKSPACE    equ 0x0E    ; Select (the mGBA/VBA/SameBoy default binding)
@@ -76,6 +91,8 @@ HJP_UP          equ 0x40    ; PAD_UP  (bit 6)
 
 SOFT_RESET_FRAMES equ 16    ; pret Init sets hSoftReset = 16 (frames of combo)
 
+KBD_RING_SIZE   equ 16      ; bytes; 2 bytes/key (scancode, shift) = 8 keys buffered
+
 ; hJoyLast / hJoyReleased are not yet in gb_memmap.inc; guard so this file
 ; assembles standalone. Addresses from ram/hram.asm (consecutive with the
 ; already-mapped hJoyPressed=0xFFB3 / hJoyHeld=0xFFB4). Root should promote
@@ -91,6 +108,12 @@ global pad_dpad             ; byte: D-pad held state (1 = pressed)
 global pad_buttons          ; byte: button held state (1 = pressed)
 global pad_quit             ; byte: nonzero once Esc is pressed
 global pad_reset            ; byte: nonzero once the A+B+Select+Start combo fires
+; --- Keyboard text-entry mode (link cable plan Stage 5 step 1) ---
+; Port-only: raw-scancode capture alongside the joypad mapping above. No
+; consumer is wired yet (src/input/kbd_text.asm links and is callable, but
+; nothing calls it in a normal build this step).
+global g_kbd_text_mode      ; byte: nonzero -> kbd_isr also buffers scancodes
+global kbd_ring_pop         ; AL=scancode, AH=shift, ZF=1 empty (cli/sti-guarded read)
 %ifdef DEBUG_NOCLIP
 global pad_noclip           ; byte: 1 = noclip active (W toggles)
 %endif
@@ -123,6 +146,18 @@ ext_pending:    resb 1      ; set when an E0 prefix byte was just received
 %ifdef DEBUG_NOCLIP
 pad_noclip:     resb 1      ; toggled by W key; 1 = collision disabled
 %endif
+
+; --- Keyboard text-entry ring (link cable plan Stage 5 step 1) ---
+; g_kbd_text_mode gates the ring push in kbd_isr below; kbd_shift_state tracks
+; LSHIFT/RSHIFT make/break unconditionally (independent of text mode) so shift
+; state is already current the moment text mode is entered. kbd_ring is a
+; flat 16-byte ring of (scancode, shift) byte pairs — 8 keys buffered; on
+; overflow the oldest pair is dropped (kbd_ring_pop below is the only reader).
+g_kbd_text_mode:  resb 1
+kbd_shift_state:  resb 1
+kbd_ring:         resb KBD_RING_SIZE
+kbd_ring_head:    resb 1     ; next write offset into kbd_ring (0..15)
+kbd_ring_tail:    resb 1     ; next read offset into kbd_ring (0..15)
 
 ; ---------------------------------------------------------------------------
 ; Data — reachable from the ISR via CS override (CS base == DS base, DJGPP)
@@ -223,6 +258,63 @@ kbd_isr:
     mov bh, al
     and bh, 0x80
 
+    ; --- Shift-state tracking (added path; keyboard text-entry mode) ---
+    ; Runs unconditionally, independent of g_kbd_text_mode, so shift state is
+    ; already current the moment text mode is entered. SC_RSHIFT (0x36) KEEPS
+    ; its existing Select binding in the cascade below unchanged — this block
+    ; only maintains kbd_shift_state and falls through; it does not intercept
+    ; the scancode or skip the joypad dispatch.
+    cmp bl, SC_LSHIFT
+    je .shift_key
+    cmp bl, SC_RSHIFT
+    jne .not_shift_key
+.shift_key:
+    test bh, bh
+    jnz .shift_up
+    mov byte [kbd_shift_state], 1
+    jmp .not_shift_key
+.shift_up:
+    mov byte [kbd_shift_state], 0
+.not_shift_key:
+
+    ; --- Text-entry ring push (added path; keyboard text-entry mode) ---
+    ; ISR budget: push only, no calls, no charmap translation (that is
+    ; host-side, in kbd_text_edit). The joypad mapping cascade below is
+    ; unaffected — this buffers a copy of the raw scancode in parallel, it
+    ; does not consume or skip it. When g_kbd_text_mode is 0 (the default,
+    ; normal-build state) this is a single cmp+je and nothing else executes,
+    ; so the existing joypad mapping stays byte-identical to before this file
+    ; was touched.
+    cmp byte [g_kbd_text_mode], 0
+    je .ring_done
+    test bh, bh
+    jnz .ring_done              ; only make codes are buffered
+    push eax
+    push ecx
+    push edx
+    movzx ecx, byte [kbd_ring_head]
+    mov al, bl                  ; AL = scancode (BL is untouched below)
+    mov [kbd_ring + ecx], al
+    inc ecx
+    and ecx, KBD_RING_SIZE - 1
+    mov al, [kbd_shift_state]
+    mov [kbd_ring + ecx], al
+    inc ecx
+    and ecx, KBD_RING_SIZE - 1
+    mov dl, [kbd_ring_tail]
+    cmp cl, dl
+    jne .ring_no_overflow
+    ; ring full: drop the oldest key by advancing tail past it
+    add dl, 2
+    and dl, KBD_RING_SIZE - 1
+    mov [kbd_ring_tail], dl
+.ring_no_overflow:
+    mov [kbd_ring_head], cl
+    pop edx
+    pop ecx
+    pop eax
+.ring_done:
+
     ; --- D-pad ---
     cmp bl, SC_RIGHT
     jne .chk_left
@@ -286,6 +378,13 @@ kbd_isr:
     jne .eoi
     test bh, bh
     jnz .eoi                    ; quit on press, ignore release
+    ; Text-entry mode reassigns Esc to "cancel this field" (kbd_text_edit
+    ; reads it from the ring): suppress the host-quit latch while active, or
+    ; cancelling a field would exit the program on the widget's very next
+    ; DelayFrame (vblank.asm's pad_quit check terminates via INT 21h/4C).
+    ; Joypad-mode (g_kbd_text_mode == 0, the default) behavior is unchanged.
+    cmp byte [g_kbd_text_mode], 0
+    jne .eoi
     mov byte [pad_quit], 1
     jmp .eoi
 
@@ -317,6 +416,47 @@ kbd_isr:
     pop es
     pop ds
     iret
+
+; ---------------------------------------------------------------------------
+; kbd_ring_pop — pop one buffered (scancode, shift) pair from the ISR ring
+; kbd_isr feeds above (link cable plan Stage 5 step 1). Port-only; no pret
+; counterpart. Called from normal (non-ISR) code, e.g. kbd_text_edit's poll
+; loop in src/input/kbd_text.asm.
+;
+; In:  (none)
+; Out: AL = scancode (7-bit make code), AH = shift flag (0/1).
+;      ZF = 1 if the ring was empty (AL/AH undefined in that case), ZF = 0 if
+;      a pair was popped. The ZF check is deliberately independent of the
+;      popped byte values (a scancode of 0 never legitimately occurs, but this
+;      does not rely on that): each return path ends on its own
+;      value-independent flag-setting instruction.
+;      Clobbers EBX/ECX/EDX. Brackets the ring read in cli/sti — kbd_isr
+;      writes kbd_ring_head/kbd_ring asynchronously.
+; ---------------------------------------------------------------------------
+kbd_ring_pop:
+    cli
+    mov bl, [kbd_ring_head]
+    mov cl, [kbd_ring_tail]
+    cmp bl, cl
+    je .empty
+    movzx edx, cl
+    mov al, [kbd_ring + edx]
+    inc edx
+    and edx, KBD_RING_SIZE - 1
+    mov ah, [kbd_ring + edx]
+    inc edx
+    and edx, KBD_RING_SIZE - 1
+    mov [kbd_ring_tail], dl
+    sti
+    mov ecx, 1
+    test ecx, ecx      ; ZF = 0 ("found"), independent of AL/AH
+    ret
+.empty:
+    sti
+    xor eax, eax
+    xor ecx, ecx
+    test ecx, ecx      ; ZF = 1 ("empty")
+    ret
 
 ; ---------------------------------------------------------------------------
 ; joypad_update — compose the IO_JOYP shadow from the held-state nibbles
