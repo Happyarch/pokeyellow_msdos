@@ -526,7 +526,15 @@ blocks in `src/engine/menus/naming_screen.asm`.
 #### Stage 3 close-out notes (2026-08-23; written for the post-/clear session)
 
 STATE: Stage 3 is code-complete and static-verified on
-`claude/link-cable-protocol-planning-s5d09u`, all commits pushed. The commit
+`claude/link-cable-protocol-planning-s5d09u`, all commits pushed.
+
+> **Every hash in this paragraph is PRE-REBASE and no longer resolves.** The
+> branch was rebased onto master `6c6cc3a` on 2026-08-23 (see the rebase record
+> below), which rewrote all of them. The list is kept for the step→commit
+> mapping it records, not as a set of addresses: use `git log` on the branch for
+> the live hashes.
+
+The commit
 chain since Stage 2's `bf827c7`: `b50e1e0` (step 1 block seam — NETTEST +
 linkcheck verified pre-deferral), `99cb00b` (step 2 cable_club.asm all 23
 labels — fidelity-serial core 16/16 pre-deferral), `4f75640` (.dsv trade
@@ -535,7 +543,63 @@ trade2.asm all 53 labels), `da5f81a` (steps 5+6 tradecheck harness + --kill),
 `9bb5fe6` (step 4 in_game_trade golden) + bookkeeping commits. Only the
 dynamic battery above remains for a runtime claim.
 
-REBASE-ONTO-MASTER PREP (maintainer plans a rebase; master changed the text
+REBASE ONTO MASTER — **DONE 2026-08-23.** Rebased onto `6c6cc3a` (master's
+10-commit text-engine/scope arc). 33 commits replayed, 32 kept: `9ab35ddf` (a
+label-DB rescan) dropped as empty, since `translation.db` is derived and was
+regenerated once at the end instead.
+
+Three conflicts, all resolved as UNIONS — no branch content and no master
+content was dropped:
+1. `tools/scenario_manifest.json`, twice: master's `sign_pallet_house` and this
+   branch's `cable_club_nolink` both claimed `id: 91`, then `in_game_trade`
+   collided at 92. Kept all three; renumbered THIS branch's two
+   (cable_club_nolink → 92, in_game_trade → 93) because master's was already
+   upstream. `assets/scenario_registry.inc` is generated from the manifest, so
+   the ids reflowed on `make assets`; `validate_scenarios` reports 92 scenarios
+   consistent.
+2. `src/engine/pokemon/bills_pc.asm` — master landed `OpenBillsPCText`, this
+   branch landed `CableClubLeftGameboy`/`RightGameboy`. Both are now in the file
+   and in the header inventory; the only line reconciled by hand was the "still
+   NOT here" list, which now names `UnusedOpenBillsPC` alone.
+3. `src/home/joypad2.asm` — master's `DelayFrames`/`WaitForSoundToFinish`/
+   `PlaySound` externs (the `ManualTextScroll` de-fork) plus this branch's
+   `CableClub_Run`. All four kept.
+
+**The branch's `WaitForAPress`/`WaitForTextScrollButtonPress` label ORDER
+survived the rebase deliberately, and it is the better one.** The two are
+stacked aliases on one body; the branch declares the port-only alias FIRST so
+the body attributes to the pret label. Measured after the rebase:
+`faithdiff WaitForTextScrollButtonPress` reads 4 pret / 3 port calls with 2
+matched here, against 4 pret / **0** port calls with everything DROPPED on
+master. The one visible cost is that `WaitForAPress` — a port-only alias at the
+same address — leaves the statically-reached set, which is a naming artifact of
+the fallthrough model, not a behaviour change.
+
+Static verification of the rebased tree (the dynamic battery below is still
+outstanding and no runtime claim is made): root `make` + `make -C dos_port`
+both clean, `make assets` clean, `update_label_db` rescanned,
+`lint_pret_labels` 0 violations in both plain and `--strict-claims` modes,
+`static_gate` PASS on all 8 checks, `port_scope` needed no entry.
+A whole-tree faithdiff sweep over all 2974 translated core labels was diffed
+against the same sweep on master: of the 2870 labels common to both, **4** have
+findings master lacks, and all 4 are this branch's intended link-cable wiring —
+`DelayFrame` +NetHAL_Pump, `EnterMap` +RunLinkCheck/RunNetPipeTest/RunTradeCheck,
+`LinkMenu` +NetHAL_StartTransfer/[IO_SC], and the `WaitForTextScrollButtonPress`
+store pair above. Nothing regressed.
+
+`tools/test_label_db.py::test_count_delta_direction` needed its upper bound
+raised 1400 → 2000, and the crossing was decomposed before it was raised:
+master alone measures 1362 statically-reached labels, the rebased tree 1409
+(+48 / −1). All 48 are link-cable (serial 9, cable_club 7, link_menu 7, net_hal
+6, com_uart 2, net_frame 2, cable_club_npc 1, yes_no 1, + 13 port-only locals in
+those files); the −1 is the `WaitForAPress` alias above. The BFS universe is
+4939 build-active labels, so the band guards nothing near 1409 (28.5%) or 2000
+(40%) — a lax terminator rule would run at ~4900.
+
+What follows is the PRE-rebase survey, kept because it records where this
+branch's text-command surface lives. Every item on it came through clean:
+
+REBASE-ONTO-MASTER PREP (superseded — master changed the text
 commands). What this branch touches in that area, most conflict-prone first:
 1. `dos_port/tools/generators/gen_menu_strings.py` — this branch ADDED four
    list blocks + their emit sections: `CABLE_CLUB_STRINGS`/`CABLE_CLUB_FAR`

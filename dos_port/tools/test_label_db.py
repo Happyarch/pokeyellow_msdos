@@ -1031,9 +1031,30 @@ class LiveTree(unittest.TestCase):
     def test_count_delta_direction(self):
         # ~385 before, ~1046+ after. "Everything reachable" is the tell that
         # the terminator rule went too lax.
+        #
+        # Upper bound raised 1400 -> 2000 on 2026-08-23, when the link-cable
+        # branch rebased onto master. It is a BAND, not a budget: re-measure
+        # rather than trusting these figures.
+        #
+        # The 1400 was outrun by ordinary subsystem growth, and the crossing was
+        # decomposed before it was raised (matching aggregates prove nothing):
+        # master alone measured 1362 reached, the rebased tree 1409, a delta of
+        # +48/-1. All 48 additions are the link-cable subsystem — serial.asm 9,
+        # cable_club.asm 7, link_menu.asm 7, net_hal.asm 6, com_uart.asm 2,
+        # net_frame.asm 2, cable_club_npc.asm 1, yes_no.asm 1, plus 13 port-only
+        # locals inside those same files. The single removal is WaitForAPress,
+        # the port-only ALIAS stacked on WaitForTextScrollButtonPress's body:
+        # the branch declares the alias FIRST so the body attributes to the pret
+        # label, so the BFS now marks the pret name instead of the alias. Same
+        # address, same behaviour (and faithdiff goes 0/4 calls matched -> 2).
+        #
+        # What the band actually guards is the BFS heading for the whole tree.
+        # That universe measured 4939 build-active labels the same day, so 1409
+        # is 28.5% of it and 2000 is 40% — a lax terminator rule would run at
+        # ~4900, nowhere near either edge.
         reached = len(live()['reached'])
         self.assertGreater(reached, 900)
-        self.assertLess(reached, 1400)
+        self.assertLess(reached, 2000)
 
     def test_differential_probe_moves_the_build_active_edge_set(self):
         # Compare edge SETS, not the reached count: the 25 BUG_FIX_LEVEL blocks
