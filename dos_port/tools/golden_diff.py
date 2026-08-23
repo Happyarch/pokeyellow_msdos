@@ -1631,7 +1631,34 @@ SCENARIOS = {
                             "read as a port defect. The row is carried so the gap "
                             "is greppable instead of silent.",
         },
-        "wram_masks": dict(_BATTLE_WRAM_MASKS),
+        "wram_masks": dict(_BATTLE_WRAM_MASKS, **{
+            "wLoadedMon": [
+                ((23, 24), "wLoadedMon's speed stat-EXP word -- THE SAME FIELD, "
+                           "the same two values and the same reasoning already "
+                           "adjudicated for battle_blackout (whose entry carries "
+                           "the long form) and inherited by battle_anim_physical, "
+                           "_elemental, _blink and battle_menu. Neither side's "
+                           "dump-point routine writes it: DrawPlayerHUDAndHPBar "
+                           "copies two disjoint runs, species..moves (0-11) and "
+                           "level..stats (33-43), so bytes 12-32 are scratch, and "
+                           "the ROM writes this one word somewhere the port does "
+                           "not. WHY IT SURFACED HERE ONLY NOW, measured "
+                           "2026-08-23: restoring pret's ProtectedDelay3 before "
+                           "PromptText's wait (home/text.asm) moves this "
+                           "scenario's dump instant 3 frames per text wait, past "
+                           "the point where the ROM has written the word. That is "
+                           "a timing shift in a known-scratch window, not a new "
+                           "divergence -- and it is corroborated by the failure "
+                           "shape: this ONE word differs and every other byte of "
+                           "wLoadedMon still matches, exactly as battle_blackout's "
+                           "account predicts (a real LoadMonData would have "
+                           "populated OT id, EXP, all four other stat-EXP words "
+                           "and the DVs). The gate's own alignment clause still "
+                           "pins wLoadedMonLevel = 80 on both sides, so the "
+                           "staging identity is still checked -- this masks two "
+                           "bytes of it, not the landmark."),
+            ],
+        }),
     },
     "battle_bide": {
         # datastruct: the Bide STORE and RELEASE — ExecutePlayerMove's

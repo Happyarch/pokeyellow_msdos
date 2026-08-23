@@ -167,13 +167,33 @@ def scan_annotations():
     return found
 
 
+sys.path.insert(0, SCRIPT_DIR)
+import port_scope        # noqa: E402  the ONE reader for the exclusion registry
+
+
+def load_exclusions():
+    """Thin shim over tools/port_scope.py.
+
+    Deliberately NOT a second implementation: label_status, project_state,
+    dependency_graph.py and this report must give one answer about what is out
+    of scope, or the report tells the maintainer a label is excluded while the
+    query tools still send an agent to port it.
+    """
+    return port_scope.load(), port_scope.by_file()
+
+
 def build_report(scan):
     labels = load_labels(scan)
     annots = scan_annotations()
     stamp_hash, stamp_at = db_stamp()
+    excluded_labels, excluded_files = load_exclusions()
 
     for l in labels:
         l['status'] = PROVIDER_TYPE_TO_STATUS.get(l['provider_type'], l['provider_type'])
+
+    # Partition BEFORE any counting, so every number below is scored-scope only.
+    out_of_scope = [l for l in labels if l['label'] in excluded_labels]
+    labels = [l for l in labels if l['label'] not in excluded_labels]
 
     by_status = collections.Counter(l['status'] for l in labels)
     total = len(labels)
@@ -213,8 +233,24 @@ def build_report(scan):
     for k in sorted(other):
         rows.append([k, other[k], pct(other[k], total)])
     rows.append(['**total pret labels**', total, '100%'])
+    if out_of_scope:
+        rows.append(['_(out of scope, excluded)_', len(out_of_scope), '—'])
 
     lines += [md_table(['status', 'labels', 'share'], rows), '']
+    if excluded_files:
+        lines += ['', '### Out of scope — excluded from the scores above', '',
+                  '_Declared in `dos_port/tools/port_scope_exclusions.json`, a'
+                  ' MAINTAINER-controlled registry. These are labels this port is not'
+                  ' going to translate because it cannot in this framework — not merely'
+                  ' ones nobody has got to yet. They are listed here rather than hidden,'
+                  ' so the exclusion is auditable instead of a silently smaller'
+                  ' denominator. Being unused in pret is NOT grounds for exclusion:'
+                  ' unused-but-portable routines are ported anyway, for completeness and'
+                  ' bug compatibility._', '']
+        for pret_file, entry in excluded_files:
+            names = ', '.join('`%s`' % n for n in entry.get('labels', []))
+            lines += ['**`%s`** — %s' % (pret_file, names), '',
+                      '> %s' % entry.get('reason', ''), '']
     lines += [f'_{linked} of those labels have a provider the current build links._'
               ' Port-only labels (routines with no pret counterpart — HAL boundaries,'
               ' debug harnesses) are deliberately excluded: they are not pret coverage,'

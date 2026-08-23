@@ -1,0 +1,27 @@
+{
+  "_comment": [
+    "OUT-OF-SCOPE pret labels: things this port is NOT going to translate, excluded",
+    "from the completeness scores in docs/translation_progress.md so that report says",
+    "what still needs WRITING rather than counting work nobody will ever do.",
+    "",
+    "MAINTAINER-CONTROLLED. An agent MUST NOT add an entry here to make its own",
+    "numbers look better - that is the same failure mode CLAUDE.md's rules about the",
+    "pret_label_allowlist exist to prevent. Entries are added only when the maintainer",
+    "says so, and each one states WHY the label is unportable rather than merely unported.",
+    "",
+    "'Unused in pret' is NOT a reason to exclude. Maintainer direction 2026-08-23:",
+    "unused pret routines get ported anyway when they are genuinely portable in this",
+    "framework, for completeness and bug compatibility, even if they stay unlinked -",
+    "uncalled code does not run, so it carries no runtime risk. GetwMoves and",
+    "OverwritewMoves were ported on exactly that basis, not excluded.",
+    "",
+    "Excluded labels are still reported, in their own section, so the exclusion is",
+    "visible and auditable instead of silently shrinking the denominator."
+  ],
+  "files": {
+    "home/pikachu_cries.asm": {
+      "reason": "The Game Boy's 1-bit wave-channel bit-bang loop for Pikachu's digitized voice. PlayPikachuPCM streams samples by writing rAUD3LEVEL in a tight timing loop; LoadNextSoundClipSample and PlaySoundClipSample are its inner helpers. The port cannot host this even in principle: its APU is virtual, and the per-device shims read rAUD3LEVEL ONCE PER audio_tick (src/audio/opl_shim.asm:707, src/audio/tandy_shim.asm:492), so a literal translation would emit silence rather than sound. The data model diverges too - tools/audio/gen_pika_pcm.py has already low-pass-filtered and decimated pret's 1-bit streams to 8-bit PCM. The cry itself IS implemented, faithfully and at its correct pret path: pret moved PlayPikachuSoundClip into audio/pikachu_pcm.asm (upstream bd1b695b) and the port mirrors it there, dispatching to the Sound Blaster DSP or the PC-speaker PWM player. src/audio/sb_pcm.asm:25 already carries the DEVIATION{class=HAL} for this replacement. Maintainer decision 2026-08-23.",
+      "labels": ["PlayPikachuPCM", "LoadNextSoundClipSample", "PlaySoundClipSample"]
+    }
+  }
+}

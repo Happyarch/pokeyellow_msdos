@@ -48,6 +48,11 @@ import os
 import sqlite3
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import port_scope        # noqa: E402  the ONE reader for the exclusion registry
+
+EXCLUDED = port_scope.load()
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH    = os.path.join(SCRIPT_DIR, 'translation.db')
 
@@ -67,7 +72,7 @@ def status_of(cur, name):
         "SELECT name, pret_file, port_file, status, stub_file FROM labels "
         "WHERE name=?", (name,)).fetchone()
 
-def subsystem_report(cur, pat, show_all):
+def subsystem_report(cur, pat, show_all, include_oos=False):
     """Per-file coverage for every core-tier label whose PRET path matches pat."""
     # A bare word is a substring match; anything with a glob char is a glob.
     like = pat if any(ch in pat for ch in '*?') else f'*{pat}*'
@@ -98,6 +103,22 @@ def subsystem_report(cur, pat, show_all):
     for name, pf, st in rows:
         files.setdefault(pf, []).append((name, st))
 
+    # Partition FIRST: an out-of-scope label is not "left to do", so it must not
+    # reach the missing counts an agent reads as a backlog. It is still printed
+    # below — excluded, never hidden.
+    oos = {}
+    if not include_oos:
+        for pf in list(files):
+            keep, drop = [], []
+            for n, st in files[pf]:
+                (drop if n in EXCLUDED else keep).append((n, st))
+            if drop:
+                oos[pf] = drop
+            if keep:
+                files[pf] = keep
+            else:
+                del files[pf]
+
     print(f"{'pret file':<52} {'missing':>7} {'stub':>5} {'reloc':>6} {'transl':>7} {'total':>6}")
     tot = [0, 0, 0, 0, 0]
     for pf in sorted(files, key=lambda f: (-sum(1 for _, s in files[f] if s == 'missing'), f)):
@@ -113,6 +134,18 @@ def subsystem_report(cur, pat, show_all):
         print("  (`reloc` on a pret scripts/Foo_2.asm row is a BANK-SPLIT continuation "
               "living in the port's flat scripts/Foo.asm — sanctioned structure, not "
               "debt. The graph viewer shows these as `bank-split`.)")
+
+    if oos:
+        n = sum(len(v) for v in oos.values())
+        print(f"\n### OUT OF SCOPE — {n} label(s) excluded from the counts above")
+        print("    Declared UNPORTABLE in tools/port_scope_exclusions.json, not merely "
+              "unported. Do not pick these up as work.")
+        for pf in sorted(oos):
+            print(f"  {pf}:")
+            for name, st in sorted(oos[pf]):
+                print(f"    [ oos] {name:<38} ({st} in the DB; not counted)")
+            print(f"    reason: {EXCLUDED[oos[pf][0][0]]['reason'][:300]}...")
+        print("    Re-run with --include-out-of-scope to score them as ordinary rows.")
 
     wanted = ('missing', 'stub') if not show_all else ('missing', 'stub', 'translated')
     for pf in sorted(files):
@@ -142,6 +175,8 @@ def main():
                     help='list a subsystem\'s labels by pret-path match')
     ap.add_argument('--all', action='store_true',
                     help='--subsystem: also list translated labels')
+    ap.add_argument('--include-out-of-scope', action='store_true',
+                    help='score maintainer-excluded labels as ordinary rows')
     ap.add_argument('--callees', action='store_true',
                     help='report the pret routine\'s call targets + statuses')
     ap.add_argument('--callers', action='store_true',
@@ -153,7 +188,8 @@ def main():
     rc = 0
 
     if args.subsystem:
-        sys.exit(subsystem_report(cur, args.subsystem, args.all))
+        sys.exit(subsystem_report(cur, args.subsystem, args.all,
+                                  args.include_out_of_scope))
     if not args.names:
         ap.error('give one or more Labels, or --subsystem PAT')
 
@@ -164,6 +200,14 @@ def main():
             rc = 1
             continue
         print(fmt_row(row))
+        if name in EXCLUDED:
+            ex = EXCLUDED[name]
+            print(f"  *** OUT OF SCOPE — DO NOT PORT THIS. Declared unportable in "
+                  f"tools/port_scope_exclusions.json ({ex['pret_file']}). ***")
+            print(f"  reason: {ex['reason']}")
+            print("  It is excluded from the completeness scores and from "
+                  "--subsystem's missing list. If you think this is wrong, raise it "
+                  "with the maintainer — do not edit the registry to unblock yourself.")
 
         if args.callees:
             targets = cur.execute("""

@@ -6540,6 +6540,18 @@ autokey_script:
     dd 620, 626, PAD_A          ; USE
     dd 680, 686, PAD_A          ; party menu: mon 1 (healthy → refusal)
     dd 740, 746, PAD_A          ; dismiss the refusal
+    ; TAIL DISMISSALS, added 2026-08-23 with pret's ProtectedDelay3 (3 frames
+    ; before every text wait, home/text.asm:PromptText). The 3 frames shift each
+    ; wait's poll start, so a single tap per message can miss its poll entirely
+    ; and leave a TextCommandProcessor session open at the dump — which reads as
+    ; `wLetterPrintingDelayFlags $01 vs $03` and nothing else, because the flow
+    ; itself completes (bag, party and every other compared field match).
+    ; These extra taps are WRAM-NEUTRAL: this scenario is datastruct class, and
+    ; an A in the bag list only opens USE/TOSS, while USE on a healthy mon is
+    ; refused without consuming anything. They cannot advance the compared state.
+    dd 780, 786, PAD_A
+    dd 820, 826, PAD_A
+    dd 860, 866, PAD_A
     dd  -1,  -1, 0
 %elifdef AUTOKEY_SURF
     ; items-plan Stage 11 (DEBUG_SURF): drive the real overworld loop through a

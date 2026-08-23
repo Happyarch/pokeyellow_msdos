@@ -41,6 +41,11 @@
 
 bits 32
 
+; pret BANK(RedrawPartyMenu_). MEASURED from pokeyellow.sym: `04:5886
+; RedrawPartyMenu_`, so bank $04. The port's Bankswitch ignores it under the
+; flat model, but pret's value is carried rather than invented.
+PARTY_MENU_BANK equ 0x04
+
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "assets/audio_constants.inc"   ; CRY_SFX_START (GetCryData)
@@ -83,6 +88,7 @@ extern WaitForSoundToFinish             ; src/home/delay.asm — block until cha
 extern DelayFrame
 extern DumpBackbuffer
 extern PlaceMenuCursor                  ; src/home/window.asm — ▶ at the current item
+extern Bankswitch                   ; src/home/bankswitch2.asm
 %endif
 
 global PlayCry
@@ -105,6 +111,10 @@ global DrawHPBar
 global LoadMonData
 global LoadFlippedFrontSpriteByMonIndex
 global LoadFrontSpriteByMonIndex
+global DrawPartyMenuCommon
+global OverwritewMoves
+global GetwMoves
+extern Bankswitch                   ; src/home/bankswitch2.asm — flat-model trampoline
 
 CHAR_LV        equ 0x6E     ; '<LV>' ":L" tile (constants/charmap.asm:67)
 
@@ -268,12 +278,31 @@ GoBackToPartyMenu:
     call RedrawPartyMenu
     jmp HandlePartyMenuInput                ; jp HandlePartyMenuInput
 
-; pret DrawPartyMenu/RedrawPartyMenu are Bankswitch trampolines onto the
-; engine bank (DrawPartyMenuCommon); flat memory collapses them to jumps.
+; ---------------------------------------------------------------------------
+; DrawPartyMenu / RedrawPartyMenu / DrawPartyMenuCommon — pret home/pokemon.asm.
+;
+; pret's two entry points load HL with the engine-bank body they want and share
+; one Bankswitch trampoline. The port used to collapse both into a direct
+; `jmp <body>` and drop DrawPartyMenuCommon entirely, which left that pret label
+; reading `missing`. pret's structure is restored here: the trampoline is
+; portable in this framework (the port has Bankswitch, src/home/bankswitch2.asm,
+; which jumps to ESI and ignores the bank in B under the flat model), so there
+; is no reason for the label not to exist.
+;
+; RedrawPartyMenu falls through into DrawPartyMenuCommon, exactly as pret does.
+; Do NOT insert anything between them.
+; ---------------------------------------------------------------------------
 DrawPartyMenu:
-    jmp DrawPartyMenu_
+    mov esi, DrawPartyMenu_             ; ld hl, DrawPartyMenu_
+    jmp DrawPartyMenuCommon             ; jr DrawPartyMenuCommon
+
 RedrawPartyMenu:
-    jmp RedrawPartyMenu_
+    mov esi, RedrawPartyMenu_           ; ld hl, RedrawPartyMenu_
+    ; fallthrough into DrawPartyMenuCommon (pret's own fallthrough)
+
+DrawPartyMenuCommon:
+    mov bh, PARTY_MENU_BANK             ; ld b, BANK(RedrawPartyMenu_)
+    jmp Bankswitch                      ; jp Bankswitch
 
 PartyMenuInit:
     ; ld a,1 / call BankswitchHome — flat memory: no bank to switch
@@ -644,4 +673,32 @@ GetCryData:
     rol al, 1                               ; rlca  (* 2)
     add al, bh                              ; add b  (* 3)
     add al, bl                              ; add c
+    ret
+
+; ---------------------------------------------------------------------------
+; OverwritewMoves — pret home/pokemon.asm:OverwritewMoves.
+; "Write c to [wMoves + b]. Unused." — pret's own comment, and it is accurate:
+; zero callers upstream, so this is unlinked here too. Ported anyway per the
+; maintainer's 2026-08-23 direction that unused pret routines are ported when
+; they are genuinely portable in this framework, for completeness and bug
+; compatibility. Uncalled code does not run, so this carries no runtime risk.
+; In: BH = index (pret B), BL = value (pret C).
+; ---------------------------------------------------------------------------
+OverwritewMoves:
+    movzx esi, bh                       ; ld e,b / ld d,0 / add hl,de
+    add esi, wMoves                     ; ld hl, wMoves
+    mov al, bl                          ; ld a, c
+    mov [ebp + esi], al                 ; ld [hl], a
+    ret
+
+; ---------------------------------------------------------------------------
+; GetwMoves — pret home/pokemon.asm:GetwMoves.
+; "Unused. Returns the move at index a from wMoves in a" — again pret's own
+; comment, and again zero callers upstream. Same rationale as OverwritewMoves.
+; In: AL = index (pret A).  Out: AL = [wMoves + index].
+; ---------------------------------------------------------------------------
+GetwMoves:
+    movzx esi, al                       ; ld c,a / ld b,0 / add hl,bc
+    add esi, wMoves                     ; ld hl, wMoves
+    mov al, [ebp + esi]                 ; ld a, [hl]
     ret

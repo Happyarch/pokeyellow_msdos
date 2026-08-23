@@ -1089,7 +1089,7 @@ PromptText:
     ; PromptText; restoring pret's order lets the duplication go. Do not insert a
     ; body between them — see memory regression-pokemon-evolution-fallthrough-severed
     ; for what that costs elsewhere in this tree.
-    ; DEVIATION{class=timing; pret=home/text.asm:PromptText; behavior=pret's unconditional ProtectedDelay3 before the wait is NOT called here, though it IS called at pret's other three sites (_ContText, PageChar, Paragraph); evidence=MEASURED 2026-08-22 - adding it PARKS item_potion_use and battle_thrash forever, item_potion_use still reading wLetterPrintingDelayFlags $03 at frame 1600 (an open TextCommandProcessor session, not a slow one), because the port's fixed-frame autokey scripts tap A once per message while dialog_window_scroll needs a FRESH press, so a tap that now completes during the 3-frame delay is never seen - the mGBA side does not park because its Lua taps repeatedly, and the three other sites were each verified clean on both scenarios; lifetime=until the two scenarios' port-side press trains are retimed to survive a wait that starts 3 frames later}
+    call ProtectedDelay3                ; pret: call ProtectedDelay3, before the wait
     mov eax, [text_prompt_hook]
     test eax, eax
     jz .prompt_overworld

@@ -67,6 +67,11 @@ from pathlib import Path
 import sqlite3
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import port_scope        # noqa: E402  the ONE reader for the exclusion registry
+
+_EXCLUDED = port_scope.load()
 import tempfile
 import threading
 import webbrowser
@@ -278,7 +283,15 @@ def build_graph(con, side, annotations=None):
     for row in label_rows:
         if side == "pret" and row["pret_file"] is None:
             continue
-        row["display_status"] = "unported" if row["status"] == "missing" else row["status"]
+        # OUT OF SCOPE beats `missing`: a label declared UNPORTABLE in
+        # tools/port_scope_exclusions.json must not read as "unported" to an
+        # agent hunting for work. The node stays in the graph, carrying the
+        # reason — excluded, never hidden.
+        if row["name"] in _EXCLUDED:
+            row["display_status"] = "out-of-scope"
+            row["out_of_scope_reason"] = _EXCLUDED[row["name"]]["reason"]
+        else:
+            row["display_status"] = "unported" if row["status"] == "missing" else row["status"]
         row["providers"] = []
         nodes[row["name"]] = row
     defs = collections.defaultdict(list)

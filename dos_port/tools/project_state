@@ -38,6 +38,11 @@ import re
 import sqlite3
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import port_scope        # noqa: E402  the ONE reader for the exclusion registry
+
+_EXCLUDED = port_scope.load()
 from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -175,6 +180,14 @@ def main():
                              else "not-applicable"),
             "debug_reachability": "unknown",
             "coverage": [], "deviation": deviation,
+            # OUT OF SCOPE: declared UNPORTABLE in tools/port_scope_exclusions.json
+            # (maintainer-controlled), not merely unported. The row is still
+            # emitted — excluded, never hidden — so a consumer filters on this
+            # field rather than wondering where a label went. Anything that
+            # totals "what is left to write" should drop these; anything auditing
+            # coverage should keep them and say they were excluded.
+            "out_of_scope": row["name"] in _EXCLUDED,
+            "out_of_scope_reason": _EXCLUDED.get(row["name"], {}).get("reason"),
         })
     if args.json:
         json.dump(records, sys.stdout, indent=2)
