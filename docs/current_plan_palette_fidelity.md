@@ -9,6 +9,80 @@ It is **reporting-only**: `golden_diff.py` prints divergences but does not fail
 on them (`PALETTE_GATING = False`). This file is the work needed to flip that to
 `True`.
 
+## RE-MEASURED 2026-08-23 (the plan's own last box)
+
+`fidelity-full`, 90 scenarios, current HEAD: **525 divergences across 45 scenarios**
+(the 2026-08-11 snapshot this file is written against was 523 across 42). The headline
+has not moved, but the DISTRIBUTION has, and one family is closed:
+
+* **`status_p1` and `status_p2` now report ZERO.** The "Live mon / HP-bar palettes"
+  box below says `status_p1` is "exactly 6 divergences"; that is stale. The status
+  half of that box is DONE. The item screens are not — `item_pp_restore` 28,
+  `item_potion_use` 20, `item_tm_teach` 20, `item_stone_evolve` 11 — so the box stays
+  open for those.
+
+Worst offenders now:
+
+| scenario | divergences |
+| --- | --- |
+| `trainer_battle_loss` | 48 |
+| `trainer_battle_init` | 36 |
+| `item_pp_restore` | 28 |
+| `trainer_battle_win` | 28 |
+| `battle_blackout` | 24 |
+| `fish_old_rod` | 24 |
+| `continue_seed` | 20 |
+| `item_potion_use` | 20 |
+| `item_tm_teach` | 20 |
+| `main_menu` | 16 |
+| `ball_catch` | 12 |
+| `item_stone_evolve` | 11 |
+
+### The blackout family is SHARPER than this file records — read this before probing it
+
+The "Blackout / loss path" box below asks for the next probe to be "find which of
+those four repaints". **That is the wrong question, and the divergence values
+themselves prove it.** No repaint is involved: BOTH SIDES HOLD `PAL_BLACK` IN THE
+SLOTS, and the entire divergence is the DMG palette register at the dump point.
+
+The proof needs no new run, only pret's own data. `CGBBasePalettes`' `PAL_BLACK` row
+(`data/sgb/sgb_palettes.asm:79`) is
+
+    RGB 31,31,31,  03,03,03,  03,03,03,  03,03,03      ; colour 0 is WHITE
+
+and `ComposeCGBPalettes` (`src/debug/debug_dump.asm`) maps each of the four entries
+through `IO_BGP`, exactly as `commit_palette` does — colour c takes base index
+`(BGP >> 2c) & 3`. So:
+
+* the port reports all four entries `(31,31,31)` = base index **0** for every field,
+  which happens only when `IO_BGP == 0`;
+* hardware reports all four `(3,3,3)` = base index **1, 2 or 3** for every field,
+  which happens only when no field of `rBGP` is 0.
+
+Both readings are consistent with the same `PAL_BLACK` sitting in the slots. The port
+is not white because it lost the black-out; it is white because `GBPalWhiteOut`
+(faithfully — pret's own `EndOfBattle` tail calls it) has already zeroed `rBGP` by
+the time the oracle dumps, and index 0 of `PAL_BLACK` is white.
+
+So this is the SAME DUMP-POINT ASYMMETRY already diagnosed for `battle_blackout`
+further down, in the opposite direction: the golden's Lua stops as soon as the
+blackout cleanup conditions hold, plausibly still inside the fade, while the port's
+`DEBUG_TRAINER_LOSS` oracle calls `EndOfBattle` / `FinalizeTrainerBattleOutcome` /
+`EndTrainerBattle` / `ResetStatusAndHalveMoneyOnBlackout` straight through and lands
+after `GBPalWhiteOut`.
+
+**NEXT PROBE, and it is one cheap measurement, not a code hunt:** add `rBGP` /
+`rOBP0` / `rOBP1` to the compared regions (or read them live on both sides) and
+confirm the two dump points hold different register values with identical slot
+palettes. If they do, this family is a harness alignment question and NOT 108 port
+defects — `trainer_battle_loss` 48 + `trainer_battle_init` 36 + `trainer_battle_win`
+28 is a fifth of the whole backlog resting on that one question.
+
+DO NOT re-derive the "which repaint" hunt: `HandlePlayerBlackOut` is faithful
+(faithdiff 6/6, stores 1/1) and `GBPalWhiteOut` is faithful (it writes only the three
+DMG registers and arms `g_pal_dirty`; it does not touch `bg_slot_pal`/`obj_slot_pal`).
+Both were checked on 2026-08-23.
+
 ## Why reporting-only rather than masked
 
 The region found a real backlog on its first run. The alternative — masking the
@@ -414,8 +488,13 @@ across 42 scenarios**.
   `home/palettes.asm:GBPalWhiteOut` (zero), `home/fade.asm` x3 (`LoadGBPal`,
   `GBFadeIncCommon`, `GBFadeDecCommon`), plus battle/minigame sites. Start by
   finding which of those runs before each failing checkpoint on hardware.
-- [ ] **Live mon / HP-bar palettes — status and item screens.** Measured:
-  `status_p1` is exactly 6 divergences, `BG pal0/1` and `OBJ pal0/1`, e.g.
+- [ ] **Live mon / HP-bar palettes — the STATUS half is DONE, the ITEM screens are
+  not.** RE-MEASURED 2026-08-23: `status_p1` and `status_p2` both report **zero**
+  palette divergences now. What remains under this heading is the item screens —
+  `item_pp_restore` 28, `item_potion_use` 20, `item_tm_teach` 20,
+  `item_stone_evolve` 11. The 2026-08-11 measurement below is kept for its
+  description of the mechanism, but its `status_p1` numbers are stale:
+  `status_p1` was exactly 6 divergences, `BG pal0/1` and `OBJ pal0/1`, e.g.
   `BG pal0 colour1: rom=(31,31,0) port=(16,31,4)` and `colour2: rom=(0,31,0)
   port=(11,23,31)`. The rom values are HP-bar / mon palettes (green, yellow,
   brown); the port has `PAL_ROUTE` throughout, i.e. it never installs the live
@@ -693,7 +772,10 @@ colours 1-3 of the four OBP1-derived palettes, with colour 0 matching because it
 is white on both sides. Do not open a separate battle investigation for those
 five; they close when `IO_OBP1` closes. Only the blackout/loss shape is
 battle-specific.
-- [ ] **Re-measure the remainder** after each family closes; the counts in this
+- [x] **Re-measure the remainder** — done 2026-08-23, see the block at the top of
+      this file: 525 across 45 scenarios, `status_p1`/`status_p2` closed, and the
+      blackout family re-diagnosed as a probable dump-point asymmetry rather than
+      108 port defects. Re-run it after each family closes; the counts in this
   file are from the 2026-08-11 runs and will drift.
 - [ ] **Flip `PALETTE_GATING = True`** in `tools/golden_diff.py` once the count
   reaches zero, and delete this file per the active-plan convention.
