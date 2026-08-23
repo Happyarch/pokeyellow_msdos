@@ -2709,6 +2709,7 @@ extern CheckIfMoveIsKnown         ; engine/items/tmhm.asm (callfar) — CF = alr
 extern LearnMove                  ; engine/pokemon/learn_move.asm (predef) — out: BH
 extern GetMoveName                ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
 extern IsThisPartyMonStarterPikachu ; engine/pikachu/pikachu_status.asm — CF = yes
+extern PlayPikachuSoundClip       ; src/audio/pikachu_pcm.asm — DL = 0-based clip index
 extern GBPalWhiteOutWithDelay3    ; src/home/palettes.asm
 extern BootedUpTMText_ref
 extern BootedUpHMText_ref
@@ -2854,12 +2855,16 @@ ItemUseTMHM:
 ; and wEvoDataBuffer has no reason to exist. The scan itself — entry strides, the
 ; EVOLVE_ITEM item-id compare, the CF contract — is byte-for-byte pret's.
 ;
-; DEVIATION{class=HAL; pret=engine/items/item_effects.asm:ItemUseEvoStone; behavior=player Pikachu's evolution refusal omits PikachuCry28 playback; evidence=pret .pikachu branch calls PlayPikachuSoundClip while the port PCM path remains deferred Phase 3 hardware work; lifetime=until Pikachu PCM playback is live}
-; pret's player-Pikachu refusal plays PikachuCry28 through
-; PlayPikachuSoundClip (ldpikacry / callfar). The Pikachu PCM path is Phase 3
-; audio work; the cry is a TODO-HW no-op here. Everything else on that branch —
-; GetPartyMonName, RefusingText, the emotion/mood writes, the "item not used"
-; tail — is faithful.
+; THE PIKACHU REFUSAL CRY IS WIRED as of 2026-08-23. This carried a
+; class=HAL deviation reading "omits PikachuCry28 playback ... the port PCM path
+; remains deferred Phase 3 hardware work; lifetime=until Pikachu PCM playback is
+; live". Phase 3 finished: PlayPikachuSoundClip is translated and linked at its
+; pret path (src/audio/pikachu_pcm.asm, dispatching to the Sound Blaster DSP or the
+; PC-speaker PWM player), and three other sites already call it. The stated
+; lifetime had been met and nothing re-read the annotation, so the branch is now
+; pret's: ldpikacry e, PikachuCry28 / callfar PlayPikachuSoundClip, then
+; GetPartyMonName, RefusingText, the emotion/mood writes and the "item not used"
+; tail — all of which were already faithful.
 
 extern EvosMovesPointerTable        ; src/data/pokemon/evos_moves.asm — flat dd TABLE (never call it)
 extern WaitForSoundToFinish         ; src/home/delay.asm
@@ -2891,7 +2896,13 @@ ItemUseEvoStone:
     jnc .noEffect
     call IsThisPartyMonStarterPikachu   ; callfar — CF = it's the player's Pikachu
     jnc .notPlayerPikachu
-    ; TODO-HW: pret plays PikachuCry28 via PlayPikachuSoundClip (Phase 3 audio).
+    ; ldpikacry e, PikachuCry28 lowers to a literal: pret's macro is
+    ; `(X_id - PikachuCriesPointerTable) / 3`, a cross-object-file difference NASM
+    ; cannot fold, and the table is strictly ordinal, so PikachuCryN is index N-1.
+    ; Same lowering src/scripts/OaksLab.asm uses for PikachuCry2 -> 1 and
+    ; engine/movie/hall_of_fame.asm for PikachuCry35 -> 34.
+    mov dl, 27                          ; ldpikacry e, PikachuCry28
+    call PlayPikachuSoundClip           ; callfar PlayPikachuSoundClip
     mov al, [ebp + wWhichPokemon]
     mov esi, wPartyMonNicks
     call GetPartyMonName
