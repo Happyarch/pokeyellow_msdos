@@ -848,9 +848,21 @@ excluded from the fidelity tiers by class. Open maintainer items: the 19-char
 address cap (above) and SetupPlayerAndEnemyPokeballs OAM placement (Stage 4).
 
 ### Stage 6 — IPX
-- [ ] `ipx_dos.asm` (detect, socket `/IPXSOCK=`, DOS-memory ECBs, poll loop,
-      broadcast discovery + direct net:node address from the book);
-      linkcheck IPXNET variant; rerun the Stage 3/4 scenario battery
+- [x] `ipx_dos.asm` (Stage 6 commit): detection INT 2F/AX=7A00 (DPMI 0300h),
+      all calls via the real-mode far entry (DPMI 0301h — first user, pattern
+      documented in the file header), `/IPX` + `/IPXSOCK=` flags, DOS-memory
+      ECBs polled from `ipx_dos_pump` (Relinquish Control + listen-ECB drain),
+      datagram↔byte-stream staging adaptation grounded in net_frame.asm's
+      atomic-burst property, broadcast AUTO discovery + direct net:node from
+      the book (link_ui_connect_attempt's IPX arm is real; success propagates
+      to LinkTransportSelect). Review note: the IPX net_vt_start row is
+      net_uart_start itself (pure session-arm logic) so kicks fire on the
+      game's NetHAL_StartTransfer edges, never on stale polled IO_SC.
+      linkcheck.sh TRANSPORT=ipx variant ([ipx] conf + ipxnet autoexec lines,
+      port 213). STATIC ONLY — the battery reruns the Stage 3/4 harnesses
+      over IPX (tradecheck/battlecheck stay serial-only until then) and
+      validates the 600-byte payload cap vs DOSBox-X's IPX MTU + partial-init
+      retry (flagged in-code)
 
 ### Stage 7 — native TCP
 - [ ] Slirp reachability spike FIRST (two NE2000+slirp guests are NATed
