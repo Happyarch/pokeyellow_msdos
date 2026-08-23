@@ -544,10 +544,34 @@ _InitBattleCommon:
     mov [ebp + wActionResultOrTookBattleTurn], al
     inc al                                       ; inc a
     mov [ebp + wFirstMonsNotOutYet], al          ; ld [wFirstMonsNotOutYet], a
-    ; pret :142-154 (.findFirstAliveEnemyMonLoop) feeds ONLY
-    ; wSerialExchangeNybbleReceiveData, the link-battle mailbox that
-    ; EnemySendOutFirstMon's link arm reads — deferred with that arm
-    ; (TODO-HW: network HAL, Phase 4).
+    ; pret StartBattle:142-154 (.findFirstAliveEnemyMonLoop) — find the first
+    ; non-fainted enemy party mon and seed wSerialExchangeNybbleReceiveData
+    ; with its slot index + 4 (d starts at 3, inc before the first test).
+    ; RESTORED 2026-08-23 (link cable Stage 8 sweep): this used to be deferred
+    ; "with that arm (TODO-HW: network HAL, Phase 4)" — but the arm went LIVE
+    ; in Stage 4 step 2 (EnemySendOutFirstMon's link path reads this mailbox
+    ; and subtracts 4 for wWhichPokemon), so without the seed a link battle's
+    ; FIRST send-out read whatever the cable-club exchange last left there.
+    ; pret runs the loop unconditionally (non-link battles never read the
+    ; byte), and mGBA does too, so the write CONVERGES the port with the
+    ; golden ground truth. Unbounded like pret's (assumes >=1 alive enemy
+    ; mon — the battle could not have started otherwise); counter kept 8-bit
+    ; in DH per the width rule.
+    mov esi, wEnemyMon1HP                        ; ld hl, wEnemyMon1HP
+    mov bx, PARTYMON_STRUCT_LENGTH - 1           ; ld bc, PARTYMON_STRUCT_LENGTH - 1
+    mov dh, 3                                    ; ld d, $3
+.findFirstAliveEnemyMonLoop:
+    inc dh                                       ; inc d
+    mov al, [ebp + esi]                          ; ld a, [hli]
+    inc esi
+    or al, [ebp + esi]                           ; or [hl] — ZF feeds the jr nz
+    jnz .foundFirstAliveEnemyMon                 ; jr nz, .foundFirstAliveEnemyMon
+    movzx eax, bx
+    add esi, eax                                 ; add hl, bc (net stride = struct len)
+    jmp .findFirstAliveEnemyMonLoop              ; jr .findFirstAliveEnemyMonLoop
+.foundFirstAliveEnemyMon:
+    mov al, dh                                   ; ld a, d
+    mov [ebp + wSerialExchangeNybbleReceiveData], al
     ;
     ; pret StartBattle:155-160 — a TRAINER battle sends out the enemy's first
     ; mon HERE, after the intro: EnemySendOutFirstMon slides the trainer pic
