@@ -84,6 +84,11 @@ TEXT_SCRIPT_FAR = [
     "_PokemonText",
 ]
 
+# engine/movie/oak_speech/clear_save.asm's "CLEAR ALL SAVE DATA?" prompt.
+CLEAR_SAVE_FAR = [
+    "_ClearSaveDataText",
+]
+
 # engine/events/elevator.asm's floor prompt.
 ELEVATOR_FAR = [
     "_WhichFloorText",
@@ -264,6 +269,8 @@ def main() -> int:
          "Sign / boulder / ledge FAR text streams for home/overworld_text.asm"),
         ("pokecenter_chansey_text", POKECENTER_CHANSEY_FAR,
          "Nurse's Chansey message for engine/events/pokecenter_chansey.asm"),
+        ("clear_save_text", CLEAR_SAVE_FAR,
+         "CLEAR ALL SAVE DATA? prompt for engine/movie/oak_speech/clear_save.asm"),
         ("elevator_text", ELEVATOR_FAR,
          "Elevator floor-prompt FAR text stream for engine/overworld/elevator.asm"),
         ("oaks_aide_text", OAKS_AIDE_FAR,

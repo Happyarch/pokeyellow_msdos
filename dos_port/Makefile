@@ -4127,6 +4127,7 @@ src/engine/battle/used_move_text.o: assets/used_move_text.inc
 src/engine/movie/hall_of_fame.o: assets/hall_of_fame_text.inc assets/audio_constants.inc assets/event_constants.inc
 src/data/pokemon/unknown_list.o: assets/unknown_list.inc
 src/engine/movie/credits.o: assets/credits_data.inc assets/the_end_2bpp.inc assets/audio_constants.inc
+src/engine/movie/oak_speech/clear_save.o: assets/clear_save_text.inc
 src/engine/pokemon/evos_moves.o: assets/script_constants.inc
 
 # Trainer-card tile graphics (box/bg/blank-names/badge-numbers/colon/circle),

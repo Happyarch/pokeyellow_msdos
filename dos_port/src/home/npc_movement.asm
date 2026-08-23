@@ -27,6 +27,23 @@ extern PlayerStepOutFromDoor              ; src/engine/overworld/auto_movement.a
 ; down from a door, or joypad states are being simulated. Returns Z otherwise.
 ; Callers read only ZF (pret: `jr nz, ...`). Clobbers AL.
 ; ---------------------------------------------------------------------------
+; ---------------------------------------------------------------------------
+; DebugPressedOrHeldB — pret home/npc_movement.asm:51, "dummy except in _DEBUG".
+;
+; pret guards the BODY with `IF DEF(_DEBUG)` (read B from hJoyHeld/hJoyPressed to
+; skip trainer battles, the Safari step counter and some NPC scripts) and falls
+; through to a bare `ret` otherwise. Retail Yellow ships with _DEBUG unset, so the
+; shipped routine IS this `ret` — which is what the port carries.
+;
+; Its CALL SITES are a different question and are correctly absent: every one of
+; them (home/trainers.asm:CheckFightingMapTrainers, safari_game.asm, and eight map
+; scripts) sits INSIDE its own `IF DEF(_DEBUG)` block, so a release build does not
+; call it at all. Checked 2026-08-23 — do not "restore" those calls.
+; ---------------------------------------------------------------------------
+global DebugPressedOrHeldB
+DebugPressedOrHeldB:
+    ret
+
 IsPlayerCharacterBeingControlledByGame:
     mov al, [ebp + wNPCMovementScriptPointerTableNum]
     test al, al
