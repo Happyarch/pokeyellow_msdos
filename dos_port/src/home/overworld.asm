@@ -2122,7 +2122,15 @@ global HandleMidJump
 global WarpFound2
 global CheckMapConnections
 global CopyMapConnectionHeader
+global ScheduleNorthRowRedraw
+global CopyToRedrawRowOrColumnSrcTiles
+global ScheduleSouthRowRedraw
+global ScheduleEastColumnRedraw
+global ScheduleColumnRedrawHelper
+global ScheduleWestColumnRedraw
 global DrawTileBlock
+global CopyMapViewToVRAM
+global CopyMapViewToVRAM2
 global FinishReloadingMap
 global LoadCurrentMapView
 global LoadDestinationWarpPosition
@@ -3426,6 +3434,173 @@ AdvancePlayerSprite:
     pop eax
     ret
 
+
+; ═══════════════════════════════════════════════════════════════════════════
+; THE VRAM-TORUS REDRAW RING — six faithful mirrors, deliberately UNREACHED.
+;
+; pret home/overworld.asm:1450-1538. These six stage one 2-tile-wide strip of the
+; screen into wRedrawRowOrColumnSrcTiles and point hRedrawRowOrColumnDest at the
+; place in the GB's 256x256 vBGMap0 tilemap torus where RedrawRowOrColumn should
+; DMA it during the next VBlank. That is how the GB scrolls the overworld: the
+; camera walks a sampling window over a wrapping 32x32 tilemap, and only the
+; column or row entering view is rewritten.
+;
+; The port does not scroll that way. render_bg (src/ppu/ppu.asm) decodes
+; wSurroundingTiles into a 48x36-tile surface through tile_cache and blits a
+; 320x200 window out of it at a signed pixel offset, so the strip these would
+; stage is already on screen the moment LoadCurrentMapView rebuilds it. Every
+; pret CALL to them is therefore dropped, each drop annotated at its own site
+; (_AdvancePlayerSprite, ShakeElevatorRedrawRow, RedrawMapView, VermilionDock).
+;
+; They are mirrored here anyway, per the maintainer's 2026-08-23 direction that
+; genuinely portable pret routines are ported for completeness even when they
+; stay unlinked. Uncalled code does not run, so this carries no runtime risk.
+; Their consumer RedrawRowOrColumn (src/home/vcopy.asm) was already ported on the
+; same basis and is what these are written to interoperate with.
+;
+; *** GEOMETRY: GB, NOT THE PORT CANVAS — and that is load-bearing. ***
+; SCREEN_WIDTH/SCREEN_HEIGHT are 40/25 in this port (the extended viewport);
+; on the GB they are 20/18. These routines are written against the GB values,
+; hardcoded and named below, for two reasons:
+;   1. Their OUTPUT contract is GB-shaped. wRedrawRowOrColumnSrcTiles is 40 bytes
+;      (pret's `ds SCREEN_WIDTH * 2` at GB width), and RedrawRowOrColumn consumes
+;      exactly 18 column entries or two 20-wide half-rows. Substituting the port's
+;      25 into ScheduleColumnRedrawHelper would write 50 bytes into that 40-byte
+;      buffer — a WRAM overrun, not a wider redraw.
+;   2. Their DESTINATION is the GB tilemap torus ($9800, 32 wide, wrapping via
+;      `and $03 / or $98`), which the port's canvas size does not change.
+; src/home/vcopy.asm:RedrawRowOrColumn hardcodes the same GB values for the same
+; reason; these match it deliberately.
+;
+; CONSEQUENCE FOR ANY FUTURE WIRING: reading a GB-geometry 20-wide row out of the
+; port's 40-stride wTileMap does not address the cells a caller would mean. That
+; is inherent to the mechanism, not a translation defect — the GB strip and the
+; port canvas are different shapes. Wiring these up is therefore a geometry
+; decision to be taken deliberately, not a matter of restoring the dropped calls.
+; ═══════════════════════════════════════════════════════════════════════════
+
+GB_SCREEN_WIDTH   equ 20      ; pret SCREEN_WIDTH  (this port's is 40)
+GB_SCREEN_HEIGHT  equ 18      ; pret SCREEN_HEIGHT (this port's is 25)
+HIGH_VBGMAP0      equ (vBGMap0 >> 8)   ; $98 — pret's literal `or $98`
+
+; ---------------------------------------------------------------------------
+; ScheduleNorthRowRedraw — pret home/overworld.asm:ScheduleNorthRowRedraw.
+; Stages screen row 0 (2 rows) and aims it at the current map-view VRAM pointer.
+; ---------------------------------------------------------------------------
+ScheduleNorthRowRedraw:
+    mov esi, wTileMap                            ; hlcoord 0, 0
+    call CopyToRedrawRowOrColumnSrcTiles
+    mov al, [ebp + wMapViewVRAMPointer]          ; ld a, [wMapViewVRAMPointer]
+    mov [ebp + hRedrawRowOrColumnDest], al
+    mov al, [ebp + wMapViewVRAMPointer + 1]      ; ld a, [wMapViewVRAMPointer + 1]
+    mov [ebp + hRedrawRowOrColumnDest + 1], al
+    mov al, REDRAW_ROW                            ; ld a, REDRAW_ROW
+    mov [ebp + hRedrawRowOrColumnMode], al       ; ldh [hRedrawRowOrColumnMode], a
+    ret
+
+; ---------------------------------------------------------------------------
+; CopyToRedrawRowOrColumnSrcTiles — pret home/overworld.asm:1461.
+; Copies 2 * SCREEN_WIDTH contiguous tiles from [HL] into the staging buffer.
+;
+; In: ESI = source (HL). Out: ESI advanced by 40. Clobbers AL, BL(c), EDX(de).
+; ---------------------------------------------------------------------------
+CopyToRedrawRowOrColumnSrcTiles:
+    mov edx, wRedrawRowOrColumnSrcTiles          ; ld de, wRedrawRowOrColumnSrcTiles
+    mov bl, 2 * GB_SCREEN_WIDTH                  ; ld c, 2 * SCREEN_WIDTH (= 40)
+.loop:
+    mov al, [ebp + esi]                          ; ld a, [hli]
+    inc esi
+    mov [ebp + edx], al                          ; ld [de], a
+    inc edx                                      ; inc de
+    dec bl                                       ; dec c — 8-bit, as on the GB
+    jnz .loop                                    ; jr nz, .loop
+    ret
+
+; ---------------------------------------------------------------------------
+; ScheduleSouthRowRedraw — pret home/overworld.asm:ScheduleSouthRowRedraw.
+; Stages screen rows 16-17 and aims them $200 bytes past the map-view pointer,
+; wrapped back inside the 1 KiB tilemap by pret's `and $03 / or $98`.
+; ---------------------------------------------------------------------------
+ScheduleSouthRowRedraw:
+    mov esi, wTileMap + 16 * GB_SCREEN_WIDTH     ; hlcoord 0, 16
+    call CopyToRedrawRowOrColumnSrcTiles
+    ; pret: ld l,[wMapViewVRAMPointer] / ld h,[+1] — the pointer is stored low
+    ; byte first, so the pair is one 16-bit load into HL (= ESI).
+    movzx esi, word [ebp + wMapViewVRAMPointer]
+    add si, 0x200                                ; ld bc, $200 / add hl, bc (wraps at 16 bits)
+    mov ax, si                                   ; AH = h, AL = l
+    and ah, 0x03                                 ; ld a,h / and $03 — stay inside TILEMAP_AREA
+    or  ah, HIGH_VBGMAP0                         ; or $98 — HIGH(vBGMap0)
+    mov [ebp + hRedrawRowOrColumnDest + 1], ah
+    mov [ebp + hRedrawRowOrColumnDest], al       ; ld a, l
+    mov al, REDRAW_ROW                            ; ld a, REDRAW_ROW
+    mov [ebp + hRedrawRowOrColumnMode], al       ; ldh [hRedrawRowOrColumnMode], a
+    ret
+
+; ---------------------------------------------------------------------------
+; ScheduleEastColumnRedraw — pret home/overworld.asm:ScheduleEastColumnRedraw.
+; Stages screen columns 18-19 and aims them 18 tiles right of the map-view
+; pointer, wrapped inside the tilemap ROW by pret's `and $e0` / `and $1f` split.
+; ---------------------------------------------------------------------------
+ScheduleEastColumnRedraw:
+    mov esi, wTileMap + 18                       ; hlcoord 18, 0
+    call ScheduleColumnRedrawHelper
+    mov al, [ebp + wMapViewVRAMPointer]          ; ld a, [wMapViewVRAMPointer]
+    mov bl, al                                   ; ld c, a
+    and al, 0xE0                                 ; and $e0 — keep the row bits
+    mov bh, al                                   ; ld b, a
+    mov al, bl                                   ; ld a, c
+    add al, 18                                   ; add 18
+    and al, 0x1F                                 ; and $1f — wrap within the row
+    or  al, bh                                   ; or b
+    mov [ebp + hRedrawRowOrColumnDest], al
+    mov al, [ebp + wMapViewVRAMPointer + 1]
+    mov [ebp + hRedrawRowOrColumnDest + 1], al
+    mov al, REDRAW_COL                            ; ld a, REDRAW_COL
+    mov [ebp + hRedrawRowOrColumnMode], al       ; ldh [hRedrawRowOrColumnMode], a
+    ret
+
+; ---------------------------------------------------------------------------
+; ScheduleColumnRedrawHelper — pret home/overworld.asm:1509.
+; Gathers a 2-wide, SCREEN_HEIGHT-tall column out of [HL] into the staging
+; buffer, stepping one screen row per iteration.
+;
+; In: ESI = source (HL). Clobbers AL, BL(c), EDX(de), ESI.
+; ---------------------------------------------------------------------------
+ScheduleColumnRedrawHelper:
+    mov edx, wRedrawRowOrColumnSrcTiles          ; ld de, wRedrawRowOrColumnSrcTiles
+    mov bl, GB_SCREEN_HEIGHT                     ; ld c, SCREEN_HEIGHT (= 18)
+.loop:
+    mov al, [ebp + esi]                          ; ld a, [hli]
+    inc esi
+    mov [ebp + edx], al                          ; ld [de], a
+    inc edx
+    mov al, [ebp + esi]                          ; ld a, [hl]
+    mov [ebp + edx], al                          ; ld [de], a
+    inc edx
+    ; pret: ld a, SCREEN_WIDTH - 1 / add l / ld l, a / jr nc / inc h — a 16-bit
+    ; add done as low byte plus explicit carry, i.e. hl += 19. Combined with the
+    ; single `hli` above, the net step is one full screen row.
+    add esi, GB_SCREEN_WIDTH - 1
+    dec bl                                       ; dec c — 8-bit, as on the GB
+    jnz .loop
+    ret
+
+; ---------------------------------------------------------------------------
+; ScheduleWestColumnRedraw — pret home/overworld.asm:ScheduleWestColumnRedraw.
+; Stages screen columns 0-1 straight at the map-view pointer.
+; ---------------------------------------------------------------------------
+ScheduleWestColumnRedraw:
+    mov esi, wTileMap                            ; hlcoord 0, 0
+    call ScheduleColumnRedrawHelper
+    mov al, [ebp + wMapViewVRAMPointer]
+    mov [ebp + hRedrawRowOrColumnDest], al
+    mov al, [ebp + wMapViewVRAMPointer + 1]
+    mov [ebp + hRedrawRowOrColumnDest + 1], al
+    mov al, REDRAW_COL                            ; ld a, REDRAW_COL
+    mov [ebp + hRedrawRowOrColumnMode], al       ; ldh [hRedrawRowOrColumnMode], a
+    ret
+
 ; ---------------------------------------------------------------------------
 ; DrawTileBlock — faithful translation.
 ; Pret ref: home/overworld.asm:DrawTileBlock
@@ -4070,7 +4245,7 @@ LoadMapData:
     mov esi, [esi + eax*4]
     mov [w_map_text_table_ptr], esi
     call InitMapSprites                 ; pret: InitMapSprites (load sprite tile patterns)
-    ; DEVIATION{class=HAL; pret=home/overworld.asm:LoadMapData; behavior=pret's `call CopyMapViewToVRAM` after LoadScreenRelatedData is dropped, and with it both CopyMapViewToVRAM and its CopyMapViewToVRAM2 entry point have no port body; evidence=the routine copies the 20x18 wTileMap into the vBGMap0 tilemap for the hardware PPU to scan, and the port has no such scan - render_bg in src/ppu/ppu.asm decodes wSurroundingTiles into a 48x36-tile surface through tile_cache and blits a 320x200 window out of it every frame, so the tilemap the copy would fill is never read, see CLAUDE.md on render_bg and the removal of the 256x256 VRAM torus - the other drop site is ReloadMapAfterSurfingMinigame in this file which carries its own annotation; lifetime=permanent, structural to the surface renderer}
+    ; DEVIATION{class=HAL; pret=home/overworld.asm:LoadMapData; behavior=pret's `call CopyMapViewToVRAM` after LoadScreenRelatedData is dropped, so the map view is never copied into the GB tilemap, though CopyMapViewToVRAM and its CopyMapViewToVRAM2 entry point both have faithful port bodies in this file which nothing reaches; evidence=the routine copies the 20x18 wTileMap into the vBGMap0 tilemap for the hardware PPU to scan, and the port has no such scan - render_bg in src/ppu/ppu.asm decodes wSurroundingTiles into a 48x36-tile surface through tile_cache and blits a 320x200 window out of it every frame, so the tilemap the copy would fill is never read, see CLAUDE.md on render_bg and the removal of the 256x256 VRAM torus - the other drop site is ReloadMapAfterSurfingMinigame in this file which carries its own annotation; lifetime=permanent, structural to the surface renderer}
     ; OW-A.5: pret calls LoadScreenRelatedData ONCE (home/overworld.asm:1967) then
     ; CopyMapViewToVRAM. The port's LoadScreenRelatedData (LoadTileBlockMap +
     ; LoadTilesetTilePatternData + LoadCurrentMapView) is idempotent and its
@@ -4110,7 +4285,7 @@ LoadScreenRelatedData:
 ; ReloadMapAfterSurfingMinigame — faithful translation.
 ; Pret ref: home/overworld.asm:ReloadMapAfterSurfingMinigame (:1991-2007)
 ; ---------------------------------------------------------------------------
-; DEVIATION{class=HAL; pret=home/overworld.asm:ReloadMapAfterSurfingMinigame; behavior=drops CopyMapViewToVRAM and CopyMapViewToVRAM2 and flattens ROM banking; evidence=native-width renderer renders wSurroundingTiles directly so VRAM tilemap copies are obsolete (OW-A.5), and the port uses a flat 32-bit address space; lifetime=permanent}
+; DEVIATION{class=HAL; pret=home/overworld.asm:ReloadMapAfterSurfingMinigame; behavior=drops the CopyMapViewToVRAM and CopyMapViewToVRAM2 calls and flattens ROM banking, the two routines themselves being mirrored earlier in this file but unreached; evidence=native-width renderer renders wSurroundingTiles directly so VRAM tilemap copies are obsolete (OW-A.5), and the port uses a flat 32-bit address space; lifetime=permanent}
 ReloadMapAfterSurfingMinigame:
     mov al, [ebp + hLoadedROMBank]
     push eax
@@ -4195,6 +4370,51 @@ ResetMapVariables:
     call hide_window                    ; count=0; sets hWY = RENDER_H
     mov byte [ebp + IO_WY], RENDER_H
     mov byte [ebp + IO_WX], 7
+    ret
+
+; ---------------------------------------------------------------------------
+; CopyMapViewToVRAM / CopyMapViewToVRAM2 — pret home/overworld.asm:2033.
+; Copies the 20x18 wTileMap screen into a 32-wide GB tilemap, skipping the 12
+; off-screen tiles at the end of each tilemap row. CopyMapViewToVRAM2 is pret's
+; second entry point, used when the caller wants a destination other than
+; vBGMap0 already in DE.
+;
+; In:  (CopyMapViewToVRAM2) EDX = destination GB tilemap address (DE).
+; Out: EDX/ESI advanced. Clobbers AL, EBX(bc), EDX, ESI, EDI.
+;
+; UNREACHED, like the six redraw routines above, and for the same reason: the
+; port has no hardware PPU scanning a GB tilemap. render_bg composites from
+; wSurroundingTiles / wTileMap directly, so vBGMap0 is written by nothing that
+; reads it back on the overworld path. Both pret call sites drop it, each
+; annotated at its own site (LoadMapData, ReloadMapAfterSurfingMinigame).
+; Geometry is GB's throughout — see the header on the redraw ring above.
+;
+; NOTE — `inc e`, NOT `inc de`. pret advances only the LOW byte inside the inner
+; loop and carries into D only on the row step, which is the 8-bit wrap the GB
+; hardware gives for free. Translating it as a 16-bit increment would silently
+; change the addressing at a page boundary, so the port keeps `inc dl`.
+; ---------------------------------------------------------------------------
+CopyMapViewToVRAM:
+    mov edx, vBGMap0                             ; ld de, vBGMap0
+CopyMapViewToVRAM2:
+    mov esi, wTileMap                            ; ld hl, wTileMap
+    mov bh, GB_SCREEN_HEIGHT                     ; ld b, SCREEN_HEIGHT (= 18)
+.vramCopyLoop:
+    mov bl, GB_SCREEN_WIDTH                      ; ld c, SCREEN_WIDTH (= 20)
+.vramCopyInnerLoop:
+    mov al, [ebp + esi]                          ; ld a, [hli]
+    inc esi
+    movzx edi, dx                                ; ld [de], a
+    mov [ebp + edi], al
+    inc dl                                       ; inc e — low byte only, as on the GB
+    dec bl                                       ; dec c — 8-bit
+    jnz .vramCopyInnerLoop
+    add dl, TILEMAP_WIDTH - GB_SCREEN_WIDTH      ; ld a, TILEMAP_WIDTH - SCREEN_WIDTH / add e / ld e, a
+    jnc .noCarry                                 ; jr nc, .noCarry
+    inc dh                                       ; inc d
+.noCarry:
+    dec bh                                       ; dec b — 8-bit
+    jnz .vramCopyLoop
     ret
 
 SwitchToMapRomBank:

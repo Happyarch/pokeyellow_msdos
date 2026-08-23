@@ -19,7 +19,8 @@
 ; observable side effect): pret itself notes it "does not appear to ever result
 ; in any visible effect"; its wMapViewVRAMPointer / vBGMap0 torus manipulation
 ; has no analog in the port's native-width renderer (the VRAM torus is gone), so
-; there is nothing to redraw. ; PROJ: no vBGMap ring in the port.
+; there is nothing to redraw. ScheduleNorthRowRedraw is mirrored in
+; src/home/overworld.asm but stays unreached. ; PROJ: no vBGMap ring in the port.
 ;
 ; Check-only.
 ;
@@ -105,7 +106,7 @@ ShakeElevator:
 ; observable effect (a Delay3). pret's VRAM-pointer/vBGMap0 rewrite has no
 ; native-renderer analog and produced no visible effect even on GB.
 ;
-; DEVIATION{class=HAL; pret=engine/overworld/elevator.asm:ShakeElevatorRedrawRow; behavior=the wMapViewVRAMPointer rewrite and the ScheduleNorthRowRedraw call are both dropped, leaving only pret's Delay3 tail, so this is one of the two sites at which ScheduleNorthRowRedraw has no port body; evidence=the routine walks the 256x256 VRAM tilemap torus pointer and schedules one 2-row VBlank strip copy, and the port has no torus - render_bg in src/ppu/ppu.asm composites the visible surface from wSurroundingTiles every frame - while pret's own source comments this routine as not resulting in any visible effect even on hardware, so the Delay3 is its entire observable behaviour on both sides, see this file header and CLAUDE.md on the removal of the torus and its rings; lifetime=permanent, structural to the surface renderer}
+; DEVIATION{class=HAL; pret=engine/overworld/elevator.asm:ShakeElevatorRedrawRow; behavior=the wMapViewVRAMPointer rewrite and the ScheduleNorthRowRedraw call are both dropped, leaving only pret's Delay3 tail, and while ScheduleNorthRowRedraw itself is mirrored in src/home/overworld.asm nothing reaches it; evidence=the routine walks the 256x256 VRAM tilemap torus pointer and schedules one 2-row VBlank strip copy, and the port has no torus - render_bg in src/ppu/ppu.asm composites the visible surface from wSurroundingTiles every frame - while pret's own source comments this routine as not resulting in any visible effect even on hardware, so the Delay3 is its entire observable behaviour on both sides, see this file header and CLAUDE.md on the removal of the torus and its rings; lifetime=permanent, structural to the surface renderer}
 ; ---------------------------------------------------------------------------
 ShakeElevatorRedrawRow:
     jmp Delay3                                  ; pret: jp Delay3 (tail)

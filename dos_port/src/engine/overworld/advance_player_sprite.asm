@@ -115,11 +115,13 @@ _AdvancePlayerSprite:
     mov al, [ebp + wCurMapWidth]
     call MoveTileBlockMapPointerNorth
 
-; DEVIATION{class=HAL; pret=engine/overworld/advance_player_sprite.asm:_AdvancePlayerSprite; behavior=the four ScheduleSouthRowRedraw ScheduleNorthRowRedraw ScheduleEastColumnRedraw and ScheduleWestColumnRedraw calls are dropped, along with the ScheduleColumnRedrawHelper they share, so none of those five pret labels has a port body; evidence=they exist only to stage one 2-tile-wide strip of the 256x256 VRAM tilemap torus per frame into wRedrawRowOrColumnSrcTiles for RedrawRowOrColumn to DMA during the next VBlank, and the port has no torus - render_bg in src/ppu/ppu.asm decodes wSurroundingTiles into a 48x36-tile surface and blits a 320x200 window out of it at a signed pixel offset, so the strip that would be staged is already on screen the moment LoadCurrentMapView above rebuilds it - see the compositor plan docs/plans/compositor_perf.md and CLAUDE.md on the removal of the torus and its rings; lifetime=permanent, structural to the surface renderer}
+; DEVIATION{class=HAL; pret=engine/overworld/advance_player_sprite.asm:_AdvancePlayerSprite; behavior=the four ScheduleSouthRowRedraw ScheduleNorthRowRedraw ScheduleEastColumnRedraw and ScheduleWestColumnRedraw calls are dropped, so this routine never stages a redraw strip, though all five of those pret labels including the ScheduleColumnRedrawHelper they share DO have faithful port bodies in src/home/overworld.asm which nothing reaches; evidence=they exist only to stage one 2-tile-wide strip of the 256x256 VRAM tilemap torus per frame into wRedrawRowOrColumnSrcTiles for RedrawRowOrColumn to DMA during the next VBlank, and the port has no torus - render_bg in src/ppu/ppu.asm decodes wSurroundingTiles into a 48x36-tile surface and blits a 320x200 window out of it at a signed pixel offset, so the strip that would be staged is already on screen the moment LoadCurrentMapView above rebuilds it - see the compositor plan docs/plans/compositor_perf.md and CLAUDE.md on the removal of the torus and its rings; lifetime=permanent, structural to the surface renderer}
 .updateMapView:
     call LoadCurrentMapView              ; rebuilds wSurroundingTiles AND refreshes wTileMap
     ; pret :138-161 follows this with a per-direction dispatch to one of the four
-    ; Schedule*Redraw routines. All four are dropped — see the DEVIATION above.
+    ; Schedule*Redraw routines. All four CALLS are dropped — see the DEVIATION
+    ; above. The routines themselves are mirrored in src/home/overworld.asm, but
+    ; they stage into the GB VRAM torus, which this renderer does not have.
     jmp .scroll
 .refreshTileMap:
     ; Non-crossing step: the player's sub-block coords just changed, so re-copy

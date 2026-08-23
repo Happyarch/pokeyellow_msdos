@@ -134,9 +134,12 @@ VermilionDock_Script:
 ; Two substitutions, both annotated at their site:
 ;   * `call ScheduleEastColumnRedraw` is DROPPED. It fills wScreenEdgeTiles for
 ;     RedrawRowOrColumn, which writes GB_TILEMAP0 — a buffer render_bg's
-;     overworld path never reads. Porting it would assemble, link, pass every
-;     gate and do nothing. The eastward walk it exists to feed is realised by
-;     VermilionDock_RedecodeBand, driven from VermilionDock_SyncScrollWithLY.
+;     overworld path never reads. ScheduleEastColumnRedraw has since been
+;     mirrored in src/home/overworld.asm for label completeness, on the same
+;     basis RedrawRowOrColumn itself was ported, but it assembles, links and does
+;     nothing, so this CALL stays dropped. The eastward walk it exists to feed is
+;     realised by VermilionDock_RedecodeBand, driven from
+;     VermilionDock_SyncScrollWithLY.
 ;   * the outer count is DOCK_WALK_BLOCKS*2 (16) rather than pret's 8, because
 ;     the port's ship starts 8 blocks from the left screen edge instead of flush
 ;     with it. Same 16 px per pass, so the ship moves at pret's speed and the
