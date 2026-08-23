@@ -4354,16 +4354,33 @@ src/engine/overworld/ledges.o: assets/ledge_shadow.inc
 assets/surfing_pikachu.inc assets/surfing_pikachu_tilemaps.inc: ../gfx/surfing_pikachu/surfing_pikachu_1a.2bpp \
                             ../gfx/surfing_pikachu/surfing_pikachu_1b.2bpp \
                             ../gfx/surfing_pikachu/surfing_pikachu_1c.2bpp \
+                            ../gfx/surfing_pikachu/surfing_pikachu_2.2bpp \
                             ../gfx/surfing_pikachu/beach_intro.tilemap \
                             ../gfx/surfing_pikachu/use_control_pad.tilemap \
                             ../gfx/surfing_pikachu/to_surf_rad.tilemap \
                             ../gfx/surfing_pikachu/title.tilemap \
                             ../gfx/surfing_pikachu/beach_outro.tilemap \
+                            ../gfx/surfing_pikachu/high_score_1.tilemap \
+                            ../gfx/surfing_pikachu/high_score_2.tilemap \
                             tools/generators/gen_surfing_pikachu.py tools/generators/gen_globals.py
 	python3 tools/generators/gen_surfing_pikachu.py
 
 src/gfx/surfing_pikachu.o: assets/surfing_pikachu.inc
 src/engine/minigame/surfing_pikachu.o: assets/surfing_pikachu_tilemaps.inc
+
+# Game Boy Printer graphics (Tier-1 data from gen_printer_gfx_inc.py)
+assets/printer_gfx.inc: ../gfx/printer/hp.1bpp \
+                        ../gfx/printer/lv.1bpp \
+                        ../gfx/printer/01.2bpp \
+                        tools/generators/gen_printer_gfx_inc.py tools/generators/gen_globals.py
+	python3 tools/generators/gen_printer_gfx_inc.py
+
+# Game Boy Printer strings (Tier-1 data from gen_printer_strings.py)
+assets/printer_strings.inc: ../engine/printer/printer.asm \
+                            ../engine/printer/printer2.asm \
+                            ../data/text/text_3.asm \
+                            tools/generators/gen_printer_strings.py tools/generators/gen_globals.py tools/generators/gb_text.py
+	python3 tools/generators/gen_printer_strings.py
 
 # pikapic (follower Pikachu Phase 4) — Tier-1 data for the Pikachu front-pic
 # facial animation engine.  One generated .inc per pret source file.
@@ -4800,6 +4817,8 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/npc_sprite_data_table.inc assets/npc_dialogs/all_dialogs.inc \
         assets/red_bike_sprite.inc assets/seel_sprite.inc \
         assets/surfing_pikachu_sprite.inc assets/surfing_pikachu.inc \
+        assets/surfing_pikachu_tilemaps.inc \
+        assets/printer_gfx.inc assets/printer_strings.inc \
         assets/pikachu_pic_gfx.inc assets/pikachu_pic_tilemaps.inc \
         assets/pikachu_pic_objects.inc assets/pikachu_pic_animation.inc \
         assets/toggleable_objects.inc assets/event_constants.inc \

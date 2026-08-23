@@ -1265,19 +1265,13 @@
 %define wNumSetBits                  0xDEEB   ; CountSetBits result byte (shared 0xD11D scratch)
 %define wChangeBoxSavedMapTextPointer 0xD88B   ; ChangeBox saves/restores wCurMapTextPtr here
 
-; Tile-map save/restore buffers — relocated to echo RAM ($E000+) to avoid
-; overlapping pret WRAM1 symbols.  All via constants; no hardcoded addresses
-; in translated code.
-; Layout in echo RAM ($E000–$F4E7, all within the DPMI allocation):
-;   $E000  wSurroundingTiles / wTileMapBackup   1728 B ($6C0) → $E6BF
-;   $E800  wOverworldMap                        2304 B ($900) → $F0FF   (MAP_BORDER=7)
-;   $F100  wTileMapBackup2                      1000 B ($3E8) → $F4E7
-; Next used symbol is GB_OAM ($FE00), so there is 2328 B of headroom above.
-; NB: LoadTileBlockMap fills W_OVERWORLD_MAP_SIZE bytes UNCONDITIONALLY, so
-; wOverworldMap's *declared* size — not the current map's footprint — is what
-; must not overlap the next buffer. Growing MAP_BORDER 6→7 pushed wOverworldMapEnd
-; from $F000 to $F100 and silently clobbered wTileMapBackup2's first 256 bytes
-; until it was moved here.
+; Tile-map save/restore buffers — located in expanded WRAM0 (under prefix-sum
+; WRAM expansion). All via constants; no hardcoded addresses in translated code.
+; Layout in expanded WRAM0:
+;   0xC788  wSurroundingTiles / wTileMapBackup   1728 B ($6C0) → 0xCE47
+;   0xCE4A  wOverworldMap                        2304 B ($900) → 0xD749   (MAP_BORDER=7, unions with wPrinterData)
+;   0xD8CF  wTileMapBackup2                      1000 B ($3E8) → 0xDCB6
+; Headroom exists above; LoadTileBlockMap fills W_OVERWORLD_MAP_SIZE bytes.
 %define wTileMapBackup               0xC788   ; wTileMapBackup (= wSurroundingTiles, see below)
 %define wTileMapBackup2              0xD8CF   ; wTileMapBackup2 (1000 B)
 
@@ -1388,9 +1382,11 @@
 
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
 ; (10 + 2*7) * (72 + 2*7) = 24 * 86 = 2064 bytes at MAP_BORDER=7, which overflows the old
-; 2048. Grown to 0x900; end = 0xF100, and nothing is used until GB_OAM at 0xFE00.
+; 2048. Grown to 0x900 (0xCE4A to 0xD74A, ends before wTileMapBackup2 0xD8CF).
+; Unions with wPrinterData (0xCE4A..0xD257).
 %define wOverworldMap                0xCE4A   ; wOverworldMap
 %define W_OVERWORLD_MAP_SIZE         0x900   ; wOverworldMapEnd − wOverworldMap (2304 bytes)
+%define wcae2                        0xD244   ; printer margin/sheet byte (pret wram.asm:321, in wPrinterData union)
 
 ; Turn-delay state (pret: wCheckFor180DegreeTurn / wPlayerLastStopDirection)
 ; W_CHECK_FOR_TURN=1 means "first direction press changes facing only; walk starts on hold".

@@ -273,15 +273,15 @@ over renderer state, feeds the device below the seam, invisible to pret code).
 ## Stages
 
 ### Stage 0 — groundwork (no behavior)
-- [ ] Add `%define wcae2 0xD244` to gb_memmap.inc (union comment included);
+- [x] Add `%define wcae2 0xD244` to gb_memmap.inc (union comment included);
       `check_ram_collisions.py` + `audit_memmap.py` clean
-- [ ] Sweep the stale pre-expansion wOverworldMap comments
+- [x] Sweep the stale pre-expansion wOverworldMap comments
       (gb_memmap.inc:1266-1278 + the "end = $F100" note); flag CLAUDE.md's
       clamp-paragraph addresses to the maintainer
-- [ ] `gen_printer_strings.py` → `assets/printer_strings.inc`; extend
+- [x] `gen_printer_strings.py` → `assets/printer_strings.inc`; extend
       `gen_surfing_pikachu.py`; new `gen_printer_gfx_inc.py`; wire into
       `make assets`
-- [ ] Record the GB-centered +10/+3 ruling for the four print screens in
+- [x] Record the GB-centered +10/+3 ruling for the four print screens in
       `docs/ui_projection.md`
 
 ### Stage 1 — serial.asm mirror (state machine)

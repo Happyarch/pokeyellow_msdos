@@ -40,6 +40,13 @@ GFX_BLOBS = [
         "Surfing Pikachu tile sheet 1c -> 2224 bytes",
         None,
     ),
+    (
+        "SurfingPikachu2Graphics",
+        "surfing_pikachu_2.2bpp",
+        1536,
+        "Surfing Pikachu tile sheet 2 -> 1536 bytes (96 tiles)",
+        None,
+    ),
 ]
 
 TILEMAP_BLOBS = [
@@ -76,6 +83,20 @@ TILEMAP_BLOBS = [
         "beach_outro.tilemap",
         200,
         "Beach outro tilemap (200 bytes, pret DrawResultsScreen.BeachOutroTilemap)",
+        None,
+    ),
+    (
+        "SurfingMinigame_HighScore1Tilemap",
+        "high_score_1.tilemap",
+        24,
+        "High score 1 tilemap (24 bytes)",
+        None,
+    ),
+    (
+        "SurfingMinigame_HighScore2Tilemap",
+        "high_score_2.tilemap",
+        96,
+        "High score 2 tilemap (96 bytes)",
         None,
     ),
 ]

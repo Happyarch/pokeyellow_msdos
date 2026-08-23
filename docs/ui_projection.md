@@ -414,6 +414,10 @@ count from the canvas height rather than inheriting pret's literal 6.
 
 The diploma screens (`src/engine/events/diploma2.asm`: `DisplayDiplomaTop`, `DisplayDiplomaBottom`) are centered in the 40×25 canvas via a uniform **+10 col / +3 row** tile offset (maintainer ruling, 2026-08-17). The 20×18 certificate is drawn centered without individual element re-anchoring.
 
+### Print screens (Fan Club portrait, Surfing high score, PC box pages 1-4) — GB-centered
+
+The four new print screens (`src/engine/printer/printer.asm`: `PrintFanClubPortrait`, `PrintSurfingMinigameHighScore`, `PrintPCBox_DrawPage1..4`) are centered in the 40×25 canvas via a uniform **+10 col / +3 row** tile offset (maintainer ruling, 2026-08-20, per the diploma precedent). The 20×18 pages are drawn centered without individual element re-anchoring.
+
 ### Future subsystems
 
 Add an entry here when introduced, stating the transform and whether it uses
@@ -531,6 +535,9 @@ grep -rn '; PROJ' dos_port/src
 | battle-anim (showcase label)| (1,14) | 12×1 | BCOORD; DEBUG_ANIM_SHOW only — move name printed in the battle frame | — | — | — | — | debug_dump.asm (DEBUG_ANIM_SHOW) |
 | events (diploma top)       | (0, 0)  | 20×18 | center, X+10, Y+3 | — | — | — | — | diploma2.asm (DisplayDiplomaTop) |
 | events (diploma bottom)    | (0, 0)  | 20×18 | center, X+10, Y+3 | — | — | — | — | diploma2.asm (DisplayDiplomaBottom) |
+| printer (fan club portrait) | (0, 0) | 20×18 | center, X+10, Y+3 | — | — | — | — | printer.asm (PrintFanClubPortrait) |
+| printer (surfing high score)| (0, 0) | 20×18 | center, X+10, Y+3 | — | — | — | — | printer.asm (PrintSurfingMinigameHighScore) |
+| printer (PC box pages 1-4)  | (0, 0) | 20×18 | center, X+10, Y+3 | — | — | — | — | printer.asm (PrintPCBox_DrawPage1..4) |
 
 
 ---
