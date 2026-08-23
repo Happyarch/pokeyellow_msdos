@@ -1,8 +1,9 @@
 ; ===========================================================================
-; escp.asm — ESC/P grayscale / 24-pin / 9-pin page emitter for GB Printer.
+; escp.asm — ESC/P grayscale / 24-pin / 9-pin / CMY(K) color page emitter.
 ;
 ; Renders accumulated 2bpp bands from g_print_band_buf to an ESC/P dot-matrix
 ; raster stream and outputs via lpt_dos.asm (Lpt_Open, Lpt_Write, Lpt_Close).
+; Supports monochrome 2x2 ordered dither and 4-pass CMY(K) color (/PRNCOLOR).
 ; See docs/current_plan_printer.md.
 ; ===========================================================================
 
@@ -15,12 +16,15 @@ extern Lpt_Write                         ; src/print/lpt_dos.asm
 extern Lpt_Close                         ; src/print/lpt_dos.asm
 
 extern g_cfg_prn_9pin                    ; src/print/print_dev.asm
+extern g_cfg_prn_color                   ; src/print/print_dev.asm
 extern g_print_band_count                ; src/print/print_dev.asm
 extern g_print_band_buf                  ; src/print/print_dev.asm
+extern g_print_pal_buf                   ; src/print/print_dev.asm
 extern g_print_margins                   ; src/print/print_dev.asm
 extern g_print_palette                   ; src/print/print_dev.asm
 extern g_print_exposure                  ; src/print/print_dev.asm
 extern g_print_status_flags              ; src/print/print_dev.asm
+extern pal_rgb_table                     ; src/home/palettes.asm
 
 PRN_COLS_24PIN                  equ 320          ; 160 GB pixels * 2
 PRN_PASS_HEIGHT_24PIN           equ 12           ; 12 GB pixel rows = 24 dots high
@@ -41,11 +45,23 @@ escp_pass_hdr_24pin:
     db 0x1B, 0x2A, 39, 0x40, 0x01        ; ESC * 39 (180 dpi 24-pin), 320 columns (0x0140)
 ESCP_PASS_HDR_LEN equ $ - escp_pass_hdr_24pin
 
+escp_color_select:
+    db 0x1B, 0x72, 0x00                  ; ESC r n (Select ribbon color: 0=K, 1=M, 2=C, 4=Y)
+
+escp_cr:
+    db 0x0D                              ; CR (Carriage Return without line feed)
+
+escp_lf:
+    db 0x0A                              ; LF (Line Feed)
+
 escp_crlf:
     db 0x0D, 0x0A                        ; CR LF
 
 escp_ff:
     db 0x0C                              ; FF (Form Feed)
+
+color_plane_order:
+    db 4, 1, 2, 0                        ; Yellow (4) -> Magenta (1) -> Cyan (2) -> Black (0)
 
 section .bss
 
@@ -93,13 +109,16 @@ Escp_PrintPage:
     shl eax, 4                           ; EAX = total_gb_rows (16 to 144)
 
     xor ebp, ebp                         ; EBP = current_gb_row_start (0, 12, 24, ...)
-.pass_loop:
+
+    cmp dword [g_cfg_prn_color], 0
+    jnz .color_pass_loop
+
+.mono_pass_loop:
     cmp ebp, eax
     jae .passes_done
 
-    ; Render one 24-dot (12 GB rows) pass starting at row EBP
     push eax
-    call .RenderPass24Pin
+    call .RenderPass24PinMono
     pop eax
 
     ; Send pass header (ESC * 39 320 0)
@@ -118,9 +137,71 @@ Escp_PrintPage:
     call Lpt_Write
 
     add ebp, PRN_PASS_HEIGHT_24PIN
-    jmp .pass_loop
+    jmp .mono_pass_loop
+
+.color_pass_loop:
+    cmp ebp, eax
+    jae .passes_done
+
+    ; Color mode: 4 planes (Yellow, Magenta, Cyan, Black)
+    push eax
+    xor ebx, ebx                         ; EBX = plane index (0..3)
+.plane_loop:
+    movzx edx, byte [color_plane_order + ebx] ; EDX = plane ID (4, 1, 2, 0)
+    push ebx
+    push edx
+    call .RenderPass24PinColor           ; EAX = non_zero_dot_count
+    pop edx
+    pop ebx
+
+    test eax, eax
+    jz .skip_empty_plane                 ; skip sending if plane is completely white
+
+    ; Select color plane (ESC r <plane>)
+    mov [escp_color_select + 2], dl
+    mov esi, escp_color_select
+    mov ecx, 3
+    call Lpt_Write
+
+    ; Send pass header (ESC * 39 320 0)
+    mov esi, escp_pass_hdr_24pin
+    mov ecx, ESCP_PASS_HDR_LEN
+    call Lpt_Write
+
+    ; Send 960 bytes of raster data
+    mov esi, g_escp_pass_buf
+    mov ecx, PRN_PASS_BYTES_24PIN
+    call Lpt_Write
+
+    ; Send CR (no LF) to return head for next color pass
+    mov esi, escp_cr
+    mov ecx, 1
+    call Lpt_Write
+
+.skip_empty_plane:
+    inc ebx
+    cmp ebx, 4
+    jb .plane_loop
+
+    ; Advance paper after all 4 planes (LF)
+    mov esi, escp_lf
+    mov ecx, 1
+    call Lpt_Write
+
+    pop eax
+    add ebp, PRN_PASS_HEIGHT_24PIN
+    jmp .color_pass_loop
 
 .passes_done:
+    ; If color mode, restore black ribbon at job end
+    cmp dword [g_cfg_prn_color], 0
+    jz .no_color_cleanup
+    mov byte [escp_color_select + 2], 0
+    mov esi, escp_color_select
+    mov ecx, 3
+    call Lpt_Write
+.no_color_cleanup:
+
     ; 4. Bottom Margin
     movzx eax, byte [g_print_margins]
     and eax, 0x0F                        ; bottom margin (0-15)
@@ -145,11 +226,11 @@ Escp_PrintPage:
     ret
 
 ; ---------------------------------------------------------------------------
-; .RenderPass24Pin — render 12 GB pixel rows [EBP .. EBP+11] to g_escp_pass_buf
+; .RenderPass24PinMono — render 12 GB pixel rows [EBP .. EBP+11] grayscale
 ; Input: EBP = starting GB row
 ; Fills: g_escp_pass_buf with 320 columns * 3 bytes (960 bytes)
 ; ---------------------------------------------------------------------------
-.RenderPass24Pin:
+.RenderPass24PinMono:
     pushad
 
     ; Clear pass buffer
@@ -174,7 +255,7 @@ Escp_PrintPage:
     push ecx
     push edx
     push ebx
-    call .GetPixelShade                  ; EAX = pixel shade (0..3) at (ECX, EAX)
+    call .GetPixelShadeMono              ; EAX = pixel shade (0..3) at (ECX, EAX)
     pop ebx
     pop edx
     pop ecx
@@ -199,7 +280,7 @@ Escp_PrintPage:
     push ecx
     push edx
     push ebx
-    call .GetPixelShade
+    call .GetPixelShadeMono
     pop ebx
     pop edx
     pop ecx
@@ -223,7 +304,7 @@ Escp_PrintPage:
     push ecx
     push edx
     push ebx
-    call .GetPixelShade
+    call .GetPixelShadeMono
     pop ebx
     pop edx
     pop ecx
@@ -248,10 +329,144 @@ Escp_PrintPage:
     ret
 
 ; ---------------------------------------------------------------------------
-; .GetPixelShade — read 2bpp pixel shade at GB coordinate (ECX=x, EAX=y)
+; .RenderPass24PinColor — render 12 GB pixel rows for one color plane
+; Inputs:
+;   EBP = starting GB row
+;   EDX = plane ID (4=Yellow, 1=Magenta, 2=Cyan, 0=Black)
+; Returns: EAX = non-zero byte count (0 if empty plane)
+; ---------------------------------------------------------------------------
+.RenderPass24PinColor:
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
+    push ebp
+
+    mov [esp + 8], edx                   ; save plane ID in stack
+
+    ; Clear pass buffer
+    lea edi, [g_escp_pass_buf]
+    mov ecx, PRN_PASS_BYTES_24PIN / 4
+    xor eax, eax
+    rep stosd
+
+    xor esi, esi                         ; ESI = non-zero accumulator
+
+    ; For each GB pixel column X from 0 to 159:
+    xor ecx, ecx                         ; ECX = gb_x (0..159)
+.color_col_loop:
+    cmp ecx, 160
+    jae .color_pass_complete
+
+    push ecx
+
+    ; Group 0: GB rows [EBP+0 .. EBP+3] -> Byte 0
+    xor edx, edx                         ; r = 0..3
+    xor ebx, ebx                         ; BL = col0, BH = col1
+.cgrp0_loop:
+    lea eax, [ebp + edx]
+    push ecx
+    push edx
+    push ebx
+    mov edx, [esp + 20]                  ; retrieve plane ID
+    call .GetPixelColorLevel             ; EAX = dither level (0..3) for this plane
+    pop ebx
+    pop edx
+    pop ecx
+
+    call .ApplyDitherBits8
+    inc edx
+    cmp edx, 4
+    jb .cgrp0_loop
+
+    mov eax, [esp]
+    shl eax, 1
+    imul eax, eax, 3
+    mov [g_escp_pass_buf + eax + 0], bl
+    mov [g_escp_pass_buf + eax + 3], bh
+    movzx edx, bl
+    or esi, edx
+    movzx edx, bh
+    or esi, edx
+
+    ; Group 1: GB rows [EBP+4 .. EBP+7] -> Byte 1
+    xor edx, edx
+    xor ebx, ebx
+.cgrp1_loop:
+    lea eax, [ebp + edx + 4]
+    push ecx
+    push edx
+    push ebx
+    mov edx, [esp + 20]
+    call .GetPixelColorLevel
+    pop ebx
+    pop edx
+    pop ecx
+
+    call .ApplyDitherBits8
+    inc edx
+    cmp edx, 4
+    jb .cgrp1_loop
+
+    mov eax, [esp]
+    shl eax, 1
+    imul eax, eax, 3
+    mov [g_escp_pass_buf + eax + 1], bl
+    mov [g_escp_pass_buf + eax + 4], bh
+    movzx edx, bl
+    or esi, edx
+    movzx edx, bh
+    or esi, edx
+
+    ; Group 2: GB rows [EBP+8 .. EBP+11] -> Byte 2
+    xor edx, edx
+    xor ebx, ebx
+.cgrp2_loop:
+    lea eax, [ebp + edx + 8]
+    push ecx
+    push edx
+    push ebx
+    mov edx, [esp + 20]
+    call .GetPixelColorLevel
+    pop ebx
+    pop edx
+    pop ecx
+
+    call .ApplyDitherBits8
+    inc edx
+    cmp edx, 4
+    jb .cgrp2_loop
+
+    mov eax, [esp]
+    shl eax, 1
+    imul eax, eax, 3
+    mov [g_escp_pass_buf + eax + 2], bl
+    mov [g_escp_pass_buf + eax + 5], bh
+    movzx edx, bl
+    or esi, edx
+    movzx edx, bh
+    or esi, edx
+
+    pop ecx
+    inc ecx
+    jmp .color_col_loop
+
+.color_pass_complete:
+    mov eax, esi                         ; non-zero indicator
+    pop ebp
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    ret
+
+; ---------------------------------------------------------------------------
+; .GetPixelShadeMono — read 2bpp pixel shade at GB coordinate (ECX=x, EAX=y)
 ; Returns: EAX = mapped shade (0=white, 1=light, 2=dark, 3=black)
 ; ---------------------------------------------------------------------------
-.GetPixelShade:
+.GetPixelShadeMono:
     push ebx
     push edx
     push esi
@@ -260,7 +475,7 @@ Escp_PrintPage:
     mov edx, [g_print_band_count]
     shl edx, 4                           ; total rows
     cmp eax, edx
-    jae .out_of_bounds
+    jae .out_of_bounds_mono
 
     ; Band index = y / 16
     mov edx, eax
@@ -316,29 +531,184 @@ Escp_PrintPage:
     ; Exposure adjustment:
     movzx ebx, byte [g_print_exposure]
     cmp ebx, 0x20
-    jbe .lighten
+    jbe .lighten_mono
     cmp ebx, 0x60
-    jae .darken
-    jmp .done_shade
+    jae .darken_mono
+    jmp .done_shade_mono
 
-.lighten:
+.lighten_mono:
     test eax, eax
-    jz .done_shade
+    jz .done_shade_mono
     dec eax
-    jmp .done_shade
+    jmp .done_shade_mono
 
-.darken:
+.darken_mono:
     cmp eax, 3
-    jae .done_shade
+    jae .done_shade_mono
     inc eax
-    jmp .done_shade
+    jmp .done_shade_mono
 
-.out_of_bounds:
+.out_of_bounds_mono:
     xor eax, eax
-.done_shade:
+.done_shade_mono:
     pop edi
     pop esi
     pop edx
+    pop ebx
+    ret
+
+; ---------------------------------------------------------------------------
+; .GetPixelColorLevel — compute CMY(K) dither level (0..3) for plane EDX
+; Inputs:
+;   ECX = x (0..159)
+;   EAX = y (0..143)
+;   EDX = plane ID (4=Yellow, 1=Magenta, 2=Cyan, 0=Black)
+; Returns: EAX = dither level (0..3)
+; ---------------------------------------------------------------------------
+.GetPixelColorLevel:
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
+
+    mov edx, [g_print_band_count]
+    shl edx, 4
+    cmp eax, edx
+    jae .color_oob
+
+    ; 1. Get raw shade from g_print_band_buf
+    push eax                             ; save y
+    push ecx                             ; save x
+
+    mov edx, eax
+    shr edx, 4
+    imul edx, edx, 640
+
+    mov ebx, eax
+    and ebx, 0x0F
+    shr ebx, 3
+    imul ebx, ebx, 20
+
+    mov edi, ecx
+    shr edi, 3
+    add ebx, edi
+    shl ebx, 4
+
+    mov edi, eax
+    and edi, 7
+    shl edi, 1
+
+    add edx, ebx
+    add edx, edi
+    lea esi, [g_print_band_buf + edx]
+
+    mov ebx, ecx
+    and ebx, 7
+    mov cl, 7
+    sub cl, bl
+
+    movzx eax, byte [esi]
+    shr eax, cl
+    and eax, 1
+
+    movzx ebx, byte [esi + 1]
+    shr ebx, cl
+    and ebx, 1
+    shl ebx, 1
+    or eax, ebx                          ; EAX = raw shade (0..3)
+
+    pop ecx                              ; restore x
+    pop edx                              ; restore y into edx
+
+    ; 2. Cell index in g_print_pal_buf = (y / 8) * 20 + (x / 8)
+    shr edx, 3                           ; tile_row (0..17)
+    imul edx, edx, 20
+    mov ebx, ecx
+    shr ebx, 3                           ; tile_col (0..19)
+    add edx, ebx                         ; cell_idx (0..359)
+    movzx ebx, byte [g_print_pal_buf + edx] ; palette ID (0..7)
+
+    ; 3. Look up RGB in pal_rgb_table: offset = (pal_id * 4 + shade) * 3
+    shl ebx, 2
+    add ebx, eax
+    imul ebx, ebx, 3
+    lea esi, [pal_rgb_table + ebx]
+    movzx eax, byte [esi + 0]            ; R6 (0..63)
+    movzx ebx, byte [esi + 1]            ; G6 (0..63)
+    movzx ecx, byte [esi + 2]            ; B6 (0..63)
+
+    ; 4. Compute plane ink value based on EDX (plane ID: 4=Y, 1=M, 2=C, 0=K)
+    mov edx, [esp + 8]                   ; retrieve plane ID
+    cmp edx, 4
+    je .plane_yellow
+    cmp edx, 1
+    je .plane_magenta
+    cmp edx, 2
+    je .plane_cyan
+
+.plane_black:
+    ; K = 63 - max(R, G, B)
+    mov edx, eax
+    cmp ebx, edx
+    jbe .k_check_b
+    mov edx, ebx
+.k_check_b:
+    cmp ecx, edx
+    jbe .k_have_max
+    mov edx, ecx
+.k_have_max:
+    mov eax, 63
+    sub eax, edx
+    jmp .map_level
+
+.plane_yellow:
+    ; Y = 63 - B6
+    mov eax, 63
+    sub eax, ecx
+    jmp .map_level
+
+.plane_magenta:
+    ; M = 63 - G6
+    mov eax, 63
+    sub eax, ebx
+    jmp .map_level
+
+.plane_cyan:
+    ; C = 63 - R6
+    mov eax, 63
+    sub eax, eax                         ; C = 63 - R6
+    mov eax, 63
+    sub eax, [esi + 0]
+    jmp .map_level
+
+.map_level:
+    ; EAX = ink value (0..63). Map to dither level 0..3
+    cmp eax, 16
+    jb .lvl0
+    cmp eax, 32
+    jb .lvl1
+    cmp eax, 48
+    jb .lvl2
+    mov eax, 3
+    jmp .color_done
+.lvl0:
+    xor eax, eax
+    jmp .color_done
+.lvl1:
+    mov eax, 1
+    jmp .color_done
+.lvl2:
+    mov eax, 2
+    jmp .color_done
+
+.color_oob:
+    xor eax, eax
+.color_done:
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
     pop ebx
     ret
 
@@ -356,18 +726,9 @@ Escp_PrintPage:
     push ecx
     push edx
 
-    ; Dot rows for GB row r:
-    ; dot_y0 = 2*r, dot bit0 = 7 - 2*r
-    ; dot_y1 = 2*r+1, dot bit1 = 6 - 2*r
     mov cl, 7
     shl dl, 1
     sub cl, dl                           ; CL = bit0 shift
-
-    ; 2x2 Dither rule:
-    ; Shade 0 (white): no dots
-    ; Shade 1 (light): dot (0,0) ON
-    ; Shade 2 (dark):  dots (0,0) and (1,1) ON
-    ; Shade 3 (black): dots (0,0), (1,0), (0,1), (1,1) ON
 
     test eax, eax
     jz .dither_done
@@ -379,18 +740,15 @@ Escp_PrintPage:
     jmp .dither_black
 
 .dither_light:
-    ; Col 0, Row 0 dot ON
     mov dl, 1
     shl dl, cl
     or bl, dl
     jmp .dither_done
 
 .dither_dark:
-    ; Col 0, Row 0 dot ON
     mov dl, 1
     shl dl, cl
     or bl, dl
-    ; Col 1, Row 1 dot ON
     dec cl
     mov dl, 1
     shl dl, cl
@@ -398,16 +756,15 @@ Escp_PrintPage:
     jmp .dither_done
 
 .dither_black:
-    ; All 4 dots ON
     mov dl, 1
     shl dl, cl
-    or bl, dl                            ; col 0 row 0
-    or bh, dl                            ; col 1 row 0
+    or bl, dl
+    or bh, dl
     dec cl
     mov dl, 1
     shl dl, cl
-    or bl, dl                            ; col 0 row 1
-    or bh, dl                            ; col 1 row 1
+    or bl, dl
+    or bh, dl
 
 .dither_done:
     pop edx

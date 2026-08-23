@@ -325,9 +325,9 @@ over renderer state, feeds the device below the seam, invisible to pret code).
       `portonly_print` scenario class; `--ps` PDF path for human review
 
 ### Stage 5 — color
-- [ ] Palette sidecar capture (`g_print_pal_buf`) + HAL DEVIATION at the
+- [x] Palette sidecar capture (`g_print_pal_buf`) + HAL DEVIATION at the
       capture routine
-- [ ] CMY(K) plane dither + `ESC r` pass loop (yellow→magenta→cyan→black);
+- [x] CMY(K) plane dither + `ESC r` pass loop (yellow→magenta→cyan→black);
       `/PRNCOLOR` gating; color PNG golden variant
 
 ### Stage 6 — docs + bookkeeping

@@ -116,6 +116,9 @@ extern StartTransmission_Send9Rows       ; src/engine/printer/serial.asm
 extern Printer_StartTransmission         ; src/engine/printer/serial.asm
 extern PrinterTransmissionJumptable      ; src/engine/printer/serial.asm
 extern PrintDev_Cancel                   ; src/print/print_dev.asm
+extern tile_pal                         ; src/ppu/ppu.asm
+extern bg_slot_pal                      ; src/home/palettes.asm
+extern g_print_pal_buf                  ; src/print/print_dev.asm
 
 section .bss
 
@@ -548,9 +551,9 @@ Printer_StopIfPressB:
     stc
     ret
 
-; ---------------------------------------------------------------------------
 ; Printer_CopyTileMapToPrinterTileBuffer — pret engine/printer/printer.asm:466-471.
 ;
+; DEVIATION{class=HAL; pret=engine/printer/printer.asm:Printer_CopyTileMapToPrinterTileBuffer; behavior=snapshots per-cell palette into g_print_pal_buf sidecar for /PRNCOLOR printer backend; evidence=docs/current_plan_printer.md; lifetime=permanent}
 ; DEVIATION{class=projection; pret=engine/printer/printer.asm:Printer_CopyTileMapToPrinterTileBuffer; behavior=copies 18 rows of 20 tiles from parameterized source address and stride to wPrinterTileBuffer; evidence=port uses 40x25 canvas with +10/+3 GB-centered projection for 4 screens and stride-20 scratch for pokedex; lifetime=permanent}
 ; ---------------------------------------------------------------------------
 Printer_CopyTileMapToPrinterTileBuffer:
@@ -568,6 +571,27 @@ Printer_CopyTileMapToPrinterTileBuffer:
     pop ecx
     dec ecx
     jnz .row_loop
+
+    ; Snapshot per-cell palette into g_print_pal_buf (360 bytes)
+    lea edi, [g_print_pal_buf]
+    lea esi, [ebp + wPrinterTileBuffer]
+    mov ecx, 360
+.pal_loop:
+    movzx eax, byte [esi]
+    test byte [ebp + IO_LCDC], 1 << 4    ; LCDC_TILEDATA_BIT
+    jnz .have_slot
+    cmp al, 128
+    jae .have_slot
+    add eax, 256
+.have_slot:
+    movzx eax, byte [tile_pal + eax]
+    and al, 7
+    movzx eax, byte [bg_slot_pal + eax]
+    mov [edi], al
+    inc esi
+    inc edi
+    dec ecx
+    jnz .pal_loop
     ret
 
 ; ---------------------------------------------------------------------------
