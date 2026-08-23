@@ -115,7 +115,7 @@ extern AddNTimes                         ; src/home/array.asm
 extern StartTransmission_Send9Rows       ; src/engine/printer/serial.asm
 extern Printer_StartTransmission         ; src/engine/printer/serial.asm
 extern PrinterTransmissionJumptable      ; src/engine/printer/serial.asm
-extern PrintDev_Cancel                   ; src/engine/printer/serial.asm
+extern PrintDev_Cancel                   ; src/print/print_dev.asm
 
 section .bss
 

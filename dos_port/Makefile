@@ -526,6 +526,10 @@ endif
 SAVE_SRCS := \
     src/save/dsv_io.asm
 
+# Virtual Game Boy Printer device and page backend (docs/current_plan_printer.md)
+PRINT_SRCS := \
+    src/print/print_dev.asm
+
 # Audio subsystem (docs/current_plan_audio.md Phase A). The translated pret
 # engine writes the virtual APU block at [ebp+rAUD*]; the DelayFrame tick +
 # device shims (opl_shim) land in later Phase A tasks. Data blobs are
@@ -3404,7 +3408,7 @@ BATTLE_SUPPORT_SRCS := \
     src/home/copy2.asm \
     src/engine/items/get_bag_item_quantity.asm
 
-LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(NET_SRCS) $(SAVE_SRCS) $(AUDIO_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
+LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(NET_SRCS) $(SAVE_SRCS) $(PRINT_SRCS) $(AUDIO_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
 # Stable de-dup: several DEBUG_* gates each append debug_party.asm, so combining two
 # (e.g. DEBUG_SEED_PARTY + DEBUG_STATUS) would list its object twice → ld "multiple
 # definition". Drop duplicates while preserving first-seen order (link layout unchanged).

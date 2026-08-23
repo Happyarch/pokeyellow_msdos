@@ -308,7 +308,7 @@ over renderer state, feeds the device below the seam, invisible to pret code).
       5 entry points (ACK-only device: full UI flow, instant "print")
 
 ### Stage 3 — real virtual device + capture golden
-- [ ] `print_dev.asm` proper: packet parse, band accumulation (≤9×640 B),
+- [x] `print_dev.asm` proper: packet parse, band accumulation (≤9×640 B),
       checksum verify, cancel, status/error mapping contract
 - [ ] `print_surf_cancel` GBSTATE golden (mGBA ground truth, masked
       transmission state, tile-buffer comparison)
