@@ -93,6 +93,7 @@ extern Serial_ExchangeBytes
 extern Serial_SyncAndExchangeNybble
 extern Serial_PrintWaitingTextAndSyncAndExchangeNybble
 extern NetHAL_StartTransfer     ; src/net/net_hal.asm — the rSC-write HAL site
+extern NetHAL_LinkAlive         ; src/net/net_hal.asm — ZF=1: no link session (escape hatch)
 
 ; --- engine callees (pret callfar/predef targets; header banking DEVIATION) -
 extern InitList                 ; src/engine/battle/misc.asm — [wInitListType]
@@ -325,6 +326,11 @@ CableClub_DoBattleOrTradeAgain:
 .finishedPatchingPlayerData:
     mov byte [ebp + edx], SERIAL_PATCH_LIST_PART_TERMINATOR ; end of part 2
     call Serial_SyncAndExchangeNybble
+    ; port: peer died at the rendezvous — without this the block exchanges
+    ; below all return immediately, leaving wSerialEnemyDataBlock stale, and
+    ; the FE-skip scans would parse garbage (hatch DEVIATION at its label)
+    call NetHAL_LinkAlive
+    jz cable_club_link_down
     mov al, [ebp + hSerialConnectionStatus]
     cmp al, USING_INTERNAL_CLOCK
     jne .skipSendingTwoZeroBytes
@@ -362,6 +368,11 @@ CableClub_DoBattleOrTradeAgain:
     mov bx, 200
     call Serial_ExchangeBytes
     mov byte [ebp + GB_IE], IE_SERIAL | IE_TIMER | IE_VBLANK
+    ; port: peer died during a block exchange — the dead exchanges returned
+    ; without filling the receive buffers, and the preamble-hunt loop below
+    ; scans unboundedly through the stale zeroes (hatch DEVIATION at its label)
+    call NetHAL_LinkAlive
+    jz cable_club_link_down
     ; the RNG list of the clocking GB is used by both sides
     mov al, [ebp + hSerialConnectionStatus]
     cmp al, USING_INTERNAL_CLOCK
@@ -539,6 +550,15 @@ CallCurrentTradeCenterFunction:
     ; port: the title screen owns its own presentation — end the surface
     call MovieEndSurface
     jmp DisplayTitleScreen
+
+; ---------------------------------------------------------------------------
+; cable_club_link_down — port-only disconnect escape hatch.
+; DEVIATION{class=HAL; pret=engine/link/cable_club.asm:CallCurrentTradeCenterFunction; behavior=when the net session dies mid-trade-center the nybble consumers jump here and reset via pret's own index-ff DisplayTitleScreen path instead of consuming the death-hatch ff value as data; evidence=a GB with a pulled cable hangs in the serial wait loops which the port's primitives cannot do (serial.asm publishes ff and returns) so ff would flow onward - the choseTrade consumer would index enemy mon ff and the tradeConfirmed dec-al test reads ff as confirm, executing a one-sided trade against stale block data; lifetime=permanent, the no-partner hatch is the port's substitute for the GB hang}
+; ---------------------------------------------------------------------------
+cable_club_link_down:
+    mov al, 0xFF
+    mov [ebp + wTradeCenterPointerTableIndex], al
+    jmp CallCurrentTradeCenterFunction
 
 ; ---------------------------------------------------------------------------
 ; TradeCenter_SelectMon — pret engine/link/cable_club.asm:316.
@@ -749,6 +769,8 @@ TradeCenter_SelectMon:
     mov [ebp + wSerialExchangeNybbleSendData], al
     call Serial_PrintWaitingTextAndSyncAndExchangeNybble
     mov al, [ebp + wSerialSyncAndExchangeNybbleReceiveData]
+    cmp al, 0xFF                        ; port: link died (serial.asm death hatch)
+    je cable_club_link_down
     cmp al, 0xF
     je CallCurrentTradeCenterFunction   ; other side cancelled: restart stage 0
     mov [ebp + wTradingWhichEnemyMon], al
@@ -788,6 +810,8 @@ TradeCenter_SelectMon:
     mov [ebp + wSerialExchangeNybbleSendData], al
     call Serial_PrintWaitingTextAndSyncAndExchangeNybble
     mov al, [ebp + wSerialSyncAndExchangeNybbleReceiveData]
+    cmp al, 0xFF                    ; port: link died (serial.asm death hatch)
+    je cable_club_link_down
     cmp al, 0xF                     ; did the other person choose Cancel too?
     jne .cancelMenuItem_Loop
     ; fall through
@@ -1001,6 +1025,8 @@ TradeCenter_Trade:
     mov [ebp + wSerialExchangeNybbleSendData], al
     call Serial_PrintWaitingTextAndSyncAndExchangeNybble
     mov al, [ebp + wSerialSyncAndExchangeNybbleReceiveData]
+    cmp al, 0xFF                    ; port: link died (serial.asm death hatch) —
+    je cable_club_link_down         ; ff would pass the dec-al confirm test below
     dec al                          ; did the other person cancel ($1)?
     jnz .doTrade
     ; the other person cancelled
