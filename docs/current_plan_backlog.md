@@ -943,6 +943,32 @@ skill). 223 of those 225 files are tracked but in no Makefile source list.
 
 ---
 
+### 36. The send-out contextual lines have NO runtime witness (measured, not suspected)
+
+`PrintSendOutMonMessage` picks one of four intro lines by remaining enemy HP —
+`GoText` (>=70%), `DoItText` (40-69%), `GetmText` (10-39%), `EnemysWeakText`
+(<10%). The routine is ported, wired from `SendOutMon`, and faithdiff-clean.
+**Its selection is not covered by anything.**
+
+Measured 2026-08-23 by the sabotage check `docs/plans/sendout_messages.md`'s last
+box asked for: `cmp al, 70` mutated to `cmp al, 255`, so the >=70% arm can never
+be taken and every send-out must fall through to `DoItText`. All three scenarios
+whose `must_hit` names `SendOutMon` — `battle_switch`, `battle_choose_next_mon`,
+`battle_intro` — still **PASS**. Mutating the other way (`cmp al, 0`) also passes,
+so it is not an artefact of which arm was broken.
+
+This is the `route17_sight` false-witness class: `must_hit` names a symbol the
+HARNESS reaches, which is not the same as a compared surface holding the message
+when the dump is taken. Three green scenarios were being read as coverage of a
+routine none of them can observe.
+
+**What a real witness needs:** a scenario that dumps while the send-out line is on
+screen, with the enemy mon below 70% max HP so the chosen line differs from the
+default `GoText`. The enemy-HP seeding already exists (`battle_low_hp` drives the
+red-HP alarm), so the missing piece is the dump frame, not the state.
+
+Until then, treat all four contextual lines as unverified.
+
 ## Relocation debt (has a live owner — pointer only)
 
 The legacy relocation inventory in `dos_port/tools/pret_label_allowlist.json`

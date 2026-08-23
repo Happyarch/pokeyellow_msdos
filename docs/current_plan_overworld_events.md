@@ -142,19 +142,29 @@ naming their retirement.
       is retired.
 - [x] Replace blanket service guards and sentinel-byte fallbacks with structured
       owning-subsystem stubs.
-- [ ] **Port `DisplayPokemartDialogue_` and the buy/sell transaction loops.** The data
-      half is DONE as of 2026-08-17: `gen_marts.py` → `assets/marts.inc` → carrier
-      `src/data/items/marts.asm` supplies all 16 pret mart inventories under their
-      pret label names, and dispatch is live — `text_script.asm:251` routes
-      `TX_SCRIPT_MART` into the real `DisplayPokemartDialogue`, which prints the
-      greeting and calls `LoadItemList` before hitting the stub. **So the greeting and
-      inventory load work today; only the priced-list menu and the transaction loop are
-      missing.** Add a scenario hitting the dispatcher plus a successful and a refused
-      purchase.
-- [ ] Port `DisplayPokemonCenterDialogue_`, the nurse heal flow and the Pokémon Center
-      PC shell. Verify party healing and the rendered dialog, not merely menu entry.
-- [ ] Port the vending, prize, Safari and Pikachu tails, replacing their stubs with
-      real providers plus must-hit scenarios.
+- [ ] **Poké Mart: PORTED, still owes a scenario.** The transaction loop is done —
+      `DisplayPokemartDialogue_` reports `translated` at
+      `src/engine/events/pokemart.asm` and is reached from its home wrapper
+      (`label_status --callers`, measured 2026-08-23). The sentence that stood here
+      until then — "only the priced-list menu and the transaction loop are missing" —
+      is dead; so is the stub it described. What is still owed is the SCENARIO half:
+      the dispatcher plus a successful and a refused purchase, and a SALE.
+      **The sale scenario is load-bearing for a known bug**, not just coverage:
+      `src/home/inventory.asm:AddAmountSoldToMoney` still drops pret's
+      `PlaySoundWaitForCurrent` + `WaitForSoundToFinish` under a
+      `BUG{class=temporary}` whose stated blocker is exactly this missing scenario.
+- [ ] **Poké Center: PORTED, still owes verification.** `DisplayPokemonCenterDialogue_`
+      is `translated` at `src/engine/events/pokecenter.asm` and wired from its home
+      wrapper (measured 2026-08-23), with `PikachuWalksToNurseJoy` and
+      `SetLastBlackoutMap` landed alongside it. What remains is the verification this
+      item always asked for: party healing and the rendered dialog, not merely menu
+      entry.
+- [ ] **Vending and prize: PORTED. Safari and Pikachu tails: still owed.**
+      `VendingMachineMenu` (reached from `DisplayTextID`) and `CeladonPrizeMenu`
+      (externed by `TextScript_GameCornerPrizeMenu`) are both `translated` at their
+      mirrored paths, measured 2026-08-23; `main_menu_stubs.asm` is down to one stub,
+      `CableClubNPC`, which is out of lane. The must-hit scenarios for all four are
+      still owed.
       **Cable is explicitly NOT in this list any more.** Maintainer directive
       2026-08-17: the link-cable layer is not to be wired for the foreseeable future.
       `CableClubNPC` keeps its stub; see stigmergy `link-layer-planned-transports`.

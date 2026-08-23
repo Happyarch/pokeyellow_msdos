@@ -2,6 +2,19 @@
 
 Implementation plan to restore full graphical and animation fidelity to the evolution sequence (`EvolveMon`), porting the visual morph layer (`Evolution_BackAndForthAnim`), 7×7 dual-pic VRAM offset switching, silhouette whole-screen palette switching (`SetPal_PokemonWholeScreen`), and retiring `src/engine/movie/evolution_stubs.asm`.
 
+## STATUS — MEASURED 2026-08-23: implementation COMPLETE, awaiting one look
+
+Every implementation and gate box below is verified against generated state, not
+read off the file: `Evolution_BackAndForthAnim`, `Evolution_LoadPic`,
+`Evolution_ChangeMonPic`, `EvolutionSetWholeScreenPalette` and
+`SetPal_PokemonWholeScreen` all report `translated` at their mirrored pret paths,
+and `src/engine/movie/evolution_stubs.asm` no longer holds an
+`Evolution_BackAndForthAnim` stub (its two remaining globals, `InternalClockTradeAnim`
+and `HallOfFamePC`, belong to other plans). The plan had been sitting at 0/15 in
+`project_state --plans` purely because nobody ticked the boxes.
+
+The single remaining item is the maintainer's own eyes on the animation.
+
 ## Background & Context
 
 The core gameplay logic of evolution (`EvolveMon`, `TryEvolvingMon`, `EvolutionAfterBattle`, B-button cancel loop, stat recomputation, move learning, and audio fanfare/cries) is fully functional in `src/engine/pokemon/evos_moves.asm` and `src/engine/movie/evolution.asm`.
@@ -52,24 +65,24 @@ However, the visual morphing sequence was previously bypassed:
 ## Action Items & Tasks
 
 ### Stage 1: Palette HAL Implementation (`src/engine/gfx/palettes.asm`)
-- [ ] Implement faithful `SetPal_PokemonWholeScreen` in `src/engine/gfx/palettes.asm` supporting `PAL_BLACK` silhouette when `bl != 0`.
-- [ ] Add structured `DEVIATION` annotation documenting the direct slot-publish HAL boundary matching `SetPal_StatusScreen`.
+- [x] Implement faithful `SetPal_PokemonWholeScreen` in `src/engine/gfx/palettes.asm` supporting `PAL_BLACK` silhouette when `bl != 0`.
+- [x] Add structured `DEVIATION` annotation documenting the direct slot-publish HAL boundary matching `SetPal_StatusScreen`.
 
 ### Stage 2: Translate Evolution Animation Routines (`src/engine/movie/evolution.asm`)
-- [ ] Port `EvolutionSetWholeScreenPalette`.
-- [ ] Port `Evolution_LoadPic` using `BCOORD(7, 2)` for widescreen 40×25 canvas projection.
-- [ ] Port `Evolution_ChangeMonPic` with 8-bit row/column loop counters and `SCREEN_WIDTH - 7 = 33` row advance.
-- [ ] Port `Evolution_BackAndForthAnim` with 8-bit cycle decrement (`dec bh`).
-- [ ] Restore complete `EvolveMon` visual pipeline (new pic load $\to$ VRAM copy $\to$ old pic load $\to$ silhouette palette $\to$ accelerando loop $\to$ cry/color resolution).
+- [x] Port `EvolutionSetWholeScreenPalette`.
+- [x] Port `Evolution_LoadPic` using `BCOORD(7, 2)` for widescreen 40×25 canvas projection.
+- [x] Port `Evolution_ChangeMonPic` with 8-bit row/column loop counters and `SCREEN_WIDTH - 7 = 33` row advance.
+- [x] Port `Evolution_BackAndForthAnim` with 8-bit cycle decrement (`dec bh`).
+- [x] Restore complete `EvolveMon` visual pipeline (new pic load $\to$ VRAM copy $\to$ old pic load $\to$ silhouette palette $\to$ accelerando loop $\to$ cry/color resolution).
 
 ### Stage 3: Stub Retirement & Link Integration
-- [ ] Delete `Evolution_BackAndForthAnim` stub and `STUB{...}` annotation from `src/engine/movie/evolution_stubs.asm`.
-- [ ] Remove `extern Evolution_BackAndForthAnim` from `src/engine/movie/evolution.asm` and update extern declarations.
+- [x] Delete `Evolution_BackAndForthAnim` stub and `STUB{...}` annotation from `src/engine/movie/evolution_stubs.asm`.
+- [x] Remove `extern Evolution_BackAndForthAnim` from `src/engine/movie/evolution.asm` and update extern declarations.
 
 ### Stage 4: Verification & Validation
-- [ ] Run `dos_port/tools/faithdiff` across all modified labels (`EvolveMon`, `Evolution_BackAndForthAnim`, `Evolution_LoadPic`, `Evolution_ChangeMonPic`, `EvolutionSetWholeScreenPalette`, `SetPal_PokemonWholeScreen`).
-- [ ] Run `dos_port/tools/lint_pret_labels --no-scan --strict-claims` (must report 0 violations).
-- [ ] Run `make -C dos_port static_gate`.
-- [ ] Run `make -C dos_port goldencheck SCENARIO=item_stone_evolve`.
-- [ ] Run `make -C dos_port fidelity` core test suite.
-- [ ] Visually verify in DOSBox-X (Rare Candy / Evolution Stone evolution and B-button cancel).
+- [x] Run `dos_port/tools/faithdiff` across all modified labels (`EvolveMon`, `Evolution_BackAndForthAnim`, `Evolution_LoadPic`, `Evolution_ChangeMonPic`, `EvolutionSetWholeScreenPalette`, `SetPal_PokemonWholeScreen`).
+- [x] Run `dos_port/tools/lint_pret_labels --no-scan --strict-claims` (must report 0 violations).
+- [x] Run `make -C dos_port static_gate`.
+- [x] Run `make -C dos_port goldencheck SCENARIO=item_stone_evolve`.
+- [x] Run `make -C dos_port fidelity` core test suite.
+- [ ] **MAINTAINER SIGN-OFF, the only thing left here.** Visually verify in DOSBox-X (Rare Candy / Evolution Stone evolution and B-button cancel).

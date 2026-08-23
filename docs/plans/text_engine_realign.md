@@ -394,8 +394,13 @@ tooling work and is deliberately out of this plan's scope.
 
 ### Stage 4 — residue
 
-- `[ ]` 4.1 `wTextDest`: declare it and restore pret's two stores, or record a
-  `DEVIATION` saying why a write-only variable is not carried
+- `[x]` 4.1 **DONE — `wTextDest` is declared and both stores are restored.**
+  Measured 2026-08-23: the symbol exists (`assets/pret_ram.inc`, $D788) and both of
+  pret's store sites are present — `TextCommandProcessor`'s entry pair
+  (`src/home/text.asm:1224-1225`, `ld a,c / ld [wTextDest],a / ld a,b /
+  ld [wTextDest+1],a`) and `TextCommand_MOVE`'s (`:1305`, `:1308`). The first
+  option in the item was taken, so no `DEVIATION` is owed. It stays write-only
+  here exactly as it is in pret, which never reads it back.
 - `[x]` 4.2 **DONE — `sign_pallet_house`**, the `<PLAYER>`-substitution gate.
   Reads Pallet Town's player's-house sign (`bg_event 3, 5`) from (6,3) facing UP
   through the real A-press dispatch on both sides;
