@@ -56,6 +56,10 @@ extern g_nf_diag                 ; net_frame.asm
 extern tradecheck_marks          ; src/engine/link/cable_club_npc.asm (harness)
 extern net_exch_ctr              ; net_hal.asm — session diagnostics probe region
 %endif
+%ifdef DEBUG_BATTLECHECK
+extern battlecheck_marks         ; src/engine/link/cable_club_npc.asm (harness)
+extern net_exch_ctr              ; net_hal.asm — session diagnostics probe region
+%endif
 extern pal_rgb_table, bg_slot_pal, obj_slot_pal
 extern pal_cgb_table    ; assets/colors/palettes.inc — BGR555 twin of pal_rgb_table
 extern tile_pal
@@ -1031,6 +1035,40 @@ gbstate_regions:
     gbregion "tcPointerIdx",  wTradeCenterPointerTableIndex, 1
     gbregion "tcWhichMons",   wTradingWhichPlayerMon,        2  ; player + enemy, contiguous
     gbregion_flat "tcMarks",   tradecheck_marks, 7         ; round1_traded, round2_cancelled, steps_taken(4), link_down_hatch
+%endif
+%ifdef DEBUG_BATTLECHECK
+    ; battlecheck two-instance harness (tools/battlecheck.sh): the same role/
+    ; session diagnostics DEBUG_LINKCHECK/TRADECHECK publish, PLUS
+    ; battlecheck_marks (the lockstep/result marks tools/battlecheck.sh reads)
+    ; and a set of named battle-state landmarks for the harness's direct-parse
+    ; convenience (wBattleResult, wIsInBattle, wEnemyMonHP, wBattleMonHP, and
+    ; both sides' roster count+species). PROBE-tier regions (no mGBA golden —
+    ; a second GB has no headless twin here), same rule as DEBUG_LINKCHECK's
+    ; and DEBUG_TRADECHECK's blocks above.
+    ;
+    ; wBattleResult/wIsInBattle/wEnemyMonHP/wBattleMonHP and the player-side
+    ; roster (wPartyCount+species) all duplicate bytes ALREADY covered by the
+    ; unconditional rows above (wBattleFlags includes wIsInBattle; wEnemyMon/
+    ; wBattleMon [BATTLEMON_STRUCT_LENGTH] each include their HP word;
+    ; wPartyData includes wPartyCount+species) — named again here anyway,
+    ; verbatim per the plan spec, so tools/battlecheck.sh's parser can read
+    ; each field directly by name instead of decoding a whole struct. Only
+    ; the ENEMY roster (wEnemyPartyCount+species) is genuinely new: no
+    ; unconditional row covers it (DEBUG_BATTLE_AISWITCH's "eRosterCount" row
+    ; above is gated on a different, unrelated debug flag).
+    gbregion "linkStatus",    hSerialConnectionStatus, 1   ; $02/$01 role split
+    gbregion "wLinkState",    wLinkState,    1
+    gbregion_flat "netLinkUp",  g_net_link_up,   1
+    gbregion_flat "netState",   net_state,       1
+    gbregion_flat "netDesyncs", net_desyncs,     2
+    gbregion_flat "netExchCtr", net_exch_ctr,    2
+    gbregion_flat "bcMarks",   battlecheck_marks, 6   ; battle_started/over/turn_count(2)/link_down_hatch/battle_result
+    gbregion "wBattleResult", wBattleResult, 1
+    gbregion "wIsInBattle",   wIsInBattle,   1
+    gbregion "wEnemyMonHP",   wEnemyMonHP,   2
+    gbregion "wBattleMonHP",  wBattleMonHP,  2
+    gbregion "bcPlayerRoster", wPartyCount,       7   ; count + species(6) — this side's own party
+    gbregion "bcEnemyRoster",  wEnemyPartyCount,  7   ; count + species(6) — the link peer's party
 %endif
 %ifdef DEBUG_CABLECLUB
     ; --- cable_club_nolink golden (link cable plan Stage 2 step 4) ---
@@ -6601,6 +6639,148 @@ TC_TRADE_CENTER_MAP equ 0xEF               ; TRADE_CENTER (assets/map_dims.inc; 
     or dl, PAD_DOWN
 .tcCancelOff:
 %endif
+%ifdef AUTOKEY_BATTLECHECK
+    ; *** STATE-GATED WALK + battle_started LATCH (battlecheck harness). ***
+    ; Two live-WRAM adjustments to the base A-train's `dl`, evaluated every
+    ; frame. See RunBattleCheck's header (src/engine/link/cable_club_npc.asm)
+    ; and the Makefile's DEBUG_BATTLECHECK comment for the overall shape.
+    ;
+    ; UNLIKE AUTOKEY_TRADECHECK there is no menu-nav gate here at all — no
+    ; STATS->TRADE cursor step, no ROUND2 DOWN-to-CANCEL climb. The whole link
+    ; battle runs on a bare A-train:
+    ;   - LinkMenu's default cursor (wCurrentMenuItem=0, link_menu.asm:1097)
+    ;     is TRADE CENTER (item 0); COLOSSEUM is item 1
+    ;     (link_menu.asm:1211-1220's `test al,al / mov al,COLOSSEUM / jnz
+    ;     .next / mov al,TRADE_CENTER` — item 0 selects TRADE_CENTER, any
+    ;     nonzero item selects COLOSSEUM). Getting to COLOSSEUM therefore
+    ;     needs one DOWN before the A that confirms it — see the DOWN-strobe
+    ;     gate immediately below (mirrors AUTOKEY_TRADECHECK's ROUND2
+    ;     DOWN-to-CANCEL idiom).
+    ;   - DisplayBattleMenu's cursor defaults to
+    ;     wBattleAndStartSavedMenuItem, reset to 0 = FIGHT at battle init
+    ;     (init_battle_variables.asm:27-35 clears the whole
+    ;     wPartyAndBillsPCSavedMenuItem..wPlayerMoveListIndex 4-byte union;
+    ;     init_battle.asm:321 clears wPlayerMoveListIndex again explicitly)
+    ;     and re-latched to whatever wCurrentMenuItem holds every time A is
+    ;     pressed on it (core.asm:725-727) — with no D-pad ever asserted here,
+    ;     wCurrentMenuItem never leaves 0, so FIGHT is selected every turn
+    ;     (core.asm:740-751).
+    ;   - MoveSelectionMenu's cursor defaults to wPlayerMoveListIndex+1
+    ;     (core.asm:951-952), 0 at battle start (same reset as above) = move
+    ;     slot 1; with no D-pad ever asserted the cursor never moves off it,
+    ;     so move 1 is (re)selected every turn it remains a legal choice —
+    ;     and if it runs out of PP, AnyMoveToSelect (core.asm:888-890) forces
+    ;     Struggle automatically, so there is no way for a bare A-train to
+    ;     stall the move menu.
+    ;   - ITEM is banned outright in a link battle regardless of cursor
+    ;     position (core.asm:775-780, `cmp wLinkState,LINK_STATE_BATTLING /
+    ;     jne .notLinkBattle / ItemsCantBeUsedHereText / jmp
+    ;     DisplayBattleMenu`) — belt-and-braces on top of the cursor never
+    ;     reaching ITEM/PKMN in the first place (they sit at menu ids 1/2,
+    ;     unreachable without a D-pad press this harness never sends).
+    ; So the ONLY WRAM-gated adjustment this battle-menu family needs is the
+    ; one DOWN to reach COLOSSEUM in LinkMenu, handled below.
+%ifndef USING_INTERNAL_CLOCK
+USING_INTERNAL_CLOCK equ 0x02              ; net_hal.asm — master
+%endif
+%ifndef LINK_STATE_IN_CABLE_CLUB
+LINK_STATE_IN_CABLE_CLUB equ 0x01          ; constants/serial_constants.asm
+%endif
+%ifndef BC_COLOSSEUM_MAP
+BC_COLOSSEUM_MAP equ 0xF0                  ; COLOSSEUM (assets/map_dims.inc; not %included here)
+%endif
+    ; (1) LINKMENU: ONE DOWN BEFORE A. wCurrentMenuItem starts 0 = TRADE
+    ; CENTER (link_menu.asm:1097); COLOSSEUM is item 1. DOWN's cursor step is
+    ; edge-triggered on hJoyPressed (home/window.asm), so hold DOWN for
+    ; strictly one edge (a single frame window keyed off autokey_frame,
+    ; rather than the strobe cadence the trade-center gates use below — one
+    ; step is all this ever needs, and re-arming would overshoot past item 1
+    ; onto COLOSSEUM2/CANCEL) and suppress A while it is not yet on item 1,
+    ; so a coincident base-train A cannot confirm TRADE CENTER first. The
+    ; gate is identified by LinkMenu's own live state (wMaxMenuItem==3,
+    ; wMenuWatchedKeys==PAD_A|PAD_B, link_menu.asm:1098-1099) rather than a
+    ; frame window, so cross-instance rendezvous skew (the same reason
+    ; AUTOKEY_LINKCHECK/TRADECHECK avoid frame-gating their own menu steps)
+    ; cannot desync it from the real menu's entry.
+    cmp byte [ebp + wMaxMenuItem], 3
+    jne .bcMenuOff
+    cmp byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
+    jne .bcMenuOff
+    cmp byte [ebp + wCurrentMenuItem], 1
+    je .bcMenuOff                           ; already on COLOSSEUM — let A through
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .bcMenuOff
+    or dl, PAD_DOWN
+.bcMenuOff:
+    ; (2) THE WALK. Entering COLOSSEUM lands wLinkState at
+    ; LINK_STATE_IN_CABLE_CLUB (link_menu.asm:1239-1240, set right before the
+    ; `jmp SpecialEnterMap` that loads the map) one tile from the role's own
+    ; table gameboy: ColosseumPlayerWarp spawns the internal-clock master at
+    ; x=3, ColosseumFriendWarp spawns the external-clock friend at x=6, both
+    ; y=4 (src/data/maps/special_warps.asm:84-87) — and the hidden events sit
+    ; at (y=4,x=4)=CableClubLeftGameboy / (y=4,x=5)=CableClubRightGameboy
+    ; (assets/hidden_events.inc:490-495, the COLOSSEUM row — identical
+    ; offsets to TRADE_CENTER's). CableClubLeftGameboy only fires for
+    ; hSerialConnectionStatus != USING_EXTERNAL_CLOCK (the master) facing
+    ; RIGHT; CableClubRightGameboy only for != USING_INTERNAL_CLOCK (the
+    ; friend) facing LEFT (src/engine/pokemon/bills_pc.asm:886-926) — so the
+    ; master at x=3 walks RIGHT onto x=4 and the friend at x=6 walks LEFT
+    ; onto x=5, each arriving facing the direction its own gameboy handler
+    ; requires and each handler arming wLinkState=LINK_STATE_START_BATTLE
+    ; (bills_pc.asm:893-899/915-921 — wCurMap==COLOSSEUM takes the `inc al`
+    ; arm off LINK_STATE_START_TRADE). Movement is level-triggered on
+    ; hJoyHeld (src/home/overworld.asm), so the hold must self-terminate
+    ; after exactly one tile or it would keep walking past the table: hold
+    ; while wWalkCounter has not yet gone 0 -> nonzero -> 0 once (started,
+    ; then finished), tracked in bc_walk_started/bc_walk_done rather than a
+    ; frame count, same rationale as AUTOKEY_TRADECHECK's walk gate (the
+    ; map-load frame itself is unbounded — cross-instance rendezvous skew).
+    ; The base A train keeps pulsing throughout; a press mid-stride is a
+    ; no-op (the real hidden-event dispatch only fires once stationary), and
+    ; the next scheduled pulse after arrival triggers it.
+    cmp byte [ebp + wCurMap], BC_COLOSSEUM_MAP
+    jne .bcWalkOff
+    cmp byte [ebp + wLinkState], LINK_STATE_IN_CABLE_CLUB
+    jne .bcWalkOff
+    cmp byte [bc_walk_done], 0
+    jne .bcWalkOff
+    cmp byte [ebp + wWalkCounter], 0
+    je .bcWalkCheckDone
+    mov byte [bc_walk_started], 1
+    jmp .bcWalkAssert
+.bcWalkCheckDone:
+    cmp byte [bc_walk_started], 0
+    je .bcWalkAssert                        ; hold not yet registered — keep asserting
+    mov byte [bc_walk_done], 1
+    jmp .bcWalkOff
+.bcWalkAssert:
+    mov al, [ebp + hSerialConnectionStatus]
+    cmp al, USING_INTERNAL_CLOCK
+    jne .bcWalkFriend
+    or dl, PAD_RIGHT
+    jmp .bcWalkOff
+.bcWalkFriend:
+    or dl, PAD_LEFT
+.bcWalkOff:
+    ; (3) BATTLE_STARTED LATCH. Spec deliverable 3d: no game-code store for
+    ; this mark — set it live, sticky, the instant wIsInBattle goes nonzero
+    ; WITH wLinkState==LINK_STATE_BATTLING (the wLinkState half of the test
+    ; excludes an ordinary wild/trainer battle from ever setting a
+    ; battlecheck mark if this build somehow reached one). LINK_STATE_BATTLING
+    ; is already %defined by gb_constants.inc (included above), unlike the
+    ; two link-state equs this block guards itself.
+    cmp byte [battlecheck_marks], 0         ; battlecheck_battle_started
+    jne .bcStartedOff
+    cmp byte [ebp + wIsInBattle], 0
+    je .bcStartedOff
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    jne .bcStartedOff
+    mov byte [battlecheck_marks], 1
+.bcStartedOff:
+%endif
 %ifdef AUTOKEY_TRADE_GOLDEN
     ; *** STATE-GATED PARTY-MENU DOWN CLIMB (in_game_trade golden). ***
     ; InGameTrade_DoTrade's DisplayPartyMenu opens with the cursor on
@@ -6747,6 +6927,10 @@ tc_walk_started: db 0                   ; wWalkCounter observed nonzero (mid-ste
 tc_walk_done:    db 0                   ; the one-tile walk to the table finished
 tc_seed_dumped:  db 0                   ; DumpGBStateSeed fired once, pre-walk
 %endif
+%ifdef AUTOKEY_BATTLECHECK
+bc_walk_started: db 0                   ; wWalkCounter observed nonzero (mid-step)
+bc_walk_done:    db 0                   ; the one-tile walk to the table finished
+%endif
 %ifdef DEBUG_BATTLE_GOLDEN
 %ifndef DEBUG_BATTLE_INTRO
 ; set for the frames of the intro-dismiss press window; applied where DL is built
@@ -6820,6 +7004,28 @@ autokey_script:
     ; here — this table's only job is "keep answering A forever".
 %assign AK_L 120
 %rep 900
+    dd AK_L, AK_L + 5, PAD_A
+%assign AK_L AK_L + 20
+%endrep
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_BATTLECHECK
+    ; battlecheck harness: the SAME long A train as AUTOKEY_LINKCHECK/
+    ; TRADECHECK (answers every prompt CableClubNPC raises across retries,
+    ; then confirms whichever LinkMenu item is under the cursor — the state
+    ; gate at .apply strobes ONE DOWN first so that lands on COLOSSEUM, not
+    ; the default TRADE CENTER — then drives FIGHT/move-1 every turn of the
+    ; ensuing link battle with plain A presses; see AUTOKEY_BATTLECHECK's
+    ; .apply block above for the full citation trace on why a bare A-train is
+    ; sufficient and cannot select anything harmful). Longer than
+    ; LINKCHECK/TRADECHECK's 900 presses (18000 frames of coverage): a link
+    ; battle runs turn-by-turn menu redraws, HP-bar animation and faint/switch
+    ; handling well past a trade's two menu rounds, and this build's own
+    ; AUTOKEY_DUMP_FRAME default (20000) already exceeds 18000 — 1200 presses
+    ; x 20 = 23980 frames of coverage, comfortably past the default with
+    ; margin for the maintainer's end-of-plan dynamic battery to raise it
+    ; further without also needing a train-length fix.
+%assign AK_L 120
+%rep 1200
     dd AK_L, AK_L + 5, PAD_A
 %assign AK_L AK_L + 20
 %endrep

@@ -276,6 +276,9 @@ extern NetHAL_LinkAlive                ; src/net/net_hal.asm — ZF=1: no link s
 extern PrintWaitingText                ; src/engine/link/print_waiting_text.asm — pret mirror
 extern DisplayLinkBattleVersusTextBox  ; src/engine/battle/link_battle_versus_text.asm — pret mirror
 extern SwitchEnemyMon                  ; src/engine/battle/trainer_ai.asm — MainInBattleLoop link dispatch
+%ifdef DEBUG_BATTLECHECK
+extern battlecheck_marks               ; src/engine/link/cable_club_npc.asm (harness)
+%endif
 
 ; --- PrintMenuItem's helpers (pret core.asm:3010) ---
 extern CopyData                        ; home/copy.asm — ESI→EDX, BX bytes
@@ -8184,6 +8187,15 @@ SelectEnemyMove:
 ; — see DEVIATION at .linkDown.
 ; ===========================================================================
 LinkBattleExchangeData:
+%ifdef DEBUG_BATTLECHECK
+    ; battlecheck harness hook: one call to this routine == one turn's worth of
+    ; nybble exchange (pret places it once per turn, right before
+    ; ExecutePlayerMove — see the header above). The lockstep proof
+    ; (tools/battlecheck.sh assertion "turn_count EQUAL on both sides") reads
+    ; this counter from both instances' GBSTATE dumps. Harness state, not game
+    ; logic (first gated site, spec deliverable 3a).
+    inc word [battlecheck_marks + 2]        ; battlecheck_turn_count
+%endif
     mov byte [ebp + wSerialExchangeNybbleReceiveData], 0xFF
     mov al, [ebp + wPlayerMoveListIndex]
     cmp al, LINKBATTLE_RUN               ; is the player running from battle?
@@ -8243,6 +8255,19 @@ LinkBattleExchangeData:
     ret
 ; DEVIATION{class=HAL; pret=engine/battle/core.asm:LinkBattleExchangeData; behavior=on a dead link detected inside .syncLoop1, synthesize LINKBATTLE_RUN into wSerialExchangeNybbleReceiveData and return immediately, skipping .syncLoop2/.syncLoop3 (which only pump a dead link), instead of spinning on Serial_ExchangeNybble forever; evidence=pret's .syncLoop1 spins until a non-$FF byte arrives, and the port's Serial_ExchangeNybble cannot hang the same way a real cable would - with no transport bound or a dead peer it stages wSerialExchangeNybbleReceiveData=$FF and returns immediately every call (src/home/serial.asm), so a literal translation loops forever with no possible exit, and every consumer of wSerialExchangeNybbleReceiveData already treats LINKBATTLE_RUN as the peer having run, which drives pret's own EnemyRan / TryRunningFromBattle paths and ends the battle gracefully, exactly mirroring the no-partner hatch family documented in serial.asm's header; lifetime=permanent, the no-partner hatch family}
 .linkDown:
+%ifdef DEBUG_BATTLECHECK
+    ; battlecheck --kill hook: sticky record that the mid-battle disconnect
+    ; hatch fired — the point of the --kill mode (tools/battlecheck.sh) is
+    ; proving A escapes .syncLoop1 instead of hanging when B is killed. A flat
+    ; .bss byte, not GB memory: the synthesized LINKBATTLE_RUN below drives
+    ; EnemyRan and ends the battle for good (see the DEVIATION above), and
+    ; EndOfBattle's LINK_STATE_BATTLING branch (end_of_battle.asm) then sets
+    ; battlecheck_battle_over — this mark records specifically that the ESCAPE
+    ; is what ended it, same rule as tradecheck_link_down_hatch
+    ; (cable_club.asm's cable_club_link_down). Harness state, not game logic
+    ; (third gated site, spec deliverable 3c).
+    mov byte [battlecheck_marks + 4], 1     ; battlecheck_link_down_hatch
+%endif
     mov byte [ebp + wSerialExchangeNybbleReceiveData], LINKBATTLE_RUN
     ret
 

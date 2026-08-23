@@ -51,6 +51,9 @@ extern DelayFrames                     ; src/home/delay.asm — BL = frame count
 extern YouWinText                      ; assets/battle_text.inc (generated Tier-1; carrier core.asm)
 extern YouLoseText                     ; assets/battle_text.inc (generated Tier-1; carrier core.asm)
 extern DrawText                        ; assets/battle_text.inc (generated Tier-1; carrier core.asm)
+%ifdef DEBUG_BATTLECHECK
+extern battlecheck_marks               ; src/engine/link/cable_club_npc.asm (harness)
+%endif
 
 EndOfBattle:
     mov al, [ebp + wLinkState]
@@ -89,6 +92,18 @@ EndOfBattle:
     call PlaceString
     mov bl, 200                           ; ld c, 200
     call DelayFrames
+%ifdef DEBUG_BATTLECHECK
+    ; battlecheck harness hook: the link-battle result has just been decided
+    ; and displayed (wBattleResult: 0=win/1=lose/2=draw, per the cmp/jc/je
+    ; chain just above — each side's "win" means ITS OWN player won, so a
+    ; consistent battle shows COMPLEMENTARY results across the two instances).
+    ; tools/battlecheck.sh's core assertion (lockstep proof) reads
+    ; battle_over/battle_result from both sides' GBSTATE dumps. Harness state,
+    ; not game logic (second gated site, spec deliverable 3b).
+    mov byte [battlecheck_marks + 1], 1     ; battlecheck_battle_over
+    mov al, [ebp + wBattleResult]
+    mov [battlecheck_marks + 5], al         ; battlecheck_battle_result
+%endif
     jmp .evolution
 
 .notLinkBattle:

@@ -454,3 +454,71 @@ RunTradeCheck:
     call DelayFrame
     jmp .park
 %endif
+
+; ===========================================================================
+; # RunBattleCheck — %ifdef DEBUG_BATTLECHECK two-instance harness driver.
+; #
+; # tools/battlecheck.sh runs two DOSBox-X instances joined by a nullmodem
+; # cable exactly like tradecheck.sh (a different default TCP port, 23458, so
+; # all three harnesses can coexist), one plain and one with /PARTYB
+; # (boot/entry.asm), both booted on this DEBUG_BATTLECHECK build. The retry
+; # loop below is RunTradeCheck's / RunLinkCheck's verbatim, same cross-instance
+; # boot-skew rationale: the REAL CableClubNPC races up to
+; # BATTLECHECK_MAX_ATTEMPTS times until both instances' 90-frame establishment
+; # windows overlap.
+; #
+; # UNLIKE RunLinkCheck, a successful race is not parked here. LinkMenu's
+; # default cursor is item 0 = TRADE CENTER (link_menu.asm:1097); COLOSSEUM is
+; # item 1, so AUTOKEY_BATTLECHECK's .apply block (debug_dump.asm) carries a
+; # state-gated LinkMenu step: suppress A and strobe ONE DOWN while
+; # wCurrentMenuItem != 1 — the same idiom as AUTOKEY_TRADECHECK's ROUND2
+; # DOWN-to-CANCEL climb; see that block for the full walk/battle citation
+; # trace. Selecting COLOSSEUM tail-jumps to SpecialEnterMap
+; # (link_menu.asm:1244, `jmp SpecialEnterMap`) and never returns up this call
+; # chain: control leaves RunBattleCheck for good and the normal OverworldLoop
+; # machinery drives the rest (the walk to the table, the entire link battle —
+; # which, per CableClub_DoBattleOrTradeAgain's battle branch
+; # (engine/link/cable_club.asm), runs synchronously inside
+; # `predef InitOpponent` before CableClub_Run's caller ever resumes) under its
+; # own per-frame DelayFrame pump like any other overworld screen. `.park`
+; # below is reached only on total failure (no peer within
+; # BATTLECHECK_MAX_ATTEMPTS), matching RunTradeCheck's own give-up shape.
+; ===========================================================================
+%ifdef DEBUG_BATTLECHECK
+global RunBattleCheck
+global battlecheck_marks
+
+BATTLECHECK_MAX_ATTEMPTS equ 40         ; same bound as LINKCHECK/TRADECHECK_MAX_ATTEMPTS
+
+section .bss
+battlecheck_attempts: resb 1            ; CableClubNPC attempts used (this harness only)
+; GBSTATE flat region "bcMarks" (debug_dump.asm). battle_started is NOT stored
+; here by any game-code site (spec Stage 4 step 3, deliverable 3d): it is set
+; live from AUTOKEY_BATTLECHECK's .apply block (debug_dump.asm reads
+; wIsInBattle/wLinkState every frame already), so no game-code store is
+; needed for it. The other three fields ARE game-code-gated stores, capped at
+; exactly the three sites the spec lists:
+;   turn_count   — LinkBattleExchangeData's entry (core.asm)
+;   battle_over/battle_result — EndOfBattle's LINK_STATE_BATTLING branch
+;                  (end_of_battle.asm)
+;   link_down_hatch — step 2's .linkDown hatch (core.asm)
+battlecheck_marks:
+battlecheck_battle_started:  resb 1     ; +0 — set ONLY by AUTOKEY_BATTLECHECK's .apply (debug_dump.asm)
+battlecheck_battle_over:     resb 1     ; +1 — end_of_battle.asm's link-battle branch
+battlecheck_turn_count:      resw 1     ; +2..3 — core.asm LinkBattleExchangeData entry (dw, incremented)
+battlecheck_link_down_hatch: resb 1     ; +4 — core.asm's .linkDown hatch
+battlecheck_battle_result:   resb 1     ; +5 — copy of wBattleResult at battle_over time
+
+section .text
+RunBattleCheck:
+    SetEvent EVENT_GOT_POKEDEX          ; open the receptionist's gate
+    mov byte [battlecheck_attempts], 0
+.try:
+    inc byte [battlecheck_attempts]
+    call CableClubNPC                   ; success tail-jumps away for good; see header
+    cmp byte [battlecheck_attempts], BATTLECHECK_MAX_ATTEMPTS
+    jb .try
+.park:                                  ; gave up: hold still for the AUTOKEY_DUMP_FRAME photograph
+    call DelayFrame
+    jmp .park
+%endif

@@ -2868,6 +2868,38 @@ AUTOKEY_DUMP_FRAME ?= 14000
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 NASMFLAGS += -D SKIP_TITLE
 endif
+# Link-cable Stage 4 step 3: the two-instance link BATTLE harness gate
+# (tools/battlecheck.sh). Clone of DEBUG_TRADECHECK: RunBattleCheck loops the
+# real CableClubNPC against the peer exactly like RunTradeCheck.
+# AUTOKEY_BATTLECHECK carries two live-WRAM gates (debug_dump.asm): one DOWN
+# strobe with A suppressed at LinkMenu to move the default cursor off item 0
+# (TRADE CENTER) onto item 1 (COLOSSEUM), and the one-tile walk to the role's
+# table gameboy — once COLOSSEUM is confirmed, the walk lands the player on
+# CableClubLeftGameboy/RightGameboy (bills_pc.asm), which arms
+# LINK_STATE_START_BATTLE and, via CableClub_Run's predef dispatch
+# (home/joypad2.asm -> engine/link/cable_club.asm:CableClub_Run ->
+# CableClub_DoBattleOrTrade -> DoBattleOrTradeAgain), runs the ENTIRE battle
+# synchronously inside `predef InitOpponent` (InitBattleCommon's own
+# `callfar StartBattle` / `callfar EndOfBattle`, engine/battle/init_battle.asm)
+# before CableClub_Run's caller ever resumes — so a bare A-train that answers
+# every prompt AND drives FIGHT/move-1 every turn is sufficient (see
+# AUTOKEY_BATTLECHECK's header comment in debug_dump.asm for the full
+# citation trace). AUTOKEY_DUMP_FRAME is larger than tradecheck's own 14000:
+# on top of the same rendezvous-skew retry loop and the walk, a full link
+# battle (turn-by-turn menu redraws, HP-bar animation, faint/switch handling)
+# runs longer than a trade's two menu rounds. 20000 is a generous starting
+# point (docs/current_plan_link_cable.md Stage 4 step 3) — unvalidated until
+# the maintainer's end-of-plan dynamic battery runs it (this implementer's
+# checks are static only, per that plan's directive).
+# make DEBUG_BATTLECHECK=1
+ifdef DEBUG_BATTLECHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLECHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLECHECK
+AUTOKEY_DUMP_FRAME ?= 20000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D SKIP_TITLE
+endif
 # Link-receptionist no-link golden (cable_club_nolink — link cable plan Stage 2
 # step 4): spawn on the Pewter Pokecenter talk tile facing the link receptionist
 # (`object_event 11, 2, SPRITE_LINK_RECEPTIONIST, STAY, DOWN`; the player stands
