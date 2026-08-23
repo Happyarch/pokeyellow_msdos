@@ -503,6 +503,7 @@ HAL_SRCS := \
 NET_SRCS := \
     src/net/net_hal.asm \
     src/net/link_book.asm \
+    src/net/link_ui.asm \
     src/net/net_frame.asm \
     src/net/com_uart.asm
 ifdef DEBUG_NETTEST
@@ -4323,6 +4324,7 @@ src/data/pokemon/dex_entries.o: assets/dex_entries.inc
 src/engine/gfx/load_pokedex_tiles.o: assets/pokedex_tiles.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc assets/link_text.inc
 src/engine/link/cable_club_npc.o: assets/link_npc_text.inc assets/event_constants.inc assets/audio_constants.inc
+src/net/link_ui.o: assets/ui_layout_menus.inc assets/link_ui_strings.inc
 
 # Trade animation (link plan Stage 3 step 3): tile graphics + the 8 far text
 # bodies (trade.asm), and the raw Trade_MonInfoText glyph run (trade2.asm).

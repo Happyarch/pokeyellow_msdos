@@ -68,6 +68,7 @@ extern Serial_ExchangeNybble        ; src/home/serial.asm
 extern LinkMenu                     ; src/engine/menus/link_menu.asm (callfar target)
 extern NetHAL_StartTransfer         ; src/net/net_hal.asm — the rSC-write HAL site
 extern NetHAL_LinkAlive             ; src/net/net_hal.asm — ZF=1: no session
+extern LinkTransportSelect          ; src/net/link_ui.asm — Out: AL=1 proceed / 0 cancel
 
 ; constants/serial_constants.asm (the values link_menu.asm/serial.asm also use)
 USING_EXTERNAL_CLOCK        equ 0x01
@@ -104,6 +105,15 @@ CableClubNPC:
     call PrintText
     jmp .didNotConnect
 .receivedPokedex:
+    ; DEVIATION{class=HAL; pret=engine/link/cable_club_npc.asm:CableClubNPC; behavior=insert a transport-select UI call before the establishment race, cancelling to the no-partner path when the player backs out; evidence=the GB has one fixed physical cable so pret never has to choose a transport, while the port must pick between the CLI-preselected transport and SERIAL/IPX/TCP-IP the player chooses live, and net_hal.asm:109's own comment says the UI selects by storing g_net_transport before this race would otherwise begin; lifetime=permanent HAL boundary for a transport this stage cannot know in advance}
+    ; LinkTransportSelect (src/net/link_ui.asm) returns immediately (AL=1) when
+    ; g_net_transport is already bound (CLI /COMx flags) -- the common case is a
+    ; single extra branch, not an extra screen. AL=0 means the player cancelled
+    ; out of the transport-select/book UI entirely; route that to the same
+    ; .didNotConnect pret already uses for "couldn't establish".
+    call LinkTransportSelect
+    test al, al
+    jz .didNotConnect
     mov byte [ebp + wMenuJoypadPollCount], 1
     mov byte [ebp + wLinkTimeoutCounter], 90
 .establishConnectionLoop:
