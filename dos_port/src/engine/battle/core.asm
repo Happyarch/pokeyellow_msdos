@@ -104,6 +104,11 @@ section .text
 
 global MainInBattleLoop
 global DisplayBattleMenu
+global Func_3d4f5
+global Func_3d523
+global Func_3d529
+global asm_3d52d
+global Func_3d536
 global MoveSelectionMenu
 global SelectMenuItem
 global SelectMenuItem_CursorUp
@@ -1194,6 +1199,94 @@ PrintMenuItem:
     call PrintMoveType                  ; predef PrintMoveType (port: direct call)
 .moveDisabled:
     jmp Delay3                          ; pret: ld a,1 / ldh [hAutoBGTransferEnabled] / jp Delay3
+
+; ===========================================================================
+; TestBattle debug helpers — pret engine/battle/core.asm:Func_3d4f5 ..
+; Func_3d536, in pret's own order and at pret's own position (immediately before
+; AnyMoveToSelect).
+;
+; WHAT THEY ARE. pret's TestBattle (`IF DEF(_DEBUG)`) lets a developer step the
+; forced move in wTestBattlePlayerSelectedMove and replay its animation without
+; playing a turn: SELECT+B/SELECT+A decrement/increment the move id, and START
+; plays the current one. Func_3d536 is the shared redraw — it clears the readout
+; box at GB (10,16), prints the id as three leading-zeroed digits and, for a real
+; move below STRUGGLE, its name.
+;
+; UNREACHED HERE, and unreached in a release pret build too: the only call sites
+; are inside pret's own `IF DEF(_DEBUG)` TestBattle block, which the port does not
+; assemble. Ported because they are genuinely portable and every callee they need
+; is already linked — the same bar GetwMoves and OverwritewMoves cleared. Wire
+; them only alongside a real TestBattle harness.
+;
+; GEOMETRY. hlcoord (10,16)/(10,17)/(13,17) are GB coordinates on a 20x18 tilemap;
+; the port draws battle text on the 40x25 canvas through BCOORD, so they are
+; projected with it exactly as the rest of this file's battle text is. That is the
+; battle-animations rule (BCOORD, +10 col / +3 row), NOT the transitions rule.
+;
+; ASSERT B_PAD_START == BIT_TRAINER_BATTLE is pret's own compile-time check that
+; the START bit and the trainer-battle status bit are the same bit index, which is
+; what lets one `bit` test serve both. It is an assertion, not behaviour; the port
+; carries the test itself.
+; ===========================================================================
+Func_3d4f5:
+    ; In: AL = the joypad byte. pret asserts B_PAD_START == BIT_TRAINER_BATTLE and
+    ; reuses the bit: START held -> hWhoseTurn = 0, else 1.
+    test al, 1 << BIT_TRAINER_BATTLE
+    mov al, 0
+    jnz .asm_3d4fd
+    mov al, 1
+.asm_3d4fd:
+    mov [ebp + hWhoseTurn], al
+    call LoadScreenTilesFromBuffer1
+    call Func_3d536
+    mov al, [ebp + wTestBattlePlayerSelectedMove]
+    and al, al
+    jz  MoveSelectionMenu               ; jp z — id 0 means "no move staged"
+    mov [ebp + wAnimationID], al
+    mov byte [ebp + wAnimationType], 0
+    call MoveAnimation                  ; predef MoveAnimation
+    call Func_78e98                     ; callfar
+    jmp MoveSelectionMenu
+
+Func_3d523:
+    mov al, [ebp + wTestBattlePlayerSelectedMove]
+    dec al
+    jmp asm_3d52d                       ; jr asm_3d52d
+Func_3d529:
+    mov al, [ebp + wTestBattlePlayerSelectedMove]
+    inc al
+asm_3d52d:
+    ; 8-BIT on purpose: pret steps the id with `dec a` / `inc a`, so it wraps
+    ; $00 <-> $FF at the ends instead of running out of range. Widening it would
+    ; change where the readout stops.
+    mov [ebp + wTestBattlePlayerSelectedMove], al
+    call Func_3d536
+    jmp MoveSelectionMenu
+
+Func_3d536:
+    mov esi, BCOORD(10, 16)             ; hlcoord 10, 16
+    mov bh, 2                           ; lb bc, 2, 10
+    mov bl, 10
+    call ClearScreenArea
+    mov esi, BCOORD(10, 17)             ; hlcoord 10, 17
+    mov edx, wTestBattlePlayerSelectedMove
+    mov bh, LEADING_ZEROES | 1          ; lb bc, LEADING_ZEROES | 1, 3
+    mov bl, 3
+    call PrintNumber
+    mov al, [ebp + wTestBattlePlayerSelectedMove]
+    and al, al
+    jz  .done                           ; ret z — nothing staged, no name to print
+    cmp al, STRUGGLE
+    jae .done                           ; ret nc — STRUGGLE and above have no name row
+    mov [ebp + wNamedObjectIndex], al
+    call GetMoveName
+    mov esi, BCOORD(13, 17)             ; hlcoord 13, 17
+    mov eax, ebp
+    add eax, wNameBuffer                ; GetMoveName leaves the name in WRAM, and
+                                        ; PlaceString takes a FLAT source
+    jmp PlaceString                     ; jp PlaceString
+.done:
+    ret
 
 ; ---------------------------------------------------------------------------
 ; AnyMoveToSelect — pret core.asm:AnyMoveToSelect (2876). If every usable move is
