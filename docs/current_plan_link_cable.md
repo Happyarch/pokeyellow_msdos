@@ -469,8 +469,24 @@ blocks in `src/engine/menus/naming_screen.asm`.
       the commit message, lint 0 both modes, `fidelity-serial` core 16/16
       PASS with the poll live. Runtime trade proof deferred to the
       two-instance item below (needs trade.asm)
-- [ ] Translate `engine/movie/trade.asm` (retire the core_stubs trade-anim
-      stubs)
+- [x] Translate `engine/movie/trade.asm` (retire the core_stubs trade-anim
+      stubs) — 2026-08-23 (`da6f486`): trade.asm all 50 labels + trade2.asm
+      all 3, both evolution_stubs trade-anim stubs retired, mirror-rule homes
+      added (`CopyTileIDsFromList_ZeroBaseTileID` → intro.asm,
+      `CopyToRedrawRowOrColumnSrcTiles` → home/overworld.asm), Tier-1 assets
+      (gen_trade_tiles.py + TRADE_ANIM_FAR/TRADE_MON_INFO_STRINGS). One
+      projection DEVIATION on TradeAnimCommon covers the movie-surface model;
+      the conditional prelude serves both the cable-club caller (surface
+      already armed) and InGameTrade_DoTrade (arms + tears down itself).
+      Static tier green (lint 0 both modes, label DB core 2886 translated /
+      460 missing / 16 stub, static_gate 8/8); dynamic verification deferred
+      to the end-of-plan battery (maintainer directive 2026-08-23). KNOWN
+      PRESENTATION GAP: `Trade_CopyCableTilesOffScreen` seeds GB_TILEMAP1, a
+      second BG plane the single-surface cinematic model does not composite —
+      memory writes are faithful, the cable-continuation scroll effect in
+      Trade_AnimLeftToRight/RightToLeft is not visually reproduced; retiring
+      it means extending ppu.asm's window model (maintainer call, not
+      blocking)
 - [ ] Two-instance scripted trade: `.dsv` postconditions (byte-identical
       44-byte structs incl. offset 7 per the Gen-2 rule, OT/ID swap, party
       counts), cancel ($F) and re-trade paths
