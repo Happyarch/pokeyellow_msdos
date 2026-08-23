@@ -868,6 +868,7 @@ PageChar:
     call dialog_window_scroll          ; ▼ + wait (pret: ManualTextScroll)
     ; ClearScreenArea b=7 rows, c=18 cols at hlcoord(1,10). EDX is the live source
     ; ptr (DE) — preserve it; use it as the row counter only inside this block.
+    ; DEVIATION{class=projection; pret=home/text.asm:PageChar; behavior=the box clear is open-coded here instead of calling pret's ClearScreenArea; evidence=MEASURED 2026-08-23 - the port's ClearScreenArea (home/copy2.asm) advances one row by SCREEN_WIDTH which is SCREEN_TILES_W = 40, the CANVAS stride, while this clear runs over the 20-wide GB-shaped text scratch addressed off text_line2 and text_row_stride (text_line2's default wTileMap + 16*20 + 1 is row 16 col 1 only at stride 20, and is row 8 col 1 on the 40-wide canvas), so ClearScreenArea would clear the wrong cells - routing this through it would mean making a pret label with 31 callers take a stride parameter; lifetime=until the text scratch and the canvas share one stride}
     push eax
     push ecx
     push edx
@@ -920,15 +921,20 @@ _ContTextNoPause:
     ; Pret ref: home/text.asm:_ContTextNoPause.
     call ScrollTextUpOneLine
     call ScrollTextUpOneLine
-    pop esi
+    ; pret sets HL and does NOT touch the PlaceString frame here — unlike its own
+    ; <LINE> handler two screens up, which really does `pop hl / hlcoord / push hl`.
+    ; The port had made the two uniform by giving this one a pop/push as well,
+    ; which quietly changed what the '@' terminator restores into HL: pret returns
+    ; the ORIGINAL line start, the port returned text_line2. Restoring pret's
+    ; asymmetry, deliberately, because it is pret's.
     mov esi, [text_line2]            ; pret's (1,16) — the box's 2nd text line
-    push esi
     jmp NextChar
 
 Paragraph:
     ; <PARA> ($51): paragraph break — wait for input, clear text area, reposition at (1,14).
     ; Pret ref: home/text.asm:Paragraph — ProtectedDelay3, ManualTextScroll,
     ; ClearScreenArea 4×18 at (1,13), DelayFrames 20.
+    ; DEVIATION{class=projection; pret=home/text.asm:Paragraph; behavior=the box clear is open-coded here instead of calling pret's ClearScreenArea; evidence=MEASURED 2026-08-23 - the port's ClearScreenArea (home/copy2.asm) advances one row by SCREEN_WIDTH which is SCREEN_TILES_W = 40, the CANVAS stride, while this clear runs over the 20-wide GB-shaped text scratch addressed off text_line2 and text_row_stride (text_line2's default wTileMap + 16*20 + 1 is row 16 col 1 only at stride 20, and is row 8 col 1 on the 40-wide canvas), so ClearScreenArea would clear the wrong cells - routing this through it would mean making a pret label with 31 callers take a stride parameter; lifetime=until the text scratch and the canvas share one stride}
     call ProtectedDelay3
     call text_pause
     ; Clear all 4 interior rows (pret's rows 13-16, cols 1-18) with TILE_SPC —
@@ -1210,6 +1216,13 @@ TextCommandProcessor:
     movzx ecx, byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS]
     xor al, cl
     mov [ebp + wLetterPrintingDelayFlags], al
+    ; pret: ld a,c / ld [wTextDest],a / ld a,b / ld [wTextDest+1],a — EBX is the
+    ; cursor (BC). Stored LOW BYTE FIRST: this is an SM83 POINTER, so it follows
+    ; the little-endian pointer convention, NOT the big-endian rule that governs
+    ; game DATA. Nothing in pret ever reads wTextDest back — it is write-only
+    ; there too — but it is pret's store and the port now carries it.
+    mov [ebp + wTextDest], bl
+    mov [ebp + wTextDest + 1], bh
 
 NextTextCommand:
     movzx eax, byte [esi]           ; stream is FLAT (see header)
@@ -1289,8 +1302,10 @@ TextCommand_FAR:
 ; --- TX_MOVE ($03): set cursor to new tile-buffer address ---
 TextCommand_MOVE:
     movzx ebx, byte [esi]          ; lo byte of new cursor addr
+    mov [ebp + wTextDest], bl      ; pret: ld [wTextDest], a
     inc esi
     movzx ecx, byte [esi]          ; hi byte
+    mov [ebp + wTextDest + 1], cl  ; pret: ld [wTextDest + 1], a
     inc esi
     shl ecx, 8
     or  ebx, ecx                   ; EBX = new cursor (BC in SM83)

@@ -57,6 +57,16 @@ bits 32
 %define MASK_LAST_CHUNK    0x02
 
 extern FillMemory
+extern BankswitchCommon             ; src/home/bankswitch2.asm
+extern OpenSRAM                     ; src/home/bankswitch2.asm — SRAM write-protect latch
+extern CloseSRAM                    ; src/home/bankswitch2.asm
+
+; pret `BANK("Sprite Buffers")`. MEASURED from the pret linker script
+; layout.link:248-249 — `SRAM $0` holds "Sprite Buffers" (bank 1 is "Save Data",
+; 2 and 3 are "Saved Boxes 1"/"Saved Boxes 2"). Local equ rather than a
+; gb_memmap.inc entry because it is a bank NUMBER, not an address, and
+; tools/audit_memmap.py reads that header as an address map.
+SRAM_BANK_SPRITE_BUFFERS equ 0
 
 global UncompressSpriteData
 global _UncompressSpriteData
@@ -66,12 +76,33 @@ section .text
 
 ; ---------------------------------------------------------------------------
 ; UncompressSpriteData — public entry (pics.asm caller).
-; In:  [wSpriteInputPtr] = GB addr of compressed stream, [wSpriteFlipped] set.
+; In:  AL = ROM bank of the compressed stream (pret: A),
+;      [wSpriteInputPtr] = GB addr of compressed stream, [wSpriteFlipped] set.
 ; Out: sSpriteBuffer1 / sSpriteBuffer2 hold the two final 1bpp planes
-;      (column-major, dense WxH). pret bankswitch/OpenSRAM are no-ops in the port.
+;      (column-major, dense WxH).
+;
+; pret's full body is restored here as of 2026-08-23. It used to be a bare
+; `call _UncompressSpriteData / ret` under a comment claiming "pret
+; bankswitch/OpenSRAM are no-ops in the port" — half true and now misleading:
+; BankswitchCommon really is a no-op beyond recording hLoadedROMBank, but
+; OpenSRAM/CloseSRAM are NOT, since they now drive the SRAM write-protect latch
+; (src/home/bankswitch2.asm). This is pret's own bracket, and it is the reason
+; the latch has anything to protect: the sprite buffers ARE SRAM bank 0
+; (sSpriteBuffer0/1/2 at $A000/$A188/$A310), so the decompressor is the single
+; biggest SRAM writer in the game.
 ; ---------------------------------------------------------------------------
 UncompressSpriteData:
+    mov bh, al                          ; ld b, a
+    mov al, [ebp + hLoadedROMBank]      ; ldh a, [hLoadedROMBank]
+    push eax                            ; push af
+    mov al, bh                          ; ld a, b
+    call BankswitchCommon
+    mov al, SRAM_BANK_SPRITE_BUFFERS    ; ld a, BANK("Sprite Buffers")
+    call OpenSRAM
     call _UncompressSpriteData
+    call CloseSRAM
+    pop eax                             ; pop af
+    call BankswitchCommon               ; restore the caller's bank
     ret
 
 ; ---------------------------------------------------------------------------

@@ -2758,7 +2758,8 @@
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "DisplaySignText"
+        "DisplaySignText",
+        "PrintPlayerName"
       ],
       "comparison": {
         "regions": [
