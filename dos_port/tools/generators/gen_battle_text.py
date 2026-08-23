@@ -496,6 +496,15 @@ EXTRA_FAR = [
     # check), so the composed wrapper lives in code at
     # src/engine/pokemon/learn_move.asm and only the far stream comes from here.
     "_OneTwoAndText",
+    # engine/battle/effects.asm:MonsStatsRoseText / MonsStatsFellText — `text_far
+    # _MonsStatsXText` + a `text_asm` selector returning Greatly{Rose,Fell}Text or
+    # {Rose,Fell}Text by move effect. The four branch targets are ordinary wrappers
+    # and ARE generated normally (GreatlyRoseText correctly carries pret's
+    # fallthrough into RoseText since 9396636a); only the two intros come from here.
+    # Both end in text_end, so their placement in this file is free — cf.
+    # gen_used_move_text.py, where it is not.
+    "_MonsStatsRoseText",
+    "_MonsStatsFellText",
 ]
 
 def main():

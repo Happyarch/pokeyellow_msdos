@@ -82,8 +82,17 @@ extern MoveHitTest                    ; engine/battle/core.asm — accuracy test
 extern BattleRandom                   ; engine/battle/core.asm — battle PRNG, result in AL
 extern DelayFrames                      ; src/home/delay.asm — BL = frame count
 extern PrintText                        ; src/home/window.asm — pret's PrintText
-extern MonsStatsRose                    ; core.asm — composes "<mon>'s STAT [greatly] rose!"
-extern MonsStatsFell                    ; core.asm — composes "<mon>'s STAT [greatly] fell!"
+extern PrintBattleText                  ; engine/battle/core.asm — PrintText + the battle
+                                        ;   msgbox projection. pret has one fixed box id
+                                        ;   inside DisplayTextBoxID; the port's PrintText
+                                        ;   republishes geometry from [text_msgbox] every
+                                        ;   call, so battle text goes through this wrapper.
+extern _MonsStatsRoseText               ; assets/battle_text.inc — pret text_5.asm far intros
+extern _MonsStatsFellText
+extern GreatlyRoseText                  ; assets/battle_text.inc — the four branch targets
+extern RoseText                         ;   (GreatlyRoseText already carries pret's
+extern GreatlyFellText                  ;    fallthrough into RoseText, per 9396636a)
+extern FellText
 
 ; --- battle_text.inc streams (global in core.o; flat addresses) ---
 extern NothingHappenedText
@@ -761,7 +770,8 @@ UpdateStatDone:
     jnz .skipBadge
     call ApplyBadgeStatBoosts            ; call z (player turn) — reapply badge boosts
 .skipBadge:
-    call MonsStatsRose                   ; "<mon>'s STAT [greatly] rose!" (intro+suffix+PROMPT)
+    mov eax, MonsStatsRoseText           ; pret :537-538 — ld hl, MonsStatsRoseText
+    call PrintBattleText                 ;                  call PrintText
     call QuarterSpeedDueToParalysis
     jmp HalveAttackDueToBurn
 
@@ -772,6 +782,37 @@ RestoreOriginalStatModifier:
 PrintNothingHappenedText:
     mov esi, NothingHappenedText
     jmp PrintText
+
+; ---------------------------------------------------------------------------
+; MonsStatsRoseText — pret engine/battle/effects.asm:552. `text_far
+; _MonsStatsRoseText` ("<USER>'s<LINE><wStringBuffer>") followed by a text_asm that
+; picks the suffix by move effect. The stream IS the code: TextCommand_START_ASM is
+; `push NextTextCommand / jmp esi` (src/home/text.asm), so the hook rets with ESI at
+; its successor stream, exactly as pret rets with HL.
+;
+; RETIRES core.asm's MonsStatsRose/ComposeStatIntro/AppendStatSuffix, which
+; hand-assembled this message into NPC_DIALOG_BUF with raw charmap constants.
+; The stat name still arrives via wStringBuffer from PrintStatText below — that
+; part was always faithful; only the sentence around it was bespoke.
+; ---------------------------------------------------------------------------
+MonsStatsRoseText:
+    db TX_FAR
+    dd _MonsStatsRoseText
+    db TX_START_ASM
+    ; The two `ld` between `and a` and `jr z` are flag-neutral on SM83; x86 `mov`
+    ; likewise, so ZF from `test al, al` survives to the branch.
+    mov esi, GreatlyRoseText
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov al, [ebp + wPlayerMoveEffect]
+    jz .playerTurn
+    mov al, [ebp + wEnemyMoveEffect]
+.playerTurn:
+    cmp al, ATTACK_DOWN1_EFFECT
+    jae .done                            ; ret nc — a stat-up-2 effect: "greatly"
+    mov esi, RoseText
+.done:
+    ret
 
 ; ===========================================================================
 ; StatModifierDownEffect
@@ -931,7 +972,8 @@ UpdateLoweredStatDone:
     jz .skipBadge
     call ApplyBadgeStatBoosts            ; call nz (enemy used stat-down on player)
 .skipBadge:
-    call MonsStatsFell                   ; "<mon>'s STAT [greatly] fell!" (intro+suffix+PROMPT)
+    mov eax, MonsStatsFellText           ; pret :727-728 — ld hl, MonsStatsFellText
+    call PrintBattleText                 ;                  call PrintText
     call QuarterSpeedDueToParalysis
     jmp HalveAttackDueToBurn
 
@@ -954,6 +996,33 @@ MoveMissed:
     jae .ret                             ; ret nc
     jmp ConditionalPrintButItFailed
 .ret:
+    ret
+
+; ---------------------------------------------------------------------------
+; MonsStatsFellText — pret engine/battle/effects.asm:754. Mirror of
+; MonsStatsRoseText with <TARGET> and the stat-DOWN-2 window: only effects in
+; [BIDE_EFFECT, ATTACK_DOWN_SIDE_EFFECT) lower a stat by two, so only those say
+; "greatly". Note the default here is the PLAIN text and the window selects
+; "greatly" — the inverse of the rose side, which is pret's shape, not a slip.
+; ---------------------------------------------------------------------------
+MonsStatsFellText:
+    db TX_FAR
+    dd _MonsStatsFellText
+    db TX_START_ASM
+    mov esi, FellText
+    mov al, [ebp + hWhoseTurn]
+    test al, al
+    mov al, [ebp + wPlayerMoveEffect]
+    jz .playerTurn
+    mov al, [ebp + wEnemyMoveEffect]
+.playerTurn:
+    ; check if the move's effect decreases a stat by 2
+    cmp al, BIDE_EFFECT
+    jb .done                             ; ret c
+    cmp al, ATTACK_DOWN_SIDE_EFFECT
+    jae .done                            ; ret nc
+    mov esi, GreatlyFellText
+.done:
     ret
 
 ; ===========================================================================

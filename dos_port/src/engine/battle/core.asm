@@ -93,7 +93,6 @@ HP_BAR_RED        equ 2       ; constants/gfx_constants.asm
 section .data
 align 4
 %include "assets/battle_hud_2bpp.inc"
-global RunBattleTextStream            ; DisplayUsedMoveText, now engine/battle/used_move_text.asm
 global battle_hud_tiles1_2bpp
 global battle_hud_tiles23_2bpp
 
@@ -115,14 +114,11 @@ global AnyMoveToSelect
 global PrintBattleText
 global PrintEmptyString                 ; pret core.asm:6720 — retired its battle_exp_stubs.asm stub
 extern DisplayUsedMoveText          ; src/engine/battle/used_move_text.asm
-extern PrintTextStaged                 ; src/home/window.asm — PrintText, stream already staged
 extern AnimationSlideEnemyMonOff       ; engine/battle/animations.asm — EnemyRan's tail
 extern PlaySoundWaitForCurrent         ; src/home/delay.asm — In: AL = sound id (also declared at its other use below)
 extern EnemyRanText                    ; dos_port/assets/battle_text.inc — EnemyRan, link arm
 global ExecutePlayerMove
 global ExecutePlayerMoveDone
-global MonsStatsRose
-global MonsStatsFell
 global ApplyAttackToEnemyPokemon
 global CheckPlayerStatusConditions
 global CheckForDisobedience
@@ -1288,15 +1284,6 @@ section .data
 EmptyBattleString: db 0x50
 section .text
 
-; RunBattleTextStream — print a stream COMPOSED IN WRAM (NPC_DIALOG_BUF) in the
-; battle dialog box. DisplayUsedMoveText and ComposeStatIntro build their streams
-; byte-by-byte at run time (splicing a nickname / a TX_RAM operand), so their stream
-; genuinely lives in GB space — this is what PrintTextStaged exists for. It is NOT
-; the retired staging workaround; do not "convert" these to PrintText.
-RunBattleTextStream:
-    mov dword [text_msgbox], msgbox_centered
-    jmp PrintTextStaged                 ; tail
-
 ; BattlePromptWait — the battle <PROMPT> hook (pret PromptText, wTileMap variant):
 ; blink the ▼ at [text_arrow_pos], wait for A/B, erase. Installed in text_prompt_hook
 ; by PrintBattleText. Clobbers EAX/ECX.
@@ -1577,61 +1564,6 @@ MirrorMoveCheck:                        ; pret 3369
 ExecutePlayerMoveDone:
     mov byte [ebp + wActionResultOrTookBattleTurn], 0
     mov bh, 1                           ; b = 1 → target did not faint
-    ret
-
-; ---------------------------------------------------------------------------
-; MonsStatsRose / MonsStatsFell — pret MonsStatsRoseText (effects.asm:552) /
-; MonsStatsFellText (:754): a text_far intro + a text_asm suffix branch, so the
-; generator can't emit them (it skips them). Composed in code, like DisplayUsedMoveText.
-; Prints "<USER/TARGET>'s<LINE><stat> rose!/fell!" — "greatly" for a ±2 stage — with a
-; <PROMPT> wait. wStringBuffer holds the stat name (set by the caller, PrintStatText).
-; TODO(B): live pacing/scroll of the "greatly" line is Master B's text-engine domain.
-; ---------------------------------------------------------------------------
-MonsStatsRose:
-    mov bh, 0x5A                         ; <USER>
-    call ComposeStatIntro               ; → EDI past intro, AL = attacker move effect
-    cmp al, ATTACK_DOWN1_EFFECT         ; pret :564 — effect >= ATTACK_DOWN1 → "greatly"
-    mov esi, str_greatly_rose
-    jae AppendStatSuffix
-    mov esi, str_rose
-    jmp AppendStatSuffix
-MonsStatsFell:
-    mov bh, 0x59                         ; <TARGET>
-    call ComposeStatIntro
-    mov esi, str_greatly_fell           ; pret :765-769 — BIDE_EFFECT <= effect
-    cmp al, BIDE_EFFECT                  ;                   < ATTACK_DOWN_SIDE_EFFECT
-    jb  .fellPlain                       ;                   → "greatly"
-    cmp al, ATTACK_DOWN_SIDE_EFFECT
-    jb  AppendStatSuffix
-.fellPlain:
-    mov esi, str_fell
-    ; fall through to AppendStatSuffix
-AppendStatSuffix:                        ; copy suffix [ESI] (flat, <PROMPT>-terminated) → [EDI]
-    mov al, [esi]
-    mov [edi], al
-    inc esi
-    inc edi
-    cmp al, 0x58                         ; <PROMPT> terminates + drives the ▼ wait
-    jne AppendStatSuffix
-    jmp RunBattleTextStream
-
-; ComposeStatIntro — BH = <USER>/<TARGET> byte. Writes "<TX_START><name>'s<LINE>
-; <TX_RAM wStringBuffer>" into NPC_DIALOG_BUF, leaves EDI past it, returns AL = the
-; attacker's move effect (hWhoseTurn-selected, pret effects.asm:557-562). Clobbers EAX/EDI.
-ComposeStatIntro:
-    lea edi, [ebp + NPC_DIALOG_BUF]
-    mov byte [edi], 0x00                 ; TX_START
-    mov [edi + 1], bh                    ; <USER> / <TARGET>
-    mov byte [edi + 2], 0xBD             ; "'s"
-    mov byte [edi + 3], 0x4F             ; <LINE>
-    mov byte [edi + 4], 0x01             ; TX_RAM
-    mov word [edi + 5], wStringBuffer    ; stat-name source ($CF4A, little-endian)
-    add edi, 7
-    mov al, [ebp + wPlayerMoveEffect]
-    cmp byte [ebp + hWhoseTurn], 0
-    je  .introDone
-    mov al, [ebp + wEnemyMoveEffect]
-.introDone:
     ret
 
 section .text

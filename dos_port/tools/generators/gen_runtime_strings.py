@@ -103,10 +103,6 @@ FILES = {
     ],
     "battle_core_runtime_strings.inc": [
         ("str_miss_text", [[0x00], "Attack got no way!", [0x50, 0x50]]),
-        ("str_rose", [" rose!", [0x58]]),
-        ("str_greatly_rose", [[0x4C], "greatly rose!", [0x58]]),
-        ("str_fell", [" fell!", [0x58]]),
-        ("str_greatly_fell", [[0x4C], "greatly fell!", [0x58]]),
         # pret engine/battle/core.asm:SevenSpacesText — `ds PIC_WIDTH, " "` + "@".
         # SlideDownFaintedMonPic PlaceStrings it to blank the row the pic just
         # vacated. A rendered glyph run is Tier-1 data, so it is generated here
