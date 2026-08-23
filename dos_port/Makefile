@@ -515,7 +515,8 @@ NET_SRCS := \
     src/net/net_frame.asm \
     src/net/com_uart.asm \
     src/net/ipx_dos.asm \
-    src/net/pktdrv.asm
+    src/net/pktdrv.asm \
+    src/net/net_ip.asm
 ifdef DEBUG_NETTEST
 NET_SRCS += src/net/net_test.asm
 endif

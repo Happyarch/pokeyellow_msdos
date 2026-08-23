@@ -23,21 +23,30 @@ once on every book screen) — it is the same literal string in both places,
 so it gets ONE generated label (LinkUIStr_Cancel) shared by both screens,
 rather than two byte-identical copies. Every other entry is one label.
 
-Four entries are LONGER than the usable budget at their draw position (the
-box interior is 13 columns wide, reused from link_menu.asm's UI_LINK_MENU
-geometry — see src/net/link_ui.asm; lu_show_message draws status/error text
-at column 1, so its actual single-line budget is 12 chars, not 13):
-"HOW WILL YOU LINK?" (19), "NO MODEM/PORT!" (14, the NetInit-failure error
-step 3 adds), "NOT IN THIS BUILD!" (19, the link_ui_connect_attempt TCP-arm
-stand-in error step 3 adds), and "NO IPX FOUND!" (13, the Ipx_Init-failure
-error Stage 6 step 1 adds — one char over the 12-char lu_show_message budget
-even though it fits the box's raw 13-column interior). Each is split into two
-lines with an embedded <NEXT> ($4E) control tile — the same
+Several entries are LONGER than the usable budget at their draw position
+(the box interior is 13 columns wide, reused from link_menu.asm's
+UI_LINK_MENU geometry — see src/net/link_ui.asm; lu_show_message draws
+status/error text at column 1, so its actual single-line budget is 12
+chars, not 13): "HOW WILL YOU LINK?" (19), "NO MODEM/PORT!" (14, the
+NetInit-failure error step 3 adds), "NO IPX FOUND!" (13, the Ipx_Init-
+failure error Stage 6 step 1 adds — one char over the 12-char
+lu_show_message budget even though it fits the box's raw 13-column
+interior), and "NO NET DRIVER!" (14, the NetIp_Init-failure error Stage 7
+step 2 adds — same shape as the two above). Each is split into two lines
+with an embedded <NEXT> ($4E) control tile — the same
 list-of-parts-with-NEXT pattern gen_menu_strings.py uses (its own
 `encode_parts`) — rather than widening the box: PlaceString does not wrap
 automatically, and an unsplit run past the budget would overwrite the box
 border. <NEXT> double-spaces by default (PlaceString, home/text.asm), so each
 split header prints on rows N and N+2 of the box.
+
+"NOT IN THIS BUILD!" (the link_ui_connect_attempt TCP-arm stand-in error
+Stage 5 step 3 added) is RETIRED as of Stage 7 step 2: the TCP transport is
+now implemented, so the arm that used to always show this message and
+return AL=0 no longer exists. Nothing in the tree references
+LinkUIStr_NotInBuild any more (grep-verified), so it is removed here rather
+than left as a dead generated label — the "sweep related messaging in the
+same workstream when a capability becomes live" rule (CLAUDE.md).
 
 Run from repo root or dos_port/.
 """
@@ -101,10 +110,11 @@ STRINGS = [
     ("LinkUIStr_BadAddress",    ["BAD ADDRESS!"],  "book screen: address failed validation"),
     ("LinkUIStr_Saved",         ["SAVED!"],        "book screen: NEW/EDIT/DELETE commit confirmation"),
     ("LinkUIStr_Empty",         ["EMPTY"],         "book screen: no entries in this family's book"),
-    ("LinkUIStr_NotInBuild",    ["NOT IN THIS", NEXT, "BUILD!"],
-     "link_ui_connect_attempt: TCP arm has no transport yet (2 lines)"),
     ("LinkUIStr_NoIpx",         ["NO IPX", NEXT, "FOUND!"],
      "link_ui_connect_attempt: Ipx_Init found no IPX stack (2 lines; Stage 6 step 1)"),
+    ("LinkUIStr_NoNetDriver",   ["NO NET", NEXT, "DRIVER!"],
+     "link_ui_connect_attempt: NetIp_Init failed — no packet driver, or "
+     "config missing (2 lines; Stage 7 step 2)"),
 ]
 
 

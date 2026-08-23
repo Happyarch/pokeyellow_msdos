@@ -122,6 +122,12 @@ extern Ipx_Shutdown
 extern Ipx_TxByte
 extern Ipx_RxByte
 extern ipx_dos_pump
+extern NetIp_Init                   ; src/net/net_ip.asm (Stage 7 step 2)
+extern NetIp_Shutdown
+extern NetIp_TxByte
+extern NetIp_RxByte
+extern net_ip_pump
+extern g_net_tcp_mode                ; src/net/net_ip.asm — /TCPWAIT=1 /TCP==2
 extern Serial                       ; src/home/serial.asm — the pret handler;
                                     ; delivery = stage IO_SB, call it
 
@@ -129,7 +135,8 @@ extern Serial                       ; src/home/serial.asm — the pret handler;
 NET_TRANSPORT_NONE  equ 0
 NET_TRANSPORT_UART  equ 1
 NET_TRANSPORT_IPX   equ 2
-NET_TRANSPORT_COUNT equ 3
+NET_TRANSPORT_TCP   equ 3
+NET_TRANSPORT_COUNT equ 4
 
 ; Session states
 NS_IDLE         equ 0               ; no transport bound
@@ -209,6 +216,7 @@ net_vt_pump:
     dd net_null_op                  ; NET_TRANSPORT_NONE
     dd net_uart_pump                ; NET_TRANSPORT_UART
     dd ipx_dos_pump                 ; NET_TRANSPORT_IPX
+    dd net_ip_pump                  ; NET_TRANSPORT_TCP (Stage 7 step 2)
 net_vt_start:
     dd net_null_op
     dd net_uart_start
@@ -224,24 +232,30 @@ net_vt_start:
                                     ; IO_SC/hSerialSendData after the game
                                     ; leaves an exchange loop, sending
                                     ; exchanges the UART transport never sends.
+    dd net_uart_start               ; NET_TRANSPORT_TCP: same row, same
+                                    ; reasoning — Stage 7 step 2 applies the
+                                    ; Stage 6 review rule verbatim (see
+                                    ; net_ip.asm's own header, "net_vt_start").
 
 section .text
 
 ; ---------------------------------------------------------------------------
 ; NetInit — bind the transport selected on the command line (nothing given =
-; single-player, byte-identical behavior: both branches below are gated on
-; their own sel flag, default 0, so a plain run with no /COMx or /IPX takes
-; neither and NetInit is a pushad/popad no-op exactly as before this step).
-; Runs from boot/entry.asm after joypad_init. Preserves all registers.
+; single-player, byte-identical behavior: every branch below is gated on its
+; own sel flag, default 0, so a plain run with no /COMx, /IPX, /TCPWAIT, or
+; /TCP= takes none of them and NetInit is a pushad/popad no-op exactly as
+; before Stage 2). Runs from boot/entry.asm after joypad_init. Preserves all
+; registers.
 ;
 ; Re-callable (the link-cable UI re-invokes this on every connect attempt —
-; src/net/link_ui.asm): the IPX branch only runs when g_net_transport is
-; STILL NONE after the COM branch, so a stale g_net_com_sel/g_net_ipx_sel
-; left over from an earlier FAILED attempt in the same run can never clobber
-; an already-bound transport — by the time either branch could re-fire,
-; g_net_transport is provably NONE (LinkTransportSelect's own top-level guard
-; skips the whole UI once a transport is bound, so this file never observes a
-; retry after success, only after a failure that left it NONE).
+; src/net/link_ui.asm): the IPX and TCP branches only run when g_net_transport
+; is STILL NONE after every earlier branch, so a stale g_net_com_sel/
+; g_net_ipx_sel/g_net_tcp_mode left over from an earlier FAILED attempt in the
+; same run can never clobber an already-bound transport — by the time any
+; later branch could re-fire, g_net_transport is provably NONE
+; (LinkTransportSelect's own top-level guard skips the whole UI once a
+; transport is bound, so this file never observes a retry after success, only
+; after a failure that left it NONE).
 ; ---------------------------------------------------------------------------
 NetInit:
     pushad
@@ -261,15 +275,31 @@ NetInit:
     cmp byte [g_net_transport], NET_TRANSPORT_NONE
     jne .done                       ; already bound (defensive; see header)
     cmp byte [g_net_ipx_sel], 0
-    je .done                        ; no /IPX: stay unbound
+    je .try_tcp                     ; no /IPX: fall through to TCP
     call Ipx_Init
-    jc .done                        ; no IPX stack: degrade, never hang
+    jc .try_tcp                     ; no IPX stack: degrade, try TCP next
     mov ebx, link_ncb
     mov dword [ebx + NFCB.cb_txbyte],  Ipx_TxByte
     mov dword [ebx + NFCB.cb_rxbyte],  Ipx_RxByte
     mov dword [ebx + NFCB.cb_deliver], net_session_deliver
     mov dword [ebx + NFCB.cb_dead],    net_session_dead
     mov al, NET_TRANSPORT_IPX
+    call net_bind_common
+    jmp .done
+.try_tcp:
+    cmp byte [g_net_transport], NET_TRANSPORT_NONE
+    jne .done                       ; already bound (defensive; see header)
+    cmp byte [g_net_tcp_mode], 0
+    je .done                        ; no /TCPWAIT or /TCP=: stay unbound
+    call NetIp_Init
+    jc .done                        ; no packet driver / config missing:
+                                     ; degrade, never hang
+    mov ebx, link_ncb
+    mov dword [ebx + NFCB.cb_txbyte],  NetIp_TxByte
+    mov dword [ebx + NFCB.cb_rxbyte],  NetIp_RxByte
+    mov dword [ebx + NFCB.cb_deliver], net_session_deliver
+    mov dword [ebx + NFCB.cb_dead],    net_session_dead
+    mov al, NET_TRANSPORT_TCP
     call net_bind_common
 .done:
     popad
@@ -298,6 +328,7 @@ NetShutdown:
     pushad
     call ComUart_Shutdown           ; safe when never bound
     call Ipx_Shutdown               ; safe when never bound
+    call NetIp_Shutdown             ; safe when never bound
     mov byte [g_net_transport], NET_TRANSPORT_NONE
     mov byte [g_net_link_up], 0
     mov byte [net_state], NS_IDLE

@@ -41,9 +41,14 @@ extern g_net_linklog     ; src/net/net_hal.asm — /LINKLOG flag
 extern g_net_ipx_sel     ; src/net/net_hal.asm — /IPX flag (Stage 6 step 1)
 extern g_net_ipx_socket  ; src/net/net_hal.asm — /IPXSOCK=n override
 extern g_pkt_int      ; src/net/pktdrv.asm — /PKTINT=0xNN override (Stage 7
-                       ; step 1; 0 = auto-scan 0x60-0x80). Not consumed by
-                       ; NetInit yet — pktdrv.asm links unreferenced until
-                       ; Stage 7 step 2 (net_ip.asm) wires the transport in.
+                       ; step 1; 0 = auto-scan 0x60-0x80)
+extern g_net_tcp_mode         ; src/net/net_ip.asm — /TCPWAIT=1 /TCP==2
+extern g_net_tcp_listen_port  ; src/net/net_ip.asm — /TCPWAIT[=port]
+extern g_net_tcp_peer_ip      ; src/net/net_ip.asm — /TCP=a.b.c.d
+extern g_net_tcp_peer_port    ; src/net/net_ip.asm — /TCP=...[:port]
+extern g_net_ip_local         ; src/net/net_ip.asm — /IP=a.b.c.d
+extern g_net_ip_mask          ; src/net/net_ip.asm — /MASK=a.b.c.d
+extern g_net_ip_gw            ; src/net/net_ip.asm — /GW=a.b.c.d
 extern g_cfg_partyb      ; src/engine/debug/debug_party.asm — /PARTYB flag (tradecheck harness)
 extern audio_shutdown    ; src/audio/audio_hal.asm
 extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at boot
@@ -114,6 +119,18 @@ arg_partyb:   db '/PARTYB',  0
 ; Packet driver client (Stage 7 step 1, docs/current_plan_link_cable.md) —
 ; hex vector override, matched with find_token_pos like /BAUD=/IPXSOCK=.
 arg_pktint:   db '/PKTINT=', 0
+; TCP/IP transport (Stage 7 step 2). /TCPWAIT (8 chars, no '=') is NEVER a
+; literal substring of "/TCP=" (position 4 of "/TCP=" is '=', not 'W'), and
+; "/TCP=" is never a substring of "/TCPWAIT..." either (position 4 there is
+; 'W', not '=') — the TOKEN SHAPES already disambiguate them (the /IPXSOCK=
+; precedent above is the opposite case: a shorter flag that genuinely IS a
+; prefix of a longer one). /TCPWAIT is still matched FIRST below anyway,
+; belt-and-suspenders, matching that precedent's own check order.
+arg_tcpwait:  db '/TCPWAIT',  0
+arg_tcp:      db '/TCP=',     0
+arg_ip:       db '/IP=',      0
+arg_mask:     db '/MASK=',    0
+arg_gw:       db '/GW=',      0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -435,6 +452,78 @@ parse_cmdline:
     mov [g_pkt_int], al
 .no_pktint:
 
+    ; --- TCP/IP transport flags (Stage 7 step 2) ---
+    ; /TCPWAIT[=port] — default port 8368 (TCP_DEFAULT_PORT in net_ip.asm).
+    ; An unparsable or out-of-range value after '=' is ignored (the default
+    ; already written stands).
+    mov edi, arg_tcpwait
+    call find_token_pos
+    jnz .no_tcpwait
+    mov byte [g_net_tcp_mode], 1
+    mov word [g_net_tcp_listen_port], 8368
+    cmp byte [eax], '='
+    jne .no_tcpwait
+    inc eax
+    call parse_decimal
+    jc .no_tcpwait
+    test eax, eax
+    jz .no_tcpwait
+    cmp eax, 0xFFFF
+    ja .no_tcpwait
+    mov [g_net_tcp_listen_port], ax
+.no_tcpwait:
+    ; /TCP=a.b.c.d[:port] — default port 8368 if ':port' is absent. A
+    ; malformed address or port leaves g_net_tcp_mode at whatever it was
+    ; (0 unless /TCPWAIT already set it) — the whole flag is ignored on
+    ; any parse failure, matching /BAUD='s "ignored, default stands" rule.
+    mov edi, arg_tcp
+    call find_token_pos
+    jnz .no_tcp
+    mov esi, eax
+    mov edi, g_net_tcp_peer_ip
+    call parse_dotted_quad
+    jc .no_tcp
+    mov word [g_net_tcp_peer_port], 8368
+    cmp byte [esi], ':'
+    jne .tcp_have_addr
+    inc esi
+    mov eax, esi
+    call parse_decimal
+    jc .no_tcp
+    test eax, eax
+    jz .no_tcp
+    cmp eax, 0xFFFF
+    ja .no_tcp
+    mov [g_net_tcp_peer_port], ax
+.tcp_have_addr:
+    mov byte [g_net_tcp_mode], 2
+.no_tcp:
+    ; /IP= /MASK= /GW= — static config, dotted-quad, no port suffix. A
+    ; malformed value leaves the field at its prior value (0.0.0.0 default);
+    ; NetIp_Init's own "config missing" check (all-zero /IP= or /MASK=) then
+    ; degrades exactly as if the flag were never given.
+    mov edi, arg_ip
+    call find_token_pos
+    jnz .no_ip
+    mov esi, eax
+    mov edi, g_net_ip_local
+    call parse_dotted_quad
+.no_ip:
+    mov edi, arg_mask
+    call find_token_pos
+    jnz .no_mask
+    mov esi, eax
+    mov edi, g_net_ip_mask
+    call parse_dotted_quad
+.no_mask:
+    mov edi, arg_gw
+    call find_token_pos
+    jnz .no_gw
+    mov esi, eax
+    mov edi, g_net_ip_gw
+    call parse_dotted_quad
+.no_gw:
+
 .done:
     pop edi
     pop esi
@@ -669,6 +758,59 @@ parse_hex:
 .out:
     pop ecx
     pop esi
+    ret
+
+; ---------------------------------------------------------------------------
+; parse_dotted_quad — ESI = flat ptr to "a.b.c.d" text (3 '.' separators,
+; each octet 1-3 decimal digits, 0-255). EDI = flat ptr to a 4-byte output
+; buffer (network/big-endian order: first octet -> byte 0). Out: CF=0 +
+; ESI advanced past the last octet's digits (left on whatever follows, e.g.
+; ':' or NUL); CF=1 malformed (bad octet range, a non-digit where a digit/
+; '.' was expected, or an octet with zero digits) — the OUTPUT BUFFER may
+; be partially written on a CF=1 return; every caller here only reads it
+; after a CF=0 check. Clobbers EAX/ECX/EDX. Shared by /IP=, /MASK=, /GW=,
+; and /TCP='s address part — the plan's "dotted-quad parser shared, one
+; helper" requirement.
+; ---------------------------------------------------------------------------
+parse_dotted_quad:
+    push ebx
+    mov ebx, 4                      ; octets remaining
+.octet:
+    xor eax, eax
+    xor ecx, ecx                    ; digit count for this octet
+.digit:
+    movzx edx, byte [esi]
+    sub dl, '0'
+    cmp dl, 9
+    ja .digits_done
+    cmp ecx, 3
+    jae .bad                        ; more than 3 digits: reject outright
+    imul eax, eax, 10
+    movzx edx, dl
+    add eax, edx
+    inc esi
+    inc ecx
+    jmp .digit
+.digits_done:
+    test ecx, ecx
+    jz .bad                         ; no digits at all
+    cmp eax, 255
+    ja .bad
+    mov [edi], al
+    inc edi
+    dec ebx
+    jz .done
+    cmp byte [esi], '.'
+    jne .bad
+    inc esi
+    jmp .octet
+.done:
+    pop ebx
+    clc
+    ret
+.bad:
+    pop ebx
+    stc
     ret
 
 ; ---------------------------------------------------------------------------

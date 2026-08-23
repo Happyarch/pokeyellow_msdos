@@ -45,6 +45,46 @@
 # LINKCHECK_IPX_PORT (default 213, DOSBox-X's IPXNET default) picks the TCP
 # port IPXNET tunnels over — independent of LINKCHECK_PORT, which stays the
 # nullmodem-only knob.
+#
+# TRANSPORT=tcp (Stage 7 step 2): swaps [serial]/[ipx] for DOSBox-X's NE2000
+# emulation over the SLIRP backend and the game's own /TCP=/TCPWAIT= flags.
+# Conf keys verified against the upstream wiki (dosbox-x.com/wiki/Guide:
+# Setting-up-networking-in-DOSBox-X — WebFetched 2026-08-23, quoted verbatim
+# in the step report):
+#   [ne2000]
+#   ne2000=true
+#   nicirq=10
+#   backend=slirp
+#   [ethernet, slirp]
+#   tcp_port_forwards=<host>:<guest>   ; server instance only
+#
+# TOPOLOGY (ROOT design — UNVERIFIED until this battery actually runs; the
+# two DOSBox-X processes are NOT proven to reach each other this way yet):
+# each guest's SLIRP backend NATs it privately to 10.0.2.15, with 10.0.2.2
+# as that SAME guest's alias for the REAL machine dosbox-x itself runs on
+# (libslirp's usual default gateway/host pair) — the two guests' 10.0.2.x
+# addresses are NOT a shared LAN, they are two independent NAT domains that
+# happen to share one physical host. The bridge is instance B's
+# tcp_port_forwards: it forwards a REAL port on the host machine to its own
+# guest's port 8368; instance A, dialing ITS OWN 10.0.2.2 (which resolves to
+# that same real host), reaches that forwarded port and thus B's guest. So:
+#   B (server): /TCPWAIT=8368 /IP=10.0.2.15 /MASK=255.255.255.0
+#               /GW=10.0.2.2 — plus tcp_port_forwards=$TCP_FWDPORT:8368
+#   A (client): /TCP=10.0.2.2:$TCP_FWDPORT /IP=10.0.2.15
+#               /MASK=255.255.255.0 /GW=10.0.2.2
+# LINKCHECK_TCP_FWDPORT (default 18368) is the HOST-side forwarded port —
+# deliberately different from the guest-side 8368 both sides speak, so a
+# stray host listener on 8368 can never be mistaken for the forward.
+#
+# PCAP FALLBACK (not implemented by this script): SLIRP's per-process NAT
+# is why the topology above needs the port-forward bridge at all — a real
+# `[ne2000] backend=pcap` bridges to a genuine host network interface
+# instead, giving both guests real, mutually-reachable IPs on one segment
+# with no port-forward indirection, but pcap needs host-level bridging
+# privileges (a tap/bridge interface, typically root or a capability grant)
+# this harness's sandbox does not have. If SLIRP's forwarding key above
+# proves wrong or insufficient when this battery is actually run, pcap is
+# the documented next thing to try, not a second SLIRP guess.
 set -eu
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"   # dos_port/
@@ -56,6 +96,7 @@ mkdir -p "$OUT/a" "$OUT/b"
 TRANSPORT="${TRANSPORT:-serial}"
 PORT="${LINKCHECK_PORT:-23456}"
 IPX_PORT="${LINKCHECK_IPX_PORT:-213}"
+TCP_FWDPORT="${LINKCHECK_TCP_FWDPORT:-18368}"
 DUMP_FRAME="${LINKCHECK_DUMP_FRAME:-3600}"
 RUN_TIMEOUT="${RUN_TIMEOUT:-150}"
 STAGGER="${LINKCHECK_STAGGER:-3}"
@@ -100,6 +141,20 @@ if [ "$TRANSPORT" = "ipx" ]; then
     sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/b/pkmn.img|; s|^PKMN.EXE\$|ipxnet connect localhost $IPX_PORT\nPKMN.EXE /IPX /LINKLOG\nexit|" \
         dosbox-x.conf >"$SCRATCH/b/run.conf"
     printf '\n[ipx]\nipx=true\n' >>"$SCRATCH/b/run.conf"
+elif [ "$TRANSPORT" = "tcp" ]; then
+    # Derive the two confs from the tracked one: per-instance image, the
+    # game's /TCPWAIT=/TCP= flags in place of /COM1, [ne2000]+[ethernet,
+    # slirp] to enable the NIC and (server only) the host->guest port
+    # forward — see the file header's TOPOLOGY note for why A dials its OWN
+    # 10.0.2.2 rather than B's address directly.
+    sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/a/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE /TCP=10.0.2.2:$TCP_FWDPORT /IP=10.0.2.15 /MASK=255.255.255.0 /GW=10.0.2.2 /LINKLOG\nexit|" \
+        dosbox-x.conf >"$SCRATCH/a/run.conf"
+    printf '\n[ne2000]\nne2000=true\nnicirq=10\nbackend=slirp\n' >>"$SCRATCH/a/run.conf"
+
+    sed "s|^imgmount c PKMN.IMG|imgmount c $SCRATCH/b/pkmn.img|; s|^PKMN.EXE\$|PKMN.EXE /TCPWAIT=8368 /IP=10.0.2.15 /MASK=255.255.255.0 /GW=10.0.2.2 /LINKLOG\nexit|" \
+        dosbox-x.conf >"$SCRATCH/b/run.conf"
+    printf '\n[ne2000]\nne2000=true\nnicirq=10\nbackend=slirp\n' >>"$SCRATCH/b/run.conf"
+    printf '\n[ethernet, slirp]\ntcp_port_forwards=%s:8368\n' "$TCP_FWDPORT" >>"$SCRATCH/b/run.conf"
 else
     # Derive the two confs from the tracked one: per-instance image, /COM1
     # /LINKLOG on the game's command line, exit after the game, and a
@@ -116,18 +171,35 @@ else
     printf '\n[serial]\nserial1=nullmodem server:localhost port:%s transparent:1\n' "$PORT" >>"$SCRATCH/b/run.conf"
 fi
 
-echo "== linkcheck: instance A (server) up, B follows after ${STAGGER}s (timeout ${RUN_TIMEOUT}s each)" >&2
+# Launch order: whichever side is the LISTENER must be up first. For
+# serial/ipx that is instance A (its conf has no server:/connect command —
+# see the branches above). For tcp it is the REVERSE: B holds the
+# tcp_port_forwards listener (the spec's own explicit A=CONNECT/B=WAIT
+# assignment — see the file header's TOPOLOGY note), so B must launch first
+# or A's /TCP= connect attempt starts retrying against nothing. Only the
+# ORDER changes here — confs stay named a/run.conf and b/run.conf exactly
+# as written above, so the extraction and Python analysis below (which
+# treat 'a'/'b' symmetrically, deriving role only from the elected token)
+# are unaffected either way.
+if [ "$TRANSPORT" = "tcp" ]; then
+    FIRST=b
+    SECOND=a
+else
+    FIRST=a
+    SECOND=b
+fi
+echo "== linkcheck: instance $FIRST (listener) up, $SECOND follows after ${STAGGER}s (timeout ${RUN_TIMEOUT}s each)" >&2
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout -s KILL "$RUN_TIMEOUT" \
-    "$DOSBOX" -defaultdir "$HERE" -defaultconf -conf "$SCRATCH/a/run.conf" \
-    >"$SCRATCH/a/dosbox.log" 2>&1 &
-PID_A=$!
+    "$DOSBOX" -defaultdir "$HERE" -defaultconf -conf "$SCRATCH/$FIRST/run.conf" \
+    >"$SCRATCH/$FIRST/dosbox.log" 2>&1 &
+PID_FIRST=$!
 sleep "$STAGGER"
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout -s KILL "$RUN_TIMEOUT" \
-    "$DOSBOX" -defaultdir "$HERE" -defaultconf -conf "$SCRATCH/b/run.conf" \
-    >"$SCRATCH/b/dosbox.log" 2>&1 &
-PID_B=$!
-wait "$PID_A" || true
-wait "$PID_B" || true
+    "$DOSBOX" -defaultdir "$HERE" -defaultconf -conf "$SCRATCH/$SECOND/run.conf" \
+    >"$SCRATCH/$SECOND/dosbox.log" 2>&1 &
+PID_SECOND=$!
+wait "$PID_FIRST" || true
+wait "$PID_SECOND" || true
 
 got=0
 for side in a b; do
