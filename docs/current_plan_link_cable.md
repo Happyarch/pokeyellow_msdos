@@ -865,14 +865,53 @@ address cap (above) and SetupPlayerAndEnemyPokeballs OAM placement (Stage 4).
       retry (flagged in-code)
 
 ### Stage 7 — native TCP
-- [ ] Slirp reachability spike FIRST (two NE2000+slirp guests are NATed
-      apart — host port-forward topology; pcap fallback documented); gates
-      the rest of the stage
-- [ ] `pktdrv.asm` (DPMI 0303h real-mode RX callback — new pattern,
-      document it) + `net_ip.asm` (ARP, IPv4, minimal stop-and-wait TCP);
-      flags `/TCPWAIT[=port]`, `/TCP=ip[:port]`, `/IP= /MASK= /GW=`
-      (no DHCP in v1 — recorded as deferred); book entries feed the
-      connect path; linkcheck NE2000 variant; rerun battery
+- [x] Slirp reachability spike — DOWNGRADED to a documented topology note
+      (2026-08-23): the spike is inherently dynamic (two NE2000+slirp
+      guests) and this stage landed under a static-only directive, so the
+      topology is DESIGNED and RECORDED, not proven. The design lives in
+      `tools/linkcheck.sh`'s TRANSPORT=tcp header (commit `8b7c45e`): each
+      guest's slirp NATs it privately to 10.0.2.15 (10.0.2.2 = that guest's
+      own alias for the real host — the two guests' 10.0.2.x are two
+      independent NAT domains, NOT a shared LAN); the bridge is instance
+      B's `tcp_port_forwards=<host 18368>:<guest 8368>`, which A reaches by
+      dialing its OWN 10.0.2.2:18368. Conf keys ([ne2000] ne2000/nicirq/
+      backend=slirp; [ethernet, slirp] tcp_port_forwards) were verified
+      against the DOSBox-X wiki (WebFetched 2026-08-23), the two-guest
+      reachability itself is UNVERIFIED until the battery — marked LOUD in
+      the script, with the pcap fallback (real bridging, needs host
+      privileges) documented as the next thing to try, not a second guess
+- [x] `pktdrv.asm` + `net_ip.asm` — DONE STATIC (2026-08-23, commits
+      `707aded` step 1 + `8b7c45e` step 2). pktdrv.asm (904 lines): INT
+      0x60-0x80 "PKT DRVR" probe (/PKTINT=0xNN override), two access_type
+      handles (ethertype 0x0800 + 0x0806, one shared callback), the repo's
+      FIRST DPMI 0303h real-mode callback (documented at length in-file:
+      dedicated callback rmcs, PM handler pops the RM return CS:IP off the
+      RM stack via DS:ESI + SP+=4, anti-recursion CS:IP rewrite), 2
+      rotating RX slots with state bytes, Pktdrv_Send/Recv flat-buffer
+      contracts. net_ip.asm (1448 lines): ARP (one-entry cache, /GW=
+      routing off-subnet, answers requests for /IP=; LISTEN learns peer
+      MAC from the SYN's ethernet source), IPv4 (real RFC 1071 header
+      checksum both directions), minimal stop-and-wait TCP (LISTEN
+      /TCPWAIT[=port] default 8368 / CONNECT /TCP=a.b.c.d[:port], 3-way
+      handshake, one unacked MSS-1460 segment, ~1s x8 retries -> dead ->
+      codec cb_dead direct, in-order-only RX with dup-ACKs, TCP
+      pseudo-header checksum generate+validate, FIN once at shutdown, no
+      DHCP — deferred). vtable row 3 with start row = net_uart_start (the
+      Stage 6 edge-trigger rule applied verbatim); book records + DIRECT
+      prompt feed the connect seam (WAIT is CLI-only — no natural UI row
+      for a listener); LinkUIStr_NotInBuild retired, LinkUIStr_NoNetDriver
+      added. ROOT review caught + fixed one real bug pre-commit: the RX
+      staging pair was cumulative over the connection lifetime, wedging the
+      link after 2920 total received bytes; now recycled whenever the codec
+      has fully drained it (NetFrame_Tick drains RX to CF=1 every tick).
+      STATIC ONLY — lint 0 both modes, full link, plain no-flag build
+      behavior unchanged (all paths gated on g_net_tcp_mode default 0).
+      The battery must: run linkcheck TRANSPORT=tcp (validates the slirp
+      topology above), then tradecheck/battlecheck over TCP. Known scope
+      decisions recorded in net_ip.asm's DESIGN DECISIONS header: no
+      auto-reconnect after DEAD, fixed local port 8368 both roles,
+      dup-SYN-in-SYN_RCVD not source-checked (point-to-point only),
+      fire-and-forget ACKs (peer retransmit re-triggers)
 
 ### Stage 8 — hardening + bookkeeping
 - [ ] Soak: repeated trades/battles per transport, injected drops,
