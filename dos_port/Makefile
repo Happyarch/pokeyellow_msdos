@@ -988,6 +988,7 @@ POKEMON_SRCS := \
     src/engine/pikachu/pikachu_stubs.asm \
     src/engine/movie/evolution.asm \
     src/engine/movie/hall_of_fame.asm \
+    src/engine/movie/credits.asm \
     src/engine/movie/evolution_stubs.asm \
     src/engine/pokemon/learn_move.asm
 
@@ -2567,6 +2568,18 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
 AUTOKEY_DUMP_FRAME ?= 260
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# Credits gate: boot to the overworld, then run the real Credits roll (skipping the
+# Hall of Fame ceremony HallOfFamePC would play first) and photograph it. No golden
+# scenario reaches the credits — they are behind the Hall of Fame, behind the
+# Champion — so this is their only runtime evidence.
+# make DEBUG_CREDITS=1 [AUTOKEY_DUMP_FRAME=<n>]
+ifdef DEBUG_CREDITS
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_CREDITS -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 200
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Options gate (menus S6 package D): boot to overworld, open the OPTION menu via
 # InitOptionsMenu (full-screen takeover), draw the cursor, dump FRAME.BIN, exit.
 # make SKIP_TITLE=1 DEBUG_OPTIONS=1
@@ -3791,6 +3804,15 @@ assets/unknown_list.inc: ../data/pokemon/unknown_list.asm assets/script_constant
         tools/generators/gen_unknown_list.py
 	python3 tools/generators/gen_unknown_list.py
 
+# Credits roll data — command stream, parade species, the pointer table and the 86
+# name strings, all transcribed out of pret (the names are rendered text, so they
+# may never be hand-encoded).
+assets/credits_data.inc: ../data/credits/credits_order.asm ../data/credits/credits_mons.asm \
+        ../data/credits/credits_text.asm ../constants/credits_constants.asm \
+        ../engine/movie/credits.asm assets/gb_charmap.txt assets/script_constants.inc \
+        tools/generators/gen_credits_data.py tools/generators/gen_battle_text.py
+	python3 tools/generators/gen_credits_data.py
+
 # Text-box menu strings (pret data/text_boxes.asm) — charmap-encoded via gb_text;
 # two-tier rule. <NEXT>/<PK>/<MN> are emitted as named raw bytes by the generator.
 assets/textbox_strings.inc: assets/gb_charmap.txt tools/generators/gen_textbox_strings.py tools/generators/gb_text.py
@@ -4104,6 +4126,7 @@ src/home/trainers.o: assets/trainer_text.inc assets/audio_constants.inc
 src/engine/battle/used_move_text.o: assets/used_move_text.inc
 src/engine/movie/hall_of_fame.o: assets/hall_of_fame_text.inc assets/audio_constants.inc assets/event_constants.inc
 src/data/pokemon/unknown_list.o: assets/unknown_list.inc
+src/engine/movie/credits.o: assets/credits_data.inc assets/the_end_2bpp.inc assets/audio_constants.inc
 src/engine/pokemon/evos_moves.o: assets/script_constants.inc
 
 # Trainer-card tile graphics (box/bg/blank-names/badge-numbers/colon/circle),

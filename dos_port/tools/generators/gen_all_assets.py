@@ -563,6 +563,7 @@ def main():
     import gen_used_move_text
     import gen_hall_of_fame_text
     import gen_unknown_list
+    import gen_credits_data
     import gen_trainer_parties
     import gen_trainer_names
     import gen_move_grammar
@@ -582,6 +583,8 @@ def main():
     gen_hall_of_fame_text.main()
     print("chaining gen_unknown_list ...")
     gen_unknown_list.main()
+    print("chaining gen_credits_data ...")
+    gen_credits_data.main()
     print("chaining gen_trainer_parties ...")
     gen_trainer_parties.main()
     print("chaining gen_trainer_names ...")

@@ -157,6 +157,9 @@ extern RunLeaguePCTest                    ; src/engine/menus/league_pc.asm
 %ifdef DEBUG_HOF
 extern RunHallOfFameTest                  ; src/engine/movie/hall_of_fame.asm
 %endif
+%ifdef DEBUG_CREDITS
+extern RunCreditsTest                     ; src/engine/movie/credits.asm
+%endif
 extern RunLearnMoveTest                   ; src/debug/debug_dump.asm
 extern RunLinkCupsTest                    ; src/engine/menus/link_menu.asm
 extern RunLinkMenuTest                    ; src/engine/menus/link_menu.asm
@@ -964,6 +967,9 @@ EnterMap:
 %endif
 %ifdef DEBUG_HOF
     call RunHallOfFameTest                  ; run the Hall of Fame ceremony; AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_CREDITS
+    call RunCreditsTest                     ; run the credits roll; AutoKeyDrive dumps
 %endif
 %ifdef DEBUG_OPTIONS
     call RunOptionsTest                     ; open OPTION menu, dump FRAME.BIN, exits

@@ -216,6 +216,14 @@ def main():
     write_2bpp_inc(ASSETS / "gamefreak_intro_2bpp.inc", "GameFreakIntro",
                    gf, "GAME FREAK presents + logo + blank tile (splash).",
                    make_global=True, pret_end_label="GameFreakIntroEnd")
+    # "THE END" tiles — pret engine/movie/credits.asm's ShowTheEndGFX copies them
+    # to vChars2 tile $60 and PlaceStrings TheEndTextString over them.
+    data = (ROOT / "gfx" / "credits" / "the_end.2bpp").read_bytes()
+    write_2bpp_inc(ASSETS / "the_end_2bpp.inc", "the_end_2bpp",
+                   data, "THE END tiles loaded to vChars2 tile $60 (credits).",
+                   make_global=True, pret_label="TheEndGfx",
+                   pret_end_label="TheEndGfxEnd")
+
     data = png_to_2bpp(gfx_splash / "falling_star.png")
     write_2bpp_inc(ASSETS / "falling_star_2bpp.inc", "FallingStar",
                    data, "Shooting-star tile (splash).",

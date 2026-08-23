@@ -69,7 +69,7 @@ extern LoadPikachuSpriteIntoVRAM                        ; src/engine/pikachu/pik
 extern LoadFontTilePatterns                             ; src/home/load_font.asm
 extern Pikachu_LoadCurrentMapViewUpdateSpritesAndDelay3 ; src/engine/pikachu/pikachu_movement.asm
 extern WaitForTextScrollButtonPress                     ; src/home/joypad2.asm
-extern HallOfFamePC                                     ; src/engine/movie/evolution_stubs.asm (ret-stub) — pret: engine/movie/credits.asm
+extern HallOfFamePC                                     ; src/engine/movie/credits.asm
 extern PikachuPewterPokecenterCheck                     ; src/engine/pikachu/pikachu_movement.asm
 extern PikachuFanClubCheck                              ; src/engine/pikachu/pikachu_movement.asm
 extern PikachuBillsHouseCheck                           ; src/engine/pikachu/pikachu_movement.asm

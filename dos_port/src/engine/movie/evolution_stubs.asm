@@ -29,16 +29,6 @@ global InternalClockTradeAnim
 InternalClockTradeAnim:
     ret
 
-; The Hall of Fame PC screen (pret engine/movie/credits.asm:HallOfFamePC), the
-; post-championship "PROF.OAK's PC" replay of the Hall of Fame entries. Its only
-; port caller is HallOfFamePCForever in src/engine/pikachu/pikachu_emotions.asm,
-; which pret guards with IF DEF(_DEBUG) and which nothing calls on either side —
-; so this stub is NOT reached in the live build; it exists to resolve that call.
-; It lands in this file for the same reason InternalClockTradeAnim does: the area
-; is right (pret engine/movie/) and there is no credits.asm mirror yet.
-; TODO(credits/hall-of-fame): replace with a translation of
-; engine/movie/credits.asm (HallOfFamePC + the credits sequence around it).
-; STUB{class=temporary; label=HallOfFamePC; pret=engine/movie/credits.asm:HallOfFamePC; behavior=return immediately instead of drawing the Hall of Fame PC screen and paging through the recorded champion parties; evidence=engine/movie/credits.asm is unported - the label DB reports HallOfFamePC missing with no port definition - and its only port reference is the unreferenced debug-only HallOfFamePCForever; lifetime=until engine/movie/credits.asm is translated}
-global HallOfFamePC
-HallOfFamePC:
-    ret
+; HallOfFamePC — STUB RETIRED 2026-08-23: the real routine now links from
+; src/engine/movie/credits.asm, which is the mirror this stub's TODO was waiting
+; for. scripts/HallOfFame.asm's predef call now runs the ceremony and the roll.
