@@ -65,6 +65,17 @@ TitleScreenPikachuEyesOAMData:
 %include "assets/pikachu_bg_2bpp.inc"
 %include "assets/pikachu_ob_2bpp.inc"
 %include "assets/pokemon_logo_tilemap.inc"
+
+; Pointer_f4669 — pret engine/movie/title_yellow.asm, at exactly this position
+; (between the logo tilemap and the pika-bubble tilemap) and marked `; unreferenced`
+; there. Ten TILE IDS, not charmap glyphs, so it is a Tier-2 table in code rather
+; than generated text — the same call MoveEffectPointerTable makes. Nothing reads
+; it in pret and nothing reads it here; it exists so the label is not `missing`
+; while its neighbours in the same file all resolve.
+global Pointer_f4669
+Pointer_f4669:
+    db 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x5F
+
 %include "assets/pikachu_tilemap.inc"
 %include "assets/pika_bubble_tilemap.inc"
 

@@ -37,6 +37,7 @@ extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild
 extern AnimateShootingStar           ; engine/movie/splash.asm — the shooting-star animation
 extern LoadCopyrightAndTextBoxTiles  ; engine/movie/title.asm — the boot copyright screen
 extern PlayIntroScene                ; engine/movie/intro_yellow.asm — the Yellow intro scenes (B3)
+extern CopyTileIDsFromList             ; engine/battle/animations.asm (pret predef)
 
 section .text
 
@@ -47,6 +48,54 @@ section .text
 ; IntroPlaceBlackTiles.) BG writes use the cinematic origin (above); pret's vBGMap0
 ; and vBGMap1 bar writes both land on the single wTileMap canvas (there is no second
 ; BG map) — the port's surface model, not a per-routine deviation.
+; ---------------------------------------------------------------------------
+; InitIntroNidorinoOAM — pret engine/movie/intro.asm:22. Lay out a BH x BL grid of
+; OBJ entries in shadow OAM, walking tile ids upward from 0 and stepping the frame
+; block's base X one tile per column.
+;
+; UNREFERENCED IN PRET, and unreferenced here: it belongs to the Red/Blue intro
+; Nidorino animation, which Yellow does not play. Ported because it is trivially
+; portable and every symbol it touches already exists.
+;
+; In:  BH = rows (b), BL = entries per row (c), wBaseCoordY / wBaseCoordX = the
+;      block origin in GB pixel space.
+; Out: wBaseCoordX advanced by 8 per row; ESI past the last entry written.
+;
+; COUNTER WIDTHS ARE PRET'S. Both loops are `dec c` / `dec b` on 8-bit registers,
+; so an entry count of 0 writes 256 entries and stops, exactly as on the GB. The
+; caller is what keeps them non-zero; do not add a guard, which would write 0.
+; ---------------------------------------------------------------------------
+InitIntroNidorinoOAM:
+    mov esi, wShadowOAM                 ; ld hl, wShadowOAM
+    mov dh, 0                           ; ld d, 0 — running tile id
+.loop:
+    push ebx                            ; push bc
+    mov al, [ebp + wBaseCoordY]
+    mov dl, al                          ; ld e, a
+.innerLoop:
+    mov al, dl                          ; ld a, e
+    add al, 8
+    mov dl, al                          ; ld e, a
+    mov [ebp + esi], al                 ; ld [hli], a — Y
+    inc esi
+    mov al, [ebp + wBaseCoordX]
+    mov [ebp + esi], al                 ; ld [hli], a — X
+    inc esi
+    mov [ebp + esi], dh                 ; ld [hli], a — tile
+    inc esi
+    mov byte [ebp + esi], OAM_PRIO      ; ld [hli], a — attributes
+    inc esi
+    inc dh                              ; inc d
+    dec bl                              ; dec c — 8-bit, as pret
+    jnz .innerLoop
+    mov al, [ebp + wBaseCoordX]
+    add al, 8
+    mov [ebp + wBaseCoordX], al
+    pop ebx                             ; pop bc
+    dec bh                              ; dec b — 8-bit, as pret
+    jnz .loop
+    ret
+
 ; ---------------------------------------------------------------------------
 global IntroDrawBlackBars
 IntroDrawBlackBars:
@@ -66,6 +115,9 @@ IntroDrawBlackBars:
 
 ; IntroClearScreen — clear the whole surface (pret clears vBGMap1 32x18; the port
 ; clears all of wTileMap, which covers the visible window). Falls into common.
+global InitIntroNidorinoOAM
+global CopyTileIDsFromList_ZeroBaseTileID
+global LoadPresentsGraphic
 global IntroClearScreen
 IntroClearScreen:
     mov esi, wTileMap                                     ; ld hl, vBGMap1 (whole surface)
@@ -103,6 +155,16 @@ IntroPlaceBlackTiles:
 ; shooting-star animation on the cinematic surface, then tears it down.
 ;
 ; DEVIATION{class=HAL; pret=engine/movie/intro.asm:PlayShootingStar; behavior=the GB LCD control (DisableLCD/EnableLCD + rLCDC window/BG-map bits, and the standalone ClearScreen before the bars which IntroDrawBlackBars already covers) is dropped in favour of the cinematic surface, and IO_LCDC is set only to select signed BG tile addressing; evidence=the port has no LCD and composites a matte surface with its own loop, so those hardware writes have no counterpart; lifetime=permanent flat-memory/HAL model}
+; ---------------------------------------------------------------------------
+; CopyTileIDsFromList_ZeroBaseTileID — pret engine/movie/intro.asm:78.
+; CopyTileIDsFromList with a base tile id of zero. pret writes it as a
+; `predef_jump`; the port calls the predef target directly (flat model).
+; UNREFERENCED IN PRET and here — the R/B intro's helper.
+; ---------------------------------------------------------------------------
+CopyTileIDsFromList_ZeroBaseTileID:
+    mov bl, 0                           ; ld c, 0
+    jmp CopyTileIDsFromList             ; predef_jump CopyTileIDsFromList
+
 ; ---------------------------------------------------------------------------
 global PlayShootingStar
 PlayShootingStar:
@@ -210,4 +272,15 @@ align 4
 ; GameFreakIntro — the Game Freak logo tile graphics (pret intro.asm INCBIN;
 ; gamefreak_presents + gamefreak_logo + a blank tile). Loaded to vChars1 by
 ; PlayShootingStar. Flat program-image data.
+; ---------------------------------------------------------------------------
+; LoadPresentsGraphic — pret engine/movie/intro.asm:151, marked `; unreferenced`.
+; It loaded the "PRESENTS" text graphic (tiles $67-$6C of gamefreak_presents) at
+; (11,7) in the Japanese versions and WAS DUMMIED OUT in the English localization:
+; pret's entire body is `ret`, and the `call LoadPresentsGraphic` that reached it
+; was removed too. The port carries the same empty routine, because a dummied-out
+; routine is still what the shipped game contains.
+; ---------------------------------------------------------------------------
+LoadPresentsGraphic:
+    ret
+
 %include "assets/gamefreak_intro_2bpp.inc"   ; GameFreakIntro + GAMEFREAKINTRO_TILES
