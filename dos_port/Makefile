@@ -3230,6 +3230,7 @@ FRONTEND_SRCS := \
     src/debug/debug_battle_moveset.asm \
     src/engine/battle/pokeballs.asm \
     src/engine/battle/draw_hud_pokeball_gfx.asm \
+    src/engine/battle/link_battle_versus_text.asm \
     src/data/trainer_pics.asm \
     src/data/mon_pics.asm \
     src/engine/battle/battle_stubs.asm \

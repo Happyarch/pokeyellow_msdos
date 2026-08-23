@@ -29,6 +29,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "coords.inc"                  ; BCOORD — battle-screen projection
 
 section .text
 
@@ -41,6 +42,15 @@ extern PrintText                         ; src/home/window.asm
 extern EvolutionAfterBattle              ; evos_moves.asm — walks party, evolves eligible mons
 extern UpdatePikachuMoodAfterBattle      ; pikachu_status.asm — raises starter Pikachu mood (DH=$82)
 extern GBPalWhiteOut                     ; src/home/palettes.asm — fade to white on the way out
+extern AddNTimes                       ; src/home/array.asm — ESI+=BX, AL times
+extern ClearScreen                     ; src/home/copy2.asm
+extern RunPaletteCommand               ; src/home/palettes.asm — In: BH = SET_PAL_* command
+extern DisplayLinkBattleVersusTextBox  ; src/engine/battle/link_battle_versus_text.asm
+extern PlaceString                     ; src/home/text.asm — EAX=flat src, ESI=dest
+extern DelayFrames                     ; src/home/delay.asm — BL = frame count
+extern YouWinText                      ; assets/battle_text.inc (generated Tier-1; carrier core.asm)
+extern YouLoseText                     ; assets/battle_text.inc (generated Tier-1; carrier core.asm)
+extern DrawText                        ; assets/battle_text.inc (generated Tier-1; carrier core.asm)
 
 EndOfBattle:
     mov al, [ebp + wLinkState]
@@ -51,7 +61,34 @@ EndOfBattle:
     ; (src/net/net_hal.asm) and can drive this branch's wLinkState read live on
     ; two DOSBox-X instances (Stage 3) — not proven statically unreachable the
     ; way an earlier version of this comment claimed; not runtime-verified.
-    ; DEVIATION{class=HAL; pret=engine/battle/end_of_battle.asm:EndOfBattle; behavior=drops the whole link-battle presentation body - the enemy-status roster writeback, RunPaletteCommand SET_PAL_OVERWORLD, callfar DisplayLinkBattleVersusTextBox, the YOU WIN/LOSE/DRAW placement, and the 200-frame delay - falling straight to the evolution tail instead; evidence=DisplayLinkBattleVersusTextBox has no port body or stub (label_status: missing) and YouWinText/YouLoseText/DrawText are not yet generated Tier-1 strings, so no part of this body can be faithfully restored without first porting the versus screen and its text, which no current plan schedules; lifetime=until link battles are ported}
+    ; Stage 4 step 2: the annotation that used to stand here recording the
+    ; drop of this whole body is retired — DisplayLinkBattleVersusTextBox is
+    ; real (src/engine/battle/link_battle_versus_text.asm) and YouWinText/
+    ; YouLoseText/DrawText are already generated Tier-1 strings in
+    ; assets/battle_text.inc (re-measured 2026-08-23; the stale evidence that
+    ; annotation cited was wrong on that point).
+    mov al, [ebp + wEnemyMonPartyPos]     ; ld a, [wEnemyMonPartyPos]
+    mov esi, wEnemyMon1Status             ; ld hl, wEnemyMon1Status
+    mov bx, PARTYMON_STRUCT_LENGTH        ; ld bc, PARTYMON_STRUCT_LENGTH
+    call AddNTimes
+    mov al, [ebp + wEnemyMonStatus]       ; ld a, [wEnemyMonStatus]
+    mov [ebp + esi], al                   ; ld [hl], a
+    call ClearScreen
+    mov bh, SET_PAL_OVERWORLD             ; ld b, SET_PAL_OVERWORLD
+    call RunPaletteCommand
+    call DisplayLinkBattleVersusTextBox   ; pret: callfar (banking DEVIATION, flat code)
+    mov al, [ebp + wBattleResult]         ; ld a, [wBattleResult]
+    cmp al, 1
+    mov eax, YouWinText                   ; ld de, YouWinText
+    jc .placeWinOrLoseString              ; jr c
+    mov eax, YouLoseText                  ; ld de, YouLoseText
+    je .placeWinOrLoseString              ; jr z
+    mov eax, DrawText                     ; ld de, DrawText
+.placeWinOrLoseString:
+    mov esi, BCOORD(6, 8)                 ; hlcoord 6, 8
+    call PlaceString
+    mov bl, 200                           ; ld c, 200
+    call DelayFrames
     jmp .evolution
 
 .notLinkBattle:
