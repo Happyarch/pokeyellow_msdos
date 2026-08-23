@@ -507,12 +507,70 @@ blocks in `src/engine/menus/naming_screen.asm`.
       stale buffers); `tradecheck --kill` (`da5f81a`) SIGKILLs B mid-session
       and asserts A's dump exists (no hang) + the sticky link_down_hatch mark
       + netLinkUp 0 + desyncs 0. Execution deferred with the harness above
+- [x] in_game_trade mGBA golden AUTHORED 2026-08-23 (`9bb5fe6`, id 92, tier
+      full): Route 2 Trade House CLEFAIRY→MR.MIME through the full flow incl.
+      InternalClockTradeAnim; state-gated dump (DoInGameTradeDialogue return =
+      last box closed); mGBA golden generated twice byte-identical (sha1
+      3bbae6f0…, frame 7397); golden_diff masks EMPTY with the measured
+      RNG-derived mask candidate (received mon DVs/OTID from rDIV) documented
+      in the entry. The DOSBox-side goldencheck run is in the battery below
 - [ ] END-OF-PLAN DYNAMIC BATTERY (added 2026-08-23, maintainer directive:
       dynamic checks deferred until the plan closes; serial VM): run and tune
-      `tools/tradecheck.sh` (+ `--kill`), `goldencheck in_game_trade`,
-      `fidelity-serial` core, `fidelity-full-serial`. Until this runs, Stage
-      3's steps 2-6 are verified to the STATIC tier only (builds, lint,
-      label DB, faithdiff, static_gate) — no runtime claim is made
+      `tools/tradecheck.sh` (+ `--kill`), `goldencheck in_game_trade` (first
+      DOSBox run: measure the window offset + confirm/deny the DVs/OTID mask
+      candidate with a real diff), `fidelity-serial` core,
+      `fidelity-full-serial`. Until this runs, Stage 3's steps 2-6 are
+      verified to the STATIC tier only (builds, lint, label DB, faithdiff,
+      static_gate) — no runtime claim is made
+
+#### Stage 3 close-out notes (2026-08-23; written for the post-/clear session)
+
+STATE: Stage 3 is code-complete and static-verified on
+`claude/link-cable-protocol-planning-s5d09u`, all commits pushed. The commit
+chain since Stage 2's `bf827c7`: `b50e1e0` (step 1 block seam — NETTEST +
+linkcheck verified pre-deferral), `99cb00b` (step 2 cable_club.asm all 23
+labels — fidelity-serial core 16/16 pre-deferral), `4f75640` (.dsv trade
+persistence), `5eeb434` (disconnect hatch), `da6f486` (step 3 trade.asm +
+trade2.asm all 53 labels), `da5f81a` (steps 5+6 tradecheck harness + --kill),
+`9bb5fe6` (step 4 in_game_trade golden) + bookkeeping commits. Only the
+dynamic battery above remains for a runtime claim.
+
+REBASE-ONTO-MASTER PREP (maintainer plans a rebase; master changed the text
+commands). What this branch touches in that area, most conflict-prone first:
+1. `dos_port/tools/generators/gen_menu_strings.py` — this branch ADDED four
+   list blocks + their emit sections: `CABLE_CLUB_STRINGS`/`CABLE_CLUB_FAR`
+   (→ assets/cable_club_text.inc, carrier cable_club.asm), `TRADE_ANIM_FAR`
+   (→ assets/trade_text.inc, carrier trade.asm), `TRADE_MON_INFO_STRINGS`
+   (→ assets/trade_mon_info_text.inc, carrier trade2.asm). If master
+   restructured the generator or the far-body collector
+   (gen_battle_text.collect_far), re-add these lists in master's new shape
+   rather than keeping this branch's emit-block style — the LISTS are the
+   content; the emit mechanics belong to master.
+2. Text-command CONSUMERS this branch added (all standard idioms — if master
+   changed the macro/stream encoding, these follow wherever the codebase
+   convention goes): text_far/text_end wrapper labels in
+   src/engine/movie/trade.asm (8: TradeWentToText…TradeforText),
+   src/engine/link/cable_club.asm (WillBeTradedText), and Stage 2's
+   cable_club_npc.asm (7 receptionist streams); PrintText(ESI=flat stream)
+   sites throughout trade.asm/cable_club.asm; TextCommandProcessor +
+   text_msgbox/msgbox_dialog in link_menu.asm; tx_pre_id JustAMomentText +
+   PrintPredefTextID in bills_pc.asm (pokecenter_pc idiom);
+   text_row_stride = SCREEN_WIDTH writes at the movie-surface preludes.
+3. All assets/*.inc are GENERATED and gitignored — after the rebase, `make
+   -C dos_port assets` regenerates everything; never hand-merge .inc content.
+4. The golden tests/goldens/in_game_trade.{bin,json} was generated from the
+   pret ROM at THIS branch's pret tree. If master's text-command changes
+   touch pret-side text data (they shouldn't — pret is read-only spec — but
+   if the rebase moves the pret submodule/tree), regenerate via
+   tools/mgba_harness (in_game_trade.lua; deterministic, sha1 recorded above).
+5. Non-text conflict surfaces, for completeness: dos_port/Makefile (three
+   added gate blocks DEBUG_TRADECHECK/DEBUG_TRADE_GOLDEN + engine/movie
+   sources + asset rules), src/debug/debug_dump.asm (two autokey blocks +
+   gbregion blocks), src/home/joypad2.asm (the CableClub_Run poll — the
+   entry hook for the whole subsystem, do not lose it in the merge),
+   src/home/overworld.asm (CopyToRedrawRowOrColumnSrcTiles + two gated
+   spawn blocks), src/engine/movie/intro.asm
+   (CopyTileIDsFromList_ZeroBaseTileID).
 
 ### Stage 4 — Colosseum link battle
 - [ ] Divergence-site audit: enumerate every pret
