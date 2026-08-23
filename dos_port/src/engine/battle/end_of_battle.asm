@@ -47,11 +47,11 @@ EndOfBattle:
     cmp al, LINK_STATE_BATTLING
     jne .notLinkBattle
     ; --- link battle ---
-    ; TODO-HW: network/link battle presentation (Phase 4). Pret copies the enemy
-    ; mon status into wEnemyMon1Status, RunPaletteCommand SET_PAL_OVERWORLD,
-    ; DisplayLinkBattleVersusTextBox, places "YOU WIN/LOSE/DRAW", DelayFrames(200).
-    ; The port has no networking, so this branch is unreachable; if it is ever
-    ; entered, fall through to evolution to stay faithful.
+    ; Stage 4 step-1 audit (2026-08-23): the connection-layer HAL is real
+    ; (src/net/net_hal.asm) and can drive this branch's wLinkState read live on
+    ; two DOSBox-X instances (Stage 3) — not proven statically unreachable the
+    ; way an earlier version of this comment claimed; not runtime-verified.
+    ; DEVIATION{class=HAL; pret=engine/battle/end_of_battle.asm:EndOfBattle; behavior=drops the whole link-battle presentation body - the enemy-status roster writeback, RunPaletteCommand SET_PAL_OVERWORLD, callfar DisplayLinkBattleVersusTextBox, the YOU WIN/LOSE/DRAW placement, and the 200-frame delay - falling straight to the evolution tail instead; evidence=DisplayLinkBattleVersusTextBox has no port body or stub (label_status: missing) and YouWinText/YouLoseText/DrawText are not yet generated Tier-1 strings, so no part of this body can be faithfully restored without first porting the versus screen and its text, which no current plan schedules; lifetime=until link battles are ported}
     jmp .evolution
 
 .notLinkBattle:

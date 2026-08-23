@@ -40,10 +40,22 @@ StarterPikachuBattleEntranceAnimation:
 ;
 ; ADDED AS A STUB 2026-08-12 (battle plan 2b). ChooseNextMon calls it inside a
 ; `wLinkState == LINK_STATE_BATTLING` branch, and keeping pret's branch shape
-; needs the label to resolve. Link play is entirely unported — there is no
-; serial HAL — so the branch is unreachable in this port: wLinkState is 0 in
-; single-player and nothing ever writes LINK_STATE_BATTLING.
-; STUB{label=LinkBattleExchangeData; class=stub; pret=engine/battle/core.asm:LinkBattleExchangeData; behavior=return without exchanging any data with a peer so the link branch of ChooseNextMon does nothing; evidence=label DB reports LinkBattleExchangeData missing and the port has no serial link HAL at all so no code path sets wLinkState to LINK_STATE_BATTLING; lifetime=until link battles are ported, which no current plan schedules}
+; needs the label to resolve. The Stage 4 step-1 audit (2026-08-23) restored
+; five more of these dead-in-single-player branches to the same shape
+; (ReplaceFaintedEnemyMon, TryRunningFromBattle, SelectEnemyMove,
+; EnemySendOutFirstMon, ExecuteEnemyMove — engine/battle/core.asm), so this
+; stub now has six callers, not one.
+;
+; CORRECTED 2026-08-23: this comment used to claim "there is no serial HAL ...
+; nothing ever writes LINK_STATE_BATTLING", which the 2026-08-22 link-cable
+; rebase made FALSE — src/net/net_hal.asm's real master/slave handshake drives
+; hSerialConnectionStatus to USING_INTERNAL_CLOCK/EXTERNAL_CLOCK between two
+; DOSBox-X instances (Stage 3, golden-tested), and src/engine/link/cable_club.asm
+; DOES write LINK_STATE_BATTLING on the real Colosseum-battle path. Only the
+; PER-TURN ACTION EXCHANGE this stub represents remains unported; whether a
+; live two-instance Colosseum battle currently reaches this stub was not
+; runtime-verified (static checks only, this pass).
+; STUB{label=LinkBattleExchangeData; class=stub; pret=engine/battle/core.asm:LinkBattleExchangeData; behavior=return without exchanging any data with a peer so every link branch that calls it (ChooseNextMon plus the five sites restored 2026-08-23) proceeds as a same-turn no-op; evidence=label DB reports LinkBattleExchangeData missing, and while src/net/net_hal.asm gives the port a real connection-layer HAL that can drive wLinkState to LINK_STATE_BATTLING on two real instances (Stage 3), the per-turn battle action exchange this label represents has no body and no current plan schedules one; lifetime=until link battles are ported}
 global LinkBattleExchangeData
 LinkBattleExchangeData:
     ret
