@@ -1051,7 +1051,7 @@ Pokedex_PrintFlavorTextAtBC:
     mov byte [ebp + H_CLEAR_LETTER_PRINTING_DELAY_FLAGS], 0x02  ; ld a, %10
     ; DEVIATION{class=projection; pret=engine/menus/pokedex.asm:Pokedex_PrintFlavorTextAtBC; behavior=keep full-page pokedex projection active during flavor text and page scrolling; evidence=pret writes into the visible dex BG page while port dialog helpers otherwise replace it with a bottom window; lifetime=permanent window-compositor boundary}
     ; Pokédex flavor mode: the text engine's dialog helpers
-    ; (sync_dialog_window per char, manual_text_scroll at the <PAGE> break) must mirror
+    ; (sync_dialog_window per char, dialog_window_scroll at the <PAGE> break) must mirror
     ; the full 20×18 page and keep the pokédex window, NOT do the dialog-box copy +
     ; bottom-window swap (which showed only the bottom 6 rows of the entry).
     mov byte [g_dex_flavor_active], 1

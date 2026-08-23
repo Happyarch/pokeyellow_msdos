@@ -175,13 +175,35 @@ The other 22 are `.handle_*` locals.
 Same dividend as Stage 2, larger. These were invisible while the handlers were
 anonymous locals:
 
-1. **`ManualTextScroll` IS A FORKED PRET NAME.** The port calls it
-   `manual_text_scroll` in `src/home/text.asm`, but it is pret's
-   `home/joypad2.asm:ManualTextScroll` and `label_status` reports that label
-   `missing`. This breaks the "Preserve pret Labels" hard rule, and fixing it is
-   a MOVE to `dos_port/src/home/joypad2.asm`, not a rename — so it is a separate
-   piece of work on a different file's label, not Stage 3's. **Do not close it
-   with an alias**; the mirror rule wants the body at the pret path.
+1. **`ManualTextScroll` WAS A FORKED PRET NAME — CLOSED 2026-08-22.** The port
+   called it `manual_text_scroll` in `src/home/text.asm` while pret's
+   `home/joypad2.asm:ManualTextScroll` read `missing`, breaking the "Preserve
+   pret Labels" hard rule.
+   **It was not a rename, and that is why it had forked.** The port's routine
+   was a COMPOSITE of two things pret keeps apart: pret's `ManualTextScroll`
+   (link-state check -> `WaitForTextScrollButtonPress` -> `WaitForSoundToFinish`
+   -> `PlaySound SFX_PRESS_AB`, else `DelayFrames 65`) and a port-only
+   overworld-dialog window hijack with no pret counterpart. Only the first half
+   is a pret label, so only it moved to `dos_port/src/home/joypad2.asm`; the
+   hijack stays in the text engine as `dialog_window_scroll` and calls it.
+   Renaming the whole composite would have put bespoke presentation under a pret
+   name in the wrong subsystem.
+   One thing had to cross the boundary: **which cell blinks.** pret writes
+   `hlcoord 18, 16` inline because it has one tilemap; the port's dialog arrow
+   lives in the window copy at `GB_TILEMAP1`, a different tilemap from the
+   battle/status cell `WaitForTextScrollButtonPress` already used. That
+   coordinate is now the `wtsbp_arrow_pos` knob, defaulting to the existing
+   battle projection, which `dialog_window_scroll` re-points for the duration of
+   its wait — an extension of that routine's existing
+   `DEVIATION{class=projection}`, not a new divergence.
+   The pokédex flavor-page branch deliberately does NOT delegate: its wait must
+   re-mirror the blinked scratch cell into the full-page window every frame,
+   which pret never has to do.
+   `home/joypad2.asm` is now 3/3 and `home/` 45 -> 44 missing. faithdiff clean
+   (4/4 calls matched), `fidelity-full` 90/90 nonzero=0 — despite real behaviour
+   change: the dialog wait now polls `hJoyPressed` (pret's edge) instead of the
+   port's release-then-press loop, uses pret's blink counters, and plays the A/B
+   press SFX the port never played.
 2. **`Paragraph` and `PageChar` dropped `ClearScreenArea`.** Both open-code the
    box clear. The port's versions are projection-aware (they address off
    `text_line2` / `text_row_stride`), so routing them through `ClearScreenArea`

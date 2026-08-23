@@ -364,7 +364,7 @@ HandlePartyMenuInput:
     ; rows, which ARE this screen's message area. The port draws the party screen on
     ; a stride-20 scratch behind two windows, so the message has to be projected —
     ; same msgbox_party record .printItemUseMessage prints through, and the same one
-    ; that keeps manual_text_scroll from stamping the dialog over the mon-list panel
+    ; that keeps dialog_window_scroll from stamping the dialog over the mon-list panel
     ; (M-29). PartyMenuPrintText selects it and restores msgbox_dialog after.
     call PartyMenuPrintText                     ; call PrintText
     mov byte [ebp + wMenuItemToSwap], 0         ; xor a / ld [wMenuItemToSwap],a

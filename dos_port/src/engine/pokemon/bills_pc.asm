@@ -899,7 +899,7 @@ BillsPCPrintText:
 ; ---------------------------------------------------------------------------
 ; BillsPCPromptWait — msgbox_bills_pc's MB_PROMPT hook: blink the ▼ at
 ; [text_arrow_pos] and wait for A/B, mirroring the scratch each frame. The
-; default hook is manual_text_scroll, which hijacks the window layer for the
+; default hook is dialog_window_scroll, which hijacks the window layer for the
 ; overworld dialog and would drop this screen (the PlayerPCPromptWait model).
 ; All registers preserved (the caller is mid-stream).
 ; ---------------------------------------------------------------------------

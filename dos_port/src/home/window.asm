@@ -461,7 +461,7 @@ HandleMenuInput_:
 ; per frame, whereas pret spins it inside JoypadLowSensitivity's busy-wait, so
 ; its 0xFF/6 reloads would give a ~25 s blink here. Every caller arms
 ; COUNT1=ARROW_ON_FRAMES, COUNT2=1 before the first call (text.asm
-; manual_text_scroll, map_sprites sync_dialog_window, and HandleMenuInput_ —
+; dialog_window_scroll, map_sprites sync_dialog_window, and HandleMenuInput_ —
 ; which arms them only when the published arrow cell really holds a ▼); the COUNT1==0
 ; guard below is what keeps the call inert everywhere else.
 ; In: ESI = EBP-relative tile offset of the arrow. Preserves EAX, EBX.

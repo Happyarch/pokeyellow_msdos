@@ -98,7 +98,7 @@ CASES = {
     "txt_oracle_plain": [
         TX_START, s("TEXT ORACLE"), CHAR_LINE, s("PLAIN AND LINE"), CHAR_DONE,
     ],
-    # 2 — <PARA>: page break. Waits for A (manual_text_scroll) → needs an autokey
+    # 2 — <PARA>: page break. Waits for A (dialog_window_scroll) → needs an autokey
     # press; the capture lands on whichever page AUTOKEY_DUMP_FRAME reaches.
     "txt_oracle_para": [
         TX_START, s("PAGE ONE HERE"), CHAR_PARA, s("PAGE TWO HERE"), CHAR_DONE,

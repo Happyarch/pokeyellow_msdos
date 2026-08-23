@@ -538,7 +538,7 @@ PlayerPCPrintText:
 ; PlayerPCPromptWait — msgbox_players_pc's MB_PROMPT hook: blink the ▼ at
 ; [text_arrow_pos] and wait for A/B, mirroring the scratch each frame so the arrow
 ; is actually on screen. The default hook (text_prompt_hook == 0) is
-; manual_text_scroll, which hijacks the window layer for the overworld dialog and
+; dialog_window_scroll, which hijacks the window layer for the overworld dialog and
 ; would drop this screen's boxes. Modelled on PartyMenuPromptWait (M-29).
 ; All registers preserved (the caller is mid-stream).
 ; ---------------------------------------------------------------------------

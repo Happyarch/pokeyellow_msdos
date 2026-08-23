@@ -154,7 +154,7 @@ PartyMenuMessagePointers:
 ;   * msgbox_dialog (text.asm) has MB_WIN_TILEMAP = GB_TILEMAP1 with STARTROW 0, so
 ;     PrintText would set_single_window — COLLAPSING this screen's window list — and
 ;     paint the dialog into GB_TILEMAP1 rows 0-5, which are the party PANEL's rows.
-;     That shared staging buffer is the bug: manual_text_scroll (text.asm:386) does
+;     That shared staging buffer is the bug: dialog_window_scroll (text.asm:386) does
 ;     the same copy unconditionally on every <PROMPT>/<PARA>, and unlike
 ;     sync_dialog_window it is NOT gated on g_bg_whiteout.
 ;   * msgbox_centered (core.asm) has no window (good) but is stride-40 and draws
@@ -162,7 +162,7 @@ PartyMenuMessagePointers:
 ;
 ; So: stride-20, box in this screen's own scratch, NO window (the caller's two party
 ; windows survive), and MB_PROMPT = our own wait — which is the mechanism the record
-; was built for, and which keeps <PROMPT> away from manual_text_scroll's rows 0-5.
+; was built for, and which keeps <PROMPT> away from dialog_window_scroll's rows 0-5.
 ; PartyMenuMirror carries the finished box to the window layer, as it already does
 ; for every other cell of this screen.
 ; ; PROJ menus: GB(0,12) 20×6 — same cells as pret; the projection is the window.
@@ -440,7 +440,7 @@ PartyMenuPrintText:
 ; [text_arrow_pos] and wait for A/B, mirroring the scratch each frame so the arrow
 ; is actually on screen. Modelled on battle's BattlePromptWait (core.asm:569), which
 ; exists for the same reason: the default (text_prompt_hook == 0) is
-; manual_text_scroll, and manual_text_scroll HIJACKS the window layer — it copies
+; dialog_window_scroll, and dialog_window_scroll HIJACKS the window layer — it copies
 ; the scratch's dialog rows into GB_TILEMAP1 rows 0-5 and forces the overworld
 ; dialog's WX/WY. Those rows are this screen's mon-list panel. See M-29.
 ; All registers preserved (the caller is mid-stream).

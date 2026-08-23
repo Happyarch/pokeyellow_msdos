@@ -37,6 +37,8 @@ extern DelayFrame
 extern DelayFrames                  ; src/home/delay.asm — BL = frame count
 extern PrintLetterDelay             ; src/home/print_text.asm
 extern Delay3                       ; src/home/palettes.asm — wait 3 frames
+extern ManualTextScroll             ; src/home/joypad2.asm — pret's wait-for-A/B + press SFX
+extern wtsbp_arrow_pos              ; src/home/joypad2.asm — its blink-cell projection knob
 
 ; ---------------------------------------------------------------------------
 ; TX_* command bytes (home/macros/scripts/text.asm const_def block)
@@ -226,19 +228,19 @@ text_row_stride: dd 20
 ; <LINE> ($4F) target tile-buffer offset (the box's 2nd text line). Default = the
 ; overworld message box (1,16); the battle box sets its own (PrintBattleText).
 text_line2:      dd (wTileMap + 16 * SCREEN_W_TILES + 1)
-; <PROMPT> ($58) display hook (0 = overworld window scroll via manual_text_scroll).
+; <PROMPT> ($58) display hook (0 = overworld window scroll via dialog_window_scroll).
 ; The battle path installs a routine that draws the ▼ at text_arrow_pos in wTileMap,
 ; waits for A/B, and erases it. text_arrow_pos = that ▼ tile-buffer offset.
 text_prompt_hook: dd 0
 text_arrow_pos:   dd 0
 
-; M1.2: when nonzero, manual_text_scroll suppresses the ▼ advance arrow (used by
+; M1.2: when nonzero, dialog_window_scroll suppresses the ▼ advance arrow (used by
 ; TX_WAIT_BUTTON, and by TX_PROMPT_BUTTON when in a link battle — pret shows no
-; arrow in those cases). manual_text_scroll resets it to 0 before it returns.
+; arrow in those cases). dialog_window_scroll resets it to 0 before it returns.
 mts_hide_arrow:   db 0
 
 ; Pokedex flavor-text mode. When nonzero, the dialog-window helpers
-; (sync_dialog_window / manual_text_scroll) mirror the FULL 20×18 pokédex page
+; (sync_dialog_window / dialog_window_scroll) mirror the FULL 20×18 pokédex page
 ; (rows 0-17 → GB_TILEMAP1) and keep the page's own full-screen window, instead
 ; of the dialog-box copy (rows 12-17 → window 0-5) + bottom-dialog window swap.
 ; Without this the pokédex DATA page's flavor print hijacks the window into a
@@ -394,7 +396,7 @@ TextBoxBorder:
 ; de-duplicate; the internal caller below resolves the extern.
 
 ; ---------------------------------------------------------------------------
-; manual_text_scroll — copy current dialog box to window layer and wait for A/B.
+; dialog_window_scroll — copy current dialog box to window layer and wait for A/B.
 ;
 ; Copies wTileMap rows 12-17 (6 rows × 20 tiles) to GB_TILEMAP1 rows 0-5, pads
 ; cols 20-31 with TILE_SPC, sets hWY=152 / IO_WX=87 so the window renders centered,
@@ -407,9 +409,9 @@ TextBoxBorder:
 ; text_pause — the "▼, wait for A/B" step of <_CONT>/<CONT>/<PARA>.
 ;
 ; Same dispatch <PROMPT> already uses (PromptText): [text_prompt_hook] = 0 is
-; the overworld display (manual_text_scroll hijacks the window layer to show the
+; the overworld display (dialog_window_scroll hijacks the window layer to show the
 ; dialog rows); non-zero is the owning screen's own wait (battle: BattlePromptWait,
-; which blinks the ▼ at [text_arrow_pos] in wTileMap). Calling manual_text_scroll
+; which blinks the ▼ at [text_arrow_pos] in wTileMap). Calling dialog_window_scroll
 ; unconditionally opened the overworld dialog window on top of the battle screen.
 ; All registers preserved.
 ; ---------------------------------------------------------------------------
@@ -421,12 +423,12 @@ text_pause:
     call eax
     jmp .tp_done
 .tp_overworld:
-    call manual_text_scroll
+    call dialog_window_scroll
 .tp_done:
     popad
     ret
 
-manual_text_scroll:
+dialog_window_scroll:
     ; Save existing blink state so nested/sequential dialogs don't clobber each other.
     movzx eax, byte [ebp + H_DOWN_ARROW_COUNT1]
     push eax
@@ -471,22 +473,26 @@ manual_text_scroll:
     jne .mts_no_arrow
     mov byte [ebp + esi], CHAR_DOWN_ARROW
 .mts_no_arrow:
-    mov byte [ebp + H_DOWN_ARROW_COUNT1], ARROW_ON_FRAMES
-    mov byte [ebp + H_DOWN_ARROW_COUNT2], 1
-    ; Release cycle: wait until A/B is no longer held (avoids re-triggering on held button).
-.mts_release:
-    call DelayFrame
-    test byte [ebp + hJoyHeld], PAD_A | PAD_B
-    jnz .mts_release
-    ; Press cycle: wait for A or B; blink ▼ each frame.
-.mts_press:
-    call DelayFrame
-    cmp byte [mts_hide_arrow], 0
-    jne .mts_no_blink
-    call HandleDownArrowBlinkTiming
-.mts_no_blink:
-    test byte [ebp + hJoyHeld], PAD_A | PAD_B
-    jz .mts_press
+    ; THE WAIT IS PRET'S, and is no longer open-coded here. This routine used to
+    ; carry its own release-then-press loop under the name `manual_text_scroll`,
+    ; which is how pret's ManualTextScroll came to be a FORKED name (the label
+    ; read `missing` while its behaviour lived here). The wait, the press SFX and
+    ; the link-battle branch are pret's routine and now live at
+    ; src/home/joypad2.asm:ManualTextScroll; what stays here is the part pret has
+    ; no counterpart for — the window hijack above.
+    ;
+    ; The one thing that must cross the boundary is WHICH CELL blinks: pret has a
+    ; single 20x18 tilemap so it writes hlcoord 18,16 inline, whereas the port's
+    ; dialog ▼ lives in the window copy at GB_TILEMAP1. Point the knob at it for
+    ; the duration of the wait and put it back afterwards.
+    mov eax, [wtsbp_arrow_pos]
+    push eax
+    mov dword [wtsbp_arrow_pos], GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET
+    call ManualTextScroll
+    pop eax
+    mov [wtsbp_arrow_pos], eax
+    ; mts_hide_arrow needs no blink guard any more: with no ▼ placed above,
+    ; HandleDownArrowBlinkTiming's COUNT1==0 guard leaves the cell alone.
     ; Clear arrow from window tilemap.
     mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TILE_SPC
     popad
@@ -500,6 +506,13 @@ manual_text_scroll:
 
 ; --- pokédex flavor page-break (<PAGE>): full-page window, no dialog hijack ---
 .dex_flavor_page:
+    ; DELIBERATELY NOT delegated to ManualTextScroll, unlike the dialog branch
+    ; above: this wait must re-mirror the blinked scratch cell into the window
+    ; EVERY FRAME (the two writes below), because the pokédex page is shown
+    ; through a full-page window copy. pret never has to do that — it blinks the
+    ; one tilemap it has — so there is no pret routine to hand this off to, and
+    ; folding the mirror into WaitForTextScrollButtonPress would put port-only
+    ; presentation inside a pret label.
     ; The ▼ is already in the wTileMap scratch at (18,16) — PageChar wrote
     ; it there as pret's PageChar does — so the full-page mirror carries it into
     ; the window. The wait then BLINKS the scratch cell (pret: ManualTextScroll →
@@ -852,7 +865,7 @@ PageChar:
     ; the arrow only into GB_TILEMAP1 — see POKEDEX_ARROW_SCRATCH_OFFSET.)
     mov byte [ebp + POKEDEX_ARROW_SCRATCH_OFFSET], CHAR_DOWN_ARROW
     call ProtectedDelay3             ; pret: call ProtectedDelay3
-    call manual_text_scroll          ; ▼ + wait (pret: ManualTextScroll)
+    call dialog_window_scroll          ; ▼ + wait (pret: ManualTextScroll)
     ; ClearScreenArea b=7 rows, c=18 cols at hlcoord(1,10). EDX is the live source
     ; ptr (DE) — preserve it; use it as the row counter only inside this block.
     push eax
@@ -1070,14 +1083,14 @@ PromptText:
     ; PromptText; restoring pret's order lets the duplication go. Do not insert a
     ; body between them — see memory regression-pokemon-evolution-fallthrough-severed
     ; for what that costs elsewhere in this tree.
-    ; DEVIATION{class=timing; pret=home/text.asm:PromptText; behavior=pret's unconditional ProtectedDelay3 before the wait is NOT called here, though it IS called at pret's other three sites (_ContText, PageChar, Paragraph); evidence=MEASURED 2026-08-22 - adding it PARKS item_potion_use and battle_thrash forever, item_potion_use still reading wLetterPrintingDelayFlags $03 at frame 1600 (an open TextCommandProcessor session, not a slow one), because the port's fixed-frame autokey scripts tap A once per message while manual_text_scroll needs a FRESH press, so a tap that now completes during the 3-frame delay is never seen - the mGBA side does not park because its Lua taps repeatedly, and the three other sites were each verified clean on both scenarios; lifetime=until the two scenarios' port-side press trains are retimed to survive a wait that starts 3 frames later}
+    ; DEVIATION{class=timing; pret=home/text.asm:PromptText; behavior=pret's unconditional ProtectedDelay3 before the wait is NOT called here, though it IS called at pret's other three sites (_ContText, PageChar, Paragraph); evidence=MEASURED 2026-08-22 - adding it PARKS item_potion_use and battle_thrash forever, item_potion_use still reading wLetterPrintingDelayFlags $03 at frame 1600 (an open TextCommandProcessor session, not a slow one), because the port's fixed-frame autokey scripts tap A once per message while dialog_window_scroll needs a FRESH press, so a tap that now completes during the 3-frame delay is never seen - the mGBA side does not park because its Lua taps repeatedly, and the three other sites were each verified clean on both scenarios; lifetime=until the two scenarios' port-side press trains are retimed to survive a wait that starts 3 frames later}
     mov eax, [text_prompt_hook]
     test eax, eax
     jz .prompt_overworld
     call eax
     jmp DoneText
 .prompt_overworld:
-    call manual_text_scroll
+    call dialog_window_scroll
     ; fall through into DoneText (pret: PromptText runs on into DoneText)
 
 DoneText:
@@ -1330,9 +1343,9 @@ TextCommand_PROMPT_BUTTON:
     movzx eax, byte [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
     je TextCommand_WAIT_BUTTON                    ; in battle: no arrow (fall to WAIT_BUTTON path)
-    ; text_pause, NOT manual_text_scroll: the ▼ + wait must go through the
+    ; text_pause, NOT dialog_window_scroll: the ▼ + wait must go through the
     ; [text_prompt_hook] dispatch so it lands on the ACTIVE msgbox projection.
-    ; manual_text_scroll is the overworld display specifically — it writes the
+    ; dialog_window_scroll is the overworld display specifically — it writes the
     ; arrow into GB_TILEMAP1 and hijacks the dialog WINDOW — so on the battle
     ; canvas (msgbox_centered, no window, box drawn straight into wTileMap) it
     ; put the arrow in a buffer nothing on screen reads and opened the overworld
@@ -1347,7 +1360,7 @@ TextCommand_PROMPT_BUTTON:
 ; --- TX_WAIT_BUTTON ($0D): wait for A/B, NO arrow. Pret ref: TextCommand_WAIT_BUTTON. ---
 TextCommand_WAIT_BUTTON:
     mov byte [mts_hide_arrow], 1        ; suppress the ▼ for this wait
-    call manual_text_scroll
+    call dialog_window_scroll
     jmp NextTextCommand
 
 ; --- TX_PAUSE ($0A): if A or B is already held, continue immediately; otherwise
@@ -1609,7 +1622,7 @@ msgbox_dialog:
     dd MSG_TEXT_EBX             ; MB_LINE1        — (1,14)
     dd wTileMap + 16 * SCREEN_W_TILES + 1  ; MB_LINE2 — <LINE> at (1,16)
     dd 0                        ; MB_ARROW        — no ▼ of its own
-    dd 0                        ; MB_PROMPT       — caller waits (manual_text_scroll)
+    dd 0                        ; MB_PROMPT       — caller waits (dialog_window_scroll)
     dd 87                       ; MB_WIN_WX
     dd 152                      ; MB_WIN_WY
     dd SCREEN_W                 ; MB_WIN_CLIP

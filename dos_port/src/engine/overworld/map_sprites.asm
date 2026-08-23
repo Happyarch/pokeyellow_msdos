@@ -688,7 +688,7 @@ IsNPCAtTargetBlock:
 ; from a plain stream — nothing needs the length to print.
 ;
 ; After PrintText (or on CHAR_DONE within PrintText), the window is already shown
-; at hWY=152 by manual_text_scroll. This function hides the window (hWY=200),
+; at hWY=152 by dialog_window_scroll. This function hides the window (hWY=200),
 ; restores the BG, and returns AL=1 (NPC found) or AL=0 (nothing found).
 ;
 ; All registers preserved (pushad/popad). Returns AL in EAX after popad.
