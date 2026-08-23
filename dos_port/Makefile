@@ -3443,7 +3443,15 @@ fidelity-full-serial:
 # Requires gfx/tilesets/*.2bpp, built by 'make' in the repo root.
 # Authored map edits (assets/map_overrides/*.json, map-tool C5) are merged
 # into the emitted <map>_blk.inc files.
+# DECLARE WHAT THE CHAIN READS: gen_all_assets.py chains generators that CONSUME
+# generated assets — gen_unknown_list + gen_credits_data read script_constants.inc,
+# gen_battle_text reads pret_ram.inc. Neither is produced by this chain. Without
+# these prerequisites make is free to run the consumer first: on a clean checkout
+# that is a hard FileNotFoundError (CI 32646793945), while a developer tree hides
+# it because gitignored assets/ accumulates. Do not rely on ordering in the
+# `assets:` list -- that is racy under -j. See memory ci-clean-tree-generator-order-traps.
 assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc: \
+		assets/script_constants.inc assets/pret_ram.inc \
 		$(wildcard assets/map_overrides/*.json)
 	python3 tools/generators/gen_all_assets.py
 
@@ -4337,6 +4345,7 @@ src/engine/pikachu/pikachu_emotions.o: assets/pikachu_text.inc
 # data/text/text_2.asm + constants/charmap.asm.
 assets/school_blackboard_text.inc: ../engine/events/hidden_events/school_blackboard.asm \
                          ../data/text/text_2.asm ../constants/charmap.asm \
+                         assets/gb_charmap.txt tools/generators/gb_text.py \
                          tools/generators/gen_battle_text.py \
                          tools/generators/gen_school_blackboard_text.py
 	python3 tools/generators/gen_school_blackboard_text.py
