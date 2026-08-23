@@ -102,7 +102,6 @@ FILES = {
         ("str_x1", [[0xF1, 0xF7, 0x50]]),  # ×1
     ],
     "battle_core_runtime_strings.inc": [
-        ("str_used_grammar", [[0x4F], "used ", [0x50]]),
         ("str_miss_text", [[0x00], "Attack got no way!", [0x50, 0x50]]),
         ("str_rose", [" rose!", [0x58]]),
         ("str_greatly_rose", [[0x4C], "greatly rose!", [0x58]]),

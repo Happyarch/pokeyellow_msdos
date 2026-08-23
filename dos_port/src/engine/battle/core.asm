@@ -93,7 +93,6 @@ HP_BAR_RED        equ 2       ; constants/gfx_constants.asm
 section .data
 align 4
 %include "assets/battle_hud_2bpp.inc"
-global str_used_grammar               ; DisplayUsedMoveText, now engine/battle/used_move_text.asm
 global RunBattleTextStream            ; DisplayUsedMoveText, now engine/battle/used_move_text.asm
 global battle_hud_tiles1_2bpp
 global battle_hud_tiles23_2bpp
@@ -223,6 +222,7 @@ extern ShowSimulatedInputBagBox        ; battle_menu.asm — tutorial one-item b
 extern DisplayListMenuID               ; src/home/list_menu.asm — CF=1 iff cancelled
 extern UseItem                         ; src/home/item.asm
 extern GetItemName                     ; src/home/names.asm
+extern GetName                         ; src/home/names2.asm — wNameListType/wNameListIndex → wNameBuffer
 extern CopyToStringBuffer              ; src/home/copy_string.asm
 extern ItemsCantBeUsedHereText         ; assets/battle_text.inc (generated Tier-1)
 extern g_window_count                  ; src/ppu/ppu.asm — window descriptor count
@@ -2412,9 +2412,13 @@ ExecuteEnemyMove:
     jnz .enemyHasNoSpecialCondition
     jmp esi                             ; jp hl — handled; ESI = continuation
 .enemyHasNoSpecialCondition:
-    call GetCurrentMove                 ; hWhoseTurn=1 → loads wEnemyMove*
+    ; ORDER IS PRET'S (5667-5670) and it is load-bearing: the charge test comes
+    ; FIRST, so the charging turn keeps the wEnemyMove* block GetCurrentMove
+    ; loaded when the charge STARTED rather than reloading it from
+    ; wEnemySelectedMove. The port had these two swapped.
     test byte [ebp + wEnemyBattleStatus1], 1 << CHARGING_UP
     jnz EnemyCanExecuteChargingMove
+    call GetCurrentMove                 ; hWhoseTurn=1 → loads wEnemyMove*
 CheckIfEnemyNeedsToChargeUp:            ; pret 5672
     mov al, [ebp + wEnemyMoveEffect]
     cmp al, CHARGE_EFFECT
@@ -2425,7 +2429,17 @@ CheckIfEnemyNeedsToChargeUp:            ; pret 5672
 EnemyCanExecuteChargingMove:            ; pret 5679
     and byte [ebp + wEnemyBattleStatus1], ~(1 << CHARGING_UP) & 0xFF
     and byte [ebp + wEnemyBattleStatus1], ~(1 << INVULNERABLE) & 0xFF
+    ; pret 5683-5691 — this path skipped GetCurrentMove, so it stages the move name
+    ; in wStringBuffer itself for _MoveNameText.
+    mov al, [ebp + wEnemyMoveNum]
+    mov [ebp + wNameListIndex], al
+    mov byte [ebp + wPredefBank], BANK_MoveNames
+    mov byte [ebp + wNameListType], MOVE_NAME
+    call GetName
+    mov edx, wNameBuffer
+    call CopyToStringBuffer
 EnemyCanExecuteMove:                    ; pret 5692 — Rage continuation
+    mov byte [ebp + wMonIsDisobedient], 0   ; pret 5693-5694 (enemies always obey)
     call DisplayUsedMoveText            ; "Enemy X used MOVE!" (enemy PP not decremented)
     mov al, [ebp + wEnemyMoveEffect]
     mov esi, ResidualEffects1
@@ -3676,7 +3690,16 @@ GetCurrentMove:
     inc edx
     dec ecx
     jnz .copy
-    ret
+    ; pret 6166-6172: stage the move NAME in wStringBuffer. RESTORED — this tail
+    ; used to be dropped because the port's old DisplayUsedMoveText fetched the
+    ; name itself; the faithful used_move_text.asm chain prints _MoveNameText,
+    ; which is `text_ram wStringBuffer`, so the staging is load-bearing again.
+    ; wPredefBank is inert in the flat model but written for fidelity.
+    mov byte [ebp + wPredefBank], BANK_MoveNames
+    mov byte [ebp + wNameListType], MOVE_NAME
+    call GetName
+    mov edx, wNameBuffer
+    jmp CopyToStringBuffer              ; jp CopyToStringBuffer (tail)
 
 ; ---------------------------------------------------------------------------
 ; LoadEnemyMonData — pret engine/battle/core.asm:6174. Moved here from

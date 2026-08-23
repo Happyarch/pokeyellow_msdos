@@ -560,6 +560,7 @@ def main():
     import gen_npc_dialogs
     import gen_toggleable_objects
     import gen_battle_text
+    import gen_used_move_text
     import gen_trainer_parties
     import gen_trainer_names
     import gen_move_grammar
@@ -573,6 +574,8 @@ def main():
     gen_toggleable_objects.generate_all()
     print("chaining gen_battle_text ...")
     gen_battle_text.main()
+    print("chaining gen_used_move_text ...")
+    gen_used_move_text.main()
     print("chaining gen_trainer_parties ...")
     gen_trainer_parties.main()
     print("chaining gen_trainer_names ...")

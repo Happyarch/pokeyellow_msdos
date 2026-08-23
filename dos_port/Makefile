@@ -3757,6 +3757,14 @@ assets/trainer_text.inc: assets/gb_charmap.txt tools/generators/gen_trainer_text
         tools/generators/gen_battle_text.py
 	python3 tools/generators/gen_trainer_text.py
 
+# Used-move FAR streams (_ActorNameText/_UsedMove{1,2}Text/_UsedInsteadText/
+# _MoveNameText) — the text_asm chain's payloads; %included by
+# src/engine/battle/used_move_text.asm. gen_battle_text.py cannot emit them: it
+# inlines text_far into its wrapper and skips text_asm-bearing wrappers.
+assets/used_move_text.inc: assets/gb_charmap.txt tools/generators/gen_used_move_text.py \
+        tools/generators/gen_battle_text.py
+	python3 tools/generators/gen_used_move_text.py
+
 # Text-box menu strings (pret data/text_boxes.asm) — charmap-encoded via gb_text;
 # two-tier rule. <NEXT>/<PK>/<MN> are emitted as named raw bytes by the generator.
 assets/textbox_strings.inc: assets/gb_charmap.txt tools/generators/gen_textbox_strings.py tools/generators/gb_text.py
@@ -4067,6 +4075,7 @@ src/data/pikachu/pikachu_pic_animation.o: assets/pikachu_pic_animation.inc \
 # home/trainers.asm %includes the generated _TrainerNameText far stream +
 # MUSIC_MEET_* ids.
 src/home/trainers.o: assets/trainer_text.inc assets/audio_constants.inc
+src/engine/battle/used_move_text.o: assets/used_move_text.inc
 
 # Trainer-card tile graphics (box/bg/blank-names/badge-numbers/colon/circle),
 # 2bpp passthrough of gfx/trainer_card/*.2bpp + gfx/font/font_extra.2bpp, for the
