@@ -3078,6 +3078,7 @@ FRONTEND_SRCS := \
     src/engine/battle/safari_zone.asm \
     src/engine/battle/unused_stats_functions.asm \
     src/engine/battle/scale_sprites.asm \
+    src/engine/battle/pikachu_entrance_anim.asm \
     src/engine/battle/battle_menu.asm \
     src/engine/battle/core.asm \
     src/engine/battle/core_stubs.asm \

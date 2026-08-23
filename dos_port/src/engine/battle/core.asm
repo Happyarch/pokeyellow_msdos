@@ -315,7 +315,7 @@ extern LoadMonBackPic                  ; engine/battle/init_battle.asm — sent-
 extern IsThisPartyMonStarterPikachu    ; engine/pikachu/pikachu_status.asm — CF=1 when starter
 extern CopyDownscaledMonTiles          ; animations.asm — predef; ESI dest, BH rows, BL cols
 extern AnimationSlideMonOff            ; animations.asm — starter-Pikachu retreat walk-off
-extern StarterPikachuBattleEntranceAnimation ; battle_stubs.asm (STUB) — pret engine/battle/pikachu_entrance_anim.asm
+extern StarterPikachuBattleEntranceAnimation ; engine/battle/pikachu_entrance_anim.asm
 extern IsPlayerPikachuAsleepInParty    ; engine/pikachu/pikachu_emotions.asm — real party scan
 extern PlayPikachuSoundClip            ; src/audio/pikachu_pcm.asm
 extern PlayCry                         ; src/home/pokemon.asm — pret home/pokemon.asm:140

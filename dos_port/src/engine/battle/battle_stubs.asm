@@ -17,16 +17,9 @@ section .text
 ; together with GoText, DoItText, GetmText, EnemysWeakText, and PrintPlayerMon1Text.
 
 ; StarterPikachuBattleEntranceAnimation — pret
-; engine/battle/pikachu_entrance_anim.asm:StarterPikachuBattleEntranceAnimation.
-; The Yellow starter-Pikachu send-out entrance, used instead of the POOF_ANIM +
-; AnimateSendingOutMon pair when the sent-out mon is the starter Pikachu. Restored
-; as a call site by SendOutMon (plan item 1f); while stubbed that branch draws no
-; entrance animation, and the branch is only reachable once the starter Pikachu is
-; the sent-out party mon.
-; STUB{label=StarterPikachuBattleEntranceAnimation; class=stub; pret=engine/battle/pikachu_entrance_anim.asm:StarterPikachuBattleEntranceAnimation; behavior=return without drawing the starter-Pikachu battle entrance animation; evidence=label DB reports StarterPikachuBattleEntranceAnimation missing and no port body exists; lifetime=until the Yellow starter-Pikachu entrance is ported under battle_completion 4a}
-global StarterPikachuBattleEntranceAnimation
-StarterPikachuBattleEntranceAnimation:
-    ret
+; StarterPikachuBattleEntranceAnimation — STUB RETIRED 2026-08-23: the real routine
+; now links from its pret mirror, src/engine/battle/pikachu_entrance_anim.asm.
+; SendOutMon's starter-Pikachu branch draws the entrance for real.
 
 ; UseBagItem — STUB RETIRED 2026-08-12 (battle plan 2c). The real body is in its
 ; pret-mirrored home, src/engine/battle/core.asm, together with BagWasSelected,
