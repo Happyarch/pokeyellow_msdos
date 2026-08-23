@@ -314,12 +314,12 @@ over renderer state, feeds the device below the seam, invisible to pret code).
       transmission state, tile-buffer comparison)
 
 ### Stage 4 — ESC/P grayscale + transport + flags
-- [ ] `escp.asm`: init/spacing/band loop per the verified sequences; 2×2
+- [x] `escp.asm`: init/spacing/band loop per the verified sequences; 2×2
       exposure-scaled dither; margins via ESC J; FF; `/PRINT9` m=0 mode
-- [ ] `lpt_dos.asm`: reflected-int-21h LPT1 open + raw-mode IOCTL (DH=0) +
+- [x] `lpt_dos.asm`: reflected-int-21h LPT1 open + raw-mode IOCTL (DH=0) +
       chunked AH=40h writes + int 17h probe; errors → GB status flags;
       `/PRNFILE` → PRINTnnn.PRN
-- [ ] entry.asm tokens `/PRINT9 /PRNCOLOR /PRNFILE`; `dos_port/run` header
+- [x] entry.asm tokens `/PRINT9 /PRNCOLOR /PRNFILE`; `dos_port/run` header
 - [ ] `tools/printcheck.sh` (fork binary, scratch docpath); PNG determinism
       probe; bless beach-house + Pokédex PNG goldens under the new
       `portonly_print` scenario class; `--ps` PDF path for human review

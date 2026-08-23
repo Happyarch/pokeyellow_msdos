@@ -528,7 +528,9 @@ SAVE_SRCS := \
 
 # Virtual Game Boy Printer device and page backend (docs/current_plan_printer.md)
 PRINT_SRCS := \
-    src/print/print_dev.asm
+    src/print/print_dev.asm \
+    src/print/escp.asm \
+    src/print/lpt_dos.asm
 
 # Audio subsystem (docs/current_plan_audio.md Phase A). The translated pret
 # engine writes the virtual APU block at [ebp+rAUD*]; the DelayFrame tick +

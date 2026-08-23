@@ -47,6 +47,9 @@ extern g_net_tcp_listen_port  ; src/net/net_ip.asm — /TCPWAIT[=port]
 extern g_net_tcp_peer_ip      ; src/net/net_ip.asm — /TCP=a.b.c.d
 extern g_net_tcp_peer_port    ; src/net/net_ip.asm — /TCP=...[:port]
 extern g_net_ip_local         ; src/net/net_ip.asm — /IP=a.b.c.d
+extern g_cfg_prn_9pin                   ; src/print/print_dev.asm
+extern g_cfg_prn_color                  ; src/print/print_dev.asm
+extern g_cfg_prn_file                   ; src/print/print_dev.asm
 extern g_net_ip_mask          ; src/net/net_ip.asm — /MASK=a.b.c.d
 extern g_net_ip_gw            ; src/net/net_ip.asm — /GW=a.b.c.d
 extern g_cfg_partyb      ; src/engine/debug/debug_party.asm — /PARTYB flag (tradecheck harness)
@@ -131,6 +134,10 @@ arg_tcp:      db '/TCP=',     0
 arg_ip:       db '/IP=',      0
 arg_mask:     db '/MASK=',    0
 arg_gw:       db '/GW=',      0
+; Printer configuration flags (docs/current_plan_printer.md Stage 4)
+arg_print9:   db '/PRINT9',   0
+arg_prncolor: db '/PRNCOLOR', 0
+arg_prnfile:  db '/PRNFILE',  0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -523,6 +530,25 @@ parse_cmdline:
     mov edi, g_net_ip_gw
     call parse_dotted_quad
 .no_gw:
+
+    ; --- printer configuration flags ---
+    mov edi, arg_print9
+    call find_token
+    jnz .no_print9
+    mov dword [g_cfg_prn_9pin], 1
+.no_print9:
+
+    mov edi, arg_prncolor
+    call find_token
+    jnz .no_prncolor
+    mov dword [g_cfg_prn_color], 1
+.no_prncolor:
+
+    mov edi, arg_prnfile
+    call find_token
+    jnz .no_prnfile
+    mov dword [g_cfg_prn_file], 1
+.no_prnfile:
 
 .done:
     pop edi

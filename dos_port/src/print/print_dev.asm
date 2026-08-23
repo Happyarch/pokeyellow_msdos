@@ -66,6 +66,8 @@ section .bss
 g_print_band_buf:               resb MAX_PAGE_BYTES
 g_print_pal_buf:                resb 360         ; 20x18 cell palette sidecar for Stage 5
 
+extern Escp_PrintPage                    ; src/print/escp.asm
+
 section .text
 
 ; ---------------------------------------------------------------------------
@@ -227,5 +229,5 @@ PrintDev_ConsumePacket:
 ; PrintDev_RenderPage — hook for Stage 4 ESC/P page backend
 ; ---------------------------------------------------------------------------
 PrintDev_RenderPage:
-    ; Stage 3: minimal device hook (Stage 4 wires ESC/P + LPT transport)
+    call Escp_PrintPage
     ret

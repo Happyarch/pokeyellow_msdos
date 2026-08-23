@@ -12,6 +12,7 @@
 #               /IPX /IPXSOCK=n /PKTINT=0xNN
 #               /TCPWAIT[=port] /TCP=a.b.c.d[:port] /IP=a.b.c.d
 #               /MASK=a.b.c.d /GW=a.b.c.d
+#   printer:    /PRINT9 /PRNCOLOR /PRNFILE
 #   harness:    /PARTYB (tradecheck/battlecheck B-side debug party)
 set -e
 DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
