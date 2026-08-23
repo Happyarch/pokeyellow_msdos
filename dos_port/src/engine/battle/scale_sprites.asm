@@ -7,7 +7,6 @@
 ; They arrived from src/home/pics.asm, which calls ScaleSpriteByTwo out of
 ; LoadMonBackPicToVRAM and keeps the rest of the pic-loading family.
 ;
-; DEVIATION{class=banking; pret=engine/battle/scale_sprites.asm:ScaleSpriteByTwo; behavior=pret's outer ScaleSpriteByTwo and its .ScaleSpriteByTwo inner label collapse into ONE routine here, so the OpenSRAM/CloseSRAM bracket wraps the scaling body inline instead of wrapping a call to it - faithdiff therefore reports an ORDER warning placing CloseSRAM last rather than second; evidence=pret's outer body is only the bank open, a call to the inner label and the bank close, and the port has no ROM banking so there is nothing for the outer frame to do beyond the bracket itself, which IS carried as of 2026-08-23 now that OpenSRAM and CloseSRAM drive the SRAM write-protect latch in src/home/bankswitch2.asm; lifetime=permanent under the flat memory model}
 ;
 ; Register map: a=AL, b=BH, c=BL (bc=EBX), d=DH, e=DL (de=EDX), hl=ESI,
 ; EBP = GB memory base. The sprite buffers are GB SRAM ($A000+), so they are
@@ -34,6 +33,11 @@ section .text
 ScaleSpriteByTwo:
     mov al, SRAM_BANK_SPRITE_BUFFERS        ; ld a, BANK("Sprite Buffers")
     call OpenSRAM
+    call .ScaleSpriteByTwo                   ; pret: call .ScaleSpriteByTwo
+    call CloseSRAM                           ; pret: call CloseSRAM
+    ret
+
+.ScaleSpriteByTwo:
     mov edx, sSpriteBuffer1 + (4*4*8) - 5    ; last input byte (last 4 rows pre-skipped)
     mov esi, sSpriteBuffer0 + SPRITEBUFFERSIZE - 1
     call ScaleLastSpriteColumnByTwo          ; last tile column is a special case
@@ -41,8 +45,11 @@ ScaleSpriteByTwo:
     mov edx, sSpriteBuffer2 + (4*4*8) - 5
     mov esi, sSpriteBuffer1 + SPRITEBUFFERSIZE - 1
     call ScaleLastSpriteColumnByTwo
-    call ScaleFirstThreeSpriteColumnsByTwo
-    jmp CloseSRAM                            ; pret: call CloseSRAM / ret
+    ; FALLS THROUGH into ScaleFirstThreeSpriteColumnsByTwo — pret's own
+    ; fallthrough, and the second of the two invocations. Do NOT insert anything
+    ; between this and the label below, and do not "tidy" it into a call: the
+    ; callee's ret then returns to ScaleSpriteByTwo's `call .ScaleSpriteByTwo`,
+    ; which is exactly what pret relies on.
 
 ; In: EDX = source (read backward), ESI = dest (written backward).
 ScaleFirstThreeSpriteColumnsByTwo:
