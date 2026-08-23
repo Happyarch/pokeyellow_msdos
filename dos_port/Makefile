@@ -939,8 +939,13 @@ GAME_SRCS := \
     src/engine/overworld/dust_smoke.asm \
     src/engine/overworld/cut.asm \
     src/engine/overworld/cut2.asm \
-    src/engine/debug/debug_party.asm
+    src/engine/debug/debug_party.asm \
+    src/engine/debug/debug_menu.asm
 
+# debug_menu.asm is the release ELSE arm of pret's file-wide IF DEF(_DEBUG) — one
+# `ret`. Linked unconditionally for the same reason debug_party.asm is: pret's
+# main.asm INCLUDEs it in every build, so the label exists in a retail ROM.
+#
 # debug_party.asm is linked UNCONDITIONALLY, matching pret: main.asm:19 INCLUDEs
 # engine/debug/debug_party.asm in every build, and PrepareNewGameDebug is a
 # "dummy except in _DEBUG" ret that PrepareForSpecialWarp always calls
