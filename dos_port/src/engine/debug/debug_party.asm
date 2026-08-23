@@ -47,6 +47,7 @@ extern CopyData                    ; home/copy.asm
 %define PIDGEOTTO 0x96      ; internal index $96 (pret constants/pokemon_constants.asm)
 %define PERSIAN 0x90        ; internal index (113 was wrong — that's KAKUNA; see data/pokemon/dex_order.asm)
 %define JIGGLYPUFF 0x64
+%define CLEFAIRY 0x04       ; pret constants/pokemon_constants.asm ($04) — DEBUG_TRADE_GOLDEN's give-species
 %define STARTER_PIKACHU 0x54
 %define CHARIZARD 0xB4      ; internal index (dex_order.asm line - 2)
 %define LAPRAS 0x13
@@ -340,7 +341,16 @@ DebugNewGameParty:
     db SNORLAX, 80
 %endif
     db PERSIAN, 80
+; DEBUG_TRADE_GOLDEN (in_game_trade golden — link cable plan Stage 3 step 4):
+; the trade's give-species is CLEFAIRY (data/events/trades.asm TRADE_FOR_MILES
+; row), swapped in at JIGGLYPUFF's slot (index 2) so party order/level for
+; every OTHER scenario is unchanged — same %ifdef-swap shape as
+; DEBUG_ANIM_DEMO's lead swap above.
+%ifdef DEBUG_TRADE_GOLDEN
+    db CLEFAIRY, 15
+%else
     db JIGGLYPUFF, 15
+%endif
     db STARTER_PIKACHU, 5
     db CHARIZARD, 50
     db LAPRAS, 34

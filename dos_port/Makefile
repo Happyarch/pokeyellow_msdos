@@ -2895,6 +2895,48 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# in_game_trade golden (link cable plan Stage 3 step 4 — the trade.asm fidelity
+# anchor): the Route 2 Trade House CLEFAIRY -> MR_MIME "MILES" trade
+# (data/events/trades.asm index 1, TRADE_FOR_MILES; scripts/Route2TradeHouse.asm's
+# GAMEBOY_KID). Same spawn shape as DEBUG_CABLECLUB: spawn beside
+# `object_event 4, 1, SPRITE_GAMEBOY_KID, STAY, DOWN`
+# (data/maps/objects/Route2TradeHouse.asm) at tile (y=2,x=4) facing UP — one
+# tile south of the NPC, the standard shop-counter arrangement (matches every
+# Mart/PC clerk in the game). DEBUG_SEED_PARTY seeds the debug party with ONE
+# row swapped under DEBUG_TRADE_GOLDEN (JIGGLYPUFF -> CLEFAIRY, same slot —
+# src/engine/debug/debug_party.asm), so the give-species is present. The whole
+# dialogue/menu flow (WannaTrade1Text, the YES/NO confirm — cursor defaults
+# YES, home/yes_no.asm — the party-menu CLEFAIRY pick, ConnectCableText,
+# InternalClockTradeAnim, TradedForText/Thanks1Text) advances on a periodic A
+# train (AUTOKEY_TRADE_GOLDEN, cloned from AUTOKEY_LINKCHECK/TRADECHECK's
+# shape) plus a state-gated party-menu DOWN climb to CLEFAIRY's slot
+# (debug_dump.asm's .apply, same rule as AUTOKEY_TRADECHECK's ROUND2
+# DOWN-to-CANCEL gate). The dump itself is STATE-GATED, not frame-gated: the
+# shim hook in src/scripts/Route2TradeHouse.asm fires the instant
+# DoInGameTradeDialogue returns — which, because its tail is a `jp PrintText`
+# into the LAST dialog box, is exactly "the closing dialog is dismissed, a
+# stable idle overworld frame" (spec step 5). AUTOKEY_DUMP_FRAME is therefore
+# only AutoKeyDrive's OWN fallback ceiling if that hook never fires (flow
+# stall), same role DEBUG_CABLECLUB gives it — SPEC DEVIATION from "start 3600
+# and measure": the DOSBox-side dynamic run that would measure a fixed frame
+# is deferred (maintainer directive 2026-08-23), and a state gate needs no
+# such measurement to be correct.
+# make DEBUG_TRADE_GOLDEN=1
+ifdef DEBUG_TRADE_GOLDEN
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRADE_GOLDEN
+NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SEED_PARTY
+TRADE_GOLDEN_MAP ?= 0x30
+TRADE_GOLDEN_Y   ?= 2
+TRADE_GOLDEN_X   ?= 4
+TRADE_GOLDEN_DIR ?= SPRITE_FACING_UP
+NASMFLAGS += -D TRADE_GOLDEN_MAP=$(TRADE_GOLDEN_MAP) -D TRADE_GOLDEN_Y=$(TRADE_GOLDEN_Y) \
+             -D TRADE_GOLDEN_X=$(TRADE_GOLDEN_X) -D TRADE_GOLDEN_DIR=$(TRADE_GOLDEN_DIR)
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_TRADE_GOLDEN
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
 # LoadEnemyMonData → LoadBattleMonFromParty) + the convergence-spec DV overwrite
 # replace DEBUG_BATTLE's synthetic seed. Combine with DEBUG_BATTLE_INTRO /

@@ -6601,6 +6601,39 @@ TC_TRADE_CENTER_MAP equ 0xEF               ; TRADE_CENTER (assets/map_dims.inc; 
     or dl, PAD_DOWN
 .tcCancelOff:
 %endif
+%ifdef AUTOKEY_TRADE_GOLDEN
+    ; *** STATE-GATED PARTY-MENU DOWN CLIMB (in_game_trade golden). ***
+    ; InGameTrade_DoTrade's DisplayPartyMenu opens with the cursor on
+    ; [wPartyAndBillsPCSavedMenuItem] (home/pokemon.asm:PartyMenuInit), which
+    ; is 0 on this scenario's fresh boot — the trade is this build's ONLY
+    ; overworld interaction, so nothing else ever writes it. CLEFAIRY sits at
+    ; slot index 2 (DebugNewGameParty's JIGGLYPUFF row, swapped under this
+    ; same %ifdef — src/engine/debug/debug_party.asm), so the cursor needs
+    ; exactly two DOWN presses. Identify the screen by PartyMenuInit's own
+    ; HandleMenuInput signature (top item Y=1/X=0, watched keys A|B) rather
+    ; than a frame window, and strip A while climbing so a coincident
+    ; base-train A cannot land mid-climb and pick the wrong slot — same rule
+    ; as AUTOKEY_TRADECHECK's ROUND2 DOWN-to-CANCEL gate just above. Strobed
+    ; (4-on/4-off on the free-running autokey_frame counter) for DOWN's
+    ; edge-triggered cursor step, same cadence that gate uses. Self-clears the
+    ; instant the cursor reaches slot 2, at which point A is no longer
+    ; suppressed and the next scheduled base-train pulse selects it.
+    cmp byte [ebp + wTopMenuItemY], 1
+    jne .tgPartyOff
+    cmp byte [ebp + wTopMenuItemX], 0
+    jne .tgPartyOff
+    cmp byte [ebp + wMenuWatchedKeys], PAD_A | PAD_B
+    jne .tgPartyOff
+    cmp byte [ebp + wCurrentMenuItem], 2
+    je .tgPartyOff
+    and dl, ~PAD_A & 0xFF
+    mov eax, [autokey_frame]
+    and eax, 7
+    cmp eax, 4
+    jae .tgPartyOff
+    or dl, PAD_DOWN
+.tgPartyOff:
+%endif
 %ifdef AUTOKEY_TRAINER_ROUTE
     ; *** STATE-GATED D-PAD (measured 2026-08-05, two stalled 26000-frame runs). ***
     ; A frame-scheduled D-pad press lands in whatever UI is up. One DOWN that hits
@@ -6785,6 +6818,27 @@ autokey_script:
     ; walk to the table, the STATS->TRADE cursor step, round 2's DOWN-to-CANCEL
     ; climb) are handled below at .apply by reading live WRAM, not by rows
     ; here — this table's only job is "keep answering A forever".
+%assign AK_L 120
+%rep 900
+    dd AK_L, AK_L + 5, PAD_A
+%assign AK_L AK_L + 20
+%endrep
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_TRADE_GOLDEN
+    ; in_game_trade golden: the SAME long A train as AUTOKEY_LINKCHECK/
+    ; TRADECHECK — answers WannaTrade1Text's page(s), the YES/NO confirm
+    ; (cursor defaults YES, home/yes_no.asm: DisplayTwoOptionMenu reads
+    ; wTwoOptionMenuID's BIT_SECOND_MENU_OPTION_DEFAULT, unset for the plain
+    ; YES_NO_MENU id 0 InitYesNoTextBoxParameters uses), the party menu's
+    ; final A-confirm on CLEFAIRY, ConnectCableText, and the two post-anim
+    ; boxes (TradedForText/Thanks1Text). The ONE moment that needs something
+    ; other than a bare A — climbing the party-menu cursor onto CLEFAIRY's
+    ; slot — is handled below at .apply by reading live WRAM, not by rows
+    ; here, same split as AUTOKEY_TRADECHECK. The dump is STATE-GATED (the
+    ; script shim in src/scripts/Route2TradeHouse.asm), so this table's only
+    ; job is "keep answering A for as long as the flow (incl. the real trade
+    ; animation) takes" — length is not load-bearing the way a frame-gated
+    ; dump's would be.
 %assign AK_L 120
 %rep 900
     dd AK_L, AK_L + 5, PAD_A

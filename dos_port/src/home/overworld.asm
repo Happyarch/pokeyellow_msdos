@@ -399,6 +399,23 @@ EnterMap:
     ; side seeds the same flag (cable_club_nolink.lua, seed.set_event).
     SetEvent EVENT_GOT_POKEDEX
 %endif
+%ifdef DEBUG_TRADE_GOLDEN
+    ; in_game_trade golden (link cable plan Stage 3 step 4): spawn in
+    ; ROUTE_2_TRADE_HOUSE one tile south of the GAMEBOY_KID NPC
+    ; (`object_event 4, 1, SPRITE_GAMEBOY_KID, STAY, DOWN` —
+    ; data/maps/objects/Route2TradeHouse.asm), open floor per
+    ; Route2TradeHouse.blk decoded through the HOUSE tileset's collision list
+    ; (the standard shop-counter arrangement every Mart/PC clerk in the game
+    ; uses — NPC facing DOWN into the customer tile below it).
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
+    mov byte [ebp + wCurMap], TRADE_GOLDEN_MAP
+    mov byte [ebp + wYCoord], TRADE_GOLDEN_Y
+    mov byte [ebp + wXCoord], TRADE_GOLDEN_X
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    ; ROUTE_2_TRADE_HOUSE is INDOORS: stage the .blk into the shared window
+    ; (same call and reason as DEBUG_CABLECLUB above).
+    call StageIndoorMapBlk
+%endif
 %ifdef DEBUG_PREDEFTEXT
     ; Predef-text gate (predef-text plan Stage 2 acceptance). Stand ON the SNES tile
     ; in Red's bedroom. pret: `hidden_event 3, 5, PrintRedSNESText, ANY_FACING`
@@ -1265,6 +1282,21 @@ EnterMap:
     ; Facing is seeded HERE, not with the coords: InitSprites (from LoadMapData)
     ; rebuilds wSpriteStateData1 (same rule as DEBUG_HIDDENOBJ).
     mov byte [ebp + wSpritePlayerStateData1FacingDirection], CABLECLUB_DIR
+%endif
+%ifdef DEBUG_TRADE_GOLDEN
+    ; Same shape as DEBUG_CABLECLUB above: seed, then FALL THROUGH into the
+    ; real OverworldLoop. AUTOKEY_TRADE_GOLDEN's A train + state-gated DOWN
+    ; climb run the production talk dispatch (IsSpriteOrSignInFrontOfPlayer ->
+    ; CheckNPCInteraction -> the generated SCRIPT entry ->
+    ; Route2TradeHouseGameboyKidText -> DoInGameTradeDialogue) through the
+    ; whole trade; the dump hook lives in the script glue
+    ; (src/scripts/Route2TradeHouse.asm).
+    ; LoadMapData does not derive the view pointer for a hand-seeded spawn.
+    call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
+    call SeamReseatView
+    ; Facing is seeded HERE, not with the coords: InitSprites (from LoadMapData)
+    ; rebuilds wSpriteStateData1 (same rule as DEBUG_CABLECLUB).
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], TRADE_GOLDEN_DIR
 %endif
 %ifdef DEBUG_LEDGE
     ; Same shape as DEBUG_SURF above: seed, then FALL THROUGH into the real

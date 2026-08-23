@@ -2803,6 +2803,38 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "Talks to the Pewter Pokecenter link receptionist with the pokedex and NO peer, through the real A-press dispatch on both sides (port: CheckNPCInteraction -> generated SCRIPT entry -> CableClubReceptionistScript; ROM: DisplayTextID's TX_SCRIPT case), running CableClubNPC's full 90-frame establishment race to expiry and the two-page failure text. The dump lands with the last page on screen and .didNotConnect's WRAM aftermath latched (linkStatus $FF, serial watchdog and poll count zeroed). SCOPE: the timeout path only \u2014 the connected path needs a peer and is covered by tools/linkcheck.sh, not a golden."
+    },
+    {
+      "name": "in_game_trade",
+      "id": 93,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_TRADE_GOLDEN=1",
+      "port_entry_gate": "DEBUG_TRADE_GOLDEN",
+      "navigation_script": "tools/mgba_harness/scenarios/in_game_trade.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DoInGameTradeDialogue",
+        "InternalClockTradeAnim",
+        "TradeAnimCommon"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Route 2 Trade House NPC trade (data/events/trades.asm index 1, TRADE_FOR_MILES): gives CLEFAIRY, receives MR.MIME nicknamed MILES, through the real DoInGameTradeDialogue dispatch (talk -> WannaTrade1Text -> YES/NO confirm, cursor default YES -> party-menu CLEFAIRY pick -> ConnectCableText -> InternalClockTradeAnim -> TradeAnimCommon -> TradedForText -> Thanks1Text) on both sides. The single-player fidelity anchor for retiring the InternalClockTradeAnim/TradeAnimCommon stubs (link cable plan Stage 3 step 4). Dump is STATE-GATED (the closing Thanks1Text dismissed, a stable idle overworld frame), not frame-gated -- DOSBox-side dynamic verification is DEFERRED to the end-of-plan battery (maintainer directive 2026-08-23). The received MR.MIME struct is NOT fully deterministic by construction: its DVs and OT ID come from Random_ (rDIV/CPU-cycle timing), reproducible run-to-run of this exact script but not predictable from the trade tables -- see the task report."
     }
   ],
   "disabled_scenarios": []

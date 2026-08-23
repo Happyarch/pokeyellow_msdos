@@ -29,6 +29,10 @@ global Route2TradeHouse_TextPointers
 extern DoInGameTradeDialogue
 extern EnableAutoTextBoxDrawing
 extern TextScriptEnd
+%ifdef DEBUG_TRADE_GOLDEN
+extern DelayFrame                   ; src/home/vblank.asm
+extern DumpBackbuffer               ; src/debug/debug_dump.asm — FRAME.BIN + GBSTATE.BIN, then exit
+%endif
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -63,4 +67,18 @@ Route2TradeHouseGameboyKidText:
     mov [ebp + wWhichTrade], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call DoInGameTradeDialogue
+%ifdef DEBUG_TRADE_GOLDEN
+    ; in_game_trade golden photograph: DoInGameTradeDialogue's tail is a
+    ; `jp PrintText` into whichever text .printText selected (Thanks1Text on
+    ; a successful trade — see the pret source above), so this call returning
+    ; means that LAST box has already closed: the whole flow (dialogue, the
+    ; YES/NO confirm, the party-menu CLEFAIRY pick, ConnectCableText,
+    ; InternalClockTradeAnim, TradedForText, Thanks1Text) is done and the
+    ; screen is back to a stable idle overworld frame — exactly the state-gated
+    ; dump point the spec calls for, no frame count needed. One DelayFrame lets
+    ; the compositor draw the final reveal, same as CableClubReceptionistScript's
+    ; DEBUG_CABLECLUB hook.
+    call DelayFrame
+    call DumpBackbuffer                     ; FRAME.BIN + GBSTATE.BIN, then exits
+%endif
     jmp TextScriptEnd

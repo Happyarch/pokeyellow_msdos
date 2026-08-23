@@ -2550,6 +2550,25 @@ SCENARIOS = {
             ],
         },
     },
+    "in_game_trade": {
+        "flags": "DEBUG_TRADE_GOLDEN=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # window/masks UNMEASURED — the DOSBox-side dynamic run that would
+        # measure them is DEFERRED to the end-of-plan battery (maintainer
+        # directive 2026-08-23); do NOT pre-invent either here. The first
+        # goldencheck run measures the port's canvas offset and any genuine
+        # divergence. Leading candidate for a wPartyData mask, per the task
+        # report's determinism analysis: the received MR.MIME's DVs
+        # (MON_DVS, party struct offset 0x1B) and OT ID (MON_OT_ID, offset
+        # 0x0C) are both Random_-derived from rDIV/CPU-cycle timing
+        # (engine/pokemon/add_mon.asm:114-116, engine/events/
+        # in_game_trades.asm:187-190) — reproducible run-to-run of the SAME
+        # script (mGBA is deterministic) but not expected to match the DOS
+        # port's own RNG-timing HAL bit-for-bit, since the two sides do not
+        # share an rDIV-equivalent clock. Confirm with a measured diff before
+        # adding the mask, not on this reasoning alone.
+        "masks": {},
+    },
 }
 
 
