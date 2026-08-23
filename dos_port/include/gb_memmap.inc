@@ -1818,6 +1818,13 @@
 %define TRAINER_FLAG                 0x40   ; 1 << BIT_TRAINER
 %define ITEM_FLAG                    0x80   ; 1 << BIT_ITEM
 
+; hAutoBGTransferPortion — which third of wTileMap AutoBgMapTransfer pushes next
+; (constants/gfx_constants.asm; pret files them under an "hAutoBGTransferEnabled"
+; heading, but the byte they are stored in is hAutoBGTransferPortion).
+%define TRANSFERTOP                  0
+%define TRANSFERMIDDLE               1
+%define TRANSFERBOTTOM               2
+
 ; RedrawRowOrColumn modes (constants/gfx_constants.asm)
 %define REDRAW_COL                   1
 %define REDRAW_ROW                   2

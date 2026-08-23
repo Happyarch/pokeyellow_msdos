@@ -10,12 +10,36 @@
 ; the BG family arrived here from src/video/bg_anim.asm (deleted) and
 ; src/home/lcd.asm (which keeps DisableLCD / EnableLCD).
 ;
-; pret labels of home/vcopy.asm this port does NOT hold, so nobody thinks they
-; were lost in the move: GetRowColAddressBgMap, FillBgMapCommon,
-; AutoBgMapTransfer, TransferBgRows, VBlankCopyDouble — none is translated.
-; The port's native renderer does not scan the GB $9800 BG map at all (see the
-; renderer-integrity note below), which is why that half of the file has never
-; been needed.
+; THE FILE IS NOW COMPLETE. GetRowColAddressBgMap, FillBgMapCommon,
+; AutoBgMapTransfer, TransferBgRows and VBlankCopyDouble used to be absent, under
+; a note saying the port's renderer never scans the GB $9800 BG map so that half
+; of the file "has never been needed". The renderer fact is still true; the
+; conclusion was the maintainer's open question of 2026-08-23, and the answer is
+; the same one the eight overworld VRAM-torus routines got in d7d72f8d7: a
+; genuinely portable pret routine is ported for completeness even when unlinked.
+;
+; MEASURED before porting, per label:
+;   AutoBgMapTransfer   pret's only caller is home/vblank.asm; the port's VBlank
+;                       pipeline (src/home/vblank.asm) does not call it. Its
+;                       output is the $9800 BG map, which render_bg never reads.
+;                       hAutoBGTransferEnabled IS written faithfully all over the
+;                       port, so the GATE byte is live — nothing consumes it.
+;   TransferBgRows      reached only from AutoBgMapTransfer and VBlankCopyBgMap.
+;   VBlankCopyDouble    armed in pret by home/copy2.asm:CopyVideoDataDouble via
+;                       hVBlankCopyDoubleSize + DelayFrame. The port's
+;                       CopyVideoDataDouble (src/home/copy2.asm:116) does the
+;                       1bpp->2bpp expansion SYNCHRONOUSLY and never writes that
+;                       HRAM byte, so this can never be armed here.
+;   GetRowColAddressBgMap  pret's only caller is home/copy2.asm's
+;                       CopyScreenTileBufferToVRAM `.setup`; the port's
+;                       CopyScreenTileBufferToVRAM (copy2.asm:284) is three
+;                       DelayFrames and drops the arming entirely.
+;   FillBgMapCommon     the ONE exception — it has a live consumer here, because
+;                       ClearBgMap and FillBgMap were ported with the shared body
+;                       INLINED instead of shared. It is now the shared body they
+;                       fall through into, which is pret's own shape.
+; So four are unreached mirrors and one is wired. label_status --callers reported
+; 0 port callers for all five before this change.
 ;
 ; -- Renderer-integrity notes (this port diverges hard from GB geometry) ------
 ; The DOS port's native renderer (src/ppu/ppu.asm:render_bg) does NOT scan the
@@ -62,6 +86,12 @@ bits 32
 ; bytes/row and overflow the 32-wide row.
 GB_BG_ROW_TILES          equ 20        ; pret SCREEN_WIDTH  — tiles copied per row
 GB_BG_STRIDE             equ 32        ; pret TILEMAP_WIDTH — dest bytes per row
+; Same reasoning for AutoBgMapTransfer, which slices wTileMap into thirds by GB
+; rows. See stigmergy [[redraw-ring-gb-geometry-contract]]: substituting the
+; port's SCREEN_HEIGHT(25) here would slice 8-row thirds out of a buffer pret
+; addresses in 6-row thirds, and address rows 18-24 that the GB map has no room
+; for. GB geometry, always.
+GB_SCREEN_HEIGHT         equ 18        ; pret SCREEN_HEIGHT — rows in the GB view
 
 ; vTileset ($9000) animated pattern-tile addresses (GB_VCHARS2 = vTileset).
 ; The tile IDs are shared (gb_memmap.inc) so screens that load their own graphics
@@ -71,14 +101,56 @@ FLOWER_TILE_ADDR         equ GB_VCHARS2 + ANIM_FLOWER_TILE_ID * TILE_SIZE  ; $90
 
 extern g_tilecache_dirty        ; src/ppu/ppu.asm — arm cache re-decode after vChars write
 
+global GetRowColAddressBgMap
 global ClearBgMap
 global FillBgMap
+global FillBgMapCommon
 global RedrawRowOrColumn
+global AutoBgMapTransfer
+global TransferBgRows
 global VBlankCopyBgMap
+global VBlankCopyDouble
 global VBlankCopy
 global UpdateMovingBgTiles
 
 section .text
+
+; ---------------------------------------------------------------------------
+; GetRowColAddressBgMap — pret home/vcopy.asm:4, the file's first label.
+; Converts a wTileMap coordinate into the matching BG-map address.
+;
+; In:  ESI (HL) = wTileMap coordinate, BH (B) = high byte of the BG map base
+; Out: ESI (HL) = BG map address. AL clobbered, exactly as pret clobbers A.
+;
+; pret shifts H right three times, catching each shifted-out bit in A through the
+; carry (`srl h` / `rr a`), so A ends holding H's low 3 bits in its TOP 3 bits —
+; i.e. HL is divided by 8 with the remainder re-joined at the low end via `or l`.
+; x86 `shr r8, 1` sets CF from the bit shifted out and `rcr r8, 1` rotates it in
+; through CF, so the pair maps one-for-one. Nothing may touch CF between them.
+;
+; UNREACHED here, and measured: pret's only caller is home/copy2.asm's
+; CopyScreenTileBufferToVRAM `.setup`, which arms hVBlankCopyBGDest for the three
+; screen thirds; the port's CopyScreenTileBufferToVRAM drops that arming because
+; render_bg never scans the $9800 map. See the file header.
+; ---------------------------------------------------------------------------
+GetRowColAddressBgMap:
+    push ecx
+    mov cx, si                          ; CH = H, CL = L
+    xor al, al                          ; xor a
+    shr ch, 1                           ; srl h
+    rcr al, 1                           ; rr a
+    shr ch, 1                           ; srl h
+    rcr al, 1                           ; rr a
+    shr ch, 1                           ; srl h
+    rcr al, 1                           ; rr a
+    or  al, cl                          ; or l
+    mov cl, al                          ; ld l, a
+    mov al, bh                          ; ld a, b
+    or  al, ch                          ; or h
+    mov ch, al                          ; ld h, a
+    movzx esi, cx
+    pop ecx
+    ret
 
 ; ---------------------------------------------------------------------------
 ; ClearBgMap — fill a BG tilemap (TILEMAP_AREA bytes) with the blank tile ($7F).
@@ -87,8 +159,13 @@ section .text
 ; ---------------------------------------------------------------------------
 ClearBgMap:
     push eax
-    mov al, 0x7F
-    call FillBgMap
+    mov al, 0x7F                        ; ld a, ' '
+    call FillBgMapCommon                ; jr FillBgMapCommon
+    ; pret CLOBBERS A here and lets the tail `ret` out of FillBgMapCommon return
+    ; to its caller. The port's entry contract for this routine has always been
+    ; "all registers preserved", and callers were written against it, so the
+    ; push/pop/call stays. The target is now pret's, which is what the shape
+    ; actually asserted.
     pop eax
     ret
 
@@ -98,6 +175,27 @@ ClearBgMap:
 ; Out: all registers preserved.
 ; ---------------------------------------------------------------------------
 FillBgMap:
+    ; pret is `FillBgMap:: ld a, l` — it takes the tile index in L and moves it to
+    ; A before falling through. The port's entry contract already delivers the
+    ; tile in AL (ESI is the base offset, not a value), so there is nothing to
+    ; move and the label is a pure entry point onto the shared body below. That
+    ; contract predates this change and is unchanged by it.
+    ; fall through
+
+; ---------------------------------------------------------------------------
+; FillBgMapCommon — pret home/vcopy.asm:30. The shared fill body ClearBgMap and
+; FillBgMap both reach (pret: `ClearBgMap: ld a,' ' / jr FillBgMapCommon`, and
+; FillBgMap falls through). The port had this body INLINED into FillBgMap with no
+; label, which is why the name read `missing`; it is now shared, as in pret.
+;
+; In:  ESI = tilemap base offset, AL = tile index. Out: all registers preserved.
+;
+; pret walks the area with a nested `dec e` / `dec d` pair over
+; `ld de, TILEMAP_AREA` — 4 x 256 bytes. `rep stosb` over the same constant count
+; is identical: TILEMAP_AREA is a fixed 1024, so the degenerate zero-count case
+; the counter-width rule warns about cannot arise here.
+; ---------------------------------------------------------------------------
+FillBgMapCommon:
     push ecx
     push edi
     lea edi, [ebp + esi]
@@ -199,6 +297,108 @@ RedrawRowOrColumn:
     ret
 
 ; ═══════════════════════════════════════════════════════════════════════════
+; AutoBgMapTransfer — pret home/vcopy.asm:127. Push one THIRD of wTileMap to the
+; BG map each V-blank, rotating top -> middle -> bottom via hAutoBGTransferPortion.
+;
+; UNREACHED here, and measured: pret's only caller is home/vblank.asm, and the
+; port's VBlank pipeline does not call it. hAutoBGTransferEnabled is written
+; faithfully by ~40 port routines, so the GATE is live — nothing consumes it, and
+; the $9800 BG map it writes is never scanned by render_bg. Ported for label
+; completeness under the same rule as the overworld torus ring (d7d72f8d7).
+;
+; GEOMETRY IS GB, NOT PORT. The thirds are GB_SCREEN_HEIGHT/3 = 6 rows of
+; GB_BG_ROW_TILES = 20, into a GB_BG_STRIDE = 32 map. The port's SCREEN_WIDTH is
+; 40 and SCREEN_HEIGHT 25; using them here would slice the wrong rows and overrun
+; the row. See [[redraw-ring-gb-geometry-contract]].
+;
+; pret saves SP and uses `ld sp, hl` + `pop de` purely as a fast 2-byte reader.
+; That is an SM83 speed trick with no x86 counterpart and no observable effect —
+; the port reads the source through ESI and never touches ESP, so hSPTemp is not
+; written. Same treatment VBlankCopyBgMap and VBlankCopy already give it.
+;
+; In:  EBP = GB memory base.
+; Out: CLOBBERS EAX/EBX/EDX/ESI — deliberately, because pret clobbers a, b, de,
+;      hl and sp here and its caller (home/vblank.asm) is what saves them. The two
+;      VBlank routines below this one wrap themselves in pushad instead; that is a
+;      pre-existing port choice, not a pattern to extend, and copying it here would
+;      have cost the fallthrough into TransferBgRows that pret's shape depends on.
+;      Anyone wiring this into the DelayFrame pipeline must save registers at the
+;      call site.
+; ═══════════════════════════════════════════════════════════════════════════
+AutoBgMapTransfer:
+    mov al, [ebp + hAutoBGTransferEnabled]
+    test al, al
+    jz .done                            ; ret z
+    mov al, [ebp + hAutoBGTransferPortion]
+    test al, al
+    jz .transferTopThird
+    dec al
+    jz .transferMiddleThird
+.transferBottomThird:
+    mov esi, wTileMap + (2 * GB_SCREEN_HEIGHT / 3) * GB_BG_ROW_TILES  ; hlcoord 0, 12
+    movzx edx, word [ebp + hAutoBGTransferDest] ; EDX = dest; DH:DL is the GB pointer.
+                                                ; movzx, NOT `mov dx` — every write below
+                                                ; is [EBP+EDX], so the upper half must be
+                                                ; zero and pushad does not guarantee it.
+    add dx, 12 * GB_BG_STRIDE                   ; ld de, 12 * TILEMAP_WIDTH / add hl, de
+    xor al, al                                  ; xor a → TRANSFERTOP
+    jmp .doTransfer
+.transferTopThird:
+    mov esi, wTileMap                           ; hlcoord 0, 0
+    movzx edx, word [ebp + hAutoBGTransferDest]
+    mov al, TRANSFERMIDDLE
+    jmp .doTransfer
+.transferMiddleThird:
+    mov esi, wTileMap + (GB_SCREEN_HEIGHT / 3) * GB_BG_ROW_TILES      ; hlcoord 0, 6
+    movzx edx, word [ebp + hAutoBGTransferDest]
+    add dx, 6 * GB_BG_STRIDE
+    mov al, TRANSFERBOTTOM
+.doTransfer:
+    mov [ebp + hAutoBGTransferPortion], al      ; store next portion
+    mov bl, GB_SCREEN_HEIGHT / 3                ; ld b, SCREEN_HEIGHT / 3
+    add esi, ebp                                ; ESI = flat source (pret: ld sp, hl)
+    ; fall through into TransferBgRows, exactly as pret does
+.done:
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════
+; TransferBgRows — pret home/vcopy.asm:171. Copy BL rows of GB_BG_ROW_TILES(20)
+; tiles into a GB_BG_STRIDE(32)-wide BG map.
+;
+; In:  ESI = flat source pointer, BL = row count, EDX = GB dest pointer with its
+;      UPPER 16 BITS ZERO (every store is [EBP+EDX]); DH:DL is the pointer proper
+; Out: ESI/EDX/EBX advanced; AL clobbered.
+;
+; THE ROW STEP IS 8-BIT AND THAT IS LOAD-BEARING. pret writes 20 bytes with 19
+; `inc l` between them — the 20th byte is written without advancing — and then
+; steps with `ld a, TILEMAP_WIDTH - (SCREEN_WIDTH - 1) / add l / ld l, a /
+; jr nc / inc h`. So only the row step carries into H, and `inc l` wraps within
+; the low byte. `add dl, 13` + `adc dh, 0` reproduces both halves exactly.
+; Widening the pointer to 16 bits would change addressing at a page boundary —
+; the same trap CopyMapViewToVRAM's `inc dl` documents.
+;
+; pret's loop is unrolled `pop de` pairs for speed on SM83; the byte SEQUENCE is
+; what matters and a plain loop emits the identical one.
+; ═══════════════════════════════════════════════════════════════════════════
+TransferBgRows:
+    mov ecx, GB_BG_ROW_TILES - 1        ; the first 19 bytes each advance L
+.byte:
+    mov al, [esi]
+    inc esi
+    mov [ebp + edx], al                 ; ld [hl], e / ld [hl], d
+    inc dl                              ; inc l — 8-bit, never carries into H
+    dec ecx
+    jnz .byte
+    mov al, [esi]                       ; the 20th byte: written, no advance
+    inc esi
+    mov [ebp + edx], al
+    add dl, GB_BG_STRIDE - (GB_BG_ROW_TILES - 1)   ; add l  (= +13, net +32/row)
+    adc dh, 0                                       ; jr nc / inc h
+    dec bl                              ; dec b — 8-bit per the counter-width rule
+    jnz TransferBgRows                  ; pret loops on the global label itself
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════
 ; VBlankCopyBgMap — flush a queued BG-map row copy.
 ; pret ref: home/vcopy.asm:VBlankCopyBgMap (+ TransferBgRows)
 ;
@@ -243,6 +443,81 @@ VBlankCopyBgMap:
     add edi, GB_BG_STRIDE - GB_BG_ROW_TILES ; +12 → dest advances 32 (one 32-wide row)
     dec ebx
     jnz .row
+.done:
+    popad
+    ret
+
+; ═══════════════════════════════════════════════════════════════════════════
+; VBlankCopyDouble — pret home/vcopy.asm:224. Copy [hVBlankCopyDoubleSize] 1bpp
+; tiles from hVBlankCopyDoubleSource to hVBlankCopyDoubleDest, expanding to 2bpp
+; on the way by writing each source byte TWICE (both bitplanes identical).
+;
+; UNREACHED here, and measured: pret arms this from home/copy2.asm's
+; CopyVideoDataDouble, which writes hVBlankCopyDoubleSize and then DelayFrames
+; until the V-blank handler has drained it. The port's CopyVideoDataDouble
+; (src/home/copy2.asm:116) does the whole expansion SYNCHRONOUSLY and never
+; writes that HRAM byte, so nothing in this build can arm the gate. The body is
+; ported for label completeness; the self-gate makes it a no-op `ret`.
+;
+; In/Out: EBP = GB memory base; all registers preserved. Source and destination
+; are written back so a multi-frame transfer continues, exactly as pret does.
+;
+; POINTERS ARE GB ADDRESSES, not flat ones. pret's source is `ld sp, hl` from
+; hVBlankCopyDoubleSource — GB space — so both ends are read through [EBP+ptr].
+; (The port's own CopyVideoDataDouble takes a FLAT source instead; that is a
+; different routine with a different contract, and this one follows pret.)
+;
+; The `inc l` / `inc hl` split is pret's and is preserved: fifteen of every
+; sixteen destination steps advance only the low byte, and only the sixteenth
+; carries into H. See TransferBgRows above for why that matters.
+; ═══════════════════════════════════════════════════════════════════════════
+VBlankCopyDouble:
+    pushad
+    mov al, [ebp + hVBlankCopyDoubleSize]
+    test al, al
+    jz .done                            ; ret z — gate
+
+    ; VRAM TILE PATTERNS CHANGE HERE, so the decode cache must be rebuilt. pret
+    ; has no counterpart; this is the port's standing obligation for any write
+    ; into vChars (CLAUDE.md, "VRAM tile writes"). Armed up front, before the
+    ; first byte lands, so an early exit cannot leave a stale cache behind.
+    mov byte [g_tilecache_dirty], 1
+
+    movzx esi, word [ebp + hVBlankCopyDoubleSource]
+    add esi, ebp                        ; ESI = flat view of the GB source
+    movzx edx, word [ebp + hVBlankCopyDoubleDest]   ; EDX = GB dest pointer (movzx: the
+                                        ; upper half must be zero — see AutoBgMapTransfer)
+    movzx ebx, al                       ; ld b, a — tile count
+    mov byte [ebp + hVBlankCopyDoubleSize], 0   ; xor a / ldh [...] — transferred
+
+.tile:
+    mov ecx, TILE_SIZE / 4              ; 4 groups of (2 src bytes -> 4 dest bytes)
+.group:
+    mov al, [esi]                       ; pop de: E = first byte
+    mov ah, [esi + 1]                   ;         D = second byte
+    add esi, 2
+    mov [ebp + edx], al                 ; ld [hl], e
+    inc dl
+    mov [ebp + edx], al                 ; ld [hl], e   (duplicate → 2bpp)
+    inc dl
+    mov [ebp + edx], ah                 ; ld [hl], d
+    inc dl
+    mov [ebp + edx], ah                 ; ld [hl], d
+    dec ecx
+    jz .tileEnd                         ; the tile's LAST step is pret's `inc hl`
+    inc dl                              ; the other three are `inc l`
+    jmp .group
+.tileEnd:
+    inc dx                              ; inc hl — the one step that carries into H
+    dec bl                              ; dec b — 8-bit per the counter-width rule
+    jnz .tile
+
+    ; pret writes both pointers back via `ld [hVBlankCopyDoubleSource], sp` and
+    ; `ld sp, hl / ld [hVBlankCopyDoubleDest], sp`, so a transfer larger than one
+    ; frame resumes where it stopped.
+    sub esi, ebp
+    mov [ebp + hVBlankCopyDoubleSource], si
+    mov [ebp + hVBlankCopyDoubleDest], dx
 .done:
     popad
     ret
