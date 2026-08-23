@@ -516,10 +516,14 @@ blocks in `src/engine/menus/naming_screen.asm`.
       in the entry. The DOSBox-side goldencheck run is in the battery below
 - [ ] END-OF-PLAN DYNAMIC BATTERY (added 2026-08-23, maintainer directive:
       dynamic checks deferred until the plan closes; serial VM): run and tune
-      `tools/tradecheck.sh` (+ `--kill`), `goldencheck in_game_trade` (first
+      `tools/tradecheck.sh` (+ `--kill`), `tools/battlecheck.sh` (+ `--kill`;
+      added Stage 4 step 3 — validate `AUTOKEY_DUMP_FRAME=20000`,
+      `BATTLECHECK_KILL_AFTER=90`, `RUN_TIMEOUT=420`, all reasoned estimates),
+      `goldencheck in_game_trade` (first
       DOSBox run: measure the window offset + confirm/deny the DVs/OTID mask
       candidate with a real diff), `fidelity-serial` core,
-      `fidelity-full-serial`. Until this runs, Stage 3's steps 2-6 are
+      `fidelity-full-serial`. Until this runs, Stage 3's steps 2-6 AND
+      Stage 4's steps 1-3 are
       verified to the STATIC tier only (builds, lint, label DB, faithdiff,
       static_gate) — no runtime claim is made
 
@@ -688,11 +692,11 @@ Annotation corrected in the same commit.
 | home/text.asm:210-211 | PromptText | skip drawing ▼ arrow | src/home/text.asm:1081 (`text_prompt_hook`) | FIXED (see below) |
 | home/text.asm:443-444 | TextCommand_PROMPT_BUTTON | defer to WAIT_BUTTON (no arrow) | src/home/text.asm:1357 | faithful |
 | engine/battle/core.asm:265-266 | EnemyRan | EnemyRanText + clear wBattleResult | src/engine/battle/core.asm:5402 | faithful |
-| engine/battle/core.asm:349-421 | MainInBattleLoop | link move/run/switch exchange + speed-tie invert | src/engine/battle/core.asm:~409-457 | deferred-step-2 |
+| engine/battle/core.asm:349-421 | MainInBattleLoop | link move/run/switch exchange + speed-tie invert | src/engine/battle/core.asm:~433-505 | FIXED step 2 (`e9476e3`) — nybble dispatch (RUN→EnemyRan/STRUGGLE/NO_ACTION/SwitchEnemyMon) + speed-tie inversion both translated |
 | engine/battle/core.asm:911-919 | ReplaceFaintedEnemyMon | LinkBattleExchangeData, ret z on RUN | src/engine/battle/core.asm:~5809 | FIXED — branch was entirely dropped |
 | engine/battle/core.asm:944-947 | TrainerBattleVictory | skip victory music | src/engine/battle/core.asm:5955 | faithful |
 | engine/battle/core.asm:950-952 | TrainerBattleVictory | ret z, no prize money | src/engine/battle/core.asm:5969 | faithful |
-| engine/battle/core.asm:1137-1142 | ChooseNextMon | LinkBattleExchangeData before switch | src/engine/battle/core.asm:5212 | faithful (calls the stub, pre-existing) |
+| engine/battle/core.asm:1137-1142 | ChooseNextMon | LinkBattleExchangeData before switch | src/engine/battle/core.asm:5212 | faithful (called the stub at audit time; real body since step 2 `e9476e3`) |
 | engine/battle/core.asm:1172-1177 | HandlePlayerBlackOut | skip Rival1 special-case | src/engine/battle/core.asm:5345 | faithful |
 | engine/battle/core.asm:1193-1196 | HandlePlayerBlackOut | LinkBattleLostText vs PlayerBlackedOutText2 | src/engine/battle/core.asm:5372 | faithful |
 | engine/battle/core.asm:1354-1360 | EnemySendOutFirstMon | switch index from link exchange nybble | src/engine/battle/core.asm:~5582 | FIXED — branch was entirely dropped |
@@ -706,16 +710,16 @@ Annotation corrected in the same commit.
 | engine/battle/core.asm:4432-4449 | GetEnemyMonStat | read precomputed party stats | src/engine/battle/core.asm:4344 | faithful |
 | engine/battle/core.asm:5646-5654 | ExecuteEnemyMove | enemy-switched-not-attacked early return | src/engine/battle/core.asm:~2437 | FIXED — branch was entirely dropped |
 | engine/battle/core.asm:6175-6177 | LoadEnemyMonData | jump to LoadEnemyMonFromParty | src/engine/battle/core.asm:3714 | faithful |
-| engine/battle/core.asm:6335-6344 | DoBattleTransitionAndInitBattleVariables | DisplayLinkBattleVersusTextBox intro | src/engine/battle/core.asm:2156 | faithful-with-deviation (DEVIATION{class=HAL}); callee itself MISSING — see claim (c) |
+| engine/battle/core.asm:6335-6344 | DoBattleTransitionAndInitBattleVariables | DisplayLinkBattleVersusTextBox intro | src/engine/battle/core.asm:2156 | faithful since step 2 `e9476e3` (real call wired, drop-DEVIATION retired — see claim (c)) |
 | engine/battle/core.asm:6640-6642 | ApplyBadgeStatBoosts | no badge boosts | src/engine/battle/core.asm:4042 | faithful |
-| engine/battle/core.asm:6731-6733 | BattleRandom | shared-seed PRNG | src/engine/battle/core.asm:~4137 | deferred-step-2 |
+| engine/battle/core.asm:6731-6733 | BattleRandom | shared-seed PRNG | src/engine/battle/core.asm:~4212 | FIXED step 2 (`e9476e3`) — list read, index++, `cp SERIAL_RNS_LENGTH-1`/ret c, x=5x+1 reseed over 9 entries, faithdiff clean |
 | engine/battle/effects.asm:585-587 | StatModifierDownEffect | skip extra miss roll | src/engine/battle/effects.asm:789 | faithful |
 | engine/battle/effects.asm:1018-1020 | FlinchSideEffect | ClearHyperBeam call before roll | src/engine/battle/effects.asm:1327 | faithful |
 | engine/battle/effects.asm:1271-1273 | MimicEffect | random pick vs player menu | src/engine/battle/effects.asm:1668 | faithful |
 | engine/battle/effects.asm:1376-1379 | DisableEffect | always-PP-checked path | src/engine/battle/effects.asm:1800 | faithful (BUG{} covers the non-link asymmetry) |
 | engine/battle/experience.asm:2-4 | GainExperience | no EXP awarded | src/engine/battle/experience.asm:139 | faithful |
 | engine/battle/battle_transitions.asm:52-54 | BattleTransition | skip transition-ID calc | src/engine/battle/battle_transitions.asm:184 | faithful |
-| engine/battle/end_of_battle.asm:2-4 | EndOfBattle | win/lose/draw + versus box | src/engine/battle/end_of_battle.asm:46 | faithful-with-deviation — same DisplayLinkBattleVersusTextBox gap, claim (c) |
+| engine/battle/end_of_battle.asm:2-4 | EndOfBattle | win/lose/draw + versus box | src/engine/battle/end_of_battle.asm:46 | faithful since step 2 `e9476e3` (whole link presentation branch restored — see claim (c)) |
 | engine/battle/trainer_ai.asm:294-296 | TrainerAI | AI disabled in link | src/engine/battle/trainer_ai.asm:505 | faithful |
 | engine/battle/trainer_ai.asm:618-620 | SwitchEnemyMon | CF=0 mid-link-switch | src/engine/battle/trainer_ai.asm:1033 | faithful |
 
@@ -743,28 +747,57 @@ still a stub) but are no longer *structurally* dropped. `PromptText`'s fix is in
   teardown pret lacks would be a fork). Open question for whoever lands the real
   exchange: confirm whether this is an actual (harmless-because-unfinished)
   Gen-1 quirk before it becomes live-reachable.
-- **(c) DisplayLinkBattleVersusTextBox** — MISSING entirely: no port body, no
-  stub, in either call site (both DROPPED with a TODO-HW comment instead). Its
-  callee `SetupPlayerAndEnemyPokeballs` is explicitly, deliberately not
-  translated (`draw_hud_pokeball_gfx.asm`, "NOT TRANSLATED, deliberately"). No
-  Tier-1 text generation is needed for this routine (it places name buffers
-  directly, no generated string blob). Judged out of scope for a fix here —
-  same class as the deferred-step-2 trio — and reported for the Stage 4 step-2
-  owner rather than speculatively implemented.
+- **(c) DisplayLinkBattleVersusTextBox** — was MISSING entirely at audit time:
+  no port body, no stub, in either call site (both DROPPED with a TODO-HW
+  comment instead). **RESOLVED step 2 (`e9476e3`)**: translated as the pret
+  mirror `src/engine/battle/link_battle_versus_text.asm`, both call sites
+  wired (`DoBattleTransitionAndInitBattleVariables`, `EndOfBattle` — whose
+  whole link presentation branch was restored; its old annotation's
+  "YouWinText/YouLoseText/DrawText not yet generated" evidence was measured
+  stale, they exist in `assets/battle_text.inc`). Its callee
+  `SetupPlayerAndEnemyPokeballs` is now a `STUB{}` in `battle_stubs.asm`:
+  re-measured, its three callees are all translated — the "deliberately
+  unported" note in `draw_hud_pokeball_gfx.asm` predates the pokeballs-fork
+  retirement — and the real blocker is the undecided widescreen OAM placement
+  of pret's GB-native coordinates ($50/$40, $50/$68), a maintainer/scenario
+  decision, not a dependency.
 
 ---
 
 ### Stage 4 — Colosseum link battle
-- [ ] Divergence-site audit: enumerate every pret
-      `wLinkState == LINK_STATE_BATTLING` site (~25) vs the ported battle
-      core; classify translated / missing / stubbed; fix gaps (items ban, no
-      EXP, no badge boosts, 65-frame `ManualTextScroll`, enemy data from the
-      received block, forced link transition + versus text box)
-- [ ] Real `LinkBattleExchangeData` (retire the battle_stubs entry): action
-      nybbles, local drain pacing, shared 10-byte RNG list (master
-      authoritative, x=5x+1 reseed), speed-tie inversion
-- [ ] Two-instance battle to a consistent result on both sides;
-      run/struggle/no-action paths; mid-battle disconnect
+- [x] Divergence-site audit (step 1, `6a75f55`): 34 sites (not ~25) verified at
+      BODY level — table above; 6 dropped branches restored; the two stale
+      battle_audit Tier-4 claims re-measured false; pret's no-teardown
+      wLinkState behavior confirmed 1:1 mirrored
+- [x] Real `LinkBattleExchangeData` (step 2, `e9476e3`): battle_stubs entry
+      retired; action nybbles, 10-frame drains, `.linkDown` disconnect hatch
+      (DEVIATION{class=HAL} — synthesizes LINKBATTLE_RUN, pret's own EnemyRan
+      path ends the battle); BattleRandom shared-RNG link path (x=5x+1 reseed);
+      speed-tie inversion; MainInBattleLoop nybble dispatch; versus box
+      (claim (c) above) — all faithdiff-triaged, lint 0 both modes
+- [x] Two-instance battle proof AUTHORED (step 3, `c8a96dd`):
+      `tools/battlecheck.sh` (port 23458) asserts consistent complementary
+      `wBattleResult` + EQUAL `turn_count` lockstep both sides;
+      run/struggle/no-action arms live in the translated exchange; `--kill`
+      mode asserts the mid-battle-disconnect hatch (no `.syncLoop1` hang).
+      STATIC TIER ONLY — first execution is the end-of-plan dynamic battery
+      (Stage 3 section); no runtime claim is made
+
+#### Stage 4 close-out notes (2026-08-23)
+
+Commit chain: `6a75f55` (step 1 audit + 6 branch restorations) → `e9476e3`
+(step 2 mechanisms; also exported `SwitchEnemyMon` from trainer_ai.asm and added
+the pret mirror `src/engine/battle/link_battle_versus_text.asm`) → `c8a96dd`
+(step 3 harness; plain build proven byte-identical by SHA1, gate invisible
+ungated). Every step: nasm per-file, full link, `update_label_db`,
+`lint_pret_labels --no-scan` + `--strict-claims` both 0, faithdiff on every
+touched pret label (one new unsuppressed line total: `+ADDED NetHAL_LinkAlive`
+on LinkBattleExchangeData — the hatch, justified by its DEVIATION), pre-commit
+`static_gate` 8/8. Open tail for the battery (beyond running the harnesses):
+the audit's claim-(b) question — whether pret's missing post-battle wLinkState
+teardown is observable once battles are live — and
+`SetupPlayerAndEnemyPokeballs`'s widescreen OAM placement (maintainer
+decision).
 
 ### Stage 5 — link setup UI + connection book
 - [ ] Keyboard text-entry mode beside the joypad scancode path
