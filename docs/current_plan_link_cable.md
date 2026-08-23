@@ -567,13 +567,32 @@ content was dropped:
 
 **The branch's `WaitForAPress`/`WaitForTextScrollButtonPress` label ORDER
 survived the rebase deliberately, and it is the better one.** The two are
-stacked aliases on one body; the branch declares the port-only alias FIRST so
-the body attributes to the pret label. Measured after the rebase:
-`faithdiff WaitForTextScrollButtonPress` reads 4 pret / 3 port calls with 2
-matched here, against 4 pret / **0** port calls with everything DROPPED on
-master. The one visible cost is that `WaitForAPress` — a port-only alias at the
-same address — leaves the statically-reached set, which is a naming artifact of
-the fallthrough model, not a behaviour change.
+stacked aliases on one body, and `update_label_db` credits the body to whichever
+label comes SECOND — so the port-only alias must be declared FIRST for the pret
+label to own its own body. This branch flipped that pair in its Stage 3 step-2
+commit (the same one that added `CableClub_Run` into the routine, which is what
+exposed the misattribution); the merge base and master both still carry the
+original pret-label-first order, which nobody chose deliberately.
+
+Measured two independent ways, master `6c6cc3a` vs this tree. `port_defs`: the
+pret label records `instr_count` 0 / `has_call` 0 on master while the alias holds
+16; here the pret label holds 17 and the alias holds 0. `faithdiff
+WaitForTextScrollButtonPress`: 4 pret / **0** port calls with everything DROPPED
+on master, against 4 pret / 3 port with 2 matched here. The one visible cost is
+that `WaitForAPress` — an alias at the same address — leaves the
+statically-reached set, a naming artifact of the single-directed-edge fallthrough
+model, not a behaviour change.
+
+**This is a class, and three instances remain OPEN on master — pre-existing,
+untouched by this rebase, flagged as out of its scope.** Sweeping `port_defs`
+for a pret label with an empty body stacked directly above a port-only label that
+owns it finds 4 on master; this branch fixes joypad2's, leaving
+`LoadScreenTilesFromBuffer1` ← `RestoreBattleScreen` and
+`SaveScreenTilesToBuffer1` ← `SaveBattleScreen` (both `src/home/tilemap.asm`) and
+`InitializeToggleableObjectsFlags` ← `InitToggleableObjectFlags`
+(`src/engine/overworld/toggleable_objects.asm`). Each reads 0 port calls under
+faithdiff today. The fix is a two-line swap per site plus a rescan; it moves no
+code.
 
 Static verification of the rebased tree (the dynamic battery below is still
 outstanding and no runtime claim is made): root `make` + `make -C dos_port`
