@@ -40,6 +40,10 @@ extern g_net_baud_div    ; src/net/net_hal.asm — /BAUD=n -> 115200/n divisor
 extern g_net_linklog     ; src/net/net_hal.asm — /LINKLOG flag
 extern g_net_ipx_sel     ; src/net/net_hal.asm — /IPX flag (Stage 6 step 1)
 extern g_net_ipx_socket  ; src/net/net_hal.asm — /IPXSOCK=n override
+extern g_pkt_int      ; src/net/pktdrv.asm — /PKTINT=0xNN override (Stage 7
+                       ; step 1; 0 = auto-scan 0x60-0x80). Not consumed by
+                       ; NetInit yet — pktdrv.asm links unreferenced until
+                       ; Stage 7 step 2 (net_ip.asm) wires the transport in.
 extern g_cfg_partyb      ; src/engine/debug/debug_party.asm — /PARTYB flag (tradecheck harness)
 extern audio_shutdown    ; src/audio/audio_hal.asm
 extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at boot
@@ -107,6 +111,9 @@ arg_ipxsock:  db '/IPXSOCK=',0     ; note: this is a literal substring of the
 ; DEBUG_TRADECHECK two-instance harness (tools/tradecheck.sh): per-side party/
 ; identity selection, same clone-of-/LINKLOG pattern.
 arg_partyb:   db '/PARTYB',  0
+; Packet driver client (Stage 7 step 1, docs/current_plan_link_cable.md) —
+; hex vector override, matched with find_token_pos like /BAUD=/IPXSOCK=.
+arg_pktint:   db '/PKTINT=', 0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -411,6 +418,22 @@ parse_cmdline:
     ja .no_ipxsock
     mov [g_net_ipx_socket], ax
 .no_ipxsock:
+    ; --- packet driver client flag (Stage 7 step 1) ---
+    ; /PKTINT=0xNN — hex packet-driver interrupt vector override (0 = keep
+    ; Pktdrv_Init's auto-scan of 0x60-0x80; an unparsable value, or one past
+    ; a single byte, is ignored and the auto-scan default stands).
+    mov edi, arg_pktint
+    call find_token_pos
+    jnz .no_pktint
+    call parse_hex                ; EAX ptr -> EAX value, CF=1 no hex digits
+    jc .no_pktint
+    test eax, eax
+    jz .no_pktint                 ; vector 0 is never a usable override
+                                   ; (real IVT slot 0 is divide-by-zero)
+    cmp eax, 0xFF
+    ja .no_pktint
+    mov [g_pkt_int], al
+.no_pktint:
 
 .done:
     pop edi
@@ -573,6 +596,66 @@ parse_decimal:
     jbe .no_clamp
     mov eax, 999999
 .no_clamp:
+    inc esi
+    inc ecx
+    jmp .next
+.done:
+    test ecx, ecx
+    jz .none
+    clc
+    jmp .out
+.none:
+    stc
+.out:
+    pop ecx
+    pop esi
+    ret
+
+; ---------------------------------------------------------------------------
+; parse_hex — EAX = flat pointer to text, optionally "0x"/"0X" prefixed
+; (skipped if present), followed by hex digits (0-9, A-F, a-f); parse up to
+; the first non-hex-digit character. Out: CF=0 + EAX = value, CF=1 no hex
+; digits found. Clobbers EDX. Preserves the rest. Mirrors parse_decimal's
+; shape/contract (added for /PKTINT=0xNN — Stage 7 step 1, no existing hex
+; parser in this file; /IPXSOCK= and /BAUD= are both decimal).
+; ---------------------------------------------------------------------------
+parse_hex:
+    push esi
+    push ecx
+    mov esi, eax
+
+    cmp byte [esi], '0'
+    jne .noprefix
+    mov al, [esi + 1]
+    cmp al, 'x'
+    je .skipprefix
+    cmp al, 'X'
+    jne .noprefix
+.skipprefix:
+    add esi, 2
+.noprefix:
+
+    xor eax, eax
+    xor ecx, ecx                  ; digit count
+.next:
+    mov dl, [esi]
+    cmp dl, '0'
+    jb .done
+    cmp dl, '9'
+    jbe .digit
+    and dl, 0xDF                  ; fold 'a'-'f' to 'A'-'F'
+    cmp dl, 'A'
+    jb .done
+    cmp dl, 'F'
+    ja .done
+    sub dl, 'A' - 10
+    jmp .accum
+.digit:
+    sub dl, '0'
+.accum:
+    shl eax, 4
+    movzx edx, dl
+    add eax, edx
     inc esi
     inc ecx
     jmp .next
