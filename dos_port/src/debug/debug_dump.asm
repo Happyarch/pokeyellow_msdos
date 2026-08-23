@@ -437,6 +437,19 @@ global DebugDumpMemory
 global DumpBackbuffer
 global DumpGBState
 global DumpPalette
+%ifdef DEBUG_TRADE_GOLDEN
+; in_game_trade golden: armed by the script shim (src/scripts/Route2TradeHouse.asm)
+; the instant DoInGameTradeDialogue returns; consumed by OverworldLoop's
+; post-interaction A-release path (src/home/overworld.asm), so the photograph is
+; taken AFTER the closing box is hidden and the map view restored — the same
+; "stable idle overworld frame" the mGBA golden dumps (its script dismisses the
+; box before dumping; dumping inside the script shim photographed Thanks1Text
+; still on screen, measured 2026-08-23).
+global trade_golden_dump_armed
+section .bss
+trade_golden_dump_armed: resb 1
+section .text
+%endif
 %ifdef DEBUG_NPC_WALK
 global DumpNpcLog
 global npc_log

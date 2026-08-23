@@ -126,6 +126,9 @@ extern DelayFrames                        ; src/home/delay.asm
 extern DisplayStartMenu                   ; src/home/start_menu.asm
 extern DoSignInteraction                  ; src/engine/overworld/overworld.asm
 extern DumpBackbuffer                     ; src/debug/debug_dump.asm
+%ifdef DEBUG_TRADE_GOLDEN
+extern trade_golden_dump_armed            ; src/debug/debug_dump.asm — armed by Route2TradeHouse shim
+%endif
 extern DumpSeamLog                        ; src/debug/debug_dump.asm
 extern EnterMapAnim                       ; src/engine/overworld/player_animations.asm
 extern GBFadeOutToBlack                   ; src/home/fade.asm
@@ -1433,6 +1436,20 @@ OverworldLoop:
     ; hJoyHeld; the DelayFrame path is per-frame and also clears hJoyPressed. Removed.
     call UpdateSprites                         ; advance player facing + walk animation
     call DelayFrame
+%ifdef DEBUG_TRADE_GOLDEN
+    ; in_game_trade golden photograph (armed by the Route2TradeHouse script shim
+    ; the instant DoInGameTradeDialogue returned): taken HERE, one full loop
+    ; iteration later — UpdateSprites above has recomputed the image indices the
+    ; dialog left at $FF (hidden) and the DelayFrame republished OAM, so the
+    ; frame matches the mGBA golden's "closing box dismissed, stable idle
+    ; overworld, sprites visible" dump point (measured 2026-08-23: dumping at
+    ; the A-release point photographed wUpdateSpritesEnabled=1 but every
+    ; state1 IMAGEINDEX still $FF and an empty $FE00).
+    cmp byte [trade_golden_dump_armed], 1
+    jne .noTradeGoldenDump
+    call DumpBackbuffer                    ; FRAME.BIN + GBSTATE.BIN, then exits
+.noTradeGoldenDump:
+%endif
 
     ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
 OverworldLoopLessDelay:                      ; pret: home/overworld.asm:OverworldLoopLessDelay

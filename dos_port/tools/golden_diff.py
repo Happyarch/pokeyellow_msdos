@@ -2553,21 +2553,55 @@ SCENARIOS = {
     "in_game_trade": {
         "flags": "DEBUG_TRADE_GOLDEN=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
-        # window/masks UNMEASURED — the DOSBox-side dynamic run that would
-        # measure them is DEFERRED to the end-of-plan battery (maintainer
-        # directive 2026-08-23); do NOT pre-invent either here. The first
-        # goldencheck run measures the port's canvas offset and any genuine
-        # divergence. Leading candidate for a wPartyData mask, per the task
-        # report's determinism analysis: the received MR.MIME's DVs
-        # (MON_DVS, party struct offset 0x1B) and OT ID (MON_OT_ID, offset
-        # 0x0C) are both Random_-derived from rDIV/CPU-cycle timing
-        # (engine/pokemon/add_mon.asm:114-116, engine/events/
-        # in_game_trades.asm:187-190) — reproducible run-to-run of the SAME
-        # script (mGBA is deterministic) but not expected to match the DOS
-        # port's own RNG-timing HAL bit-for-bit, since the two sides do not
-        # share an rDIV-equivalent clock. Confirm with a measured diff before
-        # adding the mask, not on this reasoning alone.
-        "masks": {},
+        # MEASURED 2026-08-23 (end-of-plan battery, two-instance-free DOSBox-X
+        # run): brute-force alignment of the golden's 20x18 tilemap over the
+        # port's 40x25 canvas gives (18,8) with rows 0-16 matching byte-for-byte;
+        # golden row 17 (r0+17 = 25) falls past the canvas — same offcanvas
+        # class overworld_pallet documents.
+        "window": (18, 8),
+        "offcanvas": "window at (18,8): golden row 17 maps past the 25-row canvas",
+        "masks": {
+            "vram": [
+                (164 + i, "boot residue in VRAM sprite-slot 3 ($8A40-$8AFF): the "
+                          "Trade House sprite set has only 3 sprites (player + "
+                          "scientist + kid, slots 0-2), so slot 3 is unloaded here; "
+                          "the golden's real new-game boot left earlier maps' walk "
+                          "tiles in it while the port's SKIP_TITLE boot zeroed VRAM. "
+                          "No OAM entry references $A4-$AF at the dump (measured "
+                          "2026-08-23) — same residue class as status_p1's font tail")
+                for i in range(12)
+            ] + [
+                (350 + i, "boot residue past the HOUSE tileset's loaded tail in "
+                          "vChars2 ($95E0-$95FF, tiles $5E-$5F): golden carries "
+                          "residue from tilesets loaded earlier in its real boot, "
+                          "port zeroed VRAM at SKIP_TITLE boot. No tilemap cell "
+                          "references $5E/$5F at the dump (measured 2026-08-23)")
+                for i in range(2)
+            ],
+        },
+        # The predicted RNG-derived divergence was CONFIRMED by the measured
+        # diff (9 bytes, all in the received MR.MIME at party slot 5, base 228):
+        # cur HP lo (230), OT ID (240-241), DVs (255-256), and the low bytes of
+        # the DV-derived stats (263/265/267/269). The received mon's DVs and
+        # OT ID are Random_ (rDIV-timing) derived (engine/pokemon/add_mon.asm,
+        # engine/events/in_game_trades.asm), so they cannot match the port's
+        # RNG-timing HAL bit-for-bit; HP and the five stat words are computed
+        # FROM the DVs, so they diverge with them. Species, level, moves, EXP,
+        # nickname, OT name and the Gen-2 catch-rate byte (offset 7) all match
+        # and ARE compared.
+        "wram_masks": {
+            "wPartyData": [
+                ((229, 230), "received mon (slot 5) current HP: recomputed from "
+                             "the rDIV-derived DVs below — measured diff 2026-08-23"),
+                ((240, 241), "received mon OT ID: Random_ (rDIV-timing) in "
+                             "in_game_trades — measured diff 2026-08-23"),
+                ((255, 256), "received mon DVs: Random_ (rDIV-timing) in "
+                             "_AddPartyMon path — measured diff 2026-08-23"),
+                ((262, 271), "received mon maxHP/Atk/Def/Spd/Spc: DV-derived "
+                             "(CalcStats over the masked DVs) — measured diff "
+                             "2026-08-23"),
+            ],
+        },
     },
 }
 

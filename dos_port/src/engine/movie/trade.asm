@@ -246,7 +246,16 @@ TradeAnimCommon:
     je .done
     inc edx
     movzx eax, al
+    ; pret keeps DE (the sequence pointer) on the STACK across each trade func
+    ; (`push de` before the dispatch, `.loop: pop de`): the funcs clobber DE
+    ; freely (LoadTradingGFXAndMonNames ends in `jmp GetMonName`, most funcs
+    ; use DE as scratch). Dropping this push/pop made the interpreter read wild
+    ; bytes as func indices after the FIRST func returned — measured 2026-08-23
+    ; via the debug socket: the in_game_trade run looped LoadTradingGFXAndMonNames'
+    ; CopyVideoData forever, frames never advancing past the anim's first frames.
+    push edx
     call [dword TradeFuncPointerTable + eax * 4]   ; call trade func; returns here
+    pop edx
     jmp .loop
 .done:
     pop eax

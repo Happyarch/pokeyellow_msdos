@@ -528,13 +528,31 @@ blocks in `src/engine/menus/naming_screen.asm`.
       3. `tools/battlecheck.sh` (+ `--kill`) — validate the reasoned-estimate
          timings (`AUTOKEY_DUMP_FRAME=20000`, `BATTLECHECK_KILL_AFTER=90`,
          `RUN_TIMEOUT=420`); serial, then over IPX and TCP.
-      4. `goldencheck in_game_trade` (first DOSBox run: measure the window
-         offset + confirm/deny the DVs/OTID mask candidate with a real diff).
+      4. `goldencheck in_game_trade` — **PASS 2026-08-23 (VM battery session)**.
+         Window MEASURED (18,8) by brute-force tilemap alignment (rows 0-16
+         byte-identical; golden row 17 off-canvas, justified). DVs/OTID mask
+         candidate CONFIRMED by measured diff: exactly 9 wPartyData bytes in
+         the received MR.MIME — cur-HP lo, OT ID, DVs, DV-derived stat lows —
+         now masked with the measurement cited. Three bugs found+fixed en
+         route: (a) Route2TradeHouseGameboyKidText was never registered in
+         gen_npc_dialogs SCRIPT_OVERRIDES, so the A-press showed a placeholder
+         stream and DoInGameTradeDialogue was unreachable; (b) TradeAnimCommon
+         dropped pret's push de/pop de around the trade-func dispatch, so the
+         interpreter read wild func indices after the first func returned
+         (looped LoadTradingGFXAndMonNames forever — found via the debug-socket
+         EIP/stack walk); (c) the DEBUG_TRADE_GOLDEN dump fired inside the
+         script shim with Thanks1Text still on screen and sprites hidden
+         (IMAGEINDEX $FF pre-UpdateSprites) — now armed by the shim and taken
+         at the top of the next OverworldLoop iteration, matching the golden's
+         dump point. VRAM residue masks (unused sprite-slot 3, tileset tail
+         $5E-$5F) added with unreferenced-at-dump measurements.
       5. The two port-only scenarios: `link_book_roundtrip`
          (linkbookcheck.sh) and `kbd_naming_entry` (kbdnamecheck.sh) — their
          timing defaults are also unmeasured reasoned estimates.
       6. `fidelity-serial` core + `fidelity-full-serial` (single-player
          regression sweep; serial tiers per the VM directive below).
+         Core: **PASS 2026-08-23, 16/16** (VM battery session, exit 0 via
+         status file). Full tier still pending below.
       7. Soak (Stage 8's dynamic half): repeated trades/battles per
          transport, injected drops, pause/resume one instance; keepalive/
          retry tuning from what the soak shows (NF_* cadences, TCP_RTX/

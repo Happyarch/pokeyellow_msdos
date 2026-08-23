@@ -143,6 +143,13 @@ SCRIPT_OVERRIDES = {
     'SilphCo1FLinkReceptionistText':            'CableClubReceptionistScript',
     'VermilionPokecenterLinkReceptionistText':  'CableClubReceptionistScript',
     'ViridianPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
+    # In-game trade NPC (docs/current_plan_link_cable.md Stage 3 step 4): the
+    # Gameboy Kid's text is a text_asm script (wWhichTrade = TRADE_FOR_MILES ->
+    # DoInGameTradeDialogue) hand-ported in src/scripts/Route2TradeHouse.asm.
+    # Without this row the generator emitted a plain placeholder stream, so the
+    # A-press showed a stub dialog and the trade flow was unreachable (measured
+    # 2026-08-23: the in_game_trade goldencheck's state-gated dump never fired).
+    'Route2TradeHouseGameboyKidText':           'Route2TradeHouseGameboyKidText',
 }
 
 # ---------------------------------------------------------------------------
