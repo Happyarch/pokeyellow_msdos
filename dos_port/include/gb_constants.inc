@@ -334,6 +334,7 @@
 %define BIT_WILD_ENCOUNTER_COOLDOWN  0   ; constants/ram_constants.asm (wStatusFlags2 bit)
 %define CHAN5                        4   ; constants/audio_constants.asm (5th sound channel index)
 %define LEADING_ZEROES               0x80   ; PrintNumber flag (1<<BIT_LEADING_ZEROES): print '0' not space
+%define MONEY_SIGN                   0x20   ; PrintBCDNumber flag (1<<BIT_MONEY_SIGN): prepend the ¥ glyph
 
 ; --- battle init / type (constants/battle_constants.asm, map_constants.asm) ---
 %define BATTLE_TYPE_SAFARI           2

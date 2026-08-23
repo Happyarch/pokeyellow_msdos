@@ -26,11 +26,11 @@
 ; The dialog is an entry in the port's window list,
 ; which pret's ClearScreen (a wTileMap wipe) cannot drop — hence hide_window on the
 ; exit path. Same reason, same shape as pc.asm:ActivatePC / oaks_pc.asm.
-; DEVIATION{class=projection; pret=engine/menus/league_pc.asm:LeaguePCShowMon; behavior=build the Hall of Fame mon screen only in stride-20 scratch without publishing a visible window; evidence=port LeaguePCShowMon writers and project_state linked provider with Func_7033f still seam-stubbed; lifetime=until the Hall of Fame screen projection is implemented and runtime-verified}
+; DEVIATION{class=projection; pret=engine/menus/league_pc.asm:LeaguePCShowMon; behavior=build the Hall of Fame mon screen only in stride-20 scratch without publishing a visible window; evidence=port LeaguePCShowMon writes wTileMap + y*20 + x on a 40-wide canvas and publishes no window descriptor; lifetime=until the Hall of Fame screen projection is implemented and runtime-verified}
 ; LeaguePCShowMon lays its full screen out in the stride-20
 ; wTileMap scratch (hlcoord X,Y = wTileMap + Y*20 + X) and publishes no window —
 ; UNVERIFIED, and stated as such in the ledger: reaching it needs a save with a
-; recorded Hall of Fame plus the HoF movie routine Func_7033f (still a stub).
+; recorded Hall of Fame. (Func_7033f is no longer the obstacle — it is ported.)
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX (B=BH,C=BL), DE=DX, HL=ESI, EBP = GB base.
 ;
@@ -66,7 +66,7 @@ extern LoadFrontSpriteByMonIndex ; src/home/pokemon.asm
 extern PlaceString              ; home/text.asm — EAX=flat src, ESI=dest
 extern PrintNumber              ; home/print_num.asm — EDX=src addr, BH=flags|bytes, BL=digits, ESI=dest
 extern LoadHallOfFameTeams      ; engine/menus/save.asm
-extern Func_7033f               ; league_pc_stubs.asm SEAM (engine/movie/hall_of_fame.asm)
+extern Func_7033f               ; engine/movie/hall_of_fame.asm
 
 %ifdef DEBUG_LEAGUEPC
 extern LoadFontTilePatterns     ; home/load_font.asm
@@ -171,7 +171,8 @@ LeaguePCShowTeam:
 ; ---------------------------------------------------------------------------
 ; LeaguePCShowMon — pret ref: engine/menus/league_pc.asm:LeaguePCShowMon.
 ; Full-screen display of the first mon in wHallOfFame: front pic + "HALL OF FAME
-; No" box, then Func_7033f (mon-info box + cry — still a SEAM stub).
+; No" box, then Func_7033f (mon-info box + cry), which is REAL as of the
+; engine/movie/hall_of_fame.asm port and no longer a seam stub.
 ; The structured projection deviation in the file header applies: the layout is
 ; built in the stride-20 scratch and no window is
 ; published, so this screen is UNVERIFIED (see the header).
@@ -229,7 +230,7 @@ AccessedHoFPCText:
 ; exits — the RunPCTest pattern. (The old harness dumped from a DumpBackbuffer hook
 ; after hand-drawing the first page itself, which tested the harness, not the code.)
 ; The Hall-of-Fame team loop past the dialog needs a save with a recorded HoF and
-; the HoF movie routine (Func_7033f, still a stub); it is not exercised here.
+; a recorded Hall of Fame; it is not exercised here.
 ; In: EBP = GB base. Called from EnterMap after the overworld is set up.
 ; ---------------------------------------------------------------------------
 RunLeaguePCTest:

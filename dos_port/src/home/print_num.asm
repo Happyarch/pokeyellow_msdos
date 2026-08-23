@@ -103,7 +103,34 @@ PrintNumber:
 
     pop   ecx                        ; ECX = digit count
 
-    ; --- divisor (EBX) = 10^(digits-1) ---
+    ; --- pret DISPATCHES the digit count; it does not compute a power of ten ---
+    ; pret's `.start` is `cp 2 / jr z,.tens`, `cp 3 / jr z,.hundreds`, … `cp 6 /
+    ; jr z,.hundred_thousands`, and EVERY other value — 0, 1, 7, or anything
+    ; larger — falls through into the `print_digit 1000000` entry, i.e. exactly
+    ; SEVEN digits. That fallthrough is the whole bound.
+    ;
+    ; The port built the divisor as 10^(digits-1) with an unbounded `imul` loop
+    ; instead, which has no bound at all: at 33 iterations EBX is 10^32, and
+    ; 10^32 = 2^32 * 5^32, so it is 0 modulo 2^32 — the `div ebx` below then
+    ; raises a DIVIDE ERROR and the program dies with no message.
+    ;
+    ; NOT THEORETICAL. pret reaches PrintLevelCommon with `c` INHERITED from
+    ; whatever PlaceString last left in it (engine/movie/hall_of_fame.asm's
+    ; HoFDisplayMonInfo is one such call site, and pret's own PlaceString returns
+    ; bc = the end cursor), so the count is routinely a tilemap address byte —
+    ; 252 on the GB, 84 here. Measured 2026-08-23: the Hall of Fame ceremony died
+    ; on exactly this, between frames 185 and 200 of the DEBUG_HOF harness.
+    ; TextCommand_NUM takes this count from the TEXT STREAM as well, the same
+    ; reachability argument the byte-count fix above already makes.
+    ;
+    ; This is the SAME defect class as that fix, one field over: a pret dispatch
+    ; rewritten as arithmetic, correct on the values anyone tested and unbounded
+    ; everywhere else.
+    cmp   ecx, 2
+    jb    .sevenDigits               ; 0 and 1 fall through in pret too
+    cmp   ecx, 6
+    ja    .sevenDigits               ; 7 and up: pret's millions entry
+    ; --- divisor (EBX) = 10^(digits-1), digits now known to be 2..6 ---
     mov   ebx, 1
     mov   edx, ecx
     dec   edx
@@ -112,6 +139,10 @@ PrintNumber:
     imul  ebx, ebx, 10
     dec   edx
     jnz   .powl
+    jmp   .gotdiv
+.sevenDigits:
+    mov   ecx, 7                     ; pret: enter the chain at `print_digit 1000000`
+    mov   ebx, 1000000
 .gotdiv:
     mov   byte [pn_past], 0
 

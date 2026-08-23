@@ -986,6 +986,7 @@ POKEMON_SRCS := \
     src/engine/pikachu/respawn_overworld_pikachu.asm \
     src/engine/pikachu/pikachu_stubs.asm \
     src/engine/movie/evolution.asm \
+    src/engine/movie/hall_of_fame.asm \
     src/engine/movie/evolution_stubs.asm \
     src/engine/pokemon/learn_move.asm
 
@@ -2553,6 +2554,18 @@ NASMFLAGS += -D DEBUG_LEAGUEPC
 NASMFLAGS += -D SKIP_TITLE
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
 endif
+# Hall of Fame gate: boot to the overworld with a seeded party, then run the real
+# AnimateHallOfFame ceremony and photograph it. No golden scenario reaches the Hall
+# of Fame (it is behind the Champion), so this is its only runtime evidence.
+# make DEBUG_HOF=1 [AUTOKEY_DUMP_FRAME=<n>]   — the ceremony is minutes long, so the
+# frame number chooses which moment you get; ~110 lands on the first mon's info box.
+ifdef DEBUG_HOF
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_HOF -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
+AUTOKEY_DUMP_FRAME ?= 260
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Options gate (menus S6 package D): boot to overworld, open the OPTION menu via
 # InitOptionsMenu (full-screen takeover), draw the cursor, dump FRAME.BIN, exit.
 # make SKIP_TITLE=1 DEBUG_OPTIONS=1
@@ -3765,6 +3778,12 @@ assets/used_move_text.inc: assets/gb_charmap.txt tools/generators/gen_used_move_
         tools/generators/gen_battle_text.py
 	python3 tools/generators/gen_used_move_text.py
 
+# Hall of Fame rendered strings — the four PlaceString literals plus the two
+# text_far wrappers, all parsed out of pret's own source (two-tier rule).
+assets/hall_of_fame_text.inc: assets/gb_charmap.txt tools/generators/gen_hall_of_fame_text.py \
+        tools/generators/gen_battle_text.py ../engine/movie/hall_of_fame.asm
+	python3 tools/generators/gen_hall_of_fame_text.py
+
 # Text-box menu strings (pret data/text_boxes.asm) — charmap-encoded via gb_text;
 # two-tier rule. <NEXT>/<PK>/<MN> are emitted as named raw bytes by the generator.
 assets/textbox_strings.inc: assets/gb_charmap.txt tools/generators/gen_textbox_strings.py tools/generators/gb_text.py
@@ -4076,6 +4095,7 @@ src/data/pikachu/pikachu_pic_animation.o: assets/pikachu_pic_animation.inc \
 # MUSIC_MEET_* ids.
 src/home/trainers.o: assets/trainer_text.inc assets/audio_constants.inc
 src/engine/battle/used_move_text.o: assets/used_move_text.inc
+src/engine/movie/hall_of_fame.o: assets/hall_of_fame_text.inc assets/audio_constants.inc assets/event_constants.inc
 
 # Trainer-card tile graphics (box/bg/blank-names/badge-numbers/colon/circle),
 # 2bpp passthrough of gfx/trainer_card/*.2bpp + gfx/font/font_extra.2bpp, for the

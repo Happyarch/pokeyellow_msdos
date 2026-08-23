@@ -1829,6 +1829,12 @@
 %define REDRAW_COL                   1
 %define REDRAW_ROW                   2
 
+; rLCDC BG-map select (constants/hardware.inc). The port's render_bg composites
+; from wTileMap/wSurroundingTiles and never scans either GB BG map, so writing this
+; bit selects nothing — it is kept so translations can store it as pret does.
+%define B_LCDC_BG_MAP                3
+%define LCDC_BG_MAP                  (1 << B_LCDC_BG_MAP)
+
 ; LCDC bits the OBJ renderer reads (constants/hardware.inc)
 %define LCDCF_OBJ_ON                 (1 << 1)   ; B_LCDC_OBJS  = 1 (sprites enabled)
 %define LCDCF_OBJ_SIZE               (1 << 2)   ; B_LCDC_OBJ_SIZE = 2 (0 = 8×8, 1 = 8×16)

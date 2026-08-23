@@ -7181,7 +7181,12 @@ SlidePlayerAndEnemySilhouettesOnScreen:
 section .data
 align 4
 ; RedPicBack — pret gfx/pics.asm:RedPicBack (INCBIN "gfx/player/redb.pic").
-; Kept with its only consumer; gfx/ has no mirrored port file.
+; gfx/ has no mirrored port file, so the blob lives with a consumer. It has TWO of
+; them in pret — LoadPlayerBackPic here and HoFLoadPlayerPics
+; (engine/movie/hall_of_fame.asm) — so the label and its length are global rather
+; than file-local, as they were while this file was its only consumer.
+global RedPicBack
+global RedPicBack_len
 RedPicBack:
     incbin "../gfx/player/redb.pic"        ; player (Red/Yellow) back sprite
 RedPicBack_len equ $ - RedPicBack

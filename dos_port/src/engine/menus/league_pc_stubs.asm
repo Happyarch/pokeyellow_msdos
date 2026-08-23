@@ -1,8 +1,8 @@
-; league_pc_stubs.asm — ret-only stubs for the two forward-deps of league_pc.asm
-; (menus S6 package A). PKMNLeaguePC's Hall-of-Fame team loop is ported for label
-; parity but guarded OFF while wNumHoFTeams==0 (no save layer yet), so LoadHallOfFameTeams
-; and Func_7033f are referenced at link but never executed in the live build. These
-; stubs let the faithful loop structure link; delete each when its real routine lands.
+; league_pc_stubs.asm — EMPTY. Both stubs it once held have been retired by their
+; real routines landing: LoadHallOfFameTeams (src/engine/menus/save.asm, menus S7)
+; and Func_7033f (src/engine/movie/hall_of_fame.asm). The header used to say the
+; Hall-of-Fame team loop was "guarded OFF while wNumHoFTeams==0 (no save layer
+; yet)"; that guard is gone and the loop is pret's, unconditional and live.
 ;
 ; Register map: A→AL, HL→ESI, BC→BX, DE→DX; GB mem = [ebp+SYM] (gb_memmap.inc).
 
@@ -13,9 +13,10 @@ section .text
 ; LoadHallOfFameTeams — now provided REAL by src/engine/menus/save.asm (menus S7,
 ; package H). The ret-stub was deleted here so the real routine is the only global.
 
-; Func_7033f — pret engine/movie/hall_of_fame.asm:Func_7033f (HoF mon-info box +
-; cry, tail-jumped from LeaguePCShowMon). Provided by the HoF movie port.
-; Reached only inside the dead team loop; returns to LeaguePCShowMon's caller.
-global Func_7033f
-Func_7033f:
-    ret
+; Func_7033f — now provided REAL by src/engine/movie/hall_of_fame.asm. The ret-stub
+; was deleted here so the real routine is the only global. LeaguePCShowMon's tail
+; jump now draws the mon-info box and plays the cry, as pret does.
+;
+; NOTHING IS LEFT IN THIS FILE. It is kept, empty of stubs, only because both of its
+; former occupants were retired by the routines landing rather than by the file being
+; renamed away; delete it when someone is confident no reference remains.
