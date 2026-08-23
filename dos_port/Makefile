@@ -506,6 +506,7 @@ SAVE_SRCS := \
 AUDIO_SRCS := \
     src/data/audio_data.asm \
     src/data/pokemon/cries.asm \
+    src/data/pokemon/unknown_list.asm \
     src/home/audio.asm \
     src/home/fade_audio.asm \
     src/audio/audio_hal.asm \
@@ -3784,6 +3785,12 @@ assets/hall_of_fame_text.inc: assets/gb_charmap.txt tools/generators/gen_hall_of
         tools/generators/gen_battle_text.py ../engine/movie/hall_of_fame.asm
 	python3 tools/generators/gen_hall_of_fame_text.py
 
+# Pointer_3b0ee — pret data/pokemon/unknown_list.asm, read only by the unreferenced
+# evos_moves.asm:Func_3b0a2. Transcribed so a 32-entry species list cannot drift.
+assets/unknown_list.inc: ../data/pokemon/unknown_list.asm assets/script_constants.inc \
+        tools/generators/gen_unknown_list.py
+	python3 tools/generators/gen_unknown_list.py
+
 # Text-box menu strings (pret data/text_boxes.asm) — charmap-encoded via gb_text;
 # two-tier rule. <NEXT>/<PK>/<MN> are emitted as named raw bytes by the generator.
 assets/textbox_strings.inc: assets/gb_charmap.txt tools/generators/gen_textbox_strings.py tools/generators/gb_text.py
@@ -4096,6 +4103,8 @@ src/data/pikachu/pikachu_pic_animation.o: assets/pikachu_pic_animation.inc \
 src/home/trainers.o: assets/trainer_text.inc assets/audio_constants.inc
 src/engine/battle/used_move_text.o: assets/used_move_text.inc
 src/engine/movie/hall_of_fame.o: assets/hall_of_fame_text.inc assets/audio_constants.inc assets/event_constants.inc
+src/data/pokemon/unknown_list.o: assets/unknown_list.inc
+src/engine/pokemon/evos_moves.o: assets/script_constants.inc
 
 # Trainer-card tile graphics (box/bg/blank-names/badge-numbers/colon/circle),
 # 2bpp passthrough of gfx/trainer_card/*.2bpp + gfx/font/font_extra.2bpp, for the

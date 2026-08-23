@@ -37,6 +37,7 @@ bits 32
 
 section .text
 
+global UnknownText_2812
 global DisplayTextID
 global AfterDisplayingTextID
 global HoldTextDisplayOpen
@@ -85,6 +86,16 @@ extern CableClubNPC                     ; callfar
 extern DisplayTextBoxID
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
+
+; ---------------------------------------------------------------------------
+; UnknownText_2812 — pret home/text_script.asm, marked `; unreferenced` there and
+; unreferenced here too. A plain text_far wrapper over _PokemonText ("#MON!"),
+; ported because it is a real pret label with a real stream; the payload is
+; Tier-1 data from gen_overworld_strings.py, never hand-encoded.
+; ---------------------------------------------------------------------------
+UnknownText_2812:
+    text_far _PokemonText
+    text_end
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; DisplayTextID — display sign messages, sprite dialog, etc.

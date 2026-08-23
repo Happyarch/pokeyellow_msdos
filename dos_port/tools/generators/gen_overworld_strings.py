@@ -79,6 +79,9 @@ TEXT_SCRIPT_FAR = [
     "_PokemonFaintedText",
     "_PlayerBlackedOutText",
     "_RepelWoreOffText",
+    # UnknownText_2812's payload. pret marks that wrapper `; unreferenced` and it
+    # is — but it is a real pret label with a real stream, so it gets a real body.
+    "_PokemonText",
 ]
 
 # engine/events/elevator.asm's floor prompt.

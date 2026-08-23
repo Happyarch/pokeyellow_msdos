@@ -57,11 +57,13 @@ global ArePlayerCoordsInArray
 global CheckCoords
 global CheckBoulderCoords
 global DecodeRLEList
+global SetSpriteMovementBytesToFE
 global SetSpriteMovementBytesToFF
 global GetSpriteMovementByte1Pointer
 global GetSpriteMovementByte2Pointer
 global GetPointerWithinSpriteStateData1
 global GetPointerWithinSpriteStateData2
+global SetSpriteImageIndexAfterSettingFacingDirection
 global SetSpriteFacingDirection
 global SetSpriteFacingDirectionAndDelay
 global SpriteFunc_34a1
@@ -339,6 +341,30 @@ DecodeRLEList:
     ret
 
 ; ---------------------------------------------------------------------------
+; SetSpriteMovementBytesToFE — movement byte 1 = $FE, byte 2 = [hSpriteMovementByte2],
+; for sprite [hSpriteIndex]. pret: home/map_objects.asm:281.
+;
+; NOTE THE TWO POINTER FLAVOURS, which is why this cannot be copy-edited from the
+; ...ToFF routine below without reading it: GetSpriteMovementByte1Pointer returns an
+; EBP-RELATIVE offset (written [ebp+esi]) and GetSpriteMovementByte2Pointer returns a
+; FLAT wMapSpriteData address (written [esi]). That asymmetry is the port's, recorded
+; at those two routines.
+;
+; pret brackets the body with push hl / pop hl; ESI is HL, so the same bracket.
+; UNREACHED, and so it is in pret — nothing calls it there either.
+; Clobbers: AL, flags. ESI preserved.
+; ---------------------------------------------------------------------------
+SetSpriteMovementBytesToFE:
+    push esi                                  ; push hl
+    call GetSpriteMovementByte1Pointer
+    mov byte [ebp + esi], 0xFE                ; ld [hl], $fe
+    call GetSpriteMovementByte2Pointer
+    mov al, [ebp + hSpriteMovementByte2]      ; ldh a, [hSpriteMovementByte2]
+    mov [esi], al                             ; ld [hl], a  (flat — see above)
+    pop esi                                   ; pop hl
+    ret
+
+; ---------------------------------------------------------------------------
 ; SetSpriteMovementBytesToFF — movement byte 1 = STAY ($ff), byte 2 = NONE ($00),
 ; for sprite [hSpriteIndex].
 ; pret: home/map_objects.asm:SetSpriteMovementBytesToFF
@@ -448,6 +474,22 @@ SetSpriteFacingDirection:
     mov byte [ebp + hSpriteDataOffset], SPRITESTATEDATA1_FACINGDIRECTION
     call GetPointerWithinSpriteStateData1
     mov al, [ebp + hSpriteFacingDirection]
+    mov [ebp + esi], al                 ; ld [hl], a
+    ret
+
+; ---------------------------------------------------------------------------
+; SetSpriteImageIndexAfterSettingFacingDirection — pret home/map_objects.asm:143.
+; A CONTINUATION of SetSpriteFacingDirection, not a routine you call cold: it
+; expects ESI (HL) still pointing at the facing-direction byte that routine just
+; wrote, and steps it to the image-index byte in the same slot. Hence the
+; difference-of-two-constants offset — pret writes exactly that expression.
+;
+; UNREACHED, and so it is in pret: nothing in the disassembly calls it. Ported
+; because it is trivially portable, under the same rule as GetwMoves.
+; In:  ESI = slot's facing-direction offset, AL = image index. Out: ESI advanced.
+; ---------------------------------------------------------------------------
+SetSpriteImageIndexAfterSettingFacingDirection:
+    add esi, SPRITESTATEDATA1_IMAGEINDEX - SPRITESTATEDATA1_FACINGDIRECTION
     mov [ebp + esi], al                 ; ld [hl], a
     ret
 

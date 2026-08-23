@@ -2,10 +2,12 @@
 ; Shooting-star tile (splash).
 
 global FallingStar
+global FallingStarEnd
 
 FallingStar:
     db 0x04, 0x00, 0x1F, 0x00, 0x0E, 0x00, 0x0A, 0x20, 0x00, 0xF8, 0x00, 0x70, 0x00, 0x50, 0x00, 0x00
-FallingStar_end:
+FallingStarEnd:
+FallingStar_end equ FallingStarEnd   ; port-convention alias
 FALLINGSTAR_SIZE equ FallingStar_end - FallingStar
 FALLINGSTAR_TILES equ 1
 

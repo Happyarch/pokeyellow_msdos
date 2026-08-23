@@ -26,6 +26,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "assets/script_constants.inc"   ; species ids (VICTREEBEL) — %define only, no COFF symbols
 ; Pret-name aliases for HRAM / WRAM symbols that use the H_ / W_ prefix in our
 ; includes, so the translation reads identically to the pret source.
 
@@ -37,6 +38,9 @@ global Evolution_ReloadTilesetTilePatterns
 global RenameEvolvedMon
 global CancelledEvolution
 global LearnMoveFromLevelUp
+global Func_3b079
+global Func_3b0a2
+global Func_3b10f
 global WriteMonMoves
 global WriteMonMoves_ShiftMoveData
 global GetMonLearnset
@@ -89,6 +93,9 @@ extern IntoText                 ; " <SPECIES>!"
 extern StoppedEvolvingText      ; "Huh? <MON> stopped evolving!"
 extern msgbox_centered                  ; src/engine/battle/core.asm — centered projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
+extern CanLearnTM                ; engine/items/tms.asm (pret predef) — CL = learnable
+extern IsInArray                 ; home/array2.asm — AL=value ESI=flat base EDX=stride
+extern Pointer_3b0ee             ; generated Tier-1 list, assets/unknown_list.inc
 
 section .text
 
@@ -562,6 +569,135 @@ Evolution_ReloadTilesetTilePatterns:
     je .return                      ; pret `ret z`
     jmp ReloadTilesetTilePatterns   ; pret `jp ReloadTilesetTilePatterns`
 .return:
+    ret
+
+; ===========================================================================
+; Func_3b079 / Func_3b0a2 / Func_3b10f — pret engine/pokemon/evos_moves.asm:384.
+;
+; UNREFERENCED IN PRET, and so here. pret's own comment on their data table says
+; "This list is used by a unreferenced function." Together they answer "can the
+; mon in wCurPartySpecies learn TM/HM [wTempTMHM], possibly after evolving?":
+; Func_3b0a2 tests the current species (TM learnset bit, the Pointer_3b0ee species
+; list, its already-known moves, then its level-up learnset), and Func_3b10f walks
+; the evolution table to advance wCurPartySpecies to whatever it evolves into.
+; Func_3b079 alternates them up to three times — i.e. across two evolution steps —
+; and restores the original species on the way out. Ported because they are
+; genuinely portable, the same bar GetwMoves and OverwritewMoves cleared.
+;
+; TWO PLACES THIS IS NOT A LITERAL TRANSCRIPTION, both forced and both local:
+;  * `ld hl, wMonHMoves` feeds pret's IsInArray, which reads GB memory. The port's
+;    IsInArray reads FLAT ([esi]) because its usual arrays live in program .data,
+;    so the GB buffer is named as a flat pointer with `lea esi, [ebp + …]`. Same
+;    bytes, same search.
+;  * pret indexes EvosMovesPointerTable with two `add hl, bc` (a dw table); the
+;    port's table is dd, so the scale is 4. GetMonLearnset above already does this.
+;
+; The `ld a, $ff / ld [wMonHGrowthRate], a` is NOT a growth-rate update — it plants
+; the $FF terminator IsInArray needs immediately after the four wMonHMoves bytes.
+; wMonHMoves is $DE94 and wMonHGrowthRate is $DE98 in the port too, so the
+; adjacency pret relies on holds here. Do not "tidy" it into a real sentinel.
+; ===========================================================================
+Func_3b079:
+    mov al, [ebp + wCurPartySpecies]
+    push eax                            ; push af
+    call Func_3b0a2
+    jc .asm_3b09c
+    call Func_3b10f
+    jnc .asm_3b096
+    call Func_3b0a2
+    jc .asm_3b09c
+    call Func_3b10f
+    jnc .asm_3b096
+    call Func_3b0a2
+    jc .asm_3b09c
+.asm_3b096:
+    pop eax                             ; pop af
+    mov [ebp + wCurPartySpecies], al
+    clc                                 ; and a — CF=0, "no"
+    ret
+.asm_3b09c:
+    pop eax
+    mov [ebp + wCurPartySpecies], al
+    stc                                 ; scf — CF=1, "yes"
+    ret
+
+Func_3b0a2:
+    mov al, [ebp + wTempTMHM]
+    mov [ebp + wMoveNum], al
+    call CanLearnTM                     ; predef CanLearnTM -> CL
+    mov al, cl                          ; ld a, c
+    test al, al                         ; and a
+    jnz .asm_3b0ec
+    mov esi, Pointer_3b0ee              ; ld hl, Pointer_3b0ee (flat Tier-1 table)
+    mov al, [ebp + wCurPartySpecies]
+    mov edx, 1                          ; ld de, $1 — entry stride
+    call IsInArray
+    jc .asm_3b0d2
+    mov byte [ebp + wMonHGrowthRate], 0xFF  ; the $FF that terminates wMonHMoves
+    mov al, [ebp + wTempTMHM]
+    lea esi, [ebp + wMonHMoves]         ; ld hl, wMonHMoves — GB WRAM named flat
+    mov edx, 1
+    call IsInArray
+    jc .asm_3b0ec
+.asm_3b0d2:
+    mov al, [ebp + wTempTMHM]
+    mov dh, al                          ; ld d, a — the move we are looking for
+    call GetMonLearnset                 ; -> ESI = flat learnset pointer
+.loop:
+    mov al, [esi]                       ; ld a, [hli] — level
+    inc esi
+    test al, al
+    jz .asm_3b0ea                       ; end of learnset
+    mov bh, al                          ; ld b, a
+    mov al, [ebp + wCurEnemyLevel]
+    cmp al, bh                          ; cp b
+    jb .asm_3b0ea                       ; jr c — learnset is sorted, so we are past it
+    mov al, [esi]                       ; ld a, [hli] — move id
+    inc esi
+    cmp al, dh                          ; cp d
+    je .asm_3b0ec
+    jmp .loop
+.asm_3b0ea:
+    clc                                 ; and a
+    ret
+.asm_3b0ec:
+    stc                                 ; scf
+    ret
+
+Func_3b10f:
+    mov bl, 0                           ; ld c, $0 — species index, 0-based
+.asm_3b111:
+    movzx ecx, bl                       ; ld b, $0 / add hl,bc / add hl,bc
+    mov esi, [EvosMovesPointerTable + ecx*4]  ; dd table here, dw in pret
+.asm_3b11b:
+    mov al, [esi]                       ; ld a, [hli] — evolution type
+    inc esi
+    test al, al
+    jz .asm_3b130                       ; no more evolutions for this species
+    cmp al, 2                           ; EVOLVE_ITEM carries an extra parameter
+    jne .asm_3b124
+    inc esi
+.asm_3b124:
+    inc esi                             ; step past the level/item parameter
+    mov al, [ebp + wCurPartySpecies]
+    cmp al, [esi]                       ; cp [hl] — does THIS species evolve into ours?
+    je .asm_3b138
+    inc esi
+    mov al, [esi]                       ; ld a, [hl] — next entry's type (no post-inc)
+    test al, al
+    jnz .asm_3b11b
+.asm_3b130:
+    inc bl                              ; inc c
+    mov al, bl
+    cmp al, VICTREEBEL                  ; cp VICTREEBEL — the last species scanned
+    jb .asm_3b111                       ; jr c
+    clc                                 ; and a — not found
+    ret
+.asm_3b138:
+    inc bl                              ; inc c — table index -> 1-based species id
+    mov al, bl
+    mov [ebp + wCurPartySpecies], al
+    stc                                 ; scf
     ret
 
 ; ===========================================================================
