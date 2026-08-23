@@ -101,10 +101,8 @@ extern StatusScreen             ; src/engine/pokemon/status_screen.asm
 extern StatusScreen2            ; src/engine/pokemon/status_screen.asm
 extern InitOpponent             ; src/engine/battle/init_battle.asm
 extern HealParty                ; src/engine/events/heal_party.asm
-extern InternalClockTradeAnim   ; src/engine/movie/evolution_stubs.asm (stub;
-                                ; Stage 3 step 3 moves it to engine/movie/trade.asm)
-extern ExternalClockTradeAnim   ; src/engine/movie/evolution_stubs.asm (stub;
-                                ; Stage 3 step 3 moves it to engine/movie/trade.asm)
+extern InternalClockTradeAnim   ; src/engine/movie/trade.asm
+extern ExternalClockTradeAnim   ; src/engine/movie/trade.asm
 extern TryEvolvingMon           ; src/engine/pokemon/evos_moves.asm
 extern SavePartyAndDexData      ; src/engine/menus/save.asm
 extern SramStoreImage           ; src/save/dsv_io.asm — .dsv commit (HAL DEVIATION at the TradeCenter_Trade call site)

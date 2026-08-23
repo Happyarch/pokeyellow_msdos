@@ -4680,3 +4680,39 @@ LoadDestinationWarpPosition:
     pop eax
     ret
 
+; ---------------------------------------------------------------------------
+; CopyToRedrawRowOrColumnSrcTiles — pret home/overworld.asm:1461. Needed by
+; trade.asm's Trade_CopyCableTilesOffScreen (engine/movie/trade.asm), which is
+; why it lands here rather than being hand-added to trade.asm: this label's
+; pret home is home/overworld.asm, and the mirror rule keeps every pret entry
+; point at its pret path regardless of who calls it. Its own callers
+; ScheduleNorthRowRedraw/ScheduleSouthRowRedraw are not yet ported.
+;
+; Copies 2*20 = 40 bytes (pret's OWN SCREEN_WIDTH=20, the real GB screen width —
+; NOT the port's redefined SCREEN_WIDTH=40 canvas stride, even though the two
+; numbers happen to coincide here) from the caller's source into the fixed
+; staging buffer wRedrawRowOrColumnSrcTiles, which RedrawRowOrColumn
+; (src/home/vcopy.asm) consumes at DelayFrame time.
+;
+; In:  ESI = source GB offset (HL). Out: ESI advanced past the 40-byte source
+; range (pret HL, via `ld a,[hli]`). All other registers preserved.
+; ---------------------------------------------------------------------------
+global CopyToRedrawRowOrColumnSrcTiles
+CopyToRedrawRowOrColumnSrcTiles:
+    push eax
+    push edx
+    push ecx
+    mov edx, wRedrawRowOrColumnSrcTiles     ; ld de, wRedrawRowOrColumnSrcTiles
+    mov cl, 40                              ; ld c, 2 * SCREEN_WIDTH (pret's 20)
+.loop:
+    mov al, [ebp + esi]                     ; ld a, [hli]
+    inc esi
+    mov [ebp + edx], al                     ; ld [de], a
+    inc edx
+    dec cl                                  ; dec c
+    jnz .loop
+    pop ecx
+    pop edx
+    pop eax
+    ret
+

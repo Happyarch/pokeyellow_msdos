@@ -98,7 +98,7 @@ extern LoadWildData                             ; src/engine/overworld/wild_mons
 extern Random                                   ; src/home/random.asm
 extern TryEvolvingMon                           ; src/engine/pokemon/evos_moves.asm
 extern PlayDefaultMusic                         ; src/home/audio.asm
-extern InternalClockTradeAnim                   ; src/engine/movie/evolution_stubs.asm — pret: engine/movie/trade.asm
+extern InternalClockTradeAnim                   ; src/engine/movie/trade.asm
 
 section .text
 

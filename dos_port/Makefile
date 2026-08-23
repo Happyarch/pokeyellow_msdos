@@ -1002,6 +1002,8 @@ POKEMON_SRCS := \
     src/engine/pikachu/pikachu_stubs.asm \
     src/engine/movie/evolution.asm \
     src/engine/movie/evolution_stubs.asm \
+    src/engine/movie/trade.asm \
+    src/engine/movie/trade2.asm \
     src/engine/pokemon/learn_move.asm
 
 # Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.
@@ -3802,13 +3804,18 @@ assets/gb_charmap.txt:
 # it back (the recipe only fires when a LISTED target is stale). A clean tree was
 # unaffected — menu_strings.inc is missing too, so the recipe runs and writes them
 # all — but that is luck, not a dependency. Measured and fixed 2026-08-02.
+# cable_club_text.inc was added to the generator by the link-cable Stage 3
+# merge but never added here (same class of gap this note already warns
+# about) — fixed alongside adding trade_text.inc/trade_mon_info_text.inc,
+# which is the edit that caught it.
 assets/menu_strings.inc assets/menu_text.inc assets/trainer_card_strings.inc \
         assets/party_menu_strings.inc assets/home_pokemon_strings.inc \
         assets/options_strings.inc assets/naming_strings.inc \
         assets/pokedex_strings.inc assets/bills_pc_text.inc \
         assets/save_text.inc assets/main_menu_text.inc assets/league_pc_text.inc \
         assets/players_pc_text.inc assets/link_text.inc assets/link_npc_text.inc assets/oaks_pc_text.inc \
-        assets/pc_text.inc: \
+        assets/pc_text.inc assets/cable_club_text.inc assets/trade_text.inc \
+        assets/trade_mon_info_text.inc: \
         assets/gb_charmap.txt tools/generators/gen_menu_strings.py \
         tools/generators/gb_text.py tools/generators/gen_battle_text.py
 	python3 tools/generators/gen_menu_strings.py
@@ -4146,6 +4153,17 @@ assets/trainer_card_tiles.inc: ../gfx/trainer_card/trainer_info.2bpp \
                                tools/generators/gen_trainer_card_tiles.py
 	python3 tools/generators/gen_trainer_card_tiles.py
 
+# Trade-animation tile graphics (link cable / Game Boy pics / cable ball),
+# 2bpp passthrough of gfx/trade/*.2bpp, for LoadTradingGFXAndMonNames
+# (engine/movie/trade.asm). game_boy.2bpp is built with --remove-duplicates
+# (see the root Makefile's tools/gfx rule for it) so its tile count is derived
+# from the built file, not the source PNG's pixel dimensions.
+assets/trade_tiles.inc: ../gfx/trade/game_boy.2bpp \
+                        ../gfx/trade/link_cable.2bpp \
+                        ../gfx/trade/cable_ball.2bpp \
+                        tools/generators/gen_trade_tiles.py
+	python3 tools/generators/gen_trade_tiles.py
+
 # Pokédex interface tiles (2bpp passthrough of gfx/pokedex/pokedex.2bpp + the
 # plain pokéball tile from gfx/battle/balls.2bpp) for LoadPokedexTilePatterns.
 assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
@@ -4201,6 +4219,13 @@ src/data/pokemon/dex_entries.o: assets/dex_entries.inc
 src/engine/gfx/load_pokedex_tiles.o: assets/pokedex_tiles.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc assets/link_text.inc
 src/engine/link/cable_club_npc.o: assets/link_npc_text.inc assets/event_constants.inc assets/audio_constants.inc
+
+# Trade animation (link plan Stage 3 step 3): tile graphics + the 8 far text
+# bodies (trade.asm), and the raw Trade_MonInfoText glyph run (trade2.asm).
+src/engine/movie/trade.o: assets/trade_tiles.inc assets/trade_text.inc \
+                          assets/battle_anim_constants.inc assets/audio_constants.inc \
+                          assets/ui_layout_intro.inc
+src/engine/movie/trade2.o: assets/trade_mon_info_text.inc assets/ui_layout_intro.inc
 
 # Status screen %includes the generated status_strings.inc label block.
 src/engine/pokemon/status_screen.o: assets/status_strings.inc
@@ -4582,7 +4607,9 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/mon_icons.inc \
         assets/save_text.inc assets/main_menu_text.inc assets/league_pc_text.inc \
         assets/players_pc_text.inc assets/link_text.inc assets/link_npc_text.inc assets/oaks_pc_text.inc \
-        assets/pc_text.inc assets/slots_text.inc assets/safari_text.inc
+        assets/pc_text.inc assets/slots_text.inc assets/safari_text.inc \
+        assets/cable_club_text.inc assets/trade_tiles.inc assets/trade_text.inc \
+        assets/trade_mon_info_text.inc
 	python3 tools/audit_memmap.py
 
 assets/scenario_registry.inc: tools/scenario_manifest.json tools/generators/gen_scenario_registry.py
