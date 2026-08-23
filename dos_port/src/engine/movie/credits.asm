@@ -103,11 +103,25 @@ align 4
 %include "assets/credits_data.inc"
 %include "assets/the_end_2bpp.inc"
 
-; HoFGBPalettes — pret's four-step BGP fade-in. pret writes them with `dc`
-; (2 bits per shade, MSB-first): dc 3,0,0,0 = %11000000 = $C0, and so on.
+; HoFGBPalettes — pret's four-step BGP fade-in, written with the `dc` "crumbs"
+; macro (macros/data.asm): dc a,b,c,d = (a<<6)|(b<<4)|(c<<2)|d. So the FIRST
+; argument is BGP's colour 3 and the SECOND is colour 2:
+;   dc 3,0,0,0 = $C0   dc 3,1,0,0 = $D0   dc 3,2,0,0 = $E0   dc 3,3,0,0 = $F0
+;
+; THE FADE RAISES COLOUR 2, and that is the whole point of ShiftFontColorIndex.
+; That routine zeroes the LOW bitplane of every font tile, so a glyph pixel goes
+; from colour 3 (both planes set) to colour 2 (high only) — measured in the
+; DEBUG_CREDITS dump: the 'D' tile at $8830 comes back 00 f8 00 84 ... , low planes
+; all zero. Colour 3 stays black for the bars, colour 2 walks 0 -> 3 and the text
+; fades in under it.
+;
+; This table read $C0,$C4,$C8,$CC when first written — the packing misread as
+; raising colour 1 — and the credits text was invisible at every frame sampled
+; because colour 2 stayed at shade 0. The tilemap was correct throughout; only
+; rendering FRAME.BIN and then reading the tile planes out of the dump found it.
 align 4
 HoFGBPalettes:
-    db 0xC0, 0xC4, 0xC8, 0xCC       ; dc 3,0,0,0 / 3,1,0,0 / 3,2,0,0 / 3,3,0,0
+    db 0xC0, 0xD0, 0xE0, 0xF0       ; dc 3,0,0,0 / 3,1,0,0 / 3,2,0,0 / 3,3,0,0
 
 section .text
 
