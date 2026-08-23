@@ -449,10 +449,26 @@ blocks in `src/engine/menus/naming_screen.asm`.
       authorization, this session)
 
 ### Stage 3 — Trade Center
-- [ ] Complete `src/engine/link/cable_club.asm` to all 23 labels
+- [x] HAL block seam 2026-08-22 (`b50e1e0`): `NF_BLK` reliable frame type +
+      `NetHAL_ExchangeBlock` (one message each way per block, block-id
+      lockstep, one-deep RX stage), `Serial_ExchangeBytes` re-cut at that
+      seam (receive buffer verbatim-from-byte-0 — both peers DOS ports, the
+      preamble-hunt shift is a GB-hardware artifact). Verified: NETTEST
+      layout-v2 PASS decomposed (EXCH 60/60 both ways, blocks 3/3 each way
+      content-checked incl. a one-shot-drop ARQ recovery at 424 B,
+      blk_content_fail 0), linkcheck.sh regression 664/664 records both
+      directions zero desyncs
+- [x] Complete `src/engine/link/cable_club.asm` to all 23 labels
       (`CableClub_DoBattleOrTrade[Again]` block build/patch/exchange/unpatch,
       RNG list, `TradeCenter_SelectMon`/`TradeCenter_Trade`, `CableClub_Run`
-      + its `WaitForTextScrollButtonPress` poll hook)
+      + its `WaitForTextScrollButtonPress` poll hook) — 2026-08-23
+      (`99cb00b`): whole session runs inside the movie-projection surface
+      (header projection DEVIATION), hidden events
+      `CableClubLeftGameboy`/`RightGameboy` real in bills_pc.asm,
+      `PrintWaitingText` real (link_stubs.asm deleted), faithdiff triage in
+      the commit message, lint 0 both modes, `fidelity-serial` core 16/16
+      PASS with the poll live. Runtime trade proof deferred to the
+      two-instance item below (needs trade.asm)
 - [ ] Translate `engine/movie/trade.asm` (retire the core_stubs trade-anim
       stubs)
 - [ ] Two-instance scripted trade: `.dsv` postconditions (byte-identical
