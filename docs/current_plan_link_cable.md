@@ -800,33 +800,52 @@ teardown is observable once battles are live — and
 decision).
 
 ### Stage 5 — link setup UI + connection book
-- [ ] Keyboard text-entry mode beside the joypad scancode path
-      (`src/input/joypad.asm`): port-only line-edit widget, per-field
-      charset, no effect on normal joypad mapping
-- [ ] `src/net/link_ui.asm`: transport-select menu in the `CableClubNPC`
-      seam (CLI flags bypass), COM1-4 pick, per-transport book screens —
-      DIRECT (connect without saving), AUTO (IPX), named entries with
-      CONNECT/EDIT/DELETE/CANCEL, NEW (name + address); validation +
-      error text; DELETE confirms
-- [ ] `src/net/link_book.asm`: `LINKBOOK.DAT` load/save (magic `LNKB`,
-      version, additive checksum, 5 TCP + 5 IPX fixed records with in-use
-      flag + 16-byte charmap name + address payload; corrupt or absent →
-      empty book)
-- [ ] `tools/generators/gen_link_ui_strings.py` → `assets/link_ui_strings.inc`
-      wired into `make assets`; zero hand-encoded charmap bytes
-      (`lint_pret_labels --no-scan --strict-claims` stays 0)
-- [ ] AutoKeyDrive scenario: create a named TCP and a named IPX entry,
-      reboot the instance, assert names + addresses persist; EDIT an entry
-      and re-verify; DIRECT connect path; full-book (5/5, NEW unavailable)
-      and DELETE-with-confirm paths
-- [ ] `KBD_NAMING=1` build option: Makefile flag (BUG_FIX_LEVEL plumbing
-      pattern), `%if`-guarded keyboard path in
-      `src/engine/menus/naming_screen.asm` with `DEVIATION{class=projection}`,
-      special-char picker, `gen_kbd_naming.py` generated scancode map +
-      picker charset; default build byte-identical behavior
-- [ ] Port-only scenario on a `KBD_NAMING=1` build: type a name including
-      one picker character, assert name bytes in a dump; default-build
-      goldens untouched
+- [x] Keyboard text-entry mode (step 1, commit "Stage 5 steps 1+2"): kbd_isr
+      scancode ring + shift tracking (joypad mapping byte-identical with the
+      mode byte 0; Esc host-quit suppressed in text mode), kbd_ring_pop,
+      gen_kbd_naming.py scancode→charmap tables, kbd_text_edit line-edit
+      widget (`src/input/kbd_text.asm`) with table-driven per-field charsets
+- [x] `src/net/link_ui.asm` (step 3): LinkTransportSelect in the CableClubNPC
+      seam (DEVIATION{class=HAL}; g_net_transport-bound CLI bypass), COM1-4
+      pick via re-callable NetInit, per-family book screens with
+      DIRECT/AUTO/NEW/CONNECT/EDIT/DELETE/CANCEL, address parse+validate,
+      link_ui_connect_attempt = the ONE Stage 6/7 seam (fails NOT IN THIS
+      BUILD! today). Addresses staged in pret's 20-byte wStringBuffer → 19-char
+      cap (255.255.255.255:65535 = 21 does not fit) — MAINTAINER DECISION
+      OPEN: accept the cap or grant a dedicated port-only scratch region
+- [x] `src/net/link_book.asm` (step 2): LINKBOOK.DAT exactly per spec (LNKB,
+      v1, additive LE checksum, 10×32-byte records, big-endian addresses;
+      absent/corrupt → zeroed book, CF discipline; dsv_io DPMI pattern)
+- [x] `gen_link_ui_strings.py` → assets/link_ui_strings.inc (step 2+3),
+      idempotent, in make assets; strict-claims stayed 0 throughout
+- [x] AutoKeyDrive scenario AUTHORED (step 5, id 94 `link_book_roundtrip`,
+      scenario_class `port_only` — new class added to validate_scenarios/
+      gen_scenario_registry): run 1 creates TCP+IPX entries via the
+      scancode-injection harness, run 2 (same image) EDITs + DELETEs with
+      confirm; tools/linkbookcheck.sh asserts persistence byte-exactly.
+      Full-book path deferred to the battery (flagged in the row); DIRECT
+      not separately exercised (same Stage 5 connect stub as CONNECT — real
+      coverage arrives with the Stage 6/7 transports). NOT RUN — static only
+- [x] `KBD_NAMING=1` (step 4): Makefile flag, %if-guarded keyboard path in
+      DisplayNamingScreen (append/delete/submit reuse the pret paths; Tab
+      special-char picker from the DERIVED KbdPickerChars table; one
+      DEVIATION{class=projection}); default build byte-identical (SHA1
+      9a7852938d1a20467c02a9a11b3eba9bd2b3f835 proven pre/post)
+- [x] KBD_NAMING scenario AUTHORED (step 5, id 95 `kbd_naming_entry`,
+      port_only): types Ab + one picker char, tools/kbdnamecheck.sh asserts
+      the dumped name bytes from gb_text + the generated table; default-build
+      goldens untouched (byte-identity above). NOT RUN — static only
+
+#### Stage 5 close-out notes (2026-08-23)
+
+Commit chain: "Stage 5 steps 1+2" → step 3 → `4d65e75` step 4 → step 5. Every
+step: nasm per-file, full link, generators idempotent, update_label_db + lint
+both modes 0, static_gate 8/8 via the hook; byte-identity proofs by SHA1
+against clean baselines wherever a flag or gate was added. Runtime proof =
+the end-of-plan battery: linkbookcheck.sh (+LBC_PHASE2) and kbdnamecheck.sh
+join it (timing defaults 3000/600 unmeasured), and the two port-only rows are
+excluded from the fidelity tiers by class. Open maintainer items: the 19-char
+address cap (above) and SetupPlayerAndEnemyPokeballs OAM placement (Stage 4).
 
 ### Stage 6 — IPX
 - [ ] `ipx_dos.asm` (detect, socket `/IPXSOCK=`, DOS-memory ECBs, poll loop,
