@@ -125,6 +125,31 @@ def local_tail_is_standard(script_text, label):
     return any(m.group(1) == label for m in LOCAL_TAIL.finditer(script_text))
 SCRIPT_OVERRIDES = {
     'PalletTownOakText': 'PalletTownOakText',
+    # Link receptionists (docs/current_plan_link_cable.md Stage 2): pret
+    # routes TX_SCRIPT_CABLE_CLUB_RECEPTIONIST ($f6) through DisplayTextID;
+    # the port's NPC-talk path dispatches SCRIPT table entries, so every
+    # receptionist text id routes to the shared shim in
+    # src/engine/link/cable_club_npc.asm (which runs the real CableClubNPC).
+    'CeladonPokecenterLinkReceptionistText':    'CableClubReceptionistScript',
+    'CeruleanPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
+    'CinnabarPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
+    'FuchsiaPokecenterLinkReceptionistText':    'CableClubReceptionistScript',
+    'IndigoPlateauLobbyLinkReceptionistText':   'CableClubReceptionistScript',
+    'LavenderPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
+    'MtMoonPokecenterLinkReceptionistText':     'CableClubReceptionistScript',
+    'PewterPokecenterLinkReceptionistText':     'CableClubReceptionistScript',
+    'RockTunnelPokecenterLinkReceptionistText': 'CableClubReceptionistScript',
+    'SaffronPokecenterLinkReceptionistText':    'CableClubReceptionistScript',
+    'SilphCo1FLinkReceptionistText':            'CableClubReceptionistScript',
+    'VermilionPokecenterLinkReceptionistText':  'CableClubReceptionistScript',
+    'ViridianPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
+    # In-game trade NPC (docs/current_plan_link_cable.md Stage 3 step 4): the
+    # Gameboy Kid's text is a text_asm script (wWhichTrade = TRADE_FOR_MILES ->
+    # DoInGameTradeDialogue) hand-ported in src/scripts/Route2TradeHouse.asm.
+    # Without this row the generator emitted a plain placeholder stream, so the
+    # A-press showed a stub dialog and the trade flow was unreachable (measured
+    # 2026-08-23: the in_game_trade goldencheck's state-gated dump never fired).
+    'Route2TradeHouseGameboyKidText':           'Route2TradeHouseGameboyKidText',
 }
 
 # ---------------------------------------------------------------------------

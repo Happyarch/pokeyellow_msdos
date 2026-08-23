@@ -33,6 +33,23 @@ extern pit_restore       ; boot/timing.asm
 extern joypad_init       ; src/input/joypad.asm
 extern joypad_restore    ; src/input/joypad.asm
 extern audio_init        ; src/audio/audio_hal.asm
+extern NetInit           ; src/net/net_hal.asm — link-cable transport bind
+extern NetShutdown       ; src/net/net_hal.asm — UART vector/PIC restore
+extern g_net_com_sel     ; src/net/net_hal.asm — /COM1-4 -> 1..4
+extern g_net_baud_div    ; src/net/net_hal.asm — /BAUD=n -> 115200/n divisor
+extern g_net_linklog     ; src/net/net_hal.asm — /LINKLOG flag
+extern g_net_ipx_sel     ; src/net/net_hal.asm — /IPX flag (Stage 6 step 1)
+extern g_net_ipx_socket  ; src/net/net_hal.asm — /IPXSOCK=n override
+extern g_pkt_int      ; src/net/pktdrv.asm — /PKTINT=0xNN override (Stage 7
+                       ; step 1; 0 = auto-scan 0x60-0x80)
+extern g_net_tcp_mode         ; src/net/net_ip.asm — /TCPWAIT=1 /TCP==2
+extern g_net_tcp_listen_port  ; src/net/net_ip.asm — /TCPWAIT[=port]
+extern g_net_tcp_peer_ip      ; src/net/net_ip.asm — /TCP=a.b.c.d
+extern g_net_tcp_peer_port    ; src/net/net_ip.asm — /TCP=...[:port]
+extern g_net_ip_local         ; src/net/net_ip.asm — /IP=a.b.c.d
+extern g_net_ip_mask          ; src/net/net_ip.asm — /MASK=a.b.c.d
+extern g_net_ip_gw            ; src/net/net_ip.asm — /GW=a.b.c.d
+extern g_cfg_partyb      ; src/engine/debug/debug_party.asm — /PARTYB flag (tradecheck harness)
 extern audio_shutdown    ; src/audio/audio_hal.asm
 extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at boot
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
@@ -81,6 +98,39 @@ arg_tandy:    db '/TANDY',   0
 arg_spk:      db '/SPK',     0
 arg_noenh:    db '/NOENH',   0
 arg_loop:     db '/LOOP',    0
+; Link-cable transport selection (docs/current_plan_link_cable.md Stage 2).
+arg_com1:     db '/COM1',    0
+arg_com2:     db '/COM2',    0
+arg_com3:     db '/COM3',    0
+arg_com4:     db '/COM4',    0
+arg_baud:     db '/BAUD=',   0
+arg_linklog:  db '/LINKLOG', 0
+arg_ipx:      db '/IPX',     0     ; Stage 6 step 1 (docs/current_plan_link_cable.md)
+arg_ipxsock:  db '/IPXSOCK=',0     ; note: this is a literal substring of the
+                                    ; token above, so "/IPXSOCK=n" alone (no
+                                    ; separate "/IPX") also sets g_net_ipx_sel
+                                    ; via find_token's plain substring match —
+                                    ; benign (giving a socket override implies
+                                    ; IPX intent), same tolerance the existing
+                                    ; /MT32 vs /GM ordering note nearby accepts
+; DEBUG_TRADECHECK two-instance harness (tools/tradecheck.sh): per-side party/
+; identity selection, same clone-of-/LINKLOG pattern.
+arg_partyb:   db '/PARTYB',  0
+; Packet driver client (Stage 7 step 1, docs/current_plan_link_cable.md) —
+; hex vector override, matched with find_token_pos like /BAUD=/IPXSOCK=.
+arg_pktint:   db '/PKTINT=', 0
+; TCP/IP transport (Stage 7 step 2). /TCPWAIT (8 chars, no '=') is NEVER a
+; literal substring of "/TCP=" (position 4 of "/TCP=" is '=', not 'W'), and
+; "/TCP=" is never a substring of "/TCPWAIT..." either (position 4 there is
+; 'W', not '=') — the TOKEN SHAPES already disambiguate them (the /IPXSOCK=
+; precedent above is the opposite case: a shorter flag that genuinely IS a
+; prefix of a longer one). /TCPWAIT is still matched FIRST below anyway,
+; belt-and-suspenders, matching that precedent's own check order.
+arg_tcpwait:  db '/TCPWAIT',  0
+arg_tcp:      db '/TCP=',     0
+arg_ip:       db '/IP=',      0
+arg_mask:     db '/MASK=',    0
+arg_gw:       db '/GW=',      0
 
 ; ---------------------------------------------------------------------------
 ; Code
@@ -108,6 +158,7 @@ start:
     call pit_init            ; reprogram PIT to ~60 Hz, install tick ISR
     call joypad_init         ; hook IRQ 1 (keyboard) → GB joypad state
     call audio_init          ; enable the engine + GB power-on audio state
+    call NetInit             ; bind the /COMx link transport (no flag: no-op)
 
 %ifdef DEBUG_AUDIO
     call RunAudioTest        ; play Pallet Town BGM 120 ticks, dump, exit (never returns)
@@ -313,6 +364,166 @@ parse_cmdline:
     mov byte [g_cfg_musicloop], 1 ; DEBUG_AUDIO: music-only, loop forever
 .no_loop:
 
+    ; --- link-cable transport flags (net_hal.asm owns the config bytes) ----
+    mov edi, arg_com1
+    call find_token
+    jnz .no_com1
+    mov byte [g_net_com_sel], 1
+.no_com1:
+    mov edi, arg_com2
+    call find_token
+    jnz .no_com2
+    mov byte [g_net_com_sel], 2
+.no_com2:
+    mov edi, arg_com3
+    call find_token
+    jnz .no_com3
+    mov byte [g_net_com_sel], 3
+.no_com3:
+    mov edi, arg_com4
+    call find_token
+    jnz .no_com4
+    mov byte [g_net_com_sel], 4
+.no_com4:
+    mov edi, arg_linklog
+    call find_token
+    jnz .no_linklog
+    mov byte [g_net_linklog], 1
+.no_linklog:
+    mov edi, arg_partyb
+    call find_token
+    jnz .no_partyb
+    mov byte [g_cfg_partyb], 1
+.no_partyb:
+    ; /BAUD=n — parse the decimal rate, store the 115200/n divisor. An
+    ; unparsable or out-of-range value is ignored (default 115200 stands).
+    mov edi, arg_baud
+    call find_token_pos
+    jnz .no_baud
+    call parse_decimal            ; EAX ptr -> EAX value, CF=1 no digits
+    jc .no_baud
+    test eax, eax
+    jz .no_baud
+    cmp eax, 115200
+    ja .no_baud
+    mov ecx, eax
+    mov eax, 115200
+    xor edx, edx
+    div ecx                       ; divisor = 115200 / baud
+    test eax, eax
+    jz .no_baud
+    cmp eax, 0xFFFF
+    ja .no_baud
+    mov [g_net_baud_div], ax
+.no_baud:
+    ; --- IPX transport flag (Stage 6 step 1) ---
+    mov edi, arg_ipx
+    call find_token
+    jnz .no_ipx
+    mov byte [g_net_ipx_sel], 1
+.no_ipx:
+    ; /IPXSOCK=n — decimal socket number override (default 0x869C stands on
+    ; a parse failure or an out-of-range value).
+    mov edi, arg_ipxsock
+    call find_token_pos
+    jnz .no_ipxsock
+    call parse_decimal            ; EAX ptr -> EAX value, CF=1 no digits
+    jc .no_ipxsock
+    test eax, eax
+    jz .no_ipxsock                ; socket 0 is not a usable override
+    cmp eax, 0xFFFF
+    ja .no_ipxsock
+    mov [g_net_ipx_socket], ax
+.no_ipxsock:
+    ; --- packet driver client flag (Stage 7 step 1) ---
+    ; /PKTINT=0xNN — hex packet-driver interrupt vector override (0 = keep
+    ; Pktdrv_Init's auto-scan of 0x60-0x80; an unparsable value, or one past
+    ; a single byte, is ignored and the auto-scan default stands).
+    mov edi, arg_pktint
+    call find_token_pos
+    jnz .no_pktint
+    call parse_hex                ; EAX ptr -> EAX value, CF=1 no hex digits
+    jc .no_pktint
+    test eax, eax
+    jz .no_pktint                 ; vector 0 is never a usable override
+                                   ; (real IVT slot 0 is divide-by-zero)
+    cmp eax, 0xFF
+    ja .no_pktint
+    mov [g_pkt_int], al
+.no_pktint:
+
+    ; --- TCP/IP transport flags (Stage 7 step 2) ---
+    ; /TCPWAIT[=port] — default port 8368 (TCP_DEFAULT_PORT in net_ip.asm).
+    ; An unparsable or out-of-range value after '=' is ignored (the default
+    ; already written stands).
+    mov edi, arg_tcpwait
+    call find_token_pos
+    jnz .no_tcpwait
+    mov byte [g_net_tcp_mode], 1
+    mov word [g_net_tcp_listen_port], 8368
+    cmp byte [eax], '='
+    jne .no_tcpwait
+    inc eax
+    call parse_decimal
+    jc .no_tcpwait
+    test eax, eax
+    jz .no_tcpwait
+    cmp eax, 0xFFFF
+    ja .no_tcpwait
+    mov [g_net_tcp_listen_port], ax
+.no_tcpwait:
+    ; /TCP=a.b.c.d[:port] — default port 8368 if ':port' is absent. A
+    ; malformed address or port leaves g_net_tcp_mode at whatever it was
+    ; (0 unless /TCPWAIT already set it) — the whole flag is ignored on
+    ; any parse failure, matching /BAUD='s "ignored, default stands" rule.
+    mov edi, arg_tcp
+    call find_token_pos
+    jnz .no_tcp
+    mov esi, eax
+    mov edi, g_net_tcp_peer_ip
+    call parse_dotted_quad
+    jc .no_tcp
+    mov word [g_net_tcp_peer_port], 8368
+    cmp byte [esi], ':'
+    jne .tcp_have_addr
+    inc esi
+    mov eax, esi
+    call parse_decimal
+    jc .no_tcp
+    test eax, eax
+    jz .no_tcp
+    cmp eax, 0xFFFF
+    ja .no_tcp
+    mov [g_net_tcp_peer_port], ax
+.tcp_have_addr:
+    mov byte [g_net_tcp_mode], 2
+.no_tcp:
+    ; /IP= /MASK= /GW= — static config, dotted-quad, no port suffix. A
+    ; malformed value leaves the field at its prior value (0.0.0.0 default);
+    ; NetIp_Init's own "config missing" check (all-zero /IP= or /MASK=) then
+    ; degrades exactly as if the flag were never given.
+    mov edi, arg_ip
+    call find_token_pos
+    jnz .no_ip
+    mov esi, eax
+    mov edi, g_net_ip_local
+    call parse_dotted_quad
+.no_ip:
+    mov edi, arg_mask
+    call find_token_pos
+    jnz .no_mask
+    mov esi, eax
+    mov edi, g_net_ip_mask
+    call parse_dotted_quad
+.no_mask:
+    mov edi, arg_gw
+    call find_token_pos
+    jnz .no_gw
+    mov esi, eax
+    mov edi, g_net_ip_gw
+    call parse_dotted_quad
+.no_gw:
+
 .done:
     pop edi
     pop esi
@@ -402,10 +613,212 @@ find_token:
     ret
 
 ; ---------------------------------------------------------------------------
+; find_token_pos — find_token variant for `=value` flags (/BAUD=n): same
+; inputs (EDI = NUL-terminated token, ESI = command line, ECX = remaining
+; length), but on a hit returns ZF=1 AND EAX = flat pointer to the first
+; character PAST the token (the value). ZF=0 on miss (EAX undefined).
+; Preserves EBX/ECX/ESI/EDI.
+; ---------------------------------------------------------------------------
+find_token_pos:
+    push ebx
+    push ecx
+    push esi
+    push edi
+
+    mov ebx, edi
+.tok_len:
+    cmp byte [ebx], 0
+    je .tok_len_done
+    inc ebx
+    jmp .tok_len
+.tok_len_done:
+    sub ebx, edi                 ; EBX = token length
+
+.scan_loop:
+    cmp ecx, ebx
+    jl .not_found
+    push ecx
+    push esi
+    push edi
+    mov ecx, ebx
+    repe cmpsb
+    pop edi
+    pop esi
+    pop ecx
+    je .found
+    inc esi
+    dec ecx
+    jmp .scan_loop
+.found:
+    lea eax, [esi + ebx]         ; first char past the token
+    cmp eax, eax                 ; ZF=1
+    jmp .out
+.not_found:
+    or esp, 0                    ; ZF=0 (esp is never 0)
+.out:
+    pop edi
+    pop esi
+    pop ecx
+    pop ebx
+    ret
+
+; ---------------------------------------------------------------------------
+; parse_decimal — EAX = flat pointer to ASCII digits; parse up to a
+; non-digit. Out: CF=0 + EAX = value (clamped at 999999), CF=1 no digits.
+; Clobbers EDX. Preserves the rest.
+; ---------------------------------------------------------------------------
+parse_decimal:
+    push esi
+    push ecx
+    mov esi, eax
+    xor eax, eax
+    xor ecx, ecx                 ; digit count
+.next:
+    movzx edx, byte [esi]
+    sub dl, '0'
+    cmp dl, 9
+    ja .done
+    imul eax, eax, 10
+    movzx edx, dl
+    add eax, edx
+    cmp eax, 999999
+    jbe .no_clamp
+    mov eax, 999999
+.no_clamp:
+    inc esi
+    inc ecx
+    jmp .next
+.done:
+    test ecx, ecx
+    jz .none
+    clc
+    jmp .out
+.none:
+    stc
+.out:
+    pop ecx
+    pop esi
+    ret
+
+; ---------------------------------------------------------------------------
+; parse_hex — EAX = flat pointer to text, optionally "0x"/"0X" prefixed
+; (skipped if present), followed by hex digits (0-9, A-F, a-f); parse up to
+; the first non-hex-digit character. Out: CF=0 + EAX = value, CF=1 no hex
+; digits found. Clobbers EDX. Preserves the rest. Mirrors parse_decimal's
+; shape/contract (added for /PKTINT=0xNN — Stage 7 step 1, no existing hex
+; parser in this file; /IPXSOCK= and /BAUD= are both decimal).
+; ---------------------------------------------------------------------------
+parse_hex:
+    push esi
+    push ecx
+    mov esi, eax
+
+    cmp byte [esi], '0'
+    jne .noprefix
+    mov al, [esi + 1]
+    cmp al, 'x'
+    je .skipprefix
+    cmp al, 'X'
+    jne .noprefix
+.skipprefix:
+    add esi, 2
+.noprefix:
+
+    xor eax, eax
+    xor ecx, ecx                  ; digit count
+.next:
+    mov dl, [esi]
+    cmp dl, '0'
+    jb .done
+    cmp dl, '9'
+    jbe .digit
+    and dl, 0xDF                  ; fold 'a'-'f' to 'A'-'F'
+    cmp dl, 'A'
+    jb .done
+    cmp dl, 'F'
+    ja .done
+    sub dl, 'A' - 10
+    jmp .accum
+.digit:
+    sub dl, '0'
+.accum:
+    shl eax, 4
+    movzx edx, dl
+    add eax, edx
+    inc esi
+    inc ecx
+    jmp .next
+.done:
+    test ecx, ecx
+    jz .none
+    clc
+    jmp .out
+.none:
+    stc
+.out:
+    pop ecx
+    pop esi
+    ret
+
+; ---------------------------------------------------------------------------
+; parse_dotted_quad — ESI = flat ptr to "a.b.c.d" text (3 '.' separators,
+; each octet 1-3 decimal digits, 0-255). EDI = flat ptr to a 4-byte output
+; buffer (network/big-endian order: first octet -> byte 0). Out: CF=0 +
+; ESI advanced past the last octet's digits (left on whatever follows, e.g.
+; ':' or NUL); CF=1 malformed (bad octet range, a non-digit where a digit/
+; '.' was expected, or an octet with zero digits) — the OUTPUT BUFFER may
+; be partially written on a CF=1 return; every caller here only reads it
+; after a CF=0 check. Clobbers EAX/ECX/EDX. Shared by /IP=, /MASK=, /GW=,
+; and /TCP='s address part — the plan's "dotted-quad parser shared, one
+; helper" requirement.
+; ---------------------------------------------------------------------------
+parse_dotted_quad:
+    push ebx
+    mov ebx, 4                      ; octets remaining
+.octet:
+    xor eax, eax
+    xor ecx, ecx                    ; digit count for this octet
+.digit:
+    movzx edx, byte [esi]
+    sub dl, '0'
+    cmp dl, 9
+    ja .digits_done
+    cmp ecx, 3
+    jae .bad                        ; more than 3 digits: reject outright
+    imul eax, eax, 10
+    movzx edx, dl
+    add eax, edx
+    inc esi
+    inc ecx
+    jmp .digit
+.digits_done:
+    test ecx, ecx
+    jz .bad                         ; no digits at all
+    cmp eax, 255
+    ja .bad
+    mov [edi], al
+    inc edi
+    dec ebx
+    jz .done
+    cmp byte [esi], '.'
+    jne .bad
+    inc esi
+    jmp .octet
+.done:
+    pop ebx
+    clc
+    ret
+.bad:
+    pop ebx
+    stc
+    ret
+
+; ---------------------------------------------------------------------------
 ; cleanup — restore PIT, IRQ0, IRQ1 and return to text mode
 ; ---------------------------------------------------------------------------
 cleanup:
     push eax
+    call NetShutdown         ; restore the UART vector/PIC state (no-op if unbound)
     call audio_shutdown
     call joypad_restore
     call pit_restore

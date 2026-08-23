@@ -44,7 +44,7 @@ extern PlayDefaultMusic
 extern PlayMusic
 extern PokecenterChanseyText   ; NOT YET DEFINED IN THE PORT
 extern PrintText
-extern Serial_TryEstablishingExternallyClockedConnection   ; NOT YET DEFINED IN THE PORT
+extern Serial_TryEstablishingExternallyClockedConnection   ; src/home/serial.asm (pret home/serial.asm)
 extern StopAllMusic
 extern TextScriptEnd
 

@@ -165,9 +165,12 @@ naming their retirement.
       mirrored paths, measured 2026-08-23; `main_menu_stubs.asm` is down to one stub,
       `CableClubNPC`, which is out of lane. The must-hit scenarios for all four are
       still owed.
-      **Cable is explicitly NOT in this list any more.** Maintainer directive
-      2026-08-17: the link-cable layer is not to be wired for the foreseeable future.
-      `CableClubNPC` keeps its stub; see stigmergy `link-layer-planned-transports`.
+      **Cable is explicitly NOT in this list any more — it has its own plan.**
+      The 2026-08-17 "stays unwired" directive was superseded 2026-08-21 by the
+      maintainer reopening the link layer: the work is owned by
+      `docs/current_plan_link_cable.md` (its Stage 2 retires the `CableClubNPC`
+      stub).
+
 
 **Known gap, not a bullet:** `ShowTextStream`
 (`src/engine/overworld/map_sprites.asm:991`) unconditionally calls

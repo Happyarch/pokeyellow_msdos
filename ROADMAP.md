@@ -192,23 +192,52 @@ Query the live open-item list rather than trusting this list:
 
 ---
 
-## Phase 4: Network Multiplayer
+## Phase 4: Network Multiplayer — 🔨 STATIC-COMPLETE, battery pending
 
 **Goal:** Trade and battle over a network connection, replacing the link cable.
 
-Transport selection (decide during implementation):
-- IPX packets (Novell/DOS; works in DOSBox and 86Box)
-- Raw serial / null-modem (real hardware via COM port)
-- Packet-driver TCP/IP (WATTCP or mTCP)
+**All three transports are IMPLEMENTED** (2026-08-23, the
+`docs/current_plan_link_cable.md` arc — read that plan for per-stage detail
+and the close-out evidence). The "decide during implementation" question this
+section used to pose resolved as ALL OF THEM, layered behind one HAL:
 
-Acceptance criteria:
-- Link cable I/O HAL defined, replacing the `; TODO-HW: network HAL` stubs. Those
-  stubs live in `dos_port/src/home/serial_stubs.asm`; the call sites carrying the
-  tag are in `src/engine/menus/link_menu.asm`, `src/engine/pokemon/bills_pc.asm`
-  and `src/engine/battle/end_of_battle.asm`. There is no HAL file yet —
-  `serial_hal.inc` is a proposed name, not a path.
-- Pokémon trade verified between two instances
-- Link battle verified between two instances
+- `src/net/net_hal.asm` — the transport vtable (`NET_TRANSPORT_UART/IPX/TCP`)
+  plus the session state machine; `src/net/net_frame.asm` — the shared
+  framing/ARQ/keepalive codec every transport rides. The old
+  `serial_stubs.asm` / "no HAL file yet" wording this section carried is
+  years-stale: pret's `home/serial.asm` handler is real, and the stubs it
+  described are retired.
+- Serial: `src/net/com_uart.asm` (16550 UART, `/COM1-4 /BAUD=`), DOSBox-X
+  nullmodem harness `tools/linkcheck.sh`.
+- IPX: `src/net/ipx_dos.asm` (INT 2F detect, DPMI 0301h real-mode far calls,
+  `/IPX /IPXSOCK=`), DOSBox-X IPXNET harness variant.
+- TCP: `src/net/pktdrv.asm` (packet-driver client, DPMI 0303h RX callback,
+  `/PKTINT=`) + `src/net/net_ip.asm` (bespoke ARP + IPv4 + minimal
+  stop-and-wait TCP — NOT WATTCP/mTCP, the codec already supplies ARQ so the
+  stack only needs to be a byte stream; `/TCPWAIT /TCP= /IP= /MASK= /GW=`),
+  DOSBox-X NE2000+slirp harness variant (topology designed, unverified).
+- UI: transport selectable in-game at the Cable Club receptionist
+  (`src/net/link_ui.asm`), keyboard-entered addresses (`src/input/
+  kbd_text.asm`), five saved connections per transport in `LINKBOOK.DAT`
+  (`src/net/link_book.asm`), plus a DIRECT connect path that never touches
+  the book.
+
+Acceptance criteria — **evidence discipline: "verified under two-instance
+DOSBox-X", never "works on real hardware"** (the real-hardware paths — UART
+on a physical null modem, Novell IPX, a real packet driver — ship
+spec-conformant with runtime escape hatches, the printer-backend precedent
+for unverifiable hardware):
+- [x] Link cable I/O HAL defined (net_hal vtable + net_frame codec, above)
+- [~] Pokémon trade between two instances: code-complete + static-verified;
+      the serial transport's link-up ran live pre-deferral (linkcheck,
+      Stage 2), the full trade flow awaits the plan's end-of-plan battery
+      (`tools/tradecheck.sh`)
+- [~] Link battle between two instances: code-complete + static-verified;
+      awaits the same battery (`tools/battlecheck.sh`)
+
+The remaining runtime debt is enumerated in ONE place — the END-OF-PLAN
+DYNAMIC BATTERY item in `docs/current_plan_link_cable.md`. That plan stays
+active (not archived) until the battery runs.
 
 ---
 

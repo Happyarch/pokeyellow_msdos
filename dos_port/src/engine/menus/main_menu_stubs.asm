@@ -41,11 +41,6 @@ section .text
 ; CeladonPrizeMenu stub RETIRED (overworld-events Stage 2 / chunk 4):
 ; ported faithfully to src/engine/events/prize_menu.asm.
 
-; STUB{class=stub; label=CableClubNPC; pret=engine/menus/cable_club.asm:CableClubNPC; behavior=return immediately instead of opening cable-club flow; evidence=overworld-events Stage 2 says cable-club behavior remains Phase 4; lifetime=until Phase 4 cable/link behavior lands}
-global CableClubNPC
-CableClubNPC:
-    ret
-
 ; DoClearSaveDialogue lives at its pret mirror, engine/movie/oak_speech/
 ; clear_save.asm (a temporary-DEVIATION body, not a stub — pret reaches it with
 ; farjp, so a ret-only stub cannot model it).

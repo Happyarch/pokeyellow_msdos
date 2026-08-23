@@ -37,7 +37,8 @@ extern g_tilecache_dirty             ; ppu.asm — arm the tile-cache rebuild
 extern AnimateShootingStar           ; engine/movie/splash.asm — the shooting-star animation
 extern LoadCopyrightAndTextBoxTiles  ; engine/movie/title.asm — the boot copyright screen
 extern PlayIntroScene                ; engine/movie/intro_yellow.asm — the Yellow intro scenes (B3)
-extern CopyTileIDsFromList             ; engine/battle/animations.asm (pret predef)
+extern CopyTileIDsFromList           ; engine/battle/animations.asm — BH=list index, BL=base tile id
+
 
 section .text
 
@@ -150,20 +151,26 @@ IntroPlaceBlackTiles:
     ret
 
 ; ---------------------------------------------------------------------------
+; CopyTileIDsFromList_ZeroBaseTileID — pret engine/movie/intro.asm:78
+; (`ld c, 0 / predef_jump CopyTileIDsFromList`). Needed by trade.asm's
+; Trade_DrawOpenEndOfLinkCable / Trade_DrawLeftGameboy / Trade_DrawRightGameboy
+; (engine/movie/trade.asm), which is why it lives here rather than being
+; hand-added to trade.asm: this label's pret home is intro.asm, and the mirror
+; rule keeps every pret entry point at its pret path regardless of who calls it.
+; In: BH = tile ID list index (pret b, unchanged); BL is forced to 0 (pret c).
+; DEVIATION{class=banking; pret=engine/movie/intro.asm:CopyTileIDsFromList_ZeroBaseTileID; behavior=pret's predef_jump dispatch through the ROM predef table becomes a direct near jmp to the flat CopyTileIDsFromList body; evidence=the flat single-address-space port has no ROM banking and no predef dispatch table for code predefs, the same boundary documented in cable_club.asm's header DEVIATION; lifetime=permanent flat-code boundary}
+; ---------------------------------------------------------------------------
+global CopyTileIDsFromList_ZeroBaseTileID
+CopyTileIDsFromList_ZeroBaseTileID:
+    xor bl, bl                       ; ld c, 0
+    jmp CopyTileIDsFromList           ; predef_jump CopyTileIDsFromList
+
+; ---------------------------------------------------------------------------
 ; PlayShootingStar — the Game Freak "shooting star" splash. Shows the copyright
 ; screen, then draws the framing bars, loads the logo tiles, and runs the
 ; shooting-star animation on the cinematic surface, then tears it down.
 ;
 ; DEVIATION{class=HAL; pret=engine/movie/intro.asm:PlayShootingStar; behavior=the GB LCD control (DisableLCD/EnableLCD + rLCDC window/BG-map bits, and the standalone ClearScreen before the bars which IntroDrawBlackBars already covers) is dropped in favour of the cinematic surface, and IO_LCDC is set only to select signed BG tile addressing; evidence=the port has no LCD and composites a matte surface with its own loop, so those hardware writes have no counterpart; lifetime=permanent flat-memory/HAL model}
-; ---------------------------------------------------------------------------
-; CopyTileIDsFromList_ZeroBaseTileID — pret engine/movie/intro.asm:78.
-; CopyTileIDsFromList with a base tile id of zero. pret writes it as a
-; `predef_jump`; the port calls the predef target directly (flat model).
-; UNREFERENCED IN PRET and here — the R/B intro's helper.
-; ---------------------------------------------------------------------------
-CopyTileIDsFromList_ZeroBaseTileID:
-    mov bl, 0                           ; ld c, 0
-    jmp CopyTileIDsFromList             ; predef_jump CopyTileIDsFromList
 
 ; ---------------------------------------------------------------------------
 global PlayShootingStar

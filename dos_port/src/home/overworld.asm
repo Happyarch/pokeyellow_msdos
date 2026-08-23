@@ -126,6 +126,9 @@ extern DelayFrames                        ; src/home/delay.asm
 extern DisplayStartMenu                   ; src/home/start_menu.asm
 extern DoSignInteraction                  ; src/engine/overworld/overworld.asm
 extern DumpBackbuffer                     ; src/debug/debug_dump.asm
+%ifdef DEBUG_TRADE_GOLDEN
+extern trade_golden_dump_armed            ; src/debug/debug_dump.asm — armed by Route2TradeHouse shim
+%endif
 extern DumpSeamLog                        ; src/debug/debug_dump.asm
 extern EnterMapAnim                       ; src/engine/overworld/player_animations.asm
 extern GBFadeOutToBlack                   ; src/home/fade.asm
@@ -162,6 +165,24 @@ extern RunCreditsTest                     ; src/engine/movie/credits.asm
 %endif
 extern RunLearnMoveTest                   ; src/debug/debug_dump.asm
 extern RunLinkCupsTest                    ; src/engine/menus/link_menu.asm
+%ifdef DEBUG_NETTEST
+extern RunNetPipeTest                     ; src/net/net_test.asm
+%endif
+%ifdef DEBUG_LINKCHECK
+extern RunLinkCheck                       ; src/engine/link/cable_club_npc.asm
+%endif
+%ifdef DEBUG_TRADECHECK
+extern RunTradeCheck                      ; src/engine/link/cable_club_npc.asm
+%endif
+%ifdef DEBUG_BATTLECHECK
+extern RunBattleCheck                     ; src/engine/link/cable_club_npc.asm
+%endif
+%ifdef DEBUG_LINKBOOKCHECK
+extern RunLinkBookCheck                   ; src/engine/link/cable_club_npc.asm
+%endif
+%ifdef DEBUG_KBDNAMECHECK
+extern RunKbdNameCheckTest                ; src/engine/menus/naming_screen.asm
+%endif
 extern RunLinkMenuTest                    ; src/engine/menus/link_menu.asm
 extern RunListMenuTest                    ; src/debug/debug_dump.asm
 extern RunMainMenuTest                    ; src/engine/menus/main_menu.asm
@@ -369,6 +390,49 @@ EnterMap:
     mov byte [ebp + wYCoord], SIGNTEXT_Y
     mov byte [ebp + wXCoord], SIGNTEXT_X
     mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    ; An INDOOR SIGNTEXT_MAP needs its .blk staged exactly like DEBUG_HIDDENOBJ
+    ; below (no-op for outdoor maps — the routine early-outs). Without it the
+    ; room draws off an empty block window (measured 2026-08-22 seeding a
+    ; Pokecenter for the link-receptionist smoke: blank screen).
+    call StageIndoorMapBlk
+%endif
+%ifdef DEBUG_CABLECLUB
+    ; Link-receptionist no-link gate (cable_club_nolink golden — link cable plan
+    ; Stage 2 step 4): spawn on the Pokecenter talk tile below the receptionist
+    ; (`object_event 11, 2, SPRITE_LINK_RECEPTIONIST, STAY, DOWN` — the defaults
+    ; put the player at y=3, x=11 in PEWTER_POKECENTER, open floor per
+    ; PewterPokecenter.blk + Pokecenter_Coll). The talk itself is driven by
+    ; AUTOKEY_APRESS through the real OverworldLoop dispatch — see the
+    ; post-LoadMapData block at the end of EnterMap.
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
+    mov byte [ebp + wCurMap], CABLECLUB_MAP
+    mov byte [ebp + wYCoord], CABLECLUB_Y
+    mov byte [ebp + wXCoord], CABLECLUB_X
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    ; Every Pokecenter is INDOORS: stage the .blk into the shared window (same
+    ; call and reason as DEBUG_HIDDENOBJ above).
+    call StageIndoorMapBlk
+    ; The receptionist's gate: without the pokedex CableClubNPC takes the
+    ; "making preparations" branch, not the 90-frame race under test. The mGBA
+    ; side seeds the same flag (cable_club_nolink.lua, seed.set_event).
+    SetEvent EVENT_GOT_POKEDEX
+%endif
+%ifdef DEBUG_TRADE_GOLDEN
+    ; in_game_trade golden (link cable plan Stage 3 step 4): spawn in
+    ; ROUTE_2_TRADE_HOUSE one tile south of the GAMEBOY_KID NPC
+    ; (`object_event 4, 1, SPRITE_GAMEBOY_KID, STAY, DOWN` —
+    ; data/maps/objects/Route2TradeHouse.asm), open floor per
+    ; Route2TradeHouse.blk decoded through the HOUSE tileset's collision list
+    ; (the standard shop-counter arrangement every Mart/PC clerk in the game
+    ; uses — NPC facing DOWN into the customer tile below it).
+    ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
+    mov byte [ebp + wCurMap], TRADE_GOLDEN_MAP
+    mov byte [ebp + wYCoord], TRADE_GOLDEN_Y
+    mov byte [ebp + wXCoord], TRADE_GOLDEN_X
+    mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+    ; ROUTE_2_TRADE_HOUSE is INDOORS: stage the .blk into the shared window
+    ; (same call and reason as DEBUG_CABLECLUB above).
+    call StageIndoorMapBlk
 %endif
 %ifdef DEBUG_PREDEFTEXT
     ; Predef-text gate (predef-text plan Stage 2 acceptance). Stand ON the SNES tile
@@ -1040,6 +1104,24 @@ EnterMap:
 %ifdef DEBUG_I2
     call RunLinkCupsTest                    ; run cup validators (pass+gated fail), record codes, dump, exits
 %endif
+%ifdef DEBUG_NETTEST
+    call RunNetPipeTest                     ; net_frame codec/ARQ RAM-pipe test, results -> wTileMap, dump, exits
+%endif
+%ifdef DEBUG_LINKCHECK
+    call RunLinkCheck                       ; loop the real CableClubNPC against the nullmodem peer; parks in LinkMenu, AutoKeyDrive dumps
+%endif
+%ifdef DEBUG_TRADECHECK
+    call RunTradeCheck                      ; loop the real CableClubNPC; success falls through LinkMenu into a real trade-center session
+%endif
+%ifdef DEBUG_BATTLECHECK
+    call RunBattleCheck                     ; loop the real CableClubNPC; success falls through LinkMenu into a real Colosseum link battle
+%endif
+%ifdef DEBUG_LINKBOOKCHECK
+    call RunLinkBookCheck                   ; single call to the real CableClubNPC; blocks in LinkTransportSelect's book UI, no peer
+%endif
+%ifdef DEBUG_KBDNAMECHECK
+    call RunKbdNameCheckTest                ; open the REAL (blocking) PLAYER naming screen, KBD_NAMING path driven by AUTOKEY_KBDSCRIPT
+%endif
 %ifdef DEBUG_LEARNMOVE
     call RunLearnMoveTest                  ; force a level-up move-learn, render one frame, dump FRAME.BIN, exits
 %endif
@@ -1220,6 +1302,35 @@ EnterMap:
     call SeamReseatView
     call RunSurfTestSeed                     ; party + bag + SURFBOARD; RETURNS
 %endif
+%ifdef DEBUG_CABLECLUB
+    ; Same shape as DEBUG_SURF above: seed, then FALL THROUGH into the real
+    ; OverworldLoop. AUTOKEY_APRESS's A press runs the production talk dispatch
+    ; (IsSpriteOrSignInFrontOfPlayer -> CheckNPCInteraction -> the generated
+    ; SCRIPT entry -> CableClubReceptionistScript -> CableClubNPC) and answers
+    ; the failure text's two `cont` page waits; the dump hook lives in the shim
+    ; (src/engine/link/cable_club_npc.asm).
+    ; LoadMapData does not derive the view pointer for a hand-seeded spawn.
+    call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
+    call SeamReseatView
+    ; Facing is seeded HERE, not with the coords: InitSprites (from LoadMapData)
+    ; rebuilds wSpriteStateData1 (same rule as DEBUG_HIDDENOBJ).
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], CABLECLUB_DIR
+%endif
+%ifdef DEBUG_TRADE_GOLDEN
+    ; Same shape as DEBUG_CABLECLUB above: seed, then FALL THROUGH into the
+    ; real OverworldLoop. AUTOKEY_TRADE_GOLDEN's A train + state-gated DOWN
+    ; climb run the production talk dispatch (IsSpriteOrSignInFrontOfPlayer ->
+    ; CheckNPCInteraction -> the generated SCRIPT entry ->
+    ; Route2TradeHouseGameboyKidText -> DoInGameTradeDialogue) through the
+    ; whole trade; the dump hook lives in the script glue
+    ; (src/scripts/Route2TradeHouse.asm).
+    ; LoadMapData does not derive the view pointer for a hand-seeded spawn.
+    call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
+    call SeamReseatView
+    ; Facing is seeded HERE, not with the coords: InitSprites (from LoadMapData)
+    ; rebuilds wSpriteStateData1 (same rule as DEBUG_CABLECLUB).
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], TRADE_GOLDEN_DIR
+%endif
 %ifdef DEBUG_LEDGE
     ; Same shape as DEBUG_SURF above: seed, then FALL THROUGH into the real
     ; OverworldLoop. AUTOKEY_LEDGE's scripted joypad arms the hop with a real
@@ -1337,6 +1448,20 @@ OverworldLoop:
     ; hJoyHeld; the DelayFrame path is per-frame and also clears hJoyPressed. Removed.
     call UpdateSprites                         ; advance player facing + walk animation
     call DelayFrame
+%ifdef DEBUG_TRADE_GOLDEN
+    ; in_game_trade golden photograph (armed by the Route2TradeHouse script shim
+    ; the instant DoInGameTradeDialogue returned): taken HERE, one full loop
+    ; iteration later — UpdateSprites above has recomputed the image indices the
+    ; dialog left at $FF (hidden) and the DelayFrame republished OAM, so the
+    ; frame matches the mGBA golden's "closing box dismissed, stable idle
+    ; overworld, sprites visible" dump point (measured 2026-08-23: dumping at
+    ; the A-release point photographed wUpdateSpritesEnabled=1 but every
+    ; state1 IMAGEINDEX still $FF and an empty $FE00).
+    cmp byte [trade_golden_dump_armed], 1
+    jne .noTradeGoldenDump
+    call DumpBackbuffer                    ; FRAME.BIN + GBSTATE.BIN, then exits
+.noTradeGoldenDump:
+%endif
 
     ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
 OverworldLoopLessDelay:                      ; pret: home/overworld.asm:OverworldLoopLessDelay
@@ -4859,4 +4984,5 @@ LoadDestinationWarpPosition:
     pop esi
     pop eax
     ret
+
 

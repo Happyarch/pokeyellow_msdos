@@ -1078,6 +1078,7 @@ SixDotsChar:
     mov eax, SixDotsCharText
     jmp PlaceCommandCharacter
 
+; DEVIATION{class=projection; pret=home/text.asm:PromptText; behavior=the wLinkState==LINK_STATE_BATTLING check that decides whether to draw the prompt arrow is not inlined here - PromptText dispatches through the text_prompt_hook function pointer (0=dialog_window_scroll for the overworld, or the owning screen's own hook for a projected msgbox), and each installed hook is responsible for its own link-state read; evidence=dialog_window_scroll (this file) calls the real ManualTextScroll (src/home/joypad2.asm) which already performs pret's wLinkState check and 65-frame link-battle delay, and BattlePromptWait (src/engine/battle/core.asm) performs the equivalent check before drawing the battle msgbox arrow, so every installed hook reproduces pret's link-battle skip even though no single site here contains the compare; lifetime=permanent, this is the message-box projection boundary (same family as msgbox.inc)}
 PromptText:
     ; <PROMPT> ($58): pret PromptText — draw ▼, wait for A/B, then FALL THROUGH into
     ; DoneText, which is what terminates the box. The display context is

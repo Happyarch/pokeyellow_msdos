@@ -27,16 +27,36 @@ section .text
 ; PartyMenuOrRockOrRun's safari-ROCK arm could keep pret's shape while the
 ; in-battle bag was unported; that arm now reaches the real routine.
 
-; LinkBattleExchangeData — pret engine/battle/core.asm:LinkBattleExchangeData.
-; The per-turn link-cable exchange: both sides swap their chosen action and the
-; battle proceeds in lockstep.
+; LinkBattleExchangeData — STUB RETIRED 2026-08-23 (link cable plan Stage 4
+; step 2). The real body (the per-turn action exchange, the mid-battle
+; disconnect hatch, and the local drain loops) is now in its pret-mirrored
+; home, src/engine/battle/core.asm, right after SelectEnemyMove — pret's own
+; neighbor of this routine. All six callers (ChooseNextMon,
+; ReplaceFaintedEnemyMon, TryRunningFromBattle, SelectEnemyMove,
+; EnemySendOutFirstMon are call sites; ExecuteEnemyMove reads the receive
+; buffer the others populate) now reach the real exchange.
+
+; SetupPlayerAndEnemyPokeballs — pret engine/battle/draw_hud_pokeball_gfx.asm:170.
+; The link-battle "versus" screen's own pokeball-row setup (SEPARATE from the
+; regular in-battle HUD ball rows SetupOwnPartyPokeballs/SetupEnemyPartyPokeballs
+; already draw, above in this file's pret-mirrored home).
 ;
-; ADDED AS A STUB 2026-08-12 (battle plan 2b). ChooseNextMon calls it inside a
-; `wLinkState == LINK_STATE_BATTLING` branch, and keeping pret's branch shape
-; needs the label to resolve. Link play is entirely unported — there is no
-; serial HAL — so the branch is unreachable in this port: wLinkState is 0 in
-; single-player and nothing ever writes LINK_STATE_BATTLING.
-; STUB{label=LinkBattleExchangeData; class=stub; pret=engine/battle/core.asm:LinkBattleExchangeData; behavior=return without exchanging any data with a peer so the link branch of ChooseNextMon does nothing; evidence=label DB reports LinkBattleExchangeData missing and the port has no serial link HAL at all so no code path sets wLinkState to LINK_STATE_BATTLING; lifetime=until link battles are ported, which no current plan schedules}
-global LinkBattleExchangeData
-LinkBattleExchangeData:
+; ADDED AS A STUB 2026-08-23 (link cable plan Stage 4 step 2,
+; DisplayLinkBattleVersusTextBox). Re-measured whether this routine's own
+; dependencies exist, since the header note in draw_hud_pokeball_gfx.asm
+; calling it "NOT TRANSLATED, deliberately" predates the pokeballs-fork
+; retirement (battle plan 4c): LoadPartyPokeballGfx, SetupPokeballs and
+; WritePokeballOAMData — the three routines this one's body calls — are all
+; `translated` now. The remaining blocker is NOT a missing dependency, so
+; per the implementer spec this is stubbed rather than the scope being
+; widened to invent one: pret's own body hardcodes GB-native OAM pixel
+; coordinates for this screen ($50/$40 for the player row, $50/$68 for the
+; enemy row) that have no widescreen projection decided, and this port's own
+; precedent (DrawEnemyPokeballs's header, a few lines below in this file's
+; pret-mirrored home; also the battle-completion plan's MarowakAnim OAM-offset
+; refusal) explicitly declines to invent one without a scenario that can see
+; it. Same call, same reasoning, applied here rather than re-litigated.
+; STUB{label=SetupPlayerAndEnemyPokeballs; class=stub; pret=engine/battle/draw_hud_pokeball_gfx.asm:SetupPlayerAndEnemyPokeballs; behavior=return without drawing either pokeball row, so DisplayLinkBattleVersusTextBox's versus screen shows its name/VS text box but no party-roster pokeballs; evidence=label DB reports SetupPlayerAndEnemyPokeballs missing, its three callees (LoadPartyPokeballGfx, SetupPokeballs, WritePokeballOAMData) are all translated so no dependency blocks it, and the only remaining blocker is the undecided widescreen projection of pret's GB-native OAM coordinates ($50/$40, $50/$68) for a screen no current scenario exercises, the same class of decision DrawEnemyPokeballs's header and the battle-completion plan's MarowakAnim note both declined to guess; lifetime=until a widescreen placement for the link-battle versus pokeball rows is decided (maintainer/plan call, not an agent guess)}
+global SetupPlayerAndEnemyPokeballs
+SetupPlayerAndEnemyPokeballs:
     ret

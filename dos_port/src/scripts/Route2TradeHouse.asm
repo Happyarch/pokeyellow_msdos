@@ -29,6 +29,9 @@ global Route2TradeHouse_TextPointers
 extern DoInGameTradeDialogue
 extern EnableAutoTextBoxDrawing
 extern TextScriptEnd
+%ifdef DEBUG_TRADE_GOLDEN
+extern trade_golden_dump_armed      ; src/debug/debug_dump.asm — consumed by OverworldLoop
+%endif
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -63,4 +66,16 @@ Route2TradeHouseGameboyKidText:
     mov [ebp + wWhichTrade], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call DoInGameTradeDialogue
+%ifdef DEBUG_TRADE_GOLDEN
+    ; in_game_trade golden photograph: DoInGameTradeDialogue returning means
+    ; the whole flow (dialogue, YES/NO confirm, party-menu CLEFAIRY pick,
+    ; ConnectCableText, InternalClockTradeAnim, TradedForText, Thanks1Text)
+    ; ran — but its tail `jp PrintText` returns with Thanks1Text still ON
+    ; SCREEN (measured 2026-08-23: dumping here photographed the open box,
+    ; while the mGBA golden dumps after the box is dismissed). So ARM the dump
+    ; instead: OverworldLoop's post-interaction A-release path takes the
+    ; photograph after hide_window + LoadCurrentMapView — the golden's stable
+    ; idle overworld frame.
+    mov byte [trade_golden_dump_armed], 1
+%endif
     jmp TextScriptEnd

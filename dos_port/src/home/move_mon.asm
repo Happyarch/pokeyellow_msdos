@@ -8,6 +8,9 @@
 ; RemovePokemon/MoveMon are the home wrappers over the long-linked _RemovePokemon/
 ; _MoveMon engine bodies (pret jpfar / homecall_sf; flat model -> plain jmp, which
 ; also trivially preserves _MoveMon's CF the way homecall_sf exists to do).
+; AddEnemyMonToPlayerParty joined them in link plan Stage 3 (TradeCenter_Trade is
+; its first linked caller), completing the pret file's seven labels.
+;
 ; Stat formula (per stat): (((Base + IV) * 2 + ceil(sqrt(statExp))/4) * Level)/100
 ;   then + Level + 10 for HP, or + 5 for the others; capped at MAX_STAT_VALUE (999).
 ;
@@ -37,6 +40,7 @@ global AddEnemyMonToPlayerParty
 extern _AddEnemyMonToPlayerParty   ; src/engine/pokemon/add_mon.asm
 global MoveMon
 extern _MoveMon                    ; src/engine/pokemon/add_mon.asm
+
 
 MAX_STAT_HIGH   equ (MAX_STAT_VALUE >> 8) & 0xFF    ; HIGH(999) = 0x03
 MAX_STAT_LOW    equ MAX_STAT_VALUE & 0xFF            ; LOW(999)  = 0xE7
@@ -72,6 +76,7 @@ CopyDataUntil:
 ; ---------------------------------------------------------------------------
 RemovePokemon:
     jmp _RemovePokemon
+
 
 ; ---------------------------------------------------------------------------
 ; AddPartyMon — home wrapper around _AddPartyMon (pret home/move_mon.asm).

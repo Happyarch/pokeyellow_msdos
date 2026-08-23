@@ -214,6 +214,15 @@ deleting one, lift out anything durable it happens to carry — setup facts,
 measured traps, open items — into a properly-keyed memory of its own, because a
 handoff often smuggles knowledge that outlives the job. Then delete it.
 
+**No stigmergy tools in this session? Queue the edit — never drop it.** Remote/
+web sessions have no stigmergy access, but the work they do still obsoletes
+memories. Append every needed edit to **`docs/stigmergy_outbox.jsonl`** (one JSON
+object per line; schema and protocol are in that file's permanent README line;
+`args` mirrors the stigmergy call verbatim) in the SAME commit as the work that
+makes it necessary. A host session applies each entry and deletes its line in the
+applying commit, so the file shrinks back toward the README line — applied
+entries are never kept or struck through. (Maintainer request, 2026-08-22.)
+
 ---
 
 ## Current Phase

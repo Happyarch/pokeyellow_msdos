@@ -118,6 +118,14 @@ endef
 BUG_FIX_LEVEL ?= 0
 NASMFLAGS += -D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)
 
+# Keyboard naming-screen input path (link cable plan Stage 5 step 4): an
+# additive DOS-keyboard alternative to the joypad letter grid in
+# src/engine/menus/naming_screen.asm, gated the same way BUG_FIX_LEVEL is
+# above (%if value test, not %ifdef) so KBD_NAMING=0 (default) assembles the
+# untouched pret-mirrored code path byte-for-byte. Override: make KBD_NAMING=1
+KBD_NAMING ?= 0
+NASMFLAGS += -D KBD_NAMING=$(KBD_NAMING)
+
 # Real per-mon front sprites: pics.asm indexes MonFrontPics (src/data/mon_pics.asm,
 # generated). Without this every mon draws the single embedded debug pic (pidgey).
 NASMFLAGS += -D MON_FRONT_PICS
@@ -463,7 +471,7 @@ BOOT_SRCS := \
 
 HOME_SRCS := \
     src/home/home_stubs.asm \
-    src/home/serial_stubs.asm \
+    src/home/serial.asm \
     src/home/copy.asm \
     src/home/overworld.asm \
     src/home/pikachu.asm \
@@ -492,7 +500,26 @@ HOME_SRCS := \
 HAL_SRCS := \
     src/ppu/ppu.asm \
     src/input/joypad.asm \
+    src/input/kbd_text.asm \
     src/engine/joypad.asm
+
+# Network/link-cable HAL (docs/current_plan_link_cable.md). Port-owned transport
+# layer below the home/serial.asm HAL line: session state, framing/ARQ, and the
+# per-transport drivers (null transport first; COM UART, IPX, TCP per plan stage).
+# Uses only standard .text/.data/.bss — no link.ld change needed or allowed here.
+# (NOT named LINK_SRCS: that var is the linker-input aggregate below.)
+NET_SRCS := \
+    src/net/net_hal.asm \
+    src/net/link_book.asm \
+    src/net/link_ui.asm \
+    src/net/net_frame.asm \
+    src/net/com_uart.asm \
+    src/net/ipx_dos.asm \
+    src/net/pktdrv.asm \
+    src/net/net_ip.asm
+ifdef DEBUG_NETTEST
+NET_SRCS += src/net/net_test.asm
+endif
 
 # Save HAL — the battery. SramLoadImage/SramStoreImage move the emulated 32 KiB
 # SRAM image between the resident banks and POKEMON.DSV (.dsv v2, raw image).
@@ -854,6 +881,8 @@ GAME_SRCS := \
     src/data/events/slot_machine_wheels.asm \
     src/engine/menus/swap_items.asm \
     src/engine/link/cable_club.asm \
+    src/engine/link/cable_club_npc.asm \
+    src/engine/link/print_waiting_text.asm \
     src/engine/overworld/ledges.asm \
     src/home/pathfinding.asm \
     src/engine/overworld/pathfinding.asm \
@@ -995,6 +1024,8 @@ POKEMON_SRCS := \
     src/engine/movie/hall_of_fame.asm \
     src/engine/movie/credits.asm \
     src/engine/movie/evolution_stubs.asm \
+    src/engine/movie/trade.asm \
+    src/engine/movie/trade2.asm \
     src/engine/pokemon/learn_move.asm
 
 # Items layer (current_plan_items.md). Non-UI inventory/bag logic + item data.
@@ -2838,6 +2869,214 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_DUMP_FRAME=90
 NASMFLAGS += -D SKIP_TITLE
 endif
 $(eval $(call dump_gate,DEBUG_I2))
+# Link-cable Stage 2: net_frame codec/ARQ RAM-pipe unit test (src/net/net_test.asm).
+$(eval $(call dump_gate,DEBUG_NETTEST))
+# Link-cable Stage 2 step 5: the two-instance nullmodem harness gate
+# (tools/linkcheck.sh). RunLinkCheck loops the real CableClubNPC against the
+# peer; AUTOKEY_LINKCHECK's A train answers the receptionist prompts and stops
+# at LinkMenu entry (linkcheck_in_menu), where both instances park; the
+# photograph at AUTOKEY_DUMP_FRAME writes GBSTATE/FRAME/PAL (+LINKLOG.BIN when
+# the game runs with /LINKLOG) for the script's role/exchange-log assertions.
+# 3600 default: late enough for a several-second boot stagger between the two
+# instances plus the retry loop, well inside linkcheck.sh's run timeout.
+ifdef DEBUG_LINKCHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_LINKCHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_LINKCHECK
+AUTOKEY_DUMP_FRAME ?= 3600
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+# Parked-in-LinkMenu frames before the protocol-synchronized photograph
+# (debug_dump.asm defaults it to 900; AUTOKEY_DUMP_FRAME stays the ceiling
+# for runs that never reach the menu).
+ifdef LINKCHECK_MENU_HOLD
+NASMFLAGS += -D LINKCHECK_MENU_HOLD=$(LINKCHECK_MENU_HOLD)
+endif
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Link-cable Stage 3 step 5: the two-instance trade harness gate
+# (tools/tradecheck.sh). Clone of DEBUG_LINKCHECK: RunTradeCheck loops the real
+# CableClubNPC against the peer exactly like RunLinkCheck, but AUTOKEY_TRADECHECK
+# does NOT strip A at LinkMenu — it presses through the default TRADE CENTER
+# selection, drives the one-tile walk to the role's table gameboy
+# (CableClubLeftGameboy/RightGameboy, assets/hidden_events.inc), then both
+# rounds of the trade-center menu (round 1: both sides pick party slot 0 and
+# confirm; round 2: both sides navigate to CANCEL and confirm). AUTOKEY_DUMP_FRAME
+# is far larger than linkcheck's: on top of the same rendezvous-skew retry loop,
+# the harness also waits out the real trade animation and two full menu rounds.
+# 14000 is a generous starting point (docs/current_plan_link_cable.md step 5) —
+# tune against a real run once the maintainer's end-of-plan battery executes it.
+# make DEBUG_TRADECHECK=1
+ifdef DEBUG_TRADECHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRADECHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_TRADECHECK
+AUTOKEY_DUMP_FRAME ?= 14000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Link-cable Stage 4 step 3: the two-instance link BATTLE harness gate
+# (tools/battlecheck.sh). Clone of DEBUG_TRADECHECK: RunBattleCheck loops the
+# real CableClubNPC against the peer exactly like RunTradeCheck.
+# AUTOKEY_BATTLECHECK carries two live-WRAM gates (debug_dump.asm): one DOWN
+# strobe with A suppressed at LinkMenu to move the default cursor off item 0
+# (TRADE CENTER) onto item 1 (COLOSSEUM), and the one-tile walk to the role's
+# table gameboy — once COLOSSEUM is confirmed, the walk lands the player on
+# CableClubLeftGameboy/RightGameboy (bills_pc.asm), which arms
+# LINK_STATE_START_BATTLE and, via CableClub_Run's predef dispatch
+# (home/joypad2.asm -> engine/link/cable_club.asm:CableClub_Run ->
+# CableClub_DoBattleOrTrade -> DoBattleOrTradeAgain), runs the ENTIRE battle
+# synchronously inside `predef InitOpponent` (InitBattleCommon's own
+# `callfar StartBattle` / `callfar EndOfBattle`, engine/battle/init_battle.asm)
+# before CableClub_Run's caller ever resumes — so a bare A-train that answers
+# every prompt AND drives FIGHT/move-1 every turn is sufficient (see
+# AUTOKEY_BATTLECHECK's header comment in debug_dump.asm for the full
+# citation trace). AUTOKEY_DUMP_FRAME is larger than tradecheck's own 14000:
+# on top of the same rendezvous-skew retry loop and the walk, a full link
+# battle (turn-by-turn menu redraws, HP-bar animation, faint/switch handling)
+# runs longer than a trade's two menu rounds. 20000 is a generous starting
+# point (docs/current_plan_link_cable.md Stage 4 step 3) — unvalidated until
+# the maintainer's end-of-plan dynamic battery runs it (this implementer's
+# checks are static only, per that plan's directive).
+# make DEBUG_BATTLECHECK=1
+ifdef DEBUG_BATTLECHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BATTLECHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BATTLECHECK
+AUTOKEY_DUMP_FRAME ?= 20000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D SKIP_TITLE
+endif
+# Link-receptionist no-link golden (cable_club_nolink — link cable plan Stage 2
+# step 4): spawn on the Pewter Pokecenter talk tile facing the link receptionist
+# (`object_event 11, 2, SPRITE_LINK_RECEPTIONIST, STAY, DOWN`; the player stands
+# at y=3, x=11 facing UP — open floor per PewterPokecenter.blk decoded through
+# Pokecenter_Coll), seed EVENT_GOT_POKEDEX, and let AUTOKEY_APRESS drive a REAL
+# A press through OverworldLoop -> IsSpriteOrSignInFrontOfPlayer ->
+# CheckNPCInteraction -> the generated SCRIPT entry ->
+# CableClubReceptionistScript -> CableClubNPC. With no /COM1 there is no net
+# session, the 90-frame establishment race expires, AUTOKEY_APRESS answers the
+# failure text's two `cont` page waits, and the shim's DEBUG_CABLECLUB hook
+# photographs the moment CableClubNPC returns (last page still on screen).
+# make DEBUG_CABLECLUB=1
+ifdef DEBUG_CABLECLUB
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_CABLECLUB
+NASMFLAGS += -D SKIP_TITLE
+CABLECLUB_MAP ?= 0x3A
+CABLECLUB_Y   ?= 3
+CABLECLUB_X   ?= 11
+CABLECLUB_DIR ?= SPRITE_FACING_UP
+NASMFLAGS += -D CABLECLUB_MAP=$(CABLECLUB_MAP) -D CABLECLUB_Y=$(CABLECLUB_Y) \
+             -D CABLECLUB_X=$(CABLECLUB_X) -D CABLECLUB_DIR=$(CABLECLUB_DIR)
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
+# The gate dumps itself (the shim hook); keep AutoKeyDrive's own dump away.
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+# Link-cable Stage 5 step 5, Deliverable 2: the single-instance connection-book
+# persistence harness gate (tools/linkbookcheck.sh; `link_book_roundtrip` in
+# tools/scenario_manifest.json, scenario_class "port_only" -- no ROM ground
+# truth, so this is asserted directly against GBSTATE.BIN + LINKBOOK.DAT, not
+# through goldencheck). UNLIKE DEBUG_LINKCHECK/TRADECHECK/BATTLECHECK above,
+# there is NO nullmodem cable and no /COM1: RunLinkBookCheck (src/engine/
+# link/cable_club_npc.asm) calls the real CableClubNPC exactly once, and with
+# g_net_transport left at NET_TRANSPORT_NONE its LinkTransportSelect call
+# opens the port-only transport-select/connection-book UI (src/net/link_ui.asm)
+# instead of racing an establishment window against a peer. AUTOKEY_LINKBOOKCHECK
+# (debug_dump.asm's AutoKeyDrive) drives pad-level menu navigation, phase-gated
+# off live WRAM state; AUTOKEY_KBDSCRIPT drives the NAME?/ADDRESS? fields via a
+# scripted (scancode,shift) table pushed through the new kbd_ring_push
+# (src/input/joypad.asm) -- the same scancode-injection mechanism
+# DEBUG_KBDNAMECHECK below shares.
+#
+# LBC_PHASE2 selects the SECOND run's navigation + typing script (EDIT the TCP
+# entry's name, DELETE the IPX entry) instead of the first run's (NEW both);
+# tools/linkbookcheck.sh builds this SAME gate twice, once per run, per its own
+# header -- the underlying scenario/GBSTATE id stays DEBUG_LINKBOOKCHECK
+# either way, LBC_PHASE2 only swaps which AUTOKEY_LINKBOOKCHECK[_PHASE2]
+# navigation state machine and which kbdscript_table variant compile in.
+#
+# 3000 is an unmeasured starting point -- this implementer's checks are static
+# only per the plan's directive (no DOSBox-X run happened here); tune against
+# a real run once the maintainer's end-of-plan dynamic battery executes it.
+# make DEBUG_LINKBOOKCHECK=1  [LBC_PHASE2=1]
+ifdef DEBUG_LINKBOOKCHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_LINKBOOKCHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_LINKBOOKCHECK -D AUTOKEY_KBDSCRIPT
+AUTOKEY_DUMP_FRAME ?= 3000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D SKIP_TITLE
+ifdef LBC_PHASE2
+NASMFLAGS += -D AUTOKEY_LINKBOOKCHECK_PHASE2
+endif
+endif
+# Link-cable Stage 5 step 5, Deliverable 3: the KBD_NAMING naming-screen
+# scancode-injection gate (tools/kbdnamecheck.sh; `kbd_naming_entry` in
+# tools/scenario_manifest.json, scenario_class "port_only"). Requires
+# KBD_NAMING=1 -- naming_screen.asm %errors at assemble time otherwise (see
+# RunKbdNameCheckTest's header). RunKbdNameCheckTest clones
+# RunNamingScreenTest's identity seed but then calls the REAL (blocking)
+# DisplayNamingScreen instead of drawing the letter grid by hand, so this
+# gate's scripted "Ab" + Tab (opens the picker) + Enter (picks index 0) +
+# Enter (submits) sequence -- pushed through the SAME AUTOKEY_KBDSCRIPT
+# mechanism DEBUG_LINKBOOKCHECK above shares -- actually drives the KBD_NAMING
+# input path (%if KBD_NAMING in naming_screen.asm) end to end.
+# AUTOKEY_QUIET: no pad presses at all -- kbd_text.asm/DisplayNamingScreen's
+# KBD_NAMING branch reads only the keyboard ring, never pad state, so this
+# scenario needs none of AUTOKEY_LINKBOOKCHECK's menu-navigation gate.
+# 600 is an unmeasured starting point, same caveat as DEBUG_LINKBOOKCHECK's own.
+# make KBD_NAMING=1 DEBUG_KBDNAMECHECK=1
+ifdef DEBUG_KBDNAMECHECK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_KBDNAMECHECK
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET -D AUTOKEY_KBDSCRIPT -D AUTOKEY_KBDNAMECHECK
+AUTOKEY_DUMP_FRAME ?= 600
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+NASMFLAGS += -D SKIP_TITLE
+endif
+# in_game_trade golden (link cable plan Stage 3 step 4 — the trade.asm fidelity
+# anchor): the Route 2 Trade House CLEFAIRY -> MR_MIME "MILES" trade
+# (data/events/trades.asm index 1, TRADE_FOR_MILES; scripts/Route2TradeHouse.asm's
+# GAMEBOY_KID). Same spawn shape as DEBUG_CABLECLUB: spawn beside
+# `object_event 4, 1, SPRITE_GAMEBOY_KID, STAY, DOWN`
+# (data/maps/objects/Route2TradeHouse.asm) at tile (y=2,x=4) facing UP — one
+# tile south of the NPC, the standard shop-counter arrangement (matches every
+# Mart/PC clerk in the game). DEBUG_SEED_PARTY seeds the debug party with ONE
+# row swapped under DEBUG_TRADE_GOLDEN (JIGGLYPUFF -> CLEFAIRY, same slot —
+# src/engine/debug/debug_party.asm), so the give-species is present. The whole
+# dialogue/menu flow (WannaTrade1Text, the YES/NO confirm — cursor defaults
+# YES, home/yes_no.asm — the party-menu CLEFAIRY pick, ConnectCableText,
+# InternalClockTradeAnim, TradedForText/Thanks1Text) advances on a periodic A
+# train (AUTOKEY_TRADE_GOLDEN, cloned from AUTOKEY_LINKCHECK/TRADECHECK's
+# shape) plus a state-gated party-menu DOWN climb to CLEFAIRY's slot
+# (debug_dump.asm's .apply, same rule as AUTOKEY_TRADECHECK's ROUND2
+# DOWN-to-CANCEL gate). The dump itself is STATE-GATED, not frame-gated: the
+# shim hook in src/scripts/Route2TradeHouse.asm fires the instant
+# DoInGameTradeDialogue returns — which, because its tail is a `jp PrintText`
+# into the LAST dialog box, is exactly "the closing dialog is dismissed, a
+# stable idle overworld frame" (spec step 5). AUTOKEY_DUMP_FRAME is therefore
+# only AutoKeyDrive's OWN fallback ceiling if that hook never fires (flow
+# stall), same role DEBUG_CABLECLUB gives it — SPEC DEVIATION from "start 3600
+# and measure": the DOSBox-side dynamic run that would measure a fixed frame
+# is deferred (maintainer directive 2026-08-23), and a state gate needs no
+# such measurement to be correct.
+# make DEBUG_TRADE_GOLDEN=1
+ifdef DEBUG_TRADE_GOLDEN
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_TRADE_GOLDEN
+NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SEED_PARTY
+TRADE_GOLDEN_MAP ?= 0x30
+TRADE_GOLDEN_Y   ?= 2
+TRADE_GOLDEN_X   ?= 4
+TRADE_GOLDEN_DIR ?= SPRITE_FACING_UP
+NASMFLAGS += -D TRADE_GOLDEN_MAP=$(TRADE_GOLDEN_MAP) -D TRADE_GOLDEN_Y=$(TRADE_GOLDEN_Y) \
+             -D TRADE_GOLDEN_X=$(TRADE_GOLDEN_X) -D TRADE_GOLDEN_DIR=$(TRADE_GOLDEN_DIR)
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_TRADE_GOLDEN
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
 # LoadEnemyMonData → LoadBattleMonFromParty) + the convergence-spec DV overwrite
 # replace DEBUG_BATTLE's synthetic seed. Combine with DEBUG_BATTLE_INTRO /
@@ -3132,6 +3371,7 @@ FRONTEND_SRCS := \
     src/debug/debug_battle_moveset.asm \
     src/engine/battle/pokeballs.asm \
     src/engine/battle/draw_hud_pokeball_gfx.asm \
+    src/engine/battle/link_battle_versus_text.asm \
     src/data/trainer_pics.asm \
     src/data/mon_pics.asm \
     src/engine/battle/battle_stubs.asm \
@@ -3159,7 +3399,7 @@ BATTLE_SUPPORT_SRCS := \
     src/home/copy2.asm \
     src/engine/items/get_bag_item_quantity.asm
 
-LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(SAVE_SRCS) $(AUDIO_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
+LINK_SRCS := $(BOOT_SRCS) $(HOME_SRCS) $(HAL_SRCS) $(NET_SRCS) $(SAVE_SRCS) $(AUDIO_SRCS) $(GAME_SRCS) $(POKEMON_SRCS) $(ITEMS_SRCS) $(FRONTEND_SRCS) $(BATTLE_SUPPORT_SRCS)
 # Stable de-dup: several DEBUG_* gates each append debug_party.asm, so combining two
 # (e.g. DEBUG_SEED_PARTY + DEBUG_STATUS) would list its object twice → ld "multiple
 # definition". Drop duplicates while preserving first-seen order (link layout unchanged).
@@ -3777,13 +4017,18 @@ assets/gb_charmap.txt:
 # it back (the recipe only fires when a LISTED target is stale). A clean tree was
 # unaffected — menu_strings.inc is missing too, so the recipe runs and writes them
 # all — but that is luck, not a dependency. Measured and fixed 2026-08-02.
+# cable_club_text.inc was added to the generator by the link-cable Stage 3
+# merge but never added here (same class of gap this note already warns
+# about) — fixed alongside adding trade_text.inc/trade_mon_info_text.inc,
+# which is the edit that caught it.
 assets/menu_strings.inc assets/menu_text.inc assets/trainer_card_strings.inc \
         assets/party_menu_strings.inc assets/home_pokemon_strings.inc \
         assets/options_strings.inc assets/naming_strings.inc \
         assets/pokedex_strings.inc assets/bills_pc_text.inc \
         assets/save_text.inc assets/main_menu_text.inc assets/league_pc_text.inc \
-        assets/players_pc_text.inc assets/link_text.inc assets/oaks_pc_text.inc \
-        assets/pc_text.inc: \
+        assets/players_pc_text.inc assets/link_text.inc assets/link_npc_text.inc assets/oaks_pc_text.inc \
+        assets/pc_text.inc assets/cable_club_text.inc assets/trade_text.inc \
+        assets/trade_mon_info_text.inc: \
         assets/gb_charmap.txt tools/generators/gen_menu_strings.py \
         tools/generators/gb_text.py tools/generators/gen_battle_text.py
 	python3 tools/generators/gen_menu_strings.py
@@ -3835,6 +4080,12 @@ assets/textbox_strings.inc: assets/gb_charmap.txt tools/generators/gen_textbox_s
 # List-menu strings (pret home/list_menu.asm: CANCEL / ×01 / the qty-price spacer).
 assets/list_menu_strings.inc: assets/gb_charmap.txt tools/generators/gen_list_menu_strings.py tools/generators/gb_text.py
 	python3 tools/generators/gen_list_menu_strings.py
+
+# Link-cable setup UI strings (docs/current_plan_link_cable.md Stage 5 step 2):
+# the transport-select menu + connection-book screens. Port-only (LinkUIStr_*,
+# no pret counterpart draws this UI); consumed by step 3's src/net/link_ui.asm.
+assets/link_ui_strings.inc: assets/gb_charmap.txt tools/generators/gen_link_ui_strings.py tools/generators/gb_text.py
+	python3 tools/generators/gen_link_ui_strings.py
 
 # Two-option (YES/NO) menu options — pret data/yes_no_menu_strings.asm.
 assets/yes_no_strings.inc: assets/gb_charmap.txt tools/generators/gen_yes_no_strings.py tools/generators/gb_text.py
@@ -4156,6 +4407,17 @@ assets/trainer_card_tiles.inc: ../gfx/trainer_card/trainer_info.2bpp \
                                tools/generators/gen_trainer_card_tiles.py
 	python3 tools/generators/gen_trainer_card_tiles.py
 
+# Trade-animation tile graphics (link cable / Game Boy pics / cable ball),
+# 2bpp passthrough of gfx/trade/*.2bpp, for LoadTradingGFXAndMonNames
+# (engine/movie/trade.asm). game_boy.2bpp is built with --remove-duplicates
+# (see the root Makefile's tools/gfx rule for it) so its tile count is derived
+# from the built file, not the source PNG's pixel dimensions.
+assets/trade_tiles.inc: ../gfx/trade/game_boy.2bpp \
+                        ../gfx/trade/link_cable.2bpp \
+                        ../gfx/trade/cable_ball.2bpp \
+                        tools/generators/gen_trade_tiles.py
+	python3 tools/generators/gen_trade_tiles.py
+
 # Pokédex interface tiles (2bpp passthrough of gfx/pokedex/pokedex.2bpp + the
 # plain pokéball tile from gfx/battle/balls.2bpp) for LoadPokedexTilePatterns.
 assets/pokedex_tiles.inc: ../gfx/pokedex/pokedex.2bpp ../gfx/battle/balls.2bpp \
@@ -4210,6 +4472,15 @@ src/engine/menus/pokedex.o: assets/ui_layout_menus.inc \
 src/data/pokemon/dex_entries.o: assets/dex_entries.inc
 src/engine/gfx/load_pokedex_tiles.o: assets/pokedex_tiles.inc
 src/engine/menus/link_menu.o: assets/ui_layout_menus.inc assets/link_text.inc
+src/engine/link/cable_club_npc.o: assets/link_npc_text.inc assets/event_constants.inc assets/audio_constants.inc
+src/net/link_ui.o: assets/ui_layout_menus.inc assets/link_ui_strings.inc
+
+# Trade animation (link plan Stage 3 step 3): tile graphics + the 8 far text
+# bodies (trade.asm), and the raw Trade_MonInfoText glyph run (trade2.asm).
+src/engine/movie/trade.o: assets/trade_tiles.inc assets/trade_text.inc \
+                          assets/battle_anim_constants.inc assets/audio_constants.inc \
+                          assets/ui_layout_intro.inc
+src/engine/movie/trade2.o: assets/trade_mon_info_text.inc assets/ui_layout_intro.inc
 
 # Status screen %includes the generated status_strings.inc label block.
 src/engine/pokemon/status_screen.o: assets/status_strings.inc
@@ -4330,6 +4601,15 @@ src/data/battle/set_damage_effects.o: assets/set_damage_effects.inc
 assets/alphabets.inc: ../data/text/alphabets.asm ../constants/charmap.asm \
                       ../gfx/font/ED.1bpp tools/generators/gen_alphabets.py
 	python3 tools/generators/gen_alphabets.py
+
+# Keyboard text-entry scancode->charmap tables (link cable plan Stage 5 step
+# 1: src/input/kbd_text.asm). Port-only US-keyboard layout data — no pret
+# source, but the byte values still route through gb_text.encode() (the GB
+# charmap), not hand-transcribed hex.
+assets/kbd_scancode_map.inc: tools/generators/gen_kbd_naming.py assets/gb_charmap.txt
+	python3 tools/generators/gen_kbd_naming.py
+
+src/input/kbd_text.o: assets/kbd_scancode_map.inc
 
 # Pikachu emotion-command text (ExpressionText). Generated from
 # engine/pikachu/pikachu_emotions.asm + data/text/text_3.asm + constants/charmap.asm.
@@ -4591,8 +4871,11 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \
         assets/mon_icons.inc \
         assets/save_text.inc assets/main_menu_text.inc assets/league_pc_text.inc \
-        assets/players_pc_text.inc assets/link_text.inc assets/oaks_pc_text.inc \
-        assets/pc_text.inc assets/slots_text.inc assets/safari_text.inc
+        assets/players_pc_text.inc assets/link_text.inc assets/link_npc_text.inc assets/oaks_pc_text.inc \
+        assets/pc_text.inc assets/slots_text.inc assets/safari_text.inc \
+        assets/cable_club_text.inc assets/trade_tiles.inc assets/trade_text.inc \
+        assets/trade_mon_info_text.inc \
+        assets/kbd_scancode_map.inc assets/link_ui_strings.inc
 	python3 tools/audit_memmap.py
 
 assets/scenario_registry.inc: tools/scenario_manifest.json tools/generators/gen_scenario_registry.py

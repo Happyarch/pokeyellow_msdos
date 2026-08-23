@@ -34,6 +34,24 @@ bits 32
 %ifndef LINK_STATE_BATTLING
 %define LINK_STATE_BATTLING 4
 %endif
+%ifndef LINKBATTLE_RUN
+%define LINKBATTLE_RUN 0xF          ; constants/serial_constants.asm
+%endif
+%ifndef LINKBATTLE_STRUGGLE
+%define LINKBATTLE_STRUGGLE 0xE     ; constants/serial_constants.asm
+%endif
+%ifndef LINKBATTLE_NO_ACTION
+%define LINKBATTLE_NO_ACTION 0xD    ; constants/serial_constants.asm
+%endif
+%ifndef SERIAL_RNS_LENGTH
+%define SERIAL_RNS_LENGTH 10        ; constants/serial_constants.asm — BattleRandom link path
+%endif
+%ifndef USING_EXTERNAL_CLOCK
+%define USING_EXTERNAL_CLOCK 0x01   ; constants/serial_constants.asm
+%endif
+%ifndef USING_INTERNAL_CLOCK
+%define USING_INTERNAL_CLOCK 0x02   ; constants/serial_constants.asm — speed-tie master inversion
+%endif
 ; carried in with PlayMoveAnimation (was animations.asm)
 %define ANIM_OFF_DELAY 30              ; pret .animationsDisabled: ld c,30 / call DelayFrames
 ; carried in with CalculateDamage (was core_damage.asm)
@@ -228,7 +246,9 @@ extern CopyToStringBuffer              ; src/home/copy_string.asm
 extern ItemsCantBeUsedHereText         ; assets/battle_text.inc (generated Tier-1)
 extern g_window_count                  ; src/ppu/ppu.asm — window descriptor count
 extern g_bg_whiteout                   ; src/ppu/ppu.asm — 1 = blank BG, skip the tilemap
-extern LinkBattleExchangeData          ; battle_stubs.asm (STUB) — link play is unported
+; LinkBattleExchangeData is now REAL — defined below, next to its pret
+; neighbor SelectEnemyMove (see `global LinkBattleExchangeData` there). The
+; battle_stubs.asm stub is RETIRED (Stage 4 step 2).
 extern UseNextMonText                  ; assets/battle_text.inc (generated Tier-1)
 extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm — restore clean screen
 extern DrawEmptyDialogBox              ; pret PrintEmptyString equiv (blank dialog box)
@@ -251,6 +271,15 @@ extern text_arrow_pos                  ; text.asm — ▼ tile (read by BattlePr
 extern FormatMovesString               ; misc.asm — wMoves → wMovesString (+ '-' slots)
 extern DelayFrame                      ; src/home/vblank.asm
 extern text_row_stride                 ; text.asm — wTileMap row stride
+extern Serial_ExchangeNybble           ; src/home/serial.asm — LinkBattleExchangeData
+extern Serial_SendZeroByte             ; src/home/serial.asm — LinkBattleExchangeData
+extern NetHAL_LinkAlive                ; src/net/net_hal.asm — ZF=1: no link session (disconnect hatch)
+extern PrintWaitingText                ; src/engine/link/print_waiting_text.asm — pret mirror
+extern DisplayLinkBattleVersusTextBox  ; src/engine/battle/link_battle_versus_text.asm — pret mirror
+extern SwitchEnemyMon                  ; src/engine/battle/trainer_ai.asm — MainInBattleLoop link dispatch
+%ifdef DEBUG_BATTLECHECK
+extern battlecheck_marks               ; src/engine/link/cable_club_npc.asm (harness)
+%endif
 
 ; --- PrintMenuItem's helpers (pret core.asm:3010) ---
 extern CopyData                        ; home/copy.asm — ESI→EDX, BX bytes
@@ -410,8 +439,36 @@ MainInBattleLoop:
     mov al, [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
     jne .noLinkBattle
-    ; TODO-HW: link-battle move/run/switch exchange (Phase 4 network HAL). Single-
-    ; player falls straight through to the local turn-order resolution.
+; link battle — pret core.asm:349-377: dispatch on the peer's exchanged action
+; nybble (wSerialExchangeNybbleReceiveData, populated by SelectEnemyMove's
+; LinkBattleExchangeData call just above). LINKBATTLE_RUN ends the battle via
+; EnemyRan — this dispatch is also how the .linkDown disconnect hatch's
+; synthesized RUN nybble actually terminates the battle.
+    mov al, [ebp + wSerialExchangeNybbleReceiveData]
+    cmp al, LINKBATTLE_RUN
+    jz  EnemyRan                        ; pret: jp z, EnemyRan
+    cmp al, LINKBATTLE_STRUGGLE
+    je  .noLinkBattle
+    cmp al, LINKBATTLE_NO_ACTION
+    je  .noLinkBattle
+    sub al, 4
+    jc  .noLinkBattle                   ; < 4: the peer picked a move index
+; the link battle enemy has switched mons
+    mov al, [ebp + wPlayerBattleStatus1]
+    test al, 1 << USING_TRAPPING_MOVE   ; pret: bit USING_TRAPPING_MOVE, a
+    jz  .specialMoveNotUsed
+    mov al, [ebp + wPlayerMoveListIndex]
+    mov esi, wBattleMonMoves            ; ld hl, wBattleMonMoves
+    movzx ebx, al                       ; ld c, a / ld b, 0
+    add esi, ebx                        ; add hl, bc
+    mov al, [ebp + esi]
+    ; pret: "a MIRROR MOVE check is missing, might lead to a desync in link
+    ; battles when combined with multi-turn moves" — faithfully kept missing.
+    cmp al, METRONOME_MOVE              ; cp METRONOME (move id — file-local equ below)
+    jne .specialMoveNotUsed
+    mov [ebp + wPlayerSelectedMove], al
+.specialMoveNotUsed:
+    call SwitchEnemyMon                 ; pret: callfar (banking, flat code)
 .noLinkBattle:
     ; ---- turn order: Quick Attack > Counter(last) > speed > 50/50 random ----
     mov al, [ebp + wPlayerSelectedMove]
@@ -446,11 +503,26 @@ MainInBattleLoop:
     cmp eax, ecx
     ja  .playerMovesFirst                   ; player faster
     jb  .enemyMovesFirst                    ; enemy faster
-    ; speed tie → 50/50 (the internal-clock invert is link-only: TODO-HW Phase 4).
+; speed tie -> 50/50 for both players, EXCEPT the link master inverts the
+; roll — pret engine/battle/core.asm:409-421 (.speedEqual), translated
+; verbatim. In single-player hSerialConnectionStatus is 0 (neither
+; USING_EXTERNAL_CLOCK $01 nor USING_INTERNAL_CLOCK $02), so cmp/je below
+; never takes .invertOutcome and this always falls through to the exact
+; non-inverted roll the port already ran — behavior is UNCHANGED for
+; single-player, which is why no fidelity rerun is needed for this branch
+; under the static-only regime.
+    mov al, [ebp + hSerialConnectionStatus]     ; ldh a, [hSerialConnectionStatus]
+    cmp al, USING_INTERNAL_CLOCK
+    je  .invertOutcome
     call BattleRandom
     cmp al, (50 * 0xFF / 100) + 1           ; pret `50 percent + 1` = 128
     jb  .playerMovesFirst
     jmp .enemyMovesFirst
+.invertOutcome:
+    call BattleRandom
+    cmp al, (50 * 0xFF / 100) + 1
+    jb  .enemyMovesFirst
+    jmp .playerMovesFirst
 
 .enemyMovesFirst:
     mov byte [ebp + hWhoseTurn], 1
@@ -1379,8 +1451,27 @@ section .text
 
 ; BattlePromptWait — the battle <PROMPT> hook (pret PromptText, wTileMap variant):
 ; blink the ▼ at [text_arrow_pos], wait for A/B, erase. Installed in text_prompt_hook
-; by PrintBattleText. Clobbers EAX/ECX.
+; by PrintBattleText. Clobbers EAX/ECX/EBX.
+;
+; pret home/text.asm:PromptText (:210-211) skips drawing the arrow entirely when
+; wLinkState==LINK_STATE_BATTLING, and the ManualTextScroll it then calls
+; (home/joypad2.asm:91-92) substitutes a fixed 65-frame delay for the A/B wait.
+; FIXED: this hook used to always draw+wait, never consulting wLinkState. The
+; connection-layer HAL is real (src/net/net_hal.asm's master/slave handshake
+; drives hSerialConnectionStatus to USING_INTERNAL_CLOCK/EXTERNAL_CLOCK for
+; two real DOSBox-X instances, Stage 3) and engine/link/cable_club.asm DOES
+; write LINK_STATE_BATTLING on the real Colosseum-battle path. LinkBattleExchangeData
+; (the per-turn exchange) is REAL as of Stage 4 step 2 (below in this file, next
+; to its pret neighbor SelectEnemyMove) — so this branch is not proven statically
+; unreachable the way an earlier comment here claimed; whether a live
+; two-instance session currently reaches it was not runtime-verified in this
+; pass (static checks only).
 BattlePromptWait:
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    jne .interactive
+    mov bl, 65                          ; ld c, 65 (pret ManualTextScroll .inLinkBattle)
+    jmp DelayFrames                     ; jp DelayFrames (tail call)
+.interactive:
     push esi
     mov esi, [text_arrow_pos]
     mov byte [ebp + esi], T_DOWNARROW
@@ -2167,14 +2258,18 @@ DoBattleTransitionAndInitBattleVariables:
     mov byte [ebp + IO_SCX], 0
     mov byte [ebp + IO_SCY], 0
     mov byte [ebp + hTileAnimations], 0
-    ; link battle branch — never taken in the port (wLinkState is never
-    ; LINK_STATE_BATTLING); kept faithful minus the unreachable link textbox.
+    ; Stage 4 step-1 audit (2026-08-23): the connection-layer HAL is real
+    ; (src/net/net_hal.asm) and can drive this branch's wLinkState read live on
+    ; two DOSBox-X instances (Stage 3) — not proven statically unreachable the
+    ; way this comment used to claim; not runtime-verified this pass.
+    ; Stage 4 step 2: DisplayLinkBattleVersusTextBox is now REAL (see
+    ; src/engine/battle/link_battle_versus_text.asm, the pret mirror), so the
+    ; annotation that used to stand here recording its drop is retired.
     mov al, [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
     jne .next
     mov byte [ebp + wMenuJoypadPollCount], 0
-    ; TODO-HW: network HAL — DisplayLinkBattleVersusTextBox unported (Phase 4;
-    ; this branch is unreachable until link battles exist)
+    call DisplayLinkBattleVersusTextBox   ; pret: callfar (banking DEVIATION, flat code)
     mov byte [ebp + wUpdateSpritesEnabled], 1
     call ClearScreen
 .next:
@@ -2432,6 +2527,25 @@ ExecuteEnemyMove:
     mov byte [ebp + wDamageMultipliers], EFFECTIVE
     call PrintGhostText                 ; real; non-ghost returns ZF=0
     jz  ExecuteEnemyMoveDone
+    ; pret core.asm:5646-5654: link-battle "enemy switched instead of attacking"
+    ; early return, gated by wLinkState. FIXED: branch STRUCTURE restored (it
+    ; was dropped outright). Reads wSerialExchangeNybbleReceiveData, which
+    ; SelectEnemyMove's own LinkBattleExchangeData call (real as of Stage 4
+    ; step 2) populates earlier in the same turn. Not proven unreachable —
+    ; not runtime-verified this pass (static checks only).
+    ; Note this is a BARE ret on the switch-index arm, not ExecuteEnemyMoveDone
+    ; — pret's `ret nc` returns straight to the caller.
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    jne .executeEnemyMove            ; jr nz
+    mov bh, 1                            ; ld b, $1
+    mov al, [ebp + wSerialExchangeNybbleReceiveData]
+    cmp al, LINKBATTLE_STRUGGLE
+    je .executeEnemyMove             ; jr z
+    cmp al, 4
+    jb .executeEnemyMove             ; pret: cp 4 / ret nc (a<4 → continue)
+    ret                                  ; a >= 4: enemy switched — bare ret
+.executeEnemyMove:
     inc byte [ebp + wAILayer2Encouragement]  ; pret core.asm:5656-5657 — read by AIMoveChoiceModification2
     call CheckEnemyStatusConditions
     jnz .enemyHasNoSpecialCondition
@@ -4145,14 +4259,81 @@ PlayMoveAnimation:
 ; ===========================================================================
 ; BattleRandom — battle PRNG. In a link battle (Phase 4) this reads from a
 ; shared seed list; single-player just uses Random. Returns value in AL.
-; TODO-HW: link-battle shared PRNG (Phase 4 network HAL).
+;
+; Link path — pret engine/battle/core.asm:6728-6784, translated verbatim
+; (read directly from pret; two prior summaries disagreed about the reseed
+; arithmetic, so this cites the actual instructions):
+;   ld a, [wLinkBattleRandomNumberListIndex]
+;   ld c, a / ld b, 0 / ld hl, wLinkBattleRandomNumberList / add hl, bc
+;   inc a / ld [wLinkBattleRandomNumberListIndex], a
+;   cp SERIAL_RNS_LENGTH - 1 / ld a, [hl] / pop bc / pop hl / ret c
+;   ; reseed (only entered when NOT carry, i.e. newIndex >= 9):
+;   push hl / push bc / push af / xor a / ld [wLinkBattleRandomNumberListIndex], a
+;   ld hl, wLinkBattleRandomNumberList / ld b, SERIAL_RNS_LENGTH - 1
+;   .loop: ld a,[hl] / ld c,a / add a / add a / add c / inc a / ld [hli],a
+;          dec b / jr nz, .loop
+;   pop af / pop bc / pop hl / ret
+; i.e. newval = 5*oldval+1 (via two doublings + add, not shl/imul — pret's own
+; instruction choice, kept verbatim), regenerating list[0..SERIAL_RNS_LENGTH-2]
+; in place (list[SERIAL_RNS_LENGTH-1] is never touched by the reseed loop nor
+; ever picked as an index — a real, faithfully-reproduced pret quirk, not a
+; port bug: the index always resets to 0 before it could reach 9). The
+; returned value is the byte read BEFORE reseeding (preserved across the loop
+; via the af/eax push), never the freshly regenerated one.
+;
+; Register/flag contract: matches Random's (preserves ESI/EDX/EBX, returns
+; AL) — the link path only ever touches ESI/EBX/EAX (mirroring pret's
+; hl/bc/af), leaving EDX untouched exactly as pret leaves DE untouched.
 ; ===========================================================================
 BattleRandom:
     mov al, [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
     jne Random              ; tail-call Random (returns value in AL)
-    ; link path not yet implemented; fall back to Random for determinism
-    jmp Random
+
+; Link battles use a shared PRNG.
+    push esi
+    push ebx
+    mov al, [ebp + wLinkBattleRandomNumberListIndex]
+    movzx ebx, al                        ; ld c,a / ld b,0 (zero-extend index)
+    mov esi, wLinkBattleRandomNumberList
+    add esi, ebx                         ; hl = list + oldIndex
+    inc al                               ; a = newIndex
+    mov [ebp + wLinkBattleRandomNumberListIndex], al
+    cmp al, SERIAL_RNS_LENGTH - 1        ; carry = newIndex < (LENGTH-1)
+    mov al, [ebp + esi]                  ; a = list[oldIndex] (return value)
+    pop ebx
+    pop esi
+    jc .ret                              ; ret c
+
+; if we picked the last seed, we need to recalculate the nine seeds
+    push esi
+    push ebx
+    push eax                             ; preserve the return value across the reseed loop
+
+; point to seed 0 so we pick the first number the next time
+    mov byte [ebp + wLinkBattleRandomNumberListIndex], 0
+
+    mov esi, wLinkBattleRandomNumberList
+    mov bh, SERIAL_RNS_LENGTH - 1        ; 8-bit loop counter (pret: ld b, ...)
+.reseedLoop:
+    mov al, [ebp + esi]
+    mov bl, al
+; multiply by 5
+    add al, al
+    add al, al
+    add al, bl
+; add 1
+    inc al
+    mov [ebp + esi], al                  ; ld [hli], a
+    inc esi
+    dec bh                               ; dec b
+    jnz .reseedLoop
+
+    pop eax
+    pop ebx
+    pop esi
+.ret:
+    ret
 
 ; ===========================================================================
 ; GetDamageVarsForPlayerAttack
@@ -5260,7 +5441,7 @@ ChooseNextMon:
     cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
     jne .notLinkBattle                  ; jr nz
     mov byte [ebp + wActionResultOrTookBattleTurn], 1
-    call LinkBattleExchangeData         ; ret-stand-in; link play is unported
+    call LinkBattleExchangeData         ; real as of Stage 4 step 2 (below in this file)
 .notLinkBattle:
     mov byte [ebp + wActionResultOrTookBattleTurn], 0   ; xor a
     call ClearSprites
@@ -5582,7 +5763,18 @@ EnemySendOutFirstMon:
     call SlideTrainerPicOffScreen
     call PrintEmptyString
     call SaveScreenTilesToBuffer1
-    ; TODO-HW: link-battle received-switch index (Phase 4).
+    ; pret core.asm:1354-1360 — link battle: the enemy's next mon index arrives
+    ; over the link exchange (wSerialExchangeNybbleReceiveData, populated by
+    ; SelectEnemyMove's LinkBattleExchangeData call earlier this turn — real
+    ; as of Stage 4 step 2) instead of the local search below. FIXED: branch
+    ; STRUCTURE restored so the read is faithful. Not proven unreachable —
+    ; not runtime-verified this pass (static checks only).
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    jne .next                                    ; jr nz
+    mov al, [ebp + wSerialExchangeNybbleReceiveData]
+    sub al, 4
+    mov [ebp + wWhichPokemon], al
+    jmp .next3                                   ; jr .next3
     ; --- find the next non-fainted enemy party mon (skip the current fainted slot) ---
 .next:
     mov bh, 0xFF                                 ; b = $ff
@@ -5791,15 +5983,31 @@ ReplaceFaintedEnemyMon:
     mov [ebp + IO_OBP1], al                        ; ldh [rOBP1], a
     call UpdateCGBPal_OBP0
     call UpdateCGBPal_OBP1
-    ; STILL DROPPED, and each for its own reason rather than one blanket TODO:
+    ; STILL DROPPED, and for its own reason rather than a blanket TODO:
     ;   * DrawEnemyPokeballs — now translatable (every callee took its pret name
     ;     in 337a2b0ab) but NOT yet wired, because pret reaches the screen through
     ;     a shadow-OAM DMA this port deliberately skips while a ball row is up;
     ;     wiring it needs the PrepareStaticOAM publish DrawBattlePokeballs
     ;     carries, and that is a HAL decision, not a translation.
-    ;   * LinkBattleExchangeData / LINKBATTLE_RUN → EnemyRan — link battle,
-    ;     TODO-HW: network HAL (Phase 4).
-    ;   * LoadScreenTilesFromBuffer1 — on the link arm only, same reason.
+    ; pret core.asm:911-919 — link-battle exchange, gated by wLinkState. FIXED:
+    ; branch STRUCTURE restored (it used to drop straight to EnemySendOut
+    ; unconditionally, losing even the read of wLinkState). LinkBattleExchangeData
+    ; is real as of Stage 4 step 2. Not proven unreachable — not runtime-
+    ; verified this pass (static checks only). "stores whether enemy ran in
+    ; Z flag" (pret's own header comment) is why the early `ret` below must
+    ; leave ZF as the `cmp` set it.
+    mov al, [ebp + wLinkState]
+    cmp al, LINK_STATE_BATTLING
+    jne .notLinkBattle                   ; jr nz
+; link battle
+    call LinkBattleExchangeData
+    mov al, [ebp + wSerialExchangeNybbleReceiveData]
+    cmp al, LINKBATTLE_RUN
+    jne .linkContinue                    ; (pret: ret z — inverted for the fall-through)
+    ret                                  ; ZF=1 (equal): enemy ran
+.linkContinue:
+    call LoadScreenTilesFromBuffer1
+.notLinkBattle:
     call EnemySendOut
     mov byte [ebp + wEnemyMoveNum], 0
     mov byte [ebp + wActionResultOrTookBattleTurn], 0
@@ -6836,6 +7044,7 @@ global PlayBattleVictoryMusic
 global AnyPartyAlive
 global LoadEnemyMonFromParty
 global SelectEnemyMove
+global LinkBattleExchangeData          ; pret neighbor of SelectEnemyMove — defined right after it below
 global PrintMoveFailureText
 global HandleCounterMove
 global HandleBuildingRage
@@ -7413,11 +7622,29 @@ TryRunningFromBattle:
     clc                                  ; pret: and a — reset carry
     ret
 .canEscape:
-    ; pret core.asm:1626-1645: the LINK_STATE_BATTLING exchange branch is
-    ; unreachable in the port (no link HAL — see EndOfBattle's link TODO-HW);
-    ; the non-link path sets wBattleResult=2 and plays the run SFX. The old
-    ; bespoke tail dropped wBattleResult, the SFX and SaveScreenTilesToBuffer1.
-    mov byte [ebp + wBattleResult], 2    ; pret: ld a,$2 / ld [wBattleResult],a
+    ; pret core.asm:1626-1645: link-battle exchange, gated by wLinkState. FIXED:
+    ; the branch STRUCTURE is now restored (it was dropped outright, collapsing
+    ; straight to the non-link tail) so the read stays honest with pret.
+    ; LinkBattleExchangeData is real as of Stage 4 step 2. Not proven
+    ; unreachable — not runtime-verified this pass (static checks only). The
+    ; non-link path (mov al,2 / jne .playSound) is pret's `ld a,$2 / jr nz`
+    ; unchanged.
+    cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
+    mov al, 2                            ; ld a, $2
+    jne .playSound                       ; jr nz
+; link battle
+    call SaveScreenTilesToBuffer1
+    mov byte [ebp + wActionResultOrTookBattleTurn], 0   ; xor a
+    mov byte [ebp + wPlayerMoveListIndex], LINKBATTLE_RUN
+    call LinkBattleExchangeData
+    call LoadScreenTilesFromBuffer1
+    mov al, [ebp + wSerialExchangeNybbleReceiveData]
+    cmp al, LINKBATTLE_RUN
+    mov al, 2
+    je .playSound                        ; jr z
+    dec al
+.playSound:
+    mov [ebp + wBattleResult], al        ; ld [wBattleResult], a
     mov al, SFX_RUN
     call PlaySoundWaitForCurrent         ; pret: call PlaySoundWaitForCurrent
     mov eax, GotAwayText                 ; pret: ld hl, GotAwayText
@@ -7888,12 +8115,35 @@ LoadEnemyMonFromParty:
 %define PERCENT(n) ((n) * 0xFF / 100)
 
 SelectEnemyMove:
-    ; TODO-HW: link-battle move exchange (Phase 4 network HAL). Single-player skips
-    ; it and selects locally; the link path would read the opponent's chosen move.
+    ; pret core.asm:3086-3107: link-battle move exchange, gated by wLinkState.
+    ; FIXED: the branch STRUCTURE is restored (it used to fall straight through
+    ; to local selection regardless of wLinkState). LinkBattleExchangeData is
+    ; real as of Stage 4 step 2 (below in this file). Not proven unreachable —
+    ; not runtime-verified this pass (static checks only).
+    ; `.linkedOpponentUsedStruggle` and the >=4 switch-index arm share the
+    ; local path's `.unableToSelectMove`/`.done`/`.ret` tails, exactly as
+    ; pret's `jr .unableToSelectMove` / `jr .done` / `ret nc` do.
     mov al, [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
     jne .noLinkBattle
-    ; (link path not implemented; fall through to local selection for determinism)
+; link battle
+    call SaveScreenTilesToBuffer1
+    call LinkBattleExchangeData
+    call LoadScreenTilesFromBuffer1
+    mov al, [ebp + wSerialExchangeNybbleReceiveData]
+    cmp al, LINKBATTLE_STRUGGLE
+    je .linkedOpponentUsedStruggle       ; jp z
+    cmp al, LINKBATTLE_NO_ACTION
+    je .unableToSelectMove               ; jr z
+    cmp al, 4
+    jae .ret                             ; pret: ret nc (unsigned a >= 4)
+    mov [ebp + wEnemyMoveListIndex], al  ; ld [wEnemyMoveListIndex], a
+    movzx ecx, al                        ; ld c, a / ld b, 0
+    mov al, [ebp + wEnemyMonMoves + ecx] ; ld hl,wEnemyMonMoves / add hl,bc / ld a,[hl]
+    jmp .done                            ; jr .done
+.linkedOpponentUsedStruggle:
+    mov al, STRUGGLE                     ; ld a, STRUGGLE
+    jmp .done                            ; jr .done
 .noLinkBattle:
     ; --- forced-move early-outs: keep the current wEnemySelectedMove ---
     mov al, [ebp + wEnemyBattleStatus2]
@@ -7967,6 +8217,111 @@ SelectEnemyMove:
 .done:
     mov [ebp + wEnemySelectedMove], al
 .ret:
+    ret
+
+; ===========================================================================
+; LinkBattleExchangeData — pret engine/battle/core.asm:3178-3242. Pret places
+; this directly after SelectEnemyMove (above) and before ExecutePlayerMove;
+; kept at that same relative position here (SelectEnemyMove is its port
+; neighbor, per the header comment on the `global` above).
+;
+; Stage 4 step 2: RETIRES the battle_stubs.asm ret-stub. Builds the per-turn
+; SEND nybble from the player's chosen action (RUN / STRUGGLE / NO_ACTION /
+; move-list-index / switch-index+4), stages it, then rendezvous-exchanges
+; nybbles with the peer until a real (non-$FF) byte comes back, followed by
+; two local 10-frame drain loops (this is NOT a Virtual Console build, so
+; pret's `vc_patch` constant is 10, not 26 — the `IF DEF(_YELLOW_VC)` arm
+; never applies here). pret's `vc_hook`/`vc_patch` bracket pairs around this
+; routine are Virtual Console build METADATA (patch-point markers for a
+; different build target), not code — they emit nothing on real hardware
+; either and are skipped entirely, as instructed.
+;
+; PORT-ONLY: a NetHAL_LinkAlive check inside .syncLoop1 (see .linkDown below)
+; — see DEVIATION at .linkDown.
+; ===========================================================================
+LinkBattleExchangeData:
+%ifdef DEBUG_BATTLECHECK
+    ; battlecheck harness hook: one call to this routine == one turn's worth of
+    ; nybble exchange (pret places it once per turn, right before
+    ; ExecutePlayerMove — see the header above). The lockstep proof
+    ; (tools/battlecheck.sh assertion "turn_count EQUAL on both sides") reads
+    ; this counter from both instances' GBSTATE dumps. Harness state, not game
+    ; logic (first gated site, spec deliverable 3a).
+    inc word [battlecheck_marks + 2]        ; battlecheck_turn_count
+%endif
+    mov byte [ebp + wSerialExchangeNybbleReceiveData], 0xFF
+    mov al, [ebp + wPlayerMoveListIndex]
+    cmp al, LINKBATTLE_RUN               ; is the player running from battle?
+    je .doExchange
+    mov al, [ebp + wActionResultOrTookBattleTurn]
+    test al, al                          ; is the player switching in another mon?
+    jnz .switching
+; the player used a move
+    mov al, [ebp + wPlayerSelectedMove]
+    cmp al, STRUGGLE
+    mov bh, LINKBATTLE_STRUGGLE
+    je .next
+    dec bh                               ; LINKBATTLE_NO_ACTION
+    ; ASSERT CANNOT_MOVE == 0xFF
+    inc al
+    jz .next
+    mov al, [ebp + wPlayerMoveListIndex]
+    jmp .doExchange
+.switching:
+    mov al, [ebp + wWhichPokemon]
+    add al, 4
+    mov bh, al
+.next:
+    mov al, bh
+.doExchange:
+    mov [ebp + wSerialExchangeNybbleSendData], al
+    ; vc_hook Wireless_start_exchange — VC build metadata, not code; skipped.
+    call PrintWaitingText                ; pret: callfar PrintWaitingText (banking
+                                          ; deviation, flat code — see serial.asm)
+.syncLoop1:
+    call Serial_ExchangeNybble
+    call DelayFrame
+    ; PORT-ONLY mid-battle disconnect hatch — see .linkDown DEVIATION below.
+    call NetHAL_LinkAlive                ; ZF=1: no link session (dead)
+    jz .linkDown
+    mov al, [ebp + wSerialExchangeNybbleReceiveData]
+    inc al
+    jz .syncLoop1
+    ; vc_hook Wireless_end_exchange / vc_patch Wireless_net_delay_1 — VC build
+    ; metadata, not code; skipped. Non-VC constant: 10 (pret's `_YELLOW_VC`
+    ; arm, 26, never applies to this port).
+    mov bh, 10
+.syncLoop2:
+    call DelayFrame
+    call Serial_ExchangeNybble
+    dec bh
+    jnz .syncLoop2
+    ; vc_hook Wireless_start_send_zero_bytes / vc_patch Wireless_net_delay_2 —
+    ; VC build metadata, not code; skipped. Non-VC constant: 10.
+    mov bh, 10
+.syncLoop3:
+    call DelayFrame
+    call Serial_SendZeroByte
+    dec bh
+    jnz .syncLoop3
+    ; vc_hook Wireless_end_send_zero_bytes — VC build metadata, not code; skipped.
+    ret
+; DEVIATION{class=HAL; pret=engine/battle/core.asm:LinkBattleExchangeData; behavior=on a dead link detected inside .syncLoop1, synthesize LINKBATTLE_RUN into wSerialExchangeNybbleReceiveData and return immediately, skipping .syncLoop2/.syncLoop3 (which only pump a dead link), instead of spinning on Serial_ExchangeNybble forever; evidence=pret's .syncLoop1 spins until a non-$FF byte arrives, and the port's Serial_ExchangeNybble cannot hang the same way a real cable would - with no transport bound or a dead peer it stages wSerialExchangeNybbleReceiveData=$FF and returns immediately every call (src/home/serial.asm), so a literal translation loops forever with no possible exit, and every consumer of wSerialExchangeNybbleReceiveData already treats LINKBATTLE_RUN as the peer having run, which drives pret's own EnemyRan / TryRunningFromBattle paths and ends the battle gracefully, exactly mirroring the no-partner hatch family documented in serial.asm's header; lifetime=permanent, the no-partner hatch family}
+.linkDown:
+%ifdef DEBUG_BATTLECHECK
+    ; battlecheck --kill hook: sticky record that the mid-battle disconnect
+    ; hatch fired — the point of the --kill mode (tools/battlecheck.sh) is
+    ; proving A escapes .syncLoop1 instead of hanging when B is killed. A flat
+    ; .bss byte, not GB memory: the synthesized LINKBATTLE_RUN below drives
+    ; EnemyRan and ends the battle for good (see the DEVIATION above), and
+    ; EndOfBattle's LINK_STATE_BATTLING branch (end_of_battle.asm) then sets
+    ; battlecheck_battle_over — this mark records specifically that the ESCAPE
+    ; is what ended it, same rule as tradecheck_link_down_hatch
+    ; (cable_club.asm's cable_club_link_down). Harness state, not game logic
+    ; (third gated site, spec deliverable 3c).
+    mov byte [battlecheck_marks + 4], 1     ; battlecheck_link_down_hatch
+%endif
+    mov byte [ebp + wSerialExchangeNybbleReceiveData], LINKBATTLE_RUN
     ret
 
 ; --- was src/engine/battle/print_move_failure.asm ---

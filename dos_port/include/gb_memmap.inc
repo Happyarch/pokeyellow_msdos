@@ -521,6 +521,7 @@
 %define wEnemyDisabledMove           0xDE3F
 %define wPlayerBideAccumulatedDamage 0xDE41
 %define wPlayerNumHits               0xDE41
+%define wUnknownSerialCounter2       0xDE41   ; wram.asm:1506 (dw; pret unions it with wPlayerBideAccumulatedDamage/wPlayerNumHits — link-battle serial watchdog, disjoint lifetime from Bide)
 
 %define wDamage                      0xDEA4   ; word, big-endian
 %define wTypeEffectiveness           0xDEEB   ; shared scratch byte (=wPokedexNum union)
@@ -965,17 +966,21 @@
                                         ; (.indoorMaps/.goBackOutside); the port mirrors that short window.
 ; 0xFF8C is a UNION of hMapWidth / hNorthSouthConnectedMapWidth
 %define hMapWidth                    0xFF8C   ; hMapWidth (= wCurMapWidth, stored for row-copy inner loop)
+%define hSerialReceivedNewData       0xFFA9   ; hram.asm:187 (db; HRAM never shifts — pret's own address, long reserved in prose at the hSwapItemID note below)
 %define hSerialConnectionStatus      0xFFAA   ; hSerialConnectionStatus
+%define hSerialIgnoringInitialData   0xFFAB   ; hram.asm:192 (db; contiguous FFA9-FFAD serial block per ram/hram.asm:187-194)
 ; Link-menu / serial exchange scratch (menus S8 package I — link_menu.asm).
 ; Sym-verified vs origin/symbols:pokeyellow.sym; the 0xCC3D/0xCC42 pairs are
 ; union-aliased (send/receive buffer overlaps the nybble-exchange lanes).
 %define wLinkMenuSelectionReceiveBuffer 0xD78B   ; wram.asm:425 (dw)
+%define wSerialExchangeNybbleTempReceiveData 0xD78B   ; wram.asm:436 (db; pret unions it with wSerialSyncAndExchangeNybbleReceiveData)
 %define wSerialSyncAndExchangeNybbleReceiveData 0xD78B   ; wram.asm:437 (db; aliases recv buf)
 %define wSerialExchangeNybbleReceiveData 0xD78C   ; wram.asm:439 (db)
 %define wLinkMenuSelectionSendBuffer 0xD790   ; wram.asm:428 (dw)
 %define wSerialExchangeNybbleSendData 0xD790   ; wram.asm:442 (db; aliases send buf)
 %define wUnknownSerialCounter        0xD795   ; wram.asm:444 (dw; aliases wEnteringCableClub)
 %define wEnteringCableClub           0xD795   ; wram.asm:430 (db; sym 00:cc47)
+%define wLinkTimeoutCounter          0xD795   ; wram.asm:435 (db; pret declares it on the same byte as wEnteringCableClub — cable_club_npc.asm's establish-timeout counter)
 %define wUnusedLinkMenuByte          0xD885   ; wram.asm:754 (db; was worker 0xCC83)
 %define hSerialSendData              0xFFAC   ; hram.asm:193 (db)
 %define hSerialReceiveData           0xFFAD   ; hram.asm:194 (db)
@@ -1681,6 +1686,7 @@
 %define wWarpEntries                 0xE17C   ; wWarpEntries (MAX_WARP_EVENTS * 4 bytes max)
 %define wDestinationWarpID           0xE1FC   ; pret alias of wDestinationWarpID
 %define wUnknownSerialFlag_d499      0xE266   ; GB-Stadium-link flag; restricts Sleep counter reroll range when set (0 on real HW/this port)
+%define wPrinterConnectionOpen       0xE267   ; wram.asm:2090 (db; bit 0 routes the Serial ISR to PrinterSerial__ — retained dead branch in the port, printer plan cuts inside the printer engine). Derived: contiguous pret run wPrinterSettings d497→E265 .. wPikachuEmotionModifier d49b→E269 (see those defines)
 
 ; Sign/BG event data
 %define wNumSigns                    0xE27D   ; wNumSigns

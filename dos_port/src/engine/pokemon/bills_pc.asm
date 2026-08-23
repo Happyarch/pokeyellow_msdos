@@ -8,10 +8,12 @@
 ; KnowsHMMove, HMMoveArray, DisplayDepositWithdrawMenu, DepositPCText,
 ; WithdrawPCText, StatsCancelPCText, and the text_far wrapper block.
 ; OpenBillsPCText is here too (pret file order puts it last).
-; NOT here: CableClubLeftGameboy / CableClubRightGameboy / JustAMomentText /
-; UnusedOpenBillsPC — the serial-link tail of pret's file.
-; The cable club is a serial-HAL boundary (TODO-HW: network HAL, Phase 4) and
-; its entry points are owned by engine/link/cable_club.asm's package.
+; ALSO here as of link plan Stage 3: CableClubLeftGameboy /
+; CableClubRightGameboy — the Trade Center / Colosseum table-gameboy hidden
+; events (pret's serial-link tail of this file; their hidden_object_stubs.asm
+; ret-stubs are retired). JustAMomentText's stream is generated data
+; (assets/predef_text.inc, predef_data $24). Still NOT here:
+; UnusedOpenBillsPC — pret-unreferenced.
 ;
 ; PORT MODEL:
 ;  * SM83→x86: A=AL, B=BH, C=BL (BC=EBX), D=DH, E=DL (DE=EDX), HL=ESI;
@@ -56,6 +58,9 @@ bits 32
 %include "events.inc"                    ; CheckEvent (clobbers AL, sets ZF)
 %include "assets/event_constants.inc"    ; EVENT_MET_BILL / EVENT_GOT_POKEDEX
 %include "assets/audio_constants.inc"    ; SFX_TURN_ON_PC / SFX_TURN_OFF_PC
+%include "predef.inc"                    ; tx_pre_id (CableClub*Gameboy tails)
+%include "assets/predef_text_ids.inc"    ; JustAMomentText_id
+%include "assets/map_dims.inc"           ; TRADE_CENTER (map id)
 
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_menus.inc"
@@ -64,10 +69,19 @@ global DisplayPCMainMenu
 global BillsPC_
 global KnowsHMMove
 global OpenBillsPCText
+global CableClubLeftGameboy     ; hidden-event targets (assets/hidden_events.inc)
+global CableClubRightGameboy
 
 extern TextScript_BillsPC       ; src/home/map_objects.asm (linked)
 extern MoveMon                  ; src/home/move_mon.asm (pret home wrapper)
 extern RemovePokemon            ; src/home/move_mon.asm (pret home wrapper)
+extern EnableAutoTextBoxDrawing ; src/home/window.asm (CableClub*Gameboy)
+extern PrintPredefTextID        ; src/home/predef_text.asm (CableClub*Gameboy tails)
+
+; constants/serial_constants.asm (CableClub*Gameboy — file-local, port convention)
+USING_EXTERNAL_CLOCK    equ 0x01
+USING_INTERNAL_CLOCK    equ 0x02
+LINK_STATE_START_TRADE  equ 0x02
 extern IsInArray                ; src/home/array2.asm (shared home global)
 extern SaveScreenTilesToBuffer2 ; src/home/tilemap.asm
 extern TextBoxBorder            ; home/text.asm — ESI=top-left, BL=int_w, BH=int_h
@@ -855,6 +869,61 @@ MonWasReleasedText:
 SleepingPikachuText2:
     text_far _SleepingPikachuText2
     text_end
+
+; ===========================================================================
+; CableClubLeftGameboy / CableClubRightGameboy — pret engine/pokemon/
+; bills_pc.asm:547/564 (link plan Stage 3; the hidden_object_stubs.asm
+; ret-stubs are retired). The Trade Center / Colosseum table gameboys: fired
+; by the hidden-event rows (assets/hidden_events.inc, TRADE_CENTER/COLOSSEUM
+; at (4,4)/(4,5)), each arms wLinkState = LINK_STATE_START_TRADE (or
+; _START_BATTLE in the Colosseum) when the correct-side player faces its
+; gameboy, then prints JustAMomentText — during whose scroll-wait the
+; WaitForTextScrollButtonPress CableClub_Run poll dispatches the trade.
+; The JustAMomentText STREAM is generated (assets/predef_text.inc, the
+; predef_data $24 row); pret's wrapper label here is that generated data's
+; consumer via the predef id, so no wrapper is re-defined in this file.
+; ===========================================================================
+CableClubLeftGameboy:
+    mov al, [ebp + hSerialConnectionStatus]
+    cmp al, USING_EXTERNAL_CLOCK
+    je .ret                                  ; ret z — friend's side, not ours
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_RIGHT
+    jne .ret                                 ; ret nz
+    mov al, [ebp + wCurMap]
+    cmp al, TRADE_CENTER
+    mov al, LINK_STATE_START_TRADE           ; flag-preserving (ld a, n)
+    je .next
+    inc al                                   ; LINK_STATE_START_BATTLE
+.next:
+    mov [ebp + wLinkState], al
+    call EnableAutoTextBoxDrawing
+    ; pret: `tx_pre_jump JustAMomentText`, spelled out (predef.inc — a
+    ; jump-out macro at a routine tail defeats the build-graph scanner).
+    tx_pre_id JustAMomentText
+    jmp PrintPredefTextID
+.ret:
+    ret
+
+CableClubRightGameboy:
+    mov al, [ebp + hSerialConnectionStatus]
+    cmp al, USING_INTERNAL_CLOCK
+    je .ret                                  ; ret z — friend's side, not ours
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_LEFT
+    jne .ret                                 ; ret nz
+    mov al, [ebp + wCurMap]
+    cmp al, TRADE_CENTER
+    mov al, LINK_STATE_START_TRADE           ; flag-preserving (ld a, n)
+    je .next
+    inc al                                   ; LINK_STATE_START_BATTLE
+.next:
+    mov [ebp + wLinkState], al
+    call EnableAutoTextBoxDrawing
+    tx_pre_id JustAMomentText
+    jmp PrintPredefTextID
+.ret:
+    ret
 
 align 4
 ; msgbox_bills_pc — this screen's message-box projection (msgbox.inc). pret's

@@ -106,6 +106,7 @@ global AIMoveChoiceModification3
 global AIMoveChoiceModification4
 global ReadMove
 global TrainerAI
+global SwitchEnemyMon
 global GenericAI
 global DecrementAICount
 global AICheckIfHPBelowFraction

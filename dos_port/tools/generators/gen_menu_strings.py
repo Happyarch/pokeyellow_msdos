@@ -221,6 +221,34 @@ LEAGUE_PC = [
 ]
 
 
+# The trade animation (pret engine/movie/trade.asm / trade2.asm; link plan
+# Stage 3 step 3). pret defs: data/text/text_2.asm. The `_`-prefixed names are
+# pret's own; the wrapper labels (TradeWentToText, ...) stay in trade.asm as
+# ordinary text_far + text_end, exactly as pret writes them. NOTE
+# _TradeWillTradeText and _TradeforText (lowercase f) are DISTINCT labels.
+TRADE_ANIM_FAR = [
+    "_TradeWentToText",             # "<mon> went / to <name>."
+    "_TradeForText",                # "For <PLAYER>'s / <mon>,"
+    "_TradeSendsText",              # "<name> sends / <mon>."
+    "_TradeWavesFarewellText",      # "<name> waves / farewell as"
+    "_TradeTransferredText",        # "<mon> is / transferred."
+    "_TradeTakeCareText",           # "Take good care of / <mon>."
+    "_TradeWillTradeText",          # "<name> will / trade <mon>"
+    "_TradeforText",                # "for <PLAYER>'s / <mon>." (lowercase f — distinct label)
+]
+
+# Trade_MonInfoText (pret engine/movie/trade2.asm): NOT a text_far body — it is a
+# plain PlaceString-rendered raw glyph run with pret's own <NEXT> line breaks
+# baked in (no TX_START/prompt/done — PlaceString stops at '@'). Encoded through
+# pret's own charmap (greedy longest-match) so "──" ($7A$7A), "№" ($74) and
+# "<DOT>" ($F2) come out byte-identical to pret rather than guessed. Emitted to
+# its own .inc (carrier = trade2.asm, which defines the pret label) rather than
+# folded into trade_text.inc (carrier = trade.asm) — a label has one provider.
+TRADE_MON_INFO_STRINGS = [
+    ("Trade_MonInfoText", ["──№<DOT>", NEXT, "", NEXT, "OT/", NEXT, "<ID>№<DOT>@"]),
+]
+
+
 # The boot MAIN MENU (pret engine/menus/main_menu.asm): its one FAR stream
 # (_NotEnoughMemoryText, printed by the dead-but-real Func_5cc1 branch) plus the three
 # pret GLOBAL `db` strings PlaceString renders. NOTE the order below is load-bearing:
@@ -380,6 +408,19 @@ LINK_FAR = [
     "_ColosseumVersionText",
 ]
 
+# The CableClubNPC receptionist streams (engine/link/cable_club_npc.asm's
+# text_far targets) -> assets/link_npc_text.inc, carried by the Stage-2 pret
+# mirror src/engine/link/cable_club_npc.asm.
+LINK_NPC_FAR = [
+    "_CableClubNPCAreaReservedFor2FriendsLinkedByCableText",
+    "_CableClubNPCWelcomeText",
+    "_CableClubNPCPleaseApplyHereHaveToSaveText",
+    "_CableClubNPCPleaseWaitText",
+    "_CableClubNPCLinkClosedBecauseOfInactivityText",
+    "_CableClubNPCPleaseComeAgainText",
+    "_CableClubNPCMakingPreparationsText",
+]
+
 # pret's inline `db` strings, spelled exactly as pret spells them (link_menu.asm:
 # Text_f56f4..TradeCenterText). Encoded with gen_battle_text.encode — the pret
 # charmap parser, greedy longest-match — NOT gb_text.encode: these carry the "'t"
@@ -397,6 +438,32 @@ LINK_STRINGS = [
                     "CANCEL", TERM]),
     ("TradeCenterText", ["TRADE CENTER", NEXT, "COLOSSEUM", NEXT, "COLOSSEUM2",
                          NEXT, "CANCEL", TERM]),
+    # pret engine/link/print_waiting_text.asm — the one string that file holds.
+    # Rides in link_text.inc (same subsystem) for the home/serial.asm mirror's
+    # Serial_PrintWaitingTextAndSyncAndExchangeNybble -> PrintWaitingText path.
+    ("WaitingText", ["Waiting...!", TERM]),
+]
+
+
+# pret engine/link/cable_club.asm (link plan Stage 3): the inline `db` strings
+# plus the one text_far stream the file wraps (_WillBeTradedText,
+# data/text/text_3.asm — splices wNameOfPlayerMonToBeTraded and wNameBuffer with
+# TX_RAM, so it is only expressible as a real stream). Carrier:
+# src/engine/link/cable_club.asm, which %includes cable_club_text.inc and keeps
+# pret's own wrapper label (WillBeTradedText = text_far _WillBeTradedText +
+# text_end). CableClub_StatsTradeText is pret's LOCAL `.statsTrade`
+# ("STATS     TRADE@") under TradeCenter_SelectMon — a local label cannot be a
+# generated global, so it takes a port-side name (StatsCancelPCText precedent).
+CABLE_CLUB_STRINGS = [
+    ("PleaseWaitString",         ["PLEASE WAIT!", TERM]),
+    ("CancelTextString",         ["CANCEL", TERM]),
+    ("TradeCompleted",           ["Trade completed!", TERM]),
+    ("TradeCanceled",            ["Too bad! The trade", NEXT, "was canceled!", TERM]),
+    ("CableClub_StatsTradeText", ["STATS     TRADE", TERM]),
+]
+
+CABLE_CLUB_FAR = [
+    "_WillBeTradedText",            # "<mon> and / <mon> will / be traded." (2x TX_RAM)
 ]
 
 
@@ -751,10 +818,77 @@ def main() -> int:
         ]
         kout.append(f"{label}:\n" + "\n".join(rows))
     kout.append("")
-    insert_globals(kout, ['Text_f56f4', 'Text_f5728', 'Text_f575b', 'Text_f5791', 'Text_f579c', 'TradeCenterText'])
+    insert_globals(kout, ['Text_f56f4', 'Text_f5728', 'Text_f575b', 'Text_f5791', 'Text_f579c', 'TradeCenterText', 'WaitingText'])
     kdst = ASSETS / "link_text.inc"
     kdst.write_text("\n".join(kout))
     print(f"wrote {kdst} ({len(LINK_STRINGS)} labels + {len(LINK_FAR)} far)")
+
+    # --- link_npc_text.inc: the CableClubNPC receptionist far streams -------
+    # (pret data/text/text_7.asm + text_8.asm; carrier = the pret mirror
+    # src/engine/link/cable_club_npc.asm, which %includes this file — link
+    # plan Stage 2. Kept separate from link_text.inc because that one's
+    # carrier is link_menu.asm and a label may have exactly one provider.)
+    nout = [
+        "; DO NOT EDIT BY HAND \u2014 generated by tools/generators/gen_menu_strings.py",
+        "; CableClubNPC receptionist text streams (pret data/text/text_7.asm +",
+        "; text_8.asm), charmap-encoded. Carrier: src/engine/link/cable_club_npc.asm.",
+        "; section .data so the labels land in a loaded section (see link.ld).",
+        "",
+        "section .data",
+        "",
+    ]
+    for label in LINK_NPC_FAR:
+        if label not in far:
+            sys.stderr.write(f"gen_menu_strings: missing far label {label}\n")
+            return 1
+        rows = [
+            "    db " + ", ".join(f"0x{b:02X}" for b in far[label][k:k + 16])
+            for k in range(0, len(far[label]), 16)
+        ]
+        nout.append(f"{label}:\n" + "\n".join(rows))
+    nout.append("")
+    insert_globals(nout, list(LINK_NPC_FAR))
+    ndst = ASSETS / "link_npc_text.inc"
+    ndst.write_text("\n".join(nout))
+    print(f"wrote {ndst} ({len(LINK_NPC_FAR)} far)")
+
+    # --- cable_club_text.inc: pret engine/link/cable_club.asm strings -------
+    # (link plan Stage 3; carrier = src/engine/link/cable_club.asm. Kept
+    # separate from link_text.inc / link_npc_text.inc because each generated
+    # .inc may span exactly one pret file and a label has one provider.)
+    ccout = [
+        "; cable_club_text.inc — generated by tools/generators/gen_menu_strings.py. DO NOT EDIT BY HAND.",
+        "; Every rendered string of pret engine/link/cable_club.asm: the inline `db`",
+        "; strings (PleaseWaitString, CancelTextString, TradeCompleted, TradeCanceled,",
+        "; the local .statsTrade as CableClub_StatsTradeText) and the flattened",
+        "; _WillBeTradedText stream (data/text/text_3.asm — TX_RAM splices",
+        "; wNameOfPlayerMonToBeTraded and wNameBuffer, via gen_battle_text.collect_far).",
+        "; Carrier: src/engine/link/cable_club.asm (it %includes this and keeps pret's",
+        "; WillBeTradedText wrapper = text_far _WillBeTradedText + text_end).",
+        "; section .data so the labels land in a loaded section (see link.ld).",
+        "",
+        "section .data",
+        "",
+    ]
+    cccm = gen_battle_text.load_charmap()
+    for label, parts in CABLE_CLUB_STRINGS:
+        b = encode_parts_pret(parts, cccm)
+        ccout.append(f"{label}: db " + ", ".join(f"0x{x:02X}" for x in b))
+    ccout.append("")
+    for label in CABLE_CLUB_FAR:
+        if label not in far:
+            sys.stderr.write(f"gen_menu_strings: missing far label {label}\n")
+            return 1
+        rows = [
+            "    db " + ", ".join(f"0x{b:02X}" for b in far[label][k:k + 16])
+            for k in range(0, len(far[label]), 16)
+        ]
+        ccout.append(f"{label}:\n" + "\n".join(rows))
+    ccout.append("")
+    insert_globals(ccout, [l for l, _ in CABLE_CLUB_STRINGS] + list(CABLE_CLUB_FAR))
+    ccdst = ASSETS / "cable_club_text.inc"
+    ccdst.write_text("\n".join(ccout))
+    print(f"wrote {ccdst} ({len(CABLE_CLUB_STRINGS)} labels + {len(CABLE_CLUB_FAR)} far)")
 
     # --- BILL's PC: 11 db strings + 14 far streams (bills_pc.asm) --------------
     bout = [
@@ -792,6 +926,60 @@ def main() -> int:
     bdst = ASSETS / "bills_pc_text.inc"
     bdst.write_text("\n".join(bout))
     print(f"wrote {bdst} ({len(BILLS_PC_STRINGS)} labels + {len(BILLS_PC_FAR)} far)")
+
+    # --- trade_text.inc: the trade animation's 8 far bodies (trade.asm) --------
+    # (link plan Stage 3 step 3; carrier = src/engine/movie/trade.asm, which
+    # %includes this and keeps pret's own text_far + text_end wrapper labels.)
+    trout = [
+        "; trade_text.inc — generated by tools/generators/gen_menu_strings.py. DO NOT EDIT BY HAND.",
+        "; The trade animation's far text bodies (pret data/text/text_2.asm), flattened",
+        "; via gen_battle_text.collect_far. Carrier: src/engine/movie/trade.asm (it",
+        "; %includes this and keeps pret's own TradeWentToText = text_far",
+        "; _TradeWentToText + text_end wrapper labels, so PrintText prints them exactly",
+        "; as pret does).",
+        "; section .data so the labels land in a loaded section (see link.ld).",
+        "",
+        "section .data",
+        "",
+    ]
+    for label in TRADE_ANIM_FAR:
+        if label not in far:
+            sys.stderr.write(f"gen_menu_strings: missing far label {label}\n")
+            return 1
+        rows = [
+            "    db " + ", ".join(f"0x{b:02X}" for b in far[label][k:k + 16])
+            for k in range(0, len(far[label]), 16)
+        ]
+        trout.append(f"{label}:\n" + "\n".join(rows))
+    trout.append("")
+    trdst = ASSETS / "trade_text.inc"
+    trdst.write_text("\n".join(trout))
+    print(f"wrote {trdst} ({len(TRADE_ANIM_FAR)} far)")
+
+    # --- trade_mon_info_text.inc: Trade_MonInfoText (trade2.asm) ---------------
+    # A plain raw glyph run (not a text_far body) — see the TRADE_MON_INFO_STRINGS
+    # docstring above. Carrier: src/engine/movie/trade2.asm (defines the pret
+    # label Trade_MonInfoText itself).
+    tmout = [
+        "; trade_mon_info_text.inc — generated by tools/generators/gen_menu_strings.py. DO NOT EDIT BY HAND.",
+        "; Trade_MonInfoText (pret engine/movie/trade2.asm) — a raw PlaceString glyph",
+        "; run with pret's own <NEXT> line breaks, charmap-encoded through PRET's own",
+        "; charmap (greedy longest-match) so \"──\", \"№\" and \"<DOT>\" match pret exactly.",
+        "; Carrier: src/engine/movie/trade2.asm.",
+        "; section .data so the label lands in a loaded section (see link.ld).",
+        "",
+        "section .data",
+        "",
+    ]
+    tmcm = gen_battle_text.load_charmap()
+    for label, parts in TRADE_MON_INFO_STRINGS:
+        b = encode_parts_pret(parts, tmcm)
+        tmout.append(f"{label}: db " + ", ".join(f"0x{x:02X}" for x in b))
+    tmout.append("")
+    insert_globals(tmout, [l for l, _ in TRADE_MON_INFO_STRINGS])
+    tmdst = ASSETS / "trade_mon_info_text.inc"
+    tmdst.write_text("\n".join(tmout))
+    print(f"wrote {tmdst} ({len(TRADE_MON_INFO_STRINGS)} labels)")
 
     # --- TRAINER CARD PlaceString labels (start_sub_menus.asm) ----------------
     tout = [

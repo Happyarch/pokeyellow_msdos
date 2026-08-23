@@ -50,3 +50,8 @@ global Diploma_Surfing_CopyBox
 Diploma_Surfing_CopyBox:
     ret
 
+
+; STUB{class=stub; label=PrinterSerial; pret=home/printer.asm:PrinterSerial; behavior=return immediately instead of running the printer's per-byte serial pump; evidence=only reached through the Serial delivery handler's wPrinterConnectionOpen branch (src/home/serial.asm PrinterSerial__) and no port code sets that byte's bit 0, the printer plan's seam is inside the printer engine (docs/current_plan_printer.md); lifetime=until the printer plan ports its serial pump or retires the retained dead branch}
+global PrinterSerial
+PrinterSerial:
+    ret

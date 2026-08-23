@@ -67,12 +67,9 @@ section .text
 ; BillsHousePC — RETIRED. The real faithful body is LINKED at its pret mirror
 ; src/engine/events/hidden_events/bills_house_pc.asm.
 
-global CableClubLeftGameboy
-CableClubLeftGameboy:
-    ret
-global CableClubRightGameboy
-CableClubRightGameboy:
-    ret
+; CableClubLeftGameboy / CableClubRightGameboy — RETIRED (link plan Stage 3).
+; The real faithful bodies are LINKED at their pret mirror
+; src/engine/pokemon/bills_pc.asm.
 
 ; --- Pokémon Mansion switch scripts (Stage 5: Cinnabar) ---
 global Mansion1Script_Switches
