@@ -118,6 +118,14 @@ endef
 BUG_FIX_LEVEL ?= 0
 NASMFLAGS += -D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)
 
+# Keyboard naming-screen input path (link cable plan Stage 5 step 4): an
+# additive DOS-keyboard alternative to the joypad letter grid in
+# src/engine/menus/naming_screen.asm, gated the same way BUG_FIX_LEVEL is
+# above (%if value test, not %ifdef) so KBD_NAMING=0 (default) assembles the
+# untouched pret-mirrored code path byte-for-byte. Override: make KBD_NAMING=1
+KBD_NAMING ?= 0
+NASMFLAGS += -D KBD_NAMING=$(KBD_NAMING)
+
 # Real per-mon front sprites: pics.asm indexes MonFrontPics (src/data/mon_pics.asm,
 # generated). Without this every mon draws the single embedded debug pic (pidgey).
 NASMFLAGS += -D MON_FRONT_PICS

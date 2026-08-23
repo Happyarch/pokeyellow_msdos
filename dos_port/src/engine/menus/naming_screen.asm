@@ -109,6 +109,52 @@ extern g_bg_whiteout                   ; ppu/ppu.asm
 extern g_tilecache_dirty               ; ppu/ppu.asm — VRAM tile writes must set this
 
 ; ---------------------------------------------------------------------------
+; KBD_NAMING (link cable plan Stage 5 step 4): additive DOS-keyboard input
+; for this screen. Every symbol/label under this flag is invisible to the
+; KBD_NAMING=0 (default) build — see the DEVIATION at DisplayNamingScreen's
+; entry below and the SHA1 proof in the commit message.
+; ---------------------------------------------------------------------------
+%if KBD_NAMING
+extern g_kbd_text_mode      ; src/input/joypad.asm — byte, gates kbd_isr's ring push
+extern kbd_ring_pop         ; src/input/joypad.asm — AL=scancode AH=shift ZF=1 empty
+extern pad_buttons          ; src/input/joypad.asm — byte, PAD_*_BIT held mask
+extern pad_dpad             ; src/input/joypad.asm — byte, PAD_*_BIT held mask
+extern KbdScancodeMap       ; assets/kbd_scancode_map.inc, global'd under this same
+                            ; flag by gen_kbd_naming.py (defined in src/input/
+                            ; kbd_text.o, which links unconditionally)
+extern KbdScancodeMapShift  ; ditto
+extern KbdPickerChars       ; ditto — $FF-terminated KBD_NAMING picker charset
+
+SC_ENTER_KEY     equ 0x1C   ; also Start in joypad mode (src/input/joypad.asm
+                            ; SC_ENTER) — harmless overlap: Enter always exits
+                            ; via .submitNickname, so no later JoypadLowSensitivity
+                            ; call in this routine could double-fire on it
+SC_ESC_KEY       equ 0x01   ; picker-cancel only; the host-quit latch (pad_quit)
+                            ; is suppressed while g_kbd_text_mode is set (see
+                            ; joypad.asm's Esc branch) — safe to reuse here
+SC_BACKSPACE_KEY equ 0x0E   ; also Select in joypad mode (SC_BACKSPACE) — this
+                            ; branch loops back into .inputLoop (unlike Enter),
+                            ; so PAD_SELECT_MASK is cleared below to avoid the
+                            ; SAME physical keypress re-appearing as a fresh
+                            ; Select edge (case toggle) a frame later
+SC_TAB_KEY       equ 0x0F   ; also Select in joypad mode (SC_TAB) — opens the
+                            ; picker instead in text mode; same double-fire
+                            ; guard as Backspace
+SC_LEFT_KEY      equ 0x4B   ; picker navigation; also D-pad Left (SC_LEFT)
+SC_RIGHT_KEY     equ 0x4D   ; picker navigation; also D-pad Right (SC_RIGHT)
+
+; joypad.asm's own PAD_*_BIT values (file-local equs there, not exported —
+; mirrored here as bit masks so the double-fire guards above/below can clear
+; just the one bit a text-mode key doubles as, without touching joypad.asm).
+PAD_RIGHT_MASK  equ (1 << 0)
+PAD_LEFT_MASK   equ (1 << 1)
+PAD_START_MASK  equ (1 << 3)
+PAD_SELECT_MASK equ (1 << 2)
+
+KBD_PICKER_TERMINATOR equ 0xFF   ; gen_kbd_naming.py's PICKER_TERMINATOR
+%endif
+
+; ---------------------------------------------------------------------------
 ; Local enums (Tier-2, naming-screen-only; not in gb_memmap.inc/gb_constants.inc
 ; per the two-tier rule — these are jump-table indices / UI enums, not data).
 ; pret ref: constants/menu_constants.asm, constants/text_constants.asm
@@ -140,6 +186,15 @@ GBSCR_W equ 20   ; pret SCREEN_WIDTH — stride of the naming screen's own strid
 
 ; hlcoord X,Y helper (stride-20 scratch)
 %define HL(X,Y)  (wTileMap + (Y) * GBSCR_W + (X))
+
+; KBD_NAMING picker state (link cable plan Stage 5 step 4): port-only, no
+; pret WRAM allocation (same convention as src/input/kbd_text.asm's own
+; .bss). Lives in this file's existing .bss extent — no new section name.
+%if KBD_NAMING
+section .bss
+kbd_picker_count: resb 1   ; entries in KbdPickerChars (computed at open time)
+kbd_picker_idx:   resb 1   ; currently-shown index into KbdPickerChars
+%endif
 
 ; assets/alphabets.inc — Tier-1 generated letter-grid blobs (gen_alphabets.py).
 ; %include-in-.data, same pattern as gfx/load_font.asm's font asset includes.
@@ -313,6 +368,11 @@ DisplayNameRaterScreen:
 DisplayNamingScreen:
     push esi                              ; [S1] dest — popped at .submitNickname only
     mov dword [text_row_stride], GBSCR_W  ; port: this screen's own stride-20 scratch
+    ; DEVIATION{class=projection; pret=engine/menus/naming_screen.asm:DisplayNamingScreen; behavior=an optional DOS keyboard input path (typing, Backspace, Enter, and a Tab-opened special-character picker) runs additively alongside pret's joypad letter-grid cursor, under the KBD_NAMING build flag; evidence=build-flag-gated (nasm %if KBD_NAMING) -- the default KBD_NAMING=0 build assembles byte-identical PKMN.EXE, SHA1-verified against the pre-change build (see the commit's self-check log); lifetime=permanent DOS input option}
+%if KBD_NAMING
+    mov byte [g_kbd_text_mode], 1
+    call .kbdDrainRing            ; discard scancodes buffered before this screen opened
+%endif
     or byte [ebp + wStatusFlags5], (1 << BIT_NO_TEXT_DELAY)
     call GBPalWhiteOutWithDelay3
     call ClearScreen
@@ -378,6 +438,51 @@ DisplayNamingScreen:
     call AnimatePartyMon_ForceSpeed1      ; farcall — shake the mini sprite (+ DelayFrame)
     pop eax                               ; pop af
     mov [ebp + wCurrentMenuItem], al      ; ld [wCurrentMenuItem],a
+%if KBD_NAMING
+    ; DOS keyboard path (additive, runs BEFORE the joypad handling below):
+    ; poll ONE ring entry per frame -- same one-key-per-DelayFrame idiom as
+    ; kbd_text_edit's own loop (src/input/kbd_text.asm), so a fast typist
+    ; drains across a few frames rather than losing keys (ring depth 16).
+    call kbd_ring_pop
+    jz .kbdSkip                          ; nothing typed this frame
+    cmp al, SC_ENTER_KEY
+    je .kbdEnter
+    cmp al, SC_BACKSPACE_KEY
+    je .kbdBackspace
+    cmp al, SC_TAB_KEY
+    je .kbdTab
+    movzx ebx, al
+    test ah, ah
+    jz .kbdUnshifted
+    mov al, [KbdScancodeMapShift + ebx]
+    jmp .kbdHaveChar
+.kbdUnshifted:
+    mov al, [KbdScancodeMap + ebx]
+.kbdHaveChar:
+    test al, al
+    jz .kbdSkip                          ; untypable scancode (incl. Esc/arrows,
+                                          ; not otherwise handled here) -- ignore
+    mov edx, .ABStartReturnPoint
+    push edx
+    jmp .storeLetterAndCheckLength       ; reuse .pressedA's append/length-cap path
+.kbdEnter:
+    mov edx, .ABStartReturnPoint
+    push edx
+    jmp .pressedStart
+.kbdBackspace:
+    and byte [pad_buttons], ~PAD_SELECT_MASK & 0xFF
+    mov edx, .ABStartReturnPoint
+    push edx
+    jmp .pressedB
+.kbdTab:
+    and byte [pad_buttons], ~PAD_SELECT_MASK & 0xFF
+    call .kbdPickerOverlay               ; blocks until pick/cancel; CF=1+AL=char on pick
+    jnc .kbdSkip
+    mov edx, .ABStartReturnPoint
+    push edx
+    jmp .storeLetterAndCheckLength
+.kbdSkip:
+%endif
     call JoypadLowSensitivity
     ; DEVIATION{class=HAL; pret=engine/menus/naming_screen.asm:NamingScreen; behavior=read debounced hJoy5 after JoypadLowSensitivity instead of hJoyPressed; evidence=pret input loop reads hJoyPressed while port JoypadLowSensitivity publishes hJoy5; lifetime=permanent input HAL boundary}
     ; pret reads hJoyPressed directly here; the port convention
@@ -432,6 +537,15 @@ DisplayNamingScreen:
     movzx esi, word [ebp + wMenuCursorLocation]
     inc esi                               ; letter cell sits one column right of the cursor
     mov al, [ebp + esi]
+%if KBD_NAMING
+.storeLetterAndCheckLength:             ; KBD_NAMING keyboard/picker entry point:
+                                         ; jumped to with AL = the translated or
+                                         ; picked charmap byte already in place
+                                         ; of the grid-cursor read above (ESI's
+                                         ; value here doesn't matter -- CalcStringLength
+                                         ; below overwrites it before it's used);
+                                         ; reuses every check from here on unmodified.
+%endif
     mov [ebp + wNamingScreenLetter], al
     call CalcStringLength                 ; ESI -> '@' in wStringBuffer (append point)
     mov al, [ebp + wNamingScreenLetter]
@@ -544,6 +658,9 @@ DisplayNamingScreen:
     call GBPalNormal
     mov byte [ebp + wAnimCounter], 0      ; xor a / ld [wAnimCounter],a
     and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF
+%if KBD_NAMING
+    mov byte [g_kbd_text_mode], 0         ; the only exit from DisplayNamingScreen
+%endif
     cmp byte [ebp + wIsInBattle], 0
     jz LoadTextBoxTilePatterns            ; tail jump (pret: jp z, LoadTextBoxTilePatterns)
     jmp LoadHudTilePatterns               ; tail jump (pret: jpfar LoadHudTilePatterns)
@@ -563,6 +680,152 @@ DisplayNamingScreen:
     dd .selectReturnPoint, .pressedSelect
     dd .ABStartReturnPoint,.pressedB
     dd .ABStartReturnPoint,.pressedA
+
+%if KBD_NAMING
+; ---------------------------------------------------------------------------
+; .kbdDrainRing -- discard every scancode buffered before this screen took
+; over text-mode input (e.g. the Enter/click that opened it). Same shape as
+; kbd_text_edit's own entry drain (src/input/kbd_text.asm).
+; ---------------------------------------------------------------------------
+.kbdDrainRing:
+    call kbd_ring_pop
+    jnz .kbdDrainRing
+    ret
+
+; ---------------------------------------------------------------------------
+; .kbdPickerOverlay -- KBD_NAMING special-character picker (link cable plan
+; Stage 5 step 4). Port-only, no pret counterpart (covered by the
+; DisplayNamingScreen DEVIATION above): a minimal one-TextBoxBorder-box
+; spinner over KbdPickerChars (assets/kbd_scancode_map.inc, gen_kbd_naming.py's
+; build_kbd_naming_picker()) -- the Gen-1 naming-grid glyphs no key in
+; KbdScancodeMap/KbdScancodeMapShift can type: brackets, <PK>/<MN>,
+; punctuation the covered subset skips, the gender symbols, etc.
+;
+; Left/Right cycle the single shown character (wrap-around); Enter picks it
+; (the caller does `jmp .storeLetterAndCheckLength`, appending it via the
+; SAME .addLetter path every other entry method uses -- this routine never
+; appends anything itself); Esc cancels. Self-contained: polls kbd_ring_pop
+; and calls DelayFrame/naming_mirror itself every iteration -- the same
+; one-key-per-frame idiom as the poll loop above -- so the overlay stays
+; visible and responsive even though .inputLoop's own per-frame calls don't
+; run while we're in here.
+;
+; Row-budget note: TextBoxBorder's minimum footprint (1 top border + 1
+; interior + 1 bottom border) is exactly the three rows free below the main
+; letter-grid box (that box's own TextBoxBorder call above occupies rows
+; 4-14 inclusive of this screen's 18-row stride-20 scratch) -- there is no
+; spare row left for a separate cursor indicator. Showing one always-current
+; character, rather than the whole charset at once, is what fits that
+; budget with interior 1x1: the visible character already IS the cursor,
+; which is also what "keep the overlay minimal" buys back.
+;
+; In: none. Out: CF=1 + AL=picked charmap byte, or CF=0 (Esc, or the picker
+; table is empty). Clobbers EAX/EBX/ECX/EDX/ESI.
+; ---------------------------------------------------------------------------
+.kbdPickerOverlay:
+    xor ecx, ecx
+.kbdPickerCount:
+    cmp byte [KbdPickerChars + ecx], KBD_PICKER_TERMINATOR
+    je .kbdPickerCounted
+    inc ecx
+    jmp .kbdPickerCount
+.kbdPickerCounted:
+    test ecx, ecx
+    jz .kbdPickerEmpty                   ; nothing to offer -- the generator
+                                          ; guarantees this doesn't happen
+                                          ; today; guarded anyway
+    mov [kbd_picker_count], cl
+    mov byte [kbd_picker_idx], 0
+
+    mov esi, HL(8, 15)
+    mov bh, 1
+    mov bl, 1
+    call TextBoxBorder
+    call .kbdPickerDraw
+
+.kbdPickerLoop:
+    call naming_mirror                   ; keep the overlay (and everything
+                                          ; under it) visible -- .inputLoop's
+                                          ; own mirror call doesn't run here
+    call DelayFrame
+    call kbd_ring_pop
+    jz .kbdPickerLoop
+    cmp al, SC_ENTER_KEY
+    je .kbdPickerPick
+    cmp al, SC_ESC_KEY
+    je .kbdPickerCancel
+    cmp al, SC_LEFT_KEY
+    je .kbdPickerLeft
+    cmp al, SC_RIGHT_KEY
+    je .kbdPickerRight
+    jmp .kbdPickerLoop                   ; ignore anything else
+.kbdPickerLeft:
+    movzx eax, byte [kbd_picker_idx]
+    test eax, eax
+    jnz .kbdPickerLeftDec
+    mov al, [kbd_picker_count]
+.kbdPickerLeftDec:
+    dec al
+    mov [kbd_picker_idx], al
+    call .kbdPickerDraw
+    jmp .kbdPickerLoop
+.kbdPickerRight:
+    movzx eax, byte [kbd_picker_idx]
+    inc al
+    cmp al, [kbd_picker_count]
+    jb .kbdPickerRightOK
+    xor al, al
+.kbdPickerRightOK:
+    mov [kbd_picker_idx], al
+    call .kbdPickerDraw
+    jmp .kbdPickerLoop
+.kbdPickerPick:
+    movzx ebx, byte [kbd_picker_idx]
+    mov al, [KbdPickerChars + ebx]
+    push eax
+    call .kbdPickerClose
+    pop eax
+    stc
+    ret
+.kbdPickerCancel:
+    call .kbdPickerClose
+    clc
+    ret
+.kbdPickerEmpty:
+    clc
+    ret
+
+; .kbdPickerDraw -- write the currently-selected char into the box's one
+; interior cell. In: [kbd_picker_idx]. Clobbers EAX/EBX/ESI.
+.kbdPickerDraw:
+    movzx ebx, byte [kbd_picker_idx]
+    mov al, [KbdPickerChars + ebx]
+    mov esi, HL(9, 16)
+    mov byte [ebp + esi], al
+    ret
+
+; .kbdPickerClose -- blank the box's three rows, and clear whatever D-pad/
+; Start bits an in-picker keypress left set (see .kbdTab's own
+; PAD_SELECT_MASK clear above for why: those bits double as joypad bindings,
+; and .inputLoop's JoypadLowSensitivity resumes running the instant this
+; returns). Clobbers EAX/EBX/ESI.
+.kbdPickerClose:
+    and byte [pad_dpad], ~(PAD_LEFT_MASK | PAD_RIGHT_MASK) & 0xFF
+    and byte [pad_buttons], ~PAD_START_MASK & 0xFF
+    mov esi, HL(8, 15)
+    mov bh, 1
+    mov bl, 3
+    call ClearScreenArea
+    mov esi, HL(8, 16)
+    mov bh, 1
+    mov bl, 3
+    call ClearScreenArea
+    mov esi, HL(8, 17)
+    mov bh, 1
+    mov bl, 3
+    call ClearScreenArea
+    ret
+%endif
 
 ; ---------------------------------------------------------------------------
 ; RunDefaultPaletteCommand MOVED to src/home/palettes.asm (mirror rule), where it
