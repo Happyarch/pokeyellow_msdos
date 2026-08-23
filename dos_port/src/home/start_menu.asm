@@ -222,10 +222,23 @@ CloseStartMenu:
     test byte [ebp + hJoyHeld], PAD_A | PAD_B | PAD_START
     jnz .closeReleaseLoop
     call LoadTextBoxTilePatterns
-    ; DEVIATION{class=temporary; pret=home/start_menu.asm:CloseStartMenu; behavior=inline the linked window/tile restoration instead of jumping to check-only CloseTextDisplay; evidence=project_state reports CloseTextDisplay check-only and port cleanup restores menu-owned resources; lifetime=until text_script.asm closure links}
-    ; pret `jp CloseTextDisplay` — folded here (see
-    ; header; CloseTextDisplay is translated but unlinked): drop the menu window
-    ; and swap the walk tiles back into vFont.
+    ; DEVIATION{class=projection; pret=home/start_menu.asm:CloseStartMenu; behavior=inline the window and tile restoration instead of jumping to CloseTextDisplay, and additionally reset the port-only text_row_stride and menu_redraw_cb; evidence=CloseTextDisplay does not reset either of those two port-only menu variables and does not call RefreshCollisionTileMap or ReloadWalkingTilePatterns, so a bare jump would leave the next dialog on the menu stride with a stale redraw callback; lifetime=until CloseTextDisplay absorbs the port-only menu teardown or the start menu stops owning it}
+    ;
+    ; *** THE ORIGINAL REASON FOR THIS INLINE IS DISPROVEN — do not re-cite it. ***
+    ; It read `class=temporary ... evidence=project_state reports CloseTextDisplay
+    ; check-only ... lifetime=until text_script.asm closure links`. Measured
+    ; 2026-08-23: src/home/text_script.asm IS in the Makefile's linked source list,
+    ; and both CloseTextDisplay and HoldTextDisplayOpen report `translated` with a
+    ; port file. The linkage blocker retired at some point and nothing re-read the
+    ; annotation.
+    ;
+    ; What survives is a real projection difference, which is why this is still
+    ; inlined rather than swapped for pret's `jp CloseTextDisplay`. A swap WOULD gain
+    ; pret behaviour this path currently skips — SwitchToMapRomBank, DelayFrame,
+    ; LoadGBPal, the sprite-facing restore, InitMapSprites, LoadCurrentMapView — and
+    ; that is worth doing; it is left for a change that can be gated deliberately,
+    ; because this is live overworld UI covered by the core-tier start_menu golden.
+    ; drop the menu window and swap the walk tiles back into vFont.
     call hide_window
     call RefreshCollisionTileMap        ; scrub the box tiles out of the mirror
                                         ; (pret: LoadScreenTilesFromBuffer2 analog)

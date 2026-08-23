@@ -1122,7 +1122,16 @@ StartMenu_SaveReset:                    ; pret ref: start_sub_menus.asm:StartMen
     test al, (1 << BIT_LINK_CONNECTED)
     jnz Init                            ; jp nz, Init — soft reset during a link
     call SaveMenu                       ; predef SaveMenu
-    ; DEVIATION{class=temporary; pret=engine/menus/start_sub_menus.asm:StartMenu_SaveReset; behavior=use linked CloseStartMenu instead of check-only HoldTextDisplayOpen and CloseTextDisplay after saving; evidence=project_state reports both text-script routines check-only and port fold closes to the same map destination; lifetime=until text_script.asm closure links}
+    ; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:StartMenu_SaveReset; behavior=close through CloseStartMenu instead of pret's HoldTextDisplayOpen followed by CloseTextDisplay after saving; evidence=CloseStartMenu is the port's own menu teardown and additionally resets the port-only text_row_stride and menu_redraw_cb that neither pret routine touches, and both routes end at the same map destination; lifetime=until CloseTextDisplay absorbs the port-only menu teardown}
+    ;
+    ; *** THE ORIGINAL REASON IS DISPROVEN — do not re-cite it. *** It read
+    ; `class=temporary ... evidence=project_state reports both text-script routines
+    ; check-only ... lifetime=until text_script.asm closure links`. Measured
+    ; 2026-08-23: src/home/text_script.asm is in the Makefile's linked source list
+    ; and both HoldTextDisplayOpen and CloseTextDisplay report `translated` with a
+    ; port file. Same stale-linkage premise as the twin annotation in
+    ; src/home/start_menu.asm:CloseStartMenu; see the longer note there for what a
+    ; faithful swap would gain and why it is left for a deliberately gated change.
     ; pret is `call LoadScreenTilesFromBuffer2 /
     ; jp HoldTextDisplayOpen` — hold until A is released, then fall into
     ; CloseTextDisplay, which CLOSES the menu and returns to the map. The port used
