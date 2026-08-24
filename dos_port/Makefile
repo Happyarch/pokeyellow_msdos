@@ -3088,6 +3088,18 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_TRADE_GOLDEN
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# print_surf_cancel golden (printer plan Stage 3): spawn in Summer Beach House
+# facing the printer; AUTOKEY_APRESS answers dialogs and YES/NO choices, and B cancels printing.
+# make DEBUG_PRINT_SURF_CANCEL=1
+ifdef DEBUG_PRINT_SURF_CANCEL
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_PRINT_SURF_CANCEL
+NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SEED_PARTY
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
 # LoadEnemyMonData → LoadBattleMonFromParty) + the convergence-spec DV overwrite
 # replace DEBUG_BATTLE's synthetic seed. Combine with DEBUG_BATTLE_INTRO /

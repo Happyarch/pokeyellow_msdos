@@ -450,6 +450,15 @@ section .bss
 trade_golden_dump_armed: resb 1
 section .text
 %endif
+%ifdef DEBUG_PRINT_SURF_CANCEL
+; print_surf_cancel golden (printer plan Stage 3): armed by the SummerBeachHouse
+; script shim (src/scripts/SummerBeachHouse.asm) when Func_f23d0 completes;
+; consumed by OverworldLoop after the closing text is dismissed.
+global print_surf_dump_armed
+section .bss
+print_surf_dump_armed: resb 1
+section .text
+%endif
 %ifdef DEBUG_NPC_WALK
 global DumpNpcLog
 global npc_log
@@ -1143,6 +1152,12 @@ gbstate_regions:
     ; bytes. knMarks is set only once DisplayNamingScreen's .submitNickname
     ; has actually committed (see naming_screen.asm's DEBUG_KBDNAMECHECK hook).
     gbregion_flat "knMarks",    kbdnamecheck_marks, 1
+%endif
+%ifdef DEBUG_PRINT_SURF_CANCEL
+    ; --- print_surf_cancel golden (printer plan Stage 3) ---
+    gbregion "wPrinterTileBuffer", wPrinterTileBuffer, 360
+    gbregion "wcae2",             wcae2,              1
+    gbregion "wPrinterSettings",   wPrinterSettingsTempCopy, 1
 %endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph
 ; (AUTOKEY_DUMP_ON_BATTLE) or the state-gated follow-stall probe

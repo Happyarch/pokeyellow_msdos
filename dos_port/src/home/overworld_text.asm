@@ -91,6 +91,10 @@ DisplaySignText:
     test edi, edi
     jz .done
 
+    mov eax, [ecx + edx + 4]            ; script/stream discriminator (0xFFFFFFFF = text_asm)
+    cmp eax, 0xFFFFFFFF
+    je .run_script
+
     ; --- pret DisplayTextID first-byte special-case dispatch (home/text_script.asm:71-84) ---
     mov al, [edi]                       ; first byte of the resolved TX stream
     cmp al, TX_SCRIPT_LOWEST            ; $F6 — lowest TX_SCRIPT sentinel
@@ -113,12 +117,14 @@ DisplaySignText:
     jmp .done
 
 .printText:
-    mov eax, [ecx + edx + 4]            ; script/stream discriminator (0xFFFFFFFF = text_asm)
-    cmp eax, 0xFFFFFFFF
-    je .done                            ; text_asm SCRIPT entry — handled by CheckNPCInteraction, not here
     mov esi, edi                        ; flat src — TCP walks it in place
     call ShowTextStream
 .done:
+    popad
+    ret
+
+.run_script:
+    call edi                            ; flat text_asm routine (e.g. SummerBeachHousePrinterText)
     popad
     ret
 

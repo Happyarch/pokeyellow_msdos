@@ -103,6 +103,7 @@ extern PrintText                         ; src/home/window.asm
 extern SaveScreenTilesToBuffer1          ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1        ; src/home/tilemap.asm
 extern ReloadMapAfterPrinter             ; src/home/overworld.asm
+extern DumpBackbuffer
 extern DrawDexEntryOnScreen              ; src/engine/menus/pokedex.asm
 extern Pokedex_DrawInterface             ; src/engine/menus/pokedex.asm
 extern Pokedex_PlacePokemonList          ; src/engine/menus/pokedex.asm
@@ -649,13 +650,12 @@ Printer_PlayMapMusic:
     call PlayDefaultMusic
     ret
 
-; ---------------------------------------------------------------------------
-; Printer_FadeOutMusicAndWait — pret engine/printer/printer.asm:506-514.
-; ---------------------------------------------------------------------------
+; DEVIATION{class=HAL; pret=engine/printer/printer.asm:Printer_FadeOutMusicAndWait; behavior=the fade-out wait calls DelayFrame each iteration instead of spinning on wAudioFadeOutControl alone; evidence=on the GB the audio engine runs from the VBlank interrupt so a bare spin still advances the fade, while this port ticks audio inside DelayFrame so a bare spin would never decrement it and would hang forever; lifetime=permanent}
 Printer_FadeOutMusicAndWait:
     mov byte [ebp + wAudioFadeOutControl], 4
     call StopAllMusic
 .wait_music_stop:
+    call DelayFrame
     cmp byte [ebp + wAudioFadeOutControl], 0
     jne .wait_music_stop
     ret
@@ -847,7 +847,7 @@ Printer_PrepareSurfingMinigameHighScoreTileMap:
     lea eax, [ebp + wPlayerName]
     call PlaceString
     call CopySurfingMinigameScore
-    mov bl, SET_PAL_GENERIC              ; ld b, SET_PAL_GENERIC
+    mov bh, SET_PAL_GENERIC              ; ld b, SET_PAL_GENERIC
     call RunPaletteCommand
     mov byte [ebp + hAutoBGTransferEnabled], 1
     call Delay3

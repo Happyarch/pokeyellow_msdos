@@ -129,6 +129,9 @@ extern DumpBackbuffer                     ; src/debug/debug_dump.asm
 %ifdef DEBUG_TRADE_GOLDEN
 extern trade_golden_dump_armed            ; src/debug/debug_dump.asm — armed by Route2TradeHouse shim
 %endif
+%ifdef DEBUG_PRINT_SURF_CANCEL
+extern print_surf_dump_armed              ; src/debug/debug_dump.asm — armed by SummerBeachHouse shim
+%endif
 extern DumpSeamLog                        ; src/debug/debug_dump.asm
 extern EnterMapAnim                       ; src/engine/overworld/player_animations.asm
 extern GBFadeOutToBlack                   ; src/home/fade.asm
@@ -433,6 +436,17 @@ EnterMap:
     ; ROUTE_2_TRADE_HOUSE is INDOORS: stage the .blk into the shared window
     ; (same call and reason as DEBUG_CABLECLUB above).
     call StageIndoorMapBlk
+%endif
+%ifdef DEBUG_PRINT_SURF_CANCEL
+    ; print_surf_cancel golden (printer plan Stage 3): spawn in Summer Beach House
+    ; in front of the printer at (y=2, x=13).
+    mov byte [ebp + wCurMap], SUMMER_BEACH_HOUSE
+    mov byte [ebp + wYCoord], 2
+    mov byte [ebp + wXCoord], 13
+    mov byte [ebp + wDestinationWarpID], 0xFF
+    call StageIndoorMapBlk
+    or byte [ebp + wPikachuSpawnStateFlags], (1 << BIT_PIKACHU_SPAWN_SURFING)
+    or byte [ebp + wPikachuMapScriptFlags], (1 << 1)
 %endif
 %ifdef DEBUG_PREDEFTEXT
     ; Predef-text gate (predef-text plan Stage 2 acceptance). Stand ON the SNES tile
@@ -1331,6 +1345,14 @@ EnterMap:
     ; rebuilds wSpriteStateData1 (same rule as DEBUG_CABLECLUB).
     mov byte [ebp + wSpritePlayerStateData1FacingDirection], TRADE_GOLDEN_DIR
 %endif
+%ifdef DEBUG_PRINT_SURF_CANCEL
+    ; Same shape as DEBUG_CABLECLUB above: seed, then FALL THROUGH into the
+    ; real OverworldLoop. AUTOKEY_APRESS drives the talk, YES choice, and final
+    ; dialog dismissal.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], SPRITE_FACING_UP
+%endif
 %ifdef DEBUG_LEDGE
     ; Same shape as DEBUG_SURF above: seed, then FALL THROUGH into the real
     ; OverworldLoop. AUTOKEY_LEDGE's scripted joypad arms the hop with a real
@@ -1461,6 +1483,12 @@ OverworldLoop:
     jne .noTradeGoldenDump
     call DumpBackbuffer                    ; FRAME.BIN + GBSTATE.BIN, then exits
 .noTradeGoldenDump:
+%endif
+%ifdef DEBUG_PRINT_SURF_CANCEL
+    cmp byte [print_surf_dump_armed], 1
+    jne .noPrintSurfDump
+    call DumpBackbuffer                    ; FRAME.BIN + GBSTATE.BIN, then exits
+.noPrintSurfDump:
 %endif
 
     ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
@@ -1675,7 +1703,13 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     test al, al
     jz .checkPADDown                           ; scan disagreement → fall to D-pad
 .interactionDone:
-
+%ifdef DEBUG_PRINT_SURF_CANCEL
+    cmp byte [print_surf_dump_armed], 1
+    jne .waitAReleased
+    call UpdateSprites
+    call DelayFrame
+    call DumpBackbuffer
+%endif
     ; Interaction handled. Wait for A to be released before restarting to prevent
     ; the next OverworldLoop iteration from re-triggering while A is still held.
 .waitAReleased:

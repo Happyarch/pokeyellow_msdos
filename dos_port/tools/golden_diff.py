@@ -2603,6 +2603,27 @@ SCENARIOS = {
             ],
         },
     },
+    "print_surf_cancel": {
+        "flags": "DEBUG_PRINT_SURF_CANCEL=1 AUTOKEY_APRESS=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (16, 8),
+        "offcanvas": "window at (16,8): golden row 17 maps past the 25-row canvas",
+        "masks": {
+            "oam": [
+                (i, "NPC entries: port sprite engine positions NPCs at canvas coordinates; "
+                    "player entries 0-3 match")
+                for i in range(4, 40)
+            ],
+            "vram": [
+                (i, "unreferenced OBJ/boot residue: hardware retains tiles from maps the golden walked through")
+                for i in range(36, 164)
+            ] + [
+                (328 + i, "tileset reload residue in vChars2 ($9480-$95D0): port reloaded HOUSE tileset "
+                          "patterns via ReloadTilesetTilePatterns on overworld return")
+                for i in range(22)
+            ],
+        },
+    },
 }
 
 

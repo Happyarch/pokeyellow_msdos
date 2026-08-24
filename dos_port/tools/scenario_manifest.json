@@ -2888,6 +2888,39 @@
         "masks": "n/a (port_only)"
       },
       "verification": "PORT-ONLY (link cable plan Stage 5 step 5, Deliverable 3): the KBD_NAMING keyboard-entry path on the naming screen, asserted directly against GBSTATE.BIN by tools/kbdnamecheck.sh, not through goldencheck. RunKbdNameCheckTest (src/engine/menus/naming_screen.asm) seeds the deterministic RED/id-0 identity then calls the REAL, blocking DisplayNamingScreen for the PLAYER screen (dest wPlayerName) -- unlike the DEBUG_NAMINGSCREEN golden's RunNamingScreenTest, which deliberately never enters that loop. The SAME AUTOKEY_KBDSCRIPT scancode-injection mechanism link_book_roundtrip's driver uses (src/debug/debug_dump.asm, via kbd_ring_push) types \"Ab\" (shift A, unshifted b) through DisplayNamingScreen's KBD_NAMING branch (%if KBD_NAMING; kbd_ring_pop), opens the special-character picker with Tab, picks its deterministic index-0 entry (KbdPickerChars[0], assets/kbd_scancode_map.inc) with Enter, then submits with a second Enter (.kbdEnter -> .pressedStart -> .submitNickname). kbdnamecheck_marks (GBSTATE region knMarks) is set only once .submitNickname actually commits -- a game-code-gated store, not harness bookkeeping. The default KBD_NAMING=0 build is unaffected: step 4 already SHA1-proved that build byte-identical, and every symbol this scenario touches (kbdnamecheck_marks, RunKbdNameCheckTest, the AUTOKEY_KBDSCRIPT push) lives behind DEBUG_KBDNAMECHECK/AUTOKEY_KBDSCRIPT, which this scenario's own build is the only build that defines. DOSBox-side dynamic verification is DEFERRED to the end-of-plan battery -- this implementer's checks are static only, per the plan's directive."
+    },
+    {
+      "name": "print_surf_cancel",
+      "id": 96,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_PRINT_SURF_CANCEL=1 AUTOKEY_APRESS=1",
+      "port_entry_gate": "DEBUG_PRINT_SURF_CANCEL",
+      "navigation_script": "tools/mgba_harness/scenarios/print_surf_cancel.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "PrintSurfingMinigameHighScore",
+        "Printer_PrepareSurfingMinigameHighScoreTileMap",
+        "Printer_CopyTileMapToPrinterTileBuffer",
+        "PrintDev_ConsumePacket"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Game Boy Printer capture layer and transmission/cancel test (docs/current_plan_printer.md Stage 3): interacts with the Summer Beach House printer (bg_event 13, 1) with surfing Pikachu unlocked and selects YES to print the high score. Runs SummerBeachHousePrinterText -> Func_f23d0 -> PrintSurfingMinigameHighScore, which renders the 20x18 high score screen, sets wcae2=0x13, and captures the 360-byte tilemap into wPrinterTileBuffer. The mGBA golden encounters no printer on serial, enters PRINTER_ERROR_2, cancels on B, and returns to overworld; the DOS port consumes the packets with PrintDev_ConsumePacket and returns to overworld. Compared surfaces assert wPrinterTileBuffer, wcae2, and wPrinterSettingsTempCopy alongside standard overworld state."
     }
   ],
   "disabled_scenarios": []

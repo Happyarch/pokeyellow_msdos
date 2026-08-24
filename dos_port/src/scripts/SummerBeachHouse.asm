@@ -51,6 +51,10 @@ extern TextScriptEnd
 extern WaitForSoundToFinish
 extern WaitForTextScrollButtonPress
 extern YesNoChoice
+%ifdef DEBUG_PRINT_SURF_CANCEL
+extern print_surf_dump_armed
+extern DumpBackbuffer
+%endif
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -312,6 +316,7 @@ Func_f23d0:
     call LoadScreenTilesFromBuffer2
     call Delay3
     call GBPalNormal
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     mov esi, Text_f2412
     mov al, [ebp + hOaksAideResult]
     test al, al
@@ -319,6 +324,9 @@ Func_f23d0:
     mov esi, Text_f240c
 .asm_f2406:
     call PrintText
+%ifdef DEBUG_PRINT_SURF_CANCEL
+    mov byte [print_surf_dump_armed], 1
+%endif
     jmp TextScriptEnd
 
 %assign event_byte -1

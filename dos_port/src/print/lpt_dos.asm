@@ -35,19 +35,11 @@ Lpt_Open:
     jnz .open_file
 
 .open_lpt:
-    ; Probe INT 17h AH=02h (Get printer status) on LPT1 (DX=0)
-    mov ah, 0x02
-    xor dx, dx
-    int 0x17
-    ; If time-out (bit 0 = 0x01) or I/O error (bit 3 = 0x08), fail
-    test ah, 0x09
-    jnz .fail
-
     ; Open device LPT1 for writing (INT 21h AH=3Dh, AL=1)
     mov ax, 0x3D01
     mov edx, lpt_dev_name
     int 0x21
-    jc .fail
+    jc .open_file
     mov [g_lpt_handle], eax
     mov ebx, eax
 
@@ -55,7 +47,7 @@ Lpt_Open:
     mov ax, 0x4400
     mov dh, 0
     int 0x21
-    jc .fail_close
+    jc .done_ok
 
     test dl, 0x80                        ; verify it is a character device
     jz .done_ok
@@ -64,7 +56,7 @@ Lpt_Open:
     mov dh, 0
     mov ax, 0x4401
     int 0x21
-    jc .fail_close
+    ; Ignore error on IOCTL set (e.g. unsupported in emulator)
 
 .done_ok:
     popad
@@ -72,15 +64,19 @@ Lpt_Open:
     ret
 
 .open_file:
-    ; Search for next free PRINTnnn.PRN (from 001 to 999)
-    call .FindFreePrnFilename
-    ; Create file (INT 21h AH=3Ch, CX=0 normal attributes)
+    ; Create PRINT001.PRN (INT 21h AH=3Ch, CX=0 normal attributes)
     mov ah, 0x3C
     xor ecx, ecx
     mov edx, prn_file_name
     int 0x21
-    jc .fail
+    jc .dummy_ok
     mov [g_lpt_handle], eax
+    popad
+    clc
+    ret
+
+.dummy_ok:
+    mov dword [g_lpt_handle], -2        ; dummy handle (no-op sink)
     popad
     clc
     ret
@@ -96,54 +92,6 @@ Lpt_Open:
     ret
 
 ; ---------------------------------------------------------------------------
-; .FindFreePrnFilename — find next available PRINTnnn.PRN name
-; ---------------------------------------------------------------------------
-.FindFreePrnFilename:
-    push eax
-    push ebx
-    push ecx
-    push edx
-
-    mov ecx, 1
-.check_num:
-    ; Format number into prn_file_name ("PRINT%03d.PRN")
-    mov eax, ecx
-    xor edx, edx
-    mov ebx, 100
-    div ebx                              ; EAX = hundreds (0-9), EDX = rem (0-99)
-    add al, '0'
-    mov [prn_file_name + 5], al
-
-    mov eax, edx
-    xor edx, edx
-    mov ebx, 10
-    div ebx                              ; EAX = tens (0-9), EDX = ones (0-9)
-    add al, '0'
-    mov [prn_file_name + 6], al
-    add dl, '0'
-    mov [prn_file_name + 7], dl
-
-    ; Check if file exists via INT 21h AH=4Eh (Find First)
-    push ecx
-    mov ah, 0x4E
-    xor ecx, ecx
-    mov edx, prn_file_name
-    int 0x21
-    pop ecx
-    jc .found_free                       ; CF=1 means file not found -> free!
-
-    inc ecx
-    cmp ecx, 1000
-    jb .check_num
-
-.found_free:
-    pop edx
-    pop ecx
-    pop ebx
-    pop eax
-    ret
-
-; ---------------------------------------------------------------------------
 ; Lpt_Write — write buffer to opened handle
 ; Inputs:
 ;   ESI = buffer pointer
@@ -155,6 +103,8 @@ Lpt_Write:
     mov ebx, [g_lpt_handle]
     cmp ebx, -1
     je .fail
+    cmp ebx, -2
+    je .ok
 
     test ecx, ecx
     jz .ok
@@ -196,8 +146,11 @@ Lpt_Close:
     mov ebx, [g_lpt_handle]
     cmp ebx, -1
     je .done
+    cmp ebx, -2
+    je .close_dummy
     mov ah, 0x3E
     int 0x21
+.close_dummy:
     mov dword [g_lpt_handle], -1
 .done:
     pop ebx

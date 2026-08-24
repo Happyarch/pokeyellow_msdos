@@ -150,6 +150,10 @@ SCRIPT_OVERRIDES = {
     # A-press showed a stub dialog and the trade flow was unreachable (measured
     # 2026-08-23: the in_game_trade goldencheck's state-gated dump never fired).
     'Route2TradeHouseGameboyKidText':           'Route2TradeHouseGameboyKidText',
+    # Summer Beach House printer (docs/current_plan_printer.md Stage 3):
+    # SummerBeachHousePrinterText is a text_asm script hand-ported in
+    # src/scripts/SummerBeachHouse.asm (Func_f23d0 -> PrintSurfingMinigameHighScore).
+    'SummerBeachHousePrinterText':              'SummerBeachHousePrinterText',
 }
 
 # ---------------------------------------------------------------------------

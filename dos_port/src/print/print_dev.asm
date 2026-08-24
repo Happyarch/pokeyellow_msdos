@@ -50,7 +50,7 @@ global g_print_status_flags
 section .data
 
 g_cfg_prn_lpt:                  dd 1             ; default LPT1 (1)
-g_cfg_prn_file:                 dd 0             ; default false (0)
+g_cfg_prn_file:                 dd 1             ; default file capture PRINTnnn.PRN (1)
 g_cfg_prn_color:                dd 0             ; default monochrome (0)
 g_cfg_prn_9pin:                 dd 0             ; default 24-pin ESC/P (0)
 
@@ -103,12 +103,6 @@ PrintDev_Cancel:
 PrintDev_ConsumePacket:
     pushad
 
-    ; Verify Magic ($88, $33)
-    cmp byte [ebp + wPrinterDataHeader + 0], 0x88
-    jne .packet_error
-    cmp byte [ebp + wPrinterDataHeader + 1], 0x33
-    jne .packet_error
-
     ; Verify Checksum
     call .VerifyChecksum
     jnc .checksum_ok
@@ -116,7 +110,7 @@ PrintDev_ConsumePacket:
     jmp .respond
 
 .checksum_ok:
-    mov al, [ebp + wPrinterDataHeader + 2]       ; command
+    mov al, [ebp + wPrinterDataHeader + 0]       ; command (1=INIT, 2=PRINT, 4=DATA)
     cmp al, PRN_CMD_INIT
     je .handle_init
     cmp al, PRN_CMD_DATA
