@@ -7,10 +7,10 @@
 ; engine/pikachu/pikachu_follow.asm labels (ShouldPikachuSpawn, TrySpawnPikachu,
 ; ResetPikachuOverworldStateFlag2) and the SpawnPikachu_ body they belong with.
 ;
-; The subsystem is INERT in the live build: nothing enables the follower, so the
-; only reachable path is SpawnPikachu -> _SpawnPikachu -> TrySpawnPikachu
-; .dont_spawn -> ret nc, drawing nothing. See the source file's header for the
-; full deferral note.
+; The follower-spawn plumbing is INERT in the live build (nothing enables the
+; follower), but the movement-script accessors are NOT: the Poké Center heal
+; flow reaches them through PikachuWalksToNurseJoy when the party holds the
+; starter Pikachu. See the source file's header for the full deferral note.
 ;
 ; Register map (CLAUDE.md): A->AL, HL->ESI, BC->BX (B=BH,C=BL), DE->DX; SM83
 ; `swap a` = nibble swap = `ror al, 4`. GB memory = [ebp + SYM] (gb_memmap.inc).
@@ -155,9 +155,9 @@ Pikachu_IsInArray:
     ret
 
 ; ===========================================================================
-; GetPikachuMovementScriptByte — pret home/pikachu.asm. Fetch the next byte of the
-; active Pikachu movement script, advancing wPikachuMovementScriptAddress, under
-; the script's ROM bank. Returns the byte in AL. Preserves the emulated BC (BX).
+; GetPikachuMovementScriptByte — pret home/pikachu.asm. Fetch the next byte of
+; the active Pikachu movement script, advancing the cursor. Returns AL.
+; Preserves the emulated BC (BX) and HL (ESI).
 ;
 ;   pret:
 ;     push hl / push bc
@@ -171,23 +171,24 @@ Pikachu_IsInArray:
 ;     pop af / call BankswitchCommon
 ;     ld a,c / pop bc / pop hl / ret
 ; ===========================================================================
+; DEVIATION{class=data-model; pret=home/pikachu.asm:GetPikachuMovementScriptByte; behavior=the movement-script byte is fetched through a port-only flat 32-bit cursor (g_pika_script_ptr, published by ApplyPikachuMovementData_) instead of pret's banked 16-bit wPikachuMovementScriptAddress read through GB space, which is still stored and advanced byte-faithfully; evidence=the movement scripts are flat program-image data (.PikaMovementData1 in engine/pikachu/pikachu_emotions.asm), so the GB-space [ebp+cursor] read fetched WRAM garbage as command bytes and indexed PikachuMovementDatabase out of range - the nurse heal cutscene then jumped through the movement jumptable to a wild EIP (page fault cr2=f0c3fc eip=b0c3ff, measured 2026-08-25), the same flat-vs-banked class the text engine documents in home/text_script.asm; lifetime=permanent while movement scripts live as flat image data}
+; The old body's TODO-HW note claimed the GB-space read was "Inert today" —
+; that was written before any caller staged a flat script pointer; the nurse
+; heal flow (PikachuWalksToNurseJoy) calls this for real and faulted.
+; ===========================================================================
 GetPikachuMovementScriptByte:
     push esi                                             ; push hl
     push ebx                                             ; push bc
-    mov al, [ebp + hLoadedROMBank]                    ; ldh a,[hLoadedROMBank]
-    push eax                                             ; push af (save current bank)
-    mov al, [ebp + wPikachuMovementScriptBank]           ; ld a,[wPikachuMovementScriptBank]
-    call BankswitchCommon
-    movzx ebx, word [ebp + wPikachuMovementScriptAddress]; bc = cursor (c=[hl], b=[hl+1], LE)
-    ; ld a,[bc] — read emulated GB byte at address BX.
-    ; TODO-HW: banked-ROM alias. Under the flat model a $4000-$7FFF cursor into a
-    ; ROM bank is read as [ebp+bx]; correct only once the movement-script data is
-    ; laid into that GB address (script system not staged). Inert today.
-    movzx ecx, byte [ebp + ebx]                          ; hold fetched byte in ECX scratch
-    inc bx                                               ; inc bc
+    ; Fetch through the flat cursor (pret: bankswitch + ld a,[bc]).
+    mov esi, [g_pika_script_ptr]
+    movzx ecx, byte [esi]                                ; hold fetched byte in ECX scratch
+    inc esi
+    mov [g_pika_script_ptr], esi
+    ; Advance the faithful 16-bit WRAM cursor too (pret stores it back; other
+    ; readers of the byte pair keep their pret semantics).
+    movzx ebx, word [ebp + wPikachuMovementScriptAddress]
+    inc bx
     mov [ebp + wPikachuMovementScriptAddress], bx        ; store cursor back (ld[hl],b/ld[hl],c)
-    pop eax                                              ; pop af (AL = saved bank)
-    call BankswitchCommon                                ; restore bank
     mov al, cl                                           ; ld a, c (result byte)
     pop ebx                                              ; pop bc (caller's BC restored)
     pop esi                                              ; pop hl
@@ -217,4 +218,20 @@ ApplyPikachuMovementData:
 ; ApplyPikachuMovementData_ (pret engine/pikachu/pikachu_movement.asm) —
 ; movement-data interpreter (wCurPikaMovementData union, step timers, sprite placement).
 extern ApplyPikachuMovementData_        ; src/engine/pikachu/pikachu_movement.asm
+
+; ---------------------------------------------------------------------------
+; g_pika_script_ptr — PORT-ONLY flat cursor for the active Pikachu movement
+; script (the data-model twin of the text engine's flat-table pointers). pret's
+; wPikachuMovementScriptAddress is a 16-bit banked-ROM cursor and stays
+; byte-faithful in WRAM, but the scripts themselves are flat program-image
+; data, so the fetcher must walk this pointer instead. Published by
+; ApplyPikachuMovementData_ (src/engine/pikachu/pikachu_movement.asm) from the
+; ESI the caller hands it (.PikaMovementData1/2/3 in pikachu_emotions.asm);
+; consumed and advanced by GetPikachuMovementScriptByte above.
+; ---------------------------------------------------------------------------
+section .data
+align 4
+global g_pika_script_ptr
+g_pika_script_ptr: dd 0
+section .text
 

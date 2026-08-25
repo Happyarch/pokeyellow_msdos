@@ -42,6 +42,7 @@ TILE_2BPP                       equ 16
 extern DelayFrame                                       ; src/home/vblank.asm
 extern Delay3                                           ; src/home/palettes.asm
 extern GetPikachuMovementScriptByte                     ; src/home/pikachu.asm
+extern g_pika_script_ptr                                ; src/home/pikachu.asm — flat script cursor
 extern CopyVideoDataAlternate                           ; src/home/copy.asm
 extern CopyVideoDataDoubleAlternate                     ; src/home/copy.asm
 extern EnablePikachuFollowingPlayer                     ; src/home/pikachu.asm
@@ -143,6 +144,11 @@ section .text
 ApplyPikachuMovementData_:
     mov [ebp + wPikachuMovementScriptBank], bh          ; ld a, b / ld [wPikachuMovementScriptBank], a
     mov [ebp + wPikachuMovementScriptAddress], si       ; ld a, l / ld [..], a / ld a, h / ld [..+1], a
+    ; PORT: ESI is a FLAT program-image pointer (.PikaMovementData1/2/3), not a
+    ; banked-ROM offset — publish it for GetPikachuMovementScriptByte, whose
+    ; pret body walks the banked 16-bit cursor through GB space; see the flat
+    ; cursor's structured note in src/home/pikachu.asm.
+    mov [g_pika_script_ptr], esi
     call .SwapSpriteStateData                           ; call .SwapSpriteStateData
 .loop:
     call LoadPikachuMovementCommandData                 ; call LoadPikachuMovementCommandData
@@ -532,9 +538,13 @@ PikaMovementFunc1_ApplyFacing:
 ; UpdatePikachuPosition — pret engine/pikachu/pikachu_movement.asm:479
 ; ---------------------------------------------------------------------------
 UpdatePikachuPosition:
-    movzx eax, dl                                       ; direction index (0..7)
-    mov al, dh                                          ; AL = magnitude
-    jmp [.Jumptable + eax * 4]
+    ; pret: push de / ld d,0 / hl = .Jumptable + 2*E / pop de / ld a, d / jp hl —
+    ; the table is indexed by the DIRECTION (E=DL) and the MAGNITUDE (D=DH)
+    ; travels to the handler in A. The old body indexed by DH, which picked the
+    ; wrong direction handler for every magnitude except 1.
+    movzx ecx, dl                                       ; direction index (0..7)
+    mov al, dh                                          ; A = magnitude (handler argument)
+    jmp [.Jumptable + ecx * 4]
 
 .Jumptable:
     dd .Down                                            ; 0
