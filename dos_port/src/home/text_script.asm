@@ -43,6 +43,7 @@ global AfterDisplayingTextID
 global HoldTextDisplayOpen
 global CloseTextDisplay
 global DisplayPokemartDialogue
+global DisplayPokemonCenterDialogue     ; SCRIPT table target (gen_npc_dialogs.py nurse rows)
 global LoadItemList
 
 ; ── text printers (text/text.asm) ──

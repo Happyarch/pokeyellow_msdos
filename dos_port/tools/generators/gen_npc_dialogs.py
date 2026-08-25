@@ -154,6 +154,41 @@ SCRIPT_OVERRIDES = {
     # SummerBeachHousePrinterText is a text_asm script hand-ported in
     # src/scripts/SummerBeachHouse.asm (Func_f23d0 -> PrintSurfingMinigameHighScore).
     'SummerBeachHousePrinterText':              'SummerBeachHousePrinterText',
+    # Pokémon Center nurses (overworld-services Stage 5): every NurseText label
+    # uses TX_SCRIPT_POKECENTER_NURSE ($ef), which routes through DisplayTextID →
+    # DisplayPokemonCenterDialogue_ in pret. The port's NPC-talk path dispatches
+    # SCRIPT entries by calling the flat routine pointer directly, so each nurse
+    # maps to the port's DisplayPokemonCenterDialogue shim in src/home/text_script.asm.
+    'ViridianPokecenterNurseText':     'DisplayPokemonCenterDialogue',
+    'PewterPokecenterNurseText':       'DisplayPokemonCenterDialogue',
+    'CeruleanPokecenterNurseText':     'DisplayPokemonCenterDialogue',
+    'MtMoonPokecenterNurseText':       'DisplayPokemonCenterDialogue',
+    'VermilionPokecenterNurseText':    'DisplayPokemonCenterDialogue',
+    'CeladonPokecenterNurseText':      'DisplayPokemonCenterDialogue',
+    'LavenderPokecenterNurseText':     'DisplayPokemonCenterDialogue',
+    'RockTunnelPokecenterNurseText':   'DisplayPokemonCenterDialogue',
+    'FuchsiaPokecenterNurseText':      'DisplayPokemonCenterDialogue',
+    'SaffronPokecenterNurseText':      'DisplayPokemonCenterDialogue',
+    'CinnabarPokecenterNurseText':     'DisplayPokemonCenterDialogue',
+    'IndigoPlateauLobbyNurseText':     'DisplayPokemonCenterDialogue',
+    # Pokémon Center Chanseys (same Stage 5 pass): every <Map>ChanseyText label is
+    # the same three-instruction text_asm wrapper (`callfar PokecenterChanseyText
+    # / jp TextScriptEnd`), so each maps to the port's PokecenterChanseyText
+    # (src/engine/events/pokecenter_chansey.asm). Without a row here the slot
+    # stayed on the "..." placeholder — the second talking NPC on the same screen
+    # as the nurse.
+    'ViridianPokeCenterChanseyText':   'PokecenterChanseyText',
+    'PewterPokecenterChanseyText':     'PokecenterChanseyText',
+    'CeruleanPokecenterChanseyText':   'PokecenterChanseyText',
+    'MtMoonPokecenterChanseyText':     'PokecenterChanseyText',
+    'VermilionPokecenterChanseyText':  'PokecenterChanseyText',
+    'CeladonPokecenterChanseyText':    'PokecenterChanseyText',
+    'LavenderPokecenterChanseyText':   'PokecenterChanseyText',
+    'RockTunnelPokecenterChanseyText': 'PokecenterChanseyText',
+    'FuchsiaPokecenterChanseyText':    'PokecenterChanseyText',
+    'SaffronPokecenterChanseyText':    'PokecenterChanseyText',
+    'CinnabarPokecenterChanseyText':   'PokecenterChanseyText',
+    'IndigoPlateauLobbyChanseyText':   'PokecenterChanseyText',
 }
 
 # ---------------------------------------------------------------------------
