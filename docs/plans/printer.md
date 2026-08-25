@@ -320,7 +320,7 @@ over renderer state, feeds the device below the seam, invisible to pret code).
       chunked AH=40h writes + int 17h probe; errors → GB status flags;
       `/PRNFILE` → PRINTnnn.PRN
 - [x] entry.asm tokens `/PRINT9 /PRNCOLOR /PRNFILE`; `dos_port/run` header
-- [ ] `tools/printcheck.sh` (fork binary, scratch docpath); PNG determinism
+- [x] `tools/printcheck.sh` (fork binary, scratch docpath); PNG determinism
       probe; bless beach-house + Pokédex PNG goldens under the new
       `portonly_print` scenario class; `--ps` PDF path for human review
 
@@ -331,12 +331,12 @@ over renderer state, feeds the device below the seam, invisible to pret code).
       `/PRNCOLOR` gating; color PNG golden variant
 
 ### Stage 6 — docs + bookkeeping
-- [ ] Evidence-discipline wording sweep (docs, comments, this plan's status
+- [x] Evidence-discipline wording sweep (docs, comments, this plan's status
       lines): "spec-conformant + verified under DOSBox-X emulation" only
-- [ ] Stigmergy feature memory updated to final state;
+- [x] Stigmergy feature memory updated to final state;
       `link-layer-planned-transports` not touched by PRINTER work (it is now
       owned by `docs/current_plan_link_cable.md` Stage 0, reopened 2026-08-21)
-- [ ] Archive: `git mv docs/current_plan_printer.md docs/plans/printer.md`
+- [x] Archive: `git mv docs/current_plan_printer.md docs/plans/printer.md`
 
 ## Key references for implementers
 

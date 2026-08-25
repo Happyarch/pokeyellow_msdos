@@ -2921,6 +2921,37 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "Game Boy Printer capture layer and transmission/cancel test (docs/current_plan_printer.md Stage 3): interacts with the Summer Beach House printer (bg_event 13, 1) with surfing Pikachu unlocked and selects YES to print the high score. Runs SummerBeachHousePrinterText -> Func_f23d0 -> PrintSurfingMinigameHighScore, which renders the 20x18 high score screen, sets wcae2=0x13, and captures the 360-byte tilemap into wPrinterTileBuffer. The mGBA golden encounters no printer on serial, enters PRINTER_ERROR_2, cancels on B, and returns to overworld; the DOS port consumes the packets with PrintDev_ConsumePacket and returns to overworld. Compared surfaces assert wPrinterTileBuffer, wcae2, and wPrinterSettingsTempCopy alongside standard overworld state."
+    },
+    {
+      "name": "print_beach_house",
+      "id": 97,
+      "tier": "full",
+      "scenario_class": "port_only",
+      "build_flags": "DEBUG_PRINT_BEACH_HOUSE=1 AUTOKEY_APRESS=1",
+      "port_entry_gate": "DEBUG_PRINT_BEACH_HOUSE",
+      "navigation_script": null,
+      "dump": {
+        "type": "PORTONLY_PRINT",
+        "schema_version": 1,
+        "artifact": "page1.png",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "PrintSurfingMinigameHighScore",
+        "Printer_PrepareSurfingMinigameHighScoreTileMap",
+        "PrintDev_ConsumePacket",
+        "Escp_PrintPage",
+        "Lpt_Open",
+        "Lpt_Write",
+        "Lpt_Close"
+      ],
+      "comparison": {
+        "regions": [],
+        "projection": "n/a (port_only: mGBA does not emulate parallel port printing)",
+        "masks": "n/a (port_only)"
+      },
+      "verification": "PORT-ONLY (printer plan Stage 4): Summer Beach House surfing high-score printer output, asserted against committed golden page1.png via tools/printcheck.sh."
     }
   ],
   "disabled_scenarios": []

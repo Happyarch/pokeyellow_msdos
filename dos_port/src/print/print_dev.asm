@@ -50,7 +50,7 @@ global g_print_status_flags
 section .data
 
 g_cfg_prn_lpt:                  dd 1             ; default LPT1 (1)
-g_cfg_prn_file:                 dd 1             ; default file capture PRINTnnn.PRN (1)
+g_cfg_prn_file:                 dd 0             ; default false (0)
 g_cfg_prn_color:                dd 0             ; default monochrome (0)
 g_cfg_prn_9pin:                 dd 0             ; default 24-pin ESC/P (0)
 

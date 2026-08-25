@@ -3100,6 +3100,17 @@ NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
 AUTOKEY_DUMP_FRAME ?= 999999
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
+# print_beach_house port-only print golden (printer plan Stage 4):
+# make DEBUG_PRINT_BEACH_HOUSE=1
+ifdef DEBUG_PRINT_BEACH_HOUSE
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_PRINT_BEACH_HOUSE -D DEBUG_PRINT_SURF_CANCEL
+NASMFLAGS += -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_SEED_PARTY
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_APRESS
+AUTOKEY_DUMP_FRAME ?= 999999
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Battle golden gate (fidelity plan Stage 2): the REAL loaders (InitBattle →
 # LoadEnemyMonData → LoadBattleMonFromParty) + the convergence-spec DV overwrite
 # replace DEBUG_BATTLE's synthetic seed. Combine with DEBUG_BATTLE_INTRO /
