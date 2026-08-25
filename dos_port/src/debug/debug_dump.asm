@@ -459,6 +459,30 @@ section .bss
 print_surf_dump_armed: resb 1
 section .text
 %endif
+%ifdef DEBUG_POKECENTER_HEAL
+global pokecenter_heal_dump_armed
+section .bss
+pokecenter_heal_dump_armed: resb 1
+section .text
+%endif
+%ifdef DEBUG_VENDING
+global vending_dump_armed
+section .bss
+vending_dump_armed: resb 1
+section .text
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+global prize_corner_dump_armed
+section .bss
+prize_corner_dump_armed: resb 1
+section .text
+%endif
+%ifdef DEBUG_POKEMART
+global pokemart_dump_armed
+section .bss
+pokemart_dump_armed: resb 1
+section .text
+%endif
 %ifdef DEBUG_NPC_WALK
 global DumpNpcLog
 global npc_log
@@ -8578,6 +8602,88 @@ autokey_script:
     dd  AK_T,        AK_T + 6,   PAD_A    ; open the submenu
     dd  AK_T + 110,  AK_T + 116, PAD_B    ; leave it -> back to the START menu
     dd  AK_T + 170,  AK_T + 176, PAD_B    ; close START -> back to the map
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_POKECENTER_HEAL
+    ; pokecenter_heal: talk to nurse at frame 30, confirm YES at frame 90, dismiss closing text at frame 300+
+%assign AK_A 30
+%rep 100
+    dd AK_A, AK_A + 5, PAD_A
+%assign AK_A AK_A + 20
+%endrep
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_VENDING
+    ; vending_machine: Fresh Water ($200) -> Soda Pop ($300) -> Lemonade fail ($350) -> Fresh Water fail ($200) -> CANCEL
+    dd   30,   36, PAD_A       ; interact with vending machine -> menu opens
+    dd  120,  126, PAD_A       ; select Fresh Water ($200) -> "can of FRESH WATER popped out!"
+    dd  240,  246, PAD_A       ; dismiss prompt -> menu re-opens
+    dd  360,  366, PAD_DOWN    ; cursor to Soda Pop
+    dd  440,  446, PAD_A       ; select Soda Pop ($300) -> "can of SODA POP popped out!"
+    dd  560,  566, PAD_A       ; dismiss prompt -> menu re-opens
+    dd  680,  686, PAD_DOWN    ; cursor to Soda Pop
+    dd  740,  746, PAD_DOWN    ; cursor to Lemonade
+    dd  820,  826, PAD_A       ; select Lemonade ($350) -> "You don't have enough money!"
+    dd  940,  946, PAD_A       ; dismiss prompt -> menu re-opens
+    dd 1060, 1066, PAD_A       ; select Fresh Water ($200, only $160 left) -> "You don't have enough money!"
+    dd 1180, 1186, PAD_A       ; dismiss prompt -> menu re-opens
+    dd 1300, 1306, PAD_B       ; CANCEL menu -> returns to overworld
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_PRIZE_CORNER
+    ; prize_corner: insufficient coins (CLEFAIRY 500) -> buy ABRA (230) -> decline nickname -> CANCEL
+    dd   30,   36, PAD_A       ; talk to prize vendor 1 -> menu opens
+    dd  120,  126, PAD_DOWN    ; move to CLEFAIRY (500 coins)
+    dd  200,  206, PAD_A       ; select CLEFAIRY -> "You don't have enough coins."
+    dd  320,  326, PAD_A       ; dismiss -> "Do you want any other prizes?"
+    dd  440,  446, PAD_A       ; dismiss prompt -> menu re-opens (cursor at ABRA)
+    dd  540,  546, PAD_A       ; select ABRA (230 coins) -> "ABRA is that right?"
+    dd  640,  646, PAD_A       ; confirm YES -> jingle / "received ABRA"
+    dd  760,  766, PAD_A       ; dismiss -> "Do you want to give a nickname to ABRA?"
+    dd  860,  866, PAD_DOWN    ; cursor to NO on YES/NO box
+    dd  940,  946, PAD_A       ; confirm NO -> "Do you want any other prizes?"
+    dd 1060, 1066, PAD_A       ; dismiss prompt -> menu re-opens
+    dd 1180, 1186, PAD_B       ; CANCEL menu -> returns to overworld
+    dd  -1,  -1, 0
+%elifdef AUTOKEY_POKEMART
+    ; pokemart_buy_sell: buy 1 Poke Ball ($200) -> reject Bicycle (Key item) -> reject HM01 (HM) -> sell 1 Potion ($150) -> QUIT
+    dd   30,   36, PAD_A       ; talk to clerk -> greeting
+    dd  120,  126, PAD_A       ; dismiss greeting -> BUY/SELL/QUIT menu (cursor on BUY)
+    dd  200,  206, PAD_A       ; select BUY -> "Take your time."
+    dd  320,  326, PAD_A       ; dismiss prompt -> Buy list (cursor on POKé BALL)
+    dd  420,  426, PAD_A       ; select POKé BALL -> quantity menu
+    dd  520,  526, PAD_A       ; confirm quantity 1 -> "That will be ¥200. OK?"
+    dd  640,  646, PAD_A       ; dismiss price prompt -> YES/NO box
+    dd  720,  726, PAD_A       ; confirm YES -> SFX_PURCHASE -> "Here you are! Thank you!"
+    dd  840,  846, PAD_A       ; dismiss -> Buy list
+    dd  940,  946, PAD_B       ; exit Buy list -> "Is there anything else I can do?"
+    dd 1060, 1066, PAD_A       ; dismiss prompt -> BUY/SELL/QUIT menu
+    dd 1140, 1146, PAD_DOWN    ; move cursor to SELL
+    dd 1220, 1226, PAD_A       ; select SELL -> "What would you like to sell?"
+    dd 1340, 1346, PAD_A       ; dismiss prompt -> Bag list (cursor on BICYCLE)
+    dd 1440, 1446, PAD_A       ; select BICYCLE -> "I can't put a price on that."
+    dd 1560, 1566, PAD_A       ; dismiss rejection -> "Is there anything else I can do?"
+    dd 1680, 1686, PAD_A       ; dismiss prompt -> BUY/SELL/QUIT menu
+    dd 1760, 1766, PAD_DOWN    ; move cursor to SELL
+    dd 1840, 1846, PAD_A       ; select SELL -> "What would you like to sell?"
+    dd 1960, 1966, PAD_A       ; dismiss prompt -> Bag list
+    dd 2040, 2046, PAD_DOWN    ; move cursor to HM01
+    dd 2120, 2126, PAD_A       ; select HM01 -> "I can't put a price on that."
+    dd 2240, 2246, PAD_A       ; dismiss rejection -> "Is there anything else I can do?"
+    dd 2360, 2366, PAD_A       ; dismiss prompt -> BUY/SELL/QUIT menu
+    dd 2440, 2446, PAD_DOWN    ; move cursor to SELL
+    dd 2520, 2526, PAD_A       ; select SELL -> "What would you like to sell?"
+    dd 2640, 2646, PAD_A       ; dismiss prompt -> Bag list
+    dd 2720, 2726, PAD_DOWN    ; move to HM01
+    dd 2780, 2786, PAD_DOWN    ; move to POTION
+    dd 2860, 2866, PAD_A       ; select POTION -> quantity menu
+    dd 2960, 2966, PAD_A       ; confirm quantity 1 -> "I can pay you ¥150 for that."
+    dd 3080, 3086, PAD_A       ; dismiss price prompt -> YES/NO box
+    dd 3160, 3166, PAD_A       ; confirm YES -> SFX_PURCHASE -> "Turned over the POTION..."
+    dd 3280, 3286, PAD_A       ; dismiss -> Bag list
+    dd 3380, 3386, PAD_B       ; exit Bag list -> "Is there anything else I can do?"
+    dd 3500, 3506, PAD_A       ; dismiss prompt -> BUY/SELL/QUIT menu
+    dd 3580, 3586, PAD_DOWN    ; move to SELL
+    dd 3640, 3646, PAD_DOWN    ; move to QUIT
+    dd 3720, 3726, PAD_A       ; select QUIT -> "Thank you!"
+    dd 3840, 3846, PAD_A       ; dismiss -> dialog closes back to overworld
     dd  -1,  -1, 0
 %else
     dd  60,  66, PAD_START

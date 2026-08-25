@@ -700,6 +700,18 @@ DIALOG_TILEMAP_ROWS     equ 6
 CheckNPCInteraction:
     pushad
 
+    ; If IsSpriteOrSignInFrontOfPlayer already resolved a sprite slot (including
+    ; via counter-tile distance extension), use that sprite slot directly.
+    movzx eax, byte [ebp + hSpriteIndex]
+    test al, al
+    jz .compute_target
+    cmp al, [ebp + wNumSprites]
+    ja .compute_target
+    movzx esi, al
+    shl esi, 4                              ; slot (1-15) -> slot byte offset (0x10-0xF0)
+    jmp .found_npc
+
+.compute_target:
     ; Compute target block coordinates from player facing direction.
     ; wYCoord and wXCoord are raw block coords; MAPY/MAPX are raw+4.
     ; Target MAPY = wYCoord + 4 + dy; target MAPX = wXCoord + 4 + dx.

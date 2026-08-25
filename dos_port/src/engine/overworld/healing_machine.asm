@@ -52,10 +52,12 @@ global AnimateHealingMachine
 global FlashSprite8Times
 global CopyHealingMachineOAM
 
+extern g_audio_engine_online       ; src/home/audio.asm
 extern CopyVideoData               ; home/copy2.asm (ESI=VRAM dest, EDX=flat src, BL=count)
 extern UpdateCGBPal_OBP1           ; home/cgb_palettes.asm
 extern StopAllMusic                ; home/audio.asm (LIVE)
 extern PlaySound                   ; home/audio.asm (LIVE)
+extern DelayFrame                  ; src/home/vblank.asm
 extern DelayFrames                 ; src/home/delay.asm
 extern UpdateSprites               ; src/home/update_sprites.asm
 
@@ -84,13 +86,12 @@ AnimateHealingMachine:
     call CopyHealingMachineOAM
     mov byte [ebp + wAudioFadeOutControl], 4
     call StopAllMusic
-    ; DIVERGENCE (bounded): wait for the music fade-out to finish
-    mov ecx, WAIT_FADE_MAX
+; DEVIATION{class=HAL; pret=engine/overworld/healing_machine.asm:AnimateHealingMachine.waitLoop; behavior=the fade-out wait calls DelayFrame each iteration instead of spinning on wAudioFadeOutControl alone; evidence=audio is frame-driven in this port so a bare spin never steps the fade-out; lifetime=permanent}
+    cmp byte [g_audio_engine_online], 0     ; skip wait entirely when audio is offline
+    je .fadeDone                            ; (headless golden runs: SDL_AUDIODRIVER=dummy)
 .waitLoop:
-    mov al, [ebp + wAudioFadeOutControl]
-    and al, al                                       ; is fade-out finished?
-    jz .fadeDone
-    dec ecx
+    call DelayFrame
+    cmp byte [ebp + wAudioFadeOutControl], 0
     jnz .waitLoop
 .fadeDone:
     mov al, [ebp + wPartyCount]
@@ -113,14 +114,13 @@ AnimateHealingMachine:
     call PlaySound
     mov dh, 0x28                                      ; ld d, $28
     call FlashSprite8Times
-    ; DIVERGENCE (bounded): wait for the healed jingle to stop
-    mov ecx, WAIT_JINGLE_MAX
+; DEVIATION{class=HAL; pret=engine/overworld/healing_machine.asm:AnimateHealingMachine.waitLoop2; behavior=the jingle wait calls DelayFrame each iteration instead of spinning on wChannelSoundIDs alone; evidence=audio is frame-driven in this port so a bare spin never steps the music channels; lifetime=permanent}
+    cmp byte [g_audio_engine_online], 0     ; skip wait entirely when audio is offline
+    je .jingleDone
 .waitLoop2:
-    mov al, [ebp + wChannelSoundIDs]
-    cmp al, MUSIC_PKMN_HEALED                         ; is the healed music still playing?
-    jne .jingleDone
-    dec ecx
-    jnz .waitLoop2
+    call DelayFrame
+    cmp byte [ebp + wChannelSoundIDs], MUSIC_PKMN_HEALED
+    je .waitLoop2
 .jingleDone:
     mov bl, 32                                        ; ld c, 32
     call DelayFrames

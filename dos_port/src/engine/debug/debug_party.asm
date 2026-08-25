@@ -239,10 +239,56 @@ PrepareNewGameDebug:
     mov byte [ebp + wRivalStarter + 1], NUM_POKEMON
     mov byte [ebp + wRivalStarter + 2], STARTER_PIKACHU
 
-    ; Give max money
+    ; Give max money (default, overridden below for scenarios that assert specific money)
     mov byte [ebp + wPlayerMoney], 0x99
     mov byte [ebp + wPlayerMoney + 1], 0x99
     mov byte [ebp + wPlayerMoney + 2], 0x99
+
+%ifdef DEBUG_POKECENTER_HEAL
+    ; pokecenter_heal golden: party mon 1 at 1 HP + PSN status, mon 2 at 0 HP (fainted), $1,000 money
+    mov byte [ebp + wPartyMon1HP + 0], 0
+    mov byte [ebp + wPartyMon1HP + 1], 1
+    mov byte [ebp + wPartyMon1Status], 0x08 ; PSN
+    mov byte [ebp + wPartyMon2HP + 0], 0
+    mov byte [ebp + wPartyMon2HP + 1], 0
+    mov byte [ebp + wPartyMon2Status], 0
+    mov byte [ebp + wPlayerMoney + 0], 0x00
+    mov byte [ebp + wPlayerMoney + 1], 0x10
+    mov byte [ebp + wPlayerMoney + 2], 0x00
+%endif
+%ifdef DEBUG_VENDING
+    ; vending_machine golden: 0 bag items, $660 money (3 drinks @ $200 + $60 -> 4th drink fails)
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    mov byte [ebp + wPlayerMoney + 0], 0x00
+    mov byte [ebp + wPlayerMoney + 1], 0x06
+    mov byte [ebp + wPlayerMoney + 2], 0x60
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+    ; prize_corner golden: 250 coins, Coin Case x1 in bag, 5 party mons (slot 6 empty for Abra)
+    mov byte [ebp + wPlayerCoins + 0], 0x02
+    mov byte [ebp + wPlayerCoins + 1], 0x50
+    mov byte [ebp + wNumBagItems], 1
+    mov byte [ebp + wBagItems + 0], 0x45 ; COIN_CASE
+    mov byte [ebp + wBagItems + 1], 1
+    mov byte [ebp + wBagItems + 2], 0xFF
+    mov byte [ebp + wPartyCount], 5
+    mov byte [ebp + wPartySpecies + 5], 0xFF
+%endif
+%ifdef DEBUG_POKEMART
+    ; pokemart_buy_sell golden: $10,000 money, bag = [Bicycle x1, HM01 x1, Potion x5]
+    mov byte [ebp + wPlayerMoney + 0], 0x01
+    mov byte [ebp + wPlayerMoney + 1], 0x00
+    mov byte [ebp + wPlayerMoney + 2], 0x00
+    mov byte [ebp + wNumBagItems], 3
+    mov byte [ebp + wBagItems + 0], 6   ; BICYCLE
+    mov byte [ebp + wBagItems + 1], 1
+    mov byte [ebp + wBagItems + 2], 196 ; HM01
+    mov byte [ebp + wBagItems + 3], 1
+    mov byte [ebp + wBagItems + 4], 20  ; POTION
+    mov byte [ebp + wBagItems + 5], 5
+    mov byte [ebp + wBagItems + 6], 0xFF
+%endif
     
     ret
 

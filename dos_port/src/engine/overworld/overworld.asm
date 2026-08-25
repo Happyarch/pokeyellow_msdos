@@ -170,6 +170,18 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %ifdef DEBUG_PRINT_SURF_CANCEL
 %define NEED_SEAM_RESEAT
 %endif
+%ifdef DEBUG_POKECENTER_HEAL
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_VENDING
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_POKEMART
+%define NEED_SEAM_RESEAT
+%endif
 %ifdef DEBUG_BAGMENU_LIVE
 %endif
 %ifdef DEBUG_SEED_PARTY

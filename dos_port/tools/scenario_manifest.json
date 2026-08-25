@@ -2952,6 +2952,97 @@
         "masks": "n/a (port_only)"
       },
       "verification": "PORT-ONLY (printer plan Stage 4): Summer Beach House surfing high-score printer output, asserted against committed golden page1.png via tools/printcheck.sh."
+    },
+    {
+      "name": "vending_machine",
+      "id": 99,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_VENDING=1",
+      "port_entry_gate": "DEBUG_VENDING",
+      "navigation_script": "tools/mgba_harness/scenarios/vending_machine.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 60,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "VendingMachineMenu"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Celadon Mansion roof vending machine: purchases Fresh Water ($200) and Soda Pop ($300), tests insufficient funds rejection ($160 remaining vs $350 Lemonade and $200 Fresh Water), and cancels cleanly back to overworld."
+    },
+    {
+      "name": "prize_corner",
+      "id": 100,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_PRIZE_CORNER=1",
+      "port_entry_gate": "DEBUG_PRIZE_CORNER",
+      "navigation_script": "tools/mgba_harness/scenarios/prize_corner.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 60,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TextScript_GameCornerPrizeMenu"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Celadon Game Corner prize vendor 1: seeds 250 coins, tests insufficient coins rejection on Vulpix (1000 coins), purchases Abra (230 coins), declines nickname prompt, and cancels remaining transactions cleanly with 20 coins remaining."
+    },
+    {
+      "name": "pokemart_buy_sell",
+      "id": 101,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_POKEMART=1",
+      "port_entry_gate": "DEBUG_POKEMART",
+      "navigation_script": "tools/mgba_harness/scenarios/pokemart_buy_sell.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 60,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayPokemartDialogue_",
+        "AddAmountSoldToMoney"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Pewter Poke Mart transaction loop: buys 1 Poke Ball ($200), tests Key Item (Bicycle) and HM (HM01) sell rejection, sells 1 Potion with SFX_PURCHASE ($150), and quits transaction cleanly to overworld with $9,950 money."
     }
   ],
   "disabled_scenarios": []

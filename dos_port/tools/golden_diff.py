@@ -2624,6 +2624,45 @@ SCENARIOS = {
             ],
         },
     },
+    "vending_machine": {
+        "flags": "DEBUG_VENDING=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (18, 6),
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc)"),
+            ],
+        },
+    },
+    "prize_corner": {
+        "flags": "DEBUG_PRIZE_CORNER=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (18, 6),
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc)"),
+            ],
+            "wPartyData": [
+                ((229, 230), "received Abra current HP: recomputed from rDIV-derived DVs"),
+                ((240, 241), "received Abra OT ID: Random_ (rDIV-timing) in _AddPartyMon"),
+                ((255, 256), "received Abra DVs: Random_ (rDIV-timing) in _AddPartyMon"),
+                ((262, 271), "received Abra maxHP/Atk/Def/Spd/Spc: DV-derived stats"),
+            ],
+        },
+    },
+    "pokemart_buy_sell": {
+        "flags": "DEBUG_POKEMART=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (18, 6),
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc)"),
+            ],
+        },
+    },
 }
 
 

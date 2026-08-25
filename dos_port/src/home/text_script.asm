@@ -66,6 +66,18 @@ extern hide_window                      ; src/ppu/ppu.asm — empty the window l
 extern BankswitchCommon                 ; home/bankswitch2.asm (no-op flat)
 extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to current map TextTable
 extern w_predef_text_table_ptr           ; home/predef_text.asm — port-only flat ptr to TextPredefs
+%ifdef DEBUG_POKECENTER_HEAL
+extern pokecenter_heal_dump_armed
+%endif
+%ifdef DEBUG_VENDING
+extern vending_dump_armed
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+extern prize_corner_dump_armed
+%endif
+%ifdef DEBUG_POKEMART
+extern pokemart_dump_armed
+%endif
 extern wMapSpriteData                   ; map_sprites.asm — flat [movbyte2,textid] per slot
 extern TrainerTalkHook                  ; src/scripts/trainer_map_script.asm — TEXT_ENTRY_TRAINER_TALK
 extern DisplayStartMenu
@@ -374,6 +386,18 @@ CloseTextDisplay:
     ; pop af / call BankswitchCommon — restore the entry ROM bank (no-op flat)
     pop eax
     call BankswitchCommon
+%ifdef DEBUG_POKECENTER_HEAL
+    mov byte [pokecenter_heal_dump_armed], 1
+%endif
+%ifdef DEBUG_VENDING
+    mov byte [vending_dump_armed], 1
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+    mov byte [prize_corner_dump_armed], 1
+%endif
+%ifdef DEBUG_POKEMART
+    mov byte [pokemart_dump_armed], 1
+%endif
     ; jp UpdateSprites
     jmp UpdateSprites
 
@@ -413,7 +437,7 @@ LoadItemList:
     ; ld de, wItemList ; .loop: ld a,[hli]; ld [de],a; inc de; cp $ff; jr nz,.loop
     mov edx, wItemList
 .loop:
-    mov al, [ebp + esi]
+    mov al, [esi]
     inc esi
     mov [ebp + edx], al
     inc edx

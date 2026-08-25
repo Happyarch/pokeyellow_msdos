@@ -132,6 +132,18 @@ extern trade_golden_dump_armed            ; src/debug/debug_dump.asm — armed b
 %ifdef DEBUG_PRINT_SURF_CANCEL
 extern print_surf_dump_armed              ; src/debug/debug_dump.asm — armed by SummerBeachHouse shim
 %endif
+%ifdef DEBUG_POKECENTER_HEAL
+extern pokecenter_heal_dump_armed         ; src/debug/debug_dump.asm
+%endif
+%ifdef DEBUG_VENDING
+extern vending_dump_armed                 ; src/debug/debug_dump.asm
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+extern prize_corner_dump_armed            ; src/debug/debug_dump.asm
+%endif
+%ifdef DEBUG_POKEMART
+extern pokemart_dump_armed                ; src/debug/debug_dump.asm
+%endif
 extern DumpSeamLog                        ; src/debug/debug_dump.asm
 extern EnterMapAnim                       ; src/engine/overworld/player_animations.asm
 extern GBFadeOutToBlack                   ; src/home/fade.asm
@@ -447,6 +459,38 @@ EnterMap:
     call StageIndoorMapBlk
     or byte [ebp + wPikachuSpawnStateFlags], (1 << BIT_PIKACHU_SPAWN_SURFING)
     or byte [ebp + wPikachuMapScriptFlags], (1 << 1)
+%endif
+%ifdef DEBUG_POKECENTER_HEAL
+    ; pokecenter_heal golden: spawn in Viridian Pokecenter at (y=3, x=3) facing nurse
+    mov byte [ebp + wCurMap], 0x29          ; VIRIDIAN_POKECENTER ($29, not $2A which is VIRIDIAN_MART)
+    mov byte [ebp + wYCoord], 3
+    mov byte [ebp + wXCoord], 3
+    mov byte [ebp + wDestinationWarpID], 0xFF
+    call StageIndoorMapBlk
+%endif
+%ifdef DEBUG_VENDING
+    ; vending_machine golden: spawn in Celadon Mansion Roof at (y=4, x=1) facing vending machine
+    mov byte [ebp + wCurMap], 0x9E          ; CELADON_MANSION_ROOF
+    mov byte [ebp + wYCoord], 4
+    mov byte [ebp + wXCoord], 1
+    mov byte [ebp + wDestinationWarpID], 0xFF
+    call StageIndoorMapBlk
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+    ; prize_corner golden: spawn in Celadon Prize Room at (y=3, x=2) facing vendor 1
+    mov byte [ebp + wCurMap], 0xCC          ; CELADON_PRIZE_ROOM
+    mov byte [ebp + wYCoord], 3
+    mov byte [ebp + wXCoord], 2
+    mov byte [ebp + wDestinationWarpID], 0xFF
+    call StageIndoorMapBlk
+%endif
+%ifdef DEBUG_POKEMART
+    ; pokemart_buy_sell golden: spawn in Pewter Mart at (y=5, x=1) facing clerk
+    mov byte [ebp + wCurMap], 0x38          ; PEWTER_MART
+    mov byte [ebp + wYCoord], 5
+    mov byte [ebp + wXCoord], 1
+    mov byte [ebp + wDestinationWarpID], 0xFF
+    call StageIndoorMapBlk
 %endif
 %ifdef DEBUG_PREDEFTEXT
     ; Predef-text gate (predef-text plan Stage 2 acceptance). Stand ON the SNES tile
@@ -1353,6 +1397,26 @@ EnterMap:
     call SeamReseatView
     mov byte [ebp + wSpritePlayerStateData1FacingDirection], SPRITE_FACING_UP
 %endif
+%ifdef DEBUG_POKECENTER_HEAL
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], SPRITE_FACING_UP
+%endif
+%ifdef DEBUG_VENDING
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], SPRITE_FACING_UP
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], SPRITE_FACING_UP
+%endif
+%ifdef DEBUG_POKEMART
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], SPRITE_FACING_LEFT
+%endif
 %ifdef DEBUG_LEDGE
     ; Same shape as DEBUG_SURF above: seed, then FALL THROUGH into the real
     ; OverworldLoop. AUTOKEY_LEDGE's scripted joypad arms the hop with a real
@@ -1705,6 +1769,34 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 .interactionDone:
 %ifdef DEBUG_PRINT_SURF_CANCEL
     cmp byte [print_surf_dump_armed], 1
+    jne .waitAReleased
+    call UpdateSprites
+    call DelayFrame
+    call DumpBackbuffer
+%endif
+%ifdef DEBUG_POKECENTER_HEAL
+    cmp byte [pokecenter_heal_dump_armed], 1
+    jne .waitAReleased
+    call UpdateSprites
+    call DelayFrame
+    call DumpBackbuffer
+%endif
+%ifdef DEBUG_VENDING
+    cmp byte [vending_dump_armed], 1
+    jne .waitAReleased
+    call UpdateSprites
+    call DelayFrame
+    call DumpBackbuffer
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+    cmp byte [prize_corner_dump_armed], 1
+    jne .waitAReleased
+    call UpdateSprites
+    call DelayFrame
+    call DumpBackbuffer
+%endif
+%ifdef DEBUG_POKEMART
+    cmp byte [pokemart_dump_armed], 1
     jne .waitAReleased
     call UpdateSprites
     call DelayFrame
