@@ -44,6 +44,7 @@ global HoldTextDisplayOpen
 global CloseTextDisplay
 global DisplayPokemartDialogue
 global DisplayPokemonCenterDialogue     ; SCRIPT table target (gen_npc_dialogs.py nurse rows)
+global PokecenterNurseScript            ; SCRIPT table shim: pushes hLoadedROMBank (see below)
 global LoadItemList
 
 ; ── text printers (text/text.asm) ──
@@ -458,6 +459,22 @@ DisplayPokemonCenterDialogue:
     ; homecall DisplayPokemonCenterDialogue_
     call DisplayPokemonCenterDialogue_
     jmp AfterDisplayingTextID
+
+; ─────────────────────────────────────────────────────────────────────────────
+; PokecenterNurseScript — PORT-ONLY glue, no pret counterpart. pret reaches
+; DisplayPokemonCenterDialogue through DisplayTextID's TX_SCRIPT_POKECENTER_NURSE
+; case, which pushed hLoadedROMBank at DisplayTextID's prologue; the port's live
+; NPC-talk path is CheckNPCInteraction's generated SCRIPT table, which dispatches
+; by `call edi` with no such push. CloseTextDisplay's closing `pop af` therefore
+; consumed CheckNPCInteraction's own return address and UpdateSprites' `ret`
+; transferred to the pushad-saved EDI. Supply the dword that pop is entitled to,
+; exactly as slot_machine.asm and hidden_events/town_map.asm already do.
+; DEVIATION{class=projection; pret=home/text_script.asm:DisplayTextID; behavior=the nurse text id dispatches through CheckNPCInteraction's generated SCRIPT table into this shim which pushes hLoadedROMBank before entering DisplayPokemonCenterDialogue instead of that push happening in DisplayTextID's prologue; evidence=the port's overworld NPC-talk path is the generated dialog table map_sprites.asm CheckNPCInteraction and CloseTextDisplay ends in the pop that DisplayTextID's prologue push feeds, a contract slot_machine.asm and hidden_events town_map.asm already satisfy explicitly; lifetime=permanent overworld dialog-dispatch projection}
+; ─────────────────────────────────────────────────────────────────────────────
+PokecenterNurseScript:
+    movzx eax, byte [ebp + hLoadedROMBank]
+    push eax
+    jmp DisplayPokemonCenterDialogue
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; DisplaySafariGameOverText — pret home/text_script.asm:179

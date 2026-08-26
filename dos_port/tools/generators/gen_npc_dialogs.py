@@ -159,18 +159,18 @@ SCRIPT_OVERRIDES = {
     # DisplayPokemonCenterDialogue_ in pret. The port's NPC-talk path dispatches
     # SCRIPT entries by calling the flat routine pointer directly, so each nurse
     # maps to the port's DisplayPokemonCenterDialogue shim in src/home/text_script.asm.
-    'ViridianPokecenterNurseText':     'DisplayPokemonCenterDialogue',
-    'PewterPokecenterNurseText':       'DisplayPokemonCenterDialogue',
-    'CeruleanPokecenterNurseText':     'DisplayPokemonCenterDialogue',
-    'MtMoonPokecenterNurseText':       'DisplayPokemonCenterDialogue',
-    'VermilionPokecenterNurseText':    'DisplayPokemonCenterDialogue',
-    'CeladonPokecenterNurseText':      'DisplayPokemonCenterDialogue',
-    'LavenderPokecenterNurseText':     'DisplayPokemonCenterDialogue',
-    'RockTunnelPokecenterNurseText':   'DisplayPokemonCenterDialogue',
-    'FuchsiaPokecenterNurseText':      'DisplayPokemonCenterDialogue',
-    'SaffronPokecenterNurseText':      'DisplayPokemonCenterDialogue',
-    'CinnabarPokecenterNurseText':     'DisplayPokemonCenterDialogue',
-    'IndigoPlateauLobbyNurseText':     'DisplayPokemonCenterDialogue',
+    'ViridianPokecenterNurseText':     'PokecenterNurseScript',
+    'PewterPokecenterNurseText':       'PokecenterNurseScript',
+    'CeruleanPokecenterNurseText':     'PokecenterNurseScript',
+    'MtMoonPokecenterNurseText':       'PokecenterNurseScript',
+    'VermilionPokecenterNurseText':    'PokecenterNurseScript',
+    'CeladonPokecenterNurseText':      'PokecenterNurseScript',
+    'LavenderPokecenterNurseText':     'PokecenterNurseScript',
+    'RockTunnelPokecenterNurseText':   'PokecenterNurseScript',
+    'FuchsiaPokecenterNurseText':      'PokecenterNurseScript',
+    'SaffronPokecenterNurseText':      'PokecenterNurseScript',
+    'CinnabarPokecenterNurseText':     'PokecenterNurseScript',
+    'IndigoPlateauLobbyNurseText':     'PokecenterNurseScript',
     # Pokémon Center Chanseys (same Stage 5 pass): every <Map>ChanseyText label is
     # the same three-instruction text_asm wrapper (`callfar PokecenterChanseyText
     # / jp TextScriptEnd`), so each maps to the port's PokecenterChanseyText
