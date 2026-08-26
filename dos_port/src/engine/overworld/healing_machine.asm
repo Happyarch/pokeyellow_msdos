@@ -60,6 +60,9 @@ extern PlaySound                   ; home/audio.asm (LIVE)
 extern DelayFrame                  ; src/home/vblank.asm
 extern DelayFrames                 ; src/home/delay.asm
 extern UpdateSprites               ; src/home/update_sprites.asm
+extern GBScreenToCanvasXY          ; src/engine/gfx/sprite_oam.asm (PROBE publication)
+extern spr_dos_sy, spr_dos_sx      ; src/ppu/ppu.asm
+extern spr_oam_valid               ; src/ppu/ppu.asm
 
 section .text
 
@@ -176,4 +179,29 @@ CopyHealingMachineOAM:
     mov [ebp + esi], al                               ; ld [hli], a (WRAM)
     inc esi
 %endrep
+    ; DEVIATION{class=HAL; pret=engine/overworld/healing_machine.asm:CopyHealingMachineOAM; behavior=each shadow-OAM entry written here is additionally published to the compositor - copied to $FE00, its canvas position derived via GBScreenToCanvasXY into spr_dos_sy/sx, and spr_oam_valid grown max-style - because the animation runs with wUpdateSpritesEnabled=$FF, which freezes the per-frame shadow-OAM DMA in this port, so the shadow write alone never reached $FE00 and the monitor and pokeballs were invisible for the whole healing animation (measured 2026-08-25, DEBUG_POKECENTER_HEAL=1); evidence=render_sprites takes tile and attr from $FE00 and positions from spr_dos_sy/sx keyed on spr_oam_valid, and AnimateHealingMachine relies on the $FF freeze the same way the port's direct-OAM screens (title, party-menu icons) do; lifetime=permanent, the OBJ side of the software video HAL}
+    push eax
+    push ecx
+    push edx
+    push ebx                                          ; caller holds the party count in BH
+    mov eax, esi
+    sub eax, wShadowOAM + 4                           ; entry offset (index*4)
+    mov ecx, eax
+    mov edx, [ebp + wShadowOAM + ecx]                 ; Y, X, tile, attr
+    mov [ebp + GB_OAM + ecx], edx                     ; publish to $FE00 (DMA frozen)
+    mov bh, [ebp + wShadowOAM + ecx]
+    mov bl, [ebp + wShadowOAM + ecx + 1]
+    call GBScreenToCanvasXY                           ; EAX = canvas Y, EDX = canvas X
+    shr ecx, 2                                        ; entry index
+    mov [spr_dos_sy + ecx*4], eax
+    mov [spr_dos_sx + ecx*4], edx
+    cmp [spr_oam_valid], ecx
+    ja .probe_valid_ok
+    lea eax, [ecx + 1]
+    mov [spr_oam_valid], eax
+.probe_valid_ok:
+    pop ebx
+    pop edx
+    pop ecx
+    pop eax
     ret
