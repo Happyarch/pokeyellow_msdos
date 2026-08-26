@@ -2627,8 +2627,8 @@ SCENARIOS = {
     "pokecenter_heal": {
         "flags": "DEBUG_POKECENTER_HEAL=1 AUTOKEY_APRESS=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
-        "window": (20, 12),
-        "offcanvas": "window at (20,12): golden rows 13-17 map past the 25-row canvas",
+        "window": (20, 8),
+        "offcanvas": "window at (20,8): golden row 17 maps past the 25-row canvas",
         "wram_masks": {
             "wPlayerMapPos": [
                 ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "

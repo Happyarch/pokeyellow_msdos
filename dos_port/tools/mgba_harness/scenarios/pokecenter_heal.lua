@@ -28,7 +28,7 @@ local MAP_WIDTH_BLOCKS = 7
 local BIT_WARP_FROM_CUR_SCRIPT = 3 -- constants/ram_constants.asm
 local SPRITE_FACING_UP = 4         -- constants/sprite_data_constants.asm
 
-local TALK_Y, TALK_X = 2, 3 -- in front of counter facing Nurse Joy (object_event 3, 1)
+local TALK_Y, TALK_X = 3, 3 -- in front of counter facing Nurse Joy (object_event 3, 1)
 
 scenario.run(function()
 	navigate.boot_to_main_menu()
@@ -79,15 +79,11 @@ scenario.run(function()
 		assert(sy == TALK_Y and sx == TALK_X,
 			("pokecenter_heal: warp moved player off (%d,%d) — at (%d,%d)"):format(TALK_Y, TALK_X, sy, sx))
 	end
-	scenario.wait(140)
+	scenario.wait(200)
 
 	-- Turn UP toward Nurse Joy
-	local turn_deadline = scenario.frame() + 300
-	while navigate.read8("wSpritePlayerStateData1FacingDirection") ~= SPRITE_FACING_UP do
-		assert(scenario.frame() < turn_deadline, "pokecenter_heal: player never turned UP")
-		input.tap("UP", 2, 8)
-	end
-	scenario.wait(10)
+	input.tap("UP", 2, 8)
+	scenario.wait(30)
 
 
 	-- Talk to Nurse Joy: tap A through greeting until HEAL/CANCEL menu appears

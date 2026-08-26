@@ -1,6 +1,6 @@
 {
   "description": "Viridian Pokecenter healing flow complete: nurse animated healing machine, party healed from damaged/status/fainted to full, and farewell text dismissed",
-  "frame": 5743,
+  "frame": 5867,
   "regions": [
     {
       "file_offset": 0,

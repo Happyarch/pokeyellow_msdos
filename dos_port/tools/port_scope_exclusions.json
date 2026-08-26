@@ -32,6 +32,19 @@
       "labels": [
         "Timer"
       ]
+    },
+    "engine/movie/intro_yellow.asm": {
+      "reason": "SM83 ROM bankswitching helpers for bank $3E. The Game Boy intro copies and fills memory across bank boundaries via these routines; in the port's flat 32-bit protected mode, all ROM/VRAM is directly addressable and memory operations use standard flat copy/fill without bank switching. Maintainer decision 2026-08-26.",
+      "labels": [
+        "Bank3E_CopyData",
+        "Bank3E_FillMemory"
+      ]
+    },
+    "engine/movie/title.asm": {
+      "reason": "The title screen's 1-bit wave-channel timer bit-bang trigger for Pikachu's title cry. In the port, Pikachu PCM is handled via audio/pikachu_pcm.asm and the Sound Blaster DSP / PC-speaker PWM HAL (src/audio/sb_pcm.asm). Maintainer decision 2026-08-26.",
+      "labels": [
+        "TitleScreen_PlayPikachuPCM"
+      ]
     }
   }
 }
