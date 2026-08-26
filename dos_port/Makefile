@@ -3989,14 +3989,16 @@ src/engine/movie/oak_speech/oak_speech.o: assets/oak_speech_strings.inc
 
 # Oak-speech default player/rival name data (menu-intro A4.4; pret data/player/
 # names.asm + names_list.asm). Consumed by oak_speech2.asm (naming flow).
-assets/default_names.inc: tools/generators/gen_default_names.py tools/generators/gb_text.py
+assets/default_names.inc: ../constants/player_constants.asm assets/gb_charmap.txt \
+                          tools/generators/gen_default_names.py tools/generators/gb_text.py
 	python3 tools/generators/gen_default_names.py
 
 src/engine/movie/oak_speech/oak_speech2.o: assets/default_names.inc
 
 # Debug new-game boot names (menu-intro A4.5e; pret DebugNewGame{Player,Rival}Name).
 # Consumed by title.asm; must stay contiguous (the NAME_LENGTH copies overrun).
-assets/debug_boot_names.inc: tools/generators/gen_debug_boot_names.py tools/generators/gb_text.py
+assets/debug_boot_names.inc: assets/gb_charmap.txt \
+                             tools/generators/gen_debug_boot_names.py tools/generators/gb_text.py
 	python3 tools/generators/gen_debug_boot_names.py
 
 src/engine/movie/title.o: assets/debug_boot_names.inc \
@@ -4098,7 +4100,7 @@ src/home/init.o src/home/window.o: assets/audio_constants.inc
 
 # GB character map in the unicode_converter's format (single-char → byte), for
 # the converter submodule + gb_text.py. Generated from constants/charmap.asm.
-assets/gb_charmap.txt:
+assets/gb_charmap.txt: ../constants/charmap.asm tools/generators/gen_charmap.py
 	python3 tools/generators/gen_charmap.py
 
 # START-menu item labels, encoded via the unicode_converter submodule (gb_text),
@@ -4474,6 +4476,7 @@ assets/printer_gfx.inc: ../gfx/printer/hp.1bpp \
 assets/printer_strings.inc: ../engine/printer/printer.asm \
                             ../engine/printer/printer2.asm \
                             ../data/text/text_3.asm \
+                            assets/gb_charmap.txt \
                             tools/generators/gen_printer_strings.py tools/generators/gen_globals.py tools/generators/gb_text.py
 	python3 tools/generators/gen_printer_strings.py
 
@@ -4648,10 +4651,12 @@ assets/item_text.inc: ../engine/items/item_effects.asm ../engine/menus/party_men
 assets/diploma_text.inc assets/diploma_tiles.inc &: ../engine/events/diploma2.asm \
                   ../gfx/diploma/diploma.2bpp ../gfx/diploma/diploma_pikachu.tilemap \
                   ../gfx/diploma/diploma_mew.tilemap ../constants/charmap.asm \
+                  assets/gb_charmap.txt \
                   tools/generators/gen_diploma.py tools/generators/gb_text.py
 	python3 tools/generators/gen_diploma.py
 
 assets/trades.inc assets/trade_trainer_string.inc &: ../data/events/trades.asm ../constants/charmap.asm \
+                   assets/gb_charmap.txt \
                    tools/generators/gen_trades.py tools/generators/gb_text.py
 	python3 tools/generators/gen_trades.py
 
@@ -4898,7 +4903,7 @@ src/engine/items/town_map.o: assets/town_map_data.inc assets/town_map_gfx.inc
 # CanLearnTM/TMToMove index TechnicalMachines (assets/tmhm_moves.inc, gen_items.py).
 src/engine/items/tms.o: assets/tmhm_moves.inc
 
-assets: assets/pret_ram.inc assets/scenario_registry.inc \
+assets: assets/pret_ram.inc assets/scenario_registry.inc assets/gb_charmap.txt \
         assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc \
         assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc \
         assets/map_songs.inc \
@@ -4923,7 +4928,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc \
         assets/items.inc assets/item_names.inc assets/item_prices.inc \
         assets/key_item_flags.inc assets/tm_prices.inc assets/tmhm_moves.inc \
         assets/marts.inc \
-        assets/item_text.inc assets/gb_charmap.txt assets/menu_strings.inc \
+        assets/item_text.inc assets/menu_strings.inc \
         assets/naming_strings.inc assets/pokedex_strings.inc \
         assets/bills_pc_text.inc assets/bills_house_pc_text.inc \
         assets/status_strings.inc assets/textbox_strings.inc assets/menu_text.inc \
