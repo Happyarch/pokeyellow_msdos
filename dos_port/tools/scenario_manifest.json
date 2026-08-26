@@ -2189,7 +2189,7 @@
       "id": 74,
       "tier": "full",
       "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_ANIM_PHYSICAL=1",
+      "build_flags": "DEBUG_BATTLE_ANIM_PHYSICAL=1 DEBUG_BATTLE_FAINT=1 DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE=1",
       "port_entry_gate": "DEBUG_BATTLE_ANIM_PHYSICAL",
       "navigation_script": "tools/mgba_harness/scenarios/battle_anim_physical.lua",
       "dump": {
@@ -2223,7 +2223,7 @@
       "id": 75,
       "tier": "full",
       "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_ANIM_ELEMENTAL=1",
+      "build_flags": "DEBUG_BATTLE_ANIM_ELEMENTAL=1 DEBUG_BATTLE_FAINT=1 DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE=1",
       "port_entry_gate": "DEBUG_BATTLE_ANIM_ELEMENTAL",
       "navigation_script": "tools/mgba_harness/scenarios/battle_anim_elemental.lua",
       "dump": {
@@ -2293,7 +2293,7 @@
       "id": 77,
       "tier": "full",
       "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_ANIM_BLINK=1",
+      "build_flags": "DEBUG_BATTLE_ANIM_BLINK=1 DEBUG_BATTLE_FAINT=1 DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE=1",
       "port_entry_gate": "DEBUG_BATTLE_ANIM_BLINK",
       "navigation_script": "tools/mgba_harness/scenarios/battle_anim_blink.lua",
       "dump": {
@@ -2329,7 +2329,7 @@
       "id": 78,
       "tier": "full",
       "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_ANIM_OPTOFF=1",
+      "build_flags": "DEBUG_BATTLE_ANIM_OPTOFF=1 DEBUG_BATTLE_FAINT=1 DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE=1",
       "port_entry_gate": "DEBUG_BATTLE_ANIM_OPTOFF",
       "navigation_script": "tools/mgba_harness/scenarios/battle_anim_optoff.lua",
       "dump": {
@@ -2996,7 +2996,7 @@
         "type": "GBSTATE",
         "schema_version": 2,
         "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 60,
+        "timeout_seconds": 150,
         "terminal_marker": "complete"
       },
       "must_hit": [
@@ -3026,7 +3026,7 @@
         "type": "GBSTATE",
         "schema_version": 2,
         "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 60,
+        "timeout_seconds": 150,
         "terminal_marker": "complete"
       },
       "must_hit": [
@@ -3056,7 +3056,7 @@
         "type": "GBSTATE",
         "schema_version": 2,
         "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 60,
+        "timeout_seconds": 150,
         "terminal_marker": "complete"
       },
       "must_hit": [

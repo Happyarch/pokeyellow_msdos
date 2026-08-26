@@ -899,14 +899,9 @@ class Probe(unittest.TestCase):
         self.assertIn('SKIP_TITLE', party.defines)
 
     def test_check_only_sources_are_not_linked(self):
-        # This was pinned to trainer_engine.asm until the trainer-engine
-        # promotion deleted that file, at which point the assertion was simply
-        # false on a clean tree and stayed that way
-        # (regression-tooling-stale-label-db-tests). A filename is not the
-        # contract; the SET RELATIONSHIP is. Assert that instead, so the test
-        # cannot rot the same way when the next file moves.
+        # A check-only source must never also be linked. When all sources are
+        # promoted and linked (0 check-only sources), this relation holds vacuously.
         cfg = buildprobe.probe()
-        self.assertTrue(cfg.check, 'default config reports no check-only sources')
         self.assertEqual(set(cfg.check) & set(cfg.link), set(),
                          'a check-only source must never also be linked')
         self.assertLessEqual(set(cfg.check), set(cfg.all),

@@ -469,16 +469,16 @@ EnterMap:
     call StageIndoorMapBlk
 %endif
 %ifdef DEBUG_VENDING
-    ; vending_machine golden: spawn in Celadon Mansion Roof at (y=4, x=1) facing vending machine
-    mov byte [ebp + wCurMap], 0x9E          ; CELADON_MANSION_ROOF
-    mov byte [ebp + wYCoord], 4
-    mov byte [ebp + wXCoord], 1
+    ; vending_machine golden: spawn in Celadon Mart Roof at (y=2, x=10) facing vending machine
+    mov byte [ebp + wCurMap], 0x7E          ; CELADON_MART_ROOF
+    mov byte [ebp + wYCoord], 2
+    mov byte [ebp + wXCoord], 10
     mov byte [ebp + wDestinationWarpID], 0xFF
     call StageIndoorMapBlk
 %endif
 %ifdef DEBUG_PRIZE_CORNER
     ; prize_corner golden: spawn in Celadon Prize Room at (y=3, x=2) facing vendor 1
-    mov byte [ebp + wCurMap], 0xCC          ; CELADON_PRIZE_ROOM
+    mov byte [ebp + wCurMap], 0x89          ; GAME_CORNER_PRIZE_ROOM
     mov byte [ebp + wYCoord], 3
     mov byte [ebp + wXCoord], 2
     mov byte [ebp + wDestinationWarpID], 0xFF

@@ -1132,7 +1132,7 @@ SCENARIOS = {
         # already measured for battle_menu/move_selection; OAM itself is
         # deliberately unmasked. PublishProjectedOAM keeps canonical GB OAM
         # bytes unchanged and projects only the renderer's native positions.
-        "flags": "DEBUG_BATTLE_ANIM_PHYSICAL=1",
+        "flags": "DEBUG_BATTLE_ANIM_PHYSICAL=1 DEBUG_BATTLE_FAINT=1 DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE=1",
         "window": (10, 3),
         "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
                   "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
@@ -1154,7 +1154,7 @@ SCENARIOS = {
         # Same menu-derived placement masks for the same reason; OAM stays
         # deliberately unmasked. Both sides pin wBattleMonMoves+3 to
         # THUNDERSHOCK, so the move byte is compared, not masked.
-        "flags": "DEBUG_BATTLE_ANIM_ELEMENTAL=1",
+        "flags": "DEBUG_BATTLE_ANIM_ELEMENTAL=1 DEBUG_BATTLE_FAINT=1 DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE=1",
         "window": (10, 3),
         "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
                   "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
@@ -1176,7 +1176,7 @@ SCENARIOS = {
         # 30-frame delay. Same menu-derived placement masks as the rest of the
         # family. It keeps the blink scenario's two wLoadedMon masks because it
         # shares that gate's setup -- both are documented there and below.
-        "flags": "DEBUG_BATTLE_ANIM_OPTOFF=1",
+        "flags": "DEBUG_BATTLE_ANIM_OPTOFF=1 DEBUG_BATTLE_FAINT=1 DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE=1",
         "window": (10, 3),
         "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
                   "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},
@@ -1221,7 +1221,7 @@ SCENARIOS = {
         # BlinkEnemyMonSprite), stopped at the first hidden-pic instant of
         # AnimationBlinkMon -- after the move animation, before damage is
         # applied. Same menu-derived placement masks as the rest of the family.
-        "flags": "DEBUG_BATTLE_ANIM_BLINK=1",
+        "flags": "DEBUG_BATTLE_ANIM_BLINK=1 DEBUG_BATTLE_FAINT=1 DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE=1",
         "window": (10, 3),
         "masks": {"vram": list(_BATTLE_VRAM_MASKS_MENU),
                   "tilemap": list(_BATTLE_TILEMAP_MASKS_MENU)},

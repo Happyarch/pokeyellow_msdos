@@ -5,10 +5,8 @@ game". Seeded 2026-08-19 (commits `c3709ae13`, `b5b4efbae`).
 
 ## State
 
-**224 of 225 linked** (measured 2026-08-23; was 221 on 2026-08-20, 220 on 2026-08-19, 207 at seeding, 352 + 1 before
-that). The check-only tier IS the 1 that cannot link yet (`src/scripts/HallOfFame.asm`) — they assemble-validate
-so a change that breaks them is still caught, and each graduates as its blocker
-lands. Count it, do not quote it:
+**225 of 225 linked** (measured 2026-08-26; was 224 on 2026-08-23, 221 on 2026-08-20, 220 on 2026-08-19, 207 at seeding, 352 + 1 before
+that). All 225 translated script files are linked into `SCRIPT_SRCS` in `dos_port/Makefile`, with 0 check-only sources remaining. Count it, do not quote it:
 
 ```
 python3 - <<'EOF'
@@ -48,15 +46,15 @@ the `add-hl-r16` note in `script-fine-comb-fleet-queue` records:
 `mov edx, esi`) and on VermilionDock_SyncScrollWithLY (a raster split-scroll whose
 H/L use is incidental). **Read the pair, not the instruction.**
 
-### The 1 that remains, and what it needs
+### All 225 scripts are linked
 
-| script | blocked on | size |
+| script | status | notes |
 |---|---|---|
-| ~~`vermilion_dock`~~ | **DONE 2026-08-20.** This row's premise was WRONG: `ScheduleEastColumnRedraw` was NOT what it needed. That routine feeds `RedrawRowOrColumn` → `GB_TILEMAP0`, which `render_bg`'s overworld path never reads, so porting it would have been dead code. See `docs/plans/ss_anne_departure.md` and memory `ss-anne-departure-scroll`. | — |
-| ~~`celadon_mansion_3f`~~ | **DONE 2026-08-23.** `PrintDiploma` landed with Stage 2 of `current_plan_printer.md`. | — |
-| ~~`pokemon_fan_club`~~ | **DONE 2026-08-23.** `PrintFanClubPortrait` landed with Stage 2 of `current_plan_printer.md`. | — |
-| ~~`summer_beach_house`~~ | **DONE 2026-08-23.** `PrintSurfingMinigameHighScore` and `Printer_PrepareSurfingMinigameHighScoreTileMap` landed with Stage 2 of `current_plan_printer.md`. | — |
-| `hall_of_fame` | `HallOfFamePC` — 6 lines, but 5 of its dependencies are missing: `AnimateHallOfFame`, `Credits`, `CreditsCopyTileMapToVRAM`, `CreditsLoadFont`, `FillFourRowsWithBlack` | the endgame cinematic, its own plan |
+| ~~`vermilion_dock`~~ | **DONE 2026-08-20.** | See `docs/plans/ss_anne_departure.md` |
+| ~~`celadon_mansion_3f`~~ | **DONE 2026-08-23.** | `PrintDiploma` landed with Stage 2 of `current_plan_printer.md`. |
+| ~~`pokemon_fan_club`~~ | **DONE 2026-08-23.** | `PrintFanClubPortrait` landed with Stage 2 of `current_plan_printer.md`. |
+| ~~`summer_beach_house`~~ | **DONE 2026-08-23.** | `PrintSurfingMinigameHighScore` landed with Stage 2 of `current_plan_printer.md`. |
+| ~~`hall_of_fame`~~ | **DONE 2026-08-26.** | `HallOfFamePC` and `SetSpriteFacingDirectionAndDelay` linked. |
 
 **The printer tier is `engine/printer/printer.asm`, 979 lines / 35 labels, with
 NOTHING ported** — `printer_stubs.asm` holds only `PrintPokedexEntry` and

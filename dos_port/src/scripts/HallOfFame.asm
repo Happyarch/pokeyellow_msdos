@@ -41,11 +41,11 @@ extern Delay3
 extern DelayFrames
 extern DisplayTextID
 extern EnableAutoTextBoxDrawing
-extern HallOfFamePC   ; NOT YET DEFINED IN THE PORT
+extern HallOfFamePC
 extern HideObject
 extern Init
 extern SaveGameData
-extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
+extern SetSpriteFacingDirectionAndDelay
 extern SetSpriteMovementBytesToFF
 extern StartSimulatingJoypadStates
 extern WaitForTextScrollButtonPress

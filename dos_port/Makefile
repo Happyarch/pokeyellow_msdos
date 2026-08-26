@@ -684,6 +684,7 @@ GAME_SRCS := \
     src/scripts/FuchsiaMeetingRoom.asm \
     src/scripts/FuchsiaPokecenter.asm \
     src/scripts/GameCornerPrizeRoom.asm \
+    src/scripts/HallOfFame.asm \
     src/scripts/IndigoPlateau.asm \
     src/scripts/IndigoPlateauLobby.asm \
     src/scripts/LancesRoom.asm \
@@ -3512,10 +3513,8 @@ POKEMON_CHECK_SRCS :=
 # The check-only tier is now the map scripts that cannot LINK yet: each one
 # references a symbol nothing defines (transpiler BAIL regions + unported engine
 # routines -- see docs/current_plan_script_linking.md). They assemble-validate
-# here so a change that breaks them is still caught, and each graduates to
-# SCRIPT_SRCS above as its blocking symbol lands.
-ITEMS_CHECK_SRCS := \
-    src/scripts/HallOfFame.asm \
+# All 224 translated script files are now promoted to SCRIPT_SRCS and link cleanly.
+ITEMS_CHECK_SRCS :=
 
 # Home routines that assemble-validate but aren't linked yet. count_set_bits
 # emits an undefined external for wNumSetBits (no memmap alias / no caller yet),

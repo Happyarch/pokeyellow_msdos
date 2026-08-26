@@ -161,6 +161,8 @@ WIRED_MAPS = {
                                   # -pointer term). Its leading view-range-0
                                   # headers repeat route6's branch rather than
                                   # adding one
+    "CERULEAN_CAVE_B1F": "cerulean_cave_b1f",
+    "POWER_PLANT": "power_plant",
 }
 
 
