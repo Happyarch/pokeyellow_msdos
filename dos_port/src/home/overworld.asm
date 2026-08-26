@@ -461,9 +461,9 @@ EnterMap:
     or byte [ebp + wPikachuMapScriptFlags], (1 << 1)
 %endif
 %ifdef DEBUG_POKECENTER_HEAL
-    ; pokecenter_heal golden: spawn in Viridian Pokecenter at (y=3, x=3) facing nurse
+    ; pokecenter_heal golden: spawn in Viridian Pokecenter at (y=2, x=3) facing nurse
     mov byte [ebp + wCurMap], 0x29          ; VIRIDIAN_POKECENTER ($29, not $2A which is VIRIDIAN_MART)
-    mov byte [ebp + wYCoord], 3
+    mov byte [ebp + wYCoord], 2
     mov byte [ebp + wXCoord], 3
     mov byte [ebp + wDestinationWarpID], 0xFF
     call StageIndoorMapBlk

@@ -2,6 +2,67 @@
   "schema_version": 1,
   "scenarios": [
     {
+      "name": "overworld_pallet",
+      "id": 1,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_TRANSITION=1 DEBUG_BASELINE=1",
+      "port_entry_gate": "DEBUG_TRANSITION",
+      "navigation_script": "tools/mgba_harness/scenarios/overworld_pallet.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "LoadCurrentMapView",
+        "DumpBackbuffer"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "start_menu",
+      "id": 2,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_STARTMENU=1",
+      "port_entry_gate": "DEBUG_STARTMENU",
+      "navigation_script": "tools/mgba_harness/scenarios/start_menu.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayStartMenu"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
       "name": "status_p1",
       "id": 3,
       "tier": "core",
@@ -48,67 +109,6 @@
       },
       "must_hit": [
         "RunStatusScreenTest"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic screen/navigation state"
-    },
-    {
-      "name": "start_menu",
-      "id": 2,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_STARTMENU=1",
-      "port_entry_gate": "DEBUG_STARTMENU",
-      "navigation_script": "tools/mgba_harness/scenarios/start_menu.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "DisplayStartMenu"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic screen/navigation state"
-    },
-    {
-      "name": "overworld_pallet",
-      "id": 1,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_TRANSITION=1 DEBUG_BASELINE=1",
-      "port_entry_gate": "DEBUG_TRANSITION",
-      "navigation_script": "tools/mgba_harness/scenarios/overworld_pallet.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "LoadCurrentMapView",
-        "DumpBackbuffer"
       ],
       "comparison": {
         "regions": [
@@ -183,6 +183,156 @@
       "verification": "deterministic screen/navigation state"
     },
     {
+      "name": "options_menu",
+      "id": 8,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_OPTIONS=1",
+      "port_entry_gate": "DEBUG_OPTIONS",
+      "navigation_script": "tools/mgba_harness/scenarios/options_menu.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunOptionsTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "trainer_card",
+      "id": 9,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_TRAINERCARD=1",
+      "port_entry_gate": "DEBUG_TRAINERCARD",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_card.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunTrainerCardTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "pokedex_list",
+      "id": 10,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_G1=1",
+      "port_entry_gate": "DEBUG_G1",
+      "navigation_script": "tools/mgba_harness/scenarios/pokedex_list.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunPokedexTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "pokedex_entry",
+      "id": 11,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_G2=1",
+      "port_entry_gate": "DEBUG_G2",
+      "navigation_script": "tools/mgba_harness/scenarios/pokedex_entry.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunPokedexEntryTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "naming_screen",
+      "id": 12,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_NAMINGSCREEN=1",
+      "port_entry_gate": "DEBUG_NAMINGSCREEN",
+      "navigation_script": "tools/mgba_harness/scenarios/naming_screen.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunNamingScreenTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic screen/navigation state"
+    },
+    {
       "name": "sign_pallet",
       "id": 13,
       "tier": "core",
@@ -211,6 +361,98 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "deterministic screen/navigation state"
+    },
+    {
+      "name": "battle_menu",
+      "id": 14,
+      "tier": "core",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_MENU=1 AUTOKEY_DUMP_FRAME=300",
+      "port_entry_gate": "DEBUG_BATTLE_MENU",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_menu.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "DisplayBattleMenu"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic synthetic-enemy convergence state"
+    },
+    {
+      "name": "battle_intro",
+      "id": 15,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_INTRO=1 AUTOKEY_DUMP_FRAME=300",
+      "port_entry_gate": "DEBUG_BATTLE_INTRO",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_intro.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic synthetic-enemy convergence state"
+    },
+    {
+      "name": "move_selection",
+      "id": 16,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_MOVEMENU=1 AUTOKEY_DUMP_FRAME=300",
+      "port_entry_gate": "DEBUG_MOVEMENU",
+      "navigation_script": "tools/mgba_harness/scenarios/move_selection.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "MoveSelectionMenu"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic synthetic-enemy convergence state"
     },
     {
       "name": "item_tm_teach",
@@ -294,98 +536,6 @@
       "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
     },
     {
-      "name": "battle_intro",
-      "id": 15,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_INTRO=1 AUTOKEY_DUMP_FRAME=300",
-      "port_entry_gate": "DEBUG_BATTLE_INTRO",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_intro.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunBattleTest"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic synthetic-enemy convergence state"
-    },
-    {
-      "name": "battle_menu",
-      "id": 14,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_MENU=1 AUTOKEY_DUMP_FRAME=300",
-      "port_entry_gate": "DEBUG_BATTLE_MENU",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_menu.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunBattleTest",
-        "DisplayBattleMenu"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic synthetic-enemy convergence state"
-    },
-    {
-      "name": "move_selection",
-      "id": 16,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_MOVEMENU=1 AUTOKEY_DUMP_FRAME=300",
-      "port_entry_gate": "DEBUG_MOVEMENU",
-      "navigation_script": "tools/mgba_harness/scenarios/move_selection.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunBattleTest",
-        "MoveSelectionMenu"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic synthetic-enemy convergence state"
-    },
-    {
       "name": "ball_catch",
       "id": 20,
       "tier": "full",
@@ -418,26 +568,24 @@
       "verification": "BOTH sides now navigate the real battle bag. Until 2026-08-12 the port gate preset wCurItem/wWhichPokemon/wPseudoItemID and called UseItem directly while the golden side navigated ITEM -> MASTER BALL for real, so the two sides reached the same outcome by different routes and the port's menu leg was never executed. 2c ported BagWasSelected / DisplayBagMenu / UseBagItem, so the bypass was replaced by an AUTOKEY_ITEMBALL press sequence through the production DisplayBattleMenu; the gate asserts wBattleResult == 2 (only .returnAfterCapturingMon sets it) before dumping. The committed golden was NOT regenerated -- the port converged onto the existing one, and dropping a single DOWN from the press table makes the run produce no dump at all. State verification, not UI verification"
     },
     {
-      "name": "battle_anim_physical",
-      "id": 74,
-      "tier": "full",
+      "name": "title",
+      "id": 21,
+      "tier": "core",
       "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_ANIM_PHYSICAL=1",
-      "port_entry_gate": "DEBUG_BATTLE_ANIM_PHYSICAL",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_physical.lua",
+      "build_flags": "DEBUG_TITLE=1",
+      "port_entry_gate": "DEBUG_TITLE",
+      "navigation_script": "tools/mgba_harness/scenarios/title.lua",
       "dump": {
         "type": "GBSTATE",
         "schema_version": 2,
         "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
+        "timeout_seconds": 300,
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "ExecutePlayerMove",
-        "MoveAnimation",
-        "PlayMoveAnimation",
-        "PlaySubanimation",
-        "DrawFrameBlock"
+        "DisplayTitleScreen",
+        "MovieBeginSurface",
+        "PublishProjectedOAM"
       ],
       "comparison": {
         "regions": [
@@ -449,29 +597,27 @@
         "projection": "golden_diff.SCENARIOS",
         "masks": "golden_diff.SCENARIOS"
       },
-      "verification": "Stage 6 physical move-animation witness: a real wild-battle FIGHT -> STRENGTH turn, stopped at DrawFrameBlock's first published live OAM frame. The reference watches for a CHANGE from parked battle-menu OAM rather than merely nonzero OAM, so the compared unmasked OAM entries cannot be stale menu state. The port reuses DEBUG_BATTLE_FAINT's faithful ExecutePlayerMove entry and dumps at the matching projection boundary before the faint path cleans OAM."
+      "verification": "stable-composition checkpoint: bounce complete, hSCY=0, eyes open in the post-blink window, no input consumed"
     },
     {
-      "name": "battle_anim_elemental",
-      "id": 75,
-      "tier": "full",
+      "name": "main_menu",
+      "id": 22,
+      "tier": "core",
       "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_ANIM_ELEMENTAL=1",
-      "port_entry_gate": "DEBUG_BATTLE_ANIM_ELEMENTAL",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_elemental.lua",
+      "build_flags": "DEBUG_MAINMENU_LIVE=1",
+      "port_entry_gate": "DEBUG_MAINMENU_LIVE",
+      "navigation_script": "tools/mgba_harness/scenarios/main_menu.lua",
       "dump": {
         "type": "GBSTATE",
         "schema_version": 2,
         "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
+        "timeout_seconds": 300,
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "ExecutePlayerMove",
-        "MoveAnimation",
-        "PlayMoveAnimation",
-        "PlaySubanimation",
-        "DrawFrameBlock"
+        "DisplayTitleScreen",
+        "MainMenu",
+        "InitOptions"
       ],
       "comparison": {
         "regions": [
@@ -483,31 +629,27 @@
         "projection": "golden_diff.SCENARIOS",
         "masks": "golden_diff.SCENARIOS"
       },
-      "verification": "Stage 6 elemental move-animation witness, the twin of battle_anim_physical: a real wild-battle FIGHT -> THUNDERSHOCK turn stopped at DrawFrameBlock's first published live OAM frame. The reference watches for a CHANGE from parked battle-menu OAM rather than merely nonzero OAM, so the compared unmasked OAM entries cannot be stale menu state. The shared debug party carries no elemental move, so BOTH sides pin wBattleMonMoves+3 to THUNDERSHOCK and leave its PP alone; wBattleMon therefore still compares clean. Unlike the physical twin this checkpoint sits on the subanimation/flash path."
+      "verification": "boot main menu with no save file, reached by the real title route; box drawn, no input consumed"
     },
     {
-      "name": "battle_anim_blink",
-      "id": 77,
-      "tier": "full",
+      "name": "title_reentry",
+      "id": 23,
+      "tier": "core",
       "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_ANIM_BLINK=1",
-      "port_entry_gate": "DEBUG_BATTLE_ANIM_BLINK",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_blink.lua",
+      "build_flags": "DEBUG_TITLE_REENTRY=1",
+      "port_entry_gate": "DEBUG_TITLE_REENTRY",
+      "navigation_script": "tools/mgba_harness/scenarios/title_reentry.lua",
       "dump": {
         "type": "GBSTATE",
         "schema_version": 2,
         "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
+        "timeout_seconds": 300,
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "ExecutePlayerMove",
-        "MoveAnimation",
-        "PlayApplyingAttackAnimation",
-        "BlinkEnemyMonSprite",
-        "AnimationBlinkEnemyMon",
-        "AnimationBlinkMon",
-        "AnimationHideMonPic"
+        "DisplayTitleScreen",
+        "MainMenu",
+        "MovieBeginSurface"
       ],
       "comparison": {
         "regions": [
@@ -519,47 +661,43 @@
         "projection": "golden_diff.SCENARIOS",
         "masks": "golden_diff.SCENARIOS"
       },
-      "verification": "Stage 6 shake/blink witness, the first of the family whose landmark is not a frame block. After a move's own animation MoveAnimation calls PlayApplyingAttackAnimation, which dispatches on wAnimationType; type 4 (player used a damaging move without a side effect, which STRENGTH selects) is BlinkEnemyMonSprite -> AnimationBlinkMon, six hide/show iterations. Both sides stop at the FIRST hidden-pic instant, pinned by TWO conditions: the enemy's 7x7 pic block at GB (12,0) is blank AND enemy HP is still nonzero -- damage is applied only after MoveAnimation returns, so full HP separates a blink hide from any later hide. Sits strictly between battle_anim_physical (stops earlier, inside the move animation) and battle_faint (stops after the KO), a gap nothing had covered."
+      "verification": "title stable checkpoint after a title->menu->B->title round trip; proves no leaked compositor state"
     },
     {
-      "name": "battle_anim_optoff",
-      "id": 78,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_ANIM_OPTOFF=1",
-      "port_entry_gate": "DEBUG_BATTLE_ANIM_OPTOFF",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_optoff.lua",
+      "name": "continue_seed",
+      "id": 24,
+      "tier": "core",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_CONTINUE_SEED=1",
+      "port_entry_gate": "DEBUG_CONTINUE_SEED",
+      "navigation_script": "tools/mgba_harness/scenarios/continue_seed.lua",
       "dump": {
         "type": "GBSTATE",
         "schema_version": 2,
         "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
+        "timeout_seconds": 300,
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "ExecutePlayerMove",
-        "MoveAnimation"
+        "TryLoadSaveFile"
       ],
       "comparison": {
         "regions": [
-          "tilemap",
-          "vram",
-          "oam",
           "wram"
         ],
         "projection": "golden_diff.SCENARIOS",
         "masks": "golden_diff.SCENARIOS"
       },
-      "verification": "Stage 6 animations-OFF witness, the last of the family. With wOptions BIT_BATTLE_ANIMATION set, MoveAnimation skips ShareMoveAnimations and PlayAnimation for a flat 30-frame delay (engine/battle/animations.asm:437-446). THE LANDMARK IS INSIDE THAT DISABLED ARM, and that is the point: an earlier version stopped at battle_anim_blink's shared hidden-pic landmark and PASSED while proving nothing, because the only surfaces separating the animated route from this one there are 79 VRAM tile slots (49..127) and the wOptions byte, and every one of those slots is inside _BATTLE_VRAM_MASKS_MENU ($8000-$87FF). A port that ignored the option would still have passed. Stopping inside the arm fixes that BY CONSTRUCTION: the port must take the arm to dump at all, so a port that animated anyway never reaches the checkpoint and the run fails loudly rather than green. The reference stops at the matching ROM instant -- the move-used message fully printed with the enemy pic still up -- which is true only inside the delay window; nothing moves during those 30 frames, so the state is static and the sides need not agree on a frame number."
+      "verification": "CONTINUE preserves loaded state: seed+save, clobber, TryLoadSaveFile reproduces the seed; no OakSpeech/InitPlayerData2"
     },
     {
-      "name": "battle_anim_ball",
-      "id": 76,
+      "name": "gamefreak_intro",
+      "id": 25,
       "tier": "full",
       "scenario_class": "default",
-      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_ITEMBALL=1 DEBUG_BATTLE_ANIM_BALL=1",
-      "port_entry_gate": "DEBUG_BATTLE_ANIM_BALL",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_ball.lua",
+      "build_flags": "DEBUG_GAMEFREAK_INTRO=1 AUTOKEY_DUMP_FRAME=50",
+      "port_entry_gate": "DEBUG_GAMEFREAK_INTRO",
+      "navigation_script": "tools/mgba_harness/scenarios/gamefreak_intro.lua",
       "dump": {
         "type": "GBSTATE",
         "schema_version": 2,
@@ -568,13 +706,9 @@
         "terminal_marker": "complete"
       },
       "must_hit": [
-        "DisplayBattleMenu",
-        "BagWasSelected",
-        "UseBagItem",
-        "UseItem",
-        "ItemUseBall",
-        "PlayAnimation",
-        "DrawFrameBlock"
+        "PlayShootingStar",
+        "LoadCopyrightAndTextBoxTiles",
+        "MovieBeginSurface"
       ],
       "comparison": {
         "regions": [
@@ -586,7 +720,220 @@
         "projection": "golden_diff.SCENARIOS",
         "masks": "golden_diff.SCENARIOS"
       },
-      "verification": "Stage 6 ball move-animation witness. Same landmark as its physical/elemental siblings -- DrawFrameBlock's first published live OAM frame -- but entered through the real battle ITEM menu (ITEM -> MASTER BALL) rather than FIGHT. It exists because ball_catch (id 20) cannot witness this: that scenario is datastruct/WRAM-only and dumps only after wBattleResult goes 2, by which point every toss frame block has been cleaned up. The animation under test is ULTRATOSS_ANIM ($C6), which is what pret selects for a MASTER BALL (engine/battle/animations.asm:2795) -- NOT TOSS_ANIM ($C1). The party is still 5 at the dump, which is what distinguishes this instant from ball_catch's post-capture one."
+      "verification": "Game Freak splash copyright checkpoint: 3 lines on wTileMap rows 7/9/11, copyright+gamefreak_inc glyphs in vChars2, no OAM"
+    },
+    {
+      "name": "yellow_intro_s01",
+      "id": 26,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_YELLOW_S01=1",
+      "port_entry_gate": "DEBUG_YELLOW_S01",
+      "navigation_script": "tools/mgba_harness/scenarios/yellow_intro_s01.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "PlayIntroScene",
+        "InitYellowIntroGFXAndMusic",
+        "YellowIntroScene1"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Yellow intro scene 1 (first wait-hold): intro BG letterbox + graphics loaded, running-Pikachu OBJ spawned (OAM masked)"
+    },
+    {
+      "name": "title_timeout",
+      "id": 27,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_TITLE_TIMEOUT=1",
+      "port_entry_gate": "DEBUG_TITLE_TIMEOUT",
+      "navigation_script": "tools/mgba_harness/scenarios/title_timeout.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "IncrementResetCounter",
+        "PlayIntro",
+        "PlayShootingStar"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "title timeout -> Init -> PlayIntro replay: copyright screen reappears (route proof; state == gamefreak_intro)"
+    },
+    {
+      "name": "soft_reset",
+      "id": 28,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_SOFT_RESET=1",
+      "port_entry_gate": "DEBUG_SOFT_RESET",
+      "navigation_script": "tools/mgba_harness/scenarios/soft_reset.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayTitleScreen",
+        "PlayIntro",
+        "PlayShootingStar"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "title soft-reset combo (UP+SELECT+B) -> Init -> PlayIntro replay: copyright reappears (route proof; state == gamefreak_intro)"
+    },
+    {
+      "name": "oak_intro",
+      "id": 29,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_OAKINTRO=1",
+      "port_entry_gate": "DEBUG_OAKINTRO",
+      "navigation_script": "tools/mgba_harness/scenarios/oak_intro.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "OakSpeech",
+        "PrepareOakSpeech",
+        "FadeInIntroPic",
+        "DisplayPicCenteredOrUpperRight"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Prof. Oak opening speech, page 1 parked at the cont key-wait: Oak pic + box + 'Hello there! Welcome to the'; reached via real NEW GAME -> OakSpeech (the route the port SKIP_TITLEs for a state golden)"
+    },
+    {
+      "name": "route3_sight",
+      "id": 30,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R3=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R3",
+      "navigation_script": "tools/mgba_harness/scenarios/route3_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route6_sight",
+      "id": 31,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R6=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R6",
+      "navigation_script": "tools/mgba_harness/scenarios/route6_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route11_sight",
+      "id": 32,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R11=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R11",
+      "navigation_script": "tools/mgba_harness/scenarios/route11_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
     },
     {
       "name": "battle_faint",
@@ -651,6 +998,728 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification. The other half of battle_faint's coverage: battle_faint kills the ENEMY, this one kills the PLAYER, so RemoveFaintedPlayerMon and HandlePlayerBlackOut execute for the first time. Building it found a real defect: ReadPlayerMonCurHPAndStatus was a no-op, so the fainted mon's 0 HP never reached the party and the battle looped faint->resend forever"
+    },
+    {
+      "name": "save_real_load",
+      "id": 35,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_REAL_SAVE=1",
+      "port_entry_gate": "DEBUG_REAL_SAVE",
+      "navigation_script": "tools/mgba_harness/scenarios/save_real_load.lua",
+      "seed_save": "tests/fixtures/yellow_100.sav",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TryLoadSaveFile"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "A REAL cartridge .sav (6-mon party, 151/151 dex, 19-mon current box) is staged as POKEMON.DSV, the save WRAM is clobbered, and TryLoadSaveFile repopulates it; externally-authored data catches offsets a self-round-trip cannot"
+    },
+    {
+      "name": "save_boxes_load",
+      "id": 36,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BOX_SAVE=1",
+      "port_entry_gate": "DEBUG_BOX_SAVE",
+      "navigation_script": "tools/mgba_harness/scenarios/save_boxes_load.lua",
+      "seed_save": "tests/fixtures/yellow_boxes_full.sav",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TryLoadSaveFile"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "A real save with all 12 PC boxes full is staged as POKEMON.DSV; after TryLoadSaveFile the scenario-local wBoxData region (20-mon current box, OT names, nicknames) is compared \u2014 the box_struct layout's first behavioural coverage"
+    },
+    {
+      "name": "bills_pc_ops",
+      "id": 37,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BILLSPC=1",
+      "port_entry_gate": "DEBUG_BILLSPC",
+      "navigation_script": "tools/mgba_harness/scenarios/bills_pc_ops.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "BillsPCDeposit",
+        "BillsPCWithdraw",
+        "BillsPCRelease"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "The real Bill's PC UI runs deposit PERSIAN / deposit JIGGLYPUFF / withdraw PERSIAN / release JIGGLYPUFF end-to-end (party\u2194box 44B\u219433B round trip + stat recompute); the scenario-local wBoxData region pins the box count/sentinel bookkeeping and shift residue"
+    },
+    {
+      "name": "box_change_roundtrip",
+      "id": 38,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BILLSPC_CHANGEBOX=1",
+      "port_entry_gate": "DEBUG_BILLSPC_CHANGEBOX",
+      "navigation_script": "tools/mgba_harness/scenarios/box_change_roundtrip.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ChangeBox",
+        "CopyBoxToOrFromSRAM",
+        "EmptyAllSRAMBoxes"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deposit PERSIAN, CHANGE BOX to BOX12 (first change runs EmptyAllSRAMBoxes; bank-3 traffic + real SaveGameData), CHANGE BOX back to BOX 1 \u2014 the only runtime exercise of SRAM banks 2/3; PERSIAN surviving in wBoxData proves the bank-2 store AND load, wCurrentBoxNum = $80"
+    },
+    {
+      "name": "item_pp_restore",
+      "id": 39,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_ITEMPP=1",
+      "port_entry_gate": "DEBUG_ITEMPP",
+      "navigation_script": "tools/mgba_harness/scenarios/item_pp_restore.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ItemUsePPRestore"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
+    },
+    {
+      "name": "surf_round_trip",
+      "id": 40,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_SURF=1",
+      "port_entry_gate": "DEBUG_SURF",
+      "navigation_script": "tools/mgba_harness/scenarios/surf_round_trip.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ItemUseSurfboard"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live overworld loop; state verification, not UI verification"
+    },
+    {
+      "name": "ledge_hop",
+      "id": 41,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_LEDGE=1",
+      "port_entry_gate": "DEBUG_LEDGE",
+      "navigation_script": "tools/mgba_harness/scenarios/ledge_hop.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "HandleLedges",
+        "HandleMidJump",
+        "_HandleMidJump"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live overworld loop through a Route 1 ledge hop and a post-teardown step; state verification, not UI verification"
+    },
+    {
+      "name": "fish_old_rod",
+      "id": 42,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_FISH=1",
+      "port_entry_gate": "DEBUG_FISH",
+      "navigation_script": "tools/mgba_harness/scenarios/fish_old_rod.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ItemUseOldRod",
+        "FishingInit",
+        "RodResponse",
+        "FishingAnim",
+        "LoadAnimSpriteGfx",
+        "ItemUseNotTime"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live bag UI on the Pallet shore through one FishingInit failure and the deterministic OLD ROD bite; state verification, not UI verification. Good/Super Rod share this skeleton; their bite picks are RNG-gated and not cross-side deterministic."
+    },
+    {
+      "name": "battle_damage",
+      "id": 43,
+      "tier": "full",
+      "scenario_class": "semantic",
+      "build_flags": "DEBUG_BATTLE_DAMAGE=1",
+      "port_entry_gate": "DEBUG_BATTLE_DAMAGE",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_damage.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "GetDamageVarsForPlayerAttack",
+        "GetDamageVarsForEnemyAttack",
+        "CalculateDamage",
+        "AdjustDamageForMoveType",
+        "RandomizeDamage"
+      ],
+      "comparison": {
+        "regions": [
+          "damageOracle"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "semantic numerical oracle: a non-critical Pikachu THUNDERSHOCK and a critical PIDGEY SLASH are non-lethal; each emulator's independently sampled result must match the canonical Gen-1 base, STAB, type-effectiveness and 217..255 random-factor arithmetic"
+    },
+    {
+      "name": "trainer_battle_init",
+      "id": 44,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_INIT=1",
+      "port_entry_gate": "DEBUG_TRAINER_INIT",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_init.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "StartTrainerBattle",
+        "InitBattle",
+        "GetTrainerInformation",
+        "ReadTrainer",
+        "BattleTransition",
+        "GetBattleTransitionID_WildOrTrainer",
+        "GetBattleTransitionID_CompareLevels",
+        "BattleTransition_Spiral",
+        "BattleTransition_InwardSpiral",
+        "_LoadTrainerPic",
+        "EnemySendOutFirstMon",
+        "LoadEnemyMonFromParty"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "real Route 3 trainer-sight entry on pret versus StartTrainerBattle on the port, stopped after roster load and first-mon selection; deterministic trainer initialization plus the inward-spiral transition selector/body checkpoint, not trainer presentation or battle completion"
+    },
+    {
+      "name": "trainer_battle_win",
+      "id": 45,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_WIN=1",
+      "port_entry_gate": "DEBUG_TRAINER_WIN",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_win.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "StartTrainerBattle",
+        "InitBattle",
+        "GetTrainerInformation",
+        "ReadTrainer",
+        "ExecutePlayerMove",
+        "GainExperience",
+        "TrainerBattleVictory",
+        "EndOfBattle",
+        "FinalizeTrainerBattleOutcome",
+        "EndTrainerBattle"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "real Route 3 trainer win on pret versus guarded production initialization plus deterministic terminal turn on the port; state verification of prize/result, persistent beaten flag, map-script reset, HP and EXP, not presentation"
+    },
+    {
+      "name": "trainer_battle_loss",
+      "id": 46,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_LOSS=1",
+      "port_entry_gate": "DEBUG_TRAINER_LOSS",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_loss.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "StartTrainerBattle",
+        "InitBattle",
+        "GetTrainerInformation",
+        "ReadTrainer",
+        "ExecuteEnemyMove",
+        "HandlePlayerBlackOut",
+        "EndOfBattle",
+        "FinalizeTrainerBattleOutcome",
+        "EndTrainerBattle",
+        "ResetStatusAndHalveMoneyOnBlackout"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "real Route 3 trainer blackout on pret versus guarded production initialization plus deterministic terminal loss on the port; state verification that the trainer flag stays clear while script, money and party cleanup match, not presentation"
+    },
+    {
+      "name": "route4_sight",
+      "id": 47,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R4=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R4",
+      "navigation_script": "tools/mgba_harness/scenarios/route4_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route8_sight",
+      "id": 48,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R8=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R8",
+      "navigation_script": "tools/mgba_harness/scenarios/route8_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route9_sight",
+      "id": 49,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R9=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R9",
+      "navigation_script": "tools/mgba_harness/scenarios/route9_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route10_sight",
+      "id": 50,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R10=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R10",
+      "navigation_script": "tools/mgba_harness/scenarios/route10_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "trainer_battle_route",
+      "id": 51,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_ROUTE=1",
+      "port_entry_gate": "DEBUG_TRAINER_ROUTE",
+      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_route.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 600,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "OverworldLoop",
+        "RunMapScript",
+        "TrainerMapScript",
+        "CheckFightingMapTrainers",
+        "DisplayEnemyTrainerTextAndStartBattle",
+        "StartTrainerBattle",
+        "NewBattle",
+        "InitBattle",
+        "EndOfBattle",
+        "EndTrainerBattle"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the CONTINUOUS overworld->battle->return scenario, and the only one in which the port's real OverworldLoop drives a trainer battle end to end: sight engagement by the map script, entry through the loop's own wCurOpponent poll, the live battle menus, and the .battleOccurred return that dispatches EndTrainerBattle. 44/45/46 call StartTrainerBattle and InitBattle from a harness and never run the loop, so none of them can prove this. Compared surface is choreography (battle result, wIsInBattle, wCurOpponent cleared, map-script indices, the persistent beaten flag, the .battleOccurred status-flag work, map and coords) plus the two zero-RNG reward bytes (player money BCD, lead mon EXP). Damage and HP are deliberately NOT compared: pinning them would require RNG lockstep through live menu timing, and per-turn damage math is already covered by battle_faint and 45/46"
+    },
+    {
+      "name": "route13_sight",
+      "id": 52,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R13=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R13",
+      "navigation_script": "tools/mgba_harness/scenarios/route13_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route14_sight",
+      "id": 53,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R14=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R14",
+      "navigation_script": "tools/mgba_harness/scenarios/route14_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route15_sight",
+      "id": 54,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R15=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R15",
+      "navigation_script": "tools/mgba_harness/scenarios/route15_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route17_trainer_battle",
+      "id": 55,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_TRAINER_ROUTE17=1",
+      "port_entry_gate": "DEBUG_TRAINER_ROUTE17",
+      "navigation_script": "tools/mgba_harness/scenarios/route17_trainer_battle.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 200,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "OverworldLoop",
+        "RunMapScript",
+        "TrainerMapScript",
+        "CheckFightingMapTrainers",
+        "ForceBikeDown",
+        "DisplayEnemyTrainerTextAndStartBattle",
+        "StartTrainerBattle",
+        "NewBattle",
+        "InitBattle"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "the ROUTE_17 / ForceBikeDown witness (map-script fidelity plan, third attempt): unlike the route*_sight family, this scenario drives the port's REAL OverworldLoop -- the only loop that ever calls ForceBikeDown -- from a scripted warp onto Route 17 through map-script sight engagement to a confirmed trainer-battle start. RunMapScriptSightTest structurally cannot reach OverworldLoopLessDelay, so it can never witness ForceBikeDown; this scenario is shaped like trainer_battle_route (id 51) instead. It deliberately stops at battle start rather than fighting the roster out -- trainer_battle_route already proves the live menu/turn-loop/return choreography end to end on Route 3, so this scenario's only job is proving ForceBikeDown's forced southward drift reproduces ground truth's measured wYCoord ($79) through the real input path"
+    },
+    {
+      "name": "route18_sight",
+      "id": 56,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R18=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R18",
+      "navigation_script": "tools/mgba_harness/scenarios/route18_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route19_sight",
+      "id": 57,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R19=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R19",
+      "navigation_script": "tools/mgba_harness/scenarios/route19_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
+    },
+    {
+      "name": "route21_sight",
+      "id": 58,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R21=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R21",
+      "navigation_script": "tools/mgba_harness/scenarios/route21_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
     },
     {
       "name": "battle_switch",
@@ -880,1274 +1949,6 @@
       "verification": "the MUTUAL FAINT: FaintEnemyPokemon's .sfxplayed player-also-fainted arm, which battle_faint (enemy only) and battle_blackout (player only) cannot reach. THE DUMP INSTANT IS THE WHOLE DESIGN and took three attempts. Both sides dump in the ONLY observable window: wBattleResult == 1 with both HP words 0. That byte is written ONLY by RemoveFaintedPlayerMon, which in this flow runs ONLY on that arm, and FaintEnemyPokemon RE-ZEROES it a few instructions later (pret core.asm:825-826), so it is caught per frame during the text and pic-slide. Two earlier versions dumped after FaintEnemyPokemon returned; both passed their diff AND their sabotage, i.e. proved nothing -- party slot 0's HP reaches 0 either way, wBattleResult is re-zeroed, and wPartyGainExpFlags is consumed by the EXP distribution. Deterministic by construction: ExplodeEffect zeroes the USER's HP with no accuracy test and a power-130 hit from L80 overkills 36 HP on every roll"
     },
     {
-      "name": "battle_damage",
-      "id": 43,
-      "tier": "full",
-      "scenario_class": "semantic",
-      "build_flags": "DEBUG_BATTLE_DAMAGE=1",
-      "port_entry_gate": "DEBUG_BATTLE_DAMAGE",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_damage.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunBattleTest",
-        "GetDamageVarsForPlayerAttack",
-        "GetDamageVarsForEnemyAttack",
-        "CalculateDamage",
-        "AdjustDamageForMoveType",
-        "RandomizeDamage"
-      ],
-      "comparison": {
-        "regions": [
-          "damageOracle"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "semantic numerical oracle: a non-critical Pikachu THUNDERSHOCK and a critical PIDGEY SLASH are non-lethal; each emulator's independently sampled result must match the canonical Gen-1 base, STAB, type-effectiveness and 217..255 random-factor arithmetic"
-    },
-    {
-      "name": "options_menu",
-      "id": 8,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_OPTIONS=1",
-      "port_entry_gate": "DEBUG_OPTIONS",
-      "navigation_script": "tools/mgba_harness/scenarios/options_menu.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunOptionsTest"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic screen/navigation state"
-    },
-    {
-      "name": "trainer_card",
-      "id": 9,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_TRAINERCARD=1",
-      "port_entry_gate": "DEBUG_TRAINERCARD",
-      "navigation_script": "tools/mgba_harness/scenarios/trainer_card.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunTrainerCardTest"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic screen/navigation state"
-    },
-    {
-      "name": "pokedex_list",
-      "id": 10,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_G1=1",
-      "port_entry_gate": "DEBUG_G1",
-      "navigation_script": "tools/mgba_harness/scenarios/pokedex_list.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunPokedexTest"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic screen/navigation state"
-    },
-    {
-      "name": "pokedex_entry",
-      "id": 11,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_G2=1",
-      "port_entry_gate": "DEBUG_G2",
-      "navigation_script": "tools/mgba_harness/scenarios/pokedex_entry.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunPokedexEntryTest"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic screen/navigation state"
-    },
-    {
-      "name": "naming_screen",
-      "id": 12,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_NAMINGSCREEN=1",
-      "port_entry_gate": "DEBUG_NAMINGSCREEN",
-      "navigation_script": "tools/mgba_harness/scenarios/naming_screen.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunNamingScreenTest"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic screen/navigation state"
-    },
-    {
-      "name": "title",
-      "id": 21,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_TITLE=1",
-      "port_entry_gate": "DEBUG_TITLE",
-      "navigation_script": "tools/mgba_harness/scenarios/title.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 300,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "DisplayTitleScreen",
-        "MovieBeginSurface",
-        "PublishProjectedOAM"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "stable-composition checkpoint: bounce complete, hSCY=0, eyes open in the post-blink window, no input consumed"
-    },
-    {
-      "name": "gamefreak_intro",
-      "id": 25,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_GAMEFREAK_INTRO=1 AUTOKEY_DUMP_FRAME=50",
-      "port_entry_gate": "DEBUG_GAMEFREAK_INTRO",
-      "navigation_script": "tools/mgba_harness/scenarios/gamefreak_intro.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "PlayShootingStar",
-        "LoadCopyrightAndTextBoxTiles",
-        "MovieBeginSurface"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "Game Freak splash copyright checkpoint: 3 lines on wTileMap rows 7/9/11, copyright+gamefreak_inc glyphs in vChars2, no OAM"
-    },
-    {
-      "name": "yellow_intro_s01",
-      "id": 26,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_YELLOW_S01=1",
-      "port_entry_gate": "DEBUG_YELLOW_S01",
-      "navigation_script": "tools/mgba_harness/scenarios/yellow_intro_s01.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "PlayIntroScene",
-        "InitYellowIntroGFXAndMusic",
-        "YellowIntroScene1"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "Yellow intro scene 1 (first wait-hold): intro BG letterbox + graphics loaded, running-Pikachu OBJ spawned (OAM masked)"
-    },
-    {
-      "name": "title_timeout",
-      "id": 27,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_TITLE_TIMEOUT=1",
-      "port_entry_gate": "DEBUG_TITLE_TIMEOUT",
-      "navigation_script": "tools/mgba_harness/scenarios/title_timeout.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "IncrementResetCounter",
-        "PlayIntro",
-        "PlayShootingStar"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "title timeout -> Init -> PlayIntro replay: copyright screen reappears (route proof; state == gamefreak_intro)"
-    },
-    {
-      "name": "soft_reset",
-      "id": 28,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_SOFT_RESET=1",
-      "port_entry_gate": "DEBUG_SOFT_RESET",
-      "navigation_script": "tools/mgba_harness/scenarios/soft_reset.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "DisplayTitleScreen",
-        "PlayIntro",
-        "PlayShootingStar"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "title soft-reset combo (UP+SELECT+B) -> Init -> PlayIntro replay: copyright reappears (route proof; state == gamefreak_intro)"
-    },
-    {
-      "name": "main_menu",
-      "id": 22,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_MAINMENU_LIVE=1",
-      "port_entry_gate": "DEBUG_MAINMENU_LIVE",
-      "navigation_script": "tools/mgba_harness/scenarios/main_menu.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 300,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "DisplayTitleScreen",
-        "MainMenu",
-        "InitOptions"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "boot main menu with no save file, reached by the real title route; box drawn, no input consumed"
-    },
-    {
-      "name": "title_reentry",
-      "id": 23,
-      "tier": "core",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_TITLE_REENTRY=1",
-      "port_entry_gate": "DEBUG_TITLE_REENTRY",
-      "navigation_script": "tools/mgba_harness/scenarios/title_reentry.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 300,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "DisplayTitleScreen",
-        "MainMenu",
-        "MovieBeginSurface"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "title stable checkpoint after a title->menu->B->title round trip; proves no leaked compositor state"
-    },
-    {
-      "name": "continue_seed",
-      "id": 24,
-      "tier": "core",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_CONTINUE_SEED=1",
-      "port_entry_gate": "DEBUG_CONTINUE_SEED",
-      "navigation_script": "tools/mgba_harness/scenarios/continue_seed.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 300,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TryLoadSaveFile"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "CONTINUE preserves loaded state: seed+save, clobber, TryLoadSaveFile reproduces the seed; no OakSpeech/InitPlayerData2"
-    },
-    {
-      "name": "save_real_load",
-      "id": 35,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_REAL_SAVE=1",
-      "port_entry_gate": "DEBUG_REAL_SAVE",
-      "navigation_script": "tools/mgba_harness/scenarios/save_real_load.lua",
-      "seed_save": "tests/fixtures/yellow_100.sav",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 300,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TryLoadSaveFile"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "A REAL cartridge .sav (6-mon party, 151/151 dex, 19-mon current box) is staged as POKEMON.DSV, the save WRAM is clobbered, and TryLoadSaveFile repopulates it; externally-authored data catches offsets a self-round-trip cannot"
-    },
-    {
-      "name": "save_boxes_load",
-      "id": 36,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_BOX_SAVE=1",
-      "port_entry_gate": "DEBUG_BOX_SAVE",
-      "navigation_script": "tools/mgba_harness/scenarios/save_boxes_load.lua",
-      "seed_save": "tests/fixtures/yellow_boxes_full.sav",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 300,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TryLoadSaveFile"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "A real save with all 12 PC boxes full is staged as POKEMON.DSV; after TryLoadSaveFile the scenario-local wBoxData region (20-mon current box, OT names, nicknames) is compared \u2014 the box_struct layout's first behavioural coverage"
-    },
-    {
-      "name": "bills_pc_ops",
-      "id": 37,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_BILLSPC=1",
-      "port_entry_gate": "DEBUG_BILLSPC",
-      "navigation_script": "tools/mgba_harness/scenarios/bills_pc_ops.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 300,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "BillsPCDeposit",
-        "BillsPCWithdraw",
-        "BillsPCRelease"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "The real Bill's PC UI runs deposit PERSIAN / deposit JIGGLYPUFF / withdraw PERSIAN / release JIGGLYPUFF end-to-end (party\u2194box 44B\u219433B round trip + stat recompute); the scenario-local wBoxData region pins the box count/sentinel bookkeeping and shift residue"
-    },
-    {
-      "name": "box_change_roundtrip",
-      "id": 38,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_BILLSPC_CHANGEBOX=1",
-      "port_entry_gate": "DEBUG_BILLSPC_CHANGEBOX",
-      "navigation_script": "tools/mgba_harness/scenarios/box_change_roundtrip.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 300,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "ChangeBox",
-        "CopyBoxToOrFromSRAM",
-        "EmptyAllSRAMBoxes"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deposit PERSIAN, CHANGE BOX to BOX12 (first change runs EmptyAllSRAMBoxes; bank-3 traffic + real SaveGameData), CHANGE BOX back to BOX 1 \u2014 the only runtime exercise of SRAM banks 2/3; PERSIAN surviving in wBoxData proves the bank-2 store AND load, wCurrentBoxNum = $80"
-    },
-    {
-      "name": "oak_intro",
-      "id": 29,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_OAKINTRO=1",
-      "port_entry_gate": "DEBUG_OAKINTRO",
-      "navigation_script": "tools/mgba_harness/scenarios/oak_intro.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "OakSpeech",
-        "PrepareOakSpeech",
-        "FadeInIntroPic",
-        "DisplayPicCenteredOrUpperRight"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "Prof. Oak opening speech, page 1 parked at the cont key-wait: Oak pic + box + 'Hello there! Welcome to the'; reached via real NEW GAME -> OakSpeech (the route the port SKIP_TITLEs for a state golden)"
-    },
-    {
-      "name": "route3_sight",
-      "id": 30,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R3=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R3",
-      "navigation_script": "tools/mgba_harness/scenarios/route3_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "viridian_forest_sight",
-      "id": 86,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_VF=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_VF",
-      "navigation_script": "tools/mgba_harness/scenarios/viridian_forest_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement on the first NON-ROUTE map on this gate. VIRIDIAN_FOREST was table-only until 2026-08-15 (parameter block generated, MapScriptPointers still DefaultMapScript), so its five trainers could be talked to but never fought and no ! ever appeared. This is the witness that wiring it is correct, not merely non-crashing; state verification, not UI verification"
-    },
-    {
-      "name": "route6_sight",
-      "id": 31,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R6=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R6",
-      "navigation_script": "tools/mgba_harness/scenarios/route6_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route11_sight",
-      "id": 32,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R11=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R11",
-      "navigation_script": "tools/mgba_harness/scenarios/route11_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route4_sight",
-      "id": 47,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R4=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R4",
-      "navigation_script": "tools/mgba_harness/scenarios/route4_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route8_sight",
-      "id": 48,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R8=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R8",
-      "navigation_script": "tools/mgba_harness/scenarios/route8_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route9_sight",
-      "id": 49,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R9=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R9",
-      "navigation_script": "tools/mgba_harness/scenarios/route9_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route10_sight",
-      "id": 50,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R10=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R10",
-      "navigation_script": "tools/mgba_harness/scenarios/route10_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route13_sight",
-      "id": 52,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R13=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R13",
-      "navigation_script": "tools/mgba_harness/scenarios/route13_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route14_sight",
-      "id": 53,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R14=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R14",
-      "navigation_script": "tools/mgba_harness/scenarios/route14_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route15_sight",
-      "id": 54,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R15=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R15",
-      "navigation_script": "tools/mgba_harness/scenarios/route15_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route17_trainer_battle",
-      "id": 55,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_TRAINER_ROUTE17=1",
-      "port_entry_gate": "DEBUG_TRAINER_ROUTE17",
-      "navigation_script": "tools/mgba_harness/scenarios/route17_trainer_battle.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 200,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "OverworldLoop",
-        "RunMapScript",
-        "TrainerMapScript",
-        "CheckFightingMapTrainers",
-        "ForceBikeDown",
-        "DisplayEnemyTrainerTextAndStartBattle",
-        "StartTrainerBattle",
-        "NewBattle",
-        "InitBattle"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "the ROUTE_17 / ForceBikeDown witness (map-script fidelity plan, third attempt): unlike the route*_sight family, this scenario drives the port's REAL OverworldLoop -- the only loop that ever calls ForceBikeDown -- from a scripted warp onto Route 17 through map-script sight engagement to a confirmed trainer-battle start. RunMapScriptSightTest structurally cannot reach OverworldLoopLessDelay, so it can never witness ForceBikeDown; this scenario is shaped like trainer_battle_route (id 51) instead. It deliberately stops at battle start rather than fighting the roster out -- trainer_battle_route already proves the live menu/turn-loop/return choreography end to end on Route 3, so this scenario's only job is proving ForceBikeDown's forced southward drift reproduces ground truth's measured wYCoord ($79) through the real input path"
-    },
-    {
-      "name": "route18_sight",
-      "id": 56,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R18=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R18",
-      "navigation_script": "tools/mgba_harness/scenarios/route18_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route19_sight",
-      "id": 57,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R19=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R19",
-      "navigation_script": "tools/mgba_harness/scenarios/route19_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "route21_sight",
-      "id": 58,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_R21=1",
-      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_R21",
-      "navigation_script": "tools/mgba_harness/scenarios/route21_sight.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "TrainerMapScript",
-        "CheckFightingMapTrainers"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "deterministic map-script trainer engagement state; state verification, not UI verification"
-    },
-    {
-      "name": "item_pp_restore",
-      "id": 39,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_ITEMPP=1",
-      "port_entry_gate": "DEBUG_ITEMPP",
-      "navigation_script": "tools/mgba_harness/scenarios/item_pp_restore.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "ItemUsePPRestore"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "synthetic-port-gate plus real-navigation golden; state verification, not UI verification"
-    },
-    {
-      "name": "surf_round_trip",
-      "id": 40,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_SURF=1",
-      "port_entry_gate": "DEBUG_SURF",
-      "navigation_script": "tools/mgba_harness/scenarios/surf_round_trip.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "ItemUseSurfboard"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live overworld loop; state verification, not UI verification"
-    },
-    {
-      "name": "ledge_hop",
-      "id": 41,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_LEDGE=1",
-      "port_entry_gate": "DEBUG_LEDGE",
-      "navigation_script": "tools/mgba_harness/scenarios/ledge_hop.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "HandleLedges",
-        "HandleMidJump",
-        "_HandleMidJump"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live overworld loop through a Route 1 ledge hop and a post-teardown step; state verification, not UI verification"
-    },
-    {
-      "name": "fish_old_rod",
-      "id": 42,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_FISH=1",
-      "port_entry_gate": "DEBUG_FISH",
-      "navigation_script": "tools/mgba_harness/scenarios/fish_old_rod.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "ItemUseOldRod",
-        "FishingInit",
-        "RodResponse",
-        "FishingAnim",
-        "LoadAnimSpriteGfx",
-        "ItemUseNotTime"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "scripted-joypad port gate plus real-navigation golden, both driving the live bag UI on the Pallet shore through one FishingInit failure and the deterministic OLD ROD bite; state verification, not UI verification. Good/Super Rod share this skeleton; their bite picks are RNG-gated and not cross-side deterministic."
-    },
-    {
-      "name": "trainer_battle_init",
-      "id": 44,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_TRAINER_INIT=1",
-      "port_entry_gate": "DEBUG_TRAINER_INIT",
-      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_init.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "StartTrainerBattle",
-        "InitBattle",
-        "GetTrainerInformation",
-        "ReadTrainer",
-        "BattleTransition",
-        "GetBattleTransitionID_WildOrTrainer",
-        "GetBattleTransitionID_CompareLevels",
-        "BattleTransition_Spiral",
-        "BattleTransition_InwardSpiral",
-        "_LoadTrainerPic",
-        "EnemySendOutFirstMon",
-        "LoadEnemyMonFromParty"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "real Route 3 trainer-sight entry on pret versus StartTrainerBattle on the port, stopped after roster load and first-mon selection; deterministic trainer initialization plus the inward-spiral transition selector/body checkpoint, not trainer presentation or battle completion"
-    },
-    {
-      "name": "trainer_battle_win",
-      "id": 45,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_TRAINER_WIN=1",
-      "port_entry_gate": "DEBUG_TRAINER_WIN",
-      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_win.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "StartTrainerBattle",
-        "InitBattle",
-        "GetTrainerInformation",
-        "ReadTrainer",
-        "ExecutePlayerMove",
-        "GainExperience",
-        "TrainerBattleVictory",
-        "EndOfBattle",
-        "FinalizeTrainerBattleOutcome",
-        "EndTrainerBattle"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "real Route 3 trainer win on pret versus guarded production initialization plus deterministic terminal turn on the port; state verification of prize/result, persistent beaten flag, map-script reset, HP and EXP, not presentation"
-    },
-    {
-      "name": "trainer_battle_loss",
-      "id": 46,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_TRAINER_LOSS=1",
-      "port_entry_gate": "DEBUG_TRAINER_LOSS",
-      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_loss.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "StartTrainerBattle",
-        "InitBattle",
-        "GetTrainerInformation",
-        "ReadTrainer",
-        "ExecuteEnemyMove",
-        "HandlePlayerBlackOut",
-        "EndOfBattle",
-        "FinalizeTrainerBattleOutcome",
-        "EndTrainerBattle",
-        "ResetStatusAndHalveMoneyOnBlackout"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "real Route 3 trainer blackout on pret versus guarded production initialization plus deterministic terminal loss on the port; state verification that the trainer flag stays clear while script, money and party cleanup match, not presentation"
-    },
-    {
-      "name": "trainer_battle_route",
-      "id": 51,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_TRAINER_ROUTE=1",
-      "port_entry_gate": "DEBUG_TRAINER_ROUTE",
-      "navigation_script": "tools/mgba_harness/scenarios/trainer_battle_route.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 600,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "OverworldLoop",
-        "RunMapScript",
-        "TrainerMapScript",
-        "CheckFightingMapTrainers",
-        "DisplayEnemyTrainerTextAndStartBattle",
-        "StartTrainerBattle",
-        "NewBattle",
-        "InitBattle",
-        "EndOfBattle",
-        "EndTrainerBattle"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "the CONTINUOUS overworld->battle->return scenario, and the only one in which the port's real OverworldLoop drives a trainer battle end to end: sight engagement by the map script, entry through the loop's own wCurOpponent poll, the live battle menus, and the .battleOccurred return that dispatches EndTrainerBattle. 44/45/46 call StartTrainerBattle and InitBattle from a harness and never run the loop, so none of them can prove this. Compared surface is choreography (battle result, wIsInBattle, wCurOpponent cleared, map-script indices, the persistent beaten flag, the .battleOccurred status-flag work, map and coords) plus the two zero-RNG reward bytes (player money BCD, lead mon EXP). Damage and HP are deliberately NOT compared: pinning them would require RNG lockstep through live menu timing, and per-turn damage math is already covered by battle_faint and 45/46"
-    },
-    {
       "name": "battle_exp_all",
       "id": 66,
       "tier": "full",
@@ -2269,70 +2070,6 @@
       "verification": "DisplayBattleMenu.doSimulatedMenuInput -- the old-man / Prof. Oak tutorial menu, the first scenario to execute it. Compares wPlayerName, already a STANDARD region: pret copies NAME_LENGTH=11 from the 8-byte .oldManName literal, so the correct bytes are 8E 8B 83 7F 8C 80 8D 50 8F 91 8E -- \"OLD MAN\" @ plus the adjacent \"PRO\" of .profOakName -- and a port padding with 0x50 differs in exactly the last three (the defect fixed in dbe6e797b). THE STAGING IS THE POINT: a special battle NEVER sends out the player's mon (pret StartBattle core.asm:171) and never enters MainInBattleLoop (it loops on DisplayBattleMenu, core.asm:176), so wBattleMon stays ZERO throughout on both sides. The harness sets wBattleType before the send-out decision rather than in the gate body, which is what makes the two sides agree"
     },
     {
-      "name": "battle_oldman_result",
-      "id": 79,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_OLDMAN_RESULT=1",
-      "port_entry_gate": "DEBUG_BATTLE_OLDMAN_RESULT",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_oldman_result.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunBattleTest",
-        "DisplayBattleMenu",
-        "BagWasSelected",
-        "UseBagItem",
-        "UseItem",
-        "ItemUseBall"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "The RESULT/EXIT half of the per-battle-type box for OLD_MAN: battle_oldman (id 69) stops at the rename inside the menu, this follows the same battle to its end. Landmark is wBattleResult == 2, the same one ball_catch polls -- pret's UseBagItem.returnAfterCapturingMon (core.asm:2393-2399) sets wBattleResult=2 and scf together, and .displaySafariZoneBattleMenu is `call DisplayBattleMenu / ret c`, so a capture exits the battle early and the SAFARI tail after it is reached only when carry is CLEAR. BOTH SIDES LAND POST-TEARDOWN (the port gate calls EndOfBattle before dumping) because the window where wBattleResult reads 2 while wIsInBattle is still 1 is only a few frames wide and the reference's A-taps step past it. SENSITIVITY, MEASURED not predicted: forcing the port to skip .oldManCaughtMon (so the tutorial takes the NORMAL catch path) makes this scenario FAIL -- on `wEnemyMon party pos, want $00 got $0D`. Note wPartyData MATCHED under that sabotage, so the sabotaged port did not actually gain a party mon; the discriminator is the enemy party-position field, not party/dex as first designed. PIN NOTE: unlike battle_oldman this scenario pins the enemy with SLEEP ONLY on both sides -- battle_oldman's 65535-HP pin outlives the battle here and showed up as a one-field divergence in whichever direction it was applied asymmetrically."
-    },
-    {
-      "name": "battle_pikachu_result",
-      "id": 80,
-      "tier": "full",
-      "scenario_class": "datastruct",
-      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_PIKACHU_RESULT=1",
-      "port_entry_gate": "DEBUG_BATTLE_PIKACHU_RESULT",
-      "navigation_script": "tools/mgba_harness/scenarios/battle_pikachu_result.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 150,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "RunBattleTest",
-        "DisplayBattleMenu",
-        "BagWasSelected",
-        "UseBagItem",
-        "UseItem",
-        "ItemUseBall"
-      ],
-      "comparison": {
-        "regions": [
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "The RESULT/EXIT half for BATTLE_TYPE_PIKACHU, the twin of battle_oldman_result (id 79). battle_pikachu (id 70) stops at the rename inside the menu; this follows the same battle to its end. DisplayBattleMenu dispatches OLD_MAN and PIKACHU to the SAME .doSimulatedMenuInput and ItemUseBall routes BOTH to .oldManCaughtMon (item_effects.asm:529-532) -- caught but not handed to the player -- so the same wBattleResult == 2 landmark and the same pins apply. Both sides land POST-TEARDOWN (the port gate calls EndOfBattle before dumping) because the pre-teardown window is only a few frames wide, and both pin the enemy with SLEEP ONLY -- battle_pikachu's 65535-HP pin outlives the battle at this instant and is %ifndef'd out of the RESULT gate. NON-VACUITY, MEASURED: its golden is BYTE-IDENTICAL to battle_oldman_result's -- expected, since hardware reaches the same terminal state for both types once the tutorial name is restored -- so the value is that it exercises the PORT's PIKACHU path. Proved distinct: sabotaging ONLY the PIKACHU arm of ItemUseBall's tutorial check makes THIS scenario FAIL while battle_oldman_result still PASSES."
-    },
-    {
       "name": "battle_pikachu",
       "id": 70,
       "tier": "full",
@@ -2446,6 +2183,241 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "CenterMonName's 3-4 character column shift, the only scenario outside its unshifted bucket"
+    },
+    {
+      "name": "battle_anim_physical",
+      "id": 74,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_ANIM_PHYSICAL=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_PHYSICAL",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_physical.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ExecutePlayerMove",
+        "MoveAnimation",
+        "PlayMoveAnimation",
+        "PlaySubanimation",
+        "DrawFrameBlock"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 physical move-animation witness: a real wild-battle FIGHT -> STRENGTH turn, stopped at DrawFrameBlock's first published live OAM frame. The reference watches for a CHANGE from parked battle-menu OAM rather than merely nonzero OAM, so the compared unmasked OAM entries cannot be stale menu state. The port reuses DEBUG_BATTLE_FAINT's faithful ExecutePlayerMove entry and dumps at the matching projection boundary before the faint path cleans OAM."
+    },
+    {
+      "name": "battle_anim_elemental",
+      "id": 75,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_ANIM_ELEMENTAL=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_ELEMENTAL",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_elemental.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ExecutePlayerMove",
+        "MoveAnimation",
+        "PlayMoveAnimation",
+        "PlaySubanimation",
+        "DrawFrameBlock"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 elemental move-animation witness, the twin of battle_anim_physical: a real wild-battle FIGHT -> THUNDERSHOCK turn stopped at DrawFrameBlock's first published live OAM frame. The reference watches for a CHANGE from parked battle-menu OAM rather than merely nonzero OAM, so the compared unmasked OAM entries cannot be stale menu state. The shared debug party carries no elemental move, so BOTH sides pin wBattleMonMoves+3 to THUNDERSHOCK and leave its PP alone; wBattleMon therefore still compares clean. Unlike the physical twin this checkpoint sits on the subanimation/flash path."
+    },
+    {
+      "name": "battle_anim_ball",
+      "id": 76,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_ITEMBALL=1 DEBUG_BATTLE_ANIM_BALL=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_BALL",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_ball.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayBattleMenu",
+        "BagWasSelected",
+        "UseBagItem",
+        "UseItem",
+        "ItemUseBall",
+        "PlayAnimation",
+        "DrawFrameBlock"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 ball move-animation witness. Same landmark as its physical/elemental siblings -- DrawFrameBlock's first published live OAM frame -- but entered through the real battle ITEM menu (ITEM -> MASTER BALL) rather than FIGHT. It exists because ball_catch (id 20) cannot witness this: that scenario is datastruct/WRAM-only and dumps only after wBattleResult goes 2, by which point every toss frame block has been cleaned up. The animation under test is ULTRATOSS_ANIM ($C6), which is what pret selects for a MASTER BALL (engine/battle/animations.asm:2795) -- NOT TOSS_ANIM ($C1). The party is still 5 at the dump, which is what distinguishes this instant from ball_catch's post-capture one."
+    },
+    {
+      "name": "battle_anim_blink",
+      "id": 77,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_ANIM_BLINK=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_BLINK",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_blink.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ExecutePlayerMove",
+        "MoveAnimation",
+        "PlayApplyingAttackAnimation",
+        "BlinkEnemyMonSprite",
+        "AnimationBlinkEnemyMon",
+        "AnimationBlinkMon",
+        "AnimationHideMonPic"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 shake/blink witness, the first of the family whose landmark is not a frame block. After a move's own animation MoveAnimation calls PlayApplyingAttackAnimation, which dispatches on wAnimationType; type 4 (player used a damaging move without a side effect, which STRENGTH selects) is BlinkEnemyMonSprite -> AnimationBlinkMon, six hide/show iterations. Both sides stop at the FIRST hidden-pic instant, pinned by TWO conditions: the enemy's 7x7 pic block at GB (12,0) is blank AND enemy HP is still nonzero -- damage is applied only after MoveAnimation returns, so full HP separates a blink hide from any later hide. Sits strictly between battle_anim_physical (stops earlier, inside the move animation) and battle_faint (stops after the KO), a gap nothing had covered."
+    },
+    {
+      "name": "battle_anim_optoff",
+      "id": 78,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_BATTLE_ANIM_OPTOFF=1",
+      "port_entry_gate": "DEBUG_BATTLE_ANIM_OPTOFF",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_anim_optoff.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "ExecutePlayerMove",
+        "MoveAnimation"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Stage 6 animations-OFF witness, the last of the family. With wOptions BIT_BATTLE_ANIMATION set, MoveAnimation skips ShareMoveAnimations and PlayAnimation for a flat 30-frame delay (engine/battle/animations.asm:437-446). THE LANDMARK IS INSIDE THAT DISABLED ARM, and that is the point: an earlier version stopped at battle_anim_blink's shared hidden-pic landmark and PASSED while proving nothing, because the only surfaces separating the animated route from this one there are 79 VRAM tile slots (49..127) and the wOptions byte, and every one of those slots is inside _BATTLE_VRAM_MASKS_MENU ($8000-$87FF). A port that ignored the option would still have passed. Stopping inside the arm fixes that BY CONSTRUCTION: the port must take the arm to dump at all, so a port that animated anyway never reaches the checkpoint and the run fails loudly rather than green. The reference stops at the matching ROM instant -- the move-used message fully printed with the enemy pic still up -- which is true only inside the delay window; nothing moves during those 30 frames, so the state is static and the sides need not agree on a frame number."
+    },
+    {
+      "name": "battle_oldman_result",
+      "id": 79,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_OLDMAN_RESULT=1",
+      "port_entry_gate": "DEBUG_BATTLE_OLDMAN_RESULT",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_oldman_result.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "DisplayBattleMenu",
+        "BagWasSelected",
+        "UseBagItem",
+        "UseItem",
+        "ItemUseBall"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "The RESULT/EXIT half of the per-battle-type box for OLD_MAN: battle_oldman (id 69) stops at the rename inside the menu, this follows the same battle to its end. Landmark is wBattleResult == 2, the same one ball_catch polls -- pret's UseBagItem.returnAfterCapturingMon (core.asm:2393-2399) sets wBattleResult=2 and scf together, and .displaySafariZoneBattleMenu is `call DisplayBattleMenu / ret c`, so a capture exits the battle early and the SAFARI tail after it is reached only when carry is CLEAR. BOTH SIDES LAND POST-TEARDOWN (the port gate calls EndOfBattle before dumping) because the window where wBattleResult reads 2 while wIsInBattle is still 1 is only a few frames wide and the reference's A-taps step past it. SENSITIVITY, MEASURED not predicted: forcing the port to skip .oldManCaughtMon (so the tutorial takes the NORMAL catch path) makes this scenario FAIL -- on `wEnemyMon party pos, want $00 got $0D`. Note wPartyData MATCHED under that sabotage, so the sabotaged port did not actually gain a party mon; the discriminator is the enemy party-position field, not party/dex as first designed. PIN NOTE: unlike battle_oldman this scenario pins the enemy with SLEEP ONLY on both sides -- battle_oldman's 65535-HP pin outlives the battle here and showed up as a one-field divergence in whichever direction it was applied asymmetrically."
+    },
+    {
+      "name": "battle_pikachu_result",
+      "id": 80,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_BATTLE_GOLDEN=1 DEBUG_BATTLE_PIKACHU_RESULT=1",
+      "port_entry_gate": "DEBUG_BATTLE_PIKACHU_RESULT",
+      "navigation_script": "tools/mgba_harness/scenarios/battle_pikachu_result.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "RunBattleTest",
+        "DisplayBattleMenu",
+        "BagWasSelected",
+        "UseBagItem",
+        "UseItem",
+        "ItemUseBall"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "The RESULT/EXIT half for BATTLE_TYPE_PIKACHU, the twin of battle_oldman_result (id 79). battle_pikachu (id 70) stops at the rename inside the menu; this follows the same battle to its end. DisplayBattleMenu dispatches OLD_MAN and PIKACHU to the SAME .doSimulatedMenuInput and ItemUseBall routes BOTH to .oldManCaughtMon (item_effects.asm:529-532) -- caught but not handed to the player -- so the same wBattleResult == 2 landmark and the same pins apply. Both sides land POST-TEARDOWN (the port gate calls EndOfBattle before dumping) because the pre-teardown window is only a few frames wide, and both pin the enemy with SLEEP ONLY -- battle_pikachu's 65535-HP pin outlives the battle at this instant and is %ifndef'd out of the RESULT gate. NON-VACUITY, MEASURED: its golden is BYTE-IDENTICAL to battle_oldman_result's -- expected, since hardware reaches the same terminal state for both types once the tutorial name is restored -- so the value is that it exercises the PORT's PIKACHU path. Proved distinct: sabotaging ONLY the PIKACHU arm of ItemUseBall's tutorial check makes THIS scenario FAIL while battle_oldman_result still PASSES."
     },
     {
       "name": "battle_safari_result",
@@ -2616,6 +2588,34 @@
       "verification": "the ghost UNVEIL: forced RESTLESS_SOUL plus wCurMap in POKEMON_TOWER_3F and the SILPH SCOPE in the bag on both sides, so PrintBeginningBattleText takes .isMarowak - EnemyAppearedText, UnveiledGhostText, a second LoadEnemyMonData, MarowakAnim, WildMonAppearedText. The ONLY execution of MarowakAnim, which had a caller but had never run. Landmark is the GHOST->MAROWAK nick TRANSITION, not the value"
     },
     {
+      "name": "viridian_forest_sight",
+      "id": 86,
+      "tier": "full",
+      "scenario_class": "datastruct",
+      "build_flags": "DEBUG_MAPSCRIPT_SIGHT_VF=1",
+      "port_entry_gate": "DEBUG_MAPSCRIPT_SIGHT_VF",
+      "navigation_script": "tools/mgba_harness/scenarios/viridian_forest_sight.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 150,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "TrainerMapScript",
+        "CheckFightingMapTrainers"
+      ],
+      "comparison": {
+        "regions": [
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "deterministic map-script trainer engagement on the first NON-ROUTE map on this gate. VIRIDIAN_FOREST was table-only until 2026-08-15 (parameter block generated, MapScriptPointers still DefaultMapScript), so its five trainers could be talked to but never fought and no ! ever appeared. This is the witness that wiring it is correct, not merely non-crashing; state verification, not UI verification"
+    },
+    {
       "name": "surfing_pikachu_intro",
       "id": 87,
       "tier": "full",
@@ -2680,6 +2680,37 @@
       "verification": "The real A-press dispatch (CheckForHiddenEventOrBookshelfOrCardKeyDoor -> CheckForHiddenEvent -> Route15GateLeftBinoculars) runs on both sides: the port seeds the player in front of the prop and the golden walks/turns into it. Compares the tilemap and VRAM because the interesting half is the Articuno front-sprite pop-up from DisplayMonFrontSpriteInBox, which a WRAM-only class could not see."
     },
     {
+      "name": "oaks_lab_posters",
+      "id": 89,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_OAKSPOSTER=1",
+      "port_entry_gate": "DEBUG_OAKSPOSTER",
+      "navigation_script": "tools/mgba_harness/scenarios/oaks_lab_posters.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 300,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "DisplayOakLabLeftPoster",
+        "PrintPredefTextID"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Reads the LEFT poster in Oak's Lab through the real A-press dispatch on both sides, proving DisplayOakLabLeftPoster's tx_pre_jump tail lands in PrintPredefTextID \u2014 the shape faithdiff cannot see through. DisplayOakLabRightPoster is a different handler and is NOT witnessed here. OAM above the player is masked because the port's wider sprite window admits objects pret's cuts off; all 12 of the golden's on-screen entries were verified PRESENT in the port by value first."
+    },
+    {
       "name": "safari_game_over",
       "id": 90,
       "tier": "full",
@@ -2710,37 +2741,6 @@
         "masks": "golden_diff.SCENARIOS"
       },
       "verification": "THE FIRST WALKING SCENARIO. Every other overworld gate seeds the player next to its subject and presses A; this one cannot, because the subject IS a completed step. SafariZoneCheckSteps is reachable only from StepCountCheck's arm in OverworldLoopLessDelay, once per finished step, so both sides WALK two tiles south with live collision and let the loop do the rest. That arm, and the out-of-balls SafariZoneCheck arm beside it, were absent from the port until 2077fdb3f: both routines were translated with no caller anywhere in the tree, so wSafariSteps never decremented and a Safari game could not end. A gate that called SafariZoneCheckSteps directly would have witnessed the routine and said nothing about the missing branch. wSafariSteps is seeded to 1 BIG-ENDIAN on both sides (pret reads hi from [wSafariSteps], lo from [wSafariSteps+1]); little-endian gives 256 steps and times the harness out instead of failing. wNumSafariBalls = 30 is load-bearing rather than decoration: SafariGameOverText is a text_asm that branches on it, and \"Time's up!\" -- the landmark -- exists only on the non-zero arm. Both sides park on TimesUpText's `prompt` after exactly ONE page turn; a second A would page on into GameOverText and the two would be comparing different screens."
-    },
-    {
-      "name": "oaks_lab_posters",
-      "id": 89,
-      "tier": "full",
-      "scenario_class": "default",
-      "build_flags": "DEBUG_OAKSPOSTER=1",
-      "port_entry_gate": "DEBUG_OAKSPOSTER",
-      "navigation_script": "tools/mgba_harness/scenarios/oaks_lab_posters.lua",
-      "dump": {
-        "type": "GBSTATE",
-        "schema_version": 2,
-        "artifact": "GBSTATE.BIN",
-        "timeout_seconds": 300,
-        "terminal_marker": "complete"
-      },
-      "must_hit": [
-        "DisplayOakLabLeftPoster",
-        "PrintPredefTextID"
-      ],
-      "comparison": {
-        "regions": [
-          "tilemap",
-          "vram",
-          "oam",
-          "wram"
-        ],
-        "projection": "golden_diff.SCENARIOS",
-        "masks": "golden_diff.SCENARIOS"
-      },
-      "verification": "Reads the LEFT poster in Oak's Lab through the real A-press dispatch on both sides, proving DisplayOakLabLeftPoster's tx_pre_jump tail lands in PrintPredefTextID \u2014 the shape faithdiff cannot see through. DisplayOakLabRightPoster is a different handler and is NOT witnessed here. OAM above the player is masked because the port's wider sprite window admits objects pret's cuts off; all 12 of the golden's on-screen entries were verified PRESENT in the port by value first."
     },
     {
       "name": "sign_pallet_house",
@@ -2952,6 +2952,37 @@
         "masks": "n/a (port_only)"
       },
       "verification": "PORT-ONLY (printer plan Stage 4): Summer Beach House surfing high-score printer output, asserted against committed golden page1.png via tools/printcheck.sh."
+    },
+    {
+      "name": "pokecenter_heal",
+      "id": 98,
+      "tier": "full",
+      "scenario_class": "default",
+      "build_flags": "DEBUG_POKECENTER_HEAL=1 AUTOKEY_APRESS=1",
+      "port_entry_gate": "DEBUG_POKECENTER_HEAL",
+      "navigation_script": "tools/mgba_harness/scenarios/pokecenter_heal.lua",
+      "dump": {
+        "type": "GBSTATE",
+        "schema_version": 2,
+        "artifact": "GBSTATE.BIN",
+        "timeout_seconds": 60,
+        "terminal_marker": "complete"
+      },
+      "must_hit": [
+        "PokecenterNurseScript",
+        "HealParty"
+      ],
+      "comparison": {
+        "regions": [
+          "tilemap",
+          "vram",
+          "oam",
+          "wram"
+        ],
+        "projection": "golden_diff.SCENARIOS",
+        "masks": "golden_diff.SCENARIOS"
+      },
+      "verification": "Viridian Pokemon Center nurse healing interaction: talks to nurse with damaged/statused/fainted party, accepts healing, nurse animates healing machine with audio jingle, restores party HP/status/PP, and exits cleanly back to overworld."
     },
     {
       "name": "vending_machine",

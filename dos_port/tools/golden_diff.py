@@ -2624,6 +2624,36 @@ SCENARIOS = {
             ],
         },
     },
+    "pokecenter_heal": {
+        "flags": "DEBUG_POKECENTER_HEAL=1 AUTOKEY_APRESS=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "window": (20, 12),
+        "offcanvas": "window at (20,12): golden rows 13-17 map past the 25-row canvas",
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc)"),
+            ],
+        },
+        "masks": {
+            "oam": [
+                (i, "NPC entries: port sprite engine positions NPCs at canvas coordinates "
+                    "on the 40x25 canvas; player entries 0-3 match")
+                for i in range(4, 40)
+            ],
+            "vram": [
+                (156 + i, "boot residue in VRAM sprite slots ($89C0-$8A3F): golden's real "
+                          "new-game boot left walk tiles from maps walked through, "
+                          "while port zeroed VRAM at SKIP_TITLE boot")
+                for i in range(8)
+            ] + [
+                (188 + i, "boot residue in VRAM sprite slots ($8BC0-$8D3F): golden's real "
+                          "new-game boot left walk tiles from maps walked through, "
+                          "while port zeroed VRAM at SKIP_TITLE boot")
+                for i in range(24)
+            ],
+        },
+    },
     "vending_machine": {
         "flags": "DEBUG_VENDING=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
