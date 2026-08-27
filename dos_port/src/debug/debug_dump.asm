@@ -3002,6 +3002,7 @@ RunBattleTest:
     cmp byte [ebp + wBattleType], 0
     je .normalIntroStagingSave
     call DrawEnemyHUDAndHPBar
+    call DrawEmptyDialogBox
 .normalIntroStagingSave:
     call SaveBattleScreen
     ; THE INTRO DIFFERS BY BATTLE TYPE, and this staging modelled only the normal

@@ -94,6 +94,7 @@ extern hide_window
 extern LoadHpBarAndStatusTilePatterns
 extern LoadHudTilePatterns
 extern SetPal_Battle                    ; engine/gfx/palettes.asm
+extern SetPal_Overworld                 ; engine/gfx/palettes.asm
 
 ; --- _InitBattleCommon dependencies (the real overworld→battle orchestration) ---
 extern LoadFontTilePatterns              ; home/load_font.asm
@@ -684,6 +685,7 @@ _InitBattleCommon:
     call MainInBattleLoop                       ; menu/turns/damage/faint/EXP/run
 .battleFinished:
     call EndOfBattle                             ; win: PayDay/evo/reset; then whiteout
+    call SetPal_Overworld                        ; re-zero tile_pal and restore overworld palette mappings
 
     ; --- W-1 FIX: restore the overworld view pointer InitBattle zeroed (see InitBattle),
     ;     so render_bg takes the overworld path again on the same-map post-battle EnterMap.
@@ -738,7 +740,8 @@ _InitBattleCommon:
     ; battle with NO enemy HUD; with the OLD unconditional DrawHUDsAndHPBars it drew
     ; a phantom PLAYER HUD (:L 0 / 0/ 0) that the real game never shows.
     call DrawEnemyHUDAndHPBar          ; enemy (PIKACHU L5) HUD only — no player mon out
-    call SaveBattleScreen              ; snapshot for menu re-entry (includes the enemy HUD)
+    call DrawEmptyDialogBox            ; clear intro message interior before saving screen (pret _InitBattleCommon PrintEmptyString)
+    call SaveBattleScreen              ; snapshot for menu re-entry (includes enemy HUD + empty dialog box)
     ; pret shows no party-ball row and sends out no player mon in a special
     ; battle — the trainer pic stays on the player's side for its whole length.
 .specialBattleLoop:                    ; pret StartBattle .displaySafariZoneBattleMenu
