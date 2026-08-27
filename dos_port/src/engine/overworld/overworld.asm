@@ -373,6 +373,15 @@ section .text
 EnterMapBoot:
     call LoadOverworldAssets
     call SetupPlayerSprite
+    ; Stage indoor map block data into INDOOR_BLK_GBADDR BEFORE LoadMapData reads it.
+    ; After our SetupPlayerSprite change, wCurMap may be an indoor map (e.g. REDS_HOUSE_2F
+    ; set by OakSpeech → PrepareForSpecialWarp → LoadSpecialWarpData). Indoor maps share
+    ; one INDOOR_BLK_GBADDR window; LoadMapData → LoadTileBlockMap reads wCurMapDataPtr
+    ; which for an indoor map IS INDOOR_BLK_GBADDR — an unstaged window means zeros
+    ; (garbage text, black border, no movement). StageIndoorMapBlk early-outs for outdoor
+    ; maps (wCurMap < FIRST_INDOOR_MAP_ID), so this is safe for the Pallet Town SKIP_TITLE
+    ; path too.
+    call StageIndoorMapBlk
 %ifdef SKIP_TITLE
     ; Title screen (which normally seeds wPlayerName / wRivalName) was skipped —
     ; seed the build-time defaults so <PLAYER>/<RIVAL> don't print garbage.
@@ -622,12 +631,18 @@ LoadOverworldAssets:
 ; must be set here so LoadMapHeader knows which map to load.
 ; ---------------------------------------------------------------------------
 SetupPlayerSprite:
+%ifdef SKIP_TITLE
+    ; In test builds that skip OakSpeech / LoadSpecialWarpData, initialize Pallet Town starting state
+    cmp byte [ebp + wCurMap], 0
+    jne .skip_map_default
     mov byte [ebp + wCurMap], MAP_ID_PALLET_TOWN
     mov byte [ebp + wYCoord], 8
     mov byte [ebp + wXCoord], 8
     mov byte [ebp + wYBlockCoord], 0
     mov byte [ebp + wXBlockCoord], 0
     mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], PALLET_TOWN_VIEW_PTR
+.skip_map_default:
+%endif
 
     ; Face down, standing still (no in-progress walk).
     mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR],   SPRITE_FACING_DOWN
