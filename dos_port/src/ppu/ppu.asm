@@ -1019,6 +1019,29 @@ SetBGCellAttrWin:
     ret
 
 ; ---------------------------------------------------------------------------
+; ClearCellAttrPlanes — zero both the surface and window per-cell BG attribute planes.
+;
+; Called at screen/palette ownership boundaries (SetPal_Overworld, SetPal_Screen,
+; InitBattleCanvas) so attribute overrides from a previous screen (e.g. the battle
+; enemy HP gauge) do not leak into the next screen.
+;
+; In:  none. Out: all registers preserved.
+; ---------------------------------------------------------------------------
+global ClearCellAttrPlanes
+ClearCellAttrPlanes:
+    pushad
+    xor al, al
+    mov edi, bg_cell_attr
+    mov ecx, SURF_CELLS
+    rep stosb
+    mov edi, win_cell_attr
+    mov ecx, WIN_ATTR_BYTES
+    rep stosb
+    mov byte [surf_force], 1               ; force surface re-decode without overrides
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
 ; decode_tile_attr — paint one cell under a per-cell BG attribute override.
 ;
 ; In:  ESI = the cell's decoded tile in tile_cache (64 B), EDI = bg_surface dest,

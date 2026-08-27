@@ -68,6 +68,7 @@ extern mon_pal_table, battle_slot_pal, battle_tile_pal, command_pal_table
 extern RefreshMonFrontRepaintPalette
 extern LoadBGMapAttributes, g_bg_attr_table  ; engine/gfx/bg_map_attributes.asm
 extern BlkPacket_PartyMenu       ; src/data/sgb/sgb_packets.asm (generated)
+extern ClearCellAttrPlanes       ; src/ppu/ppu.asm
 
 section .text
 
@@ -285,6 +286,7 @@ SetPal_Battle:
 ; bands (battle/repaint) retain their dedicated handlers above.
 SetPal_Screen:
     pushad
+    call ClearCellAttrPlanes
     movzx eax, al
     mov edx, eax                            ; keep the command id; EDX survives the
                                             ; rep movsb/stosb below (they use ESI/EDI/ECX/AL)
@@ -541,6 +543,7 @@ YellowIntroPaletteAction:
 ; its 2bpp cache remains unchanged except for the normal dirty rebuild.
 SetPal_Overworld:
     pushad
+    call ClearCellAttrPlanes
     mov al, [ebp + wCurMapTileset]
     cmp al, CEMETERY
     je .gray

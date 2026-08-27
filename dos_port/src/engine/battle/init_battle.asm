@@ -140,6 +140,7 @@ extern DoBattleTransitionAndInitBattleVariables ; core.asm — transition + tear
 extern Delay3                            ; src/home/palettes.asm — 3-frame wait
 extern DelayFrames                       ; src/home/delay.asm  (In: BL = frame count)
 extern CopyDownscaledMonTiles            ; animations.asm — predef target (In: ESI=dest, BH=rows, BL=cols)
+extern ClearCellAttrPlanes               ; src/ppu/ppu.asm
 global AnimateSendingOutMon       ; predef target; the "growing out of the ball" send-out
 global LoadMonBackPic             ; generic player send-out back pic (retires LoadEmbeddedBackPicFallback)
 global CopyUncompressedPicToHL          ; shared flip-aware 7×7 tilemap placement
@@ -342,6 +343,7 @@ InitBattleCanvas:
     and al, 0xF0                              ; keep battle-style/anim bits, reset speed nibble (TEXT_DELAY_MASK)
     or al, TEXT_DELAY_MEDIUM                  ; default 3 frames/char
     mov [ebp + wOptions], al
+    call ClearCellAttrPlanes                 ; clear stale per-cell BG attribute overrides
     call ClearSprites                        ; drop the overworld OAM (player etc.)
     ; Stop the per-frame OAM rebuild (update_oam → PrepareOAMData) re-showing the
     ; overworld player sprite after ClearSprites; battle manages its own sprites.
