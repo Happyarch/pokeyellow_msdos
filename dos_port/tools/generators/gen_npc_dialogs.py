@@ -328,19 +328,42 @@ def _parse_text_pointers(path: Path, map_pascal: str) -> list:
     target = f"{map_pascal}_TextPointers:"
     in_table = False
     result = []
-    for line in path.read_text(encoding='utf-8').splitlines():
+    text = path.read_text(encoding='utf-8')
+    raw_scoped = 0
+    for line in text.splitlines():
         s = line.strip()
         if s == target:
-            in_table = True; continue
+            in_table = True
+            continue
         if not in_table:
             continue
-        if not s or s.startswith(';') or s == 'def_text_pointers':
+        if not s or s.startswith(';'):
+            continue
+        if s.startswith('def_text_pointers') or re.match(r'const_def\s+\d+', s):
+            continue
+        # Count and collect plain dw rows.
+        m = re.match(r'dw\s+(\w+)', s)
+        if m:
+            result.append(m.group(1))
+            raw_scoped += 1
             continue
         m = re.match(r'dw_const\s+(\w+)', s)
         if m:
+            # dw_const may have trailing ", CONST" — still one row
             result.append(m.group(1))
-        else:
+            raw_scoped += 1
+            continue
+        # Next label (e.g. ViridianMart_TextPointers2: or ViridianMartClerkSayHiToOakText:)
+        if re.match(r'^\w+:\s*$', s):
             break
+        # Anything else ends the table.
+        break
+    # Per-map assert: raw dw/dw_const count in this block vs parsed length
+    if raw_scoped != len(result):
+        raise AssertionError(
+            f"{map_pascal}: raw dw count {raw_scoped} != parsed {len(result)} — "
+            f"parser missed a row (check dw/dw_const handling)"
+        )
     return result
 
 def _resolve_local_label(path: Path, label: str) -> str | None:

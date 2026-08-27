@@ -45,13 +45,14 @@ extern HideObject
 extern ShowObject
 extern StartSimulatingJoypadStates
 extern UpdateSprites
-extern ViridianMartClerkText   ; NOT YET DEFINED IN THE PORT
+extern ViridianMartClerkText   ; TX_SCRIPT_MART stream, global in src/data/items/marts.asm
+extern w_map_text_table_ptr
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_VIRIDIANMART_OAKS_PARCEL                equ 1
 SCRIPT_VIRIDIANMART_SCRIPT2                    equ 2
-TEXT_VIRIDIANMART_CLERK_YOU_CAME_FROM_PALLET_TOWN equ 3
-TEXT_VIRIDIANMART_CLERK_PARCEL_QUEST           equ 4
+TEXT_VIRIDIANMART_CLERK_YOU_CAME_FROM_PALLET_TOWN equ 4
+TEXT_VIRIDIANMART_CLERK_PARCEL_QUEST           equ 5
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -81,9 +82,11 @@ ViridianMartCheckParcelDeliveredScript:
     CheckEvent EVENT_OAK_GOT_PARCEL
     jnz .delivered_parcel
     mov esi, ViridianMart_TextPointers
+    mov [w_map_text_table_ptr], esi
     jmp .done
 .delivered_parcel:
     mov esi, ViridianMart_TextPointers2
+    mov [w_map_text_table_ptr], esi
 .done:
     mov eax, esi   ; pret: ld a, l / ld a, h — ESI holds HL
     mov [ebp + wCurMapTextPtr], al
@@ -166,28 +169,33 @@ ViridianMartScript2:
 %assign event_byte -1
 %assign event_byte_a -1
 ViridianMart_TextPointers:
-    dd ViridianMartClerkSayHiToOakText
-    dd ViridianMartYoungsterText
-    dd ViridianMartCooltrainerMText
-    dd ViridianMartClerkYouCameFromPalletTownText
-    dd ViridianMartClerkParcelQuestText
+    dd ViridianMartClerkSayHiToOakText, ViridianMartClerkSayHiToOakText_end - ViridianMartClerkSayHiToOakText
+    dd ViridianMartYoungsterText, ViridianMartYoungsterText_end - ViridianMartYoungsterText
+    dd ViridianMartCooltrainerMText, ViridianMartCooltrainerMText_end - ViridianMartCooltrainerMText
+    dd ViridianMartClerkYouCameFromPalletTownText, ViridianMartClerkYouCameFromPalletTownText_end - ViridianMartClerkYouCameFromPalletTownText
+    dd ViridianMartClerkParcelQuestText, ViridianMartClerkParcelQuestText_end - ViridianMartClerkParcelQuestText
 ViridianMart_TextPointers2:
-    dd ViridianMartClerkText
-    dd ViridianMartYoungsterText
-    dd ViridianMartCooltrainerMText
+    dd ViridianMartClerkText, 0
+    dd ViridianMartYoungsterText, ViridianMartYoungsterText_end - ViridianMartYoungsterText
+    dd ViridianMartCooltrainerMText, ViridianMartCooltrainerMText_end - ViridianMartCooltrainerMText
 ViridianMartClerkSayHiToOakText:
     text_far _ViridianMartClerkSayHiToOakText
     text_end
+ViridianMartClerkSayHiToOakText_end:
 ViridianMartClerkYouCameFromPalletTownText:
     text_far _ViridianMartClerkYouCameFromPalletTownText
     text_end
+ViridianMartClerkYouCameFromPalletTownText_end:
 ViridianMartClerkParcelQuestText:
     text_far _ViridianMartClerkParcelQuestText
     sound_get_key_item
     text_end
+ViridianMartClerkParcelQuestText_end:
 ViridianMartYoungsterText:
     text_far _ViridianMartYoungsterText
     text_end
+ViridianMartYoungsterText_end:
 ViridianMartCooltrainerMText:
     text_far _ViridianMartCooltrainerMText
     text_end
+ViridianMartCooltrainerMText_end:

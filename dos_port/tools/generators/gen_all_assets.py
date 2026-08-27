@@ -559,6 +559,9 @@ def main():
     import gen_map_headers
     import gen_npc_dialogs
     import gen_toggleable_objects
+    import gen_hidden_events
+    import gen_hidden_item_coords
+    import gen_hidden_coin_coords
     import gen_battle_text
     import gen_used_move_text
     import gen_hall_of_fame_text
@@ -575,6 +578,12 @@ def main():
     gen_npc_dialogs.generate_all()
     print("chaining gen_toggleable_objects ...")
     gen_toggleable_objects.generate_all()
+    print("chaining gen_hidden_events ...")
+    gen_hidden_events.main()
+    print("chaining gen_hidden_item_coords ...")
+    gen_hidden_item_coords.main()
+    print("chaining gen_hidden_coin_coords ...")
+    gen_hidden_coin_coords.main()
     print("chaining gen_battle_text ...")
     gen_battle_text.main()
     print("chaining gen_used_move_text ...")

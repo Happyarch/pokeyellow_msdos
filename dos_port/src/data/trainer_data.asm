@@ -10,6 +10,9 @@
 ; TrainerNames : tools/generators/gen_trainer_names.py
 ;     (from data/trainers/names.asm; '@'-terminated, walked by GetName — see
 ;      src/home/names.asm / src/engine/battle/get_trainer_name.asm).
+; TrainerNamePointers : tools/generators/gen_trainer_names.py
+;     (from data/trainers/name_pointers.asm; 47 flat dd rows, fixed strings +
+;      0xFFFFFFFF marker for wTrainerName — see DEVIATION in save_trainer_name.asm).
 ;
 ; TrainerClassMoveChoiceModifications used to ride this file; it moved to its own
 ; mirrored carrier src/data/trainers/move_choices.asm on 2026-08-16
@@ -27,3 +30,4 @@ align 4
 
 %include "assets/trainer_parties.inc"
 %include "assets/trainer_names.inc"
+%include "assets/trainer_name_pointers.inc"

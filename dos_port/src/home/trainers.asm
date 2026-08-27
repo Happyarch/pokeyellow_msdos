@@ -674,11 +674,11 @@ PrintEndBattleText:
     jz .noText
     and byte [ebp + wStatusFlags3], ~(1 << BIT_PRINT_END_BATTLE_TEXT)
     ; TODO-HW: bank save/restore is a no-op under the flat model (kept structurally).
-    ; SaveTrainerName is REAL as of 2026-08-11 (src/engine/battle/save_trainer_name.asm).
-    ; The STUB annotation that stood here retired itself: its own lifetime field said
-    ; "once TrainerNamePointers exists as generated Tier-1 data and the real
-    ; save_trainer_name.asm body is ported", and the names were already generated
-    ; (assets/trainer_names.inc). It now fills wNameBuffer for the TX_RAM prefix below.
+    ; SaveTrainerName is REAL (src/engine/battle/save_trainer_name.asm) and now
+    ; indexes the Tier-1 TrainerNamePointers flat table
+    ; (assets/trainer_name_pointers.inc, 47 dd rows, 0xFFFFFFFF marker for
+    ; wTrainerName) faithfully — RIVAL1/2/3 resolve through wRivalName via
+    ; wTrainerName as in pret. It fills wNameBuffer for the TX_RAM prefix below.
     call SaveTrainerName
     mov esi, TrainerEndBattleText   ; flat text-script
     ; BATTLE projection, not the overworld dialog: this routine's only caller —
