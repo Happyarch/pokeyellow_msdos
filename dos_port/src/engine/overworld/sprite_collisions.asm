@@ -20,13 +20,11 @@
 ; `ret` on both arms, so nothing fell through into it.
 ;
 ; It now holds ALL SIX, still in pret's order — Func_4d0a and
-; SpriteCollisionBitTable were de-inlined 2026-08-22. The header used to argue
-; they were "`missing` by design, not pending" because DetectCollisionBetweenSprites
-; is a native rewrite with no callable boundary for them; that conflated the two.
-; SpriteCollisionBitTable is pure data and had no boundary problem at all (the
-; inline recomputed the same sixteen values with a shift), and Func_4d0a's boundary
-; exists in pret, so the port carries it with the operands passed in registers
-; instead of pret's HRAM temps — see the DEVIATION on the routine.
+; SpriteCollisionBitTable were de-inlined 2026-08-22 and DetectCollisionBetweenSprites
+; is now a literal translation (HRAM temps as REAL [ebp+hX] bytes, HL->ESI cursor
+; walk, big-endian SpriteCollisionBitTable pointer walk, literal
+; SetSpriteCollisionValues ld a,0 quirk). Func_4d0a reads hCollidingSpriteTempX/Y
+; directly — no DEVIATION.
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=BX), D=DH, E=DL (DE=EDX), HL=ESI, EBP=GB base.
 ;
@@ -137,13 +135,16 @@ UpdateNonPlayerSprite:
     ; --- end of UpdateNonPlayerSprite dispatcher ---
 
 ; ---------------------------------------------------------------------------
-; DetectCollisionBetweenSprites
+; DetectCollisionBetweenSprites — literal translation.
 ; Pret ref: engine/overworld/sprite_collisions.asm:DetectCollisionBetweenSprites
 ; Reads hCurrentSpriteOffset to identify sprite i (current slot). Loops all
 ; 16 slots j, writing YADJUSTED/XADJUSTED/COLLISIONDATA/COLLISIONBITMAP into
-; sprite i's SPRITESTATEDATA1. No-op when all NPC PictureIDs are 0 (every j
-; exits at the "slot unused" check), so this is safe to call before NPCs exist.
-; All registers clobbered; caller (UpdateSprites) wraps with pushad/popad.
+; sprite i's SPRITESTATEDATA1. HRAM temps hCollidingSpriteTempYValue/
+; hCollidingSpriteTempXValue / hCollidingSpriteAdjustedDistance /
+; hCollidingSpriteOffset are REAL [ebp+hX] bytes so every pret operand source
+; exists literally (convention-sanctioned lowering: HL->ESI, DE->EDI).
+; No-op when all NPC PictureIDs are 0, so safe before NPCs exist.
+; All registers clobbered; caller wraps with pushad/popad.
 ; ---------------------------------------------------------------------------
 DetectCollisionBetweenSprites:
     push ebx
@@ -151,7 +152,6 @@ DetectCollisionBetweenSprites:
     push edx
     push esi
     push edi
-    sub  esp, 12        ; [esp+0]=adj_dist, [esp+4]=thr_i_y, [esp+8]=thr_i_x
 
     ; ESI = base of sprite i's data1
     movzx esi, byte [ebp + hCurrentSpriteOffset]
@@ -191,6 +191,7 @@ DetectCollisionBetweenSprites:
     xor  edx, edx           ; DL=j=0; DH=direction accumulator (reset each j)
 
 .loop_j:
+    mov  [ebp + hCollidingSpriteOffset], dl  ; ldh [hCollidingSpriteOffset],a (pret loop counter store)
     xor  dh, dh
 
     ; EDI = base of sprite j's data1  (j * 0x10 + wSpriteStateData1)
@@ -225,9 +226,10 @@ DetectCollisionBetweenSprites:
     ; |j.YAdj - i.YAdj|; CF = (j.YAdj < i.YAdj) preserved through negate
     sub   al, byte [ebp + esi + SPRITESTATEDATA1_YADJUSTED]
     jnc   .y_pos
-    not   al
-    inc   al                   ; abs(); x86 inc/not don't touch CF
+    not   al                   ; cpl
+    inc   al                   ; inc a (preserves CF, as SM83 inc does)
 .y_pos:
+    mov   [ebp + hCollidingSpriteTempYValue], al ; ldh [hCollidingSpriteTempYValue],a (distance)
     ; Accumulate Y direction into DH[1:0].
     ; SM83: push af; rl c; pop af; ccf; rl c — x86 equivalent via setc/shl/or:
     ; DH[1]=CF (i.Y>j.Y → 1), DH[0]=!CF (j.Y>=i.Y → 1).
@@ -246,9 +248,10 @@ DetectCollisionBetweenSprites:
     jz    .tiy_done
     mov   bl, 9
 .tiy_done:
+    mov   al, [ebp + hCollidingSpriteTempYValue] ; distance
     sub   al, bl               ; AL = |diffY| - thr_i_y
-    mov   byte [esp + 0], al   ; adj_dist = |diffY| - thr_i_y
-    mov   byte [esp + 4], bl   ; save thr_i_y for direction axis selection
+    mov   [ebp + hCollidingSpriteAdjustedDistance], al
+    mov   [ebp + hCollidingSpriteTempYValue], bl ; store threshold (overwrites distance)
     jc    .check_x             ; |diffY| < thr_i_y: Y axis clear, check X
 
     ; Check j's Y threshold (j's step vector determines 7 or 9)
@@ -258,7 +261,7 @@ DetectCollisionBetweenSprites:
     jz    .tjy_done
     mov   bl, 9
 .tjy_done:
-    mov   al, byte [esp + 0]   ; adj_dist
+    mov   al, [ebp + hCollidingSpriteAdjustedDistance]
     sub   al, bl
     jz    .check_x             ; exactly 0: border collision, still check X
     jnc   .next_j              ; > 0: too far apart
@@ -274,9 +277,10 @@ DetectCollisionBetweenSprites:
 
     sub   al, byte [ebp + esi + SPRITESTATEDATA1_XADJUSTED]
     jnc   .x_pos
-    not   al
-    inc   al
+    not   al                   ; cpl
+    inc   al                   ; inc a (preserves CF)
 .x_pos:
+    mov   [ebp + hCollidingSpriteTempXValue], al ; distance
     setc  ch
     shl   dh, 1
     or    dh, ch
@@ -293,9 +297,10 @@ DetectCollisionBetweenSprites:
     jz    .tix_done
     mov   bl, 9
 .tix_done:
+    mov   al, [ebp + hCollidingSpriteTempXValue] ; distance
     sub   al, bl
-    mov   byte [esp + 0], al
-    mov   byte [esp + 8], bl   ; save thr_i_x
+    mov   [ebp + hCollidingSpriteAdjustedDistance], al
+    mov   [ebp + hCollidingSpriteTempXValue], bl ; threshold
     jc    .collision
 
     movzx eax, byte [ebp + edi + SPRITESTATEDATA1_XSTEPVECTOR]
@@ -304,7 +309,7 @@ DetectCollisionBetweenSprites:
     jz    .tjx_done
     mov   bl, 9
 .tjx_done:
-    mov   al, byte [esp + 0]
+    mov   al, [ebp + hCollidingSpriteAdjustedDistance]
     sub   al, bl
     jz    .collision
     jnc   .next_j
@@ -317,16 +322,15 @@ DetectCollisionBetweenSprites:
     mov   byte [ebp + W_D433], 0
     cmp   dl, 15
     jne   .standard_col
-    mov   al, byte [esp + 8]   ; thr_i_x  (pret hCollidingSpriteTempXValue)
-    mov   bl, byte [esp + 4]   ; thr_i_y  (pret hCollidingSpriteTempYValue)
+    ; Func_4d0a now reads hCollidingSpriteTempX/YValue directly (literal HRAM)
     call  Func_4d0a
     jmp   .update_bitmap
 
 .standard_col:
     ; Select direction bits from DH based on which axis threshold is larger.
     ; Larger threshold → that axis drives the collision direction.
-    mov   al, byte [esp + 4]   ; thr_i_y
-    mov   bl, byte [esp + 8]   ; thr_i_x
+    mov   al, [ebp + hCollidingSpriteTempYValue]
+    mov   bl, [ebp + hCollidingSpriteTempXValue]
     cmp   al, bl
     jc    .use_xbits
     mov   bl, 0x0C             ; thr_i_y >= thr_i_x → Y bits DH[3:2]
@@ -359,7 +363,6 @@ DetectCollisionBetweenSprites:
     jl    .loop_j
 
 .done:
-    add   esp, 12
     pop   edi
     pop   esi
     pop   edx
@@ -368,37 +371,34 @@ DetectCollisionBetweenSprites:
     ret
 
 ; ---------------------------------------------------------------------------
-; Func_4d0a — pret engine/overworld/sprite_collisions.asm:Func_4d0a (:341-359).
+; Func_4d0a — literal translation.
+; Pret ref: engine/overworld/sprite_collisions.asm:Func_4d0a (:341-359).
 ;
-; The slot-15 (Pikachu) collision-direction pick: choose the DH bit pair belonging
-; to whichever axis threshold is larger, and store it to wd433 instead of OR-ing it
-; into the sprite's COLLISIONDATA.
-;
-; This was INLINED into DetectCollisionBetweenSprites, with a header note arguing
-; that "extracting it would add an unfaithful call seam rather than mirror pret".
-; That reasoning is backwards — pret HAS the seam, and the note left the pret label
-; reporting `missing`. What the port genuinely cannot mirror is pret's operand
-; SOURCE: the port's DetectCollisionBetweenSprites keeps its thresholds in stack
-; slots and DH rather than pret's hCollidingSpriteTempXValue / ...YValue HRAM
-; bytes, so those two values are passed in registers here.
-;
-; DEVIATION{class=projection; pret=engine/overworld/sprite_collisions.asm:Func_4d0a; behavior=the two axis thresholds arrive in AL and BL instead of being read from hCollidingSpriteTempXValue and hCollidingSpriteTempYValue, and pret two inc l pointer steps are absent; evidence=the port DetectCollisionBetweenSprites is a native rewrite that holds the thresholds in stack slots rather than the HRAM temps and addresses sprite fields by structure offset rather than by walking an HL cursor, so there is no HRAM value to read and no cursor to advance; lifetime=permanent while DetectCollisionBetweenSprites stays a native rewrite}
-;
-; In:  AL = thr_i_x (pret hCollidingSpriteTempXValue), BL = thr_i_y
-;      (pret hCollidingSpriteTempYValue), DH = the four direction bits.
-; Out: [W_D433] = the selected bit pair. Clobbers AL, BL.
+; Restored to pret's operand sources: reads hCollidingSpriteTempXValue/
+; hCollidingSpriteTempYValue directly and walks HL via ESI inc l steps.
+; Previous DEVIATION (thresholds in registers, missing inc l) retired —
+; literal HRAM reads make it unnecessary.
 ; ---------------------------------------------------------------------------
 Func_4d0a:
-    cmp   bl, al               ; cp b  (thr_i_y vs thr_i_x)
+    push  esi                  ; preserve HL cursor (pret inc l steps are local)
+    mov   al, [ebp + hCollidingSpriteTempXValue] ; ldh a,[hCollidingSpriteTempXValue]
+    mov   bl, al
+    mov   al, [ebp + hCollidingSpriteTempYValue] ; ldh a,[hCollidingSpriteTempYValue]
+    ; pret inc l after ldh Y — advance HL cursor (local)
+    add   esi, 1
+    cmp   al, bl               ; cp b
     jc    .xbits               ; jr c, .asm_4d17
-    mov   bl, 0x0C             ; thr_i_y >= thr_i_x: select DH[3:2] = Y direction
+    mov   bl, 0x0C             ; thr_i_y >= thr_i_x: select DH[3:2]
     jmp   .apply
 .xbits:
-    mov   bl, 0x03             ; thr_i_y < thr_i_x:  select DH[1:0] = X direction
+    mov   bl, 0x03             ; thr_i_y < thr_i_x: select DH[1:0]
 .apply:
     mov   al, dh               ; ld a, c
     and   al, bl               ; and b
     mov   byte [ebp + W_D433], al  ; ld [wd433], a
+    ; pret :357 ld a,c / inc l / inc l / ret — two inc l steps on HL cursor (local)
+    add   esi, 2
+    pop   esi
     ret
 
 ; ---------------------------------------------------------------------------
@@ -409,19 +409,19 @@ Func_4d0a:
 ; Clobbers: AL, BL, CL
 ; ---------------------------------------------------------------------------
 SetSpriteCollisionValues:
-    test al, al
-    jz   .zero
-    mov  cl, 9
-    cmp  al, 0xFF
-    je   .setbl            ; step=-1 → BL=0xFF, CL=9
-    mov  cl, 7
-    xor  al, al            ; step=+1 → BL=0, CL=7
+    test al, al            ; and a
+    jz   .zero             ; jr z,.done
+    mov  cl, 9             ; ld c,9
+    cmp  al, 0xFF          ; cp -1
+    je   .setbl            ; jr z,.ok
+    mov  cl, 7             ; ld c,7
+    mov  al, 0             ; ld a,0 — quirk: xor a would also zero, but pret uses ld a,0
 .setbl:
-    mov  bl, al
+    mov  bl, al            ; ld b,a
     ret
 .zero:
-    xor  bl, bl
-    xor  cl, cl
+    xor  bl, bl            ; ld b,0
+    xor  cl, cl            ; ld c,0
     ret
 
 ; ---------------------------------------------------------------------------
