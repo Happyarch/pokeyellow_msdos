@@ -620,6 +620,7 @@ MoveAnimation:
 .next:
     call PlayApplyingAttackAnimation         ; shake/flash "to show damage"
 .animationFinished:
+    call AnimationCleanOAM
     mov dword [g_obj_clip + 0], 0            ; restore full-canvas OBJ clip (see entry DEVIATION)
     mov dword [g_obj_clip + 4], 0
     mov dword [g_obj_clip + 8], RENDER_W
@@ -859,18 +860,10 @@ WavyScreen_SetSCX:
 
 ; ===========================================================================
 ; Func_78e98 / WriteLowerByteOfBGMapAndEnableBGTransfer — pret animations.asm.
-; Clear the BG tilemap, copy to VRAM via the auto-BG-transfer HRAM staging, and
-; restore. BG-transfer boundary: these drive hAutoBGTransferEnabled/Dest, which
-; the port's vblank BG path consumes; faithful sequencing is preserved.
+; DEVIATION{class=HAL; pret=engine/battle/animations.asm:Func_78e98; behavior=the intermediate ClearScreen and blank-staging Delay3 are omitted, directly keeping wTileMap intact; evidence=on the Game Boy LCDC scanned the alternate vBGMap while wTileMap was cleared and transferred to the other VRAM map in the background without visible blanking, whereas the software compositor renders wTileMap directly on every frame so clearing wTileMap produced a 3-frame blank screen; lifetime=permanent, part of the software video HAL}
 ; ===========================================================================
 Func_78e98:
     call SaveScreenTilesToBuffer2
-    mov byte [ebp + hAutoBGTransferEnabled], 0   ; xor a / ldh [hAutoBGTransferEnabled],a
-    call ClearScreen
-    mov bh, GB_TILEMAP0 >> 8                  ; ld h, HIGH(vBGMap0)
-    call WriteLowerByteOfBGMapAndEnableBGTransfer
-    call Delay3
-    mov byte [ebp + hAutoBGTransferEnabled], 0
     call LoadScreenTilesFromBuffer2
     mov bh, GB_TILEMAP1 >> 8                  ; ld h, HIGH(vBGMap1) → fall through
 WriteLowerByteOfBGMapAndEnableBGTransfer:

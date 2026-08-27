@@ -56,6 +56,7 @@ detailed usage lives (invoke it, don't guess flags from `--help` alone).
 | `map_editor/editor.py` | Overworld map viewer/painter | `build-and-debug` |
 | `ui_layout/editor.py`, `seed_from_battle.py`, `seed_from_pret.py` | UI layout editor + one-shot sidecar seeders | `build-and-debug` |
 | `render_frame.py` | Render a `FRAME.BIN` back-buffer dump to PNG | `build-and-debug` |
+| `tile_inspector.py` | Interactive tile & step coordinate inspector with smooth zoom/pan & clipboard export (`P: (Y,X)`, `R: [Y0,Y1]×[X0,X1]`) | `build-and-debug` |
 | `read_perf.py` | Decode a `DEBUG_PERF` capture (`PERF.BIN`) | `build-and-debug` |
 | `read_seamlog.py` | Decode a `DEBUG_SEAM` trace (`SEAMLOG.BIN`) | `build-and-debug` |
 | `audit_memmap.py` | Blast-radius audit of the emulated GB address space | `build-and-debug` |

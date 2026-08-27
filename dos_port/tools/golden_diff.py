@@ -2280,6 +2280,8 @@ SCENARIOS = {
                  "surround left of the pic (rows 4-10, cols 0-5): port $00 vs pret $7F, both blank"),
                 ((4, 13, 10, 19),
                  "surround right of the pic (rows 4-10, cols 13-19): port $00 vs pret $7F, both blank"),
+                ((16, 18, 16, 18),
+                 "the parked prompt's blinking down-arrow (both sides draw and blink it, snapshot landing in ON vs OFF phase)"),
             ],
             "vram": (
                 [(s, "overworld-boot tileset residue in the unsigned vChars area $8000-$87F0; the "

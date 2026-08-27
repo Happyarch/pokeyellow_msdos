@@ -56,6 +56,7 @@ extern MovieBeginSurface             ; movie_projection.asm
 extern MovieEndSurface               ; movie_projection.asm
 extern text_msgbox                   ; home/text.asm
 extern text_row_stride               ; home/text.asm
+extern text_arrow_pos                ; home/text.asm — MB_ARROW tile offset
 extern RedPicFront                   ; data/trainer_pics.asm
 extern Rival1Pic                     ; data/trainer_pics.asm
 extern ShrinkPic1                    ; data/trainer_pics.asm
@@ -198,16 +199,32 @@ MovePicLeft:
 ; IntroTextWait — the intro's <PARA>/<PROMPT> hold (msgbox_oak_speech's MB_PROMPT).
 ; PrintText copies MB_PROMPT into text_prompt_hook, so the text engine calls this at
 ; each page break instead of the windowed overworld scroll (which would replace the
-; surface). Park until A/B, letting g_surface_redraw_cb mirror the canvas each frame,
-; then return so the engine advances to the next paragraph. text_pause pushad/popad
-; around the call, so this need not preserve registers.
+; surface). Blink the ▼ at [text_arrow_pos] and park until A/B, letting
+; g_surface_redraw_cb mirror the canvas each frame, then erase the arrow and return
+; so the engine advances to the next paragraph. text_pause pushad/popad around the call,
+; so this need not preserve registers.
 ; ---------------------------------------------------------------------------
 global IntroTextWait
 IntroTextWait:
+    mov esi, [text_arrow_pos]
+    mov byte [ebp + esi], CHAR_DOWN_ARROW
+    mov ecx, ARROW_ON_FRAMES
+.wait:
     call DelayFrame
-    movzx eax, byte [ebp + hJoyPressed]
-    test al, (PAD_A | PAD_B)
-    jz IntroTextWait
+    test byte [ebp + hJoyPressed], (PAD_A | PAD_B)
+    jnz .done
+    dec ecx
+    jnz .wait
+    mov ecx, ARROW_ON_FRAMES
+    cmp byte [ebp + esi], CHAR_DOWN_ARROW
+    jne .turnOn
+    mov byte [ebp + esi], 0x7F
+    jmp .wait
+.turnOn:
+    mov byte [ebp + esi], CHAR_DOWN_ARROW
+    jmp .wait
+.done:
+    mov byte [ebp + esi], 0x7F
     ret
 
 ; ---------------------------------------------------------------------------

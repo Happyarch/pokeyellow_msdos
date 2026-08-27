@@ -23,7 +23,8 @@ description: >
   "PERF.BIN / read_perf.py", "SEAMLOG.BIN / read_seamlog.py", "audit_memmap.py",
   "unnamed.py / unnamed symbols", "saveconv.py / .sav .dsv",
   "screenshot / take a picture of the screen",
-  "page fault / DPMI register dump / what is on screen", "raw screenshot".
+  "page fault / DPMI register dump / what is on screen", "raw screenshot",
+  "tile_inspector.py / tile coordinates / inspect tiles / P: (y, x) / R: [y0, y1]×[x0, x1]".
 ---
 
 # Build & Debug Reference
@@ -386,6 +387,32 @@ disconnecting the session's dosbox-mcp tools. Match the fork binary precisely
 the repo path's space — builds, installs both binary copies). Push the
 submodule branch to the fork and commit the new submodule SHA in the
 superproject. Upstream bumps = rebase `mcp-debug` onto the new upstream tag.
+
+### Human-LLM paired debugging: Tile & Coordinate Inspector (`tile_inspector.py`)
+
+When pairing with the user to debug on-screen rendering, NPC placement, text box borders, or tile anomalies, the user may inspect frames using `dos_port/tools/tile_inspector.py` and copy tile coordinates directly into the conversation.
+
+**Tool invocation (host side):**
+```sh
+python3 dos_port/tools/tile_inspector.py [image_or_FRAME.BIN] [--zoom 3]
+```
+
+**Standard Output Format & Preamble Contract:**
+All coordinates prioritize the Game Boy's native **$(Y, X)$ ordered pair order** (row $0 \dots 24$, column $0 \dots 39$ on the $320 \times 200$ canvas).
+- **Points ($P$)**: `P: (Y1, X1); (Y2, X2); ...` (semicolon-separated).
+- **Contiguous rectangular ranges ($R$)**: Cartesian product form `R: [Y_min, Y_max]×[X_min, X_max]` using the Unicode cross `×` (`\u00D7`), with closed inclusive bracket bounds (`[` `]`), semicolon-separated.
+- **Combined**: `P: (Y1, X1); (Y2, X2) | R: [Y_min, Y_max]×[X_min, X_max]`
+
+**Examples:**
+- `P: (12, 10)` — a single tile at row 12, column 10 (`wTileMap` offset $12 \times 40 + 10 = 490$).
+- `R: [10, 14]×[5, 8]` — a rectangular box spanning rows 10 to 14 (5 rows) and columns 5 to 8 (4 columns).
+- `P: (2, 4); (6, 8) | R: [10, 14]×[5, 8]; [18, 20]×[2, 6]` — multiple discontinuous points and rectangular regions.
+
+**How agents should interpret these coordinates:**
+1. **`wTileMap` addressing**: Address offset in `[EBP + wTileMap]` is `Y * 40 + X` (canvas stride is 40).
+2. **Centered GB viewport coordinates** (for battle/menu UI projected with $+10\text{ X}, +3\text{ Y}$): $(GB\_Y, GB\_X) = (Y - 3, X - 10)$.
+3. **Pixel bounds**: $Y$-pixel range is $[Y \times 8, (Y+1) \times 8 - 1]$, $X$-pixel range is $[X \times 8, (X+1) \times 8 - 1]$.
+4. **Overworld step coordinates**: Step row $Step\_Y = \lfloor Y / 2 \rfloor$, step col $Step\_X = \lfloor X / 2 \rfloor$.
 
 ### Golden fidelity harness (mGBA ground truth vs DOSBox-X port)
 

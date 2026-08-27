@@ -154,7 +154,11 @@ PublishProjectedOAM:
     xor edx, edx
 .loop:
     lea esi, [ebp + GB_OAM + edx*4]
-    movzx eax, byte [esi]                ; raw OAM Y (no culling)
+    movzx eax, byte [esi]                ; raw OAM Y (no culling on GB_OAM bytes)
+    test al, al                          ; Y == 0 (unpopulated / hidden)?
+    jz .park_offscreen
+    cmp al, 160                          ; Y >= 160 (GB offscreen)?
+    jae .park_offscreen
     sub eax, 16                          ; OAM stores screen + (8,16)
     add eax, [proj_oam_y]
     mov [spr_dos_sy + edx*4], eax
@@ -162,6 +166,11 @@ PublishProjectedOAM:
     sub eax, 8
     add eax, [proj_oam_x]
     mov [spr_dos_sx + edx*4], eax
+    jmp .next_entry
+.park_offscreen:
+    mov dword [spr_dos_sy + edx*4], -100
+    mov dword [spr_dos_sx + edx*4], -100
+.next_entry:
     inc edx
     cmp edx, ecx
     jb .loop
@@ -202,10 +211,17 @@ PrepareOAMData:
     ; froze stale OAM instead of hiding it (caught by the pokedex_list golden, whose
     ; GB-side OAM is all Y=160).
     test al, al
-    jnz .ret                             ; $FF (or anything but 0/1): frozen, no-op
+    jnz .earlyRet                        ; $FF (or anything but 0/1): frozen, no-op
     mov byte [ebp + wUpdateSpritesEnabled], 0xFF
     call HideSprites
-    jmp .ret
+.earlyRet:
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    ret
 
 .updateEnabled:
     mov byte [ebp + hOAMBufferOffset], 0

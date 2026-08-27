@@ -1803,8 +1803,8 @@
 
 ; Dialog ▼ advance arrow (home/window.asm:HandleDownArrowBlinkTiming)
 %define CHAR_DOWN_ARROW              0xEE   ; '▼' charmap code (constants/charmap.asm)
-%define ARROW_ON_FRAMES              30   ; frames ▼ stays visible  (0.5 s at 60 Hz)
-%define ARROW_OFF_FRAMES             8   ; frames ▼ stays hidden   (0.13 s at 60 Hz)
+%define ARROW_ON_FRAMES              20   ; frames ▼ stays visible  (0.33 s at 60 Hz, matches ARROW_BLINK)
+%define ARROW_OFF_FRAMES             20   ; frames ▼ stays hidden   (0.33 s at 60 Hz, symmetric 50% duty)
 %define DIALOG_ARROW_TILEMAP_OFFSET  (4 * 32 + 18)   ; GB_TILEMAP1 row 4, col 18 = offset 146
 
 ; hJoyHeld bit positions (constants/hardware.inc B_PAD_*; active-high in hJoyHeld)

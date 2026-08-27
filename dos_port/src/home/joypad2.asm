@@ -160,8 +160,12 @@ WaitForTextScrollButtonPress:
     mov [wtsbp_saved_c1], al
     mov al, [ebp + H_DOWN_ARROW_COUNT2]
     mov [wtsbp_saved_c2], al
-    mov byte [ebp + H_DOWN_ARROW_COUNT1], 0      ; pret: xor a  / ldh [hDownArrowBlinkCount1]
-    mov byte [ebp + H_DOWN_ARROW_COUNT2], 6      ; pret: ld a,6 / ldh [hDownArrowBlinkCount2]
+    mov byte [ebp + H_DOWN_ARROW_COUNT1], 0
+    mov byte [ebp + H_DOWN_ARROW_COUNT2], 1
+    mov esi, [wtsbp_arrow_pos]                  ; pret: hlcoord 18,16 (projected)
+    cmp byte [ebp + esi], CHAR_DOWN_ARROW
+    jne .wait
+    mov byte [ebp + H_DOWN_ARROW_COUNT1], ARROW_ON_FRAMES
 .wait:
     mov esi, [wtsbp_arrow_pos]                  ; pret: hlcoord 18,16 (projected)
     call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
