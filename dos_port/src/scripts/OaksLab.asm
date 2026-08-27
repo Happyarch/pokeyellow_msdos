@@ -275,6 +275,9 @@ OakEntryMovement:
     db NPC_MOVEMENT_UP
     db NPC_MOVEMENT_UP
     db NPC_MOVEMENT_UP
+    ; DEVIATION{class=projection; pret=scripts/OaksLab.asm:OakEntryMovement; behavior=Oak moves two extra steps up; evidence=Oak needs to move two extra steps up to actually make it off screen since we are using an expanded viewport; lifetime=permanent while using the expanded viewport}
+    db NPC_MOVEMENT_UP
+    db NPC_MOVEMENT_UP 
     db -1
 
 %assign event_byte -1
