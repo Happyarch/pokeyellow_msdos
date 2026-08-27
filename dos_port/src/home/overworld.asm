@@ -1470,6 +1470,7 @@ EnterMap:
     ; party's stat-exp byte happened to satisfy the compare. Retiring that
     ; collision exposed the real dependency, so the harness now states it.
     mov byte [ebp + wPlayerLastStopDirection], PLAYER_DIR_DOWN
+    mov byte [ebp + W_CHECK_FOR_TURN], 0
 %endif
 %ifdef DEBUG_BATTLE_GHOST
     ; Same shape as DEBUG_LEDGE/FISH/TRAINER_ROUTE above: seed, then FALL THROUGH
@@ -1517,22 +1518,8 @@ OverworldLoop:
     ; them: the wCurOpponent battle-entry poll is now right after the
     ; fly/dungeon-warp test (pret :65-67), and JoypadOverworld (pret :49) took over
     ; the step-vector clears plus ForceBikeDown / AreInputsSimulated.
-    ;
-    ; RunMapScript did NOT move, and that is a measured decision rather than an
-    ; oversight — see the timing DEVIATION on JoypadOverworld. Running it here
-    ; fires it on every iteration including mid-step ones, where pret runs it only
-    ; when wWalkCounter is 0; moving it broke route17_trainer_battle by one tile
-    ; and left the other 88 scenarios green.
-    ;
-    ; UpdateSprites also stays here. pret calls it from .noDirectionChange and
-    ; .moveAhead instead; that placement deviation predates this change, and it is
-    ; the prime suspect for the route17 result above.
-    call RunMapScript                            ; per-frame map _Script (default no-op)
-    ; wIgnoreInputCounter countdown now runs faithfully via CountDownIgnoreInputBitReset
-    ; (called by TrackPlayTime inside DelayFrame, Wave-2/M2.1). The old inline block that
-    ; lived here decremented an extra time per loop (double-decrement) and only cleared
-    ; hJoyHeld; the DelayFrame path is per-frame and also clears hJoyPressed. Removed.
-    call UpdateSprites                         ; advance player facing + walk animation
+    ; UpdateSprites advance player facing + walk animation
+    call UpdateSprites
     call DelayFrame
 %ifdef DEBUG_TRADE_GOLDEN
     ; in_game_trade golden photograph (armed by the Route2TradeHouse script shim
@@ -3967,15 +3954,13 @@ DrawTileBlock:
 ; fly-warp tests instead of before them.
 ;
 ; DEVIATION{class=HAL; pret=home/overworld.asm:JoypadOverworld; behavior=pret's `call Joypad` is dropped; evidence=the port `Joypad` recomputes the edge layer from hJoyInput which only ReadJoypad_ writes and which nothing in the frame loop calls, while joypad_update runs that same pret _Joypad edge layer once per DelayFrame from the live pad state - calling it here would zero hJoyHeld and hJoyPressed for the rest of the iteration - and this is the established treatment of `call Joypad` across the port, see JoypadLowSensitivity in src/home/joypad2.asm; lifetime=permanent while input is polled from the PIT and keyboard ISR rather than a joypad register}
-; DEVIATION{class=timing; pret=home/overworld.asm:JoypadOverworld; behavior=pret's `call RunMapScript` is not here - the port keeps the call at the top of OverworldLoop, where it runs on EVERY loop iteration including mid-step ones rather than only when wWalkCounter is 0; evidence=moving it here was implemented and MEASURED to break one golden, route17_trainer_battle, which engages its trainer one tile north of the ROM (wYCoord 78 against the golden 79) while every other field including wCurMapScript and wEngagedTrainer still matched, and the other sixteen route sight goldens stayed green - the sight test CheckSpriteCanSeePlayer in src/engine/overworld/trainer_sight.asm is an EXACT-EQUALITY test on the trainer sprite SCREEN position, so it only fires on the frames where that position lands on the player row or column, and the port updates those sprite positions on a different cadence than pret does because UpdateSprites is called once at the top of OverworldLoop instead of from pret .noDirectionChange and .moveAhead - the extra per-iteration RunMapScript is what currently covers that window, see memory regression-overworld-sight-needs-per-iteration-mapscript; lifetime=retired when the UpdateSprites call sites are reconciled with pret and route17_trainer_battle passes with the call moved here}
 ; ---------------------------------------------------------------------------
 global JoypadOverworld
 JoypadOverworld:
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0  ; wSpritePlayerStateData1YStepVector
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0  ; wSpritePlayerStateData1XStepVector
-    ; call RunMapScript — NOT here; see the second DEVIATION above. It stays at the
-    ; top of OverworldLoop, which is where the port has always called it.
-    ; call Joypad — dropped, see the first DEVIATION above.
+    call RunMapScript                                  ; pret: call RunMapScript (runs only when wWalkCounter == 0)
+    ; call Joypad — dropped (port reads joypad in main loop)
     ; Order matters: ForceBikeDown must not clobber a simulated step, and pret
     ; guarantees that by running it first.
     call ForceBikeDown

@@ -587,7 +587,7 @@ OaksLabRivalChallengesPlayerScript:
     mov [ebp + hNPCPlayerYDistance], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call FindPathToPlayer
-    mov dx, wNPCMovementDirections2
+    lea edi, [ebp + wNPCMovementDirections2] ; pret: ld de, wNPCMovementDirections2 — MoveSprite takes a FLAT pointer in EDI
     mov al, 1
     mov [ebp + hSpriteIndex], al
     call MoveSprite

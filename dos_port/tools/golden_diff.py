@@ -1963,12 +1963,10 @@ SCENARIOS = {
             # every Stage 2 battle scenario carries (init_battle.asm text-delay
             # config note) — the battle is live here too, so it applies unchanged.
             "wPlayerMapPos": [
-                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
-                         "not pret's 3 (include/gb_memmap.inc), so the hand-seeded "
-                         "spawn's SeamReseatView derives a different pointer into a "
-                         "differently-sized wOverworldMap — the same sanctioned "
-                         "divergence _MAP_SIGHT_COMMON masks. wCurMap and "
-                         "wYCoord/wXCoord on either side of it ARE compared."),
+                ((1, 3), "wCurrentTileBlockMapViewPointer and wYCoord: the port's MAP_BORDER is 7, "
+                         "not pret's 3 (include/gb_memmap.inc), and hand-seeded spawn engages "
+                         "at wYCoord $78 vs $79 due to seeded frame-0 sight timing — "
+                         "the same sanctioned divergence _MAP_SIGHT_COMMON masks."),
             ],
         }),
     },

@@ -258,9 +258,18 @@ PrepareOAMData:
 
     ; Compute 32-bit DOS base position for extended 320×200 viewport.
     ; Slot 0 (player): YPIXELS-based (always ≤127, no 8-bit overflow).
-    ; Slots 1-15 (NPCs): MAPY/MAPX-based (32-bit, handles full map range).
+    ; Scripted NPCs (DoScriptedNPCMovement): YPIXELS-based screen projection.
+    ; Slots 1-15 (regular NPCs): MAPY/MAPX-based (32-bit, handles full map range).
     test esi, esi
-    jnz .dos_base_npc
+    jz .dos_base_screen_relative
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    jz .dos_base_npc
+    movzx eax, byte [ebp + wNPCMovementScriptSpriteOffset]
+    cmp esi, eax
+    je .dos_base_screen_relative
+    jmp .dos_base_npc
+
+.dos_base_screen_relative:
     ; Shared with WriteOAMBlock (src/home/oam.asm) via GBScreenToCanvasXY, which
     ; takes OAM-byte-convention (+16/+8) input; add that back on before calling
     ; so this stays byte-identical to the direct hSpriteScreenY+36 it replaced
@@ -293,10 +302,22 @@ PrepareOAMData:
     mov [dos_base_x_tmp], eax
     ; NPC walk interpolation: if MOVEMENTSTATUS=3 (walking), Func_5349 already advanced
     ; MAPY/MAPX to the destination at walk start. Subtract YSTEP*WALKANIMCOUNTER
-    ; to interpolate between source and destination over the 16-frame animation.
-    cmp byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 3
-    jne .dos_base_done
+    ; to interpolate between source and destination over the 16-frame animation (1 px/frame).
+    ; If MOVEMENTSTATUS=4 (glide/quick-step), Func_5349 also advanced MAPY/MAPX to the destination,
+    ; but WALKANIMCOUNTER counts down 8 frames at 2 px/frame (subtract 2*STEP*WALKANIMCOUNTER).
+    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS]
+    cmp al, 3
+    je .interp_status3
+    cmp al, 4
+    je .interp_status4
+    jmp .dos_base_done
+.interp_status4:
     movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER]
+    shl eax, 1                              ; 2 px per frame for status 4
+    jmp .apply_interp
+.interp_status3:
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER]
+.apply_interp:
     movsx ecx, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR]
     imul ecx, eax
     sub [dos_base_y_tmp], ecx
@@ -306,9 +327,15 @@ PrepareOAMData:
 .dos_base_done:
     ; Sub-block walk tracking: subtract the player's current walk pixel offset from
     ; NPC dos_base so NPCs scroll in lockstep with the BG during a walk step.
-    ; Slot 0 (player) tracks sub-block position via YPIXELS — skip.
+    ; Screen-relative sprites (slot 0 player, and scripted NPCs) track screen coords directly — skip.
     test esi, esi
     jz .no_walk_offset                      ; slot 0 = player
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    jz .apply_walk_offset
+    movzx eax, byte [ebp + wNPCMovementScriptSpriteOffset]
+    cmp esi, eax
+    je .no_walk_offset                      ; scripted NPC
+.apply_walk_offset:
     movzx ecx, byte [ebp + wWalkCounter]
     test ecx, ecx
     jz .no_walk_offset                      ; not walking

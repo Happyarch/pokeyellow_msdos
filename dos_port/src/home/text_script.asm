@@ -123,6 +123,7 @@ DisplayTextID:
 
     ; farcall DisplayTextIDInit — box setup / reg save (non-home, deferred)
     call DisplayTextIDInit
+    mov dword [text_msgbox], msgbox_dialog ; ensure active projection is overworld dialog
 
     ; ld hl, wTextPredefFlag / bit BIT_TEXT_PREDEF,[hl] / res BIT_TEXT_PREDEF,[hl]
     ; jr nz,.skipSwitchToMapBank

@@ -54,6 +54,8 @@ extern TextBoxBorder                    ; text.asm — ESI=top-left, BL=int_w, B
 extern UpdateSprites                    ; src/home/update_sprites.asm
 extern CopyScreenTileBufferToVRAM       ; home/copy2.asm — 3-frame pacing (port model)
 extern LoadFontTilePatterns             ; gfx/load_font.asm — font glyphs → vFont
+extern set_single_window               ; src/ppu/ppu.asm
+extern sync_dialog_window              ; src/home/text.asm
 
 ; Local screen-model constant (matches text.asm's private SCREEN_W_TILES):
 ; the GB 20-tile overworld row stride used by the window-composited dialog.
@@ -97,6 +99,16 @@ DisplayTextIDInit:
     mov esi, wTileMap + 12 * GB_SCREEN_W
     mov bh, 4
     mov bl, 18
+    call TextBoxBorder                  ; stride = text_row_stride (20, overworld)
+    mov esi, GB_TILEMAP1
+    mov eax, 87
+    mov ebx, 152
+    mov ecx, SCREEN_W
+    mov edx, RENDER_H
+    xor edi, edi
+    call set_single_window
+    call sync_dialog_window
+    jmp .skipDrawingTextBoxBorder
 .drawTextBoxBorder:
     call TextBoxBorder                  ; stride = text_row_stride (20, overworld)
 .skipDrawingTextBoxBorder:
