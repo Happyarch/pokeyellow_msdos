@@ -16,14 +16,15 @@
 ;     walk tiles after a menu/dialog overwrites the shared vFont region.
 ;
 ; Port extensions kept here (; DIVERGENCE): the toggleable-hidden object gate and the
-; overworld interaction stack (CheckNPCInteraction / IsNPCAtTargetBlock /
-; CheckTrainerSight / TrainerEncounterFlow / ShowTextStream).
+; overworld interaction stack (CheckNPCInteraction / CheckTrainerSight /
+; TrainerEncounterFlow / ShowTextStream).
 ; pret's IsSpriteOrSignInFrontOfPlayer is ported COMPLETE in its mirror,
 ; src/home/overworld.asm (R-002 retirement: sign branch + counter-range
 ; extension + the faithful pixel-based sprite scan). OverworldLoop's A-press
-; calls it and routes the found [hTextID] here: CheckNPCInteraction is the
-; port's DISPLAY half for the NPC path (it re-detects by block coords, then
-; runs the dialog) — a port helper, not pret's detection routine.
+; calls it and routes the found [hTextID]/[hSpriteIndex] here:
+; CheckNPCInteraction is the port's DISPLAY half for the NPC path — it
+; consumes the faithful scan result directly instead of re-detecting by block
+; coords.
 ;
 ; Build: nasm -f coff -I include/ -I . -o map_sprites.o src/engine/overworld/map_sprites.asm
 
@@ -71,8 +72,6 @@ global ResetMapTrainerState        ; port-ext per-map-load trainer state (called
 ; (ApplyToggleableHiddenGate global retired 2026-08-06 — see the tombstone below)
 global CheckNPCInteraction
 global ShowTextStream
-global IsNPCAtTargetBlock
-global IsNPCAtTargetBlockWithSlot
 global w_map_text_table_ptr
 global MapTextTablePointers
 global CheckTrainerSight
@@ -583,186 +582,22 @@ GetSpriteImageBaseOffset:
 ; IsToggleableHidden MOVED 2026-08-22 to their pret mirror,
 ; src/engine/overworld/toggleable_objects.asm. See that file.
 
-; ---------------------------------------------------------------------------
-; IsNPCAtTargetBlock — test if any NPC occupies the block directly in front of the player.
-;
-; Port-only helper (block-coord scan; pret satisfies this caller with the
-; pixel-based IsSpriteInFrontOfPlayer — now in src/home/overworld.asm — but
-; rewiring live collision is deliberately out of scope, see that file's
-; STRUCTURAL SPLIT note).
-;
-; Same MAPY/MAPX scan as CheckNPCInteraction.  Used by CollisionCheckOnLand to
-; block the player from walking into an NPC's tile.
-;
-; In:  EBP = GB memory base; reads wYCoord, wXCoord, W_SPRITE_PLAYER_FACING_DIR.
-; Out: CF=1 if an NPC was found in the facing tile; CF=0 if the tile is clear.
-; Preserves: all registers (push/pops EAX, EBX, ECX, ESI internally).
-; ---------------------------------------------------------------------------
-IsNPCAtTargetBlock:
-    push eax
-    push ebx
-    push ecx
-    push esi
-
-    movzx ebx, byte [ebp + wYCoord]
-    add bl, 4                               ; BL = target MAPY (player block + MAPY bias)
-    movzx ecx, byte [ebp + wXCoord]
-    add cl, 4                               ; CL = target MAPX
-
-    movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    cmp al, SPRITE_FACING_UP
-    je .face_up
-    cmp al, SPRITE_FACING_DOWN
-    je .face_down
-    cmp al, SPRITE_FACING_LEFT
-    je .face_left
-    inc cl                                  ; right: MAPX + 1
-    jmp .scan
-.face_up:
-    dec bl                                  ; up:    MAPY - 1
-    jmp .scan
-.face_down:
-    inc bl                                  ; down:  MAPY + 1
-    jmp .scan
-.face_left:
-    dec cl                                  ; left:  MAPX - 1
-
-.scan:
-    mov esi, 0x10                           ; start at NPC slot 1
-.slot_loop:
-    cmp esi, 0x100
-    jge .not_found
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
-    test al, al
-    jz .next_slot                           ; inactive slot
-    ; Hidden toggleables are INERT (pret: a hidden object's UpdateNPCSprite
-    ; bails at the IsObjectHidden predef BEFORE publishing player-collision
-    ; bits, so a hidden sprite can neither block movement nor be talked to).
-    ; Measured 2026-08-06: without this filter the boot-hidden Oak at his
-    ; (10,4) object spot was an invisible wall on Pallet's main road.
-    mov eax, esi
-    shr eax, 4
-    dec eax                                 ; local object id (0-based)
-    call IsToggleableHidden                 ; CF=1 → hidden: skip (clobbers AL only)
-    jc .next_slot
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
-    cmp al, bl
-    jne .next_slot
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
-    cmp al, cl
-    je .found
-.next_slot:
-    add esi, 0x10
-    jmp .slot_loop
-.found:
-    pop esi
-    pop ecx
-    pop ebx
-    pop eax
-    stc
-    ret
-.not_found:
-    pop esi
-    pop ecx
-    pop ebx
-    pop eax
-    clc
-    ret
+; IsNPCAtTargetBlock RETIRED 2026-08-27 — literal IsSpriteInFrontOfPlayer in
+; src/home/overworld.asm now serves CollisionCheckOnLand; the MAPY/MAPX
+; block scan is deleted. Its bandaid variant IsNPCAtTargetBlockWithSlot
+; (af2fe8269) is also deleted — the literal tail handles the Pikachu
+; B-button / bump-counter exemption without slot-reporting scaffolding.
 
 ; ---------------------------------------------------------------------------
-; IsNPCAtTargetBlockWithSlot — same scan as IsNPCAtTargetBlock but returns the
-; blocking slot byte offset in EAX when CF=1.
+; CheckNPCInteraction — display half of the A-press NPC path.
 ;
-; Pret ref: home/overworld.asm:CollisionCheckOnLand's IsSpriteInFrontOfPlayer tail
-; (the caller that needs to distinguish Pikachu slot 0xF0 for the B-button /
-; bump-counter exemption). The original IsNPCAtTargetBlock is a CF-only shared
-; scan; this variant reports WHICH slot blocked so the caller can apply the
-; Pikachu-specific leniency exactly as pret does (cp PIKACHU_SPRITE_INDEX /
-; call CheckPikachuFollowingPlayer / jr nz, .collision / B / counter).
-;
-; In:  EBP = GB memory base; reads wYCoord, wXCoord, W_SPRITE_PLAYER_FACING_DIR.
-; Out: CF=1 if an NPC was found in the facing tile, EAX = slot byte offset
-;      (0x10-0xF0, PIKACHU slot = 0xF0); CF=0 if clear, EAX = 0.
-; Preserves: EBX, ECX, ESI, EDX; clobbers EAX, flags.
-; ---------------------------------------------------------------------------
-IsNPCAtTargetBlockWithSlot:
-    push ebx
-    push ecx
-    push esi
-
-    movzx ebx, byte [ebp + wYCoord]
-    add bl, 4
-    movzx ecx, byte [ebp + wXCoord]
-    add cl, 4
-
-    movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    cmp al, SPRITE_FACING_UP
-    je .s_face_up
-    cmp al, SPRITE_FACING_DOWN
-    je .s_face_down
-    cmp al, SPRITE_FACING_LEFT
-    je .s_face_left
-    inc cl
-    jmp .s_scan
-.s_face_up:
-    dec bl
-    jmp .s_scan
-.s_face_down:
-    inc bl
-    jmp .s_scan
-.s_face_left:
-    dec cl
-
-.s_scan:
-    mov esi, 0x10
-.s_slot_loop:
-    cmp esi, 0x100
-    jge .s_not_found
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
-    test al, al
-    jz .s_next_slot
-    mov eax, esi
-    shr eax, 4
-    dec eax
-    call IsToggleableHidden
-    jc .s_next_slot
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
-    cmp al, bl
-    jne .s_next_slot
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
-    cmp al, cl
-    je .s_found
-.s_next_slot:
-    add esi, 0x10
-    jmp .s_slot_loop
-.s_found:
-    mov eax, esi
-    pop esi
-    pop ecx
-    pop ebx
-    stc
-    ret
-.s_not_found:
-    xor eax, eax
-    pop esi
-    pop ecx
-    pop ebx
-    clc
-    ret
-
-; ---------------------------------------------------------------------------
-; CheckNPCInteraction — check if an NPC is one block in front of the player;
-; if so, make it face the player, copy its dialog to WRAM, and run PrintText.
-;
-; Port-only display half of the A-press NPC path (the faithful detection —
-; IsSpriteOrSignInFrontOfPlayer's sprite scan — lives in src/home/overworld.asm;
-; this re-detects by block coords, then runs the dialog).
-; Called from OverworldLoop when A is pressed and the head routine reported a
-; sprite slot in [hTextID].
-;
-; Detection: NPC in front iff (MAPY - 4) == wYCoord + dy
-;                         AND (MAPX - 4) == wXCoord + dx
-; where (dy,dx) = (-1,0) SPRITE_FACING_UP, (+1,0) DOWN, (0,-1) LEFT, (0,+1) RIGHT.
+; The faithful detection IsSpriteOrSignInFrontOfPlayer (src/home/overworld.asm)
+; already ran in OverworldLoop and left the faced slot in [hSpriteIndex]/
+; [hTextID] (with counter-tile range extension). This routine consumes that
+; result directly — it does NOT re-detect by MAPY/MAPX block coords.
+; Hidden toggleables are already excluded by the literal scan's PICTUREID==0
+; / IMAGEINDEX==$FF gates (HideObject presents $FF, so the pixel scan skips
+; them) — no extra IsToggleableHidden filter is added here.
 ;
 ; Text data from PalletTownTextTable (flat .data ptr + size) is walked IN PLACE:
 ; PrintText/TextCommandProcessor take a flat program-image stream pointer. The
@@ -782,78 +617,16 @@ DIALOG_TILEMAP_ROWS     equ 6
 CheckNPCInteraction:
     pushad
 
-    ; If IsSpriteOrSignInFrontOfPlayer already resolved a sprite slot (including
-    ; via counter-tile distance extension), use that sprite slot directly.
+    ; Consume the faithful scan result. OverworldLoop already called
+    ; IsSpriteOrSignInFrontOfPlayer; [hSpriteIndex] (alias [hTextID]) holds the
+    ; faced slot 1-15, or 0 if nothing faced. No block-coord re-scan.
     movzx eax, byte [ebp + hSpriteIndex]
     test al, al
-    jz .compute_target
+    jz .not_found
     cmp al, [ebp + wNumSprites]
-    ja .compute_target
+    ja .not_found
     movzx esi, al
     shl esi, 4                              ; slot (1-15) -> slot byte offset (0x10-0xF0)
-    jmp .found_npc
-
-.compute_target:
-    ; Compute target block coordinates from player facing direction.
-    ; wYCoord and wXCoord are raw block coords; MAPY/MAPX are raw+4.
-    ; Target MAPY = wYCoord + 4 + dy; target MAPX = wXCoord + 4 + dx.
-    movzx ebx, byte [ebp + wYCoord]
-    add bl, 4                               ; adjust for MAPY offset (+4)
-    movzx ecx, byte [ebp + wXCoord]
-    add cl, 4                               ; adjust for MAPX offset (+4)
-
-    movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    cmp al, SPRITE_FACING_UP
-    je .face_up
-    cmp al, SPRITE_FACING_DOWN
-    je .face_down
-    cmp al, SPRITE_FACING_LEFT
-    je .face_left
-    ; SPRITE_FACING_RIGHT (0x0C) or default
-    inc cl                                  ; MAPX + 1 (block to the right)
-    jmp .scan
-.face_up:
-    dec bl                                  ; MAPY - 1 (block to the north)
-    jmp .scan
-.face_down:
-    inc bl                                  ; MAPY + 1 (block to the south)
-    jmp .scan
-.face_left:
-    dec cl                                  ; MAPX - 1 (block to the west)
-
-.scan:
-    ; BL = target_mapy, CL = target_mapx
-    ; Scan NPC slots 1-15 (slot 0 = player).
-    mov esi, 0x10                           ; slot byte offset starts at slot 1
-
-.slot_loop:
-    cmp esi, 0x100
-    jge .not_found
-
-    ; Skip inactive slots (IMAGEBASEOFFSET == 0 means slot is unused).
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
-    test al, al
-    jz .next_slot
-
-    ; Hidden toggleables are INERT — same filter and rationale as
-    ; IsNPCAtTargetBlock's scan above (pret: hidden objects can't be talked to;
-    ; the A-press must fall through to signs/nothing).
-    mov eax, esi
-    shr eax, 4
-    dec eax                                 ; local object id (0-based)
-    call IsToggleableHidden                 ; CF=1 → hidden: skip (clobbers AL only)
-    jc .next_slot
-
-    ; Compare MAPY and MAPX.
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
-    cmp al, bl
-    jne .next_slot
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
-    cmp al, cl
-    je .found_npc
-.next_slot:
-    add esi, 0x10
-    jmp .slot_loop
 
 .found_npc:
     ; ── Found: NPC at target block ──────────────────────────────────────────

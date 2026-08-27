@@ -89,7 +89,8 @@ EnablePikachuFollowingPlayer:
     ret
 
 ; CheckPikachuFollowingPlayer — pret home/pikachu.asm. Test bit 1; returns ZF as
-; the SM83 `bit 1,[hl]` would (callers branch on jr z/nz). ZF set => not following.
+; the SM83 `bit 1,[hl]` would (callers branch on jr z/nz). ZF set => following
+; (bit 1 clear, EnablePikachuFollowingPlayer does res 1,[hl]).
 CheckPikachuFollowingPlayer:
     test byte [ebp + wPikachuOverworldStateFlags], 0x02         ; bit 1, [hl]
     ret

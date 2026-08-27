@@ -328,10 +328,10 @@ DetectCollisionBetweenSprites:
     mov   al, byte [esp + 4]   ; thr_i_y
     mov   bl, byte [esp + 8]   ; thr_i_x
     cmp   al, bl
-    jc    .use_ybits           ; (label misnomer: this branch selects the X bits)
+    jc    .use_xbits
     mov   bl, 0x0C             ; thr_i_y >= thr_i_x → Y bits DH[3:2]
     jmp   .apply_col
-.use_ybits:
+.use_xbits:
     mov   bl, 0x03             ; thr_i_y < thr_i_x  → X bits DH[1:0]
 .apply_col:
     mov   al, dh

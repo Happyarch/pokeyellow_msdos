@@ -148,9 +148,7 @@ extern DumpSeamLog                        ; src/debug/debug_dump.asm
 extern EnterMapAnim                       ; src/engine/overworld/player_animations.asm
 extern GBFadeOutToBlack                   ; src/home/fade.asm
 extern _GetTileAndCoordsInFrontOfPlayer   ; src/engine/overworld/player_state.asm (non-predef entry)
-extern IsNPCAtTargetBlock                 ; src/engine/overworld/map_sprites.asm
-extern IsNPCAtTargetBlockWithSlot         ; src/engine/overworld/map_sprites.asm
-extern CheckPikachuFollowingPlayer        ; src/home/pikachu.asm — ZF set = following (bit 1 clear)
+extern CheckPikachuFollowingPlayer        ; src/home/pikachu.asm — ZF as bit 1,[hl] (ZF=1 => following)
 extern IsNextTileShoreOrWater             ; src/engine/items/item_effects.asm
 extern IsPlayerStandingOnDoorTileOrWarpTile ; src/engine/overworld/player_state.asm
 extern IsPlayerTalkingToPikachu            ; src/engine/pikachu/pikachu_emotions.asm
@@ -3346,119 +3344,94 @@ SignLoop:
 
 ; ---------------------------------------------------------------------------
 ; CollisionCheckOnLand — tile passability + sprite collision check.
-; Pret ref: home/overworld.asm:CollisionCheckOnLand.
+; Pret ref: home/overworld.asm:CollisionCheckOnLand (:1215-1268).
 ;
-; Faithful order: quick sprite reject -> Pikachu-aware NPC block scan (with
-; B-button / bump-counter exemption) -> tile-pair elevation check -> tile
-; passability. CF=1 if movement is blocked.
+; Instruction-for-instruction translation. Order and flag consumption match
+; pret: BIT_LEDGE_OR_FISHING allow, wSimulatedJoypadStatesIndex allow,
+; quick reject (one-frame stale COLLISIONDATA), IsSpriteInFrontOfPlayer
+; scan with hTextID/hSpriteIndex alias, Pikachu B/counter exemption,
+; TilePairCollisionsLand, CheckTilePassable, SFX guard.
 ; ---------------------------------------------------------------------------
 CollisionCheckOnLand:
     extern TilePairCollisionsLand          ; src/data/tilesets/pair_collision_tile_ids.asm
 %ifdef DEBUG_NOCLIP
     cmp byte [pad_noclip], 0
-    jne .passable                 ; noclip active: always passable
+    jne .passable
 %endif
     push eax
     push ecx
     push esi
-    ; pret: `bit BIT_LEDGE_OR_FISHING / jr nz, .noCollision` — FIRST check, before
-    ; everything. Mid-hop, the two simulated presses cross the impassable ledge
-    ; tile through this allow; it is NOT reached on the press that arms the hop
-    ; (the flag is set mid-check, below, and that press is then blocked by
-    ; IsTilePassable — see the note at the tile-pair scan).
+    ; :1216 ld a,[wMovementFlags] / bit BIT_LEDGE_OR_FISHING,a / jr nz,.noCollision
     test byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
-    jnz .noCollision                               ; jumping a ledge → always passable
-    ; pret home/overworld.asm:1223-1225 — no collisions while the game is scripting the
-    ; player's movement (wSimulatedJoypadStatesIndex != 0). Live since the ledge hop's
-    ; simulated steps (and door step-out) run through here.
+    jnz .noCollision
+    ; :1220 ld a,[wSimulatedJoypadStatesIndex] / and a / jr nz,.noCollision
     cmp byte [ebp + wSimulatedJoypadStatesIndex], 0
-    jne .noCollision                               ; scripted movement → always passable
-    ; pret :1226-1231 — quick sprite reject. The accumulated collision-direction bits in
-    ; wSpritePlayerStateData1CollisionData (player = slot 0) use the same bit layout as
-    ; wPlayerDirection (bit0=RIGHT, bit1=LEFT, bit2=DOWN, bit3=UP — see the DH[3:2]/DH[1:0]
-    ; write in sprite_collisions.asm:DetectCollisionBetweenSprites); if a set bit overlaps the
-    ; direction the player is trying to move, a sprite is already known to be there. This
-    ; can only ADD a block that the thorough scan below would also catch
-    ; (pret itself questions why the deeper check ever misses).
-    ; The quick reject deliberately does NOT flag Pikachu: DetectCollisionBetweenSprites'
-    ; player-vs-Pikachu case keeps the direction bits clean (sprite_collisions.asm:313),
-    ; so Pikachu is only a blocker via the MAPY/MAPX scan below.
-    mov dl, [ebp + wPlayerDirection]
-    mov al, [ebp + wSpriteStateData1 + SPRITESTATEDATA1_COLLISIONDATA]
-    and al, dl
-    jnz .blocked                                   ; sprite already flagged in travel dir
-    ; pret :1231-1252 — Pikachu-aware sprite collision tail. The port's bespoke
-    ; block-scan IsNPCAtTargetBlock replaces pret's pixel-based IsSpriteInFrontOfPlayer;
-    ; IsNPCAtTargetBlockWithSlot reports WHICH slot blocked so this tail can apply
-    ; pret's exact exemption: when the blocker is slot 15 (Pikachu, 0xF0) and
-    ; CheckPikachuFollowingPlayer says he's following, the player may step onto
-    ; his tile if B is held OR after the bump-counter expires. Counter semantics
-    ; byte-exact as pret: 0 -> allow; >0: dec; !=0 -> block (with SFX_COLLISION),
-    ; dec==0 -> allow. Loaded with 8 on 180° turn (home/overworld.asm:188), zeroed
-    ; when no direction held (:242) and on blackout (engine/events/black_out.asm:4).
-    ; After exemption, fall through to the tile checks exactly as pret's
-    ; .noSpriteCollision does — the exemption does NOT bypass TilePairCollisionsLand
-    ; or CheckTilePassable.
-    call IsNPCAtTargetBlockWithSlot                ; CF=0 -> no NPC; CF=1 + EAX=slot offset
+    jne .noCollision
+    ; :1223 ld a,[wPlayerDirection] / ld d,a / ld a,[wSpritePlayerStateData1CollisionData] / and d / nop / jr nz,.collision
+    mov dl, [ebp + wPlayerDirection]               ; d = wPlayerDirection
+    mov al, [ebp + wSpriteStateData1 + SPRITESTATEDATA1_COLLISIONDATA] ; ld a,[wSpritePlayerStateData1CollisionData]
+    and al, dl                                     ; and d — one-frame stale COLLISIONDATA, faithful
+    nop                                            ; pret nop — "??? why is this in the code"
+    jnz .collision
+    ; :1229 xor a / ldh [hTextID],a
+    xor al, al
+    mov [ebp + hTextID], al                        ; hTextID aliases hSpriteIndex (same HRAM byte 0xFF8C)
+    ; :1231 call IsSpriteInFrontOfPlayer / jr nc,.noSpriteCollision
+    call IsSpriteInFrontOfPlayer
     jnc .noSpriteCollision
-    cmp eax, 0xF0                                  ; PIKACHU slot?
-    jne .blocked                                   ; not Pikachu -> hard block
-    call CheckPikachuFollowingPlayer               ; ZF as SM83 bit 1, [hl]; ZF=1 => following
-    jnz .blocked                                   ; jr nz, .collision — not following -> block
+    ; :1233 res BIT_FACE_PLAYER,[hl] — HL is movement-status byte returned by IsSpriteInFrontOfPlayer (ESI)
+    and byte [ebp + esi], ~(1 << BIT_FACE_PLAYER)
+    ; :1234 ldh a,[hTextID] / and a / jr z,.noSpriteCollision
+    mov al, [ebp + hTextID]
+    test al, al
+    jz .noSpriteCollision
+    ; :1237 cp PIKACHU_SPRITE_INDEX / jr nz,.collision
+    cmp al, PIKACHU_SPRITE_INDEX
+    jne .collision
+    ; :1239 call CheckPikachuFollowingPlayer / jr nz,.collision — ZF from bit 1,[hl]; ZF=1 => following
+    call CheckPikachuFollowingPlayer
+    jnz .collision
+    ; :1241 ldh a,[hJoyHeld] / and PAD_B / jr nz,.noSpriteCollision
     mov al, [ebp + hJoyHeld]
     and al, PAD_B
-    jnz .noSpriteCollision                         ; B held -> walk through immediately
-    mov al, [ebp + wPikachuCollisionCounter]
+    jnz .noSpriteCollision
+    ; :1244 ld hl,wPikachuCollisionCounter / ld a,[hl] / and a / jr z,.noSpriteCollision / dec [hl] / jr nz,.collision
+    mov esi, wPikachuCollisionCounter
+    mov al, [ebp + esi]
     test al, al
-    jz .noSpriteCollision                          ; counter == 0 -> allow
-    dec byte [ebp + wPikachuCollisionCounter]
-    jnz .blocked                                   ; dec !=0 -> still blocked
-    ; dec ==0 -> fall through to .noSpriteCollision (8th bump walks through)
+    jz .noSpriteCollision
+    dec byte [ebp + esi]
+    jnz .collision
 .noSpriteCollision:
-    ; wTileMap is a sub-block viewport into wSurroundingTiles, offset by wYBlockCoord /
-    ; wXBlockCoord. AdvancePlayerSprite only calls LoadCurrentMapView on block-boundary
-    ; crossings, so the viewport can be stale within a block (YBC/XBC changed but wTileMap
-    ; not rebuilt). Rebuild here to apply the current sub-block offset before the tile read.
+    ; :1251 ld hl,TilePairCollisionsLand / call CheckForJumpingAndTilePairCollisions / jr c,.collision
+    ; LoadCurrentMapView refresh is a port constraint (wTileMap stale within a block); not in pret but required so _GetTileAndCoordsInFrontOfPlayer reads correct coords.
     call LoadCurrentMapView
-    ; pret: predef GetTileAndCoordsInFrontOfPlayer. Call the NON-predef entry
-    ; directly -- the predef wrapper runs GetPredefRegisters, which would overwrite
-    ; ESI/EBX from stale wPredefHL/wPredefBC (see memory flagactionpredef-clobbers-regs).
-    ; EDX is preserved because the ledge block below passes DH (the tile the
-    ; player stands on) to CheckForJumpingAndTilePairCollisions; the faithful routine
-    ; returns the FRONT coords in DH/DL and would otherwise destroy it.
-    push edx
-    call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile in front
+    push edx                                       ; preserve DH (tile player stands on) across _GetTile
+    call _GetTileAndCoordsInFrontOfPlayer          ; CL = tile in front (direct entry, avoids GetPredefRegisters clobber)
     pop edx
-    ; pret home/overworld.asm:CollisionCheckOnLand (.noSpriteCollision):
-    ;   ld hl, TilePairCollisionsLand / call CheckForJumpingAndTilePairCollisions
-    ;   jr c, .collision   — an illegal tile-pair (elevation-seam) boundary blocks.
-    ; This block sat behind %ifdef OVERWORLD_LEDGES from the M7.3 check-only era
-    ; until 2026-08-03 — the define existed in no build, so land collision never
-    ; armed a hop (part of regression-overworld-ledge-hop-never-advanced; the
-    ; ledge_hop golden gates it now).
-    ;
-    ; NOTE pret falls THROUGH to CheckTilePassable even when HandleLedges just
-    ; armed a hop: the front tile is the ledge tile ($37 &c.), IsTilePassable
-    ; rejects it, and the ARMING press is blocked — the hop's two tiles are then
-    ; walked entirely by the two simulated presses, which pass through the
-    ; BIT_LEDGE_OR_FISHING allow at the TOP of this routine (pret's position).
-    ; Measured on mGBA: wSimulatedJoypadStatesIndex 2→1→0, y 8→9→10. An earlier
-    ; cut short-circuited to .noCollision HERE instead, letting the arming press
-    ; step too — hop still 2 tiles (real+sim) but index left at 1; the ledge_hop
-    ; golden caught it.
-    push ebx                                       ; CheckForTilePairCollisions uses BL
-    push edx                                       ; ...and DH (tile player stands on)
-    mov esi, TilePairCollisionsLand                ; flat host ptr to the tile-pair table
-    call CheckForJumpingAndTilePairCollisions      ; may arm a ledge hop; CF=1 → seam-blocked
+    push ebx
+    push edx
+    mov esi, TilePairCollisionsLand
+    call CheckForJumpingAndTilePairCollisions
     pop edx
     pop ebx
-    jc .blocked                                    ; illegal tile-pair boundary → blocked
-    ; pret :1254-1255 — `call CheckTilePassable / jr nc, .noCollision`. The routine
-    ; re-derives the front tile itself (HandleLedges clobbered ECX above), which is
-    ; why the inline `movzx ecx, [wTileInFrontOfPlayer]` that used to stand here is
-    ; gone with it. EDX is dead from here on.
-    call CheckTilePassable                         ; CF = 1 if not passable
-    jc .blocked                                    ; tile impassable → blocked
+    jc .collision
+    ; :1254 call CheckTilePassable / jr nc,.noCollision
+    call CheckTilePassable
+    jnc .noCollision
+.collision:
+    ; :1256 ld a,[wChannelSoundIDs+CHAN5] / cp SFX_COLLISION / jr z,.setCarry / ld a,SFX_COLLISION / call PlaySound
+    mov al, [ebp + wChannelSoundIDs + CHAN5]
+    cmp al, SFX_COLLISION
+    je .setCarry
+    mov al, SFX_COLLISION
+    call PlaySound
+.setCarry:
+    pop esi
+    pop ecx
+    pop eax
+    stc
+    ret
 .noCollision:
     pop esi
     pop ecx
@@ -3466,6 +3439,13 @@ CollisionCheckOnLand:
     clc
     ret
 .blocked:
+    ; compat alias for old bespoke caller label — now same as .collision
+    jmp .collision
+%ifdef DEBUG_NOCLIP
+.passable:
+    clc
+    ret
+%endif
     ; pret home/overworld.asm:1259-1264 (.collision): play SFX_COLLISION on the bump,
     ; unless it's already playing on CHAN5. Done before the pops so PlaySound's clobber
     ; of eax/ecx/esi is undone by the restores; stc lands after (pop doesn't touch CF).
@@ -4761,17 +4741,11 @@ global IsSpriteInFrontOfPlayer2              ; long-range entry — counter bran
 ; DH (the long $20 range used over pokécenter/mart counter tiles). Both labels are
 ; kept, per CLAUDE.md's rule on structural splits.
 ;
-; STRUCTURAL SPLIT — this is the SECOND realization of pret's sprite scan, and that
-; is deliberate. The port already has IsNPCAtTargetBlock (map_sprites.asm), a
-; bespoke MAPY/MAPX *block* scan used by CollisionCheckOnLand (see its note at
-; pret :1234). The two are NOT interchangeable:
-;   - IsNPCAtTargetBlock answers "is a block occupied" for collision, in map coords.
-;   - This answers "which slot is at the faced PIXEL position", in screen coords,
-;     with the BIT_FACE_PLAYER side effect and the hSpriteIndex hand-off that
-;     TryPushingBoulder's boulder identification depends on.
-; Rewiring CollisionCheckOnLand onto this routine is deliberately NOT done here: it
-; would change live collision behavior, which this bullet does not own. The port
-; therefore keeps pret's name on this half and IsNPCAtTargetBlock's on the other.
+; This pixel scan is now the SOLE collision/talk scan. The former bespoke
+; MAPY/MAPX block scan IsNPCAtTargetBlock (map_sprites.asm, retired
+; 2026-08-27) was a port-only helper used by CollisionCheckOnLand; literal
+; IsSpriteInFrontOfPlayer now serves that caller, and CheckNPCInteraction
+; consumes its result via [hSpriteIndex].
 ;
 ; CONSUMERS: TryPushingBoulder (push_boulder.asm), and the
 ; IsSpriteOrSignInFrontOfPlayer head (counter branch → the -2 entry,
