@@ -21,6 +21,7 @@ extern WriteOAMBlock            ; src/home/oam.asm (flat tile/attr source in EDX
 extern DelayFrame               ; src/home/vblank.asm
 extern DelayFrames              ; src/home/delay.asm
 extern UpdateSprites            ; src/home/update_sprites.asm
+extern spr_dos_sy, spr_dos_sx, spr_oam_valid ; src/ppu/ppu.asm
 
 global EmotionBubble
 global EmotionBubblesOAMBlock
@@ -61,10 +62,26 @@ EmotionBubble:
     ; wShadowOAMSprite35Attributes -> wShadowOAMSprite39Attributes
     mov esi, wShadowOAM + 35*4 + 3
     mov edi, wShadowOAM + 39*4 + 3
+    mov ecx, 36
+.shiftCoordsLoop:
+    mov eax, [spr_dos_sy + (ecx - 1)*4]
+    mov [spr_dos_sy + (ecx + 3)*4], eax
+    mov eax, [spr_dos_sx + (ecx - 1)*4]
+    mov [spr_dos_sx + (ecx + 3)*4], eax
+    dec ecx
+    jnz .shiftCoordsLoop
     jmp .shift
 .reserved:
     mov esi, wShadowOAM + 31*4 + 3
     mov edi, wShadowOAM + 35*4 + 3
+    mov ecx, 32
+.shiftCoordsLoopReserved:
+    mov eax, [spr_dos_sy + (ecx - 1)*4]
+    mov [spr_dos_sy + (ecx + 3)*4], eax
+    mov eax, [spr_dos_sx + (ecx - 1)*4]
+    mov [spr_dos_sx + (ecx + 3)*4], eax
+    dec ecx
+    jnz .shiftCoordsLoopReserved
 .shift:
     mov ecx, 0x90
 .shiftLoop:
@@ -74,6 +91,26 @@ EmotionBubble:
     dec edi
     dec ecx
     jnz .shiftLoop
+
+    ; Sync shifted shadow-OAM to GB_OAM ($FE00) so render_sprites sees shifted entries
+    push esi
+    push edi
+    lea esi, [ebp + wShadowOAM]
+    lea edi, [ebp + GB_OAM]
+    mov ecx, W_SHADOW_OAM_SIZE
+    rep movsb
+    pop edi
+    pop esi
+
+    ; Grow spr_oam_valid by 4 entries (for the 4 bubble sprites)
+    mov eax, [spr_oam_valid]
+    add eax, 4
+    cmp eax, 40
+    jbe .valid_ok
+    mov eax, 40
+.valid_ok:
+    mov [spr_oam_valid], eax
+
     ; screen coords of the target sprite (YPIXELS -> b, XPIXELS+8 -> c)
     movzx esi, byte [ebp + wEmotionBubbleSpriteIndex]
     shl esi, 4                      ; slot*0x10
