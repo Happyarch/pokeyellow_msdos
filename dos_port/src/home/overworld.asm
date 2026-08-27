@@ -149,6 +149,8 @@ extern EnterMapAnim                       ; src/engine/overworld/player_animatio
 extern GBFadeOutToBlack                   ; src/home/fade.asm
 extern _GetTileAndCoordsInFrontOfPlayer   ; src/engine/overworld/player_state.asm (non-predef entry)
 extern IsNPCAtTargetBlock                 ; src/engine/overworld/map_sprites.asm
+extern IsNPCAtTargetBlockWithSlot         ; src/engine/overworld/map_sprites.asm
+extern CheckPikachuFollowingPlayer        ; src/home/pikachu.asm — ZF set = following (bit 1 clear)
 extern IsNextTileShoreOrWater             ; src/engine/items/item_effects.asm
 extern IsPlayerStandingOnDoorTileOrWarpTile ; src/engine/overworld/player_state.asm
 extern IsPlayerTalkingToPikachu            ; src/engine/pikachu/pikachu_emotions.asm
@@ -3346,8 +3348,9 @@ SignLoop:
 ; CollisionCheckOnLand — tile passability + sprite collision check.
 ; Pret ref: home/overworld.asm:CollisionCheckOnLand.
 ;
-; Checks both the tile in front of the player (IsTilePassable) and whether any
-; NPC occupies that block (IsNPCAtTargetBlock).  CF=1 if movement is blocked.
+; Faithful order: quick sprite reject -> Pikachu-aware NPC block scan (with
+; B-button / bump-counter exemption) -> tile-pair elevation check -> tile
+; passability. CF=1 if movement is blocked.
 ; ---------------------------------------------------------------------------
 CollisionCheckOnLand:
     extern TilePairCollisionsLand          ; src/data/tilesets/pair_collision_tile_ids.asm
@@ -3375,14 +3378,43 @@ CollisionCheckOnLand:
     ; wPlayerDirection (bit0=RIGHT, bit1=LEFT, bit2=DOWN, bit3=UP — see the DH[3:2]/DH[1:0]
     ; write in sprite_collisions.asm:DetectCollisionBetweenSprites); if a set bit overlaps the
     ; direction the player is trying to move, a sprite is already known to be there. This
-    ; can only ADD a block that the thorough IsNPCAtTargetBlock scan below would also catch
-    ; (pret itself questions why the deeper check ever misses). pret's `nop`, the
-    ; res BIT_FACE_PLAYER / hTextID / Pikachu-collision-counter tail are folded into the
-    ; bespoke IsNPCAtTargetBlock replacement below.
+    ; can only ADD a block that the thorough scan below would also catch
+    ; (pret itself questions why the deeper check ever misses).
+    ; The quick reject deliberately does NOT flag Pikachu: DetectCollisionBetweenSprites'
+    ; player-vs-Pikachu case keeps the direction bits clean (sprite_collisions.asm:313),
+    ; so Pikachu is only a blocker via the MAPY/MAPX scan below.
     mov dl, [ebp + wPlayerDirection]
     mov al, [ebp + wSpriteStateData1 + SPRITESTATEDATA1_COLLISIONDATA]
     and al, dl
     jnz .blocked                                   ; sprite already flagged in travel dir
+    ; pret :1231-1252 — Pikachu-aware sprite collision tail. The port's bespoke
+    ; block-scan IsNPCAtTargetBlock replaces pret's pixel-based IsSpriteInFrontOfPlayer;
+    ; IsNPCAtTargetBlockWithSlot reports WHICH slot blocked so this tail can apply
+    ; pret's exact exemption: when the blocker is slot 15 (Pikachu, 0xF0) and
+    ; CheckPikachuFollowingPlayer says he's following, the player may step onto
+    ; his tile if B is held OR after the bump-counter expires. Counter semantics
+    ; byte-exact as pret: 0 -> allow; >0: dec; !=0 -> block (with SFX_COLLISION),
+    ; dec==0 -> allow. Loaded with 8 on 180° turn (home/overworld.asm:188), zeroed
+    ; when no direction held (:242) and on blackout (engine/events/black_out.asm:4).
+    ; After exemption, fall through to the tile checks exactly as pret's
+    ; .noSpriteCollision does — the exemption does NOT bypass TilePairCollisionsLand
+    ; or CheckTilePassable.
+    call IsNPCAtTargetBlockWithSlot                ; CF=0 -> no NPC; CF=1 + EAX=slot offset
+    jnc .noSpriteCollision
+    cmp eax, 0xF0                                  ; PIKACHU slot?
+    jne .blocked                                   ; not Pikachu -> hard block
+    call CheckPikachuFollowingPlayer               ; ZF as SM83 bit 1, [hl]; ZF=1 => following
+    jnz .blocked                                   ; jr nz, .collision — not following -> block
+    mov al, [ebp + hJoyHeld]
+    and al, PAD_B
+    jnz .noSpriteCollision                         ; B held -> walk through immediately
+    mov al, [ebp + wPikachuCollisionCounter]
+    test al, al
+    jz .noSpriteCollision                          ; counter == 0 -> allow
+    dec byte [ebp + wPikachuCollisionCounter]
+    jnz .blocked                                   ; dec !=0 -> still blocked
+    ; dec ==0 -> fall through to .noSpriteCollision (8th bump walks through)
+.noSpriteCollision:
     ; wTileMap is a sub-block viewport into wSurroundingTiles, offset by wYBlockCoord /
     ; wXBlockCoord. AdvancePlayerSprite only calls LoadCurrentMapView on block-boundary
     ; crossings, so the viewport can be stale within a block (YBC/XBC changed but wTileMap
@@ -3424,17 +3456,9 @@ CollisionCheckOnLand:
     ; pret :1254-1255 — `call CheckTilePassable / jr nc, .noCollision`. The routine
     ; re-derives the front tile itself (HandleLedges clobbered ECX above), which is
     ; why the inline `movzx ecx, [wTileInFrontOfPlayer]` that used to stand here is
-    ; gone with it. EDX is dead from here on — IsNPCAtTargetBlock reads only
-    ; wYCoord/wXCoord/W_SPRITE_PLAYER_FACING_DIR — so its clobber is harmless.
+    ; gone with it. EDX is dead from here on.
     call CheckTilePassable                         ; CF = 1 if not passable
     jc .blocked                                    ; tile impassable → blocked
-    ; IsNPCAtTargetBlock is the port's BESPOKE replacement for pret's IsSpriteInFrontOfPlayer
-    ; (home/overworld.asm:1234) plus the res BIT_FACE_PLAYER / hTextID / Pikachu-collision-
-    ; counter tail (:1236-1252): a straight MAPY/MAPX block scan of slots 1–15. It does not
-    ; reproduce the sprite-facing side effect or the Pikachu-follow B-button leniency; those
-    ; ride the sprite-engine reimpl. CF=1 → an NPC occupies the target block.
-    call IsNPCAtTargetBlock                        ; CF = 1 if NPC is in front
-    jc .blocked                                    ; NPC in the way → blocked
 .noCollision:
     pop esi
     pop ecx

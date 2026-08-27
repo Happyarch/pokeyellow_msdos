@@ -72,6 +72,7 @@ global ResetMapTrainerState        ; port-ext per-map-load trainer state (called
 global CheckNPCInteraction
 global ShowTextStream
 global IsNPCAtTargetBlock
+global IsNPCAtTargetBlockWithSlot
 global w_map_text_table_ptr
 global MapTextTablePointers
 global CheckTrainerSight
@@ -665,6 +666,87 @@ IsNPCAtTargetBlock:
     pop ecx
     pop ebx
     pop eax
+    clc
+    ret
+
+; ---------------------------------------------------------------------------
+; IsNPCAtTargetBlockWithSlot — same scan as IsNPCAtTargetBlock but returns the
+; blocking slot byte offset in EAX when CF=1.
+;
+; Pret ref: home/overworld.asm:CollisionCheckOnLand's IsSpriteInFrontOfPlayer tail
+; (the caller that needs to distinguish Pikachu slot 0xF0 for the B-button /
+; bump-counter exemption). The original IsNPCAtTargetBlock is a CF-only shared
+; scan; this variant reports WHICH slot blocked so the caller can apply the
+; Pikachu-specific leniency exactly as pret does (cp PIKACHU_SPRITE_INDEX /
+; call CheckPikachuFollowingPlayer / jr nz, .collision / B / counter).
+;
+; In:  EBP = GB memory base; reads wYCoord, wXCoord, W_SPRITE_PLAYER_FACING_DIR.
+; Out: CF=1 if an NPC was found in the facing tile, EAX = slot byte offset
+;      (0x10-0xF0, PIKACHU slot = 0xF0); CF=0 if clear, EAX = 0.
+; Preserves: EBX, ECX, ESI, EDX; clobbers EAX, flags.
+; ---------------------------------------------------------------------------
+IsNPCAtTargetBlockWithSlot:
+    push ebx
+    push ecx
+    push esi
+
+    movzx ebx, byte [ebp + wYCoord]
+    add bl, 4
+    movzx ecx, byte [ebp + wXCoord]
+    add cl, 4
+
+    movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]
+    cmp al, SPRITE_FACING_UP
+    je .s_face_up
+    cmp al, SPRITE_FACING_DOWN
+    je .s_face_down
+    cmp al, SPRITE_FACING_LEFT
+    je .s_face_left
+    inc cl
+    jmp .s_scan
+.s_face_up:
+    dec bl
+    jmp .s_scan
+.s_face_down:
+    inc bl
+    jmp .s_scan
+.s_face_left:
+    dec cl
+
+.s_scan:
+    mov esi, 0x10
+.s_slot_loop:
+    cmp esi, 0x100
+    jge .s_not_found
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
+    test al, al
+    jz .s_next_slot
+    mov eax, esi
+    shr eax, 4
+    dec eax
+    call IsToggleableHidden
+    jc .s_next_slot
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
+    cmp al, bl
+    jne .s_next_slot
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
+    cmp al, cl
+    je .s_found
+.s_next_slot:
+    add esi, 0x10
+    jmp .s_slot_loop
+.s_found:
+    mov eax, esi
+    pop esi
+    pop ecx
+    pop ebx
+    stc
+    ret
+.s_not_found:
+    xor eax, eax
+    pop esi
+    pop ecx
+    pop ebx
     clc
     ret
 

@@ -275,9 +275,19 @@ PrepareOAMData:
     ; Compute 32-bit DOS base position for extended 320×200 viewport.
     ; Slot 0 (player): YPIXELS-based (always ≤127, no 8-bit overflow).
     ; Scripted NPCs (DoScriptedNPCMovement): YPIXELS-based screen projection.
-    ; Slots 1-15 (regular NPCs): MAPY/MAPX-based (32-bit, handles full map range).
+    ; Slot 15 (Pikachu follower): YPIXELS-based — the follow FSM maintains
+    ;   pret-accurate YPIXELS/XPIXELS every frame (Normal 2px/frame, Fast 4px,
+    ;   ledge-hop 4px), and its MAPY/MAPX is advanced at step START, so the
+    ;   generic NPC interpolator (status 3/4, 1px or 2px) snaps. Route through
+    ;   the screen-relative projection like the player (GBScreenToCanvasXY via
+    ;   hSpriteScreenY/X from GetSpriteScreenXY) — that is pret's data flow
+    ;   (OAM fed from pixel coords the FSM updates per frame). See DEVIATION below.
+    ; Slots 1-14 (regular NPCs): MAPY/MAPX-based (32-bit, handles full map range).
+; DEVIATION{class=projection; pret=engine/gfx/sprite_oam.asm:PrepareOAMData; behavior=slot 15 (Pikachu follower) is projected screen-relative from YPIXELS/XPIXELS via hSpriteScreenY/X and GBScreenToCanvasXY, like the player and scripted NPCs, rather than from MAPY/MAPX with the generic 1px/2px interpolator; evidence=the follow FSM (pikachu_follow.asm Normal/Fast/Func_fca0a) maintains pixel coords every frame with 2px/4px steps and advances MAPY/MAPX at step start, so MAPY/MAPX interpolation needs 2px*8, 4px*4 and 4px*8=32px models that the generic status-3/status-4 path does not provide — without this, status 5 snaps and status 3/4 half-pop — and pret's OAM is fed from those pixel coords; lifetime=permanent while PPU composites from spr_dos_sy/sx rather than OAM Y/X}
     test esi, esi
     jz .dos_base_screen_relative
+    cmp esi, 0xF0
+    je .dos_base_screen_relative               ; Pikachu follower — screen-relative (see DEVIATION)
     test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jz .dos_base_npc
     movzx eax, byte [ebp + wNPCMovementScriptSpriteOffset]
@@ -343,9 +353,14 @@ PrepareOAMData:
 .dos_base_done:
     ; Sub-block walk tracking: subtract the player's current walk pixel offset from
     ; NPC dos_base so NPCs scroll in lockstep with the BG during a walk step.
-    ; Screen-relative sprites (slot 0 player, and scripted NPCs) track screen coords directly — skip.
+    ; Screen-relative sprites (slot 0 player, slot 15 Pikachu, and scripted NPCs)
+    ; track screen coords directly — skip. Pikachu's screen pixels already account
+    ; for BG scroll via AddPikachuStepVectorToScreenPixelCoords / DoubleAdd...
+    ; (that is why the FSM has separate pixel-vs-MAPY updates).
     test esi, esi
     jz .no_walk_offset                      ; slot 0 = player
+    cmp esi, 0xF0
+    je .no_walk_offset                      ; slot 15 = Pikachu follower (screen-relative)
     test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jz .apply_walk_offset
     movzx eax, byte [ebp + wNPCMovementScriptSpriteOffset]
