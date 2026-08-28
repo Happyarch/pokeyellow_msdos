@@ -107,9 +107,11 @@ Two supporting changes were required:
 * **The `wPikachuSpawnState = 2` / flags bit 4 set at `.loadNewMap`** was explicitly
   deferred in a comment; now live, placed BEFORE `LoadMapHeader` as pret does.
 
-### Known remaining gap (NOT follower work)
+### Known remaining gap (NOT follower work) — RESOLVED 2026-08-28 Stage A2
 
-`UpdatePikachuHappinessAndMood` is ported but still never called. Its only pret call
-site is `engine/events/poison.asm:16`, and **`poison.asm` is not ported at all** — the
-overworld poison-step tick is a separate subsystem. It should be wired when that lands,
-not here.
+`UpdatePikachuHappinessAndMood` was ported but unwired; its only pret call site is
+`engine/events/poison.asm:16`. Stage A2 (`fa5bae9b2`) ported `engine/events/poison.asm`
+(`src/engine/events/poison.asm`) and wired the overworld poison-step tick at
+`src/home/overworld.asm:.notSafariZone` (`wIsInBattle` guard → `ApplyOutOfBattlePoisonDamage`
+→ `wOutOfBattleBlackout` → `HandleBlackOut`). That call chain invokes
+`UpdatePikachuHappinessAndMood` every poison tick, so the gap is closed.

@@ -75,7 +75,7 @@ The remaining work is largely confined to **overworld story script wiring**, **o
 - **All 8 Field Moves**: Cut, Surf, Strength, Flash, Fly, Dig, Teleport, and Softboiled are fully implemented and linked.
 - **NPC Movement & Dialogue**: Random walk/stay AI, scripted pathing, A* pathfinding (`FindPathToPlayer`), sprite facing updates, signpost reading (`sign_pallet`), and streaming NPC dialogue text boxes.
 - **Wild Encounters**: Full encounter probability rolls across grass and water tiles with a 3-step post-battle grace period.
-- **Open Gaps**: `StepCountCheck` currently omits out-of-battle poison damage (`poison.asm`), day-care EXP stepping, and Repel step decrementing.
+- **Open Gaps**: `StepCountCheck` now handles out-of-battle poison damage via `ApplyOutOfBattlePoisonDamage` at the post-step seam (Stage A2, `fa5bae9b2`); remaining gaps are day-care EXP stepping and Repel step decrementing.
 
 ---
 

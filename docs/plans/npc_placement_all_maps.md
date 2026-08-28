@@ -115,9 +115,9 @@ still and walk halves directly from the full 384-byte sheet. No `_still` table n
 - [x] Marks beaten via `bts word [npc_beaten_flags], dx`.
 - [x] Clears `w_trainer_enc_slot = 0xFF`, `w_player_frozen = 0`.
 
-### 4d. Gate beaten trainers
+### 4d. Gate beaten trainers — UPDATED 2026-08-28 Stage C.2 (A7)
 
-- [x] `CheckNPCInteraction` at `.found_npc`: if ISTRAINER=1 and beaten bit set → `jmp .not_found`.
+- [x] `CheckNPCInteraction` at `TRAINER TALK` dispatch: if `npc_beaten_flags` bit set → print `TRAINER_AFTER_BATTLE_TEXT` (sel 6 after-battle text via `ReadTrainerHeaderInfo`/`PrintText`, pret `TalkToTrainer` beaten path) and skip battle; unbeaten → `TrainerTalkHook`. Early `.found_npc` gate that returned `.not_found` is retired.
 
 ---
 

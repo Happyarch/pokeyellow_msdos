@@ -442,7 +442,7 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
   (flat no-op `BankswitchCommon` pair, matching `Reload*`), or annotate the
   omission — prefer restoring for line-fidelity.
 
-## Stage G — stale-comment sweep (S1-S7, S9, S11, S12)
+## Stage G — stale-comment sweep (S1-S4, S6, S9, S11, S12) — S5 FIXED C.2, S7 FIXED A2.2
 
 One commit, comments only (no code bytes change):
 
