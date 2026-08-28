@@ -313,6 +313,43 @@ def _parse_text_file(path: Path, charmap: list) -> dict:
     return entries
 
 # ---------------------------------------------------------------------------
+# Global far-text index (shared labels across maps)
+# ---------------------------------------------------------------------------
+# Several text labels are NOT map-local but shared subsystem text (BoulderText,
+# MartSignText, PokeCenterSignText, ExclamationText, GroundRoseText, ...): their
+# far bodies live in data/text/text_*.asm, not text/<Map>.asm. pret references
+# them from every city/map's sign and object slots, and the port mirrors the
+# shared routines in dos_port/src/home/overworld_text.asm. A per-map text_db
+# cannot see them, so loading only the map's own text file left those slots on
+# the `...` stub. Build a global label→bytes index once and fall back to it.
+_FAR_TEXT_CACHE = {}
+
+
+def _global_far_text(charmap: list, text_db_cache: dict) -> dict:
+    """Return {far_label: bytes} for every `_Label::` in text/*.asm + data/text/*.asm.
+
+    Cached across generate_all; each label is pure static data, so bytes are
+    identical no matter which map references it.
+    """
+    if _FAR_TEXT_CACHE:
+        return _FAR_TEXT_CACHE
+    idx = {}
+    for f in list((ROOT / "text").glob("*.asm")) + list((ROOT / "data" / "text").glob("*.asm")):
+        if f in text_db_cache:
+            idx.update(text_db_cache[f])
+        else:
+            try:
+                parsed = _parse_text_file(f, charmap)
+            except Exception as e:  # noqa: BLE001
+                print(f"[dialogs] {f.name}: global text parse error: {e}", file=sys.stderr)
+                continue
+            text_db_cache[f] = parsed
+            idx.update(parsed)
+    _FAR_TEXT_CACHE.update(idx)
+    return _FAR_TEXT_CACHE
+
+
+# ---------------------------------------------------------------------------
 # scripts/<Map>.asm — TextPointers table
 # ---------------------------------------------------------------------------
 
@@ -445,12 +482,61 @@ def _bytes_to_nasm(data: bytes, indent: str = '    ') -> str:
         lines.append(f'{indent}db {row}')
     return '\n'.join(lines)
 
+def _port_script_globals(label: str) -> set:
+    """Return the `global` symbols declared in dos_port/src/scripts/<label>.asm.
+
+    The port keeps pret's labels verbatim, so a pret text_asm local label that
+    is a `global` here is an already-translated routine the generator should call
+    via a SCRIPT entry instead of emitting the `...` placeholder. Scoped to the
+    map's own port script file so we never wire a same-named symbol from a
+    different map or subsystem.
+    """
+    path = ROOT / "dos_port" / "src" / "scripts" / f"{label}.asm"
+    if not path.exists():
+        return set()
+    text = path.read_text(encoding="utf-8", errors="replace")
+    return set(re.findall(r"^\s*global\s+(\w+)", text, re.M))
+
+
+def _is_static_text_label(path: Path, label: str) -> bool:
+    """True if `label:` is a PLAIN static text wrapper / empty alias, not a text_asm block.
+
+    A plain wrapper is exactly `text_far _X / text_end` (or a raw `text "..."`
+    body) with no logic. A `text_asm` block (even one that CONTAINS nested
+    `text_far` rows under its own `.Label:` sub-labels) is a runtime routine and
+    must NOT be inlined as a static byte stream — inlining a gym-leader's
+    pre-battle text would drop the battle/reward state machine. Text_asm blocks
+    (and script_* macros) are the auto-wire target; only true wrappers and empty
+    alias bodies stay non-dynamic.
+    """
+    body = path.read_text(encoding="utf-8", errors="replace")
+    m = re.search(rf"^{re.escape(label)}:\n((?:.*\n)+?)(?=^\S|\Z)", body, re.M)
+    if not m:
+        return True                 # no body at all — alias/pointer, not a routine
+    inner = m.group(1)
+    # Drop leading comment/blank lines, then inspect the first real statement.
+    first = None
+    for line in inner.splitlines():
+        s = line.strip()
+        if not s or s.startswith(";"):
+            continue
+        first = s
+        break
+    if first is None:
+        return True                 # empty body — alias/pointer, not a routine
+    if first.startswith("text_asm"):
+        return False                # runtime routine — auto-wire it
+    if first.startswith("script_vending_machine") or first.startswith("script_prize_vendor"):
+        return False                # dynamic script macro — auto-wire it
+    return True                     # text_far / text / text_start / text_end — static or alias
+
+
 # ---------------------------------------------------------------------------
 # Per-map generation
 # ---------------------------------------------------------------------------
 
 def generate_map(map_id: int, const: str, label: str, charmap: list,
-                 text_db_cache: dict) -> tuple | None:
+                 text_db_cache: dict, global_far: dict) -> tuple | None:
     """Generate dialog for one map.
 
     `label` is the map-header label (e.g. "RedsHouse1F") — correctly cased, so it
@@ -515,7 +601,14 @@ def generate_map(map_id: int, const: str, label: str, charmap: list,
     for i in range(npc_count_eff):
         # Rows at/past npc_count are sign (or script-only) text: plain streams.
         is_trainer = sprites[i].get('is_trainer', False) if i < npc_count else False
-        is_item    = sprites[i].get('is_item', False)    if i < npc_count else False
+        # An ITEM-flagged object with item id 0 is a scripted/toggleable object
+        # (e.g. Blues House Daisy + Town Map), not a real item ball. Treat it as
+        # a plain text slot so it routes through the text_asm/static resolution
+        # instead of the always-"..." item branch. real balls (id != 0) keep the
+        # item path.
+        is_item    = (sprites[i].get('is_item', False)
+                      and sprites[i].get('item_id', 0) != 0
+                      ) if i < npc_count else False
 
         if i < len(pointers):
             local_label = pointers[i]
@@ -551,6 +644,21 @@ def generate_map(map_id: int, const: str, label: str, charmap: list,
                 npc_entries.append((nasm_label, None, header, TRAINER_TALK_SENTINEL))
                 continue
 
+        # Auto-wire a ported text_asm script. The port keeps pret's label
+        # verbatim, so a slot whose pret label is a `global` in the map's port
+        # script file is already translated (gym leaders/trainers, Elite Four,
+        # mart/nurse/story NPCs, scripted/toggleable objects); the generator only
+        # needs a SCRIPT entry that CALLs it. Guarded so it fires for `text_asm`
+        # routines (which cascade through sub-labels / battle / reward logic) but
+        # NOT for a plain static text wrapper (`text_far _X / text_end`), which
+        # must keep inlining real bytes. This retires the long tail of hand-typed
+        # SCRIPT_OVERRIDES identity rows for already-translated maps.
+        if (local_label and local_label in _port_script_globals(label)
+                and scripts_path.exists()
+                and not _is_static_text_label(scripts_path, local_label)):
+            npc_entries.append((nasm_label, None, local_label, SCRIPT_SENTINEL))
+            continue
+
         # Resolve text bytes
         if is_trainer:
             # Try to resolve the actual pre-battle text; fall back to stub
@@ -580,16 +688,18 @@ def generate_map(map_id: int, const: str, label: str, charmap: list,
                     cand = '_' + local_label
                     if cand in text_db:
                         data = text_db[cand]
+                    elif cand in global_far:
+                        data = global_far[cand]
                     else:
                         data = _SCRIPT_STUB
                         print(f"[dialogs] {const}[{i}] {local_label}: "
                               f"text_asm script NPC — emitting stub", file=sys.stderr)
-                elif far not in text_db:
+                elif far not in text_db and far not in global_far:
                     data = _SCRIPT_STUB
                     print(f"[dialogs] {const}[{i}] {local_label}: "
                           f"far label {far!r} not found — emitting stub", file=sys.stderr)
                 else:
-                    data = text_db[far]
+                    data = text_db.get(far, global_far.get(far))
             if data is None:
                 data = _SCRIPT_STUB
 
@@ -654,11 +764,16 @@ def generate_all() -> None:
     map_table: dict = {}
     text_db_cache: dict = {}
 
+    # Shared subsystem far text (BoulderText, MartSignText, PokeCenterSignText,
+    # ExclamationText, GroundRoseText, ...) seen from any map's sign/object slot.
+    # Build once; the per-map text file stays authoritative for its own labels.
+    global_far = _global_far_text(charmap, text_db_cache)
+
     for mid, const, pascal in all_maps:
         label = const_to_label.get(const)
         if label is None:
             continue   # map has no header (should not happen for real maps)
-        result = generate_map(mid, const, label, charmap, text_db_cache)
+        result = generate_map(mid, const, label, charmap, text_db_cache, global_far)
         if result is not None:
             table_label, out_path = result
             map_table[mid] = table_label
