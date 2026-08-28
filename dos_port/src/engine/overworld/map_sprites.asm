@@ -72,6 +72,7 @@ global ResetMapTrainerState        ; port-ext per-map-load trainer state (called
 ; (ApplyToggleableHiddenGate global retired 2026-08-06 — see the tombstone below)
 global CheckNPCInteraction
 global ShowTextStream
+global npc_dialog_wait_impl
 global w_map_text_table_ptr
 global MapTextTablePointers
 global CheckTrainerSight
@@ -721,7 +722,12 @@ CheckNPCInteraction:
     call TrainerTalkHook
     jmp .dialog_done
 .run_script:
-    call edi                                ; flat text_asm routine (does its own ShowTextStream)
+    call edi                                ; flat text_asm routine
+    mov al, [ebp + wDoNotWaitForButtonPressAfterDisplayingText]
+    test al, al
+    jnz .dialog_done
+    call npc_dialog_wait_impl
+    jmp .dialog_done
 
 .dialog_done:
     ; Hide window and clear font-loaded flag.

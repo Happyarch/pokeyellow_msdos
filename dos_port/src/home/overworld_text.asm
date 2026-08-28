@@ -52,6 +52,7 @@ section .text
 
 extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to cur map TextTable
 extern ShowTextStream                   ; map_sprites.asm — print flat TX stream, wait
+extern npc_dialog_wait_impl             ; map_sprites.asm — copy to window layer, wait A/B
 extern PickUpItem                       ; engine/events/pick_up_item.asm (PickUpItemText predef)
 
 global DisplaySignText
@@ -125,6 +126,11 @@ DisplaySignText:
 
 .run_script:
     call edi                            ; flat text_asm routine (e.g. SummerBeachHousePrinterText)
+    mov al, [ebp + wDoNotWaitForButtonPressAfterDisplayingText]
+    test al, al
+    jnz .script_done
+    call npc_dialog_wait_impl
+.script_done:
     popad
     ret
 
