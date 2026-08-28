@@ -1,23 +1,12 @@
-; overworld.asm — Overworld map-loading and rendering routines.
+; overworld.asm — port-only overworld glue (no pret mirror body remains here).
 ;
-; Faithful translations (pret cross-reference maintained):
-;   ResetMapVariables          home/overworld.asm:ResetMapVariables
-;   DrawTileBlock              home/overworld.asm:DrawTileBlock
-;   LoadCurrentMapView         home/overworld.asm:LoadCurrentMapView
-;   LoadTilesetTilePatternData home/overworld.asm:LoadTilesetTilePatternData
-;   LoadTileBlockMap           home/overworld.asm:LoadTileBlockMap (N/S/W/E strips translated;
-;                               Phase 2 scaffold sets all connected maps to $FF so they skip)
-;   LoadScreenRelatedData      home/overworld.asm:LoadScreenRelatedData
-;   LoadMapData                home/overworld.asm:LoadMapData  (faithful structure; stubs for
-;                               InitMapSprites, RunPaletteCommand, LoadPlayerSpriteGraphics,
-;                               UpdateMusic — ; TODO-HW tags below)
-;
-; Phase 2 scaffold (not a faithful translation):
-;   EnterMap             — scaffold entry from title screen
-;   OverworldLoop        — player-movement frame loop: UpdateSprites (facing + walk
-;                           animation), AdvancePlayerSprite scroll, land collision
-;   LoadPlayerSpriteGraphics — loads Red's standing tiles to $8000 and walking
-;                           tiles to $8800 (the VRAM layout the sprite engine indexes)
+; All pret home/overworld.asm routines are now mirrored in
+; src/home/overworld.asm (faithful translations); this file holds the port-only
+; glue that pret spreads across banking/ROM layout: EnterMapBoot (one-time
+; boot staging), LoadDestinationMapData / StageIndoorMapBlk (flat-model indoor
+; .blk windowing at INDOOR_BLK_GBADDR), ApplyMapBorderOverrides (generated
+; border-ring data), RefreshCollisionTileMap (sub-block collision crop),
+; seam helpers (SeamReseatView) and the embedded asset blobs (.2bpp/.bst/.blk).
 ;
 ; The player now renders through the real sprite engine: UpdateSprites
 ; (src/engine/overworld/movement.asm) drives the per-slot image index, and PrepareOAMData
@@ -761,7 +750,7 @@ RefreshCollisionTileMap:
 ; ---------------------------------------------------------------------------
 ; CopyMapViewToVRAM — DIVERGENCE (OW-A.5): obsoleted by the native-width renderer.
 ; Pret ref: home/overworld.asm:CopyMapViewToVRAM / CopyMapViewToVRAM2.
-; pret copies wTileMap (25×40) to vBGMap0 each map load; the port's render_bg
+; pret copies wTileMap (20×18) to vBGMap0 each map load; the port's render_bg
 ; (src/ppu/ppu.asm) instead decodes wSurroundingTiles directly to the pixel surface
 ; every frame, so there is no wTileMap→VRAM copy step. This routine has NO body and
 ; is never called; LoadCurrentMapView (invoked where pret calls CopyMapViewToVRAM)
@@ -968,10 +957,10 @@ DoSignInteraction:
 ; trainer class/num (or item id) in wMapSpriteExtraData. It does NOT load tile
 ; patterns — that is InitMapSprites' job (map_sprites.asm), kept separate as in pret.
 ;
-; Called from LoadMapHeader (above) at the pret :1892 point. Until P3c retires the
-; bespoke InitMapSprites, that routine clears+repopulates these same slots when
-; LoadMapData runs, so InitSprites' output is currently overwritten (redundant but
-; harmless — the byte-identical baselines confirm it).
+; Called from LoadMapHeader (above) at the pret :1892 point. The bespoke
+; InitMapSprites path no longer populates slots (de-bespoked 2026-08-28), so
+; InitSprites is now the sole loader — previously the bespoke path
+; cleared+repopulated the same slots (redundant but harmless while both ran).
 ; ---------------------------------------------------------------------------
 ; hLoadSpriteTemp1/2 (pret HRAM scratch) — carry movement-byte-2 and text-id+flags
 ; from InitSprites into LoadSprite, and trainer class/num within LoadSprite.

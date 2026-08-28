@@ -7,10 +7,9 @@
 ; and the complete IsSpriteOrSignInFrontOfPlayer (R-002 retirement, 2026-07-23 —
 ; sign branch + counter-range extension + fallthrough into the sprite scan;
 ; a sign-branch-only version previously lived in engine/overworld/overworld.asm).
-; pret home/overworld.asm's REMAINING labels still live in
-; engine/overworld/overworld.asm (the port's historical home for them — legacy
-; relocation debt, see tools/pret_label_allowlist.json); move them here when
-; touched.
+; All pret home/overworld.asm labels are now mirrored here — no relocation
+; debt remains in engine/overworld/overworld.asm and the allowlist carries
+; zero overworld entries (measured 2026-08-04 baseline {}).
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX, DE=DX, HL=ESI; GB mem = [ebp+SYM].
 ;
@@ -1593,19 +1592,17 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; a dungeon warp-pad): leave the map now, before any input is acted on.
     ;   pret: ld a, [wStatusFlags6] / and (1 << BIT_FLY_WARP) | (1 << BIT_DUNGEON_WARP)
     ;         jp nz, HandleFlyWarpOrDungeonWarp        (home/overworld.asm:62-64)
-    ; PLACEMENT DEVIATION: pret tests this AFTER JoypadOverworld + SafariZoneCheck + the
-    ; script-warp check; the port's loop reads the joypad further down (both of those
-    ; are now restored immediately above, in pret's order), so the test sits at the
-    ; top of the idle branch instead. Equivalent: the bits are set by an item/script on a PREVIOUS
-    ; iteration, never by this iteration's input, and we leave the map either way — so
-    ; nothing between the two positions can observe the difference.
+    ; pret order is now restored: JoypadOverworld → SafariZoneCheck → script-warp
+    ; → fly/dungeon-warp (home/overworld.asm:49,54,58,62), and the port runs the
+    ; same sequence at the top of the idle branch, in the same order. The bits are
+    ; set by an item/script on a PREVIOUS iteration, never by this iteration's
+    ; input, and we leave the map either way, so no intervening instruction could
+    ; observe a difference even if the order were still shifted.
     ; --- Safari Zone: out of BALLS (pret home/overworld.asm:54-57) ------------
     ; RESTORED 2026-08-21, the companion to the out-of-STEPS branch further down.
-    ; pret runs this right after JoypadOverworld; the port reads the joypad further
-    ; down, so it sits here at the top of the idle branch — the same relocation, and
-    ; for the same reason, as the fly/dungeon-warp test immediately below, and it
-    ; keeps pret's ORDER relative to that test (pret: SafariZoneCheck, then the
-    ; script-warp check, then the fly-warp test).
+    ; pret order is now restored: JoypadOverworld → SafariZoneCheck → script-warp
+    ; → fly/dungeon-warp (home/overworld.asm:49,54,58,62) — the port runs the same
+    ; sequence at the top of the idle branch, in the same order.
     ; Inert outside the Safari Zone by construction: SafariZoneCheck's own first act
     ; is CheckEventHL EVENT_IN_SAFARI_ZONE, and it falls through to
     ; SafariZoneGameStillGoing (which zeroes wSafariZoneGameOver) unless
@@ -1913,9 +1910,10 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call UpdateSprites
     ; OW-A.6 (pret .noDirectionChange tail, home/overworld.asm:205-226): while
     ; surfing (wWalkBikeSurfState == 2) collision routes through
-    ; CollisionCheckOnWater; on land through CollisionCheckOnLand. Inert in
-    ; today's live build — nothing sets state 2 until Surf item-use /
-    ; ForceBikeOrSurf links (player_gfx.asm).
+    ; CollisionCheckOnWater; on land through CollisionCheckOnLand. Live: Surf
+    ; (item_effects.asm:644) sets state 2 via the bag STAR-menu handler, and
+    ; ForceBikeOrSurf (player_state.asm, called from EnterMap) re-arms it on
+    ; map entry for currents.
     cmp byte [ebp + wWalkBikeSurfState], 2 ; surfing?
     jne .collisionOnLand
     call CollisionCheckOnWater                ; CF=1 → blocked on water
@@ -1978,8 +1976,8 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 .moveAhead2:
     ; pret .moveAhead2 head (home/overworld.asm:243-248): clear the in-place-turn
     ; flag + Pikachu-collision grace counter, then the bike double-step, then
-    ; advance. DoBikeSpeedup is live but inert (wWalkBikeSurfState is never 1
-    ; until Bicycle use / ForceBikeOrSurf links). OW-A.6.
+    ; advance. DoBikeSpeedup is live — Bicycle (item_effects.asm:911) and
+    ; ForceBikeOrSurf (player_state.asm) drive wWalkBikeSurfState == 1.
     and byte [ebp + wMiscFlags], ~(1 << BIT_TURNING) & 0xFF  ; res BIT_TURNING, [hl]
     mov byte [ebp + wPikachuCollisionCounter], 0
     call DoBikeSpeedup
@@ -2066,11 +2064,13 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
 
-    ; Reset scroll and VRAM pointer. During the walk, hSCY/hSCX accumulated
-    ; 2 px/frame (e.g. −144 px over 9 north steps). CopyMapViewToVRAM always
-    ; writes to GB_TILEMAP0 ($9800), so the PPU must start reading from row 0
-    ; (SCY=0). wMapViewVRAMPointer must also reset so RedrawRowOrColumn
-    ; uses the correct base address on subsequent frames.
+    ; Reset scroll and VRAM pointer. During the walk hSCY/hSCX accumulated
+    ; 2 px/frame (e.g. −144 px over 9 north steps). The surface renderer
+    ; (src/ppu/ppu.asm render_bg) blits a 320×200 window at (hSCX, hSCY) out
+    ; of the 48×36-tile surface every frame, so stale scroll would offset
+    ; that blit after the crossing. wMapViewVRAMPointer is kept in lockstep
+    ; with the other reset sites (ResetMapVariables etc.) — vestigial under
+    ; the surface renderer but never left stale.
     mov byte [ebp + hSCY], 0
     mov byte [ebp + hSCX], 0
     mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
@@ -2504,14 +2504,14 @@ NewBattle:
 ; Called once per .moveAhead frame; when riding a bike it advances the player
 ; sprite a second time (2 px/frame). On Cycling Road (ROUTE_17) the speedup is
 ; suppressed while UP/LEFT/RIGHT is held (the forced-southward drift stays at
-; walking speed). Inert in today's live build — wWalkBikeSurfState is never 1
-; until Bicycle item-use / ForceBikeOrSurf links.
+; walking speed). Live: Bicycle (item_effects.asm:911) sets state 1 via the bag
+; use path and ForceBikeOrSurf (player_state.asm) re-arms it on Cycling Road
+; entry; the routine is verified live.
 ;
-; PORT NOTE (Stage A): _AdvancePlayerSprite now always returns CF=0 — crossing
-; was removed from it (A1.1) and is checked only in the post-step WarpScan path.
-; This inner call's CF is therefore discarded, exactly as pret discards it (its
-; crossing is caught by CheckMapConnections on the wWalkCounter path). No revisit
-; needed when biking goes live.
+; _AdvancePlayerSprite now always returns CF=0 — crossing was removed from it
+; (A1.1) and is checked only in the post-step WarpScan path. This inner call's
+; CF is therefore discarded, exactly as pret discards it (its crossing is
+; caught by CheckMapConnections on the wWalkCounter path).
 ; ---------------------------------------------------------------------------
 DoBikeSpeedup:
     mov al, [ebp + wWalkBikeSurfState]
@@ -2720,9 +2720,9 @@ PlayMapChangeSound:
     je .didNotGoThroughDoor
     cmp al, CEMETERY
     je .didNotGoThroughDoor
-    ; pret lda_coord 8, 8 = upper-left tile of the player's block, one row above the
-    ; standing tile (lda_coord 8, 9 → port PLAYER_STANDING). Port row scaling is 1:1
-    ; (fronts are ±2 rows), so project to (PLAYER_STANDING_ROW - 1, PLAYER_STANDING_COL).
+    ; pret lda_coord 8, 8 = tile one row above the standing tile (lda_coord 8, 9
+    ; → port PLAYER_STANDING). Row scaling is 1:1, so project to
+    ; (PLAYER_STANDING_ROW - 1, PLAYER_STANDING_COL) — one row above standing.
     ; ; PROJ: this door-tile row projection + the pre-EnterMap tilemap timing are
     ; unverified (no golden warp scenario) — the go-inside/go-outside SFX selection
     ; needs MCP live-warp verification. Wrong projection only mis-picks the jingle.
@@ -3653,16 +3653,16 @@ LoadCurrentMapView:
     push edx                                       ; push de
     push esi                                       ; push hl
 
-    ; STOPGAP (no GB equivalent — remove once map data is extended): the 40×25
-    ; viewport is larger than the GB's 20×18, so a player-centered camera near a
-    ; map edge reaches past wOverworldMap. wOverworldMap ($E580) sits directly
-    ; above wSurroundingTiles ($E000) in WRAM, so reads above its top border land
-    ; in the tile buffer and decode tile IDs as block IDs → a garbage band. Any
-    ; read outside [wOverworldMap, wOverworldMapEnd) instead yields the map's
-    ; border block, so the extended/out-of-map area renders as clean dummy tiles
-    ; (matching the in-bounds border) rather than garbage. See CLAUDE.md and
-    ; docs/current_plan_backlog.md:
-    ; the real fix is to extend map data to fill the larger viewport.
+    ; PERMANENT (no GB equivalent — maintainer decision 2026-08-16, CLAUDE.md):
+    ; the 40×25 viewport is larger than the GB's 20×18, so a player-centered
+    ; camera near a map edge reaches past wOverworldMap. wOverworldMap ($E580)
+    ; sits directly above wSurroundingTiles ($E000) in WRAM, so reads above its
+    ; top border land in the tile buffer and decode tile IDs as block IDs → a
+    ; garbage band. Any read outside [wOverworldMap, wOverworldMapEnd) instead
+    ; yields the map's border block, so the extended/out-of-map area renders as
+    ; clean dummy tiles (matching the in-bounds border) rather than garbage.
+    ; This clamp is the intended behaviour, not a placeholder for map-data
+    ; extension.
     cmp edx, wOverworldMap
     jb  .oobBlock
     cmp edx, wOverworldMap + W_OVERWORLD_MAP_SIZE
@@ -3920,14 +3920,13 @@ DrawTileBlock:
     shl eax, 4                                     ; EAX = blockID * 16
     add edx, eax                                   ; EDX = pointer into blockset
 
-    ; TEMPORARY (no GB equivalent — remove once map data is extended): clamp
-    ; out-of-range block IDs to block 0 (the black/border tile). The extended
-    ; 40×25-tile draw can pull the camera viewport into uninitialized
+    ; PERMANENT (no GB equivalent — maintainer decision 2026-08-16, CLAUDE.md):
+    ; clamp out-of-range block IDs to block 0 (the black/border tile). The
+    ; extended 40×25-tile draw can pull the camera viewport into uninitialized
     ; wOverworldMap padding, handing us a block ID past the embedded blockset;
-    ; without this the tile read walks off the blockset and paints garbage. This
-    ; is a stopgap: the plan is to extend the map data so those regions hold real
-    ; blocks (no blank area exists), at which point this clamp is dead code and
-    ; should be deleted. See docs/current_plan_backlog.md and CLAUDE.md.
+    ; without this the tile read walks off the blockset and paints garbage. The
+    ; clamp is the intended behaviour for out-of-map cells, not a placeholder
+    ; for map-data extension.
     cmp edx, OW_BLOCKS_GBADDR + OVERWORLD_BLOCKS_SIZE
     jb  .block_in_range
     mov edx, OW_BLOCKS_GBADDR
@@ -4426,9 +4425,10 @@ asm_0dbd:
     ; (that data survives a battle, so it isn't rebuilt). overworld_sprite_count_ptr
     ; holds the sprite_count GB offset = pret's HL on InitSprites entry; W_OBJECT_DATA_PTR_TEMP
     ; holds pret's object-data base (B1).
-    ; OW-A.2 P3b: this is the faithful home object-loader; the bespoke InitMapSprites
-    ; (still the driver until P3c) clears+repopulates the same slots afterward in
-    ; LoadMapData, so this is currently redundant-but-harmless (byte-identical).
+    ; OW-A.2 P3b: this is the faithful home object-loader; the bespoke
+    ; InitMapSprites path no longer populates slots (de-bespoked 2026-08-28,
+    ; measured no slot writes remain in its path), so InitSprites is now the
+    ; sole slot populater.
     mov al, [ebp + wStatusFlags4]
     test al, (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
     jnz .skipInitSprites
@@ -4960,8 +4960,8 @@ InitSprites:
     ; from the text-id flags at interaction time, in the SPRITE branch of
     ; IsSpriteOrSignInFrontOfPlayer (the branch the port realizes as CheckNPCInteraction;
     ; the sign branch itself is ported, below).
-    ; The bespoke InitMapSprites used to set this; it is retired in P3c, so InitSprites
-    ; (the slot populator) carries it. ZeroSpriteStateData already cleared the slot.
+    ; InitSprites carries it; the bespoke InitMapSprites path no longer sets it
+    ; (de-bespoked 2026-08-28). ZeroSpriteStateData already cleared the slot.
     test al, TRAINER_FLAG
     jz .not_trainer_slot
     mov byte [ebp + edx + wSpriteStateData2 + SPRITESTATEDATA2_ISTRAINER], 1
