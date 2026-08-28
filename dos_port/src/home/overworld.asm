@@ -1286,6 +1286,7 @@ EnterMap:
     ; pointer for a hand-seeded spawn, so do that first.
     call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
     call SeamReseatView
+    or byte [ebp + hJoyHeld], PAD_A
     ; Run the REAL A-press hidden-event dispatch, not a bespoke "print this predef"
     ; shortcut — the whole point is that the text reaches the screen through
     ; CheckForHiddenEventOrBookshelfOrCardKeyDoor -> PrintRedSNESText ->

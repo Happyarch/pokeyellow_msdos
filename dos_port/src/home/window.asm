@@ -190,6 +190,14 @@ PrintText:
 ; ---------------------------------------------------------------------------
 PrintText_NoCreatingTextBox:
     mov edi, [text_msgbox]
+    mov eax, [edi + MB_STRIDE]
+    mov [text_row_stride], eax
+    mov eax, [edi + MB_LINE2]
+    mov [text_line2], eax
+    mov eax, [edi + MB_ARROW]
+    mov [text_arrow_pos], eax
+    mov eax, [edi + MB_PROMPT]
+    mov [text_prompt_hook], eax
     mov ebx, [edi + MB_LINE1]           ; bccoord 1, 14
 %ifdef DEBUG_ASSERT_REENTRANCY
     cmp byte [print_text_depth], 0
